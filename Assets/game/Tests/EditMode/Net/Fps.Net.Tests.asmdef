@@ -1,0 +1,27 @@
+{
+    "name": "Fps.Net.Tests",
+    "rootNamespace": "Fps.Net.Tests",
+    "references": [
+        "Fps.Core",
+        "Fps.Net",
+        "Unity.Netcode.Runtime",
+        "Unity.Networking.Transport",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

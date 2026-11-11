@@ -1,0 +1,39 @@
+[install]
+description = "Restore the NuGet packages of dotnet/Fps.slnx"
+run = "scripts/install.sh"
+quiet = true
+
+[setup]
+description = "Install dependencies and skill-kit, then sync (run by make setup)"
+depends = ["install"]
+run = [
+  "curl -fsSL https://raw.githubusercontent.com/omni-stove/skill-kit/main/install.sh | sh",
+  "skill-kit game sync",
+]
+
+[update]
+description = "Pull skill-kit and re-sync this repo"
+run = "skill-kit game update"
+
+[lint]
+description = "Check C# formatting, style and analyzers (Unity-independent code via dotnet/Fps.slnx, all of Assets/game for whitespace)"
+run = "scripts/lint.sh"
+quiet = true
+
+[format]
+description = "Fix what lint reports as fixable"
+run = "scripts/lint.sh --fix"
+quiet = true
+
+[test]
+description = "Run the Unity-independent C# unit tests (dotnet/Fps.Core.Tests) with dotnet test"
+run = "scripts/test.sh"
+quiet = true
+
+[build]
+description = "Build the macOS player into Builds/ with the Unity editor in batch mode (close the Editor first)"
+run = "unity build --target StandaloneOSX -o Builds/fps.app"
+
+[test-unity]
+description = "Run the Unity EditMode tests headlessly in batch mode (close the Editor first)"
+run = "unity test --mode EditMode"

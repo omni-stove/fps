@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Unity の Fps.Core アセンブリ (Assets/game/Scripts/Core) を Unity 抜きでビルドする。ソースは Assets 側が正 -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/game/Scripts/Core/**/*.cs" />
+  </ItemGroup>
+</Project>

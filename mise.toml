@@ -1,0 +1,5 @@
+[tools]
+dotnet = "11"
+
+[task_config]
+includes = [".mise/tasks.toml"]

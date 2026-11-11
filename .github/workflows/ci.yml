@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  precheck:
+    uses: omni-stove/.github/.github/workflows/precheck.yml@main
+    permissions:
+      pull-requests: read
+
+  checks:
+    needs: precheck
+    if: needs.precheck.outputs.proceed == 'true'
+    uses: omni-stove/.github/.github/workflows/ci.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    with:
+      run-review: true
+      review-provider: "claude"
+      review-exclude-patterns: |
+        *.meta
+        *.unity
+        *.prefab
+        *.asset
+        *.mat
+        *.inputactions
+        Packages/packages-lock.json
+    secrets: inherit
+
+  lint:
+    needs: precheck
+    if: needs.precheck.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "11.0.x"
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('dotnet/**/*.csproj', 'dotnet/Directory.Build.props') }}
+
+      - name: Restore
+        run: scripts/install.sh
+
+      - name: Lint
+        run: scripts/lint.sh
+
+  test:
+    needs: precheck
+    if: needs.precheck.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "11.0.x"
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('dotnet/**/*.csproj', 'dotnet/Directory.Build.props') }}
+
+      - name: Restore
+        run: scripts/install.sh
+
+      - name: Test
+        run: scripts/test.sh
+
+  ci:
+    needs: [precheck, checks, lint, test]
+    if: always()
+    uses: omni-stove/.github/.github/workflows/ci-gate.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    with:
+      results: ${{ toJSON(needs) }}
+      conflicted: ${{ needs.precheck.outputs.conflicted }}
+      review-comments: ${{ needs.checks.outputs.review-comments }}
+      review-result: ${{ needs.checks.outputs.review-result }}
+    secrets: inherit

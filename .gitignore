@@ -1,0 +1,35 @@
+# Unity が生成するもの
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# IDE が生成するもの
+.vs/
+.idea/
+# Unity がルートに生成するもの (dotnet/ のプロジェクトは管理する)
+/*.csproj
+/*.sln
+/*.slnx
+*.suo
+*.user
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# dotnet
+/dotnet/**/bin/
+/dotnet/**/obj/

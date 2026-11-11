@@ -27,6 +27,7 @@ jobs:
     with:
       run-review: true
       review-provider: "claude"
+      review-allowed-bots: ""  # 公開リポジトリでは外部 App の PR でもレビューが起動してしまうため
       review-exclude-patterns: |
         *.meta
         *.unity

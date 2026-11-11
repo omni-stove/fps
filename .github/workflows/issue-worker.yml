@@ -1,0 +1,21 @@
+name: Issue Worker
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  work:
+    uses: omni-stove/.github/.github/workflows/issue-worker.yml@main
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    with:
+      provider: "claude"
+      allowed-bots: ""  # 公開リポジトリでは外部 App が付けたラベルでも起動してしまうため
+      # Unity / .NET の repo なので pnpm / node 系ではなく dotnet / mise / make を許可する
+      allowed-tools: "Read,Edit,Write,Glob,Grep,Bash(dotnet:*),Bash(mise:*),Bash(make:*),Bash(git:*),Bash(gh:*),Bash(ls:*),Bash(cat:*),Bash(find:*),Bash(rg:*),Bash(mkdir:*),Bash(mv:*),Bash(cp:*),Bash(rm:*)"
+      instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: wire references in code or editor scripts instead of hand-editing .unity / .prefab / .asset files."
+    secrets: inherit

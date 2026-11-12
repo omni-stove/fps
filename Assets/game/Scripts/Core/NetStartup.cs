@@ -138,5 +138,15 @@ namespace Fps.Core
         {
             return isDedicatedServer;
         }
+
+        /// <summary>
+        /// ネットワークのプレイヤーに一人称の視点 (カメラ・音声・視点操作) を付けるか。
+        /// 自分が操作するプレイヤー (オーナー) だけで、画面の無い batchmode と専用サーバーでは付けない。
+        /// batchmode はエディタからのテスト実行も含めて画面が無いので、エディタかどうかは問わない。
+        /// </summary>
+        public static bool ShouldEnableFirstPersonView(bool isOwner, bool isBatchMode, bool isDedicatedServer)
+        {
+            return isOwner && !isBatchMode && !ShouldDisablePresentation(isDedicatedServer);
+        }
     }
 }

@@ -154,6 +154,15 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void EnablesFirstPersonViewOnlyForOwnerWithScreen()
+        {
+            Assert.That(NetStartup.ShouldEnableFirstPersonView(true, false, false), Is.True);
+            Assert.That(NetStartup.ShouldEnableFirstPersonView(false, false, false), Is.False);
+            Assert.That(NetStartup.ShouldEnableFirstPersonView(true, true, false), Is.False);
+            Assert.That(NetStartup.ShouldEnableFirstPersonView(true, false, true), Is.False);
+        }
+
+        [Test]
         public void RejectsNullArguments()
         {
             Assert.Throws<ArgumentNullException>(

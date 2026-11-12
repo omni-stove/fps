@@ -4,6 +4,7 @@
     "references": [
         "Fps.Core",
         "Fps.Net",
+        "Fps.Runtime",
         "Unity.Netcode.Runtime"
     ],
     "includePlatforms": [

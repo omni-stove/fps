@@ -1,9 +1,11 @@
 using System;
 using System.Globalization;
 using Fps.Core;
+using Fps.Runtime;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 namespace Fps.Net
 {
@@ -12,6 +14,11 @@ namespace Fps.Net
     /// サーバーの指示でテレポートする。Attack で撃つと射撃を <see cref="FireServerRpc"/> で送るだけで、
     /// 当たり判定 (ラグ補償) とダメージを含む試合の判断はすべて <see cref="NetTeamDeathmatch"/> (その先の
     /// <see cref="TeamDeathmatchSession"/>) が行う。
+    /// <para>
+    /// 一人称視点: プレハブは子 <see cref="ViewName"/> (pitch を回す Transform。Camera と AudioListener 付き) と
+    /// <see cref="FirstPersonLook"/> を無効のまま持つ。自分のプレイヤー (オーナー) で画面があるときだけ有効にし、
+    /// シーンの <see cref="NetSpectatorCamera"/> を止める。射撃はこの子の位置から forward (画面中央) へ撃つ。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -23,8 +30,14 @@ namespace Fps.Net
         /// <summary>参加前を表す <see cref="ServerPlayerId"/>。</summary>
         public const int NotJoined = -1;
 
-        /// <summary>射撃の始点の、本体 (カプセルの中心) からの高さ (m)。</summary>
+        /// <summary>
+        /// 目 (一人称カメラと射撃の始点) の、本体 (カプセルの中心) からの高さ (m)。
+        /// サーバーの射撃の検査 (<see cref="NetTeamDeathmatch"/> の始点の遮蔽判定) も同じ高さを使う。
+        /// </summary>
         public const float EyeHeight = 0.6f;
+
+        /// <summary>一人称カメラを持ち pitch を回す子 GameObject の名前。</summary>
+        public const string ViewName = "View";
 
         public static readonly Color AlphaColor = new Color(0.25f, 0.5f, 1f);
         public static readonly Color BravoColor = new Color(1f, 0.3f, 0.25f);
@@ -47,12 +60,33 @@ namespace Fps.Net
         private InputAction _attackAction;
         private bool _enabledAttackAction;
 
+        // 一人称視点。View は射撃の向きにも使うので、カメラを有効にしないプレイヤーでも解決しておく
+        private Transform _view;
+        private Camera _viewCamera;
+        private AudioListener _viewListener;
+        private FirstPersonLook _look;
+        private bool _hasLocalView;
+        private bool _viewResolved;
+
         public Team Team => _team.Value;
         public int Health => _health.Value;
         public bool IsAlive => _health.Value > 0;
 
         /// <summary>サーバーでだけ使う、試合でのプレイヤー id。参加前は <see cref="NotJoined"/>。</summary>
         public int ServerPlayerId { get; internal set; } = NotJoined;
+
+        /// <summary>一人称カメラを持ち pitch を回す子。プレハブに無ければ null。</summary>
+        public Transform View
+        {
+            get
+            {
+                EnsureViewResolved();
+                return _view;
+            }
+        }
+
+        /// <summary>一人称視点 (カメラ・音声・視点操作) が有効か。自分のプレイヤーで画面があるときだけ true。</summary>
+        public bool HasLocalView => _hasLocalView;
 
         private void Awake()
         {
@@ -61,6 +95,8 @@ namespace Fps.Net
 
             // CharacterController の有効・無効は NetworkPlayerMotor が役割ごとに決めるので、ここでは触らない
             _colliders = Array.FindAll(GetComponentsInChildren<Collider>(true), c => !(c is CharacterController));
+
+            ResolveView();
         }
 
         public override void OnNetworkSpawn()
@@ -68,6 +104,8 @@ namespace Fps.Net
             _team.OnValueChanged += HandleTeamChanged;
             _health.OnValueChanged += HandleHealthChanged;
             ApplyVisuals();
+
+            SetLocalView(NetStartup.ShouldEnableFirstPersonView(IsOwner, Application.isBatchMode, NetStartup.IsDedicatedServerBuild));
 
             if (IsOwner)
             {
@@ -80,6 +118,7 @@ namespace Fps.Net
             _team.OnValueChanged -= HandleTeamChanged;
             _health.OnValueChanged -= HandleHealthChanged;
             ReleaseAttackAction();
+            SetLocalView(false);
 
             if (IsServer && NetTeamDeathmatch.Current != null)
             {
@@ -89,6 +128,13 @@ namespace Fps.Net
 
         public override void OnDestroy()
         {
+            // 消滅の通知を経ずに破棄された場合も、観戦用のカメラを戻す
+            if (_hasLocalView)
+            {
+                _hasLocalView = false;
+                NetSpectatorCamera.RemoveLocalView();
+            }
+
             foreach (var material in _ownedMaterials)
             {
                 if (material != null)
@@ -115,7 +161,7 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 1 発撃つ。目の高さから照準の向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) を添えてサーバーに送るだけで、
+        /// 1 発撃つ。目 (一人称カメラの位置) から画面中央の向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) を添えてサーバーに送るだけで、
         /// 当たり判定とダメージはサーバーが行う。
         /// </summary>
         private void Fire()
@@ -127,8 +173,8 @@ namespace Fps.Net
                 return;
             }
 
-            var origin = transform.position + (Vector3.up * EyeHeight);
-            var direction = AimDirection(origin);
+            var origin = AimOrigin();
+            var direction = AimDirection();
 
             // ホストは他人をサーバー上の今の位置で見ている (補間しない) ので遅れは 0
             var delay = IsServer ? 0 : NetworkPlayerMotor.InterpolationDelayTicks;
@@ -139,30 +185,108 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 照準の向き。画面のカメラからマウスの位置へ伸ばした線が、目の高さの水平面と交わる点へ向ける
-        /// (NetTest シーンは見下ろしのカメラなので、狙いたい相手をクリックすればよい)。
-        /// カメラかマウスが無いか、交わらなければ本体の正面。
+        /// 射撃の始点。一人称カメラ (<see cref="View"/>) の位置で、本体の中心から <see cref="EyeHeight"/> 上になる。
+        /// View が無ければ同じ高さを計算で出す。
         /// </summary>
-        private Vector3 AimDirection(Vector3 origin)
+        public Vector3 AimOrigin()
         {
-            var camera = Camera.main;
-            var mouse = Mouse.current;
-            if (camera != null && mouse != null)
+            EnsureViewResolved();
+            return _view != null ? _view.position : transform.position + (Vector3.up * EyeHeight);
+        }
+
+        /// <summary>
+        /// 射撃の向き。画面中央、つまり一人称カメラ (<see cref="View"/>) の forward で、pitch も含む。
+        /// View が無ければ本体の正面。
+        /// </summary>
+        public Vector3 AimDirection()
+        {
+            EnsureViewResolved();
+            return _view != null ? _view.forward : transform.forward;
+        }
+
+        /// <summary>
+        /// 一人称視点を有効・無効にする。有効にするとカメラ・AudioListener・<see cref="FirstPersonLook"/> を動かし、
+        /// 自分の体は影だけ描いて視界をふさがないようにし、観戦用のカメラを止める。無効にすると元に戻す。
+        /// </summary>
+        internal void SetLocalView(bool enable)
+        {
+            EnsureViewResolved();
+
+            if (enable && _viewCamera == null)
             {
-                var ray = camera.ScreenPointToRay(mouse.position.ReadValue());
-                var eyePlane = new Plane(Vector3.up, origin);
-                if (eyePlane.Raycast(ray, out var enter))
+                Debug.LogError("[Net] " + name + " has no camera under '" + ViewName
+                    + "'; run Fps.Editor.NetSceneBuilder.Build. Keeping the spectator camera", this);
+                enable = false;
+            }
+
+            if (_viewCamera != null)
+            {
+                _viewCamera.enabled = enable;
+            }
+
+            if (_viewListener != null)
+            {
+                _viewListener.enabled = enable;
+            }
+
+            if (_look != null)
+            {
+                // 有効にするとカーソルをロックし、無効にすると外す (FirstPersonLook の OnEnable / OnDisable)
+                _look.enabled = enable;
+                if (enable && !_look.enabled)
                 {
-                    var toPoint = ray.GetPoint(enter) - origin;
-                    toPoint.y = 0f;
-                    if (toPoint.sqrMagnitude > 1e-6f)
-                    {
-                        return toPoint.normalized;
-                    }
+                    // 参照か Look アクションを解決できなかった。理由は FirstPersonLook がエラーに出している
+                    Debug.LogWarning("[Net] " + name + ": FirstPersonLook could not start; the view cannot be turned", this);
+                }
+            }
+            else if (enable)
+            {
+                Debug.LogWarning("[Net] " + name + " has no FirstPersonLook; the view cannot be turned", this);
+            }
+
+            var shadowMode = enable ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+            // 生成と消滅のときだけ呼ばれるので、Awake を経ない場合も考えてその場で集める
+            foreach (var bodyRenderer in GetComponentsInChildren<Renderer>(true))
+            {
+                if (bodyRenderer != null)
+                {
+                    bodyRenderer.shadowCastingMode = shadowMode;
                 }
             }
 
-            return transform.forward;
+            if (enable == _hasLocalView)
+            {
+                return;
+            }
+
+            _hasLocalView = enable;
+            if (enable)
+            {
+                NetSpectatorCamera.AddLocalView();
+                Debug.Log("[Net] first-person view enabled on " + name, this);
+            }
+            else
+            {
+                NetSpectatorCamera.RemoveLocalView();
+            }
+        }
+
+        // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で解決する
+        private void EnsureViewResolved()
+        {
+            if (!_viewResolved)
+            {
+                ResolveView();
+            }
+        }
+
+        private void ResolveView()
+        {
+            _viewResolved = true;
+            _look = GetComponent<FirstPersonLook>();
+            _viewCamera = FirstPersonLook.FindChildCamera(transform);
+            _view = _viewCamera != null ? _viewCamera.transform : transform.Find(ViewName);
+            _viewListener = _viewCamera != null ? _viewCamera.GetComponent<AudioListener>() : null;
         }
 
         /// <summary>サーバーから、試合で決まったチームと体力を書き込む。</summary>

@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Unity.Netcode;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Fps.Net.Tests
@@ -47,6 +48,22 @@ namespace Fps.Net.Tests
 
             var networkObject = bootstrap.PlayerPrefab.GetComponent<NetworkObject>();
             Assert.That(networkObject, Is.Not.Null);
+        }
+
+        [Test]
+        public void PlayerPrefabMovesWithCharacterController()
+        {
+            var bootstrap = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single();
+            var prefab = bootstrap.PlayerPrefab;
+
+            Assert.That(prefab.GetComponent<NetworkPlayerMotor>(), Is.Not.Null,
+                "NetPlayer has no NetworkPlayerMotor; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(prefab.GetComponent<CharacterController>(), Is.Not.Null);
+
+            // CharacterController と別のコライダーがあると自分自身にぶつかる
+            Assert.That(prefab.GetComponents<Collider>(), Has.Length.EqualTo(1));
         }
 
         [Test]

@@ -13,7 +13,7 @@ namespace Fps.Net.Tests
         private const string ServerId = "0123456789abcdef0123456789abcdef";
 
         private readonly List<GameObject> _created = new List<GameObject>();
-        private Func<GameObject, NetLaunchOptions, EosCredentials, NetworkTransport> _savedEosFactory;
+        private Func<GameObject, NetTransportPlan, NetworkTransport> _savedEosFactory;
 
         [SetUp]
         public void SetUp()
@@ -184,20 +184,22 @@ namespace Fps.Net.Tests
             var target = Create("Net");
             var credentials = Credentials();
             var options = EosClientOptions();
-            NetLaunchOptions receivedOptions = null;
-            EosCredentials receivedCredentials = null;
-            NetTransportFactories.Eos = (go, o, c) =>
+            var antiCheat = AntiCheatSettings.Disabled("disabled for the test");
+            var plan = NetTransportPlan.Decide(options, credentials, null).WithAntiCheat(antiCheat);
+            NetTransportPlan receivedPlan = null;
+            NetTransportFactories.Eos = (go, p) =>
             {
-                receivedOptions = o;
-                receivedCredentials = c;
+                receivedPlan = p;
                 // 本物の EOS transport は EOS plugin のアセンブリにあるので、ここでは別の transport で代える
                 return go.AddComponent<UnityTransport>();
             };
 
-            var manager = NetworkSetup.Configure(target, NetTransportPlan.Decide(options, credentials, null), CreatePlayerPrefab());
+            var manager = NetworkSetup.Configure(target, plan, CreatePlayerPrefab());
 
-            Assert.That(receivedOptions, Is.SameAs(options));
-            Assert.That(receivedCredentials, Is.SameAs(credentials));
+            Assert.That(receivedPlan, Is.SameAs(plan));
+            Assert.That(receivedPlan.Options, Is.SameAs(options));
+            Assert.That(receivedPlan.Credentials, Is.SameAs(credentials));
+            Assert.That(receivedPlan.AntiCheat, Is.SameAs(antiCheat));
             Assert.That(manager.NetworkConfig.NetworkTransport, Is.SameAs(target.GetComponent<NetworkTransport>()));
         }
 
@@ -217,7 +219,7 @@ namespace Fps.Net.Tests
         {
             var target = Create("Net");
             var elsewhere = Create("Elsewhere");
-            NetTransportFactories.Eos = (go, o, c) => elsewhere.AddComponent<UnityTransport>();
+            NetTransportFactories.Eos = (go, p) => elsewhere.AddComponent<UnityTransport>();
             var plan = NetTransportPlan.Decide(EosClientOptions(), Credentials(), null);
 
             Assert.Throws<InvalidOperationException>(() => NetworkSetup.Configure(target, plan, CreatePlayerPrefab()));
@@ -227,7 +229,7 @@ namespace Fps.Net.Tests
         public void FallbackPlanUsesUnityTransport()
         {
             var target = Create("Net");
-            NetTransportFactories.Eos = (go, o, c) => throw new AssertionException("EOS factory must not be used");
+            NetTransportFactories.Eos = (go, p) => throw new AssertionException("EOS factory must not be used");
             var plan = NetTransportPlan.Decide(EosClientOptions(), null, EosCredentials.VariableNames);
 
             var manager = NetworkSetup.Configure(target, plan, CreatePlayerPrefab());

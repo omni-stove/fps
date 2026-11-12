@@ -18,6 +18,7 @@ namespace Fps.NetEos
     /// 認証情報は <see cref="EosPlatform"/> が呼び出し側から受け取る。分割・再組み立て・ID の対応づけは Fps.Core 側
     /// (<see cref="PacketSplitter"/> / <see cref="PacketReassembler"/> / <see cref="PeerIdTable"/>) に任せ、
     /// ここは SDK の呼び出しと Netcode のイベントへの変換だけを行う。
+    /// Easy Anti-Cheat のパケットは別のチャネルで運び、<see cref="EosAntiCheat"/> に渡す (Netcode には渡さない)。
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class EosP2PTransport : NetworkTransport
@@ -44,6 +45,9 @@ namespace Fps.NetEos
         private const byte _reliableChannel = 1;
         private const byte _orderedChannel = 2;
 
+        /// <summary>Easy Anti-Cheat のパケット (<see cref="AntiCheatPacket"/>) だけを運ぶチャネル。Netcode のデータとは混ぜない。</summary>
+        private const byte _antiCheatChannel = 3;
+
         private readonly Queue<TransportEvent> _events = new Queue<TransportEvent>();
         private readonly PeerIdTable _peers = new PeerIdTable(_serverTransportId + 1);
         private readonly Dictionary<ulong, ProductUserId> _userIds = new Dictionary<ulong, ProductUserId>();
@@ -53,6 +57,8 @@ namespace Fps.NetEos
 
         private NetLaunchOptions _options;
         private EosCredentials _credentials;
+        private AntiCheatSettings _antiCheatSettings;
+        private EosAntiCheat _antiCheat;
         private SessionState _state;
         private bool _isServer;
         private P2PInterface _p2p;
@@ -87,7 +93,10 @@ namespace Fps.NetEos
         public string LocalUserId => _localUserId?.ToString();
 
         /// <summary>起動前に 1 回呼ぶ。<see cref="EosTransportInstaller"/> が呼ぶ。</summary>
-        public void Configure(NetLaunchOptions options, EosCredentials credentials)
+        /// <param name="options">起動設定。transport は EOS であること。</param>
+        /// <param name="credentials">EOS の認証情報。</param>
+        /// <param name="antiCheat">Easy Anti-Cheat の設定。</param>
+        public void Configure(NetLaunchOptions options, EosCredentials credentials, AntiCheatSettings antiCheat)
         {
             if (options == null)
             {
@@ -106,6 +115,7 @@ namespace Fps.NetEos
 
             _options = options;
             _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+            _antiCheatSettings = antiCheat ?? throw new ArgumentNullException(nameof(antiCheat));
         }
 
         public override void Initialize(NetworkManager networkManager = null)
@@ -224,6 +234,10 @@ namespace Fps.NetEos
             _login?.Cancel();
             _login = null;
 
+            // 相手の登録を外してセッションを終えてから接続を閉じる
+            _antiCheat?.End();
+            _antiCheat = null;
+
             if (_p2p != null && _localUserId != null)
             {
                 RemoveNotifications();
@@ -266,7 +280,7 @@ namespace Fps.NetEos
 
         private bool Begin(bool isServer)
         {
-            if (_options == null || _credentials == null)
+            if (_options == null || _credentials == null || _antiCheatSettings == null)
             {
                 Debug.LogError("[Net] EosP2PTransport.Configure was not called");
                 return false;
@@ -312,6 +326,8 @@ namespace Fps.NetEos
             }
 
             Initialize();
+            _antiCheat = new EosAntiCheat(
+                _antiCheatSettings.Enabled, SendAntiCheatPacket, RemoteUserIdOf, RemovePeerForAntiCheat, FailTransport);
             _state = SessionState.LoggingIn;
             _connectDeadline = Time.realtimeSinceStartup + ConnectTimeoutSeconds;
 
@@ -340,6 +356,14 @@ namespace Fps.NetEos
             if (!Subscribe())
             {
                 FailTransport("EOS P2P notifications could not be registered");
+                return;
+            }
+
+            // 相手とつながる前に始める。始められなければ (ブートストラッパーを通していないなど) 守られないまま遊ばせない
+            if (!_antiCheat.Begin(EosPlatform.Current, userId, out var antiCheatError))
+            {
+                Debug.LogError(AntiCheatSettings.LogTag + " " + antiCheatError);
+                FailTransport("anti-cheat could not start");
                 return;
             }
 
@@ -486,6 +510,11 @@ namespace Fps.NetEos
                 ReceivePackets();
             }
 
+            if (_state == SessionState.Ready)
+            {
+                _antiCheat?.Tick(Time.realtimeSinceStartupAsDouble);
+            }
+
             if (!_isServer && _state != SessionState.Idle && !_clientConnected && !_clientEnded
                 && Time.realtimeSinceStartup > _connectDeadline)
             {
@@ -507,7 +536,7 @@ namespace Fps.NetEos
             {
                 ProductUserId peer = null;
                 var socket = default(SocketId);
-                var result = _p2p.ReceivePacket(ref options, ref peer, ref socket, out _, buffer, out var written);
+                var result = _p2p.ReceivePacket(ref options, ref peer, ref socket, out var channel, buffer, out var written);
                 if (result == Result.NotFound)
                 {
                     return;
@@ -519,11 +548,11 @@ namespace Fps.NetEos
                     return;
                 }
 
-                HandlePacket(peer, new ArraySegment<byte>(_receiveBuffer, 0, (int)written));
+                HandlePacket(peer, channel, new ArraySegment<byte>(_receiveBuffer, 0, (int)written));
             }
         }
 
-        private void HandlePacket(ProductUserId peer, ArraySegment<byte> packet)
+        private void HandlePacket(ProductUserId peer, byte channel, ArraySegment<byte> packet)
         {
             if (peer == null)
             {
@@ -548,6 +577,13 @@ namespace Fps.NetEos
 
                 MarkClientConnected();
                 id = _serverTransportId;
+            }
+
+            if (channel == _antiCheatChannel)
+            {
+                // 受信バッファは次のパケットで上書きされるが、EosAntiCheat は渡したその場で使い切るか複製する
+                _antiCheat?.HandlePacket(id, packet);
+                return;
             }
 
             if (!_reassemblers.TryGetValue(id, out var reassembler))
@@ -580,6 +616,7 @@ namespace Fps.NetEos
             _reassemblers[id] = NewReassembler();
             Enqueue(NetworkEvent.Connect, id, default);
             Debug.Log("[Net] EOS peer connected id=" + id + " user=" + remote);
+            _antiCheat?.PeerConnected(id, Time.realtimeSinceStartupAsDouble);
         }
 
         private void ForgetPeer(ulong id)
@@ -587,6 +624,7 @@ namespace Fps.NetEos
             _peers.Remove(id);
             _userIds.Remove(id);
             _reassemblers.Remove(id);
+            _antiCheat?.PeerDisconnected(id);
         }
 
         private void MarkClientConnected()
@@ -599,6 +637,7 @@ namespace Fps.NetEos
             _clientConnected = true;
             Enqueue(NetworkEvent.Connect, _serverTransportId, default);
             Debug.Log("[Net] EOS connected to server " + _serverKey);
+            _antiCheat?.PeerConnected(_serverTransportId, Time.realtimeSinceStartupAsDouble);
         }
 
         /// <summary>クライアントとしての接続を終え、Netcode に切断 (接続前なら接続失敗) を伝える。</summary>
@@ -611,6 +650,7 @@ namespace Fps.NetEos
 
             _clientEnded = true;
             Debug.Log("[Net] EOS connection to " + _serverKey + " ended: " + reason);
+            _antiCheat?.PeerDisconnected(_serverTransportId);
             if (_p2p != null && _localUserId != null && _serverUserId != null)
             {
                 CloseConnection(_serverUserId);
@@ -665,15 +705,20 @@ namespace Fps.NetEos
 
         private void SendPacketToTarget(ArraySegment<byte> packet)
         {
+            SendOne(_sendTarget, _sendChannel, _sendReliability, packet);
+        }
+
+        private void SendOne(ProductUserId remote, byte channel, PacketReliability reliability, ArraySegment<byte> packet)
+        {
             var options = new SendPacketOptions
             {
                 LocalUserId = _localUserId,
-                RemoteUserId = _sendTarget,
+                RemoteUserId = remote,
                 SocketId = Socket(),
-                Channel = _sendChannel,
+                Channel = channel,
                 Data = packet,
                 AllowDelayedDelivery = true,
-                Reliability = _sendReliability,
+                Reliability = reliability,
                 // 接続は受け入れ・要求の手順でだけ開く。切断した相手への送信で勝手に開き直さない
                 DisableAutoAcceptConnection = true,
             };
@@ -686,9 +731,64 @@ namespace Fps.NetEos
             // 送れない状態が続くとフレームごとに出るので、最初と 256 回ごとにだけ出す
             if (_sendFailures++ % 256 == 0)
             {
-                Debug.LogWarning("[Net] EOS SendPacket to " + _sendTarget + " failed: " + result
+                Debug.LogWarning("[Net] EOS SendPacket to " + remote + " failed: " + result
                     + " (failures=" + _sendFailures + ")");
             }
+        }
+
+        /// <summary><see cref="EosAntiCheat"/> のパケットを、EAC 専用のチャネルで信頼性・順序つきで送る。</summary>
+        private void SendAntiCheatPacket(ulong id, ArraySegment<byte> packet)
+        {
+            if (_state != SessionState.Ready)
+            {
+                return;
+            }
+
+            var remote = RemoteUserIdOf(id);
+            if (remote == null || (!_isServer && _clientEnded))
+            {
+                return;
+            }
+
+            SendOne(remote, _antiCheatChannel, PacketReliability.ReliableOrdered, packet);
+        }
+
+        /// <summary>transport の ID の相手の ProductUserId。接続中の相手でなければ null。</summary>
+        private ProductUserId RemoteUserIdOf(ulong id)
+        {
+            if (_isServer)
+            {
+                return _userIds.TryGetValue(id, out var remote) ? remote : null;
+            }
+
+            return id == _serverTransportId ? _serverUserId : null;
+        }
+
+        /// <summary>
+        /// EAC が求めた切断。ホストでは相手を切断して Netcode に切断を伝え、クライアントではホストとの接続を終える。
+        /// </summary>
+        private void RemovePeerForAntiCheat(ulong id, string reason)
+        {
+            if (!_isServer)
+            {
+                if (id == _serverTransportId)
+                {
+                    EndClient("anti-cheat: " + reason);
+                }
+
+                return;
+            }
+
+            if (!_userIds.TryGetValue(id, out var remote))
+            {
+                return;
+            }
+
+            ForgetPeer(id);
+            CloseConnection(remote);
+            // Netcode が自分で切ったのではないので、切断を伝えてプレイヤーを片づけさせる
+            Enqueue(NetworkEvent.Disconnect, id, default);
+            Debug.Log("[Net] EOS removed peer id=" + id + " user=" + remote + " (anti-cheat: " + reason + ")");
         }
 
         private void Enqueue(NetworkEvent type, ulong clientId, ArraySegment<byte> payload)

@@ -127,7 +127,7 @@ namespace Fps.Net
                     transport = AddUnityTransport(target, options);
                     break;
                 case NetTransportKind.Eos:
-                    transport = AddEosTransport(target, options, plan.Credentials);
+                    transport = AddEosTransport(target, plan);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(plan), options.Transport, "unknown transport");
@@ -164,11 +164,11 @@ namespace Fps.Net
             return transport;
         }
 
-        private static NetworkTransport AddEosTransport(GameObject target, NetLaunchOptions options, EosCredentials credentials)
+        private static NetworkTransport AddEosTransport(GameObject target, NetTransportPlan plan)
         {
-            if (credentials == null)
+            if (plan.Credentials == null)
             {
-                throw new ArgumentException("EOS transport needs credentials", nameof(credentials));
+                throw new ArgumentException("EOS transport needs credentials", nameof(plan));
             }
 
             var factory = NetTransportFactories.Eos;
@@ -178,7 +178,7 @@ namespace Fps.Net
                     "the EOS transport is not in this build (is com.playeveryware.eos installed and Fps.NetEos compiled?)");
             }
 
-            var transport = factory(target, options, credentials);
+            var transport = factory(target, plan);
             if (transport == null || transport.gameObject != target)
             {
                 throw new InvalidOperationException("the EOS transport factory must add a transport to '" + target.name + "'");

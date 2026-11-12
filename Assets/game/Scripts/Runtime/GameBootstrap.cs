@@ -1,4 +1,5 @@
 using System;
+using Fps.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -32,10 +33,27 @@ namespace Fps.Runtime
 
         public static readonly Vector3 LightEuler = new Vector3(50f, -30f, 0f);
 
+        /// <summary>プレイヤーに付けるタグ。敵 (<see cref="EnemyAgent"/>) はこのタグで目標を探す。</summary>
+        public const string PlayerTag = EnemyAgent.TargetTag;
+
+        public const int PlayerMaxHealth = 100;
+
+        [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
+        private bool _createFloor = true;
+
         private BootstrapWorld _world;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
         public BootstrapWorld World => _world;
+
+        /// <summary>
+        /// <see cref="Build"/> で床を生成するか。シーン側に床 (NavMeshSurface を焼いたもの) があるときは false にする。
+        /// </summary>
+        public bool CreatesFloor
+        {
+            get => _createFloor;
+            set => _createFloor = value;
+        }
 
         private void Awake()
         {
@@ -67,10 +85,10 @@ namespace Fps.Runtime
             GameObject light = null;
             try
             {
-                floor = CreateFloor();
-                player = CreatePlayer(out var controller, out var camera, out var look);
+                floor = _createFloor ? CreateFloor() : null;
+                player = CreatePlayer(out var controller, out var camera, out var look, out var damageable);
                 light = CreateLight(out var lightComponent);
-                _world = new BootstrapWorld(floor, player, controller, camera, look, lightComponent);
+                _world = new BootstrapWorld(floor, player, controller, camera, look, lightComponent, damageable);
             }
             catch
             {
@@ -93,12 +111,22 @@ namespace Fps.Runtime
             return floor;
         }
 
-        private static GameObject CreatePlayer(out CharacterController controller, out Camera camera, out FirstPersonLook look)
+        private static GameObject CreatePlayer(
+            out CharacterController controller,
+            out Camera camera,
+            out FirstPersonLook look,
+            out Damageable damageable)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
                 ConfigurePlayer(player, out controller, out camera, out look);
+
+                // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
+                player.tag = PlayerTag;
+                damageable = player.AddComponent<Damageable>();
+                damageable.Initialize(PlayerName, PlayerMaxHealth);
+                player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
             }
             catch
             {
@@ -184,6 +212,7 @@ namespace Fps.Runtime
     /// <summary><see cref="GameBootstrap.Build"/> が生成したオブジェクト。</summary>
     public sealed class BootstrapWorld
     {
+        /// <summary>生成した床。<see cref="GameBootstrap.CreatesFloor"/> が false なら null。</summary>
         public GameObject Floor { get; }
         public GameObject Player { get; }
         public CharacterController Controller { get; }
@@ -191,13 +220,17 @@ namespace Fps.Runtime
         public FirstPersonLook Look { get; }
         public Light Light { get; }
 
+        /// <summary>プレイヤーの体力。敵の射撃はここに届く。</summary>
+        public Damageable PlayerDamageable { get; }
+
         public BootstrapWorld(
             GameObject floor,
             GameObject player,
             CharacterController controller,
             Camera camera,
             FirstPersonLook look,
-            Light light)
+            Light light,
+            Damageable playerDamageable)
         {
             Floor = floor;
             Player = player;
@@ -205,6 +238,7 @@ namespace Fps.Runtime
             Camera = camera;
             Look = look;
             Light = light;
+            PlayerDamageable = playerDamageable;
         }
     }
 }

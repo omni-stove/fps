@@ -91,6 +91,18 @@ namespace Fps.Core
             return Tag + " restart";
         }
 
+        /// <summary>試合が終わった後、次の試合が始まるまでの秒数 (小数 1 桁)。</summary>
+        /// <example><c>[Match] next match in=10.0s</c></example>
+        public static string NextMatch(float delaySeconds)
+        {
+            if (!(delaySeconds >= 0f) || float.IsInfinity(delaySeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(delaySeconds), delaySeconds, "delaySeconds must not be negative and must be finite");
+            }
+
+            return Tag + " next match in=" + delaySeconds.ToString("F1", CultureInfo.InvariantCulture) + "s";
+        }
+
         private static string SoloStateName(Match match)
         {
             switch (match.State)

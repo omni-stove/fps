@@ -38,6 +38,17 @@ namespace Fps.Tests.EditMode
         {
             if (_world != null)
             {
+                // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
+                if (_world.Hud != null)
+                {
+                    Object.DestroyImmediate(_world.Hud.gameObject);
+                }
+
+                if (_world.HudPanelSettings != null)
+                {
+                    Object.DestroyImmediate(_world.HudPanelSettings);
+                }
+
                 Object.DestroyImmediate(_world.Floor);
                 Object.DestroyImmediate(_world.Player);
                 Object.DestroyImmediate(_world.Light.gameObject);
@@ -45,6 +56,17 @@ namespace Fps.Tests.EditMode
             }
 
             Object.DestroyImmediate(_host);
+        }
+
+        [Test]
+        public void BeginShowsTheRemainingTimeOnTheHud()
+        {
+            var model = _world.Hud.Model;
+            Assert.That(model.TimeText, Is.EqualTo(HudFormat.Time(TimeLimit)));
+
+            _runner.Tick(11f);
+
+            Assert.That(model.TimeText, Is.EqualTo("00:19"));
         }
 
         [Test]

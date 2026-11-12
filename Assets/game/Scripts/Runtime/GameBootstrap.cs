@@ -11,7 +11,7 @@ namespace Fps.Runtime
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 子カメラ + <see cref="FirstPersonLook"/>
     /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
-    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)・ソロの試合 (<see cref="SoloMatchRunner"/>)
+    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// </summary>
@@ -63,7 +63,6 @@ namespace Fps.Runtime
         public const int TargetDummyMaxHealth = TargetDummy.DefaultMaxHealth;
         public const float TargetDummyRespawnDelay = TargetDummy.DefaultRespawnDelay;
 
-        public const string MatchName = "Match";
         public const string HudName = "HUD";
         public const string HudPanelSettingsName = "HudPanelSettings";
 
@@ -102,7 +101,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 床・プレイヤー・ライト・標的ダミー・試合・HUD を生成する。2 回目以降は何もせず最初の結果を返す。
+        /// 床・プレイヤー・ライト・標的ダミー・HUD を生成する。2 回目以降は何もせず最初の結果を返す。
         /// 途中で失敗したら作りかけのオブジェクトを片付けてから例外を投げ直す。
         /// </summary>
         public BootstrapWorld Build()
@@ -116,7 +115,6 @@ namespace Fps.Runtime
             GameObject player = null;
             GameObject light = null;
             GameObject targets = null;
-            GameObject match = null;
             GameObject hud = null;
             PanelSettings hudPanelSettings = null;
             try
@@ -125,30 +123,21 @@ namespace Fps.Runtime
                 player = CreatePlayer(out var controller, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
-                var targetDamageables = new Damageable[dummies.Length];
-                for (var i = 0; i < dummies.Length; i++)
-                {
-                    targetDamageables[i] = dummies[i].Damageable;
-                }
-
-                match = CreateMatch(playerDamageable, targetDamageables, out var matchRunner);
-
-                // 専用サーバーには画面が無いので HUD を作らない。
+                // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
                 Hud hudComponent = null;
                 if (!NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
                 {
-                    hud = CreateHud(playerDamageable, weapon, matchRunner.Match, out hudComponent, out hudPanelSettings);
+                    hud = CreateHud(playerDamageable, weapon, out hudComponent, out hudPanelSettings);
                 }
 
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
-                    matchRunner, hudComponent, hudPanelSettings);
+                    hudComponent, hudPanelSettings);
             }
             catch
             {
                 DestroySafely(hud);
                 DestroySafely(hudPanelSettings);
-                DestroySafely(match);
                 DestroySafely(targets);
                 DestroySafely(light);
                 DestroySafely(player);
@@ -320,23 +309,6 @@ namespace Fps.Runtime
             return root;
         }
 
-        private static GameObject CreateMatch(Damageable player, IReadOnlyList<Damageable> targets, out SoloMatchRunner runner)
-        {
-            var matchObject = new GameObject(MatchName);
-            try
-            {
-                runner = matchObject.AddComponent<SoloMatchRunner>();
-                runner.Initialize(player, targets, SoloMatchRunner.DefaultTimeLimitSeconds, SoloMatchRunner.DefaultKillsToWin);
-            }
-            catch
-            {
-                DestroySafely(matchObject);
-                throw;
-            }
-
-            return matchObject;
-        }
-
         /// <summary>
         /// HUD 用の PanelSettings と UIDocument を作り、Resources の Hud.uxml とテーマを読み込んで <see cref="Hud"/> に源を渡す。
         /// UIDocument が有効になる前に参照をすべて設定するため、GameObject は無効で作ってから有効にする。
@@ -344,7 +316,6 @@ namespace Fps.Runtime
         private static GameObject CreateHud(
             Damageable player,
             WeaponController weapon,
-            Match match,
             out Hud hud,
             out PanelSettings panelSettings)
         {
@@ -381,7 +352,7 @@ namespace Fps.Runtime
                 document.visualTreeAsset = layout;
 
                 hud = hudObject.AddComponent<Hud>();
-                hud.Initialize(player, weapon, match, panelSettings);
+                hud.Initialize(player, weapon, null, panelSettings);
 
                 // 有効にすると UIDocument が木を作り、Play 中は Hud の OnEnable が Label を探す。
                 // Edit Mode では Hud の OnEnable が走らないので、木ができていればここで探す。
@@ -452,9 +423,6 @@ namespace Fps.Runtime
         /// <summary>プレイヤーの体力。敵の射撃はここに届く。</summary>
         public Damageable PlayerDamageable { get; }
 
-        /// <summary>残り時間と勝敗を持つソロの試合。</summary>
-        public SoloMatchRunner Match { get; }
-
         /// <summary>HUD。専用サーバーでは作らないので null。</summary>
         public Hud Hud { get; }
 
@@ -473,11 +441,9 @@ namespace Fps.Runtime
             GameObject targetRoot,
             IReadOnlyList<TargetDummy> targets,
             Damageable playerDamageable,
-            SoloMatchRunner match,
             Hud hud,
             PanelSettings hudPanelSettings)
         {
-            Match = match;
             Hud = hud;
             HudPanelSettings = hudPanelSettings;
             Floor = floor;

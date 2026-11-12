@@ -48,7 +48,6 @@ namespace Fps.Tests.EditMode
                 Object.DestroyImmediate(world.HudPanelSettings);
             }
 
-            Object.DestroyImmediate(world.Match.gameObject);
             if (world.Floor != null)
             {
                 Object.DestroyImmediate(world.Floor);
@@ -265,32 +264,6 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void CreatesASoloMatchThatWaitsForPlay()
-        {
-            var runner = _world.Match;
-
-            Assert.That(runner, Is.Not.Null);
-            Assert.That(runner.name, Is.EqualTo(GameBootstrap.MatchName));
-            Assert.That(runner.Match.State, Is.EqualTo(GameModeState.Waiting), "the match starts in Start, which only runs in Play Mode");
-            Assert.That(runner.Match.RemainingSeconds, Is.EqualTo(SoloMatchRunner.DefaultTimeLimitSeconds));
-            Assert.That(runner.Match.KillsToWin, Is.EqualTo(SoloMatchRunner.DefaultKillsToWin));
-        }
-
-        [Test]
-        public void KillingAnyTargetDummyWinsTheMatch()
-        {
-            var match = _world.Match.Match;
-            match.Start();
-            var last = _world.Targets[_world.Targets.Count - 1];
-            LogAssert.Expect(LogType.Log, $"{Damageable.LogTag} target died id={last.Damageable.Id}");
-            LogAssert.Expect(LogType.Log, $"{SoloMatchRunner.LogTag} solo ended result={MatchResult.Won} kills=1");
-
-            last.Damageable.Kill();
-
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Won));
-        }
-
-        [Test]
         public void HudUsesAUIDocumentWithCodeBuiltPanelSettings()
         {
             var hud = _world.Hud;
@@ -311,20 +284,15 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void HudShowsThePlayerHealthAndTheMatchTime()
+        public void HudShowsThePlayerHealthAndWaitsForTheMatch()
         {
             var model = _world.Hud.Model;
 
             Assert.That(model.HealthText, Is.EqualTo(HudFormat.Health(GameBootstrap.PlayerMaxHealth)));
-            Assert.That(model.TimeText, Is.EqualTo(HudFormat.Time(SoloMatchRunner.DefaultTimeLimitSeconds)));
+            Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime), "MatchRunner binds the time when it begins the match");
 
             _world.PlayerDamageable.TakeDamage(25);
             Assert.That(model.HealthText, Is.EqualTo("75"));
-
-            var match = _world.Match.Match;
-            match.Start();
-            match.Tick(61f);
-            Assert.That(model.TimeText, Is.EqualTo("01:59"));
         }
 
         [Test]

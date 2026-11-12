@@ -6,6 +6,8 @@ namespace Fps.Core.Tests
 {
     public sealed class HealthTests
     {
+        private static readonly string[] _changedThenDied = { "changed:0", "died" };
+
         [Test]
         public void StartsFull()
         {
@@ -76,7 +78,7 @@ namespace Fps.Core.Tests
 
             health.TakeDamage(10);
 
-            Assert.That(order, Is.EqualTo(new[] { "changed:0", "died" }));
+            Assert.That(order, Is.EqualTo(_changedThenDied));
         }
 
         [Test]

@@ -42,7 +42,7 @@ namespace Fps.Runtime
         /// </summary>
         /// <param name="player">プレイヤーの体力。</param>
         /// <param name="weapon">プレイヤーの武器。未初期化 (Edit Mode など) なら初期化されたときに購読する。</param>
-        /// <param name="match">残り時間を出す試合。</param>
+        /// <param name="match">残り時間を出す試合。null なら後で <see cref="BindMatch"/> で渡す。</param>
         /// <param name="ownedPanelSettings">この HUD 用に作った PanelSettings。渡すと破棄時に一緒に消す。null 可。</param>
         public void Initialize(Damageable player, WeaponController weapon, Match match, PanelSettings ownedPanelSettings = null)
         {
@@ -67,6 +67,12 @@ namespace Fps.Runtime
             _model.BindMatch(match);
 
             RebuildView();
+        }
+
+        /// <summary>残り時間を出す試合を差し替える。null なら仮の表示に戻す。<see cref="MatchRunner"/> が試合を始めたときに呼ぶ。</summary>
+        public void BindMatch(Match match)
+        {
+            _model.BindMatch(match);
         }
 
         /// <summary>

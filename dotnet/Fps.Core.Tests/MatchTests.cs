@@ -7,6 +7,8 @@ namespace Fps.Core.Tests
     public sealed class MatchTests
     {
         private const int _player = 1;
+        private static readonly float[] _remainingAfterTicks = { 7.5f, 0f };
+        private static readonly string[] _remainingThenEnded = { "remaining", "Ended" };
         private const int _target = 100;
         private const int _otherTarget = 101;
 
@@ -117,7 +119,7 @@ namespace Fps.Core.Tests
             match.Tick(100f);
             match.Tick(1f);
 
-            Assert.That(reported, Is.EqualTo(new[] { 7.5f, 0f }));
+            Assert.That(reported, Is.EqualTo(_remainingAfterTicks));
         }
 
         [Test]
@@ -130,7 +132,7 @@ namespace Fps.Core.Tests
 
             match.Tick(1f);
 
-            Assert.That(order, Is.EqualTo(new[] { "remaining", "Ended" }));
+            Assert.That(order, Is.EqualTo(_remainingThenEnded));
         }
 
         [Test]

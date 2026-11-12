@@ -39,3 +39,6 @@ eos.local.json
 # EOS plugin のエディタ画面が認証情報ごと書き出す設定。このプロジェクトは使わない
 /[Aa]ssets/[Ss]treaming[Aa]ssets/EOS/
 /[Aa]ssets/[Ss]treaming[Aa]ssets/EOS.meta
+
+# Claude Code の worktree
+/.claude/worktrees/

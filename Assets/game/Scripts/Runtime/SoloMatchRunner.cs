@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -6,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// ソロの試合 (<see cref="Fps.Core.Match"/>) をシーンで進める。Play 開始時に <see cref="Fps.Core.Match.Start"/>、毎フレーム
-    /// <see cref="Fps.Core.Match.Tick"/> を呼び、プレイヤーの死亡と標的の死亡を報告する。勝敗の判断はすべて Match が行う。
+    /// <see cref="Fps.Core.Match.Tick"/> を呼び、プレイヤーの死亡と標的 (複数可) の死亡を報告する。勝敗の判断はすべて Match が行う。
     /// 参照は <see cref="Initialize"/> でコードから渡す (<see cref="GameBootstrap"/> が呼ぶ)。
     /// </summary>
     [DisallowMultipleComponent]
@@ -17,18 +18,18 @@ namespace Fps.Runtime
         /// <summary>制限時間の既定値 (3 分)。</summary>
         public const float DefaultTimeLimitSeconds = 180f;
 
-        /// <summary>勝利に必要なキル数の既定値。<see cref="GameBootstrap"/> の的は 1 体なので 1。</summary>
+        /// <summary>勝利に必要なキル数の既定値。どれか 1 体を倒せば勝ち。</summary>
         public const int DefaultKillsToWin = 1;
 
         /// <summary>Match に渡すプレイヤーの ID。</summary>
         public const int PlayerId = 0;
 
-        /// <summary>標的を倒したときに Match へ報告する ID。</summary>
+        /// <summary>最初の標的を倒したときに Match へ報告する ID。i 番目の標的は TargetId + i。</summary>
         public const int TargetId = 1;
 
         private Match _match;
         private Damageable _player;
-        private Damageable _target;
+        private readonly List<Damageable> _targets = new List<Damageable>();
 
         /// <summary>進めている試合。未初期化なら null。</summary>
         public Match Match => _match;
@@ -36,14 +37,14 @@ namespace Fps.Runtime
         public bool IsInitialized => _match != null;
 
         /// <summary>
-        /// 試合を作り、プレイヤーと標的の死亡を購読する。試合はまだ始めない (Play 開始時の Start で始める)。
+        /// 試合を作り、プレイヤーと標的たちの死亡を購読する。試合はまだ始めない (Play 開始時の Start で始める)。
         /// 引数が不正なら例外を投げ、前の状態は変えない。
         /// </summary>
         /// <param name="player">プレイヤーの体力。死んだら敗北。</param>
-        /// <param name="target">標的。倒すとキル 1 つ。null なら標的なし。</param>
+        /// <param name="targets">標的。どれかを倒すたびにキル 1 つ (復活して再び倒してもまた数える)。null や空なら標的なし。null の要素は飛ばす。</param>
         /// <param name="timeLimitSeconds">制限時間 (秒)。正の有限値。</param>
         /// <param name="killsToWin">勝利に必要なキル数。1 以上。</param>
-        public void Initialize(Damageable player, Damageable target, float timeLimitSeconds, int killsToWin)
+        public void Initialize(Damageable player, IReadOnlyList<Damageable> targets, float timeLimitSeconds, int killsToWin)
         {
             if (player == null)
             {
@@ -56,13 +57,22 @@ namespace Fps.Runtime
             Unsubscribe();
             _match = match;
             _player = player;
-            _target = target;
+            if (targets != null)
+            {
+                foreach (var target in targets)
+                {
+                    if (target != null && !_targets.Contains(target))
+                    {
+                        _targets.Add(target);
+                    }
+                }
+            }
 
             _match.StateChanged += OnStateChanged;
             _player.Died += OnPlayerDied;
-            if (_target != null)
+            foreach (var target in _targets)
             {
-                _target.Died += OnTargetDied;
+                target.Died += OnTargetDied;
             }
         }
 
@@ -100,10 +110,15 @@ namespace Fps.Runtime
                 _player.Died -= OnPlayerDied;
             }
 
-            if (_target != null)
+            foreach (var target in _targets)
             {
-                _target.Died -= OnTargetDied;
+                if (target != null)
+                {
+                    target.Died -= OnTargetDied;
+                }
             }
+
+            _targets.Clear();
         }
 
         private void OnStateChanged(GameModeState state)
@@ -125,7 +140,7 @@ namespace Fps.Runtime
 
         private void OnTargetDied(Damageable target)
         {
-            _match.ReportKill(PlayerId, TargetId);
+            _match.ReportKill(PlayerId, TargetId + _targets.IndexOf(target));
         }
     }
 }

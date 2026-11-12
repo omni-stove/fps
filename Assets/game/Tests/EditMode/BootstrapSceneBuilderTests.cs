@@ -97,6 +97,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(roots[0], Is.SameAs(bootstrap));
                 Assert.That(bootstrap.name, Is.EqualTo(BootstrapSceneBuilder.BootstrapObjectName));
                 Assert.That(bootstrap.GetComponent<GameBootstrap>(), Is.Not.Null);
+                Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null, "the bootstrap scene runs a solo match");
                 Assert.That(bootstrap.transform.childCount, Is.Zero, "everything else is built at runtime");
             }
             finally
@@ -134,6 +135,7 @@ namespace Fps.Tests.EditMode
                 var roots = scene.GetRootGameObjects();
                 Assert.That(roots, Has.Length.EqualTo(1));
                 Assert.That(roots[0].GetComponent<GameBootstrap>(), Is.Not.Null);
+                Assert.That(roots[0].GetComponent<MatchRunner>(), Is.Not.Null, $"rerun {nameof(BootstrapSceneBuilder)}.Build");
                 Assert.That(EditorBuildSettings.scenes, Is.Not.Empty);
                 Assert.That(EditorBuildSettings.scenes[0].path, Is.EqualTo(path));
             }

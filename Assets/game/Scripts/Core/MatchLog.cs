@@ -6,6 +6,7 @@ namespace Fps.Core
     /// <summary>
     /// チームデスマッチの <c>[Match]</c> 付きログの文言。サーバーとクライアントで同じ書式にし、
     /// 2 つのログを突き合わせてスコアが合うか確かめられるようにする。
+    /// ソロの試合 (<see cref="Match"/>) の状態ログ (<see cref="SoloState"/>) も同じタグで出す。
     /// </summary>
     public static class MatchLog
     {
@@ -65,6 +66,44 @@ namespace Fps.Core
                 + " at=(" + p.X.ToString("F2", CultureInfo.InvariantCulture)
                 + ", " + p.Y.ToString("F2", CultureInfo.InvariantCulture)
                 + ", " + p.Z.ToString("F2", CultureInfo.InvariantCulture) + ")";
+        }
+
+        /// <summary>
+        /// ソロの試合 (<see cref="Match"/>) の状態。終了後は state に勝敗 (Won / Lost) を、それまでは進行状態を書く。
+        /// remaining は残り時間 (秒、小数 1 桁)。
+        /// </summary>
+        /// <example><c>[Match] state=Won kills=10 remaining=12.3</c></example>
+        public static string SoloState(Match match)
+        {
+            if (match == null)
+            {
+                throw new ArgumentNullException(nameof(match));
+            }
+
+            return Tag + " state=" + SoloStateName(match)
+                + " kills=" + match.Kills.ToString(CultureInfo.InvariantCulture)
+                + " remaining=" + match.RemainingSeconds.ToString("F1", CultureInfo.InvariantCulture);
+        }
+
+        /// <example><c>[Match] restart</c></example>
+        public static string Restart()
+        {
+            return Tag + " restart";
+        }
+
+        private static string SoloStateName(Match match)
+        {
+            switch (match.State)
+            {
+                case GameModeState.Waiting:
+                    return "Waiting";
+                case GameModeState.Playing:
+                    return "Playing";
+                case GameModeState.Ended:
+                    return match.Result == MatchResult.Won ? "Won" : "Lost";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(match), match.State, "match has an unknown state");
+            }
         }
 
         private static string TeamName(Team team)

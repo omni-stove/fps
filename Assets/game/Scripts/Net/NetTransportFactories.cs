@@ -14,8 +14,8 @@ namespace Fps.Net
     {
         /// <summary>
         /// EOS P2P の transport を <c>target</c> に追加して返す。未登録 (EOS を含まないビルド) なら null。
-        /// 引数は追加先・起動設定 (transport は EOS)・認証情報。
+        /// 引数は追加先と、EOS を使う計画 (起動設定・認証情報・Easy Anti-Cheat の設定)。
         /// </summary>
-        public static Func<GameObject, NetLaunchOptions, EosCredentials, NetworkTransport> Eos { get; set; }
+        public static Func<GameObject, NetTransportPlan, NetworkTransport> Eos { get; set; }
     }
 }

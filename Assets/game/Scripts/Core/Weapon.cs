@@ -30,6 +30,28 @@ namespace Fps.Core
             ReserveAmmo = spec.ReserveAmmo;
         }
 
+        /// <summary>弾数を指定して作る。セーブデータから戻すときに使う。リロード中でも連射の待ち中でもない状態で始まる。</summary>
+        /// <param name="spec">武器の設定。</param>
+        /// <param name="ammoInMagazine">弾倉の弾数。0 以上 <see cref="WeaponSpec.MagazineSize"/> 以下。</param>
+        /// <param name="reserveAmmo">予備弾の数。0 以上。</param>
+        public Weapon(WeaponSpec spec, int ammoInMagazine, int reserveAmmo)
+            : this(spec)
+        {
+            if (ammoInMagazine < 0 || ammoInMagazine > spec.MagazineSize)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(ammoInMagazine), ammoInMagazine, "ammoInMagazine must be between 0 and the magazine size");
+            }
+
+            if (reserveAmmo < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(reserveAmmo), reserveAmmo, "reserveAmmo must not be negative");
+            }
+
+            AmmoInMagazine = ammoInMagazine;
+            ReserveAmmo = reserveAmmo;
+        }
+
         /// <summary>
         /// 弾があり、前回射撃から連射間隔が経過済みで、リロード中でなければ 1 発撃って true を返す。
         /// それ以外は何もせず false を返す。

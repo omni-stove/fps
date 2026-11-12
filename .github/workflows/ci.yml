@@ -100,6 +100,7 @@ jobs:
       id-token: write
     with:
       run-fix: true
+      run-merge: true  # CI Gate が通り approve した PR を agent App でマージする。止めるなら skip-automerge ラベル
       results: ${{ toJSON(needs) }}
       conflicted: ${{ needs.precheck.outputs.conflicted }}
       review-comments: ${{ needs.checks.outputs.review-comments }}

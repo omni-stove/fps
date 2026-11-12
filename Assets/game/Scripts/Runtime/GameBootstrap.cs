@@ -74,9 +74,9 @@ namespace Fps.Runtime
             }
             catch
             {
-                DestroyObject(light);
-                DestroyObject(player);
-                DestroyObject(floor);
+                DestroySafely(light);
+                DestroySafely(player);
+                DestroySafely(floor);
                 throw;
             }
 
@@ -102,7 +102,7 @@ namespace Fps.Runtime
             }
             catch
             {
-                DestroyObject(player);
+                DestroySafely(player);
                 throw;
             }
 
@@ -119,7 +119,7 @@ namespace Fps.Runtime
             player.transform.SetPositionAndRotation(PlayerSpawn, Quaternion.identity);
 
             // CharacterController 自体がカプセルのコライダーなので、プリミティブ付属のコライダーは二重になる。
-            DestroyObject(player.GetComponent<CapsuleCollider>());
+            DestroySafely(player.GetComponent<CapsuleCollider>());
 
             controller = player.AddComponent<CharacterController>();
             controller.height = PlayerHeight;
@@ -163,7 +163,7 @@ namespace Fps.Runtime
             return lightObject;
         }
 
-        private static void DestroyObject(UnityEngine.Object target)
+        private static void DestroySafely(UnityEngine.Object target)
         {
             if (target == null)
             {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fps.Core;
+using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
@@ -27,22 +28,23 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void DefaultsMatchTheWeaponControllerRifle()
+        public void DefaultsMatchTheRifle()
         {
             var spec = NewDefinition("Default").ToSpec();
+            var rifle = WeaponAssetBuilder.RifleSpec();
 
-            Assert.That(spec.Id, Is.EqualTo(WeaponController.DefaultWeaponId));
-            Assert.That(spec.DisplayName, Is.EqualTo(WeaponController.DefaultWeaponId));
-            Assert.That(spec.FireMode, Is.EqualTo(FireMode.Auto));
-            Assert.That(spec.MagazineSize, Is.EqualTo(WeaponController.DefaultMagazineSize));
-            Assert.That(spec.ReserveAmmo, Is.EqualTo(WeaponController.DefaultReserveAmmo));
-            Assert.That(spec.FireInterval, Is.EqualTo(WeaponController.DefaultFireInterval));
-            Assert.That(spec.ReloadSeconds, Is.EqualTo(WeaponController.DefaultReloadSeconds));
-            Assert.That(spec.Damage, Is.EqualTo(WeaponController.DefaultDamage));
-            Assert.That(spec.Range, Is.EqualTo(WeaponController.DefaultRange));
-            Assert.That(spec.Falloff.StartDistance, Is.EqualTo(WeaponController.DefaultFalloffStart));
-            Assert.That(spec.Falloff.EndDistance, Is.EqualTo(WeaponController.DefaultFalloffEnd));
-            Assert.That(spec.Falloff.MinMultiplier, Is.EqualTo(WeaponController.DefaultFalloffMinMultiplier));
+            Assert.That(spec.Id, Is.EqualTo(rifle.Id));
+            Assert.That(spec.DisplayName, Is.EqualTo(rifle.Id), "the display name is left empty and falls back to the id");
+            Assert.That(spec.FireMode, Is.EqualTo(rifle.FireMode));
+            Assert.That(spec.MagazineSize, Is.EqualTo(rifle.MagazineSize));
+            Assert.That(spec.ReserveAmmo, Is.EqualTo(rifle.ReserveAmmo));
+            Assert.That(spec.FireInterval, Is.EqualTo(rifle.FireInterval));
+            Assert.That(spec.ReloadSeconds, Is.EqualTo(rifle.ReloadSeconds));
+            Assert.That(spec.Damage, Is.EqualTo(rifle.Damage));
+            Assert.That(spec.Range, Is.EqualTo(rifle.Range));
+            Assert.That(spec.Falloff.StartDistance, Is.EqualTo(rifle.Falloff.StartDistance));
+            Assert.That(spec.Falloff.EndDistance, Is.EqualTo(rifle.Falloff.EndDistance));
+            Assert.That(spec.Falloff.MinMultiplier, Is.EqualTo(rifle.Falloff.MinMultiplier));
         }
 
         [Test]

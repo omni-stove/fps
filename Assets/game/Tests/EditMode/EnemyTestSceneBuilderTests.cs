@@ -62,11 +62,31 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ActorsAreWiredInCode()
         {
-            var agent = EnemyTestSceneBuilder.CreateActors(_scene);
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                AssertActorsAreWired(EnemyTestSceneBuilder.CreateActors(_scene, rifle), rifle);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(rifle);
+            }
+        }
 
+        [Test]
+        public void ActorsNeedAWeapon()
+        {
+            Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, null));
+            Assert.That(_scene.rootCount, Is.Zero);
+        }
+
+        private void AssertActorsAreWired(EnemyAgent agent, WeaponDefinition rifle)
+        {
             var bootstrap = Find(EnemyTestSceneBuilder.BootstrapObjectName).GetComponent<GameBootstrap>();
             Assert.That(bootstrap, Is.Not.Null);
             Assert.That(bootstrap.CreatesFloor, Is.False, "the scene's own floor carries the baked NavMesh");
+            Assert.That(bootstrap.WeaponDefinition, Is.SameAs(rifle), "the player shoots the rifle");
+            Assert.That(agent.WeaponDefinition, Is.SameAs(rifle), "the enemy shoots the rifle");
 
             Assert.That(agent.name, Is.EqualTo(EnemyTestSceneBuilder.EnemyName));
             Assert.That(agent.gameObject.scene, Is.EqualTo(_scene));
@@ -166,6 +186,10 @@ namespace Fps.Tests.EditMode
             Assert.That(AssetDatabase.GetAssetPath(surface.navMeshData), Is.EqualTo(EnemyTestSceneBuilder.NavMeshDataPath));
             Assert.That(agent, Is.Not.Null);
             Assert.That(agent.PatrolRoute, Is.Not.Empty);
+
+            var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);
+            Assert.That(rifle, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
+            Assert.That(agent.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(EnemyTestSceneBuilder)}.Build");
         }
 
         private GameObject Find(string name)

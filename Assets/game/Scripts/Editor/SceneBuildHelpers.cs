@@ -380,6 +380,7 @@ namespace Fps.Editor
         /// <summary>
         /// カプセルの敵 (<see cref="EnemyAgent"/>、NavMeshAgent、Damageable、胴の Hitbox) を feet (足元) に置く。
         /// patrolRoute が空なら Idle のまま、その場で待つ。parent が null ならシーンの直下に置く。
+        /// 敵は weapon の武器で撃つ (<see cref="EnemyAgent.WeaponDefinition"/> に配線する)。
         /// </summary>
         public static EnemyAgent CreateEnemy(
             Scene scene,
@@ -389,11 +390,17 @@ namespace Fps.Editor
             Vector3 feet,
             Quaternion rotation,
             IReadOnlyList<Vector3> patrolRoute,
-            EnemyBody body)
+            EnemyBody body,
+            WeaponDefinition weapon)
         {
             if (patrolRoute == null)
             {
                 throw new ArgumentNullException(nameof(patrolRoute));
+            }
+
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
             }
 
             var capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -423,6 +430,7 @@ namespace Fps.Editor
 
             var agent = capsule.AddComponent<EnemyAgent>();
             agent.Id = id;
+            agent.WeaponDefinition = weapon;
             agent.SetPatrolRoute(patrolRoute);
             return agent;
         }

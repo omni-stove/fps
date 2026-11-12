@@ -17,6 +17,7 @@ namespace Fps.Tests.EditMode
         private const string Bootstrap = "Assets/game/Scenes/Bootstrap.unity";
 
         private MissionDefinition _definition;
+        private WeaponDefinition _rifle;
         private Scene _scene;
 
         [SetUp]
@@ -25,6 +26,7 @@ namespace Fps.Tests.EditMode
             _definition = ScriptableObject.CreateInstance<MissionDefinition>();
             _definition.name = "TestMission";
             MissionTestSceneBuilder.Configure(_definition);
+            _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
         }
 
@@ -33,6 +35,7 @@ namespace Fps.Tests.EditMode
         {
             EditorSceneManager.CloseScene(_scene, true);
             Object.DestroyImmediate(_definition);
+            Object.DestroyImmediate(_rifle);
         }
 
         [Test]
@@ -52,10 +55,11 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PopulatedSceneIsWiredInCode()
         {
-            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition);
+            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle);
 
             Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(5));
             Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>(), Is.Not.Null);
+            Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>().WeaponDefinition, Is.SameAs(_rifle));
             Assert.That(layout.Runner.Definition, Is.SameAs(_definition));
 
             Assert.That(layout.ReachArea.ObjectiveId, Is.EqualTo(MissionTestSceneBuilder.ReachAreaId));
@@ -79,7 +83,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AreaTriggerStandsOnTheFloorAndIsTallerThanThePlayer()
         {
-            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition);
+            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle);
             var collider = layout.ReachArea.GetComponent<BoxCollider>();
             var transform = collider.transform;
 
@@ -95,7 +99,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void GeneratedLayoutCanBeCompletedInOrder()
         {
-            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition);
+            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle);
             var player = new GameObject("Player");
             try
             {
@@ -137,14 +141,21 @@ namespace Fps.Tests.EditMode
         {
             SceneManager.MoveGameObjectToScene(new GameObject("Stray"), _scene);
 
-            Assert.Throws<InvalidOperationException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition));
+            Assert.Throws<InvalidOperationException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle));
             Assert.That(_scene.rootCount, Is.EqualTo(1), "nothing is left behind");
         }
 
         [Test]
         public void RefusesToPopulateWithoutDefinition()
         {
-            Assert.Throws<ArgumentNullException>(() => MissionTestSceneBuilder.PopulateScene(_scene, null));
+            Assert.Throws<ArgumentNullException>(() => MissionTestSceneBuilder.PopulateScene(_scene, null, _rifle));
+            Assert.That(_scene.rootCount, Is.Zero);
+        }
+
+        [Test]
+        public void RefusesToPopulateWithoutAWeapon()
+        {
+            Assert.Throws<ArgumentNullException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, null));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
@@ -210,16 +221,23 @@ namespace Fps.Tests.EditMode
             try
             {
                 MissionRunner runner = null;
+                GameBootstrap bootstrap = null;
                 var triggers = 0;
                 foreach (var root in scene.GetRootGameObjects())
                 {
                     runner = runner != null ? runner : root.GetComponent<MissionRunner>();
+                    bootstrap = bootstrap != null ? bootstrap : root.GetComponent<GameBootstrap>();
                     triggers += root.GetComponents<ReachAreaTrigger>().Length;
                 }
 
                 Assert.That(runner, Is.Not.Null);
                 Assert.That(runner.Definition, Is.SameAs(definition));
                 Assert.That(triggers, Is.EqualTo(2));
+
+                var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);
+                Assert.That(rifle, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
+                Assert.That(bootstrap, Is.Not.Null);
+                Assert.That(bootstrap.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(MissionTestSceneBuilder)}.Build");
             }
             finally
             {

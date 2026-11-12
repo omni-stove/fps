@@ -84,6 +84,9 @@ namespace Fps.Editor
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
 
+            // 武器のアセットが無ければ何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            var rifle = WeaponAssetBuilder.LoadRifle();
+
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
 
@@ -93,7 +96,7 @@ namespace Fps.Editor
             var surface = CreateLevel(scene);
             BakeNavMesh(surface, navMeshDataPath);
             SceneBuildHelpers.RequireOnNavMesh(PatrolRoute, NavMeshCheckRadius, "patrol point");
-            CreateActors(scene);
+            CreateActors(scene, rifle);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -138,15 +141,21 @@ namespace Fps.Editor
 
         /// <summary>
         /// GameBootstrap (床は作らない) と敵 1 体を置く。敵は巡回路の最初の地点に立たせる。参照はすべてここで設定する。
+        /// プレイヤーと敵はどちらも weapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で撃つ。
         /// </summary>
-        public static EnemyAgent CreateActors(Scene scene)
+        public static EnemyAgent CreateActors(Scene scene, WeaponDefinition weapon)
         {
             SceneBuildHelpers.RequireLoaded(scene);
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
 
             var bootstrapObject = new GameObject(BootstrapObjectName);
             SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
             var bootstrap = bootstrapObject.AddComponent<GameBootstrap>();
             bootstrap.CreatesFloor = false;
+            bootstrap.WeaponDefinition = weapon;
 
             var enemy = SceneBuildHelpers.CreateEnemy(
                 scene,
@@ -156,7 +165,8 @@ namespace Fps.Editor
                 PatrolRoute[0],
                 Quaternion.LookRotation(PatrolRoute[1] - PatrolRoute[0], Vector3.up),
                 PatrolRoute,
-                new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth));
+                new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth),
+                weapon);
             EditorSceneManager.MarkSceneDirty(scene);
             return enemy;
         }

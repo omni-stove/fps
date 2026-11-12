@@ -45,6 +45,9 @@ namespace Fps.Editor
         {
             path = ValidateScenePath(path);
 
+            // 武器のアセットが無ければ何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            var rifle = WeaponAssetBuilder.LoadRifle();
+
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
             {
@@ -52,7 +55,7 @@ namespace Fps.Editor
             }
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            PopulateScene(scene);
+            PopulateScene(scene, rifle);
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {
@@ -66,13 +69,19 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 空のシーンに GameBootstrap と MatchRunner を置いた GameObject を 1 つだけ入れる。参照は実行時にコードで解決するので配線はしない。
+        /// 空のシーンに GameBootstrap と MatchRunner を置いた GameObject を 1 つだけ入れ、プレイヤーの武器の定義 weapon
+        /// (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) を GameBootstrap に配線する。残りの参照は実行時にコードで解決する。
         /// </summary>
-        public static GameObject PopulateScene(Scene scene)
+        public static GameObject PopulateScene(Scene scene, WeaponDefinition weapon)
         {
             if (!scene.IsValid() || !scene.isLoaded)
             {
                 throw new ArgumentException("scene must be a valid, loaded scene", nameof(scene));
+            }
+
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
             }
 
             if (scene.rootCount != 0)
@@ -83,6 +92,7 @@ namespace Fps.Editor
 
             // MatchRunner は Start で同じ GameObject の GameBootstrap が Awake で作ったものを拾うので、ここでの配線は要らない。
             var bootstrap = new GameObject(BootstrapObjectName, typeof(GameBootstrap), typeof(MatchRunner));
+            bootstrap.GetComponent<GameBootstrap>().WeaponDefinition = weapon;
             SceneManager.MoveGameObjectToScene(bootstrap, scene);
             EditorSceneManager.MarkSceneDirty(scene);
             return bootstrap;

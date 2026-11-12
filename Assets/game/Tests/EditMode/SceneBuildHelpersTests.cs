@@ -91,10 +91,42 @@ namespace Fps.Tests.EditMode
             var feet = new Vector3(2f, 0f, 5f);
             var rotation = SceneBuildHelpers.FacingTowards(feet, feet + Vector3.left);
 
-            var agent = SceneBuildHelpers.CreateEnemy(
-                _scene, parent.transform, "Enemy", "enemy", feet, rotation, Array.Empty<Vector3>(), new EnemyBody(2f, 0.5f, 3.5f, 80));
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                var agent = SceneBuildHelpers.CreateEnemy(
+                    _scene,
+                    parent.transform,
+                    "Enemy",
+                    "enemy",
+                    feet,
+                    rotation,
+                    Array.Empty<Vector3>(),
+                    new EnemyBody(2f, 0.5f, 3.5f, 80),
+                    rifle);
 
-            Assert.That(agent.transform.parent, Is.SameAs(parent.transform));
+                AssertStandsOnItsFeet(agent, parent.transform, feet);
+                Assert.That(agent.WeaponDefinition, Is.SameAs(rifle));
+            }
+            finally
+            {
+                Object.DestroyImmediate(rifle);
+            }
+        }
+
+        [Test]
+        public void EnemyNeedsAWeaponDefinition()
+        {
+            Assert.Throws<ArgumentNullException>(
+                () => SceneBuildHelpers.CreateEnemy(
+                    _scene, null, "Enemy", "enemy", Vector3.zero, Quaternion.identity, Array.Empty<Vector3>(),
+                    new EnemyBody(2f, 0.5f, 3.5f, 80), null));
+            Assert.That(_scene.rootCount, Is.Zero, "nothing is placed when the weapon is missing");
+        }
+
+        private void AssertStandsOnItsFeet(EnemyAgent agent, Transform parent, Vector3 feet)
+        {
+            Assert.That(agent.transform.parent, Is.SameAs(parent));
             Assert.That(agent.gameObject.scene, Is.EqualTo(_scene));
             Assert.That(agent.PatrolRoute, Is.Empty);
             var navAgent = agent.GetComponent<NavMeshAgent>();

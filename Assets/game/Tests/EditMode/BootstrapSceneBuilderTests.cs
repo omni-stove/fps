@@ -88,38 +88,46 @@ namespace Fps.Tests.EditMode
         public void PopulatedSceneHoldsOnlyTheBootstrap()
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             try
             {
-                var bootstrap = BootstrapSceneBuilder.PopulateScene(scene);
+                var bootstrap = BootstrapSceneBuilder.PopulateScene(scene, rifle);
 
                 var roots = scene.GetRootGameObjects();
                 Assert.That(roots, Has.Length.EqualTo(1));
                 Assert.That(roots[0], Is.SameAs(bootstrap));
                 Assert.That(bootstrap.name, Is.EqualTo(BootstrapSceneBuilder.BootstrapObjectName));
                 Assert.That(bootstrap.GetComponent<GameBootstrap>(), Is.Not.Null);
+                Assert.That(bootstrap.GetComponent<GameBootstrap>().WeaponDefinition, Is.SameAs(rifle), "the player's weapon is wired");
                 Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null, "the bootstrap scene runs a solo match");
                 Assert.That(bootstrap.transform.childCount, Is.Zero, "everything else is built at runtime");
             }
             finally
             {
                 EditorSceneManager.CloseScene(scene, true);
+                UnityEngine.Object.DestroyImmediate(rifle);
             }
         }
 
         [Test]
-        public void RefusesToPopulateANonEmptyScene()
+        public void RefusesToPopulateANonEmptySceneOrWithoutAWeapon()
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             try
             {
+                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.PopulateScene(scene, null));
+                Assert.That(scene.rootCount, Is.Zero);
+
                 var stray = new GameObject("Stray");
                 SceneManager.MoveGameObjectToScene(stray, scene);
 
-                Assert.Throws<InvalidOperationException>(() => BootstrapSceneBuilder.PopulateScene(scene));
+                Assert.Throws<InvalidOperationException>(() => BootstrapSceneBuilder.PopulateScene(scene, rifle));
             }
             finally
             {
                 EditorSceneManager.CloseScene(scene, true);
+                UnityEngine.Object.DestroyImmediate(rifle);
             }
         }
 
@@ -136,6 +144,10 @@ namespace Fps.Tests.EditMode
                 Assert.That(roots, Has.Length.EqualTo(1));
                 Assert.That(roots[0].GetComponent<GameBootstrap>(), Is.Not.Null);
                 Assert.That(roots[0].GetComponent<MatchRunner>(), Is.Not.Null, $"rerun {nameof(BootstrapSceneBuilder)}.Build");
+                Assert.That(
+                    roots[0].GetComponent<GameBootstrap>().WeaponDefinition,
+                    Is.SameAs(AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath)).And.Not.Null,
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build");
                 Assert.That(EditorBuildSettings.scenes, Is.Not.Empty);
                 Assert.That(EditorBuildSettings.scenes[0].path, Is.EqualTo(path));
             }

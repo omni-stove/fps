@@ -47,6 +47,38 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void LoadDefinitionReturnsTheBuiltAsset()
+        {
+            Build();
+
+            var rifle = WeaponAssetBuilder.LoadDefinition(_riflePath);
+
+            Assert.That(rifle, Is.SameAs(AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_riflePath)));
+            Assert.That(rifle.ToSpec().Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+        }
+
+        [Test]
+        public void LoadDefinitionRejectsAMissingOrWrongAsset()
+        {
+            Assert.Throws<InvalidOperationException>(() => WeaponAssetBuilder.LoadDefinition(_riflePath));
+            Assert.Throws<ArgumentException>(() => WeaponAssetBuilder.LoadDefinition("Rifle.asset"));
+
+            Build();
+            Assert.Throws<InvalidOperationException>(
+                () => WeaponAssetBuilder.LoadDefinition(_catalogPath), "a catalog is not a weapon definition");
+        }
+
+        [Test]
+        public void LoadDefinitionRejectsAnInvalidAsset()
+        {
+            Build();
+            var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_riflePath);
+            rifle.MagazineSize = 0;
+
+            Assert.Throws<WeaponDefinitionException>(() => WeaponAssetBuilder.LoadDefinition(_riflePath));
+        }
+
+        [Test]
         public void BuildsRifleHandgunAndCatalogInThatOrder()
         {
             Build();

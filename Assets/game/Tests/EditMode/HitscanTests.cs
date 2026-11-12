@@ -196,6 +196,38 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void FireReportsTheShooterPositionToTheTarget()
+        {
+            var target = CreateTarget("dummy", new Vector3(0f, 1f, 10f), HitZone.Body);
+            var shooter = new GameObject("Shooter");
+            _created.Add(shooter);
+            shooter.transform.position = new Vector3(0f, 0f, -1f);
+            var reports = new List<DamageReport>();
+            target.Damaged += (_, report) => reports.Add(report);
+
+            Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, shooter.transform);
+            Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, null);
+
+            Assert.That(reports, Has.Count.EqualTo(2));
+            Assert.That(reports[0].Amount, Is.EqualTo(10));
+            Assert.That(reports[0].SourcePosition, Is.EqualTo(shooter.transform.position));
+            Assert.That(reports[1].SourcePosition.HasValue, Is.False, "no shooter, no position");
+        }
+
+        [Test]
+        public void PerceptionPassesTheNoisePosition()
+        {
+            var perception = EnemySenses.Perceive(Vector3.zero, _eye, null, 20f, null, new Vector3(1f, 0f, -4f));
+
+            Assert.That(perception.HeardNoise, Is.True);
+            Assert.That(perception.NoisePosition, Is.EqualTo(new System.Numerics.Vector3(1f, 0f, -4f)));
+
+            var quiet = EnemySenses.Perceive(Vector3.zero, _eye, null, 20f, null);
+            Assert.That(quiet.HeardNoise, Is.False);
+            Assert.That(quiet.NoisePosition.HasValue, Is.False);
+        }
+
+        [Test]
         public void PerceptionReportsGroundPositionsAndSight()
         {
             var target = CreateTarget("player", new Vector3(0f, 1f, 10f), HitZone.Body);

@@ -82,6 +82,33 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void DamagedReportsTheAmountAndSourceWhileAlive()
+        {
+            _damageable.Initialize("dummy", 20);
+            var reports = new System.Collections.Generic.List<DamageReport>();
+            _damageable.Damaged += (d, report) =>
+            {
+                Assert.That(d, Is.SameAs(_damageable));
+                reports.Add(report);
+            };
+            var source = new Vector3(1f, 0f, -5f);
+
+            _damageable.TakeDamage(5, source);
+            _damageable.ApplyHit(10, Fps.Core.HitZone.Body, 0f, Fps.Core.DamageFalloff.None);
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=dummy");
+            _damageable.TakeDamage(15, source);
+            _damageable.TakeDamage(15, source);
+
+            Assert.That(reports, Has.Count.EqualTo(3), "the killing blow is reported, damage after death is not");
+            Assert.That(reports[0].Amount, Is.EqualTo(5));
+            Assert.That(reports[0].SourcePosition, Is.EqualTo(source));
+            Assert.That(reports[1].Amount, Is.EqualTo(10));
+            Assert.That(reports[1].SourcePosition.HasValue, Is.False);
+            Assert.That(reports[2].Amount, Is.EqualTo(15));
+            Assert.That(reports[2].SourcePosition, Is.EqualTo(source));
+        }
+
+        [Test]
         public void ReinitializingDoesNotNotifyTwice()
         {
             _damageable.Initialize("a", 10);

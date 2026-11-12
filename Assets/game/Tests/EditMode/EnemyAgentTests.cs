@@ -118,6 +118,79 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ShotFromBehindWhilePatrollingSearchesTowardsTheShooter()
+        {
+            var damageable = PrepareShootableEnemy(Damageable.DefaultMaxHealth);
+            _agent.SetPatrolRoute(new[] { new Vector3(0f, 0f, 5f), new Vector3(5f, 0f, 5f) });
+            Assert.That(_agent.State, Is.EqualTo(EnemyState.Patrol));
+
+            // 敵は +z を向いて巡回しているので、-z 側は視界の外 (目標もいない)。
+            var shooter = new GameObject("Shooter");
+            try
+            {
+                shooter.transform.position = new Vector3(0f, 0f, -10f);
+
+                var result = Hitscan.Fire(new Vector3(0f, 1f, -10f), Vector3.forward, 50f, 10, DamageFalloff.None, shooter.transform);
+                Assert.That(result.Damage, Is.EqualTo(10));
+                Assert.That(damageable.Health.Current, Is.EqualTo(Damageable.DefaultMaxHealth - 10));
+
+                var perception = _agent.Perceive();
+                Assert.That(perception.HeardNoise, Is.True);
+                Assert.That(perception.NoisePosition, Is.EqualTo(shooter.transform.position.ToNumerics()));
+
+                LogAssert.Expect(LogType.Log, "[AI] id=enemy-1 state=Search prev=Patrol");
+                var decision = _agent.Brain.Tick(0.1f, perception);
+
+                Assert.That(_agent.State, Is.EqualTo(EnemyState.Search));
+                Assert.That(decision.MoveTo, Is.EqualTo(shooter.transform.position.ToNumerics()));
+                Assert.That(decision.MoveTo.Value.Z, Is.LessThan(_host.transform.position.z), "heads behind itself, towards the shooter");
+
+                Assert.That(_agent.Perceive().HeardNoise, Is.False, "the hit is used for one perception only");
+            }
+            finally
+            {
+                Object.DestroyImmediate(shooter);
+            }
+        }
+
+        [Test]
+        public void DamageWithoutAShooterPositionIsNotHeard()
+        {
+            var damageable = PrepareShootableEnemy(Damageable.DefaultMaxHealth);
+
+            damageable.TakeDamage(10);
+
+            Assert.That(_agent.Perceive().HeardNoise, Is.False);
+        }
+
+        [Test]
+        public void DeadEnemyDoesNotReactToBeingShot()
+        {
+            var damageable = PrepareShootableEnemy(10);
+            _agent.SetPatrolRoute(new[] { new Vector3(0f, 0f, 5f) });
+
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=enemy-1");
+            LogAssert.Expect(LogType.Log, "[AI] id=enemy-1 state=Dead prev=Patrol");
+            damageable.TakeDamage(10, new Vector3(0f, 0f, -10f));
+            damageable.TakeDamage(5, new Vector3(0f, 0f, -10f));
+
+            Assert.That(_agent.State, Is.EqualTo(EnemyState.Dead));
+            Assert.That(_agent.Perceive().HeardNoise, Is.False);
+
+            var decision = _agent.Brain.Tick(0.1f, _agent.Perceive());
+            Assert.That(decision.MoveTo.HasValue, Is.False);
+            Assert.That(decision.LookAt.HasValue, Is.False);
+            Assert.That(decision.Fire, Is.False);
+            Assert.That(_agent.State, Is.EqualTo(EnemyState.Dead));
+        }
+
+        [Test]
+        public void PerceiveRequiresInitialization()
+        {
+            Assert.Throws<System.InvalidOperationException>(() => _agent.Perceive());
+        }
+
+        [Test]
         public void GroundAndEyePositionsUseTheBaseOffset()
         {
             _host.GetComponent<NavMeshAgent>().baseOffset = 1f;
@@ -134,6 +207,20 @@ namespace Fps.Tests.EditMode
             Assert.That(
                 EnemyAgent.FormatStateLog("enemy-2", EnemyState.Chase, EnemyState.Search),
                 Is.EqualTo("[AI] id=enemy-2 state=Search prev=Chase"));
+        }
+
+        // 原点に立つ (足元 y=0) 撃てる敵を用意して初期化する。胴の Hitbox を付けて Raycast が当たるようにする。
+        private Damageable PrepareShootableEnemy(int maxHealth)
+        {
+            _agent.Id = "enemy-1";
+            _host.transform.SetPositionAndRotation(new Vector3(0f, 1f, 0f), Quaternion.identity);
+            _host.GetComponent<NavMeshAgent>().baseOffset = 1f;
+            var damageable = _host.GetComponent<Damageable>();
+            damageable.Initialize("enemy-1", maxHealth);
+            _host.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
+            Physics.SyncTransforms();
+            Assert.That(_agent.TryInitialize(), Is.True);
+            return damageable;
         }
     }
 }

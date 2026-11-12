@@ -69,6 +69,36 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BuiltIsRaisedOnceWithTheWorld()
+        {
+            var host = new GameObject("Bootstrap-Built");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                var received = new System.Collections.Generic.List<BootstrapWorld>();
+                bootstrap.Built += _ => throw new System.InvalidOperationException("a broken subscriber");
+                bootstrap.Built += received.Add;
+
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                LogAssert.Expect(LogType.Exception, new System.Text.RegularExpressions.Regex("a broken subscriber"));
+                world = bootstrap.Build();
+
+                Assert.That(received, Is.EqualTo(new[] { world }), "a throwing subscriber does not stop the others");
+                Assert.That(bootstrap.World, Is.SameAs(world), "a throwing subscriber does not fail the build");
+
+                Assert.That(bootstrap.Build(), Is.SameAs(world));
+                Assert.That(received, Has.Count.EqualTo(1), "raised only when the world is first built");
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
         public void CreatesFloorPlane()
         {
             var floor = _world.Floor;

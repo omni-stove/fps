@@ -31,6 +31,29 @@ namespace Fps.Tests.EditMode
             Assert.That(root.Q<Label>(HudView.AmmoLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.TimeLabelName), Is.Not.Null);
             Assert.That(root.Q<VisualElement>(HudView.CrosshairName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.NoticeLabelName), Is.Not.Null);
+        }
+
+        [Test]
+        public void TheNoticeIsHiddenWhileEmptyAndShownWhileItHasText()
+        {
+            var model = new HudModel();
+            var notice = new CampaignNotice();
+            model.BindNotice(notice);
+            var view = new HudView(CloneLayout(), model);
+
+            Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            notice.ShowSaved(1f);
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(HudFormat.CheckpointSaved));
+            Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            notice.ShowRestartCountdown(2f);
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(HudFormat.CheckpointRestart(2)));
+
+            notice.Clear();
+            Assert.That(view.NoticeLabel.text, Is.Empty);
+            Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 
         [Test]

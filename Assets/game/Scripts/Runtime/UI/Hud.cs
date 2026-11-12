@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// HUD (左下に体力、右下に弾倉/予備、上中央に残り時間、中央に照準)。同じ GameObject の <see cref="UIDocument"/> に出す。
+    /// HUD (左下に体力、右下に弾倉/予備、上中央に残り時間とその下に一時的な案内、中央に照準)。同じ GameObject の <see cref="UIDocument"/> に出す。
     /// 値の源 (プレイヤーの <see cref="Damageable"/>・<see cref="WeaponController"/>・<see cref="Fps.Core.Match"/>) は
     /// <see cref="Initialize"/> でコードから渡す。値はそれぞれのイベントで <see cref="HudModel"/> が更新し、
     /// <see cref="HudView"/> が Label に写す。毎フレームは読みに行かない。
@@ -73,6 +73,15 @@ namespace Fps.Runtime
         public void BindMatch(Match match)
         {
             _model.BindMatch(match);
+        }
+
+        /// <summary>
+        /// 一時的な案内の源を差し替える。null なら案内を消す。<see cref="CampaignRunner"/> がキャンペーンを始めたときに呼び、
+        /// 止めるときに null で外す。
+        /// </summary>
+        public void BindNotice(CampaignNotice notice)
+        {
+            _model.BindNotice(notice);
         }
 
         /// <summary>

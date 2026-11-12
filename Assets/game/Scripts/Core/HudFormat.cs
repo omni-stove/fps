@@ -90,5 +90,23 @@ namespace Fps.Core
 
             return "次の試合まで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
         }
+
+        /// <summary>案内が無いときの表示。空文字のときは HUD が案内の欄ごと隠す。</summary>
+        public const string NoNotice = "";
+
+        /// <summary>キャンペーンのチェックポイントでセーブしたときの案内。</summary>
+        public const string CheckpointSaved = "チェックポイントでセーブしました";
+
+        /// <summary>キャンペーンでプレイヤーが倒れた後、チェックポイントから再開するまでの案内。秒数は切り上げた整数で受ける。</summary>
+        /// <example><c>CheckpointRestart(3)</c> は <c>チェックポイントから再開まで 3 秒</c></example>
+        public static string CheckpointRestart(int seconds)
+        {
+            if (seconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
+            }
+
+            return "チェックポイントから再開まで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+        }
     }
 }

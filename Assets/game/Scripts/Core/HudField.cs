@@ -6,5 +6,8 @@ namespace Fps.Core
         Health,
         Ammo,
         Time,
+
+        /// <summary>一時的な案内 (キャンペーンのセーブ・再開までの秒数)。</summary>
+        Notice,
     }
 }

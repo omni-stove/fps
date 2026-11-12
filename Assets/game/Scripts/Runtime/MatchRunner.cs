@@ -319,7 +319,8 @@ namespace Fps.Runtime
             _enabledRestartAction = false;
         }
 
-        private void Stop()
+        /// <summary>購読を解除して試合から離れる。破棄時にも呼ばれる。</summary>
+        public void Stop()
         {
             ReleaseRestartAction();
 

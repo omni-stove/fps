@@ -148,6 +148,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void DestroyingTheRunnerStopsListening()
         {
+            // Edit Mode では OnDestroy が呼ばれないので、破棄時に走る Stop を直接呼ぶ。
+            _runner.Stop();
             Object.DestroyImmediate(_runner);
 
             _world.Targets[0].Damageable.Kill();

@@ -1,6 +1,9 @@
 namespace Fps.Core
 {
-    /// <summary>サーバーが射撃を捨てる理由。<see cref="ShotValidator.Check"/> の結果に、連射の制限 (<see cref="ShotBudget"/>) を加えたもの。</summary>
+    /// <summary>
+    /// サーバーが射撃を捨てる理由。<see cref="ShotValidator.Check"/> の結果に、連射の制限 (<see cref="ShotBudget"/>) と
+    /// 弾倉の状態 (<see cref="ServerWeapon.TryFire"/>) を加えたもの。
+    /// </summary>
     public enum ShotRejection
     {
         /// <summary>受け付ける。</summary>
@@ -23,5 +26,14 @@ namespace Fps.Core
 
         /// <summary>連射の間隔より速く撃っている (<see cref="ShotBudget.TryConsume"/> が false)。</summary>
         FireRateExceeded,
+
+        /// <summary>撃った本人に武器が渡されていない (試合が武器の設定に失敗したなど)。</summary>
+        NoWeapon,
+
+        /// <summary>リロード中で撃てない。</summary>
+        Reloading,
+
+        /// <summary>弾倉が空で撃てない (予備弾があればサーバーがリロードを始める)。</summary>
+        OutOfAmmo,
     }
 }

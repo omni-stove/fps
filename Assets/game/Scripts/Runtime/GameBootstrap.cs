@@ -5,7 +5,8 @@ using UnityEngine.Rendering;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// シーンの起点。Awake で床・プレイヤー (CharacterController + 子カメラ + <see cref="FirstPersonLook"/>)・ライトを
+    /// シーンの起点。Awake で床・プレイヤー (CharacterController + 子カメラ + <see cref="FirstPersonLook"/>
+    /// + <see cref="PlayerController"/>)・ライトを
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// </summary>
     [DisallowMultipleComponent]
@@ -68,9 +69,9 @@ namespace Fps.Runtime
             try
             {
                 floor = CreateFloor();
-                player = CreatePlayer(out var controller, out var camera, out var look);
+                player = CreatePlayer(out var controller, out var camera, out var look, out var mover);
                 light = CreateLight(out var lightComponent);
-                _world = new BootstrapWorld(floor, player, controller, camera, look, lightComponent);
+                _world = new BootstrapWorld(floor, player, controller, camera, look, mover, lightComponent);
             }
             catch
             {
@@ -93,12 +94,16 @@ namespace Fps.Runtime
             return floor;
         }
 
-        private static GameObject CreatePlayer(out CharacterController controller, out Camera camera, out FirstPersonLook look)
+        private static GameObject CreatePlayer(
+            out CharacterController controller,
+            out Camera camera,
+            out FirstPersonLook look,
+            out PlayerController mover)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
-                ConfigurePlayer(player, out controller, out camera, out look);
+                ConfigurePlayer(player, out controller, out camera, out look, out mover);
             }
             catch
             {
@@ -113,8 +118,10 @@ namespace Fps.Runtime
             GameObject player,
             out CharacterController controller,
             out Camera camera,
-            out FirstPersonLook look)
+            out FirstPersonLook look,
+            out PlayerController mover)
         {
+            mover = null;
             player.name = PlayerName;
             player.transform.SetPositionAndRotation(PlayerSpawn, Quaternion.identity);
 
@@ -149,6 +156,14 @@ namespace Fps.Runtime
             {
                 throw new InvalidOperationException(
                     "FirstPersonLook could not resolve its camera or Look action; see the error above");
+            }
+
+            // FirstPersonLook と CharacterController を先に付けておくと、PlayerController の Awake が自力で参照を解決できる。
+            mover = player.AddComponent<PlayerController>();
+            if (Application.isPlaying && !mover.IsInitialized)
+            {
+                throw new InvalidOperationException(
+                    "PlayerController could not resolve its references or Move/Sprint/Jump actions; see the error above");
             }
         }
 
@@ -189,6 +204,7 @@ namespace Fps.Runtime
         public CharacterController Controller { get; }
         public Camera Camera { get; }
         public FirstPersonLook Look { get; }
+        public PlayerController Mover { get; }
         public Light Light { get; }
 
         public BootstrapWorld(
@@ -197,6 +213,7 @@ namespace Fps.Runtime
             CharacterController controller,
             Camera camera,
             FirstPersonLook look,
+            PlayerController mover,
             Light light)
         {
             Floor = floor;
@@ -204,6 +221,7 @@ namespace Fps.Runtime
             Controller = controller;
             Camera = camera;
             Look = look;
+            Mover = mover;
             Light = light;
         }
     }

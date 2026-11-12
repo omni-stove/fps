@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Fps.Core;
+using Fps.Runtime;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -20,6 +21,11 @@ namespace Fps.Net
     /// </list>
     /// tick はオーナーのクライアントが数えたものをサーバーがそのまま返す。プレイヤー同士は衝突させない
     /// (予測側には他人の確定位置が無く、衝突させると毎回ずれるため)。
+    /// <para>
+    /// 向き (yaw) はオーナーの <see cref="FirstPersonLook"/> が本体を回し、その値を入力に乗せて送る。
+    /// サーバーは受け取った yaw で本体を回して確定状態と一緒に返し、他人のクライアントは位置と同じ遅れで補間して回す。
+    /// オーナー自身の向きは視点操作が決めるので、サーバーからの yaw では上書きしない。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
@@ -75,7 +81,11 @@ namespace Fps.Net
         [SerializeField, Range(0f, 1f), Tooltip("空中で水平速度を入力方向へ寄せる 1 tick あたりの割合")]
         private float _airControl = 0.1f;
 
+        // 補間した向きの長さがこれより短ければ (真逆の向きの間など) 向きを決められないので、前の向きのままにする
+        private const float _minYawDirectionLengthSquared = 1e-6f;
+
         private CharacterController _controller;
+        private FirstPersonLook _look;
         private PlayerMotor _motor;
         private NetworkPlayerRole _role;
         private Vector3 _spawnPosition;
@@ -91,6 +101,7 @@ namespace Fps.Net
 
         // サーバー
         private MotorState _serverState;
+        private float _serverYaw;
         private int _serverTick;
         private int _lastProcessedTick;
         private float _inputBudget;
@@ -99,6 +110,10 @@ namespace Fps.Net
 
         // 他人のプレイヤーの補間
         private HitboxHistory _remoteHistory;
+
+        // 向きは水平の単位ベクトル (sin yaw, 0, cos yaw) として記録し、位置と同じ tick で補間する。
+        // 角度のまま補間すると 359° と 1° の間で逆回りしてしまうため
+        private HitboxHistory _remoteYawHistory;
         private bool _hasRemoteState;
         private int _latestRemoteTick;
         private double _renderTick;
@@ -112,6 +127,7 @@ namespace Fps.Net
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
+            _look = GetComponent<FirstPersonLook>();
 
             try
             {
@@ -141,6 +157,7 @@ namespace Fps.Net
                 _role = IsOwner ? NetworkPlayerRole.HostOwner : NetworkPlayerRole.ServerSimulated;
                 _controller.enabled = true;
                 _serverState = new MotorState(transform.position, Vector3.zero, false);
+                _serverYaw = transform.eulerAngles.y * Mathf.Deg2Rad;
                 _serverTick = 0;
                 _lastProcessedTick = 0;
                 _inputBudget = _maxInputBudget;
@@ -158,6 +175,7 @@ namespace Fps.Net
                 _role = NetworkPlayerRole.Interpolated;
                 _controller.enabled = false;
                 _remoteHistory = new HitboxHistory();
+                _remoteYawHistory = new HitboxHistory();
                 _hasRemoteState = false;
             }
 
@@ -202,7 +220,7 @@ namespace Fps.Net
             {
                 // 1 フレームに複数 tick 進んでも送るのは最新だけ。照合も補間も間の tick を必要としない
                 _hasPendingState = false;
-                StateRpc(_serverTick, _serverState.Position, _serverState.Velocity, _serverState.IsGrounded, default);
+                StateRpc(_serverTick, _serverState.Position, _serverState.Velocity, _serverState.IsGrounded, _serverYaw, default);
             }
         }
 
@@ -229,9 +247,35 @@ namespace Fps.Net
             var jump = _jumpLatched;
             _jumpLatched = false;
 
-            // 向きは本体の yaw。今は回す部品が無いので 0 (ワールドの +Z が前) になる
-            var yaw = transform.eulerAngles.y * Mathf.Deg2Rad;
+            var yaw = SampleYaw(_look, transform);
             return new MotorInput(move, yaw, sprint, jump);
+        }
+
+        /// <summary>
+        /// 入力に乗せる向き (Y 軸まわり、ラジアン)。視点操作 (<see cref="FirstPersonLook"/>) が動いていればその yaw、
+        /// 無いか止まっていれば (他人のプレイヤーや画面の無い batchmode) 本体の yaw。
+        /// </summary>
+        public static float SampleYaw(FirstPersonLook look, Transform body)
+        {
+            if (body == null)
+            {
+                throw new ArgumentNullException(nameof(body));
+            }
+
+            var degrees = look != null && look.enabled && look.IsInitialized ? look.Yaw : body.eulerAngles.y;
+            return degrees * Mathf.Deg2Rad;
+        }
+
+        /// <summary>yaw (ラジアン) だけを持つ回転。</summary>
+        public static Quaternion YawRotation(float yaw)
+        {
+            return Quaternion.Euler(0f, yaw * Mathf.Rad2Deg, 0f);
+        }
+
+        // 補間用に、yaw を水平の単位ベクトルにする。Quaternion.Euler(0, yaw, 0) * Vector3.forward と同じ向き
+        private static System.Numerics.Vector3 YawDirection(float yaw)
+        {
+            return new System.Numerics.Vector3(Mathf.Sin(yaw), 0f, Mathf.Cos(yaw));
         }
 
         private void RunOwnerTick(int tick, MotorInput input)
@@ -249,6 +293,13 @@ namespace Fps.Net
         private void ApplyAuthoritative(int tick, MotorInput input)
         {
             _serverState = Simulate(_serverState, input);
+            _serverYaw = input.Yaw;
+            if (_role == NetworkPlayerRole.ServerSimulated)
+            {
+                // ホスト自身のプレイヤーは FirstPersonLook がもう回しているので、遅れた値で上書きしない
+                transform.rotation = YawRotation(input.Yaw);
+            }
+
             _serverTick = tick;
             _lastProcessedTick = tick;
             _hasPendingState = true;
@@ -290,6 +341,10 @@ namespace Fps.Net
             // 補間の履歴を捨て、テレポート先から表示し直す
             _remoteHistory = new HitboxHistory();
             _remoteHistory.Record(tick, NetMath.ToNumerics(position));
+
+            // テレポートでは向きは変わらないので、今の向きから補間し直す
+            _remoteYawHistory = new HitboxHistory();
+            _remoteYawHistory.Record(tick, YawDirection(transform.eulerAngles.y * Mathf.Deg2Rad));
             _latestRemoteTick = tick;
             _renderTick = tick;
             _hasRemoteState = true;
@@ -333,7 +388,7 @@ namespace Fps.Net
         }
 
         [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable)]
-        private void StateRpc(int tick, Vector3 position, Vector3 velocity, bool isGrounded, RpcParams rpcParams = default)
+        private void StateRpc(int tick, Vector3 position, Vector3 velocity, bool isGrounded, float yaw, RpcParams rpcParams = default)
         {
             if (rpcParams.Receive.SenderClientId != NetworkManager.ServerClientId)
             {
@@ -341,7 +396,7 @@ namespace Fps.Net
             }
 
             var state = new MotorState(position, velocity, isGrounded);
-            if (!state.IsFinite)
+            if (!state.IsFinite || !NetMath.IsFinite(yaw))
             {
                 WarnThrottled("[Net] dropped non-finite state for owner=" + OwnerClientId + " tick=" + tick);
                 return;
@@ -353,7 +408,7 @@ namespace Fps.Net
                     Reconcile(tick, state);
                     break;
                 case NetworkPlayerRole.Interpolated:
-                    ReceiveRemoteState(tick, position);
+                    ReceiveRemoteState(tick, position, yaw);
                     break;
             }
         }
@@ -376,7 +431,7 @@ namespace Fps.Net
                 result.ResimulatedTicks), this);
         }
 
-        private void ReceiveRemoteState(int tick, Vector3 position)
+        private void ReceiveRemoteState(int tick, Vector3 position, float yaw)
         {
             // 信頼性なしで送るので順番が入れ替わることがある。古いものは捨てる
             if (_hasRemoteState && tick <= _latestRemoteTick)
@@ -385,13 +440,14 @@ namespace Fps.Net
             }
 
             _remoteHistory.Record(tick, NetMath.ToNumerics(position));
+            _remoteYawHistory.Record(tick, YawDirection(yaw));
             _latestRemoteTick = tick;
 
             if (!_hasRemoteState)
             {
                 _hasRemoteState = true;
                 _renderTick = tick;
-                transform.position = position;
+                transform.SetPositionAndRotation(position, YawRotation(yaw));
             }
         }
 
@@ -421,6 +477,12 @@ namespace Fps.Net
             if (_remoteHistory.TrySample((float)_renderTick, out var sampled))
             {
                 transform.position = NetMath.ToUnity(sampled);
+            }
+
+            if (_remoteYawHistory.TrySample((float)_renderTick, out var facing)
+                && facing.LengthSquared() > _minYawDirectionLengthSquared)
+            {
+                transform.rotation = YawRotation(Mathf.Atan2(facing.X, facing.Z));
             }
         }
 
@@ -533,6 +595,7 @@ namespace Fps.Net
             _sprintAction = null;
             _prediction = null;
             _remoteHistory = null;
+            _remoteYawHistory = null;
             _hasPendingState = false;
             _role = NetworkPlayerRole.None;
         }

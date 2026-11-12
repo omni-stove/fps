@@ -5,6 +5,8 @@
         "Fps.Core",
         "Fps.Net",
         "Fps.Net.Editor",
+        "Fps.Runtime",
+        "Unity.InputSystem",
         "Unity.Netcode.Runtime",
         "Unity.Networking.Transport",
         "UnityEngine.TestRunner",

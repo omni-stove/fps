@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fps.Net;
+using Fps.Runtime;
 using Unity.Netcode;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -22,6 +23,9 @@ namespace Fps.Editor
         /// <summary>プレイヤーのカプセルの高さと半径 (m)。プリミティブの Capsule と同じ大きさ。</summary>
         public const float PlayerHeight = 2f;
         public const float PlayerRadius = 0.5f;
+
+        /// <summary>一人称カメラの近クリップ (m)。カプセルの半径より十分小さくし、壁に寄っても突き抜けて見えにくくする。</summary>
+        public const float ViewNearClip = 0.05f;
 
         /// <summary>床 (Plane は 10m 四方) の拡大率。両陣地と東西の地点が収まる 60m 四方にする。</summary>
         public static readonly Vector3 GroundScale = new Vector3(6f, 1f, 6f);
@@ -79,8 +83,31 @@ namespace Fps.Editor
             controller.center = Vector3.zero;
             source.AddComponent<NetworkPlayerMotor>();
 
+            AddFirstPersonView(source);
+
             source.AddComponent<NetPlayer>();
             return source;
+        }
+
+        /// <summary>
+        /// 一人称視点を足す。pitch を回す子 (<see cref="NetPlayer.ViewName"/>) を目の高さに置いてカメラと AudioListener を付け、
+        /// 本体に yaw を回す <see cref="FirstPersonLook"/> を付ける。どれも無効にしておき、
+        /// 自分のプレイヤーでだけ <see cref="NetPlayer"/> が生成時に有効にする (他人のカメラが映ったり音を拾ったりしない)。
+        /// </summary>
+        private static void AddFirstPersonView(GameObject source)
+        {
+            var view = new GameObject(NetPlayer.ViewName) { tag = "MainCamera" };
+            view.transform.SetParent(source.transform, false);
+            view.transform.localPosition = new Vector3(0f, NetPlayer.EyeHeight, 0f);
+            view.transform.localRotation = Quaternion.identity;
+
+            var camera = view.AddComponent<Camera>();
+            camera.nearClipPlane = ViewNearClip;
+            camera.enabled = false;
+            view.AddComponent<AudioListener>().enabled = false;
+
+            // Edit Mode の AddComponent では Awake が走らないので、参照の解決は実行時の Awake に任せる
+            source.AddComponent<FirstPersonLook>().enabled = false;
         }
 
         private static GameObject CreateMatchSource()
@@ -133,9 +160,11 @@ namespace Fps.Editor
             bootstrap.PlayerPrefab = playerPrefab;
             bootstrap.MatchPrefab = matchPrefab;
 
-            // 画面ありで起動したときに両陣地のカプセルが見えるよう、上から見下ろす
+            // 自分のプレイヤーが居ない間 (サーバーや接続前) の観戦用に、両陣地のカプセルが見えるよう上から見下ろす。
+            // 自分のプレイヤーが生成されたら NetSpectatorCamera が止め、一人称カメラに替わる
             var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
             cameraObject.AddComponent<Camera>();
+            cameraObject.AddComponent<NetSpectatorCamera>();
             cameraObject.transform.SetPositionAndRotation(new Vector3(0f, 38f, -38f), Quaternion.Euler(45f, 0f, 0f));
 
             var lightObject = new GameObject("Directional Light");

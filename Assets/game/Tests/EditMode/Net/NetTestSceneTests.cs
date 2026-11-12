@@ -194,6 +194,46 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void PlayerPrefabHasDisabledFirstPersonViewAtEyeHeight()
+        {
+            var prefab = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single()
+                .PlayerPrefab;
+
+            var view = prefab.transform.Find(NetPlayer.ViewName);
+            Assert.That(view, Is.Not.Null, "NetPlayer has no pitch pivot; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(view.parent, Is.EqualTo(prefab.transform), "yaw turns the body and pitch turns this child");
+            Assert.That(view.localPosition, Is.EqualTo(new Vector3(0f, NetPlayer.EyeHeight, 0f)),
+                "the camera is the shot origin, which the server checks with NetPlayer.EyeHeight");
+
+            var camera = view.GetComponent<Camera>();
+            var listener = view.GetComponent<AudioListener>();
+            var look = prefab.GetComponent<Fps.Runtime.FirstPersonLook>();
+            Assert.That(camera, Is.Not.Null);
+            Assert.That(listener, Is.Not.Null);
+            Assert.That(look, Is.Not.Null);
+            Assert.That(Fps.Runtime.FirstPersonLook.FindChildCamera(prefab.transform), Is.EqualTo(camera));
+
+            // 他人のプレイヤーで映ったり音を拾ったりしないよう、NetPlayer が自分のプレイヤーでだけ有効にする
+            Assert.That(camera.enabled, Is.False);
+            Assert.That(listener.enabled, Is.False);
+            Assert.That(look.enabled, Is.False);
+        }
+
+        [Test]
+        public void HasSpectatorCameraForWhenNoPlayerIsLocal()
+        {
+            var spectators = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetSpectatorCamera>(true))
+                .ToArray();
+
+            Assert.That(spectators, Has.Length.EqualTo(1));
+            Assert.That(spectators[0].GetComponent<Camera>(), Is.Not.Null);
+            Assert.That(spectators[0].GetComponent<Camera>().enabled, Is.True);
+        }
+
+        [Test]
         public void HasNoNetworkManagerSavedInScene()
         {
             // 構成はコードで行うので、シーンに保存された NetworkManager があれば二重になる

@@ -52,7 +52,8 @@ fix_metas() {
 	local line path
 	local -a lines=()
 	# 未追跡の新規ファイルも検査対象にするため、intent-to-add で index に載せる (内容は stage しない)。
-	git ls-files --others --exclude-standard -z -- Assets | xargs -0 -r git add -N --
+	# .meta は intent-to-add だと追跡済みに見えてコミットに入らないので、-N の対象から外して後で通常の add をする。
+	git ls-files --others --exclude-standard -z -- Assets ':!*.meta' | xargs -0 -r git add -N --
 	while IFS= read -r line; do lines+=("$line"); done < <(meta_problems)
 	for line in ${lines[@]+"${lines[@]}"}; do
 		[ -n "$line" ] || continue

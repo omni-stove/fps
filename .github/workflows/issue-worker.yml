@@ -14,7 +14,7 @@ jobs:
       id-token: write
     with:
       provider: "claude"
-      allowed-bots: ""  # 公開リポジトリでは外部 App が付けたラベルでも起動してしまうため
+      allowed-bots: "omni-stove-agent"  # Unblock が agent App で付けたラベルで起動させる。外部 App は "*" にすると起動してしまうので名指しで許可
       # Unity / .NET の repo なので pnpm / node 系ではなく dotnet / mise / make を許可する
       allowed-tools: "Read,Edit,Write,Glob,Grep,Bash(dotnet:*),Bash(mise:*),Bash(make:*),Bash(git:*),Bash(gh:*),Bash(ls:*),Bash(cat:*),Bash(find:*),Bash(rg:*),Bash(mkdir:*),Bash(mv:*),Bash(cp:*),Bash(rm:*)"
       instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: wire references in code or editor scripts instead of hand-editing .unity / .prefab / .asset files."

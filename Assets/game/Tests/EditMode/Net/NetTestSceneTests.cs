@@ -5,6 +5,7 @@ using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Fps.Net.Tests
@@ -50,8 +51,8 @@ namespace Fps.Net.Tests
             var networkObject = bootstrap.PlayerPrefab.GetComponent<NetworkObject>();
             Assert.That(networkObject, Is.Not.Null);
             Assert.That(bootstrap.PlayerPrefab.GetComponent<NetPlayer>(), Is.Not.Null);
-            Assert.That(bootstrap.PlayerPrefab.GetComponent<NetworkTransform>(), Is.Not.Null,
-                "respawn teleports need a NetworkTransform to reach the clients");
+            Assert.That(bootstrap.PlayerPrefab.GetComponent<NetworkTransform>(), Is.Null,
+                "NetworkPlayerMotor syncs the position; a NetworkTransform would fight it");
         }
 
         [Test]
@@ -83,7 +84,23 @@ namespace Fps.Net.Tests
                 new TeamDeathmatchSpec(10, 300f, 3f), 100, points, new SpawnSelector(), _ => System.Numerics.Vector3.Zero);
             Assert.That(session.Join(0), Is.EqualTo(Team.Alpha));
             Assert.That(session.Join(1), Is.EqualTo(Team.Bravo));
-            Assert.That(session.State, Is.EqualTo(TeamDeathmatchState.Playing));
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+        }
+
+        [Test]
+        public void PlayerPrefabMovesWithCharacterController()
+        {
+            var bootstrap = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single();
+            var prefab = bootstrap.PlayerPrefab;
+
+            Assert.That(prefab.GetComponent<NetworkPlayerMotor>(), Is.Not.Null,
+                "NetPlayer has no NetworkPlayerMotor; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(prefab.GetComponent<CharacterController>(), Is.Not.Null);
+
+            // CharacterController と別のコライダーがあると自分自身にぶつかる
+            Assert.That(prefab.GetComponents<Collider>(), Has.Length.EqualTo(1));
         }
 
         [Test]

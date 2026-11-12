@@ -15,6 +15,9 @@ namespace Fps.Core.Tests
         private Dictionary<int, Vector3> _positions;
         private List<string> _events;
 
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Events(params string[] expected) => expected;
+
         [SetUp]
         public void SetUp()
         {
@@ -80,11 +83,11 @@ namespace Fps.Core.Tests
             var session = Create();
 
             session.Join(1);
-            Assert.That(session.State, Is.EqualTo(TeamDeathmatchState.Waiting));
+            Assert.That(session.State, Is.EqualTo(GameModeState.Waiting));
 
             session.Join(2);
-            Assert.That(session.State, Is.EqualTo(TeamDeathmatchState.Playing));
-            Assert.That(_events, Is.EqualTo(new[] { "spawn 1", "spawn 2", "started" }));
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(_events, Is.EqualTo(Events("spawn 1", "spawn 2", "started")));
         }
 
         [Test]
@@ -123,7 +126,7 @@ namespace Fps.Core.Tests
             Assert.That(session.GetKills(1), Is.EqualTo(1));
             Assert.That(session.GetDeaths(2), Is.EqualTo(1));
             Assert.That(session.GetScore(Team.Alpha), Is.EqualTo(1));
-            Assert.That(_events, Is.EqualTo(new[] { "kill 1>2", "score 1-0" }));
+            Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 1-0")));
         }
 
         [Test]
@@ -154,7 +157,7 @@ namespace Fps.Core.Tests
             Assert.That(session.GetDeaths(1), Is.EqualTo(1));
             Assert.That(session.GetScore(Team.Alpha), Is.Zero);
             Assert.That(session.GetScore(Team.Bravo), Is.Zero);
-            Assert.That(_events, Is.EqualTo(new[] { "kill 1>1" }));
+            Assert.That(_events, Is.EqualTo(Events("kill 1>1")));
         }
 
         [Test]
@@ -197,7 +200,7 @@ namespace Fps.Core.Tests
             session.Tick(0.2f);
             Assert.That(session.GetHealth(2), Is.EqualTo(_maxHealth));
             Assert.That(_positions[2], Is.EqualTo(_bravoBase));
-            Assert.That(_events, Is.EqualTo(new[] { "spawn 2" }));
+            Assert.That(_events, Is.EqualTo(Events("spawn 2")));
         }
 
         [Test]
@@ -210,7 +213,7 @@ namespace Fps.Core.Tests
 
             session.ApplyDamage(1, 2, _maxHealth);
 
-            Assert.That(_events, Is.EqualTo(new[] { "kill 1>2", "score 1-0", "spawn 2" }));
+            Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 1-0", "spawn 2")));
             Assert.That(session.IsAlive(2), Is.True);
         }
 
@@ -224,9 +227,9 @@ namespace Fps.Core.Tests
 
             session.ApplyDamage(2, 1, _maxHealth);
 
-            Assert.That(session.State, Is.EqualTo(TeamDeathmatchState.Ended));
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(session.Winner, Is.EqualTo(Team.Bravo));
-            Assert.That(_events, Is.EqualTo(new[] { "kill 2>1", "score 0-1", "ended Bravo" }));
+            Assert.That(_events, Is.EqualTo(Events("kill 2>1", "score 0-1", "ended Bravo")));
             Assert.That(session.ApplyDamage(1, 2, _maxHealth), Is.EqualTo(DamageOutcome.Ignored));
         }
 
@@ -240,9 +243,9 @@ namespace Fps.Core.Tests
 
             session.Tick(5f);
 
-            Assert.That(session.State, Is.EqualTo(TeamDeathmatchState.Ended));
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(session.Winner, Is.Null);
-            Assert.That(_events, Is.EqualTo(new[] { "ended draw" }));
+            Assert.That(_events, Is.EqualTo(Events("ended draw")));
         }
 
         [Test]

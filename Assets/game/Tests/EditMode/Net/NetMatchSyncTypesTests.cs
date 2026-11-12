@@ -9,21 +9,21 @@ namespace Fps.Net.Tests
         [Test]
         public void MatchStatusRoundTripsWinner()
         {
-            Assert.That(new NetMatchStatus(TeamDeathmatchState.Ended, Team.Alpha).Winner, Is.EqualTo(Team.Alpha));
-            Assert.That(new NetMatchStatus(TeamDeathmatchState.Ended, Team.Bravo).Winner, Is.EqualTo(Team.Bravo));
-            Assert.That(new NetMatchStatus(TeamDeathmatchState.Ended, null).Winner, Is.Null);
-            Assert.That(new NetMatchStatus(TeamDeathmatchState.Waiting, null).WinnerCode, Is.EqualTo(NetMatchStatus.NoWinner));
+            Assert.That(new NetMatchStatus(GameModeState.Ended, Team.Alpha).Winner, Is.EqualTo(Team.Alpha));
+            Assert.That(new NetMatchStatus(GameModeState.Ended, Team.Bravo).Winner, Is.EqualTo(Team.Bravo));
+            Assert.That(new NetMatchStatus(GameModeState.Ended, null).Winner, Is.Null);
+            Assert.That(new NetMatchStatus(GameModeState.Waiting, null).WinnerCode, Is.EqualTo(NetMatchStatus.NoWinner));
         }
 
         [Test]
         public void MatchStatusEqualityUsesStateAndWinner()
         {
-            var playing = new NetMatchStatus(TeamDeathmatchState.Playing, null);
+            var playing = new NetMatchStatus(GameModeState.Playing, null);
 
-            Assert.That(playing.Equals(new NetMatchStatus(TeamDeathmatchState.Playing, null)), Is.True);
-            Assert.That(playing.Equals(new NetMatchStatus(TeamDeathmatchState.Ended, null)), Is.False);
+            Assert.That(playing.Equals(new NetMatchStatus(GameModeState.Playing, null)), Is.True);
+            Assert.That(playing.Equals(new NetMatchStatus(GameModeState.Ended, null)), Is.False);
             Assert.That(
-                new NetMatchStatus(TeamDeathmatchState.Ended, Team.Alpha).Equals(new NetMatchStatus(TeamDeathmatchState.Ended, Team.Bravo)),
+                new NetMatchStatus(GameModeState.Ended, Team.Alpha).Equals(new NetMatchStatus(GameModeState.Ended, Team.Bravo)),
                 Is.False);
         }
 

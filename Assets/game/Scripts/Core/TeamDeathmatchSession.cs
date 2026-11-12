@@ -56,7 +56,7 @@ namespace Fps.Core
         /// <summary>参加したときとリスポーンしたときの体力。</summary>
         public int MaxHealth { get; }
 
-        public TeamDeathmatchState State => _match.State;
+        public GameModeState State => _match.State;
         public float RemainingSeconds => _match.RemainingSeconds;
         public Team? Winner => _match.Winner;
         public int PlayerCount => _health.Count;
@@ -177,7 +177,7 @@ namespace Fps.Core
             FindHealth(attackerId, nameof(attackerId));
             var victim = FindHealth(victimId, nameof(victimId));
 
-            if (amount == 0 || State != TeamDeathmatchState.Playing || victim.IsDead)
+            if (amount == 0 || State != GameModeState.Playing || victim.IsDead)
             {
                 return DamageOutcome.Ignored;
             }
@@ -266,7 +266,7 @@ namespace Fps.Core
         public int? FindNearestEnemy(int playerId)
         {
             var self = FindHealth(playerId);
-            if (State != TeamDeathmatchState.Playing || self.IsDead)
+            if (State != GameModeState.Playing || self.IsDead)
             {
                 return null;
             }
@@ -295,7 +295,7 @@ namespace Fps.Core
 
         private void TryStart()
         {
-            if (State != TeamDeathmatchState.Waiting)
+            if (State != GameModeState.Waiting)
             {
                 return;
             }

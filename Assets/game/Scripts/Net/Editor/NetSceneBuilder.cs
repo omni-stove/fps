@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Fps.Net;
 using Unity.Netcode;
-using Unity.Netcode.Components;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -20,12 +19,19 @@ namespace Fps.Editor
         public const string PlayerPrefabPath = "Assets/game/Prefabs/Net/NetPlayer.prefab";
         public const string MatchPrefabPath = "Assets/game/Prefabs/Net/NetMatch.prefab";
 
-        /// <summary>地面 (Plane は 10m 四方) の拡大率。60m 四方にする。</summary>
-        public const float GroundScale = 6f;
+        /// <summary>プレイヤーのカプセルの高さと半径 (m)。プリミティブの Capsule と同じ大きさ。</summary>
+        public const float PlayerHeight = 2f;
+        public const float PlayerRadius = 0.5f;
+
+        /// <summary>床 (Plane は 10m 四方) の拡大率。両陣地と東西の地点が収まる 60m 四方にする。</summary>
+        public static readonly Vector3 GroundScale = new Vector3(6f, 1f, 6f);
+
+        /// <summary>床の高さ。カプセルの中心が y=0 のとき足元が床に接する。</summary>
+        public const float GroundY = -PlayerHeight / 2f;
 
         /// <summary>
         /// 出現地点。チームごとの陣地を南北に 2 か所ずつ、どちらも使える地点を東西に 1 か所ずつ置く。
-        /// カプセル (高さ 2m) の中心が y=0 に来るので、y=-1 の地面にちょうど立つ。
+        /// カプセルの中心が y=0 に来るので、<see cref="GroundY"/> の床にちょうど立つ。
         /// </summary>
         public static readonly (string Name, Vector3 Position, NetSpawnPoint.SpawnTeam Team)[] SpawnPoints =
         {
@@ -64,11 +70,14 @@ namespace Fps.Editor
             source.name = "NetPlayer";
             source.AddComponent<NetworkObject>();
 
-            // 位置はサーバーが決めて配る (リスポーンのテレポートもサーバーから)。大きさは変わらないので送らない
-            var networkTransform = source.AddComponent<NetworkTransform>();
-            networkTransform.SyncScaleX = false;
-            networkTransform.SyncScaleY = false;
-            networkTransform.SyncScaleZ = false;
+            // 位置は NetworkPlayerMotor が同期する (リスポーンのテレポートも Motor 経由)。NetworkTransform は付けない。
+            // CharacterController 自体がカプセルのコライダーなので、プリミティブ付属のコライダーは二重になる
+            UnityEngine.Object.DestroyImmediate(source.GetComponent<CapsuleCollider>());
+            var controller = source.AddComponent<CharacterController>();
+            controller.height = PlayerHeight;
+            controller.radius = PlayerRadius;
+            controller.center = Vector3.zero;
+            source.AddComponent<NetworkPlayerMotor>();
 
             source.AddComponent<NetPlayer>();
             return source;
@@ -136,8 +145,8 @@ namespace Fps.Editor
 
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
-            ground.transform.position = new Vector3(0f, -1f, 0f);
-            ground.transform.localScale = new Vector3(GroundScale, 1f, GroundScale);
+            ground.transform.position = new Vector3(0f, GroundY, 0f);
+            ground.transform.localScale = GroundScale;
 
             var spawnRoot = new GameObject("SpawnPoints");
             foreach (var (pointName, position, team) in SpawnPoints)

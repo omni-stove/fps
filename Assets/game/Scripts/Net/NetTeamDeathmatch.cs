@@ -43,7 +43,7 @@ namespace Fps.Net
         private readonly NetworkVariable<int> _bravoScore = new NetworkVariable<int>();
         private readonly NetworkVariable<int> _remainingSeconds = new NetworkVariable<int>();
         private readonly NetworkVariable<NetMatchStatus> _status =
-            new NetworkVariable<NetMatchStatus>(new NetMatchStatus(TeamDeathmatchState.Waiting, null));
+            new NetworkVariable<NetMatchStatus>(new NetMatchStatus(GameModeState.Waiting, null));
 
         // NetworkList は Awake で作る (フィールド初期化子だとエディタで破棄されずに残ることがある)
         private NetworkList<NetPlayerStats> _players;
@@ -61,7 +61,7 @@ namespace Fps.Net
         /// <summary>残り時間 (秒、切り上げ)。</summary>
         public int RemainingSeconds => _remainingSeconds.Value;
 
-        public TeamDeathmatchState State => _status.Value.State;
+        public GameModeState State => _status.Value.State;
         public Team? Winner => _status.Value.Winner;
 
         /// <summary>各プレイヤーのチーム・キル数・デス数。参加順に並ぶ。</summary>
@@ -423,7 +423,7 @@ namespace Fps.Net
 
         private void HandleStarted()
         {
-            _status.Value = new NetMatchStatus(TeamDeathmatchState.Playing, null);
+            _status.Value = new NetMatchStatus(GameModeState.Playing, null);
             Debug.Log(MatchLog.Started(_session.PlayerCount));
         }
 
@@ -475,7 +475,7 @@ namespace Fps.Net
 
         private void HandleEnded(Team? winner)
         {
-            _status.Value = new NetMatchStatus(TeamDeathmatchState.Ended, winner);
+            _status.Value = new NetMatchStatus(GameModeState.Ended, winner);
             SyncRemainingSeconds();
             Debug.Log(MatchLog.Ended(winner));
         }
@@ -505,11 +505,11 @@ namespace Fps.Net
                 return;
             }
 
-            if (current.State == TeamDeathmatchState.Ended)
+            if (current.State == GameModeState.Ended)
             {
                 Debug.Log(MatchLog.Ended(current.Winner));
             }
-            else if (current.State == TeamDeathmatchState.Playing)
+            else if (current.State == GameModeState.Playing)
             {
                 Debug.Log(MatchLog.Tag + " started");
             }

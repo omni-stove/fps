@@ -1,7 +1,6 @@
 using System;
 using Fps.Core;
 using Unity.Netcode;
-using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -27,7 +26,7 @@ namespace Fps.Net
 
         /// <summary>
         /// サーバーにテレポートさせられたとき、所有クライアント (ホストなら自分) で呼ばれる。
-        /// クライアント側で位置を予測する部品は、ここで予測中の状態 (位置・速度・未確定の入力) を捨てて上書きする。
+        /// 予測中の位置は <see cref="NetworkPlayerMotor"/> がサーバーの確定状態との照合で置き直すので、ここでは通知だけ受け取れる。
         /// </summary>
         public event Action<Vector3, Quaternion> Teleported;
 
@@ -36,7 +35,7 @@ namespace Fps.Net
         // 0 は倒れているか、まだ試合に参加していないことを表す
         private readonly NetworkVariable<int> _health = new NetworkVariable<int>(0);
 
-        private NetworkTransform _networkTransform;
+        private NetworkPlayerMotor _motor;
         private Renderer[] _renderers = Array.Empty<Renderer>();
         private Collider[] _colliders = Array.Empty<Collider>();
         private Material[] _ownedMaterials = Array.Empty<Material>();
@@ -52,9 +51,11 @@ namespace Fps.Net
 
         private void Awake()
         {
-            _networkTransform = GetComponent<NetworkTransform>();
+            _motor = GetComponent<NetworkPlayerMotor>();
             _renderers = GetComponentsInChildren<Renderer>(true);
-            _colliders = GetComponentsInChildren<Collider>(true);
+
+            // CharacterController の有効・無効は NetworkPlayerMotor が役割ごとに決めるので、ここでは触らない
+            _colliders = Array.FindAll(GetComponentsInChildren<Collider>(true), c => !(c is CharacterController));
         }
 
         public override void OnNetworkSpawn()
@@ -117,16 +118,16 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// サーバーで position へ瞬間移動させる。補間させずに飛ばし、所有クライアントには予測側の状態を
-        /// 上書きさせるために <see cref="Teleported"/> を出させる。
+        /// サーバーで position へ瞬間移動させる。位置の同期は <see cref="NetworkPlayerMotor"/> に任せ
+        /// (予測の照合・補間の飛ばしもそちら)、所有クライアントには <see cref="Teleported"/> を出させる。
         /// </summary>
         internal void ServerTeleport(Vector3 position)
         {
             RequireServer();
             var rotation = transform.rotation;
-            if (_networkTransform != null && _networkTransform.IsSpawned && _networkTransform.CanCommitToTransform)
+            if (_motor != null && _motor.IsSpawned)
             {
-                _networkTransform.Teleport(position, rotation, transform.localScale);
+                _motor.ServerTeleport(position);
             }
             else
             {
@@ -139,12 +140,6 @@ namespace Fps.Net
         [Rpc(SendTo.Owner)]
         private void TeleportedRpc(Vector3 position, Quaternion rotation)
         {
-            if (!IsServer)
-            {
-                // NetworkTransform の補間を待たずに、所有者の手元の位置をサーバーの値で上書きする
-                transform.SetPositionAndRotation(position, rotation);
-            }
-
             Teleported?.Invoke(position, rotation);
         }
 

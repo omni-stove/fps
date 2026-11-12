@@ -12,12 +12,12 @@ namespace Fps.Net
         /// <summary>勝者がいない (終了前か引き分け) ことを表す <see cref="WinnerCode"/>。</summary>
         public const int NoWinner = -1;
 
-        public TeamDeathmatchState State;
+        public GameModeState State;
 
         /// <summary>勝ったチームを int にしたもの。いなければ <see cref="NoWinner"/>。</summary>
         public int WinnerCode;
 
-        public NetMatchStatus(TeamDeathmatchState state, Team? winner)
+        public NetMatchStatus(GameModeState state, Team? winner)
         {
             State = state;
             WinnerCode = winner.HasValue ? (int)winner.Value : NoWinner;

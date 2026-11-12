@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Fps.Core;
 using Fps.Runtime;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -172,8 +173,8 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 1 発撃つ。目から画面中央が指す点への向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) を添えてサーバーに送るだけで、
-        /// 当たり判定とダメージはサーバーが行う。
+        /// 1 発撃つ。目から画面中央が指す点への向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) と装備中の武器の Id を添えて
+        /// サーバーに送るだけで、武器の値 (ダメージ・射程など) は送らない。当たり判定とダメージはサーバーが Catalog の値で行う。
         /// </summary>
         private void Fire()
         {
@@ -184,15 +185,23 @@ namespace Fps.Net
                 return;
             }
 
+            // 装備中の武器はサーバーから届く。届く前 (参加直後) や長すぎる Id は送ってもサーバーが捨てるので送らない
+            var weaponId = _weapon != null ? _weapon.WeaponId : string.Empty;
+            if (string.IsNullOrEmpty(weaponId) || !NetPlayerWeapon.FitsWeaponId(weaponId))
+            {
+                Debug.LogWarning("[Net] cannot fire before the server equips a weapon", this);
+                return;
+            }
+
             var origin = AimOrigin();
             var direction = AimDirection();
 
             // ホストは他人をサーバー上の今の位置で見ている (補間しない) ので遅れは 0
             var delay = IsServer ? 0 : NetworkPlayerMotor.InterpolationDelayTicks;
             var time = FireTiming.ViewTime(serverTime, NetworkPlayerMotor.TickRate, delay);
-            Debug.Log("[Net] fire tick=" + time.Tick.ToString(CultureInfo.InvariantCulture)
+            Debug.Log("[Net] fire weapon=" + weaponId + " tick=" + time.Tick.ToString(CultureInfo.InvariantCulture)
                 + " alpha=" + time.Alpha.ToString("F2", CultureInfo.InvariantCulture), this);
-            FireServerRpc(origin, direction, time.Tick, time.Alpha);
+            FireServerRpc(new FixedString32Bytes(weaponId), origin, direction, time.Tick, time.Alpha);
         }
 
         /// <summary>
@@ -364,11 +373,14 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 射撃をサーバーへ送る。clientTick + interpolationAlpha は撃った側が他人を見ていた時点 (サーバーの tick)。
+        /// 射撃をサーバーへ送る。weaponId は撃った武器の Id で、武器の値は送らない (サーバーが Catalog から引く)。
+        /// Catalog に無い・サーバーが持たせている武器と違う Id の射撃は捨てられる。
+        /// clientTick + interpolationAlpha は撃った側が他人を見ていた時点 (サーバーの tick)。
         /// サーバーはその時点まで巻き戻して当たり判定をする (<see cref="NetTeamDeathmatch.ServerFire"/>)。
         /// </summary>
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
-        private void FireServerRpc(Vector3 origin, Vector3 direction, int clientTick, float interpolationAlpha, RpcParams rpcParams = default)
+        private void FireServerRpc(
+            FixedString32Bytes weaponId, Vector3 origin, Vector3 direction, int clientTick, float interpolationAlpha, RpcParams rpcParams = default)
         {
             if (rpcParams.Receive.SenderClientId != OwnerClientId)
             {
@@ -380,7 +392,7 @@ namespace Fps.Net
             var match = NetTeamDeathmatch.Current;
             if (match != null)
             {
-                match.ServerFire(this, origin, direction, new ShotTime(clientTick, interpolationAlpha));
+                match.ServerFire(this, weaponId.ToString(), origin, direction, new ShotTime(clientTick, interpolationAlpha));
             }
         }
 

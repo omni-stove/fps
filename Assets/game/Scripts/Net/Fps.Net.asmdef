@@ -4,6 +4,7 @@
     "references": [
         "Fps.Core",
         "Fps.Runtime",
+        "Unity.Collections",
         "Unity.InputSystem",
         "Unity.Netcode.Runtime",
         "Unity.Networking.Transport"

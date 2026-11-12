@@ -1,5 +1,7 @@
 using System;
+using System.Text;
 using Fps.Core;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -12,7 +14,8 @@ namespace Fps.Net
     /// 持ち主が Reload を押すと <see cref="ReloadServerRpc"/> を送り、サーバーがリロードを始める。
     /// </summary>
     /// <remarks>
-    /// 武器の設定は <see cref="NetTeamDeathmatch"/> が試合の開始時に作り、参加時に <see cref="ServerEquip"/> で渡す。
+    /// 武器の設定 (<see cref="WeaponSpec"/>) は <see cref="NetTeamDeathmatch"/> が WeaponCatalog から引き、参加時に <see cref="ServerEquip"/> で渡す。
+    /// 装備中の武器の Id (<see cref="WeaponId"/>) は全員に配り、持ち主は射撃の RPC にこの Id を載せる (数値は送らない)。
     /// 射撃 1 発ぶんの消費は <see cref="NetTeamDeathmatch.ServerFire"/> が当たり判定の前に <see cref="ServerTryFire"/> で行う。
     /// <para>
     /// <c>Server*</c> の付く操作は、Spawn 済みならサーバーでしか呼べない。Spawn 前 (組み立て中・テスト) は
@@ -26,10 +29,13 @@ namespace Fps.Net
         /// <summary>Assets/InputSystem_Actions.inputactions の Reload アクション (キーボードの R)。</summary>
         public const string ReloadActionPath = "Player/Reload";
 
-        /// <summary>武器の既定値。オフラインの WeaponController と同じ値にそろえる。</summary>
-        public const int DefaultMagazineSize = 30;
-        public const int DefaultReserveAmmo = 90;
-        public const float DefaultReloadSeconds = 2f;
+        /// <summary>
+        /// 装備中の武器の Id。全員が読める (持ち替えの見た目に使えるよう)。値は Id だけで、弾数は <see cref="_state"/> で持ち主にだけ送る。
+        /// </summary>
+        private readonly NetworkVariable<FixedString32Bytes> _weaponId = new NetworkVariable<FixedString32Bytes>(
+            default,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// 弾倉の残り・予備弾・リロード中かどうか。持ち主 (とサーバー) だけが読める。
@@ -59,6 +65,23 @@ namespace Fps.Net
 
         /// <summary>サーバーが持つ武器。<see cref="ServerEquip"/> の前とクライアントでは null。</summary>
         public ServerWeapon ServerWeapon => _weapon;
+
+        /// <summary>
+        /// 装備中の武器の Id。サーバーでは <see cref="ServerEquip"/> した武器、クライアントではサーバーから届いた値。
+        /// 装備前 (届く前) は空文字。持ち主はこれを射撃の RPC に載せる。
+        /// </summary>
+        public string WeaponId
+        {
+            get
+            {
+                if (_weapon != null)
+                {
+                    return _weapon.Spec.Id;
+                }
+
+                return _weaponId.Value.ToString();
+            }
+        }
 
         private void Awake()
         {
@@ -155,13 +178,26 @@ namespace Fps.Net
             return true;
         }
 
+        /// <summary>武器の Id が <see cref="FixedString32Bytes"/> (射撃の RPC と <see cref="WeaponId"/> の同期) に収まるか。</summary>
+        public static bool FitsWeaponId(string weaponId)
+        {
+            return weaponId != null && Encoding.UTF8.GetByteCount(weaponId) <= FixedString32Bytes.UTF8MaxLengthInBytes;
+        }
+
         /// <summary>サーバーで、spec の武器を満タンで持たせる。前の武器 (リロード中を含む) は捨てる。</summary>
+        /// <exception cref="ArgumentException">spec の Id が <see cref="FixedString32Bytes"/> に収まらない。</exception>
         /// <exception cref="InvalidOperationException">Spawn 済みのクライアントで呼んだ。</exception>
         public void ServerEquip(WeaponSpec spec)
         {
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (!FitsWeaponId(spec.Id))
+            {
+                throw new ArgumentException("weapon id '" + spec.Id + "' is longer than "
+                    + FixedString32Bytes.UTF8MaxLengthInBytes + " bytes and cannot be synced", nameof(spec));
             }
 
             RequireServerSide();
@@ -242,6 +278,12 @@ namespace Fps.Net
             if (!_state.Value.Equals(state))
             {
                 _state.Value = state;
+            }
+
+            var weaponId = new FixedString32Bytes(_weapon.Spec.Id);
+            if (!_weaponId.Value.Equals(weaponId))
+            {
+                _weaponId.Value = weaponId;
             }
         }
 

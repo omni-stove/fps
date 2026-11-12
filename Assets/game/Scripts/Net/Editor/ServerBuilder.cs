@@ -107,20 +107,22 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// NetTest シーンとプレイヤーのプレハブが無ければ生成する。既にあれば作り直さない
-        /// (プレハブを作り直すと、すでに配ったクライアントのビルドと食い違うおそれがあるため)。
+        /// NetTest シーンとプレイヤーのプレハブが無いか、試合の進行役に武器の一覧が配線されていなければ生成する。
+        /// そろっていれば作り直さない (プレハブを作り直すと、すでに配ったクライアントのビルドと食い違うおそれがあるため)。
         /// </summary>
         private static void EnsureNetScene()
         {
             var hasScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(NetBootstrap.ScenePath) != null;
             var hasPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NetSceneBuilder.PlayerPrefabPath) != null;
-            if (hasScene && hasPrefab)
+            var hasCatalog = MatchHasWeaponCatalog();
+            if (hasScene && hasPrefab && hasCatalog)
             {
                 return;
             }
 
             Debug.Log("[Net] ServerBuilder: " + NetBootstrap.ScenePath + " or " + NetSceneBuilder.PlayerPrefabPath
-                + " is missing; running NetSceneBuilder.Build (commit the generated files)");
+                + " is missing, or " + NetSceneBuilder.MatchPrefabPath + " has no weapon catalog;"
+                + " running NetSceneBuilder.Build (commit the generated files)");
             NetSceneBuilder.Build();
 
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(NetBootstrap.ScenePath) == null)
@@ -128,6 +130,23 @@ namespace Fps.Editor
                 throw new InvalidOperationException(
                     "[Net] ServerBuilder: " + NetBootstrap.ScenePath + " was not created by NetSceneBuilder.Build");
             }
+
+            if (!MatchHasWeaponCatalog())
+            {
+                throw new InvalidOperationException(
+                    "[Net] ServerBuilder: " + NetSceneBuilder.MatchPrefabPath + " has no usable weapon catalog after NetSceneBuilder.Build");
+            }
+        }
+
+        /// <summary>
+        /// 試合の進行役のプレハブに、サーバーが起動時に読める武器の一覧が配線されているか。
+        /// 無いままビルドすると専用サーバーは試合を始められずに終わるので、ビルドの前に確かめる。
+        /// </summary>
+        private static bool MatchHasWeaponCatalog()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(NetSceneBuilder.MatchPrefabPath);
+            var match = prefab != null ? prefab.GetComponent<NetTeamDeathmatch>() : null;
+            return match != null && NetTeamDeathmatch.TryCreateLoadout(match.Catalog, out _, out _);
         }
     }
 }

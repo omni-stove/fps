@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Fps.Core;
+using Fps.Runtime;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,8 +26,15 @@ namespace Fps.Net
     /// 体力は <see cref="NetPlayer"/> の NetworkVariable で配る。
     /// </para>
     /// <para>
-    /// 弾倉と予備弾はサーバーが各プレイヤーの <see cref="NetPlayerWeapon"/> で持つ。武器の設定は試合の開始時に作り、
-    /// 参加時に持たせて、出現・リスポーンと試合の開始で満タンに戻す。射撃は当たり判定の前に 1 発消費し、弾が無ければ捨てる。
+    /// 武器の値はここに持たず、<see cref="WeaponCatalog"/> (<see cref="WeaponCatalogAsset"/>) から引く。試合の開始時に
+    /// <see cref="WeaponCatalogAsset.ToCatalog"/> して <see cref="ServerLoadout"/> に保持し、未設定・不正なら試合を始めない。
+    /// 各プレイヤーには参加時に装備中の武器 (今は全員 <see cref="DefaultWeaponId"/>) を決めて持たせ、
+    /// 連射間隔・ダメージ・射程・減衰・弾倉はすべてその武器の <see cref="WeaponSpec"/> を使う。
+    /// クライアントは撃った武器の Id だけを送り、Catalog に無い・装備中の武器と違う射撃は捨てる。
+    /// </para>
+    /// <para>
+    /// 弾倉と予備弾はサーバーが各プレイヤーの <see cref="NetPlayerWeapon"/> で持つ。出現・リスポーンと試合の開始で満タンに戻す。
+    /// 射撃は当たり判定の前に 1 発消費し、弾が無ければ捨てる。
     /// </para>
     /// <para>
     /// 試合が終わると、サーバーは <see cref="RestartDelaySeconds"/> 秒待って同じ Session で次の試合を始める
@@ -38,16 +47,10 @@ namespace Fps.Net
     [RequireComponent(typeof(NetworkObject))]
     public sealed class NetTeamDeathmatch : NetworkBehaviour
     {
-        /// <summary>試合で配る武器の Id。定義アセットに置き換えるまでは固定。</summary>
+        /// <summary>
+        /// 参加したプレイヤーに持たせる武器の Id。持ち替えが入るまでは全員これ。<see cref="WeaponCatalog"/> に無ければ試合を始めない。
+        /// </summary>
         public const string DefaultWeaponId = "rifle";
-
-        /// <summary>武器の既定値。オフラインの WeaponController と同じ値にそろえる。</summary>
-        public const int DefaultWeaponDamage = 25;
-        public const float DefaultWeaponRange = 100f;
-        public const float DefaultFireInterval = 0.1f;
-        public const float DefaultFalloffStart = 20f;
-        public const float DefaultFalloffEnd = 60f;
-        public const float DefaultFalloffMinMultiplier = 0.5f;
 
         /// <summary>試合が終わってから次の試合を始めるまでの秒数の既定値。</summary>
         public const float DefaultRestartDelaySeconds = 10f;
@@ -76,32 +79,8 @@ namespace Fps.Net
         [SerializeField, Min(0f), Tooltip("この距離 (m) 以内に敵がいる地点には、他に候補があればリスポーンしない")]
         private float _minEnemySpawnDistance = SpawnSelector.DefaultMinEnemyDistance;
 
-        [SerializeField, Min(0), Tooltip("ヒットスキャン 1 発の基本ダメージ。部位倍率と距離減衰はこれに掛ける")]
-        private int _weaponDamage = DefaultWeaponDamage;
-
-        [SerializeField, Min(0.01f), Tooltip("ヒットスキャンの射程 (m)")]
-        private float _weaponRange = DefaultWeaponRange;
-
-        [SerializeField, Min(0f), Tooltip("武器の連射間隔 (秒)。サーバーはこれより速い連射を捨てる")]
-        private float _fireInterval = DefaultFireInterval;
-
-        [SerializeField, Min(1), Tooltip("弾倉の容量")]
-        private int _magazineSize = NetPlayerWeapon.DefaultMagazineSize;
-
-        [SerializeField, Min(0), Tooltip("予備弾の初期値 (出現・リスポーンのたびにこの値に戻る)")]
-        private int _reserveAmmo = NetPlayerWeapon.DefaultReserveAmmo;
-
-        [SerializeField, Min(0f), Tooltip("リロード開始から補充までの秒数")]
-        private float _reloadSeconds = NetPlayerWeapon.DefaultReloadSeconds;
-
-        [SerializeField, Min(0f), Tooltip("この距離 (m) までは減衰しない")]
-        private float _falloffStart = DefaultFalloffStart;
-
-        [SerializeField, Min(0f), Tooltip("この距離 (m) 以上で最小倍率になる")]
-        private float _falloffEnd = DefaultFalloffEnd;
-
-        [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("最大まで減衰したときの倍率")]
-        private float _falloffMinMultiplier = DefaultFalloffMinMultiplier;
+        [SerializeField, Tooltip("武器の一覧 (Assets/game/Weapons/WeaponCatalog.asset)。ダメージ・射程・減衰・連射間隔・弾倉はここから引く")]
+        private WeaponCatalogAsset _weaponCatalog;
 
         [SerializeField, Min(0f), Tooltip("射撃の始点とサーバー上の本人の位置のずれ (m) の上限。超えた射撃は捨てる")]
         private float _maxShotOriginOffset = ShotValidator.DefaultMaxOriginOffset;
@@ -123,14 +102,11 @@ namespace Fps.Net
         // ラグ補償 (サーバーだけ)。試合の開始時に作る
         private readonly HitboxRewinder _rewinder = new HitboxRewinder();
         private readonly List<RewindTarget> _rewindTargets = new List<RewindTarget>();
-        private readonly Dictionary<int, ShotBudget> _shotBudgets = new Dictionary<int, ShotBudget>();
         private LagCompensator _lagCompensator;
         private int _lastRecordedTick = _noRecordedTick;
-        private DamageFalloff _falloff;
-        private WeaponSpec _weaponSpec;
-        private int _activeWeaponDamage;
-        private float _activeWeaponRange;
-        private float _activeFireInterval;
+
+        // 試合の開始時に Catalog から作る。各プレイヤーの装備中の武器と連射の制限 (サーバーだけ)
+        private ServerLoadout _loadout;
         private float _activeMaxShotOriginOffset;
         private float _nextRejectWarningTime;
 
@@ -195,47 +171,19 @@ namespace Fps.Net
             set => _minEnemySpawnDistance = value;
         }
 
-        /// <summary>ヒットスキャン 1 発の基本ダメージ。0 以上。試合の開始時に読む。</summary>
-        public int WeaponDamage
+        /// <summary>
+        /// 武器の一覧のアセット。試合の開始時 (Spawn 時) に <see cref="WeaponCatalogAsset.ToCatalog"/> で読む。
+        /// 未設定・不正・<see cref="DefaultWeaponId"/> を含まないなら、サーバーはエラーを出して試合を始めない。
+        /// プレハブでは <c>Fps.Editor.NetSceneBuilder</c> が配線し、テストでは Spawn 前にここへ渡す。
+        /// </summary>
+        public WeaponCatalogAsset Catalog
         {
-            get => _weaponDamage;
-            set => _weaponDamage = value;
+            get => _weaponCatalog;
+            set => _weaponCatalog = value;
         }
 
-        /// <summary>ヒットスキャンの射程 (m)。0 より大きい有限値。試合の開始時に読む。</summary>
-        public float WeaponRange
-        {
-            get => _weaponRange;
-            set => _weaponRange = value;
-        }
-
-        /// <summary>武器の連射間隔 (秒)。サーバーはこれより速い連射を捨てる。0 以上。試合の開始時に読む。</summary>
-        public float FireInterval
-        {
-            get => _fireInterval;
-            set => _fireInterval = value;
-        }
-
-        /// <summary>弾倉の容量。1 以上。試合の開始時に読む。</summary>
-        public int MagazineSize
-        {
-            get => _magazineSize;
-            set => _magazineSize = value;
-        }
-
-        /// <summary>予備弾の初期値。0 以上。試合の開始時に読む。</summary>
-        public int ReserveAmmo
-        {
-            get => _reserveAmmo;
-            set => _reserveAmmo = value;
-        }
-
-        /// <summary>リロード開始から補充までの秒数。0 以上の有限値。試合の開始時に読む。</summary>
-        public float ReloadSeconds
-        {
-            get => _reloadSeconds;
-            set => _reloadSeconds = value;
-        }
+        /// <summary>サーバーで試合が動いている間の、各プレイヤーの装備中の武器。試合の開始前とクライアントでは null。</summary>
+        internal ServerLoadout Loadout => _loadout;
 
         private void Awake()
         {
@@ -284,9 +232,8 @@ namespace Fps.Net
             _rejectedClients.Clear();
             _lagCompensator = null;
             _lastRecordedTick = _noRecordedTick;
-            _shotBudgets.Clear();
             _rewindTargets.Clear();
-            _weaponSpec = null;
+            _loadout = null;
 
             if (Current == this)
             {
@@ -360,17 +307,19 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// サーバーで shooter の射撃 1 発を処理する。連射の間隔と始点を確かめ、弾倉から 1 発消費してから、shooter が見ていた時点 time まで
+        /// サーバーで shooter の射撃 1 発を処理する。撃った武器・連射の間隔・始点を確かめ、弾倉から 1 発消費してから、shooter が見ていた時点 time まで
         /// 他のプレイヤーを巻き戻して Raycast し、当たればダメージを与えて <c>[Net] hit attacker=.. victim=.. rewindTicks=..</c> を出す。
         /// 巻き戻せるのは <see cref="LagCompensator.MaxRewindTicks"/> tick 前まで。
+        /// 射程・ダメージ・減衰は、サーバーが shooter に持たせている武器の <see cref="WeaponSpec"/> を使う (クライアントの値は使わない)。
         /// </summary>
         /// <param name="shooter">撃った人。試合に参加していて生きていなければ何もしない。</param>
+        /// <param name="weaponId">クライアントが送ってきた、撃った武器の Id。Catalog に無い・装備中の武器と違えば捨てる。</param>
         /// <param name="origin">クライアントが送ってきた始点。</param>
         /// <param name="direction">クライアントが送ってきた向き。</param>
         /// <param name="time">クライアントが見ていた時点。</param>
-        internal void ServerFire(NetPlayer shooter, Vector3 origin, Vector3 direction, ShotTime time)
+        internal void ServerFire(NetPlayer shooter, string weaponId, Vector3 origin, Vector3 direction, ShotTime time)
         {
-            if (!IsServer || _session == null || _lagCompensator == null || shooter == null || !IsJoined(shooter))
+            if (!IsServer || _session == null || _lagCompensator == null || _loadout == null || shooter == null || !IsJoined(shooter))
             {
                 return;
             }
@@ -381,17 +330,12 @@ namespace Fps.Net
                 return;
             }
 
-            // 連射間隔はここ (ShotBudget) だけで制限する。ServerWeapon は弾倉とリロードだけを見る。
+            // 武器の Id を確かめ、その武器の連射間隔 (ShotBudget) で制限する。ServerWeapon は弾倉とリロードだけを見る。
             // RPC の届く時刻は揺れるので、間隔どおりの射撃がまとめて届いても Burst 発までは受け入れ、速すぎる連打だけを捨てる
-            if (!_shotBudgets.TryGetValue(shooterId, out var budget))
+            var weaponCheck = _loadout.TryFire(shooterId, weaponId, NetworkManager.ServerTime.Time, out var spec);
+            if (weaponCheck != ShotRejection.None)
             {
-                budget = new ShotBudget(_activeFireInterval);
-                _shotBudgets.Add(shooterId, budget);
-            }
-
-            if (!budget.TryConsume(NetworkManager.ServerTime.Time))
-            {
-                WarnRejected(shooterId, ShotRejection.FireRateExceeded);
+                WarnRejected(shooterId, weaponCheck);
                 return;
             }
 
@@ -448,7 +392,7 @@ namespace Fps.Net
             bool any;
             try
             {
-                any = _rewinder.Raycast(_rewindTargets, rewound, origin, direction, _activeWeaponRange, shooter.transform, out hit);
+                any = _rewinder.Raycast(_rewindTargets, rewound, origin, direction, spec.Range, shooter.transform, out hit);
             }
             finally
             {
@@ -461,7 +405,7 @@ namespace Fps.Net
             }
 
             var zone = ZoneOf(victim, hit);
-            var damage = DamageCalculator.Calculate(_activeWeaponDamage, zone, hit.RaycastHit.distance, _falloff);
+            var damage = DamageCalculator.Calculate(spec.Damage, zone, hit.RaycastHit.distance, spec.Falloff);
             var outcome = ApplyDamage(shooter, victim, damage);
             var health = _session.HasPlayer(hit.TargetId) ? _session.GetHealth(hit.TargetId) : 0;
             Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome));
@@ -502,7 +446,7 @@ namespace Fps.Net
             player.ServerPlayerId = NetPlayer.NotJoined;
             _playerById.Remove(playerId);
             _lagCompensator?.Remove(playerId);
-            _shotBudgets.Remove(playerId);
+            _loadout?.Remove(playerId);
             if (_session != null && _session.HasPlayer(playerId))
             {
                 _session.Leave(playerId);
@@ -527,32 +471,22 @@ namespace Fps.Net
         {
             TeamDeathmatchSpec spec;
             SpawnSelector selector;
-            DamageFalloff falloff;
-            WeaponSpec weaponSpec;
             try
             {
                 spec = new TeamDeathmatchSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds);
                 selector = new SpawnSelector(_minEnemySpawnDistance);
-                falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
-                ValidateWeaponSettings();
+                ValidateShotSettings();
                 ValidateRestartDelay();
-
-                // 連射間隔も Spec に入れるが、制限するのは ShotBudget だけ (ServerWeapon は使わない)
-                weaponSpec = new WeaponSpec(
-                    DefaultWeaponId,
-                    null,
-                    FireMode.Auto,
-                    _magazineSize,
-                    _reserveAmmo,
-                    _fireInterval,
-                    _reloadSeconds,
-                    _weaponDamage,
-                    _weaponRange,
-                    falloff);
             }
             catch (ArgumentOutOfRangeException e)
             {
                 Debug.LogError("[Match] invalid match settings on " + name + ": " + e.Message);
+                return;
+            }
+
+            if (!TryCreateLoadout(_weaponCatalog, out var loadout, out var weaponError))
+            {
+                Debug.LogError("[Match] invalid weapon catalog on " + name + ": " + weaponError + "; run Fps.Editor.NetSceneBuilder.Build");
                 return;
             }
 
@@ -568,15 +502,10 @@ namespace Fps.Net
                 return;
             }
 
-            _falloff = falloff;
-            _weaponSpec = weaponSpec;
-            _activeWeaponDamage = _weaponDamage;
-            _activeWeaponRange = _weaponRange;
-            _activeFireInterval = _fireInterval;
+            _loadout = loadout;
             _activeMaxShotOriginOffset = _maxShotOriginOffset;
             _lagCompensator = new LagCompensator();
             _lastRecordedTick = _noRecordedTick;
-            _shotBudgets.Clear();
 
             _session.Started += HandleStarted;
             _session.Restarted += HandleRestarted;
@@ -595,31 +524,74 @@ namespace Fps.Net
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
                 + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count);
             Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
-                + " tickRate=" + NetworkPlayerMotor.TickRate + " damage=" + _activeWeaponDamage + " range=" + _activeWeaponRange
-                + " fireInterval=" + _activeFireInterval + " magazine=" + _weaponSpec.MagazineSize + " reserve=" + _weaponSpec.ReserveAmmo
-                + " reload=" + _weaponSpec.ReloadSeconds + "s");
+                + " tickRate=" + NetworkPlayerMotor.TickRate);
+            foreach (var weapon in _loadout.Catalog.All)
+            {
+                Debug.Log(WeaponLog(weapon));
+            }
         }
 
-        /// <summary>Inspector で入る武器の値を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>
-        private void ValidateWeaponSettings()
+        /// <summary>
+        /// asset から Catalog を作り、試合で使う <see cref="ServerLoadout"/> にする。asset が未設定・不正、
+        /// <see cref="DefaultWeaponId"/> を含まない、RPC で送れない長さの Id がある、のどれかなら false と理由を返す。
+        /// </summary>
+        public static bool TryCreateLoadout(WeaponCatalogAsset asset, out ServerLoadout loadout, out string error)
         {
-            if (_weaponDamage < 0)
+            loadout = null;
+
+            // 参照切れ (破棄されたアセット) も Unity の == null で拾う
+            if (asset == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(WeaponDamage), _weaponDamage, "weapon damage must not be negative");
+                error = "no weapon catalog is assigned";
+                return false;
             }
 
-            if (!(_weaponRange > 0f) || float.IsInfinity(_weaponRange))
+            WeaponCatalog catalog;
+            try
             {
-                throw new ArgumentOutOfRangeException(nameof(WeaponRange), _weaponRange, "weapon range must be positive and finite");
+                catalog = asset.ToCatalog();
+            }
+            catch (WeaponDefinitionException e)
+            {
+                error = e.Message;
+                return false;
             }
 
+            if (!catalog.Contains(DefaultWeaponId))
+            {
+                error = "weapon catalog '" + asset.name + "' has no '" + DefaultWeaponId + "' to give to joining players";
+                return false;
+            }
+
+            foreach (var weapon in catalog.All)
+            {
+                if (!NetPlayerWeapon.FitsWeaponId(weapon.Id))
+                {
+                    error = "weapon id '" + weapon.Id + "' in '" + asset.name + "' is longer than "
+                        + FixedString32Bytes.UTF8MaxLengthInBytes + " bytes and cannot be sent with a shot";
+                    return false;
+                }
+            }
+
+            loadout = new ServerLoadout(catalog);
+            error = null;
+            return true;
+        }
+
+        private static string WeaponLog(WeaponSpec weapon)
+        {
+            return "[Net] weapon id=" + weapon.Id + " damage=" + weapon.Damage + " range=" + weapon.Range
+                + " fireInterval=" + weapon.FireInterval + " magazine=" + weapon.MagazineSize + " reserve=" + weapon.ReserveAmmo
+                + " reload=" + weapon.ReloadSeconds + "s";
+        }
+
+        /// <summary>Inspector で入る射撃の検査の値を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>
+        private void ValidateShotSettings()
+        {
             if (float.IsNaN(_maxShotOriginOffset) || float.IsInfinity(_maxShotOriginOffset) || _maxShotOriginOffset < 0f)
             {
                 throw new ArgumentOutOfRangeException(nameof(_maxShotOriginOffset), _maxShotOriginOffset, "max shot origin offset must be finite and not negative");
             }
-
-            // 間隔の検査は ShotBudget に任せる (不正なら ArgumentOutOfRangeException)
-            _ = new ShotBudget(_fireInterval);
         }
 
         /// <summary>Inspector で入る次の試合までの秒数を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>
@@ -696,11 +668,22 @@ namespace Fps.Net
                 player.ServerPlayerId = playerId;
                 _playerById[playerId] = player;
 
-                // Join の中で出現 (Spawned) するので、その前に持たせておく
-                player.Weapon.ServerEquip(_weaponSpec);
+                // Join の中で出現 (Spawned) するので、その前に持たせておく。持ち替えが入るまでは全員 DefaultWeaponId
+                ServerEquip(player, DefaultWeaponId);
                 Debug.Log(MatchLog.Joined(playerId, _session.NextTeam));
                 _session.Join(playerId);
             }
+        }
+
+        /// <summary>
+        /// サーバーで、参加済みの player に Catalog の weaponId の武器を持たせる。弾倉・予備弾は満タンになり、連射の制限はやり直す。
+        /// 以後この Id 以外の射撃は <see cref="ShotRejection.WeaponMismatch"/> で捨てる。
+        /// </summary>
+        /// <exception cref="KeyNotFoundException">weaponId が Catalog に無い。</exception>
+        private void ServerEquip(NetPlayer player, string weaponId)
+        {
+            var spec = _loadout.Equip(player.ServerPlayerId, weaponId);
+            player.Weapon.ServerEquip(spec);
         }
 
         private void SyncRemainingSeconds()
@@ -922,7 +905,7 @@ namespace Fps.Net
             _status.Value = new NetMatchStatus(GameModeState.Waiting, null);
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
-            _shotBudgets.Clear();
+            _loadout?.ResetBudgets();
             Debug.Log(MatchLog.Restart());
         }
 

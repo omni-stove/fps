@@ -48,20 +48,37 @@ write_meta() {
 # meta_problems の指摘のうち直せるものを直す。.cs とフォルダ以外の .meta は取り込み設定が要るので Unity に任せ、
 # 本体が作業ツリーにある .meta は GUID を失わないよう消さない。
 fix_metas() {
-	local line path
-	while IFS= read -r line; do
+	local line path ext
+	local -a lines=() orphans=()
+	local created=" "
+	# 未追跡の新規ファイルも検査対象にするため、intent-to-add で index に載せる (内容は stage しない)。
+	git ls-files --others --exclude-standard -z -- Assets | xargs -0 -r git add -N --
+	while IFS= read -r line; do lines+=("$line"); done < <(meta_problems)
+	for line in ${lines[@]+"${lines[@]}"}; do
+		[ -n "$line" ] || continue
 		path="${line%%: error META: *}"
 		case "$line" in
 		*"追跡されていない")
 			if [ ! -e "$path.meta" ]; then
 				[ -d "$path" ] || [ "${path%.cs}" != "$path" ] || continue
 				write_meta "$path"
+				ext="${path##*.}"
+				[ -d "$path" ] && ext="/"
+				created="$created$ext "
 			fi
 			git add -- "$path.meta"
 			;;
-		*"本体の無い"*) [ -e "${path%.meta}" ] || git rm -q -f -- "$path" ;;
+		*"本体の無い"*) orphans+=("$path") ;;
 		esac
-	done < <(meta_problems)
+	done
+	# 改名で .meta が取り残されたときに GUID を失わないよう、同じ種類の .meta を新規に作った回は消さず指摘に残す。
+	for path in ${orphans[@]+"${orphans[@]}"}; do
+		[ ! -e "${path%.meta}" ] || continue
+		ext="${path%.meta}"
+		ext="${ext##*.}"
+		case "$created" in *" $ext "*) continue ;; esac
+		git rm -q -f -- "$path"
+	done
 }
 
 [ "${1:-}" = "--fix" ] && fix_metas

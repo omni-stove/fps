@@ -33,3 +33,9 @@ Thumbs.db
 # dotnet
 /dotnet/**/bin/
 /dotnet/**/obj/
+
+# EOS の認証情報 (リポジトリは公開なのでコミットしない)。値は環境変数か eos.local.json で渡す
+eos.local.json
+# EOS plugin のエディタ画面が認証情報ごと書き出す設定。このプロジェクトは使わない
+/[Aa]ssets/[Ss]treaming[Aa]ssets/EOS/
+/[Aa]ssets/[Ss]treaming[Aa]ssets/EOS.meta

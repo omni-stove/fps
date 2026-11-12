@@ -7,7 +7,8 @@ using UnityEngine;
 namespace Fps.Net
 {
     /// <summary>
-    /// <see cref="NetworkManager"/> と <see cref="UnityTransport"/> をコードで組み立てる。
+    /// <see cref="NetworkManager"/> と transport (UDP なら <see cref="UnityTransport"/>、EOS なら
+    /// <see cref="NetTransportFactories.Eos"/> が作るもの) をコードで組み立てる。
     /// シーンやプレハブに設定を持たせず、ここだけで構成が決まるようにする。
     /// </summary>
     public static class NetworkSetup
@@ -19,22 +20,45 @@ namespace Fps.Net
         public const int MaxConnectAttempts = 10;
 
         /// <summary>
-        /// <paramref name="target"/> に <see cref="UnityTransport"/> と <see cref="NetworkManager"/> を追加して設定する。
+        /// UDP で組み立てる。<paramref name="options"/> の transport は UDP であること。
+        /// 詳しくは <see cref="Configure(GameObject, NetTransportPlan, GameObject)"/>。
+        /// </summary>
+        public static NetworkManager Configure(GameObject target, NetLaunchOptions options, GameObject playerPrefab)
+        {
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
+
+            if (options.Transport != NetTransportKind.Udp)
+            {
+                throw new ArgumentException(
+                    "EOS needs credentials; configure with a NetTransportPlan instead", nameof(options));
+            }
+
+            return Configure(target, NetTransportPlan.Decide(options, null, null), playerPrefab);
+        }
+
+        /// <summary>
+        /// <paramref name="target"/> に transport と <see cref="NetworkManager"/> を追加して設定する。
         /// 起動 (StartHost など) はしない。
         /// </summary>
         /// <param name="target">追加先。ルートの GameObject で、まだ NetworkManager を持たないこと。</param>
-        /// <param name="options">接続先・待ち受けの設定。</param>
+        /// <param name="plan">使う transport と接続先・待ち受けの設定。</param>
         /// <param name="playerPrefab">接続したクライアントごとに生成するプレハブ。NetworkObject を持つこと。</param>
-        public static NetworkManager Configure(GameObject target, NetLaunchOptions options, GameObject playerPrefab)
+        /// <exception cref="InvalidOperationException">
+        /// 構成済み、または EOS を使うのに EOS の transport がこのビルドに無い。
+        /// </exception>
+        public static NetworkManager Configure(GameObject target, NetTransportPlan plan, GameObject playerPrefab)
         {
             if (target == null)
             {
                 throw new ArgumentNullException(nameof(target));
             }
 
-            if (options == null)
+            if (plan == null)
             {
-                throw new ArgumentNullException(nameof(options));
+                throw new ArgumentNullException(nameof(plan));
             }
 
             if (playerPrefab == null)
@@ -54,16 +78,24 @@ namespace Fps.Net
                     "NetworkManager must be on a root GameObject ('" + target.name + "' has a parent)", nameof(target));
             }
 
-            if (target.GetComponent<NetworkManager>() != null || target.GetComponent<UnityTransport>() != null)
+            if (target.GetComponent<NetworkManager>() != null || target.GetComponent<NetworkTransport>() != null)
             {
                 throw new InvalidOperationException("'" + target.name + "' is already configured for networking");
             }
 
-            var transport = target.AddComponent<UnityTransport>();
-            transport.ConnectTimeoutMS = ConnectTimeoutMs;
-            transport.MaxConnectAttempts = MaxConnectAttempts;
-            // ホスト・サーバーでは Address で待ち受け、クライアントでは Address へ接続する
-            transport.SetConnectionData(options.Address, options.Port, options.Address);
+            var options = plan.Options;
+            NetworkTransport transport;
+            switch (options.Transport)
+            {
+                case NetTransportKind.Udp:
+                    transport = AddUnityTransport(target, options);
+                    break;
+                case NetTransportKind.Eos:
+                    transport = AddEosTransport(target, options, plan.Credentials);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(plan), options.Transport, "unknown transport");
+            }
 
             var manager = target.AddComponent<NetworkManager>();
             if (manager.NetworkConfig == null)
@@ -79,6 +111,39 @@ namespace Fps.Net
             config.EnableSceneManagement = false;
 
             return manager;
+        }
+
+        private static UnityTransport AddUnityTransport(GameObject target, NetLaunchOptions options)
+        {
+            var transport = target.AddComponent<UnityTransport>();
+            transport.ConnectTimeoutMS = ConnectTimeoutMs;
+            transport.MaxConnectAttempts = MaxConnectAttempts;
+            // ホスト・サーバーでは Address で待ち受け、クライアントでは Address へ接続する
+            transport.SetConnectionData(options.Address, options.Port, options.Address);
+            return transport;
+        }
+
+        private static NetworkTransport AddEosTransport(GameObject target, NetLaunchOptions options, EosCredentials credentials)
+        {
+            if (credentials == null)
+            {
+                throw new ArgumentException("EOS transport needs credentials", nameof(credentials));
+            }
+
+            var factory = NetTransportFactories.Eos;
+            if (factory == null)
+            {
+                throw new InvalidOperationException(
+                    "the EOS transport is not in this build (is com.playeveryware.eos installed and Fps.NetEos compiled?)");
+            }
+
+            var transport = factory(target, options, credentials);
+            if (transport == null || transport.gameObject != target)
+            {
+                throw new InvalidOperationException("the EOS transport factory must add a transport to '" + target.name + "'");
+            }
+
+            return transport;
         }
     }
 }

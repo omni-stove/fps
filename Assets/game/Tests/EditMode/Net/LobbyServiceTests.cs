@@ -8,8 +8,8 @@ namespace Fps.Net.Tests
     public sealed class LobbyServiceTests
     {
         private const string _self = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-        private const string _owner ="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-        private const string _bucket ="fps:test";
+        private const string _owner = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        private const string _bucket = "fps:test";
 
         private FakeLobbyBackend _backend;
         private LobbyService _service;

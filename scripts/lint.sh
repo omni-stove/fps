@@ -3,8 +3,7 @@
 # Assets/game の全 .cs は書式だけを見る (MonoBehaviour などは Unity 抜きでビルドできないため)。
 # あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応を検査する。
 # 問題が無ければ何も出さず、あれば指摘の行だけを出して 1 で終わる。--fix で直せるものを直す
-# (.meta の抜けは、作業ツリーにある .meta か、.cs とフォルダなら Unity と同じ形で作ったものを git add する。
-# 本体の無い .meta は消さず指摘に残す)。
+# (.meta の抜けは、.cs とフォルダなら Unity と同じ形で作る。本体の無い .meta は消さない。詳しくは fix_metas)。
 # shellcheck source=scripts/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 
@@ -12,9 +11,10 @@ verify=(--verify-no-changes)
 [ "${1:-}" = "--fix" ] && verify=()
 
 # Assets/ 以下で .meta が追跡されていないファイル・フォルダと、本体の無い .meta を 1 行ずつ出す。
+# --others を付けると、未追跡 (ignore されていない) のファイルも追跡済みとみなして調べる。
 # Unity が取り込まない名前 (. で始まる・~ で終わる) を含むパスは対象外にする。
 meta_problems() {
-	git -c core.quotepath=off ls-files -- Assets | awk '
+	git -c core.quotepath=off ls-files --cached ${1:+--others --exclude-standard} -- Assets | awk '
 		{
 			n = split($0, part, "/")
 			for (i = 1; i <= n; i++) if (part[i] ~ /^\./ || part[i] ~ /~$/) next
@@ -46,17 +46,13 @@ write_meta() {
 	fi >"$1.meta"
 }
 
-# meta_problems の指摘のうち直せるものを直す。.cs とフォルダ以外の .meta は取り込み設定が要るので Unity に任せ、
-# 本体の無い .meta は GUID を失わないよう消さない。
+# meta_problems の指摘のうち直せるものを直す。未追跡の新規ファイルも対象にする。
+# .meta が無ければ、.cs とフォルダに限り作る (他の種類は取り込み設定が要るので Unity に任せる)。
+# 本体が追跡済みなら .meta を git add し、未追跡なら本体と一緒に add されるよう作業ツリーに置くだけにする。
+# 本体の無い .meta は改名で取り残された GUID かもしれないので、自動では消さず指摘に残す。
 fix_metas() {
 	local line path
-	local -a lines=()
-	# 未追跡の新規ファイルも検査対象にするため、intent-to-add で index に載せる (内容は stage しない)。
-	# .meta は intent-to-add だと追跡済みに見えてコミットに入らないので、-N の対象から外して後で通常の add をする。
-	git ls-files --others --exclude-standard -z -- Assets ':!*.meta' | xargs -0 -r git add -N --
-	while IFS= read -r line; do lines+=("$line"); done < <(meta_problems)
-	for line in ${lines[@]+"${lines[@]}"}; do
-		[ -n "$line" ] || continue
+	while IFS= read -r line; do
 		path="${line%%: error META: *}"
 		case "$line" in
 		*"追跡されていない")
@@ -64,11 +60,10 @@ fix_metas() {
 				[ -d "$path" ] || [ "${path%.cs}" != "$path" ] || continue
 				write_meta "$path"
 			fi
-			git add -- "$path.meta"
+			if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then git add -- "$path.meta"; fi
 			;;
 		esac
-	done
-	# 本体の無い .meta は改名で取り残された GUID かもしれないので、自動では消さず指摘に残す。
+	done < <(meta_problems --others)
 }
 
 [ "${1:-}" = "--fix" ] && fix_metas

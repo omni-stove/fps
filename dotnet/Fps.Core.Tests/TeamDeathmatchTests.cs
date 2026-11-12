@@ -27,12 +27,12 @@ namespace Fps.Core.Tests
         {
             var match = new TeamDeathmatch(new TeamDeathmatchSpec(10, 60f, 3f));
 
-            Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Waiting));
+            Assert.That(match.State, Is.EqualTo(GameModeState.Waiting));
             Assert.That(match.RemainingSeconds, Is.EqualTo(60f));
 
             match.Start();
 
-            Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Playing));
+            Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
             Assert.Throws<InvalidOperationException>(() => match.Start());
         }
 
@@ -86,11 +86,11 @@ namespace Fps.Core.Tests
             match.Ended += winner => ended.Add(winner);
 
             match.ReportKill(_bravo1, _alpha1);
-            Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Playing));
+            Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
 
             match.ReportKill(_bravo2, _alpha2);
 
-            Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Ended));
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(match.Winner, Is.EqualTo(Team.Bravo));
             Assert.That(ended, Is.EqualTo(new Team?[] { Team.Bravo }));
         }
@@ -104,12 +104,12 @@ namespace Fps.Core.Tests
             match.ReportKill(_alpha1, _bravo1);
 
             match.Tick(9f);
-            Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Playing));
+            Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
             Assert.That(match.RemainingSeconds, Is.EqualTo(1f));
 
             match.Tick(5f);
 
-            Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Ended));
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(match.RemainingSeconds, Is.Zero);
             Assert.That(match.Winner, Is.EqualTo(Team.Alpha));
             Assert.That(ended, Is.EqualTo(new Team?[] { Team.Alpha }));
@@ -126,7 +126,7 @@ namespace Fps.Core.Tests
 
             match.Tick(10f);
 
-            Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Ended));
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(match.Winner, Is.Null);
             Assert.That(ended, Is.EqualTo(new Team?[] { null }));
         }
@@ -181,6 +181,75 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ReportDeathCountsDeathAndWaitsForRespawnWithoutScoring()
+        {
+            var match = CreateStarted(respawnSeconds: 2f);
+            var respawned = new List<int>();
+            match.RespawnReady += id => respawned.Add(id);
+
+            match.ReportDeath(_alpha1);
+            match.ReportDeath(_alpha1);
+
+            Assert.That(match.GetDeaths(_alpha1), Is.EqualTo(1));
+            Assert.That(match.GetKills(_alpha1), Is.Zero);
+            Assert.That(match.GetScore(Team.Alpha), Is.Zero);
+            Assert.That(match.GetScore(Team.Bravo), Is.Zero);
+            Assert.That(match.IsAwaitingRespawn(_alpha1), Is.True);
+
+            match.ReportKill(_bravo1, _alpha1);
+            Assert.That(match.GetScore(Team.Bravo), Is.Zero);
+
+            match.Tick(2f);
+
+            Assert.That(respawned, Is.EqualTo(new[] { _alpha1 }));
+        }
+
+        [Test]
+        public void ReportDeathIsIgnoredWhileWaitingAndAfterEnd()
+        {
+            var waiting = new TeamDeathmatch(new TeamDeathmatchSpec(10, 60f, 3f));
+            waiting.AddPlayer(_alpha1, Team.Alpha);
+
+            waiting.ReportDeath(_alpha1);
+
+            Assert.That(waiting.GetDeaths(_alpha1), Is.Zero);
+
+            var ended = CreateStarted(scoreLimit: 1);
+            ended.ReportKill(_alpha1, _bravo1);
+
+            ended.ReportDeath(_alpha2);
+
+            Assert.That(ended.GetDeaths(_alpha2), Is.Zero);
+            Assert.That(ended.IsAwaitingRespawn(_alpha2), Is.False);
+        }
+
+        [Test]
+        public void ReportDeathOfUnknownPlayerThrows()
+        {
+            var match = CreateStarted();
+
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => match.ReportDeath(99));
+            Assert.That(ex.ParamName, Is.EqualTo("playerId"));
+        }
+
+        [Test]
+        public void StateChangedFiresOnStartAndEndBeforeEnded()
+        {
+            var match = new TeamDeathmatch(new TeamDeathmatchSpec(1, 60f, 3f));
+            match.AddPlayer(_alpha1, Team.Alpha);
+            match.AddPlayer(_bravo1, Team.Bravo);
+            var events = new List<string>();
+            match.StateChanged += state => events.Add($"state {state} winner {match.Winner}");
+            match.Ended += winner => events.Add($"ended {winner}");
+
+            match.Start();
+            match.ReportKill(_bravo1, _alpha1);
+            match.Tick(100f);
+
+            Assert.That(events, Is.EqualTo(new[] { "state Playing winner ", "state Ended winner Bravo", "ended Bravo" }));
+        }
+
+        [Test]
         public void KillOfPlayerAwaitingRespawnIsIgnored()
         {
             var match = CreateStarted();
@@ -209,7 +278,7 @@ namespace Fps.Core.Tests
             match.Tick(1f);
             match.Tick(100f);
 
-            Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Ended));
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(match.Winner, Is.EqualTo(Team.Alpha));
             Assert.That(match.GetScore(Team.Alpha), Is.EqualTo(1));
             Assert.That(match.GetScore(Team.Bravo), Is.Zero);
@@ -233,7 +302,7 @@ namespace Fps.Core.Tests
             Assert.That(match.GetScore(Team.Alpha), Is.Zero);
             Assert.That(match.GetDeaths(_bravo1), Is.Zero);
             Assert.That(match.RemainingSeconds, Is.EqualTo(60f));
-            Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Waiting));
+            Assert.That(match.State, Is.EqualTo(GameModeState.Waiting));
         }
 
         [Test]

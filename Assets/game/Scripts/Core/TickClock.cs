@@ -16,10 +16,10 @@ namespace Fps.Core
 
         // float の delta は 1/60 などを正確に表せず、合計がわずかに境界を下回ることがある。
         // それで tick を 1 つ取りこぼさないための許容幅（tick 単位。60Hz で約 1.7 マイクロ秒）。
-        private const double BoundaryEpsilon = 1e-4;
+        private const double _boundaryEpsilon = 1e-4;
 
         // 1 未満で最大の float。
-        private const float MaxAlpha = 0.99999994f;
+        private const float _maxAlpha = 0.99999994f;
 
         // 次の tick までに溜まった時間。誤差が溜まらないよう tick 単位の double で持つ。
         private double _pendingTicks;
@@ -48,7 +48,7 @@ namespace Fps.Core
                 }
 
                 // double では 1 未満でも float に丸めると 1 になることがあるので、1 未満に収める。
-                return alpha < 1f ? alpha : MaxAlpha;
+                return alpha < 1f ? alpha : _maxAlpha;
             }
         }
 
@@ -86,7 +86,7 @@ namespace Fps.Core
 
             _pendingTicks += (double)deltaSeconds * TickRate;
 
-            var wholeTicks = Math.Floor(_pendingTicks + BoundaryEpsilon);
+            var wholeTicks = Math.Floor(_pendingTicks + _boundaryEpsilon);
             if (wholeTicks <= 0d)
             {
                 return 0;

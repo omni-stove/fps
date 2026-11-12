@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace Fps.Core
 {
@@ -209,6 +210,152 @@ namespace Fps.Core
             }
 
             Notify(changes);
+        }
+
+        /// <summary>全目標の現在の状態と進み具合を定義順で書き出す。<see cref="Restore"/> に渡すと今の状態に戻る。</summary>
+        public IReadOnlyList<ObjectiveProgress> Snapshot()
+        {
+            var list = new List<ObjectiveProgress>(Objectives.Count);
+            foreach (var objective in Objectives)
+            {
+                list.Add(new ObjectiveProgress(objective.Id, _states[objective.Id], _counts[objective.Id]));
+            }
+
+            return new ReadOnlyCollection<ObjectiveProgress>(list);
+        }
+
+        /// <summary>
+        /// <see cref="Snapshot"/> で書き出した状態に戻す。終了後のミッションにも使え、ミッション全体の状態も計算し直す。
+        /// Completed と Failed はそのまま戻し、Locked と Active は前提の状態から決め直す
+        /// (前提がすべて完了なら Active、前提が失敗していれば Failed、それ以外は Locked)。
+        /// ただし終了したミッションでは、操作で目標が切り替わらないのに合わせて、Locked はそのまま、Active は前提が未完了なら Locked にするだけにする。
+        /// 戻すことは操作ではないので、イベントは呼ばない。呼び出し側は戻したあとで状態を読み直す。
+        /// </summary>
+        /// <param name="progress">
+        /// 全目標ちょうど 1 つずつの状態。Completed は進み具合が RequiredCount で前提がすべて完了していること、
+        /// それ以外は進み具合が RequiredCount 未満で、前提が未完了なら 0 であること。
+        /// 満たさなければ <see cref="ArgumentException"/> を投げ、ミッションは変えない。
+        /// </param>
+        public void Restore(IEnumerable<ObjectiveProgress> progress)
+        {
+            if (progress == null)
+            {
+                throw new ArgumentNullException(nameof(progress));
+            }
+
+            var saved = new Dictionary<string, ObjectiveProgress>(StringComparer.Ordinal);
+            foreach (var entry in progress)
+            {
+                if (entry == null)
+                {
+                    throw new ArgumentException("progress must not contain null", nameof(progress));
+                }
+
+                if (!_byId.TryGetValue(entry.Id, out var objective))
+                {
+                    throw new ArgumentException($"unknown objective id '{entry.Id}'", nameof(progress));
+                }
+
+                if (!saved.TryAdd(entry.Id, entry))
+                {
+                    throw new ArgumentException($"duplicate objective id '{entry.Id}'", nameof(progress));
+                }
+
+                if (entry.State == ObjectiveState.Completed ? entry.Count != objective.RequiredCount : entry.Count >= objective.RequiredCount)
+                {
+                    throw new ArgumentException(
+                        $"objective '{entry.Id}' cannot be {entry.State} with count {entry.Count.ToString(CultureInfo.InvariantCulture)}",
+                        nameof(progress));
+                }
+            }
+
+            foreach (var objective in Objectives)
+            {
+                if (!saved.ContainsKey(objective.Id))
+                {
+                    throw new ArgumentException($"missing objective id '{objective.Id}'", nameof(progress));
+                }
+            }
+
+            // 先に Completed と Failed だけでミッション全体の状態を決める。終了済みなら Locked と Active は操作で切り替わらない。
+            var states = new Dictionary<string, ObjectiveState>(StringComparer.Ordinal);
+            var finished = false;
+            var allRequiredCompleted = true;
+            foreach (var objective in Objectives)
+            {
+                var state = saved[objective.Id].State;
+                finished |= !objective.Optional && state == ObjectiveState.Failed;
+                allRequiredCompleted &= objective.Optional || state == ObjectiveState.Completed;
+            }
+
+            finished |= allRequiredCompleted;
+            var requiredFailed = false;
+            allRequiredCompleted = true;
+
+            // 前提が先に並ぶ順に見るので、前提の状態は決まっている。
+            foreach (var objective in _topologicalOrder)
+            {
+                var entry = saved[objective.Id];
+                var prerequisitesCompleted = true;
+                var prerequisiteFailed = false;
+                foreach (var prerequisite in objective.Prerequisites)
+                {
+                    prerequisitesCompleted &= states[prerequisite] == ObjectiveState.Completed;
+                    prerequisiteFailed |= states[prerequisite] == ObjectiveState.Failed;
+                }
+
+                var state = entry.State;
+                if (state == ObjectiveState.Completed && !prerequisitesCompleted)
+                {
+                    throw new ArgumentException(
+                        $"objective '{objective.Id}' is completed before its prerequisites", nameof(progress));
+                }
+
+                if (state == ObjectiveState.Locked || state == ObjectiveState.Active)
+                {
+                    if (!prerequisitesCompleted && entry.Count != 0)
+                    {
+                        throw new ArgumentException(
+                            $"objective '{objective.Id}' has progress before its prerequisites are completed", nameof(progress));
+                    }
+
+                    if (finished)
+                    {
+                        state = state == ObjectiveState.Active && prerequisitesCompleted ? ObjectiveState.Active : ObjectiveState.Locked;
+                    }
+                    else if (prerequisiteFailed)
+                    {
+                        state = ObjectiveState.Failed;
+                    }
+                    else
+                    {
+                        state = prerequisitesCompleted ? ObjectiveState.Active : ObjectiveState.Locked;
+                    }
+                }
+
+                states.Add(objective.Id, state);
+                requiredFailed |= !objective.Optional && state == ObjectiveState.Failed;
+                allRequiredCompleted &= objective.Optional || state == ObjectiveState.Completed;
+            }
+
+            foreach (var objective in Objectives)
+            {
+                _states[objective.Id] = states[objective.Id];
+                _counts[objective.Id] = saved[objective.Id].Count;
+            }
+
+            if (requiredFailed)
+            {
+                State = MissionState.Failed;
+            }
+            else if (allRequiredCompleted)
+            {
+                State = MissionState.Completed;
+            }
+            else
+            {
+                State = MissionState.Active;
+            }
         }
 
         private Objective Find(string id)

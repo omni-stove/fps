@@ -33,11 +33,19 @@ namespace Fps.Net.Tests
         private static WeaponSpec DefaultSpec()
         {
             return new WeaponSpec(
+                NetTeamDeathmatch.DefaultWeaponId,
+                null,
+                FireMode.Auto,
                 NetPlayerWeapon.DefaultMagazineSize,
                 NetPlayerWeapon.DefaultReserveAmmo,
                 NetTeamDeathmatch.DefaultFireInterval,
                 NetPlayerWeapon.DefaultReloadSeconds,
-                NetTeamDeathmatch.DefaultWeaponDamage);
+                NetTeamDeathmatch.DefaultWeaponDamage,
+                NetTeamDeathmatch.DefaultWeaponRange,
+                new DamageFalloff(
+                    NetTeamDeathmatch.DefaultFalloffStart,
+                    NetTeamDeathmatch.DefaultFalloffEnd,
+                    NetTeamDeathmatch.DefaultFalloffMinMultiplier));
         }
 
         private NetPlayerWeapon CreateWeapon()
@@ -179,7 +187,7 @@ namespace Fps.Net.Tests
             var weapon = CreateWeapon();
             weapon.ServerTryFire();
 
-            weapon.ServerEquip(new WeaponSpec(5, 10, 0.1f, 1f, 25));
+            weapon.ServerEquip(new WeaponSpec("handgun", null, FireMode.Semi, 5, 10, 0.1f, 1f, 25, 50f, DamageFalloff.None));
 
             Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(5));
             Assert.That(weapon.ServerWeapon.ReserveAmmo, Is.EqualTo(10));

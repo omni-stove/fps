@@ -33,7 +33,17 @@ namespace Fps.Core
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
             _innerSpec = spec.FireInterval == 0f
                 ? spec
-                : new WeaponSpec(spec.MagazineSize, spec.ReserveAmmo, 0f, spec.ReloadSeconds, spec.Damage);
+                : new WeaponSpec(
+                    spec.Id,
+                    spec.DisplayName,
+                    spec.FireMode,
+                    spec.MagazineSize,
+                    spec.ReserveAmmo,
+                    0f,
+                    spec.ReloadSeconds,
+                    spec.Damage,
+                    spec.Range,
+                    spec.Falloff);
             _weapon = CreateWeapon();
         }
 

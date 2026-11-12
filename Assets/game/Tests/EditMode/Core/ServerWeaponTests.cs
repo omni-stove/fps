@@ -8,7 +8,7 @@ namespace Fps.Core.Tests
     {
         private static WeaponSpec Spec(int magazine = 3, int reserve = 5, float fireInterval = 0.1f, float reloadSeconds = 2f)
         {
-            return new WeaponSpec(magazine, reserve, fireInterval, reloadSeconds, 25);
+            return new WeaponSpec("rifle", null, FireMode.Auto, magazine, reserve, fireInterval, reloadSeconds, 25, 100f, DamageFalloff.None);
         }
 
         [Test]

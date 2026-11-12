@@ -38,10 +38,10 @@ namespace Fps.Net
     [RequireComponent(typeof(NetworkObject))]
     public sealed class NetTeamDeathmatch : NetworkBehaviour
     {
-        /// <summary>武器の既定値。オフラインの WeaponController と同じ値にそろえる。</summary>
         /// <summary>試合で配る武器の Id。定義アセットに置き換えるまでは固定。</summary>
         public const string DefaultWeaponId = "rifle";
 
+        /// <summary>武器の既定値。オフラインの WeaponController と同じ値にそろえる。</summary>
         public const int DefaultWeaponDamage = 25;
         public const float DefaultWeaponRange = 100f;
         public const float DefaultFireInterval = 0.1f;

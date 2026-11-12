@@ -4,6 +4,7 @@
     "references": [
         "Fps.Core",
         "Fps.Net",
+        "Fps.Net.Editor",
         "Unity.Netcode.Runtime",
         "Unity.Networking.Transport",
         "UnityEngine.TestRunner",

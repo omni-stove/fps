@@ -62,11 +62,17 @@ namespace Fps.Core
 
             if (distance >= EndDistance)
             {
-                return MinMultiplier;
+                return MinMultiplierAsDouble();
             }
 
             var t = ((double)distance - StartDistance) / ((double)EndDistance - StartDistance);
-            return 1.0 + ((MinMultiplier - 1.0) * t);
+            return 1.0 + ((MinMultiplierAsDouble() - 1.0) * t);
+        }
+
+        // float を 10 進経由で広げ、0.7f が 0.699999988... にならないようにする。
+        private double MinMultiplierAsDouble()
+        {
+            return (double)(decimal)MinMultiplier;
         }
 
         private static bool IsFinite(float value)

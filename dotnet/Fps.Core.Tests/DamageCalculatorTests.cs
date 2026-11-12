@@ -6,14 +6,14 @@ namespace Fps.Core.Tests
     public sealed class DamageCalculatorTests
     {
         // 10 以下は 1.0、30 以上は 0.5、20 で 0.75
-        private static readonly DamageFalloff Falloff = new DamageFalloff(10f, 30f, 0.5f);
+        private static readonly DamageFalloff _falloff =new DamageFalloff(10f, 30f, 0.5f);
 
         [TestCase(HitZone.Head, 200)]
         [TestCase(HitZone.Body, 100)]
         [TestCase(HitZone.Limb, 75)]
         public void AppliesZoneMultiplier(HitZone zone, int expected)
         {
-            Assert.That(DamageCalculator.Calculate(100, zone, 0f, Falloff), Is.EqualTo(expected));
+            Assert.That(DamageCalculator.Calculate(100, zone, 0f, _falloff), Is.EqualTo(expected));
         }
 
         [TestCase(0f, 100)]
@@ -24,20 +24,20 @@ namespace Fps.Core.Tests
         [TestCase(1000f, 50)]
         public void AppliesDistanceFalloff(float distance, int expected)
         {
-            Assert.That(DamageCalculator.Calculate(100, HitZone.Body, distance, Falloff), Is.EqualTo(expected));
+            Assert.That(DamageCalculator.Calculate(100, HitZone.Body, distance, _falloff), Is.EqualTo(expected));
         }
 
         [Test]
         public void InfiniteDistanceUsesMinMultiplier()
         {
-            Assert.That(DamageCalculator.Calculate(100, HitZone.Body, float.PositiveInfinity, Falloff), Is.EqualTo(50));
+            Assert.That(DamageCalculator.Calculate(100, HitZone.Body, float.PositiveInfinity, _falloff), Is.EqualTo(50));
         }
 
         [Test]
         public void CombinesZoneAndFalloff()
         {
             // 40 × 2.0 × 0.75 = 60
-            Assert.That(DamageCalculator.Calculate(40, HitZone.Head, 20f, Falloff), Is.EqualTo(60));
+            Assert.That(DamageCalculator.Calculate(40, HitZone.Head, 20f, _falloff), Is.EqualTo(60));
         }
 
         [Test]
@@ -62,7 +62,7 @@ namespace Fps.Core.Tests
         [TestCase(7, HitZone.Limb, 0f, 5)] // 5.25 → 5
         public void RoundsHalfAwayFromZero(int baseDamage, HitZone zone, float distance, int expected)
         {
-            Assert.That(DamageCalculator.Calculate(baseDamage, zone, distance, Falloff), Is.EqualTo(expected));
+            Assert.That(DamageCalculator.Calculate(baseDamage, zone, distance, _falloff), Is.EqualTo(expected));
         }
 
         [Test]
@@ -87,13 +87,13 @@ namespace Fps.Core.Tests
         [TestCase(HitZone.Limb)]
         public void ZeroBaseDamageIsZero(HitZone zone)
         {
-            Assert.That(DamageCalculator.Calculate(0, zone, 50f, Falloff), Is.Zero);
+            Assert.That(DamageCalculator.Calculate(0, zone, 50f, _falloff), Is.Zero);
         }
 
         [Test]
         public void HugeDamageIsClampedToIntMax()
         {
-            Assert.That(DamageCalculator.Calculate(int.MaxValue, HitZone.Head, 0f, Falloff), Is.EqualTo(int.MaxValue));
+            Assert.That(DamageCalculator.Calculate(int.MaxValue, HitZone.Head, 0f, _falloff), Is.EqualTo(int.MaxValue));
         }
 
         [Test]
@@ -101,7 +101,7 @@ namespace Fps.Core.Tests
         {
             var health = new Health(100);
 
-            health.TakeDamage(DamageCalculator.Calculate(30, HitZone.Head, 0f, Falloff));
+            health.TakeDamage(DamageCalculator.Calculate(30, HitZone.Head, 0f, _falloff));
 
             Assert.That(health.Current, Is.EqualTo(40));
         }
@@ -109,7 +109,7 @@ namespace Fps.Core.Tests
         [Test]
         public void RejectsNegativeBaseDamage()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => DamageCalculator.Calculate(-1, HitZone.Body, 0f, Falloff));
+            Assert.Throws<ArgumentOutOfRangeException>(() => DamageCalculator.Calculate(-1, HitZone.Body, 0f, _falloff));
         }
 
         [TestCase(-0.01f)]
@@ -117,19 +117,19 @@ namespace Fps.Core.Tests
         [TestCase(float.NaN)]
         public void RejectsInvalidDistance(float distance)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => DamageCalculator.Calculate(10, HitZone.Body, distance, Falloff));
+            Assert.Throws<ArgumentOutOfRangeException>(() => DamageCalculator.Calculate(10, HitZone.Body, distance, _falloff));
         }
 
         [Test]
         public void RejectsNegativeDistanceEvenWithZeroBaseDamage()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => DamageCalculator.Calculate(0, HitZone.Body, -1f, Falloff));
+            Assert.Throws<ArgumentOutOfRangeException>(() => DamageCalculator.Calculate(0, HitZone.Body, -1f, _falloff));
         }
 
         [Test]
         public void RejectsUnknownZone()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => DamageCalculator.Calculate(10, (HitZone)99, 0f, Falloff));
+            Assert.Throws<ArgumentOutOfRangeException>(() => DamageCalculator.Calculate(10, (HitZone)99, 0f, _falloff));
         }
 
         [Test]

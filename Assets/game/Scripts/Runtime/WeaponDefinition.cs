@@ -1,0 +1,168 @@
+using System;
+using Fps.Core;
+using UnityEngine;
+
+namespace Fps.Runtime
+{
+    /// <summary>
+    /// 武器 1 種類の値をアセットとして持つ。クライアントと専用サーバーは同じアセットを読み、<see cref="ToSpec"/> で
+    /// 不変の <see cref="WeaponSpec"/> に変換して使う。検証は <see cref="WeaponSpec"/> と <see cref="DamageFalloff"/> に任せ、
+    /// 失敗したらどのアセットの値かを添えて <see cref="WeaponDefinitionException"/> を投げる。
+    /// 既定値は <see cref="WeaponController"/> の既定 (rifle) と同じ。
+    /// </summary>
+    [CreateAssetMenu(fileName = "Weapon", menuName = "Fps/Weapon Definition")]
+    public sealed class WeaponDefinition : ScriptableObject
+    {
+        [SerializeField, Tooltip("武器の識別子。小文字英数字・ハイフン・アンダースコアのみ (例: rifle)")]
+        private string _id = WeaponController.DefaultWeaponId;
+
+        [SerializeField, Tooltip("プレイヤーに見せる名前。空なら Id")]
+        private string _displayName = string.Empty;
+
+        [SerializeField, Tooltip("射撃モード")]
+        private FireMode _fireMode = FireMode.Auto;
+
+        [SerializeField, Min(1), Tooltip("弾倉の容量")]
+        private int _magazineSize = WeaponController.DefaultMagazineSize;
+
+        [SerializeField, Min(0), Tooltip("予備弾の初期値")]
+        private int _reserveAmmo = WeaponController.DefaultReserveAmmo;
+
+        [SerializeField, Min(0f), Tooltip("射撃から次に撃てるまでの秒数")]
+        private float _fireInterval = WeaponController.DefaultFireInterval;
+
+        [SerializeField, Min(0f), Tooltip("リロード開始から補充までの秒数")]
+        private float _reloadSeconds = WeaponController.DefaultReloadSeconds;
+
+        [SerializeField, Min(0), Tooltip("1 発あたりの基本ダメージ")]
+        private int _damage = WeaponController.DefaultDamage;
+
+        [SerializeField, Min(0.01f), Tooltip("射程 (m)")]
+        private float _range = WeaponController.DefaultRange;
+
+        [Header("距離減衰")]
+        [SerializeField, Min(0f), Tooltip("この距離までは減衰しない (m)")]
+        private float _falloffStart = WeaponController.DefaultFalloffStart;
+
+        [SerializeField, Min(0f), Tooltip("この距離以上で最小倍率になる (m)")]
+        private float _falloffEnd = WeaponController.DefaultFalloffEnd;
+
+        [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("最大まで減衰したときの倍率")]
+        private float _falloffMinMultiplier = WeaponController.DefaultFalloffMinMultiplier;
+
+        public string Id
+        {
+            get => _id ?? string.Empty;
+            set => _id = value ?? string.Empty;
+        }
+
+        public string DisplayName
+        {
+            get => _displayName ?? string.Empty;
+            set => _displayName = value ?? string.Empty;
+        }
+
+        public FireMode FireMode
+        {
+            get => _fireMode;
+            set => _fireMode = value;
+        }
+
+        public int MagazineSize
+        {
+            get => _magazineSize;
+            set => _magazineSize = value;
+        }
+
+        public int ReserveAmmo
+        {
+            get => _reserveAmmo;
+            set => _reserveAmmo = value;
+        }
+
+        public float FireInterval
+        {
+            get => _fireInterval;
+            set => _fireInterval = value;
+        }
+
+        public float ReloadSeconds
+        {
+            get => _reloadSeconds;
+            set => _reloadSeconds = value;
+        }
+
+        public int Damage
+        {
+            get => _damage;
+            set => _damage = value;
+        }
+
+        public float Range
+        {
+            get => _range;
+            set => _range = value;
+        }
+
+        public float FalloffStart
+        {
+            get => _falloffStart;
+            set => _falloffStart = value;
+        }
+
+        public float FalloffEnd
+        {
+            get => _falloffEnd;
+            set => _falloffEnd = value;
+        }
+
+        public float FalloffMinMultiplier
+        {
+            get => _falloffMinMultiplier;
+            set => _falloffMinMultiplier = value;
+        }
+
+        /// <summary>
+        /// 定義を不変の <see cref="WeaponSpec"/> に変換する。呼ぶたびに新しいインスタンスを返す。
+        /// Id の前後の空白は <see cref="WeaponSpec"/> が取り除く。
+        /// </summary>
+        /// <exception cref="WeaponDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
+        public WeaponSpec ToSpec()
+        {
+            var source = string.IsNullOrEmpty(name) ? "(unnamed weapon)" : name;
+            try
+            {
+                var falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
+                return new WeaponSpec(
+                    Id,
+                    DisplayName,
+                    _fireMode,
+                    _magazineSize,
+                    _reserveAmmo,
+                    _fireInterval,
+                    _reloadSeconds,
+                    _damage,
+                    _range,
+                    falloff);
+            }
+            catch (ArgumentException e)
+            {
+                throw new WeaponDefinitionException($"weapon '{source}' (id '{Id}') is invalid: {e.Message}", e);
+            }
+        }
+    }
+
+    /// <summary><see cref="WeaponDefinition"/> や <see cref="WeaponCatalogAsset"/> の内容が不正で変換できない。</summary>
+    public sealed class WeaponDefinitionException : Exception
+    {
+        public WeaponDefinitionException(string message)
+            : base(message)
+        {
+        }
+
+        public WeaponDefinitionException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
+}

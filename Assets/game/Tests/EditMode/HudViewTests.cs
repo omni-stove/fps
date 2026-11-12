@@ -9,6 +9,11 @@ namespace Fps.Tests.EditMode
 {
     public sealed class HudViewTests
     {
+        private static WeaponSpec NewSpec()
+        {
+            return new WeaponSpec("rifle", null, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
+        }
+
         private static VisualElement CloneLayout()
         {
             var layout = Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath);
@@ -31,6 +36,29 @@ namespace Fps.Tests.EditMode
             Assert.That(root.Q<Label>(HudView.AmmoLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.TimeLabelName), Is.Not.Null);
             Assert.That(root.Q<VisualElement>(HudView.CrosshairName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.NoticeLabelName), Is.Not.Null);
+        }
+
+        [Test]
+        public void TheNoticeIsHiddenWhileEmptyAndShownWhileItHasText()
+        {
+            var model = new HudModel();
+            var notice = new CampaignNotice();
+            model.BindNotice(notice);
+            var view = new HudView(CloneLayout(), model);
+
+            Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            notice.ShowSaved(1f);
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(HudFormat.CheckpointSaved));
+            Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            notice.ShowRestartCountdown(2f);
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(HudFormat.CheckpointRestart(2)));
+
+            notice.Clear();
+            Assert.That(view.NoticeLabel.text, Is.Empty);
+            Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 
         [Test]
@@ -38,7 +66,7 @@ namespace Fps.Tests.EditMode
         {
             var model = new HudModel();
             model.BindHealth(new Health(100));
-            model.BindWeapon(new Weapon(new WeaponSpec(30, 90, 0f, 1f, 25)));
+            model.BindWeapon(new Weapon(NewSpec()));
             model.BindMatch(new Match(125f, 1, 0));
 
             var view = new HudView(CloneLayout(), model);
@@ -53,7 +81,7 @@ namespace Fps.Tests.EditMode
         {
             var model = new HudModel();
             var health = new Health(100);
-            var weapon = new Weapon(new WeaponSpec(30, 90, 0f, 1f, 25));
+            var weapon = new Weapon(NewSpec());
             var match = new Match(60f, 1, 0);
             model.BindHealth(health);
             model.BindWeapon(weapon);

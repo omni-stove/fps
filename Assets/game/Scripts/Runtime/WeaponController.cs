@@ -26,6 +26,9 @@ namespace Fps.Runtime
 
         public const string ReloadedLog = "[Combat] reloaded";
 
+        /// <summary>このコンポーネントが作る武器の Id。定義アセットに置き換えるまでは固定。</summary>
+        public const string DefaultWeaponId = "rifle";
+
         public const int DefaultMagazineSize = 30;
         public const int DefaultReserveAmmo = 90;
         public const float DefaultFireInterval = 0.1f;
@@ -243,8 +246,18 @@ namespace Fps.Runtime
             }
 
             // 先に両方作って検査を通してから差し替える (途中で失敗しても前の状態が残る)。
-            var spec = new WeaponSpec(_magazineSize, _reserveAmmo, _fireInterval, _reloadSeconds, _damage);
             var falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
+            var spec = new WeaponSpec(
+                DefaultWeaponId,
+                null,
+                FireMode.Auto,
+                _magazineSize,
+                _reserveAmmo,
+                _fireInterval,
+                _reloadSeconds,
+                _damage,
+                _range,
+                falloff);
 
             if (_enabledAttackAction && _attackAction != null && _attackAction != attackAction)
             {

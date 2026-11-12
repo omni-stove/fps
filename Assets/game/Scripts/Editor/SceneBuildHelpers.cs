@@ -146,6 +146,18 @@ namespace Fps.Editor
         /// </summary>
         public static MissionDefinition CreateOrUpdateMissionDefinition(string path, Action<MissionDefinition> configure)
         {
+            return CreateOrUpdateAsset(path, configure);
+        }
+
+        /// <summary>
+        /// path の ScriptableObject (型 T) を configure で上書きする。無ければ作る。既存のアセットは GUID を保つので、
+        /// それを参照しているシーンやアセットは壊れない。configure は不正な中身なら例外を投げ、そのときは保存しない
+        /// (新しく作ったインスタンスは捨てる)。configure は値を検査してから書き込むと、既存のアセットのメモリ上の中身も汚さない。
+        /// path に別の型のアセットがあれば例外を投げる。
+        /// </summary>
+        public static T CreateOrUpdateAsset<T>(string path, Action<T> configure)
+            where T : ScriptableObject
+        {
             if (configure == null)
             {
                 throw new ArgumentNullException(nameof(configure));
@@ -154,29 +166,29 @@ namespace Fps.Editor
             path = ValidateAssetPath(path);
 
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
-            if (existing != null && !(existing is MissionDefinition))
+            if (existing != null && !(existing is T))
             {
                 throw new InvalidOperationException(
-                    $"'{path}' is a {existing.GetType().Name}, not a {nameof(MissionDefinition)}; move it away first");
+                    $"'{path}' is a {existing.GetType().Name}, not a {typeof(T).Name}; move it away first");
             }
 
-            var definition = (MissionDefinition)existing;
-            var created = definition == null;
+            var asset = (T)existing;
+            var created = asset == null;
             if (created)
             {
-                definition = ScriptableObject.CreateInstance<MissionDefinition>();
-                definition.name = Path.GetFileNameWithoutExtension(path);
+                asset = ScriptableObject.CreateInstance<T>();
+                asset.name = Path.GetFileNameWithoutExtension(path);
             }
 
             try
             {
-                configure(definition);
+                configure(asset);
             }
             catch
             {
                 if (created)
                 {
-                    UnityEngine.Object.DestroyImmediate(definition);
+                    UnityEngine.Object.DestroyImmediate(asset);
                 }
 
                 throw;
@@ -185,15 +197,15 @@ namespace Fps.Editor
             if (created)
             {
                 EnsureFolder(Path.GetDirectoryName(path));
-                AssetDatabase.CreateAsset(definition, path);
+                AssetDatabase.CreateAsset(asset, path);
             }
             else
             {
-                EditorUtility.SetDirty(definition);
+                EditorUtility.SetDirty(asset);
             }
 
             AssetDatabase.SaveAssets();
-            return definition;
+            return asset;
         }
 
         /// <summary>

@@ -14,6 +14,7 @@ namespace Fps.Runtime
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
+    /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameBootstrap : MonoBehaviour
@@ -82,6 +83,13 @@ namespace Fps.Runtime
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
         public BootstrapWorld World => _world;
+
+        /// <summary>
+        /// <see cref="Build"/> が生成し終えたときに、生成物を渡して 1 度だけ呼ばれる。生成に失敗したときは呼ばれない。
+        /// 生成は Awake で済むので、購読する側は先に <see cref="World"/> を見て、null のときだけ購読して待つ。
+        /// 購読者が例外を投げても生成は失敗にせず、例外をログに出して残りの購読者を呼ぶ。
+        /// </summary>
+        public event Action<BootstrapWorld> Built;
 
         /// <summary>
         /// <see cref="Build"/> で床を生成するか。シーン側に床 (NavMeshSurface を焼いたもの) があるときは false にする。
@@ -160,7 +168,29 @@ namespace Fps.Runtime
             }
 
             Debug.Log(ReadyLog, this);
+            NotifyBuilt(_world);
             return _world;
+        }
+
+        private void NotifyBuilt(BootstrapWorld world)
+        {
+            var handlers = Built;
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (var handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<BootstrapWorld>)handler)(world);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e, this);
+                }
+            }
         }
 
         private static GameObject CreateFloor()

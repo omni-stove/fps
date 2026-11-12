@@ -17,9 +17,11 @@ namespace Fps.Runtime
     /// 別のミッションのセーブや壊れたセーブは警告を出して無視し、最初から始める。</item>
     /// <item>ミッションを達成したらセーブを消す。</item>
     /// </list>
-    /// Start で <see cref="MissionRunner"/> (Inspector で指定しなければシーンから) と <see cref="GameBootstrap"/> が作ったプレイヤーを拾う。
+    /// Start で <see cref="MissionRunner"/> と <see cref="GameBootstrap"/> (どちらも Inspector で指定しなければシーンから) を拾い、
+    /// GameBootstrap がプレイヤーを作り終えていればすぐ、まだなら <see cref="GameBootstrap.Built"/> を待って始める。
     /// トリガーより先にミッションを戻すため、既定の実行順より前に Start を走らせる。
     /// セーブの場所 (<see cref="Storage"/>) とシーンの読み直し (<see cref="SceneReloader"/>) は差し替えられる。
+    /// セーブしたことと再開までの秒数は <see cref="Notice"/> に出し、GameBootstrap の HUD があればそこに表示する。
     /// 状態の変化は <see cref="LogTag"/> を付けて Debug.Log に出す。
     /// </summary>
     [DisallowMultipleComponent]
@@ -33,8 +35,14 @@ namespace Fps.Runtime
 
         public const float DefaultReloadDelaySeconds = 3f;
 
+        /// <summary>セーブしたときに HUD へ「セーブしました」を出しておく秒数。</summary>
+        public const float SavedNoticeSeconds = 2.5f;
+
         [SerializeField, Tooltip("セーブするミッション。空ならシーンから探す")]
         private MissionRunner _missionRunner;
+
+        [SerializeField, Tooltip("プレイヤーと HUD を作る GameBootstrap。空ならシーンから探す")]
+        private GameBootstrap _bootstrap;
 
         [SerializeField, Min(0f), Tooltip("プレイヤーが倒れてからシーンを読み直すまでの秒数")]
         private float _reloadDelaySeconds = DefaultReloadDelaySeconds;
@@ -54,6 +62,12 @@ namespace Fps.Runtime
 
         private bool _reloadPending;
         private float _reloadRemaining;
+
+        private readonly CampaignNotice _notice = new CampaignNotice();
+        private Hud _hud;
+
+        // Start の時点でプレイヤーがまだ無かったときに、Built を待っている GameBootstrap。
+        private GameBootstrap _awaitedBootstrap;
 
         /// <summary>セーブを置く場所。null なら Start で <see cref="FileSaveStorage.CreateDefault"/> を使う。開始後は差し替えない。</summary>
         public ISaveStorage Storage
@@ -75,6 +89,19 @@ namespace Fps.Runtime
             get => _missionRunner;
             set => _missionRunner = value;
         }
+
+        /// <summary>Start でプレイヤーと HUD を受け取る GameBootstrap。null ならシーンから探す。</summary>
+        public GameBootstrap Bootstrap
+        {
+            get => _bootstrap;
+            set => _bootstrap = value;
+        }
+
+        /// <summary>HUD に一時的に出す案内 (セーブした・再開まで N 秒)。</summary>
+        public CampaignNotice Notice => _notice;
+
+        /// <summary>案内を出している HUD。HUD が無い (専用サーバーなど) か開始前なら null。</summary>
+        public Hud BoundHud => _hud;
 
         /// <summary>プレイヤーが倒れてからシーンを読み直すまでの秒数。0 以上。</summary>
         public float ReloadDelaySeconds
@@ -102,9 +129,12 @@ namespace Fps.Runtime
         /// <summary>プレイヤーが倒れ、シーンの読み直しを待っていれば true。</summary>
         public bool IsReloadPending => _reloadPending;
 
+        /// <summary>プレイヤーがまだ無く、<see cref="GameBootstrap.Built"/> を待っていれば true。</summary>
+        public bool IsWaitingForBootstrap => _awaitedBootstrap != null;
+
         private void Start()
         {
-            if (!IsStarted && !TryBeginFromScene())
+            if (!BeginFromSceneOrWait())
             {
                 enabled = false;
             }
@@ -120,15 +150,83 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
+            StopWaitingForBootstrap();
             Stop();
         }
 
         /// <summary>
+        /// <see cref="Bootstrap"/> (null ならシーンの GameBootstrap) がプレイヤーを作り終えていれば <see cref="TryBeginWith"/> で始め、
+        /// まだなら <see cref="GameBootstrap.Built"/> を購読して、作り終えたときに始める。Start から呼ぶ。
+        /// 既に始まっているか待っていれば何もせず true。GameBootstrap が無い・始められないときは理由を Debug.LogError に出して false。
+        /// </summary>
+        public bool BeginFromSceneOrWait()
+        {
+            if (IsStarted || IsWaitingForBootstrap)
+            {
+                return true;
+            }
+
+            var bootstrap = ResolveBootstrap();
+            if (bootstrap == null)
+            {
+                return false;
+            }
+
+            if (bootstrap.World != null)
+            {
+                return TryBeginWith(bootstrap.World);
+            }
+
+            _awaitedBootstrap = bootstrap;
+            bootstrap.Built += OnBootstrapBuilt;
+            Debug.LogWarning(
+                $"{LogTag} GameBootstrap '{bootstrap.name}' がまだプレイヤーを生成していないため、生成し終えてから始めます (生成に失敗していれば上のエラーを確認してください)。",
+                this);
+            return true;
+        }
+
+        /// <summary>
         /// シーンの MissionRunner と <see cref="GameBootstrap"/> のプレイヤーを拾って <see cref="Begin"/> する。
-        /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
+        /// 既に始まっていれば何もせず true。GameBootstrap がまだプレイヤーを作っていない・始められないときは
+        /// 理由を Debug.LogError に出して false を返す (作り終えるのを待つなら <see cref="BeginFromSceneOrWait"/> を使う)。
         /// </summary>
         public bool TryBeginFromScene()
         {
+            if (IsStarted)
+            {
+                return true;
+            }
+
+            var bootstrap = ResolveBootstrap();
+            if (bootstrap == null)
+            {
+                return false;
+            }
+
+            if (bootstrap.World == null)
+            {
+                Debug.LogError(
+                    $"{LogTag} GameBootstrap '{bootstrap.name}' がプレイヤーを生成していません。上のエラーを確認してください。",
+                    this);
+                return false;
+            }
+
+            return TryBeginWith(bootstrap.World);
+        }
+
+        /// <summary>
+        /// world (GameBootstrap の生成物) のプレイヤーと、<see cref="Runner"/> (null ならシーンの MissionRunner) で <see cref="Begin"/> し、
+        /// world に HUD があれば <see cref="Notice"/> を出させる。セーブの置き場所は <see cref="Storage"/>、無ければ
+        /// <see cref="FileSaveStorage.CreateDefault"/> のスロット <see cref="SaveSlot"/>。
+        /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
+        /// </summary>
+        public bool TryBeginWith(BootstrapWorld world)
+        {
+            if (world == null)
+            {
+                throw new ArgumentNullException(nameof(world));
+            }
+
             if (IsStarted)
             {
                 return true;
@@ -138,14 +236,6 @@ namespace Fps.Runtime
             if (runner == null)
             {
                 Debug.LogError($"{LogTag} シーンに MissionRunner がありません。", this);
-                return false;
-            }
-
-            var bootstrap = FindAnyObjectByType<GameBootstrap>();
-            var world = bootstrap != null ? bootstrap.World : null;
-            if (world == null)
-            {
-                Debug.LogError($"{LogTag} GameBootstrap がプレイヤーを生成していません。シーンに GameBootstrap があるか、上のエラーを確認してください。", this);
                 return false;
             }
 
@@ -170,7 +260,26 @@ namespace Fps.Runtime
                 return false;
             }
 
+            BindHud(world.Hud);
             return true;
+        }
+
+        /// <summary>
+        /// <see cref="Notice"/> を出す HUD を差し替える。null なら出さない。前の HUD からは外す。
+        /// <see cref="TryBeginWith"/> が GameBootstrap の HUD で呼ぶ。<see cref="Begin"/> を直接呼んだときは自分で呼ぶ。
+        /// </summary>
+        public void BindHud(Hud hud)
+        {
+            if (_hud != null && _hud != hud)
+            {
+                _hud.BindNotice(null);
+            }
+
+            _hud = hud;
+            if (_hud != null)
+            {
+                _hud.BindNotice(_notice);
+            }
         }
 
         /// <summary>
@@ -238,6 +347,7 @@ namespace Fps.Runtime
             _lastCheckpointId = string.Empty;
             _reloadPending = false;
             _reloadRemaining = 0f;
+            _notice.Clear();
 
             _player.Died += OnPlayerDied;
             _mission.MissionCompleted += OnMissionCompleted;
@@ -300,6 +410,7 @@ namespace Fps.Runtime
 
             _lastCheckpointId = checkpointId;
             _passedCheckpointIds.Add(checkpointId);
+            _notice.ShowSaved(SavedNoticeSeconds);
             Debug.Log(
                 $"{LogTag} saved mission={_missionId} checkpoint={checkpointId} health={save.Health} ammo={save.AmmoInMagazine}/{save.ReserveAmmo}",
                 this);
@@ -307,7 +418,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// シーンの読み直しまでの時間を deltaSeconds 進める。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。
+        /// シーンの読み直しまでの時間と、HUD の案内の残り時間を deltaSeconds 進める。読み直しを待つ間は
+        /// 「チェックポイントから再開まで N 秒」を更新する。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。
         /// </summary>
         public void Tick(float deltaSeconds)
         {
@@ -316,6 +428,7 @@ namespace Fps.Runtime
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must be a non-negative finite number");
             }
 
+            _notice.Tick(deltaSeconds);
             if (!_reloadPending)
             {
                 return;
@@ -324,18 +437,23 @@ namespace Fps.Runtime
             _reloadRemaining -= deltaSeconds;
             if (_reloadRemaining > 0f)
             {
+                _notice.ShowRestartCountdown(_reloadRemaining);
                 return;
             }
 
             _reloadPending = false;
             _reloadRemaining = 0f;
+            _notice.Clear();
             Debug.Log($"{LogTag} reloading scene", this);
             _sceneReloader();
         }
 
-        /// <summary>購読を解除してミッションから離れる。破棄時にも呼ばれる。</summary>
+        /// <summary>購読を解除してミッションから離れ、HUD の案内を外す。破棄時にも呼ばれる。</summary>
         public void Stop()
         {
+            BindHud(null);
+            _notice.Clear();
+
             if (_player != null)
             {
                 _player.Died -= OnPlayerDied;
@@ -459,9 +577,40 @@ namespace Fps.Runtime
 
             _reloadPending = true;
             _reloadRemaining = _reloadDelaySeconds;
+            _notice.ShowRestartCountdown(_reloadRemaining);
             Debug.Log(
                 $"{LogTag} player died; reloading in {_reloadDelaySeconds.ToString("0.##", CultureInfo.InvariantCulture)}s from checkpoint={(_lastCheckpointId.Length > 0 ? _lastCheckpointId : "(start)")}",
                 this);
+        }
+
+        private GameBootstrap ResolveBootstrap()
+        {
+            var bootstrap = _bootstrap != null ? _bootstrap : FindAnyObjectByType<GameBootstrap>();
+            if (bootstrap == null)
+            {
+                Debug.LogError($"{LogTag} シーンに GameBootstrap がありません。", this);
+            }
+
+            return bootstrap;
+        }
+
+        private void OnBootstrapBuilt(BootstrapWorld world)
+        {
+            StopWaitingForBootstrap();
+            if (!TryBeginWith(world))
+            {
+                enabled = false;
+            }
+        }
+
+        private void StopWaitingForBootstrap()
+        {
+            if (_awaitedBootstrap != null)
+            {
+                _awaitedBootstrap.Built -= OnBootstrapBuilt;
+            }
+
+            _awaitedBootstrap = null;
         }
 
         private void OnMissionCompleted()

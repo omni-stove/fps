@@ -10,6 +10,9 @@ namespace Fps.Core.Tests
             "{'version':1,'missionId':'m01','checkpointId':'cp2','health':75,'ammoInMagazine':12,'reserveAmmo':60," +
             "'objectives':[{'id':'kills','state':'active','count':2},{'id':'exit','state':'locked','count':0}]}";
 
+        private static readonly string[] _killsAndExit = { "kills", "exit" };
+        private static readonly string[] _killsOnly = { "kills" };
+
         [Test]
         public void ConstructorKeepsValues()
         {
@@ -21,7 +24,7 @@ namespace Fps.Core.Tests
             Assert.That(save.Health, Is.EqualTo(75));
             Assert.That(save.AmmoInMagazine, Is.EqualTo(12));
             Assert.That(save.ReserveAmmo, Is.EqualTo(60));
-            Assert.That(save.Objectives.Select(o => o.Id), Is.EqualTo(new[] { "kills", "exit" }));
+            Assert.That(save.Objectives.Select(o => o.Id), Is.EqualTo(_killsAndExit));
         }
 
         [Test]
@@ -80,7 +83,7 @@ namespace Fps.Core.Tests
             var objectives = new[]
             {
                 new Objective("kills", "", 3),
-                new Objective("exit", "", prerequisites: new[] { "kills" }),
+                new Objective("exit", "", prerequisites: _killsOnly),
                 new Objective("bonus", "", optional: true),
             };
             var mission = new Mission(objectives);
@@ -180,7 +183,7 @@ namespace Fps.Core.Tests
         [TestCase("{'id':'exit','state':'locked','count':0}", "{'id':'exit','state':'locked'}")]
         public void RejectsInvalidFields(string from, string to)
         {
-            Assert.That(_valid, Does.Contain(from));
+            Assert.That(_valid.Contains(from, StringComparison.Ordinal), Is.True);
             var json = Json(_valid.Replace(from, to, StringComparison.Ordinal));
 
             Assert.Throws<FormatException>(() => CampaignSave.FromJson(json));

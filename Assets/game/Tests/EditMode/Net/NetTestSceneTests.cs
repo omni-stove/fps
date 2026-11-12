@@ -194,7 +194,7 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void PlayerPrefabHasDisabledFirstPersonViewAtEyeHeight()
+        public void PlayerPrefabHasDisabledViewWithEyeAtEyeHeight()
         {
             var prefab = _scene.GetRootGameObjects()
                 .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
@@ -202,23 +202,30 @@ namespace Fps.Net.Tests
                 .PlayerPrefab;
 
             var view = prefab.transform.Find(NetPlayer.ViewName);
-            Assert.That(view, Is.Not.Null, "NetPlayer has no pitch pivot; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(view, Is.Not.Null, "NetPlayer has no eye; run Fps.Editor.NetSceneBuilder.Build");
             Assert.That(view.parent, Is.EqualTo(prefab.transform), "yaw turns the body and pitch turns this child");
             Assert.That(view.localPosition, Is.EqualTo(new Vector3(0f, NetPlayer.EyeHeight, 0f)),
-                "the camera is the shot origin, which the server checks with NetPlayer.EyeHeight");
+                "the eye is the shot origin, which the server checks with NetPlayer.EyeHeight");
 
-            var camera = view.GetComponent<Camera>();
-            var listener = view.GetComponent<AudioListener>();
+            var cameraObject = view.Find(NetPlayer.ViewCameraName);
+            Assert.That(cameraObject, Is.Not.Null, "the camera sits under the eye so a third-person offset keeps the shot at the eye");
+            var camera = cameraObject.GetComponent<Camera>();
+            var listener = cameraObject.GetComponent<AudioListener>();
             var look = prefab.GetComponent<Fps.Runtime.FirstPersonLook>();
+            var rig = prefab.GetComponent<Fps.Runtime.ViewRig>();
             Assert.That(camera, Is.Not.Null);
             Assert.That(listener, Is.Not.Null);
             Assert.That(look, Is.Not.Null);
+            Assert.That(rig, Is.Not.Null);
+            Assert.That(rig.Mode, Is.EqualTo(Fps.Editor.NetSceneBuilder.PlayerViewMode));
             Assert.That(Fps.Runtime.FirstPersonLook.FindChildCamera(prefab.transform), Is.EqualTo(camera));
+            Assert.That(Fps.Runtime.ViewRig.FindEye(prefab.transform), Is.EqualTo(view));
 
             // 他人のプレイヤーで映ったり音を拾ったりしないよう、NetPlayer が自分のプレイヤーでだけ有効にする
             Assert.That(camera.enabled, Is.False);
             Assert.That(listener.enabled, Is.False);
             Assert.That(look.enabled, Is.False);
+            Assert.That(rig.enabled, Is.False);
         }
 
         [Test]

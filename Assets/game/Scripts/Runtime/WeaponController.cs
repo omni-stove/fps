@@ -7,7 +7,9 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// ヒットスキャン射撃。プレイヤーのカメラに付ける。Attack を押している間 <see cref="Weapon.TryFire"/> を呼び、
-    /// 撃てたらカメラの正面へ <see cref="HitscanRange"/> まで Raycast して、当たったコライダーの <see cref="Hitbox"/> にダメージを渡す。
+    /// 撃てたら画面中央が指す点へ <see cref="HitscanRange"/> まで Raycast して、当たったコライダーの <see cref="Hitbox"/> にダメージを渡す。
+    /// 本体に <see cref="ViewRig"/> があれば始点は目で、三人称でもカメラではなくキャラの目から撃つ (<see cref="ViewRig.ResolveAim(float, out Vector3, out Vector3)"/>)。
+    /// 無ければカメラの位置から正面へ撃つ。
     /// Reload で <see cref="Weapon.TryStartReload"/>、毎フレーム <see cref="Weapon.Tick"/> を呼ぶ。
     /// 弾数・連射間隔・リロードの判断は <see cref="Weapon"/>、ダメージ量は <see cref="DamageCalculator"/> が行う。
     /// 参照はコードで解決する: 照準は同じ GameObject の <see cref="Camera"/>、入力はプロジェクト全体のアクション。
@@ -72,6 +74,7 @@ namespace Fps.Runtime
 
         private readonly RaycastHit[] _hitBuffer = new RaycastHit[MaxRaycastHits];
         private Transform _aim;
+        private ViewRig _rig;
         private InputAction _attackAction;
         private InputAction _reloadAction;
         private bool _enabledAttackAction;
@@ -261,6 +264,7 @@ namespace Fps.Runtime
             }
 
             _aim = aim;
+            _rig = aim.GetComponentInParent<ViewRig>(true);
             _attackAction = attackAction;
             _reloadAction = reloadAction;
             _falloff = falloff;
@@ -321,9 +325,10 @@ namespace Fps.Runtime
 
             Debug.Log($"[Combat] fire ammo={_weapon.AmmoInMagazine}", this);
 
-            if (TryRaycast(out var hit))
+            ResolveShot(out var origin, out var direction);
+            if (TryRaycast(origin, direction, out var hit))
             {
-                TryApplyHit(hit.collider, hit.distance, _weapon.Spec.Damage, _falloff, this, _aim.position);
+                TryApplyHit(hit.collider, hit.distance, _weapon.Spec.Damage, _falloff, this, origin);
             }
 
             return true;
@@ -383,10 +388,30 @@ namespace Fps.Runtime
             return true;
         }
 
-        // 照準の正面へ射程まで撃ち、自分の体 (照準と同じルートの階層) を除いた最も近い命中を返す。
-        private bool TryRaycast(out RaycastHit nearest)
+        /// <summary>
+        /// 射撃の始点と向き。照準が <see cref="ViewRig"/> のカメラなら目から画面中央が指す点へ (一人称・三人称共通)、
+        /// そうでなければ照準の位置から正面へ。
+        /// </summary>
+        public void ResolveShot(out Vector3 origin, out Vector3 direction)
         {
-            var ray = new Ray(_aim.position, _aim.forward);
+            EnsureInitialized();
+
+            // ViewRig の Awake より先に撃たれても目が決まるよう、FindEye で探す (ログは出さない)。
+            var eye = _rig != null ? ViewRig.FindEye(_rig.transform) : null;
+            if (eye != null && _aim.parent == eye)
+            {
+                ViewRig.ResolveAim(_aim, eye, _range, _aim.root, _hitMask, out origin, out direction);
+                return;
+            }
+
+            origin = _aim.position;
+            direction = _aim.forward;
+        }
+
+        // origin から direction へ射程まで撃ち、自分の体 (照準と同じルートの階層) を除いた最も近い命中を返す。
+        private bool TryRaycast(Vector3 origin, Vector3 direction, out RaycastHit nearest)
+        {
+            var ray = new Ray(origin, direction);
             var count = Physics.RaycastNonAlloc(ray, _hitBuffer, _range, _hitMask, QueryTriggerInteraction.Ignore);
             var self = _aim.root;
 

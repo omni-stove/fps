@@ -55,21 +55,23 @@ namespace Fps.Net.Tests
         public void NonOwnerKeepsCameraListenerAndLookDisabled()
         {
             var player = InstantiatePlayer();
-            var view = player.View;
-            var camera = view.GetComponent<Camera>();
-            var listener = view.GetComponent<AudioListener>();
+            var camera = player.View.GetComponentInChildren<Camera>(true);
+            var listener = camera.GetComponent<AudioListener>();
             var look = player.GetComponent<FirstPersonLook>();
+            var rig = player.GetComponent<ViewRig>();
 
             // 何かの拍子に有効になっていても、オーナーでなければ止める
             camera.enabled = true;
             listener.enabled = true;
             look.enabled = true;
+            rig.enabled = true;
 
             player.SetLocalView(NetStartup.ShouldEnableFirstPersonView(false, false, false));
 
             Assert.That(camera.enabled, Is.False);
             Assert.That(listener.enabled, Is.False);
             Assert.That(look.enabled, Is.False);
+            Assert.That(rig.enabled, Is.False);
             Assert.That(player.HasLocalView, Is.False);
             Assert.That(NetSpectatorCamera.LocalViewCount, Is.EqualTo(_localViewsBefore));
         }
@@ -78,8 +80,8 @@ namespace Fps.Net.Tests
         public void OwnerViewEnablesCameraAndHidesSpectatorUntilDisabled()
         {
             var player = InstantiatePlayer();
-            var camera = player.View.GetComponent<Camera>();
-            var listener = player.View.GetComponent<AudioListener>();
+            var camera = player.View.GetComponentInChildren<Camera>(true);
+            var listener = camera.GetComponent<AudioListener>();
             var body = player.GetComponent<Renderer>();
 
             player.SetLocalView(true);
@@ -87,6 +89,7 @@ namespace Fps.Net.Tests
             Assert.That(camera.enabled, Is.True);
             Assert.That(listener.enabled, Is.True);
             Assert.That(player.GetComponent<FirstPersonLook>().enabled, Is.True);
+            Assert.That(player.GetComponent<ViewRig>().enabled, Is.True);
             Assert.That(player.HasLocalView, Is.True);
             Assert.That(body.shadowCastingMode, Is.EqualTo(ShadowCastingMode.ShadowsOnly), "own body must not block the view");
             Assert.That(NetSpectatorCamera.LocalViewCount, Is.EqualTo(_localViewsBefore + 1));
@@ -105,7 +108,7 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void AimsFromCameraAlongItsForwardIncludingPitch()
+        public void AimsFromEyeAlongItsForwardIncludingPitch()
         {
             var player = InstantiatePlayer();
             player.transform.SetPositionAndRotation(new Vector3(1f, 2f, 3f), Quaternion.Euler(0f, 90f, 0f));
@@ -115,10 +118,29 @@ namespace Fps.Net.Tests
             var direction = player.AimDirection();
 
             Assert.That(Vector3.Distance(origin, new Vector3(1f, 2f + NetPlayer.EyeHeight, 3f)), Is.LessThan(1e-4f),
-                "the shot starts at the camera, which the server checks with NetPlayer.EyeHeight");
+                "the shot starts at the eye, which the server checks with NetPlayer.EyeHeight");
             Assert.That(Vector3.Distance(direction, player.View.forward), Is.LessThan(1e-4f));
             Assert.That(direction.y, Is.GreaterThan(0.4f), "looking up must aim up");
             Assert.That(direction.x, Is.GreaterThan(0.8f), "yaw 90 must aim toward +X");
+        }
+
+        [Test]
+        public void ThirdPersonStillShowsTheBodyAndAimsFromTheEye()
+        {
+            var player = InstantiatePlayer();
+            var rig = player.GetComponent<ViewRig>();
+            Assert.That(rig.TryInitializeFromHierarchy(), Is.True);
+            rig.Mode = ViewMode.ThirdPerson;
+            rig.UpdateCameraPosition();
+            player.transform.position = new Vector3(1f, 2f, 3f);
+
+            player.SetLocalView(true);
+
+            Assert.That(player.GetComponent<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.On),
+                "the own body is what a third-person camera looks at");
+            Assert.That(Vector3.Distance(player.AimOrigin(), new Vector3(1f, 2f + NetPlayer.EyeHeight, 3f)), Is.LessThan(1e-4f),
+                "the shot must start at the eye, not at the camera, or the server rejects it and walls can be peeked");
+            Assert.That(player.AimDirection().z, Is.GreaterThan(0.99f));
         }
 
         [Test]

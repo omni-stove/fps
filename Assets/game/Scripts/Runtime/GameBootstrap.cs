@@ -2,18 +2,18 @@ using System;
 using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
 namespace Fps.Runtime
 {
     /// <summary>
-    /// シーンの起点。Awake で床・プレイヤー (CharacterController + 子カメラ + <see cref="FirstPersonLook"/>
+    /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
     /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
+    /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameBootstrap : MonoBehaviour
@@ -26,6 +26,9 @@ namespace Fps.Runtime
         /// <summary>プレイヤーに付ける Unity 組み込みのタグ。ミッションの範囲トリガーはこれでプレイヤーを見分ける。</summary>
         public const string PlayerTag = ObjectiveAreaBase.DefaultPlayerTag;
         public const string CameraName = "PlayerCamera";
+
+        /// <summary>pitch を回し射撃の始点になる、プレイヤーの目の子 GameObject の名前。カメラはこの子。</summary>
+        public const string EyeName = "PlayerEye";
         public const string LightName = "Directional Light";
 
         /// <summary>Plane は 10m 四方なので、5 倍で 50m 四方。</summary>
@@ -72,6 +75,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
         private bool _createFloor = true;
 
+        [SerializeField, Tooltip("プレイヤーの視点。一人称か三人称 (肩越し)")]
+        private ViewMode _viewMode = ViewMode.FirstPerson;
+
         private BootstrapWorld _world;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
@@ -84,6 +90,13 @@ namespace Fps.Runtime
         {
             get => _createFloor;
             set => _createFloor = value;
+        }
+
+        /// <summary><see cref="Build"/> で作るプレイヤーの視点。生成後に変えるなら <see cref="BootstrapWorld.Rig"/> の Mode を変える。</summary>
+        public ViewMode ViewMode
+        {
+            get => _viewMode;
+            set => _viewMode = value;
         }
 
         private void Awake()
@@ -120,7 +133,8 @@ namespace Fps.Runtime
             try
             {
                 floor = _createFloor ? CreateFloor() : null;
-                player = CreatePlayer(out var controller, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
+                player = CreatePlayer(
+                    _viewMode, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
@@ -132,7 +146,7 @@ namespace Fps.Runtime
 
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
-                    hudComponent, hudPanelSettings);
+                    hudComponent, hudPanelSettings, rig);
             }
             catch
             {
@@ -159,7 +173,9 @@ namespace Fps.Runtime
         }
 
         private static GameObject CreatePlayer(
+            ViewMode viewMode,
             out CharacterController controller,
+            out ViewRig rig,
             out Camera camera,
             out FirstPersonLook look,
             out PlayerController mover,
@@ -169,7 +185,7 @@ namespace Fps.Runtime
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
-                ConfigurePlayer(player, out controller, out camera, out look, out mover, out weapon);
+                ConfigurePlayer(player, viewMode, out controller, out rig, out camera, out look, out mover, out weapon);
 
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
@@ -187,7 +203,9 @@ namespace Fps.Runtime
 
         private static void ConfigurePlayer(
             GameObject player,
+            ViewMode viewMode,
             out CharacterController controller,
+            out ViewRig rig,
             out Camera camera,
             out FirstPersonLook look,
             out PlayerController mover,
@@ -206,23 +224,35 @@ namespace Fps.Runtime
             controller.radius = PlayerRadius;
             controller.center = Vector3.zero;
 
+            // 本体 (yaw) > 目 (pitch、射撃の始点) > カメラ (目からのオフセットは ViewRig が視点ごとに決める)
+            var eye = new GameObject(EyeName).transform;
+            eye.SetParent(player.transform, false);
+            eye.localPosition = EyeOffset;
+            eye.localRotation = Quaternion.identity;
+
             var cameraObject = new GameObject(CameraName);
             cameraObject.tag = "MainCamera";
-            cameraObject.transform.SetParent(player.transform, false);
-            cameraObject.transform.localPosition = EyeOffset;
+            cameraObject.transform.SetParent(eye, false);
+            cameraObject.transform.localPosition = Vector3.zero;
             cameraObject.transform.localRotation = Quaternion.identity;
             camera = cameraObject.AddComponent<Camera>();
             camera.nearClipPlane = 0.05f;
             cameraObject.AddComponent<AudioListener>();
 
-            // 自分の体が視界に入らないよう影だけ落とす。
-            var renderer = player.GetComponent<MeshRenderer>();
-            if (renderer != null)
+            // 視点を先に決めておくと、Play 中の AddComponent で走る OnEnable が最初からその視点でカメラを置く。
+            // Edit Mode では Awake / OnEnable が走らないので、参照と見た目はここで直接整える。
+            rig = player.AddComponent<ViewRig>();
+            rig.Mode = viewMode;
+            if (!rig.IsInitialized)
             {
-                renderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+                rig.Initialize(eye, camera);
             }
 
-            // カメラを先に子に置いておくと、Play 中の AddComponent で走る Awake が自力で参照を解決できる。
+            // 一人称なら自分の体が視界に入らないよう影だけ落とし、三人称なら描く。
+            rig.ApplyBodyVisibility(true);
+            rig.UpdateCameraPosition();
+
+            // カメラと ViewRig を先に置いておくと、Play 中の AddComponent で走る Awake が自力で pitch の軸 (目) を解決できる。
             // Awake が走らない Edit Mode (シーン生成やテスト) では入力の解決を実行時の Awake に任せる。
             look = player.AddComponent<FirstPersonLook>();
             // 専用サーバーでは FirstPersonLook が自分を止めて初期化しないので、未初期化を失敗にしない。
@@ -409,6 +439,10 @@ namespace Fps.Runtime
         public GameObject Player { get; }
         public CharacterController Controller { get; }
         public Camera Camera { get; }
+
+        /// <summary>プレイヤーの視点 (一人称・三人称) と目。</summary>
+        public ViewRig Rig { get; }
+
         public FirstPersonLook Look { get; }
         public PlayerController Mover { get; }
         public Light Light { get; }
@@ -442,8 +476,10 @@ namespace Fps.Runtime
             IReadOnlyList<TargetDummy> targets,
             Damageable playerDamageable,
             Hud hud,
-            PanelSettings hudPanelSettings)
+            PanelSettings hudPanelSettings,
+            ViewRig rig = null)
         {
+            Rig = rig;
             Hud = hud;
             HudPanelSettings = hudPanelSettings;
             Floor = floor;

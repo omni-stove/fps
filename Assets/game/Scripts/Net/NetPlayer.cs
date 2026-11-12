@@ -15,9 +15,10 @@ namespace Fps.Net
     /// 当たり判定 (ラグ補償) とダメージを含む試合の判断はすべて <see cref="NetTeamDeathmatch"/> (その先の
     /// <see cref="TeamDeathmatchSession"/>) が行う。
     /// <para>
-    /// 一人称視点: プレハブは子 <see cref="ViewName"/> (pitch を回す Transform。Camera と AudioListener 付き) と
-    /// <see cref="FirstPersonLook"/> を無効のまま持つ。自分のプレイヤー (オーナー) で画面があるときだけ有効にし、
-    /// シーンの <see cref="NetSpectatorCamera"/> を止める。射撃はこの子の位置から forward (画面中央) へ撃つ。
+    /// 視点 (一人称・三人称共通): プレハブは子 <see cref="ViewName"/> (目。pitch を回し射撃の始点になる) とその子のカメラ
+    /// (Camera と AudioListener 付き)、本体の <see cref="ViewRig"/> と <see cref="FirstPersonLook"/> を無効のまま持つ。
+    /// 自分のプレイヤー (オーナー) で画面があるときだけ有効にし、シーンの <see cref="NetSpectatorCamera"/> を止める。
+    /// 一人称か三人称かは ViewRig の Mode で決まり、射撃はどちらでも目から画面中央が指す点へ撃つ。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -36,8 +37,11 @@ namespace Fps.Net
         /// </summary>
         public const float EyeHeight = 0.6f;
 
-        /// <summary>一人称カメラを持ち pitch を回す子 GameObject の名前。</summary>
+        /// <summary>pitch を回し射撃の始点になる目の子 GameObject の名前。カメラはこの子に置く。</summary>
         public const string ViewName = "View";
+
+        /// <summary><see cref="ViewName"/> の子の、カメラを持つ GameObject の名前。</summary>
+        public const string ViewCameraName = "ViewCamera";
 
         public static readonly Color AlphaColor = new Color(0.25f, 0.5f, 1f);
         public static readonly Color BravoColor = new Color(1f, 0.3f, 0.25f);
@@ -60,11 +64,12 @@ namespace Fps.Net
         private InputAction _attackAction;
         private bool _enabledAttackAction;
 
-        // 一人称視点。View は射撃の向きにも使うので、カメラを有効にしないプレイヤーでも解決しておく
+        // 視点。View (目) は射撃の始点にも使うので、カメラを有効にしないプレイヤーでも解決しておく
         private Transform _view;
         private Camera _viewCamera;
         private AudioListener _viewListener;
         private FirstPersonLook _look;
+        private ViewRig _rig;
         private bool _hasLocalView;
         private bool _viewResolved;
 
@@ -75,7 +80,7 @@ namespace Fps.Net
         /// <summary>サーバーでだけ使う、試合でのプレイヤー id。参加前は <see cref="NotJoined"/>。</summary>
         public int ServerPlayerId { get; internal set; } = NotJoined;
 
-        /// <summary>一人称カメラを持ち pitch を回す子。プレハブに無ければ null。</summary>
+        /// <summary>pitch を回し射撃の始点になる目。プレハブに無ければ null。</summary>
         public Transform View
         {
             get
@@ -85,7 +90,7 @@ namespace Fps.Net
             }
         }
 
-        /// <summary>一人称視点 (カメラ・音声・視点操作) が有効か。自分のプレイヤーで画面があるときだけ true。</summary>
+        /// <summary>視点 (カメラ・音声・視点操作) が有効か。自分のプレイヤーで画面があるときだけ true。</summary>
         public bool HasLocalView => _hasLocalView;
 
         private void Awake()
@@ -161,7 +166,7 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 1 発撃つ。目 (一人称カメラの位置) から画面中央の向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) を添えてサーバーに送るだけで、
+        /// 1 発撃つ。目から画面中央が指す点への向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) を添えてサーバーに送るだけで、
         /// 当たり判定とダメージはサーバーが行う。
         /// </summary>
         private void Fire()
@@ -185,8 +190,8 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 射撃の始点。一人称カメラ (<see cref="View"/>) の位置で、本体の中心から <see cref="EyeHeight"/> 上になる。
-        /// View が無ければ同じ高さを計算で出す。
+        /// 射撃の始点。目 (<see cref="View"/>) の位置で、本体の中心から <see cref="EyeHeight"/> 上になる。
+        /// 三人称でもカメラではなく目から撃つ (サーバーは始点を目の高さで検査する)。View が無ければ同じ高さを計算で出す。
         /// </summary>
         public Vector3 AimOrigin()
         {
@@ -195,18 +200,30 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 射撃の向き。画面中央、つまり一人称カメラ (<see cref="View"/>) の forward で、pitch も含む。
-        /// View が無ければ本体の正面。
+        /// 射撃の向き。目から、画面中央 (カメラの正面) が指す点への向きで、pitch も含む (<see cref="ViewRig.ResolveAim(float, out Vector3, out Vector3)"/>)。
+        /// 一人称ではカメラが目に重なるので目の forward と同じ。カメラが目の下に無ければ目の forward、View も無ければ本体の正面。
         /// </summary>
         public Vector3 AimDirection()
         {
             EnsureViewResolved();
-            return _view != null ? _view.forward : transform.forward;
+            if (_view == null)
+            {
+                return transform.forward;
+            }
+
+            if (_viewCamera == null || _viewCamera.transform.parent != _view)
+            {
+                return _view.forward;
+            }
+
+            ViewRig.ResolveAim(
+                _viewCamera.transform, _view, ViewRig.DefaultAimDistance, transform, Physics.DefaultRaycastLayers, out _, out var direction);
+            return direction;
         }
 
         /// <summary>
-        /// 一人称視点を有効・無効にする。有効にするとカメラ・AudioListener・<see cref="FirstPersonLook"/> を動かし、
-        /// 自分の体は影だけ描いて視界をふさがないようにし、観戦用のカメラを止める。無効にすると元に戻す。
+        /// 視点を有効・無効にする。有効にするとカメラ・AudioListener・<see cref="ViewRig"/>・<see cref="FirstPersonLook"/> を動かし、
+        /// 一人称なら自分の体は影だけ描いて視界をふさがないようにし (三人称なら描く)、観戦用のカメラを止める。無効にすると元に戻す。
         /// </summary>
         internal void SetLocalView(bool enable)
         {
@@ -214,7 +231,7 @@ namespace Fps.Net
 
             if (enable && _viewCamera == null)
             {
-                Debug.LogError("[Net] " + name + " has no camera under '" + ViewName
+                Debug.LogError("[Net] " + name + " has no camera under '" + ViewName + "/" + ViewCameraName
                     + "'; run Fps.Editor.NetSceneBuilder.Build. Keeping the spectator camera", this);
                 enable = false;
             }
@@ -244,13 +261,22 @@ namespace Fps.Net
                 Debug.LogWarning("[Net] " + name + " has no FirstPersonLook; the view cannot be turned", this);
             }
 
-            var shadowMode = enable ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
-            // 生成と消滅のときだけ呼ばれるので、Awake を経ない場合も考えてその場で集める
-            foreach (var bodyRenderer in GetComponentsInChildren<Renderer>(true))
+            if (_rig != null)
             {
-                if (bodyRenderer != null)
+                // 有効にすると LateUpdate でカメラを視点ごとの位置へ置く。Edit Mode では OnEnable が走らないので体の描き方はここで決める
+                _rig.enabled = enable;
+                _rig.ApplyBodyVisibility(enable);
+            }
+            else
+            {
+                var shadowMode = enable ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+                // 生成と消滅のときだけ呼ばれるので、Awake を経ない場合も考えてその場で集める
+                foreach (var bodyRenderer in GetComponentsInChildren<Renderer>(true))
                 {
-                    bodyRenderer.shadowCastingMode = shadowMode;
+                    if (bodyRenderer != null)
+                    {
+                        bodyRenderer.shadowCastingMode = shadowMode;
+                    }
                 }
             }
 
@@ -263,7 +289,7 @@ namespace Fps.Net
             if (enable)
             {
                 NetSpectatorCamera.AddLocalView();
-                Debug.Log("[Net] first-person view enabled on " + name, this);
+                Debug.Log("[Net] " + (_rig != null ? _rig.Mode : ViewMode.FirstPerson) + " view enabled on " + name, this);
             }
             else
             {
@@ -284,8 +310,16 @@ namespace Fps.Net
         {
             _viewResolved = true;
             _look = GetComponent<FirstPersonLook>();
+            _rig = GetComponent<ViewRig>();
             _viewCamera = FirstPersonLook.FindChildCamera(transform);
-            _view = _viewCamera != null ? _viewCamera.transform : transform.Find(ViewName);
+
+            // 目は ViewName の子。古い構成 (カメラが目を兼ねる) ではカメラ自身
+            _view = transform.Find(ViewName);
+            if (_view == null && _viewCamera != null)
+            {
+                _view = _viewCamera.transform;
+            }
+
             _viewListener = _viewCamera != null ? _viewCamera.GetComponent<AudioListener>() : null;
         }
 

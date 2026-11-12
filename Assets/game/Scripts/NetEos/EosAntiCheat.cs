@@ -38,6 +38,7 @@ namespace Fps.NetEos
         private readonly Action<ulong, string> _remove;
         private readonly Action<string> _fail;
         private readonly byte[] _sendBuffer = new byte[AntiCheatPacket.MaxPacketSize];
+        private readonly Dictionary<ulong, double> _lastHelloAt = new Dictionary<ulong, double>();
         private readonly List<ulong> _helloDue = new List<ulong>();
         private readonly List<ulong> _timedOut = new List<ulong>();
 
@@ -223,6 +224,7 @@ namespace Fps.NetEos
 
             _sessionStarted = false;
             _client = null;
+            _lastHelloAt.Clear();
             _peers.Clear();
         }
 
@@ -233,7 +235,7 @@ namespace Fps.NetEos
             {
                 case AntiCheatHelloVerdict.Duplicate:
                     // 相手がまだこちらの Hello を受け取っていない (届く前に捨てられた) ので送り直す
-                    SendHello(peerId);
+                    SendHelloThrottled(peerId);
                     break;
                 case AntiCheatHelloVerdict.Accepted:
                     Debug.Log(_tag + "peer id=" + peerId + " also runs without anti-cheat; continuing unprotected");
@@ -301,7 +303,7 @@ namespace Fps.NetEos
                 // メッセージは取っておき、こちらの Hello を送って相手に Hello を送り直させる
                 if (_peers.TryQueueEarlyMessage(peerId, payload))
                 {
-                    SendHello(peerId);
+                    SendHelloThrottled(peerId);
                     return;
                 }
             }
@@ -328,8 +330,24 @@ namespace Fps.NetEos
             }
         }
 
+        /// <summary>
+        /// 相手の Hello や早着メッセージへの返信用。直近に送ってから <see cref="HelloIntervalSeconds"/> 経つまでは送らず、
+        /// 双方が Hello を返し合い続けるのを防ぐ。
+        /// </summary>
+        private void SendHelloThrottled(ulong peerId)
+        {
+            var now = Time.realtimeSinceStartupAsDouble;
+            if (_lastHelloAt.TryGetValue(peerId, out var last) && now - last < HelloIntervalSeconds)
+            {
+                return;
+            }
+
+            SendHello(peerId);
+        }
+
         private void SendHello(ulong peerId)
         {
+            _lastHelloAt[peerId] = Time.realtimeSinceStartupAsDouble;
             var length = AntiCheatPacket.WriteHello(_sendBuffer, Enabled);
             _send(peerId, new ArraySegment<byte>(_sendBuffer, 0, length));
         }

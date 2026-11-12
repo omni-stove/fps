@@ -5,6 +5,8 @@
         <ui:VisualElement name="hud-time-panel" class="hud__panel hud__panel--top-center" picking-mode="Ignore">
             <ui:Label name="hud-time" text="--:--" class="hud__value hud__value--time" picking-mode="Ignore" />
         </ui:VisualElement>
+        <!-- 一時的な案内 (セーブした・再開まで N 秒)。HudView が空のときは隠す。 -->
+        <ui:Label name="hud-notice" text="" class="hud__notice" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-health-panel" class="hud__panel hud__panel--bottom-left" picking-mode="Ignore">
             <ui:Label text="HP" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-health" text="--" class="hud__value" picking-mode="Ignore" />

@@ -22,6 +22,9 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml の照準。</summary>
         public const string CrosshairName = "hud-crosshair";
 
+        /// <summary>Hud.uxml の一時的な案内の Label。案内が空のときは隠す。</summary>
+        public const string NoticeLabelName = "hud-notice";
+
         private readonly HudModel _model;
         private bool _disposed;
 
@@ -29,6 +32,7 @@ namespace Fps.Runtime
         public Label AmmoLabel { get; }
         public Label TimeLabel { get; }
         public VisualElement Crosshair { get; }
+        public Label NoticeLabel { get; }
 
         /// <summary>
         /// root の下から Label と照準を名前で探し、今のモデルの文字列を入れてから変更を購読する。
@@ -46,10 +50,12 @@ namespace Fps.Runtime
             AmmoLabel = Require<Label>(root, AmmoLabelName);
             TimeLabel = Require<Label>(root, TimeLabelName);
             Crosshair = Require<VisualElement>(root, CrosshairName);
+            NoticeLabel = Require<Label>(root, NoticeLabelName);
 
             HealthLabel.text = _model.HealthText;
             AmmoLabel.text = _model.AmmoText;
             TimeLabel.text = _model.TimeText;
+            ShowNotice();
             _model.Changed += OnChanged;
         }
 
@@ -78,9 +84,20 @@ namespace Fps.Runtime
                 case HudField.Time:
                     TimeLabel.text = _model.TimeText;
                     break;
+                case HudField.Notice:
+                    ShowNotice();
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a valid HudField");
             }
+        }
+
+        /// <summary>案内の文字列を入れ、空なら Label ごと隠す (背景の帯だけが残らないように)。</summary>
+        private void ShowNotice()
+        {
+            var text = _model.NoticeText;
+            NoticeLabel.text = text;
+            NoticeLabel.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private static T Require<T>(VisualElement root, string elementName)

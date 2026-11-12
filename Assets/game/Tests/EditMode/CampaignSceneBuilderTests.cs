@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -8,6 +10,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
@@ -67,7 +70,8 @@ namespace Fps.Tests.EditMode
         {
             var layout = Populate();
 
-            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(6));
+            // Level, GameBootstrap, MissionRunner, AreaA, Enemies, Exit, CampaignRunner, 2 つのチェックポイント。
+            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(9));
 
             Assert.That(layout.Bootstrap, Is.Not.Null);
             Assert.That(layout.Bootstrap.gameObject.scene, Is.EqualTo(_scene));
@@ -87,6 +91,103 @@ namespace Fps.Tests.EditMode
             Assert.That(layout.Exit.ObjectiveId, Is.EqualTo(CampaignSceneBuilder.ReachExitId));
             Assert.That(layout.Exit.Runner, Is.SameAs(layout.Runner));
             Assert.That(layout.Exit.GetComponent<BoxCollider>().isTrigger, Is.True);
+        }
+
+        [Test]
+        public void CampaignRunnerAndTwoCheckpointsAreWired()
+        {
+            var layout = Populate();
+
+            var campaigns = Components<CampaignRunner>();
+            Assert.That(campaigns, Has.Length.EqualTo(1));
+            Assert.That(campaigns[0], Is.SameAs(layout.Campaign));
+            Assert.That(layout.Campaign.gameObject.scene, Is.EqualTo(_scene));
+            Assert.That(layout.Campaign.Runner, Is.SameAs(layout.Runner));
+            Assert.That(layout.Campaign.Bootstrap, Is.SameAs(layout.Bootstrap));
+            Assert.That(layout.Campaign.Storage, Is.Null, "the save storage is FileSaveStorage.CreateDefault, chosen at run time");
+
+            var checkpoints = Components<CheckpointTrigger>();
+            Assert.That(checkpoints, Has.Length.EqualTo(2));
+            Assert.That(checkpoints, Does.Contain(layout.StartCheckpoint));
+            Assert.That(checkpoints, Does.Contain(layout.AreaACheckpoint));
+
+            AssertCheckpoint(layout.StartCheckpoint, layout, CampaignSceneBuilder.StartCheckpointId, CampaignSceneBuilder.StartCheckpointPosition);
+            AssertCheckpoint(layout.AreaACheckpoint, layout, CampaignSceneBuilder.AreaACheckpointId, CampaignSceneBuilder.AreaACheckpointPosition);
+            Assert.That(CampaignSceneBuilder.StartCheckpointId, Is.EqualTo("start"));
+            Assert.That(CampaignSceneBuilder.AreaACheckpointId, Is.EqualTo("area_a"));
+
+            // 開始地点のチェックポイントからは、GameBootstrap がプレイヤーを出す位置そのままで再開する。
+            Assert.That(
+                Vector3.Distance(layout.StartCheckpoint.RespawnPosition, GameBootstrap.PlayerSpawn),
+                Is.LessThan(1e-4f));
+        }
+
+        [Test]
+        public void CampaignSavesAtTheCheckpointsAndRestartsFromAreaA()
+        {
+            var layout = Populate();
+            var root = Path.Combine(Path.GetTempPath(), "fps-campaign-scene-tests-" + Guid.NewGuid().ToString("N"));
+            var storage = new FileSaveStorage(root);
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
+            BootstrapWorld world = null;
+            try
+            {
+                // Edit Mode では Awake/Start が走らないので、GameBootstrap に作らせて武器だけ手で初期化する。
+                // 武器の初期化は CampaignRunner より先に Built を受け取る購読者で済ませる。
+                layout.Bootstrap.Built += built => built.Weapon.Initialize(built.Camera.transform, attack, reload);
+                layout.Campaign.Storage = storage;
+                layout.Campaign.SceneReloader = () => { };
+                LogAssert.Expect(LogType.Warning, new Regex(@"^\[Campaign\] GameBootstrap '.*' がまだプレイヤーを生成していない"));
+                Assert.That(layout.Campaign.BeginFromSceneOrWait(), Is.True);
+                Assert.That(layout.Campaign.IsWaitingForBootstrap, Is.True);
+                Assert.That(layout.Campaign.IsStarted, Is.False);
+
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                LogAssert.Expect(LogType.Log, "[Campaign] started mission=Campaign01");
+                LogAssert.Expect(LogType.Log, "[Campaign] no save; starting mission=Campaign01 from the beginning");
+                world = layout.Bootstrap.Build();
+
+                Assert.That(layout.Campaign.IsStarted, Is.True, "the campaign starts as soon as GameBootstrap has built the player");
+                Assert.That(layout.Campaign.IsWaitingForBootstrap, Is.False);
+                Assert.That(layout.Campaign.BoundHud, Is.SameAs(world.Hud));
+                Assert.That(layout.Runner.IsStarted, Is.True);
+
+                var player = world.Controller;
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=start "));
+                Assert.That(layout.StartCheckpoint.HandleEnter(player), Is.True);
+                Assert.That(world.Hud.Model.NoticeText, Is.EqualTo(HudFormat.CheckpointSaved));
+
+                layout.Runner.Progress(CampaignSceneBuilder.ReachAreaAId);
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=area_a "));
+                Assert.That(layout.AreaACheckpoint.HandleEnter(player), Is.True);
+                Assert.That(storage.TryRead(CampaignRunner.SaveSlot, out var text), Is.True);
+                Assert.That(CampaignSave.FromJson(text).CheckpointId, Is.EqualTo(CampaignSceneBuilder.AreaACheckpointId));
+
+                layout.Campaign.Tick(CampaignRunner.SavedNoticeSeconds);
+                Assert.That(world.Hud.Model.NoticeText, Is.EqualTo(HudFormat.NoNotice), "the saved notice disappears");
+
+                LogAssert.Expect(LogType.Log, "[Combat] target died id=Player");
+                LogAssert.Expect(LogType.Log, "[Campaign] player died; reloading in 3s from checkpoint=area_a");
+                world.PlayerDamageable.Kill();
+                Assert.That(world.Hud.Model.NoticeText, Is.EqualTo(HudFormat.CheckpointRestart(3)));
+                layout.Campaign.Tick(1.5f);
+                Assert.That(world.Hud.Model.NoticeText, Is.EqualTo(HudFormat.CheckpointRestart(2)));
+
+                layout.Campaign.Stop();
+                Assert.That(world.Hud.Model.NoticeText, Is.EqualTo(HudFormat.NoNotice), "stopping takes the notice off the HUD");
+            }
+            finally
+            {
+                layout.Campaign.Stop();
+                DestroyWorld(world);
+                attack.Dispose();
+                reload.Dispose();
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
         }
 
         [Test]
@@ -302,12 +403,14 @@ namespace Fps.Tests.EditMode
             _scene = EditorSceneManager.OpenScene(CampaignSceneBuilder.ScenePath, OpenSceneMode.Additive);
 
             MissionRunner runner = null;
+            GameBootstrap bootstrap = null;
             NavMeshSurface surface = null;
             var triggers = 0;
             var enemies = 0;
             foreach (var root in _scene.GetRootGameObjects())
             {
                 runner = runner != null ? runner : root.GetComponent<MissionRunner>();
+                bootstrap = bootstrap != null ? bootstrap : root.GetComponent<GameBootstrap>();
                 surface = surface != null ? surface : root.GetComponent<NavMeshSurface>();
                 triggers += root.GetComponents<ReachAreaTrigger>().Length;
                 enemies += root.GetComponentsInChildren<EnemyAgent>(true).Length;
@@ -315,6 +418,22 @@ namespace Fps.Tests.EditMode
 
             Assert.That(runner, Is.Not.Null);
             Assert.That(runner.Definition, Is.SameAs(definition));
+
+            // 保存した参照が読み直しても切れていない。
+            var campaigns = Components<CampaignRunner>();
+            Assert.That(campaigns, Has.Length.EqualTo(1), $"run {nameof(CampaignSceneBuilder)}.Build again to add the CampaignRunner");
+            Assert.That(campaigns[0].Runner, Is.SameAs(runner));
+            Assert.That(campaigns[0].Bootstrap, Is.SameAs(bootstrap));
+            var checkpoints = Components<CheckpointTrigger>();
+            Assert.That(checkpoints, Has.Length.EqualTo(2));
+            var ids = new System.Collections.Generic.List<string>();
+            foreach (var checkpoint in checkpoints)
+            {
+                Assert.That(checkpoint.Runner, Is.SameAs(campaigns[0]));
+                ids.Add(checkpoint.CheckpointId);
+            }
+
+            Assert.That(ids, Is.EquivalentTo(new[] { CampaignSceneBuilder.StartCheckpointId, CampaignSceneBuilder.AreaACheckpointId }));
             Assert.That(triggers, Is.EqualTo(2));
             Assert.That(enemies, Is.EqualTo(CampaignSceneBuilder.EnemyCount));
             Assert.That(surface, Is.Not.Null);
@@ -327,6 +446,68 @@ namespace Fps.Tests.EditMode
             var layout = CampaignSceneBuilder.PopulateScene(_scene, _definition);
             _baked = layout.Surface.navMeshData;
             return layout;
+        }
+
+        /// <summary>_scene に置かれた T をすべて (無効なものも) 集める。</summary>
+        private T[] Components<T>()
+            where T : Component
+        {
+            var found = new System.Collections.Generic.List<T>();
+            foreach (var root in _scene.GetRootGameObjects())
+            {
+                found.AddRange(root.GetComponentsInChildren<T>(true));
+            }
+
+            return found.ToArray();
+        }
+
+        private void AssertCheckpoint(CheckpointTrigger checkpoint, CampaignLayout layout, string id, Vector3 feet)
+        {
+            Assert.That(checkpoint, Is.Not.Null);
+            Assert.That(checkpoint.gameObject.scene, Is.EqualTo(_scene));
+            Assert.That(checkpoint.CheckpointId, Is.EqualTo(id));
+            Assert.That(checkpoint.Runner, Is.SameAs(layout.Campaign));
+            Assert.That(checkpoint.PlayerTag, Is.EqualTo(GameBootstrap.PlayerTag));
+
+            var collider = checkpoint.GetComponent<BoxCollider>();
+            Assert.That(collider, Is.Not.Null);
+            Assert.That(collider.isTrigger, Is.True);
+            Assert.That(checkpoint.GetComponent<Rigidbody>().isKinematic, Is.True, "the trigger reports the CharacterController");
+            Assert.That(IsInside(collider, feet + Vector3.up), Is.True, $"checkpoint '{id}' covers {feet}");
+
+            var expectedRespawn = feet + new Vector3(0f, GameBootstrap.PlayerHeight / 2f, 0f);
+            Assert.That(
+                Vector3.Distance(checkpoint.RespawnPosition, expectedRespawn),
+                Is.LessThan(1e-4f),
+                $"the player restarts from '{id}' with the feet on the floor");
+        }
+
+        private static void DestroyWorld(BootstrapWorld world)
+        {
+            if (world == null)
+            {
+                return;
+            }
+
+            // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
+            if (world.Hud != null)
+            {
+                Object.DestroyImmediate(world.Hud.gameObject);
+            }
+
+            if (world.HudPanelSettings != null)
+            {
+                Object.DestroyImmediate(world.HudPanelSettings);
+            }
+
+            if (world.Floor != null)
+            {
+                Object.DestroyImmediate(world.Floor);
+            }
+
+            Object.DestroyImmediate(world.Player);
+            Object.DestroyImmediate(world.Light.gameObject);
+            Object.DestroyImmediate(world.TargetRoot);
         }
 
         /// <summary>Edit Mode では物理の同期を待たずに確かめたいので、Collider.bounds ではなく Transform から計算する。</summary>

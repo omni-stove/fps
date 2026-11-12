@@ -192,5 +192,50 @@ namespace Fps.Core.Tests
             Assert.That(model.AmmoText, Is.EqualTo("30 / 90"));
             Assert.That(model.TimeText, Is.EqualTo("00:10"));
         }
+
+        [Test]
+        public void NoticeStartsEmptyAndFollowsTheCampaign()
+        {
+            var model = new HudModel();
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+
+            var notice = new CampaignNotice();
+            notice.ShowSaved(1f);
+            var changes = Record(model);
+
+            model.BindNotice(notice);
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.CheckpointSaved), "binding shows the current notice at once");
+
+            notice.Tick(1f);
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+
+            notice.ShowRestartCountdown(3f);
+            notice.ShowRestartCountdown(2.5f);
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.CheckpointRestart(3)));
+
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Notice, HudField.Notice, HudField.Notice }));
+        }
+
+        [Test]
+        public void UnbindingTheNoticeClearsItAndStopsListening()
+        {
+            var model = new HudModel();
+            var notice = new CampaignNotice();
+            model.BindNotice(notice);
+            notice.ShowRestartCountdown(3f);
+
+            model.BindNotice(null);
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+
+            notice.ShowRestartCountdown(1f);
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+
+            model.BindNotice(notice);
+            model.UnbindAll();
+            var changes = Record(model);
+            notice.Clear();
+            Assert.That(changes, Is.Empty);
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.CheckpointRestart(1)), "UnbindAll keeps the text");
+        }
     }
 }

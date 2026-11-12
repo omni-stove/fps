@@ -28,6 +28,19 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.NextMatch(-1));
         }
 
+        [TestCase(3, "チェックポイントから再開まで 3 秒")]
+        [TestCase(0, "チェックポイントから再開まで 0 秒")]
+        public void CheckpointRestartShowsTheSecondsLeft(int seconds, string expected)
+        {
+            Assert.That(HudFormat.CheckpointRestart(seconds), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void CheckpointRestartRejectsNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.CheckpointRestart(-1));
+        }
+
         [Test]
         public void HealthRejectsNegative()
         {

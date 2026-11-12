@@ -15,7 +15,8 @@ namespace Fps.Editor
     /// キャンペーンの最初のミッション Campaign01 のシーンとミッション定義を生成する。
     /// 地形 (床・外周の壁・仕切り・遮蔽物) を置いて <see cref="NavMeshSurface"/> で NavMesh を焼き、
     /// NavMeshData をシーンの隣に保存してから、<see cref="GameBootstrap"/> (床は作らない)、<see cref="MissionRunner"/>、
-    /// 3 つの目標 (区域 A に到達 → 敵 4 体を倒す → 出口に到達) と敵 4 体を置く。参照はすべてここでコードから設定する。
+    /// 3 つの目標 (区域 A に到達 → 敵 4 体を倒す → 出口に到達) と敵 4 体、セーブと再開を受け持つ <see cref="CampaignRunner"/> と
+    /// 2 つの <see cref="CheckpointTrigger"/> (開始地点 <c>start</c>・区域 A <c>area_a</c>) を置く。参照はすべてここでコードから設定する。
     /// 保存したシーンは Build Settings の末尾に加える (先頭の起動シーンは変えない)。何度実行しても同じ結果になる。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.CampaignSceneBuilder.Build</code>
@@ -29,6 +30,7 @@ namespace Fps.Editor
     /// (KillTargetObjective は目標が Active になる前の撃破を数えないので、区域 A に入る前に敵を撃てないようにする)。</item>
     /// <item>衝立の左右の出口を、待ち伏せの敵 2 体が z = 49 から見張る。その奥の z = 55 と z = 63 を、巡回の敵 2 体が左右に往復する。</item>
     /// <item>出口は北の壁の手前 (0, 0, 66)。</item>
+    /// <item>チェックポイントは開始地点 (原点、プレイヤーは出現した時点で踏んでいる) と区域 A の中 (0, 0, 34)。</item>
     /// </list>
     /// </remarks>
     public static class CampaignSceneBuilder
@@ -56,6 +58,9 @@ namespace Fps.Editor
         public const string AreaAObjectName = "AreaA";
         public const string EnemiesObjectName = "Enemies";
         public const string ExitObjectName = "Exit";
+        public const string CampaignRunnerObjectName = "CampaignRunner";
+        public const string StartCheckpointObjectName = "Checkpoint_Start";
+        public const string AreaACheckpointObjectName = "Checkpoint_AreaA";
 
         // ---- 地形 ----
 
@@ -129,6 +134,18 @@ namespace Fps.Editor
 
         /// <summary>区域 A のチェックポイント (足元)。区域 A の中で、仕切りの向こうから見えない位置。</summary>
         public static readonly Vector3 AreaACheckpointPosition = new Vector3(0f, 0f, 34f);
+
+        /// <summary>開始地点のチェックポイントの Id。セーブデータに残るので変えない。</summary>
+        public const string StartCheckpointId = "start";
+
+        /// <summary>区域 A のチェックポイントの Id。セーブデータに残るので変えない。</summary>
+        public const string AreaACheckpointId = "area_a";
+
+        /// <summary>
+        /// チェックポイントの床の印の大きさ。区域 A の印 (厚さ 0.1m) より厚くして、重なる所で面がちらつかないようにする。
+        /// 区域 A のチェックポイントは区域 A の中 (z = 32〜36) に収まる。
+        /// </summary>
+        public static readonly Vector3 CheckpointPadScale = new Vector3(4f, 0.15f, 4f);
 
         // ---- 敵 ----
 
@@ -233,7 +250,8 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 空のシーンに地形を置いて NavMesh を焼き (アセットには保存しない)、敵・目標・GameBootstrap・MissionRunner を置いて
+        /// 空のシーンに地形を置いて NavMesh を焼き (アセットには保存しない)、敵・目標・GameBootstrap・MissionRunner・
+        /// CampaignRunner・チェックポイントを置いて
         /// 参照をすべて設定する。焼いた NavMesh に敵の位置・巡回地点・区域・チェックポイントが乗っていて、開始地点から
         /// 歩いて行けることを確かめ、そうでなければ例外を投げる。失敗したときは置いた物をすべて片付ける。
         /// Edit Mode では Awake/Start が走らないので、ミッションと敵は Play したときに動き出す。
@@ -294,8 +312,22 @@ namespace Fps.Editor
 
                 var exit = CreateArea(scene, ExitObjectName, ExitPosition, ExitPadScale, ReachExitId, runner);
 
+                // セーブの置き場所は CampaignRunner が実行時に FileSaveStorage.CreateDefault (スロット "campaign") で決める。
+                // プレイヤーは GameBootstrap が実行時に作るので、CampaignRunner は GameBootstrap から受け取る。
+                var campaignObject = new GameObject(CampaignRunnerObjectName);
+                SceneManager.MoveGameObjectToScene(campaignObject, scene);
+                var campaign = campaignObject.AddComponent<CampaignRunner>();
+                campaign.Runner = runner;
+                campaign.Bootstrap = bootstrap;
+
+                var startCheckpoint = CreateCheckpoint(
+                    scene, StartCheckpointObjectName, StartCheckpointPosition, StartCheckpointId, campaign);
+                var areaACheckpoint = CreateCheckpoint(
+                    scene, AreaACheckpointObjectName, AreaACheckpointPosition, AreaACheckpointId, campaign);
+
                 EditorSceneManager.MarkSceneDirty(scene);
-                return new CampaignLayout(bootstrap, runner, surface, areaA, kill, enemies, exit);
+                return new CampaignLayout(
+                    bootstrap, runner, surface, areaA, kill, enemies, exit, campaign, startCheckpoint, areaACheckpoint);
             }
             catch
             {
@@ -379,6 +411,27 @@ namespace Fps.Editor
             trigger.Runner = runner;
             return trigger;
         }
+
+        /// <summary>
+        /// feet (足元) に床の印とトリガーを置いた <see cref="CheckpointTrigger"/> を作る。
+        /// 印の中心は床から厚さの半分だけ上がるので、再開位置のずれはその分を引き、プレイヤーの足が床に着く高さにする。
+        /// </summary>
+        private static CheckpointTrigger CreateCheckpoint(
+            Scene scene,
+            string name,
+            Vector3 feet,
+            string checkpointId,
+            CampaignRunner campaign)
+        {
+            var pad = SceneBuildHelpers.CreateAreaPad(name, feet, CheckpointPadScale, AreaTriggerHeight);
+            SceneManager.MoveGameObjectToScene(pad, scene);
+            var checkpoint = pad.AddComponent<CheckpointTrigger>();
+            checkpoint.CheckpointId = checkpointId;
+            checkpoint.Runner = campaign;
+            checkpoint.PlayerTag = GameBootstrap.PlayerTag;
+            checkpoint.RespawnOffset = new Vector3(0f, (GameBootstrap.PlayerHeight / 2f) - (CheckpointPadScale.y / 2f), 0f);
+            return checkpoint;
+        }
     }
 
     /// <summary>地形の直方体 1 つ。</summary>
@@ -448,6 +501,15 @@ namespace Fps.Editor
 
         public ReachAreaTrigger Exit { get; }
 
+        /// <summary>セーブと再開を受け持つ。<see cref="Runner"/> と <see cref="Bootstrap"/> につないである。</summary>
+        public CampaignRunner Campaign { get; }
+
+        /// <summary>開始地点のチェックポイント (Id は <see cref="CampaignSceneBuilder.StartCheckpointId"/>)。</summary>
+        public CheckpointTrigger StartCheckpoint { get; }
+
+        /// <summary>区域 A のチェックポイント (Id は <see cref="CampaignSceneBuilder.AreaACheckpointId"/>)。</summary>
+        public CheckpointTrigger AreaACheckpoint { get; }
+
         public CampaignLayout(
             GameBootstrap bootstrap,
             MissionRunner runner,
@@ -455,7 +517,10 @@ namespace Fps.Editor
             ReachAreaTrigger areaA,
             KillTargetObjective killEnemies,
             IReadOnlyList<EnemyAgent> enemies,
-            ReachAreaTrigger exit)
+            ReachAreaTrigger exit,
+            CampaignRunner campaign,
+            CheckpointTrigger startCheckpoint,
+            CheckpointTrigger areaACheckpoint)
         {
             Bootstrap = bootstrap;
             Runner = runner;
@@ -464,6 +529,9 @@ namespace Fps.Editor
             KillEnemies = killEnemies;
             Enemies = enemies;
             Exit = exit;
+            Campaign = campaign;
+            StartCheckpoint = startCheckpoint;
+            AreaACheckpoint = areaACheckpoint;
         }
     }
 }

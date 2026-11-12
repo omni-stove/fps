@@ -20,6 +20,7 @@ namespace Fps.Tests.EditMode
     public sealed class CampaignSceneBuilderTests
     {
         private MissionDefinition _definition;
+        private WeaponDefinition _rifle;
         private Scene _scene;
         private NavMeshData _baked;
 
@@ -29,6 +30,7 @@ namespace Fps.Tests.EditMode
             _definition = ScriptableObject.CreateInstance<MissionDefinition>();
             _definition.name = "Campaign01";
             CampaignSceneBuilder.Configure(_definition);
+            _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
         }
 
@@ -47,6 +49,7 @@ namespace Fps.Tests.EditMode
             }
 
             Object.DestroyImmediate(_definition);
+            Object.DestroyImmediate(_rifle);
         }
 
         [Test]
@@ -76,6 +79,11 @@ namespace Fps.Tests.EditMode
             Assert.That(layout.Bootstrap, Is.Not.Null);
             Assert.That(layout.Bootstrap.gameObject.scene, Is.EqualTo(_scene));
             Assert.That(layout.Bootstrap.CreatesFloor, Is.False, "the scene's own floor carries the baked NavMesh");
+            Assert.That(layout.Bootstrap.WeaponDefinition, Is.SameAs(_rifle), "the player shoots the rifle");
+            foreach (var enemy in layout.Enemies)
+            {
+                Assert.That(enemy.WeaponDefinition, Is.SameAs(_rifle), $"{enemy.Id} shoots the rifle");
+            }
 
             Assert.That(layout.Runner.Definition, Is.SameAs(_definition));
             Assert.That(layout.Runner.gameObject.scene, Is.EqualTo(_scene));
@@ -375,14 +383,21 @@ namespace Fps.Tests.EditMode
         {
             SceneManager.MoveGameObjectToScene(new GameObject("Stray"), _scene);
 
-            Assert.Throws<InvalidOperationException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition));
+            Assert.Throws<InvalidOperationException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle));
             Assert.That(_scene.rootCount, Is.EqualTo(1), "nothing is left behind");
         }
 
         [Test]
         public void RefusesToPopulateWithoutDefinition()
         {
-            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, null));
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, null, _rifle));
+            Assert.That(_scene.rootCount, Is.Zero);
+        }
+
+        [Test]
+        public void RefusesToPopulateWithoutAWeapon()
+        {
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, null));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
@@ -436,6 +451,15 @@ namespace Fps.Tests.EditMode
             Assert.That(ids, Is.EquivalentTo(new[] { CampaignSceneBuilder.StartCheckpointId, CampaignSceneBuilder.AreaACheckpointId }));
             Assert.That(triggers, Is.EqualTo(2));
             Assert.That(enemies, Is.EqualTo(CampaignSceneBuilder.EnemyCount));
+
+            var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);
+            Assert.That(rifle, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
+            Assert.That(bootstrap.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(CampaignSceneBuilder)}.Build");
+            foreach (var enemy in Components<EnemyAgent>())
+            {
+                Assert.That(enemy.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(CampaignSceneBuilder)}.Build");
+            }
+
             Assert.That(surface, Is.Not.Null);
             Assert.That(surface.navMeshData, Is.Not.Null, "the NavMesh must be baked and committed");
             Assert.That(AssetDatabase.GetAssetPath(surface.navMeshData), Is.EqualTo(CampaignSceneBuilder.NavMeshDataPath));
@@ -443,7 +467,7 @@ namespace Fps.Tests.EditMode
 
         private CampaignLayout Populate()
         {
-            var layout = CampaignSceneBuilder.PopulateScene(_scene, _definition);
+            var layout = CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle);
             _baked = layout.Surface.navMeshData;
             return layout;
         }

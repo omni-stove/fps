@@ -12,6 +12,7 @@ namespace Fps.Runtime
     /// <see cref="NavMeshAgent.SetDestination"/>・向きの変更・射撃 (<see cref="Hitscan.Fire"/>) に変換するだけをする。
     /// 参照はコードで解決する: NavMeshAgent と自分の <see cref="Damageable"/> は同じ GameObject、
     /// 目標は <see cref="TargetTag"/> のタグが付いた GameObject の Damageable。
+    /// 武器の値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない (シーン生成スクリプトが rifle を配線する)。
     /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
     /// 撃たれたら (<see cref="Damageable.Damaged"/>) 撃った者の位置を次の知覚 1 回だけ物音として渡し、
     /// 視界の外から撃たれても <see cref="EnemyBrain"/> がその位置を Search するようにする。
@@ -77,39 +78,14 @@ namespace Fps.Runtime
         private float _turnSpeed = DefaultTurnSpeed;
 
         [Header("Weapon")]
-        [SerializeField, Min(1)]
-        private int _magazineSize = 10;
-
-        [SerializeField, Min(0)]
-        private int _reserveAmmo = 990;
-
-        [SerializeField, Min(0f)]
-        private float _fireInterval = 0.4f;
-
-        [SerializeField, Min(0f)]
-        private float _reloadSeconds = 2f;
-
-        [SerializeField, Min(0)]
-        private int _damage = 10;
-
-        [SerializeField, Min(0.01f)]
-        private float _range = 40f;
-
-        [SerializeField, Min(0f)]
-        private float _falloffStart = 10f;
-
-        [SerializeField, Min(0f)]
-        private float _falloffEnd = 30f;
-
-        [SerializeField, Range(0f, 1f)]
-        private float _falloffMinMultiplier = 0.5f;
+        [SerializeField, Tooltip("撃つ武器の定義 (弾数・連射間隔・ダメージ・射程・距離減衰)。シーン生成スクリプトが rifle を配線する")]
+        private WeaponDefinition _weaponDefinition;
 
         private NavMeshAgent _agent;
         private Damageable _self;
         private Damageable _target;
         private EnemyBrain _brain;
         private Weapon _weapon;
-        private DamageFalloff _falloff;
         private Vector3? _destination;
         private Vector3? _pendingNoise;
         private float _nextTargetSearch;
@@ -149,6 +125,16 @@ namespace Fps.Runtime
         }
 
         public Weapon Weapon => _weapon;
+
+        /// <summary>
+        /// 撃つ武器の定義。<see cref="TryInitialize"/> がこれから <see cref="Weapon"/> を作るので、それより前に設定する
+        /// (初期化後に変えても今の武器は変わらない)。
+        /// </summary>
+        public WeaponDefinition WeaponDefinition
+        {
+            get => _weaponDefinition;
+            set => _weaponDefinition = value;
+        }
 
         /// <summary>巡回地点 (ワールド座標の足元)。</summary>
         public IReadOnlyList<Vector3> PatrolRoute => _patrolRoute;
@@ -194,8 +180,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 部品を解決し、Inspector の値から <see cref="EnemyBrain"/> と <see cref="Weapon"/> を作る。
-        /// 失敗したら理由を Debug.LogError に出して false を返す。2 回目以降は何もしない。
+        /// 部品を解決し、Inspector の値から <see cref="EnemyBrain"/> を、<see cref="WeaponDefinition"/> から <see cref="Weapon"/> を作る。
+        /// 失敗したら (定義が未設定・不正なときも) 理由を Debug.LogError に出して false を返す。2 回目以降は何もしない。
         /// </summary>
         public bool TryInitialize()
         {
@@ -212,32 +198,32 @@ namespace Fps.Runtime
                 return false;
             }
 
+            if (_weaponDefinition == null)
+            {
+                Debug.LogError(
+                    $"{LogTag} id={Id} に WeaponDefinition が設定されていません。シーン生成スクリプトで配線してください。", this);
+                return false;
+            }
+
             EnemySpec spec;
-            WeaponSpec weaponSpec;
             try
             {
                 spec = new EnemySpec(_sightRange, _attackRange, _loseSightSeconds, _searchSeconds, _reactionSeconds);
-                if (!(_range > 0f) || float.IsInfinity(_range))
-                {
-                    throw new ArgumentOutOfRangeException(nameof(_range), _range, "range must be positive and finite");
-                }
-
-                _falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
-                weaponSpec = new WeaponSpec(
-                    WeaponController.DefaultWeaponId,
-                    null,
-                    FireMode.Auto,
-                    _magazineSize,
-                    _reserveAmmo,
-                    _fireInterval,
-                    _reloadSeconds,
-                    _damage,
-                    _range,
-                    _falloff);
             }
             catch (ArgumentException e)
             {
                 Debug.LogError($"{LogTag} id={Id} の設定が不正です: {e.Message}", this);
+                return false;
+            }
+
+            WeaponSpec weaponSpec;
+            try
+            {
+                weaponSpec = _weaponDefinition.ToSpec();
+            }
+            catch (WeaponDefinitionException e)
+            {
+                Debug.LogError($"{LogTag} id={Id} の武器定義が不正です: {e.Message}", _weaponDefinition);
                 return false;
             }
 
@@ -476,7 +462,8 @@ namespace Fps.Runtime
                 direction = transform.forward;
             }
 
-            var result = Hitscan.Fire(eye, direction, _range, _weapon.Spec.Damage, _falloff, transform);
+            var spec = _weapon.Spec;
+            var result = Hitscan.Fire(eye, direction, spec.Range, spec.Damage, spec.Falloff, transform);
             Debug.Log($"{LogTag} id={Id} fire ammo={_weapon.AmmoInMagazine} hit={DescribeHit(result)} dmg={result.Damage}", this);
         }
 

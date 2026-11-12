@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Fps.Core;
+using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEditor;
@@ -18,19 +19,26 @@ namespace Fps.Tests.EditMode
     {
         private GameObject _host;
         private EnemyAgent _agent;
+        private WeaponDefinition _rifle;
 
         [SetUp]
         public void SetUp()
         {
+            _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _rifle.name = "Rifle";
+            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+
             _host = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             _host.name = "Enemy";
             _agent = _host.AddComponent<EnemyAgent>();
+            _agent.WeaponDefinition = _rifle;
         }
 
         [TearDown]
         public void TearDown()
         {
             Object.DestroyImmediate(_host);
+            Object.DestroyImmediate(_rifle);
         }
 
         [Test]
@@ -64,6 +72,50 @@ namespace Fps.Tests.EditMode
             LogAssert.Expect(LogType.Error, new Regex(@"^\[AI\] id=.* の設定が不正です"));
             Assert.That(_agent.TryInitialize(), Is.False);
             Assert.That(_agent.IsInitialized, Is.False);
+        }
+
+        [Test]
+        public void WeaponIsBuiltFromTheDefinition()
+        {
+            Assert.That(_agent.TryInitialize(), Is.True);
+
+            var expected = WeaponAssetBuilder.RifleSpec();
+            var spec = _agent.Weapon.Spec;
+            Assert.That(spec.Id, Is.EqualTo(expected.Id));
+            Assert.That(spec.MagazineSize, Is.EqualTo(expected.MagazineSize));
+            Assert.That(spec.ReserveAmmo, Is.EqualTo(expected.ReserveAmmo));
+            Assert.That(spec.FireInterval, Is.EqualTo(expected.FireInterval));
+            Assert.That(spec.ReloadSeconds, Is.EqualTo(expected.ReloadSeconds));
+            Assert.That(spec.Damage, Is.EqualTo(expected.Damage));
+            Assert.That(spec.Range, Is.EqualTo(expected.Range));
+            Assert.That(spec.Falloff.StartDistance, Is.EqualTo(expected.Falloff.StartDistance));
+            Assert.That(spec.Falloff.EndDistance, Is.EqualTo(expected.Falloff.EndDistance));
+            Assert.That(spec.Falloff.MinMultiplier, Is.EqualTo(expected.Falloff.MinMultiplier));
+            Assert.That(_agent.Weapon.AmmoInMagazine, Is.EqualTo(expected.MagazineSize));
+        }
+
+        [Test]
+        public void MissingWeaponDefinitionIsReportedAndRejected()
+        {
+            _agent.Id = "enemy-1";
+            _agent.WeaponDefinition = null;
+
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[AI\] id=enemy-1 に WeaponDefinition が設定されていません"));
+            Assert.That(_agent.TryInitialize(), Is.False);
+            Assert.That(_agent.IsInitialized, Is.False);
+            Assert.That(_agent.Weapon, Is.Null);
+        }
+
+        [Test]
+        public void InvalidWeaponDefinitionIsReportedAndRejected()
+        {
+            _agent.Id = "enemy-1";
+            _rifle.MagazineSize = 0;
+
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[AI\] id=enemy-1 の武器定義が不正です: weapon 'Rifle'"));
+            Assert.That(_agent.TryInitialize(), Is.False);
+            Assert.That(_agent.IsInitialized, Is.False);
+            Assert.That(_agent.Weapon, Is.Null);
         }
 
         [Test]

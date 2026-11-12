@@ -79,6 +79,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("プレイヤーの視点。一人称か三人称 (肩越し)")]
         private ViewMode _viewMode = ViewMode.FirstPerson;
 
+        [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義。シーン生成スクリプトが rifle を配線する")]
+        private WeaponDefinition _weaponDefinition;
+
         private BootstrapWorld _world;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
@@ -105,6 +108,16 @@ namespace Fps.Runtime
         {
             get => _viewMode;
             set => _viewMode = value;
+        }
+
+        /// <summary>
+        /// <see cref="Build"/> で作るプレイヤーの <see cref="WeaponController.Definition"/>。
+        /// Play 中に未設定なら WeaponController が初期化できず、<see cref="Build"/> は失敗する。
+        /// </summary>
+        public WeaponDefinition WeaponDefinition
+        {
+            get => _weaponDefinition;
+            set => _weaponDefinition = value;
         }
 
         private void Awake()
@@ -142,7 +155,7 @@ namespace Fps.Runtime
             {
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(
-                    _viewMode, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
+                    _viewMode, _weaponDefinition, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
@@ -204,6 +217,7 @@ namespace Fps.Runtime
 
         private static GameObject CreatePlayer(
             ViewMode viewMode,
+            WeaponDefinition weaponDefinition,
             out CharacterController controller,
             out ViewRig rig,
             out Camera camera,
@@ -215,7 +229,7 @@ namespace Fps.Runtime
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
-                ConfigurePlayer(player, viewMode, out controller, out rig, out camera, out look, out mover, out weapon);
+                ConfigurePlayer(player, viewMode, weaponDefinition, out controller, out rig, out camera, out look, out mover, out weapon);
 
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
@@ -234,6 +248,7 @@ namespace Fps.Runtime
         private static void ConfigurePlayer(
             GameObject player,
             ViewMode viewMode,
+            WeaponDefinition weaponDefinition,
             out CharacterController controller,
             out ViewRig rig,
             out Camera camera,
@@ -301,11 +316,23 @@ namespace Fps.Runtime
             }
 
             // 射撃は視点の向きで撃つのでカメラに付ける。参照の解決は FirstPersonLook と同じく Play 中の Awake に任せる。
-            weapon = cameraObject.AddComponent<WeaponController>();
+            // Awake は定義から武器を作るので、カメラを一度無効にして付け、定義を渡してから有効にする (そこで Awake が走る)。
+            var cameraWasActive = cameraObject.activeSelf;
+            cameraObject.SetActive(false);
+            try
+            {
+                weapon = cameraObject.AddComponent<WeaponController>();
+                weapon.Definition = weaponDefinition;
+            }
+            finally
+            {
+                cameraObject.SetActive(cameraWasActive);
+            }
+
             if (Application.isPlaying && !weapon.IsInitialized)
             {
                 throw new InvalidOperationException(
-                    "WeaponController could not resolve its camera or Attack/Reload actions; see the error above");
+                    "WeaponController could not resolve its WeaponDefinition, camera or Attack/Reload actions; see the error above");
             }
         }
 

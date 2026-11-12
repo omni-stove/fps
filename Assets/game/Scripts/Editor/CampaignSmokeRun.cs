@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Fps.Editor
 {
     /// <summary>
-    /// Campaign01 を生成し直し、セーブを消してから Play Mode で数秒走らせ、ログで次を確かめて Editor を終える。
+    /// 武器のアセットと Campaign01 を生成し直し、セーブを消してから Play Mode で数秒走らせ、ログで次を確かめて Editor を終える。
     /// <list type="bullet">
     /// <item>ミッションが始まる (<c>[Mission] objective=... state=Active</c> が出る)。</item>
     /// <item>キャンペーンがセーブ無しの状態から始まる (<c>[Campaign] no save; starting ...</c> が出る)。</item>
@@ -68,6 +68,8 @@ namespace Fps.Editor
             {
                 var seconds = ParseSeconds(Environment.GetCommandLineArgs());
 
+                // シーンはプレイヤーと敵に rifle のアセットを配線するので、先に武器のアセットを作り直しておく。
+                WeaponAssetBuilder.Build();
                 CampaignSceneBuilder.Build();
                 DeleteSave("before the run");
                 EditorSceneManager.OpenScene(CampaignSceneBuilder.ScenePath, OpenSceneMode.Single);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace Fps.Core.Tests
@@ -43,6 +44,39 @@ namespace Fps.Core.Tests
             health.TakeDamage(10);
 
             Assert.That(died, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ChangedFiresOnlyWhenCurrentChanges()
+        {
+            var health = new Health(10);
+            var changed = 0;
+            health.Changed += () => changed++;
+
+            health.Heal(5);
+            health.TakeDamage(0);
+            Assert.That(changed, Is.Zero);
+
+            health.TakeDamage(3);
+            health.Heal(1);
+            Assert.That(changed, Is.EqualTo(2));
+
+            health.TakeDamage(100);
+            health.TakeDamage(1);
+            Assert.That(changed, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void ChangedFiresBeforeDied()
+        {
+            var health = new Health(10);
+            var order = new List<string>();
+            health.Changed += () => order.Add("changed:" + health.Current);
+            health.Died += () => order.Add("died");
+
+            health.TakeDamage(10);
+
+            Assert.That(order, Is.EqualTo(new[] { "changed:0", "died" }));
         }
 
         [Test]

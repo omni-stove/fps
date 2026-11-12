@@ -104,6 +104,36 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void RemainingSecondsChangedFiresOnEveryTickThatReducesTime()
+        {
+            var match = new Match(10f, 1, _player);
+            var reported = new List<float>();
+            match.RemainingSecondsChanged += reported.Add;
+
+            match.Tick(1f);
+            match.Start();
+            match.Tick(2.5f);
+            match.Tick(0f);
+            match.Tick(100f);
+            match.Tick(1f);
+
+            Assert.That(reported, Is.EqualTo(new[] { 7.5f, 0f }));
+        }
+
+        [Test]
+        public void RemainingSecondsChangedFiresBeforeTheTimeUpEnd()
+        {
+            var match = StartedMatch(1f);
+            var order = new List<string>();
+            match.RemainingSecondsChanged += _ => order.Add("remaining");
+            match.StateChanged += state => order.Add(state.ToString());
+
+            match.Tick(1f);
+
+            Assert.That(order, Is.EqualTo(new[] { "remaining", "Ended" }));
+        }
+
+        [Test]
         public void TimeUpLoses()
         {
             var match = StartedMatch(10f);

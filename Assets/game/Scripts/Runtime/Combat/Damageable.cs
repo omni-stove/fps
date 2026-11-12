@@ -28,6 +28,12 @@ namespace Fps.Runtime
         /// <summary>死亡した瞬間に、死んだ Damageable を渡して 1 度だけ呼ばれる (ResetHealth 後は再び呼ばれ得る)。</summary>
         public event Action<Damageable> Died;
 
+        /// <summary>
+        /// <see cref="ResetHealth"/> で <see cref="Health"/> を作り直したときに、新しい Health を渡して呼ばれる。
+        /// Health のイベントを直接購読している側 (HUD など) はここで購読し直す。
+        /// </summary>
+        public event Action<Health> HealthReset;
+
         /// <summary>ログに出す識別子。未設定なら GameObject の名前。</summary>
         public string Id => string.IsNullOrEmpty(_id) ? name : _id;
 
@@ -165,6 +171,7 @@ namespace Fps.Runtime
             // Inspector で 0 以下にされていても Health の例外で落ちないよう 1 に揃える。
             _health = new Health(Math.Max(1, _maxHealth));
             _health.Died += OnHealthDied;
+            HealthReset?.Invoke(_health);
         }
 
         private void OnHealthDied()

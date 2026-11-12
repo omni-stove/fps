@@ -13,6 +13,12 @@ namespace Fps.Core
         /// <summary>状態が変わるたびに新しい状態を渡して呼ばれる。Ended で呼ばれた時点で <see cref="Result"/> は確定済み。</summary>
         public event Action<GameModeState> StateChanged;
 
+        /// <summary>
+        /// <see cref="Tick"/> で <see cref="RemainingSeconds"/> が減るたびに新しい残り時間を渡して呼ばれる。
+        /// 時間切れのときは Ended の <see cref="StateChanged"/> より先に 0 で呼ぶ。
+        /// </summary>
+        public event Action<float> RemainingSecondsChanged;
+
         /// <summary>制限時間（秒）。</summary>
         public float TimeLimitSeconds { get; }
 
@@ -81,7 +87,13 @@ namespace Fps.Core
                 return;
             }
 
+            var previous = RemainingSeconds;
             RemainingSeconds = Math.Max(0f, RemainingSeconds - deltaSeconds);
+            if (RemainingSeconds != previous)
+            {
+                RemainingSecondsChanged?.Invoke(RemainingSeconds);
+            }
+
             if (RemainingSeconds <= 0f)
             {
                 End(MatchResult.Lost);

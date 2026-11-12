@@ -1,0 +1,86 @@
+/* HUD の見た目。基準解像度は 1920x1080 (GameBootstrap の PanelSettings が画面サイズに合わせて拡縮する)。 */
+
+.hud {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.hud__panel {
+    position: absolute;
+    flex-direction: row;
+    align-items: flex-end;
+    padding: 6px 18px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.hud__panel--bottom-left {
+    left: 32px;
+    bottom: 32px;
+}
+
+.hud__panel--bottom-right {
+    right: 32px;
+    bottom: 32px;
+}
+
+.hud__panel--top-center {
+    top: 24px;
+    left: 50%;
+    translate: -50% 0;
+}
+
+.hud__caption {
+    margin: 0 10px 6px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.7);
+    -unity-font-style: bold;
+}
+
+.hud__value {
+    margin: 0;
+    padding: 0;
+    font-size: 44px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: lower-left;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hud__value--time {
+    font-size: 36px;
+    -unity-text-align: middle-center;
+}
+
+/* 中央の照準。24px 四方の中に太さ 2px の十字を描く。 */
+.hud__crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 24px;
+    height: 24px;
+    translate: -50% -50%;
+}
+
+.hud__crosshair-line {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.hud__crosshair-line--horizontal {
+    left: 0;
+    right: 0;
+    top: 11px;
+    height: 2px;
+}
+
+.hud__crosshair-line--vertical {
+    top: 0;
+    bottom: 0;
+    left: 11px;
+    width: 2px;
+}

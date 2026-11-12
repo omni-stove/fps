@@ -2,7 +2,9 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
+using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -24,15 +26,37 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            if (_world != null)
+            DestroyWorld(_world);
+            Object.DestroyImmediate(_host);
+        }
+
+        private static void DestroyWorld(BootstrapWorld world)
+        {
+            if (world == null)
             {
-                Object.DestroyImmediate(_world.Floor);
-                Object.DestroyImmediate(_world.Player);
-                Object.DestroyImmediate(_world.Light.gameObject);
-                Object.DestroyImmediate(_world.Target.gameObject);
+                return;
             }
 
-            Object.DestroyImmediate(_host);
+            // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
+            if (world.Hud != null)
+            {
+                Object.DestroyImmediate(world.Hud.gameObject);
+            }
+
+            if (world.HudPanelSettings != null)
+            {
+                Object.DestroyImmediate(world.HudPanelSettings);
+            }
+
+            Object.DestroyImmediate(world.Match.gameObject);
+            if (world.Floor != null)
+            {
+                Object.DestroyImmediate(world.Floor);
+            }
+
+            Object.DestroyImmediate(world.Player);
+            Object.DestroyImmediate(world.Light.gameObject);
+            Object.DestroyImmediate(world.Target.gameObject);
         }
 
         [Test]
@@ -133,13 +157,7 @@ namespace Fps.Tests.EditMode
             }
             finally
             {
-                if (world != null)
-                {
-                    Object.DestroyImmediate(world.Player);
-                    Object.DestroyImmediate(world.Light.gameObject);
-                    Object.DestroyImmediate(world.Target.gameObject);
-                }
-
+                DestroyWorld(world);
                 Object.DestroyImmediate(host);
             }
         }
@@ -193,6 +211,109 @@ namespace Fps.Tests.EditMode
             Assert.That(eyeY, Is.LessThan(bodyTop));
             Assert.That(eyeY, Is.LessThan(headBottom));
             Assert.That(GameBootstrap.TargetPosition.z, Is.LessThan(WeaponController.DefaultRange));
+        }
+
+        [Test]
+        public void CreatesASoloMatchThatWaitsForPlay()
+        {
+            var runner = _world.Match;
+
+            Assert.That(runner, Is.Not.Null);
+            Assert.That(runner.name, Is.EqualTo(GameBootstrap.MatchName));
+            Assert.That(runner.Match.State, Is.EqualTo(GameModeState.Waiting), "the match starts in Start, which only runs in Play Mode");
+            Assert.That(runner.Match.RemainingSeconds, Is.EqualTo(SoloMatchRunner.DefaultTimeLimitSeconds));
+            Assert.That(runner.Match.KillsToWin, Is.EqualTo(SoloMatchRunner.DefaultKillsToWin));
+        }
+
+        [Test]
+        public void KillingTheTargetWinsTheMatch()
+        {
+            var match = _world.Match.Match;
+            match.Start();
+            LogAssert.Expect(LogType.Log, $"{Damageable.LogTag} target died id={GameBootstrap.TargetName}");
+            LogAssert.Expect(LogType.Log, $"{SoloMatchRunner.LogTag} solo ended result={MatchResult.Won} kills=1");
+
+            _world.Target.Kill();
+
+            Assert.That(match.Result, Is.EqualTo(MatchResult.Won));
+        }
+
+        [Test]
+        public void HudUsesAUIDocumentWithCodeBuiltPanelSettings()
+        {
+            var hud = _world.Hud;
+            Assert.That(hud, Is.Not.Null);
+            Assert.That(hud.name, Is.EqualTo(GameBootstrap.HudName));
+            Assert.That(hud.gameObject.activeSelf, Is.True);
+
+            var document = hud.GetComponent<UIDocument>();
+            Assert.That(document, Is.Not.Null);
+            Assert.That(document.visualTreeAsset, Is.SameAs(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath)));
+
+            var settings = _world.HudPanelSettings;
+            Assert.That(document.panelSettings, Is.SameAs(settings));
+            Assert.That(settings.name, Is.EqualTo(GameBootstrap.HudPanelSettingsName));
+            Assert.That(settings.themeStyleSheet, Is.SameAs(Resources.Load<ThemeStyleSheet>(Hud.ThemeResourcePath)));
+            Assert.That(settings.scaleMode, Is.EqualTo(PanelScaleMode.ScaleWithScreenSize));
+            Assert.That(settings.referenceResolution, Is.EqualTo(GameBootstrap.HudReferenceResolution));
+        }
+
+        [Test]
+        public void HudShowsThePlayerHealthAndTheMatchTime()
+        {
+            var model = _world.Hud.Model;
+
+            Assert.That(model.HealthText, Is.EqualTo(HudFormat.Health(GameBootstrap.PlayerMaxHealth)));
+            Assert.That(model.TimeText, Is.EqualTo(HudFormat.Time(SoloMatchRunner.DefaultTimeLimitSeconds)));
+
+            _world.PlayerDamageable.TakeDamage(25);
+            Assert.That(model.HealthText, Is.EqualTo("75"));
+
+            var match = _world.Match.Match;
+            match.Start();
+            match.Tick(61f);
+            Assert.That(model.TimeText, Is.EqualTo("01:59"));
+        }
+
+        [Test]
+        public void HudFollowsTheHealthAfterItIsReset()
+        {
+            var model = _world.Hud.Model;
+            var damageable = _world.PlayerDamageable;
+            damageable.TakeDamage(40);
+
+            damageable.ResetHealth();
+            Assert.That(model.HealthText, Is.EqualTo("100"));
+
+            damageable.TakeDamage(10);
+            Assert.That(model.HealthText, Is.EqualTo("90"));
+        }
+
+        [Test]
+        public void HudFollowsTheWeaponOnceItIsInitialized()
+        {
+            var model = _world.Hud.Model;
+            var controller = _world.Weapon;
+
+            // Edit Mode では WeaponController の Awake が走らないので、武器はまだ無い。
+            Assert.That(controller.Weapon, Is.Null);
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
+            try
+            {
+                controller.Initialize(_world.Camera.transform, attack, reload);
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(WeaponController.DefaultMagazineSize, WeaponController.DefaultReserveAmmo)));
+
+                Assert.That(controller.Weapon.TryFire(), Is.True);
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(WeaponController.DefaultMagazineSize - 1, WeaponController.DefaultReserveAmmo)));
+            }
+            finally
+            {
+                attack.Dispose();
+                reload.Dispose();
+            }
         }
 
         [Test]

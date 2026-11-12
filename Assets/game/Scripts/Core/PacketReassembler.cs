@@ -11,12 +11,15 @@ namespace Fps.Core
     {
         private readonly int _maxMessageSize;
         private readonly int _maxPendingMessages;
+        private readonly long _maxPendingBytes;
+        private long _pendingBytes;
         private readonly Dictionary<ushort, Pending> _pending = new Dictionary<ushort, Pending>();
         private readonly List<ushort> _arrivalOrder = new List<ushort>();
 
         /// <param name="maxMessageSize">受け付けるメッセージの最大バイト数。超えるものは捨てる。</param>
         /// <param name="maxPendingMessages">同時に組み立て途中にしておけるメッセージの数。</param>
-        public PacketReassembler(int maxMessageSize, int maxPendingMessages)
+        /// <param name="maxPendingBytes">組み立て途中のメッセージが溜めてよい合計バイト数。0 以下なら <paramref name="maxMessageSize"/> × <paramref name="maxPendingMessages"/>。</param>
+        public PacketReassembler(int maxMessageSize, int maxPendingMessages, int maxPendingBytes = 0)
         {
             if (maxMessageSize <= 0)
             {
@@ -30,6 +33,7 @@ namespace Fps.Core
 
             _maxMessageSize = maxMessageSize;
             _maxPendingMessages = maxPendingMessages;
+            _maxPendingBytes = maxPendingBytes > 0 ? maxPendingBytes : (long)maxMessageSize * maxPendingMessages;
         }
 
         /// <summary>組み立て途中のメッセージの数。</summary>
@@ -94,33 +98,52 @@ namespace Fps.Core
                 _pending.Add(messageId, pending);
                 _arrivalOrder.Add(messageId);
             }
-            else if (pending.Pieces.Length != count || pending.Pieces[index] != null)
+            else if (pending.Count != count || pending.Pieces.ContainsKey(index))
             {
                 Drop(messageId);
                 return PacketReadResult.Malformed;
             }
 
-            if (pending.TotalBytes + pieceLength > _maxMessageSize)
+            if (pending.TotalBytes + pieceLength > _maxMessageSize || pieceLength > _maxPendingBytes)
             {
                 Drop(messageId);
                 return PacketReadResult.Malformed;
+            }
+
+            // 送り手全体の合計が上限を超えるなら、古いメッセージから捨てる
+            while (_pendingBytes + pieceLength > _maxPendingBytes)
+            {
+                var oldest = _arrivalOrder[0];
+                if (oldest == messageId)
+                {
+                    if (_arrivalOrder.Count == 1)
+                    {
+                        Drop(messageId);
+                        return PacketReadResult.Malformed;
+                    }
+
+                    oldest = _arrivalOrder[1];
+                }
+
+                Drop(oldest);
             }
 
             var piece = new byte[pieceLength];
             Buffer.BlockCopy(array, packet.Offset + PacketSplitter.FragmentHeaderSize, piece, 0, pieceLength);
             pending.Pieces[index] = piece;
-            pending.Received++;
             pending.TotalBytes += pieceLength;
+            _pendingBytes += pieceLength;
 
-            if (pending.Received < count)
+            if (pending.Pieces.Count < count)
             {
                 return PacketReadResult.Incomplete;
             }
 
             var assembled = new byte[pending.TotalBytes];
             var offset = 0;
-            foreach (var part in pending.Pieces)
+            for (var i = 0; i < count; i++)
             {
+                var part = pending.Pieces[i];
                 Buffer.BlockCopy(part, 0, assembled, offset, part.Length);
                 offset += part.Length;
             }
@@ -135,13 +158,16 @@ namespace Fps.Core
         {
             _pending.Clear();
             _arrivalOrder.Clear();
+            _pendingBytes = 0;
         }
 
         private void Drop(ushort messageId)
         {
-            if (_pending.Remove(messageId))
+            if (_pending.TryGetValue(messageId, out var pending))
             {
+                _pending.Remove(messageId);
                 _arrivalOrder.Remove(messageId);
+                _pendingBytes -= pending.TotalBytes;
             }
         }
 
@@ -149,12 +175,13 @@ namespace Fps.Core
         {
             public Pending(int count)
             {
-                Pieces = new byte[count][];
+                Count = count;
             }
 
-            public byte[][] Pieces { get; }
+            public int Count { get; }
 
-            public int Received { get; set; }
+            // 断片が届いた分だけ確保する (count だけで大きな配列を作らせない)
+            public Dictionary<int, byte[]> Pieces { get; } = new Dictionary<int, byte[]>();
 
             public int TotalBytes { get; set; }
         }

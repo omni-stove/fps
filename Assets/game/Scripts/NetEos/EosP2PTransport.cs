@@ -29,7 +29,10 @@ namespace Fps.NetEos
         public const int MaxPacketSize = 1170;
 
         /// <summary>受け付けるメッセージの上限。分割して届いてもこれを超えれば捨てる。</summary>
-        public const int MaxMessageSize = 4 * 1024 * 1024;
+        public const int MaxMessageSize = 1024 * 1024;
+
+        /// <summary>送り手 1 人あたり、組み立て途中に溜めてよい合計バイト数。</summary>
+        public const int MaxPendingBytesPerPeer = 2 * 1024 * 1024;
 
         /// <summary>クライアントがログインからサーバーとつながるまで待つ秒数。</summary>
         public const float ConnectTimeoutSeconds = 20f;
@@ -700,7 +703,7 @@ namespace Fps.NetEos
 
         private static PacketReassembler NewReassembler()
         {
-            return new PacketReassembler(MaxMessageSize, _maxPendingMessagesPerPeer);
+            return new PacketReassembler(MaxMessageSize, _maxPendingMessagesPerPeer, MaxPendingBytesPerPeer);
         }
 
         private static SocketId Socket()

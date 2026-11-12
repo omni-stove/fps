@@ -7,6 +7,8 @@ namespace Fps.Core.Tests
     public sealed class MatchTests
     {
         private const int _player = 1;
+        private static readonly float[] _remainingAfterTicks = { 7.5f, 0f };
+        private static readonly string[] _remainingThenEnded = { "remaining", "Ended" };
         private const int _target = 100;
         private const int _otherTarget = 101;
 
@@ -101,6 +103,36 @@ namespace Fps.Core.Tests
 
             Assert.That(match.RemainingSeconds, Is.EqualTo(7.5f));
             Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
+        }
+
+        [Test]
+        public void RemainingSecondsChangedFiresOnEveryTickThatReducesTime()
+        {
+            var match = new Match(10f, 1, _player);
+            var reported = new List<float>();
+            match.RemainingSecondsChanged += reported.Add;
+
+            match.Tick(1f);
+            match.Start();
+            match.Tick(2.5f);
+            match.Tick(0f);
+            match.Tick(100f);
+            match.Tick(1f);
+
+            Assert.That(reported, Is.EqualTo(_remainingAfterTicks));
+        }
+
+        [Test]
+        public void RemainingSecondsChangedFiresBeforeTheTimeUpEnd()
+        {
+            var match = StartedMatch(1f);
+            var order = new List<string>();
+            match.RemainingSecondsChanged += _ => order.Add("remaining");
+            match.StateChanged += state => order.Add(state.ToString());
+
+            match.Tick(1f);
+
+            Assert.That(order, Is.EqualTo(_remainingThenEnded));
         }
 
         [Test]

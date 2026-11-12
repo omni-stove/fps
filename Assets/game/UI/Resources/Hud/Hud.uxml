@@ -1,0 +1,21 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- HUD。GameBootstrap が UIDocument に読み込み、Fps.Runtime.HudView が name で Label を探して文字列を入れる。 -->
+    <Style src="Hud.uss" />
+    <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
+        <ui:VisualElement name="hud-time-panel" class="hud__panel hud__panel--top-center" picking-mode="Ignore">
+            <ui:Label name="hud-time" text="--:--" class="hud__value hud__value--time" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement name="hud-health-panel" class="hud__panel hud__panel--bottom-left" picking-mode="Ignore">
+            <ui:Label text="HP" class="hud__caption" picking-mode="Ignore" />
+            <ui:Label name="hud-health" text="--" class="hud__value" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement name="hud-ammo-panel" class="hud__panel hud__panel--bottom-right" picking-mode="Ignore">
+            <ui:Label text="AMMO" class="hud__caption" picking-mode="Ignore" />
+            <ui:Label name="hud-ammo" text="-- / --" class="hud__value" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement name="hud-crosshair" class="hud__crosshair" picking-mode="Ignore">
+            <ui:VisualElement class="hud__crosshair-line hud__crosshair-line--horizontal" picking-mode="Ignore" />
+            <ui:VisualElement class="hud__crosshair-line hud__crosshair-line--vertical" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

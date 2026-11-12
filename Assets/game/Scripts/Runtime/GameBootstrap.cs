@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
 namespace Fps.Runtime
 {
@@ -10,7 +11,8 @@ namespace Fps.Runtime
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 子カメラ + <see cref="FirstPersonLook"/>
     /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
-    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する) を
+    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
+    /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// </summary>
     [DisallowMultipleComponent]
@@ -61,6 +63,12 @@ namespace Fps.Runtime
         public const int TargetDummyMaxHealth = TargetDummy.DefaultMaxHealth;
         public const float TargetDummyRespawnDelay = TargetDummy.DefaultRespawnDelay;
 
+        public const string HudName = "HUD";
+        public const string HudPanelSettingsName = "HudPanelSettings";
+
+        /// <summary>HUD の基準解像度。これより大きい・小さい画面では幅と高さの中間で拡縮する。</summary>
+        public static readonly Vector2Int HudReferenceResolution = new Vector2Int(1920, 1080);
+
         [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
         private bool _createFloor = true;
 
@@ -93,7 +101,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 床・プレイヤー・ライト・標的ダミーを生成する。2 回目以降は何もせず最初の結果を返す。
+        /// 床・プレイヤー・ライト・標的ダミー・HUD を生成する。2 回目以降は何もせず最初の結果を返す。
         /// 途中で失敗したら作りかけのオブジェクトを片付けてから例外を投げ直す。
         /// </summary>
         public BootstrapWorld Build()
@@ -107,17 +115,29 @@ namespace Fps.Runtime
             GameObject player = null;
             GameObject light = null;
             GameObject targets = null;
+            GameObject hud = null;
+            PanelSettings hudPanelSettings = null;
             try
             {
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(out var controller, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
+                // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
+                Hud hudComponent = null;
+                if (!NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
+                {
+                    hud = CreateHud(playerDamageable, weapon, out hudComponent, out hudPanelSettings);
+                }
+
                 _world = new BootstrapWorld(
-                    floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable);
+                    floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
+                    hudComponent, hudPanelSettings);
             }
             catch
             {
+                DestroySafely(hud);
+                DestroySafely(hudPanelSettings);
                 DestroySafely(targets);
                 DestroySafely(light);
                 DestroySafely(player);
@@ -289,6 +309,69 @@ namespace Fps.Runtime
             return root;
         }
 
+        /// <summary>
+        /// HUD 用の PanelSettings と UIDocument を作り、Resources の Hud.uxml とテーマを読み込んで <see cref="Hud"/> に源を渡す。
+        /// UIDocument が有効になる前に参照をすべて設定するため、GameObject は無効で作ってから有効にする。
+        /// </summary>
+        private static GameObject CreateHud(
+            Damageable player,
+            WeaponController weapon,
+            out Hud hud,
+            out PanelSettings panelSettings)
+        {
+            var layout = Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath);
+            if (layout == null)
+            {
+                throw new InvalidOperationException(
+                    $"HUD layout 'Resources/{Hud.LayoutResourcePath}.uxml' was not found (expected under Assets/game/UI/Resources)");
+            }
+
+            var theme = Resources.Load<ThemeStyleSheet>(Hud.ThemeResourcePath);
+            if (theme == null)
+            {
+                throw new InvalidOperationException(
+                    $"HUD theme 'Resources/{Hud.ThemeResourcePath}.tss' was not found (expected under Assets/game/UI/Resources)");
+            }
+
+            panelSettings = null;
+            GameObject hudObject = null;
+            try
+            {
+                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                panelSettings.name = HudPanelSettingsName;
+                panelSettings.themeStyleSheet = theme;
+                panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+                panelSettings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+                panelSettings.referenceResolution = HudReferenceResolution;
+                panelSettings.match = 0.5f;
+
+                hudObject = new GameObject(HudName);
+                hudObject.SetActive(false);
+                var document = hudObject.AddComponent<UIDocument>();
+                document.panelSettings = panelSettings;
+                document.visualTreeAsset = layout;
+
+                hud = hudObject.AddComponent<Hud>();
+                hud.Initialize(player, weapon, null, panelSettings);
+
+                // 有効にすると UIDocument が木を作り、Play 中は Hud の OnEnable が Label を探す。
+                // Edit Mode では Hud の OnEnable が走らないので、木ができていればここで探す。
+                hudObject.SetActive(true);
+                if (!Application.isPlaying)
+                {
+                    hud.RebuildView();
+                }
+            }
+            catch
+            {
+                DestroySafely(hudObject);
+                DestroySafely(panelSettings);
+                throw;
+            }
+
+            return hudObject;
+        }
+
         private static GameObject CreateLight(out Light light)
         {
             var lightObject = new GameObject(LightName);
@@ -340,6 +423,12 @@ namespace Fps.Runtime
         /// <summary>プレイヤーの体力。敵の射撃はここに届く。</summary>
         public Damageable PlayerDamageable { get; }
 
+        /// <summary>HUD。専用サーバーでは作らないので null。</summary>
+        public Hud Hud { get; }
+
+        /// <summary>HUD 用に作った PanelSettings。<see cref="Hud"/> が破棄されるときに一緒に消える。専用サーバーでは null。</summary>
+        public PanelSettings HudPanelSettings { get; }
+
         public BootstrapWorld(
             GameObject floor,
             GameObject player,
@@ -351,8 +440,12 @@ namespace Fps.Runtime
             WeaponController weapon,
             GameObject targetRoot,
             IReadOnlyList<TargetDummy> targets,
-            Damageable playerDamageable)
+            Damageable playerDamageable,
+            Hud hud,
+            PanelSettings hudPanelSettings)
         {
+            Hud = hud;
+            HudPanelSettings = hudPanelSettings;
             Floor = floor;
             Player = player;
             Controller = controller;

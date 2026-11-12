@@ -10,6 +10,9 @@ namespace Fps.Core
         /// <summary>体力が 0 になった瞬間に 1 度だけ呼ばれる。</summary>
         public event Action Died;
 
+        /// <summary><see cref="Current"/> が変わるたびに呼ばれる。死亡時は <see cref="Died"/> より先に呼ぶ。値が変わらない操作では呼ばない。</summary>
+        public event Action Changed;
+
         public int Max { get; }
         public int Current { get; private set; }
         public bool IsDead => Current == 0;
@@ -39,7 +42,13 @@ namespace Fps.Core
                 return;
             }
 
+            var previous = Current;
             Current = Math.Max(0, Current - amount);
+            if (Current != previous)
+            {
+                Changed?.Invoke();
+            }
+
             if (IsDead)
             {
                 Died?.Invoke();
@@ -59,7 +68,12 @@ namespace Fps.Core
                 return;
             }
 
+            var previous = Current;
             Current = Math.Min(Max, Current + amount);
+            if (Current != previous)
+            {
+                Changed?.Invoke();
+            }
         }
     }
 }

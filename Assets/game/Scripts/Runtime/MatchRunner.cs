@@ -199,6 +199,13 @@ namespace Fps.Runtime
 
             _player.Died += OnPlayerDied;
             _match.StateChanged += OnStateChanged;
+
+            // HUD (専用サーバーでは無い) に残り時間を出させる。
+            if (world.Hud != null)
+            {
+                world.Hud.BindMatch(_match);
+            }
+
             _match.Start();
         }
 

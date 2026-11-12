@@ -64,6 +64,13 @@ fix_metas() {
 			;;
 		esac
 	done < <(meta_problems --others)
+	# Unity が先に作った未追跡の .meta は --others の集合では「ある」扱いで指摘に出ないので、本体が追跡済みならここで add する。
+	local meta body
+	while IFS= read -r meta; do
+		case "/$meta/" in */.*/ | *~/*) continue ;; esac
+		body="${meta%.meta}"
+		if git ls-files --error-unmatch -- "$body" >/dev/null 2>&1; then git add -- "$meta"; fi
+	done < <(git -c core.quotepath=off ls-files --others --exclude-standard -- 'Assets/*.meta')
 }
 
 [ "${1:-}" = "--fix" ] && fix_metas

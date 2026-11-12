@@ -3,6 +3,7 @@
     "rootNamespace": "Fps.Net",
     "references": [
         "Fps.Core",
+        "Unity.InputSystem",
         "Unity.Netcode.Runtime",
         "Unity.Networking.Transport"
     ],

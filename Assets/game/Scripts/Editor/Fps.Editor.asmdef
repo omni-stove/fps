@@ -2,6 +2,7 @@
     "name": "Fps.Editor",
     "rootNamespace": "Fps.Editor",
     "references": [
+        "Fps.Core",
         "Fps.Runtime"
     ],
     "includePlatforms": [

@@ -18,6 +18,16 @@ namespace Fps.Editor
     {
         public const string PlayerPrefabPath = "Assets/game/Prefabs/Net/NetPlayer.prefab";
 
+        /// <summary>プレイヤーのカプセルの高さと半径 (m)。プリミティブの Capsule と同じ大きさ。</summary>
+        public const float PlayerHeight = 2f;
+        public const float PlayerRadius = 0.5f;
+
+        /// <summary>床 (Plane は 10m 四方) の拡大率。歩き回っても落ちにくい 50m 四方にする。</summary>
+        public static readonly Vector3 GroundScale = new Vector3(5f, 1f, 5f);
+
+        /// <summary>床の高さ。カプセルの中心が原点のとき足元が床に接する。</summary>
+        public const float GroundY = -PlayerHeight / 2f;
+
         /// <summary>
         /// プレハブにするのは、NetworkObject の GlobalObjectIdHash がアセットの GUID からエディタでしか作られず、
         /// 実行時に生成したオブジェクトではサーバーとクライアントで同じプレハブだと突き合わせられないため。
@@ -47,6 +57,14 @@ namespace Fps.Editor
             {
                 source.name = "NetPlayer";
                 source.AddComponent<NetworkObject>();
+
+                // CharacterController 自体がカプセルのコライダーなので、プリミティブ付属のコライダーは二重になる
+                UnityEngine.Object.DestroyImmediate(source.GetComponent<CapsuleCollider>());
+                var controller = source.AddComponent<CharacterController>();
+                controller.height = PlayerHeight;
+                controller.radius = PlayerRadius;
+                controller.center = Vector3.zero;
+                source.AddComponent<NetworkPlayerMotor>();
                 var saved = PrefabUtility.SaveAsPrefabAsset(source, PlayerPrefabPath, out var success);
                 if (!success || saved == null)
                 {
@@ -93,7 +111,8 @@ namespace Fps.Editor
 
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
-            ground.transform.position = new Vector3(0f, -1f, 0f);
+            ground.transform.position = new Vector3(0f, GroundY, 0f);
+            ground.transform.localScale = GroundScale;
 
             if (!EditorSceneManager.SaveScene(scene, NetBootstrap.ScenePath))
             {

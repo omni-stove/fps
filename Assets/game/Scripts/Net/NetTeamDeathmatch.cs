@@ -23,6 +23,10 @@ namespace Fps.Net
     /// ダメージ量は <see cref="DamageCalculator"/>、体力は Session の <see cref="Health"/> が決め、
     /// 体力は <see cref="NetPlayer"/> の NetworkVariable で配る。
     /// </para>
+    /// <para>
+    /// 弾倉と予備弾はサーバーが各プレイヤーの <see cref="NetPlayerWeapon"/> で持つ。武器の設定は試合の開始時に作り、
+    /// 参加時に持たせて、出現・リスポーンと試合の開始で満タンに戻す。射撃は当たり判定の前に 1 発消費し、弾が無ければ捨てる。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -63,8 +67,17 @@ namespace Fps.Net
         [SerializeField, Min(0.01f), Tooltip("ヒットスキャンの射程 (m)")]
         private float _weaponRange = DefaultWeaponRange;
 
-        [SerializeField, Min(0f), Tooltip("サーバーが受け付ける射撃の間隔 (秒)。これより速い連射は捨てる")]
+        [SerializeField, Min(0f), Tooltip("武器の連射間隔 (秒)。サーバーはこれより速い連射を捨てる")]
         private float _fireInterval = DefaultFireInterval;
+
+        [SerializeField, Min(1), Tooltip("弾倉の容量")]
+        private int _magazineSize = NetPlayerWeapon.DefaultMagazineSize;
+
+        [SerializeField, Min(0), Tooltip("予備弾の初期値 (出現・リスポーンのたびにこの値に戻る)")]
+        private int _reserveAmmo = NetPlayerWeapon.DefaultReserveAmmo;
+
+        [SerializeField, Min(0f), Tooltip("リロード開始から補充までの秒数")]
+        private float _reloadSeconds = NetPlayerWeapon.DefaultReloadSeconds;
 
         [SerializeField, Min(0f), Tooltip("この距離 (m) までは減衰しない")]
         private float _falloffStart = DefaultFalloffStart;
@@ -98,6 +111,7 @@ namespace Fps.Net
         private LagCompensator _lagCompensator;
         private int _lastRecordedTick = _noRecordedTick;
         private DamageFalloff _falloff;
+        private WeaponSpec _weaponSpec;
         private int _activeWeaponDamage;
         private float _activeWeaponRange;
         private float _activeFireInterval;
@@ -166,11 +180,32 @@ namespace Fps.Net
             set => _weaponRange = value;
         }
 
-        /// <summary>サーバーが受け付ける射撃の間隔 (秒)。0 以上。試合の開始時に読む。</summary>
+        /// <summary>武器の連射間隔 (秒)。サーバーはこれより速い連射を捨てる。0 以上。試合の開始時に読む。</summary>
         public float FireInterval
         {
             get => _fireInterval;
             set => _fireInterval = value;
+        }
+
+        /// <summary>弾倉の容量。1 以上。試合の開始時に読む。</summary>
+        public int MagazineSize
+        {
+            get => _magazineSize;
+            set => _magazineSize = value;
+        }
+
+        /// <summary>予備弾の初期値。0 以上。試合の開始時に読む。</summary>
+        public int ReserveAmmo
+        {
+            get => _reserveAmmo;
+            set => _reserveAmmo = value;
+        }
+
+        /// <summary>リロード開始から補充までの秒数。0 以上の有限値。試合の開始時に読む。</summary>
+        public float ReloadSeconds
+        {
+            get => _reloadSeconds;
+            set => _reloadSeconds = value;
         }
 
         private void Awake()
@@ -222,6 +257,7 @@ namespace Fps.Net
             _lastRecordedTick = _noRecordedTick;
             _shotBudgets.Clear();
             _rewindTargets.Clear();
+            _weaponSpec = null;
 
             if (Current == this)
             {
@@ -288,7 +324,7 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// サーバーで shooter の射撃 1 発を処理する。連射の間隔と始点を確かめてから、shooter が見ていた時点 time まで
+        /// サーバーで shooter の射撃 1 発を処理する。連射の間隔と始点を確かめ、弾倉から 1 発消費してから、shooter が見ていた時点 time まで
         /// 他のプレイヤーを巻き戻して Raycast し、当たればダメージを与えて <c>[Net] hit attacker=.. victim=.. rewindTicks=..</c> を出す。
         /// 巻き戻せるのは <see cref="LagCompensator.MaxRewindTicks"/> tick 前まで。
         /// </summary>
@@ -309,6 +345,8 @@ namespace Fps.Net
                 return;
             }
 
+            // 連射間隔はここ (ShotBudget) だけで制限する。ServerWeapon は弾倉とリロードだけを見る。
+            // RPC の届く時刻は揺れるので、間隔どおりの射撃がまとめて届いても Burst 発までは受け入れ、速すぎる連打だけを捨てる
             if (!_shotBudgets.TryGetValue(shooterId, out var budget))
             {
                 budget = new ShotBudget(_activeFireInterval);
@@ -336,6 +374,15 @@ namespace Fps.Net
             if (IsOriginBlocked(shooter, origin))
             {
                 WarnRejected(shooterId, ShotRejection.OriginBlocked);
+                return;
+            }
+
+            // 不正な射撃では弾を減らさないよう、検査を通ってから 1 発消費する。弾倉が空ならここでリロードが始まる
+            var weapon = shooter.Weapon;
+            var ammo = weapon != null ? weapon.ServerTryFire() : ShotRejection.NoWeapon;
+            if (ammo != ShotRejection.None)
+            {
+                WarnRejected(shooterId, ammo);
                 return;
             }
 
@@ -445,12 +492,16 @@ namespace Fps.Net
             TeamDeathmatchSpec spec;
             SpawnSelector selector;
             DamageFalloff falloff;
+            WeaponSpec weaponSpec;
             try
             {
                 spec = new TeamDeathmatchSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds);
                 selector = new SpawnSelector(_minEnemySpawnDistance);
                 falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
                 ValidateWeaponSettings();
+
+                // 連射間隔も Spec に入れるが、制限するのは ShotBudget だけ (ServerWeapon は使わない)
+                weaponSpec = new WeaponSpec(_magazineSize, _reserveAmmo, _fireInterval, _reloadSeconds, _weaponDamage);
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -471,6 +522,7 @@ namespace Fps.Net
             }
 
             _falloff = falloff;
+            _weaponSpec = weaponSpec;
             _activeWeaponDamage = _weaponDamage;
             _activeWeaponRange = _weaponRange;
             _activeFireInterval = _fireInterval;
@@ -495,7 +547,8 @@ namespace Fps.Net
                 + "s respawn=" + spec.RespawnSeconds + "s spawnPoints=" + spawnPoints.Count);
             Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
                 + " tickRate=" + NetworkPlayerMotor.TickRate + " damage=" + _activeWeaponDamage + " range=" + _activeWeaponRange
-                + " fireInterval=" + _activeFireInterval);
+                + " fireInterval=" + _activeFireInterval + " magazine=" + _weaponSpec.MagazineSize + " reserve=" + _weaponSpec.ReserveAmmo
+                + " reload=" + _weaponSpec.ReloadSeconds + "s");
         }
 
         /// <summary>Inspector で入る武器の値を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>
@@ -556,6 +609,14 @@ namespace Fps.Net
                     continue;
                 }
 
+                if (player.Weapon == null)
+                {
+                    // 弾数はサーバーが NetPlayerWeapon で持つので、無いと撃てない。古いプレハブのまま起動したとき
+                    _rejectedClients.Add(client.ClientId);
+                    Debug.LogError("[Match] player object of client " + client.ClientId + " has no NetPlayerWeapon; run Fps.Editor.NetSceneBuilder.Build");
+                    continue;
+                }
+
                 if (client.ClientId > int.MaxValue)
                 {
                     _rejectedClients.Add(client.ClientId);
@@ -574,6 +635,9 @@ namespace Fps.Net
 
                 player.ServerPlayerId = playerId;
                 _playerById[playerId] = player;
+
+                // Join の中で出現 (Spawned) するので、その前に持たせておく
+                player.Weapon.ServerEquip(_weaponSpec);
                 Debug.Log(MatchLog.Joined(playerId, _session.NextTeam));
                 _session.Join(playerId);
             }
@@ -705,6 +769,16 @@ namespace Fps.Net
         private void HandleStarted()
         {
             _status.Value = new NetMatchStatus(GameModeState.Playing, null);
+
+            // 待っている間にリロードを始めていた人も、満タンでそろえて始める
+            foreach (var player in _playerById.Values)
+            {
+                if (player != null && player.Weapon != null)
+                {
+                    player.Weapon.ServerRefill();
+                }
+            }
+
             Debug.Log(MatchLog.Started(_session.PlayerCount));
         }
 
@@ -752,6 +826,11 @@ namespace Fps.Net
             // テレポートの前後を補間して途中の位置に当たらないよう、履歴を捨てて出現地点から記録し直す。
             // 出現より前の時点まで巻き戻した射撃には、その時点にいなかったものとして当たらない
             _lagCompensator?.Remove(playerId);
+
+            if (player.Weapon != null)
+            {
+                player.Weapon.ServerRefill();
+            }
 
             var p = point.Position;
             player.ServerTeleport(new Vector3(p.X, p.Y, p.Z));

@@ -51,6 +51,8 @@ namespace Fps.Net.Tests
             var networkObject = bootstrap.PlayerPrefab.GetComponent<NetworkObject>();
             Assert.That(networkObject, Is.Not.Null);
             Assert.That(bootstrap.PlayerPrefab.GetComponent<NetPlayer>(), Is.Not.Null);
+            Assert.That(bootstrap.PlayerPrefab.GetComponent<NetPlayerWeapon>(), Is.Not.Null,
+                "NetPlayer has no NetPlayerWeapon; run Fps.Editor.NetSceneBuilder.Build");
             Assert.That(bootstrap.PlayerPrefab.GetComponent<NetworkTransform>(), Is.Null,
                 "NetworkPlayerMotor syncs the position; a NetworkTransform would fight it");
         }

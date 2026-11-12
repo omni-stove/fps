@@ -41,6 +41,7 @@ namespace Fps.Net
         private readonly NetworkVariable<int> _health = new NetworkVariable<int>(0);
 
         private NetworkPlayerMotor _motor;
+        private NetPlayerWeapon _weapon;
         private Renderer[] _renderers = Array.Empty<Renderer>();
         private Collider[] _colliders = Array.Empty<Collider>();
         private Material[] _ownedMaterials = Array.Empty<Material>();
@@ -51,12 +52,16 @@ namespace Fps.Net
         public int Health => _health.Value;
         public bool IsAlive => _health.Value > 0;
 
+        /// <summary>同じオブジェクトの武器 (弾倉・リロード)。プレハブに無ければ null。</summary>
+        public NetPlayerWeapon Weapon => _weapon;
+
         /// <summary>サーバーでだけ使う、試合でのプレイヤー id。参加前は <see cref="NotJoined"/>。</summary>
         public int ServerPlayerId { get; internal set; } = NotJoined;
 
         private void Awake()
         {
             _motor = GetComponent<NetworkPlayerMotor>();
+            _weapon = GetComponent<NetPlayerWeapon>();
             _renderers = GetComponentsInChildren<Renderer>(true);
 
             // CharacterController の有効・無効は NetworkPlayerMotor が役割ごとに決めるので、ここでは触らない
@@ -108,7 +113,8 @@ namespace Fps.Net
                 return;
             }
 
-            if (_attackAction.WasPressedThisFrame() && IsAlive)
+            // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う
+            if (_attackAction.WasPressedThisFrame() && IsAlive && (_weapon == null || _weapon.PrepareFire()))
             {
                 Fire();
             }

@@ -3,7 +3,7 @@
 # Assets/game の全 .cs は書式だけを見る (MonoBehaviour などは Unity 抜きでビルドできないため)。
 # あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応を検査する。
 # 問題が無ければ何も出さず、あれば指摘の行だけを出して 1 で終わる。--fix で直せるものを直す
-# (.meta の抜けは直さない。GUID は Unity に生成させる)。
+# (.meta の抜けは、作業ツリーにある .meta か、.cs とフォルダなら Unity と同じ形で作ったものを git add する)。
 # shellcheck source=scripts/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 
@@ -34,10 +34,42 @@ meta_problems() {
 		}' | LC_ALL=C sort
 }
 
+# Unity がその場で作るのと同じ中身の .meta を書く。GUID はパスから決めるので、誰がいつ作っても同じになる。
+write_meta() {
+	local guid
+	guid="$(printf '%s' "$1" | git hash-object --stdin | cut -c1-32)"
+	if [ -d "$1" ]; then
+		printf 'fileFormatVersion: 2\nguid: %s\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n' "$guid"
+	else
+		printf 'fileFormatVersion: 2\nguid: %s' "$guid"
+	fi >"$1.meta"
+}
+
+# meta_problems の指摘のうち直せるものを直す。.cs とフォルダ以外の .meta は取り込み設定が要るので Unity に任せ、
+# 本体が作業ツリーにある .meta は GUID を失わないよう消さない。
+fix_metas() {
+	local line path
+	while IFS= read -r line; do
+		path="${line%%: error META: *}"
+		case "$line" in
+		*"追跡されていない")
+			if [ ! -e "$path.meta" ]; then
+				[ -d "$path" ] || [ "${path%.cs}" != "$path" ] || continue
+				write_meta "$path"
+			fi
+			git add -- "$path.meta"
+			;;
+		*"本体の無い"*) [ -e "${path%.meta}" ] || git rm -q -f -- "$path" ;;
+		esac
+	done < <(meta_problems)
+}
+
+[ "${1:-}" = "--fix" ] && fix_metas
+
 status=0
 out="$( {
-	dotnet format dotnet/Fps.slnx "${verify[@]}" -v q || status=1
-	dotnet format whitespace Assets/game --folder "${verify[@]}" -v q || status=1
+	dotnet format dotnet/Fps.slnx ${verify[@]+"${verify[@]}"} -v q || status=1
+	dotnet format whitespace Assets/game --folder ${verify[@]+"${verify[@]}"} -v q || status=1
 	metas="$(meta_problems)"
 	[ -z "$metas" ] || { printf '%s\n' "$metas"; status=1; }
 	echo "status=$status"

@@ -21,7 +21,7 @@ run = "scripts/lint.sh"
 quiet = true
 
 [format]
-description = "Fix what lint reports as fixable"
+description = "Fix what lint reports as fixable (adds missing .meta for .cs files and folders with git add)"
 run = "scripts/lint.sh --fix"
 quiet = true
 

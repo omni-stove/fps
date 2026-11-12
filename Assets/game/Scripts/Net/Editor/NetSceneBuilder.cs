@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fps.Core;
 using Fps.Net;
 using Fps.Runtime;
 using Unity.Netcode;
@@ -26,6 +27,12 @@ namespace Fps.Editor
 
         /// <summary>一人称カメラの近クリップ (m)。カプセルの半径より十分小さくし、壁に寄っても突き抜けて見えにくくする。</summary>
         public const float ViewNearClip = 0.05f;
+
+        /// <summary>
+        /// ネット対戦のプレイヤーの視点。三人称のゲームにするならここを <see cref="ViewMode.ThirdPerson"/> にして Build し直す
+        /// (当たり判定とサーバーの検査は目から行うので、視点を変えても他は変わらない)。
+        /// </summary>
+        public const ViewMode PlayerViewMode = ViewMode.FirstPerson;
 
         /// <summary>床 (Plane は 10m 四方) の拡大率。両陣地と東西の地点が収まる 60m 四方にする。</summary>
         public static readonly Vector3 GroundScale = new Vector3(6f, 1f, 6f);
@@ -83,7 +90,7 @@ namespace Fps.Editor
             controller.center = Vector3.zero;
             source.AddComponent<NetworkPlayerMotor>();
 
-            AddFirstPersonView(source);
+            AddView(source);
 
             source.AddComponent<NetPlayer>();
 
@@ -93,23 +100,32 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 一人称視点を足す。pitch を回す子 (<see cref="NetPlayer.ViewName"/>) を目の高さに置いてカメラと AudioListener を付け、
-        /// 本体に yaw を回す <see cref="FirstPersonLook"/> を付ける。どれも無効にしておき、
-        /// 自分のプレイヤーでだけ <see cref="NetPlayer"/> が生成時に有効にする (他人のカメラが映ったり音を拾ったりしない)。
+        /// 視点を足す。pitch を回す目 (<see cref="NetPlayer.ViewName"/>) を目の高さに置き、その子 (<see cref="NetPlayer.ViewCameraName"/>) に
+        /// カメラと AudioListener を付け、本体に視点の土台 <see cref="ViewRig"/> (<see cref="PlayerViewMode"/>) と yaw を回す <see cref="FirstPersonLook"/> を付ける。
+        /// どれも無効にしておき、自分のプレイヤーでだけ <see cref="NetPlayer"/> が生成時に有効にする (他人のカメラが映ったり音を拾ったりしない)。
         /// </summary>
-        private static void AddFirstPersonView(GameObject source)
+        private static void AddView(GameObject source)
         {
-            var view = new GameObject(NetPlayer.ViewName) { tag = "MainCamera" };
+            var view = new GameObject(NetPlayer.ViewName);
             view.transform.SetParent(source.transform, false);
             view.transform.localPosition = new Vector3(0f, NetPlayer.EyeHeight, 0f);
             view.transform.localRotation = Quaternion.identity;
 
-            var camera = view.AddComponent<Camera>();
+            var cameraObject = new GameObject(NetPlayer.ViewCameraName) { tag = "MainCamera" };
+            cameraObject.transform.SetParent(view.transform, false);
+            cameraObject.transform.localPosition = Vector3.zero;
+            cameraObject.transform.localRotation = Quaternion.identity;
+
+            var camera = cameraObject.AddComponent<Camera>();
             camera.nearClipPlane = ViewNearClip;
             camera.enabled = false;
-            view.AddComponent<AudioListener>().enabled = false;
+            cameraObject.AddComponent<AudioListener>().enabled = false;
 
-            // Edit Mode の AddComponent では Awake が走らないので、参照の解決は実行時の Awake に任せる
+            // Edit Mode の AddComponent では Awake が走らないので、参照はここで渡す。入力の解決は実行時の Awake に任せる
+            var rig = source.AddComponent<ViewRig>();
+            rig.enabled = false;
+            rig.Initialize(view.transform, camera);
+            rig.Mode = PlayerViewMode;
             source.AddComponent<FirstPersonLook>().enabled = false;
         }
 

@@ -6,10 +6,11 @@ using UnityEngine.InputSystem;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 一人称の視点操作。Look 入力で本体 (この GameObject) を yaw、子のカメラを pitch (±85°) で回す。
+    /// 視点操作 (一人称・三人称共通)。Look 入力で本体 (この GameObject) を yaw、子の pitch の軸を pitch (±85°) で回す。
     /// 有効な間はカーソルをロックする。参照はコードで解決するので Inspector の配線は要らない:
-    /// カメラは子階層の <see cref="Camera"/>、入力はプロジェクト全体のアクション
-    /// (<see cref="InputSystem.actions"/>) の <see cref="LookActionPath"/>。
+    /// pitch の軸は、本体に <see cref="ViewRig"/> があればその目 (カメラの親)、無ければ子階層の <see cref="Camera"/>。
+    /// 入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の <see cref="LookActionPath"/>。
+    /// 三人称でもカメラは目の子なので、目を回せば肩越しのカメラも一緒に回る。
     /// 解決できなければエラーを出して自分を無効にする。
     /// </summary>
     [DisallowMultipleComponent]
@@ -35,7 +36,7 @@ namespace Fps.Runtime
         private InputAction _lookAction;
         private bool _enabledLookAction;
 
-        /// <summary>pitch を回す Transform (カメラ)。未初期化なら null。</summary>
+        /// <summary>pitch を回す Transform (ViewRig の目、無ければカメラ)。未初期化なら null。</summary>
         public Transform PitchPivot => _pitchPivot;
 
         /// <summary>読んでいる Look アクション。未初期化なら null。</summary>
@@ -129,7 +130,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 子階層のカメラとプロジェクト全体の Look アクションを探して初期化する。
+        /// pitch の軸 (<see cref="ViewRig"/> の目か、子階層のカメラ) とプロジェクト全体の Look アクションを探して初期化する。
         /// 見つからなければ理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryInitializeFromHierarchy()
@@ -161,7 +162,8 @@ namespace Fps.Runtime
                 return false;
             }
 
-            Initialize(camera.transform, look);
+            var eye = ViewRig.FindEye(transform);
+            Initialize(eye != null ? eye : camera.transform, look);
             return true;
         }
 

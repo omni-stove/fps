@@ -3,6 +3,7 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
@@ -132,14 +133,17 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void CameraIsAChildAtEyeHeight()
+        public void CameraIsUnderTheEyeAtEyeHeight()
         {
             var camera = _world.Camera;
+            var eye = camera.transform.parent;
 
             Assert.That(camera, Is.Not.Null);
             Assert.That(camera.name, Is.EqualTo(GameBootstrap.CameraName));
-            Assert.That(camera.transform.parent, Is.SameAs(_world.Player.transform));
-            Assert.That(camera.transform.localPosition, Is.EqualTo(GameBootstrap.EyeOffset));
+            Assert.That(eye.name, Is.EqualTo(GameBootstrap.EyeName));
+            Assert.That(eye.parent, Is.SameAs(_world.Player.transform));
+            Assert.That(eye.localPosition, Is.EqualTo(GameBootstrap.EyeOffset));
+            Assert.That(camera.transform.localPosition, Is.EqualTo(Vector3.zero), "first person by default");
             Assert.That(camera.CompareTag("MainCamera"), Is.True);
             Assert.That(camera.GetComponent<AudioListener>(), Is.Not.Null);
         }
@@ -149,6 +153,55 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(_world.Look, Is.SameAs(_world.Player.GetComponent<FirstPersonLook>()));
             Assert.That(FirstPersonLook.FindChildCamera(_world.Player.transform), Is.SameAs(_world.Camera));
+        }
+
+        [Test]
+        public void RigIsFirstPersonByDefaultAndHidesTheOwnBody()
+        {
+            var rig = _world.Rig;
+
+            Assert.That(rig, Is.SameAs(_world.Player.GetComponent<ViewRig>()));
+            Assert.That(rig.Mode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(rig.Eye, Is.SameAs(_world.Camera.transform.parent));
+            Assert.That(rig.Camera, Is.SameAs(_world.Camera));
+            Assert.That(_world.Player.GetComponent<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.ShadowsOnly));
+        }
+
+        [Test]
+        public void ThirdPersonBuildPutsTheCameraBehindAndShowsTheBody()
+        {
+            // SetUp のプレイヤーが同じ場所に立っていると、三人称のカメラがそのカプセルに当たって縮む
+            _world.Player.SetActive(false);
+            Physics.SyncTransforms();
+            var host = new GameObject("BootstrapThirdPerson");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.ViewMode = ViewMode.ThirdPerson;
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+
+                world = bootstrap.Build();
+
+                Assert.That(world.Rig.Mode, Is.EqualTo(ViewMode.ThirdPerson));
+                Assert.That(world.Camera.transform.localPosition.z, Is.LessThan(-1f));
+                Assert.That(world.Player.GetComponent<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.On));
+
+                // Edit Mode では WeaponController の Awake が走らないので、入力を渡して初期化する
+                using (var attack = new InputAction("Attack", InputActionType.Button))
+                using (var reload = new InputAction("Reload", InputActionType.Button))
+                {
+                    world.Weapon.Initialize(world.Camera.transform, attack, reload);
+                    world.Weapon.ResolveShot(out var origin, out _);
+                    Assert.That(Vector3.Distance(origin, world.Rig.Eye.position), Is.LessThan(1e-5f), "third person fires from the eye");
+                }
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
         }
 
         [Test]

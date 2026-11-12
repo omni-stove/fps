@@ -60,6 +60,7 @@ namespace Fps.Tests.EditMode
             var player = _world.Player;
 
             Assert.That(player.name, Is.EqualTo(GameBootstrap.PlayerName));
+            Assert.That(player.CompareTag(GameBootstrap.PlayerTag), Is.True, "mission area triggers find the player by this tag");
             Assert.That(player.transform.position, Is.EqualTo(GameBootstrap.PlayerSpawn));
             Assert.That(_world.Controller, Is.SameAs(player.GetComponent<CharacterController>()));
             Assert.That(_world.Controller.height, Is.EqualTo(GameBootstrap.PlayerHeight));

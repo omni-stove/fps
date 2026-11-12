@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Fps.Core;
 using NUnit.Framework;
@@ -90,6 +91,95 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void MatchPrefabRestartsTenSecondsAfterEnd()
+        {
+            var match = MatchPrefabComponent();
+
+            Assert.That(match.RestartDelaySeconds, Is.EqualTo(NetTeamDeathmatch.DefaultRestartDelaySeconds));
+            Assert.That(NetTeamDeathmatch.DefaultRestartDelaySeconds, Is.EqualTo(10f));
+        }
+
+        [Test]
+        public void EndedMatchReturnsToPlayingAfterRestartDelayAndRespawnsEveryone()
+        {
+            var match = MatchPrefabComponent();
+            var points = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetSpawnPoint>(true))
+                .Select(marker => marker.ToSpawnPoint())
+                .ToArray();
+            var positions = new Dictionary<int, System.Numerics.Vector3>();
+            var spawned = new Dictionary<int, SpawnPoint>();
+
+            // NetTeamDeathmatch.StartSession と同じ値で組み立てる
+            var session = new TeamDeathmatchSession(
+                new TeamDeathmatchSpec(match.ScoreLimit, match.TimeLimitSeconds, match.RespawnSeconds),
+                match.MaxHealth,
+                points,
+                new SpawnSelector(match.MinEnemySpawnDistance),
+                id => positions[id],
+                match.RestartDelaySeconds);
+            session.Spawned += (id, point) =>
+            {
+                positions[id] = point.Position;
+                spawned[id] = point;
+            };
+
+            var playerIds = new[] { 0, 1, 2, 3 };
+            foreach (var id in playerIds)
+            {
+                session.Join(id);
+            }
+
+            // 点数・キル数・デス数が付き、傷ついた人と出現地点から動いた人がいる状態で時間切れにする
+            session.ApplyDamage(0, 1, match.MaxHealth);
+            session.ApplyDamage(1, 2, 1);
+            foreach (var id in playerIds)
+            {
+                positions[id] = new System.Numerics.Vector3(1000f, 0f, 1000f);
+            }
+
+            session.Tick(match.TimeLimitSeconds);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(session.Winner, Is.EqualTo(Team.Alpha));
+            Assert.That(session.RestartRemainingSeconds, Is.EqualTo(match.RestartDelaySeconds));
+
+            var teams = playerIds.ToDictionary(id => id, session.GetTeam);
+            spawned.Clear();
+
+            session.Tick(match.RestartDelaySeconds / 2f);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(spawned, Is.Empty);
+
+            session.Tick(match.RestartDelaySeconds / 2f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(session.RemainingSeconds, Is.EqualTo(match.TimeLimitSeconds));
+            Assert.That(session.GetScore(Team.Alpha), Is.Zero);
+            Assert.That(session.GetScore(Team.Bravo), Is.Zero);
+            Assert.That(spawned.Keys, Is.EquivalentTo(playerIds));
+            foreach (var id in playerIds)
+            {
+                Assert.That(session.GetTeam(id), Is.EqualTo(teams[id]), "team of " + id);
+                Assert.That(session.GetHealth(id), Is.EqualTo(match.MaxHealth), "health of " + id);
+                Assert.That(session.GetKills(id), Is.Zero, "kills of " + id);
+                Assert.That(session.GetDeaths(id), Is.Zero, "deaths of " + id);
+                Assert.That(spawned[id].IsUsableBy(teams[id]), Is.True, "spawn point of " + id);
+                Assert.That(positions[id], Is.EqualTo(spawned[id].Position), "position of " + id);
+            }
+        }
+
+        private NetTeamDeathmatch MatchPrefabComponent()
+        {
+            var bootstrap = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single();
+            Assert.That(bootstrap.MatchPrefab, Is.Not.Null);
+            var match = bootstrap.MatchPrefab.GetComponent<NetTeamDeathmatch>();
+            Assert.That(match, Is.Not.Null);
+            return match;
+        }
+
+        [Test]
         public void PlayerPrefabMovesWithCharacterController()
         {
             var bootstrap = _scene.GetRootGameObjects()
@@ -103,6 +193,46 @@ namespace Fps.Net.Tests
 
             // CharacterController と別のコライダーがあると自分自身にぶつかる
             Assert.That(prefab.GetComponents<Collider>(), Has.Length.EqualTo(1));
+        }
+
+        [Test]
+        public void PlayerPrefabHasDisabledFirstPersonViewAtEyeHeight()
+        {
+            var prefab = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single()
+                .PlayerPrefab;
+
+            var view = prefab.transform.Find(NetPlayer.ViewName);
+            Assert.That(view, Is.Not.Null, "NetPlayer has no pitch pivot; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(view.parent, Is.EqualTo(prefab.transform), "yaw turns the body and pitch turns this child");
+            Assert.That(view.localPosition, Is.EqualTo(new Vector3(0f, NetPlayer.EyeHeight, 0f)),
+                "the camera is the shot origin, which the server checks with NetPlayer.EyeHeight");
+
+            var camera = view.GetComponent<Camera>();
+            var listener = view.GetComponent<AudioListener>();
+            var look = prefab.GetComponent<Fps.Runtime.FirstPersonLook>();
+            Assert.That(camera, Is.Not.Null);
+            Assert.That(listener, Is.Not.Null);
+            Assert.That(look, Is.Not.Null);
+            Assert.That(Fps.Runtime.FirstPersonLook.FindChildCamera(prefab.transform), Is.EqualTo(camera));
+
+            // 他人のプレイヤーで映ったり音を拾ったりしないよう、NetPlayer が自分のプレイヤーでだけ有効にする
+            Assert.That(camera.enabled, Is.False);
+            Assert.That(listener.enabled, Is.False);
+            Assert.That(look.enabled, Is.False);
+        }
+
+        [Test]
+        public void HasSpectatorCameraForWhenNoPlayerIsLocal()
+        {
+            var spectators = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetSpectatorCamera>(true))
+                .ToArray();
+
+            Assert.That(spectators, Has.Length.EqualTo(1));
+            Assert.That(spectators[0].GetComponent<Camera>(), Is.Not.Null);
+            Assert.That(spectators[0].GetComponent<Camera>().enabled, Is.True);
         }
 
         [Test]

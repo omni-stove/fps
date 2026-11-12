@@ -82,6 +82,33 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void DamagedReportsTheAmountAndSourceWhileAlive()
+        {
+            _damageable.Initialize("dummy", 20);
+            var reports = new System.Collections.Generic.List<DamageReport>();
+            _damageable.Damaged += (d, report) =>
+            {
+                Assert.That(d, Is.SameAs(_damageable));
+                reports.Add(report);
+            };
+            var source = new Vector3(1f, 0f, -5f);
+
+            _damageable.TakeDamage(5, source);
+            _damageable.ApplyHit(10, Fps.Core.HitZone.Body, 0f, Fps.Core.DamageFalloff.None);
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=dummy");
+            _damageable.TakeDamage(15, source);
+            _damageable.TakeDamage(15, source);
+
+            Assert.That(reports, Has.Count.EqualTo(3), "the killing blow is reported, damage after death is not");
+            Assert.That(reports[0].Amount, Is.EqualTo(5));
+            Assert.That(reports[0].SourcePosition, Is.EqualTo(source));
+            Assert.That(reports[1].Amount, Is.EqualTo(10));
+            Assert.That(reports[1].SourcePosition.HasValue, Is.False);
+            Assert.That(reports[2].Amount, Is.EqualTo(15));
+            Assert.That(reports[2].SourcePosition, Is.EqualTo(source));
+        }
+
+        [Test]
         public void ReinitializingDoesNotNotifyTwice()
         {
             _damageable.Initialize("a", 10);
@@ -93,6 +120,48 @@ namespace Fps.Tests.EditMode
             _damageable.TakeDamage(10);
 
             Assert.That(died, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RestoreHealthSetsCurrentAndNotifiesTheReset()
+        {
+            _damageable.Initialize("dummy", 50);
+            _damageable.TakeDamage(45);
+            Fps.Core.Health reset = null;
+            _damageable.HealthReset += health => reset = health;
+
+            _damageable.RestoreHealth(30);
+
+            Assert.That(_damageable.Health.Current, Is.EqualTo(30));
+            Assert.That(_damageable.Health.Max, Is.EqualTo(50));
+            Assert.That(reset, Is.SameAs(_damageable.Health));
+
+            _damageable.RestoreHealth(80);
+            Assert.That(_damageable.Health.Current, Is.EqualTo(50), "values above the max are clamped");
+        }
+
+        [Test]
+        public void RestoreHealthBringsTheDeadBackAndKeepsSubscribers()
+        {
+            _damageable.Initialize("dummy", 20);
+            var died = 0;
+            _damageable.Died += _ => died++;
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=dummy");
+            _damageable.Kill();
+
+            _damageable.RestoreHealth(5);
+            Assert.That(_damageable.IsDead, Is.False);
+
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=dummy");
+            _damageable.TakeDamage(5);
+            Assert.That(died, Is.EqualTo(2));
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void RestoreHealthRejectsNonPositiveValues(int current)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _damageable.RestoreHealth(current));
         }
 
         [Test]

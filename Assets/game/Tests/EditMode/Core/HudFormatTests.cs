@@ -14,6 +14,20 @@ namespace Fps.Core.Tests
             Assert.That(HudFormat.Health(current), Is.EqualTo(expected));
         }
 
+        [TestCase(10, "次の試合まで 10 秒")]
+        [TestCase(1, "次の試合まで 1 秒")]
+        [TestCase(0, "次の試合まで 0 秒")]
+        public void NextMatchShowsTheSecondsLeft(int seconds, string expected)
+        {
+            Assert.That(HudFormat.NextMatch(seconds), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void NextMatchRejectsNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.NextMatch(-1));
+        }
+
         [Test]
         public void HealthRejectsNegative()
         {

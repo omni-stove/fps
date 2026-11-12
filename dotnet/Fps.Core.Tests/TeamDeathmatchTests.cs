@@ -9,6 +9,11 @@ namespace Fps.Core.Tests
         private static readonly string[] _expectedStateChangedEvents =
             { "state Playing winner ", "state Ended winner Bravo", "ended Bravo" };
 
+        private static readonly Team?[] _expectedWinnersAcrossReset = { Team.Alpha, Team.Bravo };
+
+        private static readonly GameModeState[] _expectedStatesAcrossReset =
+            { GameModeState.Playing, GameModeState.Ended, GameModeState.Waiting };
+
         private const int _alpha1 = 1;
         private const int _alpha2 = 2;
         private const int _bravo1 = 11;
@@ -290,6 +295,100 @@ namespace Fps.Core.Tests
             Assert.That(match.RemainingSeconds, Is.EqualTo(10f));
             Assert.That(ended, Is.EqualTo(1));
             Assert.That(respawned, Is.Zero);
+        }
+
+        [Test]
+        public void ResetAfterEndRestoresInitialScoresKillsAndTime()
+        {
+            var match = CreateStarted(scoreLimit: 2, timeLimitSeconds: 30f, respawnSeconds: 1f);
+            match.Tick(4f);
+            match.ReportKill(_alpha1, _bravo1);
+            match.ReportKill(_bravo2, _alpha2);
+            match.ReportKill(_alpha2, _bravo2);
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
+
+            match.Reset();
+
+            Assert.That(match.State, Is.EqualTo(GameModeState.Waiting));
+            Assert.That(match.Winner, Is.Null);
+            Assert.That(match.RemainingSeconds, Is.EqualTo(30f));
+            Assert.That(match.GetScore(Team.Alpha), Is.Zero);
+            Assert.That(match.GetScore(Team.Bravo), Is.Zero);
+            foreach (var id in new[] { _alpha1, _alpha2, _bravo1, _bravo2 })
+            {
+                Assert.That(match.GetKills(id), Is.Zero, "kills of " + id);
+                Assert.That(match.GetDeaths(id), Is.Zero, "deaths of " + id);
+                Assert.That(match.IsAwaitingRespawn(id), Is.False, "respawn of " + id);
+            }
+        }
+
+        [Test]
+        public void ResetKeepsPlayersAndTeams()
+        {
+            var match = CreateStarted(scoreLimit: 1);
+            match.ReportKill(_bravo1, _alpha1);
+
+            match.Reset();
+
+            Assert.That(match.PlayerCount, Is.EqualTo(4));
+            Assert.That(match.GetTeam(_alpha1), Is.EqualTo(Team.Alpha));
+            Assert.That(match.GetTeam(_alpha2), Is.EqualTo(Team.Alpha));
+            Assert.That(match.GetTeam(_bravo1), Is.EqualTo(Team.Bravo));
+            Assert.That(match.GetTeam(_bravo2), Is.EqualTo(Team.Bravo));
+        }
+
+        [Test]
+        public void ResetMatchCanBePlayedAndEndedAgain()
+        {
+            var match = CreateStarted(scoreLimit: 1, timeLimitSeconds: 10f);
+            var ended = new List<Team?>();
+            match.Ended += winner => ended.Add(winner);
+            match.ReportKill(_alpha1, _bravo1);
+
+            match.Reset();
+            match.Start();
+            match.ReportKill(_bravo1, _alpha1);
+
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(match.Winner, Is.EqualTo(Team.Bravo));
+            Assert.That(match.GetScore(Team.Alpha), Is.Zero);
+            Assert.That(match.GetScore(Team.Bravo), Is.EqualTo(1));
+            Assert.That(ended, Is.EqualTo(_expectedWinnersAcrossReset));
+        }
+
+        [Test]
+        public void ResetCancelsPendingRespawnWhilePlaying()
+        {
+            var match = CreateStarted(respawnSeconds: 2f);
+            var respawned = 0;
+            match.RespawnReady += _ => respawned++;
+            match.ReportKill(_alpha1, _bravo1);
+
+            match.Reset();
+            match.Start();
+            match.Tick(5f);
+
+            Assert.That(respawned, Is.Zero);
+            Assert.That(match.RemainingSeconds, Is.EqualTo(55f));
+        }
+
+        [Test]
+        public void ResetFiresStateChangedOnlyWhenStateChanges()
+        {
+            var match = new TeamDeathmatch(new TeamDeathmatchSpec(1, 10f, 0f));
+            match.AddPlayer(_alpha1, Team.Alpha);
+            match.AddPlayer(_bravo1, Team.Bravo);
+            var states = new List<GameModeState>();
+            match.StateChanged += states.Add;
+
+            match.Reset();
+            Assert.That(states, Is.Empty);
+
+            match.Start();
+            match.ReportKill(_alpha1, _bravo1);
+            match.Reset();
+
+            Assert.That(states, Is.EqualTo(_expectedStatesAcrossReset));
         }
 
         [Test]

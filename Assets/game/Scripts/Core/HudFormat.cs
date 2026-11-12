@@ -78,5 +78,17 @@ namespace Fps.Core
             var seconds = total % 60;
             return minutes.ToString("00", CultureInfo.InvariantCulture) + ":" + seconds.ToString("00", CultureInfo.InvariantCulture);
         }
+
+        /// <summary>試合が終わった後、次の試合が始まるまでの案内。秒数は整数 (同期されている切り上げの値) で受ける。</summary>
+        /// <example><c>NextMatch(10)</c> は <c>次の試合まで 10 秒</c></example>
+        public static string NextMatch(int seconds)
+        {
+            if (seconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
+            }
+
+            return "次の試合まで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+        }
     }
 }

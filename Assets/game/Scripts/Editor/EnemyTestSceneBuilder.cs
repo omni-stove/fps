@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
 using Fps.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
@@ -83,17 +82,17 @@ namespace Fps.Editor
         public static void BuildAt(string scenePath, string navMeshDataPath)
         {
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
-            navMeshDataPath = ValidateAssetPath(navMeshDataPath);
+            navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
 
-            EnsureFolder(Path.GetDirectoryName(scenePath));
-            EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
+            SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
+            SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             // 敵のコライダーで NavMesh に穴が空かないよう、地形だけを置いた状態で焼く。
             var surface = CreateLevel(scene);
             BakeNavMesh(surface, navMeshDataPath);
-            RequireOnNavMesh(PatrolRoute);
+            SceneBuildHelpers.RequireOnNavMesh(PatrolRoute, NavMeshCheckRadius, "patrol point");
             CreateActors(scene);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -112,26 +111,11 @@ namespace Fps.Editor
         /// </summary>
         public static NavMeshSurface CreateLevel(Scene scene)
         {
-            RequireEmpty(scene);
+            SceneBuildHelpers.RequireEmpty(scene, "the level");
 
-            var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            floor.name = FloorName;
-            floor.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-            floor.transform.localScale = FloorScale;
-            floor.isStatic = true;
-            SceneManager.MoveGameObjectToScene(floor, scene);
-
-            var surface = floor.AddComponent<NavMeshSurface>();
-            surface.agentTypeID = 0; // Humanoid (既定のエージェント)
-            surface.collectObjects = CollectObjects.All;
-            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
-
-            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            wall.name = WallName;
-            wall.transform.SetPositionAndRotation(WallCenter, Quaternion.identity);
-            wall.transform.localScale = WallSize;
-            wall.isStatic = true;
-            SceneManager.MoveGameObjectToScene(wall, scene);
+            var floor = SceneBuildHelpers.CreateStaticPlane(scene, null, FloorName, Vector3.zero, FloorScale);
+            var surface = SceneBuildHelpers.AddNavMeshSurface(floor, CollectObjects.All);
+            SceneBuildHelpers.CreateStaticBox(scene, null, WallName, WallCenter, WallSize);
 
             EditorSceneManager.MarkSceneDirty(scene);
             return surface;
@@ -147,23 +131,9 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(surface));
             }
 
-            assetPath = ValidateAssetPath(assetPath);
-
-            surface.BuildNavMesh();
-            var data = surface.navMeshData;
-            if (data == null)
-            {
-                throw new InvalidOperationException($"NavMeshSurface on '{surface.name}' produced no NavMesh data");
-            }
-
-            if (AssetDatabase.LoadMainAssetAtPath(assetPath) != null && !AssetDatabase.DeleteAsset(assetPath))
-            {
-                throw new IOException($"Failed to replace the NavMesh data at '{assetPath}'");
-            }
-
-            AssetDatabase.CreateAsset(data, assetPath);
-            EditorUtility.SetDirty(surface);
-            return data;
+            assetPath = SceneBuildHelpers.ValidateAssetPath(assetPath);
+            SceneBuildHelpers.BakeNavMesh(surface);
+            return SceneBuildHelpers.SaveNavMeshData(surface, assetPath);
         }
 
         /// <summary>
@@ -171,161 +141,30 @@ namespace Fps.Editor
         /// </summary>
         public static EnemyAgent CreateActors(Scene scene)
         {
-            if (!scene.IsValid() || !scene.isLoaded)
-            {
-                throw new ArgumentException("scene must be a valid, loaded scene", nameof(scene));
-            }
+            SceneBuildHelpers.RequireLoaded(scene);
 
             var bootstrapObject = new GameObject(BootstrapObjectName);
             SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
             var bootstrap = bootstrapObject.AddComponent<GameBootstrap>();
             bootstrap.CreatesFloor = false;
 
-            var enemy = CreateEnemy(scene);
+            var enemy = SceneBuildHelpers.CreateEnemy(
+                scene,
+                null,
+                EnemyName,
+                EnemyId,
+                PatrolRoute[0],
+                Quaternion.LookRotation(PatrolRoute[1] - PatrolRoute[0], Vector3.up),
+                PatrolRoute,
+                new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth));
             EditorSceneManager.MarkSceneDirty(scene);
             return enemy;
-        }
-
-        private static EnemyAgent CreateEnemy(Scene scene)
-        {
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = EnemyName;
-            SceneManager.MoveGameObjectToScene(body, scene);
-
-            // カプセルの中心が Transform の位置なので、足元が地面に付くよう半分だけ上げる。
-            var spawn = PatrolRoute[0] + (Vector3.up * (EnemyHeight / 2f));
-            var facing = PatrolRoute[1] - PatrolRoute[0];
-            body.transform.SetPositionAndRotation(spawn, Quaternion.LookRotation(facing, Vector3.up));
-
-            var navAgent = body.AddComponent<NavMeshAgent>();
-            navAgent.agentTypeID = 0;
-            navAgent.baseOffset = EnemyHeight / 2f;
-            navAgent.height = EnemyHeight;
-            navAgent.radius = EnemyRadius;
-            navAgent.speed = EnemySpeed;
-            navAgent.angularSpeed = EnemyAgent.DefaultTurnSpeed;
-            navAgent.acceleration = 8f;
-            navAgent.stoppingDistance = 0f;
-            navAgent.autoBraking = true;
-
-            var damageable = body.AddComponent<Damageable>();
-            damageable.Initialize(EnemyId, EnemyMaxHealth);
-
-            // プリミティブ付属の CapsuleCollider を胴の当たり判定にする。
-            body.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
-
-            var agent = body.AddComponent<EnemyAgent>();
-            agent.Id = EnemyId;
-            agent.SetPatrolRoute(PatrolRoute);
-            return agent;
         }
 
         /// <summary>Build Settings の末尾に path を有効な状態で加える。既にあれば位置はそのままで有効にする。</summary>
         public static EditorBuildSettingsScene[] WithSceneAppended(IReadOnlyList<EditorBuildSettingsScene> current, string path)
         {
-            path = BootstrapSceneBuilder.ValidateScenePath(path);
-
-            var scenes = new List<EditorBuildSettingsScene>();
-            var found = false;
-            if (current != null)
-            {
-                foreach (var scene in current)
-                {
-                    if (scene == null || string.IsNullOrEmpty(scene.path))
-                    {
-                        continue;
-                    }
-
-                    if (string.Equals(scene.path.Replace('\\', '/'), path, StringComparison.Ordinal))
-                    {
-                        if (found)
-                        {
-                            continue;
-                        }
-
-                        found = true;
-                        scenes.Add(new EditorBuildSettingsScene(path, true));
-                        continue;
-                    }
-
-                    scenes.Add(scene);
-                }
-            }
-
-            if (!found)
-            {
-                scenes.Add(new EditorBuildSettingsScene(path, true));
-            }
-
-            return scenes.ToArray();
-        }
-
-        private static void RequireOnNavMesh(IEnumerable<Vector3> points)
-        {
-            foreach (var point in points)
-            {
-                if (!NavMesh.SamplePosition(point, out _, NavMeshCheckRadius, NavMesh.AllAreas))
-                {
-                    throw new InvalidOperationException(
-                        $"patrol point {point} is not on the baked NavMesh; check the floor and wall layout");
-                }
-            }
-        }
-
-        private static void RequireEmpty(Scene scene)
-        {
-            if (!scene.IsValid() || !scene.isLoaded)
-            {
-                throw new ArgumentException("scene must be a valid, loaded scene", nameof(scene));
-            }
-
-            if (scene.rootCount != 0)
-            {
-                throw new InvalidOperationException(
-                    $"scene '{scene.name}' already has {scene.rootCount} root object(s); the level must be built into an empty scene");
-            }
-        }
-
-        private static string ValidateAssetPath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                throw new ArgumentException("asset path must not be empty", nameof(path));
-            }
-
-            var normalized = path.Trim().Replace('\\', '/');
-            if (!normalized.StartsWith("Assets/", StringComparison.Ordinal)
-                || !normalized.EndsWith(".asset", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException($"asset path '{path}' must be a .asset under Assets/", nameof(path));
-            }
-
-            foreach (var segment in normalized.Split('/'))
-            {
-                if (segment.Length == 0 || segment == "." || segment == "..")
-                {
-                    throw new ArgumentException($"asset path '{path}' must not contain empty, '.' or '..' segments", nameof(path));
-                }
-            }
-
-            return normalized;
-        }
-
-        private static void EnsureFolder(string path)
-        {
-            path = path.Replace('\\', '/');
-            if (AssetDatabase.IsValidFolder(path))
-            {
-                return;
-            }
-
-            var parent = Path.GetDirectoryName(path).Replace('\\', '/');
-            EnsureFolder(parent);
-            var name = path.Substring(parent.Length + 1);
-            if (string.IsNullOrEmpty(AssetDatabase.CreateFolder(parent, name)))
-            {
-                throw new InvalidOperationException("failed to create folder " + path);
-            }
+            return SceneBuildHelpers.WithSceneAppended(current, path);
         }
     }
 }

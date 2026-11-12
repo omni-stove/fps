@@ -20,21 +20,28 @@ namespace Fps.Runtime
         /// <param name="target">目標。null 可。</param>
         /// <param name="sightRange">視認距離。0 より大きい有限値。</param>
         /// <param name="selfRoot">敵自身。自分のコライダーは視線を遮らない。</param>
+        /// <param name="noisePosition">
+        /// この tick に聞いた物音の位置 (撃たれたときの撃った者の位置など)。null なら物音は無い。
+        /// </param>
         public static EnemyPerception Perceive(
             Vector3 selfGround,
             Vector3 eye,
             Damageable target,
             float sightRange,
-            Transform selfRoot)
+            Transform selfRoot,
+            Vector3? noisePosition = null)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
             {
                 throw new ArgumentOutOfRangeException(nameof(sightRange), sightRange, "sightRange must be positive and finite");
             }
 
+            var heardNoise = noisePosition.HasValue;
+            System.Numerics.Vector3? noise = heardNoise ? noisePosition.Value.ToNumerics() : (System.Numerics.Vector3?)null;
+
             if (target == null || target.IsDead)
             {
-                return new EnemyPerception(selfGround.ToNumerics(), null, false, false, null);
+                return new EnemyPerception(selfGround.ToNumerics(), null, false, heardNoise, noise);
             }
 
             var targetGround = target.GroundPoint;
@@ -44,8 +51,7 @@ namespace Fps.Runtime
             var lineOfSight = inRange
                 && Hitscan.HasLineOfSight(eye, target, Vector3.Distance(eye, target.AimPoint) + 0.01f, selfRoot);
 
-            // 音の発生源はまだ無い (プレイヤーの射撃音などは後続で渡す)。
-            return new EnemyPerception(selfGround.ToNumerics(), targetGround.ToNumerics(), lineOfSight, false, null);
+            return new EnemyPerception(selfGround.ToNumerics(), targetGround.ToNumerics(), lineOfSight, heardNoise, noise);
         }
     }
 }

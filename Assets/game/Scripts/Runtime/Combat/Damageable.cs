@@ -10,6 +10,7 @@ namespace Fps.Runtime
     /// Health は Awake か最初に触れたときに <see cref="MaxHealth"/> で作るので、Awake が走らない Edit Mode でも使える。
     /// <see cref="ResetHealth"/> で Health を作り直しても、<see cref="Died"/> の購読者はそのまま通知を受け取れる。
     /// 敵の視線判定や射撃の狙いには <see cref="AimPoint"/> / <see cref="GroundPoint"/> を使う。
+    /// 生きている間にダメージを受けると <see cref="Damaged"/> で量と撃った者の位置を知らせる (敵が撃たれた方向へ向かうのに使う)。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class Damageable : MonoBehaviour
@@ -27,6 +28,13 @@ namespace Fps.Runtime
 
         /// <summary>死亡した瞬間に、死んだ Damageable を渡して 1 度だけ呼ばれる (ResetHealth 後は再び呼ばれ得る)。</summary>
         public event Action<Damageable> Died;
+
+        /// <summary>
+        /// 生きている状態でダメージを受けたときに、受けた Damageable と <see cref="DamageReport"/> を渡して呼ばれる。
+        /// Health を減らした後に呼ぶので、とどめの 1 発では <see cref="Died"/> の後に呼ばれ、<see cref="IsDead"/> は true になっている。
+        /// 既に死んでいるときのダメージでは呼ばない。
+        /// </summary>
+        public event Action<Damageable, DamageReport> Damaged;
 
         /// <summary>
         /// <see cref="ResetHealth"/> で <see cref="Health"/> を作り直したときに、新しい Health を渡して呼ばれる。
@@ -96,17 +104,26 @@ namespace Fps.Runtime
         /// <param name="zone">命中した部位。</param>
         /// <param name="distance">射手から命中点までの距離。0 以上。</param>
         /// <param name="falloff">距離減衰の設定。</param>
-        public int ApplyHit(int baseDamage, HitZone zone, float distance, DamageFalloff falloff)
+        /// <param name="sourcePosition">撃った者の位置。分からなければ null。<see cref="Damaged"/> にそのまま渡す。</param>
+        public int ApplyHit(int baseDamage, HitZone zone, float distance, DamageFalloff falloff, Vector3? sourcePosition = null)
         {
             var damage = DamageCalculator.Calculate(baseDamage, zone, distance, falloff);
-            Health.TakeDamage(damage);
+            TakeDamage(damage, sourcePosition);
             return damage;
         }
 
-        /// <summary>体力を amount 減らす。死亡後は何もしない。</summary>
-        public void TakeDamage(int amount)
+        /// <summary>体力を amount 減らし、生きていたなら <see cref="Damaged"/> を呼ぶ。死亡後は何もしない。</summary>
+        /// <param name="amount">ダメージ量。0 以上。</param>
+        /// <param name="sourcePosition">ダメージを与えた者の位置。分からなければ null。</param>
+        public void TakeDamage(int amount, Vector3? sourcePosition = null)
         {
-            Health.TakeDamage(amount);
+            var health = Health;
+            var wasAlive = !health.IsDead;
+            health.TakeDamage(amount);
+            if (wasAlive)
+            {
+                Damaged?.Invoke(this, new DamageReport(amount, sourcePosition));
+            }
         }
 
         /// <summary>残りの体力ぶんのダメージを与えて倒す。Play 中に Inspector の右クリックメニューからも呼べる。</summary>
@@ -174,10 +191,46 @@ namespace Fps.Runtime
             HealthReset?.Invoke(_health);
         }
 
+        /// <summary>
+        /// Health を作り直して体力を current にする。セーブデータから戻すときに使う。<see cref="MaxHealth"/> を超える値は Max に揃える。
+        /// <see cref="ResetHealth"/> と同じく <see cref="HealthReset"/> を呼ぶ。
+        /// </summary>
+        /// <param name="current">戻す体力。1 以上 (0 では生きた状態に戻せない)。</param>
+        public void RestoreHealth(int current)
+        {
+            if (current <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(current), current, "current must be positive");
+            }
+
+            ResetHealth();
+            var missing = _health.Max - Math.Min(current, _health.Max);
+            if (missing > 0)
+            {
+                _health.TakeDamage(missing);
+            }
+        }
+
         private void OnHealthDied()
         {
             Debug.Log($"{LogTag} target died id={Id}", this);
             Died?.Invoke(this);
+        }
+    }
+
+    /// <summary><see cref="Damageable.Damaged"/> で渡す、1 回の被弾の情報。</summary>
+    public readonly struct DamageReport
+    {
+        /// <summary>受けたダメージ量 (残りの体力で切り詰める前の値)。</summary>
+        public int Amount { get; }
+
+        /// <summary>ダメージを与えた者の位置。分からなければ null。</summary>
+        public Vector3? SourcePosition { get; }
+
+        public DamageReport(int amount, Vector3? sourcePosition)
+        {
+            Amount = amount;
+            SourcePosition = sourcePosition;
         }
     }
 }

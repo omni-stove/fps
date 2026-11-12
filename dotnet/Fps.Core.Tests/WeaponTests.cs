@@ -231,6 +231,50 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => new Weapon(null));
         }
 
+        [Test]
+        public void StartsWithTheGivenAmmo()
+        {
+            var spec = new WeaponSpec(5, 10, 0.5f, 1f, 10);
+
+            var weapon = new Weapon(spec, 2, 7);
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(7));
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.TryFire(), Is.True);
+
+            weapon.Tick(0.5f);
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(1f);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void AcceptsEmptyAndFullAmmo()
+        {
+            var spec = new WeaponSpec(5, 10, 0.5f, 1f, 10);
+
+            Assert.That(new Weapon(spec, 0, 0).AmmoInMagazine, Is.Zero);
+            Assert.That(new Weapon(spec, 5, 0).AmmoInMagazine, Is.EqualTo(5));
+        }
+
+        [TestCase(-1, 0)]
+        [TestCase(6, 0)]
+        [TestCase(0, -1)]
+        public void RejectsAmmoOutOfRange(int ammoInMagazine, int reserveAmmo)
+        {
+            var spec = new WeaponSpec(5, 10, 0.5f, 1f, 10);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => new Weapon(spec, ammoInMagazine, reserveAmmo));
+        }
+
+        [Test]
+        public void RejectsNullSpecWithAmmo()
+        {
+            Assert.Throws<ArgumentNullException>(() => new Weapon(null, 0, 0));
+        }
+
         [TestCase(0, 10, 0.5f, 2f, 10)]
         [TestCase(-1, 10, 0.5f, 2f, 10)]
         [TestCase(3, -1, 0.5f, 2f, 10)]

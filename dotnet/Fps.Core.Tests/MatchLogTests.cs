@@ -81,6 +81,16 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void FormatsNextMatch()
+        {
+            Assert.That(MatchLog.NextMatch(10f), Is.EqualTo("[Match] next match in=10.0s"));
+            Assert.That(MatchLog.NextMatch(0f), Is.EqualTo("[Match] next match in=0.0s"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => MatchLog.NextMatch(-1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => MatchLog.NextMatch(float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => MatchLog.NextMatch(float.PositiveInfinity));
+        }
+
+        [Test]
         public void RejectsInvalidArguments()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => MatchLog.Ended((Team)99));

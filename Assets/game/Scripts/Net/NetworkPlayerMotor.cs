@@ -254,6 +254,48 @@ namespace Fps.Net
             _hasPendingState = true;
         }
 
+        /// <summary>
+        /// サーバーで position へ瞬間移動させる (リスポーンなど)。速度は 0 に戻す。
+        /// 所有クライアントは次に届く確定状態との照合で巻き戻され、他人のクライアントは補間せずに飛ばす。
+        /// </summary>
+        public void ServerTeleport(Vector3 position)
+        {
+            if (!IsServer)
+            {
+                throw new InvalidOperationException("ServerTeleport can only be called on the server");
+            }
+
+            if (_role != NetworkPlayerRole.HostOwner && _role != NetworkPlayerRole.ServerSimulated)
+            {
+                // 生成前・設定不足で動かせないときは位置だけ置く
+                transform.position = position;
+                return;
+            }
+
+            _serverState = new MotorState(position, Vector3.zero, false);
+            PlaceAt(position);
+            _hasPendingState = true;
+            TeleportedRpc(_serverTick, position);
+        }
+
+        [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Reliable)]
+        private void TeleportedRpc(int tick, Vector3 position, RpcParams rpcParams = default)
+        {
+            if (rpcParams.Receive.SenderClientId != NetworkManager.ServerClientId || _role != NetworkPlayerRole.Interpolated)
+            {
+                // 所有クライアントは StateRpc の照合で置き直す
+                return;
+            }
+
+            // 補間の履歴を捨て、テレポート先から表示し直す
+            _remoteHistory = new HitboxHistory();
+            _remoteHistory.Record(tick, NetMath.ToNumerics(position));
+            _latestRemoteTick = tick;
+            _renderTick = tick;
+            _hasRemoteState = true;
+            transform.position = position;
+        }
+
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
         private void SubmitInputRpc(int tick, Vector2 move, float yaw, bool sprint, bool jump, RpcParams rpcParams = default)
         {

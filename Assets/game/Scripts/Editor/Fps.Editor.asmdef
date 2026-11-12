@@ -3,7 +3,8 @@
     "rootNamespace": "Fps.Editor",
     "references": [
         "Fps.Core",
-        "Fps.Runtime"
+        "Fps.Runtime",
+        "Unity.AI.Navigation"
     ],
     "includePlatforms": [
         "Editor"

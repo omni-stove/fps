@@ -99,6 +99,52 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlayerCanBeShotAndFoundByEnemies()
+        {
+            var player = _world.Player;
+            var damageable = _world.PlayerDamageable;
+
+            Assert.That(player.CompareTag(EnemyAgent.TargetTag), Is.True);
+            Assert.That(damageable, Is.SameAs(player.GetComponent<Damageable>()));
+            Assert.That(damageable.Id, Is.EqualTo(GameBootstrap.PlayerName));
+            Assert.That(damageable.Health.Max, Is.EqualTo(GameBootstrap.PlayerMaxHealth));
+
+            var hitbox = Hitbox.FindFor(_world.Controller);
+            Assert.That(hitbox, Is.Not.Null, "the CharacterController is the body hitbox");
+            Assert.That(hitbox.Zone, Is.EqualTo(HitZone.Body));
+            Assert.That(hitbox.Owner, Is.SameAs(damageable));
+        }
+
+        [Test]
+        public void FloorCanBeLeftToTheScene()
+        {
+            var host = new GameObject("BootstrapWithoutFloor");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+
+                world = bootstrap.Build();
+
+                Assert.That(world.Floor, Is.Null);
+                Assert.That(world.Player, Is.Not.Null);
+            }
+            finally
+            {
+                if (world != null)
+                {
+                    Object.DestroyImmediate(world.Player);
+                    Object.DestroyImmediate(world.Light.gameObject);
+                    Object.DestroyImmediate(world.Target.gameObject);
+                }
+
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
         public void PlayerControllerIsOnThePlayerWithDefaultSpec()
         {
             var mover = _world.Mover;

@@ -7,7 +7,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 子カメラ + <see cref="FirstPersonLook"/>
-    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/>)・ライト・射撃確認用の的
+    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/>)
+    /// ・ライト・射撃確認用の的
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// </summary>
@@ -38,6 +39,9 @@ namespace Fps.Runtime
 
         public static readonly Vector3 LightEuler = new Vector3(50f, -30f, 0f);
 
+        /// <summary>プレイヤーの最大体力。敵 (<see cref="EnemyAgent"/>) の射撃はプレイヤーの <see cref="Damageable"/> に届く。</summary>
+        public const int PlayerMaxHealth = 100;
+
         public const string TargetName = "Target";
         public const string TargetBodyName = "TargetBody";
         public const string TargetHeadName = "TargetHead";
@@ -53,10 +57,22 @@ namespace Fps.Runtime
         public static readonly Vector3 TargetHeadLocalPosition = new Vector3(0f, 1.95f, 0f);
         public static readonly Vector3 TargetHeadScale = new Vector3(0.5f, 0.5f, 0.5f);
 
+        [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
+        private bool _createFloor = true;
+
         private BootstrapWorld _world;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
         public BootstrapWorld World => _world;
+
+        /// <summary>
+        /// <see cref="Build"/> で床を生成するか。シーン側に床 (NavMeshSurface を焼いたもの) があるときは false にする。
+        /// </summary>
+        public bool CreatesFloor
+        {
+            get => _createFloor;
+            set => _createFloor = value;
+        }
 
         private void Awake()
         {
@@ -89,11 +105,12 @@ namespace Fps.Runtime
             GameObject target = null;
             try
             {
-                floor = CreateFloor();
-                player = CreatePlayer(out var controller, out var camera, out var look, out var mover, out var weapon);
+                floor = _createFloor ? CreateFloor() : null;
+                player = CreatePlayer(out var controller, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
                 light = CreateLight(out var lightComponent);
                 target = CreateTarget(out var targetDamageable);
-                _world = new BootstrapWorld(floor, player, controller, camera, look, mover, lightComponent, weapon, targetDamageable);
+                _world = new BootstrapWorld(
+                    floor, player, controller, camera, look, mover, lightComponent, weapon, targetDamageable, playerDamageable);
             }
             catch
             {
@@ -122,12 +139,18 @@ namespace Fps.Runtime
             out Camera camera,
             out FirstPersonLook look,
             out PlayerController mover,
-            out WeaponController weapon)
+            out WeaponController weapon,
+            out Damageable damageable)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
                 ConfigurePlayer(player, out controller, out camera, out look, out mover, out weapon);
+
+                // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
+                damageable = player.AddComponent<Damageable>();
+                damageable.Initialize(PlayerName, PlayerMaxHealth);
+                player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
             }
             catch
             {
@@ -273,6 +296,7 @@ namespace Fps.Runtime
     /// <summary><see cref="GameBootstrap.Build"/> が生成したオブジェクト。</summary>
     public sealed class BootstrapWorld
     {
+        /// <summary>生成した床。<see cref="GameBootstrap.CreatesFloor"/> が false なら null。</summary>
         public GameObject Floor { get; }
         public GameObject Player { get; }
         public CharacterController Controller { get; }
@@ -285,6 +309,9 @@ namespace Fps.Runtime
         /// <summary>射撃の確認用の的。</summary>
         public Damageable Target { get; }
 
+        /// <summary>プレイヤーの体力。敵の射撃はここに届く。</summary>
+        public Damageable PlayerDamageable { get; }
+
         public BootstrapWorld(
             GameObject floor,
             GameObject player,
@@ -294,7 +321,8 @@ namespace Fps.Runtime
             PlayerController mover,
             Light light,
             WeaponController weapon,
-            Damageable target)
+            Damageable target,
+            Damageable playerDamageable)
         {
             Floor = floor;
             Player = player;
@@ -305,6 +333,7 @@ namespace Fps.Runtime
             Light = light;
             Weapon = weapon;
             Target = target;
+            PlayerDamageable = playerDamageable;
         }
     }
 }

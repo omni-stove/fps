@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using Unity.Netcode;
 using UnityEngine;
@@ -7,9 +8,11 @@ using UnityEngine.SceneManagement;
 namespace Fps.Net
 {
     /// <summary>
-    /// コマンドライン引数 (<c>-mode host|server|client</c> / <c>-address</c> / <c>-port</c>) に従って
-    /// NetworkManager を組み立てて起動する。引数が無ければ <see cref="DefaultMode"/> (既定は Host) で起動する。
+    /// コマンドライン引数 (<c>-mode host|server|client</c> / <c>-address</c> / <c>-port</c> /
+    /// <c>-transport udp|eos</c> / <c>-eos-server</c>) に従って NetworkManager を組み立てて起動する。
+    /// 引数が無ければ <see cref="DefaultMode"/> (既定は Host) の UDP で起動する。
     /// 専用サーバービルド (<c>UNITY_SERVER</c>) では引数が無くても Server で起動し、描画・音声のコンポーネントを止める。
+    /// EOS を要求されても認証情報が無ければ UDP に切り替え、<see cref="CredentialsMissingLog"/> を出す。
     /// 失敗はすべて <c>[Net]</c> 付きのエラーログに出し、batchmode のプレイヤーでは終了コード付きで終了する。
     /// </summary>
     [DisallowMultipleComponent]
@@ -25,9 +28,16 @@ namespace Fps.Net
         public const int ExitConnectFailed = 5;
         public const int ExitTransportFailure = 6;
 
+        /// <summary>EOS を要求されたが認証情報が揃わず、UDP に切り替えたときのログ。</summary>
+        public const string CredentialsMissingLog = "[Net] EOS credentials missing, using UDP";
+
         [SerializeField]
         [Tooltip("接続したクライアントごとに生成するプレハブ (NetworkObject 必須)")]
         private GameObject _playerPrefab;
+
+        [SerializeField]
+        [Tooltip("サーバー起動時に Spawn する試合の進行役のプレハブ (NetworkObject と NetTeamDeathmatch 必須)")]
+        private GameObject _matchPrefab;
 
         [SerializeField]
         [Tooltip("-mode が無いときの起動モード")]
@@ -48,6 +58,12 @@ namespace Fps.Net
         {
             get => _playerPrefab;
             set => _playerPrefab = value;
+        }
+
+        public GameObject MatchPrefab
+        {
+            get => _matchPrefab;
+            set => _matchPrefab = value;
         }
 
         public NetLaunchMode DefaultMode
@@ -123,9 +139,23 @@ namespace Fps.Net
                 return;
             }
 
+            if (_matchPrefab == null || _matchPrefab.GetComponent<NetTeamDeathmatch>() == null)
+            {
+                Fail(ExitMisconfigured, "[Net] match prefab with NetTeamDeathmatch is not assigned on " + name + "; run Fps.Editor.NetSceneBuilder.Build");
+                return;
+            }
+
+            var plan = PlanTransport(_options);
+            if (plan == null)
+            {
+                return;
+            }
+
+            _options = plan.Options;
+
             try
             {
-                _manager = NetworkSetup.Configure(gameObject, _options, _playerPrefab);
+                _manager = NetworkSetup.Configure(gameObject, plan, _playerPrefab, new[] { _matchPrefab });
             }
             catch (ArgumentException e)
             {
@@ -144,6 +174,32 @@ namespace Fps.Net
             _manager.OnTransportFailure += HandleTransportFailure;
         }
 
+        /// <summary>
+        /// EOS を要求されていれば認証情報を読み、使う transport を <see cref="NetTransportPlan"/> に決めさせる。
+        /// 認証情報のファイルが壊れていれば失敗として null を返す。
+        /// </summary>
+        private NetTransportPlan PlanTransport(NetLaunchOptions requested)
+        {
+            EosCredentials credentials = null;
+            IReadOnlyList<string> missing = null;
+            if (requested.Transport == NetTransportKind.Eos
+                && !EosCredentialSource.TryLoad(out credentials, out missing, out var loadError))
+            {
+                Fail(ExitMisconfigured, "[Net] cannot load EOS credentials: " + loadError);
+                return null;
+            }
+
+            var plan = NetTransportPlan.Decide(requested, credentials, missing);
+            if (plan.FellBackToUdp)
+            {
+                Debug.LogWarning(CredentialsMissingLog);
+                Debug.Log("[Net] missing EOS settings: " + string.Join(", ", plan.MissingCredentials)
+                    + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")");
+            }
+
+            return plan;
+        }
+
         private void Start()
         {
             if (_failed || _manager == null)
@@ -152,7 +208,7 @@ namespace Fps.Net
             }
 
             // StartHost は接続のコールバックを同期で呼ぶので、開始のログは先に出す
-            Debug.Log("[Net] starting " + _options);
+            Debug.Log("[Net] starting " + _options + " transport=" + NetLaunchOptions.TransportName(_options.Transport));
             var started = false;
             try
             {
@@ -178,7 +234,9 @@ namespace Fps.Net
 
             if (!started)
             {
-                var hint = _options.Mode == NetLaunchMode.Client ? "" : " (is the port already in use?)";
+                var hint = _options.Mode == NetLaunchMode.Client || _options.Transport != NetTransportKind.Udp
+                    ? ""
+                    : " (is the port already in use?)";
                 Fail(ExitStartFailed, "[Net] failed to start " + _options + hint);
                 return;
             }
@@ -212,7 +270,39 @@ namespace Fps.Net
 
         private void HandleServerStarted()
         {
-            Debug.Log("[Net] server listening on " + _options.Address + ":" + _options.Port);
+            Debug.Log("[Net] server listening on " + _options.Endpoint);
+            SpawnMatch();
+        }
+
+        /// <summary>試合の進行役をサーバーで生成して Spawn する。クライアントには Netcode が複製を作る。</summary>
+        private void SpawnMatch()
+        {
+            GameObject instance = null;
+            try
+            {
+                instance = Instantiate(_matchPrefab);
+                instance.name = _matchPrefab.name;
+                instance.GetComponent<NetworkObject>().Spawn(true);
+            }
+            catch (Exception e)
+            {
+                // 起動処理の外側の境界なので、何が飛んできてもログと終了コードに変える
+                Debug.LogException(e);
+                if (instance != null)
+                {
+                    Destroy(instance);
+                }
+
+                Fail(ExitStartFailed, "[Net] failed to spawn the match " + _matchPrefab.name);
+                return;
+            }
+
+            var match = instance.GetComponent<NetTeamDeathmatch>();
+            if (!match.IsRunningOnServer)
+            {
+                // 設定やシーンの誤りは NetTeamDeathmatch が理由をエラーログに出している
+                Fail(ExitMisconfigured, "[Net] the match could not start; see the [Match] error above");
+            }
         }
 
         private void HandleClientConnected(ulong clientId)
@@ -224,7 +314,7 @@ namespace Fps.Net
             }
 
             _connectedToServer = true;
-            Debug.Log("[Net] client connected id=" + clientId + " (local) server=" + _options.Address + ":" + _options.Port);
+            Debug.Log("[Net] client connected id=" + clientId + " (local) server=" + _options.Endpoint);
         }
 
         private void HandleClientDisconnected(ulong clientId)
@@ -240,7 +330,7 @@ namespace Fps.Net
             // クライアント側では自分の切断 (接続失敗を含む) として呼ばれる
             if (!_connectedToServer)
             {
-                Fail(ExitConnectFailed, "[Net] failed to connect to " + _options.Address + ":" + _options.Port + reason);
+                Fail(ExitConnectFailed, "[Net] failed to connect to " + _options.Endpoint + reason);
                 return;
             }
 

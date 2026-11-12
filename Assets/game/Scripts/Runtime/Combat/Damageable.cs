@@ -9,12 +9,16 @@ namespace Fps.Runtime
     /// <see cref="Hitbox"/> からの命中は <see cref="ApplyHit"/> で受け、ダメージ量の計算は <see cref="DamageCalculator"/> に任せる。
     /// Health は Awake か最初に触れたときに <see cref="MaxHealth"/> で作るので、Awake が走らない Edit Mode でも使える。
     /// <see cref="ResetHealth"/> で Health を作り直しても、<see cref="Died"/> の購読者はそのまま通知を受け取れる。
+    /// 敵の視線判定や射撃の狙いには <see cref="AimPoint"/> / <see cref="GroundPoint"/> を使う。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class Damageable : MonoBehaviour
     {
         public const string LogTag = "[Combat]";
         public const int DefaultMaxHealth = 100;
+
+        [SerializeField, Tooltip("ログに出す識別子。空なら GameObject の名前")]
+        private string _id = string.Empty;
 
         [SerializeField, Min(1), Tooltip("最大体力。開始時と ResetHealth 時は満タン")]
         private int _maxHealth = DefaultMaxHealth;
@@ -23,6 +27,9 @@ namespace Fps.Runtime
 
         /// <summary>死亡した瞬間に、死んだ Damageable を渡して 1 度だけ呼ばれる (ResetHealth 後は再び呼ばれ得る)。</summary>
         public event Action<Damageable> Died;
+
+        /// <summary>ログに出す識別子。未設定なら GameObject の名前。</summary>
+        public string Id => string.IsNullOrEmpty(_id) ? name : _id;
 
         /// <summary>今の体力。初めて触れたときに <see cref="MaxHealth"/> で作る。</summary>
         public Health Health
@@ -64,6 +71,18 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// 識別子と最大体力を設定し、満タンの Health を作り直す。シーン生成やコードでの組み立てから呼ぶ。
+        /// </summary>
+        /// <param name="id">ログに出す識別子。null か空なら GameObject の名前を使う。</param>
+        /// <param name="maxHealth">最大体力。1 以上。</param>
+        public void Initialize(string id, int maxHealth)
+        {
+            MaxHealth = maxHealth;
+            _id = id ?? string.Empty;
+            ResetHealth();
+        }
+
+        /// <summary>
         /// baseDamage に部位倍率と距離減衰を掛けた値を <see cref="DamageCalculator.Calculate"/> で求め、Health から引く。
         /// 計算したダメージ量を返す (既に死んでいれば Health は変わらないが、計算値はそのまま返す)。
         /// </summary>
@@ -91,6 +110,50 @@ namespace Fps.Runtime
             TakeDamage(Health.Current);
         }
 
+        /// <summary>狙う点 (自分と子孫のコライダーを合わせた範囲の中心)。コライダーが無ければ Transform の位置。</summary>
+        public Vector3 AimPoint => TryGetBounds(out var bounds) ? bounds.center : transform.position;
+
+        /// <summary>足元の点 (コライダーを合わせた範囲の底面の中心)。コライダーが無ければ Transform の位置。</summary>
+        public Vector3 GroundPoint
+        {
+            get
+            {
+                if (!TryGetBounds(out var bounds))
+                {
+                    return transform.position;
+                }
+
+                var center = bounds.center;
+                return new Vector3(center.x, bounds.min.y, center.z);
+            }
+        }
+
+        /// <summary>自分と子孫の有効でトリガーでないコライダーを合わせた範囲。1 つも無ければ false。</summary>
+        public bool TryGetBounds(out Bounds bounds)
+        {
+            bounds = default;
+            var found = false;
+            foreach (var collider in GetComponentsInChildren<Collider>())
+            {
+                if (!collider.enabled || collider.isTrigger)
+                {
+                    continue;
+                }
+
+                if (found)
+                {
+                    bounds.Encapsulate(collider.bounds);
+                }
+                else
+                {
+                    bounds = collider.bounds;
+                    found = true;
+                }
+            }
+
+            return found;
+        }
+
         /// <summary><see cref="MaxHealth"/> で満タンの Health を作り直す。</summary>
         public void ResetHealth()
         {
@@ -106,7 +169,7 @@ namespace Fps.Runtime
 
         private void OnHealthDied()
         {
-            Debug.Log($"{LogTag} target died id={name}", this);
+            Debug.Log($"{LogTag} target died id={Id}", this);
             Died?.Invoke(this);
         }
     }

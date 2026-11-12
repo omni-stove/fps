@@ -35,10 +35,57 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void FormatsSoloStateWhileWaitingAndPlaying()
+        {
+            var match = new Match(60f, 3, 0);
+            Assert.That(MatchLog.SoloState(match), Is.EqualTo("[Match] state=Waiting kills=0 remaining=60.0"));
+
+            match.Start();
+            match.Tick(12.34f);
+            match.ReportKill(0, 1);
+            Assert.That(MatchLog.SoloState(match), Is.EqualTo("[Match] state=Playing kills=1 remaining=47.7"));
+        }
+
+        [Test]
+        public void FormatsSoloStateWithTheResultOnceWon()
+        {
+            var match = new Match(30f, 2, 0);
+            match.Start();
+            match.Tick(10f);
+            match.ReportKill(0, 1);
+            match.ReportKill(0, 2);
+
+            Assert.That(MatchLog.SoloState(match), Is.EqualTo("[Match] state=Won kills=2 remaining=20.0"));
+        }
+
+        [Test]
+        public void FormatsSoloStateWithTheResultOnceLost()
+        {
+            var timedOut = new Match(5f, 2, 0);
+            timedOut.Start();
+            timedOut.ReportKill(0, 1);
+            timedOut.Tick(6f);
+            Assert.That(MatchLog.SoloState(timedOut), Is.EqualTo("[Match] state=Lost kills=1 remaining=0.0"));
+
+            var died = new Match(5f, 2, 0);
+            died.Start();
+            died.Tick(1f);
+            died.ReportDeath(0);
+            Assert.That(MatchLog.SoloState(died), Is.EqualTo("[Match] state=Lost kills=0 remaining=4.0"));
+        }
+
+        [Test]
+        public void FormatsRestart()
+        {
+            Assert.That(MatchLog.Restart(), Is.EqualTo("[Match] restart"));
+        }
+
+        [Test]
         public void RejectsInvalidArguments()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => MatchLog.Ended((Team)99));
             Assert.Throws<ArgumentNullException>(() => MatchLog.Spawn(1, null));
+            Assert.Throws<ArgumentNullException>(() => MatchLog.SoloState(null));
         }
     }
 }

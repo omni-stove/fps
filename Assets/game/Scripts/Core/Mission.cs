@@ -110,6 +110,12 @@ namespace Fps.Core
             State = MissionState.Active;
         }
 
+        /// <summary>id の目標がこのミッションにあれば true。null は false。</summary>
+        public bool HasObjective(string id)
+        {
+            return id != null && _byId.ContainsKey(id);
+        }
+
         /// <summary>目標の現在の状態。</summary>
         public ObjectiveState GetState(string id)
         {

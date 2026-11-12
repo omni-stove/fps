@@ -18,6 +18,9 @@ namespace Fps.Runtime
 
         public const string FloorName = "Floor";
         public const string PlayerName = "Player";
+
+        /// <summary>プレイヤーに付ける Unity 組み込みのタグ。ミッションの範囲トリガーはこれでプレイヤーを見分ける。</summary>
+        public const string PlayerTag = ObjectiveAreaBase.DefaultPlayerTag;
         public const string CameraName = "PlayerCamera";
         public const string LightName = "Directional Light";
 
@@ -145,6 +148,7 @@ namespace Fps.Runtime
         {
             mover = null;
             player.name = PlayerName;
+            player.tag = PlayerTag;
             player.transform.SetPositionAndRotation(PlayerSpawn, Quaternion.identity);
 
             // CharacterController 自体がカプセルのコライダーなので、プリミティブ付属のコライダーは二重になる。

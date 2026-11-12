@@ -36,6 +36,10 @@ namespace Fps.Net
         private GameObject _playerPrefab;
 
         [SerializeField]
+        [Tooltip("サーバー起動時に Spawn する試合の進行役のプレハブ (NetworkObject と NetTeamDeathmatch 必須)")]
+        private GameObject _matchPrefab;
+
+        [SerializeField]
         [Tooltip("-mode が無いときの起動モード")]
         private NetLaunchMode _defaultMode = NetLaunchMode.Host;
 
@@ -54,6 +58,12 @@ namespace Fps.Net
         {
             get => _playerPrefab;
             set => _playerPrefab = value;
+        }
+
+        public GameObject MatchPrefab
+        {
+            get => _matchPrefab;
+            set => _matchPrefab = value;
         }
 
         public NetLaunchMode DefaultMode
@@ -129,6 +139,12 @@ namespace Fps.Net
                 return;
             }
 
+            if (_matchPrefab == null || _matchPrefab.GetComponent<NetTeamDeathmatch>() == null)
+            {
+                Fail(ExitMisconfigured, "[Net] match prefab with NetTeamDeathmatch is not assigned on " + name + "; run Fps.Editor.NetSceneBuilder.Build");
+                return;
+            }
+
             var plan = PlanTransport(_options);
             if (plan == null)
             {
@@ -139,7 +155,7 @@ namespace Fps.Net
 
             try
             {
-                _manager = NetworkSetup.Configure(gameObject, plan, _playerPrefab);
+                _manager = NetworkSetup.Configure(gameObject, plan, _playerPrefab, new[] { _matchPrefab });
             }
             catch (ArgumentException e)
             {
@@ -255,6 +271,38 @@ namespace Fps.Net
         private void HandleServerStarted()
         {
             Debug.Log("[Net] server listening on " + _options.Endpoint);
+            SpawnMatch();
+        }
+
+        /// <summary>試合の進行役をサーバーで生成して Spawn する。クライアントには Netcode が複製を作る。</summary>
+        private void SpawnMatch()
+        {
+            GameObject instance = null;
+            try
+            {
+                instance = Instantiate(_matchPrefab);
+                instance.name = _matchPrefab.name;
+                instance.GetComponent<NetworkObject>().Spawn(true);
+            }
+            catch (Exception e)
+            {
+                // 起動処理の外側の境界なので、何が飛んできてもログと終了コードに変える
+                Debug.LogException(e);
+                if (instance != null)
+                {
+                    Destroy(instance);
+                }
+
+                Fail(ExitStartFailed, "[Net] failed to spawn the match " + _matchPrefab.name);
+                return;
+            }
+
+            var match = instance.GetComponent<NetTeamDeathmatch>();
+            if (!match.IsRunningOnServer)
+            {
+                // 設定やシーンの誤りは NetTeamDeathmatch が理由をエラーログに出している
+                Fail(ExitMisconfigured, "[Net] the match could not start; see the [Match] error above");
+            }
         }
 
         private void HandleClientConnected(ulong clientId)

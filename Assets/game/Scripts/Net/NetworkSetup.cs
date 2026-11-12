@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -21,9 +22,13 @@ namespace Fps.Net
 
         /// <summary>
         /// UDP で組み立てる。<paramref name="options"/> の transport は UDP であること。
-        /// 詳しくは <see cref="Configure(GameObject, NetTransportPlan, GameObject)"/>。
+        /// 詳しくは <see cref="Configure(GameObject, NetTransportPlan, GameObject, IReadOnlyList{GameObject})"/>。
         /// </summary>
-        public static NetworkManager Configure(GameObject target, NetLaunchOptions options, GameObject playerPrefab)
+        public static NetworkManager Configure(
+            GameObject target,
+            NetLaunchOptions options,
+            GameObject playerPrefab,
+            IReadOnlyList<GameObject> networkPrefabs = null)
         {
             if (options == null)
             {
@@ -36,7 +41,7 @@ namespace Fps.Net
                     "EOS needs credentials; configure with a NetTransportPlan instead", nameof(options));
             }
 
-            return Configure(target, NetTransportPlan.Decide(options, null, null), playerPrefab);
+            return Configure(target, NetTransportPlan.Decide(options, null, null), playerPrefab, networkPrefabs);
         }
 
         /// <summary>
@@ -46,10 +51,17 @@ namespace Fps.Net
         /// <param name="target">追加先。ルートの GameObject で、まだ NetworkManager を持たないこと。</param>
         /// <param name="plan">使う transport と接続先・待ち受けの設定。</param>
         /// <param name="playerPrefab">接続したクライアントごとに生成するプレハブ。NetworkObject を持つこと。</param>
+        /// <param name="networkPrefabs">
+        /// サーバーが実行中に Spawn するプレハブ (試合の進行役など)。どれも NetworkObject を持つこと。null なら無し。
+        /// </param>
         /// <exception cref="InvalidOperationException">
         /// 構成済み、または EOS を使うのに EOS の transport がこのビルドに無い。
         /// </exception>
-        public static NetworkManager Configure(GameObject target, NetTransportPlan plan, GameObject playerPrefab)
+        public static NetworkManager Configure(
+            GameObject target,
+            NetTransportPlan plan,
+            GameObject playerPrefab,
+            IReadOnlyList<GameObject> networkPrefabs = null)
         {
             if (target == null)
             {
@@ -70,6 +82,30 @@ namespace Fps.Net
             {
                 throw new ArgumentException(
                     "player prefab '" + playerPrefab.name + "' has no NetworkObject", nameof(playerPrefab));
+            }
+
+            var extraPrefabs = new List<GameObject>();
+            if (networkPrefabs != null)
+            {
+                foreach (var prefab in networkPrefabs)
+                {
+                    if (prefab == null)
+                    {
+                        throw new ArgumentException("networkPrefabs must not contain null", nameof(networkPrefabs));
+                    }
+
+                    if (prefab.GetComponent<NetworkObject>() == null)
+                    {
+                        throw new ArgumentException(
+                            "network prefab '" + prefab.name + "' has no NetworkObject", nameof(networkPrefabs));
+                    }
+
+                    // プレイヤーのプレハブは NetworkManager が自分で登録するので、重複させない
+                    if (prefab != playerPrefab && !extraPrefabs.Contains(prefab))
+                    {
+                        extraPrefabs.Add(prefab);
+                    }
+                }
             }
 
             if (target.transform.parent != null)
@@ -109,6 +145,11 @@ namespace Fps.Net
             config.ConnectionApproval = false;
             // シーンの同期はまだ要らない。有効だとクライアントが NetTest を読み直して Bootstrap が二重になる
             config.EnableSceneManagement = false;
+
+            foreach (var prefab in extraPrefabs)
+            {
+                config.Prefabs.Add(new NetworkPrefab { Prefab = prefab });
+            }
 
             return manager;
         }

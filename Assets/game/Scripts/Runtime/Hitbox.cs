@@ -54,7 +54,11 @@ namespace Fps.Runtime
         /// この部位への命中として持ち主にダメージを渡し、計算したダメージ量を返す。
         /// 持ち主が見つからなければ <see cref="InvalidOperationException"/> を投げる。
         /// </summary>
-        public int ApplyHit(int baseDamage, float distance, DamageFalloff falloff)
+        /// <param name="baseDamage">武器の基本ダメージ。0 以上。</param>
+        /// <param name="distance">射手から命中点までの距離。0 以上。</param>
+        /// <param name="falloff">距離減衰の設定。</param>
+        /// <param name="sourcePosition">撃った者の位置。分からなければ null。</param>
+        public int ApplyHit(int baseDamage, float distance, DamageFalloff falloff, Vector3? sourcePosition = null)
         {
             var owner = Owner;
             if (owner == null)
@@ -62,7 +66,7 @@ namespace Fps.Runtime
                 throw new InvalidOperationException($"Hitbox '{name}' has no Damageable owner in itself or its parents");
             }
 
-            return owner.ApplyHit(baseDamage, _zone, distance, falloff);
+            return owner.ApplyHit(baseDamage, _zone, distance, falloff, sourcePosition);
         }
 
         /// <summary>コライダーの GameObject か、その親階層にある Hitbox を返す。無ければ null。</summary>

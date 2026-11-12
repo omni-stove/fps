@@ -13,6 +13,8 @@ namespace Fps.Runtime
     /// 参照はコードで解決する: NavMeshAgent と自分の <see cref="Damageable"/> は同じ GameObject、
     /// 目標は <see cref="TargetTag"/> のタグが付いた GameObject の Damageable。
     /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
+    /// 撃たれたら (<see cref="Damageable.Damaged"/>) 撃った者の位置を次の知覚 1 回だけ物音として渡し、
+    /// 視界の外から撃たれても <see cref="EnemyBrain"/> がその位置を Search するようにする。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
@@ -109,6 +111,7 @@ namespace Fps.Runtime
         private Weapon _weapon;
         private DamageFalloff _falloff;
         private Vector3? _destination;
+        private Vector3? _pendingNoise;
         private float _nextTargetSearch;
         private bool _warnedNoTarget;
         private bool _warnedOffMesh;
@@ -232,7 +235,24 @@ namespace Fps.Runtime
             _weapon = new Weapon(weaponSpec);
             _weapon.Reloaded += OnReloaded;
             _self.Died += OnDied;
+            _self.Damaged += OnDamaged;
             return true;
+        }
+
+        /// <summary>
+        /// 今の位置・目標・視線と、前の知覚の後に撃たれていれば撃った者の位置 (物音) から、1 tick 分の知覚を組み立てる。
+        /// 撃たれた情報はここで使い切るので、次の呼び出しでは物音は無い。未初期化なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public EnemyPerception Perceive()
+        {
+            if (_brain == null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
+            }
+
+            var noise = _pendingNoise;
+            _pendingNoise = null;
+            return EnemySenses.Perceive(GroundPosition, EyePosition, _target, _sightRange, transform, noise);
         }
 
         /// <summary>状態変化のログ。</summary>
@@ -279,6 +299,7 @@ namespace Fps.Runtime
             if (_self != null)
             {
                 _self.Died -= OnDied;
+                _self.Damaged -= OnDamaged;
             }
         }
 
@@ -297,7 +318,7 @@ namespace Fps.Runtime
                 ResolveTarget(force: false);
             }
 
-            var perception = EnemySenses.Perceive(GroundPosition, EyePosition, _target, _sightRange, transform);
+            var perception = Perceive();
             var decision = _brain.Tick(deltaSeconds, perception);
             if (_brain.IsDead)
             {
@@ -473,8 +494,21 @@ namespace Fps.Runtime
             Debug.Log($"{LogTag} id={Id} reloaded ammo={_weapon.AmmoInMagazine}", this);
         }
 
+        private void OnDamaged(Damageable self, DamageReport report)
+        {
+            // 死んだ敵は反応しない (とどめの 1 発では Died の後にここへ来る)。撃った者が分からなければ向かう先も無い。
+            if (_brain == null || _brain.IsDead || self.IsDead || !report.SourcePosition.HasValue)
+            {
+                return;
+            }
+
+            _pendingNoise = report.SourcePosition.Value;
+            Debug.Log($"{LogTag} id={Id} damaged dmg={report.Amount} from={report.SourcePosition.Value}", this);
+        }
+
         private void OnDied(Damageable self)
         {
+            _pendingNoise = null;
             _brain.Kill();
 
             if (_agent.isOnNavMesh)

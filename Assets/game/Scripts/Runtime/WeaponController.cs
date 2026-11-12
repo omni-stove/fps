@@ -294,7 +294,7 @@ namespace Fps.Runtime
 
             if (TryRaycast(out var hit))
             {
-                TryApplyHit(hit.collider, hit.distance, _weapon.Spec.Damage, _falloff, this);
+                TryApplyHit(hit.collider, hit.distance, _weapon.Spec.Damage, _falloff, this, _aim.position);
             }
 
             return true;
@@ -323,7 +323,14 @@ namespace Fps.Runtime
         /// <param name="baseDamage">武器の基本ダメージ。</param>
         /// <param name="falloff">距離減衰の設定。</param>
         /// <param name="context">ログの文脈にするオブジェクト。null 可。</param>
-        public static bool TryApplyHit(Collider collider, float distance, int baseDamage, DamageFalloff falloff, UnityEngine.Object context = null)
+        /// <param name="sourcePosition">撃った者の位置。撃たれた敵がこの方向へ向かう。分からなければ null。</param>
+        public static bool TryApplyHit(
+            Collider collider,
+            float distance,
+            int baseDamage,
+            DamageFalloff falloff,
+            UnityEngine.Object context = null,
+            Vector3? sourcePosition = null)
         {
             if (collider == null)
             {
@@ -342,7 +349,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            var damage = hitbox.ApplyHit(baseDamage, distance, falloff);
+            var damage = hitbox.ApplyHit(baseDamage, distance, falloff, sourcePosition);
             Debug.Log($"[Combat] hit zone={hitbox.Zone} dmg={damage}", context != null ? context : hitbox);
             return true;
         }

@@ -74,7 +74,10 @@ namespace Fps.Runtime
         /// <param name="range">射程。0 より大きい有限値。</param>
         /// <param name="baseDamage">武器の基本ダメージ。0 以上。</param>
         /// <param name="falloff">距離減衰の設定。</param>
-        /// <param name="shooterRoot">撃った本人。自分のコライダーには当たらない。</param>
+        /// <param name="shooterRoot">
+        /// 撃った本人。自分のコライダーには当たらない。null でなければ、その位置を撃った者の位置として
+        /// <see cref="Damageable.Damaged"/> に渡す。
+        /// </param>
         public static HitscanResult Fire(
             Vector3 origin,
             Vector3 direction,
@@ -116,7 +119,9 @@ namespace Fps.Runtime
                 return new HitscanResult(true, hit, hitbox, 0);
             }
 
-            var damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff);
+            // 撃たれた側 (敵) が撃った方向へ向かえるよう、撃った者の位置を渡す。
+            Vector3? sourcePosition = shooterRoot != null ? shooterRoot.position : (Vector3?)null;
+            var damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff, sourcePosition);
             Debug.Log($"{Damageable.LogTag} hit zone={hitbox.Zone} dmg={damage} id={owner.Id} hp={owner.Health.Current}", hitbox);
             return new HitscanResult(true, hit, hitbox, damage);
         }

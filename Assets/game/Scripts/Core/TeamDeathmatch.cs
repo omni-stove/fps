@@ -8,8 +8,11 @@ namespace Fps.Core
     /// 制限時間が切れたら終わる。時間は <see cref="Tick"/> で外から進める。
     /// 終了後は何を報告しても状態が変わらない。
     /// </summary>
-    public sealed class TeamDeathmatch
+    public sealed class TeamDeathmatch : IGameMode
     {
+        /// <summary>状態が変わるたびに新しい状態を渡して呼ばれる。Ended では <see cref="Ended"/> より先に呼ばれ、その時点で Winner は確定済み。</summary>
+        public event Action<GameModeState> StateChanged;
+
         /// <summary>倒されたプレイヤーが RespawnSeconds 経ってリスポーンできるようになったときに呼ばれる。引数は playerId。</summary>
         public event Action<int> RespawnReady;
 
@@ -21,7 +24,7 @@ namespace Fps.Core
         private int _bravoScore;
 
         public TeamDeathmatchSpec Spec { get; }
-        public TeamDeathmatchState State { get; private set; }
+        public GameModeState State { get; private set; }
 
         /// <summary>残り時間 (秒)。開始前は TimeLimitSeconds のまま、終了後は終了した時点の値のまま。</summary>
         public float RemainingSeconds { get; private set; }
@@ -35,19 +38,20 @@ namespace Fps.Core
         public TeamDeathmatch(TeamDeathmatchSpec spec)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
-            State = TeamDeathmatchState.Waiting;
+            State = GameModeState.Waiting;
             RemainingSeconds = spec.TimeLimitSeconds;
         }
 
         /// <summary>試合を始める。Waiting のときだけ呼べる。</summary>
         public void Start()
         {
-            if (State != TeamDeathmatchState.Waiting)
+            if (State != GameModeState.Waiting)
             {
                 throw new InvalidOperationException("match has already started");
             }
 
-            State = TeamDeathmatchState.Playing;
+            State = GameModeState.Playing;
+            StateChanged?.Invoke(State);
         }
 
         /// <summary>プレイヤーを team に加える。キル数とデス数は 0 から数える。</summary>
@@ -109,7 +113,7 @@ namespace Fps.Core
             var killer = Find(killerId, nameof(killerId));
             var victim = Find(victimId, nameof(victimId));
 
-            if (State != TeamDeathmatchState.Playing || victim.RespawnRemaining.HasValue)
+            if (State != GameModeState.Playing || victim.RespawnRemaining.HasValue)
             {
                 return;
             }
@@ -125,11 +129,24 @@ namespace Fps.Core
                 }
             }
 
-            victim.RespawnRemaining = Spec.RespawnSeconds;
-            if (Spec.RespawnSeconds == 0f)
+            BeginRespawn(victimId, victim);
+        }
+
+        /// <summary>
+        /// playerId が倒した相手なしで死んだこと (落下・環境ダメージなど) を報告する。自滅と同じく Deaths だけ増やし、
+        /// 点数は動かさずにリスポーン待ちにする。Waiting・Ended の間と、すでにリスポーン待ちのときは何もしない。
+        /// </summary>
+        public void ReportDeath(int playerId)
+        {
+            var player = Find(playerId, nameof(playerId));
+
+            if (State != GameModeState.Playing || player.RespawnRemaining.HasValue)
             {
-                FireRespawn(victimId, victim);
+                return;
             }
+
+            player.Deaths++;
+            BeginRespawn(playerId, player);
         }
 
         /// <summary>
@@ -143,7 +160,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must not be negative");
             }
 
-            if (State != TeamDeathmatchState.Playing)
+            if (State != GameModeState.Playing)
             {
                 return;
             }
@@ -180,7 +197,7 @@ namespace Fps.Core
                 foreach (var pair in ready)
                 {
                     // ハンドラの中で抜けたり、再び倒されたり、試合が終わったりしたら出さない。
-                    if (State != TeamDeathmatchState.Playing)
+                    if (State != GameModeState.Playing)
                     {
                         return;
                     }
@@ -195,7 +212,7 @@ namespace Fps.Core
                 }
             }
 
-            if (State == TeamDeathmatchState.Playing && RemainingSeconds <= 0f)
+            if (State == GameModeState.Playing && RemainingSeconds <= 0f)
             {
                 End(LeadingTeam());
             }
@@ -223,14 +240,24 @@ namespace Fps.Core
 
         private void End(Team? winner)
         {
-            State = TeamDeathmatchState.Ended;
+            State = GameModeState.Ended;
             Winner = winner;
             foreach (var record in _players.Values)
             {
                 record.RespawnRemaining = null;
             }
 
+            StateChanged?.Invoke(State);
             Ended?.Invoke(winner);
+        }
+
+        private void BeginRespawn(int playerId, PlayerRecord record)
+        {
+            record.RespawnRemaining = Spec.RespawnSeconds;
+            if (Spec.RespawnSeconds == 0f)
+            {
+                FireRespawn(playerId, record);
+            }
         }
 
         private void FireRespawn(int playerId, PlayerRecord record)

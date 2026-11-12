@@ -89,7 +89,7 @@ namespace Fps.Editor
 
             var definition = CreateOrUpdateDefinition(definitionPath);
 
-            EnsureFolder(Path.GetDirectoryName(scenePath));
+            SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             PopulateScene(scene, definition);
 
@@ -110,36 +110,7 @@ namespace Fps.Editor
         /// </summary>
         public static MissionDefinition CreateOrUpdateDefinition(string path)
         {
-            path = ValidateAssetPath(path);
-
-            var existing = AssetDatabase.LoadMainAssetAtPath(path);
-            if (existing != null && !(existing is MissionDefinition))
-            {
-                throw new InvalidOperationException(
-                    $"'{path}' is a {existing.GetType().Name}, not a {nameof(MissionDefinition)}; move it away first");
-            }
-
-            var definition = (MissionDefinition)existing;
-            var created = definition == null;
-            if (created)
-            {
-                definition = ScriptableObject.CreateInstance<MissionDefinition>();
-            }
-
-            Configure(definition);
-
-            if (created)
-            {
-                EnsureFolder(Path.GetDirectoryName(path));
-                AssetDatabase.CreateAsset(definition, path);
-            }
-            else
-            {
-                EditorUtility.SetDirty(definition);
-            }
-
-            AssetDatabase.SaveAssets();
-            return definition;
+            return SceneBuildHelpers.CreateOrUpdateMissionDefinition(path, Configure);
         }
 
         /// <summary>definition の中身をテスト用ミッションにし、Mission に変換できることを確かめる。</summary>
@@ -236,94 +207,19 @@ namespace Fps.Editor
         /// </summary>
         public static EditorBuildSettingsScene[] WithSceneAppended(IReadOnlyList<EditorBuildSettingsScene> current, string path)
         {
-            path = BootstrapSceneBuilder.ValidateScenePath(path);
-
-            var scenes = new List<EditorBuildSettingsScene>();
-            var found = false;
-            if (current != null)
-            {
-                foreach (var scene in current)
-                {
-                    if (scene == null || string.IsNullOrEmpty(scene.path))
-                    {
-                        continue;
-                    }
-
-                    if (string.Equals(scene.path.Replace('\\', '/'), path, StringComparison.Ordinal))
-                    {
-                        if (found)
-                        {
-                            continue;
-                        }
-
-                        found = true;
-                        scenes.Add(new EditorBuildSettingsScene(path, true));
-                        continue;
-                    }
-
-                    scenes.Add(scene);
-                }
-            }
-
-            if (!found)
-            {
-                scenes.Add(new EditorBuildSettingsScene(path, true));
-            }
-
-            return scenes.ToArray();
+            return SceneBuildHelpers.WithSceneAppended(current, path);
         }
 
         /// <summary>Assets/ 以下の .asset であることを確かめ、区切りを / に揃えて返す。</summary>
         public static string ValidateAssetPath(string path)
         {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                throw new ArgumentException("asset path must not be empty", nameof(path));
-            }
-
-            var normalized = path.Trim().Replace('\\', '/');
-            if (!normalized.StartsWith("Assets/", StringComparison.Ordinal))
-            {
-                throw new ArgumentException($"asset path '{path}' must be under Assets/", nameof(path));
-            }
-
-            if (!normalized.EndsWith(".asset", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException($"asset path '{path}' must end with .asset", nameof(path));
-            }
-
-            foreach (var segment in normalized.Split('/'))
-            {
-                if (segment.Length == 0 || segment == "." || segment == "..")
-                {
-                    throw new ArgumentException($"asset path '{path}' must not contain empty, '.' or '..' segments", nameof(path));
-                }
-            }
-
-            return normalized;
+            return SceneBuildHelpers.ValidateAssetPath(path);
         }
 
-        /// <summary>
-        /// 床に置く薄い板の目印。BoxCollider はトリガーにし、板の上に <see cref="AreaTriggerHeight"/> の高さまで伸ばす。
-        /// CharacterController が確実にトリガーを通知するよう、動かない kinematic の Rigidbody を付ける。
-        /// </summary>
+        /// <summary>床に置く <see cref="AreaPadScale"/> の板の目印。トリガーは <see cref="AreaTriggerHeight"/> の高さまで伸ばす。</summary>
         private static GameObject CreateAreaPad(string name, Vector3 position)
         {
-            var pad = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            pad.name = name;
-            pad.transform.SetPositionAndRotation(position + new Vector3(0f, AreaPadScale.y / 2f, 0f), Quaternion.identity);
-            pad.transform.localScale = AreaPadScale;
-
-            var collider = pad.GetComponent<BoxCollider>();
-            collider.isTrigger = true;
-            var height = AreaTriggerHeight / AreaPadScale.y;
-            collider.size = new Vector3(1f, height, 1f);
-            collider.center = new Vector3(0f, (height - 1f) / 2f, 0f);
-
-            var body = pad.AddComponent<Rigidbody>();
-            body.isKinematic = true;
-            body.useGravity = false;
-            return pad;
+            return SceneBuildHelpers.CreateAreaPad(name, position, AreaPadScale, AreaTriggerHeight);
         }
 
         private static Damageable CreateTarget(Transform parent, int index)
@@ -341,28 +237,6 @@ namespace Fps.Editor
         {
             created.Add(gameObject);
             return gameObject;
-        }
-
-        private static void EnsureFolder(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-            {
-                return;
-            }
-
-            path = path.Replace('\\', '/');
-            if (AssetDatabase.IsValidFolder(path))
-            {
-                return;
-            }
-
-            var parent = Path.GetDirectoryName(path)?.Replace('\\', '/');
-            EnsureFolder(parent);
-            var guid = AssetDatabase.CreateFolder(parent, Path.GetFileName(path));
-            if (string.IsNullOrEmpty(guid))
-            {
-                throw new IOException($"Failed to create the folder '{path}'");
-            }
         }
     }
 

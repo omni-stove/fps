@@ -18,6 +18,9 @@ namespace Fps.Core
         /// <summary>始点が、サーバーの知る撃った本人の位置から離れすぎている。</summary>
         OriginTooFar,
 
+        /// <summary>撃った本人の目の位置から始点までの間に遮蔽物がある (Net 側で判定する)。</summary>
+        OriginBlocked,
+
         /// <summary>連射の間隔より速く撃っている (<see cref="ShotBudget.TryConsume"/> が false)。</summary>
         FireRateExceeded,
     }

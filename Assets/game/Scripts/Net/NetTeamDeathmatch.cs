@@ -333,6 +333,12 @@ namespace Fps.Net
                 return;
             }
 
+            if (IsOriginBlocked(shooter, origin))
+            {
+                WarnRejected(shooterId, ShotRejection.OriginBlocked);
+                return;
+            }
+
             if (_lastRecordedTick == _noRecordedTick)
             {
                 // 試合が始まった直後のフレームで、まだ巻き戻す履歴が無い
@@ -376,6 +382,29 @@ namespace Fps.Net
             var outcome = ApplyDamage(shooter, victim, damage);
             var health = _session.HasPlayer(hit.TargetId) ? _session.GetHealth(hit.TargetId) : 0;
             Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome));
+        }
+
+        // サーバーの知る本人の目の位置から始点までの間に、プレイヤー以外のコライダー (壁など) があれば true。
+        private static bool IsOriginBlocked(NetPlayer shooter, Vector3 origin)
+        {
+            var eye = shooter.transform.position + (Vector3.up * NetPlayer.EyeHeight);
+            var toOrigin = origin - eye;
+            var distance = toOrigin.magnitude;
+            if (distance <= 0f)
+            {
+                return false;
+            }
+
+            var hits = Physics.RaycastAll(eye, toOrigin / distance, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            foreach (var h in hits)
+            {
+                if (h.collider.GetComponentInParent<NetPlayer>() == null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>プレイヤーの NetworkObject が消えるとき (切断を含む) にサーバーで呼ぶ。</summary>

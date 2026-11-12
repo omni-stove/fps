@@ -65,8 +65,9 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 1 発撃つ。最初に当たったコライダーに <see cref="Hitbox"/> があれば <see cref="Hitbox.ApplyHit"/> でダメージを与える。
-        /// 壁など Hitbox の無いものに当たれば、そこで止まりダメージは 0。
+        /// 1 発撃つ。最初に当たったコライダーに <see cref="Hitbox"/> があれば <see cref="Hitbox.ApplyHit"/> でダメージを与え、
+        /// <c>[Combat] hit zone=.. dmg=.. id=.. hp=..</c> をログに出す。
+        /// 壁など Hitbox の無いものに当たるか、持ち主がいないか既に死んでいれば、そこで止まりダメージは 0。
         /// </summary>
         /// <param name="origin">銃口 (目) の位置。</param>
         /// <param name="direction">撃つ向き。0 ではないこと。</param>
@@ -97,12 +98,26 @@ namespace Fps.Runtime
                 return HitscanResult.Miss;
             }
 
-            if (!Hitbox.TryFind(hit.collider, out var hitbox))
+            var hitbox = Hitbox.FindFor(hit.collider);
+            if (hitbox == null)
             {
                 return new HitscanResult(true, hit, null, 0);
             }
 
+            var owner = hitbox.Owner;
+            if (owner == null)
+            {
+                Debug.LogError($"{Damageable.LogTag} Hitbox '{hitbox.name}' has no Damageable owner; the hit is ignored", hitbox);
+                return new HitscanResult(true, hit, hitbox, 0);
+            }
+
+            if (owner.IsDead)
+            {
+                return new HitscanResult(true, hit, hitbox, 0);
+            }
+
             var damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff);
+            Debug.Log($"{Damageable.LogTag} hit zone={hitbox.Zone} dmg={damage} id={owner.Id} hp={owner.Health.Current}", hitbox);
             return new HitscanResult(true, hit, hitbox, damage);
         }
 

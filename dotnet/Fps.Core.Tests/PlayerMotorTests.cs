@@ -220,6 +220,34 @@ namespace Fps.Core.Tests
             Assert.That(motor.Velocity, Is.EqualTo(Vector3.Zero));
         }
 
+        [Test]
+        public void SetVelocityRestoresAirborneMomentum()
+        {
+            // 空中での水平速度は前の速度に依存するので、同じ速度から始めれば同じ結果になる
+            var original = new PlayerMotor(Spec());
+            original.Step(new Vector2(0f, 1f), 0f, false, true, true, _dt);
+            var velocity = original.Velocity;
+            var expected = original.Step(Vector2.Zero, 0f, false, false, false, _dt);
+
+            var restored = new PlayerMotor(Spec());
+            restored.SetVelocity(velocity);
+            var actual = restored.Step(Vector2.Zero, 0f, false, false, false, _dt);
+
+            Assert.That(actual, Is.EqualTo(expected));
+            Assert.That(restored.Velocity, Is.EqualTo(original.Velocity));
+        }
+
+        [Test]
+        public void SetVelocityRejectsNonFinite()
+        {
+            var motor = new PlayerMotor(Spec());
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => motor.SetVelocity(new Vector3(float.NaN, 0f, 0f)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => motor.SetVelocity(new Vector3(0f, float.PositiveInfinity, 0f)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => motor.SetVelocity(new Vector3(0f, 0f, float.NegativeInfinity)));
+            Assert.That(motor.Velocity, Is.EqualTo(Vector3.Zero));
+        }
+
         [TestCase(-0.001f)]
         [TestCase(float.NaN)]
         [TestCase(float.PositiveInfinity)]

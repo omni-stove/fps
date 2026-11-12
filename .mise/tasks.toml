@@ -34,6 +34,11 @@ quiet = true
 description = "Build the macOS player into Builds/ with the Unity editor in batch mode (close the Editor first)"
 run = "unity build --target StandaloneOSX -o Builds/fps.app"
 
+[build-server]
+description = "Build the dedicated server (macos by default, or linux) into Builds/server-<platform>/ with the Unity editor in batch mode (close the Editor first)"
+usage = 'arg "[platform]" help="macos or linux" default="macos"'
+run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform "${usage_platform:-macos}"'
+
 [test-unity]
 description = "Run the Unity EditMode tests headlessly in batch mode (close the Editor first)"
 run = "unity test --mode EditMode"

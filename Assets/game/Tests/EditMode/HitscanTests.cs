@@ -107,7 +107,7 @@ namespace Fps.Tests.EditMode
             var target = CreateTarget("dummy", new Vector3(0f, 1f, 10f), HitZone.Body);
             target.Initialize("dummy", 5);
 
-            LogAssert.Expect(LogType.Log, "[Combat] died id=dummy");
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=dummy");
             Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, null);
             var second = Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, null);
 
@@ -124,10 +124,8 @@ namespace Fps.Tests.EditMode
             head.transform.SetParent(root.transform, false);
             var hitbox = head.AddComponent<Hitbox>();
 
-            Assert.That(Hitbox.TryFind(head.GetComponent<Collider>(), out var found), Is.True);
-            Assert.That(found, Is.SameAs(hitbox));
+            Assert.That(Hitbox.FindFor(head.GetComponent<Collider>()), Is.SameAs(hitbox));
             Assert.That(hitbox.Owner, Is.SameAs(owner));
-            Assert.That(Hitbox.TryFind(null, out _), Is.False);
         }
 
         [Test]
@@ -135,10 +133,15 @@ namespace Fps.Tests.EditMode
         {
             var orphan = GameObject.CreatePrimitive(PrimitiveType.Cube);
             _created.Add(orphan);
+            orphan.transform.position = new Vector3(0f, 1.6f, 5f);
             var hitbox = orphan.AddComponent<Hitbox>();
+            Physics.SyncTransforms();
 
-            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("has no Damageable owner"));
-            Assert.That(hitbox.ApplyHit(10, 1f, DamageFalloff.None), Is.Zero);
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("has no Damageable owner"));
+            var result = Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, null);
+
+            Assert.That(result.Hitbox, Is.SameAs(hitbox));
+            Assert.That(result.Damage, Is.Zero);
         }
 
         [Test]
@@ -186,8 +189,8 @@ namespace Fps.Tests.EditMode
             Assert.That(Hitscan.HasLineOfSight(_eye, null, 20f, null), Is.False);
 
             target.Initialize("player", 1);
-            LogAssert.Expect(LogType.Log, "[Combat] died id=player");
-            target.ApplyDamage(1);
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=player");
+            target.TakeDamage(1);
 
             Assert.That(Hitscan.HasLineOfSight(_eye, target, 20f, null), Is.False);
         }

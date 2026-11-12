@@ -109,9 +109,9 @@ namespace Fps.Tests.EditMode
             damageable.Initialize("enemy-1", 10);
             Assert.That(_agent.TryInitialize(), Is.True);
 
-            LogAssert.Expect(LogType.Log, "[Combat] died id=enemy-1");
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=enemy-1");
             LogAssert.Expect(LogType.Log, "[AI] id=enemy-1 state=Dead prev=Idle");
-            damageable.ApplyDamage(10);
+            damageable.TakeDamage(10);
 
             Assert.That(_agent.State, Is.EqualTo(EnemyState.Dead));
             Assert.That(_host.GetComponent<NavMeshAgent>().enabled, Is.False);

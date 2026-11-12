@@ -38,7 +38,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void InitializeSetsIdAndRefillsHealth()
         {
-            _damageable.ApplyDamage(30);
+            _damageable.TakeDamage(30);
 
             _damageable.Initialize("dummy", 50);
 
@@ -55,9 +55,9 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ApplyDamageRejectsNegativeAmounts()
+        public void TakeDamageRejectsNegativeAmounts()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _damageable.ApplyDamage(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _damageable.TakeDamage(-1));
         }
 
         [Test]
@@ -71,10 +71,10 @@ namespace Fps.Tests.EditMode
                 died++;
             };
 
-            LogAssert.Expect(LogType.Log, "[Combat] died id=dummy");
-            _damageable.ApplyDamage(15);
-            _damageable.ApplyDamage(15);
-            _damageable.ApplyDamage(15);
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=dummy");
+            _damageable.TakeDamage(15);
+            _damageable.TakeDamage(15);
+            _damageable.TakeDamage(15);
 
             Assert.That(died, Is.EqualTo(1));
             Assert.That(_damageable.IsDead, Is.True);
@@ -89,8 +89,8 @@ namespace Fps.Tests.EditMode
             var died = 0;
             _damageable.Died += _ => died++;
 
-            LogAssert.Expect(LogType.Log, "[Combat] died id=a");
-            _damageable.ApplyDamage(10);
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=a");
+            _damageable.TakeDamage(10);
 
             Assert.That(died, Is.EqualTo(1));
         }

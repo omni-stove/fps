@@ -1,19 +1,29 @@
 namespace Fps.Runtime
 {
     /// <summary>
-    /// Unity のベクトルと <see cref="Fps.Core"/> が使う <see cref="System.Numerics.Vector3"/> の相互変換。
-    /// 座標系は同じ (Y が上、左手系) なので成分をそのまま写す。
+    /// Fps.Core が使う <see cref="System.Numerics"/> のベクトルと UnityEngine のベクトルを相互に変換する。
+    /// どちらも同じ成分 (Y が上、左手系の解釈は呼び出し側の約束) をそのまま写すだけで、座標系の変換はしない。
     /// </summary>
     public static class VectorConversions
     {
-        public static System.Numerics.Vector3 ToNumerics(this UnityEngine.Vector3 v)
+        public static UnityEngine.Vector3 ToUnity(this System.Numerics.Vector3 value)
         {
-            return new System.Numerics.Vector3(v.x, v.y, v.z);
+            return new UnityEngine.Vector3(value.X, value.Y, value.Z);
         }
 
-        public static UnityEngine.Vector3 ToUnity(this System.Numerics.Vector3 v)
+        public static System.Numerics.Vector3 ToNumerics(this UnityEngine.Vector3 value)
         {
-            return new UnityEngine.Vector3(v.X, v.Y, v.Z);
+            return new System.Numerics.Vector3(value.x, value.y, value.z);
+        }
+
+        public static UnityEngine.Vector2 ToUnity(this System.Numerics.Vector2 value)
+        {
+            return new UnityEngine.Vector2(value.X, value.Y);
+        }
+
+        public static System.Numerics.Vector2 ToNumerics(this UnityEngine.Vector2 value)
+        {
+            return new System.Numerics.Vector2(value.x, value.y);
         }
     }
 }

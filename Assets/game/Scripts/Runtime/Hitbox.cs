@@ -5,9 +5,8 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 当たり判定の部位。コライダーと同じ GameObject に置き、命中した部位 (<see cref="HitZone"/>) と
-    /// 持ち主の <see cref="Damageable"/> を結ぶ。ダメージ量は <see cref="DamageCalculator"/> が決める。
-    /// 持ち主を設定しなければ親をたどって探す。
+    /// 当たり判定 1 つ分の部位。同じ GameObject か親にあるコライダーへの命中を、持ち主の <see cref="Damageable"/> に
+    /// <see cref="Zone"/> 付きで渡す。持ち主は <see cref="Initialize"/> で渡すか、未設定なら親階層から探す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class Hitbox : MonoBehaviour
@@ -15,36 +14,36 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("この当たり判定の部位")]
         private HitZone _zone = HitZone.Body;
 
-        [SerializeField, Tooltip("ダメージを受ける持ち主。空なら親から探す")]
+        [SerializeField, Tooltip("ダメージを受ける持ち主。空なら親階層から探す")]
         private Damageable _owner;
 
         public HitZone Zone => _zone;
 
-        /// <summary>持ち主。未設定なら自分か親の Damageable。見つからなければ null。</summary>
+        /// <summary>持ち主。未設定なら親階層 (自分を含む) から探して覚える。見つからなければ null。</summary>
         public Damageable Owner
         {
             get
             {
                 if (_owner == null)
                 {
-                    _owner = GetComponentInParent<Damageable>();
+                    _owner = GetComponentInParent<Damageable>(true);
                 }
 
                 return _owner;
             }
         }
 
-        /// <summary>部位と持ち主を設定する。</summary>
+        /// <summary>部位と持ち主をコードで設定する。</summary>
         public void Initialize(HitZone zone, Damageable owner)
         {
-            if (owner == null)
-            {
-                throw new ArgumentNullException(nameof(owner));
-            }
-
             if (!Enum.IsDefined(typeof(HitZone), zone))
             {
                 throw new ArgumentOutOfRangeException(nameof(zone), zone, "unknown hit zone");
+            }
+
+            if (owner == null)
+            {
+                throw new ArgumentNullException(nameof(owner));
             }
 
             _zone = zone;
@@ -52,38 +51,29 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 命中 1 回分のダメージを <see cref="DamageCalculator.Calculate"/> で求めて持ち主に渡し、与えたダメージを返す。
-        /// 持ち主がいない、または既に死んでいれば何もせず 0 を返す。
+        /// この部位への命中として持ち主にダメージを渡し、計算したダメージ量を返す。
+        /// 持ち主が見つからなければ <see cref="InvalidOperationException"/> を投げる。
         /// </summary>
-        /// <param name="baseDamage">武器の基本ダメージ。0 以上。</param>
-        /// <param name="distance">射手から命中点までの距離。0 以上。</param>
-        /// <param name="falloff">距離減衰の設定。</param>
         public int ApplyHit(int baseDamage, float distance, DamageFalloff falloff)
         {
-            var damage = DamageCalculator.Calculate(baseDamage, _zone, distance, falloff);
-
             var owner = Owner;
             if (owner == null)
             {
-                Debug.LogWarning($"{Damageable.LogTag} hitbox '{name}' has no Damageable owner; the hit is ignored", this);
-                return 0;
+                throw new InvalidOperationException($"Hitbox '{name}' has no Damageable owner in itself or its parents");
             }
 
-            if (owner.IsDead)
-            {
-                return 0;
-            }
-
-            owner.ApplyDamage(damage);
-            Debug.Log($"{Damageable.LogTag} hit zone={_zone} dmg={damage} id={owner.Id} hp={owner.Health.Current}", this);
-            return damage;
+            return owner.ApplyHit(baseDamage, _zone, distance, falloff);
         }
 
-        /// <summary>コライダーから Hitbox を探す。コライダー自身になければ親をたどる。</summary>
-        public static bool TryFind(Collider collider, out Hitbox hitbox)
+        /// <summary>コライダーの GameObject か、その親階層にある Hitbox を返す。無ければ null。</summary>
+        public static Hitbox FindFor(Collider collider)
         {
-            hitbox = collider == null ? null : collider.GetComponentInParent<Hitbox>();
-            return hitbox != null;
+            if (collider == null)
+            {
+                throw new ArgumentNullException(nameof(collider));
+            }
+
+            return collider.GetComponentInParent<Hitbox>(true);
         }
     }
 }

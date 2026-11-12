@@ -34,7 +34,7 @@ namespace Fps.Core.Tests
 
             reporter.ReportAll();
 
-            Assert.That(lines, Is.EqualTo(InitialLines));
+            Assert.That(lines, Is.EqualTo(_initialLines));
         }
 
         [Test]
@@ -47,7 +47,7 @@ namespace Fps.Core.Tests
             mission.Progress("a");
             mission.Progress("b");
 
-            Assert.That(lines, Is.EqualTo(CompletionLines));
+            Assert.That(lines, Is.EqualTo(_completionLines));
         }
 
         [Test]
@@ -59,7 +59,7 @@ namespace Fps.Core.Tests
 
             mission.Fail("a");
 
-            Assert.That(lines, Is.EqualTo(FailureLines));
+            Assert.That(lines, Is.EqualTo(_failureLines));
         }
 
         [Test]
@@ -90,15 +90,15 @@ namespace Fps.Core.Tests
             Assert.Throws<ObjectDisposedException>(() => reporter.ReportAll());
         }
 
-        private static readonly string[] PrerequisiteA = { "a" };
+        private static readonly string[] _prerequisiteA = { "a" };
 
-        private static readonly string[] InitialLines =
+        private static readonly string[] _initialLines =
         {
             "[Mission] objective=a state=Active",
             "[Mission] objective=b state=Locked",
         };
 
-        private static readonly string[] CompletionLines =
+        private static readonly string[] _completionLines =
         {
             "[Mission] objective=a state=Completed",
             "[Mission] objective=b state=Active",
@@ -106,7 +106,7 @@ namespace Fps.Core.Tests
             "[Mission] completed",
         };
 
-        private static readonly string[] FailureLines =
+        private static readonly string[] _failureLines =
         {
             "[Mission] objective=a state=Failed",
             "[Mission] failed",
@@ -117,7 +117,7 @@ namespace Fps.Core.Tests
             return new Mission(new[]
             {
                 new Objective("a", ""),
-                new Objective("b", "", prerequisites: PrerequisiteA),
+                new Objective("b", "", prerequisites: _prerequisiteA),
             });
         }
     }

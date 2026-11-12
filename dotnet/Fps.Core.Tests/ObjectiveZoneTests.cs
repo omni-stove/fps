@@ -135,14 +135,14 @@ namespace Fps.Core.Tests
             Assert.That(mission.HasObjective(null), Is.False);
         }
 
-        private static readonly string[] PrerequisiteA = { "a" };
+        private static readonly string[] _prerequisiteA = { "a" };
 
         private static Mission TwoStep()
         {
             return new Mission(new[]
             {
                 new Objective("a", ""),
-                new Objective("b", "", prerequisites: PrerequisiteA),
+                new Objective("b", "", prerequisites: _prerequisiteA),
             });
         }
     }

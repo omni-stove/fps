@@ -202,7 +202,7 @@ namespace Fps.Net
             {
                 // 1 フレームに複数 tick 進んでも送るのは最新だけ。照合も補間も間の tick を必要としない
                 _hasPendingState = false;
-                StateRpc(_serverTick, _serverState.Position, _serverState.Velocity, _serverState.IsGrounded);
+                StateRpc(_serverTick, _serverState.Position, _serverState.Velocity, _serverState.IsGrounded, default);
             }
         }
 
@@ -291,8 +291,13 @@ namespace Fps.Net
         }
 
         [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable)]
-        private void StateRpc(int tick, Vector3 position, Vector3 velocity, bool isGrounded)
+        private void StateRpc(int tick, Vector3 position, Vector3 velocity, bool isGrounded, RpcParams rpcParams = default)
         {
+            if (rpcParams.Receive.SenderClientId != NetworkManager.ServerClientId)
+            {
+                return;
+            }
+
             var state = new MotorState(position, velocity, isGrounded);
             if (!state.IsFinite)
             {

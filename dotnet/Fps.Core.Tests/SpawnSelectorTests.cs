@@ -38,7 +38,7 @@ namespace Fps.Core.Tests
         {
             var selector = new SpawnSelector();
 
-            Assert.Throws<InvalidOperationException>(() => selector.Select(Array.Empty<SpawnPoint>(), _none, _none,Team.Alpha));
+            Assert.Throws<InvalidOperationException>(() => selector.Select(Array.Empty<SpawnPoint>(), _none, _none, Team.Alpha));
         }
 
         [Test]
@@ -47,7 +47,7 @@ namespace Fps.Core.Tests
             var selector = new SpawnSelector();
             var points = new[] { new SpawnPoint(At(0f), Team.Bravo) };
 
-            Assert.Throws<InvalidOperationException>(() => selector.Select(points, _none, _none,Team.Alpha));
+            Assert.Throws<InvalidOperationException>(() => selector.Select(points, _none, _none, Team.Alpha));
         }
 
         [Test]
@@ -56,11 +56,11 @@ namespace Fps.Core.Tests
             var selector = new SpawnSelector();
             var points = new[] { new SpawnPoint(At(0f)) };
 
-            Assert.Throws<ArgumentNullException>(() => selector.Select(null, _none, _none,Team.Alpha));
-            Assert.Throws<ArgumentNullException>(() => selector.Select(points, null, _none,Team.Alpha));
-            Assert.Throws<ArgumentNullException>(() => selector.Select(points, _none, null,Team.Alpha));
-            Assert.Throws<ArgumentException>(() => selector.Select(new SpawnPoint[] { null }, _none, _none,Team.Alpha));
-            Assert.Throws<ArgumentOutOfRangeException>(() => selector.Select(points, _none, _none,(Team)99));
+            Assert.Throws<ArgumentNullException>(() => selector.Select(null, _none, _none, Team.Alpha));
+            Assert.Throws<ArgumentNullException>(() => selector.Select(points, null, _none, Team.Alpha));
+            Assert.Throws<ArgumentNullException>(() => selector.Select(points, _none, null, Team.Alpha));
+            Assert.Throws<ArgumentException>(() => selector.Select(new SpawnPoint[] { null }, _none, _none, Team.Alpha));
+            Assert.Throws<ArgumentOutOfRangeException>(() => selector.Select(points, _none, _none, (Team)99));
         }
 
         [Test]
@@ -73,8 +73,8 @@ namespace Fps.Core.Tests
             var points = new[] { bravo, alpha, shared };
             var enemies = new[] { At(0f) };
 
-            Assert.That(selector.Select(points, enemies, _none,Team.Alpha), Is.SameAs(alpha));
-            Assert.That(selector.Select(points, enemies, _none,Team.Bravo), Is.SameAs(bravo));
+            Assert.That(selector.Select(points, enemies, _none, Team.Alpha), Is.SameAs(alpha));
+            Assert.That(selector.Select(points, enemies, _none, Team.Bravo), Is.SameAs(bravo));
         }
 
         [Test]
@@ -84,8 +84,8 @@ namespace Fps.Core.Tests
             var shared = new SpawnPoint(At(0f));
             var points = new[] { shared };
 
-            Assert.That(selector.Select(points, _none, _none,Team.Alpha), Is.SameAs(shared));
-            Assert.That(selector.Select(points, _none, _none,Team.Bravo), Is.SameAs(shared));
+            Assert.That(selector.Select(points, _none, _none, Team.Alpha), Is.SameAs(shared));
+            Assert.That(selector.Select(points, _none, _none, Team.Bravo), Is.SameAs(shared));
         }
 
         [Test]
@@ -98,7 +98,7 @@ namespace Fps.Core.Tests
             var points = new[] { near, far };
             var enemies = new[] { At(0f) };
 
-            Assert.That(selector.Select(points, enemies, _none,Team.Alpha), Is.SameAs(far));
+            Assert.That(selector.Select(points, enemies, _none, Team.Alpha), Is.SameAs(far));
         }
 
         [Test]
@@ -110,7 +110,7 @@ namespace Fps.Core.Tests
             var points = new[] { atLimit, outside };
             var enemies = new[] { At(0f) };
 
-            Assert.That(selector.Select(points, enemies, _none,Team.Alpha), Is.SameAs(outside));
+            Assert.That(selector.Select(points, enemies, _none, Team.Alpha), Is.SameAs(outside));
         }
 
         [Test]
@@ -124,7 +124,7 @@ namespace Fps.Core.Tests
             // b は敵 2 に近いので、いちばん近い敵までの距離は a=20, b=10 (除外), c=25。
             var enemies = new[] { At(0f), At(60f) };
 
-            Assert.That(selector.Select(points, enemies, _none,Team.Alpha), Is.SameAs(c));
+            Assert.That(selector.Select(points, enemies, _none, Team.Alpha), Is.SameAs(c));
         }
 
         [Test]
@@ -164,7 +164,7 @@ namespace Fps.Core.Tests
             var enemies = new[] { At(0f) };
 
             // 他チームの地点 (敵から 100m) はフォールバックでも選ばない。
-            Assert.That(selector.Select(points, enemies, _none,Team.Alpha), Is.SameAs(lessNear));
+            Assert.That(selector.Select(points, enemies, _none, Team.Alpha), Is.SameAs(lessNear));
         }
 
         [Test]
@@ -176,7 +176,7 @@ namespace Fps.Core.Tests
             var second = new SpawnPoint(At(20f));
             var points = new[] { bravo, first, second };
 
-            Assert.That(selector.Select(points, _none, _none,Team.Alpha), Is.SameAs(first));
+            Assert.That(selector.Select(points, _none, _none, Team.Alpha), Is.SameAs(first));
         }
 
         [Test]

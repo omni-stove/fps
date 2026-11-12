@@ -10,11 +10,22 @@ namespace Fps.Net.Tests
 {
     public sealed class NetworkSetupTests
     {
+        private const string ServerId = "0123456789abcdef0123456789abcdef";
+
         private readonly List<GameObject> _created = new List<GameObject>();
+        private Func<GameObject, NetLaunchOptions, EosCredentials, NetworkTransport> _savedEosFactory;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _savedEosFactory = NetTransportFactories.Eos;
+        }
 
         [TearDown]
         public void TearDown()
         {
+            NetTransportFactories.Eos = _savedEosFactory;
+
             foreach (var go in _created)
             {
                 if (go != null)
@@ -120,7 +131,8 @@ namespace Fps.Net.Tests
             var options = new NetLaunchOptions(NetLaunchMode.Host, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort);
 
             Assert.Throws<ArgumentNullException>(() => NetworkSetup.Configure(null, options, prefab));
-            Assert.Throws<ArgumentNullException>(() => NetworkSetup.Configure(target, null, prefab));
+            Assert.Throws<ArgumentNullException>(() => NetworkSetup.Configure(target, (NetLaunchOptions)null, prefab));
+            Assert.Throws<ArgumentNullException>(() => NetworkSetup.Configure(target, (NetTransportPlan)null, prefab));
             Assert.Throws<ArgumentNullException>(() => NetworkSetup.Configure(target, options, null));
         }
 
@@ -144,6 +156,87 @@ namespace Fps.Net.Tests
             NetworkSetup.Configure(target, options, prefab);
 
             Assert.Throws<InvalidOperationException>(() => NetworkSetup.Configure(target, options, prefab));
+        }
+
+        private static NetLaunchOptions EosClientOptions()
+        {
+            return new NetLaunchOptions(
+                NetLaunchMode.Client, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Eos, ServerId);
+        }
+
+        private static EosCredentials Credentials()
+        {
+            return new EosCredentials("product", "sandbox", "deployment", "client", "secret");
+        }
+
+        [Test]
+        public void EosOptionsNeedAPlan()
+        {
+            var target = Create("Net");
+
+            Assert.Throws<ArgumentException>(() => NetworkSetup.Configure(target, EosClientOptions(), CreatePlayerPrefab()));
+            Assert.That(target.GetComponent<NetworkTransport>(), Is.Null);
+        }
+
+        [Test]
+        public void EosPlanUsesRegisteredFactory()
+        {
+            var target = Create("Net");
+            var credentials = Credentials();
+            var options = EosClientOptions();
+            NetLaunchOptions receivedOptions = null;
+            EosCredentials receivedCredentials = null;
+            NetTransportFactories.Eos = (go, o, c) =>
+            {
+                receivedOptions = o;
+                receivedCredentials = c;
+                // 本物の EOS transport は EOS plugin のアセンブリにあるので、ここでは別の transport で代える
+                return go.AddComponent<UnityTransport>();
+            };
+
+            var manager = NetworkSetup.Configure(target, NetTransportPlan.Decide(options, credentials, null), CreatePlayerPrefab());
+
+            Assert.That(receivedOptions, Is.SameAs(options));
+            Assert.That(receivedCredentials, Is.SameAs(credentials));
+            Assert.That(manager.NetworkConfig.NetworkTransport, Is.SameAs(target.GetComponent<NetworkTransport>()));
+        }
+
+        [Test]
+        public void EosPlanWithoutFactoryFails()
+        {
+            var target = Create("Net");
+            NetTransportFactories.Eos = null;
+            var plan = NetTransportPlan.Decide(EosClientOptions(), Credentials(), null);
+
+            Assert.Throws<InvalidOperationException>(() => NetworkSetup.Configure(target, plan, CreatePlayerPrefab()));
+            Assert.That(target.GetComponent<NetworkManager>(), Is.Null);
+        }
+
+        [Test]
+        public void EosFactoryMustAddToTarget()
+        {
+            var target = Create("Net");
+            var elsewhere = Create("Elsewhere");
+            NetTransportFactories.Eos = (go, o, c) => elsewhere.AddComponent<UnityTransport>();
+            var plan = NetTransportPlan.Decide(EosClientOptions(), Credentials(), null);
+
+            Assert.Throws<InvalidOperationException>(() => NetworkSetup.Configure(target, plan, CreatePlayerPrefab()));
+        }
+
+        [Test]
+        public void FallbackPlanUsesUnityTransport()
+        {
+            var target = Create("Net");
+            NetTransportFactories.Eos = (go, o, c) => throw new AssertionException("EOS factory must not be used");
+            var plan = NetTransportPlan.Decide(EosClientOptions(), null, EosCredentials.VariableNames);
+
+            var manager = NetworkSetup.Configure(target, plan, CreatePlayerPrefab());
+
+            var transport = target.GetComponent<UnityTransport>();
+            Assert.That(plan.FellBackToUdp, Is.True);
+            Assert.That(manager.NetworkConfig.NetworkTransport, Is.SameAs(transport));
+            Assert.That(transport.ConnectionData.Address, Is.EqualTo(NetLaunchOptions.DefaultAddress));
+            Assert.That(transport.ConnectionData.Port, Is.EqualTo(NetLaunchOptions.DefaultPort));
         }
     }
 }

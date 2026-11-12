@@ -5,36 +5,82 @@ using System.Globalization;
 namespace Fps.Core
 {
     /// <summary>
-    /// ネットワークの起動設定。コマンドライン引数 <c>-mode</c> / <c>-address</c> / <c>-port</c> から作る。
-    /// 知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
+    /// ネットワークの起動設定。コマンドライン引数 <c>-mode</c> / <c>-address</c> / <c>-port</c> /
+    /// <c>-transport</c> / <c>-eos-server</c> から作る。知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
     /// </summary>
     public sealed class NetLaunchOptions
     {
         public const string ModeFlag = "-mode";
         public const string AddressFlag = "-address";
         public const string PortFlag = "-port";
+        public const string TransportFlag = "-transport";
+        public const string EosServerFlag = "-eos-server";
 
         public const string DefaultAddress = "127.0.0.1";
         public const ushort DefaultPort = 7777;
 
+        /// <summary>
+        /// <c>-transport</c> が無いときの transport。認証情報の有無で挙動が変わらないよう、EOS は明示したときだけ使う。
+        /// </summary>
+        public const NetTransportKind DefaultTransport = NetTransportKind.Udp;
+
         /// <summary>全インターフェースで待ち受けるアドレス。サーバー側でだけ使える。</summary>
         public const string AnyAddress = "0.0.0.0";
 
+        /// <summary>EOS の ProductUserId の文字列表現の長さ (16 進数の桁数)。</summary>
+        public const int ProductUserIdLength = 32;
+
+        private static readonly string[] _flags = { ModeFlag, AddressFlag, PortFlag, TransportFlag, EosServerFlag };
+
         public NetLaunchMode Mode { get; }
 
-        /// <summary>クライアントでは接続先、ホスト・サーバーでは待ち受けるアドレス (IPv4)。</summary>
+        /// <summary>UDP のとき、クライアントでは接続先、ホスト・サーバーでは待ち受けるアドレス (IPv4)。</summary>
         public string Address { get; }
 
         public ushort Port { get; }
+
+        public NetTransportKind Transport { get; }
+
+        /// <summary>EOS のクライアントが接続するサーバーの ProductUserId。それ以外では null。</summary>
+        public string EosServerId { get; }
+
+        /// <summary>ログ向けの接続先・待ち受け先。UDP は <c>address:port</c>、EOS は <c>eos</c> か <c>eos:&lt;サーバーの ID&gt;</c>。</summary>
+        public string Endpoint
+        {
+            get
+            {
+                if (Transport == NetTransportKind.Udp)
+                {
+                    return Address + ":" + Port.ToString(CultureInfo.InvariantCulture);
+                }
+
+                return EosServerId == null ? "eos" : "eos:" + EosServerId;
+            }
+        }
 
         /// <param name="mode">起動モード。</param>
         /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。</param>
         /// <param name="port">1 から 65535 のポート番号。</param>
         public NetLaunchOptions(NetLaunchMode mode, string address, ushort port)
+            : this(mode, address, port, NetTransportKind.Udp, null)
+        {
+        }
+
+        /// <param name="mode">起動モード。</param>
+        /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。EOS では使わないが検証はする。</param>
+        /// <param name="port">1 から 65535 のポート番号。</param>
+        /// <param name="transport">transport。</param>
+        /// <param name="eosServerId">EOS のクライアントでは必須の、サーバーの ProductUserId。EOS のクライアント以外では null。</param>
+        public NetLaunchOptions(NetLaunchMode mode, string address, ushort port, NetTransportKind transport, string eosServerId)
         {
             if (!Enum.IsDefined(typeof(NetLaunchMode), mode))
             {
                 throw new ArgumentOutOfRangeException(nameof(mode), mode, "unknown mode");
+            }
+
+            if (!Enum.IsDefined(typeof(NetTransportKind), transport))
+            {
+                throw new ArgumentOutOfRangeException(nameof(transport), transport, "unknown transport");
             }
 
             var addressError = ValidateAddress(mode, address);
@@ -48,9 +94,17 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(port), port, "port must be between 1 and 65535");
             }
 
+            var serverError = ValidateEosServer(mode, transport, eosServerId);
+            if (serverError != null)
+            {
+                throw new ArgumentException(serverError, nameof(eosServerId));
+            }
+
             Mode = mode;
             Address = address;
             Port = port;
+            Transport = transport;
+            EosServerId = eosServerId;
         }
 
         /// <summary>引数に <c>-mode</c> が含まれるか。値の妥当性は見ない。</summary>
@@ -74,7 +128,9 @@ namespace Fps.Core
 
         /// <summary>
         /// コマンドライン引数を解析する。<c>-mode</c> が無ければ <paramref name="defaultMode"/>、
-        /// <c>-address</c> が無ければ <see cref="DefaultAddress"/>、<c>-port</c> が無ければ <see cref="DefaultPort"/> を使う。
+        /// <c>-address</c> が無ければ <see cref="DefaultAddress"/>、<c>-port</c> が無ければ <see cref="DefaultPort"/>、
+        /// <c>-transport</c> が無ければ <see cref="DefaultTransport"/> を使う。
+        /// <c>-eos-server</c> は <c>-transport eos</c> のクライアントでだけ使い、そのときは必須。
         /// </summary>
         /// <param name="args">コマンドライン引数。先頭が実行ファイルのパスでもよい。</param>
         /// <param name="defaultMode">-mode が無いときのモード。</param>
@@ -93,26 +149,12 @@ namespace Fps.Core
             }
 
             options = null;
-            string modeText = null;
-            string addressText = null;
-            string portText = null;
+            var values = new Dictionary<string, string>(StringComparer.Ordinal);
 
             for (var i = 0; i < args.Count; i++)
             {
-                string flag;
-                if (IsFlag(args[i], ModeFlag))
-                {
-                    flag = ModeFlag;
-                }
-                else if (IsFlag(args[i], AddressFlag))
-                {
-                    flag = AddressFlag;
-                }
-                else if (IsFlag(args[i], PortFlag))
-                {
-                    flag = PortFlag;
-                }
-                else
+                var flag = MatchFlag(args[i]);
+                if (flag == null)
                 {
                     continue;
                 }
@@ -123,41 +165,17 @@ namespace Fps.Core
                     return false;
                 }
 
-                var value = args[++i];
-                if (flag == ModeFlag)
+                if (values.ContainsKey(flag))
                 {
-                    if (modeText != null)
-                    {
-                        error = ModeFlag + " is given more than once";
-                        return false;
-                    }
-
-                    modeText = value;
+                    error = flag + " is given more than once";
+                    return false;
                 }
-                else if (flag == AddressFlag)
-                {
-                    if (addressText != null)
-                    {
-                        error = AddressFlag + " is given more than once";
-                        return false;
-                    }
 
-                    addressText = value;
-                }
-                else
-                {
-                    if (portText != null)
-                    {
-                        error = PortFlag + " is given more than once";
-                        return false;
-                    }
-
-                    portText = value;
-                }
+                values.Add(flag, args[++i]);
             }
 
             var mode = defaultMode;
-            if (modeText != null && !TryParseMode(modeText, out mode))
+            if (values.TryGetValue(ModeFlag, out var modeText) && !TryParseMode(modeText, out mode))
             {
                 error = ModeFlag + " must be host, server or client (got '" + modeText + "')";
                 return false;
@@ -168,7 +186,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(defaultMode), defaultMode, "unknown mode");
             }
 
-            var address = addressText ?? DefaultAddress;
+            if (!values.TryGetValue(AddressFlag, out var address))
+            {
+                address = DefaultAddress;
+            }
+
             var addressError = ValidateAddress(mode, address);
             if (addressError != null)
             {
@@ -177,13 +199,28 @@ namespace Fps.Core
             }
 
             var port = DefaultPort;
-            if (portText != null && !TryParsePort(portText, out port))
+            if (values.TryGetValue(PortFlag, out var portText) && !TryParsePort(portText, out port))
             {
                 error = PortFlag + " must be an integer between 1 and 65535 (got '" + portText + "')";
                 return false;
             }
 
-            options = new NetLaunchOptions(mode, address, port);
+            var transport = DefaultTransport;
+            if (values.TryGetValue(TransportFlag, out var transportText) && !TryParseTransport(transportText, out transport))
+            {
+                error = TransportFlag + " must be udp or eos (got '" + transportText + "')";
+                return false;
+            }
+
+            values.TryGetValue(EosServerFlag, out var eosServerId);
+            var serverError = ValidateEosServer(mode, transport, eosServerId);
+            if (serverError != null)
+            {
+                error = serverError;
+                return false;
+            }
+
+            options = new NetLaunchOptions(mode, address, port, transport, eosServerId);
             error = null;
             return true;
         }
@@ -204,9 +241,72 @@ namespace Fps.Core
             }
         }
 
+        /// <summary>ログ・引数向けの小文字の transport 名 (udp / eos)。</summary>
+        public static string TransportName(NetTransportKind transport)
+        {
+            switch (transport)
+            {
+                case NetTransportKind.Udp:
+                    return "udp";
+                case NetTransportKind.Eos:
+                    return "eos";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(transport), transport, "unknown transport");
+            }
+        }
+
+        /// <summary>
+        /// EOS の ProductUserId の文字列表現 (<see cref="ProductUserIdLength"/> 桁の 16 進数) に見えるか。
+        /// 実在するかは EOS に問い合わせないと分からない。
+        /// </summary>
+        public static bool IsProductUserId(string text)
+        {
+            if (text == null || text.Length != ProductUserIdLength)
+            {
+                return false;
+            }
+
+            foreach (var c in text)
+            {
+                var isHex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+                if (!isHex)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>transport だけを差し替えた設定を返す。UDP にしたときは EOS のサーバー ID を捨てる。</summary>
+        /// <exception cref="ArgumentException">EOS のクライアントにするのにサーバー ID が無い。</exception>
+        public NetLaunchOptions WithTransport(NetTransportKind transport)
+        {
+            if (transport == Transport)
+            {
+                return this;
+            }
+
+            var serverId = transport == NetTransportKind.Udp ? null : EosServerId;
+            return new NetLaunchOptions(Mode, Address, Port, transport, serverId);
+        }
+
         public override string ToString()
         {
-            return ModeName(Mode) + " " + Address + ":" + Port.ToString(CultureInfo.InvariantCulture);
+            return ModeName(Mode) + " " + Endpoint;
+        }
+
+        private static string MatchFlag(string arg)
+        {
+            foreach (var flag in _flags)
+            {
+                if (IsFlag(arg, flag))
+                {
+                    return flag;
+                }
+            }
+
+            return null;
         }
 
         private static bool TryParseMode(string text, out NetLaunchMode mode)
@@ -221,6 +321,21 @@ namespace Fps.Core
             }
 
             mode = default;
+            return false;
+        }
+
+        private static bool TryParseTransport(string text, out NetTransportKind transport)
+        {
+            foreach (NetTransportKind candidate in Enum.GetValues(typeof(NetTransportKind)))
+            {
+                if (string.Equals(text, TransportName(candidate), StringComparison.OrdinalIgnoreCase))
+                {
+                    transport = candidate;
+                    return true;
+                }
+            }
+
+            transport = default;
             return false;
         }
 
@@ -240,6 +355,31 @@ namespace Fps.Core
             if (mode == NetLaunchMode.Client && address == AnyAddress)
             {
                 return AddressFlag + " " + AnyAddress + " can only be listened on; a client needs the server's address";
+            }
+
+            return null;
+        }
+
+        /// <returns>正しければ null、誤りならその理由。</returns>
+        private static string ValidateEosServer(NetLaunchMode mode, NetTransportKind transport, string eosServerId)
+        {
+            var needsServer = transport == NetTransportKind.Eos && mode == NetLaunchMode.Client;
+            if (eosServerId == null)
+            {
+                return needsServer
+                    ? "a client with " + TransportFlag + " eos needs " + EosServerFlag + " <server product user id>"
+                    : null;
+            }
+
+            if (!needsServer)
+            {
+                return EosServerFlag + " is only used by a client with " + TransportFlag + " eos";
+            }
+
+            if (!IsProductUserId(eosServerId))
+            {
+                return EosServerFlag + " must be a " + ProductUserIdLength.ToString(CultureInfo.InvariantCulture)
+                    + "-digit hexadecimal product user id (got '" + eosServerId + "')";
             }
 
             return null;

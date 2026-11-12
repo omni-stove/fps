@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -25,7 +26,14 @@ namespace Fps.Net
         /// <param name="target">追加先。ルートの GameObject で、まだ NetworkManager を持たないこと。</param>
         /// <param name="options">接続先・待ち受けの設定。</param>
         /// <param name="playerPrefab">接続したクライアントごとに生成するプレハブ。NetworkObject を持つこと。</param>
-        public static NetworkManager Configure(GameObject target, NetLaunchOptions options, GameObject playerPrefab)
+        /// <param name="networkPrefabs">
+        /// サーバーが実行中に Spawn するプレハブ (試合の進行役など)。どれも NetworkObject を持つこと。null なら無し。
+        /// </param>
+        public static NetworkManager Configure(
+            GameObject target,
+            NetLaunchOptions options,
+            GameObject playerPrefab,
+            IReadOnlyList<GameObject> networkPrefabs = null)
         {
             if (target == null)
             {
@@ -46,6 +54,30 @@ namespace Fps.Net
             {
                 throw new ArgumentException(
                     "player prefab '" + playerPrefab.name + "' has no NetworkObject", nameof(playerPrefab));
+            }
+
+            var extraPrefabs = new List<GameObject>();
+            if (networkPrefabs != null)
+            {
+                foreach (var prefab in networkPrefabs)
+                {
+                    if (prefab == null)
+                    {
+                        throw new ArgumentException("networkPrefabs must not contain null", nameof(networkPrefabs));
+                    }
+
+                    if (prefab.GetComponent<NetworkObject>() == null)
+                    {
+                        throw new ArgumentException(
+                            "network prefab '" + prefab.name + "' has no NetworkObject", nameof(networkPrefabs));
+                    }
+
+                    // プレイヤーのプレハブは NetworkManager が自分で登録するので、重複させない
+                    if (prefab != playerPrefab && !extraPrefabs.Contains(prefab))
+                    {
+                        extraPrefabs.Add(prefab);
+                    }
+                }
             }
 
             if (target.transform.parent != null)
@@ -77,6 +109,11 @@ namespace Fps.Net
             config.ConnectionApproval = false;
             // シーンの同期はまだ要らない。有効だとクライアントが NetTest を読み直して Bootstrap が二重になる
             config.EnableSceneManagement = false;
+
+            foreach (var prefab in extraPrefabs)
+            {
+                config.Prefabs.Add(new NetworkPrefab { Prefab = prefab });
+            }
 
             return manager;
         }

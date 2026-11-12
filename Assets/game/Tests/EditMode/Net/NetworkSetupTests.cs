@@ -99,6 +99,20 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void RejectsNetworkPrefabWithoutNetworkObject()
+        {
+            var target = Create("Net");
+            var options = new NetLaunchOptions(NetLaunchMode.Host, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort);
+
+            Assert.Throws<ArgumentException>(() =>
+                NetworkSetup.Configure(target, options, CreatePlayerPrefab(), new[] { Create("NotNetworked") }));
+            Assert.Throws<ArgumentException>(() =>
+                NetworkSetup.Configure(target, options, CreatePlayerPrefab(), new GameObject[] { null }));
+            Assert.That(target.GetComponent<NetworkManager>(), Is.Null);
+            Assert.That(target.GetComponent<UnityTransport>(), Is.Null);
+        }
+
+        [Test]
         public void RejectsNullArguments()
         {
             var target = Create("Net");

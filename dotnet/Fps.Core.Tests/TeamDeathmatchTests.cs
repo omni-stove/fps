@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
 {
     public sealed class TeamDeathmatchTests
     {
-        private static readonly string[] ExpectedStateChangedEvents =
+        private static readonly string[] _expectedStateChangedEvents =
             { "state Playing winner ", "state Ended winner Bravo", "ended Bravo" };
 
         private const int _alpha1 = 1;
@@ -249,7 +249,7 @@ namespace Fps.Core.Tests
             match.ReportKill(_bravo1, _alpha1);
             match.Tick(100f);
 
-            Assert.That(events, Is.EqualTo(ExpectedStateChangedEvents));
+            Assert.That(events, Is.EqualTo(_expectedStateChangedEvents));
         }
 
         [Test]

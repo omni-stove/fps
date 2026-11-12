@@ -1,3 +1,4 @@
+using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
@@ -28,6 +29,7 @@ namespace Fps.Tests.EditMode
                 Object.DestroyImmediate(_world.Floor);
                 Object.DestroyImmediate(_world.Player);
                 Object.DestroyImmediate(_world.Light.gameObject);
+                Object.DestroyImmediate(_world.Target.gameObject);
             }
 
             Object.DestroyImmediate(_host);
@@ -93,6 +95,44 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(_world.Look, Is.SameAs(_world.Player.GetComponent<FirstPersonLook>()));
             Assert.That(FirstPersonLook.FindChildCamera(_world.Player.transform), Is.SameAs(_world.Camera));
+        }
+
+        [Test]
+        public void WeaponIsOnTheCamera()
+        {
+            Assert.That(_world.Weapon, Is.Not.Null);
+            Assert.That(_world.Weapon, Is.SameAs(_world.Camera.GetComponent<WeaponController>()));
+        }
+
+        [Test]
+        public void TargetHasHeadAndBodyHitboxesOwnedByItsDamageable()
+        {
+            var target = _world.Target;
+
+            Assert.That(target.name, Is.EqualTo(GameBootstrap.TargetName));
+            Assert.That(target.transform.position, Is.EqualTo(GameBootstrap.TargetPosition));
+
+            var body = target.transform.Find(GameBootstrap.TargetBodyName).GetComponent<Hitbox>();
+            var head = target.transform.Find(GameBootstrap.TargetHeadName).GetComponent<Hitbox>();
+            Assert.That(body.Zone, Is.EqualTo(HitZone.Body));
+            Assert.That(head.Zone, Is.EqualTo(HitZone.Head));
+            Assert.That(body.Owner, Is.SameAs(target));
+            Assert.That(head.Owner, Is.SameAs(target));
+            Assert.That(body.GetComponent<Collider>(), Is.Not.Null);
+            Assert.That(head.GetComponent<Collider>(), Is.Not.Null);
+        }
+
+        [Test]
+        public void ShootingStraightAheadFromTheEyesHitsTheTargetBody()
+        {
+            // カメラは identity 回転 (+Z 向き) で、目の高さは胴体のカプセルの範囲にある。
+            var eyeY = GameBootstrap.PlayerSpawn.y + GameBootstrap.EyeOffset.y;
+            var bodyTop = GameBootstrap.TargetPosition.y + GameBootstrap.TargetBodyLocalPosition.y + GameBootstrap.TargetBodyScale.y;
+            var headBottom = GameBootstrap.TargetPosition.y + GameBootstrap.TargetHeadLocalPosition.y - GameBootstrap.TargetHeadScale.y / 2f;
+
+            Assert.That(eyeY, Is.LessThan(bodyTop));
+            Assert.That(eyeY, Is.LessThan(headBottom));
+            Assert.That(GameBootstrap.TargetPosition.z, Is.LessThan(WeaponController.DefaultRange));
         }
 
         [Test]

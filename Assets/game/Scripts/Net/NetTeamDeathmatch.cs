@@ -16,11 +16,32 @@ namespace Fps.Net
     /// サーバーは接続順 (<see cref="NetworkManager.ConnectedClientsList"/> の順) にプレイヤーを試合に加える。
     /// ダメージはすべて <see cref="ApplyDamage"/> を通し、体力が尽きたら Core 側が ReportKill する。
     /// 出現・リスポーンの地点は Core の SpawnSelector が選び、ここでは <see cref="NetPlayer.ServerTeleport"/> を呼ぶだけ。
+    /// <para>
+    /// 射撃はサーバー権威のヒットスキャンで、ラグ補償をかける。毎フレームの終わりに全プレイヤーの位置を
+    /// サーバーの tick で <see cref="LagCompensator"/> に記録し、射撃 (<see cref="ServerFire"/>) が届いたら
+    /// 撃った側が見ていた時点まで巻き戻した位置で <see cref="HitboxRewinder"/> が Raycast する。
+    /// ダメージ量は <see cref="DamageCalculator"/>、体力は Session の <see cref="Health"/> が決め、
+    /// 体力は <see cref="NetPlayer"/> の NetworkVariable で配る。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
     public sealed class NetTeamDeathmatch : NetworkBehaviour
     {
+        /// <summary>武器の既定値。オフラインの WeaponController と同じ値にそろえる。</summary>
+        public const int DefaultWeaponDamage = 25;
+        public const float DefaultWeaponRange = 100f;
+        public const float DefaultFireInterval = 0.1f;
+        public const float DefaultFalloffStart = 20f;
+        public const float DefaultFalloffEnd = 60f;
+        public const float DefaultFalloffMinMultiplier = 0.5f;
+
+        // まだ一度も位置を記録していないことを表す tick
+        private const int _noRecordedTick = -1;
+
+        // 不正な射撃の警告を出す最短の間隔 (秒)。連打でログを埋めないため
+        private const float _rejectWarningInterval = 1f;
+
         [SerializeField, Min(1), Tooltip("どちらかのチームがこの点数に届いたら終わる")]
         private int _scoreLimit = 10;
 
@@ -36,8 +57,26 @@ namespace Fps.Net
         [SerializeField, Min(0f), Tooltip("この距離 (m) 以内に敵がいる地点には、他に候補があればリスポーンしない")]
         private float _minEnemySpawnDistance = SpawnSelector.DefaultMinEnemyDistance;
 
-        [SerializeField, Min(0), Tooltip("動作確認用の攻撃 (Attack 入力) 1 回のダメージ")]
-        private int _debugAttackDamage = 50;
+        [SerializeField, Min(0), Tooltip("ヒットスキャン 1 発の基本ダメージ。部位倍率と距離減衰はこれに掛ける")]
+        private int _weaponDamage = DefaultWeaponDamage;
+
+        [SerializeField, Min(0.01f), Tooltip("ヒットスキャンの射程 (m)")]
+        private float _weaponRange = DefaultWeaponRange;
+
+        [SerializeField, Min(0f), Tooltip("サーバーが受け付ける射撃の間隔 (秒)。これより速い連射は捨てる")]
+        private float _fireInterval = DefaultFireInterval;
+
+        [SerializeField, Min(0f), Tooltip("この距離 (m) までは減衰しない")]
+        private float _falloffStart = DefaultFalloffStart;
+
+        [SerializeField, Min(0f), Tooltip("この距離 (m) 以上で最小倍率になる")]
+        private float _falloffEnd = DefaultFalloffEnd;
+
+        [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("最大まで減衰したときの倍率")]
+        private float _falloffMinMultiplier = DefaultFalloffMinMultiplier;
+
+        [SerializeField, Min(0f), Tooltip("射撃の始点とサーバー上の本人の位置のずれ (m) の上限。超えた射撃は捨てる")]
+        private float _maxShotOriginOffset = ShotValidator.DefaultMaxOriginOffset;
 
         private readonly NetworkVariable<int> _alphaScore = new NetworkVariable<int>();
         private readonly NetworkVariable<int> _bravoScore = new NetworkVariable<int>();
@@ -51,6 +90,19 @@ namespace Fps.Net
         private readonly Dictionary<int, NetPlayer> _playerById = new Dictionary<int, NetPlayer>();
         private readonly HashSet<ulong> _rejectedClients = new HashSet<ulong>();
         private TeamDeathmatchSession _session;
+
+        // ラグ補償 (サーバーだけ)。試合の開始時に作る
+        private readonly HitboxRewinder _rewinder = new HitboxRewinder();
+        private readonly List<RewindTarget> _rewindTargets = new List<RewindTarget>();
+        private readonly Dictionary<int, ShotBudget> _shotBudgets = new Dictionary<int, ShotBudget>();
+        private LagCompensator _lagCompensator;
+        private int _lastRecordedTick = _noRecordedTick;
+        private DamageFalloff _falloff;
+        private int _activeWeaponDamage;
+        private float _activeWeaponRange;
+        private float _activeFireInterval;
+        private float _activeMaxShotOriginOffset;
+        private float _nextRejectWarningTime;
 
         /// <summary>このプロセスで Spawn されている試合。サーバーでもクライアントでも設定される。無ければ null。</summary>
         public static NetTeamDeathmatch Current { get; private set; }
@@ -100,10 +152,25 @@ namespace Fps.Net
             set => _minEnemySpawnDistance = value;
         }
 
-        public int DebugAttackDamage
+        /// <summary>ヒットスキャン 1 発の基本ダメージ。0 以上。試合の開始時に読む。</summary>
+        public int WeaponDamage
         {
-            get => _debugAttackDamage;
-            set => _debugAttackDamage = value;
+            get => _weaponDamage;
+            set => _weaponDamage = value;
+        }
+
+        /// <summary>ヒットスキャンの射程 (m)。0 より大きい有限値。試合の開始時に読む。</summary>
+        public float WeaponRange
+        {
+            get => _weaponRange;
+            set => _weaponRange = value;
+        }
+
+        /// <summary>サーバーが受け付ける射撃の間隔 (秒)。0 以上。試合の開始時に読む。</summary>
+        public float FireInterval
+        {
+            get => _fireInterval;
+            set => _fireInterval = value;
         }
 
         private void Awake()
@@ -151,6 +218,10 @@ namespace Fps.Net
 
             _playerById.Clear();
             _rejectedClients.Clear();
+            _lagCompensator = null;
+            _lastRecordedTick = _noRecordedTick;
+            _shotBudgets.Clear();
+            _rewindTargets.Clear();
 
             if (Current == this)
             {
@@ -168,6 +239,17 @@ namespace Fps.Net
             JoinNewPlayers();
             _session.Tick(Time.deltaTime);
             SyncRemainingSeconds();
+        }
+
+        // 入力 (RPC) とホストの移動 (Update) が反映された後の位置を記録する
+        private void LateUpdate()
+        {
+            if (!IsSpawned || !IsServer || _session == null || _lagCompensator == null)
+            {
+                return;
+            }
+
+            RecordHitboxes();
         }
 
         /// <summary>
@@ -205,25 +287,124 @@ namespace Fps.Net
             return _session.ApplyDamage(attacker.ServerPlayerId, victim.ServerPlayerId, amount);
         }
 
-        /// <summary>動作確認用の攻撃。いちばん近い生きている敵に <see cref="DebugAttackDamage"/> を与える。</summary>
-        internal void ServerDebugAttack(NetPlayer attacker)
+        /// <summary>
+        /// サーバーで shooter の射撃 1 発を処理する。連射の間隔と始点を確かめてから、shooter が見ていた時点 time まで
+        /// 他のプレイヤーを巻き戻して Raycast し、当たればダメージを与えて <c>[Net] hit attacker=.. victim=.. rewindTicks=..</c> を出す。
+        /// 巻き戻せるのは <see cref="LagCompensator.MaxRewindTicks"/> tick 前まで。
+        /// </summary>
+        /// <param name="shooter">撃った人。試合に参加していて生きていなければ何もしない。</param>
+        /// <param name="origin">クライアントが送ってきた始点。</param>
+        /// <param name="direction">クライアントが送ってきた向き。</param>
+        /// <param name="time">クライアントが見ていた時点。</param>
+        internal void ServerFire(NetPlayer shooter, Vector3 origin, Vector3 direction, ShotTime time)
         {
-            if (_session == null || !IsJoined(attacker))
+            if (!IsServer || _session == null || _lagCompensator == null || shooter == null || !IsJoined(shooter))
             {
                 return;
             }
 
-            var targetId = _session.FindNearestEnemy(attacker.ServerPlayerId);
-            if (targetId == null || !_playerById.TryGetValue(targetId.Value, out var target))
+            var shooterId = shooter.ServerPlayerId;
+            if (_session.State != GameModeState.Playing || !_session.IsAlive(shooterId))
             {
-                Debug.Log("[Match] attack player=" + attacker.ServerPlayerId + " found no target");
                 return;
             }
 
-            // 倒したときの kill / score のログより先に出るよう、ダメージを与える前に書く
-            Debug.Log("[Match] attack player=" + attacker.ServerPlayerId + " target=" + targetId.Value
-                + " damage=" + _debugAttackDamage + " healthBefore=" + _session.GetHealth(targetId.Value));
-            ApplyDamage(attacker, target, _debugAttackDamage);
+            if (!_shotBudgets.TryGetValue(shooterId, out var budget))
+            {
+                budget = new ShotBudget(_activeFireInterval);
+                _shotBudgets.Add(shooterId, budget);
+            }
+
+            if (!budget.TryConsume(NetworkManager.ServerTime.Time))
+            {
+                WarnRejected(shooterId, ShotRejection.FireRateExceeded);
+                return;
+            }
+
+            var rejection = ShotValidator.Check(
+                NetMath.ToNumerics(origin),
+                NetMath.ToNumerics(direction),
+                time,
+                NetMath.ToNumerics(shooter.transform.position),
+                _activeMaxShotOriginOffset);
+            if (rejection != ShotRejection.None)
+            {
+                WarnRejected(shooterId, rejection);
+                return;
+            }
+
+            if (IsOriginBlocked(shooter, origin))
+            {
+                WarnRejected(shooterId, ShotRejection.OriginBlocked);
+                return;
+            }
+
+            if (_lastRecordedTick == _noRecordedTick)
+            {
+                // 試合が始まった直後のフレームで、まだ巻き戻す履歴が無い
+                return;
+            }
+
+            var currentTick = _lastRecordedTick;
+            var rewindTick = _lagCompensator.ClampTick(time.ToTick(), currentTick);
+            var rewound = _lagCompensator.Rewind(rewindTick);
+
+            _rewindTargets.Clear();
+            foreach (var pair in _playerById)
+            {
+                if (pair.Value == null)
+                {
+                    continue;
+                }
+
+                var hittable = pair.Key != shooterId && _session.HasPlayer(pair.Key) && _session.IsAlive(pair.Key);
+                _rewindTargets.Add(new RewindTarget(pair.Key, pair.Value.transform, hittable));
+            }
+
+            RewindHit hit;
+            bool any;
+            try
+            {
+                any = _rewinder.Raycast(_rewindTargets, rewound, origin, direction, _activeWeaponRange, shooter.transform, out hit);
+            }
+            finally
+            {
+                _rewindTargets.Clear();
+            }
+
+            if (!any || !hit.HitTarget || !_playerById.TryGetValue(hit.TargetId, out var victim) || victim == null)
+            {
+                return;
+            }
+
+            var zone = ZoneOf(victim, hit);
+            var damage = DamageCalculator.Calculate(_activeWeaponDamage, zone, hit.RaycastHit.distance, _falloff);
+            var outcome = ApplyDamage(shooter, victim, damage);
+            var health = _session.HasPlayer(hit.TargetId) ? _session.GetHealth(hit.TargetId) : 0;
+            Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome));
+        }
+
+        // サーバーの知る本人の目の位置から始点までの間に、プレイヤー以外のコライダー (壁など) があれば true。
+        private static bool IsOriginBlocked(NetPlayer shooter, Vector3 origin)
+        {
+            var eye = shooter.transform.position + (Vector3.up * NetPlayer.EyeHeight);
+            var toOrigin = origin - eye;
+            var distance = toOrigin.magnitude;
+            if (distance <= 0f)
+            {
+                return false;
+            }
+
+            var hits = Physics.RaycastAll(eye, toOrigin / distance, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            foreach (var h in hits)
+            {
+                if (h.collider.GetComponentInParent<NetPlayer>() == null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>プレイヤーの NetworkObject が消えるとき (切断を含む) にサーバーで呼ぶ。</summary>
@@ -237,6 +418,8 @@ namespace Fps.Net
             var playerId = player.ServerPlayerId;
             player.ServerPlayerId = NetPlayer.NotJoined;
             _playerById.Remove(playerId);
+            _lagCompensator?.Remove(playerId);
+            _shotBudgets.Remove(playerId);
             if (_session != null && _session.HasPlayer(playerId))
             {
                 _session.Leave(playerId);
@@ -261,10 +444,13 @@ namespace Fps.Net
         {
             TeamDeathmatchSpec spec;
             SpawnSelector selector;
+            DamageFalloff falloff;
             try
             {
                 spec = new TeamDeathmatchSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds);
                 selector = new SpawnSelector(_minEnemySpawnDistance);
+                falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
+                ValidateWeaponSettings();
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -284,6 +470,15 @@ namespace Fps.Net
                 return;
             }
 
+            _falloff = falloff;
+            _activeWeaponDamage = _weaponDamage;
+            _activeWeaponRange = _weaponRange;
+            _activeFireInterval = _fireInterval;
+            _activeMaxShotOriginOffset = _maxShotOriginOffset;
+            _lagCompensator = new LagCompensator();
+            _lastRecordedTick = _noRecordedTick;
+            _shotBudgets.Clear();
+
             _session.Started += HandleStarted;
             _session.ScoreChanged += HandleScoreChanged;
             _session.PlayerChanged += HandlePlayerChanged;
@@ -298,6 +493,31 @@ namespace Fps.Net
 
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
                 + "s respawn=" + spec.RespawnSeconds + "s spawnPoints=" + spawnPoints.Count);
+            Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
+                + " tickRate=" + NetworkPlayerMotor.TickRate + " damage=" + _activeWeaponDamage + " range=" + _activeWeaponRange
+                + " fireInterval=" + _activeFireInterval);
+        }
+
+        /// <summary>Inspector で入る武器の値を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>
+        private void ValidateWeaponSettings()
+        {
+            if (_weaponDamage < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(WeaponDamage), _weaponDamage, "weapon damage must not be negative");
+            }
+
+            if (!(_weaponRange > 0f) || float.IsInfinity(_weaponRange))
+            {
+                throw new ArgumentOutOfRangeException(nameof(WeaponRange), _weaponRange, "weapon range must be positive and finite");
+            }
+
+            if (float.IsNaN(_maxShotOriginOffset) || float.IsInfinity(_maxShotOriginOffset) || _maxShotOriginOffset < 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(_maxShotOriginOffset), _maxShotOriginOffset, "max shot origin offset must be finite and not negative");
+            }
+
+            // 間隔の検査は ShotBudget に任せる (不正なら ArgumentOutOfRangeException)
+            _ = new ShotBudget(_fireInterval);
         }
 
         private void UnsubscribeSession(TeamDeathmatchSession session)
@@ -366,6 +586,67 @@ namespace Fps.Net
             {
                 _remainingSeconds.Value = seconds;
             }
+        }
+
+        /// <summary>参加中の全プレイヤーの今の位置を、サーバーの今の tick で記録する。</summary>
+        private void RecordHitboxes()
+        {
+            var time = NetworkManager.ServerTime.Time;
+            if (double.IsNaN(time) || time < 0d)
+            {
+                return;
+            }
+
+            var tick = FireTiming.TickAt(time, NetworkPlayerMotor.TickRate);
+            if (tick < _lastRecordedTick)
+            {
+                // サーバーの時刻は戻らないはずだが、履歴は古い tick を受け付けないので念のため飛ばす
+                return;
+            }
+
+            foreach (var pair in _playerById)
+            {
+                if (pair.Value != null)
+                {
+                    _lagCompensator.Record(tick, pair.Key, NetMath.ToNumerics(pair.Value.transform.position));
+                }
+            }
+
+            _lastRecordedTick = tick;
+        }
+
+        /// <summary>
+        /// 当たった高さから部位を決める。プレイヤーの当たりは CharacterController のカプセル 1 つなので、
+        /// 巻き戻した位置を基準にカプセルの中の高さの割合で <see cref="CapsuleHitZone"/> に決めさせる。
+        /// </summary>
+        private static HitZone ZoneOf(NetPlayer victim, RewindHit hit)
+        {
+            var controller = victim.GetComponent<CharacterController>();
+            if (controller == null)
+            {
+                return HitZone.Body;
+            }
+
+            var scale = victim.transform.lossyScale.y;
+            var height = controller.height * scale;
+            if (!(height > 0f) || float.IsInfinity(height))
+            {
+                return HitZone.Body;
+            }
+
+            var bottom = hit.TargetPosition.y + (controller.center.y * scale) - (height / 2f);
+            return CapsuleHitZone.Classify(hit.RaycastHit.point.y, bottom, height);
+        }
+
+        private void WarnRejected(int shooterId, ShotRejection reason)
+        {
+            if (Time.unscaledTime < _nextRejectWarningTime)
+            {
+                return;
+            }
+
+            _nextRejectWarningTime = Time.unscaledTime + _rejectWarningInterval;
+            Debug.LogWarning(NetHitLog.Rejected(shooterId, reason), this);
         }
 
         private System.Numerics.Vector3 PositionOf(int playerId)
@@ -467,6 +748,10 @@ namespace Fps.Net
             {
                 return;
             }
+
+            // テレポートの前後を補間して途中の位置に当たらないよう、履歴を捨てて出現地点から記録し直す。
+            // 出現より前の時点まで巻き戻した射撃には、その時点にいなかったものとして当たらない
+            _lagCompensator?.Remove(playerId);
 
             var p = point.Position;
             player.ServerTeleport(new Vector3(p.X, p.Y, p.Z));

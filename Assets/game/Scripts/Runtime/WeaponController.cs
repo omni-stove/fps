@@ -88,6 +88,12 @@ namespace Fps.Runtime
         /// <summary>撃っている武器。未初期化なら null。</summary>
         public Weapon Weapon => _weapon;
 
+        /// <summary>
+        /// <see cref="Initialize"/> で <see cref="Weapon"/> を作り直したときに、新しい Weapon を渡して呼ばれる。
+        /// Weapon のイベントを直接購読している側 (HUD など) はここで購読し直す。
+        /// </summary>
+        public event Action<Weapon> WeaponChanged;
+
         public DamageFalloff Falloff => _falloff;
 
         /// <summary>Raycast の射程 (m)。</summary>
@@ -267,6 +273,8 @@ namespace Fps.Runtime
                 _enabledAttackAction |= EnableIfNeeded(_attackAction);
                 _enabledReloadAction |= EnableIfNeeded(_reloadAction);
             }
+
+            WeaponChanged?.Invoke(_weapon);
         }
 
         /// <summary>

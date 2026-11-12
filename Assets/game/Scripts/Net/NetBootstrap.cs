@@ -9,7 +9,8 @@ namespace Fps.Net
 {
     /// <summary>
     /// コマンドライン引数 (<c>-mode host|server|client</c> / <c>-address</c> / <c>-port</c> /
-    /// <c>-transport udp|eos</c> / <c>-eos-server</c>) に従って NetworkManager を組み立てて起動する。
+    /// <c>-transport udp|eos</c> / <c>-eos-server</c> / <c>-noeac</c> / <c>-eac</c>) に従って NetworkManager を組み立てて起動する。
+    /// Easy Anti-Cheat を使うかは <see cref="AntiCheatSettings"/> が決め、<c>[AntiCheat]</c> 付きでログに出す。
     /// 引数が無ければ <see cref="DefaultMode"/> (既定は Host) の UDP で起動する。
     /// 専用サーバービルド (<c>UNITY_SERVER</c>) では引数が無くても Server で起動し、描画・音声のコンポーネントを止める。
     /// EOS を要求されても認証情報が無ければ UDP に切り替え、<see cref="CredentialsMissingLog"/> を出す。
@@ -243,7 +244,8 @@ namespace Fps.Net
 
         /// <summary>
         /// EOS を要求されていれば認証情報を読み、使う transport を <see cref="NetTransportPlan"/> に決めさせる。
-        /// 認証情報のファイルが壊れていれば失敗として null を返す。
+        /// あわせて Easy Anti-Cheat の設定を決めて計画に載せる。
+        /// 認証情報のファイルが壊れている、または EAC の引数が矛盾していれば失敗として null を返す。
         /// </summary>
         private NetTransportPlan PlanTransport(NetLaunchOptions requested)
         {
@@ -264,7 +266,24 @@ namespace Fps.Net
                     + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")");
             }
 
-            return plan;
+            return WithAntiCheat(plan);
+        }
+
+        /// <summary>
+        /// Easy Anti-Cheat の設定を決めて計画に載せる。EAC の引数が矛盾していれば失敗として null を返す。
+        /// UDP に切り替えた後の設定で決める。EAC は EOS の ProductUserId でピアを登録するので UDP では使えない。
+        /// </summary>
+        private NetTransportPlan WithAntiCheat(NetTransportPlan plan)
+        {
+            if (!AntiCheatSettings.TryResolve(
+                    Environment.GetCommandLineArgs(), Application.isEditor, plan.Options, out var antiCheat, out var antiCheatError))
+            {
+                Fail(ExitInvalidArguments, AntiCheatSettings.LogTag + " invalid arguments: " + antiCheatError);
+                return null;
+            }
+
+            Debug.Log(antiCheat.Describe());
+            return plan.WithAntiCheat(antiCheat);
         }
 
         private void Start()
@@ -296,7 +315,8 @@ namespace Fps.Net
                 return;
             }
 
-            if (ConfigureNetwork(NetTransportPlan.Decide(options, _lobbyCredentials, null)))
+            var plan = WithAntiCheat(NetTransportPlan.Decide(options, _lobbyCredentials, null));
+            if (plan != null && ConfigureNetwork(plan))
             {
                 StartNetwork();
             }

@@ -16,10 +16,10 @@ namespace Fps.NetEos
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void Install()
         {
-            NetTransportFactories.Eos = (target, options, credentials) =>
+            NetTransportFactories.Eos = (target, plan) =>
             {
                 var transport = target.AddComponent<EosP2PTransport>();
-                transport.Configure(options, credentials);
+                transport.Configure(plan.Options, plan.Credentials, plan.AntiCheat);
                 return transport;
             };
             NetTransportFactories.EosLobby = credentials => new EosLobbyBackend(credentials, LobbyDisplayName);

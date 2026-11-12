@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Fps.Core;
 using Unity.Netcode;
 using UnityEngine;
@@ -8,7 +9,8 @@ namespace Fps.Net
 {
     /// <summary>
     /// 接続したクライアントごとのプレイヤー。チームと体力をサーバーから受け取って見た目に反映し、
-    /// サーバーの指示でテレポートする。試合の判断はすべて <see cref="NetTeamDeathmatch"/> (その先の
+    /// サーバーの指示でテレポートする。Attack で撃つと射撃を <see cref="FireServerRpc"/> で送るだけで、
+    /// 当たり判定 (ラグ補償) とダメージを含む試合の判断はすべて <see cref="NetTeamDeathmatch"/> (その先の
     /// <see cref="TeamDeathmatchSession"/>) が行う。
     /// </summary>
     [DisallowMultipleComponent]
@@ -20,6 +22,9 @@ namespace Fps.Net
 
         /// <summary>参加前を表す <see cref="ServerPlayerId"/>。</summary>
         public const int NotJoined = -1;
+
+        /// <summary>射撃の始点の、本体 (カプセルの中心) からの高さ (m)。</summary>
+        public const float EyeHeight = 0.6f;
 
         public static readonly Color AlphaColor = new Color(0.25f, 0.5f, 1f);
         public static readonly Color BravoColor = new Color(1f, 0.3f, 0.25f);
@@ -103,10 +108,61 @@ namespace Fps.Net
                 return;
             }
 
-            if (_attackAction.WasPressedThisFrame())
+            if (_attackAction.WasPressedThisFrame() && IsAlive)
             {
-                DebugAttackRpc();
+                Fire();
             }
+        }
+
+        /// <summary>
+        /// 1 発撃つ。目の高さから照準の向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) を添えてサーバーに送るだけで、
+        /// 当たり判定とダメージはサーバーが行う。
+        /// </summary>
+        private void Fire()
+        {
+            var serverTime = NetworkManager.ServerTime.Time;
+            if (double.IsNaN(serverTime) || double.IsInfinity(serverTime) || serverTime < 0d)
+            {
+                Debug.LogWarning("[Net] cannot fire before the server time is known", this);
+                return;
+            }
+
+            var origin = transform.position + (Vector3.up * EyeHeight);
+            var direction = AimDirection(origin);
+
+            // ホストは他人をサーバー上の今の位置で見ている (補間しない) ので遅れは 0
+            var delay = IsServer ? 0 : NetworkPlayerMotor.InterpolationDelayTicks;
+            var time = FireTiming.ViewTime(serverTime, NetworkPlayerMotor.TickRate, delay);
+            Debug.Log("[Net] fire tick=" + time.Tick.ToString(CultureInfo.InvariantCulture)
+                + " alpha=" + time.Alpha.ToString("F2", CultureInfo.InvariantCulture), this);
+            FireServerRpc(origin, direction, time.Tick, time.Alpha);
+        }
+
+        /// <summary>
+        /// 照準の向き。画面のカメラからマウスの位置へ伸ばした線が、目の高さの水平面と交わる点へ向ける
+        /// (NetTest シーンは見下ろしのカメラなので、狙いたい相手をクリックすればよい)。
+        /// カメラかマウスが無いか、交わらなければ本体の正面。
+        /// </summary>
+        private Vector3 AimDirection(Vector3 origin)
+        {
+            var camera = Camera.main;
+            var mouse = Mouse.current;
+            if (camera != null && mouse != null)
+            {
+                var ray = camera.ScreenPointToRay(mouse.position.ReadValue());
+                var eyePlane = new Plane(Vector3.up, origin);
+                if (eyePlane.Raycast(ray, out var enter))
+                {
+                    var toPoint = ray.GetPoint(enter) - origin;
+                    toPoint.y = 0f;
+                    if (toPoint.sqrMagnitude > 1e-6f)
+                    {
+                        return toPoint.normalized;
+                    }
+                }
+            }
+
+            return transform.forward;
         }
 
         /// <summary>サーバーから、試合で決まったチームと体力を書き込む。</summary>
@@ -144,21 +200,23 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 動作確認用の攻撃。いちばん近い敵に固定ダメージを与える。命中判定 (B/H) が入ったらそちらに置き換える。
+        /// 射撃をサーバーへ送る。clientTick + interpolationAlpha は撃った側が他人を見ていた時点 (サーバーの tick)。
+        /// サーバーはその時点まで巻き戻して当たり判定をする (<see cref="NetTeamDeathmatch.ServerFire"/>)。
         /// </summary>
-        [Rpc(SendTo.Server)]
-        private void DebugAttackRpc(RpcParams rpcParams = default)
+        [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
+        private void FireServerRpc(Vector3 origin, Vector3 direction, int clientTick, float interpolationAlpha, RpcParams rpcParams = default)
         {
             if (rpcParams.Receive.SenderClientId != OwnerClientId)
             {
-                Debug.LogWarning("[Match] ignored attack from client " + rpcParams.Receive.SenderClientId
+                Debug.LogWarning("[Net] ignored shot from client " + rpcParams.Receive.SenderClientId
                     + " for player owned by " + OwnerClientId);
                 return;
             }
 
-            if (NetTeamDeathmatch.Current != null)
+            var match = NetTeamDeathmatch.Current;
+            if (match != null)
             {
-                NetTeamDeathmatch.Current.ServerDebugAttack(this);
+                match.ServerFire(this, origin, direction, new ShotTime(clientTick, interpolationAlpha));
             }
         }
 
@@ -212,7 +270,7 @@ namespace Fps.Net
             var attack = actions != null ? actions.FindAction(AttackActionPath) : null;
             if (attack == null)
             {
-                Debug.LogWarning("[Match] input action '" + AttackActionPath + "' was not found; debug attack is disabled");
+                Debug.LogWarning("[Net] input action '" + AttackActionPath + "' was not found; firing is disabled");
                 return;
             }
 

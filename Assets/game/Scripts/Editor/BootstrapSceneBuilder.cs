@@ -10,8 +10,8 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     /// <summary>
-    /// Bootstrap シーンを生成する。シーンには <see cref="GameBootstrap"/> を置いた GameObject だけを入れ、
-    /// 残りは実行時に GameBootstrap がコードで作る。保存したシーンは Build Settings の先頭に登録する。
+    /// Bootstrap シーンを生成する。シーンには <see cref="GameBootstrap"/> と試合を進める <see cref="MatchRunner"/> を
+    /// 置いた GameObject だけを入れ、残りは実行時に GameBootstrap がコードで作る。保存したシーンは Build Settings の先頭に登録する。
     /// Editor を閉じた状態で次のように呼べる (保存先は -bootstrapScenePath で変えられる):
     /// <code>unity -batchmode -quit -executeMethod Fps.Editor.BootstrapSceneBuilder.Build</code>
     /// </summary>
@@ -66,7 +66,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 空のシーンに GameBootstrap を置いた GameObject を 1 つだけ入れる。参照は実行時にコードで解決するので配線はしない。
+        /// 空のシーンに GameBootstrap と MatchRunner を置いた GameObject を 1 つだけ入れる。参照は実行時にコードで解決するので配線はしない。
         /// </summary>
         public static GameObject PopulateScene(Scene scene)
         {
@@ -81,7 +81,8 @@ namespace Fps.Editor
                     $"scene '{scene.name}' already has {scene.rootCount} root object(s); the bootstrap scene must contain only {BootstrapObjectName}");
             }
 
-            var bootstrap = new GameObject(BootstrapObjectName, typeof(GameBootstrap));
+            // MatchRunner は Start で同じ GameObject の GameBootstrap が Awake で作ったものを拾うので、ここでの配線は要らない。
+            var bootstrap = new GameObject(BootstrapObjectName, typeof(GameBootstrap), typeof(MatchRunner));
             SceneManager.MoveGameObjectToScene(bootstrap, scene);
             EditorSceneManager.MarkSceneDirty(scene);
             return bootstrap;

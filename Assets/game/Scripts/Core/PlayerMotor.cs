@@ -101,6 +101,20 @@ namespace Fps.Core
             Velocity = Vector3.Zero;
         }
 
+        /// <summary>
+        /// 速度を直接設定する。クライアント予測で過去の状態に巻き戻して再シミュレーションするときに使う。
+        /// </summary>
+        /// <param name="velocity">速度 (m/s)。各成分が有限値。</param>
+        public void SetVelocity(Vector3 velocity)
+        {
+            if (!IsFinite(velocity.X) || !IsFinite(velocity.Y) || !IsFinite(velocity.Z))
+            {
+                throw new ArgumentOutOfRangeException(nameof(velocity), velocity, "velocity must be finite");
+            }
+
+            Velocity = velocity;
+        }
+
         private static Vector2 ClampLength(Vector2 input)
         {
             var lengthSquared = input.LengthSquared();

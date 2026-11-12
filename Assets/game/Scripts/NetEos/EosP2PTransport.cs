@@ -332,6 +332,15 @@ namespace Fps.NetEos
             _connectDeadline = Time.realtimeSinceStartup + ConnectTimeoutSeconds;
 
             var role = isServer ? "server" : "client";
+            var loggedIn = EosPlatform.LocalUserId;
+            if (loggedIn != null)
+            {
+                // ロビーのために先にログインしていれば、同じユーザーで P2P をつなぐ (ロビーのオーナーの ID が接続先になるため)
+                Debug.Log("[Net] EOS reusing the device id login as " + role);
+                HandleLoggedIn(loggedIn, null);
+                return true;
+            }
+
             _login = new EosDeviceLogin(connect, "fps-" + role, SystemInfo.deviceModel);
             Debug.Log("[Net] EOS logging in with the device id as " + role);
             _login.Begin(HandleLoggedIn);

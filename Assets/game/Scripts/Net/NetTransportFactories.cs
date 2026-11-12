@@ -17,5 +17,11 @@ namespace Fps.Net
         /// 引数は追加先と、EOS を使う計画 (起動設定・認証情報・Easy Anti-Cheat の設定)。
         /// </summary>
         public static Func<GameObject, NetTransportPlan, NetworkTransport> Eos { get; set; }
+
+        /// <summary>
+        /// 認証情報から EOS のロビーのバックエンドを作る。未登録 (EOS を含まないビルド) なら null。
+        /// SDK の初期化とログインは作った後の <see cref="ILobbyBackend.Login"/> で行い、失敗はそこで返す。
+        /// </summary>
+        public static Func<EosCredentials, ILobbyBackend> EosLobby { get; set; }
     }
 }

@@ -1,0 +1,153 @@
+using System;
+using System.Collections.Generic;
+using NUnit.Framework;
+
+namespace Fps.Core.Tests
+{
+    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    public sealed class LobbySelectorTests
+    {
+        private const string _self = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+        private static string[] Ids(string commaSeparated)
+        {
+            return commaSeparated.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private static LobbyInfo Lobby(string id, string owner, int max, string members)
+        {
+            return new LobbyInfo(id, owner, max, Ids(members));
+        }
+
+        [Test]
+        public void InfoCountsMembersAndFreeSlots()
+        {
+            var lobby = Lobby("l1", "o", 4, "o,m1");
+
+            Assert.That(lobby.MemberCount, Is.EqualTo(2));
+            Assert.That(lobby.FreeSlots, Is.EqualTo(2));
+            Assert.That(lobby.IsOwnedBy("O"), Is.True);
+            Assert.That(lobby.HasMember("M1"), Is.True);
+            Assert.That(lobby.HasMember("m2"), Is.False);
+            Assert.That(lobby.IsOwnedBy(null), Is.False);
+            Assert.That(lobby.HasMember(null), Is.False);
+        }
+
+        [Test]
+        public void InfoDropsBlankAndDuplicateMembers()
+        {
+            var lobby = new LobbyInfo("l1", "o", 8, new List<string> { "o", "", " ", null, "O", "m1" });
+
+            Assert.That(lobby.Members, Is.EqualTo(Ids("o,m1")));
+        }
+
+        [Test]
+        public void FreeSlotsNeverGoesNegative()
+        {
+            var lobby = Lobby("l1", "o", 2, "o,m1,m2");
+
+            Assert.That(lobby.FreeSlots, Is.Zero);
+        }
+
+        [Test]
+        public void InfoDescribesMembersForTheLog()
+        {
+            var lobby = Lobby("l1", "o", 8, "o,m1");
+
+            Assert.That(lobby.DescribeMembers(), Is.EqualTo("2/8 [o,m1]"));
+            Assert.That(lobby.ToString(), Is.EqualTo("id=l1 owner=o members=2/8 [o,m1]"));
+        }
+
+        [Test]
+        public void InfoRejectsInvalidValues()
+        {
+            Assert.Throws<ArgumentException>(() => Lobby(" ", "o", 8, "o"));
+            Assert.Throws<ArgumentException>(() => Lobby("l1", "", 8, "o"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Lobby("l1", "o", 0, "o"));
+            Assert.Throws<ArgumentNullException>(() => _ = new LobbyInfo("l1", "o", 8, null));
+        }
+
+        [Test]
+        public void PicksTheFullestLobbyWithRoom()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                Lobby("small", "o1", 8, "o1"),
+                Lobby("full", "o2", 2, "o2,m1"),
+                Lobby("busy", "o3", 8, "o3,m2,m3"),
+            };
+
+            Assert.That(LobbySelector.PickJoinable(lobbies, _self).Id, Is.EqualTo("busy"));
+        }
+
+        [Test]
+        public void BreaksTiesByLobbyId()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                Lobby("b", "o1", 8, "o1"),
+                Lobby("a", "o2", 8, "o2"),
+            };
+
+            Assert.That(LobbySelector.PickJoinable(lobbies, _self).Id, Is.EqualTo("a"));
+        }
+
+        [Test]
+        public void SkipsOwnLobbiesAndLobbiesAlreadyJoined()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                Lobby("mine", _self, 8, _self),
+                Lobby("joined", "o1", 8, "o1," + _self + ",m1"),
+                null,
+                Lobby("other", "o2", 8, "o2"),
+            };
+
+            Assert.That(LobbySelector.PickJoinable(lobbies, _self.ToUpperInvariant()).Id, Is.EqualTo("other"));
+        }
+
+        [Test]
+        public void ReturnsNullWhenNothingIsJoinable()
+        {
+            var lobbies = new List<LobbyInfo> { Lobby("full", "o1", 2, "o1,m1"), Lobby("mine", _self, 8, _self) };
+
+            Assert.That(LobbySelector.PickJoinable(lobbies, _self), Is.Null);
+            Assert.That(LobbySelector.PickJoinable(new List<LobbyInfo>(), _self), Is.Null);
+        }
+
+        [Test]
+        public void PickRejectsInvalidArguments()
+        {
+            Assert.Throws<ArgumentNullException>(() => LobbySelector.PickJoinable(null, _self));
+            Assert.Throws<ArgumentException>(() => LobbySelector.PickJoinable(new List<LobbyInfo>(), " "));
+        }
+
+        [Test]
+        public void RetryScheduleWaitsBetweenAttemptsAndExpires()
+        {
+            var schedule = new RetrySchedule(3f, 10f);
+
+            Assert.That(schedule.IsDue(0f), Is.False);
+            Assert.That(schedule.IsExpired(100f), Is.False);
+
+            schedule.Start(5f);
+            Assert.That(schedule.IsDue(5f), Is.True);
+            Assert.That(schedule.IsExpired(14.9f), Is.False);
+            Assert.That(schedule.IsExpired(15f), Is.True);
+
+            schedule.Wait(6f);
+            Assert.That(schedule.IsDue(8.9f), Is.False);
+            Assert.That(schedule.IsDue(9f), Is.True);
+        }
+
+        [TestCase(0f, 10f)]
+        [TestCase(-1f, 10f)]
+        [TestCase(1f, 0f)]
+        [TestCase(float.NaN, 10f)]
+        [TestCase(1f, float.PositiveInfinity)]
+        public void RetryScheduleRejectsInvalidTimes(float interval, float timeout)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ = new RetrySchedule(interval, timeout));
+        }
+    }
+}

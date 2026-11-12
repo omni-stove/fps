@@ -86,6 +86,52 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void LoadsNetSceneWithLobbyFlag()
+        {
+            Assert.That(NetStartup.ShouldLoadNetScene(false, false, Args("fps -lobby join")), Is.True);
+            Assert.That(NetStartup.ShouldLoadNetScene(true, false, Args("fps -lobby join")), Is.False);
+        }
+
+        [Test]
+        public void ResolveLobbyWithoutFlagIsNone()
+        {
+            var ok = NetStartup.TryResolveLobby(Args("fps -mode host"), true, out var options, out var error);
+
+            Assert.That(ok, Is.True, error);
+            Assert.That(options.IsRequested, Is.False);
+        }
+
+        [Test]
+        public void ResolveLobbyInNormalBuild()
+        {
+            var ok = NetStartup.TryResolveLobby(Args("fps -lobby create"), false, out var options, out var error);
+
+            Assert.That(ok, Is.True, error);
+            Assert.That(options.Command, Is.EqualTo(LobbyCommand.Create));
+        }
+
+        [TestCase("-lobby create")]
+        [TestCase("-lobby join")]
+        public void DedicatedServerRejectsLobby(string commandLine)
+        {
+            var ok = NetStartup.TryResolveLobby(Args(commandLine), true, out var options, out var error);
+
+            Assert.That(ok, Is.False);
+            Assert.That(options, Is.Null);
+            Assert.That(error, Does.Contain("dedicated server"));
+        }
+
+        [Test]
+        public void ResolveLobbyPassesThroughParseErrors()
+        {
+            var ok = NetStartup.TryResolveLobby(Args("-lobby create -mode host"), false, out var options, out var error);
+
+            Assert.That(ok, Is.False);
+            Assert.That(options, Is.Null);
+            Assert.That(error, Does.Contain("-mode"));
+        }
+
+        [Test]
         public void NeverLoadsNetSceneInEditor()
         {
             Assert.That(NetStartup.ShouldLoadNetScene(true, true, Args("-mode server")), Is.False);
@@ -113,6 +159,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(
                 () => NetStartup.TryResolve(null, true, NetLaunchMode.Host, out _, out _));
             Assert.Throws<ArgumentNullException>(() => NetStartup.ShouldLoadNetScene(false, true, null));
+            Assert.Throws<ArgumentNullException>(() => NetStartup.TryResolveLobby(null, false, out _, out _));
         }
     }
 }

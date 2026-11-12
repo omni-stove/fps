@@ -16,10 +16,27 @@ namespace Fps.NetEos
         private const string _productName = "fps";
 
         private static PlatformInterface _platform;
+        private static ProductUserId _localUserId;
         private static bool _quitHooked;
+        private static int _lastTickFrame = -1;
 
         /// <summary>作成済みのプラットフォーム。無ければ null。</summary>
         public static PlatformInterface Current => _platform;
+
+        /// <summary>
+        /// このプロセスで Device ID のログインに成功したユーザー。まだなら null。
+        /// ロビーと transport が同じユーザーを使い、ログインを 1 回で済ませるために持つ。
+        /// </summary>
+        public static ProductUserId LocalUserId => _platform != null && _localUserId != null && _localUserId.IsValid() ? _localUserId : null;
+
+        /// <summary><see cref="EosDeviceLogin"/> がログインに成功したときに呼ぶ。</summary>
+        public static void RememberLogin(ProductUserId userId)
+        {
+            if (_platform != null && userId != null && userId.IsValid())
+            {
+                _localUserId = userId;
+            }
+        }
 
         /// <summary>
         /// プラットフォームを作る (作成済みならそれを返す)。SDK の初期化・ネイティブライブラリの読み込みの失敗は
@@ -101,10 +118,18 @@ namespace Fps.NetEos
             return _platform;
         }
 
-        /// <summary>SDK のコールバックを進める。毎フレーム呼ぶ。</summary>
+        /// <summary>
+        /// SDK のコールバックを進める。毎フレーム呼ぶ。ロビーと transport の両方から呼ばれるので、1 フレームに 1 回だけ進める。
+        /// </summary>
         public static void Tick()
         {
-            _platform?.Tick();
+            if (_platform == null || _lastTickFrame == Time.frameCount)
+            {
+                return;
+            }
+
+            _lastTickFrame = Time.frameCount;
+            _platform.Tick();
         }
 
         private static void Release()
@@ -116,6 +141,8 @@ namespace Fps.NetEos
 
             _platform.Release();
             _platform = null;
+            _localUserId = null;
+            _lastTickFrame = -1;
 
             // Shutdown 後は同じプロセスで初期化し直せないので、Play Mode を繰り返すエディタでは呼ばない
             if (!Application.isEditor)

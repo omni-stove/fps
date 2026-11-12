@@ -71,8 +71,43 @@ namespace Fps.Core
         }
 
         /// <summary>
+        /// コマンドライン引数からロビーの設定を決める。<see cref="LobbyLaunchOptions.TryParse"/> の結果のうち、
+        /// 専用サーバーでのロビーは Host になれないので失敗にする。<c>-lobby</c> が無ければ <see cref="LobbyLaunchOptions.None"/>。
+        /// </summary>
+        /// <param name="args">コマンドライン引数。</param>
+        /// <param name="isDedicatedServer">専用サーバービルドか。</param>
+        /// <param name="options">成功したときの設定。失敗したときは null。</param>
+        /// <param name="error">失敗したときの理由。成功したときは null。</param>
+        public static bool TryResolveLobby(
+            IReadOnlyList<string> args,
+            bool isDedicatedServer,
+            out LobbyLaunchOptions options,
+            out string error)
+        {
+            if (args == null)
+            {
+                throw new ArgumentNullException(nameof(args));
+            }
+
+            if (!LobbyLaunchOptions.TryParse(args, out options, out error))
+            {
+                return false;
+            }
+
+            if (isDedicatedServer && options.IsRequested)
+            {
+                error = LobbyLaunchOptions.LobbyFlag + " needs the normal player build: the lobby owner runs as a host,"
+                    + " which a dedicated server build cannot do";
+                options = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// 起動直後にネットワークのシーンへ切り替えるか。エディタでは切り替えない。
-        /// プレイヤーでは専用サーバーか、<c>-mode</c> が指定されたときに切り替える。
+        /// プレイヤーでは専用サーバーか、<c>-mode</c> か <c>-lobby</c> が指定されたときに切り替える。
         /// </summary>
         public static bool ShouldLoadNetScene(bool isEditor, bool isDedicatedServer, IReadOnlyList<string> args)
         {
@@ -86,7 +121,7 @@ namespace Fps.Core
                 return false;
             }
 
-            return isDedicatedServer || NetLaunchOptions.HasModeFlag(args);
+            return isDedicatedServer || NetLaunchOptions.HasModeFlag(args) || LobbyLaunchOptions.HasLobbyFlag(args);
         }
 
         /// <summary>

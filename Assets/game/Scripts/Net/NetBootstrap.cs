@@ -9,6 +9,7 @@ namespace Fps.Net
     /// <summary>
     /// コマンドライン引数 (<c>-mode host|server|client</c> / <c>-address</c> / <c>-port</c>) に従って
     /// NetworkManager を組み立てて起動する。引数が無ければ <see cref="DefaultMode"/> (既定は Host) で起動する。
+    /// 専用サーバービルド (<c>UNITY_SERVER</c>) では引数が無くても Server で起動し、描画・音声のコンポーネントを止める。
     /// 失敗はすべて <c>[Net]</c> 付きのエラーログに出し、batchmode のプレイヤーでは終了コード付きで終了する。
     /// </summary>
     [DisallowMultipleComponent]
@@ -56,13 +57,14 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// プレイヤーを <c>-mode</c> 付きで起動したとき、最初のシーンが NetTest でなければ NetTest へ切り替える。
+        /// プレイヤーを <c>-mode</c> 付きで起動したときと専用サーバーでは、最初のシーンが NetTest でなければ NetTest へ切り替える。
         /// ふだんの起動 (引数なし) では何もしない。
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void LoadNetSceneWhenRequested()
         {
-            if (Application.isEditor || !NetLaunchOptions.HasModeFlag(Environment.GetCommandLineArgs()))
+            if (!NetStartup.ShouldLoadNetScene(
+                    Application.isEditor, NetStartup.IsDedicatedServerBuild, Environment.GetCommandLineArgs()))
             {
                 return;
             }
@@ -92,15 +94,24 @@ namespace Fps.Net
                 return;
             }
 
+            var isDedicatedServer = NetStartup.IsDedicatedServerBuild;
+
             // サーバーとクライアントを同じマシンで並べて動かすので、裏に回っても止めない
             Application.runInBackground = true;
-            if (Application.isBatchMode)
+            if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, isDedicatedServer))
             {
                 // 描画しないと CPU を使い切るまで回るので、ティック (既定 30Hz) より十分速い程度に抑える
                 Application.targetFrameRate = 60;
             }
 
-            if (!NetLaunchOptions.TryParse(Environment.GetCommandLineArgs(), _defaultMode, out _options, out var error))
+            if (NetStartup.ShouldDisablePresentation(isDedicatedServer))
+            {
+                var disabled = HeadlessPresentation.DisableIn(gameObject.scene);
+                Debug.Log("[Net] dedicated server build: disabled " + disabled + " camera/audio component(s)");
+            }
+
+            if (!NetStartup.TryResolve(
+                    Environment.GetCommandLineArgs(), isDedicatedServer, _defaultMode, out _options, out var error))
             {
                 Fail(ExitInvalidArguments, "[Net] invalid arguments: " + error);
                 return;
@@ -261,10 +272,10 @@ namespace Fps.Net
             QuitIfHeadlessPlayer(exitCode);
         }
 
-        /// <summary>batchmode のプレイヤーだけ終了する。エディタでは Play Mode を止めずにログだけ残す。</summary>
+        /// <summary>batchmode のプレイヤーと専用サーバーだけ終了する。エディタでは Play Mode を止めずにログだけ残す。</summary>
         private static void QuitIfHeadlessPlayer(int exitCode)
         {
-            if (!Application.isEditor && Application.isBatchMode)
+            if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
             {
                 Application.Quit(exitCode);
             }

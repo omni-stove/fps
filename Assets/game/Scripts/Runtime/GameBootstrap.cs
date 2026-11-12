@@ -1,4 +1,5 @@
 using System;
+using Fps.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -152,7 +153,8 @@ namespace Fps.Runtime
             // カメラを先に子に置いておくと、Play 中の AddComponent で走る Awake が自力で参照を解決できる。
             // Awake が走らない Edit Mode (シーン生成やテスト) では入力の解決を実行時の Awake に任せる。
             look = player.AddComponent<FirstPersonLook>();
-            if (Application.isPlaying && !look.IsInitialized)
+            // 専用サーバーでは FirstPersonLook が自分を止めて初期化しないので、未初期化を失敗にしない。
+            if (Application.isPlaying && !look.IsInitialized && !NetStartup.IsDedicatedServerBuild)
             {
                 throw new InvalidOperationException(
                     "FirstPersonLook could not resolve its camera or Look action; see the error above");

@@ -21,7 +21,7 @@ namespace Fps.Core.Tests
             };
         }
 
-        private static Func<string, string> Lookup(IReadOnlyDictionary<string, string> values)
+        private static Func<string, string> Lookup(Dictionary<string, string> values)
         {
             return name => values.TryGetValue(name, out var value) ? value : null;
         }

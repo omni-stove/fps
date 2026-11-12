@@ -220,7 +220,7 @@ namespace Fps.Core
                         case 'u':
                             if (Position + 4 > _text.Length
                                 || !int.TryParse(
-                                    _text.Substring(Position, 4),
+                                    _text.AsSpan(Position, 4),
                                     NumberStyles.AllowHexSpecifier,
                                     CultureInfo.InvariantCulture,
                                     out var code))

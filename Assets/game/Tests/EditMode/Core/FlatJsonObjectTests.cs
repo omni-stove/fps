@@ -62,8 +62,9 @@ namespace Fps.Core.Tests
         [Test]
         public void ReportsPosition()
         {
-            FlatJsonObject.TryParse("{\"k\": 1}", out _, out var error);
+            var ok = FlatJsonObject.TryParse("{\"k\": 1}", out _, out var error);
 
+            Assert.That(ok, Is.False);
             Assert.That(error, Does.EndWith("at position 7"));
         }
 

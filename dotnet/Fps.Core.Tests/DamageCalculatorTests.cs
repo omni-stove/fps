@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
     public sealed class DamageCalculatorTests
     {
         // 10 以下は 1.0、30 以上は 0.5、20 で 0.75
-        private static readonly DamageFalloff _falloff = newDamageFalloff(10f, 30f, 0.5f);
+        private static readonly DamageFalloff _falloff = new DamageFalloff(10f, 30f, 0.5f);
 
         [TestCase(HitZone.Head, 200)]
         [TestCase(HitZone.Body, 100)]

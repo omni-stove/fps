@@ -7,7 +7,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 子カメラ + <see cref="FirstPersonLook"/>
-    /// + <see cref="PlayerController"/>)・ライトを
+    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/>)・ライト・射撃確認用の的
+    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// </summary>
     [DisallowMultipleComponent]
@@ -34,6 +35,21 @@ namespace Fps.Runtime
 
         public static readonly Vector3 LightEuler = new Vector3(50f, -30f, 0f);
 
+        public const string TargetName = "Target";
+        public const string TargetBodyName = "TargetBody";
+        public const string TargetHeadName = "TargetHead";
+
+        /// <summary>射撃の確認用の的の足元。プレイヤーの正面 (+Z) 10m。</summary>
+        public static readonly Vector3 TargetPosition = new Vector3(0f, 0f, 10f);
+
+        /// <summary>胴体のカプセル。高さ 1.7m (Capsule は高さ 2m なので y を 0.85 倍) で足元から立つ。</summary>
+        public static readonly Vector3 TargetBodyLocalPosition = new Vector3(0f, 0.85f, 0f);
+        public static readonly Vector3 TargetBodyScale = new Vector3(1f, 0.85f, 1f);
+
+        /// <summary>頭の球。直径 0.5m で胴体のすぐ上 (1.7m〜2.2m)。正面を水平に撃つと胴体、少し上を向くと頭に当たる。</summary>
+        public static readonly Vector3 TargetHeadLocalPosition = new Vector3(0f, 1.95f, 0f);
+        public static readonly Vector3 TargetHeadScale = new Vector3(0.5f, 0.5f, 0.5f);
+
         private BootstrapWorld _world;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
@@ -54,7 +70,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 床・プレイヤー・ライトを生成する。2 回目以降は何もせず最初の結果を返す。
+        /// 床・プレイヤー・ライト・的を生成する。2 回目以降は何もせず最初の結果を返す。
         /// 途中で失敗したら作りかけのオブジェクトを片付けてから例外を投げ直す。
         /// </summary>
         public BootstrapWorld Build()
@@ -67,15 +83,18 @@ namespace Fps.Runtime
             GameObject floor = null;
             GameObject player = null;
             GameObject light = null;
+            GameObject target = null;
             try
             {
                 floor = CreateFloor();
-                player = CreatePlayer(out var controller, out var camera, out var look, out var mover);
+                player = CreatePlayer(out var controller, out var camera, out var look, out var mover, out var weapon);
                 light = CreateLight(out var lightComponent);
-                _world = new BootstrapWorld(floor, player, controller, camera, look, mover, lightComponent);
+                target = CreateTarget(out var targetDamageable);
+                _world = new BootstrapWorld(floor, player, controller, camera, look, mover, lightComponent, weapon, targetDamageable);
             }
             catch
             {
+                DestroySafely(target);
                 DestroySafely(light);
                 DestroySafely(player);
                 DestroySafely(floor);
@@ -99,12 +118,13 @@ namespace Fps.Runtime
             out CharacterController controller,
             out Camera camera,
             out FirstPersonLook look,
-            out PlayerController mover)
+            out PlayerController mover,
+            out WeaponController weapon)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
-                ConfigurePlayer(player, out controller, out camera, out look, out mover);
+                ConfigurePlayer(player, out controller, out camera, out look, out mover, out weapon);
             }
             catch
             {
@@ -120,7 +140,8 @@ namespace Fps.Runtime
             out CharacterController controller,
             out Camera camera,
             out FirstPersonLook look,
-            out PlayerController mover)
+            out PlayerController mover,
+            out WeaponController weapon)
         {
             mover = null;
             player.name = PlayerName;
@@ -167,6 +188,53 @@ namespace Fps.Runtime
                 throw new InvalidOperationException(
                     "PlayerController could not resolve its references or Move/Sprint/Jump actions; see the error above");
             }
+
+            // 射撃は視点の向きで撃つのでカメラに付ける。参照の解決は FirstPersonLook と同じく Play 中の Awake に任せる。
+            weapon = cameraObject.AddComponent<WeaponController>();
+            if (Application.isPlaying && !weapon.IsInitialized)
+            {
+                throw new InvalidOperationException(
+                    "WeaponController could not resolve its camera or Attack/Reload actions; see the error above");
+            }
+        }
+
+        private static GameObject CreateTarget(out Damageable damageable)
+        {
+            var target = new GameObject(TargetName);
+            try
+            {
+                target.transform.SetPositionAndRotation(TargetPosition, Quaternion.identity);
+                damageable = target.AddComponent<Damageable>();
+
+                CreateTargetPart(target.transform, PrimitiveType.Capsule, TargetBodyName, TargetBodyLocalPosition, TargetBodyScale, HitZone.Body, damageable);
+                CreateTargetPart(target.transform, PrimitiveType.Sphere, TargetHeadName, TargetHeadLocalPosition, TargetHeadScale, HitZone.Head, damageable);
+            }
+            catch
+            {
+                DestroySafely(target);
+                throw;
+            }
+
+            return target;
+        }
+
+        private static void CreateTargetPart(
+            Transform parent,
+            PrimitiveType shape,
+            string partName,
+            Vector3 localPosition,
+            Vector3 localScale,
+            HitZone zone,
+            Damageable owner)
+        {
+            // プリミティブ付属のコライダーをそのまま当たり判定に使う。
+            var part = GameObject.CreatePrimitive(shape);
+            part.name = partName;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = localPosition;
+            part.transform.localRotation = Quaternion.identity;
+            part.transform.localScale = localScale;
+            part.AddComponent<Hitbox>().Initialize(zone, owner);
         }
 
         private static GameObject CreateLight(out Light light)
@@ -208,6 +276,10 @@ namespace Fps.Runtime
         public FirstPersonLook Look { get; }
         public PlayerController Mover { get; }
         public Light Light { get; }
+        public WeaponController Weapon { get; }
+
+        /// <summary>射撃の確認用の的。</summary>
+        public Damageable Target { get; }
 
         public BootstrapWorld(
             GameObject floor,
@@ -216,7 +288,9 @@ namespace Fps.Runtime
             Camera camera,
             FirstPersonLook look,
             PlayerController mover,
-            Light light)
+            Light light,
+            WeaponController weapon,
+            Damageable target)
         {
             Floor = floor;
             Player = player;
@@ -225,6 +299,8 @@ namespace Fps.Runtime
             Look = look;
             Mover = mover;
             Light = light;
+            Weapon = weapon;
+            Target = target;
         }
     }
 }

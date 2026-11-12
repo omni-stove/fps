@@ -117,7 +117,10 @@ namespace Fps.Core
         /// <see cref="CheckWeapon"/> に通ったら、持っている武器の連射の制限から nowSeconds 時点で 1 発ぶん減らす。
         /// 間隔より速ければ <see cref="ShotRejection.FireRateExceeded"/>。武器が違う射撃では制限を減らさない。
         /// </summary>
+        /// <param name="playerId">撃ったプレイヤーの Id。</param>
+        /// <param name="weaponId">クライアントが申告した武器 Id。</param>
         /// <param name="nowSeconds">サーバーの今の時刻 (秒)。有限値。</param>
+        /// <param name="spec">通ったときの装備中の武器。拒否されたときは null。</param>
         public ShotRejection TryFire(int playerId, string weaponId, double nowSeconds, out WeaponSpec spec)
         {
             var rejection = CheckWeapon(playerId, weaponId, out spec);

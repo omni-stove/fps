@@ -6,18 +6,18 @@ namespace Fps.Core.Tests
 {
     public sealed class TeamDeathmatchTests
     {
-        private const int Alpha1 = 1;
-        private const int Alpha2 = 2;
-        private const int Bravo1 = 11;
-        private const int Bravo2 = 12;
+        private const int _alpha1 = 1;
+        private const int _alpha2 = 2;
+        private const int _bravo1 = 11;
+        private const int _bravo2 = 12;
 
         private static TeamDeathmatch CreateStarted(int scoreLimit = 10, float timeLimitSeconds = 60f, float respawnSeconds = 3f)
         {
             var match = new TeamDeathmatch(new TeamDeathmatchSpec(scoreLimit, timeLimitSeconds, respawnSeconds));
-            match.AddPlayer(Alpha1, Team.Alpha);
-            match.AddPlayer(Alpha2, Team.Alpha);
-            match.AddPlayer(Bravo1, Team.Bravo);
-            match.AddPlayer(Bravo2, Team.Bravo);
+            match.AddPlayer(_alpha1, Team.Alpha);
+            match.AddPlayer(_alpha2, Team.Alpha);
+            match.AddPlayer(_bravo1, Team.Bravo);
+            match.AddPlayer(_bravo2, Team.Bravo);
             match.Start();
             return match;
         }
@@ -41,14 +41,14 @@ namespace Fps.Core.Tests
         {
             var match = CreateStarted();
 
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
 
             Assert.That(match.GetScore(Team.Alpha), Is.EqualTo(1));
             Assert.That(match.GetScore(Team.Bravo), Is.Zero);
-            Assert.That(match.GetKills(Alpha1), Is.EqualTo(1));
-            Assert.That(match.GetDeaths(Alpha1), Is.Zero);
-            Assert.That(match.GetKills(Bravo1), Is.Zero);
-            Assert.That(match.GetDeaths(Bravo1), Is.EqualTo(1));
+            Assert.That(match.GetKills(_alpha1), Is.EqualTo(1));
+            Assert.That(match.GetDeaths(_alpha1), Is.Zero);
+            Assert.That(match.GetKills(_bravo1), Is.Zero);
+            Assert.That(match.GetDeaths(_bravo1), Is.EqualTo(1));
         }
 
         [Test]
@@ -56,12 +56,12 @@ namespace Fps.Core.Tests
         {
             var match = CreateStarted();
 
-            match.ReportKill(Alpha1, Alpha2);
+            match.ReportKill(_alpha1, _alpha2);
 
             Assert.That(match.GetScore(Team.Alpha), Is.Zero);
             Assert.That(match.GetScore(Team.Bravo), Is.Zero);
-            Assert.That(match.GetKills(Alpha1), Is.Zero);
-            Assert.That(match.GetDeaths(Alpha2), Is.EqualTo(1));
+            Assert.That(match.GetKills(_alpha1), Is.Zero);
+            Assert.That(match.GetDeaths(_alpha2), Is.EqualTo(1));
         }
 
         [Test]
@@ -69,13 +69,13 @@ namespace Fps.Core.Tests
         {
             var match = CreateStarted();
 
-            match.ReportKill(Bravo1, Bravo1);
+            match.ReportKill(_bravo1, _bravo1);
 
             Assert.That(match.GetScore(Team.Alpha), Is.Zero);
             Assert.That(match.GetScore(Team.Bravo), Is.Zero);
-            Assert.That(match.GetKills(Bravo1), Is.Zero);
-            Assert.That(match.GetDeaths(Bravo1), Is.EqualTo(1));
-            Assert.That(match.IsAwaitingRespawn(Bravo1), Is.True);
+            Assert.That(match.GetKills(_bravo1), Is.Zero);
+            Assert.That(match.GetDeaths(_bravo1), Is.EqualTo(1));
+            Assert.That(match.IsAwaitingRespawn(_bravo1), Is.True);
         }
 
         [Test]
@@ -85,10 +85,10 @@ namespace Fps.Core.Tests
             var ended = new List<Team?>();
             match.Ended += winner => ended.Add(winner);
 
-            match.ReportKill(Bravo1, Alpha1);
+            match.ReportKill(_bravo1, _alpha1);
             Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Playing));
 
-            match.ReportKill(Bravo2, Alpha2);
+            match.ReportKill(_bravo2, _alpha2);
 
             Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Ended));
             Assert.That(match.Winner, Is.EqualTo(Team.Bravo));
@@ -101,7 +101,7 @@ namespace Fps.Core.Tests
             var match = CreateStarted(timeLimitSeconds: 10f);
             var ended = new List<Team?>();
             match.Ended += winner => ended.Add(winner);
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
 
             match.Tick(9f);
             Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Playing));
@@ -121,8 +121,8 @@ namespace Fps.Core.Tests
             var match = CreateStarted(timeLimitSeconds: 10f);
             var ended = new List<Team?>();
             match.Ended += winner => ended.Add(winner);
-            match.ReportKill(Alpha1, Bravo1);
-            match.ReportKill(Bravo2, Alpha2);
+            match.ReportKill(_alpha1, _bravo1);
+            match.ReportKill(_bravo2, _alpha2);
 
             match.Tick(10f);
 
@@ -137,17 +137,17 @@ namespace Fps.Core.Tests
             var match = CreateStarted(respawnSeconds: 3f);
             var respawned = new List<int>();
             match.RespawnReady += id => respawned.Add(id);
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
 
             match.Tick(1f);
             match.Tick(1.5f);
             Assert.That(respawned, Is.Empty);
-            Assert.That(match.IsAwaitingRespawn(Bravo1), Is.True);
+            Assert.That(match.IsAwaitingRespawn(_bravo1), Is.True);
 
             match.Tick(0.5f);
 
-            Assert.That(respawned, Is.EqualTo(new[] { Bravo1 }));
-            Assert.That(match.IsAwaitingRespawn(Bravo1), Is.False);
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
+            Assert.That(match.IsAwaitingRespawn(_bravo1), Is.False);
 
             match.Tick(10f);
             Assert.That(respawned, Has.Count.EqualTo(1));
@@ -159,13 +159,13 @@ namespace Fps.Core.Tests
             var match = CreateStarted(respawnSeconds: 3f);
             var respawned = new List<int>();
             match.RespawnReady += id => respawned.Add(id);
-            match.ReportKill(Alpha1, Bravo2);
+            match.ReportKill(_alpha1, _bravo2);
             match.Tick(1f);
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
 
             match.Tick(5f);
 
-            Assert.That(respawned, Is.EqualTo(new[] { Bravo2, Bravo1 }));
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo2, _bravo1 }));
         }
 
         [Test]
@@ -175,22 +175,22 @@ namespace Fps.Core.Tests
             var respawned = new List<int>();
             match.RespawnReady += id => respawned.Add(id);
 
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
 
-            Assert.That(respawned, Is.EqualTo(new[] { Bravo1 }));
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
         }
 
         [Test]
         public void KillOfPlayerAwaitingRespawnIsIgnored()
         {
             var match = CreateStarted();
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
 
-            match.ReportKill(Alpha2, Bravo1);
+            match.ReportKill(_alpha2, _bravo1);
 
             Assert.That(match.GetScore(Team.Alpha), Is.EqualTo(1));
-            Assert.That(match.GetKills(Alpha2), Is.Zero);
-            Assert.That(match.GetDeaths(Bravo1), Is.EqualTo(1));
+            Assert.That(match.GetKills(_alpha2), Is.Zero);
+            Assert.That(match.GetDeaths(_bravo1), Is.EqualTo(1));
         }
 
         [Test]
@@ -201,11 +201,11 @@ namespace Fps.Core.Tests
             var respawned = 0;
             match.Ended += _ => ended++;
             match.RespawnReady += _ => respawned++;
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
             match.Tick(1f);
 
-            match.ReportKill(Alpha1, Bravo2);
-            match.ReportKill(Bravo1, Alpha1);
+            match.ReportKill(_alpha1, _bravo2);
+            match.ReportKill(_bravo1, _alpha1);
             match.Tick(1f);
             match.Tick(100f);
 
@@ -213,8 +213,8 @@ namespace Fps.Core.Tests
             Assert.That(match.Winner, Is.EqualTo(Team.Alpha));
             Assert.That(match.GetScore(Team.Alpha), Is.EqualTo(1));
             Assert.That(match.GetScore(Team.Bravo), Is.Zero);
-            Assert.That(match.GetKills(Alpha1), Is.EqualTo(1));
-            Assert.That(match.GetDeaths(Bravo2), Is.Zero);
+            Assert.That(match.GetKills(_alpha1), Is.EqualTo(1));
+            Assert.That(match.GetDeaths(_bravo2), Is.Zero);
             Assert.That(match.RemainingSeconds, Is.EqualTo(10f));
             Assert.That(ended, Is.EqualTo(1));
             Assert.That(respawned, Is.Zero);
@@ -224,14 +224,14 @@ namespace Fps.Core.Tests
         public void KillsWhileWaitingAreIgnored()
         {
             var match = new TeamDeathmatch(new TeamDeathmatchSpec(10, 60f, 3f));
-            match.AddPlayer(Alpha1, Team.Alpha);
-            match.AddPlayer(Bravo1, Team.Bravo);
+            match.AddPlayer(_alpha1, Team.Alpha);
+            match.AddPlayer(_bravo1, Team.Bravo);
 
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
             match.Tick(100f);
 
             Assert.That(match.GetScore(Team.Alpha), Is.Zero);
-            Assert.That(match.GetDeaths(Bravo1), Is.Zero);
+            Assert.That(match.GetDeaths(_bravo1), Is.Zero);
             Assert.That(match.RemainingSeconds, Is.EqualTo(60f));
             Assert.That(match.State, Is.EqualTo(TeamDeathmatchState.Waiting));
         }
@@ -242,15 +242,15 @@ namespace Fps.Core.Tests
             var match = CreateStarted(respawnSeconds: 3f);
             var respawned = new List<int>();
             match.RespawnReady += id => respawned.Add(id);
-            match.ReportKill(Alpha1, Bravo1);
-            match.ReportKill(Alpha1, Bravo2);
+            match.ReportKill(_alpha1, _bravo1);
+            match.ReportKill(_alpha1, _bravo2);
             match.Tick(1f);
 
-            match.RemovePlayer(Bravo1);
+            match.RemovePlayer(_bravo1);
             match.Tick(5f);
 
-            Assert.That(respawned, Is.EqualTo(new[] { Bravo2 }));
-            Assert.That(match.HasPlayer(Bravo1), Is.False);
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo2 }));
+            Assert.That(match.HasPlayer(_bravo1), Is.False);
             Assert.That(match.GetScore(Team.Alpha), Is.EqualTo(2));
         }
 
@@ -260,14 +260,14 @@ namespace Fps.Core.Tests
             var match = CreateStarted(respawnSeconds: 3f);
             var respawned = new List<int>();
             match.RespawnReady += id => respawned.Add(id);
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
 
-            match.RemovePlayer(Bravo1);
-            match.AddPlayer(Bravo1, Team.Bravo);
+            match.RemovePlayer(_bravo1);
+            match.AddPlayer(_bravo1, Team.Bravo);
             match.Tick(5f);
 
             Assert.That(respawned, Is.Empty);
-            Assert.That(match.GetDeaths(Bravo1), Is.Zero);
+            Assert.That(match.GetDeaths(_bravo1), Is.Zero);
         }
 
         [Test]
@@ -278,17 +278,17 @@ namespace Fps.Core.Tests
             match.RespawnReady += id =>
             {
                 respawned.Add(id);
-                if (id == Bravo1)
+                if (id == _bravo1)
                 {
-                    match.RemovePlayer(Bravo2);
+                    match.RemovePlayer(_bravo2);
                 }
             };
-            match.ReportKill(Alpha1, Bravo1);
-            match.ReportKill(Alpha1, Bravo2);
+            match.ReportKill(_alpha1, _bravo1);
+            match.ReportKill(_alpha1, _bravo2);
 
             match.Tick(3f);
 
-            Assert.That(respawned, Is.EqualTo(new[] { Bravo1 }));
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
         }
 
         [Test]
@@ -296,8 +296,8 @@ namespace Fps.Core.Tests
         {
             var match = CreateStarted();
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => match.ReportKill(99, Bravo1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => match.ReportKill(Alpha1, 99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => match.ReportKill(99, _bravo1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => match.ReportKill(_alpha1, 99));
             Assert.Throws<ArgumentOutOfRangeException>(() => match.RemovePlayer(99));
             Assert.Throws<ArgumentOutOfRangeException>(() => match.GetKills(99));
         }
@@ -306,9 +306,9 @@ namespace Fps.Core.Tests
         public void UnknownPlayerThrowsEvenAfterEnd()
         {
             var match = CreateStarted(scoreLimit: 1);
-            match.ReportKill(Alpha1, Bravo1);
+            match.ReportKill(_alpha1, _bravo1);
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => match.ReportKill(99, Bravo1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => match.ReportKill(99, _bravo1));
         }
 
         [Test]
@@ -316,7 +316,7 @@ namespace Fps.Core.Tests
         {
             var match = CreateStarted();
 
-            Assert.Throws<ArgumentException>(() => match.AddPlayer(Alpha1, Team.Bravo));
+            Assert.Throws<ArgumentException>(() => match.AddPlayer(_alpha1, Team.Bravo));
             Assert.Throws<ArgumentOutOfRangeException>(() => match.AddPlayer(50, (Team)7));
         }
 

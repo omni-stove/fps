@@ -46,6 +46,12 @@ namespace Fps.Runtime
         private Damageable _player;
         private WeaponController _weapon;
         private string _lastCheckpointId = string.Empty;
+
+        // シーンを読み直すと CheckpointTrigger は未通過に戻るので、通ったチェックポイントの Id は読み直しをまたいで覚えておく。
+        // 復元できなかったとき (最初から始めるとき) と達成でセーブを消すときに空にする。
+        private static readonly System.Collections.Generic.HashSet<string> _passedCheckpointIds =
+            new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+
         private bool _reloadPending;
         private float _reloadRemaining;
 
@@ -237,7 +243,10 @@ namespace Fps.Runtime
             _mission.MissionCompleted += OnMissionCompleted;
 
             Debug.Log($"{LogTag} started mission={_missionId}", this);
-            TryRestore();
+            if (!TryRestore())
+            {
+                _passedCheckpointIds.Clear();
+            }
         }
 
         /// <summary>
@@ -290,6 +299,7 @@ namespace Fps.Runtime
             }
 
             _lastCheckpointId = checkpointId;
+            _passedCheckpointIds.Add(checkpointId);
             Debug.Log(
                 $"{LogTag} saved mission={_missionId} checkpoint={checkpointId} health={save.Health} ammo={save.AmmoInMagazine}/{save.ReserveAmmo}",
                 this);
@@ -418,6 +428,11 @@ namespace Fps.Runtime
             }
 
             checkpoint.MarkReached();
+            _passedCheckpointIds.Add(checkpointId);
+            foreach (var passedId in _passedCheckpointIds)
+            {
+                CheckpointTrigger.Find(passedId)?.MarkReached();
+            }
 
             // CharacterController は有効なままだと Transform の書き換えを次の移動で上書きするので、移す間だけ切る。
             var controller = _player.GetComponent<CharacterController>();
@@ -457,6 +472,7 @@ namespace Fps.Runtime
 
         private void DeleteSave()
         {
+            _passedCheckpointIds.Clear();
             try
             {
                 _storage.Delete(SaveSlot);

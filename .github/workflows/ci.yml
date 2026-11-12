@@ -93,11 +93,13 @@ jobs:
     if: always()
     uses: omni-stove/.github/.github/workflows/ci-gate.yml@main
     permissions:
+      actions: read  # run-fix が失敗ログを読むため
       contents: read
       pull-requests: write
       issues: write
       id-token: write
     with:
+      run-fix: true
       results: ${{ toJSON(needs) }}
       conflicted: ${{ needs.precheck.outputs.conflicted }}
       review-comments: ${{ needs.checks.outputs.review-comments }}

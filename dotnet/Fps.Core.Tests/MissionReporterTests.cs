@@ -34,11 +34,7 @@ namespace Fps.Core.Tests
 
             reporter.ReportAll();
 
-            Assert.That(lines, Is.EqualTo(new[]
-            {
-                "[Mission] objective=a state=Active",
-                "[Mission] objective=b state=Locked",
-            }));
+            Assert.That(lines, Is.EqualTo(InitialLines));
         }
 
         [Test]
@@ -51,13 +47,7 @@ namespace Fps.Core.Tests
             mission.Progress("a");
             mission.Progress("b");
 
-            Assert.That(lines, Is.EqualTo(new[]
-            {
-                "[Mission] objective=a state=Completed",
-                "[Mission] objective=b state=Active",
-                "[Mission] objective=b state=Completed",
-                "[Mission] completed",
-            }));
+            Assert.That(lines, Is.EqualTo(CompletionLines));
         }
 
         [Test]
@@ -69,7 +59,7 @@ namespace Fps.Core.Tests
 
             mission.Fail("a");
 
-            Assert.That(lines, Is.EqualTo(new[] { "[Mission] objective=a state=Failed", "[Mission] failed" }));
+            Assert.That(lines, Is.EqualTo(FailureLines));
         }
 
         [Test]
@@ -100,12 +90,34 @@ namespace Fps.Core.Tests
             Assert.Throws<ObjectDisposedException>(() => reporter.ReportAll());
         }
 
+        private static readonly string[] PrerequisiteA = { "a" };
+
+        private static readonly string[] InitialLines =
+        {
+            "[Mission] objective=a state=Active",
+            "[Mission] objective=b state=Locked",
+        };
+
+        private static readonly string[] CompletionLines =
+        {
+            "[Mission] objective=a state=Completed",
+            "[Mission] objective=b state=Active",
+            "[Mission] objective=b state=Completed",
+            "[Mission] completed",
+        };
+
+        private static readonly string[] FailureLines =
+        {
+            "[Mission] objective=a state=Failed",
+            "[Mission] failed",
+        };
+
         private static Mission TwoStep()
         {
             return new Mission(new[]
             {
                 new Objective("a", ""),
-                new Objective("b", "", prerequisites: new[] { "a" }),
+                new Objective("b", "", prerequisites: PrerequisiteA),
             });
         }
     }

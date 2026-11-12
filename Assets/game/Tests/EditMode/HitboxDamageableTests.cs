@@ -49,12 +49,71 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void MaxHealthCannotChangeAfterHealthExists()
+        public void MaxHealthChangeAfterHealthExistsAppliesOnNextReset()
         {
             _damageable.MaxHealth = 50;
             Assert.That(_damageable.Health.Max, Is.EqualTo(50));
 
-            Assert.Throws<InvalidOperationException>(() => _damageable.MaxHealth = 80);
+            _damageable.MaxHealth = 80;
+            Assert.That(_damageable.MaxHealth, Is.EqualTo(80));
+            Assert.That(_damageable.Health.Max, Is.EqualTo(50), "the current Health keeps its max");
+
+            _damageable.ResetHealth();
+            Assert.That(_damageable.Health.Max, Is.EqualTo(80));
+            Assert.That(_damageable.Health.Current, Is.EqualTo(80));
+        }
+
+        [Test]
+        public void IsDeadDoesNotCreateHealth()
+        {
+            var host = new GameObject("Lazy");
+            try
+            {
+                var lazy = host.AddComponent<Damageable>();
+
+                Assert.That(lazy.IsDead, Is.False);
+
+                // Health がまだ無ければ、作られた Health に後から設定した MaxHealth が反映される。
+                lazy.MaxHealth = 30;
+                Assert.That(lazy.Health.Max, Is.EqualTo(30));
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void DiedIsStillRaisedAfterResetHealth()
+        {
+            var deaths = 0;
+            _damageable.Died += _ => deaths++;
+
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=Dummy");
+            _damageable.Kill();
+            Assert.That(_damageable.IsDead, Is.True);
+
+            _damageable.ResetHealth();
+            Assert.That(_damageable.IsDead, Is.False);
+            Assert.That(_damageable.Health.Current, Is.EqualTo(Damageable.DefaultMaxHealth));
+
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=Dummy");
+            _damageable.ApplyHit(Damageable.DefaultMaxHealth, HitZone.Body, 0f, DamageFalloff.None);
+
+            Assert.That(_damageable.IsDead, Is.True);
+            Assert.That(deaths, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ApplyHitReturnsTheCalculatedDamageEvenWhenDead()
+        {
+            var expected = DamageCalculator.Calculate(25, HitZone.Head, 0f, DamageFalloff.None);
+
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=Dummy");
+            _damageable.Kill();
+
+            Assert.That(_damageable.ApplyHit(25, HitZone.Head, 0f, DamageFalloff.None), Is.EqualTo(expected));
+            Assert.That(_damageable.Health.Current, Is.Zero);
         }
 
         [Test]
@@ -137,7 +196,7 @@ namespace Fps.Tests.EditMode
             var deaths = 0;
             _damageable.Died += _ => deaths++;
 
-            LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] killed target=Dummy$"));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] target died id=Dummy$"));
             head.ApplyHit(60, 0f, DamageFalloff.None);
             head.ApplyHit(60, 0f, DamageFalloff.None);
 

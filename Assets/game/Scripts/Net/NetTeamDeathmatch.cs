@@ -23,6 +23,12 @@ namespace Fps.Net
     /// ダメージ量は <see cref="DamageCalculator"/>、体力は Session の <see cref="Health"/> が決め、
     /// 体力は <see cref="NetPlayer"/> の NetworkVariable で配る。
     /// </para>
+    /// <para>
+    /// 試合が終わると、サーバーは <see cref="RestartDelaySeconds"/> 秒待って同じ Session で次の試合を始める
+    /// (<see cref="TeamDeathmatchSession.Restart"/>)。チーム分けはそのままで、点数・キル数・デス数・残り時間を戻し、
+    /// 全員を体力満タンで出現させる。待っている間の残り秒数は <see cref="NextMatchSeconds"/> で配る。
+    /// 終わっている間に接続してきたプレイヤーは、次の試合が始まってから加える。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -35,6 +41,9 @@ namespace Fps.Net
         public const float DefaultFalloffStart = 20f;
         public const float DefaultFalloffEnd = 60f;
         public const float DefaultFalloffMinMultiplier = 0.5f;
+
+        /// <summary>試合が終わってから次の試合を始めるまでの秒数の既定値。</summary>
+        public const float DefaultRestartDelaySeconds = 10f;
 
         // まだ一度も位置を記録していないことを表す tick
         private const int _noRecordedTick = -1;
@@ -50,6 +59,9 @@ namespace Fps.Net
 
         [SerializeField, Min(0f), Tooltip("倒されてからリスポーンするまでの秒数")]
         private float _respawnSeconds = 3f;
+
+        [SerializeField, Min(0f), Tooltip("試合が終わってから次の試合を始めるまでの秒数")]
+        private float _restartDelaySeconds = DefaultRestartDelaySeconds;
 
         [SerializeField, Min(1), Tooltip("プレイヤーの最大体力")]
         private int _maxHealth = 100;
@@ -81,6 +93,7 @@ namespace Fps.Net
         private readonly NetworkVariable<int> _alphaScore = new NetworkVariable<int>();
         private readonly NetworkVariable<int> _bravoScore = new NetworkVariable<int>();
         private readonly NetworkVariable<int> _remainingSeconds = new NetworkVariable<int>();
+        private readonly NetworkVariable<int> _nextMatchSeconds = new NetworkVariable<int>();
         private readonly NetworkVariable<NetMatchStatus> _status =
             new NetworkVariable<NetMatchStatus>(new NetMatchStatus(GameModeState.Waiting, null));
 
@@ -113,6 +126,12 @@ namespace Fps.Net
         /// <summary>残り時間 (秒、切り上げ)。</summary>
         public int RemainingSeconds => _remainingSeconds.Value;
 
+        /// <summary>
+        /// 試合が終わった後、次の試合が始まるまでの残り秒数 (切り上げ)。試合中と開始前は 0。
+        /// HUD は <see cref="State"/> が Ended の間これを <see cref="HudFormat.NextMatch"/> で出す。
+        /// </summary>
+        public int NextMatchSeconds => _nextMatchSeconds.Value;
+
         public GameModeState State => _status.Value.State;
         public Team? Winner => _status.Value.Winner;
 
@@ -138,6 +157,13 @@ namespace Fps.Net
         {
             get => _respawnSeconds;
             set => _respawnSeconds = value;
+        }
+
+        /// <summary>試合が終わってから次の試合を始めるまでの秒数。0 以上の有限値。試合の開始時 (Spawn 時) に読む。</summary>
+        public float RestartDelaySeconds
+        {
+            get => _restartDelaySeconds;
+            set => _restartDelaySeconds = value;
         }
 
         public int MaxHealth
@@ -236,9 +262,16 @@ namespace Fps.Net
                 return;
             }
 
-            JoinNewPlayers();
+            // 終わっている間に来た人は、次の試合が始まってから加える
+            if (_session.State != GameModeState.Ended)
+            {
+                JoinNewPlayers();
+            }
+
+            // 終わっていれば次の試合までの待ちが進み、待ち終わったら Session が Restart する
             _session.Tick(Time.deltaTime);
             SyncRemainingSeconds();
+            SyncNextMatchSeconds();
         }
 
         // 入力 (RPC) とホストの移動 (Update) が反映された後の位置を記録する
@@ -451,6 +484,7 @@ namespace Fps.Net
                 selector = new SpawnSelector(_minEnemySpawnDistance);
                 falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
                 ValidateWeaponSettings();
+                ValidateRestartDelay();
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -461,7 +495,7 @@ namespace Fps.Net
             var spawnPoints = CollectSpawnPoints();
             try
             {
-                _session = new TeamDeathmatchSession(spec, _maxHealth, spawnPoints, selector, PositionOf);
+                _session = new TeamDeathmatchSession(spec, _maxHealth, spawnPoints, selector, PositionOf, _restartDelaySeconds);
             }
             catch (ArgumentException e)
             {
@@ -480,6 +514,7 @@ namespace Fps.Net
             _shotBudgets.Clear();
 
             _session.Started += HandleStarted;
+            _session.Restarted += HandleRestarted;
             _session.ScoreChanged += HandleScoreChanged;
             _session.PlayerChanged += HandlePlayerChanged;
             _session.Killed += HandleKilled;
@@ -490,9 +525,10 @@ namespace Fps.Net
             _bravoScore.Value = 0;
             _status.Value = new NetMatchStatus(_session.State, null);
             SyncRemainingSeconds();
+            SyncNextMatchSeconds();
 
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
-                + "s respawn=" + spec.RespawnSeconds + "s spawnPoints=" + spawnPoints.Count);
+                + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count);
             Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
                 + " tickRate=" + NetworkPlayerMotor.TickRate + " damage=" + _activeWeaponDamage + " range=" + _activeWeaponRange
                 + " fireInterval=" + _activeFireInterval);
@@ -520,9 +556,20 @@ namespace Fps.Net
             _ = new ShotBudget(_fireInterval);
         }
 
+        /// <summary>Inspector で入る次の試合までの秒数を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>
+        private void ValidateRestartDelay()
+        {
+            if (!(_restartDelaySeconds >= 0f) || float.IsInfinity(_restartDelaySeconds))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(RestartDelaySeconds), _restartDelaySeconds, "restart delay must not be negative and must be finite");
+            }
+        }
+
         private void UnsubscribeSession(TeamDeathmatchSession session)
         {
             session.Started -= HandleStarted;
+            session.Restarted -= HandleRestarted;
             session.ScoreChanged -= HandleScoreChanged;
             session.PlayerChanged -= HandlePlayerChanged;
             session.Killed -= HandleKilled;
@@ -585,6 +632,15 @@ namespace Fps.Net
             if (_remainingSeconds.Value != seconds)
             {
                 _remainingSeconds.Value = seconds;
+            }
+        }
+
+        private void SyncNextMatchSeconds()
+        {
+            var seconds = (int)Math.Ceiling(_session.RestartRemainingSeconds);
+            if (_nextMatchSeconds.Value != seconds)
+            {
+                _nextMatchSeconds.Value = seconds;
             }
         }
 
@@ -762,7 +818,20 @@ namespace Fps.Net
         {
             _status.Value = new NetMatchStatus(GameModeState.Ended, winner);
             SyncRemainingSeconds();
+            SyncNextMatchSeconds();
             Debug.Log(MatchLog.Ended(winner));
+            Debug.Log(MatchLog.NextMatch(_session.RestartRemainingSeconds));
+        }
+
+        // Session が点数・キル数・時間・体力を戻した直後。続けて点数・各プレイヤー・出現の知らせが来て、
+        // 両チームがそろっていれば HandleStarted で Playing になる
+        private void HandleRestarted()
+        {
+            _status.Value = new NetMatchStatus(GameModeState.Waiting, null);
+            SyncRemainingSeconds();
+            SyncNextMatchSeconds();
+            _shotBudgets.Clear();
+            Debug.Log(MatchLog.Restart());
         }
 
         // クライアントでも同じ書式でログを出し、サーバーのログと突き合わせられるようにする。
@@ -793,8 +862,16 @@ namespace Fps.Net
             if (current.State == GameModeState.Ended)
             {
                 Debug.Log(MatchLog.Ended(current.Winner));
+                return;
             }
-            else if (current.State == GameModeState.Playing)
+
+            // サーバーでは同じフレームに Waiting → Playing と変わるので、クライアントには Ended → Playing で届くことがある
+            if (previous.State == GameModeState.Ended)
+            {
+                Debug.Log(MatchLog.Restart());
+            }
+
+            if (current.State == GameModeState.Playing)
             {
                 Debug.Log(MatchLog.Tag + " started");
             }

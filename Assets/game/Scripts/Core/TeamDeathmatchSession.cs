@@ -18,12 +18,21 @@ namespace Fps.Core
     /// 体力を満タンに戻して地点を選び <see cref="Spawned"/> を出す。</item>
     /// <item>イベントはいつも「倒した → 点数 → リスポーン/終了」の順に出す
     /// (RespawnSeconds が 0 でも倒したことより先にリスポーンを出さない)。</item>
+    /// <item>再開までの秒数 (<see cref="RestartDelaySeconds"/>) を渡したときは、終わってからその秒数だけ
+    /// <see cref="Tick"/> が進んだら <see cref="Restart"/> して同じ顔ぶれ・同じチーム分けで次の試合を始める。</item>
     /// </list>
     /// </remarks>
     public sealed class TeamDeathmatchSession
     {
-        /// <summary>試合が始まったときに 1 度だけ呼ばれる。</summary>
+        /// <summary>試合が始まるたびに呼ばれる (<see cref="Restart"/> で始め直したときも)。</summary>
         public event Action Started;
+
+        /// <summary>
+        /// <see cref="Restart"/> で点数・キル数・デス数・残り時間・体力を初期値に戻した直後に呼ばれる。
+        /// 続けて <see cref="ScoreChanged"/> (0, 0)、各プレイヤーの <see cref="PlayerChanged"/> と <see cref="Spawned"/>、
+        /// 両チームがそろっていれば <see cref="Started"/> の順に出る。
+        /// </summary>
+        public event Action Restarted;
 
         /// <summary>チームの点数が変わったときに呼ばれる。引数は (Alpha の点数, Bravo の点数)。</summary>
         public event Action<int, int> ScoreChanged;
@@ -51,7 +60,21 @@ namespace Fps.Core
         private readonly Queue<Action> _deferred = new Queue<Action>();
         private int _busy;
 
+        // 終わってから次の試合までの待ち。待っていないときは _restartPending が false
+        private readonly float? _restartDelaySeconds;
+        private float _restartRemaining;
+        private bool _restartPending;
+
         public TeamDeathmatchSpec Spec => _match.Spec;
+
+        /// <summary>終わってから自動で次の試合を始めるまでの秒数。null なら自動では始めない。</summary>
+        public float? RestartDelaySeconds => _restartDelaySeconds;
+
+        /// <summary>終わった後、次の試合を待っている間は true。</summary>
+        public bool IsRestartPending => _restartPending;
+
+        /// <summary>次の試合が始まるまでの残り秒数。待っていないときは 0。</summary>
+        public float RestartRemainingSeconds => _restartPending ? Math.Max(0f, _restartRemaining) : 0f;
 
         /// <summary>参加したときとリスポーンしたときの体力。</summary>
         public int MaxHealth { get; }
@@ -69,16 +92,27 @@ namespace Fps.Core
         /// <param name="spawnPoints">出現地点。両チームとも 1 か所以上使えること。順番は同点時の決め手になる。</param>
         /// <param name="selector">出現地点の選び方。</param>
         /// <param name="positionOf">playerId から現在位置を引く。参加中のプレイヤーについてだけ呼ぶ。</param>
+        /// <param name="restartDelaySeconds">
+        /// 終わってから自動で次の試合を始めるまでの秒数。0 以上の有限値。null なら自動では始めない。
+        /// </param>
         public TeamDeathmatchSession(
             TeamDeathmatchSpec spec,
             int maxHealth,
             IReadOnlyList<SpawnPoint> spawnPoints,
             SpawnSelector selector,
-            Func<int, Vector3> positionOf)
+            Func<int, Vector3> positionOf,
+            float? restartDelaySeconds = null)
         {
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (restartDelaySeconds.HasValue
+                && (!(restartDelaySeconds.Value >= 0f) || float.IsInfinity(restartDelaySeconds.Value)))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(restartDelaySeconds), restartDelaySeconds, "restartDelaySeconds must not be negative and must be finite");
             }
 
             if (maxHealth <= 0)
@@ -103,10 +137,21 @@ namespace Fps.Core
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
             _positionOf = positionOf ?? throw new ArgumentNullException(nameof(positionOf));
             MaxHealth = maxHealth;
+            _restartDelaySeconds = restartDelaySeconds;
 
             _match = new TeamDeathmatch(spec);
             _match.RespawnReady += playerId => Defer(() => Respawn(playerId));
-            _match.Ended += winner => Defer(() => Ended?.Invoke(winner));
+            _match.Ended += winner =>
+            {
+                // 終わった瞬間から数える (Ended の受け手が残り秒数を読めるよう、知らせるより先に)
+                if (_restartDelaySeconds.HasValue)
+                {
+                    _restartPending = true;
+                    _restartRemaining = _restartDelaySeconds.Value;
+                }
+
+                Defer(() => Ended?.Invoke(winner));
+            };
         }
 
         public bool HasPlayer(int playerId) => _health.ContainsKey(playerId);
@@ -224,10 +269,74 @@ namespace Fps.Core
             }
         }
 
-        /// <summary>時間を進める。リスポーン待ちが終わった人を出現させ、時間切れなら試合を終える。</summary>
+        /// <summary>
+        /// 時間を進める。リスポーン待ちが終わった人を出現させ、時間切れなら試合を終える。
+        /// 終わった後は次の試合までの待ちを進め、待ち終わったら <see cref="Restart"/> する
+        /// (試合が終わった回の Tick の残りは待ちに数えない)。
+        /// </summary>
         public void Tick(float deltaSeconds)
         {
+            var waitingForRestart = _restartPending && State == GameModeState.Ended;
+
+            // 引数の検査は TeamDeathmatch に任せる。終わった後は時間を進めないので何も起きない
             _match.Tick(deltaSeconds);
+
+            if (!waitingForRestart)
+            {
+                return;
+            }
+
+            _restartRemaining -= deltaSeconds;
+            if (_restartRemaining <= 0f)
+            {
+                Restart();
+            }
+        }
+
+        /// <summary>
+        /// 終わった試合を同じ顔ぶれ・同じチーム分けで始め直す。チームの点数、各プレイヤーのキル数とデス数、
+        /// 残り時間を初期値に戻し、全員を体力満タンにして自分のチームの地点へ出現させる (<see cref="Spawned"/>)。
+        /// 両チームに 1 人以上いればそのまま始まり、いなければ Waiting に戻って参加を待つ。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">試合がまだ終わっていない。</exception>
+        public void Restart()
+        {
+            if (State != GameModeState.Ended)
+            {
+                throw new InvalidOperationException("the match can only be restarted after it has ended, but is " + State);
+            }
+
+            _restartPending = false;
+            _restartRemaining = 0f;
+            _match.Reset();
+
+            var playerIds = new List<int>(_health.Keys);
+            foreach (var playerId in playerIds)
+            {
+                _health[playerId] = new Health(MaxHealth);
+            }
+
+            Restarted?.Invoke();
+            ScoreChanged?.Invoke(0, 0);
+
+            // 受け手の中で抜けた人は飛ばす
+            foreach (var playerId in playerIds)
+            {
+                if (_health.ContainsKey(playerId))
+                {
+                    PlayerChanged?.Invoke(playerId);
+                }
+            }
+
+            foreach (var playerId in playerIds)
+            {
+                if (_health.ContainsKey(playerId))
+                {
+                    Spawned?.Invoke(playerId, SelectSpawn(playerId));
+                }
+            }
+
+            TryStart();
         }
 
         /// <summary>

@@ -6,7 +6,7 @@ namespace Fps.Core
     /// <summary>
     /// チームデスマッチのルール。Alpha と Bravo の 2 チームでキル数を競い、どちらかが ScoreLimit に届くか
     /// 制限時間が切れたら終わる。時間は <see cref="Tick"/> で外から進める。
-    /// 終了後は何を報告しても状態が変わらない。
+    /// 終了後は何を報告しても状態が変わらない。次の試合は <see cref="Reset"/> で同じ顔ぶれのまま始め直す。
     /// </summary>
     public sealed class TeamDeathmatch : IGameMode
     {
@@ -51,6 +51,33 @@ namespace Fps.Core
             }
 
             State = GameModeState.Playing;
+            StateChanged?.Invoke(State);
+        }
+
+        /// <summary>
+        /// 次の試合のために、チームの点数・各プレイヤーのキル数とデス数・残り時間・勝者を初期値に戻し、
+        /// リスポーン待ちを取り消して Waiting に戻す。参加者とチーム分けはそのまま残す。
+        /// どの状態からでも呼べる。状態が変わったときだけ <see cref="StateChanged"/> を出す。
+        /// </summary>
+        public void Reset()
+        {
+            _alphaScore = 0;
+            _bravoScore = 0;
+            RemainingSeconds = Spec.TimeLimitSeconds;
+            Winner = null;
+            foreach (var record in _players.Values)
+            {
+                record.Kills = 0;
+                record.Deaths = 0;
+                record.RespawnRemaining = null;
+            }
+
+            if (State == GameModeState.Waiting)
+            {
+                return;
+            }
+
+            State = GameModeState.Waiting;
             StateChanged?.Invoke(State);
         }
 

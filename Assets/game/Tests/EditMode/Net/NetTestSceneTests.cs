@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Fps.Core;
 using NUnit.Framework;
@@ -85,6 +86,95 @@ namespace Fps.Net.Tests
             Assert.That(session.Join(0), Is.EqualTo(Team.Alpha));
             Assert.That(session.Join(1), Is.EqualTo(Team.Bravo));
             Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+        }
+
+        [Test]
+        public void MatchPrefabRestartsTenSecondsAfterEnd()
+        {
+            var match = MatchPrefabComponent();
+
+            Assert.That(match.RestartDelaySeconds, Is.EqualTo(NetTeamDeathmatch.DefaultRestartDelaySeconds));
+            Assert.That(NetTeamDeathmatch.DefaultRestartDelaySeconds, Is.EqualTo(10f));
+        }
+
+        [Test]
+        public void EndedMatchReturnsToPlayingAfterRestartDelayAndRespawnsEveryone()
+        {
+            var match = MatchPrefabComponent();
+            var points = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetSpawnPoint>(true))
+                .Select(marker => marker.ToSpawnPoint())
+                .ToArray();
+            var positions = new Dictionary<int, System.Numerics.Vector3>();
+            var spawned = new Dictionary<int, SpawnPoint>();
+
+            // NetTeamDeathmatch.StartSession と同じ値で組み立てる
+            var session = new TeamDeathmatchSession(
+                new TeamDeathmatchSpec(match.ScoreLimit, match.TimeLimitSeconds, match.RespawnSeconds),
+                match.MaxHealth,
+                points,
+                new SpawnSelector(match.MinEnemySpawnDistance),
+                id => positions[id],
+                match.RestartDelaySeconds);
+            session.Spawned += (id, point) =>
+            {
+                positions[id] = point.Position;
+                spawned[id] = point;
+            };
+
+            var playerIds = new[] { 0, 1, 2, 3 };
+            foreach (var id in playerIds)
+            {
+                session.Join(id);
+            }
+
+            // 点数・キル数・デス数が付き、傷ついた人と出現地点から動いた人がいる状態で時間切れにする
+            session.ApplyDamage(0, 1, match.MaxHealth);
+            session.ApplyDamage(1, 2, 1);
+            foreach (var id in playerIds)
+            {
+                positions[id] = new System.Numerics.Vector3(1000f, 0f, 1000f);
+            }
+
+            session.Tick(match.TimeLimitSeconds);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(session.Winner, Is.EqualTo(Team.Alpha));
+            Assert.That(session.RestartRemainingSeconds, Is.EqualTo(match.RestartDelaySeconds));
+
+            var teams = playerIds.ToDictionary(id => id, session.GetTeam);
+            spawned.Clear();
+
+            session.Tick(match.RestartDelaySeconds / 2f);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(spawned, Is.Empty);
+
+            session.Tick(match.RestartDelaySeconds / 2f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(session.RemainingSeconds, Is.EqualTo(match.TimeLimitSeconds));
+            Assert.That(session.GetScore(Team.Alpha), Is.Zero);
+            Assert.That(session.GetScore(Team.Bravo), Is.Zero);
+            Assert.That(spawned.Keys, Is.EquivalentTo(playerIds));
+            foreach (var id in playerIds)
+            {
+                Assert.That(session.GetTeam(id), Is.EqualTo(teams[id]), "team of " + id);
+                Assert.That(session.GetHealth(id), Is.EqualTo(match.MaxHealth), "health of " + id);
+                Assert.That(session.GetKills(id), Is.Zero, "kills of " + id);
+                Assert.That(session.GetDeaths(id), Is.Zero, "deaths of " + id);
+                Assert.That(spawned[id].IsUsableBy(teams[id]), Is.True, "spawn point of " + id);
+                Assert.That(positions[id], Is.EqualTo(spawned[id].Position), "position of " + id);
+            }
+        }
+
+        private NetTeamDeathmatch MatchPrefabComponent()
+        {
+            var bootstrap = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single();
+            Assert.That(bootstrap.MatchPrefab, Is.Not.Null);
+            var match = bootstrap.MatchPrefab.GetComponent<NetTeamDeathmatch>();
+            Assert.That(match, Is.Not.Null);
+            return match;
         }
 
         [Test]

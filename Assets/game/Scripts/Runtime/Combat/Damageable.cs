@@ -191,6 +191,26 @@ namespace Fps.Runtime
             HealthReset?.Invoke(_health);
         }
 
+        /// <summary>
+        /// Health を作り直して体力を current にする。セーブデータから戻すときに使う。<see cref="MaxHealth"/> を超える値は Max に揃える。
+        /// <see cref="ResetHealth"/> と同じく <see cref="HealthReset"/> を呼ぶ。
+        /// </summary>
+        /// <param name="current">戻す体力。1 以上 (0 では生きた状態に戻せない)。</param>
+        public void RestoreHealth(int current)
+        {
+            if (current <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(current), current, "current must be positive");
+            }
+
+            ResetHealth();
+            var missing = _health.Max - Math.Min(current, _health.Max);
+            if (missing > 0)
+            {
+                _health.TakeDamage(missing);
+            }
+        }
+
         private void OnHealthDied()
         {
             Debug.Log($"{LogTag} target died id={Id}", this);

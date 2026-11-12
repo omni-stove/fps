@@ -50,6 +50,40 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void RestoreAmmoReplacesTheWeaponAndCancelsReload()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload);
+            LogAssert.Expect(LogType.Log, "[Combat] fire ammo=29");
+            _controller.Fire();
+            Assert.That(_controller.StartReload(), Is.True);
+            var previous = _controller.Weapon;
+            Fps.Core.Weapon changed = null;
+            _controller.WeaponChanged += weapon => changed = weapon;
+
+            _controller.RestoreAmmo(7, 12);
+
+            Assert.That(_controller.Weapon, Is.Not.SameAs(previous));
+            Assert.That(changed, Is.SameAs(_controller.Weapon));
+            Assert.That(_controller.Weapon.Spec, Is.SameAs(previous.Spec));
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(7));
+            Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(12));
+            Assert.That(_controller.Weapon.IsReloading, Is.False);
+
+            _controller.RestoreAmmo(WeaponController.DefaultMagazineSize + 5, 0);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(WeaponController.DefaultMagazineSize), "clamped to the magazine");
+        }
+
+        [Test]
+        public void RestoreAmmoRejectsNegativeValuesAndNeedsInitialize()
+        {
+            Assert.Throws<InvalidOperationException>(() => _controller.RestoreAmmo(1, 1));
+
+            _controller.Initialize(_camera.transform, _attack, _reload);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _controller.RestoreAmmo(-1, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _controller.RestoreAmmo(0, -1));
+        }
+
+        [Test]
         public void InitializeBuildsTheWeaponFromCodeDefaults()
         {
             _controller.Initialize(_camera.transform, _attack, _reload);

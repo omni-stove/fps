@@ -13,7 +13,9 @@ namespace Fps.Net
     /// 引数が無ければ <see cref="DefaultMode"/> (既定は Host) の UDP で起動する。
     /// 専用サーバービルド (<c>UNITY_SERVER</c>) では引数が無くても Server で起動し、描画・音声のコンポーネントを止める。
     /// EOS を要求されても認証情報が無ければ UDP に切り替え、<see cref="CredentialsMissingLog"/> を出す。
-    /// 失敗はすべて <c>[Net]</c> 付きのエラーログに出し、batchmode のプレイヤーでは終了コード付きで終了する。
+    /// <c>-lobby create|join</c> なら EOS にログインしてロビーを作る (または探して入る) までを <see cref="LobbyLauncher"/> に任せ、
+    /// オーナーは EOS の Host、メンバーはオーナーへ接続するクライアントとして起動する。
+    /// 失敗はすべて <c>[Net]</c> か <c>[Lobby]</c> 付きのエラーログに出し、batchmode のプレイヤーでは終了コード付きで終了する。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class NetBootstrap : MonoBehaviour
@@ -27,6 +29,7 @@ namespace Fps.Net
         public const int ExitStartFailed = 4;
         public const int ExitConnectFailed = 5;
         public const int ExitTransportFailure = 6;
+        public const int ExitLobbyFailed = 7;
 
         /// <summary>EOS を要求されたが認証情報が揃わず、UDP に切り替えたときのログ。</summary>
         public const string CredentialsMissingLog = "[Net] EOS credentials missing, using UDP";
@@ -50,6 +53,9 @@ namespace Fps.Net
 
         private NetworkManager _manager;
         private NetLaunchOptions _options;
+        private EosCredentials _lobbyCredentials;
+        private LobbyService _lobby;
+        private LobbyLauncher _lobbyLauncher;
         private bool _connectedToServer;
         private bool _failed;
         private float _nextStatusLogTime;
@@ -126,8 +132,15 @@ namespace Fps.Net
                 Debug.Log("[Net] dedicated server build: disabled " + disabled + " camera/audio component(s)");
             }
 
-            if (!NetStartup.TryResolve(
-                    Environment.GetCommandLineArgs(), isDedicatedServer, _defaultMode, out _options, out var error))
+            var args = Environment.GetCommandLineArgs();
+            if (!NetStartup.TryResolveLobby(args, isDedicatedServer, out var lobbyOptions, out var lobbyError))
+            {
+                Fail(ExitInvalidArguments, "[Lobby] invalid arguments: " + lobbyError);
+                return;
+            }
+
+            if (!lobbyOptions.IsRequested
+                && !NetStartup.TryResolve(args, isDedicatedServer, _defaultMode, out _options, out var error))
             {
                 Fail(ExitInvalidArguments, "[Net] invalid arguments: " + error);
                 return;
@@ -145,12 +158,65 @@ namespace Fps.Net
                 return;
             }
 
+            if (lobbyOptions.IsRequested)
+            {
+                // 起動モードと接続先はロビーが決まってから分かるので、NetworkManager はそのときに組み立てる
+                PrepareLobby(lobbyOptions);
+                return;
+            }
+
             var plan = PlanTransport(_options);
             if (plan == null)
             {
                 return;
             }
 
+            ConfigureNetwork(plan);
+        }
+
+        /// <summary>ロビーのサービスを用意する。EOS の認証情報が無ければ UDP には切り替えず失敗にする。</summary>
+        private void PrepareLobby(LobbyLaunchOptions lobbyOptions)
+        {
+            if (!EosCredentialSource.TryLoad(out var credentials, out var missing, out var loadError))
+            {
+                Fail(ExitMisconfigured, "[Lobby] cannot load EOS credentials: " + loadError);
+                return;
+            }
+
+            if (credentials == null)
+            {
+                Fail(ExitMisconfigured, "[Lobby] " + LobbyLaunchOptions.LobbyFlag + " needs EOS credentials; missing "
+                    + string.Join(", ", missing) + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")");
+                return;
+            }
+
+            var factory = NetTransportFactories.EosLobby;
+            if (factory == null)
+            {
+                Fail(ExitMisconfigured,
+                    "[Lobby] the EOS lobby is not in this build (is com.playeveryware.eos installed and Fps.NetEos compiled?)");
+                return;
+            }
+
+            var backend = factory(credentials);
+            if (backend == null)
+            {
+                Fail(ExitMisconfigured, "[Lobby] the EOS lobby factory returned no backend");
+                return;
+            }
+
+            _lobbyCredentials = credentials;
+            _lobby = new LobbyService(backend, LobbyLaunchOptions.BucketId(Application.version));
+            _lobby.Removed += HandleLobbyRemoved;
+            _lobbyLauncher = new LobbyLauncher(_lobby, lobbyOptions);
+
+            // EOS のプラットフォームも終了時に解放されるので、それより先に (ここで先に登録して) ロビーから出る要求を出す
+            Application.quitting += LeaveLobbyOnQuit;
+        }
+
+        /// <summary>NetworkManager と transport を組み立て、イベントを購読する。失敗したら false。</summary>
+        private bool ConfigureNetwork(NetTransportPlan plan)
+        {
             _options = plan.Options;
 
             try
@@ -160,18 +226,19 @@ namespace Fps.Net
             catch (ArgumentException e)
             {
                 Fail(ExitMisconfigured, "[Net] cannot configure NetworkManager: " + e.Message);
-                return;
+                return false;
             }
             catch (InvalidOperationException e)
             {
                 Fail(ExitMisconfigured, "[Net] cannot configure NetworkManager: " + e.Message);
-                return;
+                return false;
             }
 
             _manager.OnServerStarted += HandleServerStarted;
             _manager.OnClientConnectedCallback += HandleClientConnected;
             _manager.OnClientDisconnectCallback += HandleClientDisconnected;
             _manager.OnTransportFailure += HandleTransportFailure;
+            return true;
         }
 
         /// <summary>
@@ -202,11 +269,57 @@ namespace Fps.Net
 
         private void Start()
         {
-            if (_failed || _manager == null)
+            if (_failed)
             {
                 return;
             }
 
+            if (_lobbyLauncher != null)
+            {
+                _lobbyLauncher.Begin(Time.unscaledTime, HandleLobbyReady, HandleLobbyFailed);
+                return;
+            }
+
+            if (_manager == null)
+            {
+                return;
+            }
+
+            StartNetwork();
+        }
+
+        /// <summary>ロビーが決まった。その設定で NetworkManager を組み立てて起動する。</summary>
+        private void HandleLobbyReady(NetLaunchOptions options)
+        {
+            if (_failed)
+            {
+                return;
+            }
+
+            if (ConfigureNetwork(NetTransportPlan.Decide(options, _lobbyCredentials, null)))
+            {
+                StartNetwork();
+            }
+        }
+
+        private void HandleLobbyFailed(string reason)
+        {
+            Fail(ExitLobbyFailed, "[Lobby] " + reason);
+        }
+
+        private void HandleLobbyRemoved(string reason)
+        {
+            // 試合の接続は transport が見ているので、ここでは止めない。Host が抜ければクライアント側は切断で終わる
+            Debug.LogWarning("[Lobby] no longer in the lobby (" + reason + "); the match keeps running until the connection ends");
+        }
+
+        private void LeaveLobbyOnQuit()
+        {
+            _lobby?.LeaveLobby();
+        }
+
+        private void StartNetwork()
+        {
             // StartHost は接続のコールバックを同期で呼ぶので、開始のログは先に出す
             Debug.Log("[Net] starting " + _options + " transport=" + NetLaunchOptions.TransportName(_options.Transport));
             var started = false;
@@ -246,6 +359,9 @@ namespace Fps.Net
 
         private void Update()
         {
+            // ロビーが決まった後もメンバーの出入りを受け取るため、終わるまで進め続ける
+            _lobbyLauncher?.Tick(Time.unscaledTime);
+
             if (_manager == null || !_manager.IsServer || Time.unscaledTime < _nextStatusLogTime)
             {
                 return;
@@ -257,6 +373,15 @@ namespace Fps.Net
 
         private void OnDestroy()
         {
+            if (_lobby != null)
+            {
+                Application.quitting -= LeaveLobbyOnQuit;
+                _lobby.Removed -= HandleLobbyRemoved;
+                _lobby.Dispose();
+                _lobby = null;
+                _lobbyLauncher = null;
+            }
+
             if (_manager == null)
             {
                 return;
@@ -336,6 +461,8 @@ namespace Fps.Net
 
             _connectedToServer = false;
             Debug.Log("[Net] disconnected from server id=" + clientId + reason);
+            // Host がいなくなったロビーに残っても意味が無い
+            _lobby?.LeaveLobby();
             QuitIfHeadlessPlayer(ExitDisconnected);
         }
 
@@ -359,6 +486,8 @@ namespace Fps.Net
                 _manager.Shutdown();
             }
 
+            // 試合を始められなかったので、作った・入ったロビーを残さない
+            _lobby?.LeaveLobby();
             QuitIfHeadlessPlayer(exitCode);
         }
 

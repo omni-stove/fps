@@ -127,6 +127,11 @@ namespace Fps.NetEos
                 userId = null;
             }
 
+            if (error == null)
+            {
+                EosPlatform.RememberLogin(userId);
+            }
+
             done(userId, error);
         }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Fps.Net;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -10,13 +11,31 @@ using UnityEngine;
 namespace Fps.Editor
 {
     /// <summary>
-    /// ネットワークの動作確認用シーン NetTest とプレイヤーのプレハブを生成し、ビルド設定に加える。
+    /// ネットワークの動作確認用シーン NetTest と、プレイヤー・試合の進行役のプレハブを生成し、ビルド設定に加える。
     /// 何度実行しても同じ結果になる。batchmode では
     /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.Build</c> で呼ぶ。
     /// </summary>
     public static class NetSceneBuilder
     {
         public const string PlayerPrefabPath = "Assets/game/Prefabs/Net/NetPlayer.prefab";
+        public const string MatchPrefabPath = "Assets/game/Prefabs/Net/NetMatch.prefab";
+
+        /// <summary>地面 (Plane は 10m 四方) の拡大率。60m 四方にする。</summary>
+        public const float GroundScale = 6f;
+
+        /// <summary>
+        /// 出現地点。チームごとの陣地を南北に 2 か所ずつ、どちらも使える地点を東西に 1 か所ずつ置く。
+        /// カプセル (高さ 2m) の中心が y=0 に来るので、y=-1 の地面にちょうど立つ。
+        /// </summary>
+        public static readonly (string Name, Vector3 Position, NetSpawnPoint.SpawnTeam Team)[] SpawnPoints =
+        {
+            ("Spawn Alpha 1", new Vector3(-4f, 0f, -22f), NetSpawnPoint.SpawnTeam.Alpha),
+            ("Spawn Alpha 2", new Vector3(4f, 0f, -22f), NetSpawnPoint.SpawnTeam.Alpha),
+            ("Spawn Bravo 1", new Vector3(-4f, 0f, 22f), NetSpawnPoint.SpawnTeam.Bravo),
+            ("Spawn Bravo 2", new Vector3(4f, 0f, 22f), NetSpawnPoint.SpawnTeam.Bravo),
+            ("Spawn Any West", new Vector3(-22f, 0f, 0f), NetSpawnPoint.SpawnTeam.Any),
+            ("Spawn Any East", new Vector3(22f, 0f, 0f), NetSpawnPoint.SpawnTeam.Any),
+        };
 
         /// <summary>
         /// プレハブにするのは、NetworkObject の GlobalObjectIdHash がアセットの GUID からエディタでしか作られず、
@@ -31,26 +50,49 @@ namespace Fps.Editor
                 return;
             }
 
-            var prefab = BuildPlayerPrefab();
-            BuildScene(prefab);
+            var playerPrefab = BuildPrefab(PlayerPrefabPath, CreatePlayerSource);
+            var matchPrefab = BuildPrefab(MatchPrefabPath, CreateMatchSource);
+            BuildScene(playerPrefab, matchPrefab);
             AddSceneToBuildSettings(NetBootstrap.ScenePath);
             AssetDatabase.SaveAssets();
-            Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + " and " + NetBootstrap.ScenePath);
+            Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath);
         }
 
-        private static GameObject BuildPlayerPrefab()
+        private static GameObject CreatePlayerSource()
         {
-            EnsureFolder(System.IO.Path.GetDirectoryName(PlayerPrefabPath));
-
             var source = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            source.name = "NetPlayer";
+            source.AddComponent<NetworkObject>();
+
+            // 位置はサーバーが決めて配る (リスポーンのテレポートもサーバーから)。大きさは変わらないので送らない
+            var networkTransform = source.AddComponent<NetworkTransform>();
+            networkTransform.SyncScaleX = false;
+            networkTransform.SyncScaleY = false;
+            networkTransform.SyncScaleZ = false;
+
+            source.AddComponent<NetPlayer>();
+            return source;
+        }
+
+        private static GameObject CreateMatchSource()
+        {
+            var source = new GameObject("NetMatch");
+            source.AddComponent<NetworkObject>();
+            source.AddComponent<NetTeamDeathmatch>();
+            return source;
+        }
+
+        private static GameObject BuildPrefab(string path, Func<GameObject> createSource)
+        {
+            EnsureFolder(System.IO.Path.GetDirectoryName(path));
+
+            var source = createSource();
             try
             {
-                source.name = "NetPlayer";
-                source.AddComponent<NetworkObject>();
-                var saved = PrefabUtility.SaveAsPrefabAsset(source, PlayerPrefabPath, out var success);
+                var saved = PrefabUtility.SaveAsPrefabAsset(source, path, out var success);
                 if (!success || saved == null)
                 {
-                    throw new InvalidOperationException("failed to save " + PlayerPrefabPath);
+                    throw new InvalidOperationException("failed to save " + path);
                 }
             }
             finally
@@ -59,11 +101,11 @@ namespace Fps.Editor
             }
 
             // 読み込み時の OnValidate で GlobalObjectIdHash が埋まるので、それをディスクへ書き戻す
-            AssetDatabase.ImportAsset(PlayerPrefabPath, ImportAssetOptions.ForceUpdate);
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null || prefab.GetComponent<NetworkObject>() == null)
             {
-                throw new InvalidOperationException(PlayerPrefabPath + " has no NetworkObject after import");
+                throw new InvalidOperationException(path + " has no NetworkObject after import");
             }
 
             EditorUtility.SetDirty(prefab);
@@ -71,7 +113,7 @@ namespace Fps.Editor
             return prefab;
         }
 
-        private static void BuildScene(GameObject playerPrefab)
+        private static void BuildScene(GameObject playerPrefab, GameObject matchPrefab)
         {
             EnsureFolder(System.IO.Path.GetDirectoryName(NetBootstrap.ScenePath));
 
@@ -80,11 +122,12 @@ namespace Fps.Editor
             var bootstrapObject = new GameObject("NetBootstrap");
             var bootstrap = bootstrapObject.AddComponent<NetBootstrap>();
             bootstrap.PlayerPrefab = playerPrefab;
+            bootstrap.MatchPrefab = matchPrefab;
 
-            // 画面ありで起動したときにカプセルが見えるようにするだけの最小限の構成
+            // 画面ありで起動したときに両陣地のカプセルが見えるよう、上から見下ろす
             var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
             cameraObject.AddComponent<Camera>();
-            cameraObject.transform.SetPositionAndRotation(new Vector3(0f, 4f, -8f), Quaternion.Euler(25f, 0f, 0f));
+            cameraObject.transform.SetPositionAndRotation(new Vector3(0f, 38f, -38f), Quaternion.Euler(45f, 0f, 0f));
 
             var lightObject = new GameObject("Directional Light");
             var light = lightObject.AddComponent<Light>();
@@ -94,6 +137,16 @@ namespace Fps.Editor
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
             ground.transform.position = new Vector3(0f, -1f, 0f);
+            ground.transform.localScale = new Vector3(GroundScale, 1f, GroundScale);
+
+            var spawnRoot = new GameObject("SpawnPoints");
+            foreach (var (pointName, position, team) in SpawnPoints)
+            {
+                var pointObject = new GameObject(pointName);
+                pointObject.transform.SetParent(spawnRoot.transform, false);
+                pointObject.transform.localPosition = position;
+                pointObject.AddComponent<NetSpawnPoint>().Team = team;
+            }
 
             if (!EditorSceneManager.SaveScene(scene, NetBootstrap.ScenePath))
             {

@@ -1,6 +1,8 @@
 using System.Linq;
+using Fps.Core;
 using NUnit.Framework;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
@@ -47,6 +49,41 @@ namespace Fps.Net.Tests
 
             var networkObject = bootstrap.PlayerPrefab.GetComponent<NetworkObject>();
             Assert.That(networkObject, Is.Not.Null);
+            Assert.That(bootstrap.PlayerPrefab.GetComponent<NetPlayer>(), Is.Not.Null);
+            Assert.That(bootstrap.PlayerPrefab.GetComponent<NetworkTransform>(), Is.Not.Null,
+                "respawn teleports need a NetworkTransform to reach the clients");
+        }
+
+        [Test]
+        public void HasMatchPrefabWithTeamDeathmatch()
+        {
+            var bootstrap = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single();
+
+            Assert.That(bootstrap.MatchPrefab, Is.Not.Null);
+            Assert.That(PrefabUtility.IsPartOfPrefabAsset(bootstrap.MatchPrefab), Is.True);
+            Assert.That(bootstrap.MatchPrefab.GetComponent<NetworkObject>(), Is.Not.Null);
+            Assert.That(bootstrap.MatchPrefab.GetComponent<NetTeamDeathmatch>(), Is.Not.Null);
+        }
+
+        [Test]
+        public void SpawnPointsCanStartTeamDeathmatch()
+        {
+            var points = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetSpawnPoint>(true))
+                .Select(marker => marker.ToSpawnPoint())
+                .ToArray();
+
+            Assert.That(points.Any(p => p.Team == Team.Alpha), Is.True);
+            Assert.That(points.Any(p => p.Team == Team.Bravo), Is.True);
+
+            // 実行時と同じ組み立てで例外が出ないこと (どちらのチームも使える地点がある)
+            var session = new TeamDeathmatchSession(
+                new TeamDeathmatchSpec(10, 300f, 3f), 100, points, new SpawnSelector(), _ => System.Numerics.Vector3.Zero);
+            Assert.That(session.Join(0), Is.EqualTo(Team.Alpha));
+            Assert.That(session.Join(1), Is.EqualTo(Team.Bravo));
+            Assert.That(session.State, Is.EqualTo(TeamDeathmatchState.Playing));
         }
 
         [Test]

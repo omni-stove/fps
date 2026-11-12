@@ -39,6 +39,9 @@ namespace Fps.Net
     public sealed class NetTeamDeathmatch : NetworkBehaviour
     {
         /// <summary>武器の既定値。オフラインの WeaponController と同じ値にそろえる。</summary>
+        /// <summary>試合で配る武器の Id。定義アセットに置き換えるまでは固定。</summary>
+        public const string DefaultWeaponId = "rifle";
+
         public const int DefaultWeaponDamage = 25;
         public const float DefaultWeaponRange = 100f;
         public const float DefaultFireInterval = 0.1f;
@@ -535,7 +538,17 @@ namespace Fps.Net
                 ValidateRestartDelay();
 
                 // 連射間隔も Spec に入れるが、制限するのは ShotBudget だけ (ServerWeapon は使わない)
-                weaponSpec = new WeaponSpec(_magazineSize, _reserveAmmo, _fireInterval, _reloadSeconds, _weaponDamage);
+                weaponSpec = new WeaponSpec(
+                    DefaultWeaponId,
+                    null,
+                    FireMode.Auto,
+                    _magazineSize,
+                    _reserveAmmo,
+                    _fireInterval,
+                    _reloadSeconds,
+                    _weaponDamage,
+                    _weaponRange,
+                    falloff);
             }
             catch (ArgumentOutOfRangeException e)
             {

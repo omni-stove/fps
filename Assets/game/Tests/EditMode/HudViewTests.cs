@@ -9,6 +9,11 @@ namespace Fps.Tests.EditMode
 {
     public sealed class HudViewTests
     {
+        private static WeaponSpec NewSpec()
+        {
+            return new WeaponSpec("rifle", null, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
+        }
+
         private static VisualElement CloneLayout()
         {
             var layout = Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath);
@@ -38,7 +43,7 @@ namespace Fps.Tests.EditMode
         {
             var model = new HudModel();
             model.BindHealth(new Health(100));
-            model.BindWeapon(new Weapon(new WeaponSpec(30, 90, 0f, 1f, 25)));
+            model.BindWeapon(new Weapon(NewSpec()));
             model.BindMatch(new Match(125f, 1, 0));
 
             var view = new HudView(CloneLayout(), model);
@@ -53,7 +58,7 @@ namespace Fps.Tests.EditMode
         {
             var model = new HudModel();
             var health = new Health(100);
-            var weapon = new Weapon(new WeaponSpec(30, 90, 0f, 1f, 25));
+            var weapon = new Weapon(NewSpec());
             var match = new Match(60f, 1, 0);
             model.BindHealth(health);
             model.BindWeapon(weapon);

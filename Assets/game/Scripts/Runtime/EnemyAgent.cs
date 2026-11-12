@@ -217,12 +217,23 @@ namespace Fps.Runtime
             try
             {
                 spec = new EnemySpec(_sightRange, _attackRange, _loseSightSeconds, _searchSeconds, _reactionSeconds);
-                weaponSpec = new WeaponSpec(_magazineSize, _reserveAmmo, _fireInterval, _reloadSeconds, _damage);
-                _falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
                 if (!(_range > 0f) || float.IsInfinity(_range))
                 {
                     throw new ArgumentOutOfRangeException(nameof(_range), _range, "range must be positive and finite");
                 }
+
+                _falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
+                weaponSpec = new WeaponSpec(
+                    WeaponController.DefaultWeaponId,
+                    null,
+                    FireMode.Auto,
+                    _magazineSize,
+                    _reserveAmmo,
+                    _fireInterval,
+                    _reloadSeconds,
+                    _damage,
+                    _range,
+                    _falloff);
             }
             catch (ArgumentException e)
             {

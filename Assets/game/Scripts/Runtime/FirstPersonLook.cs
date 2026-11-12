@@ -59,6 +59,14 @@ namespace Fps.Runtime
 
         private void Awake()
         {
+            // 専用サーバーには画面も入力も無く、視点を動かす相手がいない。カーソル操作も要らないので最初から止める。
+            if (NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
+            {
+                Debug.Log($"[FirstPersonLook] '{name}': disabled on a dedicated server build", this);
+                enabled = false;
+                return;
+            }
+
             if (!IsInitialized && !TryInitializeFromHierarchy())
             {
                 enabled = false;

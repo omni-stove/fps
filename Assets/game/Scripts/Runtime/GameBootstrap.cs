@@ -7,7 +7,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 子カメラ + <see cref="FirstPersonLook"/>
-    /// + カメラの <see cref="WeaponController"/>)・ライト・射撃確認用の的 (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>) を
+    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/>)・ライト・射撃確認用の的
+    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// </summary>
     [DisallowMultipleComponent]
@@ -86,10 +87,10 @@ namespace Fps.Runtime
             try
             {
                 floor = CreateFloor();
-                player = CreatePlayer(out var controller, out var camera, out var look, out var weapon);
+                player = CreatePlayer(out var controller, out var camera, out var look, out var mover, out var weapon);
                 light = CreateLight(out var lightComponent);
                 target = CreateTarget(out var targetDamageable);
-                _world = new BootstrapWorld(floor, player, controller, camera, look, lightComponent, weapon, targetDamageable);
+                _world = new BootstrapWorld(floor, player, controller, camera, look, mover, lightComponent, weapon, targetDamageable);
             }
             catch
             {
@@ -117,12 +118,13 @@ namespace Fps.Runtime
             out CharacterController controller,
             out Camera camera,
             out FirstPersonLook look,
+            out PlayerController mover,
             out WeaponController weapon)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
-                ConfigurePlayer(player, out controller, out camera, out look, out weapon);
+                ConfigurePlayer(player, out controller, out camera, out look, out mover, out weapon);
             }
             catch
             {
@@ -138,8 +140,10 @@ namespace Fps.Runtime
             out CharacterController controller,
             out Camera camera,
             out FirstPersonLook look,
+            out PlayerController mover,
             out WeaponController weapon)
         {
+            mover = null;
             player.name = PlayerName;
             player.transform.SetPositionAndRotation(PlayerSpawn, Quaternion.identity);
 
@@ -170,10 +174,19 @@ namespace Fps.Runtime
             // カメラを先に子に置いておくと、Play 中の AddComponent で走る Awake が自力で参照を解決できる。
             // Awake が走らない Edit Mode (シーン生成やテスト) では入力の解決を実行時の Awake に任せる。
             look = player.AddComponent<FirstPersonLook>();
-            if (Application.isPlaying && !look.IsInitialized)
+            // 専用サーバーでは FirstPersonLook が自分を止めて初期化しないので、未初期化を失敗にしない。
+            if (Application.isPlaying && !look.IsInitialized && !NetStartup.IsDedicatedServerBuild)
             {
                 throw new InvalidOperationException(
                     "FirstPersonLook could not resolve its camera or Look action; see the error above");
+            }
+
+            // FirstPersonLook と CharacterController を先に付けておくと、PlayerController の Awake が自力で参照を解決できる。
+            mover = player.AddComponent<PlayerController>();
+            if (Application.isPlaying && !mover.IsInitialized)
+            {
+                throw new InvalidOperationException(
+                    "PlayerController could not resolve its references or Move/Sprint/Jump actions; see the error above");
             }
 
             // 射撃は視点の向きで撃つのでカメラに付ける。参照の解決は FirstPersonLook と同じく Play 中の Awake に任せる。
@@ -261,6 +274,7 @@ namespace Fps.Runtime
         public CharacterController Controller { get; }
         public Camera Camera { get; }
         public FirstPersonLook Look { get; }
+        public PlayerController Mover { get; }
         public Light Light { get; }
         public WeaponController Weapon { get; }
 
@@ -273,6 +287,7 @@ namespace Fps.Runtime
             CharacterController controller,
             Camera camera,
             FirstPersonLook look,
+            PlayerController mover,
             Light light,
             WeaponController weapon,
             Damageable target)
@@ -282,6 +297,7 @@ namespace Fps.Runtime
             Controller = controller;
             Camera = camera;
             Look = look;
+            Mover = mover;
             Light = light;
             Weapon = weapon;
             Target = target;

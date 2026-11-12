@@ -98,6 +98,19 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlayerControllerIsOnThePlayerWithDefaultSpec()
+        {
+            var mover = _world.Mover;
+
+            Assert.That(mover, Is.SameAs(_world.Player.GetComponent<PlayerController>()));
+            Assert.That(mover.WalkSpeed, Is.EqualTo(PlayerController.DefaultWalkSpeed));
+            Assert.That(mover.SprintSpeed, Is.EqualTo(PlayerController.DefaultSprintSpeed));
+            Assert.That(mover.JumpHeight, Is.EqualTo(PlayerController.DefaultJumpHeight));
+            Assert.That(mover.Gravity, Is.EqualTo(PlayerController.DefaultGravity));
+            Assert.That(mover.AirControl, Is.EqualTo(PlayerController.DefaultAirControl));
+        }
+
+        [Test]
         public void WeaponIsOnTheCamera()
         {
             Assert.That(_world.Weapon, Is.Not.Null);

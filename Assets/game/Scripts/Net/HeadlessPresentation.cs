@@ -1,0 +1,61 @@
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace Fps.Net
+{
+    /// <summary>
+    /// 専用サーバーで要らない描画・音声のコンポーネント (Camera / AudioListener / AudioSource) を止める。
+    /// 止めるかどうかは <see cref="Fps.Core.NetStartup.ShouldDisablePresentation"/> で決め、ここは止める処理だけを持つ。
+    /// </summary>
+    public static class HeadlessPresentation
+    {
+        /// <summary>
+        /// <paramref name="scene"/> のすべての GameObject (非アクティブを含む) から該当コンポーネントを探して無効にする。
+        /// </summary>
+        /// <returns>新たに無効にしたコンポーネントの数。</returns>
+        public static int DisableIn(Scene scene)
+        {
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                return 0;
+            }
+
+            var disabled = 0;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                disabled += DisableUnder(root);
+            }
+
+            return disabled;
+        }
+
+        /// <summary><paramref name="root"/> とその子孫 (非アクティブを含む) の該当コンポーネントを無効にする。</summary>
+        /// <returns>新たに無効にしたコンポーネントの数。</returns>
+        public static int DisableUnder(GameObject root)
+        {
+            if (root == null)
+            {
+                return 0;
+            }
+
+            return Disable(root.GetComponentsInChildren<Camera>(true))
+                + Disable(root.GetComponentsInChildren<AudioListener>(true))
+                + Disable(root.GetComponentsInChildren<AudioSource>(true));
+        }
+
+        private static int Disable(Behaviour[] behaviours)
+        {
+            var disabled = 0;
+            foreach (var behaviour in behaviours)
+            {
+                if (behaviour != null && behaviour.enabled)
+                {
+                    behaviour.enabled = false;
+                    disabled++;
+                }
+            }
+
+            return disabled;
+        }
+    }
+}

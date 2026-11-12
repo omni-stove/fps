@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -8,8 +9,8 @@ namespace Fps.Runtime
     /// <summary>
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 子カメラ + <see cref="FirstPersonLook"/>
     /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/>)
-    /// ・ライト・射撃確認用の的
-    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>) を
+    /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
+    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// </summary>
     [DisallowMultipleComponent]
@@ -42,20 +43,23 @@ namespace Fps.Runtime
         /// <summary>プレイヤーの最大体力。敵 (<see cref="EnemyAgent"/>) の射撃はプレイヤーの <see cref="Damageable"/> に届く。</summary>
         public const int PlayerMaxHealth = 100;
 
-        public const string TargetName = "Target";
-        public const string TargetBodyName = "TargetBody";
-        public const string TargetHeadName = "TargetHead";
+        /// <summary>標的ダミーをまとめる親の名前。</summary>
+        public const string TargetsName = "TargetDummies";
 
-        /// <summary>射撃の確認用の的の足元。プレイヤーの正面 (+Z) 10m。</summary>
-        public static readonly Vector3 TargetPosition = new Vector3(0f, 0f, 10f);
+        /// <summary>標的ダミーの名前 (ログの識別子) の頭。左から 1, 2, ... を付ける。</summary>
+        public const string TargetDummyNamePrefix = "TargetDummy";
 
-        /// <summary>胴体のカプセル。高さ 1.7m (Capsule は高さ 2m なので y を 0.85 倍) で足元から立つ。</summary>
-        public static readonly Vector3 TargetBodyLocalPosition = new Vector3(0f, 0.85f, 0f);
-        public static readonly Vector3 TargetBodyScale = new Vector3(1f, 0.85f, 1f);
+        /// <summary>プレイヤーの前方に並べる標的ダミーの数。</summary>
+        public const int TargetDummyCount = 5;
 
-        /// <summary>頭の球。直径 0.5m で胴体のすぐ上 (1.7m〜2.2m)。正面を水平に撃つと胴体、少し上を向くと頭に当たる。</summary>
-        public static readonly Vector3 TargetHeadLocalPosition = new Vector3(0f, 1.95f, 0f);
-        public static readonly Vector3 TargetHeadScale = new Vector3(0.5f, 0.5f, 0.5f);
+        /// <summary>プレイヤーの足元から標的ダミーの列までの前方の距離 (m)。</summary>
+        public const float TargetDummyDistance = 10f;
+
+        /// <summary>隣り合う標的ダミーの間隔 (m)。胴の直径 1m に対して 1m の隙間を空ける。</summary>
+        public const float TargetDummySpacing = 2f;
+
+        public const int TargetDummyMaxHealth = TargetDummy.DefaultMaxHealth;
+        public const float TargetDummyRespawnDelay = TargetDummy.DefaultRespawnDelay;
 
         [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
         private bool _createFloor = true;
@@ -89,7 +93,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 床・プレイヤー・ライト・的を生成する。2 回目以降は何もせず最初の結果を返す。
+        /// 床・プレイヤー・ライト・標的ダミーを生成する。2 回目以降は何もせず最初の結果を返す。
         /// 途中で失敗したら作りかけのオブジェクトを片付けてから例外を投げ直す。
         /// </summary>
         public BootstrapWorld Build()
@@ -102,19 +106,19 @@ namespace Fps.Runtime
             GameObject floor = null;
             GameObject player = null;
             GameObject light = null;
-            GameObject target = null;
+            GameObject targets = null;
             try
             {
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(out var controller, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
                 light = CreateLight(out var lightComponent);
-                target = CreateTarget(out var targetDamageable);
+                targets = CreateTargetDummies(player.transform, out var dummies);
                 _world = new BootstrapWorld(
-                    floor, player, controller, camera, look, mover, lightComponent, weapon, targetDamageable, playerDamageable);
+                    floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable);
             }
             catch
             {
-                DestroySafely(target);
+                DestroySafely(targets);
                 DestroySafely(light);
                 DestroySafely(player);
                 DestroySafely(floor);
@@ -225,43 +229,64 @@ namespace Fps.Runtime
             }
         }
 
-        private static GameObject CreateTarget(out Damageable damageable)
+        /// <summary>index 番目 (0 始まり、左から) の標的ダミーの名前。</summary>
+        public static string TargetDummyName(int index)
         {
-            var target = new GameObject(TargetName);
+            return TargetDummyNamePrefix + (index + 1);
+        }
+
+        /// <summary>
+        /// 標的ダミーの足元の位置。プレイヤーの足元から前方へ <see cref="TargetDummyDistance"/> 進んだ所に、
+        /// 横方向へ <see cref="TargetDummySpacing"/> 間隔で、プレイヤーから見て左から順に <see cref="TargetDummyCount"/> 個並べる。
+        /// </summary>
+        public static Vector3[] TargetDummyPositions(Vector3 playerFeet, Quaternion playerRotation)
+        {
+            var forward = HorizontalForward(playerRotation);
+            var right = Vector3.Cross(Vector3.up, forward);
+
+            var offsets = LineLayout.CenteredOffsets(TargetDummyCount, TargetDummySpacing);
+            var positions = new Vector3[offsets.Length];
+            for (var i = 0; i < offsets.Length; i++)
+            {
+                positions[i] = playerFeet + (forward * TargetDummyDistance) + (right * offsets[i]);
+            }
+
+            return positions;
+        }
+
+        /// <summary>向きの前方を水平面に落とした単位ベクトル。真上か真下を向いていれば +Z。</summary>
+        private static Vector3 HorizontalForward(Quaternion rotation)
+        {
+            // 水平に取るのは、プレイヤーが傾いていても標的が宙に浮いたり埋まったりしないようにするため。
+            var forward = Vector3.ProjectOnPlane(rotation * Vector3.forward, Vector3.up);
+            return forward.sqrMagnitude > 1e-6f ? forward.normalized : Vector3.forward;
+        }
+
+        private static GameObject CreateTargetDummies(Transform player, out TargetDummy[] dummies)
+        {
+            var feet = player.position + (Vector3.down * (PlayerHeight / 2f));
+            var positions = TargetDummyPositions(feet, player.rotation);
+
+            // 標的はプレイヤーの方を向かせる (並べた方向の逆)。
+            var facing = Quaternion.LookRotation(-HorizontalForward(player.rotation), Vector3.up);
+
+            var root = new GameObject(TargetsName);
             try
             {
-                target.transform.SetPositionAndRotation(TargetPosition, Quaternion.identity);
-                damageable = target.AddComponent<Damageable>();
-
-                CreateTargetPart(target.transform, PrimitiveType.Capsule, TargetBodyName, TargetBodyLocalPosition, TargetBodyScale, HitZone.Body, damageable);
-                CreateTargetPart(target.transform, PrimitiveType.Sphere, TargetHeadName, TargetHeadLocalPosition, TargetHeadScale, HitZone.Head, damageable);
+                dummies = new TargetDummy[positions.Length];
+                for (var i = 0; i < positions.Length; i++)
+                {
+                    dummies[i] = TargetDummy.Create(
+                        TargetDummyName(i), positions[i], facing, root.transform, TargetDummyMaxHealth, TargetDummyRespawnDelay);
+                }
             }
             catch
             {
-                DestroySafely(target);
+                DestroySafely(root);
                 throw;
             }
 
-            return target;
-        }
-
-        private static void CreateTargetPart(
-            Transform parent,
-            PrimitiveType shape,
-            string partName,
-            Vector3 localPosition,
-            Vector3 localScale,
-            HitZone zone,
-            Damageable owner)
-        {
-            // プリミティブ付属のコライダーをそのまま当たり判定に使う。
-            var part = GameObject.CreatePrimitive(shape);
-            part.name = partName;
-            part.transform.SetParent(parent, false);
-            part.transform.localPosition = localPosition;
-            part.transform.localRotation = Quaternion.identity;
-            part.transform.localScale = localScale;
-            part.AddComponent<Hitbox>().Initialize(zone, owner);
+            return root;
         }
 
         private static GameObject CreateLight(out Light light)
@@ -306,8 +331,11 @@ namespace Fps.Runtime
         public Light Light { get; }
         public WeaponController Weapon { get; }
 
-        /// <summary>射撃の確認用の的。</summary>
-        public Damageable Target { get; }
+        /// <summary>標的ダミーをまとめた親。</summary>
+        public GameObject TargetRoot { get; }
+
+        /// <summary>プレイヤーの前方に並べた標的ダミー。プレイヤーから見て左から順。</summary>
+        public IReadOnlyList<TargetDummy> Targets { get; }
 
         /// <summary>プレイヤーの体力。敵の射撃はここに届く。</summary>
         public Damageable PlayerDamageable { get; }
@@ -321,7 +349,8 @@ namespace Fps.Runtime
             PlayerController mover,
             Light light,
             WeaponController weapon,
-            Damageable target,
+            GameObject targetRoot,
+            IReadOnlyList<TargetDummy> targets,
             Damageable playerDamageable)
         {
             Floor = floor;
@@ -332,7 +361,8 @@ namespace Fps.Runtime
             Mover = mover;
             Light = light;
             Weapon = weapon;
-            Target = target;
+            TargetRoot = targetRoot;
+            Targets = targets ?? throw new ArgumentNullException(nameof(targets));
             PlayerDamageable = playerDamageable;
         }
     }

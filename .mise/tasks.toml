@@ -16,7 +16,7 @@ description = "Pull skill-kit and re-sync this repo"
 run = "skill-kit game update"
 
 [lint]
-description = "Check C# formatting, style and analyzers (Unity-independent code via dotnet/Fps.slnx, all of Assets/game for whitespace)"
+description = "Check C# formatting, style and analyzers (Unity-independent code via dotnet/Fps.slnx, all of Assets/game for whitespace) and that every tracked file/folder under Assets has a tracked .meta and vice versa"
 run = "scripts/lint.sh"
 quiet = true
 

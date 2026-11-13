@@ -30,7 +30,8 @@ namespace Fps.Net
     /// 抜け殻はローカルな見た目だけで、判定と同期には関わらない。
     /// </para>
     /// <para>
-    /// 射撃の入力と <see cref="FireServerRpc"/> は .Fire.cs に分けてある。
+    /// 射撃の入力と <see cref="FireServerRpc"/> は .Fire.cs に、ダウンと蘇生 (同期・見た目・頭の上の印・Interact と <see cref="ReviveRpc"/>) は
+    /// .Downed.cs に分けてある。ダウン中は撃てない。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -202,6 +203,8 @@ namespace Fps.Net
                 _deathBody = DeathBodyPresenter.Attach(gameObject);
                 _deathBody.Id = "client=" + OwnerClientId.ToString(CultureInfo.InvariantCulture);
             }
+
+            SpawnDowned();
         }
 
         public override void OnNetworkDespawn()
@@ -214,6 +217,7 @@ namespace Fps.Net
             }
 
             ReleaseAttackAction();
+            DespawnDowned();
             SetLocalView(false);
             DestroyHud();
 
@@ -239,6 +243,15 @@ namespace Fps.Net
             }
 
             DestroyHud();
+
+            // 消滅の通知を経ずに破棄された場合も、一覧と印を残さない
+            _spawnedPlayers.Remove(this);
+            if (Local == this)
+            {
+                Local = null;
+            }
+
+            DestroyDownedMarker();
 
             foreach (var material in _ownedMaterials)
             {
@@ -594,6 +607,8 @@ namespace Fps.Net
 
         private void LateUpdate()
         {
+            RefreshDownedMarker();
+
             if (!_deathBodyPending)
             {
                 return;

@@ -54,7 +54,8 @@ namespace Fps.Net
     /// 終わっている間に接続してきたプレイヤーは、次の試合が始まってから加える。
     /// </para>
     /// <para>
-    /// 射撃は .Fire.cs、出現とリスポーンは .Spawn.cs、武器を配る処理は .Loadout.cs、参加と退出は .Roster.cs に分けてある。
+    /// 射撃は .Fire.cs、出現とリスポーンは .Spawn.cs、武器を配る処理は .Loadout.cs、参加と退出は .Roster.cs、
+    /// ダウンと蘇生は .Downed.cs に分けてある。
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -305,6 +306,7 @@ namespace Fps.Net
             _rewindTargets.Clear();
             _serverLoadout = null;
             _lastKillers.Clear();
+            ClearDowned();
 
             if (Current == this)
             {
@@ -325,8 +327,11 @@ namespace Fps.Net
                 JoinNewPlayers();
             }
 
+            // 蘇生は Session の Tick より前に進める (前の Tick から進めなかった累計を Tick が 0 に戻すため)。
             // 終わっていれば次の試合までの待ちが進み、待ち終わったら Session が Restart する
+            ServerAdvanceRevives(Time.deltaTime);
             _session.Tick(Time.deltaTime);
+            SyncDownedStates();
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
             SyncNextWaveSeconds();
@@ -376,7 +381,7 @@ namespace Fps.Net
                 return DamageOutcome.Ignored;
             }
 
-            return _session.ApplyDamage(attacker.ServerPlayerId, victim.ServerPlayerId, amount);
+            return ApplySessionDamage(attacker.ServerPlayerId, victim.ServerPlayerId, amount);
         }
 
         private void StartSession()
@@ -441,8 +446,10 @@ namespace Fps.Net
             _session.Killed += HandleKilled;
             _session.Spawned += HandleSpawned;
             _session.Ended += HandleEnded;
+            SubscribeDowned(_session);
 
             _lastKillers.Clear();
+            ClearDowned();
 
             _alphaScore.Value = 0;
             _bravoScore.Value = 0;
@@ -455,6 +462,7 @@ namespace Fps.Net
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
                 + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count);
             Debug.Log(MatchLog.Rules(usedDefaultRules ? "default" : _rules.name, spec.Rules));
+            Debug.Log(NetDownedLog.Settings(spec.Rules.Actions, ReviveReach.DefaultRange));
             Debug.Log("[Match] destructible structures=" + structures + " destruction=" + spec.Rules.Destruction);
             Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
                 + " tickRate=" + NetworkPlayerMotor.TickRate);
@@ -568,6 +576,7 @@ namespace Fps.Net
             session.Killed -= HandleKilled;
             session.Spawned -= HandleSpawned;
             session.Ended -= HandleEnded;
+            UnsubscribeDowned(session);
         }
 
         private void SyncRemainingSeconds()
@@ -676,8 +685,9 @@ namespace Fps.Net
             SyncNextWaveSeconds();
             _serverLoadout?.ResetBudgets();
 
-            // 続く PlayerChanged で各行が倒した相手なしに戻る
+            // 続く PlayerChanged で各行が倒した相手なしに戻る。続く DownedChanged でダウンしていた人の状態が戻る
             _lastKillers.Clear();
+            _reviveHolds.Clear();
             Debug.Log(MatchLog.Restart());
         }
 

@@ -207,6 +207,40 @@ namespace Fps.Net.Tests
             Assert.That(failed.HasActiveReloadWindow, Is.False);
         }
 
+        [Test]
+        public void DownedStateSerializesAllFields()
+        {
+            var downed = new NetDownedState(true, 12, 42);
+            var full = new NetDownedState(true, 0, 100);
+
+            Assert.That(RoundTrip(downed), Is.EqualTo(downed));
+            Assert.That(RoundTrip(full), Is.EqualTo(full));
+            Assert.That(RoundTrip(NetDownedState.None), Is.EqualTo(NetDownedState.None));
+            Assert.That(RoundTrip(downed).ToString(), Is.EqualTo("downed=true bleedout=12 revive=42%"));
+        }
+
+        [Test]
+        public void DownedStateEqualityUsesAllFields()
+        {
+            var state = new NetDownedState(true, 12, 42);
+
+            Assert.That(state.Equals(new NetDownedState(true, 12, 42)), Is.True);
+            Assert.That(state.GetHashCode(), Is.EqualTo(new NetDownedState(true, 12, 42).GetHashCode()));
+            Assert.That(state.Equals(new NetDownedState(false, 12, 42)), Is.False);
+            Assert.That(state.Equals(new NetDownedState(true, 11, 42)), Is.False);
+            Assert.That(state.Equals(new NetDownedState(true, 12, 43)), Is.False);
+            Assert.That(default(NetDownedState), Is.EqualTo(NetDownedState.None), "the initial value means not downed");
+        }
+
+        [Test]
+        public void DownedStateIsQuantizedToWhatTheHudShows()
+        {
+            Assert.That(NetDownedState.From(false, 3f, 0.5f), Is.EqualTo(NetDownedState.None), "values are dropped when not downed");
+            Assert.That(NetDownedState.From(true, 14.2f, 0f), Is.EqualTo(new NetDownedState(true, 15, 0)));
+            Assert.That(NetDownedState.From(true, 0.01f, 0.426f), Is.EqualTo(new NetDownedState(true, 1, 42)));
+            Assert.That(NetDownedState.From(true, null, 1f), Is.EqualTo(new NetDownedState(true, 0, 100)));
+        }
+
         // NetworkVariable / NetworkList が送るときと同じく INetworkSerializable で書いて読み戻す
         private static T RoundTrip<T>(T value)
             where T : INetworkSerializable, new()

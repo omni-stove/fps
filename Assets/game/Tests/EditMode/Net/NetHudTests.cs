@@ -436,6 +436,74 @@ namespace Fps.Net.Tests
             Assert.That(_match.StatusVariable.OnValueChanged, Is.Null);
             Assert.That(_match.NextWaveSecondsVariable.OnValueChanged, Is.Null);
             Assert.That(_match.RulesVariable.OnValueChanged, Is.Null);
+            Assert.That(_player.DownedStateVariable.OnValueChanged, Is.Null);
+        }
+
+        [Test]
+        public void ShowsTheBleedoutAndTheReviveProgressWhileDowned()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+
+            // ダウン中は体力が残るので、リスポーンの待ちにはならない
+            Arrive(_player.HealthVariable, _maxHealth, 30);
+            Arrive(_player.DownedStateVariable, NetDownedState.None, new NetDownedState(true, 12, 0));
+            Assert.That(_netHud.IsAwaitingRespawn, Is.False);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("ダウン中 あと 12 秒"));
+            Assert.That(IsShown(_view.NoticeLabel), Is.True);
+
+            Arrive(_player.DownedStateVariable, new NetDownedState(true, 12, 0), new NetDownedState(true, 11, 40));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("ダウン中 あと 11 秒 (蘇生 40%)"));
+
+            // 起こされたら案内を消す
+            Arrive(_player.DownedStateVariable, new NetDownedState(true, 11, 40), NetDownedState.None);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [Test]
+        public void BleedingOutSwitchesToTheRespawnCountdown()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, 30);
+            Arrive(_player.DownedStateVariable, NetDownedState.None, new NetDownedState(true, 1, 0));
+
+            // サーバーは体力 0 とダウンの解除を同じフレームに書く
+            Arrive(_player.HealthVariable, 30, 0);
+            Arrive(_player.DownedStateVariable, new NetDownedState(true, 1, 0), NetDownedState.None);
+
+            Assert.That(_netHud.IsAwaitingRespawn, Is.True);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(3)));
+        }
+
+        [Test]
+        public void ShowsTheProgressWhileRevivingAnAlly()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+
+            _netHud.ShowReviving(0);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("蘇生中 0%"));
+
+            _netHud.ShowReviving(55);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("蘇生中 55%"));
+
+            _netHud.ShowReviving(null);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [Test]
+        public void OwnDownedNoticeWinsOverReviving()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            _netHud.ShowReviving(55);
+
+            Arrive(_player.DownedStateVariable, NetDownedState.None, new NetDownedState(true, 9, 0));
+
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("ダウン中 あと 9 秒"));
         }
     }
 }

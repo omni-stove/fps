@@ -29,6 +29,7 @@ namespace Fps.Net
         private readonly Vector3 _standingEyeLocal;
         private readonly Vector3 _standingBodyPosition;
         private readonly Vector3 _standingBodyScale;
+        private readonly Quaternion _standingBodyRotation;
 
         /// <summary>
         /// 今の controller の height / center / radius と目の位置を立ちの寸法として測る。立った状態で呼ぶこと。
@@ -63,6 +64,7 @@ namespace Fps.Net
             _standingEyeLocal = eye != null ? _root.InverseTransformPoint(eye.position) : new Vector3(0f, NetPlayer.EyeHeight, 0f);
             _standingBodyPosition = body != null ? body.localPosition : Vector3.zero;
             _standingBodyScale = body != null ? body.localScale : Vector3.one;
+            _standingBodyRotation = body != null ? body.localRotation : Quaternion.identity;
             Geometry = new StanceGeometry(controller.height, _standingCenter.y, _standingEyeLocal.y, crouchHeight, controller.radius);
         }
 
@@ -99,7 +101,10 @@ namespace Fps.Net
         /// <summary>今の姿勢での目のワールド座標。目の Transform が無くても同じ規則で計算する (サーバーの射撃の検査に使う)。</summary>
         public Vector3 EyePosition => _root.TransformPoint(new Vector3(_standingEyeLocal.x, Current.EyeY, _standingEyeLocal.z));
 
-        /// <summary>姿勢の寸法を CharacterController・目・見た目に当てる。足元の高さは変わらない。</summary>
+        /// <summary>
+        /// 姿勢の寸法を CharacterController・目・見た目に当てる。足元の高さは変わらない。
+        /// 見た目を寝かせている間 (<see cref="SetLying"/>) は、見た目だけ寝かせたままにする。
+        /// </summary>
         public void Apply(bool crouched)
         {
             var shape = Geometry.Shape(crouched);
@@ -111,16 +116,51 @@ namespace Fps.Net
                 _eye.position = _root.TransformPoint(new Vector3(_standingEyeLocal.x, shape.EyeY, _standingEyeLocal.z));
             }
 
-            if (_body != null)
+            IsCrouched = crouched;
+            ApplyBody();
+        }
+
+        /// <summary>見た目 (<see cref="BodyName"/>) を寝かせているか (ダウン中)。</summary>
+        public bool IsLying { get; private set; }
+
+        /// <summary>
+        /// 見た目だけを寝かせる・起こす。CharacterController と目は姿勢 (<see cref="Apply"/>) のままにする。
+        /// 寝かせると、見た目を立ちの大きさのまま前後に倒し、足元の高さに半径ぶん浮かせて置く。
+        /// </summary>
+        public void SetLying(bool lying)
+        {
+            if (IsLying == lying)
             {
-                var standing = Geometry.Standing;
-                _body.localPosition = new Vector3(
-                    _standingBodyPosition.x, _standingBodyPosition.y + (shape.CenterY - standing.CenterY), _standingBodyPosition.z);
-                _body.localScale = new Vector3(
-                    _standingBodyScale.x, _standingBodyScale.y * (shape.Height / standing.Height), _standingBodyScale.z);
+                return;
             }
 
-            IsCrouched = crouched;
+            IsLying = lying;
+            ApplyBody();
+        }
+
+        private void ApplyBody()
+        {
+            if (_body == null)
+            {
+                return;
+            }
+
+            var standing = Geometry.Standing;
+            if (IsLying)
+            {
+                var feetY = standing.CenterY - (standing.Height / 2f);
+                _body.localRotation = _standingBodyRotation * Quaternion.Euler(90f, 0f, 0f);
+                _body.localPosition = new Vector3(_standingBodyPosition.x, feetY + Geometry.Radius, _standingBodyPosition.z);
+                _body.localScale = _standingBodyScale;
+                return;
+            }
+
+            var shape = Geometry.Shape(IsCrouched);
+            _body.localRotation = _standingBodyRotation;
+            _body.localPosition = new Vector3(
+                _standingBodyPosition.x, _standingBodyPosition.y + (shape.CenterY - standing.CenterY), _standingBodyPosition.z);
+            _body.localScale = new Vector3(
+                _standingBodyScale.x, _standingBodyScale.y * (shape.Height / standing.Height), _standingBodyScale.z);
         }
 
         /// <summary>

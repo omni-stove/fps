@@ -10,6 +10,10 @@ namespace Fps.Core
     /// キルとデスは数えるだけで、ポイントにはしない。リスポーンはこのクラスでは扱わない。
     /// 終了後は何を報告しても状態が変わらない。次の試合は <see cref="Reset"/> で同じ顔ぶれのまま始め直す。
     /// </summary>
+    /// <remarks>
+    /// 中身は <see cref="ModeSession"/> に <see cref="TwoTeams"/>・拠点のポイント (このクラスの <see cref="IScoreRule"/>)・
+    /// <see cref="ScoreLimitWin"/>・<see cref="TimeLimitWin"/> を組んだもの。リスポーンの部品は渡さない。
+    /// </remarks>
     public sealed class Domination : IGameMode
     {
         /// <summary>状態が変わるたびに新しい状態を渡して呼ばれる。Ended では <see cref="Ended"/> より先に呼ばれ、その時点で Winner は確定済み。</summary>
@@ -24,23 +28,22 @@ namespace Fps.Core
         /// <summary>持ち主のいた拠点が中立に戻った瞬間に呼ばれる。引数は拠点の番号とそれまでの持ち主。</summary>
         public event Action<int, Team> PointNeutralized;
 
-        private readonly Dictionary<int, PlayerRecord> _players = new Dictionary<int, PlayerRecord>();
+        private readonly ModeSession _session;
         private readonly ControlPoint[] _points;
 
-        // 1 秒あたりのポイントは小数なので、丸めをためないよう double で足していく。
-        private double _alphaScore;
-        private double _bravoScore;
+        // 参加者ごとの、半径の中にいる拠点の番号。どこにもいなければ null。顔ぶれは _session と同じに保つ。
+        private readonly Dictionary<int, int?> _playerPoints = new Dictionary<int, int?>();
 
         public DominationSpec Spec { get; }
-        public GameModeState State { get; private set; }
+        public GameModeState State => _session.State;
 
         /// <summary>残り時間 (秒)。開始前は TimeLimitSeconds のまま、終了後は終了した時点の値のまま。</summary>
-        public float RemainingSeconds { get; private set; }
+        public float RemainingSeconds => _session.RemainingSeconds;
 
         /// <summary>勝ったチーム。終了前と、同点で終わったときは null。</summary>
-        public Team? Winner { get; private set; }
+        public Team? Winner => Side.ToTeam(_session.Winner);
 
-        public int PlayerCount => _players.Count;
+        public int PlayerCount => _session.PlayerCount;
 
         public int PointCount => _points.Length;
 
@@ -48,8 +51,6 @@ namespace Fps.Core
         public Domination(DominationSpec spec)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
-            State = GameModeState.Waiting;
-            RemainingSeconds = spec.TimeLimitSeconds;
 
             _points = new ControlPoint[spec.PointCount];
             for (var i = 0; i < _points.Length; i++)
@@ -60,19 +61,19 @@ namespace Fps.Core
                 point.Neutralized += team => PointNeutralized?.Invoke(index, team);
                 _points[i] = point;
             }
+
+            _session = new ModeSession(
+                new TwoTeams(),
+                spec.TimeLimitSeconds,
+                new IScoreRule[] { new ControlPointScore(this) },
+                null,
+                new IWinCondition[] { new ScoreLimitWin(spec.ScoreLimit), new TimeLimitWin() });
+            _session.StateChanged += state => StateChanged?.Invoke(state);
+            _session.Ended += winner => Ended?.Invoke(Side.ToTeam(winner));
         }
 
         /// <summary>試合を始める。Waiting のときだけ呼べる。</summary>
-        public void Start()
-        {
-            if (State != GameModeState.Waiting)
-            {
-                throw new InvalidOperationException("match has already started");
-            }
-
-            State = GameModeState.Playing;
-            StateChanged?.Invoke(State);
-        }
+        public void Start() => _session.Start();
 
         /// <summary>
         /// 次の試合のために、ポイント・各プレイヤーのキル数とデス数・残り時間・勝者・全拠点の占領を初期値に戻し、
@@ -81,66 +82,43 @@ namespace Fps.Core
         /// </summary>
         public void Reset()
         {
-            _alphaScore = 0d;
-            _bravoScore = 0d;
-            RemainingSeconds = Spec.TimeLimitSeconds;
-            Winner = null;
             foreach (var point in _points)
             {
                 point.Reset();
             }
 
-            foreach (var record in _players.Values)
+            foreach (var playerId in new List<int>(_playerPoints.Keys))
             {
-                record.Kills = 0;
-                record.Deaths = 0;
-                record.PointIndex = null;
+                _playerPoints[playerId] = null;
             }
 
-            if (State == GameModeState.Waiting)
-            {
-                return;
-            }
-
-            State = GameModeState.Waiting;
-            StateChanged?.Invoke(State);
+            _session.Reset();
         }
 
         /// <summary>プレイヤーを team に加える。どの拠点にもいない状態で、キル数とデス数は 0 から数える。</summary>
         public void AddPlayer(int playerId, Team team)
         {
-            if (team != Team.Alpha && team != Team.Bravo)
-            {
-                throw new ArgumentOutOfRangeException(nameof(team), team, "team is not a valid Team");
-            }
-
-            if (_players.ContainsKey(playerId))
-            {
-                throw new ArgumentException($"player {playerId} has already been added", nameof(playerId));
-            }
-
-            _players.Add(playerId, new PlayerRecord(team));
+            _session.AddPlayer(playerId, Side.FromTeam(team));
+            _playerPoints[playerId] = null;
         }
 
         /// <summary>プレイヤーを抜く。次の <see cref="Tick"/> から拠点の人数に数えない。チームのポイントはそのまま残す。</summary>
         public void RemovePlayer(int playerId)
         {
-            if (!_players.Remove(playerId))
-            {
-                throw UnknownPlayer(playerId);
-            }
+            _session.RemovePlayer(playerId);
+            _playerPoints.Remove(playerId);
         }
 
-        public bool HasPlayer(int playerId) => _players.ContainsKey(playerId);
+        public bool HasPlayer(int playerId) => _session.HasPlayer(playerId);
 
-        public Team GetTeam(int playerId) => Find(playerId).Team;
+        public Team GetTeam(int playerId) => _session.GetSide(playerId).ToTeam();
 
-        public int GetKills(int playerId) => Find(playerId).Kills;
+        public int GetKills(int playerId) => _session.GetKills(playerId);
 
-        public int GetDeaths(int playerId) => Find(playerId).Deaths;
+        public int GetDeaths(int playerId) => _session.GetDeaths(playerId);
 
         /// <summary>プレイヤーがいる拠点の番号。どの拠点の半径にもいなければ null。</summary>
-        public int? GetPlayerPoint(int playerId) => Find(playerId).PointIndex;
+        public int? GetPlayerPoint(int playerId) => FindPoint(playerId);
 
         /// <summary>
         /// プレイヤーがどの拠点の半径にいるかを伝える。どこにもいなければ null。次の <see cref="Tick"/> から占領に数える。
@@ -148,13 +126,13 @@ namespace Fps.Core
         /// </summary>
         public void SetPlayerPoint(int playerId, int? pointIndex)
         {
-            var record = Find(playerId);
+            FindPoint(playerId);
             if (pointIndex.HasValue && (pointIndex.Value < 0 || pointIndex.Value >= _points.Length))
             {
                 throw new ArgumentOutOfRangeException(nameof(pointIndex), pointIndex, "no control point with this index");
             }
 
-            record.PointIndex = pointIndex;
+            _playerPoints[playerId] = pointIndex;
         }
 
         /// <summary>拠点を占領しているチーム。中立なら null。</summary>
@@ -169,7 +147,7 @@ namespace Fps.Core
         /// <summary>team が持っている拠点の数。</summary>
         public int CountOwned(Team team)
         {
-            ValidateTeam(team);
+            Side.FromTeam(team);
             var owned = 0;
             foreach (var point in _points)
             {
@@ -183,11 +161,7 @@ namespace Fps.Core
         }
 
         /// <summary>team のポイント。小数を含む。表示では切り捨てて使う。</summary>
-        public float GetScore(Team team)
-        {
-            ValidateTeam(team);
-            return (float)(team == Team.Alpha ? _alphaScore : _bravoScore);
-        }
+        public float GetScore(Team team) => (float)_session.GetScore(Side.FromTeam(team));
 
         /// <summary>
         /// killerId が victimId を倒したことを数える。倒された人の Deaths を増やし、別チームを倒したなら倒した人の Kills を増やす。
@@ -195,19 +169,11 @@ namespace Fps.Core
         /// </summary>
         public void ReportKill(int killerId, int victimId)
         {
-            var killer = Find(killerId, nameof(killerId));
-            var victim = Find(victimId, nameof(victimId));
-
-            if (State != GameModeState.Playing)
+            var playing = State == GameModeState.Playing;
+            _session.ReportKill(killerId, victimId);
+            if (playing)
             {
-                return;
-            }
-
-            victim.Deaths++;
-            victim.PointIndex = null;
-            if (killerId != victimId && killer.Team != victim.Team)
-            {
-                killer.Kills++;
+                LeavePoint(victimId);
             }
         }
 
@@ -217,15 +183,12 @@ namespace Fps.Core
         /// </summary>
         public void ReportDeath(int playerId)
         {
-            var player = Find(playerId, nameof(playerId));
-
-            if (State != GameModeState.Playing)
+            var playing = State == GameModeState.Playing;
+            _session.ReportDeath(playerId);
+            if (playing)
             {
-                return;
+                LeavePoint(playerId);
             }
-
-            player.Deaths++;
-            player.PointIndex = null;
         }
 
         /// <summary>
@@ -234,69 +197,13 @@ namespace Fps.Core
         /// この Tick の途中で ScoreLimit に届くチームがあれば、先に届いたほうの勝ちで終える (同時なら引き分け)。
         /// 届かずに残り時間が 0 になったら、ポイントの多いほうを勝ちとして終える。Playing 以外では何もしない。
         /// </summary>
-        public void Tick(float deltaSeconds)
+        public void Tick(float deltaSeconds) => _session.Tick(deltaSeconds);
+
+        private void LeavePoint(int playerId)
         {
-            if (!(deltaSeconds >= 0f))
+            if (_playerPoints.ContainsKey(playerId))
             {
-                throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must not be negative");
-            }
-
-            if (State != GameModeState.Playing)
-            {
-                return;
-            }
-
-            var elapsed = Math.Min(deltaSeconds, RemainingSeconds);
-
-            // 占領し終えた Tick の分まで点を与えると、長い Tick で占領した側が持っていなかった時間の点を得てしまうので、Tick の頭の持ち主で数える。
-            var alphaRate = CountOwned(Team.Alpha) * (double)Spec.PointsPerSecond;
-            var bravoRate = CountOwned(Team.Bravo) * (double)Spec.PointsPerSecond;
-
-            var alphaReach = SecondsToLimit(_alphaScore, alphaRate);
-            var bravoReach = SecondsToLimit(_bravoScore, bravoRate);
-            var firstReach = Math.Min(alphaReach, bravoReach);
-
-            // 拠点も勝利ポイントに届く時刻までしか進めない。
-            UpdatePoints((float)Math.Min(elapsed, firstReach));
-
-            // 拠点のイベントのハンドラで Reset されたら、ここで点を足さない。
-            if (State != GameModeState.Playing)
-            {
-                return;
-            }
-
-            // 1 回の Tick が長くても、勝利ポイントに届いた時刻で止めて、そこで勝敗を決める。
-            if (firstReach <= elapsed)
-            {
-                Advance(firstReach, alphaRate, bravoRate);
-                Team? winner = null;
-                if (alphaReach < bravoReach)
-                {
-                    winner = Team.Alpha;
-                }
-                else if (bravoReach < alphaReach)
-                {
-                    winner = Team.Bravo;
-                }
-
-                if (alphaReach == firstReach)
-                {
-                    _alphaScore = Spec.ScoreLimit;
-                }
-
-                if (bravoReach == firstReach)
-                {
-                    _bravoScore = Spec.ScoreLimit;
-                }
-
-                End(winner);
-                return;
-            }
-
-            Advance(elapsed, alphaRate, bravoRate);
-            if (RemainingSeconds <= 0f)
-            {
-                End(LeadingTeam());
+                _playerPoints[playerId] = null;
             }
         }
 
@@ -304,20 +211,20 @@ namespace Fps.Core
         {
             var alphaCounts = new int[_points.Length];
             var bravoCounts = new int[_points.Length];
-            foreach (var record in _players.Values)
+            foreach (var pair in _playerPoints)
             {
-                if (!record.PointIndex.HasValue)
+                if (!pair.Value.HasValue)
                 {
                     continue;
                 }
 
-                if (record.Team == Team.Alpha)
+                if (_session.GetSide(pair.Key) == Side.Alpha)
                 {
-                    alphaCounts[record.PointIndex.Value]++;
+                    alphaCounts[pair.Value.Value]++;
                 }
                 else
                 {
-                    bravoCounts[record.PointIndex.Value]++;
+                    bravoCounts[pair.Value.Value]++;
                 }
             }
 
@@ -325,41 +232,6 @@ namespace Fps.Core
             {
                 _points[i].Update(alphaCounts[i], bravoCounts[i], elapsed);
             }
-        }
-
-        private double SecondsToLimit(double score, double rate)
-        {
-            return rate > 0d ? Math.Max(0d, (Spec.ScoreLimit - score) / rate) : double.PositiveInfinity;
-        }
-
-        private void Advance(double seconds, double alphaRate, double bravoRate)
-        {
-            _alphaScore += alphaRate * seconds;
-            _bravoScore += bravoRate * seconds;
-            RemainingSeconds = (float)Math.Max(0d, RemainingSeconds - seconds);
-        }
-
-        private Team? LeadingTeam()
-        {
-            if (_alphaScore > _bravoScore)
-            {
-                return Team.Alpha;
-            }
-
-            if (_bravoScore > _alphaScore)
-            {
-                return Team.Bravo;
-            }
-
-            return null;
-        }
-
-        private void End(Team? winner)
-        {
-            State = GameModeState.Ended;
-            Winner = winner;
-            StateChanged?.Invoke(State);
-            Ended?.Invoke(winner);
         }
 
         private ControlPoint Point(int pointIndex)
@@ -372,42 +244,34 @@ namespace Fps.Core
             return _points[pointIndex];
         }
 
-        private static void ValidateTeam(Team team)
+        private int? FindPoint(int playerId)
         {
-            if (team != Team.Alpha && team != Team.Bravo)
+            if (!_playerPoints.TryGetValue(playerId, out var pointIndex))
             {
-                throw new ArgumentOutOfRangeException(nameof(team), team, "team is not a valid Team");
-            }
-        }
-
-        private PlayerRecord Find(int playerId, string paramName = "playerId")
-        {
-            if (!_players.TryGetValue(playerId, out var record))
-            {
-                throw UnknownPlayer(playerId, paramName);
+                throw new ArgumentOutOfRangeException(nameof(playerId), playerId, "no player with this id");
             }
 
-            return record;
+            return pointIndex;
         }
 
-        private static ArgumentOutOfRangeException UnknownPlayer(int playerId, string paramName = "playerId")
+        /// <summary>持っている拠点 1 つにつき 1 秒あたり PointsPerSecond を入れ、拠点の占領を進める。キルでは点を入れない。</summary>
+        private sealed class ControlPointScore : IScoreRule
         {
-            return new ArgumentOutOfRangeException(paramName, playerId, "no player with this id");
-        }
+            private readonly Domination _owner;
 
-        private sealed class PlayerRecord
-        {
-            public Team Team { get; }
-            public int Kills { get; set; }
-            public int Deaths { get; set; }
-
-            /// <summary>半径の中にいる拠点の番号。どこにもいなければ null。</summary>
-            public int? PointIndex { get; set; }
-
-            public PlayerRecord(Team team)
+            public ControlPointScore(Domination owner)
             {
-                Team = team;
+                _owner = owner;
             }
+
+            public double PointsForKill(ModeSession session, int killerId, int victimId) => 0d;
+
+            public double PointsPerSecond(ModeSession session, Side side)
+            {
+                return _owner.CountOwned(side.ToTeam()) * (double)_owner.Spec.PointsPerSecond;
+            }
+
+            public void Advance(ModeSession session, float seconds) => _owner.UpdatePoints(seconds);
         }
     }
 }

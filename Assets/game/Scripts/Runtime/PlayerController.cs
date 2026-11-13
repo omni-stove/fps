@@ -23,7 +23,7 @@ namespace Fps.Runtime
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
-    public sealed partial class PlayerController : MonoBehaviour
+    public sealed partial class PlayerController : MonoBehaviour, ICharacterMotionSource
     {
         /// <summary>Assets/InputSystem_Actions.inputactions のアクション。</summary>
         public const string MoveActionPath = InputActionPaths.Move;
@@ -166,6 +166,13 @@ namespace Fps.Runtime
 
         /// <summary>ダッシュ中か (ボタンをモードどおりに解釈し、自動解除した後の値)。</summary>
         public bool IsSprinting => Sprint.IsActive;
+
+        /// <summary>自分の入力でダッシュ中かが常に分かるので、<see cref="IsSprinting"/> を入れて true を返す。</summary>
+        bool ICharacterMotionSource.TryGetSprinting(out bool sprinting)
+        {
+            sprinting = IsSprinting;
+            return true;
+        }
 
         /// <summary>今使っているダッシュのモード。</summary>
         public HoldMode SprintMode => Sprint.Mode;

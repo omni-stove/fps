@@ -32,7 +32,7 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// 射撃の入力と <see cref="FireServerRpc"/> は .Fire.cs に、ダウンと蘇生 (同期・見た目・頭の上の印・Interact と <see cref="ReviveRpc"/>) は
-    /// .Downed.cs に分けてある。ダウン中は撃てない。
+    /// .Downed.cs に、他人の被弾を演出に知らせる <see cref="Hurt"/> は .Hurt.cs に分けてある。ダウン中は撃てない。
     /// </para>
     /// <para>
     /// 見た目はプレハブに置いた人型のリグ (NetSceneBuilder) で、チームの色はリグの材質に塗る。リグは
@@ -773,6 +773,7 @@ namespace Fps.Net
         private void HandleHealthChanged(int previous, int current)
         {
             ApplyVisuals();
+            ReportHurt(previous, current);
 
             // しゃがみ・ダッシュの入力の状態はオーナーの NetworkPlayerMotor にしか無く、他では何もしない
             var wasAlive = previous > 0;

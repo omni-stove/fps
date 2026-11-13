@@ -114,6 +114,23 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ShowsTheGrenadeCountOnlyWhileTheRulesUseGrenades()
+        {
+            var grenades = _netHud.GetComponent<GrenadeCountView>();
+            Assert.That(grenades, Is.Not.Null, "NetHud should attach the grenade count");
+            Assert.That(grenades.Text, Is.Empty, "nothing has arrived yet");
+
+            Arrive(_player.GrenadesVariable, NetGrenadeState.None, new NetGrenadeState(true, 2));
+            Assert.That(grenades.Text, Is.EqualTo(HudFormat.Grenades(2)));
+
+            Arrive(_player.GrenadesVariable, new NetGrenadeState(true, 2), new NetGrenadeState(true, 0));
+            Assert.That(grenades.Text, Is.EqualTo(HudFormat.Grenades(0)), "an empty pouch still shows 0 while grenades are on");
+
+            Arrive(_player.GrenadesVariable, new NetGrenadeState(true, 0), new NetGrenadeState(false, 0));
+            Assert.That(grenades.Text, Is.Empty);
+        }
+
+        [Test]
         public void ThePauseMenuKeepsTheMatchTimeRunning()
         {
             var pause = _netHud.Hud.PauseMenu;
@@ -581,6 +598,74 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ShowsTheIdleWarningAndCountsItDownUntilItIsCleared()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+
+            _netHud.ShowIdleWarning(15f);
+            Assert.That(_netHud.IsShowingIdleWarning, Is.True);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("操作がありません あと 15 秒で切断されます"));
+            Assert.That(IsShown(_view.NoticeLabel), Is.True);
+
+            _netHud.Tick(1.5f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(14)));
+
+            // 切断が届くまでは 0 秒のまま出しておく
+            _netHud.Tick(30f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(0)));
+
+            _netHud.ClearIdleWarning();
+            Assert.That(_netHud.IsShowingIdleWarning, Is.False);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [Test]
+        public void TheIdleWarningWinsOverSpawnProtectionButNotOverTheEndOfTheMatch()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            _netHud.ShowSpawnProtection(2);
+
+            _netHud.ShowIdleWarning(10f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(10)));
+
+            _netHud.ClearIdleWarning();
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("保護中 あと 2 秒"));
+
+            _netHud.ShowIdleWarning(10f);
+            Arrive(_match.StatusVariable, Status(GameModeState.Playing), Status(GameModeState.Ended, Team.Alpha));
+            Arrive(_match.NextMatchSecondsVariable, 0, 10);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NextMatch(10)));
+        }
+
+        [Test]
+        public void UnbindingTheMatchDropsTheIdleWarning()
+        {
+            _netHud.BindMatch(_match);
+            _netHud.ShowIdleWarning(10f);
+
+            _netHud.BindMatch(null);
+
+            Assert.That(_netHud.IsShowingIdleWarning, Is.False);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [TestCase(-3f)]
+        [TestCase(float.NaN)]
+        public void AnInvalidIdleWarningShowsZeroSeconds(float seconds)
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+
+            _netHud.ShowIdleWarning(seconds);
+
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(0)));
+        }
+
+        [Test]
         public void RevivingAndBeingDownedWinOverSpawnProtection()
         {
             _netHud.BindMatch(_match);
@@ -628,6 +713,18 @@ namespace Fps.Net.Tests
             Assert.That(other.IsLocal, Is.False);
             Assert.That(NetHud.TryToScoreboardEntry(row, null, out var unknown), Is.True);
             Assert.That(unknown.IsLocal, Is.False);
+        }
+
+        [Test]
+        public void BotRowsAreNamedWithTheBotTagAndAreNeverTheLocalPlayer()
+        {
+            var row = new NetPlayerStats((ulong)BotRoster.FirstBotPlayerId + 1, Team.Alpha, 4, 1);
+
+            Assert.That(NetHud.TryToScoreboardEntry(row, 0, out var entry), Is.True);
+            Assert.That(entry.PlayerId, Is.EqualTo(BotRoster.FirstBotPlayerId + 1));
+            Assert.That(entry.Name, Is.EqualTo("[BOT] Bot 2"));
+            Assert.That(entry.Kills, Is.EqualTo(4));
+            Assert.That(entry.IsLocal, Is.False, "the host (client 0) owns bots but is not them");
         }
 
         [Test]

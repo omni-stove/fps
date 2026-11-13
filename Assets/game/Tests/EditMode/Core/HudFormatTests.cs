@@ -95,6 +95,19 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.SpawnProtected(-1));
         }
 
+        [TestCase(15, "操作がありません あと 15 秒で切断されます")]
+        [TestCase(1, "操作がありません あと 1 秒で切断されます")]
+        public void IdleWarningShowsTheSecondsUntilTheKick(int seconds, string expected)
+        {
+            Assert.That(HudFormat.IdleWarning(seconds), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void IdleWarningRejectsNegativeSeconds()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.IdleWarning(-1));
+        }
+
         [TestCase(0f, 0)]
         [TestCase(0.426f, 42)]
         [TestCase(0.999f, 99)]

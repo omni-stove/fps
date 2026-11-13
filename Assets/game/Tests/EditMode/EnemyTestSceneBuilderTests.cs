@@ -143,6 +143,55 @@ namespace Fps.Tests.EditMode
             }
         }
 
+        [Test]
+        public void PickupSpawnPointsAreWiredInCode()
+        {
+            var launcher = NewWeapon("Launcher", WeaponAssetBuilder.LauncherSpec());
+            try
+            {
+                var root = EnemyTestSceneBuilder.CreatePickups(_scene, launcher);
+
+                Assert.That(root.name, Is.EqualTo(EnemyTestSceneBuilder.PickupsObjectName));
+                Assert.That(root.scene, Is.EqualTo(_scene));
+                var points = root.GetComponentsInChildren<PickupSpawnPoint>();
+                Assert.That(points, Has.Length.EqualTo(4));
+
+                var weapon = root.transform.Find(EnemyTestSceneBuilder.WeaponPickupName).GetComponent<PickupSpawnPoint>();
+                Assert.That(weapon.Contents.Kind, Is.EqualTo(PickupKind.Weapon));
+                Assert.That(weapon.Contents.Weapon, Is.SameAs(launcher));
+                Assert.That(weapon.transform.position, Is.EqualTo(EnemyTestSceneBuilder.WeaponPickupPosition));
+
+                var ammo = root.transform.Find(EnemyTestSceneBuilder.AmmoPickupName).GetComponent<PickupSpawnPoint>();
+                Assert.That(ammo.Contents.Kind, Is.EqualTo(PickupKind.ReserveAmmo));
+                Assert.That(ammo.Contents.Weapon, Is.Null, "fills the weapon in hand");
+
+                var health = root.transform.Find(EnemyTestSceneBuilder.HealthPickupName).GetComponent<PickupSpawnPoint>();
+                Assert.That(health.Contents.Kind, Is.EqualTo(PickupKind.Health));
+                Assert.That(health.CollectMode, Is.EqualTo(PickupCollectMode.Touch));
+
+                var interact = root.transform.Find(EnemyTestSceneBuilder.InteractHealthPickupName).GetComponent<PickupSpawnPoint>();
+                Assert.That(interact.CollectMode, Is.EqualTo(PickupCollectMode.Interact));
+
+                foreach (var point in points)
+                {
+                    Assert.That(point.RespawnSeconds, Is.EqualTo(EnemyTestSceneBuilder.PickupRespawnSeconds));
+                    var flat = new Vector2(point.transform.position.x, point.transform.position.z);
+                    Assert.That(flat.magnitude, Is.GreaterThan(point.Radius + 1f), "not picked up at the player's spawn");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(launcher);
+            }
+        }
+
+        [Test]
+        public void PickupsNeedAWeapon()
+        {
+            Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreatePickups(_scene, null));
+            Assert.That(_scene.rootCount, Is.Zero, "nothing is placed");
+        }
+
         private void AssertActorsAreWired(EnemyAgent agent, WeaponDefinition[] playerWeapons)
         {
             var bootstrap = Find(EnemyTestSceneBuilder.BootstrapObjectName).GetComponent<GameBootstrap>();
@@ -175,6 +224,14 @@ namespace Fps.Tests.EditMode
             Assert.That(agent.GetComponent<CharacterAudio>(), Is.Not.Null, "rerun EnemyTestSceneBuilder.Build");
             Assert.That(agent.GetComponent<CharacterAnimator>(), Is.Not.Null, "rerun EnemyTestSceneBuilder.Build");
             Assert.That(agent.GetComponent<GrenadeThrower>(), Is.Null, "enemies do not throw grenades");
+
+            var drop = agent.GetComponent<DropOnDeath>();
+            Assert.That(drop, Is.Not.Null, "the enemy drops pickups when it falls");
+            Assert.That(drop.Drops, Has.Count.EqualTo(2));
+            Assert.That(drop.Drops[0].Kind, Is.EqualTo(PickupKind.ReserveAmmo));
+            Assert.That(drop.Drops[0].Amount, Is.EqualTo(EnemyTestSceneBuilder.EnemyDropAmmoAmount));
+            Assert.That(drop.Drops[1].Kind, Is.EqualTo(PickupKind.Health));
+            Assert.That(drop.Drops[1].Amount, Is.EqualTo(EnemyTestSceneBuilder.EnemyDropHealthAmount));
 
             var registry = agent.CoverRegistry;
             Assert.That(registry, Is.Not.Null, "the enemy takes cover");

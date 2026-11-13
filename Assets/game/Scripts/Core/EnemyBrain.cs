@@ -159,20 +159,18 @@ namespace Fps.Core
                 return false;
             }
 
-            _routeIndex = 0;
-            _lastSeen = default;
-            _searchPoint = default;
-            _reactionElapsed = 0f;
-            _shotsInAttack = 0;
-            _lostElapsed = 0f;
-            _searchElapsed = 0f;
-            _coverElapsed = 0f;
-            _coverThreat = default;
-            _coverIndex = -1;
-            _unreachableCover.Clear();
-            CoverPhase = EnemyCoverPhase.None;
-            SetState(_route.Length > 0 ? EnemyState.Patrol : EnemyState.Idle);
+            StartOver();
             return true;
+        }
+
+        /// <summary>
+        /// 生死を問わず、<see cref="Revive"/> と同じく覚えていることを忘れて巡回ルートの最初の地点から始め直す。使っていた遮蔽点は放す。
+        /// ラウンド制のモードがラウンドの頭で、生き残っていた敵も含めて全員を戻すときに使う。
+        /// </summary>
+        public void Restart()
+        {
+            ReleaseCoverPoint();
+            StartOver();
         }
 
         /// <summary>
@@ -438,6 +436,23 @@ namespace Fps.Core
         {
             _cover?.Release(this);
             _coverIndex = -1;
+        }
+
+        private void StartOver()
+        {
+            _routeIndex = 0;
+            _lastSeen = default;
+            _searchPoint = default;
+            _reactionElapsed = 0f;
+            _shotsInAttack = 0;
+            _lostElapsed = 0f;
+            _searchElapsed = 0f;
+            _coverElapsed = 0f;
+            _coverThreat = default;
+            _coverIndex = -1;
+            _unreachableCover.Clear();
+            CoverPhase = EnemyCoverPhase.None;
+            SetState(_route.Length > 0 ? EnemyState.Patrol : EnemyState.Idle);
         }
 
         /// <summary>見失った直後。最後に見た位置へ向かい、LoseSightSeconds 経ったら Search に移る。</summary>

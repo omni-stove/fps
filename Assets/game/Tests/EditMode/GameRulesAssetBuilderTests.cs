@@ -20,14 +20,16 @@ namespace Fps.Tests.EditMode
         // BuildAt と同じ並び (teamDeathmatch, campaignEasy, campaignNormal, campaignHard, range, tpsRange, domination)。
         private static readonly ExpectedActions[] _expectedActions =
         {
-            new ExpectedActions(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On),
+            new ExpectedActions(
+                Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On, grenade: Grenade.On, grenadeCount: GameRulesAssetBuilder.TeamDeathmatchGrenadeCount),
             new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
             new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
             new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
             new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
             new ExpectedActions(
                 Downed.Off, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, GameRulesAssetBuilder.TpsRangeGrenadeCount),
-            new ExpectedActions(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On),
+            new ExpectedActions(
+                Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On, grenade: Grenade.On, grenadeCount: GameRulesAssetBuilder.TeamDeathmatchGrenadeCount),
         };
 
         private string _folder;
@@ -409,6 +411,25 @@ namespace Fps.Tests.EditMode
         private static float ExpectedSpawnProtection(int index)
         {
             return index == 0 || index == DominationIndex ? GameRulesAssetBuilder.TeamDeathmatchSpawnProtectionSeconds : 0f;
+        }
+
+        [Test]
+        public void OnlyTheOnlineStyleModesKickIdlePlayersAfterTwoMinutes()
+        {
+            Assert.That(GameRulesAssetBuilder.OnlineIdleKickSeconds, Is.EqualTo(120f));
+
+            var built = Build();
+            Assert.That(built[0].ToRules().IdleKickSeconds, Is.EqualTo(120f), built[0].name);
+            Assert.That(built[DominationIndex].ToRules().IdleKickSeconds, Is.EqualTo(120f), built[DominationIndex].name);
+            for (var i = 1; i <= TpsRangeIndex; i++)
+            {
+                Assert.That(built[i].ToRules().IdleKickSeconds, Is.Zero, built[i].name);
+            }
+
+            foreach (var name in GameRulesAssetBuilder.ModeNames)
+            {
+                Assert.That(GameRulesAssetBuilder.ModeRules(name).IdleKickSeconds, Is.EqualTo(120f), name);
+            }
         }
 
         [Test]

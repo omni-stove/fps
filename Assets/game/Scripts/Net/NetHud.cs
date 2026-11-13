@@ -24,6 +24,7 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// 予備弾は <see cref="NetMatchRules.InfiniteReserve"/> が true なら数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。
+    /// グレネードの残りは自分の <see cref="NetPlayer.Grenades"/> を購読して <see cref="GrenadeCountView"/> に出す。
     /// </para>
     /// <para>
     /// 出す項目は、サーバーから届いたルールの <see cref="NetMatchRules.HudDensity"/> で <see cref="Hud.ApplyDensity"/> に決めさせる。
@@ -47,10 +48,15 @@ namespace Fps.Net
     /// キルフィード (<see cref="KillFeedView"/>) の名前は、自分のクライアント Id と試合の参加者・ロードアウトで引く
     /// <see cref="NetKillFeedNames"/> に替える。行そのものは <see cref="NetCombatFeed"/> が配る。
     /// </para>
+    /// <para>
+    /// 回線の Ping・ロスの表示は .NetStats.cs、拠点の表示は .Objective.cs が受け持つ。それぞれの差し込み口を、
+    /// 試合を購読したとき (<see cref="BindMatch"/>)・外したとき・毎フレーム (<see cref="Tick"/>)・すべての購読を外すとき (<see cref="UnbindAll"/>) に呼ぶ。
+    /// 放置の警告は .Idle.cs が受け持ち、出している間は試合の終わり以外のどの案内よりも先に出す。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Hud))]
-    public sealed class NetHud : MonoBehaviour
+    public sealed partial class NetHud : MonoBehaviour
     {
         /// <summary><see cref="Create"/> が作る GameObject の名前。</summary>
         public const string ObjectName = "NetHUD";
@@ -71,6 +77,10 @@ namespace Fps.Net
         private NetMatchStatus _status = new NetMatchStatus(GameModeState.Waiting, null);
         private NetMatchRules _rules = NetMatchRules.Default;
         private NetWeaponState _weaponState;
+
+        // グレネードの残り。サーバーが持ち主にだけ送る (NetPlayer.Grenades)
+        private GrenadeCountView _grenadeView;
+        private NetGrenadeState _grenadeState;
 
         // 試合中に倒れてから、出現するか試合が終わるまで true。_respawn は Individual の表示に使う数え (待ち時間が不正なら null)
         private bool _isDown;
@@ -174,6 +184,11 @@ namespace Fps.Net
             _revivingPercent = null;
             _spawnProtectionSeconds = 0;
             player.DownedStateVariable.OnValueChanged += HandleDownedStateChanged;
+            _grenadeState = player.GrenadesVariable.Value;
+            player.GrenadesVariable.OnValueChanged += HandleGrenadesChanged;
+
+            // 試合のルール (HUD の量) を当てる前に付け、弾数と一緒に出し入れされるようにする
+            _grenadeView = GrenadeCountView.AttachTo(_hud);
 
             // NetPlayer.Weapon は Awake で解決するので、Awake を経ない Edit Mode でも見つかるよう自分で探す
             _weapon = player.GetComponent<NetPlayerWeapon>();
@@ -184,6 +199,7 @@ namespace Fps.Net
             }
 
             ShowAmmo();
+            ShowGrenades();
             ShowHealth();
             ShowScores();
             ShowNotice();
@@ -279,6 +295,7 @@ namespace Fps.Net
                 _nextWaveSeconds = 0;
                 _status = new NetMatchStatus(GameModeState.Waiting, null);
                 _rules = NetMatchRules.Default;
+                _idleRemaining = null;
                 ApplyDensity();
                 Model.ClearTime();
                 Model.ClearScores();
@@ -287,6 +304,8 @@ namespace Fps.Net
                 ShowHealth();
                 ShowNotice();
                 ShowScoreboard();
+                NetStatsMatchBound();
+                ObjectiveMatchBound();
                 return;
             }
 
@@ -320,11 +339,18 @@ namespace Fps.Net
             ShowResult();
             ShowNotice();
             ShowScoreboard();
+            NetStatsMatchBound();
+            ObjectiveMatchBound();
         }
 
-        /// <summary>リスポーンまでの秒数を deltaSeconds 進める。待っていなければ何もしない。Play 中は Update が呼ぶ。</summary>
+        /// <summary>
+        /// リスポーンまでの秒数を deltaSeconds 進める (待っていなければ進めない)。続けて回線と拠点の表示の差し込み口を進める。Play 中は Update が呼ぶ。
+        /// </summary>
         internal void Tick(float deltaSeconds)
         {
+            NetStatsTick(deltaSeconds);
+            ObjectiveTick(deltaSeconds);
+            IdleTick(deltaSeconds);
             if (_respawn == null)
             {
                 return;
@@ -386,6 +412,8 @@ namespace Fps.Net
 
             UnbindMatch();
             UnbindPlayer();
+            NetStatsReleased();
+            ObjectiveReleased();
         }
 
         private void ListenForMatch()
@@ -407,6 +435,7 @@ namespace Fps.Net
                 _player.TeamVariable.OnValueChanged -= HandleTeamChanged;
                 _player.HealthVariable.OnValueChanged -= HandleHealthChanged;
                 _player.DownedStateVariable.OnValueChanged -= HandleDownedStateChanged;
+                _player.GrenadesVariable.OnValueChanged -= HandleGrenadesChanged;
                 _player = null;
             }
 
@@ -419,6 +448,9 @@ namespace Fps.Net
 
         private void UnbindMatch()
         {
+            // 差し込み口が試合の同期値の購読を外せるよう、_match を消す前に呼ぶ
+            NetStatsMatchUnbinding();
+            ObjectiveMatchUnbinding();
             if (_players != null)
             {
                 _players.OnListChanged -= HandlePlayersChanged;
@@ -482,6 +514,12 @@ namespace Fps.Net
 
             // 次のフレームを待たずに、リロードが終わった・判定した時点で進みと幅を変えるため
             RefreshReloadProgressNow();
+        }
+
+        private void HandleGrenadesChanged(NetGrenadeState previous, NetGrenadeState current)
+        {
+            _grenadeState = current;
+            ShowGrenades();
         }
 
         private void HandleAlphaScoreChanged(int previous, int current)
@@ -599,6 +637,15 @@ namespace Fps.Net
                 _rules.InfiniteReserve);
         }
 
+        /// <summary>届いたグレネードの状態を出す。ルールで使わない (<see cref="NetGrenadeState.Enabled"/> が false) 間は隠す。</summary>
+        private void ShowGrenades()
+        {
+            if (_grenadeView != null)
+            {
+                _grenadeView.ShowCount(_grenadeState.Enabled, _grenadeState.Remaining);
+            }
+        }
+
         private void ShowScores()
         {
             if (_match == null)
@@ -647,6 +694,7 @@ namespace Fps.Net
         /// <summary>
         /// <see cref="NetTeamDeathmatch.Players"/> の 1 行をスコアボードの行にする。サーバーはプレイヤー Id にクライアント Id を
         /// そのまま使い、int に収まらないクライアントは試合に入れないので、収まらない行は false を返して載せない。
+        /// Bot の行 (Id が <see cref="BotRoster.FirstBotPlayerId"/> 以上) は名前の頭に <see cref="BotRoster.Tag"/> を付ける。
         /// </summary>
         /// <param name="localClientId">この画面のプレイヤーのクライアント Id。分からなければ null (どの行も自分にしない)。</param>
         internal static bool TryToScoreboardEntry(NetPlayerStats row, ulong? localClientId, out ScoreboardEntry entry)
@@ -660,7 +708,7 @@ namespace Fps.Net
             var playerId = (int)row.ClientId;
             entry = new ScoreboardEntry(
                 playerId,
-                ScoreboardRows.PlayerName(playerId),
+                BotRoster.ScoreboardName(playerId),
                 row.Team,
                 Math.Max(0, row.Kills),
                 Math.Max(0, row.Deaths),
@@ -682,7 +730,7 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 終わっていれば次の試合までの秒数を、ダウン中なら出血で倒れるまでの秒数と起こされている進みを、
+        /// 終わっていれば次の試合までの秒数を、放置の警告を受けていれば切断までの秒数を、ダウン中なら出血で倒れるまでの秒数と起こされている進みを、
         /// 倒れていればリスポーン方式に合わせた案内 (Individual は自分のリスポーンまで、Wave は次のウェーブまでの秒数、
         /// None は次の試合まで復活なし) を、味方を起こしていればその進みを、出現直後の無敵の最中なら「保護中 あと N 秒」を出す。
         /// どれでもなければ消す。
@@ -692,6 +740,11 @@ namespace Fps.Net
             if (_match != null && _status.State == GameModeState.Ended)
             {
                 Model.SetNotice(HudFormat.NextMatch(Math.Max(0, _nextMatchSeconds)));
+                return;
+            }
+
+            if (TryShowIdleNotice())
+            {
                 return;
             }
 

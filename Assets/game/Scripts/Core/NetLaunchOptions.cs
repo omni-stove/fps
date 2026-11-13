@@ -6,7 +6,8 @@ namespace Fps.Core
 {
     /// <summary>
     /// ネットワークの起動設定。コマンドライン引数 <c>-mode</c> / <c>-address</c> / <c>-port</c> /
-    /// <c>-transport</c> / <c>-eos-server</c> / <c>-register-lobby</c> から作る。知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
+    /// <c>-transport</c> / <c>-eos-server</c> / <c>-register-lobby</c> / <c>-map</c> / <c>-bots</c> / <c>-net-latency</c> / <c>-net-loss</c> /
+    /// <c>-net-jitter</c> / <c>-drain-timeout</c> から作る。知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
     /// </summary>
     public sealed class NetLaunchOptions
     {
@@ -16,6 +17,27 @@ namespace Fps.Core
         public const string TransportFlag = "-transport";
         public const string EosServerFlag = "-eos-server";
         public const string RegisterLobbyFlag = "-register-lobby";
+        public const string MapFlag = "-map";
+        public const string BotsFlag = "-bots";
+        public const string NetLatencyFlag = "-net-latency";
+        public const string NetLossFlag = "-net-loss";
+        public const string NetJitterFlag = "-net-jitter";
+        public const string DrainTimeoutFlag = "-drain-timeout";
+
+        /// <summary><see cref="Map"/> の名前の最長の文字数。</summary>
+        public const int MaxMapNameLength = 64;
+
+        /// <summary><see cref="Bots"/> の上限。サーバーが Bot を際限なく足さないようにする。</summary>
+        public const int MaxBots = 64;
+
+        /// <summary><see cref="NetLatencyMs"/> と <see cref="NetJitterMs"/> の上限 (ミリ秒)。</summary>
+        public const int MaxNetDelayMs = 5000;
+
+        /// <summary><see cref="NetLossPercent"/> の上限 (%)。</summary>
+        public const int MaxNetLossPercent = 100;
+
+        /// <summary><see cref="DrainTimeoutSeconds"/> の上限 (秒)。</summary>
+        public const int MaxDrainTimeoutSeconds = 3600;
 
         public const string DefaultAddress = "127.0.0.1";
         public const ushort DefaultPort = 7777;
@@ -31,7 +53,11 @@ namespace Fps.Core
         /// <summary>EOS の ProductUserId の文字列表現の長さ (16 進数の桁数)。</summary>
         public const int ProductUserIdLength = 32;
 
-        private static readonly string[] _flags = { ModeFlag, AddressFlag, PortFlag, TransportFlag, EosServerFlag, RegisterLobbyFlag };
+        private static readonly string[] _flags =
+        {
+            ModeFlag, AddressFlag, PortFlag, TransportFlag, EosServerFlag, RegisterLobbyFlag,
+            MapFlag, BotsFlag, NetLatencyFlag, NetLossFlag, NetJitterFlag, DrainTimeoutFlag,
+        };
 
         public NetLaunchMode Mode { get; }
 
@@ -52,6 +78,27 @@ namespace Fps.Core
 
         /// <summary>サーバーが自分を EOS のロビーに登録するか。</summary>
         public bool RegistersLobby => RegisterLobbyEndpoint != null;
+
+        /// <summary>ホスト・サーバーが試合に使うマップ (シーン名)。指定が無ければ null で、今のシーンのまま。</summary>
+        public string Map { get; }
+
+        /// <summary>ホスト・サーバーが試合に足す Bot の数。0 なら足さない。</summary>
+        public int Bots { get; }
+
+        /// <summary>送受信に足す遅れ (ミリ秒)。0 なら足さない。</summary>
+        public int NetLatencyMs { get; }
+
+        /// <summary>落とすパケットの割合 (%)。0 なら落とさない。</summary>
+        public int NetLossPercent { get; }
+
+        /// <summary>遅れに足すゆらぎ (ミリ秒)。0 ならゆらがない。</summary>
+        public int NetJitterMs { get; }
+
+        /// <summary>回線の劣化 (遅れ・ロス・ゆらぎ) をどれか 1 つでも求められているか。</summary>
+        public bool SimulatesNetwork => NetLatencyMs > 0 || NetLossPercent > 0 || NetJitterMs > 0;
+
+        /// <summary>サーバーが終了を求められてから、今の試合が終わるのを待つ最長の秒数。0 なら待たずに止まる。</summary>
+        public int DrainTimeoutSeconds { get; }
 
         /// <summary>ログ向けの接続先・待ち受け先。UDP は <c>address:port</c>、EOS は <c>eos</c> か <c>eos:&lt;サーバーの ID&gt;</c>。</summary>
         public string Endpoint
@@ -95,6 +142,39 @@ namespace Fps.Core
         /// </param>
         public NetLaunchOptions(
             NetLaunchMode mode, string address, ushort port, NetTransportKind transport, string eosServerId, string registerLobbyEndpoint)
+            : this(mode, address, port, transport, eosServerId, registerLobbyEndpoint, null, 0, 0, 0, 0, 0)
+        {
+        }
+
+        /// <param name="mode">起動モード。</param>
+        /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。EOS では使わないが検証はする。</param>
+        /// <param name="port">1 から 65535 のポート番号。</param>
+        /// <param name="transport">transport。</param>
+        /// <param name="eosServerId">EOS のクライアントでは必須の、サーバーの ProductUserId。EOS のクライアント以外では null。</param>
+        /// <param name="registerLobbyEndpoint">
+        /// UDP のサーバーが EOS のロビーに載せる公開アドレス (<c>address:port</c>)。登録しないなら null。
+        /// </param>
+        /// <param name="map">ホスト・サーバーが使うマップ (<see cref="IsMapName"/> に通るシーン名)。今のシーンのままなら null。</param>
+        /// <param name="bots">ホスト・サーバーが足す Bot の数。0 以上 <see cref="MaxBots"/> 以下。クライアントでは 0。</param>
+        /// <param name="netLatencyMs">足す遅れ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
+        /// <param name="netLossPercent">落とすパケットの割合 (%)。0 以上 <see cref="MaxNetLossPercent"/> 以下。</param>
+        /// <param name="netJitterMs">遅れのゆらぎ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
+        /// <param name="drainTimeoutSeconds">
+        /// 終了を求められてから試合の終わりを待つ最長の秒数。0 以上 <see cref="MaxDrainTimeoutSeconds"/> 以下。サーバー以外では 0。
+        /// </param>
+        public NetLaunchOptions(
+            NetLaunchMode mode,
+            string address,
+            ushort port,
+            NetTransportKind transport,
+            string eosServerId,
+            string registerLobbyEndpoint,
+            string map,
+            int bots,
+            int netLatencyMs,
+            int netLossPercent,
+            int netJitterMs,
+            int drainTimeoutSeconds)
         {
             if (!Enum.IsDefined(typeof(NetLaunchMode), mode))
             {
@@ -129,12 +209,42 @@ namespace Fps.Core
                 throw new ArgumentException(registerError, nameof(registerLobbyEndpoint));
             }
 
+            var mapError = ValidateMap(mode, map);
+            if (mapError != null)
+            {
+                throw new ArgumentException(mapError, nameof(map));
+            }
+
+            ThrowIfOutOfRange(nameof(bots), BotsFlag, bots, MaxBots);
+            ThrowIfOutOfRange(nameof(netLatencyMs), NetLatencyFlag, netLatencyMs, MaxNetDelayMs);
+            ThrowIfOutOfRange(nameof(netLossPercent), NetLossFlag, netLossPercent, MaxNetLossPercent);
+            ThrowIfOutOfRange(nameof(netJitterMs), NetJitterFlag, netJitterMs, MaxNetDelayMs);
+            ThrowIfOutOfRange(nameof(drainTimeoutSeconds), DrainTimeoutFlag, drainTimeoutSeconds, MaxDrainTimeoutSeconds);
+
+            var botsError = ValidateBots(mode, bots);
+            if (botsError != null)
+            {
+                throw new ArgumentException(botsError, nameof(bots));
+            }
+
+            var drainError = ValidateDrainTimeout(mode, drainTimeoutSeconds);
+            if (drainError != null)
+            {
+                throw new ArgumentException(drainError, nameof(drainTimeoutSeconds));
+            }
+
             Mode = mode;
             Address = address;
             Port = port;
             Transport = transport;
             EosServerId = eosServerId;
             RegisterLobbyEndpoint = normalizedEndpoint;
+            Map = map;
+            Bots = bots;
+            NetLatencyMs = netLatencyMs;
+            NetLossPercent = netLossPercent;
+            NetJitterMs = netJitterMs;
+            DrainTimeoutSeconds = drainTimeoutSeconds;
         }
 
         /// <summary>引数に <c>-mode</c> が含まれるか。値の妥当性は見ない。</summary>
@@ -162,6 +272,8 @@ namespace Fps.Core
         /// <c>-transport</c> が無ければ <see cref="DefaultTransport"/> を使う。
         /// <c>-eos-server</c> は <c>-transport eos</c> のクライアントでだけ使い、そのときは必須。
         /// <c>-register-lobby</c> は UDP のサーバーでだけ使える。
+        /// <c>-map</c> と <c>-bots</c> はホスト・サーバーで、<c>-drain-timeout</c> はサーバーでだけ使える。
+        /// <c>-bots</c> / <c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> / <c>-drain-timeout</c> は 0 以上の整数で、無ければ 0。
         /// </summary>
         /// <param name="args">コマンドライン引数。先頭が実行ファイルのパスでもよい。</param>
         /// <param name="defaultMode">-mode が無いときのモード。</param>
@@ -259,8 +371,32 @@ namespace Fps.Core
                 return false;
             }
 
-            options = new NetLaunchOptions(mode, address, port, transport, eosServerId, registerEndpoint);
-            error = null;
+            values.TryGetValue(MapFlag, out var map);
+            var mapError = ValidateMap(mode, map);
+            if (mapError != null)
+            {
+                error = mapError;
+                return false;
+            }
+
+            if (!TryReadCount(values, BotsFlag, MaxBots, out var bots, out error)
+                || !TryReadCount(values, NetLatencyFlag, MaxNetDelayMs, out var netLatencyMs, out error)
+                || !TryReadCount(values, NetLossFlag, MaxNetLossPercent, out var netLossPercent, out error)
+                || !TryReadCount(values, NetJitterFlag, MaxNetDelayMs, out var netJitterMs, out error)
+                || !TryReadCount(values, DrainTimeoutFlag, MaxDrainTimeoutSeconds, out var drainTimeoutSeconds, out error))
+            {
+                return false;
+            }
+
+            error = ValidateBots(mode, bots) ?? ValidateDrainTimeout(mode, drainTimeoutSeconds);
+            if (error != null)
+            {
+                return false;
+            }
+
+            options = new NetLaunchOptions(
+                mode, address, port, transport, eosServerId, registerEndpoint,
+                map, bots, netLatencyMs, netLossPercent, netJitterMs, drainTimeoutSeconds);
             return true;
         }
 
@@ -356,7 +492,8 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// transport だけを差し替えた設定を返す。UDP にしたときは EOS のサーバー ID を捨てる。ロビーへの登録はそのまま引き継ぐ。
+        /// transport だけを差し替えた設定を返す。UDP にしたときは EOS のサーバー ID を捨てる。
+        /// ロビーへの登録・マップ・Bot・回線の劣化・終了の待ち時間はそのまま引き継ぐ。
         /// </summary>
         /// <exception cref="ArgumentException">
         /// EOS のクライアントにするのにサーバー ID が無い、または EOS にするのにロビーへの登録が指定されている。
@@ -369,13 +506,146 @@ namespace Fps.Core
             }
 
             var serverId = transport == NetTransportKind.Udp ? null : EosServerId;
-            return new NetLaunchOptions(Mode, Address, Port, transport, serverId, RegisterLobbyEndpoint);
+            return new NetLaunchOptions(
+                Mode, Address, Port, transport, serverId, RegisterLobbyEndpoint,
+                Map, Bots, NetLatencyMs, NetLossPercent, NetJitterMs, DrainTimeoutSeconds);
         }
 
+        /// <summary>
+        /// <c>&lt;モード&gt; &lt;接続先&gt;</c> に、指定されたものだけ <c>lobby=</c> / <c>map=</c> / <c>bots=</c> /
+        /// <c>latency=</c> <c>loss=</c> <c>jitter=</c> / <c>drain=</c> を続けたログ向けの文字列。
+        /// </summary>
         public override string ToString()
         {
             var text = ModeName(Mode) + " " + Endpoint;
-            return RegistersLobby ? text + " lobby=" + RegisterLobbyEndpoint : text;
+            if (RegistersLobby)
+            {
+                text += " lobby=" + RegisterLobbyEndpoint;
+            }
+
+            if (Map != null)
+            {
+                text += " map=" + Map;
+            }
+
+            if (Bots > 0)
+            {
+                text += " bots=" + Bots.ToString(CultureInfo.InvariantCulture);
+            }
+
+            if (SimulatesNetwork)
+            {
+                text += " latency=" + NetLatencyMs.ToString(CultureInfo.InvariantCulture) + "ms"
+                    + " loss=" + NetLossPercent.ToString(CultureInfo.InvariantCulture) + "%"
+                    + " jitter=" + NetJitterMs.ToString(CultureInfo.InvariantCulture) + "ms";
+            }
+
+            if (DrainTimeoutSeconds > 0)
+            {
+                text += " drain=" + DrainTimeoutSeconds.ToString(CultureInfo.InvariantCulture) + "s";
+            }
+
+            return text;
+        }
+
+        /// <summary>
+        /// <c>-map</c> に使えるシーン名か。1 文字以上 <see cref="MaxMapNameLength"/> 文字以下の英数字・<c>_</c>・<c>-</c> だけを認める
+        /// (パスや拡張子を書いても、ビルドに入っているシーンは名前でしか引けないため)。シーンがビルドにあるかは見ない。
+        /// </summary>
+        public static bool IsMapName(string text)
+        {
+            if (string.IsNullOrEmpty(text) || text.Length > MaxMapNameLength)
+            {
+                return false;
+            }
+
+            foreach (var c in text)
+            {
+                var allowed = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-';
+                if (!allowed)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <returns>正しければ null、誤りならその理由。</returns>
+        private static string ValidateMap(NetLaunchMode mode, string map)
+        {
+            if (map == null)
+            {
+                return null;
+            }
+
+            if (!IsMapName(map))
+            {
+                return MapFlag + " must be a scene name of letters, digits, '_' or '-' (at most "
+                    + MaxMapNameLength.ToString(CultureInfo.InvariantCulture) + " characters, got '" + map + "')";
+            }
+
+            return mode == NetLaunchMode.Client ? HostOrServerOnly(MapFlag, mode) : null;
+        }
+
+        /// <returns>正しければ null、誤りならその理由。</returns>
+        private static string ValidateBots(NetLaunchMode mode, int bots)
+        {
+            return bots > 0 && mode == NetLaunchMode.Client ? HostOrServerOnly(BotsFlag, mode) : null;
+        }
+
+        /// <returns>正しければ null、誤りならその理由。</returns>
+        private static string ValidateDrainTimeout(NetLaunchMode mode, int seconds)
+        {
+            if (seconds == 0 || mode == NetLaunchMode.Server)
+            {
+                return null;
+            }
+
+            return DrainTimeoutFlag + " is only used by " + ModeFlag + " " + ModeName(NetLaunchMode.Server)
+                + " (got " + ModeName(mode) + ")";
+        }
+
+        private static string HostOrServerOnly(string flag, NetLaunchMode mode)
+        {
+            return flag + " is only used by " + ModeFlag + " " + ModeName(NetLaunchMode.Host) + " or " + ModeName(NetLaunchMode.Server)
+                + " (got " + ModeName(mode) + ")";
+        }
+
+        /// <summary>
+        /// values の flag を 0 以上 max 以下の整数として読む。無ければ 0。整数でないか範囲外なら error に理由を入れて false。
+        /// </summary>
+        private static bool TryReadCount(
+            Dictionary<string, string> values, string flag, int max, out int value, out string error)
+        {
+            value = 0;
+            error = null;
+            if (!values.TryGetValue(flag, out var text))
+            {
+                return true;
+            }
+
+            if (!int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out value) || value > max)
+            {
+                value = 0;
+                error = CountRangeMessage(flag, max) + " (got '" + text + "')";
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void ThrowIfOutOfRange(string paramName, string flag, int value, int max)
+        {
+            if (value < 0 || value > max)
+            {
+                throw new ArgumentOutOfRangeException(paramName, value, CountRangeMessage(flag, max));
+            }
+        }
+
+        private static string CountRangeMessage(string flag, int max)
+        {
+            return flag + " must be an integer between 0 and " + max.ToString(CultureInfo.InvariantCulture);
         }
 
         private static string MatchFlag(string arg)

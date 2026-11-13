@@ -10,7 +10,7 @@ namespace Fps.Core
     /// </summary>
     /// <remarks>
     /// 詰まる前は、最後に進めた地点から <see cref="ProgressDistance"/> 動けば進めたとみなす (追う目標が逃げていても誤って詰まりとしない)。
-    /// 立て直しを始めた後は、基準点から目的地の方向へ <see cref="ProgressDistance"/> 以上動いたときだけ立ち直ったとみなす。
+    /// 立て直しを始めた後は、基準点から経路の進む向き (分からなければ目的地の方向) へ <see cref="ProgressDistance"/> 以上動いたときだけ立ち直ったとみなす。
     /// 寄り道で横へ動いたり、同じ所を行き来したりしただけで段階が最初に戻るのを防ぐため。
     /// 立て直しの途中で目的地が <see cref="GoalChangeDistance"/> 以上変わったら、段階も経過時間もそのままに、基準点を今の位置へ移して測り直す。
     /// </remarks>
@@ -39,7 +39,8 @@ namespace Fps.Core
 
         private Vector3 _anchor;
         private Vector3 _goal;
-        private float? _anchorRemaining;
+        private Vector3 _pathAnchor;
+        private Vector3? _pathDirection;
         private bool _tracking;
 
         /// <param name="stuckSeconds">次の段階へ移るまでの秒数。正の有限値。</param>
@@ -72,8 +73,8 @@ namespace Fps.Core
         /// <param name="deltaSeconds">前回からの経過時間 (秒)。0 以上の有限値。</param>
         /// <param name="position">今の位置。有限値。</param>
         /// <param name="goal">向かっている先。無ければ null。有限値。</param>
-        /// <param name="remainingDistance">経路に沿った目的地までの残り距離。立て直し中はこれが <see cref="ProgressDistance"/> 縮めば立ち直ったとみなす。分からなければ null (目的地の直線方向への移動で測る)。</param>
-        public StuckRecovery Tick(float deltaSeconds, Vector3 position, Vector3? goal, float? remainingDistance = null)
+        /// <param name="pathWaypoint">目的地への経路上で、今の位置から <see cref="ProgressDistance"/> 以上先にある最初の角。立て直し中はこの向きへ <see cref="ProgressDistance"/> 進めば立ち直ったとみなす。分からなければ null (目的地の直線方向への移動で測る)。</param>
+        public StuckRecovery Tick(float deltaSeconds, Vector3 position, Vector3? goal, Vector3? pathWaypoint = null)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
             {
@@ -88,6 +89,11 @@ namespace Fps.Core
             if (goal.HasValue && !IsFinite(goal.Value))
             {
                 throw new ArgumentOutOfRangeException(nameof(goal), goal, "goal must be finite");
+            }
+
+            if (pathWaypoint.HasValue && !IsFinite(pathWaypoint.Value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(pathWaypoint), pathWaypoint, "pathWaypoint must be finite");
             }
 
             if (!goal.HasValue)
@@ -118,9 +124,9 @@ namespace Fps.Core
                 // 基準点も今の位置へ移す。目標が動くたびに距離を測り直すと、速い目標を歩いて追う敵は距離が縮まず立ち直れない。
                 _goal = goal.Value;
                 _anchor = position;
-                _anchorRemaining = null;
+                _pathDirection = null;
             }
-            else if (MadeProgress(position, goal.Value, remainingDistance))
+            else if (MadeProgress(position, goal.Value, pathWaypoint))
             {
                 var stalled = TotalStalledSeconds;
                 Reset();
@@ -149,23 +155,31 @@ namespace Fps.Core
                 && !float.IsNaN(value.Z) && !float.IsInfinity(value.Z);
         }
 
-        // 経路が壁を回り込むなら、最初の区間は目的地の直線方向から外れる。経路に沿った残り距離が分かるときはそれで測る。
-        private bool MadeProgress(Vector3 position, Vector3 goal, float? remainingDistance)
+        // 経路が壁を回り込むなら、最初の区間は目的地の直線方向から外れるので、経路が分かるときはその向きで測る。
+        // 目的地までの残り距離では測らない。逃げる目標を追う間は、普通に歩けていても残り距離は延び続ける。
+        private bool MadeProgress(Vector3 position, Vector3 goal, Vector3? pathWaypoint)
         {
-            if (!remainingDistance.HasValue || float.IsNaN(remainingDistance.Value) || float.IsInfinity(remainingDistance.Value))
+            if (!pathWaypoint.HasValue)
             {
+                // 寄り道の間など経路の向きが分からない間に動いた分を、後で古い向きに当てはめないよう測り直させる。
+                _pathDirection = null;
                 return MovedTowardGoal(position, goal);
             }
 
-            if (!_anchorRemaining.HasValue)
+            if (!_pathDirection.HasValue)
             {
-                _anchorRemaining = remainingDistance;
+                var toWaypoint = pathWaypoint.Value - position;
+                var length = toWaypoint.Length();
+                if (length > 0f)
+                {
+                    _pathAnchor = position;
+                    _pathDirection = toWaypoint / length;
+                }
+
                 return false;
             }
 
-            // 追う目標のほうが近づいただけでも残り距離は縮むので、敵自身が動いたことも要る。
-            return _anchorRemaining.Value - remainingDistance.Value >= ProgressDistance
-                && Vector3.DistanceSquared(position, _anchor) >= ProgressDistance * ProgressDistance;
+            return Vector3.Dot(position - _pathAnchor, _pathDirection.Value) >= ProgressDistance;
         }
 
         // 目的地までの距離だけだと、動かない敵へ目標のほうが近づいただけで立ち直ったことになってしまう。
@@ -184,7 +198,7 @@ namespace Fps.Core
         private void Track(Vector3 position, Vector3 goal)
         {
             _anchor = position;
-            _anchorRemaining = null;
+            _pathDirection = null;
             _goal = goal;
             _tracking = true;
             StalledSeconds = 0f;

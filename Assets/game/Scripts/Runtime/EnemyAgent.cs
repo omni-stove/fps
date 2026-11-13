@@ -559,9 +559,13 @@ namespace Fps.Runtime
             var heading = _goal.HasValue && HorizontalDistance(ground, _goal.Value) > EnemyBrain.ArrivalDistance
                 ? _goal
                 : null;
-            // 経路の角の取得は毎回ヒープを確保するので、残り距離を使う立て直し中だけ計算する。
-            var remaining = _stuck.Stage == StuckRecovery.None ? null : PathRemainingDistance(heading);
-            var recovery = _stuck.Tick(deltaSeconds, ground.ToNumerics(), heading.HasValue ? heading.Value.ToNumerics() : (System.Numerics.Vector3?)null, remaining);
+            // 経路の角の取得は毎回ヒープを確保するので、経路の向きを使う立て直し中だけ計算する。
+            var waypoint = _stuck.Stage == StuckRecovery.None ? null : PathWaypoint(heading);
+            var recovery = _stuck.Tick(
+                deltaSeconds,
+                ground.ToNumerics(),
+                heading.HasValue ? heading.Value.ToNumerics() : (System.Numerics.Vector3?)null,
+                waypoint.HasValue ? waypoint.Value.ToNumerics() : (System.Numerics.Vector3?)null);
             if (recovery == StuckRecovery.None)
             {
                 return;
@@ -587,10 +591,13 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>今の経路の角を辿った距離に、最後の角から目的地までの直線を足したもの。寄り道中は寄り道先が終点でも目的地までで測れる。経路が無ければ null。</summary>
-        private float? PathRemainingDistance(Vector3? goal)
+        /// <summary>
+        /// 目的地への今の経路で、<see cref="StuckProgressDistance"/> 以上先にある最初の角 (無ければ最後の角)。
+        /// 寄り道中は経路の終点が寄り道先なので null。寄り道先へ歩いただけで立ち直ったことにしないため。
+        /// </summary>
+        private Vector3? PathWaypoint(Vector3? goal)
         {
-            if (!goal.HasValue || !_agent.isOnNavMesh || !_agent.hasPath || _agent.pathPending)
+            if (!goal.HasValue || _detour.HasValue || !_agent.isOnNavMesh || !_agent.hasPath || _agent.pathPending)
             {
                 return null;
             }
@@ -601,13 +608,16 @@ namespace Fps.Runtime
                 return null;
             }
 
-            var total = Vector3.Distance(GroundPosition, corners[0]);
-            for (var i = 1; i < corners.Length; i++)
+            var ground = GroundPosition;
+            foreach (var corner in corners)
             {
-                total += Vector3.Distance(corners[i - 1], corners[i]);
+                if (HorizontalDistance(ground, corner) >= StuckProgressDistance)
+                {
+                    return corner;
+                }
             }
 
-            return total + Vector3.Distance(corners[corners.Length - 1], goal.Value);
+            return corners[corners.Length - 1];
         }
 
         private void Repath()

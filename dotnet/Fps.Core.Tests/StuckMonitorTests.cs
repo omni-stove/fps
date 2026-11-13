@@ -129,6 +129,32 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void WalkingAlongThePathResetsTheStageEvenWhileTheGoalMovesAway()
+        {
+            var monitor = StuckAtOrigin(1);
+            // 経路は壁を回り込んで +Z へ進み、追う目標は敵より速く +X へ逃げている。
+            var waypoint = new Vector3(0f, 0f, 3f);
+
+            Assert.That(monitor.Tick(0.2f, Vector3.Zero, _goal + new Vector3(1f, 0f, 0f), waypoint), Is.EqualTo(StuckRecovery.None));
+            Assert.That(monitor.Tick(0.2f, new Vector3(0f, 0f, 0.4f), _goal + new Vector3(1.5f, 0f, 0f), waypoint), Is.EqualTo(StuckRecovery.None));
+            Assert.That(monitor.Stage, Is.EqualTo(StuckRecovery.Repath), "経路の向きへ 0.5m 進むまでは立ち直っていない");
+
+            Assert.That(monitor.Tick(0.2f, new Vector3(0f, 0f, 0.7f), _goal + new Vector3(1.9f, 0f, 0f), waypoint), Is.EqualTo(StuckRecovery.None));
+            Assert.That(monitor.Stage, Is.EqualTo(StuckRecovery.None));
+        }
+
+        [Test]
+        public void MovingAcrossThePathDuringRecoveryDoesNotResetTheStage()
+        {
+            var monitor = StuckAtOrigin(1);
+            var waypoint = new Vector3(0f, 0f, 3f);
+
+            monitor.Tick(0.1f, Vector3.Zero, _goal, waypoint);
+            Assert.That(monitor.Tick(0.1f, new Vector3(-1f, 0f, 0f), _goal, waypoint), Is.EqualTo(StuckRecovery.None));
+            Assert.That(monitor.Stage, Is.EqualTo(StuckRecovery.Repath));
+        }
+
+        [Test]
         public void ANewGoalDuringRecoveryKeepsTheStageAndMeasuresFromTheNewGoal()
         {
             var monitor = StuckAtOrigin(3);

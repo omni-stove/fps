@@ -285,6 +285,12 @@ namespace Fps.Runtime
                 return;
             }
 
+            if (!_player.isActiveAndEnabled)
+            {
+                ExitCover(ReasonDisabled);
+                return;
+            }
+
             var controller = _player.Controller;
             if (!controller.enabled || !controller.gameObject.activeInHierarchy)
             {

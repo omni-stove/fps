@@ -64,8 +64,8 @@ namespace Fps.Core
 
         /// <summary>
         /// プレイヤーが試合に入った。rejoined は切断してから戻り、前の成績を引き継いだか。
+        /// productUserId は EOS の ProductUserId で、EOS でつないでいないなら null (項目ごと出さない)。
         /// </summary>
-        /// <param name="productUserId">EOS の ProductUserId。EOS でつないでいないなら null で、項目ごと出さない。</param>
         /// <example><c>{"type":"player_joined","time":"...","matchId":"6c1f...","playerId":"1","productUserId":"0002...","team":"Bravo","rejoined":"false"}</c></example>
         public static string PlayerJoined(DateTime utcNow, string matchId, int playerId, string productUserId, Team team, bool rejoined)
         {
@@ -76,8 +76,10 @@ namespace Fps.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <summary>プレイヤーが試合から抜けた (切断を含む)。</summary>
-        /// <param name="productUserId">EOS の ProductUserId。EOS でつないでいないなら null で、項目ごと出さない。</param>
+        /// <summary>
+        /// プレイヤーが試合から抜けた (切断を含む)。
+        /// productUserId は EOS の ProductUserId で、EOS でつないでいないなら null (項目ごと出さない)。
+        /// </summary>
         /// <example><c>{"type":"player_left","time":"...","matchId":"6c1f...","playerId":"1"}</c></example>
         public static string PlayerLeft(DateTime utcNow, string matchId, int playerId, string productUserId)
         {

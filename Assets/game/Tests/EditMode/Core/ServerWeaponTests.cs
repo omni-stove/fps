@@ -170,6 +170,43 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void CancelReloadStopsWithoutChangingAmmoAndNotifies()
+        {
+            var weapon = new ServerWeapon(Spec());
+            var reloaded = 0;
+            weapon.Reloaded += () => reloaded++;
+            weapon.TryFire();
+            weapon.TryStartReload();
+            weapon.Tick(1f);
+            var changes = 0;
+            weapon.Changed += () => changes++;
+
+            weapon.CancelReload();
+
+            Assert.That(changes, Is.EqualTo(1));
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(5));
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
+
+            weapon.Tick(5f);
+            Assert.That(reloaded, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CancelReloadWhenNotReloadingDoesNotNotify()
+        {
+            var weapon = new ServerWeapon(Spec());
+            var changes = 0;
+            weapon.Changed += () => changes++;
+
+            weapon.CancelReload();
+
+            Assert.That(changes, Is.EqualTo(0));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+        }
+
+        [Test]
         public void TickRejectsInvalidDelta()
         {
             var weapon = new ServerWeapon(Spec());

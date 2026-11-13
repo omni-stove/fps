@@ -17,10 +17,11 @@ namespace Fps.Net
     /// EOS を要求されても認証情報が無ければ UDP に切り替え、<see cref="CredentialsMissingLog"/> を出す。
     /// <c>-lobby create|join</c> なら EOS にログインしてロビーを作る (または探して入る) までを <see cref="LobbyLauncher"/> に任せ、
     /// オーナーは EOS の Host、メンバーはオーナーへ接続するクライアントとして起動する。
+    /// <c>-lobby quickmatch</c> なら EOS にログインして専用サーバーのロビーを探し、選んだサーバーの公開アドレスへ UDP のクライアントとして接続する。
     /// UDP のサーバーに <c>-register-lobby &lt;公開アドレス:ポート&gt;</c> が付いていれば、待ち受けを始めたところで
     /// <see cref="ServerLobbyRegistrar"/> に EOS のロビーへ登録させ、接続人数を知らせ続け、終了時にロビーを閉じる。
     /// 失敗はすべて <c>[Net]</c> か <c>[Lobby]</c> 付きのエラーログに出し、batchmode のプレイヤーでは終了コード付きで終了する。
-    /// メインメニューの「ロビーを作る／入る」から来たときは、<see cref="MenuNavigator.TakeLobbyRequest"/> の設定を <c>-lobby</c> と同じに扱い
+    /// メインメニューの「ロビーを作る／入る／クイックマッチ」から来たときは、<see cref="MenuNavigator.TakeLobbyRequest"/> の設定を <c>-lobby</c> と同じに扱い
     /// (起動引数が優先、<see cref="NetStartup.ChooseLobby"/>)、失敗や Host からの切断ではその理由を添えてメニューへ戻る。
     /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
     /// </summary>
@@ -213,13 +214,13 @@ namespace Fps.Net
         private void PrepareLobby(LobbyLaunchOptions lobbyOptions)
         {
             if (!TryCreateLobbyService(
-                    LobbyLaunchOptions.LobbyFlag, LobbyLaunchOptions.BucketId(Application.version), null, out _lobbyCredentials))
+                    LobbyLaunchOptions.LobbyFlag, lobbyOptions.SearchBucketId(Application.version), null, out _lobbyCredentials))
             {
                 return;
             }
 
             _lobby.Removed += HandleLobbyRemoved;
-            _lobbyLauncher = new LobbyLauncher(_lobby, lobbyOptions);
+            _lobbyLauncher = new LobbyLauncher(_lobby, lobbyOptions, Application.version);
         }
 
         /// <summary>

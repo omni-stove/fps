@@ -122,6 +122,129 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentException>(() => LobbySelector.PickJoinable(new List<LobbyInfo>(), " "));
         }
 
+        private const string _version = "0.3.0";
+
+        private static LobbyInfo Server(string id, string endpoint, long players, string version = _version, int max = 8)
+        {
+            var attributes = new List<LobbyAttribute> { LobbyAttribute.OfNumber(ServerLobby.PlayersKey, players) };
+            if (endpoint != null)
+            {
+                attributes.Add(LobbyAttribute.OfText(ServerLobby.ServerKey, endpoint));
+            }
+
+            if (version != null)
+            {
+                attributes.Add(LobbyAttribute.OfText(ServerLobby.VersionKey, version));
+            }
+
+            return new LobbyInfo(id, "server-" + id, max, Ids("server-" + id), attributes);
+        }
+
+        [Test]
+        public void InfoReadsAttributesByKindAndKeepsTheFirstOfAKey()
+        {
+            var lobby = new LobbyInfo("l1", "o", 8, Ids("o"), new List<LobbyAttribute>
+            {
+                LobbyAttribute.OfText("server", "203.0.113.10:7777"),
+                null,
+                LobbyAttribute.OfNumber("players", 3),
+                LobbyAttribute.OfText("server", "198.51.100.1:7777"),
+            });
+
+            Assert.That(lobby.Attributes, Has.Count.EqualTo(2));
+            Assert.That(lobby.TryGetText("server", out var server), Is.True);
+            Assert.That(server, Is.EqualTo("203.0.113.10:7777"));
+            Assert.That(lobby.TryGetNumber("players", out var players), Is.True);
+            Assert.That(players, Is.EqualTo(3));
+            Assert.That(lobby.TryGetNumber("server", out _), Is.False, "a text attribute is not a number");
+            Assert.That(lobby.TryGetText("players", out _), Is.False, "a number attribute is not text");
+            Assert.That(lobby.TryGetText("mode", out _), Is.False);
+            Assert.That(Lobby("l2", "o", 8, "o").Attributes, Is.Empty);
+            Assert.Throws<ArgumentNullException>(() => _ = new LobbyInfo("l1", "o", 8, Ids("o"), null));
+        }
+
+        [Test]
+        public void PicksTheBusiestServerWithRoomOnTheSameVersion()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                Server("empty", "203.0.113.1:7777", 0),
+                Server("full", "203.0.113.2:7777", 8),
+                Server("busy", "203.0.113.3:7777", 5),
+                Server("newer", "203.0.113.4:7777", 7, "0.4.0"),
+                null,
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version).Id, Is.EqualTo("busy"));
+        }
+
+        [Test]
+        public void BreaksServerTiesByLobbyId()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                Server("b", "203.0.113.1:7777", 2),
+                Server("a", "203.0.113.2:7777", 2),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version).Id, Is.EqualTo("a"));
+        }
+
+        [Test]
+        public void ServerIsFullAtTheLobbyMaximum()
+        {
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 3, max: 4), _version), Is.Null);
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 4, max: 4), _version), Is.EqualTo("full"));
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 9, max: 4), _version), Is.EqualTo("full"));
+        }
+
+        [Test]
+        public void RejectsServersThatCannotBeJoined()
+        {
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 0, "0.2.0"), _version), Does.Contain("0.2.0").And.Contain(_version));
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 0, null), _version), Is.EqualTo("no version"));
+            Assert.That(LobbySelector.ServerRejection(Server("s", null, 0), _version), Is.EqualTo("no server address"));
+            Assert.That(LobbySelector.ServerRejection(Server("s", "0.0.0.0:7777", 0), _version), Is.EqualTo("no server address"));
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1", 0), _version), Is.EqualTo("no server address"));
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", -1), _version), Is.EqualTo("no player count"));
+            Assert.That(LobbySelector.ServerRejection(Lobby("host", "o", 8, "o"), _version), Is.EqualTo("no version"), "a player-hosted lobby has no server attributes");
+        }
+
+        [Test]
+        public void ComparesVersionsTheWayTheServerWritesThem()
+        {
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 0, "0"), " "), Is.Null, "a blank version is written as 0");
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 0, "0.3.0"), " 0.3.0 "), Is.Null);
+        }
+
+        [Test]
+        public void PickServerReturnsNullWhenNothingIsJoinable()
+        {
+            var lobbies = new List<LobbyInfo> { Server("full", "203.0.113.1:7777", 8), Server("old", "203.0.113.2:7777", 0, "0.2.0") };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version), Is.Null);
+            Assert.That(LobbySelector.PickServer(new List<LobbyInfo>(), _version), Is.Null);
+            Assert.Throws<ArgumentNullException>(() => LobbySelector.PickServer(null, _version));
+            Assert.Throws<ArgumentNullException>(() => LobbySelector.ServerRejection(null, _version));
+        }
+
+        [Test]
+        public void DescribesWhyNoServerWasPicked()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                Server("f1", "203.0.113.1:7777", 8),
+                Server("old", "203.0.113.2:7777", 0, "0.2.0"),
+                Server("f2", "203.0.113.3:7777", 8),
+            };
+
+            Assert.That(
+                LobbySelector.DescribeNoServer(lobbies, _version),
+                Is.EqualTo("no server to join among 3 found (full x2, version 0.2.0 (this build is 0.3.0) x1)"));
+            Assert.That(LobbySelector.DescribeNoServer(new List<LobbyInfo>(), _version), Is.EqualTo("no server lobby found"));
+            Assert.Throws<ArgumentNullException>(() => LobbySelector.DescribeNoServer(null, _version));
+        }
+
         [Test]
         public void RetryScheduleWaitsBetweenAttemptsAndExpires()
         {

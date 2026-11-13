@@ -81,6 +81,18 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void QuickMatchLoadsTheNetSceneLikeLobbyQuickMatch()
+        {
+            var transition = MenuRoute.Plan(MenuDestination.QuickMatch);
+            Assert.That(LobbyLaunchOptions.TryParse(Args("-lobby quickmatch"), out var fromArgs, out var error), Is.True, error);
+
+            Assert.That(transition.Kind, Is.EqualTo(MenuTransitionKind.LoadScene));
+            Assert.That(transition.ScenePath, Is.EqualTo(MenuRoute.NetScene));
+            Assert.That(transition.Lobby.Command, Is.EqualTo(fromArgs.Command));
+            Assert.That(transition.Lobby.Command, Is.EqualTo(LobbyCommand.QuickMatch));
+        }
+
+        [Test]
         public void QuitLoadsNothing()
         {
             var transition = MenuRoute.Plan(MenuDestination.Quit);

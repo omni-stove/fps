@@ -12,6 +12,9 @@ namespace Fps.Core
         /// <summary>オンライン: ロビーを探して入る (<c>-lobby join</c> と同じ)。</summary>
         JoinLobby,
 
+        /// <summary>オンライン: 専用サーバーを探して UDP でつなぐ (<c>-lobby quickmatch</c> と同じ)。</summary>
+        QuickMatch,
+
         /// <summary>射撃場 (Bootstrap)。</summary>
         Range,
 

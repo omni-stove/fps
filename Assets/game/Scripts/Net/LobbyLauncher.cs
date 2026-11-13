@@ -6,8 +6,9 @@ using UnityEngine;
 namespace Fps.Net
 {
     /// <summary>
-    /// <c>-lobby create|join</c> の起動手順を進める。ログインし、ロビーを作る (または探して入る) と、
+    /// <c>-lobby create|join|quickmatch</c> の起動手順を進める。ログインし、ロビーを作る (または探して入る) と、
     /// ネットワークの起動設定 (オーナーなら EOS の Host、メンバーならオーナーへ接続するクライアント) を返す。
+    /// quickmatch では専用サーバーのロビーを探し、選んだサーバーの公開アドレスへ接続する UDP のクライアントを返す (ロビーには入らない)。
     /// どのロビーに入るか・いつ諦めるかは Fps.Core (<see cref="LobbySelector"/> / <see cref="RetrySchedule"/> /
     /// <see cref="LobbyLaunchOptions.ToNetOptions"/>) が決め、ここは順に呼ぶだけにする。
     /// </summary>
@@ -16,15 +17,18 @@ namespace Fps.Net
         private readonly LobbyService _service;
         private readonly LobbyLaunchOptions _options;
         private readonly RetrySchedule _schedule;
+        private readonly string _version;
         private Action<NetLaunchOptions> _ready;
         private Action<string> _failed;
         private Step _step;
         private float _now;
+        private string _lastRetryReason;
 
         /// <param name="service">ログイン前のロビーのサービス。</param>
         /// <param name="options">ロビーを使う設定 (<see cref="LobbyLaunchOptions.IsRequested"/>)。</param>
-        public LobbyLauncher(LobbyService service, LobbyLaunchOptions options)
-            : this(service, options, new RetrySchedule(LobbyLaunchOptions.SearchIntervalSeconds, LobbyLaunchOptions.TimeoutSeconds))
+        /// <param name="version">自分のビルドの版 (Application.version)。quickmatch でサーバーの版と比べる。</param>
+        public LobbyLauncher(LobbyService service, LobbyLaunchOptions options, string version)
+            : this(service, options, version, DefaultSchedule(options))
         {
         }
 
@@ -32,13 +36,23 @@ namespace Fps.Net
         /// <param name="options">ロビーを使う設定。</param>
         /// <param name="schedule">検索し直す間隔と、全体を諦めるまでの期限。</param>
         public LobbyLauncher(LobbyService service, LobbyLaunchOptions options, RetrySchedule schedule)
+            : this(service, options, null, schedule)
+        {
+        }
+
+        /// <param name="service">ログイン前のロビーのサービス。</param>
+        /// <param name="options">ロビーを使う設定。</param>
+        /// <param name="version">自分のビルドの版。空なら "0" として比べる。</param>
+        /// <param name="schedule">検索し直す間隔と、全体を諦めるまでの期限。</param>
+        public LobbyLauncher(LobbyService service, LobbyLaunchOptions options, string version, RetrySchedule schedule)
         {
             _service = service ?? throw new ArgumentNullException(nameof(service));
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
+            _version = version;
             if (!options.IsRequested)
             {
-                throw new ArgumentException("options must request a lobby (-lobby create|join)", nameof(options));
+                throw new ArgumentException("options must request a lobby (-lobby create|join|quickmatch)", nameof(options));
             }
         }
 
@@ -90,6 +104,13 @@ namespace Fps.Net
 
             if (_schedule.IsExpired(now))
             {
+                if (_options.Command == LobbyCommand.QuickMatch && (_step == Step.Searching || _step == Step.WaitingToSearch))
+                {
+                    Fail("no quick match server found after " + _schedule.TimeoutSeconds + "s"
+                        + (_lastRetryReason == null ? "" : " (" + _lastRetryReason + ")"));
+                    return;
+                }
+
                 Fail("gave up after " + _schedule.TimeoutSeconds + "s while " + Describe(_step));
                 return;
             }
@@ -163,6 +184,12 @@ namespace Fps.Net
                 return;
             }
 
+            if (_options.Command == LobbyCommand.QuickMatch)
+            {
+                ConnectToServer(lobbies);
+                return;
+            }
+
             var lobby = LobbySelector.PickJoinable(lobbies, _service.LocalUserId);
             if (lobby == null)
             {
@@ -184,6 +211,36 @@ namespace Fps.Net
             }
 
             Join(lobby.Id);
+        }
+
+        /// <summary>専用サーバーのロビーから 1 つ選び、その公開アドレスへつなぐ設定を返す。無ければ探し直す。</summary>
+        private void ConnectToServer(IReadOnlyList<LobbyInfo> lobbies)
+        {
+            var lobby = LobbySelector.PickServer(lobbies, _version);
+            if (lobby == null)
+            {
+                Retry(LobbySelector.DescribeNoServer(lobbies, _version));
+                return;
+            }
+
+            lobby.TryGetText(ServerLobby.ServerKey, out var endpoint);
+            NetLaunchOptions options;
+            try
+            {
+                options = _options.ToServerNetOptions(endpoint);
+            }
+            catch (ArgumentException e)
+            {
+                // PickServer がアドレスの形を確かめているので、ここに来るのは規則が食い違ったときだけ
+                Retry(e.Message);
+                return;
+            }
+
+            lobby.TryGetNumber(ServerLobby.PlayersKey, out var players);
+            _step = Step.Ready;
+            Debug.Log(LobbyService.LogPrefix + "quick match picked id=" + lobby.Id + " server=" + endpoint
+                + " players=" + players + "/" + lobby.MaxMembers + "; starting " + options);
+            _ready(options);
         }
 
         private void Join(string lobbyId)
@@ -223,6 +280,7 @@ namespace Fps.Net
 
         private void Retry(string reason)
         {
+            _lastRetryReason = reason;
             _step = Step.WaitingToSearch;
             _schedule.Wait(_now);
             Debug.Log(LobbyService.LogPrefix + reason + "; searching again in " + _schedule.IntervalSeconds + "s");
@@ -256,6 +314,16 @@ namespace Fps.Net
             _step = Step.Failed;
             _service.LeaveLobby();
             _failed(reason);
+        }
+
+        private static RetrySchedule DefaultSchedule(LobbyLaunchOptions options)
+        {
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
+
+            return new RetrySchedule(options.SearchInterval, options.Timeout);
         }
 
         private static string Describe(Step step)

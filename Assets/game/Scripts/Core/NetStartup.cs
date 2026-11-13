@@ -96,8 +96,11 @@ namespace Fps.Core
 
             if (isDedicatedServer && options.IsRequested)
             {
-                error = LobbyLaunchOptions.LobbyFlag + " needs the normal player build: the lobby owner runs as a host,"
-                    + " which a dedicated server build cannot do";
+                error = options.Command == LobbyCommand.QuickMatch
+                    ? LobbyLaunchOptions.LobbyFlag + " quickmatch needs the normal player build: it connects as a client;"
+                        + " use " + NetLaunchOptions.RegisterLobbyFlag + " to list a dedicated server for quick match"
+                    : LobbyLaunchOptions.LobbyFlag + " needs the normal player build: the lobby owner runs as a host,"
+                        + " which a dedicated server build cannot do";
                 options = null;
                 return false;
             }

@@ -31,13 +31,14 @@ namespace Fps.Core
             MenuDestination.Campaign,
             MenuDestination.CreateLobby,
             MenuDestination.JoinLobby,
+            MenuDestination.QuickMatch,
             MenuDestination.Range,
             MenuDestination.Tutorial,
             MenuDestination.Quit,
         };
 
         /// <summary>
-        /// destination へ行く遷移。オンラインは <c>-lobby create</c> / <c>-lobby join</c> を起動引数で渡したときと同じ設定
+        /// destination へ行く遷移。オンラインは <c>-lobby create</c> / <c>-lobby join</c> / <c>-lobby quickmatch</c> を起動引数で渡したときと同じ設定
         /// (最大人数は既定、参加するロビーは検索して選ぶ) で NetTest を読む。
         /// チュートリアルは射撃場を読み、終えたことがあってもチュートリアルを出すよう求める (<see cref="MenuTransition.StartsTutorial"/>)。
         /// </summary>
@@ -51,6 +52,8 @@ namespace Fps.Core
                     return MenuTransition.Load(NetScene, LobbyLaunchOptions.Create());
                 case MenuDestination.JoinLobby:
                     return MenuTransition.Load(NetScene, LobbyLaunchOptions.Join());
+                case MenuDestination.QuickMatch:
+                    return MenuTransition.Load(NetScene, LobbyLaunchOptions.QuickMatch());
                 case MenuDestination.Range:
                     return MenuTransition.Load(RangeScene);
                 case MenuDestination.Tutorial:

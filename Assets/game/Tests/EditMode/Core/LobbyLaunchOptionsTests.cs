@@ -106,6 +106,9 @@ namespace Fps.Core.Tests
         [TestCase("-lobby-id abc", "-lobby-id")]
         [TestCase("-lobby-max-players 4", "-lobby-max-players")]
         [TestCase("-lobby create -transport udp", "-transport")]
+        [TestCase("-lobby quickmatch -transport eos", "-transport udp")]
+        [TestCase("-lobby quickmatch -lobby-id abc", "-lobby-id")]
+        [TestCase("-lobby quickmatch -lobby-max-players 4", "-lobby-max-players")]
         public void RejectsInvalidArguments(string commandLine, string expected)
         {
             Assert.That(ParseError(commandLine), Does.Contain(expected));
@@ -117,6 +120,8 @@ namespace Fps.Core.Tests
         [TestCase("-lobby join -port 9000", "-port")]
         [TestCase("-lobby join -eos-server " + _ownerId, "-eos-server")]
         [TestCase("-lobby create -register-lobby 203.0.113.10:7777", "-register-lobby")]
+        [TestCase("-lobby quickmatch -address 10.0.0.1", "-address")]
+        [TestCase("-lobby quickmatch -mode client", "-mode")]
         public void RejectsFlagsTheLobbyDecides(string commandLine, string flag)
         {
             var error = ParseError(commandLine);
@@ -174,6 +179,63 @@ namespace Fps.Core.Tests
         public void NoneHasNoNetOptions()
         {
             Assert.Throws<InvalidOperationException>(() => LobbyLaunchOptions.None.ToNetOptions(_ownerId));
+        }
+
+        [Test]
+        public void QuickMatchSearchesServersOverUdpEveryFiveSecondsForThirtySeconds()
+        {
+            var options = Parse("fps -lobby quickmatch");
+
+            Assert.That(options.IsRequested, Is.True);
+            Assert.That(options.Command, Is.EqualTo(LobbyCommand.QuickMatch));
+            Assert.That(options.ToString(), Is.EqualTo("quickmatch"));
+            Assert.That(options.Transport, Is.EqualTo(NetTransportKind.Udp));
+            Assert.That(options.SearchInterval, Is.EqualTo(5f));
+            Assert.That(options.Timeout, Is.EqualTo(30f));
+            Assert.That(options.SearchBucketId("1.2.0"), Is.EqualTo(ServerLobby.BucketId("1.2.0")));
+            Assert.That(Parse("-LOBBY QuickMatch -transport UDP").Command, Is.EqualTo(LobbyCommand.QuickMatch));
+        }
+
+        [Test]
+        public void CreateAndJoinKeepTheirEosBucketAndSchedule()
+        {
+            foreach (var options in new[] { LobbyLaunchOptions.Create(), LobbyLaunchOptions.Join() })
+            {
+                Assert.That(options.Transport, Is.EqualTo(NetTransportKind.Eos));
+                Assert.That(options.SearchInterval, Is.EqualTo(LobbyLaunchOptions.SearchIntervalSeconds));
+                Assert.That(options.Timeout, Is.EqualTo(LobbyLaunchOptions.TimeoutSeconds));
+                Assert.That(options.SearchBucketId("1.2.0"), Is.EqualTo(LobbyLaunchOptions.BucketId("1.2.0")));
+            }
+        }
+
+        [Test]
+        public void QuickMatchConnectsToTheServerAddressOverUdp()
+        {
+            var net = LobbyLaunchOptions.QuickMatch().ToServerNetOptions("203.0.113.10:7790");
+
+            Assert.That(net.Mode, Is.EqualTo(NetLaunchMode.Client));
+            Assert.That(net.Transport, Is.EqualTo(NetTransportKind.Udp));
+            Assert.That(net.Address, Is.EqualTo("203.0.113.10"));
+            Assert.That(net.Port, Is.EqualTo(7790));
+            Assert.That(net.EosServerId, Is.Null);
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("203.0.113.10")]
+        [TestCase("0.0.0.0:7777")]
+        [TestCase("server.example:7777")]
+        public void QuickMatchRejectsAServerAddressThatIsNotIPv4AndPort(string endpoint)
+        {
+            Assert.Throws<ArgumentException>(() => LobbyLaunchOptions.QuickMatch().ToServerNetOptions(endpoint));
+        }
+
+        [Test]
+        public void OnlyQuickMatchUsesAServerAddress()
+        {
+            Assert.Throws<InvalidOperationException>(() => LobbyLaunchOptions.QuickMatch().ToNetOptions(_ownerId));
+            Assert.Throws<InvalidOperationException>(() => LobbyLaunchOptions.Join().ToServerNetOptions("203.0.113.10:7777"));
+            Assert.Throws<InvalidOperationException>(() => LobbyLaunchOptions.None.ToServerNetOptions("203.0.113.10:7777"));
         }
 
         [Test]

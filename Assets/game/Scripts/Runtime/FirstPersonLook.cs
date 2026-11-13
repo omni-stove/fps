@@ -176,8 +176,8 @@ namespace Fps.Runtime
                 _enabledLookAction = true;
             }
 
-            // ポーズ中に出現し直したプレイヤーが、メニューを操作しているカーソルを奪わないようにする。閉じたときに PauseMenu がロックする。
-            if (!PauseMenu.IsAnyOpen)
+            // ポーズ中やロードアウト選択中に出現し直したプレイヤーが、画面を操作しているカーソルを奪わないようにする。閉じたときに各画面がロックする。
+            if (!PauseMenu.IsAnyOpen && !LoadoutSelectView.IsAnyOpen)
             {
                 LockCursor(true);
             }
@@ -197,7 +197,7 @@ namespace Fps.Runtime
         private void OnApplicationFocus(bool hasFocus)
         {
             // フォーカスを失うと OS がロックを外すので、戻ったときにかけ直す。
-            if (hasFocus && isActiveAndEnabled && !PauseMenu.IsAnyOpen)
+            if (hasFocus && isActiveAndEnabled && !PauseMenu.IsAnyOpen && !LoadoutSelectView.IsAnyOpen)
             {
                 LockCursor(true);
             }

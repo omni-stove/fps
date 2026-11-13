@@ -159,6 +159,10 @@ namespace Fps.Core
 
         public override int GetHashCode() => HashCode.Combine(ReviverId, TargetId);
 
+        public static bool operator ==(ReviveHold left, ReviveHold right) => left.Equals(right);
+
+        public static bool operator !=(ReviveHold left, ReviveHold right) => !left.Equals(right);
+
         public override string ToString() => "reviver=" + ReviverId + " target=" + TargetId;
     }
 }

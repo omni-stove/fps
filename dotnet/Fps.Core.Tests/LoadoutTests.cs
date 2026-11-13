@@ -20,6 +20,9 @@ namespace Fps.Core.Tests
         private static readonly Item _pistol = new Item("pistol");
         private static readonly Item _knife = new Item("knife");
 
+        private static readonly string[] _expectedHolsterCalls = { "rifle@0", "switched 1", "pistol@1", "switched 2" };
+        private static readonly int[] _expectedSwitchedIndices = { 2, 0, 2 };
+
         private static Loadout<Item> Create(float switchSeconds = 0.5f, Action<Item> onHolster = null)
         {
             return new Loadout<Item>(new[] { _rifle, _pistol, _knife }, switchSeconds, onHolster);
@@ -232,7 +235,7 @@ namespace Fps.Core.Tests
             loadout.TrySelect(1);
             loadout.TrySelect(2);
 
-            Assert.That(calls, Is.EqualTo(new[] { "rifle@0", "switched 1", "pistol@1", "switched 2" }));
+            Assert.That(calls, Is.EqualTo(_expectedHolsterCalls));
         }
 
         [Test]
@@ -246,7 +249,7 @@ namespace Fps.Core.Tests
             loadout.SelectNext();
             loadout.SelectPrevious();
 
-            Assert.That(indices, Is.EqualTo(new[] { 2, 0, 2 }));
+            Assert.That(indices, Is.EqualTo(_expectedSwitchedIndices));
         }
 
         [Test]

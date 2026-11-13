@@ -33,6 +33,10 @@ namespace Fps.Tests.EditMode
             // 本物の選択 (LoadoutPreferenceStore.DefaultKey) を壊さないよう、テストごとに別のキーを使う
             _store = new LoadoutPreferenceStore("Fps.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"));
             _screen.LoadoutStore = _store;
+
+            // 本物のセーブ (persistentDataPath) を読み書きしないよう、キャンペーンのテストはメモリの置き場所を使う
+            _screen.SaveStorage = new MemorySaveStorage();
+            CampaignLaunchSelection.Clear();
         }
 
         [TearDown]
@@ -43,6 +47,7 @@ namespace Fps.Tests.EditMode
             MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
+            CampaignLaunchSelection.Clear();
             UnityEngine.Object.DestroyImmediate(_owner);
         }
 
@@ -257,6 +262,222 @@ namespace Fps.Tests.EditMode
                 Assert.That(_screen.IsLoadoutOpen, Is.False);
                 Assert.That(_screen.Notice, Is.Null);
             }
+        }
+
+        [Test]
+        public void CampaignWithoutACatalogOnlyShowsANotice()
+        {
+            _screen.Bind(_root);
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Menu\] cannot open the campaign"));
+
+            _screen.OpenCampaign();
+
+            Assert.That(_screen.IsCampaignOpen, Is.False);
+            Assert.That(_screen.Notice, Does.StartWith(CampaignMenuFormat.UnavailableNotice));
+            Assert.That(_screen.CampaignSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+        }
+
+        [Test]
+        public void CampaignListsTheMissionsAndStartsTheChosenOneAtTheChosenDifficulty()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                var storage = UseCampaign(missions);
+
+                _screen.OpenCampaign();
+
+                var panel = _screen.CampaignPanel;
+                Assert.That(_screen.IsCampaignOpen, Is.True);
+                Assert.That(panel.Container, Is.SameAs(_screen.CampaignSlot));
+                Assert.That(_screen.CampaignSlot.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+                Assert.That(_screen.Buttons.All(b => !b.enabledSelf), Is.True);
+                Assert.That(_screen.Choose(MenuDestination.Range), Is.False, "the menu does not move while the campaign is open");
+                Assert.That(panel.Menu.Missions.Select(m => m.DisplayName),
+                    Is.EqualTo(new[] { CampaignTestCatalog.Mission01Name, CampaignTestCatalog.Mission02Name }));
+                Assert.That(panel.Menu.Difficulty, Is.EqualTo(CampaignDifficulty.Normal));
+                Assert.That(panel.IsShown(CampaignMenuItemKind.Start), Is.True);
+                Assert.That(panel.IsShown(CampaignMenuItemKind.Continue), Is.False);
+                Assert.That(panel.HasSaveBadge(0), Is.False);
+
+                // ゲームパッドと同じ順: ミッションで決定 → 難易度を左へ (Easy) → 決定 → 「始める」で決定
+                panel.Submit();
+                Assert.That(panel.CycleDifficulty(-1), Is.True);
+                panel.Submit();
+                Assert.That(panel.Menu.FocusedItem.Kind, Is.EqualTo(CampaignMenuItemKind.Start));
+                panel.Submit();
+
+                Assert.That(_host.Loaded, Is.EqualTo(new[] { MenuRoute.CampaignScene }));
+                Assert.That(CampaignLaunchSelection.Current.MissionId, Is.EqualTo(CampaignTestCatalog.Mission01));
+                Assert.That(CampaignLaunchSelection.Current.Difficulty, Is.EqualTo(CampaignDifficulty.Easy));
+                Assert.That(panel.IsBusy, Is.True, "no second press while the scene loads");
+                Assert.That(storage.Slots, Is.Empty);
+            }
+        }
+
+        [Test]
+        public void ASavedMissionOffersContinueWhichKeepsTheSave()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                var storage = UseCampaign(missions);
+                var slot = CampaignSaveSlots.For(CampaignTestCatalog.Mission01);
+                storage.Slots[slot] = CampaignTestCatalog.SaveJson(CampaignTestCatalog.Mission01, "area-a");
+
+                _screen.OpenCampaign();
+
+                var panel = _screen.CampaignPanel;
+                Assert.That(panel.HasSaveBadge(0), Is.True);
+                Assert.That(panel.HasSaveBadge(1), Is.False);
+                Assert.That(panel.IsShown(CampaignMenuItemKind.Continue), Is.True);
+                Assert.That(panel.IsShown(CampaignMenuItemKind.Restart), Is.True);
+                Assert.That(panel.IsShown(CampaignMenuItemKind.Start), Is.False);
+
+                panel.Press(CampaignMenuItemKind.Continue);
+
+                Assert.That(_host.Loaded, Is.EqualTo(new[] { MenuRoute.CampaignScene }));
+                Assert.That(storage.Slots.ContainsKey(slot), Is.True, "CampaignRunner restores from the save");
+            }
+        }
+
+        [Test]
+        public void StartOverAsksAndThenDeletesTheSaveBeforeLoading()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                var storage = UseCampaign(missions);
+                storage.Slots[CampaignSaveSlots.For(CampaignTestCatalog.Mission01)] =
+                    CampaignTestCatalog.SaveJson(CampaignTestCatalog.Mission01, "area-a");
+                storage.Slots[CampaignSaveSlots.Legacy] = CampaignTestCatalog.SaveJson(CampaignTestCatalog.Mission01, "start");
+                _screen.OpenCampaign();
+                var panel = _screen.CampaignPanel;
+
+                panel.Press(CampaignMenuItemKind.Restart);
+
+                Assert.That(panel.Question, Does.Contain(CampaignTestCatalog.Mission01Name));
+                Assert.That(panel.IsShown(CampaignMenuItemKind.ConfirmRestart), Is.True);
+                Assert.That(panel.IsShown(CampaignMenuItemKind.Continue), Is.False);
+                Assert.That(storage.Slots, Has.Count.EqualTo(2), "nothing is deleted before the answer");
+                Assert.That(_host.Loaded, Is.Empty);
+
+                // 確認は取り消しで閉じられる
+                panel.Cancel();
+                Assert.That(panel.Question, Is.Null);
+                Assert.That(_screen.IsCampaignOpen, Is.True);
+
+                panel.Press(CampaignMenuItemKind.Restart);
+                panel.Press(CampaignMenuItemKind.ConfirmRestart);
+
+                Assert.That(storage.Slots, Is.Empty, "the mission slot and the legacy slot are both gone");
+                Assert.That(_host.Loaded, Is.EqualTo(new[] { MenuRoute.CampaignScene }));
+            }
+        }
+
+        [Test]
+        public void AFailedDeleteKeepsTheMenuOpenAndLoadsNothing()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                var storage = UseCampaign(missions);
+                storage.Slots[CampaignSaveSlots.For(CampaignTestCatalog.Mission01)] =
+                    CampaignTestCatalog.SaveJson(CampaignTestCatalog.Mission01, "area-a");
+                storage.FailDeletes = true;
+                _screen.OpenCampaign();
+                var panel = _screen.CampaignPanel;
+                LogAssert.Expect(LogType.Error, new Regex(@"^\[Campaign\] could not delete the save of mission=Campaign01"));
+
+                panel.Press(CampaignMenuItemKind.Restart);
+                panel.Press(CampaignMenuItemKind.ConfirmRestart);
+
+                Assert.That(_host.Loaded, Is.Empty);
+                Assert.That(CampaignLaunchSelection.Current, Is.Null);
+                Assert.That(panel.IsBusy, Is.False);
+                Assert.That(panel.IsStatusError, Is.True);
+                Assert.That(panel.Status, Does.Contain("read-only"));
+                Assert.That(panel.IsShown(CampaignMenuItemKind.Continue), Is.True, "the save is still there to continue from");
+            }
+        }
+
+        [Test]
+        public void AMissionOutsideTheBuildKeepsItsSave()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                var storage = UseCampaign(missions);
+                var slot = CampaignSaveSlots.For(CampaignTestCatalog.Mission02);
+                storage.Slots[slot] = CampaignTestCatalog.SaveJson(CampaignTestCatalog.Mission02, "start");
+                _screen.OpenCampaign();
+                var panel = _screen.CampaignPanel;
+                panel.ChooseMission(1);
+                LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(CampaignTestCatalog.NotBuiltScene) + ".*not in the build settings"));
+
+                panel.Press(CampaignMenuItemKind.Restart);
+                panel.Press(CampaignMenuItemKind.ConfirmRestart);
+
+                Assert.That(storage.Slots.ContainsKey(slot), Is.True, "the save is deleted only when the mission can start");
+                Assert.That(_host.Loaded, Is.Empty);
+                Assert.That(panel.Status, Does.Contain(CampaignTestCatalog.Mission02Name));
+                Assert.That(panel.IsBusy, Is.False);
+            }
+        }
+
+        [Test]
+        public void ABrokenSaveIsNotOfferedToContinue()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                var storage = UseCampaign(missions);
+                storage.Slots[CampaignSaveSlots.For(CampaignTestCatalog.Mission01)] = "{ broken";
+                LogAssert.Expect(LogType.Warning, new Regex(@"^\[Campaign\] mission=Campaign01 has a save that cannot be resumed"));
+
+                _screen.OpenCampaign();
+
+                Assert.That(_screen.CampaignPanel.IsShown(CampaignMenuItemKind.Continue), Is.False);
+                Assert.That(_screen.CampaignPanel.IsShown(CampaignMenuItemKind.Start), Is.True);
+            }
+        }
+
+        [Test]
+        public void ReopeningTheCampaignStartsAtTheLastLaunch()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                UseCampaign(missions);
+                CampaignLaunchSelection.Select(new CampaignLaunch(CampaignTestCatalog.Mission02, CampaignDifficulty.Hard));
+
+                _screen.OpenCampaign();
+
+                Assert.That(_screen.CampaignPanel.Menu.SelectedMission.Id, Is.EqualTo(CampaignTestCatalog.Mission02));
+                Assert.That(_screen.CampaignPanel.Menu.Difficulty, Is.EqualTo(CampaignDifficulty.Hard));
+            }
+        }
+
+        [Test]
+        public void BackClosesTheCampaignAndFocusesItsButton()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                UseCampaign(missions);
+                _screen.OpenCampaign();
+
+                _screen.CampaignPanel.Cancel();
+
+                Assert.That(_screen.IsCampaignOpen, Is.False);
+                Assert.That(_screen.CampaignSlot.childCount, Is.Zero);
+                Assert.That(_screen.CampaignSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+                Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+                Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.CampaignButtonName)));
+                Assert.That(_host.Loaded, Is.Empty);
+            }
+        }
+
+        private MemorySaveStorage UseCampaign(CampaignTestCatalog missions)
+        {
+            var storage = new MemorySaveStorage();
+            _screen.Missions = missions.Catalog;
+            _screen.SaveStorage = storage;
+            _screen.Bind(_root);
+            return storage;
         }
 
         private sealed class RecordingHost : IMenuSceneHost

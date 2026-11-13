@@ -11,7 +11,8 @@ namespace Fps.Editor
     /// メインメニューのシーン MainMenu を生成し、起動時のシーンとして Build Settings の先頭に登録する。
     /// シーンには背景を塗るカメラと <see cref="MainMenuScreen"/> を置いた GameObject だけを入れ、UI Toolkit の UIDocument と
     /// PanelSettings は実行時に MainMenuScreen がコードで作る (Resources の MainMenu.uxml を読む)。
-    /// MainMenuScreen にはロードアウトの選択に使うデフォルトロードアウトと武器の一覧のアセット (<see cref="WeaponAssetBuilder"/>) を配線する。
+    /// MainMenuScreen にはロードアウトの選択に使うデフォルトロードアウトと武器の一覧のアセット (<see cref="WeaponAssetBuilder"/>) と、
+    /// キャンペーンの選択に使うミッションの一覧 (<see cref="MissionCatalogBuilder"/>) を配線する。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.MenuSceneBuilder.Build</code>
     /// </summary>
@@ -81,6 +82,7 @@ namespace Fps.Editor
             var screen = menu.GetComponent<MainMenuScreen>();
             screen.Loadout = LoadOrBuildWeaponAsset(WeaponAssetBuilder.LoadoutPath, WeaponAssetBuilder.LoadDefaultLoadout);
             screen.Catalog = LoadOrBuildWeaponAsset(WeaponAssetBuilder.CatalogPath, WeaponAssetBuilder.LoadCatalog);
+            screen.Missions = LoadOrBuildMissionCatalog();
             SceneManager.MoveGameObjectToScene(menu, scene);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -98,6 +100,34 @@ namespace Fps.Editor
             }
 
             return load();
+        }
+
+        /// <summary>
+        /// キャンペーンの選択に使うミッションの一覧。無ければミッションの定義とシーンから作る (<see cref="MissionCatalogBuilder.Build"/>)。
+        /// 定義やシーンがまだ無くて作れないときは警告を出して null を返す (メニューは「キャンペーンを開けない」案内を出す)。
+        /// </summary>
+        public static MissionCatalog LoadOrBuildMissionCatalog()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<MissionCatalog>(MissionCatalogBuilder.CatalogPath);
+            if (catalog != null)
+            {
+                return catalog;
+            }
+
+            Debug.Log($"{LogTag} {MissionCatalogBuilder.CatalogPath} is missing; running {MissionCatalogBuilder.MenuPath}");
+            try
+            {
+                MissionCatalogBuilder.Build();
+            }
+            catch (System.Exception e) when (e is System.InvalidOperationException || e is MissionCatalogException)
+            {
+                // ミッションのシーンは NavMesh を焼くので重く、メニューを作るたびに巻き込まない。後で作ってメニューを作り直せばつながる
+                Debug.LogWarning(
+                    $"{LogTag} the campaign menu has no missions: {e.Message}. Run {CampaignSceneBuilder.MenuPath}, then {MenuPath}");
+                return null;
+            }
+
+            return AssetDatabase.LoadAssetAtPath<MissionCatalog>(MissionCatalogBuilder.CatalogPath);
         }
     }
 }

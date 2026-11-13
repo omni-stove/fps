@@ -21,5 +21,7 @@
         <ui:VisualElement name="menu-settings-slot" class="menu__settings-slot" style="display: none;" />
         <!-- オンラインで持っていく武器を選ぶ画面の差し込み口。MainMenuScreen が LoadoutSelectPanel で中身を作る。 -->
         <ui:VisualElement name="menu-loadout-slot" class="menu__loadout-slot" style="display: none;" />
+        <!-- キャンペーンのミッションと難易度を選ぶ画面の差し込み口。MainMenuScreen が CampaignSelectPanel で中身を作る。 -->
+        <ui:VisualElement name="menu-campaign-slot" class="menu__campaign-slot" style="display: none;" />
     </ui:VisualElement>
 </ui:UXML>

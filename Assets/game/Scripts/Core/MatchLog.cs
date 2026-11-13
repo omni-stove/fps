@@ -127,6 +127,14 @@ namespace Fps.Core
                 + " switch=" + Seconds(loadout.SwitchSeconds);
         }
 
+        /// <summary>プレイヤーが自分のロードアウトに選べる武器の一覧。name はアセット名 (空なら <c>-</c>)。</summary>
+        /// <example><c>[Match] loadout catalog name=WeaponCatalog weapons=2</c></example>
+        public static string LoadoutCatalog(string name, int weaponCount)
+        {
+            return Tag + " loadout catalog name=" + (string.IsNullOrWhiteSpace(name) ? "-" : name)
+                + " weapons=" + weaponCount.ToString(CultureInfo.InvariantCulture);
+        }
+
         /// <summary>
         /// 試合で使うルールの全項目。name はアセット名で、アセットが無く <see cref="GameRules.Default"/> を使うときは <c>default</c> を渡す
         /// (空なら <c>-</c>)。秒と倍率は小数 2 桁、真偽値は小文字。

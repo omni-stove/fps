@@ -86,9 +86,23 @@ namespace Fps.Core.Tests
             Assert.That(notice.Detail, Is.Null);
         }
 
+        [Test]
+        public void TheIdleKickedReasonSaysThePlayerWasIdle()
+        {
+            var notice = DisconnectNotice.Classify(DisconnectNotice.IdleKickedReason, true, "0.2.0");
+
+            Assert.That(DisconnectNotice.IdleKickedReason, Is.EqualTo("fps:idle-kicked"));
+            Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.IdleKicked));
+            Assert.That(notice.Message, Is.EqualTo(DisconnectNotice.IdleKickedMessage));
+            Assert.That(notice.Message, Does.Contain("放置"));
+            Assert.That(notice.WasConnected, Is.True);
+            Assert.That(notice.Describe(), Is.EqualTo("kind=IdleKicked connected=True reason=\"fps:idle-kicked\""));
+        }
+
         [TestCase(null)]
         [TestCase("")]
         [TestCase("Disconnected due to host shutting down.")]
+        [TestCase("fps:idle-kicked:extra")]
         [TestCase("fps:something-new")]
         [TestCase("FPS:SERVER-STOPPED")]
         public void WithoutAKnownCodeAConnectedClientTimedOut(string reason)

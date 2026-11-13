@@ -290,6 +290,134 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void RegistersNoLobbyByDefault()
+        {
+            var options = ParseOrFail("-mode server");
+
+            Assert.That(options.RegistersLobby, Is.False);
+            Assert.That(options.RegisterLobbyEndpoint, Is.Null);
+        }
+
+        [Test]
+        public void ServerTakesTheEndpointToRegister()
+        {
+            var options = ParseOrFail("-mode server -address 0.0.0.0 -port 7777 -register-lobby 203.0.113.10:17777");
+
+            Assert.That(options.RegistersLobby, Is.True);
+            Assert.That(options.RegisterLobbyEndpoint, Is.EqualTo("203.0.113.10:17777"));
+            Assert.That(options.Endpoint, Is.EqualTo("0.0.0.0:7777"));
+            Assert.That(options.ToString(), Is.EqualTo("server 0.0.0.0:7777 lobby=203.0.113.10:17777"));
+        }
+
+        [Test]
+        public void DedicatedServerDefaultModeCanRegister()
+        {
+            var options = ParseOrFail("-register-lobby 203.0.113.10:7777 -transport UDP", NetLaunchMode.Server);
+
+            Assert.That(options.RegisterLobbyEndpoint, Is.EqualTo("203.0.113.10:7777"));
+        }
+
+        [TestCase("-register-lobby 203.0.113.10:7777")]
+        [TestCase("-mode host -register-lobby 203.0.113.10:7777")]
+        [TestCase("-mode client -register-lobby 203.0.113.10:7777")]
+        public void OnlyAServerRegistersALobby(string commandLine)
+        {
+            Assert.That(ParseError(commandLine), Does.StartWith("-register-lobby is only used by -mode server"));
+        }
+
+        [Test]
+        public void RegisteringNeedsUdp()
+        {
+            var error = ParseError("-mode server -transport eos -register-lobby 203.0.113.10:7777");
+
+            Assert.That(error, Does.StartWith("-register-lobby needs -transport udp"));
+        }
+
+        [TestCase("203.0.113.10")]
+        [TestCase("203.0.113.10:")]
+        [TestCase(":7777")]
+        [TestCase("0.0.0.0:7777")]
+        [TestCase("example.com:7777")]
+        [TestCase("203.0.113.10:0")]
+        [TestCase("203.0.113.10:65536")]
+        [TestCase("203.0.113.10:77a")]
+        [TestCase("203.0.113.10:7777:1")]
+        [TestCase("[::1]:7777")]
+        public void RejectsMalformedRegisterEndpoint(string value)
+        {
+            var error = ParseError("-mode server -register-lobby " + value);
+
+            Assert.That(error, Does.StartWith("-register-lobby must be the public IPv4 address and port"));
+            Assert.That(error, Does.Contain(value));
+        }
+
+        [TestCase("-mode server -register-lobby")]
+        [TestCase("-mode server -register-lobby -port 7777")]
+        public void RejectsMissingRegisterEndpoint(string commandLine)
+        {
+            Assert.That(ParseError(commandLine), Does.Contain("requires a value"));
+        }
+
+        [Test]
+        public void RejectsDuplicateRegisterEndpoint()
+        {
+            var error = ParseError("-mode server -register-lobby 203.0.113.10:7777 -register-lobby 203.0.113.11:7777");
+
+            Assert.That(error, Does.Contain("more than once"));
+        }
+
+        [Test]
+        public void WithTransportKeepsTheRegistrationOnUdpOnly()
+        {
+            var options = ParseOrFail("-mode server -register-lobby 203.0.113.10:7777");
+
+            Assert.That(options.WithTransport(NetTransportKind.Udp), Is.SameAs(options));
+            Assert.Throws<ArgumentException>(() => options.WithTransport(NetTransportKind.Eos));
+        }
+
+        [Test]
+        public void ConstructorValidatesTheRegisterEndpoint()
+        {
+            var options = new NetLaunchOptions(
+                NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, "10.0.0.2:7000");
+
+            Assert.That(options.RegisterLobbyEndpoint, Is.EqualTo("10.0.0.2:7000"));
+            Assert.Throws<ArgumentException>(() => new NetLaunchOptions(
+                NetLaunchMode.Host, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, "10.0.0.2:7000"));
+            Assert.Throws<ArgumentException>(() => new NetLaunchOptions(
+                NetLaunchMode.Server, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Eos, null, "10.0.0.2:7000"));
+            Assert.Throws<ArgumentException>(() => new NetLaunchOptions(
+                NetLaunchMode.Server, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, "10.0.0.2"));
+        }
+
+        [TestCase("127.0.0.1:7777", "127.0.0.1", 7777)]
+        [TestCase("203.0.113.10:1", "203.0.113.10", 1)]
+        [TestCase("203.0.113.10:65535", "203.0.113.10", 65535)]
+        public void ParsesEndpoints(string text, string expectedAddress, int expectedPort)
+        {
+            var ok = NetLaunchOptions.TryParseEndpoint(text, out var address, out var port);
+
+            Assert.That(ok, Is.True);
+            Assert.That(address, Is.EqualTo(expectedAddress));
+            Assert.That((int)port, Is.EqualTo(expectedPort));
+            Assert.That(NetLaunchOptions.FormatEndpoint(address, port), Is.EqualTo(text));
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("0.0.0.0:7777")]
+        [TestCase("203.0.113.10")]
+        [TestCase("203.0.113.10:+7777")]
+        public void RejectsMalformedEndpoints(string text)
+        {
+            var ok = NetLaunchOptions.TryParseEndpoint(text, out var address, out var port);
+
+            Assert.That(ok, Is.False);
+            Assert.That(address, Is.Null);
+            Assert.That((int)port, Is.Zero);
+        }
+
+        [Test]
         public void RecognizesProductUserIds()
         {
             Assert.That(NetLaunchOptions.IsProductUserId(_serverId), Is.True);

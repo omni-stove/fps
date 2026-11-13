@@ -21,6 +21,7 @@ namespace Fps.Net
         private readonly string _bucketId;
         private Operation _operation;
         private bool _leaveWhenSettled;
+        private bool _updating;
         private bool _disposed;
 
         /// <param name="backend">SDK を呼ぶ側。このサービスが Dispose する。</param>
@@ -36,6 +37,7 @@ namespace Fps.Net
             _bucketId = bucketId;
             _backend.MembersChanged += HandleMembersChanged;
             _backend.Removed += HandleRemoved;
+            _backend.LoggedOut += HandleLoggedOut;
         }
 
         /// <summary>参加中のロビーのメンバーが変わった。引数は最新の状態。</summary>
@@ -43,6 +45,12 @@ namespace Fps.Net
 
         /// <summary>参加中のロビーから外された (自分で出たときは呼ばない)。引数は理由。</summary>
         public event Action<string> Removed;
+
+        /// <summary>
+        /// ログインが切れた。引数は理由。ロビーに入っていれば先に <see cref="Removed"/> を呼ぶ。
+        /// この後は <see cref="Login"/> からやり直せる。
+        /// </summary>
+        public event Action<string> LoggedOut;
 
         private enum Operation
         {
@@ -62,8 +70,11 @@ namespace Fps.Net
 
         public bool IsLoggedIn => LocalUserId != null;
 
-        /// <summary>完了を待っている操作があるか。</summary>
+        /// <summary>完了を待っている操作があるか。属性の更新は含めない (<see cref="IsUpdating"/>)。</summary>
         public bool IsBusy => _operation != Operation.None;
+
+        /// <summary>属性の更新の完了を待っているか。</summary>
+        public bool IsUpdating => _updating;
 
         /// <summary>参加中のロビーのオーナーが自分か。</summary>
         public bool IsOwner => Current != null && Current.IsOwnedBy(LocalUserId);
@@ -121,6 +132,17 @@ namespace Fps.Net
         /// <param name="done">完了したときに呼ぶ。</param>
         public void CreateLobby(int maxPlayers, Action<LobbyInfo, string> done)
         {
+            CreateLobby(maxPlayers, Array.Empty<LobbyAttribute>(), done);
+        }
+
+        /// <summary>属性を付けたロビーを作ってオーナーとして入る。成功なら (作ったロビー, null)。</summary>
+        /// <param name="maxPlayers">
+        /// <see cref="LobbyLaunchOptions.MinMaxPlayers"/> から <see cref="LobbyLaunchOptions.MaxMaxPlayers"/> の最大人数。
+        /// </param>
+        /// <param name="attributes">公開する属性。キーの重複は認めない。無ければ空。</param>
+        /// <param name="done">完了したときに呼ぶ。</param>
+        public void CreateLobby(int maxPlayers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+        {
             Require(done);
             if (maxPlayers < LobbyLaunchOptions.MinMaxPlayers || maxPlayers > LobbyLaunchOptions.MaxMaxPlayers)
             {
@@ -129,9 +151,10 @@ namespace Fps.Net
                     "must be between " + LobbyLaunchOptions.MinMaxPlayers + " and " + LobbyLaunchOptions.MaxMaxPlayers);
             }
 
+            var copied = CopyAttributes(attributes, nameof(attributes));
             ThrowUnlessReadyOutsideLobby();
             Begin(Operation.Create);
-            _backend.CreateLobby(_bucketId, maxPlayers, Once<LobbyInfo>((lobby, error) =>
+            _backend.CreateLobby(_bucketId, maxPlayers, copied, Once<LobbyInfo>((lobby, error) =>
             {
                 End();
                 if (!Enter(lobby, ref error))
@@ -140,7 +163,8 @@ namespace Fps.Net
                     return;
                 }
 
-                Debug.Log(LogPrefix + "created id=" + lobby.Id + " max=" + lobby.MaxMembers + " owner=" + lobby.OwnerUserId);
+                Debug.Log(LogPrefix + "created id=" + lobby.Id + " max=" + lobby.MaxMembers + " owner=" + lobby.OwnerUserId
+                    + (copied.Length == 0 ? "" : " " + Describe(copied)));
                 LogMembers(lobby);
                 if (!LeaveIfRequested())
                 {
@@ -202,6 +226,56 @@ namespace Fps.Net
                 }
 
                 done(null, "the lobby was left while it was being joined");
+            }));
+        }
+
+        /// <summary>
+        /// オーナーとして参加中のロビーの属性を、同じキーは上書きして足す。成功なら null、失敗なら理由を渡す。
+        /// 更新は 1 つずつ行い、ほかの操作とは並べて進められる。
+        /// </summary>
+        /// <param name="attributes">更新する属性。1 つ以上で、キーの重複は認めない。</param>
+        /// <param name="done">完了したときに呼ぶ。</param>
+        public void UpdateAttributes(IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
+        {
+            Require(done);
+            var copied = CopyAttributes(attributes, nameof(attributes));
+            if (copied.Length == 0)
+            {
+                throw new ArgumentException("must contain at least one attribute", nameof(attributes));
+            }
+
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(LobbyService));
+            }
+
+            if (_updating)
+            {
+                throw new InvalidOperationException("an attribute update is still in progress");
+            }
+
+            if (!IsOwner)
+            {
+                throw new InvalidOperationException(Current == null
+                    ? "not in a lobby"
+                    : "only the owner can update lobby " + Current.Id);
+            }
+
+            var lobbyId = Current.Id;
+            _updating = true;
+            _backend.UpdateAttributes(lobbyId, copied, Once((string error) =>
+            {
+                _updating = false;
+                if (error != null)
+                {
+                    Debug.LogWarning(LogPrefix + "could not update id=" + lobbyId + " " + Describe(copied) + ": " + error);
+                }
+                else
+                {
+                    Debug.Log(LogPrefix + "updated id=" + lobbyId + " " + Describe(copied));
+                }
+
+                done(error);
             }));
         }
 
@@ -274,10 +348,12 @@ namespace Fps.Net
             _disposed = true;
             _backend.MembersChanged -= HandleMembersChanged;
             _backend.Removed -= HandleRemoved;
+            _backend.LoggedOut -= HandleLoggedOut;
             _backend.Dispose();
             Current = null;
             MembersChanged = null;
             Removed = null;
+            LoggedOut = null;
         }
 
         private void HandleMembersChanged(LobbyInfo lobby)
@@ -302,6 +378,64 @@ namespace Fps.Net
             Current = null;
             Debug.LogWarning(LogPrefix + "removed from id=" + lobbyId + ": " + reason);
             Removed?.Invoke(reason);
+        }
+
+        private void HandleLoggedOut(string reason)
+        {
+            if (_disposed || !IsLoggedIn)
+            {
+                return;
+            }
+
+            // バックエンドが先にロビーからの退出を知らせなかったときも、ログインの無いロビーには留まれない
+            if (Current != null)
+            {
+                HandleRemoved(Current.Id, "logged out: " + reason);
+            }
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            Debug.LogWarning(LogPrefix + "logged out user=" + LocalUserId + ": " + reason);
+            LocalUserId = null;
+            LoggedOut?.Invoke(reason);
+        }
+
+        /// <summary>属性の一覧を検証して写す。null の要素やキーの重複は誤った呼び出しとして例外にする。</summary>
+        private static LobbyAttribute[] CopyAttributes(IReadOnlyList<LobbyAttribute> attributes, string paramName)
+        {
+            if (attributes == null)
+            {
+                throw new ArgumentNullException(paramName);
+            }
+
+            var copied = new LobbyAttribute[attributes.Count];
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            for (var i = 0; i < copied.Length; i++)
+            {
+                var attribute = attributes[i] ?? throw new ArgumentException("must not contain null", paramName);
+                if (!keys.Add(attribute.Key))
+                {
+                    throw new ArgumentException("key '" + attribute.Key + "' is given more than once", paramName);
+                }
+
+                copied[i] = attribute;
+            }
+
+            return copied;
+        }
+
+        private static string Describe(IEnumerable<LobbyAttribute> attributes)
+        {
+            var parts = new List<string>();
+            foreach (var attribute in attributes)
+            {
+                parts.Add(attribute.ToString());
+            }
+
+            return string.Join(" ", parts);
         }
 
         /// <summary>作成・参加の結果を受け取る。成功なら <see cref="Current"/> にして true。</summary>

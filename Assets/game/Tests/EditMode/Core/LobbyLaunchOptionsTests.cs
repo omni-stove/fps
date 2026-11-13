@@ -116,6 +116,7 @@ namespace Fps.Core.Tests
         [TestCase("-lobby join -address 10.0.0.1", "-address")]
         [TestCase("-lobby join -port 9000", "-port")]
         [TestCase("-lobby join -eos-server " + _ownerId, "-eos-server")]
+        [TestCase("-lobby create -register-lobby 203.0.113.10:7777", "-register-lobby")]
         public void RejectsFlagsTheLobbyDecides(string commandLine, string flag)
         {
             var error = ParseError(commandLine);

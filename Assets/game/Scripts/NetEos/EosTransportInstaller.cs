@@ -10,7 +10,7 @@ namespace Fps.NetEos
     /// </summary>
     public static class EosTransportInstaller
     {
-        /// <summary>初めて Device ID でログインしたときに作るユーザーの表示名。</summary>
+        /// <summary>初めて Device ID でログインしたときに作るユーザーの表示名。呼び出し側が指定しなければこれを使う。</summary>
         public const string LobbyDisplayName = "fps-player";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -22,7 +22,8 @@ namespace Fps.NetEos
                 transport.Configure(plan.Options, plan.Credentials, plan.AntiCheat);
                 return transport;
             };
-            NetTransportFactories.EosLobby = credentials => new EosLobbyBackend(credentials, LobbyDisplayName);
+            NetTransportFactories.EosLobby = (credentials, displayName) =>
+                new EosLobbyBackend(credentials, string.IsNullOrWhiteSpace(displayName) ? LobbyDisplayName : displayName);
         }
     }
 }

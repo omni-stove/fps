@@ -6,7 +6,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// ネットワークの起動設定。コマンドライン引数 <c>-mode</c> / <c>-address</c> / <c>-port</c> /
-    /// <c>-transport</c> / <c>-eos-server</c> から作る。知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
+    /// <c>-transport</c> / <c>-eos-server</c> / <c>-register-lobby</c> から作る。知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
     /// </summary>
     public sealed class NetLaunchOptions
     {
@@ -15,6 +15,7 @@ namespace Fps.Core
         public const string PortFlag = "-port";
         public const string TransportFlag = "-transport";
         public const string EosServerFlag = "-eos-server";
+        public const string RegisterLobbyFlag = "-register-lobby";
 
         public const string DefaultAddress = "127.0.0.1";
         public const ushort DefaultPort = 7777;
@@ -30,7 +31,7 @@ namespace Fps.Core
         /// <summary>EOS の ProductUserId の文字列表現の長さ (16 進数の桁数)。</summary>
         public const int ProductUserIdLength = 32;
 
-        private static readonly string[] _flags = { ModeFlag, AddressFlag, PortFlag, TransportFlag, EosServerFlag };
+        private static readonly string[] _flags = { ModeFlag, AddressFlag, PortFlag, TransportFlag, EosServerFlag, RegisterLobbyFlag };
 
         public NetLaunchMode Mode { get; }
 
@@ -44,6 +45,14 @@ namespace Fps.Core
         /// <summary>EOS のクライアントが接続するサーバーの ProductUserId。それ以外では null。</summary>
         public string EosServerId { get; }
 
+        /// <summary>
+        /// サーバーが EOS のロビーに載せる、クライアントがつなぐ公開アドレス (<c>address:port</c>)。登録しないなら null。
+        /// </summary>
+        public string RegisterLobbyEndpoint { get; }
+
+        /// <summary>サーバーが自分を EOS のロビーに登録するか。</summary>
+        public bool RegistersLobby => RegisterLobbyEndpoint != null;
+
         /// <summary>ログ向けの接続先・待ち受け先。UDP は <c>address:port</c>、EOS は <c>eos</c> か <c>eos:&lt;サーバーの ID&gt;</c>。</summary>
         public string Endpoint
         {
@@ -51,7 +60,7 @@ namespace Fps.Core
             {
                 if (Transport == NetTransportKind.Udp)
                 {
-                    return Address + ":" + Port.ToString(CultureInfo.InvariantCulture);
+                    return FormatEndpoint(Address, Port);
                 }
 
                 return EosServerId == null ? "eos" : "eos:" + EosServerId;
@@ -72,6 +81,20 @@ namespace Fps.Core
         /// <param name="transport">transport。</param>
         /// <param name="eosServerId">EOS のクライアントでは必須の、サーバーの ProductUserId。EOS のクライアント以外では null。</param>
         public NetLaunchOptions(NetLaunchMode mode, string address, ushort port, NetTransportKind transport, string eosServerId)
+            : this(mode, address, port, transport, eosServerId, null)
+        {
+        }
+
+        /// <param name="mode">起動モード。</param>
+        /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。EOS では使わないが検証はする。</param>
+        /// <param name="port">1 から 65535 のポート番号。</param>
+        /// <param name="transport">transport。</param>
+        /// <param name="eosServerId">EOS のクライアントでは必須の、サーバーの ProductUserId。EOS のクライアント以外では null。</param>
+        /// <param name="registerLobbyEndpoint">
+        /// UDP のサーバーが EOS のロビーに載せる公開アドレス (<c>address:port</c>)。登録しないなら null。
+        /// </param>
+        public NetLaunchOptions(
+            NetLaunchMode mode, string address, ushort port, NetTransportKind transport, string eosServerId, string registerLobbyEndpoint)
         {
             if (!Enum.IsDefined(typeof(NetLaunchMode), mode))
             {
@@ -100,11 +123,18 @@ namespace Fps.Core
                 throw new ArgumentException(serverError, nameof(eosServerId));
             }
 
+            var registerError = ValidateRegisterLobby(mode, transport, registerLobbyEndpoint, out var normalizedEndpoint);
+            if (registerError != null)
+            {
+                throw new ArgumentException(registerError, nameof(registerLobbyEndpoint));
+            }
+
             Mode = mode;
             Address = address;
             Port = port;
             Transport = transport;
             EosServerId = eosServerId;
+            RegisterLobbyEndpoint = normalizedEndpoint;
         }
 
         /// <summary>引数に <c>-mode</c> が含まれるか。値の妥当性は見ない。</summary>
@@ -131,6 +161,7 @@ namespace Fps.Core
         /// <c>-address</c> が無ければ <see cref="DefaultAddress"/>、<c>-port</c> が無ければ <see cref="DefaultPort"/>、
         /// <c>-transport</c> が無ければ <see cref="DefaultTransport"/> を使う。
         /// <c>-eos-server</c> は <c>-transport eos</c> のクライアントでだけ使い、そのときは必須。
+        /// <c>-register-lobby</c> は UDP のサーバーでだけ使える。
         /// </summary>
         /// <param name="args">コマンドライン引数。先頭が実行ファイルのパスでもよい。</param>
         /// <param name="defaultMode">-mode が無いときのモード。</param>
@@ -220,7 +251,15 @@ namespace Fps.Core
                 return false;
             }
 
-            options = new NetLaunchOptions(mode, address, port, transport, eosServerId);
+            values.TryGetValue(RegisterLobbyFlag, out var registerText);
+            var registerError = ValidateRegisterLobby(mode, transport, registerText, out var registerEndpoint);
+            if (registerError != null)
+            {
+                error = registerError;
+                return false;
+            }
+
+            options = new NetLaunchOptions(mode, address, port, transport, eosServerId, registerEndpoint);
             error = null;
             return true;
         }
@@ -278,8 +317,50 @@ namespace Fps.Core
             return true;
         }
 
-        /// <summary>transport だけを差し替えた設定を返す。UDP にしたときは EOS のサーバー ID を捨てる。</summary>
-        /// <exception cref="ArgumentException">EOS のクライアントにするのにサーバー ID が無い。</exception>
+        /// <summary>
+        /// <c>address:port</c> (IPv4 と 1〜65535 のポート) を分ける。<see cref="AnyAddress"/> はつなぐ先にならないので受け付けない。
+        /// </summary>
+        /// <param name="text">分ける文字列。</param>
+        /// <param name="address">成功したときのアドレス。失敗したときは null。</param>
+        /// <param name="port">成功したときのポート。失敗したときは 0。</param>
+        public static bool TryParseEndpoint(string text, out string address, out ushort port)
+        {
+            address = null;
+            port = 0;
+            if (string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+
+            var colon = text.LastIndexOf(':');
+            if (colon <= 0 || colon == text.Length - 1)
+            {
+                return false;
+            }
+
+            var host = text.Substring(0, colon);
+            if (!IsIPv4(host) || host == AnyAddress || !TryParsePort(text.Substring(colon + 1), out var parsedPort))
+            {
+                return false;
+            }
+
+            address = host;
+            port = parsedPort;
+            return true;
+        }
+
+        /// <summary>ログ・ロビーの属性向けの <c>address:port</c>。</summary>
+        public static string FormatEndpoint(string address, ushort port)
+        {
+            return address + ":" + port.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// transport だけを差し替えた設定を返す。UDP にしたときは EOS のサーバー ID を捨てる。ロビーへの登録はそのまま引き継ぐ。
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// EOS のクライアントにするのにサーバー ID が無い、または EOS にするのにロビーへの登録が指定されている。
+        /// </exception>
         public NetLaunchOptions WithTransport(NetTransportKind transport)
         {
             if (transport == Transport)
@@ -288,12 +369,13 @@ namespace Fps.Core
             }
 
             var serverId = transport == NetTransportKind.Udp ? null : EosServerId;
-            return new NetLaunchOptions(Mode, Address, Port, transport, serverId);
+            return new NetLaunchOptions(Mode, Address, Port, transport, serverId, RegisterLobbyEndpoint);
         }
 
         public override string ToString()
         {
-            return ModeName(Mode) + " " + Endpoint;
+            var text = ModeName(Mode) + " " + Endpoint;
+            return RegistersLobby ? text + " lobby=" + RegisterLobbyEndpoint : text;
         }
 
         private static string MatchFlag(string arg)
@@ -382,6 +464,42 @@ namespace Fps.Core
                     + "-digit hexadecimal product user id (got '" + eosServerId + "')";
             }
 
+            return null;
+        }
+
+        /// <param name="mode">起動モード。</param>
+        /// <param name="transport">transport。</param>
+        /// <param name="endpoint">登録しないなら null。</param>
+        /// <param name="normalized">正しいときの <c>address:port</c>。登録しないか誤りなら null。</param>
+        /// <returns>正しければ null、誤りならその理由。</returns>
+        private static string ValidateRegisterLobby(
+            NetLaunchMode mode, NetTransportKind transport, string endpoint, out string normalized)
+        {
+            normalized = null;
+            if (endpoint == null)
+            {
+                return null;
+            }
+
+            if (mode != NetLaunchMode.Server)
+            {
+                return RegisterLobbyFlag + " is only used by " + ModeFlag + " " + ModeName(NetLaunchMode.Server)
+                    + " (got " + ModeName(mode) + ")";
+            }
+
+            if (transport != NetTransportKind.Udp)
+            {
+                return RegisterLobbyFlag + " needs " + TransportFlag + " " + TransportName(NetTransportKind.Udp)
+                    + "; clients connect to the registered address over UDP";
+            }
+
+            if (!TryParseEndpoint(endpoint, out var address, out var port))
+            {
+                return RegisterLobbyFlag + " must be the public IPv4 address and port clients connect to, such as 203.0.113.10:"
+                    + DefaultPort.ToString(CultureInfo.InvariantCulture) + " (got '" + endpoint + "')";
+            }
+
+            normalized = FormatEndpoint(address, port);
             return null;
         }
 

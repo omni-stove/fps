@@ -143,6 +143,9 @@ namespace Fps.Core
             }
 
             StalledSeconds = 0f;
+            // 立て直しは今の位置から始まる。詰まる前の 0.5m 未満の移動を残すと、寄り道が目的地の方向へ少し動いただけで立ち直りと判定される。
+            _anchor = position;
+            _pathDirection = null;
             Stage = Stage == StuckRecovery.Warp ? StuckRecovery.Repath : Stage + 1;
             return Stage;
         }

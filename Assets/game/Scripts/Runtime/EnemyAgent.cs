@@ -650,7 +650,7 @@ namespace Fps.Runtime
                 var candidate = ground + new Vector3(offset.x, 0f, offset.y);
                 if (!NavMesh.SamplePosition(candidate, out var hit, SidestepRadius, NavMesh.AllAreas)
                     || HorizontalDistance(ground, hit.position) < SidestepMinDistance
-                    || (goal.HasValue && Vector3.Distance(hit.position, goal.Value) <= Vector3.Distance(ground, goal.Value) - StuckProgressDistance)
+                    || (goal.HasValue && MovesTowardGoal(ground, hit.position, goal.Value))
                     || !_agent.CalculatePath(hit.position, path)
                     || path.status != NavMeshPathStatus.PathComplete)
                 {
@@ -663,6 +663,21 @@ namespace Fps.Runtime
                 _agent.SetPath(path);
                 return;
             }
+        }
+
+        // StuckMonitor の寄り道中の判定 (基準点から目的地の方向への射影) と同じ基準にそろえる。
+        private static bool MovesTowardGoal(Vector3 from, Vector3 to, Vector3 goal)
+        {
+            var toGoal = goal - from;
+            toGoal.y = 0f;
+            if (toGoal.sqrMagnitude <= 0f)
+            {
+                return false;
+            }
+
+            var move = to - from;
+            move.y = 0f;
+            return Vector3.Dot(move, toGoal.normalized) >= StuckProgressDistance;
         }
 
         /// <summary>

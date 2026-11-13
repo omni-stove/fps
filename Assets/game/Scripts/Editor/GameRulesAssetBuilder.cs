@@ -12,7 +12,8 @@ namespace Fps.Editor
     /// 対戦・PvE モードの <see cref="ModeNames"/> の 9 つ) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) と、そこから作る個別リスポーンのモードだけ
-    /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す (<see cref="GameRules"/> の既定)。
+    /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す・
+    /// 拠点なし・Bot で埋めない・放置で切らない (<see cref="GameRules"/> の既定)。
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
     /// TPS 射撃場がそれに回避・乗り越え・グレネードを足したもの。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
@@ -527,7 +528,10 @@ namespace Fps.Editor
                 actions,
                 source.SpawnProtectionSeconds,
                 source.FallDamage,
-                source.HudDensity);
+                source.HudDensity,
+                source.Objective,
+                source.MinPlayers,
+                source.IdleKickSeconds);
         }
     }
 }

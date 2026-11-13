@@ -60,6 +60,11 @@ namespace Fps.Net
     /// 射撃は .Fire.cs、出現とリスポーンと出現直後の無敵 (<see cref="SpawnProtections"/>) は .Spawn.cs、武器を配る処理は .Loadout.cs、参加と退出は .Roster.cs、
     /// ダウンと蘇生は .Downed.cs、射撃・ヒット・被弾・キルをクライアントへ配る処理 (<see cref="NetCombatFeed"/>) は .CombatFeed.cs に分けてある。
     /// </para>
+    /// <para>
+    /// Bot で人数を埋める処理は .Bots.cs、放置した人を切る処理は .Idle.cs、拠点で勝敗を決める処理は .Objective.cs が受け持つ。
+    /// それぞれの差し込み口を、サーバーで試合を始めたとき・毎フレーム・参加・退出・キル・次の試合の開始・試合の終わり・Despawn から呼ぶ。
+    /// 試合の終わりでは、勝ったチームを <c>ObjectiveDecideWinner</c> が差し替えてから同期とログに使う。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -318,6 +323,10 @@ namespace Fps.Net
 
             if (_session != null)
             {
+                // 差し込み口が試合の状態を読んで片付けられるよう、Session を手放す前に呼ぶ
+                BotsServerStopped();
+                IdleServerStopped();
+                ObjectiveServerStopped();
                 UnsubscribeSession(_session);
                 _session = null;
             }
@@ -365,6 +374,9 @@ namespace Fps.Net
             // 終わっていれば次の試合までの待ちが進み、待ち終わったら Session が Restart する
             ServerAdvanceRevives(Time.deltaTime);
             _session.Tick(Time.deltaTime);
+            BotsServerTick(Time.deltaTime);
+            IdleServerTick(Time.deltaTime);
+            ObjectiveServerTick(Time.deltaTime);
             SyncDownedStates();
             SyncSpawnProtections();
             SyncRemainingSeconds();
@@ -522,6 +534,10 @@ namespace Fps.Net
             {
                 Debug.Log(MatchLog.LoadoutCatalog(_catalog.name, _serverLoadout.Catalog.Count));
             }
+
+            BotsServerStarted();
+            IdleServerStarted();
+            ObjectiveServerStarted();
         }
 
         /// <summary>
@@ -726,16 +742,23 @@ namespace Fps.Net
             var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
             Debug.Log(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId));
             SendKill(killerId, victimId, byAlly);
+            BotsPlayerKilled(killerId, victimId);
+            IdlePlayerKilled(killerId, victimId);
+            ObjectivePlayerKilled(killerId, victimId);
         }
 
         private void HandleEnded(Team? winner)
         {
+            ObjectiveDecideWinner(ref winner);
             _status.Value = new NetMatchStatus(GameModeState.Ended, winner);
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
             SyncNextWaveSeconds();
             Debug.Log(MatchLog.Ended(winner));
             Debug.Log(MatchLog.NextMatch(_session.RestartRemainingSeconds));
+            BotsMatchEnded(winner);
+            IdleMatchEnded(winner);
+            ObjectiveMatchEnded(winner);
         }
 
         // Session が点数・キル数・時間・体力を戻した直後。続けて点数・各プレイヤー・出現の知らせが来て、
@@ -752,6 +775,9 @@ namespace Fps.Net
             _lastKillers.Clear();
             _reviveHolds.Clear();
             Debug.Log(MatchLog.Restart());
+            BotsMatchRestarted();
+            IdleMatchRestarted();
+            ObjectiveMatchRestarted();
         }
 
         // クライアントでも同じ書式でログを出し、サーバーのログと突き合わせられるようにする。

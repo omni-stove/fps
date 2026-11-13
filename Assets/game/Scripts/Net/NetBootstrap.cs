@@ -27,9 +27,15 @@ namespace Fps.Net
     /// <see cref="DisconnectNotice"/> で分けた理由 (サーバー停止・タイムアウト・拒否・版違い) を添えてメニューへ戻る。
     /// サーバー (Host を含む) は止まる前に、つないでいるクライアントへ止まると知らせてから切る。
     /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
+    /// <para>
+    /// <c>-map</c> は .Map.cs、<c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> は .NetSimulation.cs、
+    /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、試合のイベントのログは .Log.cs が受け持つ。
+    /// それぞれの起動の前 (<c>*BeforeStart</c>)・起動の後 (<c>*AfterStart</c>)・終了の要求 (<c>*QuitRequested</c>) の差し込み口を
+    /// <see cref="StartNetwork"/> と <see cref="HandleWantsToQuit"/> から呼ぶ。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class NetBootstrap : MonoBehaviour
+    public sealed partial class NetBootstrap : MonoBehaviour
     {
         /// <summary>このコンポーネントを置くシーン。<c>Fps.Editor.NetSceneBuilder</c> が生成する。</summary>
         public const string ScenePath = "Assets/game/Scenes/NetTest.unity";
@@ -314,6 +320,7 @@ namespace Fps.Net
             _manager.OnTransportFailure += HandleTransportFailure;
             // 専用サーバーは docker stop (SIGTERM) で終了するので、Netcode が終了で止まる前にクライアントへ知らせる
             Application.quitting += TellClientsServerStopping;
+            Application.wantsToQuit += HandleWantsToQuit;
             return true;
         }
 
@@ -474,6 +481,19 @@ namespace Fps.Net
         {
             // StartHost は接続のコールバックを同期で呼ぶので、開始のログは先に出す
             Debug.Log("[Net] starting " + _options + " transport=" + NetLaunchOptions.TransportName(_options.Transport));
+
+            // transport の設定は待ち受け・接続を始めた後に変えても効かないので、起動の前に差し込み口を呼ぶ
+            string beforeStartError = null;
+            MapBeforeStart(ref beforeStartError);
+            NetSimulationBeforeStart(ref beforeStartError);
+            ShutdownBeforeStart(ref beforeStartError);
+            LogBeforeStart(ref beforeStartError);
+            if (beforeStartError != null)
+            {
+                Fail(ExitMisconfigured, beforeStartError);
+                return;
+            }
+
             var started = false;
             try
             {
@@ -507,6 +527,24 @@ namespace Fps.Net
             }
 
             _nextStatusLogTime = Time.unscaledTime + _statusLogInterval;
+            MapAfterStart();
+            NetSimulationAfterStart();
+            ShutdownAfterStart();
+            LogAfterStart();
+        }
+
+        /// <summary>
+        /// 終了の要求 (<see cref="Application.wantsToQuit"/>) を差し込み口に渡す。どれかが allowQuit を false にすれば終了を待たせる。
+        /// 待たせた差し込み口は、待ち終えたら自分で <see cref="Application.Quit()"/> を呼ぶ。
+        /// </summary>
+        private bool HandleWantsToQuit()
+        {
+            var allowQuit = true;
+            MapQuitRequested(ref allowQuit);
+            NetSimulationQuitRequested(ref allowQuit);
+            ShutdownQuitRequested(ref allowQuit);
+            LogQuitRequested(ref allowQuit);
+            return allowQuit;
         }
 
         private void Update()
@@ -542,6 +580,7 @@ namespace Fps.Net
             }
 
             Application.quitting -= TellClientsServerStopping;
+            Application.wantsToQuit -= HandleWantsToQuit;
             if (_manager == null)
             {
                 return;

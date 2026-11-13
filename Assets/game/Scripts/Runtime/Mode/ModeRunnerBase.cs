@@ -21,6 +21,7 @@ namespace Fps.Runtime
     /// <item>Update で <see cref="Tick"/> し、状態が変わるたび・倒れるたび・終わったときに <c>[Mode]</c> のログ (<see cref="ModeLog"/>) を出す。
     /// HUD があれば <see cref="ModeHudView"/> に残り時間・得点・自分のリスポーンまでの秒数・派生モードの行 (<see cref="AppendHudLines"/>)・結果を出す。</item>
     /// <item>終わったら全員の操作と行動を止め、<see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) でシーンを読み直す。</item>
+    /// <item><see cref="HidesTargetDummies"/> が true (既定) なら、始めたときに GameBootstrap の標的ダミーを隠す。</item>
     /// </list>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -39,6 +40,9 @@ namespace Fps.Runtime
 
         [SerializeField, Min(0), Tooltip("GameBootstrap が作るプレイヤーに SideMember が無いとき、付ける陣営の ID")]
         private int _playerSideId;
+
+        [SerializeField, Tooltip("GameBootstrap が並べる標的ダミーを隠すか (モードの参加者ではない)")]
+        private bool _hideTargetDummies = true;
 
         private readonly List<SideMember> _members = new List<SideMember>();
         private readonly Dictionary<Damageable, int> _ids = new Dictionary<Damageable, int>();
@@ -74,6 +78,13 @@ namespace Fps.Runtime
         {
             get => new Side(Math.Max(0, _playerSideId));
             set => _playerSideId = value.Id;
+        }
+
+        /// <summary><see cref="TryBegin"/> で始めたとき、<see cref="GameBootstrap"/> が並べる標的ダミーを隠すか。既定は true。</summary>
+        public bool HidesTargetDummies
+        {
+            get => _hideTargetDummies;
+            set => _hideTargetDummies = value;
         }
 
         /// <summary>
@@ -229,6 +240,12 @@ namespace Fps.Runtime
             {
                 Debug.LogError($"{LogTag} モードを始められません: {e.Message}", this);
                 return false;
+            }
+
+            // 標的ダミーは SideMember を持たず得点にもならないのに、プレイヤーの正面 (出現点の前) に立って射線を塞ぐ。
+            if (_hideTargetDummies && world != null && world.TargetRoot != null)
+            {
+                world.TargetRoot.SetActive(false);
             }
 
             return true;

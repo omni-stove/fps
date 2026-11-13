@@ -56,6 +56,9 @@ step() {
 
 step "EditMode tests" mise run test-unity
 step "smoke suite" mise run smoke
+if [ -f Logs/perf.json ]; then
+	echo "nightly-local: server tick timings from PerfSmokeRun are in Logs/perf.json"
+fi
 if [ "$client" -eq 1 ]; then
 	step "macOS client build" mise run build macos
 else

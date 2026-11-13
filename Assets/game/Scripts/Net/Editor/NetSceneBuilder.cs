@@ -103,13 +103,20 @@ namespace Fps.Editor
 
         private static GameObject CreatePlayerSource()
         {
-            var source = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            source.name = "NetPlayer";
+            var source = new GameObject("NetPlayer");
             source.AddComponent<NetworkObject>();
+
+            // 見た目は子に置く。しゃがみで NetStance が見た目だけを縦に縮める (本体を縮めると目や CharacterController まで縮む)
+            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            body.name = NetStance.BodyName;
+            body.transform.SetParent(source.transform, false);
+            body.transform.localPosition = Vector3.zero;
+            body.transform.localRotation = Quaternion.identity;
+            body.transform.localScale = Vector3.one;
 
             // 位置は NetworkPlayerMotor が同期する (リスポーンのテレポートも Motor 経由)。NetworkTransform は付けない。
             // CharacterController 自体がカプセルのコライダーなので、プリミティブ付属のコライダーは二重になる
-            UnityEngine.Object.DestroyImmediate(source.GetComponent<CapsuleCollider>());
+            UnityEngine.Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
             var controller = source.AddComponent<CharacterController>();
             controller.height = PlayerHeight;
             controller.radius = PlayerRadius;
@@ -127,7 +134,8 @@ namespace Fps.Editor
 
         /// <summary>
         /// 視点を足す。pitch を回す目 (<see cref="NetPlayer.ViewName"/>) を目の高さに置き、その子 (<see cref="NetPlayer.ViewCameraName"/>) に
-        /// カメラと AudioListener を付け、本体に視点の土台 <see cref="ViewRig"/> (<see cref="PlayerViewMode"/>) と yaw を回す <see cref="FirstPersonLook"/> を付ける。
+        /// カメラと AudioListener を付け、本体に視点の土台 <see cref="ViewRig"/> (<see cref="PlayerViewMode"/>) と yaw を回す <see cref="FirstPersonLook"/>、
+        /// 覗き込みの <see cref="AimDownSights"/> を付ける。
         /// どれも無効にしておき、自分のプレイヤーでだけ <see cref="NetPlayer"/> が生成時に有効にする (他人のカメラが映ったり音を拾ったりしない)。
         /// </summary>
         private static void AddView(GameObject source)
@@ -153,6 +161,9 @@ namespace Fps.Editor
             rig.Initialize(view.transform, camera);
             rig.Mode = PlayerViewMode;
             source.AddComponent<FirstPersonLook>().enabled = false;
+
+            // 覗き込みもカメラを持つ自分のプレイヤーでだけ動かす。参照と入力の解決は実行時の Awake に任せる
+            source.AddComponent<AimDownSights>().enabled = false;
         }
 
         private static GameObject CreateMatchSource(LoadoutDefinition loadout)

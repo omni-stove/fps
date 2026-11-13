@@ -344,7 +344,8 @@ namespace Fps.Core.Tests
                 d.DeathBody,
                 d.DeathCamera,
                 infiniteReserve,
-                reserveAmmoMultiplier);
+                reserveAmmoMultiplier,
+                d.Destruction);
         }
 
         private static WeaponSpec Spec(int magazineSize = 3, int reserveAmmo = 10, float reloadSeconds = 1f)

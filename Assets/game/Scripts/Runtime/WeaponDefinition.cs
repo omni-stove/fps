@@ -9,7 +9,7 @@ namespace Fps.Runtime
     /// 不変の <see cref="WeaponSpec"/> に変換して使う。検証は <see cref="WeaponSpec"/> と <see cref="DamageFalloff"/> に任せ、
     /// 失敗したらどのアセットの値かを添えて <see cref="WeaponDefinitionException"/> を投げる。
     /// 新しく作ったときの値は rifle 相当 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、
-    /// 20〜60m で 0.5 倍まで減衰)。Id はエディターで作ったとき (<see cref="Reset"/>) と値を検証するとき (<see cref="OnValidate"/>) に、
+    /// 20〜60m で 0.5 倍まで減衰)。ただし ADS の視野角は未設定 (共通の初期値) で始まる。Id はエディターで作ったとき (<see cref="Reset"/>) と値を検証するとき (<see cref="OnValidate"/>) に、
     /// 空なら新しい UUID を入れる。
     /// 実際に使う値はアセット (Assets/game/Weapons/*.asset、Fps.Editor.WeaponAssetBuilder が作る) の側にある。
     /// </summary>
@@ -55,6 +55,19 @@ namespace Fps.Runtime
 
         [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("最大まで減衰したときの倍率")]
         private float _falloffMinMultiplier = 0.5f;
+
+        [Header("建造物")]
+        [SerializeField, Min(0f), Tooltip("建造物に当たったときに被害を広げる半径 (m)。0 なら当たった物だけ")]
+        private float _explosionRadius;
+
+        [Header("覗き込み (ADS)")]
+        [SerializeField, Min(0f), Tooltip("覗き込み切ったときのカメラの縦の視野角 (度)。0 なら共通の初期値 (Fps.Core.AdsZoom.DefaultFieldOfView)")]
+        private float _adsFieldOfView = UnsetAdsFieldOfView;
+
+        /// <summary>
+        /// <see cref="AdsFieldOfView"/> が未設定であることを表す値。この項目が無かった頃に保存したアセットも、読み込むとこの値になる。
+        /// </summary>
+        public const float UnsetAdsFieldOfView = 0f;
 
         public string Id
         {
@@ -134,6 +147,19 @@ namespace Fps.Runtime
             set => _falloffMinMultiplier = value;
         }
 
+        public float ExplosionRadius
+        {
+            get => _explosionRadius;
+            set => _explosionRadius = value;
+        }
+
+        /// <summary>覗き込み切ったときの視野角 (度)。<see cref="UnsetAdsFieldOfView"/> なら <see cref="ToSpec"/> は共通の初期値を使う。</summary>
+        public float AdsFieldOfView
+        {
+            get => _adsFieldOfView;
+            set => _adsFieldOfView = value;
+        }
+
         /// <summary>Id が空 (空白のみを含む) なら新しい UUID を入れて true を返す。既に値があれば変えずに false。</summary>
         public bool AssignIdIfEmpty()
         {
@@ -185,7 +211,10 @@ namespace Fps.Runtime
                     _reloadSeconds,
                     _damage,
                     _range,
-                    falloff);
+                    falloff,
+                    _explosionRadius,
+                    // 負の値などは未設定と見なさず、WeaponSpec の検査で不正として弾く。
+                    _adsFieldOfView == UnsetAdsFieldOfView ? (float?)null : _adsFieldOfView);
             }
             catch (ArgumentException e)
             {

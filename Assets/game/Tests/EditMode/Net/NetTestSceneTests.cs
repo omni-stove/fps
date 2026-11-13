@@ -219,6 +219,27 @@ namespace Fps.Net.Tests
 
             // CharacterController と別のコライダーがあると自分自身にぶつかる
             Assert.That(prefab.GetComponents<Collider>(), Has.Length.EqualTo(1));
+            Assert.That(prefab.GetComponentsInChildren<Collider>(true), Has.Length.EqualTo(1));
+        }
+
+        [Test]
+        public void PlayerPrefabCanCrouchWithBodyAndEye()
+        {
+            var prefab = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single()
+                .PlayerPrefab;
+
+            var body = prefab.transform.Find(NetStance.BodyName);
+            Assert.That(body, Is.Not.Null, "NetPlayer has no '" + NetStance.BodyName + "'; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(body.GetComponent<Renderer>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<Renderer>(), Is.Null, "the mesh must be on the body child so crouching squashes only the look");
+
+            // プレハブの寸法でしゃがみの寸法が作れる (NetworkPlayerMotor の Awake と同じ)
+            var stance = NetStance.FromHierarchy(prefab.GetComponent<CharacterController>(), Fps.Runtime.PlayerController.DefaultCrouchHeight);
+            Assert.That(stance.Eye, Is.SameAs(prefab.transform.Find(NetPlayer.ViewName)));
+            Assert.That(stance.Body, Is.SameAs(body));
+            Assert.That(stance.Geometry.Standing.EyeY, Is.EqualTo(NetPlayer.EyeHeight).Within(1e-4f));
         }
 
         [Test]
@@ -254,6 +275,10 @@ namespace Fps.Net.Tests
             Assert.That(listener.enabled, Is.False);
             Assert.That(look.enabled, Is.False);
             Assert.That(rig.enabled, Is.False);
+
+            var ads = prefab.GetComponent<Fps.Runtime.AimDownSights>();
+            Assert.That(ads, Is.Not.Null, "NetPlayer has no AimDownSights; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(ads.enabled, Is.False, "only the own player zooms its camera");
         }
 
         [Test]

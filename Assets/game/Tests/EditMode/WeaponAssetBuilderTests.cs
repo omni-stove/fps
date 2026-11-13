@@ -79,6 +79,11 @@ namespace Fps.Tests.EditMode
             Assert.That(weapons, Has.None.Null);
             Assert.That(weapons[0].ToSpec().Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
             Assert.That(weapons[1].ToSpec().Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
+            Assert.That(
+                weapons[0].ToSpec().AdsFieldOfView,
+                Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView),
+                $"the committed assets predate the ADS field of view; run {nameof(WeaponAssetBuilder)}.Build");
+            Assert.That(weapons[1].ToSpec().AdsFieldOfView, Is.EqualTo(WeaponAssetBuilder.HandgunAdsFieldOfView));
         }
 
         [Test]
@@ -143,6 +148,8 @@ namespace Fps.Tests.EditMode
             Assert.That(rifle.Falloff.StartDistance, Is.EqualTo(20f));
             Assert.That(rifle.Falloff.EndDistance, Is.EqualTo(60f));
             Assert.That(rifle.Falloff.MinMultiplier, Is.EqualTo(0.5f));
+            Assert.That(rifle.AdsFieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView));
+            Assert.That(rifleAsset.AdsFieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView), "the asset stores the value instead of leaving it unset");
 
             var handgun = catalog.Get(WeaponAssetBuilder.HandgunId);
             Assert.That(handgun.Category, Is.EqualTo(WeaponCategory.Handgun));
@@ -156,6 +163,11 @@ namespace Fps.Tests.EditMode
             Assert.That(handgun.Falloff.StartDistance, Is.EqualTo(15f));
             Assert.That(handgun.Falloff.EndDistance, Is.EqualTo(40f));
             Assert.That(handgun.Falloff.MinMultiplier, Is.EqualTo(0.6f));
+            Assert.That(handgun.AdsFieldOfView, Is.EqualTo(WeaponAssetBuilder.HandgunAdsFieldOfView));
+            Assert.That(
+                WeaponAssetBuilder.RifleAdsFieldOfView,
+                Is.LessThan(WeaponAssetBuilder.HandgunAdsFieldOfView),
+                "the rifle zooms in further than the handgun");
         }
 
         [Test]
@@ -272,6 +284,7 @@ namespace Fps.Tests.EditMode
             rifle.Damage = 1;
             rifle.Id = "00000000-0000-4000-8000-000000000099";
             rifle.Category = WeaponCategory.SniperRifle;
+            rifle.AdsFieldOfView = WeaponDefinition.UnsetAdsFieldOfView;
             EditorUtility.SetDirty(rifle);
             var catalogAsset = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(_catalogPath);
             catalogAsset.SetWeapons(new[] { rifle });
@@ -287,6 +300,7 @@ namespace Fps.Tests.EditMode
             var restored = rebuilt.ToCatalog().Get(WeaponAssetBuilder.RifleId);
             Assert.That(restored.Damage, Is.EqualTo(25));
             Assert.That(restored.Category, Is.EqualTo(WeaponCategory.AssaultRifle));
+            Assert.That(restored.AdsFieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView));
             Assert.That(rebuilt.Weapons, Has.Count.EqualTo(2));
         }
 

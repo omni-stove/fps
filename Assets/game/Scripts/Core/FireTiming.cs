@@ -11,7 +11,7 @@ namespace Fps.Core
         private const float _maxAlpha = 0.99999994f;
 
         /// <summary>
-        /// timeSeconds 時点の tick (切り捨て)。サーバーが位置を <see cref="LagCompensator.Record"/> するときの tick に使う。
+        /// timeSeconds 時点の tick (切り捨て)。サーバーが位置を <see cref="LagCompensator.Record(int, int, System.Numerics.Vector3, bool)"/> するときの tick に使う。
         /// </summary>
         /// <param name="timeSeconds">時刻 (秒)。0 以上の有限値。</param>
         /// <param name="tickRate">1 秒あたりの tick 数。1 以上。</param>

@@ -23,7 +23,8 @@ namespace Fps.Core.Tests
                 DeathBody.Vanish,
                 DeathCamera.None,
                 false,
-                1f);
+                1f,
+                Destruction.Off);
         }
 
         [Test]

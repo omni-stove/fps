@@ -22,6 +22,18 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void FormatsVictimStance()
+        {
+            Assert.That(
+                NetHitLog.Hit(0, 1, 2f, HitZone.Head, 50, 50, DamageOutcome.Damaged, true),
+                Is.EqualTo("[Net] hit attacker=0 victim=1 rewindTicks=2.00 zone=Head dmg=50 hp=50 outcome=Damaged victimCrouched=true"));
+            Assert.That(
+                NetHitLog.Hit(0, 1, 0f, HitZone.Body, 25, 75, DamageOutcome.Damaged, false),
+                Does.EndWith(" victimCrouched=false"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => NetHitLog.Hit(0, 1, 0f, (HitZone)99, 1, 1, DamageOutcome.Damaged, true));
+        }
+
+        [Test]
         public void FormatsRejectedShot()
         {
             Assert.That(

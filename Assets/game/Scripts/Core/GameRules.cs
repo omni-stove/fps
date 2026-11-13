@@ -8,7 +8,7 @@ namespace Fps.Core
     public sealed class GameRules
     {
         /// <summary>
-        /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1。
+        /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない。
         /// </summary>
         public static readonly GameRules Default = new GameRules(
             FriendlyFire.Off,
@@ -19,7 +19,8 @@ namespace Fps.Core
             DeathBody.Vanish,
             DeathCamera.None,
             false,
-            1f);
+            1f,
+            Destruction.Off);
 
         /// <summary><see cref="Default"/> の <see cref="WaveIntervalSeconds"/>。Wave 以外では使われない。</summary>
         public const float DefaultWaveIntervalSeconds = 10f;
@@ -51,6 +52,9 @@ namespace Fps.Core
         /// <summary>初期予備弾の倍率。0 以上の有限値。</summary>
         public float ReserveAmmoMultiplier { get; }
 
+        /// <summary>建造物を弾で壊せるか。</summary>
+        public Destruction Destruction { get; }
+
         /// <param name="friendlyFire">味方撃ちの扱い。定義済みの値。</param>
         /// <param name="respawnMode">リスポーン方式。定義済みの値。</param>
         /// <param name="waveIntervalSeconds">波の間隔 (秒)。0 より大きい有限値。</param>
@@ -60,6 +64,7 @@ namespace Fps.Core
         /// <param name="deathCamera">死亡カメラ。定義済みの値。</param>
         /// <param name="infiniteReserve">予備弾を減らさないか。</param>
         /// <param name="reserveAmmoMultiplier">初期予備弾の倍率。0 以上の有限値。</param>
+        /// <param name="destruction">建造物を壊せるか。定義済みの値。</param>
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -69,7 +74,8 @@ namespace Fps.Core
             DeathBody deathBody,
             DeathCamera deathCamera,
             bool infiniteReserve,
-            float reserveAmmoMultiplier)
+            float reserveAmmoMultiplier,
+            Destruction destruction)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -112,6 +118,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(reserveAmmoMultiplier), reserveAmmoMultiplier, "reserveAmmoMultiplier must be a non-negative finite number");
             }
 
+            if (!Enum.IsDefined(typeof(Destruction), destruction))
+            {
+                throw new ArgumentOutOfRangeException(nameof(destruction), destruction, "destruction is not a defined Destruction");
+            }
+
             FriendlyFire = friendlyFire;
             RespawnMode = respawnMode;
             WaveIntervalSeconds = waveIntervalSeconds;
@@ -121,6 +132,7 @@ namespace Fps.Core
             DeathCamera = deathCamera;
             InfiniteReserve = infiniteReserve;
             ReserveAmmoMultiplier = reserveAmmoMultiplier;
+            Destruction = destruction;
         }
     }
 }

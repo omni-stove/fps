@@ -68,6 +68,8 @@ namespace Fps.Runtime
         /// 1 発撃つ。最初に当たったコライダーに <see cref="Hitbox"/> があれば <see cref="Hitbox.ApplyHit"/> でダメージを与え、
         /// <c>[Combat] hit zone=.. dmg=.. id=.. hp=..</c> をログに出す。
         /// 壁など Hitbox の無いものに当たるか、持ち主がいないか既に死んでいれば、そこで止まりダメージは 0。
+        /// Hitbox の無いものに当たったときは <see cref="StructureDamage.Apply"/> に baseDamage と explosionRadius を渡す
+        /// (結果の <see cref="HitscanResult.Damage"/> には含めない)。
         /// </summary>
         /// <param name="origin">銃口 (目) の位置。</param>
         /// <param name="direction">撃つ向き。0 ではないこと。</param>
@@ -78,13 +80,15 @@ namespace Fps.Runtime
         /// 撃った本人。自分のコライダーには当たらない。null でなければ、その位置を撃った者の位置として
         /// <see cref="Damageable.Damaged"/> に渡す。
         /// </param>
+        /// <param name="explosionRadius">建造物への被害を広げる半径 (m)。0 以上の有限値。0 なら当たった物だけ。</param>
         public static HitscanResult Fire(
             Vector3 origin,
             Vector3 direction,
             float range,
             int baseDamage,
             DamageFalloff falloff,
-            Transform shooterRoot)
+            Transform shooterRoot,
+            float explosionRadius = 0f)
         {
             if (baseDamage < 0)
             {
@@ -96,6 +100,12 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(falloff));
             }
 
+            // 建造物に当たったときだけ使う値でも、当たり方によって例外になったりならなかったりしないよう先に検査する。
+            if (!(explosionRadius >= 0f) || float.IsInfinity(explosionRadius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(explosionRadius), explosionRadius, "explosionRadius must be a non-negative finite number");
+            }
+
             if (!TryFirstHit(origin, direction, range, shooterRoot, out var hit))
             {
                 return HitscanResult.Miss;
@@ -104,6 +114,7 @@ namespace Fps.Runtime
             var hitbox = Hitbox.FindFor(hit.collider);
             if (hitbox == null)
             {
+                StructureDamage.Apply(hit.collider, hit.point, baseDamage, explosionRadius);
                 return new HitscanResult(true, hit, null, 0);
             }
 

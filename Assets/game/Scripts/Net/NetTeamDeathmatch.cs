@@ -399,6 +399,7 @@ namespace Fps.Net
             var currentTick = _lastRecordedTick;
             var rewindTick = _lagCompensator.ClampTick(time.ToTick(), currentTick);
             var rewound = _lagCompensator.Rewind(rewindTick);
+            var rewoundCrouched = _lagCompensator.RewindCrouched(rewindTick);
 
             _rewindTargets.Clear();
             foreach (var pair in _playerById)
@@ -409,21 +410,37 @@ namespace Fps.Net
                 }
 
                 var hittable = pair.Key != shooterId && _session.HasPlayer(pair.Key) && _session.IsAlive(pair.Key);
-                _rewindTargets.Add(new RewindTarget(pair.Key, pair.Value.transform, hittable));
+                _rewindTargets.Add(new RewindTarget(pair.Key, pair.Value.transform, hittable, pair.Value.Stance));
             }
 
             RewindHit hit;
             bool any;
             try
             {
-                any = _rewinder.Raycast(_rewindTargets, rewound, origin, direction, spec.Range, shooter.transform, out hit);
+                any = _rewinder.Raycast(
+                    _rewindTargets, rewound, rewoundCrouched, origin, direction, spec.Range, shooter.transform, out hit);
             }
             finally
             {
                 _rewindTargets.Clear();
             }
 
-            if (!any || !hit.HitTarget || !_playerById.TryGetValue(hit.TargetId, out var victim) || victim == null)
+            if (!any)
+            {
+                return;
+            }
+
+            if (!hit.HitTarget)
+            {
+                if (_session.Spec.Rules.Destruction == Destruction.On)
+                {
+                    StructureDamage.Apply(hit.RaycastHit.collider, hit.RaycastHit.point, spec.Damage, spec.ExplosionRadius);
+                }
+
+                return;
+            }
+
+            if (!_playerById.TryGetValue(hit.TargetId, out var victim) || victim == null)
             {
                 return;
             }
@@ -432,7 +449,7 @@ namespace Fps.Net
             var damage = DamageCalculator.Calculate(spec.Damage, zone, hit.RaycastHit.distance, spec.Falloff);
             var outcome = ApplyDamage(shooter, victim, damage);
             var health = _session.HasPlayer(hit.TargetId) ? _session.GetHealth(hit.TargetId) : 0;
-            Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome));
+            Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome, hit.TargetCrouched));
         }
 
         /// <summary>
@@ -472,10 +489,10 @@ namespace Fps.Net
             }
         }
 
-        // サーバーの知る本人の目の位置から始点までの間に、プレイヤー以外のコライダー (壁など) があれば true。
+        // サーバーの知る本人の目の位置 (今の姿勢の高さ) から始点までの間に、プレイヤー以外のコライダー (壁など) があれば true。
         private static bool IsOriginBlocked(NetPlayer shooter, Vector3 origin)
         {
-            var eye = shooter.transform.position + (Vector3.up * NetPlayer.EyeHeight);
+            var eye = shooter.EyePosition();
             var toOrigin = origin - eye;
             var distance = toOrigin.magnitude;
             if (distance <= 0f)
@@ -762,7 +779,7 @@ namespace Fps.Net
             }
         }
 
-        /// <summary>参加中の全プレイヤーの今の位置を、サーバーの今の tick で記録する。</summary>
+        /// <summary>参加中の全プレイヤーの今の位置としゃがみを、サーバーの今の tick で記録する。</summary>
         private void RecordHitboxes()
         {
             var time = NetworkManager.ServerTime.Time;
@@ -782,7 +799,7 @@ namespace Fps.Net
             {
                 if (pair.Value != null)
                 {
-                    _lagCompensator.Record(tick, pair.Key, NetMath.ToNumerics(pair.Value.transform.position));
+                    _lagCompensator.Record(tick, pair.Key, NetMath.ToNumerics(pair.Value.transform.position), pair.Value.IsCrouched);
                 }
             }
 
@@ -791,24 +808,40 @@ namespace Fps.Net
 
         /// <summary>
         /// 当たった高さから部位を決める。プレイヤーの当たりは CharacterController のカプセル 1 つなので、
-        /// 巻き戻した位置を基準にカプセルの中の高さの割合で <see cref="CapsuleHitZone"/> に決めさせる。
+        /// 巻き戻した位置と巻き戻した時点の姿勢 (<see cref="RewindHit.TargetCrouched"/>) のカプセルの中の高さの割合で
+        /// <see cref="CapsuleHitZone"/> に決めさせる。姿勢を持たないプレイヤーは今の CharacterController の高さで決める。
         /// </summary>
         private static HitZone ZoneOf(NetPlayer victim, RewindHit hit)
         {
+            var scale = victim.transform.lossyScale.y;
+            var stance = victim.Stance;
+            if (stance != null)
+            {
+                return ZoneOf(stance.Geometry.Shape(hit.TargetCrouched), scale, hit);
+            }
+
             var controller = victim.GetComponent<CharacterController>();
             if (controller == null)
             {
                 return HitZone.Body;
             }
 
-            var scale = victim.transform.lossyScale.y;
-            var height = controller.height * scale;
+            return ZoneOf(new StanceShape(controller.height, controller.center.y, 0f), scale, hit);
+        }
+
+        /// <summary>
+        /// 当たった高さから部位を決める。shape は当たったときのカプセルの寸法 (本体のローカル)、scaleY は本体の縦の拡大率。
+        /// カプセルの底は巻き戻した位置 (<see cref="RewindHit.TargetPosition"/>) から測る。高さが 0 以下か有限でなければ胴体。
+        /// </summary>
+        internal static HitZone ZoneOf(StanceShape shape, float scaleY, RewindHit hit)
+        {
+            var height = shape.Height * scaleY;
             if (!(height > 0f) || float.IsInfinity(height))
             {
                 return HitZone.Body;
             }
 
-            var bottom = hit.TargetPosition.y + (controller.center.y * scale) - (height / 2f);
+            var bottom = hit.TargetPosition.y + (shape.CenterY * scaleY) - (height / 2f);
             return CapsuleHitZone.Classify(hit.RaycastHit.point.y, bottom, height);
         }
 

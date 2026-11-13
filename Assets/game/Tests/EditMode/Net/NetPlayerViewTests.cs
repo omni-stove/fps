@@ -59,12 +59,14 @@ namespace Fps.Net.Tests
             var listener = camera.GetComponent<AudioListener>();
             var look = player.GetComponent<FirstPersonLook>();
             var rig = player.GetComponent<ViewRig>();
+            var ads = player.GetComponent<AimDownSights>();
 
             // 何かの拍子に有効になっていても、オーナーでなければ止める
             camera.enabled = true;
             listener.enabled = true;
             look.enabled = true;
             rig.enabled = true;
+            ads.enabled = true;
 
             player.SetLocalView(NetStartup.ShouldEnableFirstPersonView(false, false, false));
 
@@ -72,6 +74,7 @@ namespace Fps.Net.Tests
             Assert.That(listener.enabled, Is.False);
             Assert.That(look.enabled, Is.False);
             Assert.That(rig.enabled, Is.False);
+            Assert.That(ads.enabled, Is.False);
             Assert.That(player.HasLocalView, Is.False);
             Assert.That(NetSpectatorCamera.LocalViewCount, Is.EqualTo(_localViewsBefore));
         }
@@ -82,7 +85,7 @@ namespace Fps.Net.Tests
             var player = InstantiatePlayer();
             var camera = player.View.GetComponentInChildren<Camera>(true);
             var listener = camera.GetComponent<AudioListener>();
-            var body = player.GetComponent<Renderer>();
+            var body = player.GetComponentInChildren<Renderer>(true);
 
             player.SetLocalView(true);
 
@@ -108,6 +111,42 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void OwnerViewZoomsWhileAimIsHeldWithoutTellingTheServer()
+        {
+            var player = InstantiatePlayer();
+            var camera = player.View.GetComponentInChildren<Camera>(true);
+            var look = player.GetComponent<FirstPersonLook>();
+            var ads = player.GetComponent<AimDownSights>();
+            var hip = camera.fieldOfView;
+            var aimDirection = player.AimDirection();
+
+            player.SetLocalView(true);
+            Assert.That(ads.enabled, Is.True);
+
+            var aim = new InputAction("Aim", InputActionType.Button);
+            try
+            {
+                // Edit Mode では Awake が走らないので、実行時に Awake が解決する参照をここで渡す
+                ads.Initialize(camera, look, aim);
+                ads.Tick(true, true, 1f);
+
+                // 試合も武器もまだ無いので、共通の初期値まで狭める
+                Assert.That(camera.fieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView).Within(1e-4f));
+                Assert.That(look.SensitivityMultiplier, Is.LessThan(1f));
+                Assert.That(Vector3.Distance(player.AimDirection(), aimDirection), Is.LessThan(1e-4f),
+                    "zooming does not move where the shot goes");
+
+                ads.Tick(false, false, 1f);
+                Assert.That(camera.fieldOfView, Is.EqualTo(hip).Within(1e-4f));
+                Assert.That(look.SensitivityMultiplier, Is.EqualTo(1f));
+            }
+            finally
+            {
+                aim.Dispose();
+            }
+        }
+
+        [Test]
         public void AimsFromEyeAlongItsForwardIncludingPitch()
         {
             var player = InstantiatePlayer();
@@ -125,6 +164,26 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void CrouchLowersTheAimOriginWithTheEye()
+        {
+            var player = InstantiatePlayer();
+            player.transform.position = new Vector3(1f, 2f, 3f);
+            var stance = NetStance.FromHierarchy(player.GetComponent<CharacterController>(), PlayerController.DefaultCrouchHeight);
+
+            stance.Apply(true);
+
+            // 頭のてっぺんが 0.8m 下がるので、目 (射撃の始点) も 0.8m 下がる
+            var crouchedEye = new Vector3(1f, 2f + NetPlayer.EyeHeight - 0.8f, 3f);
+            Assert.That(Vector3.Distance(player.AimOrigin(), crouchedEye), Is.LessThan(1e-4f));
+            Assert.That(Vector3.Distance(stance.EyePosition, crouchedEye), Is.LessThan(1e-4f),
+                "the server checks the origin from the same crouched eye height");
+
+            stance.Apply(false);
+
+            Assert.That(Vector3.Distance(player.AimOrigin(), new Vector3(1f, 2f + NetPlayer.EyeHeight, 3f)), Is.LessThan(1e-4f));
+        }
+
+        [Test]
         public void ThirdPersonStillShowsTheBodyAndAimsFromTheEye()
         {
             var player = InstantiatePlayer();
@@ -136,7 +195,7 @@ namespace Fps.Net.Tests
 
             player.SetLocalView(true);
 
-            Assert.That(player.GetComponent<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.On),
+            Assert.That(player.GetComponentInChildren<Renderer>(true).shadowCastingMode, Is.EqualTo(ShadowCastingMode.On),
                 "the own body is what a third-person camera looks at");
             Assert.That(Vector3.Distance(player.AimOrigin(), new Vector3(1f, 2f + NetPlayer.EyeHeight, 3f)), Is.LessThan(1e-4f),
                 "the shot must start at the eye, not at the camera, or the server rejects it and walls can be peeked");

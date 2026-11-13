@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Fps.Net
 {
     /// <summary>
-    /// オンラインのキルフィードの引き先。Id はプレイヤー Id (= クライアント Id) なので、名前は <see cref="KillFeedFormat.Player"/>、
+    /// オンラインのキルフィードの引き先。Id はプレイヤー Id (人はクライアント Id、Bot は Bot の Id) なので、名前は <see cref="BotRoster.KillFeedName"/>、
     /// チームは試合の <see cref="NetTeamDeathmatch.Players"/>、武器の表示名は試合のロードアウト (グレネードは <see cref="GrenadeThrower.DisplayName"/>) から引き、
     /// 自分のクライアントの行を強調する。
     /// </summary>
@@ -53,7 +53,7 @@ namespace Fps.Net
         private KillFeedName NameOf(int playerId)
         {
             var team = _teamOf != null ? _teamOf(playerId) : null;
-            return new KillFeedName(KillFeedFormat.Player(playerId), team, playerId == _localPlayerId);
+            return new KillFeedName(BotRoster.KillFeedName(playerId), team, playerId == _localPlayerId);
         }
 
         // 抜けた人は行が消えているのでチームが分からない (名前は Id のまま出す)

@@ -37,7 +37,7 @@ namespace Fps.Net
             get
             {
                 var match = NetTeamDeathmatch.Current;
-                return match != null && IsSpawned ? match.GetSpawnProtectionSeconds(OwnerClientId) : 0;
+                return match != null && IsSpawned ? match.GetSpawnProtectionSeconds(RosterId) : 0;
             }
         }
 
@@ -98,7 +98,7 @@ namespace Fps.Net
         // LateUpdate で呼ぶ。切り替わったときだけ材質を書き直す
         private void RefreshSpawnProtection()
         {
-            var show = ShouldShowSpawnProtection(IsOwner, IsAlive, SpawnProtectionSeconds);
+            var show = ShouldShowSpawnProtection(IsLocallyControlled, IsAlive, SpawnProtectionSeconds);
             if (show == _showsSpawnProtection)
             {
                 return;

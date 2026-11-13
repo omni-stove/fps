@@ -28,6 +28,7 @@ namespace Fps.Net
     /// サーバー (Host を含む) は止まる前に、つないでいるクライアントへ止まると知らせてから切る。
     /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
     /// <para>
+    /// <c>-bots</c> は試合の進行役を Spawn する前に <see cref="NetTeamDeathmatch.LaunchBots"/> へ渡す (Bot を足すのは試合の .Bots.cs)。
     /// <c>-map</c> は .Map.cs、<c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> は .NetSimulation.cs、
     /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、試合のイベントのログは .Log.cs が受け持つ。
     /// それぞれの起動の前 (<c>*BeforeStart</c>)・起動の後 (<c>*AfterStart</c>)・終了の要求 (<c>*QuitRequested</c>) の差し込み口を
@@ -657,6 +658,9 @@ namespace Fps.Net
             {
                 instance = Instantiate(_matchPrefab);
                 instance.name = _matchPrefab.name;
+
+                // 試合は Spawn の中で始まる (OnNetworkSpawn) ので、Bot の数はその前に渡す
+                instance.GetComponent<NetTeamDeathmatch>().LaunchBots = _options.Bots;
                 instance.GetComponent<NetworkObject>().Spawn(true);
             }
             catch (Exception e)

@@ -175,6 +175,25 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheNetStatsToggledWhileOpenSurviveEditsResetAndSave()
+        {
+            _view.Open(_container);
+
+            // 開いている間に F3 (NetHud) で出した
+            AppliedControlSettings.Apply(AppliedControlSettings.Current.WithShowNetStats(true));
+
+            _view.SetValue(ControlValue.FieldOfView, 70);
+            Assert.That(AppliedControlSettings.Current.ShowNetStats, Is.True, "an edit keeps it");
+
+            _view.ResetToDefaults();
+            Assert.That(AppliedControlSettings.Current, Is.EqualTo(ControlSettings.Default.WithShowNetStats(true)), "it is not on this screen");
+
+            _view.SetValue(ControlValue.FieldOfView, 75);
+            _view.Close();
+            Assert.That(_store.Load().ShowNetStats, Is.True);
+        }
+
+        [Test]
         public void ClosingWithoutChangesDoesNotWrite()
         {
             _view.Open(_container);

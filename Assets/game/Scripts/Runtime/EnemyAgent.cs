@@ -16,7 +16,7 @@ namespace Fps.Runtime
     /// 同じ GameObject に <see cref="SideMember"/> があれば、タグの代わりに自分と違う陣営で生きている、いちばん近い相手を
     /// <see cref="TargetSearchInterval"/> ごとに (目標が倒れたらすぐに) 選び直す (<see cref="EnemySenses.SelectHostile"/>)。
     /// モードが倒れた敵を戻すときは <see cref="Respawn"/> を呼ぶ。
-    /// 武器は 1 本だけ持ち、持ち替えない。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
+    /// 武器は 1 本だけ持ち、自分では持ち替えない (ガンゲームのようにモードが <see cref="EquipWeapon"/> で替えることはある)。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
     /// (シーン生成スクリプトが、敵の配置ごとに指定した Id の武器を武器の一覧 <see cref="WeaponCatalogAsset"/> から引いて配線する)。
     /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
     /// 撃たれたら (<see cref="Damageable.Damaged"/>) 撃った者の位置を次の知覚 1 回だけ物音として渡し、
@@ -174,6 +174,7 @@ namespace Fps.Runtime
         private Damageable _target;
         private EnemyBrain _brain;
         private Weapon _weapon;
+        private GameRules _weaponRules = GameRules.Default;
         private Vector3? _destination;
         private Vector3? _pendingNoise;
         private bool _pendingHit;
@@ -235,12 +236,46 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 撃つ武器の定義。<see cref="TryInitialize"/> がこれから <see cref="Weapon"/> を作るので、それより前に設定する
-        /// (初期化後に変えても今の武器は変わらない)。
+        /// (初期化後に変えても今の武器は変わらない。初期化後に持ち替えるなら <see cref="EquipWeapon"/>)。
         /// </summary>
         public WeaponDefinition WeaponDefinition
         {
             get => _weaponDefinition;
             set => _weaponDefinition = value;
+        }
+
+        /// <summary>武器を作るときの予備弾のルール。既定は <see cref="GameRules.Default"/>。<see cref="EquipWeapon"/> で変える。</summary>
+        public GameRules WeaponRules => _weaponRules;
+
+        /// <summary>
+        /// 持つ武器を definition に替え、rules (null なら今の <see cref="WeaponRules"/>) の予備弾で満タンに作り直す。リロード中なら取り消す。
+        /// 以後の <see cref="Respawn"/> もこの武器とルールで作り直す。未初期化なら定義とルールを覚えるだけで、<see cref="TryInitialize"/> がそれで作る。
+        /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、今の武器はそのまま残す。
+        /// </summary>
+        public void EquipWeapon(WeaponDefinition definition, GameRules rules = null)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            var spec = definition.ToSpec();
+            var weaponRules = rules ?? _weaponRules;
+            _weaponDefinition = definition;
+            _weaponRules = weaponRules;
+            if (_brain == null)
+            {
+                return;
+            }
+
+            if (_weapon != null)
+            {
+                _weapon.Reloaded -= OnReloaded;
+            }
+
+            _weapon = new Weapon(spec, weaponRules);
+            _weapon.Reloaded += OnReloaded;
+            Debug.Log($"{LogTag} id={Id} equip weapon={spec.DisplayName} ammo={_weapon.AmmoInMagazine}", this);
         }
 
         /// <summary>巡回地点 (ワールド座標の足元)。</summary>
@@ -345,18 +380,7 @@ namespace Fps.Runtime
             EnemySpec spec;
             try
             {
-                spec = new EnemySpec(
-                    _sightRange,
-                    _attackRange,
-                    _loseSightSeconds,
-                    _searchSeconds,
-                    _reactionSeconds,
-                    _openingSpreadDegrees,
-                    _settledSpreadDegrees,
-                    _openingShots,
-                    _coverHideSeconds,
-                    _coverPeekSeconds,
-                    _coverHealthFraction);
+                spec = CreateSpec();
             }
             catch (ArgumentException e)
             {
@@ -391,11 +415,73 @@ namespace Fps.Runtime
             _stuck.Recovered += OnUnstuck;
             _brain = new EnemyBrain(spec);
             _brain.StateChanged += OnStateChanged;
-            _weapon = new Weapon(weaponSpec);
+            _weapon = new Weapon(weaponSpec, _weaponRules);
             _weapon.Reloaded += OnReloaded;
             _self.Died += OnDied;
             _self.Damaged += OnDamaged;
             return true;
+        }
+
+        /// <summary>
+        /// Inspector の値から判断の設定を作る。値が不正なら <see cref="ArgumentException"/>。
+        /// </summary>
+        public EnemySpec CreateSpec()
+        {
+            return new EnemySpec(
+                _sightRange,
+                _attackRange,
+                _loseSightSeconds,
+                _searchSeconds,
+                _reactionSeconds,
+                _openingSpreadDegrees,
+                _settledSpreadDegrees,
+                _openingShots,
+                _coverHideSeconds,
+                _coverPeekSeconds,
+                _coverHealthFraction);
+        }
+
+        /// <summary>
+        /// 判断の設定を spec の値にする。<see cref="TryInitialize"/> がこの値から <see cref="EnemyBrain"/> を作るので、それより前
+        /// (GameObject を有効にする前) に呼ぶ。波で出す敵を強くするのに使う。初期化後なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ApplySpec(EnemySpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (_brain != null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is already initialized; apply the spec before activating it");
+            }
+
+            _sightRange = spec.SightRange;
+            _attackRange = spec.AttackRange;
+            _loseSightSeconds = spec.LoseSightSeconds;
+            _searchSeconds = spec.SearchSeconds;
+            _reactionSeconds = spec.ReactionSeconds;
+            _openingSpreadDegrees = spec.OpeningSpreadDegrees;
+            _settledSpreadDegrees = spec.SettledSpreadDegrees;
+            _openingShots = spec.OpeningShots;
+            _coverHideSeconds = spec.CoverHideSeconds;
+            _coverPeekSeconds = spec.CoverPeekSeconds;
+            _coverHealthFraction = spec.CoverHealthFraction;
+        }
+
+        /// <summary>
+        /// position の物音を次の知覚 1 回だけ渡す。Idle・Patrol・Search 中ならその位置を Search しに行く (<see cref="EnemyBrain"/>)。
+        /// 視界の外に出した敵を目標の方へ向かわせるのに使う。倒れていれば何もしない。
+        /// </summary>
+        public void Alert(Vector3 position)
+        {
+            if (_brain != null && _brain.IsDead)
+            {
+                return;
+            }
+
+            _pendingNoise = position;
         }
 
         /// <summary>
@@ -710,6 +796,22 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// 生きていても倒れていても、groundPosition (足元) に戻して <see cref="Respawn"/> と同じく初めからにする。
+        /// ラウンド制のモードが、生き残った敵も含めて全員を出現点に並べ直すのに使う。未初期化なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ResetTo(Vector3 groundPosition, Quaternion rotation)
+        {
+            if (_brain == null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
+            }
+
+            // Respawn は倒れた敵だけを戻す約束なので、生きていれば判断だけ倒れたことにしてから同じ手順で戻す。
+            _brain.Kill();
+            Respawn(groundPosition, rotation);
+        }
+
+        /// <summary>
         /// 倒れた敵を groundPosition (足元) に戻して生き返らせる。体力を満たし、武器を弾の満ちた状態で作り直し、NavMeshAgent を有効に戻して
         /// 近くの NavMesh に置き、判断 (<see cref="EnemyBrain.Revive"/>)・経路・立て直し・撃たれた記録を初めからにして、目標を選び直す。
         /// 出現地点 (NavMesh から外れたときの戻り先) も置いた位置にする。
@@ -763,7 +865,7 @@ namespace Fps.Runtime
             SetCrouching(false);
 
             _weapon.Reloaded -= OnReloaded;
-            _weapon = new Weapon(_weapon.Spec);
+            _weapon = new Weapon(_weapon.Spec, _weaponRules);
             _weapon.Reloaded += OnReloaded;
 
             // 無効のまま Transform を動かしてから有効にすると、NavMeshAgent は新しい位置の近くの NavMesh に載る。

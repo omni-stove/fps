@@ -36,9 +36,13 @@ namespace Fps.Editor
         /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
         public const string DominationScene = "Assets/game/Scenes/Domination.unity";
 
+        /// <summary>PvE の波で敵を出す部品 (WaveSpawner) を試すシーン。</summary>
+        public const string WaveTestScene = "Assets/game/Scenes/WaveTest.unity";
+
         // 対戦・PvE モード。名前とルールはそれぞれ GameRulesAssetBuilder.ModeNames と <名前>Path に揃える (一致はテストで確かめる)。
         public const string FreeForAllScene = "Assets/game/Scenes/FreeForAll.unity";
         public const string KillConfirmedScene = "Assets/game/Scenes/KillConfirmed.unity";
+        /// <summary>ガンゲーム。生成は <see cref="GunGameSceneBuilder"/>。</summary>
         public const string GunGameScene = "Assets/game/Scenes/GunGame.unity";
 
         /// <summary>ハードポイント。生成は <see cref="HardpointSceneBuilder"/>。</summary>
@@ -71,6 +75,7 @@ namespace Fps.Editor
             Campaign02Scene,
             TpsRangeScene,
             DominationScene,
+            WaveTestScene,
             FreeForAllScene,
             KillConfirmedScene,
             GunGameScene,

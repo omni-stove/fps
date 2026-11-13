@@ -196,6 +196,24 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ReloadStartedIsRaisedOnlyWhenAReloadStarts()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var started = 0;
+            _controller.ReloadStarted += weapon =>
+            {
+                Assert.That(weapon, Is.SameAs(_controller.Weapon));
+                started++;
+            };
+
+            Assert.That(_controller.StartReload(), Is.False, "a full magazine does not reload");
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(_controller.StartReload(), Is.True);
+            Assert.That(_controller.StartReload(), Is.False, "already reloading");
+            Assert.That(started, Is.EqualTo(1));
+        }
+
+        [Test]
         public void InvalidDefinitionIsRejectedAndKeepsThePreviousWeapon()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);

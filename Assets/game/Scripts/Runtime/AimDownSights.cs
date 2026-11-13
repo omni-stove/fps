@@ -6,8 +6,10 @@ using UnityEngine.InputSystem;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 覗き込み (ADS)。<see cref="AimActionPath"/> を押している間、カメラの視野角を今の武器の
-    /// <see cref="WeaponSpec.AdsFieldOfView"/> へ <see cref="TransitionSeconds"/> かけて狭め、離すと腰だめの視野角へ戻す。
+    /// 覗き込み (ADS)。<see cref="AimActionPath"/> で覗き込んでいる間、カメラの視野角を今の武器の
+    /// <see cref="WeaponSpec.AdsFieldOfView"/> へ <see cref="TransitionSeconds"/> かけて狭め、やめると腰だめの視野角へ戻す。
+    /// ボタンは <see cref="ControlSettings"/> のモードで解釈する (押している間／押すたびに切り替え。機器は最後に Aim を押した機器)。
+    /// リロードや持ち替えでは <see cref="Release"/>、死亡・リスポーンでは <see cref="ResetView"/> を、配線した側が呼ぶ。
     /// 視野角に合わせて同じ GameObject の <see cref="FirstPersonLook.SensitivityMultiplier"/> を下げる。計算は <see cref="AdsZoom"/>。
     /// 覗き込み始めと終わりに <see cref="AimingChanged"/> を呼び、<c>[View] ads=true</c> / <c>[View] ads=false</c> をログに出す
     /// (ダッシュの解除は購読した側が行う)。見た目だけの機能で、サーバーには何も送らない。
@@ -34,11 +36,13 @@ namespace Fps.Runtime
         private AdsZoom _zoom;
         private float _hipFieldOfView;
 
-        // 今は押している間だけだが、切り替え式にするときに Mode を変えるだけで済むよう HoldToggleState で持つ。
         private readonly HoldToggleState _aimState = new HoldToggleState(HoldMode.Hold);
+        private ControlSettings _controlSettings = ControlSettings.Default;
+        private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
 
         /// <summary>
-        /// 覗き込み始めたとき (true) と、やめたとき (false) に呼ばれる。<see cref="Tick"/> の中、視野角を変える前に呼ぶ。
+        /// 覗き込み始めたとき (true) と、やめたとき (false) に呼ばれる。
+        /// <see cref="Tick(bool, bool, InputDeviceKind, float)"/> では視野角を変える前に呼び、<see cref="Release"/> と <see cref="ResetView"/> でも呼ぶ。
         /// </summary>
         public event Action<bool> AimingChanged;
 
@@ -62,11 +66,27 @@ namespace Fps.Runtime
         /// <summary>覗き込んでいるか (ボタンの判定。視野角はまだ動いている途中のことがある)。</summary>
         public bool IsAiming => _aimState.IsActive;
 
+        /// <summary>
+        /// ADS のモードを決める操作設定。Awake で <see cref="ControlSettingsStore"/> から読む (Edit Mode では Awake が走らないので初期値)。
+        /// 変えると次の <see cref="Tick(bool, bool, InputDeviceKind, float)"/> から使う。
+        /// </summary>
+        public ControlSettings ControlSettings
+        {
+            get => _controlSettings;
+            set => _controlSettings = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
+        /// <summary>最後に Aim を押した機器。ADS のモードはこの機器の設定を使う。</summary>
+        public InputDeviceKind ActiveDevice => _device;
+
+        /// <summary>今使っている ADS のモード。</summary>
+        public HoldMode Mode => _aimState.Mode;
+
         /// <summary>覗き込みの進み具合。0 が腰だめ、1 が覗き込み切った状態。未初期化なら 0。</summary>
         public float Progress => _zoom != null ? _zoom.Progress : 0f;
 
         /// <summary>
-        /// 腰だめの視野角 (度)。初期化したときのカメラの値。変えると、次の <see cref="Tick"/> からその値を基準にする。
+        /// 腰だめの視野角 (度)。初期化したときのカメラの値。変えると、次の <see cref="Tick(bool, bool, InputDeviceKind, float)"/> からその値を基準にする。
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">0 以下か 180 以上のとき。</exception>
         public float HipFieldOfView
@@ -97,6 +117,7 @@ namespace Fps.Runtime
                 return;
             }
 
+            _controlSettings = new ControlSettingsStore().Load();
             if (!IsInitialized && !TryInitializeFromHierarchy())
             {
                 enabled = false;
@@ -128,20 +149,37 @@ namespace Fps.Runtime
 
         private void Update()
         {
-            Tick(_aimAction.IsPressed(), _aimAction.WasPressedThisFrame(), Time.deltaTime);
+            Tick(
+                _aimAction.IsPressed(),
+                _aimAction.WasPressedThisFrame(),
+                InputDeviceKinds.Of(_aimAction, _device),
+                Time.deltaTime);
         }
 
         /// <summary>
-        /// 1 フレーム分の Aim ボタンの状態で覗き込むかを決め、視野角を deltaSeconds だけ寄せてカメラと感度に反映する。
+        /// 最後に Aim を押した機器 (<see cref="ActiveDevice"/>) のモードで <see cref="Tick(bool, bool, InputDeviceKind, float)"/> を呼ぶ。
+        /// </summary>
+        public void Tick(bool isPressed, bool wasPressedThisFrame, float deltaSeconds)
+        {
+            Tick(isPressed, wasPressedThisFrame, _device, deltaSeconds);
+        }
+
+        /// <summary>
+        /// 1 フレーム分の Aim ボタンの状態を device の <see cref="ControlSettings"/> のモードで解釈して覗き込むかを決め、
+        /// 視野角を deltaSeconds だけ寄せてカメラと感度に反映する。モードが変わると覗き込みをやめてから入れ替える。
         /// </summary>
         /// <param name="isPressed">今 Aim が押されているか。</param>
         /// <param name="wasPressedThisFrame">今フレームに Aim が押されたか。</param>
+        /// <param name="device">Aim を操作している機器。</param>
         /// <param name="deltaSeconds">進める秒数。0 以上の有限値。</param>
-        public void Tick(bool isPressed, bool wasPressedThisFrame, float deltaSeconds)
+        public void Tick(bool isPressed, bool wasPressedThisFrame, InputDeviceKind device, float deltaSeconds)
         {
             EnsureInitialized();
 
+            var mode = _controlSettings.Get(device, HoldAction.Aim);
+            _device = device;
             var wasAiming = _aimState.IsActive;
+            _aimState.Mode = mode;
             var aiming = _aimState.Update(isPressed, wasPressedThisFrame);
             if (aiming != wasAiming)
             {
@@ -150,6 +188,23 @@ namespace Fps.Runtime
 
             _zoom.Step(aiming, deltaSeconds);
             Apply(_zoom.FieldOfView(_hipFieldOfView, TargetFieldOfView));
+        }
+
+        /// <summary>
+        /// 覗き込みをやめる (リロードを始めたときや持ち替えたときなど)。視野角は次の <see cref="Tick(bool, bool, InputDeviceKind, float)"/> から腰だめへ補間して戻す。
+        /// 覗き込んでいたなら <see cref="AimingChanged"/> を false で呼んで true。ボタンを押し続けていても、押し直すまで覗き込まない。
+        /// 未初期化でも呼べる (覗き込んでいないので何もしない)。
+        /// </summary>
+        public bool Release()
+        {
+            if (!_aimState.IsActive)
+            {
+                return false;
+            }
+
+            _aimState.Release();
+            ReportAiming(false);
+            return true;
         }
 
         /// <summary>

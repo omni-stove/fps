@@ -27,11 +27,16 @@ namespace Fps.Net
     /// オーナー自身の向きは視点操作が決めるので、サーバーからの yaw では上書きしない。
     /// </para>
     /// <para>
-    /// しゃがみ (Crouch を押している間) も入力に乗せて送り、予測とサーバーで同じ <see cref="NetMotorSimulation"/> を通して
+    /// しゃがみも入力に乗せて送り、予測とサーバーで同じ <see cref="NetMotorSimulation"/> を通して
     /// <see cref="NetStance"/> で CharacterController の height / center と目を変える。確定状態にしゃがみも乗せて返し、
     /// 予測と食い違えば位置が合っていても巻き戻す (<see cref="MotorState.PositionError"/>)。
     /// 他人のクライアントは受け取ったしゃがみを位置と同じ遅れで当て、カプセル・目・見た目 (<see cref="NetStance.BodyName"/>) を変える。
     /// しゃがみが変わるたび <c>[Net] stance owner=.. tick=.. crouched=..</c> を出す (サーバーと他人のクライアント)。
+    /// </para>
+    /// <para>
+    /// オーナーは Crouch を <see cref="ControlSettings"/> のモード (押している間／押すたびに切り替え) で <see cref="CrouchInput"/> が解釈し、
+    /// 送るのは解釈した後の「しゃがみたいか」だけにする (サーバーはモードを知らない)。ジャンプとダッシュの開始で解除し、
+    /// 死亡・リスポーンでは <see cref="NetPlayer"/> が <see cref="ReleaseCrouch"/> を呼ぶ。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -111,6 +116,10 @@ namespace Fps.Net
 
         // ReleaseSprint の後は押し直すまでダッシュしない。tick の進まないフレームの押下も拾うよう、フレームごとに更新する
         private readonly HoldToggleState _sprintState = new HoldToggleState(HoldMode.Hold);
+        private bool _crouchPressLatched;
+        private CrouchInput _crouch;
+        private ControlSettings _controlSettings = ControlSettings.Default;
+        private InputDeviceKind _crouchDevice = InputDeviceKind.KeyboardMouse;
         private PredictionBuffer<MotorInput, MotorState> _prediction;
 
         // サーバー
@@ -158,6 +167,19 @@ namespace Fps.Net
         public void ReleaseSprint()
         {
             _sprintState.Release();
+        }
+
+        /// <summary>オーナーでしゃがみたいか (モードどおりに解釈し、自動解除した後の値)。オーナー以外では false。</summary>
+        public bool IsCrouchActive => _crouch != null && _crouch.IsActive;
+
+        /// <summary>
+        /// オーナーのしゃがみを解除する (死亡・リスポーン)。頭上は確かめない。Hold でもボタンを押し直すまでしゃがまない。
+        /// 次の tick の入力から効く。オーナー以外では何もしない。しゃがみたい状態だったら true。
+        /// </summary>
+        /// <param name="reason">ログに出す理由 (<see cref="CrouchInput.ReasonDeath"/> など)。</param>
+        public bool ReleaseCrouch(string reason)
+        {
+            return _crouch != null && _crouch.Release(reason);
         }
 
         private void Awake()
@@ -236,6 +258,11 @@ namespace Fps.Net
             {
                 _clock = new TickClock(TickRate);
                 _jumpLatched = false;
+                _crouchPressLatched = false;
+                _controlSettings = new ControlSettingsStore().Load();
+                _crouchDevice = InputDeviceKind.KeyboardMouse;
+                _crouch = new CrouchInput(_simulation.Stance.HasHeadroomToStand);
+                _crouch.Changed += OnCrouchInputChanged;
                 ResolveInputActions();
             }
 
@@ -295,6 +322,15 @@ namespace Fps.Net
                 _sprintState.Release();
             }
 
+            // 切り替えは押したフレームで起きるので、ジャンプと同じく次の tick まで覚えておく
+            if (_crouchAction != null && _crouchAction.WasPressedThisFrame())
+            {
+                _crouchPressLatched = true;
+            }
+
+            // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
+            _crouchDevice = InputDeviceKinds.Of(_crouchAction, InputDeviceKinds.Of(_moveAction, _crouchDevice));
+
             var ticks = _clock.Advance(deltaSeconds);
             var firstTick = _clock.CurrentTick - ticks + 1;
             for (var i = 0; i < ticks; i++)
@@ -307,12 +343,36 @@ namespace Fps.Net
         {
             var move = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
             var sprint = _sprintState.IsActive;
-            var crouch = _crouchAction != null && _crouchAction.IsPressed();
             var jump = _jumpLatched;
             _jumpLatched = false;
+            var crouch = SampleCrouch(jump, sprint);
 
             var yaw = SampleYaw(_look, transform);
             return new MotorInput(move, yaw, sprint, jump, crouch);
+        }
+
+        // サーバーへはモードを解釈した後の「しゃがみたいか」だけを送る (サーバー側は押し方を知らなくてよい)
+        private bool SampleCrouch(bool jumpPressed, bool sprinting)
+        {
+            var wasPressed = _crouchPressLatched;
+            _crouchPressLatched = false;
+            if (_crouch == null)
+            {
+                return false;
+            }
+
+            // 空中で押したジャンプは跳ばないので、しゃがみも解かない。本体はいま最新の予測 (ホストは確定) の位置にある
+            var grounded = _role == NetworkPlayerRole.HostOwner
+                ? _serverState.IsGrounded
+                : _prediction != null && _prediction.Current.IsGrounded;
+            var isPressed = _crouchAction != null && _crouchAction.IsPressed();
+            var mode = _controlSettings.Get(_crouchDevice, HoldAction.Crouch);
+            return _crouch.Update(mode, isPressed, wasPressed, jumpPressed && grounded, sprinting);
+        }
+
+        private void OnCrouchInputChanged(CrouchInput input, string reason)
+        {
+            Debug.Log(CrouchInput.FormatLog(input.IsActive, input.Mode, reason), this);
         }
 
         /// <summary>
@@ -376,7 +436,7 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// サーバーで position へ瞬間移動させる (リスポーンなど)。速度は 0 に戻し、立たせる (しゃがみを押し続けていれば次の tick でまたしゃがむ)。
+        /// サーバーで position へ瞬間移動させる (リスポーンなど)。速度は 0 に戻し、立たせる (オーナーがしゃがみを送り続けていれば次の tick でまたしゃがむ)。
         /// 所有クライアントは次に届く確定状態との照合で巻き戻され、他人のクライアントは補間せずに飛ばす。
         /// </summary>
         public void ServerTeleport(Vector3 position)
@@ -671,6 +731,13 @@ namespace Fps.Net
             _sprintAction = null;
             _crouchAction = null;
             _sprintState.Release();
+            if (_crouch != null)
+            {
+                _crouch.Changed -= OnCrouchInputChanged;
+                _crouch = null;
+            }
+
+            _crouchPressLatched = false;
             _prediction = null;
             _remoteHistory = null;
             _remoteYawHistory = null;

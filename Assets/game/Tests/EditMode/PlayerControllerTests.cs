@@ -372,6 +372,139 @@ namespace Fps.Tests.EditMode
             Assert.That(new Vector2(velocity.X, velocity.Z).magnitude, Is.EqualTo(_spec.CrouchSpeed).Within(_tolerance));
         }
 
+        [Test]
+        public void CrouchUsesTheDefaultSettingsUntilLoaded()
+        {
+            Assert.That(_player.ControlSettings, Is.EqualTo(ControlSettings.Default));
+            Assert.Throws<ArgumentNullException>(() => _player.ControlSettings = null);
+        }
+
+        [Test]
+        public void CrouchModeFollowsTheDevice()
+        {
+            // 初期値ではキーボード／マウスが Hold、ゲームパッドが Toggle。
+            _player.UpdateCrouch(false, false, false, false, InputDeviceKind.Gamepad);
+            Assert.That(_player.CrouchDevice, Is.EqualTo(InputDeviceKind.Gamepad));
+            Assert.That(_player.CrouchMode, Is.EqualTo(HoldMode.Toggle));
+
+            LogAssert.Expect(LogType.Log, "[Player] crouch=off mode=hold reason=mode");
+            _player.UpdateCrouch(false, false, false, false, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.CrouchMode, Is.EqualTo(HoldMode.Hold));
+        }
+
+        [Test]
+        public void HoldCrouchesOnlyWhilePressedAsBefore()
+        {
+            InitializeWithLook();
+
+            LogAssert.Expect(LogType.Log, "[Player] crouched=true");
+            TickCrouch(true, true, false, false, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.IsCrouched, Is.True);
+
+            TickCrouch(true, false, false, false, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.IsCrouched, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Player] crouched=false");
+            Physics.SyncTransforms();
+            TickCrouch(false, false, false, false, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.IsCrouched, Is.False);
+        }
+
+        [Test]
+        public void ToggleCrouchStaysDownAfterOnePressAndJumpingStandsUp()
+        {
+            InitializeWithLook();
+            _player.ControlSettings = ControlSettings.Default.With(InputDeviceKind.KeyboardMouse, HoldAction.Crouch, HoldMode.Toggle);
+
+            LogAssert.Expect(LogType.Log, "[Player] crouch=on mode=toggle reason=button");
+            LogAssert.Expect(LogType.Log, "[Player] crouched=true");
+            TickCrouch(true, true, false, false, InputDeviceKind.KeyboardMouse);
+            Physics.SyncTransforms();
+            TickCrouch(false, false, false, false, InputDeviceKind.KeyboardMouse);
+            TickCrouch(false, false, false, false, InputDeviceKind.KeyboardMouse);
+
+            Assert.That(_player.IsCrouched, Is.True, "letting go keeps crouching");
+            Assert.That(_player.IsCrouchActive, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Player] crouch=off mode=toggle reason=jump");
+            LogAssert.Expect(LogType.Log, "[Player] crouched=false");
+            TickCrouch(false, false, true, false, InputDeviceKind.KeyboardMouse);
+
+            Assert.That(_player.IsCrouchActive, Is.False);
+            Assert.That(_player.IsCrouched, Is.False);
+        }
+
+        [Test]
+        public void ToggleCrouchIsReleasedWhenTheSprintStarts()
+        {
+            InitializeWithLook();
+            TickCrouch(true, true, false, false, InputDeviceKind.Gamepad);
+            Assert.That(_player.IsCrouched, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Player] crouch=off mode=toggle reason=sprint");
+            Physics.SyncTransforms();
+            TickCrouch(false, false, false, true, InputDeviceKind.Gamepad);
+
+            Assert.That(_player.IsCrouched, Is.False);
+        }
+
+        [Test]
+        public void ToggleCrouchUnderACeilingIsNotReleasedByJumping()
+        {
+            InitializeWithLook();
+            _player.ControlSettings = ControlSettings.Default.With(InputDeviceKind.KeyboardMouse, HoldAction.Crouch, HoldMode.Toggle);
+            TickCrouch(true, true, false, false, InputDeviceKind.KeyboardMouse);
+
+            // 立った頭 (y = 2) と、しゃがんだ頭 (y = 1.2) の間に天井を置く。
+            var ceiling = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                ceiling.transform.position = new Vector3(0f, 1.7f, 0f);
+                ceiling.transform.localScale = new Vector3(3f, 0.4f, 3f);
+                Physics.SyncTransforms();
+
+                TickCrouch(false, false, true, false, InputDeviceKind.KeyboardMouse);
+                TickCrouch(false, false, false, true, InputDeviceKind.KeyboardMouse);
+
+                Assert.That(_player.IsCrouchActive, Is.True, "a blocked headroom keeps the toggle on");
+                Assert.That(_player.IsCrouched, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(ceiling);
+            }
+
+            // 天井が無くなっても、切り替えたしゃがみは勝手には解けない。
+            Physics.SyncTransforms();
+            TickCrouch(false, false, false, false, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.IsCrouched, Is.True);
+
+            TickCrouch(false, false, true, false, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.IsCrouched, Is.False);
+        }
+
+        [Test]
+        public void ReleaseCrouchStandsUpOnTheNextTickAndNeedsAFreshPress()
+        {
+            InitializeWithLook();
+            TickCrouch(true, true, false, false, InputDeviceKind.KeyboardMouse);
+
+            LogAssert.Expect(LogType.Log, "[Player] crouch=off mode=hold reason=death");
+            Assert.That(_player.ReleaseCrouch(CrouchInput.ReasonDeath), Is.True);
+            Assert.That(_player.ReleaseCrouch(CrouchInput.ReasonDeath), Is.False);
+
+            Physics.SyncTransforms();
+            TickCrouch(true, false, false, false, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.IsCrouched, Is.False, "holding Crouch through a release does not crouch again");
+        }
+
+        // UpdateCrouch で解釈した結果を Tick に渡す (Update と同じ流れ)。
+        private void TickCrouch(bool isPressed, bool wasPressed, bool jump, bool sprint, InputDeviceKind device)
+        {
+            var crouch = _player.UpdateCrouch(isPressed, wasPressed, jump, sprint, device);
+            _player.Tick(Vector2.zero, sprint, crouch, jump, 0f);
+        }
+
         private void InitializeWithLook()
         {
             _look = _body.AddComponent<FirstPersonLook>();

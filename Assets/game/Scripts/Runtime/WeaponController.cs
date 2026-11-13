@@ -108,6 +108,9 @@ namespace Fps.Runtime
         /// </summary>
         public event Action<Weapon> WeaponChanged;
 
+        /// <summary><see cref="StartReload"/> でリロードが始まったときに、リロードする Weapon を渡して呼ばれる。</summary>
+        public event Action<Weapon> ReloadStarted;
+
         /// <summary>今持っている武器の距離減衰。未初期化なら null。</summary>
         public DamageFalloff Falloff => Weapon?.Spec.Falloff;
 
@@ -422,11 +425,21 @@ namespace Fps.Runtime
             return true;
         }
 
-        /// <summary>今の武器の <see cref="Weapon.TryStartReload"/> を呼ぶ。補充は <see cref="Tick"/> で時間が経ったときに行う。</summary>
+        /// <summary>
+        /// 今の武器の <see cref="Weapon.TryStartReload"/> を呼ぶ。補充は <see cref="Tick"/> で時間が経ったときに行う。
+        /// 始まったら <see cref="ReloadStarted"/> を呼んで true。
+        /// </summary>
         public bool StartReload()
         {
             EnsureInitialized();
-            return Weapon.TryStartReload();
+            var weapon = Weapon;
+            if (!weapon.TryStartReload())
+            {
+                return false;
+            }
+
+            ReloadStarted?.Invoke(weapon);
+            return true;
         }
 
         /// <summary>今の武器の時間を deltaSeconds 進める。</summary>

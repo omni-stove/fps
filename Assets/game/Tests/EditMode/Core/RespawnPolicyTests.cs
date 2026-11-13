@@ -7,6 +7,11 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class RespawnPolicyTests
     {
+        private static readonly int[] _one = { 1 };
+        private static readonly int[] _two = { 2 };
+        private static readonly int[] _oneThenTwo = { 1, 2 };
+        private static readonly int[] _twoThenOne = { 2, 1 };
+
         [Test]
         public void FromRulesPicksThePolicyForTheRespawnMode()
         {
@@ -36,7 +41,7 @@ namespace Fps.Core.Tests
 
             policy.Tick(session, 5f, released.Add);
 
-            Assert.That(released, Is.EqualTo(new[] { 2, 1 }));
+            Assert.That(released, Is.EqualTo(_twoThenOne));
             Assert.That(policy.GetRemaining(1), Is.Null);
         }
 
@@ -61,12 +66,12 @@ namespace Fps.Core.Tests
 
             policy.Cancel(1);
             policy.Tick(session, 2f, released.Add);
-            Assert.That(released, Is.EqualTo(new[] { 2 }));
+            Assert.That(released, Is.EqualTo(_two));
 
             policy.BeginWait(session, 3);
             policy.CancelAll();
             policy.Tick(session, 2f, released.Add);
-            Assert.That(released, Is.EqualTo(new[] { 2 }));
+            Assert.That(released, Is.EqualTo(_two));
         }
 
         [Test]
@@ -84,7 +89,7 @@ namespace Fps.Core.Tests
                 session.Reset();
             });
 
-            Assert.That(released, Is.EqualTo(new[] { 1 }));
+            Assert.That(released, Is.EqualTo(_one));
         }
 
         [Test]
@@ -103,7 +108,7 @@ namespace Fps.Core.Tests
 
             policy.Tick(session, 3f, released.Add);
 
-            Assert.That(released, Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(released, Is.EqualTo(_oneThenTwo));
             Assert.That(policy.SecondsUntilNextWave, Is.EqualTo(5f));
         }
 
@@ -122,7 +127,7 @@ namespace Fps.Core.Tests
             Assert.That(released, Is.Empty);
 
             policy.Tick(session, 5f, released.Add);
-            Assert.That(released, Is.EqualTo(new[] { 1 }));
+            Assert.That(released, Is.EqualTo(_one));
         }
 
         [Test]
@@ -171,7 +176,7 @@ namespace Fps.Core.Tests
         // 部品だけを試すので、リスポーンを扱わないセッションを State の読み先にだけ使う
         private static ModeSession PlayingSession()
         {
-            var session = new ModeSession(new TwoTeams(), 60f, new IScoreRule[0], null, new IWinCondition[0]);
+            var session = new ModeSession(new TwoTeams(), 60f, Array.Empty<IScoreRule>(), null, Array.Empty<IWinCondition>());
             session.Start();
             return session;
         }

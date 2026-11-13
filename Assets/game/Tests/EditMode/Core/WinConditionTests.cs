@@ -139,7 +139,7 @@ namespace Fps.Core.Tests
 
         private static ModeSession Session(ITeamLayout layout, IRespawnPolicy respawn)
         {
-            return new ModeSession(layout, 60f, new IScoreRule[0], respawn, new IWinCondition[0]);
+            return new ModeSession(layout, 60f, Array.Empty<IScoreRule>(), respawn, Array.Empty<IWinCondition>());
         }
     }
 }

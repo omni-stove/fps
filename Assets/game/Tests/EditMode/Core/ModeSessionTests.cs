@@ -7,12 +7,13 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ModeSessionTests
     {
-        private static readonly string[] ExpectedPlayingEndedEnded = { "Playing ", "Ended Side 0", "Ended Side 0" };
-        private static readonly float[] ExpectedAdvanced3 = { 3f };
-        private static readonly float[] ExpectedAdvanced5 = { 5f };
-        private static readonly int[] ExpectedRespawned11 = { 11 };
-        private static readonly string[] ExpectedEliminated1 = { "Eliminated 1" };
-        private static readonly string[] ExpectedEliminatedThenEnded = { "Eliminated 1", "Eliminated 2", "Ended 0" };
+        private static readonly string[] _expectedPlayingEndedEnded = { "Playing ", "Ended Side 0", "Ended Side 0" };
+        private static readonly float[] _expectedAdvanced3 = { 3f };
+        private static readonly float[] _expectedAdvanced5 = { 5f };
+        private static readonly int[] _expectedRespawned11 = { 11 };
+        private static readonly string[] _expectedEliminated1 = { "Eliminated 1" };
+        private static readonly string[] _expectedEliminatedThenEnded = { "Eliminated 1", "Eliminated 2", "Ended 0" };
+        private static readonly int[] _tenAndTwelve = { 10, 12 };
 
         [Test]
         public void JoinAssignsSidesInJoinOrder()
@@ -28,7 +29,7 @@ namespace Fps.Core.Tests
             Assert.That(session.GetSide(10), Is.EqualTo(Side.Alpha));
             Assert.That(session.CountMembers(Side.Alpha), Is.EqualTo(2));
             Assert.That(session.CountMembers(Side.Bravo), Is.Zero);
-            Assert.That(session.GetPlayerIds(), Is.EqualTo(new[] { 10, 12 }));
+            Assert.That(session.GetPlayerIds(), Is.EqualTo(_tenAndTwelve));
             Assert.That(session.Sides, Is.EqualTo(new[] { Side.Alpha, Side.Bravo }));
         }
 
@@ -115,7 +116,7 @@ namespace Fps.Core.Tests
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(session.Winner, Is.EqualTo((Side?)Side.Alpha));
-            Assert.That(events, Is.EqualTo(ExpectedPlayingEndedEnded));
+            Assert.That(events, Is.EqualTo(_expectedPlayingEndedEnded));
         }
 
         [Test]
@@ -152,7 +153,7 @@ namespace Fps.Core.Tests
 
             session.Tick(3f);
 
-            Assert.That(rule.Advanced, Is.EqualTo(ExpectedAdvanced3));
+            Assert.That(rule.Advanced, Is.EqualTo(_expectedAdvanced3));
             Assert.That(session.GetScore(Side.Alpha), Is.EqualTo(3d));
             Assert.That(session.GetScore(Side.Bravo), Is.Zero);
 
@@ -178,7 +179,7 @@ namespace Fps.Core.Tests
 
             session.Tick(30f);
 
-            Assert.That(rule.Advanced, Is.EqualTo(ExpectedAdvanced5));
+            Assert.That(rule.Advanced, Is.EqualTo(_expectedAdvanced5));
             Assert.That(session.Winner, Is.EqualTo((Side?)Side.Alpha));
             Assert.That(session.GetScore(Side.Alpha), Is.EqualTo(10d));
             Assert.That(session.GetScore(Side.Bravo), Is.EqualTo(5d));
@@ -271,7 +272,7 @@ namespace Fps.Core.Tests
 
             session.Tick(2f);
 
-            Assert.That(respawned, Is.EqualTo(ExpectedRespawned11));
+            Assert.That(respawned, Is.EqualTo(_expectedRespawned11));
             Assert.That(session.IsDown(11), Is.False);
         }
 
@@ -315,13 +316,13 @@ namespace Fps.Core.Tests
             session.ReportKill(10, 11);
             session.Tick(1f);
             session.Tick(1f);
-            Assert.That(events, Is.EqualTo(ExpectedEliminated1));
+            Assert.That(events, Is.EqualTo(_expectedEliminated1));
             Assert.That(session.IsSideEliminated(new Side(1)), Is.True);
 
             session.ReportKill(10, 12);
             session.Tick(1f);
 
-            Assert.That(events, Is.EqualTo(ExpectedEliminatedThenEnded));
+            Assert.That(events, Is.EqualTo(_expectedEliminatedThenEnded));
         }
 
         [Test]

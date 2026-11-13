@@ -19,7 +19,7 @@ namespace Fps.Net
     /// <see cref="TeamDeathmatchSession"/>) が行う。
     /// <para>
     /// 視点 (一人称・三人称共通): プレハブは子 <see cref="ViewName"/> (目。pitch を回し射撃の始点になる) とその子のカメラ
-    /// (Camera と AudioListener 付き)、本体の <see cref="ViewRig"/> と <see cref="FirstPersonLook"/> を無効のまま持つ。
+    /// (Camera と AudioListener 付き)、本体の <see cref="ViewRig"/>・<see cref="FirstPersonLook"/>・<see cref="AimDownSights"/> を無効のまま持つ。
     /// 自分のプレイヤー (オーナー) で画面があるときだけ有効にし、シーンの <see cref="NetSpectatorCamera"/> を止める。
     /// 一人称か三人称かは ViewRig の Mode で決まり、射撃はどちらでも目から画面中央が指す点へ撃つ。
     /// </para>
@@ -74,6 +74,7 @@ namespace Fps.Net
 
         // 装備中の武器の射撃モードと連射間隔。持ち主だけが ResolveTrigger で作る。_triggerWeaponId と _triggerLoadout はどの武器で引いたか
         private FireTrigger _trigger;
+        private WeaponSpec _triggerSpec;
         private string _triggerWeaponId;
         private LoadoutDefinition _triggerLoadout;
         private string _triggerError;
@@ -85,6 +86,7 @@ namespace Fps.Net
         private AudioListener _viewListener;
         private FirstPersonLook _look;
         private ViewRig _rig;
+        private AimDownSights _ads;
         private bool _hasLocalView;
         private bool _viewResolved;
 
@@ -238,6 +240,7 @@ namespace Fps.Net
             }
 
             _trigger = null;
+            _triggerSpec = null;
             _triggerWeaponId = weaponId;
             _triggerLoadout = loadout;
             _triggerError = null;
@@ -270,12 +273,23 @@ namespace Fps.Net
                 if (string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
                 {
                     _trigger = new FireTrigger(spec);
+                    _triggerSpec = spec;
                     return _trigger;
                 }
             }
 
             _triggerError = "with weapon '" + weaponId + "' missing from '" + loadout.name + "'";
             return null;
+        }
+
+        /// <summary>
+        /// 装備中の武器の値。<see cref="ResolveTrigger"/> と同じく試合の Loadout から引く。引けなければ null
+        /// (<see cref="AimDownSights"/> は共通の初期値の視野角を使う)。
+        /// </summary>
+        internal WeaponSpec ResolveEquippedSpec()
+        {
+            ResolveTrigger();
+            return _triggerSpec;
         }
 
         private void WarnUnknownWeapon()
@@ -384,7 +398,7 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 視点を有効・無効にする。有効にするとカメラ・AudioListener・<see cref="ViewRig"/>・<see cref="FirstPersonLook"/> を動かし、
+        /// 視点を有効・無効にする。有効にするとカメラ・AudioListener・<see cref="ViewRig"/>・<see cref="FirstPersonLook"/>・<see cref="AimDownSights"/> を動かし、
         /// 一人称なら自分の体は影だけ描いて視界をふさがないようにし (三人称なら描く)、観戦用のカメラを止める。無効にすると元に戻す。
         /// </summary>
         internal void SetLocalView(bool enable)
@@ -421,6 +435,21 @@ namespace Fps.Net
             else if (enable)
             {
                 Debug.LogWarning("[Net] " + name + " has no FirstPersonLook; the view cannot be turned", this);
+            }
+
+            if (_ads != null)
+            {
+                // 無効にすると OnDisable で視野角と感度を腰だめに戻す
+                _ads.enabled = enable;
+                if (enable && !_ads.enabled)
+                {
+                    // 参照か Aim アクションを解決できなかった。理由は AimDownSights がエラーに出している
+                    Debug.LogWarning("[Net] " + name + ": AimDownSights could not start; aiming down sights is unavailable", this);
+                }
+            }
+            else if (enable)
+            {
+                Debug.LogWarning("[Net] " + name + " has no AimDownSights; run Fps.Editor.NetSceneBuilder.Build", this);
             }
 
             if (_rig != null)
@@ -494,9 +523,36 @@ namespace Fps.Net
             _viewResolved = true;
             _look = GetComponent<FirstPersonLook>();
             _rig = GetComponent<ViewRig>();
+            ResolveAds();
             _viewCamera = FirstPersonLook.FindChildCamera(transform);
             _view = FindView(transform);
             _viewListener = _viewCamera != null ? _viewCamera.GetComponent<AudioListener>() : null;
+        }
+
+        // ADS は自分の画面の見た目だけで、サーバーには送らない。ダッシュの解除も持ち主の入力の側で行う
+        private void ResolveAds()
+        {
+            if (_ads != null)
+            {
+                _ads.AimingChanged -= HandleAimingChanged;
+            }
+
+            _ads = GetComponent<AimDownSights>();
+            if (_ads == null)
+            {
+                return;
+            }
+
+            _ads.WeaponSource = ResolveEquippedSpec;
+            _ads.AimingChanged += HandleAimingChanged;
+        }
+
+        private void HandleAimingChanged(bool aiming)
+        {
+            if (aiming && _motor != null)
+            {
+                _motor.ReleaseSprint();
+            }
         }
 
         /// <summary>サーバーから、試合で決まったチームと体力を書き込む。</summary>

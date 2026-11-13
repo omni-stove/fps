@@ -89,6 +89,9 @@ namespace Fps.Runtime
         private bool _isLive;
         private bool? _lastGrounded;
 
+        // 押し続けていても、ReleaseSprint の後は押し直すまでダッシュしない (ADS を始めたときなど)。
+        private readonly HoldToggleState _sprintState = new HoldToggleState(HoldMode.Hold);
+
         public CharacterController Controller => _controller;
         public FirstPersonLook Look => _look;
         public InputAction MoveAction => _moveAction;
@@ -125,6 +128,9 @@ namespace Fps.Runtime
         public float Gravity => _gravity;
         public float AirControl => _airControl;
         public float CrouchHeight => _crouchHeight;
+
+        /// <summary>ダッシュしているか (最後の <see cref="UpdateSprint"/> の結果。<see cref="ReleaseSprint"/> で false になる)。</summary>
+        public bool IsSprintActive => _sprintState.IsActive;
 
         private void Awake()
         {
@@ -174,10 +180,24 @@ namespace Fps.Runtime
         {
             Tick(
                 _moveAction.ReadValue<Vector2>(),
-                _sprintAction.IsPressed(),
+                UpdateSprint(_sprintAction.IsPressed(), _sprintAction.WasPressedThisFrame()),
                 _crouchAction.IsPressed(),
                 _jumpAction.WasPressedThisFrame(),
                 Time.deltaTime);
+        }
+
+        /// <summary>1 フレーム分の Sprint ボタンの状態を渡し、ダッシュするかを返す。押している間だけダッシュする。</summary>
+        public bool UpdateSprint(bool isPressed, bool wasPressedThisFrame)
+        {
+            return _sprintState.Update(isPressed, wasPressedThisFrame);
+        }
+
+        /// <summary>
+        /// ダッシュを外から解除する (ADS を始めたときなど)。ボタンを押し続けていても、押し直すまでダッシュしない。
+        /// </summary>
+        public void ReleaseSprint()
+        {
+            _sprintState.Release();
         }
 
         /// <summary>

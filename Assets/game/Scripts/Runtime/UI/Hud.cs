@@ -119,7 +119,8 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>・
-        /// <see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>) と <see cref="PauseMenu"/> を hudObject に付ける。
+        /// <see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>) を
+        /// hudObject に付ける。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
         /// 既に付いているものは付け直さない。
         /// </summary>
@@ -136,6 +137,8 @@ namespace Fps.Runtime
             AddIfMissing<ScoreboardView>(hudObject);
             AddIfMissing<LoadoutSelectView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
+            // PauseMenu の後に付けると、木を作り直したときも PauseMenu が「設定」のボタンを持ってから開く処理を渡せる。
+            AddIfMissing<PauseSettingsView>(hudObject);
         }
 
         /// <summary>同じ GameObject のヒットマーカー。<see cref="AddViews"/> で付けていなければ null。</summary>
@@ -155,6 +158,9 @@ namespace Fps.Runtime
 
         /// <summary>同じ GameObject のポーズメニュー。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();
+
+        /// <summary>同じ GameObject のポーズ画面の設定画面。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public PauseSettingsView PauseSettings => GetComponent<PauseSettingsView>();
 
         /// <summary>チームの点数とスコアボードの見出しを塗る色を決める。View を作り直しても引き継ぐ。</summary>
         public void SetTeamColors(Color alpha, Color bravo)

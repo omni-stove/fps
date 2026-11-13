@@ -14,7 +14,7 @@ namespace Fps.Core
     /// <item>着地: 空中から接地に変わり、そのときの落下の速さが <see cref="MinLandingFallSpeed"/> 以上なら 1 回 (<see cref="LandingVolume"/>)。
     /// 着地音を鳴らした後は、次の足音まで歩幅をまるごと 1 つ待つ (着地音と足音を重ねない)。
     /// 坂や段差で一瞬だけ接地が切れたような小さな落下は着地にせず、歩幅の進みもそのまま保つ。</item>
-    /// <item>1 フレームに <see cref="TeleportSpeed"/> を超える速さで動いたら瞬間移動 (リスポーン・補間の飛び) と見なし、
+    /// <item>1 フレームに <see cref="TeleportDistance"/> を超えて動いたら瞬間移動 (リスポーン・補間の飛び) と見なし、
     /// 鳴らさずに歩幅の進みを最初からにする。</item>
     /// <item>生成直後の最初の接地は、空中から降りたのか分からないので着地にしない。</item>
     /// </list>
@@ -37,8 +37,12 @@ namespace Fps.Core
         /// <summary>これ未満の水平の速さ (m/s) は止まっていると見なす (<see cref="CharacterPose.StillSpeed"/> と同じ)。</summary>
         public const float StillSpeed = CharacterPose.StillSpeed;
 
-        /// <summary>1 フレームの動きがこの速さ (m/s) を超えたら瞬間移動と見なす。高所からの落下 (50m で約 45 m/s) より大きくしてある。</summary>
-        public const float TeleportSpeed = 60f;
+        /// <summary>
+        /// 1 フレームの動きがこの距離 (m) を超えたら瞬間移動と見なす。高所からの落下 (約 45 m/s) が 0.1 秒の引っかかりで動く距離より大きくしてある。
+        /// 速さ (距離 ÷ フレームの秒数) で判定しないのは、ネット対戦の自分のキャラが tick (1/60 秒) ぶんの移動を 1 フレームでまとめて行い、
+        /// フレームレートが高いほど計算上の速さが大きくなるため。
+        /// </summary>
+        public const float TeleportDistance = 5f;
 
         /// <summary>止まってから歩き出したときの、歩幅の進み (0〜1)。歩き出してすぐ最初の足音が鳴るようにする。</summary>
         public const float FirstStepProgress = 0.5f;
@@ -71,6 +75,7 @@ namespace Fps.Core
         private bool? _wasGrounded;
         private float _airFallSpeed;
         private float _stillSeconds;
+        private float _secondsSinceVerticalMove;
 
         /// <param name="walkStride">立って歩くときの歩幅 (m)。0 より大きい有限値。</param>
         /// <param name="sprintStride">ダッシュ中の歩幅 (m)。0 より大きい有限値。</param>
@@ -215,17 +220,28 @@ namespace Fps.Core
             }
 
             var distance = Math.Sqrt((horizontalDistance * (double)horizontalDistance) + (verticalDistance * (double)verticalDistance));
-            if (distance / deltaSeconds > TeleportSpeed)
+            if (distance > TeleportDistance)
             {
                 Reset();
                 _wasGrounded = grounded;
                 return FootstepCue.None;
             }
 
-            var fallSpeed = Math.Max(0f, -verticalDistance / deltaSeconds);
+            // tick ごとにしか動かないキャラ (ネット対戦の自分) は、tick の無いフレームで縦の動きが 0 になり、tick のフレームで
+            // 1 tick ぶんまとめて動く。このフレームの秒数だけで割ると速さが大きく出るので、空中で前に縦に動いてからの秒数で割る。
+            // 接地中は数えない (止まって立っている間の秒数で、次の落下の速さが小さく出るため)
+            var fallSeconds = _secondsSinceVerticalMove + deltaSeconds;
+            var fallSpeed = verticalDistance != 0f ? Math.Max(0f, -verticalDistance / fallSeconds) : 0f;
+            _secondsSinceVerticalMove = grounded || verticalDistance != 0f ? 0f : fallSeconds;
+
             if (!grounded)
             {
-                _airFallSpeed = fallSpeed;
+                // 縦に動かなかったフレームで上書きすると、直前の落下の速さが消える
+                if (verticalDistance != 0f)
+                {
+                    _airFallSpeed = fallSpeed;
+                }
+
                 _wasGrounded = false;
                 return FootstepCue.None;
             }
@@ -257,7 +273,7 @@ namespace Fps.Core
             }
 
             _stillSeconds = 0f;
-            _progress +=horizontalDistance / StrideFor(crouching, sprinting);
+            _progress += horizontalDistance / StrideFor(crouching, sprinting);
             if (_progress < 1f)
             {
                 return FootstepCue.None;
@@ -278,6 +294,7 @@ namespace Fps.Core
             _wasGrounded = null;
             _airFallSpeed = 0f;
             _stillSeconds = 0f;
+            _secondsSinceVerticalMove = 0f;
         }
 
         private static float RequirePositive(float value, string name)

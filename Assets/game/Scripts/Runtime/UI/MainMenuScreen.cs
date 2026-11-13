@@ -15,6 +15,7 @@ namespace Fps.Runtime
     /// 起動引数に <c>-mode</c> / <c>-lobby</c> があるとき (<see cref="MenuRoute.ShouldSkipMenu"/>) は何も出さず、
     /// NetBootstrap がネット対戦のシーンへ切り替えるのに任せる。
     /// 設定ボタンは <see cref="SettingsRequested"/> に差し込み口の要素を渡すだけで、中身は設定画面の側が入れる。
+    /// <see cref="Show"/> は <see cref="SettingsView"/> を取り付ける (<see cref="InstallSettingsView"/>)。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MainMenuScreen : MonoBehaviour
@@ -61,12 +62,19 @@ namespace Fps.Runtime
         private int _focusIndex = -1;
         private bool _settingsOpen;
         private bool _leaving;
+        private SettingsView _settingsView;
 
         /// <summary>
         /// 設定ボタンを押したときに、差し込み口の要素 (空にして表示した状態) を渡す。設定画面はここに中身を入れ、
         /// 閉じるときに <see cref="CloseSettings"/> を呼ぶ。購読が無ければ <see cref="SettingsUnavailableNotice"/> を出すだけ。
         /// </summary>
         public event Action<VisualElement> SettingsRequested;
+
+        /// <summary><see cref="CloseSettings"/> で設定画面を閉じた直後 (差し込み口を空にする前)。設定画面はここで保存する。</summary>
+        public event Action SettingsClosed;
+
+        /// <summary><see cref="InstallSettingsView"/> で取り付けた設定画面。無ければ null。</summary>
+        public SettingsView SettingsView => _settingsView;
 
         /// <summary><see cref="ButtonNames"/> の順に並んだボタン。<see cref="Bind"/> の前は空。</summary>
         public IReadOnlyList<Button> Buttons => _buttons;
@@ -106,6 +114,8 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
+            // 設定画面を開いたままシーンを離れても、変えた値を失わない。
+            CloseSettings();
             Unbind();
             if (_ownedPanelSettings != null)
             {
@@ -161,8 +171,37 @@ namespace Fps.Runtime
             documentObject.SetActive(true);
 
             Bind(_document.rootVisualElement);
+            InstallSettingsView(new SettingsView());
             ShowNotice(MenuNavigator.TakeNotice());
             FocusAt(0);
+        }
+
+        /// <summary>
+        /// 設定ボタンで view を差し込み口に開き、「戻る」・キャンセルで閉じるようにつなぐ。閉じると view が保存する。
+        /// <see cref="Show"/> が呼ぶ。既に取り付けていれば何もしない (1 つの画面に設定画面は 1 つ)。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">別の設定画面を取り付け済み。</exception>
+        public void InstallSettingsView(SettingsView view)
+        {
+            if (view == null)
+            {
+                throw new ArgumentNullException(nameof(view));
+            }
+
+            if (_settingsView == view)
+            {
+                return;
+            }
+
+            if (_settingsView != null)
+            {
+                throw new InvalidOperationException("a settings view is already installed on the main menu");
+            }
+
+            _settingsView = view;
+            SettingsRequested += view.Open;
+            SettingsClosed += () => view.Close();
+            view.BackRequested += CloseSettings;
         }
 
         /// <summary>
@@ -176,6 +215,8 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(root));
             }
 
+            // 前の木で開いていた設定画面を、保存させてから手放す。
+            CloseSettings();
             Unbind();
 
             foreach (var buttonName in ButtonNames)
@@ -316,10 +357,38 @@ namespace Fps.Runtime
             }
 
             _settingsOpen = false;
+            RaiseSettingsClosed();
+            if (_settingsSlot == null)
+            {
+                return;
+            }
+
             _settingsSlot.Clear();
             SetDisplayed(_settingsSlot, false);
             SetButtonsEnabled(true);
             FocusAt(IndexOf(SettingsButtonName));
+        }
+
+        private void RaiseSettingsClosed()
+        {
+            var handlers = SettingsClosed;
+            if (handlers == null)
+            {
+                return;
+            }
+
+            // 保存に失敗した購読先があっても、メニューは閉じた状態に戻す。
+            foreach (var handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action)handler)();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e, this);
+                }
+            }
         }
 
         /// <summary>案内を出す。null か空なら隠す。</summary>
@@ -407,6 +476,13 @@ namespace Fps.Runtime
             }
 
             evt.StopPropagation();
+
+            // 設定画面で割り当ての入力を待っている間の Esc / Start は、待つのをやめるためのもの。
+            if (PlayerBindings.IsCapturingInput)
+            {
+                return;
+            }
+
             CloseSettings();
         }
 

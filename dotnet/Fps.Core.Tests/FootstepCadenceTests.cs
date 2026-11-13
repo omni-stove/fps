@@ -292,6 +292,63 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TickDrivenFallAtHighFrameRateStillLandsAtTheTickSpeed()
+        {
+            var cadence = new FootstepCadence();
+            const float frame = 1f / 144f;
+            const float tick = 1f / 60f;
+            cadence.Advance(0f, 0f, frame, true, false, false);
+
+            // 1 tick (7 m/s) ぶん落ちたフレームの後、tick の無い空中のフレームが続いてから、わずかに落ちて接地する
+            cadence.Advance(0f, -7f * tick, frame, false, false, false);
+            cadence.Advance(0f, 0f, frame, false, false, false);
+            var cue = cadence.Advance(0f, -0.001f, frame, true, false, false);
+
+            Assert.That(cue.Kind, Is.EqualTo(FootstepCueKind.Landing));
+            Assert.That(cue.Volume, Is.EqualTo(FootstepCadence.LandingVolume(7f * tick / frame)).Within(_tolerance));
+        }
+
+        [Test]
+        public void TickDrivenFallMeasuresTheSpeedOverTheWholeTick()
+        {
+            var cadence = new FootstepCadence();
+            const float frame = 1f / 144f;
+            const float tick = 1f / 60f;
+            cadence.Advance(0f, 0f, frame, true, false, false);
+            cadence.Advance(0f, -0.05f, frame, false, false, false);
+
+            // 前に縦に動いたフレームから 3 フレームぶんの秒数で、1 tick ぶん落ちる
+            cadence.Advance(0f, 0f, frame, false, false, false);
+            cadence.Advance(0f, 0f, frame, false, false, false);
+            cadence.Advance(0f, -7f * tick, frame, false, false, false);
+            var cue = cadence.Advance(0f, 0f, frame, true, false, false);
+
+            Assert.That(cue.Kind, Is.EqualTo(FootstepCueKind.Landing));
+            Assert.That(cue.Volume, Is.EqualTo(FootstepCadence.LandingVolume(7f * tick / (3f * frame))).Within(_tolerance));
+        }
+
+        [Test]
+        public void TickDrivenSprintAtVeryHighFrameRateIsNotATeleport()
+        {
+            var cadence = new FootstepCadence();
+            const float frame = 1f / 1000f;
+            const float tick = 1f / 60f;
+            cadence.Advance(0f, 0f, frame, true, false, true);
+
+            var cue = FootstepCue.None;
+            for (var i = 0; i < 20; i++)
+            {
+                cue = cadence.Advance(_sprintSpeed * tick, 0f, frame, true, false, true);
+                if (cue.HasSound)
+                {
+                    break;
+                }
+            }
+
+            Assert.That(cue.Kind, Is.EqualTo(FootstepCueKind.Footstep));
+        }
+
+        [Test]
         public void ZeroDeltaChangesNothing()
         {
             var cadence = new FootstepCadence();

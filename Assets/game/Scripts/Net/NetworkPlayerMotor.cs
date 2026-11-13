@@ -39,8 +39,9 @@ namespace Fps.Net
     /// 死亡・リスポーンでは <see cref="NetPlayer"/> が <see cref="ReleaseCrouch"/> を呼ぶ。
     /// </para>
     /// <para>
-    /// サーバーで確定した着地 (落下ダメージ) は .Landing.cs で扱う。ダウン中に動けなくする処理は .Downed.cs に、
-    /// 演出 (足音) に見せる接地とダッシュは .Grounded.cs に分けてある。
+    /// サーバーで確定した着地 (落下ダメージ) は .Landing.cs で扱う。ダウン中に動けなくする処理は .Downed.cs に分けてある。
+    /// カバー (試合のルール <see cref="NetMatchRules.Cover"/> が On のとき) は .Cover.cs で扱う。
+    /// 演出 (足音) に見せるダッシュは .Grounded.cs に分けてある。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -101,6 +102,9 @@ namespace Fps.Net
         [SerializeField, Min(0.01f), Tooltip("しゃがみのカプセルの高さ (m)。半径の 2 倍以上、立ちの高さ以下")]
         private float _crouchHeight = PlayerController.DefaultCrouchHeight;
 
+        [SerializeField, Tooltip("カバーにする壁として当たるレイヤー")]
+        private LayerMask _coverWallMask = Physics.DefaultRaycastLayers;
+
         // 補間した向きの長さがこれより短ければ (真逆の向きの間など) 向きを決められないので、前の向きのままにする
         private const float _minYawDirectionLengthSquared = 1e-6f;
 
@@ -120,6 +124,7 @@ namespace Fps.Net
         private bool _sprintPressLatched;
         private SprintInput _sprint;
         private ControlSettings _controlSettings = ControlSettings.Default;
+        private bool _listeningToSettings;
         private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
         private bool _crouchPressLatched;
         private CrouchInput _crouch;
@@ -142,6 +147,10 @@ namespace Fps.Net
         // 角度のまま補間すると 359° と 1° の間で逆回りしてしまうため
         private HitboxHistory _remoteYawHistory;
         private StanceHistory _remoteStanceHistory;
+
+        // 接地もしゃがみと同じく tick で切り替わる bool なので、同じ履歴で持つ。見た目 (足を動かすか) にだけ使う
+        private StanceHistory _remoteGroundedHistory;
+        private bool _remoteGrounded = true;
         private bool _hasRemoteState;
         private int _latestRemoteTick;
         private double _renderTick;
@@ -160,6 +169,65 @@ namespace Fps.Net
 
         /// <summary>このインスタンスで今しゃがんでいるか (オーナーは予測、他人は補間表示の姿勢)。</summary>
         public bool IsCrouched => _simulation != null && _simulation.Stance.IsCrouched;
+
+        /// <summary>歩きの水平速度 (m/s)。</summary>
+        public float WalkSpeed => _walkSpeed;
+
+        /// <summary>ダッシュ中の水平速度 (m/s)。</summary>
+        public float SprintSpeed => _sprintSpeed;
+
+        /// <summary>しゃがみ中の水平速度 (m/s)。移動の計算 (<see cref="MotorSpec"/>) と同じ値。</summary>
+        public float CrouchSpeed => PlayerController.DefaultCrouchSpeed;
+
+        /// <summary>
+        /// このインスタンスで今接地しているか。サーバー (ホストを含む) は確定状態、予測するオーナーは最新の予測、
+        /// 他人のクライアントは届いた確定状態を位置と同じ遅れで当てた値。生成前と、他人で状態がまだ届いていないときは true。
+        /// 見た目 (<see cref="Fps.Runtime.CharacterAnimator"/>) に使う。
+        /// </summary>
+        public bool IsGrounded
+        {
+            get
+            {
+                switch (_role)
+                {
+                    case NetworkPlayerRole.HostOwner:
+                    case NetworkPlayerRole.ServerSimulated:
+                        return _serverState.IsGrounded;
+                    case NetworkPlayerRole.Predicted:
+                        return _prediction == null || _prediction.Current.IsGrounded;
+                    case NetworkPlayerRole.Interpolated:
+                        return _remoteGrounded;
+                    default:
+                        return true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// このインスタンスの最新の水平の速さ (m/s)。サーバー (ホストを含む) は確定状態、予測するオーナーは最新の予測の速度から出す。
+        /// 他人のクライアントは速度を受け取らないので 0。射撃のばらつき (<see cref="NetPlayer.SpreadMoveFraction"/>) に使う。
+        /// </summary>
+        public float HorizontalSpeed
+        {
+            get
+            {
+                Vector3 velocity;
+                switch (_role)
+                {
+                    case NetworkPlayerRole.HostOwner:
+                    case NetworkPlayerRole.ServerSimulated:
+                        velocity = _serverState.Velocity;
+                        break;
+                    case NetworkPlayerRole.Predicted:
+                        velocity = _prediction != null ? _prediction.Current.Velocity : Vector3.zero;
+                        break;
+                    default:
+                        return 0f;
+                }
+
+                return new Vector2(velocity.x, velocity.z).magnitude;
+            }
+        }
 
         /// <summary>オーナーでダッシュ中か (モードどおりに解釈し、自動解除した後の値)。オーナー以外では false。</summary>
         public bool IsSprinting => _sprint != null && _sprint.IsActive;
@@ -201,7 +269,7 @@ namespace Fps.Net
                 var motor = new PlayerMotor(new MotorSpec(
                     _walkSpeed, _sprintSpeed, _jumpHeight, _gravity, _airControl, PlayerController.DefaultCrouchSpeed));
                 var stance = NetStance.FromHierarchy(_controller, _crouchHeight);
-                _simulation = new NetMotorSimulation(_controller, motor, stance, TickSeconds, KillPlaneY);
+                _simulation = new NetMotorSimulation(_controller, motor, stance, TickSeconds, KillPlaneY, _coverWallMask);
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -256,7 +324,9 @@ namespace Fps.Net
                 _remoteHistory = new HitboxHistory();
                 _remoteYawHistory = new HitboxHistory();
                 _remoteStanceHistory = new StanceHistory();
-                ClearRemoteGrounded();
+                _remoteGroundedHistory = new StanceHistory();
+                _remoteGrounded = true;
+                ResetRemoteCover();
                 _hasRemoteState = false;
             }
 
@@ -266,7 +336,14 @@ namespace Fps.Net
                 _jumpLatched = false;
                 _sprintPressLatched = false;
                 _crouchPressLatched = false;
-                _controlSettings = new ControlSettingsStore().Load();
+                _coverPressLatched = false;
+                _controlSettings = AppliedControlSettings.Current;
+                if (!_listeningToSettings)
+                {
+                    AppliedControlSettings.Changed += HandleSettingsChanged;
+                    _listeningToSettings = true;
+                }
+
                 _device = InputDeviceKind.KeyboardMouse;
                 _crouchDevice = InputDeviceKind.KeyboardMouse;
                 _sprint = new SprintInput();
@@ -311,7 +388,14 @@ namespace Fps.Net
                 // 1 フレームに複数 tick 進んでも送るのは最新だけ。照合も補間も間の tick を必要としない
                 _hasPendingState = false;
                 StateRpc(
-                    _serverTick, _serverState.Position, _serverState.Velocity, _serverState.IsGrounded, _serverState.IsCrouched, _serverYaw, default);
+                    _serverTick,
+                    _serverState.Position,
+                    _serverState.Velocity,
+                    _serverState.IsGrounded,
+                    _serverState.IsCrouched,
+                    _serverState.Cover,
+                    _serverYaw,
+                    default);
             }
         }
 
@@ -334,6 +418,11 @@ namespace Fps.Net
                 _crouchPressLatched = true;
             }
 
+            if (_coverAction != null && _coverAction.WasPressedThisFrame())
+            {
+                _coverPressLatched = true;
+            }
+
             // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
             _device = InputDeviceKinds.Of(_sprintAction, InputDeviceKinds.Of(_moveAction, _device));
             _crouchDevice = InputDeviceKinds.Of(_crouchAction, InputDeviceKinds.Of(_moveAction, _crouchDevice));
@@ -353,9 +442,10 @@ namespace Fps.Net
             var jump = _jumpLatched;
             _jumpLatched = false;
             var crouch = SampleCrouch(jump, sprint);
+            var cover = SampleCover();
 
             var yaw = SampleYaw(_look, transform);
-            return new MotorInput(move, yaw, sprint, jump, crouch, _downed);
+            return new MotorInput(move, yaw, sprint, jump, crouch, _downed, cover, SampleAim());
         }
 
         // サーバーへはモードを解釈した後の「ダッシュ中か」だけを送る (サーバー側は押し方を知らなくてよい)
@@ -438,7 +528,7 @@ namespace Fps.Net
             else
             {
                 _prediction.Predict(tick, input);
-                SubmitInputRpc(tick, input.Move, input.Yaw, input.Sprint, input.Jump, input.Crouch);
+                SubmitInputRpc(tick, input.Move, input.Yaw, input.Sprint, input.Jump, input.Crouch, input.Cover, input.Aim);
             }
 
             OwnerTicked?.Invoke(tick);
@@ -446,14 +536,23 @@ namespace Fps.Net
 
         private void ApplyAuthoritative(int tick, MotorInput input)
         {
+            // ルールで使えないカバーは、オーナーが送ってきても入れない
+            if (!CoverEnabled)
+            {
+                input = input.WithoutCover();
+            }
+
             var wasCrouched = _serverState.IsCrouched;
             var wasGrounded = _serverState.IsGrounded;
+            var previousCover = _serverState.Cover;
             _serverState = _simulation.Step(_serverState, input);
             _serverYaw = input.Yaw;
             if (_serverState.IsCrouched != wasCrouched)
             {
                 Debug.Log(FormatStanceLog(OwnerClientId, tick, _serverState.IsCrouched), this);
             }
+
+            ReportServerCover(tick, previousCover, _serverState.Cover);
 
             ReportServerLanding(tick, wasGrounded, _serverState);
 
@@ -487,12 +586,15 @@ namespace Fps.Net
             }
 
             var wasCrouched = _serverState.IsCrouched;
+            var previousCover = _serverState.Cover;
             _serverState = new MotorState(position, Vector3.zero, false, false);
             _simulation.Place(_serverState);
             if (wasCrouched)
             {
                 Debug.Log(FormatStanceLog(OwnerClientId, _serverTick, false), this);
             }
+
+            ReportServerCover(_serverTick, previousCover, _serverState.Cover);
 
             _hasPendingState = true;
             TeleportedRpc(_serverTick, position);
@@ -520,8 +622,14 @@ namespace Fps.Net
             _remoteStanceHistory.Record(tick, false);
             ShowRemoteStance(tick, false);
 
-            // サーバーはテレポート先を宙にいる状態から始める
-            RestartRemoteGrounded(tick, false);
+            // サーバーはテレポートで宙に置き直す (着地は次の確定状態で届く)
+            _remoteGroundedHistory = new StanceHistory();
+            _remoteGroundedHistory.Record(tick, false);
+            _remoteGrounded = false;
+
+            // サーバーはテレポートでカバーから出す
+            ResetRemoteCover();
+            RecordRemoteCover(tick, NetCoverState.Out);
 
             _latestRemoteTick = tick;
             _renderTick = tick;
@@ -530,7 +638,8 @@ namespace Fps.Net
         }
 
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
-        private void SubmitInputRpc(int tick, Vector2 move, float yaw, bool sprint, bool jump, bool crouch, RpcParams rpcParams = default)
+        private void SubmitInputRpc(
+            int tick, Vector2 move, float yaw, bool sprint, bool jump, bool crouch, bool cover, bool aim, RpcParams rpcParams = default)
         {
             if (_role != NetworkPlayerRole.ServerSimulated)
             {
@@ -564,19 +673,26 @@ namespace Fps.Net
             _inputBudget -= 1f;
 
             // ダウンはクライアントの申告ではなく、サーバーの知る状態で決める
-            ApplyAuthoritative(tick, new MotorInput(move, yaw, sprint, jump, crouch, _downed));
+            ApplyAuthoritative(tick, new MotorInput(move, yaw, sprint, jump, crouch, _downed, cover, aim));
         }
 
         [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable)]
         private void StateRpc(
-            int tick, Vector3 position, Vector3 velocity, bool isGrounded, bool isCrouched, float yaw, RpcParams rpcParams = default)
+            int tick,
+            Vector3 position,
+            Vector3 velocity,
+            bool isGrounded,
+            bool isCrouched,
+            NetCoverState cover,
+            float yaw,
+            RpcParams rpcParams = default)
         {
             if (rpcParams.Receive.SenderClientId != NetworkManager.ServerClientId)
             {
                 return;
             }
 
-            var state = new MotorState(position, velocity, isGrounded, isCrouched);
+            var state = new MotorState(position, velocity, isGrounded, isCrouched, cover);
             if (!state.IsFinite || !NetMath.IsFinite(yaw))
             {
                 WarnThrottled("[Net] dropped non-finite state for owner=" + OwnerClientId + " tick=" + tick);
@@ -589,7 +705,7 @@ namespace Fps.Net
                     Reconcile(tick, state);
                     break;
                 case NetworkPlayerRole.Interpolated:
-                    ReceiveRemoteState(tick, position, yaw, isCrouched, isGrounded);
+                    ReceiveRemoteState(tick, position, yaw, isCrouched, isGrounded, cover);
                     break;
             }
         }
@@ -625,7 +741,7 @@ namespace Fps.Net
                 predictedCrouched ? "true" : "false");
         }
 
-        private void ReceiveRemoteState(int tick, Vector3 position, float yaw, bool crouched, bool grounded)
+        private void ReceiveRemoteState(int tick, Vector3 position, float yaw, bool crouched, bool grounded, NetCoverState cover)
         {
             // 信頼性なしで送るので順番が入れ替わることがある。古いものは捨てる
             if (_hasRemoteState && tick <= _latestRemoteTick)
@@ -636,7 +752,8 @@ namespace Fps.Net
             _remoteHistory.Record(tick, NetMath.ToNumerics(position));
             _remoteYawHistory.Record(tick, YawDirection(yaw));
             _remoteStanceHistory.Record(tick, crouched);
-            RecordRemoteGrounded(tick, grounded);
+            _remoteGroundedHistory.Record(tick, grounded);
+            RecordRemoteCover(tick, cover);
             _latestRemoteTick = tick;
 
             if (!_hasRemoteState)
@@ -645,6 +762,8 @@ namespace Fps.Net
                 _renderTick = tick;
                 transform.SetPositionAndRotation(position, YawRotation(yaw));
                 ShowRemoteStance(tick, crouched);
+                _remoteGrounded = grounded;
+                ShowRemoteCover(tick);
             }
         }
 
@@ -699,11 +818,17 @@ namespace Fps.Net
                 ShowRemoteStance((int)Math.Floor(_renderTick), crouched);
             }
 
-            ShowRemoteGrounded((float)_renderTick);
+            if (_remoteGroundedHistory.TrySample((float)_renderTick, out var grounded))
+            {
+                _remoteGrounded = grounded;
+            }
+
+            ShowRemoteCover((float)_renderTick);
         }
 
         private void ResolveInputActions()
         {
+            AppliedInputBindings.EnsureLoaded();
             var actions = InputSystem.actions;
             if (actions == null)
             {
@@ -715,6 +840,8 @@ namespace Fps.Net
             _jumpAction = FindAndEnable(actions, JumpActionPath);
             _sprintAction = FindAndEnable(actions, SprintActionPath);
             _crouchAction = FindAndEnable(actions, CrouchActionPath);
+            _coverAction = FindAndEnable(actions, CoverActionPath);
+            _aimAction = FindAndEnable(actions, AimActionPath);
         }
 
         private InputAction FindAndEnable(InputActionAsset actions, string path)
@@ -754,9 +881,19 @@ namespace Fps.Net
             _active.Add(this);
         }
 
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            _controlSettings = settings;
+        }
+
         private void Shutdown()
         {
             _active.Remove(this);
+            if (_listeningToSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _listeningToSettings = false;
+            }
 
             foreach (var action in _enabledActions)
             {
@@ -771,6 +908,8 @@ namespace Fps.Net
             _jumpAction = null;
             _sprintAction = null;
             _crouchAction = null;
+            _coverAction = null;
+            _aimAction = null;
             if (_sprint != null)
             {
                 _sprint.Changed -= OnSprintChanged;
@@ -785,12 +924,17 @@ namespace Fps.Net
 
             _sprintPressLatched = false;
             _crouchPressLatched = false;
+            _coverPressLatched = false;
+            _remoteInCoverHistory = null;
+            _remoteLowCoverHistory = null;
+            _remoteCoverHeight = null;
             _downed = false;
             _prediction = null;
             _remoteHistory = null;
             _remoteYawHistory = null;
             _remoteStanceHistory = null;
-            ClearRemoteGrounded();
+            _remoteGroundedHistory = null;
+            _remoteGrounded = true;
             _hasPendingState = false;
             _role = NetworkPlayerRole.None;
         }

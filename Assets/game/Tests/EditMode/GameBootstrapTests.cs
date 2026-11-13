@@ -171,6 +171,14 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlayerVaultFollowsTheRules()
+        {
+            Assert.That(_world.Mover.VaultRule, Is.EqualTo(_world.Rules.Actions.Vault));
+            Assert.That(_world.Mover.IsVaulting, Is.False);
+            Assert.That(_world.Weapon.IsFireBlocked, Is.False, "not vaulting");
+        }
+
+        [Test]
         public void PlayerWeaponsUseTheWiredReserveRules()
         {
             Assert.That(_world.Weapon.Rules, Is.SameAs(_world.Rules));

@@ -10,7 +10,7 @@ namespace Fps.Core
     public readonly struct FootstepCue : IEquatable<FootstepCue>
     {
         /// <summary>何も鳴らさない結果。</summary>
-        public static readonly FootstepCue None = default;
+        public static readonly FootstepCue None;
 
         /// <summary>鳴らす音の種類。</summary>
         public FootstepCueKind Kind { get; }

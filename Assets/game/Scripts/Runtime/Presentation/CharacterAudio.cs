@@ -16,6 +16,7 @@ namespace Fps.Runtime
     /// </list>
     /// 音は <see cref="Catalog"/> の <see cref="PresentationCatalog.Footstep"/> / <see cref="PresentationCatalog.Landing"/> / <see cref="PresentationCatalog.HurtVoice"/>。
     /// 無いものは鳴らさないだけで、動きや戦闘の処理は止めない。AudioSource は初めて鳴らすときに本体へ足す (足と声で 2 つ)。
+    /// 銃声・着弾・リロードの音は <see cref="WeaponPresentation"/> が鳴らす。
     /// 専用サーバーでは <c>Fps.Net.HeadlessPresentation</c> が止める。
     /// </summary>
     [DisallowMultipleComponent]

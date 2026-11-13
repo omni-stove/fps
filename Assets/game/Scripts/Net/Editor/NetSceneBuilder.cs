@@ -55,6 +55,19 @@ namespace Fps.Editor
         };
 
         /// <summary>
+        /// カバーの確かめ用の壁 (ルールで Cover を On にしたとき張り付ける)。両陣地の前に、低い壁 (上端が床から 0.8m、
+        /// <see cref="CoverProbe.LowWallHeight"/> 未満) と、端から覗ける高い壁 (2.5m) を 1 枚ずつ、相手の陣地に向けて置く。
+        /// 位置は床の上の中心、大きさは Cube の拡大率。出現地点と陣地の間の通り道は塞がない。
+        /// </summary>
+        public static readonly (string Name, Vector3 Center, Vector3 Size)[] CoverWalls =
+        {
+            ("Cover Low Alpha", new Vector3(-9f, GroundY + 0.4f, -10f), new Vector3(4f, 0.8f, 0.4f)),
+            ("Cover High Alpha", new Vector3(9f, GroundY + 1.25f, -10f), new Vector3(2f, 2.5f, 0.4f)),
+            ("Cover Low Bravo", new Vector3(9f, GroundY + 0.4f, 10f), new Vector3(4f, 0.8f, 0.4f)),
+            ("Cover High Bravo", new Vector3(-9f, GroundY + 1.25f, 10f), new Vector3(2f, 2.5f, 0.4f)),
+        };
+
+        /// <summary>
         /// プレハブにするのは、NetworkObject の GlobalObjectIdHash がアセットの GUID からエディタでしか作られず、
         /// 実行時に生成したオブジェクトではサーバーとクライアントで同じプレハブだと突き合わせられないため。
         /// </summary>
@@ -70,14 +83,51 @@ namespace Fps.Editor
             var loadout = LoadOrBuildLoadout();
             var catalog = LoadCatalogFor(loadout);
             var rules = LoadOrBuildRules();
-            var playerPrefab = BuildPrefab(PlayerPrefabPath, CreatePlayerSource);
+            var rig = LoadOrBuildRig();
+            var playerPrefab = BuildPrefab(PlayerPrefabPath, () => CreatePlayerSource(rig));
             var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout, catalog, rules));
             BuildScene(playerPrefab, matchPrefab);
             BuildSceneList.Register(NetBootstrap.ScenePath);
             AssetDatabase.SaveAssets();
             Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath
                 + " (loadout " + WeaponAssetBuilder.LoadoutPath + ", catalog " + WeaponAssetBuilder.CatalogPath
-                + ", rules " + GameRulesAssetBuilder.TeamDeathmatchPath + ")");
+                + ", rules " + GameRulesAssetBuilder.TeamDeathmatchPath + ", rig " + CharacterRigBuilder.PrefabPath + ")");
+        }
+
+        /// <summary>
+        /// プレイヤーの見た目にする人型のリグ (<see cref="CharacterRigBuilder.PrefabPath"/>) を読む。無ければ <see cref="CharacterRigBuilder.Build"/> で作る。
+        /// 根に AnimatorController の付いた Animator が無い・コライダーがある (当たり判定と自分の CharacterController にぶつかる) なら、
+        /// プレハブを書かずに例外を投げる。
+        /// </summary>
+        public static GameObject LoadOrBuildRig()
+        {
+            var rig = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterRigBuilder.PrefabPath);
+            if (rig == null)
+            {
+                Debug.Log("[Net] NetSceneBuilder: " + CharacterRigBuilder.PrefabPath + " is missing; running CharacterRigBuilder.Build");
+                CharacterRigBuilder.Build();
+                rig = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterRigBuilder.PrefabPath);
+            }
+
+            if (rig == null)
+            {
+                throw new InvalidOperationException("[Net] NetSceneBuilder: " + CharacterRigBuilder.PrefabPath + " could not be loaded");
+            }
+
+            var animator = rig.GetComponent<Animator>();
+            if (animator == null || animator.runtimeAnimatorController == null)
+            {
+                throw new InvalidOperationException("[Net] NetSceneBuilder: " + CharacterRigBuilder.PrefabPath
+                    + " has no Animator with a controller on its root; run CharacterRigBuilder.Build");
+            }
+
+            if (rig.GetComponentsInChildren<Collider>(true).Length > 0)
+            {
+                throw new InvalidOperationException("[Net] NetSceneBuilder: " + CharacterRigBuilder.PrefabPath
+                    + " has colliders, which would block the player's own CharacterController and shots; run CharacterRigBuilder.Build");
+            }
+
+            return rig;
         }
 
         /// <summary>
@@ -165,22 +215,14 @@ namespace Fps.Editor
             return loadout;
         }
 
-        private static GameObject CreatePlayerSource()
+        private static GameObject CreatePlayerSource(GameObject rigPrefab)
         {
             var source = new GameObject("NetPlayer");
             source.AddComponent<NetworkObject>();
 
-            // 見た目は子に置く。しゃがみで NetStance が見た目だけを縦に縮める (本体を縮めると目や CharacterController まで縮む)
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = NetStance.BodyName;
-            body.transform.SetParent(source.transform, false);
-            body.transform.localPosition = Vector3.zero;
-            body.transform.localRotation = Quaternion.identity;
-            body.transform.localScale = Vector3.one;
+            AddRig(source, rigPrefab);
 
-            // 位置は NetworkPlayerMotor が同期する (リスポーンのテレポートも Motor 経由)。NetworkTransform は付けない。
-            // CharacterController 自体がカプセルのコライダーなので、プリミティブ付属のコライダーは二重になる
-            UnityEngine.Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
+            // 位置は NetworkPlayerMotor が同期する (リスポーンのテレポートも Motor 経由)。NetworkTransform は付けない
             var controller = source.AddComponent<CharacterController>();
             controller.height = PlayerHeight;
             controller.radius = PlayerRadius;
@@ -200,6 +242,32 @@ namespace Fps.Editor
             // 演出と手榴弾。専用サーバーでは演出だけを HeadlessPresentation が止める
             CharacterComponents.Attach(source, throwsGrenades: true);
             return source;
+        }
+
+        /// <summary>
+        /// 見た目として人型のリグ (rigPrefab のプレハブのインスタンス) を本体の直下の <see cref="CharacterAnimator.RigObjectName"/> に置き、
+        /// 足元 (カプセルの底) に合わせる。実行時は <see cref="CharacterAnimator"/> がこれを使って動かす。
+        /// </summary>
+        /// <remarks>
+        /// <see cref="NetStance.BodyName"/> にはしない。NetStance は Body をしゃがみで縦に縮め、ダウンで寝かせるが、
+        /// リグではその姿勢を Animator のクリップが付けるので、二重にかかる。
+        /// 実行時に Resources から置かずにプレハブに入れるのは、<see cref="NetPlayer"/> が Awake で見た目の Renderer を集めて
+        /// チームの色を塗るため (CharacterAnimator の Start ではまだ置かれていない) と、リグが読めなくても見た目が消えないようにするため。
+        /// プレハブのインスタンスのままにして、CharacterRigBuilder で作り直したリグがそのまま反映されるようにする。
+        /// </remarks>
+        private static void AddRig(GameObject source, GameObject rigPrefab)
+        {
+            var rig = (GameObject)PrefabUtility.InstantiatePrefab(rigPrefab);
+            if (rig == null)
+            {
+                throw new InvalidOperationException("[Net] NetSceneBuilder: could not instantiate " + CharacterRigBuilder.PrefabPath);
+            }
+
+            rig.name = CharacterAnimator.RigObjectName;
+            rig.transform.SetParent(source.transform, false);
+            rig.transform.localPosition = new Vector3(0f, -PlayerHeight / 2f, 0f);
+            rig.transform.localRotation = Quaternion.identity;
+            rig.transform.localScale = Vector3.one;
         }
 
         /// <summary>
@@ -310,6 +378,16 @@ namespace Fps.Editor
             ground.name = "Ground";
             ground.transform.position = new Vector3(0f, GroundY, 0f);
             ground.transform.localScale = GroundScale;
+
+            var coverRoot = new GameObject("CoverWalls");
+            foreach (var (wallName, center, size) in CoverWalls)
+            {
+                var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                wall.name = wallName;
+                wall.transform.SetParent(coverRoot.transform, false);
+                wall.transform.localPosition = center;
+                wall.transform.localScale = size;
+            }
 
             var spawnRoot = new GameObject("SpawnPoints");
             foreach (var (pointName, position, team) in SpawnPoints)

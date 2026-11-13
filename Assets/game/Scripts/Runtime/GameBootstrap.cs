@@ -439,14 +439,14 @@ namespace Fps.Runtime
 
             WireAds(ads, weapon, mover);
             WireSpreadAndRecoil(weapon, ads, mover, look);
-            WireDodge(mover, weapon, ads);
+            WireDodgeAndVault(mover, weapon, ads);
         }
 
         /// <summary>
-        /// 回避の間は撃たせず、覗き込みを解かせる (転がり始めたときと、転がっている間に覗き込もうとしたとき)。
-        /// 回避を使うかはルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら転がらないので、ここは常に配線しておく。
+        /// 回避・乗り越えの間は撃たせず、覗き込みを解かせる (始めたときと、その最中に覗き込もうとしたとき)。
+        /// 使うかはルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら始まらないので、ここは常に配線しておく。
         /// </summary>
-        private static void WireDodge(PlayerController mover, WeaponController weapon, AimDownSights ads)
+        private static void WireDodgeAndVault(PlayerController mover, WeaponController weapon, AimDownSights ads)
         {
             if (mover == null)
             {
@@ -455,7 +455,7 @@ namespace Fps.Runtime
 
             if (weapon != null)
             {
-                weapon.FireBlocker = () => mover != null && mover.IsDodging;
+                weapon.FireBlocker = () => mover != null && (mover.IsDodging || mover.IsVaulting);
             }
 
             if (ads == null)
@@ -464,9 +464,10 @@ namespace Fps.Runtime
             }
 
             mover.DodgeStarted += _ => ads.Release();
+            mover.VaultStarted += _ => ads.Release();
             ads.AimingChanged += aiming =>
             {
-                if (aiming && mover != null && mover.IsDodging)
+                if (aiming && mover != null && (mover.IsDodging || mover.IsVaulting))
                 {
                     ads.Release();
                 }

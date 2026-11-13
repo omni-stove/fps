@@ -341,18 +341,25 @@ namespace Fps.Core.Tests
             var zeroHealth = new[] { 1, 0 };
             var negativeHealth = new[] { 1, -3 };
 
-            Assert.Throws<ArgumentNullException>(() => new StructureLayout(null, new[] { true }, noEdges));
-            Assert.Throws<ArgumentNullException>(() => new StructureLayout(new[] { 1 }, null, noEdges));
-            Assert.Throws<ArgumentNullException>(() => new StructureLayout(new[] { 1 }, new[] { true }, null));
+            var oneHealth = new[] { 1 };
+            var oneGround = new[] { true };
+            Assert.Throws<ArgumentNullException>(() => new StructureLayout(null, oneGround, noEdges));
+            Assert.Throws<ArgumentNullException>(() => new StructureLayout(oneHealth, null, noEdges));
+            Assert.Throws<ArgumentNullException>(() => new StructureLayout(oneHealth, oneGround, null));
             Assert.Throws<ArgumentException>(() => new StructureLayout(Array.Empty<int>(), Array.Empty<bool>(), noEdges));
-            Assert.Throws<ArgumentException>(() => new StructureLayout(new[] { 1, 1 }, new[] { true }, noEdges));
+            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, oneGround, noEdges));
             Assert.Throws<ArgumentOutOfRangeException>(() => new StructureLayout(zeroHealth, groundFirst, noEdges));
             Assert.Throws<ArgumentOutOfRangeException>(() => new StructureLayout(negativeHealth, groundFirst, noEdges));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new StructureLayout(twoHealth, groundFirst, new[] { (0, 2) }));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new StructureLayout(twoHealth, groundFirst, new[] { (-1, 0) }));
-            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, groundFirst, new[] { (1, 1) }));
-            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, groundFirst, new[] { (0, 1), (0, 1) }));
-            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, groundFirst, new[] { (0, 1), (1, 0) }));
+            var outOfRange = new[] { (0, 2) };
+            var negativeIndex = new[] { (-1, 0) };
+            var selfEdge = new[] { (1, 1) };
+            var duplicate = new[] { (0, 1), (0, 1) };
+            var reversed = new[] { (0, 1), (1, 0) };
+            Assert.Throws<ArgumentOutOfRangeException>(() => new StructureLayout(twoHealth, groundFirst, outOfRange));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new StructureLayout(twoHealth, groundFirst, negativeIndex));
+            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, groundFirst, selfEdge));
+            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, groundFirst, duplicate));
+            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, groundFirst, reversed));
         }
 
         [Test]

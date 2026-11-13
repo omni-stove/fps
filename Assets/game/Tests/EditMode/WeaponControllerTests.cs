@@ -524,6 +524,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ShotFilterIsNullByDefaultAndTheShotGoesStraightAhead()
         {
+            _rifle.HipSpreadDegrees = 0f;
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
             var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
             var aside = CreateStructure("Aside", new Vector3(20f, 0f, 10f));
@@ -538,6 +539,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ShotFilterOriginIsWhereTheRaycastStarts()
         {
+            _rifle.HipSpreadDegrees = 0f;
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
             var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
             var aside = CreateStructure("Aside", new Vector3(20f, 0f, 10f));

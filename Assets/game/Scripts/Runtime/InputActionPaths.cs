@@ -22,5 +22,6 @@ namespace Fps.Runtime
         public const string Scoreboard = "Player/Scoreboard";
         public const string Dodge = "Player/Dodge";
         public const string Grenade = "Player/Grenade";
+        public const string NetStats = "Player/NetStats";
     }
 }

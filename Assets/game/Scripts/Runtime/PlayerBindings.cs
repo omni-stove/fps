@@ -209,6 +209,9 @@ namespace Fps.Runtime
                 case "Grenade":
                     label = "グレネード";
                     break;
+                case "NetStats":
+                    label = "回線の表示";
+                    break;
                 default:
                     label = actionName;
                     break;
@@ -540,6 +543,9 @@ namespace Fps.Runtime
                 slots.Add(new RebindSlot(action, InputDeviceKind.KeyboardMouse));
                 slots.Add(new RebindSlot(action, InputDeviceKind.Gamepad));
             }
+
+            // 回線の表示はゲームパッドに割り当てない (空いているボタンが無い) ので、キーボードの行だけを出す
+            slots.Add(new RebindSlot("NetStats", InputDeviceKind.KeyboardMouse));
 
             return slots.ToArray();
         }

@@ -118,14 +118,16 @@ namespace Fps.Tests.EditMode
                 .With(ControlValue.FieldOfView, 72)
                 .With(ControlValue.MasterVolume, 30)
                 .With(ControlValue.EffectsVolume, 0)
-                .With(InputDeviceKind.Gamepad, HoldAction.Crouch, HoldMode.Hold);
+                .With(InputDeviceKind.Gamepad, HoldAction.Crouch, HoldMode.Hold)
+                .WithShowNetStats(true);
 
             _store.Save(settings);
 
             // 起動し直したときと同じく、新しいストアで読む。
             var loaded = new ControlSettingsStore(_store.Key).Load();
             Assert.That(loaded, Is.EqualTo(settings));
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":2"));
+            Assert.That(loaded.ShowNetStats, Is.True);
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":3"));
             LogAssert.NoUnexpectedReceived();
         }
 

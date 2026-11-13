@@ -86,10 +86,10 @@ namespace Fps.Core.Tests
             Assert.That(
                 ControlSettings.Default.ToJson(),
                 Is.EqualTo(Json(
-                    "{'version':2,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
+                    "{'version':3,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
                     "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}," +
                     "'mouseSensitivity':100,'gamepadSensitivity':100,'adsSensitivity':100," +
-                    "'fieldOfView':60,'masterVolume':100,'effectsVolume':100}")));
+                    "'fieldOfView':60,'masterVolume':100,'effectsVolume':100,'showNetStats':false}")));
         }
 
         [Test]
@@ -139,7 +139,7 @@ namespace Fps.Core.Tests
         [TestCase("{'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':'1','gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':0,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
-        [TestCase("{'version':3,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':4,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':-1,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         public void BrokenDataFallsBackToAllDefaults(string text)
         {
@@ -152,9 +152,9 @@ namespace Fps.Core.Tests
         [Test]
         public void ReportsTheVersionItRejected()
         {
-            ControlSettings.FromJson(Json("{'version':3}"), out var problems);
+            ControlSettings.FromJson(Json("{'version':4}"), out var problems);
 
-            Assert.That(problems[0], Does.Contain("version 3"));
+            Assert.That(problems[0], Does.Contain("version 4"));
         }
 
         // 1 つの操作の値が欠けている・型違い・知らない名前なら、その操作だけ初期値
@@ -379,7 +379,7 @@ namespace Fps.Core.Tests
         {
             var loaded = ControlSettings.FromJson(Json(_valid), out _);
 
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':2,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':3,")));
             Assert.That(ControlSettings.FromJson(loaded.ToJson(), out var problems), Is.EqualTo(loaded));
             Assert.That(problems, Is.Empty);
         }
@@ -474,6 +474,94 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new ControlValueRange(0, 10, 11));
             Assert.That(new ControlValueRange(0, 10, 5).Clamp(long.MaxValue), Is.EqualTo(10));
             Assert.That(new ControlValueRange(0, 10, 5).Clamp(long.MinValue), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void NetStatsAreHiddenByDefault()
+        {
+            Assert.That(ControlSettings.Default.ShowNetStats, Is.False);
+        }
+
+        [Test]
+        public void WithShowNetStatsChangesOnlyThatFlag()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.FieldOfView, 80)
+                .With(InputDeviceKind.KeyboardMouse, HoldAction.Aim, HoldMode.Toggle);
+
+            var shown = settings.WithShowNetStats(true);
+
+            Assert.That(shown.ShowNetStats, Is.True);
+            Assert.That(settings.ShowNetStats, Is.False);
+            Assert.That(shown.FieldOfView, Is.EqualTo(80f));
+            Assert.That(shown.Get(InputDeviceKind.KeyboardMouse, HoldAction.Aim), Is.EqualTo(HoldMode.Toggle));
+            Assert.That(shown, Is.Not.EqualTo(settings));
+            Assert.That(shown.WithShowNetStats(false), Is.EqualTo(settings));
+            Assert.That(shown.WithShowNetStats(false).GetHashCode(), Is.EqualTo(settings.GetHashCode()));
+            Assert.That(settings.WithShowNetStats(false), Is.SameAs(settings));
+        }
+
+        [Test]
+        public void ChangingAModeOrValueKeepsTheNetStatsFlag()
+        {
+            var shown = ControlSettings.Default.WithShowNetStats(true);
+
+            Assert.That(shown.With(ControlValue.MasterVolume, 10).ShowNetStats, Is.True);
+            Assert.That(shown.With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle).ShowNetStats, Is.True);
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void RoundTripsTheNetStatsFlag(bool show)
+        {
+            var settings = ControlSettings.Default.With(ControlValue.MouseSensitivity, 200).WithShowNetStats(show);
+
+            var loaded = ControlSettings.FromJson(settings.ToJson(), out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.ShowNetStats, Is.EqualTo(show));
+        }
+
+        [Test]
+        public void ReadsVersionTwoWithTheNetStatsHiddenAndNoProblems()
+        {
+            var loaded = ControlSettings.FromJson(Json(_validV2), out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded.ShowNetStats, Is.False);
+            Assert.That(loaded.Get(ControlValue.FieldOfView), Is.EqualTo(75), "the saved value");
+        }
+
+        [Test]
+        public void VersionTwoReportsTheNetStatsKeyAsUnknown()
+        {
+            var loaded = ControlSettings.FromJson(
+                Json(_validV2.Replace("'effectsVolume':0}", "'effectsVolume':0,'showNetStats':true}", StringComparison.Ordinal)),
+                out var problems);
+
+            Assert.That(loaded.ShowNetStats, Is.False);
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("'showNetStats'"));
+        }
+
+        // 回線の表示が欠けている・真偽値でないなら、その項目だけ初期値 (出さない)
+        [TestCase(",'showNetStats':true", "")]
+        [TestCase("'showNetStats':true", "'showNetStats':'true'")]
+        [TestCase("'showNetStats':true", "'showNetStats':1")]
+        [TestCase("'showNetStats':true", "'showNetStats':null")]
+        public void BrokenNetStatsFlagFallsBackOnlyForThatFlag(string from, string to)
+        {
+            var valid = Json(_validV2.Replace("'version':2", "'version':3", StringComparison.Ordinal)
+                .Replace("'effectsVolume':0}", "'effectsVolume':0,'showNetStats':true}", StringComparison.Ordinal));
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("showNetStats"));
+            Assert.That(loaded.ShowNetStats, Is.False, "the default");
+            Assert.That(loaded.Get(ControlValue.FieldOfView), Is.EqualTo(75), "the saved value");
         }
 
         /// <summary>読みやすさのため ' で書いた JSON を " に直す。</summary>

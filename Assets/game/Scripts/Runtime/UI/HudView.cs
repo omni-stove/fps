@@ -8,14 +8,24 @@ namespace Fps.Runtime
     /// <summary>
     /// <see cref="HudModel"/> の文字列を Hud.uxml の Label に写す。<see cref="HudModel.Changed"/> が来たときだけ書き換え、
     /// 毎フレームは何もしない。表示の判断 (書式・いつ変わるか) はすべて HudModel が持つ。
+    /// HUD の量で消す項目 (<see cref="HudVisibility"/>) は、モデルの値によらず欄ごと隠す。
     /// </summary>
     public sealed class HudView : IDisposable
     {
+        /// <summary>Hud.uxml の体力の欄 (見出しと <see cref="HealthLabelName"/> を含む)。HUD の量で消すときは欄ごと隠す。</summary>
+        public const string HealthPanelName = "hud-health-panel";
+
         /// <summary>Hud.uxml の体力の Label。</summary>
         public const string HealthLabelName = "hud-health";
 
+        /// <summary>Hud.uxml の弾数の欄 (見出しと <see cref="AmmoLabelName"/> を含む)。HUD の量で消すときは欄ごと隠す。</summary>
+        public const string AmmoPanelName = "hud-ammo-panel";
+
         /// <summary>Hud.uxml の弾数の Label。</summary>
         public const string AmmoLabelName = "hud-ammo";
+
+        /// <summary>Hud.uxml の残り時間の欄 (<see cref="TimeLabelName"/> を含む)。HUD の量で消すときは欄ごと隠す。</summary>
+        public const string TimePanelName = "hud-time-panel";
 
         /// <summary>Hud.uxml の、弾数の上に出す武器名の Label。武器名が空のときは隠す。</summary>
         public const string WeaponNameLabelName = "hud-weapon-name";
@@ -81,10 +91,14 @@ namespace Fps.Runtime
         private Color _alphaColor = Color.white;
         private Color _bravoColor = Color.white;
         private bool _disposed;
+        private HudVisibility _visibility;
 
+        public VisualElement HealthPanel { get; }
         public Label HealthLabel { get; }
+        public VisualElement AmmoPanel { get; }
         public Label AmmoLabel { get; }
         public Label WeaponNameLabel { get; }
+        public VisualElement TimePanel { get; }
         public Label TimeLabel { get; }
         public VisualElement Crosshair { get; }
         public VisualElement CrosshairDot { get; }
@@ -101,11 +115,17 @@ namespace Fps.Runtime
         public VisualElement ReloadFill { get; }
         public VisualElement ReloadWindow { get; }
 
+        /// <summary>すべての項目を出す (<see cref="HudVisibility.Full"/>) View を作る。</summary>
+        public HudView(VisualElement root, HudModel model)
+            : this(root, model, HudVisibility.Full)
+        {
+        }
+
         /// <summary>
-        /// root の下から Label と照準を名前で探し、今のモデルの文字列を入れてから変更を購読する。
+        /// root の下から Label と照準を名前で探し、今のモデルの文字列を入れてから変更を購読する。visibility で消す項目は隠す。
         /// 見つからなければ <see cref="InvalidOperationException"/> を投げる (UXML と名前がずれている)。
         /// </summary>
-        public HudView(VisualElement root, HudModel model)
+        public HudView(VisualElement root, HudModel model, HudVisibility visibility)
         {
             if (root == null)
             {
@@ -113,10 +133,14 @@ namespace Fps.Runtime
             }
 
             _model = model ?? throw new ArgumentNullException(nameof(model));
-            HealthLabel = Require<Label>(root, HealthLabelName);
-            AmmoLabel = Require<Label>(root, AmmoLabelName);
+            _visibility = visibility ?? throw new ArgumentNullException(nameof(visibility));
+            HealthPanel = Require<VisualElement>(root, HealthPanelName);
+            HealthLabel = Require<Label>(HealthPanel, HealthLabelName);
+            AmmoPanel = Require<VisualElement>(root, AmmoPanelName);
+            AmmoLabel = Require<Label>(AmmoPanel, AmmoLabelName);
             WeaponNameLabel = Require<Label>(root, WeaponNameLabelName);
-            TimeLabel = Require<Label>(root, TimeLabelName);
+            TimePanel = Require<VisualElement>(root, TimePanelName);
+            TimeLabel = Require<Label>(TimePanel, TimeLabelName);
             Crosshair = Require<VisualElement>(root, CrosshairName);
             CrosshairDot = Require<VisualElement>(Crosshair, CrosshairDotName);
             CrosshairTop = Require<VisualElement>(Crosshair, CrosshairTopName);
@@ -135,13 +159,28 @@ namespace Fps.Runtime
             ShowHealth();
             ShowAmmo();
             ShowWeaponName();
-            TimeLabel.text = _model.TimeText;
+            ShowTime();
             ShowNotice();
             ShowScores();
             ShowResult();
             ShowReloadProgress();
             ShowCrosshair();
             _model.Changed += OnChanged;
+        }
+
+        /// <summary>今出す項目。</summary>
+        public HudVisibility Visibility => _visibility;
+
+        /// <summary>出す項目を visibility に替え、項目ごとに出し直す。</summary>
+        public void ApplyVisibility(HudVisibility visibility)
+        {
+            _visibility = visibility ?? throw new ArgumentNullException(nameof(visibility));
+            ShowHealth();
+            ShowAmmo();
+            ShowWeaponName();
+            ShowTime();
+            ShowScores();
+            ShowCrosshair();
         }
 
         /// <summary>チームの点数を塗る色を決め、今の点数を塗り直す。決めるまでは白で塗る。</summary>
@@ -181,7 +220,7 @@ namespace Fps.Runtime
                     ShowAmmo();
                     break;
                 case HudField.Time:
-                    TimeLabel.text = _model.TimeText;
+                    ShowTime();
                     break;
                 case HudField.Notice:
                     ShowNotice();
@@ -210,17 +249,25 @@ namespace Fps.Runtime
         {
             HealthLabel.text = _model.HealthText;
             HealthLabel.EnableInClassList(LowHealthClass, _model.IsHealthLow);
+            HealthPanel.style.display = Display(_visibility.Health);
         }
 
         private void ShowAmmo()
         {
             AmmoLabel.text = _model.AmmoText;
             AmmoLabel.EnableInClassList(ReloadingClass, _model.IsReloading);
+            AmmoPanel.style.display = Display(_visibility.Ammo);
         }
 
         private void ShowWeaponName()
         {
-            ShowOrHide(WeaponNameLabel, _model.WeaponNameText);
+            ShowOrHide(WeaponNameLabel, _model.WeaponNameText, _visibility.WeaponName);
+        }
+
+        private void ShowTime()
+        {
+            TimeLabel.text = _model.TimeText;
+            TimePanel.style.display = Display(_visibility.Time);
         }
 
         /// <summary>案内の文字列を入れ、空なら Label ごと隠す (背景の帯だけが残らないように)。</summary>
@@ -234,7 +281,7 @@ namespace Fps.Runtime
             ShowOrHide(ResultLabel, _model.ResultText);
         }
 
-        /// <summary>点数を入れてチームの色で塗る。点数が無ければ欄ごと隠す。</summary>
+        /// <summary>点数を入れてチームの色で塗る。点数が無いか HUD の量で消すなら欄ごと隠す。</summary>
         private void ShowScores()
         {
             FirstScoreLabel.text = _model.FirstScoreText;
@@ -246,7 +293,7 @@ namespace Fps.Runtime
             {
                 FirstScoreLabel.style.color = TeamColor(first.Value);
                 SecondScoreLabel.style.color = TeamColor(second.Value);
-                ScorePanel.style.display = DisplayStyle.Flex;
+                ScorePanel.style.display = Display(_visibility.Score);
             }
             else
             {
@@ -289,11 +336,13 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 照準を出すか隠し、4 本の線を中央から隙間の分だけ外へずらす。Hud.uss は線を中央に接する位置に置いているので、
-        /// 隙間は translate だけで決まる。
+        /// 隙間は translate だけで決まる。大きさ 0 の箱を中央に置いているので、箱の scale で線と隙間がまとめて中央へ縮む。
         /// </summary>
         private void ShowCrosshair()
         {
-            Crosshair.style.display = _model.IsCrosshairVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            Crosshair.style.display = Display(_model.IsCrosshairVisible && _visibility.Crosshair);
+            var scale = _visibility.CrosshairScale;
+            Crosshair.style.scale = new Scale(new Vector2(scale, scale));
 
             var gap = CrosshairGap(_model.CrosshairSpread);
             CrosshairTop.style.translate = new Translate(new Length(0f), new Length(-gap));
@@ -302,10 +351,15 @@ namespace Fps.Runtime
             CrosshairRight.style.translate = new Translate(new Length(gap), new Length(0f));
         }
 
-        private static void ShowOrHide(Label label, string text)
+        private static void ShowOrHide(Label label, string text, bool allowed = true)
         {
             label.text = text;
-            label.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
+            label.style.display = Display(allowed && !string.IsNullOrEmpty(text));
+        }
+
+        private static DisplayStyle Display(bool shown)
+        {
+            return shown ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private static T Require<T>(VisualElement root, string elementName)

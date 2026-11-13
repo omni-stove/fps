@@ -14,6 +14,20 @@ namespace Fps.Core.Tests
             Assert.That(HudFormat.Health(current), Is.EqualTo(expected));
         }
 
+        [TestCase(30, false, "30")]
+        [TestCase(0, false, "0")]
+        [TestCase(0, true, HudFormat.Reloading)]
+        public void MagazineIsTheMagazineCountOrTheReloadingText(int magazine, bool reloading, string expected)
+        {
+            Assert.That(HudFormat.Magazine(magazine, reloading), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void MagazineRejectsNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Magazine(-1, false));
+        }
+
         [TestCase(10, "次の試合まで 10 秒")]
         [TestCase(1, "次の試合まで 1 秒")]
         [TestCase(0, "次の試合まで 0 秒")]

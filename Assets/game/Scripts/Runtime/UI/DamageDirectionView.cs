@@ -66,10 +66,13 @@ namespace Fps.Runtime
             Tick(Time.unscaledDeltaTime);
         }
 
-        /// <summary>sourcePosition から撃たれた弧を出す。近い攻撃元の弧が既にあれば、それを出し直す。</summary>
+        /// <summary>
+        /// sourcePosition から撃たれた弧を出す。近い攻撃元の弧が既にあれば、それを出し直す。
+        /// HUD の量で出さない (<see cref="HudElementView.IsAllowed"/> が false) ときは何もしない。
+        /// </summary>
         public void Show(Vector3 sourcePosition)
         {
-            if (!IsFinite(sourcePosition))
+            if (!IsAllowed || !IsFinite(sourcePosition))
             {
                 return;
             }
@@ -140,6 +143,14 @@ namespace Fps.Runtime
             }
 
             Refresh();
+        }
+
+        protected override void OnAllowedChanged(bool allowed)
+        {
+            if (!allowed)
+            {
+                Clear();
+            }
         }
 
         protected override void OnUnbinding(VisualElement element)

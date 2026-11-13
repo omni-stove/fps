@@ -132,6 +132,24 @@ namespace Fps.Core
             return (reloading ? Reloading : magazine.ToString(CultureInfo.InvariantCulture)) + AmmoSeparator + InfiniteReserve;
         }
 
+        /// <summary>予備を出さない HUD (<see cref="HudVisibility.ReserveAmmo"/> が false) で、武器がまだ無いときの表示。</summary>
+        public const string NoMagazine = "--";
+
+        /// <summary>
+        /// 予備を出さない HUD (<see cref="HudVisibility.ReserveAmmo"/> が false) の弾数。弾倉の数だけを出し、リロード中は
+        /// <see cref="Ammo(int, int, bool)"/> と同じく数の代わりに <see cref="Reloading"/> を出す。
+        /// </summary>
+        /// <example><c>Magazine(30, false)</c> は <c>30</c>、<c>Magazine(0, true)</c> は <c>リロード中</c></example>
+        public static string Magazine(int magazine, bool reloading)
+        {
+            if (magazine < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(magazine), magazine, "magazine must not be negative");
+            }
+
+            return reloading ? Reloading : magazine.ToString(CultureInfo.InvariantCulture);
+        }
+
         /// <summary>
         /// 体力が少ないと見なす割合。最大体力のこの割合以下 (0 は除く) で HUD が体力を警告の色にする。
         /// </summary>

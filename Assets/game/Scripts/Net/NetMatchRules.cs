@@ -15,12 +15,21 @@ namespace Fps.Net
         public RespawnMode RespawnMode;
         public bool InfiniteReserve;
 
-        public NetMatchRules(DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve)
+        /// <summary>HUD に出す項目の量。クライアントの NetHud が <see cref="Fps.Runtime.Hud.ApplyDensity"/> に渡す。</summary>
+        public HudDensity HudDensity;
+
+        public NetMatchRules(
+            DeathBody deathBody,
+            DeathCamera deathCamera,
+            RespawnMode respawnMode,
+            bool infiniteReserve,
+            HudDensity hudDensity = HudDensity.Full)
         {
             DeathBody = deathBody;
             DeathCamera = deathCamera;
             RespawnMode = respawnMode;
             InfiniteReserve = infiniteReserve;
+            HudDensity = hudDensity;
         }
 
         /// <summary><see cref="GameRules.Default"/> の値。サーバーから届く前と、試合を始められなかったときはこの値のまま。</summary>
@@ -34,7 +43,7 @@ namespace Fps.Net
                 throw new ArgumentNullException(nameof(rules));
             }
 
-            return new NetMatchRules(rules.DeathBody, rules.DeathCamera, rules.RespawnMode, rules.InfiniteReserve);
+            return new NetMatchRules(rules.DeathBody, rules.DeathCamera, rules.RespawnMode, rules.InfiniteReserve, rules.HudDensity);
         }
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer)
@@ -44,6 +53,7 @@ namespace Fps.Net
             serializer.SerializeValue(ref DeathCamera);
             serializer.SerializeValue(ref RespawnMode);
             serializer.SerializeValue(ref InfiniteReserve);
+            serializer.SerializeValue(ref HudDensity);
         }
 
         public bool Equals(NetMatchRules other)
@@ -51,7 +61,8 @@ namespace Fps.Net
             return DeathBody == other.DeathBody
                 && DeathCamera == other.DeathCamera
                 && RespawnMode == other.RespawnMode
-                && InfiniteReserve == other.InfiniteReserve;
+                && InfiniteReserve == other.InfiniteReserve
+                && HudDensity == other.HudDensity;
         }
 
         public override bool Equals(object obj)
@@ -61,13 +72,13 @@ namespace Fps.Net
 
         public override int GetHashCode()
         {
-            return HashCode.Combine((int)DeathBody, (int)DeathCamera, (int)RespawnMode, InfiniteReserve);
+            return HashCode.Combine((int)DeathBody, (int)DeathCamera, (int)RespawnMode, InfiniteReserve, (int)HudDensity);
         }
 
         public override string ToString()
         {
             return "deathBody=" + DeathBody + " deathCamera=" + DeathCamera + " respawnMode=" + RespawnMode
-                + " infiniteReserve=" + (InfiniteReserve ? "true" : "false");
+                + " infiniteReserve=" + (InfiniteReserve ? "true" : "false") + " hudDensity=" + HudDensity;
         }
     }
 }

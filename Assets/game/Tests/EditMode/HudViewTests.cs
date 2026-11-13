@@ -111,6 +111,79 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheLayoutHasThePanelsTheDensityHides()
+        {
+            var root = CloneLayout();
+
+            Assert.That(root.Q<VisualElement>(HudView.HealthPanelName).Q<Label>(HudView.HealthLabelName), Is.Not.Null);
+            Assert.That(root.Q<VisualElement>(HudView.AmmoPanelName).Q<Label>(HudView.AmmoLabelName), Is.Not.Null);
+            Assert.That(root.Q<VisualElement>(HudView.TimePanelName).Q<Label>(HudView.TimeLabelName), Is.Not.Null);
+        }
+
+        [Test]
+        public void HardcoreHidesHealthAmmoWeaponNameAndCrosshairButKeepsTimeAndScore()
+        {
+            var model = new HudModel();
+            model.SetHealth(100, 100);
+            model.SetAmmo(30, 90, false);
+            model.SetWeaponName("Rifle");
+            model.SetTime(60f);
+            model.SetScores(Team.Alpha, 1, 2);
+
+            var view = new HudView(CloneLayout(), model, HudVisibility.Hardcore);
+
+            Assert.That(view.HealthPanel.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.AmmoPanel.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.TimePanel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.ScorePanel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            // 値が変わっても隠したまま
+            model.SetHealth(50, 100);
+            model.SetCrosshair(0.5f, true);
+            Assert.That(view.HealthPanel.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.HealthLabel.text, Is.EqualTo("50"), "the label keeps the value so switching back shows it at once");
+        }
+
+        [Test]
+        public void ApplyingFullAgainShowsEverythingThatHasAValue()
+        {
+            var model = new HudModel();
+            model.SetWeaponName("Rifle");
+            var view = new HudView(CloneLayout(), model, HudVisibility.Hardcore);
+
+            view.ApplyVisibility(HudVisibility.Full);
+
+            Assert.That(view.Visibility, Is.SameAs(HudVisibility.Full));
+            Assert.That(view.HealthPanel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.AmmoPanel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.Crosshair.style.scale.value.value.x, Is.EqualTo(HudVisibility.FullCrosshairScale));
+            Assert.That(view.ScorePanel.style.display.value, Is.EqualTo(DisplayStyle.None), "no scores were set");
+        }
+
+        [Test]
+        public void MinimalShrinksTheCrosshair()
+        {
+            var view = new HudView(CloneLayout(), new HudModel(), HudVisibility.Minimal);
+
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.Crosshair.style.scale.value.value.x, Is.EqualTo(HudVisibility.SmallCrosshairScale));
+            Assert.That(view.Crosshair.style.scale.value.value.y, Is.EqualTo(HudVisibility.SmallCrosshairScale));
+        }
+
+        [Test]
+        public void TheViewRejectsANullVisibility()
+        {
+            Assert.Throws<ArgumentNullException>(() => new HudView(CloneLayout(), new HudModel(), null));
+            var view = new HudView(CloneLayout(), new HudModel());
+            Assert.Throws<ArgumentNullException>(() => view.ApplyVisibility(null));
+        }
+
+        [Test]
         public void CrosshairGapGrowsFromTheMinimumToTheMaximum()
         {
             Assert.That(HudView.CrosshairGap(0f), Is.EqualTo(HudView.MinCrosshairGap));

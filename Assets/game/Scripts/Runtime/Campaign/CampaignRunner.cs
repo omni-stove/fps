@@ -408,6 +408,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// <see cref="Notice"/> を出す HUD を差し替える。null なら出さない。前の HUD からは外す。
+        /// 始めたときのルール (<see cref="Rules"/>) があれば、その <see cref="GameRules.HudDensity"/> を HUD に効かせる。
         /// <see cref="TryBeginWith"/> が GameBootstrap の HUD で呼ぶ。<see cref="Begin"/> を直接呼んだときは自分で呼ぶ。
         /// </summary>
         public void BindHud(Hud hud)
@@ -421,6 +422,12 @@ namespace Fps.Runtime
             if (_hud != null)
             {
                 _hud.BindNotice(_notice);
+
+                // 難易度のルールは GameBootstrap のルールと別のことがあるので、HUD の量も始めたときのルールで決め直す
+                if (_activeRules != null)
+                {
+                    _hud.ApplyDensity(_activeRules.HudDensity);
+                }
             }
         }
 
@@ -505,6 +512,11 @@ namespace Fps.Runtime
             }
 
             _activeRules = rules;
+            if (rules != null && _hud != null)
+            {
+                _hud.ApplyDensity(rules.HudDensity);
+            }
+
             _mission = missionRunner.Mission;
             _missionId = missionRunner.Definition != null ? missionRunner.Definition.name : string.Empty;
             _player = player;

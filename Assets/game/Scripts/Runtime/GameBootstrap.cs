@@ -17,7 +17,8 @@ namespace Fps.Runtime
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
     /// 自動回復と予備弾の倍率・無限は <see cref="RulesDefinition"/> のルールで決める (標的ダミーには効かせない)。
-    /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で決める。
+    /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す項目は
+    /// <see cref="GameRules.HudDensity"/> (<see cref="Hud.ApplyDensity"/>) で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
     /// </summary>
     [DisallowMultipleComponent]
@@ -200,7 +201,7 @@ namespace Fps.Runtime
                 Hud hudComponent = null;
                 if (!NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
                 {
-                    hud = CreateHud(playerDamageable, weapon, out hudComponent, out hudPanelSettings);
+                    hud = CreateHud(playerDamageable, weapon, rules, out hudComponent, out hudPanelSettings);
                 }
 
                 _world = new BootstrapWorld(
@@ -570,15 +571,17 @@ namespace Fps.Runtime
             DeathBodyPresenter.BindAll(targets, rules.DeathBody);
         }
 
-        /// <summary>HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡す。</summary>
+        /// <summary>HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。</summary>
         private static GameObject CreateHud(
             Damageable player,
             WeaponController weapon,
+            GameRules rules,
             out Hud hud,
             out PanelSettings panelSettings)
         {
             hud = Hud.Create(HudName, player, weapon, null);
             panelSettings = hud.OwnedPanelSettings;
+            hud.ApplyDensity(rules.HudDensity);
             return hud.gameObject;
         }
 

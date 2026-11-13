@@ -24,6 +24,10 @@ namespace Fps.Net
     /// 予備弾は <see cref="NetMatchRules.InfiniteReserve"/> が true なら数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。
     /// </para>
     /// <para>
+    /// 出す項目は、サーバーから届いたルールの <see cref="NetMatchRules.HudDensity"/> で <see cref="Hud.ApplyDensity"/> に決めさせる。
+    /// 試合がまだ届いていない間と試合が無くなったときは <see cref="NetMatchRules.Default"/> (Full) に戻す。
+    /// </para>
+    /// <para>
     /// ダウン中は自分の <see cref="NetPlayer.DownedState"/> から「ダウン中 あと N 秒」と起こされている進み (<see cref="HudFormat.Downed(int, int)"/>) を、
     /// 味方を起こしている間は相手 (<see cref="NetPlayer.ReviveTarget"/>) の進み (<see cref="HudFormat.Reviving"/>) を案内の欄に出す。
     /// </para>
@@ -215,6 +219,7 @@ namespace Fps.Net
                 _nextWaveSeconds = 0;
                 _status = new NetMatchStatus(GameModeState.Waiting, null);
                 _rules = NetMatchRules.Default;
+                ApplyDensity();
                 Model.ClearTime();
                 Model.ClearScores();
                 Model.ClearResult();
@@ -238,6 +243,7 @@ namespace Fps.Net
             _match.StatusVariable.OnValueChanged += HandleStatusChanged;
             _match.RulesVariable.OnValueChanged += HandleRulesChanged;
 
+            ApplyDensity();
             Model.SetTime(_match.RemainingSecondsVariable.Value);
             ShowAmmo();
             ShowHealth();
@@ -417,8 +423,22 @@ namespace Fps.Net
         private void HandleRulesChanged(NetMatchRules previous, NetMatchRules current)
         {
             _rules = current;
+            ApplyDensity();
             ShowAmmo();
             ShowNotice();
+        }
+
+        // 新しいサーバーが足した値を古いクライアントが知らないこともあるので、知らない量は落とさず Full で出す
+        private void ApplyDensity()
+        {
+            var density = _rules.HudDensity;
+            if (!Enum.IsDefined(typeof(HudDensity), density))
+            {
+                Debug.LogWarning("[Net] the server sent an unknown HUD density " + (int)density + "; the HUD shows everything", this);
+                density = HudDensity.Full;
+            }
+
+            _hud.ApplyDensity(density);
         }
 
         private void HandleStatusChanged(NetMatchStatus previous, NetMatchStatus current)

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d3a7c15e2f84b06b1c8a4e6f0d52b73, type: 3}
+  m_Name: CampaignHard
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.GameRulesDefinition
+  _friendlyFire: 0
+  _respawnMode: 0
+  _waveIntervalSeconds: 10
+  _regenDelaySeconds: 0
+  _regenPerSecond: 0
+  _deathBody: 1
+  _deathCamera: 0
+  _infiniteReserve: 0
+  _reserveAmmoMultiplier: 0.6

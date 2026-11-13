@@ -112,6 +112,23 @@
     text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.8);
 }
 
+/* 弾数の欄のすぐ上に右寄せで出す武器名。 */
+.hud__weapon-name {
+    position: absolute;
+    right: 32px;
+    bottom: 104px;
+    margin: 0;
+    padding: 4px 14px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+    font-size: 24px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-right;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 /* リロード中の弾数。 */
 .hud__value--reloading {
     color: rgb(255, 210, 80);

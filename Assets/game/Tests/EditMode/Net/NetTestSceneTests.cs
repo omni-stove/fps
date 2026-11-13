@@ -72,16 +72,29 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void MatchPrefabTakesWeaponsFromTheCatalogAsset()
+        public void MatchPrefabTakesWeaponsFromTheDefaultLoadoutAsset()
         {
             var match = MatchPrefabComponent();
 
-            Assert.That(match.Catalog, Is.Not.Null, "the match has no weapon catalog; run Fps.Editor.NetSceneBuilder.Build");
-            Assert.That(AssetDatabase.GetAssetPath(match.Catalog), Is.EqualTo(Fps.Editor.WeaponAssetBuilder.CatalogPath));
+            Assert.That(match.Loadout, Is.Not.Null, "the match has no loadout; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(AssetDatabase.GetAssetPath(match.Loadout), Is.EqualTo(Fps.Editor.WeaponAssetBuilder.LoadoutPath));
 
-            // サーバーの起動時と同じ検査に通り、参加者に持たせる武器がある
-            Assert.That(NetTeamDeathmatch.TryCreateLoadout(match.Catalog, out var loadout, out var error), Is.True, error);
-            Assert.That(loadout.Catalog.Contains(NetTeamDeathmatch.DefaultWeaponId), Is.True);
+            // サーバーの起動時と同じ検査に通り、0 番は rifle、1 番は handgun
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(match.Loadout, out var loadout, out var error), Is.True, error);
+            Assert.That(loadout.Weapons.Select(w => w.Id), Is.EqualTo(new[] { Fps.Editor.WeaponAssetBuilder.RifleId, Fps.Editor.WeaponAssetBuilder.HandgunId }));
+        }
+
+        [Test]
+        public void DedicatedServerBuildIncludesTheLoadoutAndItsWeapons()
+        {
+            var paths = Fps.Editor.ServerBuilder.LoadoutAssetPaths(MatchPrefabComponent().Loadout);
+
+            Assert.That(paths, Does.Contain(Fps.Editor.WeaponAssetBuilder.LoadoutPath));
+            Assert.That(paths, Does.Contain(Fps.Editor.WeaponAssetBuilder.RiflePath));
+            Assert.That(paths, Does.Contain(Fps.Editor.WeaponAssetBuilder.HandgunPath));
+
+            // 専用サーバーに入れるのは NetTest シーンだけなので、そこから参照をたどって届けばビルドに入る
+            Assert.That(Fps.Editor.ServerBuilder.MissingFromScene(NetBootstrap.ScenePath, paths), Is.Empty);
         }
 
         [Test]

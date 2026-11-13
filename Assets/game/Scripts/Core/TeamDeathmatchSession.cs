@@ -13,8 +13,9 @@ namespace Fps.Core
     /// <remarks>
     /// <list type="bullet">
     /// <item>両チームに 1 人以上そろった時点で試合を始める。</item>
-    /// <item>味方へのダメージは無視する (自滅は数える)。</item>
-    /// <item>体力が 0 になったら <see cref="TeamDeathmatch.ReportKill"/> を呼び、リスポーン待ちが終わったら
+    /// <item>味方へのダメージは <see cref="GameRules.FriendlyFire"/> に従い、無視する・与える・撃った本人に跳ね返すを切り替える (自滅はいつも数える)。</item>
+    /// <item>体力が 0 になったら <see cref="TeamDeathmatch.ReportKill"/> (味方に倒されたときと跳ね返しで倒れたときは
+    /// <see cref="TeamDeathmatch.ReportDeath"/>) を呼び、リスポーン待ちが終わったら
     /// 体力を満タンに戻して地点を選び <see cref="Spawned"/> を出す。いつ待ちが終わるかは
     /// <see cref="GameRules.RespawnMode"/> に従う (None では試合中は戻らず、全滅したチームの負けになる)。</item>
     /// <item>イベントはいつも「倒した → 点数 → リスポーン/終了」の順に出す
@@ -226,6 +227,18 @@ namespace Fps.Core
         /// <summary>
         /// attackerId が victimId に amount のダメージを与える。体力が 0 になったら倒したことにして
         /// <see cref="TeamDeathmatch.ReportKill"/> を呼ぶ。ネットワーク側のダメージ処理はすべてここを通す。
+        /// 味方へのダメージは <see cref="TeamDeathmatchSpec.Rules"/> の <see cref="GameRules.FriendlyFire"/> に従う。
+        /// <list type="bullet">
+        /// <item><see cref="FriendlyFire.Off"/>: 無視して <see cref="DamageOutcome.Ignored"/> を返す。</item>
+        /// <item><see cref="FriendlyFire.On"/>: 味方の体力を減らす。倒したら <see cref="Killed"/> を (attackerId, victimId) で出し、
+        /// <see cref="TeamDeathmatch.ReportDeath"/> で倒された側の Deaths だけを増やす (倒した側のキルとチームの点数は動かさない)。</item>
+        /// <item><see cref="FriendlyFire.Reflect"/>: victimId ではなく attackerId の体力を減らす。それで倒れたら
+        /// <see cref="Killed"/> を (attackerId, attackerId) で出し、<see cref="TeamDeathmatch.ReportDeath"/> で attackerId の Deaths を増やす。
+        /// 返す値は attackerId に起きたこと (体力が減った・倒れた・何も起きなかった) を表す。体力が変わったのは撃った本人なので、
+        /// 結果を見て体力の同期やヒットの知らせを出す呼び出し側が、実際に体力の変わっていない味方に Damaged / Killed を
+        /// 結び付けないようにするため。attackerId がすでに倒れていれば何もせず <see cref="DamageOutcome.Ignored"/> を返す。</item>
+        /// </list>
+        /// 自滅 (attackerId == victimId) はモードによらず数える。
         /// </summary>
         /// <param name="attackerId">撃った人。victimId と同じなら自滅。</param>
         /// <param name="victimId">撃たれた人。</param>
@@ -237,7 +250,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
             }
 
-            FindHealth(attackerId, nameof(attackerId));
+            var attacker = FindHealth(attackerId, nameof(attackerId));
             var victim = FindHealth(victimId, nameof(victimId));
 
             if (amount == 0 || State != GameModeState.Playing || victim.IsDead)
@@ -245,11 +258,31 @@ namespace Fps.Core
                 return DamageOutcome.Ignored;
             }
 
-            if (attackerId != victimId && GetTeam(attackerId) == GetTeam(victimId))
+            if (attackerId == victimId || GetTeam(attackerId) != GetTeam(victimId))
             {
-                return DamageOutcome.Ignored;
+                return Damage(attackerId, victimId, victim, amount, byAlly: false);
             }
 
+            var friendlyFire = Spec.Rules.FriendlyFire;
+            switch (friendlyFire)
+            {
+                case FriendlyFire.Off:
+                    return DamageOutcome.Ignored;
+                case FriendlyFire.On:
+                    return Damage(attackerId, victimId, victim, amount, byAlly: true);
+                case FriendlyFire.Reflect:
+                    return attacker.IsDead
+                        ? DamageOutcome.Ignored
+                        : Damage(attackerId, attackerId, attacker, amount, byAlly: true);
+                default:
+                    throw new InvalidOperationException("unknown FriendlyFire " + friendlyFire);
+            }
+        }
+
+        // 味方相手の ReportKill も加点はしないが、倒した側の記録に触れないことを TeamDeathmatch の判定に頼らず
+        // ここで決めるため、byAlly では ReportDeath にする。
+        private DamageOutcome Damage(int killerId, int victimId, Health victim, int amount, bool byAlly)
+        {
             _busy++;
             try
             {
@@ -262,13 +295,20 @@ namespace Fps.Core
 
                 var alphaBefore = _match.GetScore(Team.Alpha);
                 var bravoBefore = _match.GetScore(Team.Bravo);
-                _match.ReportKill(attackerId, victimId);
-
-                Killed?.Invoke(attackerId, victimId);
-                PlayerChanged?.Invoke(victimId);
-                if (attackerId != victimId)
+                if (byAlly)
                 {
-                    PlayerChanged?.Invoke(attackerId);
+                    _match.ReportDeath(victimId);
+                }
+                else
+                {
+                    _match.ReportKill(killerId, victimId);
+                }
+
+                Killed?.Invoke(killerId, victimId);
+                PlayerChanged?.Invoke(victimId);
+                if (killerId != victimId && !byAlly)
+                {
+                    PlayerChanged?.Invoke(killerId);
                 }
 
                 var alpha = _match.GetScore(Team.Alpha);

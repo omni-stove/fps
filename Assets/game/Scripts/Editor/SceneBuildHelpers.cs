@@ -141,6 +141,33 @@ namespace Fps.Editor
         }
 
         /// <summary>
+        /// プレイヤーに配線する武器の定義の並び weapons が 1 本以上で null を含まないことを確かめる。
+        /// 値の検査 (<see cref="WeaponDefinition.ToSpec"/>) は読み込み時 (<see cref="WeaponAssetBuilder.LoadPlayerLoadout"/>) に済んでいる。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">weapons が null。</exception>
+        /// <exception cref="ArgumentException">weapons が空か null を含む。</exception>
+        public static void RequirePlayerWeapons(IReadOnlyList<WeaponDefinition> weapons, string parameterName)
+        {
+            if (weapons == null)
+            {
+                throw new ArgumentNullException(parameterName);
+            }
+
+            if (weapons.Count == 0)
+            {
+                throw new ArgumentException("the player needs at least one weapon", parameterName);
+            }
+
+            for (var i = 0; i < weapons.Count; i++)
+            {
+                if (weapons[i] == null)
+                {
+                    throw new ArgumentException($"player weapon #{i} is missing", parameterName);
+                }
+            }
+        }
+
+        /// <summary>
         /// path の MissionDefinition を configure で上書きする。無ければ作る。既存のアセットは GUID を保つので、
         /// それを参照しているシーンは壊れない。configure は不正な定義なら例外を投げ、そのときは保存しない。
         /// </summary>

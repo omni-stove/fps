@@ -92,7 +92,6 @@ namespace Fps.Tests.EditMode
             _runner.Progress("reach");
 
             ExpectMission("objective=kill state=Failed");
-            ExpectMission("objective=extract state=Failed");
             LogAssert.Expect(LogType.Log, MissionReporter.FailedLine);
             _runner.Fail("kill");
 

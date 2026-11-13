@@ -18,6 +18,8 @@ namespace Fps.Core.Tests
         // 定数配列を直接渡すと CA1861 になるので params で受ける
         private static string[] Events(params string[] expected) => expected;
 
+        private static int[] Ids(params int[] expected) => expected;
+
         [SetUp]
         public void SetUp()
         {
@@ -30,13 +32,25 @@ namespace Fps.Core.Tests
             float timeLimitSeconds = 60f,
             float respawnSeconds = 3f,
             float? restartDelaySeconds = null,
-            GameRules rules = null)
+            GameRules rules = null,
+            FriendlyFire friendlyFire = FriendlyFire.Off)
         {
             var points = new[]
             {
                 new SpawnPoint(_alphaBase, Team.Alpha),
                 new SpawnPoint(_bravoBase, Team.Bravo),
             };
+            var d = GameRules.Default;
+            rules ??= new GameRules(
+                friendlyFire,
+                d.RespawnMode,
+                d.WaveIntervalSeconds,
+                d.RegenDelaySeconds,
+                d.RegenPerSecond,
+                d.DeathBody,
+                d.DeathCamera,
+                d.InfiniteReserve,
+                d.ReserveAmmoMultiplier);
             var session = new TeamDeathmatchSession(
                 new TeamDeathmatchSpec(scoreLimit, timeLimitSeconds, respawnSeconds, rules),
                 _maxHealth,
@@ -162,6 +176,195 @@ namespace Fps.Core.Tests
 
             Assert.That(session.ApplyDamage(1, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
             Assert.That(session.GetDeaths(1), Is.EqualTo(1));
+            Assert.That(session.GetScore(Team.Alpha), Is.Zero);
+            Assert.That(session.GetScore(Team.Bravo), Is.Zero);
+            Assert.That(_events, Is.EqualTo(Events("kill 1>1")));
+        }
+
+        [Test]
+        public void FriendlyFireOffLeavesAllyAndStatsUntouched()
+        {
+            var session = Create(friendlyFire: FriendlyFire.Off);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+            _events.Clear();
+
+            Assert.That(session.ApplyDamage(1, 3, 40), Is.EqualTo(DamageOutcome.Ignored));
+            Assert.That(session.ApplyDamage(1, 3, _maxHealth), Is.EqualTo(DamageOutcome.Ignored));
+
+            Assert.That(session.GetHealth(1), Is.EqualTo(_maxHealth));
+            Assert.That(session.GetHealth(3), Is.EqualTo(_maxHealth));
+            Assert.That(session.GetDeaths(3), Is.Zero);
+            Assert.That(session.GetKills(1), Is.Zero);
+            Assert.That(changed, Is.Empty);
+            Assert.That(_events, Is.Empty);
+        }
+
+        [Test]
+        public void FriendlyFireOnDamagesAlly()
+        {
+            var session = Create(friendlyFire: FriendlyFire.On);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+
+            Assert.That(session.ApplyDamage(1, 3, 40), Is.EqualTo(DamageOutcome.Damaged));
+
+            Assert.That(session.GetHealth(3), Is.EqualTo(60));
+            Assert.That(session.GetHealth(1), Is.EqualTo(_maxHealth));
+            Assert.That(changed, Is.EqualTo(Ids(3)));
+        }
+
+        [Test]
+        public void FriendlyFireOnKillCountsOnlyTheVictimsDeath()
+        {
+            var session = Create(scoreLimit: 1, friendlyFire: FriendlyFire.On);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+            _events.Clear();
+
+            Assert.That(session.ApplyDamage(1, 3, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(session.IsAlive(3), Is.False);
+            Assert.That(session.GetDeaths(3), Is.EqualTo(1));
+            Assert.That(session.GetKills(1), Is.Zero);
+            Assert.That(session.GetDeaths(1), Is.Zero);
+            Assert.That(session.GetScore(Team.Alpha), Is.Zero);
+            Assert.That(session.GetScore(Team.Bravo), Is.Zero);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(changed, Is.EqualTo(Ids(3)));
+            Assert.That(_events, Is.EqualTo(Events("kill 1>3")));
+            Assert.That(session.ApplyDamage(1, 3, _maxHealth), Is.EqualTo(DamageOutcome.Ignored));
+        }
+
+        [Test]
+        public void FriendlyFireOnInstantRespawnComesAfterKill()
+        {
+            var session = Create(respawnSeconds: 0f, friendlyFire: FriendlyFire.On);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            _events.Clear();
+
+            session.ApplyDamage(1, 3, _maxHealth);
+
+            Assert.That(_events, Is.EqualTo(Events("kill 1>3", "spawn 3")));
+            Assert.That(session.GetHealth(3), Is.EqualTo(_maxHealth));
+        }
+
+        [Test]
+        public void FriendlyFireOnStillScoresEnemyKills()
+        {
+            var session = Create(friendlyFire: FriendlyFire.On);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            _events.Clear();
+
+            Assert.That(session.ApplyDamage(1, 2, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(session.GetKills(1), Is.EqualTo(1));
+            Assert.That(session.GetScore(Team.Alpha), Is.EqualTo(1));
+            Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 1-0")));
+        }
+
+        [Test]
+        public void FriendlyFireReflectDamagesTheAttackerInstead()
+        {
+            var session = Create(friendlyFire: FriendlyFire.Reflect);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+
+            Assert.That(session.ApplyDamage(1, 3, 40), Is.EqualTo(DamageOutcome.Damaged));
+
+            Assert.That(session.GetHealth(1), Is.EqualTo(60));
+            Assert.That(session.GetHealth(3), Is.EqualTo(_maxHealth));
+            Assert.That(changed, Is.EqualTo(Ids(1)));
+        }
+
+        [Test]
+        public void FriendlyFireReflectKillsTheAttackerAsADeathOnly()
+        {
+            var session = Create(friendlyFire: FriendlyFire.Reflect);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+            _events.Clear();
+
+            Assert.That(session.ApplyDamage(1, 3, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(session.IsAlive(1), Is.False);
+            Assert.That(session.IsAlive(3), Is.True);
+            Assert.That(session.GetHealth(3), Is.EqualTo(_maxHealth));
+            Assert.That(session.GetDeaths(1), Is.EqualTo(1));
+            Assert.That(session.GetKills(1), Is.Zero);
+            Assert.That(session.GetDeaths(3), Is.Zero);
+            Assert.That(session.GetScore(Team.Alpha), Is.Zero);
+            Assert.That(session.GetScore(Team.Bravo), Is.Zero);
+            Assert.That(changed, Is.EqualTo(Ids(1)));
+            Assert.That(_events, Is.EqualTo(Events("kill 1>1")));
+        }
+
+        [Test]
+        public void FriendlyFireReflectInstantRespawnComesAfterKill()
+        {
+            var session = Create(respawnSeconds: 0f, friendlyFire: FriendlyFire.Reflect);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            _events.Clear();
+
+            session.ApplyDamage(1, 3, _maxHealth);
+
+            Assert.That(_events, Is.EqualTo(Events("kill 1>1", "spawn 1")));
+            Assert.That(session.GetHealth(1), Is.EqualTo(_maxHealth));
+        }
+
+        [Test]
+        public void FriendlyFireReflectIgnoresShotsFromADeadAttacker()
+        {
+            var session = Create(friendlyFire: FriendlyFire.Reflect);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            session.ApplyDamage(2, 1, _maxHealth);
+            _events.Clear();
+
+            Assert.That(session.ApplyDamage(1, 3, _maxHealth), Is.EqualTo(DamageOutcome.Ignored));
+
+            Assert.That(session.GetDeaths(1), Is.EqualTo(1));
+            Assert.That(session.GetHealth(3), Is.EqualTo(_maxHealth));
+            Assert.That(_events, Is.Empty);
+        }
+
+        [TestCase(FriendlyFire.On)]
+        [TestCase(FriendlyFire.Reflect)]
+        public void SuicideIsCountedTheSameInEveryFriendlyFireMode(FriendlyFire friendlyFire)
+        {
+            var session = Create(friendlyFire: friendlyFire);
+            session.Join(1);
+            session.Join(2);
+            _events.Clear();
+
+            Assert.That(session.ApplyDamage(1, 1, 40), Is.EqualTo(DamageOutcome.Damaged));
+            Assert.That(session.GetHealth(1), Is.EqualTo(60));
+
+            Assert.That(session.ApplyDamage(1, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+            Assert.That(session.GetDeaths(1), Is.EqualTo(1));
+            Assert.That(session.GetKills(1), Is.Zero);
             Assert.That(session.GetScore(Team.Alpha), Is.Zero);
             Assert.That(session.GetScore(Team.Bravo), Is.Zero);
             Assert.That(_events, Is.EqualTo(Events("kill 1>1")));

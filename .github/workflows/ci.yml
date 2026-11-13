@@ -28,6 +28,8 @@ jobs:
       run-review: true
       review-provider: "claude"
       review-allowed-bots: "omni-stove-agent"  # 自前の Issue Worker の PR はレビューする。外部 App は "*" にすると起動してしまうので名指しで許可
+      # Issue Worker と同じ Unity 固有の規約で見させる。.meta などはレビュー対象から外しているので、それらを書き換えるコードの側で見る
+      review-instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: flag scripts that regenerate existing .meta files (their GUIDs are what scenes and assets reference), changes that rely on hand-editing .unity / .prefab / .asset files instead of wiring references in code or editor scripts, and Unity dependencies leaking into dotnet/Fps.Core."
       review-exclude-patterns: |
         *.meta
         *.unity
@@ -58,9 +60,16 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('dotnet/**/*.csproj', 'dotnet/Directory.Build.props') }}
 
       - name: Restore
+        id: restore
         run: scripts/install.sh
 
+      # 抜けた .meta を diff --git で出し、自動修正がエージェントより先に regen-command で作り直せるようにする
+      - name: Generated .meta
+        run: scripts/lint.sh --fix-meta && git diff --cached --exit-code
+
+      # 上で落ちても残りの lint の指摘を一緒に出す
       - name: Lint
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         run: scripts/lint.sh
 
   test:
@@ -100,6 +109,11 @@ jobs:
       id-token: write
     with:
       run-fix: true
+      fix-provider: "claude"
+      # 自動修正のエージェントにも Issue Worker と同じ Unity 固有の規約を守らせる
+      fix-instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: never edit or regenerate an existing .meta, and wire references in code or editor scripts instead of hand-editing .unity / .prefab / .asset files. Do not write a .meta for a new .cs file or folder under Assets yourself; set needs_regen to true and CI generates it."
+      # 自動修正が足した .cs やフォルダの .meta を作る。dotnet も Unity も無い環境で走る
+      regen-command: "scripts/lint.sh --fix-meta"
       run-merge: true  # CI Gate が通り approve した PR を agent App でマージする。止めるなら skip-automerge ラベル
       results: ${{ toJSON(needs) }}
       conflicted: ${{ needs.precheck.outputs.conflicted }}

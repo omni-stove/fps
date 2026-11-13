@@ -18,7 +18,7 @@ namespace Fps.Net.Tests
     /// </summary>
     public sealed class NetPlayerWeaponTests
     {
-        private const string _handgunId = "00000000-0000-4000-8000-000000000002";
+        private const string _handgunId = "00000000-0000-4000-8000-00000000000a";
         private const float _switchSeconds = 0.5f;
 
         private readonly List<GameObject> _created = new List<GameObject>();
@@ -43,7 +43,7 @@ namespace Fps.Net.Tests
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             try
             {
-                definition.Id = NetTeamDeathmatch.DefaultWeaponId;
+                definition.Id = WeaponAssetBuilder.RifleId;
                 return definition.ToSpec();
             }
             finally
@@ -65,7 +65,7 @@ namespace Fps.Net.Tests
             return go.AddComponent<NetPlayerWeapon>();
         }
 
-        /// <summary>ネット対戦が今渡しているのと同じ、rifle 1 本だけの武器。</summary>
+        /// <summary>rifle 1 本だけの武器。</summary>
         private NetPlayerWeapon CreateWeapon()
         {
             var weapon = CreateUnequipped();
@@ -89,16 +89,24 @@ namespace Fps.Net.Tests
             }
         }
 
-        private static void ExpectSwitchLog(NetPlayerWeapon weapon, int index)
+        private static string RifleId => WeaponAssetBuilder.RifleId;
+
+        // CreateTwoWeapons の並び (0 番が rifle、1 番が handgun) での番号
+        private static int IndexOf(string weaponId)
         {
-            LogAssert.Expect(LogType.Log, "[Net] switch client=" + weapon.OwnerClientId + " index=" + index);
+            return weaponId == _handgunId ? 1 : 0;
         }
 
-        /// <summary>index に持ち替え、持ち替えが終わるまで時間を進める。</summary>
-        private static void SwitchAndWait(NetPlayerWeapon weapon, int index)
+        private static void ExpectSwitchLog(NetPlayerWeapon weapon, string weaponId)
         {
-            ExpectSwitchLog(weapon, index);
-            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, index), Is.True);
+            LogAssert.Expect(LogType.Log, "[Net] switch client=" + weapon.OwnerClientId + " index=" + IndexOf(weaponId) + " weapon=" + weaponId);
+        }
+
+        /// <summary>持ち主からの要求で weaponId に持ち替え、持ち替えが終わるまで時間を進める。</summary>
+        private static void SwitchAndWait(NetPlayerWeapon weapon, string weaponId)
+        {
+            ExpectSwitchLog(weapon, weaponId);
+            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, weaponId), Is.True);
             weapon.ServerTick(_switchSeconds);
             Assert.That(weapon.Loadout.IsSwitching, Is.False);
         }
@@ -108,7 +116,7 @@ namespace Fps.Net.Tests
         {
             // 以下のテストの弾数は、オフラインの WeaponController と同じ rifle (30 発 / 予備 90 / リロード 2 秒) を前提にする
             var spec = DefaultSpec();
-            Assert.That(spec.Id, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
             Assert.That(spec.Category, Is.EqualTo(WeaponCategory.AssaultRifle));
             Assert.That(spec.MagazineSize, Is.EqualTo(30));
             Assert.That(spec.ReserveAmmo, Is.EqualTo(90));
@@ -123,8 +131,8 @@ namespace Fps.Net.Tests
             Assert.That(weapon.CurrentSpec, Is.Null);
 
             weapon.ServerEquip(new[] { DefaultSpec() }, _switchSeconds);
-            Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
-            Assert.That(weapon.CurrentSpec.Id, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(weapon.WeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(weapon.CurrentSpec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
 
             weapon.ServerEquip(new[] { HandgunSpec() }, _switchSeconds);
             Assert.That(weapon.WeaponId, Is.EqualTo(_handgunId));
@@ -134,20 +142,12 @@ namespace Fps.Net.Tests
         [Test]
         public void UuidWeaponIdsFitTheShotRpc()
         {
-            Assert.That(NetPlayerWeapon.FitsWeaponId(NetTeamDeathmatch.DefaultWeaponId), Is.True);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(WeaponAssetBuilder.RifleId), Is.True);
             Assert.That(NetPlayerWeapon.FitsWeaponId(WeaponAssetBuilder.RifleId), Is.True);
             Assert.That(NetPlayerWeapon.FitsWeaponId(WeaponAssetBuilder.HandgunId), Is.True);
             Assert.That(NetPlayerWeapon.FitsWeaponId(new string('a', NetPlayerWeapon.MaxWeaponIdBytes)), Is.True);
             Assert.That(NetPlayerWeapon.FitsWeaponId(new string('a', NetPlayerWeapon.MaxWeaponIdBytes + 1)), Is.False);
             Assert.That(NetPlayerWeapon.FitsWeaponId(null), Is.False);
-        }
-
-        [Test]
-        public void DefaultWeaponIdIsTheRifleOfTheWeaponAssets()
-        {
-            // DefaultWeaponId は Fps.Net から Fps.Editor を参照できないのでリテラルで持つ。ずれたら試合が始まらない
-            Assert.That(NetTeamDeathmatch.DefaultWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
-            Assert.That(WeaponAssetBuilder.RifleSpec().Category, Is.EqualTo(WeaponCategory.AssaultRifle));
         }
 
         [Test]
@@ -160,7 +160,7 @@ namespace Fps.Net.Tests
             Assert.That(weapon.Loadout.SwitchSeconds, Is.EqualTo(_switchSeconds));
             Assert.That(weapon.Loadout.CurrentIndex, Is.EqualTo(0));
             Assert.That(weapon.Loadout.IsSwitching, Is.False);
-            Assert.That(weapon.Loadout.Items[0].Spec.Id, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(weapon.Loadout.Items[0].Spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
             Assert.That(weapon.Loadout.Items[1].Spec.Id, Is.EqualTo(_handgunId));
             Assert.That(weapon.ServerWeapon, Is.SameAs(weapon.Loadout.Items[0]));
             Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(30));
@@ -191,7 +191,7 @@ namespace Fps.Net.Tests
             Assert.Throws<ArgumentException>(() => weapon.ServerEquip(tooMany, _switchSeconds));
 
             Assert.That(weapon.Loadout, Is.SameAs(previous));
-            Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(weapon.WeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
         }
 
         [Test]
@@ -202,7 +202,7 @@ namespace Fps.Net.Tests
             // ServerFire は None 以外ならダメージを与えずに捨てる
             Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.NoWeapon));
             Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.False);
-            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, 0), Is.False);
+            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, RifleId), Is.False);
             Assert.DoesNotThrow(weapon.ServerRefill);
             Assert.DoesNotThrow(() => weapon.ServerTick(1f));
         }
@@ -272,8 +272,8 @@ namespace Fps.Net.Tests
         {
             var weapon = CreateTwoWeapons();
 
-            ExpectSwitchLog(weapon, 1);
-            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, 1), Is.True);
+            ExpectSwitchLog(weapon, _handgunId);
+            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, _handgunId), Is.True);
 
             // 持ち替え中も、送る Id とダメージに使う Spec は持ち替え先の武器
             Assert.That(weapon.Loadout.CurrentIndex, Is.EqualTo(1));
@@ -297,16 +297,16 @@ namespace Fps.Net.Tests
             var weapon = CreateTwoWeapons();
             weapon.ServerTryFire();
 
-            ExpectSwitchLog(weapon, 1);
-            weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, 1);
+            ExpectSwitchLog(weapon, _handgunId);
+            weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, _handgunId);
 
             // ServerFire は None 以外ならダメージを与えずに捨てる。弾も減らさない
             Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.Switching));
             Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(5));
             Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.False);
 
-            ExpectSwitchLog(weapon, 0);
-            weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, 0);
+            ExpectSwitchLog(weapon, RifleId);
+            weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, RifleId);
             Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.False, "rifle has 29 rounds but is still being drawn");
             Assert.That(weapon.ServerWeapon.IsReloading, Is.False);
 
@@ -323,11 +323,11 @@ namespace Fps.Net.Tests
                 weapon.ServerTryFire();
             }
 
-            SwitchAndWait(weapon, 1);
+            SwitchAndWait(weapon, _handgunId);
             weapon.ServerTryFire();
             Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(4));
 
-            SwitchAndWait(weapon, 0);
+            SwitchAndWait(weapon, RifleId);
             Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(27));
             Assert.That(weapon.ServerWeapon.ReserveAmmo, Is.EqualTo(90));
             Assert.That(weapon.Loadout.Items[1].AmmoInMagazine, Is.EqualTo(4));
@@ -342,7 +342,7 @@ namespace Fps.Net.Tests
             weapon.ServerTryFire();
             Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
 
-            SwitchAndWait(weapon, 1);
+            SwitchAndWait(weapon, _handgunId);
             Assert.That(rifle.IsReloading, Is.False);
 
             // しまった武器は Tick しないので、リロードの時間が過ぎても補充されない
@@ -352,24 +352,34 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void SwitchRequestsOutOfRangeOrFromAnotherClientAreIgnored()
+        public void SwitchRequestsOutsideTheLoadoutOrFromAnotherClientAreIgnored()
         {
             var weapon = CreateTwoWeapons();
+            var rifle = weapon.ServerWeapon;
+            weapon.ServerTryFire();
+            Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
             var intruder = weapon.OwnerClientId + 1;
+            const string shotgunId = "00000000-0000-4000-8000-000000000003";
 
-            LogAssert.Expect(LogType.Warning, new Regex("ignored switch client=" + weapon.OwnerClientId + " index=2 count=2"));
-            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, 2), Is.False);
-            LogAssert.Expect(LogType.Warning, new Regex("ignored switch client=" + weapon.OwnerClientId + " index=-1 count=2"));
-            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, -1), Is.False);
+            foreach (var id in new[] { shotgunId, _handgunId.ToUpperInvariant(), string.Empty, null })
+            {
+                LogAssert.Expect(LogType.Warning, new Regex("ignored switch client=" + weapon.OwnerClientId + " weaponIdLength="
+                    + (id?.Length ?? 0) + " not in the loadout"));
+                Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, id), Is.False, "id '" + id + "'");
+            }
+
             LogAssert.Expect(LogType.Warning, new Regex("ignored switch from client " + intruder));
-            Assert.That(weapon.ServerHandleSwitchRequest(intruder, 1), Is.False);
+            Assert.That(weapon.ServerHandleSwitchRequest(intruder, _handgunId), Is.False);
 
-            // 今の番号と同じなら持ち替えない (持ち替えの待ち時間も始めない)
-            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, 0), Is.False);
+            // 今の武器と同じなら持ち替えない (持ち替えの待ち時間も始めない)
+            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, RifleId), Is.False);
 
+            // 捨てた要求では持ち替えず、リロードも止まらない
             Assert.That(weapon.Loadout.CurrentIndex, Is.EqualTo(0));
             Assert.That(weapon.Loadout.IsSwitching, Is.False);
-            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.ServerWeapon, Is.SameAs(rifle));
+            Assert.That(weapon.WeaponId, Is.EqualTo(RifleId));
+            Assert.That(rifle.IsReloading, Is.True);
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -378,8 +388,33 @@ namespace Fps.Net.Tests
         {
             var weapon = CreateWeapon();
 
-            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, 0), Is.False);
+            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, RifleId), Is.False);
             Assert.That(weapon.Loadout.IsSwitching, Is.False);
+        }
+
+        [Test]
+        public void NeighbourWeaponWrapsAroundTheLoadout()
+        {
+            var specs = new[] { DefaultSpec(), HandgunSpec() };
+
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(specs, RifleId, 1), Is.EqualTo(_handgunId));
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(specs, _handgunId, 1), Is.EqualTo(RifleId));
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(specs, RifleId, -1), Is.EqualTo(_handgunId));
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(specs, _handgunId, -1), Is.EqualTo(RifleId));
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(specs, RifleId, 3), Is.EqualTo(_handgunId));
+        }
+
+        [Test]
+        public void NoNeighbourWeaponWithoutAnotherWeaponOrTheCurrentOne()
+        {
+            var specs = new[] { DefaultSpec(), HandgunSpec() };
+
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(new[] { DefaultSpec() }, RifleId, 1), Is.Null);
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(null, RifleId, 1), Is.Null);
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(specs, string.Empty, 1), Is.Null, "before the server equips a weapon");
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(specs, null, 1), Is.Null);
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(specs, "00000000-0000-4000-8000-000000000003", 1), Is.Null);
+            Assert.That(NetPlayerWeapon.NeighbourWeaponId(specs, RifleId, 0), Is.Null);
         }
 
         [Test]
@@ -408,7 +443,7 @@ namespace Fps.Net.Tests
             var weapon = CreateTwoWeapons();
             var rifle = weapon.ServerWeapon;
             weapon.ServerTryFire();
-            SwitchAndWait(weapon, 1);
+            SwitchAndWait(weapon, _handgunId);
             weapon.ServerTryFire();
             Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
 
@@ -417,7 +452,7 @@ namespace Fps.Net.Tests
             Assert.That(weapon.Loadout.CurrentIndex, Is.EqualTo(0));
             Assert.That(weapon.Loadout.IsSwitching, Is.False, "a respawned player can fire at once");
             Assert.That(weapon.ServerWeapon, Is.SameAs(rifle));
-            Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(weapon.WeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
             Assert.That(rifle.AmmoInMagazine, Is.EqualTo(30));
             Assert.That(rifle.ReserveAmmo, Is.EqualTo(90));
             Assert.That(weapon.Loadout.Items[1].AmmoInMagazine, Is.EqualTo(5));
@@ -426,7 +461,7 @@ namespace Fps.Net.Tests
             Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
 
             // 作り直した並びでも持ち替えとリロードの購読が続いている
-            SwitchAndWait(weapon, 1);
+            SwitchAndWait(weapon, _handgunId);
             Assert.That(weapon.WeaponId, Is.EqualTo(_handgunId));
         }
 
@@ -434,8 +469,8 @@ namespace Fps.Net.Tests
         public void RefillWhileSwitchingEndsTheSwitch()
         {
             var weapon = CreateTwoWeapons();
-            ExpectSwitchLog(weapon, 1);
-            weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, 1);
+            ExpectSwitchLog(weapon, _handgunId);
+            weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, _handgunId);
 
             weapon.ServerRefill();
 
@@ -449,8 +484,8 @@ namespace Fps.Net.Tests
         {
             var weapon = CreateTwoWeapons();
             weapon.ServerTryFire();
-            ExpectSwitchLog(weapon, 1);
-            weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, 1);
+            ExpectSwitchLog(weapon, _handgunId);
+            weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, _handgunId);
 
             weapon.ServerEquip(new[] { HandgunSpec() }, 0f);
 
@@ -469,7 +504,7 @@ namespace Fps.Net.Tests
             Assert.That(weapon.State, Is.EqualTo(default(NetWeaponState)));
             Assert.That(weapon.PrepareFire(), Is.False);
             Assert.That(weapon.RequestReload(), Is.False);
-            Assert.That(weapon.RequestSwitch(1), Is.False);
+            Assert.That(weapon.RequestSwitch(_handgunId), Is.False);
             Assert.That(weapon.RequestNextWeapon(), Is.False);
             Assert.That(weapon.RequestPreviousWeapon(), Is.False);
         }

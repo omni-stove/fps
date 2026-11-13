@@ -216,5 +216,114 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => weapon.Tick(-1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => weapon.Tick(float.NaN));
         }
+
+        private static GameRules Rules(bool infiniteReserve, float reserveAmmoMultiplier)
+        {
+            var d = GameRules.Default;
+            return new GameRules(
+                d.FriendlyFire,
+                d.RespawnMode,
+                d.WaveIntervalSeconds,
+                d.RegenDelaySeconds,
+                d.RegenPerSecond,
+                d.DeathBody,
+                d.DeathCamera,
+                infiniteReserve,
+                reserveAmmoMultiplier);
+        }
+
+        [Test]
+        public void RejectsNullRules()
+        {
+            Assert.Throws<ArgumentNullException>(() => new ServerWeapon(Spec(), null));
+        }
+
+        [Test]
+        public void DefaultRulesKeepTheSpecReserve()
+        {
+            var weapon = new ServerWeapon(Spec(reserve: 5), GameRules.Default);
+
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(5));
+            Assert.That(weapon.HasInfiniteReserve, Is.False);
+            Assert.That(new ServerWeapon(Spec()).HasInfiniteReserve, Is.False);
+        }
+
+        [TestCase(10, 0f, 0)]
+        [TestCase(10, 0.5f, 5)]
+        [TestCase(5, 0.5f, 3)]
+        [TestCase(10, 2f, 20)]
+        public void StartsWithReserveScaledByTheMultiplier(int specReserve, float multiplier, int expected)
+        {
+            var weapon = new ServerWeapon(Spec(reserve: specReserve), Rules(false, multiplier));
+
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(expected));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void RefillRestoresTheScaledReserve()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 3, reserve: 5), Rules(false, 2f));
+            weapon.TryFire();
+            weapon.TryStartReload();
+            weapon.Tick(2f);
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(9));
+
+            weapon.Refill();
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(10));
+            Assert.That(weapon.HasInfiniteReserve, Is.False);
+        }
+
+        [Test]
+        public void InfiniteReserveRefillsWithoutConsumingReserve()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 3, reserve: 5), Rules(true, 1f));
+            var reloaded = 0;
+            weapon.Reloaded += () => reloaded++;
+            for (var i = 0; i < 3; i++)
+            {
+                weapon.TryFire();
+            }
+
+            Assert.That(weapon.HasInfiniteReserve, Is.True);
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(2f);
+
+            Assert.That(reloaded, Is.EqualTo(1));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void InfiniteReserveWithZeroReserveStillReloadsAutomatically()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 1, reserve: 0), Rules(true, 1f));
+            bool? automatic = null;
+            weapon.ReloadStarted += a => automatic = a;
+            weapon.TryFire();
+
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.OutOfAmmo));
+            Assert.That(weapon.IsReloading, Is.True);
+            Assert.That(automatic, Is.True);
+
+            weapon.Tick(2f);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(0));
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
+        }
+
+        [Test]
+        public void RefillKeepsInfiniteReserve()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 1, reserve: 0), Rules(true, 1f));
+
+            weapon.Refill();
+            weapon.TryFire();
+
+            Assert.That(weapon.HasInfiniteReserve, Is.True);
+            Assert.That(weapon.TryStartReload(), Is.True);
+        }
     }
 }

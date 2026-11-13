@@ -10,9 +10,9 @@ namespace Fps.Core
     /// </summary>
     /// <remarks>
     /// 詰まる前は、最後に進めた地点から <see cref="ProgressDistance"/> 動けば進めたとみなす (追う目標が逃げていても誤って詰まりとしない)。
-    /// 立て直しを始めた後は、目的地までの距離が詰まった時点より <see cref="ProgressDistance"/> 縮んだときだけ立ち直ったとみなす。
+    /// 立て直しを始めた後は、基準点から目的地の方向へ <see cref="ProgressDistance"/> 以上動いたときだけ立ち直ったとみなす。
     /// 寄り道で横へ動いたり、同じ所を行き来したりしただけで段階が最初に戻るのを防ぐため。
-    /// 立て直しの途中で目的地が <see cref="GoalChangeDistance"/> 以上変わったら、段階も経過時間もそのままに、新しい目的地までの距離から測り直す。
+    /// 立て直しの途中で目的地が <see cref="GoalChangeDistance"/> 以上変わったら、段階も経過時間もそのままに、基準点を今の位置へ移して測り直す。
     /// </remarks>
     public sealed class StuckMonitor
     {
@@ -22,7 +22,7 @@ namespace Fps.Core
         /// <summary>進めないまま次の段階へ移るまでの秒数。</summary>
         public float StuckSeconds { get; }
 
-        /// <summary>これだけ動けば (立て直し中は目的地へこれだけ近づけば) 進めたとみなす距離 (メートル)。</summary>
+        /// <summary>これだけ動けば (立て直し中は目的地の方向へこれだけ動けば) 進めたとみなす距離 (メートル)。</summary>
         public float ProgressDistance { get; }
 
         /// <summary>立て直しの途中で目的地がこれ以上変わったら、新しい目的地までの距離から測り直す距離 (メートル)。</summary>
@@ -40,7 +40,6 @@ namespace Fps.Core
         private Vector3 _anchor;
         private Vector3 _goal;
         private bool _tracking;
-        private float _stuckGoalDistance;
 
         /// <param name="stuckSeconds">次の段階へ移るまでの秒数。正の有限値。</param>
         /// <param name="progressDistance">進めたとみなす距離。正の有限値。</param>
@@ -114,11 +113,11 @@ namespace Fps.Core
             {
                 // 段階も経過時間も戻さない。目的地をあきらめても体が挟まったままなら次は Warp まで進める必要があり、
                 // 動き続ける目標を追う間も時間は積み上げないと段階が先へ進まない。
+                // 基準点も今の位置へ移す。目標が動くたびに距離を測り直すと、速い目標を歩いて追う敵は距離が縮まず立ち直れない。
                 _goal = goal.Value;
-                _stuckGoalDistance = Vector3.Distance(position, goal.Value);
+                _anchor = position;
             }
-            else if (Vector3.Distance(position, goal.Value) <= _stuckGoalDistance - ProgressDistance
-                && MovedTowardGoal(position, goal.Value))
+            else if (MovedTowardGoal(position, goal.Value))
             {
                 var stalled = TotalStalledSeconds;
                 Reset();
@@ -132,11 +131,6 @@ namespace Fps.Core
             if (StalledSeconds < StuckSeconds)
             {
                 return StuckRecovery.None;
-            }
-
-            if (Stage == StuckRecovery.None)
-            {
-                _stuckGoalDistance = Vector3.Distance(position, goal.Value);
             }
 
             StalledSeconds = 0f;

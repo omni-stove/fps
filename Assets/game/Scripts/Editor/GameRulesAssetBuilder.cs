@@ -67,27 +67,27 @@ namespace Fps.Editor
                 ActionRules.Default);
         }
 
-        /// <summary>キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、体だけ倒れるようにし、予備弾の倍率を 1 にしたもの。建造物は壊れない。</summary>
+        /// <summary>キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、5 秒後から毎秒 15 回復、体は倒れる、予備弾は有限で 1 倍にしたもの。建造物は壊れない。</summary>
         public static GameRules CampaignNormalRules()
         {
-            return WithOverrides(GameRules.Default, DeathBody.Collapse, GameRules.Default.RegenDelaySeconds, GameRules.Default.RegenPerSecond, 1f);
+            return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f);
         }
 
-        /// <summary>キャンペーン (難)。<see cref="GameRules.Default"/> のうち、回復なし、体は倒れる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。</summary>
+        /// <summary>キャンペーン (難)。<see cref="GameRules.Default"/> のうち、7 秒後から毎秒 10 回復、体は倒れる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。</summary>
         public static GameRules CampaignHardRules()
         {
-            return WithOverrides(GameRules.Default, DeathBody.Collapse, 0f, 0f, 0.6f);
+            return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f);
         }
 
-        /// <summary>射撃場。味方撃ちなし、個別リスポーン、回復なし、体は消える、死亡カメラなし、予備弾は無限、建造物は弾で壊れる。</summary>
+        /// <summary>射撃場。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は消える、死亡カメラなし、予備弾は無限、建造物は弾で壊れる。</summary>
         public static GameRules RangeRules()
         {
             return new GameRules(
                 FriendlyFire.Off,
                 RespawnMode.Individual,
                 GameRules.DefaultWaveIntervalSeconds,
-                0f,
-                0f,
+                4f,
+                20f,
                 DeathBody.Vanish,
                 DeathCamera.None,
                 true,

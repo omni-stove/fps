@@ -12,7 +12,7 @@ namespace Fps.Tests.EditMode
     {
         private GameObject _player;
 
-        private static GameRules Rules(Cover cover, BlindFire blindFire)
+        private static GameRules Rules(Cover cover, BlindFire blindFire, Dodge dodge = Dodge.Off)
         {
             var actions = new ActionRules(
                 Downed.Off,
@@ -21,7 +21,8 @@ namespace Fps.Tests.EditMode
                 ActionRules.DefaultReviveSeconds,
                 cover,
                 blindFire,
-                ActiveReload.Off);
+                ActiveReload.Off,
+                dodge);
             return new GameRules(
                 FriendlyFire.Off,
                 RespawnMode.Individual,
@@ -51,7 +52,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void DefaultRulesAttachBothActionsDisabled()
         {
-            LogAssert.Expect(LogType.Log, "[Actions] cover=Off blindFire=Off activeReload=Off downed=Off");
+            LogAssert.Expect(LogType.Log, "[Actions] cover=Off blindFire=Off activeReload=Off downed=Off dodge=Off");
 
             PlayerActions.Attach(_player, GameRules.Default);
 
@@ -66,7 +67,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void CoverOnEnablesOnlyTheCover()
         {
-            LogAssert.Expect(LogType.Log, "[Actions] cover=On blindFire=Off activeReload=Off downed=Off");
+            LogAssert.Expect(LogType.Log, "[Actions] cover=On blindFire=Off activeReload=Off downed=Off dodge=Off");
 
             PlayerActions.Attach(_player, Rules(Cover.On, BlindFire.Off));
 
@@ -77,7 +78,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BlindFireOnEnablesBoth()
         {
-            LogAssert.Expect(LogType.Log, "[Actions] cover=On blindFire=On activeReload=Off downed=Off");
+            LogAssert.Expect(LogType.Log, "[Actions] cover=On blindFire=On activeReload=Off downed=Off dodge=Off");
 
             PlayerActions.Attach(_player, Rules(Cover.On, BlindFire.On));
 
@@ -105,6 +106,39 @@ namespace Fps.Tests.EditMode
 
             Assert.That(cover.IsInCover, Is.False);
             Assert.That(cover.IsPeeking, Is.False);
+        }
+
+        [Test]
+        public void DodgeFollowsTheRulesOnThePlayerController()
+        {
+            var mover = _player.AddComponent<PlayerController>();
+            Assert.That(mover.DodgeRule, Is.EqualTo(Dodge.Off));
+
+            LogAssert.Expect(LogType.Log, "[Actions] cover=Off blindFire=Off activeReload=Off downed=Off dodge=On");
+            PlayerActions.Attach(_player, Rules(Cover.Off, BlindFire.Off, Dodge.On));
+            Assert.That(mover.DodgeRule, Is.EqualTo(Dodge.On));
+
+            PlayerActions.Attach(_player, GameRules.Default);
+            Assert.That(mover.DodgeRule, Is.EqualTo(Dodge.Off));
+        }
+
+        [Test]
+        public void DodgeIsBlockedOnlyWhileInCover()
+        {
+            var mover = _player.AddComponent<PlayerController>();
+
+            PlayerActions.Attach(_player, Rules(Cover.On, BlindFire.Off, Dodge.On));
+
+            Assert.That(mover.DodgeBlocker, Is.Not.Null);
+            Assert.That(mover.DodgeBlocker(), Is.False, "out of cover");
+        }
+
+        [Test]
+        public void AttachWithoutAPlayerControllerStillWorks()
+        {
+            PlayerActions.Attach(_player, Rules(Cover.Off, BlindFire.Off, Dodge.On));
+
+            Assert.That(_player.GetComponent<PlayerController>(), Is.Null);
         }
 
         [Test]

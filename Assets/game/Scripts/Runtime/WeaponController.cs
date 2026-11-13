@@ -185,6 +185,15 @@ namespace Fps.Runtime
         /// </summary>
         public IShotFilter ShotFilter { get; set; }
 
+        /// <summary>
+        /// true を返す間は <see cref="Fire"/> が撃たない (回避中など)。弾は減らず、連射間隔も進めない。null なら止めない。
+        /// オフラインは <see cref="GameBootstrap"/> が配線する。
+        /// </summary>
+        public Func<bool> FireBlocker { get; set; }
+
+        /// <summary><see cref="FireBlocker"/> が今の射撃を止めているか。</summary>
+        public bool IsFireBlocked => FireBlocker != null && FireBlocker();
+
         /// <summary>今持っている武器の距離減衰。未初期化なら null。</summary>
         public DamageFalloff Falloff => Weapon?.Spec.Falloff;
 
@@ -498,7 +507,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 今の武器で 1 発撃つ。<see cref="Weapon.TryFire"/> が false なら何もせず false。
+        /// 今の武器で 1 発撃つ。<see cref="FireBlocker"/> が止めているか <see cref="Weapon.TryFire"/> が false なら何もせず false。
         /// 撃てたら照準の正面へ (<see cref="ShotFilter"/> があれば書き換えた始点と向きで) Raycast し、Hitbox に当たればダメージを渡す。
         /// Hitbox の無い物に当たれば <see cref="StructureDamage.Apply"/> に武器の <see cref="WeaponSpec.ExplosionRadius"/> で渡す。
         /// 撃つと <see cref="CombatEvents.ShotFired"/>、何かに当たると <see cref="CombatEvents.Impact"/>、
@@ -510,7 +519,7 @@ namespace Fps.Runtime
             EnsureInitialized();
 
             var weapon = Weapon;
-            if (!weapon.TryFire())
+            if (IsFireBlocked || !weapon.TryFire())
             {
                 return false;
             }

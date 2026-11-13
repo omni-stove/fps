@@ -124,7 +124,7 @@ namespace Fps.Core
         }
 
         /// <summary>入力 (X 右・Y 前) を yaw で回し、ワールドの水平ベクトル (X, Z) にする。</summary>
-        private static Vector2 ToWorld(Vector2 input, float yawRadians)
+        internal static Vector2 ToWorld(Vector2 input, float yawRadians)
         {
             var sin = (float)Math.Sin(yawRadians);
             var cos = (float)Math.Cos(yawRadians);

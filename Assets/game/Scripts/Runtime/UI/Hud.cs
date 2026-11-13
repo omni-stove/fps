@@ -123,7 +123,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>・
-        /// <see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>) を
+        /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>) を
         /// hudObject に付ける。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
         /// 既に付いているものは付け直さない。
@@ -138,6 +138,7 @@ namespace Fps.Runtime
             AddIfMissing<HitMarkerView>(hudObject);
             AddIfMissing<DamageDirectionView>(hudObject);
             AddIfMissing<KillFeedView>(hudObject);
+            AddIfMissing<SubtitleView>(hudObject);
             AddIfMissing<ScoreboardView>(hudObject);
             AddIfMissing<LoadoutSelectView>(hudObject);
             AddIfMissing<TutorialPromptView>(hudObject);
@@ -155,6 +156,9 @@ namespace Fps.Runtime
 
         /// <summary>同じ GameObject のキルフィード。<see cref="AddViews"/> で付けていなければ null。</summary>
         public KillFeedView KillFeed => GetComponent<KillFeedView>();
+
+        /// <summary>同じ GameObject の音の合図の字幕。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public SubtitleView Subtitles => GetComponent<SubtitleView>();
 
         /// <summary>同じ GameObject のスコアボード。<see cref="AddViews"/> で付けていなければ null。</summary>
         public ScoreboardView Scoreboard => GetComponent<ScoreboardView>();

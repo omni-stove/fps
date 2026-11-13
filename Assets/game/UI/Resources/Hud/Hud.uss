@@ -170,6 +170,29 @@
     -unity-font-style: bold;
 }
 
+/* 画面下中央の音の合図の字幕。下端のチュートリアルの案内と重ならない高さに、行を最初に出た順で上から積む。 */
+.subtitles {
+    position: absolute;
+    bottom: 130px;
+    left: 50%;
+    translate: -50% 0;
+    flex-direction: column;
+    align-items: center;
+}
+
+.subtitles__line {
+    margin: 2px 0 0 0;
+    padding: 4px 16px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.6);
+    font-size: 28px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 /* 試合結果。画面中央の照準より上に大きく出す。 */
 .hud__result {
     position: absolute;

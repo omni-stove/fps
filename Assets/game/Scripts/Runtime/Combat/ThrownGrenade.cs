@@ -30,6 +30,12 @@ namespace Fps.Runtime
         /// <summary>爆発のエフェクトを消すまでの秒数。プレハブが自分で消えなかったときの後始末。</summary>
         public const float EffectLifetimeSeconds = 4f;
 
+        /// <summary>
+        /// 爆発の音が聞こえなくなる距離 (m)。<see cref="AudioSource.PlayClipAtPoint(AudioClip, Vector3)"/> が作る音源の既定の maxDistance に合わせ、
+        /// 字幕 (<see cref="SubtitleFeed"/>) をこれより遠い人には出さない。
+        /// </summary>
+        public const float ExplosionAudibleDistance = 500f;
+
         // 身をかがめて頭だけ出している相手にも当たるよう、体の上端の少し下へも線を引く。
         private const float TopProbeInset = 0.1f;
 
@@ -383,7 +389,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// center に <see cref="PresentationCatalog"/> の爆発のエフェクトと音を出す。Play 中でない・専用サーバー・カタログか素材が無いときは何もしない。
+        /// center に <see cref="PresentationCatalog"/> の爆発のエフェクトと音を出し、音を鳴らしたら字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
+        /// Play 中でない・専用サーバー・カタログか素材が無いときは何もしない。
         /// ネット対戦ではサーバーから爆発を受け取ったクライアント (<c>Fps.Net.NetCombatFeed</c>) も呼ぶ。
         /// </summary>
         public static void PlayExplosionEffects(Vector3 center)
@@ -409,6 +416,7 @@ namespace Fps.Runtime
             if (catalog.ExplosionSound != null)
             {
                 AudioSource.PlayClipAtPoint(catalog.ExplosionSound, center);
+                SubtitleFeed.Raise(SoundCueKind.Explosion, center, ExplosionAudibleDistance);
             }
         }
 

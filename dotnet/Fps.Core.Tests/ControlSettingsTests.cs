@@ -86,11 +86,11 @@ namespace Fps.Core.Tests
             Assert.That(
                 ControlSettings.Default.ToJson(),
                 Is.EqualTo(Json(
-                    "{'version':4,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
+                    "{'version':5,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
                     "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}," +
                     "'mouseSensitivity':100,'gamepadSensitivity':100,'adsSensitivity':100," +
                     "'fieldOfView':60,'masterVolume':100,'effectsVolume':100,'showNetStats':false," +
-                    "'colorPalette':'standard'}")));
+                    "'colorPalette':'standard','showSubtitles':false}")));
         }
 
         [Test]
@@ -140,7 +140,7 @@ namespace Fps.Core.Tests
         [TestCase("{'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':'1','gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':0,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
-        [TestCase("{'version':5,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':6,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':-1,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         public void BrokenDataFallsBackToAllDefaults(string text)
         {
@@ -153,9 +153,9 @@ namespace Fps.Core.Tests
         [Test]
         public void ReportsTheVersionItRejected()
         {
-            ControlSettings.FromJson(Json("{'version':5}"), out var problems);
+            ControlSettings.FromJson(Json("{'version':6}"), out var problems);
 
-            Assert.That(problems[0], Does.Contain("version 5"));
+            Assert.That(problems[0], Does.Contain("version 6"));
         }
 
         // 1 つの操作の値が欠けている・型違い・知らない名前なら、その操作だけ初期値
@@ -380,7 +380,7 @@ namespace Fps.Core.Tests
         {
             var loaded = ControlSettings.FromJson(Json(_valid), out _);
 
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':4,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':5,")));
             Assert.That(ControlSettings.FromJson(loaded.ToJson(), out var problems), Is.EqualTo(loaded));
             Assert.That(problems, Is.Empty);
         }
@@ -614,7 +614,7 @@ namespace Fps.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'colorPalette':'" + name + "'}")));
+            Assert.That(json, Does.Contain(Json(",'colorPalette':'" + name + "',")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.Palette, Is.EqualTo(palette));
@@ -667,6 +667,113 @@ namespace Fps.Core.Tests
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.Standard), "the default");
             Assert.That(loaded.ShowNetStats, Is.True, "the saved value");
             Assert.That(loaded.Get(ControlValue.FieldOfView), Is.EqualTo(75), "the saved value");
+        }
+
+        [Test]
+        public void SubtitlesAreOffByDefault()
+        {
+            Assert.That(ControlSettings.Default.ShowSubtitles, Is.False);
+        }
+
+        [Test]
+        public void WithShowSubtitlesChangesOnlyThatFlag()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.FieldOfView, 80)
+                .WithShowNetStats(true)
+                .WithPalette(ColorPalette.RedGreen);
+
+            var shown = settings.WithShowSubtitles(true);
+
+            Assert.That(shown.ShowSubtitles, Is.True);
+            Assert.That(settings.ShowSubtitles, Is.False);
+            Assert.That(shown.FieldOfView, Is.EqualTo(80f));
+            Assert.That(shown.ShowNetStats, Is.True);
+            Assert.That(shown.Palette, Is.EqualTo(ColorPalette.RedGreen));
+            Assert.That(shown, Is.Not.EqualTo(settings));
+            Assert.That(shown.WithShowSubtitles(false), Is.EqualTo(settings));
+            Assert.That(shown.WithShowSubtitles(false).GetHashCode(), Is.EqualTo(settings.GetHashCode()));
+            Assert.That(settings.WithShowSubtitles(false), Is.SameAs(settings));
+        }
+
+        [Test]
+        public void ChangingOtherEntriesKeepsTheSubtitles()
+        {
+            var shown = ControlSettings.Default.WithShowSubtitles(true);
+
+            Assert.That(shown.With(ControlValue.MasterVolume, 10).ShowSubtitles, Is.True);
+            Assert.That(shown.With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle).ShowSubtitles, Is.True);
+            Assert.That(shown.WithShowNetStats(true).ShowSubtitles, Is.True);
+            Assert.That(shown.WithPalette(ColorPalette.BlueYellow).ShowSubtitles, Is.True);
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void RoundTripsTheSubtitles(bool show)
+        {
+            var settings = ControlSettings.Default.WithPalette(ColorPalette.BlueYellow).WithShowSubtitles(show);
+
+            var json = settings.ToJson();
+            var loaded = ControlSettings.FromJson(json, out var problems);
+
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + "}")));
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.ShowSubtitles, Is.EqualTo(show));
+        }
+
+        [Test]
+        public void ReadsVersionFourWithTheSubtitlesOffAndNoProblems()
+        {
+            var versionFour = Json(_validV2.Replace("'version':2", "'version':4", StringComparison.Ordinal)
+                .Replace("'effectsVolume':0}", "'effectsVolume':0,'showNetStats':true,'colorPalette':'redGreen'}", StringComparison.Ordinal));
+
+            var loaded = ControlSettings.FromJson(versionFour, out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded.ShowSubtitles, Is.False);
+            Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen), "the saved value");
+        }
+
+        [Test]
+        public void VersionFourReportsTheSubtitlesKeyAsUnknown()
+        {
+            var versionFour = Json(_validV2.Replace("'version':2", "'version':4", StringComparison.Ordinal)
+                .Replace(
+                    "'effectsVolume':0}",
+                    "'effectsVolume':0,'showNetStats':true,'colorPalette':'redGreen','showSubtitles':true}",
+                    StringComparison.Ordinal));
+
+            var loaded = ControlSettings.FromJson(versionFour, out var problems);
+
+            Assert.That(loaded.ShowSubtitles, Is.False);
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("'showSubtitles'"));
+        }
+
+        // 字幕が欠けている・真偽値でないなら、その項目だけ初期値 (出さない)
+        [TestCase(",'showSubtitles':true", "")]
+        [TestCase("'showSubtitles':true", "'showSubtitles':'true'")]
+        [TestCase("'showSubtitles':true", "'showSubtitles':1")]
+        [TestCase("'showSubtitles':true", "'showSubtitles':null")]
+        public void BrokenSubtitlesFlagFallsBackOnlyForThatFlag(string from, string to)
+        {
+            var valid = Json(_validV2.Replace("'version':2", "'version':5", StringComparison.Ordinal)
+                .Replace(
+                    "'effectsVolume':0}",
+                    "'effectsVolume':0,'showNetStats':true,'colorPalette':'redGreen','showSubtitles':true}",
+                    StringComparison.Ordinal));
+            Assert.That(ControlSettings.FromJson(valid, out var none).ShowSubtitles, Is.True);
+            Assert.That(none, Is.Empty);
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("showSubtitles"));
+            Assert.That(loaded.ShowSubtitles, Is.False, "the default");
+            Assert.That(loaded.ShowNetStats, Is.True, "the saved value");
+            Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen), "the saved value");
         }
 
         /// <summary>読みやすさのため ' で書いた JSON を " に直す。</summary>

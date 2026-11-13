@@ -6,7 +6,8 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ServerLoadoutTests
     {
-        private const string _rifle = "00000000-0000-4000-8000-000000000001";
+        // 大文字にすると別の文字列になるよう、16 進の英字を含める
+        private const string _rifle = "00000000-0000-4000-8000-00000000000a";
         private const string _handgun = "00000000-0000-4000-8000-000000000002";
 
         // ロードアウトに無い Id

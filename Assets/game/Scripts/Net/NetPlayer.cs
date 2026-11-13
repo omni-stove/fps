@@ -30,7 +30,7 @@ namespace Fps.Net
     public sealed class NetPlayer : NetworkBehaviour
     {
         /// <summary>Assets/InputSystem_Actions.inputactions の Attack アクション。</summary>
-        public const string AttackActionPath = "Player/Attack";
+        public const string AttackActionPath = InputActionPaths.Attack;
 
         /// <summary>参加前を表す <see cref="ServerPlayerId"/>。</summary>
         public const int NotJoined = -1;

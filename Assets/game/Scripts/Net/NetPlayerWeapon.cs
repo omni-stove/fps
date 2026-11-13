@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using Fps.Core;
+using Fps.Runtime;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -27,7 +28,7 @@ namespace Fps.Net
     public sealed class NetPlayerWeapon : NetworkBehaviour
     {
         /// <summary>Assets/InputSystem_Actions.inputactions の Reload アクション (キーボードの R)。</summary>
-        public const string ReloadActionPath = "Player/Reload";
+        public const string ReloadActionPath = InputActionPaths.Reload;
 
         /// <summary>
         /// 武器の Id として同期・送信できる最大バイト数 (<see cref="FixedString64Bytes"/>)。

@@ -43,9 +43,9 @@ namespace Fps.Net
         /// <summary>この高さより下に落ちたら出現位置に戻す。予測とサーバーで同じ規則にするためシミュレーションの中で行う。</summary>
         public const float KillPlaneY = -50f;
 
-        public const string MoveActionPath = "Player/Move";
-        public const string JumpActionPath = "Player/Jump";
-        public const string SprintActionPath = "Player/Sprint";
+        public const string MoveActionPath = InputActionPaths.Move;
+        public const string JumpActionPath = InputActionPaths.Jump;
+        public const string SprintActionPath = InputActionPaths.Sprint;
 
         /// <summary>1 tick の長さ (秒)。</summary>
         public static readonly float TickSeconds = 1f / TickRate;

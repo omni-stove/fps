@@ -13,7 +13,7 @@ namespace Fps.Runtime
     public sealed class InteractObjective : ObjectiveAreaBase
     {
         /// <summary>Assets/InputSystem_Actions.inputactions の Interact アクション。</summary>
-        public const string InteractActionPath = "Player/Interact";
+        public const string InteractActionPath = InputActionPaths.Interact;
 
         private InputAction _interactAction;
         private bool _enabledInteractAction;

@@ -410,12 +410,12 @@ namespace Fps.Core.Tests
         [Test]
         public void RejectsInvalidArguments()
         {
-            Assert.Throws<ArgumentNullException>(() => new ModeSession(null, 60f, new IScoreRule[0], null, new IWinCondition[0]));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ModeSession(new TwoTeams(), 0f, new IScoreRule[0], null, new IWinCondition[0]));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ModeSession(new TwoTeams(), float.NaN, new IScoreRule[0], null, new IWinCondition[0]));
-            Assert.Throws<ArgumentNullException>(() => new ModeSession(new TwoTeams(), 60f, null, null, new IWinCondition[0]));
-            Assert.Throws<ArgumentNullException>(() => new ModeSession(new TwoTeams(), 60f, new IScoreRule[0], null, null));
-            Assert.Throws<ArgumentException>(() => new ModeSession(new TwoTeams(), 60f, new IScoreRule[] { null }, null, new IWinCondition[0]));
+            Assert.Throws<ArgumentNullException>(() => new ModeSession(null, 60f, Array.Empty<IScoreRule>(), null, Array.Empty<IWinCondition>()));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ModeSession(new TwoTeams(), 0f, Array.Empty<IScoreRule>(), null, Array.Empty<IWinCondition>()));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ModeSession(new TwoTeams(), float.NaN, Array.Empty<IScoreRule>(), null, Array.Empty<IWinCondition>()));
+            Assert.Throws<ArgumentNullException>(() => new ModeSession(new TwoTeams(), 60f, null, null, Array.Empty<IWinCondition>()));
+            Assert.Throws<ArgumentNullException>(() => new ModeSession(new TwoTeams(), 60f, Array.Empty<IScoreRule>(), null, null));
+            Assert.Throws<ArgumentException>(() => new ModeSession(new TwoTeams(), 60f, new IScoreRule[] { null }, null, Array.Empty<IWinCondition>()));
 
             var session = Create(new TwoTeams());
             session.Join(10);
@@ -450,9 +450,9 @@ namespace Fps.Core.Tests
             return new ModeSession(
                 layout,
                 timeLimitSeconds,
-                scoreRules ?? new IScoreRule[0],
+                scoreRules ?? Array.Empty<IScoreRule>(),
                 respawn,
-                winConditions ?? new IWinCondition[0]);
+                winConditions ?? Array.Empty<IWinCondition>());
         }
 
         private sealed class FixedRateScore : IScoreRule

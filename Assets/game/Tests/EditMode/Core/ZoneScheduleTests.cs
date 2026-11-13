@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ZoneScheduleTests
     {
-        private const float Tolerance = 1e-4f;
+        private const float _tolerance =1e-4f;
 
         // 半径 100 から、10 秒待って 20 秒で 50 へ、5 秒待って 10 秒で 20 へ。合わせて 45 秒。
         private static ZoneSchedule TwoPhases(int seed = 7)
@@ -29,9 +29,9 @@ namespace Fps.Core.Tests
             var schedule = TwoPhases();
 
             Assert.That(schedule.PhaseCount, Is.EqualTo(2));
-            Assert.That(schedule.TotalSeconds, Is.EqualTo(45f).Within(Tolerance));
+            Assert.That(schedule.TotalSeconds, Is.EqualTo(45f).Within(_tolerance));
             Assert.That(schedule.PhaseStartSeconds(0), Is.EqualTo(0f));
-            Assert.That(schedule.PhaseStartSeconds(1), Is.EqualTo(30f).Within(Tolerance));
+            Assert.That(schedule.PhaseStartSeconds(1), Is.EqualTo(30f).Within(_tolerance));
             Assert.That(schedule.TargetRadius(0), Is.EqualTo(50f));
             Assert.That(schedule.TargetRadius(1), Is.EqualTo(20f));
         }
@@ -49,8 +49,8 @@ namespace Fps.Core.Tests
             Assert.That(state.TargetRadius, Is.EqualTo(50f));
             Assert.That(state.TargetCenter, Is.EqualTo(schedule.TargetCenter(0)));
             Assert.That(state.DamagePerSecond, Is.EqualTo(1f));
-            Assert.That(state.SecondsUntilShrink, Is.EqualTo(6f).Within(Tolerance));
-            Assert.That(state.SecondsUntilStageEnds, Is.EqualTo(6f).Within(Tolerance));
+            Assert.That(state.SecondsUntilShrink, Is.EqualTo(6f).Within(_tolerance));
+            Assert.That(state.SecondsUntilStageEnds, Is.EqualTo(6f).Within(_tolerance));
         }
 
         [Test]
@@ -62,12 +62,12 @@ namespace Fps.Core.Tests
 
             Assert.That(state.Stage, Is.EqualTo(ZoneStage.Shrinking));
             Assert.That(state.PhaseIndex, Is.EqualTo(0));
-            Assert.That(state.Radius, Is.EqualTo(75f).Within(Tolerance));
+            Assert.That(state.Radius, Is.EqualTo(75f).Within(_tolerance));
             var halfway = Vector2.Lerp(new Vector2(10f, -5f), target, 0.5f);
-            Assert.That(state.Center.X, Is.EqualTo(halfway.X).Within(Tolerance));
-            Assert.That(state.Center.Y, Is.EqualTo(halfway.Y).Within(Tolerance));
+            Assert.That(state.Center.X, Is.EqualTo(halfway.X).Within(_tolerance));
+            Assert.That(state.Center.Y, Is.EqualTo(halfway.Y).Within(_tolerance));
             Assert.That(state.SecondsUntilShrink, Is.EqualTo(0f));
-            Assert.That(state.SecondsUntilStageEnds, Is.EqualTo(10f).Within(Tolerance));
+            Assert.That(state.SecondsUntilStageEnds, Is.EqualTo(10f).Within(_tolerance));
             Assert.That(schedule.RadiusAt(20f), Is.EqualTo(state.Radius));
             Assert.That(schedule.CenterAt(20f), Is.EqualTo(state.Center));
         }
@@ -83,7 +83,7 @@ namespace Fps.Core.Tests
             Assert.That(state.Radius, Is.EqualTo(50f));
             Assert.That(state.Center, Is.EqualTo(schedule.TargetCenter(0)));
             Assert.That(state.DamagePerSecond, Is.EqualTo(4f));
-            Assert.That(state.SecondsUntilShrink, Is.EqualTo(5f).Within(Tolerance));
+            Assert.That(state.SecondsUntilShrink, Is.EqualTo(5f).Within(_tolerance));
         }
 
         [Test]
@@ -120,7 +120,7 @@ namespace Fps.Core.Tests
                     var radius = schedule.TargetRadius(i);
                     Assert.That(
                         Vector2.Distance(center, previousCenter) + radius,
-                        Is.LessThanOrEqualTo(previousRadius + Tolerance),
+                        Is.LessThanOrEqualTo(previousRadius + _tolerance),
                         "seed " + seed + " phase " + i);
                     previousCenter = center;
                     previousRadius = radius;
@@ -207,7 +207,7 @@ namespace Fps.Core.Tests
             var phase = new ZonePhase(1f, 1f, 5f, 1f);
 
             Assert.Throws<ArgumentNullException>(() => new ZoneSchedule(Vector2.Zero, 10f, null, 0));
-            Assert.Throws<ArgumentException>(() => new ZoneSchedule(Vector2.Zero, 10f, new ZonePhase[0], 0));
+            Assert.Throws<ArgumentException>(() => new ZoneSchedule(Vector2.Zero, 10f, Array.Empty<ZonePhase>(), 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new ZoneSchedule(Vector2.Zero, 0f, new[] { phase }, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new ZoneSchedule(Vector2.Zero, float.PositiveInfinity, new[] { phase }, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new ZoneSchedule(new Vector2(float.NaN, 0f), 10f, new[] { phase }, 0));

@@ -422,6 +422,12 @@ namespace Fps.Runtime
             CollectTargets();
             foreach (var target in _targets)
             {
+                // コールバック内で Stop() されたら、残りの相手には触らず、空にした状態も書き戻さない。
+                if (_schedule == null)
+                {
+                    return;
+                }
+
                 var inside = target.IsDead || _state.Contains(new System.Numerics.Vector2(target.transform.position.x, target.transform.position.z));
                 if (inside)
                 {
@@ -450,6 +456,11 @@ namespace Fps.Runtime
                 if (whole > 0)
                 {
                     target.TakeDamage(whole);
+                    if (_schedule == null)
+                    {
+                        return;
+                    }
+
                     DamageDealt?.Invoke(target, whole);
                 }
             }

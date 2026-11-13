@@ -98,7 +98,7 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 弾数と武器名の源を差し替える。弾数は射撃 (Fired) とリロード完了 (Reloaded) で更新し、武器名はここで
+        /// 弾数と武器名の源を差し替える。弾数は射撃 (Fired)・リロード完了 (Reloaded)・予備弾の補充 (ReserveAmmoAdded) で更新し、武器名はここで
         /// <see cref="WeaponSpec.DisplayName"/> にする。null なら両方とも仮の表示に戻す。
         /// </summary>
         public void BindWeapon(Weapon weapon)
@@ -107,6 +107,7 @@ namespace Fps.Core
             {
                 _weapon.Fired -= OnWeaponChanged;
                 _weapon.Reloaded -= OnWeaponChanged;
+                _weapon.ReserveAmmoAdded -= OnWeaponChanged;
             }
 
             _weapon = weapon;
@@ -114,6 +115,7 @@ namespace Fps.Core
             {
                 _weapon.Fired += OnWeaponChanged;
                 _weapon.Reloaded += OnWeaponChanged;
+                _weapon.ReserveAmmoAdded += OnWeaponChanged;
             }
 
             OnWeaponChanged();
@@ -170,6 +172,7 @@ namespace Fps.Core
             {
                 _weapon.Fired -= OnWeaponChanged;
                 _weapon.Reloaded -= OnWeaponChanged;
+                _weapon.ReserveAmmoAdded -= OnWeaponChanged;
                 _weapon = null;
             }
 

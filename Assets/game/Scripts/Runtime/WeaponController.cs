@@ -499,6 +499,56 @@ namespace Fps.Runtime
             WeaponChanged?.Invoke(Weapon);
         }
 
+        /// <summary>
+        /// definition の武器を満タン (<see cref="LoadedRules"/> の予備弾) で持ち武器の最後に加える。今持っている武器と他の武器の弾数はそのまま。
+        /// 武器を作り直すのでリロード中なら取り消し、<see cref="WeaponChanged"/> を呼ぶ (HUD は購読し直す)。持ち替えはしない。
+        /// <see cref="Definitions"/> (既定のロードアウト) は変えないが、<see cref="ApplyRules"/> での満たし直しでは加えた武器も残る。
+        /// 同じ Id の武器を既に持っていれば何もせず false。定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、状態は変えない。
+        /// </summary>
+        public bool AddWeapon(WeaponDefinition definition)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            EnsureInitialized();
+            var spec = definition.ToSpec();
+            if (_loadout.IndexOf(spec.Id) >= 0)
+            {
+                return false;
+            }
+
+            var specs = new WeaponSpec[_specs.Length + 1];
+            Array.Copy(_specs, specs, _specs.Length);
+            specs[_specs.Length] = spec;
+            var definitions = new WeaponDefinition[_loadedDefinitions.Length + 1];
+            Array.Copy(_loadedDefinitions, definitions, _loadedDefinitions.Length);
+            definitions[_loadedDefinitions.Length] = definition;
+
+            var loadout = WeaponLoadout.Restore(specs, _loadout.SnapshotAmmo(), Weapon.Spec.Id, _loadedRules, out _);
+            SetLoadout(loadout, specs, definitions, _loadedRules);
+            Debug.Log($"[Combat] weapon added index={specs.Length - 1} id={spec.Id} name={spec.DisplayName}", this);
+            WeaponChanged?.Invoke(Weapon);
+            return true;
+        }
+
+        /// <summary>
+        /// Id が weaponId の持ち武器に予備弾を amount 足し (<see cref="Fps.Core.Weapon.AddReserveAmmo"/>)、実際に足した数を返す。
+        /// 持っていない武器なら 0。
+        /// </summary>
+        public int AddReserveAmmo(string weaponId, int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
+            }
+
+            EnsureInitialized();
+            var index = _loadout.IndexOf(weaponId);
+            return index >= 0 ? _loadout.Items[index].AddReserveAmmo(amount) : 0;
+        }
+
         /// <summary>持っている全武器の今の残弾。並びの順。セーブに使う。</summary>
         public IReadOnlyList<WeaponAmmo> SnapshotAmmo()
         {

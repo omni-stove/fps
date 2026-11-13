@@ -13,8 +13,8 @@ namespace Fps.Editor
 {
     /// <summary>
     /// 敵 AI の動作確認用シーン EnemyAiTest を生成する。床に <see cref="NavMeshSurface"/> を置いて NavMesh を焼き、
-    /// NavMeshData をシーンの隣にアセットとして保存してから、敵 (<see cref="EnemyAgent"/>) と
-    /// <see cref="GameBootstrap"/> (床は生成しない設定) を置く。プレイヤーとライトは実行時に GameBootstrap が作る。
+    /// NavMeshData をシーンの隣にアセットとして保存してから、敵 (<see cref="EnemyAgent"/>、倒れると予備弾と回復を落とす <see cref="DropOnDeath"/> 付き)・
+    /// 拾える物の出現点 (<see cref="PickupSpawnPoint"/>) と <see cref="GameBootstrap"/> (床は生成しない設定) を置く。プレイヤーとライトは実行時に GameBootstrap が作る。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.EnemyTestSceneBuilder.Build</code>
     /// </summary>
@@ -92,6 +92,34 @@ namespace Fps.Editor
         /// <summary>巡回地点が NavMesh 上にあるかを確かめるときに探す半径 (メートル)。</summary>
         public const float NavMeshCheckRadius = 1f;
 
+        public const string PickupsObjectName = "Pickups";
+        public const string WeaponPickupName = "PickupSpawn-Weapon";
+        public const string AmmoPickupName = "PickupSpawn-Ammo";
+        public const string HealthPickupName = "PickupSpawn-Health";
+        public const string InteractHealthPickupName = "PickupSpawn-Health-Interact";
+
+        /// <summary>拾う武器を既に持っていたときに足す予備弾。</summary>
+        public const int WeaponPickupAmmoIfOwned = 2;
+
+        public const int AmmoPickupAmount = 60;
+        public const int HealthPickupAmount = 40;
+        public const float PickupRespawnSeconds = 15f;
+
+        /// <summary>倒れた敵が落とす予備弾と回復の量。</summary>
+        public const int EnemyDropAmmoAmount = 30;
+
+        public const int EnemyDropHealthAmount = 25;
+
+        /// <summary>
+        /// 拾える物の出現点。プレイヤー (原点) の少し前、壁 (z = 8) の手前に左から武器・予備弾・回復を並べ、
+        /// 左端には Interact で拾う回復を置く。どれも出現位置から拾える範囲 (<see cref="Pickup.DefaultRadius"/>) の外。
+        /// </summary>
+        public static readonly Vector3 WeaponPickupPosition = new Vector3(-6f, 0f, 3f);
+
+        public static readonly Vector3 AmmoPickupPosition = new Vector3(-3f, 0f, 3f);
+        public static readonly Vector3 HealthPickupPosition = new Vector3(3f, 0f, 3f);
+        public static readonly Vector3 InteractHealthPickupPosition = new Vector3(-9f, 0f, 3f);
+
         [MenuItem(MenuPath)]
         public static void Build()
         {
@@ -120,6 +148,7 @@ namespace Fps.Editor
             var playerWeapons = WeaponAssetBuilder.LoadPlayerLoadout();
             var catalog = WeaponAssetBuilder.LoadCatalog();
             WeaponAssetBuilder.FindInCatalog(catalog, EnemyId, EnemyWeaponId);
+            var pickupWeapon = WeaponAssetBuilder.LoadLauncher();
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
@@ -132,6 +161,7 @@ namespace Fps.Editor
             SceneBuildHelpers.RequireOnNavMesh(coverStands, NavMeshCheckRadius, "cover point");
             SceneBuildHelpers.RequireReachable(PatrolRoute[0], coverStands, NavMeshCheckRadius, "cover point");
             CreateActors(scene, playerWeapons, catalog);
+            CreatePickups(scene, pickupWeapon);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -211,8 +241,61 @@ namespace Fps.Editor
                 new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth),
                 enemyWeapon);
             enemy.CoverRegistry = SceneBuildHelpers.CreateCoverPoints(scene, null, CoverPointsObjectName, CoverPoints);
+
+            var drop = enemy.gameObject.AddComponent<DropOnDeath>();
+            drop.Drops = EnemyDrops();
             EditorSceneManager.MarkSceneDirty(scene);
             return enemy;
+        }
+
+        /// <summary>倒れた敵が落とす物 (予備弾と回復)。</summary>
+        public static PickupContents[] EnemyDrops()
+        {
+            return new[]
+            {
+                PickupContents.ForReserveAmmo(EnemyDropAmmoAmount),
+                PickupContents.ForHealth(EnemyDropHealthAmount),
+            };
+        }
+
+        /// <summary>
+        /// <see cref="PickupsObjectName"/> の下に拾える物の出現点を置き、その GameObject を返す。
+        /// 武器 (weapon、通常は <see cref="WeaponAssetBuilder.LoadLauncher"/> でプレイヤーの持たない武器)・予備弾 (今の武器)・回復は
+        /// 入ると拾い、残りの回復は Interact で拾う。どれも <see cref="PickupRespawnSeconds"/> 後にまた出る。
+        /// weapon が無いか Id が空なら何も置かずに例外を投げる。
+        /// </summary>
+        public static GameObject CreatePickups(Scene scene, WeaponDefinition weapon)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
+
+            // 中身を先に作って検査し、不正なら何も置かない。
+            var placements = new (string Name, Vector3 Position, PickupContents Contents, PickupCollectMode Mode)[]
+            {
+                (WeaponPickupName, WeaponPickupPosition, PickupContents.ForWeapon(weapon, WeaponPickupAmmoIfOwned), PickupCollectMode.Touch),
+                (AmmoPickupName, AmmoPickupPosition, PickupContents.ForReserveAmmo(AmmoPickupAmount), PickupCollectMode.Touch),
+                (HealthPickupName, HealthPickupPosition, PickupContents.ForHealth(HealthPickupAmount), PickupCollectMode.Touch),
+                (InteractHealthPickupName, InteractHealthPickupPosition, PickupContents.ForHealth(HealthPickupAmount), PickupCollectMode.Interact),
+            };
+
+            var root = new GameObject(PickupsObjectName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            foreach (var placement in placements)
+            {
+                var pointObject = new GameObject(placement.Name);
+                pointObject.transform.SetParent(root.transform, false);
+                pointObject.transform.position = placement.Position;
+                var point = pointObject.AddComponent<PickupSpawnPoint>();
+                point.Contents = placement.Contents;
+                point.CollectMode = placement.Mode;
+                point.RespawnSeconds = PickupRespawnSeconds;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            return root;
         }
 
         /// <summary>Build Settings の末尾に path を有効な状態で加える。既にあれば位置はそのままで有効にする。</summary>

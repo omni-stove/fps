@@ -320,7 +320,7 @@ namespace Fps.Net.Tests
             Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
             Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
 
-            NetTeamDeathmatch.ArmForSpawn(loadout, weapon);
+            NetTeamDeathmatch.ArmForSpawn(loadout, GameRules.Default, weapon);
 
             Assert.That(weapon.WeaponId, Is.EqualTo(_rifleId));
             Assert.That(weapon.CurrentSpec.Id, Is.EqualTo(_rifleId));
@@ -344,7 +344,121 @@ namespace Fps.Net.Tests
         [Test]
         public void SpawningWithoutAWeaponComponentDoesNothing()
         {
-            Assert.DoesNotThrow(() => NetTeamDeathmatch.ArmForSpawn(RifleAndHandgunLoadout(), null));
+            Assert.DoesNotThrow(() => NetTeamDeathmatch.ArmForSpawn(RifleAndHandgunLoadout(), GameRules.Default, null));
+        }
+
+        [Test]
+        public void SpawningWithoutRulesThrows()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = UnequippedWeapon();
+
+            Assert.Throws<System.ArgumentNullException>(() => NetTeamDeathmatch.ArmForSpawn(loadout, null, weapon));
+            Assert.That(weapon.Loadout, Is.Null, "nothing is equipped when the rules are missing");
+        }
+
+        /// <summary>予備弾のルールだけを変え、ほかは <see cref="GameRules.Default"/> と同じルール。</summary>
+        private static GameRules ReserveRules(bool infiniteReserve, float reserveAmmoMultiplier)
+        {
+            return new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                GameRules.DefaultWaveIntervalSeconds,
+                0f,
+                0f,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                infiniteReserve,
+                reserveAmmoMultiplier,
+                Destruction.Off);
+        }
+
+        /// <summary>出現したときと同じく、loadout を rules で <see cref="NetTeamDeathmatch.ArmForSpawn"/> から持たせたプレイヤー。</summary>
+        private NetPlayerWeapon SpawnedWeapon(ServerLoadout loadout, GameRules rules)
+        {
+            var weapon = UnequippedWeapon();
+            NetTeamDeathmatch.ArmForSpawn(loadout, rules, weapon);
+            return weapon;
+        }
+
+        // WeaponDefinition の既定の予備弾は 90 発
+        [TestCase(0.5f, 45)]
+        [TestCase(2f, 180)]
+        public void SpawnScalesTheReserveOfEveryWeaponByTheRules(float multiplier, int expected)
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = SpawnedWeapon(loadout, ReserveRules(false, multiplier));
+
+            foreach (var held in weapon.Loadout.Items)
+            {
+                Assert.That(held.Spec.ReserveAmmo, Is.EqualTo(90), held.Spec.Id);
+                Assert.That(held.ReserveAmmo, Is.EqualTo(expected), held.Spec.Id);
+                Assert.That(held.AmmoInMagazine, Is.EqualTo(held.Spec.MagazineSize), held.Spec.Id);
+                Assert.That(held.HasInfiniteReserve, Is.False, held.Spec.Id);
+            }
+
+            // リロードで減った予備弾は、試合の開始 (ServerRefill) で倍率を掛けた数に戻る
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
+            weapon.ServerTick(weapon.CurrentSpec.ReloadSeconds);
+            Assert.That(weapon.ServerWeapon.ReserveAmmo, Is.EqualTo(expected - 1));
+
+            weapon.ServerRefill();
+
+            Assert.That(weapon.ServerWeapon.ReserveAmmo, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void InfiniteReserveReloadsFromZeroReserve()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = SpawnedWeapon(loadout, ReserveRules(true, 0f));
+            var rifle = weapon.ServerWeapon;
+            Assert.That(rifle.ReserveAmmo, Is.EqualTo(0), "a multiplier of 0 leaves no reserve to show");
+            Assert.That(rifle.HasInfiniteReserve, Is.True);
+
+            // 手でのリロード (ReloadServerRpc) を、予備弾 0 でもサーバーが受ける
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
+            weapon.ServerTick(rifle.Spec.ReloadSeconds);
+            Assert.That(rifle.AmmoInMagazine, Is.EqualTo(rifle.Spec.MagazineSize));
+            Assert.That(rifle.ReserveAmmo, Is.EqualTo(0));
+
+            // 弾倉を撃ち切ったときの自動リロードも、予備弾 0 から始まる
+            for (var i = 0; i < rifle.Spec.MagazineSize; i++)
+            {
+                Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None), "shot " + i);
+            }
+
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.OutOfAmmo));
+            Assert.That(rifle.IsReloading, Is.True);
+            weapon.ServerTick(rifle.Spec.ReloadSeconds);
+            Assert.That(rifle.AmmoInMagazine, Is.EqualTo(rifle.Spec.MagazineSize));
+            Assert.That(rifle.ReserveAmmo, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void FiniteReserveAtZeroRefusesTheReload()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = SpawnedWeapon(loadout, ReserveRules(false, 0f));
+
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.False);
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.False);
+            Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(weapon.CurrentSpec.MagazineSize - 1));
+        }
+
+        [Test]
+        public void ClientSendsTheReloadEvenWithNoReserve()
+        {
+            // 予備弾 0 でも送り、許すかどうか (無限予備弾か) はサーバーが決める
+            Assert.That(NetPlayerWeapon.ShouldRequestReload(new NetWeaponState(0, 0, false, 0, 2, false), true), Is.True);
+            Assert.That(NetPlayerWeapon.ShouldRequestReload(new NetWeaponState(29, 90, false, 0, 2, false), true), Is.True);
+
+            Assert.That(NetPlayerWeapon.ShouldRequestReload(new NetWeaponState(0, 0, true, 0, 2, false), true), Is.False, "already reloading");
+            Assert.That(NetPlayerWeapon.ShouldRequestReload(new NetWeaponState(0, 0, false, 0, 2, true), true), Is.False, "switching");
+            Assert.That(NetPlayerWeapon.ShouldRequestReload(new NetWeaponState(0, 0, false, 0, 2, false), false), Is.False, "down");
         }
 
         [Test]

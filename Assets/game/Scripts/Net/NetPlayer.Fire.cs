@@ -17,7 +17,7 @@ namespace Fps.Net
     {
         private void Update()
         {
-            if (!IsSpawned || !IsOwner || _attackAction == null)
+            if (!IsSpawned || !IsOwner || _attackAction == null || IsWatchingDeathCamera)
             {
                 return;
             }

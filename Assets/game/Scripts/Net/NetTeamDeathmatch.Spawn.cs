@@ -54,7 +54,7 @@ namespace Fps.Net
             // 出現より前の時点まで巻き戻した射撃には、その時点にいなかったものとして当たらない
             _lagCompensator?.Remove(playerId);
 
-            ArmForSpawn(_serverLoadout, player.Weapon);
+            ArmForSpawn(_serverLoadout, _session.Spec.Rules, player.Weapon);
 
             var p = point.Position;
             player.ServerTeleport(new Vector3(p.X, p.Y, p.Z));

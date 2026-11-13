@@ -12,5 +12,6 @@ namespace Fps.Core
         SniperRifle,
         LightMachineGun,
         Handgun,
+        Launcher,
     }
 }

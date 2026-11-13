@@ -20,6 +20,9 @@ namespace Fps.Net
     /// から数える。表示は秒の桁が変わったときだけ変わる。Wave ではサーバーが配る次のウェーブまでの秒数
     /// (<see cref="NetTeamDeathmatch.NextWaveSeconds"/>) を、None では次の試合まで戻らないことを出す。
     /// </para>
+    /// <para>
+    /// 予備弾は <see cref="NetMatchRules.InfiniteReserve"/> が true なら数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Hud))]
@@ -43,6 +46,7 @@ namespace Fps.Net
         private int _nextWaveSeconds;
         private NetMatchStatus _status = new NetMatchStatus(GameModeState.Waiting, null);
         private NetMatchRules _rules = NetMatchRules.Default;
+        private NetWeaponState _weaponState;
 
         // 試合中に倒れてから、出現するか試合が終わるまで true。_respawn は Individual の表示に使う数え (待ち時間が不正なら null)
         private bool _isDown;
@@ -116,16 +120,13 @@ namespace Fps.Net
 
             // NetPlayer.Weapon は Awake で解決するので、Awake を経ない Edit Mode でも見つかるよう自分で探す
             _weapon = player.GetComponent<NetPlayerWeapon>();
+            _weaponState = _weapon != null ? _weapon.StateVariable.Value : default;
             if (_weapon != null)
             {
                 _weapon.StateVariable.OnValueChanged += HandleWeaponChanged;
-                ShowAmmo(_weapon.StateVariable.Value);
-            }
-            else
-            {
-                Model.ClearAmmo();
             }
 
+            ShowAmmo();
             ShowHealth();
             ShowScores();
         }
@@ -150,6 +151,7 @@ namespace Fps.Net
                 Model.ClearTime();
                 Model.ClearScores();
                 Model.ClearResult();
+                ShowAmmo();
                 ShowHealth();
                 ShowNotice();
                 return;
@@ -170,6 +172,7 @@ namespace Fps.Net
             _match.RulesVariable.OnValueChanged += HandleRulesChanged;
 
             Model.SetTime(_match.RemainingSecondsVariable.Value);
+            ShowAmmo();
             ShowHealth();
             ShowScores();
             ShowResult();
@@ -286,7 +289,8 @@ namespace Fps.Net
 
         private void HandleWeaponChanged(NetWeaponState previous, NetWeaponState current)
         {
-            ShowAmmo(current);
+            _weaponState = current;
+            ShowAmmo();
         }
 
         private void HandleAlphaScoreChanged(int previous, int current)
@@ -321,6 +325,7 @@ namespace Fps.Net
         private void HandleRulesChanged(NetMatchRules previous, NetMatchRules current)
         {
             _rules = current;
+            ShowAmmo();
             ShowNotice();
         }
 
@@ -373,9 +378,20 @@ namespace Fps.Net
             Model.SetHealth(current, max);
         }
 
-        private void ShowAmmo(NetWeaponState state)
+        // 無限予備弾は武器の状態ではなく試合のルールで届くので、どちらが後に届いても同じ表示になるよう両方の控えから出す
+        private void ShowAmmo()
         {
-            Model.SetAmmo(Math.Max(0, state.AmmoInMagazine), Math.Max(0, state.ReserveAmmo), state.IsReloading);
+            if (_weapon == null)
+            {
+                Model.ClearAmmo();
+                return;
+            }
+
+            Model.SetAmmo(
+                Math.Max(0, _weaponState.AmmoInMagazine),
+                Math.Max(0, _weaponState.ReserveAmmo),
+                _weaponState.IsReloading,
+                _rules.InfiniteReserve);
         }
 
         private void ShowScores()

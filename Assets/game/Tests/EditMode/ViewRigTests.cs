@@ -108,6 +108,60 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void DefaultsToTheRightShoulder()
+        {
+            Assert.That(_rig.Shoulder, Is.EqualTo(ShoulderSide.Right));
+        }
+
+        [Test]
+        public void LeftShoulderMirrorsTheThirdPersonCameraToTheLeft()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+
+            _rig.Shoulder = ShoulderSide.Left;
+            _rig.UpdateCameraPosition();
+
+            var expected = ViewRig.DefaultThirdPersonOffset;
+            expected.x = -expected.x;
+            Assert.That(_camera.transform.localPosition.x, Is.LessThan(0f));
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, expected), Is.LessThan(1e-4f));
+            Assert.That(_rig.ThirdPersonOffset, Is.EqualTo(ViewRig.DefaultThirdPersonOffset), "the stored offset stays on the right");
+        }
+
+        [Test]
+        public void SwappingBackToTheRightShoulderRestoresTheCamera()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+            _rig.Shoulder = ShoulderSide.Left;
+            _rig.UpdateCameraPosition();
+
+            _rig.Shoulder = ShoulderSide.Right;
+            _rig.UpdateCameraPosition();
+
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, ViewRig.DefaultThirdPersonOffset), Is.LessThan(1e-4f));
+        }
+
+        [Test]
+        public void ShoulderDoesNotMoveTheFirstPersonCamera()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Shoulder = ShoulderSide.Left;
+
+            _rig.UpdateCameraPosition();
+
+            Assert.That(_camera.transform.localPosition, Is.EqualTo(Vector3.zero));
+        }
+
+        [Test]
+        public void RejectsUnknownShoulder()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rig.Shoulder = (ShoulderSide)99);
+            Assert.That(_rig.Shoulder, Is.EqualTo(ShoulderSide.Right));
+        }
+
+        [Test]
         public void OtherPlayersBodyIsDrawnInFirstPerson()
         {
             _rig.Initialize(_eye, _camera);
@@ -133,6 +187,32 @@ namespace Fps.Tests.EditMode
             var z = _camera.transform.localPosition.z;
             Assert.That(z, Is.LessThan(-CameraBoom.DefaultMinLength + 1e-4f));
             Assert.That(z, Is.GreaterThan(-1.4f), "the camera must stay in front of the wall (1.5m behind minus its 0.1m half thickness)");
+        }
+
+        [Test]
+        public void BoomPositionReachesTheOffsetInTheOpen()
+        {
+            var origin = _eye.position;
+
+            var position = _rig.ResolveBoomPosition(origin, new Vector3(0f, 1.5f, -2f));
+
+            Assert.That(Vector3.Distance(position, origin + new Vector3(0f, 1.5f, -2f)), Is.LessThan(1e-4f));
+            Assert.That(_rig.ResolveBoomPosition(origin, Vector3.zero), Is.EqualTo(origin));
+        }
+
+        [Test]
+        public void BoomPositionStopsShortOfACeiling()
+        {
+            var origin = _eye.position;
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = origin + new Vector3(0f, 1f, 0f);
+            _wall.transform.localScale = new Vector3(4f, 0.2f, 4f);
+            Physics.SyncTransforms();
+
+            var position = _rig.ResolveBoomPosition(origin, new Vector3(0f, 3f, 0f));
+
+            Assert.That(position.y - origin.y, Is.LessThan(0.9f), "the camera must stay under the ceiling (1m up minus its 0.1m half thickness)");
+            Assert.That(position.y - origin.y, Is.GreaterThanOrEqualTo(CameraBoom.DefaultMinLength - 1e-4f));
         }
 
         [Test]

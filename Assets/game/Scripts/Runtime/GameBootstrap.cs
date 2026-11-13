@@ -15,6 +15,7 @@ namespace Fps.Runtime
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
     /// 自動回復と予備弾の倍率・無限は <see cref="RulesDefinition"/> のルールで決める (標的ダミーには効かせない)。
+    /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
     /// </summary>
     [DisallowMultipleComponent]
@@ -141,7 +142,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// <see cref="Build"/> でプレイヤーに効かせるルール (自動回復の <see cref="HealthRegen"/> と、武器の予備弾)。
+        /// <see cref="Build"/> でプレイヤーに効かせるルール (自動回復の <see cref="HealthRegen"/> と、武器の予備弾) と、標的ダミーのやられ演出。
         /// null なら <see cref="GameRules.Default"/> を使い、Build 時に警告を出す。
         /// </summary>
         public GameRulesDefinition RulesDefinition
@@ -192,6 +193,7 @@ namespace Fps.Runtime
                     out var ads, out var playerDamageable, out var regen);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
+                BindDeathBodies(dummies, rules);
                 // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
                 Hud hudComponent = null;
                 if (!NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
@@ -292,6 +294,7 @@ namespace Fps.Runtime
                 // 回復しないルール (RegenPerSecond = 0) でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため。
                 regen = player.AddComponent<HealthRegen>();
                 regen.Bind(damageable, rules);
+                PlayerActions.Attach(player, rules);
 
                 // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
                 mover.BindSprintRelease(weapon, damageable);
@@ -512,6 +515,21 @@ namespace Fps.Runtime
             }
 
             return root;
+        }
+
+        /// <summary>標的ダミーのやられ演出を rules の <see cref="GameRules.DeathBody"/> にする (プレイヤー自身には付けない)。</summary>
+        private static void BindDeathBodies(IReadOnlyList<TargetDummy> dummies, GameRules rules)
+        {
+            var targets = new List<Damageable>(dummies.Count);
+            foreach (var dummy in dummies)
+            {
+                if (dummy != null)
+                {
+                    targets.Add(dummy.Damageable);
+                }
+            }
+
+            DeathBodyPresenter.BindAll(targets, rules.DeathBody);
         }
 
         /// <summary>HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡す。</summary>

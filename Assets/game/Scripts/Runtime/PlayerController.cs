@@ -120,6 +120,12 @@ namespace Fps.Runtime
         /// <summary>しゃがんでいるか。</summary>
         public bool IsCrouched => _isCrouched;
 
+        /// <summary>
+        /// <see cref="Tick"/> が姿勢を決める前に、移動・ダッシュ・しゃがみ・ジャンプの入力を書き換える差し込み口 (カバーなど)。
+        /// null なら入力をそのまま使う。
+        /// </summary>
+        public IPlayerMoveFilter MoveFilter { get; set; }
+
         public bool IsInitialized =>
             _controller != null
             && _look != null
@@ -375,6 +381,7 @@ namespace Fps.Runtime
         /// <summary>
         /// 1 フレーム分の入力でしゃがみの姿勢を決め、<see cref="PlayerMotor.Step"/> を呼び、変位を CharacterController に適用する。
         /// 向きは <see cref="FirstPersonLook"/> 本体 (この GameObject) の yaw を使う。
+        /// <see cref="MoveFilter"/> があれば、姿勢を決める前に入力を書き換えさせる。
         /// </summary>
         /// <param name="crouch">しゃがみたいか (<see cref="UpdateCrouch"/> の結果)。false でも頭上が塞がっていればしゃがんだまま。</param>
         public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, float deltaSeconds)
@@ -389,6 +396,7 @@ namespace Fps.Runtime
                 return;
             }
 
+            MoveFilter?.Filter(ref move, ref sprint, ref crouch, ref jumpPressed);
             UpdateStance(crouch);
 
             if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out var displacement))

@@ -12,19 +12,25 @@ namespace Fps.Net
     {
         /// <summary>
         /// 出現・リスポーンで weapon に loadout の武器を全部満タンで渡し直し、先頭 (rifle) を持ち替えの待ち時間なしで構えさせる。
-        /// 持ち替え中・リロード中だった状態と、倒れる前の残弾は捨てる。weapon が null なら何もしない。
+        /// 持ち替え中・リロード中だった状態と、倒れる前の残弾は捨てる。予備弾は rules の倍率を掛けた数で、
+        /// <see cref="GameRules.InfiniteReserve"/> なら減らない。weapon が null なら何もしない。
         /// </summary>
-        internal static void ArmForSpawn(ServerLoadout loadout, NetPlayerWeapon weapon)
+        internal static void ArmForSpawn(ServerLoadout loadout, GameRules rules, NetPlayerWeapon weapon)
         {
             if (loadout == null)
             {
                 throw new ArgumentNullException(nameof(loadout));
             }
 
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
             // ServerLoadout は開始時に ServerEquip と同じ条件で検査済みなので、ここでは投げない
             if (weapon != null)
             {
-                weapon.ServerEquip(loadout.Weapons, loadout.SwitchSeconds);
+                weapon.ServerEquip(loadout.Weapons, loadout.SwitchSeconds, rules);
             }
         }
 

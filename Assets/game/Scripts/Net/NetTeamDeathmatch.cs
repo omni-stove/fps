@@ -4,6 +4,7 @@ using Fps.Core;
 using Fps.Runtime;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Fps.Net
 {
@@ -27,7 +28,9 @@ namespace Fps.Net
     /// <para>
     /// 武器の値はここに持たず、ロードアウトのアセット (<see cref="LoadoutDefinition"/>) から引く。試合の開始時に
     /// <see cref="LoadoutDefinition.ToRule"/> と <see cref="LoadoutDefinition.ToSpecs"/> で検査して <see cref="Fps.Core.ServerLoadout"/> に保持し、
-    /// 未設定・不正なら試合を始めない。全員に同じロードアウトを、出現・リスポーンのたびに <see cref="NetPlayerWeapon.ServerEquip"/> で持たせる。
+    /// 未設定・不正なら試合を始めない。全員に同じロードアウトを、出現・リスポーンのたびに
+    /// 試合のルールと一緒に <see cref="NetPlayerWeapon.ServerEquip(System.Collections.Generic.IReadOnlyList{WeaponSpec}, float, GameRules)"/> で持たせる
+    /// (予備弾の倍率と無限予備弾はそこで各武器に効く)。
     /// 持ち替えは <see cref="NetPlayerWeapon"/> がサーバーで判定し、射撃の判定 (ダメージ・射程・減衰・連射間隔) には
     /// 撃った人がその時に持っている武器 (<see cref="NetPlayerWeapon.CurrentSpec"/>) の値を使う。
     /// クライアントは撃った武器の Id だけを送り、ロードアウトに無い・今持っている武器と違う射撃は捨てる。
@@ -41,6 +44,8 @@ namespace Fps.Net
     /// <see cref="TeamDeathmatchSpec"/> に渡してサーバーの判定に使う。クライアントには見た目と HUD に要る値だけを
     /// <see cref="SyncedRules"/> で、Wave の次のウェーブまでの秒数を <see cref="NextWaveSeconds"/> で、
     /// 各プレイヤーを最後に倒した相手を <see cref="Players"/> の <see cref="NetPlayerStats.Killer"/> で配る。
+    /// 建物を壊せるか (<see cref="GameRules.Destruction"/>) は、試合の開始時にシーンの全ての <see cref="DestructibleStructure"/> に設定する。
+    /// 壊れた部品の同期は <see cref="NetDestructibleStructure"/> が行う。
     /// </para>
     /// <para>
     /// 試合が終わると、サーバーは <see cref="RestartDelaySeconds"/> 秒待って同じ Session で次の試合を始める
@@ -422,6 +427,8 @@ namespace Fps.Net
                 return;
             }
 
+            var structures = ApplyDestructionRule(CollectStructures(), spec.Rules);
+
             _serverLoadout = loadout;
             _activeMaxShotOriginOffset = _maxShotOriginOffset;
             _lagCompensator = new LagCompensator();
@@ -448,6 +455,7 @@ namespace Fps.Net
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
                 + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count);
             Debug.Log(MatchLog.Rules(usedDefaultRules ? "default" : _rules.name, spec.Rules));
+            Debug.Log("[Match] destructible structures=" + structures + " destruction=" + spec.Rules.Destruction);
             Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
                 + " tickRate=" + NetworkPlayerMotor.TickRate);
             Debug.Log(MatchLog.Loadout(_loadout.name, _serverLoadout));
@@ -475,6 +483,61 @@ namespace Fps.Net
 
             usedDefault = false;
             return asset.TryToRules(out rules, out error);
+        }
+
+        /// <summary>
+        /// structures の全ての <see cref="DestructibleStructure.DestructionEnabled"/> を、rules の <see cref="GameRules.Destruction"/> が
+        /// <see cref="Destruction.On"/> かどうかにそろえる。null の要素 (破棄された建物) は飛ばす。切り替えた建物の数を返す。
+        /// </summary>
+        internal static int ApplyDestructionRule(IEnumerable<DestructibleStructure> structures, GameRules rules)
+        {
+            if (structures == null)
+            {
+                throw new ArgumentNullException(nameof(structures));
+            }
+
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
+            var enabled = rules.Destruction == Destruction.On;
+            var count = 0;
+            foreach (var structure in structures)
+            {
+                if (structure == null)
+                {
+                    continue;
+                }
+
+                structure.DestructionEnabled = enabled;
+                count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// 壊せる建物をシーンから集める。後から有効にされる建物にもルールを効かせるよう、非アクティブなものも含める。
+        /// </summary>
+        private static List<DestructibleStructure> CollectStructures()
+        {
+            var structures = new List<DestructibleStructure>();
+            for (var i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded)
+                {
+                    continue;
+                }
+
+                foreach (var root in scene.GetRootGameObjects())
+                {
+                    structures.AddRange(root.GetComponentsInChildren<DestructibleStructure>(true));
+                }
+            }
+
+            return structures;
         }
 
         /// <summary>Inspector で入る射撃の検査の値を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>

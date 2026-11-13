@@ -1,0 +1,73 @@
+name: Server image
+
+# v* のタグを push したら、専用サーバーの Linux 版をビルドしてイメージにし、GitHub Container Registry に push する。
+# 起動の仕方は docs/dedicated-server.md を参照
+on:
+  push:
+    tags: ["v*"]
+
+# 同じタグを付け直して push したときに古い方が後から上書きしないよう、取り消さずに順に走らせる
+concurrency:
+  group: server-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  server-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: unity-library-server-linux-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: unity-library-server-linux-
+
+      # ServerBuilder.Build は Unity 自身の引数や unity-builder の -customBuildPath などを無視し、
+      # -serverPlatform linux を見て Builds/server-linux/ に出力する (make build-server linux と同じ)
+      - name: Build the Linux dedicated server
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: StandaloneLinux64
+          buildMethod: Fps.Editor.ServerBuilder.Build
+          customParameters: -serverPlatform linux
+          versioning: None
+
+      - name: Check the build output
+        run: test -x Builds/server-linux/fps-server.x86_64
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/server
+          # semver でないタグ (v1-rc など) でも push できるよう、タグの名前そのものも付ける
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      # Builds/ は git に入っていないので、git のコンテキストではなくチェックアウトしたディレクトリを渡す
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/server/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

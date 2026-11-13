@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Fps.Core;
 using Fps.Runtime;
 using Unity.Netcode;
@@ -22,6 +23,11 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// HUD も同じ条件 (<see cref="NetStartup.ShouldCreateHud"/>) で生成時に <see cref="NetHud.Create"/> で作り、消滅時に消す。
+    /// </para>
+    /// <para>
+    /// 倒れると見た目と当たりを消す。試合のルール (<see cref="NetTeamDeathmatch.SyncedRules"/>) のやられ演出が Collapse なら、
+    /// 画面のあるクライアントでだけ <see cref="DeathBodyPresenter"/> が抜け殻をサーバーから届いた最後の被弾の向きへ倒し、リスポーンで消す。
+    /// 抜け殻はローカルな見た目だけで、判定と同期には関わらない。
     /// </para>
     /// <para>
     /// 射撃の入力と <see cref="FireServerRpc"/> は .Fire.cs に分けてある。
@@ -61,6 +67,9 @@ namespace Fps.Net
 
         private readonly NetworkVariable<Team> _team = new NetworkVariable<Team>(Team.Alpha);
 
+        // 最後に受けた弾の進む向き (単位ベクトル)。まだ撃たれていなければ zero。倒れた体を倒す向きにだけ使い、判定には使わない
+        private readonly NetworkVariable<Vector3> _lastHitDirection = new NetworkVariable<Vector3>(Vector3.zero);
+
         // 0 は倒れているか、まだ試合に参加していないことを表す
         private readonly NetworkVariable<int> _health = new NetworkVariable<int>(0);
 
@@ -92,6 +101,14 @@ namespace Fps.Net
 
         // HUD を作ったときだけ。自分のプレイヤーで画面があるときに作る
         private NetHud _hud;
+
+        // やられ演出。画面のあるクライアント (ホストを含む) でだけ付ける。倒れた tick の LateUpdate で出す
+        private DeathBodyPresenter _deathBody;
+        private bool _deathBodyPending;
+
+        // 映している間は射撃の入力を読まない。プレハブに無ければ null
+        private NetDeathCamera _deathCamera;
+        private bool _deathCameraResolved;
 
         public Team Team => _team.Value;
         public int Health => _health.Value;
@@ -125,10 +142,24 @@ namespace Fps.Net
         /// <summary>視点 (カメラ・音声・視点操作) が有効か。自分のプレイヤーで画面があるときだけ true。</summary>
         public bool HasLocalView => _hasLocalView;
 
+        /// <summary>
+        /// やられ演出のデスカム (<see cref="NetDeathCamera"/>) を映しているか。映している間は射撃の入力を読まない
+        /// (連射の間隔も進めない)。カメラが自分の目に戻るまでは、狙った所へ撃てないため。
+        /// </summary>
+        public bool IsWatchingDeathCamera
+        {
+            get
+            {
+                ResolveDeathCamera();
+                return _deathCamera != null && _deathCamera.IsActive;
+            }
+        }
+
         private void Awake()
         {
             _motor = GetComponent<NetworkPlayerMotor>();
             _weapon = GetComponent<NetPlayerWeapon>();
+            ResolveDeathCamera();
             _renderers = GetComponentsInChildren<Renderer>(true);
 
             // CharacterController の有効・無効は NetworkPlayerMotor が役割ごとに決めるので、ここでは触らない
@@ -158,6 +189,13 @@ namespace Fps.Net
             {
                 CreateHud();
             }
+
+            // サーバーだけのインスタンスには見る人がいないので作らない (専用サーバーは IsPresentationAvailable でも弾く)
+            if (IsClient && DeathBodyPresenter.IsPresentationAvailable)
+            {
+                _deathBody = DeathBodyPresenter.Attach(gameObject);
+                _deathBody.Id = "client=" + OwnerClientId.ToString(CultureInfo.InvariantCulture);
+            }
         }
 
         public override void OnNetworkDespawn()
@@ -172,6 +210,12 @@ namespace Fps.Net
             ReleaseAttackAction();
             SetLocalView(false);
             DestroyHud();
+
+            _deathBodyPending = false;
+            if (_deathBody != null)
+            {
+                _deathBody.Clear(DeathBodyPresenter.ReasonDestroyed);
+            }
 
             if (IsServer && NetTeamDeathmatch.Current != null)
             {
@@ -390,6 +434,16 @@ namespace Fps.Net
             return camera != null ? camera.transform : null;
         }
 
+        // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で解決する。プレハブに無いときに毎フレーム探さないよう 1 回だけ
+        private void ResolveDeathCamera()
+        {
+            if (!_deathCameraResolved)
+            {
+                _deathCameraResolved = true;
+                _deathCamera = GetComponent<NetDeathCamera>();
+            }
+        }
+
         // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で解決する
         private void EnsureViewResolved()
         {
@@ -513,6 +567,60 @@ namespace Fps.Net
                 ResetStance(isAlive ? CrouchInput.ReasonRespawn : CrouchInput.ReasonDeath);
                 ReleaseSprint(isAlive ? SprintInput.ReasonRespawn : SprintInput.ReasonDeath);
             }
+
+            if (_deathBody == null)
+            {
+                return;
+            }
+
+            if (wasAlive && !isAlive)
+            {
+                // 弾の向きは体力と同じ tick に届くが、ホストではサーバーが体力を書いた後に書くので、ここではまだ古い。
+                // LateUpdate まで待てばどちらでも揃っている
+                _deathBodyPending = true;
+            }
+            else if (isAlive)
+            {
+                _deathBodyPending = false;
+                _deathBody.Clear(DeathBodyPresenter.ReasonRespawn);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (!_deathBodyPending)
+            {
+                return;
+            }
+
+            _deathBodyPending = false;
+            if (_deathBody == null || IsAlive)
+            {
+                return;
+            }
+
+            // 試合のルールが届く前か、知らない値が届いたときは今までどおり消すだけにする
+            var match = NetTeamDeathmatch.Current;
+            var mode = match != null ? match.SyncedRules.DeathBody : DeathBody.Vanish;
+            _deathBody.Mode = Enum.IsDefined(typeof(DeathBody), mode) ? mode : DeathBody.Vanish;
+
+            var direction = _lastHitDirection.Value;
+            _deathBody.Present(direction.sqrMagnitude > 0f ? direction : (Vector3?)null);
+        }
+
+        /// <summary>
+        /// サーバーから、このプレイヤーが最後に受けた弾の進む向きを書き込む。倒れたときのやられ演出 (<see cref="DeathBodyPresenter"/>) にだけ使う。
+        /// 長さが 0 か有限でない向きは無視する。
+        /// </summary>
+        internal void ServerSetLastHitDirection(Vector3 direction)
+        {
+            RequireServer();
+            if (!NetMath.IsFinite(direction) || direction.sqrMagnitude < 1e-12f)
+            {
+                return;
+            }
+
+            _lastHitDirection.Value = direction.normalized;
         }
 
         /// <summary>チームの色を塗り、倒れている間は見た目と当たりを消す。</summary>

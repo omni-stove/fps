@@ -43,6 +43,8 @@ namespace Fps.Net
             {
                 _players.RemoveAt(index);
             }
+
+            RemoveSpawnProtectionRow(player.OwnerClientId);
         }
 
         /// <summary>まだ試合に入っていない接続済みプレイヤーを、接続順に加える。</summary>

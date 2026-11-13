@@ -320,6 +320,19 @@ namespace Fps.Core
             return "蘇生中 " + percent.ToString(CultureInfo.InvariantCulture) + "%";
         }
 
+        /// <summary>出現直後の無敵の最中の案内。無敵が切れるまでの秒数は切り上げた整数で受ける。</summary>
+        /// <example><c>SpawnProtected(2)</c> は <c>保護中 あと 2 秒</c></example>
+        /// <exception cref="ArgumentOutOfRangeException">seconds が負。</exception>
+        public static string SpawnProtected(int seconds)
+        {
+            if (seconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
+            }
+
+            return "保護中 あと " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+        }
+
         private static void CheckPercent(int percent)
         {
             if (percent < 0 || percent > 100)

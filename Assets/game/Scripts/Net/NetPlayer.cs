@@ -32,7 +32,7 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// 射撃の入力と <see cref="FireServerRpc"/> は .Fire.cs に、ダウンと蘇生 (同期・見た目・頭の上の印・Interact と <see cref="ReviveRpc"/>) は
-    /// .Downed.cs に分けてある。ダウン中は撃てない。
+    /// .Downed.cs に、他人の被弾を演出に知らせる <see cref="Hurt"/> は .Hurt.cs に分けてある。ダウン中は撃てない。
     /// </para>
     /// <para>
     /// 見た目はプレハブに置いた人型のリグ (NetSceneBuilder) で、チームの色はリグの材質に塗る。リグは
@@ -269,6 +269,7 @@ namespace Fps.Net
 
             ReleaseAttackAction();
             DespawnDowned();
+            ResetSpawnProtectionLook();
             SetLocalView(false);
             DestroyHud();
 
@@ -772,6 +773,7 @@ namespace Fps.Net
         private void HandleHealthChanged(int previous, int current)
         {
             ApplyVisuals();
+            ReportHurt(previous, current);
 
             // しゃがみ・ダッシュの入力の状態はオーナーの NetworkPlayerMotor にしか無く、他では何もしない
             var wasAlive = previous > 0;
@@ -803,6 +805,7 @@ namespace Fps.Net
         private void LateUpdate()
         {
             RefreshDownedMarker();
+            RefreshSpawnProtection();
 
             if (!_deathBodyPending)
             {
@@ -845,11 +848,16 @@ namespace Fps.Net
             return team == Team.Bravo ? BravoColor : AlphaColor;
         }
 
-        /// <summary>チームの色を見た目 (リグ) の材質に塗り、倒れている間は見た目と当たりを消す。</summary>
+        /// <summary>
+        /// チームの色を見た目 (リグ) の材質に塗り、倒れている間は見た目と当たりを消す。
+        /// 出現直後の無敵を見せている間 (<see cref="ShowsSpawnProtection"/>) は、材質を半透明にして色のアルファを <see cref="SpawnProtectionAlpha"/> にする。
+        /// </summary>
         private void ApplyVisuals()
         {
             var alive = IsAlive;
+            var translucent = _showsSpawnProtection;
             var color = TeamColor(_team.Value);
+            color.a = translucent ? SpawnProtectionAlpha : 1f;
             EnsureTeamMaterials();
 
             foreach (var bodyRenderer in _renderers)
@@ -865,8 +873,15 @@ namespace Fps.Net
                 if (material != null)
                 {
                     material.color = color;
+                    if (translucent != _materialsTranslucent)
+                    {
+                        SetTranslucent(material, translucent);
+                    }
                 }
             }
+
+            // 無敵を一度も見せない (SpawnProtectionSeconds が 0 の) 試合では、複製した材質の描画の設定に触らない
+            _materialsTranslucent = translucent;
 
             foreach (var hitbox in _colliders)
             {

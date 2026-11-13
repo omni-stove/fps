@@ -32,12 +32,14 @@ namespace Fps.Core
             MenuDestination.CreateLobby,
             MenuDestination.JoinLobby,
             MenuDestination.Range,
+            MenuDestination.Tutorial,
             MenuDestination.Quit,
         };
 
         /// <summary>
         /// destination へ行く遷移。オンラインは <c>-lobby create</c> / <c>-lobby join</c> を起動引数で渡したときと同じ設定
         /// (最大人数は既定、参加するロビーは検索して選ぶ) で NetTest を読む。
+        /// チュートリアルは射撃場を読み、終えたことがあってもチュートリアルを出すよう求める (<see cref="MenuTransition.StartsTutorial"/>)。
         /// </summary>
         public static MenuTransition Plan(MenuDestination destination)
         {
@@ -51,6 +53,8 @@ namespace Fps.Core
                     return MenuTransition.Load(NetScene, LobbyLaunchOptions.Join());
                 case MenuDestination.Range:
                     return MenuTransition.Load(RangeScene);
+                case MenuDestination.Tutorial:
+                    return MenuTransition.Load(RangeScene, startsTutorial: true);
                 case MenuDestination.Quit:
                     return MenuTransition.Quit;
                 default:

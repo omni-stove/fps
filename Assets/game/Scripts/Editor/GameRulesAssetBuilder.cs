@@ -10,7 +10,8 @@ namespace Fps.Editor
     /// <summary>
     /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/> 7 つ) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
-    /// どのモードもリスポーン直後の無敵なし・落下ダメージなし・HUD はすべて出す (<see cref="GameRules"/> の既定)。
+    /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) だけ <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、
+    /// 他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す (<see cref="GameRules"/> の既定)。
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
     /// TPS 射撃場がそれに回避・乗り越え・グレネードを足したもの。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
@@ -35,9 +36,12 @@ namespace Fps.Editor
         public const string MenuPath = "Fps/Build Game Rules Assets";
         public const string LogTag = "[GameRulesAssetBuilder]";
 
+        /// <summary><see cref="TeamDeathmatchRules"/> の出現直後の無敵の秒数。</summary>
+        public const float TeamDeathmatchSpawnProtectionSeconds = 2f;
+
         /// <summary>
         /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、倒した相手を映す、予備弾は有限で 1 倍、
-        /// 建造物は弾で壊れる。アクションは <see cref="TeamDeathmatchActions"/>。
+        /// 建造物は弾で壊れる、出現直後は <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒無敵。アクションは <see cref="TeamDeathmatchActions"/>。
         /// </summary>
         public static GameRules TeamDeathmatchRules()
         {
@@ -52,7 +56,8 @@ namespace Fps.Editor
                 false,
                 1f,
                 Destruction.On,
-                TeamDeathmatchActions());
+                TeamDeathmatchActions())
+                .WithSpawnProtectionSeconds(TeamDeathmatchSpawnProtectionSeconds);
         }
 
         /// <summary>

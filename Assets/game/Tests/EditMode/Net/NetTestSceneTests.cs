@@ -193,7 +193,8 @@ namespace Fps.Net.Tests
                 session.Join(id);
             }
 
-            // 点数・キル数・デス数が付き、傷ついた人と出現地点から動いた人がいる状態で時間切れにする
+            // 出現直後の無敵が切れてから、点数・キル数・デス数が付き、傷ついた人と出現地点から動いた人がいる状態で時間切れにする
+            session.Tick(rules.SpawnProtectionSeconds);
             session.ApplyDamage(0, 1, match.MaxHealth);
             session.ApplyDamage(1, 2, 1);
             foreach (var id in playerIds)

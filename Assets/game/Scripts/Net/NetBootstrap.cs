@@ -22,7 +22,10 @@ namespace Fps.Net
     /// <see cref="ServerLobbyRegistrar"/> に EOS のロビーへ登録させ、接続人数を知らせ続け、終了時にロビーを閉じる。
     /// 失敗はすべて <c>[Net]</c> か <c>[Lobby]</c> 付きのエラーログに出し、batchmode のプレイヤーでは終了コード付きで終了する。
     /// メインメニューの「ロビーを作る／入る／クイックマッチ」から来たときは、<see cref="MenuNavigator.TakeLobbyRequest"/> の設定を <c>-lobby</c> と同じに扱い
-    /// (起動引数が優先、<see cref="NetStartup.ChooseLobby"/>)、失敗や Host からの切断ではその理由を添えてメニューへ戻る。
+    /// (起動引数が優先、<see cref="NetStartup.ChooseLobby"/>)、失敗ではその理由を添えてメニューへ戻る。
+    /// クライアントがサーバーとの接続を失ったとき (つながらない・承認で断られたのを含む) は、どこから来たかによらず
+    /// <see cref="DisconnectNotice"/> で分けた理由 (サーバー停止・タイムアウト・拒否・版違い) を添えてメニューへ戻る。
+    /// サーバー (Host を含む) は止まる前に、つないでいるクライアントへ止まると知らせてから切る。
     /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
     /// </summary>
     [DisallowMultipleComponent]
@@ -77,6 +80,7 @@ namespace Fps.Net
         private float _serverLobbyCloseDeadline;
         private bool _quitHeldForServerLobby;
         private bool _connectedToServer;
+        private bool _toldClientsServerStopping;
         private bool _failed;
         private bool _startedFromMenu;
         private bool _returningToMenu;
@@ -308,6 +312,8 @@ namespace Fps.Net
             _manager.OnClientConnectedCallback += HandleClientConnected;
             _manager.OnClientDisconnectCallback += HandleClientDisconnected;
             _manager.OnTransportFailure += HandleTransportFailure;
+            // 専用サーバーは docker stop (SIGTERM) で終了するので、Netcode が終了で止まる前にクライアントへ知らせる
+            Application.quitting += TellClientsServerStopping;
             return true;
         }
 
@@ -535,11 +541,14 @@ namespace Fps.Net
                 _serverLobby = null;
             }
 
+            Application.quitting -= TellClientsServerStopping;
             if (_manager == null)
             {
                 return;
             }
 
+            // エディタで Play Mode を止めたときやシーンを替えたときも、クライアントへ止まると知らせる
+            TellClientsServerStopping();
             _manager.OnServerStarted -= HandleServerStarted;
             _manager.OnClientConnectedCallback -= HandleClientConnected;
             _manager.OnClientDisconnectCallback -= HandleClientDisconnected;
@@ -629,19 +638,21 @@ namespace Fps.Net
                 return;
             }
 
-            // クライアント側では自分の切断 (接続失敗を含む) として呼ばれる
+            // クライアント側では自分の切断 (接続失敗・承認で断られたのを含む) として呼ばれる
+            var notice = NetworkSetup.ClassifyDisconnect(_manager, _connectedToServer);
             if (!_connectedToServer)
             {
-                Fail(ExitConnectFailed, "[Net] failed to connect to " + _options.Endpoint + reason);
+                Fail(ExitConnectFailed, "[Net] failed to connect to " + _options.Endpoint + " " + notice.Describe(), notice);
                 return;
             }
 
             _connectedToServer = false;
-            Debug.Log("[Net] disconnected from server id=" + clientId + reason);
+            _failed = true;
+            Debug.Log("[Net] disconnected from server id=" + clientId + " " + notice.Describe());
             // Host がいなくなったロビーに残っても意味が無い
             _lobby?.LeaveLobby();
             QuitIfHeadlessPlayer(ExitDisconnected);
-            ReturnToMenuIfStartedThere("Disconnected from the host." + reason);
+            ReturnToMenuAfterDisconnect(notice);
         }
 
         private void HandleTransportFailure()
@@ -649,7 +660,12 @@ namespace Fps.Net
             Fail(ExitTransportFailure, "[Net] transport failure (" + _options + ")");
         }
 
-        private void Fail(int exitCode, string message)
+        /// <param name="exitCode">batchmode のプレイヤーで終了するときの終了コード。</param>
+        /// <param name="message">エラーログに出す文。</param>
+        /// <param name="notice">
+        /// サーバーとの接続を失ったことによる失敗なら、その理由。あればどこから来たかによらずメニューへ戻り、理由の文を出す。
+        /// </param>
+        private void Fail(int exitCode, string message, DisconnectNotice notice = null)
         {
             if (_failed)
             {
@@ -661,6 +677,7 @@ namespace Fps.Net
 
             if (_manager != null && _manager.IsListening && !_manager.ShutdownInProgress)
             {
+                TellClientsServerStopping();
                 _manager.Shutdown();
             }
 
@@ -668,6 +685,12 @@ namespace Fps.Net
             CloseServerLobby();
             _lobby?.LeaveLobby();
             QuitIfHeadlessPlayer(exitCode);
+            if (notice != null)
+            {
+                ReturnToMenuAfterDisconnect(notice);
+                return;
+            }
+
             ReturnToMenuIfStartedThere(message);
         }
 
@@ -677,14 +700,63 @@ namespace Fps.Net
         /// </summary>
         private void ReturnToMenuIfStartedThere(string reason)
         {
-            if (!_startedFromMenu || _returningToMenu
+            if (!_startedFromMenu)
+            {
+                return;
+            }
+
+            ReturnToMenu(reason);
+        }
+
+        /// <summary>
+        /// サーバーとの接続を失ったクライアントを、理由の文を添えてメニューへ戻す。
+        /// 起動引数でつないだときも、残っても遊べないので戻す (batchmode では先に終了している)。
+        /// </summary>
+        private void ReturnToMenuAfterDisconnect(DisconnectNotice notice)
+        {
+            ReturnToMenu(notice.Message);
+        }
+
+        private void ReturnToMenu(string notice)
+        {
+            if (_returningToMenu
                 || NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
             {
                 return;
             }
 
             // メニューがビルドに無ければ MenuNavigator がエラーログを出し、このシーンに留まる
-            MenuNavigator.ReturnToMenu(reason);
+            MenuNavigator.ReturnToMenu(notice);
+        }
+
+        /// <summary>
+        /// サーバー (Host を含む) が止まる前に、つないでいるクライアントへ <see cref="DisconnectNotice.ServerStoppedReason"/> を送って切る。
+        /// 送らずに止めると、クライアントは理由が分からずタイムアウトとして扱う。1 度だけ送る。
+        /// </summary>
+        private void TellClientsServerStopping()
+        {
+            if (_toldClientsServerStopping || _manager == null)
+            {
+                return;
+            }
+
+            int count;
+            try
+            {
+                count = NetworkSetup.DisconnectRemoteClients(_manager, DisconnectNotice.ServerStoppedReason);
+            }
+            catch (Exception e)
+            {
+                // 止める途中なので、知らせられなくても止めるのは続ける (クライアントはタイムアウトとして扱う)
+                Debug.LogException(e);
+                return;
+            }
+
+            _toldClientsServerStopping = true;
+            if (count > 0)
+            {
+                Debug.Log("[Net] server stopping; told " + count + " client(s) and disconnected them");
+            }
         }
 
         /// <summary>
@@ -703,6 +775,7 @@ namespace Fps.Net
             Debug.Log("[Net] leaving for the menu; shutting down the network");
             if (_manager != null && _manager.IsListening && !_manager.ShutdownInProgress)
             {
+                TellClientsServerStopping();
                 _manager.Shutdown();
             }
 

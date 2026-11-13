@@ -26,7 +26,10 @@ namespace Fps.Editor
         public const string MenuPath = "Fps/Build Game Rules Assets";
         public const string LogTag = "[GameRulesAssetBuilder]";
 
-        /// <summary>チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、倒した相手を映す、予備弾は有限で 1 倍。</summary>
+        /// <summary>
+        /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、倒した相手を映す、予備弾は有限で 1 倍、
+        /// 建造物は弾で壊れる。
+        /// </summary>
         public static GameRules TeamDeathmatchRules()
         {
             return new GameRules(
@@ -39,11 +42,14 @@ namespace Fps.Editor
                 DeathCamera.Killer,
                 false,
                 1f,
-                Destruction.Off,
+                Destruction.On,
                 ActionRules.Default);
         }
 
-        /// <summary>キャンペーン (易)。味方撃ちなし、個別リスポーン、3 秒後から毎秒 25 回復、体は倒れる、死亡カメラなし、予備弾は有限で 1.5 倍。</summary>
+        /// <summary>
+        /// キャンペーン (易)。味方撃ちなし、個別リスポーン、3 秒後から毎秒 25 回復、体は倒れる、死亡カメラなし、予備弾は有限で 1.5 倍、
+        /// 建造物は壊れない。
+        /// </summary>
         public static GameRules CampaignEasyRules()
         {
             return new GameRules(
@@ -60,19 +66,19 @@ namespace Fps.Editor
                 ActionRules.Default);
         }
 
-        /// <summary>キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、体だけ倒れるようにし、予備弾の倍率を 1 にしたもの。</summary>
+        /// <summary>キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、体だけ倒れるようにし、予備弾の倍率を 1 にしたもの。建造物は壊れない。</summary>
         public static GameRules CampaignNormalRules()
         {
             return WithOverrides(GameRules.Default, DeathBody.Collapse, GameRules.Default.RegenDelaySeconds, GameRules.Default.RegenPerSecond, 1f);
         }
 
-        /// <summary>キャンペーン (難)。<see cref="GameRules.Default"/> のうち、回復なし、体は倒れる、予備弾は有限で 0.6 倍にしたもの。</summary>
+        /// <summary>キャンペーン (難)。<see cref="GameRules.Default"/> のうち、回復なし、体は倒れる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。</summary>
         public static GameRules CampaignHardRules()
         {
             return WithOverrides(GameRules.Default, DeathBody.Collapse, 0f, 0f, 0.6f);
         }
 
-        /// <summary>射撃場。味方撃ちなし、個別リスポーン、回復なし、体は消える、死亡カメラなし、予備弾は無限。</summary>
+        /// <summary>射撃場。味方撃ちなし、個別リスポーン、回復なし、体は消える、死亡カメラなし、予備弾は無限、建造物は弾で壊れる。</summary>
         public static GameRules RangeRules()
         {
             return new GameRules(
@@ -85,7 +91,7 @@ namespace Fps.Editor
                 DeathCamera.None,
                 true,
                 1f,
-                Destruction.Off,
+                Destruction.On,
                 ActionRules.Default);
         }
 

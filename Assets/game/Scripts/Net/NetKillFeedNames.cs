@@ -38,7 +38,7 @@ namespace Fps.Net
                 return new NetKillFeedNames(null, null, localId);
             }
 
-            return new NetKillFeedNames(id => TeamOf(match, id), WeaponNames(match.Loadout), localId);
+            return new NetKillFeedNames(id => TeamOf(match, id), WeaponNames(match.Loadout, match.Catalog), localId);
         }
 
         public KillFeedLine Describe(KillFeedEntry entry)
@@ -75,31 +75,37 @@ namespace Fps.Net
             return null;
         }
 
-        private static Func<string, string> WeaponNames(LoadoutDefinition loadout)
+        // プレイヤーはカタログの武器も選べるので、クライアントの射撃と同じく Loadout とカタログの両方から引く
+        private static Func<string, string> WeaponNames(LoadoutDefinition loadout, WeaponCatalogAsset catalog)
         {
-            if (loadout == null)
+            if (loadout == null && catalog == null)
             {
-                return null;
-            }
-
-            IReadOnlyList<WeaponSpec> specs;
-            try
-            {
-                specs = loadout.ToSpecs();
-            }
-            catch (WeaponDefinitionException e)
-            {
-                Debug.LogWarning(KillFeedView.LogTag + " cannot read weapon names from the loadout: " + e.Message);
                 return null;
             }
 
             var names = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var spec in specs)
+            var warned = false;
+            return id =>
             {
-                names[spec.Id] = spec.DisplayName;
-            }
+                if (names.TryGetValue(id, out var cached))
+                {
+                    return cached;
+                }
 
-            return id => names.TryGetValue(id, out var name) ? name : string.Empty;
+                if (NetTeamDeathmatch.TryFindWeaponSpec(loadout, catalog, id, out var spec, out var error))
+                {
+                    names[id] = spec.DisplayName;
+                    return spec.DisplayName;
+                }
+
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning(KillFeedView.LogTag + " cannot read weapon name '" + id + "': " + error);
+                }
+
+                return string.Empty;
+            };
         }
     }
 }

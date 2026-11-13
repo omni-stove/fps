@@ -148,7 +148,8 @@ jobs:
           key: unity-library-client-osx-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
           restore-keys: unity-library-client-osx-
 
-      # Standalone は Mono なので Linux のランナーでも macOS 向けにビルドできる。シーンは Build Settings のもの (make build と同じ)
+      # Standalone は Mono なので Linux のランナーでも macOS 向けにビルドできる。シーンは Build Settings のもので、
+      # BuildSceneList.Scenes から選ぶ ClientBuilder (make build、client-release.yml) とは入るシーンが違うことがある
       - name: Build the macOS client
         uses: game-ci/unity-builder@v4
         env:

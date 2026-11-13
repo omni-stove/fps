@@ -57,7 +57,7 @@ step() {
 step "EditMode tests" mise run test-unity
 step "smoke suite" mise run smoke
 if [ "$client" -eq 1 ]; then
-	step "macOS client build" mise run build
+	step "macOS client build" mise run build macos
 else
 	echo "nightly-local: skipped the macOS client build (not Sunday in JST; pass --client to build it)"
 fi

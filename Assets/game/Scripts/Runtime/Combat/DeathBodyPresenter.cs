@@ -223,8 +223,13 @@ namespace Fps.Runtime
             }
 
             // 抜け殻を作る前に集める。抜け殻は体の子にしないので混ざらないが、隠す前の Renderer を確実に拾うため
-            var renderers = GetComponentsInChildren<Renderer>(true);
-            HideBody(renderers);
+            var allRenderers = GetComponentsInChildren<Renderer>(true);
+            // CharacterAnimator が置き換えて隠したカプセルだけは抜け殻に写さない。enabled では、同じ Died の購読者
+            // (TargetDummy など) が直前に隠したものと区別できない
+            var animator = GetComponent<CharacterAnimator>();
+            var hiddenHost = animator != null ? animator.HiddenHostRenderer : null;
+            var renderers = System.Array.FindAll(allRenderers, r => r != null && r != hiddenHost);
+            HideBody(allRenderers);
 
             if (!IsPresentationAvailable)
             {

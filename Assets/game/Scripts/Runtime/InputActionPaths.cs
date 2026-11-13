@@ -18,5 +18,9 @@ namespace Fps.Runtime
         public const string Next = "Player/Next";
         public const string Cover = "Player/Cover";
         public const string SwapShoulder = "Player/SwapShoulder";
+        public const string Pause = "Player/Pause";
+        public const string Scoreboard = "Player/Scoreboard";
+        public const string Dodge = "Player/Dodge";
+        public const string Grenade = "Player/Grenade";
     }
 }

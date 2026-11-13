@@ -379,5 +379,114 @@ namespace Fps.Core.Tests
             var e = Assert.Throws<ArgumentOutOfRangeException>(() => CreateWithActions(activeReloadFailSeconds: seconds));
             Assert.That(e.ParamName, Is.EqualTo("activeReloadFailSeconds"));
         }
+
+        private static WeaponSpec CreateWithHandling(
+            float recoilPitchDegrees = 0f,
+            float recoilYawDegrees = 0f,
+            float recoilRecoveryPerSecond = 0f,
+            float hipSpreadDegrees = 0f,
+            float adsSpreadDegrees = 0f,
+            float moveSpreadDegrees = 0f)
+        {
+            return new WeaponSpec(
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff,
+                recoilPitchDegrees: recoilPitchDegrees,
+                recoilYawDegrees: recoilYawDegrees,
+                recoilRecoveryPerSecond: recoilRecoveryPerSecond,
+                hipSpreadDegrees: hipSpreadDegrees,
+                adsSpreadDegrees: adsSpreadDegrees,
+                moveSpreadDegrees: moveSpreadDegrees);
+        }
+
+        private static WeaponSpec CreateWithAngle(string name, float degrees)
+        {
+            switch (name)
+            {
+                case "recoilPitchDegrees":
+                    return CreateWithHandling(recoilPitchDegrees: degrees);
+                case "recoilYawDegrees":
+                    return CreateWithHandling(recoilYawDegrees: degrees);
+                case "hipSpreadDegrees":
+                    return CreateWithHandling(hipSpreadDegrees: degrees);
+                case "adsSpreadDegrees":
+                    return CreateWithHandling(adsSpreadDegrees: degrees);
+                case "moveSpreadDegrees":
+                    return CreateWithHandling(moveSpreadDegrees: degrees);
+                default:
+                    throw new ArgumentException("unknown angle " + name, nameof(name));
+            }
+        }
+
+        [Test]
+        public void RecoilAndSpreadAreZeroWhenOmitted()
+        {
+            var spec = Create();
+
+            Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(0f));
+            Assert.That(spec.RecoilYawDegrees, Is.EqualTo(0f));
+            Assert.That(spec.RecoilRecoveryPerSecond, Is.EqualTo(0f));
+            Assert.That(spec.HipSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void KeepsTheRecoilAndSpreadValues()
+        {
+            var spec = CreateWithHandling(1.5f, 0.4f, 12f, 3f, 0.5f, 2f);
+
+            Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(1.5f));
+            Assert.That(spec.RecoilYawDegrees, Is.EqualTo(0.4f));
+            Assert.That(spec.RecoilRecoveryPerSecond, Is.EqualTo(12f));
+            Assert.That(spec.HipSpreadDegrees, Is.EqualTo(3f));
+            Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(0.5f));
+            Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(2f));
+        }
+
+        [TestCase("recoilPitchDegrees", 0f)]
+        [TestCase("recoilPitchDegrees", 90f)]
+        [TestCase("recoilYawDegrees", 0f)]
+        [TestCase("recoilYawDegrees", 90f)]
+        [TestCase("hipSpreadDegrees", 0f)]
+        [TestCase("hipSpreadDegrees", 90f)]
+        [TestCase("adsSpreadDegrees", 0f)]
+        [TestCase("adsSpreadDegrees", 90f)]
+        [TestCase("moveSpreadDegrees", 0f)]
+        [TestCase("moveSpreadDegrees", 90f)]
+        public void AcceptsRecoilAndSpreadAnglesAtTheBounds(string name, float degrees)
+        {
+            Assert.That(() => CreateWithAngle(name, degrees), Throws.Nothing);
+        }
+
+        [TestCase("recoilPitchDegrees", -0.1f)]
+        [TestCase("recoilPitchDegrees", 90.1f)]
+        [TestCase("recoilPitchDegrees", float.NaN)]
+        [TestCase("recoilYawDegrees", -0.1f)]
+        [TestCase("recoilYawDegrees", 90.1f)]
+        [TestCase("recoilYawDegrees", float.PositiveInfinity)]
+        [TestCase("hipSpreadDegrees", -0.1f)]
+        [TestCase("hipSpreadDegrees", 90.1f)]
+        [TestCase("hipSpreadDegrees", float.NaN)]
+        [TestCase("adsSpreadDegrees", -0.1f)]
+        [TestCase("adsSpreadDegrees", 90.1f)]
+        [TestCase("adsSpreadDegrees", float.NegativeInfinity)]
+        [TestCase("moveSpreadDegrees", -0.1f)]
+        [TestCase("moveSpreadDegrees", 90.1f)]
+        [TestCase("moveSpreadDegrees", float.NaN)]
+        public void RejectsRecoilAndSpreadAnglesOutsideZeroToNinety(string name, float degrees)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => CreateWithAngle(name, degrees));
+            Assert.That(e.ParamName, Is.EqualTo(name));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void RejectsInvalidRecoilRecovery(float perSecond)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => CreateWithHandling(recoilRecoveryPerSecond: perSecond));
+            Assert.That(e.ParamName, Is.EqualTo("recoilRecoveryPerSecond"));
+        }
     }
 }

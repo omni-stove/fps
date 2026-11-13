@@ -228,6 +228,74 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.Cover, Is.EqualTo(expected.Cover), message);
             Assert.That(actual.BlindFire, Is.EqualTo(expected.BlindFire), message);
             Assert.That(actual.ActiveReload, Is.EqualTo(expected.ActiveReload), message);
+            Assert.That(actual.Dodge, Is.EqualTo(Dodge.Off), message);
+            Assert.That(actual.Vault, Is.EqualTo(Vault.Off), message);
+            Assert.That(actual.Grenade, Is.EqualTo(Grenade.Off), message);
+            Assert.That(actual.GrenadeCount, Is.EqualTo(0), message);
+        }
+
+        [Test]
+        public void EveryModeKeepsNoSpawnProtectionNoFallDamageAndTheFullHud()
+        {
+            var built = Build();
+
+            foreach (var definition in built)
+            {
+                Assert.That(definition.SpawnProtectionSeconds, Is.EqualTo(0f), definition.name);
+                Assert.That(definition.FallDamage, Is.EqualTo(FallDamage.Off), definition.name);
+                Assert.That(definition.HudDensity, Is.EqualTo(HudDensity.Full), definition.name);
+                Assert.That(definition.GrenadeCount, Is.EqualTo(0), definition.name);
+
+                var rules = definition.ToRules();
+                Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f), definition.name);
+                Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off), definition.name);
+                Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full), definition.name);
+            }
+        }
+
+        [Test]
+        public void SecondRunRestoresTheNewValues()
+        {
+            Build();
+            var range = AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(_rangePath);
+            range.SpawnProtectionSeconds = 3f;
+            range.FallDamage = FallDamage.On;
+            range.HudDensity = HudDensity.Hardcore;
+            range.Dodge = Dodge.On;
+            range.Vault = Vault.On;
+            range.Grenade = Grenade.On;
+            range.GrenadeCount = 4;
+            EditorUtility.SetDirty(range);
+            AssetDatabase.SaveAssets();
+
+            var restored = Build()[4].ToRules();
+
+            Assert.That(restored.SpawnProtectionSeconds, Is.EqualTo(0f));
+            Assert.That(restored.FallDamage, Is.EqualTo(FallDamage.Off));
+            Assert.That(restored.HudDensity, Is.EqualTo(HudDensity.Full));
+            AssertDefaultActions(restored.Actions, range.name);
+        }
+
+        [Test]
+        public void TheRepositoryRuleAssetsLoadWithTheNewValuesAtTheirDefaults()
+        {
+            var paths = new[]
+            {
+                GameRulesAssetBuilder.TeamDeathmatchPath,
+                GameRulesAssetBuilder.CampaignEasyPath,
+                GameRulesAssetBuilder.CampaignNormalPath,
+                GameRulesAssetBuilder.CampaignHardPath,
+                GameRulesAssetBuilder.RangePath,
+            };
+
+            foreach (var path in paths)
+            {
+                var rules = GameRulesAssetBuilder.LoadRules(path).ToRules();
+                Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f), path);
+                Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off), path);
+                Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full), path);
+                AssertDefaultActions(rules.Actions, path);
+            }
         }
 
         [Test]

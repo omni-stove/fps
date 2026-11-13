@@ -15,7 +15,10 @@ namespace Fps.Core.Tests
             DeathCamera deathCamera = DeathCamera.None,
             bool infiniteReserve = false,
             float reserveAmmoMultiplier = 1f,
-            Destruction destruction = Destruction.Off)
+            Destruction destruction = Destruction.Off,
+            float spawnProtectionSeconds = 0f,
+            FallDamage fallDamage = FallDamage.Off,
+            HudDensity hudDensity = HudDensity.Full)
         {
             return new GameRules(
                 friendlyFire,
@@ -27,7 +30,11 @@ namespace Fps.Core.Tests
                 deathCamera,
                 infiniteReserve,
                 reserveAmmoMultiplier,
-                destruction);
+                destruction,
+                null,
+                spawnProtectionSeconds,
+                fallDamage,
+                hudDensity);
         }
 
         [Test]
@@ -46,6 +53,75 @@ namespace Fps.Core.Tests
             Assert.That(rules.InfiniteReserve, Is.False);
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(1f));
             Assert.That(rules.Destruction, Is.EqualTo(Destruction.Off));
+            Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f));
+            Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off));
+            Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full));
+        }
+
+        [Test]
+        public void NewValuesAreOffWhenOmitted()
+        {
+            var rules = new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                10f,
+                0f,
+                0f,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                false,
+                1f,
+                Destruction.Off);
+
+            Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f));
+            Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off));
+            Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full));
+        }
+
+        [Test]
+        public void KeepsTheGivenSpawnProtectionFallDamageAndHudDensity()
+        {
+            var rules = Rules(spawnProtectionSeconds: 2.5f, fallDamage: FallDamage.On, hudDensity: HudDensity.Hardcore);
+
+            Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(2.5f));
+            Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.On));
+            Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Hardcore));
+        }
+
+        [TestCase(-0.01f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void RejectsANegativeOrNonFiniteSpawnProtection(float value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(spawnProtectionSeconds: value));
+            Assert.That(ex.ParamName, Is.EqualTo("spawnProtectionSeconds"));
+        }
+
+        [TestCase(-1)]
+        [TestCase(2)]
+        public void RejectsAnUndefinedFallDamage(int value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(fallDamage: (FallDamage)value));
+            Assert.That(ex.ParamName, Is.EqualTo("fallDamage"));
+        }
+
+        [TestCase(-1)]
+        [TestCase(3)]
+        public void RejectsAnUndefinedHudDensity(int value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(hudDensity: (HudDensity)value));
+            Assert.That(ex.ParamName, Is.EqualTo("hudDensity"));
+        }
+
+        [Test]
+        public void DeathCameraHasNoneKillerAllyAndFreeInThatOrder()
+        {
+            // 値の並びがアセットとネットの直列化に乗るので、後ろに足したことを固定する。
+            Assert.That((int)DeathCamera.None, Is.EqualTo(0));
+            Assert.That((int)DeathCamera.Killer, Is.EqualTo(1));
+            Assert.That((int)DeathCamera.Ally, Is.EqualTo(2));
+            Assert.That((int)DeathCamera.Free, Is.EqualTo(3));
         }
 
         [Test]
@@ -111,6 +187,16 @@ namespace Fps.Core.Tests
             {
                 Assert.That(Rules(destruction: value).Destruction, Is.EqualTo(value));
             }
+
+            foreach (FallDamage value in Enum.GetValues<FallDamage>())
+            {
+                Assert.That(Rules(fallDamage: value).FallDamage, Is.EqualTo(value));
+            }
+
+            foreach (HudDensity value in Enum.GetValues<HudDensity>())
+            {
+                Assert.That(Rules(hudDensity: value).HudDensity, Is.EqualTo(value));
+            }
         }
 
         [Test]
@@ -148,7 +234,7 @@ namespace Fps.Core.Tests
         }
 
         [TestCase(-1)]
-        [TestCase(2)]
+        [TestCase(4)]
         public void RejectsAnUndefinedDeathCamera(int value)
         {
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(deathCamera: (DeathCamera)value));
@@ -219,7 +305,11 @@ namespace Fps.Core.Tests
             float reviveSeconds = 3f,
             Cover cover = Cover.Off,
             BlindFire blindFire = BlindFire.Off,
-            ActiveReload activeReload = ActiveReload.Off)
+            ActiveReload activeReload = ActiveReload.Off,
+            Dodge dodge = Dodge.Off,
+            Vault vault = Vault.Off,
+            Grenade grenade = Grenade.Off,
+            int grenadeCount = 0)
         {
             return new ActionRules(
                 downed,
@@ -228,7 +318,11 @@ namespace Fps.Core.Tests
                 reviveSeconds,
                 cover,
                 blindFire,
-                activeReload);
+                activeReload,
+                dodge,
+                vault,
+                grenade,
+                grenadeCount);
         }
 
         [Test]
@@ -295,6 +389,64 @@ namespace Fps.Core.Tests
             Assert.That(actions.Cover, Is.EqualTo(Cover.Off));
             Assert.That(actions.BlindFire, Is.EqualTo(BlindFire.Off));
             Assert.That(actions.ActiveReload, Is.EqualTo(ActiveReload.Off));
+            Assert.That(actions.Dodge, Is.EqualTo(Dodge.Off));
+            Assert.That(actions.Vault, Is.EqualTo(Vault.Off));
+            Assert.That(actions.Grenade, Is.EqualTo(Grenade.Off));
+            Assert.That(actions.GrenadeCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ActionsLeaveDodgeVaultAndGrenadeOffWhenOmitted()
+        {
+            var actions = new ActionRules(Downed.Off, 15f, 0.3f, 3f, Cover.Off, BlindFire.Off, ActiveReload.Off);
+
+            Assert.That(actions.Dodge, Is.EqualTo(Dodge.Off));
+            Assert.That(actions.Vault, Is.EqualTo(Vault.Off));
+            Assert.That(actions.Grenade, Is.EqualTo(Grenade.Off));
+            Assert.That(actions.GrenadeCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ActionsKeepTheGivenDodgeVaultAndGrenade()
+        {
+            var actions = Actions(dodge: Dodge.On, vault: Vault.On, grenade: Grenade.On, grenadeCount: 2);
+
+            Assert.That(actions.Dodge, Is.EqualTo(Dodge.On));
+            Assert.That(actions.Vault, Is.EqualTo(Vault.On));
+            Assert.That(actions.Grenade, Is.EqualTo(Grenade.On));
+            Assert.That(actions.GrenadeCount, Is.EqualTo(2));
+        }
+
+        [TestCase(-1)]
+        [TestCase(2)]
+        public void ActionsRejectAnUndefinedDodge(int value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Actions(dodge: (Dodge)value));
+            Assert.That(ex.ParamName, Is.EqualTo("dodge"));
+        }
+
+        [TestCase(-1)]
+        [TestCase(2)]
+        public void ActionsRejectAnUndefinedVault(int value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Actions(vault: (Vault)value));
+            Assert.That(ex.ParamName, Is.EqualTo("vault"));
+        }
+
+        [TestCase(-1)]
+        [TestCase(2)]
+        public void ActionsRejectAnUndefinedGrenade(int value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Actions(grenade: (Grenade)value));
+            Assert.That(ex.ParamName, Is.EqualTo("grenade"));
+        }
+
+        [TestCase(Grenade.Off)]
+        [TestCase(Grenade.On)]
+        public void ActionsRejectANegativeGrenadeCount(Grenade grenade)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Actions(grenade: grenade, grenadeCount: -1));
+            Assert.That(ex.ParamName, Is.EqualTo("grenadeCount"));
         }
 
         [Test]
@@ -340,6 +492,21 @@ namespace Fps.Core.Tests
             foreach (ActiveReload value in Enum.GetValues<ActiveReload>())
             {
                 Assert.That(Actions(activeReload: value).ActiveReload, Is.EqualTo(value));
+            }
+
+            foreach (Dodge value in Enum.GetValues<Dodge>())
+            {
+                Assert.That(Actions(dodge: value).Dodge, Is.EqualTo(value));
+            }
+
+            foreach (Vault value in Enum.GetValues<Vault>())
+            {
+                Assert.That(Actions(vault: value).Vault, Is.EqualTo(value));
+            }
+
+            foreach (Grenade value in Enum.GetValues<Grenade>())
+            {
+                Assert.That(Actions(grenade: value).Grenade, Is.EqualTo(value));
             }
         }
 

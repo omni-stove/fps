@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// TPS のアクション (ダウンと蘇生、カバー、ブラインドファイア、アクティブリロード) のルール。
+    /// TPS のアクション (ダウンと蘇生、カバー、ブラインドファイア、アクティブリロード、回避、乗り越え、グレネード) のルール。
     /// 生成時に値を検査し、以後は変わらない。<see cref="GameRules.Actions"/> として持つ。
     /// </summary>
     public sealed class ActionRules
@@ -20,7 +20,7 @@ namespace Fps.Core
         /// <summary>
         /// 今の挙動。どのアクションも使わない。ダウンの値は <see cref="Core.Downed.Revive"/> にしたときのために、
         /// 出血 <see cref="DefaultDownedBleedoutSeconds"/> 秒、体力の割合 <see cref="DefaultDownedHealthFraction"/>、
-        /// 蘇生 <see cref="DefaultReviveSeconds"/> 秒を入れておく。
+        /// 蘇生 <see cref="DefaultReviveSeconds"/> 秒を入れておく。グレネードの数は 0。
         /// </summary>
         public static readonly ActionRules Default = new ActionRules(
             Downed.Off,
@@ -52,6 +52,18 @@ namespace Fps.Core
         /// <summary>アクティブリロードを使うか。</summary>
         public ActiveReload ActiveReload { get; }
 
+        /// <summary>素早く飛び退けるか。</summary>
+        public Dodge Dodge { get; }
+
+        /// <summary>低い障害物を乗り越えられるか。</summary>
+        public Vault Vault { get; }
+
+        /// <summary>グレネードを投げられるか。</summary>
+        public Grenade Grenade { get; }
+
+        /// <summary>出撃ごとに持つグレネードの数。0 以上。<see cref="Core.Grenade.Off"/> なら使わない。</summary>
+        public int GrenadeCount { get; }
+
         /// <param name="downed">ダウンの扱い。定義済みの値。</param>
         /// <param name="downedBleedoutSeconds">ダウンから倒れるまでの秒数。0 より大きい有限値。</param>
         /// <param name="downedHealthFraction">ダウン中と起こされた後の体力の割合。0 より大きく 1 以下。</param>
@@ -59,6 +71,10 @@ namespace Fps.Core
         /// <param name="cover">カバー。定義済みの値。</param>
         /// <param name="blindFire">ブラインドファイア。定義済みの値。On なら cover も On であること。</param>
         /// <param name="activeReload">アクティブリロード。定義済みの値。</param>
+        /// <param name="dodge">回避。定義済みの値。</param>
+        /// <param name="vault">乗り越え。定義済みの値。</param>
+        /// <param name="grenade">グレネード。定義済みの値。</param>
+        /// <param name="grenadeCount">出撃ごとのグレネードの数。0 以上。</param>
         public ActionRules(
             Downed downed,
             float downedBleedoutSeconds,
@@ -66,7 +82,11 @@ namespace Fps.Core
             float reviveSeconds,
             Cover cover,
             BlindFire blindFire,
-            ActiveReload activeReload)
+            ActiveReload activeReload,
+            Dodge dodge = Dodge.Off,
+            Vault vault = Vault.Off,
+            Grenade grenade = Grenade.Off,
+            int grenadeCount = 0)
         {
             if (!Enum.IsDefined(typeof(Downed), downed))
             {
@@ -109,6 +129,26 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(activeReload), activeReload, "activeReload is not a defined ActiveReload");
             }
 
+            if (!Enum.IsDefined(typeof(Dodge), dodge))
+            {
+                throw new ArgumentOutOfRangeException(nameof(dodge), dodge, "dodge is not a defined Dodge");
+            }
+
+            if (!Enum.IsDefined(typeof(Vault), vault))
+            {
+                throw new ArgumentOutOfRangeException(nameof(vault), vault, "vault is not a defined Vault");
+            }
+
+            if (!Enum.IsDefined(typeof(Grenade), grenade))
+            {
+                throw new ArgumentOutOfRangeException(nameof(grenade), grenade, "grenade is not a defined Grenade");
+            }
+
+            if (grenadeCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(grenadeCount), grenadeCount, "grenadeCount must not be negative");
+            }
+
             Downed = downed;
             DownedBleedoutSeconds = downedBleedoutSeconds;
             DownedHealthFraction = downedHealthFraction;
@@ -116,6 +156,10 @@ namespace Fps.Core
             Cover = cover;
             BlindFire = blindFire;
             ActiveReload = activeReload;
+            Dodge = dodge;
+            Vault = vault;
+            Grenade = grenade;
+            GrenadeCount = grenadeCount;
         }
     }
 }

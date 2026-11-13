@@ -10,5 +10,11 @@ namespace Fps.Core
 
         /// <summary>自分を倒した相手を映す。</summary>
         Killer,
+
+        /// <summary>生きている味方を映す。</summary>
+        Ally,
+
+        /// <summary>自由に動かせるカメラにする。</summary>
+        Free,
     }
 }

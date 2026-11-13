@@ -370,6 +370,12 @@ namespace Fps.Editor
             definition.ActiveReloadWindowStart = spec.ActiveReloadWindowStart;
             definition.ActiveReloadWindowLength = spec.ActiveReloadWindowLength;
             definition.ActiveReloadFailSeconds = spec.ActiveReloadFailSeconds;
+            definition.RecoilPitchDegrees = spec.RecoilPitchDegrees;
+            definition.RecoilYawDegrees = spec.RecoilYawDegrees;
+            definition.RecoilRecoveryPerSecond = spec.RecoilRecoveryPerSecond;
+            definition.HipSpreadDegrees = spec.HipSpreadDegrees;
+            definition.AdsSpreadDegrees = spec.AdsSpreadDegrees;
+            definition.MoveSpreadDegrees = spec.MoveSpreadDegrees;
 
             // spec は検査済みだが、アセットの形で読み直せることも確かめる。不正なら保存しない。
             definition.ToSpec();

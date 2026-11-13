@@ -49,7 +49,7 @@ namespace Fps.Runtime
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で 0 に戻す。
         private static int _openCount;
 
-        private readonly PauseState _state = new PauseState(PauseTimeMode.KeepRunning, new[] { PauseActionPath });
+        private readonly PauseState _state = new PauseState(PauseTimeMode.KeepRunning, new[] { PauseActionPath, InputActionPaths.NetStats });
         private readonly List<string> _enabledScratch = new List<string>();
         private InputActionAsset _actions;
         private InputAction _pauseAction;

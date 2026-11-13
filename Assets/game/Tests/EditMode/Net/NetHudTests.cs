@@ -581,6 +581,74 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ShowsTheIdleWarningAndCountsItDownUntilItIsCleared()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+
+            _netHud.ShowIdleWarning(15f);
+            Assert.That(_netHud.IsShowingIdleWarning, Is.True);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("操作がありません あと 15 秒で切断されます"));
+            Assert.That(IsShown(_view.NoticeLabel), Is.True);
+
+            _netHud.Tick(1.5f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(14)));
+
+            // 切断が届くまでは 0 秒のまま出しておく
+            _netHud.Tick(30f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(0)));
+
+            _netHud.ClearIdleWarning();
+            Assert.That(_netHud.IsShowingIdleWarning, Is.False);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [Test]
+        public void TheIdleWarningWinsOverSpawnProtectionButNotOverTheEndOfTheMatch()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            _netHud.ShowSpawnProtection(2);
+
+            _netHud.ShowIdleWarning(10f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(10)));
+
+            _netHud.ClearIdleWarning();
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("保護中 あと 2 秒"));
+
+            _netHud.ShowIdleWarning(10f);
+            Arrive(_match.StatusVariable, Status(GameModeState.Playing), Status(GameModeState.Ended, Team.Alpha));
+            Arrive(_match.NextMatchSecondsVariable, 0, 10);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NextMatch(10)));
+        }
+
+        [Test]
+        public void UnbindingTheMatchDropsTheIdleWarning()
+        {
+            _netHud.BindMatch(_match);
+            _netHud.ShowIdleWarning(10f);
+
+            _netHud.BindMatch(null);
+
+            Assert.That(_netHud.IsShowingIdleWarning, Is.False);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [TestCase(-3f)]
+        [TestCase(float.NaN)]
+        public void AnInvalidIdleWarningShowsZeroSeconds(float seconds)
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+
+            _netHud.ShowIdleWarning(seconds);
+
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(0)));
+        }
+
+        [Test]
         public void RevivingAndBeingDownedWinOverSpawnProtection()
         {
             _netHud.BindMatch(_match);

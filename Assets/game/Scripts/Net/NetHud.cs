@@ -50,6 +50,7 @@ namespace Fps.Net
     /// <para>
     /// 回線の Ping・ロスの表示は .NetStats.cs、拠点の表示は .Objective.cs が受け持つ。それぞれの差し込み口を、
     /// 試合を購読したとき (<see cref="BindMatch"/>)・外したとき・毎フレーム (<see cref="Tick"/>)・すべての購読を外すとき (<see cref="UnbindAll"/>) に呼ぶ。
+    /// 放置の警告は .Idle.cs が受け持ち、出している間は試合の終わり以外のどの案内よりも先に出す。
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -283,6 +284,7 @@ namespace Fps.Net
                 _nextWaveSeconds = 0;
                 _status = new NetMatchStatus(GameModeState.Waiting, null);
                 _rules = NetMatchRules.Default;
+                _idleRemaining = null;
                 ApplyDensity();
                 Model.ClearTime();
                 Model.ClearScores();
@@ -337,6 +339,7 @@ namespace Fps.Net
         {
             NetStatsTick(deltaSeconds);
             ObjectiveTick(deltaSeconds);
+            IdleTick(deltaSeconds);
             if (_respawn == null)
             {
                 return;
@@ -700,7 +703,7 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 終わっていれば次の試合までの秒数を、ダウン中なら出血で倒れるまでの秒数と起こされている進みを、
+        /// 終わっていれば次の試合までの秒数を、放置の警告を受けていれば切断までの秒数を、ダウン中なら出血で倒れるまでの秒数と起こされている進みを、
         /// 倒れていればリスポーン方式に合わせた案内 (Individual は自分のリスポーンまで、Wave は次のウェーブまでの秒数、
         /// None は次の試合まで復活なし) を、味方を起こしていればその進みを、出現直後の無敵の最中なら「保護中 あと N 秒」を出す。
         /// どれでもなければ消す。
@@ -710,6 +713,11 @@ namespace Fps.Net
             if (_match != null && _status.State == GameModeState.Ended)
             {
                 Model.SetNotice(HudFormat.NextMatch(Math.Max(0, _nextMatchSeconds)));
+                return;
+            }
+
+            if (TryShowIdleNotice())
+            {
                 return;
             }
 

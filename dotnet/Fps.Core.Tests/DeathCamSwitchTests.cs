@@ -85,6 +85,29 @@ namespace Fps.Core.Tests
             Assert.That(deathCam.Update(DeathCamera.None, true, false, false), Is.EqualTo(DeathCamTransition.RuleDisabled));
         }
 
+        [TestCase(DeathCamera.Ally)]
+        [TestCase(DeathCamera.Free)]
+        public void AllyAndFreeStartAndStopLikeKiller(DeathCamera mode)
+        {
+            var deathCam = new DeathCamSwitch();
+            deathCam.Update(mode, true, true, false);
+
+            Assert.That(deathCam.Update(mode, true, false, false), Is.EqualTo(DeathCamTransition.Started));
+            Assert.That(deathCam.Update(mode, true, true, false), Is.EqualTo(DeathCamTransition.Respawned));
+        }
+
+        [Test]
+        public void SwitchingBetweenShowingRulesKeepsWatching()
+        {
+            // 何を映すかは呼び出し側が今のルールで決めるので、None になるまでは止めない
+            var deathCam = Dead();
+
+            Assert.That(deathCam.Update(DeathCamera.Ally, true, false, false), Is.EqualTo(DeathCamTransition.None));
+            Assert.That(deathCam.Update(DeathCamera.Free, true, false, false), Is.EqualTo(DeathCamTransition.None));
+            Assert.That(deathCam.IsActive, Is.True);
+            Assert.That(deathCam.Update(DeathCamera.None, true, false, false), Is.EqualTo(DeathCamTransition.RuleDisabled));
+        }
+
         [Test]
         public void MatchEndWinsOverRespawnInTheSameUpdate()
         {

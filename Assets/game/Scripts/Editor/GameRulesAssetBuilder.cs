@@ -10,7 +10,9 @@ namespace Fps.Editor
     /// <summary>
     /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/> 5 つ) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
-    /// どのモードもリスポーン直後の無敵なし・落下ダメージなし・HUD はすべて出す (<see cref="GameRules"/> の既定) で、アクションは <see cref="ActionRules.Default"/>。
+    /// どのモードもリスポーン直後の無敵なし・落下ダメージなし・HUD はすべて出す (<see cref="GameRules"/> の既定)。
+    /// アクションは、チームデスマッチがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード。
+    /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.GameRulesAssetBuilder.Build</code>
@@ -29,7 +31,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、倒した相手を映す、予備弾は有限で 1 倍、
-        /// 建造物は弾で壊れる。
+        /// 建造物は弾で壊れる。アクションは <see cref="TeamDeathmatchActions"/>。
         /// </summary>
         public static GameRules TeamDeathmatchRules()
         {
@@ -44,12 +46,12 @@ namespace Fps.Editor
                 false,
                 1f,
                 Destruction.On,
-                ActionRules.Default);
+                TeamDeathmatchActions());
         }
 
         /// <summary>
         /// キャンペーン (易)。味方撃ちなし、個別リスポーン、3 秒後から毎秒 25 回復、体は倒れる、死亡カメラなし、予備弾は有限で 1.5 倍、
-        /// 建造物は壊れない。
+        /// 建造物は壊れない。アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignEasyRules()
         {
@@ -64,22 +66,31 @@ namespace Fps.Editor
                 false,
                 1.5f,
                 Destruction.Off,
-                ActionRules.Default);
+                CampaignActions());
         }
 
-        /// <summary>キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、5 秒後から毎秒 15 回復、体は倒れる、予備弾は有限で 1 倍にしたもの。建造物は壊れない。</summary>
+        /// <summary>
+        /// キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、5 秒後から毎秒 15 回復、体は倒れる、予備弾は有限で 1 倍にしたもの。建造物は壊れない。
+        /// アクションは <see cref="CampaignActions"/>。
+        /// </summary>
         public static GameRules CampaignNormalRules()
         {
-            return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f);
+            return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f, CampaignActions());
         }
 
-        /// <summary>キャンペーン (難)。<see cref="GameRules.Default"/> のうち、7 秒後から毎秒 10 回復、体は倒れる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。</summary>
+        /// <summary>
+        /// キャンペーン (難)。<see cref="GameRules.Default"/> のうち、7 秒後から毎秒 10 回復、体は倒れる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。
+        /// アクションは <see cref="CampaignActions"/>。
+        /// </summary>
         public static GameRules CampaignHardRules()
         {
-            return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f);
+            return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f, CampaignActions());
         }
 
-        /// <summary>射撃場。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は消える、死亡カメラなし、予備弾は無限、建造物は弾で壊れる。</summary>
+        /// <summary>
+        /// 射撃場。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は消える、死亡カメラなし、予備弾は無限、建造物は弾で壊れる。
+        /// アクションは <see cref="RangeActions"/>。
+        /// </summary>
         public static GameRules RangeRules()
         {
             return new GameRules(
@@ -93,7 +104,28 @@ namespace Fps.Editor
                 true,
                 1f,
                 Destruction.On,
-                ActionRules.Default);
+                RangeActions());
+        }
+
+        /// <summary>
+        /// チームデスマッチのアクション。倒れたらダウンして味方が起こせ、アクティブリロードを使う。
+        /// カバーとブラインドファイアはオンラインのプレイヤーが対応していないので使わない。
+        /// </summary>
+        public static ActionRules TeamDeathmatchActions()
+        {
+            return WithDefaultDownedTimings(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On);
+        }
+
+        /// <summary>キャンペーン (どの難易度も) のアクション。カバー・ブラインドファイア・アクティブリロードを使い、ダウンはしない。</summary>
+        public static ActionRules CampaignActions()
+        {
+            return WithDefaultDownedTimings(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On);
+        }
+
+        /// <summary>射撃場のアクション。カバー・ブラインドファイア・アクティブリロードを使い、ダウンはしない。</summary>
+        public static ActionRules RangeActions()
+        {
+            return WithDefaultDownedTimings(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On);
         }
 
         /// <summary>path の <see cref="GameRulesDefinition"/> を読み、<see cref="GameRulesDefinition.ToRules"/> に通ることを確かめて返す。</summary>
@@ -177,12 +209,26 @@ namespace Fps.Editor
             definition.ToRules();
         }
 
+        private static ActionRules WithDefaultDownedTimings(Downed downed, Cover cover, BlindFire blindFire, ActiveReload activeReload)
+        {
+            var defaults = ActionRules.Default;
+            return new ActionRules(
+                downed,
+                defaults.DownedBleedoutSeconds,
+                defaults.DownedHealthFraction,
+                defaults.ReviveSeconds,
+                cover,
+                blindFire,
+                activeReload);
+        }
+
         private static GameRules WithOverrides(
             GameRules source,
             DeathBody deathBody,
             float regenDelaySeconds,
             float regenPerSecond,
-            float reserveAmmoMultiplier)
+            float reserveAmmoMultiplier,
+            ActionRules actions)
         {
             return new GameRules(
                 source.FriendlyFire,
@@ -195,7 +241,7 @@ namespace Fps.Editor
                 source.InfiniteReserve,
                 reserveAmmoMultiplier,
                 Destruction.Off,
-                source.Actions,
+                actions,
                 source.SpawnProtectionSeconds,
                 source.FallDamage,
                 source.HudDensity);

@@ -1,4 +1,5 @@
 using System;
+using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -85,7 +86,7 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void PopulatedSceneHoldsOnlyTheBootstrap()
+        public void PopulatedSceneHoldsTheBootstrapAndTheCovers()
         {
             var scene = TestScenes.NewAdditive();
             var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
@@ -96,8 +97,10 @@ namespace Fps.Tests.EditMode
                 var bootstrap = BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle, handgun }, range);
 
                 var roots = scene.GetRootGameObjects();
-                Assert.That(roots, Has.Length.EqualTo(1));
+                Assert.That(roots, Has.Length.EqualTo(2));
                 Assert.That(roots[0], Is.SameAs(bootstrap));
+                Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
+                AssertCovers(roots[1]);
                 Assert.That(bootstrap.name, Is.EqualTo(BootstrapSceneBuilder.BootstrapObjectName));
                 Assert.That(bootstrap.GetComponent<GameBootstrap>(), Is.Not.Null);
                 Assert.That(
@@ -154,8 +157,10 @@ namespace Fps.Tests.EditMode
             try
             {
                 var roots = scene.GetRootGameObjects();
-                Assert.That(roots, Has.Length.EqualTo(1));
+                Assert.That(roots, Has.Length.EqualTo(2), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers");
                 Assert.That(roots[0].GetComponent<GameBootstrap>(), Is.Not.Null);
+                Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
+                AssertCovers(roots[1]);
                 Assert.That(roots[0].GetComponent<MatchRunner>(), Is.Not.Null, $"rerun {nameof(BootstrapSceneBuilder)}.Build");
                 Assert.That(
                     roots[0].GetComponent<GameBootstrap>().WeaponDefinitions,
@@ -173,6 +178,92 @@ namespace Fps.Tests.EditMode
             finally
             {
                 EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
+        public void TheCoversAreOneLowAndOneHigh()
+        {
+            Assert.That(BootstrapSceneBuilder.Covers, Has.Count.EqualTo(2));
+            Assert.That(BootstrapSceneBuilder.LowCover.Size.y, Is.EqualTo(1f));
+            Assert.That(BootstrapSceneBuilder.HighCover.Size.y, Is.EqualTo(2f));
+            Assert.That(BootstrapSceneBuilder.LowCover.Size.y, Is.LessThan(CoverProbe.LowWallHeight), "the player crouches behind the low cover");
+            Assert.That(BootstrapSceneBuilder.HighCover.Size.y, Is.GreaterThanOrEqualTo(CoverProbe.LowWallHeight), "the player stands behind the high cover");
+
+            foreach (var cover in BootstrapSceneBuilder.Covers)
+            {
+                Assert.That(cover.Center.y - (cover.Size.y / 2f), Is.EqualTo(0f).Within(1e-5f), $"{cover.Name} stands on the floor");
+            }
+        }
+
+        [Test]
+        public void TheCoversStandBetweenThePlayerAndTheTargetsAndLeaveALineOfFireOpen()
+        {
+            var feet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
+            var eye = GameBootstrap.PlayerSpawn + GameBootstrap.EyeOffset;
+            var targets = GameBootstrap.TargetDummyPositions(feet, Quaternion.identity);
+
+            var open = 0;
+            foreach (var target in targets)
+            {
+                // 標的の胴の高さ (足元から 1m) を狙う。
+                var aim = target + Vector3.up;
+                var ray = new Ray(eye, aim - eye);
+                var length = Vector3.Distance(eye, aim);
+                var blocked = false;
+                foreach (var cover in BootstrapSceneBuilder.Covers)
+                {
+                    var bounds = new Bounds(cover.Center, cover.Size);
+                    if (bounds.IntersectRay(ray, out var distance) && distance <= length)
+                    {
+                        blocked = true;
+                    }
+                }
+
+                if (!blocked)
+                {
+                    open++;
+                }
+            }
+
+            Assert.That(open, Is.GreaterThan(0), "at least one target can be shot from the spawn");
+
+            foreach (var cover in BootstrapSceneBuilder.Covers)
+            {
+                Assert.That(cover.Center.z, Is.GreaterThan(feet.z + GameBootstrap.PlayerRadius + CoverProbe.MaxEnterDistance), $"{cover.Name} is ahead of the spawn");
+                Assert.That(cover.Center.z, Is.LessThan(targets[0].z), $"{cover.Name} is in front of the targets");
+            }
+
+            var center = targets[targets.Length / 2];
+            var toCenter = new Ray(eye, center + Vector3.up - eye);
+            foreach (var cover in BootstrapSceneBuilder.Covers)
+            {
+                Assert.That(new Bounds(cover.Center, cover.Size).IntersectRay(toCenter), Is.False, $"{cover.Name} keeps the middle target open");
+            }
+        }
+
+        [Test]
+        public void CreateCoversRejectsAnUnloadedScene()
+        {
+            Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreateCovers(default));
+        }
+
+        private static void AssertCovers(GameObject root)
+        {
+            Assert.That(root.transform.childCount, Is.EqualTo(2), "one low and one high cover");
+            var low = root.transform.Find(BootstrapSceneBuilder.LowCoverName);
+            var high = root.transform.Find(BootstrapSceneBuilder.HighCoverName);
+            Assert.That(low, Is.Not.Null);
+            Assert.That(high, Is.Not.Null);
+
+            foreach (var (box, expected) in new[] { (low, BootstrapSceneBuilder.LowCover), (high, BootstrapSceneBuilder.HighCover) })
+            {
+                Assert.That(Vector3.Distance(box.position, expected.Center), Is.LessThan(1e-4f), expected.Name);
+                Assert.That(Vector3.Distance(box.lossyScale, expected.Size), Is.LessThan(1e-4f), expected.Name);
+                var collider = box.GetComponent<BoxCollider>();
+                Assert.That(collider, Is.Not.Null, $"{expected.Name} blocks the player and the cover probe");
+                Assert.That(collider.isTrigger, Is.False, expected.Name);
+                Assert.That(box.gameObject.isStatic, Is.True, expected.Name);
             }
         }
     }

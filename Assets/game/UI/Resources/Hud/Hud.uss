@@ -287,6 +287,15 @@
     left: 0;
 }
 
+/* ロードアウトの選択。倒されている間に画面の中央に出す。中身の見た目は Resources/Loadout/LoadoutSelect.uss。 */
+.hud__loadout {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: 960px;
+}
+
 /* スコアボード。Scoreboard を押している間だけ画面の中央に出す。行は ScoreboardView が作る。 */
 .scoreboard {
     position: absolute;

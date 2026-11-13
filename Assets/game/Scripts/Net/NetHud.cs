@@ -94,7 +94,7 @@ namespace Fps.Net
         /// <summary>
         /// HUD (<see cref="Hud.Create"/>) を作り、player とその武器、今の試合 (<see cref="NetTeamDeathmatch.Current"/>) を購読する。
         /// ヒットマーカー・キルフィードなどのビューと <see cref="PauseMenu"/> は、オフラインと同じく <see cref="Hud.Create"/> が
-        /// (<see cref="Hud.AddViews"/> で) 付ける。
+        /// (<see cref="Hud.AddViews"/> で) 付ける。倒されている間のロードアウトの選択は <see cref="NetLoadoutChooser"/> を付けてつなぐ。
         /// 失敗したら作りかけのものは消して例外を投げる。
         /// </summary>
         /// <exception cref="InvalidOperationException">Resources に HUD のレイアウトかテーマが無い。</exception>
@@ -111,6 +111,7 @@ namespace Fps.Net
                 var netHud = hud.gameObject.AddComponent<NetHud>();
                 netHud.Initialize(player);
                 netHud.ListenForMatch();
+                hud.gameObject.AddComponent<NetLoadoutChooser>().Initialize(netHud);
                 return netHud;
             }
             catch

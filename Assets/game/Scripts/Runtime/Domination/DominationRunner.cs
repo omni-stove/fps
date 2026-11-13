@@ -616,7 +616,7 @@ namespace Fps.Runtime
             {
                 if (!participant.Enemy.Respawn(ground, participant.HomeRotation))
                 {
-                    Debug.LogWarning($"{LogTag} 敵 '{participant.Name}' を戻せませんでした (未初期化か、倒れていません)。", participant.Enemy);
+                    Debug.LogWarning($"{LogTag} 敵 '{participant.Name}' を戻せませんでした (倒れていません)。", participant.Enemy);
                     return;
                 }
             }

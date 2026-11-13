@@ -65,6 +65,8 @@
         <ui:VisualElement name="loadout-select" class="hud__loadout" picking-mode="Ignore" style="display: none;" />
         <!-- 拠点制圧のポイント・残り時間・拠点の持ち主。DominationRunner が DominationView を付けたときだけ出す。 -->
         <ui:VisualElement name="domination" class="domination" picking-mode="Ignore" style="display: none;" />
+        <!-- オフラインのモードの残り時間・陣営ごとの得点・モードが足す行・結果。ModeRunnerBase が ModeHudView に渡している間だけ出し、行は ModeHudView が足す。 -->
+        <ui:VisualElement name="mode-hud" class="mode-hud" picking-mode="Ignore" style="display: none;" />
         <!-- チュートリアルの今の手順。射撃場で TutorialPresenter が TutorialPromptView に文を渡している間だけ出す。 -->
         <ui:Label name="tutorial-prompt" text="" class="tutorial-prompt" picking-mode="Ignore" style="display: none;" />
         <!-- ポーズ画面。開いている間だけ PauseMenu が出す。画面全体を覆い、後ろへのクリックを止める。 -->

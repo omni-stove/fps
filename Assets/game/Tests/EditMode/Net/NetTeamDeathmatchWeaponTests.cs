@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Fps.Net.Tests
 {
@@ -25,6 +27,8 @@ namespace Fps.Net.Tests
         private const int _handgunDamage = 34;
         private const float _rifleInterval = 0.1f;
         private const float _handgunInterval = 0.3f;
+        private const float _rifleRange = 120f;
+        private const float _handgunRange = 40f;
         private const float _switchSeconds = 0.4f;
         private const int _shooterId = 1;
 
@@ -46,15 +50,16 @@ namespace Fps.Net.Tests
 
         private WeaponDefinition Rifle()
         {
-            return Definition("Rifle", _rifleId, WeaponCategory.AssaultRifle, FireMode.Auto, _rifleDamage, _rifleInterval);
+            return Definition("Rifle", _rifleId, WeaponCategory.AssaultRifle, FireMode.Auto, _rifleDamage, _rifleInterval, _rifleRange);
         }
 
         private WeaponDefinition Handgun()
         {
-            return Definition("Handgun", _handgunId, WeaponCategory.Handgun, FireMode.Semi, _handgunDamage, _handgunInterval);
+            return Definition("Handgun", _handgunId, WeaponCategory.Handgun, FireMode.Semi, _handgunDamage, _handgunInterval, _handgunRange);
         }
 
-        private WeaponDefinition Definition(string assetName, string id, WeaponCategory category, FireMode fireMode, int damage, float fireInterval)
+        private WeaponDefinition Definition(
+            string assetName, string id, WeaponCategory category, FireMode fireMode, int damage, float fireInterval, float range)
         {
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             _created.Add(definition);
@@ -65,6 +70,7 @@ namespace Fps.Net.Tests
             definition.FireMode = fireMode;
             definition.Damage = damage;
             definition.FireInterval = fireInterval;
+            definition.Range = range;
             return definition;
         }
 
@@ -111,10 +117,10 @@ namespace Fps.Net.Tests
             return go.AddComponent<NetPlayerWeapon>();
         }
 
-        /// <summary>サーバーと同じく持ち主からの要求で index に持ち替え、持ち替えが終わるまで時間を進める。</summary>
-        private static void SwitchAndWait(NetPlayerWeapon weapon, int index)
+        /// <summary>サーバーと同じく持ち主からの要求 (SwitchWeaponServerRpc) で weaponId に持ち替え、持ち替えが終わるまで時間を進める。</summary>
+        private static void SwitchAndWait(NetPlayerWeapon weapon, string weaponId)
         {
-            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, index), Is.True);
+            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, weaponId), Is.True);
             weapon.ServerTick(_switchSeconds);
             Assert.That(weapon.Loadout.IsSwitching, Is.False);
         }
@@ -252,11 +258,93 @@ namespace Fps.Net.Tests
             Assert.That(spec, Is.SameAs(weapon.CurrentSpec));
             Assert.That(DamageCalculator.Calculate(spec.Damage, HitZone.Body, 10f, spec.Falloff), Is.EqualTo(_rifleDamage));
 
-            SwitchAndWait(weapon, 1);
+            SwitchAndWait(weapon, _handgunId);
 
             Assert.That(Fire(loadout, weapon, _handgunId, 1d, out spec), Is.EqualTo(ShotRejection.None));
             Assert.That(spec.Id, Is.EqualTo(_handgunId));
             Assert.That(DamageCalculator.Calculate(spec.Damage, HitZone.Body, 10f, spec.Falloff), Is.EqualTo(_handgunDamage));
+        }
+
+        [Test]
+        public void RangeFollowsTheHeldWeapon()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = EquippedWeapon(loadout);
+
+            Assert.That(Fire(loadout, weapon, _rifleId, 0d, out var spec), Is.EqualTo(ShotRejection.None));
+            Assert.That(spec.Range, Is.EqualTo(_rifleRange));
+
+            SwitchAndWait(weapon, _handgunId);
+
+            // ServerFire はこの spec.Range まで Raycast する
+            Assert.That(Fire(loadout, weapon, _handgunId, 1d, out spec), Is.EqualTo(ShotRejection.None));
+            Assert.That(spec.Range, Is.EqualTo(_handgunRange));
+        }
+
+        [Test]
+        public void SwitchToAWeaponOutsideTheLoadoutIsDropped()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = EquippedWeapon(loadout);
+
+            LogAssert.Expect(LogType.Warning, new Regex("ignored switch client=" + weapon.OwnerClientId + " weaponIdLength=" + _shotgunId.Length + " not in the loadout"));
+            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, _shotgunId), Is.False);
+
+            Assert.That(weapon.Loadout.IsSwitching, Is.False, "a dropped request does not start the switch delay");
+            Assert.That(weapon.WeaponId, Is.EqualTo(_rifleId));
+            Assert.That(Fire(loadout, weapon, _rifleId, 0d, out var spec), Is.EqualTo(ShotRejection.None));
+            Assert.That(spec.Id, Is.EqualTo(_rifleId));
+            Assert.That(Fire(loadout, weapon, _shotgunId, 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
+        }
+
+        [Test]
+        public void ShotsAreDroppedWhileTheNewWeaponIsDrawn()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = EquippedWeapon(loadout);
+            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, _handgunId), Is.True);
+
+            // 持ち替えた直後に届いた古い Id の射撃は WeaponMismatch。新しい Id でも抜き終わるまでは弾を減らさずに捨てる
+            Assert.That(Fire(loadout, weapon, _rifleId, 0d, out _), Is.EqualTo(ShotRejection.WeaponMismatch));
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.Switching));
+            Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(weapon.CurrentSpec.MagazineSize));
+        }
+
+        [Test]
+        public void RespawnHoldsTheRifleWithEveryWeaponFull()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = EquippedWeapon(loadout);
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+            SwitchAndWait(weapon, _handgunId);
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
+
+            NetTeamDeathmatch.ArmForSpawn(loadout, weapon);
+
+            Assert.That(weapon.WeaponId, Is.EqualTo(_rifleId));
+            Assert.That(weapon.CurrentSpec.Id, Is.EqualTo(_rifleId));
+            Assert.That(weapon.Loadout.CurrentIndex, Is.EqualTo(0));
+            Assert.That(weapon.Loadout.IsSwitching, Is.False, "a respawned player can fire at once");
+            foreach (var held in weapon.Loadout.Items)
+            {
+                Assert.That(held.AmmoInMagazine, Is.EqualTo(held.Spec.MagazineSize), held.Spec.Id);
+                Assert.That(held.ReserveAmmo, Is.EqualTo(held.Spec.ReserveAmmo), held.Spec.Id);
+                Assert.That(held.IsReloading, Is.False, held.Spec.Id);
+            }
+
+            // 射撃は rifle の値で判定し、倒れる前に持っていた handgun の Id では撃てない
+            Assert.That(Fire(loadout, weapon, _handgunId, 2d, out _), Is.EqualTo(ShotRejection.WeaponMismatch));
+            Assert.That(Fire(loadout, weapon, _rifleId, 2d, out var spec), Is.EqualTo(ShotRejection.None));
+            Assert.That(spec.Damage, Is.EqualTo(_rifleDamage));
+            Assert.That(loadout.TryGetBudget(_shooterId, out var budget), Is.True);
+            Assert.That(budget.FireInterval, Is.EqualTo(_rifleInterval));
+        }
+
+        [Test]
+        public void SpawningWithoutAWeaponComponentDoesNothing()
+        {
+            Assert.DoesNotThrow(() => NetTeamDeathmatch.ArmForSpawn(RifleAndHandgunLoadout(), null));
         }
 
         [Test]
@@ -268,7 +356,7 @@ namespace Fps.Net.Tests
             Assert.That(Fire(loadout, weapon, _handgunId, 0d, out var spec), Is.EqualTo(ShotRejection.WeaponMismatch), "the handgun is not drawn yet");
             Assert.That(spec, Is.Null);
 
-            SwitchAndWait(weapon, 1);
+            SwitchAndWait(weapon, _handgunId);
 
             // 持ち替えた後に届いた rifle の射撃は、rifle の値で判定しない
             Assert.That(Fire(loadout, weapon, _rifleId, 0d, out spec), Is.EqualTo(ShotRejection.WeaponMismatch));
@@ -289,7 +377,7 @@ namespace Fps.Net.Tests
             Assert.That(loadout.TryGetBudget(_shooterId, out var budget), Is.True);
             Assert.That(budget.FireInterval, Is.EqualTo(_rifleInterval));
 
-            SwitchAndWait(weapon, 1);
+            SwitchAndWait(weapon, _handgunId);
 
             // 持ち替えたら handgun の間隔で作り直すので、溜めは満タンから
             for (var i = 0; i < ShotBudget.DefaultBurst; i++)

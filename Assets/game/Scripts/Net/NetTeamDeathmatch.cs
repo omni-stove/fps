@@ -28,7 +28,9 @@ namespace Fps.Net
     /// <para>
     /// 武器の値はここに持たず、ロードアウトのアセット (<see cref="LoadoutDefinition"/>) から引く。試合の開始時に
     /// <see cref="LoadoutDefinition.ToRule"/> と <see cref="LoadoutDefinition.ToSpecs"/> で検査して <see cref="Fps.Core.ServerLoadout"/> に保持し、
-    /// 未設定・不正なら試合を始めない。全員に同じロードアウトを、出現・リスポーンのたびに <see cref="NetPlayerWeapon.ServerEquip"/> で持たせる。
+    /// 未設定・不正なら試合を始めない。全員に同じロードアウトを、出現・リスポーンのたびに
+    /// 試合のルールと一緒に <see cref="NetPlayerWeapon.ServerEquip(System.Collections.Generic.IReadOnlyList{WeaponSpec}, float, GameRules)"/> で持たせる
+    /// (予備弾の倍率と無限予備弾はそこで各武器に効く)。
     /// 持ち替えは <see cref="NetPlayerWeapon"/> がサーバーで判定し、射撃の判定 (ダメージ・射程・減衰・連射間隔) には
     /// 撃った人がその時に持っている武器 (<see cref="NetPlayerWeapon.CurrentSpec"/>) の値を使う。
     /// クライアントは撃った武器の Id だけを送り、ロードアウトに無い・今持っている武器と違う射撃は捨てる。
@@ -517,19 +519,25 @@ namespace Fps.Net
 
         /// <summary>
         /// 出現・リスポーンで weapon に loadout の武器を全部満タンで渡し直し、先頭 (rifle) を持ち替えの待ち時間なしで構えさせる。
-        /// 持ち替え中・リロード中だった状態と、倒れる前の残弾は捨てる。weapon が null なら何もしない。
+        /// 持ち替え中・リロード中だった状態と、倒れる前の残弾は捨てる。予備弾は rules の倍率を掛けた数で、
+        /// <see cref="GameRules.InfiniteReserve"/> なら減らない。weapon が null なら何もしない。
         /// </summary>
-        internal static void ArmForSpawn(ServerLoadout loadout, NetPlayerWeapon weapon)
+        internal static void ArmForSpawn(ServerLoadout loadout, GameRules rules, NetPlayerWeapon weapon)
         {
             if (loadout == null)
             {
                 throw new ArgumentNullException(nameof(loadout));
             }
 
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
             // ServerLoadout は開始時に ServerEquip と同じ条件で検査済みなので、ここでは投げない
             if (weapon != null)
             {
-                weapon.ServerEquip(loadout.Weapons, loadout.SwitchSeconds);
+                weapon.ServerEquip(loadout.Weapons, loadout.SwitchSeconds, rules);
             }
         }
 
@@ -1128,7 +1136,7 @@ namespace Fps.Net
             // 出現より前の時点まで巻き戻した射撃には、その時点にいなかったものとして当たらない
             _lagCompensator?.Remove(playerId);
 
-            ArmForSpawn(_serverLoadout, player.Weapon);
+            ArmForSpawn(_serverLoadout, _session.Spec.Rules, player.Weapon);
 
             var p = point.Position;
             player.ServerTeleport(new Vector3(p.X, p.Y, p.Z));

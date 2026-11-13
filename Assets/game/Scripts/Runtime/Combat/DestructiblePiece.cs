@@ -154,18 +154,33 @@ namespace Fps.Runtime
 
             foreach (var child in GetComponentsInChildren<Collider>(true))
             {
-                child.enabled = !broken;
+                if (OwnsComponent(child))
+                {
+                    child.enabled = !broken;
+                }
             }
 
             foreach (var renderer in GetComponentsInChildren<Renderer>(true))
             {
-                renderer.enabled = !broken;
+                if (OwnsComponent(renderer))
+                {
+                    renderer.enabled = !broken;
+                }
             }
 
             foreach (var obstacle in GetComponentsInChildren<NavMeshObstacle>(true))
             {
-                obstacle.enabled = !broken;
+                if (OwnsComponent(obstacle))
+                {
+                    obstacle.enabled = !broken;
+                }
             }
+        }
+
+        // 子孫に別の部品があるとき、その部品の分まで切り替えると支えの状態とずれるため。
+        private bool OwnsComponent(Component component)
+        {
+            return component.GetComponentInParent<DestructiblePiece>(true) == this;
         }
 
         /// <summary>

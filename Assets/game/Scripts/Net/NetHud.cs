@@ -32,6 +32,10 @@ namespace Fps.Net
     /// 開始時刻と長さから求めて <see cref="HudModel.SetReloadProgress"/> に渡す。時刻は NetworkManager.LocalTime を使う。
     /// LocalTime はサーバーの時刻の尺で、今送った RPC がサーバーに着く頃を指すので、バーが「今押したらサーバーで判定される進み」になる。
     /// </para>
+    /// <para>
+    /// キルフィード (<see cref="KillFeedView"/>) の名前は、自分のクライアント Id と試合の参加者・ロードアウトで引く
+    /// <see cref="NetKillFeedNames"/> に替える。行そのものは <see cref="NetTeamDeathmatch"/> が配る。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Hud))]
@@ -149,6 +153,7 @@ namespace Fps.Net
             ShowScores();
             ShowNotice();
             RefreshReloadProgressNow();
+            BindKillFeedNames();
         }
 
         /// <summary>
@@ -207,6 +212,7 @@ namespace Fps.Net
             CancelRespawn();
 
             _match = match;
+            BindKillFeedNames();
             if (_match == null)
             {
                 _alphaScore = 0;
@@ -259,6 +265,16 @@ namespace Fps.Net
         }
 
         private HudModel Model => _hud.Model;
+
+        // キルフィードの Id はプレイヤー Id なので、オフラインの引き先から自分と試合で引くものに替える
+        private void BindKillFeedNames()
+        {
+            var killFeed = _hud != null ? _hud.KillFeed : null;
+            if (killFeed != null && _player != null)
+            {
+                killFeed.Names = NetKillFeedNames.For(_match, _player.OwnerClientId);
+            }
+        }
 
         private void Update()
         {

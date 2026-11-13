@@ -128,7 +128,19 @@ namespace Fps.Net
 
             var zone = ZoneOf(victim, hit);
             var damage = DamageCalculator.Calculate(spec.Damage, zone, hit.RaycastHit.distance, spec.Falloff);
-            var outcome = ApplyDamage(shooter, victim, damage);
+            DamageOutcome outcome;
+            _shotWeaponId = spec.Id;
+            _shotHeadshot = zone == HitZone.Head;
+            try
+            {
+                outcome = ApplyDamage(shooter, victim, damage);
+            }
+            finally
+            {
+                _shotWeaponId = null;
+                _shotHeadshot = false;
+            }
+
             RecordHitDirection(shooter, victim, outcome, direction);
             var health = _session.HasPlayer(hit.TargetId) ? _session.GetHealth(hit.TargetId) : 0;
             Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome, hit.TargetCrouched));

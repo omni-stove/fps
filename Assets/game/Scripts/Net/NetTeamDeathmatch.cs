@@ -55,7 +55,7 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// 射撃は .Fire.cs、出現とリスポーンは .Spawn.cs、武器を配る処理は .Loadout.cs、参加と退出は .Roster.cs、
-    /// ダウンと蘇生は .Downed.cs に分けてある。
+    /// ダウンと蘇生は .Downed.cs、キルフィードの配信は .KillFeed.cs に分けてある。
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -663,6 +663,7 @@ namespace Fps.Net
             _lastKillers.Record(killerId, victimId);
             var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
             Debug.Log(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId));
+            SendKillFeed(killerId, victimId, byAlly);
         }
 
         private void HandleEnded(Team? winner)

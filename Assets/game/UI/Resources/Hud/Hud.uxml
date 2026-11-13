@@ -37,10 +37,11 @@
             <ui:VisualElement name="hud-crosshair-left" class="hud__crosshair-line hud__crosshair-line--left" picking-mode="Ignore" />
             <ui:VisualElement name="hud-crosshair-right" class="hud__crosshair-line hud__crosshair-line--right" picking-mode="Ignore" />
         </ui:VisualElement>
-        <!-- 以下は Hud と同じ GameObject のビュー (HudElementView) が name で受け取る枠。中身はまだ無く、隠しておく。 -->
+        <!-- 以下は Hud と同じ GameObject のビュー (HudElementView) が name で受け取る枠。中身はビューが入れ、空の間は隠しておく。 -->
         <ui:VisualElement name="hit-marker" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="damage-direction" picking-mode="Ignore" style="display: none;" />
-        <ui:VisualElement name="kill-feed" picking-mode="Ignore" style="display: none;" />
+        <!-- 画面右上のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
+        <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="scoreboard" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="loadout-select" picking-mode="Ignore" style="display: none;" />
     </ui:VisualElement>

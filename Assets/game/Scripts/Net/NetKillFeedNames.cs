@@ -1,0 +1,105 @@
+using System;
+using System.Collections.Generic;
+using Fps.Core;
+using Fps.Runtime;
+using UnityEngine;
+
+namespace Fps.Net
+{
+    /// <summary>
+    /// オンラインのキルフィードの引き先。Id はプレイヤー Id (= クライアント Id) なので、名前は <see cref="KillFeedFormat.Player"/>、
+    /// チームは試合の <see cref="NetTeamDeathmatch.Players"/>、武器の表示名は試合のロードアウトから引き、自分のクライアントの行を強調する。
+    /// </summary>
+    public sealed class NetKillFeedNames : IKillFeedNames
+    {
+        private readonly Func<int, Team?> _teamOf;
+        private readonly Func<string, string> _weaponNameOf;
+        private readonly int? _localPlayerId;
+
+        /// <param name="teamOf">プレイヤー Id のチーム。分からなければ null。null なら誰のチームも分からない。</param>
+        /// <param name="weaponNameOf">武器の Id の表示名。分からなければ空文字か null。null なら武器名を出さない。</param>
+        /// <param name="localPlayerId">この画面のプレイヤーの Id。無ければ null (どの行も強調しない)。</param>
+        public NetKillFeedNames(Func<int, Team?> teamOf, Func<string, string> weaponNameOf, int? localPlayerId)
+        {
+            _teamOf = teamOf;
+            _weaponNameOf = weaponNameOf;
+            _localPlayerId = localPlayerId;
+        }
+
+        /// <summary>
+        /// match の参加者とロードアウトから引く。match が null なら、チームも武器名も分からないまま名前と強調だけを出す。
+        /// ロードアウトが不正なら警告を 1 度出して武器名を出さない (試合そのものはサーバーが止める)。
+        /// </summary>
+        public static NetKillFeedNames For(NetTeamDeathmatch match, ulong localClientId)
+        {
+            int? localId = localClientId <= int.MaxValue ? (int)localClientId : (int?)null;
+            if (match == null)
+            {
+                return new NetKillFeedNames(null, null, localId);
+            }
+
+            return new NetKillFeedNames(id => TeamOf(match, id), WeaponNames(match.Loadout), localId);
+        }
+
+        public KillFeedLine Describe(KillFeedEntry entry)
+        {
+            var killer = NameOf(entry.KillerId);
+            var victim = entry.IsSuicide ? killer : NameOf(entry.VictimId);
+            var weapon = entry.WeaponId.Length > 0 && _weaponNameOf != null ? _weaponNameOf(entry.WeaponId) : string.Empty;
+            return new KillFeedLine(entry, killer, victim, weapon);
+        }
+
+        private KillFeedName NameOf(int playerId)
+        {
+            var team = _teamOf != null ? _teamOf(playerId) : null;
+            return new KillFeedName(KillFeedFormat.Player(playerId), team, playerId == _localPlayerId);
+        }
+
+        // 抜けた人は行が消えているのでチームが分からない (名前は Id のまま出す)
+        private static Team? TeamOf(NetTeamDeathmatch match, int playerId)
+        {
+            if (match == null || playerId < 0 || match.Players == null)
+            {
+                return null;
+            }
+
+            var players = match.Players;
+            for (var i = 0; i < players.Count; i++)
+            {
+                if (players[i].ClientId == (ulong)playerId)
+                {
+                    return players[i].Team;
+                }
+            }
+
+            return null;
+        }
+
+        private static Func<string, string> WeaponNames(LoadoutDefinition loadout)
+        {
+            if (loadout == null)
+            {
+                return null;
+            }
+
+            IReadOnlyList<WeaponSpec> specs;
+            try
+            {
+                specs = loadout.ToSpecs();
+            }
+            catch (WeaponDefinitionException e)
+            {
+                Debug.LogWarning(KillFeedView.LogTag + " cannot read weapon names from the loadout: " + e.Message);
+                return null;
+            }
+
+            var names = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var spec in specs)
+            {
+                names[spec.Id] = spec.DisplayName;
+            }
+
+            return id => names.TryGetValue(id, out var name) ? name : string.Empty;
+        }
+    }
+}

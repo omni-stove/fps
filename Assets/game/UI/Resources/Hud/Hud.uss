@@ -94,6 +94,59 @@
     margin-left: 24px;
 }
 
+/* 画面右上のキルログ。行は古い順に上から並び、右端をそろえる。名前の色は KillFeedView がチームの色で塗る。 */
+.kill-feed {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.kill-feed__row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.45);
+}
+
+/* この画面のプレイヤーが倒したか倒された行。 */
+.kill-feed__row--local {
+    background-color: rgba(255, 255, 255, 0.22);
+    border-width: 2px;
+    border-color: rgb(255, 210, 80);
+}
+
+.kill-feed__name,
+.kill-feed__weapon,
+.kill-feed__friendly {
+    margin: 0 4px;
+    padding: 0;
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.kill-feed__name {
+    -unity-font-style: bold;
+}
+
+.kill-feed__weapon {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.kill-feed__weapon--headshot {
+    color: rgb(255, 210, 80);
+}
+
+.kill-feed__friendly {
+    color: rgb(255, 120, 60);
+    -unity-font-style: bold;
+}
+
 /* 試合結果。画面中央の照準より上に大きく出す。 */
 .hud__result {
     position: absolute;

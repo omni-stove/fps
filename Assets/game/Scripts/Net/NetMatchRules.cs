@@ -7,7 +7,7 @@ namespace Fps.Net
     /// <summary>
     /// クライアントが見た目と HUD に使うルールの値。試合の <see cref="GameRules"/> のうち、クライアントが読むものだけを 1 つの
     /// NetworkVariable で送る (別々に届いて食い違わないよう)。味方撃ち・回復・予備弾の倍率などサーバーの判定にしか使わない値は送らない。
-    /// カバーとブラインドファイアは、オーナーが入力を送るか・予測するかを決めるのに使う (判定はサーバーが同じ値で行う)。
+    /// カバー・ブラインドファイア・回避・乗り越えは、オーナーが入力を送るか・予測するかを決めるのに使う (判定はサーバーが同じ値で行う)。
     /// </summary>
     public struct NetMatchRules : INetworkSerializable, IEquatable<NetMatchRules>
     {
@@ -17,6 +17,8 @@ namespace Fps.Net
         public bool InfiniteReserve;
         public Cover Cover;
         public BlindFire BlindFire;
+        public Dodge Dodge;
+        public Vault Vault;
 
         public NetMatchRules(DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve)
             : this(deathBody, deathCamera, respawnMode, infiniteReserve, Cover.Off, BlindFire.Off)
@@ -25,6 +27,19 @@ namespace Fps.Net
 
         public NetMatchRules(
             DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve, Cover cover, BlindFire blindFire)
+            : this(deathBody, deathCamera, respawnMode, infiniteReserve, cover, blindFire, Dodge.Off, Vault.Off)
+        {
+        }
+
+        public NetMatchRules(
+            DeathBody deathBody,
+            DeathCamera deathCamera,
+            RespawnMode respawnMode,
+            bool infiniteReserve,
+            Cover cover,
+            BlindFire blindFire,
+            Dodge dodge,
+            Vault vault)
         {
             DeathBody = deathBody;
             DeathCamera = deathCamera;
@@ -32,6 +47,8 @@ namespace Fps.Net
             InfiniteReserve = infiniteReserve;
             Cover = cover;
             BlindFire = blindFire;
+            Dodge = dodge;
+            Vault = vault;
         }
 
         /// <summary><see cref="GameRules.Default"/> の値。サーバーから届く前と、試合を始められなかったときはこの値のまま。</summary>
@@ -43,6 +60,12 @@ namespace Fps.Net
         /// <summary>カバーから隠れたまま撃てるか。カバーが使えなければ (届いた値が食い違っていても) false。</summary>
         public bool BlindFireEnabled => CoverEnabled && BlindFire == BlindFire.On;
 
+        /// <summary>回避を使えるか。</summary>
+        public bool DodgeEnabled => Dodge == Dodge.On;
+
+        /// <summary>乗り越えを使えるか。</summary>
+        public bool VaultEnabled => Vault == Vault.On;
+
         /// <summary>rules のうちクライアントへ送る値を写す。</summary>
         public static NetMatchRules From(GameRules rules)
         {
@@ -51,8 +74,16 @@ namespace Fps.Net
                 throw new ArgumentNullException(nameof(rules));
             }
 
+            var actions = rules.Actions;
             return new NetMatchRules(
-                rules.DeathBody, rules.DeathCamera, rules.RespawnMode, rules.InfiniteReserve, rules.Actions.Cover, rules.Actions.BlindFire);
+                rules.DeathBody,
+                rules.DeathCamera,
+                rules.RespawnMode,
+                rules.InfiniteReserve,
+                actions.Cover,
+                actions.BlindFire,
+                actions.Dodge,
+                actions.Vault);
         }
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer)
@@ -64,6 +95,8 @@ namespace Fps.Net
             serializer.SerializeValue(ref InfiniteReserve);
             serializer.SerializeValue(ref Cover);
             serializer.SerializeValue(ref BlindFire);
+            serializer.SerializeValue(ref Dodge);
+            serializer.SerializeValue(ref Vault);
         }
 
         public bool Equals(NetMatchRules other)
@@ -73,7 +106,9 @@ namespace Fps.Net
                 && RespawnMode == other.RespawnMode
                 && InfiniteReserve == other.InfiniteReserve
                 && Cover == other.Cover
-                && BlindFire == other.BlindFire;
+                && BlindFire == other.BlindFire
+                && Dodge == other.Dodge
+                && Vault == other.Vault;
         }
 
         public override bool Equals(object obj)
@@ -83,14 +118,16 @@ namespace Fps.Net
 
         public override int GetHashCode()
         {
-            return HashCode.Combine((int)DeathBody, (int)DeathCamera, (int)RespawnMode, InfiniteReserve, (int)Cover, (int)BlindFire);
+            return HashCode.Combine(
+                (int)DeathBody, (int)DeathCamera, (int)RespawnMode, InfiniteReserve, (int)Cover, (int)BlindFire, (int)Dodge, (int)Vault);
         }
 
         public override string ToString()
         {
             return "deathBody=" + DeathBody + " deathCamera=" + DeathCamera + " respawnMode=" + RespawnMode
                 + " infiniteReserve=" + (InfiniteReserve ? "true" : "false")
-                + " cover=" + Cover + " blindFire=" + BlindFire;
+                + " cover=" + Cover + " blindFire=" + BlindFire
+                + " dodge=" + Dodge + " vault=" + Vault;
         }
     }
 }

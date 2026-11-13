@@ -40,7 +40,8 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// サーバーで確定した着地 (落下ダメージ) は .Landing.cs で扱う。ダウン中に動けなくする処理は .Downed.cs に分けてある。
-    /// カバー (試合のルール <see cref="NetMatchRules.Cover"/> が On のとき) は .Cover.cs で扱う。
+    /// カバー (試合のルール <see cref="NetMatchRules.Cover"/> が On のとき) は .Cover.cs、
+    /// 回避と乗り越え (<see cref="NetMatchRules.Dodge"/>・<see cref="NetMatchRules.Vault"/> が On のとき) は .DodgeVault.cs で扱う。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -326,6 +327,7 @@ namespace Fps.Net
                 _remoteGroundedHistory = new StanceHistory();
                 _remoteGrounded = true;
                 ResetRemoteCover();
+                ResetRemoteMoveActions();
                 _hasRemoteState = false;
             }
 
@@ -336,6 +338,7 @@ namespace Fps.Net
                 _sprintPressLatched = false;
                 _crouchPressLatched = false;
                 _coverPressLatched = false;
+                _dodgePressLatched = false;
                 _controlSettings = AppliedControlSettings.Current;
                 if (!_listeningToSettings)
                 {
@@ -393,6 +396,8 @@ namespace Fps.Net
                     _serverState.IsGrounded,
                     _serverState.IsCrouched,
                     _serverState.Cover,
+                    _serverState.Dodge,
+                    _serverState.Vault,
                     _serverYaw,
                     default);
             }
@@ -422,6 +427,8 @@ namespace Fps.Net
                 _coverPressLatched = true;
             }
 
+            LatchDodgePress();
+
             // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
             _device = InputDeviceKinds.Of(_sprintAction, InputDeviceKinds.Of(_moveAction, _device));
             _crouchDevice = InputDeviceKinds.Of(_crouchAction, InputDeviceKinds.Of(_moveAction, _crouchDevice));
@@ -442,9 +449,11 @@ namespace Fps.Net
             _jumpLatched = false;
             var crouch = SampleCrouch(jump, sprint);
             var cover = SampleCover();
+            var dodge = SampleDodge();
 
+            // 乗り越えてよいかは送らない。予測は同期されたルールを、サーバーは自分の知るルールを入れる
             var yaw = SampleYaw(_look, transform);
-            return new MotorInput(move, yaw, sprint, jump, crouch, _downed, cover, SampleAim());
+            return new MotorInput(move, yaw, sprint, jump, crouch, _downed, cover, SampleAim(), dodge, VaultEnabled);
         }
 
         // サーバーへはモードを解釈した後の「ダッシュ中か」だけを送る (サーバー側は押し方を知らなくてよい)
@@ -520,27 +529,36 @@ namespace Fps.Net
 
         private void RunOwnerTick(int tick, MotorInput input)
         {
+            MotorState previous;
+            MotorState current;
             if (_role == NetworkPlayerRole.HostOwner)
             {
+                previous = _serverState;
                 ApplyAuthoritative(tick, input);
+                current = _serverState;
             }
             else
             {
-                _prediction.Predict(tick, input);
-                SubmitInputRpc(tick, input.Move, input.Yaw, input.Sprint, input.Jump, input.Crouch, input.Cover, input.Aim);
+                previous = _prediction.Current;
+                current = _prediction.Predict(tick, input);
+                SubmitInputRpc(tick, input.Move, input.Yaw, input.Sprint, input.Jump, input.Crouch, input.Cover, input.Aim, input.Dodge);
             }
 
+            ApplyOwnerMoveActionEffects(previous, current);
             OwnerTicked?.Invoke(tick);
         }
 
         private void ApplyAuthoritative(int tick, MotorInput input)
         {
-            // ルールで使えないカバーは、オーナーが送ってきても入れない
+            // ルールで使えないカバー・回避は、オーナーが送ってきても入れない。乗り越えてよいかはサーバーの知るルールで決める
             if (!CoverEnabled)
             {
                 input = input.WithoutCover();
             }
 
+            input = ApplyMoveActionRules(input, DodgeEnabled, VaultEnabled);
+
+            var previous = _serverState;
             var wasCrouched = _serverState.IsCrouched;
             var wasGrounded = _serverState.IsGrounded;
             var previousCover = _serverState.Cover;
@@ -552,6 +570,7 @@ namespace Fps.Net
             }
 
             ReportServerCover(tick, previousCover, _serverState.Cover);
+            ReportServerMoveActions(tick, previous, _serverState);
 
             ReportServerLanding(tick, wasGrounded, _serverState);
 
@@ -584,6 +603,8 @@ namespace Fps.Net
                 return;
             }
 
+            // 回避・乗り越えもやめ、回避の待ち時間も無くす (戻った位置ですぐ回避できるように。PlayerController のリスポーンと同じ)
+            var previous = _serverState;
             var wasCrouched = _serverState.IsCrouched;
             var previousCover = _serverState.Cover;
             _serverState = new MotorState(position, Vector3.zero, false, false);
@@ -594,6 +615,7 @@ namespace Fps.Net
             }
 
             ReportServerCover(_serverTick, previousCover, _serverState.Cover);
+            ReportServerMoveActions(_serverTick, previous, _serverState);
 
             _hasPendingState = true;
             TeleportedRpc(_serverTick, position);
@@ -626,9 +648,21 @@ namespace Fps.Net
             _remoteGroundedHistory.Record(tick, false);
             _remoteGrounded = false;
 
-            // サーバーはテレポートでカバーから出す
+            // サーバーはテレポートでカバーから出し、回避・乗り越えをやめさせる
             ResetRemoteCover();
             RecordRemoteCover(tick, NetCoverState.Out);
+            if (_remoteDodging)
+            {
+                Debug.Log(FormatDodgeLog(OwnerClientId, tick, false), this);
+            }
+
+            if (_remoteVaulting)
+            {
+                Debug.Log(FormatVaultLog(OwnerClientId, tick, false), this);
+            }
+
+            ResetRemoteMoveActions();
+            RecordRemoteMoveActions(tick, false, false);
 
             _latestRemoteTick = tick;
             _renderTick = tick;
@@ -638,7 +672,16 @@ namespace Fps.Net
 
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
         private void SubmitInputRpc(
-            int tick, Vector2 move, float yaw, bool sprint, bool jump, bool crouch, bool cover, bool aim, RpcParams rpcParams = default)
+            int tick,
+            Vector2 move,
+            float yaw,
+            bool sprint,
+            bool jump,
+            bool crouch,
+            bool cover,
+            bool aim,
+            bool dodge,
+            RpcParams rpcParams = default)
         {
             if (_role != NetworkPlayerRole.ServerSimulated)
             {
@@ -671,8 +714,8 @@ namespace Fps.Net
 
             _inputBudget -= 1f;
 
-            // ダウンはクライアントの申告ではなく、サーバーの知る状態で決める
-            ApplyAuthoritative(tick, new MotorInput(move, yaw, sprint, jump, crouch, _downed, cover, aim));
+            // ダウンと乗り越えてよいかはクライアントの申告ではなく、サーバーの知る状態で決める (ApplyAuthoritative)
+            ApplyAuthoritative(tick, new MotorInput(move, yaw, sprint, jump, crouch, _downed, cover, aim, dodge, false));
         }
 
         [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable)]
@@ -683,6 +726,8 @@ namespace Fps.Net
             bool isGrounded,
             bool isCrouched,
             NetCoverState cover,
+            NetDodgeState dodge,
+            NetVaultState vault,
             float yaw,
             RpcParams rpcParams = default)
         {
@@ -691,7 +736,7 @@ namespace Fps.Net
                 return;
             }
 
-            var state = new MotorState(position, velocity, isGrounded, isCrouched, cover);
+            var state = new MotorState(position, velocity, isGrounded, isCrouched, cover, dodge, vault);
             if (!state.IsFinite || !NetMath.IsFinite(yaw))
             {
                 WarnThrottled("[Net] dropped non-finite state for owner=" + OwnerClientId + " tick=" + tick);
@@ -704,7 +749,7 @@ namespace Fps.Net
                     Reconcile(tick, state);
                     break;
                 case NetworkPlayerRole.Interpolated:
-                    ReceiveRemoteState(tick, position, yaw, isCrouched, isGrounded, cover);
+                    ReceiveRemoteState(tick, state, yaw);
                     break;
             }
         }
@@ -740,7 +785,7 @@ namespace Fps.Net
                 predictedCrouched ? "true" : "false");
         }
 
-        private void ReceiveRemoteState(int tick, Vector3 position, float yaw, bool crouched, bool grounded, NetCoverState cover)
+        private void ReceiveRemoteState(int tick, MotorState state, float yaw)
         {
             // 信頼性なしで送るので順番が入れ替わることがある。古いものは捨てる
             if (_hasRemoteState && tick <= _latestRemoteTick)
@@ -748,21 +793,23 @@ namespace Fps.Net
                 return;
             }
 
-            _remoteHistory.Record(tick, NetMath.ToNumerics(position));
+            _remoteHistory.Record(tick, NetMath.ToNumerics(state.Position));
             _remoteYawHistory.Record(tick, YawDirection(yaw));
-            _remoteStanceHistory.Record(tick, crouched);
-            _remoteGroundedHistory.Record(tick, grounded);
-            RecordRemoteCover(tick, cover);
+            _remoteStanceHistory.Record(tick, state.IsCrouched);
+            _remoteGroundedHistory.Record(tick, state.IsGrounded);
+            RecordRemoteCover(tick, state.Cover);
+            RecordRemoteMoveActions(tick, state.IsDodging, state.IsVaulting);
             _latestRemoteTick = tick;
 
             if (!_hasRemoteState)
             {
                 _hasRemoteState = true;
                 _renderTick = tick;
-                transform.SetPositionAndRotation(position, YawRotation(yaw));
-                ShowRemoteStance(tick, crouched);
-                _remoteGrounded = grounded;
+                transform.SetPositionAndRotation(state.Position, YawRotation(yaw));
+                ShowRemoteStance(tick, state.IsCrouched);
+                _remoteGrounded = state.IsGrounded;
                 ShowRemoteCover(tick);
+                ShowRemoteMoveActions(tick);
             }
         }
 
@@ -823,6 +870,7 @@ namespace Fps.Net
             }
 
             ShowRemoteCover((float)_renderTick);
+            ShowRemoteMoveActions((float)_renderTick);
         }
 
         private void ResolveInputActions()
@@ -841,6 +889,7 @@ namespace Fps.Net
             _crouchAction = FindAndEnable(actions, CrouchActionPath);
             _coverAction = FindAndEnable(actions, CoverActionPath);
             _aimAction = FindAndEnable(actions, AimActionPath);
+            _dodgeAction = FindAndEnable(actions, DodgeActionPath);
         }
 
         private InputAction FindAndEnable(InputActionAsset actions, string path)
@@ -909,6 +958,7 @@ namespace Fps.Net
             _crouchAction = null;
             _coverAction = null;
             _aimAction = null;
+            _dodgeAction = null;
             if (_sprint != null)
             {
                 _sprint.Changed -= OnSprintChanged;
@@ -924,6 +974,11 @@ namespace Fps.Net
             _sprintPressLatched = false;
             _crouchPressLatched = false;
             _coverPressLatched = false;
+            _dodgePressLatched = false;
+            _remoteDodgeHistory = null;
+            _remoteVaultHistory = null;
+            _remoteDodging = false;
+            _remoteVaulting = false;
             _remoteInCoverHistory = null;
             _remoteLowCoverHistory = null;
             _remoteCoverHeight = null;

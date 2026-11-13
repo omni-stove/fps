@@ -45,8 +45,8 @@ namespace Fps.Net
             trigger.Tick(Time.deltaTime);
 
             // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う。
-            // ダウン中の射撃と、高い壁で端にいないブラインドファイアはサーバーが捨てるので送らない
-            if (IsAlive && !IsDowned && ResolveBlindFire(out _) != BlindFireAim.Blocked
+            // ダウン中・回避中・乗り越え中の射撃と、高い壁で端にいないブラインドファイアはサーバーが捨てるので送らない
+            if (IsAlive && !IsDowned && MoveActionShotRejection == ShotRejection.None && ResolveBlindFire(out _) != BlindFireAim.Blocked
                 && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
             {
                 Fire();
@@ -176,6 +176,30 @@ namespace Fps.Net
             }
 
             ReleaseSprint(SprintInput.ReasonFire);
+        }
+
+        /// <summary>
+        /// 回避・乗り越えの最中で撃てないなら、その理由 (<see cref="ShotRejection.Dodging"/>・<see cref="ShotRejection.Vaulting"/>)。撃てるなら None。
+        /// 状態はこのインスタンスの最新の値 (<see cref="NetworkPlayerMotor.IsDodging"/>。持ち主は予測、サーバーは確定状態)。動きを持たなければ None。
+        /// </summary>
+        internal ShotRejection MoveActionShotRejection
+        {
+            get
+            {
+                var motor = ResolveMotor();
+                return motor != null ? CheckMoveActionShot(motor.IsDodging, motor.IsVaulting) : ShotRejection.None;
+            }
+        }
+
+        /// <summary>回避中なら <see cref="ShotRejection.Dodging"/>、乗り越え中なら <see cref="ShotRejection.Vaulting"/>、どちらでもなければ None。</summary>
+        internal static ShotRejection CheckMoveActionShot(bool dodging, bool vaulting)
+        {
+            if (dodging)
+            {
+                return ShotRejection.Dodging;
+            }
+
+            return vaulting ? ShotRejection.Vaulting : ShotRejection.None;
         }
 
         /// <summary>

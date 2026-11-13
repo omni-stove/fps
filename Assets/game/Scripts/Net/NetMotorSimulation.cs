@@ -20,6 +20,16 @@ namespace Fps.Net
     /// 低い壁ではしゃがませる (覗いている間は立たせる)。寄せている間は壁へ寄せ、高い壁の端から覗いている間は横に出る。
     /// オフラインと違い、寄せるときに向きは回さない (向きはオーナーの視点操作が決めて入力に乗せるもので、シミュレーションからは書けないため)。
     /// </para>
+    /// <para>
+    /// 回避と乗り越えもオフラインの <see cref="PlayerController"/> と同じ Core の <see cref="DodgeMotion"/>・<see cref="VaultProbe"/> で進める。
+    /// 回避は状態 (<see cref="MotorState.Dodge"/>) から <see cref="DodgeMotion.Restore"/> で戻してから、接地していて、乗り越え中でもカバー中でもなく、
+    /// 待ち時間が明けていれば <see cref="MotorInput.Dodge"/> で移動入力の向き (無ければ後ろ) へ転がり始める。
+    /// 乗り越えは <see cref="MotorInput.VaultAllowed"/> のときの <see cref="MotorInput.Jump"/> で、接地して立っていて、回避中でもカバー中でもなければ
+    /// 前方を <see cref="NetVaultSensor"/> で調べ、乗り越えられればジャンプの代わりに軌跡をたどる。軌跡は状態 (<see cref="MotorState.Vault"/>) に持たせ、
+    /// 物理で調べるのは始めた tick だけなので、巻き戻して再シミュレーションしても同じ道をたどる。
+    /// どちらの最中もダッシュ・ジャンプ・しゃがみを止め、カバーには入らない。乗り越えの最中は回避の待ち時間を進めない (オフラインと同じ)。
+    /// ダウンするとどちらもやめる。
+    /// </para>
     /// </remarks>
     public sealed class NetMotorSimulation
     {
@@ -29,9 +39,14 @@ namespace Fps.Net
         private readonly CharacterController _controller;
         private readonly PlayerMotor _motor;
         private readonly NetCoverSensor _sensor;
+        private readonly NetVaultSensor _vaultSensor;
 
         // 状態から毎 tick 戻して使う作業用。tick をまたいで中身を持ち越さない
         private readonly CoverState _cover = new CoverState();
+        private readonly DodgeMotion _dodge;
+
+        // 状態の頂点から作った軌跡の使い回し。同じ頂点の間は毎 tick 作り直さない
+        private VaultPath _vaultPath;
 
         /// <param name="controller">動かす CharacterController。</param>
         /// <param name="motor">移動量の計算。</param>
@@ -56,6 +71,10 @@ namespace Fps.Net
             _motor = motor ?? throw new ArgumentNullException(nameof(motor));
             Stance = stance ?? throw new ArgumentNullException(nameof(stance));
             _sensor = new NetCoverSensor(controller, coverWallMask);
+            _dodge = new DodgeMotion(motor.Spec);
+
+            // 軌跡の上のカプセルの検査 (NetStance) と同じレイヤーで障害物を探す
+            _vaultSensor = new NetVaultSensor(controller, _sensor, stance, Physics.DefaultRaycastLayers);
 
             if (!(tickSeconds > 0f) || float.IsInfinity(tickSeconds))
             {
@@ -88,17 +107,57 @@ namespace Fps.Net
         /// <summary>カバーの壁を調べる部品。体の半径もここから測る。</summary>
         public NetCoverSensor CoverSensor => _sensor;
 
+        /// <summary>乗り越えの障害物を調べる部品。</summary>
+        public NetVaultSensor VaultSensor => _vaultSensor;
+
+        /// <summary>回避 1 回で動く水平距離 (m)。</summary>
+        public float DodgeDistance => _dodge.Distance;
+
+        /// <summary>回避 1 回にかかる秒数。</summary>
+        public float DodgeSeconds => _dodge.Seconds;
+
+        /// <summary>回避を終えてから次を始められるまでの秒数。</summary>
+        public float DodgeCooldownSeconds => _dodge.CooldownSeconds;
+
+        /// <summary>
+        /// 最後に <see cref="Step"/> の中で乗り越えのために前方を調べた結果。調べていなければ <see cref="VaultProbeResult.None"/>。
+        /// 調べた tick の後でだけ意味を持つ (次の Step で調べなければそのまま残る)。
+        /// </summary>
+        public VaultProbeResult LastVaultProbe { get; private set; }
+
         /// <summary>
         /// 状態から 1 tick 進める。CharacterController を実際に動かすので、終わったとき本体は結果の位置と姿勢にある。
         /// ダウン中の入力 (<see cref="MotorInput.Downed"/>) は <see cref="MotorInput.Restrained"/> にしてから動かす (重力は効く)。
-        /// ダウンするとカバーから出る。
+        /// ダウンするとカバーから出て、回避と乗り越えをやめる。
         /// </summary>
         public MotorState Step(MotorState state, MotorInput input)
         {
             input = input.Restrained();
             Place(state);
 
-            var cover = StepCover(state.Cover, input);
+            _dodge.Restore(state.Dodge.Snapshot);
+            var vault = state.Vault;
+            var startVelocity = state.Velocity;
+            if (input.Downed)
+            {
+                _dodge.Cancel();
+                if (vault.IsVaulting)
+                {
+                    // オフラインの FinishVault と同じく、やめた所から速度 0 で落ちる
+                    vault = NetVaultState.None;
+                    startVelocity = Vector3.zero;
+                }
+            }
+
+            // 回避・乗り越えの最中はカバーに入らない (寄せる動きと転がり・乗り越えの軌跡がぶつかるため。CoverController と同じ)
+            var busy = _dodge.IsRolling || vault.IsVaulting;
+            var cover = StepCover(state.Cover, busy && !state.Cover.IsInCover ? input.WithoutCover() : input);
+
+            if (input.Dodge && state.IsGrounded && !vault.IsVaulting && !cover.IsInCover && _dodge.IsReady)
+            {
+                _dodge.TryStart(DodgeMotion.ResolveDirection(NetMath.ToNumerics(input.Move), input.Yaw));
+            }
+
             var move = input.Move;
             var sprint = input.Sprint;
             var jump = input.Jump;
@@ -113,6 +172,13 @@ namespace Fps.Net
                 }
             }
 
+            if (_dodge.IsRolling || vault.IsVaulting)
+            {
+                sprint = false;
+                jump = false;
+                wantsCrouch = false;
+            }
+
             var crouched = ResolveCrouch(state.IsCrouched, wantsCrouch);
             if (cover.IsInCover)
             {
@@ -120,13 +186,36 @@ namespace Fps.Net
                 move = cover.Phase == CoverPhase.In ? AlongWall(cover.Normal, input.Move.x, input.Yaw, crouched) : Vector2.zero;
             }
 
-            _motor.SetVelocity(NetMath.ToNumerics(state.Velocity));
-            var displacement = _motor.Step(
-                NetMath.ToNumerics(move), input.Yaw, sprint, crouched, jump, state.IsGrounded, TickSeconds);
-            _controller.Move(NetMath.ToUnity(displacement));
+            if (jump && input.VaultAllowed && state.IsGrounded && !crouched && !cover.IsInCover)
+            {
+                vault = TryStartVault(input.Yaw);
+                if (vault.IsVaulting)
+                {
+                    jump = false;
+                }
+            }
+
+            Vector3 velocity;
+            if (vault.IsVaulting)
+            {
+                velocity = FollowVault(ref vault);
+            }
+            else if (_dodge.IsRolling)
+            {
+                velocity = Roll(startVelocity, state.IsGrounded);
+            }
+            else
+            {
+                // 転がっていない間も待ち時間を減らす
+                _dodge.Step(TickSeconds);
+                _motor.SetVelocity(NetMath.ToNumerics(startVelocity));
+                var displacement = _motor.Step(
+                    NetMath.ToNumerics(move), input.Yaw, sprint, crouched, jump, state.IsGrounded, TickSeconds);
+                _controller.Move(NetMath.ToUnity(displacement));
+                velocity = NetMath.ToUnity(_motor.Velocity);
+            }
 
             var position = _controller.transform.position;
-            var velocity = NetMath.ToUnity(_motor.Velocity);
             var grounded = _controller.isGrounded;
 
             if (position.y < KillPlaneY)
@@ -136,10 +225,62 @@ namespace Fps.Net
                 grounded = false;
                 crouched = false;
                 cover = NetCoverState.Out;
+                _dodge.Reset();
+                vault = NetVaultState.None;
                 Place(new MotorState(position, velocity, grounded, false));
             }
 
-            return new MotorState(position, velocity, grounded, crouched, cover);
+            return new MotorState(position, velocity, grounded, crouched, cover, new NetDodgeState(_dodge.Capture()), vault);
+        }
+
+        // 前方を調べ、乗り越えられれば進み 0 の状態を返す。乗り越えられなければ None (Jump はふつうのジャンプになる)
+        private NetVaultState TryStartVault(float yaw)
+        {
+            LastVaultProbe = _vaultSensor.Probe(_controller.transform.position, yaw, _motor.Spec.VaultMaxHeight);
+            if (!LastVaultProbe.CanVault)
+            {
+                return NetVaultState.None;
+            }
+
+            _vaultPath = LastVaultProbe.Path;
+            return new NetVaultState(_vaultPath, 0f);
+        }
+
+        // 軌跡を 1 tick たどる。たどり終えたら乗り越えをやめ、着地で跳ね返らないよう速度を 0 にする (PlayerController と同じ)
+        private Vector3 FollowVault(ref NetVaultState vault)
+        {
+            if (_vaultPath == null || !vault.HasSamePath(_vaultPath))
+            {
+                _vaultPath = vault.ToPath();
+            }
+
+            var before = vault.Elapsed;
+            var after = Mathf.Min(_vaultPath.Duration, before + TickSeconds);
+            var displacement = NetMath.ToUnity(_vaultPath.Displacement(Mathf.Min(before, after), after));
+            _controller.Move(displacement);
+
+            if (after >= _vaultPath.Duration)
+            {
+                vault = NetVaultState.None;
+                return Vector3.zero;
+            }
+
+            vault = vault.WithElapsed(after);
+
+            // 射撃のばらつきなど速度を読む側のために、たどっている速度を入れておく
+            return displacement / TickSeconds;
+        }
+
+        // 転がりを 1 tick 進める。縦は PlayerMotor と同じ扱い (接地中は地面へ吸着、空中は重力の台形則) にし、段差から転がり落ちても浮かない。
+        // 転がり終えて空中にいたら、その勢いのまま次の tick から PlayerMotor の空中制御に引き継がせる (PlayerController と同じ)
+        private Vector3 Roll(Vector3 startVelocity, bool grounded)
+        {
+            var horizontalVelocity = _dodge.Velocity;
+            var horizontal = _dodge.Step(TickSeconds);
+            var verticalStart = grounded ? PlayerMotor.GroundedVerticalSpeed : startVelocity.y;
+            var verticalEnd = grounded ? verticalStart : verticalStart - (_motor.Spec.Gravity * TickSeconds);
+            _controller.Move(new Vector3(horizontal.X, (verticalStart + verticalEnd) * 0.5f * TickSeconds, horizontal.Y));
+            return new Vector3(horizontalVelocity.X, verticalEnd, horizontalVelocity.Y);
         }
 
         /// <summary>yaw (ラジアン) の向きの水平の単位ベクトル。<see cref="PlayerMotor"/> の前と同じ向き。</summary>

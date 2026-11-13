@@ -153,6 +153,32 @@ namespace Fps.Core
             return true;
         }
 
+        /// <summary>今の中身 (転がりの進みと待ち時間) を写す。<see cref="Restore"/> で戻せる。</summary>
+        public DodgeSnapshot Capture()
+        {
+            return new DodgeSnapshot(_isRolling, _direction, Elapsed, _cooldownRemaining);
+        }
+
+        /// <summary>
+        /// <see cref="Capture"/> で写した中身に戻す。同じ中身から同じ入力で <see cref="Step"/> すれば同じ結果になる。
+        /// 進みは <see cref="Seconds"/> までに切り詰め、向きは単位ベクトルにする。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">snapshot が <see cref="DodgeSnapshot.IsValid"/> でないとき。</exception>
+        public void Restore(DodgeSnapshot snapshot)
+        {
+            if (!snapshot.IsValid)
+            {
+                throw new ArgumentOutOfRangeException(nameof(snapshot), "snapshot must be valid");
+            }
+
+            _isRolling = snapshot.IsRolling;
+
+            // 進みが Seconds を超えたまま Step すると、差が負になって逆向きに動くため切り詰める
+            _elapsed = snapshot.IsRolling ? Math.Min(Seconds, snapshot.Elapsed) : 0f;
+            _cooldownRemaining = snapshot.CooldownRemaining;
+            _direction = snapshot.Direction.LengthSquared() > 0f ? Vector2.Normalize(snapshot.Direction) : Vector2.Zero;
+        }
+
         /// <summary>転がりも待ち時間も無かったことにする (リスポーンで位置を戻したときなど)。</summary>
         public void Reset()
         {

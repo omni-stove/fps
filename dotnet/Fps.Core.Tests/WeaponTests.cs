@@ -217,6 +217,61 @@ namespace Fps.Core.Tests
             Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
         }
 
+        [Test]
+        public void CancelReloadStopsWithoutChangingAmmo()
+        {
+            var weapon = Create(magazineSize: 3, reserveAmmo: 10, reloadSeconds: 2f);
+            var reloaded = 0;
+            weapon.Reloaded += () => reloaded++;
+            weapon.TryFire();
+            weapon.TryStartReload();
+            weapon.Tick(1.5f);
+
+            weapon.CancelReload();
+
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(10));
+
+            // 途中まで進んだ時間は残らない
+            weapon.Tick(5f);
+            Assert.That(reloaded, Is.Zero);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(weapon.TryFire(), Is.True);
+        }
+
+        [Test]
+        public void ReloadAfterCancelTakesTheFullTime()
+        {
+            var weapon = Create(magazineSize: 3, reserveAmmo: 10, reloadSeconds: 2f);
+            weapon.TryFire();
+            weapon.TryStartReload();
+            weapon.Tick(1.5f);
+            weapon.CancelReload();
+
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(1.5f);
+            Assert.That(weapon.IsReloading, Is.True);
+
+            weapon.Tick(0.5f);
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(9));
+        }
+
+        [Test]
+        public void CancelReloadWhenNotReloadingDoesNothing()
+        {
+            var weapon = Create(fireInterval: 0.5f);
+            weapon.TryFire();
+
+            weapon.CancelReload();
+
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(weapon.TryFire(), Is.False, "the fire interval is not reset");
+        }
+
         [TestCase(-0.1f)]
         [TestCase(float.NaN)]
         [TestCase(float.PositiveInfinity)]

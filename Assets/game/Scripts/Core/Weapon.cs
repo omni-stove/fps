@@ -85,6 +85,13 @@ namespace Fps.Core
             return true;
         }
 
+        /// <summary>リロード中ならやめる。弾数は変えない。リロード中でなければ何もしない。</summary>
+        public void CancelReload()
+        {
+            IsReloading = false;
+            _reloadRemaining = 0f;
+        }
+
         /// <summary>連射のクールダウンとリロードを deltaSeconds 進める。</summary>
         public void Tick(float deltaSeconds)
         {

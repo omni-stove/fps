@@ -92,6 +92,18 @@ namespace Fps.Core
             return StartReload(false);
         }
 
+        /// <summary>リロード中なら弾数を変えずにやめて <see cref="Changed"/> を呼ぶ。リロード中でなければ何もしない。</summary>
+        public void CancelReload()
+        {
+            if (!_weapon.IsReloading)
+            {
+                return;
+            }
+
+            _weapon.CancelReload();
+            Changed?.Invoke();
+        }
+
         /// <summary>リロードを deltaSeconds 進める。0 以上の有限値。</summary>
         public void Tick(float deltaSeconds)
         {

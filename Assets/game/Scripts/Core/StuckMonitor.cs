@@ -39,6 +39,7 @@ namespace Fps.Core
 
         private Vector3 _anchor;
         private Vector3 _goal;
+        private float? _anchorRemaining;
         private bool _tracking;
 
         /// <param name="stuckSeconds">次の段階へ移るまでの秒数。正の有限値。</param>
@@ -71,7 +72,8 @@ namespace Fps.Core
         /// <param name="deltaSeconds">前回からの経過時間 (秒)。0 以上の有限値。</param>
         /// <param name="position">今の位置。有限値。</param>
         /// <param name="goal">向かっている先。無ければ null。有限値。</param>
-        public StuckRecovery Tick(float deltaSeconds, Vector3 position, Vector3? goal)
+        /// <param name="remainingDistance">経路に沿った目的地までの残り距離。立て直し中はこれが <see cref="ProgressDistance"/> 縮めば立ち直ったとみなす。分からなければ null (目的地の直線方向への移動で測る)。</param>
+        public StuckRecovery Tick(float deltaSeconds, Vector3 position, Vector3? goal, float? remainingDistance = null)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
             {
@@ -116,8 +118,9 @@ namespace Fps.Core
                 // 基準点も今の位置へ移す。目標が動くたびに距離を測り直すと、速い目標を歩いて追う敵は距離が縮まず立ち直れない。
                 _goal = goal.Value;
                 _anchor = position;
+                _anchorRemaining = null;
             }
-            else if (MovedTowardGoal(position, goal.Value))
+            else if (MadeProgress(position, goal.Value, remainingDistance))
             {
                 var stalled = TotalStalledSeconds;
                 Reset();
@@ -146,6 +149,23 @@ namespace Fps.Core
                 && !float.IsNaN(value.Z) && !float.IsInfinity(value.Z);
         }
 
+        // 経路が壁を回り込むなら、最初の区間は目的地の直線方向から外れる。経路に沿った残り距離が分かるときはそれで測る。
+        private bool MadeProgress(Vector3 position, Vector3 goal, float? remainingDistance)
+        {
+            if (!remainingDistance.HasValue || float.IsNaN(remainingDistance.Value) || float.IsInfinity(remainingDistance.Value))
+            {
+                return MovedTowardGoal(position, goal);
+            }
+
+            if (!_anchorRemaining.HasValue)
+            {
+                _anchorRemaining = remainingDistance;
+                return false;
+            }
+
+            return _anchorRemaining.Value - remainingDistance.Value >= ProgressDistance;
+        }
+
         // 目的地までの距離だけだと、動かない敵へ目標のほうが近づいただけで立ち直ったことになってしまう。
         private bool MovedTowardGoal(Vector3 position, Vector3 goal)
         {
@@ -162,6 +182,7 @@ namespace Fps.Core
         private void Track(Vector3 position, Vector3 goal)
         {
             _anchor = position;
+            _anchorRemaining = null;
             _goal = goal;
             _tracking = true;
             StalledSeconds = 0f;

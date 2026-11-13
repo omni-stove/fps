@@ -559,7 +559,7 @@ namespace Fps.Runtime
             var heading = _goal.HasValue && HorizontalDistance(ground, _goal.Value) > EnemyBrain.ArrivalDistance
                 ? _goal
                 : null;
-            var recovery = _stuck.Tick(deltaSeconds, ground.ToNumerics(), heading.HasValue ? heading.Value.ToNumerics() : (System.Numerics.Vector3?)null);
+            var recovery = _stuck.Tick(deltaSeconds, ground.ToNumerics(), heading.HasValue ? heading.Value.ToNumerics() : (System.Numerics.Vector3?)null, PathRemainingDistance(heading));
             if (recovery == StuckRecovery.None)
             {
                 return;
@@ -583,6 +583,29 @@ namespace Fps.Runtime
                     Warp(ground);
                     break;
             }
+        }
+
+        /// <summary>今の経路の角を辿った距離に、最後の角から目的地までの直線を足したもの。寄り道中は寄り道先が終点でも目的地までで測れる。経路が無ければ null。</summary>
+        private float? PathRemainingDistance(Vector3? goal)
+        {
+            if (!goal.HasValue || !_agent.isOnNavMesh || !_agent.hasPath || _agent.pathPending)
+            {
+                return null;
+            }
+
+            var corners = _agent.path.corners;
+            if (corners.Length == 0)
+            {
+                return null;
+            }
+
+            var total = Vector3.Distance(GroundPosition, corners[0]);
+            for (var i = 1; i < corners.Length; i++)
+            {
+                total += Vector3.Distance(corners[i - 1], corners[i]);
+            }
+
+            return total + Vector3.Distance(corners[corners.Length - 1], goal.Value);
         }
 
         private void Repath()

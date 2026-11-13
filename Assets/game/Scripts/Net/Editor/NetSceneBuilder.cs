@@ -55,6 +55,19 @@ namespace Fps.Editor
         };
 
         /// <summary>
+        /// カバーの確かめ用の壁 (ルールで Cover を On にしたとき張り付ける)。両陣地の前に、低い壁 (上端が床から 0.8m、
+        /// <see cref="CoverProbe.LowWallHeight"/> 未満) と、端から覗ける高い壁 (2.5m) を 1 枚ずつ、相手の陣地に向けて置く。
+        /// 位置は床の上の中心、大きさは Cube の拡大率。出現地点と陣地の間の通り道は塞がない。
+        /// </summary>
+        public static readonly (string Name, Vector3 Center, Vector3 Size)[] CoverWalls =
+        {
+            ("Cover Low Alpha", new Vector3(-9f, GroundY + 0.4f, -10f), new Vector3(4f, 0.8f, 0.4f)),
+            ("Cover High Alpha", new Vector3(9f, GroundY + 1.25f, -10f), new Vector3(2f, 2.5f, 0.4f)),
+            ("Cover Low Bravo", new Vector3(9f, GroundY + 0.4f, 10f), new Vector3(4f, 0.8f, 0.4f)),
+            ("Cover High Bravo", new Vector3(-9f, GroundY + 1.25f, 10f), new Vector3(2f, 2.5f, 0.4f)),
+        };
+
+        /// <summary>
         /// プレハブにするのは、NetworkObject の GlobalObjectIdHash がアセットの GUID からエディタでしか作られず、
         /// 実行時に生成したオブジェクトではサーバーとクライアントで同じプレハブだと突き合わせられないため。
         /// </summary>
@@ -365,6 +378,16 @@ namespace Fps.Editor
             ground.name = "Ground";
             ground.transform.position = new Vector3(0f, GroundY, 0f);
             ground.transform.localScale = GroundScale;
+
+            var coverRoot = new GameObject("CoverWalls");
+            foreach (var (wallName, center, size) in CoverWalls)
+            {
+                var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                wall.name = wallName;
+                wall.transform.SetParent(coverRoot.transform, false);
+                wall.transform.localPosition = center;
+                wall.transform.localScale = size;
+            }
 
             var spawnRoot = new GameObject("SpawnPoints");
             foreach (var (pointName, position, team) in SpawnPoints)

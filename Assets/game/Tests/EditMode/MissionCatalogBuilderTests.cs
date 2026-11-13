@@ -36,17 +36,52 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void DefaultMissionsAreCampaign01()
+        public void DefaultMissionsAreCampaign01ThenCampaign02()
         {
             Assert.That(MissionCatalogBuilder.CatalogPath, Is.EqualTo("Assets/game/Missions/MissionCatalog.asset"));
             var missions = MissionCatalogBuilder.DefaultMissions();
 
-            Assert.That(missions, Has.Count.EqualTo(1));
+            Assert.That(missions, Has.Count.EqualTo(2));
             Assert.That(missions[0].Id, Is.EqualTo("Campaign01"));
             Assert.That(missions[0].Id, Is.EqualTo(CampaignSaveSlots.LegacyMissionId), "Campaign01 is the mission that owned the legacy save slot");
             Assert.That(missions[0].DisplayName, Is.EqualTo(CampaignSceneBuilder.MissionDisplayName));
             Assert.That(missions[0].ScenePath, Is.EqualTo(CampaignSceneBuilder.ScenePath));
             Assert.That(missions[0].DefinitionPath, Is.EqualTo(CampaignSceneBuilder.DefinitionPath));
+
+            Assert.That(missions[1].Id, Is.EqualTo(MissionCatalogBuilder.Campaign02Id));
+            Assert.That(missions[1].Id, Is.EqualTo("Campaign02"));
+            Assert.That(CampaignSaveSlots.ReadsLegacy(missions[1].Id), Is.False, "only Campaign01 reads the legacy save slot");
+            Assert.That(missions[1].DisplayName, Is.EqualTo(Campaign02Mission.MissionDisplayName));
+            Assert.That(missions[1].ScenePath, Is.EqualTo(BuildSceneList.Campaign02Scene));
+            Assert.That(missions[1].DefinitionPath, Is.EqualTo(Campaign02Mission.DefinitionPath));
+        }
+
+        [Test]
+        public void BuildsACatalogWithBothMissionsInOrder()
+        {
+            var first = CreateDefinition();
+            var secondPath = _folder + "/" + MissionCatalogBuilder.Campaign02Id + ".asset";
+            var second = SceneBuildHelpers.CreateOrUpdateMissionDefinition(
+                secondPath,
+                d => d.SetObjectives(new[] { new ObjectiveDefinition("reach", "") }));
+            var missions = new[]
+            {
+                new MissionCatalogBuilder.MissionSource(
+                    MissionCatalogBuilder.Campaign01Id, "Campaign 01", BuildSceneList.CampaignScene, _definitionPath),
+
+                // シーンは開かずに有無だけを見るので、リポジトリにある Campaign01 のシーンを指す。
+                new MissionCatalogBuilder.MissionSource(
+                    MissionCatalogBuilder.Campaign02Id, "Campaign 02", BuildSceneList.CampaignScene, secondPath),
+            };
+
+            var catalog = MissionCatalogBuilder.BuildAt(_catalogPath, missions);
+
+            Assert.That(catalog.Missions, Has.Count.EqualTo(2));
+            Assert.That(catalog.Missions[0].Definition, Is.SameAs(first));
+            Assert.That(catalog.Missions[1].Id, Is.EqualTo("Campaign02"));
+            Assert.That(catalog.Missions[1].Definition, Is.SameAs(second));
+            Assert.That(catalog.TryFind("Campaign02", out var found), Is.True);
+            Assert.That(found.DisplayName, Is.EqualTo("Campaign 02"));
         }
 
         [Test]

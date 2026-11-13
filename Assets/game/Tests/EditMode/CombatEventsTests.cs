@@ -290,6 +290,9 @@ namespace Fps.Tests.EditMode
             _created.Add(rifle);
             WeaponAssetBuilder.Configure(rifle, WeaponAssetBuilder.RifleSpec());
 
+            // 着弾点と向きを決め打ちで確かめるので、rifle の腰撃ちのばらつきを切って真っすぐ撃たせる。
+            rifle.HipSpreadDegrees = 0f;
+
             var weapon = camera.AddComponent<WeaponController>();
             weapon.Initialize(camera.transform, _attack, _reload, rifle);
             return weapon;

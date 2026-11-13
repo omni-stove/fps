@@ -38,7 +38,16 @@ namespace Fps.Net
     /// 見た目はプレハブに置いた人型のリグ (NetSceneBuilder) で、チームの色はリグの材質に塗る。リグは
     /// <see cref="CharacterAnimator"/> が <see cref="ICharacterPoseSource"/> としてのこのプレイヤーから状態を読んで動かす。
     /// 読む値はどれも他のクライアントにも同期されているもの (しゃがみ・接地は <see cref="NetworkPlayerMotor"/>、ダウン・体力・武器の Id)。
-    /// ADS だけは持ち主の画面にしか無いので、持ち主が <see cref="IsAiming"/> の同期値に書く (見た目だけで、サーバーは判断に使わない)。
+    /// ADS だけは持ち主の画面にしか無いので、持ち主が <see cref="IsAiming"/> の同期値に書く。
+    /// </para>
+    /// <para>
+    /// 弾のばらつき (<see cref="SpreadPattern"/>) は、サーバーが数える発射番号 (<see cref="ServerShotSequence"/>) とプレイヤー Id を種に、
+    /// ADS の同期値と移動の速さ (<see cref="SpreadMoveFraction"/>) で決める。持ち主も同じ種 (<see cref="NetShotSequence"/>) で予測して曳光弾を出し、
+    /// 反動 (<see cref="RecoilState"/>) は持ち主のカメラ (<see cref="FirstPersonLook.Recoil"/>) にだけ効かせる。
+    /// </para>
+    /// <para>
+    /// ブラインドファイア (ルールの <see cref="NetMatchRules.BlindFire"/> が On でカバー中に覗かずに撃つ) は <see cref="NetBlindFire"/> で決める。
+    /// 持ち主は予測したカバーの状態から始点と散らばりを予測して曳光弾を出すが、サーバーへは目の始点を送り、判定の始点はサーバーが決める。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -81,7 +90,8 @@ namespace Fps.Net
         // 0 は倒れているか、まだ試合に参加していないことを表す
         private readonly NetworkVariable<int> _health = new NetworkVariable<int>(0);
 
-        // 持ち主が覗き込んでいるか。他のクライアントでリグを構えさせるためだけの値なので、サーバーを通さず持ち主が書く
+        // 持ち主が覗き込んでいるか。他のクライアントでリグを構えさせ、サーバーが弾のばらつきを決めるのに使う。
+        // 覗き込みは持ち主の画面にしか無いので、サーバーを通さず持ち主が書く
         private readonly NetworkVariable<bool> _aiming = new NetworkVariable<bool>(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
@@ -106,6 +116,13 @@ namespace Fps.Net
         private WeaponCatalogAsset _triggerCatalog;
         private string _triggerError;
         private bool _triggerResolved;
+
+        // 発射番号。持ち主は予測に、サーバーは判定に使う (ホストでは両方)。どちらもこのプレイヤーオブジェクトの生成から数える
+        private readonly NetShotSequence _shots = new NetShotSequence();
+        private readonly ServerShotSequence _serverShots = new ServerShotSequence();
+
+        // 持ち主のカメラにだけ配線する反動
+        private readonly RecoilState _recoil = new RecoilState();
 
         // 視点。View (目) は射撃の始点にも使うので、カメラを有効にしないプレイヤーでも解決しておく
         private Transform _view;
@@ -397,6 +414,9 @@ namespace Fps.Net
 
             if (_look != null)
             {
+                _recoil.Reset();
+                _look.Recoil = enable ? _recoil : null;
+
                 // 有効にするとカーソルをロックし、無効にすると外す (FirstPersonLook の OnEnable / OnDisable)
                 _look.enabled = enable;
                 if (enable && !_look.enabled)
@@ -552,7 +572,7 @@ namespace Fps.Net
 
         /// <summary>
         /// 覗き込んで構えているか。持ち主は自分の <see cref="AimDownSights"/> の今の値、他では持ち主が書いた同期値。
-        /// リグの姿勢 (<see cref="CharacterAnimator"/>) にだけ使う。
+        /// リグの姿勢 (<see cref="CharacterAnimator"/>) に使う。弾のばらつきは持ち主でも同期値 (<see cref="AimingForSpread"/>) を読む。
         /// </summary>
         public bool IsAiming
         {
@@ -613,6 +633,7 @@ namespace Fps.Net
                 motor == null || motor.IsGrounded,
                 IsCrouched,
                 IsAiming,
+                motor != null ? motor.PoseCoverHeight : null,
                 IsDowned,
                 IsAlive,
                 spec != null ? spec.Category : (WeaponCategory?)null);
@@ -623,11 +644,43 @@ namespace Fps.Net
         /// ダッシュしているかは他人に同期されないので、立っていて歩きより速く動いていればダッシュとみなす
         /// (<see cref="NetworkPlayerMotor"/> で歩きより速く動けるのはダッシュだけ)。
         /// </summary>
+        /// <param name="coverHeight">張り付いている壁の高さ (<see cref="NetworkPlayerMotor.PoseCoverHeight"/>)。張り付いていなければ null。</param>
         internal static CharacterPoseInput PoseInput(
-            float horizontalSpeed, float walkSpeed, bool grounded, bool crouched, bool aiming, bool downed, bool alive, WeaponCategory? weapon)
+            float horizontalSpeed,
+            float walkSpeed,
+            bool grounded,
+            bool crouched,
+            bool aiming,
+            CoverHeight? coverHeight,
+            bool downed,
+            bool alive,
+            WeaponCategory? weapon)
         {
             var sprinting = !crouched && horizontalSpeed > walkSpeed;
-            return new CharacterPoseInput(horizontalSpeed, grounded, crouched, sprinting, aiming, null, downed, !alive, weapon);
+            return new CharacterPoseInput(horizontalSpeed, grounded, crouched, sprinting, aiming, coverHeight, downed, !alive, weapon);
+        }
+
+        /// <summary>
+        /// このインスタンスの最新のカバーの状態 (<see cref="NetworkPlayerMotor.Cover"/>)。サーバーでは確定状態、持ち主では最新の予測。
+        /// 動きを持たなければカバーの外。ブラインドファイアの始点に使う。
+        /// </summary>
+        internal NetCoverState CurrentCover
+        {
+            get
+            {
+                var motor = ResolveMotor();
+                return motor != null ? motor.Cover : NetCoverState.Out;
+            }
+        }
+
+        /// <summary>体の半径 (m)。動きを持たなければ 0。</summary>
+        internal float BodyRadius
+        {
+            get
+            {
+                var motor = ResolveMotor();
+                return motor != null ? motor.BodyRadius : 0f;
+            }
         }
 
         private NetworkPlayerMotor ResolveMotor()
@@ -662,6 +715,7 @@ namespace Fps.Net
         // しゃがみはオーナーの NetworkPlayerMotor にしか状態が無く、ADS は視点のある持ち主でしか初期化されないので、他では何もしない
         private void ResetStance(string reason)
         {
+            _recoil.Reset();
             if (_motor != null)
             {
                 _motor.ReleaseCrouch(reason);

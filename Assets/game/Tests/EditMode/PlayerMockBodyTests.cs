@@ -127,6 +127,28 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void WithoutTheBodyOnlyTheViewModelIsShown()
+        {
+            _mock.Build(_camera);
+            Apply(PlayerActionConditions.Grounded, ViewMode.ThirdPerson);
+
+            _mock.ShowsBody = false;
+            Assert.That(_mock.BodyRoot.gameObject.activeSelf, Is.False, "hidden at once");
+
+            Apply(PlayerActionConditions.Grounded, ViewMode.ThirdPerson);
+            Assert.That(_mock.BodyRoot.gameObject.activeSelf, Is.False);
+            Assert.That(_mock.ViewModelRoot.gameObject.activeSelf, Is.False);
+
+            Apply(PlayerActionConditions.Grounded, ViewMode.FirstPerson);
+            Assert.That(_mock.BodyRoot.gameObject.activeSelf, Is.False);
+            Assert.That(_mock.ViewModelRoot.gameObject.activeSelf, Is.True);
+
+            _mock.ShowsBody = true;
+            Apply(PlayerActionConditions.Grounded, ViewMode.ThirdPerson);
+            Assert.That(_mock.BodyRoot.gameObject.activeSelf, Is.True);
+        }
+
+        [Test]
         public void ViewModelIsFixedEvenAfterTheRigRewritesEveryRenderer()
         {
             _mock.Build(_camera);

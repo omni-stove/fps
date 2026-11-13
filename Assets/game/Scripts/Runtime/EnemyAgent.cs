@@ -345,18 +345,7 @@ namespace Fps.Runtime
             EnemySpec spec;
             try
             {
-                spec = new EnemySpec(
-                    _sightRange,
-                    _attackRange,
-                    _loseSightSeconds,
-                    _searchSeconds,
-                    _reactionSeconds,
-                    _openingSpreadDegrees,
-                    _settledSpreadDegrees,
-                    _openingShots,
-                    _coverHideSeconds,
-                    _coverPeekSeconds,
-                    _coverHealthFraction);
+                spec = CreateSpec();
             }
             catch (ArgumentException e)
             {
@@ -396,6 +385,68 @@ namespace Fps.Runtime
             _self.Died += OnDied;
             _self.Damaged += OnDamaged;
             return true;
+        }
+
+        /// <summary>
+        /// Inspector の値から判断の設定を作る。値が不正なら <see cref="ArgumentException"/>。
+        /// </summary>
+        public EnemySpec CreateSpec()
+        {
+            return new EnemySpec(
+                _sightRange,
+                _attackRange,
+                _loseSightSeconds,
+                _searchSeconds,
+                _reactionSeconds,
+                _openingSpreadDegrees,
+                _settledSpreadDegrees,
+                _openingShots,
+                _coverHideSeconds,
+                _coverPeekSeconds,
+                _coverHealthFraction);
+        }
+
+        /// <summary>
+        /// 判断の設定を spec の値にする。<see cref="TryInitialize"/> がこの値から <see cref="EnemyBrain"/> を作るので、それより前
+        /// (GameObject を有効にする前) に呼ぶ。波で出す敵を強くするのに使う。初期化後なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ApplySpec(EnemySpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (_brain != null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is already initialized; apply the spec before activating it");
+            }
+
+            _sightRange = spec.SightRange;
+            _attackRange = spec.AttackRange;
+            _loseSightSeconds = spec.LoseSightSeconds;
+            _searchSeconds = spec.SearchSeconds;
+            _reactionSeconds = spec.ReactionSeconds;
+            _openingSpreadDegrees = spec.OpeningSpreadDegrees;
+            _settledSpreadDegrees = spec.SettledSpreadDegrees;
+            _openingShots = spec.OpeningShots;
+            _coverHideSeconds = spec.CoverHideSeconds;
+            _coverPeekSeconds = spec.CoverPeekSeconds;
+            _coverHealthFraction = spec.CoverHealthFraction;
+        }
+
+        /// <summary>
+        /// position の物音を次の知覚 1 回だけ渡す。Idle・Patrol・Search 中ならその位置を Search しに行く (<see cref="EnemyBrain"/>)。
+        /// 視界の外に出した敵を目標の方へ向かわせるのに使う。倒れていれば何もしない。
+        /// </summary>
+        public void Alert(Vector3 position)
+        {
+            if (_brain != null && _brain.IsDead)
+            {
+                return;
+            }
+
+            _pendingNoise = position;
         }
 
         /// <summary>

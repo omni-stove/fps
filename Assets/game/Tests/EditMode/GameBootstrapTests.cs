@@ -804,6 +804,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(views, Has.None.Null);
             Assert.That(hud.PauseMenu, Is.Not.Null);
+            Assert.That(hud.PauseMenu.TimeMode, Is.EqualTo(PauseTimeMode.Freeze), "offline pauses stop time");
 
             // Edit Mode では UIDocument が木を作らないことがあり、そのときは View もビューの要素も無い。
             Assume.That(hud.View, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");

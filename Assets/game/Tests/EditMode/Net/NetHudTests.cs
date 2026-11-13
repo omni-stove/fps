@@ -114,6 +114,26 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ThePauseMenuKeepsTheMatchTimeRunning()
+        {
+            var pause = _netHud.Hud.PauseMenu;
+            Assert.That(pause, Is.Not.Null);
+            Assert.That(pause.TimeMode, Is.EqualTo(PauseTimeMode.KeepRunning));
+
+            var timeScaleBefore = Time.timeScale;
+            try
+            {
+                pause.Open();
+                Assert.That(Time.timeScale, Is.EqualTo(timeScaleBefore), "opening the pause menu online must not stop time");
+            }
+            finally
+            {
+                // Edit Mode では OnDisable が走らないので、開いたまま他のテストへ持ち越さない
+                pause.Close();
+            }
+        }
+
+        [Test]
         public void WithoutAMatchTheScoresAndTimeAreHidden()
         {
             Assert.That(_netHud.Match, Is.Null);

@@ -422,6 +422,44 @@ namespace Fps.Tests.EditMode
             Assert.That(existing.Rules.RegenPerSecond, Is.EqualTo(25f), "the bootstrap's regen is rebound to the campaign rules");
         }
 
+        [Test]
+        public void TryBeginWithAppliesTheDeathBodyToTargetsInTheScene()
+        {
+            var scene = BuildScene();
+            var dummy = TargetDummy.Create("campaign-dummy", new Vector3(30f, 0f, 30f), Quaternion.identity);
+            GameObject shell = null;
+            try
+            {
+                var rules = NewRules("CampaignNormal", 0f, 0f, false, 1f);
+                rules.DeathBody = DeathBody.Collapse;
+                scene.Campaign.RulesDefinition = rules;
+                scene.Campaign.LaunchArgs = Array.Empty<string>();
+
+                BeginWithWorldQuietly(scene);
+
+                var presenter = dummy.GetComponent<DeathBodyPresenter>();
+                Assert.That(presenter, Is.Not.Null);
+                Assert.That(presenter.Target, Is.SameAs(dummy.Damageable));
+                Assert.That(presenter.Mode, Is.EqualTo(DeathBody.Collapse));
+                Assert.That(scene.Player.GetComponent<DeathBodyPresenter>(), Is.Null, "the player's own body is not collapsed");
+
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathBody\] collapse id=campaign-dummy "));
+                dummy.Damageable.Kill();
+                shell = presenter.Shell;
+                Assert.That(shell, Is.Not.Null);
+            }
+            finally
+            {
+                // 抜け殻は体の子ではないので別に消す
+                if (shell != null)
+                {
+                    Object.DestroyImmediate(shell);
+                }
+
+                Object.DestroyImmediate(dummy.gameObject);
+            }
+        }
+
         [TestCase("easy", "CampaignEasy", 1.5f)]
         [TestCase("normal", "CampaignNormal", 1f)]
         [TestCase("hard", "CampaignHard", 0.6f)]

@@ -18,5 +18,8 @@ namespace Fps.Core
 
         /// <summary>持っている武器の表示名。武器が無ければ出さない。</summary>
         WeaponName,
+
+        /// <summary>アクティブリロードの進捗と、成功になる区間。リロード中でなければ出さない。</summary>
+        ReloadProgress,
     }
 }

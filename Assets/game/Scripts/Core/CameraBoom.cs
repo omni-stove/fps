@@ -14,15 +14,33 @@ namespace Fps.Core
 
         /// <summary>
         /// 目から見たカメラの位置 (目のローカル座標)。一人称は目そのもの (0)、三人称は thirdPersonOffset。
+        /// <see cref="ShoulderSide.Right"/> を渡した <see cref="Offset(ViewMode, Vector3, ShoulderSide)"/> と同じ。
         /// </summary>
         public static Vector3 Offset(ViewMode mode, Vector3 thirdPersonOffset)
         {
+            return Offset(mode, thirdPersonOffset, ShoulderSide.Right);
+        }
+
+        /// <summary>
+        /// 目から見たカメラの位置 (目のローカル座標)。一人称は目そのもの (0)、三人称は thirdPersonOffset で、
+        /// side が <see cref="ShoulderSide.Left"/> なら x (左右) の符号を反転する。
+        /// </summary>
+        public static Vector3 Offset(ViewMode mode, Vector3 thirdPersonOffset, ShoulderSide side)
+        {
+            // 一人称でも side を検査するのは、不正な値が視点を切り替えた時点で初めて見つかるのを避けるため。
+            if (side != ShoulderSide.Right && side != ShoulderSide.Left)
+            {
+                throw new ArgumentOutOfRangeException(nameof(side), side, "unknown shoulder side");
+            }
+
             switch (mode)
             {
                 case ViewMode.FirstPerson:
                     return Vector3.Zero;
                 case ViewMode.ThirdPerson:
-                    return thirdPersonOffset;
+                    return side == ShoulderSide.Left
+                        ? new Vector3(-thirdPersonOffset.X, thirdPersonOffset.Y, thirdPersonOffset.Z)
+                        : thirdPersonOffset;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, "unknown view mode");
             }

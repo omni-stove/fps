@@ -130,6 +130,12 @@ namespace Fps.Runtime
         /// <summary><see cref="Fire"/> で弾が出たときに、撃った Weapon を渡して呼ばれる (当たり判定の前)。</summary>
         public event Action<Weapon> Fired;
 
+        /// <summary>
+        /// <see cref="Fire"/> が <see cref="ResolveShot"/> で決めた始点と向きを、Raycast の前に書き換える差し込み口 (カバーなど)。
+        /// null ならそのまま撃つ。
+        /// </summary>
+        public IShotFilter ShotFilter { get; set; }
+
         /// <summary>今持っている武器の距離減衰。未初期化なら null。</summary>
         public DamageFalloff Falloff => Weapon?.Spec.Falloff;
 
@@ -444,7 +450,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今の武器で 1 発撃つ。<see cref="Weapon.TryFire"/> が false なら何もせず false。
-        /// 撃てたら照準の正面へ Raycast し、Hitbox に当たればダメージを渡す。
+        /// 撃てたら照準の正面へ (<see cref="ShotFilter"/> があれば書き換えた始点と向きで) Raycast し、Hitbox に当たればダメージを渡す。
         /// Hitbox の無い物に当たれば <see cref="StructureDamage.Apply"/> に武器の <see cref="WeaponSpec.ExplosionRadius"/> で渡す。
         /// </summary>
         public bool Fire()
@@ -461,6 +467,7 @@ namespace Fps.Runtime
             Fired?.Invoke(weapon);
 
             ResolveShot(out var origin, out var direction);
+            ShotFilter?.Filter(ref origin, ref direction);
             if (TryRaycast(origin, direction, out var hit))
             {
                 if (Hitbox.FindFor(hit.collider) == null)

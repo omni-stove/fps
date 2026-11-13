@@ -8,8 +8,9 @@ using UnityEngine;
 namespace Fps.Editor
 {
     /// <summary>
-    /// 武器のアセット (<see cref="RiflePath"/>・<see cref="HandgunPath"/> の <see cref="WeaponDefinition"/> と、
-    /// それを rifle・handgun の順に並べた <see cref="CatalogPath"/> の <see cref="WeaponCatalogAsset"/>) を作るか上書きする。
+    /// 武器のアセット (<see cref="RiflePath"/>・<see cref="HandgunPath"/> の <see cref="WeaponDefinition"/>、
+    /// それを rifle・handgun の順に並べた <see cref="CatalogPath"/> の <see cref="WeaponCatalogAsset"/>、
+    /// それをスロットに入れた <see cref="LoadoutPath"/> の <see cref="LoadoutDefinition"/>) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
@@ -20,6 +21,7 @@ namespace Fps.Editor
         public const string RiflePath = "Assets/game/Weapons/Rifle.asset";
         public const string HandgunPath = "Assets/game/Weapons/Handgun.asset";
         public const string CatalogPath = "Assets/game/Weapons/WeaponCatalog.asset";
+        public const string LoadoutPath = "Assets/game/Weapons/DefaultLoadout.asset";
 
         public const string MenuPath = "Fps/Build Weapon Assets";
         public const string LogTag = "[WeaponAssetBuilder]";
@@ -91,22 +93,80 @@ namespace Fps.Editor
                 new DamageFalloff(15f, 40f, 0.6f));
         }
 
+        /// <summary>
+        /// <see cref="LoadoutPath"/> のデフォルトロードアウトを読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう
+        /// 例外を投げる。値が不正でも例外を投げ、壊れたロードアウトを配線しない。
+        /// </summary>
+        public static LoadoutDefinition LoadDefaultLoadout()
+        {
+            return LoadLoadout(LoadoutPath);
+        }
+
+        /// <summary>path の <see cref="LoadoutDefinition"/> を読み、<see cref="LoadoutDefinition.ToSpecs"/> に通ることを確かめて返す。</summary>
+        public static LoadoutDefinition LoadLoadout(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+
+            var loadout = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(path);
+            if (loadout == null)
+            {
+                throw new InvalidOperationException(
+                    $"loadout '{path}' was not found; run {MenuPath} (Fps.Editor.WeaponAssetBuilder.Build) first");
+            }
+
+            loadout.ToSpecs();
+            return loadout;
+        }
+
+        /// <summary>デフォルトロードアウトのスロット 0 が許す種別。Handgun 以外のすべて (種別が増えたら自動で入る)。</summary>
+        public static WeaponCategory[] DefaultPrimaryCategories()
+        {
+            var categories = new List<WeaponCategory>();
+            foreach (WeaponCategory category in Enum.GetValues(typeof(WeaponCategory)))
+            {
+                if (category != WeaponCategory.Handgun)
+                {
+                    categories.Add(category);
+                }
+            }
+
+            return categories.ToArray();
+        }
+
+        /// <summary>デフォルトロードアウトのスロット 1 が許す種別。Handgun だけ。</summary>
+        public static WeaponCategory[] DefaultSecondaryCategories()
+        {
+            return new[] { WeaponCategory.Handgun };
+        }
+
+        /// <summary>デフォルトロードアウトのスロット。0 番は <see cref="DefaultPrimaryCategories"/> で rifle、1 番は <see cref="DefaultSecondaryCategories"/> で handgun。</summary>
+        public static LoadoutSlotDefinition[] DefaultLoadoutSlots(WeaponDefinition rifle, WeaponDefinition handgun)
+        {
+            return new[]
+            {
+                new LoadoutSlotDefinition(DefaultPrimaryCategories(), rifle),
+                new LoadoutSlotDefinition(DefaultSecondaryCategories(), handgun),
+            };
+        }
+
         [MenuItem(MenuPath)]
         public static void Build()
         {
-            BuildAt(RiflePath, HandgunPath, CatalogPath);
+            BuildAt(RiflePath, HandgunPath, CatalogPath, LoadoutPath);
         }
 
         /// <summary>
-        /// riflePath・handgunPath に武器の定義を、catalogPath にそれを並べたカタログを作るか上書きして保存し、カタログを返す。
-        /// 3 つのパスは互いに異なる Assets/ 以下の .asset であること。
+        /// riflePath・handgunPath に武器の定義を、catalogPath にそれを並べたカタログを、loadoutPath にそれをスロットに入れた
+        /// デフォルトロードアウトを作るか上書きして保存し、カタログを返す。
+        /// 4 つのパスは互いに異なる Assets/ 以下の .asset であること。
         /// </summary>
-        public static WeaponCatalogAsset BuildAt(string riflePath, string handgunPath, string catalogPath)
+        public static WeaponCatalogAsset BuildAt(string riflePath, string handgunPath, string catalogPath, string loadoutPath)
         {
             riflePath = SceneBuildHelpers.ValidateAssetPath(riflePath);
             handgunPath = SceneBuildHelpers.ValidateAssetPath(handgunPath);
             catalogPath = SceneBuildHelpers.ValidateAssetPath(catalogPath);
-            RequireDistinct(riflePath, handgunPath, catalogPath);
+            loadoutPath = SceneBuildHelpers.ValidateAssetPath(loadoutPath);
+            RequireDistinct(riflePath, handgunPath, catalogPath, loadoutPath);
 
             var rifleSpec = RifleSpec();
             var handgunSpec = HandgunSpec();
@@ -114,8 +174,10 @@ namespace Fps.Editor
             var handgun = SceneBuildHelpers.CreateOrUpdateAsset<WeaponDefinition>(handgunPath, d => Configure(d, handgunSpec));
             var catalog = SceneBuildHelpers.CreateOrUpdateAsset<WeaponCatalogAsset>(
                 catalogPath, c => Configure(c, new[] { rifle, handgun }));
+            SceneBuildHelpers.CreateOrUpdateAsset<LoadoutDefinition>(
+                loadoutPath, l => Configure(l, DefaultLoadoutSlots(rifle, handgun), LoadoutDefinition.DefaultSwitchSeconds));
 
-            Debug.Log($"{LogTag} saved '{riflePath}', '{handgunPath}' and '{catalogPath}'");
+            Debug.Log($"{LogTag} saved '{riflePath}', '{handgunPath}', '{catalogPath}' and '{loadoutPath}'");
             return catalog;
         }
 
@@ -167,6 +229,26 @@ namespace Fps.Editor
 
             // 不正ならここで WeaponDefinitionException になり、壊れたアセットを保存しない。
             catalog.ToCatalog();
+        }
+
+        /// <summary>loadout のスロットを slots に、持ち替え秒数を switchSeconds にし、<see cref="LoadoutDefinition.ToSpecs"/> に通ることを確かめる。</summary>
+        public static void Configure(LoadoutDefinition loadout, IEnumerable<LoadoutSlotDefinition> slots, float switchSeconds)
+        {
+            if (loadout == null)
+            {
+                throw new ArgumentNullException(nameof(loadout));
+            }
+
+            if (slots == null)
+            {
+                throw new ArgumentNullException(nameof(slots));
+            }
+
+            loadout.SetSlots(slots);
+            loadout.SwitchSeconds = switchSeconds;
+
+            // 不正ならここで WeaponDefinitionException になり、壊れたアセットを保存しない。
+            loadout.ToSpecs();
         }
 
         private static void RequireDistinct(params string[] paths)

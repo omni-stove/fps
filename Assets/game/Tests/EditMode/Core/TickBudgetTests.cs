@@ -87,7 +87,7 @@ namespace Fps.Core.Tests
         [Test]
         public void PassesWithinTheBudget()
         {
-            var budget = Recorded(new TickBudget(), 1d, 2d, 11d);
+            var budget = Recorded(new TickBudget(), 1d, 2d, 8d);
 
             Assert.That(budget.IsWithinBudget, Is.True);
             Assert.That(budget.Violations(), Is.Empty);

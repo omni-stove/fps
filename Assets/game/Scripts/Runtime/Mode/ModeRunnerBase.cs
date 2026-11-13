@@ -23,7 +23,8 @@ namespace Fps.Runtime
     /// <item>終わったら全員の操作と行動を止め、<see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) でシーンを読み直す。</item>
     /// <item><see cref="HidesTargetDummies"/> が true (既定) なら、始めたときに GameBootstrap の標的ダミーを隠す。</item>
     /// <item>ModeSession をラウンドとして繰り返す派生は、始め方 (<see cref="StartSession"/>)・進め方 (<see cref="AdvanceSession"/>)・
-    /// 倒れ方 (<see cref="InterceptDeath"/>)・HUD (<see cref="HudScores"/> など)・終わりのログ (<see cref="SessionEndedLog"/>) を置き換える。</item>
+    /// 倒れ方 (<see cref="InterceptDeath"/>)・HUD (<see cref="HudScores(Side?)"/> など)・終わりのログ (<see cref="SessionEndedLog"/>) を置き換える。</item>
+    /// <item>試合の終わりを自分で決める派生は <see cref="EndsMatchWithSession"/> を false にし、終わったときに <see cref="EndMatch"/> を呼ぶ。</item>
     /// </list>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -57,11 +58,24 @@ namespace Fps.Runtime
         private ModeHudView _hudView;
         private InputAction _restartAction;
         private bool _enabledRestartAction;
+        private bool _matchOver;
 
         /// <summary>進めているモード。開始前や開始に失敗したときは null。</summary>
         public ModeSession Session => _session;
 
         public bool IsStarted => _session != null;
+
+        /// <summary>試合が終わったか (<see cref="EndMatch"/> の後)。終わった後は全員の操作と行動を止め、再開の入力を受け付ける。</summary>
+        public bool IsMatchOver => _matchOver;
+
+        /// <summary>
+        /// <see cref="Session"/> が終わったら試合も終わりとして扱うなら true (既定)。ラウンド制のモードは false にし、
+        /// 試合が終わったときに自分で <see cref="EndMatch"/> を呼ぶ。
+        /// </summary>
+        protected virtual bool EndsMatchWithSession => true;
+
+        /// <summary>出現点。null は除いてある。</summary>
+        protected IReadOnlyList<SideSpawnPoint> SpawnPoints => _spawnPoints;
 
         /// <summary>参加者。添字がモードでの ID。</summary>
         public IReadOnlyList<SideMember> Members => _members;
@@ -146,10 +160,16 @@ namespace Fps.Runtime
             session.Start();
         }
 
-        /// <summary><see cref="Tick"/> で時間を進める。既定は <see cref="ModeSession.Tick"/>。ラウンド制のように外から進める派生が置き換える。</summary>
+        /// <summary><see cref="Tick"/> で時間を進める。既定は <see cref="TickSession"/>。ラウンド制のように外から進める派生が置き換える。</summary>
         protected virtual void AdvanceSession(float deltaSeconds)
         {
-            _session.Tick(deltaSeconds);
+            TickSession(_session, deltaSeconds);
+        }
+
+        /// <summary><see cref="AdvanceSession"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。既定は <see cref="ModeSession.Tick"/>。</summary>
+        protected virtual void TickSession(ModeSession session, float deltaSeconds)
+        {
+            session.Tick(deltaSeconds);
         }
 
         /// <summary>
@@ -164,20 +184,29 @@ namespace Fps.Runtime
         /// <summary>HUD の残り時間。既定は <see cref="ModeHudText.Time"/>。</summary>
         protected virtual string HudTime()
         {
-            return ModeHudText.Time(_session);
+            return HudTime(_session);
         }
 
         /// <summary>HUD の陣営ごとの得点の行。既定は <see cref="ModeHudText.Scores"/>。</summary>
         protected virtual IReadOnlyList<ModeHudScoreLine> HudScores(Side? ownSide)
         {
-            return ModeHudText.Scores(_session, ownSide);
+            return HudScores(_session, ownSide);
         }
 
         /// <summary>HUD の結果。既定は <see cref="ModeHudText.Result"/>。</summary>
         protected virtual string HudResult()
         {
-            return ModeHudText.Result(_session);
+            return HudResult(_session);
         }
+
+        /// <summary><see cref="HudTime()"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。</summary>
+        protected virtual string HudTime(ModeSession session) => ModeHudText.Time(session);
+
+        /// <summary><see cref="HudScores(Side?)"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。</summary>
+        protected virtual IReadOnlyList<ModeHudScoreLine> HudScores(ModeSession session, Side? ownSide) => ModeHudText.Scores(session, ownSide);
+
+        /// <summary><see cref="HudResult()"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。</summary>
+        protected virtual string HudResult(ModeSession session) => ModeHudText.Result(session);
 
         /// <summary>
         /// ModeSession が終わったときに出すログ。null なら出さない。既定は <see cref="ModeLog.Ended"/>。
@@ -190,6 +219,15 @@ namespace Fps.Runtime
 
         /// <summary><see cref="Stop"/> の頭、購読を外す前に呼ばれる。派生が自分で購読したものはここで外す。</summary>
         protected virtual void OnStopping()
+        {
+            OnStop();
+        }
+
+        /// <summary>
+        /// <see cref="OnStopping"/> の既定が呼ぶ。何度呼ばれてもよいように書く。
+        /// Unity のメッセージ (OnDisable など) を派生クラスで定義すると土台のものが呼ばれなくなるので、購読の解除はこちらか <see cref="OnStopping"/> で行う。
+        /// </summary>
+        protected virtual void OnStop()
         {
         }
 
@@ -221,7 +259,7 @@ namespace Fps.Runtime
         private void OnEnable()
         {
             // 終了後に無効→有効にされたら、再開の入力をもう一度受け付ける。
-            if (IsStarted && _session.State == GameModeState.Ended)
+            if (IsStarted && _matchOver)
             {
                 AcquireRestartAction();
             }
@@ -246,7 +284,7 @@ namespace Fps.Runtime
 
             Tick(Time.deltaTime);
 
-            if (_session != null && _session.State == GameModeState.Ended && _restartAction != null && _restartAction.WasPressedThisFrame())
+            if (_session != null && _matchOver && _restartAction != null && _restartAction.WasPressedThisFrame())
             {
                 Restart();
             }
@@ -487,6 +525,20 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// member を point に戻し、体力を満たして操作と行動を戻す (終了後は止めたまま)。
+        /// ラウンドの頭で、参加者を 1 人ずつ別の出現点に並べるときに使う。
+        /// </summary>
+        public void RespawnAt(SideMember member, SideSpawnPoint point)
+        {
+            if (point == null)
+            {
+                throw new ArgumentNullException(nameof(point));
+            }
+
+            RespawnAt(member, point.Position, point.Rotation);
+        }
+
+        /// <summary>
         /// member を position (足元) に戻し、体力を満たして操作と行動を戻す (終了後は止めたまま)。
         /// 出現点を自分で選ぶ派生 (ラウンドの始めに全員を並べ直すなど) が使う。
         /// </summary>
@@ -494,13 +546,10 @@ namespace Fps.Runtime
         {
             var id = RequireMember(member);
             member.Respawn(position, rotation);
-            member.SetActing(_session == null || _session.State != GameModeState.Ended);
+            member.SetActing(_session == null || (!_matchOver && _session.State != GameModeState.Ended));
             Debug.Log(ModeLog.Spawn(id, member.Side, position.ToNumerics()), member);
             OnSpawned(member);
         }
-
-        /// <summary>シーンから拾った出現点 (null を除く)。</summary>
-        protected IReadOnlyList<SideSpawnPoint> SpawnPoints => _spawnPoints;
 
         /// <summary>今のシーンを読み込み直して最初からやり直す。Play 中にのみ呼べる。</summary>
         [ContextMenu("Restart")]
@@ -556,6 +605,34 @@ namespace Fps.Runtime
             _session = null;
             _localPlayer = null;
             _hudView = null;
+            _matchOver = false;
+        }
+
+        /// <summary>
+        /// 試合を終える。全員の操作と行動を止め、再開の入力を受け付け、<c>[Mode] ended</c> を出して HUD を書き直してから <see cref="OnEnded"/> を呼ぶ。
+        /// <see cref="EndsMatchWithSession"/> が true なら <see cref="Session"/> が終わったときに呼ばれる。2 度目からは何もしない。
+        /// </summary>
+        protected void EndMatch(Side? winner)
+        {
+            if (_session == null || _matchOver)
+            {
+                return;
+            }
+
+            _matchOver = true;
+            _pendingRespawns.Clear();
+            foreach (var member in _members)
+            {
+                if (member != null)
+                {
+                    member.SetActing(false);
+                }
+            }
+
+            AcquireRestartAction();
+            Debug.Log(ModeLog.Ended(winner), this);
+            RefreshHud();
+            OnEnded(winner);
         }
 
         /// <summary>今の得点を <c>[Mode] score</c> でログに出す。キルのたびに呼ぶ。時間で点が入るモードは派生クラスが区切りで呼ぶ。</summary>
@@ -759,27 +836,18 @@ namespace Fps.Runtime
         private void OnStateChanged(GameModeState state)
         {
             Debug.Log(ModeLog.State(_session), this);
-
-            if (state != GameModeState.Ended)
-            {
-                return;
-            }
-
-            _pendingRespawns.Clear();
-            foreach (var member in _members)
-            {
-                if (member != null)
-                {
-                    member.SetActing(false);
-                }
-            }
-
-            AcquireRestartAction();
         }
 
         private void OnSessionEnded(Side? winner)
         {
             var log = SessionEndedLog(winner);
+            // ラウンドの終わりに区切りのログを自分で出す派生 (log が null) は、ModeSession の終わりを試合の終わりにしない。
+            if (EndsMatchWithSession && log != null)
+            {
+                EndMatch(winner);
+                return;
+            }
+
             if (log != null)
             {
                 Debug.Log(log, this);

@@ -63,6 +63,7 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// Bot で人数を埋める処理は .Bots.cs、放置した人を切る処理は .Idle.cs、拠点で勝敗を決める処理は .Objective.cs が受け持つ。
+    /// サーバーの 1 フレームぶんの処理 (Update と LateUpdate) にかかった時間を計って知らせる処理は .TickTiming.cs が受け持つ。
     /// それぞれの差し込み口を、サーバーで試合を始めたとき・毎フレーム・参加・退出・キル・次の試合の開始・試合の終わり・Despawn から呼ぶ。
     /// 放置の判定には、これに加えて射撃が届いたときにも知らせる (<c>IdlePlayerFired</c>)。
     /// 試合の終わりでは、勝ったチームを <c>ObjectiveDecideWinner</c> が差し替えてから同期とログに使う。
@@ -367,6 +368,8 @@ namespace Fps.Net
                 return;
             }
 
+            var tickStartedAt = TickTimingBegin();
+
             // 終わっている間に来た人は、次の試合が始まってから加える
             if (_session.State != GameModeState.Ended)
             {
@@ -385,17 +388,24 @@ namespace Fps.Net
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
             SyncNextWaveSeconds();
+            TickTimingAddUpdate(tickStartedAt);
         }
 
         // 入力 (RPC) とホストの移動 (Update) が反映された後の位置を記録する
         private void LateUpdate()
         {
-            if (!IsSpawned || !IsServer || _session == null || _lagCompensator == null)
+            if (!IsSpawned || !IsServer || _session == null)
             {
                 return;
             }
 
-            RecordHitboxes();
+            var tickStartedAt = TickTimingBegin();
+            if (_lagCompensator != null)
+            {
+                RecordHitboxes();
+            }
+
+            TickTimingEndFrame(tickStartedAt);
         }
 
         /// <summary>

@@ -30,6 +30,7 @@ namespace Fps.Tests.EditMode
                     nameof(EnemyFireSmokeRun),
                     nameof(EnemyStuckSmokeRun),
                     nameof(WeaponSwitchSmokeRun),
+                    SmokeSuite.PerfSmokeRunName,
                 }));
             Assert.That(SmokeSuite.Runs.Select(run => run.LogTag), Is.Unique);
         }
@@ -49,7 +50,25 @@ namespace Fps.Tests.EditMode
                 .Select(type => type.Name)
                 .Except(_standaloneSmokeRuns);
 
-            Assert.That(SmokeSuite.Runs.Select(run => run.Name), Is.EquivalentTo(smokeRuns));
+            // PerfSmokeRun は Fps.Net.Editor にあり、そちらの SmokeRun は Fps.Net.Tests の PerfSmokeRunTests が確かめる
+            Assert.That(
+                SmokeSuite.Runs.Select(run => run.Name).Where(name => name != SmokeSuite.PerfSmokeRunName),
+                Is.EquivalentTo(smokeRuns));
+        }
+
+        [Test]
+        public void FindStaticRunExplainsWhatIsMissing()
+        {
+            Assert.That(
+                () => SmokeSuite.FindStaticRun("Fps.Editor.NoSuchSmokeRun, Fps.Editor"),
+                Throws.InvalidOperationException.With.Message.Contains("was not found"));
+            Assert.That(
+                () => SmokeSuite.FindStaticRun(typeof(SmokeSuiteTests).AssemblyQualifiedName),
+                Throws.InvalidOperationException.With.Message.Contains("has no public static Run()"));
+            Assert.Throws<ArgumentException>(() => SmokeSuite.FindStaticRun(string.Empty));
+            Assert.That(
+                SmokeSuite.FindStaticRun(typeof(DestructionSmokeRun).AssemblyQualifiedName).Name,
+                Is.EqualTo(nameof(DestructionSmokeRun.Run)));
         }
 
         [Test]

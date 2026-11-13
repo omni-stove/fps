@@ -10,6 +10,8 @@ namespace Fps.Core.Tests
         // 視認 20m、攻撃 10m、見失って 1 秒で Search、Search 2 秒、反応 0.5 秒。
         private static EnemySpec DefaultSpec() => new EnemySpec(20f, 10f, 1f, 2f, 0.5f);
 
+        private static readonly float[] _expectedOpeningSpreads = { 6f, 4f, 2f, 0f, 0f };
+
         private static EnemyPerception Sees(Vector3 self, Vector3 target) =>
             new EnemyPerception(self, target, true, false, null);
 
@@ -193,16 +195,89 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ReactionTimeCountsFromDiscoveryDuringChase()
+        public void EnteringAttackFromChaseDoesNotFireAtOnce()
         {
             var brain = PatrollingBrain(out _);
 
-            brain.Tick(0.25f, Sees(Vector3.Zero, new Vector3(0f, 0f, 15f)));
-            brain.Tick(0.25f, Sees(Vector3.Zero, new Vector3(0f, 0f, 15f)));
+            brain.Tick(0.5f, Sees(Vector3.Zero, new Vector3(0f, 0f, 15f)));
+            brain.Tick(0.5f, Sees(Vector3.Zero, new Vector3(0f, 0f, 15f)));
             var decision = brain.Tick(0.25f, Sees(Vector3.Zero, new Vector3(0f, 0f, 5f)));
 
             Assert.That(brain.State, Is.EqualTo(EnemyState.Attack));
-            Assert.That(decision.Fire, Is.True);
+            Assert.That(decision.Fire, Is.False, "Chase の時間は反応時間に数えない");
+        }
+
+        [Test]
+        public void FiresReactionSecondsAfterEnteringAttackFromChase()
+        {
+            var brain = PatrollingBrain(out _);
+            var far = new Vector3(0f, 0f, 15f);
+            var near = new Vector3(0f, 0f, 5f);
+            brain.Tick(1f, Sees(Vector3.Zero, far));
+
+            Assert.That(brain.Tick(0.25f, Sees(Vector3.Zero, near)).Fire, Is.False, "Attack に入った tick");
+            Assert.That(brain.Tick(0.25f, Sees(Vector3.Zero, near)).Fire, Is.False, "0.25 秒後");
+            Assert.That(brain.Tick(0.25f, Sees(Vector3.Zero, near)).Fire, Is.True, "0.5 秒後");
+        }
+
+        [Test]
+        public void LeavingAttackRangeRestartsReaction()
+        {
+            var brain = PatrollingBrain(out _);
+            var far = new Vector3(0f, 0f, 15f);
+            var near = new Vector3(0f, 0f, 5f);
+            brain.Tick(0.1f, Sees(Vector3.Zero, near));
+            Assert.That(brain.Tick(1f, Sees(Vector3.Zero, near)).Fire, Is.True);
+
+            brain.Tick(0.1f, Sees(Vector3.Zero, far));
+            var decision = brain.Tick(0.1f, Sees(Vector3.Zero, near));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Attack));
+            Assert.That(decision.Fire, Is.False);
+        }
+
+        [Test]
+        public void SpreadNarrowsOverTheOpeningShotsAndResetsOnEnteringAttack()
+        {
+            var brain = new EnemyBrain(new EnemySpec(20f, 10f, 1f, 2f, 0f, 6f, 0f, 3));
+            var near = new Vector3(0f, 0f, 5f);
+            brain.Tick(0.1f, Sees(Vector3.Zero, near));
+
+            var spreads = new List<float>();
+            for (var i = 0; i < 5; i++)
+            {
+                spreads.Add(brain.NextShotSpreadDegrees);
+                brain.RecordShot();
+            }
+
+            Assert.That(spreads, Is.EqualTo(_expectedOpeningSpreads).Within(1e-4f));
+            Assert.That(brain.ShotsInAttack, Is.EqualTo(5));
+
+            brain.Tick(0.1f, Sees(Vector3.Zero, new Vector3(0f, 0f, 15f)));
+            brain.Tick(0.1f, Sees(Vector3.Zero, near));
+
+            Assert.That(brain.ShotsInAttack, Is.Zero);
+            Assert.That(brain.NextShotSpreadDegrees, Is.EqualTo(6f));
+        }
+
+        [Test]
+        public void SpreadStaysSettledWhenThereAreNoOpeningShots()
+        {
+            var spec = new EnemySpec(20f, 10f, 1f, 2f, 0f, 6f, 1f, 0);
+
+            Assert.That(spec.SpreadDegreesForShot(0), Is.EqualTo(1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => spec.SpreadDegreesForShot(-1));
+        }
+
+        [TestCase(-1f, 0f, 0)]
+        [TestCase(float.NaN, 0f, 0)]
+        [TestCase(91f, 0f, 0)]
+        [TestCase(0f, -1f, 0)]
+        [TestCase(0f, 91f, 0)]
+        [TestCase(0f, 0f, -1)]
+        public void SpecRejectsInvalidSpread(float opening, float settled, int shots)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new EnemySpec(20f, 10f, 1f, 2f, 0f, opening, settled, shots));
         }
 
         [Test]

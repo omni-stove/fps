@@ -36,7 +36,16 @@ namespace Fps.Runtime
         public const float DefaultAttackRange = 12f;
         public const float DefaultLoseSightSeconds = 2f;
         public const float DefaultSearchSeconds = 6f;
-        public const float DefaultReactionSeconds = 0.6f;
+        public const float DefaultReactionSeconds = 1.0f;
+
+        /// <summary>Attack に入って最初の 1 発の散らばりの半角 (度)。12m 先で半径 1m ほどに散り、外れやすい。</summary>
+        public const float DefaultOpeningSpreadDegrees = 5f;
+
+        /// <summary>撃ち始めの数発が過ぎた後の散らばりの半角 (度)。</summary>
+        public const float DefaultSettledSpreadDegrees = 0f;
+
+        /// <summary>散らばりを絞り切るまでの発数。</summary>
+        public const int DefaultOpeningShots = 3;
 
         /// <summary>足元からの目の高さ (メートル)。</summary>
         public const float DefaultEyeHeight = 1.6f;
@@ -105,6 +114,15 @@ namespace Fps.Runtime
         [SerializeField, Min(0f)]
         private float _reactionSeconds = DefaultReactionSeconds;
 
+        [SerializeField, Range(0f, EnemySpec.MaxSpreadDegrees), Tooltip("Attack に入って最初の 1 発の散らばりの半角 (度)")]
+        private float _openingSpreadDegrees = DefaultOpeningSpreadDegrees;
+
+        [SerializeField, Range(0f, EnemySpec.MaxSpreadDegrees), Tooltip("撃ち始めの数発が過ぎた後の散らばりの半角 (度)")]
+        private float _settledSpreadDegrees = DefaultSettledSpreadDegrees;
+
+        [SerializeField, Min(0), Tooltip("散らばりを絞り切るまでの発数")]
+        private int _openingShots = DefaultOpeningShots;
+
         [Header("Body")]
         [SerializeField, Min(0f)]
         private float _eyeHeight = DefaultEyeHeight;
@@ -133,6 +151,7 @@ namespace Fps.Runtime
         private Vector3 _spawnPosition;
         private Vector3 _lastFinitePosition;
         private float _nextOffMeshRetry;
+        private readonly System.Random _random = new System.Random();
 
         /// <summary>ログに出す識別子。</summary>
         public string Id
@@ -250,7 +269,15 @@ namespace Fps.Runtime
             EnemySpec spec;
             try
             {
-                spec = new EnemySpec(_sightRange, _attackRange, _loseSightSeconds, _searchSeconds, _reactionSeconds);
+                spec = new EnemySpec(
+                    _sightRange,
+                    _attackRange,
+                    _loseSightSeconds,
+                    _searchSeconds,
+                    _reactionSeconds,
+                    _openingSpreadDegrees,
+                    _settledSpreadDegrees,
+                    _openingShots);
             }
             catch (ArgumentException e)
             {
@@ -773,9 +800,18 @@ namespace Fps.Runtime
                 direction = transform.forward;
             }
 
+            var spread = _brain.NextShotSpreadDegrees;
+            direction = BlindFireShot.Spread(direction.ToNumerics(), spread, _random).ToUnity();
+            _brain.RecordShot();
+
             var spec = _weapon.Spec;
             var result = Hitscan.Fire(eye, direction, spec.Range, spec.Damage, spec.Falloff, transform, weaponId: spec.Id);
-            Debug.Log($"{LogTag} id={Id} fire ammo={_weapon.AmmoInMagazine} hit={DescribeHit(result)} dmg={result.Damage}", this);
+            Debug.Log(
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{0} id={1} fire ammo={2} spread={3:F1} hit={4} dmg={5}",
+                    LogTag, Id, _weapon.AmmoInMagazine, spread, DescribeHit(result), result.Damage),
+                this);
         }
 
         private static string DescribeHit(HitscanResult result)

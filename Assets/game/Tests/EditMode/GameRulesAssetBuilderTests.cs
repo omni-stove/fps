@@ -109,6 +109,11 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Destruction, Is.EqualTo(teamDeathmatch.Destruction));
             Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(teamDeathmatch.SpawnProtectionSeconds));
             AssertActions(rules.Actions, _expectedActions[DominationIndex], _dominationPath);
+
+            // オンラインの試合の勝敗を拠点で決めるのはドミネーションだけ
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Domination));
+            Assert.That(teamDeathmatch.Objective, Is.EqualTo(MatchObjective.None));
+            Assert.That(BuildAndLoad(_teamDeathmatchPath).Objective, Is.EqualTo(MatchObjective.None));
         }
 
         [Test]

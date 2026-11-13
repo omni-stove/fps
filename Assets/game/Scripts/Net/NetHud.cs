@@ -50,6 +50,7 @@ namespace Fps.Net
     /// <para>
     /// 回線の Ping・ロスの表示は .NetStats.cs、拠点の表示は .Objective.cs が受け持つ。それぞれの差し込み口を、
     /// 試合を購読したとき (<see cref="BindMatch"/>)・外したとき・毎フレーム (<see cref="Tick"/>)・すべての購読を外すとき (<see cref="UnbindAll"/>) に呼ぶ。
+    /// 拠点で勝敗を決める試合では、チームの点数の欄にキル数に代えて拠点のポイントを出す (<c>ObjectiveOverrideScores</c>)。
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -624,7 +625,10 @@ namespace Fps.Net
                 return;
             }
 
-            Model.SetScores(_team, Math.Max(0, _alphaScore), Math.Max(0, _bravoScore));
+            var alpha = _alphaScore;
+            var bravo = _bravoScore;
+            ObjectiveOverrideScores(ref alpha, ref bravo);
+            Model.SetScores(_team, Math.Max(0, alpha), Math.Max(0, bravo));
         }
 
         /// <summary>

@@ -153,6 +153,43 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void HasOneControlPointTheDominationRulesCanUse()
+        {
+            const string rerun = "run Fps.Editor.NetSceneBuilder.Build";
+            var points = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetControlPoint>(true))
+                .ToArray();
+
+            Assert.That(points, Has.Length.EqualTo(Fps.Editor.NetSceneBuilder.ControlPoints.Length), rerun);
+            Assert.That(points, Has.Length.EqualTo(1));
+            var point = points[0];
+            Assert.That(point.transform.parent, Is.Null, "a scene NetworkObject must not be nested under another one");
+            Assert.That(point.Zone, Is.Not.Null, rerun);
+            Assert.That(point.Index, Is.Zero);
+
+            // サーバーとクライアントがシーンの拠点を突き合わせる値
+            var networkObject = point.GetComponent<NetworkObject>();
+            Assert.That(networkObject, Is.Not.Null, rerun);
+            Assert.That(new SerializedObject(networkObject).FindProperty("GlobalObjectIdHash").uintValue, Is.Not.Zero, rerun);
+
+            // 床に立つプレイヤーのカプセルの中心 (y=0) が範囲に入る
+            Assert.That(point.Zone.Contains(point.transform.position + new Vector3(0f, -Fps.Editor.NetSceneBuilder.GroundY, 0f)), Is.True);
+
+            // 実行時と同じ組み立てで、ドミネーションのルールの試合を組める
+            Assert.That(NetControlPoint.TryBuildMap(points, out var map, out _, out var error), Is.True, error);
+            var rules = AssetDatabase.LoadAssetAtPath<Fps.Runtime.GameRulesDefinition>(Fps.Editor.GameRulesAssetBuilder.DominationPath);
+            Assert.That(rules, Is.Not.Null, "run Fps.Editor.GameRulesAssetBuilder.Build");
+            Assert.That(NetTeamDeathmatch.TryLoadRules(rules, out var loaded, out _, out error), Is.True, error);
+            Assert.That(loaded.Objective, Is.EqualTo(MatchObjective.Domination), "run Fps.Editor.GameRulesAssetBuilder.Build");
+
+            var match = MatchPrefabComponent();
+            Assert.That(
+                () => new DominationObjective(
+                    map, match.CaptureSeconds, match.PointsPerSecond, match.DominationScoreLimit, match.TimeLimitSeconds, match.MaxCapturers),
+                Throws.Nothing);
+        }
+
+        [Test]
         public void MatchPrefabRestartsTenSecondsAfterEnd()
         {
             var match = MatchPrefabComponent();

@@ -447,11 +447,18 @@ namespace Fps.Net
                     + "; run Fps.Editor.NetSceneBuilder.Build");
             }
 
+            if (!TryPrepareObjective(rules, out var killScoreLimit, out var objectiveError))
+            {
+                Debug.LogError("[Match] cannot start the " + rules.Objective + " match on " + name + ": " + objectiveError
+                    + "; run Fps.Editor.NetSceneBuilder.Build");
+                return;
+            }
+
             TeamDeathmatchSpec spec;
             SpawnSelector selector;
             try
             {
-                spec = new TeamDeathmatchSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds, rules);
+                spec = new TeamDeathmatchSpec(killScoreLimit, _timeLimitSeconds, _respawnSeconds, rules);
                 selector = new SpawnSelector(_minEnemySpawnDistance);
                 ValidateShotSettings();
                 ValidateRestartDelay();

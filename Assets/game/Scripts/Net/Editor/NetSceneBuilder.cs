@@ -68,11 +68,40 @@ namespace Fps.Editor
         };
 
         /// <summary>
+        /// 拠点制圧 (ルールを <see cref="GameRulesAssetBuilder.DominationPath"/> にしたとき) の拠点。両陣地の間、マップの中央に 1 つ置く。
+        /// 位置は足元 (床の高さ) で、範囲の円柱はそこから上下に <see cref="ControlPointZone.DefaultHeight"/> の半分ずつ広がるので、
+        /// 床に立つプレイヤーのカプセルの中心 (y=0) が入る。番号は HUD とログで 0 = A。
+        /// </summary>
+        public static readonly (string Name, Vector3 Position, int Index)[] ControlPoints =
+        {
+            ("Control Point A", new Vector3(0f, GroundY, 0f), 0),
+        };
+
+        /// <summary>
         /// プレハブにするのは、NetworkObject の GlobalObjectIdHash がアセットの GUID からエディタでしか作られず、
         /// 実行時に生成したオブジェクトではサーバーとクライアントで同じプレハブだと突き合わせられないため。
+        /// 試合のルールはチームデスマッチ (<see cref="GameRulesAssetBuilder.TeamDeathmatchPath"/>)。
         /// </summary>
         [MenuItem("Fps/Net/Build NetTest Scene")]
         public static void Build()
+        {
+            Build(GameRulesAssetBuilder.TeamDeathmatchPath);
+        }
+
+        /// <summary>
+        /// <see cref="Build"/> のうち、試合のルールをドミネーション (<see cref="GameRulesAssetBuilder.DominationPath"/>) にしたもの。
+        /// NetTest の拠点を取り合い、拠点のポイントで勝敗を決める。コミットするのはチームデスマッチのほうなので、
+        /// 確かめ終えたら <see cref="Build"/> で戻す。batchmode では
+        /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.BuildWithDominationRules</c> で呼ぶ。
+        /// </summary>
+        [MenuItem("Fps/Net/Build NetTest Scene (Domination Rules)")]
+        public static void BuildWithDominationRules()
+        {
+            Build(GameRulesAssetBuilder.DominationPath);
+        }
+
+        /// <summary>試合の進行役に rulesPath のルールを渡して、プレハブと NetTest シーンを作る。</summary>
+        public static void Build(string rulesPath)
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
@@ -82,7 +111,7 @@ namespace Fps.Editor
 
             var loadout = LoadOrBuildLoadout();
             var catalog = LoadCatalogFor(loadout);
-            var rules = LoadOrBuildRules();
+            var rules = LoadOrBuildRules(rulesPath);
             var rig = LoadOrBuildRig();
             var playerPrefab = BuildPrefab(PlayerPrefabPath, () => CreatePlayerSource(rig));
             var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout, catalog, rules));
@@ -91,7 +120,7 @@ namespace Fps.Editor
             AssetDatabase.SaveAssets();
             Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath
                 + " (loadout " + WeaponAssetBuilder.LoadoutPath + ", catalog " + WeaponAssetBuilder.CatalogPath
-                + ", rules " + GameRulesAssetBuilder.TeamDeathmatchPath + ", rig " + CharacterRigBuilder.PrefabPath + ")");
+                + ", rules " + rulesPath + ", rig " + CharacterRigBuilder.PrefabPath + ")");
         }
 
         /// <summary>
@@ -165,27 +194,33 @@ namespace Fps.Editor
         /// </summary>
         public static GameRulesDefinition LoadOrBuildRules()
         {
-            if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(GameRulesAssetBuilder.TeamDeathmatchPath) == null)
+            return LoadOrBuildRules(GameRulesAssetBuilder.TeamDeathmatchPath);
+        }
+
+        /// <summary>
+        /// <see cref="LoadOrBuildRules()"/> のうち、読むルールを path (<see cref="GameRulesAssetBuilder.Build"/> が作るどれか) にしたもの。
+        /// </summary>
+        public static GameRulesDefinition LoadOrBuildRules(string path)
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path) == null)
             {
-                Debug.Log("[Net] NetSceneBuilder: " + GameRulesAssetBuilder.TeamDeathmatchPath + " is missing; running GameRulesAssetBuilder.Build");
+                Debug.Log("[Net] NetSceneBuilder: " + path + " is missing; running GameRulesAssetBuilder.Build");
                 GameRulesAssetBuilder.Build();
             }
 
             GameRulesDefinition rules;
             try
             {
-                rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.TeamDeathmatchPath);
+                rules = GameRulesAssetBuilder.LoadRules(path);
             }
-            catch (GameRulesDefinitionException e)
+            catch (Exception e) when (e is GameRulesDefinitionException || e is InvalidOperationException || e is ArgumentException)
             {
-                throw new InvalidOperationException(
-                    "[Net] NetSceneBuilder: " + GameRulesAssetBuilder.TeamDeathmatchPath + " cannot be used by the match: " + e.Message, e);
+                throw new InvalidOperationException("[Net] NetSceneBuilder: " + path + " cannot be used by the match: " + e.Message, e);
             }
 
             if (!NetTeamDeathmatch.TryLoadRules(rules, out _, out _, out var error))
             {
-                throw new InvalidOperationException(
-                    "[Net] NetSceneBuilder: " + GameRulesAssetBuilder.TeamDeathmatchPath + " cannot be used by the match: " + error);
+                throw new InvalidOperationException("[Net] NetSceneBuilder: " + path + " cannot be used by the match: " + error);
             }
 
             return rules;
@@ -398,9 +433,59 @@ namespace Fps.Editor
                 pointObject.AddComponent<NetSpawnPoint>().Team = team;
             }
 
+            // NetworkObject の親にほかの NetworkObject が無いよう、ルートに置く
+            foreach (var (pointName, position, index) in ControlPoints)
+            {
+                var pointObject = new GameObject(pointName);
+                pointObject.transform.position = position;
+                pointObject.AddComponent<NetworkObject>();
+                pointObject.AddComponent<ControlPointZone>().Index = index;
+                pointObject.AddComponent<NetControlPoint>();
+            }
+
             if (!EditorSceneManager.SaveScene(scene, NetBootstrap.ScenePath))
             {
                 throw new InvalidOperationException("failed to save " + NetBootstrap.ScenePath);
+            }
+
+            FillSceneObjectIds();
+        }
+
+        /// <summary>
+        /// シーンに置いた NetworkObject (拠点) の GlobalObjectIdHash を埋めて保存し直す。この値は保存済みのシーンの中でしか作れず
+        /// (シーンの GUID を使う)、新しいシーンに置いた時点では埋まらないので、開き直して読み込み時の OnValidate に作らせる。
+        /// 埋まらなければ、サーバーとクライアントで拠点を突き合わせられないので例外を投げる。
+        /// </summary>
+        private static void FillSceneObjectIds()
+        {
+            var scene = EditorSceneManager.OpenScene(NetBootstrap.ScenePath, OpenSceneMode.Single);
+            var networkObjects = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<NetworkObject>(true))
+                .ToArray();
+            if (networkObjects.Length == 0)
+            {
+                return;
+            }
+
+            foreach (var networkObject in networkObjects)
+            {
+                EditorUtility.SetDirty(networkObject);
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            if (!EditorSceneManager.SaveScene(scene))
+            {
+                throw new InvalidOperationException("failed to save " + NetBootstrap.ScenePath);
+            }
+
+            foreach (var networkObject in networkObjects)
+            {
+                var hash = new SerializedObject(networkObject).FindProperty("GlobalObjectIdHash");
+                if (hash == null || hash.uintValue == 0u)
+                {
+                    throw new InvalidOperationException(
+                        NetBootstrap.ScenePath + ": " + networkObject.name + " has no GlobalObjectIdHash after reopening the scene");
+                }
             }
         }
 

@@ -138,6 +138,13 @@ namespace Fps.Core
         public void ReportDeath(int playerId) => _session.ReportDeath(playerId);
 
         /// <summary>
+        /// キル数の外 (拠点のポイントなど) で決まった勝敗で、試合をすぐ終える。リスポーン待ちは取り消す。
+        /// Playing のときだけ終えて Ended を出し、true を返す。それ以外では何もせず false を返す。
+        /// </summary>
+        /// <param name="winner">勝ったチーム。引き分けなら null。</param>
+        public bool Finish(Team? winner) => _session.Finish(Side.FromTeam(winner));
+
+        /// <summary>
         /// 時間を deltaSeconds 進める。None では先に全滅したチームがないか調べ、あれば時間を進めずに終える。
         /// 続けてリスポーン待ちが終わったプレイヤーについて RespawnReady を出し、
         /// 残り時間が 0 になったら点数の多いほうを勝ちとして終える。Playing 以外では何もしない。

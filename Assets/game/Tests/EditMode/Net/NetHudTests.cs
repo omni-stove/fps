@@ -505,7 +505,75 @@ namespace Fps.Net.Tests
             Assert.That(_match.StatusVariable.OnValueChanged, Is.Null);
             Assert.That(_match.NextWaveSecondsVariable.OnValueChanged, Is.Null);
             Assert.That(_match.RulesVariable.OnValueChanged, Is.Null);
+            Assert.That(_match.ObjectiveStatusVariable.OnValueChanged, Is.Null);
             Assert.That(_player.DownedStateVariable.OnValueChanged, Is.Null);
+        }
+
+        [Test]
+        public void DominationShowsThePointsInsteadOfTheKills()
+        {
+            _netHud.BindMatch(_match);
+            Arrive(_match.AlphaScoreVariable, 0, 7);
+            Arrive(_match.BravoScoreVariable, 0, 9);
+
+            Arrive(_match.ObjectiveStatusVariable, NetObjectiveStatus.None, new NetObjectiveStatus(MatchObjective.Domination, 42, 3));
+
+            Assert.That(_netHud.ObjectiveStatus.IsDomination, Is.True);
+            Assert.That(_view.FirstScoreLabel.text, Is.EqualTo("ALPHA 42"));
+            Assert.That(_view.SecondScoreLabel.text, Is.EqualTo("BRAVO 3"));
+
+            // 拠点制圧の間はキル数が変わっても欄はポイントのまま
+            Arrive(_match.AlphaScoreVariable, 7, 8);
+            Assert.That(_view.FirstScoreLabel.text, Is.EqualTo("ALPHA 42"));
+        }
+
+        [Test]
+        public void WithoutDominationTheScoresStayTheKills()
+        {
+            _netHud.BindMatch(_match);
+            Arrive(_match.AlphaScoreVariable, 0, 7);
+
+            Arrive(_match.ObjectiveStatusVariable, NetObjectiveStatus.None, new NetObjectiveStatus(MatchObjective.None, 42, 3));
+
+            Assert.That(_view.FirstScoreLabel.text, Is.EqualTo("ALPHA 7"));
+            Assert.That(_netHud.ControlPoints == null || !_netHud.ControlPoints.IsShown, Is.True);
+        }
+
+        [Test]
+        public void DominationShowsTheControlPointsAndSkipsDestroyedOnes()
+        {
+            var pointObjects = new[] { new GameObject("TestPointA"), new GameObject("TestPointB") };
+            try
+            {
+                var points = new NetControlPoint[pointObjects.Length];
+                for (var i = 0; i < pointObjects.Length; i++)
+                {
+                    pointObjects[i].AddComponent<NetworkObject>();
+                    pointObjects[i].AddComponent<ControlPointZone>().Index = i;
+                    points[i] = pointObjects[i].AddComponent<NetControlPoint>();
+                }
+
+                _netHud.BindMatch(_match);
+                Arrive(_match.ObjectiveStatusVariable, NetObjectiveStatus.None, new NetObjectiveStatus(MatchObjective.Domination, 0, 0));
+                _netHud.RefreshControlPoints(new[] { points[0], null, points[1] });
+
+                var view = _netHud.ControlPoints;
+                Assert.That(view, Is.Not.Null, "the HUD adds the control point view for Domination");
+                Assert.That(view.IsShown, Is.True);
+                Assert.That(view.PointNames, Is.EqualTo(new[] { "A", "B" }));
+                Assert.That(view.States, Is.EqualTo(new[] { NetControlPointState.Neutral, NetControlPointState.Neutral }));
+
+                // 試合が無くなったら隠す
+                _netHud.BindMatch(null);
+                Assert.That(view.IsShown, Is.False);
+            }
+            finally
+            {
+                foreach (var pointObject in pointObjects)
+                {
+                    Object.DestroyImmediate(pointObject);
+                }
+            }
         }
 
         [Test]

@@ -562,6 +562,278 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => new EnemyBrain(DefaultSpec()).SetPatrolRoute(null));
         }
 
+        // プレイヤーは +Z にいる。A と C は +Z を遮り (A の方が出現地点に近い)、B は +X を遮る。
+        private static readonly Vector3 _player = new Vector3(0f, 0f, 10f);
+        private static readonly CoverPoint _coverA = new CoverPoint(new Vector3(2f, 0f, 2f), new Vector3(0f, 0f, 1f), CoverHeight.Low);
+        private static readonly CoverPoint _coverB = new CoverPoint(new Vector3(-3f, 0f, 0f), new Vector3(1f, 0f, 0f), CoverHeight.High);
+        private static readonly CoverPoint _coverC = new CoverPoint(new Vector3(-2f, 0f, 3f), new Vector3(0f, 0f, 1f), CoverHeight.Low);
+
+        // 反応 0.5 秒、隠れて 1 秒、覗いて 1 秒。
+        private static EnemySpec CoverSpec() => new EnemySpec(20f, 10f, 1f, 2f, 0.5f, coverHideSeconds: 1f, coverPeekSeconds: 1f);
+
+        private static EnemyPerception Watches(Vector3 self, Vector3 target, bool lineOfSight) =>
+            new EnemyPerception(self, target, lineOfSight, false, null);
+
+        private static EnemyPerception Shot(Vector3 self, Vector3 target, bool lineOfSight) =>
+            new EnemyPerception(self, target, lineOfSight, false, null, true, target, 0.9f);
+
+        private static EnemyPerception Wounded(Vector3 self, Vector3 target, float healthFraction) =>
+            new EnemyPerception(self, target, false, false, null, false, null, healthFraction);
+
+        private static EnemyBrain CoverBrain(CoverPointSelector selector, out List<EnemyState> changes)
+        {
+            var brain = new EnemyBrain(CoverSpec());
+            brain.SetPatrolRoute(new[] { new Vector3(0f, 0f, -10f) });
+            brain.UseCover(selector);
+            var log = new List<EnemyState>();
+            brain.StateChanged += (_, next) => log.Add(next);
+            changes = log;
+            return brain;
+        }
+
+        [Test]
+        public void BeingShotTakesCoverAtTheNearestPointThatBlocksTheShooter()
+        {
+            var selector = new CoverPointSelector(new[] { _coverB, _coverC, _coverA });
+            var brain = CoverBrain(selector, out var changes);
+
+            var decision = brain.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.TakeCover));
+            Assert.That(brain.CoverPhase, Is.EqualTo(EnemyCoverPhase.Moving));
+            Assert.That(brain.CoverPointIndex, Is.EqualTo(2), "B は向きが合わず、C より A が近い");
+            Assert.That(brain.CurrentCoverPoint?.Position, Is.EqualTo(_coverA.Position));
+            Assert.That(selector.IndexClaimedBy(brain), Is.EqualTo(2));
+            Assert.That(decision.MoveTo, Is.EqualTo(_coverA.Position));
+            Assert.That(decision.LookAt, Is.EqualTo(_player));
+            Assert.That(decision.Fire, Is.False);
+            Assert.That(decision.Crouch, Is.False);
+            Assert.That(changes, Is.EqualTo(new[] { EnemyState.TakeCover }));
+        }
+
+        [Test]
+        public void BeingShotFromAnUnknownTargetUsesTheShooterPosition()
+        {
+            var selector = new CoverPointSelector(new[] { _coverA });
+            var brain = CoverBrain(selector, out _);
+
+            brain.Tick(0.1f, new EnemyPerception(Vector3.Zero, null, false, false, null, true, _player, 0.9f));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.TakeCover));
+            Assert.That(brain.CoverPointIndex, Is.Zero);
+        }
+
+        [Test]
+        public void DroppingBelowHalfHealthTakesCover()
+        {
+            var brain = CoverBrain(new CoverPointSelector(new[] { _coverA }), out _);
+
+            brain.Tick(0.1f, Wounded(Vector3.Zero, _player, 0.5f));
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol), "ちょうど半分ではまだ移らない");
+
+            brain.Tick(0.1f, Wounded(Vector3.Zero, _player, 0.49f));
+            Assert.That(brain.State, Is.EqualTo(EnemyState.TakeCover));
+        }
+
+        [Test]
+        public void BeingShotWithoutCoverPointsKeepsTheUsualBehaviour()
+        {
+            var shooter = new Vector3(0f, 0f, 8f);
+            var withoutSelector = new EnemyBrain(CoverSpec());
+            withoutSelector.Tick(0.1f, Shot(Vector3.Zero, shooter, true));
+            Assert.That(withoutSelector.State, Is.EqualTo(EnemyState.Attack));
+
+            var facingAway = new EnemyBrain(CoverSpec());
+            facingAway.UseCover(new CoverPointSelector(new[] { _coverB }));
+            facingAway.Tick(0.1f, Shot(Vector3.Zero, shooter, true));
+            Assert.That(facingAway.State, Is.EqualTo(EnemyState.Attack), "遮る点が無い");
+            Assert.That(facingAway.CoverPhase, Is.EqualTo(EnemyCoverPhase.None));
+        }
+
+        [Test]
+        public void HidesCrouchedThenPeeksAndFiresAfterReaction()
+        {
+            var brain = CoverBrain(new CoverPointSelector(new[] { _coverA }), out _);
+            var at = _coverA.Position;
+            brain.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+
+            var hide = brain.Tick(0.1f, Watches(at, _player, false));
+            Assert.That(brain.CoverPhase, Is.EqualTo(EnemyCoverPhase.Hiding), "着いたらしゃがむ");
+            Assert.That(hide.MoveTo, Is.Null);
+            Assert.That(hide.LookAt, Is.EqualTo(_player));
+            Assert.That(hide.Crouch, Is.True);
+            Assert.That(hide.Fire, Is.False);
+
+            Assert.That(brain.Tick(0.5f, Watches(at, _player, false)).Crouch, Is.True, "CoverHideSeconds 未満");
+
+            var peek = brain.Tick(0.5f, Watches(at, _player, true));
+            Assert.That(brain.CoverPhase, Is.EqualTo(EnemyCoverPhase.Peeking));
+            Assert.That(peek.Crouch, Is.False);
+            Assert.That(peek.Fire, Is.False, "覗いた瞬間には撃たない");
+            Assert.That(brain.ShotsInAttack, Is.Zero);
+
+            Assert.That(brain.Tick(0.25f, Watches(at, _player, true)).Fire, Is.False, "0.25 秒後");
+            Assert.That(brain.Tick(0.25f, Watches(at, _player, true)).Fire, Is.True, "ReactionSeconds 後");
+            Assert.That(brain.Tick(0.25f, Watches(at, _player, false)).Fire, Is.False, "見えていなければ撃たない");
+
+            var again = brain.Tick(0.25f, Watches(at, _player, true));
+            Assert.That(brain.CoverPhase, Is.EqualTo(EnemyCoverPhase.Hiding), "CoverPeekSeconds 経ったら隠れ直す");
+            Assert.That(again.Crouch, Is.True);
+            Assert.That(again.Fire, Is.False);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.TakeCover));
+        }
+
+        [Test]
+        public void BeingFlankedMovesToAnotherPoint()
+        {
+            var selector = new CoverPointSelector(new[] { _coverA, _coverB });
+            var brain = CoverBrain(selector, out var changes);
+            brain.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+            brain.Tick(0.1f, Watches(_coverA.Position, _player, false));
+            Assert.That(brain.CoverPhase, Is.EqualTo(EnemyCoverPhase.Hiding));
+
+            var flanker = new Vector3(12f, 0f, 2f);
+            var decision = brain.Tick(0.1f, Watches(_coverA.Position, flanker, true));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.TakeCover));
+            Assert.That(brain.CoverPhase, Is.EqualTo(EnemyCoverPhase.Moving));
+            Assert.That(brain.CoverPointIndex, Is.EqualTo(1));
+            Assert.That(decision.MoveTo, Is.EqualTo(_coverB.Position));
+            Assert.That(decision.LookAt, Is.EqualTo(flanker));
+            Assert.That(decision.Crouch, Is.False);
+            Assert.That(selector.IsOccupied(0), Is.False, "前の点を放す");
+            Assert.That(selector.IndexClaimedBy(brain), Is.EqualTo(1));
+            Assert.That(changes, Is.EqualTo(new[] { EnemyState.TakeCover }), "点を移っても状態は TakeCover のまま");
+        }
+
+        [Test]
+        public void BeingFlankedWithoutAnotherPointLeavesCoverAndFights()
+        {
+            var selector = new CoverPointSelector(new[] { _coverA });
+            var brain = CoverBrain(selector, out var changes);
+            brain.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+            brain.Tick(0.1f, Watches(_coverA.Position, _player, false));
+
+            var flanker = new Vector3(10f, 0f, 2f);
+            var decision = brain.Tick(0.1f, Watches(_coverA.Position, flanker, true));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Attack));
+            Assert.That(brain.CoverPhase, Is.EqualTo(EnemyCoverPhase.None));
+            Assert.That(brain.CoverPointIndex, Is.EqualTo(-1));
+            Assert.That(selector.IsOccupied(0), Is.False);
+            Assert.That(decision.LookAt, Is.EqualTo(flanker));
+            Assert.That(decision.Fire, Is.False, "Attack の反応時間は測り直す");
+            Assert.That(changes, Is.EqualTo(new[] { EnemyState.TakeCover, EnemyState.Attack }));
+        }
+
+        [Test]
+        public void DoesNotPickAPointAnotherEnemyUses()
+        {
+            var selector = new CoverPointSelector(new[] { _coverA, _coverC });
+            var first = CoverBrain(selector, out _);
+            var second = CoverBrain(selector, out _);
+
+            first.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+            var decision = second.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+
+            Assert.That(first.CoverPointIndex, Is.Zero);
+            Assert.That(second.CoverPointIndex, Is.EqualTo(1));
+            Assert.That(decision.MoveTo, Is.EqualTo(_coverC.Position));
+        }
+
+        [Test]
+        public void KillingReleasesThePoint()
+        {
+            var selector = new CoverPointSelector(new[] { _coverA });
+            var first = CoverBrain(selector, out _);
+            var second = CoverBrain(selector, out _);
+            first.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+
+            first.Kill();
+            second.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+
+            Assert.That(first.CoverPhase, Is.EqualTo(EnemyCoverPhase.None));
+            Assert.That(second.State, Is.EqualTo(EnemyState.TakeCover));
+            Assert.That(second.CoverPointIndex, Is.Zero);
+        }
+
+        [Test]
+        public void AbandoningTheWayToAPointPicksAnotherOne()
+        {
+            var selector = new CoverPointSelector(new[] { _coverA, _coverC });
+            var brain = CoverBrain(selector, out _);
+            brain.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+
+            Assert.That(brain.AbandonGoal(), Is.True);
+            var decision = brain.Tick(0.1f, Watches(Vector3.Zero, _player, false));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.TakeCover));
+            Assert.That(brain.CoverPointIndex, Is.EqualTo(1));
+            Assert.That(decision.MoveTo, Is.EqualTo(_coverC.Position));
+            Assert.That(selector.IsOccupied(0), Is.False);
+        }
+
+        [Test]
+        public void AbandoningAfterReachingThePointDoesNothing()
+        {
+            var brain = CoverBrain(new CoverPointSelector(new[] { _coverA }), out _);
+            brain.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+            brain.Tick(0.1f, Watches(_coverA.Position, _player, false));
+
+            Assert.That(brain.AbandonGoal(), Is.False);
+            Assert.That(brain.CoverPointIndex, Is.Zero);
+        }
+
+        [Test]
+        public void LosingTheTargetLeavesCoverAndGoesToWhereItWas()
+        {
+            var selector = new CoverPointSelector(new[] { _coverA });
+            var brain = CoverBrain(selector, out var changes);
+            brain.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+            brain.Tick(0.1f, Watches(_coverA.Position, _player, false));
+
+            var decision = brain.Tick(0.1f, Nothing(_coverA.Position));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+            Assert.That(decision.MoveTo, Is.EqualTo(_player));
+            Assert.That(decision.Crouch, Is.False);
+            Assert.That(selector.IsOccupied(0), Is.False);
+            Assert.That(changes, Is.EqualTo(new[] { EnemyState.TakeCover, EnemyState.Chase }));
+        }
+
+        [Test]
+        public void RemovingCoverPointsLeavesCover()
+        {
+            var selector = new CoverPointSelector(new[] { _coverA });
+            var brain = CoverBrain(selector, out _);
+            brain.Tick(0.1f, Shot(Vector3.Zero, _player, false));
+
+            brain.UseCover(null);
+            brain.Tick(0.1f, Watches(Vector3.Zero, _player, false));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+            Assert.That(selector.IsOccupied(0), Is.False);
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(1.1f)]
+        [TestCase(float.NaN)]
+        public void PerceptionRejectsInvalidHealth(float healthFraction)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => Wounded(Vector3.Zero, _player, healthFraction));
+        }
+
+        [TestCase(-1f, 1f, 0.5f)]
+        [TestCase(float.PositiveInfinity, 1f, 0.5f)]
+        [TestCase(1f, -1f, 0.5f)]
+        [TestCase(1f, float.NaN, 0.5f)]
+        [TestCase(1f, 1f, -0.1f)]
+        [TestCase(1f, 1f, 1.1f)]
+        public void SpecRejectsInvalidCoverValues(float hide, float peek, float health)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new EnemySpec(20f, 10f, 1f, 2f, 0f, 0f, 0f, 0, hide, peek, health));
+        }
+
         [TestCase(0f, 1f, 0f, 0f, 0f)]
         [TestCase(-1f, 1f, 0f, 0f, 0f)]
         [TestCase(float.NaN, 1f, 0f, 0f, 0f)]

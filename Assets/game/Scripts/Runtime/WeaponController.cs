@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// ヒットスキャン射撃。プレイヤーのカメラに付ける。Attack を押している間 <see cref="Weapon.TryFire"/> を呼び、
+    /// ヒットスキャン射撃。プレイヤーのカメラに付ける。Attack を武器の射撃モードに従って (Auto は押している間、Semi は押すたびに) <see cref="Weapon.TryFire"/> を呼び、
     /// 撃てたら画面中央が指す点へ <see cref="HitscanRange"/> まで Raycast して、当たったコライダーの <see cref="Hitbox"/> にダメージを渡す。
     /// 本体に <see cref="ViewRig"/> があれば始点は目で、三人称でもカメラではなくキャラの目から撃つ (<see cref="ViewRig.ResolveAim(float, out Vector3, out Vector3)"/>)。
     /// 無ければカメラの位置から正面へ撃つ。
@@ -138,11 +138,19 @@ namespace Fps.Runtime
                 StartReload();
             }
 
-            // 押している間は連射する。間隔は Weapon が FireInterval で制限する。
-            if (_attackAction.IsPressed())
-            {
-                Fire();
-            }
+            PullTrigger(_attackAction.IsPressed(), _attackAction.WasPressedThisFrame());
+        }
+
+        /// <summary>
+        /// Attack の入力を武器の <see cref="WeaponSpec.FireMode"/> で判断し (<see cref="FireTrigger.Wants"/>)、撃つなら <see cref="Fire"/> する。
+        /// Auto は押している間、Semi は押したフレームだけ撃つ。連射間隔は <see cref="Weapon"/> が制限する。撃てたら true。
+        /// </summary>
+        /// <param name="isPressed">Attack が押されているか。</param>
+        /// <param name="wasPressedThisFrame">Attack がこのフレームに押されたか。</param>
+        public bool PullTrigger(bool isPressed, bool wasPressedThisFrame)
+        {
+            EnsureInitialized();
+            return FireTrigger.Wants(_weapon.Spec.FireMode, isPressed, wasPressedThisFrame) && Fire();
         }
 
         /// <summary>

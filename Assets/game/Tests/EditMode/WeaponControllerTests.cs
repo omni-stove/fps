@@ -204,6 +204,60 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AutoWeaponKeepsFiringWhileTheTriggerIsHeld()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var full = _rifle.MagazineSize;
+
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 1}");
+            Assert.That(_controller.PullTrigger(true, true), Is.True);
+            Assert.That(_controller.PullTrigger(true, false), Is.False, "still within the fire interval");
+
+            _controller.Tick(_rifle.FireInterval);
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 2}");
+            Assert.That(_controller.PullTrigger(true, false), Is.True);
+
+            _controller.Tick(_rifle.FireInterval);
+            Assert.That(_controller.PullTrigger(false, false), Is.False, "released");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void SemiWeaponFiresOncePerPress()
+        {
+            var handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                handgun.name = "Handgun";
+                WeaponAssetBuilder.Configure(handgun, WeaponAssetBuilder.HandgunSpec());
+                Assert.That(handgun.FireMode, Is.EqualTo(Fps.Core.FireMode.Semi));
+                _controller.Initialize(_camera.transform, _attack, _reload, handgun);
+                var full = handgun.MagazineSize;
+
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 1}");
+                Assert.That(_controller.PullTrigger(true, true), Is.True);
+
+                // 連射間隔を過ぎても押し続けている間は 2 発目が出ない。
+                for (var i = 0; i < 5; i++)
+                {
+                    _controller.Tick(handgun.FireInterval);
+                    Assert.That(_controller.PullTrigger(true, false), Is.False);
+                }
+
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(full - 1));
+
+                Assert.That(_controller.PullTrigger(false, false), Is.False);
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 2}");
+                Assert.That(_controller.PullTrigger(true, true), Is.True, "pressed again");
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
         public void ReloadLogsWhenTheMagazineIsRefilled()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);

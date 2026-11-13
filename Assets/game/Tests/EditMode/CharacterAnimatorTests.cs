@@ -324,6 +324,165 @@ namespace Fps.Tests.EditMode
             Assert.That(_player.GetComponent<MeshRenderer>().enabled, Is.False, "the capsule stays hidden");
         }
 
+        // NetSceneBuilder の NetPlayer と同じく、本体にレンダラーは無く、当たりは CharacterController。
+        private static GameObject CreateNetworkBody(out FakeCharacterPoseSource source, out CharacterAnimator animator)
+        {
+            var body = new GameObject("NetBody");
+            body.transform.position = new Vector3(0f, 1f, 0f);
+            var controller = body.AddComponent<CharacterController>();
+            controller.height = 2f;
+            controller.radius = 0.5f;
+            controller.center = Vector3.zero;
+            source = body.AddComponent<FakeCharacterPoseSource>();
+            animator = body.AddComponent<CharacterAnimator>();
+            return body;
+        }
+
+        [Test]
+        public void BindsAPoseSourceWhenThereIsNoPlayerOrEnemy()
+        {
+            var body = CreateNetworkBody(out var source, out var animator);
+            try
+            {
+                source.WalkSpeed = 4f;
+                source.SprintSpeed = 7f;
+                source.CrouchSpeed = 2f;
+
+                Assert.That(animator.TryBind(), Is.True);
+
+                Assert.That(animator.Source, Is.EqualTo(CharacterAnimatorSource.Network));
+                Assert.That(animator.Pose.WalkSpeed, Is.EqualTo(4f));
+                Assert.That(animator.Pose.SprintSpeed, Is.EqualTo(7f));
+                Assert.That(animator.Pose.CrouchSpeed, Is.EqualTo(2f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(body);
+            }
+        }
+
+        [Test]
+        public void PoseSourceGetsTheSpeedFromThePositionChange()
+        {
+            var body = CreateNetworkBody(out var source, out var animator);
+            try
+            {
+                animator.TryBind();
+                animator.Refresh(0f);
+                Assert.That(source.LastSpeed, Is.EqualTo(0f));
+
+                // 0.1 秒で 0.5m は歩き (5 m/s)
+                body.transform.position += new Vector3(0.5f, 0f, 0f);
+                var walking = animator.Refresh(HorizontalSpeedMeter.DefaultWindowSeconds);
+                Assert.That(source.LastSpeed, Is.EqualTo(5f).Within(1e-3f));
+                Assert.That(walking.Speed, Is.EqualTo(CharacterPose.WalkSpeedValue).Within(1e-3f));
+
+                // 0.1 秒で 0.8m はダッシュ (8 m/s)
+                body.transform.position += new Vector3(0f, 0f, 0.8f);
+                var running = animator.Refresh(HorizontalSpeedMeter.DefaultWindowSeconds);
+                Assert.That(animator.MeasuredSpeed, Is.EqualTo(8f).Within(1e-3f));
+                Assert.That(running.Speed, Is.EqualTo(CharacterPose.RunSpeedValue).Within(1e-3f));
+
+                // 落ちるだけ (縦の移動) では足を動かさない
+                body.transform.position += new Vector3(0f, -1f, 0f);
+                Assert.That(animator.Refresh(HorizontalSpeedMeter.DefaultWindowSeconds).Speed, Is.EqualTo(CharacterPose.IdleSpeedValue));
+            }
+            finally
+            {
+                Object.DestroyImmediate(body);
+            }
+        }
+
+        [Test]
+        public void PoseSourceStateDrivesTheParameters()
+        {
+            var body = CreateNetworkBody(out var source, out var animator);
+            try
+            {
+                animator.TryBind();
+                source.Weapon = WeaponCategory.AssaultRifle;
+                source.Crouching = true;
+                source.Aiming = true;
+
+                var aiming = animator.Refresh(DeltaSeconds);
+                Assert.That(aiming.Crouch, Is.True);
+                Assert.That(aiming.Aim, Is.True);
+                Assert.That(aiming.WeaponCategory, Is.EqualTo((int)WeaponCategory.AssaultRifle));
+
+                source.Downed = true;
+                var downed = animator.Refresh(DeltaSeconds);
+                Assert.That(downed.Downed, Is.True);
+                Assert.That(downed.Crouch, Is.False);
+                Assert.That(downed.Aim, Is.False);
+
+                source.Dead = true;
+                Assert.That(animator.Refresh(DeltaSeconds).Dead, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(body);
+            }
+        }
+
+        [Test]
+        public void BuildRigUsesTheRigAlreadyUnderTheBodyAndKeepsIt()
+        {
+            var body = CreateNetworkBody(out _, out var animator);
+            try
+            {
+                // NetSceneBuilder がプレハブに置くリグと同じく、本体の直下の CharacterRig で、根に Animator を持つ
+                var placed = new GameObject(CharacterAnimator.RigObjectName);
+                placed.transform.SetParent(body.transform, false);
+                placed.AddComponent<Animator>();
+                var part = new GameObject("TorsoMesh");
+                part.transform.SetParent(placed.transform, false);
+                part.AddComponent<MeshFilter>();
+                part.AddComponent<MeshRenderer>();
+                animator.TryBind();
+                animator.RigPrefab = _rigPrefab;
+
+                Assert.That(animator.BuildRig(), Is.True);
+
+                Assert.That(animator.Rig, Is.SameAs(placed.transform));
+                Assert.That(animator.OwnsRig, Is.False);
+                Assert.That(animator.Animator, Is.SameAs(placed.GetComponent<Animator>()));
+                Assert.That(animator.Rig.localPosition, Is.EqualTo(new Vector3(0f, -1f, 0f)), "the rig stands on the capsule's feet");
+                Assert.That(body.transform.childCount, Is.EqualTo(1), "no second rig is placed from the prefab");
+
+                animator.Dismantle();
+
+                Assert.That(animator.IsBuilt, Is.False);
+                Assert.That(placed == null, Is.False, "the prefab's own rig is not destroyed");
+            }
+            finally
+            {
+                Object.DestroyImmediate(body);
+            }
+        }
+
+        [Test]
+        public void BuildRigPlacesThePrefabWhenTheChildHasNoAnimator()
+        {
+            var body = CreateNetworkBody(out _, out var animator);
+            try
+            {
+                var stray = new GameObject(CharacterAnimator.RigObjectName);
+                stray.transform.SetParent(body.transform, false);
+                animator.TryBind();
+                animator.RigPrefab = _rigPrefab;
+                LogAssert.Expect(LogType.Warning, new Regex(@"^\[CharacterAnimator\] 'NetBody' の子 'CharacterRig' の根に Animator がない"));
+
+                Assert.That(animator.BuildRig(), Is.True);
+
+                Assert.That(animator.Rig, Is.Not.SameAs(stray.transform));
+                Assert.That(animator.OwnsRig, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(body);
+            }
+        }
+
         [Test]
         public void EnemyStateDrivesTheParameters()
         {

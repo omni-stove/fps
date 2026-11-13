@@ -9,7 +9,9 @@ namespace Fps.Core
     /// 移動や視線判定（Raycast）は行わず、呼び出し側が決定を実行する。
     /// </summary>
     /// <remarks>
-    /// 目標が視線の通る SightRange 内にいれば Chase、AttackRange 内なら Attack（発見から ReactionSeconds 後に撃つ）。
+    /// 目標が視線の通る SightRange 内にいれば Chase、AttackRange 内なら Attack（Attack に入ってから ReactionSeconds 後に撃つ。
+    /// Chase で追っていた時間は数えないので、射程に入った瞬間には撃たない）。
+    /// 撃ち始めの数発は散らばりを大きくし、OpeningShots 発かけて絞る（<see cref="EnemySpec.SpreadDegreesForShot"/>）。
     /// 見失ったら最後に見た位置へ向かい、LoseSightSeconds 後に Search、SearchSeconds 後に Patrol（ルートが無ければ Idle）に戻る。
     /// Idle・Patrol・Search 中に音を聞いたら、その位置を Search する。
     /// </remarks>
@@ -27,12 +29,31 @@ namespace Fps.Core
         private Vector3 _lastSeen;
         private Vector3 _searchPoint;
         private float _reactionElapsed;
+        private int _shotsInAttack;
         private float _lostElapsed;
         private float _searchElapsed;
 
         public EnemySpec Spec => _spec;
         public EnemyState State { get; private set; } = EnemyState.Idle;
         public bool IsDead => State == EnemyState.Dead;
+
+        /// <summary>今の Attack に入ってから <see cref="RecordShot"/> で記録した発数。Attack に入るたびに 0 に戻る。</summary>
+        public int ShotsInAttack => _shotsInAttack;
+
+        /// <summary>次に撃つ弾の散らばりの半角 (度)。</summary>
+        public float NextShotSpreadDegrees => _spec.SpreadDegreesForShot(_shotsInAttack);
+
+        /// <summary>
+        /// 実際に 1 発撃ったことを記録し、次の弾の散らばりを絞る。
+        /// Fire の決定でも弾切れや連射間隔で撃てないことがあるので、撃てたかどうかは呼び出し側が伝える。
+        /// </summary>
+        public void RecordShot()
+        {
+            if (_shotsInAttack < int.MaxValue)
+            {
+                _shotsInAttack++;
+            }
+        }
 
         /// <summary>巡回で次に向かう地点の添字。ルートが無ければ 0。</summary>
         public int PatrolIndex => _routeIndex;
@@ -171,13 +192,21 @@ namespace Fps.Core
         /// <summary>目標が見えているときの Chase / Attack。</summary>
         private EnemyDecision Engage(float deltaSeconds, Vector3 self, Vector3 target)
         {
-            var alreadyEngaged = State == EnemyState.Chase || State == EnemyState.Attack;
-            _reactionElapsed = alreadyEngaged ? _reactionElapsed + deltaSeconds : 0f;
             _lostElapsed = 0f;
             _lastSeen = target;
 
             if (Vector3.Distance(self, target) <= _spec.AttackRange)
             {
+                if (State == EnemyState.Attack)
+                {
+                    _reactionElapsed += deltaSeconds;
+                }
+                else
+                {
+                    _reactionElapsed = 0f;
+                    _shotsInAttack = 0;
+                }
+
                 SetState(EnemyState.Attack);
                 return new EnemyDecision(null, target, _reactionElapsed >= _spec.ReactionSeconds);
             }
@@ -204,7 +233,6 @@ namespace Fps.Core
         {
             _searchPoint = point;
             _searchElapsed = 0f;
-            _reactionElapsed = 0f;
             _lostElapsed = 0f;
             SetState(EnemyState.Search);
         }

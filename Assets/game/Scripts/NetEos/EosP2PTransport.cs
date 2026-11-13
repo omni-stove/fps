@@ -401,7 +401,7 @@ namespace Fps.NetEos
         }
 
         /// <summary>
-        /// 接続の承認データを自分の ProductUserId にする。サーバーはこれで、切断して戻ってきた人を見分ける (NetConnectionKeys)。
+        /// 接続の承認データの鍵を自分の ProductUserId にする (版はそのまま)。サーバーはこれで、切断して戻ってきた人を見分ける (NetConnectionKeys)。
         /// Netcode は transport がつながった後に承認データを読んで送るので、つなぐ前に差し替えれば間に合う。
         /// </summary>
         private void UseUserIdAsRejoinKey(string userId)
@@ -418,7 +418,13 @@ namespace Fps.NetEos
                 return;
             }
 
-            manager.NetworkConfig.ConnectionData = RejoinKey.Encode(userId);
+            if (!ConnectionPayload.TryReplaceRejoinKey(manager.NetworkConfig.ConnectionData, userId, out var payload))
+            {
+                Debug.LogWarning("[Net] the connection payload was not built by NetworkSetup; keeping it as is");
+                return;
+            }
+
+            manager.NetworkConfig.ConnectionData = payload;
         }
 
         private bool Subscribe()

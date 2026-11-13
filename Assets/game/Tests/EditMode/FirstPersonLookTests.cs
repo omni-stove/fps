@@ -49,6 +49,28 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void SensitivityMultiplierScalesBothSensitivities()
+        {
+            Assert.That(_look.SensitivityMultiplier, Is.EqualTo(1f));
+            Assert.That(_look.EffectiveMouseSensitivity, Is.EqualTo(FirstPersonLook.DefaultMouseSensitivity));
+
+            _look.SensitivityMultiplier = 0.5f;
+
+            Assert.That(_look.EffectiveMouseSensitivity, Is.EqualTo(FirstPersonLook.DefaultMouseSensitivity * 0.5f));
+            Assert.That(_look.EffectiveStickSensitivity, Is.EqualTo(FirstPersonLook.DefaultStickSensitivity * 0.5f));
+            Assert.That(_look.MouseSensitivity, Is.EqualTo(FirstPersonLook.DefaultMouseSensitivity));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void SensitivityMultiplierRejectsInvalidValues(float multiplier)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _look.SensitivityMultiplier = multiplier);
+            Assert.That(_look.SensitivityMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void InitializeRejectsMissingReferences()
         {
             Assert.Throws<ArgumentNullException>(() => _look.Initialize(null, _action));

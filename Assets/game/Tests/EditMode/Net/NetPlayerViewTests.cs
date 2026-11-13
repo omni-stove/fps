@@ -59,12 +59,14 @@ namespace Fps.Net.Tests
             var listener = camera.GetComponent<AudioListener>();
             var look = player.GetComponent<FirstPersonLook>();
             var rig = player.GetComponent<ViewRig>();
+            var ads = player.GetComponent<AimDownSights>();
 
             // 何かの拍子に有効になっていても、オーナーでなければ止める
             camera.enabled = true;
             listener.enabled = true;
             look.enabled = true;
             rig.enabled = true;
+            ads.enabled = true;
 
             player.SetLocalView(NetStartup.ShouldEnableFirstPersonView(false, false, false));
 
@@ -72,6 +74,7 @@ namespace Fps.Net.Tests
             Assert.That(listener.enabled, Is.False);
             Assert.That(look.enabled, Is.False);
             Assert.That(rig.enabled, Is.False);
+            Assert.That(ads.enabled, Is.False);
             Assert.That(player.HasLocalView, Is.False);
             Assert.That(NetSpectatorCamera.LocalViewCount, Is.EqualTo(_localViewsBefore));
         }
@@ -105,6 +108,42 @@ namespace Fps.Net.Tests
             Assert.That(listener.enabled, Is.False);
             Assert.That(body.shadowCastingMode, Is.EqualTo(ShadowCastingMode.On));
             Assert.That(NetSpectatorCamera.LocalViewCount, Is.EqualTo(_localViewsBefore));
+        }
+
+        [Test]
+        public void OwnerViewZoomsWhileAimIsHeldWithoutTellingTheServer()
+        {
+            var player = InstantiatePlayer();
+            var camera = player.View.GetComponentInChildren<Camera>(true);
+            var look = player.GetComponent<FirstPersonLook>();
+            var ads = player.GetComponent<AimDownSights>();
+            var hip = camera.fieldOfView;
+            var aimDirection = player.AimDirection();
+
+            player.SetLocalView(true);
+            Assert.That(ads.enabled, Is.True);
+
+            var aim = new InputAction("Aim", InputActionType.Button);
+            try
+            {
+                // Edit Mode では Awake が走らないので、実行時に Awake が解決する参照をここで渡す
+                ads.Initialize(camera, look, aim);
+                ads.Tick(true, true, 1f);
+
+                // 試合も武器もまだ無いので、共通の初期値まで狭める
+                Assert.That(camera.fieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView).Within(1e-4f));
+                Assert.That(look.SensitivityMultiplier, Is.LessThan(1f));
+                Assert.That(Vector3.Distance(player.AimDirection(), aimDirection), Is.LessThan(1e-4f),
+                    "zooming does not move where the shot goes");
+
+                ads.Tick(false, false, 1f);
+                Assert.That(camera.fieldOfView, Is.EqualTo(hip).Within(1e-4f));
+                Assert.That(look.SensitivityMultiplier, Is.EqualTo(1f));
+            }
+            finally
+            {
+                aim.Dispose();
+            }
         }
 
         [Test]

@@ -110,6 +110,7 @@ namespace Fps.Tests.EditMode
             definition.FalloffStart = 15f;
             definition.FalloffEnd = 40f;
             definition.FalloffMinMultiplier = 0.6f;
+            definition.AdsFieldOfView = 55f;
 
             var spec = definition.ToSpec();
 
@@ -126,7 +127,17 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.Falloff.StartDistance, Is.EqualTo(15f));
             Assert.That(spec.Falloff.EndDistance, Is.EqualTo(40f));
             Assert.That(spec.Falloff.MinMultiplier, Is.EqualTo(0.6f));
+            Assert.That(spec.AdsFieldOfView, Is.EqualTo(55f));
             Assert.That(definition.ToSpec(), Is.Not.SameAs(spec));
+        }
+
+        [Test]
+        public void AnUnsetAdsFieldOfViewUsesTheCommonDefault()
+        {
+            var definition = NewDefinition("Unset", _rifleId);
+
+            Assert.That(definition.AdsFieldOfView, Is.EqualTo(WeaponDefinition.UnsetAdsFieldOfView));
+            Assert.That(definition.ToSpec().AdsFieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView));
         }
 
         [Test]
@@ -154,6 +165,7 @@ namespace Fps.Tests.EditMode
         [TestCase("FalloffStart", "")]
         [TestCase("FalloffEnd", "")]
         [TestCase("FalloffMinMultiplier", "")]
+        [TestCase("AdsFieldOfView", "")]
         public void ToSpecRejectsInvalidValuesWithTheAssetName(string field, string id)
         {
             var definition = NewDefinition("BrokenWeapon");
@@ -194,6 +206,9 @@ namespace Fps.Tests.EditMode
                     break;
                 case "FalloffMinMultiplier":
                     definition.FalloffMinMultiplier = 1.5f;
+                    break;
+                case "AdsFieldOfView":
+                    definition.AdsFieldOfView = 180f;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

@@ -62,6 +62,21 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void SprintIsHeldAndReleaseSprintNeedsAFreshPress()
+        {
+            Assert.That(_player.IsSprintActive, Is.False);
+            Assert.That(_player.UpdateSprint(true, true), Is.True);
+            Assert.That(_player.UpdateSprint(true, false), Is.True);
+
+            _player.ReleaseSprint();
+
+            Assert.That(_player.IsSprintActive, Is.False);
+            Assert.That(_player.UpdateSprint(true, false), Is.False, "holding Sprint through a release does not resume it");
+            Assert.That(_player.UpdateSprint(false, false), Is.False);
+            Assert.That(_player.UpdateSprint(true, true), Is.True);
+        }
+
+        [Test]
         public void TickBeforeInitializeThrows()
         {
             Assert.That(_player.IsInitialized, Is.False);

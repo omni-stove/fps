@@ -8,7 +8,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
-    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/>)
+    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
@@ -171,7 +171,8 @@ namespace Fps.Runtime
             {
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(
-                    _viewMode, WeaponDefinitions, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
+                    _viewMode, WeaponDefinitions, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon,
+                    out var ads, out var playerDamageable);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
@@ -183,7 +184,7 @@ namespace Fps.Runtime
 
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
-                    hudComponent, hudPanelSettings, rig);
+                    hudComponent, hudPanelSettings, rig, ads);
             }
             catch
             {
@@ -240,12 +241,14 @@ namespace Fps.Runtime
             out FirstPersonLook look,
             out PlayerController mover,
             out WeaponController weapon,
+            out AimDownSights ads,
             out Damageable damageable)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
-                ConfigurePlayer(player, viewMode, weaponDefinitions, out controller, out rig, out camera, out look, out mover, out weapon);
+                ConfigurePlayer(
+                    player, viewMode, weaponDefinitions, out controller, out rig, out camera, out look, out mover, out weapon, out ads);
 
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
@@ -270,7 +273,8 @@ namespace Fps.Runtime
             out Camera camera,
             out FirstPersonLook look,
             out PlayerController mover,
-            out WeaponController weapon)
+            out WeaponController weapon,
+            out AimDownSights ads)
         {
             mover = null;
             player.name = PlayerName;
@@ -350,6 +354,32 @@ namespace Fps.Runtime
                 throw new InvalidOperationException(
                     "WeaponController could not resolve its WeaponDefinitions, camera or Attack/Reload actions; see the error above");
             }
+
+            // カメラと FirstPersonLook を先に付けておくと、Play 中の AddComponent で走る Awake が自力で参照を解決できる。
+            ads = player.AddComponent<AimDownSights>();
+            if (Application.isPlaying && !ads.IsInitialized && !NetStartup.IsDedicatedServerBuild)
+            {
+                throw new InvalidOperationException(
+                    "AimDownSights could not resolve its camera, FirstPersonLook or Aim action; see the error above");
+            }
+
+            WireAds(ads, weapon, mover);
+        }
+
+        /// <summary>
+        /// ADS に今持っている武器の視野角を読ませ、覗き込み始めたらダッシュを解除させる。
+        /// Edit Mode ではどれも未初期化のままのことがあるが、読むのは実行時なので配線だけしておく。
+        /// </summary>
+        private static void WireAds(AimDownSights ads, WeaponController weapon, PlayerController mover)
+        {
+            ads.WeaponSource = () => weapon != null && weapon.Weapon != null ? weapon.Weapon.Spec : null;
+            ads.AimingChanged += aiming =>
+            {
+                if (aiming && mover != null)
+                {
+                    mover.ReleaseSprint();
+                }
+            };
         }
 
         /// <summary>index 番目 (0 始まり、左から) の標的ダミーの名前。</summary>
@@ -470,6 +500,9 @@ namespace Fps.Runtime
         public Light Light { get; }
         public WeaponController Weapon { get; }
 
+        /// <summary>プレイヤーの覗き込み (ADS)。</summary>
+        public AimDownSights Ads { get; }
+
         /// <summary>標的ダミーをまとめた親。</summary>
         public GameObject TargetRoot { get; }
 
@@ -499,9 +532,11 @@ namespace Fps.Runtime
             Damageable playerDamageable,
             Hud hud,
             PanelSettings hudPanelSettings,
-            ViewRig rig = null)
+            ViewRig rig = null,
+            AimDownSights ads = null)
         {
             Rig = rig;
+            Ads = ads;
             Hud = hud;
             HudPanelSettings = hudPanelSettings;
             Floor = floor;

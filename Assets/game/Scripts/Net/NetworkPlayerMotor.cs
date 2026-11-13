@@ -97,6 +97,9 @@ namespace Fps.Net
         private InputAction _sprintAction;
         private readonly List<InputAction> _enabledActions = new List<InputAction>();
         private bool _jumpLatched;
+
+        // ReleaseSprint の後は押し直すまでダッシュしない。tick の進まないフレームの押下も拾うよう、フレームごとに更新する
+        private readonly HoldToggleState _sprintState = new HoldToggleState(HoldMode.Hold);
         private PredictionBuffer<MotorInput, MotorState> _prediction;
 
         // サーバー
@@ -123,6 +126,18 @@ namespace Fps.Net
 
         /// <summary>予測の履歴。オーナーのクライアント以外では null。</summary>
         public PredictionBuffer<MotorInput, MotorState> Prediction => _prediction;
+
+        /// <summary>次の入力でダッシュを送るか。オーナー以外では常に false。</summary>
+        public bool IsSprintActive => _sprintState.IsActive;
+
+        /// <summary>
+        /// ダッシュを外から解除する (ADS を始めたときなど)。ボタンを押し続けていても、押し直すまでダッシュを送らない。
+        /// サーバーは送られた入力どおりに動かすだけなので、解除はオーナーの入力の側で行う。
+        /// </summary>
+        public void ReleaseSprint()
+        {
+            _sprintState.Release();
+        }
 
         private void Awake()
         {
@@ -232,6 +247,15 @@ namespace Fps.Net
                 _jumpLatched = true;
             }
 
+            if (_sprintAction != null)
+            {
+                _sprintState.Update(_sprintAction.IsPressed(), _sprintAction.WasPressedThisFrame());
+            }
+            else
+            {
+                _sprintState.Release();
+            }
+
             var ticks = _clock.Advance(deltaSeconds);
             var firstTick = _clock.CurrentTick - ticks + 1;
             for (var i = 0; i < ticks; i++)
@@ -243,7 +267,7 @@ namespace Fps.Net
         private MotorInput SampleInput()
         {
             var move = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
-            var sprint = _sprintAction != null && _sprintAction.IsPressed();
+            var sprint = _sprintState.IsActive;
             var jump = _jumpLatched;
             _jumpLatched = false;
 
@@ -593,6 +617,7 @@ namespace Fps.Net
             _moveAction = null;
             _jumpAction = null;
             _sprintAction = null;
+            _sprintState.Release();
             _prediction = null;
             _remoteHistory = null;
             _remoteYawHistory = null;

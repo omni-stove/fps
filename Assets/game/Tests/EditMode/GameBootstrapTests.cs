@@ -281,6 +281,49 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AdsZoomsToTheHeldWeaponAndStopsTheSprint()
+        {
+            var ads = _world.Ads;
+            Assert.That(ads, Is.Not.Null);
+            Assert.That(ads, Is.SameAs(_world.Player.GetComponent<AimDownSights>()));
+
+            var aim = new InputAction("Aim", InputActionType.Button);
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
+            try
+            {
+                // Edit Mode では Awake が走らないので、実行時に Awake が解決する参照をここで渡す。
+                ads.Initialize(_world.Camera, _world.Look, aim);
+                _world.Weapon.Initialize(_world.Camera.transform, attack, reload);
+                var hip = _world.Camera.fieldOfView;
+
+                Assert.That(_world.Mover.UpdateSprint(true, true), Is.True);
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(true));
+                ads.Tick(true, true, 1f);
+
+                Assert.That(_world.Mover.IsSprintActive, Is.False, "aiming down sights stops the sprint");
+                Assert.That(_world.Mover.UpdateSprint(true, false), Is.False, "holding Sprint does not resume it");
+                Assert.That(_world.Camera.fieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView).Within(1e-4f));
+                Assert.That(_world.Look.SensitivityMultiplier, Is.LessThan(1f));
+
+                Assert.That(_world.Weapon.SelectNext(), Is.True);
+                ads.Tick(true, false, 0f);
+                Assert.That(_world.Camera.fieldOfView, Is.EqualTo(WeaponAssetBuilder.HandgunAdsFieldOfView).Within(1e-4f));
+
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(false));
+                ads.Tick(false, false, 1f);
+                Assert.That(_world.Camera.fieldOfView, Is.EqualTo(hip).Within(1e-4f));
+                Assert.That(_world.Look.SensitivityMultiplier, Is.EqualTo(1f));
+            }
+            finally
+            {
+                aim.Dispose();
+                attack.Dispose();
+                reload.Dispose();
+            }
+        }
+
+        [Test]
         public void PlacesFiveTargetDummiesInARowInFrontOfThePlayer()
         {
             var targets = _world.Targets;

@@ -30,8 +30,15 @@ namespace Fps.Editor
         public const string RifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
         public const string HandgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
 
+        /// <summary>rifle を覗き込み切ったときの縦の視野角 (度)。共通の初期値 (<see cref="AdsZoom.DefaultFieldOfView"/>) より狭く、遠くを狙いやすくする。</summary>
+        public const float RifleAdsFieldOfView = 45f;
+
+        /// <summary>handgun を覗き込み切ったときの縦の視野角 (度)。近距離で使うので rifle より広い。</summary>
+        public const float HandgunAdsFieldOfView = 55f;
+
         /// <summary>
-        /// rifle の値 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰)。
+        /// rifle の値 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰、
+        /// ADS の視野角 <see cref="RifleAdsFieldOfView"/>)。
         /// オフラインのプレイヤー (<see cref="WeaponController"/>) と、配置でこの Id を指定した敵 (<see cref="EnemyAgent"/>) が使う。
         /// </summary>
         public static WeaponSpec RifleSpec()
@@ -47,7 +54,8 @@ namespace Fps.Editor
                 2f,
                 25,
                 100f,
-                new DamageFalloff(20f, 60f, 0.5f));
+                new DamageFalloff(20f, 60f, 0.5f),
+                RifleAdsFieldOfView);
         }
 
         /// <summary>
@@ -115,7 +123,10 @@ namespace Fps.Editor
             return definition;
         }
 
-        /// <summary>handgun の値 (Handgun、Semi、12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰)。</summary>
+        /// <summary>
+        /// handgun の値 (Handgun、Semi、12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰、
+        /// ADS の視野角 <see cref="HandgunAdsFieldOfView"/>)。
+        /// </summary>
         public static WeaponSpec HandgunSpec()
         {
             return new WeaponSpec(
@@ -129,7 +140,8 @@ namespace Fps.Editor
                 1.5f,
                 34,
                 60f,
-                new DamageFalloff(15f, 40f, 0.6f));
+                new DamageFalloff(15f, 40f, 0.6f),
+                HandgunAdsFieldOfView);
         }
 
         /// <summary>
@@ -265,6 +277,7 @@ namespace Fps.Editor
             definition.FalloffStart = spec.Falloff.StartDistance;
             definition.FalloffEnd = spec.Falloff.EndDistance;
             definition.FalloffMinMultiplier = spec.Falloff.MinMultiplier;
+            definition.AdsFieldOfView = spec.AdsFieldOfView;
 
             // spec は検査済みだが、アセットの形で読み直せることも確かめる。不正なら保存しない。
             definition.ToSpec();

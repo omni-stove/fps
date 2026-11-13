@@ -233,7 +233,7 @@ namespace Fps.Editor
 
             source.AddComponent<NetPlayer>();
 
-            // やられ演出。ルールが Killer のときだけ、自分のプレイヤーで倒れてからリスポーンまでカメラを動かす
+            // やられ演出。ルールが None 以外のとき、自分のプレイヤーで倒れてからリスポーンまでカメラを動かす (相手・味方・自由カメラ)
             source.AddComponent<NetDeathCamera>();
 
             // 弾倉・予備弾・リロード。弾数はサーバーが持ち、持ち主にだけ同期する

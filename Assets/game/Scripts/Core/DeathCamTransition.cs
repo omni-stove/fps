@@ -18,7 +18,7 @@ namespace Fps.Core
         /// <summary>自分の視点 (カメラ) が無くなったので止めた。</summary>
         ViewLost,
 
-        /// <summary>ルールが <see cref="DeathCamera.Killer"/> でなくなったので止めた。</summary>
+        /// <summary>ルールが <see cref="DeathCamera.None"/> になったので止めた。</summary>
         RuleDisabled,
     }
 }

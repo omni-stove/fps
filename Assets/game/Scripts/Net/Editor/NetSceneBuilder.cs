@@ -127,7 +127,8 @@ namespace Fps.Editor
 
         /// <summary>
         /// 視点を足す。pitch を回す目 (<see cref="NetPlayer.ViewName"/>) を目の高さに置き、その子 (<see cref="NetPlayer.ViewCameraName"/>) に
-        /// カメラと AudioListener を付け、本体に視点の土台 <see cref="ViewRig"/> (<see cref="PlayerViewMode"/>) と yaw を回す <see cref="FirstPersonLook"/> を付ける。
+        /// カメラと AudioListener を付け、本体に視点の土台 <see cref="ViewRig"/> (<see cref="PlayerViewMode"/>) と yaw を回す <see cref="FirstPersonLook"/>、
+        /// 覗き込みの <see cref="AimDownSights"/> を付ける。
         /// どれも無効にしておき、自分のプレイヤーでだけ <see cref="NetPlayer"/> が生成時に有効にする (他人のカメラが映ったり音を拾ったりしない)。
         /// </summary>
         private static void AddView(GameObject source)
@@ -153,6 +154,9 @@ namespace Fps.Editor
             rig.Initialize(view.transform, camera);
             rig.Mode = PlayerViewMode;
             source.AddComponent<FirstPersonLook>().enabled = false;
+
+            // 覗き込みもカメラを持つ自分のプレイヤーでだけ動かす。参照と入力の解決は実行時の Awake に任せる
+            source.AddComponent<AimDownSights>().enabled = false;
         }
 
         private static GameObject CreateMatchSource(LoadoutDefinition loadout)

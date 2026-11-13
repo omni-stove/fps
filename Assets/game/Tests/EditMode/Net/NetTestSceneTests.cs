@@ -254,6 +254,10 @@ namespace Fps.Net.Tests
             Assert.That(listener.enabled, Is.False);
             Assert.That(look.enabled, Is.False);
             Assert.That(rig.enabled, Is.False);
+
+            var ads = prefab.GetComponent<Fps.Runtime.AimDownSights>();
+            Assert.That(ads, Is.Not.Null, "NetPlayer has no AimDownSights; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(ads.enabled, Is.False, "only the own player zooms its camera");
         }
 
         [Test]

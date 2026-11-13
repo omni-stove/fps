@@ -295,7 +295,7 @@ namespace Fps.Core
             // _match.Tick より先に回すのは、この Tick で時間切れになっても終わるまでの分は回復させるため
             if (State == GameModeState.Playing)
             {
-                TickRegeneration(deltaSeconds);
+                TickRegeneration(Math.Min(deltaSeconds, _match.RemainingSeconds));
             }
 
             // 終わった後は時間を進めないので何も起きない

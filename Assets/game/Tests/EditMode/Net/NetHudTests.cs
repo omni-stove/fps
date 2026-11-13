@@ -165,6 +165,28 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void InfiniteReserveShowsInfinityWhicheverArrivesFirst()
+        {
+            _netHud.BindMatch(_match);
+            var infinite = new NetMatchRules(DeathBody.Vanish, DeathCamera.None, RespawnMode.Individual, true);
+
+            // 武器の状態が先に届き、ルールが後から届く
+            Arrive(_weapon.StateVariable, default, new NetWeaponState(30, 0, false, 0, 1, false));
+            Assert.That(_view.AmmoLabel.text, Is.EqualTo("30 / 0"));
+            Arrive(_match.RulesVariable, NetMatchRules.Default, infinite);
+            Assert.That(_view.AmmoLabel.text, Is.EqualTo("30 / " + HudFormat.InfiniteReserve));
+
+            // ルールが届いた後の弾数の変化とリロードも ∞ のまま
+            Arrive(_weapon.StateVariable, new NetWeaponState(30, 0, false, 0, 1, false), new NetWeaponState(0, 0, true, 0, 1, false));
+            Assert.That(_view.AmmoLabel.text, Is.EqualTo(HudFormat.Ammo(0, 0, true, true)));
+            Assert.That(_view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.True);
+
+            // 次の試合で有限に戻れば数を出す
+            Arrive(_match.RulesVariable, infinite, NetMatchRules.Default);
+            Assert.That(_view.AmmoLabel.text, Is.EqualTo(HudFormat.Ammo(0, 0, true)));
+        }
+
+        [Test]
         public void TimeFollowsTheRemainingSeconds()
         {
             _netHud.BindMatch(_match);

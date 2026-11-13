@@ -18,6 +18,7 @@ namespace Fps.Tests.EditMode
             _host = new FakeHost();
             MenuNavigator.Host = _host;
             MenuNavigator.TakeLobbyRequest();
+            MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
         }
 
@@ -26,12 +27,14 @@ namespace Fps.Tests.EditMode
         {
             MenuNavigator.Host = null;
             MenuNavigator.TakeLobbyRequest();
+            MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
             Time.timeScale = 1f;
         }
 
         [TestCase(MenuDestination.Campaign, MenuRoute.CampaignScene)]
         [TestCase(MenuDestination.Range, MenuRoute.RangeScene)]
+        [TestCase(MenuDestination.Tutorial, MenuRoute.RangeScene)]
         [TestCase(MenuDestination.CreateLobby, MenuRoute.NetScene)]
         [TestCase(MenuDestination.JoinLobby, MenuRoute.NetScene)]
         public void GoLoadsTheDestinationScene(MenuDestination destination, string scene)
@@ -56,6 +59,41 @@ namespace Fps.Tests.EditMode
 
             MenuNavigator.Go(MenuDestination.Range);
             Assert.That(MenuNavigator.PendingLobby.IsRequested, Is.False, "an offline scene clears an unused request");
+        }
+
+        [Test]
+        public void TutorialLeavesTheRequestForTheRangeOnce()
+        {
+            MenuNavigator.Go(MenuDestination.Tutorial);
+
+            Assert.That(MenuNavigator.PendingTutorial, Is.True);
+            Assert.That(MenuNavigator.TakeTutorialRequest(), Is.True);
+            Assert.That(MenuNavigator.TakeTutorialRequest(), Is.False, "the request is handed over only once");
+
+            MenuNavigator.Go(MenuDestination.Tutorial);
+            MenuNavigator.Go(MenuDestination.Range);
+            Assert.That(MenuNavigator.PendingTutorial, Is.False, "the plain range clears an unused request");
+        }
+
+        [Test]
+        public void TutorialLeavesNoRequestWhenTheRangeIsNotInTheBuild()
+        {
+            _host.Missing.Add(MenuRoute.RangeScene);
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(MenuRoute.RangeScene) + ".*not in the build settings"));
+
+            Assert.That(MenuNavigator.Go(MenuDestination.Tutorial), Is.False);
+
+            Assert.That(MenuNavigator.PendingTutorial, Is.False);
+        }
+
+        [Test]
+        public void ReturnToMenuDropsAnUnusedTutorialRequest()
+        {
+            MenuNavigator.Go(MenuDestination.Tutorial);
+
+            Assert.That(MenuNavigator.ReturnToMenu(), Is.True);
+
+            Assert.That(MenuNavigator.PendingTutorial, Is.False);
         }
 
         [Test]

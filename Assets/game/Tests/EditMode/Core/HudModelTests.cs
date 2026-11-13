@@ -399,6 +399,68 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void HidingTheReserveRewritesTheShownAmmoToTheMagazineOnly()
+        {
+            var model = new HudModel();
+            model.SetAmmo(12, 48, false, true);
+            var changes = Record(model);
+
+            model.SetReserveAmmoShown(false);
+            Assert.That(model.ShowsReserveAmmo, Is.False);
+            Assert.That(model.AmmoText, Is.EqualTo("12"));
+
+            model.SetAmmo(0, 48, true, false);
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Reloading));
+            Assert.That(model.IsReloading, Is.True);
+
+            model.SetReserveAmmoShown(true);
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(0, 48, true)));
+
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo, HudField.Ammo, HudField.Ammo }));
+        }
+
+        [Test]
+        public void HidingTheReserveFollowsTheBoundWeapon()
+        {
+            var model = new HudModel();
+            model.SetReserveAmmoShown(false);
+            var weapon = NewWeapon();
+
+            model.BindWeapon(weapon);
+            Assert.That(model.AmmoText, Is.EqualTo("30"));
+
+            weapon.TryFire();
+            Assert.That(model.AmmoText, Is.EqualTo("29"));
+        }
+
+        [Test]
+        public void HidingTheReserveWithoutAWeaponShowsTheMagazinePlaceholder()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetReserveAmmoShown(false);
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoMagazine));
+
+            model.SetReserveAmmoShown(false);
+            model.SetReserveAmmoShown(true);
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo, HudField.Ammo }));
+        }
+
+        [Test]
+        public void HidingTheReserveStillRejectsANegativeReserve()
+        {
+            var model = new HudModel();
+            model.SetReserveAmmoShown(false);
+            model.SetAmmo(5, 10, false);
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetAmmo(5, -1, false));
+            Assert.That(model.AmmoText, Is.EqualTo("5"));
+        }
+
+        [Test]
         public void SetTimeNotifiesOnlyWhenTheShownSecondChanges()
         {
             var model = new HudModel();

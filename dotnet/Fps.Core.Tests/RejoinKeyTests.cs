@@ -6,13 +6,13 @@ namespace Fps.Core.Tests
 {
     public sealed class RejoinKeyTests
     {
-        private const string ProductUserId = "0123456789abcdef0123456789abcdef";
+        private const string _productUserId = "0123456789abcdef0123456789abcdef";
 
         [Test]
         public void RoundTripsAProductUserId()
         {
-            Assert.That(RejoinKey.TryDecode(RejoinKey.Encode(ProductUserId), out var key), Is.True);
-            Assert.That(key, Is.EqualTo(ProductUserId));
+            Assert.That(RejoinKey.TryDecode(RejoinKey.Encode(_productUserId), out var key), Is.True);
+            Assert.That(key, Is.EqualTo(_productUserId));
         }
 
         [Test]

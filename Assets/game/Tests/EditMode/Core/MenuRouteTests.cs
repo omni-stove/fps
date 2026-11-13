@@ -29,6 +29,30 @@ namespace Fps.Core.Tests
             Assert.That(transition.Kind, Is.EqualTo(MenuTransitionKind.LoadScene));
             Assert.That(transition.ScenePath, Is.EqualTo(MenuRoute.RangeScene));
             Assert.That(transition.Lobby.IsRequested, Is.False);
+            Assert.That(transition.StartsTutorial, Is.False, "the range shows the tutorial only until it has been finished");
+        }
+
+        [Test]
+        public void TutorialLoadsTheRangeAndAsksForTheTutorial()
+        {
+            var transition = MenuRoute.Plan(MenuDestination.Tutorial);
+
+            Assert.That(transition.Kind, Is.EqualTo(MenuTransitionKind.LoadScene));
+            Assert.That(transition.ScenePath, Is.EqualTo(MenuRoute.RangeScene));
+            Assert.That(transition.Lobby.IsRequested, Is.False);
+            Assert.That(transition.StartsTutorial, Is.True);
+            Assert.That(transition.ToString(), Does.EndWith(" tutorial"));
+        }
+
+        [Test]
+        public void OnlyTheTutorialAsksForTheTutorial()
+        {
+            foreach (var destination in MenuRoute.Destinations)
+            {
+                Assert.That(MenuRoute.Plan(destination).StartsTutorial, Is.EqualTo(destination == MenuDestination.Tutorial), destination.ToString());
+            }
+
+            Assert.That(MenuRoute.BackToMenu().StartsTutorial, Is.False);
         }
 
         [Test]
@@ -110,6 +134,8 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentException>(() => MenuTransition.Load(null));
             Assert.Throws<ArgumentException>(() => MenuTransition.Load(" "));
             Assert.That(MenuTransition.Load(MenuRoute.RangeScene, null).Lobby, Is.SameAs(LobbyLaunchOptions.None));
+            Assert.That(MenuTransition.Load(MenuRoute.RangeScene).StartsTutorial, Is.False);
+            Assert.That(MenuTransition.Quit.StartsTutorial, Is.False);
         }
 
         [TestCase("Fps.app")]

@@ -15,6 +15,9 @@ namespace Fps.Core
         /// <summary>射撃場 (Bootstrap)。</summary>
         Range,
 
+        /// <summary>射撃場 (Bootstrap) で、終えたことがあってもチュートリアルを最初から出す。</summary>
+        Tutorial,
+
         /// <summary>ゲームを終える。</summary>
         Quit,
     }

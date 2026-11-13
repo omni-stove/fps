@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
+using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
@@ -16,6 +17,7 @@ namespace Fps.Tests.EditMode
         private MainMenuScreen _screen;
         private VisualElement _root;
         private RecordingHost _host;
+        private LoadoutPreferenceStore _store;
 
         [SetUp]
         public void SetUp()
@@ -27,15 +29,35 @@ namespace Fps.Tests.EditMode
             _screen = _owner.AddComponent<MainMenuScreen>();
             _host = new RecordingHost();
             MenuNavigator.Host = _host;
+
+            // 本物の選択 (LoadoutPreferenceStore.DefaultKey) を壊さないよう、テストごとに別のキーを使う
+            _store = new LoadoutPreferenceStore("Fps.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"));
+            _screen.LoadoutStore = _store;
         }
 
         [TearDown]
         public void TearDown()
         {
+            _store.Delete();
             MenuNavigator.Host = null;
             MenuNavigator.TakeLobbyRequest();
+            MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
             UnityEngine.Object.DestroyImmediate(_owner);
+        }
+
+        [Test]
+        public void TheTutorialButtonSitsNextToTheRangeAndOpensTheRangeWithTheTutorial()
+        {
+            var names = MainMenuScreen.ButtonNames.ToList();
+            Assert.That(names.IndexOf(MainMenuScreen.TutorialButtonName), Is.EqualTo(names.IndexOf(MainMenuScreen.RangeButtonName) + 1));
+
+            _screen.Bind(_root);
+
+            Assert.That(_screen.Choose(MenuDestination.Tutorial), Is.True);
+
+            Assert.That(_host.Loaded, Is.EqualTo(new[] { MenuRoute.RangeScene }));
+            Assert.That(MenuNavigator.TakeTutorialRequest(), Is.True);
         }
 
         [Test]
@@ -68,9 +90,10 @@ namespace Fps.Tests.EditMode
         [Test]
         public void EveryDestinationHasAButton()
         {
-            // 設定は遷移ではないので行き先の一覧には無く、ボタンだけがある
-            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 1));
+            // 設定とロードアウトは遷移ではないので行き先の一覧には無く、ボタンだけがある
+            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 2));
             Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.SettingsButtonName));
+            Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.LoadoutButtonName));
             Assert.That(MainMenuScreen.ButtonNames, Is.Unique);
         }
 
@@ -164,6 +187,76 @@ namespace Fps.Tests.EditMode
             Assert.That(_screen.SettingsSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
             Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.SettingsButtonName)));
             Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+        }
+
+        [Test]
+        public void LoadoutWithoutAssetsOnlyShowsANotice()
+        {
+            _screen.Bind(_root);
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Loadout\] cannot open the loadout screen"));
+
+            _screen.OpenLoadout();
+
+            Assert.That(_screen.IsLoadoutOpen, Is.False);
+            Assert.That(_screen.Notice, Does.StartWith(MainMenuScreen.LoadoutUnavailableNotice));
+            Assert.That(_screen.LoadoutSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+        }
+
+        [Test]
+        public void LoadoutShowsTheSlotsAndSavesTheChoice()
+        {
+            using (var assets = new LoadoutTestAssets())
+            {
+                _screen.Loadout = assets.Loadout;
+                _screen.Catalog = assets.Catalog;
+                _screen.Bind(_root);
+
+                _screen.OpenLoadout();
+
+                Assert.That(_screen.IsLoadoutOpen, Is.True);
+                Assert.That(_screen.LoadoutPanel.Container, Is.SameAs(_screen.LoadoutSlot));
+                Assert.That(_screen.LoadoutSlot.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+                Assert.That(_screen.Buttons.All(b => !b.enabledSelf), Is.True);
+                Assert.That(_screen.Choose(MenuDestination.Range), Is.False, "the menu does not move while the loadout is open");
+                Assert.That(_host.Loaded, Is.Empty);
+
+                _screen.LoadoutPanel.Select(0, 1);
+                Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
+
+                var expected = new[] { LoadoutTestAssets.SmgId, WeaponAssetBuilder.HandgunId };
+                Assert.That(_store.Load(), Is.EqualTo(expected));
+                Assert.That(_screen.IsLoadoutOpen, Is.False);
+                Assert.That(_screen.LoadoutSlot.childCount, Is.Zero);
+                Assert.That(_screen.LoadoutSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+                Assert.That(_screen.Notice, Is.EqualTo(LoadoutFormat.Saved));
+                Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.LoadoutButtonName)));
+                Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+
+                // 次に開いたとき (再起動後も同じ PlayerPrefs から) 前に選んだ並びが選ばれている
+                _screen.OpenLoadout();
+                Assert.That(_screen.LoadoutPanel.Selection.WeaponIds, Is.EqualTo(expected));
+                Assert.That(_screen.LoadoutPanel.Selection.RestoredPreference, Is.True);
+            }
+        }
+
+        [Test]
+        public void ClosingTheLoadoutWithoutConfirmingSavesNothing()
+        {
+            using (var assets = new LoadoutTestAssets())
+            {
+                _screen.Loadout = assets.Loadout;
+                _screen.Catalog = assets.Catalog;
+                _screen.Bind(_root);
+                _screen.OpenLoadout();
+                _screen.LoadoutPanel.Select(0, 1);
+
+                _screen.CloseLoadout();
+
+                Assert.That(_store.Load(), Is.Null);
+                Assert.That(_screen.IsLoadoutOpen, Is.False);
+                Assert.That(_screen.Notice, Is.Null);
+            }
         }
 
         private sealed class RecordingHost : IMenuSceneHost

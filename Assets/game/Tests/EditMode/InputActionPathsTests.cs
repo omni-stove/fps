@@ -32,6 +32,7 @@ namespace Fps.Tests.EditMode
         [TestCase(InputActionPaths.Scoreboard)]
         [TestCase(InputActionPaths.Dodge)]
         [TestCase(InputActionPaths.Grenade)]
+        [TestCase(InputActionPaths.NetStats)]
         public void EveryPathExistsInTheProjectWideActions(string path)
         {
             Find(path);
@@ -57,6 +58,24 @@ namespace Fps.Tests.EditMode
                 }
 
                 Assert.That(other.bindings, Has.None.Matches<InputBinding>(b => b.path == key || b.path == gamepad), other.name);
+            }
+        }
+
+        [Test]
+        public void NetStatsIsAButtonOnlyOnF3()
+        {
+            var action = Find(InputActionPaths.NetStats);
+
+            Assert.That(action.type, Is.EqualTo(InputActionType.Button));
+            Assert.That(action.bindings, Has.Exactly(1).Matches<InputBinding>(b => b.path == "<Keyboard>/f3" && b.groups == "Keyboard&Mouse"));
+            Assert.That(action.bindings, Has.None.Matches<InputBinding>(b => b.groups != null && b.groups.Contains("Gamepad")), "no gamepad button is free");
+
+            foreach (var other in action.actionMap.actions)
+            {
+                if (other != action)
+                {
+                    Assert.That(other.bindings, Has.None.Matches<InputBinding>(b => b.path == "<Keyboard>/f3"), other.name);
+                }
             }
         }
 

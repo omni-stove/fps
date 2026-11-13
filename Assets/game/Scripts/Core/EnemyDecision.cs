@@ -19,11 +19,20 @@ namespace Fps.Core
         /// <summary>この tick に撃つか。</summary>
         public bool Fire { get; }
 
+        /// <summary>この tick にしゃがむか。</summary>
+        public bool Crouch { get; }
+
         public EnemyDecision(Vector3? moveTo, Vector3? lookAt, bool fire)
+            : this(moveTo, lookAt, fire, false)
+        {
+        }
+
+        public EnemyDecision(Vector3? moveTo, Vector3? lookAt, bool fire, bool crouch)
         {
             MoveTo = moveTo;
             LookAt = lookAt;
             Fire = fire;
+            Crouch = crouch;
         }
     }
 }

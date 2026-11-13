@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 
 namespace Fps.Core
@@ -22,13 +23,44 @@ namespace Fps.Core
         /// <summary>聞いた音の位置。HeardNoise が false なら使われない。</summary>
         public Vector3? NoisePosition { get; }
 
+        /// <summary>前の tick からこの tick までに撃たれたか。</summary>
+        public bool WasHit { get; }
+
+        /// <summary>撃った者の位置。分からなければ null。WasHit が false なら使われない。</summary>
+        public Vector3? HitSource { get; }
+
+        /// <summary>今の体力の割合。0 以上 1 以下。</summary>
+        public float HealthFraction { get; }
+
         public EnemyPerception(Vector3 self, Vector3? target, bool hasLineOfSight, bool heardNoise, Vector3? noisePosition)
+            : this(self, target, hasLineOfSight, heardNoise, noisePosition, false, null, 1f)
         {
+        }
+
+        /// <exception cref="ArgumentOutOfRangeException">healthFraction が 0 以上 1 以下でないとき。</exception>
+        public EnemyPerception(
+            Vector3 self,
+            Vector3? target,
+            bool hasLineOfSight,
+            bool heardNoise,
+            Vector3? noisePosition,
+            bool wasHit,
+            Vector3? hitSource,
+            float healthFraction)
+        {
+            if (!(healthFraction >= 0f) || healthFraction > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(healthFraction), healthFraction, "healthFraction must be between 0 and 1");
+            }
+
             Self = self;
             Target = target;
             HasLineOfSight = hasLineOfSight;
             HeardNoise = heardNoise;
             NoisePosition = noisePosition;
+            WasHit = wasHit;
+            HitSource = hitSource;
+            HealthFraction = healthFraction;
         }
     }
 }

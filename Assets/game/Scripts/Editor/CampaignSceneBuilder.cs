@@ -222,7 +222,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 定義アセットとシーンを既定の場所に生成し、シーンを Build Settings に加える。
+        /// 定義アセットとシーンを既定の場所に生成し、シーンを Build Settings に加え、ミッションの一覧 (<see cref="MissionCatalogBuilder"/>) も作り直す。
         /// 失敗したら例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
         /// </summary>
         [MenuItem(MenuPath)]
@@ -236,6 +236,7 @@ namespace Fps.Editor
             }
 
             BuildAt(ScenePath, DefinitionPath, NavMeshDataPath);
+            MissionCatalogBuilder.Build();
         }
 
         /// <summary>definitionPath に定義を、navMeshDataPath に焼いた NavMesh を、scenePath にシーンを生成・保存する。</summary>
@@ -384,7 +385,7 @@ namespace Fps.Editor
 
                 var exit = CreateArea(scene, ExitObjectName, ExitPosition, ExitPadScale, ReachExitId, runner);
 
-                // セーブの置き場所は CampaignRunner が実行時に FileSaveStorage.CreateDefault (スロット "campaign") で決める。
+                // セーブの置き場所は CampaignRunner が実行時に FileSaveStorage.CreateDefault (スロットはミッション Id ごと) で決める。
                 // プレイヤーは GameBootstrap が実行時に作るので、CampaignRunner は GameBootstrap から受け取る。
                 var campaignObject = new GameObject(CampaignRunnerObjectName);
                 SceneManager.MoveGameObjectToScene(campaignObject, scene);

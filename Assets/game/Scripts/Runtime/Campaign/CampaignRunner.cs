@@ -12,19 +12,22 @@ namespace Fps.Runtime
     /// キャンペーンのセーブと再開を受け持つ。
     /// <list type="bullet">
     /// <item><see cref="CheckpointTrigger"/> から <see cref="SaveAt"/> を呼ばれたら、ミッションの進み具合・プレイヤーの体力・弾数・
-    /// チェックポイントの Id から <see cref="CampaignSave"/> を作り、スロット <see cref="SaveSlot"/> に書く。</item>
+    /// チェックポイントの Id から <see cref="CampaignSave"/> を作り、ミッションごとのスロット <see cref="SaveSlot"/>
+    /// (<see cref="CampaignSaveSlots.For"/>) に書く。</item>
     /// <item>プレイヤーが倒れたら <see cref="ReloadDelaySeconds"/> 秒後にシーンを読み直す。</item>
     /// <item>始めるときにセーブがあれば、ミッションの進み具合・チェックポイントの位置・体力・弾数を戻す。
-    /// 別のミッションのセーブや壊れたセーブは警告を出して無視し、最初から始める。</item>
-    /// <item>ミッションを達成したらセーブを消す。</item>
+    /// 別のミッションのセーブや壊れたセーブは警告を出して無視し、最初から始める。
+    /// ミッションごとのスロットが無ければ、<see cref="CampaignSaveSlots.LegacyMissionId"/> だけは古いスロット <see cref="CampaignSaveSlots.Legacy"/> も読み、
+    /// 戻せたらミッションごとのスロットへ移す。</item>
+    /// <item>ミッションを達成したらセーブ (古いスロットも) を消す。</item>
     /// </list>
     /// Start で <see cref="MissionRunner"/> と <see cref="GameBootstrap"/> (どちらも Inspector で指定しなければシーンから) を拾い、
     /// GameBootstrap がプレイヤーを作り終えていればすぐ、まだなら <see cref="GameBootstrap.Built"/> を待って始める。
     /// トリガーより先にミッションを戻すため、既定の実行順より前に Start を走らせる。
     /// セーブの場所 (<see cref="Storage"/>) とシーンの読み直し (<see cref="SceneReloader"/>) は差し替えられる。
     /// セーブしたことと再開までの秒数は <see cref="Notice"/> に出し、GameBootstrap の HUD があればそこに表示する。
-    /// 始めるときにルール (<see cref="RulesDefinition"/>、コマンドライン引数 <c>-difficulty easy|normal|hard</c> があれば
-    /// <see cref="EasyRules"/> / <see cref="NormalRules"/> / <see cref="HardRules"/>) を読み、プレイヤーの自動回復 (<see cref="HealthRegen"/>) と
+    /// 始めるときにルール (メニューの選択 <see cref="CampaignLaunchSelection.Current"/> かコマンドライン引数 <c>-difficulty easy|normal|hard</c> があれば
+    /// <see cref="EasyRules"/> / <see cref="NormalRules"/> / <see cref="HardRules"/>、無ければ <see cref="RulesDefinition"/>) を読み、プレイヤーの自動回復 (<see cref="HealthRegen"/>) と
     /// 武器の予備弾 (<see cref="WeaponController.ApplyRules"/>) に効かせてからセーブを戻す。セーブの予備弾には倍率を掛け直さない。
     /// 同じルールの <see cref="GameRules.DeathBody"/> で、シーンの敵と標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も決める。
     /// 状態の変化は <see cref="LogTag"/> を付けて Debug.Log に出す。
@@ -34,9 +37,6 @@ namespace Fps.Runtime
     public sealed class CampaignRunner : MonoBehaviour
     {
         public const string LogTag = "[Campaign]";
-
-        /// <summary>キャンペーンのセーブを置くスロット名。</summary>
-        public const string SaveSlot = "campaign";
 
         public const float DefaultReloadDelaySeconds = 3f;
 
@@ -53,16 +53,16 @@ namespace Fps.Runtime
         private float _reloadDelaySeconds = DefaultReloadDelaySeconds;
 
         [Header("ルール")]
-        [SerializeField, Tooltip("-difficulty が無いときのルール。空なら GameRules.Default を使い警告を出す。シーン生成スクリプトが CampaignNormal を配線する")]
+        [SerializeField, Tooltip("難易度を選ばずに始めたときのルール。空なら GameRules.Default を使い警告を出す。シーン生成スクリプトが CampaignNormal を配線する")]
         private GameRulesDefinition _rules;
 
-        [SerializeField, Tooltip("-difficulty easy のときのルール (CampaignEasy)")]
+        [SerializeField, Tooltip("Easy を選んだとき (メニューか -difficulty easy) のルール (CampaignEasy)")]
         private GameRulesDefinition _easyRules;
 
-        [SerializeField, Tooltip("-difficulty normal のときのルール (CampaignNormal)")]
+        [SerializeField, Tooltip("Normal を選んだとき (メニューか -difficulty normal) のルール (CampaignNormal)")]
         private GameRulesDefinition _normalRules;
 
-        [SerializeField, Tooltip("-difficulty hard のときのルール (CampaignHard)")]
+        [SerializeField, Tooltip("Hard を選んだとき (メニューか -difficulty hard) のルール (CampaignHard)")]
         private GameRulesDefinition _hardRules;
 
         private IReadOnlyList<string> _launchArgs;
@@ -71,6 +71,7 @@ namespace Fps.Runtime
         private Action _sceneReloader;
         private Mission _mission;
         private string _missionId;
+        private string _saveSlot;
         private Damageable _player;
         private WeaponController _weapon;
         private string _lastCheckpointId = string.Empty;
@@ -117,28 +118,28 @@ namespace Fps.Runtime
             set => _bootstrap = value;
         }
 
-        /// <summary><c>-difficulty</c> が無いときに使うルール。null なら <see cref="GameRules.Default"/> を使い、開始時に警告を出す。</summary>
+        /// <summary>難易度を選ばずに始めたときに使うルール。null なら <see cref="GameRules.Default"/> を使い、開始時に警告を出す。</summary>
         public GameRulesDefinition RulesDefinition
         {
             get => _rules;
             set => _rules = value;
         }
 
-        /// <summary><c>-difficulty easy</c> のときに使うルール。</summary>
+        /// <summary>Easy を選んだときに使うルール。</summary>
         public GameRulesDefinition EasyRules
         {
             get => _easyRules;
             set => _easyRules = value;
         }
 
-        /// <summary><c>-difficulty normal</c> のときに使うルール。</summary>
+        /// <summary>Normal を選んだときに使うルール。</summary>
         public GameRulesDefinition NormalRules
         {
             get => _normalRules;
             set => _normalRules = value;
         }
 
-        /// <summary><c>-difficulty hard</c> のときに使うルール。</summary>
+        /// <summary>Hard を選んだときに使うルール。</summary>
         public GameRulesDefinition HardRules
         {
             get => _hardRules;
@@ -199,6 +200,9 @@ namespace Fps.Runtime
 
         /// <summary>セーブとの照合に使うミッションの Id (MissionDefinition のアセット名)。開始前は null。</summary>
         public string MissionId => _missionId;
+
+        /// <summary>このミッションのセーブを置くスロット (<see cref="CampaignSaveSlots.For"/>)。開始前は null。</summary>
+        public string SaveSlot => _saveSlot;
 
         /// <summary>最後にセーブした (または再開した) チェックポイントの Id。無ければ空文字。</summary>
         public string LastCheckpointId => _lastCheckpointId;
@@ -294,7 +298,7 @@ namespace Fps.Runtime
         /// <summary>
         /// world (GameBootstrap の生成物) のプレイヤーと、<see cref="Runner"/> (null ならシーンの MissionRunner) で <see cref="Begin"/> し、
         /// world に HUD があれば <see cref="Notice"/> を出させる。セーブの置き場所は <see cref="Storage"/>、無ければ
-        /// <see cref="FileSaveStorage.CreateDefault"/> のスロット <see cref="SaveSlot"/>。ルールは <see cref="TryResolveRules"/> で決める。
+        /// <see cref="FileSaveStorage.CreateDefault"/>。ルールは <see cref="TryResolveRules"/> で決める。
         /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryBeginWith(BootstrapWorld world)
@@ -316,7 +320,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            if (!TryResolveRules(out var rules))
+            if (!TryResolveRules(runner.Definition != null ? runner.Definition.name : string.Empty, out var rules))
             {
                 return false;
             }
@@ -347,28 +351,56 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 開始時に使うルールを決める。<see cref="LaunchArgs"/> に <c>-difficulty</c> があればその難易度のルール
-        /// (<see cref="RulesFor"/>)、無ければ <see cref="RulesDefinition"/>。
-        /// <list type="bullet">
-        /// <item>引数が読めない (値が無い・知らない難易度など) ときは警告を出し、<c>-difficulty</c> が無いものとして扱う。</item>
-        /// <item>選んだ難易度のルールが配線されていないときはエラーを出し、<see cref="RulesDefinition"/> を使う。</item>
-        /// <item>使うルールが無ければ警告を出して <see cref="GameRules.Default"/>。</item>
+        /// 開始時に使うルールを決める。難易度は次の順に探し、見つかればその難易度のルール (<see cref="RulesFor"/>)、
+        /// どれも無ければ <see cref="RulesDefinition"/> を使う。
+        /// <list type="number">
+        /// <item>メニューの選択 <see cref="CampaignLaunchSelection.Current"/>。ミッション Id が missionId と違えば警告を出して使わない。</item>
+        /// <item><see cref="LaunchArgs"/> の <c>-difficulty</c>。読めない (値が無い・知らない難易度など) ときは警告を出し、無いものとして扱う。</item>
         /// </list>
+        /// 選んだ難易度のルールが配線されていないときはエラーを出し、<see cref="RulesDefinition"/> を使う。
+        /// 使うルールが無ければ警告を出して <see cref="GameRules.Default"/>。
         /// 使うルールの値が不正なら理由を Debug.LogError に出して false (rules は null)。
         /// </summary>
-        public bool TryResolveRules(out GameRules rules)
+        /// <param name="missionId">このシーンのミッションの Id (MissionDefinition のアセット名)。選択と照合する。</param>
+        public bool TryResolveRules(string missionId, out GameRules rules)
         {
-            var args = _launchArgs ?? Environment.GetCommandLineArgs();
-            if (!CampaignLaunchOptions.TryParse(args, out var options, out var parseError))
+            CampaignDifficulty? difficulty = null;
+            string difficultySource = null;
+
+            var launch = CampaignLaunchSelection.Current;
+            if (launch != null)
             {
-                Debug.LogWarning($"{LogTag} コマンドライン引数を無視します ({parseError})。シーンに配線したルールを使います。", this);
-                options = CampaignLaunchOptions.None;
+                if (string.Equals(launch.MissionId, missionId, StringComparison.Ordinal))
+                {
+                    difficulty = launch.Difficulty;
+                    difficultySource = "CampaignLaunch";
+                    Debug.Log($"{LogTag} launch mission={launch.MissionId} difficulty={CampaignLaunchOptions.DifficultyName(launch.Difficulty)}", this);
+                }
+                else
+                {
+                    Debug.LogWarning(
+                        $"{LogTag} メニューで選んだミッション '{launch.MissionId}' がこのシーンのミッション '{missionId}' と違うため、選んだ難易度を使いません。",
+                        this);
+                }
+            }
+
+            if (!difficulty.HasValue)
+            {
+                var args = _launchArgs ?? Environment.GetCommandLineArgs();
+                if (!CampaignLaunchOptions.TryParse(args, out var options, out var parseError))
+                {
+                    Debug.LogWarning($"{LogTag} コマンドライン引数を無視します ({parseError})。シーンに配線したルールを使います。", this);
+                    options = CampaignLaunchOptions.None;
+                }
+
+                difficulty = options.Difficulty;
+                difficultySource = CampaignLaunchOptions.DifficultyFlag;
             }
 
             var definition = _rules;
-            if (options.Difficulty.HasValue)
+            if (difficulty.HasValue)
             {
-                var chosen = RulesFor(options.Difficulty.Value);
+                var chosen = RulesFor(difficulty.Value);
                 if (chosen != null)
                 {
                     definition = chosen;
@@ -376,10 +408,12 @@ namespace Fps.Runtime
                 else
                 {
                     Debug.LogError(
-                        $"{LogTag} {CampaignLaunchOptions.DifficultyFlag} {options} のルールが '{name}' に配線されていないため、既定のルールを使います。シーン生成スクリプトで配線してください。",
+                        $"{LogTag} {difficultySource} {CampaignLaunchOptions.DifficultyName(difficulty.Value)} のルールが '{name}' に配線されていないため、既定のルールを使います。シーン生成スクリプトで配線してください。",
                         this);
                 }
             }
+
+            var difficultyName = difficulty.HasValue ? CampaignLaunchOptions.DifficultyName(difficulty.Value) : "(none)";
 
             string source;
             if (definition == null)
@@ -401,7 +435,7 @@ namespace Fps.Runtime
             }
 
             Debug.Log(
-                $"{LogTag} rules={source} difficulty={options} regen={rules.RegenPerSecond.ToString("0.##", CultureInfo.InvariantCulture)}/s after {rules.RegenDelaySeconds.ToString("0.##", CultureInfo.InvariantCulture)}s reserve=x{rules.ReserveAmmoMultiplier.ToString("0.##", CultureInfo.InvariantCulture)} infinite={rules.InfiniteReserve}",
+                $"{LogTag} rules={source} difficulty={difficultyName} regen={rules.RegenPerSecond.ToString("0.##", CultureInfo.InvariantCulture)}/s after {rules.RegenDelaySeconds.ToString("0.##", CultureInfo.InvariantCulture)}s reserve=x{rules.ReserveAmmoMultiplier.ToString("0.##", CultureInfo.InvariantCulture)} infinite={rules.InfiniteReserve}",
                 this);
             return true;
         }
@@ -498,6 +532,15 @@ namespace Fps.Runtime
                 throw new ArgumentException($"MissionRunner '{missionRunner.name}' cannot start its mission", nameof(missionRunner));
             }
 
+            var missionId = missionRunner.Definition != null ? missionRunner.Definition.name : string.Empty;
+            if (!CampaignLaunch.IsValidMissionId(missionId))
+            {
+                throw new ArgumentException(
+                    $"MissionRunner '{missionRunner.name}' has mission id '{missionId}', which cannot name a save slot "
+                    + $"(use 1-{CampaignLaunch.MaxMissionIdLength} letters, digits, '_' or '-' in the MissionDefinition's asset name)",
+                    nameof(missionRunner));
+            }
+
             if (rules != null)
             {
                 ApplyRules(player, weapon, rules);
@@ -506,7 +549,8 @@ namespace Fps.Runtime
 
             _activeRules = rules;
             _mission = missionRunner.Mission;
-            _missionId = missionRunner.Definition != null ? missionRunner.Definition.name : string.Empty;
+            _missionId = missionId;
+            _saveSlot = CampaignSaveSlots.For(missionId);
             _player = player;
             _weapon = weapon;
             _storage = storage;
@@ -566,7 +610,7 @@ namespace Fps.Runtime
 
             try
             {
-                _storage.Write(SaveSlot, save.ToJson());
+                _storage.Write(_saveSlot, save.ToJson());
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
@@ -632,6 +676,7 @@ namespace Fps.Runtime
 
             _mission = null;
             _missionId = null;
+            _saveSlot = null;
             _player = null;
             _weapon = null;
             _activeRules = null;
@@ -691,10 +736,17 @@ namespace Fps.Runtime
         /// <summary>セーブがあれば今のシーンに戻す。戻せたら true。戻せないときは理由をログに出し、最初からの状態のままにする。</summary>
         private bool TryRestore()
         {
-            if (!_storage.TryRead(SaveSlot, out var text))
+            var fromLegacy = false;
+            if (!_storage.TryRead(_saveSlot, out var text))
             {
-                Debug.Log($"{LogTag} no save; starting mission={_missionId} from the beginning", this);
-                return false;
+                if (!CampaignSaveSlots.ReadsLegacy(_missionId) || !_storage.TryRead(CampaignSaveSlots.Legacy, out text))
+                {
+                    Debug.Log($"{LogTag} no save; starting mission={_missionId} from the beginning", this);
+                    return false;
+                }
+
+                fromLegacy = true;
+                Debug.Log($"{LogTag} reading the legacy save slot={CampaignSaveSlots.Legacy} for mission={_missionId}", this);
             }
 
             CampaignSave save;
@@ -743,8 +795,36 @@ namespace Fps.Runtime
             {
                 DeleteSave();
             }
+            else if (fromLegacy)
+            {
+                MigrateLegacySave(text);
+            }
 
             return true;
+        }
+
+        /// <summary>
+        /// 古いスロットから戻せたセーブを、ミッションごとのスロットへ書いてから古いスロットを消す。
+        /// 書けなければ古いスロットを残す (次も古いスロットから再開できる)。
+        /// </summary>
+        private void MigrateLegacySave(string text)
+        {
+            try
+            {
+                _storage.Write(_saveSlot, text);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogError(
+                    $"{LogTag} failed to move the legacy save slot={CampaignSaveSlots.Legacy} to slot={_saveSlot}; keeping the legacy slot: {e.Message}",
+                    this);
+                return;
+            }
+
+            if (TryDeleteSlot(CampaignSaveSlots.Legacy))
+            {
+                Debug.Log($"{LogTag} migrated save slot={CampaignSaveSlots.Legacy} to slot={_saveSlot}", this);
+            }
         }
 
         /// <summary>ログ用の「Id:弾倉/予備」をカンマで並べた文字列。</summary>
@@ -852,14 +932,29 @@ namespace Fps.Runtime
         private void DeleteSave()
         {
             _passedCheckpointIds.Clear();
+            if (TryDeleteSlot(_saveSlot))
+            {
+                Debug.Log($"{LogTag} deleted save slot={_saveSlot}", this);
+            }
+
+            // 移す前に書けなかった古いスロットが残っていると、達成した後にまた途中から再開してしまう。
+            if (CampaignSaveSlots.ReadsLegacy(_missionId))
+            {
+                TryDeleteSlot(CampaignSaveSlots.Legacy);
+            }
+        }
+
+        private bool TryDeleteSlot(string slot)
+        {
             try
             {
-                _storage.Delete(SaveSlot);
-                Debug.Log($"{LogTag} deleted save slot={SaveSlot}", this);
+                _storage.Delete(slot);
+                return true;
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                Debug.LogError($"{LogTag} failed to delete save slot={SaveSlot}: {e.Message}", this);
+                Debug.LogError($"{LogTag} failed to delete save slot={slot}: {e.Message}", this);
+                return false;
             }
         }
 

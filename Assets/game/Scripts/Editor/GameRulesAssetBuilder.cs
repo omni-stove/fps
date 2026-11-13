@@ -38,7 +38,8 @@ namespace Fps.Editor
                 DeathBody.Collapse,
                 DeathCamera.Killer,
                 false,
-                1f);
+                1f,
+                Destruction.Off);
         }
 
         /// <summary>キャンペーン (易)。味方撃ちなし、個別リスポーン、3 秒後から毎秒 25 回復、体は倒れる、死亡カメラなし、予備弾は有限で 1.5 倍。</summary>
@@ -53,7 +54,8 @@ namespace Fps.Editor
                 DeathBody.Collapse,
                 DeathCamera.None,
                 false,
-                1.5f);
+                1.5f,
+                Destruction.Off);
         }
 
         /// <summary>キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、体だけ倒れるようにし、予備弾の倍率を 1 にしたもの。</summary>
@@ -80,7 +82,8 @@ namespace Fps.Editor
                 DeathBody.Vanish,
                 DeathCamera.None,
                 true,
-                1f);
+                1f,
+                Destruction.Off);
         }
 
         /// <summary>path の <see cref="GameRulesDefinition"/> を読み、<see cref="GameRulesDefinition.ToRules"/> に通ることを確かめて返す。</summary>
@@ -180,7 +183,8 @@ namespace Fps.Editor
                 deathBody,
                 source.DeathCamera,
                 source.InfiniteReserve,
-                reserveAmmoMultiplier);
+                reserveAmmoMultiplier,
+                Destruction.Off);
         }
     }
 }

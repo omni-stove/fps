@@ -243,7 +243,7 @@ namespace Fps.Tests.EditMode
                 25,
                 100f,
                 DamageFalloff.None,
-                adsFieldOfView);
+                adsFieldOfView: adsFieldOfView);
         }
     }
 }

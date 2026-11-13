@@ -40,6 +40,9 @@ namespace Fps.Core
         /// <summary>距離によるダメージ減衰。null にならない。</summary>
         public DamageFalloff Falloff { get; }
 
+        /// <summary>建造物に当たったときに被害を広げる半径 (m)。0 なら当たった物だけ。0 以上の有限値。</summary>
+        public float ExplosionRadius { get; }
+
         /// <summary>
         /// 覗き込み (ADS) し切ったときのカメラの縦の視野角 (度)。0 より大きく 180 未満。
         /// 生成時に指定しなければ <see cref="AdsZoom.DefaultFieldOfView"/>。クライアントの見た目にだけ使い、サーバーは見ない。
@@ -57,6 +60,7 @@ namespace Fps.Core
         /// <param name="damage">1 発あたりのダメージ。0 以上。</param>
         /// <param name="range">射程 (m)。0 より大きい有限値。</param>
         /// <param name="falloff">距離減衰。null 不可 (減衰しないなら <see cref="DamageFalloff.None"/>)。</param>
+        /// <param name="explosionRadius">建造物への被害を広げる半径 (m)。0 以上の有限値。</param>
         /// <param name="adsFieldOfView">ADS し切ったときの視野角 (度)。0 より大きく 180 未満。null なら <see cref="AdsZoom.DefaultFieldOfView"/>。</param>
         public WeaponSpec(
             string id,
@@ -70,6 +74,7 @@ namespace Fps.Core
             int damage,
             float range,
             DamageFalloff falloff,
+            float explosionRadius = 0f,
             float? adsFieldOfView = null)
         {
             var normalizedId = NormalizeId(id);
@@ -114,6 +119,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(range), range, "range must be positive and finite");
             }
 
+            if (!IsNonNegativeFinite(explosionRadius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(explosionRadius), explosionRadius, "explosionRadius must be a non-negative finite number");
+            }
+
             if (adsFieldOfView.HasValue)
             {
                 AdsZoom.ValidateFieldOfView(adsFieldOfView.Value, nameof(adsFieldOfView));
@@ -130,6 +140,7 @@ namespace Fps.Core
             Damage = damage;
             Range = range;
             Falloff = falloff ?? throw new ArgumentNullException(nameof(falloff));
+            ExplosionRadius = explosionRadius;
             AdsFieldOfView = adsFieldOfView ?? AdsZoom.DefaultFieldOfView;
         }
 

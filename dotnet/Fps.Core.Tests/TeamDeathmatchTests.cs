@@ -22,7 +22,7 @@ namespace Fps.Core.Tests
         private static GameRules RulesWith(RespawnMode respawnMode, float waveIntervalSeconds = GameRules.DefaultWaveIntervalSeconds)
         {
             return new GameRules(
-                FriendlyFire.Off, respawnMode, waveIntervalSeconds, 0f, 0f, DeathBody.Vanish, DeathCamera.None, false, 1f);
+                FriendlyFire.Off, respawnMode, waveIntervalSeconds, 0f, 0f, DeathBody.Vanish, DeathCamera.None, false, 1f, Destruction.Off);
         }
 
         private static TeamDeathmatch CreateStarted(

@@ -425,7 +425,22 @@ namespace Fps.Net
                 _rewindTargets.Clear();
             }
 
-            if (!any || !hit.HitTarget || !_playerById.TryGetValue(hit.TargetId, out var victim) || victim == null)
+            if (!any)
+            {
+                return;
+            }
+
+            if (!hit.HitTarget)
+            {
+                if (_session.Spec.Rules.Destruction == Destruction.On)
+                {
+                    StructureDamage.Apply(hit.RaycastHit.collider, hit.RaycastHit.point, spec.Damage, spec.ExplosionRadius);
+                }
+
+                return;
+            }
+
+            if (!_playerById.TryGetValue(hit.TargetId, out var victim) || victim == null)
             {
                 return;
             }

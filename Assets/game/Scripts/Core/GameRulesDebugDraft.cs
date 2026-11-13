@@ -19,28 +19,28 @@ namespace Fps.Core
         /// </summary>
         public const int DefaultGrenadeCount = 3;
 
-        private const string GrenadeCountName = "GrenadeCount";
+        private const string _grenadeCountName = "GrenadeCount";
 
-        private static readonly string[] BoolOptions = { "Off", "On" };
+        private static readonly string[] _boolOptions = { "Off", "On" };
 
-        private static readonly GameRulesDebugField[] AllFields = (GameRulesDebugField[])Enum.GetValues(typeof(GameRulesDebugField));
+        private static readonly GameRulesDebugField[] _allFields = (GameRulesDebugField[])Enum.GetValues(typeof(GameRulesDebugField));
 
-        private static readonly IReadOnlyList<GameRulesDebugField> ReadOnlyFields = Array.AsReadOnly(AllFields);
+        private static readonly IReadOnlyList<GameRulesDebugField> _readOnlyFields = Array.AsReadOnly(_allFields);
 
-        private readonly int[] _values = new int[AllFields.Length];
+        private readonly int[] _values = new int[_allFields.Length];
 
         /// <param name="baseRules">初期値と、パネルに出さない項目の値を取るルール。</param>
         public GameRulesDebugDraft(GameRules baseRules)
         {
             Base = baseRules ?? throw new ArgumentNullException(nameof(baseRules));
-            foreach (var field in AllFields)
+            foreach (var field in _allFields)
             {
                 _values[(int)field] = Read(baseRules, field);
             }
         }
 
         /// <summary>パネルに出す項目。<see cref="GameRulesDebugField"/> の定義順。</summary>
-        public static IReadOnlyList<GameRulesDebugField> Fields => ReadOnlyFields;
+        public static IReadOnlyList<GameRulesDebugField> Fields => _readOnlyFields;
 
         /// <summary>初期値と、パネルに出さない項目の値を取るルール。</summary>
         public GameRules Base { get; }
@@ -52,7 +52,7 @@ namespace Fps.Core
         public static IReadOnlyList<string> Options(GameRulesDebugField field)
         {
             var type = EnumTypeOf(field);
-            return type == null ? BoolOptions : Enum.GetNames(type);
+            return type == null ? _boolOptions : Enum.GetNames(type);
         }
 
         /// <summary>
@@ -174,7 +174,7 @@ namespace Fps.Core
             }
 
             var changes = new List<string>();
-            foreach (var field in AllFields)
+            foreach (var field in _allFields)
             {
                 var from = Read(before, field);
                 var to = Read(after, field);
@@ -187,7 +187,7 @@ namespace Fps.Core
 
             if (before.Actions.GrenadeCount != after.Actions.GrenadeCount)
             {
-                changes.Add($"{GrenadeCountName}: {before.Actions.GrenadeCount} -> {after.Actions.GrenadeCount}");
+                changes.Add($"{_grenadeCountName}: {before.Actions.GrenadeCount} -> {after.Actions.GrenadeCount}");
             }
 
             return changes;
@@ -210,7 +210,7 @@ namespace Fps.Core
         private static int IndexOf(GameRulesDebugField field)
         {
             var index = (int)field;
-            if (index < 0 || index >= AllFields.Length)
+            if (index < 0 || index >= _allFields.Length)
             {
                 throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a defined GameRulesDebugField");
             }

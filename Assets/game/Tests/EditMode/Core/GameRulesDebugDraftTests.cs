@@ -7,6 +7,21 @@ namespace Fps.Core.Tests
     /// <summary><see cref="GameRulesDebugDraft"/> がパネルの値から上書き用の <see cref="GameRules"/> を組み立て、変えた項目を書き出すことを確かめる。</summary>
     public sealed class GameRulesDebugDraftTests
     {
+        private static readonly string[] _offOn = { "Off", "On" };
+        private static readonly string[] _friendlyFireOptions = { "Off", "On", "Reflect" };
+        private static readonly string[] _respawnModeOptions = { "Individual", "Wave", "None" };
+        private static readonly string[] _deathCameraOptions = { "None", "Killer", "Ally", "Free" };
+        private static readonly string[] _hudDensityOptions = { "Full", "Minimal", "Hardcore" };
+        private static readonly string[] _downedOptions = { "Off", "Revive" };
+
+        private static readonly string[] _expectedChanges =
+        {
+            "InfiniteReserve: Off -> On",
+            "Downed: Off -> Revive",
+            "Cover: Off -> On",
+            "HudDensity: Full -> Hardcore",
+        };
+
         // パネルに出さない項目も既定と違う値にしておき、Build がそれらを元のまま残すことまで見分けられるようにする。
         private static readonly ActionRules _actions = new ActionRules(
             Downed.Revive, 20f, 0.5f, 4f, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, 2);
@@ -76,12 +91,12 @@ namespace Fps.Core.Tests
         [Test]
         public void OptionsMatchTheValuesOfEachField()
         {
-            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.InfiniteReserve), Is.EqualTo(new[] { "Off", "On" }));
-            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.FriendlyFire), Is.EqualTo(new[] { "Off", "On", "Reflect" }));
-            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.RespawnMode), Is.EqualTo(new[] { "Individual", "Wave", "None" }));
-            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.DeathCamera), Is.EqualTo(new[] { "None", "Killer", "Ally", "Free" }));
-            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.HudDensity), Is.EqualTo(new[] { "Full", "Minimal", "Hardcore" }));
-            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.Downed), Is.EqualTo(new[] { "Off", "Revive" }));
+            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.InfiniteReserve), Is.EqualTo(_offOn));
+            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.FriendlyFire), Is.EqualTo(_friendlyFireOptions));
+            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.RespawnMode), Is.EqualTo(_respawnModeOptions));
+            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.DeathCamera), Is.EqualTo(_deathCameraOptions));
+            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.HudDensity), Is.EqualTo(_hudDensityOptions));
+            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.Downed), Is.EqualTo(_downedOptions));
         }
 
         [Test]
@@ -236,13 +251,7 @@ namespace Fps.Core.Tests
 
             var changes = GameRulesDebugDraft.Changes(GameRules.Default, draft.Build());
 
-            Assert.That(changes, Is.EqualTo(new[]
-            {
-                "InfiniteReserve: Off -> On",
-                "Downed: Off -> Revive",
-                "Cover: Off -> On",
-                "HudDensity: Full -> Hardcore",
-            }));
+            Assert.That(changes, Is.EqualTo(_expectedChanges));
         }
 
         [Test]

@@ -294,12 +294,9 @@ namespace Fps.Runtime
 
             _suspendedActions.Clear();
 
-            var bootstrap = FindAnyObjectByType<GameBootstrap>();
-            var look = bootstrap != null && bootstrap.World != null ? bootstrap.World.Look : null;
-            if (look != null && look.isActiveAndEnabled)
+            if (!PauseMenu.IsAnyOpen)
             {
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
+                FirstPersonLook.RefreshCursorLock();
             }
         }
 

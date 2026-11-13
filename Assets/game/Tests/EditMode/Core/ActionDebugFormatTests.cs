@@ -7,29 +7,31 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ActionDebugFormatTests
     {
+        static readonly string[] DefaultTexts =
+        {
+            "ダッシュ: OFF",
+            "しゃがみ: OFF",
+            "回避: OFF",
+            "乗り越え: OFF",
+            "接地: OFF",
+            "カバー: OFF",
+            "ブラインドファイア: OFF",
+            "ADS: OFF",
+            "射撃: OFF",
+            "リロード: OFF (アクティブ: -)",
+            "ダウン: OFF",
+            "肩: 右",
+            "視点: 一人称",
+            "武器: -",
+            "ばらつき: 0.0°",
+        };
+
         [Test]
         public void DefaultStateListsEveryItemInOrderWithNothingActive()
         {
             var lines = ActionDebugFormat.Lines(default);
 
-            Assert.That(lines.Select(line => line.Text).ToArray(), Is.EqualTo(new[]
-            {
-                "ダッシュ: OFF",
-                "しゃがみ: OFF",
-                "回避: OFF",
-                "乗り越え: OFF",
-                "接地: OFF",
-                "カバー: OFF",
-                "ブラインドファイア: OFF",
-                "ADS: OFF",
-                "射撃: OFF",
-                "リロード: OFF (アクティブ: -)",
-                "ダウン: OFF",
-                "肩: 右",
-                "視点: 一人称",
-                "武器: -",
-                "ばらつき: 0.0°",
-            }));
+            Assert.That(lines.Select(line => line.Text).ToArray(), Is.EqualTo(DefaultTexts));
             Assert.That(lines.Length, Is.EqualTo(ActionDebugFormat.LineCount));
             Assert.That(lines.Any(line => line.IsActive), Is.False);
         }

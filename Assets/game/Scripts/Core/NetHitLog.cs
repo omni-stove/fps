@@ -60,6 +60,9 @@ namespace Fps.Core
         /// <param name="attackerId">撃った人のプレイヤー id。</param>
         /// <param name="shotIndex">サーバーが付けた発射番号。</param>
         /// <param name="coneDegrees">掛けた散らばりの半角 (度)。</param>
+        /// <param name="x">判定の向きの x。</param>
+        /// <param name="y">判定の向きの y。</param>
+        /// <param name="z">判定の向きの z。</param>
         public static string Shot(int attackerId, int shotIndex, float coneDegrees, float x, float y, float z)
         {
             return Tag + " shot attacker=" + attackerId.ToString(CultureInfo.InvariantCulture)

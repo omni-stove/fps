@@ -666,6 +666,8 @@ namespace Fps.Runtime
                 return;
             }
 
+            // 詰まった地点で測った基準のままだと、目的地から遠い出現地点へ戻した後は普通に歩けていても立て直しが走り続ける。
+            _stuck.Reset();
             Debug.Log($"{LogTag} id={Id} warped from={ground.ToString("F1")} to={to.Value.ToString("F1")}", this);
         }
 

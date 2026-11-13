@@ -6,12 +6,12 @@ namespace Fps.Core.Tests
     public sealed class FallDamageCalculatorTests
     {
         // PlayerController・NetworkPlayerMotor の既定値と同じ
-        private const float PlayerGravity = 20f;
-        private const float PlayerJumpHeight = 1.2f;
+        private const float _playerGravity = 20f;
+        private const float _playerJumpHeight = 1.2f;
 
         private static MotorSpec Spec(float safeFallSpeed = 10f, float lethalFallSpeed = 20f)
         {
-            return new MotorSpec(5f, 8f, PlayerJumpHeight, PlayerGravity, 0.1f, 2.5f, safeFallSpeed, lethalFallSpeed);
+            return new MotorSpec(5f, 8f, _playerJumpHeight, _playerGravity, 0.1f, 2.5f, safeFallSpeed, lethalFallSpeed);
         }
 
         [TestCase(0f)]
@@ -69,8 +69,8 @@ namespace Fps.Core.Tests
         [Test]
         public void DefaultThresholdsDoNotHurtANormalJump()
         {
-            var spec = new MotorSpec(5f, 8f, PlayerJumpHeight, PlayerGravity, 0.1f, 2.5f);
-            var jumpLanding = (float)Math.Sqrt(2.0 * PlayerGravity * PlayerJumpHeight);
+            var spec = new MotorSpec(5f, 8f, _playerJumpHeight, _playerGravity, 0.1f, 2.5f);
+            var jumpLanding = (float)Math.Sqrt(2.0 * _playerGravity * _playerJumpHeight);
 
             Assert.That(FallDamageCalculator.Calculate(jumpLanding, spec, 100), Is.EqualTo(0));
         }
@@ -78,8 +78,8 @@ namespace Fps.Core.Tests
         [Test]
         public void DefaultThresholdsDoNotHurtJumpingOffAVaultableLedge()
         {
-            var spec = new MotorSpec(5f, 8f, PlayerJumpHeight, PlayerGravity, 0.1f, 2.5f);
-            var landing = (float)Math.Sqrt(2.0 * PlayerGravity * (PlayerJumpHeight + spec.VaultMaxHeight));
+            var spec = new MotorSpec(5f, 8f, _playerJumpHeight, _playerGravity, 0.1f, 2.5f);
+            var landing = (float)Math.Sqrt(2.0 * _playerGravity * (_playerJumpHeight + spec.VaultMaxHeight));
 
             Assert.That(FallDamageCalculator.Calculate(landing, spec, 100), Is.EqualTo(0));
         }
@@ -87,7 +87,7 @@ namespace Fps.Core.Tests
         [Test]
         public void DefaultThresholdsHurtAndKillFromHighPlaces()
         {
-            var spec = new MotorSpec(5f, 8f, PlayerJumpHeight, PlayerGravity, 0.1f, 2.5f);
+            var spec = new MotorSpec(5f, 8f, _playerJumpHeight, _playerGravity, 0.1f, 2.5f);
 
             Assert.That(FallDamageCalculator.Calculate(LandingSpeed(8f), spec, 100), Is.InRange(1, 99));
             Assert.That(FallDamageCalculator.Calculate(LandingSpeed(20f), spec, 100), Is.EqualTo(100));
@@ -96,7 +96,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ADiscreteJumpOnFlatGroundLandsBelowTheDefaultSafeSpeed()
         {
-            var spec = new MotorSpec(5f, 8f, PlayerJumpHeight, PlayerGravity, 0.1f, 2.5f);
+            var spec = new MotorSpec(5f, 8f, _playerJumpHeight, _playerGravity, 0.1f, 2.5f);
             var motor = new PlayerMotor(spec);
             const float dt = 1f / 30f;
             var height = 0f;
@@ -133,7 +133,7 @@ namespace Fps.Core.Tests
 
         private static float LandingSpeed(float dropHeight)
         {
-            return (float)Math.Sqrt(2.0 * PlayerGravity * dropHeight);
+            return (float)Math.Sqrt(2.0 * _playerGravity * dropHeight);
         }
     }
 }

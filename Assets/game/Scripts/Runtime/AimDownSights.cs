@@ -186,7 +186,8 @@ namespace Fps.Runtime
                 ReportAiming(aiming);
             }
 
-            _zoom.Step(aiming, deltaSeconds);
+            // AimingChanged の購読側が同じフレームで Release することがある (回避中など) ので、決めた後の状態で寄せる。
+            _zoom.Step(_aimState.IsActive, deltaSeconds);
             Apply(_zoom.FieldOfView(_hipFieldOfView, TargetFieldOfView));
         }
 

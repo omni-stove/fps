@@ -8,6 +8,7 @@ namespace Fps.Core.Tests
     {
         private const int _playerId = 0;
         private const string _rifleId = "00000000-0000-4000-8000-000000000001";
+        private const string _handgunId = "00000000-0000-4000-8000-000000000002";
 
         private static Weapon NewWeapon(int magazine = 30, int reserve = 90, float fireInterval = 0f, float reloadSeconds = 1f)
         {
@@ -100,6 +101,55 @@ namespace Fps.Core.Tests
             weapon.Tick(0.5f);
             Assert.That(model.AmmoText, Is.EqualTo("30 / 88"));
 
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo, HudField.Ammo, HudField.Ammo }));
+        }
+
+        [Test]
+        public void RebindingAnotherWeaponShowsItsAmmoAndNameInOneChange()
+        {
+            var model = new HudModel();
+            var rifle = new Weapon(new WeaponSpec(_rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None));
+            var handgun = new Weapon(new WeaponSpec(_handgunId, " Handgun ", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0f, 1f, 34, 60f, DamageFalloff.None));
+            model.BindWeapon(rifle);
+            Assert.That(model.WeaponNameText, Is.EqualTo("Rifle"));
+            var changes = Record(model);
+
+            model.BindWeapon(handgun);
+
+            Assert.That(model.WeaponNameText, Is.EqualTo("Handgun"), "the name is trimmed");
+            Assert.That(model.AmmoText, Is.EqualTo("12 / 48"));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo }));
+
+            // 前の武器を撃っても表示は変わらない (購読を外している)
+            rifle.TryFire();
+            Assert.That(model.AmmoText, Is.EqualTo("12 / 48"));
+            Assert.That(changes, Has.Count.EqualTo(1));
+
+            model.BindWeapon(null);
+            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+        }
+
+        [Test]
+        public void SetWeaponNameKeepsTheAmmoAndClearAmmoKeepsTheName()
+        {
+            var model = new HudModel();
+            model.SetAmmo(5, 90, true);
+            var changes = Record(model);
+
+            model.SetWeaponName("Rifle");
+            Assert.That(model.WeaponNameText, Is.EqualTo("Rifle"));
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(5, 90, true)));
+            Assert.That(model.IsReloading, Is.True);
+
+            model.SetWeaponName("Rifle");
+            Assert.That(changes, Has.Count.EqualTo(1), "the same name does not notify");
+
+            model.ClearAmmo();
+            Assert.That(model.WeaponNameText, Is.EqualTo("Rifle"));
+
+            model.SetWeaponName("   ");
+            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
             Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo, HudField.Ammo, HudField.Ammo }));
         }
 

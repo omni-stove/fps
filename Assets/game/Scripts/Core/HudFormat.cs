@@ -15,6 +15,9 @@ namespace Fps.Core
         /// <summary>武器がまだ無いときの表示。</summary>
         public const string NoAmmo = "-- / --";
 
+        /// <summary>武器の名前が無いときの表示。View は空のとき名前の Label を隠す。</summary>
+        public const string NoWeaponName = "";
+
         /// <summary>試合がまだ無いときの表示。</summary>
         public const string NoTime = "--:--";
 

@@ -88,7 +88,7 @@ namespace Fps.Editor
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
 
             // 武器のアセットが無い・敵の武器がカタログに無いなら何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
-            var rifle = WeaponAssetBuilder.LoadRifle();
+            var loadout = WeaponAssetBuilder.LoadDefaultLoadout();
             var catalog = WeaponAssetBuilder.LoadCatalog();
             WeaponAssetBuilder.FindInCatalog(catalog, EnemyId, EnemyWeaponId);
 
@@ -101,7 +101,7 @@ namespace Fps.Editor
             var surface = CreateLevel(scene);
             BakeNavMesh(surface, navMeshDataPath);
             SceneBuildHelpers.RequireOnNavMesh(PatrolRoute, NavMeshCheckRadius, "patrol point");
-            CreateActors(scene, rifle, catalog);
+            CreateActors(scene, loadout, catalog);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -146,16 +146,16 @@ namespace Fps.Editor
 
         /// <summary>
         /// GameBootstrap (床は作らない) と敵 1 体を置く。敵は巡回路の最初の地点に立たせる。参照はすべてここで設定する。
-        /// プレイヤーは playerWeapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で、敵は enemyWeapons から
+        /// プレイヤーは playerLoadout (通常は <see cref="WeaponAssetBuilder.LoadDefaultLoadout"/> のデフォルトロードアウト) の武器で、敵は enemyWeapons から
         /// <see cref="EnemyWeaponId"/> で引いた武器で撃つ。Id が enemyWeapons に無ければ何も置かずに
         /// <see cref="KeyNotFoundException"/> を投げる。
         /// </summary>
-        public static EnemyAgent CreateActors(Scene scene, WeaponDefinition playerWeapon, WeaponCatalogAsset enemyWeapons)
+        public static EnemyAgent CreateActors(Scene scene, LoadoutDefinition playerLoadout, WeaponCatalogAsset enemyWeapons)
         {
             SceneBuildHelpers.RequireLoaded(scene);
-            if (playerWeapon == null)
+            if (playerLoadout == null)
             {
-                throw new ArgumentNullException(nameof(playerWeapon));
+                throw new ArgumentNullException(nameof(playerLoadout));
             }
 
             if (enemyWeapons == null)
@@ -169,7 +169,7 @@ namespace Fps.Editor
             SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
             var bootstrap = bootstrapObject.AddComponent<GameBootstrap>();
             bootstrap.CreatesFloor = false;
-            bootstrap.WeaponDefinition = playerWeapon;
+            bootstrap.LoadoutDefinition = playerLoadout;
 
             var enemy = SceneBuildHelpers.CreateEnemy(
                 scene,

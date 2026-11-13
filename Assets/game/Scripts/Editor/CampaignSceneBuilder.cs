@@ -244,7 +244,7 @@ namespace Fps.Editor
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
 
             // 武器のアセットが無い・敵の武器がカタログに無いなら何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
-            var rifle = WeaponAssetBuilder.LoadRifle();
+            var loadout = WeaponAssetBuilder.LoadDefaultLoadout();
             var catalog = WeaponAssetBuilder.LoadCatalog();
             ResolveEnemyWeapons(catalog);
             var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(definitionPath, Configure);
@@ -253,7 +253,7 @@ namespace Fps.Editor
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var layout = PopulateScene(scene, definition, rifle, catalog);
+            var layout = PopulateScene(scene, definition, loadout, catalog);
             SceneBuildHelpers.SaveNavMeshData(layout.Surface, navMeshDataPath);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -288,14 +288,14 @@ namespace Fps.Editor
         /// 参照をすべて設定する。焼いた NavMesh に敵の位置・巡回地点・区域・チェックポイントが乗っていて、開始地点から
         /// 歩いて行けることを確かめ、そうでなければ例外を投げる。失敗したときは置いた物をすべて片付ける。
         /// Edit Mode では Awake/Start が走らないので、ミッションと敵は Play したときに動き出す。
-        /// プレイヤーは playerWeapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で、敵は配置ごとに
+        /// プレイヤーは playerLoadout (通常は <see cref="WeaponAssetBuilder.LoadDefaultLoadout"/> のデフォルトロードアウト) の武器で、敵は配置ごとに
         /// <see cref="EnemyPlacement.WeaponId"/> の武器を enemyWeapons から引いて撃つ。Id が enemyWeapons に無ければ
         /// 何も置かずに <see cref="KeyNotFoundException"/> を投げる。
         /// </summary>
         public static CampaignLayout PopulateScene(
             Scene scene,
             MissionDefinition definition,
-            WeaponDefinition playerWeapon,
+            LoadoutDefinition playerLoadout,
             WeaponCatalogAsset enemyWeapons)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the campaign scene");
@@ -304,9 +304,9 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(definition));
             }
 
-            if (playerWeapon == null)
+            if (playerLoadout == null)
             {
-                throw new ArgumentNullException(nameof(playerWeapon));
+                throw new ArgumentNullException(nameof(playerLoadout));
             }
 
             var weapons = ResolveEnemyWeapons(enemyWeapons);
@@ -323,7 +323,7 @@ namespace Fps.Editor
                 SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
                 var bootstrap = bootstrapObject.AddComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
-                bootstrap.WeaponDefinition = playerWeapon;
+                bootstrap.LoadoutDefinition = playerLoadout;
 
                 var runnerObject = new GameObject(RunnerObjectName);
                 SceneManager.MoveGameObjectToScene(runnerObject, scene);

@@ -87,13 +87,13 @@ namespace Fps.Editor
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
             definitionPath = ValidateAssetPath(definitionPath);
 
-            // 武器のアセットが無ければ何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
-            var rifle = WeaponAssetBuilder.LoadRifle();
+            // ロードアウトのアセットが無いか不正なら何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            var loadout = WeaponAssetBuilder.LoadDefaultLoadout();
             var definition = CreateOrUpdateDefinition(definitionPath);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            PopulateScene(scene, definition, rifle);
+            PopulateScene(scene, definition, loadout);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -132,9 +132,10 @@ namespace Fps.Editor
 
         /// <summary>
         /// 空のシーンにテスト用ミッションの物を置き、参照をすべて設定する。Edit Mode では Awake/Start が走らないので、
-        /// ミッションは Play したときに始まる。プレイヤーは weapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で撃つ。
+        /// ミッションは Play したときに始まる。プレイヤーは loadout (通常は <see cref="WeaponAssetBuilder.LoadDefaultLoadout"/>
+        /// のデフォルトロードアウト) の武器を持ち替えて撃つ。
         /// </summary>
-        public static MissionTestLayout PopulateScene(Scene scene, MissionDefinition definition, WeaponDefinition weapon)
+        public static MissionTestLayout PopulateScene(Scene scene, MissionDefinition definition, LoadoutDefinition loadout)
         {
             if (!scene.IsValid() || !scene.isLoaded)
             {
@@ -146,9 +147,9 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(definition));
             }
 
-            if (weapon == null)
+            if (loadout == null)
             {
-                throw new ArgumentNullException(nameof(weapon));
+                throw new ArgumentNullException(nameof(loadout));
             }
 
             if (scene.rootCount != 0)
@@ -161,7 +162,7 @@ namespace Fps.Editor
             try
             {
                 var bootstrap = Track(created, new GameObject(BootstrapObjectName, typeof(GameBootstrap)));
-                bootstrap.GetComponent<GameBootstrap>().WeaponDefinition = weapon;
+                bootstrap.GetComponent<GameBootstrap>().LoadoutDefinition = loadout;
 
                 var runnerObject = Track(created, new GameObject(RunnerObjectName));
                 var runner = runnerObject.AddComponent<MissionRunner>();

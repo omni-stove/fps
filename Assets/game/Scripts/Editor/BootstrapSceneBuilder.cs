@@ -45,8 +45,8 @@ namespace Fps.Editor
         {
             path = ValidateScenePath(path);
 
-            // 武器のアセットが無ければ何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
-            var rifle = WeaponAssetBuilder.LoadRifle();
+            // ロードアウトのアセットが無いか不正なら何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            var loadout = WeaponAssetBuilder.LoadDefaultLoadout();
 
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
@@ -55,7 +55,7 @@ namespace Fps.Editor
             }
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            PopulateScene(scene, rifle);
+            PopulateScene(scene, loadout);
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {
@@ -69,19 +69,20 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 空のシーンに GameBootstrap と MatchRunner を置いた GameObject を 1 つだけ入れ、プレイヤーの武器の定義 weapon
-        /// (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) を GameBootstrap に配線する。残りの参照は実行時にコードで解決する。
+        /// 空のシーンに GameBootstrap と MatchRunner を置いた GameObject を 1 つだけ入れ、プレイヤーのロードアウト loadout
+        /// (通常は <see cref="WeaponAssetBuilder.LoadDefaultLoadout"/> のデフォルトロードアウト) を GameBootstrap に配線する。
+        /// 残りの参照は実行時にコードで解決する。
         /// </summary>
-        public static GameObject PopulateScene(Scene scene, WeaponDefinition weapon)
+        public static GameObject PopulateScene(Scene scene, LoadoutDefinition loadout)
         {
             if (!scene.IsValid() || !scene.isLoaded)
             {
                 throw new ArgumentException("scene must be a valid, loaded scene", nameof(scene));
             }
 
-            if (weapon == null)
+            if (loadout == null)
             {
-                throw new ArgumentNullException(nameof(weapon));
+                throw new ArgumentNullException(nameof(loadout));
             }
 
             if (scene.rootCount != 0)
@@ -92,7 +93,7 @@ namespace Fps.Editor
 
             // MatchRunner は Start で同じ GameObject の GameBootstrap が Awake で作ったものを拾うので、ここでの配線は要らない。
             var bootstrap = new GameObject(BootstrapObjectName, typeof(GameBootstrap), typeof(MatchRunner));
-            bootstrap.GetComponent<GameBootstrap>().WeaponDefinition = weapon;
+            bootstrap.GetComponent<GameBootstrap>().LoadoutDefinition = loadout;
             SceneManager.MoveGameObjectToScene(bootstrap, scene);
             EditorSceneManager.MarkSceneDirty(scene);
             return bootstrap;

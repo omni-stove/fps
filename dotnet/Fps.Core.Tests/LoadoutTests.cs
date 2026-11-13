@@ -290,6 +290,35 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new Loadout<Item>(new[] { _rifle }, switchSeconds, null));
         }
 
+        [Test]
+        public void CanStartHoldingAGivenIndexWithoutSwitching()
+        {
+            var holstered = 0;
+            var switched = 0;
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol, _knife }, 0.5f, _ => holstered++, 2);
+            loadout.Switched += _ => switched++;
+
+            Assert.That(loadout.CurrentIndex, Is.EqualTo(2));
+            Assert.That(loadout.Current, Is.SameAs(_knife));
+            Assert.That(loadout.IsSwitching, Is.False);
+            Assert.That(holstered, Is.Zero);
+
+            Assert.That(loadout.SelectNext(), Is.True);
+            Assert.That(loadout.CurrentIndex, Is.Zero);
+            Assert.That(holstered, Is.EqualTo(1));
+            Assert.That(switched, Is.EqualTo(1));
+        }
+
+        [TestCase(-1)]
+        [TestCase(3)]
+        public void RejectsAnOutOfRangeStartingIndex(int currentIndex)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(
+                () => new Loadout<Item>(new[] { _rifle, _pistol, _knife }, 0.5f, null, currentIndex));
+
+            Assert.That(ex.ParamName, Is.EqualTo("currentIndex"));
+        }
+
         [TestCase(-0.1f)]
         [TestCase(float.NaN)]
         [TestCase(float.PositiveInfinity)]

@@ -32,7 +32,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// rifle の値 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰)。
-        /// オフラインのプレイヤー (<see cref="WeaponController"/>) と、配置でこの Id を指定した敵 (<see cref="EnemyAgent"/>) が使う。
+        /// オフラインのプレイヤー (<see cref="WeaponController"/> のデフォルトロードアウトの 0 番) と、配置でこの Id を指定した敵 (<see cref="EnemyAgent"/>) が使う。
         /// </summary>
         public static WeaponSpec RifleSpec()
         {
@@ -51,8 +51,8 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// <see cref="RiflePath"/> の rifle の定義を読む。シーン生成スクリプトがプレイヤーの <see cref="WeaponController"/>
-        /// に配線するのに使う (敵の武器は <see cref="LoadCatalog"/> の一覧から配置ごとに引く)。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
+        /// <see cref="RiflePath"/> の rifle の定義を読む (プレイヤーの <see cref="WeaponController"/> には <see cref="LoadDefaultLoadout"/> を、
+        /// 敵の武器は <see cref="LoadCatalog"/> の一覧から配置ごとに引いて配線する)。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
         /// 値が不正でも例外を投げ、壊れた定義をシーンに配線しない。
         /// </summary>
         public static WeaponDefinition LoadRifle()

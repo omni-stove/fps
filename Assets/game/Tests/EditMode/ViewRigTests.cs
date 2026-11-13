@@ -25,6 +25,8 @@ namespace Fps.Tests.EditMode
         private GameObject _wall;
         private InputAction _attack;
         private InputAction _reload;
+        private InputAction _next;
+        private InputAction _previous;
 
         [SetUp]
         public void SetUp()
@@ -39,6 +41,8 @@ namespace Fps.Tests.EditMode
             _rig = _body.AddComponent<ViewRig>();
             _attack = new InputAction("Attack", InputActionType.Button);
             _reload = new InputAction("Reload", InputActionType.Button);
+            _next = new InputAction("Next", InputActionType.Button);
+            _previous = new InputAction("Previous", InputActionType.Button);
         }
 
         [TearDown]
@@ -46,6 +50,8 @@ namespace Fps.Tests.EditMode
         {
             _attack.Dispose();
             _reload.Dispose();
+            _next.Dispose();
+            _previous.Dispose();
             Object.DestroyImmediate(_body);
             if (_wall != null)
             {
@@ -196,9 +202,10 @@ namespace Fps.Tests.EditMode
             var weapon = _camera.gameObject.AddComponent<WeaponController>();
             var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             rifle.AssignIdIfEmpty();
+            var loadout = TestLoadouts.Of("RifleOnly", rifle);
             try
             {
-                weapon.Initialize(_camera.transform, _attack, _reload, rifle);
+                weapon.Initialize(_camera.transform, _attack, _reload, _next, _previous, loadout);
 
                 weapon.ResolveShot(out var origin, out var direction);
 
@@ -208,6 +215,7 @@ namespace Fps.Tests.EditMode
             }
             finally
             {
+                Object.DestroyImmediate(loadout);
                 Object.DestroyImmediate(rifle);
             }
         }

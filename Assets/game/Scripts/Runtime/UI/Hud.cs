@@ -6,11 +6,11 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// HUD (左下に体力、右下に弾倉/予備、上中央に残り時間とその下に一時的な案内、中央に照準)。同じ GameObject の <see cref="UIDocument"/> に出す。
+    /// HUD (左下に体力、右下に今の武器の名前と弾倉/予備、上中央に残り時間とその下に一時的な案内、中央に照準)。同じ GameObject の <see cref="UIDocument"/> に出す。
     /// 値の源 (プレイヤーの <see cref="Damageable"/>・<see cref="WeaponController"/>・<see cref="Fps.Core.Match"/>) は
     /// <see cref="Initialize"/> でコードから渡す。値はそれぞれのイベントで <see cref="HudModel"/> が更新し、
     /// <see cref="HudView"/> が Label に写す。毎フレームは読みに行かない。
-    /// Health や Weapon が作り直されたとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
+    /// Health が作り直されたときや、持ち替えなどで今の Weapon が変わったとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
     /// オンライン (Fps.Net の NetHud) は源を渡さずに作り、<see cref="Model"/> の Set 系で値を書く。チームの点数 (左上) と
     /// 試合結果 (中央上) はそのときだけ出る。
     /// </summary>

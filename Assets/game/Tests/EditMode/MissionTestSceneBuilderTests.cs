@@ -17,7 +17,7 @@ namespace Fps.Tests.EditMode
         private const string Bootstrap = "Assets/game/Scenes/Bootstrap.unity";
 
         private MissionDefinition _definition;
-        private WeaponDefinition _rifle;
+        private LoadoutDefinition _loadout;
         private Scene _scene;
 
         [SetUp]
@@ -26,7 +26,7 @@ namespace Fps.Tests.EditMode
             _definition = ScriptableObject.CreateInstance<MissionDefinition>();
             _definition.name = "TestMission";
             MissionTestSceneBuilder.Configure(_definition);
-            _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _loadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
             _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
         }
 
@@ -35,7 +35,7 @@ namespace Fps.Tests.EditMode
         {
             EditorSceneManager.CloseScene(_scene, true);
             Object.DestroyImmediate(_definition);
-            Object.DestroyImmediate(_rifle);
+            Object.DestroyImmediate(_loadout);
         }
 
         [Test]
@@ -55,11 +55,11 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PopulatedSceneIsWiredInCode()
         {
-            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle);
+            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _loadout);
 
             Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(5));
             Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>(), Is.Not.Null);
-            Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>().WeaponDefinition, Is.SameAs(_rifle));
+            Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>().LoadoutDefinition, Is.SameAs(_loadout));
             Assert.That(layout.Runner.Definition, Is.SameAs(_definition));
 
             Assert.That(layout.ReachArea.ObjectiveId, Is.EqualTo(MissionTestSceneBuilder.ReachAreaId));
@@ -83,7 +83,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AreaTriggerStandsOnTheFloorAndIsTallerThanThePlayer()
         {
-            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle);
+            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _loadout);
             var collider = layout.ReachArea.GetComponent<BoxCollider>();
             var transform = collider.transform;
 
@@ -99,7 +99,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void GeneratedLayoutCanBeCompletedInOrder()
         {
-            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle);
+            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _loadout);
             var player = new GameObject("Player");
             try
             {
@@ -141,19 +141,19 @@ namespace Fps.Tests.EditMode
         {
             SceneManager.MoveGameObjectToScene(new GameObject("Stray"), _scene);
 
-            Assert.Throws<InvalidOperationException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle));
+            Assert.Throws<InvalidOperationException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, _loadout));
             Assert.That(_scene.rootCount, Is.EqualTo(1), "nothing is left behind");
         }
 
         [Test]
         public void RefusesToPopulateWithoutDefinition()
         {
-            Assert.Throws<ArgumentNullException>(() => MissionTestSceneBuilder.PopulateScene(_scene, null, _rifle));
+            Assert.Throws<ArgumentNullException>(() => MissionTestSceneBuilder.PopulateScene(_scene, null, _loadout));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
         [Test]
-        public void RefusesToPopulateWithoutAWeapon()
+        public void RefusesToPopulateWithoutALoadout()
         {
             Assert.Throws<ArgumentNullException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, null));
             Assert.That(_scene.rootCount, Is.Zero);
@@ -234,10 +234,10 @@ namespace Fps.Tests.EditMode
                 Assert.That(runner.Definition, Is.SameAs(definition));
                 Assert.That(triggers, Is.EqualTo(2));
 
-                var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);
-                Assert.That(rifle, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
+                var loadout = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(WeaponAssetBuilder.LoadoutPath);
+                Assert.That(loadout, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
                 Assert.That(bootstrap, Is.Not.Null);
-                Assert.That(bootstrap.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(MissionTestSceneBuilder)}.Build");
+                Assert.That(bootstrap.LoadoutDefinition, Is.SameAs(loadout), $"rerun {nameof(MissionTestSceneBuilder)}.Build");
             }
             finally
             {

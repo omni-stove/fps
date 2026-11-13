@@ -63,15 +63,15 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ActorsAreWiredInCode()
         {
-            var playerWeapon = NewWeapon("PlayerRifle", WeaponAssetBuilder.RifleSpec());
+            var playerLoadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
             var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
             var handgun = NewWeapon("Handgun", WeaponAssetBuilder.HandgunSpec());
             var catalog = NewCatalog("WeaponCatalog", handgun, rifle);
             try
             {
-                var agent = EnemyTestSceneBuilder.CreateActors(_scene, playerWeapon, catalog);
+                var agent = EnemyTestSceneBuilder.CreateActors(_scene, playerLoadout, catalog);
 
-                AssertActorsAreWired(agent, playerWeapon);
+                AssertActorsAreWired(agent, playerLoadout);
                 Assert.That(agent.WeaponDefinition, Is.SameAs(rifle), "the enemy shoots the catalog's weapon with its id");
                 Assert.That(agent.WeaponDefinition.Id, Is.EqualTo(EnemyTestSceneBuilder.EnemyWeaponId));
             }
@@ -80,37 +80,39 @@ namespace Fps.Tests.EditMode
                 UnityEngine.Object.DestroyImmediate(catalog);
                 UnityEngine.Object.DestroyImmediate(handgun);
                 UnityEngine.Object.DestroyImmediate(rifle);
-                UnityEngine.Object.DestroyImmediate(playerWeapon);
+                UnityEngine.Object.DestroyImmediate(playerLoadout);
             }
         }
 
         [Test]
-        public void ActorsNeedAPlayerWeaponAndACatalog()
+        public void ActorsNeedAPlayerLoadoutAndACatalog()
         {
+            var playerLoadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
             var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
             var catalog = NewCatalog("WeaponCatalog", rifle);
             try
             {
                 Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, null, catalog));
-                Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, rifle, null));
+                Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, playerLoadout, null));
                 Assert.That(_scene.rootCount, Is.Zero);
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(catalog);
                 UnityEngine.Object.DestroyImmediate(rifle);
+                UnityEngine.Object.DestroyImmediate(playerLoadout);
             }
         }
 
         [Test]
         public void ActorsRefuseAWeaponIdThatIsNotInTheCatalog()
         {
-            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var playerLoadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
             var handgun = NewWeapon("Handgun", WeaponAssetBuilder.HandgunSpec());
             var catalog = NewCatalog("HandgunOnly", handgun);
             try
             {
-                var e = Assert.Throws<KeyNotFoundException>(() => EnemyTestSceneBuilder.CreateActors(_scene, rifle, catalog));
+                var e = Assert.Throws<KeyNotFoundException>(() => EnemyTestSceneBuilder.CreateActors(_scene, playerLoadout, catalog));
 
                 Assert.That(e.Message, Does.Contain($"'{EnemyTestSceneBuilder.EnemyId}'"), "names the placement");
                 Assert.That(e.Message, Does.Contain($"'{EnemyTestSceneBuilder.EnemyWeaponId}'"), "names the weapon id");
@@ -121,33 +123,33 @@ namespace Fps.Tests.EditMode
             {
                 UnityEngine.Object.DestroyImmediate(catalog);
                 UnityEngine.Object.DestroyImmediate(handgun);
-                UnityEngine.Object.DestroyImmediate(rifle);
+                UnityEngine.Object.DestroyImmediate(playerLoadout);
             }
         }
 
         [Test]
         public void ActorsRefuseAnInvalidCatalog()
         {
-            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var playerLoadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
             var empty = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
             try
             {
-                Assert.Throws<WeaponDefinitionException>(() => EnemyTestSceneBuilder.CreateActors(_scene, rifle, empty));
+                Assert.Throws<WeaponDefinitionException>(() => EnemyTestSceneBuilder.CreateActors(_scene, playerLoadout, empty));
                 Assert.That(_scene.rootCount, Is.Zero, "nothing is placed");
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(empty);
-                UnityEngine.Object.DestroyImmediate(rifle);
+                UnityEngine.Object.DestroyImmediate(playerLoadout);
             }
         }
 
-        private void AssertActorsAreWired(EnemyAgent agent, WeaponDefinition playerWeapon)
+        private void AssertActorsAreWired(EnemyAgent agent, LoadoutDefinition playerLoadout)
         {
             var bootstrap = Find(EnemyTestSceneBuilder.BootstrapObjectName).GetComponent<GameBootstrap>();
             Assert.That(bootstrap, Is.Not.Null);
             Assert.That(bootstrap.CreatesFloor, Is.False, "the scene's own floor carries the baked NavMesh");
-            Assert.That(bootstrap.WeaponDefinition, Is.SameAs(playerWeapon), "the player shoots the rifle");
+            Assert.That(bootstrap.LoadoutDefinition, Is.SameAs(playerLoadout), "the player carries the loadout");
 
             Assert.That(agent.name, Is.EqualTo(EnemyTestSceneBuilder.EnemyName));
             Assert.That(agent.gameObject.scene, Is.EqualTo(_scene));

@@ -19,6 +19,8 @@
             <ui:Label name="hud-health" text="--" class="hud__value" picking-mode="Ignore" />
         </ui:VisualElement>
         <ui:VisualElement name="hud-ammo-panel" class="hud__panel hud__panel--bottom-right" picking-mode="Ignore">
+            <!-- 今の武器の名前。持ち替えると HudView が書き換え、名前が無い (オンライン) ときは隠す。 -->
+            <ui:Label name="hud-weapon" text="" class="hud__weapon" picking-mode="Ignore" style="display: none;" />
             <ui:Label text="AMMO" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-ammo" text="-- / --" class="hud__value" picking-mode="Ignore" />
         </ui:VisualElement>

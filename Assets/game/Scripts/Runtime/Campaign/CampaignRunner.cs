@@ -35,6 +35,12 @@ namespace Fps.Runtime
 
         public const float DefaultReloadDelaySeconds = 3f;
 
+        /// <summary>
+        /// 弾数をセーブ・復元するロードアウトの番号。セーブは武器 1 本分の弾数しか持たないので、読み直し直後に持っている 0 番に固定する
+        /// (今の武器を保存すると、別の武器の弾数を読み直し後の 0 番に戻してしまう)。他の武器は読み直すと満タンに戻る。
+        /// </summary>
+        public const int SavedWeaponIndex = 0;
+
         /// <summary>セーブしたときに HUD へ「セーブしました」を出しておく秒数。</summary>
         public const float SavedNoticeSeconds = 2.5f;
 
@@ -389,7 +395,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            var weapon = _weapon.Weapon;
+            var weapon = SavedWeapon();
             var save = new CampaignSave(
                 _missionId,
                 checkpointId,
@@ -472,6 +478,11 @@ namespace Fps.Runtime
             _reloadRemaining = 0f;
         }
 
+        private Weapon SavedWeapon()
+        {
+            return _weapon.Loadout.Items[SavedWeaponIndex];
+        }
+
         /// <summary>セーブがあれば今のシーンに戻す。戻せたら true。戻せないときは理由をログに出し、最初からの状態のままにする。</summary>
         private bool TryRestore()
         {
@@ -515,11 +526,12 @@ namespace Fps.Runtime
 
             MovePlayerTo(save.CheckpointId);
             _player.RestoreHealth(save.Health);
-            _weapon.RestoreAmmo(save.AmmoInMagazine, save.ReserveAmmo);
+            _weapon.RestoreAmmo(SavedWeaponIndex, save.AmmoInMagazine, save.ReserveAmmo);
             _lastCheckpointId = save.CheckpointId;
 
+            var restored = SavedWeapon();
             Debug.Log(
-                $"{LogTag} restored mission={_missionId} checkpoint={save.CheckpointId} health={_player.Health.Current} ammo={_weapon.Weapon.AmmoInMagazine}/{_weapon.Weapon.ReserveAmmo} state={_mission.State}",
+                $"{LogTag} restored mission={_missionId} checkpoint={save.CheckpointId} health={_player.Health.Current} ammo={restored.AmmoInMagazine}/{restored.ReserveAmmo} state={_mission.State}",
                 this);
 
             // 達成したらセーブを消すので普通は起きないが、消す前に落ちたセーブから戻ったときはここで片付ける。

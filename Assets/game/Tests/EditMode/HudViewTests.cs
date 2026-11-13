@@ -34,6 +34,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(root.Q<Label>(HudView.HealthLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.AmmoLabelName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.WeaponNameLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.TimeLabelName), Is.Not.Null);
             Assert.That(root.Q<VisualElement>(HudView.CrosshairName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.NoticeLabelName), Is.Not.Null);
@@ -50,6 +51,21 @@ namespace Fps.Tests.EditMode
 
             Assert.That(view.ScorePanel.style.display.value, Is.EqualTo(DisplayStyle.None));
             Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheWeaponNameIsShownOnlyWhileThereIsOne()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+            Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            model.SetWeaponName("Rifle");
+            Assert.That(view.WeaponNameLabel.text, Is.EqualTo("Rifle"));
+            Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            model.SetWeaponName(null);
+            Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 
         [Test]

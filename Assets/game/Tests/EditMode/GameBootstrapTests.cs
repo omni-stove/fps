@@ -16,6 +16,8 @@ namespace Fps.Tests.EditMode
         private GameObject _host;
         private BootstrapWorld _world;
         private WeaponDefinition _rifle;
+        private WeaponDefinition _handgun;
+        private LoadoutDefinition _loadout;
 
         [SetUp]
         public void SetUp()
@@ -23,10 +25,17 @@ namespace Fps.Tests.EditMode
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
             WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            _handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _handgun.name = "Handgun";
+            WeaponAssetBuilder.Configure(_handgun, WeaponAssetBuilder.HandgunSpec());
+            _loadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
+            _loadout.name = "Loadout";
+            WeaponAssetBuilder.Configure(
+                _loadout, WeaponAssetBuilder.DefaultLoadoutSlots(_rifle, _handgun), LoadoutDefinition.DefaultSwitchSeconds);
 
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
-            bootstrap.WeaponDefinition = _rifle;
+            bootstrap.LoadoutDefinition = _loadout;
             LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
             _world = bootstrap.Build();
         }
@@ -36,7 +45,31 @@ namespace Fps.Tests.EditMode
         {
             DestroyWorld(_world);
             Object.DestroyImmediate(_host);
+            Object.DestroyImmediate(_loadout);
+            Object.DestroyImmediate(_handgun);
             Object.DestroyImmediate(_rifle);
+        }
+
+        // Edit Mode では WeaponController の Awake が走らないので、テスト用の入力を渡して初期化する
+        private sealed class TestInputs : System.IDisposable
+        {
+            public InputAction Attack { get; } = new InputAction("Attack", InputActionType.Button);
+            public InputAction Reload { get; } = new InputAction("Reload", InputActionType.Button);
+            public InputAction Next { get; } = new InputAction("Next", InputActionType.Button);
+            public InputAction Previous { get; } = new InputAction("Previous", InputActionType.Button);
+
+            public void InitializeWeapon(WeaponController weapon, Transform aim)
+            {
+                weapon.Initialize(aim, Attack, Reload, Next, Previous);
+            }
+
+            public void Dispose()
+            {
+                Attack.Dispose();
+                Reload.Dispose();
+                Next.Dispose();
+                Previous.Dispose();
+            }
         }
 
         private static void DestroyWorld(BootstrapWorld world)
@@ -188,7 +221,7 @@ namespace Fps.Tests.EditMode
                 var bootstrap = host.AddComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
                 bootstrap.ViewMode = ViewMode.ThirdPerson;
-                bootstrap.WeaponDefinition = _rifle;
+                bootstrap.LoadoutDefinition = _loadout;
                 LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
 
                 world = bootstrap.Build();
@@ -197,11 +230,9 @@ namespace Fps.Tests.EditMode
                 Assert.That(world.Camera.transform.localPosition.z, Is.LessThan(-1f));
                 Assert.That(world.Player.GetComponent<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.On));
 
-                // Edit Mode では WeaponController の Awake が走らないので、入力を渡して初期化する
-                using (var attack = new InputAction("Attack", InputActionType.Button))
-                using (var reload = new InputAction("Reload", InputActionType.Button))
+                using (var inputs = new TestInputs())
                 {
-                    world.Weapon.Initialize(world.Camera.transform, attack, reload);
+                    inputs.InitializeWeapon(world.Weapon, world.Camera.transform);
                     world.Weapon.ResolveShot(out var origin, out _);
                     Assert.That(Vector3.Distance(origin, world.Rig.Eye.position), Is.LessThan(1e-5f), "third person fires from the eye");
                 }
@@ -271,7 +302,7 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(_world.Weapon, Is.Not.Null);
             Assert.That(_world.Weapon, Is.SameAs(_world.Camera.GetComponent<WeaponController>()));
-            Assert.That(_world.Weapon.Definition, Is.SameAs(_rifle), "the bootstrap hands its weapon definition to the player");
+            Assert.That(_world.Weapon.LoadoutDefinition, Is.SameAs(_loadout), "the bootstrap hands its loadout to the player");
             Assert.That(_world.Camera.gameObject.activeSelf, Is.True, "the camera is active again after the weapon is attached");
         }
 
@@ -412,21 +443,46 @@ namespace Fps.Tests.EditMode
             // Edit Mode では WeaponController の Awake が走らないので、武器はまだ無い。
             Assert.That(controller.Weapon, Is.Null);
             Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
 
-            var attack = new InputAction("Attack", InputActionType.Button);
-            var reload = new InputAction("Reload", InputActionType.Button);
-            try
+            using (var inputs = new TestInputs())
             {
-                controller.Initialize(_world.Camera.transform, attack, reload);
+                inputs.InitializeWeapon(controller, _world.Camera.transform);
                 Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize, _rifle.ReserveAmmo)));
+                Assert.That(model.WeaponNameText, Is.EqualTo(_rifle.DisplayName));
 
                 Assert.That(controller.Weapon.TryFire(), Is.True);
                 Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize - 1, _rifle.ReserveAmmo)));
             }
-            finally
+        }
+
+        [Test]
+        public void HudShowsTheWeaponItSwitchesTo()
+        {
+            var model = _world.Hud.Model;
+            var controller = _world.Weapon;
+
+            using (var inputs = new TestInputs())
             {
-                attack.Dispose();
-                reload.Dispose();
+                inputs.InitializeWeapon(controller, _world.Camera.transform);
+                var rifle = controller.Weapon;
+                Assert.That(rifle.TryFire(), Is.True);
+
+                LogAssert.Expect(LogType.Log, WeaponController.SwitchedLog(1, _handgun.DisplayName));
+                Assert.That(controller.SelectNext(), Is.True);
+
+                Assert.That(model.WeaponNameText, Is.EqualTo(_handgun.DisplayName));
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo)));
+
+                controller.Tick(_loadout.SwitchSeconds);
+                Assert.That(controller.Weapon.TryFire(), Is.True);
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize - 1, _handgun.ReserveAmmo)));
+
+                LogAssert.Expect(LogType.Log, WeaponController.SwitchedLog(0, _rifle.DisplayName));
+                Assert.That(controller.SelectPrevious(), Is.True);
+                Assert.That(model.WeaponNameText, Is.EqualTo(_rifle.DisplayName));
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize - 1, _rifle.ReserveAmmo)), "the rifle kept its ammo");
+                Assert.That(rifle, Is.SameAs(controller.Weapon));
             }
         }
 

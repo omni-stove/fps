@@ -381,6 +381,8 @@ namespace Fps.Tests.EditMode
             public List<Object> Created { get; } = new List<Object>();
             private readonly InputAction _attack = new InputAction("Attack", InputActionType.Button);
             private readonly InputAction _reload = new InputAction("Reload", InputActionType.Button);
+            private readonly InputAction _next = new InputAction("Next", InputActionType.Button);
+            private readonly InputAction _previous = new InputAction("Previous", InputActionType.Button);
             private bool _disposed;
 
             public CampaignScene(MissionDefinition definition, Vector3 checkpointPosition, Vector3 spawnPosition)
@@ -400,8 +402,10 @@ namespace Fps.Tests.EditMode
                 Rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
                 Rifle.AssignIdIfEmpty();
                 Created.Add(Rifle);
+                var loadout = TestLoadouts.Of("RifleOnly", Rifle);
+                Created.Add(loadout);
                 Weapon = camera.AddComponent<WeaponController>();
-                Weapon.Initialize(camera.transform, _attack, _reload, Rifle);
+                Weapon.Initialize(camera.transform, _attack, _reload, _next, _previous, loadout);
 
                 var checkpoint = Add(new GameObject("Checkpoint"));
                 checkpoint.transform.position = checkpointPosition;
@@ -456,6 +460,8 @@ namespace Fps.Tests.EditMode
                 Created.Clear();
                 _attack.Dispose();
                 _reload.Dispose();
+                _next.Dispose();
+                _previous.Dispose();
             }
 
             private GameObject Add(GameObject created)

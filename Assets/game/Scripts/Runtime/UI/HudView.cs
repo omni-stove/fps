@@ -17,6 +17,9 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml の弾数の Label。</summary>
         public const string AmmoLabelName = "hud-ammo";
 
+        /// <summary>Hud.uxml の、弾数の横に出す今の武器の名前の Label。名前が空のときは隠す。</summary>
+        public const string WeaponNameLabelName = "hud-weapon";
+
         /// <summary>Hud.uxml の残り時間の Label。</summary>
         public const string TimeLabelName = "hud-time";
 
@@ -51,6 +54,7 @@ namespace Fps.Runtime
 
         public Label HealthLabel { get; }
         public Label AmmoLabel { get; }
+        public Label WeaponNameLabel { get; }
         public Label TimeLabel { get; }
         public VisualElement Crosshair { get; }
         public Label NoticeLabel { get; }
@@ -73,6 +77,7 @@ namespace Fps.Runtime
             _model = model ?? throw new ArgumentNullException(nameof(model));
             HealthLabel = Require<Label>(root, HealthLabelName);
             AmmoLabel = Require<Label>(root, AmmoLabelName);
+            WeaponNameLabel = Require<Label>(root, WeaponNameLabelName);
             TimeLabel = Require<Label>(root, TimeLabelName);
             Crosshair = Require<VisualElement>(root, CrosshairName);
             NoticeLabel = Require<Label>(root, NoticeLabelName);
@@ -153,6 +158,7 @@ namespace Fps.Runtime
         {
             AmmoLabel.text = _model.AmmoText;
             AmmoLabel.EnableInClassList(ReloadingClass, _model.IsReloading);
+            ShowOrHide(WeaponNameLabel, _model.WeaponNameText);
         }
 
         /// <summary>案内の文字列を入れ、空なら Label ごと隠す (背景の帯だけが残らないように)。</summary>

@@ -35,6 +35,12 @@ namespace Fps.Core
         /// <summary>リロード中か。<see cref="AmmoText"/> にも出るが、View が見た目を変えるのに使う。</summary>
         public bool IsReloading { get; private set; }
 
+        /// <summary>
+        /// 弾数の横に出す今の武器の名前 (<see cref="WeaponSpec.DisplayName"/>)。無ければ <see cref="HudFormat.NoWeaponName"/>。
+        /// 弾数と同じ欄なので、変わったときは <see cref="HudField.Ammo"/> で知らせる。
+        /// </summary>
+        public string WeaponNameText { get; private set; } = HudFormat.NoWeaponName;
+
         /// <summary>上中央の残り時間 (mm:ss)。</summary>
         public string TimeText { get; private set; } = HudFormat.NoTime;
 
@@ -73,7 +79,10 @@ namespace Fps.Core
             OnHealthChanged();
         }
 
-        /// <summary>弾数の源を差し替える。射撃 (Fired) とリロード完了 (Reloaded) で更新する。null なら仮の表示に戻す。</summary>
+        /// <summary>
+        /// 弾数と武器の名前の源を差し替える。持ち替えたときもこれで今の武器を渡し直す。
+        /// 射撃 (Fired) とリロード完了 (Reloaded) で弾数を更新する。null なら弾数も名前も仮の表示に戻す。
+        /// </summary>
         public void BindWeapon(Weapon weapon)
         {
             if (_weapon != null)
@@ -175,13 +184,19 @@ namespace Fps.Core
         /// <exception cref="ArgumentOutOfRangeException">magazine か reserve が負。</exception>
         public void SetAmmo(int magazine, int reserve, bool reloading)
         {
-            ApplyAmmo(HudFormat.Ammo(magazine, reserve, reloading), reloading);
+            ApplyAmmo(HudFormat.Ammo(magazine, reserve, reloading), reloading, WeaponNameText);
         }
 
-        /// <summary>弾数を仮の表示に戻す。</summary>
+        /// <summary>弾数を仮の表示に戻す。武器の名前はそのまま残す。</summary>
         public void ClearAmmo()
         {
-            ApplyAmmo(HudFormat.NoAmmo, false);
+            ApplyAmmo(HudFormat.NoAmmo, false, WeaponNameText);
+        }
+
+        /// <summary>弾数の横に出す武器の名前を出す。null か空白だけなら名前を消す。</summary>
+        public void SetWeaponName(string displayName)
+        {
+            ApplyAmmo(AmmoText, IsReloading, NormalizeWeaponName(displayName));
         }
 
         /// <summary>残り時間 (秒) を出す。表示は秒の桁が変わったときだけ変わる (<see cref="HudFormat.Time"/>)。</summary>
@@ -251,14 +266,24 @@ namespace Fps.Core
 
         private void OnWeaponChanged()
         {
+            // 持ち替えで弾数と名前が同時に変わるので、1 回の Changed にまとめる
             if (_weapon != null)
             {
-                SetAmmo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, _weapon.IsReloading);
+                var reloading = _weapon.IsReloading;
+                ApplyAmmo(
+                    HudFormat.Ammo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, reloading),
+                    reloading,
+                    NormalizeWeaponName(_weapon.Spec.DisplayName));
             }
             else
             {
-                ClearAmmo();
+                ApplyAmmo(HudFormat.NoAmmo, false, HudFormat.NoWeaponName);
             }
+        }
+
+        private static string NormalizeWeaponName(string displayName)
+        {
+            return string.IsNullOrWhiteSpace(displayName) ? HudFormat.NoWeaponName : displayName.Trim();
         }
 
         private void ApplyHealth(string text, bool low)
@@ -273,15 +298,16 @@ namespace Fps.Core
             Changed?.Invoke(HudField.Health);
         }
 
-        private void ApplyAmmo(string text, bool reloading)
+        private void ApplyAmmo(string text, bool reloading, string weaponName)
         {
-            if (text == AmmoText && reloading == IsReloading)
+            if (text == AmmoText && reloading == IsReloading && weaponName == WeaponNameText)
             {
                 return;
             }
 
             AmmoText = text;
             IsReloading = reloading;
+            WeaponNameText = weaponName;
             Changed?.Invoke(HudField.Ammo);
         }
 

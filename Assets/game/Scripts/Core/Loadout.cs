@@ -21,6 +21,19 @@ namespace Fps.Core
         /// <param name="switchSeconds">持ち替えにかかる秒数。0 以上の有限値。</param>
         /// <param name="onHolster">武器をしまうときに呼ぶ処理 (リロードの中断など)。null なら何もしない。</param>
         public Loadout(IReadOnlyList<T> items, float switchSeconds, Action<T> onHolster)
+            : this(items, switchSeconds, onHolster, 0)
+        {
+        }
+
+        /// <summary>
+        /// currentIndex の武器を持ち、持ち替え中でない状態で作る。武器を作り直すとき (セーブから弾数を戻すなど) に、
+        /// 持っている番号を保ったまま差し替えるのに使う。onHolster も <see cref="Switched"/> も呼ばない。
+        /// </summary>
+        /// <param name="items">持つ武器。1 本以上で、null 要素は不可。</param>
+        /// <param name="switchSeconds">持ち替えにかかる秒数。0 以上の有限値。</param>
+        /// <param name="onHolster">武器をしまうときに呼ぶ処理 (リロードの中断など)。null なら何もしない。</param>
+        /// <param name="currentIndex">最初に持つ番号。0 以上 items の数未満。</param>
+        public Loadout(IReadOnlyList<T> items, float switchSeconds, Action<T> onHolster, int currentIndex)
         {
             if (items == null)
             {
@@ -48,10 +61,16 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(switchSeconds), switchSeconds, "switchSeconds must be a non-negative finite number");
             }
 
+            if (currentIndex < 0 || currentIndex >= list.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(currentIndex), currentIndex, "currentIndex must be in [0, " + list.Count + ")");
+            }
+
             // 渡されたリストを後から書き換えられても番号がずれないよう写しを持つ
             Items = list.AsReadOnly();
             SwitchSeconds = switchSeconds;
             _onHolster = onHolster;
+            CurrentIndex = currentIndex;
         }
 
         /// <summary>持っている武器。生成後は変わらない。</summary>
@@ -63,7 +82,7 @@ namespace Fps.Core
         /// <summary>持ち替えにかかる秒数。</summary>
         public float SwitchSeconds { get; }
 
-        /// <summary>今持っている武器の番号。最初は 0。</summary>
+        /// <summary>今持っている武器の番号。最初はコンストラクタの currentIndex (指定しなければ 0)。</summary>
         public int CurrentIndex { get; private set; }
 
         /// <summary>今持っている武器。持ち替え中は持ち替え先の武器。</summary>

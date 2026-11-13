@@ -431,6 +431,67 @@ namespace Fps.Editor
             return agent;
         }
 
+        /// <summary>
+        /// rootName の GameObject に <see cref="CoverPointRegistry"/> を付け、その子に placements の遮蔽点
+        /// (<see cref="Fps.Runtime.CoverPoint"/>) を並べて registry に配線する。parent が null ならシーンの直下に置く。
+        /// 名前が重なっていれば何も置かずに例外を投げる。敵には <see cref="EnemyAgent.CoverRegistry"/> で渡す。
+        /// </summary>
+        public static CoverPointRegistry CreateCoverPoints(
+            Scene scene, Transform parent, string rootName, IReadOnlyList<CoverPointPlacement> placements)
+        {
+            if (placements == null)
+            {
+                throw new ArgumentNullException(nameof(placements));
+            }
+
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var placement in placements)
+            {
+                if (!names.Add(placement.Name))
+                {
+                    throw new ArgumentException($"cover point name '{placement.Name}' is used twice", nameof(placements));
+                }
+            }
+
+            var root = new GameObject(rootName);
+            Place(scene, parent, root);
+            var registry = root.AddComponent<CoverPointRegistry>();
+
+            var points = new Fps.Runtime.CoverPoint[placements.Count];
+            for (var i = 0; i < placements.Count; i++)
+            {
+                var placement = placements[i];
+                var marker = new GameObject(placement.Name);
+                marker.transform.SetParent(root.transform, false);
+                marker.transform.SetPositionAndRotation(placement.Position, FacingTowards(Vector3.zero, placement.Facing));
+
+                points[i] = marker.AddComponent<Fps.Runtime.CoverPoint>();
+                points[i].Height = placement.Height;
+                points[i].SetPeekOffsetWorld(placement.PeekOffset);
+            }
+
+            registry.SetPoints(points);
+            return registry;
+        }
+
+        /// <summary>遮蔽点の足元と覗く位置をすべて並べる (NavMesh に乗っているか・行けるかを確かめるため)。</summary>
+        public static List<Vector3> CoverStandPoints(IEnumerable<CoverPointPlacement> placements)
+        {
+            if (placements == null)
+            {
+                throw new ArgumentNullException(nameof(placements));
+            }
+
+            var points = new List<Vector3>();
+            foreach (var placement in placements)
+            {
+                points.Add(placement.Position);
+                points.Add(placement.PeekPosition);
+            }
+
+            return points;
+        }
+
         /// <summary>from から to を水平に向く回転。同じ位置なら +Z を向く。</summary>
         public static Quaternion FacingTowards(Vector3 from, Vector3 to)
         {
@@ -471,6 +532,58 @@ namespace Fps.Editor
             Radius = radius;
             Speed = speed;
             MaxHealth = maxHealth;
+        }
+    }
+
+    /// <summary>遮蔽点 1 つの置き方 (<see cref="SceneBuildHelpers.CreateCoverPoints"/>)。座標はすべてワールド。</summary>
+    public readonly struct CoverPointPlacement
+    {
+        public string Name { get; }
+
+        /// <summary>隠れるときに立つ足元。</summary>
+        public Vector3 Position { get; }
+
+        /// <summary>この点から壁へ向かう向き。水平の成分が要る。</summary>
+        public Vector3 Facing { get; }
+
+        public CoverHeight Height { get; }
+
+        /// <summary>覗くときに立つ位置の、<see cref="Position"/> からのずれ。0 ならその場で立ち上がって覗く。</summary>
+        public Vector3 PeekOffset { get; }
+
+        public Vector3 PeekPosition => Position + PeekOffset;
+
+        /// <exception cref="ArgumentException">name が空のとき。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">facing に水平の成分が無いとき。</exception>
+        public CoverPointPlacement(string name, Vector3 position, Vector3 facing, CoverHeight height, Vector3 peekOffset)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("cover point needs a name", nameof(name));
+            }
+
+            if (new Vector2(facing.x, facing.z).sqrMagnitude < 1e-6f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(facing), facing, $"cover point '{name}' must face horizontally");
+            }
+
+            Name = name;
+            Position = position;
+            Facing = facing;
+            Height = height;
+            PeekOffset = peekOffset;
+        }
+
+        /// <summary>低い壁の点。その場で立ち上がって覗く。</summary>
+        public static CoverPointPlacement Low(string name, Vector3 position, Vector3 facing)
+        {
+            return new CoverPointPlacement(name, position, facing, CoverHeight.Low, Vector3.zero);
+        }
+
+        /// <summary>高い壁の点。覗くときは peekOffset だけ (壁の端の外へ) 出る。</summary>
+        public static CoverPointPlacement High(string name, Vector3 position, Vector3 facing, Vector3 peekOffset)
+        {
+            return new CoverPointPlacement(name, position, facing, CoverHeight.High, peekOffset);
         }
     }
 }

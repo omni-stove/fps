@@ -175,6 +175,58 @@ namespace Fps.Tests.EditMode
             Assert.That(agent.GetComponent<CharacterAudio>(), Is.Not.Null, "rerun EnemyTestSceneBuilder.Build");
             Assert.That(agent.GetComponent<CharacterAnimator>(), Is.Not.Null, "rerun EnemyTestSceneBuilder.Build");
             Assert.That(agent.GetComponent<GrenadeThrower>(), Is.Null, "enemies do not throw grenades");
+
+            var registry = agent.CoverRegistry;
+            Assert.That(registry, Is.Not.Null, "the enemy takes cover");
+            Assert.That(registry.name, Is.EqualTo(EnemyTestSceneBuilder.CoverPointsObjectName));
+            Assert.That(registry.gameObject.scene, Is.EqualTo(_scene));
+            Assert.That(registry.Points.Count, Is.EqualTo(EnemyTestSceneBuilder.CoverPoints.Count));
+            for (var i = 0; i < registry.Points.Count; i++)
+            {
+                var placement = EnemyTestSceneBuilder.CoverPoints[i];
+                var point = registry.Points[i];
+                Assert.That(point.name, Is.EqualTo(placement.Name));
+                Assert.That(point.Height, Is.EqualTo(placement.Height));
+                Assert.That(Vector3.Distance(point.Position, placement.Position), Is.LessThan(1e-4f));
+                Assert.That(Vector3.Distance(point.PeekPosition, placement.PeekPosition), Is.LessThan(1e-4f));
+                Assert.That(Vector3.Angle(point.Facing, placement.Facing), Is.LessThan(0.01f));
+            }
+        }
+
+        [Test]
+        public void LowCoverHidesACrouchedEnemyAndWallEndsHideUntilPeeking()
+        {
+            // 原点のプレイヤーの目から、遮蔽点で隠れた敵は見えず、覗けば見える。
+            var eye = new Vector3(0f, GameBootstrap.PlayerSpawn.y + GameBootstrap.EyeOffset.y, 0f);
+            EnemyTestSceneBuilder.CreateLevel(_scene);
+            Physics.SyncTransforms();
+
+            Assert.That(Find(EnemyTestSceneBuilder.LowCoverName).transform.localScale, Is.EqualTo(EnemyTestSceneBuilder.LowCoverSize));
+            Assert.That(EnemyTestSceneBuilder.LowCoverSize.y, Is.LessThan(CoverProbe.LowWallHeight), "it counts as a low wall");
+
+            foreach (var placement in EnemyTestSceneBuilder.CoverPoints)
+            {
+                if (placement.Height == CoverHeight.Low)
+                {
+                    // 低い壁の、プレイヤーの側を向いた点だけを見る (反対側の点は回り込まれたとき用)。
+                    if (Vector3.Dot(placement.Facing, -placement.Position) <= 0f)
+                    {
+                        continue;
+                    }
+
+                    var crouchedTop = placement.Position + (Vector3.up * (EnemyAgent.DefaultCrouchHeight - 0.05f));
+                    Assert.That(IsVisibleAt(eye, crouchedTop), Is.False, $"{placement.Name} hides a crouched enemy");
+                    var standingEye = placement.Position + (Vector3.up * EnemyAgent.DefaultEyeHeight);
+                    Assert.That(IsVisibleAt(eye, standingEye), Is.True, $"{placement.Name} lets the enemy stand up and peek");
+                }
+                else
+                {
+                    var hidden = placement.Position + (Vector3.up * EnemyAgent.DefaultEyeHeight);
+                    Assert.That(IsVisibleAt(eye, hidden), Is.False, $"{placement.Name} hides a standing enemy");
+                    var peeking = placement.PeekPosition + (Vector3.up * EnemyAgent.DefaultEyeHeight);
+                    Assert.That(IsVisibleAt(eye, peeking), Is.True, $"{placement.Name} peeks past the wall end");
+                }
+            }
         }
 
         [Test]
@@ -292,7 +344,11 @@ namespace Fps.Tests.EditMode
 
         private static bool IsVisible(Vector3 eye, Vector3 groundPoint)
         {
-            var point = groundPoint + (Vector3.up * 1f);
+            return IsVisibleAt(eye, groundPoint + (Vector3.up * 1f));
+        }
+
+        private static bool IsVisibleAt(Vector3 eye, Vector3 point)
+        {
             var toPoint = point - eye;
             return !Physics.Raycast(eye, toPoint.normalized, toPoint.magnitude, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
         }

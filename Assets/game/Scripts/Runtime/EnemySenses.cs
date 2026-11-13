@@ -23,25 +23,37 @@ namespace Fps.Runtime
         /// <param name="noisePosition">
         /// この tick に聞いた物音の位置 (撃たれたときの撃った者の位置など)。null なら物音は無い。
         /// </param>
+        /// <param name="wasHit">前の知覚からこの知覚までに撃たれたか。</param>
+        /// <param name="hitSource">撃った者の位置。分からなければ null。wasHit が false なら使わない。</param>
+        /// <param name="healthFraction">今の体力の割合。0 以上 1 以下。</param>
         public static EnemyPerception Perceive(
             Vector3 selfGround,
             Vector3 eye,
             Damageable target,
             float sightRange,
             Transform selfRoot,
-            Vector3? noisePosition = null)
+            Vector3? noisePosition = null,
+            bool wasHit = false,
+            Vector3? hitSource = null,
+            float healthFraction = 1f)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
             {
                 throw new ArgumentOutOfRangeException(nameof(sightRange), sightRange, "sightRange must be positive and finite");
             }
 
+            if (!(healthFraction >= 0f) || healthFraction > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(healthFraction), healthFraction, "healthFraction must be between 0 and 1");
+            }
+
             var heardNoise = noisePosition.HasValue;
             System.Numerics.Vector3? noise = heardNoise ? noisePosition.Value.ToNumerics() : (System.Numerics.Vector3?)null;
+            System.Numerics.Vector3? source = wasHit && hitSource.HasValue ? hitSource.Value.ToNumerics() : (System.Numerics.Vector3?)null;
 
             if (target == null || target.IsDead)
             {
-                return new EnemyPerception(selfGround.ToNumerics(), null, false, heardNoise, noise);
+                return new EnemyPerception(selfGround.ToNumerics(), null, false, heardNoise, noise, wasHit, source, healthFraction);
             }
 
             var targetGround = target.GroundPoint;
@@ -51,7 +63,8 @@ namespace Fps.Runtime
             var lineOfSight = inRange
                 && Hitscan.HasLineOfSight(eye, target, Vector3.Distance(eye, target.AimPoint) + 0.01f, selfRoot);
 
-            return new EnemyPerception(selfGround.ToNumerics(), targetGround.ToNumerics(), lineOfSight, heardNoise, noise);
+            return new EnemyPerception(
+                selfGround.ToNumerics(), targetGround.ToNumerics(), lineOfSight, heardNoise, noise, wasHit, source, healthFraction);
         }
     }
 }

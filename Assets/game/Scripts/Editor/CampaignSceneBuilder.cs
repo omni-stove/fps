@@ -32,6 +32,8 @@ namespace Fps.Editor
     /// (KillTargetObjective は目標が Active になる前の撃破を数えないので、区域 A に入る前に敵を撃てないようにする)。</item>
     /// <item>衝立の左右の出口を、待ち伏せの敵 2 体 (handgun) が z = 49 から見張る。その奥の z = 55 と z = 63 を、
     /// 巡回の敵 2 体 (rifle) が左右に往復する。</item>
+    /// <item>奥の区画の 3 つの遮蔽物の南北の面の左右の端に遮蔽点 (<see cref="CoverPoints"/>) があり、敵 4 体が 1 つの
+    /// <see cref="CoverPointRegistry"/> を共有する。撃たれた敵はプレイヤーの方向を遮る点へ移り、端の外へ出て覗いて撃つ。</item>
     /// <item>出口は北の壁の手前 (0, 0, 66)。</item>
     /// <item>チェックポイントは開始地点 (原点、プレイヤーは出現した時点で踏んでいる) と区域 A の中 (0, 0, 34)。</item>
     /// </list>
@@ -114,6 +116,47 @@ namespace Fps.Editor
             new LevelBox("Cover_2", new Vector3(5f, 1f, 50f), new Vector3(3f, 2f, 1f)),
             new LevelBox("Cover_3", new Vector3(0f, 1f, 59f), new Vector3(4f, 2f, 1f)),
         };
+
+        public const string CoverPointsObjectName = "CoverPoints";
+
+        /// <summary>遮蔽点を置く、遮蔽物の面からの距離 (m)。敵の半径 (0.5m) で削られた NavMesh の縁より少し外。</summary>
+        public const float CoverPointStandOff = 0.7f;
+
+        /// <summary>遮蔽点を置く、遮蔽物の端からの内側への距離 (m)。</summary>
+        public const float CoverPointEdgeInset = 0.5f;
+
+        /// <summary>
+        /// 覗くときに遮蔽物の端の外へ出る距離 (m)。立つ位置から端までの距離に足す。
+        /// 斜め前のプレイヤーでも遮蔽物の厚み (1m) の角に遮られないよう、体の幅より大きく出る。
+        /// </summary>
+        public const float CoverPeekOutset = 1.5f;
+
+        /// <summary>
+        /// 遮蔽物 (<see cref="Covers"/>) の横に置く遮蔽点。遮蔽物は高さ 2m で立ったまま隠れる高い壁なので、どれも覗くときは
+        /// 近い方の端の外へ出る。南北の両面の左右の端に 1 つずつ置き、南から来るプレイヤーにも、回り込んで北に回ったプレイヤーにも使える。
+        /// </summary>
+        public static IReadOnlyList<CoverPointPlacement> CoverPoints()
+        {
+            var points = new List<CoverPointPlacement>();
+            foreach (var cover in Covers)
+            {
+                var halfX = cover.Size.x / 2f;
+                var halfZ = cover.Size.z / 2f;
+                var west = cover.Center.x - halfX + CoverPointEdgeInset;
+                var east = cover.Center.x + halfX - CoverPointEdgeInset;
+                var peek = CoverPointEdgeInset + CoverPeekOutset;
+                var north = cover.Center.z + halfZ + CoverPointStandOff;
+                var south = cover.Center.z - halfZ - CoverPointStandOff;
+
+                // 北側の点は南 (-Z) の壁を向き、南から来る弾を遮る。南側はその逆。
+                points.Add(CoverPointPlacement.High($"{cover.Name}_NW", new Vector3(west, 0f, north), Vector3.back, new Vector3(-peek, 0f, 0f)));
+                points.Add(CoverPointPlacement.High($"{cover.Name}_NE", new Vector3(east, 0f, north), Vector3.back, new Vector3(peek, 0f, 0f)));
+                points.Add(CoverPointPlacement.High($"{cover.Name}_SW", new Vector3(west, 0f, south), Vector3.forward, new Vector3(-peek, 0f, 0f)));
+                points.Add(CoverPointPlacement.High($"{cover.Name}_SE", new Vector3(east, 0f, south), Vector3.forward, new Vector3(peek, 0f, 0f)));
+            }
+
+            return points;
+        }
 
         // ---- 目標 ----
 
@@ -378,6 +421,13 @@ namespace Fps.Editor
                     targets[i] = enemies[i].GetComponent<Damageable>();
                 }
 
+                // 敵どうしで同じ点を取り合わないよう、全員に同じ registry を渡す。
+                var coverRegistry = SceneBuildHelpers.CreateCoverPoints(scene, null, CoverPointsObjectName, CoverPoints());
+                foreach (var enemy in enemies)
+                {
+                    enemy.CoverRegistry = coverRegistry;
+                }
+
                 var kill = enemiesRoot.AddComponent<KillTargetObjective>();
                 kill.ObjectiveId = KillEnemiesId;
                 kill.Runner = runner;
@@ -404,7 +454,7 @@ namespace Fps.Editor
 
                 EditorSceneManager.MarkSceneDirty(scene);
                 return new CampaignLayout(
-                    bootstrap, runner, surface, areaA, kill, enemies, exit, campaign, startCheckpoint, areaACheckpoint);
+                    bootstrap, runner, surface, areaA, kill, enemies, exit, campaign, startCheckpoint, areaACheckpoint, coverRegistry);
             }
             catch
             {
@@ -452,7 +502,7 @@ namespace Fps.Editor
             return surface;
         }
 
-        /// <summary>NavMesh の上で開始地点から行かなければならない点 (足元)。</summary>
+        /// <summary>NavMesh の上で開始地点から行かなければならない点 (足元)。遮蔽点の立つ位置と覗く位置も含む。</summary>
         public static IReadOnlyList<Vector3> RequiredPoints()
         {
             var points = new List<Vector3> { AreaACheckpointPosition, AreaAPosition, ExitPosition };
@@ -462,6 +512,7 @@ namespace Fps.Editor
                 points.AddRange(enemy.PatrolRoute);
             }
 
+            points.AddRange(SceneBuildHelpers.CoverStandPoints(CoverPoints()));
             return points;
         }
 
@@ -619,6 +670,9 @@ namespace Fps.Editor
         /// <summary>区域 A のチェックポイント (Id は <see cref="CampaignSceneBuilder.AreaACheckpointId"/>)。</summary>
         public CheckpointTrigger AreaACheckpoint { get; }
 
+        /// <summary>遮蔽点をまとめたもの。<see cref="Enemies"/> の全員に渡してある。</summary>
+        public CoverPointRegistry CoverRegistry { get; }
+
         public CampaignLayout(
             GameBootstrap bootstrap,
             MissionRunner runner,
@@ -629,7 +683,8 @@ namespace Fps.Editor
             ReachAreaTrigger exit,
             CampaignRunner campaign,
             CheckpointTrigger startCheckpoint,
-            CheckpointTrigger areaACheckpoint)
+            CheckpointTrigger areaACheckpoint,
+            CoverPointRegistry coverRegistry = null)
         {
             Bootstrap = bootstrap;
             Runner = runner;
@@ -641,6 +696,7 @@ namespace Fps.Editor
             Campaign = campaign;
             StartCheckpoint = startCheckpoint;
             AreaACheckpoint = areaACheckpoint;
+            CoverRegistry = coverRegistry;
         }
     }
 }

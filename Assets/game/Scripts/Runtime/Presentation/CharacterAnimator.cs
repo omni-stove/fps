@@ -370,7 +370,7 @@ namespace Fps.Runtime
             return new CharacterPoseInput(
                 HorizontalSpeed(velocity),
                 isGrounded: true,
-                isCrouching: phase == EnemyCoverPhase.Hiding,
+                isCrouching: _enemy.IsCrouching,
                 isSprinting: false,
                 isAiming: aiming,
                 coverHeight: null,

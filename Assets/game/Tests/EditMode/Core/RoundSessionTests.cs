@@ -7,11 +7,11 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class RoundSessionTests
     {
-        private const int AlphaPlayer = 10;
-        private const int BravoPlayer = 11;
+        private const int _alphaPlayer = 10;
+        private const int _bravoPlayer = 11;
 
         private static readonly int[] _expectedRoundOneStarted = { 1 };
-        private static readonly int[] _expectedRespawnedBravo = { BravoPlayer };
+        private static readonly int[] _expectedRespawnedBravo = { _bravoPlayer };
 
         private static readonly string[] _expectedFirstToTwo =
         {
@@ -51,8 +51,8 @@ namespace Fps.Core.Tests
             Assert.That(rounds.PreparationRemaining, Is.EqualTo(5f));
             Assert.That(rounds.Mode.State, Is.EqualTo(GameModeState.Waiting));
 
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
-            Assert.That(rounds.Mode.GetKills(AlphaPlayer), Is.Zero);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
+            Assert.That(rounds.Mode.GetKills(_alphaPlayer), Is.Zero);
             Assert.That(rounds.GetRoundWins(Side.Alpha), Is.Zero);
 
             rounds.Tick(3f);
@@ -86,12 +86,12 @@ namespace Fps.Core.Tests
             var log = Record(rounds);
             rounds.Start();
 
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
             Assert.That(rounds.GetRoundWins(Side.Alpha), Is.EqualTo(1));
             Assert.That(rounds.Phase, Is.EqualTo(RoundPhase.Live));
 
-            rounds.ReportKill(BravoPlayer, AlphaPlayer);
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
+            rounds.ReportKill(_bravoPlayer, _alphaPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
 
             Assert.That(log, Is.EqualTo(_expectedFirstToTwo));
             Assert.That(rounds.Phase, Is.EqualTo(RoundPhase.Ended));
@@ -102,7 +102,7 @@ namespace Fps.Core.Tests
 
             // 試合が終わった後は ModeSession も最後のラウンドの結果のまま残り、報告も時間も効かない。
             Assert.That(rounds.Mode.State, Is.EqualTo(GameModeState.Ended));
-            rounds.ReportKill(BravoPlayer, AlphaPlayer);
+            rounds.ReportKill(_bravoPlayer, _alphaPlayer);
             rounds.Tick(100f);
             Assert.That(rounds.GetRoundWins(Side.Bravo), Is.EqualTo(1));
             Assert.That(rounds.RoundNumber, Is.EqualTo(3));
@@ -134,11 +134,11 @@ namespace Fps.Core.Tests
             var log = Record(rounds, withAttacker: true);
             rounds.Start();
 
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
-            rounds.ReportKill(BravoPlayer, AlphaPlayer);
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
-            rounds.ReportKill(BravoPlayer, AlphaPlayer);
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
+            rounds.ReportKill(_bravoPlayer, _alphaPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
+            rounds.ReportKill(_bravoPlayer, _alphaPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
 
             Assert.That(log, Is.EqualTo(_expectedSwapOrder));
             Assert.That(rounds.Attacker, Is.EqualTo(Side.Alpha));
@@ -170,7 +170,7 @@ namespace Fps.Core.Tests
 
             for (var i = 0; i < 4; i++)
             {
-                rounds.ReportKill(AlphaPlayer, BravoPlayer);
+                rounds.ReportKill(_alphaPlayer, _bravoPlayer);
             }
 
             Assert.That(swaps, Is.Zero);
@@ -184,9 +184,9 @@ namespace Fps.Core.Tests
             rounds.Start();
             rounds.Tick(1f);
 
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
             Assert.That(rounds.Mode.GetScore(Side.Alpha), Is.EqualTo(1d));
-            Assert.That(rounds.Mode.IsAwaitingRespawn(BravoPlayer), Is.True);
+            Assert.That(rounds.Mode.IsAwaitingRespawn(_bravoPlayer), Is.True);
 
             rounds.AddScore(Side.Bravo, 2d);
 
@@ -195,12 +195,12 @@ namespace Fps.Core.Tests
             Assert.That(rounds.Mode.State, Is.EqualTo(GameModeState.Waiting));
             Assert.That(rounds.Mode.GetScore(Side.Alpha), Is.Zero);
             Assert.That(rounds.Mode.GetScore(Side.Bravo), Is.Zero);
-            Assert.That(rounds.Mode.GetKills(AlphaPlayer), Is.Zero);
-            Assert.That(rounds.Mode.GetDeaths(BravoPlayer), Is.Zero);
-            Assert.That(rounds.Mode.IsDown(BravoPlayer), Is.False);
-            Assert.That(rounds.Mode.GetRespawnRemaining(BravoPlayer), Is.Null);
+            Assert.That(rounds.Mode.GetKills(_alphaPlayer), Is.Zero);
+            Assert.That(rounds.Mode.GetDeaths(_bravoPlayer), Is.Zero);
+            Assert.That(rounds.Mode.IsDown(_bravoPlayer), Is.False);
+            Assert.That(rounds.Mode.GetRespawnRemaining(_bravoPlayer), Is.Null);
             Assert.That(rounds.Mode.PlayerCount, Is.EqualTo(2));
-            Assert.That(rounds.Mode.GetSide(BravoPlayer), Is.EqualTo(Side.Bravo));
+            Assert.That(rounds.Mode.GetSide(_bravoPlayer), Is.EqualTo(Side.Bravo));
         }
 
         [Test]
@@ -211,7 +211,7 @@ namespace Fps.Core.Tests
             rounds.Mode.RespawnReady += respawned.Add;
             rounds.Start();
 
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
             rounds.Tick(2f);
 
             Assert.That(respawned, Is.EqualTo(_expectedRespawnedBravo));
@@ -228,19 +228,19 @@ namespace Fps.Core.Tests
                 Array.Empty<IScoreRule>(),
                 new NoRespawn(),
                 new IWinCondition[] { new LastSideStandingWin() });
-            mode.AddPlayer(AlphaPlayer, Side.Alpha);
-            mode.AddPlayer(BravoPlayer, Side.Bravo);
+            mode.AddPlayer(_alphaPlayer, Side.Alpha);
+            mode.AddPlayer(_bravoPlayer, Side.Bravo);
             var rounds = new RoundSession(mode, 2, 0f, 0);
             rounds.Start();
 
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
             Assert.That(rounds.RoundNumber, Is.EqualTo(1));
 
             rounds.Tick(0.1f);
 
             Assert.That(rounds.GetRoundWins(Side.Alpha), Is.EqualTo(1));
             Assert.That(rounds.RoundNumber, Is.EqualTo(2));
-            Assert.That(rounds.Mode.IsEliminated(BravoPlayer), Is.False);
+            Assert.That(rounds.Mode.IsEliminated(_bravoPlayer), Is.False);
         }
 
         [Test]
@@ -249,7 +249,7 @@ namespace Fps.Core.Tests
             var rounds = Create();
             rounds.Start();
 
-            rounds.Mode.ReportKill(AlphaPlayer, BravoPlayer);
+            rounds.Mode.ReportKill(_alphaPlayer, _bravoPlayer);
             Assert.That(rounds.Mode.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(rounds.RoundNumber, Is.EqualTo(1));
             Assert.That(rounds.GetRoundWins(Side.Alpha), Is.Zero);
@@ -266,7 +266,7 @@ namespace Fps.Core.Tests
             var rounds = Create(winsToWin: 1, swapEveryRounds: 1, timeLimitSeconds: 10f);
             rounds.Start();
             rounds.Tick(10f);
-            rounds.ReportKill(BravoPlayer, AlphaPlayer);
+            rounds.ReportKill(_bravoPlayer, _alphaPlayer);
             Assert.That(rounds.Phase, Is.EqualTo(RoundPhase.Ended));
 
             rounds.Reset();
@@ -281,7 +281,7 @@ namespace Fps.Core.Tests
             Assert.That(rounds.Mode.PlayerCount, Is.EqualTo(2));
 
             rounds.Start();
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
             Assert.That(rounds.Winner, Is.EqualTo((Side?)Side.Alpha));
         }
 
@@ -298,7 +298,7 @@ namespace Fps.Core.Tests
             rounds.Ended += winner => log.Add("Ended " + winner);
             rounds.Start();
 
-            rounds.ReportKill(AlphaPlayer, BravoPlayer);
+            rounds.ReportKill(_alphaPlayer, _bravoPlayer);
 
             Assert.That(log, Is.EqualTo(_expectedResetInRoundEnded));
             Assert.That(rounds.Phase, Is.EqualTo(RoundPhase.Waiting));
@@ -345,8 +345,8 @@ namespace Fps.Core.Tests
             IRespawnPolicy respawn = null)
         {
             var mode = CreateMode(timeLimitSeconds, scoreLimit, respawn);
-            mode.AddPlayer(AlphaPlayer, Side.Alpha);
-            mode.AddPlayer(BravoPlayer, Side.Bravo);
+            mode.AddPlayer(_alphaPlayer, Side.Alpha);
+            mode.AddPlayer(_bravoPlayer, Side.Bravo);
             return new RoundSession(mode, winsToWin, preparationSeconds, swapEveryRounds);
         }
 

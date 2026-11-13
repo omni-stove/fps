@@ -302,7 +302,6 @@ namespace Fps.Core
                 return;
             }
 
-            _finishingRound = false;
             if (Phase == RoundPhase.Ended)
             {
                 Ended?.Invoke(Winner.Value);
@@ -321,6 +320,7 @@ namespace Fps.Core
                 }
             }
 
+            _finishingRound = false;
             BeginPreparation();
         }
     }

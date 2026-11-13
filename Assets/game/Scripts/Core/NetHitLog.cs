@@ -37,6 +37,15 @@ namespace Fps.Core
                 + " outcome=" + outcome;
         }
 
+        /// <example><c>[Net] hit attacker=0 victim=1 rewindTicks=6.40 zone=Head dmg=50 hp=50 outcome=Damaged victimCrouched=true</c></example>
+        /// <param name="victimCrouched">判定に使った (巻き戻した時点の) 当たった人のしゃがみ。</param>
+        public static string Hit(
+            int attackerId, int victimId, float rewindTicks, HitZone zone, int damage, int healthAfter, DamageOutcome outcome, bool victimCrouched)
+        {
+            return Hit(attackerId, victimId, rewindTicks, zone, damage, healthAfter, outcome)
+                + " victimCrouched=" + (victimCrouched ? "true" : "false");
+        }
+
         /// <example><c>[Net] rejected shot attacker=0 reason=OriginTooFar</c></example>
         public static string Rejected(int attackerId, ShotRejection reason)
         {

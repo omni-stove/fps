@@ -103,13 +103,20 @@ namespace Fps.Editor
 
         private static GameObject CreatePlayerSource()
         {
-            var source = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            source.name = "NetPlayer";
+            var source = new GameObject("NetPlayer");
             source.AddComponent<NetworkObject>();
+
+            // 見た目は子に置く。しゃがみで NetStance が見た目だけを縦に縮める (本体を縮めると目や CharacterController まで縮む)
+            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            body.name = NetStance.BodyName;
+            body.transform.SetParent(source.transform, false);
+            body.transform.localPosition = Vector3.zero;
+            body.transform.localRotation = Quaternion.identity;
+            body.transform.localScale = Vector3.one;
 
             // 位置は NetworkPlayerMotor が同期する (リスポーンのテレポートも Motor 経由)。NetworkTransform は付けない。
             // CharacterController 自体がカプセルのコライダーなので、プリミティブ付属のコライダーは二重になる
-            UnityEngine.Object.DestroyImmediate(source.GetComponent<CapsuleCollider>());
+            UnityEngine.Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
             var controller = source.AddComponent<CharacterController>();
             controller.height = PlayerHeight;
             controller.radius = PlayerRadius;

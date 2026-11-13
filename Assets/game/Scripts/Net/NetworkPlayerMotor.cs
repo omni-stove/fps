@@ -26,6 +26,13 @@ namespace Fps.Net
     /// サーバーは受け取った yaw で本体を回して確定状態と一緒に返し、他人のクライアントは位置と同じ遅れで補間して回す。
     /// オーナー自身の向きは視点操作が決めるので、サーバーからの yaw では上書きしない。
     /// </para>
+    /// <para>
+    /// しゃがみ (Crouch を押している間) も入力に乗せて送り、予測とサーバーで同じ <see cref="NetMotorSimulation"/> を通して
+    /// <see cref="NetStance"/> で CharacterController の height / center と目を変える。確定状態にしゃがみも乗せて返し、
+    /// 予測と食い違えば位置が合っていても巻き戻す (<see cref="MotorState.PositionError"/>)。
+    /// 他人のクライアントは受け取ったしゃがみを位置と同じ遅れで当て、カプセル・目・見た目 (<see cref="NetStance.BodyName"/>) を変える。
+    /// しゃがみが変わるたび <c>[Net] stance owner=.. tick=.. crouched=..</c> を出す (サーバーと他人のクライアント)。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
@@ -46,6 +53,7 @@ namespace Fps.Net
         public const string MoveActionPath = InputActionPaths.Move;
         public const string JumpActionPath = InputActionPaths.Jump;
         public const string SprintActionPath = InputActionPaths.Sprint;
+        public const string CrouchActionPath = InputActionPaths.Crouch;
 
         /// <summary>1 tick の長さ (秒)。</summary>
         public static readonly float TickSeconds = 1f / TickRate;
@@ -81,20 +89,23 @@ namespace Fps.Net
         [SerializeField, Range(0f, 1f), Tooltip("空中で水平速度を入力方向へ寄せる 1 tick あたりの割合")]
         private float _airControl = 0.1f;
 
+        [SerializeField, Min(0.01f), Tooltip("しゃがみのカプセルの高さ (m)。半径の 2 倍以上、立ちの高さ以下")]
+        private float _crouchHeight = PlayerController.DefaultCrouchHeight;
+
         // 補間した向きの長さがこれより短ければ (真逆の向きの間など) 向きを決められないので、前の向きのままにする
         private const float _minYawDirectionLengthSquared = 1e-6f;
 
         private CharacterController _controller;
         private FirstPersonLook _look;
-        private PlayerMotor _motor;
+        private NetMotorSimulation _simulation;
         private NetworkPlayerRole _role;
-        private Vector3 _spawnPosition;
 
         // オーナー (予測するクライアントとホスト)
         private TickClock _clock;
         private InputAction _moveAction;
         private InputAction _jumpAction;
         private InputAction _sprintAction;
+        private InputAction _crouchAction;
         private readonly List<InputAction> _enabledActions = new List<InputAction>();
         private bool _jumpLatched;
         private PredictionBuffer<MotorInput, MotorState> _prediction;
@@ -114,6 +125,7 @@ namespace Fps.Net
         // 向きは水平の単位ベクトル (sin yaw, 0, cos yaw) として記録し、位置と同じ tick で補間する。
         // 角度のまま補間すると 359° と 1° の間で逆回りしてしまうため
         private HitboxHistory _remoteYawHistory;
+        private StanceHistory _remoteStanceHistory;
         private bool _hasRemoteState;
         private int _latestRemoteTick;
         private double _renderTick;
@@ -124,40 +136,64 @@ namespace Fps.Net
         /// <summary>予測の履歴。オーナーのクライアント以外では null。</summary>
         public PredictionBuffer<MotorInput, MotorState> Prediction => _prediction;
 
+        /// <summary>
+        /// 姿勢 (立ち・しゃがみの寸法と、今当てている姿勢)。設定が不正か CharacterController が無ければ null。
+        /// 射撃の始点 (<see cref="NetPlayer.EyePosition"/>) と巻き戻しの当たり判定 (<see cref="RewindTarget.Stance"/>) が使う。
+        /// </summary>
+        public NetStance Stance => _simulation != null ? _simulation.Stance : null;
+
+        /// <summary>このインスタンスで今しゃがんでいるか (オーナーは予測、他人は補間表示の姿勢)。</summary>
+        public bool IsCrouched => _simulation != null && _simulation.Stance.IsCrouched;
+
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
             _look = GetComponent<FirstPersonLook>();
+            if (_controller == null)
+            {
+                return;
+            }
 
             try
             {
-                _motor = new PlayerMotor(new MotorSpec(
+                var motor = new PlayerMotor(new MotorSpec(
                     _walkSpeed, _sprintSpeed, _jumpHeight, _gravity, _airControl, PlayerController.DefaultCrouchSpeed));
+                var stance = NetStance.FromHierarchy(_controller, _crouchHeight);
+                _simulation = new NetMotorSimulation(_controller, motor, stance, TickSeconds, KillPlaneY);
             }
             catch (ArgumentOutOfRangeException e)
             {
-                Debug.LogError("[Net] invalid motor settings on " + name + ": " + e.Message, this);
-                _motor = null;
+                Debug.LogError("[Net] invalid motor or crouch settings on " + name + ": " + e.Message, this);
+                _simulation = null;
             }
+        }
+
+        /// <summary>しゃがみが変わったときのログ。例: <c>[Net] stance owner=1 tick=42 crouched=true</c>。</summary>
+        public static string FormatStanceLog(ulong ownerClientId, int tick, bool crouched)
+        {
+            return "[Net] stance owner=" + ownerClientId.ToString(CultureInfo.InvariantCulture)
+                + " tick=" + tick.ToString(CultureInfo.InvariantCulture)
+                + " crouched=" + (crouched ? "true" : "false");
         }
 
         public override void OnNetworkSpawn()
         {
-            if (_motor == null || _controller == null)
+            if (_simulation == null || _controller == null)
             {
-                Debug.LogError("[Net] " + name + " cannot move: motor settings or CharacterController are missing", this);
+                Debug.LogError("[Net] " + name + " cannot move: motor or crouch settings or CharacterController are missing", this);
                 enabled = false;
                 return;
             }
 
-            _spawnPosition = transform.position;
+            _simulation.SpawnPosition = transform.position;
+            _simulation.Stance.Apply(false);
             Register();
 
             if (IsServer)
             {
                 _role = IsOwner ? NetworkPlayerRole.HostOwner : NetworkPlayerRole.ServerSimulated;
                 _controller.enabled = true;
-                _serverState = new MotorState(transform.position, Vector3.zero, false);
+                _serverState = new MotorState(transform.position, Vector3.zero, false, false);
                 _serverYaw = transform.eulerAngles.y * Mathf.Deg2Rad;
                 _serverTick = 0;
                 _lastProcessedTick = 0;
@@ -167,8 +203,8 @@ namespace Fps.Net
             {
                 _role = NetworkPlayerRole.Predicted;
                 _controller.enabled = true;
-                _prediction = new PredictionBuffer<MotorInput, MotorState>(Simulate, MotorState.PositionError, ReconcileTolerance);
-                _prediction.Reset(0, new MotorState(transform.position, Vector3.zero, false));
+                _prediction = new PredictionBuffer<MotorInput, MotorState>(_simulation.Step, MotorState.PositionError, ReconcileTolerance);
+                _prediction.Reset(0, new MotorState(transform.position, Vector3.zero, false, false));
             }
             else
             {
@@ -177,6 +213,7 @@ namespace Fps.Net
                 _controller.enabled = false;
                 _remoteHistory = new HitboxHistory();
                 _remoteYawHistory = new HitboxHistory();
+                _remoteStanceHistory = new StanceHistory();
                 _hasRemoteState = false;
             }
 
@@ -221,7 +258,8 @@ namespace Fps.Net
             {
                 // 1 フレームに複数 tick 進んでも送るのは最新だけ。照合も補間も間の tick を必要としない
                 _hasPendingState = false;
-                StateRpc(_serverTick, _serverState.Position, _serverState.Velocity, _serverState.IsGrounded, _serverYaw, default);
+                StateRpc(
+                    _serverTick, _serverState.Position, _serverState.Velocity, _serverState.IsGrounded, _serverState.IsCrouched, _serverYaw, default);
             }
         }
 
@@ -245,11 +283,12 @@ namespace Fps.Net
         {
             var move = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
             var sprint = _sprintAction != null && _sprintAction.IsPressed();
+            var crouch = _crouchAction != null && _crouchAction.IsPressed();
             var jump = _jumpLatched;
             _jumpLatched = false;
 
             var yaw = SampleYaw(_look, transform);
-            return new MotorInput(move, yaw, sprint, jump);
+            return new MotorInput(move, yaw, sprint, jump, crouch);
         }
 
         /// <summary>
@@ -288,13 +327,19 @@ namespace Fps.Net
             }
 
             _prediction.Predict(tick, input);
-            SubmitInputRpc(tick, input.Move, input.Yaw, input.Sprint, input.Jump);
+            SubmitInputRpc(tick, input.Move, input.Yaw, input.Sprint, input.Jump, input.Crouch);
         }
 
         private void ApplyAuthoritative(int tick, MotorInput input)
         {
-            _serverState = Simulate(_serverState, input);
+            var wasCrouched = _serverState.IsCrouched;
+            _serverState = _simulation.Step(_serverState, input);
             _serverYaw = input.Yaw;
+            if (_serverState.IsCrouched != wasCrouched)
+            {
+                Debug.Log(FormatStanceLog(OwnerClientId, tick, _serverState.IsCrouched), this);
+            }
+
             if (_role == NetworkPlayerRole.ServerSimulated)
             {
                 // ホスト自身のプレイヤーは FirstPersonLook がもう回しているので、遅れた値で上書きしない
@@ -307,7 +352,7 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// サーバーで position へ瞬間移動させる (リスポーンなど)。速度は 0 に戻す。
+        /// サーバーで position へ瞬間移動させる (リスポーンなど)。速度は 0 に戻し、立たせる (しゃがみを押し続けていれば次の tick でまたしゃがむ)。
         /// 所有クライアントは次に届く確定状態との照合で巻き戻され、他人のクライアントは補間せずに飛ばす。
         /// </summary>
         public void ServerTeleport(Vector3 position)
@@ -324,8 +369,14 @@ namespace Fps.Net
                 return;
             }
 
-            _serverState = new MotorState(position, Vector3.zero, false);
-            PlaceAt(position);
+            var wasCrouched = _serverState.IsCrouched;
+            _serverState = new MotorState(position, Vector3.zero, false, false);
+            _simulation.Place(_serverState);
+            if (wasCrouched)
+            {
+                Debug.Log(FormatStanceLog(OwnerClientId, _serverTick, false), this);
+            }
+
             _hasPendingState = true;
             TeleportedRpc(_serverTick, position);
         }
@@ -346,6 +397,12 @@ namespace Fps.Net
             // テレポートでは向きは変わらないので、今の向きから補間し直す
             _remoteYawHistory = new HitboxHistory();
             _remoteYawHistory.Record(tick, YawDirection(transform.eulerAngles.y * Mathf.Deg2Rad));
+
+            // サーバーはテレポートで立たせる
+            _remoteStanceHistory = new StanceHistory();
+            _remoteStanceHistory.Record(tick, false);
+            ShowRemoteStance(tick, false);
+
             _latestRemoteTick = tick;
             _renderTick = tick;
             _hasRemoteState = true;
@@ -353,7 +410,7 @@ namespace Fps.Net
         }
 
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
-        private void SubmitInputRpc(int tick, Vector2 move, float yaw, bool sprint, bool jump, RpcParams rpcParams = default)
+        private void SubmitInputRpc(int tick, Vector2 move, float yaw, bool sprint, bool jump, bool crouch, RpcParams rpcParams = default)
         {
             if (_role != NetworkPlayerRole.ServerSimulated)
             {
@@ -385,18 +442,19 @@ namespace Fps.Net
             }
 
             _inputBudget -= 1f;
-            ApplyAuthoritative(tick, new MotorInput(move, yaw, sprint, jump));
+            ApplyAuthoritative(tick, new MotorInput(move, yaw, sprint, jump, crouch));
         }
 
         [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable)]
-        private void StateRpc(int tick, Vector3 position, Vector3 velocity, bool isGrounded, float yaw, RpcParams rpcParams = default)
+        private void StateRpc(
+            int tick, Vector3 position, Vector3 velocity, bool isGrounded, bool isCrouched, float yaw, RpcParams rpcParams = default)
         {
             if (rpcParams.Receive.SenderClientId != NetworkManager.ServerClientId)
             {
                 return;
             }
 
-            var state = new MotorState(position, velocity, isGrounded);
+            var state = new MotorState(position, velocity, isGrounded, isCrouched);
             if (!state.IsFinite || !NetMath.IsFinite(yaw))
             {
                 WarnThrottled("[Net] dropped non-finite state for owner=" + OwnerClientId + " tick=" + tick);
@@ -409,7 +467,7 @@ namespace Fps.Net
                     Reconcile(tick, state);
                     break;
                 case NetworkPlayerRole.Interpolated:
-                    ReceiveRemoteState(tick, position, yaw);
+                    ReceiveRemoteState(tick, position, yaw, isCrouched);
                     break;
             }
         }
@@ -423,16 +481,29 @@ namespace Fps.Net
             }
 
             // 再シミュレーションした tick が無いときは確定状態そのものが最新なので、ここで置き直す
-            PlaceAt(_prediction.Current.Position);
-            Debug.Log(string.Format(
-                CultureInfo.InvariantCulture,
-                "[Net] reconcile tick={0} error={1:F3} resimulated={2}",
-                result.Tick,
-                result.Error,
-                result.ResimulatedTicks), this);
+            var current = _prediction.Current;
+            _simulation.Place(current);
+            Debug.Log(FormatReconcileLog(result, authoritative.IsCrouched, current.IsCrouched), this);
         }
 
-        private void ReceiveRemoteState(int tick, Vector3 position, float yaw)
+        /// <summary>
+        /// 照合で巻き戻したときのログ。しゃがみが食い違って巻き戻したときは error が Infinity になる。
+        /// 例: <c>[Net] reconcile tick=42 error=Infinity resimulated=3 crouched=true predictedCrouched=true</c>
+        /// (crouched はその tick の確定状態、predictedCrouched は再シミュレーション後の最新の予測)。
+        /// </summary>
+        public static string FormatReconcileLog(ReconcileResult result, bool authoritativeCrouched, bool predictedCrouched)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "[Net] reconcile tick={0} error={1:F3} resimulated={2} crouched={3} predictedCrouched={4}",
+                result.Tick,
+                result.Error,
+                result.ResimulatedTicks,
+                authoritativeCrouched ? "true" : "false",
+                predictedCrouched ? "true" : "false");
+        }
+
+        private void ReceiveRemoteState(int tick, Vector3 position, float yaw, bool crouched)
         {
             // 信頼性なしで送るので順番が入れ替わることがある。古いものは捨てる
             if (_hasRemoteState && tick <= _latestRemoteTick)
@@ -442,6 +513,7 @@ namespace Fps.Net
 
             _remoteHistory.Record(tick, NetMath.ToNumerics(position));
             _remoteYawHistory.Record(tick, YawDirection(yaw));
+            _remoteStanceHistory.Record(tick, crouched);
             _latestRemoteTick = tick;
 
             if (!_hasRemoteState)
@@ -449,7 +521,20 @@ namespace Fps.Net
                 _hasRemoteState = true;
                 _renderTick = tick;
                 transform.SetPositionAndRotation(position, YawRotation(yaw));
+                ShowRemoteStance(tick, crouched);
             }
+        }
+
+        // 他人のプレイヤーの姿勢を表示する。変わったときだけ当ててログを出す
+        private void ShowRemoteStance(int tick, bool crouched)
+        {
+            if (_simulation.Stance.IsCrouched == crouched)
+            {
+                return;
+            }
+
+            _simulation.Stance.Apply(crouched);
+            Debug.Log(FormatStanceLog(OwnerClientId, tick, crouched), this);
         }
 
         private void UpdateInterpolation(float deltaSeconds)
@@ -485,47 +570,11 @@ namespace Fps.Net
             {
                 transform.rotation = YawRotation(Mathf.Atan2(facing.X, facing.Z));
             }
-        }
 
-        /// <summary>
-        /// 状態から 1 tick 進める。CharacterController を実際に動かすので、終わったとき本体は結果の位置にある。
-        /// 予測・再シミュレーション・サーバーで同じ処理を使う。
-        /// </summary>
-        private MotorState Simulate(MotorState state, MotorInput input)
-        {
-            PlaceAt(state.Position);
-            _motor.SetVelocity(NetMath.ToNumerics(state.Velocity));
-
-            // ネット対戦のしゃがみは入力と状態の同期が要るので、まだしゃがまない。
-            var displacement = _motor.Step(
-                NetMath.ToNumerics(input.Move), input.Yaw, input.Sprint, false, input.Jump, state.IsGrounded, TickSeconds);
-            _controller.Move(NetMath.ToUnity(displacement));
-
-            var position = transform.position;
-            var velocity = NetMath.ToUnity(_motor.Velocity);
-            var grounded = _controller.isGrounded;
-
-            if (position.y < KillPlaneY)
+            if (_remoteStanceHistory.TrySample((float)_renderTick, out var crouched))
             {
-                position = _spawnPosition;
-                velocity = Vector3.zero;
-                grounded = false;
-                PlaceAt(position);
+                ShowRemoteStance((int)Math.Floor(_renderTick), crouched);
             }
-
-            return new MotorState(position, velocity, grounded);
-        }
-
-        /// <summary>本体を位置へ置き、CharacterController がその位置から動くよう物理側にも反映する。</summary>
-        private void PlaceAt(Vector3 position)
-        {
-            if (transform.position.Equals(position))
-            {
-                return;
-            }
-
-            transform.position = position;
-            Physics.SyncTransforms();
         }
 
         private void ResolveInputActions()
@@ -540,6 +589,7 @@ namespace Fps.Net
             _moveAction = FindAndEnable(actions, MoveActionPath);
             _jumpAction = FindAndEnable(actions, JumpActionPath);
             _sprintAction = FindAndEnable(actions, SprintActionPath);
+            _crouchAction = FindAndEnable(actions, CrouchActionPath);
         }
 
         private InputAction FindAndEnable(InputActionAsset actions, string path)
@@ -595,9 +645,11 @@ namespace Fps.Net
             _moveAction = null;
             _jumpAction = null;
             _sprintAction = null;
+            _crouchAction = null;
             _prediction = null;
             _remoteHistory = null;
             _remoteYawHistory = null;
+            _remoteStanceHistory = null;
             _hasPendingState = false;
             _role = NetworkPlayerRole.None;
         }

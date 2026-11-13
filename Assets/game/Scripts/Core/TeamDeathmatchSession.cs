@@ -14,6 +14,8 @@ namespace Fps.Core
     /// <list type="bullet">
     /// <item>両チームに 1 人以上そろった時点で試合を始める。</item>
     /// <item>味方へのダメージは無視する (自滅は数える)。</item>
+    /// <item>プレイヤーごとに <see cref="HealthRegenerator"/> を持ち、<see cref="TeamDeathmatchSpec.Rules"/> に従って
+    /// 試合中だけ体力を自動回復させる。</item>
     /// <item>体力が 0 になったら <see cref="TeamDeathmatch.ReportKill"/> を呼び、リスポーン待ちが終わったら
     /// 体力を満タンに戻して地点を選び <see cref="Spawned"/> を出す。</item>
     /// <item>イベントはいつも「倒した → 点数 → リスポーン/終了」の順に出す
@@ -57,6 +59,9 @@ namespace Fps.Core
 
         // playerId の昇順に回して、同じ入力なら同じ結果になるようにする。
         private readonly SortedDictionary<int, Health> _health = new SortedDictionary<int, Health>();
+
+        // _health と同じ顔ぶれを持つ。Health を作り直すたびに作り直す。
+        private readonly Dictionary<int, HealthRegenerator> _regenerators = new Dictionary<int, HealthRegenerator>();
         private readonly Queue<Action> _deferred = new Queue<Action>();
         private int _busy;
 
@@ -189,7 +194,7 @@ namespace Fps.Core
 
             var team = _assigner.Assign();
             _match.AddPlayer(playerId, team);
-            _health.Add(playerId, new Health(MaxHealth));
+            ResetHealth(playerId);
 
             PlayerChanged?.Invoke(playerId);
             Spawned?.Invoke(playerId, SelectSpawn(playerId));
@@ -203,6 +208,7 @@ namespace Fps.Core
             FindHealth(playerId);
             _match.RemovePlayer(playerId);
             _health.Remove(playerId);
+            _regenerators.Remove(playerId);
         }
 
         /// <summary>
@@ -236,6 +242,7 @@ namespace Fps.Core
             try
             {
                 victim.TakeDamage(amount);
+                _regenerators[victimId].NotifyDamaged();
                 if (!victim.IsDead)
                 {
                     PlayerChanged?.Invoke(victimId);
@@ -270,15 +277,28 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 時間を進める。リスポーン待ちが終わった人を出現させ、時間切れなら試合を終える。
+        /// 時間を進める。試合中なら先に各プレイヤーの体力を自動回復させ (<see cref="GameRules.RegenPerSecond"/> が
+        /// 0 なら何もしない)、体力が変わった人ごとに <see cref="PlayerChanged"/> を出す。続けて
+        /// リスポーン待ちが終わった人を出現させ、時間切れなら試合を終える。
         /// 終わった後は次の試合までの待ちを進め、待ち終わったら <see cref="Restart"/> する
         /// (試合が終わった回の Tick の残りは待ちに数えない)。
         /// </summary>
         public void Tick(float deltaSeconds)
         {
+            if (!(deltaSeconds >= 0f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must not be negative");
+            }
+
             var waitingForRestart = _restartPending && State == GameModeState.Ended;
 
-            // 引数の検査は TeamDeathmatch に任せる。終わった後は時間を進めないので何も起きない
+            // _match.Tick より先に回すのは、この Tick で時間切れになっても終わるまでの分は回復させるため
+            if (State == GameModeState.Playing)
+            {
+                TickRegeneration(deltaSeconds);
+            }
+
+            // 終わった後は時間を進めないので何も起きない
             _match.Tick(deltaSeconds);
 
             if (!waitingForRestart)
@@ -313,7 +333,7 @@ namespace Fps.Core
             var playerIds = new List<int>(_health.Keys);
             foreach (var playerId in playerIds)
             {
-                _health[playerId] = new Health(MaxHealth);
+                ResetHealth(playerId);
             }
 
             Restarted?.Invoke();
@@ -438,9 +458,47 @@ namespace Fps.Core
                 return;
             }
 
-            _health[playerId] = new Health(MaxHealth);
+            ResetHealth(playerId);
             PlayerChanged?.Invoke(playerId);
             Spawned?.Invoke(playerId, SelectSpawn(playerId));
+        }
+
+        private void ResetHealth(int playerId)
+        {
+            var health = new Health(MaxHealth);
+            _health[playerId] = health;
+            _regenerators[playerId] = new HealthRegenerator(health, Spec.Rules);
+        }
+
+        private void TickRegeneration(float deltaSeconds)
+        {
+            if (Spec.Rules.RegenPerSecond == 0f)
+            {
+                return;
+            }
+
+            // 受け手が抜けたりダメージを与えたりしても回している最中の辞書を崩さないよう、知らせるのは回し終えてから
+            List<int> changed = null;
+            foreach (var playerId in _health.Keys)
+            {
+                if (_regenerators[playerId].Tick(deltaSeconds) > 0)
+                {
+                    (changed ??= new List<int>()).Add(playerId);
+                }
+            }
+
+            if (changed == null)
+            {
+                return;
+            }
+
+            foreach (var playerId in changed)
+            {
+                if (_health.ContainsKey(playerId))
+                {
+                    PlayerChanged?.Invoke(playerId);
+                }
+            }
         }
 
         /// <summary>ApplyDamage の途中ならそれが終わるまで遅らせ、そうでなければすぐに実行する。</summary>

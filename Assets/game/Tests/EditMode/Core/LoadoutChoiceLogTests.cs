@@ -19,7 +19,7 @@ namespace Fps.Core.Tests
         {
             Assert.That(LoadoutChoiceLog.Requested(new[] { _rifle, _handgun }),
                 Is.EqualTo("[Net] loadout request weapons=" + _rifle + "," + _handgun));
-            Assert.That(LoadoutChoiceLog.Requested(new string[0]), Is.EqualTo("[Net] loadout request weapons=-"));
+            Assert.That(LoadoutChoiceLog.Requested(Array.Empty<string>()), Is.EqualTo("[Net] loadout request weapons=-"));
             Assert.Throws<ArgumentNullException>(() => LoadoutChoiceLog.Requested(null));
         }
 

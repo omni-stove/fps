@@ -254,7 +254,7 @@ namespace Fps.Core.Tests
             Assert.That(tooFew, Does.Contain("expected 2"));
             Assert.That(loadout.TryChoose(1, new[] { _rifle, _handgun, _smg }, out var tooMany), Is.False);
             Assert.That(tooMany, Does.Contain("expected 2"));
-            Assert.That(loadout.TryChoose(1, new string[0], out var none), Is.False);
+            Assert.That(loadout.TryChoose(1, System.Array.Empty<string>(), out var none), Is.False);
             Assert.That(none, Does.Contain("expected 2"));
             Assert.That(loadout.TryChoose(1, null, out var missing), Is.False);
             Assert.That(missing, Is.Not.Null);

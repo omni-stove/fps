@@ -25,7 +25,8 @@ namespace Fps.Core
 
         public static MenuTransition Quit { get; } = new MenuTransition(MenuTransitionKind.Quit, null, LobbyLaunchOptions.None);
 
-        /// <summary>scenePath のシーンを読む遷移。</summary>
+        /// <summary>シーンを読む遷移。</summary>
+        /// <param name="scenePath">読むシーンのパス。</param>
         /// <param name="lobby">読んだシーンで使うロビーの設定。null なら <see cref="LobbyLaunchOptions.None"/>。</param>
         public static MenuTransition Load(string scenePath, LobbyLaunchOptions lobby = null)
         {

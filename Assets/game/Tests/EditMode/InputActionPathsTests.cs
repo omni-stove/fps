@@ -61,5 +61,19 @@ namespace Fps.Tests.EditMode
             Assert.That(reload.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/buttonWest"));
             Assert.That(MatchRunner.RestartActionPath, Is.EqualTo(InputActionPaths.Reload));
         }
+
+        [Test]
+        public void NextAndPreviousKeepTheirKeysAndAddTheScrollWheel()
+        {
+            var next = Find(InputActionPaths.Next);
+            var previous = Find(InputActionPaths.Previous);
+
+            Assert.That(next.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Mouse>/scroll/up"));
+            Assert.That(next.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/2"));
+            Assert.That(next.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/dpad/right"));
+            Assert.That(previous.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Mouse>/scroll/down"));
+            Assert.That(previous.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/1"));
+            Assert.That(previous.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/dpad/left"));
+        }
     }
 }

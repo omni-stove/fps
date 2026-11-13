@@ -21,5 +21,8 @@ namespace Fps.Core
 
         /// <summary>アクティブリロードの進捗と、成功になる区間。リロード中でなければ出さない。</summary>
         ReloadProgress,
+
+        /// <summary>照準の広がり (0〜1) と、出すかどうか。</summary>
+        Crosshair,
     }
 }

@@ -492,6 +492,76 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheCrosshairStartsShownWithNoSpread()
+        {
+            var model = new HudModel();
+
+            Assert.That(model.CrosshairSpread, Is.EqualTo(0f));
+            Assert.That(model.IsCrosshairVisible, Is.True);
+        }
+
+        [Test]
+        public void SetCrosshairChangesTheSpreadAndNotifiesOnlyWhenItChanges()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetCrosshair(0.5f, true);
+            model.SetCrosshair(0.5f, true);
+            model.SetCrosshair(1f, true);
+
+            Assert.That(model.CrosshairSpread, Is.EqualTo(1f));
+            Assert.That(model.IsCrosshairVisible, Is.True);
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Crosshair, HudField.Crosshair }));
+        }
+
+        [Test]
+        public void SetCrosshairHidesAndShowsTheCrosshair()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetCrosshair(0f, false);
+            Assert.That(model.IsCrosshairVisible, Is.False);
+            model.SetCrosshair(0f, false);
+
+            model.SetCrosshair(0f, true);
+            Assert.That(model.IsCrosshairVisible, Is.True);
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Crosshair, HudField.Crosshair }));
+        }
+
+        [Test]
+        public void ResetCrosshairShowsItWithNoSpread()
+        {
+            var model = new HudModel();
+            model.SetCrosshair(0.75f, false);
+            var changes = Record(model);
+
+            model.ResetCrosshair();
+            model.ResetCrosshair();
+
+            Assert.That(model.CrosshairSpread, Is.EqualTo(0f));
+            Assert.That(model.IsCrosshairVisible, Is.True);
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Crosshair }));
+        }
+
+        [Test]
+        public void SetCrosshairRejectsASpreadOutsideZeroToOneAndKeepsTheShownOne()
+        {
+            var model = new HudModel();
+            model.SetCrosshair(0.25f, true);
+            var changes = Record(model);
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetCrosshair(-0.1f, false));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetCrosshair(1.1f, false));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetCrosshair(float.NaN, false));
+
+            Assert.That(model.CrosshairSpread, Is.EqualTo(0.25f));
+            Assert.That(model.IsCrosshairVisible, Is.True);
+            Assert.That(changes, Is.Empty);
+        }
+
+        [Test]
         public void ReloadProgressStartsHidden()
         {
             var model = new HudModel();

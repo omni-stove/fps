@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// HUD に出す文字列を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo(int, int, bool, bool)"/>・<see cref="SetTime"/> などで直接渡すか、
+    /// HUD に出す文字列と照準の状態を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo(int, int, bool, bool)"/>・<see cref="SetTime"/> などで直接渡すか、
     /// <see cref="Health"/>・<see cref="Weapon"/>・<see cref="Match"/>・<see cref="CampaignNotice"/> を Bind してそのイベントで受ける
     /// (Bind 系も中では Set 系を呼ぶ)。毎フレーム値を読みに行かず、値が来たときだけ書式を通し、表示が変わったときだけ
     /// <see cref="Changed"/> を呼ぶ (残り時間は秒の桁が変わったときだけ)。Bind で源を差し替えると前の源の購読は外し、今の値をすぐ反映する。
@@ -67,6 +67,12 @@ namespace Fps.Core
 
         /// <summary>アクティブリロードで成功になる区間の終わり (進捗と同じ 0〜1)。<see cref="ReloadProgress"/> が null なら 0。</summary>
         public float ReloadWindowEnd { get; private set; }
+
+        /// <summary>照準の広がり (0〜1)。0 で線が中央に最も寄り、1 で最も離れる。</summary>
+        public float CrosshairSpread { get; private set; }
+
+        /// <summary>照準を出すか。ADS 中とダッシュ中は false。</summary>
+        public bool IsCrosshairVisible { get; private set; } = true;
 
         /// <summary>体力の源を差し替える。null なら仮の表示に戻す。</summary>
         public void BindHealth(Health health)
@@ -317,6 +323,31 @@ namespace Fps.Core
         public void ClearReloadProgress()
         {
             ApplyReloadProgress(null, 0f, 0f);
+        }
+
+        /// <summary>照準の広がりと、出すかどうかを決める。広がりは時間で変わるので HUD が毎フレーム呼ぶ。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">spread が 0〜1 の外か NaN。</exception>
+        public void SetCrosshair(float spread, bool visible)
+        {
+            if (!IsFraction(spread))
+            {
+                throw new ArgumentOutOfRangeException(nameof(spread), spread, "spread must be between 0 and 1");
+            }
+
+            if (spread == CrosshairSpread && visible == IsCrosshairVisible)
+            {
+                return;
+            }
+
+            CrosshairSpread = spread;
+            IsCrosshairVisible = visible;
+            Changed?.Invoke(HudField.Crosshair);
+        }
+
+        /// <summary>照準を広がり 0 で出す状態に戻す。</summary>
+        public void ResetCrosshair()
+        {
+            SetCrosshair(0f, true);
         }
 
         /// <summary>

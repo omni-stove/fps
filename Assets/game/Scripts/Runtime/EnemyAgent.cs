@@ -467,7 +467,16 @@ namespace Fps.Runtime
         {
             Debug.Log($"{LogTag} id={Id} state={_brain.State}", this);
             ApplyPatrolRoute();
-            ResolveTarget(force: true);
+            var sideMember = GetComponent<SideMember>();
+            if (sideMember != null)
+            {
+                // Player タグの相手を先に目標にすると、間隔が過ぎるまで同陣営のプレイヤーを狙ってしまう。
+                ResolveHostile(sideMember, force: true);
+            }
+            else
+            {
+                ResolveTarget(force: true);
+            }
 
             _lastFinitePosition = transform.position;
             _spawnPosition = NavMesh.SamplePosition(GroundPosition, out var spawnHit, OffMeshSnapRadius, NavMesh.AllAreas)

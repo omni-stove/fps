@@ -137,6 +137,13 @@ namespace Fps.Runtime
             {
                 Damageable.ResetHealth();
             }
+
+            // 予備弾が有限のルールでは、倒れたときの弾数のまま戻ると撃てなくなるので満たし直す。未初期化 (Edit Mode) では作れない。
+            var weapon = GetComponentInChildren<WeaponController>();
+            if (weapon != null && weapon.IsInitialized)
+            {
+                weapon.ApplyRules(weapon.Rules);
+            }
         }
 
         /// <summary>

@@ -57,7 +57,8 @@
         <ui:VisualElement name="damage-direction" class="damage-direction" picking-mode="Ignore" style="display: none;" />
         <!-- 画面右上のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
-        <ui:VisualElement name="scoreboard" picking-mode="Ignore" style="display: none;" />
+        <!-- スコアボード。Scoreboard を押している間だけ ScoreboardView が行を作って出す。 -->
+        <ui:VisualElement name="scoreboard" class="scoreboard" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="loadout-select" picking-mode="Ignore" style="display: none;" />
     </ui:VisualElement>
 </ui:UXML>

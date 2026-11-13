@@ -50,7 +50,11 @@ namespace Fps.Editor
         public const string GuardianScene = "Assets/game/Scenes/Guardian.unity";
         public const string ExecutionScene = "Assets/game/Scenes/Execution.unity";
         public const string SearchAndDestroyScene = "Assets/game/Scenes/SearchAndDestroy.unity";
+
+        /// <summary>ホード (PvE の防衛)。生成は <see cref="HordeSceneBuilder"/>。</summary>
         public const string HordeScene = "Assets/game/Scenes/Horde.unity";
+
+
         public const string BattleRoyaleScene = "Assets/game/Scenes/BattleRoyale.unity";
 
         /// <summary><see cref="ModeSceneBuilder"/> の動作確認用シーン (最小の TDM)。生成は <see cref="ModeTestSceneBuilder"/>。</summary>

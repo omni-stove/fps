@@ -74,6 +74,149 @@
     right: 160px;
 }
 
+/* キャンペーンの選択の差し込み口と、Fps.Runtime.CampaignSelectPanel が作る中身。 */
+.menu__campaign-slot {
+    position: absolute;
+    left: 760px;
+    top: 120px;
+    right: 160px;
+}
+
+.campaign-select {
+    padding: 20px 28px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.campaign-select__title {
+    margin: 0 0 16px 0;
+    padding: 0;
+    font-size: 32px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.campaign-select__mission,
+.campaign-select__action {
+    height: 56px;
+    margin: 0 0 10px 0;
+    padding: 0 20px;
+    border-width: 0;
+    border-left-width: 6px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.campaign-select__mission {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.campaign-select__mission-name {
+    margin: 0;
+    padding: 0;
+    font-size: 26px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.campaign-select__save-badge {
+    margin: 0;
+    padding: 2px 10px;
+    border-radius: 4px;
+    background-color: rgba(120, 200, 120, 0.3);
+    font-size: 16px;
+    color: rgb(190, 240, 190);
+}
+
+.campaign-select__difficulty {
+    margin: 6px 0 16px 0;
+    padding: 8px 12px;
+    border-left-width: 6px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 4px;
+}
+
+.campaign-select__difficulty-title {
+    margin: 0 0 6px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.campaign-select__difficulty-options {
+    flex-direction: row;
+}
+
+.campaign-select__difficulty-option {
+    min-width: 150px;
+    height: 48px;
+    margin: 0 12px 0 0;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgb(255, 255, 255);
+    font-size: 22px;
+    -unity-font-style: bold;
+}
+
+.campaign-select__mission:hover,
+.campaign-select__action:hover,
+.campaign-select__difficulty-option:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+/* 選んでいるミッションと難易度。 */
+.campaign-select__item--selected {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.25);
+}
+
+/* ゲームパッド・キーボードで選んでいる項目。難易度は行ごと強調する。 */
+.campaign-select__item--focused,
+.campaign-select__mission:focus,
+.campaign-select__action:focus {
+    border-color: rgb(255, 255, 255);
+    color: rgb(255, 255, 255);
+}
+
+.campaign-select__difficulty.campaign-select__item--focused {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.campaign-select__mission:disabled,
+.campaign-select__action:disabled,
+.campaign-select__difficulty-option:disabled {
+    opacity: 0.4;
+}
+
+.campaign-select__question {
+    margin: 0 0 16px 0;
+    padding: 0;
+    font-size: 24px;
+    color: rgb(255, 196, 64);
+    white-space: normal;
+}
+
+.campaign-select__status {
+    margin: 12px 0 0 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgb(160, 230, 160);
+    white-space: normal;
+}
+
+.campaign-select__status--error {
+    color: rgb(255, 120, 100);
+}
+
 .menu__settings-slot {
     position: absolute;
     left: 760px;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Fps.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -19,6 +20,9 @@ namespace Fps.Runtime
     /// 選ぶ画面 (<see cref="LoadoutSelectPanel"/>) を差し込み口に出し、決めた並びを <see cref="LoadoutStore"/> に保存する。
     /// 送るのはオンラインに入ってから (Fps.Net の NetLoadoutChooser が保存した並びを送る)。
     /// <see cref="Show"/> は <see cref="SettingsView"/> を取り付ける (<see cref="InstallSettingsView"/>)。
+    /// キャンペーンのボタンは、ミッションの一覧 (<see cref="Missions"/>、MenuSceneBuilder が配線) とセーブ (<see cref="SaveStorage"/>) から
+    /// ミッションと難易度を選ぶ画面 (<see cref="CampaignPanel"/>) を差し込み口に出し、決めた始め方で <see cref="MenuNavigator.StartCampaign"/> を呼ぶ。
+    /// 「最初から」はシーンを読めると確かめてからセーブを消す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MainMenuScreen : MonoBehaviour
@@ -43,6 +47,7 @@ namespace Fps.Runtime
         public const string NoticeName = "menu-notice";
         public const string SettingsSlotName = "menu-settings-slot";
         public const string LoadoutSlotName = "menu-loadout-slot";
+        public const string CampaignSlotName = "menu-campaign-slot";
 
         /// <summary>設定画面がまだ差し込まれていないときに出す案内。</summary>
         public const string SettingsUnavailableNotice = "Settings are not available yet.";
@@ -69,6 +74,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("オンラインで選べる武器の一覧 (Assets/game/Weapons/WeaponCatalog.asset)")]
         private WeaponCatalogAsset _catalog;
 
+        [SerializeField, Tooltip("キャンペーンのミッションの一覧 (Assets/game/Missions/MissionCatalog.asset)")]
+        private MissionCatalog _missions;
+
         private readonly List<Button> _buttons = new List<Button>();
         private readonly List<Action> _unbind = new List<Action>();
         private UIDocument _document;
@@ -78,6 +86,9 @@ namespace Fps.Runtime
         private VisualElement _loadoutSlot;
         private LoadoutSelectPanel _loadoutPanel;
         private LoadoutPreferenceStore _loadoutStore = new LoadoutPreferenceStore();
+        private VisualElement _campaignSlot;
+        private CampaignSelectPanel _campaignPanel;
+        private ISaveStorage _saveStorage;
         private Label _notice;
         private int _focusIndex = -1;
         private bool _settingsOpen;
@@ -131,6 +142,32 @@ namespace Fps.Runtime
             set => _catalog = value;
         }
 
+        /// <summary>キャンペーンのミッションの一覧。MenuSceneBuilder がシーンに配線する。</summary>
+        public MissionCatalog Missions
+        {
+            get => _missions;
+            set => _missions = value;
+        }
+
+        /// <summary>
+        /// キャンペーンのセーブの置き場所。CampaignRunner と同じ <see cref="FileSaveStorage.CreateDefault"/> を、初めて使うときに作る。
+        /// null を入れると既定に戻す (テストで差し替える)。
+        /// </summary>
+        public ISaveStorage SaveStorage
+        {
+            get => _saveStorage ??= FileSaveStorage.CreateDefault();
+            set => _saveStorage = value;
+        }
+
+        /// <summary>キャンペーンの選択の差し込み口。<see cref="Bind"/> の前は null。</summary>
+        public VisualElement CampaignSlot => _campaignSlot;
+
+        /// <summary>出しているキャンペーンの選択。閉じていれば null。</summary>
+        public CampaignSelectPanel CampaignPanel => _campaignPanel;
+
+        /// <summary>キャンペーンの選択を開いているか。</summary>
+        public bool IsCampaignOpen => _campaignPanel != null;
+
         /// <summary>選んだロードアウトの保存先。null を入れると既定のキーに戻す (テストで差し替える)。</summary>
         public LoadoutPreferenceStore LoadoutStore
         {
@@ -138,8 +175,8 @@ namespace Fps.Runtime
             set => _loadoutStore = value ?? new LoadoutPreferenceStore();
         }
 
-        // 設定とロードアウトのどちらかを開いている間は、メニューのボタンとその移動を止める
-        private bool IsOverlayOpen => _settingsOpen || _loadoutPanel != null;
+        // 設定・ロードアウト・キャンペーンのどれかを開いている間は、メニューのボタンとその移動を止める
+        private bool IsOverlayOpen => _settingsOpen || _loadoutPanel != null || _campaignPanel != null;
 
         /// <summary>出している案内。出していなければ null。</summary>
         public string Notice => _notice != null && _notice.style.display != DisplayStyle.None ? _notice.text : null;
@@ -289,6 +326,8 @@ namespace Fps.Runtime
                 ?? throw new InvalidOperationException($"the menu layout has no element named '{SettingsSlotName}'");
             _loadoutSlot = root.Q<VisualElement>(LoadoutSlotName)
                 ?? throw new InvalidOperationException($"the menu layout has no element named '{LoadoutSlotName}'");
+            _campaignSlot = root.Q<VisualElement>(CampaignSlotName)
+                ?? throw new InvalidOperationException($"the menu layout has no element named '{CampaignSlotName}'");
 
             for (var i = 0; i < _buttons.Count; i++)
             {
@@ -327,6 +366,7 @@ namespace Fps.Runtime
             _leaving = false;
             SetDisplayed(_settingsSlot, false);
             SetDisplayed(_loadoutSlot, false);
+            SetDisplayed(_campaignSlot, false);
             ShowNotice(null);
         }
 
@@ -488,6 +528,155 @@ namespace Fps.Runtime
             ShowNotice(LoadoutFormat.Saved);
         }
 
+        /// <summary>
+        /// キャンペーンの選択を差し込み口に出す。ミッションは <see cref="Missions"/> の順に並べ、<see cref="SaveStorage"/> に再開できるセーブがあるものには
+        /// 「続きから」と「最初から」を出す。最初に選んでおくミッションと難易度は前に始めたもの (<see cref="CampaignLaunchSelection.Current"/>)、無ければ先頭と Normal。
+        /// カタログが未設定・不正なら理由を案内に出して開かない。
+        /// </summary>
+        public void OpenCampaign()
+        {
+            if (_campaignSlot == null || IsOverlayOpen || _leaving)
+            {
+                return;
+            }
+
+            if (!TryCreateCampaignMenu(out var menu, out var error))
+            {
+                Debug.LogWarning(MenuNavigator.LogTag + " cannot open the campaign: " + error, this);
+                ShowNotice(CampaignMenuFormat.UnavailableNotice + error);
+                return;
+            }
+
+            ShowNotice(null);
+            SetDisplayed(_campaignSlot, true);
+            SetButtonsEnabled(false);
+            _campaignPanel = new CampaignSelectPanel(_campaignSlot, menu);
+            _campaignPanel.StartRequested += StartCampaign;
+            _campaignPanel.Cancelled += CloseCampaign;
+        }
+
+        /// <summary>キャンペーンの選択を閉じて差し込み口を空にし、キャンペーンのボタンにフォーカスを戻す。開いていなければ何もしない。</summary>
+        public void CloseCampaign()
+        {
+            if (_campaignPanel == null)
+            {
+                return;
+            }
+
+            _campaignPanel.Dispose();
+            _campaignPanel = null;
+            SetDisplayed(_campaignSlot, false);
+            SetButtonsEnabled(true);
+            FocusAt(IndexOf(CampaignButtonName));
+        }
+
+        private bool TryCreateCampaignMenu(out CampaignMenu menu, out string error)
+        {
+            menu = null;
+            if (_missions == null)
+            {
+                error = "no mission catalog is wired to the menu; rerun Fps/Build Mission Catalog and Fps/Build Main Menu Scene";
+                return false;
+            }
+
+            try
+            {
+                _missions.Validate();
+            }
+            catch (MissionCatalogException e)
+            {
+                error = e.Message;
+                return false;
+            }
+
+            var storage = SaveStorage;
+            var missions = new List<CampaignMenuMission>(_missions.Missions.Count);
+            foreach (var mission in _missions.Missions)
+            {
+                var hasSave = ProbeSave(storage, mission.Id);
+                missions.Add(new CampaignMenuMission(mission.Id, mission.DisplayName, hasSave));
+            }
+
+            var last = CampaignLaunchSelection.Current;
+            menu = new CampaignMenu(missions, last?.Difficulty ?? CampaignDifficulty.Normal, last?.MissionId);
+            error = null;
+            return true;
+        }
+
+        private bool ProbeSave(ISaveStorage storage, string missionId)
+        {
+            if (CampaignSaveLookup.TryReadResumable(storage, missionId, out var save, out var problem))
+            {
+                var checkpoint = save.CheckpointId.Length > 0 ? save.CheckpointId : "(start)";
+                Debug.Log($"{CampaignRunner.LogTag} mission={missionId} can continue from checkpoint={checkpoint}", this);
+                return true;
+            }
+
+            if (problem != null)
+            {
+                // CampaignRunner もこのセーブを無視して最初から始めるので、「続きから」は出さない
+                Debug.LogWarning($"{CampaignRunner.LogTag} mission={missionId} has a save that cannot be resumed: {problem}", this);
+            }
+
+            return false;
+        }
+
+        private void StartCampaign(CampaignMenuStart start)
+        {
+            if (_campaignPanel == null || _leaving)
+            {
+                return;
+            }
+
+            var missionId = start.Launch.MissionId;
+            Action beforeLoad = null;
+            if (start.DeletesSave)
+            {
+                beforeLoad = () =>
+                {
+                    CampaignSaveLookup.Delete(SaveStorage, missionId);
+                    Debug.Log($"{CampaignRunner.LogTag} deleted the save of mission={missionId} to start from the beginning", this);
+                };
+            }
+
+            _leaving = true;
+            _campaignPanel.SetBusy(true);
+            Debug.Log($"{MenuNavigator.LogTag} campaign start {start}", this);
+            string failure;
+            try
+            {
+                failure = MenuNavigator.StartCampaign(_missions, start.Launch, beforeLoad)
+                    ? null
+                    : CampaignMenuFormat.SceneMissing(_campaignPanel.Menu.SelectedMission.DisplayName);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogError($"{CampaignRunner.LogTag} could not delete the save of mission={missionId}: {e.Message}", this);
+                failure = CampaignMenuFormat.DeleteFailed(e.Message);
+            }
+            catch (Exception e) when (e is MissionCatalogException || e is ArgumentException || e is InvalidOperationException)
+            {
+                Debug.LogError($"{MenuNavigator.LogTag} could not start mission={missionId}: {e.Message}", this);
+                failure = CampaignMenuFormat.CannotStart(e.Message);
+            }
+
+            if (failure == null)
+            {
+                return;
+            }
+
+            _leaving = false;
+
+            // 消している途中で失敗しても、残ったセーブの有無に合わせて「続きから」を出し直す
+            if (start.DeletesSave && !ProbeSave(SaveStorage, missionId))
+            {
+                _campaignPanel.Menu.ForgetSave(missionId);
+            }
+
+            _campaignPanel.SetBusy(false);
+            _campaignPanel.ShowStatus(failure, true);
+        }
+
         private void RaiseSettingsClosed()
         {
             var handlers = SettingsClosed;
@@ -528,7 +717,7 @@ namespace Fps.Runtime
             switch (buttonName)
             {
                 case CampaignButtonName:
-                    Choose(MenuDestination.Campaign);
+                    OpenCampaign();
                     break;
                 case CreateLobbyButtonName:
                     Choose(MenuDestination.CreateLobby);
@@ -664,6 +853,12 @@ namespace Fps.Runtime
                 _loadoutPanel = null;
             }
 
+            if (_campaignPanel != null)
+            {
+                _campaignPanel.Dispose();
+                _campaignPanel = null;
+            }
+
             foreach (var undo in _unbind)
             {
                 undo();
@@ -675,6 +870,7 @@ namespace Fps.Runtime
             _notice = null;
             _settingsSlot = null;
             _loadoutSlot = null;
+            _campaignSlot = null;
         }
 
         private static void SetDisplayed(VisualElement element, bool displayed)

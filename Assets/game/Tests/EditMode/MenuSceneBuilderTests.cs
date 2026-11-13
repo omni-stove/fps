@@ -31,6 +31,10 @@ namespace Fps.Tests.EditMode
                 var screen = menu.GetComponent<MainMenuScreen>();
                 Assert.That(AssetDatabase.GetAssetPath(screen.Loadout), Is.EqualTo(WeaponAssetBuilder.LoadoutPath));
                 Assert.That(AssetDatabase.GetAssetPath(screen.Catalog), Is.EqualTo(WeaponAssetBuilder.CatalogPath));
+
+                // キャンペーンの選択はミッションの一覧から並べる (ミッションのシーンがまだ無ければ一覧も作れず、配線しない)
+                var missions = AssetDatabase.LoadAssetAtPath<MissionCatalog>(MissionCatalogBuilder.CatalogPath);
+                Assert.That(screen.Missions, Is.SameAs(missions));
             }
             finally
             {
@@ -86,6 +90,12 @@ namespace Fps.Tests.EditMode
                 Assert.That(roots, Has.Length.EqualTo(2), $"rerun {MenuSceneBuilder.MenuPath}");
                 AssertCamera(roots[0]);
                 Assert.That(roots[1].GetComponent<MainMenuScreen>(), Is.Not.Null, $"rerun {MenuSceneBuilder.MenuPath}");
+                var missions = AssetDatabase.LoadAssetAtPath<MissionCatalog>(MissionCatalogBuilder.CatalogPath);
+                if (missions != null)
+                {
+                    Assert.That(roots[1].GetComponent<MainMenuScreen>().Missions, Is.SameAs(missions),
+                        $"rerun {MenuSceneBuilder.MenuPath} to wire the mission catalog to the campaign menu");
+                }
                 Assert.That(EditorBuildSettings.scenes, Is.Not.Empty);
                 Assert.That(EditorBuildSettings.scenes[0].path, Is.EqualTo(path), $"rerun {MenuSceneBuilder.MenuPath} to start the game at the menu");
                 Assert.That(EditorBuildSettings.scenes[0].enabled, Is.True);

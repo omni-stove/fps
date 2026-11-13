@@ -555,6 +555,139 @@ namespace Fps.Tests.EditMode
             }
         }
 
+        [Test]
+        public void ModeNamesAreTheNineModesWithPathsUnderGameRules()
+        {
+            Assert.That(
+                GameRulesAssetBuilder.ModeNames,
+                Is.EqualTo(new[]
+                {
+                    "FreeForAll", "KillConfirmed", "GunGame", "Hardpoint", "Guardian", "Execution", "SearchAndDestroy", "Horde", "BattleRoyale",
+                }));
+            Assert.That(GameRulesAssetBuilder.FreeForAllPath, Is.EqualTo("Assets/game/Rules/FreeForAll.asset"));
+            Assert.That(GameRulesAssetBuilder.BattleRoyalePath, Is.EqualTo("Assets/game/Rules/BattleRoyale.asset"));
+            foreach (var name in GameRulesAssetBuilder.ModeNames)
+            {
+                Assert.That(GameRulesAssetBuilder.ModeRulesPath(name), Is.EqualTo("Assets/game/Rules/" + name + ".asset"));
+            }
+
+            Assert.Throws<ArgumentException>(() => GameRulesAssetBuilder.ModeRulesPath("TeamDeathmatch"), "TDM is built by BuildAt");
+            Assert.Throws<ArgumentException>(() => GameRulesAssetBuilder.ModeRules("freeforall"), "names are case sensitive");
+            Assert.Throws<ArgumentException>(() => GameRulesAssetBuilder.ModeRulesPath("Library", GameRulesAssetBuilder.HordeName));
+            Assert.Throws<ArgumentException>(() => GameRulesAssetBuilder.ModeRulesPath(" ", GameRulesAssetBuilder.HordeName));
+        }
+
+        [Test]
+        public void BuildModesAtWritesEveryModeInOrderAndKeepsTheGuids()
+        {
+            var built = GameRulesAssetBuilder.BuildModesAt(_folder + "/");
+
+            Assert.That(built, Has.Length.EqualTo(GameRulesAssetBuilder.ModeNames.Count));
+            var guids = new string[built.Length];
+            for (var i = 0; i < built.Length; i++)
+            {
+                var path = _folder + "/" + GameRulesAssetBuilder.ModeNames[i] + ".asset";
+                Assert.That(built[i], Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path)), path);
+                guids[i] = AssetDatabase.AssetPathToGUID(path);
+                Assert.That(guids[i], Is.Not.Empty, path);
+            }
+
+            var horde = built[Array.IndexOf(ToArray(GameRulesAssetBuilder.ModeNames), GameRulesAssetBuilder.HordeName)];
+            horde.RespawnMode = RespawnMode.Individual;
+            horde.ReserveAmmoMultiplier = 1f;
+            EditorUtility.SetDirty(horde);
+            AssetDatabase.SaveAssets();
+
+            var rebuilt = GameRulesAssetBuilder.BuildModesAt(_folder);
+
+            for (var i = 0; i < rebuilt.Length; i++)
+            {
+                Assert.That(rebuilt[i], Is.SameAs(built[i]));
+                Assert.That(AssetDatabase.AssetPathToGUID(_folder + "/" + GameRulesAssetBuilder.ModeNames[i] + ".asset"), Is.EqualTo(guids[i]));
+            }
+
+            var restored = horde.ToRules();
+            Assert.That(restored.RespawnMode, Is.EqualTo(RespawnMode.Wave));
+            Assert.That(restored.ReserveAmmoMultiplier, Is.EqualTo(GameRulesAssetBuilder.HordeReserveAmmoMultiplier));
+        }
+
+        [Test]
+        public void EliminationModesDoNotRespawn()
+        {
+            Assert.That(GameRulesAssetBuilder.ExecutionRules().RespawnMode, Is.EqualTo(RespawnMode.None));
+            Assert.That(GameRulesAssetBuilder.SearchAndDestroyRules().RespawnMode, Is.EqualTo(RespawnMode.None));
+            Assert.That(GameRulesAssetBuilder.BattleRoyaleRules().RespawnMode, Is.EqualTo(RespawnMode.None));
+            Assert.That(GameRulesAssetBuilder.HordeRules().RespawnMode, Is.EqualTo(RespawnMode.Wave));
+            Assert.That(GameRulesAssetBuilder.HordeRules().WaveIntervalSeconds, Is.EqualTo(GameRulesAssetBuilder.HordeWaveIntervalSeconds));
+
+            foreach (var name in new[] { GameRulesAssetBuilder.FreeForAllName, GameRulesAssetBuilder.KillConfirmedName, GameRulesAssetBuilder.GunGameName,
+                         GameRulesAssetBuilder.HardpointName, GameRulesAssetBuilder.GuardianName })
+            {
+                var rules = GameRulesAssetBuilder.ModeRules(name);
+                Assert.That(rules.RespawnMode, Is.EqualTo(RespawnMode.Individual), name);
+                Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(GameRulesAssetBuilder.TeamDeathmatchSpawnProtectionSeconds), name);
+            }
+
+            Assert.That(GameRulesAssetBuilder.ExecutionRules().SpawnProtectionSeconds, Is.Zero, "nobody respawns, so nobody needs protecting");
+            Assert.That(GameRulesAssetBuilder.SearchAndDestroyRules().SpawnProtectionSeconds, Is.Zero);
+            Assert.That(GameRulesAssetBuilder.BattleRoyaleRules().SpawnProtectionSeconds, Is.Zero);
+        }
+
+        [Test]
+        public void ExecutionHordeAndBattleRoyaleDownButFreeForAllAndSearchAndDestroyDoNot()
+        {
+            Assert.That(GameRulesAssetBuilder.ExecutionRules().Actions.Downed, Is.EqualTo(Downed.Revive));
+            Assert.That(GameRulesAssetBuilder.HordeRules().Actions.Downed, Is.EqualTo(Downed.Revive));
+            Assert.That(GameRulesAssetBuilder.BattleRoyaleRules().Actions.Downed, Is.EqualTo(Downed.Revive));
+            Assert.That(GameRulesAssetBuilder.FreeForAllRules().Actions.Downed, Is.EqualTo(Downed.Off), "nobody can revive in a free-for-all");
+            Assert.That(GameRulesAssetBuilder.GunGameRules().Actions.Downed, Is.EqualTo(Downed.Off));
+            Assert.That(GameRulesAssetBuilder.SearchAndDestroyRules().Actions.Downed, Is.EqualTo(Downed.Off));
+
+            foreach (var name in GameRulesAssetBuilder.ModeNames)
+            {
+                var actions = GameRulesAssetBuilder.ModeRules(name).Actions;
+                Assert.That(actions.Cover, Is.EqualTo(Cover.Off), name + ": the online player does not support cover");
+                Assert.That(actions.BlindFire, Is.EqualTo(BlindFire.Off), name);
+                Assert.That(actions.ActiveReload, Is.EqualTo(ActiveReload.On), name);
+            }
+        }
+
+        [Test]
+        public void HordeAndBattleRoyaleCarryMoreReserveAmmoAndGunGameNeverRunsOut()
+        {
+            Assert.That(GameRulesAssetBuilder.HordeRules().ReserveAmmoMultiplier, Is.GreaterThan(1f));
+            Assert.That(GameRulesAssetBuilder.BattleRoyaleRules().ReserveAmmoMultiplier, Is.GreaterThan(1f));
+            Assert.That(GameRulesAssetBuilder.GunGameRules().InfiniteReserve, Is.True);
+            Assert.That(GameRulesAssetBuilder.FreeForAllRules().DeathCamera, Is.EqualTo(DeathCamera.Killer), "there is no ally to watch");
+
+            foreach (var name in new[] { GameRulesAssetBuilder.FreeForAllName, GameRulesAssetBuilder.KillConfirmedName, GameRulesAssetBuilder.HardpointName,
+                         GameRulesAssetBuilder.GuardianName, GameRulesAssetBuilder.ExecutionName, GameRulesAssetBuilder.SearchAndDestroyName })
+            {
+                var rules = GameRulesAssetBuilder.ModeRules(name);
+                Assert.That(rules.InfiniteReserve, Is.False, name);
+                Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(1f), name);
+            }
+
+            foreach (var name in GameRulesAssetBuilder.ModeNames)
+            {
+                var rules = GameRulesAssetBuilder.ModeRules(name);
+                Assert.That(rules.Destruction, Is.EqualTo(Destruction.On), name);
+                Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off), name);
+                Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full), name);
+            }
+        }
+
+        private static string[] ToArray(System.Collections.Generic.IReadOnlyList<string> list)
+        {
+            var array = new string[list.Count];
+            for (var i = 0; i < array.Length; i++)
+            {
+                array[i] = list[i];
+            }
+
+            return array;
+        }
+
         private GameRulesDefinition[] Build()
         {
             return GameRulesAssetBuilder.BuildAt(

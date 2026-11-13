@@ -4,6 +4,7 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
@@ -241,6 +242,72 @@ namespace Fps.Tests.EditMode
             Assert.That(session.GetDeaths(1), Is.Zero);
             Assert.That(_runner.Events, Is.Empty);
             Assert.That(hud.IsShown, Is.False);
+        }
+
+        [Test]
+        public void TryBeginJoinsTheBootstrapPlayerAndHidesTheTargetDummies()
+        {
+            WithBootstrapWorld(world =>
+            {
+                Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+                _runner.PlayerSide = new Side(0);
+
+                Assert.That(_runner.HidesTargetDummies, Is.True, "hiding is the default");
+                Assert.That(_runner.TryBegin(), Is.True);
+
+                Assert.That(_runner.LocalPlayer, Is.Not.Null);
+                Assert.That(_runner.LocalPlayer.gameObject, Is.SameAs(world.Player));
+                Assert.That(_runner.LocalPlayer.Side, Is.EqualTo(new Side(0)));
+                Assert.That(world.TargetRoot.activeSelf, Is.False, "target dummies are not part of the mode");
+            });
+        }
+
+        [Test]
+        public void TryBeginKeepsTheTargetDummiesWhenAskedTo()
+        {
+            WithBootstrapWorld(world =>
+            {
+                Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+                _runner.HidesTargetDummies = false;
+
+                Assert.That(_runner.TryBegin(), Is.True);
+
+                Assert.That(world.TargetRoot.activeSelf, Is.True);
+            });
+        }
+
+        private void WithBootstrapWorld(Action<BootstrapWorld> test)
+        {
+            var bootstrap = Track(new GameObject("Bootstrap")).AddComponent<GameBootstrap>();
+            LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+            var world = bootstrap.Build();
+            try
+            {
+                test(world);
+            }
+            finally
+            {
+                _runner.Stop();
+
+                // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
+                if (world.Hud != null)
+                {
+                    Object.DestroyImmediate(world.Hud.gameObject);
+                }
+
+                if (world.HudPanelSettings != null)
+                {
+                    Object.DestroyImmediate(world.HudPanelSettings);
+                }
+
+                Object.DestroyImmediate(world.Player);
+                Object.DestroyImmediate(world.Light.gameObject);
+                Object.DestroyImmediate(world.TargetRoot);
+                if (world.Floor != null)
+                {
+                    Object.DestroyImmediate(world.Floor);
+                }
+            }
         }
 
         private void Begin(IReadOnlyList<SideMember> members, IReadOnlyList<SideSpawnPoint> spawns, SideMember localPlayer, ModeHudView hud = null)

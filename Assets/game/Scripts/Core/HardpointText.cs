@@ -1,0 +1,82 @@
+using System;
+using System.Globalization;
+
+namespace Fps.Core
+{
+    /// <summary>
+    /// ハードポイント (<see cref="Hardpoint"/>) の HUD の行と、<c>[Mode]</c> 付きログの文言。
+    /// 拠点は <see cref="DominationHudFormat.PointName"/> と同じく番号の順に A, B, C ... と呼ぶ。
+    /// </summary>
+    public static class HardpointText
+    {
+        /// <summary>有効な拠点に誰もいないときの様子の行。</summary>
+        public const string Empty = "拠点は無人";
+
+        /// <summary>有効な拠点に両チームがいるときの様子の行。</summary>
+        public const string Contested = "争奪中";
+
+        /// <summary>有効な拠点と、次の拠点へ移るまでの秒数 (切り上げ)。</summary>
+        /// <example><c>ActivePoint(1, 2, 22.3f)</c> は <c>拠点 B (次は C まで 23 秒)</c></example>
+        public static string ActivePoint(int pointIndex, int nextPointIndex, float secondsUntilMove)
+        {
+            return "拠点 " + DominationHudFormat.PointName(pointIndex)
+                + " (次は " + DominationHudFormat.PointName(nextPointIndex)
+                + " まで " + HudFormat.DisplayedSeconds(secondsUntilMove).ToString(CultureInfo.InvariantCulture) + " 秒)";
+        }
+
+        /// <summary>有効な拠点の様子。確保中なら陣営名を出す。</summary>
+        /// <example><c>Status(HardpointStatus.Held, Side.Bravo)</c> は <c>BRAVO が確保中</c></example>
+        /// <exception cref="ArgumentException">Held なのに holder が null。</exception>
+        public static string Status(HardpointStatus status, Side? holder)
+        {
+            switch (status)
+            {
+                case HardpointStatus.Empty:
+                    return Empty;
+                case HardpointStatus.Contested:
+                    return Contested;
+                case HardpointStatus.Held:
+                    if (!holder.HasValue)
+                    {
+                        throw new ArgumentException("a held point needs a holder", nameof(holder));
+                    }
+
+                    return ModeHudText.SideName(holder.Value) + " が確保中";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(status), status, "status is not a defined HardpointStatus");
+            }
+        }
+
+        /// <summary>hardpoint の HUD の 2 行 (有効な拠点と移るまでの秒数、様子)。</summary>
+        public static string[] HudLines(Hardpoint hardpoint)
+        {
+            if (hardpoint == null)
+            {
+                throw new ArgumentNullException(nameof(hardpoint));
+            }
+
+            return new[]
+            {
+                ActivePoint(hardpoint.ActivePoint, hardpoint.NextPoint, hardpoint.SecondsUntilMove),
+                Status(hardpoint.Status, hardpoint.Holder),
+            };
+        }
+
+        /// <summary>有効な拠点が移った。</summary>
+        /// <example><c>[Mode] hardpoint moved from=A to=B</c></example>
+        public static string MovedLog(int previousPointIndex, int nextPointIndex)
+        {
+            return ModeLog.Tag + " hardpoint moved from=" + DominationHudFormat.PointName(previousPointIndex)
+                + " to=" + DominationHudFormat.PointName(nextPointIndex);
+        }
+
+        /// <summary>有効な拠点の様子が変わった。holder は確保している陣営の ID で、いなければ <c>-</c>。</summary>
+        /// <example><c>[Mode] hardpoint point=B status=Held holder=1</c></example>
+        public static string StatusLog(int pointIndex, HardpointStatus status, Side? holder)
+        {
+            return ModeLog.Tag + " hardpoint point=" + DominationHudFormat.PointName(pointIndex)
+                + " status=" + status
+                + " holder=" + (holder.HasValue ? holder.Value.Id.ToString(CultureInfo.InvariantCulture) : "-");
+        }
+    }
+}

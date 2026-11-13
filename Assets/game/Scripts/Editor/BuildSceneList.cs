@@ -41,7 +41,10 @@ namespace Fps.Editor
         public const string KillConfirmedScene = "Assets/game/Scenes/KillConfirmed.unity";
         /// <summary>ガンゲーム。生成は <see cref="GunGameSceneBuilder"/>。</summary>
         public const string GunGameScene = "Assets/game/Scenes/GunGame.unity";
+
+        /// <summary>ハードポイント。生成は <see cref="HardpointSceneBuilder"/>。</summary>
         public const string HardpointScene = "Assets/game/Scenes/Hardpoint.unity";
+
         public const string GuardianScene = "Assets/game/Scenes/Guardian.unity";
         public const string ExecutionScene = "Assets/game/Scenes/Execution.unity";
         public const string SearchAndDestroyScene = "Assets/game/Scenes/SearchAndDestroy.unity";

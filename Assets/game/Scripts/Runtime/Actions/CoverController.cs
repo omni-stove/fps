@@ -272,7 +272,8 @@ namespace Fps.Runtime
         /// <summary>
         /// 1 フレーム分の入力でカバーを進める。外では Cover を押したときだけ正面の壁を調べ、中では張り付いている壁を調べ直す。
         /// 入りかけの間は壁へ寄せて壁に向かせ、覗いている間は横に出る。状態が変わったら <c>[Cover] ..</c> をログに出す。
-        /// 回避の最中 (<see cref="PlayerController.IsDodging"/>) は入らない (寄せる動きと転がりがぶつかるため)。
+        /// 回避・乗り越えの最中 (<see cref="PlayerController.IsDodging"/>・<see cref="PlayerController.IsVaulting"/>) は入らない
+        /// (寄せる動きと転がり・乗り越えの軌跡がぶつかるため)。
         /// 無効か未初期化なら何もしない。
         /// </summary>
         /// <param name="coverPressed">このフレームで Cover を押したか。</param>
@@ -299,7 +300,7 @@ namespace Fps.Runtime
             }
 
             var wasInCover = _state.IsInCover;
-            if (!wasInCover && (!coverPressed || _player.IsDodging))
+            if (!wasInCover && (!coverPressed || _player.IsDodging || _player.IsVaulting))
             {
                 return;
             }

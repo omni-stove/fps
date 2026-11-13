@@ -529,7 +529,7 @@ namespace Fps.Net
             var index = IndexOfWeapon(weaponId);
             if (index < 0)
             {
-                Debug.LogWarning("[Net] ignored switch client=" + senderClientId + " weapon='" + weaponId + "' not in the loadout", this);
+                Debug.LogWarning("[Net] ignored switch client=" + senderClientId + " weaponIdLength=" + (weaponId?.Length ?? 0) + " not in the loadout", this);
                 return false;
             }
 

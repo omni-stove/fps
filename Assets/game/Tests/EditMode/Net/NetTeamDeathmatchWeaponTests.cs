@@ -287,7 +287,7 @@ namespace Fps.Net.Tests
             var loadout = RifleAndHandgunLoadout();
             var weapon = EquippedWeapon(loadout);
 
-            LogAssert.Expect(LogType.Warning, new Regex("ignored switch client=" + weapon.OwnerClientId + " weapon='" + _shotgunId + "' not in the loadout"));
+            LogAssert.Expect(LogType.Warning, new Regex("ignored switch client=" + weapon.OwnerClientId + " weaponIdLength=" + _shotgunId.Length + " not in the loadout"));
             Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, _shotgunId), Is.False);
 
             Assert.That(weapon.Loadout.IsSwitching, Is.False, "a dropped request does not start the switch delay");

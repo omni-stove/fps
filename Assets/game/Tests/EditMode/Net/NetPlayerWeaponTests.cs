@@ -18,7 +18,7 @@ namespace Fps.Net.Tests
     /// </summary>
     public sealed class NetPlayerWeaponTests
     {
-        private const string _handgunId = "00000000-0000-4000-8000-000000000002";
+        private const string _handgunId = "00000000-0000-4000-8000-00000000000a";
         private const float _switchSeconds = 0.5f;
 
         private readonly List<GameObject> _created = new List<GameObject>();
@@ -363,8 +363,8 @@ namespace Fps.Net.Tests
 
             foreach (var id in new[] { shotgunId, _handgunId.ToUpperInvariant(), string.Empty, null })
             {
-                LogAssert.Expect(LogType.Warning, new Regex("ignored switch client=" + weapon.OwnerClientId + " weapon='"
-                    + Regex.Escape(id ?? string.Empty) + "' not in the loadout"));
+                LogAssert.Expect(LogType.Warning, new Regex("ignored switch client=" + weapon.OwnerClientId + " weaponIdLength="
+                    + (id?.Length ?? 0) + " not in the loadout"));
                 Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, id), Is.False, "id '" + id + "'");
             }
 

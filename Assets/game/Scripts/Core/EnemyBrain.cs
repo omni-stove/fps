@@ -14,6 +14,13 @@ namespace Fps.Core
     /// 撃ち始めの数発は散らばりを大きくし、OpeningShots 発かけて絞る（<see cref="EnemySpec.SpreadDegreesForShot"/>）。
     /// 見失ったら最後に見た位置へ向かい、LoseSightSeconds 後に Search、SearchSeconds 後に Patrol（ルートが無ければ Idle）に戻る。
     /// Idle・Patrol・Search 中に音を聞いたら、その位置を Search する。
+    /// <para>
+    /// <see cref="UseCover"/> で遮蔽点を渡していれば、撃たれたとき (<see cref="EnemyPerception.WasHit"/>) や体力の割合が
+    /// <see cref="EnemySpec.CoverHealthFraction"/> を下回ったときに、脅威の方向を遮る点を選んで TakeCover に移る。
+    /// 脅威の位置は目標の位置 (視線が通らなくても渡されていれば使う) で、目標がいなければ撃たれた tick だけ撃った者の位置を使う。
+    /// 点に着いたら CoverHideSeconds しゃがみ、CoverPeekSeconds 立って覗き (見えていれば ReactionSeconds 後から撃つ)、を繰り返す。
+    /// 目標が点の遮る向きから外れたら (回り込まれたら) 別の点に移り、移れる点が無いか目標がいなくなったら TakeCover をやめて追う。
+    /// </para>
     /// </remarks>
     public sealed class EnemyBrain
     {
@@ -32,12 +39,30 @@ namespace Fps.Core
         private int _shotsInAttack;
         private float _lostElapsed;
         private float _searchElapsed;
+        private CoverPointSelector _cover;
+        private int _coverIndex = -1;
+        private float _coverElapsed;
+        private Vector3 _coverThreat;
+
+        // 着けなかった点。また選んで同じ点で詰まり続けないよう、巡回や待機に戻るか遮蔽点の一覧が変わるまで選ばない。
+        private readonly HashSet<int> _unreachableCover = new HashSet<int>();
 
         public EnemySpec Spec => _spec;
         public EnemyState State { get; private set; } = EnemyState.Idle;
         public bool IsDead => State == EnemyState.Dead;
 
-        /// <summary>今の Attack に入ってから <see cref="RecordShot"/> で記録した発数。Attack に入るたびに 0 に戻る。</summary>
+        /// <summary>TakeCover の中の段階。TakeCover でなければ None。</summary>
+        public EnemyCoverPhase CoverPhase { get; private set; }
+
+        /// <summary>使っている遮蔽点の、<see cref="CoverPointSelector.Points"/> での添字。使っていなければ -1。</summary>
+        public int CoverPointIndex => _coverIndex;
+
+        /// <summary>使っている遮蔽点。使っていなければ null。</summary>
+        public CoverPoint? CurrentCoverPoint => _cover != null && _coverIndex >= 0 ? _cover.Points[_coverIndex] : (CoverPoint?)null;
+
+        /// <summary>
+        /// 今の Attack に入ってから <see cref="RecordShot"/> で記録した発数。Attack に入るたび、TakeCover で覗き始めるたびに 0 に戻る。
+        /// </summary>
         public int ShotsInAttack => _shotsInAttack;
 
         /// <summary>次に撃つ弾の散らばりの半角 (度)。</summary>
@@ -94,7 +119,23 @@ namespace Fps.Core
             }
         }
 
-        /// <summary>死亡させる。以後の Tick はすべて空の決定を返す。</summary>
+        /// <summary>
+        /// 隠れに行く遮蔽点を設定する。同じ一覧を使う敵どうしで同じ selector を渡すと、ほかの敵が使っている点を選ばなくなる。
+        /// null を渡すと遮蔽点を使わなくなる。TakeCover 中に変えたら今の点を放し、次の tick に選び直す (選べなければ TakeCover をやめる)。
+        /// </summary>
+        public void UseCover(CoverPointSelector selector)
+        {
+            if (ReferenceEquals(selector, _cover))
+            {
+                return;
+            }
+
+            ReleaseCoverPoint();
+            _unreachableCover.Clear();
+            _cover = selector;
+        }
+
+        /// <summary>死亡させる。以後の Tick はすべて空の決定を返す。使っていた遮蔽点は放す。</summary>
         public void Kill()
         {
             if (IsDead)
@@ -102,6 +143,8 @@ namespace Fps.Core
                 return;
             }
 
+            ReleaseCoverPoint();
+            CoverPhase = EnemyCoverPhase.None;
             SetState(EnemyState.Dead);
         }
 
@@ -109,12 +152,17 @@ namespace Fps.Core
         /// 今向かっている先に届かないとき、その目的地をあきらめる。
         /// Patrol なら次の巡回地点へ進め、Search なら打ち切って次の tick で Patrol (ルートが無ければ Idle) に戻す。
         /// 見失った後の Chase なら Search を飛ばして同じく戻す。目標が見えていれば次の tick でまた追う。
-        /// 目的地を持たない状態 (Idle・Attack・Dead) では何もせず false を返す。
+        /// TakeCover で遮蔽点へ向かっているなら、その点を放して以後選ばず、次の tick に別の点を選び直す (選べなければ TakeCover をやめる)。
+        /// 目的地を持たない状態 (Idle・Attack・Dead、遮蔽点に着いた後の TakeCover) では何もせず false を返す。
         /// </summary>
         public bool AbandonGoal()
         {
             switch (State)
             {
+                case EnemyState.TakeCover when CoverPhase == EnemyCoverPhase.Moving && _coverIndex >= 0:
+                    _unreachableCover.Add(_coverIndex);
+                    ReleaseCoverPoint();
+                    return true;
                 case EnemyState.Patrol when _route.Length > 0:
                     _routeIndex = (_routeIndex + 1) % _route.Length;
                     return true;
@@ -151,13 +199,22 @@ namespace Fps.Core
 
         private EnemyDecision Decide(float deltaSeconds, EnemyPerception p)
         {
-            if (p.HasLineOfSight && p.Target.HasValue
-                && Vector3.Distance(p.Self, p.Target.Value) <= _spec.SightRange)
+            var seen = p.HasLineOfSight && p.Target.HasValue
+                && Vector3.Distance(p.Self, p.Target.Value) <= _spec.SightRange;
+
+            if ((State == EnemyState.TakeCover || ShouldTakeCover(p))
+                && TryCover(deltaSeconds, p, seen, out var cover))
+            {
+                return cover;
+            }
+
+            if (seen)
             {
                 return Engage(deltaSeconds, p.Self, p.Target.Value);
             }
 
-            if (State == EnemyState.Chase || State == EnemyState.Attack)
+            // TakeCover をやめたばかりなら、Chase と同じく最後に脅威のいた位置へ向かう。
+            if (State == EnemyState.Chase || State == EnemyState.Attack || State == EnemyState.TakeCover)
             {
                 return Pursue(deltaSeconds);
             }
@@ -215,6 +272,147 @@ namespace Fps.Core
             return new EnemyDecision(target, target, false);
         }
 
+        private bool ShouldTakeCover(EnemyPerception p)
+        {
+            return _cover != null && (p.WasHit || p.HealthFraction < _spec.CoverHealthFraction);
+        }
+
+        private static Vector3? ThreatOf(EnemyPerception p)
+        {
+            if (p.Target.HasValue)
+            {
+                return p.Target.Value;
+            }
+
+            return p.WasHit ? p.HitSource : null;
+        }
+
+        /// <summary>
+        /// TakeCover に入るか続ける。使える遮蔽点が無いか脅威が分からなければ TakeCover をやめて false を返し、
+        /// 呼び出し側がふだんの Chase / Attack の判断を続ける。
+        /// </summary>
+        private bool TryCover(float deltaSeconds, EnemyPerception p, bool seen, out EnemyDecision decision)
+        {
+            decision = EnemyDecision.None;
+            if (seen)
+            {
+                _lastSeen = p.Target.Value;
+            }
+
+            var threat = ThreatOf(p);
+            if (_cover == null || !threat.HasValue || !CoverPoint.IsFinite(threat.Value) || !CoverPoint.IsFinite(p.Self))
+            {
+                LeaveCover();
+                return false;
+            }
+
+            _coverThreat = threat.Value;
+
+            // 回り込まれて今の点が脅威の方向を遮らなくなったら、放して選び直す。
+            if (_coverIndex >= 0 && !_cover.Protects(_coverIndex, _coverThreat))
+            {
+                ReleaseCoverPoint();
+            }
+
+            if (_coverIndex < 0)
+            {
+                var next = _cover.Select(p.Self, _coverThreat, this, _unreachableCover);
+                if (next < 0 || !_cover.TryClaim(next, this))
+                {
+                    LeaveCover();
+                    return false;
+                }
+
+                _coverIndex = next;
+                CoverPhase = EnemyCoverPhase.Moving;
+            }
+
+            if (State != EnemyState.TakeCover)
+            {
+                _lostElapsed = 0f;
+            }
+
+            decision = CoverStep(deltaSeconds, p.Self, seen);
+
+            // 決定を作った後に移す。StateChanged の購読者が Kill() して点を放しても、ここでは点を読まない。
+            SetState(EnemyState.TakeCover);
+            return true;
+        }
+
+        private EnemyDecision CoverStep(float deltaSeconds, Vector3 self, bool seen)
+        {
+            var point = _cover.Points[_coverIndex].Position;
+            switch (CoverPhase)
+            {
+                case EnemyCoverPhase.Moving:
+                    if (Vector3.Distance(self, point) > ArrivalDistance)
+                    {
+                        return new EnemyDecision(point, _coverThreat, false, false);
+                    }
+
+                    StartHiding();
+                    return HideDecision();
+                case EnemyCoverPhase.Hiding:
+                    _coverElapsed += deltaSeconds;
+                    if (_coverElapsed < _spec.CoverHideSeconds)
+                    {
+                        return HideDecision();
+                    }
+
+                    CoverPhase = EnemyCoverPhase.Peeking;
+                    _coverElapsed = 0f;
+                    _reactionElapsed = 0f;
+                    _shotsInAttack = 0;
+                    return PeekDecision(self, seen);
+                default:
+                    _coverElapsed += deltaSeconds;
+                    if (_coverElapsed >= _spec.CoverPeekSeconds)
+                    {
+                        StartHiding();
+                        return HideDecision();
+                    }
+
+                    _reactionElapsed = _coverElapsed;
+                    return PeekDecision(self, seen);
+            }
+        }
+
+        private void StartHiding()
+        {
+            CoverPhase = EnemyCoverPhase.Hiding;
+            _coverElapsed = 0f;
+        }
+
+        private EnemyDecision HideDecision()
+        {
+            return new EnemyDecision(null, _coverThreat, false, true);
+        }
+
+        private EnemyDecision PeekDecision(Vector3 self, bool seen)
+        {
+            var inRange = Vector3.Distance(self, _coverThreat) <= _spec.AttackRange;
+            return new EnemyDecision(null, _coverThreat, seen && inRange && _reactionElapsed >= _spec.ReactionSeconds, false);
+        }
+
+        /// <summary>TakeCover をやめる。状態は呼び出し側の判断 (Chase / Attack) で移る。</summary>
+        private void LeaveCover()
+        {
+            if (State == EnemyState.TakeCover)
+            {
+                _lastSeen = _coverThreat;
+                _lostElapsed = 0f;
+            }
+
+            ReleaseCoverPoint();
+            CoverPhase = EnemyCoverPhase.None;
+        }
+
+        private void ReleaseCoverPoint()
+        {
+            _cover?.Release(this);
+            _coverIndex = -1;
+        }
+
         /// <summary>見失った直後。最後に見た位置へ向かい、LoseSightSeconds 経ったら Search に移る。</summary>
         private EnemyDecision Pursue(float deltaSeconds)
         {
@@ -245,6 +443,7 @@ namespace Fps.Core
         /// <summary>ルートがあれば Patrol、なければ Idle。</summary>
         private EnemyDecision Routine(Vector3 self)
         {
+            _unreachableCover.Clear();
             if (_route.Length == 0)
             {
                 SetState(EnemyState.Idle);

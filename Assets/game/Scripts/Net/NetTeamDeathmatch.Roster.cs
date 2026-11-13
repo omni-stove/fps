@@ -21,6 +21,7 @@ namespace Fps.Net
             player.ServerPlayerId = NetPlayer.NotJoined;
             _playerById.Remove(playerId);
             _lagCompensator?.Remove(playerId);
+            // 連射の制限と一緒に選んだ並びも捨てる。同じクライアント Id で入り直したら既定の並びから
             _serverLoadout?.Remove(playerId);
             _lastKillers.Remove(playerId);
             ForgetDowned(playerId);

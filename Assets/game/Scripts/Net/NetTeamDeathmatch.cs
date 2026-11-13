@@ -28,7 +28,8 @@ namespace Fps.Net
     /// <para>
     /// 武器の値はここに持たず、ロードアウトのアセット (<see cref="LoadoutDefinition"/>) から引く。試合の開始時に
     /// <see cref="LoadoutDefinition.ToRule"/> と <see cref="LoadoutDefinition.ToSpecs"/> で検査して <see cref="Fps.Core.ServerLoadout"/> に保持し、
-    /// 未設定・不正なら試合を始めない。全員に同じロードアウトを、出現・リスポーンのたびに
+    /// 未設定・不正なら試合を始めない。プレイヤーが武器の一覧 (<see cref="Catalog"/>) から選んだ並びは同じルールで検査し
+    /// (<see cref="ServerChooseLoadout"/>)、通ればその人の次の出現から配る。選んでいない人には既定の並びを。どちらも出現・リスポーンのたびに
     /// 試合のルールと一緒に <see cref="NetPlayerWeapon.ServerEquip(System.Collections.Generic.IReadOnlyList{WeaponSpec}, float, GameRules)"/> で持たせる
     /// (予備弾の倍率と無限予備弾はそこで各武器に効く)。
     /// 持ち替えは <see cref="NetPlayerWeapon"/> がサーバーで判定し、射撃の判定 (ダメージ・射程・減衰・連射間隔) には
@@ -91,6 +92,9 @@ namespace Fps.Net
 
         [SerializeField, Tooltip("全員に持たせるロードアウト (Assets/game/Weapons/DefaultLoadout.asset)。ダメージ・射程・減衰・連射間隔・弾倉・持ち替え秒数はここから引く")]
         private LoadoutDefinition _loadout;
+
+        [SerializeField, Tooltip("プレイヤーが自分のロードアウトに選べる武器の一覧 (Assets/game/Weapons/WeaponCatalog.asset)。選んだ並びは Loadout のスロットのルールで検査する。未設定なら全員 Loadout の武器のまま")]
+        private WeaponCatalogAsset _catalog;
 
         [SerializeField, Min(0f), Tooltip("射撃の始点とサーバー上の本人の位置のずれ (m) の上限。超えた射撃は捨てる")]
         private float _maxShotOriginOffset = ShotValidator.DefaultMaxOriginOffset;
@@ -246,6 +250,19 @@ namespace Fps.Net
         {
             get => _loadout;
             set => _loadout = value;
+        }
+
+        /// <summary>
+        /// プレイヤーが <see cref="NetPlayerWeapon.RequestLoadout"/> で選べる武器の一覧のアセット。試合の開始時 (Spawn 時) に
+        /// <see cref="TryCreateLoadout(LoadoutDefinition, WeaponCatalogAsset, out ServerLoadout, out string)"/> で読む。
+        /// 未設定なら警告を出し、選んだ並びはすべて断って全員に <see cref="Loadout"/> の武器を配る。不正ならエラーを出して試合を始めない。
+        /// クライアントは、持ち主が持たされた武器の射撃モードと連射間隔をここからも引く。
+        /// プレハブでは <c>Fps.Editor.NetSceneBuilder</c> が配線し、テストでは Spawn 前にここへ渡す。
+        /// </summary>
+        public WeaponCatalogAsset Catalog
+        {
+            get => _catalog;
+            set => _catalog = value;
         }
 
         /// <summary>
@@ -424,10 +441,16 @@ namespace Fps.Net
                 return;
             }
 
-            if (!TryCreateLoadout(_loadout, out var loadout, out var loadoutError))
+            if (!TryCreateLoadout(_loadout, _catalog, out var loadout, out var loadoutError))
             {
                 Debug.LogError("[Match] invalid loadout on " + name + ": " + loadoutError + "; run Fps.Editor.NetSceneBuilder.Build");
                 return;
+            }
+
+            if (_catalog == null)
+            {
+                Debug.LogWarning("[Match] no weapon catalog is assigned to " + name + "; every player keeps the default loadout"
+                    + "; run Fps.Editor.NetSceneBuilder.Build");
             }
 
             var spawnPoints = CollectSpawnPoints();
@@ -480,6 +503,11 @@ namespace Fps.Net
             for (var i = 0; i < _serverLoadout.Weapons.Count; i++)
             {
                 Debug.Log(MatchLog.Weapon(i, _serverLoadout.Weapons[i]));
+            }
+
+            if (_serverLoadout.Catalog != null)
+            {
+                Debug.Log(MatchLog.LoadoutCatalog(_catalog.name, _serverLoadout.Catalog.Count));
             }
         }
 

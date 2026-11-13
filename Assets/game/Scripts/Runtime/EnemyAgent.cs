@@ -460,8 +460,9 @@ namespace Fps.Runtime
 
             if (!_goal.HasValue)
             {
+                bool hadDetour = _detour.HasValue;
                 _detour = null;
-                if (_destination.HasValue)
+                if (_destination.HasValue || hadDetour)
                 {
                     _agent.ResetPath();
                     _destination = null;

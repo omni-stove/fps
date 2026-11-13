@@ -72,7 +72,7 @@
                 <ui:Button name="pause-return-to-menu" text="メニューに戻る" class="pause__button" />
             </ui:VisualElement>
             <!-- 設定画面の枠。「設定」で PauseSettingsView が SettingsView の中身を入れて出す。 -->
-            <ui:VisualElement name="pause-settings" class="pause__settings" style="display: none;" />
+            <ui:VisualElement name="pause-settings-slot" class="pause__settings" style="display: none;" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

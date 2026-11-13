@@ -260,7 +260,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ListsEveryValueOnce()
         {
-            Assert.That(ControlSettings.Values, Is.EquivalentTo((ControlValue[])Enum.GetValues(typeof(ControlValue))));
+            Assert.That(ControlSettings.Values, Is.EquivalentTo(Enum.GetValues<ControlValue>()));
             Assert.That(ControlSettings.Values, Is.Unique);
         }
 

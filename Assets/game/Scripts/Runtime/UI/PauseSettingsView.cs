@@ -18,7 +18,7 @@ namespace Fps.Runtime
         public const string PanelName = "pause-panel";
 
         /// <summary>Hud.uxml の設定画面の枠。</summary>
-        public const string SlotName = "pause-settings";
+        public const string SlotName = "pause-settings-slot";
 
         private SettingsView _view;
         private PauseMenu _pause;

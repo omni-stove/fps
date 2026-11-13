@@ -10,7 +10,7 @@ namespace Fps.Core.Tests
         // 視認 20m、攻撃 10m、見失って 1 秒で Search、Search 2 秒、反応 0.5 秒。
         private static EnemySpec DefaultSpec() => new EnemySpec(20f, 10f, 1f, 2f, 0.5f);
 
-        private static readonly float[] ExpectedOpeningSpreads = { 6f, 4f, 2f, 0f, 0f };
+        private static readonly float[] _expectedOpeningSpreads = { 6f, 4f, 2f, 0f, 0f };
 
         private static EnemyPerception Sees(Vector3 self, Vector3 target) =>
             new EnemyPerception(self, target, true, false, null);
@@ -250,7 +250,7 @@ namespace Fps.Core.Tests
                 brain.RecordShot();
             }
 
-            Assert.That(spreads, Is.EqualTo(ExpectedOpeningSpreads).Within(1e-4f));
+            Assert.That(spreads, Is.EqualTo(_expectedOpeningSpreads).Within(1e-4f));
             Assert.That(brain.ShotsInAttack, Is.EqualTo(5));
 
             brain.Tick(0.1f, Sees(Vector3.Zero, new Vector3(0f, 0f, 15f)));

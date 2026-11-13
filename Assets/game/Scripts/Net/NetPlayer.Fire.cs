@@ -23,6 +23,7 @@ namespace Fps.Net
 
             // 反動の戻りは撃てない間 (デスカム中など) も進める
             _recoil.Tick(Time.deltaTime);
+            UpdateGrenadeInput(Time.deltaTime);
             if (_attackAction == null || IsWatchingDeathCamera)
             {
                 return;
@@ -46,7 +47,8 @@ namespace Fps.Net
 
             // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う。
             // ダウン中の射撃と、高い壁で端にいないブラインドファイアはサーバーが捨てるので送らない
-            if (IsAlive && !IsDowned && ResolveBlindFire(out _) != BlindFireAim.Blocked
+            // 投げている間は撃たない (オフラインと同じ)。サーバーはこの間の射撃を断らないので、持ち主の側だけで止める
+            if (IsAlive && !IsDowned && !IsThrowingGrenade && ResolveBlindFire(out _) != BlindFireAim.Blocked
                 && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
             {
                 Fire();

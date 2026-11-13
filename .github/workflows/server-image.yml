@@ -46,7 +46,8 @@ jobs:
 
       # ServerBuilder.Build は Unity 自身の引数や unity-builder の -customBuildPath などを無視し、
       # -serverPlatform linux と -buildVersion を見て Builds/server-linux/ に出力する (make build-server linux と同じ)。
-      # コンテナの中では git describe に頼れない (浅いクローンでタグが無い) ので、版はタグ名から渡す
+      # コンテナの中では git describe に頼れない (浅いクローンでタグが無い) ので、版はタグ名から渡す。
+      # unity-builder は自分でも -buildVersion を足し、customParameters に書くと 2 回指定で失敗するので、versioning: Custom で渡す
       - name: Build the Linux dedicated server
         uses: game-ci/unity-builder@v4
         env:
@@ -56,8 +57,9 @@ jobs:
         with:
           targetPlatform: StandaloneLinux64
           buildMethod: Fps.Editor.ServerBuilder.Build
-          customParameters: -serverPlatform linux -buildVersion ${{ steps.version.outputs.version }}
-          versioning: None
+          customParameters: -serverPlatform linux
+          versioning: Custom
+          version: ${{ steps.version.outputs.version }}
 
       - name: Check the build output
         run: test -x Builds/server-linux/fps-server.x86_64

@@ -332,6 +332,153 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => new Weapon(null, 0, 0));
         }
 
+        private static GameRules Rules(bool infiniteReserve, float reserveAmmoMultiplier)
+        {
+            var d = GameRules.Default;
+            return new GameRules(
+                d.FriendlyFire,
+                d.RespawnMode,
+                d.WaveIntervalSeconds,
+                d.RegenDelaySeconds,
+                d.RegenPerSecond,
+                d.DeathBody,
+                d.DeathCamera,
+                infiniteReserve,
+                reserveAmmoMultiplier);
+        }
+
+        private static WeaponSpec Spec(int magazineSize = 3, int reserveAmmo = 10, float reloadSeconds = 1f)
+        {
+            return new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, magazineSize, reserveAmmo, 0f, reloadSeconds, 10, 100f, DamageFalloff.None);
+        }
+
+        [TestCase(10, 0f, 0)]
+        [TestCase(10, 0.5f, 5)]
+        [TestCase(10, 1f, 10)]
+        [TestCase(10, 2f, 20)]
+        [TestCase(5, 0.5f, 3)]
+        [TestCase(5, 0.7f, 4)]
+        [TestCase(10, 0.33f, 3)]
+        [TestCase(10, 0.37f, 4)]
+        [TestCase(0, 2f, 0)]
+        public void StartsWithReserveScaledByTheMultiplier(int specReserve, float multiplier, int expected)
+        {
+            var weapon = new Weapon(Spec(reserveAmmo: specReserve), Rules(false, multiplier));
+
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(expected));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(weapon.HasInfiniteReserve, Is.False);
+        }
+
+        [Test]
+        public void DefaultRulesKeepTheSpecReserveAndFiniteReserve()
+        {
+            var weapon = new Weapon(Spec(reserveAmmo: 10), GameRules.Default);
+
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(10));
+            Assert.That(weapon.HasInfiniteReserve, Is.False);
+            Assert.That(Create().HasInfiniteReserve, Is.False);
+        }
+
+        [Test]
+        public void ScaledReserveIsClampedToIntMaxValue()
+        {
+            Assert.That(Weapon.ScaleReserveAmmo(int.MaxValue, 2f), Is.EqualTo(int.MaxValue));
+            Assert.That(Weapon.ScaleReserveAmmo(1, float.MaxValue), Is.EqualTo(int.MaxValue));
+        }
+
+        [TestCase(-1, 1f)]
+        [TestCase(10, -0.1f)]
+        [TestCase(10, float.NaN)]
+        [TestCase(10, float.PositiveInfinity)]
+        public void ScaleReserveAmmoRejectsInvalidArguments(int reserveAmmo, float multiplier)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => Weapon.ScaleReserveAmmo(reserveAmmo, multiplier));
+        }
+
+        [Test]
+        public void RejectsNullRules()
+        {
+            Assert.Throws<ArgumentNullException>(() => new Weapon(Spec(), null));
+            Assert.Throws<ArgumentNullException>(() => new Weapon(Spec(), 0, 0, null));
+        }
+
+        [Test]
+        public void InfiniteReserveRefillsWithoutConsumingReserve()
+        {
+            var weapon = new Weapon(Spec(magazineSize: 3, reserveAmmo: 10), Rules(true, 1f));
+            var reloaded = 0;
+            weapon.Reloaded += () => reloaded++;
+            Empty(weapon, 0f);
+
+            Assert.That(weapon.HasInfiniteReserve, Is.True);
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(1f);
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(10));
+            Assert.That(reloaded, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void InfiniteReserveReloadsEvenWithZeroReserve()
+        {
+            var weapon = new Weapon(Spec(magazineSize: 3, reserveAmmo: 10), Rules(true, 0f));
+            Assert.That(weapon.ReserveAmmo, Is.Zero);
+
+            for (var i = 0; i < 3; i++)
+            {
+                Empty(weapon, 0f);
+                Assert.That(weapon.TryStartReload(), Is.True);
+                weapon.Tick(1f);
+                Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+                Assert.That(weapon.ReserveAmmo, Is.Zero);
+            }
+        }
+
+        [Test]
+        public void InfiniteReserveStillRefusesReloadWhenFull()
+        {
+            var weapon = new Weapon(Spec(), Rules(true, 1f));
+
+            Assert.That(weapon.TryStartReload(), Is.False);
+        }
+
+        [Test]
+        public void RestoringFromSaveDoesNotReapplyTheMultiplier()
+        {
+            var weapon = new Weapon(Spec(magazineSize: 5, reserveAmmo: 10), 2, 7, Rules(false, 2f));
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(7));
+            Assert.That(weapon.HasInfiniteReserve, Is.False);
+
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(1f);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void RestoringFromSaveKeepsInfiniteReserve()
+        {
+            var weapon = new Weapon(Spec(magazineSize: 5, reserveAmmo: 10), 0, 0, Rules(true, 2f));
+
+            Assert.That(weapon.ReserveAmmo, Is.Zero);
+            Assert.That(weapon.HasInfiniteReserve, Is.True);
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(1f);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(weapon.ReserveAmmo, Is.Zero);
+        }
+
+        [Test]
+        public void RestoringFromSaveStillValidatesAmmoWithRules()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new Weapon(Spec(magazineSize: 5), 6, 0, Rules(true, 1f)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new Weapon(Spec(magazineSize: 5), 0, -1, Rules(true, 1f)));
+        }
+
         [TestCase(0, 10, 0.5f, 2f, 10)]
         [TestCase(-1, 10, 0.5f, 2f, 10)]
         [TestCase(3, -1, 0.5f, 2f, 10)]

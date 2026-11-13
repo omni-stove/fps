@@ -68,7 +68,7 @@ namespace Fps.Editor
             {
                 var seconds = ParseSeconds(Environment.GetCommandLineArgs());
 
-                // シーンはプレイヤーに rifle を、敵に武器の一覧から引いた武器を配線するので、先に武器のアセットを作り直しておく。
+                // シーンはプレイヤーに既定のロードアウト (rifle, handgun) を、敵に武器の一覧から引いた武器を配線するので、先に武器のアセットを作り直しておく。
                 WeaponAssetBuilder.Build();
                 CampaignSceneBuilder.Build();
                 DeleteSave("before the run");
@@ -157,6 +157,13 @@ namespace Fps.Editor
 
             if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
             {
+                // Unity 6000.6.0f1 の batchmode では、Editor の起動時インデックス (SearchInit.IndexationOnStartup) が
+                // Play 中に例外を投げることがある。ゲームのコードではないので、これだけは判定から外す。
+                if (stackTrace != null && stackTrace.Contains("UnityEditor.Search.SearchInit.IndexationOnStartup"))
+                {
+                    return;
+                }
+
                 _errors.Add($"{type}: {condition}");
                 return;
             }

@@ -79,8 +79,8 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("プレイヤーの視点。一人称か三人称 (肩越し)")]
         private ViewMode _viewMode = ViewMode.FirstPerson;
 
-        [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義。シーン生成スクリプトが rifle を配線する")]
-        private WeaponDefinition _weaponDefinition;
+        [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義の並び (既定のロードアウト)。シーン生成スクリプトが rifle, handgun を配線する")]
+        private WeaponDefinition[] _weaponDefinitions = Array.Empty<WeaponDefinition>();
 
         private BootstrapWorld _world;
 
@@ -111,13 +111,29 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// <see cref="Build"/> で作るプレイヤーの <see cref="WeaponController.Definition"/>。
-        /// Play 中に未設定なら WeaponController が初期化できず、<see cref="Build"/> は失敗する。
+        /// <see cref="Build"/> で作るプレイヤーの <see cref="WeaponController.Definitions"/> (既定のロードアウト)。0 番を持って始める。
+        /// Play 中に空なら WeaponController が初期化できず、<see cref="Build"/> は失敗する。null を設定すると空になる。
         /// </summary>
-        public WeaponDefinition WeaponDefinition
+        public IReadOnlyList<WeaponDefinition> WeaponDefinitions
         {
-            get => _weaponDefinition;
-            set => _weaponDefinition = value;
+            get => _weaponDefinitions ?? Array.Empty<WeaponDefinition>();
+            set
+            {
+                if (value == null)
+                {
+                    _weaponDefinitions = Array.Empty<WeaponDefinition>();
+                    return;
+                }
+
+                // 呼ぶ側が後から並びを書き換えても、配線した中身が変わらないよう写しを持つ
+                var copy = new WeaponDefinition[value.Count];
+                for (var i = 0; i < copy.Length; i++)
+                {
+                    copy[i] = value[i];
+                }
+
+                _weaponDefinitions = copy;
+            }
         }
 
         private void Awake()
@@ -155,7 +171,7 @@ namespace Fps.Runtime
             {
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(
-                    _viewMode, _weaponDefinition, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
+                    _viewMode, WeaponDefinitions, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon, out var playerDamageable);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
@@ -217,7 +233,7 @@ namespace Fps.Runtime
 
         private static GameObject CreatePlayer(
             ViewMode viewMode,
-            WeaponDefinition weaponDefinition,
+            IReadOnlyList<WeaponDefinition> weaponDefinitions,
             out CharacterController controller,
             out ViewRig rig,
             out Camera camera,
@@ -229,7 +245,7 @@ namespace Fps.Runtime
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
-                ConfigurePlayer(player, viewMode, weaponDefinition, out controller, out rig, out camera, out look, out mover, out weapon);
+                ConfigurePlayer(player, viewMode, weaponDefinitions, out controller, out rig, out camera, out look, out mover, out weapon);
 
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
@@ -248,7 +264,7 @@ namespace Fps.Runtime
         private static void ConfigurePlayer(
             GameObject player,
             ViewMode viewMode,
-            WeaponDefinition weaponDefinition,
+            IReadOnlyList<WeaponDefinition> weaponDefinitions,
             out CharacterController controller,
             out ViewRig rig,
             out Camera camera,
@@ -322,7 +338,7 @@ namespace Fps.Runtime
             try
             {
                 weapon = cameraObject.AddComponent<WeaponController>();
-                weapon.Definition = weaponDefinition;
+                weapon.Definitions = weaponDefinitions;
             }
             finally
             {
@@ -332,7 +348,7 @@ namespace Fps.Runtime
             if (Application.isPlaying && !weapon.IsInitialized)
             {
                 throw new InvalidOperationException(
-                    "WeaponController could not resolve its WeaponDefinition, camera or Attack/Reload actions; see the error above");
+                    "WeaponController could not resolve its WeaponDefinitions, camera or Attack/Reload actions; see the error above");
             }
         }
 

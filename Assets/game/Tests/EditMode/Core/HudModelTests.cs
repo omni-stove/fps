@@ -9,9 +9,16 @@ namespace Fps.Core.Tests
         private const int _playerId = 0;
         private const string _rifleId = "00000000-0000-4000-8000-000000000001";
 
+        private const string _handgunId = "00000000-0000-4000-8000-000000000002";
+
         private static Weapon NewWeapon(int magazine = 30, int reserve = 90, float fireInterval = 0f, float reloadSeconds = 1f)
         {
-            return new Weapon(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, magazine, reserve, fireInterval, reloadSeconds, 25, 100f, DamageFalloff.None));
+            return new Weapon(new WeaponSpec(_rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, magazine, reserve, fireInterval, reloadSeconds, 25, 100f, DamageFalloff.None));
+        }
+
+        private static Weapon NewHandgun()
+        {
+            return new Weapon(new WeaponSpec(_handgunId, "Handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None));
         }
 
         private static List<HudField> Record(HudModel model)
@@ -28,6 +35,7 @@ namespace Fps.Core.Tests
 
             Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
             Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
             Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime));
         }
 
@@ -43,8 +51,78 @@ namespace Fps.Core.Tests
 
             Assert.That(model.HealthText, Is.EqualTo("100"));
             Assert.That(model.AmmoText, Is.EqualTo("30 / 90"));
+            Assert.That(model.WeaponNameText, Is.EqualTo("Rifle"));
             Assert.That(model.TimeText, Is.EqualTo("03:00"));
-            Assert.That(changes, Is.EqualTo(new[] { HudField.Health, HudField.Ammo, HudField.Time }));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Health, HudField.Ammo, HudField.WeaponName, HudField.Time }));
+        }
+
+        [Test]
+        public void WeaponNameStartsEmptyAndFollowsTheBoundWeapon()
+        {
+            var model = new HudModel();
+            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+            var changes = Record(model);
+
+            model.BindWeapon(NewWeapon());
+            Assert.That(model.WeaponNameText, Is.EqualTo("Rifle"));
+
+            model.BindWeapon(NewHandgun());
+            Assert.That(model.WeaponNameText, Is.EqualTo("Handgun"), "switching weapons rebinds and shows the new name");
+            Assert.That(model.AmmoText, Is.EqualTo("12 / 48"));
+
+            model.BindWeapon(null);
+            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+
+            Assert.That(changes, Is.EqualTo(new[]
+            {
+                HudField.Ammo, HudField.WeaponName,
+                HudField.Ammo, HudField.WeaponName,
+                HudField.Ammo, HudField.WeaponName,
+            }));
+        }
+
+        [Test]
+        public void WeaponNameDoesNotNotifyWhenTheNameStaysTheSame()
+        {
+            var model = new HudModel();
+            model.BindWeapon(NewWeapon());
+            var changes = Record(model);
+
+            model.BindWeapon(NewWeapon(magazine: 20));
+
+            Assert.That(model.WeaponNameText, Is.EqualTo("Rifle"));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo }));
+        }
+
+        [Test]
+        public void SetWeaponNameTreatsNullAsEmptyAndCanBeCleared()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetWeaponName("Handgun");
+            Assert.That(model.WeaponNameText, Is.EqualTo("Handgun"));
+
+            model.SetWeaponName(null);
+            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+
+            model.SetWeaponName("Rifle");
+            model.ClearWeaponName();
+            model.ClearWeaponName();
+            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+
+            Assert.That(changes, Is.EqualTo(new[] { HudField.WeaponName, HudField.WeaponName, HudField.WeaponName, HudField.WeaponName }));
+        }
+
+        [Test]
+        public void UnbindAllKeepsTheWeaponName()
+        {
+            var model = new HudModel();
+            model.BindWeapon(NewHandgun());
+
+            model.UnbindAll();
+
+            Assert.That(model.WeaponNameText, Is.EqualTo("Handgun"));
         }
 
         [Test]
@@ -167,6 +245,7 @@ namespace Fps.Core.Tests
 
             Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
             Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
             Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime));
         }
 

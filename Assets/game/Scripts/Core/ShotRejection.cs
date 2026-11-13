@@ -36,7 +36,7 @@ namespace Fps.Core
         /// <summary>弾倉が空で撃てない (予備弾があればサーバーがリロードを始める)。</summary>
         OutOfAmmo,
 
-        /// <summary>送られてきた武器の Id がサーバーの <see cref="WeaponCatalog"/> に無い。</summary>
+        /// <summary>送られてきた武器の Id が、サーバーが試合で配るロードアウトに無い (<see cref="ServerLoadout.Contains"/>)。</summary>
         UnknownWeapon,
 
         /// <summary>送られてきた武器の Id が、サーバーが持たせている武器と違う (<see cref="ServerLoadout.CheckWeapon"/>)。</summary>

@@ -17,17 +17,17 @@ namespace Fps.Tests.EditMode
         private const string Bootstrap = "Assets/game/Scenes/Bootstrap.unity";
 
         private MissionDefinition _definition;
-        private WeaponDefinition _rifle;
+        private WeaponDefinition[] _weapons;
         private Scene _scene;
 
         [SetUp]
         public void SetUp()
         {
+            _scene = TestScenes.NewAdditive();
             _definition = ScriptableObject.CreateInstance<MissionDefinition>();
             _definition.name = "TestMission";
             MissionTestSceneBuilder.Configure(_definition);
-            _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
-            _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            _weapons = new[] { ScriptableObject.CreateInstance<WeaponDefinition>(), ScriptableObject.CreateInstance<WeaponDefinition>() };
         }
 
         [TearDown]
@@ -35,7 +35,10 @@ namespace Fps.Tests.EditMode
         {
             EditorSceneManager.CloseScene(_scene, true);
             Object.DestroyImmediate(_definition);
-            Object.DestroyImmediate(_rifle);
+            foreach (var weapon in _weapons)
+            {
+                Object.DestroyImmediate(weapon);
+            }
         }
 
         [Test]
@@ -43,7 +46,7 @@ namespace Fps.Tests.EditMode
         {
             var mission = _definition.CreateMission();
 
-            Assert.That(mission.Objectives, Has.Count.EqualTo(3));
+            Assert.That(mission.Objectives.Count, Is.EqualTo(3));
             Assert.That(mission.Objectives[0].Id, Is.EqualTo(MissionTestSceneBuilder.ReachAreaId));
             Assert.That(mission.Objectives[1].Id, Is.EqualTo(MissionTestSceneBuilder.KillTargetsId));
             Assert.That(mission.Objectives[1].RequiredCount, Is.EqualTo(MissionTestSceneBuilder.TargetCount));
@@ -55,11 +58,11 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PopulatedSceneIsWiredInCode()
         {
-            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle);
+            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _weapons);
 
             Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(5));
             Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>(), Is.Not.Null);
-            Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>().WeaponDefinition, Is.SameAs(_rifle));
+            Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>().WeaponDefinitions, Is.EqualTo(_weapons));
             Assert.That(layout.Runner.Definition, Is.SameAs(_definition));
 
             Assert.That(layout.ReachArea.ObjectiveId, Is.EqualTo(MissionTestSceneBuilder.ReachAreaId));
@@ -69,7 +72,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(layout.KillTargets.ObjectiveId, Is.EqualTo(MissionTestSceneBuilder.KillTargetsId));
             Assert.That(layout.KillTargets.Runner, Is.SameAs(layout.Runner));
-            Assert.That(layout.Targets, Has.Count.EqualTo(MissionTestSceneBuilder.TargetCount));
+            Assert.That(layout.Targets.Count, Is.EqualTo(MissionTestSceneBuilder.TargetCount));
             foreach (var target in layout.Targets)
             {
                 Assert.That(target.transform.parent, Is.SameAs(layout.KillTargets.transform));
@@ -83,7 +86,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AreaTriggerStandsOnTheFloorAndIsTallerThanThePlayer()
         {
-            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle);
+            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _weapons);
             var collider = layout.ReachArea.GetComponent<BoxCollider>();
             var transform = collider.transform;
 
@@ -99,7 +102,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void GeneratedLayoutCanBeCompletedInOrder()
         {
-            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle);
+            var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _weapons);
             var player = new GameObject("Player");
             try
             {
@@ -141,14 +144,14 @@ namespace Fps.Tests.EditMode
         {
             SceneManager.MoveGameObjectToScene(new GameObject("Stray"), _scene);
 
-            Assert.Throws<InvalidOperationException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, _rifle));
+            Assert.Throws<InvalidOperationException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, _weapons));
             Assert.That(_scene.rootCount, Is.EqualTo(1), "nothing is left behind");
         }
 
         [Test]
         public void RefusesToPopulateWithoutDefinition()
         {
-            Assert.Throws<ArgumentNullException>(() => MissionTestSceneBuilder.PopulateScene(_scene, null, _rifle));
+            Assert.Throws<ArgumentNullException>(() => MissionTestSceneBuilder.PopulateScene(_scene, null, _weapons));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
@@ -156,6 +159,8 @@ namespace Fps.Tests.EditMode
         public void RefusesToPopulateWithoutAWeapon()
         {
             Assert.Throws<ArgumentNullException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, null));
+            Assert.Throws<ArgumentException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, Array.Empty<WeaponDefinition>()));
+            Assert.Throws<ArgumentException>(() => MissionTestSceneBuilder.PopulateScene(_scene, _definition, new WeaponDefinition[] { null }));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
@@ -215,7 +220,7 @@ namespace Fps.Tests.EditMode
                 Is.Not.Null,
                 $"run {nameof(MissionTestSceneBuilder)}.Build first");
 
-            Assert.That(definition.CreateMission().Objectives, Has.Count.EqualTo(3));
+            Assert.That(definition.CreateMission().Objectives.Count, Is.EqualTo(3));
 
             var scene = EditorSceneManager.OpenScene(MissionTestSceneBuilder.ScenePath, OpenSceneMode.Additive);
             try
@@ -237,7 +242,7 @@ namespace Fps.Tests.EditMode
                 var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);
                 Assert.That(rifle, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
                 Assert.That(bootstrap, Is.Not.Null);
-                Assert.That(bootstrap.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(MissionTestSceneBuilder)}.Build");
+                Assert.That(bootstrap.WeaponDefinitions, Is.EqualTo(TestScenes.ExpectedPlayerWeapons()), $"rerun {nameof(MissionTestSceneBuilder)}.Build");
             }
             finally
             {

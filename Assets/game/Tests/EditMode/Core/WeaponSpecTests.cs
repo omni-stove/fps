@@ -264,5 +264,119 @@ namespace Fps.Core.Tests
             var e = Assert.Throws<ArgumentOutOfRangeException>(() => Create(explosionRadius: explosionRadius));
             Assert.That(e.ParamName, Is.EqualTo("explosionRadius"));
         }
+
+        private static WeaponSpec CreateWithActions(
+            float blindFireSpreadDegrees = 0f,
+            float activeReloadWindowStart = WeaponSpec.DefaultActiveReloadWindowStart,
+            float activeReloadWindowLength = WeaponSpec.DefaultActiveReloadWindowLength,
+            float activeReloadFailSeconds = WeaponSpec.DefaultActiveReloadFailSeconds)
+        {
+            return new WeaponSpec(
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff,
+                blindFireSpreadDegrees: blindFireSpreadDegrees,
+                activeReloadWindowStart: activeReloadWindowStart,
+                activeReloadWindowLength: activeReloadWindowLength,
+                activeReloadFailSeconds: activeReloadFailSeconds);
+        }
+
+        [Test]
+        public void ActionValuesUseTheDefaultsWhenOmitted()
+        {
+            var spec = Create();
+
+            Assert.That(spec.BlindFireSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(spec.ActiveReloadWindowStart, Is.EqualTo(0.5f));
+            Assert.That(spec.ActiveReloadWindowLength, Is.EqualTo(0.15f));
+            Assert.That(spec.ActiveReloadFailSeconds, Is.EqualTo(0.5f));
+        }
+
+        [Test]
+        public void KeepsTheActionValues()
+        {
+            var spec = CreateWithActions(12f, 0.45f, 0.2f, 0.4f);
+
+            Assert.That(spec.BlindFireSpreadDegrees, Is.EqualTo(12f));
+            Assert.That(spec.ActiveReloadWindowStart, Is.EqualTo(0.45f));
+            Assert.That(spec.ActiveReloadWindowLength, Is.EqualTo(0.2f));
+            Assert.That(spec.ActiveReloadFailSeconds, Is.EqualTo(0.4f));
+        }
+
+        [TestCase(0f)]
+        [TestCase(90f)]
+        public void AcceptsABlindFireSpreadAtTheBounds(float degrees)
+        {
+            Assert.That(CreateWithActions(blindFireSpreadDegrees: degrees).BlindFireSpreadDegrees, Is.EqualTo(degrees));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(90.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void RejectsABlindFireSpreadOutsideZeroToNinety(float degrees)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => CreateWithActions(blindFireSpreadDegrees: degrees));
+            Assert.That(e.ParamName, Is.EqualTo("blindFireSpreadDegrees"));
+        }
+
+        [Test]
+        public void AcceptsAnActiveReloadWindowThatStartsAtZero()
+        {
+            Assert.That(CreateWithActions(activeReloadWindowStart: 0f).ActiveReloadWindowStart, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void AcceptsAnActiveReloadWindowThatEndsAtTheEndOfTheReload()
+        {
+            var spec = CreateWithActions(activeReloadWindowStart: 0.75f, activeReloadWindowLength: 0.25f);
+
+            Assert.That(spec.ActiveReloadWindowStart, Is.EqualTo(0.75f));
+            Assert.That(spec.ActiveReloadWindowLength, Is.EqualTo(0.25f));
+        }
+
+        [TestCase(-0.01f)]
+        [TestCase(1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void RejectsAnActiveReloadWindowStartOutsideZeroToOne(float start)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => CreateWithActions(activeReloadWindowStart: start));
+            Assert.That(e.ParamName, Is.EqualTo("activeReloadWindowStart"));
+        }
+
+        [TestCase(0f)]
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void RejectsANonPositiveActiveReloadWindowLength(float length)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => CreateWithActions(activeReloadWindowLength: length));
+            Assert.That(e.ParamName, Is.EqualTo("activeReloadWindowLength"));
+        }
+
+        [Test]
+        public void RejectsAnActiveReloadWindowThatEndsAfterTheReload()
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(
+                () => CreateWithActions(activeReloadWindowStart: 0.9f, activeReloadWindowLength: 0.2f));
+            Assert.That(e.ParamName, Is.EqualTo("activeReloadWindowLength"));
+        }
+
+        [Test]
+        public void AcceptsZeroActiveReloadFailSeconds()
+        {
+            Assert.That(CreateWithActions(activeReloadFailSeconds: 0f).ActiveReloadFailSeconds, Is.EqualTo(0f));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void RejectsInvalidActiveReloadFailSeconds(float seconds)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => CreateWithActions(activeReloadFailSeconds: seconds));
+            Assert.That(e.ParamName, Is.EqualTo("activeReloadFailSeconds"));
+        }
     }
 }

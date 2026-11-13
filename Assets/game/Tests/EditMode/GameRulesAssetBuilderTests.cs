@@ -179,6 +179,9 @@ namespace Fps.Tests.EditMode
             teamDeathmatch.RegenPerSecond = 1f;
             teamDeathmatch.InfiniteReserve = true;
             teamDeathmatch.Destruction = Destruction.On;
+            teamDeathmatch.Downed = Downed.Revive;
+            teamDeathmatch.ReviveSeconds = 9f;
+            teamDeathmatch.Cover = Cover.On;
             EditorUtility.SetDirty(teamDeathmatch);
             AssetDatabase.SaveAssets();
 
@@ -191,6 +194,40 @@ namespace Fps.Tests.EditMode
             Assert.That(restored.RegenPerSecond, Is.EqualTo(20f));
             Assert.That(restored.InfiniteReserve, Is.False);
             Assert.That(restored.Destruction, Is.EqualTo(Destruction.Off));
+            AssertDefaultActions(restored.Actions, rebuilt[0].name);
+        }
+
+        [Test]
+        public void EveryModeKeepsTheDefaultActions()
+        {
+            var built = Build();
+
+            foreach (var definition in built)
+            {
+                AssertDefaultActions(definition.ToRules().Actions, definition.name);
+            }
+        }
+
+        [Test]
+        public void EveryModeRulesUseTheDefaultActions()
+        {
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchRules().Actions, Is.SameAs(ActionRules.Default));
+            Assert.That(GameRulesAssetBuilder.CampaignEasyRules().Actions, Is.SameAs(ActionRules.Default));
+            Assert.That(GameRulesAssetBuilder.CampaignNormalRules().Actions, Is.SameAs(ActionRules.Default));
+            Assert.That(GameRulesAssetBuilder.CampaignHardRules().Actions, Is.SameAs(ActionRules.Default));
+            Assert.That(GameRulesAssetBuilder.RangeRules().Actions, Is.SameAs(ActionRules.Default));
+        }
+
+        private static void AssertDefaultActions(ActionRules actual, string message)
+        {
+            var expected = ActionRules.Default;
+            Assert.That(actual.Downed, Is.EqualTo(expected.Downed), message);
+            Assert.That(actual.DownedBleedoutSeconds, Is.EqualTo(expected.DownedBleedoutSeconds), message);
+            Assert.That(actual.DownedHealthFraction, Is.EqualTo(expected.DownedHealthFraction), message);
+            Assert.That(actual.ReviveSeconds, Is.EqualTo(expected.ReviveSeconds), message);
+            Assert.That(actual.Cover, Is.EqualTo(expected.Cover), message);
+            Assert.That(actual.BlindFire, Is.EqualTo(expected.BlindFire), message);
+            Assert.That(actual.ActiveReload, Is.EqualTo(expected.ActiveReload), message);
         }
 
         [Test]

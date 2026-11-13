@@ -164,6 +164,20 @@ namespace Fps.Tests.EditMode
             Assert.That(handgun.Falloff.EndDistance, Is.EqualTo(40f));
             Assert.That(handgun.Falloff.MinMultiplier, Is.EqualTo(0.6f));
             Assert.That(handgun.AdsFieldOfView, Is.EqualTo(WeaponAssetBuilder.HandgunAdsFieldOfView));
+
+            Assert.That(rifle.BlindFireSpreadDegrees, Is.EqualTo(8f));
+            Assert.That(rifle.ActiveReloadWindowStart, Is.EqualTo(0.5f));
+            Assert.That(rifle.ActiveReloadWindowStart + rifle.ActiveReloadWindowLength, Is.EqualTo(0.65f).Within(1e-5f));
+            Assert.That(rifle.ActiveReloadFailSeconds, Is.EqualTo(0.6f));
+            Assert.That(rifleAsset.BlindFireSpreadDegrees, Is.EqualTo(8f), "the asset stores the value");
+            Assert.That(rifleAsset.ActiveReloadFailSeconds, Is.EqualTo(0.6f), "the asset stores the value");
+
+            Assert.That(handgun.BlindFireSpreadDegrees, Is.EqualTo(12f));
+            Assert.That(handgun.ActiveReloadWindowStart, Is.EqualTo(0.45f));
+            Assert.That(handgun.ActiveReloadWindowStart + handgun.ActiveReloadWindowLength, Is.EqualTo(0.65f).Within(1e-5f));
+            Assert.That(handgun.ActiveReloadFailSeconds, Is.EqualTo(0.4f));
+            Assert.That(handgunAsset.ActiveReloadWindowStart, Is.EqualTo(0.45f), "the asset stores the value");
+
             Assert.That(
                 WeaponAssetBuilder.RifleAdsFieldOfView,
                 Is.LessThan(WeaponAssetBuilder.HandgunAdsFieldOfView),
@@ -285,6 +299,8 @@ namespace Fps.Tests.EditMode
             rifle.Id = "00000000-0000-4000-8000-000000000099";
             rifle.Category = WeaponCategory.SniperRifle;
             rifle.AdsFieldOfView = WeaponDefinition.UnsetAdsFieldOfView;
+            rifle.BlindFireSpreadDegrees = 0f;
+            rifle.ActiveReloadFailSeconds = 3f;
             EditorUtility.SetDirty(rifle);
             var catalogAsset = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(_catalogPath);
             catalogAsset.SetWeapons(new[] { rifle });
@@ -301,6 +317,8 @@ namespace Fps.Tests.EditMode
             Assert.That(restored.Damage, Is.EqualTo(25));
             Assert.That(restored.Category, Is.EqualTo(WeaponCategory.AssaultRifle));
             Assert.That(restored.AdsFieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView));
+            Assert.That(restored.BlindFireSpreadDegrees, Is.EqualTo(WeaponAssetBuilder.RifleBlindFireSpreadDegrees));
+            Assert.That(restored.ActiveReloadFailSeconds, Is.EqualTo(WeaponAssetBuilder.RifleActiveReloadFailSeconds));
             Assert.That(rebuilt.Weapons, Has.Count.EqualTo(2));
         }
 

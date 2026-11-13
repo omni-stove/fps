@@ -47,6 +47,28 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("建造物を弾で壊せるか")]
         private Destruction _destruction = Destruction.Off;
 
+        [Header("アクション")]
+        [SerializeField, Tooltip("体力が 0 になったプレイヤーをダウンさせ、味方が起こせるようにするか")]
+        private Downed _downed = Downed.Off;
+
+        [SerializeField, Min(0.01f), Tooltip("ダウンしてから起こされずに倒れるまでの秒数")]
+        private float _downedBleedoutSeconds = ActionRules.DefaultDownedBleedoutSeconds;
+
+        [SerializeField, UnityEngine.Range(0.01f, 1f), Tooltip("ダウン中と起こされた後の体力の、最大体力に対する割合")]
+        private float _downedHealthFraction = ActionRules.DefaultDownedHealthFraction;
+
+        [SerializeField, Min(0.01f), Tooltip("味方を起こすのにかかる秒数")]
+        private float _reviveSeconds = ActionRules.DefaultReviveSeconds;
+
+        [SerializeField, Tooltip("遮蔽物に張り付いて身を隠せるか")]
+        private Cover _cover = Cover.Off;
+
+        [SerializeField, Tooltip("隠れたまま撃てるか。On にするなら Cover も On にする")]
+        private BlindFire _blindFire = BlindFire.Off;
+
+        [SerializeField, Tooltip("リロード中に決まった間で押すと早く終わる仕組みを使うか")]
+        private ActiveReload _activeReload = ActiveReload.Off;
+
         public FriendlyFire FriendlyFire
         {
             get => _friendlyFire;
@@ -107,6 +129,48 @@ namespace Fps.Runtime
             set => _destruction = value;
         }
 
+        public Downed Downed
+        {
+            get => _downed;
+            set => _downed = value;
+        }
+
+        public float DownedBleedoutSeconds
+        {
+            get => _downedBleedoutSeconds;
+            set => _downedBleedoutSeconds = value;
+        }
+
+        public float DownedHealthFraction
+        {
+            get => _downedHealthFraction;
+            set => _downedHealthFraction = value;
+        }
+
+        public float ReviveSeconds
+        {
+            get => _reviveSeconds;
+            set => _reviveSeconds = value;
+        }
+
+        public Cover Cover
+        {
+            get => _cover;
+            set => _cover = value;
+        }
+
+        public BlindFire BlindFire
+        {
+            get => _blindFire;
+            set => _blindFire = value;
+        }
+
+        public ActiveReload ActiveReload
+        {
+            get => _activeReload;
+            set => _activeReload = value;
+        }
+
         /// <summary>定義を不変の <see cref="GameRules"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="GameRulesDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ToRules()
@@ -123,7 +187,15 @@ namespace Fps.Runtime
                     _deathCamera,
                     _infiniteReserve,
                     _reserveAmmoMultiplier,
-                    _destruction);
+                    _destruction,
+                    new ActionRules(
+                        _downed,
+                        _downedBleedoutSeconds,
+                        _downedHealthFraction,
+                        _reviveSeconds,
+                        _cover,
+                        _blindFire,
+                        _activeReload));
             }
             catch (ArgumentException e)
             {
@@ -169,6 +241,15 @@ namespace Fps.Runtime
             _infiniteReserve = rules.InfiniteReserve;
             _reserveAmmoMultiplier = rules.ReserveAmmoMultiplier;
             _destruction = rules.Destruction;
+
+            var actions = rules.Actions;
+            _downed = actions.Downed;
+            _downedBleedoutSeconds = actions.DownedBleedoutSeconds;
+            _downedHealthFraction = actions.DownedHealthFraction;
+            _reviveSeconds = actions.ReviveSeconds;
+            _cover = actions.Cover;
+            _blindFire = actions.BlindFire;
+            _activeReload = actions.ActiveReload;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed game rules)" : name;

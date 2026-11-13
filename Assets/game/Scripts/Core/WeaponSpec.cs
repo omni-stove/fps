@@ -7,6 +7,15 @@ namespace Fps.Core
     /// </summary>
     public sealed class WeaponSpec
     {
+        /// <summary>生成時に指定しなかったときの <see cref="ActiveReloadWindowStart"/>。</summary>
+        public const float DefaultActiveReloadWindowStart = 0.5f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="ActiveReloadWindowLength"/>。</summary>
+        public const float DefaultActiveReloadWindowLength = 0.15f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="ActiveReloadFailSeconds"/>。</summary>
+        public const float DefaultActiveReloadFailSeconds = 0.5f;
+
         /// <summary>武器の識別子。小文字・ハイフン区切りの UUID (<c>Guid.ToString("D")</c> の形)。</summary>
         public string Id { get; }
 
@@ -49,6 +58,18 @@ namespace Fps.Core
         /// </summary>
         public float AdsFieldOfView { get; }
 
+        /// <summary>隠れたまま撃ったときに、狙った向きから弾が散らばる最大の角度 (度)。0 以上 90 以下。</summary>
+        public float BlindFireSpreadDegrees { get; }
+
+        /// <summary>アクティブリロードの判定の幅が始まる時点の、<see cref="ReloadSeconds"/> に対する割合。0 以上 1 未満。</summary>
+        public float ActiveReloadWindowStart { get; }
+
+        /// <summary>アクティブリロードの判定の幅の長さの、<see cref="ReloadSeconds"/> に対する割合。0 より大きく、<see cref="ActiveReloadWindowStart"/> との和が 1 以下。</summary>
+        public float ActiveReloadWindowLength { get; }
+
+        /// <summary>アクティブリロードで判定の幅を外したときに、リロードに足される秒数。0 以上の有限値。</summary>
+        public float ActiveReloadFailSeconds { get; }
+
         /// <param name="id">識別子。前後の空白は除く。除いた後が小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。</param>
         /// <param name="displayName">表示名。null・空白のみなら <paramref name="id"/> を使う。</param>
         /// <param name="category">武器の種別。定義済みの値のみ。</param>
@@ -62,6 +83,10 @@ namespace Fps.Core
         /// <param name="falloff">距離減衰。null 不可 (減衰しないなら <see cref="DamageFalloff.None"/>)。</param>
         /// <param name="explosionRadius">建造物への被害を広げる半径 (m)。0 以上の有限値。</param>
         /// <param name="adsFieldOfView">ADS し切ったときの視野角 (度)。0 より大きく 180 未満。null なら <see cref="AdsZoom.DefaultFieldOfView"/>。</param>
+        /// <param name="blindFireSpreadDegrees">ブラインドファイアの散らばりの最大角度 (度)。0 以上 90 以下。</param>
+        /// <param name="activeReloadWindowStart">アクティブリロードの判定の幅の始まり (リロード時間に対する割合)。0 以上 1 未満。</param>
+        /// <param name="activeReloadWindowLength">アクティブリロードの判定の幅の長さ (リロード時間に対する割合)。0 より大きく、activeReloadWindowStart との和が 1 以下。</param>
+        /// <param name="activeReloadFailSeconds">アクティブリロードに失敗したときに足される秒数。0 以上の有限値。</param>
         public WeaponSpec(
             string id,
             string displayName,
@@ -75,7 +100,11 @@ namespace Fps.Core
             float range,
             DamageFalloff falloff,
             float explosionRadius = 0f,
-            float? adsFieldOfView = null)
+            float? adsFieldOfView = null,
+            float blindFireSpreadDegrees = 0f,
+            float activeReloadWindowStart = DefaultActiveReloadWindowStart,
+            float activeReloadWindowLength = DefaultActiveReloadWindowLength,
+            float activeReloadFailSeconds = DefaultActiveReloadFailSeconds)
         {
             var normalizedId = NormalizeId(id);
 
@@ -129,6 +158,26 @@ namespace Fps.Core
                 AdsZoom.ValidateFieldOfView(adsFieldOfView.Value, nameof(adsFieldOfView));
             }
 
+            if (!(blindFireSpreadDegrees >= 0f && blindFireSpreadDegrees <= 90f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(blindFireSpreadDegrees), blindFireSpreadDegrees, "blindFireSpreadDegrees must be between 0 and 90");
+            }
+
+            if (!(activeReloadWindowStart >= 0f && activeReloadWindowStart < 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(activeReloadWindowStart), activeReloadWindowStart, "activeReloadWindowStart must be at least 0 and less than 1");
+            }
+
+            if (!(activeReloadWindowLength > 0f && activeReloadWindowStart + activeReloadWindowLength <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(activeReloadWindowLength), activeReloadWindowLength, "activeReloadWindowLength must be positive and end the window at or before the end of the reload");
+            }
+
+            if (!IsNonNegativeFinite(activeReloadFailSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(activeReloadFailSeconds), activeReloadFailSeconds, "activeReloadFailSeconds must be a non-negative finite number");
+            }
+
             Id = normalizedId;
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? normalizedId : displayName.Trim();
             Category = category;
@@ -142,6 +191,10 @@ namespace Fps.Core
             Falloff = falloff ?? throw new ArgumentNullException(nameof(falloff));
             ExplosionRadius = explosionRadius;
             AdsFieldOfView = adsFieldOfView ?? AdsZoom.DefaultFieldOfView;
+            BlindFireSpreadDegrees = blindFireSpreadDegrees;
+            ActiveReloadWindowStart = activeReloadWindowStart;
+            ActiveReloadWindowLength = activeReloadWindowLength;
+            ActiveReloadFailSeconds = activeReloadFailSeconds;
         }
 
         private static string NormalizeId(string id)

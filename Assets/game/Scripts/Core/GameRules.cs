@@ -8,7 +8,7 @@ namespace Fps.Core
     public sealed class GameRules
     {
         /// <summary>
-        /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない。
+        /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない、アクションは <see cref="ActionRules.Default"/>。
         /// </summary>
         public static readonly GameRules Default = new GameRules(
             FriendlyFire.Off,
@@ -55,6 +55,9 @@ namespace Fps.Core
         /// <summary>建造物を弾で壊せるか。</summary>
         public Destruction Destruction { get; }
 
+        /// <summary>TPS のアクションのルール。null にならない。</summary>
+        public ActionRules Actions { get; }
+
         /// <param name="friendlyFire">味方撃ちの扱い。定義済みの値。</param>
         /// <param name="respawnMode">リスポーン方式。定義済みの値。</param>
         /// <param name="waveIntervalSeconds">波の間隔 (秒)。0 より大きい有限値。</param>
@@ -65,6 +68,7 @@ namespace Fps.Core
         /// <param name="infiniteReserve">予備弾を減らさないか。</param>
         /// <param name="reserveAmmoMultiplier">初期予備弾の倍率。0 以上の有限値。</param>
         /// <param name="destruction">建造物を壊せるか。定義済みの値。</param>
+        /// <param name="actions">アクションのルール。null なら <see cref="ActionRules.Default"/>。</param>
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -75,7 +79,8 @@ namespace Fps.Core
             DeathCamera deathCamera,
             bool infiniteReserve,
             float reserveAmmoMultiplier,
-            Destruction destruction)
+            Destruction destruction,
+            ActionRules actions = null)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -133,6 +138,7 @@ namespace Fps.Core
             InfiniteReserve = infiniteReserve;
             ReserveAmmoMultiplier = reserveAmmoMultiplier;
             Destruction = destruction;
+            Actions = actions ?? ActionRules.Default;
         }
     }
 }

@@ -42,6 +42,7 @@ namespace Fps.Net
     /// サーバーで確定した着地 (落下ダメージ) は .Landing.cs で扱う。ダウン中に動けなくする処理は .Downed.cs に分けてある。
     /// カバー (試合のルール <see cref="NetMatchRules.Cover"/> が On のとき) は .Cover.cs、
     /// 回避と乗り越え (<see cref="NetMatchRules.Dodge"/>・<see cref="NetMatchRules.Vault"/> が On のとき) は .DodgeVault.cs で扱う。
+    /// 演出 (足音) に見せるダッシュは .Grounded.cs に分けてある。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]

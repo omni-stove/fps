@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// 値の源 (プレイヤーの <see cref="Damageable"/>・<see cref="WeaponController"/>・<see cref="Fps.Core.Match"/>) は
     /// <see cref="Initialize"/> でコードから渡す。値はそれぞれのイベントで <see cref="HudModel"/> が更新し、
     /// <see cref="HudView"/> が Label に写す。毎フレーム読みに行くのは、時間で進みイベントの無いリロードの進み
-    /// (<see cref="HudModel.RefreshReloadProgress"/>) だけ。
+    /// (<see cref="HudModel.RefreshReloadProgress"/>) と照準の広がり・表示 (<see cref="RefreshCrosshair"/>) だけ。
     /// Health や Weapon が作り直されたとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
     /// オンライン (Fps.Net の NetHud) は源を渡さずに作り、<see cref="Model"/> の Set 系で値を書く。チームの点数 (左上) と
     /// 試合結果 (中央上) はそのときだけ出る。
@@ -39,6 +39,8 @@ namespace Fps.Runtime
         private HudView _view;
         private Damageable _player;
         private WeaponController _weapon;
+        private AimDownSights _ads;
+        private PlayerController _mover;
         private PanelSettings _ownedPanelSettings;
         private Color _alphaColor = Color.white;
         private Color _bravoColor = Color.white;
@@ -182,6 +184,8 @@ namespace Fps.Runtime
 
             _player = player;
             _weapon = weapon;
+            _ads = weapon != null ? weapon.GetComponentInParent<AimDownSights>(true) : null;
+            _mover = weapon != null ? weapon.GetComponentInParent<PlayerController>(true) : null;
             _ownedPanelSettings = ownedPanelSettings;
 
             if (_player != null)
@@ -197,6 +201,7 @@ namespace Fps.Runtime
             _model.BindHealth(_player != null ? _player.Health : null);
             _model.BindWeapon(_weapon != null ? _weapon.Weapon : null);
             _model.BindMatch(match);
+            RefreshCrosshair();
 
             RebuildView();
         }
@@ -263,11 +268,30 @@ namespace Fps.Runtime
 
         private void LateUpdate()
         {
-            // WeaponController を渡さない HUD (NetHud) は Set 系で進みを書くので、ここで読み直して消さない。
+            // WeaponController を渡さない HUD (NetHud) は Set 系で進みや照準を書くので、ここで読み直して消さない。
             if (_weapon != null)
             {
                 _model.RefreshReloadProgress();
+                RefreshCrosshair();
             }
+        }
+
+        /// <summary>
+        /// 武器の今のばらつき (<see cref="WeaponController.SpreadFraction"/>) を照準の広がりにし、ADS 中
+        /// (<see cref="AimDownSights.IsAiming"/>) とダッシュ中 (<see cref="PlayerController.IsSprinting"/>) は照準を隠す。
+        /// 武器を渡していなければ広がり 0 で出す。値の源は <see cref="Initialize"/> の weapon と、その親の階層の ADS とプレイヤー。
+        /// </summary>
+        public void RefreshCrosshair()
+        {
+            if (_weapon == null)
+            {
+                _model.ResetCrosshair();
+                return;
+            }
+
+            var aiming = _ads != null && _ads.IsAiming;
+            var sprinting = _mover != null && _mover.IsSprinting;
+            _model.SetCrosshair(Mathf.Clamp01(_weapon.SpreadFraction), !aiming && !sprinting);
         }
 
         private void TryRebuildViewAndLog()
@@ -363,6 +387,8 @@ namespace Fps.Runtime
 
             _player = null;
             _weapon = null;
+            _ads = null;
+            _mover = null;
         }
     }
 }

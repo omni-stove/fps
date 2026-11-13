@@ -23,8 +23,29 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml の残り時間の Label。</summary>
         public const string TimeLabelName = "hud-time";
 
-        /// <summary>Hud.uxml の照準。</summary>
+        /// <summary>Hud.uxml の照準。ADS 中とダッシュ中は隠す。</summary>
         public const string CrosshairName = "hud-crosshair";
+
+        /// <summary>Hud.uxml の照準の中央の点 (<see cref="CrosshairName"/> の子)。</summary>
+        public const string CrosshairDotName = "hud-crosshair-dot";
+
+        /// <summary>Hud.uxml の照準の上の線 (<see cref="CrosshairName"/> の子)。</summary>
+        public const string CrosshairTopName = "hud-crosshair-top";
+
+        /// <summary>Hud.uxml の照準の下の線 (<see cref="CrosshairName"/> の子)。</summary>
+        public const string CrosshairBottomName = "hud-crosshair-bottom";
+
+        /// <summary>Hud.uxml の照準の左の線 (<see cref="CrosshairName"/> の子)。</summary>
+        public const string CrosshairLeftName = "hud-crosshair-left";
+
+        /// <summary>Hud.uxml の照準の右の線 (<see cref="CrosshairName"/> の子)。</summary>
+        public const string CrosshairRightName = "hud-crosshair-right";
+
+        /// <summary>広がり 0 のときの、中央から線の内側の端までの隙間 (基準解像度の px)。</summary>
+        public const float MinCrosshairGap = 6f;
+
+        /// <summary>広がり 1 のときの、中央から線の内側の端までの隙間 (基準解像度の px)。</summary>
+        public const float MaxCrosshairGap = 30f;
 
         /// <summary>Hud.uxml の一時的な案内の Label。案内が空のときは隠す。</summary>
         public const string NoticeLabelName = "hud-notice";
@@ -66,6 +87,11 @@ namespace Fps.Runtime
         public Label WeaponNameLabel { get; }
         public Label TimeLabel { get; }
         public VisualElement Crosshair { get; }
+        public VisualElement CrosshairDot { get; }
+        public VisualElement CrosshairTop { get; }
+        public VisualElement CrosshairBottom { get; }
+        public VisualElement CrosshairLeft { get; }
+        public VisualElement CrosshairRight { get; }
         public Label NoticeLabel { get; }
         public VisualElement ScorePanel { get; }
         public Label FirstScoreLabel { get; }
@@ -92,6 +118,11 @@ namespace Fps.Runtime
             WeaponNameLabel = Require<Label>(root, WeaponNameLabelName);
             TimeLabel = Require<Label>(root, TimeLabelName);
             Crosshair = Require<VisualElement>(root, CrosshairName);
+            CrosshairDot = Require<VisualElement>(Crosshair, CrosshairDotName);
+            CrosshairTop = Require<VisualElement>(Crosshair, CrosshairTopName);
+            CrosshairBottom = Require<VisualElement>(Crosshair, CrosshairBottomName);
+            CrosshairLeft = Require<VisualElement>(Crosshair, CrosshairLeftName);
+            CrosshairRight = Require<VisualElement>(Crosshair, CrosshairRightName);
             NoticeLabel = Require<Label>(root, NoticeLabelName);
             ScorePanel = Require<VisualElement>(root, ScorePanelName);
             FirstScoreLabel = Require<Label>(root, FirstScoreLabelName);
@@ -109,6 +140,7 @@ namespace Fps.Runtime
             ShowScores();
             ShowResult();
             ShowReloadProgress();
+            ShowCrosshair();
             _model.Changed += OnChanged;
         }
 
@@ -165,6 +197,9 @@ namespace Fps.Runtime
                     break;
                 case HudField.ReloadProgress:
                     ShowReloadProgress();
+                    break;
+                case HudField.Crosshair:
+                    ShowCrosshair();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a valid HudField");
@@ -244,6 +279,27 @@ namespace Fps.Runtime
             {
                 ReloadWindow.style.display = DisplayStyle.None;
             }
+        }
+
+        /// <summary>広がり spread (0〜1) のときの、中央から線の内側の端までの隙間 (基準解像度の px)。範囲外は端に揃える。</summary>
+        public static float CrosshairGap(float spread)
+        {
+            return Mathf.Lerp(MinCrosshairGap, MaxCrosshairGap, Mathf.Clamp01(spread));
+        }
+
+        /// <summary>
+        /// 照準を出すか隠し、4 本の線を中央から隙間の分だけ外へずらす。Hud.uss は線を中央に接する位置に置いているので、
+        /// 隙間は translate だけで決まる。
+        /// </summary>
+        private void ShowCrosshair()
+        {
+            Crosshair.style.display = _model.IsCrosshairVisible ? DisplayStyle.Flex : DisplayStyle.None;
+
+            var gap = CrosshairGap(_model.CrosshairSpread);
+            CrosshairTop.style.translate = new Translate(new Length(0f), new Length(-gap));
+            CrosshairBottom.style.translate = new Translate(new Length(0f), new Length(gap));
+            CrosshairLeft.style.translate = new Translate(new Length(-gap), new Length(0f));
+            CrosshairRight.style.translate = new Translate(new Length(gap), new Length(0f));
         }
 
         private static void ShowOrHide(Label label, string text)

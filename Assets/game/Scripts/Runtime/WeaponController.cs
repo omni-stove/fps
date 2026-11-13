@@ -43,6 +43,15 @@ namespace Fps.Runtime
         /// <summary>持ち替えたときのログの頭。続けて <c>index=.. id=.. name=..</c> を出す。</summary>
         public const string SwitchedLogPrefix = "[Combat] switched";
 
+        /// <summary>1 発撃つごとに <see cref="SpreadFraction"/> に足す量。</summary>
+        public const float SpreadPerShot = 0.25f;
+
+        /// <summary>最後に撃ってから <see cref="SpreadFraction"/> が戻り始めるまでの秒数。</summary>
+        public const float SpreadRecoveryDelaySeconds = 0.15f;
+
+        /// <summary><see cref="SpreadFraction"/> が戻る速さ (1 秒あたりに減る量)。</summary>
+        public const float SpreadRecoveryPerSecond = 2f;
+
         // 自分の体を除いて最も近い命中を選ぶための一時バッファ。毎発の確保を避ける。
         private const int MaxRaycastHits = 16;
 
@@ -70,6 +79,14 @@ namespace Fps.Runtime
         private WeaponDefinition[] _loadedDefinitions;
         private GameRules _rules = GameRules.Default;
         private GameRules _loadedRules;
+        private float _spread;
+        private float _secondsSinceShot;
+
+        /// <summary>
+        /// 今のばらつき (0〜1)。撃つたびに <see cref="SpreadPerShot"/> 増え、撃ち止めて <see cref="SpreadRecoveryDelaySeconds"/> 経つと
+        /// <see cref="SpreadRecoveryPerSecond"/> で 0 へ戻る。時間は <see cref="Tick"/> (Play 中は Update) で進む。HUD が照準の広がりに使う。
+        /// </summary>
+        public float SpreadFraction => _spread;
 
         /// <summary>射撃の向きと起点。未初期化なら null。</summary>
         public Transform Aim => _aim;
@@ -195,7 +212,7 @@ namespace Fps.Runtime
                 SelectPrevious();
             }
 
-            Weapon.Tick(Time.deltaTime);
+            Tick(Time.deltaTime);
 
             if (_reloadAction.WasPressedThisFrame())
             {
@@ -473,6 +490,8 @@ namespace Fps.Runtime
             }
 
             Debug.Log($"[Combat] fire ammo={weapon.AmmoInMagazine}", this);
+            _spread = Mathf.Min(1f, _spread + SpreadPerShot);
+            _secondsSinceShot = 0f;
             Fired?.Invoke(weapon);
 
             ResolveShot(out var origin, out var direction);
@@ -557,11 +576,16 @@ namespace Fps.Runtime
             return $"{ActiveReloadLogPrefix} {(result == ActiveReloadResult.Success ? "success" : "fail")}";
         }
 
-        /// <summary>今の武器の時間を deltaSeconds 進める。</summary>
+        /// <summary>今の武器の時間と、<see cref="SpreadFraction"/> の戻りを deltaSeconds 進める。</summary>
         public void Tick(float deltaSeconds)
         {
             EnsureInitialized();
             Weapon.Tick(deltaSeconds);
+
+            var waiting = Mathf.Max(0f, SpreadRecoveryDelaySeconds - _secondsSinceShot);
+            var recovering = Mathf.Max(0f, deltaSeconds - waiting);
+            _secondsSinceShot = Mathf.Min(SpreadRecoveryDelaySeconds, _secondsSinceShot + deltaSeconds);
+            _spread = Mathf.Max(0f, _spread - (recovering * SpreadRecoveryPerSecond));
         }
 
         /// <summary>

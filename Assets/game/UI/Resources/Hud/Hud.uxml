@@ -29,9 +29,13 @@
             <ui:VisualElement name="hud-reload-fill" class="hud__reload-fill" picking-mode="Ignore" />
             <ui:VisualElement name="hud-reload-window" class="hud__reload-window" picking-mode="Ignore" />
         </ui:VisualElement>
+        <!-- 照準 (中央の点と上下左右の線)。線と中央の隙間は HudView が広がりで translate し、ADS 中とダッシュ中は隠す。 -->
         <ui:VisualElement name="hud-crosshair" class="hud__crosshair" picking-mode="Ignore">
-            <ui:VisualElement class="hud__crosshair-line hud__crosshair-line--horizontal" picking-mode="Ignore" />
-            <ui:VisualElement class="hud__crosshair-line hud__crosshair-line--vertical" picking-mode="Ignore" />
+            <ui:VisualElement name="hud-crosshair-dot" class="hud__crosshair-dot" picking-mode="Ignore" />
+            <ui:VisualElement name="hud-crosshair-top" class="hud__crosshair-line hud__crosshair-line--top" picking-mode="Ignore" />
+            <ui:VisualElement name="hud-crosshair-bottom" class="hud__crosshair-line hud__crosshair-line--bottom" picking-mode="Ignore" />
+            <ui:VisualElement name="hud-crosshair-left" class="hud__crosshair-line hud__crosshair-line--left" picking-mode="Ignore" />
+            <ui:VisualElement name="hud-crosshair-right" class="hud__crosshair-line hud__crosshair-line--right" picking-mode="Ignore" />
         </ui:VisualElement>
         <!-- 以下は Hud と同じ GameObject のビュー (HudElementView) が name で受け取る枠。中身はまだ無く、隠しておく。 -->
         <ui:VisualElement name="hit-marker" picking-mode="Ignore" style="display: none;" />

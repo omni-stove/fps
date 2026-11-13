@@ -174,31 +174,62 @@
     color: rgb(255, 80, 70);
 }
 
-/* 中央の照準。24px 四方の中に太さ 2px の十字を描く。 */
+/*
+ * 中央の照準。大きさ 0 の箱を画面の中央に置き、子をその点からの位置で並べる。
+ * 線は中央に接する位置に置き、隙間は HudView が translate で足す。点と線は 1px の暗い縁で明るい背景でも見えるようにする
+ * (width / height は縁を含むので、中の白は 2px)。
+ */
 .hud__crosshair {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 24px;
-    height: 24px;
-    translate: -50% -50%;
+    width: 0;
+    height: 0;
+    overflow: visible;
 }
 
+.hud__crosshair-dot,
 .hud__crosshair-line {
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.95);
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.7);
 }
 
-.hud__crosshair-line--horizontal {
-    left: 0;
-    right: 0;
-    top: 11px;
-    height: 2px;
+.hud__crosshair-dot {
+    left: -2px;
+    top: -2px;
+    width: 4px;
+    height: 4px;
+    border-radius: 1px;
 }
 
-.hud__crosshair-line--vertical {
-    top: 0;
+.hud__crosshair-line--top,
+.hud__crosshair-line--bottom {
+    left: -2px;
+    width: 4px;
+    height: 12px;
+}
+
+.hud__crosshair-line--top {
     bottom: 0;
-    left: 11px;
-    width: 2px;
+}
+
+.hud__crosshair-line--bottom {
+    top: 0;
+}
+
+.hud__crosshair-line--left,
+.hud__crosshair-line--right {
+    top: -2px;
+    width: 12px;
+    height: 4px;
+}
+
+.hud__crosshair-line--left {
+    right: 0;
+}
+
+.hud__crosshair-line--right {
+    left: 0;
 }

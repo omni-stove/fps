@@ -31,13 +31,17 @@ run = "scripts/test.sh"
 quiet = true
 
 [build]
-description = "Build the macOS player into Builds/ with the Unity editor in batch mode (close the Editor first)"
-run = "unity build --target StandaloneOSX -o Builds/fps.app"
+description = "Build the macOS player into Builds/fps.app with the Unity editor in batch mode (close the Editor first). The version is --version <v>, or git describe --tags --always --dirty"
+usage = 'flag "--version <version>" help="build version such as v0.2.0 (default: git describe --tags --always --dirty)"'
+run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ClientBuilder.Build ${usage_version:+-buildVersion "$usage_version"}'
 
 [build-server]
-description = "Build the dedicated server (macos by default, or linux) into Builds/server-<platform>/ with the Unity editor in batch mode (close the Editor first)"
-usage = 'arg "[platform]" help="macos or linux" default="macos"'
-run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform "${usage_platform:-macos}"'
+description = "Build the dedicated server (macos by default, or linux) into Builds/server-<platform>/ with the Unity editor in batch mode (close the Editor first). The version is --version <v>, or git describe --tags --always --dirty"
+usage = '''
+arg "[platform]" help="macos or linux" default="macos"
+flag "--version <version>" help="build version such as v0.2.0 (default: git describe --tags --always --dirty)"
+'''
+run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
 
 [server-image]
 description = "Build the Linux dedicated server and package it as a Docker image with docker/server/Dockerfile (close the Editor first). Options: --tag <name:tag> (default fps-server:local), --skip-build to reuse Builds/server-linux/"

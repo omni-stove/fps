@@ -1,0 +1,98 @@
+/* 設定画面 (Fps.Runtime.SettingsView) の見た目。メインメニューの差し込み口とポーズ画面の枠のどちらにも入るので、
+   入れ物の大きさに合わせて広がり、寸法は基準解像度 1920x1080 で決める。 */
+
+.settings {
+    flex-grow: 1;
+    padding: 24px 40px;
+    border-radius: 8px;
+    background-color: rgba(20, 20, 24, 0.92);
+}
+
+.settings__title {
+    margin: 0 0 12px 0;
+    padding: 0;
+    font-size: 40px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.settings__section {
+    margin: 16px 0 4px 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.settings__row {
+    flex-direction: row;
+    align-items: center;
+    height: 44px;
+}
+
+.settings__caption {
+    width: 260px;
+    margin: 0;
+    padding: 0;
+    font-size: 24px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.settings__column {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 8px;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.6);
+    -unity-text-align: middle-center;
+}
+
+.settings__slider {
+    flex-grow: 1;
+    margin: 0 16px 0 0;
+}
+
+.settings__value {
+    width: 90px;
+    margin: 0;
+    padding: 0;
+    font-size: 24px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-right;
+}
+
+.settings__button {
+    margin: 0 8px;
+    padding: 6px 20px;
+    font-size: 22px;
+    border-width: 2px;
+    border-radius: 6px;
+    border-color: rgba(255, 255, 255, 0.25);
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgb(255, 255, 255);
+}
+
+.settings__button:hover,
+.settings__button:focus {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.2);
+}
+
+.settings__mode {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 36px;
+}
+
+/* スライダーもボタンと同じく、ゲームパッドで選んでいる所が分かるようにする。 */
+.settings__slider:focus {
+    border-width: 0 0 0 4px;
+    border-color: rgb(255, 196, 64);
+    padding-left: 8px;
+}
+
+.settings__footer {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin: 24px 0 0 0;
+}

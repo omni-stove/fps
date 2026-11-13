@@ -23,7 +23,8 @@ namespace Fps.Runtime
     /// </para>
     /// <para>
     /// 「メニューに戻る」は <see cref="MenuNavigator.ReturnToMenu"/> でメインメニューへ戻る。オンラインの接続は NetBootstrap が
-    /// <see cref="MenuNavigator.ReturningToMenu"/> で切る。「設定」は <see cref="OpenSettings"/> を渡すまで押せない。
+    /// <see cref="MenuNavigator.ReturningToMenu"/> で切る。「設定」は <see cref="OpenSettings"/> を渡すまで押せない
+    /// (<see cref="Hud.AddViews"/> が付ける <see cref="PauseSettingsView"/> が渡す)。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -87,7 +88,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 「設定」で呼ぶ処理。null の間は「設定」を押せない。設定画面 (SettingsView) ができたらそれを開く処理を渡す。
+        /// 「設定」で呼ぶ処理。null の間は「設定」を押せない。<see cref="Hud.AddViews"/> で付く <see cref="PauseSettingsView"/> が、
+        /// <see cref="SettingsView"/> を開く処理を渡す。
         /// </summary>
         public Action OpenSettings
         {

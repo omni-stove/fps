@@ -70,7 +70,7 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("しゃがみのカプセルの高さ (m)。半径の 2 倍以上、立ちの高さ以下")]
         private float _crouchHeight = DefaultCrouchHeight;
 
-        [SerializeField, Tooltip("立ち上がれるかを調べるときに頭上の障害物として扱うレイヤー")]
+        [SerializeField, Tooltip("立ち上がれるか・乗り越えられるかを調べるときに障害物として扱うレイヤー")]
         private LayerMask _headroomMask = Physics.DefaultRaycastLayers;
 
         private CharacterController _controller;
@@ -242,6 +242,7 @@ namespace Fps.Runtime
             _isLive = false;
             ReleaseActions();
             CancelDodge();
+            CancelVault();
         }
 
         /// <summary>プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。</summary>
@@ -377,12 +378,14 @@ namespace Fps.Runtime
         {
             ReleaseSprint(SprintInput.ReasonDeath);
             CancelDodge();
+            CancelVault();
         }
 
         private void OnHealthReset(Health _)
         {
             ReleaseSprint(SprintInput.ReasonRespawn);
             CancelDodge();
+            CancelVault();
 
             // 戻った位置で、倒れる前の待ち時間に縛られずすぐ回避できるようにする。
             _dodgeMotion?.Reset();
@@ -397,6 +400,7 @@ namespace Fps.Runtime
         /// 1 フレーム分の入力でしゃがみの姿勢を決め、<see cref="PlayerMotor.Step"/> を呼び、変位を CharacterController に適用する。
         /// 向きは <see cref="FirstPersonLook"/> 本体 (この GameObject) の yaw を使う。
         /// <see cref="MoveFilter"/> があれば、姿勢を決める前に入力を書き換えさせる。
+        /// <see cref="VaultRule"/> が On なら、Jump で前方の低い障害物を乗り越える (乗り越えられなければふつうにジャンプする)。
         /// </summary>
         /// <param name="crouch">しゃがみたいか (<see cref="UpdateCrouch"/> の結果)。false でも頭上が塞がっていればしゃがんだまま。</param>
         public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, float deltaSeconds)
@@ -413,6 +417,7 @@ namespace Fps.Runtime
 
             MoveFilter?.Filter(ref move, ref sprint, ref crouch, ref jumpPressed);
             FilterInputForDodge(ref sprint, ref crouch, ref jumpPressed);
+            FilterInputForVault(ref sprint, ref crouch, ref jumpPressed);
             UpdateStance(crouch);
 
             if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out var displacement))
@@ -464,13 +469,19 @@ namespace Fps.Runtime
                 throw new InvalidOperationException("PlayerController is not initialized");
             }
 
+            return IsStandingCapsuleClear(Vector3.zero);
+        }
+
+        // 立った高さのカプセルを今の位置から offset (ワールド) だけずらした所に置き、自分以外に重ならないか (乗り越えの軌跡の検査と共用)。
+        private bool IsStandingCapsuleClear(Vector3 offset)
+        {
             _stance.SphereCenters(_stance.Standing, out var bottomY, out var topY);
             var body = transform;
             var scale = body.lossyScale;
             var radius = _stance.Radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
             var margin = Mathf.Min(_controller.skinWidth, radius * 0.5f);
-            var bottom = body.TransformPoint(new Vector3(_standingCenter.x, bottomY, _standingCenter.z));
-            var top = body.TransformPoint(new Vector3(_standingCenter.x, topY, _standingCenter.z));
+            var bottom = body.TransformPoint(new Vector3(_standingCenter.x, bottomY, _standingCenter.z)) + offset;
+            var top = body.TransformPoint(new Vector3(_standingCenter.x, topY, _standingCenter.z)) + offset;
 
             // Physics.CheckCapsule では自分の CharacterController にも当たってしまうので、重なりを列挙して自分を除く。
             var count = Physics.OverlapCapsuleNonAlloc(
@@ -631,6 +642,7 @@ namespace Fps.Runtime
             _crouchAction = crouchAction;
             _jumpAction = jumpAction;
             CancelDodge();
+            CancelVault();
             _motor = new PlayerMotor(spec);
             _dodgeMotion = new DodgeMotion(spec);
             _stance = stance;

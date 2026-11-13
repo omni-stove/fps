@@ -33,7 +33,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void StartSceneComesFirstInTheBuildSceneList()
         {
-            Assert.That(BuildSceneList.Scenes[0], Is.EqualTo(BuildSceneList.BootstrapScene));
+            Assert.That(BuildSceneList.Scenes[0], Is.EqualTo(BuildSceneList.MainMenuScene));
 
             var scenes = ClientBuilder.ClientScenePaths(BuildSceneList.Scenes, _ => true, null);
 

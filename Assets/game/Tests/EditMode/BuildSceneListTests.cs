@@ -18,12 +18,23 @@ namespace Fps.Tests.EditMode
             Assert.That(MissionTestSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.MissionTestScene));
             Assert.That(DestructionTestSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.DestructionTestScene));
             Assert.That(CampaignSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.CampaignScene));
+            Assert.That(MenuSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.MainMenuScene));
         }
 
         [Test]
-        public void ListStartsWithTheBootstrapAndHasNoDuplicates()
+        public void TheMenuLoadsTheListedScenes()
         {
-            Assert.That(BuildSceneList.Scenes[0], Is.EqualTo(BuildSceneList.BootstrapScene));
+            Assert.That(Fps.Core.MenuRoute.MainMenuScene, Is.EqualTo(BuildSceneList.MainMenuScene));
+            Assert.That(Fps.Core.MenuRoute.RangeScene, Is.EqualTo(BuildSceneList.BootstrapScene));
+            Assert.That(Fps.Core.MenuRoute.CampaignScene, Is.EqualTo(BuildSceneList.CampaignScene));
+            Assert.That(Fps.Core.MenuRoute.NetScene, Is.EqualTo(BuildSceneList.NetTestScene));
+        }
+
+        [Test]
+        public void ListStartsWithTheMainMenuAndHasNoDuplicates()
+        {
+            Assert.That(BuildSceneList.Scenes[0], Is.EqualTo(BuildSceneList.MainMenuScene));
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.BootstrapScene));
             Assert.That(BuildSceneList.Scenes, Is.Unique);
             foreach (var path in BuildSceneList.Scenes)
             {

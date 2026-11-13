@@ -106,6 +106,40 @@ namespace Fps.Core
         }
 
         /// <summary>
+        /// 起動引数から決めたロビーの設定 fromArgs と、メニューから渡されたロビーの設定 fromMenu のどちらを使うかを決める。
+        /// 起動引数に <c>-lobby</c> か <c>-mode</c> があれば起動引数を優先し、メニューの設定は捨てる (引数で起動したときはメニューを通らない)。
+        /// 専用サーバーはロビーの Host になれないので、メニューの設定は使わない。
+        /// </summary>
+        /// <param name="fromArgs"><see cref="TryResolveLobby"/> で決めた設定。</param>
+        /// <param name="args">コマンドライン引数。</param>
+        /// <param name="isDedicatedServer">専用サーバービルドか。</param>
+        /// <param name="fromMenu">メニューが渡した設定。無ければ null か <see cref="LobbyLaunchOptions.None"/>。</param>
+        public static LobbyLaunchOptions ChooseLobby(
+            LobbyLaunchOptions fromArgs,
+            IReadOnlyList<string> args,
+            bool isDedicatedServer,
+            LobbyLaunchOptions fromMenu)
+        {
+            if (fromArgs == null)
+            {
+                throw new ArgumentNullException(nameof(fromArgs));
+            }
+
+            if (args == null)
+            {
+                throw new ArgumentNullException(nameof(args));
+            }
+
+            if (fromArgs.IsRequested || NetLaunchOptions.HasModeFlag(args) || isDedicatedServer
+                || fromMenu == null || !fromMenu.IsRequested)
+            {
+                return fromArgs;
+            }
+
+            return fromMenu;
+        }
+
+        /// <summary>
         /// 起動直後にネットワークのシーンへ切り替えるか。エディタでは切り替えない。
         /// プレイヤーでは専用サーバーか、<c>-mode</c> か <c>-lobby</c> が指定されたときに切り替える。
         /// </summary>

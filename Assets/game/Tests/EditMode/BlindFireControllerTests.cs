@@ -113,6 +113,9 @@ namespace Fps.Tests.EditMode
             _rifle.name = "Rifle";
             WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
             _rifle.BlindFireSpreadDegrees = _spreadDegrees;
+
+            // 壁越しに当たるかをブラインドファイアの散らばりだけで確かめるので、腰撃ちのばらつきは切る。
+            _rifle.HipSpreadDegrees = 0f;
             _attack = new InputAction("Attack", InputActionType.Button);
             _reload = new InputAction("Reload", InputActionType.Button);
             _weapon = camera.gameObject.AddComponent<WeaponController>();

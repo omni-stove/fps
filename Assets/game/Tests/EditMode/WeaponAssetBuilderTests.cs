@@ -356,49 +356,139 @@ namespace Fps.Tests.EditMode
             Assert.That(restored.AdsFieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView));
             Assert.That(restored.BlindFireSpreadDegrees, Is.EqualTo(WeaponAssetBuilder.RifleBlindFireSpreadDegrees));
             Assert.That(restored.ActiveReloadFailSeconds, Is.EqualTo(WeaponAssetBuilder.RifleActiveReloadFailSeconds));
-            Assert.That(restored.RecoilPitchDegrees, Is.EqualTo(0f));
-            Assert.That(restored.HipSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(restored.RecoilPitchDegrees, Is.EqualTo(WeaponAssetBuilder.RifleRecoilPitchDegrees));
+            Assert.That(restored.HipSpreadDegrees, Is.EqualTo(WeaponAssetBuilder.RifleHipSpreadDegrees));
             Assert.That(rebuilt.Weapons, Has.Count.EqualTo(2));
         }
 
         [Test]
-        public void BuiltWeaponsHaveNoRecoilOrSpread()
+        public void BuiltWeaponsStoreTheirRecoilAndSpread()
         {
             Build();
 
-            foreach (var path in new[] { _riflePath, _handgunPath })
+            AssertRecoilAndSpread(
+                AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_riflePath), WeaponAssetBuilder.RifleSpec(), _riflePath);
+            AssertRecoilAndSpread(
+                AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_handgunPath), WeaponAssetBuilder.HandgunSpec(), _handgunPath);
+
+            var rifle = WeaponAssetBuilder.RifleSpec();
+            Assert.That(rifle.RecoilPitchDegrees, Is.EqualTo(0.5f));
+            Assert.That(rifle.RecoilYawDegrees, Is.EqualTo(0.2f));
+            Assert.That(rifle.RecoilRecoveryPerSecond, Is.EqualTo(10f));
+            Assert.That(rifle.HipSpreadDegrees, Is.EqualTo(3f));
+            Assert.That(rifle.AdsSpreadDegrees, Is.EqualTo(0.5f));
+            Assert.That(rifle.MoveSpreadDegrees, Is.EqualTo(3f));
+
+            var handgun = WeaponAssetBuilder.HandgunSpec();
+            Assert.That(handgun.RecoilPitchDegrees, Is.EqualTo(2.5f));
+            Assert.That(handgun.RecoilYawDegrees, Is.EqualTo(0.6f));
+            Assert.That(handgun.RecoilRecoveryPerSecond, Is.EqualTo(60f));
+            Assert.That(handgun.HipSpreadDegrees, Is.EqualTo(2f));
+            Assert.That(handgun.AdsSpreadDegrees, Is.EqualTo(0.8f));
+            Assert.That(handgun.MoveSpreadDegrees, Is.EqualTo(1.5f));
+        }
+
+        [Test]
+        public void TheRifleClimbsWhileFiringAndRecoversAfterLettingGo()
+        {
+            var rifle = WeaponAssetBuilder.RifleSpec();
+            var recoil = new RecoilState();
+
+            for (var shot = 0; shot < 10; shot++)
             {
-                var asset = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(path);
-                AssertNoRecoilOrSpread(asset, path);
+                recoil.Kick(rifle, 1, shot);
+                recoil.Tick(rifle.FireInterval);
+            }
+
+            Assert.That(
+                recoil.PitchUpDegrees,
+                Is.EqualTo(10f * rifle.RecoilPitchDegrees).Within(1e-4f),
+                "the fire interval is shorter than the recovery delay, so a burst does not recover");
+            Assert.That(
+                recoil.PitchUpDegrees,
+                Is.GreaterThan(Math.Abs(recoil.YawDegrees)),
+                "the burst climbs up more than it drifts sideways");
+
+            recoil.Tick(recoil.RecoveryDelaySeconds + (recoil.PitchUpDegrees / rifle.RecoilRecoveryPerSecond) + 0.5f);
+            Assert.That(recoil.IsAtRest, Is.True, "letting go brings the aim back");
+        }
+
+        [Test]
+        public void TheHandgunKicksHarderThanTheRifleAndRecoversBeforeTheNextFewShots()
+        {
+            var rifle = WeaponAssetBuilder.RifleSpec();
+            var handgun = WeaponAssetBuilder.HandgunSpec();
+            Assert.That(handgun.RecoilPitchDegrees, Is.GreaterThan(rifle.RecoilPitchDegrees * 2f), "one handgun shot jumps more");
+            Assert.That(handgun.RecoilRecoveryPerSecond, Is.GreaterThan(rifle.RecoilRecoveryPerSecond), "the handgun settles faster");
+
+            var recoil = new RecoilState();
+            recoil.Kick(handgun, 1, 0);
+            Assert.That(recoil.PitchUpDegrees, Is.EqualTo(handgun.RecoilPitchDegrees));
+
+            recoil.Tick(0.3f);
+            Assert.That(recoil.IsAtRest, Is.True, "a single kick is gone within 0.3 s");
+        }
+
+        [Test]
+        public void TheHandgunDoesNotClimbWhenFiredAtItsFastestInterval()
+        {
+            var handgun = WeaponAssetBuilder.HandgunSpec();
+            var recoil = new RecoilState();
+            for (var shot = 0; shot < 12; shot++)
+            {
+                recoil.Kick(handgun, 1, 0);
+                Assert.That(recoil.PitchUpDegrees, Is.EqualTo(handgun.RecoilPitchDegrees), "shot " + shot);
+                recoil.Tick(0.2f);
             }
         }
 
         [Test]
-        public void TheRepositoryWeaponAssetsLoadWithNoRecoilOrSpread()
+        public void AimingTightensTheSpreadAndMovingWidensIt()
         {
-            foreach (var path in new[] { WeaponAssetBuilder.RiflePath, WeaponAssetBuilder.HandgunPath })
+            foreach (var spec in new[] { WeaponAssetBuilder.RifleSpec(), WeaponAssetBuilder.HandgunSpec() })
             {
-                AssertNoRecoilOrSpread(WeaponAssetBuilder.LoadDefinition(path), path);
+                var hip = SpreadPattern.ConeDegrees(spec, 0f, 0f);
+                var ads = SpreadPattern.ConeDegrees(spec, 1f, 0f);
+                var moving = SpreadPattern.ConeDegrees(spec, 0f, 1f);
+
+                Assert.That(ads, Is.GreaterThan(0f).And.LessThan(hip), spec.DisplayName);
+                Assert.That(moving, Is.GreaterThan(hip), spec.DisplayName);
+                Assert.That(spec.BlindFireSpreadDegrees, Is.GreaterThan(hip), spec.DisplayName + ": blind fire is still the widest");
             }
+
+            Assert.That(
+                WeaponAssetBuilder.RifleAdsSpreadDegrees,
+                Is.LessThan(WeaponAssetBuilder.HandgunAdsSpreadDegrees),
+                "the rifle groups tighter when aimed");
         }
 
-        private static void AssertNoRecoilOrSpread(WeaponDefinition asset, string message)
+        [Test]
+        public void TheRepositoryWeaponAssetsStoreTheBuiltRecoilAndSpread()
         {
+            AssertRecoilAndSpread(
+                WeaponAssetBuilder.LoadDefinition(WeaponAssetBuilder.RiflePath), WeaponAssetBuilder.RifleSpec(), WeaponAssetBuilder.RiflePath);
+            AssertRecoilAndSpread(
+                WeaponAssetBuilder.LoadDefinition(WeaponAssetBuilder.HandgunPath), WeaponAssetBuilder.HandgunSpec(), WeaponAssetBuilder.HandgunPath);
+        }
+
+        private static void AssertRecoilAndSpread(WeaponDefinition asset, WeaponSpec expected, string path)
+        {
+            var message = $"{path}; run {nameof(WeaponAssetBuilder)}.Build if the committed asset predates the values";
             Assert.That(asset, Is.Not.Null, message);
-            Assert.That(asset.RecoilPitchDegrees, Is.EqualTo(0f), message);
-            Assert.That(asset.RecoilYawDegrees, Is.EqualTo(0f), message);
-            Assert.That(asset.RecoilRecoveryPerSecond, Is.EqualTo(0f), message);
-            Assert.That(asset.HipSpreadDegrees, Is.EqualTo(0f), message);
-            Assert.That(asset.AdsSpreadDegrees, Is.EqualTo(0f), message);
-            Assert.That(asset.MoveSpreadDegrees, Is.EqualTo(0f), message);
+            Assert.That(asset.RecoilPitchDegrees, Is.EqualTo(expected.RecoilPitchDegrees), message);
+            Assert.That(asset.RecoilYawDegrees, Is.EqualTo(expected.RecoilYawDegrees), message);
+            Assert.That(asset.RecoilRecoveryPerSecond, Is.EqualTo(expected.RecoilRecoveryPerSecond), message);
+            Assert.That(asset.HipSpreadDegrees, Is.EqualTo(expected.HipSpreadDegrees), message);
+            Assert.That(asset.AdsSpreadDegrees, Is.EqualTo(expected.AdsSpreadDegrees), message);
+            Assert.That(asset.MoveSpreadDegrees, Is.EqualTo(expected.MoveSpreadDegrees), message);
 
             var spec = asset.ToSpec();
-            Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(0f), message);
-            Assert.That(spec.RecoilYawDegrees, Is.EqualTo(0f), message);
-            Assert.That(spec.RecoilRecoveryPerSecond, Is.EqualTo(0f), message);
-            Assert.That(spec.HipSpreadDegrees, Is.EqualTo(0f), message);
-            Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(0f), message);
-            Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(0f), message);
+            Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(expected.RecoilPitchDegrees), message);
+            Assert.That(spec.RecoilYawDegrees, Is.EqualTo(expected.RecoilYawDegrees), message);
+            Assert.That(spec.RecoilRecoveryPerSecond, Is.EqualTo(expected.RecoilRecoveryPerSecond), message);
+            Assert.That(spec.HipSpreadDegrees, Is.EqualTo(expected.HipSpreadDegrees), message);
+            Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(expected.AdsSpreadDegrees), message);
+            Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(expected.MoveSpreadDegrees), message);
         }
 
         [Test]

@@ -59,17 +59,19 @@ jobs:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('dotnet/**/*.csproj', 'dotnet/Directory.Build.props') }}
 
+      # 抜けた .meta の差分を CI Gate に渡し、PR に [regen] コミットとして積ませる。
+      # dotnet を使わないので Restore の失敗に巻き込まれないよう先に走らせる
+      - name: Generate .meta
+        run: scripts/lint.sh --fix-meta
+
+      - uses: omni-stove/.github/actions/regen-diff@main
+        with:
+          pathspec: '*.meta'
+
       - name: Restore
-        id: restore
         run: scripts/install.sh
 
-      # 抜けた .meta を diff --git で出し、自動修正がエージェントより先に regen-command で作り直せるようにする
-      - name: Generated .meta
-        run: scripts/lint.sh --fix-meta && git diff --cached --exit-code
-
-      # 上で落ちても残りの lint の指摘を一緒に出す
       - name: Lint
-        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         run: scripts/lint.sh
 
   test:
@@ -111,9 +113,7 @@ jobs:
       run-fix: true
       fix-provider: "claude"
       # 自動修正のエージェントにも Issue Worker と同じ Unity 固有の規約を守らせる
-      fix-instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: never edit or regenerate an existing .meta, and wire references in code or editor scripts instead of hand-editing .unity / .prefab / .asset files. Do not write a .meta for a new .cs file or folder under Assets yourself; set needs_regen to true and CI generates it."
-      # 自動修正が足した .cs やフォルダの .meta を作る。dotnet も Unity も無い環境で走る
-      regen-command: "scripts/lint.sh --fix-meta"
+      fix-instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: never edit or regenerate an existing .meta, and wire references in code or editor scripts instead of hand-editing .unity / .prefab / .asset files. Do not write a .meta for a new .cs file or folder under Assets yourself; CI generates it."
       run-merge: true  # CI Gate が通り approve した PR を agent App でマージする。止めるなら skip-automerge ラベル
       results: ${{ toJSON(needs) }}
       conflicted: ${{ needs.precheck.outputs.conflicted }}

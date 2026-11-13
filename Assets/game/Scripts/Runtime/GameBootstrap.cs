@@ -254,6 +254,7 @@ namespace Fps.Runtime
                 damageable = player.AddComponent<Damageable>();
                 damageable.Initialize(PlayerName, PlayerMaxHealth);
                 player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
+                WireDeathAndRespawn(damageable, mover, ads);
 
                 // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
                 mover.BindSprintRelease(weapon, damageable);
@@ -370,7 +371,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// ADS に今持っている武器の視野角を読ませ、覗き込み始めたらダッシュを解除させる。
+        /// ADS に今持っている武器の視野角を読ませ、覗き込み始めたらダッシュを解除させ、リロードを始めたときと持ち替えたときに覗き込みをやめさせる。
         /// Edit Mode ではどれも未初期化のままのことがあるが、読むのは実行時なので配線だけしておく。
         /// </summary>
         private static void WireAds(AimDownSights ads, WeaponController weapon, PlayerController mover)
@@ -383,6 +384,35 @@ namespace Fps.Runtime
                     mover.ReleaseSprint(SprintInput.ReasonAim);
                 }
             };
+
+            if (weapon != null)
+            {
+                weapon.ReloadStarted += _ => ads.Release();
+                weapon.WeaponChanged += _ => ads.Release();
+            }
+        }
+
+        /// <summary>
+        /// 倒れたときと体力を作り直したとき (キャンペーンの再開) に、しゃがみを解除し、覗き込みを即座に腰だめへ戻す。
+        /// </summary>
+        private static void WireDeathAndRespawn(Damageable damageable, PlayerController mover, AimDownSights ads)
+        {
+            damageable.Died += _ => ResetStance(mover, ads, CrouchInput.ReasonDeath);
+            damageable.HealthReset += _ => ResetStance(mover, ads, CrouchInput.ReasonRespawn);
+        }
+
+        private static void ResetStance(PlayerController mover, AimDownSights ads, string reason)
+        {
+            if (mover != null)
+            {
+                mover.ReleaseCrouch(reason);
+            }
+
+            // 専用サーバーや Edit Mode では ADS が初期化されておらず、戻す視野角も無い。
+            if (ads != null && ads.IsInitialized)
+            {
+                ads.ResetView();
+            }
         }
 
         /// <summary>index 番目 (0 始まり、左から) の標的ダミーの名前。</summary>

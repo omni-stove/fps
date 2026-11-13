@@ -235,6 +235,9 @@ namespace Fps.Runtime
             }
 
             var failed = false;
+
+            // 開いている間に F3 で切り替えて保存した回線の表示を、開いたときの値で書き戻さない
+            _editing = _editing.WithShowNetStats(AppliedControlSettings.Current.ShowNetStats);
             if (!_editing.Equals(_saved))
             {
                 try
@@ -287,7 +290,10 @@ namespace Fps.Runtime
             Edit(_editing.With(device, action, mode));
         }
 
-        /// <summary>すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。保存は閉じるとき。</summary>
+        /// <summary>
+        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。保存は閉じるとき。
+        /// この画面に無い回線の表示 (<see cref="ControlSettings.ShowNetStats"/>) は今のまま残す。
+        /// </summary>
         /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void ResetToDefaults()
         {
@@ -465,6 +471,8 @@ namespace Fps.Runtime
 
         private void Edit(ControlSettings settings)
         {
+            // 回線の表示はこの画面に無く、開いている間にも F3 (Fps.Net の NetHud) で切り替わるので、開いたときの値で戻さない
+            settings = settings.WithShowNetStats(AppliedControlSettings.Current.ShowNetStats);
             if (settings.Equals(_editing))
             {
                 return;

@@ -22,12 +22,34 @@ namespace Fps.Core
         public int ReserveAmmo { get; private set; }
         public bool IsReloading { get; private set; }
 
-        /// <param name="spec">武器の設定。開始時は弾倉満タン、予備弾は spec の初期値。</param>
+        /// <summary>
+        /// true ならリロードで予備弾を減らさず、予備弾が 0 でもリロードできる。
+        /// <see cref="ReserveAmmo"/> は表示用にそのままの値を残す。
+        /// </summary>
+        public bool HasInfiniteReserve { get; }
+
+        /// <param name="spec">武器の設定。開始時は弾倉満タン、予備弾は spec の初期値。予備弾は有限。</param>
         public Weapon(WeaponSpec spec)
+            : this(spec, GameRules.Default)
+        {
+        }
+
+        /// <param name="spec">武器の設定。開始時は弾倉満タン。</param>
+        /// <param name="rules">
+        /// 予備弾のルール。予備弾は <see cref="WeaponSpec.ReserveAmmo"/> × <see cref="GameRules.ReserveAmmoMultiplier"/>
+        /// (<see cref="ScaleReserveAmmo"/>)、<see cref="GameRules.InfiniteReserve"/> は <see cref="HasInfiniteReserve"/> になる。
+        /// </param>
+        public Weapon(WeaponSpec spec, GameRules rules)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
             AmmoInMagazine = spec.MagazineSize;
-            ReserveAmmo = spec.ReserveAmmo;
+            ReserveAmmo = ScaleReserveAmmo(spec.ReserveAmmo, rules.ReserveAmmoMultiplier);
+            HasInfiniteReserve = rules.InfiniteReserve;
         }
 
         /// <summary>弾数を指定して作る。セーブデータから戻すときに使う。リロード中でも連射の待ち中でもない状態で始まる。</summary>
@@ -35,7 +57,20 @@ namespace Fps.Core
         /// <param name="ammoInMagazine">弾倉の弾数。0 以上 <see cref="WeaponSpec.MagazineSize"/> 以下。</param>
         /// <param name="reserveAmmo">予備弾の数。0 以上。</param>
         public Weapon(WeaponSpec spec, int ammoInMagazine, int reserveAmmo)
-            : this(spec)
+            : this(spec, ammoInMagazine, reserveAmmo, GameRules.Default)
+        {
+        }
+
+        /// <summary>
+        /// 弾数とルールを指定して作る。セーブデータから戻すときに使う。<paramref name="reserveAmmo"/> はセーブの値をそのまま使い、
+        /// <see cref="GameRules.ReserveAmmoMultiplier"/> は掛けない (作ったときに掛けた値がセーブされているため)。
+        /// </summary>
+        /// <param name="spec">武器の設定。</param>
+        /// <param name="ammoInMagazine">弾倉の弾数。0 以上 <see cref="WeaponSpec.MagazineSize"/> 以下。</param>
+        /// <param name="reserveAmmo">予備弾の数。0 以上。</param>
+        /// <param name="rules">予備弾のルール。<see cref="GameRules.InfiniteReserve"/> だけを使う。</param>
+        public Weapon(WeaponSpec spec, int ammoInMagazine, int reserveAmmo, GameRules rules)
+            : this(spec, rules)
         {
             if (ammoInMagazine < 0 || ammoInMagazine > spec.MagazineSize)
             {
@@ -70,12 +105,41 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 弾倉が満タンでなく、予備弾があり、リロード中でなければリロードを始めて true を返す。
+        /// 初期の予備弾 <paramref name="reserveAmmo"/> × <paramref name="multiplier"/> を整数にする。
+        /// 端数は四捨五入 (0.5 は 0 から遠い側)、0 未満にはせず、int に収まらなければ <see cref="int.MaxValue"/>。
+        /// </summary>
+        /// <param name="reserveAmmo">倍率を掛ける前の予備弾。0 以上。</param>
+        /// <param name="multiplier">倍率。0 以上の有限値。</param>
+        public static int ScaleReserveAmmo(int reserveAmmo, float multiplier)
+        {
+            if (reserveAmmo < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(reserveAmmo), reserveAmmo, "reserveAmmo must not be negative");
+            }
+
+            if (!(multiplier >= 0f) || float.IsInfinity(multiplier))
+            {
+                throw new ArgumentOutOfRangeException(nameof(multiplier), multiplier, "multiplier must be a non-negative finite number");
+            }
+
+            if ((double)reserveAmmo * multiplier >= int.MaxValue)
+            {
+                return int.MaxValue;
+            }
+
+            // decimal で掛けるのは、0.7f のような倍率が 2 進では 0.69999... になり、ちょうど .5 になる積が切り捨てられるのを避けるため。
+            // float から decimal への変換は有効桁 7 桁に丸めるので、設定に書いた 0.7 のまま掛けられる。
+            var scaled = Math.Round(reserveAmmo * (decimal)multiplier, MidpointRounding.AwayFromZero);
+            return (int)Math.Min(Math.Max(scaled, 0m), int.MaxValue);
+        }
+
+        /// <summary>
+        /// 弾倉が満タンでなく、予備弾があり (<see cref="HasInfiniteReserve"/> なら 0 でもよい)、リロード中でなければリロードを始めて true を返す。
         /// 補充は <see cref="Tick"/> でリロード時間が経過したときに行う。
         /// </summary>
         public bool TryStartReload()
         {
-            if (IsReloading || AmmoInMagazine == Spec.MagazineSize || ReserveAmmo == 0)
+            if (IsReloading || AmmoInMagazine == Spec.MagazineSize || (!HasInfiniteReserve && ReserveAmmo == 0))
             {
                 return false;
             }
@@ -113,9 +177,18 @@ namespace Fps.Core
                 return;
             }
 
-            var amount = Math.Min(Spec.MagazineSize - AmmoInMagazine, ReserveAmmo);
-            AmmoInMagazine += amount;
-            ReserveAmmo -= amount;
+            var missing = Spec.MagazineSize - AmmoInMagazine;
+            if (HasInfiniteReserve)
+            {
+                AmmoInMagazine += missing;
+            }
+            else
+            {
+                var amount = Math.Min(missing, ReserveAmmo);
+                AmmoInMagazine += amount;
+                ReserveAmmo -= amount;
+            }
+
             _reloadRemaining = 0f;
             IsReloading = false;
             Reloaded?.Invoke();

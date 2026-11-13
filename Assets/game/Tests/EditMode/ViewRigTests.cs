@@ -438,6 +438,76 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BoomPositionCanIgnoreAnotherBody()
+        {
+            // 他のプレイヤーの目から肩越しへ置くときは、その体の中から球を飛ばすことになる
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            _wall.transform.position = new Vector3(10f, 1f, 0f);
+            Physics.SyncTransforms();
+            var origin = new Vector3(10f, 1.6f, 0f);
+            var offset = new Vector3(0.5f, 0.2f, -2.5f);
+
+            var blocked = _rig.ResolveBoomPosition(origin, offset);
+            var ignored = _rig.ResolveBoomPosition(origin, offset, _wall.transform);
+
+            Assert.That(Vector3.Distance(blocked, origin), Is.LessThan(offset.magnitude - 1f), "the other body shortens the boom");
+            Assert.That(Vector3.Distance(ignored, origin + offset), Is.LessThan(1e-4f));
+        }
+
+        [Test]
+        public void FreeMoveGoesTheWholeWayInTheOpen()
+        {
+            var from = new Vector3(0f, 5f, 0f);
+
+            Assert.That(Vector3.Distance(_rig.ResolveFreeMove(from, new Vector3(0f, 0f, 3f)), new Vector3(0f, 5f, 3f)), Is.LessThan(1e-4f));
+            Assert.That(_rig.ResolveFreeMove(from, Vector3.zero), Is.EqualTo(from));
+        }
+
+        [Test]
+        public void FreeMoveStopsShortOfAWallAndStaysOut()
+        {
+            // 手前の面は z = 2.9
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = new Vector3(0f, 5f, 3f);
+            _wall.transform.localScale = new Vector3(4f, 4f, 0.2f);
+            Physics.SyncTransforms();
+            var limit = 2.9f - _rig.CollisionRadius;
+
+            var first = _rig.ResolveFreeMove(new Vector3(0f, 5f, 0f), new Vector3(0f, 0f, 10f));
+            var second = _rig.ResolveFreeMove(first, new Vector3(0f, 0f, 1f));
+
+            Assert.That(first.z, Is.LessThanOrEqualTo(limit + 1e-3f));
+            Assert.That(first.z, Is.GreaterThan(limit - ViewRig.FreeMoveSkin - 0.01f));
+            Assert.That(second.z, Is.LessThanOrEqualTo(limit + 1e-3f), "pushing again does not go through");
+        }
+
+        [Test]
+        public void FreeMoveSlidesAlongAWall()
+        {
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = new Vector3(0f, 5f, 3f);
+            _wall.transform.localScale = new Vector3(4f, 4f, 0.2f);
+            Physics.SyncTransforms();
+
+            var position = _rig.ResolveFreeMove(new Vector3(0f, 5f, 0f), new Vector3(1f, 0f, 10f));
+
+            Assert.That(position.x, Is.EqualTo(1f).Within(1e-2f), "the sideways part of the move is kept");
+            Assert.That(position.z, Is.LessThanOrEqualTo(2.9f - _rig.CollisionRadius + 1e-3f));
+        }
+
+        [Test]
+        public void FreeMoveCanLeaveSomethingItStartedInside()
+        {
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = new Vector3(0f, 5f, 0f);
+            Physics.SyncTransforms();
+
+            var position = _rig.ResolveFreeMove(new Vector3(0f, 5f, 0f), new Vector3(0f, 0f, 3f));
+
+            Assert.That(Vector3.Distance(position, new Vector3(0f, 5f, 3f)), Is.LessThan(1e-4f));
+        }
+
+        [Test]
         public void FirstPersonAimsAlongTheCameraForwardFromTheEye()
         {
             _rig.Initialize(_eye, _camera);

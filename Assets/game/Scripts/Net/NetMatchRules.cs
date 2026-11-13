@@ -20,6 +20,9 @@ namespace Fps.Net
         public Dodge Dodge;
         public Vault Vault;
 
+        /// <summary>HUD に出す項目の量。クライアントの NetHud が <see cref="Fps.Runtime.Hud.ApplyDensity"/> に渡す。</summary>
+        public HudDensity HudDensity;
+
         public NetMatchRules(DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve)
             : this(deathBody, deathCamera, respawnMode, infiniteReserve, Cover.Off, BlindFire.Off)
         {
@@ -32,6 +35,12 @@ namespace Fps.Net
         }
 
         public NetMatchRules(
+            DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve, HudDensity hudDensity)
+            : this(deathBody, deathCamera, respawnMode, infiniteReserve, Cover.Off, BlindFire.Off, Dodge.Off, Vault.Off, hudDensity)
+        {
+        }
+
+        public NetMatchRules(
             DeathBody deathBody,
             DeathCamera deathCamera,
             RespawnMode respawnMode,
@@ -39,7 +48,8 @@ namespace Fps.Net
             Cover cover,
             BlindFire blindFire,
             Dodge dodge,
-            Vault vault)
+            Vault vault,
+            HudDensity hudDensity = HudDensity.Full)
         {
             DeathBody = deathBody;
             DeathCamera = deathCamera;
@@ -49,6 +59,7 @@ namespace Fps.Net
             BlindFire = blindFire;
             Dodge = dodge;
             Vault = vault;
+            HudDensity = hudDensity;
         }
 
         /// <summary><see cref="GameRules.Default"/> の値。サーバーから届く前と、試合を始められなかったときはこの値のまま。</summary>
@@ -83,7 +94,8 @@ namespace Fps.Net
                 actions.Cover,
                 actions.BlindFire,
                 actions.Dodge,
-                actions.Vault);
+                actions.Vault,
+                rules.HudDensity);
         }
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer)
@@ -97,6 +109,7 @@ namespace Fps.Net
             serializer.SerializeValue(ref BlindFire);
             serializer.SerializeValue(ref Dodge);
             serializer.SerializeValue(ref Vault);
+            serializer.SerializeValue(ref HudDensity);
         }
 
         public bool Equals(NetMatchRules other)
@@ -108,7 +121,8 @@ namespace Fps.Net
                 && Cover == other.Cover
                 && BlindFire == other.BlindFire
                 && Dodge == other.Dodge
-                && Vault == other.Vault;
+                && Vault == other.Vault
+                && HudDensity == other.HudDensity;
         }
 
         public override bool Equals(object obj)
@@ -118,8 +132,10 @@ namespace Fps.Net
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(
+            // HashCode.Combine は 8 個までしか受け取らない。
+            var hash = HashCode.Combine(
                 (int)DeathBody, (int)DeathCamera, (int)RespawnMode, InfiniteReserve, (int)Cover, (int)BlindFire, (int)Dodge, (int)Vault);
+            return HashCode.Combine(hash, (int)HudDensity);
         }
 
         public override string ToString()
@@ -127,7 +143,7 @@ namespace Fps.Net
             return "deathBody=" + DeathBody + " deathCamera=" + DeathCamera + " respawnMode=" + RespawnMode
                 + " infiniteReserve=" + (InfiniteReserve ? "true" : "false")
                 + " cover=" + Cover + " blindFire=" + BlindFire
-                + " dodge=" + Dodge + " vault=" + Vault;
+                + " dodge=" + Dodge + " vault=" + Vault + " hudDensity=" + HudDensity;
         }
     }
 }

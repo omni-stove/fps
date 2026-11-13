@@ -26,6 +26,11 @@ namespace Fps.Tests.EditMode
                 Assert.That(menu.name, Is.EqualTo(MenuSceneBuilder.MenuObjectName));
                 Assert.That(menu.GetComponent<MainMenuScreen>(), Is.Not.Null);
                 Assert.That(menu.transform.childCount, Is.Zero, "the UI document is built at runtime");
+
+                // ロードアウトの選択はオンラインの試合と同じアセットから並べる
+                var screen = menu.GetComponent<MainMenuScreen>();
+                Assert.That(AssetDatabase.GetAssetPath(screen.Loadout), Is.EqualTo(WeaponAssetBuilder.LoadoutPath));
+                Assert.That(AssetDatabase.GetAssetPath(screen.Catalog), Is.EqualTo(WeaponAssetBuilder.CatalogPath));
             }
             finally
             {

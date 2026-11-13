@@ -182,6 +182,23 @@
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+/* 武器名のさらに上に右寄せで出す、残りのグレネードの数。 */
+.grenade-count {
+    position: absolute;
+    right: 32px;
+    bottom: 150px;
+    margin: 0;
+    padding: 4px 14px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-right;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 /* 弾数の欄のすぐ下に右寄せで出す、アクティブリロードの細いバー。塗りと幅の left / width は HudView が % で入れる。 */
 .hud__reload-bar {
     position: absolute;
@@ -285,6 +302,15 @@
 
 .hud__crosshair-line--right {
     left: 0;
+}
+
+/* ロードアウトの選択。倒されている間に画面の中央に出す。中身の見た目は Resources/Loadout/LoadoutSelect.uss。 */
+.hud__loadout {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: 960px;
 }
 
 /* ポーズ画面。HUD の上に画面全体を暗く重ね、中央にボタンを縦に並べる。 */

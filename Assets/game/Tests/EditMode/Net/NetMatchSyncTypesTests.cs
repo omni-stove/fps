@@ -91,7 +91,8 @@ namespace Fps.Net.Tests
                 DeathCamera.Killer,
                 true,
                 0.5f,
-                Destruction.On);
+                Destruction.On,
+                hudDensity: HudDensity.Hardcore);
 
             var synced = NetMatchRules.From(rules);
 
@@ -99,6 +100,7 @@ namespace Fps.Net.Tests
             Assert.That(synced.DeathCamera, Is.EqualTo(DeathCamera.Killer));
             Assert.That(synced.RespawnMode, Is.EqualTo(RespawnMode.Wave));
             Assert.That(synced.InfiniteReserve, Is.True);
+            Assert.That(synced.HudDensity, Is.EqualTo(HudDensity.Hardcore));
             Assert.Throws<System.ArgumentNullException>(() => NetMatchRules.From(null));
         }
 
@@ -106,7 +108,11 @@ namespace Fps.Net.Tests
         public void MatchRulesDefaultMatchesTheDefaultGameRules()
         {
             var expected = new NetMatchRules(
-                GameRules.Default.DeathBody, GameRules.Default.DeathCamera, GameRules.Default.RespawnMode, GameRules.Default.InfiniteReserve);
+                GameRules.Default.DeathBody,
+                GameRules.Default.DeathCamera,
+                GameRules.Default.RespawnMode,
+                GameRules.Default.InfiniteReserve,
+                GameRules.Default.HudDensity);
 
             Assert.That(NetMatchRules.Default, Is.EqualTo(expected));
 
@@ -125,14 +131,16 @@ namespace Fps.Net.Tests
             Assert.That(rules.Equals(new NetMatchRules(DeathBody.Collapse, DeathCamera.None, RespawnMode.Wave, true)), Is.False);
             Assert.That(rules.Equals(new NetMatchRules(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.None, true)), Is.False);
             Assert.That(rules.Equals(new NetMatchRules(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.Wave, false)), Is.False);
+            Assert.That(rules.Equals(new NetMatchRules(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.Wave, true, HudDensity.Minimal)), Is.False);
         }
 
-        [TestCase(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.Wave, true)]
-        [TestCase(DeathBody.Vanish, DeathCamera.None, RespawnMode.Individual, false)]
-        [TestCase(DeathBody.Collapse, DeathCamera.None, RespawnMode.None, false)]
-        public void MatchRulesSerializeAllFields(DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve)
+        [TestCase(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.Wave, true, HudDensity.Full)]
+        [TestCase(DeathBody.Vanish, DeathCamera.None, RespawnMode.Individual, false, HudDensity.Minimal)]
+        [TestCase(DeathBody.Collapse, DeathCamera.None, RespawnMode.None, false, HudDensity.Hardcore)]
+        public void MatchRulesSerializeAllFields(
+            DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve, HudDensity hudDensity)
         {
-            var rules = new NetMatchRules(deathBody, deathCamera, respawnMode, infiniteReserve);
+            var rules = new NetMatchRules(deathBody, deathCamera, respawnMode, infiniteReserve, hudDensity);
 
             Assert.That(RoundTrip(rules), Is.EqualTo(rules));
         }

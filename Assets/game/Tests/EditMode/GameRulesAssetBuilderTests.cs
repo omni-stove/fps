@@ -121,7 +121,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.RegenDelaySeconds, Is.EqualTo(4f));
             Assert.That(rules.RegenPerSecond, Is.EqualTo(20f));
             Assert.That(rules.DeathBody, Is.EqualTo(DeathBody.Collapse));
-            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Killer));
+            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Ally));
             Assert.That(rules.InfiniteReserve, Is.False);
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(1f));
         }

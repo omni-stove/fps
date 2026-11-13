@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
 {
     public sealed class ConnectionPayloadTests
     {
-        private const string Key = "0123456789abcdef0123456789abcdef";
+        public const string Key = "0123456789abcdef0123456789abcdef";
 
         [Test]
         public void RoundTripsVersionAndKey()

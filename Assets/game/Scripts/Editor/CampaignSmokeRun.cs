@@ -341,6 +341,11 @@ namespace Fps.Editor
                 Debug.LogError(line);
             }
 
+            if (SmokeSuite.TakeOver(LogTag, exitCode))
+            {
+                return;
+            }
+
             if (Application.isBatchMode)
             {
                 EditorApplication.Exit(exitCode);

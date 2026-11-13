@@ -11,7 +11,22 @@ namespace Fps.Net.Tests
 
         public event Action<string, string> Removed;
 
+        public event Action<string> LoggedOut;
+
         public int Ticks { get; private set; }
+
+        public int Logins { get; private set; }
+
+        public int Creates { get; private set; }
+
+        public IReadOnlyList<LobbyAttribute> CreatedAttributes { get; private set; }
+
+        public Action<string> PendingUpdate { get; private set; }
+
+        public string UpdatedLobbyId { get; private set; }
+
+        /// <summary>送られた属性の更新。1 回分ずつ並べる。</summary>
+        public List<IReadOnlyList<LobbyAttribute>> Updates { get; } = new List<IReadOnlyList<LobbyAttribute>>();
 
         public bool Disposed { get; private set; }
 
@@ -44,14 +59,24 @@ namespace Fps.Net.Tests
 
         public void Login(Action<string, string> done)
         {
+            Logins++;
             PendingLogin = done;
         }
 
-        public void CreateLobby(string bucketId, int maxMembers, Action<LobbyInfo, string> done)
+        public void CreateLobby(string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
+            Creates++;
             CreatedBucket = bucketId;
             CreatedMaxMembers = maxMembers;
+            CreatedAttributes = attributes;
             PendingCreate = done;
+        }
+
+        public void UpdateAttributes(string lobbyId, IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
+        {
+            UpdatedLobbyId = lobbyId;
+            Updates.Add(attributes);
+            PendingUpdate = done;
         }
 
         public void SearchLobbies(string bucketId, int maxResults, Action<IReadOnlyList<LobbyInfo>, string> done)
@@ -101,6 +126,16 @@ namespace Fps.Net.Tests
         public void CompleteLeave(string error = null)
         {
             Take(PendingLeave, () => PendingLeave = null)(error);
+        }
+
+        public void CompleteUpdate(string error = null)
+        {
+            Take(PendingUpdate, () => PendingUpdate = null)(error);
+        }
+
+        public void RaiseLoggedOut(string reason)
+        {
+            LoggedOut?.Invoke(reason);
         }
 
         public void RaiseMembersChanged(LobbyInfo lobby)

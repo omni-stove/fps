@@ -91,6 +91,16 @@ namespace Fps.Core
             return ((int)Kind * 397) ^ MissionIndex;
         }
 
+        public static bool operator ==(CampaignMenuItem left, CampaignMenuItem right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(CampaignMenuItem left, CampaignMenuItem right)
+        {
+            return !left.Equals(right);
+        }
+
         public override string ToString()
         {
             return Kind == CampaignMenuItemKind.Mission ? Kind + "#" + MissionIndex : Kind.ToString();
@@ -136,7 +146,7 @@ namespace Fps.Core
         }
     }
 
-    /// <summary><see cref="CampaignMenu.Activate"/> と <see cref="CampaignMenu.Cancel"/> の結果。</summary>
+    /// <summary><see cref="CampaignMenu.Activate()"/> と <see cref="CampaignMenu.Cancel"/> の結果。</summary>
     public enum CampaignMenuResultKind
     {
         /// <summary>メニューの中で状態が変わっただけ。</summary>

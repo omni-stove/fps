@@ -243,7 +243,10 @@ namespace Fps.Editor
             definitionPath = SceneBuildHelpers.ValidateAssetPath(definitionPath);
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
 
-            // 武器のアセットが無い・敵の武器がカタログに無いなら何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // NewScene(Single) は参照されていないアセットをアンロードし、先に読んだ定義が null になるので、シーンを作ってから読む。
+            // 武器のアセットが無い・敵の武器がカタログに無いなら何も保存せずに止める (先に WeaponAssetBuilder.Build を走らせる)。
             var rifle = WeaponAssetBuilder.LoadRifle();
             var catalog = WeaponAssetBuilder.LoadCatalog();
             ResolveEnemyWeapons(catalog);
@@ -251,8 +254,6 @@ namespace Fps.Editor
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
-
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var layout = PopulateScene(scene, definition, rifle, catalog);
             SceneBuildHelpers.SaveNavMeshData(layout.Surface, navMeshDataPath);
 

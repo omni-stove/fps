@@ -45,7 +45,10 @@ namespace Fps.Editor
         {
             path = ValidateScenePath(path);
 
-            // 武器のアセットが無ければ何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // NewScene(Single) は参照されていないアセットをアンロードし、先に読んだ定義が null になるので、シーンを作ってから読む。
+            // 武器のアセットが無ければ何も保存せずに止める (先に WeaponAssetBuilder.Build を走らせる)。
             var rifle = WeaponAssetBuilder.LoadRifle();
 
             var directory = Path.GetDirectoryName(path);
@@ -54,7 +57,6 @@ namespace Fps.Editor
                 Directory.CreateDirectory(directory);
             }
 
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             PopulateScene(scene, rifle);
 
             if (!EditorSceneManager.SaveScene(scene, path))

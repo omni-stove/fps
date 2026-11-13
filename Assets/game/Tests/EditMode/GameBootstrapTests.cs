@@ -280,7 +280,7 @@ namespace Fps.Tests.EditMode
         {
             var targets = _world.Targets;
 
-            Assert.That(targets, Has.Count.EqualTo(GameBootstrap.TargetDummyCount));
+            Assert.That(targets.Count, Is.EqualTo(GameBootstrap.TargetDummyCount));
             Assert.That(GameBootstrap.TargetDummyCount, Is.EqualTo(5));
             Assert.That(_world.TargetRoot.name, Is.EqualTo(GameBootstrap.TargetsName));
 

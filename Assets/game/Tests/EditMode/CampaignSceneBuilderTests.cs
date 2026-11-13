@@ -29,6 +29,7 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
+            _scene = TestScenes.NewAdditive();
             _definition = ScriptableObject.CreateInstance<MissionDefinition>();
             _definition.name = "Campaign01";
             CampaignSceneBuilder.Configure(_definition);
@@ -41,7 +42,6 @@ namespace Fps.Tests.EditMode
             _catalog = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
             _catalog.name = "WeaponCatalog";
             WeaponAssetBuilder.Configure(_catalog, new[] { _rifle, _handgun });
-            _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
         }
 
         [TearDown]
@@ -70,7 +70,7 @@ namespace Fps.Tests.EditMode
             var mission = _definition.CreateMission();
 
             Assert.That(_definition.DisplayName, Is.EqualTo(CampaignSceneBuilder.MissionDisplayName));
-            Assert.That(mission.Objectives, Has.Count.EqualTo(3));
+            Assert.That(mission.Objectives.Count, Is.EqualTo(3));
             Assert.That(mission.Objectives[0].Id, Is.EqualTo(CampaignSceneBuilder.ReachAreaAId));
             Assert.That(mission.Objectives[0].Prerequisites, Is.Empty);
             Assert.That(mission.Objectives[1].Id, Is.EqualTo(CampaignSceneBuilder.KillEnemiesId));
@@ -93,7 +93,7 @@ namespace Fps.Tests.EditMode
             Assert.That(layout.Bootstrap.CreatesFloor, Is.False, "the scene's own floor carries the baked NavMesh");
             Assert.That(layout.Bootstrap.WeaponDefinition, Is.SameAs(_rifle), "the player shoots the rifle");
             var placements = CampaignSceneBuilder.AllEnemies();
-            Assert.That(layout.Enemies, Has.Count.EqualTo(placements.Count));
+            Assert.That(layout.Enemies.Count, Is.EqualTo(placements.Count));
             for (var i = 0; i < placements.Count; i++)
             {
                 var enemy = layout.Enemies[i];
@@ -223,9 +223,9 @@ namespace Fps.Tests.EditMode
         {
             var layout = Populate();
 
-            Assert.That(layout.Enemies, Has.Count.EqualTo(CampaignSceneBuilder.EnemyCount));
-            Assert.That(CampaignSceneBuilder.Patrollers, Has.Count.EqualTo(2));
-            Assert.That(CampaignSceneBuilder.Ambushers, Has.Count.EqualTo(2));
+            Assert.That(layout.Enemies.Count, Is.EqualTo(CampaignSceneBuilder.EnemyCount));
+            Assert.That(CampaignSceneBuilder.Patrollers.Count, Is.EqualTo(2));
+            Assert.That(CampaignSceneBuilder.Ambushers.Count, Is.EqualTo(2));
 
             var placements = CampaignSceneBuilder.AllEnemies();
             var patrolling = 0;
@@ -370,7 +370,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(layout.AreaA.Bind(layout.Runner), Is.True);
                 Assert.That(layout.KillEnemies.Bind(layout.Runner), Is.True);
                 Assert.That(layout.Exit.Bind(layout.Runner), Is.True);
-                Assert.That(layout.KillEnemies.BoundTargets, Has.Count.EqualTo(CampaignSceneBuilder.EnemyCount));
+                Assert.That(layout.KillEnemies.BoundTargets.Count, Is.EqualTo(CampaignSceneBuilder.EnemyCount));
                 var mission = layout.Runner.Mission;
 
                 layout.AreaA.HandleEnter(collider);
@@ -446,7 +446,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(weapons[i].Id, Is.EqualTo(placements[i].WeaponId));
             }
 
-            Assert.That(weapons, Does.Contain(_rifle).And.Contain(_handgun), "the campaign uses more than one weapon");
+            Assert.That(weapons, Has.Member(_rifle).And.Member(_handgun), "the campaign uses more than one weapon");
             Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.ResolveEnemyWeapons(null));
         }
 
@@ -500,7 +500,7 @@ namespace Fps.Tests.EditMode
                 Is.Not.Null,
                 $"run {nameof(CampaignSceneBuilder)}.Build first");
 
-            Assert.That(definition.CreateMission().Objectives, Has.Count.EqualTo(3));
+            Assert.That(definition.CreateMission().Objectives.Count, Is.EqualTo(3));
 
             // テストの前に開いていた追加シーンは使わず、保存済みのシーンを開いて確かめる。
             EditorSceneManager.CloseScene(_scene, true);

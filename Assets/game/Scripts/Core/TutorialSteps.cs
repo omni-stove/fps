@@ -203,6 +203,8 @@ namespace Fps.Core
         }
 
         /// <summary>step を keyLabel のキーで行うよう案内する文 (番号や進みは付けない)。</summary>
+        /// <param name="step">案内する手順。</param>
+        /// <param name="keyLabel">操作に使うキーの表記。空にはできない。</param>
         /// <param name="hitsRequired">射撃の手順で当てる回数。1 以上。</param>
         public static string Instruction(TutorialStep step, string keyLabel, int hitsRequired = DefaultHitsRequired)
         {

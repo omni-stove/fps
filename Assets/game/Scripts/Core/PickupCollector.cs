@@ -9,7 +9,7 @@ namespace Fps.Core
     /// </summary>
     public sealed class PickupCollector
     {
-        private static readonly PickupWeaponState[] _noWeapons =Array.Empty<PickupWeaponState>();
+        private static readonly PickupWeaponState[] _noWeapons = Array.Empty<PickupWeaponState>();
 
         private PickupCollector(
             Side? side,

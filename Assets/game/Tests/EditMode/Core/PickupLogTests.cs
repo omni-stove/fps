@@ -7,14 +7,14 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class PickupLogTests
     {
-        private const string Launcher = "00000000-0000-4000-8000-000000000003";
+        private const string _launcher = "00000000-0000-4000-8000-000000000003";
 
         [Test]
         public void DescribesTheContents()
         {
             Assert.That(
-                PickupLog.Describe(PickupSpec.Weapon(Launcher, 2)),
-                Is.EqualTo("kind=Weapon weapon=" + Launcher + " amount=2 who=anyone"));
+                PickupLog.Describe(PickupSpec.Weapon(_launcher, 2)),
+                Is.EqualTo("kind=Weapon weapon=" + _launcher + " amount=2 who=anyone"));
             Assert.That(
                 PickupLog.Describe(PickupSpec.Health(25, PickupEligibility.Only(Side.Bravo))),
                 Is.EqualTo("kind=Health amount=25 who=only:1"));
@@ -45,13 +45,13 @@ namespace Fps.Core.Tests
 
             var armed = new PickupCollector(Side.Alpha, 100, 100).WithWeapons(Array.Empty<PickupWeaponState>(), null);
             Assert.That(
-                PickupLog.Collected("Pickup-Weapon", "Player", PickupJudge.Judge(PickupSpec.Weapon(Launcher, 2), armed)),
-                Is.EqualTo("[Pickup] collected pickup=Pickup-Weapon by=Player kind=Weapon weapon=" + Launcher + " added"));
+                PickupLog.Collected("Pickup-Weapon", "Player", PickupJudge.Judge(PickupSpec.Weapon(_launcher, 2), armed)),
+                Is.EqualTo("[Pickup] collected pickup=Pickup-Weapon by=Player kind=Weapon weapon=" + _launcher + " added"));
 
-            var withLauncher = armed.WithWeapons(new[] { new PickupWeaponState(Launcher, 1, 4, false) }, Launcher);
+            var withLauncher = armed.WithWeapons(new[] { new PickupWeaponState(_launcher, 1, 4, false) }, _launcher);
             Assert.That(
                 PickupLog.Collected(null, null, PickupJudge.Judge(PickupSpec.ReserveAmmo(10), withLauncher)),
-                Is.EqualTo("[Pickup] collected pickup=- by=- kind=ReserveAmmo weapon=" + Launcher + " reserve=+3"));
+                Is.EqualTo("[Pickup] collected pickup=- by=- kind=ReserveAmmo weapon=" + _launcher + " reserve=+3"));
 
             Assert.That(
                 PickupLog.Collected("Tag", "bot-2", PickupJudge.Judge(PickupSpec.Tag(4, Side.Alpha), armed)),

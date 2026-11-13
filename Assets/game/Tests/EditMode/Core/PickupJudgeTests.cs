@@ -6,22 +6,22 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class PickupJudgeTests
     {
-        private const string Rifle = "00000000-0000-4000-8000-000000000001";
-        private const string Handgun = "00000000-0000-4000-8000-000000000002";
-        private const string Launcher = "00000000-0000-4000-8000-000000000003";
+        private const string _rifle = "00000000-0000-4000-8000-000000000001";
+        private const string _handgun = "00000000-0000-4000-8000-000000000002";
+        private const string _launcher = "00000000-0000-4000-8000-000000000003";
 
         private static PickupCollector Healthy(Side? side = null)
         {
             return new PickupCollector(side, 100, 100);
         }
 
-        private static PickupCollector Armed(int rifleReserve = 30, int handgunReserve = 20, string current = Rifle, bool infinite = false)
+        private static PickupCollector Armed(int rifleReserve = 30, int handgunReserve = 20, string current = _rifle, bool infinite = false)
         {
             return new PickupCollector(Side.Alpha, 100, 100).WithWeapons(
                 new[]
                 {
-                    new PickupWeaponState(Rifle, rifleReserve, 90, infinite),
-                    new PickupWeaponState(Handgun, handgunReserve, 40, infinite),
+                    new PickupWeaponState(_rifle, rifleReserve, 90, infinite),
+                    new PickupWeaponState(_handgun, handgunReserve, 40, infinite),
                 },
                 current);
         }
@@ -90,63 +90,63 @@ namespace Fps.Core.Tests
         [Test]
         public void NewWeaponIsAdded()
         {
-            var outcome = PickupJudge.Judge(PickupSpec.Weapon(Launcher, 2), Armed());
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_launcher, 2), Armed());
 
             Assert.That(outcome.IsCollected, Is.True);
             Assert.That(outcome.AddsWeapon, Is.True);
-            Assert.That(outcome.WeaponId, Is.EqualTo(Launcher));
+            Assert.That(outcome.WeaponId, Is.EqualTo(_launcher));
             Assert.That(outcome.ReserveAmmo, Is.Zero);
         }
 
         [Test]
         public void OwnedWeaponTurnsIntoItsReserveAmmo()
         {
-            var outcome = PickupJudge.Judge(PickupSpec.Weapon(Rifle, 30), Armed(rifleReserve: 80));
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_rifle,30), Armed(rifleReserve: 80));
 
             Assert.That(outcome.IsCollected, Is.True);
             Assert.That(outcome.AddsWeapon, Is.False);
-            Assert.That(outcome.WeaponId, Is.EqualTo(Rifle));
+            Assert.That(outcome.WeaponId, Is.EqualTo(_rifle));
             Assert.That(outcome.ReserveAmmo, Is.EqualTo(10), "cut at the reserve limit");
         }
 
         [Test]
         public void OwnedWeaponIsLeftWhenItsReserveIsFullOrItGivesNoAmmo()
         {
-            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(Rifle, 30), Armed(rifleReserve: 90)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
-            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(Rifle, 0), Armed(rifleReserve: 0)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
+            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_rifle,30), Armed(rifleReserve: 90)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
+            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_rifle,0), Armed(rifleReserve: 0)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
         }
 
         [Test]
         public void CollectorsWithoutWeaponsCannotTakeWeaponsOrAmmo()
         {
-            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(Rifle, 30), Healthy()).Rejection, Is.EqualTo(PickupRejection.CannotHoldWeapons));
+            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_rifle,30), Healthy()).Rejection, Is.EqualTo(PickupRejection.CannotHoldWeapons));
             Assert.That(PickupJudge.Judge(PickupSpec.ReserveAmmo(30), Healthy()).Rejection, Is.EqualTo(PickupRejection.CannotHoldWeapons));
         }
 
         [Test]
         public void AmmoGoesToTheCurrentWeaponFirst()
         {
-            var outcome = PickupJudge.Judge(PickupSpec.ReserveAmmo(15), Armed(rifleReserve: 30, handgunReserve: 0, current: Handgun));
+            var outcome = PickupJudge.Judge(PickupSpec.ReserveAmmo(15), Armed(rifleReserve: 30, handgunReserve: 0, current: _handgun));
 
-            Assert.That(outcome.WeaponId, Is.EqualTo(Handgun));
+            Assert.That(outcome.WeaponId, Is.EqualTo(_handgun));
             Assert.That(outcome.ReserveAmmo, Is.EqualTo(15));
         }
 
         [Test]
         public void AmmoFallsBackToTheFirstWeaponWithRoomWhenTheCurrentIsFull()
         {
-            var outcome = PickupJudge.Judge(PickupSpec.ReserveAmmo(15), Armed(rifleReserve: 90, handgunReserve: 35, current: Rifle));
+            var outcome = PickupJudge.Judge(PickupSpec.ReserveAmmo(15), Armed(rifleReserve: 90, handgunReserve: 35, current: _rifle));
 
-            Assert.That(outcome.WeaponId, Is.EqualTo(Handgun));
+            Assert.That(outcome.WeaponId, Is.EqualTo(_handgun));
             Assert.That(outcome.ReserveAmmo, Is.EqualTo(5));
         }
 
         [Test]
         public void AmmoForANamedWeaponGoesOnlyToIt()
         {
-            Assert.That(PickupJudge.Judge(PickupSpec.ReserveAmmo(15, Handgun), Armed(current: Rifle)).WeaponId, Is.EqualTo(Handgun));
-            Assert.That(PickupJudge.Judge(PickupSpec.ReserveAmmo(15, Launcher), Armed()).Rejection, Is.EqualTo(PickupRejection.NoWeapon));
-            Assert.That(PickupJudge.Judge(PickupSpec.ReserveAmmo(15, Rifle), Armed(rifleReserve: 90)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
+            Assert.That(PickupJudge.Judge(PickupSpec.ReserveAmmo(15, _handgun), Armed(current: _rifle)).WeaponId, Is.EqualTo(_handgun));
+            Assert.That(PickupJudge.Judge(PickupSpec.ReserveAmmo(15, _launcher), Armed()).Rejection, Is.EqualTo(PickupRejection.NoWeapon));
+            Assert.That(PickupJudge.Judge(PickupSpec.ReserveAmmo(15, _rifle), Armed(rifleReserve: 90)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
         }
 
         [Test]
@@ -189,7 +189,7 @@ namespace Fps.Core.Tests
         {
             Assert.Throws<ArgumentException>(() => PickupSpec.Weapon(null, 0));
             Assert.Throws<ArgumentException>(() => PickupSpec.Weapon(string.Empty, 0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.Weapon(Rifle, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.Weapon(_rifle,-1));
             Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.ReserveAmmo(0));
             Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.Health(0));
             Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.Armor(-5));
@@ -207,9 +207,9 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new PickupCollector(null, -1, 100));
             Assert.Throws<ArgumentOutOfRangeException>(() => Healthy().WithArmor(10, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => Healthy().WithArmor(11, 10));
-            Assert.Throws<ArgumentException>(() => Healthy().WithWeapons(new[] { new PickupWeaponState(Rifle, 0, 0, false) }, Handgun));
+            Assert.Throws<ArgumentException>(() => Healthy().WithWeapons(new[] { new PickupWeaponState(_rifle, 0, 0, false) }, _handgun));
             Assert.Throws<ArgumentException>(() => new PickupWeaponState(string.Empty, 0, 0, false));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new PickupWeaponState(Rifle, -1, 0, false));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PickupWeaponState(_rifle, -1, 0, false));
             Assert.Throws<ArgumentNullException>(() => PickupJudge.Judge(null, Healthy()));
             Assert.Throws<ArgumentNullException>(() => PickupJudge.Judge(PickupSpec.Health(1), null));
             Assert.Throws<ArgumentException>(() => PickupOutcome.Rejected(PickupKind.Health, PickupRejection.None));
@@ -218,10 +218,10 @@ namespace Fps.Core.Tests
         [Test]
         public void WeaponStateReadsTheWeapon()
         {
-            var spec = new WeaponSpec(Rifle, null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 10, 100f, DamageFalloff.None);
+            var spec = new WeaponSpec(_rifle, null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 10, 100f, DamageFalloff.None);
             var state = PickupWeaponState.Of(new Weapon(spec, 30, 60));
 
-            Assert.That(state.WeaponId, Is.EqualTo(Rifle));
+            Assert.That(state.WeaponId, Is.EqualTo(_rifle));
             Assert.That(state.ReserveAmmo, Is.EqualTo(60));
             Assert.That(state.MaxReserveAmmo, Is.EqualTo(90));
             Assert.That(state.Room, Is.EqualTo(30));

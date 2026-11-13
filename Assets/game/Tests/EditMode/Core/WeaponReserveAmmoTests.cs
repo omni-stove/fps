@@ -6,11 +6,11 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class WeaponReserveAmmoTests
     {
-        private const string Rifle = "00000000-0000-4000-8000-000000000001";
+        private const string _rifle = "00000000-0000-4000-8000-000000000001";
 
         private static WeaponSpec Spec(int reserveAmmo = 90)
         {
-            return new WeaponSpec(Rifle, null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, reserveAmmo, 0.1f, 2f, 10, 100f, DamageFalloff.None);
+            return new WeaponSpec(_rifle, null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, reserveAmmo, 0.1f, 2f, 10, 100f, DamageFalloff.None);
         }
 
         [Test]

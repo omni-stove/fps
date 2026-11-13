@@ -1253,7 +1253,8 @@ namespace Fps.Core.Tests
         [Test]
         public void FriendlyFireOnAllyDownedPlayerBleedsOutAsADeathOnly()
         {
-            var session = CreateTwoOnTwo(DownedRules(FriendlyFire.On));
+            // 出血で倒れた回の Tick 全体がリスポーン待ちに数えられるので、出現が同じ Tick に出ないよう長く待たせる
+            var session = CreateTwoOnTwo(DownedRules(FriendlyFire.On), respawnSeconds: 100f);
 
             Assert.That(session.ApplyDamage(3, 1, _maxHealth), Is.EqualTo(DamageOutcome.Downed));
             session.Tick(_bleedoutSeconds);
@@ -1344,7 +1345,8 @@ namespace Fps.Core.Tests
         [Test]
         public void BleedoutAfterTheDownerLeftCountsOnlyTheDeath()
         {
-            var session = CreateTwoOnTwo(DownedRules());
+            // 出血で倒れた回の Tick 全体がリスポーン待ちに数えられるので、出現が同じ Tick に出ないよう長く待たせる
+            var session = CreateTwoOnTwo(DownedRules(), respawnSeconds: 100f);
             session.ApplyDamage(2, 1, _maxHealth);
 
             session.Leave(2);

@@ -1,0 +1,69 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+
+namespace Fps.Core
+{
+    /// <summary>ガーディアンの HUD の行と <c>[Mode]</c> のログ (<see cref="GuardianRespawn"/> のリーダーの生死)。</summary>
+    public static class GuardianText
+    {
+        public const string Alive = "生存";
+        public const string Fallen = "撃破 (復活不可)";
+
+        /// <summary>自分がリーダーのときに出す行。</summary>
+        public const string YouAreLeader = "あなたがリーダー";
+
+        /// <summary>自分の陣営のリーダーが倒れていて、自分も倒れているときに出す行。</summary>
+        public const string NoRespawnLeaderDown = "リーダーが倒れたため復活なし";
+
+        /// <example><c>Leader(Side.Alpha, false)</c> は <c>ALPHA リーダー 生存</c></example>
+        public static string Leader(Side side, bool fallen)
+        {
+            return ModeHudText.SideName(side) + " リーダー " + (fallen ? Fallen : Alive);
+        }
+
+        /// <summary>
+        /// リーダーのいる陣営ごとの生死の行。ownSide があればその行を先頭に、残りは陣営の ID の昇順に並べる。
+        /// </summary>
+        public static IReadOnlyList<string> Leaders(GuardianRespawn leaders, Side? ownSide)
+        {
+            if (leaders == null)
+            {
+                throw new ArgumentNullException(nameof(leaders));
+            }
+
+            var lines = new List<string>();
+            foreach (var side in leaders.LeaderSides)
+            {
+                var line = Leader(side, leaders.HasLeaderFallen(side));
+                if (side == ownSide)
+                {
+                    lines.Insert(0, line);
+                }
+                else
+                {
+                    lines.Add(line);
+                }
+            }
+
+            return lines;
+        }
+
+        /// <example><c>[Mode] leader side=1 player=4</c></example>
+        public static string LeaderChosenLog(Side side, int playerId)
+        {
+            return ModeLog.Tag + " leader side=" + Number(side.Id) + " player=" + Number(playerId);
+        }
+
+        /// <example><c>[Mode] leader-down side=1 player=4 respawn=off</c></example>
+        public static string LeaderFellLog(Side side, int playerId)
+        {
+            return ModeLog.Tag + " leader-down side=" + Number(side.Id) + " player=" + Number(playerId) + " respawn=off";
+        }
+
+        private static string Number(int value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+}

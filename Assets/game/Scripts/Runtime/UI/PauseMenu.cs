@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
 namespace Fps.Runtime
@@ -23,8 +22,8 @@ namespace Fps.Runtime
     /// 閉じたときは自分が止めたものだけを有効に戻す。
     /// </para>
     /// <para>
-    /// 「メニューに戻る」は、メインメニューへの遷移がまだ無いので今のシーンを読み込み直す。読み込む前に <see cref="ReturningToMenu"/> を
-    /// 呼ぶので、オンラインはそこで接続を切る。「設定」は <see cref="OpenSettings"/> を渡すまで押せない。
+    /// 「メニューに戻る」は <see cref="MenuNavigator.ReturnToMenu"/> でメインメニューへ戻る。オンラインの接続は NetBootstrap が
+    /// <see cref="MenuNavigator.ReturningToMenu"/> で切る。「設定」は <see cref="OpenSettings"/> を渡すまで押せない。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -105,12 +104,6 @@ namespace Fps.Runtime
 
         /// <summary>閉じたとき。</summary>
         public event Action Closed;
-
-        /// <summary>
-        /// 「メニューに戻る」でシーンを離れる直前 (閉じて時間と入力を戻した後)。オンラインはここで接続を切る。
-        /// 購読先が投げても、ログに出してシーンは離れる。
-        /// </summary>
-        public event Action ReturningToMenu;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay()
@@ -212,37 +205,26 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// メニューに戻る。閉じて時間と入力を戻し、<see cref="ReturningToMenu"/> を呼んでから、今のシーンを読み込み直す
-        /// (メインメニューへの遷移ができたらそちらに差し替える)。Play 中にのみ呼べる。
+        /// メインメニューへ戻る (<see cref="MenuNavigator.ReturnToMenu"/>)。閉じて時間と入力を戻してから遷移する。
+        /// メニューのシーンがビルドに無ければ false で、閉じたまま今のシーンに留まる。Play 中にのみ呼べる。
         /// </summary>
         /// <exception cref="InvalidOperationException">Play 中でない。</exception>
-        public void ReturnToMenu()
+        public bool ReturnToMenu()
         {
             if (!Application.isPlaying)
             {
                 throw new InvalidOperationException("PauseMenu.ReturnToMenu can only leave the scene in Play mode");
             }
 
+            // シーンの読み込みは次のフレームまで終わらないので、続けて押されても遷移を重ねない
             if (_leaving)
             {
-                return;
+                return true;
             }
 
-            var scene = SceneManager.GetActiveScene();
-            if (scene.buildIndex < 0)
-            {
-                Debug.LogError(
-                    $"{LogTag} scene '{scene.path}' is not in the build settings, so it cannot be reloaded to return to the menu; run Fps.Editor.BuildSceneList",
-                    this);
-                return;
-            }
-
-            _leaving = true;
             Close();
-            Raise(ReturningToMenu, nameof(ReturningToMenu));
-
-            Debug.Log($"{LogTag} returning to the menu: reloading '{scene.path}' (there is no main menu to go to yet)", this);
-            SceneManager.LoadScene(scene.buildIndex);
+            _leaving = MenuNavigator.ReturnToMenu();
+            return _leaving;
         }
 
         protected override void OnBound(VisualElement element)

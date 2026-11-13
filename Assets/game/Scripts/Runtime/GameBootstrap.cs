@@ -419,6 +419,38 @@ namespace Fps.Runtime
 
             WireAds(ads, weapon, mover);
             WireSpreadAndRecoil(weapon, ads, mover, look);
+            WireDodge(mover, weapon, ads);
+        }
+
+        /// <summary>
+        /// 回避の間は撃たせず、覗き込みを解かせる (転がり始めたときと、転がっている間に覗き込もうとしたとき)。
+        /// 回避を使うかはルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら転がらないので、ここは常に配線しておく。
+        /// </summary>
+        private static void WireDodge(PlayerController mover, WeaponController weapon, AimDownSights ads)
+        {
+            if (mover == null)
+            {
+                return;
+            }
+
+            if (weapon != null)
+            {
+                weapon.FireBlocker = () => mover != null && mover.IsDodging;
+            }
+
+            if (ads == null)
+            {
+                return;
+            }
+
+            mover.DodgeStarted += _ => ads.Release();
+            ads.AimingChanged += aiming =>
+            {
+                if (aiming && mover != null && mover.IsDodging)
+                {
+                    ads.Release();
+                }
+            };
         }
 
         /// <summary>

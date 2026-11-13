@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fps.Core;
+using Fps.Runtime;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -16,7 +17,12 @@ namespace Fps.Net
     /// EOS を要求されても認証情報が無ければ UDP に切り替え、<see cref="CredentialsMissingLog"/> を出す。
     /// <c>-lobby create|join</c> なら EOS にログインしてロビーを作る (または探して入る) までを <see cref="LobbyLauncher"/> に任せ、
     /// オーナーは EOS の Host、メンバーはオーナーへ接続するクライアントとして起動する。
+    /// UDP のサーバーに <c>-register-lobby &lt;公開アドレス:ポート&gt;</c> が付いていれば、待ち受けを始めたところで
+    /// <see cref="ServerLobbyRegistrar"/> に EOS のロビーへ登録させ、接続人数を知らせ続け、終了時にロビーを閉じる。
     /// 失敗はすべて <c>[Net]</c> か <c>[Lobby]</c> 付きのエラーログに出し、batchmode のプレイヤーでは終了コード付きで終了する。
+    /// メインメニューの「ロビーを作る／入る」から来たときは、<see cref="MenuNavigator.TakeLobbyRequest"/> の設定を <c>-lobby</c> と同じに扱い
+    /// (起動引数が優先、<see cref="NetStartup.ChooseLobby"/>)、失敗や Host からの切断ではその理由を添えてメニューへ戻る。
+    /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class NetBootstrap : MonoBehaviour
@@ -34,6 +40,12 @@ namespace Fps.Net
 
         /// <summary>EOS を要求されたが認証情報が揃わず、UDP に切り替えたときのログ。</summary>
         public const string CredentialsMissingLog = "[Net] EOS credentials missing, using UDP";
+
+        /// <summary>終了の前に、登録したロビーを閉じ終えるのを待つ最長の秒数。</summary>
+        public const float ServerLobbyCloseWaitSeconds = 3f;
+
+        /// <summary><see cref="QuitIfHeadlessPlayer"/> が頼んだ終了コード。終了をロビーの片付けで待たせた後の終了に使う。</summary>
+        private static int _requestedExitCode;
 
         [SerializeField]
         [Tooltip("接続したクライアントごとに生成するプレハブ (NetworkObject 必須)")]
@@ -57,9 +69,16 @@ namespace Fps.Net
         private EosCredentials _lobbyCredentials;
         private LobbyService _lobby;
         private LobbyLauncher _lobbyLauncher;
+        private ServerLobbyRegistrar _serverLobby;
+        private readonly HashSet<ulong> _remoteClients = new HashSet<ulong>();
+        private bool _serverLobbyClosing;
+        private bool _serverLobbyClosed;
+        private float _serverLobbyCloseDeadline;
+        private bool _quitHeldForServerLobby;
         private bool _connectedToServer;
         private bool _failed;
-        private bool _leaving;
+        private bool _startedFromMenu;
+        private bool _returningToMenu;
         private float _nextStatusLogTime;
 
         public GameObject PlayerPrefab
@@ -120,6 +139,10 @@ namespace Fps.Net
 
             var isDedicatedServer = NetStartup.IsDedicatedServerBuild;
 
+            // 起動引数が不正で先に止まっても、メニューで選んだ要求を次の起動まで持ち越さないよう最初に受け取る
+            var menuLobby = MenuNavigator.TakeLobbyRequest();
+            MenuNavigator.ReturningToMenu += HandleReturningToMenu;
+
             // サーバーとクライアントを同じマシンで並べて動かすので、裏に回っても止めない
             Application.runInBackground = true;
             if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, isDedicatedServer))
@@ -139,6 +162,13 @@ namespace Fps.Net
             {
                 Fail(ExitInvalidArguments, "[Lobby] invalid arguments: " + lobbyError);
                 return;
+            }
+
+            lobbyOptions = NetStartup.ChooseLobby(lobbyOptions, args, isDedicatedServer, menuLobby);
+            _startedFromMenu = menuLobby.IsRequested && ReferenceEquals(lobbyOptions, menuLobby);
+            if (_startedFromMenu)
+            {
+                Debug.Log("[Lobby] " + LobbyLaunchOptions.CommandName(lobbyOptions.Command) + " requested from the menu (" + lobbyOptions + ")");
             }
 
             if (!lobbyOptions.IsRequested
@@ -173,23 +203,62 @@ namespace Fps.Net
                 return;
             }
 
-            ConfigureNetwork(plan);
+            if (ConfigureNetwork(plan) && _options.RegistersLobby)
+            {
+                PrepareServerLobby();
+            }
         }
 
         /// <summary>ロビーのサービスを用意する。EOS の認証情報が無ければ UDP には切り替えず失敗にする。</summary>
         private void PrepareLobby(LobbyLaunchOptions lobbyOptions)
         {
-            if (!EosCredentialSource.TryLoad(out var credentials, out var missing, out var loadError))
+            if (!TryCreateLobbyService(
+                    LobbyLaunchOptions.LobbyFlag, LobbyLaunchOptions.BucketId(Application.version), null, out _lobbyCredentials))
+            {
+                return;
+            }
+
+            _lobby.Removed += HandleLobbyRemoved;
+            _lobbyLauncher = new LobbyLauncher(_lobby, lobbyOptions);
+        }
+
+        /// <summary>
+        /// <c>-register-lobby</c> のために、サーバー用の表示名でロビーのサービスと <see cref="ServerLobbyRegistrar"/> を用意する。
+        /// 登録は待ち受けを始めてから行う (<see cref="HandleServerStarted"/>)。
+        /// </summary>
+        private void PrepareServerLobby()
+        {
+            if (!TryCreateLobbyService(
+                    NetLaunchOptions.RegisterLobbyFlag, ServerLobby.BucketId(Application.version), ServerLobby.DisplayName, out _))
+            {
+                return;
+            }
+
+            _serverLobby = new ServerLobbyRegistrar(_lobby, _options.RegisterLobbyEndpoint, Application.version);
+            if (!Application.isEditor)
+            {
+                // エディタでは Play Mode を止めたときの OnDestroy で閉じるので、終了を待たせるのはプレイヤーだけにする
+                Application.wantsToQuit += HoldQuitUntilServerLobbyClosed;
+            }
+        }
+
+        /// <summary>
+        /// EOS の認証情報を読み、ロビーのバックエンドから <see cref="_lobby"/> を作る。
+        /// 認証情報が無ければ UDP には切り替えず、<paramref name="flag"/> の名前で失敗にして false を返す。
+        /// </summary>
+        private bool TryCreateLobbyService(string flag, string bucketId, string displayName, out EosCredentials credentials)
+        {
+            if (!EosCredentialSource.TryLoad(out credentials, out var missing, out var loadError))
             {
                 Fail(ExitMisconfigured, "[Lobby] cannot load EOS credentials: " + loadError);
-                return;
+                return false;
             }
 
             if (credentials == null)
             {
-                Fail(ExitMisconfigured, "[Lobby] " + LobbyLaunchOptions.LobbyFlag + " needs EOS credentials; missing "
+                Fail(ExitMisconfigured, "[Lobby] " + flag + " needs EOS credentials; missing "
                     + string.Join(", ", missing) + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")");
-                return;
+                return false;
             }
 
             var factory = NetTransportFactories.EosLobby;
@@ -197,23 +266,21 @@ namespace Fps.Net
             {
                 Fail(ExitMisconfigured,
                     "[Lobby] the EOS lobby is not in this build (is com.playeveryware.eos installed and Fps.NetEos compiled?)");
-                return;
+                return false;
             }
 
-            var backend = factory(credentials);
+            var backend = factory(credentials, displayName);
             if (backend == null)
             {
                 Fail(ExitMisconfigured, "[Lobby] the EOS lobby factory returned no backend");
-                return;
+                return false;
             }
 
-            _lobbyCredentials = credentials;
-            _lobby = new LobbyService(backend, LobbyLaunchOptions.BucketId(Application.version));
-            _lobby.Removed += HandleLobbyRemoved;
-            _lobbyLauncher = new LobbyLauncher(_lobby, lobbyOptions);
+            _lobby = new LobbyService(backend, bucketId);
 
             // EOS のプラットフォームも終了時に解放されるので、それより先に (ここで先に登録して) ロビーから出る要求を出す
             Application.quitting += LeaveLobbyOnQuit;
+            return true;
         }
 
         /// <summary>NetworkManager と transport を組み立て、イベントを購読する。失敗したら false。</summary>
@@ -323,55 +390,6 @@ namespace Fps.Net
             }
         }
 
-        /// <summary>
-        /// 自分から試合を抜ける (ポーズ画面の「メニューに戻る」)。ロビーから出て NetworkManager を止め、この GameObject
-        /// (NetworkManager が付いている) ごと消す。消さずにシーンを読み込み直すと、残った NetworkManager を見た新しい NetBootstrap が
-        /// 重複として自分を消してしまう。Host が抜けると試合はほかの参加者ごと終わる。既に抜けていれば何もしない。
-        /// </summary>
-        public void Leave()
-        {
-            if (_leaving)
-            {
-                return;
-            }
-
-            _leaving = true;
-            Debug.Log("[Net] leaving the match by request");
-            _lobby?.LeaveLobby();
-            if (_manager != null && _manager.IsListening && !_manager.ShutdownInProgress)
-            {
-                _manager.Shutdown();
-            }
-
-            Destroy(gameObject);
-        }
-
-        /// <summary>
-        /// 今の NetworkManager (<see cref="NetworkManager.Singleton"/>) を組み立てた NetBootstrap から <see cref="Leave"/> する。
-        /// 無ければ NetworkManager だけ止める。
-        /// </summary>
-        public static void LeaveCurrent()
-        {
-            var manager = NetworkManager.Singleton;
-            if (manager == null)
-            {
-                return;
-            }
-
-            var bootstrap = manager.GetComponent<NetBootstrap>();
-            if (bootstrap != null)
-            {
-                bootstrap.Leave();
-                return;
-            }
-
-            Debug.LogWarning("[Net] the NetworkManager has no NetBootstrap; shutting it down without leaving a lobby");
-            if (manager.IsListening && !manager.ShutdownInProgress)
-            {
-                manager.Shutdown();
-            }
-        }
-
         private void HandleLobbyFailed(string reason)
         {
             Fail(ExitLobbyFailed, "[Lobby] " + reason);
@@ -385,7 +403,64 @@ namespace Fps.Net
 
         private void LeaveLobbyOnQuit()
         {
+            CloseServerLobby();
             _lobby?.LeaveLobby();
+        }
+
+        private void HandleServerLobbyFailed(string reason)
+        {
+            Fail(ExitLobbyFailed, "[Lobby] " + reason);
+        }
+
+        /// <summary>登録したロビーを閉じ始める。閉じ終えるか <see cref="ServerLobbyCloseWaitSeconds"/> が過ぎるまで終了を待たせる。</summary>
+        private void CloseServerLobby()
+        {
+            if (_serverLobby == null || _serverLobbyClosing)
+            {
+                return;
+            }
+
+            _serverLobbyClosing = true;
+            _serverLobbyCloseDeadline = Time.unscaledTime + ServerLobbyCloseWaitSeconds;
+            _serverLobby.Close(() => _serverLobbyClosed = true);
+        }
+
+        /// <summary>
+        /// 終了の要求を、登録したロビーを閉じ終えるまで待たせる。閉じる要求を出してすぐ EOS のプラットフォームを解放すると
+        /// 要求が届かず、EOS が接続切れに気づくまで、つながらないサーバーのロビーが検索に残る。
+        /// </summary>
+        private bool HoldQuitUntilServerLobbyClosed()
+        {
+            CloseServerLobby();
+            if (_serverLobby == null || _serverLobbyClosed || Time.unscaledTime >= _serverLobbyCloseDeadline)
+            {
+                return true;
+            }
+
+            if (!_quitHeldForServerLobby)
+            {
+                Debug.Log("[Lobby] closing the server lobby before quitting (up to " + ServerLobbyCloseWaitSeconds + "s)");
+            }
+
+            _quitHeldForServerLobby = true;
+            return false;
+        }
+
+        /// <summary>待たせていた終了を、ロビーを閉じ終えたか待つ期限が過ぎたところで行う。</summary>
+        private void QuitWhenServerLobbyClosed()
+        {
+            if (!_quitHeldForServerLobby || (!_serverLobbyClosed && Time.unscaledTime < _serverLobbyCloseDeadline))
+            {
+                return;
+            }
+
+            _quitHeldForServerLobby = false;
+            if (!_serverLobbyClosed)
+            {
+                Debug.LogWarning("[Lobby] the server lobby did not close within " + ServerLobbyCloseWaitSeconds + "s; quitting anyway");
+            }
+
+            Application.Quit(_requestedExitCode);
         }
 
         private void StartNetwork()
@@ -431,6 +506,8 @@ namespace Fps.Net
         {
             // ロビーが決まった後もメンバーの出入りを受け取るため、終わるまで進め続ける
             _lobbyLauncher?.Tick(Time.unscaledTime);
+            _serverLobby?.Tick(Time.unscaledTime);
+            QuitWhenServerLobbyClosed();
 
             if (_manager == null || !_manager.IsServer || Time.unscaledTime < _nextStatusLogTime)
             {
@@ -443,13 +520,18 @@ namespace Fps.Net
 
         private void OnDestroy()
         {
+            MenuNavigator.ReturningToMenu -= HandleReturningToMenu;
+
             if (_lobby != null)
             {
                 Application.quitting -= LeaveLobbyOnQuit;
+                Application.wantsToQuit -= HoldQuitUntilServerLobbyClosed;
+                CloseServerLobby();
                 _lobby.Removed -= HandleLobbyRemoved;
                 _lobby.Dispose();
                 _lobby = null;
                 _lobbyLauncher = null;
+                _serverLobby = null;
             }
 
             if (_manager == null)
@@ -467,6 +549,12 @@ namespace Fps.Net
         {
             Debug.Log("[Net] server listening on " + _options.Endpoint);
             SpawnMatch();
+
+            // 待ち受けていないサーバーをクライアントに見つけさせないよう、試合を始められてから登録する
+            if (!_failed && _serverLobby != null)
+            {
+                _serverLobby.Begin(Time.unscaledTime, HandleServerLobbyFailed);
+            }
         }
 
         /// <summary>試合の進行役をサーバーで生成して Spawn する。クライアントには Netcode が複製を作る。</summary>
@@ -505,6 +593,12 @@ namespace Fps.Net
             if (_manager.IsServer)
             {
                 Debug.Log("[Net] client connected id=" + clientId + " clients=" + _manager.ConnectedClientsIds.Count);
+                if (clientId != NetworkManager.ServerClientId)
+                {
+                    _remoteClients.Add(clientId);
+                    _serverLobby?.SetPlayers(_remoteClients.Count);
+                }
+
                 return;
             }
 
@@ -519,14 +613,18 @@ namespace Fps.Net
             if (_manager.IsServer)
             {
                 Debug.Log("[Net] client disconnected id=" + clientId + reason);
+                // 切断のコールバックの時点で ConnectedClientsIds から外れているかは Netcode の版で違うので、自分で数える
+                if (_remoteClients.Remove(clientId))
+                {
+                    _serverLobby?.SetPlayers(_remoteClients.Count);
+                }
+
                 return;
             }
 
-            // 自分から抜けた (Leave) ときの切断は失敗ではない
-            if (_leaving)
+            // メニューへ戻るために自分で切ったときの通知なので、失敗としては扱わない
+            if (_returningToMenu)
             {
-                _connectedToServer = false;
-                Debug.Log("[Net] disconnected from server id=" + clientId + " (left by request)");
                 return;
             }
 
@@ -542,6 +640,7 @@ namespace Fps.Net
             // Host がいなくなったロビーに残っても意味が無い
             _lobby?.LeaveLobby();
             QuitIfHeadlessPlayer(ExitDisconnected);
+            ReturnToMenuIfStartedThere("Disconnected from the host." + reason);
         }
 
         private void HandleTransportFailure()
@@ -565,8 +664,48 @@ namespace Fps.Net
             }
 
             // 試合を始められなかったので、作った・入ったロビーを残さない
+            CloseServerLobby();
             _lobby?.LeaveLobby();
             QuitIfHeadlessPlayer(exitCode);
+            ReturnToMenuIfStartedThere(message);
+        }
+
+        /// <summary>
+        /// メニューの「ロビーを作る／入る」から来たときだけ、理由を添えてメニューへ戻る。
+        /// 起動引数で来たときは今までどおりこのシーンに留まる (batchmode では先に終了している)。
+        /// </summary>
+        private void ReturnToMenuIfStartedThere(string reason)
+        {
+            if (!_startedFromMenu || _returningToMenu
+                || NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
+            {
+                return;
+            }
+
+            // メニューがビルドに無ければ MenuNavigator がエラーログを出し、このシーンに留まる
+            MenuNavigator.ReturnToMenu(reason);
+        }
+
+        /// <summary>
+        /// メニューへ戻る直前に呼ばれる。NetworkManager は DontDestroyOnLoad でシーンをまたいで残り、次に NetTest を読んだときの
+        /// NetBootstrap が重複として消えてしまうので、接続を切ってこの GameObject ごと消す。ロビーは OnDestroy の Dispose で出る。
+        /// </summary>
+        private void HandleReturningToMenu()
+        {
+            if (_returningToMenu)
+            {
+                return;
+            }
+
+            _returningToMenu = true;
+            _failed = true;
+            Debug.Log("[Net] leaving for the menu; shutting down the network");
+            if (_manager != null && _manager.IsListening && !_manager.ShutdownInProgress)
+            {
+                _manager.Shutdown();
+            }
+
+            Destroy(gameObject);
         }
 
         /// <summary>batchmode のプレイヤーと専用サーバーだけ終了する。エディタでは Play Mode を止めずにログだけ残す。</summary>
@@ -574,6 +713,7 @@ namespace Fps.Net
         {
             if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
             {
+                _requestedExitCode = exitCode;
                 Application.Quit(exitCode);
             }
         }

@@ -583,6 +583,35 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void FireBlockerStopsShotsWithoutSpendingAmmo()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var blocked = true;
+            var fired = 0;
+            _controller.Fired += _ => fired++;
+            _controller.FireBlocker = () => blocked;
+
+            Assert.That(_controller.IsFireBlocked, Is.True);
+            Assert.That(_controller.Fire(), Is.False);
+            Assert.That(_controller.PullTrigger(true, true), Is.False);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize));
+            Assert.That(_controller.ShotCount, Is.EqualTo(0));
+            Assert.That(fired, Is.EqualTo(0));
+
+            blocked = false;
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(fired, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void FireBlockerIsNullByDefault()
+        {
+            Assert.That(_controller.FireBlocker, Is.Null);
+            Assert.That(_controller.IsFireBlocked, Is.False);
+        }
+
+        [Test]
         public void AWeaponWithoutSpreadOrRecoilShootsStraightAndLeavesTheViewAlone()
         {
             _rifle.HipSpreadDegrees = 0f;

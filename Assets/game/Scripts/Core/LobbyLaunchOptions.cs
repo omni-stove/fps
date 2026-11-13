@@ -53,6 +53,7 @@ namespace Fps.Core
             NetLaunchOptions.AddressFlag,
             NetLaunchOptions.PortFlag,
             NetLaunchOptions.EosServerFlag,
+            NetLaunchOptions.RegisterLobbyFlag,
         };
 
         /// <summary>ロビーを使わない設定。</summary>
@@ -296,13 +297,19 @@ namespace Fps.Core
         /// <param name="version">アプリのバージョン。空なら "0"。</param>
         public static string BucketId(string version)
         {
+            return BucketPrefix + BucketVersion(version);
+        }
+
+        /// <summary>バケット ID に入れる版。空なら "0"、長すぎれば <see cref="MaxBucketVersionLength"/> 文字で切る。</summary>
+        internal static string BucketVersion(string version)
+        {
             var trimmed = string.IsNullOrWhiteSpace(version) ? "0" : version.Trim();
             if (trimmed.Length > MaxBucketVersionLength)
             {
                 trimmed = trimmed.Substring(0, MaxBucketVersionLength);
             }
 
-            return BucketPrefix + trimmed;
+            return trimmed;
         }
 
         /// <summary>ログ向けの小文字の操作名 (none / create / join)。</summary>

@@ -1,0 +1,77 @@
+/* メインメニューの見た目。基準解像度は 1920x1080 (MainMenuScreen の PanelSettings が画面サイズに合わせて拡縮する)。 */
+
+.menu {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    padding-left: 160px;
+    background-color: rgba(10, 12, 16, 0.85);
+}
+
+.menu__title {
+    margin: 0 0 48px 0;
+    padding: 0;
+    font-size: 96px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.menu__buttons {
+    width: 560px;
+}
+
+.menu__button {
+    height: 64px;
+    margin: 0 0 12px 0;
+    padding: 0 24px;
+    border-width: 0;
+    border-left-width: 6px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 28px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.menu__button:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+/* ゲームパッド・キーボードで選んでいるボタン。マウスで指したボタンにもフォーカスを移すので、どの入力でも同じ見た目になる。 */
+.menu__button:focus {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.2);
+    color: rgb(255, 255, 255);
+}
+
+.menu__button:active {
+    background-color: rgba(255, 196, 64, 0.35);
+}
+
+.menu__button:disabled {
+    opacity: 0.4;
+}
+
+.menu__notice {
+    margin: 32px 0 0 0;
+    padding: 0;
+    max-width: 960px;
+    font-size: 24px;
+    color: rgb(255, 196, 64);
+    white-space: normal;
+}
+
+.menu__settings-slot {
+    position: absolute;
+    left: 760px;
+    top: 160px;
+    right: 160px;
+    bottom: 160px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.6);
+}

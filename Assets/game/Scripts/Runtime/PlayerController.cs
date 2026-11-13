@@ -15,7 +15,8 @@ namespace Fps.Runtime
     /// 立つときは立った高さのカプセルが自分以外のコライダーに重ならないときだけ立ち上がる。
     /// 参照はコードで解決するので Inspector の配線は要らない: CharacterController と <see cref="FirstPersonLook"/> は同じ
     /// GameObject、目は <see cref="ViewRig.FindEye"/> (無ければ子のカメラ)、入力はプロジェクト全体のアクション
-    /// (<see cref="InputSystem.actions"/>) の Move / Sprint / Crouch / Jump。解決できなければエラーを出して自分を無効にする。
+    /// (<see cref="InputSystem.actions"/>) の Move / Sprint / Crouch / Jump。解決できなければエラーを出して自分を無効にする
+    /// (Dodge は無くても警告だけで、回避を入力からできなくなる)。
     /// Sprint は <see cref="ControlSettings"/> のモード (押している間／押すたびに切り替え) で <see cref="SprintInput"/> が解釈し、
     /// 射撃・死亡・リスポーンでの解除は <see cref="BindSprintRelease"/> で購読する。
     /// 着地と落下ダメージ (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs) は、<see cref="Tick"/> から呼ぶメソッドとして別のファイルに置く。
@@ -29,6 +30,7 @@ namespace Fps.Runtime
         public const string SprintActionPath = InputActionPaths.Sprint;
         public const string CrouchActionPath = InputActionPaths.Crouch;
         public const string JumpActionPath = InputActionPaths.Jump;
+        public const string DodgeActionPath = InputActionPaths.Dodge;
 
         public const string LogTag = "[Player]";
 
@@ -239,6 +241,7 @@ namespace Fps.Runtime
         {
             _isLive = false;
             ReleaseActions();
+            CancelDodge();
         }
 
         /// <summary>プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。</summary>
@@ -248,6 +251,7 @@ namespace Fps.Runtime
             _enabledSprint = EnableIfNeeded(_sprintAction);
             _enabledCrouch = EnableIfNeeded(_crouchAction);
             _enabledJump = EnableIfNeeded(_jumpAction);
+            AcquireDodgeAction();
         }
 
         private void ReleaseActions()
@@ -256,11 +260,13 @@ namespace Fps.Runtime
             DisableIfOwned(_sprintAction, ref _enabledSprint);
             DisableIfOwned(_crouchAction, ref _enabledCrouch);
             DisableIfOwned(_jumpAction, ref _enabledJump);
+            ReleaseDodgeAction();
         }
 
         private void Update()
         {
             var move = _moveAction.ReadValue<Vector2>();
+            UpdateDodgeInput(move);
 
             // 押されたダッシュボタンの機器を優先し、どちらも動いていなければ直前の機器のまま。
             var device = InputDeviceKinds.Of(_sprintAction, InputDeviceKinds.Of(_moveAction, _device));
@@ -331,6 +337,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// weapon が撃ったとき、damageable が死んだとき・体力を作り直した (リスポーンした) ときにダッシュを解除するよう購読する。
+        /// 死んだとき・体力を作り直したときは回避もやめる。
         /// 前に渡したものの購読は外す。どちらも null 可 (その理由では解除しない)。
         /// </summary>
         public void BindSprintRelease(WeaponController weapon, Damageable damageable)
@@ -369,11 +376,16 @@ namespace Fps.Runtime
         private void OnDied(Damageable _)
         {
             ReleaseSprint(SprintInput.ReasonDeath);
+            CancelDodge();
         }
 
         private void OnHealthReset(Health _)
         {
             ReleaseSprint(SprintInput.ReasonRespawn);
+            CancelDodge();
+
+            // 戻った位置で、倒れる前の待ち時間に縛られずすぐ回避できるようにする。
+            _dodgeMotion?.Reset();
         }
 
         private void OnSprintChanged(SprintChange change)
@@ -400,6 +412,7 @@ namespace Fps.Runtime
             }
 
             MoveFilter?.Filter(ref move, ref sprint, ref crouch, ref jumpPressed);
+            FilterInputForDodge(ref sprint, ref crouch, ref jumpPressed);
             UpdateStance(crouch);
 
             if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out var displacement))
@@ -530,6 +543,7 @@ namespace Fps.Runtime
                 return false;
             }
 
+            ResolveDodgeAction(actions);
             return true;
         }
 
@@ -616,7 +630,9 @@ namespace Fps.Runtime
             _sprintAction = sprintAction;
             _crouchAction = crouchAction;
             _jumpAction = jumpAction;
+            CancelDodge();
             _motor = new PlayerMotor(spec);
+            _dodgeMotion = new DodgeMotion(spec);
             _stance = stance;
             _eye = eye;
             _standingEyeLocal = standingEyeLocal;

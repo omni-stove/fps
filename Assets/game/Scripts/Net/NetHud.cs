@@ -38,6 +38,10 @@ namespace Fps.Net
     /// 開始時刻と長さから求めて <see cref="HudModel.SetReloadProgress"/> に渡す。時刻は NetworkManager.LocalTime を使う。
     /// LocalTime はサーバーの時刻の尺で、今送った RPC がサーバーに着く頃を指すので、バーが「今押したらサーバーで判定される進み」になる。
     /// </para>
+    /// <para>
+    /// キルフィード (<see cref="KillFeedView"/>) の名前は、自分のクライアント Id と試合の参加者・ロードアウトで引く
+    /// <see cref="NetKillFeedNames"/> に替える。行そのものは <see cref="NetCombatFeed"/> が配る。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Hud))]
@@ -119,9 +123,8 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// オンラインのポーズ画面は時間を止めず (<see cref="PauseTimeMode.KeepRunning"/>)、「メニューに戻る」では
-        /// シーンを読み込み直す前に試合から抜ける (<see cref="NetBootstrap.LeaveCurrent"/>)。
-        /// 購読はポーズ画面と同じ GameObject の寿命なので外さない。
+        /// オンラインのポーズ画面は時間を止めない (<see cref="PauseTimeMode.KeepRunning"/>)。「メニューに戻る」での切断は
+        /// NetBootstrap が <see cref="MenuNavigator.ReturningToMenu"/> で行う。
         /// </summary>
         internal static void ConfigurePauseMenu(PauseMenu pauseMenu)
         {
@@ -131,8 +134,6 @@ namespace Fps.Net
             }
 
             pauseMenu.TimeMode = PauseTimeMode.KeepRunning;
-            pauseMenu.ReturningToMenu -= NetBootstrap.LeaveCurrent;
-            pauseMenu.ReturningToMenu += NetBootstrap.LeaveCurrent;
         }
 
         /// <summary>
@@ -178,6 +179,7 @@ namespace Fps.Net
             ShowNotice();
             ShowScoreboard();
             RefreshReloadProgressNow();
+            BindKillFeedNames();
         }
 
         /// <summary>
@@ -236,6 +238,7 @@ namespace Fps.Net
             CancelRespawn();
 
             _match = match;
+            BindKillFeedNames();
             if (_match == null)
             {
                 _alphaScore = 0;
@@ -297,6 +300,16 @@ namespace Fps.Net
         }
 
         private HudModel Model => _hud.Model;
+
+        // キルフィードの Id はプレイヤー Id なので、オフラインの引き先から自分と試合で引くものに替える
+        private void BindKillFeedNames()
+        {
+            var killFeed = _hud != null ? _hud.KillFeed : null;
+            if (killFeed != null && _player != null)
+            {
+                killFeed.Names = NetKillFeedNames.For(_match, _player.OwnerClientId);
+            }
+        }
 
         private void Update()
         {

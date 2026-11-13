@@ -172,8 +172,10 @@ namespace Fps.Tests.EditMode
                     roots[0].GetComponent<GameBootstrap>().RulesDefinition,
                     Is.SameAs(range),
                     $"rerun {nameof(BootstrapSceneBuilder)}.Build to wire the range rules");
-                Assert.That(EditorBuildSettings.scenes, Is.Not.Empty);
-                Assert.That(EditorBuildSettings.scenes[0].path, Is.EqualTo(path));
+                Assert.That(
+                    Array.Exists(EditorBuildSettings.scenes, s => s.path == path && s.enabled),
+                    Is.True,
+                    $"the range is in the build; rerun {BuildSceneList.MenuPath}");
             }
             finally
             {

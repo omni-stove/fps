@@ -91,6 +91,40 @@ docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -transport 
 EOS のサーバーでは `[Net] EOS server ready id=<サーバーの ID>` が出るので、クライアントは
 `-mode client -transport eos -eos-server <サーバーの ID> -noeac` でつなぐ (EAC については [anti-cheat.md](anti-cheat.md))。
 
+### EOS のロビーに登録する
+
+UDP で待ち受けるサーバーに `-register-lobby <公開アドレス:ポート>` を付けると、EOS に Device ID でログインし、
+クライアントがサーバーを探せるロビーを作る。公開アドレスはクライアントから届く IPv4 アドレスとポート
+(`docker run -p` で公開した側の番号) で、`0.0.0.0` やホスト名は使えない。EOS の認証情報が無いと起動に失敗する。
+
+```sh
+docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -register-lobby 203.0.113.10:7777
+```
+
+ロビーは `fps-server:<版>` のバケツに、最大 8 人で作り、次の公開の属性を付ける。`-lobby join` の Host のロビー
+(`fps:<版>`) とはバケツを分けている。
+
+| 属性 | 値 |
+| --- | --- |
+| `server` | `-register-lobby` に渡したアドレスとポート |
+| `mode` | `tdm` |
+| `version` | ビルドの版 |
+| `players` | 接続しているプレイヤーの人数 (整数) |
+
+ログには次のように出る。
+
+```
+[Lobby] created id=<ロビー Id> max=8 owner=<サーバーの ID> server=203.0.113.10:7777 mode=tdm version=0.2.0 players=0
+[Lobby] registered id=<ロビー Id> server=203.0.113.10:7777 players=0
+[Lobby] players 0 -> 1
+[Lobby] updated id=<ロビー Id> players=1
+```
+
+ロビーやログインを失うと (`[Lobby] lost the server lobby ...`)、5 秒おきに作り直す。起動してから 60 秒たっても
+一度も登録できなければ、認証情報や設定の誤りとみなして終了コード 7 で終わる。一度登録できた後は試合を止めず、
+60 秒ごとにエラーを出しながら作り直しを続ける。止めるとロビーを閉じ (`[Lobby] closed id=<ロビー Id>`)、
+閉じ終えるまで最長 3 秒終了を待つ。
+
 ## CI でのリリース
 
 `v*` のタグを push すると `.github/workflows/server-image.yml` が専用サーバーをビルドし、

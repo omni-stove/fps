@@ -427,6 +427,105 @@ namespace Fps.Core.Tests
             Assert.That(session.IsAlive(2), Is.True);
         }
 
+        private static GameRules RegenRules(float regenDelaySeconds, float regenPerSecond)
+        {
+            return new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                GameRules.DefaultWaveIntervalSeconds,
+                regenDelaySeconds,
+                regenPerSecond,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                false,
+                1f);
+        }
+
+        [Test]
+        public void RegeneratesAfterDelayAndRaisesPlayerChanged()
+        {
+            var session = Create(rules: RegenRules(2f, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, 50);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+
+            session.Tick(2f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(50));
+            Assert.That(changed, Is.Empty);
+
+            session.Tick(1f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(60));
+            Assert.That(changed, Is.EqualTo(Ids(2)));
+        }
+
+        [Test]
+        public void DamageResetsRegenDelay()
+        {
+            var session = Create(rules: RegenRules(2f, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, 50);
+            session.Tick(1.5f);
+
+            session.ApplyDamage(1, 2, 10);
+            session.Tick(1.5f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(40));
+
+            session.Tick(1f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(45));
+        }
+
+        [Test]
+        public void DefaultRulesDoNotRegenerate()
+        {
+            var session = Create();
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, 40);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+
+            session.Tick(30f);
+
+            Assert.That(session.GetHealth(2), Is.EqualTo(60));
+            Assert.That(changed, Is.Empty);
+        }
+
+        [Test]
+        public void RespawnedPlayerRegeneratesWithNewHealth()
+        {
+            var session = Create(respawnSeconds: 3f, rules: RegenRules(2f, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, _maxHealth);
+            session.Tick(3.1f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(_maxHealth));
+
+            session.ApplyDamage(1, 2, 50);
+            session.Tick(2f);
+            session.Tick(1f);
+
+            Assert.That(session.GetHealth(2), Is.EqualTo(60));
+        }
+
+        [Test]
+        public void DoesNotRegenerateAfterMatchEnds()
+        {
+            var session = Create(scoreLimit: 1, rules: RegenRules(0f, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            session.ApplyDamage(2, 3, 50);
+            session.ApplyDamage(2, 1, _maxHealth);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+
+            session.Tick(10f);
+
+            Assert.That(session.GetHealth(3), Is.EqualTo(50));
+        }
+
         [Test]
         public void EndsWhenScoreLimitReached()
         {

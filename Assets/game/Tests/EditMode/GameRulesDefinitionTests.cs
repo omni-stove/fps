@@ -1,0 +1,197 @@
+using System;
+using System.Collections.Generic;
+using Fps.Core;
+using Fps.Runtime;
+using NUnit.Framework;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace Fps.Tests.EditMode
+{
+    public sealed class GameRulesDefinitionTests
+    {
+        private readonly List<Object> _created = new List<Object>();
+
+        [TearDown]
+        public void TearDown()
+        {
+            foreach (var created in _created)
+            {
+                if (created != null)
+                {
+                    Object.DestroyImmediate(created);
+                }
+            }
+
+            _created.Clear();
+        }
+
+        [Test]
+        public void DefaultsMatchGameRulesDefault()
+        {
+            var rules = NewDefinition("Default").ToRules();
+            var expected = GameRules.Default;
+
+            AssertSameRules(rules, expected);
+        }
+
+        [Test]
+        public void ToRulesCopiesEveryField()
+        {
+            var definition = NewDefinition("Custom");
+            definition.FriendlyFire = FriendlyFire.Reflect;
+            definition.RespawnMode = RespawnMode.Wave;
+            definition.WaveIntervalSeconds = 15f;
+            definition.RegenDelaySeconds = 4f;
+            definition.RegenPerSecond = 20f;
+            definition.DeathBody = DeathBody.Collapse;
+            definition.DeathCamera = DeathCamera.Killer;
+            definition.InfiniteReserve = true;
+            definition.ReserveAmmoMultiplier = 0.6f;
+
+            var rules = definition.ToRules();
+
+            Assert.That(rules.FriendlyFire, Is.EqualTo(FriendlyFire.Reflect));
+            Assert.That(rules.RespawnMode, Is.EqualTo(RespawnMode.Wave));
+            Assert.That(rules.WaveIntervalSeconds, Is.EqualTo(15f));
+            Assert.That(rules.RegenDelaySeconds, Is.EqualTo(4f));
+            Assert.That(rules.RegenPerSecond, Is.EqualTo(20f));
+            Assert.That(rules.DeathBody, Is.EqualTo(DeathBody.Collapse));
+            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Killer));
+            Assert.That(rules.InfiniteReserve, Is.True);
+            Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(0.6f));
+            Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
+        }
+
+        [Test]
+        public void CopyFromRoundTripsThroughToRules()
+        {
+            var source = new GameRules(
+                FriendlyFire.On,
+                RespawnMode.None,
+                7f,
+                2f,
+                30f,
+                DeathBody.Collapse,
+                DeathCamera.Killer,
+                true,
+                2f);
+            var definition = NewDefinition("Copied");
+
+            definition.CopyFrom(source);
+
+            AssertSameRules(definition.ToRules(), source);
+            Assert.Throws<ArgumentNullException>(() => definition.CopyFrom(null));
+        }
+
+        [TestCase("FriendlyFire")]
+        [TestCase("RespawnMode")]
+        [TestCase("WaveIntervalSeconds")]
+        [TestCase("RegenDelaySeconds")]
+        [TestCase("RegenPerSecond")]
+        [TestCase("DeathBody")]
+        [TestCase("DeathCamera")]
+        [TestCase("ReserveAmmoMultiplier")]
+        public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
+        {
+            var definition = NewBroken("BrokenRules", field);
+
+            var e = Assert.Throws<GameRulesDefinitionException>(() => definition.ToRules());
+            Assert.That(e.Message, Does.Contain("BrokenRules"));
+            Assert.That(e.InnerException, Is.InstanceOf<ArgumentException>());
+        }
+
+        [TestCase("FriendlyFire")]
+        [TestCase("WaveIntervalSeconds")]
+        [TestCase("RegenPerSecond")]
+        [TestCase("ReserveAmmoMultiplier")]
+        public void TryToRulesReportsInvalidValuesWithoutThrowing(string field)
+        {
+            var definition = NewBroken("BrokenRules", field);
+
+            Assert.That(definition.TryToRules(out var rules, out var error), Is.False);
+            Assert.That(rules, Is.Null);
+            Assert.That(error, Does.Contain("BrokenRules"));
+        }
+
+        [Test]
+        public void TryToRulesReturnsTheRulesWhenValid()
+        {
+            var definition = NewDefinition("Valid");
+            definition.RegenPerSecond = 10f;
+
+            Assert.That(definition.TryToRules(out var rules, out var error), Is.True);
+            Assert.That(error, Is.Null);
+            Assert.That(rules, Is.Not.Null);
+            Assert.That(rules.RegenPerSecond, Is.EqualTo(10f));
+        }
+
+        [Test]
+        public void AnUnnamedDefinitionStillNamesItselfInTheError()
+        {
+            var definition = NewDefinition(string.Empty);
+            definition.ReserveAmmoMultiplier = -1f;
+
+            var e = Assert.Throws<GameRulesDefinitionException>(() => definition.ToRules());
+            Assert.That(e.Message, Does.Contain("(unnamed game rules)"));
+        }
+
+        private static void AssertSameRules(GameRules actual, GameRules expected)
+        {
+            Assert.That(actual.FriendlyFire, Is.EqualTo(expected.FriendlyFire));
+            Assert.That(actual.RespawnMode, Is.EqualTo(expected.RespawnMode));
+            Assert.That(actual.WaveIntervalSeconds, Is.EqualTo(expected.WaveIntervalSeconds));
+            Assert.That(actual.RegenDelaySeconds, Is.EqualTo(expected.RegenDelaySeconds));
+            Assert.That(actual.RegenPerSecond, Is.EqualTo(expected.RegenPerSecond));
+            Assert.That(actual.DeathBody, Is.EqualTo(expected.DeathBody));
+            Assert.That(actual.DeathCamera, Is.EqualTo(expected.DeathCamera));
+            Assert.That(actual.InfiniteReserve, Is.EqualTo(expected.InfiniteReserve));
+            Assert.That(actual.ReserveAmmoMultiplier, Is.EqualTo(expected.ReserveAmmoMultiplier));
+        }
+
+        private GameRulesDefinition NewBroken(string assetName, string field)
+        {
+            var definition = NewDefinition(assetName);
+            switch (field)
+            {
+                case "FriendlyFire":
+                    definition.FriendlyFire = (FriendlyFire)99;
+                    break;
+                case "RespawnMode":
+                    definition.RespawnMode = (RespawnMode)99;
+                    break;
+                case "WaveIntervalSeconds":
+                    definition.WaveIntervalSeconds = 0f;
+                    break;
+                case "RegenDelaySeconds":
+                    definition.RegenDelaySeconds = float.NaN;
+                    break;
+                case "RegenPerSecond":
+                    definition.RegenPerSecond = float.PositiveInfinity;
+                    break;
+                case "DeathBody":
+                    definition.DeathBody = (DeathBody)99;
+                    break;
+                case "DeathCamera":
+                    definition.DeathCamera = (DeathCamera)99;
+                    break;
+                case "ReserveAmmoMultiplier":
+                    definition.ReserveAmmoMultiplier = -0.1f;
+                    break;
+                default:
+                    Assert.Fail("unknown field " + field);
+                    break;
+            }
+
+            return definition;
+        }
+
+        private GameRulesDefinition NewDefinition(string assetName)
+        {
+            var definition = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            definition.name = assetName;
+            _created.Add(definition);
+            return definition;
+        }
+    }
+}

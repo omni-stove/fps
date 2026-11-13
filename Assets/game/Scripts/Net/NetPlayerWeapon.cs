@@ -19,7 +19,9 @@ namespace Fps.Net
     /// </summary>
     /// <remarks>
     /// 武器の設定 (<see cref="WeaponSpec"/>) は <see cref="NetTeamDeathmatch"/> がロードアウトのアセット (<see cref="LoadoutDefinition"/>) から引き、
-    /// 出現・リスポーンのたびに <see cref="ServerEquip"/> で渡す。
+    /// 出現・リスポーンのたびに試合のルール (<see cref="GameRules"/>) と一緒に
+    /// <see cref="ServerEquip(IReadOnlyList{WeaponSpec}, float, GameRules)"/> で渡す。予備弾の倍率と無限予備弾はサーバーの
+    /// <see cref="ServerWeapon"/> だけが効かせ、クライアントは届いた弾数をそのまま使う。
     /// 今持っている武器の Id (<see cref="WeaponId"/>) は全員に配り、持ち主は射撃の RPC にこの Id を載せる (数値は送らない)。
     /// 射撃 1 発ぶんの消費は <see cref="NetTeamDeathmatch.ServerFire"/> が当たり判定の前に <see cref="ServerTryFire"/> で行う。
     /// <para>
@@ -104,14 +106,14 @@ namespace Fps.Net
         /// <summary>サーバーから届いた、持ち替え中かどうか。</summary>
         public bool IsSwitching => _state.Value.IsSwitching;
 
-        /// <summary>サーバーが持つ武器の並び。<see cref="ServerEquip"/> の前とクライアントでは null。</summary>
+        /// <summary>サーバーが持つ武器の並び。<see cref="ServerEquip(IReadOnlyList{WeaponSpec}, float, GameRules)"/> の前とクライアントでは null。</summary>
         public Loadout<ServerWeapon> Loadout => _loadout;
 
-        /// <summary>サーバーが持つ、今持っている武器 (持ち替え中は持ち替え先)。<see cref="ServerEquip"/> の前とクライアントでは null。</summary>
+        /// <summary>サーバーが持つ、今持っている武器 (持ち替え中は持ち替え先)。<see cref="ServerEquip(IReadOnlyList{WeaponSpec}, float, GameRules)"/> の前とクライアントでは null。</summary>
         public ServerWeapon ServerWeapon => _loadout?.Current;
 
         /// <summary>
-        /// サーバーで、今持っている武器 (持ち替え中は持ち替え先) の設定。<see cref="ServerEquip"/> の前とクライアントでは null。
+        /// サーバーで、今持っている武器 (持ち替え中は持ち替え先) の設定。<see cref="ServerEquip(IReadOnlyList{WeaponSpec}, float, GameRules)"/> の前とクライアントでは null。
         /// ダメージ・射程・連射間隔はクライアントの申告ではなくこれを使う。
         /// </summary>
         public WeaponSpec CurrentSpec => _loadout?.Current.Spec;
@@ -248,8 +250,8 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 持ち主で、サーバーにリロードを頼む。届いている状態でリロード中か持ち替え中か予備弾が無ければ送らず false。
-        /// 弾倉が満タンかどうかはサーバーが確かめる。
+        /// 持ち主で、サーバーにリロードを頼む。<see cref="ShouldRequestReload"/> が false なら送らず false。
+        /// 弾倉が満タンかどうかと予備弾が足りるかどうかはサーバーが確かめる。
         /// </summary>
         public bool RequestReload()
         {
@@ -258,14 +260,22 @@ namespace Fps.Net
                 return false;
             }
 
-            var state = _state.Value;
-            if (state.IsReloading || state.IsSwitching || state.ReserveAmmo == 0 || (_player != null && !_player.IsAlive))
+            if (!ShouldRequestReload(_state.Value, _player == null || _player.IsAlive))
             {
                 return false;
             }
 
             ReloadServerRpc();
             return true;
+        }
+
+        /// <summary>
+        /// 持ち主が届いている state でリロードを頼んでよいか。リロード中・持ち替え中・倒れているなら false。
+        /// 予備弾が 0 でも true (無限予備弾のルールならサーバーは 0 からでもリロードするので、許すかどうかはサーバーの <see cref="ServerWeapon"/> が決める)。
+        /// </summary>
+        internal static bool ShouldRequestReload(NetWeaponState state, bool isAlive)
+        {
+            return isAlive && !state.IsReloading && !state.IsSwitching;
         }
 
         /// <summary>
@@ -386,22 +396,39 @@ namespace Fps.Net
         }
 
         /// <summary>
+        /// <see cref="ServerEquip(IReadOnlyList{WeaponSpec}, float, GameRules)"/> を <see cref="GameRules.Default"/> (予備弾は有限で倍率 1) で呼ぶ。
+        /// </summary>
+        public void ServerEquip(IReadOnlyList<WeaponSpec> specs, float switchSeconds)
+        {
+            ServerEquip(specs, switchSeconds, GameRules.Default);
+        }
+
+        /// <summary>
         /// サーバーで、specs の武器をこの並びで 1 本ずつ満タンで持たせ、0 番を持った状態にする。
         /// 前の武器 (リロード中・持ち替え中を含む) は捨てる。
         /// </summary>
         /// <param name="specs">持たせる武器。1 本以上 <see cref="MaxWeaponCount"/> 本以下で、null 要素は不可。</param>
         /// <param name="switchSeconds">持ち替えにかかる秒数。0 以上の有限値。</param>
-        /// <exception cref="ArgumentNullException">specs が null。</exception>
+        /// <param name="rules">
+        /// 試合のルール。予備弾は <see cref="WeaponSpec.ReserveAmmo"/> × <see cref="GameRules.ReserveAmmoMultiplier"/> で、
+        /// <see cref="GameRules.InfiniteReserve"/> ならリロードで減らさず 0 からでもリロードできる (<see cref="ServerRefill"/> の後も同じ)。
+        /// </param>
+        /// <exception cref="ArgumentNullException">specs か rules が null。</exception>
         /// <exception cref="ArgumentException">
         /// specs が空・多すぎる・null を含む、または Id が <see cref="MaxWeaponIdBytes"/> に収まらない武器がある。
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">switchSeconds が負か有限値でない。</exception>
         /// <exception cref="InvalidOperationException">Spawn 済みのクライアントで呼んだ。</exception>
-        public void ServerEquip(IReadOnlyList<WeaponSpec> specs, float switchSeconds)
+        public void ServerEquip(IReadOnlyList<WeaponSpec> specs, float switchSeconds, GameRules rules)
         {
             if (specs == null)
             {
                 throw new ArgumentNullException(nameof(specs));
+            }
+
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
             }
 
             if (specs.Count == 0)
@@ -430,7 +457,7 @@ namespace Fps.Net
                         + MaxWeaponIdBytes + " bytes and cannot be synced", nameof(specs));
                 }
 
-                weapons[i] = new ServerWeapon(spec);
+                weapons[i] = new ServerWeapon(spec, rules);
             }
 
             RequireServerSide();
@@ -442,7 +469,7 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// サーバーで、全武器の弾倉と予備弾を満タンに戻してリロード中ならやめ、持ち替え中でも 0 番を持った状態に戻す。
+        /// サーバーで、全武器の弾倉と予備弾を初期値 (予備弾は <see cref="ServerEquip(IReadOnlyList{WeaponSpec}, float, GameRules)"/> のルールの倍率を掛けた値) に戻してリロード中ならやめ、持ち替え中でも 0 番を持った状態に戻す。
         /// リスポーンと試合の開始時に呼ぶ。装備前なら何もしない。
         /// </summary>
         /// <exception cref="InvalidOperationException">Spawn 済みのクライアントで呼んだ。</exception>
@@ -472,7 +499,7 @@ namespace Fps.Net
         /// <summary>
         /// サーバーで、今の武器で 1 発ぶん消費する。撃てたら <see cref="ShotRejection.None"/>。装備前なら <see cref="ShotRejection.NoWeapon"/>、
         /// 持ち替え中なら <see cref="ShotRejection.Switching"/>、リロード中なら <see cref="ShotRejection.Reloading"/>、
-        /// 弾倉が空なら <see cref="ShotRejection.OutOfAmmo"/> (予備弾があればリロードを始める)。
+        /// 弾倉が空なら <see cref="ShotRejection.OutOfAmmo"/> (予備弾があるか無限予備弾ならリロードを始める)。
         /// </summary>
         /// <exception cref="InvalidOperationException">Spawn 済みのクライアントで呼んだ。</exception>
         public ShotRejection ServerTryFire()

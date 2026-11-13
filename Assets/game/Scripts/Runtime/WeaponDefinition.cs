@@ -194,7 +194,7 @@ namespace Fps.Runtime
         }
     }
 
-    /// <summary><see cref="WeaponDefinition"/> や <see cref="WeaponCatalogAsset"/> の内容が不正で変換できない。</summary>
+    /// <summary><see cref="WeaponDefinition"/>・<see cref="WeaponCatalogAsset"/>・<see cref="LoadoutDefinition"/> の内容が不正で変換できない。</summary>
     public sealed class WeaponDefinitionException : Exception
     {
         public WeaponDefinitionException(string message)

@@ -19,6 +19,7 @@ namespace Fps.Tests.EditMode
         private string _riflePath;
         private string _handgunPath;
         private string _catalogPath;
+        private string _loadoutPath;
 
         [SetUp]
         public void SetUp()
@@ -27,6 +28,7 @@ namespace Fps.Tests.EditMode
             _riflePath = _folder + "/Rifle.asset";
             _handgunPath = _folder + "/Handgun.asset";
             _catalogPath = _folder + "/WeaponCatalog.asset";
+            _loadoutPath = _folder + "/DefaultLoadout.asset";
         }
 
         [TearDown]
@@ -44,6 +46,7 @@ namespace Fps.Tests.EditMode
             Assert.That(WeaponAssetBuilder.RiflePath, Is.EqualTo("Assets/game/Weapons/Rifle.asset"));
             Assert.That(WeaponAssetBuilder.HandgunPath, Is.EqualTo("Assets/game/Weapons/Handgun.asset"));
             Assert.That(WeaponAssetBuilder.CatalogPath, Is.EqualTo("Assets/game/Weapons/WeaponCatalog.asset"));
+            Assert.That(WeaponAssetBuilder.LoadoutPath, Is.EqualTo("Assets/game/Weapons/DefaultLoadout.asset"));
         }
 
         [Test]
@@ -133,6 +136,104 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BuildsTheDefaultLoadoutWithRifleThenHandgun()
+        {
+            Build();
+
+            var rifleAsset = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_riflePath);
+            var handgunAsset = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_handgunPath);
+            var loadout = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(_loadoutPath);
+            Assert.That(loadout, Is.Not.Null);
+            Assert.That(loadout.SwitchSeconds, Is.EqualTo(0.4f));
+            Assert.That(loadout.Slots, Has.Count.EqualTo(2));
+            Assert.That(loadout.Slots[0].Weapon, Is.SameAs(rifleAsset));
+            Assert.That(loadout.Slots[1].Weapon, Is.SameAs(handgunAsset));
+
+            var rule = loadout.ToRule();
+            Assert.That(rule.SlotCount, Is.EqualTo(2));
+            foreach (WeaponCategory category in Enum.GetValues(typeof(WeaponCategory)))
+            {
+                var isHandgun = category == WeaponCategory.Handgun;
+                Assert.That(rule.Accepts(0, category), Is.EqualTo(!isHandgun), "slot 0 accepts " + category);
+                Assert.That(rule.Accepts(1, category), Is.EqualTo(isHandgun), "slot 1 accepts " + category);
+            }
+
+            var specs = loadout.ToSpecs();
+            Assert.That(specs[0].Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(specs[1].Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
+        }
+
+        [Test]
+        public void LoadLoadoutReturnsTheBuiltAsset()
+        {
+            Build();
+
+            var loadout = WeaponAssetBuilder.LoadLoadout(_loadoutPath);
+
+            Assert.That(loadout, Is.SameAs(AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(_loadoutPath)));
+        }
+
+        [Test]
+        public void LoadLoadoutRejectsAMissingWrongOrInvalidAsset()
+        {
+            Assert.Throws<InvalidOperationException>(() => WeaponAssetBuilder.LoadLoadout(_loadoutPath));
+            Assert.Throws<ArgumentException>(() => WeaponAssetBuilder.LoadLoadout("DefaultLoadout.asset"));
+
+            Build();
+            Assert.Throws<InvalidOperationException>(
+                () => WeaponAssetBuilder.LoadLoadout(_catalogPath), "a catalog is not a loadout");
+
+            var loadout = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(_loadoutPath);
+            var handgun = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_handgunPath);
+            var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_riflePath);
+            loadout.SetSlots(WeaponAssetBuilder.DefaultLoadoutSlots(handgun, rifle));
+            Assert.Throws<WeaponDefinitionException>(() => WeaponAssetBuilder.LoadLoadout(_loadoutPath));
+        }
+
+        [Test]
+        public void SecondRunKeepsTheLoadoutGuidAndRestoresItsValues()
+        {
+            Build();
+            var loadoutGuid = AssetDatabase.AssetPathToGUID(_loadoutPath);
+            Assert.That(loadoutGuid, Is.Not.Empty);
+
+            var loadout = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(_loadoutPath);
+            var handgun = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_handgunPath);
+            loadout.SetSlots(new[] { new LoadoutSlotDefinition(new[] { WeaponCategory.Handgun }, handgun) });
+            loadout.SwitchSeconds = 3f;
+            EditorUtility.SetDirty(loadout);
+            AssetDatabase.SaveAssets();
+
+            Build();
+
+            Assert.That(AssetDatabase.AssetPathToGUID(_loadoutPath), Is.EqualTo(loadoutGuid));
+            var rebuilt = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(_loadoutPath);
+            Assert.That(rebuilt, Is.SameAs(loadout));
+            Assert.That(rebuilt.SwitchSeconds, Is.EqualTo(0.4f));
+            Assert.That(rebuilt.Slots, Has.Count.EqualTo(2));
+            Assert.That(rebuilt.ToSpecs()[0].Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+        }
+
+        [Test]
+        public void ConfigureDoesNotSaveAnInvalidLoadout()
+        {
+            Build();
+            var otherPath = _folder + "/BrokenLoadout.asset";
+            var handgun = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_handgunPath);
+            var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_riflePath);
+
+            Assert.Throws<WeaponDefinitionException>(
+                () => SceneBuildHelpers.CreateOrUpdateAsset<LoadoutDefinition>(
+                    otherPath,
+                    l => WeaponAssetBuilder.Configure(l, WeaponAssetBuilder.DefaultLoadoutSlots(handgun, rifle), 0.4f)));
+            Assert.Throws<WeaponDefinitionException>(
+                () => SceneBuildHelpers.CreateOrUpdateAsset<LoadoutDefinition>(
+                    otherPath,
+                    l => WeaponAssetBuilder.Configure(l, WeaponAssetBuilder.DefaultLoadoutSlots(rifle, handgun), -1f)));
+            Assert.That(AssetDatabase.LoadMainAssetAtPath(otherPath), Is.Null);
+        }
+
+        [Test]
         public void SecondRunKeepsTheGuidsAndRestoresTheValues()
         {
             Build();
@@ -181,8 +282,10 @@ namespace Fps.Tests.EditMode
         [Test]
         public void RejectsInvalidOrSharedPaths()
         {
-            Assert.Throws<ArgumentException>(() => WeaponAssetBuilder.BuildAt("Rifle.asset", _handgunPath, _catalogPath));
-            Assert.Throws<ArgumentException>(() => WeaponAssetBuilder.BuildAt(_riflePath, _riflePath, _catalogPath));
+            Assert.Throws<ArgumentException>(() => WeaponAssetBuilder.BuildAt("Rifle.asset", _handgunPath, _catalogPath, _loadoutPath));
+            Assert.Throws<ArgumentException>(() => WeaponAssetBuilder.BuildAt(_riflePath, _riflePath, _catalogPath, _loadoutPath));
+            Assert.Throws<ArgumentException>(() => WeaponAssetBuilder.BuildAt(_riflePath, _handgunPath, _catalogPath, "DefaultLoadout.asset"));
+            Assert.Throws<ArgumentException>(() => WeaponAssetBuilder.BuildAt(_riflePath, _handgunPath, _catalogPath, _catalogPath));
             Assert.That(AssetDatabase.IsValidFolder(_folder), Is.False);
         }
 
@@ -207,7 +310,7 @@ namespace Fps.Tests.EditMode
 
         private WeaponCatalogAsset Build()
         {
-            return WeaponAssetBuilder.BuildAt(_riflePath, _handgunPath, _catalogPath);
+            return WeaponAssetBuilder.BuildAt(_riflePath, _handgunPath, _catalogPath, _loadoutPath);
         }
     }
 }

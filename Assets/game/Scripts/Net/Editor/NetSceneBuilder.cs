@@ -88,7 +88,8 @@ namespace Fps.Editor
             if (catalog == null)
             {
                 Debug.Log("[Net] NetSceneBuilder: " + WeaponAssetBuilder.CatalogPath + " is missing; running WeaponAssetBuilder.Build");
-                catalog = WeaponAssetBuilder.BuildAt(WeaponAssetBuilder.RiflePath, WeaponAssetBuilder.HandgunPath, WeaponAssetBuilder.CatalogPath);
+                catalog = WeaponAssetBuilder.BuildAt(
+                    WeaponAssetBuilder.RiflePath, WeaponAssetBuilder.HandgunPath, WeaponAssetBuilder.CatalogPath, WeaponAssetBuilder.LoadoutPath);
             }
 
             if (!NetTeamDeathmatch.TryCreateLoadout(catalog, out _, out var error))

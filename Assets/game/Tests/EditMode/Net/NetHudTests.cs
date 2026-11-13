@@ -114,6 +114,23 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ShowsTheGrenadeCountOnlyWhileTheRulesUseGrenades()
+        {
+            var grenades = _netHud.GetComponent<GrenadeCountView>();
+            Assert.That(grenades, Is.Not.Null, "NetHud should attach the grenade count");
+            Assert.That(grenades.Text, Is.Empty, "nothing has arrived yet");
+
+            Arrive(_player.GrenadesVariable, NetGrenadeState.None, new NetGrenadeState(true, 2));
+            Assert.That(grenades.Text, Is.EqualTo(HudFormat.Grenades(2)));
+
+            Arrive(_player.GrenadesVariable, new NetGrenadeState(true, 2), new NetGrenadeState(true, 0));
+            Assert.That(grenades.Text, Is.EqualTo(HudFormat.Grenades(0)), "an empty pouch still shows 0 while grenades are on");
+
+            Arrive(_player.GrenadesVariable, new NetGrenadeState(true, 0), new NetGrenadeState(false, 0));
+            Assert.That(grenades.Text, Is.Empty);
+        }
+
+        [Test]
         public void ThePauseMenuKeepsTheMatchTimeRunning()
         {
             var pause = _netHud.Hud.PauseMenu;

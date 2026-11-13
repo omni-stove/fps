@@ -80,7 +80,7 @@ namespace Fps.Editor
         private static bool _sawRestart;
         private static float _alphaScore;
         private static string _endedLine;
-        private static int _firstRunnerId;
+        private static EntityId _firstRunnerId;
         private static int _teleports;
         private static double _playStartedAt = -1d;
         private static bool _finished;
@@ -201,7 +201,7 @@ namespace Fps.Editor
             _sawRestart = false;
             _alphaScore = 0f;
             _endedLine = null;
-            _firstRunnerId = 0;
+            _firstRunnerId = EntityId.None;
             _teleports = 0;
             _playStartedAt = -1d;
             _finished = false;
@@ -366,7 +366,7 @@ namespace Fps.Editor
                 return $"the match has {runner.Zones.Count} control point(s), expected {DominationSceneBuilder.ControlPoints.Count}; rerun {DominationSceneBuilder.MenuPath}";
             }
 
-            _firstRunnerId = runner.GetInstanceID();
+            _firstRunnerId = runner.GetEntityId();
             _step = Step.HoldPoint;
             return null;
         }
@@ -427,7 +427,7 @@ namespace Fps.Editor
 
         private static string WaitRestart(DominationRunner runner)
         {
-            if (runner.GetInstanceID() == _firstRunnerId || !runner.IsStarted)
+            if (runner.GetEntityId() == _firstRunnerId || !runner.IsStarted)
             {
                 return null;
             }

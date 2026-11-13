@@ -58,7 +58,8 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// 射撃は .Fire.cs、出現とリスポーンと出現直後の無敵 (<see cref="SpawnProtections"/>) は .Spawn.cs、武器を配る処理は .Loadout.cs、参加と退出は .Roster.cs、
-    /// ダウンと蘇生は .Downed.cs、射撃・ヒット・被弾・キルをクライアントへ配る処理 (<see cref="NetCombatFeed"/>) は .CombatFeed.cs に分けてある。
+    /// ダウンと蘇生は .Downed.cs、射撃・ヒット・被弾・キルをクライアントへ配る処理 (<see cref="NetCombatFeed"/>) は .CombatFeed.cs、
+    /// グレネードを投げる・爆発させる処理は .Explosion.cs に分けてある。
     /// </para>
     /// <para>
     /// Bot で人数を埋める処理は .Bots.cs、放置した人を切る処理は .Idle.cs、拠点で勝敗を決める処理は .Objective.cs が受け持つ。
@@ -349,6 +350,7 @@ namespace Fps.Net
             _serverLoadout = null;
             _lastKillers.Clear();
             ClearDowned();
+            ClearGrenades();
             _combatFeed = null;
             _killShot = null;
 
@@ -508,6 +510,7 @@ namespace Fps.Net
 
             _lastKillers.Clear();
             ClearDowned();
+            PrepareGrenades(spec.Rules);
 
             _alphaScore.Value = 0;
             _bravoScore.Value = 0;
@@ -691,13 +694,21 @@ namespace Fps.Net
             _status.Value = new NetMatchStatus(GameModeState.Playing, null);
             SyncNextWaveSeconds();
 
-            // 待っている間にリロードを始めていた人も、満タンでそろえて始める
-            foreach (var player in _playerById.Values)
+            // 待っている間にリロードを始めていた人や投げていた人も、満タンでそろえて始める
+            foreach (var pair in _playerById)
             {
-                if (player != null && player.Weapon != null)
+                var player = pair.Value;
+                if (player == null)
+                {
+                    continue;
+                }
+
+                if (player.Weapon != null)
                 {
                     player.Weapon.ServerRefill();
                 }
+
+                ServerRefillGrenades(pair.Key, player);
             }
 
             Debug.Log(MatchLog.Started(_session.PlayerCount));

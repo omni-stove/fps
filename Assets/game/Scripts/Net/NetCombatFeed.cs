@@ -22,6 +22,7 @@ namespace Fps.Net
     /// <item><see cref="CombatEvents.HitConfirmed"/>: 撃った本人だけ。</item>
     /// <item><see cref="CombatEvents.DamageTaken"/>: 撃たれた本人 (跳ね返した味方撃ちなら体力の減った撃った本人) だけ。</item>
     /// <item><see cref="CombatEvents.Killed"/>: 全員。</item>
+    /// <item>爆発 (グレネード): 全員。受け取ったクライアントで爆発の演出を出し、<c>[Combat] Explosion</c> 行を出す。</item>
     /// </list>
     /// 専用サーバー自身は宛先に入れない (演出も UI も無い)。ホストはクライアントでもあるので、ほかのクライアントと同じく宛先に入る。
     /// Bot (<see cref="NetPlayer.IsBot"/>) の射撃は誰も除かずに送り、Bot が撃った・撃たれたヒットと被弾はだれにも送らない。
@@ -190,6 +191,30 @@ namespace Fps.Net
                 sourcePosition.HasValue, sourcePosition ?? Vector3.zero, amount, RpcTarget.Single(clientId, RpcTargetUse.Temp));
         }
 
+        /// <summary>
+        /// サーバーで、center で起きた爆発 (グレネードなど) を全員に送る。受け取ったクライアントは爆発の演出 (<see cref="ThrownGrenade.PlayExplosionEffects"/>) を出す。
+        /// thrower は投げた人。抜けていれば null。
+        /// </summary>
+        internal void ServerExplosion(Vector3 center, NetPlayer thrower, string weaponId)
+        {
+            if (!CanSendFromServer())
+            {
+                return;
+            }
+
+            var hasThrower = thrower != null && thrower.IsSpawned;
+            var throwerReference = hasThrower ? new NetworkObjectReference(thrower.NetworkObject) : default;
+            ExplosionRpc(center, hasThrower, throwerReference, ToWireWeaponId(weaponId));
+        }
+
+        /// <example><c>[Combat] Explosion weapon=grenade at=(1.00, -0.92, 9.50) thrower=1</c>。投げた人が分からなければ <c>thrower=none</c>。</example>
+        internal static string ExplosionLog(string weaponId, Vector3 center, ulong? throwerClientId)
+        {
+            return LogTag + " Explosion weapon=" + (weaponId ?? string.Empty)
+                + " at=" + center.ToString("F2", CultureInfo.InvariantCulture)
+                + " thrower=" + (throwerClientId.HasValue ? throwerClientId.Value.ToString(CultureInfo.InvariantCulture) : "none");
+        }
+
         /// <summary>サーバーで、キルフィードの 1 行を全員に送る。</summary>
         internal void ServerKilled(KillFeedEntry entry)
         {
@@ -303,6 +328,32 @@ namespace Fps.Net
             var entry = new KillFeedEntry(killerId, victimId, weaponId.ToString(), headshot, friendly);
             Debug.Log(KilledLog(entry), this);
             CombatEvents.RaiseKilled(entry);
+        }
+
+        [Rpc(SendTo.ClientsAndHost, Delivery = RpcDelivery.Reliable)]
+        private void ExplosionRpc(
+            Vector3 center, bool hasThrower, NetworkObjectReference thrower, FixedString64Bytes weaponId, RpcParams rpcParams = default)
+        {
+            if (!IsFromServer(rpcParams))
+            {
+                return;
+            }
+
+            if (!NetMath.IsFinite(center))
+            {
+                Debug.LogWarning(LogTag + " ignored an explosion at a non-finite point from the server", this);
+                return;
+            }
+
+            // 投げた人がもう消えていても、爆発の演出は出す
+            ulong? throwerClientId = null;
+            if (hasThrower && thrower.TryGet(out var throwerObject))
+            {
+                throwerClientId = throwerObject.OwnerClientId;
+            }
+
+            Debug.Log(ExplosionLog(weaponId.ToString(), center, throwerClientId), this);
+            ThrownGrenade.PlayExplosionEffects(center);
         }
 
         private bool IsFromServer(RpcParams rpcParams)

@@ -24,6 +24,7 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// 予備弾は <see cref="NetMatchRules.InfiniteReserve"/> が true なら数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。
+    /// グレネードの残りは自分の <see cref="NetPlayer.Grenades"/> を購読して <see cref="GrenadeCountView"/> に出す。
     /// </para>
     /// <para>
     /// 出す項目は、サーバーから届いたルールの <see cref="NetMatchRules.HudDensity"/> で <see cref="Hud.ApplyDensity"/> に決めさせる。
@@ -76,6 +77,10 @@ namespace Fps.Net
         private NetMatchStatus _status = new NetMatchStatus(GameModeState.Waiting, null);
         private NetMatchRules _rules = NetMatchRules.Default;
         private NetWeaponState _weaponState;
+
+        // グレネードの残り。サーバーが持ち主にだけ送る (NetPlayer.Grenades)
+        private GrenadeCountView _grenadeView;
+        private NetGrenadeState _grenadeState;
 
         // 試合中に倒れてから、出現するか試合が終わるまで true。_respawn は Individual の表示に使う数え (待ち時間が不正なら null)
         private bool _isDown;
@@ -179,6 +184,11 @@ namespace Fps.Net
             _revivingPercent = null;
             _spawnProtectionSeconds = 0;
             player.DownedStateVariable.OnValueChanged += HandleDownedStateChanged;
+            _grenadeState = player.GrenadesVariable.Value;
+            player.GrenadesVariable.OnValueChanged += HandleGrenadesChanged;
+
+            // 試合のルール (HUD の量) を当てる前に付け、弾数と一緒に出し入れされるようにする
+            _grenadeView = GrenadeCountView.AttachTo(_hud);
 
             // NetPlayer.Weapon は Awake で解決するので、Awake を経ない Edit Mode でも見つかるよう自分で探す
             _weapon = player.GetComponent<NetPlayerWeapon>();
@@ -189,6 +199,7 @@ namespace Fps.Net
             }
 
             ShowAmmo();
+            ShowGrenades();
             ShowHealth();
             ShowScores();
             ShowNotice();
@@ -424,6 +435,7 @@ namespace Fps.Net
                 _player.TeamVariable.OnValueChanged -= HandleTeamChanged;
                 _player.HealthVariable.OnValueChanged -= HandleHealthChanged;
                 _player.DownedStateVariable.OnValueChanged -= HandleDownedStateChanged;
+                _player.GrenadesVariable.OnValueChanged -= HandleGrenadesChanged;
                 _player = null;
             }
 
@@ -502,6 +514,12 @@ namespace Fps.Net
 
             // 次のフレームを待たずに、リロードが終わった・判定した時点で進みと幅を変えるため
             RefreshReloadProgressNow();
+        }
+
+        private void HandleGrenadesChanged(NetGrenadeState previous, NetGrenadeState current)
+        {
+            _grenadeState = current;
+            ShowGrenades();
         }
 
         private void HandleAlphaScoreChanged(int previous, int current)
@@ -617,6 +635,15 @@ namespace Fps.Net
                 Math.Max(0, _weaponState.ReserveAmmo),
                 _weaponState.IsReloading,
                 _rules.InfiniteReserve);
+        }
+
+        /// <summary>届いたグレネードの状態を出す。ルールで使わない (<see cref="NetGrenadeState.Enabled"/> が false) 間は隠す。</summary>
+        private void ShowGrenades()
+        {
+            if (_grenadeView != null)
+            {
+                _grenadeView.ShowCount(_grenadeState.Enabled, _grenadeState.Remaining);
+            }
         }
 
         private void ShowScores()

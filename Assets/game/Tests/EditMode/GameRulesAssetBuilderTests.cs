@@ -20,14 +20,16 @@ namespace Fps.Tests.EditMode
         // BuildAt と同じ並び (teamDeathmatch, campaignEasy, campaignNormal, campaignHard, range, tpsRange, domination)。
         private static readonly ExpectedActions[] _expectedActions =
         {
-            new ExpectedActions(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On),
+            new ExpectedActions(
+                Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On, grenade: Grenade.On, grenadeCount: GameRulesAssetBuilder.TeamDeathmatchGrenadeCount),
             new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
             new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
             new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
             new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
             new ExpectedActions(
                 Downed.Off, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, GameRulesAssetBuilder.TpsRangeGrenadeCount),
-            new ExpectedActions(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On),
+            new ExpectedActions(
+                Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On, grenade: Grenade.On, grenadeCount: GameRulesAssetBuilder.TeamDeathmatchGrenadeCount),
         };
 
         private string _folder;

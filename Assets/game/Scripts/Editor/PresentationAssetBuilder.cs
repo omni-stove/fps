@@ -26,7 +26,7 @@ namespace Fps.Editor
         /// カタログの置き場所。実行時に <see cref="PresentationCatalog.Load"/> で読めるよう、Resources の
         /// <see cref="PresentationCatalog.ResourcePath"/> に置く。
         /// </summary>
-        public static string CatalogPath => PresentationFolder +"/Resources/" + PresentationCatalog.ResourcePath + ".asset";
+        public static string CatalogPath => PresentationFolder + "/Resources/" + PresentationCatalog.ResourcePath + ".asset";
 
         public const string MenuPath = "Fps/Build Presentation Assets";
         public const string LogTag = "[PresentationAssetBuilder]";

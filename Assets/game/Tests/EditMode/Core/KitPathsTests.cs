@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class KitPathsTests
     {
-        private const string PackageRoot = "Packages/com.omnistove.fps";
+        private const string _packageRoot = "Packages/com.omnistove.fps";
 
         [Test]
         public void DefaultRootIsTheRepositoryFolder()
@@ -50,18 +50,18 @@ namespace Fps.Core.Tests
         [Test]
         public void PlanWithARootLoadsScenesUnderIt()
         {
-            Assert.That(MenuRoute.Plan(MenuDestination.Campaign, PackageRoot).ScenePath, Is.EqualTo(PackageRoot + "/Scenes/Campaign01.unity"));
-            Assert.That(MenuRoute.Plan(MenuDestination.Range, PackageRoot).ScenePath, Is.EqualTo(PackageRoot + "/Scenes/Bootstrap.unity"));
-            Assert.That(MenuRoute.Plan(MenuDestination.Tutorial, PackageRoot).StartsTutorial, Is.True);
-            Assert.That(MenuRoute.Plan(MenuDestination.QuickMatch, PackageRoot).ScenePath, Is.EqualTo(PackageRoot + "/Scenes/NetTest.unity"));
-            Assert.That(MenuRoute.Plan(MenuDestination.QuickMatch, PackageRoot).Lobby.IsRequested, Is.True);
-            Assert.That(MenuRoute.BackToMenu(PackageRoot).ScenePath, Is.EqualTo(PackageRoot + "/Scenes/MainMenu.unity"));
+            Assert.That(MenuRoute.Plan(MenuDestination.Campaign, _packageRoot).ScenePath, Is.EqualTo(_packageRoot + "/Scenes/Campaign01.unity"));
+            Assert.That(MenuRoute.Plan(MenuDestination.Range, _packageRoot).ScenePath, Is.EqualTo(_packageRoot + "/Scenes/Bootstrap.unity"));
+            Assert.That(MenuRoute.Plan(MenuDestination.Tutorial, _packageRoot).StartsTutorial, Is.True);
+            Assert.That(MenuRoute.Plan(MenuDestination.QuickMatch, _packageRoot).ScenePath, Is.EqualTo(_packageRoot + "/Scenes/NetTest.unity"));
+            Assert.That(MenuRoute.Plan(MenuDestination.QuickMatch, _packageRoot).Lobby.IsRequested, Is.True);
+            Assert.That(MenuRoute.BackToMenu(_packageRoot).ScenePath, Is.EqualTo(_packageRoot + "/Scenes/MainMenu.unity"));
         }
 
         [Test]
         public void QuitIgnoresTheRoot()
         {
-            Assert.That(MenuRoute.Plan(MenuDestination.Quit, PackageRoot).Kind, Is.EqualTo(MenuTransitionKind.Quit));
+            Assert.That(MenuRoute.Plan(MenuDestination.Quit, _packageRoot).Kind, Is.EqualTo(MenuTransitionKind.Quit));
         }
 
         [Test]

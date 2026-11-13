@@ -125,6 +125,29 @@ docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -register-l
 60 秒ごとにエラーを出しながら作り直しを続ける。止めるとロビーを閉じ (`[Lobby] closed id=<ロビー Id>`)、
 閉じ終えるまで最長 3 秒終了を待つ。
 
+### クライアントからクイックマッチでつなぐ
+
+クライアントはメインメニューの「ONLINE - QUICK MATCH」か、起動引数 `-lobby quickmatch` で、
+登録されたサーバーを探して UDP でつなぐ。クライアントにも EOS の認証情報が要る (検索に EOS へログインするため)。
+
+```sh
+./fps -lobby quickmatch
+```
+
+`fps-server:<自分の版>` のバケツを探し、`version` が自分の版と同じで、`players` がロビーの最大人数より少なく、
+`server` が IPv4:ポートのロビーのうち、`players` がいちばん多いもの (同じならロビー ID の順で先のもの) を選ぶ。
+クライアントはロビーには入らず、`server` のアドレスへそのままつなぐ。
+
+```
+[Lobby] found 2 lobby(s) in fps-server:0.2.0
+[Lobby] quick match picked id=<ロビー Id> server=203.0.113.10:7777 players=1/8; starting client 203.0.113.10:7777
+```
+
+つなげるサーバーが無ければ 5 秒おきに探し直し (`[Lobby] no server to join among 1 found (full x1); searching again in 5s`)、
+30 秒たっても見つからなければ `[Lobby] no quick match server found after 30s (...)` を出して終わる
+(メニューから来たときはこの理由を添えてメニューへ戻り、batchmode では終了コード 7)。
+`-lobby quickmatch` は `-transport udp` だけを受け付け、`-lobby-id` / `-lobby-max-players` / `-mode` / `-address` / `-port` とは併用できない。
+
 ## CI でのリリース
 
 `v*` のタグを push すると `.github/workflows/server-image.yml` が専用サーバーをビルドし、

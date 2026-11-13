@@ -39,6 +39,7 @@ namespace Fps.Tests.EditMode
         [TestCase(MenuDestination.Tutorial, MenuRoute.RangeScene)]
         [TestCase(MenuDestination.CreateLobby, MenuRoute.NetScene)]
         [TestCase(MenuDestination.JoinLobby, MenuRoute.NetScene)]
+        [TestCase(MenuDestination.QuickMatch, MenuRoute.NetScene)]
         public void GoLoadsTheDestinationScene(MenuDestination destination, string scene)
         {
             Assert.That(MenuNavigator.Go(destination), Is.True);

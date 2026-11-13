@@ -5,9 +5,10 @@ using System.Globalization;
 namespace Fps.Core
 {
     /// <summary>
-    /// ロビーを使った起動の設定。コマンドライン引数 <c>-lobby create|join</c> / <c>-lobby-id</c> /
+    /// ロビーを使った起動の設定。コマンドライン引数 <c>-lobby create|join|quickmatch</c> / <c>-lobby-id</c> /
     /// <c>-lobby-max-players</c> から作る。ロビーを使うときは、起動モードと接続先はロビーで決まるので
-    /// <c>-mode</c> / <c>-address</c> / <c>-port</c> / <c>-eos-server</c> は受け付けず、transport は EOS に固定する。
+    /// <c>-mode</c> / <c>-address</c> / <c>-port</c> / <c>-eos-server</c> は受け付けない。
+    /// transport は create / join では EOS、quickmatch (専用サーバーへつなぐ) では UDP に固定する。
     /// </summary>
     public sealed class LobbyLaunchOptions
     {
@@ -33,6 +34,12 @@ namespace Fps.Core
         /// <summary>ログインからロビーの作成・参加が終わるまで待つ秒数。</summary>
         public const float TimeoutSeconds = 60f;
 
+        /// <summary>クイックマッチでつなげるサーバーが見つからないとき、検索し直すまでの秒数。</summary>
+        public const float QuickMatchIntervalSeconds = 5f;
+
+        /// <summary>クイックマッチでログインからサーバーが決まるまで待つ秒数。過ぎたら見つからなかったとして諦める。</summary>
+        public const float QuickMatchTimeoutSeconds = 30f;
+
         /// <summary>1 回の検索で受け取るロビーの最大数。</summary>
         public const int MaxSearchResults = 25;
 
@@ -44,7 +51,7 @@ namespace Fps.Core
 
         private static readonly string[] _ownFlags = { LobbyFlag, LobbyIdFlag, MaxPlayersFlag };
 
-        private static readonly LobbyCommand[] _commands = { LobbyCommand.Create, LobbyCommand.Join };
+        private static readonly LobbyCommand[] _commands = { LobbyCommand.Create, LobbyCommand.Join, LobbyCommand.QuickMatch };
 
         /// <summary>ロビーが決めるので、<c>-lobby</c> と一緒には指定できない起動引数。</summary>
         private static readonly string[] _conflictingFlags =
@@ -103,6 +110,31 @@ namespace Fps.Core
             }
 
             return new LobbyLaunchOptions(LobbyCommand.Join, lobbyId, DefaultMaxPlayers);
+        }
+
+        /// <summary>専用サーバーのロビーを探して UDP でつなぐ設定。</summary>
+        public static LobbyLaunchOptions QuickMatch()
+        {
+            return new LobbyLaunchOptions(LobbyCommand.QuickMatch, null, DefaultMaxPlayers);
+        }
+
+        /// <summary>この操作で使う transport。quickmatch は専用サーバーへ UDP、それ以外は EOS の P2P。</summary>
+        public NetTransportKind Transport => Command == LobbyCommand.QuickMatch ? NetTransportKind.Udp : NetTransportKind.Eos;
+
+        /// <summary>検索し直す間隔の秒数。</summary>
+        public float SearchInterval => Command == LobbyCommand.QuickMatch ? QuickMatchIntervalSeconds : SearchIntervalSeconds;
+
+        /// <summary>ログインからロビー (またはサーバー) が決まるまで待つ秒数。</summary>
+        public float Timeout => Command == LobbyCommand.QuickMatch ? QuickMatchTimeoutSeconds : TimeoutSeconds;
+
+        /// <summary>
+        /// 作る・探すロビーのバケット ID。quickmatch は専用サーバーのバケット (<see cref="ServerLobby.BucketId"/>)、
+        /// それ以外はプレイヤーが Host のロビーのバケット (<see cref="BucketId"/>)。
+        /// </summary>
+        /// <param name="version">アプリのバージョン。空なら "0"。</param>
+        public string SearchBucketId(string version)
+        {
+            return Command == LobbyCommand.QuickMatch ? ServerLobby.BucketId(version) : BucketId(version);
         }
 
         /// <summary>引数に <c>-lobby</c> が含まれるか。値の妥当性は見ない。</summary>
@@ -182,7 +214,7 @@ namespace Fps.Core
                 {
                     if (values.ContainsKey(flag))
                     {
-                        error = flag + " is only used with " + LobbyFlag + " create|join";
+                        error = flag + " is only used with " + LobbyFlag + " create|join|quickmatch";
                         return false;
                     }
                 }
@@ -194,7 +226,7 @@ namespace Fps.Core
 
             if (!TryParseCommand(commandText, out var command))
             {
-                error = LobbyFlag + " must be create or join (got '" + commandText + "')";
+                error = LobbyFlag + " must be create, join or quickmatch (got '" + commandText + "')";
                 return false;
             }
 
@@ -204,12 +236,29 @@ namespace Fps.Core
                 return false;
             }
 
+            var transport = command == LobbyCommand.QuickMatch ? NetTransportKind.Udp : NetTransportKind.Eos;
             if (transportText != null
-                && !string.Equals(transportText, NetLaunchOptions.TransportName(NetTransportKind.Eos), StringComparison.OrdinalIgnoreCase))
+                && !string.Equals(transportText, NetLaunchOptions.TransportName(transport), StringComparison.OrdinalIgnoreCase))
             {
-                error = LobbyFlag + " always uses " + NetLaunchOptions.TransportFlag + " "
-                    + NetLaunchOptions.TransportName(NetTransportKind.Eos) + " (got '" + transportText + "')";
+                error = LobbyFlag + " " + CommandName(command) + " always uses " + NetLaunchOptions.TransportFlag + " "
+                    + NetLaunchOptions.TransportName(transport) + " (got '" + transportText + "')";
                 return false;
+            }
+
+            if (command == LobbyCommand.QuickMatch)
+            {
+                foreach (var flag in new[] { LobbyIdFlag, MaxPlayersFlag })
+                {
+                    if (values.ContainsKey(flag))
+                    {
+                        error = flag + " cannot be used with " + LobbyFlag + " quickmatch; the server is chosen by the search";
+                        return false;
+                    }
+                }
+
+                options = QuickMatch();
+                error = null;
+                return true;
             }
 
             if (command == LobbyCommand.Create)
@@ -286,9 +335,31 @@ namespace Fps.Core
 
                     return new NetLaunchOptions(
                         NetLaunchMode.Client, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Eos, ownerUserId);
+                case LobbyCommand.QuickMatch:
+                    throw new InvalidOperationException(LobbyFlag + " quickmatch connects to a server address; use " + nameof(ToServerNetOptions));
                 default:
                     throw new InvalidOperationException("no lobby command was given");
             }
+        }
+
+        /// <summary>クイックマッチで選んだサーバーへ接続する UDP のクライアントの起動設定。</summary>
+        /// <param name="serverEndpoint">サーバーのロビーの <see cref="ServerLobby.ServerKey"/> 属性 (<c>address:port</c>)。</param>
+        /// <exception cref="InvalidOperationException">quickmatch の設定ではない。</exception>
+        /// <exception cref="ArgumentException">アドレスが IPv4:port の形でない。</exception>
+        public NetLaunchOptions ToServerNetOptions(string serverEndpoint)
+        {
+            if (Command != LobbyCommand.QuickMatch)
+            {
+                throw new InvalidOperationException("only " + LobbyFlag + " quickmatch connects to a server address (this is " + CommandName(Command) + ")");
+            }
+
+            if (!NetLaunchOptions.TryParseEndpoint(serverEndpoint, out var address, out var port))
+            {
+                throw new ArgumentException(
+                    "the server address '" + serverEndpoint + "' is not an IPv4 address:port", nameof(serverEndpoint));
+            }
+
+            return new NetLaunchOptions(NetLaunchMode.Client, address, port, NetTransportKind.Udp, null);
         }
 
         /// <summary>
@@ -312,7 +383,7 @@ namespace Fps.Core
             return trimmed;
         }
 
-        /// <summary>ログ向けの小文字の操作名 (none / create / join)。</summary>
+        /// <summary>ログ向けの小文字の操作名 (none / create / join / quickmatch)。<c>-lobby</c> の値と同じ。</summary>
         public static string CommandName(LobbyCommand command)
         {
             switch (command)
@@ -323,6 +394,8 @@ namespace Fps.Core
                     return "create";
                 case LobbyCommand.Join:
                     return "join";
+                case LobbyCommand.QuickMatch:
+                    return "quickmatch";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(command), command, "unknown lobby command");
             }

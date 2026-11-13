@@ -39,6 +39,7 @@ namespace Fps.Runtime
         public const string CampaignButtonName = "menu-campaign";
         public const string CreateLobbyButtonName = "menu-create-lobby";
         public const string JoinLobbyButtonName = "menu-join-lobby";
+        public const string QuickMatchButtonName = "menu-quick-match";
         public const string LoadoutButtonName = "menu-loadout";
         public const string RangeButtonName = "menu-range";
         public const string TutorialButtonName = "menu-tutorial";
@@ -61,6 +62,7 @@ namespace Fps.Runtime
             CampaignButtonName,
             CreateLobbyButtonName,
             JoinLobbyButtonName,
+            QuickMatchButtonName,
             LoadoutButtonName,
             RangeButtonName,
             TutorialButtonName,
@@ -724,6 +726,9 @@ namespace Fps.Runtime
                     break;
                 case JoinLobbyButtonName:
                     Choose(MenuDestination.JoinLobby);
+                    break;
+                case QuickMatchButtonName:
+                    Choose(MenuDestination.QuickMatch);
                     break;
                 case LoadoutButtonName:
                     OpenLoadout();

@@ -100,6 +100,16 @@ namespace Fps.Core
             return HashCode.Combine((int)Phase, (int)Height, Normal, PeekOffset, EnterElapsed, BackElapsed, PreferredSide);
         }
 
+        public static bool operator ==(CoverSnapshot left, CoverSnapshot right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(CoverSnapshot left, CoverSnapshot right)
+        {
+            return !left.Equals(right);
+        }
+
         private static bool IsFinite(float value)
         {
             return !float.IsNaN(value) && !float.IsInfinity(value);

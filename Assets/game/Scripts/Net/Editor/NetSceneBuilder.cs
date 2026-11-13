@@ -68,13 +68,47 @@ namespace Fps.Editor
             }
 
             var loadout = LoadOrBuildLoadout();
+            var rules = LoadOrBuildRules();
             var playerPrefab = BuildPrefab(PlayerPrefabPath, CreatePlayerSource);
-            var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout));
+            var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout, rules));
             BuildScene(playerPrefab, matchPrefab);
             AddSceneToBuildSettings(NetBootstrap.ScenePath);
             AssetDatabase.SaveAssets();
             Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath
-                + " (loadout " + WeaponAssetBuilder.LoadoutPath + ")");
+                + " (loadout " + WeaponAssetBuilder.LoadoutPath + ", rules " + GameRulesAssetBuilder.TeamDeathmatchPath + ")");
+        }
+
+        /// <summary>
+        /// 試合の進行役に渡すチームデスマッチのルール (<see cref="GameRulesAssetBuilder.TeamDeathmatchPath"/>) を
+        /// <see cref="GameRulesAssetBuilder.LoadRules"/> で読む。無ければ <see cref="GameRulesAssetBuilder.Build"/> で作る。
+        /// サーバーの起動時と同じく <see cref="NetTeamDeathmatch.TryLoadRules"/> に通らなければ、プレハブを書かずに例外を投げる。
+        /// </summary>
+        public static GameRulesDefinition LoadOrBuildRules()
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(GameRulesAssetBuilder.TeamDeathmatchPath) == null)
+            {
+                Debug.Log("[Net] NetSceneBuilder: " + GameRulesAssetBuilder.TeamDeathmatchPath + " is missing; running GameRulesAssetBuilder.Build");
+                GameRulesAssetBuilder.Build();
+            }
+
+            GameRulesDefinition rules;
+            try
+            {
+                rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.TeamDeathmatchPath);
+            }
+            catch (GameRulesDefinitionException e)
+            {
+                throw new InvalidOperationException(
+                    "[Net] NetSceneBuilder: " + GameRulesAssetBuilder.TeamDeathmatchPath + " cannot be used by the match: " + e.Message, e);
+            }
+
+            if (!NetTeamDeathmatch.TryLoadRules(rules, out _, out _, out var error))
+            {
+                throw new InvalidOperationException(
+                    "[Net] NetSceneBuilder: " + GameRulesAssetBuilder.TeamDeathmatchPath + " cannot be used by the match: " + error);
+            }
+
+            return rules;
         }
 
         /// <summary>
@@ -166,13 +200,15 @@ namespace Fps.Editor
             source.AddComponent<AimDownSights>().enabled = false;
         }
 
-        private static GameObject CreateMatchSource(LoadoutDefinition loadout)
+        private static GameObject CreateMatchSource(LoadoutDefinition loadout, GameRulesDefinition rules)
         {
             var source = new GameObject("NetMatch");
             source.AddComponent<NetworkObject>();
 
-            // 武器の値はプレハブに持たず、アセットへの参照だけを持つ (サーバーは試合の開始時に読む)
-            source.AddComponent<NetTeamDeathmatch>().Loadout = loadout;
+            // 武器とルールの値はプレハブに持たず、アセットへの参照だけを持つ (サーバーは試合の開始時に読む)
+            var match = source.AddComponent<NetTeamDeathmatch>();
+            match.Loadout = loadout;
+            match.Rules = rules;
             return source;
         }
 

@@ -223,6 +223,29 @@ namespace Fps.Core
             return "リスポーンまで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
         }
 
+        /// <summary><see cref="RespawnMode.None"/> で倒れたとき、次の試合が始まるまで戻らないことの案内。</summary>
+        public const string NoRespawnUntilNextMatch = "次の試合まで復活なし";
+
+        /// <summary>
+        /// 倒れている間の案内を、リスポーン方式に合わせて選ぶ。Individual は自分のリスポーンまで、Wave は次のウェーブまでの秒数を
+        /// <see cref="Respawn"/> で、None は <see cref="NoRespawnUntilNextMatch"/> を出す (seconds は使わない)。
+        /// </summary>
+        /// <example><c>RespawnNotice(RespawnMode.Wave, 7)</c> は <c>リスポーンまで 7 秒</c></example>
+        /// <exception cref="ArgumentOutOfRangeException">mode が定義済みの値でないか、None 以外で seconds が負。</exception>
+        public static string RespawnNotice(RespawnMode mode, int seconds)
+        {
+            switch (mode)
+            {
+                case RespawnMode.Individual:
+                case RespawnMode.Wave:
+                    return Respawn(seconds);
+                case RespawnMode.None:
+                    return NoRespawnUntilNextMatch;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mode), mode, "mode is not a defined RespawnMode");
+            }
+        }
+
         /// <summary>案内が無いときの表示。空文字のときは HUD が案内の欄ごと隠す。</summary>
         public const string NoNotice = "";
 

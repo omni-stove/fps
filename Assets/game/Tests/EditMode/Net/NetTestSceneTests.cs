@@ -85,6 +85,25 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void MatchPrefabTakesRulesFromTheTeamDeathmatchAsset()
+        {
+            var match = MatchPrefabComponent();
+
+            Assert.That(match.Rules, Is.Not.Null, "the match has no game rules; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(AssetDatabase.GetAssetPath(match.Rules), Is.EqualTo(Fps.Editor.GameRulesAssetBuilder.TeamDeathmatchPath));
+
+            // サーバーの起動時と同じ検査に通り、既定のルールに置き換わらない
+            Assert.That(NetTeamDeathmatch.TryLoadRules(match.Rules, out var rules, out var usedDefault, out var error), Is.True, error);
+            Assert.That(usedDefault, Is.False);
+            Assert.That(rules.DeathCamera, Is.EqualTo(Fps.Editor.GameRulesAssetBuilder.TeamDeathmatchRules().DeathCamera));
+
+            // 専用サーバーのビルドにも、NetTest シーンから参照をたどって入る
+            Assert.That(
+                Fps.Editor.ServerBuilder.MissingFromScene(NetBootstrap.ScenePath, new[] { Fps.Editor.GameRulesAssetBuilder.TeamDeathmatchPath }),
+                Is.Empty);
+        }
+
+        [Test]
         public void DedicatedServerBuildIncludesTheLoadoutAndItsWeapons()
         {
             var paths = Fps.Editor.ServerBuilder.LoadoutAssetPaths(MatchPrefabComponent().Loadout);
@@ -137,8 +156,9 @@ namespace Fps.Net.Tests
             var spawned = new Dictionary<int, SpawnPoint>();
 
             // NetTeamDeathmatch.StartSession と同じ値で組み立てる
+            Assert.That(NetTeamDeathmatch.TryLoadRules(match.Rules, out var rules, out _, out var rulesError), Is.True, rulesError);
             var session = new TeamDeathmatchSession(
-                new TeamDeathmatchSpec(match.ScoreLimit, match.TimeLimitSeconds, match.RespawnSeconds),
+                new TeamDeathmatchSpec(match.ScoreLimit, match.TimeLimitSeconds, match.RespawnSeconds, rules),
                 match.MaxHealth,
                 points,
                 new SpawnSelector(match.MinEnemySpawnDistance),

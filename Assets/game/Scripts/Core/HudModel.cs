@@ -242,6 +242,13 @@ namespace Fps.Core
             Changed?.Invoke(HudField.Notice);
         }
 
+        /// <summary>倒れている間の案内を、リスポーン方式に合わせて出す (<see cref="HudFormat.RespawnNotice"/>)。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">mode が定義済みの値でないか、None 以外で seconds が負。</exception>
+        public void SetRespawnNotice(RespawnMode mode, int seconds)
+        {
+            SetNotice(HudFormat.RespawnNotice(mode, seconds));
+        }
+
         /// <summary>チームの点数を、ownTeam を先にして出す。</summary>
         /// <exception cref="ArgumentOutOfRangeException">点数が負か、ownTeam が Team の値でない。</exception>
         public void SetScores(Team ownTeam, int alphaScore, int bravoScore)

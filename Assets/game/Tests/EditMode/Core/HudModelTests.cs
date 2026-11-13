@@ -475,6 +475,23 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void SetRespawnNoticeFollowsTheRespawnMode()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetRespawnNotice(RespawnMode.Wave, 5);
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.Respawn(5)));
+
+            model.SetRespawnNotice(RespawnMode.None, 0);
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoRespawnUntilNextMatch));
+
+            // 表示が変わらなければ知らせない
+            model.SetRespawnNotice(RespawnMode.None, 3);
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Notice, HudField.Notice }));
+        }
+
+        [Test]
         public void SettersRejectInvalidValues()
         {
             var model = new HudModel();

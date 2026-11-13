@@ -329,6 +329,8 @@ namespace Fps.Net.Tests
             _registrar.Close(() => closed = true);
             _backend.CompleteCreate(Lobby("l1"));
 
+            Assert.That(closed, Is.False);
+            _backend.CompleteLeave();
             Assert.That(closed, Is.True);
             Assert.That(_backend.Leaves, Is.EqualTo(new[] { "destroy:l1" }));
             Assert.That(_registrar.IsRegistered, Is.False);

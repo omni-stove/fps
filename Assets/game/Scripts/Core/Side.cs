@@ -94,5 +94,13 @@ namespace Fps.Core
         public static bool operator ==(Side left, Side right) => left.Equals(right);
 
         public static bool operator !=(Side left, Side right) => !left.Equals(right);
+
+        public static bool operator <(Side left, Side right) => left.CompareTo(right) < 0;
+
+        public static bool operator <=(Side left, Side right) => left.CompareTo(right) <= 0;
+
+        public static bool operator >(Side left, Side right) => left.CompareTo(right) > 0;
+
+        public static bool operator >=(Side left, Side right) => left.CompareTo(right) >= 0;
     }
 }

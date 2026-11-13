@@ -9,7 +9,7 @@ namespace Fps.Core
     /// </summary>
     public sealed class FreeForAll : ITeamLayout
     {
-        private static readonly Side[] _none = new Side[0];
+        private static readonly Side[] _none = Array.Empty<Side>();
 
         public IReadOnlyList<Side> FixedSides => _none;
 

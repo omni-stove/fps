@@ -42,7 +42,9 @@ namespace Fps.Core.Tests
         {
             Assert.That(new Side(3) == new Side(3), Is.True);
             Assert.That(new Side(3) != new Side(4), Is.True);
-            Assert.That(new Side(3).GetHashCode(), Is.EqualTo(new Side(3).GetHashCode()));
+            var first = new Side(3);
+            var second = new Side(3);
+            Assert.That(first.GetHashCode(), Is.EqualTo(second.GetHashCode()));
             Assert.That(new Side(3).CompareTo(new Side(4)), Is.LessThan(0));
             Assert.That(new Side(5).Equals((object)new Side(5)), Is.True);
         }

@@ -121,12 +121,14 @@ namespace Fps.Runtime
             // CharacterController は有効なままだと Transform の書き換えを次の移動で上書きするので、移す間だけ切る。
             var controller = GetComponent<CharacterController>();
             var wasEnabled = controller != null && controller.enabled;
+            // 切った後は GroundPoint が transform.position に戻り差が 0 になるので、切る前に測る。
+            var feetToRoot = transform.position - GroundPosition;
             if (wasEnabled)
             {
                 controller.enabled = false;
             }
 
-            transform.position = groundPosition + (transform.position - GroundPosition);
+            transform.position = groundPosition + feetToRoot;
 
             if (wasEnabled)
             {

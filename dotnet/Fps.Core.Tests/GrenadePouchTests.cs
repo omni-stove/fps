@@ -6,6 +6,8 @@ namespace Fps.Core.Tests
 {
     public sealed class GrenadePouchTests
     {
+        private static readonly int[] _expectedChanges = { 1, 0, 2 };
+
         [Test]
         public void StartsFull()
         {
@@ -52,7 +54,7 @@ namespace Fps.Core.Tests
             pouch.Refill();
             pouch.Refill();
 
-            Assert.That(changes, Is.EqualTo(new[] { 1, 0, 2 }));
+            Assert.That(changes, Is.EqualTo(_expectedChanges));
         }
 
         [Test]

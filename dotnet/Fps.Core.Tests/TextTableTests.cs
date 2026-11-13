@@ -275,7 +275,7 @@ namespace Fps.Core.Tests
         {
             var ex = Assert.Throws<FormatException>(() => TextTable.FromJson("{\n  \"a\": 1\n}"));
 
-            Assert.That(ex.Message, Does.Contain("line 2, column 8"));
+            Assert.That(ex.Message, Does.Contain("position 10"));
         }
     }
 }

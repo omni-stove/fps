@@ -80,6 +80,12 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>名前の色 (<see cref="Hud.TeamColor"/>) が変わったときに呼ぶ。出している行をその色で塗り直す。</summary>
+        public void RefreshTeamColors()
+        {
+            Render();
+        }
+
         /// <summary>行をすべて消す。</summary>
         public void Clear()
         {

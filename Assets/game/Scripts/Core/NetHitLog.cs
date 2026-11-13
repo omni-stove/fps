@@ -38,6 +38,13 @@ namespace Fps.Core
         }
 
         /// <example><c>[Net] hit attacker=0 victim=1 rewindTicks=6.40 zone=Head dmg=50 hp=50 outcome=Damaged victimCrouched=true</c></example>
+        /// <param name="attackerId">撃った人のプレイヤー id。</param>
+        /// <param name="victimId">当たった人のプレイヤー id。</param>
+        /// <param name="rewindTicks">巻き戻した tick 数 (サーバーの今の tick − 判定に使った tick)。</param>
+        /// <param name="zone">当たった部位。</param>
+        /// <param name="damage">計算したダメージ。</param>
+        /// <param name="healthAfter">ダメージ後の体力。</param>
+        /// <param name="outcome">ダメージを与えた結果。</param>
         /// <param name="victimCrouched">判定に使った (巻き戻した時点の) 当たった人のしゃがみ。</param>
         public static string Hit(
             int attackerId, int victimId, float rewindTicks, HitZone zone, int damage, int healthAfter, DamageOutcome outcome, bool victimCrouched)

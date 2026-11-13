@@ -109,7 +109,8 @@ namespace Fps.Core.Tests
 
             var result = integrity.ApplyDamage(4, 5);
 
-            Assert.That(result.Destroyed, Is.EqualTo(new[] { 4 }));
+            var expectedDestroyed = new[] { 4 };
+            Assert.That(result.Destroyed, Is.EqualTo(expectedDestroyed));
             Assert.That(result.Collapsed, Is.Empty);
             Assert.That(integrity.IsDestroyed(4), Is.True);
             Assert.That(integrity.Health(4), Is.EqualTo(0));
@@ -125,8 +126,10 @@ namespace Fps.Core.Tests
             Assert.That(integrity.ApplyDamage(3, 5).Collapsed, Is.Empty);
             var result = integrity.ApplyDamage(5, 100);
 
-            Assert.That(result.Destroyed, Is.EqualTo(new[] { 5 }));
-            Assert.That(result.Collapsed, Is.EqualTo(new[] { 6, 7, 8 }));
+            var expectedDestroyed = new[] { 5 };
+            var expectedCollapsed = new[] { 6, 7, 8 };
+            Assert.That(result.Destroyed, Is.EqualTo(expectedDestroyed));
+            Assert.That(result.Collapsed, Is.EqualTo(expectedCollapsed));
             for (var i = 0; i < 9; i++)
             {
                 Assert.That(integrity.IsDestroyed(i), Is.EqualTo(i >= 3), $"piece {i}");
@@ -143,8 +146,10 @@ namespace Fps.Core.Tests
 
             var result = integrity.ApplyDamage(0, 10);
 
-            Assert.That(result.Destroyed, Is.EqualTo(new[] { 0 }));
-            Assert.That(result.Collapsed, Is.EqualTo(new[] { 1, 2, 3 }));
+            var expectedDestroyed = new[] { 0 };
+            var expectedCollapsed = new[] { 1, 2, 3 };
+            Assert.That(result.Destroyed, Is.EqualTo(expectedDestroyed));
+            Assert.That(result.Collapsed, Is.EqualTo(expectedCollapsed));
             Assert.That(integrity.DestroyedCount, Is.EqualTo(4));
         }
 
@@ -155,8 +160,10 @@ namespace Fps.Core.Tests
 
             var result = integrity.ApplyDamage(2, 10);
 
-            Assert.That(result.Destroyed, Is.EqualTo(new[] { 2 }));
-            Assert.That(result.Collapsed, Is.EqualTo(new[] { 3, 4 }));
+            var expectedDestroyed = new[] { 2 };
+            var expectedCollapsed = new[] { 3, 4 };
+            Assert.That(result.Destroyed, Is.EqualTo(expectedDestroyed));
+            Assert.That(result.Collapsed, Is.EqualTo(expectedCollapsed));
             Assert.That(integrity.IsDestroyed(1), Is.False);
         }
 
@@ -203,7 +210,8 @@ namespace Fps.Core.Tests
             source.ApplyDamage(5, 5);
 
             var bitset = source.ToBitset();
-            Assert.That(bitset, Is.EqualTo(new[] { 0b1_1111_1000UL }));
+            var expectedBitset = new[] { 0b1_1111_1000UL };
+            Assert.That(bitset, Is.EqualTo(expectedBitset));
 
             var copy = new StructureIntegrity(Grid3x3(5));
             copy.ApplyDestroyedSet(bitset);
@@ -222,7 +230,8 @@ namespace Fps.Core.Tests
         {
             var integrity = new StructureIntegrity(PillarAndBeam(2));
 
-            integrity.ApplyDestroyedSet(new[] { true, false, false });
+            var destroyed = new[] { true, false, false };
+            integrity.ApplyDestroyedSet(destroyed);
 
             Assert.That(integrity.IsDestroyed(0), Is.True);
             Assert.That(integrity.IsDestroyed(1), Is.False);
@@ -237,7 +246,8 @@ namespace Fps.Core.Tests
             integrity.ApplyDamage(0, 3);
             integrity.ApplyDamage(2, 10);
 
-            integrity.ApplyDestroyedSet(new[] { false, true, false });
+            var destroyed = new[] { false, true, false };
+            integrity.ApplyDestroyedSet(destroyed);
 
             Assert.That(integrity.Health(0), Is.EqualTo(7));
             Assert.That(integrity.Health(1), Is.EqualTo(0));
@@ -254,7 +264,8 @@ namespace Fps.Core.Tests
 
             var result = integrity.ApplyDamage(64, 1);
 
-            Assert.That(result.Destroyed, Is.EqualTo(new[] { 64 }));
+            var expectedDestroyed = new[] { 64 };
+            Assert.That(result.Destroyed, Is.EqualTo(expectedDestroyed));
             Assert.That(result.Collapsed.Count, Is.EqualTo(65));
             Assert.That(result.Collapsed[0], Is.EqualTo(65));
             Assert.That(result.Collapsed[64], Is.EqualTo(129));
@@ -293,7 +304,8 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => integrity.ApplyDestroyedSet((IReadOnlyList<bool>)null));
             Assert.Throws<ArgumentException>(() => integrity.ApplyDestroyedSet(new ulong[1]));
             Assert.Throws<ArgumentException>(() => integrity.ApplyDestroyedSet(new ulong[3]));
-            Assert.Throws<ArgumentException>(() => integrity.ApplyDestroyedSet(new[] { 0UL, 0b10UL }));
+            var spareBitSet = new[] { 0UL, 0b10UL };
+            Assert.Throws<ArgumentException>(() => integrity.ApplyDestroyedSet(spareBitSet));
             Assert.Throws<ArgumentException>(() => integrity.ApplyDestroyedSet(new bool[64]));
             Assert.That(integrity.DestroyedCount, Is.EqualTo(0));
         }
@@ -301,18 +313,19 @@ namespace Fps.Core.Tests
         [Test]
         public void LayoutNormalizesAndSortsAdjacency()
         {
-            var layout = new StructureLayout(
-                new[] { 1, 2, 3 },
-                new[] { true, false, false },
-                new[] { (2, 1), (1, 0) });
+            var health = new[] { 1, 2, 3 };
+            var grounded = new[] { true, false, false };
+            var layout = new StructureLayout(health, grounded, new[] { (2, 1), (1, 0) });
 
             Assert.That(layout.PieceCount, Is.EqualTo(3));
             Assert.That(layout.MaxHealth(2), Is.EqualTo(3));
             Assert.That(layout.IsGrounded(0), Is.True);
             Assert.That(layout.IsGrounded(1), Is.False);
             Assert.That(layout.Adjacency, Is.EqualTo(new[] { (0, 1), (1, 2) }));
-            Assert.That(layout.Neighbors(1), Is.EqualTo(new[] { 0, 2 }));
-            Assert.That(layout.Neighbors(0), Is.EqualTo(new[] { 1 }));
+            var neighborsOf1 = new[] { 0, 2 };
+            var neighborsOf0 = new[] { 1 };
+            Assert.That(layout.Neighbors(1), Is.EqualTo(neighborsOf1));
+            Assert.That(layout.Neighbors(0), Is.EqualTo(neighborsOf0));
         }
 
         [Test]

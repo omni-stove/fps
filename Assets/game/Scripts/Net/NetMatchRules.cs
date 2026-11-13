@@ -18,13 +18,28 @@ namespace Fps.Net
         public Cover Cover;
         public BlindFire BlindFire;
 
+        /// <summary>HUD に出す項目の量。クライアントの NetHud が <see cref="Fps.Runtime.Hud.ApplyDensity"/> に渡す。</summary>
+        public HudDensity HudDensity;
+
         public NetMatchRules(DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve)
-            : this(deathBody, deathCamera, respawnMode, infiniteReserve, Cover.Off, BlindFire.Off)
+            : this(deathBody, deathCamera, respawnMode, infiniteReserve, Cover.Off, BlindFire.Off, HudDensity.Full)
         {
         }
 
         public NetMatchRules(
-            DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve, Cover cover, BlindFire blindFire)
+            DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve, HudDensity hudDensity)
+            : this(deathBody, deathCamera, respawnMode, infiniteReserve, Cover.Off, BlindFire.Off, hudDensity)
+        {
+        }
+
+        public NetMatchRules(
+            DeathBody deathBody,
+            DeathCamera deathCamera,
+            RespawnMode respawnMode,
+            bool infiniteReserve,
+            Cover cover,
+            BlindFire blindFire,
+            HudDensity hudDensity = HudDensity.Full)
         {
             DeathBody = deathBody;
             DeathCamera = deathCamera;
@@ -32,6 +47,7 @@ namespace Fps.Net
             InfiniteReserve = infiniteReserve;
             Cover = cover;
             BlindFire = blindFire;
+            HudDensity = hudDensity;
         }
 
         /// <summary><see cref="GameRules.Default"/> の値。サーバーから届く前と、試合を始められなかったときはこの値のまま。</summary>
@@ -52,7 +68,13 @@ namespace Fps.Net
             }
 
             return new NetMatchRules(
-                rules.DeathBody, rules.DeathCamera, rules.RespawnMode, rules.InfiniteReserve, rules.Actions.Cover, rules.Actions.BlindFire);
+                rules.DeathBody,
+                rules.DeathCamera,
+                rules.RespawnMode,
+                rules.InfiniteReserve,
+                rules.Actions.Cover,
+                rules.Actions.BlindFire,
+                rules.HudDensity);
         }
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer)
@@ -64,6 +86,7 @@ namespace Fps.Net
             serializer.SerializeValue(ref InfiniteReserve);
             serializer.SerializeValue(ref Cover);
             serializer.SerializeValue(ref BlindFire);
+            serializer.SerializeValue(ref HudDensity);
         }
 
         public bool Equals(NetMatchRules other)
@@ -73,7 +96,8 @@ namespace Fps.Net
                 && RespawnMode == other.RespawnMode
                 && InfiniteReserve == other.InfiniteReserve
                 && Cover == other.Cover
-                && BlindFire == other.BlindFire;
+                && BlindFire == other.BlindFire
+                && HudDensity == other.HudDensity;
         }
 
         public override bool Equals(object obj)
@@ -83,14 +107,14 @@ namespace Fps.Net
 
         public override int GetHashCode()
         {
-            return HashCode.Combine((int)DeathBody, (int)DeathCamera, (int)RespawnMode, InfiniteReserve, (int)Cover, (int)BlindFire);
+            return HashCode.Combine((int)DeathBody, (int)DeathCamera, (int)RespawnMode, InfiniteReserve, (int)Cover, (int)BlindFire, (int)HudDensity);
         }
 
         public override string ToString()
         {
             return "deathBody=" + DeathBody + " deathCamera=" + DeathCamera + " respawnMode=" + RespawnMode
                 + " infiniteReserve=" + (InfiniteReserve ? "true" : "false")
-                + " cover=" + Cover + " blindFire=" + BlindFire;
+                + " cover=" + Cover + " blindFire=" + BlindFire + " hudDensity=" + HudDensity;
         }
     }
 }

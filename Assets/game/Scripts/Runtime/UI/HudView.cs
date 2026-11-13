@@ -41,6 +41,15 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml の試合結果の Label。結果が空のときは隠す。</summary>
         public const string ResultLabelName = "hud-result";
 
+        /// <summary>Hud.uxml の、弾数の下に出すリロードの進みのバー。進みが無いときは隠す。</summary>
+        public const string ReloadBarName = "hud-reload-bar";
+
+        /// <summary>Hud.uxml の、リロードの進みの塗り (<see cref="ReloadBarName"/> の子)。幅を進みの % にする。</summary>
+        public const string ReloadFillName = "hud-reload-fill";
+
+        /// <summary>Hud.uxml の、アクティブリロードで成功になる幅 (<see cref="ReloadBarName"/> の子)。幅が 0 のときは隠す。</summary>
+        public const string ReloadWindowName = "hud-reload-window";
+
         /// <summary>リロード中に弾数の Label に付ける USS クラス。</summary>
         public const string ReloadingClass = "hud__value--reloading";
 
@@ -62,6 +71,9 @@ namespace Fps.Runtime
         public Label FirstScoreLabel { get; }
         public Label SecondScoreLabel { get; }
         public Label ResultLabel { get; }
+        public VisualElement ReloadBar { get; }
+        public VisualElement ReloadFill { get; }
+        public VisualElement ReloadWindow { get; }
 
         /// <summary>
         /// root の下から Label と照準を名前で探し、今のモデルの文字列を入れてから変更を購読する。
@@ -85,6 +97,9 @@ namespace Fps.Runtime
             FirstScoreLabel = Require<Label>(root, FirstScoreLabelName);
             SecondScoreLabel = Require<Label>(root, SecondScoreLabelName);
             ResultLabel = Require<Label>(root, ResultLabelName);
+            ReloadBar = Require<VisualElement>(root, ReloadBarName);
+            ReloadFill = Require<VisualElement>(ReloadBar, ReloadFillName);
+            ReloadWindow = Require<VisualElement>(ReloadBar, ReloadWindowName);
 
             ShowHealth();
             ShowAmmo();
@@ -93,6 +108,7 @@ namespace Fps.Runtime
             ShowNotice();
             ShowScores();
             ShowResult();
+            ShowReloadProgress();
             _model.Changed += OnChanged;
         }
 
@@ -148,7 +164,7 @@ namespace Fps.Runtime
                     ShowWeaponName();
                     break;
                 case HudField.ReloadProgress:
-                    // 進捗の描画はアクティブリロードの issue で足す。それまでは受けても何も描かない。
+                    ShowReloadProgress();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a valid HudField");
@@ -200,6 +216,33 @@ namespace Fps.Runtime
             else
             {
                 ScorePanel.style.display = DisplayStyle.None;
+            }
+        }
+
+        /// <summary>進みがあればバーを出して塗りの幅を進みにし、成功になる幅を重ねる。進みが無ければバーごと隠す。</summary>
+        private void ShowReloadProgress()
+        {
+            var progress = _model.ReloadProgress;
+            if (!progress.HasValue)
+            {
+                ReloadBar.style.display = DisplayStyle.None;
+                return;
+            }
+
+            ReloadBar.style.display = DisplayStyle.Flex;
+            ReloadFill.style.width = Length.Percent(progress.Value * 100f);
+
+            var start = _model.ReloadWindowStart;
+            var end = _model.ReloadWindowEnd;
+            if (end > start)
+            {
+                ReloadWindow.style.left = Length.Percent(start * 100f);
+                ReloadWindow.style.width = Length.Percent((end - start) * 100f);
+                ReloadWindow.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                ReloadWindow.style.display = DisplayStyle.None;
             }
         }
 

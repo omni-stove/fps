@@ -13,7 +13,7 @@ namespace Fps.Runtime
     /// 無ければカメラの位置から正面へ撃つ。
     /// 武器は <see cref="Definitions"/> (既定のロードアウト) の並びで 1 本ずつ持ち (<see cref="Loadout"/>)、Next / Previous で持ち替える (端で折り返す)。
     /// 持ち替えに時間はかからず、しまった武器のリロードは取り消す。
-    /// Reload で <see cref="Weapon.TryStartReload"/>、毎フレーム今の武器の <see cref="Weapon.Tick"/> を呼ぶ。
+    /// Reload で <see cref="Weapon.TryStartReload"/> (リロード中なら <see cref="Weapon.TryActiveReload"/>)、毎フレーム今の武器の <see cref="Weapon.Tick"/> を呼ぶ。
     /// 弾数・連射間隔・リロードの判断は <see cref="Weapon"/>、ダメージ量は <see cref="DamageCalculator"/> が行う。
     /// 武器の値 (弾数・連射間隔・ダメージ・射程・距離減衰) は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない。
     /// 参照はコードで解決する: 照準は同じ GameObject の <see cref="Camera"/>、入力はプロジェクト全体のアクション、
@@ -36,6 +36,9 @@ namespace Fps.Runtime
         public const string PreviousActionPath = "Player/Previous";
 
         public const string ReloadedLog = "[Combat] reloaded";
+
+        /// <summary>アクティブリロードの判定のログの頭。続けて <c>success</c> か <c>fail</c> を出す (<see cref="ActiveReloadLog"/>)。</summary>
+        public const string ActiveReloadLogPrefix = "[Combat] active-reload";
 
         /// <summary>持ち替えたときのログの頭。続けて <c>index=.. id=.. name=..</c> を出す。</summary>
         public const string SwitchedLogPrefix = "[Combat] switched";
@@ -127,6 +130,9 @@ namespace Fps.Runtime
         /// <summary><see cref="StartReload"/> でリロードが始まったときに、リロードする Weapon を渡して呼ばれる。</summary>
         public event Action<Weapon> ReloadStarted;
 
+        /// <summary><see cref="TryActiveReload"/> で判定したときに、判定した Weapon と結果を渡して呼ばれる。</summary>
+        public event Action<Weapon, ActiveReloadResult> ActiveReloadJudged;
+
         /// <summary><see cref="Fire"/> で弾が出たときに、撃った Weapon を渡して呼ばれる (当たり判定の前)。</summary>
         public event Action<Weapon> Fired;
 
@@ -193,7 +199,7 @@ namespace Fps.Runtime
 
             if (_reloadAction.WasPressedThisFrame())
             {
-                StartReload();
+                PressReload();
             }
 
             PullTrigger(_attackAction.IsPressed(), _attackAction.WasPressedThisFrame());
@@ -498,6 +504,41 @@ namespace Fps.Runtime
 
             ReloadStarted?.Invoke(weapon);
             return true;
+        }
+
+        /// <summary>
+        /// Reload を押したときの処理。今の武器がリロード中なら <see cref="TryActiveReload"/>、そうでなければ <see cref="StartReload"/> を呼ぶ。
+        /// リロード中の 2 回目の押下で新しいリロードは始めない (アクティブリロードが Off なら何もしない)。どちらかが起きたら true。
+        /// </summary>
+        public bool PressReload()
+        {
+            EnsureInitialized();
+            return Weapon.IsReloading ? TryActiveReload() : StartReload();
+        }
+
+        /// <summary>
+        /// 今の武器の <see cref="Weapon.TryActiveReload"/> を呼び、判定したら <c>[Combat] active-reload success|fail</c> をログに出して
+        /// <see cref="ActiveReloadJudged"/> を呼び、true を返す。ルールが Off・リロード中でない・判定済みなら何もせず false。
+        /// 成功したときの補充のログ (<see cref="ReloadedLog"/>) は、判定のログより先に出る。
+        /// </summary>
+        public bool TryActiveReload()
+        {
+            EnsureInitialized();
+            var weapon = Weapon;
+            if (!weapon.TryActiveReload(out var result))
+            {
+                return false;
+            }
+
+            Debug.Log(ActiveReloadLog(result), this);
+            ActiveReloadJudged?.Invoke(weapon, result);
+            return true;
+        }
+
+        /// <summary>アクティブリロードの判定のログ。<c>[Combat] active-reload success</c> か <c>[Combat] active-reload fail</c>。</summary>
+        public static string ActiveReloadLog(ActiveReloadResult result)
+        {
+            return $"{ActiveReloadLogPrefix} {(result == ActiveReloadResult.Success ? "success" : "fail")}";
         }
 
         /// <summary>今の武器の時間を deltaSeconds 進める。</summary>

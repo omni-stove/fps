@@ -24,6 +24,11 @@
             <ui:Label text="AMMO" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-ammo" text="-- / --" class="hud__value" picking-mode="Ignore" />
         </ui:VisualElement>
+        <!-- アクティブリロードの進み (塗り) と成功になる幅。リロード中だけ HudView が出し、幅と塗りの長さを % で入れる。 -->
+        <ui:VisualElement name="hud-reload-bar" class="hud__reload-bar" picking-mode="Ignore" style="display: none;">
+            <ui:VisualElement name="hud-reload-fill" class="hud__reload-fill" picking-mode="Ignore" />
+            <ui:VisualElement name="hud-reload-window" class="hud__reload-window" picking-mode="Ignore" />
+        </ui:VisualElement>
         <ui:VisualElement name="hud-crosshair" class="hud__crosshair" picking-mode="Ignore">
             <ui:VisualElement class="hud__crosshair-line hud__crosshair-line--horizontal" picking-mode="Ignore" />
             <ui:VisualElement class="hud__crosshair-line hud__crosshair-line--vertical" picking-mode="Ignore" />

@@ -249,6 +249,8 @@ namespace Fps.Tests.EditMode
         {
             Assert.Throws<InvalidOperationException>(() => _controller.Fire());
             Assert.Throws<InvalidOperationException>(() => _controller.StartReload());
+            Assert.Throws<InvalidOperationException>(() => _controller.PressReload());
+            Assert.Throws<InvalidOperationException>(() => _controller.TryActiveReload());
             Assert.Throws<InvalidOperationException>(() => _controller.Tick(0.1f));
         }
 
@@ -646,6 +648,96 @@ namespace Fps.Tests.EditMode
             Assert.That(_controller.Weapon.IsReloading, Is.False);
             Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize));
             LogAssert.NoUnexpectedReceived();
+        }
+
+        private static Fps.Core.GameRules ActiveReloadRules(Fps.Core.ActiveReload activeReload)
+        {
+            var d = Fps.Core.GameRules.Default;
+            var a = Fps.Core.ActionRules.Default;
+            return new Fps.Core.GameRules(
+                d.FriendlyFire,
+                d.RespawnMode,
+                d.WaveIntervalSeconds,
+                d.RegenDelaySeconds,
+                d.RegenPerSecond,
+                d.DeathBody,
+                d.DeathCamera,
+                d.InfiniteReserve,
+                d.ReserveAmmoMultiplier,
+                d.Destruction,
+                new Fps.Core.ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload));
+        }
+
+        private void StartReloadWithRules(Fps.Core.ActiveReload activeReload)
+        {
+            _controller.Rules = ActiveReloadRules(activeReload);
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+            _controller.Fire();
+            Assert.That(_controller.PressReload(), Is.True, "the first press starts the reload");
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+        }
+
+        [Test]
+        public void PressingReloadInsideTheWindowJudgesASuccessAndRefillsAtOnce()
+        {
+            StartReloadWithRules(Fps.Core.ActiveReload.On);
+            var judged = new System.Collections.Generic.List<Fps.Core.ActiveReloadResult>();
+            _controller.ActiveReloadJudged += (weapon, result) =>
+            {
+                Assert.That(weapon, Is.SameAs(_controller.Weapon));
+                judged.Add(result);
+            };
+            _controller.Tick(_rifle.ReloadSeconds * (_rifle.ActiveReloadWindowStart + (_rifle.ActiveReloadWindowLength / 2f)));
+
+            LogAssert.Expect(LogType.Log, WeaponController.ReloadedLog);
+            LogAssert.Expect(LogType.Log, "[Combat] active-reload success");
+            Assert.That(_controller.PressReload(), Is.True);
+
+            Assert.That(judged, Is.EqualTo(new[] { Fps.Core.ActiveReloadResult.Success }));
+            Assert.That(_controller.Weapon.IsReloading, Is.False);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void PressingReloadOutsideTheWindowJudgesAFailOnlyOnce()
+        {
+            StartReloadWithRules(Fps.Core.ActiveReload.On);
+            _controller.Tick(_rifle.ReloadSeconds * _rifle.ActiveReloadWindowStart / 2f);
+
+            LogAssert.Expect(LogType.Log, "[Combat] active-reload fail");
+            Assert.That(_controller.PressReload(), Is.True);
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+            Assert.That(_controller.Weapon.HasJudgedActiveReload, Is.True);
+
+            Assert.That(_controller.PressReload(), Is.False, "the second press of the same reload is ignored");
+            Assert.That(_controller.TryActiveReload(), Is.False);
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void PressingReloadWhileReloadingDoesNothingWhenTheRuleIsOff()
+        {
+            StartReloadWithRules(Fps.Core.ActiveReload.Off);
+            var judged = 0;
+            _controller.ActiveReloadJudged += (weapon, result) => judged++;
+            _controller.Tick(_rifle.ReloadSeconds * (_rifle.ActiveReloadWindowStart + (_rifle.ActiveReloadWindowLength / 2f)));
+
+            Assert.That(_controller.PressReload(), Is.False);
+
+            Assert.That(judged, Is.Zero);
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize - 1));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ActiveReloadLogNamesTheResult()
+        {
+            Assert.That(WeaponController.ActiveReloadLog(Fps.Core.ActiveReloadResult.Success), Is.EqualTo("[Combat] active-reload success"));
+            Assert.That(WeaponController.ActiveReloadLog(Fps.Core.ActiveReloadResult.Fail), Is.EqualTo("[Combat] active-reload fail"));
         }
 
         [Test]

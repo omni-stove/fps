@@ -6,24 +6,24 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class GunGameTests
     {
-        private const string Rifle = "rifle";
-        private const string Launcher = "launcher";
-        private const string Handgun = "handgun";
-        private const string Knife = "knife";
+        private const string _rifle = "rifle";
+        private const string _launcher = "launcher";
+        private const string _handgun = "handgun";
+        private const string _knifeId = "knife";
 
-        private const int Player = 0;
-        private const int BotA = 1;
-        private const int BotB = 2;
+        private const int _player = 0;
+        private const int _botA = 1;
+        private const int _botB = 2;
 
         private static readonly GunGameTier[] _tiers =
         {
-            new GunGameTier(Rifle, "Rifle"),
-            new GunGameTier(Launcher, "Launcher"),
-            new GunGameTier(Handgun, "Handgun"),
+            new GunGameTier(_rifle, "Rifle"),
+            new GunGameTier(_launcher, "Launcher"),
+            new GunGameTier(_handgun, "Handgun"),
         };
 
-        private static readonly string[] _knife = { Knife };
-        private static readonly string[] _knifeTwiceAndPadded = { Knife, " knife " };
+        private static readonly string[] _knife = { _knifeId };
+        private static readonly string[] _knifeTwiceAndPadded = { _knifeId," knife " };
         private static readonly string[] _blankMelee = { " " };
         private static readonly string[] _nullMelee = { null };
 
@@ -32,9 +32,9 @@ namespace Fps.Core.Tests
         {
             var game = new GunGame(Ladder(true));
 
-            Assert.That(game.GetTier(Player), Is.Zero);
-            Assert.That(game.GetWeapon(Player).WeaponId, Is.EqualTo(Rifle));
-            Assert.That(game.GetNextWeapon(Player)?.WeaponId, Is.EqualTo(Launcher));
+            Assert.That(game.GetTier(_player), Is.Zero);
+            Assert.That(game.GetWeapon(_player).WeaponId, Is.EqualTo(_rifle));
+            Assert.That(game.GetNextWeapon(_player)?.WeaponId, Is.EqualTo(_launcher));
             Assert.That(game.FinisherId, Is.Null);
             Assert.That(game.ScoreLimit, Is.Null);
         }
@@ -45,16 +45,16 @@ namespace Fps.Core.Tests
             var game = new GunGame(Ladder(true));
             var session = Started(game);
 
-            var kill = game.ReportKill(session, Player, BotA, Rifle);
+            var kill = game.ReportKill(session, _player, _botA, _rifle);
 
             Assert.That(kill.Promoted, Is.True);
             Assert.That(kill.KillerTierBefore, Is.Zero);
             Assert.That(kill.KillerTier, Is.EqualTo(1));
             Assert.That(kill.Demoted, Is.False);
             Assert.That(kill.Finished, Is.False);
-            Assert.That(game.GetTier(Player), Is.EqualTo(1));
-            Assert.That(game.GetWeapon(Player).WeaponId, Is.EqualTo(Launcher));
-            Assert.That(game.GetTier(BotA), Is.Zero, "a gun kill does not move the victim");
+            Assert.That(game.GetTier(_player), Is.EqualTo(1));
+            Assert.That(game.GetWeapon(_player).WeaponId, Is.EqualTo(_launcher));
+            Assert.That(game.GetTier(_botA), Is.Zero, "a gun kill does not move the victim");
         }
 
         [Test]
@@ -63,13 +63,13 @@ namespace Fps.Core.Tests
             var game = new GunGame(Ladder(true));
             var session = Started(game);
 
-            Assert.That(game.ReportKill(session, Player, BotA, Launcher).Promoted, Is.False, "a later tier's weapon");
-            Assert.That(game.ReportKill(session, Player, BotA, "grenade").Promoted, Is.False, "a weapon off the ladder");
-            Assert.That(game.ReportKill(session, Player, BotA, null).Promoted, Is.False, "an unknown weapon");
-            Assert.That(game.ReportKill(session, Player, BotA, string.Empty).Promoted, Is.False, "an unknown weapon");
-            Assert.That(game.GetTier(Player), Is.Zero);
+            Assert.That(game.ReportKill(session, _player, _botA, _launcher).Promoted, Is.False, "a later tier's weapon");
+            Assert.That(game.ReportKill(session, _player, _botA, "grenade").Promoted, Is.False, "a weapon off the ladder");
+            Assert.That(game.ReportKill(session, _player, _botA, null).Promoted, Is.False, "an unknown weapon");
+            Assert.That(game.ReportKill(session, _player, _botA, string.Empty).Promoted, Is.False, "an unknown weapon");
+            Assert.That(game.GetTier(_player), Is.Zero);
 
-            Assert.That(game.ReportKill(session, Player, BotA, " rifle ").Promoted, Is.True, "ids are compared trimmed");
+            Assert.That(game.ReportKill(session, _player, _botA, " rifle ").Promoted, Is.True, "ids are compared trimmed");
         }
 
         [Test]
@@ -78,24 +78,24 @@ namespace Fps.Core.Tests
             var game = new GunGame(Ladder(true));
             var session = Started(game);
 
-            game.ReportKill(session, Player, BotA, Rifle);
-            game.ReportKill(session, Player, BotB, Launcher);
-            Assert.That(game.GetNextWeapon(Player), Is.Null, "the last tier has no next weapon");
+            game.ReportKill(session, _player, _botA, _rifle);
+            game.ReportKill(session, _player, _botB, _launcher);
+            Assert.That(game.GetNextWeapon(_player), Is.Null, "the last tier has no next weapon");
 
-            var kill = game.ReportKill(session, Player, BotA, Handgun);
+            var kill = game.ReportKill(session, _player, _botA, _handgun);
 
             Assert.That(kill.Finished, Is.True);
             Assert.That(kill.Promoted, Is.True);
-            Assert.That(game.FinisherId, Is.EqualTo(Player));
-            Assert.That(game.FinisherSide, Is.EqualTo((Side?)new Side(Player)));
-            Assert.That(game.GetTier(Player), Is.EqualTo(3));
-            Assert.That(game.GetWeaponTier(Player), Is.EqualTo(2), "the finisher keeps the last weapon");
+            Assert.That(game.FinisherId, Is.EqualTo(_player));
+            Assert.That(game.FinisherSide, Is.EqualTo((Side?)new Side(_player)));
+            Assert.That(game.GetTier(_player), Is.EqualTo(3));
+            Assert.That(game.GetWeaponTier(_player), Is.EqualTo(2), "the finisher keeps the last weapon");
             Assert.That(session.State, Is.EqualTo(GameModeState.Playing), "the mode ends at the head of the next tick");
 
             session.Tick(0f);
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(session.Winner, Is.EqualTo((Side?)new Side(Player)));
+            Assert.That(session.Winner, Is.EqualTo((Side?)new Side(_player)));
         }
 
         [Test]
@@ -103,20 +103,20 @@ namespace Fps.Core.Tests
         {
             var game = new GunGame(Ladder(true));
             var session = Started(game);
-            game.ReportKill(session, Player, BotA, Rifle);
-            game.ReportKill(session, Player, BotA, Launcher);
-            game.ReportKill(session, BotB, BotA, Rifle);
-            game.ReportKill(session, BotB, BotA, Launcher);
+            game.ReportKill(session, _player, _botA, _rifle);
+            game.ReportKill(session, _player, _botA, _launcher);
+            game.ReportKill(session, _botB, _botA, _rifle);
+            game.ReportKill(session, _botB, _botA, _launcher);
 
-            game.ReportKill(session, BotB, Player, Handgun);
-            var late = game.ReportKill(session, Player, BotB, Handgun);
+            game.ReportKill(session, _botB, _player, _handgun);
+            var late = game.ReportKill(session, _player, _botB, _handgun);
 
             Assert.That(late.Promoted, Is.False);
             Assert.That(late.Finished, Is.False);
-            Assert.That(game.FinisherId, Is.EqualTo(BotB));
+            Assert.That(game.FinisherId, Is.EqualTo(_botB));
 
             session.Tick(0f);
-            Assert.That(session.Winner, Is.EqualTo((Side?)new Side(BotB)));
+            Assert.That(session.Winner, Is.EqualTo((Side?)new Side(_botB)));
         }
 
         [Test]
@@ -124,17 +124,17 @@ namespace Fps.Core.Tests
         {
             var game = new GunGame(Ladder(true));
             var session = Started(game);
-            game.ReportKill(session, BotA, Player, Rifle);
-            game.ReportKill(session, BotA, Player, Launcher);
-            Assert.That(game.GetTier(BotA), Is.EqualTo(2));
+            game.ReportKill(session, _botA, _player, _rifle);
+            game.ReportKill(session, _botA, _player, _launcher);
+            Assert.That(game.GetTier(_botA), Is.EqualTo(2));
 
-            var kill = game.ReportKill(session, Player, BotA, Knife);
+            var kill = game.ReportKill(session, _player, _botA, _knifeId);
 
             Assert.That(kill.Demoted, Is.True);
             Assert.That(kill.VictimTierBefore, Is.EqualTo(2));
             Assert.That(kill.VictimTier, Is.EqualTo(1));
             Assert.That(kill.Promoted, Is.False, "the knife is not the killer's tier weapon");
-            Assert.That(game.GetWeapon(BotA).WeaponId, Is.EqualTo(Launcher));
+            Assert.That(game.GetWeapon(_botA).WeaponId, Is.EqualTo(_launcher));
         }
 
         [Test]
@@ -142,30 +142,30 @@ namespace Fps.Core.Tests
         {
             var enabled = new GunGame(Ladder(true));
             var session = Started(enabled);
-            Assert.That(enabled.ReportKill(session, Player, BotA, Knife).Demoted, Is.False);
-            Assert.That(enabled.GetTier(BotA), Is.Zero);
+            Assert.That(enabled.ReportKill(session, _player, _botA, _knifeId).Demoted, Is.False);
+            Assert.That(enabled.GetTier(_botA), Is.Zero);
 
             var disabled = new GunGame(Ladder(false));
             var other = Started(disabled);
-            disabled.ReportKill(other, BotA, Player, Rifle);
-            Assert.That(disabled.ReportKill(other, Player, BotA, Knife).Demoted, Is.False);
-            Assert.That(disabled.GetTier(BotA), Is.EqualTo(1));
+            disabled.ReportKill(other, _botA, _player, _rifle);
+            Assert.That(disabled.ReportKill(other, _player, _botA, _knifeId).Demoted, Is.False);
+            Assert.That(disabled.GetTier(_botA), Is.EqualTo(1));
         }
 
         [Test]
         public void AMeleeWeaponOnTheLadderBothPromotesAndDemotes()
         {
-            var tiers = new[] { new GunGameTier(Rifle, "Rifle"), new GunGameTier(Knife, "Knife") };
+            var tiers = new[] { new GunGameTier(_rifle, "Rifle"), new GunGameTier(_knifeId, "Knife") };
             var game = new GunGame(new GunGameLadder(tiers, _knife, true));
             var session = Started(game);
-            game.ReportKill(session, BotA, BotB, Rifle);
-            game.ReportKill(session, Player, BotB, Rifle);
+            game.ReportKill(session, _botA, _botB, _rifle);
+            game.ReportKill(session, _player, _botB, _rifle);
 
-            var kill = game.ReportKill(session, Player, BotA, Knife);
+            var kill = game.ReportKill(session, _player, _botA, _knifeId);
 
             Assert.That(kill.Demoted, Is.True);
             Assert.That(kill.Finished, Is.True);
-            Assert.That(game.GetTier(BotA), Is.Zero);
+            Assert.That(game.GetTier(_botA), Is.Zero);
         }
 
         [Test]
@@ -175,18 +175,18 @@ namespace Fps.Core.Tests
 
             // 味方のキルを作るため、この試合だけ 1 陣営に 2 人入れる。
             var waiting = new ModeSession(new Squads(2, 2), 60f, Array.Empty<IScoreRule>(), new IndividualRespawn(1f), new IWinCondition[] { game });
-            waiting.AddPlayer(Player, new Side(0));
-            waiting.AddPlayer(BotA, new Side(1));
-            waiting.AddPlayer(BotB, new Side(1));
+            waiting.AddPlayer(_player, new Side(0));
+            waiting.AddPlayer(_botA, new Side(1));
+            waiting.AddPlayer(_botB, new Side(1));
 
-            Assert.That(game.ReportKill(waiting, Player, BotA, Rifle).Promoted, Is.False, "before the start");
+            Assert.That(game.ReportKill(waiting, _player, _botA, _rifle).Promoted, Is.False, "before the start");
 
             waiting.Start();
-            Assert.That(game.ReportKill(waiting, Player, Player, Rifle).Promoted, Is.False, "a suicide");
-            Assert.That(game.ReportKill(waiting, BotA, BotB, Rifle).Promoted, Is.False, "a team kill");
-            Assert.That(game.ReportKill(waiting, BotB, BotA, Knife).Demoted, Is.False, "a team kill");
-            Assert.That(game.GetTier(Player), Is.Zero);
-            Assert.That(game.GetTier(BotA), Is.Zero);
+            Assert.That(game.ReportKill(waiting, _player, _player, _rifle).Promoted, Is.False, "a suicide");
+            Assert.That(game.ReportKill(waiting, _botA, _botB, _rifle).Promoted, Is.False, "a team kill");
+            Assert.That(game.ReportKill(waiting, _botB, _botA, _knifeId).Demoted, Is.False, "a team kill");
+            Assert.That(game.GetTier(_player), Is.Zero);
+            Assert.That(game.GetTier(_botA), Is.Zero);
         }
 
         [Test]
@@ -195,9 +195,9 @@ namespace Fps.Core.Tests
             var game = new GunGame(Ladder(true));
             var session = Started(game);
 
-            Assert.Throws<ArgumentNullException>(() => game.ReportKill(null, Player, BotA, Rifle));
-            Assert.Throws<ArgumentOutOfRangeException>(() => game.ReportKill(session, 9, BotA, Rifle));
-            Assert.Throws<ArgumentOutOfRangeException>(() => game.ReportKill(session, Player, 9, Rifle));
+            Assert.Throws<ArgumentNullException>(() => game.ReportKill(null, _player, _botA, _rifle));
+            Assert.Throws<ArgumentOutOfRangeException>(() => game.ReportKill(session, 9, _botA, _rifle));
+            Assert.Throws<ArgumentOutOfRangeException>(() => game.ReportKill(session, _player, 9, _rifle));
         }
 
         [Test]
@@ -205,17 +205,17 @@ namespace Fps.Core.Tests
         {
             var game = new GunGame(Ladder(true));
             var session = Started(game, 10f);
-            game.ReportKill(session, BotA, Player, Rifle);
+            game.ReportKill(session, _botA, _player, _rifle);
 
             session.Tick(10f);
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(session.Winner, Is.EqualTo((Side?)new Side(BotA)));
+            Assert.That(session.Winner, Is.EqualTo((Side?)new Side(_botA)));
 
             var tied = new GunGame(Ladder(true));
             var other = Started(tied, 10f);
-            tied.ReportKill(other, BotA, Player, Rifle);
-            tied.ReportKill(other, BotB, Player, Rifle);
+            tied.ReportKill(other, _botA, _player, _rifle);
+            tied.ReportKill(other, _botB, _player, _rifle);
 
             other.Tick(10f);
 
@@ -228,13 +228,13 @@ namespace Fps.Core.Tests
         {
             var game = new GunGame(Ladder(true));
             var session = Started(game);
-            game.ReportKill(session, Player, BotA, Rifle);
-            game.ReportKill(session, Player, BotA, Launcher);
-            game.ReportKill(session, Player, BotA, Handgun);
+            game.ReportKill(session, _player, _botA, _rifle);
+            game.ReportKill(session, _player, _botA, _launcher);
+            game.ReportKill(session, _player, _botA, _handgun);
 
             game.Reset();
 
-            Assert.That(game.GetTier(Player), Is.Zero);
+            Assert.That(game.GetTier(_player), Is.Zero);
             Assert.That(game.FinisherId, Is.Null);
             Assert.That(game.CheckStanding(session).IsDecided, Is.False);
         }
@@ -254,13 +254,13 @@ namespace Fps.Core.Tests
             Assert.That(ladder.TierCount, Is.EqualTo(3));
             Assert.That(ladder.MeleeWeaponIds, Is.EqualTo(_knife));
             Assert.That(ladder.IsMelee(" knife"), Is.True);
-            Assert.That(ladder.IsMelee(Rifle), Is.False);
+            Assert.That(ladder.IsMelee(_rifle), Is.False);
             Assert.That(ladder.IsMelee(null), Is.False);
             Assert.That(ladder.DemotesOnMelee, Is.False);
 
             var unnamed = new GunGameTier(" rifle ", " ");
-            Assert.That(unnamed.WeaponId, Is.EqualTo(Rifle));
-            Assert.That(unnamed.DisplayName, Is.EqualTo(Rifle), "a blank name falls back to the id");
+            Assert.That(unnamed.WeaponId, Is.EqualTo(_rifle));
+            Assert.That(unnamed.DisplayName, Is.EqualTo(_rifle), "a blank name falls back to the id");
         }
 
         [Test]
@@ -294,9 +294,9 @@ namespace Fps.Core.Tests
         private static ModeSession Started(GunGame game, float timeLimitSeconds = 60f)
         {
             var session = Session(game, timeLimitSeconds);
-            session.AddPlayer(Player, new Side(Player));
-            session.AddPlayer(BotA, new Side(BotA));
-            session.AddPlayer(BotB, new Side(BotB));
+            session.AddPlayer(_player, new Side(_player));
+            session.AddPlayer(_botA, new Side(_botA));
+            session.AddPlayer(_botB, new Side(_botB));
             session.Start();
             return session;
         }

@@ -77,6 +77,8 @@ namespace Fps.Tests.EditMode
             Assert.That(element.Q<Button>(PauseMenu.SettingsButtonName), Is.Not.Null);
             Assert.That(element.Q<Button>(PauseMenu.ReturnToMenuButtonName), Is.Not.Null);
             Assert.That(element.Q<Label>(PauseMenu.NoteLabelName), Is.Not.Null);
+            Assert.That(element.Q<VisualElement>(PauseSettingsView.PanelName), Is.Not.Null);
+            Assert.That(element.Q<VisualElement>(PauseSettingsView.SlotName), Is.Not.Null);
         }
 
         [Test]
@@ -147,8 +149,10 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void SettingsIsDisabledUntilAHandlerIsGiven()
+        public void SettingsIsDisabledWithoutAHandler()
         {
+            // Hud は PauseSettingsView を付けて開く処理を渡すので、外した状態から確かめる。
+            _pause.OpenSettings = null;
             _pause.Bind(CloneLayout());
             var settings = _pause.Element.Q<Button>(PauseMenu.SettingsButtonName);
 

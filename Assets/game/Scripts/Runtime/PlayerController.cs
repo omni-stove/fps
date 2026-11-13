@@ -96,6 +96,7 @@ namespace Fps.Runtime
         private bool _isLive;
         private bool? _lastGrounded;
         private ControlSettings _controlSettings = ControlSettings.Default;
+        private bool _listeningToSettings;
         private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
         private SprintInput _sprint;
         private WeaponController _releaseWeapon;
@@ -150,7 +151,8 @@ namespace Fps.Runtime
         public float CrouchHeight => _crouchHeight;
 
         /// <summary>
-        /// ダッシュとしゃがみのモードを決める操作設定。Awake で <see cref="ControlSettingsStore"/> から読む (Edit Mode では Awake が走らないので初期値)。
+        /// ダッシュとしゃがみのモードを決める操作設定。Awake で <see cref="AppliedControlSettings.Current"/> を読み、設定画面で変わるたびに入れ直す
+        /// (Edit Mode では Awake が走らないので初期値)。
         /// 変えると次の <see cref="UpdateSprint"/> / <see cref="UpdateCrouch"/> から使う。
         /// </summary>
         public ControlSettings ControlSettings
@@ -212,7 +214,9 @@ namespace Fps.Runtime
 
         private void Awake()
         {
-            _controlSettings = new ControlSettingsStore().Load();
+            _controlSettings = AppliedControlSettings.Current;
+            AppliedControlSettings.Changed += HandleSettingsChanged;
+            _listeningToSettings = true;
             if (!IsInitialized && !TryInitializeFromHierarchy())
             {
                 enabled = false;
@@ -222,6 +226,16 @@ namespace Fps.Runtime
         private void OnDestroy()
         {
             BindSprintRelease(null, null);
+            if (_listeningToSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _listeningToSettings = false;
+            }
+        }
+
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            _controlSettings = settings;
         }
 
         private void OnEnable()

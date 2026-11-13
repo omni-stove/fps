@@ -257,6 +257,54 @@ namespace Fps.Tests.EditMode
             Assert.That(view.Element.Query<VisualElement>(className: DamageDirectionView.ArcClass).ToList(), Has.Count.EqualTo(1));
         }
 
+        [Test]
+        public void AHitMarkerTheDensityForbidsShowsNothingAndHidesItsElement()
+        {
+            var view = CreateView<HitMarkerView>(out var root);
+            view.Catalog = null;
+            view.Bind(root);
+            view.Show(new HitConfirm(25, HitZone.Body, killed: false, downed: false));
+
+            view.SetAllowed(false);
+            Assert.That(view.IsAllowed, Is.False);
+            Assert.That(view.IsShowing, Is.False, "the marker shown before the switch goes away");
+            Assert.That(view.Element.style.visibility.value, Is.EqualTo(Visibility.Hidden));
+
+            view.Show(new HitConfirm(25, HitZone.Head, killed: true, downed: false));
+            Assert.That(view.IsShowing, Is.False);
+
+            view.SetAllowed(true);
+            Assert.That(view.Element.style.visibility.value, Is.EqualTo(Visibility.Visible));
+            view.Show(new HitConfirm(25, HitZone.Body, killed: false, downed: false));
+            Assert.That(view.IsShowing, Is.True);
+        }
+
+        [Test]
+        public void AForbiddenViewStaysHiddenOnANewTree()
+        {
+            var view = CreateView<HitMarkerView>(out _);
+            view.SetAllowed(false);
+
+            view.Bind(CloneLayout());
+
+            Assert.That(view.Element.style.visibility.value, Is.EqualTo(Visibility.Hidden));
+        }
+
+        [Test]
+        public void ADamageDirectionTheDensityForbidsClearsItsArcsAndIgnoresHits()
+        {
+            var view = CreateView<DamageDirectionView>(out var root);
+            view.Viewer = CreateViewer(yaw: 0f);
+            view.Bind(root);
+            view.Show(new Vector3(10f, 0f, 0f));
+
+            view.SetAllowed(false);
+            Assert.That(view.ActiveCount, Is.EqualTo(0));
+
+            view.Show(new Vector3(-10f, 0f, 0f));
+            Assert.That(view.ActiveCount, Is.EqualTo(0));
+        }
+
         private T CreateView<T>(out VisualElement root)
             where T : HudElementView
         {

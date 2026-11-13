@@ -88,9 +88,18 @@ namespace Fps.Runtime
             Tick(Time.unscaledDeltaTime);
         }
 
-        /// <summary>confirm の命中の印を出し直し、音があれば鳴らす。出している途中でも残りの秒数を戻す。</summary>
+        /// <summary>
+        /// confirm の命中の印を出し直し、音があれば鳴らす。出している途中でも残りの秒数を戻す。
+        /// HUD の量で出さない (<see cref="HudElementView.IsAllowed"/> が false) ときは、音も含めて何もしない。
+        /// </summary>
         public void Show(HitConfirm confirm)
         {
+            // 音だけ鳴らすと、ハードコアで隠した命中の手応えが音で伝わってしまうため
+            if (!IsAllowed)
+            {
+                return;
+            }
+
             _remaining = DisplaySeconds;
             _headshot = confirm.Zone == HitZone.Head;
             _killed = confirm.Killed;
@@ -117,6 +126,15 @@ namespace Fps.Runtime
         protected override void OnBound(VisualElement element)
         {
             Apply();
+        }
+
+        protected override void OnAllowedChanged(bool allowed)
+        {
+            if (!allowed)
+            {
+                _remaining = 0f;
+                Apply();
+            }
         }
 
         private void Apply()

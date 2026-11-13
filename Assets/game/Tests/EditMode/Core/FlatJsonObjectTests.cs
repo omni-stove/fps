@@ -92,7 +92,7 @@ namespace Fps.Core.Tests
         [Test]
         public void FormatEscapesSoTheLineStaysOneLine()
         {
-            var text = FlatJsonObject.Format(new[] { Pair("k\"", "a\"b\\c\nd\re\tf\u0001g h") });
+            var text = FlatJsonObject.Format(new[] { Pair("k\"", "a\"b\\c\nd\re\tf\u0001g\u2028h") });
 
             Assert.That(text, Is.EqualTo("{\"k\\\"\":\"a\\\"b\\\\c\\nd\\re\\tf\\u0001g\\u2028h\"}"));
         }
@@ -108,7 +108,7 @@ namespace Fps.Core.Tests
         [Test]
         public void FormattedTextReadsBack()
         {
-            var pairs = new[] { Pair("a", "x\"y\\z\n\u0000"), Pair("b", ""), Pair("c", "/ ") };
+            var pairs = new[] { Pair("a", "x\"y\\z\n\u0000"), Pair("b", ""), Pair("c", "/\u2029") };
 
             var ok = FlatJsonObject.TryParse(FlatJsonObject.Format(pairs), out var values, out var error);
 
@@ -116,7 +116,7 @@ namespace Fps.Core.Tests
             Assert.That(values, Has.Count.EqualTo(3));
             Assert.That(values["a"], Is.EqualTo("x\"y\\z\n\u0000"));
             Assert.That(values["b"], Is.Empty);
-            Assert.That(values["c"], Is.EqualTo("/ "));
+            Assert.That(values["c"], Is.EqualTo("/\u2029"));
         }
 
         [Test]

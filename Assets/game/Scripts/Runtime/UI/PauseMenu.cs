@@ -364,32 +364,21 @@ namespace Fps.Runtime
                 }
             }
 
-            var toSuspend = _state.Suspend(_enabledScratch);
-            if (toSuspend.Count == 0)
+            if (_enabledScratch.Count == 0)
             {
                 return;
             }
 
+            // Suspend が返すのはまだ記録していない名前だけで、一度止めた後に別の部品が有効にし直したものは返らない。
+            // 返り値は閉じたときに戻す記録にだけ使い、止めるのは有効なもの全部にする
+            _state.Suspend(_enabledScratch);
             foreach (var action in map.actions)
             {
-                if (action.enabled && Contains(toSuspend, PathOf(action)))
+                if (action.enabled && !_state.KeepsEnabled(PathOf(action)))
                 {
                     action.Disable();
                 }
             }
-        }
-
-        private static bool Contains(IReadOnlyList<string> paths, string path)
-        {
-            for (var i = 0; i < paths.Count; i++)
-            {
-                if (string.Equals(paths[i], path, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private void ResumeActions(IReadOnlyList<string> paths)

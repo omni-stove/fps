@@ -1,6 +1,7 @@
 name: Nightly
 
 # 毎日 JST 3:00 に Unity の EditMode テストと SmokeSuite.RunAll (Play Mode のスモーク) を回し、JST の日曜は macOS クライアントもビルドする。
+# スモークの PerfSmokeRun が書く Logs/perf.json (サーバーの tick の平均・最大・p95) は成果物 perf-<sha> として残す。
 # 同じ sha で前に通っていれば飛ばす。どれかが失敗したら nightly-failure ラベルの issue を開け、開いたものがあればコメントを足す。
 # ローカルで同じ手順を回すなら make nightly-local
 on:
@@ -134,6 +135,15 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         run: bash scripts/nightly-smoke-ci.sh
 
+      # PerfSmokeRun が書くサーバーの tick の平均・最大・p95。予算を超えて落ちた夜も見比べられるよう、結果によらず残す
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-${{ github.sha }}
+          path: Logs/perf.json
+          retention-days: 30
+          if-no-files-found: warn
+
   client:
     needs: gate
     if: needs.gate.outputs.build-client == 'true'
@@ -236,6 +246,7 @@ jobs:
             echo "| record | $RECORD |"
             echo
             echo "smoke の失敗は、ログの \`[SmokeSuite]\` の行と FAILED になった SmokeRun のタグの行を見る。ローカルでは \`make nightly-local\` で同じ手順を回せる。"
+            echo "PerfSmokeRun (サーバーの tick の予算) の結果は成果物 \`perf-$SHA\` の perf.json にある。ローカルでは \`make perf\` で計れる。"
           } > "$body"
 
           existing="$(gh issue list --label "$LABEL" --state open --limit 1 --json number --jq '.[0].number // empty')"

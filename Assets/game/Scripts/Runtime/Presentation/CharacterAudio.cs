@@ -16,6 +16,7 @@ namespace Fps.Runtime
     /// </list>
     /// 音は <see cref="Catalog"/> の <see cref="PresentationCatalog.Footstep"/> / <see cref="PresentationCatalog.Landing"/> / <see cref="PresentationCatalog.HurtVoice"/>。
     /// 無いものは鳴らさないだけで、動きや戦闘の処理は止めない。AudioSource は初めて鳴らすときに本体へ足す (足と声で 2 つ)。
+    /// 他人の足音と着地音を鳴らしたら、字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
     /// 銃声・着弾・リロードの音は <see cref="WeaponPresentation"/> が鳴らす。
     /// 専用サーバーでは <c>Fps.Net.HeadlessPresentation</c> が止める。
     /// </summary>
@@ -189,7 +190,17 @@ namespace Fps.Runtime
             var feet = EnsureSource(ref _feet);
             feet.pitch = isLanding ? 1f : 1f + Random.Range(-FootstepPitchJitter, FootstepPitchJitter);
             feet.PlayOneShot(clip, cue.Volume);
+
+            // 自分の足音は歩くたびに鳴り続け、周りの合図を読む邪魔になるだけなので字幕にしない。
+            if (!IsLocalCharacter)
+            {
+                SubtitleFeed.Raise(SoundCueKind.Footstep, transform.position, Mathf.Max(_maxDistance, _minDistance + 0.01f));
+            }
         }
+
+        /// <summary>この画面で操作しているキャラか (<see cref="Damageable.IsLocalPlayer"/> / <see cref="ICharacterHurtSource.IsLocalPlayer"/>)。</summary>
+        public bool IsLocalCharacter =>
+            _damageable != null ? _damageable.IsLocalPlayer : _hurtSource != null && _hurtSource.IsLocalPlayer;
 
         /// <summary>
         /// 被弾の声を鳴らす。<see cref="HurtVoiceCooldownSeconds"/> の間に続けて呼んでも 1 回だけ鳴らす。

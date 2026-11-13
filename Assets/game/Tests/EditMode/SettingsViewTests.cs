@@ -244,6 +244,53 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheSubtitlesButtonStartsOff()
+        {
+            _view.Open(_container);
+
+            Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo(SettingsView.OffText));
+        }
+
+        // 字幕を On にするとすぐ効き (HUD の字幕は Changed で切り替わる)、閉じると保存され、起動し直しても残る
+        [Test]
+        public void TurningSubtitlesOnAppliesAtOnceAndIsSavedOnClose()
+        {
+            var received = new List<ControlSettings>();
+            AppliedControlSettings.Changed += received.Add;
+            try
+            {
+                _view.Open(_container);
+
+                _view.SetShowSubtitles(true);
+
+                Assert.That(AppliedControlSettings.Current.ShowSubtitles, Is.True);
+                Assert.That(received, Has.Count.EqualTo(1));
+                Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo(SettingsView.OnText));
+                Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False, "not written until it closes");
+
+                _view.Close();
+
+                Assert.That(new ControlSettingsStore(_store.Key).Load().ShowSubtitles, Is.True);
+            }
+            finally
+            {
+                AppliedControlSettings.Changed -= received.Add;
+            }
+        }
+
+        [Test]
+        public void ResetToDefaultsTurnsTheSubtitlesOff()
+        {
+            _view.Open(_container);
+            _view.SetShowSubtitles(true);
+
+            _view.ResetToDefaults();
+
+            Assert.That(AppliedControlSettings.Current.ShowSubtitles, Is.False);
+            Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo(SettingsView.OffText));
+        }
+
+        [Test]
         public void TheNetStatsToggledWhileOpenSurviveEditsResetAndSave()
         {
             _view.Open(_container);

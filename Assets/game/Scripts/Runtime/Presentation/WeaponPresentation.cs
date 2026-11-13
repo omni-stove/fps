@@ -22,6 +22,7 @@ namespace Fps.Runtime
     /// 上限を超えたら古いものから取り上げる。部品はキャラの外の <see cref="PoolRoot"/> の下に置く (キャラが動いても着弾の跡は動かない)。</item>
     /// <item>リロード音は、同じ階層の <see cref="WeaponController.ReloadStarted"/> (オフラインのプレイヤー) と、
     /// <see cref="PlayReload"/> を呼ぶ側 (ネット対戦では <c>Fps.Net.NetPlayer</c>) から鳴らす。</item>
+    /// <item>銃声とリロード音を鳴らしたら、字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。自分のリロード音は位置を付けない。</item>
     /// </list>
     /// 専用サーバーでは <c>Fps.Net.HeadlessPresentation</c> が止め、ここでも有効になったときに自分を止める。
     /// </remarks>
@@ -266,6 +267,10 @@ namespace Fps.Runtime
                     {
                         PlayAt(assets.Fire, shot.Origin, now);
                     }
+
+                    // 手元の銃声は耳元 (弾の始点) で鳴り位置では向きが決まらないので、銃を向けている先から聞こえたことにする。
+                    var heardAt = own && IsLocal ? shot.Origin + direction : shot.Origin;
+                    SubtitleFeed.Raise(SoundCueKind.Gunshot, heardAt, SoundMaxDistance);
                 }
 
                 if (assets.MuzzleFlash != null)
@@ -334,6 +339,7 @@ namespace Fps.Runtime
             if (assets.Reload != null)
             {
                 PlayOnBody(assets.Reload);
+                SubtitleFeed.Raise(SoundCueKind.Reload, IsLocal ? default(Vector3?) : transform.position, SoundMaxDistance);
             }
         }
 

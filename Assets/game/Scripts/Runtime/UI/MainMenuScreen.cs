@@ -15,6 +15,9 @@ namespace Fps.Runtime
     /// 起動引数に <c>-mode</c> / <c>-lobby</c> があるとき (<see cref="MenuRoute.ShouldSkipMenu"/>) は何も出さず、
     /// NetBootstrap がネット対戦のシーンへ切り替えるのに任せる。
     /// 設定ボタンは <see cref="SettingsRequested"/> に差し込み口の要素を渡すだけで、中身は設定画面の側が入れる。
+    /// ロードアウトのボタンは、オンラインと同じアセット (<see cref="Loadout"/>・<see cref="Catalog"/>、MenuSceneBuilder が配線) から
+    /// 選ぶ画面 (<see cref="LoadoutSelectPanel"/>) を差し込み口に出し、決めた並びを <see cref="LoadoutStore"/> に保存する。
+    /// 送るのはオンラインに入ってから (Fps.Net の NetLoadoutChooser が保存した並びを送る)。
     /// <see cref="Show"/> は <see cref="SettingsView"/> を取り付ける (<see cref="InstallSettingsView"/>)。
     /// </summary>
     [DisallowMultipleComponent]
@@ -32,15 +35,20 @@ namespace Fps.Runtime
         public const string CampaignButtonName = "menu-campaign";
         public const string CreateLobbyButtonName = "menu-create-lobby";
         public const string JoinLobbyButtonName = "menu-join-lobby";
+        public const string LoadoutButtonName = "menu-loadout";
         public const string RangeButtonName = "menu-range";
         public const string TutorialButtonName = "menu-tutorial";
         public const string SettingsButtonName = "menu-settings";
         public const string QuitButtonName = "menu-quit";
         public const string NoticeName = "menu-notice";
         public const string SettingsSlotName = "menu-settings-slot";
+        public const string LoadoutSlotName = "menu-loadout-slot";
 
         /// <summary>設定画面がまだ差し込まれていないときに出す案内。</summary>
         public const string SettingsUnavailableNotice = "Settings are not available yet.";
+
+        /// <summary>ロードアウトのアセットが使えないときに出す案内の頭。続けて理由を出す。</summary>
+        public const string LoadoutUnavailableNotice = "The loadout cannot be changed: ";
 
         /// <summary>ボタンの名前。この順に上から並べ、ゲームパッドのフォーカスもこの順に動かす。</summary>
         public static readonly IReadOnlyList<string> ButtonNames = new[]
@@ -48,11 +56,18 @@ namespace Fps.Runtime
             CampaignButtonName,
             CreateLobbyButtonName,
             JoinLobbyButtonName,
+            LoadoutButtonName,
             RangeButtonName,
             TutorialButtonName,
             SettingsButtonName,
             QuitButtonName,
         };
+
+        [SerializeField, Tooltip("オンラインのロードアウト (Assets/game/Weapons/DefaultLoadout.asset)。スロットのルールと既定の武器をここから引く")]
+        private LoadoutDefinition _loadout;
+
+        [SerializeField, Tooltip("オンラインで選べる武器の一覧 (Assets/game/Weapons/WeaponCatalog.asset)")]
+        private WeaponCatalogAsset _catalog;
 
         private readonly List<Button> _buttons = new List<Button>();
         private readonly List<Action> _unbind = new List<Action>();
@@ -60,6 +75,9 @@ namespace Fps.Runtime
         private PanelSettings _ownedPanelSettings;
         private VisualElement _navigationRoot;
         private VisualElement _settingsSlot;
+        private VisualElement _loadoutSlot;
+        private LoadoutSelectPanel _loadoutPanel;
+        private LoadoutPreferenceStore _loadoutStore = new LoadoutPreferenceStore();
         private Label _notice;
         private int _focusIndex = -1;
         private bool _settingsOpen;
@@ -89,6 +107,39 @@ namespace Fps.Runtime
 
         /// <summary>設定画面を開いているか。</summary>
         public bool IsSettingsOpen => _settingsOpen;
+
+        /// <summary>ロードアウトの差し込み口。<see cref="Bind"/> の前は null。</summary>
+        public VisualElement LoadoutSlot => _loadoutSlot;
+
+        /// <summary>出しているロードアウトの選択。閉じていれば null。</summary>
+        public LoadoutSelectPanel LoadoutPanel => _loadoutPanel;
+
+        /// <summary>ロードアウトの選択を開いているか。</summary>
+        public bool IsLoadoutOpen => _loadoutPanel != null;
+
+        /// <summary>スロットのルールと既定の武器を引くロードアウト。MenuSceneBuilder がシーンに配線する。</summary>
+        public LoadoutDefinition Loadout
+        {
+            get => _loadout;
+            set => _loadout = value;
+        }
+
+        /// <summary>選べる武器の一覧。MenuSceneBuilder がシーンに配線する。</summary>
+        public WeaponCatalogAsset Catalog
+        {
+            get => _catalog;
+            set => _catalog = value;
+        }
+
+        /// <summary>選んだロードアウトの保存先。null を入れると既定のキーに戻す (テストで差し替える)。</summary>
+        public LoadoutPreferenceStore LoadoutStore
+        {
+            get => _loadoutStore;
+            set => _loadoutStore = value ?? new LoadoutPreferenceStore();
+        }
+
+        // 設定とロードアウトのどちらかを開いている間は、メニューのボタンとその移動を止める
+        private bool IsOverlayOpen => _settingsOpen || _loadoutPanel != null;
 
         /// <summary>出している案内。出していなければ null。</summary>
         public string Notice => _notice != null && _notice.style.display != DisplayStyle.None ? _notice.text : null;
@@ -236,6 +287,8 @@ namespace Fps.Runtime
             _notice = root.Q<Label>(NoticeName) ?? throw new InvalidOperationException($"the menu layout has no Label named '{NoticeName}'");
             _settingsSlot = root.Q<VisualElement>(SettingsSlotName)
                 ?? throw new InvalidOperationException($"the menu layout has no element named '{SettingsSlotName}'");
+            _loadoutSlot = root.Q<VisualElement>(LoadoutSlotName)
+                ?? throw new InvalidOperationException($"the menu layout has no element named '{LoadoutSlotName}'");
 
             for (var i = 0; i < _buttons.Count; i++)
             {
@@ -273,13 +326,16 @@ namespace Fps.Runtime
             _settingsOpen = false;
             _leaving = false;
             SetDisplayed(_settingsSlot, false);
+            SetDisplayed(_loadoutSlot, false);
             ShowNotice(null);
         }
 
-        /// <summary>選んでいるボタンを step だけ動かす (<see cref="MenuRoute.MoveFocus"/>)。設定画面を開いている間は動かさない。</summary>
+        /// <summary>
+        /// 選んでいるボタンを step だけ動かす (<see cref="MenuRoute.MoveFocus"/>)。設定画面・ロードアウトの選択を開いている間は動かさない。
+        /// </summary>
         public void MoveFocus(int step)
         {
-            if (_settingsOpen || _buttons.Count == 0)
+            if (IsOverlayOpen || _buttons.Count == 0)
             {
                 return;
             }
@@ -293,7 +349,7 @@ namespace Fps.Runtime
         /// </summary>
         public bool Choose(MenuDestination destination)
         {
-            if (_leaving || _settingsOpen)
+            if (_leaving || IsOverlayOpen)
             {
                 return false;
             }
@@ -329,7 +385,7 @@ namespace Fps.Runtime
         /// </summary>
         public void OpenSettings()
         {
-            if (_settingsSlot == null || _settingsOpen || _leaving)
+            if (_settingsSlot == null || IsOverlayOpen || _leaving)
             {
                 return;
             }
@@ -369,6 +425,67 @@ namespace Fps.Runtime
             SetDisplayed(_settingsSlot, false);
             SetButtonsEnabled(true);
             FocusAt(IndexOf(SettingsButtonName));
+        }
+
+        /// <summary>
+        /// ロードアウトの選択を差し込み口に出す。最初に選んでおく並びは保存した並び (<see cref="LoadoutStore"/>)、
+        /// なければ <see cref="Loadout"/> の既定の武器。アセットが未設定・不正なら理由を案内に出して開かない。
+        /// 決めた並びは保存して閉じ、Cancel では保存せずに閉じる。
+        /// </summary>
+        public void OpenLoadout()
+        {
+            if (_loadoutSlot == null || IsOverlayOpen || _leaving)
+            {
+                return;
+            }
+
+            if (!LoadoutSelectionAssets.TryCreate(_loadout, _catalog, _loadoutStore.Load(), null, out var selection, out var error))
+            {
+                Debug.LogWarning(LoadoutPreferenceStore.LogTag + " cannot open the loadout screen: " + error, this);
+                ShowNotice(LoadoutUnavailableNotice + error);
+                return;
+            }
+
+            ShowNotice(null);
+            SetDisplayed(_loadoutSlot, true);
+            SetButtonsEnabled(false);
+            _loadoutPanel = new LoadoutSelectPanel(_loadoutSlot, selection);
+            _loadoutPanel.Confirmed += SaveLoadout;
+            _loadoutPanel.Cancelled += CloseLoadout;
+        }
+
+        /// <summary>ロードアウトの選択を閉じて差し込み口を空にし、ロードアウトのボタンにフォーカスを戻す。開いていなければ何もしない。</summary>
+        public void CloseLoadout()
+        {
+            if (_loadoutPanel == null)
+            {
+                return;
+            }
+
+            _loadoutPanel.Dispose();
+            _loadoutPanel = null;
+            SetDisplayed(_loadoutSlot, false);
+            SetButtonsEnabled(true);
+            FocusAt(IndexOf(LoadoutButtonName));
+        }
+
+        private void SaveLoadout(IReadOnlyList<string> weaponIds)
+        {
+            try
+            {
+                _loadoutStore.Save(weaponIds);
+            }
+            catch (ArgumentException e)
+            {
+                // Validate を通った並びは空の Id を持たないので、ここに来るのは選択の側の誤り
+                Debug.LogError(LoadoutPreferenceStore.LogTag + " could not save the loadout: " + e.Message, this);
+                _loadoutPanel?.ShowStatus(LoadoutFormat.Rejected(e.Message), true);
+                return;
+            }
+
+            Debug.Log(LoadoutPreferenceStore.LogTag + " saved " + string.Join(",", weaponIds), this);
+            CloseLoadout();
+            ShowNotice(LoadoutFormat.Saved);
         }
 
         private void RaiseSettingsClosed()
@@ -419,6 +536,9 @@ namespace Fps.Runtime
                 case JoinLobbyButtonName:
                     Choose(MenuDestination.JoinLobby);
                     break;
+                case LoadoutButtonName:
+                    OpenLoadout();
+                    break;
                 case RangeButtonName:
                     Choose(MenuDestination.Range);
                     break;
@@ -438,8 +558,8 @@ namespace Fps.Runtime
 
         private void HandleNavigationMove(NavigationMoveEvent evt)
         {
-            // 設定画面の中の移動は設定画面に任せる
-            if (_settingsOpen)
+            // 設定画面・ロードアウトの選択の中の移動はそれぞれに任せる
+            if (IsOverlayOpen)
             {
                 return;
             }
@@ -507,7 +627,7 @@ namespace Fps.Runtime
             {
                 button.schedule.Execute(() =>
                 {
-                    if (_focusIndex == index && !_settingsOpen)
+                    if (_focusIndex == index && !IsOverlayOpen)
                     {
                         button.Focus();
                     }
@@ -538,6 +658,12 @@ namespace Fps.Runtime
 
         private void Unbind()
         {
+            if (_loadoutPanel != null)
+            {
+                _loadoutPanel.Dispose();
+                _loadoutPanel = null;
+            }
+
             foreach (var undo in _unbind)
             {
                 undo();
@@ -548,6 +674,7 @@ namespace Fps.Runtime
             _navigationRoot = null;
             _notice = null;
             _settingsSlot = null;
+            _loadoutSlot = null;
         }
 
         private static void SetDisplayed(VisualElement element, bool displayed)

@@ -17,6 +17,8 @@ namespace Fps.Runtime
     /// <item><see cref="DamageTaken"/>: 撃たれた本人のクライアントでだけ。オフラインでは <see cref="Damageable.IsLocalPlayer"/> の <see cref="Damageable"/>。</item>
     /// <item><see cref="Killed"/>: 倒れるたび。オフラインでは <see cref="Damageable"/> が倒れたときに、<see cref="Attribute"/> で決めた倒した者と武器で出す。</item>
     /// </list>
+    /// ネット対戦では、撃った本人の ShotFired は本人のクライアント (<c>Fps.Net.NetPlayer</c>) が出し、それ以外はサーバーから
+    /// <c>Fps.Net.NetCombatFeed</c> が届けて各クライアントで出す (Impact の <see cref="ImpactInfo.Collider"/> は見つからなければ null)。
     /// 購読者が例外を投げても戦闘の処理は止めず、例外をログに出して残りの購読者を呼ぶ。
     /// 静的なので、ドメインの再読み込みを切った Play でも前回の購読が残らないよう、Play の開始時に購読をすべて外す。
     /// </remarks>
@@ -219,7 +221,7 @@ namespace Fps.Runtime
         /// <summary>当たった面の法線。</summary>
         public Vector3 Normal { get; }
 
-        /// <summary>当たったコライダー。</summary>
+        /// <summary>当たったコライダー。ネット対戦でサーバーから届いた着弾では、このクライアントで見つからなければ null。</summary>
         public Collider Collider { get; }
 
         public ImpactInfo(Vector3 point, Vector3 normal, Collider collider)

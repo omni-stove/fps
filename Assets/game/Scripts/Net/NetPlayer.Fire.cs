@@ -123,6 +123,7 @@ namespace Fps.Net
         /// <summary>
         /// 1 発撃つ。目から画面中央が指す点への向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) と装備中の武器の Id を添えて
         /// サーバーに送るだけで、武器の値 (ダメージ・射程など) は送らない。当たり判定とダメージはサーバーが今持たせている武器の値で行う。
+        /// 送ったら、このクライアントで <see cref="CombatEvents.ShotFired"/> を出す。
         /// </summary>
         private void Fire()
         {
@@ -150,6 +151,9 @@ namespace Fps.Net
             Debug.Log("[Net] fire weapon=" + weaponId + " tick=" + time.Tick.ToString(CultureInfo.InvariantCulture)
                 + " alpha=" + time.Alpha.ToString("F2", CultureInfo.InvariantCulture), this);
             FireServerRpc(new FixedString64Bytes(weaponId), origin, direction, time.Tick, time.Alpha);
+
+            // 撃った本人の演出は返事を待たずに出す (サーバーの NetCombatFeed は本人にだけ射撃を送らない)
+            CombatEvents.RaiseShotFired(gameObject, origin, direction, weaponId);
             ReleaseSprint(SprintInput.ReasonFire);
         }
 

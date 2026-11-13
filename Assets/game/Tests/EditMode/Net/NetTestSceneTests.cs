@@ -69,6 +69,8 @@ namespace Fps.Net.Tests
             Assert.That(PrefabUtility.IsPartOfPrefabAsset(bootstrap.MatchPrefab), Is.True);
             Assert.That(bootstrap.MatchPrefab.GetComponent<NetworkObject>(), Is.Not.Null);
             Assert.That(bootstrap.MatchPrefab.GetComponent<NetTeamDeathmatch>(), Is.Not.Null);
+            Assert.That(bootstrap.MatchPrefab.GetComponent<NetCombatFeed>(), Is.Not.Null,
+                "NetMatch has no NetCombatFeed; run Fps.Editor.NetSceneBuilder.Build");
         }
 
         [Test]

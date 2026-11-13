@@ -14,6 +14,13 @@ namespace Fps.Core.Tests
             new Wave(3, 1.5f, 2, 0f),
         });
 
+        private static readonly string[] FirstWaveStartEvents = { "start 1 enemies=2" };
+
+        private static readonly string[] RestThenSecondWaveEvents =
+        {
+            "start 1 enemies=2", "cleared 1 phase=Resting", "rest over 2", "start 2 enemies=3",
+        };
+
         private static List<string> Record(WaveSchedule schedule)
         {
             var events = new List<string>();
@@ -53,7 +60,7 @@ namespace Fps.Core.Tests
             Assert.That(schedule.Phase, Is.EqualTo(WavePhase.Fighting));
             Assert.That(schedule.WaveNumber, Is.EqualTo(1));
             Assert.That(schedule.CurrentWave, Is.EqualTo(new Wave(2, 1f, 1, 3f)));
-            Assert.That(events, Is.EqualTo(new[] { "start 1 enemies=2" }));
+            Assert.That(events, Is.EqualTo(FirstWaveStartEvents));
             Assert.Throws<InvalidOperationException>(schedule.Start);
         }
 
@@ -114,7 +121,7 @@ namespace Fps.Core.Tests
             Assert.That(schedule.SpawnBudget, Is.EqualTo(2));
             Assert.That(
                 events,
-                Is.EqualTo(new[] { "start 1 enemies=2", "cleared 1 phase=Resting", "rest over 2", "start 2 enemies=3" }));
+                Is.EqualTo(RestThenSecondWaveEvents));
         }
 
         [Test]

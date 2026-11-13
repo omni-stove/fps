@@ -43,6 +43,26 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ListHasTheTpsRangeAndDominationScenes()
+        {
+            Assert.That(BuildSceneList.TpsRangeScene, Is.EqualTo("Assets/game/Scenes/TpsRange.unity"));
+            Assert.That(BuildSceneList.DominationScene, Is.EqualTo("Assets/game/Scenes/Domination.unity"));
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.TpsRangeScene));
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.DominationScene));
+        }
+
+        [Test]
+        public void ArrangeSkipsTheNewScenesUntilTheyAreBuilt()
+        {
+            var scenes = BuildSceneList.Arrange(
+                null, path => path != BuildSceneList.TpsRangeScene && path != BuildSceneList.DominationScene);
+
+            Assert.That(scenes.Select(s => s.path), Has.No.Member(BuildSceneList.TpsRangeScene));
+            Assert.That(scenes.Select(s => s.path), Has.No.Member(BuildSceneList.DominationScene));
+            Assert.That(scenes[0].path, Is.EqualTo(BuildSceneList.MainMenuScene));
+        }
+
+        [Test]
         public void ServerScenesAreOnlyTheNetScene()
         {
             Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { BuildSceneList.NetTestScene }));

@@ -8,10 +8,11 @@ using UnityEngine;
 namespace Fps.Editor
 {
     /// <summary>
-    /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/> 5 つ) を作るか上書きする。
+    /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/> 7 つ) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// どのモードもリスポーン直後の無敵なし・落下ダメージなし・HUD はすべて出す (<see cref="GameRules"/> の既定)。
-    /// アクションは、チームデスマッチがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード。
+    /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
+    /// TPS 射撃場がそれに回避・乗り越え・グレネードを足したもの。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
@@ -25,6 +26,11 @@ namespace Fps.Editor
         public const string CampaignNormalPath = Folder + "/CampaignNormal.asset";
         public const string CampaignHardPath = Folder + "/CampaignHard.asset";
         public const string RangePath = Folder + "/Range.asset";
+        public const string TpsRangePath = Folder + "/TpsRange.asset";
+        public const string DominationPath = Folder + "/Domination.asset";
+
+        /// <summary><see cref="TpsRangeActions"/> で出撃ごとに持つグレネードの数。</summary>
+        public const int TpsRangeGrenadeCount = 3;
 
         public const string MenuPath = "Fps/Build Game Rules Assets";
         public const string LogTag = "[GameRulesAssetBuilder]";
@@ -108,6 +114,35 @@ namespace Fps.Editor
         }
 
         /// <summary>
+        /// TPS 射撃場。<see cref="RangeRules"/> (予備弾は無限) のアクションを <see cref="TpsRangeActions"/> にしたもの。
+        /// </summary>
+        public static GameRules TpsRangeRules()
+        {
+            return RangeRules().WithActions(TpsRangeActions());
+        }
+
+        /// <summary>
+        /// ドミネーション。今は <see cref="TeamDeathmatchRules"/> と同じ値 (アクションも <see cref="TeamDeathmatchActions"/>)。
+        /// チームデスマッチの値を後で変えてもドミネーションが付いて変わるよう、値を写さずに呼び出して作る。
+        /// </summary>
+        public static GameRules DominationRules()
+        {
+            return TeamDeathmatchRules();
+        }
+
+        /// <summary>
+        /// TPS 射撃場のアクション。<see cref="RangeActions"/> に回避・乗り越え・グレネード (<see cref="TpsRangeGrenadeCount"/> 個) を足したもの。
+        /// </summary>
+        public static ActionRules TpsRangeActions()
+        {
+            return RangeActions()
+                .WithDodge(Dodge.On)
+                .WithVault(Vault.On)
+                .WithGrenade(Grenade.On)
+                .WithGrenadeCount(TpsRangeGrenadeCount);
+        }
+
+        /// <summary>
         /// チームデスマッチのアクション。倒れたらダウンして味方が起こせ、アクティブリロードを使う。
         /// カバーとブラインドファイアはオンラインのプレイヤーが対応していないので使わない。
         /// </summary>
@@ -147,19 +182,23 @@ namespace Fps.Editor
         [MenuItem(MenuPath)]
         public static void Build()
         {
-            BuildAt(TeamDeathmatchPath, CampaignEasyPath, CampaignNormalPath, CampaignHardPath, RangePath);
+            BuildAt(
+                TeamDeathmatchPath, CampaignEasyPath, CampaignNormalPath, CampaignHardPath, RangePath, TpsRangePath, DominationPath);
         }
 
         /// <summary>
-        /// 各パスにモード別のルールを作るか上書きして保存し、teamDeathmatch・campaignEasy・campaignNormal・campaignHard・range の順に返す。
-        /// 5 つのパスは互いに異なる Assets/ 以下の .asset であること。
+        /// 各パスにモード別のルールを作るか上書きして保存し、
+        /// teamDeathmatch・campaignEasy・campaignNormal・campaignHard・range・tpsRange・domination の順に返す。
+        /// 7 つのパスは互いに異なる Assets/ 以下の .asset であること。
         /// </summary>
         public static GameRulesDefinition[] BuildAt(
             string teamDeathmatchPath,
             string campaignEasyPath,
             string campaignNormalPath,
             string campaignHardPath,
-            string rangePath)
+            string rangePath,
+            string tpsRangePath,
+            string dominationPath)
         {
             var entries = new[]
             {
@@ -168,6 +207,8 @@ namespace Fps.Editor
                 (Path: SceneBuildHelpers.ValidateAssetPath(campaignNormalPath), Rules: CampaignNormalRules()),
                 (Path: SceneBuildHelpers.ValidateAssetPath(campaignHardPath), Rules: CampaignHardRules()),
                 (Path: SceneBuildHelpers.ValidateAssetPath(rangePath), Rules: RangeRules()),
+                (Path: SceneBuildHelpers.ValidateAssetPath(tpsRangePath), Rules: TpsRangeRules()),
+                (Path: SceneBuildHelpers.ValidateAssetPath(dominationPath), Rules: DominationRules()),
             };
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

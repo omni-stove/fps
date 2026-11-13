@@ -27,6 +27,12 @@ namespace Fps.Editor
         public const string DestructionTestScene = "Assets/game/Scenes/DestructionTest.unity";
         public const string CampaignScene = "Assets/game/Scenes/Campaign01.unity";
 
+        /// <summary>TPS のアクションを試す射撃場。ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/>。</summary>
+        public const string TpsRangeScene = "Assets/game/Scenes/TpsRange.unity";
+
+        /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
+        public const string DominationScene = "Assets/game/Scenes/Domination.unity";
+
         /// <summary>
         /// ネット対戦のシーン。実行時に読み込む側 (Fps.Net の NetBootstrap.ScenePath) と同じ値で、
         /// この Editor のアセンブリは Fps.Net を参照しないため文字列で持つ (一致はテストで確かめる)。
@@ -42,6 +48,8 @@ namespace Fps.Editor
             MissionTestScene,
             DestructionTestScene,
             CampaignScene,
+            TpsRangeScene,
+            DominationScene,
             NetTestScene,
         };
 

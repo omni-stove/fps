@@ -301,7 +301,7 @@ namespace Fps.Editor
         private static void HitEnemy()
         {
             EnemyAgent enemy = null;
-            foreach (var agent in UnityEngine.Object.FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None))
+            foreach (var agent in UnityEngine.Object.FindObjectsByType<EnemyAgent>())
             {
                 if (agent.Id == EnemyTestSceneBuilder.EnemyId)
                 {

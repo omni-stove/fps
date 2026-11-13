@@ -249,14 +249,14 @@ namespace Fps.Runtime
                 return false;
             }
 
-            var zones = FindObjectsByType<ControlPointZone>(FindObjectsSortMode.None);
+            var zones = FindObjectsByType<ControlPointZone>();
             if (zones.Length == 0)
             {
                 Debug.LogError($"{LogTag} シーンに ControlPointZone がありません。拠点を 1 つ以上置いてください。", this);
                 return false;
             }
 
-            var enemies = FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None);
+            var enemies = FindObjectsByType<EnemyAgent>();
 
             // Id をシーンを開くたびに同じにするため、見つかった順ではなく名前の順に振る。
             Array.Sort(enemies, (a, b) => string.CompareOrdinal(a.name, b.name));

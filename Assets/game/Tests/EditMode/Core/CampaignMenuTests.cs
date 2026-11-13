@@ -240,7 +240,10 @@ namespace Fps.Core.Tests
         [Test]
         public void EveryStartItemHasALabel()
         {
-            foreach (CampaignMenuItemKind kind in Enum.GetValues<CampaignMenuItemKind>())
+            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
+#pragma warning disable CA2263
+            foreach (CampaignMenuItemKind kind in Enum.GetValues(typeof(CampaignMenuItemKind)))
+#pragma warning restore CA2263
             {
                 if (kind == CampaignMenuItemKind.Mission || kind == CampaignMenuItemKind.Difficulty)
                 {

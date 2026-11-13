@@ -453,7 +453,7 @@ namespace Fps.Editor
                 return $"no player Collider tagged '{GameBootstrap.PlayerTag}'";
             }
 
-            foreach (var area in UnityEngine.Object.FindObjectsByType<ObjectiveAreaBase>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            foreach (var area in UnityEngine.Object.FindObjectsByType<ObjectiveAreaBase>(FindObjectsInactive.Exclude))
             {
                 if (!string.Equals(area.ObjectiveId, objectiveId, StringComparison.Ordinal))
                 {
@@ -476,7 +476,7 @@ namespace Fps.Editor
                 return "the objective did not complete after the player entered its area";
             }
 
-            foreach (var kill in UnityEngine.Object.FindObjectsByType<KillTargetObjective>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            foreach (var kill in UnityEngine.Object.FindObjectsByType<KillTargetObjective>(FindObjectsInactive.Exclude))
             {
                 if (!string.Equals(kill.ObjectiveId, objectiveId, StringComparison.Ordinal))
                 {

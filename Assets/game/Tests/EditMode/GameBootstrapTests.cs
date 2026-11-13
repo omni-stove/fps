@@ -327,13 +327,13 @@ namespace Fps.Tests.EditMode
                 bootstrap.CreatesFloor = false;
                 bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
                 bootstrap.RulesDefinition = broken;
-                var playersBefore = Object.FindObjectsByType<Damageable>(FindObjectsSortMode.None).Length;
+                var playersBefore = Object.FindObjectsByType<Damageable>().Length;
 
                 var e = Assert.Throws<GameRulesDefinitionException>(() => bootstrap.Build());
                 Assert.That(e.Message, Does.Contain("BrokenRules"));
                 Assert.That(bootstrap.World, Is.Null);
                 Assert.That(
-                    Object.FindObjectsByType<Damageable>(FindObjectsSortMode.None).Length,
+                    Object.FindObjectsByType<Damageable>().Length,
                     Is.EqualTo(playersBefore),
                     "no player is left behind");
             }

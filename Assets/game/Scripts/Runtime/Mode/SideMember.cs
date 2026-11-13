@@ -73,7 +73,7 @@ namespace Fps.Runtime
         /// <summary>シーンにある有効な陣営をすべて返す (順番は決まっていない)。</summary>
         public static SideMember[] FindAll()
         {
-            return FindObjectsByType<SideMember>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            return FindObjectsByType<SideMember>(FindObjectsInactive.Exclude);
         }
 
         /// <summary>

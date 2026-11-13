@@ -16,6 +16,7 @@ namespace Fps.Net
     /// <remarks>
     /// サーバーは接続順 (<see cref="NetworkManager.ConnectedClientsList"/> の順) にプレイヤーを試合に加える。
     /// ダメージはすべて <see cref="ApplyDamage"/> を通し、体力が尽きたら Core 側が ReportKill する。
+    /// 味方に倒されたときは <see cref="MatchLog.TeamKill"/> で敵のキルと分けてログに出す。
     /// 出現・リスポーンの地点は Core の SpawnSelector が選び、ここでは <see cref="NetPlayer.ServerTeleport"/> を呼ぶだけ。
     /// <para>
     /// 射撃はサーバー権威のヒットスキャンで、ラグ補償をかける。毎フレームの終わりに全プレイヤーの位置を
@@ -550,7 +551,8 @@ namespace Fps.Net
             SyncNextMatchSeconds();
 
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
-                + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count);
+                + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count
+                + " friendlyFire=" + spec.Rules.FriendlyFire);
             Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
                 + " tickRate=" + NetworkPlayerMotor.TickRate);
             foreach (var weapon in _loadout.Catalog.All)
@@ -896,7 +898,8 @@ namespace Fps.Net
 
         private void HandleKilled(int killerId, int victimId)
         {
-            Debug.Log(MatchLog.Kill(killerId, victimId));
+            var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
+            Debug.Log(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId));
         }
 
         private void HandleSpawned(int playerId, SpawnPoint point)

@@ -9,18 +9,19 @@ namespace Fps.Core
     /// <summary>
     /// 操作設定。<see cref="HoldAction"/> ごとの <see cref="HoldMode"/> を、キーボード／マウスとゲームパッドで別々に持ち、
     /// 感度・視野角・音量 (<see cref="ControlValue"/>) を整数で持ち、オンラインの回線の表示を出すか (<see cref="ShowNetStats"/>) と
-    /// 敵味方の色の組 (<see cref="Palette"/>) を持つ。不変。
+    /// 敵味方の色の組 (<see cref="Palette"/>) と音の合図の字幕を出すか (<see cref="ShowSubtitles"/>) を持つ。不変。
     /// <see cref="ToJson"/> と <see cref="FromJson"/> で文字列にして保存する。
     /// </summary>
     public sealed class ControlSettings : IEquatable<ControlSettings>
     {
         /// <summary>このコードが書き出す形式のバージョン。</summary>
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
 
         /// <summary>
         /// 読める最も古い形式のバージョン。1 は Hold/Toggle だけを持ち、数値の設定は初期値で補う。
         /// 2 は回線の表示 (<see cref="ShowNetStats"/>) を持たず、初期値 (出さない) で補う。
         /// 3 は色の組 (<see cref="Palette"/>) を持たず、初期値 (<see cref="ColorPalette.Standard"/>) で補う。
+        /// 4 は字幕 (<see cref="ShowSubtitles"/>) を持たず、初期値 (出さない) で補う。
         /// </summary>
         public const int OldestReadableVersion = 1;
 
@@ -38,6 +39,7 @@ namespace Fps.Core
         private const string _effectsVolumeKey = "effectsVolume";
         private const string _showNetStatsKey = "showNetStats";
         private const string _paletteKey = "colorPalette";
+        private const string _showSubtitlesKey = "showSubtitles";
         private const string _standardPaletteName = "standard";
         private const string _redGreenPaletteName = "redGreen";
         private const string _blueYellowPaletteName = "blueYellow";
@@ -86,7 +88,7 @@ namespace Fps.Core
             _showNetStatsKey,
         };
 
-        private static readonly string[] _rootKeys =
+        private static readonly string[] _versionFourRootKeys =
         {
             _versionKey, _keyboardMouseKey, _gamepadKey,
             _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
@@ -94,12 +96,20 @@ namespace Fps.Core
             _showNetStatsKey, _paletteKey,
         };
 
+        private static readonly string[] _rootKeys =
+        {
+            _versionKey, _keyboardMouseKey, _gamepadKey,
+            _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
+            _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
+            _showNetStatsKey, _paletteKey, _showSubtitlesKey,
+        };
+
         private static readonly string[] _actionKeys = { _sprintKey, _crouchKey, _aimKey };
 
         /// <summary>
         /// 初期値。キーボード／マウスはすべて Hold。
         /// ゲームパッドはスティックを押し込み続けにくいのでダッシュとしゃがみを Toggle にし、ADS はトリガーなので Hold。
-        /// 数値は <see cref="RangeOf"/> の初期値。回線の表示は出さない。色の組は <see cref="ColorPalette.Standard"/>。
+        /// 数値は <see cref="RangeOf"/> の初期値。回線の表示は出さない。色の組は <see cref="ColorPalette.Standard"/>。字幕は出さない。
         /// </summary>
         public static ControlSettings Default { get; } = new ControlSettings(
             new[]
@@ -109,7 +119,8 @@ namespace Fps.Core
             },
             DefaultValues(),
             false,
-            ColorPalette.Standard);
+            ColorPalette.Standard,
+            false);
 
         // 添字は Index(device, action)。
         private readonly HoldMode[] _modes;
@@ -121,12 +132,15 @@ namespace Fps.Core
 
         private readonly ColorPalette _palette;
 
-        private ControlSettings(HoldMode[] modes, int[] amounts, bool showNetStats, ColorPalette palette)
+        private readonly bool _showSubtitles;
+
+        private ControlSettings(HoldMode[] modes, int[] amounts, bool showNetStats, ColorPalette palette, bool showSubtitles)
         {
             _modes = modes;
             _amounts = amounts;
             _showNetStats = showNetStats;
             _palette = palette;
+            _showSubtitles = showSubtitles;
         }
 
         /// <summary>数値の設定をすべて、並べる順に返す。</summary>
@@ -182,6 +196,9 @@ namespace Fps.Core
         /// <summary>敵味方の色の組の種類。色は <see cref="TeamPalette.For"/> で引く。</summary>
         public ColorPalette Palette => _palette;
 
+        /// <summary>銃声・足音・爆発・リロードの音の合図を、種類と方向の字幕にして画面の下に出すか。</summary>
+        public bool ShowSubtitles => _showSubtitles;
+
         /// <summary>device の action だけを mode に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings With(InputDeviceKind device, HoldAction action, HoldMode mode)
         {
@@ -198,7 +215,7 @@ namespace Fps.Core
 
             var modes = (HoldMode[])_modes.Clone();
             modes[index] = mode;
-            return new ControlSettings(modes, _amounts, _showNetStats, _palette);
+            return new ControlSettings(modes, _amounts, _showNetStats, _palette, _showSubtitles);
         }
 
         /// <summary>数値の設定 value だけを amount に変えた設定を返す。この設定は変わらない。</summary>
@@ -222,13 +239,13 @@ namespace Fps.Core
 
             var amounts = (int[])_amounts.Clone();
             amounts[index] = amount;
-            return new ControlSettings(_modes, amounts, _showNetStats, _palette);
+            return new ControlSettings(_modes, amounts, _showNetStats, _palette, _showSubtitles);
         }
 
         /// <summary>回線の表示 (<see cref="ShowNetStats"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowNetStats(bool show)
         {
-            return show == _showNetStats ? this : new ControlSettings(_modes, _amounts, show, _palette);
+            return show == _showNetStats ? this : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles);
         }
 
         /// <summary>色の組 (<see cref="Palette"/>) だけを palette に変えた設定を返す。この設定は変わらない。</summary>
@@ -236,7 +253,13 @@ namespace Fps.Core
         public ControlSettings WithPalette(ColorPalette palette)
         {
             PaletteName(palette);
-            return palette == _palette ? this : new ControlSettings(_modes, _amounts, _showNetStats, palette);
+            return palette == _palette ? this : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles);
+        }
+
+        /// <summary>字幕 (<see cref="ShowSubtitles"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
+        public ControlSettings WithShowSubtitles(bool show)
+        {
+            return show == _showSubtitles ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show);
         }
 
         /// <summary>JSON の文字列に書き出す。<see cref="FromJson"/> で同じ内容に戻る。</summary>
@@ -274,6 +297,8 @@ namespace Fps.Core
             builder.Append(',');
             AppendKey(builder, _paletteKey);
             SaveJson.AppendString(builder, PaletteName(_palette));
+            builder.Append(',');
+            AppendKey(builder, _showSubtitlesKey).Append(_showSubtitles ? "true" : "false");
             builder.Append('}');
             return builder.ToString();
         }
@@ -282,10 +307,11 @@ namespace Fps.Core
         /// <see cref="ToJson"/> で書き出した文字列から読む。壊れていても例外にはせず、読めなかった所は <see cref="Default"/> の値にする。
         /// JSON として壊れている・バージョンが読めないときはすべて初期値、操作ごとの値が無い・型違い・知らない名前ならその操作だけ初期値にする。
         /// 数値の設定は、無い・整数でなければ初期値、範囲の外なら範囲に収めた値にする。
-        /// 回線の表示は、無い・真偽値でなければ初期値にする。色の組は、無い・文字列でない・知らない名前なら初期値にする。
+        /// 回線の表示と字幕は、無い・真偽値でなければ初期値にする。色の組は、無い・文字列でない・知らない名前なら初期値にする。
         /// バージョン 1 (数値の設定が無い形式) は、数値の設定を何も言わずに初期値で補う。
         /// バージョン 1・2 (回線の表示が無い形式) は、回線の表示を何も言わずに初期値で補う。
-        /// バージョン 1〜3 (色の組が無い形式) は、色の組を何も言わずに初期値で補う。知らない項目は読み飛ばす。
+        /// バージョン 1〜3 (色の組が無い形式) は、色の組を何も言わずに初期値で補う。
+        /// バージョン 1〜4 (字幕が無い形式) は、字幕を何も言わずに初期値で補う。知らない項目は読み飛ばす。
         /// </summary>
         /// <param name="json">読む文字列。</param>
         /// <param name="problems">初期値に戻した所や読み飛ばした所の理由。問題が無ければ空。</param>
@@ -333,7 +359,9 @@ namespace Fps.Core
             var hasValues = version >= 2;
             var hasShowNetStats = version >= 3;
             var hasPalette = version >= 4;
-            var knownKeys = hasPalette ? _rootKeys
+            var hasShowSubtitles = version >= 5;
+            var knownKeys = hasShowSubtitles ? _rootKeys
+                : hasPalette ? _versionFourRootKeys
                 : hasShowNetStats ? _versionThreeRootKeys
                 : hasValues ? _versionTwoRootKeys
                 : _versionOneRootKeys;
@@ -346,9 +374,12 @@ namespace Fps.Core
                 ReadValues(root, amounts, found);
             }
 
-            var showNetStats = hasShowNetStats ? ReadShowNetStats(root, found) : Default._showNetStats;
+            var showNetStats = hasShowNetStats ? ReadFlag(root, _showNetStatsKey, Default._showNetStats, found) : Default._showNetStats;
             var palette = hasPalette ? ReadPalette(root, found) : Default._palette;
-            return new ControlSettings(modes, amounts, showNetStats, palette);
+            var showSubtitles = hasShowSubtitles
+                ? ReadFlag(root, _showSubtitlesKey, Default._showSubtitles, found)
+                : Default._showSubtitles;
+            return new ControlSettings(modes, amounts, showNetStats, palette, showSubtitles);
         }
 
         public bool Equals(ControlSettings other)
@@ -374,7 +405,7 @@ namespace Fps.Core
                 }
             }
 
-            return _showNetStats == other._showNetStats && _palette == other._palette;
+            return _showNetStats == other._showNetStats && _palette == other._palette && _showSubtitles == other._showSubtitles;
         }
 
         public override bool Equals(object obj)
@@ -396,7 +427,8 @@ namespace Fps.Core
             }
 
             hash = unchecked((hash * 31) + (_showNetStats ? 1 : 0));
-            return unchecked((hash * 31) + (int)_palette);
+            hash = unchecked((hash * 31) + (int)_palette);
+            return unchecked((hash * 31) + (_showSubtitles ? 1 : 0));
         }
 
         public override string ToString()
@@ -471,21 +503,21 @@ namespace Fps.Core
             }
         }
 
-        private static bool ReadShowNetStats(Dictionary<string, object> root, List<string> problems)
+        private static bool ReadFlag(Dictionary<string, object> root, string key, bool fallback, List<string> problems)
         {
-            if (!root.TryGetValue(_showNetStatsKey, out var raw))
+            if (!root.TryGetValue(key, out var raw))
             {
-                problems.Add($"missing '{_showNetStatsKey}'");
-                return Default._showNetStats;
+                problems.Add($"missing '{key}'");
+                return fallback;
             }
 
-            if (!(raw is bool show))
+            if (!(raw is bool flag))
             {
-                problems.Add($"'{_showNetStatsKey}' must be true or false but was {Describe(raw)}");
-                return Default._showNetStats;
+                problems.Add($"'{key}' must be true or false but was {Describe(raw)}");
+                return fallback;
             }
 
-            return show;
+            return flag;
         }
 
         private static ColorPalette ReadPalette(Dictionary<string, object> root, List<string> problems)

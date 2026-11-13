@@ -10,7 +10,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 設定画面。感度・ADS 感度・視野角・音量 (<see cref="ControlValue"/>) のスライダー、敵味方の色の組 (<see cref="ColorPalette"/>) の切り替えと見本、
-    /// 入力機器ごとの Hold/Toggle の切り替えを
+    /// 音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off、入力機器ごとの Hold/Toggle の切り替えを
     /// UI Toolkit の要素としてコードで組み、<see cref="Open"/> で渡された入れ物 (メインメニューの差し込み口やポーズ画面の枠) に入れる。
     /// 値を変えるとすぐ <see cref="AppliedControlSettings.Apply"/> で効かせ、<see cref="Close"/> (か <see cref="Save"/>) で
     /// <see cref="ControlSettingsStore"/> に保存する。スライダーを動かすたびにディスクへ書かないよう、保存は閉じるときにまとめる。
@@ -44,6 +44,12 @@ namespace Fps.Runtime
 
         /// <summary>今の色の組で敵の見え方を出す見本の Label の name。</summary>
         public const string PaletteEnemySampleName = "settings-palette-enemy";
+
+        /// <summary>音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off を切り替えるボタンの name。</summary>
+        public const string SubtitlesButtonName = "settings-subtitles";
+
+        public const string OnText = "オン";
+        public const string OffText = "オフ";
 
         /// <summary>見本の味方の名前。</summary>
         public const string FriendlySampleText = "味方";
@@ -87,6 +93,7 @@ namespace Fps.Runtime
         private Button _paletteButton;
         private Label _friendlySample;
         private Label _enemySample;
+        private Button _subtitlesButton;
 
         /// <param name="store">保存先。null ならゲームの既定のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
         /// <param name="bindingStore">割り当ての上書きの保存先。null ならゲームの既定のキー。</param>
@@ -183,6 +190,12 @@ namespace Fps.Runtime
             return mode == HoldMode.Toggle ? ToggleText : HoldText;
         }
 
+        /// <summary>On/Off のボタンに出す文字。</summary>
+        public static string FormatOnOff(bool on)
+        {
+            return on ? OnText : OffText;
+        }
+
         /// <summary>色の組のボタンに出す文字。</summary>
         /// <exception cref="ArgumentOutOfRangeException">palette が定義済みの値でない。</exception>
         public static string FormatPalette(ColorPalette palette)
@@ -274,6 +287,7 @@ namespace Fps.Runtime
             _paletteButton = null;
             _friendlySample = null;
             _enemySample = null;
+            _subtitlesButton = null;
             return saved;
         }
 
@@ -357,7 +371,18 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に戻す。保存は閉じるとき。
+        /// 音の合図の字幕を出すか (<see cref="ControlSettings.ShowSubtitles"/>) を show にしてすぐ効かせ
+        /// (HUD の <see cref="SubtitleView"/> は <see cref="AppliedControlSettings.Changed"/> で切り替わる)、ボタンの表示を合わせる。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        public void SetShowSubtitles(bool show)
+        {
+            EnsureOpen();
+            Edit(_editing.WithShowSubtitles(show));
+        }
+
+        /// <summary>
+        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に、字幕も Off に戻す。保存は閉じるとき。
         /// この画面に無い回線の表示 (<see cref="ControlSettings.ShowNetStats"/>) は今のまま残す。
         /// </summary>
         /// <exception cref="InvalidOperationException">開いていない。</exception>
@@ -573,6 +598,7 @@ namespace Fps.Runtime
             content.Add(NewLabel("見やすさ", "settings__section"));
             content.Add(BuildPaletteRow());
             content.Add(BuildPaletteSampleRow());
+            content.Add(BuildSubtitlesRow());
 
             content.Add(NewLabel("ボタンの扱い", "settings__section"));
             content.Add(BuildDeviceHeader());
@@ -753,6 +779,16 @@ namespace Fps.Runtime
             }
         }
 
+        private VisualElement BuildSubtitlesRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel("音の字幕", "settings__caption"));
+            _subtitlesButton = NewButton(SubtitlesButtonName, string.Empty, () => SetShowSubtitles(!_editing.ShowSubtitles));
+            _subtitlesButton.AddToClassList("settings__mode");
+            row.Add(_subtitlesButton);
+            return row;
+        }
+
         private VisualElement BuildModeRow(HoldAction action)
         {
             var row = NewRow();
@@ -790,6 +826,11 @@ namespace Fps.Runtime
             }
 
             RefreshPalette();
+            if (_subtitlesButton != null)
+            {
+                _subtitlesButton.text = FormatOnOff(_editing.ShowSubtitles);
+            }
+
             RefreshBindings();
         }
 

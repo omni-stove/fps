@@ -174,5 +174,91 @@ namespace Fps.Core
             FallDamage = fallDamage;
             HudDensity = hudDensity;
         }
+
+        /// <summary><see cref="FriendlyFire"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithFriendlyFire(FriendlyFire value) => Copy(friendlyFire: value);
+
+        /// <summary><see cref="RespawnMode"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithRespawnMode(RespawnMode value) => Copy(respawnMode: value);
+
+        /// <summary><see cref="WaveIntervalSeconds"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithWaveIntervalSeconds(float value) => Copy(waveIntervalSeconds: value);
+
+        /// <summary><see cref="RegenDelaySeconds"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithRegenDelaySeconds(float value) => Copy(regenDelaySeconds: value);
+
+        /// <summary><see cref="RegenPerSecond"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithRegenPerSecond(float value) => Copy(regenPerSecond: value);
+
+        /// <summary><see cref="DeathBody"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithDeathBody(DeathBody value) => Copy(deathBody: value);
+
+        /// <summary><see cref="DeathCamera"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithDeathCamera(DeathCamera value) => Copy(deathCamera: value);
+
+        /// <summary><see cref="InfiniteReserve"/> だけを value にした複製。</summary>
+        public GameRules WithInfiniteReserve(bool value) => Copy(infiniteReserve: value);
+
+        /// <summary><see cref="ReserveAmmoMultiplier"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithReserveAmmoMultiplier(float value) => Copy(reserveAmmoMultiplier: value);
+
+        /// <summary><see cref="Destruction"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithDestruction(Destruction value) => Copy(destruction: value);
+
+        /// <summary>
+        /// <see cref="Actions"/> だけを value にした複製。value が null なら <see cref="ArgumentNullException"/>
+        /// (コンストラクターと違って <see cref="ActionRules.Default"/> に置き換えないのは、差し替えたつもりの値が黙って既定に戻らないようにするため)。
+        /// </summary>
+        public GameRules WithActions(ActionRules value)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            return Copy(actions: value);
+        }
+
+        /// <summary><see cref="SpawnProtectionSeconds"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithSpawnProtectionSeconds(float value) => Copy(spawnProtectionSeconds: value);
+
+        /// <summary><see cref="FallDamage"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithFallDamage(FallDamage value) => Copy(fallDamage: value);
+
+        /// <summary><see cref="HudDensity"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithHudDensity(HudDensity value) => Copy(hudDensity: value);
+
+        private GameRules Copy(
+            FriendlyFire? friendlyFire = null,
+            RespawnMode? respawnMode = null,
+            float? waveIntervalSeconds = null,
+            float? regenDelaySeconds = null,
+            float? regenPerSecond = null,
+            DeathBody? deathBody = null,
+            DeathCamera? deathCamera = null,
+            bool? infiniteReserve = null,
+            float? reserveAmmoMultiplier = null,
+            Destruction? destruction = null,
+            ActionRules actions = null,
+            float? spawnProtectionSeconds = null,
+            FallDamage? fallDamage = null,
+            HudDensity? hudDensity = null)
+        {
+            return new GameRules(
+                friendlyFire ?? FriendlyFire,
+                respawnMode ?? RespawnMode,
+                waveIntervalSeconds ?? WaveIntervalSeconds,
+                regenDelaySeconds ?? RegenDelaySeconds,
+                regenPerSecond ?? RegenPerSecond,
+                deathBody ?? DeathBody,
+                deathCamera ?? DeathCamera,
+                infiniteReserve ?? InfiniteReserve,
+                reserveAmmoMultiplier ?? ReserveAmmoMultiplier,
+                destruction ?? Destruction,
+                actions ?? Actions,
+                spawnProtectionSeconds ?? SpawnProtectionSeconds,
+                fallDamage ?? FallDamage,
+                hudDensity ?? HudDensity);
+        }
     }
 }

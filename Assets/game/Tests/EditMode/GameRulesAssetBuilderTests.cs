@@ -14,14 +14,20 @@ namespace Fps.Tests.EditMode
     /// </summary>
     public sealed class GameRulesAssetBuilderTests
     {
-        // BuildAt と同じ並び (teamDeathmatch, campaignEasy, campaignNormal, campaignHard, range)。
-        private static readonly (Downed Downed, Cover Cover, BlindFire BlindFire, ActiveReload ActiveReload)[] _expectedActions =
+        private const int TpsRangeIndex = 5;
+        private const int DominationIndex = 6;
+
+        // BuildAt と同じ並び (teamDeathmatch, campaignEasy, campaignNormal, campaignHard, range, tpsRange, domination)。
+        private static readonly ExpectedActions[] _expectedActions =
         {
-            (Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On),
-            (Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
-            (Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
-            (Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
-            (Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+            new ExpectedActions(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On),
+            new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+            new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+            new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+            new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+            new ExpectedActions(
+                Downed.Off, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, GameRulesAssetBuilder.TpsRangeGrenadeCount),
+            new ExpectedActions(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On),
         };
 
         private string _folder;
@@ -30,6 +36,8 @@ namespace Fps.Tests.EditMode
         private string _campaignNormalPath;
         private string _campaignHardPath;
         private string _rangePath;
+        private string _tpsRangePath;
+        private string _dominationPath;
 
         [SetUp]
         public void SetUp()
@@ -40,6 +48,8 @@ namespace Fps.Tests.EditMode
             _campaignNormalPath = _folder + "/CampaignNormal.asset";
             _campaignHardPath = _folder + "/CampaignHard.asset";
             _rangePath = _folder + "/Range.asset";
+            _tpsRangePath = _folder + "/TpsRange.asset";
+            _dominationPath = _folder + "/Domination.asset";
         }
 
         [TearDown]
@@ -59,6 +69,45 @@ namespace Fps.Tests.EditMode
             Assert.That(GameRulesAssetBuilder.CampaignNormalPath, Is.EqualTo("Assets/game/Rules/CampaignNormal.asset"));
             Assert.That(GameRulesAssetBuilder.CampaignHardPath, Is.EqualTo("Assets/game/Rules/CampaignHard.asset"));
             Assert.That(GameRulesAssetBuilder.RangePath, Is.EqualTo("Assets/game/Rules/Range.asset"));
+            Assert.That(GameRulesAssetBuilder.TpsRangePath, Is.EqualTo("Assets/game/Rules/TpsRange.asset"));
+            Assert.That(GameRulesAssetBuilder.DominationPath, Is.EqualTo("Assets/game/Rules/Domination.asset"));
+        }
+
+        [Test]
+        public void BuildsTpsRangeAsTheRangeWithEveryTpsAction()
+        {
+            var rules = BuildAndLoad(_tpsRangePath);
+            var range = GameRulesAssetBuilder.RangeRules();
+
+            Assert.That(rules.InfiniteReserve, Is.True);
+            Assert.That(rules.FriendlyFire, Is.EqualTo(range.FriendlyFire));
+            Assert.That(rules.RespawnMode, Is.EqualTo(range.RespawnMode));
+            Assert.That(rules.RegenDelaySeconds, Is.EqualTo(range.RegenDelaySeconds));
+            Assert.That(rules.RegenPerSecond, Is.EqualTo(range.RegenPerSecond));
+            Assert.That(rules.DeathBody, Is.EqualTo(range.DeathBody));
+            Assert.That(rules.DeathCamera, Is.EqualTo(range.DeathCamera));
+            Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(range.ReserveAmmoMultiplier));
+            Assert.That(rules.Destruction, Is.EqualTo(range.Destruction));
+            AssertActions(rules.Actions, _expectedActions[TpsRangeIndex], _tpsRangePath);
+        }
+
+        [Test]
+        public void BuildsDominationWithTheTeamDeathmatchValues()
+        {
+            var rules = BuildAndLoad(_dominationPath);
+            var teamDeathmatch = GameRulesAssetBuilder.TeamDeathmatchRules();
+
+            Assert.That(rules.FriendlyFire, Is.EqualTo(teamDeathmatch.FriendlyFire));
+            Assert.That(rules.RespawnMode, Is.EqualTo(teamDeathmatch.RespawnMode));
+            Assert.That(rules.WaveIntervalSeconds, Is.EqualTo(teamDeathmatch.WaveIntervalSeconds));
+            Assert.That(rules.RegenDelaySeconds, Is.EqualTo(teamDeathmatch.RegenDelaySeconds));
+            Assert.That(rules.RegenPerSecond, Is.EqualTo(teamDeathmatch.RegenPerSecond));
+            Assert.That(rules.DeathBody, Is.EqualTo(teamDeathmatch.DeathBody));
+            Assert.That(rules.DeathCamera, Is.EqualTo(teamDeathmatch.DeathCamera));
+            Assert.That(rules.InfiniteReserve, Is.EqualTo(teamDeathmatch.InfiniteReserve));
+            Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(teamDeathmatch.ReserveAmmoMultiplier));
+            Assert.That(rules.Destruction, Is.EqualTo(teamDeathmatch.Destruction));
+            AssertActions(rules.Actions, _expectedActions[DominationIndex], _dominationPath);
         }
 
         [Test]
@@ -139,12 +188,14 @@ namespace Fps.Tests.EditMode
         {
             var built = Build();
 
-            Assert.That(built, Has.Length.EqualTo(5));
+            Assert.That(built, Has.Length.EqualTo(7));
             Assert.That(built[0], Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(_teamDeathmatchPath)));
             Assert.That(built[1], Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(_campaignEasyPath)));
             Assert.That(built[2], Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(_campaignNormalPath)));
             Assert.That(built[3], Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(_campaignHardPath)));
             Assert.That(built[4], Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(_rangePath)));
+            Assert.That(built[TpsRangeIndex], Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(_tpsRangePath)));
+            Assert.That(built[DominationIndex], Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(_dominationPath)));
         }
 
         [Test]
@@ -178,7 +229,10 @@ namespace Fps.Tests.EditMode
         public void SecondRunKeepsTheGuidsAndRestoresTheValues()
         {
             Build();
-            var paths = new[] { _teamDeathmatchPath, _campaignEasyPath, _campaignNormalPath, _campaignHardPath, _rangePath };
+            var paths = new[]
+            {
+                _teamDeathmatchPath, _campaignEasyPath, _campaignNormalPath, _campaignHardPath, _rangePath, _tpsRangePath, _dominationPath,
+            };
             var guids = Array.ConvertAll(paths, AssetDatabase.AssetPathToGUID);
             foreach (var guid in guids)
             {
@@ -272,6 +326,8 @@ namespace Fps.Tests.EditMode
                 GameRulesAssetBuilder.CampaignNormalRules(),
                 GameRulesAssetBuilder.CampaignHardRules(),
                 GameRulesAssetBuilder.RangeRules(),
+                GameRulesAssetBuilder.TpsRangeRules(),
+                GameRulesAssetBuilder.DominationRules(),
             };
 
             for (var i = 0; i < rules.Length; i++)
@@ -282,12 +338,25 @@ namespace Fps.Tests.EditMode
             AssertActions(GameRulesAssetBuilder.TeamDeathmatchActions(), _expectedActions[0], nameof(GameRulesAssetBuilder.TeamDeathmatchActions));
             AssertActions(GameRulesAssetBuilder.CampaignActions(), _expectedActions[1], nameof(GameRulesAssetBuilder.CampaignActions));
             AssertActions(GameRulesAssetBuilder.RangeActions(), _expectedActions[4], nameof(GameRulesAssetBuilder.RangeActions));
+            AssertActions(GameRulesAssetBuilder.TpsRangeActions(), _expectedActions[TpsRangeIndex], nameof(GameRulesAssetBuilder.TpsRangeActions));
         }
 
-        private static void AssertActions(
-            ActionRules actual,
-            (Downed Downed, Cover Cover, BlindFire BlindFire, ActiveReload ActiveReload) expected,
-            string message)
+        [Test]
+        public void TpsRangeEnablesEveryTpsActionWithInfiniteReserve()
+        {
+            var rules = GameRulesAssetBuilder.TpsRangeRules();
+
+            Assert.That(rules.InfiniteReserve, Is.True);
+            Assert.That(rules.Actions.Cover, Is.EqualTo(Cover.On));
+            Assert.That(rules.Actions.BlindFire, Is.EqualTo(BlindFire.On));
+            Assert.That(rules.Actions.ActiveReload, Is.EqualTo(ActiveReload.On));
+            Assert.That(rules.Actions.Dodge, Is.EqualTo(Dodge.On));
+            Assert.That(rules.Actions.Vault, Is.EqualTo(Vault.On));
+            Assert.That(rules.Actions.Grenade, Is.EqualTo(Grenade.On));
+            Assert.That(rules.Actions.GrenadeCount, Is.GreaterThan(0), "grenades are on, so there must be some to throw");
+        }
+
+        private static void AssertActions(ActionRules actual, ExpectedActions expected, string message)
         {
             var defaults = ActionRules.Default;
             Assert.That(actual.Downed, Is.EqualTo(expected.Downed), message);
@@ -297,10 +366,42 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.Cover, Is.EqualTo(expected.Cover), message);
             Assert.That(actual.BlindFire, Is.EqualTo(expected.BlindFire), message);
             Assert.That(actual.ActiveReload, Is.EqualTo(expected.ActiveReload), message);
-            Assert.That(actual.Dodge, Is.EqualTo(Dodge.Off), message);
-            Assert.That(actual.Vault, Is.EqualTo(Vault.Off), message);
-            Assert.That(actual.Grenade, Is.EqualTo(Grenade.Off), message);
-            Assert.That(actual.GrenadeCount, Is.EqualTo(0), message);
+            Assert.That(actual.Dodge, Is.EqualTo(expected.Dodge), message);
+            Assert.That(actual.Vault, Is.EqualTo(expected.Vault), message);
+            Assert.That(actual.Grenade, Is.EqualTo(expected.Grenade), message);
+            Assert.That(actual.GrenadeCount, Is.EqualTo(expected.GrenadeCount), message);
+        }
+
+        private readonly struct ExpectedActions
+        {
+            public readonly Downed Downed;
+            public readonly Cover Cover;
+            public readonly BlindFire BlindFire;
+            public readonly ActiveReload ActiveReload;
+            public readonly Dodge Dodge;
+            public readonly Vault Vault;
+            public readonly Grenade Grenade;
+            public readonly int GrenadeCount;
+
+            public ExpectedActions(
+                Downed downed,
+                Cover cover,
+                BlindFire blindFire,
+                ActiveReload activeReload,
+                Dodge dodge = Dodge.Off,
+                Vault vault = Vault.Off,
+                Grenade grenade = Grenade.Off,
+                int grenadeCount = 0)
+            {
+                Downed = downed;
+                Cover = cover;
+                BlindFire = blindFire;
+                ActiveReload = activeReload;
+                Dodge = dodge;
+                Vault = vault;
+                Grenade = grenade;
+                GrenadeCount = grenadeCount;
+            }
         }
 
         [Test]
@@ -308,12 +409,13 @@ namespace Fps.Tests.EditMode
         {
             var built = Build();
 
-            foreach (var definition in built)
+            for (var i = 0; i < built.Length; i++)
             {
+                var definition = built[i];
                 Assert.That(definition.SpawnProtectionSeconds, Is.EqualTo(0f), definition.name);
                 Assert.That(definition.FallDamage, Is.EqualTo(FallDamage.Off), definition.name);
                 Assert.That(definition.HudDensity, Is.EqualTo(HudDensity.Full), definition.name);
-                Assert.That(definition.GrenadeCount, Is.EqualTo(0), definition.name);
+                Assert.That(definition.GrenadeCount, Is.EqualTo(_expectedActions[i].GrenadeCount), definition.name);
 
                 var rules = definition.ToRules();
                 Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f), definition.name);
@@ -369,7 +471,7 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void DestructionIsOnOnlyForTeamDeathmatchAndRange()
+        public void DestructionIsOffOnlyForCampaigns()
         {
             var built = Build();
 
@@ -378,6 +480,8 @@ namespace Fps.Tests.EditMode
             Assert.That(built[2].ToRules().Destruction, Is.EqualTo(Destruction.Off), built[2].name);
             Assert.That(built[3].ToRules().Destruction, Is.EqualTo(Destruction.Off), built[3].name);
             Assert.That(built[4].ToRules().Destruction, Is.EqualTo(Destruction.On), built[4].name);
+            Assert.That(built[TpsRangeIndex].ToRules().Destruction, Is.EqualTo(Destruction.On), built[TpsRangeIndex].name);
+            Assert.That(built[DominationIndex].ToRules().Destruction, Is.EqualTo(Destruction.On), built[DominationIndex].name);
         }
 
         [Test]
@@ -395,11 +499,20 @@ namespace Fps.Tests.EditMode
         public void RejectsInvalidOrSharedPaths()
         {
             Assert.Throws<ArgumentException>(
-                () => GameRulesAssetBuilder.BuildAt("TeamDeathmatch.asset", _campaignEasyPath, _campaignNormalPath, _campaignHardPath, _rangePath));
+                () => GameRulesAssetBuilder.BuildAt(
+                    "TeamDeathmatch.asset", _campaignEasyPath, _campaignNormalPath, _campaignHardPath, _rangePath, _tpsRangePath, _dominationPath));
             Assert.Throws<ArgumentException>(
-                () => GameRulesAssetBuilder.BuildAt(_teamDeathmatchPath, _campaignEasyPath, _campaignNormalPath, _campaignHardPath, "Range.prefab"));
+                () => GameRulesAssetBuilder.BuildAt(
+                    _teamDeathmatchPath, _campaignEasyPath, _campaignNormalPath, _campaignHardPath, "Range.prefab", _tpsRangePath, _dominationPath));
             Assert.Throws<ArgumentException>(
-                () => GameRulesAssetBuilder.BuildAt(_teamDeathmatchPath, _campaignEasyPath, _campaignEasyPath, _campaignHardPath, _rangePath));
+                () => GameRulesAssetBuilder.BuildAt(
+                    _teamDeathmatchPath, _campaignEasyPath, _campaignEasyPath, _campaignHardPath, _rangePath, _tpsRangePath, _dominationPath));
+            Assert.Throws<ArgumentException>(
+                () => GameRulesAssetBuilder.BuildAt(
+                    _teamDeathmatchPath, _campaignEasyPath, _campaignNormalPath, _campaignHardPath, _rangePath, _tpsRangePath, _teamDeathmatchPath));
+            Assert.Throws<ArgumentException>(
+                () => GameRulesAssetBuilder.BuildAt(
+                    _teamDeathmatchPath, _campaignEasyPath, _campaignNormalPath, _campaignHardPath, _rangePath, null, _dominationPath));
             Assert.That(AssetDatabase.IsValidFolder(_folder), Is.False);
         }
 
@@ -425,7 +538,8 @@ namespace Fps.Tests.EditMode
 
         private GameRulesDefinition[] Build()
         {
-            return GameRulesAssetBuilder.BuildAt(_teamDeathmatchPath, _campaignEasyPath, _campaignNormalPath, _campaignHardPath, _rangePath);
+            return GameRulesAssetBuilder.BuildAt(
+                _teamDeathmatchPath, _campaignEasyPath, _campaignNormalPath, _campaignHardPath, _rangePath, _tpsRangePath, _dominationPath);
         }
 
         private GameRules BuildAndLoad(string path)

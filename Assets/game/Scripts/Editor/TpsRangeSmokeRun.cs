@@ -15,7 +15,9 @@ namespace Fps.Editor
     /// <list type="number">
     /// <item>肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) で始まっている。</item>
     /// <item>低い遮蔽物 (<see cref="TpsRangeSceneBuilder.LowCoverName"/>) の前でカバーに入り (<c>[Cover] enter</c>)、張り付いたまま狙わずに撃つ (<c>[Combat] blind-fire</c>)。</item>
-    /// <item>カバーを出て乗り越えの壁 (<see cref="TpsRangeSceneBuilder.VaultWallName"/>) の手前に立ち、前へ進みながら跳んで向こう側に降りる。</item>
+    /// <item>カバーを出て乗り越えの壁 (<see cref="TpsRangeSceneBuilder.VaultWallName"/>) の手前に立ち、前へ進みながら Jump を押して乗り越え
+    /// (<c>[Player] vault=Vault</c> → <c>[Player] vaulting=true</c> → <c>vaulting=false</c>)、壁の向こう側に降りる。
+    /// ふつうのジャンプで越えたら失敗にする。</item>
     /// <item>開けた場所 (<see cref="TpsRangeSceneBuilder.OpenAreaName"/>) で右へ回避し (<c>[Player] dodging=true</c> → <c>dodging=false</c>)、
     /// 転がっている間は撃てず、終わったら撃てる。</item>
     /// </list>
@@ -26,7 +28,8 @@ namespace Fps.Editor
     /// <remarks>
     /// batchmode には入力が無いので、Cover / Attack / 移動とジャンプ / Dodge の代わりに <see cref="CoverController.Tick"/>・
     /// <see cref="WeaponController.PullTrigger"/>・<see cref="PlayerController.MoveFilter"/> への差し込み・<see cref="PlayerController.TryStartDodge"/> を使う。
-    /// 乗り越えは「前へ進みながらジャンプを押して壁の向こうに降りられる」ことを確かめ、<see cref="PlayerController.IsVaulting"/> の動きの有無は問わない。
+    /// 乗り越えは接地しているフレームにだけ Jump を押し、その Jump で <see cref="PlayerController.VaultStarted"/> が呼ばれて
+    /// <see cref="PlayerController.IsVaulting"/> が true になることを確かめる。
     /// </remarks>
     [InitializeOnLoad]
     public static class TpsRangeSmokeRun
@@ -45,8 +48,14 @@ namespace Fps.Editor
         /// <summary>カバーに入る前に置く位置の、体の表面から遮蔽物の手前の面までの隙間 (m)。<see cref="CoverProbe.MaxEnterDistance"/> に収まる。</summary>
         public const float StandOffFromCover = 0.3f;
 
-        /// <summary>乗り越える前に置く位置の、体の表面から壁の手前の面までの隙間 (m)。</summary>
-        public const float StandOffFromVaultWall = 1f;
+        /// <summary>
+        /// 乗り越える前に置く位置の、体の表面から壁の手前の面までの隙間 (m)。体の中心から壁までが <see cref="VaultProbe.MaxReach"/> に収まり、
+        /// 最初の Jump で乗り越えられる。届かないとふつうのジャンプになり、低い壁はそれでも越えられてしまうので乗り越えを確かめられない。
+        /// </summary>
+        public const float StandOffFromVaultWall = 0.3f;
+
+        /// <summary>乗り越え始めた向きと、壁を越える向き (+Z) とのなす角の余弦の下限。</summary>
+        public const float MinVaultDirectionDot = 0.9f;
 
         /// <summary>回避で少なくとも動くべき水平の距離の、<see cref="MotorSpec.DodgeDistance"/> に対する割合。床との摩擦や最後のフレームの端数を見込む。</summary>
         public const float MinDodgeDistanceRatio = 0.5f;
@@ -61,6 +70,9 @@ namespace Fps.Editor
         private static readonly string _coverEnterLog = CoverState.LogTag + " enter";
         private static readonly string _dodgeStartLog = PlayerController.FormatDodgingLog(true);
         private static readonly string _dodgeEndLog = PlayerController.FormatDodgingLog(false);
+        private static readonly string _vaultProbeLog = $"{PlayerController.LogTag} vault={VaultVerdict.Vault} ";
+        private static readonly string _vaultStartLog = PlayerController.FormatVaultingLog(true);
+        private static readonly string _vaultEndLog = PlayerController.FormatVaultingLog(false);
 
         private static readonly List<string> _errors = new List<string>();
         private static Step _step;
@@ -69,6 +81,13 @@ namespace Fps.Editor
         private static bool _sawDodgeStart;
         private static bool _sawDodgeEnd;
         private static bool _crossedVaultWall;
+        private static bool _sawVaultProbe;
+        private static bool _sawVaultStart;
+        private static bool _sawVaultEnd;
+        private static bool _vaultStarted;
+        private static bool _vaultingOnStart;
+        private static Vector3 _vaultDirection;
+        private static PlayerController _vaultMover;
         private static bool _dodgeBlockedFire;
         private static double _playStartedAt = -1d;
         private static double _exerciseStartedAt = -1d;
@@ -149,6 +168,13 @@ namespace Fps.Editor
             _sawDodgeStart = false;
             _sawDodgeEnd = false;
             _crossedVaultWall = false;
+            _sawVaultProbe = false;
+            _sawVaultStart = false;
+            _sawVaultEnd = false;
+            _vaultStarted = false;
+            _vaultingOnStart = false;
+            _vaultDirection = Vector3.zero;
+            _vaultMover = null;
             _dodgeBlockedFire = false;
             _playStartedAt = -1d;
             _exerciseStartedAt = -1d;
@@ -197,6 +223,18 @@ namespace Fps.Editor
             else if (string.Equals(condition, _dodgeEndLog, StringComparison.Ordinal))
             {
                 _sawDodgeEnd = true;
+            }
+            else if (condition.StartsWith(_vaultProbeLog, StringComparison.Ordinal))
+            {
+                _sawVaultProbe = true;
+            }
+            else if (string.Equals(condition, _vaultStartLog, StringComparison.Ordinal))
+            {
+                _sawVaultStart = true;
+            }
+            else if (string.Equals(condition, _vaultEndLog, StringComparison.Ordinal))
+            {
+                _sawVaultEnd = true;
             }
         }
 
@@ -449,26 +487,79 @@ namespace Fps.Editor
             FaceForward(world);
 
             // カバーの差し込み (カバー外では何もしない) を残したまま、前進とジャンプを足す。
-            _vaultFilter = new ForwardJumpFilter(world.Mover.MoveFilter, world.Player.transform, bounds.max.z + GameBootstrap.PlayerRadius);
-            world.Mover.MoveFilter = _vaultFilter;
+            var mover = world.Mover;
+            _vaultFilter = new ForwardJumpFilter(mover.MoveFilter, mover, bounds.max.z + GameBootstrap.PlayerRadius);
+            mover.MoveFilter = _vaultFilter;
+            _vaultMover = mover;
+            mover.VaultStarted += OnVaultStarted;
             _step = Step.CrossVaultWall;
             return null;
         }
 
+        // IsVaulting は乗り越えている間しか true でなく、OnUpdate (Editor のフレーム) の間隔によっては見逃すので、始まった瞬間に読む。
+        private static void OnVaultStarted(Vector3 direction)
+        {
+            _vaultStarted = true;
+            _vaultDirection = direction;
+            _vaultingOnStart = _vaultMover != null && _vaultMover.IsVaulting;
+        }
+
+        private static void StopWatchingVault()
+        {
+            if (_vaultMover != null)
+            {
+                _vaultMover.VaultStarted -= OnVaultStarted;
+                _vaultMover = null;
+            }
+        }
+
         private static string CrossVaultWall(BootstrapWorld world)
         {
-            if (_vaultFilter == null || !ReferenceEquals(world.Mover.MoveFilter, _vaultFilter))
+            var mover = world.Mover;
+            if (_vaultFilter == null || !ReferenceEquals(mover.MoveFilter, _vaultFilter))
             {
                 return "something replaced the move filter while crossing the vault wall";
             }
 
-            if (!_vaultFilter.IsPast || !world.Mover.IsGrounded)
+            // Jump は接地しているフレームにだけ押すので、押したのに乗り越え始めていなければ、そのフレームはふつうのジャンプになっている。
+            if (_vaultFilter.JumpedWhileGrounded && !_vaultStarted)
+            {
+                return $"jumping in front of '{TpsRangeSceneBuilder.VaultWallName}' did not start a vault ({PlayerController.FormatVaultProbeLog(mover.LastVaultProbe)}, crouched={mover.IsCrouched}, dodging={mover.IsDodging})";
+            }
+
+            if (!_vaultStarted)
             {
                 return null;
             }
 
-            world.Mover.MoveFilter = _vaultFilter.Inner;
+            if (!_vaultingOnStart)
+            {
+                return "VaultStarted was raised while IsVaulting was false";
+            }
+
+            if (!_sawVaultProbe || !_sawVaultStart)
+            {
+                return $"the vault started without logging '{_vaultProbeLog}...' and '{_vaultStartLog}' (probe={_sawVaultProbe} start={_sawVaultStart})";
+            }
+
+            if (Vector3.Dot(_vaultDirection, Vector3.forward) < MinVaultDirectionDot)
+            {
+                return $"the vault started towards {Format(_vaultDirection)}, not over the wall (+Z)";
+            }
+
+            if (mover.IsVaulting || !_vaultFilter.IsPast || !mover.IsGrounded)
+            {
+                return null;
+            }
+
+            if (!_sawVaultEnd)
+            {
+                return $"the vault ended but no '{_vaultEndLog}' line was logged";
+            }
+
+            mover.MoveFilter = _vaultFilter.Inner;
             _vaultFilter = null;
+            StopWatchingVault();
             _crossedVaultWall = true;
             _step = Step.PlaceInOpenArea;
             return null;
@@ -616,12 +707,16 @@ namespace Fps.Editor
 
             problems.AddRange(_errors);
             Debug.Log(
-                $"{LogTag} step={_step} cover enter={_sawCoverEnter} blind fire={_sawBlindFire} vault crossed={_crossedVaultWall} dodge start={_sawDodgeStart} dodge end={_sawDodgeEnd} dodge blocked fire={_dodgeBlockedFire} errors={_errors.Count.ToString(CultureInfo.InvariantCulture)}");
+                $"{LogTag} step={_step} cover enter={_sawCoverEnter} blind fire={_sawBlindFire} vault probe={_sawVaultProbe} vault start={_sawVaultStart} vaulting={_vaultingOnStart} vault end={_sawVaultEnd} vault crossed={_crossedVaultWall} dodge start={_sawDodgeStart} dodge end={_sawDodgeEnd} dodge blocked fire={_dodgeBlockedFire} errors={_errors.Count.ToString(CultureInfo.InvariantCulture)}");
 
             var passed = problems.Count == 0
                 && _step == Step.Done
                 && _sawCoverEnter
                 && _sawBlindFire
+                && _sawVaultProbe
+                && _sawVaultStart
+                && _vaultingOnStart
+                && _sawVaultEnd
                 && _crossedVaultWall
                 && _sawDodgeStart
                 && _sawDodgeEnd
@@ -645,6 +740,7 @@ namespace Fps.Editor
         {
             _finished = true;
             Detach();
+            StopWatchingVault();
             SessionState.EraseBool(ActiveKey);
             SessionState.EraseFloat(RequestedAtKey);
 
@@ -669,32 +765,40 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 乗り越えの手順で、入力の代わりに前進とジャンプを押し続ける差し込み。体が <see cref="_pastZ"/> を越えたらジャンプをやめて降りさせる。
+        /// 乗り越えの手順で、入力の代わりに前進を押し続け、乗り越え始めるまでは接地しているフレームにだけ Jump を押す差し込み。
+        /// 乗り越え始めたら Jump をやめ、降りた先でふつうに跳ばないようにする。
         /// 先に差し込まれていたもの (カバー) は後から呼び、カバーの制限を上書きしない。
         /// </summary>
         private sealed class ForwardJumpFilter : IPlayerMoveFilter
         {
-            private readonly Transform _body;
+            private readonly PlayerController _mover;
             private readonly float _pastZ;
 
-            public ForwardJumpFilter(IPlayerMoveFilter inner, Transform body, float pastZ)
+            public ForwardJumpFilter(IPlayerMoveFilter inner, PlayerController mover, float pastZ)
             {
                 Inner = inner;
-                _body = body ?? throw new ArgumentNullException(nameof(body));
+                _mover = mover != null ? mover : throw new ArgumentNullException(nameof(mover));
                 _pastZ = pastZ;
             }
 
             public IPlayerMoveFilter Inner { get; }
 
-            public bool IsPast => _body.position.z > _pastZ;
+            public bool IsPast => _mover.transform.position.z > _pastZ;
+
+            /// <summary>接地しているフレームに Jump を押したか。乗り越えの条件のうち接地はここで満たしているので、押して乗り越えなければふつうのジャンプになっている。</summary>
+            public bool JumpedWhileGrounded { get; private set; }
 
             public void Filter(ref Vector2 move, ref bool sprint, ref bool crouch, ref bool jumpPressed)
             {
                 move = Vector2.up;
                 sprint = false;
                 crouch = false;
-                jumpPressed = !IsPast;
+                jumpPressed = !_vaultStarted && !IsPast && _mover.IsGrounded;
                 Inner?.Filter(ref move, ref sprint, ref crouch, ref jumpPressed);
+                if (jumpPressed)
+                {
+                    JumpedWhileGrounded = true;
+                }
             }
         }
     }

@@ -701,15 +701,21 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 倒れた敵を groundPosition (足元) に戻して生き返らせる。体力を満たし、NavMeshAgent を有効に戻して近くの NavMesh に置き、
-        /// 判断 (<see cref="EnemyBrain.Revive"/>)・経路・立て直し・撃たれた記録を初めからにして、目標を選び直す。
-        /// 生きているときに呼んでも同じく置き直す。未初期化なら <see cref="InvalidOperationException"/>。
+        /// 倒れた敵を groundPosition (足元) に戻して生き返らせる。体力を満たし、武器を弾の満ちた状態で作り直し、NavMeshAgent を有効に戻して
+        /// 近くの NavMesh に置き、判断 (<see cref="EnemyBrain.Revive"/>)・経路・立て直し・撃たれた記録を初めからにして、目標を選び直す。
+        /// 出現地点 (NavMesh から外れたときの戻り先) も置いた位置にする。
+        /// まだ生きていれば何もせず false。未初期化なら <see cref="InvalidOperationException"/>。
         /// </summary>
-        public void Respawn(Vector3 groundPosition, Quaternion rotation)
+        public bool Respawn(Vector3 groundPosition, Quaternion rotation)
         {
             if (_brain == null)
             {
                 throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
+            }
+
+            if (!_brain.IsDead)
+            {
+                return false;
             }
 
             var ground = NavMesh.SamplePosition(groundPosition, out var hit, OffMeshSnapRadius, NavMesh.AllAreas)
@@ -719,11 +725,17 @@ namespace Fps.Runtime
             _pendingNoise = null;
             _pendingHit = false;
             _pendingHitSource = null;
+            _loggedCoverIndex = -1;
+            _loggedCoverPhase = EnemyCoverPhase.None;
             _destination = null;
             _detour = null;
             _goal = null;
             _stuck.Reset();
             SetCrouching(false);
+
+            _weapon.Reloaded -= OnReloaded;
+            _weapon = new Weapon(_weapon.Spec);
+            _weapon.Reloaded += OnReloaded;
 
             // 無効のまま Transform を動かしてから有効にすると、NavMeshAgent は新しい位置の近くの NavMesh に載る。
             if (_agent.enabled && _agent.isOnNavMesh)
@@ -753,6 +765,7 @@ namespace Fps.Runtime
             _target = null;
             _nextTargetSearch = 0f;
             Debug.Log($"{LogTag} id={Id} respawned at={ground.ToString("F1")} state={_brain.State}", this);
+            return true;
         }
 
         private void MoveTo(System.Numerics.Vector3? moveTo)

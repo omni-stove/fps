@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ZoneScheduleTests
     {
-        private const float _tolerance =1e-4f;
+        private const float _tolerance = 1e-4f;
 
         // 半径 100 から、10 秒待って 20 秒で 50 へ、5 秒待って 10 秒で 20 へ。合わせて 45 秒。
         private static ZoneSchedule TwoPhases(int seed = 7)

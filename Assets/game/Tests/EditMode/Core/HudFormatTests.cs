@@ -28,6 +28,22 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.NextMatch(-1));
         }
 
+        [TestCase(RespawnMode.Individual, 3, "リスポーンまで 3 秒")]
+        [TestCase(RespawnMode.Wave, 7, "リスポーンまで 7 秒")]
+        [TestCase(RespawnMode.None, 0, "次の試合まで復活なし")]
+        [TestCase(RespawnMode.None, -1, "次の試合まで復活なし")]
+        public void RespawnNoticeFollowsTheRespawnMode(RespawnMode mode, int seconds, string expected)
+        {
+            Assert.That(HudFormat.RespawnNotice(mode, seconds), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void RespawnNoticeRejectsNegativeSecondsAndUnknownModes()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.RespawnNotice(RespawnMode.Wave, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.RespawnNotice((RespawnMode)99, 1));
+        }
+
         [TestCase(3, "チェックポイントから再開まで 3 秒")]
         [TestCase(0, "チェックポイントから再開まで 0 秒")]
         public void CheckpointRestartShowsTheSecondsLeft(int seconds, string expected)

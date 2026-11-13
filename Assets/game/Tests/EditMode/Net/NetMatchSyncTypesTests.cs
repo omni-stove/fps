@@ -1,5 +1,7 @@
 using Fps.Core;
 using NUnit.Framework;
+using Unity.Collections;
+using Unity.Netcode;
 
 namespace Fps.Net.Tests
 {
@@ -38,6 +40,126 @@ namespace Fps.Net.Tests
             Assert.That(stats.Equals(new NetPlayerStats(3, Team.Alpha, 2, 1)), Is.False);
             Assert.That(stats.Equals(new NetPlayerStats(3, Team.Bravo, 3, 1)), Is.False);
             Assert.That(stats.Equals(new NetPlayerStats(3, Team.Bravo, 2, 2)), Is.False);
+        }
+
+        [Test]
+        public void PlayerStatsRoundTripsTheKiller()
+        {
+            Assert.That(new NetPlayerStats(3, Team.Bravo, 2, 1).Killer, Is.Null);
+            Assert.That(new NetPlayerStats(3, Team.Bravo, 2, 1, 5).Killer, Is.EqualTo(5UL));
+
+            // ホスト (クライアント 0) に倒されたことと、倒した相手がいないことを取り違えない
+            Assert.That(new NetPlayerStats(3, Team.Bravo, 2, 1, 0).Killer, Is.EqualTo(0UL));
+            Assert.That(default(NetPlayerStats).Killer, Is.Null);
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new NetPlayerStats(3, Team.Bravo, 2, 1, ulong.MaxValue));
+        }
+
+        [Test]
+        public void PlayerStatsEqualityUsesTheKiller()
+        {
+            var stats = new NetPlayerStats(3, Team.Bravo, 2, 1, 0);
+
+            Assert.That(stats.Equals(new NetPlayerStats(3, Team.Bravo, 2, 1, 0)), Is.True);
+            Assert.That(stats.GetHashCode(), Is.EqualTo(new NetPlayerStats(3, Team.Bravo, 2, 1, 0).GetHashCode()));
+            Assert.That(stats.Equals(new NetPlayerStats(3, Team.Bravo, 2, 1)), Is.False);
+            Assert.That(stats.Equals(new NetPlayerStats(3, Team.Bravo, 2, 1, 4)), Is.False);
+        }
+
+        [Test]
+        public void PlayerStatsSerializeAllFields()
+        {
+            var withKiller = new NetPlayerStats(7, Team.Alpha, 4, 2, 9);
+            var withoutKiller = new NetPlayerStats(7, Team.Alpha, 4, 2);
+
+            Assert.That(RoundTrip(withKiller), Is.EqualTo(withKiller));
+            Assert.That(RoundTrip(withKiller).Killer, Is.EqualTo(9UL));
+            Assert.That(RoundTrip(withoutKiller), Is.EqualTo(withoutKiller));
+            Assert.That(RoundTrip(withoutKiller).Killer, Is.Null);
+        }
+
+        [Test]
+        public void MatchRulesTakeOnlyTheClientValuesFromGameRules()
+        {
+            var rules = new GameRules(
+                FriendlyFire.Reflect,
+                RespawnMode.Wave,
+                7f,
+                2f,
+                15f,
+                DeathBody.Collapse,
+                DeathCamera.Killer,
+                true,
+                0.5f,
+                Destruction.On);
+
+            var synced = NetMatchRules.From(rules);
+
+            Assert.That(synced.DeathBody, Is.EqualTo(DeathBody.Collapse));
+            Assert.That(synced.DeathCamera, Is.EqualTo(DeathCamera.Killer));
+            Assert.That(synced.RespawnMode, Is.EqualTo(RespawnMode.Wave));
+            Assert.That(synced.InfiniteReserve, Is.True);
+            Assert.Throws<System.ArgumentNullException>(() => NetMatchRules.From(null));
+        }
+
+        [Test]
+        public void MatchRulesDefaultMatchesTheDefaultGameRules()
+        {
+            var expected = new NetMatchRules(
+                GameRules.Default.DeathBody, GameRules.Default.DeathCamera, GameRules.Default.RespawnMode, GameRules.Default.InfiniteReserve);
+
+            Assert.That(NetMatchRules.Default, Is.EqualTo(expected));
+
+            // NetworkVariable の初期値が届く前の値 (default) も既定のルールと同じ見た目になる
+            Assert.That(default(NetMatchRules), Is.EqualTo(NetMatchRules.Default));
+        }
+
+        [Test]
+        public void MatchRulesEqualityUsesAllFields()
+        {
+            var rules = new NetMatchRules(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.Wave, true);
+
+            Assert.That(rules.Equals(new NetMatchRules(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.Wave, true)), Is.True);
+            Assert.That(rules.GetHashCode(), Is.EqualTo(new NetMatchRules(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.Wave, true).GetHashCode()));
+            Assert.That(rules.Equals(new NetMatchRules(DeathBody.Vanish, DeathCamera.Killer, RespawnMode.Wave, true)), Is.False);
+            Assert.That(rules.Equals(new NetMatchRules(DeathBody.Collapse, DeathCamera.None, RespawnMode.Wave, true)), Is.False);
+            Assert.That(rules.Equals(new NetMatchRules(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.None, true)), Is.False);
+            Assert.That(rules.Equals(new NetMatchRules(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.Wave, false)), Is.False);
+        }
+
+        [TestCase(DeathBody.Collapse, DeathCamera.Killer, RespawnMode.Wave, true)]
+        [TestCase(DeathBody.Vanish, DeathCamera.None, RespawnMode.Individual, false)]
+        [TestCase(DeathBody.Collapse, DeathCamera.None, RespawnMode.None, false)]
+        public void MatchRulesSerializeAllFields(DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve)
+        {
+            var rules = new NetMatchRules(deathBody, deathCamera, respawnMode, infiniteReserve);
+
+            Assert.That(RoundTrip(rules), Is.EqualTo(rules));
+        }
+
+        [Test]
+        public void MatchStatusSerializesStateAndWinner()
+        {
+            var status = new NetMatchStatus(GameModeState.Ended, Team.Bravo);
+
+            Assert.That(RoundTrip(status), Is.EqualTo(status));
+            Assert.That(RoundTrip(new NetMatchStatus(GameModeState.Ended, null)).Winner, Is.Null);
+        }
+
+        // NetworkVariable / NetworkList が送るときと同じく INetworkSerializable で書いて読み戻す
+        private static T RoundTrip<T>(T value)
+            where T : INetworkSerializable, new()
+        {
+            using (var writer = new FastBufferWriter(64, Allocator.Temp))
+            {
+                writer.WriteNetworkSerializable(value);
+                using (var reader = new FastBufferReader(writer, Allocator.Temp))
+                {
+                    reader.ReadNetworkSerializable(out T result);
+                    Assert.That(reader.Position, Is.EqualTo(writer.Length), "every written byte should be read back");
+                    return result;
+                }
+            }
         }
 
         [TestCase(NetSpawnPoint.SpawnTeam.Any, null)]

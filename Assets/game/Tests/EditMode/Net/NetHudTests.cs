@@ -220,6 +220,76 @@ namespace Fps.Net.Tests
             Assert.That(IsShown(_view.NoticeLabel), Is.False);
         }
 
+        private void ArriveRespawnMode(RespawnMode mode)
+        {
+            Arrive(
+                _match.RulesVariable,
+                NetMatchRules.Default,
+                new NetMatchRules(DeathBody.Collapse, DeathCamera.Killer, mode, false));
+        }
+
+        [Test]
+        public void WaveShowsTheSecondsUntilTheNextWaveWhileDown()
+        {
+            _netHud.BindMatch(_match);
+            ArriveRespawnMode(RespawnMode.Wave);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            Arrive(_match.NextWaveSecondsVariable, 0, 7);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False, "the wave countdown is shown only while down");
+
+            Arrive(_player.HealthVariable, _maxHealth, 0);
+            Assert.That(_netHud.IsAwaitingRespawn, Is.True);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(7)));
+
+            // 自分の待ち時間ではなく、サーバーが配る次のウェーブまでの秒数で進む
+            _netHud.Tick(1.2f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(7)));
+            Arrive(_match.NextWaveSecondsVariable, 7, 6);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(6)));
+
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            Assert.That(_netHud.IsAwaitingRespawn, Is.False);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [Test]
+        public void NoneShowsThatThereIsNoRespawnUntilTheNextMatch()
+        {
+            _netHud.BindMatch(_match);
+            ArriveRespawnMode(RespawnMode.None);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+
+            Arrive(_player.HealthVariable, _maxHealth, 0);
+            Assert.That(_netHud.IsAwaitingRespawn, Is.True);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NoRespawnUntilNextMatch));
+
+            _netHud.Tick(10f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NoRespawnUntilNextMatch));
+
+            // 終わったら次の試合までの秒数に替わる
+            Arrive(_match.StatusVariable, Status(GameModeState.Playing), Status(GameModeState.Ended, Team.Alpha));
+            Arrive(_match.NextMatchSecondsVariable, 0, 10);
+            Assert.That(_netHud.IsAwaitingRespawn, Is.False);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NextMatch(10)));
+        }
+
+        [Test]
+        public void RulesArrivingWhileDownSwitchTheNotice()
+        {
+            Assert.That(_match.SyncedRules, Is.EqualTo(NetMatchRules.Default), "before the server starts the match");
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            Arrive(_player.HealthVariable, _maxHealth, 0);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(3)));
+
+            ArriveRespawnMode(RespawnMode.None);
+
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NoRespawnUntilNextMatch));
+        }
+
         [Test]
         public void NoRespawnCountdownBeforeTheMatchIsPlaying()
         {
@@ -296,6 +366,8 @@ namespace Fps.Net.Tests
             Assert.That(_match.AlphaScoreVariable.OnValueChanged, Is.Null);
             Assert.That(_match.RemainingSecondsVariable.OnValueChanged, Is.Null);
             Assert.That(_match.StatusVariable.OnValueChanged, Is.Null);
+            Assert.That(_match.NextWaveSecondsVariable.OnValueChanged, Is.Null);
+            Assert.That(_match.RulesVariable.OnValueChanged, Is.Null);
         }
     }
 }

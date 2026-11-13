@@ -336,6 +336,8 @@ namespace Fps.Tests.EditMode
             rifle.AdsFieldOfView = WeaponDefinition.UnsetAdsFieldOfView;
             rifle.BlindFireSpreadDegrees = 0f;
             rifle.ActiveReloadFailSeconds = 3f;
+            rifle.RecoilPitchDegrees = 5f;
+            rifle.HipSpreadDegrees = 7f;
             EditorUtility.SetDirty(rifle);
             var catalogAsset = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(_catalogPath);
             catalogAsset.SetWeapons(new[] { rifle });
@@ -354,7 +356,49 @@ namespace Fps.Tests.EditMode
             Assert.That(restored.AdsFieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView));
             Assert.That(restored.BlindFireSpreadDegrees, Is.EqualTo(WeaponAssetBuilder.RifleBlindFireSpreadDegrees));
             Assert.That(restored.ActiveReloadFailSeconds, Is.EqualTo(WeaponAssetBuilder.RifleActiveReloadFailSeconds));
+            Assert.That(restored.RecoilPitchDegrees, Is.EqualTo(0f));
+            Assert.That(restored.HipSpreadDegrees, Is.EqualTo(0f));
             Assert.That(rebuilt.Weapons, Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public void BuiltWeaponsHaveNoRecoilOrSpread()
+        {
+            Build();
+
+            foreach (var path in new[] { _riflePath, _handgunPath })
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(path);
+                AssertNoRecoilOrSpread(asset, path);
+            }
+        }
+
+        [Test]
+        public void TheRepositoryWeaponAssetsLoadWithNoRecoilOrSpread()
+        {
+            foreach (var path in new[] { WeaponAssetBuilder.RiflePath, WeaponAssetBuilder.HandgunPath })
+            {
+                AssertNoRecoilOrSpread(WeaponAssetBuilder.LoadDefinition(path), path);
+            }
+        }
+
+        private static void AssertNoRecoilOrSpread(WeaponDefinition asset, string message)
+        {
+            Assert.That(asset, Is.Not.Null, message);
+            Assert.That(asset.RecoilPitchDegrees, Is.EqualTo(0f), message);
+            Assert.That(asset.RecoilYawDegrees, Is.EqualTo(0f), message);
+            Assert.That(asset.RecoilRecoveryPerSecond, Is.EqualTo(0f), message);
+            Assert.That(asset.HipSpreadDegrees, Is.EqualTo(0f), message);
+            Assert.That(asset.AdsSpreadDegrees, Is.EqualTo(0f), message);
+            Assert.That(asset.MoveSpreadDegrees, Is.EqualTo(0f), message);
+
+            var spec = asset.ToSpec();
+            Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(0f), message);
+            Assert.That(spec.RecoilYawDegrees, Is.EqualTo(0f), message);
+            Assert.That(spec.RecoilRecoveryPerSecond, Is.EqualTo(0f), message);
+            Assert.That(spec.HipSpreadDegrees, Is.EqualTo(0f), message);
+            Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(0f), message);
+            Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(0f), message);
         }
 
         [Test]

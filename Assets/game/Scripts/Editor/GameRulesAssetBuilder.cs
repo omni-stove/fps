@@ -10,6 +10,7 @@ namespace Fps.Editor
     /// <summary>
     /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/> 5 つ) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
+    /// どのモードもリスポーン直後の無敵なし・落下ダメージなし・HUD はすべて出す (<see cref="GameRules"/> の既定) で、アクションは <see cref="ActionRules.Default"/>。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.GameRulesAssetBuilder.Build</code>
@@ -194,7 +195,10 @@ namespace Fps.Editor
                 source.InfiniteReserve,
                 reserveAmmoMultiplier,
                 Destruction.Off,
-                source.Actions);
+                source.Actions,
+                source.SpawnProtectionSeconds,
+                source.FallDamage,
+                source.HudDensity);
         }
     }
 }

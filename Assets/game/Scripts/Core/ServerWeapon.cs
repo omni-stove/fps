@@ -62,7 +62,13 @@ namespace Fps.Core
                     spec.BlindFireSpreadDegrees,
                     spec.ActiveReloadWindowStart,
                     spec.ActiveReloadWindowLength,
-                    spec.ActiveReloadFailSeconds);
+                    spec.ActiveReloadFailSeconds,
+                    spec.RecoilPitchDegrees,
+                    spec.RecoilYawDegrees,
+                    spec.RecoilRecoveryPerSecond,
+                    spec.HipSpreadDegrees,
+                    spec.AdsSpreadDegrees,
+                    spec.MoveSpreadDegrees);
             _weapon = CreateWeapon();
         }
 

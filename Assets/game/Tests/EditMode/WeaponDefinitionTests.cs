@@ -67,6 +67,26 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void RecoilAndSpreadStartAtZero()
+        {
+            var definition = NewDefinition("Default", _rifleId);
+            var spec = definition.ToSpec();
+
+            Assert.That(definition.RecoilPitchDegrees, Is.EqualTo(0f));
+            Assert.That(definition.RecoilYawDegrees, Is.EqualTo(0f));
+            Assert.That(definition.RecoilRecoveryPerSecond, Is.EqualTo(0f));
+            Assert.That(definition.HipSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(definition.AdsSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(definition.MoveSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(0f));
+            Assert.That(spec.RecoilYawDegrees, Is.EqualTo(0f));
+            Assert.That(spec.RecoilRecoveryPerSecond, Is.EqualTo(0f));
+            Assert.That(spec.HipSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(0f));
+        }
+
+        [Test]
         public void ANewDefinitionHasNoIdUntilOneIsAssigned()
         {
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
@@ -128,6 +148,12 @@ namespace Fps.Tests.EditMode
             definition.ActiveReloadWindowStart = 0.45f;
             definition.ActiveReloadWindowLength = 0.2f;
             definition.ActiveReloadFailSeconds = 0.4f;
+            definition.RecoilPitchDegrees = 1.5f;
+            definition.RecoilYawDegrees = 0.4f;
+            definition.RecoilRecoveryPerSecond = 12f;
+            definition.HipSpreadDegrees = 3f;
+            definition.AdsSpreadDegrees = 0.5f;
+            definition.MoveSpreadDegrees = 2f;
 
             var spec = definition.ToSpec();
 
@@ -150,6 +176,12 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.ActiveReloadWindowStart, Is.EqualTo(0.45f));
             Assert.That(spec.ActiveReloadWindowLength, Is.EqualTo(0.2f));
             Assert.That(spec.ActiveReloadFailSeconds, Is.EqualTo(0.4f));
+            Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(1.5f));
+            Assert.That(spec.RecoilYawDegrees, Is.EqualTo(0.4f));
+            Assert.That(spec.RecoilRecoveryPerSecond, Is.EqualTo(12f));
+            Assert.That(spec.HipSpreadDegrees, Is.EqualTo(3f));
+            Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(0.5f));
+            Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(2f));
             Assert.That(definition.ToSpec(), Is.Not.SameAs(spec));
         }
 
@@ -194,6 +226,12 @@ namespace Fps.Tests.EditMode
         [TestCase("ActiveReloadWindowLength", "")]
         [TestCase("ActiveReloadWindowEnd", "")]
         [TestCase("ActiveReloadFailSeconds", "")]
+        [TestCase("RecoilPitchDegrees", "")]
+        [TestCase("RecoilYawDegrees", "")]
+        [TestCase("RecoilRecoveryPerSecond", "")]
+        [TestCase("HipSpreadDegrees", "")]
+        [TestCase("AdsSpreadDegrees", "")]
+        [TestCase("MoveSpreadDegrees", "")]
         public void ToSpecRejectsInvalidValuesWithTheAssetName(string field, string id)
         {
             var definition = NewDefinition("BrokenWeapon");
@@ -256,6 +294,24 @@ namespace Fps.Tests.EditMode
                     break;
                 case "ActiveReloadFailSeconds":
                     definition.ActiveReloadFailSeconds = -0.1f;
+                    break;
+                case "RecoilPitchDegrees":
+                    definition.RecoilPitchDegrees = 91f;
+                    break;
+                case "RecoilYawDegrees":
+                    definition.RecoilYawDegrees = -0.1f;
+                    break;
+                case "RecoilRecoveryPerSecond":
+                    definition.RecoilRecoveryPerSecond = float.NaN;
+                    break;
+                case "HipSpreadDegrees":
+                    definition.HipSpreadDegrees = 91f;
+                    break;
+                case "AdsSpreadDegrees":
+                    definition.AdsSpreadDegrees = -0.1f;
+                    break;
+                case "MoveSpreadDegrees":
+                    definition.MoveSpreadDegrees = float.PositiveInfinity;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

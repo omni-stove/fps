@@ -69,6 +69,30 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("リロード中に決まった間で押すと早く終わる仕組みを使うか")]
         private ActiveReload _activeReload = ActiveReload.Off;
 
+        [SerializeField, Tooltip("素早く横や後ろへ飛び退けるか")]
+        private Dodge _dodge = Dodge.Off;
+
+        [SerializeField, Tooltip("低い障害物を乗り越えられるか")]
+        private Vault _vault = Vault.Off;
+
+        [SerializeField, Tooltip("グレネードを投げられるか")]
+        private Grenade _grenade = Grenade.Off;
+
+        [SerializeField, Min(0), Tooltip("出撃ごとに持つグレネードの数。Grenade が Off なら使わない")]
+        private int _grenadeCount;
+
+        [Header("リスポーン")]
+        [SerializeField, Min(0f), Tooltip("リスポーンしてからダメージを受けなくなる秒数。0 なら守らない")]
+        private float _spawnProtectionSeconds;
+
+        [Header("移動")]
+        [SerializeField, Tooltip("高い所から落ちたときにダメージを受けるか")]
+        private FallDamage _fallDamage = FallDamage.Off;
+
+        [Header("HUD")]
+        [SerializeField, Tooltip("HUD にどれだけの情報を出すか")]
+        private HudDensity _hudDensity = HudDensity.Full;
+
         public FriendlyFire FriendlyFire
         {
             get => _friendlyFire;
@@ -171,6 +195,48 @@ namespace Fps.Runtime
             set => _activeReload = value;
         }
 
+        public Dodge Dodge
+        {
+            get => _dodge;
+            set => _dodge = value;
+        }
+
+        public Vault Vault
+        {
+            get => _vault;
+            set => _vault = value;
+        }
+
+        public Grenade Grenade
+        {
+            get => _grenade;
+            set => _grenade = value;
+        }
+
+        public int GrenadeCount
+        {
+            get => _grenadeCount;
+            set => _grenadeCount = value;
+        }
+
+        public float SpawnProtectionSeconds
+        {
+            get => _spawnProtectionSeconds;
+            set => _spawnProtectionSeconds = value;
+        }
+
+        public FallDamage FallDamage
+        {
+            get => _fallDamage;
+            set => _fallDamage = value;
+        }
+
+        public HudDensity HudDensity
+        {
+            get => _hudDensity;
+            set => _hudDensity = value;
+        }
+
         /// <summary>定義を不変の <see cref="GameRules"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="GameRulesDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ToRules()
@@ -195,7 +261,14 @@ namespace Fps.Runtime
                         _reviveSeconds,
                         _cover,
                         _blindFire,
-                        _activeReload));
+                        _activeReload,
+                        _dodge,
+                        _vault,
+                        _grenade,
+                        _grenadeCount),
+                    _spawnProtectionSeconds,
+                    _fallDamage,
+                    _hudDensity);
             }
             catch (ArgumentException e)
             {
@@ -241,6 +314,9 @@ namespace Fps.Runtime
             _infiniteReserve = rules.InfiniteReserve;
             _reserveAmmoMultiplier = rules.ReserveAmmoMultiplier;
             _destruction = rules.Destruction;
+            _spawnProtectionSeconds = rules.SpawnProtectionSeconds;
+            _fallDamage = rules.FallDamage;
+            _hudDensity = rules.HudDensity;
 
             var actions = rules.Actions;
             _downed = actions.Downed;
@@ -250,6 +326,10 @@ namespace Fps.Runtime
             _cover = actions.Cover;
             _blindFire = actions.BlindFire;
             _activeReload = actions.ActiveReload;
+            _dodge = actions.Dodge;
+            _vault = actions.Vault;
+            _grenade = actions.Grenade;
+            _grenadeCount = actions.GrenadeCount;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed game rules)" : name;

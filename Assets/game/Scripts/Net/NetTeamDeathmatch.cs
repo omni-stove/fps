@@ -55,7 +55,7 @@ namespace Fps.Net
     /// 終わっている間に接続してきたプレイヤーは、次の試合が始まってから加える。
     /// </para>
     /// <para>
-    /// 射撃は .Fire.cs、出現とリスポーンは .Spawn.cs、武器を配る処理は .Loadout.cs、参加と退出は .Roster.cs、
+    /// 射撃は .Fire.cs、出現とリスポーンと出現直後の無敵 (<see cref="SpawnProtections"/>) は .Spawn.cs、武器を配る処理は .Loadout.cs、参加と退出は .Roster.cs、
     /// ダウンと蘇生は .Downed.cs、射撃・ヒット・被弾・キルをクライアントへ配る処理 (<see cref="NetCombatFeed"/>) は .CombatFeed.cs に分けてある。
     /// </para>
     /// </remarks>
@@ -282,6 +282,7 @@ namespace Fps.Net
         private void Awake()
         {
             _players = new NetworkList<NetPlayerStats>();
+            _spawnProtections = new NetworkList<NetSpawnProtection>();
         }
 
         public override void OnNetworkSpawn()
@@ -358,6 +359,7 @@ namespace Fps.Net
             ServerAdvanceRevives(Time.deltaTime);
             _session.Tick(Time.deltaTime);
             SyncDownedStates();
+            SyncSpawnProtections();
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
             SyncNextWaveSeconds();

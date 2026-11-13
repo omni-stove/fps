@@ -32,6 +32,7 @@ namespace Fps.Net
     /// <para>
     /// ダウン中は自分の <see cref="NetPlayer.DownedState"/> から「ダウン中 あと N 秒」と起こされている進み (<see cref="HudFormat.Downed(int, int)"/>) を、
     /// 味方を起こしている間は相手 (<see cref="NetPlayer.ReviveTarget"/>) の進み (<see cref="HudFormat.Reviving"/>) を案内の欄に出す。
+    /// 出現直後の無敵の間は、自分の <see cref="NetPlayer.SpawnProtectionSeconds"/> から <see cref="HudFormat.SpawnProtected"/> を出す。
     /// </para>
     /// <para>
     /// アクティブリロードの進みも時間で進むので、毎フレーム <see cref="RefreshReloadProgress"/> で、届いた <see cref="NetWeaponState"/> の
@@ -74,6 +75,9 @@ namespace Fps.Net
         // 自分のダウンの状態と、自分が起こしている味方の蘇生の進み (起こしていなければ null)
         private NetDownedState _downedState;
         private int? _revivingPercent;
+
+        // 自分の出現直後の無敵が切れるまでの秒数 (切り上げ)。無敵でなければ 0
+        private int _spawnProtectionSeconds;
 
         // 購読している試合の Players。試合が先に破棄されても購読を外せるよう、試合とは別に持つ
         private NetworkList<NetPlayerStats> _players;
@@ -163,6 +167,7 @@ namespace Fps.Net
             player.HealthVariable.OnValueChanged += HandleHealthChanged;
             _downedState = player.DownedStateVariable.Value;
             _revivingPercent = null;
+            _spawnProtectionSeconds = 0;
             player.DownedStateVariable.OnValueChanged += HandleDownedStateChanged;
 
             // NetPlayer.Weapon は Awake で解決するので、Awake を経ない Edit Mode でも見つかるよう自分で探す
@@ -196,6 +201,28 @@ namespace Fps.Net
 
             _revivingPercent = clamped;
             ShowNotice();
+        }
+
+        /// <summary>
+        /// 自分の出現直後の無敵が切れるまでの秒数を出す。0 なら無敵でない。変わったときだけ案内を書き直す。
+        /// Play 中は Update が、自分のプレイヤーの <see cref="NetPlayer.SpawnProtectionSeconds"/> から呼ぶ。
+        /// </summary>
+        internal void ShowSpawnProtection(int seconds)
+        {
+            var clamped = Math.Max(0, seconds);
+            if (clamped == _spawnProtectionSeconds)
+            {
+                return;
+            }
+
+            _spawnProtectionSeconds = clamped;
+            ShowNotice();
+        }
+
+        // 無敵の残りは試合の一覧 (NetTeamDeathmatch.SpawnProtections) に届き、自分の行は出現・解除で増えたり消えたりするので、購読せずに毎フレーム引く
+        private int ReadSpawnProtectionSeconds()
+        {
+            return _player != null ? _player.SpawnProtectionSeconds : 0;
         }
 
         // 相手の進みは相手の NetworkVariable に届くので、購読せずに毎フレーム読む (起こす相手はフレームごとに変わりうる)
@@ -315,6 +342,7 @@ namespace Fps.Net
         {
             Tick(Time.deltaTime);
             ShowReviving(ReadRevivingPercent());
+            ShowSpawnProtection(ReadSpawnProtectionSeconds());
             RefreshReloadProgressNow();
         }
 
@@ -634,7 +662,8 @@ namespace Fps.Net
         /// <summary>
         /// 終わっていれば次の試合までの秒数を、ダウン中なら出血で倒れるまでの秒数と起こされている進みを、
         /// 倒れていればリスポーン方式に合わせた案内 (Individual は自分のリスポーンまで、Wave は次のウェーブまでの秒数、
-        /// None は次の試合まで復活なし) を、味方を起こしていればその進みを出す。どれでもなければ消す。
+        /// None は次の試合まで復活なし) を、味方を起こしていればその進みを、出現直後の無敵の最中なら「保護中 あと N 秒」を出す。
+        /// どれでもなければ消す。
         /// </summary>
         private void ShowNotice()
         {
@@ -653,7 +682,20 @@ namespace Fps.Net
 
             if (!_isDown)
             {
-                Model.SetNotice(_revivingPercent.HasValue ? HudFormat.Reviving(_revivingPercent.Value) : HudFormat.NoNotice);
+                // 蘇生の進みは押している間しか出せないので、放っておけば切れる無敵の案内より先に出す
+                if (_revivingPercent.HasValue)
+                {
+                    Model.SetNotice(HudFormat.Reviving(_revivingPercent.Value));
+                }
+                else if (_spawnProtectionSeconds > 0)
+                {
+                    Model.SetNotice(HudFormat.SpawnProtected(_spawnProtectionSeconds));
+                }
+                else
+                {
+                    Model.SetNotice(HudFormat.NoNotice);
+                }
+
                 return;
             }
 

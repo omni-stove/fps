@@ -5,8 +5,8 @@ using System.Numerics;
 namespace Fps.Core
 {
     /// <summary>
-    /// ラグ補償用に、エンティティ ID ごとの位置の履歴を持つ。
-    /// サーバーは毎 tick 位置を記録し、撃った側のクライアントが見ていた時点まで巻き戻した位置で当たり判定をする。
+    /// ラグ補償用に、エンティティ ID ごとの位置としゃがみの履歴を持つ。
+    /// サーバーは毎 tick 位置 (としゃがみ) を記録し、撃った側のクライアントが見ていた時点まで巻き戻した位置と姿勢で当たり判定をする。
     /// </summary>
     public sealed class LagCompensator
     {
@@ -14,6 +14,7 @@ namespace Fps.Core
         public const int DefaultMaxRewindTicks = 12;
 
         private readonly Dictionary<int, HitboxHistory> _histories = new Dictionary<int, HitboxHistory>();
+        private readonly Dictionary<int, StanceHistory> _stances = new Dictionary<int, StanceHistory>();
 
         /// <summary>エンティティ 1 体あたりに保持する記録の数。</summary>
         public int HistoryCapacity { get; }
@@ -51,10 +52,26 @@ namespace Fps.Core
             history.Record(tick, position);
         }
 
-        /// <summary>entityId の履歴を捨てる。退出や死亡で当たり判定の対象から外すときに呼ぶ。消したら true。</summary>
+        /// <summary>entityId の tick 時点の位置としゃがみを記録する。初めての ID なら履歴を作る。</summary>
+        public void Record(int tick, int entityId, Vector3 position, bool crouched)
+        {
+            // 位置の履歴が古い tick を拒んだときに姿勢だけ記録されないよう、位置を先に記録する
+            Record(tick, entityId, position);
+
+            if (!_stances.TryGetValue(entityId, out var stance))
+            {
+                stance = new StanceHistory(HistoryCapacity);
+                _stances.Add(entityId, stance);
+            }
+
+            stance.Record(tick, crouched);
+        }
+
+        /// <summary>entityId の履歴 (位置としゃがみ) を捨てる。退出や死亡で当たり判定の対象から外すときに呼ぶ。消したら true。</summary>
         public bool Remove(int entityId)
         {
-            return _histories.Remove(entityId);
+            var removedStance = _stances.Remove(entityId);
+            return _histories.Remove(entityId) || removedStance;
         }
 
         /// <summary>tick 時点の位置を、その時点で位置が取れたエンティティだけ返す。巻き戻し幅の上限はかけない。</summary>
@@ -80,6 +97,25 @@ namespace Fps.Core
         public IReadOnlyDictionary<int, Vector3> Rewind(float tick, int currentTick)
         {
             return Rewind(ClampTick(tick, currentTick));
+        }
+
+        /// <summary>
+        /// tick 時点のしゃがみを、その時点の記録があるエンティティだけ返す (しゃがみ付きの
+        /// <see cref="Record(int, int, Vector3, bool)"/> で記録したものだけ)。巻き戻し幅の上限はかけないので、
+        /// <see cref="ClampTick"/> で丸めた tick を渡す。
+        /// </summary>
+        public IReadOnlyDictionary<int, bool> RewindCrouched(float tick)
+        {
+            var result = new Dictionary<int, bool>();
+            foreach (var pair in _stances)
+            {
+                if (pair.Value.TrySample(tick, out var crouched))
+                {
+                    result.Add(pair.Key, crouched);
+                }
+            }
+
+            return result;
         }
 
         /// <summary>Rewind(tick, currentTick) が実際に使う tick。NaN はそのまま返す。</summary>

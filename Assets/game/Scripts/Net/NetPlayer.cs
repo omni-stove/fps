@@ -38,8 +38,9 @@ namespace Fps.Net
         public const int NotJoined = -1;
 
         /// <summary>
-        /// 目 (一人称カメラと射撃の始点) の、本体 (カプセルの中心) からの高さ (m)。
-        /// サーバーの射撃の検査 (<see cref="NetTeamDeathmatch"/> の始点の遮蔽判定) も同じ高さを使う。
+        /// 立っているときの目 (一人称カメラと射撃の始点) の、本体 (カプセルの中心) からの高さ (m)。
+        /// しゃがむと <see cref="NetStance"/> が頭のてっぺんからの距離を保ったまま下げる。
+        /// サーバーの射撃の検査 (<see cref="NetTeamDeathmatch"/> の始点の遮蔽判定) も同じ規則の高さ (<see cref="EyePosition"/>) を使う。
         /// </summary>
         public const float EyeHeight = 0.6f;
 
@@ -338,13 +339,49 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 射撃の始点。目 (<see cref="View"/>) の位置で、本体の中心から <see cref="EyeHeight"/> 上になる。
-        /// 三人称でもカメラではなく目から撃つ (サーバーは始点を目の高さで検査する)。View が無ければ同じ高さを計算で出す。
+        /// 射撃の始点。目 (<see cref="View"/>) の位置で、立っていれば本体の中心から <see cref="EyeHeight"/> 上、
+        /// しゃがんでいれば <see cref="NetworkPlayerMotor"/> が下げた高さになる。
+        /// 三人称でもカメラではなく目から撃つ (サーバーは始点を目の高さで検査する)。View が無ければ同じ高さを計算で出す (<see cref="EyePosition"/>)。
         /// </summary>
         public Vector3 AimOrigin()
         {
             EnsureViewResolved();
-            return _view != null ? _view.position : transform.position + (Vector3.up * EyeHeight);
+            return _view != null ? _view.position : EyePosition();
+        }
+
+        /// <summary>
+        /// 今の姿勢での目のワールド座標を計算で出す。サーバーの射撃の検査 (<see cref="NetTeamDeathmatch"/> の始点の遮蔽判定) が使う。
+        /// 姿勢を持たない (<see cref="NetworkPlayerMotor"/> が無い・設定が不正) ときは本体の中心から <see cref="EyeHeight"/> 上。
+        /// </summary>
+        public Vector3 EyePosition()
+        {
+            var stance = Stance;
+            return stance != null ? stance.EyePosition : transform.position + (Vector3.up * EyeHeight);
+        }
+
+        /// <summary>姿勢。同じオブジェクトの <see cref="NetworkPlayerMotor"/> が持つ。無ければ null。</summary>
+        public NetStance Stance
+        {
+            get
+            {
+                // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で探す
+                if (_motor == null)
+                {
+                    _motor = GetComponent<NetworkPlayerMotor>();
+                }
+
+                return _motor != null ? _motor.Stance : null;
+            }
+        }
+
+        /// <summary>しゃがんでいるか (このインスタンスで今当てている姿勢)。</summary>
+        public bool IsCrouched
+        {
+            get
+            {
+                var stance = Stance;
+                return stance != null && stance.IsCrouched;
+            }
         }
 
         /// <summary>
@@ -460,6 +497,27 @@ namespace Fps.Net
             }
         }
 
+        /// <summary>
+        /// プレイヤー本体 root の目。子 <see cref="ViewName"/>、無ければ (カメラが目を兼ねる古い構成) 子のカメラ、どちらも無ければ null。
+        /// <see cref="NetStance"/> もこれで探すので、しゃがみで下げる目と射撃の始点は同じ Transform になる。
+        /// </summary>
+        public static Transform FindView(Transform root)
+        {
+            if (root == null)
+            {
+                throw new ArgumentNullException(nameof(root));
+            }
+
+            var view = root.Find(ViewName);
+            if (view != null)
+            {
+                return view;
+            }
+
+            var camera = FirstPersonLook.FindChildCamera(root);
+            return camera != null ? camera.transform : null;
+        }
+
         // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で解決する
         private void EnsureViewResolved()
         {
@@ -476,14 +534,7 @@ namespace Fps.Net
             _rig = GetComponent<ViewRig>();
             ResolveAds();
             _viewCamera = FirstPersonLook.FindChildCamera(transform);
-
-            // 目は ViewName の子。古い構成 (カメラが目を兼ねる) ではカメラ自身
-            _view = transform.Find(ViewName);
-            if (_view == null && _viewCamera != null)
-            {
-                _view = _viewCamera.transform;
-            }
-
+            _view = FindView(transform);
             _viewListener = _viewCamera != null ? _viewCamera.GetComponent<AudioListener>() : null;
         }
 

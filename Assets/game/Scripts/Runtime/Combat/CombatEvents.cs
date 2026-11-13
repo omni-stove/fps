@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -24,6 +25,9 @@ namespace Fps.Runtime
         // 入れ子の Attribute を戻せるよう、今の帰属を 1 つだけ持ち、スコープが前の値を覚える。
         private static ShotAttribution? _attribution;
 
+        // EntityId は int に変換できない (Unity 6.6 で変換が error) ので、初めて見た EntityId に連番を振る。
+        private static readonly Dictionary<EntityId, int> _offlineIds = new Dictionary<EntityId, int>();
+
         /// <summary>1 発撃ったとき。</summary>
         public static event Action<ShotFiredInfo> ShotFired;
 
@@ -45,7 +49,7 @@ namespace Fps.Runtime
         public static ShotAttribution? CurrentAttribution => _attribution;
 
         /// <summary>
-        /// オフラインでキルフィードに使う Id。キャラの本体 (撃つ側は撃った者、倒れる側は <see cref="Damageable"/> の GameObject) の InstanceID。
+        /// オフラインでキルフィードに使う Id。キャラの本体 (撃つ側は撃った者、倒れる側は <see cref="Damageable"/> の GameObject) ごとに振る 1 以上の連番。
         /// null なら 0。ネット対戦の Id とは別物で、同じ Play の間だけ一意。
         /// </summary>
         /// <remarks>
@@ -53,7 +57,19 @@ namespace Fps.Runtime
         /// </remarks>
         public static int OfflineId(GameObject gameObject)
         {
-            return gameObject != null ? gameObject.GetInstanceID() : 0;
+            if (gameObject == null)
+            {
+                return 0;
+            }
+
+            var entityId = gameObject.GetEntityId();
+            if (!_offlineIds.TryGetValue(entityId, out var id))
+            {
+                id = _offlineIds.Count + 1;
+                _offlineIds.Add(entityId, id);
+            }
+
+            return id;
         }
 
         /// <summary>
@@ -109,6 +125,7 @@ namespace Fps.Runtime
         private static void ResetOnPlay()
         {
             ClearSubscribers();
+            _offlineIds.Clear();
         }
 
         private static void Invoke<T>(Action<T> handlers, T value)

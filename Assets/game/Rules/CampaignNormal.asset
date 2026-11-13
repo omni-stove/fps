@@ -15,9 +15,24 @@ MonoBehaviour:
   _friendlyFire: 0
   _respawnMode: 0
   _waveIntervalSeconds: 10
-  _regenDelaySeconds: 0
-  _regenPerSecond: 0
+  _regenDelaySeconds: 5
+  _regenPerSecond: 15
   _deathBody: 1
   _deathCamera: 0
   _infiniteReserve: 0
   _reserveAmmoMultiplier: 1
+  _destruction: 0
+  _downed: 0
+  _downedBleedoutSeconds: 15
+  _downedHealthFraction: 0.3
+  _reviveSeconds: 3
+  _cover: 1
+  _blindFire: 1
+  _activeReload: 1
+  _dodge: 0
+  _vault: 0
+  _grenade: 0
+  _grenadeCount: 0
+  _spawnProtectionSeconds: 0
+  _fallDamage: 0
+  _hudDensity: 0

@@ -34,6 +34,9 @@ namespace Fps.Core
         /// <summary>リスポーンした。</summary>
         public const string ReasonRespawn = "respawn";
 
+        /// <summary>ADS を始めた。</summary>
+        public const string ReasonAim = "aim";
+
         private readonly HoldToggleState _state = new HoldToggleState(HoldMode.Hold);
         private bool _hasMode;
         private bool _wasMoving;

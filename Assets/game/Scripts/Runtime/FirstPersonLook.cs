@@ -35,6 +35,7 @@ namespace Fps.Runtime
         private Transform _pitchPivot;
         private InputAction _lookAction;
         private bool _enabledLookAction;
+        private float _sensitivityMultiplier = 1f;
 
         /// <summary>pitch を回す Transform (ViewRig の目、無ければカメラ)。未初期化なら null。</summary>
         public Transform PitchPivot => _pitchPivot;
@@ -57,6 +58,31 @@ namespace Fps.Runtime
             get => _stickSensitivity;
             set => _stickSensitivity = Mathf.Max(0f, value);
         }
+
+        /// <summary>
+        /// マウスとスティックの両方の感度に掛ける倍率。既定は 1。覗き込み (<see cref="AimDownSights"/>) が視野角に合わせて下げる。
+        /// 保存する設定ではないので、シリアライズしない。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">負か、有限でない値のとき。</exception>
+        public float SensitivityMultiplier
+        {
+            get => _sensitivityMultiplier;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "sensitivity multiplier must be a non-negative finite number");
+                }
+
+                _sensitivityMultiplier = value;
+            }
+        }
+
+        /// <summary>今効いているマウスの感度 (<see cref="MouseSensitivity"/> × <see cref="SensitivityMultiplier"/>)。</summary>
+        public float EffectiveMouseSensitivity => _mouseSensitivity * _sensitivityMultiplier;
+
+        /// <summary>今効いているスティックの感度 (<see cref="StickSensitivity"/> × <see cref="SensitivityMultiplier"/>)。</summary>
+        public float EffectiveStickSensitivity => _stickSensitivity * _sensitivityMultiplier;
 
         private void Awake()
         {
@@ -125,7 +151,7 @@ namespace Fps.Runtime
 
             // マウスやタッチの delta はフレームあたりの移動量なので deltaTime を掛けない。スティックは速度として扱う。
             var isPointer = _lookAction.activeControl?.device is Pointer;
-            var degrees = isPointer ? raw * _mouseSensitivity : raw * (_stickSensitivity * Time.deltaTime);
+            var degrees = isPointer ? raw * EffectiveMouseSensitivity : raw * (EffectiveStickSensitivity * Time.deltaTime);
             ApplyLookDelta(degrees);
         }
 

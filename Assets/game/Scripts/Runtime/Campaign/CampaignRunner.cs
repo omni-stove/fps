@@ -14,7 +14,7 @@ namespace Fps.Runtime
     /// <item><see cref="CheckpointTrigger"/> から <see cref="SaveAt"/> を呼ばれたら、ミッションの進み具合・プレイヤーの体力・弾数・
     /// チェックポイントの Id から <see cref="CampaignSave"/> を作り、ミッションごとのスロット <see cref="SaveSlot"/>
     /// (<see cref="CampaignSaveSlots.For"/>) に書く。</item>
-    /// <item>プレイヤーが倒れたら <see cref="ReloadDelaySeconds"/> 秒後にシーンを読み直す。</item>
+    /// <item>プレイヤーが倒れたら武器・移動・グレネードを止め、<see cref="ReloadDelaySeconds"/> 秒後にシーンを読み直す。</item>
     /// <item>始めるときにセーブがあれば、ミッションの進み具合・チェックポイントの位置・体力・弾数を戻す。
     /// 別のミッションのセーブや壊れたセーブは警告を出して無視し、最初から始める。
     /// ミッションごとのスロットが無ければ、<see cref="CampaignSaveSlots.LegacyMissionId"/> だけは古いスロット <see cref="CampaignSaveSlots.Legacy"/> も読み、
@@ -907,10 +907,34 @@ namespace Fps.Runtime
 
             _reloadPending = true;
             _reloadRemaining = _reloadDelaySeconds;
+            StopPlayerControl();
             _notice.ShowRestartCountdown(_reloadRemaining);
             Debug.Log(
                 $"{LogTag} player died; reloading in {_reloadDelaySeconds.ToString("0.##", CultureInfo.InvariantCulture)}s from checkpoint={(_lastCheckpointId.Length > 0 ? _lastCheckpointId : "(start)")}",
                 this);
+        }
+
+        // 読み直しで作り直されるので戻す処理は要らない。
+        // FirstPersonLook は止めるとカーソルのロックが外れるので、視点だけは動かせるままにする (DominationRunner と同じ)。
+        private void StopPlayerControl()
+        {
+            // 武器を先に止める。止めると Reload アクションが無効に戻ることがあるので、他の入力より前にする。
+            if (_weapon != null)
+            {
+                _weapon.enabled = false;
+            }
+
+            var mover = _player.GetComponent<PlayerController>();
+            if (mover != null)
+            {
+                mover.enabled = false;
+            }
+
+            var grenades = _player.GetComponent<GrenadeThrower>();
+            if (grenades != null)
+            {
+                grenades.enabled = false;
+            }
         }
 
         private GameBootstrap ResolveBootstrap()

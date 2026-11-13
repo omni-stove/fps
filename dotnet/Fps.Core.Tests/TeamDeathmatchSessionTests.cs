@@ -35,7 +35,8 @@ namespace Fps.Core.Tests
             float respawnSeconds = 3f,
             float? restartDelaySeconds = null,
             GameRules rules = null,
-            FriendlyFire friendlyFire = FriendlyFire.Off)
+            FriendlyFire friendlyFire = FriendlyFire.Off,
+            float reconnectGraceSeconds = TeamDeathmatchSession.DefaultReconnectGraceSeconds)
         {
             var points = new[]
             {
@@ -60,7 +61,8 @@ namespace Fps.Core.Tests
                 points,
                 new SpawnSelector(),
                 id => _positions[id],
-                restartDelaySeconds);
+                restartDelaySeconds,
+                reconnectGraceSeconds);
 
             // ネットワーク側と同じく、出現の知らせを受けたら位置を動かす
             session.Spawned += (id, point) =>
@@ -795,13 +797,11 @@ namespace Fps.Core.Tests
             Assert.That(session.IsRestartPending, Is.False);
             Assert.That(_events, Is.EqualTo(Events("restarted", "score 0-0", "spawn 1")));
 
-            // 割り当ての順番は抜けた人がいても戻らないので、次の 2 人目で Bravo がそろう
+            // 次に来た人は人数の少ない Bravo に入るので、その場でそろう
             _events.Clear();
-            Assert.That(session.Join(3), Is.EqualTo(Team.Alpha));
-            Assert.That(session.State, Is.EqualTo(GameModeState.Waiting));
-            Assert.That(session.Join(4), Is.EqualTo(Team.Bravo));
+            Assert.That(session.Join(3), Is.EqualTo(Team.Bravo));
             Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
-            Assert.That(_events, Is.EqualTo(Events("spawn 3", "spawn 4", "started")));
+            Assert.That(_events, Is.EqualTo(Events("spawn 3", "started")));
         }
 
         [Test]
@@ -1578,6 +1578,212 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => session.GetSpawnProtectionRemaining(1));
             Assert.Throws<ArgumentOutOfRangeException>(() => session.IsSpawnProtected(1));
             Assert.Throws<ArgumentOutOfRangeException>(() => session.EndSpawnProtection(1));
+        }
+
+        // 1 と 3 が Alpha、2 と 4 が Bravo の 2 対 2 にする。鍵は "k" + id。
+        // 保持の 60 秒を進めても時間切れで終わらないよう、制限時間を長くする
+        private TeamDeathmatchSession CreateTwoOnTwoWithKeys(
+            float reconnectGraceSeconds = TeamDeathmatchSession.DefaultReconnectGraceSeconds,
+            int scoreLimit = 10,
+            float? restartDelaySeconds = null)
+        {
+            var session = Create(
+                scoreLimit: scoreLimit,
+                timeLimitSeconds: 600f,
+                restartDelaySeconds: restartDelaySeconds,
+                reconnectGraceSeconds: reconnectGraceSeconds);
+            for (var id = 1; id <= 4; id++)
+            {
+                session.Join(id, "k" + id);
+            }
+
+            _events.Clear();
+            return session;
+        }
+
+        [Test]
+        public void MidMatchJoinGoesToTheTeamWithFewerPlayers()
+        {
+            var session = CreateTwoOnTwoWithKeys();
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+
+            // Alpha が 1 点リードしていても、人数の少ない Alpha に入れる
+            session.ApplyDamage(1, 2, _maxHealth);
+            session.Leave(3);
+
+            Assert.That(session.Join(5), Is.EqualTo(Team.Alpha));
+        }
+
+        [Test]
+        public void MidMatchJoinWithEvenTeamsGoesToTheLowerScore()
+        {
+            var session = CreateTwoOnTwoWithKeys();
+            session.ApplyDamage(1, 2, _maxHealth);
+
+            Assert.That(session.NextTeam, Is.EqualTo(Team.Bravo));
+            Assert.That(session.Join(5), Is.EqualTo(Team.Bravo));
+            Assert.That(session.Join(6), Is.EqualTo(Team.Alpha));
+        }
+
+        [Test]
+        public void LeavingWithAKeyHoldsTheRecordOutsideTheTeamSize()
+        {
+            var session = CreateTwoOnTwoWithKeys();
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.Leave(2), Is.True);
+
+            Assert.That(session.HasPlayer(2), Is.False);
+            Assert.That(session.HeldCount, Is.EqualTo(1));
+            Assert.That(session.IsKeyInUse("k2"), Is.False);
+            var held = session.FindHeld("k2");
+            Assert.That(held.HasValue, Is.True);
+            Assert.That(held.Value.PlayerId, Is.EqualTo(2));
+            Assert.That(held.Value.Team, Is.EqualTo(Team.Bravo));
+            Assert.That(held.Value.Kills, Is.EqualTo(1));
+            Assert.That(held.Value.Deaths, Is.Zero);
+            Assert.That(held.Value.RemainingSeconds, Is.EqualTo(TeamDeathmatchSession.DefaultReconnectGraceSeconds));
+
+            // 残している人は数えないので、Bravo が 1 人少ない
+            Assert.That(session.NextTeam, Is.EqualTo(Team.Bravo));
+        }
+
+        [Test]
+        public void RejoiningWithinTheGraceKeepsTeamAndStats()
+        {
+            var session = CreateTwoOnTwoWithKeys();
+            session.ApplyDamage(2, 1, _maxHealth);
+            session.Tick(3f);
+            session.ApplyDamage(3, 2, _maxHealth);
+            session.Leave(2);
+
+            // 空いた Bravo に別の人が入って 2 対 2 に戻る。点も 1 対 1 なので、新しい人なら Alpha に入るところ
+            Assert.That(session.Join(5, "k5"), Is.EqualTo(Team.Bravo));
+            session.Tick(TeamDeathmatchSession.DefaultReconnectGraceSeconds - 1f);
+            _events.Clear();
+
+            Assert.That(session.Join(7, "k2"), Is.EqualTo(Team.Bravo));
+
+            Assert.That(session.GetKills(7), Is.EqualTo(1));
+            Assert.That(session.GetDeaths(7), Is.EqualTo(1));
+            Assert.That(session.GetHealth(7), Is.EqualTo(_maxHealth));
+            Assert.That(session.GetScore(Team.Alpha), Is.EqualTo(1));
+            Assert.That(session.GetScore(Team.Bravo), Is.EqualTo(1));
+            Assert.That(session.HeldCount, Is.Zero);
+            Assert.That(session.FindHeld("k2").HasValue, Is.False);
+            Assert.That(session.IsKeyInUse("k2"), Is.True);
+            Assert.That(_events, Is.EqualTo(Events("spawn 7")));
+        }
+
+        [Test]
+        public void RejoiningAfterTheGraceJoinsAsANewPlayer()
+        {
+            var session = CreateTwoOnTwoWithKeys();
+            var expired = new List<HeldPlayer>();
+            session.HeldExpired += expired.Add;
+            session.ApplyDamage(2, 1, _maxHealth);
+            session.Leave(2);
+
+            session.Tick(TeamDeathmatchSession.DefaultReconnectGraceSeconds);
+
+            Assert.That(session.HeldCount, Is.Zero);
+            Assert.That(expired, Has.Count.EqualTo(1));
+            Assert.That(expired[0].PlayerId, Is.EqualTo(2));
+            Assert.That(expired[0].Kills, Is.EqualTo(1));
+            Assert.That(expired[0].RemainingSeconds, Is.Zero);
+
+            // 人数の少ない Bravo に入るが、成績は 0 から
+            Assert.That(session.Join(7, "k2"), Is.EqualTo(Team.Bravo));
+            Assert.That(session.GetKills(7), Is.Zero);
+            Assert.That(session.GetDeaths(7), Is.Zero);
+        }
+
+        [Test]
+        public void RejoinedTeamIgnoresTheCurrentTeamSizes()
+        {
+            var session = CreateTwoOnTwoWithKeys();
+            session.Leave(1);
+            Assert.That(session.Join(5), Is.EqualTo(Team.Alpha));
+            Assert.That(session.Join(6), Is.EqualTo(Team.Alpha));
+
+            // Alpha 3 人・Bravo 2 人で、新しい人なら Bravo に入るところでも、元の Alpha に戻す
+            Assert.That(session.NextTeam, Is.EqualTo(Team.Bravo));
+            Assert.That(session.Join(8, "k1"), Is.EqualTo(Team.Alpha));
+        }
+
+        [Test]
+        public void LeavingWithoutAKeyHoldsNothing()
+        {
+            var session = Create();
+            session.Join(1);
+            session.Join(2);
+
+            Assert.That(session.Leave(2), Is.False);
+            Assert.That(session.HeldCount, Is.Zero);
+        }
+
+        [Test]
+        public void ZeroGraceHoldsNothing()
+        {
+            var session = CreateTwoOnTwoWithKeys(reconnectGraceSeconds: 0f);
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.Leave(2), Is.False);
+            Assert.That(session.HeldCount, Is.Zero);
+            Assert.That(session.Join(7, "k2"), Is.EqualTo(Team.Bravo));
+            Assert.That(session.GetKills(7), Is.Zero);
+        }
+
+        [Test]
+        public void JoiningWithAKeyInUseIsRejected()
+        {
+            var session = Create();
+            session.Join(1, "same");
+
+            Assert.That(session.IsKeyInUse("same"), Is.True);
+            Assert.Throws<ArgumentException>(() => session.Join(2, "same"));
+            Assert.That(session.HasPlayer(2), Is.False);
+            Assert.That(session.NextTeam, Is.EqualTo(Team.Bravo));
+        }
+
+        [Test]
+        public void HoldingWorksAcrossSeveralLeaves()
+        {
+            var session = CreateTwoOnTwoWithKeys();
+            session.Leave(1);
+            session.Tick(30f);
+            session.Leave(2);
+
+            session.Tick(30f);
+
+            Assert.That(session.FindHeld("k1").HasValue, Is.False);
+            Assert.That(session.FindHeld("k2").Value.RemainingSeconds, Is.EqualTo(30f));
+        }
+
+        [Test]
+        public void RestartClearsTheHeldStatsButKeepsTheTeam()
+        {
+            var session = CreateTwoOnTwoWithKeys(scoreLimit: 1, restartDelaySeconds: 0f);
+            session.ApplyDamage(1, 2, _maxHealth);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            session.Leave(1);
+
+            session.Tick(0f);
+
+            var held = session.FindHeld("k1");
+            Assert.That(held.Value.Team, Is.EqualTo(Team.Alpha));
+            Assert.That(held.Value.Kills, Is.Zero);
+            Assert.That(held.Value.Deaths, Is.Zero);
+            Assert.That(session.Join(5, "k1"), Is.EqualTo(Team.Alpha));
+            Assert.That(session.GetKills(5), Is.Zero);
+        }
+
+        [Test]
+        public void RejectsAnInvalidReconnectGrace()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => Create(reconnectGraceSeconds: -1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Create(reconnectGraceSeconds: float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Create(reconnectGraceSeconds: float.PositiveInfinity));
         }
     }
 }

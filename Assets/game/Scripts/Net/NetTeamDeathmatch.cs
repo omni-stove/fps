@@ -14,7 +14,9 @@ namespace Fps.Net
     /// <see cref="NetBootstrap"/> がサーバー起動時に生成して Spawn する。
     /// </summary>
     /// <remarks>
-    /// サーバーは接続順 (<see cref="NetworkManager.ConnectedClientsList"/> の順) にプレイヤーを試合に加える。
+    /// サーバーは接続順 (<see cref="NetworkManager.ConnectedClientsList"/> の順) にプレイヤーを試合に加え、人数の少ないチーム
+    /// (同じなら点の低いチーム) に入れる。切断した人の成績は <see cref="ReconnectGraceSeconds"/> 秒残し、同じ鍵でつなぎ直せば引き継ぐ (.Roster.cs)。
+    /// 点数・残り時間・状態は NetworkVariable、壊れた建物は <see cref="NetDestructibleStructure"/> の NetworkList なので、途中から入った人にも Spawn の時点で届く。
     /// ダメージはすべて <see cref="ApplyDamage"/> を通し、体力が尽きたら Core 側が ReportKill する。
     /// 味方に倒されたときは <see cref="MatchLog.TeamKill"/> で敵のキルと分けてログに出す。
     /// 出現・リスポーンの地点は Core の SpawnSelector が選び、ここでは <see cref="NetPlayer.ServerTeleport"/> を呼ぶだけ。
@@ -301,7 +303,11 @@ namespace Fps.Net
             if (IsServer)
             {
                 StartSession();
+                return;
             }
+
+            // 途中から入ったクライアントにも、Spawn の時点で今の点数・残り時間・状態が届いていることをログで確かめられるようにする
+            Debug.Log(MatchLog.Synced(_alphaScore.Value, _bravoScore.Value, _remainingSeconds.Value, _status.Value.State));
         }
 
         public override void OnNetworkDespawn()
@@ -326,6 +332,7 @@ namespace Fps.Net
 
             _playerById.Clear();
             _rejectedClients.Clear();
+            _waitingForKey.Clear();
             _lagCompensator = null;
             _lastRecordedTick = _noRecordedTick;
             _rewindTargets.Clear();
@@ -436,6 +443,7 @@ namespace Fps.Net
                 selector = new SpawnSelector(_minEnemySpawnDistance);
                 ValidateShotSettings();
                 ValidateRestartDelay();
+                ValidateReconnectGrace();
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -458,7 +466,8 @@ namespace Fps.Net
             var spawnPoints = CollectSpawnPoints();
             try
             {
-                _session = new TeamDeathmatchSession(spec, _maxHealth, spawnPoints, selector, PositionOf, _restartDelaySeconds);
+                _session = new TeamDeathmatchSession(
+                    spec, _maxHealth, spawnPoints, selector, PositionOf, _restartDelaySeconds, _reconnectGraceSeconds);
             }
             catch (ArgumentException e)
             {
@@ -481,6 +490,7 @@ namespace Fps.Net
             _session.Killed += HandleKilled;
             _session.Spawned += HandleSpawned;
             _session.Ended += HandleEnded;
+            _session.HeldExpired += HandleHeldExpired;
             SubscribeDowned(_session);
 
             _lastKillers.Clear();
@@ -495,7 +505,8 @@ namespace Fps.Net
             SyncNextWaveSeconds();
 
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
-                + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count);
+                + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s reconnectGrace=" + _reconnectGraceSeconds
+                + "s spawnPoints=" + spawnPoints.Count);
             Debug.Log(MatchLog.Rules(usedDefaultRules ? "default" : _rules.name, spec.Rules));
             Debug.Log(NetDownedLog.Settings(spec.Rules.Actions, ReviveReach.DefaultRange));
             Debug.Log("[Match] destructible structures=" + structures + " destruction=" + spec.Rules.Destruction);
@@ -607,6 +618,16 @@ namespace Fps.Net
             }
         }
 
+        /// <summary>Inspector で入る切断した人の成績を残す秒数を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>
+        private void ValidateReconnectGrace()
+        {
+            if (!(_reconnectGraceSeconds >= 0f) || float.IsInfinity(_reconnectGraceSeconds))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(ReconnectGraceSeconds), _reconnectGraceSeconds, "reconnect grace must not be negative and must be finite");
+            }
+        }
+
         private void UnsubscribeSession(TeamDeathmatchSession session)
         {
             session.Started -= HandleStarted;
@@ -616,6 +637,7 @@ namespace Fps.Net
             session.Killed -= HandleKilled;
             session.Spawned -= HandleSpawned;
             session.Ended -= HandleEnded;
+            session.HeldExpired -= HandleHeldExpired;
             UnsubscribeDowned(session);
         }
 

@@ -570,7 +570,10 @@ namespace Fps.Runtime
             DeathBodyPresenter.BindAll(targets, rules.DeathBody);
         }
 
-        /// <summary>HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡す。</summary>
+        /// <summary>
+        /// HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡す。オフラインなので、ポーズ中は時間を止める
+        /// (<see cref="PauseTimeMode.Freeze"/>)。
+        /// </summary>
         private static GameObject CreateHud(
             Damageable player,
             WeaponController weapon,
@@ -579,6 +582,7 @@ namespace Fps.Runtime
         {
             hud = Hud.Create(HudName, player, weapon, null);
             panelSettings = hud.OwnedPanelSettings;
+            hud.PauseMenu.TimeMode = PauseTimeMode.Freeze;
             return hud.gameObject;
         }
 

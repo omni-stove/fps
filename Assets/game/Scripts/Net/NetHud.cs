@@ -97,6 +97,7 @@ namespace Fps.Net
                 var netHud = hud.gameObject.AddComponent<NetHud>();
                 netHud.Initialize(player);
                 netHud.ListenForMatch();
+                ConfigurePauseMenu(hud.PauseMenu);
                 return netHud;
             }
             catch
@@ -105,6 +106,23 @@ namespace Fps.Net
                 DestroySafely(hud.gameObject);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// オンラインのポーズ画面は時間を止めず (<see cref="PauseTimeMode.KeepRunning"/>)、「メニューに戻る」では
+        /// シーンを読み込み直す前に試合から抜ける (<see cref="NetBootstrap.LeaveCurrent"/>)。
+        /// 購読はポーズ画面と同じ GameObject の寿命なので外さない。
+        /// </summary>
+        internal static void ConfigurePauseMenu(PauseMenu pauseMenu)
+        {
+            if (pauseMenu == null)
+            {
+                throw new ArgumentNullException(nameof(pauseMenu));
+            }
+
+            pauseMenu.TimeMode = PauseTimeMode.KeepRunning;
+            pauseMenu.ReturningToMenu -= NetBootstrap.LeaveCurrent;
+            pauseMenu.ReturningToMenu += NetBootstrap.LeaveCurrent;
         }
 
         /// <summary>

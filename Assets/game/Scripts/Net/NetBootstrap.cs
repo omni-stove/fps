@@ -59,6 +59,7 @@ namespace Fps.Net
         private LobbyLauncher _lobbyLauncher;
         private bool _connectedToServer;
         private bool _failed;
+        private bool _leaving;
         private float _nextStatusLogTime;
 
         public GameObject PlayerPrefab
@@ -322,6 +323,55 @@ namespace Fps.Net
             }
         }
 
+        /// <summary>
+        /// 自分から試合を抜ける (ポーズ画面の「メニューに戻る」)。ロビーから出て NetworkManager を止め、この GameObject
+        /// (NetworkManager が付いている) ごと消す。消さずにシーンを読み込み直すと、残った NetworkManager を見た新しい NetBootstrap が
+        /// 重複として自分を消してしまう。Host が抜けると試合はほかの参加者ごと終わる。既に抜けていれば何もしない。
+        /// </summary>
+        public void Leave()
+        {
+            if (_leaving)
+            {
+                return;
+            }
+
+            _leaving = true;
+            Debug.Log("[Net] leaving the match by request");
+            _lobby?.LeaveLobby();
+            if (_manager != null && _manager.IsListening && !_manager.ShutdownInProgress)
+            {
+                _manager.Shutdown();
+            }
+
+            Destroy(gameObject);
+        }
+
+        /// <summary>
+        /// 今の NetworkManager (<see cref="NetworkManager.Singleton"/>) を組み立てた NetBootstrap から <see cref="Leave"/> する。
+        /// 無ければ NetworkManager だけ止める。
+        /// </summary>
+        public static void LeaveCurrent()
+        {
+            var manager = NetworkManager.Singleton;
+            if (manager == null)
+            {
+                return;
+            }
+
+            var bootstrap = manager.GetComponent<NetBootstrap>();
+            if (bootstrap != null)
+            {
+                bootstrap.Leave();
+                return;
+            }
+
+            Debug.LogWarning("[Net] the NetworkManager has no NetBootstrap; shutting it down without leaving a lobby");
+            if (manager.IsListening && !manager.ShutdownInProgress)
+            {
+                manager.Shutdown();
+            }
+        }
+
         private void HandleLobbyFailed(string reason)
         {
             Fail(ExitLobbyFailed, "[Lobby] " + reason);
@@ -469,6 +519,14 @@ namespace Fps.Net
             if (_manager.IsServer)
             {
                 Debug.Log("[Net] client disconnected id=" + clientId + reason);
+                return;
+            }
+
+            // 自分から抜けた (Leave) ときの切断は失敗ではない
+            if (_leaving)
+            {
+                _connectedToServer = false;
+                Debug.Log("[Net] disconnected from server id=" + clientId + " (left by request)");
                 return;
             }
 

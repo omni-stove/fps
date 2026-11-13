@@ -24,6 +24,34 @@ namespace Fps.Runtime
             _weapons = weapons == null ? new List<WeaponDefinition>() : new List<WeaponDefinition>(weapons);
         }
 
+        /// <summary>
+        /// Id が id の武器の定義を探す。無い・null なら false と null。Id は <see cref="WeaponSpec.Id"/> (前後の空白を除いた値) と
+        /// 大文字小文字を区別して比べる。
+        /// </summary>
+        /// <exception cref="WeaponDefinitionException">一覧か、そのどれかの定義が不正なとき (見つかるかどうかに関わらず)。</exception>
+        public bool TryFind(string id, out WeaponDefinition definition)
+        {
+            // 不正な一覧から一部だけ引けてしまわないよう、先に全体を検証する。
+            var catalog = ToCatalog();
+            definition = null;
+            if (id == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < catalog.All.Count; i++)
+            {
+                if (string.Equals(catalog.All[i].Id, id, StringComparison.Ordinal))
+                {
+                    // ToCatalog は Weapons と同じ順に変換するので、添字で定義に戻せる。
+                    definition = Weapons[i];
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>定義を変換して <see cref="WeaponCatalog"/> を作る。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="WeaponDefinitionException">一覧か、そのどれかの定義が不正なとき。</exception>
         public WeaponCatalog ToCatalog()

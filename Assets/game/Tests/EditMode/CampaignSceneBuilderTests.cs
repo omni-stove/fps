@@ -21,6 +21,8 @@ namespace Fps.Tests.EditMode
     {
         private MissionDefinition _definition;
         private WeaponDefinition _rifle;
+        private WeaponDefinition _handgun;
+        private WeaponCatalogAsset _catalog;
         private Scene _scene;
         private NavMeshData _baked;
 
@@ -31,6 +33,14 @@ namespace Fps.Tests.EditMode
             _definition.name = "Campaign01";
             CampaignSceneBuilder.Configure(_definition);
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _rifle.name = "Rifle";
+            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            _handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _handgun.name = "Handgun";
+            WeaponAssetBuilder.Configure(_handgun, WeaponAssetBuilder.HandgunSpec());
+            _catalog = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
+            _catalog.name = "WeaponCatalog";
+            WeaponAssetBuilder.Configure(_catalog, new[] { _rifle, _handgun });
             _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
         }
 
@@ -50,6 +60,8 @@ namespace Fps.Tests.EditMode
 
             Object.DestroyImmediate(_definition);
             Object.DestroyImmediate(_rifle);
+            Object.DestroyImmediate(_handgun);
+            Object.DestroyImmediate(_catalog);
         }
 
         [Test]
@@ -80,9 +92,17 @@ namespace Fps.Tests.EditMode
             Assert.That(layout.Bootstrap.gameObject.scene, Is.EqualTo(_scene));
             Assert.That(layout.Bootstrap.CreatesFloor, Is.False, "the scene's own floor carries the baked NavMesh");
             Assert.That(layout.Bootstrap.WeaponDefinition, Is.SameAs(_rifle), "the player shoots the rifle");
-            foreach (var enemy in layout.Enemies)
+            var placements = CampaignSceneBuilder.AllEnemies();
+            Assert.That(layout.Enemies, Has.Count.EqualTo(placements.Count));
+            for (var i = 0; i < placements.Count; i++)
             {
-                Assert.That(enemy.WeaponDefinition, Is.SameAs(_rifle), $"{enemy.Id} shoots the rifle");
+                var enemy = layout.Enemies[i];
+                Assert.That(enemy.WeaponDefinition, Is.Not.Null, $"{enemy.Id} has a weapon");
+                Assert.That(
+                    enemy.WeaponDefinition.Id,
+                    Is.EqualTo(placements[i].WeaponId),
+                    $"{enemy.Id} shoots the weapon of its placement");
+                Assert.That(_catalog.Weapons, Does.Contain(enemy.WeaponDefinition), $"{enemy.Id}'s weapon comes from the catalog");
             }
 
             Assert.That(layout.Runner.Definition, Is.SameAs(_definition));
@@ -379,25 +399,94 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PatrollersCarryTheRifleAndAmbushersTheHandgun()
+        {
+            var layout = Populate();
+
+            var patrollers = CampaignSceneBuilder.Patrollers.Count;
+            for (var i = 0; i < layout.Enemies.Count; i++)
+            {
+                var expected = i < patrollers ? _rifle : _handgun;
+                Assert.That(layout.Enemies[i].WeaponDefinition, Is.SameAs(expected), $"{layout.Enemies[i].Id} weapon");
+            }
+        }
+
+        [Test]
+        public void RefusesToPopulateWhenAnEnemyWeaponIsNotInTheCatalog()
+        {
+            var rifleOnly = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
+            try
+            {
+                rifleOnly.name = "RifleOnly";
+                WeaponAssetBuilder.Configure(rifleOnly, new[] { _rifle });
+
+                var e = Assert.Throws<System.Collections.Generic.KeyNotFoundException>(
+                    () => CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle, rifleOnly));
+                var ambusher = CampaignSceneBuilder.Ambushers[0];
+                Assert.That(e.Message, Does.Contain($"'{ambusher.Id}'"), "names the placement");
+                Assert.That(e.Message, Does.Contain($"'{WeaponAssetBuilder.HandgunId}'"), "names the weapon id");
+                Assert.That(e.Message, Does.Contain("'RifleOnly'"), "names the catalog");
+                Assert.That(_scene.rootCount, Is.Zero, "nothing is placed");
+            }
+            finally
+            {
+                Object.DestroyImmediate(rifleOnly);
+            }
+        }
+
+        [Test]
+        public void ResolvesEveryPlacementWeaponFromTheCatalog()
+        {
+            var weapons = CampaignSceneBuilder.ResolveEnemyWeapons(_catalog);
+
+            var placements = CampaignSceneBuilder.AllEnemies();
+            Assert.That(weapons, Has.Length.EqualTo(placements.Count));
+            for (var i = 0; i < placements.Count; i++)
+            {
+                Assert.That(weapons[i].Id, Is.EqualTo(placements[i].WeaponId));
+            }
+
+            Assert.That(weapons, Does.Contain(_rifle).And.Contain(_handgun), "the campaign uses more than one weapon");
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.ResolveEnemyWeapons(null));
+        }
+
+        [Test]
+        public void PlacementsNeedAWeaponId()
+        {
+            Assert.Throws<ArgumentException>(
+                () => EnemyPlacement.Ambush("Enemy", "enemy", " ", Vector3.zero, Vector3.forward));
+            Assert.Throws<ArgumentException>(
+                () => EnemyPlacement.Patrol("Enemy", "enemy", null, Vector3.zero, Vector3.forward));
+        }
+
+        [Test]
         public void RefusesToPopulateANonEmptyScene()
         {
             SceneManager.MoveGameObjectToScene(new GameObject("Stray"), _scene);
 
-            Assert.Throws<InvalidOperationException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle));
+            Assert.Throws<InvalidOperationException>(
+                () => CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle, _catalog));
             Assert.That(_scene.rootCount, Is.EqualTo(1), "nothing is left behind");
         }
 
         [Test]
         public void RefusesToPopulateWithoutDefinition()
         {
-            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, null, _rifle));
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, null, _rifle, _catalog));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
         [Test]
-        public void RefusesToPopulateWithoutAWeapon()
+        public void RefusesToPopulateWithoutAPlayerWeapon()
         {
-            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, null));
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, null, _catalog));
+            Assert.That(_scene.rootCount, Is.Zero);
+        }
+
+        [Test]
+        public void RefusesToPopulateWithoutAWeaponCatalog()
+        {
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle, null));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
@@ -455,9 +544,17 @@ namespace Fps.Tests.EditMode
             var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);
             Assert.That(rifle, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
             Assert.That(bootstrap.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(CampaignSceneBuilder)}.Build");
-            foreach (var enemy in Components<EnemyAgent>())
+            var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(WeaponAssetBuilder.CatalogPath);
+            Assert.That(catalog, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
+            var expected = CampaignSceneBuilder.ResolveEnemyWeapons(catalog);
+            var placements = CampaignSceneBuilder.AllEnemies();
+            var agents = Components<EnemyAgent>();
+            Assert.That(agents, Has.Length.EqualTo(placements.Count));
+            for (var i = 0; i < placements.Count; i++)
             {
-                Assert.That(enemy.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(CampaignSceneBuilder)}.Build");
+                var agent = Array.Find(agents, a => a.Id == placements[i].Id);
+                Assert.That(agent, Is.Not.Null, $"'{placements[i].Id}' is in the scene");
+                Assert.That(agent.WeaponDefinition, Is.SameAs(expected[i]), $"rerun {nameof(CampaignSceneBuilder)}.Build");
             }
 
             Assert.That(surface, Is.Not.Null);
@@ -467,7 +564,7 @@ namespace Fps.Tests.EditMode
 
         private CampaignLayout Populate()
         {
-            var layout = CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle);
+            var layout = CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle, _catalog);
             _baked = layout.Surface.navMeshData;
             return layout;
         }

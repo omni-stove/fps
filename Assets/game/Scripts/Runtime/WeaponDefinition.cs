@@ -8,17 +8,22 @@ namespace Fps.Runtime
     /// 武器 1 種類の値をアセットとして持つ。クライアントと専用サーバーは同じアセットを読み、<see cref="ToSpec"/> で
     /// 不変の <see cref="WeaponSpec"/> に変換して使う。検証は <see cref="WeaponSpec"/> と <see cref="DamageFalloff"/> に任せ、
     /// 失敗したらどのアセットの値かを添えて <see cref="WeaponDefinitionException"/> を投げる。
-    /// 新しく作ったときの値は rifle (Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰)。
+    /// 新しく作ったときの値は rifle 相当 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、
+    /// 20〜60m で 0.5 倍まで減衰)。Id はエディターで作ったとき (<see cref="Reset"/>) と値を検証するとき (<see cref="OnValidate"/>) に、
+    /// 空なら新しい UUID を入れる。
     /// 実際に使う値はアセット (Assets/game/Weapons/*.asset、Fps.Editor.WeaponAssetBuilder が作る) の側にある。
     /// </summary>
     [CreateAssetMenu(fileName = "Weapon", menuName = "Fps/Weapon Definition")]
     public sealed class WeaponDefinition : ScriptableObject
     {
-        [SerializeField, Tooltip("武器の識別子。小文字英数字・ハイフン・アンダースコアのみ (例: rifle)")]
-        private string _id = "rifle";
+        [SerializeField, Tooltip("武器の識別子。小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。空なら自動で振る。作った後は変えない")]
+        private string _id = string.Empty;
 
         [SerializeField, Tooltip("プレイヤーに見せる名前。空なら Id")]
         private string _displayName = string.Empty;
+
+        [SerializeField, Tooltip("武器の種別。ロードアウトの制約と表示にだけ使う")]
+        private WeaponCategory _category = WeaponCategory.AssaultRifle;
 
         [SerializeField, Tooltip("射撃モード")]
         private FireMode _fireMode = FireMode.Auto;
@@ -61,6 +66,12 @@ namespace Fps.Runtime
         {
             get => _displayName ?? string.Empty;
             set => _displayName = value ?? string.Empty;
+        }
+
+        public WeaponCategory Category
+        {
+            get => _category;
+            set => _category = value;
         }
 
         public FireMode FireMode
@@ -123,6 +134,35 @@ namespace Fps.Runtime
             set => _falloffMinMultiplier = value;
         }
 
+        /// <summary>Id が空 (空白のみを含む) なら新しい UUID を入れて true を返す。既に値があれば変えずに false。</summary>
+        public bool AssignIdIfEmpty()
+        {
+            if (!string.IsNullOrWhiteSpace(_id))
+            {
+                return false;
+            }
+
+            _id = Guid.NewGuid().ToString("D");
+            return true;
+        }
+
+        private void Reset()
+        {
+            AssignIdIfEmpty();
+        }
+
+        private void OnValidate()
+        {
+            var assigned = AssignIdIfEmpty();
+#if UNITY_EDITOR
+            // OnValidate での書き換えは dirty にならず、保存されないまま開くたび別の Id になるため
+            if (assigned)
+            {
+                UnityEditor.EditorUtility.SetDirty(this);
+            }
+#endif
+        }
+
         /// <summary>
         /// 定義を不変の <see cref="WeaponSpec"/> に変換する。呼ぶたびに新しいインスタンスを返す。
         /// Id の前後の空白は <see cref="WeaponSpec"/> が取り除く。
@@ -137,6 +177,7 @@ namespace Fps.Runtime
                 return new WeaponSpec(
                     Id,
                     DisplayName,
+                    _category,
                     _fireMode,
                     _magazineSize,
                     _reserveAmmo,
@@ -153,7 +194,7 @@ namespace Fps.Runtime
         }
     }
 
-    /// <summary><see cref="WeaponDefinition"/> や <see cref="WeaponCatalogAsset"/> の内容が不正で変換できない。</summary>
+    /// <summary><see cref="WeaponDefinition"/>・<see cref="WeaponCatalogAsset"/>・<see cref="LoadoutDefinition"/> の内容が不正で変換できない。</summary>
     public sealed class WeaponDefinitionException : Exception
     {
         public WeaponDefinitionException(string message)

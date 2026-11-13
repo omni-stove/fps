@@ -7,11 +7,14 @@ namespace Fps.Core
     /// </summary>
     public sealed class WeaponSpec
     {
-        /// <summary>武器の識別子。小文字英数字・ハイフン・アンダースコアのみ (例: rifle, handgun)。</summary>
+        /// <summary>武器の識別子。小文字・ハイフン区切りの UUID (<c>Guid.ToString("D")</c> の形)。</summary>
         public string Id { get; }
 
         /// <summary>表示名。生成時に空なら <see cref="Id"/>。</summary>
         public string DisplayName { get; }
+
+        /// <summary>武器の種別。ロードアウトの制約と表示にだけ使う。</summary>
+        public WeaponCategory Category { get; }
 
         /// <summary>射撃モード。</summary>
         public FireMode FireMode { get; }
@@ -37,8 +40,9 @@ namespace Fps.Core
         /// <summary>距離によるダメージ減衰。null にならない。</summary>
         public DamageFalloff Falloff { get; }
 
-        /// <param name="id">識別子。前後の空白は除く。除いた後が空でなく、小文字英数字・ハイフン・アンダースコアのみ。</param>
+        /// <param name="id">識別子。前後の空白は除く。除いた後が小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。</param>
         /// <param name="displayName">表示名。null・空白のみなら <paramref name="id"/> を使う。</param>
+        /// <param name="category">武器の種別。定義済みの値のみ。</param>
         /// <param name="fireMode">射撃モード。</param>
         /// <param name="magazineSize">弾倉の容量。1 以上。</param>
         /// <param name="reserveAmmo">予備弾の初期値。0 以上。</param>
@@ -50,6 +54,7 @@ namespace Fps.Core
         public WeaponSpec(
             string id,
             string displayName,
+            WeaponCategory category,
             FireMode fireMode,
             int magazineSize,
             int reserveAmmo,
@@ -60,6 +65,11 @@ namespace Fps.Core
             DamageFalloff falloff)
         {
             var normalizedId = NormalizeId(id);
+
+            if (!Enum.IsDefined(typeof(WeaponCategory), category))
+            {
+                throw new ArgumentOutOfRangeException(nameof(category), category, "category is not a defined WeaponCategory");
+            }
 
             if (fireMode != FireMode.Auto && fireMode != FireMode.Semi)
             {
@@ -98,6 +108,7 @@ namespace Fps.Core
 
             Id = normalizedId;
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? normalizedId : displayName.Trim();
+            Category = category;
             FireMode = fireMode;
             MagazineSize = magazineSize;
             ReserveAmmo = reserveAmmo;
@@ -116,26 +127,40 @@ namespace Fps.Core
             }
 
             var trimmed = id.Trim();
-            if (trimmed.Length == 0)
+            if (!IsLowercaseUuid(trimmed))
             {
-                throw new ArgumentException("id must not be empty", nameof(id));
-            }
-
-            foreach (var c in trimmed)
-            {
-                if (!IsIdChar(c))
-                {
-                    throw new ArgumentException(
-                        "id must contain only lowercase letters, digits, '-' and '_': '" + trimmed + "'", nameof(id));
-                }
+                throw new ArgumentException(
+                    "id must be a lowercase hyphenated UUID (e.g. 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13): '" + trimmed + "'", nameof(id));
             }
 
             return trimmed;
         }
 
-        private static bool IsIdChar(char c)
+        // Guid.TryParseExact(value, "D", ...) は大文字も通すので使わない
+        private static bool IsLowercaseUuid(string value)
         {
-            return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+            if (value.Length != 36)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < value.Length; i++)
+            {
+                var c = value[i];
+                if (i == 8 || i == 13 || i == 18 || i == 23)
+                {
+                    if (c != '-')
+                    {
+                        return false;
+                    }
+                }
+                else if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static bool IsNonNegativeFinite(float value)

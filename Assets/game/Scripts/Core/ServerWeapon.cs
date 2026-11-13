@@ -36,6 +36,7 @@ namespace Fps.Core
                 : new WeaponSpec(
                     spec.Id,
                     spec.DisplayName,
+                    spec.Category,
                     spec.FireMode,
                     spec.MagazineSize,
                     spec.ReserveAmmo,

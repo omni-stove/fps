@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Fps.Core;
 using Fps.Runtime;
-using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -49,8 +48,9 @@ namespace Fps.Net
     {
         /// <summary>
         /// 参加したプレイヤーに持たせる武器の Id。持ち替えが入るまでは全員これ。<see cref="WeaponCatalog"/> に無ければ試合を始めない。
+        /// rifle (<see cref="WeaponCategory.AssaultRifle"/>、Fps.Editor.WeaponAssetBuilder.RifleId と同じ値)。
         /// </summary>
-        public const string DefaultWeaponId = "rifle";
+        public const string DefaultWeaponId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
 
         /// <summary>試合が終わってから次の試合を始めるまでの秒数の既定値。</summary>
         public const float DefaultRestartDelaySeconds = 10f;
@@ -596,7 +596,7 @@ namespace Fps.Net
                 if (!NetPlayerWeapon.FitsWeaponId(weapon.Id))
                 {
                     error = "weapon id '" + weapon.Id + "' in '" + asset.name + "' is longer than "
-                        + FixedString32Bytes.UTF8MaxLengthInBytes + " bytes and cannot be sent with a shot";
+                        + NetPlayerWeapon.MaxWeaponIdBytes + " bytes and cannot be sent with a shot";
                     return false;
                 }
             }
@@ -608,7 +608,8 @@ namespace Fps.Net
 
         private static string WeaponLog(WeaponSpec weapon)
         {
-            return "[Net] weapon id=" + weapon.Id + " damage=" + weapon.Damage + " range=" + weapon.Range
+            return "[Net] weapon id=" + weapon.Id + " name=" + weapon.DisplayName + " category=" + weapon.Category
+                + " damage=" + weapon.Damage + " range=" + weapon.Range
                 + " fireInterval=" + weapon.FireInterval + " magazine=" + weapon.MagazineSize + " reserve=" + weapon.ReserveAmmo
                 + " reload=" + weapon.ReloadSeconds + "s";
         }

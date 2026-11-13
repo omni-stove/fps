@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Fps.Core;
+using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
 using Unity.Netcode;
@@ -31,18 +32,26 @@ namespace Fps.Net.Tests
             _created.Clear();
         }
 
+        private const string _handgunId = "00000000-0000-4000-8000-000000000002";
+
         // ネット対戦と同じく、武器の値は定義アセット (WeaponDefinition の既定 = rifle) から引く
         private static WeaponSpec DefaultSpec()
         {
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             try
             {
+                definition.Id = NetTeamDeathmatch.DefaultWeaponId;
                 return definition.ToSpec();
             }
             finally
             {
                 Object.DestroyImmediate(definition);
             }
+        }
+
+        private static WeaponSpec HandgunSpec()
+        {
+            return new WeaponSpec(_handgunId, null, WeaponCategory.Handgun, FireMode.Semi, 5, 10, 0.1f, 1f, 25, 50f, DamageFalloff.None);
         }
 
         private NetPlayerWeapon CreateWeapon()
@@ -69,6 +78,7 @@ namespace Fps.Net.Tests
             // 以下のテストの弾数は、オフラインの WeaponController と同じ rifle (30 発 / 予備 90 / リロード 2 秒) を前提にする
             var spec = DefaultSpec();
             Assert.That(spec.Id, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(spec.Category, Is.EqualTo(WeaponCategory.AssaultRifle));
             Assert.That(spec.MagazineSize, Is.EqualTo(30));
             Assert.That(spec.ReserveAmmo, Is.EqualTo(90));
             Assert.That(spec.ReloadSeconds, Is.EqualTo(2f));
@@ -86,22 +96,27 @@ namespace Fps.Net.Tests
             weapon.ServerEquip(DefaultSpec());
             Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
 
-            weapon.ServerEquip(new WeaponSpec("handgun", null, FireMode.Semi, 5, 10, 0.1f, 1f, 25, 50f, DamageFalloff.None));
-            Assert.That(weapon.WeaponId, Is.EqualTo("handgun"));
+            weapon.ServerEquip(HandgunSpec());
+            Assert.That(weapon.WeaponId, Is.EqualTo(_handgunId));
         }
 
         [Test]
-        public void RejectsAWeaponIdTooLongToSend()
+        public void UuidWeaponIdsFitTheShotRpc()
         {
-            var weapon = CreateWeapon();
-            var longId = new string('a', 30);
-            Assert.That(NetPlayerWeapon.FitsWeaponId(new string('a', 29)), Is.True);
-            Assert.That(NetPlayerWeapon.FitsWeaponId(longId), Is.False);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(NetTeamDeathmatch.DefaultWeaponId), Is.True);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(WeaponAssetBuilder.RifleId), Is.True);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(WeaponAssetBuilder.HandgunId), Is.True);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(new string('a', NetPlayerWeapon.MaxWeaponIdBytes)), Is.True);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(new string('a', NetPlayerWeapon.MaxWeaponIdBytes + 1)), Is.False);
             Assert.That(NetPlayerWeapon.FitsWeaponId(null), Is.False);
+        }
 
-            Assert.Throws<System.ArgumentException>(
-                () => weapon.ServerEquip(new WeaponSpec(longId, null, FireMode.Auto, 5, 10, 0.1f, 1f, 25, 50f, DamageFalloff.None)));
-            Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId), "the previous weapon is kept");
+        [Test]
+        public void DefaultWeaponIdIsTheRifleOfTheWeaponAssets()
+        {
+            // DefaultWeaponId は Fps.Net から Fps.Editor を参照できないのでリテラルで持つ。ずれたら試合が始まらない
+            Assert.That(NetTeamDeathmatch.DefaultWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(WeaponAssetBuilder.RifleSpec().Category, Is.EqualTo(WeaponCategory.AssaultRifle));
         }
 
         [Test]
@@ -215,7 +230,7 @@ namespace Fps.Net.Tests
             var weapon = CreateWeapon();
             weapon.ServerTryFire();
 
-            weapon.ServerEquip(new WeaponSpec("handgun", null, FireMode.Semi, 5, 10, 0.1f, 1f, 25, 50f, DamageFalloff.None));
+            weapon.ServerEquip(HandgunSpec());
 
             Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(5));
             Assert.That(weapon.ServerWeapon.ReserveAmmo, Is.EqualTo(10));

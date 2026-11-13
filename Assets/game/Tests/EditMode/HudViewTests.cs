@@ -11,7 +11,7 @@ namespace Fps.Tests.EditMode
     {
         private static WeaponSpec NewSpec()
         {
-            return new WeaponSpec("rifle", null, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
+            return new WeaponSpec("00000000-0000-4000-8000-000000000001", null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
         }
 
         private static VisualElement CloneLayout()

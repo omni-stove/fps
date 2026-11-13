@@ -30,9 +30,15 @@ namespace Fps.Net
         public const string ReloadActionPath = "Player/Reload";
 
         /// <summary>
+        /// 武器の Id として同期・送信できる最大バイト数 (<see cref="FixedString64Bytes"/>)。
+        /// UUID の Id (36 バイト) は <see cref="FixedString32Bytes"/> (29 バイト) に収まらない。
+        /// </summary>
+        public static int MaxWeaponIdBytes => FixedString64Bytes.UTF8MaxLengthInBytes;
+
+        /// <summary>
         /// 装備中の武器の Id。全員が読める (持ち替えの見た目に使えるよう)。値は Id だけで、弾数は <see cref="_state"/> で持ち主にだけ送る。
         /// </summary>
-        private readonly NetworkVariable<FixedString32Bytes> _weaponId = new NetworkVariable<FixedString32Bytes>(
+        private readonly NetworkVariable<FixedString64Bytes> _weaponId = new NetworkVariable<FixedString64Bytes>(
             default,
             NetworkVariableReadPermission.Everyone,
             NetworkVariableWritePermission.Server);
@@ -181,14 +187,14 @@ namespace Fps.Net
             return true;
         }
 
-        /// <summary>武器の Id が <see cref="FixedString32Bytes"/> (射撃の RPC と <see cref="WeaponId"/> の同期) に収まるか。</summary>
+        /// <summary>武器の Id が <see cref="MaxWeaponIdBytes"/> (射撃の RPC と <see cref="WeaponId"/> の同期) に収まるか。</summary>
         public static bool FitsWeaponId(string weaponId)
         {
-            return weaponId != null && Encoding.UTF8.GetByteCount(weaponId) <= FixedString32Bytes.UTF8MaxLengthInBytes;
+            return weaponId != null && Encoding.UTF8.GetByteCount(weaponId) <= MaxWeaponIdBytes;
         }
 
         /// <summary>サーバーで、spec の武器を満タンで持たせる。前の武器 (リロード中を含む) は捨てる。</summary>
-        /// <exception cref="ArgumentException">spec の Id が <see cref="FixedString32Bytes"/> に収まらない。</exception>
+        /// <exception cref="ArgumentException">spec の Id が <see cref="MaxWeaponIdBytes"/> に収まらない。</exception>
         /// <exception cref="InvalidOperationException">Spawn 済みのクライアントで呼んだ。</exception>
         public void ServerEquip(WeaponSpec spec)
         {
@@ -200,7 +206,7 @@ namespace Fps.Net
             if (!FitsWeaponId(spec.Id))
             {
                 throw new ArgumentException("weapon id '" + spec.Id + "' is longer than "
-                    + FixedString32Bytes.UTF8MaxLengthInBytes + " bytes and cannot be synced", nameof(spec));
+                    + MaxWeaponIdBytes + " bytes and cannot be synced", nameof(spec));
             }
 
             RequireServerSide();
@@ -283,7 +289,7 @@ namespace Fps.Net
                 _state.Value = state;
             }
 
-            var weaponId = new FixedString32Bytes(_weapon.Spec.Id);
+            var weaponId = new FixedString64Bytes(_weapon.Spec.Id);
             if (!_weaponId.Value.Equals(weaponId))
             {
                 _weaponId.Value = weaponId;

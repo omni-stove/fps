@@ -79,6 +79,7 @@ namespace Fps.Tests.EditMode
             try
             {
                 broken.name = "Broken";
+                broken.AssignIdIfEmpty();
                 broken.FalloffStart = 50f;
                 broken.FalloffEnd = 10f;
 
@@ -147,6 +148,7 @@ namespace Fps.Tests.EditMode
             Assert.That(changed, Is.SameAs(_controller.Weapon));
             Assert.That(_controller.Definition, Is.SameAs(_rifle));
             Assert.That(spec.Id, Is.EqualTo(expected.Id));
+            Assert.That(spec.Category, Is.EqualTo(expected.Category));
             Assert.That(spec.FireMode, Is.EqualTo(expected.FireMode));
             Assert.That(spec.MagazineSize, Is.EqualTo(expected.MagazineSize));
             Assert.That(spec.ReserveAmmo, Is.EqualTo(expected.ReserveAmmo));

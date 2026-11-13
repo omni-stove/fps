@@ -224,7 +224,7 @@ namespace Fps.Net
             var time = FireTiming.ViewTime(serverTime, NetworkPlayerMotor.TickRate, delay);
             Debug.Log("[Net] fire weapon=" + weaponId + " tick=" + time.Tick.ToString(CultureInfo.InvariantCulture)
                 + " alpha=" + time.Alpha.ToString("F2", CultureInfo.InvariantCulture), this);
-            FireServerRpc(new FixedString32Bytes(weaponId), origin, direction, time.Tick, time.Alpha);
+            FireServerRpc(new FixedString64Bytes(weaponId), origin, direction, time.Tick, time.Alpha);
         }
 
         /// <summary>
@@ -403,7 +403,7 @@ namespace Fps.Net
         /// </summary>
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
         private void FireServerRpc(
-            FixedString32Bytes weaponId, Vector3 origin, Vector3 direction, int clientTick, float interpolationAlpha, RpcParams rpcParams = default)
+            FixedString64Bytes weaponId, Vector3 origin, Vector3 direction, int clientTick, float interpolationAlpha, RpcParams rpcParams = default)
         {
             if (rpcParams.Receive.SenderClientId != OwnerClientId)
             {

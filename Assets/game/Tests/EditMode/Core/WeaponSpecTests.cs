@@ -6,11 +6,14 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class WeaponSpecTests
     {
+        private const string _rifleId = "3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13";
+
         private static readonly DamageFalloff _falloff = new DamageFalloff(20f, 60f, 0.5f);
 
         private static WeaponSpec Create(
-            string id = "rifle",
+            string id = _rifleId,
             string displayName = "Rifle",
+            WeaponCategory category = WeaponCategory.AssaultRifle,
             FireMode fireMode = FireMode.Auto,
             int magazineSize = 30,
             int reserveAmmo = 90,
@@ -24,6 +27,7 @@ namespace Fps.Core.Tests
             return new WeaponSpec(
                 id,
                 displayName,
+                category,
                 fireMode,
                 magazineSize,
                 reserveAmmo,
@@ -37,10 +41,11 @@ namespace Fps.Core.Tests
         [Test]
         public void KeepsEveryValue()
         {
-            var spec = Create(fireMode: FireMode.Semi);
+            var spec = Create(category: WeaponCategory.MarksmanRifle, fireMode: FireMode.Semi);
 
-            Assert.That(spec.Id, Is.EqualTo("rifle"));
+            Assert.That(spec.Id, Is.EqualTo(_rifleId));
             Assert.That(spec.DisplayName, Is.EqualTo("Rifle"));
+            Assert.That(spec.Category, Is.EqualTo(WeaponCategory.MarksmanRifle));
             Assert.That(spec.FireMode, Is.EqualTo(FireMode.Semi));
             Assert.That(spec.MagazineSize, Is.EqualTo(30));
             Assert.That(spec.ReserveAmmo, Is.EqualTo(90));
@@ -54,15 +59,21 @@ namespace Fps.Core.Tests
         [Test]
         public void TrimsTheId()
         {
-            Assert.That(Create(id: "  handgun \t").Id, Is.EqualTo("handgun"));
+            Assert.That(Create(id: "  " + _rifleId + " \t").Id, Is.EqualTo(_rifleId));
         }
 
-        [TestCase("rifle")]
-        [TestCase("smg-2")]
-        [TestCase("sniper_rifle")]
-        [TestCase("9mm")]
-        public void AcceptsLowercaseAlphanumericHyphenAndUnderscoreIds(string id)
+        [TestCase("3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13")]
+        [TestCase("00000000-0000-0000-0000-000000000000")]
+        [TestCase("ffffffff-ffff-ffff-ffff-ffffffffffff")]
+        public void AcceptsLowercaseHyphenatedUuids(string id)
         {
+            Assert.That(Create(id: id).Id, Is.EqualTo(id));
+        }
+
+        [Test]
+        public void AcceptsTheFormatOfGuidToStringD()
+        {
+            var id = Guid.NewGuid().ToString("D");
             Assert.That(Create(id: id).Id, Is.EqualTo(id));
         }
 
@@ -75,11 +86,22 @@ namespace Fps.Core.Tests
 
         [TestCase("")]
         [TestCase("   ")]
-        [TestCase("Rifle")]
-        [TestCase("hand gun")]
-        [TestCase("rifle.v2")]
-        [TestCase("ライフル")]
-        public void RejectsInvalidIds(string id)
+        [TestCase("rifle")]
+        [TestCase("handgun")]
+        [TestCase("3F2B8C1E-0A4D-4C6E-9B1A-7D2E5F8C0B13")]
+        [TestCase("3f2b8c1e-0a4d-4c6e-9b1a-7D2e5f8c0b13")]
+        [TestCase("{3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13}")]
+        [TestCase("(3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)")]
+        [TestCase("3f2b8c1e0a4d4c6e9b1a7d2e5f8c0b13")]
+        [TestCase("3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b1")]
+        [TestCase("3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b134")]
+        [TestCase("3f2b8c1e-0a4d-4c6e-9b1a_7d2e5f8c0b13")]
+        [TestCase("3f2b8c1e0-a4d-4c6e-9b1a-7d2e5f8c0b13")]
+        [TestCase("3f2b8c1g-0a4d-4c6e-9b1a-7d2e5f8c0b13")]
+        [TestCase("3f2b8c1e 0a4d 4c6e 9b1a 7d2e5f8c0b13")]
+        [TestCase("0x3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b")]
+        [TestCase("3f2b8c1e-0a4d-4c6e-9b1a-７d2e5f8c0b13")]
+        public void RejectsIdsThatAreNotLowercaseHyphenatedUuids(string id)
         {
             var e = Assert.Throws<ArgumentException>(() => Create(id: id));
             Assert.That(e.ParamName, Is.EqualTo("id"));
@@ -90,9 +112,29 @@ namespace Fps.Core.Tests
         [TestCase("  ")]
         public void UsesTheIdWhenTheDisplayNameIsEmpty(string displayName)
         {
-            Assert.That(Create(id: " rifle ", displayName: displayName).DisplayName, Is.EqualTo("rifle"));
+            Assert.That(Create(id: " " + _rifleId + " ", displayName: displayName).DisplayName, Is.EqualTo(_rifleId));
         }
 
+        [TestCase(WeaponCategory.AssaultRifle)]
+        [TestCase(WeaponCategory.SubmachineGun)]
+        [TestCase(WeaponCategory.Shotgun)]
+        [TestCase(WeaponCategory.MarksmanRifle)]
+        [TestCase(WeaponCategory.SniperRifle)]
+        [TestCase(WeaponCategory.LightMachineGun)]
+        [TestCase(WeaponCategory.Handgun)]
+        public void AcceptsEveryDefinedCategory(WeaponCategory category)
+        {
+            Assert.That(Create(category: category).Category, Is.EqualTo(category));
+        }
+
+        [TestCase(-1)]
+        [TestCase(7)]
+        [TestCase(99)]
+        public void RejectsUndefinedCategory(int category)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => Create(category: (WeaponCategory)category));
+            Assert.That(e.ParamName, Is.EqualTo("category"));
+        }
         [Test]
         public void TrimsTheDisplayName()
         {

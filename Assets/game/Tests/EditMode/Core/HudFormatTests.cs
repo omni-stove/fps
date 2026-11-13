@@ -285,5 +285,19 @@ namespace Fps.Core.Tests
             Assert.That(HudFormat.Time(float.PositiveInfinity), Is.EqualTo("99:59"));
             Assert.That(HudFormat.DisplayedSeconds(float.MaxValue), Is.EqualTo(HudFormat.MaxDisplayedSeconds));
         }
+
+        [TestCase(0, "グレネード 0")]
+        [TestCase(2, "グレネード 2")]
+        [TestCase(12, "グレネード 12")]
+        public void GrenadesIsThePrefixAndTheCount(int remaining, string expected)
+        {
+            Assert.That(HudFormat.Grenades(remaining), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void GrenadesRejectsANegativeCount()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Grenades(-1));
+        }
     }
 }

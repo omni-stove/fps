@@ -716,7 +716,9 @@ namespace Fps.Net
             _inputBudget -= 1f;
 
             // ダウンと乗り越えてよいかはクライアントの申告ではなく、サーバーの知る状態で決める (ApplyAuthoritative)
-            ApplyAuthoritative(tick, new MotorInput(move, yaw, sprint, jump, crouch, _downed, cover, aim, dodge, false));
+            var input = new MotorInput(move, yaw, sprint, jump, crouch, _downed, cover, aim, dodge, false);
+            ApplyAuthoritative(tick, input);
+            RaiseServerInputReceived(input);
         }
 
         [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable)]

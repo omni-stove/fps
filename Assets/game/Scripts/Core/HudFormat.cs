@@ -333,6 +333,19 @@ namespace Fps.Core
             return "保護中 あと " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
         }
 
+        /// <summary>入力が無いままだとサーバーから切られる (<see cref="GameRules.IdleKickSeconds"/>) ことの警告。切られるまでの秒数は切り上げた整数で受ける。</summary>
+        /// <example><c>IdleWarning(15)</c> は <c>操作がありません あと 15 秒で切断されます</c></example>
+        /// <exception cref="ArgumentOutOfRangeException">seconds が負。</exception>
+        public static string IdleWarning(int seconds)
+        {
+            if (seconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
+            }
+
+            return "操作がありません あと " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒で切断されます";
+        }
+
         private static void CheckPercent(int percent)
         {
             if (percent < 0 || percent > 100)

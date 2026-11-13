@@ -79,6 +79,9 @@ namespace Fps.Runtime
         /// <summary>死んでいれば true。Health をまだ作っていなければ false (ここでは作らない)。</summary>
         public bool IsDead => _health != null && _health.IsDead;
 
+        /// <summary>ダウンしているか。オフラインにダウンを入れるまでは常に false (ネット対戦のダウンはサーバーが持つ)。</summary>
+        public bool IsDowned { get; private set; }
+
         /// <summary>
         /// この画面で操作しているプレイヤーか。true のときだけ被弾を <see cref="CombatEvents.DamageTaken"/> に流す。
         /// 実行時にプレイヤーを組み立てる <see cref="GameBootstrap"/> が設定する (シーンには保存しない)。

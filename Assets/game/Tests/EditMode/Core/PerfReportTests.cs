@@ -6,8 +6,8 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class PerfReportTests
     {
-        private static readonly string[] BoomProblems = { "Error: \"boom\"" };
-        private static readonly string[] BotsProblems = { "only 3 of 16 bots joined" };
+        private static readonly string[] _boomProblems = { "Error: \"boom\"" };
+        private static readonly string[] _botsProblems = { "only 3 of 16 bots joined" };
 
         [Test]
         public void WritesTheStatisticsAndThePassingVerdict()
@@ -40,7 +40,7 @@ namespace Fps.Core.Tests
             var budget = new TickBudget(0.01d, 0.01d);
             budget.Record(0.5d);
 
-            var json = PerfReport.ToJson("NetArena01", 16, 120d, budget, BoomProblems);
+            var json = PerfReport.ToJson("NetArena01", 16, 120d, budget, _boomProblems);
 
             Assert.That(json, Does.Contain("\"passed\": false,"));
             Assert.That(json, Does.Contain("\"average 0.5 ms exceeds the budget of 0.01 ms\""));
@@ -54,7 +54,7 @@ namespace Fps.Core.Tests
             var budget = new TickBudget();
             budget.Record(1d);
 
-            var json = PerfReport.ToJson("NetArena01", 16, 120d, budget, BotsProblems);
+            var json = PerfReport.ToJson("NetArena01", 16, 120d, budget, _botsProblems);
 
             Assert.That(json, Does.Contain("\"passed\": false,"));
         }

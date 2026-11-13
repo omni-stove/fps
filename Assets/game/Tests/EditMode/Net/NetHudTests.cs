@@ -515,6 +515,41 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ShowsSpawnProtectionUntilItEnds()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+
+            _netHud.ShowSpawnProtection(2);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("保護中 あと 2 秒"));
+
+            _netHud.ShowSpawnProtection(1);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("保護中 あと 1 秒"));
+
+            _netHud.ShowSpawnProtection(0);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [Test]
+        public void RevivingAndBeingDownedWinOverSpawnProtection()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            _netHud.ShowSpawnProtection(2);
+
+            _netHud.ShowReviving(55);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("蘇生中 55%"));
+
+            _netHud.ShowReviving(null);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("保護中 あと 2 秒"));
+
+            Arrive(_player.DownedStateVariable, NetDownedState.None, new NetDownedState(true, 9, 0));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo("ダウン中 あと 9 秒"));
+        }
+
+        [Test]
         public void OwnDownedNoticeWinsOverReviving()
         {
             _netHud.BindMatch(_match);

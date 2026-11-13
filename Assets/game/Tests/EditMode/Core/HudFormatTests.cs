@@ -68,6 +68,19 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Reviving(101));
         }
 
+        [TestCase(1, "保護中 あと 1 秒")]
+        [TestCase(2, "保護中 あと 2 秒")]
+        public void SpawnProtectedShowsTheSeconds(int seconds, string expected)
+        {
+            Assert.That(HudFormat.SpawnProtected(seconds), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void SpawnProtectedRejectsNegativeSeconds()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.SpawnProtected(-1));
+        }
+
         [TestCase(0f, 0)]
         [TestCase(0.426f, 42)]
         [TestCase(0.999f, 99)]

@@ -107,6 +107,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.InfiniteReserve, Is.EqualTo(teamDeathmatch.InfiniteReserve));
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(teamDeathmatch.ReserveAmmoMultiplier));
             Assert.That(rules.Destruction, Is.EqualTo(teamDeathmatch.Destruction));
+            Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(teamDeathmatch.SpawnProtectionSeconds));
             AssertActions(rules.Actions, _expectedActions[DominationIndex], _dominationPath);
         }
 
@@ -404,21 +405,36 @@ namespace Fps.Tests.EditMode
             }
         }
 
+        // TeamDeathmatch (0) と、その値を引き継ぐ Domination だけが出現直後に無敵になる
+        private static float ExpectedSpawnProtection(int index)
+        {
+            return index == 0 || index == DominationIndex ? GameRulesAssetBuilder.TeamDeathmatchSpawnProtectionSeconds : 0f;
+        }
+
         [Test]
-        public void EveryModeKeepsNoSpawnProtectionNoFallDamageAndTheFullHud()
+        public void TeamDeathmatchProtectsForTwoSecondsAfterSpawning()
+        {
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchSpawnProtectionSeconds, Is.EqualTo(2f));
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchRules().SpawnProtectionSeconds, Is.EqualTo(2f));
+            Assert.That(BuildAndLoad(_teamDeathmatchPath).SpawnProtectionSeconds, Is.EqualTo(2f));
+            Assert.That(BuildAndLoad(_dominationPath).SpawnProtectionSeconds, Is.EqualTo(2f));
+        }
+
+        [Test]
+        public void EveryModeKeepsTheExpectedSpawnProtectionNoFallDamageAndTheFullHud()
         {
             var built = Build();
 
             for (var i = 0; i < built.Length; i++)
             {
                 var definition = built[i];
-                Assert.That(definition.SpawnProtectionSeconds, Is.EqualTo(0f), definition.name);
+                Assert.That(definition.SpawnProtectionSeconds, Is.EqualTo(ExpectedSpawnProtection(i)), definition.name);
                 Assert.That(definition.FallDamage, Is.EqualTo(FallDamage.Off), definition.name);
                 Assert.That(definition.HudDensity, Is.EqualTo(HudDensity.Full), definition.name);
                 Assert.That(definition.GrenadeCount, Is.EqualTo(_expectedActions[i].GrenadeCount), definition.name);
 
                 var rules = definition.ToRules();
-                Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f), definition.name);
+                Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(ExpectedSpawnProtection(i)), definition.name);
                 Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off), definition.name);
                 Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full), definition.name);
             }
@@ -463,7 +479,10 @@ namespace Fps.Tests.EditMode
             {
                 var path = paths[i];
                 var rules = GameRulesAssetBuilder.LoadRules(path).ToRules();
-                Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f), path);
+                Assert.That(
+                    rules.SpawnProtectionSeconds,
+                    Is.EqualTo(ExpectedSpawnProtection(i)),
+                    path + $" (rerun {nameof(GameRulesAssetBuilder)}.Build)");
                 Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off), path);
                 Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full), path);
                 AssertActions(rules.Actions, _expectedActions[i], path + $" (rerun {nameof(GameRulesAssetBuilder)}.Build)");

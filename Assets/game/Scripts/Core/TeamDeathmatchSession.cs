@@ -28,6 +28,9 @@ namespace Fps.Core
     /// (<see cref="ApplyDamage"/>)。ダウン中は <see cref="IsAlive"/> のまま、自動回復せず、動けるプレイヤー (<see cref="SelectSpawn"/> と
     /// <see cref="FindNearestEnemy"/> が数える人) には入らない。ダウン中の体力が尽きるか出血の秒数が過ぎると倒れ、
     /// 味方が <see cref="TryRevive"/> を押し続けると起き上がる。チームの全員がダウンか死亡になったら、ダウン中の人もその場で倒す。</item>
+    /// <item>出現 (参加・リスポーン・<see cref="Restart"/>) から <see cref="GameRules.SpawnProtectionSeconds"/> の間は、どこからのダメージも受けない
+    /// (<see cref="GetSpawnProtectionRemaining"/>)。その間に自分が撃ったら、呼び出し側が <see cref="EndSpawnProtection"/> ですぐ解く。
+    /// 0 なら無敵にしない。</item>
     /// </list>
     /// </remarks>
     public sealed class TeamDeathmatchSession
@@ -90,6 +93,11 @@ namespace Fps.Core
         private readonly Dictionary<int, HealthRegenerator> _regenerators = new Dictionary<int, HealthRegenerator>();
         // Downed が Off なら null
         private readonly DownedTracker _downed;
+
+        // 出現直後の無敵の残り秒数。無敵の人だけが入る (SpawnProtectionSeconds が 0 なら空のまま)
+        private readonly Dictionary<int, float> _spawnProtection = new Dictionary<int, float>();
+        private readonly List<int> _protectedIds = new List<int>();
+
         private readonly Queue<Action> _deferred = new Queue<Action>();
         private int _busy;
 
@@ -237,6 +245,33 @@ namespace Fps.Core
             return _downed?.GetReviveProgress(playerId) ?? 0f;
         }
 
+        /// <summary>
+        /// 出現直後の無敵が切れるまでの残り秒数。無敵でなければ 0。
+        /// 出現した時点で <see cref="GameRules.SpawnProtectionSeconds"/> になり、<see cref="Tick"/> で減る。
+        /// </summary>
+        public float GetSpawnProtectionRemaining(int playerId)
+        {
+            FindHealth(playerId);
+            return _spawnProtection.TryGetValue(playerId, out var remaining) ? remaining : 0f;
+        }
+
+        /// <summary>出現直後の無敵の最中なら true。無敵の間はどのダメージも <see cref="DamageOutcome.Ignored"/> になる。</summary>
+        public bool IsSpawnProtected(int playerId)
+        {
+            FindHealth(playerId);
+            return _spawnProtection.ContainsKey(playerId);
+        }
+
+        /// <summary>
+        /// playerId の出現直後の無敵をすぐ解く。自分が撃ったとき (当たったかどうかによらず、弾を撃った時点) に呼ぶ。
+        /// </summary>
+        /// <returns>無敵だったら true。無敵でなければ何もせず false。</returns>
+        public bool EndSpawnProtection(int playerId)
+        {
+            FindHealth(playerId);
+            return _spawnProtection.Remove(playerId);
+        }
+
         /// <inheritdoc cref="TeamDeathmatch.IsEliminated"/>
         public bool IsEliminated(int playerId)
         {
@@ -293,6 +328,7 @@ namespace Fps.Core
             _match.RemovePlayer(playerId);
             _health.Remove(playerId);
             _regenerators.Remove(playerId);
+            _spawnProtection.Remove(playerId);
             if (_downed != null)
             {
                 _downed.RemovePlayer(playerId);
@@ -315,6 +351,8 @@ namespace Fps.Core
         /// 結び付けないようにするため。attackerId がすでに倒れていれば何もせず <see cref="DamageOutcome.Ignored"/> を返す。</item>
         /// </list>
         /// 自滅 (attackerId == victimId) はモードによらず数える。
+        /// 体力が減るはずの人 (跳ね返しなら attackerId) が出現直後の無敵の最中なら、何もせず <see cref="DamageOutcome.Ignored"/> を返す。
+        /// 撃った人の無敵はここでは解かない (外れた射撃でも解くので、呼び出し側が <see cref="EndSpawnProtection"/> を呼ぶ)。
         /// <para>
         /// <see cref="ActionRules.Downed"/> が <see cref="Fps.Core.Downed.Revive"/> のときは、体力が 0 になっても倒さずにダウンさせ、
         /// <see cref="Downed"/> を出して <see cref="DamageOutcome.Downed"/> を返す。ただし自滅 (跳ね返しを含む) と、
@@ -365,6 +403,11 @@ namespace Fps.Core
 
         private DamageOutcome Damage(int attackerId, int victimId, Health victim, int amount, bool byAlly)
         {
+            if (_spawnProtection.ContainsKey(victimId))
+            {
+                return DamageOutcome.Ignored;
+            }
+
             _busy++;
             try
             {
@@ -568,7 +611,7 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 時間を進める。試合中なら先に各プレイヤーの体力を自動回復させ (<see cref="GameRules.RegenPerSecond"/> が
+        /// 時間を進める。試合の状態によらず、まず出現直後の無敵の残りを減らす。試合中なら次に各プレイヤーの体力を自動回復させ (<see cref="GameRules.RegenPerSecond"/> が
         /// 0 なら何もしない)、体力が変わった人ごとに <see cref="PlayerChanged"/> を出す。次に、前の Tick から
         /// <see cref="TryRevive"/> されなかったダウン中の人の蘇生の累計を 0 に戻し、出血を進めて、秒数が過ぎた人を倒す。続けて
         /// リスポーン待ちが終わった人を出現させ、時間切れなら試合を終える。
@@ -583,6 +626,9 @@ namespace Fps.Core
             }
 
             var waitingForRestart = _restartPending && State == GameModeState.Ended;
+
+            // この Tick の中で出現した人 (リスポーン・Restart) の無敵を減らさないよう、_match.Tick より先に回す
+            TickSpawnProtection(deltaSeconds);
 
             // _match.Tick より先に回すのは、この Tick で時間切れになっても終わるまでの分は回復させるため
             if (State == GameModeState.Playing)
@@ -609,7 +655,7 @@ namespace Fps.Core
 
         /// <summary>
         /// 終わった試合を同じ顔ぶれ・同じチーム分けで始め直す。チームの点数、各プレイヤーのキル数とデス数、
-        /// 残り時間を初期値に戻し、全員を体力満タンにしてダウンを消し、自分のチームの地点へ出現させる (<see cref="Spawned"/>)。
+        /// 残り時間を初期値に戻し、全員を体力満タンにしてダウンを消し、出現直後の無敵を付け直して、自分のチームの地点へ出現させる (<see cref="Spawned"/>)。
         /// ダウンしていた人には、<see cref="PlayerChanged"/> を出し終えた後に <see cref="DownedChanged"/> を出す。
         /// 両チームに 1 人以上いればそのまま始まり、いなければ Waiting に戻って参加を待つ。
         /// </summary>
@@ -779,13 +825,49 @@ namespace Fps.Core
             Spawned?.Invoke(playerId, SelectSpawn(playerId));
         }
 
-        /// <summary>体力を満タンにし、ダウンを消す。ダウンしていたら true。</summary>
+        /// <summary>体力を満タンにし、出現直後の無敵を付け直し、ダウンを消す。ダウンしていたら true。</summary>
         private bool ResetHealth(int playerId)
         {
             var health = new Health(MaxHealth);
             _health[playerId] = health;
             _regenerators[playerId] = new HealthRegenerator(health, Spec.Rules);
+
+            var protection = Spec.Rules.SpawnProtectionSeconds;
+            if (protection > 0f)
+            {
+                _spawnProtection[playerId] = protection;
+            }
+            else
+            {
+                _spawnProtection.Remove(playerId);
+            }
+
             return _downed != null && _downed.Remove(playerId);
+        }
+
+        // 試合の状態によらず減らす。待っている間と終わった後はそもそもダメージが通らないので、出現からの実時間で切れればよい
+        private void TickSpawnProtection(float deltaSeconds)
+        {
+            if (_spawnProtection.Count == 0)
+            {
+                return;
+            }
+
+            // 回している最中の辞書は書き換えられないので、キーを写してから回す
+            _protectedIds.Clear();
+            _protectedIds.AddRange(_spawnProtection.Keys);
+            foreach (var playerId in _protectedIds)
+            {
+                var remaining = _spawnProtection[playerId] - deltaSeconds;
+                if (remaining > 0f)
+                {
+                    _spawnProtection[playerId] = remaining;
+                }
+                else
+                {
+                    _spawnProtection.Remove(playerId);
+                }
+            }
         }
 
         // 起き上がった直後から回復させると、起こしてもらうだけで体力が満タンへ向かってしまうので、被弾した直後と同じ待ちから始める

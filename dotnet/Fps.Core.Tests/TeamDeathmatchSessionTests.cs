@@ -1441,5 +1441,143 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => new TeamDeathmatchSession(spec, 100, both, null, positionOf));
             Assert.Throws<ArgumentNullException>(() => new TeamDeathmatchSession(spec, 100, both, selector, null));
         }
+
+        private static GameRules ProtectionRules(float seconds, FriendlyFire friendlyFire = FriendlyFire.Off)
+        {
+            return GameRules.Default.WithSpawnProtectionSeconds(seconds).WithFriendlyFire(friendlyFire);
+        }
+
+        [Test]
+        public void SpawnProtectionIgnoresDamageUntilItRunsOut()
+        {
+            var session = Create(rules: ProtectionRules(2f));
+            session.Join(1);
+            session.Join(2);
+
+            Assert.That(session.IsSpawnProtected(2), Is.True);
+            Assert.That(session.GetSpawnProtectionRemaining(2), Is.EqualTo(2f));
+            Assert.That(session.ApplyDamage(1, 2, 40), Is.EqualTo(DamageOutcome.Ignored));
+            Assert.That(session.GetHealth(2), Is.EqualTo(_maxHealth));
+
+            session.Tick(1.5f);
+            Assert.That(session.GetSpawnProtectionRemaining(2), Is.EqualTo(0.5f).Within(1e-5f));
+            Assert.That(session.ApplyDamage(1, 2, _maxHealth), Is.EqualTo(DamageOutcome.Ignored));
+            Assert.That(session.GetHealth(2), Is.EqualTo(_maxHealth));
+
+            session.Tick(0.5f);
+            Assert.That(session.IsSpawnProtected(2), Is.False);
+            Assert.That(session.GetSpawnProtectionRemaining(2), Is.Zero);
+            Assert.That(session.ApplyDamage(1, 2, 40), Is.EqualTo(DamageOutcome.Damaged));
+            Assert.That(session.GetHealth(2), Is.EqualTo(60));
+        }
+
+        [Test]
+        public void SpawnProtectionAlsoIgnoresSelfDamage()
+        {
+            var session = Create(rules: ProtectionRules(2f));
+            session.Join(1);
+            session.Join(2);
+
+            Assert.That(session.ApplyDamage(2, 2, 40), Is.EqualTo(DamageOutcome.Ignored));
+            Assert.That(session.GetHealth(2), Is.EqualTo(_maxHealth));
+        }
+
+        [Test]
+        public void EndingSpawnProtectionByFiringLetsDamageThroughAtOnce()
+        {
+            var session = Create(rules: ProtectionRules(2f));
+            session.Join(1);
+            session.Join(2);
+
+            Assert.That(session.EndSpawnProtection(2), Is.True);
+            Assert.That(session.IsSpawnProtected(2), Is.False);
+            Assert.That(session.GetSpawnProtectionRemaining(2), Is.Zero);
+            Assert.That(session.EndSpawnProtection(2), Is.False);
+
+            // 撃った人の無敵だけが解け、撃たれていない相手はまだ守られている
+            Assert.That(session.IsSpawnProtected(1), Is.True);
+            Assert.That(session.ApplyDamage(2, 1, 40), Is.EqualTo(DamageOutcome.Ignored));
+            Assert.That(session.ApplyDamage(1, 2, 40), Is.EqualTo(DamageOutcome.Damaged));
+            Assert.That(session.GetHealth(2), Is.EqualTo(60));
+        }
+
+        [Test]
+        public void ReflectedDamageHitsAnAttackerWhoEndedTheirProtectionByFiring()
+        {
+            var session = Create(rules: ProtectionRules(2f, FriendlyFire.Reflect));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+
+            session.EndSpawnProtection(1);
+
+            Assert.That(session.ApplyDamage(1, 3, 40), Is.EqualTo(DamageOutcome.Damaged));
+            Assert.That(session.GetHealth(1), Is.EqualTo(60));
+            Assert.That(session.GetHealth(3), Is.EqualTo(_maxHealth));
+        }
+
+        [Test]
+        public void ZeroSpawnProtectionLeavesDamageAsBefore()
+        {
+            var session = Create(rules: ProtectionRules(0f));
+            session.Join(1);
+            session.Join(2);
+
+            Assert.That(session.IsSpawnProtected(2), Is.False);
+            Assert.That(session.GetSpawnProtectionRemaining(2), Is.Zero);
+            Assert.That(session.EndSpawnProtection(2), Is.False);
+            Assert.That(session.ApplyDamage(1, 2, 40), Is.EqualTo(DamageOutcome.Damaged));
+            Assert.That(session.GetHealth(2), Is.EqualTo(60));
+        }
+
+        [Test]
+        public void RespawnStartsANewSpawnProtection()
+        {
+            var session = Create(respawnSeconds: 3f, rules: ProtectionRules(2f));
+            session.Join(1);
+            session.Join(2);
+            session.Tick(2f);
+
+            Assert.That(session.ApplyDamage(1, 2, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+            Assert.That(session.IsSpawnProtected(2), Is.False);
+
+            // リスポーンした Tick の分は、出現した後の無敵からは引かない
+            session.Tick(3.1f);
+            Assert.That(session.IsAlive(2), Is.True);
+            Assert.That(session.GetSpawnProtectionRemaining(2), Is.EqualTo(2f));
+            Assert.That(session.ApplyDamage(1, 2, 40), Is.EqualTo(DamageOutcome.Ignored));
+            Assert.That(session.GetHealth(2), Is.EqualTo(_maxHealth));
+        }
+
+        [Test]
+        public void RestartStartsANewSpawnProtectionForEveryone()
+        {
+            var session = Create(timeLimitSeconds: 10f, restartDelaySeconds: 5f, rules: ProtectionRules(2f));
+            session.Join(1);
+            session.Join(2);
+            session.EndSpawnProtection(1);
+            session.Tick(10f);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(session.IsSpawnProtected(1), Is.False);
+            Assert.That(session.IsSpawnProtected(2), Is.False);
+
+            session.Tick(5f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(session.GetSpawnProtectionRemaining(1), Is.EqualTo(2f));
+            Assert.That(session.GetSpawnProtectionRemaining(2), Is.EqualTo(2f));
+        }
+
+        [Test]
+        public void SpawnProtectionQueriesRejectAnUnknownPlayer()
+        {
+            var session = Create(rules: ProtectionRules(2f));
+            session.Join(1);
+            session.Leave(1);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.GetSpawnProtectionRemaining(1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.IsSpawnProtected(1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.EndSpawnProtection(1));
+        }
     }
 }

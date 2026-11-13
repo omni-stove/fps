@@ -289,10 +289,11 @@ namespace Fps.Core.Tests
             var integrity = new StructureIntegrity(Chain(64));
             Assert.That(integrity.BitsetLength, Is.EqualTo(1));
 
-            integrity.ApplyDestroyedSet(new[] { 1UL << 63 });
+            var expected = new[] { 1UL << 63 };
+            integrity.ApplyDestroyedSet(expected);
 
             Assert.That(integrity.IsDestroyed(63), Is.True);
-            Assert.That(integrity.ToBitset(), Is.EqualTo(new[] { 1UL << 63 }));
+            Assert.That(integrity.ToBitset(), Is.EqualTo(expected));
         }
 
         [Test]

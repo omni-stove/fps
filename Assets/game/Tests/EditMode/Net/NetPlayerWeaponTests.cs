@@ -529,6 +529,14 @@ namespace Fps.Net.Tests
             Assert.That(state.Equals(new NetWeaponState(12, 60, false, 0, 2, false)), Is.False);
             Assert.That(state.Equals(new NetWeaponState(12, 60, false, 1, 3, false)), Is.False);
             Assert.That(state.Equals(new NetWeaponState(12, 60, false, 1, 2, true)), Is.False);
+
+            var reloading = new NetWeaponState(12, 60, true, 1, 2, false, 4d, 2f, 0.5f, 0.65f);
+            Assert.That(reloading.Equals(new NetWeaponState(12, 60, true, 1, 2, false, 4d, 2f, 0.5f, 0.65f)), Is.True);
+            Assert.That(reloading.GetHashCode(), Is.EqualTo(new NetWeaponState(12, 60, true, 1, 2, false, 4d, 2f, 0.5f, 0.65f).GetHashCode()));
+            Assert.That(reloading.Equals(new NetWeaponState(12, 60, true, 1, 2, false, 5d, 2f, 0.5f, 0.65f)), Is.False, "start");
+            Assert.That(reloading.Equals(new NetWeaponState(12, 60, true, 1, 2, false, 4d, 2.5f, 0.5f, 0.65f)), Is.False, "length");
+            Assert.That(reloading.Equals(new NetWeaponState(12, 60, true, 1, 2, false, 4d, 2f, 0f, 0.65f)), Is.False, "window start");
+            Assert.That(reloading.Equals(new NetWeaponState(12, 60, true, 1, 2, false, 4d, 2f, 0.5f, 0f)), Is.False, "window end");
         }
 
         [Test]
@@ -539,6 +547,184 @@ namespace Fps.Net.Tests
             Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(idle, new NetWeaponState(12, 60, true, 0, 2, false)), Is.True, "reload");
             Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(idle, new NetWeaponState(12, 60, false, 1, 2, true)), Is.True, "switch");
             Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(idle, new NetWeaponState(7, 30, false, 1, 2, false)), Is.True, "equipped index changed");
+        }
+
+        private static GameRules ActiveReloadRules(ActiveReload activeReload)
+        {
+            var d = GameRules.Default;
+            var a = ActionRules.Default;
+            return new GameRules(
+                d.FriendlyFire,
+                d.RespawnMode,
+                d.WaveIntervalSeconds,
+                d.RegenDelaySeconds,
+                d.RegenPerSecond,
+                d.DeathBody,
+                d.DeathCamera,
+                d.InfiniteReserve,
+                d.ReserveAmmoMultiplier,
+                d.Destruction,
+                new ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload));
+        }
+
+        /// <summary>rifle (withHandgun なら 1 番に handgun も) を activeReload のルールで持たせ、rifle を 1 発撃ってからリロードを始めた武器。</summary>
+        private NetPlayerWeapon CreateReloadingWeapon(ActiveReload activeReload, bool withHandgun = false)
+        {
+            var weapon = CreateUnequipped();
+            var specs = withHandgun ? new[] { DefaultSpec(), HandgunSpec() } : new[] { DefaultSpec() };
+            weapon.ServerEquip(specs, _switchSeconds, ActiveReloadRules(activeReload));
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
+            return weapon;
+        }
+
+        // 成功の幅の真ん中の経過秒数
+        private static float SecondsIntoTheWindow(WeaponSpec spec)
+        {
+            return spec.ReloadSeconds * (spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength / 2f);
+        }
+
+        [Test]
+        public void ServerJudgesASuccessWithItsOwnProgressAndRefillsAtOnce()
+        {
+            var weapon = CreateReloadingWeapon(ActiveReload.On);
+            var spec = weapon.CurrentSpec;
+            weapon.ServerTick(SecondsIntoTheWindow(spec));
+
+            LogAssert.Expect(LogType.Log, NetPlayerWeapon.ActiveReloadLog(weapon.OwnerClientId, ActiveReloadResult.Success));
+            Assert.That(weapon.ServerHandleActiveReloadRequest(weapon.OwnerClientId), Is.True);
+
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.False);
+            Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(spec.MagazineSize));
+            Assert.That(weapon.ServerWeapon.ReserveAmmo, Is.EqualTo(spec.ReserveAmmo - 1));
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+        }
+
+        [Test]
+        public void ServerJudgesAnEarlyPressAsAFailAndDelaysTheReload()
+        {
+            var weapon = CreateReloadingWeapon(ActiveReload.On);
+            var spec = weapon.CurrentSpec;
+            var elapsed = spec.ReloadSeconds * spec.ActiveReloadWindowStart / 2f;
+            weapon.ServerTick(elapsed);
+
+            LogAssert.Expect(LogType.Log, NetPlayerWeapon.ActiveReloadLog(weapon.OwnerClientId, ActiveReloadResult.Fail));
+            Assert.That(weapon.ServerHandleActiveReloadRequest(weapon.OwnerClientId), Is.True);
+
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.True);
+            Assert.That(weapon.ServerWeapon.ReloadDurationSeconds, Is.EqualTo(spec.ReloadSeconds + spec.ActiveReloadFailSeconds));
+            Assert.That(weapon.ServerHandleActiveReloadRequest(weapon.OwnerClientId), Is.False, "one judgement per reload");
+
+            weapon.ServerTick(spec.ReloadSeconds - elapsed);
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.True, "the usual reload time is no longer enough");
+            weapon.ServerTick(spec.ActiveReloadFailSeconds);
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.False);
+            Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(spec.MagazineSize));
+        }
+
+        [Test]
+        public void OffRuleIgnoresTheActiveReloadRequest()
+        {
+            var weapon = CreateReloadingWeapon(ActiveReload.Off);
+            weapon.ServerTick(SecondsIntoTheWindow(weapon.CurrentSpec));
+
+            Assert.That(weapon.ServerHandleActiveReloadRequest(weapon.OwnerClientId), Is.False);
+
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.True);
+            Assert.That(weapon.ServerWeapon.HasJudgedActiveReload, Is.False);
+            Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(weapon.CurrentSpec.MagazineSize - 1), "nothing is refilled early");
+        }
+
+        [Test]
+        public void ActiveReloadFromAnotherClientIsIgnored()
+        {
+            var weapon = CreateReloadingWeapon(ActiveReload.On);
+            weapon.ServerTick(SecondsIntoTheWindow(weapon.CurrentSpec));
+            var intruder = weapon.OwnerClientId + 1;
+
+            LogAssert.Expect(LogType.Warning, new Regex("ignored active reload from client " + intruder));
+            Assert.That(weapon.ServerHandleActiveReloadRequest(intruder), Is.False);
+
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.True);
+            Assert.That(weapon.ServerWeapon.HasJudgedActiveReload, Is.False, "the owner can still be judged");
+        }
+
+        [Test]
+        public void ActiveReloadDoesNothingBeforeEquipNotReloadingOrWhileSwitching()
+        {
+            Assert.That(CreateUnequipped().ServerHandleActiveReloadRequest(0), Is.False, "before equip");
+
+            var idle = CreateUnequipped();
+            idle.ServerEquip(new[] { DefaultSpec() }, _switchSeconds, ActiveReloadRules(ActiveReload.On));
+            Assert.That(idle.ServerHandleActiveReloadRequest(idle.OwnerClientId), Is.False, "not reloading");
+
+            var switching = CreateReloadingWeapon(ActiveReload.On, true);
+            ExpectSwitchLog(switching, _handgunId);
+            Assert.That(switching.ServerHandleSwitchRequest(switching.OwnerClientId, _handgunId), Is.True);
+            Assert.That(switching.ServerHandleActiveReloadRequest(switching.OwnerClientId), Is.False, "switching");
+        }
+
+        [Test]
+        public void SyncedStateCarriesTheReloadAndTheWindowOnlyWithTheOnRule()
+        {
+            var on = CreateReloadingWeapon(ActiveReload.On);
+            var spec = on.CurrentSpec;
+            var state = NetPlayerWeapon.BuildState(on.ServerWeapon, 0, 1, false, 12.5d);
+
+            Assert.That(state.IsReloading, Is.True);
+            Assert.That(state.ReloadStartedAt, Is.EqualTo(12.5d));
+            Assert.That(state.ReloadSeconds, Is.EqualTo(spec.ReloadSeconds));
+            Assert.That(state.ActiveReloadWindowStart, Is.EqualTo(spec.ActiveReloadWindowStart));
+            Assert.That(state.ActiveReloadWindowEnd, Is.EqualTo(spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength));
+            Assert.That(state.HasActiveReloadWindow, Is.True);
+
+            var off = CreateReloadingWeapon(ActiveReload.Off);
+            var offState = NetPlayerWeapon.BuildState(off.ServerWeapon, 0, 1, false, 12.5d);
+            Assert.That(offState.IsReloading, Is.True);
+            Assert.That(offState.HasReloadProgress, Is.False, "the Off rule shows no bar, like the offline HUD");
+            Assert.That(offState.HasActiveReloadWindow, Is.False);
+            Assert.That(offState, Is.EqualTo(new NetWeaponState(offState.AmmoInMagazine, offState.ReserveAmmo, true, 0, 1, false)));
+        }
+
+        [Test]
+        public void SyncedStateDropsTheWindowAndStretchesTheReloadAfterAFail()
+        {
+            var weapon = CreateReloadingWeapon(ActiveReload.On);
+            var spec = weapon.CurrentSpec;
+            weapon.ServerTick(0.25f);
+            LogAssert.Expect(LogType.Log, NetPlayerWeapon.ActiveReloadLog(weapon.OwnerClientId, ActiveReloadResult.Fail));
+            Assert.That(weapon.ServerHandleActiveReloadRequest(weapon.OwnerClientId), Is.True);
+
+            var state = NetPlayerWeapon.BuildState(weapon.ServerWeapon, 0, 1, false, 3d);
+
+            Assert.That(state.HasReloadProgress, Is.True);
+            Assert.That(state.ReloadSeconds, Is.EqualTo(spec.ReloadSeconds + spec.ActiveReloadFailSeconds));
+            Assert.That(state.HasActiveReloadWindow, Is.False, "the reload has been judged");
+            Assert.That(state.ActiveReloadWindowStart, Is.Zero);
+            Assert.That(state.ActiveReloadWindowEnd, Is.Zero);
+            Assert.That(state.ReloadProgressAt(3d + 0.25d), Is.EqualTo(weapon.ServerWeapon.ReloadProgress).Within(1e-6f));
+        }
+
+        [Test]
+        public void ClientAsksForAnActiveReloadOnlyWhileTheWindowIsOpen()
+        {
+            var open = new NetWeaponState(0, 60, true, 0, 1, false, 4d, 2f, 0.5f, 0.65f);
+
+            Assert.That(NetPlayerWeapon.ShouldRequestActiveReload(open, true), Is.True);
+            Assert.That(NetPlayerWeapon.ShouldRequestActiveReload(open, false), Is.False, "down");
+            Assert.That(NetPlayerWeapon.ShouldRequestActiveReload(new NetWeaponState(0, 60, true, 0, 1, false, 4d, 2.5f, 0f, 0f), true), Is.False, "judged");
+            Assert.That(NetPlayerWeapon.ShouldRequestActiveReload(new NetWeaponState(0, 60, true, 0, 1, false), true), Is.False, "Off rule");
+            Assert.That(NetPlayerWeapon.ShouldRequestActiveReload(new NetWeaponState(0, 60, false, 0, 1, false), true), Is.False, "not reloading");
+            Assert.That(NetPlayerWeapon.ShouldRequestActiveReload(new NetWeaponState(0, 60, true, 0, 1, true, 4d, 2f, 0.5f, 0.65f), true), Is.False, "switching");
+        }
+
+        [Test]
+        public void PressingReloadBeforeSpawnSendsNothing()
+        {
+            var weapon = CreateReloadingWeapon(ActiveReload.On);
+
+            Assert.That(weapon.PressReload(), Is.False);
+            Assert.That(weapon.RequestActiveReload(), Is.False);
         }
 
         [Test]

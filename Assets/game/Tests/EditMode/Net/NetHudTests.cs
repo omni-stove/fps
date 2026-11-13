@@ -165,6 +165,52 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ReloadBarFollowsTheSyncedReloadAndWindow()
+        {
+            var idle = new NetWeaponState(30, 90, false, 0, 1, false);
+            var reloading = new NetWeaponState(0, 90, true, 0, 1, false, 10d, 2f, 0.5f, 0.65f);
+            var failed = new NetWeaponState(0, 90, true, 0, 1, false, 10d, 2.5f, 0f, 0f);
+            var model = _netHud.Hud.Model;
+
+            Arrive(_weapon.StateVariable, default, idle);
+            _netHud.RefreshReloadProgress(10d);
+            Assert.That(model.ReloadProgress, Is.Null);
+            Assert.That(IsShown(_view.ReloadBar), Is.False);
+
+            Arrive(_weapon.StateVariable, idle, reloading);
+            _netHud.RefreshReloadProgress(11d);
+            Assert.That(model.ReloadProgress, Is.EqualTo(0.5f));
+            Assert.That(model.ReloadWindowStart, Is.EqualTo(0.5f));
+            Assert.That(model.ReloadWindowEnd, Is.EqualTo(0.65f));
+            Assert.That(IsShown(_view.ReloadBar), Is.True);
+            Assert.That(IsShown(_view.ReloadWindow), Is.True);
+
+            // 失敗すると長さが延びて幅は届かなくなる。オフラインと同じく進みだけを出す
+            Arrive(_weapon.StateVariable, reloading, failed);
+            _netHud.RefreshReloadProgress(11.25d);
+            Assert.That(model.ReloadProgress, Is.EqualTo(0.5f));
+            Assert.That(model.ReloadWindowEnd, Is.Zero);
+            Assert.That(IsShown(_view.ReloadBar), Is.True);
+            Assert.That(IsShown(_view.ReloadWindow), Is.False);
+
+            Arrive(_weapon.StateVariable, failed, new NetWeaponState(30, 60, false, 0, 1, false));
+            Assert.That(model.ReloadProgress, Is.Null, "the bar goes away as soon as the reload ends");
+            Assert.That(IsShown(_view.ReloadBar), Is.False);
+        }
+
+        [Test]
+        public void OffRuleShowsNoReloadBar()
+        {
+            // Off のルールではサーバーが長さを 0 で送る
+            Arrive(_weapon.StateVariable, default, new NetWeaponState(0, 90, true, 0, 1, false));
+            _netHud.RefreshReloadProgress(11d);
+
+            Assert.That(_netHud.Hud.Model.ReloadProgress, Is.Null);
+            Assert.That(IsShown(_view.ReloadBar), Is.False);
+            Assert.That(_view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.True, "the usual reload is still shown");
+        }
+
+        [Test]
         public void InfiniteReserveShowsInfinityWhicheverArrivesFirst()
         {
             _netHud.BindMatch(_match);

@@ -14,13 +14,15 @@ namespace Fps.Core
     /// </remarks>
     public sealed class ServerWeapon
     {
-        /// <summary>弾倉・予備弾・リロード中かどうかのどれかが変わったときに呼ばれる。</summary>
+        /// <summary>
+        /// 弾倉・予備弾・リロード中かどうか・今のリロードにかかる時間 (<see cref="ReloadDurationSeconds"/>) のどれかが変わったときに呼ばれる。
+        /// </summary>
         public event Action Changed;
 
         /// <summary>リロードを始めたときに呼ばれる。引数は空撃ちによる自動リロードなら true。</summary>
         public event Action<bool> ReloadStarted;
 
-        /// <summary>リロードが終わって弾倉が補充されたときに呼ばれる。</summary>
+        /// <summary>リロードが終わって弾倉が補充されたときに呼ばれる。アクティブリロードに成功してその場で終えたときも呼ばれる。</summary>
         public event Action Reloaded;
 
         // 連射間隔を 0 にした Spec。内側の Weapon はこれで作る
@@ -36,8 +38,9 @@ namespace Fps.Core
 
         /// <param name="spec">武器の設定。<see cref="WeaponSpec.FireInterval"/> は使わない (<see cref="ShotBudget"/> に渡す)。</param>
         /// <param name="rules">
-        /// 予備弾のルール。初期の予備弾と <see cref="Refill"/> で戻す値に <see cref="GameRules.ReserveAmmoMultiplier"/> を掛け、
-        /// <see cref="GameRules.InfiniteReserve"/> ならリロードで予備弾を減らさない。
+        /// 予備弾とアクティブリロードのルール。初期の予備弾と <see cref="Refill"/> で戻す値に <see cref="GameRules.ReserveAmmoMultiplier"/> を掛け、
+        /// <see cref="GameRules.InfiniteReserve"/> ならリロードで予備弾を減らさない。<see cref="ActionRules.ActiveReload"/> が
+        /// <see cref="ActiveReload.On"/> ならリロード中の <see cref="TryActiveReload"/> で判定する。
         /// </param>
         public ServerWeapon(WeaponSpec spec, GameRules rules)
         {
@@ -82,6 +85,36 @@ namespace Fps.Core
         /// <summary>true ならリロードで予備弾を減らさず、予備弾が 0 でもリロードできる。</summary>
         public bool HasInfiniteReserve => _weapon.HasInfiniteReserve;
 
+        /// <summary>true ならリロード中の <see cref="TryActiveReload"/> で判定する。false なら <see cref="TryActiveReload"/> は常に false。</summary>
+        public bool HasActiveReload => _weapon.HasActiveReload;
+
+        /// <summary>今のリロードで <see cref="TryActiveReload"/> の判定を済ませたか。リロード中でなければ false。</summary>
+        public bool HasJudgedActiveReload => _weapon.HasJudgedActiveReload;
+
+        /// <summary>
+        /// リロードの進み (経過時間 / リロードにかかる時間)。0〜1。リロード中でなければ 0。
+        /// アクティブリロードに失敗すると、かかる時間が <see cref="WeaponSpec.ActiveReloadFailSeconds"/> だけ延びるので進みは下がる。
+        /// </summary>
+        public float ReloadProgress => _weapon.ReloadProgress;
+
+        /// <summary>
+        /// 今のリロードにかかる秒数。<see cref="WeaponSpec.ReloadSeconds"/> に、アクティブリロードに失敗していれば
+        /// <see cref="WeaponSpec.ActiveReloadFailSeconds"/> を足した値。リロード中でなければ 0。
+        /// </summary>
+        public float ReloadDurationSeconds
+        {
+            get
+            {
+                if (!_weapon.IsReloading)
+                {
+                    return 0f;
+                }
+
+                // 成功すればその場でリロードが終わるので、判定済みのままリロード中なのは失敗したときだけ
+                return _weapon.HasJudgedActiveReload ? Spec.ReloadSeconds + Spec.ActiveReloadFailSeconds : Spec.ReloadSeconds;
+            }
+        }
+
         /// <summary>
         /// 1 発撃つ。撃てたら弾倉を 1 減らして <see cref="ShotRejection.None"/>。
         /// リロード中なら <see cref="ShotRejection.Reloading"/>、弾倉が空なら <see cref="ShotRejection.OutOfAmmo"/> を返し、
@@ -117,6 +150,30 @@ namespace Fps.Core
         public bool TryStartReload()
         {
             return StartReload(false);
+        }
+
+        /// <summary>
+        /// リロード中にもう一度 Reload を押したときのアクティブリロード。今の <see cref="ReloadProgress"/> を
+        /// <see cref="ActiveReloadJudge.Judge"/> で判定し、成功ならその場で補充してリロードを終え (<see cref="Reloaded"/> を呼ぶ)、
+        /// 失敗なら残り時間に <see cref="WeaponSpec.ActiveReloadFailSeconds"/> を足す。どちらでも <see cref="Changed"/> を 1 回呼び、true を返す。
+        /// <see cref="HasActiveReload"/> が false、リロード中でない、今のリロードで判定済みのときは何もせず false。
+        /// </summary>
+        /// <param name="result">判定の結果。false を返したときは <see cref="ActiveReloadResult.Fail"/> で、意味を持たない。</param>
+        public bool TryActiveReload(out ActiveReloadResult result)
+        {
+            if (!_weapon.TryActiveReload(out result))
+            {
+                return false;
+            }
+
+            // 成功は Reloaded 経由で Changed を呼んでいる。失敗は弾数もリロード中かどうかも変わらないが、
+            // かかる時間と判定済みかどうかが変わり、同期し直す必要があるので知らせる
+            if (result == ActiveReloadResult.Fail)
+            {
+                Changed?.Invoke();
+            }
+
+            return true;
         }
 
         /// <summary>リロード中なら弾数を変えずにやめて <see cref="Changed"/> を呼ぶ。リロード中でなければ何もしない。</summary>

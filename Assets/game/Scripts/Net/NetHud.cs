@@ -23,6 +23,11 @@ namespace Fps.Net
     /// <para>
     /// 予備弾は <see cref="NetMatchRules.InfiniteReserve"/> が true なら数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。
     /// </para>
+    /// <para>
+    /// アクティブリロードの進みも時間で進むので、毎フレーム <see cref="RefreshReloadProgress"/> で、届いた <see cref="NetWeaponState"/> の
+    /// 開始時刻と長さから求めて <see cref="HudModel.SetReloadProgress"/> に渡す。時刻は NetworkManager.LocalTime を使う。
+    /// LocalTime はサーバーの時刻の尺で、今送った RPC がサーバーに着く頃を指すので、バーが「今押したらサーバーで判定される進み」になる。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Hud))]
@@ -129,6 +134,31 @@ namespace Fps.Net
             ShowAmmo();
             ShowHealth();
             ShowScores();
+            RefreshReloadProgressNow();
+        }
+
+        /// <summary>
+        /// 届いている武器の状態 (<see cref="NetWeaponState"/>) から、サーバーの時刻 serverTime でのリロードの進みを HUD に出す。
+        /// 武器が無い・進みを出せない状態 (<see cref="NetWeaponState.HasReloadProgress"/> が false) なら消す。
+        /// 判定を済ませた後 (成功になる幅が届かない) は、オフラインと同じく幅を 0 にして進みだけを出す。Play 中は Update が呼ぶ。
+        /// </summary>
+        internal void RefreshReloadProgress(double serverTime)
+        {
+            if (_weapon == null || !_weaponState.HasReloadProgress)
+            {
+                Model.ClearReloadProgress();
+                return;
+            }
+
+            var progress = _weaponState.ReloadProgressAt(serverTime);
+            if (_weaponState.HasActiveReloadWindow)
+            {
+                Model.SetReloadProgress(progress, _weaponState.ActiveReloadWindowStart, _weaponState.ActiveReloadWindowEnd);
+            }
+            else
+            {
+                Model.SetReloadProgress(progress, 0f, 0f);
+            }
         }
 
         /// <summary>
@@ -196,6 +226,20 @@ namespace Fps.Net
         private void Update()
         {
             Tick(Time.deltaTime);
+            RefreshReloadProgressNow();
+        }
+
+        // Spawn 前 (Edit Mode を含む) は時刻が無いので進みを出さない
+        private void RefreshReloadProgressNow()
+        {
+            if (_weapon != null && _weapon.IsSpawned && _weapon.NetworkManager != null)
+            {
+                RefreshReloadProgress(_weapon.NetworkManager.LocalTime.Time);
+            }
+            else
+            {
+                Model.ClearReloadProgress();
+            }
         }
 
         private void OnDestroy()
@@ -291,6 +335,9 @@ namespace Fps.Net
         {
             _weaponState = current;
             ShowAmmo();
+
+            // 次のフレームを待たずに、リロードが終わった・判定した時点で進みと幅を変えるため
+            RefreshReloadProgressNow();
         }
 
         private void HandleAlphaScoreChanged(int previous, int current)

@@ -461,6 +461,79 @@ namespace Fps.Net.Tests
             Assert.That(NetPlayerWeapon.ShouldRequestReload(new NetWeaponState(0, 0, false, 0, 2, false), false), Is.False, "down");
         }
 
+        private static GameRules ActiveReloadRules(ActiveReload activeReload)
+        {
+            var a = ActionRules.Default;
+            return new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                GameRules.DefaultWaveIntervalSeconds,
+                0f,
+                0f,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                false,
+                1f,
+                Destruction.Off,
+                new ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload));
+        }
+
+        [TestCase(ActiveReload.On, true)]
+        [TestCase(ActiveReload.Off, false)]
+        public void SpawnGivesEveryWeaponTheActiveReloadRule(ActiveReload activeReload, bool expected)
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = SpawnedWeapon(loadout, ActiveReloadRules(activeReload));
+
+            foreach (var held in weapon.Loadout.Items)
+            {
+                Assert.That(held.HasActiveReload, Is.EqualTo(expected), held.Spec.Id);
+            }
+
+            // リスポーンで満タンに戻しても同じルールのまま
+            weapon.ServerRefill();
+            foreach (var held in weapon.Loadout.Items)
+            {
+                Assert.That(held.HasActiveReload, Is.EqualTo(expected), held.Spec.Id);
+            }
+        }
+
+        [Test]
+        public void SpawnedWeaponIsJudgedOnTheServerWithTheMatchRules()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = SpawnedWeapon(loadout, ActiveReloadRules(ActiveReload.On));
+            var spec = weapon.CurrentSpec;
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
+            weapon.ServerTick(spec.ReloadSeconds * (spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength / 2f));
+
+            LogAssert.Expect(LogType.Log, NetPlayerWeapon.ActiveReloadLog(weapon.OwnerClientId, ActiveReloadResult.Success));
+            Assert.That(weapon.ServerHandleActiveReloadRequest(weapon.OwnerClientId), Is.True);
+
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.False);
+            Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(spec.MagazineSize));
+        }
+
+        [Test]
+        public void SpawnedWeaponWithTheOffRuleKeepsTheUsualReload()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = SpawnedWeapon(loadout, ActiveReloadRules(ActiveReload.Off));
+            var spec = weapon.CurrentSpec;
+            Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
+            var inTheWindow = spec.ReloadSeconds * (spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength / 2f);
+            weapon.ServerTick(inTheWindow);
+
+            Assert.That(weapon.ServerHandleActiveReloadRequest(weapon.OwnerClientId), Is.False);
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.True);
+
+            weapon.ServerTick(spec.ReloadSeconds - inTheWindow);
+            Assert.That(weapon.ServerWeapon.IsReloading, Is.False);
+            Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(spec.MagazineSize));
+        }
+
         [Test]
         public void ShotWithTheWeaponHeldBeforeASwitchIsDropped()
         {

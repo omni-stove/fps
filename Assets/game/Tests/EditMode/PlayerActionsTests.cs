@@ -98,7 +98,7 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheEmptyCoverIsNeverInCover()
+        public void CoverStartsOutOfCover()
         {
             PlayerActions.Attach(_player, Rules(Cover.On, BlindFire.Off));
             var cover = _player.GetComponent<CoverController>();

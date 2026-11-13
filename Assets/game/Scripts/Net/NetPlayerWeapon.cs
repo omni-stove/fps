@@ -217,11 +217,14 @@ namespace Fps.Net
                 SyncEquippedIds();
             }
 
-            if (IsOwner)
+            if (IsLocallyControlled)
             {
                 ResolveInputActions();
             }
         }
+
+        // Bot はサーバーが持ち主なので、IsOwner だけではホストの人の入力を Bot の武器が読んでしまう
+        private bool IsLocallyControlled => IsOwner && (_player == null || !_player.IsBot);
 
         public override void OnNetworkDespawn()
         {
@@ -247,7 +250,7 @@ namespace Fps.Net
                 ServerTick(Time.deltaTime);
             }
 
-            if (!IsOwner)
+            if (!IsLocallyControlled)
             {
                 return;
             }
@@ -1085,7 +1088,7 @@ namespace Fps.Net
             }
 
             // ホストのサーバーは他人の状態の変化も受け取るが、他人のリロードは知らせない (他のクライアントには届かないため揃える)
-            if (IsOwner && StartsReload(previous, current))
+            if (IsLocallyControlled && StartsReload(previous, current))
             {
                 ReloadStarted?.Invoke(WeaponId);
             }

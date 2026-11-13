@@ -731,10 +731,11 @@ namespace Fps.Net
             var team = _session.GetTeam(playerId);
             player.ServerSetState(team, _session.GetHealth(playerId));
 
-            // playerId はクライアント Id をそのまま使っている (JoinNewPlayers) ので、抜けた相手でもクライアント Id に戻せる
+            // playerId は人ならクライアント Id、Bot なら Bot の Id をそのまま使っている (JoinNewPlayers・.Bots.cs) ので、
+            // 抜けた相手でも行の Id (RosterId) に戻せる
             var killer = _lastKillers.Get(playerId);
             var row = new NetPlayerStats(
-                player.OwnerClientId, team, _session.GetKills(playerId), _session.GetDeaths(playerId),
+                player.RosterId, team, _session.GetKills(playerId), _session.GetDeaths(playerId),
                 killer.HasValue ? (ulong)killer.Value : (ulong?)null);
             var index = FindRow(row.ClientId);
             if (index < 0)

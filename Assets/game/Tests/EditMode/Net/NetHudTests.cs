@@ -716,6 +716,18 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void BotRowsAreNamedWithTheBotTagAndAreNeverTheLocalPlayer()
+        {
+            var row = new NetPlayerStats((ulong)BotRoster.FirstBotPlayerId + 1, Team.Alpha, 4, 1);
+
+            Assert.That(NetHud.TryToScoreboardEntry(row, 0, out var entry), Is.True);
+            Assert.That(entry.PlayerId, Is.EqualTo(BotRoster.FirstBotPlayerId + 1));
+            Assert.That(entry.Name, Is.EqualTo("[BOT] Bot 2"));
+            Assert.That(entry.Kills, Is.EqualTo(4));
+            Assert.That(entry.IsLocal, Is.False, "the host (client 0) owns bots but is not them");
+        }
+
+        [Test]
         public void PlayerStatsWithAnIdTooLargeForAPlayerIdAreSkipped()
         {
             var row = new NetPlayerStats((ulong)int.MaxValue + 1, Team.Alpha, 0, 0);

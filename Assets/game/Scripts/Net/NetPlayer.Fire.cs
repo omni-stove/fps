@@ -16,7 +16,7 @@ namespace Fps.Net
     {
         private void Update()
         {
-            if (!IsSpawned || !IsOwner)
+            if (!IsSpawned || !IsLocallyControlled)
             {
                 return;
             }

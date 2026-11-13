@@ -208,11 +208,14 @@ namespace Fps.Net
 
         public override void OnNetworkSpawn()
         {
+            SpawnBotMark();
             _team.OnValueChanged += HandleTeamChanged;
             _health.OnValueChanged += HandleHealthChanged;
             ApplyVisuals();
 
-            SetLocalView(NetStartup.ShouldEnableFirstPersonView(IsOwner, Application.isBatchMode, NetStartup.IsDedicatedServerBuild));
+            // Bot はサーバーが持ち主なので、IsOwner ではなく人が操作しているかで視点・入力・HUD を付ける
+            var local = IsLocallyControlled;
+            SetLocalView(NetStartup.ShouldEnableFirstPersonView(local, Application.isBatchMode, NetStartup.IsDedicatedServerBuild));
 
             // NetBootstrap が止めるのは起動時のシーンだけなので、後から生成されるプレイヤーの演出はここで止める
             if (NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
@@ -224,10 +227,10 @@ namespace Fps.Net
             _presentation = GetComponent<WeaponPresentation>();
             if (_presentation != null)
             {
-                _presentation.IsLocal = IsOwner;
+                _presentation.IsLocal = local;
             }
 
-            if (IsOwner)
+            if (local)
             {
                 ResolveAttackAction();
                 ResolveGrenadeAction();
@@ -241,7 +244,7 @@ namespace Fps.Net
                 PublishAiming(_ads != null && _ads.IsAiming);
             }
 
-            if (NetStartup.ShouldCreateHud(IsOwner, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
+            if (NetStartup.ShouldCreateHud(local, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
             {
                 CreateHud();
             }
@@ -250,7 +253,7 @@ namespace Fps.Net
             if (IsClient && DeathBodyPresenter.IsPresentationAvailable)
             {
                 _deathBody = DeathBodyPresenter.Attach(gameObject);
-                _deathBody.Id = "client=" + OwnerClientId.ToString(CultureInfo.InvariantCulture);
+                _deathBody.Id = (IsBot ? "bot=" : "client=") + RosterId.ToString(CultureInfo.InvariantCulture);
             }
 
             SpawnDowned();
@@ -565,7 +568,7 @@ namespace Fps.Net
 
         private void PublishAiming(bool aiming)
         {
-            if (!_canPublishAiming || !IsSpawned || !IsOwner || _aiming.Value == aiming)
+            if (!_canPublishAiming || !IsSpawned || !IsLocallyControlled || _aiming.Value == aiming)
             {
                 return;
             }
@@ -582,7 +585,7 @@ namespace Fps.Net
             get
             {
                 EnsureViewResolved();
-                if (IsSpawned && IsOwner && _ads != null && _ads.IsInitialized)
+                if (IsSpawned && IsLocallyControlled && _ads != null && _ads.IsInitialized)
                 {
                     return _ads.IsAiming;
                 }

@@ -68,7 +68,7 @@ namespace Fps.Net.Tests
             Assert.That(manager.NetworkConfig.NetworkTransport, Is.SameAs(transport));
             Assert.That(manager.NetworkConfig.PlayerPrefab, Is.SameAs(prefab));
             Assert.That(manager.NetworkConfig.ConnectionApproval, Is.True);
-            Assert.That(manager.NetworkConfig.EnableSceneManagement, Is.False);
+            Assert.That(manager.NetworkConfig.EnableSceneManagement, Is.True, "clients follow the server's -map scene");
             Assert.That(manager.IsListening, Is.False);
         }
 

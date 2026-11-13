@@ -12,7 +12,8 @@ namespace Fps.Editor
 {
     /// <summary>
     /// 専用サーバー (Dedicated Server) をビルドして <c>Builds/server-&lt;platform&gt;/</c> に出力する。
-    /// 入れるシーンは NetTest だけで、起動するとそのままサーバーとして待ち受ける (<see cref="NetStartup"/>)。
+    /// 入れるシーンは NetTest と <c>-map</c> で選べるマップ (<see cref="BuildSceneList.ServerScenes"/>) で、
+    /// 起動すると NetTest でそのままサーバーとして待ち受ける (<see cref="NetStartup"/>)。<c>-map</c> があればそのマップへ移ってから待ち受ける。
     /// Editor を閉じた状態で次のように呼ぶ (<c>make build-server</c> / <c>make build-server linux</c>):
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform macos|linux [-buildVersion v0.2.0]</code>
     /// 版は <see cref="BuildVersionStamper"/> が <c>-buildVersion</c> か git describe から決め、ビルドの間だけ bundleVersion に入れる。
@@ -52,7 +53,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// 専用サーバーのビルドに入れるシーン (<see cref="BuildSceneList.ServerScenes"/>)。
-        /// 一人称カメラの Bootstrap は要らないので、NetTest を最初のシーンにしてそのまま待ち受ける。
+        /// 一人称カメラの Bootstrap は要らないので、NetTest を最初のシーンにしてそのまま待ち受け、マップを続ける。
         /// </summary>
         public static string[] ServerScenePaths()
         {
@@ -66,7 +67,8 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// NetTest シーンが無ければ <see cref="NetSceneBuilder.Build"/> で作り、専用サーバーをビルドする。
+        /// NetTest シーンが無ければ <see cref="NetSceneBuilder.Build"/> で、マップが無ければ <see cref="ArenaSceneBuilder.BuildAt"/> で作り、
+        /// 専用サーバーをビルドする。
         /// </summary>
         public static BuildReport BuildFor(ServerBuildOptions options)
         {
@@ -85,6 +87,7 @@ namespace Fps.Editor
             }
 
             EnsureNetScene();
+            EnsureArenaScene();
             RequireLoadoutInBuild();
 
             Directory.CreateDirectory(options.OutputDirectory);
@@ -157,6 +160,27 @@ namespace Fps.Editor
             {
                 throw new InvalidOperationException(
                     "[Net] ServerBuilder: " + NetSceneBuilder.MatchPrefabPath + " has no usable loadout after NetSceneBuilder.Build");
+            }
+        }
+
+        /// <summary>
+        /// マップ NetArena01 が無ければ生成する。あれば作り直さない (建物の NetworkObject の ID が配ったクライアントと食い違わないよう)。
+        /// </summary>
+        private static void EnsureArenaScene()
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ArenaSceneBuilder.ScenePath) != null)
+            {
+                return;
+            }
+
+            Debug.Log("[Net] ServerBuilder: " + ArenaSceneBuilder.ScenePath
+                + " is missing; running ArenaSceneBuilder.BuildAt (commit the generated files)");
+            ArenaSceneBuilder.BuildAt(ArenaSceneBuilder.ScenePath, ArenaSceneBuilder.NavMeshDataPath);
+
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ArenaSceneBuilder.ScenePath) == null)
+            {
+                throw new InvalidOperationException(
+                    "[Net] ServerBuilder: " + ArenaSceneBuilder.ScenePath + " was not created by ArenaSceneBuilder.BuildAt");
             }
         }
 

@@ -71,6 +71,12 @@ namespace Fps.Editor
         /// </summary>
         public static string NetTestScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.NetSceneName);
 
+        /// <summary>
+        /// ネット対戦のマップ。サーバーは <c>-map NetArena01</c> でこのシーンへ移る。生成は Fps.Net.Editor の ArenaSceneBuilder
+        /// (この Editor のアセンブリは Fps.Net.Editor を参照しないため文字列で持つ。一致はテストで確かめる)。
+        /// </summary>
+        public static string NetArena01Scene => FpsKitRoot.OutputScene("NetArena01");
+
         /// <summary>ビルドに入れるシーン。この順に Build Settings へ並べる (先頭が起動時のシーン)。</summary>
         public static IReadOnlyList<string> Scenes => new[]
         {
@@ -94,6 +100,7 @@ namespace Fps.Editor
             HordeScene,
             BattleRoyaleScene,
             ModeTestScene,
+            NetArena01Scene,
             NetTestScene,
         };
 
@@ -129,8 +136,11 @@ namespace Fps.Editor
             }
         }
 
-        /// <summary>専用サーバーのビルドに入れるシーン。メニューと一人称カメラの射撃場は要らないので、ネット対戦のシーンだけを最初に置く。</summary>
-        public static IReadOnlyList<string> ServerScenes => new[] { NetTestScene };
+        /// <summary>
+        /// 専用サーバーのビルドに入れるシーン。メニューと一人称カメラの射撃場は要らないので、ネット対戦のシーンを最初に置き、
+        /// <c>-map</c> で選べるマップを続ける。出力先ルートが変わるので、読むたびに組む。
+        /// </summary>
+        public static IReadOnlyList<string> ServerScenes => new[] { NetTestScene, NetArena01Scene };
 
         /// <summary>path を起動時のシーンとして Build Settings の先頭に有効な状態で置く (<see cref="WithStartScene"/>)。</summary>
         public static void RegisterStartScene(string path)

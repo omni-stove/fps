@@ -159,6 +159,12 @@ namespace Fps.Runtime
 
         protected override bool EndsMatchWithSession => false;
 
+        protected override string SessionEndedLog(Side? winner)
+        {
+            // ModeSession が終わるのはラウンドの終わり。試合の終わりは EndMatch が出す。
+            return null;
+        }
+
         /// <summary>設置地点を配線する。番号は 0 から抜けなく 1 つずつであること (始めるときに確かめる)。</summary>
         public void SetSites(IReadOnlyList<BombSite> sites)
         {

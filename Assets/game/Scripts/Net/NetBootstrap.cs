@@ -313,6 +313,30 @@ namespace Fps.Net
             return true;
         }
 
+        /// <summary>
+        /// サーバーが実行中に Spawn するプレハブ。試合の進行役 matchPrefab と、その <see cref="NetTeamDeathmatch.GrenadePrefab"/>。
+        /// グレネードのプレハブが使えなければ (<see cref="NetTeamDeathmatch.TryValidateGrenadePrefab"/>) 登録せずに警告を出す
+        /// (サーバーもクライアントも同じ NetMatch プレハブから決めるので、どちらも登録しない側にそろう)。
+        /// </summary>
+        internal static GameObject[] SpawnablePrefabs(GameObject matchPrefab)
+        {
+            if (matchPrefab == null)
+            {
+                throw new ArgumentNullException(nameof(matchPrefab));
+            }
+
+            var match = matchPrefab.GetComponent<NetTeamDeathmatch>();
+            var grenade = match != null ? match.GrenadePrefab : null;
+            if (!NetTeamDeathmatch.TryValidateGrenadePrefab(grenade, out var error))
+            {
+                Debug.LogWarning("[Net] " + error + " on " + matchPrefab.name + "; grenades cannot be thrown online"
+                    + "; run Fps.Editor.NetSceneBuilder.Build");
+                return new[] { matchPrefab };
+            }
+
+            return new[] { matchPrefab, grenade };
+        }
+
         /// <summary>NetworkManager と transport を組み立て、イベントを購読する。失敗したら false。</summary>
         private bool ConfigureNetwork(NetTransportPlan plan)
         {
@@ -320,7 +344,7 @@ namespace Fps.Net
 
             try
             {
-                _manager = NetworkSetup.Configure(gameObject, plan, _playerPrefab, new[] { _matchPrefab });
+                _manager = NetworkSetup.Configure(gameObject, plan, _playerPrefab, SpawnablePrefabs(_matchPrefab));
             }
             catch (ArgumentException e)
             {

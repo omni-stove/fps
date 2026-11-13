@@ -45,6 +45,7 @@ namespace Fps.Net
             _serverLoadout?.Remove(playerId);
             _lastKillers.Remove(playerId);
             ForgetDowned(playerId);
+            ForgetGrenades(playerId);
             var held = _session != null && _session.HasPlayer(playerId) && _session.Leave(playerId);
 
             Debug.Log(MatchLog.Left(playerId));

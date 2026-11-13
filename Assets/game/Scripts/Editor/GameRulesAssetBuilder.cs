@@ -82,6 +82,9 @@ namespace Fps.Editor
         /// <summary><see cref="TpsRangeActions"/> で出撃ごとに持つグレネードの数。</summary>
         public const int TpsRangeGrenadeCount = 3;
 
+        /// <summary><see cref="TeamDeathmatchActions"/> (ドミネーションも同じ) で出撃ごとに持つグレネードの数。</summary>
+        public const int TeamDeathmatchGrenadeCount = 2;
+
         public const string MenuPath = "Fps/Build Game Rules Assets";
         public const string LogTag = "[GameRulesAssetBuilder]";
 
@@ -334,12 +337,15 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// チームデスマッチのアクション。倒れたらダウンして味方が起こせ、アクティブリロードを使う。
+        /// チームデスマッチのアクション。倒れたらダウンして味方が起こせ、アクティブリロードを使い、グレネードを
+        /// <see cref="TeamDeathmatchGrenadeCount"/> 個持つ (オンラインではサーバーが数えて投げる)。
         /// カバーとブラインドファイアはオンラインのプレイヤーが対応していないので使わない。
         /// </summary>
         public static ActionRules TeamDeathmatchActions()
         {
-            return WithDefaultDownedTimings(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On);
+            return WithDefaultDownedTimings(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On)
+                .WithGrenade(Grenade.On)
+                .WithGrenadeCount(TeamDeathmatchGrenadeCount);
         }
 
         /// <summary>キャンペーン (どの難易度も) のアクション。カバー・ブラインドファイア・アクティブリロードを使い、ダウンはしない。</summary>

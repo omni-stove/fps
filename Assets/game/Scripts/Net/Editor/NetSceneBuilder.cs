@@ -5,6 +5,7 @@ using Fps.Core;
 using Fps.Net;
 using Fps.Runtime;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -13,7 +14,7 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     /// <summary>
-    /// ネットワークの動作確認用シーン NetTest と、プレイヤー・試合の進行役のプレハブを生成し、ビルド設定に加える。
+    /// ネットワークの動作確認用シーン NetTest と、プレイヤー・試合の進行役・投げたグレネードのプレハブを生成し、ビルド設定に加える。
     /// 何度実行しても同じ結果になる。batchmode では
     /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.Build</c> で呼ぶ。
     /// </summary>
@@ -21,6 +22,13 @@ namespace Fps.Editor
     {
         public const string PlayerPrefabPath = "Assets/game/Prefabs/Net/NetPlayer.prefab";
         public const string MatchPrefabPath = "Assets/game/Prefabs/Net/NetMatch.prefab";
+        public const string GrenadePrefabPath = "Assets/game/Prefabs/Net/NetGrenade.prefab";
+
+        /// <summary>
+        /// Netcode が既定で使うネットワークのプレハブの一覧。実行時の登録は <see cref="NetBootstrap"/> がコードで行うが、
+        /// エディタの Netcode の設定と食い違わないよう、Build で作ったプレハブをここにも足す。
+        /// </summary>
+        public const string DefaultNetworkPrefabsPath = "Assets/DefaultNetworkPrefabs.asset";
 
         /// <summary>プレイヤーのカプセルの高さと半径 (m)。プリミティブの Capsule と同じ大きさ。</summary>
         public const float PlayerHeight = 2f;
@@ -86,11 +94,13 @@ namespace Fps.Editor
             var rules = LoadOrBuildRules();
             var rig = LoadOrBuildRig();
             var playerPrefab = BuildPrefab(PlayerPrefabPath, () => CreatePlayerSource(rig));
-            var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout, catalog, rules));
+            var grenadePrefab = BuildPrefab(GrenadePrefabPath, CreateGrenadeSource);
+            var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout, catalog, rules, grenadePrefab));
+            RegisterDefaultNetworkPrefabs(playerPrefab, matchPrefab, grenadePrefab);
             BuildScene(playerPrefab, matchPrefab);
             BuildSceneList.Register(NetBootstrap.ScenePath);
             AssetDatabase.SaveAssets();
-            Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath
+            Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + GrenadePrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath
                 + " (loadout " + WeaponAssetBuilder.LoadoutPath + ", catalog " + WeaponAssetBuilder.CatalogPath
                 + ", rules " + GameRulesAssetBuilder.TeamDeathmatchPath + ", rig " + CharacterRigBuilder.PrefabPath + ")");
         }
@@ -305,7 +315,82 @@ namespace Fps.Editor
             source.AddComponent<AimDownSights>().enabled = false;
         }
 
-        private static GameObject CreateMatchSource(LoadoutDefinition loadout, WeaponCatalogAsset catalog, GameRulesDefinition rules)
+        /// <summary>
+        /// 投げたグレネードのプレハブ。オフラインの <see cref="ThrownGrenade"/> と同じ大きさ・重さの球に、NetworkObject・位置と回転だけを配る
+        /// NetworkTransform・Rigidbody・<see cref="NetGrenade"/> を付ける。Rigidbody は kinematic にしておき、サーバーだけが
+        /// <see cref="NetGrenade"/> の生成時に動的にする (クライアントは届いた位置をなぞるだけ)。
+        /// </summary>
+        private static GameObject CreateGrenadeSource()
+        {
+            var source = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            source.name = "NetGrenade";
+            source.transform.localScale = Vector3.one * (ThrownGrenade.BodyRadius * 2f);
+            source.AddComponent<NetworkObject>();
+
+            var body = source.AddComponent<Rigidbody>();
+            body.mass = ThrownGrenade.Mass;
+            body.isKinematic = true;
+            body.interpolation = RigidbodyInterpolation.None;
+            body.collisionDetectionMode = CollisionDetectionMode.Discrete;
+
+            // 大きさは変わらないので送らない
+            var sync = source.AddComponent<NetworkTransform>();
+            sync.SyncScaleX = false;
+            sync.SyncScaleY = false;
+            sync.SyncScaleZ = false;
+
+            source.AddComponent<NetGrenade>();
+            return source;
+        }
+
+        /// <summary>
+        /// prefabs を <see cref="DefaultNetworkPrefabsPath"/> の一覧に (無ければ) 足す。一覧のアセットが無ければ警告だけを出す
+        /// (実行時は <see cref="NetBootstrap"/> がコードで登録するので、無くても動く)。
+        /// </summary>
+        private static void RegisterDefaultNetworkPrefabs(params GameObject[] prefabs)
+        {
+            var list = AssetDatabase.LoadAssetAtPath<NetworkPrefabsList>(DefaultNetworkPrefabsPath);
+            if (list == null)
+            {
+                Debug.LogWarning("[Net] NetSceneBuilder: " + DefaultNetworkPrefabsPath + " was not found; NetBootstrap still registers the prefabs at runtime");
+                return;
+            }
+
+            var added = 0;
+            foreach (var prefab in prefabs)
+            {
+                if (prefab == null || ContainsPrefab(list, prefab))
+                {
+                    continue;
+                }
+
+                list.Add(new NetworkPrefab { Prefab = prefab });
+                added++;
+            }
+
+            if (added > 0)
+            {
+                EditorUtility.SetDirty(list);
+                AssetDatabase.SaveAssetIfDirty(list);
+                Debug.Log("[Net] NetSceneBuilder: added " + added + " prefab(s) to " + DefaultNetworkPrefabsPath);
+            }
+        }
+
+        private static bool ContainsPrefab(NetworkPrefabsList list, GameObject prefab)
+        {
+            foreach (var entry in list.PrefabList)
+            {
+                if (entry != null && entry.Prefab == prefab)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static GameObject CreateMatchSource(
+            LoadoutDefinition loadout, WeaponCatalogAsset catalog, GameRulesDefinition rules, GameObject grenadePrefab)
         {
             var source = new GameObject("NetMatch");
             source.AddComponent<NetworkObject>();
@@ -315,6 +400,9 @@ namespace Fps.Editor
             match.Loadout = loadout;
             match.Catalog = catalog;
             match.Rules = rules;
+
+            // 投げたグレネードはサーバーがこのプレハブから出す。NetBootstrap もここから引いてネットワークのプレハブとして登録する
+            match.GrenadePrefab = grenadePrefab;
 
             // 射撃・ヒット・被弾・キルをクライアントへ配る。NetTeamDeathmatch が同じ GameObject から探す
             source.AddComponent<NetCombatFeed>();

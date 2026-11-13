@@ -83,7 +83,7 @@ namespace Fps.Runtime
                 go.transform.localScale = Vector3.one * (BodyRadius * 2f);
 
                 var collider = go.GetComponent<SphereCollider>();
-                collider.sharedMaterial = SharedMaterial();
+                collider.sharedMaterial = SharedPhysicsMaterial();
                 if (thrower != null)
                 {
                     foreach (var other in thrower.GetComponentsInChildren<Collider>())
@@ -203,7 +203,7 @@ namespace Fps.Runtime
             var result = new GrenadeExplosion(center, damaged, killed, structures);
             Debug.Log(FormatLog(result), this);
 
-            PlayEffects(center);
+            PlayExplosionEffects(center);
             try
             {
                 Exploded?.Invoke(this, result);
@@ -382,7 +382,11 @@ namespace Fps.Runtime
             return false;
         }
 
-        private static void PlayEffects(Vector3 center)
+        /// <summary>
+        /// center に <see cref="PresentationCatalog"/> の爆発のエフェクトと音を出す。Play 中でない・専用サーバー・カタログか素材が無いときは何もしない。
+        /// ネット対戦ではサーバーから爆発を受け取ったクライアント (<c>Fps.Net.NetCombatFeed</c>) も呼ぶ。
+        /// </summary>
+        public static void PlayExplosionEffects(Vector3 center)
         {
             // Edit Mode では時間差で消せず、専用サーバーには見る人がいない。
             if (!Application.isPlaying || NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
@@ -408,7 +412,8 @@ namespace Fps.Runtime
             }
         }
 
-        private static PhysicsMaterial SharedMaterial()
+        /// <summary>グレネードの球の跳ね方 (<see cref="Bounciness"/>)。ネット対戦のグレネード (<c>Fps.Net.NetGrenade</c>) も同じものを使う。</summary>
+        public static PhysicsMaterial SharedPhysicsMaterial()
         {
             if (_material == null)
             {

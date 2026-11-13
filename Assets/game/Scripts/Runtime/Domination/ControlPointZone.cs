@@ -11,6 +11,7 @@ namespace Fps.Runtime
     /// 範囲にいる生きた参加者は <see cref="DominationRunner"/> が毎フレーム <see cref="Scan"/> で調べ直す (このコンポーネントは自分では調べない。
     /// 誰が参加者かを知っているのは Runner なので)。試合中に拠点を動かすことは考えない。
     /// Play 中は足元に範囲を示す薄い円盤を作り、持ち主のチームの色 (<see cref="ShowOwner"/>) で塗る。Scene ビューには範囲を線で描く。
+    /// ハードポイントのように有効な拠点が 1 つだけのモードは、<see cref="SetHighlight"/> で有効な拠点の円盤を光らせ、他を暗くする。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ControlPointZone : MonoBehaviour
@@ -28,7 +29,15 @@ namespace Fps.Runtime
         public static readonly Color BravoColor = new Color(1f, 0.3f, 0.25f);
         public static readonly Color NeutralColor = new Color(0.85f, 0.85f, 0.85f);
 
+        /// <summary>光らせていない (<see cref="SetHighlight"/> に false を渡した) 拠点の円盤の明るさ。</summary>
+        public const float DimmedBrightness = 0.3f;
+
+        /// <summary>光らせた拠点の円盤の発光の強さ (チームの色に掛ける)。</summary>
+        public const float HighlightEmission = 1.5f;
+
         private const int GizmoSegments = 32;
+        private const string EmissionKeyword = "_EMISSION";
+        private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
         [SerializeField, Min(0), Tooltip("拠点の番号。シーンの拠点で 0 から抜けなく 1 つずつ振る。HUD とログでは 0 = A, 1 = B, ...")]
         private int _index;
@@ -46,6 +55,7 @@ namespace Fps.Runtime
         private Renderer _marker;
         private Material _markerMaterial;
         private Team? _owner;
+        private bool? _highlight;
 
         /// <summary>拠点の番号。0 以上。</summary>
         public int Index
@@ -108,6 +118,11 @@ namespace Fps.Runtime
         /// <summary><see cref="ShowOwner"/> で最後に渡された持ち主。中立なら null。</summary>
         public Team? Owner => _owner;
 
+        /// <summary>
+        /// <see cref="SetHighlight"/> で最後に渡された値。true は光らせている、false は暗くしている、null はどちらでもない (既定。拠点制圧の見た目)。
+        /// </summary>
+        public bool? Highlight => _highlight;
+
         /// <summary>Play 中に作った円盤。作っていなければ null。</summary>
         public Renderer Marker => _marker;
 
@@ -143,10 +158,28 @@ namespace Fps.Runtime
         public void ShowOwner(Team? owner)
         {
             _owner = owner;
-            if (_markerMaterial != null)
+            ApplyMarkerColor();
+        }
+
+        /// <summary>
+        /// 円盤を光らせる (true)、暗くする (false)、どちらでもない元の色に戻す (null)。円盤がまだ無くても覚えておき、作ったときに合わせる。
+        /// </summary>
+        public void SetHighlight(bool? highlighted)
+        {
+            _highlight = highlighted;
+            ApplyMarkerColor();
+        }
+
+        /// <summary>持ち主と光らせ方に応じた円盤の色。暗くするときは <see cref="DimmedBrightness"/> を掛ける (不透明度はそのまま)。</summary>
+        public static Color MarkerColorOf(Team? owner, bool? highlight)
+        {
+            var color = ColorOf(owner);
+            if (highlight == false)
             {
-                _markerMaterial.color = ColorOf(owner);
+                color = new Color(color.r * DimmedBrightness, color.g * DimmedBrightness, color.b * DimmedBrightness, color.a);
             }
+
+            return color;
         }
 
         /// <summary>持ち主のチームの色。中立なら <see cref="NeutralColor"/>。</summary>
@@ -222,7 +255,34 @@ namespace Fps.Runtime
             // 共有のマテリアルを塗り替えると他のプリミティブまで色が変わるので、この拠点用に複製する。
             _markerMaterial = new Material(_marker.sharedMaterial) { name = MarkerName };
             _marker.sharedMaterial = _markerMaterial;
-            _markerMaterial.color = ColorOf(_owner);
+            ApplyMarkerColor();
+        }
+
+        private void ApplyMarkerColor()
+        {
+            if (_markerMaterial == null)
+            {
+                return;
+            }
+
+            _markerMaterial.color = MarkerColorOf(_owner, _highlight);
+
+            // 発光を持たないシェーダーでは色だけ変える。
+            if (!_markerMaterial.HasProperty(EmissionColorId))
+            {
+                return;
+            }
+
+            if (_highlight == true)
+            {
+                _markerMaterial.EnableKeyword(EmissionKeyword);
+                _markerMaterial.SetColor(EmissionColorId, ColorOf(_owner) * HighlightEmission);
+            }
+            else
+            {
+                _markerMaterial.DisableKeyword(EmissionKeyword);
+                _markerMaterial.SetColor(EmissionColorId, Color.black);
+            }
         }
 
         private void OnDrawGizmos()

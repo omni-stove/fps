@@ -6,6 +6,8 @@ namespace Fps.Core.Tests
     public sealed class TutorialStepsTests
     {
         private const float _frame = 1f / 60f;
+        private static readonly string[] _letterKeys = { "W", "A", "S", "D" };
+        private static readonly string[] _wordKeys = { "Up", "Left", "Down", "Right" };
 
         private static TutorialObservation Frame(
             float moved = 0f,
@@ -261,8 +263,8 @@ namespace Fps.Core.Tests
         [Test]
         public void SingleLetterKeysAreJoinedAndLongerOnesAreSeparated()
         {
-            Assert.That(TutorialSteps.JoinDirectionalKeys(new[] { "W", "A", "S", "D" }), Is.EqualTo("WASD"));
-            Assert.That(TutorialSteps.JoinDirectionalKeys(new[] { "Up", "Left", "Down", "Right" }), Is.EqualTo("Up/Left/Down/Right"));
+            Assert.That(TutorialSteps.JoinDirectionalKeys(_letterKeys), Is.EqualTo("WASD"));
+            Assert.That(TutorialSteps.JoinDirectionalKeys(_wordKeys), Is.EqualTo("Up/Left/Down/Right"));
             Assert.That(TutorialSteps.JoinDirectionalKeys(new[] { "W", null, " ", "D" }), Is.EqualTo("WD"));
             Assert.That(TutorialSteps.JoinDirectionalKeys(Array.Empty<string>()), Is.Empty);
             Assert.Throws<ArgumentNullException>(() => TutorialSteps.JoinDirectionalKeys(null));

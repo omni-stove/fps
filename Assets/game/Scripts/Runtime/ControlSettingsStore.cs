@@ -6,7 +6,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// <see cref="ControlSettings"/> を <see cref="PlayerPrefs"/> の 1 つのキーに JSON の文字列 (<see cref="ControlSettings.ToJson"/>) で読み書きする。
-    /// 読めなかった所は初期値に戻し、理由を <c>[Input]</c> 付きの警告で出す。
+    /// 読めなかった所は初期値 (範囲の外の数値は範囲に収めた値) に戻し、理由を <c>[Input]</c> 付きの警告で出す。
+    /// 数値の設定を足す前の形式 (バージョン 1) も警告なしに読み、次に保存したときに今の形式で書き直す。
     /// </summary>
     public sealed class ControlSettingsStore
     {
@@ -48,7 +49,7 @@ namespace Fps.Runtime
             var settings = ControlSettings.FromJson(text, out var problems);
             foreach (var problem in problems)
             {
-                Debug.LogWarning($"[Input] control settings '{Key}': {problem}; using the default for it");
+                Debug.LogWarning($"[Input] control settings '{Key}': {problem}; using the default or the nearest valid value");
             }
 
             return settings;

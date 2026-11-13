@@ -22,6 +22,8 @@ namespace Fps.Editor
     /// 配置 (上から見て、プレイヤーは原点で +Z を向く):
     /// z = 8 に幅 18m (x = ±9) の壁があり、敵は壁の裏 (z = 14) を左右に巡回してから右手前 (14, 0, 2) へ出てくる。
     /// 右の列を手前へ下りて z ≒ 12 を過ぎたところでプレイヤーが視界 (20m) に入り、Chase → Attack になる。
+    /// 遮蔽点 (<see cref="CoverPoints"/>) は、壁の左右の端の裏 (高い壁: 端の外へ出て覗く) と、右手前の低い壁 (x = 10, z = 0.5〜3.5) の両側
+    /// (低い壁: しゃがんで隠れ、立って覗く) にある。撃たれた敵はプレイヤーの方向を遮る近い点へ移り、回り込まれると別の点へ移る。
     /// </remarks>
     public static class EnemyTestSceneBuilder
     {
@@ -49,6 +51,30 @@ namespace Fps.Editor
         public static readonly Vector3 WallCenter = new Vector3(0f, 1.5f, 8f);
 
         public static readonly Vector3 WallSize = new Vector3(18f, 3f, 0.5f);
+
+        public const string LowCoverName = "LowCover";
+
+        /// <summary>
+        /// 右手前の低い壁。上端 (1.05m) は <see cref="Fps.Core.CoverProbe.LowWallHeight"/> 未満で、しゃがんだ敵 (<see cref="EnemyAgent.DefaultCrouchHeight"/>) が隠れる。
+        /// プレイヤーの目 (1.6m) から巡回路の最後の地点は、この壁の上を越えて見える。
+        /// </summary>
+        public static readonly Vector3 LowCoverCenter = new Vector3(10f, 0.525f, 2f);
+
+        public static readonly Vector3 LowCoverSize = new Vector3(0.5f, 1.05f, 3f);
+
+        public const string CoverPointsObjectName = "CoverPoints";
+
+        /// <summary>
+        /// 遮蔽点。壁の端の裏 2 つ (高い壁) と、低い壁の両側 2 つ。
+        /// 壁の端の点で覗く位置 (x = ±10.8) は、原点のプレイヤーとの間を壁の厚みの角まで含めて遮られない所。
+        /// </summary>
+        public static readonly IReadOnlyList<CoverPointPlacement> CoverPoints = new[]
+        {
+            CoverPointPlacement.High("Cover-WallEast", new Vector3(8.3f, 0f, 8.95f), Vector3.back, new Vector3(2.5f, 0f, 0f)),
+            CoverPointPlacement.High("Cover-WallWest", new Vector3(-8.3f, 0f, 8.95f), Vector3.back, new Vector3(-2.5f, 0f, 0f)),
+            CoverPointPlacement.Low("Cover-LowEast", new Vector3(10.95f, 0f, 2f), Vector3.left),
+            CoverPointPlacement.Low("Cover-LowWest", new Vector3(9.05f, 0f, 2f), Vector3.right),
+        };
 
         /// <summary>巡回地点 (足元)。最初の地点に敵を置く。</summary>
         public static readonly Vector3[] PatrolRoute =
@@ -102,6 +128,9 @@ namespace Fps.Editor
             var surface = CreateLevel(scene);
             BakeNavMesh(surface, navMeshDataPath);
             SceneBuildHelpers.RequireOnNavMesh(PatrolRoute, NavMeshCheckRadius, "patrol point");
+            var coverStands = SceneBuildHelpers.CoverStandPoints(CoverPoints);
+            SceneBuildHelpers.RequireOnNavMesh(coverStands, NavMeshCheckRadius, "cover point");
+            SceneBuildHelpers.RequireReachable(PatrolRoute[0], coverStands, NavMeshCheckRadius, "cover point");
             CreateActors(scene, playerWeapons, catalog);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -116,7 +145,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 床 (NavMeshSurface 付き) と壁を空のシーンに置き、床の NavMeshSurface を返す。焼くのは <see cref="BakeNavMesh"/>。
+        /// 床 (NavMeshSurface 付き) と壁・低い壁を空のシーンに置き、床の NavMeshSurface を返す。焼くのは <see cref="BakeNavMesh"/>。
         /// </summary>
         public static NavMeshSurface CreateLevel(Scene scene)
         {
@@ -125,6 +154,7 @@ namespace Fps.Editor
             var floor = SceneBuildHelpers.CreateStaticPlane(scene, null, FloorName, Vector3.zero, FloorScale);
             var surface = SceneBuildHelpers.AddNavMeshSurface(floor, CollectObjects.All);
             SceneBuildHelpers.CreateStaticBox(scene, null, WallName, WallCenter, WallSize);
+            SceneBuildHelpers.CreateStaticBox(scene, null, LowCoverName, LowCoverCenter, LowCoverSize);
 
             EditorSceneManager.MarkSceneDirty(scene);
             return surface;
@@ -146,7 +176,8 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// GameBootstrap (床は作らない) と敵 1 体を置く。敵は巡回路の最初の地点に立たせる。参照はすべてここで設定する。
+        /// GameBootstrap (床は作らない)、遮蔽点 (<see cref="CoverPoints"/>、<see cref="CoverPointsObjectName"/> の
+        /// <see cref="CoverPointRegistry"/> の下) と敵 1 体を置く。敵は巡回路の最初の地点に立たせ、遮蔽点の registry を渡す。参照はすべてここで設定する。
         /// プレイヤーは playerWeapons (通常は <see cref="WeaponAssetBuilder.LoadPlayerLoadout"/> の rifle, handgun) を持ち、敵は enemyWeapons から
         /// <see cref="EnemyWeaponId"/> で引いた武器で撃つ。Id が enemyWeapons に無ければ何も置かずに
         /// <see cref="KeyNotFoundException"/> を投げる。
@@ -179,6 +210,7 @@ namespace Fps.Editor
                 PatrolRoute,
                 new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth),
                 enemyWeapon);
+            enemy.CoverRegistry = SceneBuildHelpers.CreateCoverPoints(scene, null, CoverPointsObjectName, CoverPoints);
             EditorSceneManager.MarkSceneDirty(scene);
             return enemy;
         }

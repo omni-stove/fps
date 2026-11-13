@@ -109,6 +109,78 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void SavesTheValuesAndLoadsThemBackAfterARestart()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.MouseSensitivity, 175)
+                .With(ControlValue.GamepadSensitivity, 60)
+                .With(ControlValue.AdsSensitivity, 80)
+                .With(ControlValue.FieldOfView, 72)
+                .With(ControlValue.MasterVolume, 30)
+                .With(ControlValue.EffectsVolume, 0)
+                .With(InputDeviceKind.Gamepad, HoldAction.Crouch, HoldMode.Hold);
+
+            _store.Save(settings);
+
+            // 起動し直したときと同じく、新しいストアで読む。
+            var loaded = new ControlSettingsStore(_store.Key).Load();
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":2"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ReadsVersionOneDataSilentlyWithDefaultValues()
+        {
+            // 数値の設定を足す前のゲームが書いた形式。
+            PlayerPrefs.SetString(
+                _store.Key,
+                "{\"version\":1,\"keyboardMouse\":{\"sprint\":\"toggle\",\"crouch\":\"hold\",\"aim\":\"toggle\"}," +
+                "\"gamepad\":{\"sprint\":\"hold\",\"crouch\":\"toggle\",\"aim\":\"hold\"}}");
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.Get(InputDeviceKind.KeyboardMouse, HoldAction.Sprint), Is.EqualTo(HoldMode.Toggle));
+            Assert.That(loaded.Get(InputDeviceKind.KeyboardMouse, HoldAction.Aim), Is.EqualTo(HoldMode.Toggle));
+            Assert.That(loaded.Get(InputDeviceKind.Gamepad, HoldAction.Sprint), Is.EqualTo(HoldMode.Hold));
+            foreach (var value in ControlSettings.Values)
+            {
+                Assert.That(loaded.Get(value), Is.EqualTo(ControlSettings.RangeOf(value).Default), value.ToString());
+            }
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void VersionOneDataIsRewrittenInTheCurrentFormatOnSave()
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                "{\"version\":1,\"keyboardMouse\":{\"sprint\":\"toggle\",\"crouch\":\"hold\",\"aim\":\"hold\"}," +
+                "\"gamepad\":{\"sprint\":\"toggle\",\"crouch\":\"toggle\",\"aim\":\"hold\"}}");
+            var loaded = _store.Load();
+
+            _store.Save(loaded.With(ControlValue.FieldOfView, 80));
+
+            var reloaded = _store.Load();
+            Assert.That(reloaded.Get(ControlValue.FieldOfView), Is.EqualTo(80));
+            Assert.That(reloaded.Get(InputDeviceKind.KeyboardMouse, HoldAction.Sprint), Is.EqualTo(HoldMode.Toggle), "the old mode survives");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ValueOutsideTheRangeIsClampedWithAWarning()
+        {
+            PlayerPrefs.SetString(_store.Key, ControlSettings.Default.ToJson().Replace("\"fieldOfView\":60", "\"fieldOfView\":150"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*fieldOfView"));
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.Get(ControlValue.FieldOfView), Is.EqualTo(ControlSettings.RangeOf(ControlValue.FieldOfView).Max));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
         public void RejectsInvalidArguments()
         {
             Assert.Throws<ArgumentNullException>(() => new ControlSettingsStore(null));

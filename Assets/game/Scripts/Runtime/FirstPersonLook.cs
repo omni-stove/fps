@@ -7,12 +7,13 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 視点操作 (一人称・三人称共通)。Look 入力で本体 (この GameObject) を yaw、子の pitch の軸を pitch (±85°) で回す。
-    /// 有効な間はカーソルをロックする。参照はコードで解決するので Inspector の配線は要らない:
+    /// 有効な間はカーソルをロックする (<see cref="PauseMenu"/> が開いている間を除く)。参照はコードで解決するので Inspector の配線は要らない:
     /// pitch の軸は、本体に <see cref="ViewRig"/> があればその目 (カメラの親)、無ければ子階層の <see cref="Camera"/>。
     /// 入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の <see cref="LookActionPath"/>。
     /// 三人称でもカメラは目の子なので、目を回せば肩越しのカメラも一緒に回る。
     /// <see cref="Recoil"/> があれば、その反動のずれを pitch の軸にだけ足す (本体の yaw と <see cref="Yaw"/> / <see cref="Pitch"/> は変えない)。
     /// 解決できなければエラーを出して自分を無効にする。
+    /// 感度には操作設定 (<see cref="ControlSettings"/>) のマウス・ゲームパッドごとの倍率を掛け、設定画面で変えるとその場で効く。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class FirstPersonLook : MonoBehaviour
@@ -37,6 +38,8 @@ namespace Fps.Runtime
         private InputAction _lookAction;
         private bool _enabledLookAction;
         private float _sensitivityMultiplier = 1f;
+        private ControlSettings _controlSettings = ControlSettings.Default;
+        private bool _listeningToSettings;
         private float _recoilPitchUp;
         private float _recoilYaw;
         private float _appliedRecoilPitchUp;
@@ -94,11 +97,27 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>今効いているマウスの感度 (<see cref="MouseSensitivity"/> × <see cref="SensitivityMultiplier"/>)。</summary>
-        public float EffectiveMouseSensitivity => _mouseSensitivity * _sensitivityMultiplier;
+        /// <summary>
+        /// 感度の倍率 (<see cref="ControlSettings.LookSensitivity"/>) を決める操作設定。Awake で <see cref="AppliedControlSettings.Current"/> を読み、
+        /// 設定画面で変わるたびに入れ直す (Edit Mode では Awake が走らないので初期値)。変えると次のフレームから使う。
+        /// </summary>
+        public ControlSettings ControlSettings
+        {
+            get => _controlSettings;
+            set => _controlSettings = value ?? throw new ArgumentNullException(nameof(value));
+        }
 
-        /// <summary>今効いているスティックの感度 (<see cref="StickSensitivity"/> × <see cref="SensitivityMultiplier"/>)。</summary>
-        public float EffectiveStickSensitivity => _stickSensitivity * _sensitivityMultiplier;
+        /// <summary>
+        /// 今効いているマウスの感度 (<see cref="MouseSensitivity"/> × 設定のマウス感度 × <see cref="SensitivityMultiplier"/>)。
+        /// </summary>
+        public float EffectiveMouseSensitivity =>
+            _mouseSensitivity * _controlSettings.LookSensitivity(InputDeviceKind.KeyboardMouse) * _sensitivityMultiplier;
+
+        /// <summary>
+        /// 今効いているスティックの感度 (<see cref="StickSensitivity"/> × 設定のゲームパッド感度 × <see cref="SensitivityMultiplier"/>)。
+        /// </summary>
+        public float EffectiveStickSensitivity =>
+            _stickSensitivity * _controlSettings.LookSensitivity(InputDeviceKind.Gamepad) * _sensitivityMultiplier;
 
         /// <summary>
         /// Look 入力を読まずに向きを止めるか。既定は false。デスカムの間のように、すぐ戻す一時停止に使う。
@@ -116,10 +135,27 @@ namespace Fps.Runtime
                 return;
             }
 
+            _controlSettings = AppliedControlSettings.Current;
+            AppliedControlSettings.Changed += HandleSettingsChanged;
+            _listeningToSettings = true;
             if (!IsInitialized && !TryInitializeFromHierarchy())
             {
                 enabled = false;
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (_listeningToSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _listeningToSettings = false;
+            }
+        }
+
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            _controlSettings = settings;
         }
 
         private void OnEnable()
@@ -140,7 +176,11 @@ namespace Fps.Runtime
                 _enabledLookAction = true;
             }
 
-            LockCursor(true);
+            // ポーズ中に出現し直したプレイヤーが、メニューを操作しているカーソルを奪わないようにする。閉じたときに PauseMenu がロックする。
+            if (!PauseMenu.IsAnyOpen)
+            {
+                LockCursor(true);
+            }
         }
 
         private void OnDisable()
@@ -157,10 +197,29 @@ namespace Fps.Runtime
         private void OnApplicationFocus(bool hasFocus)
         {
             // フォーカスを失うと OS がロックを外すので、戻ったときにかけ直す。
-            if (hasFocus && isActiveAndEnabled)
+            if (hasFocus && isActiveAndEnabled && !PauseMenu.IsAnyOpen)
             {
                 LockCursor(true);
             }
+        }
+
+        /// <summary>
+        /// 有効で初期化済みの視点操作がシーンにあればカーソルをロックして隠し、無ければ外して出す。
+        /// <see cref="PauseMenu"/> を閉じたときに呼ぶ (開いている間に視点操作が有効・無効になっていることがあるため、開く前の状態には戻さない)。
+        /// </summary>
+        public static void RefreshCursorLock()
+        {
+            var anyActive = false;
+            foreach (var look in FindObjectsByType<FirstPersonLook>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (look.isActiveAndEnabled && look.IsInitialized)
+                {
+                    anyActive = true;
+                    break;
+                }
+            }
+
+            LockCursor(anyActive);
         }
 
         private void Update()

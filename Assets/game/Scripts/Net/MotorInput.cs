@@ -25,12 +25,26 @@ namespace Fps.Net
         /// </summary>
         public bool Downed { get; }
 
+        /// <summary>
+        /// この tick に Cover が押されたか (カバーに入る・出る)。ルールの <see cref="Fps.Core.ActionRules.Cover"/> が Off なら、
+        /// オーナーは送らず、サーバーは受け取っても false にする。
+        /// </summary>
+        public bool Cover { get; }
+
+        /// <summary>覗き込んでいるか。カバー中ならこれで覗く (<see cref="Fps.Core.CoverState.Step"/> の aimHeld)。</summary>
+        public bool Aim { get; }
+
         public MotorInput(Vector2 move, float yaw, bool sprint, bool jump, bool crouch)
             : this(move, yaw, sprint, jump, crouch, false)
         {
         }
 
         public MotorInput(Vector2 move, float yaw, bool sprint, bool jump, bool crouch, bool downed)
+            : this(move, yaw, sprint, jump, crouch, downed, false, false)
+        {
+        }
+
+        public MotorInput(Vector2 move, float yaw, bool sprint, bool jump, bool crouch, bool downed, bool cover, bool aim)
         {
             Move = Vector2.ClampMagnitude(move, 1f);
             Yaw = yaw;
@@ -38,15 +52,23 @@ namespace Fps.Net
             Jump = jump;
             Crouch = crouch;
             Downed = downed;
+            Cover = cover;
+            Aim = aim;
         }
 
         /// <summary>
-        /// ダウン中に実際に使う入力。移動・ダッシュ・ジャンプを捨て、向きは残し、カプセルを低くするためしゃがませる
+        /// ダウン中に実際に使う入力。移動・ダッシュ・ジャンプ・カバー・覗き込みを捨て、向きは残し、カプセルを低くするためしゃがませる
         /// (当たり判定と目の高さが寝かせた見た目に近くなる)。<see cref="Downed"/> でなければそのまま返す。
         /// </summary>
         public MotorInput Restrained()
         {
-            return Downed ? new MotorInput(Vector2.zero, Yaw, false, false, true, true) : this;
+            return Downed ? new MotorInput(Vector2.zero, Yaw, false, false, true, true, false, false) : this;
+        }
+
+        /// <summary>Cover の押下だけを捨てた入力。カバーがルールで Off のときにサーバーが使う。</summary>
+        public MotorInput WithoutCover()
+        {
+            return Cover ? new MotorInput(Move, Yaw, Sprint, Jump, Crouch, Downed, false, Aim) : this;
         }
 
         /// <summary>移動入力と向きがすべて有限値か。ネットワークから受け取った値の検査に使う。</summary>

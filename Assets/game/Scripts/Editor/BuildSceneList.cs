@@ -27,6 +27,9 @@ namespace Fps.Editor
         public const string DestructionTestScene = "Assets/game/Scenes/DestructionTest.unity";
         public const string CampaignScene = "Assets/game/Scenes/Campaign01.unity";
 
+        /// <summary>キャンペーンの 2 本目のミッション。ミッションの一覧 (MissionCatalog) から読む。</summary>
+        public const string Campaign02Scene = "Assets/game/Scenes/Campaign02.unity";
+
         /// <summary>TPS のアクションを試す射撃場。ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/>。</summary>
         public const string TpsRangeScene = "Assets/game/Scenes/TpsRange.unity";
 
@@ -48,6 +51,7 @@ namespace Fps.Editor
             MissionTestScene,
             DestructionTestScene,
             CampaignScene,
+            Campaign02Scene,
             TpsRangeScene,
             DominationScene,
             NetTestScene,

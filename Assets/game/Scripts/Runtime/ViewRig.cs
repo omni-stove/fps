@@ -19,6 +19,7 @@ namespace Fps.Runtime
     /// 三人称では、この端末のプレイヤーの視点 (<see cref="IsLocalView"/>) の間だけ <see cref="SwapShoulderActionPath"/> を読み、
     /// 押すたびにカメラを反対の肩へ <see cref="ShoulderBlend.DefaultSeconds"/> 秒で移す。カメラだけの話なので同期はしない。
     /// 参照はコードで解決するので Inspector の配線は要らない: カメラは子階層の <see cref="Camera"/>、目はその親、入力はプロジェクト全体のアクション。
+    /// カメラの視野角は操作設定 (<see cref="ControlSettings.FieldOfView"/>) にし、設定画面で変えるとその場で直す (<see cref="ApplyControlSettings"/>)。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ViewRig : MonoBehaviour
@@ -67,6 +68,7 @@ namespace Fps.Runtime
         private bool _enabledSwapShoulderAction;
         private bool _isLocalView;
         private bool _isLive;
+        private bool _listeningToSettings;
 
         /// <summary>
         /// 一人称か三人称か。変えるとカメラの位置と体の描き方をすぐ直す (有効な間だけ。無効なら次に有効になったとき)。
@@ -154,7 +156,47 @@ namespace Fps.Runtime
             if (!IsInitialized && !TryInitializeFromHierarchy())
             {
                 enabled = false;
+                return;
             }
+
+            AppliedControlSettings.Changed += ApplyControlSettings;
+            _listeningToSettings = true;
+            ApplyControlSettings(AppliedControlSettings.Current);
+        }
+
+        private void OnDestroy()
+        {
+            if (_listeningToSettings)
+            {
+                AppliedControlSettings.Changed -= ApplyControlSettings;
+                _listeningToSettings = false;
+            }
+        }
+
+        /// <summary>
+        /// カメラの視野角を操作設定の <see cref="ControlSettings.FieldOfView"/> にする。Awake と、設定画面で変わったときに呼ばれる。
+        /// 同じ本体に初期化済みの <see cref="AimDownSights"/> があれば、視野角はそちらが腰だめと覗き込みの間で毎フレーム書くので触らない
+        /// (AimDownSights が同じ設定を自分で受け取る)。未初期化なら何もしない。
+        /// </summary>
+        public void ApplyControlSettings(ControlSettings settings)
+        {
+            if (settings == null)
+            {
+                throw new ArgumentNullException(nameof(settings));
+            }
+
+            if (!IsInitialized)
+            {
+                return;
+            }
+
+            var ads = GetComponent<AimDownSights>();
+            if (ads != null && ads.IsInitialized)
+            {
+                return;
+            }
+
+            _camera.fieldOfView = settings.FieldOfView;
         }
 
         private void OnEnable()

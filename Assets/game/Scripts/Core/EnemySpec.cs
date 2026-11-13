@@ -108,7 +108,7 @@ namespace Fps.Core
             CoverHealthFraction = coverHealthFraction;
         }
 
-        /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread"/>) が受け付ける範囲に合わせる。</summary>
+        /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread(System.Numerics.Vector3, float, System.Random)"/>) が受け付ける範囲に合わせる。</summary>
         public const float MaxSpreadDegrees = BlindFireShot.MaxSpreadDegrees;
 
         /// <summary>

@@ -34,12 +34,20 @@ namespace Fps.Tests.EditMode
             Assert.That(SmokeSuite.Runs.Select(run => run.LogTag), Is.Unique);
         }
 
+        // スイートに入れず、それぞれの -executeMethod で単独に走らせる SmokeRun。
+        private static readonly string[] _standaloneSmokeRuns =
+        {
+            nameof(TpsActionSmokeRun),
+            nameof(TpsRangeSmokeRun),
+        };
+
         [Test]
         public void EveryEditorSmokeRunClassIsInTheSuite()
         {
             var smokeRuns = typeof(SmokeSuite).Assembly.GetTypes()
                 .Where(type => type.Namespace == typeof(SmokeSuite).Namespace && type.Name.EndsWith("SmokeRun", StringComparison.Ordinal))
-                .Select(type => type.Name);
+                .Select(type => type.Name)
+                .Except(_standaloneSmokeRuns);
 
             Assert.That(SmokeSuite.Runs.Select(run => run.Name), Is.EquivalentTo(smokeRuns));
         }

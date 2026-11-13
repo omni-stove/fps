@@ -9,7 +9,7 @@ namespace Fps.Core
     /// </summary>
     public sealed class PickupCollector
     {
-        private static readonly PickupWeaponState[] NoWeapons = Array.Empty<PickupWeaponState>();
+        private static readonly PickupWeaponState[] _noWeapons =Array.Empty<PickupWeaponState>();
 
         private PickupCollector(
             Side? side,
@@ -84,7 +84,7 @@ namespace Fps.Core
                 throw new ArgumentException("currentWeaponId '" + current + "' is not one of weapons", nameof(currentWeaponId));
             }
 
-            return new PickupCollector(Side, Health, MaxHealth, Armor, MaxArmor, copy.Count > 0 ? copy.AsReadOnly() : (IReadOnlyList<PickupWeaponState>)NoWeapons, current);
+            return new PickupCollector(Side, Health, MaxHealth, Armor, MaxArmor, copy.Count > 0 ? copy.AsReadOnly() : (IReadOnlyList<PickupWeaponState>)_noWeapons, current);
         }
 
         /// <summary>防具を持てる人にする。</summary>

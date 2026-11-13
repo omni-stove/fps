@@ -8,7 +8,7 @@ namespace Fps.Core
     public readonly struct PickupEligibility : IEquatable<PickupEligibility>
     {
         /// <summary>誰でも拾える。</summary>
-        public static readonly PickupEligibility Anyone = default;
+        public static readonly PickupEligibility Anyone = new PickupEligibility(PickupSideRule.Anyone, default(Side));
 
         private PickupEligibility(PickupSideRule rule, Side side)
         {

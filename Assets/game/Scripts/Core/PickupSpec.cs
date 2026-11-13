@@ -48,6 +48,7 @@ namespace Fps.Core
         /// <summary>武器。持っていなければ持ち武器に加え、持っていればその武器の予備弾を ammoIfOwned 足す。</summary>
         /// <param name="weaponId">渡す武器の Id。空でないこと。</param>
         /// <param name="ammoIfOwned">既に持っていたときに足す予備弾。0 以上。</param>
+        /// <param name="eligibility">拾える陣営の条件。</param>
         public static PickupSpec Weapon(string weaponId, int ammoIfOwned, PickupEligibility eligibility = default)
         {
             if (string.IsNullOrEmpty(weaponId))
@@ -66,6 +67,7 @@ namespace Fps.Core
         /// <summary>予備弾を amount 足す。</summary>
         /// <param name="amount">足す数。1 以上。</param>
         /// <param name="weaponId">弾を足す武器の Id。null か空なら今持っている武器 (満タンなら他の持ち武器)。</param>
+        /// <param name="eligibility">拾える陣営の条件。</param>
         public static PickupSpec ReserveAmmo(int amount, string weaponId = null, PickupEligibility eligibility = default)
         {
             return new PickupSpec(
@@ -79,6 +81,7 @@ namespace Fps.Core
 
         /// <summary>体力を amount 回復する。</summary>
         /// <param name="amount">回復量。1 以上。</param>
+        /// <param name="eligibility">拾える陣営の条件。</param>
         public static PickupSpec Health(int amount, PickupEligibility eligibility = default)
         {
             return new PickupSpec(PickupKind.Health, RequirePositive(amount, nameof(amount)), null, NoOwner, null, eligibility);
@@ -86,6 +89,7 @@ namespace Fps.Core
 
         /// <summary>防具を amount 足す。</summary>
         /// <param name="amount">足す量。1 以上。</param>
+        /// <param name="eligibility">拾える陣営の条件。</param>
         public static PickupSpec Armor(int amount, PickupEligibility eligibility = default)
         {
             return new PickupSpec(PickupKind.Armor, RequirePositive(amount, nameof(amount)), null, NoOwner, null, eligibility);
@@ -94,6 +98,7 @@ namespace Fps.Core
         /// <summary>倒れた人のタグ。</summary>
         /// <param name="ownerId">持ち主のモードでの ID。0 以上か <see cref="NoOwner"/>。</param>
         /// <param name="ownerSide">持ち主の陣営。分からなければ null。</param>
+        /// <param name="eligibility">拾える陣営の条件。</param>
         public static PickupSpec Tag(int ownerId, Side? ownerSide, PickupEligibility eligibility = default)
         {
             if (ownerId < NoOwner)

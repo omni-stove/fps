@@ -34,6 +34,7 @@ namespace Fps.Tests.EditMode
         private InputAction _crouch;
         private InputAction _jump;
         private MotorSpec _spec;
+        private GameObject _floor;
 
         [SetUp]
         public void SetUp()
@@ -60,6 +61,10 @@ namespace Fps.Tests.EditMode
             _crouch.Dispose();
             _jump.Dispose();
             Object.DestroyImmediate(_body);
+            if (_floor != null)
+            {
+                Object.DestroyImmediate(_floor);
+            }
         }
 
         [Test]
@@ -698,6 +703,178 @@ namespace Fps.Tests.EditMode
             Physics.SyncTransforms();
             TickCrouch(true, false, false, false, InputDeviceKind.KeyboardMouse);
             Assert.That(_player.IsCrouched, Is.False, "holding Crouch through a release does not crouch again");
+        }
+
+        [Test]
+        public void DodgeIsOffByDefaultAndDoesNothing()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+
+            Assert.That(_player.DodgeRule, Is.EqualTo(Dodge.Off));
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.False);
+            Assert.That(_player.IsDodging, Is.False);
+        }
+
+        [Test]
+        public void DodgeRollsTheSpecDistanceTowardsTheInput()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            var start = _body.transform.position;
+            Vector3? startedTowards = null;
+            var ended = 0;
+            _player.DodgeStarted += direction => startedTowards = direction;
+            _player.DodgeEnded += () => ended++;
+
+            LogAssert.Expect(LogType.Log, "[Player] dodging=true");
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.True);
+            Assert.That(_player.IsDodging, Is.True);
+            Assert.That(startedTowards, Is.Not.Null);
+            Assert.That(startedTowards.Value.x, Is.EqualTo(1f).Within(_tolerance));
+
+            LogAssert.Expect(LogType.Log, "[Player] dodging=false");
+            TickUntilDodgeEnds();
+
+            var moved = _body.transform.position - start;
+            Assert.That(moved.x, Is.EqualTo(MotorSpec.DefaultDodgeDistance).Within(0.01f));
+            Assert.That(moved.z, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(ended, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DodgeWithoutInputRollsBackwards()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            var start = _body.transform.position;
+
+            Assert.That(_player.TryStartDodge(Vector2.zero), Is.True);
+            TickUntilDodgeEnds();
+
+            var moved = _body.transform.position - start;
+            Assert.That(moved.z, Is.EqualTo(-MotorSpec.DefaultDodgeDistance).Within(0.01f));
+            Assert.That(moved.x, Is.EqualTo(0f).Within(0.01f));
+        }
+
+        [Test]
+        public void DodgeNeedsGround()
+        {
+            InitializeWithLook();
+            _player.DodgeRule = Dodge.On;
+
+            Assert.That(_player.IsGrounded, Is.False);
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.False);
+        }
+
+        [Test]
+        public void DodgeIsNotRestartedUntilTheCooldownPasses()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.True);
+            Assert.That(_player.TryStartDodge(new Vector2(-1f, 0f)), Is.False, "not while rolling");
+            TickUntilDodgeEnds();
+            Assert.That(_player.TryStartDodge(new Vector2(-1f, 0f)), Is.False, "not right after the roll");
+
+            for (var i = 0; i < 26; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, 0.02f);
+            }
+
+            Assert.That(_player.TryStartDodge(new Vector2(-1f, 0f)), Is.True, "after the cooldown");
+        }
+
+        [Test]
+        public void DodgeIsNotStartedWhileBlocked()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            var blocked = true;
+            _player.DodgeBlocker = () => blocked;
+
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.False);
+
+            blocked = false;
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.True);
+        }
+
+        [Test]
+        public void DodgeReleasesCrouchAndSprintAndKeepsThemOffWhileRolling()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            // 0 秒の Tick では動かず接地が外れるので、時間を進めて床に押し付けたまましゃがむ。
+            var crouch = _player.UpdateCrouch(true, true, false, false, InputDeviceKind.KeyboardMouse);
+            _player.Tick(Vector2.zero, false, crouch, false, 0.02f);
+            _player.UpdateSprint(new Vector2(0f, 1f), true, true, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.IsCrouched, Is.True);
+            Assert.That(_player.IsSprinting, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Player] crouch=off mode=hold reason=dodge");
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.True);
+            Assert.That(_player.IsCrouchActive, Is.False);
+            Assert.That(_player.IsSprinting, Is.False);
+
+            // しゃがみとジャンプを押し続けても、転がっている間は立ったまま跳ばない。
+            Physics.SyncTransforms();
+            _player.Tick(Vector2.zero, true, true, true, 0.02f);
+
+            Assert.That(_player.IsCrouched, Is.False);
+            Assert.That(_player.Motor.Velocity.Y, Is.LessThanOrEqualTo(0f));
+        }
+
+        [Test]
+        public void TurningDodgeOffStopsTheRoll()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            _player.TryStartDodge(new Vector2(1f, 0f));
+
+            LogAssert.Expect(LogType.Log, "[Player] dodging=false");
+            _player.DodgeRule = Dodge.Off;
+
+            Assert.That(_player.IsDodging, Is.False);
+        }
+
+        [Test]
+        public void DodgingLogHasTagAndLowercaseValue()
+        {
+            Assert.That(PlayerController.FormatDodgingLog(true), Is.EqualTo("[Player] dodging=true"));
+            Assert.That(PlayerController.FormatDodgingLog(false), Is.EqualTo("[Player] dodging=false"));
+        }
+
+        // 足元 (y = 0) の下に床を置き、接地するまで落とす。
+        private void LandOnFloor()
+        {
+            _floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _floor.transform.position = new Vector3(0f, -0.5f, 0f);
+            _floor.transform.localScale = new Vector3(40f, 1f, 40f);
+            Physics.SyncTransforms();
+
+            for (var i = 0; i < 10 && !_player.IsGrounded; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, 0.02f);
+            }
+
+            Assert.That(_player.IsGrounded, Is.True, "landed on the floor");
+        }
+
+        private void TickUntilDodgeEnds()
+        {
+            for (var i = 0; i < 100 && _player.IsDodging; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, 0.02f);
+            }
+
+            Assert.That(_player.IsDodging, Is.False, "the roll ends");
         }
 
         // UpdateCrouch で解釈した結果を Tick に渡す (Update と同じ流れ)。

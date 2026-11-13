@@ -161,6 +161,15 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlayerDodgeFollowsTheRulesAndBlocksTheWeapon()
+        {
+            Assert.That(_world.Mover.DodgeRule, Is.EqualTo(_world.Rules.Actions.Dodge));
+            Assert.That(_world.Mover.DodgeBlocker, Is.Not.Null, "cover blocks the dodge");
+            Assert.That(_world.Weapon.FireBlocker, Is.Not.Null);
+            Assert.That(_world.Weapon.IsFireBlocked, Is.False, "not dodging");
+        }
+
+        [Test]
         public void PlayerWeaponsUseTheWiredReserveRules()
         {
             Assert.That(_world.Weapon.Rules, Is.SameAs(_world.Rules));

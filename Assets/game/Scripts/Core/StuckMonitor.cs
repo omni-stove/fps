@@ -117,7 +117,8 @@ namespace Fps.Core
                 _goal = goal.Value;
                 _stuckGoalDistance = Vector3.Distance(position, goal.Value);
             }
-            else if (Vector3.Distance(position, goal.Value) <= _stuckGoalDistance - ProgressDistance)
+            else if (Vector3.Distance(position, goal.Value) <= _stuckGoalDistance - ProgressDistance
+                && MovedTowardGoal(position, goal.Value))
             {
                 var stalled = TotalStalledSeconds;
                 Reset();
@@ -149,6 +150,19 @@ namespace Fps.Core
             return !float.IsNaN(value.X) && !float.IsInfinity(value.X)
                 && !float.IsNaN(value.Y) && !float.IsInfinity(value.Y)
                 && !float.IsNaN(value.Z) && !float.IsInfinity(value.Z);
+        }
+
+        // 目的地までの距離だけだと、動かない敵へ目標のほうが近づいただけで立ち直ったことになってしまう。
+        private bool MovedTowardGoal(Vector3 position, Vector3 goal)
+        {
+            var toGoal = goal - _anchor;
+            var length = toGoal.Length();
+            if (!(length > 0f))
+            {
+                return false;
+            }
+
+            return Vector3.Dot(position - _anchor, toGoal / length) >= ProgressDistance;
         }
 
         private void Track(Vector3 position, Vector3 goal)

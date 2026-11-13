@@ -56,6 +56,17 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ActionValuesStartAtTheWeaponSpecDefaults()
+        {
+            var spec = NewDefinition("Default", _rifleId).ToSpec();
+
+            Assert.That(spec.BlindFireSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(spec.ActiveReloadWindowStart, Is.EqualTo(WeaponSpec.DefaultActiveReloadWindowStart));
+            Assert.That(spec.ActiveReloadWindowLength, Is.EqualTo(WeaponSpec.DefaultActiveReloadWindowLength));
+            Assert.That(spec.ActiveReloadFailSeconds, Is.EqualTo(WeaponSpec.DefaultActiveReloadFailSeconds));
+        }
+
+        [Test]
         public void ANewDefinitionHasNoIdUntilOneIsAssigned()
         {
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
@@ -113,6 +124,10 @@ namespace Fps.Tests.EditMode
             definition.FalloffMinMultiplier = 0.6f;
             definition.ExplosionRadius = 2.5f;
             definition.AdsFieldOfView = 55f;
+            definition.BlindFireSpreadDegrees = 12f;
+            definition.ActiveReloadWindowStart = 0.45f;
+            definition.ActiveReloadWindowLength = 0.2f;
+            definition.ActiveReloadFailSeconds = 0.4f;
 
             var spec = definition.ToSpec();
 
@@ -131,6 +146,10 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.Falloff.MinMultiplier, Is.EqualTo(0.6f));
             Assert.That(spec.ExplosionRadius, Is.EqualTo(2.5f));
             Assert.That(spec.AdsFieldOfView, Is.EqualTo(55f));
+            Assert.That(spec.BlindFireSpreadDegrees, Is.EqualTo(12f));
+            Assert.That(spec.ActiveReloadWindowStart, Is.EqualTo(0.45f));
+            Assert.That(spec.ActiveReloadWindowLength, Is.EqualTo(0.2f));
+            Assert.That(spec.ActiveReloadFailSeconds, Is.EqualTo(0.4f));
             Assert.That(definition.ToSpec(), Is.Not.SameAs(spec));
         }
 
@@ -170,6 +189,11 @@ namespace Fps.Tests.EditMode
         [TestCase("FalloffMinMultiplier", "")]
         [TestCase("ExplosionRadius", "")]
         [TestCase("AdsFieldOfView", "")]
+        [TestCase("BlindFireSpreadDegrees", "")]
+        [TestCase("ActiveReloadWindowStart", "")]
+        [TestCase("ActiveReloadWindowLength", "")]
+        [TestCase("ActiveReloadWindowEnd", "")]
+        [TestCase("ActiveReloadFailSeconds", "")]
         public void ToSpecRejectsInvalidValuesWithTheAssetName(string field, string id)
         {
             var definition = NewDefinition("BrokenWeapon");
@@ -216,6 +240,22 @@ namespace Fps.Tests.EditMode
                     break;
                 case "AdsFieldOfView":
                     definition.AdsFieldOfView = 180f;
+                    break;
+                case "BlindFireSpreadDegrees":
+                    definition.BlindFireSpreadDegrees = 91f;
+                    break;
+                case "ActiveReloadWindowStart":
+                    definition.ActiveReloadWindowStart = 1f;
+                    break;
+                case "ActiveReloadWindowLength":
+                    definition.ActiveReloadWindowLength = 0f;
+                    break;
+                case "ActiveReloadWindowEnd":
+                    definition.ActiveReloadWindowStart = 0.9f;
+                    definition.ActiveReloadWindowLength = 0.2f;
+                    break;
+                case "ActiveReloadFailSeconds":
+                    definition.ActiveReloadFailSeconds = -0.1f;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

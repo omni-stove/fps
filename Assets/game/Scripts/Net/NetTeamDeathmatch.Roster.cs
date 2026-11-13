@@ -1,14 +1,34 @@
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
 namespace Fps.Net
 {
     /// <summary>
-    /// <see cref="NetTeamDeathmatch"/> のうち、接続したプレイヤーを試合に加える (チームは Session が交互に決める)・抜けたプレイヤーを外す処理と、
+    /// <see cref="NetTeamDeathmatch"/> のうち、接続したプレイヤーを試合に加える・抜けたプレイヤーを外す処理と、
     /// 参加者と同期する一覧の引き方。
     /// </summary>
+    /// <remarks>
+    /// チームは Session が人数の少ないほう (同じなら点の低いほう) に決める。接続の承認データで届いた鍵 (<see cref="NetConnectionKeys"/>:
+    /// EOS では ProductUserId、UDP では起動時に作る端末の Id) を付けて加えるので、切断した人が
+    /// <see cref="ReconnectGraceSeconds"/> 秒のうちに同じ鍵でつなぎ直せば、同じチームで前のキル数・デス数のまま戻る。
+    /// 前の接続が切れたとサーバーが気づく前につなぎ直してきたときは、前のプレイヤーが抜けるまで加えずに待つ。
+    /// </remarks>
     public sealed partial class NetTeamDeathmatch
     {
+        // 同じ鍵の前の接続が抜けるのを待っているクライアント。待っている間に何度も警告を出さないため
+        private readonly HashSet<ulong> _waitingForKey = new HashSet<ulong>();
+
+        [SerializeField, Min(0f), Tooltip("切断した人のチーム・キル数・デス数を残す秒数。この間に同じ鍵でつなぎ直せば引き継ぐ。0 なら残さない")]
+        private float _reconnectGraceSeconds = TeamDeathmatchSession.DefaultReconnectGraceSeconds;
+
+        /// <summary>切断した人の成績を残す秒数。0 以上の有限値。試合の開始時 (Spawn 時) に読む。</summary>
+        public float ReconnectGraceSeconds
+        {
+            get => _reconnectGraceSeconds;
+            set => _reconnectGraceSeconds = value;
+        }
+
         /// <summary>プレイヤーの NetworkObject が消えるとき (切断を含む) にサーバーで呼ぶ。</summary>
         internal void ServerLeave(NetPlayer player)
         {
@@ -25,12 +45,13 @@ namespace Fps.Net
             _serverLoadout?.Remove(playerId);
             _lastKillers.Remove(playerId);
             ForgetDowned(playerId);
-            if (_session != null && _session.HasPlayer(playerId))
-            {
-                _session.Leave(playerId);
-            }
+            var held = _session != null && _session.HasPlayer(playerId) && _session.Leave(playerId);
 
             Debug.Log(MatchLog.Left(playerId));
+            if (held)
+            {
+                Debug.Log(MatchLog.Held(playerId, _session.ReconnectGraceSeconds));
+            }
 
             // 停止中は配る先がもう無いので、同期する一覧には触らない
             if (NetworkManager != null && NetworkManager.ShutdownInProgress)
@@ -50,6 +71,7 @@ namespace Fps.Net
         /// <summary>まだ試合に入っていない接続済みプレイヤーを、接続順に加える。</summary>
         private void JoinNewPlayers()
         {
+            NetConnectionKeys keys = null;
             var clients = NetworkManager.ConnectedClientsList;
             for (var i = 0; i < clients.Count; i++)
             {
@@ -97,13 +119,43 @@ namespace Fps.Net
                     continue;
                 }
 
+                // 承認を通さずに組んだ NetworkManager (テストなど) では鍵が無く、抜けても成績を残さない
+                if (keys == null)
+                {
+                    NetworkManager.TryGetComponent(out keys);
+                }
+
+                var key = keys != null && keys.TryGet(client.ClientId, out var found) ? found : null;
+                if (_session.IsKeyInUse(key))
+                {
+                    if (_waitingForKey.Add(client.ClientId))
+                    {
+                        Debug.LogWarning("[Match] client " + client.ClientId
+                            + " reconnected before its previous connection left; waiting for that player to leave");
+                    }
+
+                    continue;
+                }
+
+                _waitingForKey.Remove(client.ClientId);
                 player.ServerPlayerId = playerId;
                 _playerById[playerId] = player;
 
                 // 武器は Join の中の出現 (HandleSpawned) で持たせる
-                Debug.Log(MatchLog.Joined(playerId, _session.NextTeam));
-                _session.Join(playerId);
+                var held = _session.FindHeld(key);
+                Debug.Log(MatchLog.Joined(playerId, held.HasValue ? held.Value.Team : _session.NextTeam));
+                if (held.HasValue)
+                {
+                    Debug.Log(MatchLog.Rejoined(playerId, held.Value));
+                }
+
+                _session.Join(playerId, key);
             }
+        }
+
+        private void HandleHeldExpired(HeldPlayer held)
+        {
+            Debug.Log(MatchLog.HoldExpired(held.PlayerId));
         }
 
         private bool IsJoined(NetPlayer player)

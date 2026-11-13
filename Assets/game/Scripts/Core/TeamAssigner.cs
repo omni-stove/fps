@@ -1,22 +1,41 @@
+using System;
+
 namespace Fps.Core
 {
     /// <summary>
-    /// 参加した順にチームを交互に割り当てる。最初は Alpha、次は Bravo、その次は Alpha…と続く。
-    /// 抜けた人がいても順番は戻さない。
+    /// 新しく入る人のチームを、今いる人数と点数から決める。人数の少ないチームに入れ、同じなら点の低いチーム、
+    /// それも同じなら Alpha に入れる。誰も抜けなければ Alpha、Bravo、Alpha…と交互になる。
     /// </summary>
-    public sealed class TeamAssigner
+    public static class TeamAssigner
     {
-        private Team _next = Team.Alpha;
-
-        /// <summary>次に割り当てるチーム。<see cref="Assign"/> を呼ぶまで変わらない。</summary>
-        public Team Peek => _next;
-
-        /// <summary>次のチームを返し、順番を 1 つ進める。</summary>
-        public Team Assign()
+        /// <param name="alphaPlayers">Alpha に今いる人数。切断して戻るのを待っている人は数えない。</param>
+        /// <param name="bravoPlayers">Bravo に今いる人数。</param>
+        /// <param name="alphaScore">Alpha の点数。</param>
+        /// <param name="bravoScore">Bravo の点数。</param>
+        /// <returns>入れるチーム。</returns>
+        public static Team Choose(int alphaPlayers, int bravoPlayers, int alphaScore, int bravoScore)
         {
-            var team = _next;
-            _next = team == Team.Alpha ? Team.Bravo : Team.Alpha;
-            return team;
+            if (alphaPlayers < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(alphaPlayers), alphaPlayers, "player count must not be negative");
+            }
+
+            if (bravoPlayers < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bravoPlayers), bravoPlayers, "player count must not be negative");
+            }
+
+            if (alphaPlayers != bravoPlayers)
+            {
+                return alphaPlayers < bravoPlayers ? Team.Alpha : Team.Bravo;
+            }
+
+            if (alphaScore != bravoScore)
+            {
+                return alphaScore < bravoScore ? Team.Alpha : Team.Bravo;
+            }
+
+            return Team.Alpha;
         }
     }
 }

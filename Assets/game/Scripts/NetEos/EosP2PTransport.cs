@@ -394,8 +394,31 @@ namespace Fps.NetEos
                 return;
             }
 
+            UseUserIdAsRejoinKey(self);
+
             // 自分から受け入れると、相手に接続要求が届く
             AcceptConnection(_serverUserId);
+        }
+
+        /// <summary>
+        /// 接続の承認データを自分の ProductUserId にする。サーバーはこれで、切断して戻ってきた人を見分ける (NetConnectionKeys)。
+        /// Netcode は transport がつながった後に承認データを読んで送るので、つなぐ前に差し替えれば間に合う。
+        /// </summary>
+        private void UseUserIdAsRejoinKey(string userId)
+        {
+            var manager = GetComponent<NetworkManager>();
+            if (manager == null || manager.NetworkConfig == null)
+            {
+                return;
+            }
+
+            if (!RejoinKey.IsValid(userId))
+            {
+                Debug.LogWarning("[Net] EOS product user id " + userId + " cannot be used as a rejoin key; keeping the device id");
+                return;
+            }
+
+            manager.NetworkConfig.ConnectionData = RejoinKey.Encode(userId);
         }
 
         private bool Subscribe()

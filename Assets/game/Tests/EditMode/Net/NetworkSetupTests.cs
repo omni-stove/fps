@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Fps.Core;
 using NUnit.Framework;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Fps.Net.Tests
 {
@@ -65,7 +67,7 @@ namespace Fps.Net.Tests
             Assert.That(transport, Is.Not.Null);
             Assert.That(manager.NetworkConfig.NetworkTransport, Is.SameAs(transport));
             Assert.That(manager.NetworkConfig.PlayerPrefab, Is.SameAs(prefab));
-            Assert.That(manager.NetworkConfig.ConnectionApproval, Is.False);
+            Assert.That(manager.NetworkConfig.ConnectionApproval, Is.True);
             Assert.That(manager.NetworkConfig.EnableSceneManagement, Is.False);
             Assert.That(manager.IsListening, Is.False);
         }
@@ -239,6 +241,56 @@ namespace Fps.Net.Tests
             Assert.That(manager.NetworkConfig.NetworkTransport, Is.SameAs(transport));
             Assert.That(transport.ConnectionData.Address, Is.EqualTo(NetLaunchOptions.DefaultAddress));
             Assert.That(transport.ConnectionData.Port, Is.EqualTo(NetLaunchOptions.DefaultPort));
+        }
+
+        [Test]
+        public void SendsTheDeviceKeyAndApprovesThroughConnectionKeys()
+        {
+            var target = Create("Net");
+            var options = new NetLaunchOptions(NetLaunchMode.Client, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort);
+
+            var manager = NetworkSetup.Configure(target, options, CreatePlayerPrefab());
+
+            var keys = target.GetComponent<NetConnectionKeys>();
+            Assert.That(keys, Is.Not.Null);
+            Assert.That(manager.ConnectionApprovalCallback, Is.Not.Null);
+            Assert.That(RejoinKey.TryDecode(manager.NetworkConfig.ConnectionData, out var key), Is.True);
+            Assert.That(key, Is.EqualTo(NetConnectionKeys.DeviceKey));
+        }
+
+        [Test]
+        public void ConnectionKeysRememberAValidKeyPerClient()
+        {
+            var keys = Create("Keys").AddComponent<NetConnectionKeys>();
+            var response = new NetworkManager.ConnectionApprovalResponse();
+
+            keys.Approve(
+                new NetworkManager.ConnectionApprovalRequest { ClientNetworkId = 3, Payload = RejoinKey.Encode(ServerId) },
+                response);
+
+            Assert.That(response.Approved, Is.True);
+            Assert.That(response.CreatePlayerObject, Is.True);
+            Assert.That(response.Pending, Is.False);
+            Assert.That(keys.TryGet(3, out var key), Is.True);
+            Assert.That(key, Is.EqualTo(ServerId));
+            Assert.That(keys.TryGet(4, out _), Is.False);
+        }
+
+        [Test]
+        public void ConnectionKeysStillApproveWithoutAKey()
+        {
+            var keys = Create("Keys").AddComponent<NetConnectionKeys>();
+            var response = new NetworkManager.ConnectionApprovalResponse();
+            LogAssert.Expect(LogType.Warning, new Regex("client 5 sent no valid rejoin key"));
+
+            keys.Approve(
+                new NetworkManager.ConnectionApprovalRequest { ClientNetworkId = 5, Payload = new byte[] { 0xff } },
+                response);
+
+            Assert.That(response.Approved, Is.True);
+            Assert.That(response.CreatePlayerObject, Is.True);
+            Assert.That(keys.TryGet(5, out _), Is.False);
+            Assert.That(keys.Count, Is.Zero);
         }
     }
 }

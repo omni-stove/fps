@@ -53,7 +53,7 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local
 UDP の専用サーバーにつなぐクライアントは、通常のプレイヤーのビルド (`make build`) を `-mode client` で起動する。
 
 ```sh
-Builds/fps.app/Contents/MacOS/fps -mode client -address 127.0.0.1
+Builds/client-macos/fps.app/Contents/MacOS/fps -mode client -address 127.0.0.1
 ```
 
 ポートを変えたときは `-port` も合わせる。別のマシンのサーバーには `-address` にそのマシンの IPv4 アドレスを渡す。

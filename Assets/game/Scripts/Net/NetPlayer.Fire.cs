@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Fps.Core;
 using Fps.Runtime;
@@ -48,16 +47,19 @@ namespace Fps.Net
 
         /// <summary>
         /// 装備中の武器 (<see cref="NetPlayerWeapon.WeaponId"/>) の射撃モードと連射間隔で判断する <see cref="FireTrigger"/>。
-        /// 試合 (<see cref="NetTeamDeathmatch.Current"/>) の <see cref="NetTeamDeathmatch.Loadout"/> から引き、武器か Loadout が変わったら作り直す。
-        /// 武器がまだ届いていない・Loadout に無い・Loadout が不正なら null。
+        /// 試合 (<see cref="NetTeamDeathmatch.Current"/>) の <see cref="NetTeamDeathmatch.Loadout"/>、無ければ自分で選んだ武器のある
+        /// <see cref="NetTeamDeathmatch.Catalog"/> から引き (<see cref="NetTeamDeathmatch.TryFindWeaponSpec"/>)、武器か参照するアセットが変わったら作り直す。
+        /// 武器がまだ届いていない・どちらにも無い・アセットが不正なら null。
         /// </summary>
         private FireTrigger ResolveTrigger()
         {
             var weaponId = _weapon != null ? _weapon.WeaponId : string.Empty;
             var match = NetTeamDeathmatch.Current;
             var loadout = match != null ? match.Loadout : null;
+            var catalog = match != null ? match.Catalog : null;
             // 引けなかったときも覚えておき、毎フレーム Loadout の武器を作り直さない
-            if (_triggerResolved && _triggerLoadout == loadout && string.Equals(_triggerWeaponId, weaponId, StringComparison.Ordinal))
+            if (_triggerResolved && _triggerLoadout == loadout && _triggerCatalog == catalog
+                && string.Equals(_triggerWeaponId, weaponId, StringComparison.Ordinal))
             {
                 return _trigger;
             }
@@ -66,6 +68,7 @@ namespace Fps.Net
             _triggerSpec = null;
             _triggerWeaponId = weaponId;
             _triggerLoadout = loadout;
+            _triggerCatalog = catalog;
             _triggerError = null;
             _triggerResolved = true;
             if (string.IsNullOrEmpty(weaponId))
@@ -74,35 +77,15 @@ namespace Fps.Net
                 return null;
             }
 
-            if (loadout == null)
+            if (!NetTeamDeathmatch.TryFindWeaponSpec(loadout, catalog, weaponId, out var spec, out var error))
             {
-                _triggerError = "without the match's loadout";
+                _triggerError = error;
                 return null;
             }
 
-            IReadOnlyList<WeaponSpec> specs;
-            try
-            {
-                specs = loadout.ToSpecs();
-            }
-            catch (WeaponDefinitionException e)
-            {
-                _triggerError = "with an invalid loadout: " + e.Message;
-                return null;
-            }
-
-            foreach (var spec in specs)
-            {
-                if (string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
-                {
-                    _trigger = new FireTrigger(spec);
-                    _triggerSpec = spec;
-                    return _trigger;
-                }
-            }
-
-            _triggerError = "with weapon '" + weaponId + "' missing from '" + loadout.name + "'";
-            return null;
+            _trigger = new FireTrigger(spec);
+            _triggerSpec = spec;
+            return _trigger;
         }
 
         /// <summary>
@@ -123,6 +106,7 @@ namespace Fps.Net
         /// <summary>
         /// 1 発撃つ。目から画面中央が指す点への向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) と装備中の武器の Id を添えて
         /// サーバーに送るだけで、武器の値 (ダメージ・射程など) は送らない。当たり判定とダメージはサーバーが今持たせている武器の値で行う。
+        /// 送ったら、このクライアントで <see cref="CombatEvents.ShotFired"/> を出す。
         /// </summary>
         private void Fire()
         {
@@ -150,6 +134,9 @@ namespace Fps.Net
             Debug.Log("[Net] fire weapon=" + weaponId + " tick=" + time.Tick.ToString(CultureInfo.InvariantCulture)
                 + " alpha=" + time.Alpha.ToString("F2", CultureInfo.InvariantCulture), this);
             FireServerRpc(new FixedString64Bytes(weaponId), origin, direction, time.Tick, time.Alpha);
+
+            // 撃った本人の演出は返事を待たずに出す (サーバーの NetCombatFeed は本人にだけ射撃を送らない)
+            CombatEvents.RaiseShotFired(gameObject, origin, direction, weaponId);
             ReleaseSprint(SprintInput.ReasonFire);
         }
 

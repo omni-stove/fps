@@ -21,6 +21,7 @@ namespace Fps.Tests.EditMode
     {
         private const string MissionName = "CampaignTestMission";
         private const string CheckpointId = "cp1";
+        private const string Slot = CampaignSaveSlots.Prefix + MissionName;
 
         // 古い形式のセーブは rifle の残弾として読むので、テストの rifle にもその Id を使う。
         private const string RifleId = CampaignSave.LegacyWeaponId;
@@ -51,6 +52,7 @@ namespace Fps.Tests.EditMode
             _root = Path.Combine(Path.GetTempPath(), "fps-campaign-tests-" + Guid.NewGuid().ToString("N"));
             _storage = new FileSaveStorage(_root);
             _reloads = 0;
+            CampaignLaunchSelection.Clear();
         }
 
         [TearDown]
@@ -69,6 +71,7 @@ namespace Fps.Tests.EditMode
 
             _assets.Clear();
             Object.DestroyImmediate(_definition);
+            CampaignLaunchSelection.Clear();
 
             if (Directory.Exists(_root))
             {
@@ -101,7 +104,7 @@ namespace Fps.Tests.EditMode
             Assert.That(first.Checkpoint.HandleEnter(first.PlayerCollider), Is.True);
             Assert.That(first.Checkpoint.IsReached, Is.True);
             Assert.That(first.Campaign.LastCheckpointId, Is.EqualTo(CheckpointId));
-            Assert.That(_storage.TryRead(CampaignRunner.SaveSlot, out _), Is.True);
+            Assert.That(_storage.TryRead(Slot, out _), Is.True);
 
             // 同じチェックポイントには 1 度しかセーブしない。後の進み具合はセーブに入らない。
             first.Missions.Progress("kill");
@@ -148,11 +151,11 @@ namespace Fps.Tests.EditMode
             // 達成したらセーブを消す。
             second.Missions.Progress("kill", 2);
             ExpectCampaign($"mission={MissionName} completed");
-            ExpectCampaign($"deleted save slot={CampaignRunner.SaveSlot}");
+            ExpectCampaign($"deleted save slot={Slot}");
             second.Missions.Progress("extract");
 
             Assert.That(mission.State, Is.EqualTo(MissionState.Completed));
-            Assert.That(_storage.TryRead(CampaignRunner.SaveSlot, out _), Is.False);
+            Assert.That(_storage.TryRead(Slot, out _), Is.False);
             ExpectCampaign(new Regex(@"^\[Campaign\] skipped save checkpoint=late reason=mission Completed$"));
             Assert.That(second.Campaign.SaveAt("late"), Is.False);
         }
@@ -215,7 +218,7 @@ namespace Fps.Tests.EditMode
             ExpectCampaign("reloading scene");
             scene.Campaign.Tick(0f);
             Assert.That(_reloads, Is.EqualTo(1));
-            Assert.That(_storage.TryRead(CampaignRunner.SaveSlot, out _), Is.False);
+            Assert.That(_storage.TryRead(Slot, out _), Is.False);
         }
 
         [Test]
@@ -227,7 +230,7 @@ namespace Fps.Tests.EditMode
                 new ObjectiveProgress("kill", ObjectiveState.Active, 0),
                 new ObjectiveProgress("extract", ObjectiveState.Locked, 0),
             });
-            _storage.Write(CampaignRunner.SaveSlot, other.ToJson());
+            _storage.Write(Slot, other.ToJson());
             var scene = BuildScene();
 
             ExpectCampaign($"started mission={MissionName}");
@@ -242,7 +245,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void IgnoresABrokenSave()
         {
-            _storage.Write(CampaignRunner.SaveSlot, "{\"version\":1,");
+            _storage.Write(Slot, "{\"version\":1,");
             var scene = BuildScene();
 
             ExpectCampaign($"started mission={MissionName}");
@@ -259,7 +262,7 @@ namespace Fps.Tests.EditMode
             {
                 new ObjectiveProgress("removed", ObjectiveState.Completed, 1),
             });
-            _storage.Write(CampaignRunner.SaveSlot, stale.ToJson());
+            _storage.Write(Slot, stale.ToJson());
             var scene = BuildScene();
 
             ExpectCampaign($"started mission={MissionName}");
@@ -278,7 +281,7 @@ namespace Fps.Tests.EditMode
                 new ObjectiveProgress("kill", ObjectiveState.Active, 1),
                 new ObjectiveProgress("extract", ObjectiveState.Locked, 0),
             });
-            _storage.Write(CampaignRunner.SaveSlot, save.ToJson());
+            _storage.Write(Slot, save.ToJson());
             var scene = BuildScene();
 
             ExpectCampaign($"started mission={MissionName}");
@@ -296,7 +299,7 @@ namespace Fps.Tests.EditMode
         public void RestoresALegacySingleWeaponSaveAsTheRiflesAmmo()
         {
             _storage.Write(
-                CampaignRunner.SaveSlot,
+                Slot,
                 "{\"version\":1,\"missionId\":\"" + MissionName + "\",\"checkpointId\":\"" + CheckpointId + "\",\"health\":55," +
                 "\"ammoInMagazine\":5,\"reserveAmmo\":6,\"objectives\":[" +
                 "{\"id\":\"reach\",\"state\":\"completed\",\"count\":1}," +
@@ -315,7 +318,7 @@ namespace Fps.Tests.EditMode
 
             // 次のセーブは新しい形式で書く。
             scene.Campaign.SaveAt("next");
-            Assert.That(_storage.TryRead(CampaignRunner.SaveSlot, out var text), Is.True);
+            Assert.That(_storage.TryRead(Slot, out var text), Is.True);
             Assert.That(text, Does.StartWith("{\"version\":" + CampaignSave.CurrentVersion + ","));
         }
 
@@ -349,7 +352,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(scene.Checkpoint.HandleEnter(stranger), Is.False);
             Assert.That(scene.Checkpoint.HandleEnter(null), Is.False);
-            Assert.That(_storage.TryRead(CampaignRunner.SaveSlot, out _), Is.False);
+            Assert.That(_storage.TryRead(Slot, out _), Is.False);
         }
 
         [Test]
@@ -561,7 +564,7 @@ namespace Fps.Tests.EditMode
                 new ObjectiveProgress("kill", ObjectiveState.Active, 0),
                 new ObjectiveProgress("extract", ObjectiveState.Locked, 0),
             });
-            _storage.Write(CampaignRunner.SaveSlot, save.ToJson());
+            _storage.Write(Slot, save.ToJson());
             var scene = BuildScene();
             scene.Campaign.RulesDefinition = NewRules("CampaignEasy", 3f, 25f, false, 1.5f);
             scene.Campaign.LaunchArgs = Array.Empty<string>();
@@ -593,7 +596,7 @@ namespace Fps.Tests.EditMode
                 new ObjectiveProgress("kill", ObjectiveState.Active, 0),
                 new ObjectiveProgress("extract", ObjectiveState.Locked, 0),
             });
-            _storage.Write(CampaignRunner.SaveSlot, save.ToJson());
+            _storage.Write(Slot, save.ToJson());
             var scene = BuildScene();
             scene.Campaign.RulesDefinition = NewRules("Range", 0f, 0f, true, 1f);
             scene.Campaign.LaunchArgs = Array.Empty<string>();
@@ -615,6 +618,190 @@ namespace Fps.Tests.EditMode
             Assert.That(scene.Campaign.Rules, Is.Null);
             Assert.That(scene.Player.GetComponent<HealthRegen>(), Is.Null);
             Assert.That(scene.Weapon.Rules, Is.SameAs(GameRules.Default));
+        }
+
+        [Test]
+        public void TheLaunchSelectionPicksItsDifficultyOverTheCommandLineAndSurvivesAReload()
+        {
+            CampaignLaunchSelection.Select(new CampaignLaunch(MissionName, CampaignDifficulty.Hard));
+
+            for (var reload = 0; reload < 2; reload++)
+            {
+                var scene = BuildScene();
+                WireDifficulties(scene);
+                scene.Campaign.LaunchArgs = new[] { CampaignLaunchOptions.DifficultyFlag, "easy" };
+
+                ExpectCampaign($"launch mission={MissionName} difficulty=hard");
+                ExpectCampaign(new Regex(@"^\[Campaign\] rules=CampaignHard difficulty=hard "));
+                BeginWithWorldQuietly(scene);
+
+                Assert.That(scene.Campaign.Rules.ReserveAmmoMultiplier, Is.EqualTo(0.6f));
+                Assert.That(scene.Weapon.Weapon.ReserveAmmo, Is.EqualTo(Weapon.ScaleReserveAmmo(90, 0.6f)), "Hard has less reserve ammo");
+                scene.Dispose();
+            }
+        }
+
+        [Test]
+        public void ALaunchForAnotherMissionIsIgnored()
+        {
+            CampaignLaunchSelection.Select(new CampaignLaunch("OtherMission", CampaignDifficulty.Hard));
+            var scene = BuildScene();
+            WireDifficulties(scene);
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+
+            LogAssert.Expect(
+                LogType.Warning,
+                new Regex(@"^\[Campaign\] メニューで選んだミッション 'OtherMission' がこのシーンのミッション '" + MissionName + "' と違う"));
+            ExpectCampaign(new Regex(@"^\[Campaign\] rules=CampaignNormal difficulty=\(none\) "));
+            BeginWithWorldQuietly(scene);
+
+            Assert.That(scene.Campaign.Rules.ReserveAmmoMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void WithoutALaunchTheSceneStartsWithItsDefaultRules()
+        {
+            Assert.That(CampaignLaunchSelection.Current, Is.Null);
+            var scene = BuildScene();
+            WireDifficulties(scene);
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+
+            ExpectCampaign(new Regex(@"^\[Campaign\] rules=CampaignNormal difficulty=\(none\) "));
+            BeginWithWorldQuietly(scene);
+
+            Assert.That(scene.Campaign.Rules.ReserveAmmoMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void AnUnwiredLaunchDifficultyFallsBackToTheDefaultWithAnError()
+        {
+            CampaignLaunchSelection.Select(new CampaignLaunch(MissionName, CampaignDifficulty.Easy));
+            var scene = BuildScene();
+            scene.Campaign.RulesDefinition = NewRules("CampaignNormal", 0f, 0f, false, 1f);
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+
+            ExpectCampaign($"launch mission={MissionName} difficulty=easy");
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[Campaign\] CampaignLaunch easy のルールが 'CampaignRunner' に配線されていない"));
+            ExpectCampaign(new Regex(@"^\[Campaign\] rules=CampaignNormal difficulty=easy "));
+            BeginWithWorldQuietly(scene);
+
+            Assert.That(scene.Campaign.Rules.ReserveAmmoMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void SavesGoToTheMissionsOwnSlot()
+        {
+            var scene = BuildScene();
+            BeginQuietly(scene);
+
+            Assert.That(scene.Campaign.SaveSlot, Is.EqualTo("campaign-" + MissionName));
+            ExpectCampaign(new Regex($@"^\[Campaign\] saved mission={MissionName} checkpoint={CheckpointId} "));
+            Assert.That(scene.Checkpoint.HandleEnter(scene.PlayerCollider), Is.True);
+
+            Assert.That(_storage.TryRead(Slot, out _), Is.True);
+            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out _), Is.False, "the legacy slot is not written any more");
+        }
+
+        [Test]
+        public void Campaign01RestoresTheLegacySlotAndMovesItToItsOwnSlot()
+        {
+            const string id = CampaignSaveSlots.LegacyMissionId;
+            _definition.name = id;
+            var legacy = SaveAtCheckpoint(id, 45).ToJson();
+            _storage.Write(CampaignSaveSlots.Legacy, legacy);
+            var scene = BuildScene();
+
+            ExpectCampaign($"started mission={id}");
+            ExpectCampaign($"reading the legacy save slot={CampaignSaveSlots.Legacy} for mission={id}");
+            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={id} checkpoint={CheckpointId} health=45 "));
+            ExpectCampaign($"migrated save slot={CampaignSaveSlots.Legacy} to slot={CampaignSaveSlots.Prefix}{id}");
+            scene.Begin(_storage, () => _reloads++);
+
+            Assert.That(scene.Player.Health.Current, Is.EqualTo(45));
+            Assert.That(scene.Missions.Mission.GetState("kill"), Is.EqualTo(ObjectiveState.Active));
+            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out _), Is.False, "the legacy slot is moved away");
+            Assert.That(_storage.TryRead(CampaignSaveSlots.Prefix + id, out var moved), Is.True);
+            Assert.That(moved, Is.EqualTo(legacy));
+
+            // 読み直したシーンは移した先のスロットから戻す。
+            scene.Dispose();
+            var second = BuildScene();
+            ExpectCampaign($"started mission={id}");
+            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={id} checkpoint={CheckpointId} health=45 "));
+            second.Begin(_storage, () => _reloads++);
+            Assert.That(second.Player.Health.Current, Is.EqualTo(45));
+        }
+
+        [Test]
+        public void Campaign01PrefersItsOwnSlotAndCompletionDeletesBothSlots()
+        {
+            const string id = CampaignSaveSlots.LegacyMissionId;
+            _definition.name = id;
+            _storage.Write(CampaignSaveSlots.Legacy, SaveAtCheckpoint(id, 20).ToJson());
+            _storage.Write(CampaignSaveSlots.Prefix + id, SaveAtCheckpoint(id, 80).ToJson());
+            var scene = BuildScene();
+
+            ExpectCampaign($"started mission={id}");
+            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={id} checkpoint={CheckpointId} health=80 "));
+            scene.Begin(_storage, () => _reloads++);
+            Assert.That(scene.Player.Health.Current, Is.EqualTo(80));
+            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out _), Is.True, "the legacy slot is only moved when it is read");
+
+            ExpectCampaign($"mission={id} completed");
+            ExpectCampaign($"deleted save slot={CampaignSaveSlots.Prefix}{id}");
+            scene.Missions.Progress("kill", 2);
+            scene.Missions.Progress("extract");
+
+            Assert.That(_storage.TryRead(CampaignSaveSlots.Prefix + id, out _), Is.False);
+            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out _), Is.False, "a finished mission does not resume from the legacy slot");
+        }
+
+        [Test]
+        public void OtherMissionsDoNotReadTheLegacySlot()
+        {
+            var legacy = SaveAtCheckpoint(MissionName, 45).ToJson();
+            _storage.Write(CampaignSaveSlots.Legacy, legacy);
+            var scene = BuildScene();
+
+            BeginQuietly(scene);
+
+            AssertStartedFresh(scene);
+            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out var text), Is.True, "another mission's legacy save is left alone");
+            Assert.That(text, Is.EqualTo(legacy));
+        }
+
+        [Test]
+        public void AFailedMigrationKeepsTheLegacySlot()
+        {
+            const string id = CampaignSaveSlots.LegacyMissionId;
+            _definition.name = id;
+            var storage = new MemoryStorage();
+            var legacy = SaveAtCheckpoint(id, 45).ToJson();
+            storage.Write(CampaignSaveSlots.Legacy, legacy);
+            storage.FailWrites = true;
+            var scene = BuildScene();
+
+            ExpectCampaign($"started mission={id}");
+            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={id} checkpoint={CheckpointId} health=45 "));
+            LogAssert.Expect(
+                LogType.Error,
+                new Regex($@"^\[Campaign\] failed to move the legacy save slot={CampaignSaveSlots.Legacy} to slot={CampaignSaveSlots.Prefix}{id}; keeping the legacy slot: disk full$"));
+            scene.Begin(storage, () => _reloads++);
+
+            Assert.That(scene.Player.Health.Current, Is.EqualTo(45), "the save is still restored");
+            Assert.That(storage.TryRead(CampaignSaveSlots.Legacy, out var text), Is.True);
+            Assert.That(text, Is.EqualTo(legacy));
+            Assert.That(storage.TryRead(CampaignSaveSlots.Prefix + id, out _), Is.False);
+        }
+
+        [Test]
+        public void BeginRejectsAMissionIdThatCannotNameASlot()
+        {
+            _definition.name = "Bad Mission";
+            var scene = BuildScene();
+
+            Assert.Throws<ArgumentException>(() => scene.Begin(_storage, () => _reloads++));
+            Assert.That(scene.Campaign.IsStarted, Is.False);
         }
 
         [Test]
@@ -670,6 +857,17 @@ namespace Fps.Tests.EditMode
             Assert.That(scene.Missions.Mission.GetState("reach"), Is.EqualTo(ObjectiveState.Active));
             Assert.That(scene.Checkpoint.IsReached, Is.False);
             Assert.That(scene.Campaign.LastCheckpointId, Is.Empty);
+        }
+
+        /// <summary>missionId の、チェックポイント <see cref="CheckpointId"/> (区域に着いた後) で体力 health のセーブ。</summary>
+        private static CampaignSave SaveAtCheckpoint(string missionId, int health)
+        {
+            return new CampaignSave(missionId, CheckpointId, health, RifleAmmo(10, 20), RifleId, new[]
+            {
+                new ObjectiveProgress("reach", ObjectiveState.Completed, 1),
+                new ObjectiveProgress("kill", ObjectiveState.Active, 0),
+                new ObjectiveProgress("extract", ObjectiveState.Locked, 0),
+            });
         }
 
         private static WeaponAmmo[] RifleAmmo(int magazine, int reserve)
@@ -809,6 +1007,34 @@ namespace Fps.Tests.EditMode
             {
                 Created.Add(created);
                 return created;
+            }
+        }
+
+        /// <summary>スロットごとに置き、書き込みを失敗させられるメモリ上のストレージ。</summary>
+        private sealed class MemoryStorage : ISaveStorage
+        {
+            private readonly Dictionary<string, string> _slots = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            public bool FailWrites { get; set; }
+
+            public bool TryRead(string slot, out string text)
+            {
+                return _slots.TryGetValue(slot, out text);
+            }
+
+            public void Write(string slot, string text)
+            {
+                if (FailWrites)
+                {
+                    throw new IOException("disk full");
+                }
+
+                _slots[slot] = text;
+            }
+
+            public void Delete(string slot)
+            {
+                _slots.Remove(slot);
             }
         }
 

@@ -82,11 +82,12 @@ namespace Fps.Net
         private InputAction _attackAction;
         private bool _enabledAttackAction;
 
-        // 装備中の武器の射撃モードと連射間隔。持ち主だけが ResolveTrigger で作る。_triggerWeaponId と _triggerLoadout はどの武器で引いたか
+        // 装備中の武器の射撃モードと連射間隔。持ち主だけが ResolveTrigger で作る。_triggerWeaponId・_triggerLoadout・_triggerCatalog はどの武器で引いたか
         private FireTrigger _trigger;
         private WeaponSpec _triggerSpec;
         private string _triggerWeaponId;
         private LoadoutDefinition _triggerLoadout;
+        private WeaponCatalogAsset _triggerCatalog;
         private string _triggerError;
         private bool _triggerResolved;
 

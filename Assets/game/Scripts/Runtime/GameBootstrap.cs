@@ -16,7 +16,7 @@ namespace Fps.Runtime
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
-    /// 自動回復と予備弾の倍率・無限は <see cref="RulesDefinition"/> のルールで決める (標的ダミーには効かせない)。
+    /// 自動回復と予備弾の倍率・無限・落下ダメージは <see cref="RulesDefinition"/> のルールで決める (標的ダミーには効かせない)。
     /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
     /// </summary>
@@ -300,6 +300,7 @@ namespace Fps.Runtime
                 regen = player.AddComponent<HealthRegen>();
                 regen.Bind(damageable, rules);
                 PlayerActions.Attach(player, rules);
+                mover.ApplyRules(rules);
 
                 // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
                 mover.BindSprintRelease(weapon, damageable);
@@ -417,6 +418,37 @@ namespace Fps.Runtime
             }
 
             WireAds(ads, weapon, mover);
+            WireSpreadAndRecoil(weapon, ads, mover, look);
+        }
+
+        /// <summary>
+        /// 射撃のばらつきに覗き込みの進み具合と移動の速さ (歩きの速さで足し切る) を読ませ、射撃の反動を視点に足させる。
+        /// WireAds と同じく、読むのは実行時なので Edit Mode では配線だけしておく。
+        /// </summary>
+        private static void WireSpreadAndRecoil(WeaponController weapon, AimDownSights ads, PlayerController mover, FirstPersonLook look)
+        {
+            if (weapon == null)
+            {
+                return;
+            }
+
+            weapon.AdsProgressSource = () => ads != null ? ads.Progress : 0f;
+            weapon.MoveFractionSource = () =>
+            {
+                var controller = mover != null ? mover.Controller : null;
+                if (controller == null)
+                {
+                    return 0f;
+                }
+
+                var velocity = controller.velocity;
+                return SpreadPattern.MoveFraction(new Vector2(velocity.x, velocity.z).magnitude, mover.WalkSpeed);
+            };
+
+            if (look != null)
+            {
+                look.Recoil = weapon.Recoil;
+            }
         }
 
         /// <summary>

@@ -25,6 +25,12 @@ namespace Fps.Net
     /// 今持っている武器の Id (<see cref="WeaponId"/>) は全員に配り、持ち主は射撃の RPC にこの Id を載せる (数値は送らない)。
     /// 射撃 1 発ぶんの消費は <see cref="NetTeamDeathmatch.ServerFire"/> が当たり判定の前に <see cref="ServerTryFire"/> で行う。
     /// <para>
+    /// 持ち主は <see cref="RequestLoadout"/> で、自分のロードアウトに選んだ武器の Id の並びを <see cref="RequestLoadoutServerRpc"/> で送る。
+    /// サーバーは試合の武器の一覧とロードアウトのルールで検査し (<see cref="NetTeamDeathmatch.ServerChooseLoadout"/>)、
+    /// 通ればその並びを次の出現から配る。結果 (断ったなら理由) は <see cref="LoadoutAnswerRpc"/> で持ち主に返し、
+    /// 持ち主では <see cref="LoadoutAnswered"/> を呼ぶ。今持たされている並びの Id は持ち主にだけ配り、持ち替えの順番に使う。
+    /// </para>
+    /// <para>
     /// アクティブリロード (<see cref="ActionRules.ActiveReload"/>) の判定は、サーバーが RPC を受け取った時点の自分の
     /// <see cref="ServerWeapon.ReloadProgress"/> で行う (クライアントは進みを送らない)。持ち主の HUD が進みを描けるよう、
     /// リロードを始めたサーバーの時刻と長さ・成功になる幅を <see cref="NetWeaponState"/> に載せる。
@@ -79,6 +85,11 @@ namespace Fps.Net
             NetworkVariableReadPermission.Owner,
             NetworkVariableWritePermission.Server);
 
+        // サーバーが今持たせている武器の Id (スロット順)。持ち主 (とサーバー) だけが読める。
+        // 選んだロードアウトは人ごとに違い、試合のアセットからは持ち替えの順番が分からないため配る。
+        // NetworkList は Awake で作る (フィールド初期化子だとエディタで破棄されずに残ることがある)
+        private NetworkList<FixedString64Bytes> _equippedIds;
+
         private NetPlayer _player;
         private Loadout<ServerWeapon> _loadout;
         private InputAction _reloadAction;
@@ -101,6 +112,12 @@ namespace Fps.Net
         /// 弾倉が空になったときのサーバーの自動リロードも含む。
         /// </summary>
         public event Action<NetWeaponState> ReloadOrSwitchStarted;
+
+        /// <summary>
+        /// 持ち主で、<see cref="RequestLoadout"/> で送った並びの結果がサーバーから届いたときに呼ばれる。
+        /// 受け入れなら true と null (次の出現から配られる)、断られたら false と理由 (武器は変わらない)。
+        /// </summary>
+        public event Action<bool, string> LoadoutAnswered;
 
         /// <summary>サーバーから届いた武器の状態。持ち主とサーバーでだけ意味がある (他人の分は届かず既定値のまま)。</summary>
         public NetWeaponState State => _state.Value;
@@ -148,9 +165,39 @@ namespace Fps.Net
             }
         }
 
+        /// <summary>
+        /// 今持たされている武器の Id (スロット順)。サーバーでは <see cref="Loadout"/> の並び、持ち主ではサーバーから届いた並び。
+        /// 装備前・他人のプレイヤーでは空。
+        /// </summary>
+        public IReadOnlyList<string> EquippedWeaponIds
+        {
+            get
+            {
+                var ids = new List<string>();
+                if (_loadout != null)
+                {
+                    foreach (var weapon in _loadout.Items)
+                    {
+                        ids.Add(weapon.Spec.Id);
+                    }
+                }
+                else if (_equippedIds != null)
+                {
+                    foreach (var id in _equippedIds)
+                    {
+                        ids.Add(id.ToString());
+                    }
+                }
+
+                return ids;
+            }
+        }
+
         private void Awake()
         {
             _player = GetComponent<NetPlayer>();
+            _equippedIds = new NetworkList<FixedString64Bytes>(
+                null, NetworkVariableReadPermission.Owner, NetworkVariableWritePermission.Server);
         }
 
         public override void OnNetworkSpawn()
@@ -161,6 +208,7 @@ namespace Fps.Net
             {
                 // Spawn より前に装備していたら、その状態を配る
                 SyncState();
+                SyncEquippedIds();
             }
 
             if (IsOwner)
@@ -353,15 +401,15 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 持ち主で、試合のロードアウト (<see cref="NetTeamDeathmatch.Loadout"/>) で今の武器の次 (最後の次は先頭) の武器への持ち替えを頼む。
-        /// 1 本しか無い・今の武器が分からない・ロードアウトが読めないなら送らず false。
+        /// 持ち主で、今持たされている並び (<see cref="EquippedWeaponIds"/>) で今の武器の次 (最後の次は先頭) の武器への持ち替えを頼む。
+        /// 1 本しか無い・今の武器が分からない・並びがまだ届いていないなら送らず false。
         /// </summary>
         public bool RequestNextWeapon()
         {
             return RequestNeighbour(1);
         }
 
-        /// <summary>持ち主で、試合のロードアウトで今の武器の前 (先頭の前は最後) の武器への持ち替えを頼む。送れなければ false。</summary>
+        /// <summary>持ち主で、今持たされている並びで今の武器の前 (先頭の前は最後) の武器への持ち替えを頼む。送れなければ false。</summary>
         public bool RequestPreviousWeapon()
         {
             return RequestNeighbour(-1);
@@ -374,7 +422,7 @@ namespace Fps.Net
                 return false;
             }
 
-            var target = NeighbourWeaponId(ResolveClientSpecs(), WeaponId, step);
+            var target = NeighbourId(EquippedWeaponIds, WeaponId, step);
             return target != null && RequestSwitch(target);
         }
 
@@ -384,60 +432,197 @@ namespace Fps.Net
         /// </summary>
         internal static string NeighbourWeaponId(IReadOnlyList<WeaponSpec> specs, string currentId, int step)
         {
-            if (specs == null || specs.Count <= 1 || step == 0)
+            if (specs == null)
             {
                 return null;
             }
 
-            var current = IndexOf(specs, currentId);
+            var ids = new string[specs.Count];
+            for (var i = 0; i < specs.Count; i++)
+            {
+                ids[i] = specs[i]?.Id;
+            }
+
+            return NeighbourId(ids, currentId, step);
+        }
+
+        /// <summary>
+        /// weaponIds の中で currentId から step だけ進めた (端では反対側へ回り込む) Id。
+        /// weaponIds が null か 1 本以下、currentId が weaponIds に無い、step が 0 なら null。
+        /// </summary>
+        internal static string NeighbourId(IReadOnlyList<string> weaponIds, string currentId, int step)
+        {
+            if (weaponIds == null || weaponIds.Count <= 1 || step == 0)
+            {
+                return null;
+            }
+
+            var current = IndexOf(weaponIds, currentId);
             if (current < 0)
             {
                 return null;
             }
 
-            var count = specs.Count;
+            var count = weaponIds.Count;
             var next = ((current + (step % count)) % count + count) % count;
-            return specs[next].Id;
+            return weaponIds[next];
         }
 
-        // クライアントは武器の並びを持たないので、サーバーが全員に配っているのと同じロードアウトのアセットから引く
-        private IReadOnlyList<WeaponSpec> ResolveClientSpecs()
-        {
-            var match = NetTeamDeathmatch.Current;
-            var loadout = match != null ? match.Loadout : null;
-            if (loadout == null)
-            {
-                Debug.LogWarning("[Net] cannot switch weapons without the match's loadout", this);
-                return null;
-            }
-
-            try
-            {
-                return loadout.ToSpecs();
-            }
-            catch (WeaponDefinitionException e)
-            {
-                Debug.LogWarning("[Net] cannot switch weapons with an invalid loadout: " + e.Message, this);
-                return null;
-            }
-        }
-
-        private static int IndexOf(IReadOnlyList<WeaponSpec> specs, string weaponId)
+        private static int IndexOf(IReadOnlyList<string> weaponIds, string weaponId)
         {
             if (weaponId == null)
             {
                 return -1;
             }
 
-            for (var i = 0; i < specs.Count; i++)
+            for (var i = 0; i < weaponIds.Count; i++)
             {
-                if (specs[i] != null && string.Equals(specs[i].Id, weaponId, StringComparison.Ordinal))
+                if (string.Equals(weaponIds[i], weaponId, StringComparison.Ordinal))
                 {
                     return i;
                 }
             }
 
             return -1;
+        }
+
+        /// <summary>
+        /// 持ち主で、自分のロードアウトに weaponIds (スロット順の武器の Id) を選んだことをサーバーへ送る。
+        /// 送れない並び (<see cref="CheckLoadoutRequest"/>) なら警告を出して送らず false。
+        /// ルールに合うかはサーバーが確かめ、結果は <see cref="LoadoutAnswered"/> で届く。受け入れられたら次の出現から使われる。
+        /// </summary>
+        public bool RequestLoadout(IReadOnlyList<string> weaponIds)
+        {
+            if (!IsSpawned || !IsOwner)
+            {
+                return false;
+            }
+
+            var error = CheckLoadoutRequest(weaponIds);
+            if (error != null)
+            {
+                Debug.LogWarning(LoadoutChoiceLog.Prefix + " cannot request: " + error, this);
+                return false;
+            }
+
+            Debug.Log(LoadoutChoiceLog.Requested(weaponIds), this);
+            RequestLoadoutServerRpc(new NetLoadoutRequest(weaponIds));
+            return true;
+        }
+
+        /// <summary>
+        /// weaponIds を <see cref="RequestLoadoutServerRpc"/> で送れるか。送れるなら null、送れなければ理由。
+        /// null・空・<see cref="MaxWeaponCount"/> 本より多い・空の Id・<see cref="MaxWeaponIdBytes"/> に収まらない Id は送らない
+        /// (サーバーでも同期できない)。スロットに合うかはここでは見ない。
+        /// </summary>
+        internal static string CheckLoadoutRequest(IReadOnlyList<string> weaponIds)
+        {
+            if (weaponIds == null || weaponIds.Count == 0)
+            {
+                return "no weapons were chosen";
+            }
+
+            if (weaponIds.Count > MaxWeaponCount)
+            {
+                return weaponIds.Count + " weapons were chosen but at most " + MaxWeaponCount + " can be synced";
+            }
+
+            for (var i = 0; i < weaponIds.Count; i++)
+            {
+                if (string.IsNullOrEmpty(weaponIds[i]))
+                {
+                    return "slot " + i + " has no weapon id";
+                }
+
+                if (!FitsWeaponId(weaponIds[i]))
+                {
+                    return "slot " + i + " has a weapon id longer than " + MaxWeaponIdBytes + " bytes";
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// サーバーで、senderClientId から届いたロードアウトの選択 weaponIds を処理する。持ち主以外からの要求は警告を出して捨てる
+        /// (reason は null)。試合 (<see cref="NetTeamDeathmatch.Current"/>) の <see cref="NetTeamDeathmatch.ServerChooseLoadout"/> で検査し、
+        /// 通れば <c>[Net] loadout accepted ..</c> を出して true、通らなければ <c>[Net] loadout rejected .. reason=..</c> を警告で出して false。
+        /// 今持っている武器は変えない。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Spawn 済みのクライアントで呼んだ。</exception>
+        public bool ServerHandleLoadoutRequest(ulong senderClientId, IReadOnlyList<string> weaponIds, out string reason)
+        {
+            RequireServerSide();
+            if (senderClientId != OwnerClientId)
+            {
+                Debug.LogWarning("[Net] ignored loadout from client " + senderClientId + " for player owned by " + OwnerClientId, this);
+                reason = null;
+                return false;
+            }
+
+            var match = NetTeamDeathmatch.Current;
+            var accepted = false;
+            if (match == null || !match.IsSpawned)
+            {
+                reason = "no match is running";
+            }
+            else
+            {
+                // 長すぎる Id はカタログに無いので検査で断られるが、理由を分かりやすくするため先に見る
+                reason = CheckLoadoutRequest(weaponIds);
+                if (reason == null)
+                {
+                    accepted = match.ServerChooseLoadout(_player, weaponIds, out reason);
+                }
+            }
+
+            if (accepted)
+            {
+                Debug.Log(LoadoutChoiceLog.Accepted(senderClientId, match.ServerNextWeapons(_player) ?? Array.Empty<WeaponSpec>()), this);
+            }
+            else
+            {
+                Debug.LogWarning(LoadoutChoiceLog.Rejected(senderClientId, reason), this);
+            }
+
+            return accepted;
+        }
+
+        /// <summary><see cref="LoadoutAnswerRpc"/> で送れる理由の最大バイト数 (<see cref="FixedString512Bytes"/>)。</summary>
+        public static int MaxAnswerBytes => FixedString512Bytes.UTF8MaxLengthInBytes;
+
+        /// <summary>
+        /// reason を <see cref="MaxAnswerBytes"/> 以下に、文字の途中で切らないよう詰める。null は空文字。
+        /// </summary>
+        internal static string FitAnswer(string reason)
+        {
+            if (string.IsNullOrEmpty(reason))
+            {
+                return string.Empty;
+            }
+
+            var max = MaxAnswerBytes;
+            if (Encoding.UTF8.GetByteCount(reason) <= max)
+            {
+                return reason;
+            }
+
+            var bytes = 0;
+            var end = 0;
+            while (end < reason.Length)
+            {
+                var step = char.IsHighSurrogate(reason[end]) && end + 1 < reason.Length && char.IsLowSurrogate(reason[end + 1]) ? 2 : 1;
+                var size = Encoding.UTF8.GetByteCount(reason.ToCharArray(end, step));
+                if (bytes + size > max)
+                {
+                    break;
+                }
+
+                bytes += size;
+                end += step;
+            }
+
+            return reason.Substring(0, end);
         }
 
         /// <summary>武器の Id が <see cref="MaxWeaponIdBytes"/> (射撃の RPC と <see cref="WeaponId"/> の同期) に収まるか。</summary>
@@ -517,6 +702,7 @@ namespace Fps.Net
             var loadout = new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon);
             SetLoadout(loadout);
             SyncState();
+            SyncEquippedIds();
         }
 
         /// <summary>
@@ -691,6 +877,67 @@ namespace Fps.Net
         private void SwitchWeaponServerRpc(FixedString64Bytes weaponId, RpcParams rpcParams = default)
         {
             ServerHandleSwitchRequest(rpcParams.Receive.SenderClientId, weaponId.ToString());
+        }
+
+        [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
+        private void RequestLoadoutServerRpc(NetLoadoutRequest request, RpcParams rpcParams = default)
+        {
+            var sender = rpcParams.Receive.SenderClientId;
+            var accepted = ServerHandleLoadoutRequest(sender, request.WeaponIds, out var reason);
+
+            // 持ち主以外には結果を返さない (他人の選択を探らせない)
+            if (sender == OwnerClientId)
+            {
+                LoadoutAnswerRpc(accepted, new FixedString512Bytes(FitAnswer(reason)));
+            }
+        }
+
+        [Rpc(SendTo.Owner, Delivery = RpcDelivery.Reliable)]
+        private void LoadoutAnswerRpc(bool accepted, FixedString512Bytes reason)
+        {
+            var text = accepted ? null : reason.ToString();
+
+            // ホストではサーバーとして同じ判定をログに出しているので二重にしない
+            if (!IsServer)
+            {
+                if (accepted)
+                {
+                    Debug.Log(LoadoutChoiceLog.Answer(true, null), this);
+                }
+                else
+                {
+                    Debug.LogWarning(LoadoutChoiceLog.Answer(false, text), this);
+                }
+            }
+
+            LoadoutAnswered?.Invoke(accepted, text);
+        }
+
+        /// <summary>サーバーの今の並びの Id を、持ち主だけが読める一覧に写す。Spawn 前は写さない (Spawn 時に写す)。</summary>
+        private void SyncEquippedIds()
+        {
+            if (!IsSpawned || !IsServer || _loadout == null || _equippedIds == null)
+            {
+                return;
+            }
+
+            var items = _loadout.Items;
+            var same = _equippedIds.Count == items.Count;
+            for (var i = 0; same && i < items.Count; i++)
+            {
+                same = _equippedIds[i].Equals(new FixedString64Bytes(items[i].Spec.Id));
+            }
+
+            if (same)
+            {
+                return;
+            }
+
+            _equippedIds.Clear();
+            foreach (var weapon in items)
+            {
+                _equippedIds.Add(new FixedString64Bytes(weapon.Spec.Id));
+            }
         }
 
         private void SetLoadout(Loadout<ServerWeapon> loadout)

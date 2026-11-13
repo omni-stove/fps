@@ -69,6 +69,8 @@ namespace Fps.Net.Tests
             Assert.That(PrefabUtility.IsPartOfPrefabAsset(bootstrap.MatchPrefab), Is.True);
             Assert.That(bootstrap.MatchPrefab.GetComponent<NetworkObject>(), Is.Not.Null);
             Assert.That(bootstrap.MatchPrefab.GetComponent<NetTeamDeathmatch>(), Is.Not.Null);
+            Assert.That(bootstrap.MatchPrefab.GetComponent<NetCombatFeed>(), Is.Not.Null,
+                "NetMatch has no NetCombatFeed; run Fps.Editor.NetSceneBuilder.Build");
         }
 
         [Test]
@@ -82,6 +84,21 @@ namespace Fps.Net.Tests
             // サーバーの起動時と同じ検査に通り、0 番は rifle、1 番は handgun
             Assert.That(NetTeamDeathmatch.TryCreateLoadout(match.Loadout, out var loadout, out var error), Is.True, error);
             Assert.That(loadout.Weapons.Select(w => w.Id), Is.EqualTo(new[] { Fps.Editor.WeaponAssetBuilder.RifleId, Fps.Editor.WeaponAssetBuilder.HandgunId }));
+        }
+
+        [Test]
+        public void MatchPrefabLetsPlayersChooseFromTheWeaponCatalog()
+        {
+            var match = MatchPrefabComponent();
+
+            Assert.That(match.Catalog, Is.Not.Null, "the match has no weapon catalog; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(AssetDatabase.GetAssetPath(match.Catalog), Is.EqualTo(Fps.Editor.WeaponAssetBuilder.CatalogPath));
+
+            // サーバーの起動時と同じ検査に通り、テスト用のメニューの並びは片方だけが通る
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(match.Loadout, match.Catalog, out var loadout, out var error), Is.True, error);
+            Assert.That(loadout.TryChoose(1, Fps.Editor.NetLoadoutDebugMenu.ValidWeaponIds, out var reason), Is.True, reason);
+            Assert.That(loadout.TryChoose(2, Fps.Editor.NetLoadoutDebugMenu.InvalidWeaponIds, out reason), Is.False);
+            Assert.That(reason, Does.Contain("slot 0 does not accept Handgun"));
         }
 
         [Test]
@@ -339,6 +356,7 @@ namespace Fps.Net.Tests
         public void BuildSceneListNamesTheSceneTheRuntimeLoads()
         {
             Assert.That(Fps.Editor.BuildSceneList.NetTestScene, Is.EqualTo(NetBootstrap.ScenePath));
+            Assert.That(Fps.Core.MenuRoute.NetScene, Is.EqualTo(NetBootstrap.ScenePath), "the menu's online buttons load this scene");
             Assert.That(Fps.Editor.BuildSceneList.Scenes, Has.Member(NetBootstrap.ScenePath));
             Assert.That(Fps.Editor.ServerBuilder.ServerScenePaths(), Is.EqualTo(new[] { NetBootstrap.ScenePath }));
         }

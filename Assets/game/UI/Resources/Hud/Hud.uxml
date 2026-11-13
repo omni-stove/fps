@@ -60,6 +60,8 @@
         <!-- スコアボード。Scoreboard を押している間だけ ScoreboardView が行を作って出す。 -->
         <ui:VisualElement name="scoreboard" class="scoreboard" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="loadout-select" picking-mode="Ignore" style="display: none;" />
+        <!-- 拠点制圧のポイント・残り時間・拠点の持ち主。DominationRunner が DominationView を付けたときだけ出す。 -->
+        <ui:VisualElement name="domination" class="domination" picking-mode="Ignore" style="display: none;" />
         <!-- チュートリアルの今の手順。射撃場で TutorialPresenter が TutorialPromptView に文を渡している間だけ出す。 -->
         <ui:Label name="tutorial-prompt" text="" class="tutorial-prompt" picking-mode="Ignore" style="display: none;" />
         <!-- ポーズ画面。開いている間だけ PauseMenu が出す。画面全体を覆い、後ろへのクリックを止める。 -->

@@ -135,7 +135,7 @@ namespace Fps.Core
             _cover = selector;
         }
 
-        /// <summary>死亡させる。以後の Tick はすべて空の決定を返す。使っていた遮蔽点は放す。</summary>
+        /// <summary>死亡させる。<see cref="Revive"/> するまで Tick はすべて空の決定を返す。使っていた遮蔽点は放す。</summary>
         public void Kill()
         {
             if (IsDead)
@@ -146,6 +146,33 @@ namespace Fps.Core
             ReleaseCoverPoint();
             CoverPhase = EnemyCoverPhase.None;
             SetState(EnemyState.Dead);
+        }
+
+        /// <summary>
+        /// 死亡から生き返らせる。最後に見た位置・反応や見失いの経過・撃った発数・着けなかった遮蔽点を忘れ、
+        /// 巡回ルートの最初の地点から Patrol (ルートが無ければ Idle) で始め直す。生きていれば何もせず false。
+        /// </summary>
+        public bool Revive()
+        {
+            if (!IsDead)
+            {
+                return false;
+            }
+
+            _routeIndex = 0;
+            _lastSeen = default;
+            _searchPoint = default;
+            _reactionElapsed = 0f;
+            _shotsInAttack = 0;
+            _lostElapsed = 0f;
+            _searchElapsed = 0f;
+            _coverElapsed = 0f;
+            _coverThreat = default;
+            _coverIndex = -1;
+            _unreachableCover.Clear();
+            CoverPhase = EnemyCoverPhase.None;
+            SetState(_route.Length > 0 ? EnemyState.Patrol : EnemyState.Idle);
+            return true;
         }
 
         /// <summary>

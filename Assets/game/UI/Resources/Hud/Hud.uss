@@ -510,6 +510,73 @@
     color: rgba(255, 60, 50, 0.85);
 }
 
+/* 拠点制圧。Hud の残り時間の欄と同じ上中央に、ポイントと残り時間の行・拠点の持ち主の行・結果を縦に並べる。色は DominationView がチームの色で塗る。 */
+.domination {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    translate: -50% 0;
+    flex-direction: column;
+    align-items: center;
+}
+
+.domination__scores,
+.domination__points {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 18px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.domination__points {
+    margin-top: 6px;
+}
+
+.domination__score,
+.domination__time,
+.domination__point {
+    margin: 0 12px;
+    padding: 0;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.domination__score {
+    font-size: 32px;
+}
+
+.domination__time {
+    font-size: 36px;
+}
+
+.domination__point {
+    font-size: 24px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0);
+}
+
+/* 両チームがいて占領が止まっている拠点。 */
+.domination__point--contested {
+    border-color: rgb(255, 210, 80);
+}
+
+.domination__result {
+    margin-top: 12px;
+    padding: 12px 32px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.55);
+    font-size: 64px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    white-space: nowrap;
+    text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.8);
+}
+
 /* チュートリアルの今の手順。体力と弾数の欄の間 (画面下の中央) に出す。 */
 .tutorial-prompt {
     position: absolute;

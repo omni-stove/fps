@@ -22,6 +22,8 @@ namespace Fps.Runtime
     /// HUD があれば <see cref="ModeHudView"/> に残り時間・得点・自分のリスポーンまでの秒数・派生モードの行 (<see cref="AppendHudLines"/>)・結果を出す。</item>
     /// <item>終わったら全員の操作と行動を止め、<see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) でシーンを読み直す。</item>
     /// <item><see cref="HidesTargetDummies"/> が true (既定) なら、始めたときに GameBootstrap の標的ダミーを隠す。</item>
+    /// <item>ModeSession をラウンドとして繰り返す派生は、始め方 (<see cref="StartSession"/>)・進め方 (<see cref="AdvanceSession"/>)・
+    /// 倒れ方 (<see cref="InterceptDeath"/>)・HUD (<see cref="HudScores"/> など)・終わりのログ (<see cref="SessionEndedLog"/>) を置き換える。</item>
     /// </list>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -127,6 +129,67 @@ namespace Fps.Runtime
 
         /// <summary>HUD の得点の下に足す行を lines に入れる。HUD を書き直すたびに空の lines で呼ばれる。</summary>
         protected virtual void AppendHudLines(List<string> lines)
+        {
+        }
+
+        /// <summary>
+        /// <see cref="Begin"/> が参加者を入れる前に、session をこの Runner で進められるか確かめる。進められなければ <see cref="ArgumentException"/> を投げる。
+        /// 既定では何もしない。ModeSession を包む別の進め方 (ラウンド制など) を使う派生は、包んだものと session が合うかをここで確かめる。
+        /// </summary>
+        protected virtual void ValidateSession(ModeSession session)
+        {
+        }
+
+        /// <summary><see cref="Begin"/> の最後に session を始める。既定は <see cref="ModeSession.Start"/>。ラウンド制のように外から始める派生が置き換える。</summary>
+        protected virtual void StartSession(ModeSession session)
+        {
+            session.Start();
+        }
+
+        /// <summary><see cref="Tick"/> で時間を進める。既定は <see cref="ModeSession.Tick"/>。ラウンド制のように外から進める派生が置き換える。</summary>
+        protected virtual void AdvanceSession(float deltaSeconds)
+        {
+            _session.Tick(deltaSeconds);
+        }
+
+        /// <summary>
+        /// 参加者が倒れ、操作を止めた直後、モードに報告する前に呼ばれる。killer は倒した参加者で、分からないときと自滅では null。
+        /// true を返すと既定の報告 (<see cref="ModeSession.ReportKill"/> などとログと <see cref="OnKill"/>) をしない。ダウンを扱うモードが使う。
+        /// </summary>
+        protected virtual bool InterceptDeath(SideMember killer, SideMember victim)
+        {
+            return false;
+        }
+
+        /// <summary>HUD の残り時間。既定は <see cref="ModeHudText.Time"/>。</summary>
+        protected virtual string HudTime()
+        {
+            return ModeHudText.Time(_session);
+        }
+
+        /// <summary>HUD の陣営ごとの得点の行。既定は <see cref="ModeHudText.Scores"/>。</summary>
+        protected virtual IReadOnlyList<ModeHudScoreLine> HudScores(Side? ownSide)
+        {
+            return ModeHudText.Scores(_session, ownSide);
+        }
+
+        /// <summary>HUD の結果。既定は <see cref="ModeHudText.Result"/>。</summary>
+        protected virtual string HudResult()
+        {
+            return ModeHudText.Result(_session);
+        }
+
+        /// <summary>
+        /// ModeSession が終わったときに出すログ。null なら出さない。既定は <see cref="ModeLog.Ended"/>。
+        /// ModeSession の終わりが試合の終わりでない (ラウンドの終わり) 派生は、自分で区切りのログを出して null を返す。
+        /// </summary>
+        protected virtual string SessionEndedLog(Side? winner)
+        {
+            return ModeLog.Ended(winner);
+        }
+
+        /// <summary><see cref="Stop"/> の頭、購読を外す前に呼ばれる。派生が自分で購読したものはここで外す。</summary>
+        protected virtual void OnStopping()
         {
         }
 
@@ -307,6 +370,8 @@ namespace Fps.Runtime
                 throw new ArgumentException("session must have no players; Begin adds the scene's SideMembers", nameof(session));
             }
 
+            ValidateSession(session);
+
             var ordered = OrderMembers(members, localPlayer);
             if (ordered.Count == 0)
             {
@@ -350,7 +415,7 @@ namespace Fps.Runtime
             _session.StateChanged += OnStateChanged;
             _session.RespawnReady += OnRespawnReady;
             _session.Ended += OnSessionEnded;
-            _session.Start();
+            StartSession(_session);
             RefreshHud();
             OnBegan();
         }
@@ -366,7 +431,7 @@ namespace Fps.Runtime
             }
 
             OnBeforeTick(deltaSeconds);
-            _session.Tick(deltaSeconds);
+            AdvanceSession(deltaSeconds);
             RespawnPending();
             RefreshHud();
         }
@@ -377,12 +442,7 @@ namespace Fps.Runtime
         /// </summary>
         public void Respawn(SideMember member)
         {
-            var id = IdOf(member);
-            if (id < 0)
-            {
-                throw new ArgumentException($"'{(member != null ? member.name : "null")}' is not a member of this mode", nameof(member));
-            }
-
+            RequireMember(member);
             var side = member.Side;
             var usable = new List<SideSpawnPoint>(_spawnPoints.Count);
             var spawns = new List<SideSpawn>(_spawnPoints.Count);
@@ -423,11 +483,24 @@ namespace Fps.Runtime
                 rotation = member.transform.rotation;
             }
 
+            RespawnAt(member, position, rotation);
+        }
+
+        /// <summary>
+        /// member を position (足元) に戻し、体力を満たして操作と行動を戻す (終了後は止めたまま)。
+        /// 出現点を自分で選ぶ派生 (ラウンドの始めに全員を並べ直すなど) が使う。
+        /// </summary>
+        public void RespawnAt(SideMember member, Vector3 position, Quaternion rotation)
+        {
+            var id = RequireMember(member);
             member.Respawn(position, rotation);
             member.SetActing(_session == null || _session.State != GameModeState.Ended);
-            Debug.Log(ModeLog.Spawn(id, side, position.ToNumerics()), member);
+            Debug.Log(ModeLog.Spawn(id, member.Side, position.ToNumerics()), member);
             OnSpawned(member);
         }
+
+        /// <summary>シーンから拾った出現点 (null を除く)。</summary>
+        protected IReadOnlyList<SideSpawnPoint> SpawnPoints => _spawnPoints;
 
         /// <summary>今のシーンを読み込み直して最初からやり直す。Play 中にのみ呼べる。</summary>
         [ContextMenu("Restart")]
@@ -452,6 +525,7 @@ namespace Fps.Runtime
         /// <summary>購読を解除してモードから離れる。破棄時にも呼ばれる。</summary>
         public void Stop()
         {
+            OnStopping();
             ReleaseRestartAction();
 
             foreach (var damageable in _ids.Keys)
@@ -513,7 +587,18 @@ namespace Fps.Runtime
 
             AppendHudLines(_hudLines);
             var ownSide = _localPlayer != null ? _localPlayer.Side : (Side?)null;
-            _hudView.Show(ModeHudText.Time(_session), ModeHudText.Scores(_session, ownSide), _hudLines, ModeHudText.Result(_session));
+            _hudView.Show(HudTime(), HudScores(ownSide), _hudLines, HudResult());
+        }
+
+        private int RequireMember(SideMember member)
+        {
+            var id = IdOf(member);
+            if (id < 0)
+            {
+                throw new ArgumentException($"'{(member != null ? member.name : "null")}' is not a member of this mode", nameof(member));
+            }
+
+            return id;
         }
 
         private static List<SideMember> OrderMembers(IReadOnlyList<SideMember> members, SideMember localPlayer)
@@ -613,6 +698,11 @@ namespace Fps.Runtime
 
             var killer = ResolveKiller();
             var killerId = IdOf(killer);
+            if (InterceptDeath(killerId >= 0 && killerId != victimId ? killer : null, victim))
+            {
+                return;
+            }
+
             if (killerId >= 0 && killerId != victimId)
             {
                 Debug.Log(
@@ -689,7 +779,12 @@ namespace Fps.Runtime
 
         private void OnSessionEnded(Side? winner)
         {
-            Debug.Log(ModeLog.Ended(winner), this);
+            var log = SessionEndedLog(winner);
+            if (log != null)
+            {
+                Debug.Log(log, this);
+            }
+
             RefreshHud();
             OnEnded(winner);
         }

@@ -79,7 +79,10 @@ namespace Fps.Runtime
         /// <summary>死んでいれば true。Health をまだ作っていなければ false (ここでは作らない)。</summary>
         public bool IsDead => _health != null && _health.IsDead;
 
-        /// <summary>ダウンしているか。オフラインにダウンを入れるまでは常に false (ネット対戦のダウンはサーバーが持つ)。</summary>
+        /// <summary>
+        /// ダウンしているか。オフラインではダウンを扱うモード (<see cref="ExecutionRunner"/>) が <see cref="SetDowned"/> で立てる。
+        /// ネット対戦のダウンはサーバーが持つので、ここは false のまま。
+        /// </summary>
         public bool IsDowned { get; private set; }
 
         /// <summary>
@@ -215,6 +218,14 @@ namespace Fps.Runtime
             }
 
             return found;
+        }
+
+        /// <summary>
+        /// ダウンしているかを設定する。体力は変えない (ダウンは体力 0 で倒れた後の状態で、起き上がるときはモードが <see cref="RestoreHealth"/> で戻す)。
+        /// </summary>
+        public void SetDowned(bool downed)
+        {
+            IsDowned = downed;
         }
 
         /// <summary><see cref="MaxHealth"/> で満タンの Health を作り直す。</summary>

@@ -21,3 +21,18 @@ MonoBehaviour:
   _deathCamera: 1
   _infiniteReserve: 0
   _reserveAmmoMultiplier: 1
+  _destruction: 1
+  _downed: 1
+  _downedBleedoutSeconds: 15
+  _downedHealthFraction: 0.3
+  _reviveSeconds: 3
+  _cover: 0
+  _blindFire: 0
+  _activeReload: 1
+  _dodge: 0
+  _vault: 0
+  _grenade: 0
+  _grenadeCount: 0
+  _spawnProtectionSeconds: 0
+  _fallDamage: 0
+  _hudDensity: 0

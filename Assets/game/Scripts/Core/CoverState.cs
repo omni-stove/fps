@@ -60,6 +60,9 @@ namespace Fps.Core
         /// </summary>
         public float PeekOffset { get; private set; }
 
+        /// <summary>両側とも端の壁で覗く・ブラインドファイアで出る側。負なら左、それ以外は右。最後に横へ入力した側で、最初は右。</summary>
+        public float PreferredSide => _preferredSide;
+
         /// <summary>入りかけになってからの割合 (0〜1)。中・覗きでは 1、外では 0。</summary>
         public float EnterProgress
         {
@@ -174,6 +177,32 @@ namespace Fps.Core
 
             Exit(reason);
             return true;
+        }
+
+        /// <summary>今の中身を写す。<see cref="LastExitReason"/> はログにしか使わないので含めない。</summary>
+        public CoverSnapshot Capture()
+        {
+            return new CoverSnapshot(Phase, Height, Normal, PeekOffset, _enterElapsed, _backElapsed, _preferredSide);
+        }
+
+        /// <summary>
+        /// <see cref="Capture"/> で写した中身に戻す。同じ中身から同じ入力で <see cref="Step"/> すれば同じ結果になる。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">snapshot が <see cref="CoverSnapshot.IsValid"/> でないとき。</exception>
+        public void Restore(CoverSnapshot snapshot)
+        {
+            if (!snapshot.IsValid)
+            {
+                throw new ArgumentOutOfRangeException(nameof(snapshot), "snapshot must be valid");
+            }
+
+            Phase = snapshot.Phase;
+            Height = snapshot.Height;
+            Normal = snapshot.Normal;
+            PeekOffset = snapshot.PeekOffset;
+            _enterElapsed = snapshot.EnterElapsed;
+            _backElapsed = snapshot.BackElapsed;
+            _preferredSide = snapshot.PreferredSide < 0f ? -1f : 1f;
         }
 
         /// <summary>

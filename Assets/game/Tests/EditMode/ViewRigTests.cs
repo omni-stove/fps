@@ -74,6 +74,45 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void SettingsSetTheCameraFieldOfView()
+        {
+            _rig.Initialize(_eye, _camera);
+            _camera.fieldOfView = 40f;
+
+            _rig.ApplyControlSettings(ControlSettings.Default.With(ControlValue.FieldOfView, 85));
+
+            Assert.That(_camera.fieldOfView, Is.EqualTo(85f));
+            Assert.Throws<ArgumentNullException>(() => _rig.ApplyControlSettings(null));
+        }
+
+        [Test]
+        public void SettingsLeaveTheFieldOfViewToAnInitializedAds()
+        {
+            _rig.Initialize(_eye, _camera);
+            _camera.fieldOfView = 40f;
+            var look = _body.AddComponent<FirstPersonLook>();
+            var ads = _body.AddComponent<AimDownSights>();
+            using (var aim = new InputAction("Aim", InputActionType.Button))
+            {
+                ads.Initialize(_camera, look, aim);
+
+                _rig.ApplyControlSettings(ControlSettings.Default.With(ControlValue.FieldOfView, 85));
+
+                Assert.That(_camera.fieldOfView, Is.EqualTo(40f), "AimDownSights applies the same settings itself");
+            }
+        }
+
+        [Test]
+        public void SettingsBeforeInitializeDoNothing()
+        {
+            _camera.fieldOfView = 40f;
+
+            _rig.ApplyControlSettings(ControlSettings.Default.With(ControlValue.FieldOfView, 85));
+
+            Assert.That(_camera.fieldOfView, Is.EqualTo(40f));
+        }
+
+        [Test]
         public void DefaultsToFirstPerson()
         {
             Assert.That(_rig.Mode, Is.EqualTo(ViewMode.FirstPerson));

@@ -114,6 +114,12 @@ namespace Fps.Net
         public event Action<NetWeaponState> ReloadOrSwitchStarted;
 
         /// <summary>
+        /// 持ち主で、サーバーから届いた状態でリロードが始まったとき (<see cref="StartsReload"/>) に、リロードする武器の Id (<see cref="WeaponId"/>) を渡して呼ばれる。
+        /// 弾倉が空になったときのサーバーの自動リロードも含む。リロード音 (<see cref="WeaponPresentation.PlayReload"/>) に使う。
+        /// </summary>
+        public event Action<string> ReloadStarted;
+
+        /// <summary>
         /// 持ち主で、<see cref="RequestLoadout"/> で送った並びの結果がサーバーから届いたときに呼ばれる。
         /// 受け入れなら true と null (次の出現から配られる)、断られたら false と理由 (武器は変わらない)。
         /// </summary>
@@ -1061,12 +1067,27 @@ namespace Fps.Net
                 || current.EquippedIndex != previous.EquippedIndex;
         }
 
+        /// <summary>
+        /// previous から current への変化で、リロードが始まったか (リロード中でなかったのがリロード中になったか)。
+        /// 装備前 (武器の数が 0) からの最初の同期は始まりとみなさない。
+        /// </summary>
+        public static bool StartsReload(NetWeaponState previous, NetWeaponState current)
+        {
+            return previous.WeaponCount != 0 && current.IsReloading && !previous.IsReloading;
+        }
+
         private void HandleStateChanged(NetWeaponState previous, NetWeaponState current)
         {
             StateChanged?.Invoke(current);
             if (StartsReloadOrSwitch(previous, current))
             {
                 ReloadOrSwitchStarted?.Invoke(current);
+            }
+
+            // ホストのサーバーは他人の状態の変化も受け取るが、他人のリロードは知らせない (他のクライアントには届かないため揃える)
+            if (IsOwner && StartsReload(previous, current))
+            {
+                ReloadStarted?.Invoke(WeaponId);
             }
         }
 

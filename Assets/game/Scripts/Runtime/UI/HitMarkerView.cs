@@ -153,7 +153,7 @@ namespace Fps.Runtime
                 _audio.spatialBlend = 0f;
             }
 
-            _audio.PlayOneShot(clip, catalog.HitMarkerVolume);
+            _audio.PlayOneShot(clip, catalog.HitMarkerVolume * AppliedControlSettings.Current.EffectsVolume);
         }
     }
 }

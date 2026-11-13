@@ -36,9 +36,13 @@ namespace Fps.Net
         // 保存した並びを送った試合。同じ試合に 2 度送らない (次の試合のオブジェクトになったら送り直す)
         private NetTeamDeathmatch _sentFor;
 
-        // 画面から送って答えを待っている並び。自動で送った並びの答えは画面に出さないので null
-        private IReadOnlyList<string> _pending;
+        // 送って答えを待っている並びを送った順に持つ。サーバーはどの送信にも送った順に答えるので、届いた答えは先頭のものへの答え。
+        // 画面を閉じても消さないのは、閉じた後に届いた答えでも受け入れられた並びを保存するため
+        private readonly Queue<PendingRequest> _pending = new Queue<PendingRequest>();
         private bool _wasAwaiting;
+
+        // 画面を開いた回数。前に開いた画面から送った並びの答えを、開き直した画面に出さないために答えと突き合わせる
+        private int _screenSession;
 
         /// <summary>選んだ並びの保存先。null を入れると既定のキーに戻す (テストで差し替える)。</summary>
         public LoadoutPreferenceStore Store
@@ -47,8 +51,8 @@ namespace Fps.Net
             set => _store = value ?? new LoadoutPreferenceStore();
         }
 
-        /// <summary>画面から送って答えを待っているか。</summary>
-        public bool IsAwaitingAnswer => _pending != null;
+        /// <summary>送った並び (画面から・自動のどちらも) の答えを待っているか。</summary>
+        public bool IsAwaitingAnswer => _pending.Count > 0;
 
         /// <summary>netHud の HUD の <see cref="LoadoutSelectView"/> を購読する。前に購読したものは外す。</summary>
         /// <exception cref="InvalidOperationException">HUD にロードアウトの選択のビューが無い。</exception>
@@ -68,7 +72,6 @@ namespace Fps.Net
             }
 
             _view.Confirmed += HandleConfirmed;
-            _view.Closed += HandleClosed;
             BindWeapon(FindWeapon());
         }
 
@@ -108,7 +111,6 @@ namespace Fps.Net
             }
             else if (!awaiting && _wasAwaiting)
             {
-                _pending = null;
                 _view.Close();
             }
 
@@ -164,7 +166,7 @@ namespace Fps.Net
                 return;
             }
 
-            _pending = null;
+            _screenSession++;
             _view.Open(selection);
         }
 
@@ -189,7 +191,10 @@ namespace Fps.Net
             }
 
             Debug.Log(LoadoutChoiceLog.Prefix + " sending the saved loadout", this);
-            _weapon.RequestLoadout(ids);
+            if (_weapon.RequestLoadout(ids))
+            {
+                _pending.Enqueue(new PendingRequest(ids, 0));
+            }
         }
 
         // サーバーは試合に入っていない人の選択を断るので、自分が Players に載るまで待つ
@@ -220,29 +225,23 @@ namespace Fps.Net
                 return;
             }
 
-            _pending = new List<string>(weaponIds).AsReadOnly();
+            _pending.Enqueue(new PendingRequest(new List<string>(weaponIds).AsReadOnly(), _screenSession));
             _view.ShowSending();
-        }
-
-        private void HandleClosed()
-        {
-            _pending = null;
         }
 
         private void HandleAnswered(bool accepted, string reason)
         {
-            var pending = _pending;
-            if (pending == null)
+            if (_pending.Count == 0)
             {
                 return;
             }
 
-            _pending = null;
+            var pending = _pending.Dequeue();
             if (accepted)
             {
                 try
                 {
-                    _store.Save(pending);
+                    _store.Save(pending.WeaponIds);
                 }
                 catch (ArgumentException e)
                 {
@@ -250,7 +249,8 @@ namespace Fps.Net
                 }
             }
 
-            if (_view.IsOpen)
+            // 画面が待っているのは、今開いている画面から最後に送った並びの答えだけ
+            if (pending.ScreenSession == _screenSession && _pending.Count == 0 && _view != null && _view.IsOpen)
             {
                 _view.ShowAnswer(accepted, reason);
             }
@@ -264,7 +264,7 @@ namespace Fps.Net
             }
 
             _weapon = weapon;
-            _pending = null;
+            _pending.Clear();
             if (_weapon != null)
             {
                 _weapon.LoadoutAnswered += HandleAnswered;
@@ -277,11 +277,24 @@ namespace Fps.Net
             if (_view != null)
             {
                 _view.Confirmed -= HandleConfirmed;
-                _view.Closed -= HandleClosed;
             }
 
             _view = null;
             _netHud = null;
+        }
+
+        private readonly struct PendingRequest
+        {
+            public PendingRequest(IReadOnlyList<string> weaponIds, int screenSession)
+            {
+                WeaponIds = weaponIds;
+                ScreenSession = screenSession;
+            }
+
+            public IReadOnlyList<string> WeaponIds { get; }
+
+            // 自動で送った並びは 0 (画面に出さない)
+            public int ScreenSession { get; }
         }
     }
 }

@@ -296,6 +296,70 @@
     width: 960px;
 }
 
+/* ポーズ画面。HUD の上に画面全体を暗く重ね、中央にボタンを縦に並べる。 */
+.pause {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.pause__panel {
+    min-width: 480px;
+    padding: 32px 48px;
+    border-radius: 10px;
+    align-items: stretch;
+    background-color: rgba(20, 20, 24, 0.9);
+}
+
+/* 設定画面の枠。中身 (SettingsView) は Menu/Settings.uss で塗り、ここでは大きさだけ決める。 */
+.pause__settings {
+    width: 1000px;
+    height: 760px;
+}
+
+.pause__title {
+    margin: 0 0 24px 0;
+    font-size: 48px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.pause__note {
+    margin: 0 0 20px 0;
+    font-size: 22px;
+    color: rgb(255, 210, 120);
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.pause__button {
+    margin: 8px 0;
+    padding: 12px 24px;
+    font-size: 30px;
+    border-width: 2px;
+    border-radius: 6px;
+    border-color: rgba(255, 255, 255, 0.25);
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgb(255, 255, 255);
+}
+
+.pause__button:hover,
+.pause__button:focus {
+    border-color: rgb(255, 255, 255);
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.pause__button:disabled {
+    color: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
 /* スコアボード。Scoreboard を押している間だけ画面の中央に出す。行は ScoreboardView が作る。 */
 .scoreboard {
     position: absolute;

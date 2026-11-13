@@ -9,7 +9,10 @@ namespace Fps.Core.Tests
         [Test]
         public void EveryCategoryHasADisplayName()
         {
+            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
+#pragma warning disable CA2263
             foreach (WeaponCategory category in Enum.GetValues(typeof(WeaponCategory)))
+#pragma warning restore CA2263
             {
                 Assert.That(LoadoutFormat.Category(category), Is.Not.Empty, category.ToString());
             }

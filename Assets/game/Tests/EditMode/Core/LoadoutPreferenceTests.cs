@@ -34,7 +34,7 @@ namespace Fps.Core.Tests
         public void ToJsonRejectsEmptyLoadouts()
         {
             Assert.Throws<ArgumentNullException>(() => LoadoutPreference.ToJson(null));
-            Assert.Throws<ArgumentException>(() => LoadoutPreference.ToJson(new string[0]));
+            Assert.Throws<ArgumentException>(() => LoadoutPreference.ToJson(Array.Empty<string>()));
             Assert.Throws<ArgumentException>(() => LoadoutPreference.ToJson(new[] { _rifle, string.Empty }));
             Assert.Throws<ArgumentException>(() => LoadoutPreference.ToJson(new[] { _rifle, null }));
         }

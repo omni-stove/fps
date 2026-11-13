@@ -5,8 +5,9 @@ using UnityEngine.SceneManagement;
 namespace Fps.Net
 {
     /// <summary>
-    /// 専用サーバーで要らない描画・音声のコンポーネント (Camera / AudioListener / AudioSource と、演出の
+    /// 専用サーバーで要らない描画・音声のコンポーネント (Camera / AudioListener / AudioSource / Animator と、演出の
     /// <see cref="WeaponPresentation"/> / <see cref="CharacterAudio"/> / <see cref="CharacterAnimator"/>) を止める。
+    /// Animator はプレハブに置いたリグ (NetPlayer) のもの。当たり判定はリグの関節を使わないので、止めても試合は変わらない。
     /// 止めるかどうかは <see cref="Fps.Core.NetStartup.ShouldDisablePresentation"/> で決め、ここは止める処理だけを持つ。
     /// </summary>
     public static class HeadlessPresentation
@@ -43,6 +44,7 @@ namespace Fps.Net
             return Disable(root.GetComponentsInChildren<Camera>(true))
                 + Disable(root.GetComponentsInChildren<AudioListener>(true))
                 + Disable(root.GetComponentsInChildren<AudioSource>(true))
+                + Disable(root.GetComponentsInChildren<Animator>(true))
                 + Disable(root.GetComponentsInChildren<WeaponPresentation>(true))
                 + Disable(root.GetComponentsInChildren<CharacterAudio>(true))
                 + Disable(root.GetComponentsInChildren<CharacterAnimator>(true));

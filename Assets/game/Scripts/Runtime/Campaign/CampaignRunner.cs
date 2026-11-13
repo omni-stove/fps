@@ -447,7 +447,7 @@ namespace Fps.Runtime
         /// <summary>
         /// <see cref="Begin(MissionRunner, Damageable, WeaponController, ISaveStorage, Action)"/> と同じだが、セーブを戻す前に rules を
         /// プレイヤーに効かせる。武器は rules の予備弾で満タンに作り直し (<see cref="WeaponController.ApplyRules"/>)、
-        /// プレイヤーの <see cref="HealthRegen"/> (無ければ付ける) とアクション (<see cref="PlayerActions.Attach"/>) を rules で付け直す。セーブがあればその後で弾数を戻すので、
+        /// プレイヤーの <see cref="HealthRegen"/> (無ければ付ける) とアクション (<see cref="PlayerActions.Attach"/>)、落下ダメージ (<see cref="PlayerController.ApplyRules"/>) を rules で付け直す。セーブがあればその後で弾数を戻すので、
         /// セーブの予備弾には倍率を掛け直さない。rules が null ならルールは効かせ直さない。
         /// </summary>
         public void Begin(
@@ -651,6 +651,13 @@ namespace Fps.Runtime
 
             regen.Bind(player, rules);
             PlayerActions.Attach(player.gameObject, rules);
+
+            // Begin は Damageable しか求めていないので、PlayerController の無いプレイヤーも渡され得る
+            var mover = player.GetComponent<PlayerController>();
+            if (mover != null)
+            {
+                mover.ApplyRules(rules);
+            }
         }
 
         /// <summary>

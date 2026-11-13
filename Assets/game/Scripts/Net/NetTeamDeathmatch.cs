@@ -194,6 +194,12 @@ namespace Fps.Net
         /// <summary>サーバーで試合が動いているか。設定やシーンに誤りがあると false のまま。</summary>
         public bool IsRunningOnServer => IsServer && _session != null;
 
+        /// <summary>サーバーで動いている試合のルール。試合が動いていなければ (クライアントを含む) null。</summary>
+        internal GameRules ServerRules => IsRunningOnServer ? _session.Spec.Rules : null;
+
+        /// <summary>サーバーで動いている試合の最大体力。試合が動いていなければ 0。</summary>
+        internal int ServerMaxHealth => IsRunningOnServer ? _session.MaxHealth : 0;
+
         public int ScoreLimit
         {
             get => _scoreLimit;
@@ -352,18 +358,17 @@ namespace Fps.Net
         /// サーバーで attacker が victim に amount のダメージを与える。命中判定 (B/H) はここを呼ぶ。
         /// 体力が尽きたら Core 側で ReportKill され、点数とリスポーンが進む。ダウンが On なら倒さずにダウンさせ、
         /// <see cref="DamageOutcome.Downed"/> を返す (体力が変わったことは <see cref="DamageOutcome.Damaged"/> と同じに扱う)。
+        /// attacker が null のダメージ (落下など) は victim 自身が与えたものとし、倒れたら自滅として数える (ダウンさせずに倒す)。
         /// </summary>
+        /// <param name="attacker">撃った人。撃った人がいなければ null。</param>
+        /// <param name="victim">ダメージを受ける人。</param>
+        /// <param name="amount">ダメージ。0 以上。</param>
         /// <exception cref="InvalidOperationException">サーバー以外で呼んだ。</exception>
         public DamageOutcome ApplyDamage(NetPlayer attacker, NetPlayer victim, int amount)
         {
             if (!IsServer)
             {
                 throw new InvalidOperationException("damage can only be applied on the server");
-            }
-
-            if (attacker == null)
-            {
-                throw new ArgumentNullException(nameof(attacker));
             }
 
             if (victim == null)
@@ -376,12 +381,14 @@ namespace Fps.Net
                 throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
             }
 
-            if (_session == null || !IsJoined(attacker) || !IsJoined(victim))
+            // Session は攻撃者と被害者が同じ Id のダメージを自滅として扱うので、攻撃者のいないダメージはそれに寄せる
+            var source = attacker != null ? attacker : victim;
+            if (_session == null || !IsJoined(source) || !IsJoined(victim))
             {
                 return DamageOutcome.Ignored;
             }
 
-            return ApplySessionDamage(attacker.ServerPlayerId, victim.ServerPlayerId, amount);
+            return ApplySessionDamage(source.ServerPlayerId, victim.ServerPlayerId, amount);
         }
 
         private void StartSession()

@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 視点操作 (一人称・三人称共通)。Look 入力で本体 (この GameObject) を yaw、子の pitch の軸を pitch (±85°) で回す。
-    /// 有効な間はカーソルをロックする。参照はコードで解決するので Inspector の配線は要らない:
+    /// 有効な間はカーソルをロックする (<see cref="PauseMenu"/> が開いている間を除く)。参照はコードで解決するので Inspector の配線は要らない:
     /// pitch の軸は、本体に <see cref="ViewRig"/> があればその目 (カメラの親)、無ければ子階層の <see cref="Camera"/>。
     /// 入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の <see cref="LookActionPath"/>。
     /// 三人称でもカメラは目の子なので、目を回せば肩越しのカメラも一緒に回る。
@@ -140,7 +140,11 @@ namespace Fps.Runtime
                 _enabledLookAction = true;
             }
 
-            LockCursor(true);
+            // ポーズ中に出現し直したプレイヤーが、メニューを操作しているカーソルを奪わないようにする。閉じたときに PauseMenu がロックする。
+            if (!PauseMenu.IsAnyOpen)
+            {
+                LockCursor(true);
+            }
         }
 
         private void OnDisable()
@@ -157,10 +161,29 @@ namespace Fps.Runtime
         private void OnApplicationFocus(bool hasFocus)
         {
             // フォーカスを失うと OS がロックを外すので、戻ったときにかけ直す。
-            if (hasFocus && isActiveAndEnabled)
+            if (hasFocus && isActiveAndEnabled && !PauseMenu.IsAnyOpen)
             {
                 LockCursor(true);
             }
+        }
+
+        /// <summary>
+        /// 有効で初期化済みの視点操作がシーンにあればカーソルをロックして隠し、無ければ外して出す。
+        /// <see cref="PauseMenu"/> を閉じたときに呼ぶ (開いている間に視点操作が有効・無効になっていることがあるため、開く前の状態には戻さない)。
+        /// </summary>
+        public static void RefreshCursorLock()
+        {
+            var anyActive = false;
+            foreach (var look in FindObjectsByType<FirstPersonLook>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (look.isActiveAndEnabled && look.IsInitialized)
+                {
+                    anyActive = true;
+                    break;
+                }
+            }
+
+            LockCursor(anyActive);
         }
 
         private void Update()

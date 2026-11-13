@@ -780,6 +780,7 @@ namespace Fps.Net
 
         private void ResolveInputActions()
         {
+            AppliedInputBindings.EnsureLoaded();
             var actions = InputSystem.actions;
             if (actions == null)
             {

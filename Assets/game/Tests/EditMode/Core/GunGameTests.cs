@@ -23,7 +23,7 @@ namespace Fps.Core.Tests
         };
 
         private static readonly string[] _knife = { _knifeId };
-        private static readonly string[] _knifeTwiceAndPadded = { _knifeId," knife " };
+        private static readonly string[] _knifeTwiceAndPadded = { _knifeId, " knife " };
         private static readonly string[] _blankMelee = { " " };
         private static readonly string[] _nullMelee = { null };
 

@@ -13,7 +13,8 @@ namespace Fps.Editor
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) と、そこから作る個別リスポーンのモードだけ
     /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す・
-    /// 拠点なし・Bot で埋めない・放置で切らない (<see cref="GameRules"/> の既定)。
+    /// 拠点なし・Bot で埋めない (<see cref="GameRules"/> の既定)。放置で切るのは、オンラインの試合が使うチームデスマッチと、
+    /// その値から作るモード (ドミネーション・対戦・PvE のモード) だけで <see cref="OnlineIdleKickSeconds"/> 秒。キャンペーンと射撃場は切らない。
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
     /// TPS 射撃場がそれに回避・乗り越え・グレネードを足したもの。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
@@ -88,8 +89,14 @@ namespace Fps.Editor
         public const float TeamDeathmatchSpawnProtectionSeconds = 2f;
 
         /// <summary>
+        /// <see cref="TeamDeathmatchRules"/> (オンラインの試合が使うルール) で、入力が無いプレイヤーをサーバーから切るまでの秒数。
+        /// </summary>
+        public const float OnlineIdleKickSeconds = 120f;
+
+        /// <summary>
         /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、リスポーンまで生きている味方の視点で観戦する、予備弾は有限で 1 倍、
-        /// 建造物は弾で壊れる、出現直後は <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒無敵。アクションは <see cref="TeamDeathmatchActions"/>。
+        /// 建造物は弾で壊れる、出現直後は <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒無敵、
+        /// 入力が <see cref="OnlineIdleKickSeconds"/> 秒無ければサーバーから切る。アクションは <see cref="TeamDeathmatchActions"/>。
         /// </summary>
         public static GameRules TeamDeathmatchRules()
         {
@@ -105,7 +112,8 @@ namespace Fps.Editor
                 1f,
                 Destruction.On,
                 TeamDeathmatchActions())
-                .WithSpawnProtectionSeconds(TeamDeathmatchSpawnProtectionSeconds);
+                .WithSpawnProtectionSeconds(TeamDeathmatchSpawnProtectionSeconds)
+                .WithIdleKickSeconds(OnlineIdleKickSeconds);
         }
 
         /// <summary>

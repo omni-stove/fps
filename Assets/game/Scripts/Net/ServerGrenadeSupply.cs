@@ -11,13 +11,21 @@ namespace Fps.Net
     public sealed class ServerGrenadeSupply
     {
         private readonly float _throwSeconds;
+        private readonly float _jitterSeconds;
         private GrenadePouch _pouch = new GrenadePouch(0);
         private bool _enabled;
         private double _nextThrowAt = double.NegativeInfinity;
 
         /// <param name="throwSeconds">投げてから次を投げられるまでの秒数。0 以上の有限値。</param>
-        public ServerGrenadeSupply(float throwSeconds)
+        /// <param name="jitterSeconds">RPC の届く時刻の揺れとして、間隔より短く届いても受け入れる秒数。0 以上の有限値。</param>
+        public ServerGrenadeSupply(float throwSeconds, float jitterSeconds = 0f)
         {
+            if (!(jitterSeconds >= 0f) || float.IsInfinity(jitterSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(jitterSeconds), jitterSeconds, "jitterSeconds must be a non-negative finite number");
+            }
+
+            _jitterSeconds = jitterSeconds;
             if (!(throwSeconds >= 0f) || float.IsInfinity(throwSeconds))
             {
                 throw new ArgumentOutOfRangeException(nameof(throwSeconds), throwSeconds, "throwSeconds must be a non-negative finite number");
@@ -65,7 +73,7 @@ namespace Fps.Net
                 return GrenadeThrowRejection.Empty;
             }
 
-            return nowSeconds < _nextThrowAt ? GrenadeThrowRejection.TooSoon : GrenadeThrowRejection.None;
+            return nowSeconds < _nextThrowAt - _jitterSeconds ? GrenadeThrowRejection.TooSoon : GrenadeThrowRejection.None;
         }
 
         /// <summary>

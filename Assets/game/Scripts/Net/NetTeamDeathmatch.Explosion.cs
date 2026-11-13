@@ -37,6 +37,8 @@ namespace Fps.Net
         [SerializeField, Tooltip("投げたグレネードのプレハブ (Assets/game/Prefabs/Net/NetGrenade.prefab)。NetworkObject と NetGrenade 必須。未設定ならルールで On でも投げられない")]
         private GameObject _grenadePrefab;
 
+        private const float GrenadeThrowJitterSeconds = 0.15f;
+
         // 1 人ごとのグレネードの残り (サーバーだけ)。プレイヤー Id から引く
         private readonly Dictionary<int, ServerGrenadeSupply> _grenadeSupplies = new Dictionary<int, ServerGrenadeSupply>();
 
@@ -456,7 +458,8 @@ namespace Fps.Net
 
             if (!_grenadeSupplies.TryGetValue(playerId, out var supply))
             {
-                supply = new ServerGrenadeSupply(GrenadeThrower.ThrowSeconds);
+                // RPC の届く時刻は揺れるので、持ち主の時計どおりに送られた次の要求が間隔より少し早く届いても捨てない
+                supply = new ServerGrenadeSupply(GrenadeThrower.ThrowSeconds, GrenadeThrowJitterSeconds);
                 _grenadeSupplies.Add(playerId, supply);
             }
 

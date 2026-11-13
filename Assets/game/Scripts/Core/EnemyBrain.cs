@@ -363,7 +363,7 @@ namespace Fps.Core
                     _coverElapsed = 0f;
                     _reactionElapsed = 0f;
                     _shotsInAttack = 0;
-                    return PeekDecision(seen);
+                    return PeekDecision(self, seen);
                 default:
                     _coverElapsed += deltaSeconds;
                     if (_coverElapsed >= _spec.CoverPeekSeconds)
@@ -373,7 +373,7 @@ namespace Fps.Core
                     }
 
                     _reactionElapsed = _coverElapsed;
-                    return PeekDecision(seen);
+                    return PeekDecision(self, seen);
             }
         }
 
@@ -388,9 +388,10 @@ namespace Fps.Core
             return new EnemyDecision(null, _coverThreat, false, true);
         }
 
-        private EnemyDecision PeekDecision(bool seen)
+        private EnemyDecision PeekDecision(Vector3 self, bool seen)
         {
-            return new EnemyDecision(null, _coverThreat, seen && _reactionElapsed >= _spec.ReactionSeconds, false);
+            var inRange = Vector3.Distance(self, _coverThreat) <= _spec.AttackRange;
+            return new EnemyDecision(null, _coverThreat, seen && inRange && _reactionElapsed >= _spec.ReactionSeconds, false);
         }
 
         /// <summary>TakeCover をやめる。状態は呼び出し側の判断 (Chase / Attack) で移る。</summary>

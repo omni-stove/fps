@@ -414,6 +414,25 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void OnlyTheOnlineStyleModesKickIdlePlayersAfterTwoMinutes()
+        {
+            Assert.That(GameRulesAssetBuilder.OnlineIdleKickSeconds, Is.EqualTo(120f));
+
+            var built = Build();
+            Assert.That(built[0].ToRules().IdleKickSeconds, Is.EqualTo(120f), built[0].name);
+            Assert.That(built[DominationIndex].ToRules().IdleKickSeconds, Is.EqualTo(120f), built[DominationIndex].name);
+            for (var i = 1; i <= TpsRangeIndex; i++)
+            {
+                Assert.That(built[i].ToRules().IdleKickSeconds, Is.Zero, built[i].name);
+            }
+
+            foreach (var name in GameRulesAssetBuilder.ModeNames)
+            {
+                Assert.That(GameRulesAssetBuilder.ModeRules(name).IdleKickSeconds, Is.EqualTo(120f), name);
+            }
+        }
+
+        [Test]
         public void TeamDeathmatchProtectsForTwoSecondsAfterSpawning()
         {
             Assert.That(GameRulesAssetBuilder.TeamDeathmatchSpawnProtectionSeconds, Is.EqualTo(2f));

@@ -42,6 +42,89 @@ namespace Fps.Tests.EditMode
             Assert.That(root.Q<Label>(HudView.FirstScoreLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.SecondScoreLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.ResultLabelName), Is.Not.Null);
+            var reloadBar = root.Q<VisualElement>(HudView.ReloadBarName);
+            Assert.That(reloadBar, Is.Not.Null);
+            Assert.That(reloadBar.Q<VisualElement>(HudView.ReloadFillName), Is.Not.Null);
+            Assert.That(reloadBar.Q<VisualElement>(HudView.ReloadWindowName), Is.Not.Null);
+        }
+
+        private static Weapon NewActiveReloadWeapon()
+        {
+            var actions = new ActionRules(
+                Downed.Off,
+                ActionRules.DefaultDownedBleedoutSeconds,
+                ActionRules.DefaultDownedHealthFraction,
+                ActionRules.DefaultReviveSeconds,
+                Cover.Off,
+                BlindFire.Off,
+                ActiveReload.On);
+            var rules = new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                GameRules.DefaultWaveIntervalSeconds,
+                0f,
+                0f,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                false,
+                1f,
+                Destruction.Off,
+                actions);
+            var spec = new WeaponSpec(
+                "00000000-0000-4000-8000-000000000001", "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 2f, 25, 100f, DamageFalloff.None,
+                activeReloadWindowStart: 0.5f,
+                activeReloadWindowLength: 0.25f,
+                activeReloadFailSeconds: 0.5f);
+            return new Weapon(spec, rules);
+        }
+
+        [Test]
+        public void TheReloadBarIsHiddenUntilThereIsProgress()
+        {
+            var view = new HudView(CloneLayout(), new HudModel());
+
+            Assert.That(view.ReloadBar.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheReloadBarShowsTheProgressAndTheWindowAndHidesWhenTheReloadEnds()
+        {
+            var model = new HudModel();
+            var weapon = NewActiveReloadWeapon();
+            model.BindWeapon(weapon);
+            var view = new HudView(CloneLayout(), model);
+            Assert.That(weapon.TryFire(), Is.True);
+            Assert.That(weapon.TryStartReload(), Is.True);
+
+            weapon.Tick(0.5f);
+            model.RefreshReloadProgress();
+
+            Assert.That(view.ReloadBar.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.ReloadFill.style.width.value, Is.EqualTo(Length.Percent(25f)));
+            Assert.That(view.ReloadWindow.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.ReloadWindow.style.left.value, Is.EqualTo(Length.Percent(50f)));
+            Assert.That(view.ReloadWindow.style.width.value, Is.EqualTo(Length.Percent(25f)));
+
+            weapon.Tick(1.5f);
+
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(view.ReloadBar.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void AnEmptyWindowIsHiddenWhileTheBarStays()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            model.SetReloadProgress(0.4f, 0f, 0f);
+
+            Assert.That(view.ReloadBar.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.ReloadFill.style.width.value, Is.EqualTo(Length.Percent(40f)));
+            Assert.That(view.ReloadWindow.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            model.ClearReloadProgress();
+            Assert.That(view.ReloadBar.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 
         [Test]

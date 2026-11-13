@@ -319,6 +319,33 @@ namespace Fps.Core
             ApplyReloadProgress(null, 0f, 0f);
         }
 
+        /// <summary>
+        /// Bind した武器の今の <see cref="Weapon.ReloadProgress"/> を読み、アクティブリロードを使う武器 (<see cref="Weapon.HasActiveReload"/>) が
+        /// リロード中なら <see cref="SetReloadProgress"/>、そうでなければ <see cref="ClearReloadProgress"/> を呼ぶ。
+        /// 進みは時間で変わりイベントが無いので、HUD が毎フレーム呼ぶ。判定を済ませた後は判定の幅を 0 (始め = 終わり = 0) にして出さない。
+        /// </summary>
+        public void RefreshReloadProgress()
+        {
+            if (_weapon == null || !_weapon.HasActiveReload || !_weapon.IsReloading)
+            {
+                ClearReloadProgress();
+                return;
+            }
+
+            if (_weapon.HasJudgedActiveReload)
+            {
+                // 失敗で時間が延びた後は、幅の位置が進みの尺と合わなくなるため出さない。
+                SetReloadProgress(_weapon.ReloadProgress, 0f, 0f);
+                return;
+            }
+
+            var spec = _weapon.Spec;
+            SetReloadProgress(
+                _weapon.ReloadProgress,
+                spec.ActiveReloadWindowStart,
+                spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength);
+        }
+
         private void OnHealthChanged()
         {
             if (_health != null)
@@ -341,6 +368,9 @@ namespace Fps.Core
             {
                 ClearAmmo();
             }
+
+            // 次のフレームを待たずに、リロードが終わった・武器が替わった時点で進みを消すため。
+            RefreshReloadProgress();
         }
 
         private void ApplyHealth(string text, bool low)

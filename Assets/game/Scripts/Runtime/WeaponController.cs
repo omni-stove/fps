@@ -21,10 +21,18 @@ namespace Fps.Runtime
     /// 参照はコードで解決する: 照準は同じ GameObject の <see cref="Camera"/>、入力はプロジェクト全体のアクション、
     /// 定義はシーン生成スクリプト (または <see cref="GameBootstrap"/>) が <see cref="Definitions"/> に配線する。
     /// </summary>
+    /// <remarks>
+    /// <see cref="Disarm"/> で武器を持っていない状態 (<see cref="IsUnarmed"/>) にできる。その間は <see cref="Weapon"/> が null で、撃つ・リロード・持ち替えは何もしない。
+    /// 武器を拾う (<see cref="AddWeapon"/>) と、その武器 1 本だけを持った状態になる。武器の並び (<see cref="Loadout"/>) は空にできないので、
+    /// 武器を持っていない間も最後の並びを内に持ったままにする (外からは見せない)。
+    /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Camera))]
-    public sealed class WeaponController : MonoBehaviour
+    public sealed class WeaponController : MonoBehaviour, IWeaponHolder
     {
+        /// <summary>武器を手放したときのログ。</summary>
+        public const string DisarmedLog = "[Combat] disarmed";
+
         /// <summary>Assets/InputSystem_Actions.inputactions の Attack アクション。</summary>
         public const string AttackActionPath = InputActionPaths.Attack;
 
@@ -85,6 +93,7 @@ namespace Fps.Runtime
         private float _spread;
         private float _secondsSinceShot;
         private int _shotCount;
+        private bool _unarmed;
 
         /// <summary>撃つたびに反動を足し、<see cref="Tick"/> で戻す。視点 (<see cref="FirstPersonLook.Recoil"/>) に同じものを配線して揺らす。</summary>
         public RecoilState Recoil => _recoil;
@@ -143,8 +152,18 @@ namespace Fps.Runtime
         /// <summary>今の <see cref="Loadout"/> を作ったときのルール。未初期化なら null。</summary>
         public GameRules LoadedRules => _loadout != null ? _loadedRules : null;
 
-        /// <summary>今持っている武器の定義。未初期化なら null。</summary>
-        public WeaponDefinition Definition => _loadout != null ? _loadedDefinitions[_loadout.CurrentIndex] : null;
+        /// <summary>今持っている武器の定義。未初期化か武器を持っていなければ null。</summary>
+        public WeaponDefinition Definition => _loadout != null && !_unarmed ? _loadedDefinitions[_loadout.CurrentIndex] : null;
+
+        /// <summary><see cref="Disarm"/> してから、武器を拾うか初期化し直すまで true。</summary>
+        public bool IsUnarmed => _unarmed;
+
+        /// <summary>
+        /// 今持っている武器の定義 (<see cref="Loadout"/> と同じ並び。拾って加えた武器を含む)。未初期化か武器を持っていなければ空。
+        /// <see cref="Definitions"/> (既定のロードアウト) とは違い、倒れたときに落とす物を決めるのに使う。
+        /// </summary>
+        public IReadOnlyList<WeaponDefinition> HeldDefinitions =>
+            _loadout != null && !_unarmed ? _loadedDefinitions : (IReadOnlyList<WeaponDefinition>)Array.Empty<WeaponDefinition>();
 
         public InputAction AttackAction => _attackAction;
         public InputAction ReloadAction => _reloadAction;
@@ -155,14 +174,14 @@ namespace Fps.Runtime
         /// <summary>前の武器に持ち替えるアクション。渡されていなければ null (入力では持ち替えない)。</summary>
         public InputAction PreviousAction => _previousAction;
 
-        /// <summary>持っている武器の並び。未初期化なら null。</summary>
-        public Loadout<Weapon> Loadout => _loadout;
+        /// <summary>持っている武器の並び。未初期化か武器を持っていなければ null。</summary>
+        public Loadout<Weapon> Loadout => _unarmed ? null : _loadout;
 
-        /// <summary>今持っている武器。未初期化なら null。</summary>
-        public Weapon Weapon => _loadout?.Current;
+        /// <summary>今持っている武器。未初期化か武器を持っていなければ null。</summary>
+        public Weapon Weapon => _unarmed ? null : _loadout?.Current;
 
-        /// <summary>今持っている武器の番号。未初期化なら -1。</summary>
-        public int CurrentIndex => _loadout != null ? _loadout.CurrentIndex : -1;
+        /// <summary>今持っている武器の番号。未初期化か武器を持っていなければ -1。</summary>
+        public int CurrentIndex => _loadout != null && !_unarmed ? _loadout.CurrentIndex : -1;
 
         /// <summary>
         /// 今持っている <see cref="Weapon"/> が変わったとき (初期化・持ち替え・<see cref="RestoreLoadout"/>) に、新しい Weapon を渡して呼ばれる。
@@ -237,6 +256,12 @@ namespace Fps.Runtime
 
         private void Update()
         {
+            if (_unarmed)
+            {
+                Tick(Time.deltaTime);
+                return;
+            }
+
             // 持ち替えを先に見るのは、同じフレームの射撃とリロードを持ち替え先の武器で行うため。
             if (_nextAction != null && _nextAction.WasPressedThisFrame())
             {
@@ -266,35 +291,76 @@ namespace Fps.Runtime
         public bool PullTrigger(bool isPressed, bool wasPressedThisFrame)
         {
             EnsureInitialized();
-            return FireTrigger.Wants(Weapon.Spec.FireMode, isPressed, wasPressedThisFrame) && Fire();
+            return !_unarmed && FireTrigger.Wants(Weapon.Spec.FireMode, isPressed, wasPressedThisFrame) && Fire();
         }
 
-        /// <summary>次の番号の武器に持ち替える (最後の次は 0 番)。1 本しかなければ false。</summary>
+        /// <summary>次の番号の武器に持ち替える (最後の次は 0 番)。1 本しかないか武器を持っていなければ false。</summary>
         public bool SelectNext()
         {
             EnsureInitialized();
-            return _loadout.SelectNext();
+            return !_unarmed && _loadout.SelectNext();
         }
 
-        /// <summary>前の番号の武器に持ち替える (0 番の前は最後)。1 本しかなければ false。</summary>
+        /// <summary>前の番号の武器に持ち替える (0 番の前は最後)。1 本しかないか武器を持っていなければ false。</summary>
         public bool SelectPrevious()
         {
             EnsureInitialized();
-            return _loadout.SelectPrevious();
+            return !_unarmed && _loadout.SelectPrevious();
         }
 
-        /// <summary>index 番の武器に持ち替える。範囲外か今の番号なら false。</summary>
+        /// <summary>index 番の武器に持ち替える。範囲外か今の番号か、武器を持っていなければ false。</summary>
         public bool Select(int index)
         {
             EnsureInitialized();
-            return _loadout.TrySelect(index);
+            return !_unarmed && _loadout.TrySelect(index);
         }
 
         /// <summary>Id が weaponId の武器に持ち替える。持っていないか今の武器なら false。</summary>
         public bool Select(string weaponId)
         {
             EnsureInitialized();
-            return _loadout.TrySelect(weaponId);
+            return !_unarmed && _loadout.TrySelect(weaponId);
+        }
+
+        /// <summary>
+        /// 武器を持っていない状態にする (<see cref="IsUnarmed"/>)。リロード中なら取り消し、<c>[Combat] disarmed</c> を出して
+        /// <see cref="WeaponChanged"/> を null で呼ぶ (HUD は武器なしの表示にする)。もう持っていなければ何もせず false。
+        /// 武器を拾う (<see cref="AddWeapon"/>) か初期化し直すと持った状態に戻る。
+        /// </summary>
+        public bool Disarm()
+        {
+            EnsureInitialized();
+            if (_unarmed)
+            {
+                return false;
+            }
+
+            _loadout.Current.CancelReload();
+            _unarmed = true;
+            Debug.Log(DisarmedLog, this);
+            WeaponChanged?.Invoke(null);
+            return true;
+        }
+
+        /// <summary>持っている武器の今の予備弾 (並びの順)。武器を持っていなければ空。</summary>
+        public IReadOnlyList<PickupWeaponState> DescribeWeapons(out string currentWeaponId)
+        {
+            EnsureInitialized();
+            if (_unarmed)
+            {
+                currentWeaponId = null;
+                return Array.Empty<PickupWeaponState>();
+            }
+
+            var items = _loadout.Items;
+            var list = new PickupWeaponState[items.Count];
+            for (var i = 0; i < items.Count; i++)
+            {
+                list[i] = PickupWeaponState.Of(items[i]);
+            }
+
+            currentWeaponId = _loadout.Current.Spec.Id;
+            return list;
         }
 
         /// <summary>
@@ -438,6 +504,7 @@ namespace Fps.Runtime
             _aim = aim;
             _rig = aim.GetComponentInParent<ViewRig>(true);
             _definitions = loaded;
+            _unarmed = false;
             SetLoadout(loadout, specs, loaded, rules);
 
             // Edit Mode では OnDisable が呼ばれず無効に戻せないので、Play 中だけ有効にする。
@@ -452,7 +519,7 @@ namespace Fps.Runtime
         /// <summary>
         /// rules の予備弾で全武器を満タンに作り直し、0 番を持つ。<see cref="Rules"/> も rules にする。
         /// キャンペーンが開始時に難易度のルールを効かせるのに使う (セーブから戻すのはこの後の <see cref="RestoreLoadout"/>)。
-        /// <see cref="WeaponChanged"/> を呼ぶので HUD は購読し直す。
+        /// <see cref="WeaponChanged"/> を呼ぶので HUD は購読し直す。武器を持っていなければ、持っていないまま (内の並びだけ作り直す)。
         /// </summary>
         public void ApplyRules(GameRules rules)
         {
@@ -473,7 +540,7 @@ namespace Fps.Runtime
         /// Id が ammo にある武器はその弾数 (弾倉の容量を超える分は容量に揃える)、無い武器は満タンにし、equippedWeaponId の武器を持つ
         /// (持っていない Id か空なら 0 番)。ammo にあって持っていない武器は警告を出して捨てる。
         /// 予備弾はセーブの値をそのまま使い、<see cref="GameRules.ReserveAmmoMultiplier"/> は掛け直さない。
-        /// 無限予備弾かどうかは今の <see cref="LoadedRules"/> に従う。
+        /// 無限予備弾かどうかは今の <see cref="LoadedRules"/> に従う。武器を持っていなかったら、持った状態に戻す。
         /// <see cref="WeaponChanged"/> を呼ぶので HUD は購読し直す。
         /// </summary>
         /// <param name="ammo">武器ごとの残弾 (<see cref="CampaignSave.Weapons"/>)。null を含まない。</param>
@@ -481,6 +548,7 @@ namespace Fps.Runtime
         public void RestoreLoadout(IEnumerable<WeaponAmmo> ammo, string equippedWeaponId)
         {
             EnsureInitialized();
+            _unarmed = false;
 
             var loadout = WeaponLoadout.Restore(_specs, ammo, equippedWeaponId, _loadedRules, out var unknown);
             foreach (var id in unknown)
@@ -504,6 +572,7 @@ namespace Fps.Runtime
         /// 武器を作り直すのでリロード中なら取り消し、<see cref="WeaponChanged"/> を呼ぶ (HUD は購読し直す)。持ち替えはしない。
         /// <see cref="Definitions"/> (既定のロードアウト) は変えないが、<see cref="ApplyRules"/> での満たし直しでは加えた武器も残る。
         /// 同じ Id の武器を既に持っていれば何もせず false。定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、状態は変えない。
+        /// 武器を持っていなければ (<see cref="IsUnarmed"/>)、definition の武器 1 本だけを持った状態にする。
         /// </summary>
         public bool AddWeapon(WeaponDefinition definition)
         {
@@ -514,6 +583,17 @@ namespace Fps.Runtime
 
             EnsureInitialized();
             var spec = definition.ToSpec();
+            if (_unarmed)
+            {
+                var only = new[] { spec };
+                var armed = WeaponLoadout.Create(only, _loadedRules);
+                SetLoadout(armed, only, new[] { definition }, _loadedRules);
+                _unarmed = false;
+                Debug.Log($"[Combat] weapon added index=0 id={spec.Id} name={spec.DisplayName}", this);
+                WeaponChanged?.Invoke(Weapon);
+                return true;
+            }
+
             if (_loadout.IndexOf(spec.Id) >= 0)
             {
                 return false;
@@ -535,7 +615,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// Id が weaponId の持ち武器に予備弾を amount 足し (<see cref="Fps.Core.Weapon.AddReserveAmmo"/>)、実際に足した数を返す。
-        /// 持っていない武器なら 0。
+        /// 持っていない武器 (武器を持っていないときはどの武器も) なら 0。
         /// </summary>
         public int AddReserveAmmo(string weaponId, int amount)
         {
@@ -545,15 +625,20 @@ namespace Fps.Runtime
             }
 
             EnsureInitialized();
+            if (_unarmed)
+            {
+                return 0;
+            }
+
             var index = _loadout.IndexOf(weaponId);
             return index >= 0 ? _loadout.Items[index].AddReserveAmmo(amount) : 0;
         }
 
-        /// <summary>持っている全武器の今の残弾。並びの順。セーブに使う。</summary>
+        /// <summary>持っている全武器の今の残弾。並びの順。セーブに使う。武器を持っていなければ空。</summary>
         public IReadOnlyList<WeaponAmmo> SnapshotAmmo()
         {
             EnsureInitialized();
-            return _loadout.SnapshotAmmo();
+            return _unarmed ? Array.Empty<WeaponAmmo>() : _loadout.SnapshotAmmo();
         }
 
         /// <summary>
@@ -569,7 +654,7 @@ namespace Fps.Runtime
             EnsureInitialized();
 
             var weapon = Weapon;
-            if (IsFireBlocked || !weapon.TryFire())
+            if (weapon == null || IsFireBlocked || !weapon.TryFire())
             {
                 return false;
             }
@@ -622,7 +707,7 @@ namespace Fps.Runtime
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (!weapon.TryStartReload())
+            if (weapon == null || !weapon.TryStartReload())
             {
                 return false;
             }
@@ -638,7 +723,8 @@ namespace Fps.Runtime
         public bool PressReload()
         {
             EnsureInitialized();
-            return Weapon.IsReloading ? TryActiveReload() : StartReload();
+            var weapon = Weapon;
+            return weapon != null && (weapon.IsReloading ? TryActiveReload() : StartReload());
         }
 
         /// <summary>
@@ -650,7 +736,7 @@ namespace Fps.Runtime
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (!weapon.TryActiveReload(out var result))
+            if (weapon == null || !weapon.TryActiveReload(out var result))
             {
                 return false;
             }
@@ -699,11 +785,11 @@ namespace Fps.Runtime
             return SpreadPattern.ConeDegrees(spec, ads, move);
         }
 
-        /// <summary>今の武器の時間と、<see cref="SpreadFraction"/> と <see cref="Recoil"/> の戻りを deltaSeconds 進める。</summary>
+        /// <summary>今の武器の時間 (武器を持っていなければ進めない) と、<see cref="SpreadFraction"/> と <see cref="Recoil"/> の戻りを deltaSeconds 進める。</summary>
         public void Tick(float deltaSeconds)
         {
             EnsureInitialized();
-            Weapon.Tick(deltaSeconds);
+            Weapon?.Tick(deltaSeconds);
             _recoil.Tick(deltaSeconds);
 
             var waiting = Mathf.Max(0f, SpreadRecoveryDelaySeconds - _secondsSinceShot);

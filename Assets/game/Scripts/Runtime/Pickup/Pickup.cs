@@ -9,7 +9,8 @@ namespace Fps.Runtime
     /// <summary>
     /// 拾える物。トリガーの球 (<see cref="Radius"/>) に <see cref="Damageable"/> を持つ人が入ったら (<see cref="PickupCollectMode.Touch"/>)、
     /// または範囲にいるプレイヤーが Interact を押したら (<see cref="PickupCollectMode.Interact"/>) 拾う。
-    /// 拾えるかと何が起きるかは <see cref="PickupJudge"/> が決め、ここは拾った人の <see cref="WeaponController"/> (持ち武器・予備弾)・
+    /// 拾えるかと何が起きるかは <see cref="PickupJudge"/> が決め、ここは拾った人の <see cref="IWeaponHolder"/> (プレイヤーの <see cref="WeaponController"/> か
+    /// bot の <see cref="EnemyAgent"/>。持ち武器・予備弾)・
     /// <see cref="Damageable"/> (体力)・<see cref="IArmorHolder"/> (防具) に反映して <c>[Pickup]</c> のログを出し、<see cref="Collected"/> を呼ぶ。
     /// タグは何にも反映せず、<see cref="Collected"/> を受けたモードが得点などを決める。
     /// </summary>
@@ -194,6 +195,22 @@ namespace Fps.Runtime
         public static string ObjectName(PickupKind kind)
         {
             return "Pickup-" + kind;
+        }
+
+        /// <summary>シーンにある有効な物のうち、まだ拾われていない物 (順番は決まっていない)。bot が取りに行く物を選ぶのに使う。</summary>
+        public static List<Pickup> FindActive()
+        {
+            var found = FindObjectsByType<Pickup>(FindObjectsInactive.Exclude);
+            var active = new List<Pickup>(found.Length);
+            foreach (var pickup in found)
+            {
+                if (pickup != null && pickup.isActiveAndEnabled && pickup.IsAvailable)
+                {
+                    active.Add(pickup);
+                }
+            }
+
+            return active;
         }
 
         private void Awake()
@@ -405,8 +422,10 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// collector の今の状態を、拾う判定に要る形にする。陣営は <see cref="SideMember"/>、武器は子の初期化済みの <see cref="WeaponController"/>、
-        /// 防具は同じ GameObject の <see cref="IArmorHolder"/> から読む。どれも無ければ陣営なし・武器を持てない・防具を持てない人にする。
+        /// collector の今の状態を、拾う判定に要る形にする。陣営は <see cref="SideMember"/>、武器は子の初期化済みの <see cref="WeaponController"/>
+        /// (無ければ同じ GameObject の初期化済みの <see cref="EnemyAgent"/>)、防具は同じ GameObject の <see cref="IArmorHolder"/> から読む。
+        /// どれも無ければ陣営なし・武器を持てない・防具を持てない人にする。武器を持っていない (<see cref="WeaponController.IsUnarmed"/>) 人は、
+        /// 武器を持てるが 1 本も持っていない人にする。
         /// </summary>
         public static PickupCollector Describe(Damageable collector)
         {
@@ -418,7 +437,7 @@ namespace Fps.Runtime
             return Describe(collector, WeaponsOf(collector), collector.GetComponent<IArmorHolder>());
         }
 
-        private static PickupCollector Describe(Damageable collector, WeaponController weapons, IArmorHolder armor)
+        private static PickupCollector Describe(Damageable collector, IWeaponHolder weapons, IArmorHolder armor)
         {
             var side = SideMember.Of(collector.gameObject);
             var health = collector.Health;
@@ -427,14 +446,8 @@ namespace Fps.Runtime
 
             if (weapons != null)
             {
-                var items = weapons.Loadout.Items;
-                var list = new PickupWeaponState[items.Count];
-                for (var i = 0; i < items.Count; i++)
-                {
-                    list[i] = PickupWeaponState.Of(items[i]);
-                }
-
-                state = state.WithWeapons(list, weapons.Weapon.Spec.Id);
+                var list = weapons.DescribeWeapons(out var currentWeaponId);
+                state = state.WithWeapons(list, currentWeaponId);
             }
 
             // 上限が 0 以下の実装は防具を持てないものとして扱う (Core の検査で例外にしない)。
@@ -446,13 +459,19 @@ namespace Fps.Runtime
             return state;
         }
 
-        private static WeaponController WeaponsOf(Damageable collector)
+        private static IWeaponHolder WeaponsOf(Damageable collector)
         {
             var weapons = collector.GetComponentInChildren<WeaponController>(true);
-            return weapons != null && weapons.IsInitialized ? weapons : null;
+            if (weapons != null && weapons.IsInitialized)
+            {
+                return weapons;
+            }
+
+            var agent = collector.GetComponent<EnemyAgent>();
+            return agent != null && agent.IsInitialized ? agent : null;
         }
 
-        private bool TryApply(PickupOutcome outcome, Damageable collector, WeaponController weapons, IArmorHolder armor, out string failure)
+        private bool TryApply(PickupOutcome outcome, Damageable collector, IWeaponHolder weapons, IArmorHolder armor, out string failure)
         {
             failure = null;
             switch (outcome.Kind)

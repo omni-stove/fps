@@ -70,7 +70,7 @@ namespace Fps.Core.Tests
         public void EveryListedDestinationHasAPlanAndTheListHasNoDuplicates()
         {
             Assert.That(MenuRoute.Destinations, Is.Unique);
-            foreach (MenuDestination destination in Enum.GetValues(typeof(MenuDestination)))
+            foreach (MenuDestination destination in Enum.GetValues<MenuDestination>())
             {
                 Assert.That(MenuRoute.Destinations, Has.Member(destination));
                 Assert.That(MenuRoute.Plan(destination), Is.Not.Null);

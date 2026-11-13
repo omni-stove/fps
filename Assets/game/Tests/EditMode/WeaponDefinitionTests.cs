@@ -223,6 +223,35 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TryFindReturnsTheDefinitionWithTheId()
+        {
+            var rifle = NewDefinition("Rifle", _rifleId);
+            var handgun = NewDefinition("Handgun", " " + _handgunId + " ");
+            var asset = NewCatalog("Catalog", rifle, handgun);
+
+            Assert.That(asset.TryFind(_rifleId, out var found), Is.True);
+            Assert.That(found, Is.SameAs(rifle));
+            Assert.That(asset.TryFind(_handgunId, out found), Is.True, "compares the id without surrounding spaces");
+            Assert.That(found, Is.SameAs(handgun));
+
+            Assert.That(asset.TryFind("00000000-0000-4000-8000-000000000003", out found), Is.False);
+            Assert.That(found, Is.Null);
+            Assert.That(asset.TryFind(null, out found), Is.False);
+            Assert.That(found, Is.Null);
+        }
+
+        [Test]
+        public void TryFindRejectsAnInvalidCatalogEvenForAnIdItHas()
+        {
+            var rifle = NewDefinition("Rifle", _rifleId);
+            var broken = NewDefinition("BrokenWeapon", _handgunId);
+            broken.MagazineSize = 0;
+
+            var e = Assert.Throws<WeaponDefinitionException>(() => NewCatalog("MainCatalog", rifle, broken).TryFind(_rifleId, out _));
+            Assert.That(e.Message, Does.Contain("MainCatalog").And.Contain("BrokenWeapon"));
+        }
+
+        [Test]
         public void SetWeaponsCopiesTheList()
         {
             var rifle = NewDefinition("Rifle", _rifleId);

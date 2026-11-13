@@ -28,7 +28,8 @@ namespace Fps.Editor
     /// <item>z = 30〜40 の幅いっぱいが区域 A。z = 40 の仕切りの中央 (x = ±2.5) にだけ出入口がある。</item>
     /// <item>出入口の 3m 先 (z = 43) に幅 16m の衝立があり、区域 A より手前からは仕切りの向こうが見えない
     /// (KillTargetObjective は目標が Active になる前の撃破を数えないので、区域 A に入る前に敵を撃てないようにする)。</item>
-    /// <item>衝立の左右の出口を、待ち伏せの敵 2 体が z = 49 から見張る。その奥の z = 55 と z = 63 を、巡回の敵 2 体が左右に往復する。</item>
+    /// <item>衝立の左右の出口を、待ち伏せの敵 2 体 (handgun) が z = 49 から見張る。その奥の z = 55 と z = 63 を、
+    /// 巡回の敵 2 体 (rifle) が左右に往復する。</item>
     /// <item>出口は北の壁の手前 (0, 0, 66)。</item>
     /// <item>チェックポイントは開始地点 (原点、プレイヤーは出現した時点で踏んでいる) と区域 A の中 (0, 0, 34)。</item>
     /// </list>
@@ -154,18 +155,25 @@ namespace Fps.Editor
         public const float EnemySpeed = 3.5f;
         public const int EnemyMaxHealth = 100;
 
-        /// <summary>巡回する敵。最初の地点に置き、2 つの地点を往復する。</summary>
+        /// <summary>巡回する敵。最初の地点に置き、2 つの地点を往復する。射程の長い rifle を持つ。</summary>
         public static readonly IReadOnlyList<EnemyPlacement> Patrollers = new[]
         {
-            EnemyPlacement.Patrol("Enemy-Patrol-1", "patrol-1", new Vector3(-11f, 0f, 55f), new Vector3(11f, 0f, 55f)),
-            EnemyPlacement.Patrol("Enemy-Patrol-2", "patrol-2", new Vector3(11f, 0f, 63f), new Vector3(-11f, 0f, 63f)),
+            EnemyPlacement.Patrol(
+                "Enemy-Patrol-1", "patrol-1", WeaponAssetBuilder.RifleId, new Vector3(-11f, 0f, 55f), new Vector3(11f, 0f, 55f)),
+            EnemyPlacement.Patrol(
+                "Enemy-Patrol-2", "patrol-2", WeaponAssetBuilder.RifleId, new Vector3(11f, 0f, 63f), new Vector3(-11f, 0f, 63f)),
         };
 
-        /// <summary>区域 A の先で待ち伏せる敵。巡回せず、衝立の左右の出口を向いて立つ。</summary>
+        /// <summary>
+        /// 区域 A の先で待ち伏せる敵。巡回せず、衝立の左右の出口を向いて立つ。
+        /// 出口までは 8m ほどで handgun の減衰が始まる距離 (15m) より近いので、handgun を持たせる。
+        /// </summary>
         public static readonly IReadOnlyList<EnemyPlacement> Ambushers = new[]
         {
-            EnemyPlacement.Ambush("Enemy-Ambush-1", "ambush-1", new Vector3(-12f, 0f, 49f), new Vector3(-11.5f, 0f, 41.5f)),
-            EnemyPlacement.Ambush("Enemy-Ambush-2", "ambush-2", new Vector3(12f, 0f, 49f), new Vector3(11.5f, 0f, 41.5f)),
+            EnemyPlacement.Ambush(
+                "Enemy-Ambush-1", "ambush-1", WeaponAssetBuilder.HandgunId, new Vector3(-12f, 0f, 49f), new Vector3(-11.5f, 0f, 41.5f)),
+            EnemyPlacement.Ambush(
+                "Enemy-Ambush-2", "ambush-2", WeaponAssetBuilder.HandgunId, new Vector3(12f, 0f, 49f), new Vector3(11.5f, 0f, 41.5f)),
         };
 
         /// <summary>点が NavMesh 上にあるかを確かめるときに探す半径 (メートル)。</summary>
@@ -177,6 +185,27 @@ namespace Fps.Editor
             var all = new List<EnemyPlacement>(Patrollers);
             all.AddRange(Ambushers);
             return all;
+        }
+
+        /// <summary>
+        /// <see cref="AllEnemies"/> と同じ順に、各配置の <see cref="EnemyPlacement.WeaponId"/> の武器を catalog から引く。
+        /// どれかの Id が catalog に無ければ、配置の Id と武器の Id を添えて <see cref="KeyNotFoundException"/> を投げる。
+        /// </summary>
+        public static WeaponDefinition[] ResolveEnemyWeapons(WeaponCatalogAsset catalog)
+        {
+            if (catalog == null)
+            {
+                throw new ArgumentNullException(nameof(catalog));
+            }
+
+            var placements = AllEnemies();
+            var weapons = new WeaponDefinition[placements.Count];
+            for (var i = 0; i < placements.Count; i++)
+            {
+                weapons[i] = WeaponAssetBuilder.FindInCatalog(catalog, placements[i].Id, placements[i].WeaponId);
+            }
+
+            return weapons;
         }
 
         /// <summary>Campaign01 の目標。定義順に、前の目標を前提にする。</summary>
@@ -214,15 +243,17 @@ namespace Fps.Editor
             definitionPath = SceneBuildHelpers.ValidateAssetPath(definitionPath);
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
 
-            // 武器のアセットが無ければ何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            // 武器のアセットが無い・敵の武器がカタログに無いなら何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
             var rifle = WeaponAssetBuilder.LoadRifle();
+            var catalog = WeaponAssetBuilder.LoadCatalog();
+            ResolveEnemyWeapons(catalog);
             var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(definitionPath, Configure);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var layout = PopulateScene(scene, definition, rifle);
+            var layout = PopulateScene(scene, definition, rifle, catalog);
             SceneBuildHelpers.SaveNavMeshData(layout.Surface, navMeshDataPath);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -257,9 +288,15 @@ namespace Fps.Editor
         /// 参照をすべて設定する。焼いた NavMesh に敵の位置・巡回地点・区域・チェックポイントが乗っていて、開始地点から
         /// 歩いて行けることを確かめ、そうでなければ例外を投げる。失敗したときは置いた物をすべて片付ける。
         /// Edit Mode では Awake/Start が走らないので、ミッションと敵は Play したときに動き出す。
-        /// プレイヤーと敵はどちらも weapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で撃つ。
+        /// プレイヤーは playerWeapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で、敵は配置ごとに
+        /// <see cref="EnemyPlacement.WeaponId"/> の武器を enemyWeapons から引いて撃つ。Id が enemyWeapons に無ければ
+        /// 何も置かずに <see cref="KeyNotFoundException"/> を投げる。
         /// </summary>
-        public static CampaignLayout PopulateScene(Scene scene, MissionDefinition definition, WeaponDefinition weapon)
+        public static CampaignLayout PopulateScene(
+            Scene scene,
+            MissionDefinition definition,
+            WeaponDefinition playerWeapon,
+            WeaponCatalogAsset enemyWeapons)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the campaign scene");
             if (definition == null)
@@ -267,10 +304,12 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(definition));
             }
 
-            if (weapon == null)
+            if (playerWeapon == null)
             {
-                throw new ArgumentNullException(nameof(weapon));
+                throw new ArgumentNullException(nameof(playerWeapon));
             }
+
+            var weapons = ResolveEnemyWeapons(enemyWeapons);
 
             NavMeshSurface surface = null;
             try
@@ -284,7 +323,7 @@ namespace Fps.Editor
                 SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
                 var bootstrap = bootstrapObject.AddComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
-                bootstrap.WeaponDefinition = weapon;
+                bootstrap.WeaponDefinition = playerWeapon;
 
                 var runnerObject = new GameObject(RunnerObjectName);
                 SceneManager.MoveGameObjectToScene(runnerObject, scene);
@@ -311,7 +350,7 @@ namespace Fps.Editor
                         placement.Rotation,
                         placement.PatrolRoute,
                         body,
-                        weapon);
+                        weapons[i]);
                     targets[i] = enemies[i].GetComponent<Damageable>();
                 }
 
@@ -465,6 +504,9 @@ namespace Fps.Editor
         public string Name { get; }
         public string Id { get; }
 
+        /// <summary>持たせる武器の Id (<see cref="WeaponDefinition.Id"/> の UUID)。シーンを生成するときに武器の一覧から引く。</summary>
+        public string WeaponId { get; }
+
         /// <summary>置く位置 (足元)。</summary>
         public Vector3 Position { get; }
 
@@ -475,25 +517,38 @@ namespace Fps.Editor
 
         public bool Patrols => PatrolRoute.Count > 0;
 
-        private EnemyPlacement(string name, string id, Vector3 position, Quaternion rotation, Vector3[] patrolRoute)
+        private EnemyPlacement(
+            string name,
+            string id,
+            string weaponId,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3[] patrolRoute)
         {
+            if (string.IsNullOrWhiteSpace(weaponId))
+            {
+                throw new ArgumentException($"enemy placement '{id}' needs a weapon id", nameof(weaponId));
+            }
+
             Name = name;
             Id = id;
+            WeaponId = weaponId;
             Position = position;
             Rotation = rotation;
             PatrolRoute = patrolRoute;
         }
 
-        /// <summary>from に置き、from と to を往復する敵。</summary>
-        public static EnemyPlacement Patrol(string name, string id, Vector3 from, Vector3 to)
+        /// <summary>from に置き、from と to を往復する敵。weaponId の武器で撃つ。</summary>
+        public static EnemyPlacement Patrol(string name, string id, string weaponId, Vector3 from, Vector3 to)
         {
-            return new EnemyPlacement(name, id, from, SceneBuildHelpers.FacingTowards(from, to), new[] { from, to });
+            return new EnemyPlacement(name, id, weaponId, from, SceneBuildHelpers.FacingTowards(from, to), new[] { from, to });
         }
 
-        /// <summary>position に立ち、watch の方を向いて待つ敵。</summary>
-        public static EnemyPlacement Ambush(string name, string id, Vector3 position, Vector3 watch)
+        /// <summary>position に立ち、watch の方を向いて待つ敵。weaponId の武器で撃つ。</summary>
+        public static EnemyPlacement Ambush(string name, string id, string weaponId, Vector3 position, Vector3 watch)
         {
-            return new EnemyPlacement(name, id, position, SceneBuildHelpers.FacingTowards(position, watch), Array.Empty<Vector3>());
+            return new EnemyPlacement(
+                name, id, weaponId, position, SceneBuildHelpers.FacingTowards(position, watch), Array.Empty<Vector3>());
         }
     }
 

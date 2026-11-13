@@ -12,7 +12,8 @@ namespace Fps.Runtime
     /// <see cref="NavMeshAgent.SetDestination"/>・向きの変更・射撃 (<see cref="Hitscan.Fire"/>) に変換するだけをする。
     /// 参照はコードで解決する: NavMeshAgent と自分の <see cref="Damageable"/> は同じ GameObject、
     /// 目標は <see cref="TargetTag"/> のタグが付いた GameObject の Damageable。
-    /// 武器の値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない (シーン生成スクリプトが rifle を配線する)。
+    /// 武器は 1 本だけ持ち、持ち替えない。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
+    /// (シーン生成スクリプトが、敵の配置ごとに指定した Id の武器を武器の一覧 <see cref="WeaponCatalogAsset"/> から引いて配線する)。
     /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
     /// 撃たれたら (<see cref="Damageable.Damaged"/>) 撃った者の位置を次の知覚 1 回だけ物音として渡し、
     /// 視界の外から撃たれても <see cref="EnemyBrain"/> がその位置を Search するようにする。
@@ -78,7 +79,7 @@ namespace Fps.Runtime
         private float _turnSpeed = DefaultTurnSpeed;
 
         [Header("Weapon")]
-        [SerializeField, Tooltip("撃つ武器の定義 (弾数・連射間隔・ダメージ・射程・距離減衰)。シーン生成スクリプトが rifle を配線する")]
+        [SerializeField, Tooltip("撃つ武器の定義 (弾数・連射間隔・ダメージ・射程・距離減衰)。シーン生成スクリプトが配置ごとに武器の一覧から引いて配線する")]
         private WeaponDefinition _weaponDefinition;
 
         private NavMeshAgent _agent;

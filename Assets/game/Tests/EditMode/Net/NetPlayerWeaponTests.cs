@@ -738,5 +738,18 @@ namespace Fps.Net.Tests
             Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(reloading, new NetWeaponState(11, 42, true, 0, 2, false)), Is.False, "still reloading");
             Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(default, new NetWeaponState(30, 90, false, 1, 2, false)), Is.False, "first sync");
         }
+
+        [Test]
+        public void StartsReloadOnlyWhenReloadingBegins()
+        {
+            var idle = new NetWeaponState(12, 60, false, 0, 2, false);
+            var reloading = new NetWeaponState(12, 60, true, 0, 2, false);
+
+            Assert.That(NetPlayerWeapon.StartsReload(idle, reloading), Is.True, "reload");
+            Assert.That(NetPlayerWeapon.StartsReload(idle, new NetWeaponState(12, 60, false, 1, 2, true)), Is.False, "switch");
+            Assert.That(NetPlayerWeapon.StartsReload(reloading, new NetWeaponState(11, 42, true, 0, 2, false)), Is.False, "still reloading");
+            Assert.That(NetPlayerWeapon.StartsReload(reloading, new NetWeaponState(30, 42, false, 0, 2, false)), Is.False, "reload done");
+            Assert.That(NetPlayerWeapon.StartsReload(default, reloading), Is.False, "first sync");
+        }
     }
 }

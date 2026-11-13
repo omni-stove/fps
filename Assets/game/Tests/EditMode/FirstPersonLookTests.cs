@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
@@ -59,6 +60,22 @@ namespace Fps.Tests.EditMode
             Assert.That(_look.EffectiveMouseSensitivity, Is.EqualTo(FirstPersonLook.DefaultMouseSensitivity * 0.5f));
             Assert.That(_look.EffectiveStickSensitivity, Is.EqualTo(FirstPersonLook.DefaultStickSensitivity * 0.5f));
             Assert.That(_look.MouseSensitivity, Is.EqualTo(FirstPersonLook.DefaultMouseSensitivity));
+        }
+
+        [Test]
+        public void SettingsScaleEachDeviceSeparatelyAndStackWithTheMultiplier()
+        {
+            Assert.That(_look.ControlSettings, Is.EqualTo(ControlSettings.Default));
+
+            _look.ControlSettings = ControlSettings.Default
+                .With(ControlValue.MouseSensitivity, 200)
+                .With(ControlValue.GamepadSensitivity, 50);
+            _look.SensitivityMultiplier = 0.5f;
+
+            Assert.That(_look.EffectiveMouseSensitivity, Is.EqualTo(FirstPersonLook.DefaultMouseSensitivity * 2f * 0.5f).Within(1e-6f));
+            Assert.That(_look.EffectiveStickSensitivity, Is.EqualTo(FirstPersonLook.DefaultStickSensitivity * 0.5f * 0.5f).Within(1e-4f));
+            Assert.That(_look.MouseSensitivity, Is.EqualTo(FirstPersonLook.DefaultMouseSensitivity), "the base value is untouched");
+            Assert.Throws<ArgumentNullException>(() => _look.ControlSettings = null);
         }
 
         [TestCase(-0.1f)]

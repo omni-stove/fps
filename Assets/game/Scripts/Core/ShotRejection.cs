@@ -44,5 +44,11 @@ namespace Fps.Core
 
         /// <summary>武器を持ち替えている途中で撃てない (<see cref="Loadout{T}.IsSwitching"/>)。</summary>
         Switching,
+
+        /// <summary>
+        /// サーバーの知るカバーの状態ではブラインドファイアになるのに、高い壁で端にいないので撃てない
+        /// (<see cref="BlindFireShot.TryResolveOrigin"/> が false)。弾は減らさない。
+        /// </summary>
+        BlindFireBlocked,
     }
 }

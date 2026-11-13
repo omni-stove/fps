@@ -111,6 +111,7 @@ namespace Fps.Net
                 var netHud = hud.gameObject.AddComponent<NetHud>();
                 netHud.Initialize(player);
                 netHud.ListenForMatch();
+                ConfigurePauseMenu(hud.PauseMenu);
                 return netHud;
             }
             catch
@@ -119,6 +120,20 @@ namespace Fps.Net
                 DestroySafely(hud.gameObject);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// オンラインのポーズ画面は時間を止めない (<see cref="PauseTimeMode.KeepRunning"/>)。「メニューに戻る」での切断は
+        /// NetBootstrap が <see cref="MenuNavigator.ReturningToMenu"/> で行う。
+        /// </summary>
+        internal static void ConfigurePauseMenu(PauseMenu pauseMenu)
+        {
+            if (pauseMenu == null)
+            {
+                throw new ArgumentNullException(nameof(pauseMenu));
+            }
+
+            pauseMenu.TimeMode = PauseTimeMode.KeepRunning;
         }
 
         /// <summary>

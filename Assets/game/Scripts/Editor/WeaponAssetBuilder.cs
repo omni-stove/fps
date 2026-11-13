@@ -57,6 +57,48 @@ namespace Fps.Editor
         /// <summary>rifle のアクティブリロードに失敗したときに足される秒数。</summary>
         public const float RifleActiveReloadFailSeconds = 0.6f;
 
+        /// <summary>
+        /// rifle の 1 発ごとの縦の反動 (度)。連射間隔 0.1 秒が反動の戻り待ち (<see cref="RecoilState.DefaultRecoveryDelaySeconds"/>) より短いので、
+        /// 撃ち続ける間は戻らずに上へ溜まり、30 発撃ち切ると 15° 上がる。
+        /// </summary>
+        public const float RifleRecoilPitchDegrees = 0.5f;
+
+        /// <summary>rifle の 1 発ごとの横の反動の最大 (度)。縦より小さくし、溜まる向きを上に寄せる。</summary>
+        public const float RifleRecoilYawDegrees = 0.2f;
+
+        /// <summary>rifle の反動が戻る速さ (度/秒)。撃ち切った 15° が離してから約 1.5 秒で戻る。</summary>
+        public const float RifleRecoilRecoveryPerSecond = 10f;
+
+        /// <summary>rifle を腰だめで撃ったときの散らばりの最大角度 (度)。</summary>
+        public const float RifleHipSpreadDegrees = 3f;
+
+        /// <summary>rifle を覗き込み切って撃ったときの散らばりの最大角度 (度)。腰撃ちの 1/6 まで絞れる。</summary>
+        public const float RifleAdsSpreadDegrees = 0.5f;
+
+        /// <summary>rifle を走りながら撃ったときに散らばりへ足す最大角度 (度)。</summary>
+        public const float RifleMoveSpreadDegrees = 3f;
+
+        /// <summary>handgun の 1 発ごとの縦の反動 (度)。rifle の 1 発より大きく跳ねる。</summary>
+        public const float HandgunRecoilPitchDegrees = 2.5f;
+
+        /// <summary>handgun の 1 発ごとの横の反動の最大 (度)。</summary>
+        public const float HandgunRecoilYawDegrees = 0.6f;
+
+        /// <summary>
+        /// handgun の反動が戻る速さ (度/秒)。連射間隔 0.2 秒のうち戻り待ち 0.15 秒を除いた 0.05 秒で
+        /// 1 発分 (縦横で最大約 2.57°) が戻るので、最短間隔で撃ち続けても上へは溜まらない。
+        /// </summary>
+        public const float HandgunRecoilRecoveryPerSecond = 60f;
+
+        /// <summary>handgun を腰だめで撃ったときの散らばりの最大角度 (度)。近距離用なので rifle より狭い。</summary>
+        public const float HandgunHipSpreadDegrees = 2f;
+
+        /// <summary>handgun を覗き込み切って撃ったときの散らばりの最大角度 (度)。片手寄りの構えなので rifle ほどは絞れない。</summary>
+        public const float HandgunAdsSpreadDegrees = 0.8f;
+
+        /// <summary>handgun を走りながら撃ったときに散らばりへ足す最大角度 (度)。軽いので rifle より小さい。</summary>
+        public const float HandgunMoveSpreadDegrees = 1.5f;
+
         /// <summary>handgun を隠れたまま撃ったときの散らばりの最大角度 (度)。片手で構えるので rifle より広い。</summary>
         public const float HandgunBlindFireSpreadDegrees = 12f;
 
@@ -71,7 +113,8 @@ namespace Fps.Editor
 
         /// <summary>
         /// rifle の値 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰、
-        /// ADS の視野角 <see cref="RifleAdsFieldOfView"/>、ブラインドファイアの散らばり 8°、アクティブリロードの判定の幅 0.5〜0.65・失敗 0.6 秒)。
+        /// ADS の視野角 <see cref="RifleAdsFieldOfView"/>、ブラインドファイアの散らばり 8°、アクティブリロードの判定の幅 0.5〜0.65・失敗 0.6 秒、
+        /// 反動 上 0.5°・左右 ±0.2°・戻り 10°/秒、散らばり 腰 3°・ADS 0.5°・移動 +3°)。
         /// オフラインのプレイヤー (<see cref="WeaponController"/>) と、配置でこの Id を指定した敵 (<see cref="EnemyAgent"/>) が使う。
         /// </summary>
         public static WeaponSpec RifleSpec()
@@ -92,7 +135,13 @@ namespace Fps.Editor
                 blindFireSpreadDegrees: RifleBlindFireSpreadDegrees,
                 activeReloadWindowStart: RifleActiveReloadWindowStart,
                 activeReloadWindowLength: RifleActiveReloadWindowLength,
-                activeReloadFailSeconds: RifleActiveReloadFailSeconds);
+                activeReloadFailSeconds: RifleActiveReloadFailSeconds,
+                recoilPitchDegrees: RifleRecoilPitchDegrees,
+                recoilYawDegrees: RifleRecoilYawDegrees,
+                recoilRecoveryPerSecond: RifleRecoilRecoveryPerSecond,
+                hipSpreadDegrees: RifleHipSpreadDegrees,
+                adsSpreadDegrees: RifleAdsSpreadDegrees,
+                moveSpreadDegrees: RifleMoveSpreadDegrees);
         }
 
         /// <summary>
@@ -162,7 +211,8 @@ namespace Fps.Editor
 
         /// <summary>
         /// handgun の値 (Handgun、Semi、12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰、
-        /// ADS の視野角 <see cref="HandgunAdsFieldOfView"/>、ブラインドファイアの散らばり 12°、アクティブリロードの判定の幅 0.45〜0.65・失敗 0.4 秒)。
+        /// ADS の視野角 <see cref="HandgunAdsFieldOfView"/>、ブラインドファイアの散らばり 12°、アクティブリロードの判定の幅 0.45〜0.65・失敗 0.4 秒、
+        /// 反動 上 2.5°・左右 ±0.6°・戻り 60°/秒、散らばり 腰 2°・ADS 0.8°・移動 +1.5°)。
         /// </summary>
         public static WeaponSpec HandgunSpec()
         {
@@ -182,7 +232,13 @@ namespace Fps.Editor
                 blindFireSpreadDegrees: HandgunBlindFireSpreadDegrees,
                 activeReloadWindowStart: HandgunActiveReloadWindowStart,
                 activeReloadWindowLength: HandgunActiveReloadWindowLength,
-                activeReloadFailSeconds: HandgunActiveReloadFailSeconds);
+                activeReloadFailSeconds: HandgunActiveReloadFailSeconds,
+                recoilPitchDegrees: HandgunRecoilPitchDegrees,
+                recoilYawDegrees: HandgunRecoilYawDegrees,
+                recoilRecoveryPerSecond: HandgunRecoilRecoveryPerSecond,
+                hipSpreadDegrees: HandgunHipSpreadDegrees,
+                adsSpreadDegrees: HandgunAdsSpreadDegrees,
+                moveSpreadDegrees: HandgunMoveSpreadDegrees);
         }
 
         /// <summary>

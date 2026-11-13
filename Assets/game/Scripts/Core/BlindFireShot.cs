@@ -165,6 +165,29 @@ namespace Fps.Core
             return Vector3.Normalize(result);
         }
 
+        /// <summary>
+        /// direction を中心とし、半角 halfAngleDegrees の円錐の中で、種 (playerId・shotIndex) から決めた向き (長さ 1)。
+        /// ネット対戦で持ち主の予測とサーバーの判定を揃えるために乱数ではなく種で決める。
+        /// 武器のばらつき (<see cref="SpreadPattern.Direction(Vector3, float, int, int)"/>) とは別の系列を使うので、同じ種でも別の向きになる。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">direction が有限でないか長さ 0、halfAngleDegrees が範囲外のとき。</exception>
+        public static Vector3 Spread(Vector3 direction, float halfAngleDegrees, int playerId, int shotIndex)
+        {
+            if (!IsFinite(direction) || direction.Length() < _minLength)
+            {
+                throw new ArgumentOutOfRangeException(nameof(direction), direction, "direction must be finite and not zero");
+            }
+
+            if (!(halfAngleDegrees >= 0f) || halfAngleDegrees > MaxSpreadDegrees)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(halfAngleDegrees), halfAngleDegrees, "halfAngleDegrees must be between 0 and " + MaxSpreadDegrees);
+            }
+
+            return SpreadPattern.Direction(
+                direction, halfAngleDegrees, playerId, shotIndex, SpreadPattern.BlindFirePolarStream, SpreadPattern.BlindFireAzimuthStream);
+        }
+
         /// <summary>ブラインドファイアのログ。例: <c>[Combat] blind-fire spread=8</c>。</summary>
         public static string FormatLog(float spreadDegrees)
         {

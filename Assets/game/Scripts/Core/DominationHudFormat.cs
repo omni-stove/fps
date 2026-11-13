@@ -12,7 +12,7 @@ namespace Fps.Core
         /// <summary>中立の拠点の持ち主の欄に出す文字列。</summary>
         public const string Neutral = "--";
 
-        private const int LetterCount = 26;
+        private const int _letterCount = 26;
 
         /// <summary>
         /// 拠点の呼び名。0 から 25 は A から Z、それより後は <c>P27</c> のように 1 始まりの番号にする。
@@ -25,7 +25,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(pointIndex), pointIndex, "pointIndex must not be negative");
             }
 
-            return pointIndex < LetterCount
+            return pointIndex < _letterCount
                 ? ((char)('A' + pointIndex)).ToString()
                 : "P" + (pointIndex + 1).ToString(CultureInfo.InvariantCulture);
         }

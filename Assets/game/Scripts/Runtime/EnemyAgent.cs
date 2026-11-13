@@ -21,6 +21,13 @@ namespace Fps.Runtime
     /// 動こうとしているのに進めなければ (<see cref="StuckMonitor"/>)、経路の引き直し → 寄り道 → 目的地をあきらめる →
     /// 瞬間移動の順に立て直し、<c>[AI] id=.. stuck recovery=..</c> をログに出す。NavMesh から外れたら近くの NavMesh に戻し
     /// (近くに無ければ瞬間移動の段階で出現地点へ戻し)、位置が NaN などになったら最後に正常だった位置に戻す。判断の良し悪しはここでは直さない (<see cref="EnemyBrain"/> 側で調整する)。
+    /// <para>
+    /// <see cref="CoverRegistry"/> を配線していれば、その selector を <see cref="EnemyBrain.UseCover"/> に渡し、撃たれたときや体力が減ったときに
+    /// 遮蔽点 (<see cref="CoverPoint"/>) へ NavMesh で移る (TakeCover)。低い壁 (<see cref="CoverHeight.Low"/>) の点で隠れている間は
+    /// しゃがみ、当たり判定のカプセルと目の高さを <see cref="CrouchHeight"/>・<see cref="CrouchEyeHeight"/> まで下げる。
+    /// 覗くときは立ち上がり、点に覗く位置 (<see cref="CoverPoint.PeekPosition"/>) があればそこへ出て撃ち、隠れ直すときに点へ戻る。
+    /// 使う点や段階が変わるたびに <c>[AI] id=.. cover phase=.. point=..</c> をログに出す。
+    /// </para>
     /// 倒れた後は <see cref="Respawn"/> で生き返らせられる (キャンペーンでは呼ばない)。
     /// </summary>
     [DisallowMultipleComponent]
@@ -53,6 +60,12 @@ namespace Fps.Runtime
 
         /// <summary>LookAt に向き直る速さ (度/秒)。</summary>
         public const float DefaultTurnSpeed = 360f;
+
+        /// <summary>しゃがんだときの当たり判定の高さ (メートル)。低い壁 (<see cref="CoverProbe.LowWallHeight"/> 未満) に隠れる高さ。</summary>
+        public const float DefaultCrouchHeight = 1f;
+
+        /// <summary>しゃがんだときの足元からの目の高さ (メートル)。</summary>
+        public const float DefaultCrouchEyeHeight = 0.8f;
 
         /// <summary>巡回地点を NavMesh 上に寄せるときに探す半径 (メートル)。</summary>
         public const float RouteSnapRadius = 2f;
@@ -131,6 +144,25 @@ namespace Fps.Runtime
         [SerializeField, Min(0f)]
         private float _turnSpeed = DefaultTurnSpeed;
 
+        [SerializeField, Min(0.01f), Tooltip("しゃがんだときの当たり判定の高さ (m)")]
+        private float _crouchHeight = DefaultCrouchHeight;
+
+        [SerializeField, Min(0f), Tooltip("しゃがんだときの足元からの目の高さ (m)")]
+        private float _crouchEyeHeight = DefaultCrouchEyeHeight;
+
+        [Header("Cover")]
+        [SerializeField, Tooltip("隠れに行く遮蔽点をまとめたもの。シーン生成スクリプトが配線する。空なら遮蔽点を使わない")]
+        private CoverPointRegistry _coverRegistry;
+
+        [SerializeField, Min(0f), Tooltip("遮蔽点に着いてから、また隠れ直してから、覗くまで隠れている時間 (秒)")]
+        private float _coverHideSeconds = EnemySpec.DefaultCoverHideSeconds;
+
+        [SerializeField, Min(0f), Tooltip("遮蔽点から 1 回覗いている時間 (秒)")]
+        private float _coverPeekSeconds = EnemySpec.DefaultCoverPeekSeconds;
+
+        [SerializeField, Range(0f, 1f), Tooltip("体力の割合がこれを下回ったら、撃たれていなくても遮蔽点へ移る。0 なら体力では移らない")]
+        private float _coverHealthFraction = EnemySpec.DefaultCoverHealthFraction;
+
         [Header("Weapon")]
         [SerializeField, Tooltip("撃つ武器の定義 (弾数・連射間隔・ダメージ・射程・距離減衰)。シーン生成スクリプトが配置ごとに武器の一覧から引いて配線する")]
         private WeaponDefinition _weaponDefinition;
@@ -142,6 +174,14 @@ namespace Fps.Runtime
         private Weapon _weapon;
         private Vector3? _destination;
         private Vector3? _pendingNoise;
+        private bool _pendingHit;
+        private Vector3? _pendingHitSource;
+        private CapsuleCollider _capsule;
+        private float _standingCapsuleHeight;
+        private Vector3 _standingCapsuleCenter;
+        private bool _crouching;
+        private int _loggedCoverIndex = -1;
+        private EnemyCoverPhase _loggedCoverPhase = EnemyCoverPhase.None;
         private float _nextTargetSearch;
         private bool _warnedNoTarget;
         private bool _warnedOffMesh;
@@ -204,6 +244,20 @@ namespace Fps.Runtime
         public float SightRange => _sightRange;
         public float AttackRange => _attackRange;
         public float EyeHeight => _eyeHeight;
+        public float CrouchHeight => _crouchHeight;
+        public float CrouchEyeHeight => _crouchEyeHeight;
+
+        /// <summary>
+        /// 隠れに行く遮蔽点をまとめたもの。null なら遮蔽点を使わない。変えたら次の Update から新しい点を使う (使っていた点は放す)。
+        /// </summary>
+        public CoverPointRegistry CoverRegistry
+        {
+            get => _coverRegistry;
+            set => _coverRegistry = value;
+        }
+
+        /// <summary>低い壁の遮蔽点でしゃがんで隠れているか。</summary>
+        public bool IsCrouching => _crouching;
 
         /// <summary>足元の位置。NavMeshAgent の baseOffset を引いた位置。</summary>
         public Vector3 GroundPosition
@@ -215,8 +269,8 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>視線と射撃の始点。</summary>
-        public Vector3 EyePosition => GroundPosition + (Vector3.up * _eyeHeight);
+        /// <summary>視線と射撃の始点。しゃがんでいれば <see cref="CrouchEyeHeight"/> の高さ。</summary>
+        public Vector3 EyePosition => GroundPosition + (Vector3.up * (_crouching ? Mathf.Min(_crouchEyeHeight, _eyeHeight) : _eyeHeight));
 
         /// <summary>
         /// 巡回地点を設定する。初期化済みなら NavMesh 上に寄せてすぐ <see cref="EnemyBrain.SetPatrolRoute"/> に渡す。
@@ -278,7 +332,10 @@ namespace Fps.Runtime
                     _reactionSeconds,
                     _openingSpreadDegrees,
                     _settledSpreadDegrees,
-                    _openingShots);
+                    _openingShots,
+                    _coverHideSeconds,
+                    _coverPeekSeconds,
+                    _coverHealthFraction);
             }
             catch (ArgumentException e)
             {
@@ -297,6 +354,18 @@ namespace Fps.Runtime
                 return false;
             }
 
+            // しゃがみで縮めるのは Y 向きのカプセルだけ。ほかの形の当たり判定は形を推し量れないのでそのままにする。
+            _capsule = GetComponent<CapsuleCollider>();
+            if (_capsule != null && _capsule.direction == 1)
+            {
+                _standingCapsuleHeight = _capsule.height;
+                _standingCapsuleCenter = _capsule.center;
+            }
+            else
+            {
+                _capsule = null;
+            }
+
             _stuck = new StuckMonitor(StuckSeconds, StuckProgressDistance, StuckGoalChangeDistance);
             _stuck.Recovered += OnUnstuck;
             _brain = new EnemyBrain(spec);
@@ -309,8 +378,9 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 今の位置・目標・視線と、前の知覚の後に撃たれていれば撃った者の位置 (物音) から、1 tick 分の知覚を組み立てる。
-        /// 撃たれた情報はここで使い切るので、次の呼び出しでは物音は無い。未初期化なら <see cref="InvalidOperationException"/>。
+        /// 今の位置・目標・視線・体力の割合と、前の知覚の後に撃たれていれば撃たれたこと・撃った者の位置 (物音としても渡す) から、
+        /// 1 tick 分の知覚を組み立てる。撃たれた情報はここで使い切るので、次の呼び出しでは撃たれていないことになる。
+        /// 未初期化なら <see cref="InvalidOperationException"/>。
         /// </summary>
         public EnemyPerception Perceive()
         {
@@ -320,8 +390,31 @@ namespace Fps.Runtime
             }
 
             var noise = _pendingNoise;
+            var wasHit = _pendingHit;
+            var hitSource = _pendingHitSource;
             _pendingNoise = null;
-            return EnemySenses.Perceive(GroundPosition, EyePosition, _target, _sightRange, transform, noise);
+            _pendingHit = false;
+            _pendingHitSource = null;
+            return EnemySenses.Perceive(
+                GroundPosition, EyePosition, _target, _sightRange, transform, noise, wasHit, hitSource, HealthFraction(_self));
+        }
+
+        /// <summary>体力の割合 (0 以上 1 以下)。self が無ければ 1。</summary>
+        public static float HealthFraction(Damageable self)
+        {
+            if (self == null)
+            {
+                return 1f;
+            }
+
+            var health = self.Health;
+            return health.Max > 0 ? Mathf.Clamp01((float)health.Current / health.Max) : 0f;
+        }
+
+        /// <summary>遮蔽点の段階が変わったときのログ。</summary>
+        public static string FormatCoverLog(string id, EnemyCoverPhase phase, string point)
+        {
+            return $"{LogTag} id={id} cover phase={phase} point={(string.IsNullOrEmpty(point) ? "none" : point)}";
         }
 
         /// <summary>
@@ -353,6 +446,10 @@ namespace Fps.Runtime
             _weapon.Reloaded += OnReloaded;
 
             _pendingNoise = null;
+            _pendingHit = false;
+            _pendingHitSource = null;
+            _loggedCoverIndex = -1;
+            _loggedCoverPhase = EnemyCoverPhase.None;
             _destination = null;
             _detour = null;
             _goal = null;
@@ -456,6 +553,9 @@ namespace Fps.Runtime
                 ResolveTarget(force: false);
             }
 
+            // 同じ selector なら何もしないので毎フレーム渡し、registry の差し替えや作り直しに追いつかせる。
+            _brain.UseCover(_coverRegistry != null ? _coverRegistry.Selector : null);
+
             var perception = Perceive();
             var decision = _brain.Tick(deltaSeconds, perception);
             if (_brain.IsDead)
@@ -463,13 +563,88 @@ namespace Fps.Runtime
                 return;
             }
 
-            MoveTo(decision.MoveTo);
+            LogCoverChange();
+            SetCrouching(decision.Crouch && _brain.CurrentCoverPoint?.Height == CoverHeight.Low);
+            MoveTo(CoverMoveTo(decision));
             WatchProgress(deltaSeconds);
             Face(decision.LookAt, deltaSeconds);
             if (decision.Fire)
             {
                 Shoot();
             }
+        }
+
+        /// <summary>
+        /// 遮蔽点に着いた後の TakeCover では <see cref="EnemyBrain"/> は移動先を出さないので、覗くときは覗く位置へ、
+        /// 隠れるときは点へ戻る移動先をここで足す。立つ位置に着いていれば null (その場に留まる)。
+        /// </summary>
+        private System.Numerics.Vector3? CoverMoveTo(EnemyDecision decision)
+        {
+            if (decision.MoveTo.HasValue || _brain.State != EnemyState.TakeCover)
+            {
+                return decision.MoveTo;
+            }
+
+            var point = _brain.CurrentCoverPoint;
+            if (!point.HasValue)
+            {
+                return null;
+            }
+
+            var stand = point.Value.Position.ToUnity();
+            if (_brain.CoverPhase == EnemyCoverPhase.Peeking && _coverRegistry != null)
+            {
+                var peek = _coverRegistry.PeekPositionAt(_brain.CoverPointIndex);
+                if (peek.HasValue)
+                {
+                    stand = peek.Value;
+                }
+            }
+
+            return HorizontalDistance(GroundPosition, stand) > EnemyBrain.ArrivalDistance ? stand.ToNumerics() : (System.Numerics.Vector3?)null;
+        }
+
+        /// <summary>しゃがむ・立つ。Y 向きのカプセルの当たり判定があれば、足元の高さを変えずに縮める・戻す。</summary>
+        private void SetCrouching(bool crouching)
+        {
+            if (_crouching == crouching)
+            {
+                return;
+            }
+
+            _crouching = crouching;
+            if (_capsule == null)
+            {
+                return;
+            }
+
+            if (!crouching)
+            {
+                _capsule.height = _standingCapsuleHeight;
+                _capsule.center = _standingCapsuleCenter;
+                return;
+            }
+
+            var scaleY = Mathf.Abs(transform.lossyScale.y);
+            var height = scaleY > 1e-4f ? _crouchHeight / scaleY : _standingCapsuleHeight;
+            height = Mathf.Min(height, _standingCapsuleHeight);
+            _capsule.height = height;
+            _capsule.center = _standingCapsuleCenter - (Vector3.up * ((_standingCapsuleHeight - height) / 2f));
+        }
+
+        private void LogCoverChange()
+        {
+            var index = _brain.CoverPointIndex;
+            var phase = _brain.CoverPhase;
+            if (index == _loggedCoverIndex && phase == _loggedCoverPhase)
+            {
+                return;
+            }
+
+            _loggedCoverIndex = index;
+            _loggedCoverPhase = phase;
+            var marker = _coverRegistry != null ? _coverRegistry.MarkerAt(index) : null;
+            Debug.Log(FormatCoverLog(Id, phase, marker != null ? marker.name : null), this);
         }
 
         private void ApplyPatrolRoute()
@@ -890,19 +1065,31 @@ namespace Fps.Runtime
 
         private void OnDamaged(Damageable self, DamageReport report)
         {
-            // 死んだ敵は反応しない (とどめの 1 発では Died の後にここへ来る)。撃った者が分からなければ向かう先も無い。
-            if (_brain == null || _brain.IsDead || self.IsDead || !report.SourcePosition.HasValue)
+            // 死んだ敵は反応しない (とどめの 1 発では Died の後にここへ来る)。
+            if (_brain == null || _brain.IsDead || self.IsDead)
             {
                 return;
             }
 
+            // 撃った者が分からなくても、目標が見えていれば EnemyBrain はその位置から隠れられるので、撃たれたことは伝える。
+            _pendingHit = true;
+            if (!report.SourcePosition.HasValue)
+            {
+                Debug.Log($"{LogTag} id={Id} damaged dmg={report.Amount} from=unknown", this);
+                return;
+            }
+
             _pendingNoise = report.SourcePosition.Value;
+            _pendingHitSource = report.SourcePosition.Value;
             Debug.Log($"{LogTag} id={Id} damaged dmg={report.Amount} from={report.SourcePosition.Value}", this);
         }
 
         private void OnDied(Damageable self)
         {
             _pendingNoise = null;
+            _pendingHit = false;
+            _pendingHitSource = null;
+            SetCrouching(false);
             _brain.Kill();
 
             if (_agent.isOnNavMesh)

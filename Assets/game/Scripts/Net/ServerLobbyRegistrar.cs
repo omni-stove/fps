@@ -31,6 +31,8 @@ namespace Fps.Net
         private int _lobbyGeneration;
         private float _nextUpdateTime;
         private string _lastError;
+        private bool _failedLeaveDone;
+        private Action _failedLeaveWaiters;
 
         /// <param name="service">ログイン前のロビーのサービス。</param>
         /// <param name="endpoint">クライアントがつなぐ公開アドレス (<see cref="NetLaunchOptions.RegisterLobbyEndpoint"/>)。</param>
@@ -157,6 +159,13 @@ namespace Fps.Net
         /// </summary>
         public void Close(Action done = null)
         {
+            if (_step == Step.Failed && !_failedLeaveDone)
+            {
+                // 作成中に期限が来たときは、作り終えたロビーを閉じ終えるまで完了にしない
+                _failedLeaveWaiters += done;
+                return;
+            }
+
             if (_step == Step.Closed || _step == Step.Failed)
             {
                 done?.Invoke();
@@ -338,7 +347,13 @@ namespace Fps.Net
             {
                 _step = Step.Failed;
                 Unsubscribe();
-                _service.LeaveLobby();
+                _service.LeaveLobby(_ =>
+                {
+                    _failedLeaveDone = true;
+                    var waiting = _failedLeaveWaiters;
+                    _failedLeaveWaiters = null;
+                    waiting?.Invoke();
+                });
                 _failed(reason);
                 return;
             }

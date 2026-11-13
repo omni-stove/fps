@@ -93,6 +93,10 @@ namespace Fps.Net
         // HUD を作ったときだけ。自分のプレイヤーで画面があるときに作る
         private NetHud _hud;
 
+        // 映している間は射撃の入力を読まない。プレハブに無ければ null
+        private NetDeathCamera _deathCamera;
+        private bool _deathCameraResolved;
+
         public Team Team => _team.Value;
         public int Health => _health.Value;
         public bool IsAlive => _health.Value > 0;
@@ -125,10 +129,24 @@ namespace Fps.Net
         /// <summary>視点 (カメラ・音声・視点操作) が有効か。自分のプレイヤーで画面があるときだけ true。</summary>
         public bool HasLocalView => _hasLocalView;
 
+        /// <summary>
+        /// やられ演出のデスカム (<see cref="NetDeathCamera"/>) を映しているか。映している間は射撃の入力を読まない
+        /// (連射の間隔も進めない)。カメラが自分の目に戻るまでは、狙った所へ撃てないため。
+        /// </summary>
+        public bool IsWatchingDeathCamera
+        {
+            get
+            {
+                ResolveDeathCamera();
+                return _deathCamera != null && _deathCamera.IsActive;
+            }
+        }
+
         private void Awake()
         {
             _motor = GetComponent<NetworkPlayerMotor>();
             _weapon = GetComponent<NetPlayerWeapon>();
+            ResolveDeathCamera();
             _renderers = GetComponentsInChildren<Renderer>(true);
 
             // CharacterController の有効・無効は NetworkPlayerMotor が役割ごとに決めるので、ここでは触らない
@@ -204,7 +222,7 @@ namespace Fps.Net
 
         private void Update()
         {
-            if (!IsSpawned || !IsOwner || _attackAction == null)
+            if (!IsSpawned || !IsOwner || _attackAction == null || IsWatchingDeathCamera)
             {
                 return;
             }
@@ -525,6 +543,16 @@ namespace Fps.Net
 
             var camera = FirstPersonLook.FindChildCamera(root);
             return camera != null ? camera.transform : null;
+        }
+
+        // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で解決する。プレハブに無いときに毎フレーム探さないよう 1 回だけ
+        private void ResolveDeathCamera()
+        {
+            if (!_deathCameraResolved)
+            {
+                _deathCameraResolved = true;
+                _deathCamera = GetComponent<NetDeathCamera>();
+            }
         }
 
         // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で解決する

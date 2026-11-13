@@ -14,8 +14,8 @@ namespace Fps.Net
     /// プレイヤーが持つ武器の並び (ロードアウト) と、今持っている武器の弾倉・予備弾・リロード。
     /// 武器はサーバーだけが <see cref="ServerWeapon"/> を並べた <see cref="Loadout{T}"/> で持ち、今の武器の弾数・リロード中かどうか・
     /// 持っている番号・持ち替え中かどうかを持ち主だけが読める NetworkVariable で配る (他人には送らない)。
-    /// 持ち主が Reload を押すと <see cref="ReloadServerRpc"/>、Next / Previous を押すと持ち替え先の武器の Id を
-    /// <see cref="SwitchWeaponServerRpc"/> で送り、サーバーがリロード・持ち替えを判定する。
+    /// 持ち主が Reload を押すと <see cref="ReloadServerRpc"/> (リロード中なら <see cref="ActiveReloadServerRpc"/>)、Next / Previous を押すと
+    /// 持ち替え先の武器の Id を <see cref="SwitchWeaponServerRpc"/> で送り、サーバーがリロード・アクティブリロード・持ち替えを判定する。
     /// </summary>
     /// <remarks>
     /// 武器の設定 (<see cref="WeaponSpec"/>) は <see cref="NetTeamDeathmatch"/> がロードアウトのアセット (<see cref="LoadoutDefinition"/>) から引き、
@@ -24,6 +24,11 @@ namespace Fps.Net
     /// <see cref="ServerWeapon"/> だけが効かせ、クライアントは届いた弾数をそのまま使う。
     /// 今持っている武器の Id (<see cref="WeaponId"/>) は全員に配り、持ち主は射撃の RPC にこの Id を載せる (数値は送らない)。
     /// 射撃 1 発ぶんの消費は <see cref="NetTeamDeathmatch.ServerFire"/> が当たり判定の前に <see cref="ServerTryFire"/> で行う。
+    /// <para>
+    /// アクティブリロード (<see cref="ActionRules.ActiveReload"/>) の判定は、サーバーが RPC を受け取った時点の自分の
+    /// <see cref="ServerWeapon.ReloadProgress"/> で行う (クライアントは進みを送らない)。持ち主の HUD が進みを描けるよう、
+    /// リロードを始めたサーバーの時刻と長さ・成功になる幅を <see cref="NetWeaponState"/> に載せる。
+    /// </para>
     /// <para>
     /// <c>Server*</c> の付く操作は、Spawn 済みならサーバーでしか呼べない。Spawn 前 (組み立て中・テスト) は
     /// サーバー側の状態だけを変え、同期はしない。
@@ -53,6 +58,9 @@ namespace Fps.Net
         /// </summary>
         public static int MaxWeaponIdBytes => FixedString64Bytes.UTF8MaxLengthInBytes;
 
+        /// <summary>アクティブリロードの判定のログの頭。続けて <c>player=&lt;id&gt; success|fail</c> を出す (<see cref="ActiveReloadLog"/>)。</summary>
+        public const string ActiveReloadLogPrefix = "[Net] active-reload";
+
         /// <summary>
         /// 今持っている武器の Id。全員が読める (持ち替えの見た目に使えるよう)。値は Id だけで、弾数は <see cref="_state"/> で持ち主にだけ送る。
         /// </summary>
@@ -62,7 +70,8 @@ namespace Fps.Net
             NetworkVariableWritePermission.Server);
 
         /// <summary>
-        /// 今の武器の弾倉の残り・予備弾・リロード中かどうかと、番号・持ち替え中かどうか。持ち主 (とサーバー) だけが読める。
+        /// 今の武器の弾倉の残り・予備弾・リロード中かどうか (アクティブリロードの進みを描く値を含む) と、番号・持ち替え中かどうか。
+        /// 持ち主 (とサーバー) だけが読める。
         /// 他人の弾数は表示に要らず、送ると相手のリロードや持ち替えの隙が分かってしまうため。
         /// </summary>
         private readonly NetworkVariable<NetWeaponState> _state = new NetworkVariable<NetWeaponState>(
@@ -78,6 +87,9 @@ namespace Fps.Net
         private bool _enabledNextAction;
         private InputAction _previousAction;
         private bool _enabledPreviousAction;
+
+        // サーバーで、今のリロードを始めた時刻 (NetworkManager.ServerTime)。Spawn 前は時刻が無いので 0
+        private double _reloadStartedAt;
 
         /// <summary>
         /// 持ち主で弾数・リロード中かどうか・持っている番号・持ち替え中かどうかが変わったときに呼ばれる (サーバーから届いたとき)。
@@ -188,7 +200,7 @@ namespace Fps.Net
 
             if (_reloadAction != null && _reloadAction.WasPressedThisFrame())
             {
-                RequestReload();
+                PressReload();
             }
 
             if (_nextAction != null && _nextAction.WasPressedThisFrame())
@@ -276,6 +288,45 @@ namespace Fps.Net
         internal static bool ShouldRequestReload(NetWeaponState state, bool isAlive)
         {
             return isAlive && !state.IsReloading && !state.IsSwitching;
+        }
+
+        /// <summary>
+        /// 持ち主で Reload を押したときの処理。届いている状態がリロード中なら <see cref="RequestActiveReload"/>、
+        /// そうでなければ <see cref="RequestReload"/> を呼ぶ。リロード中の 2 回目の押下で新しいリロードは頼まない。送ったら true。
+        /// </summary>
+        public bool PressReload()
+        {
+            return _state.Value.IsReloading ? RequestActiveReload() : RequestReload();
+        }
+
+        /// <summary>
+        /// 持ち主で、サーバーにアクティブリロードの判定を頼む。<see cref="ShouldRequestActiveReload"/> が false なら送らず false。
+        /// 進みは送らない (判定はサーバーが自分の <see cref="ServerWeapon.ReloadProgress"/> で行う)。
+        /// </summary>
+        public bool RequestActiveReload()
+        {
+            if (!IsSpawned || !IsOwner)
+            {
+                return false;
+            }
+
+            if (!ShouldRequestActiveReload(_state.Value, _player == null || _player.IsAlive))
+            {
+                return false;
+            }
+
+            ActiveReloadServerRpc();
+            return true;
+        }
+
+        /// <summary>
+        /// 持ち主が届いている state でアクティブリロードの判定を頼んでよいか。生きていて、持ち替え中でなく、
+        /// まだ判定していないリロードの途中 (<see cref="NetWeaponState.HasActiveReloadWindow"/>) なら true。
+        /// ルールが Off ならサーバーは成功になる幅を送らないので false になる。
+        /// </summary>
+        internal static bool ShouldRequestActiveReload(NetWeaponState state, bool isAlive)
+        {
+            return isAlive && !state.IsSwitching && state.HasActiveReloadWindow;
         }
 
         /// <summary>
@@ -536,6 +587,42 @@ namespace Fps.Net
         }
 
         /// <summary>
+        /// サーバーで、senderClientId から届いたアクティブリロードの要求を処理する。持ち主以外からの要求は警告を出して捨てる。
+        /// 今の武器の <see cref="ServerWeapon.TryActiveReload"/> で、サーバーの今の進みを判定する (成功なら即座に補充、失敗なら遅らせる)。
+        /// 判定したら <c>[Net] active-reload player=&lt;id&gt; success|fail</c> をログに出して true。
+        /// 装備前・持ち替え中・ルールが Off・リロード中でない・今のリロードで判定済みなら何もせず false。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Spawn 済みのクライアントで呼んだ。</exception>
+        public bool ServerHandleActiveReloadRequest(ulong senderClientId)
+        {
+            RequireServerSide();
+            if (senderClientId != OwnerClientId)
+            {
+                Debug.LogWarning("[Net] ignored active reload from client " + senderClientId + " for player owned by " + OwnerClientId, this);
+                return false;
+            }
+
+            if (_loadout == null || _loadout.IsSwitching)
+            {
+                return false;
+            }
+
+            if (!_loadout.Current.TryActiveReload(out var result))
+            {
+                return false;
+            }
+
+            Debug.Log(ActiveReloadLog(OwnerClientId, result), this);
+            return true;
+        }
+
+        /// <summary>アクティブリロードの判定のログ。<c>[Net] active-reload player=&lt;id&gt; success</c> か <c>... fail</c>。</summary>
+        public static string ActiveReloadLog(ulong playerId, ActiveReloadResult result)
+        {
+            return ActiveReloadLogPrefix + " player=" + playerId + " " + (result == ActiveReloadResult.Success ? "success" : "fail");
+        }
+
+        /// <summary>
         /// サーバーで、senderClientId から届いた weaponId の武器への持ち替えの要求を処理する。持ち主以外からの要求と、
         /// このプレイヤーのロードアウトに無い Id (大文字・小文字は区別する) は警告を出して捨てる。今の武器と同じなら何もしない。
         /// 持ち替えを始めたら true (今の武器のリロードはやめ、各武器の残弾はそのまま)。
@@ -595,6 +682,12 @@ namespace Fps.Net
         }
 
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
+        private void ActiveReloadServerRpc(RpcParams rpcParams = default)
+        {
+            ServerHandleActiveReloadRequest(rpcParams.Receive.SenderClientId);
+        }
+
+        [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
         private void SwitchWeaponServerRpc(FixedString64Bytes weaponId, RpcParams rpcParams = default)
         {
             ServerHandleSwitchRequest(rpcParams.Receive.SenderClientId, weaponId.ToString());
@@ -640,13 +733,7 @@ namespace Fps.Net
             }
 
             var weapon = _loadout.Current;
-            var state = new NetWeaponState(
-                weapon.AmmoInMagazine,
-                weapon.ReserveAmmo,
-                weapon.IsReloading,
-                (byte)_loadout.CurrentIndex,
-                (byte)_loadout.Count,
-                _loadout.IsSwitching);
+            var state = BuildState(weapon, _loadout.CurrentIndex, _loadout.Count, _loadout.IsSwitching, _reloadStartedAt);
             if (!_state.Value.Equals(state))
             {
                 _state.Value = state;
@@ -659,6 +746,36 @@ namespace Fps.Net
             }
         }
 
+        /// <summary>
+        /// サーバーの weapon から同期する状態を作る。アクティブリロードのルールが On でリロード中なら、開始時刻 reloadStartedAt と
+        /// 今のリロードの長さ (<see cref="ServerWeapon.ReloadDurationSeconds"/>) を、まだ判定していなければ成功になる幅も載せる。
+        /// それ以外ではこれらを 0 にする (オフラインの HUD と同じく、Off のルールでは進みを出さない)。
+        /// </summary>
+        /// <param name="reloadStartedAt">今のリロードを始めたサーバーの時刻 (秒)。</param>
+        internal static NetWeaponState BuildState(ServerWeapon weapon, int equippedIndex, int weaponCount, bool isSwitching, double reloadStartedAt)
+        {
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
+
+            var showsProgress = weapon.HasActiveReload && weapon.IsReloading;
+            var windowOpen = showsProgress && !weapon.HasJudgedActiveReload;
+            var spec = weapon.Spec;
+            return new NetWeaponState(
+                weapon.AmmoInMagazine,
+                weapon.ReserveAmmo,
+                weapon.IsReloading,
+                (byte)equippedIndex,
+                (byte)weaponCount,
+                isSwitching,
+                showsProgress ? reloadStartedAt : 0d,
+                showsProgress ? weapon.ReloadDurationSeconds : 0f,
+                windowOpen ? spec.ActiveReloadWindowStart : 0f,
+                // 終わりを判定 (ActiveReloadJudge) と同じ float の和で求め、表示の幅と判定の幅をずらさない
+                windowOpen ? spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength : 0f);
+        }
+
         private void HandleSwitched(int index)
         {
             Debug.Log("[Net] switch client=" + OwnerClientId + " index=" + index + " weapon=" + _loadout.Items[index].Spec.Id, this);
@@ -668,6 +785,8 @@ namespace Fps.Net
         // しまった武器のリロードは HolsterWeapon でやめ、Tick も今の武器だけなので、リロードが起きるのは今の武器だけ
         private void HandleReloadStarted(bool automatic)
         {
+            // ServerWeapon は ReloadStarted の後に Changed を呼ぶので、SyncState より先にここで控えられる
+            _reloadStartedAt = IsSpawned && NetworkManager != null ? NetworkManager.ServerTime.Time : 0d;
             var weapon = _loadout.Current;
             Debug.Log("[Net] reload start client=" + OwnerClientId + " auto=" + automatic + " ammo=" + weapon.AmmoInMagazine
                 + " reserve=" + weapon.ReserveAmmo, this);

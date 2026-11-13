@@ -315,6 +315,224 @@ namespace Fps.Core.Tests
             Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
         }
 
+        private static GameRules ActiveReloadRules(ActiveReload activeReload, bool infiniteReserve = false)
+        {
+            var d = GameRules.Default;
+            var a = ActionRules.Default;
+            return new GameRules(
+                d.FriendlyFire,
+                d.RespawnMode,
+                d.WaveIntervalSeconds,
+                d.RegenDelaySeconds,
+                d.RegenPerSecond,
+                d.DeathBody,
+                d.DeathCamera,
+                infiniteReserve,
+                1f,
+                d.Destruction,
+                new ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload));
+        }
+
+        // WeaponTests の ActiveReloadWeapon と同じく、リロード 2 秒、成功の幅は 1.0〜1.5 秒 (進み 0.5〜0.75)、失敗で 0.5 秒遅れる。
+        // 連射間隔を 0 でない値にして、内側の Weapon を作り直す経路でも判定の値が引き継がれることを確かめる
+        private static ServerWeapon ActiveReloadWeapon(ActiveReload activeReload = ActiveReload.On, bool infiniteReserve = false)
+        {
+            var spec = new WeaponSpec(
+                _rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, 3, 10, 0.1f, 2f, 25, 100f, DamageFalloff.None,
+                activeReloadWindowStart: 0.5f,
+                activeReloadWindowLength: 0.25f,
+                activeReloadFailSeconds: 0.5f);
+            var weapon = new ServerWeapon(spec, ActiveReloadRules(activeReload, infiniteReserve));
+            for (var i = 0; i < 3; i++)
+            {
+                Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
+            }
+
+            return weapon;
+        }
+
+        [Test]
+        public void ActiveReloadRuleIsTakenFromTheRules()
+        {
+            Assert.That(ActiveReloadWeapon(ActiveReload.On).HasActiveReload, Is.True);
+            Assert.That(ActiveReloadWeapon(ActiveReload.Off).HasActiveReload, Is.False);
+            Assert.That(new ServerWeapon(Spec()).HasActiveReload, Is.False, "the default rules keep it off");
+        }
+
+        [Test]
+        public void ReloadProgressAndDurationFollowTheReload()
+        {
+            var weapon = ActiveReloadWeapon();
+            Assert.That(weapon.ReloadProgress, Is.Zero, "not reloading");
+            Assert.That(weapon.ReloadDurationSeconds, Is.Zero, "not reloading");
+
+            Assert.That(weapon.TryStartReload(), Is.True);
+            Assert.That(weapon.ReloadProgress, Is.Zero);
+            Assert.That(weapon.ReloadDurationSeconds, Is.EqualTo(2f));
+
+            weapon.Tick(0.5f);
+            Assert.That(weapon.ReloadProgress, Is.EqualTo(0.25f));
+
+            weapon.Tick(1.5f);
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.ReloadProgress, Is.Zero, "back to 0 once the reload is over");
+            Assert.That(weapon.ReloadDurationSeconds, Is.Zero);
+        }
+
+        [TestCase(1f)]
+        [TestCase(1.25f)]
+        [TestCase(1.5f)]
+        public void ActiveReloadSuccessRefillsAtOnce(float elapsed)
+        {
+            var weapon = ActiveReloadWeapon();
+            var reloaded = 0;
+            weapon.Reloaded += () => reloaded++;
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(elapsed);
+            var changes = 0;
+            weapon.Changed += () => changes++;
+
+            Assert.That(weapon.TryActiveReload(out var result), Is.True);
+
+            Assert.That(result, Is.EqualTo(ActiveReloadResult.Success));
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(7));
+            Assert.That(weapon.HasJudgedActiveReload, Is.False, "the judgement belongs to the finished reload");
+            Assert.That(reloaded, Is.EqualTo(1));
+            Assert.That(changes, Is.EqualTo(1));
+
+            weapon.Tick(5f);
+            Assert.That(reloaded, Is.EqualTo(1), "the finished reload does not refill again");
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None), "the weapon can fire right after the success");
+        }
+
+        [TestCase(0.5f)]
+        [TestCase(1.75f)]
+        public void ActiveReloadFailDelaysTheReload(float elapsed)
+        {
+            var weapon = ActiveReloadWeapon();
+            var reloaded = 0;
+            weapon.Reloaded += () => reloaded++;
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(elapsed);
+            var changes = 0;
+            weapon.Changed += () => changes++;
+
+            Assert.That(weapon.TryActiveReload(out var result), Is.True);
+
+            Assert.That(result, Is.EqualTo(ActiveReloadResult.Fail));
+            Assert.That(changes, Is.EqualTo(1), "the longer reload has to be synced");
+            Assert.That(weapon.IsReloading, Is.True);
+            Assert.That(weapon.AmmoInMagazine, Is.Zero);
+            Assert.That(weapon.HasJudgedActiveReload, Is.True);
+            Assert.That(weapon.ReloadDurationSeconds, Is.EqualTo(2.5f));
+            Assert.That(weapon.ReloadProgress, Is.EqualTo(elapsed / 2.5f), "the reload now takes 2 + 0.5 seconds");
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.Reloading));
+
+            weapon.Tick(2f - elapsed);
+            Assert.That(weapon.IsReloading, Is.True, "the usual reload time is no longer enough");
+            Assert.That(reloaded, Is.Zero);
+
+            weapon.Tick(0.5f);
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(7));
+            Assert.That(reloaded, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ActiveReloadIsJudgedOncePerReload()
+        {
+            var weapon = ActiveReloadWeapon();
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(0.25f);
+            Assert.That(weapon.TryActiveReload(out var first), Is.True);
+            Assert.That(first, Is.EqualTo(ActiveReloadResult.Fail));
+
+            weapon.Tick(1f);
+            var changes = 0;
+            weapon.Changed += () => changes++;
+            Assert.That(weapon.TryActiveReload(out _), Is.False, "a second press is ignored even inside the window");
+            Assert.That(changes, Is.Zero);
+            Assert.That(weapon.IsReloading, Is.True);
+            Assert.That(weapon.AmmoInMagazine, Is.Zero);
+        }
+
+        [Test]
+        public void ActiveReloadCanBeJudgedAgainAfterACancelOrRefill()
+        {
+            var weapon = ActiveReloadWeapon();
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(0.25f);
+            Assert.That(weapon.TryActiveReload(out _), Is.True);
+            weapon.CancelReload();
+            Assert.That(weapon.HasJudgedActiveReload, Is.False);
+            Assert.That(weapon.ReloadDurationSeconds, Is.Zero);
+
+            Assert.That(weapon.TryStartReload(), Is.True);
+            Assert.That(weapon.ReloadDurationSeconds, Is.EqualTo(2f), "the cancelled reload's delay is gone");
+            weapon.Tick(1.25f);
+            Assert.That(weapon.TryActiveReload(out var result), Is.True);
+            Assert.That(result, Is.EqualTo(ActiveReloadResult.Success));
+
+            weapon.TryFire();
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(0.25f);
+            Assert.That(weapon.TryActiveReload(out _), Is.True);
+            weapon.Refill();
+            Assert.That(weapon.HasActiveReload, Is.True, "the refilled weapon keeps the rule");
+            Assert.That(weapon.HasJudgedActiveReload, Is.False);
+        }
+
+        [Test]
+        public void ActiveReloadOffRuleNeverJudges()
+        {
+            var weapon = ActiveReloadWeapon(ActiveReload.Off);
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(1.25f);
+            var changes = 0;
+            weapon.Changed += () => changes++;
+
+            Assert.That(weapon.TryActiveReload(out _), Is.False);
+            Assert.That(changes, Is.Zero);
+            Assert.That(weapon.IsReloading, Is.True);
+            Assert.That(weapon.HasJudgedActiveReload, Is.False);
+            Assert.That(weapon.ReloadDurationSeconds, Is.EqualTo(2f));
+
+            weapon.Tick(0.75f);
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void ActiveReloadDoesNothingWhileNotReloading()
+        {
+            var weapon = ActiveReloadWeapon();
+            var reloaded = 0;
+            weapon.Reloaded += () => reloaded++;
+
+            Assert.That(weapon.TryActiveReload(out _), Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.Zero);
+            Assert.That(weapon.HasJudgedActiveReload, Is.False);
+            Assert.That(reloaded, Is.Zero);
+        }
+
+        [Test]
+        public void ActiveReloadSuccessWithInfiniteReserveKeepsTheReserve()
+        {
+            var weapon = ActiveReloadWeapon(infiniteReserve: true);
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(1.25f);
+
+            Assert.That(weapon.TryActiveReload(out var result), Is.True);
+
+            Assert.That(result, Is.EqualTo(ActiveReloadResult.Success));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(10));
+            Assert.That(weapon.IsReloading, Is.False);
+        }
+
         [Test]
         public void RefillKeepsInfiniteReserve()
         {

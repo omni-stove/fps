@@ -9,7 +9,8 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 設定画面。感度・ADS 感度・視野角・音量 (<see cref="ControlValue"/>) のスライダーと、入力機器ごとの Hold/Toggle の切り替えを
+    /// 設定画面。感度・ADS 感度・視野角・音量 (<see cref="ControlValue"/>) のスライダー、敵味方の色の組 (<see cref="ColorPalette"/>) の切り替えと見本、
+    /// 入力機器ごとの Hold/Toggle の切り替えを
     /// UI Toolkit の要素としてコードで組み、<see cref="Open"/> で渡された入れ物 (メインメニューの差し込み口やポーズ画面の枠) に入れる。
     /// 値を変えるとすぐ <see cref="AppliedControlSettings.Apply"/> で効かせ、<see cref="Close"/> (か <see cref="Save"/>) で
     /// <see cref="ControlSettingsStore"/> に保存する。スライダーを動かすたびにディスクへ書かないよう、保存は閉じるときにまとめる。
@@ -34,6 +35,21 @@ namespace Fps.Runtime
         public const string RebindCancelButtonName = "settings-rebind-cancel";
         public const string RebindUndoButtonName = "settings-rebind-undo";
         public const string RebindKeepButtonName = "settings-rebind-keep";
+
+        /// <summary>敵味方の色の組 (<see cref="ControlSettings.Palette"/>) を順に切り替えるボタンの name。</summary>
+        public const string PaletteButtonName = "settings-palette";
+
+        /// <summary>今の色の組で味方の見え方を出す見本の Label の name。</summary>
+        public const string PaletteFriendlySampleName = "settings-palette-friendly";
+
+        /// <summary>今の色の組で敵の見え方を出す見本の Label の name。</summary>
+        public const string PaletteEnemySampleName = "settings-palette-enemy";
+
+        /// <summary>見本の味方の名前。</summary>
+        public const string FriendlySampleText = "味方";
+
+        /// <summary>見本の敵の名前。</summary>
+        public const string EnemySampleText = "敵";
 
         public const string HoldText = "長押し";
         public const string ToggleText = "切り替え";
@@ -68,6 +84,9 @@ namespace Fps.Runtime
         private Button _rebindCancelButton;
         private Button _rebindUndoButton;
         private Button _rebindKeepButton;
+        private Button _paletteButton;
+        private Label _friendlySample;
+        private Label _enemySample;
 
         /// <param name="store">保存先。null ならゲームの既定のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
         /// <param name="bindingStore">割り当ての上書きの保存先。null ならゲームの既定のキー。</param>
@@ -164,6 +183,38 @@ namespace Fps.Runtime
             return mode == HoldMode.Toggle ? ToggleText : HoldText;
         }
 
+        /// <summary>色の組のボタンに出す文字。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">palette が定義済みの値でない。</exception>
+        public static string FormatPalette(ColorPalette palette)
+        {
+            switch (palette)
+            {
+                case ColorPalette.Standard:
+                    return "標準";
+                case ColorPalette.RedGreen:
+                    return "赤緑 (1 型・2 型色覚)";
+                case ColorPalette.BlueYellow:
+                    return "青黄 (3 型色覚)";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(palette), palette, "unknown color palette");
+            }
+        }
+
+        /// <summary><see cref="TeamPalette.All"/> の並びで palette の次の組。最後の次は最初に戻る。</summary>
+        public static ColorPalette NextPalette(ColorPalette palette)
+        {
+            var all = TeamPalette.All;
+            for (var i = 0; i < all.Count; i++)
+            {
+                if (all[i].Kind == palette)
+                {
+                    return all[(i + 1) % all.Count].Kind;
+                }
+            }
+
+            return all[0].Kind;
+        }
+
         /// <summary>
         /// 今効いている設定 (<see cref="AppliedControlSettings.Current"/>) で画面を組んで container に入れ、最初のスライダーにフォーカスを置く。
         /// 既に開いていれば、前の画面を閉じて (保存して) から開き直す。
@@ -220,6 +271,9 @@ namespace Fps.Runtime
             _rebindCancelButton = null;
             _rebindUndoButton = null;
             _rebindKeepButton = null;
+            _paletteButton = null;
+            _friendlySample = null;
+            _enemySample = null;
             return saved;
         }
 
@@ -291,7 +345,19 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。保存は閉じるとき。
+        /// 敵味方の色の組を palette にしてすぐ効かせ (キャラクター・HUD・拠点は <see cref="AppliedControlSettings.Changed"/> で塗り直す)、
+        /// ボタンと見本の表示を合わせる。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">palette が定義済みの値でない。</exception>
+        public void SetPalette(ColorPalette palette)
+        {
+            EnsureOpen();
+            Edit(_editing.WithPalette(palette));
+        }
+
+        /// <summary>
+        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に戻す。保存は閉じるとき。
         /// この画面に無い回線の表示 (<see cref="ControlSettings.ShowNetStats"/>) は今のまま残す。
         /// </summary>
         /// <exception cref="InvalidOperationException">開いていない。</exception>
@@ -504,6 +570,10 @@ namespace Fps.Runtime
                 content.Add(BuildSliderRow(value));
             }
 
+            content.Add(NewLabel("見やすさ", "settings__section"));
+            content.Add(BuildPaletteRow());
+            content.Add(BuildPaletteSampleRow());
+
             content.Add(NewLabel("ボタンの扱い", "settings__section"));
             content.Add(BuildDeviceHeader());
             foreach (var action in _actions)
@@ -638,6 +708,51 @@ namespace Fps.Runtime
             return row;
         }
 
+        private VisualElement BuildPaletteRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel("敵味方の色", "settings__caption"));
+            _paletteButton = NewButton(PaletteButtonName, string.Empty, () => SetPalette(NextPalette(_editing.Palette)));
+            _paletteButton.AddToClassList("settings__palette");
+            row.Add(_paletteButton);
+            return row;
+        }
+
+        // 組を切り替えたとき、試合に入らなくても色と印の違いが分かるように、ネームプレートと同じ書き方の見本を並べる
+        private VisualElement BuildPaletteSampleRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(string.Empty, "settings__caption"));
+            _friendlySample = NewLabel(string.Empty, "settings__palette-sample");
+            _friendlySample.name = PaletteFriendlySampleName;
+            row.Add(_friendlySample);
+            _enemySample = NewLabel(string.Empty, "settings__palette-sample");
+            _enemySample.name = PaletteEnemySampleName;
+            row.Add(_enemySample);
+            return row;
+        }
+
+        private void RefreshPalette()
+        {
+            var palette = TeamPalette.For(_editing.Palette);
+            if (_paletteButton != null)
+            {
+                _paletteButton.text = FormatPalette(palette.Kind);
+            }
+
+            if (_friendlySample != null)
+            {
+                _friendlySample.text = palette.NameplateText(TeamRelation.Friendly, FriendlySampleText);
+                _friendlySample.style.color = TeamColors.ToColor(palette.Friendly);
+            }
+
+            if (_enemySample != null)
+            {
+                _enemySample.text = palette.NameplateText(TeamRelation.Enemy, EnemySampleText);
+                _enemySample.style.color = TeamColors.ToColor(palette.Enemy);
+            }
+        }
+
         private VisualElement BuildModeRow(HoldAction action)
         {
             var row = NewRow();
@@ -674,6 +789,7 @@ namespace Fps.Runtime
                 }
             }
 
+            RefreshPalette();
             RefreshBindings();
         }
 

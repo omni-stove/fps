@@ -175,6 +175,75 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ThePaletteButtonShowsTheStandardPaletteWithUnmarkedSamples()
+        {
+            _view.Open(_container);
+
+            Assert.That(_container.Q<Button>(SettingsView.PaletteButtonName).text, Is.EqualTo(SettingsView.FormatPalette(ColorPalette.Standard)));
+            var friendly = _container.Q<Label>(SettingsView.PaletteFriendlySampleName);
+            var enemy = _container.Q<Label>(SettingsView.PaletteEnemySampleName);
+            Assert.That(friendly.text, Is.EqualTo(SettingsView.FriendlySampleText));
+            Assert.That(enemy.text, Is.EqualTo(SettingsView.EnemySampleText));
+            Assert.That(friendly.style.color.value, Is.EqualTo(TeamColors.ToColor(TeamPalette.Standard.Friendly)));
+            Assert.That(enemy.style.color.value, Is.EqualTo(TeamColors.ToColor(TeamPalette.Standard.Enemy)));
+        }
+
+        // 赤緑を選ぶと、味方と敵が青と橙になり、味方に ◆・敵に ▲ が付く。閉じると保存され、起動し直しても残る
+        [Test]
+        public void ChoosingRedGreenRecolorsAtOnceMarksTheSamplesAndIsSavedOnClose()
+        {
+            var received = new List<ControlSettings>();
+            AppliedControlSettings.Changed += received.Add;
+            try
+            {
+                _view.Open(_container);
+
+                _view.SetPalette(ColorPalette.RedGreen);
+
+                Assert.That(AppliedControlSettings.Current.Palette, Is.EqualTo(ColorPalette.RedGreen));
+                Assert.That(received, Has.Count.EqualTo(1));
+                Assert.That(TeamColors.Of(Team.Alpha, Team.Alpha), Is.EqualTo(TeamColors.ToColor(TeamPalette.RedGreen.Friendly)));
+                Assert.That(TeamColors.Of(Team.Bravo, Team.Alpha), Is.EqualTo(TeamColors.ToColor(TeamPalette.RedGreen.Enemy)));
+                Assert.That(_container.Q<Button>(SettingsView.PaletteButtonName).text, Is.EqualTo(SettingsView.FormatPalette(ColorPalette.RedGreen)));
+                var friendly = _container.Q<Label>(SettingsView.PaletteFriendlySampleName);
+                var enemy = _container.Q<Label>(SettingsView.PaletteEnemySampleName);
+                Assert.That(friendly.text, Is.EqualTo("◆ " + SettingsView.FriendlySampleText));
+                Assert.That(enemy.text, Is.EqualTo("▲ " + SettingsView.EnemySampleText));
+                Assert.That(friendly.style.color.value, Is.EqualTo(TeamColors.ToColor(TeamPalette.RedGreen.Friendly)));
+                Assert.That(enemy.style.color.value, Is.EqualTo(TeamColors.ToColor(TeamPalette.RedGreen.Enemy)));
+                Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False, "not written until it closes");
+
+                _view.Close();
+
+                Assert.That(new ControlSettingsStore(_store.Key).Load().Palette, Is.EqualTo(ColorPalette.RedGreen));
+            }
+            finally
+            {
+                AppliedControlSettings.Changed -= received.Add;
+            }
+        }
+
+        [Test]
+        public void NextPaletteCyclesThroughEveryPalette()
+        {
+            Assert.That(SettingsView.NextPalette(ColorPalette.Standard), Is.EqualTo(ColorPalette.RedGreen));
+            Assert.That(SettingsView.NextPalette(ColorPalette.RedGreen), Is.EqualTo(ColorPalette.BlueYellow));
+            Assert.That(SettingsView.NextPalette(ColorPalette.BlueYellow), Is.EqualTo(ColorPalette.Standard));
+        }
+
+        [Test]
+        public void ResetToDefaultsRestoresTheStandardPalette()
+        {
+            _view.Open(_container);
+            _view.SetPalette(ColorPalette.BlueYellow);
+
+            _view.ResetToDefaults();
+
+            Assert.That(AppliedControlSettings.Current.Palette, Is.EqualTo(ColorPalette.Standard));
+            Assert.That(_container.Q<Button>(SettingsView.PaletteButtonName).text, Is.EqualTo(SettingsView.FormatPalette(ColorPalette.Standard)));
+        }
+
+        [Test]
         public void TheNetStatsToggledWhileOpenSurviveEditsResetAndSave()
         {
             _view.Open(_container);

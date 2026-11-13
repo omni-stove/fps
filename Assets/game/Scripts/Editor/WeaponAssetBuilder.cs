@@ -212,7 +212,7 @@ namespace Fps.Editor
         /// <summary>
         /// handgun の値 (Handgun、Semi、12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰、
         /// ADS の視野角 <see cref="HandgunAdsFieldOfView"/>、ブラインドファイアの散らばり 12°、アクティブリロードの判定の幅 0.45〜0.65・失敗 0.4 秒、
-        /// 反動 上 2.5°・左右 ±0.6°・戻り 25°/秒、散らばり 腰 2°・ADS 0.8°・移動 +1.5°)。
+        /// 反動 上 2.5°・左右 ±0.6°・戻り 60°/秒、散らばり 腰 2°・ADS 0.8°・移動 +1.5°)。
         /// </summary>
         public static WeaponSpec HandgunSpec()
         {

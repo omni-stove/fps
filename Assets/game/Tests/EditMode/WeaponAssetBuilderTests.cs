@@ -382,7 +382,7 @@ namespace Fps.Tests.EditMode
             var handgun = WeaponAssetBuilder.HandgunSpec();
             Assert.That(handgun.RecoilPitchDegrees, Is.EqualTo(2.5f));
             Assert.That(handgun.RecoilYawDegrees, Is.EqualTo(0.6f));
-            Assert.That(handgun.RecoilRecoveryPerSecond, Is.EqualTo(25f));
+            Assert.That(handgun.RecoilRecoveryPerSecond, Is.EqualTo(60f));
             Assert.That(handgun.HipSpreadDegrees, Is.EqualTo(2f));
             Assert.That(handgun.AdsSpreadDegrees, Is.EqualTo(0.8f));
             Assert.That(handgun.MoveSpreadDegrees, Is.EqualTo(1.5f));

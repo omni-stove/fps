@@ -29,6 +29,7 @@ namespace Fps.Runtime
 
         // EntityId は int に変換できない (Unity 6.6 で変換が error) ので、初めて見た EntityId に連番を振る。
         private static readonly Dictionary<EntityId, int> _offlineIds = new Dictionary<EntityId, int>();
+        private static readonly Dictionary<int, GameObject> _offlineObjects = new Dictionary<int, GameObject>();
 
         /// <summary>1 発撃ったとき。</summary>
         public static event Action<ShotFiredInfo> ShotFired;
@@ -69,9 +70,19 @@ namespace Fps.Runtime
             {
                 id = _offlineIds.Count + 1;
                 _offlineIds.Add(entityId, id);
+                _offlineObjects.Add(id, gameObject);
             }
 
             return id;
+        }
+
+        /// <summary>
+        /// <see cref="OfflineId"/> で id を振った GameObject。振っていないか、もう破棄されていれば null。
+        /// キルフィードがオフラインの Id から名前を引くのに使う。
+        /// </summary>
+        public static GameObject OfflineObject(int id)
+        {
+            return _offlineObjects.TryGetValue(id, out var gameObject) && gameObject != null ? gameObject : null;
         }
 
         /// <summary>
@@ -128,6 +139,7 @@ namespace Fps.Runtime
         {
             ClearSubscribers();
             _offlineIds.Clear();
+            _offlineObjects.Clear();
         }
 
         private static void Invoke<T>(Action<T> handlers, T value)

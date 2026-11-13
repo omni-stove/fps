@@ -16,7 +16,10 @@ namespace Fps.Editor
         public const string MenuPath = "Fps/Register Build Scenes";
         public const string LogTag = "[BuildSceneList]";
 
-        /// <summary>射撃場。起動時のシーンなので Build Settings の先頭に置く。</summary>
+        /// <summary>メインメニュー。起動時のシーンなので Build Settings の先頭に置く。実行時に読む側 (<see cref="Fps.Core.MenuRoute"/>) と同じ値。</summary>
+        public const string MainMenuScene = Fps.Core.MenuRoute.MainMenuScene;
+
+        /// <summary>射撃場。メニューから読む。</summary>
         public const string BootstrapScene = "Assets/game/Scenes/Bootstrap.unity";
 
         public const string EnemyAiTestScene = "Assets/game/Scenes/EnemyAiTest.unity";
@@ -33,6 +36,7 @@ namespace Fps.Editor
         /// <summary>ビルドに入れるシーン。この順に Build Settings へ並べる (先頭が起動時のシーン)。</summary>
         public static IReadOnlyList<string> Scenes { get; } = new[]
         {
+            MainMenuScene,
             BootstrapScene,
             EnemyAiTestScene,
             MissionTestScene,
@@ -41,7 +45,7 @@ namespace Fps.Editor
             NetTestScene,
         };
 
-        /// <summary>専用サーバーのビルドに入れるシーン。一人称カメラの射撃場は要らないので、ネット対戦のシーンだけを最初に置く。</summary>
+        /// <summary>専用サーバーのビルドに入れるシーン。メニューと一人称カメラの射撃場は要らないので、ネット対戦のシーンだけを最初に置く。</summary>
         public static IReadOnlyList<string> ServerScenes { get; } = new[] { NetTestScene };
 
         /// <summary>path を起動時のシーンとして Build Settings の先頭に有効な状態で置く (<see cref="WithStartScene"/>)。</summary>

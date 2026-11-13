@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fps.Core;
+using Fps.Runtime;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,6 +18,9 @@ namespace Fps.Net
     /// <c>-lobby create|join</c> なら EOS にログインしてロビーを作る (または探して入る) までを <see cref="LobbyLauncher"/> に任せ、
     /// オーナーは EOS の Host、メンバーはオーナーへ接続するクライアントとして起動する。
     /// 失敗はすべて <c>[Net]</c> か <c>[Lobby]</c> 付きのエラーログに出し、batchmode のプレイヤーでは終了コード付きで終了する。
+    /// メインメニューの「ロビーを作る／入る」から来たときは、<see cref="MenuNavigator.TakeLobbyRequest"/> の設定を <c>-lobby</c> と同じに扱い
+    /// (起動引数が優先、<see cref="NetStartup.ChooseLobby"/>)、失敗や Host からの切断ではその理由を添えてメニューへ戻る。
+    /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class NetBootstrap : MonoBehaviour
@@ -59,6 +63,8 @@ namespace Fps.Net
         private LobbyLauncher _lobbyLauncher;
         private bool _connectedToServer;
         private bool _failed;
+        private bool _startedFromMenu;
+        private bool _returningToMenu;
         private float _nextStatusLogTime;
 
         public GameObject PlayerPrefab
@@ -119,6 +125,10 @@ namespace Fps.Net
 
             var isDedicatedServer = NetStartup.IsDedicatedServerBuild;
 
+            // 起動引数が不正で先に止まっても、メニューで選んだ要求を次の起動まで持ち越さないよう最初に受け取る
+            var menuLobby = MenuNavigator.TakeLobbyRequest();
+            MenuNavigator.ReturningToMenu += HandleReturningToMenu;
+
             // サーバーとクライアントを同じマシンで並べて動かすので、裏に回っても止めない
             Application.runInBackground = true;
             if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, isDedicatedServer))
@@ -138,6 +148,13 @@ namespace Fps.Net
             {
                 Fail(ExitInvalidArguments, "[Lobby] invalid arguments: " + lobbyError);
                 return;
+            }
+
+            lobbyOptions = NetStartup.ChooseLobby(lobbyOptions, args, isDedicatedServer, menuLobby);
+            _startedFromMenu = menuLobby.IsRequested && ReferenceEquals(lobbyOptions, menuLobby);
+            if (_startedFromMenu)
+            {
+                Debug.Log("[Lobby] " + LobbyLaunchOptions.CommandName(lobbyOptions.Command) + " requested from the menu (" + lobbyOptions + ")");
             }
 
             if (!lobbyOptions.IsRequested
@@ -393,6 +410,8 @@ namespace Fps.Net
 
         private void OnDestroy()
         {
+            MenuNavigator.ReturningToMenu -= HandleReturningToMenu;
+
             if (_lobby != null)
             {
                 Application.quitting -= LeaveLobbyOnQuit;
@@ -472,6 +491,12 @@ namespace Fps.Net
                 return;
             }
 
+            // メニューへ戻るために自分で切ったときの通知なので、失敗としては扱わない
+            if (_returningToMenu)
+            {
+                return;
+            }
+
             // クライアント側では自分の切断 (接続失敗を含む) として呼ばれる
             if (!_connectedToServer)
             {
@@ -484,6 +509,7 @@ namespace Fps.Net
             // Host がいなくなったロビーに残っても意味が無い
             _lobby?.LeaveLobby();
             QuitIfHeadlessPlayer(ExitDisconnected);
+            ReturnToMenuIfStartedThere("Disconnected from the host." + reason);
         }
 
         private void HandleTransportFailure()
@@ -509,6 +535,45 @@ namespace Fps.Net
             // 試合を始められなかったので、作った・入ったロビーを残さない
             _lobby?.LeaveLobby();
             QuitIfHeadlessPlayer(exitCode);
+            ReturnToMenuIfStartedThere(message);
+        }
+
+        /// <summary>
+        /// メニューの「ロビーを作る／入る」から来たときだけ、理由を添えてメニューへ戻る。
+        /// 起動引数で来たときは今までどおりこのシーンに留まる (batchmode では先に終了している)。
+        /// </summary>
+        private void ReturnToMenuIfStartedThere(string reason)
+        {
+            if (!_startedFromMenu || _returningToMenu
+                || NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
+            {
+                return;
+            }
+
+            // メニューがビルドに無ければ MenuNavigator がエラーログを出し、このシーンに留まる
+            MenuNavigator.ReturnToMenu(reason);
+        }
+
+        /// <summary>
+        /// メニューへ戻る直前に呼ばれる。NetworkManager は DontDestroyOnLoad でシーンをまたいで残り、次に NetTest を読んだときの
+        /// NetBootstrap が重複として消えてしまうので、接続を切ってこの GameObject ごと消す。ロビーは OnDestroy の Dispose で出る。
+        /// </summary>
+        private void HandleReturningToMenu()
+        {
+            if (_returningToMenu)
+            {
+                return;
+            }
+
+            _returningToMenu = true;
+            _failed = true;
+            Debug.Log("[Net] leaving for the menu; shutting down the network");
+            if (_manager != null && _manager.IsListening && !_manager.ShutdownInProgress)
+            {
+                _manager.Shutdown();
+            }
+
+            Destroy(gameObject);
         }
 
         /// <summary>batchmode のプレイヤーと専用サーバーだけ終了する。エディタでは Play Mode を止めずにログだけ残す。</summary>

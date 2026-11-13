@@ -48,6 +48,7 @@ namespace Fps.Tests.EditMode
             definition.DeathCamera = DeathCamera.Killer;
             definition.InfiniteReserve = true;
             definition.ReserveAmmoMultiplier = 0.6f;
+            definition.Destruction = Destruction.On;
 
             var rules = definition.ToRules();
 
@@ -60,6 +61,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Killer));
             Assert.That(rules.InfiniteReserve, Is.True);
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(0.6f));
+            Assert.That(rules.Destruction, Is.EqualTo(Destruction.On));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
 
@@ -75,7 +77,8 @@ namespace Fps.Tests.EditMode
                 DeathBody.Collapse,
                 DeathCamera.Killer,
                 true,
-                2f);
+                2f,
+                Destruction.On);
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -92,6 +95,7 @@ namespace Fps.Tests.EditMode
         [TestCase("DeathBody")]
         [TestCase("DeathCamera")]
         [TestCase("ReserveAmmoMultiplier")]
+        [TestCase("Destruction")]
         public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
         {
             var definition = NewBroken("BrokenRules", field);
@@ -147,6 +151,7 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.DeathCamera, Is.EqualTo(expected.DeathCamera));
             Assert.That(actual.InfiniteReserve, Is.EqualTo(expected.InfiniteReserve));
             Assert.That(actual.ReserveAmmoMultiplier, Is.EqualTo(expected.ReserveAmmoMultiplier));
+            Assert.That(actual.Destruction, Is.EqualTo(expected.Destruction));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)
@@ -177,6 +182,9 @@ namespace Fps.Tests.EditMode
                     break;
                 case "ReserveAmmoMultiplier":
                     definition.ReserveAmmoMultiplier = -0.1f;
+                    break;
+                case "Destruction":
+                    definition.Destruction = (Destruction)99;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

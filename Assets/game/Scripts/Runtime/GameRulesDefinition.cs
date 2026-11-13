@@ -43,6 +43,10 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("初期予備弾の倍率")]
         private float _reserveAmmoMultiplier = 1f;
 
+        [Header("建造物")]
+        [SerializeField, Tooltip("建造物を弾で壊せるか")]
+        private Destruction _destruction = Destruction.Off;
+
         public FriendlyFire FriendlyFire
         {
             get => _friendlyFire;
@@ -97,6 +101,12 @@ namespace Fps.Runtime
             set => _reserveAmmoMultiplier = value;
         }
 
+        public Destruction Destruction
+        {
+            get => _destruction;
+            set => _destruction = value;
+        }
+
         /// <summary>定義を不変の <see cref="GameRules"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="GameRulesDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ToRules()
@@ -112,7 +122,8 @@ namespace Fps.Runtime
                     _deathBody,
                     _deathCamera,
                     _infiniteReserve,
-                    _reserveAmmoMultiplier);
+                    _reserveAmmoMultiplier,
+                    _destruction);
             }
             catch (ArgumentException e)
             {
@@ -157,6 +168,7 @@ namespace Fps.Runtime
             _deathCamera = rules.DeathCamera;
             _infiniteReserve = rules.InfiniteReserve;
             _reserveAmmoMultiplier = rules.ReserveAmmoMultiplier;
+            _destruction = rules.Destruction;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed game rules)" : name;

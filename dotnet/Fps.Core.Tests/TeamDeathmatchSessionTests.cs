@@ -50,7 +50,8 @@ namespace Fps.Core.Tests
                 d.DeathBody,
                 d.DeathCamera,
                 d.InfiniteReserve,
-                d.ReserveAmmoMultiplier);
+                d.ReserveAmmoMultiplier,
+                d.Destruction);
             var session = new TeamDeathmatchSession(
                 new TeamDeathmatchSpec(scoreLimit, timeLimitSeconds, respawnSeconds, rules),
                 _maxHealth,
@@ -438,7 +439,8 @@ namespace Fps.Core.Tests
                 DeathBody.Vanish,
                 DeathCamera.None,
                 false,
-                1f);
+                1f,
+                Destruction.Off);
         }
 
         [Test]
@@ -816,7 +818,7 @@ namespace Fps.Core.Tests
         private static GameRules RulesWith(RespawnMode respawnMode, float waveIntervalSeconds = GameRules.DefaultWaveIntervalSeconds)
         {
             return new GameRules(
-                FriendlyFire.Off, respawnMode, waveIntervalSeconds, 0f, 0f, DeathBody.Vanish, DeathCamera.None, false, 1f);
+                FriendlyFire.Off, respawnMode, waveIntervalSeconds, 0f, 0f, DeathBody.Vanish, DeathCamera.None, false, 1f, Destruction.Off);
         }
 
         [Test]

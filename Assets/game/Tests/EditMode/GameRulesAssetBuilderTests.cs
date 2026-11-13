@@ -178,6 +178,7 @@ namespace Fps.Tests.EditMode
             teamDeathmatch.FriendlyFire = FriendlyFire.On;
             teamDeathmatch.RegenPerSecond = 1f;
             teamDeathmatch.InfiniteReserve = true;
+            teamDeathmatch.Destruction = Destruction.On;
             EditorUtility.SetDirty(teamDeathmatch);
             AssetDatabase.SaveAssets();
 
@@ -189,6 +190,18 @@ namespace Fps.Tests.EditMode
             Assert.That(restored.FriendlyFire, Is.EqualTo(FriendlyFire.Off));
             Assert.That(restored.RegenPerSecond, Is.EqualTo(20f));
             Assert.That(restored.InfiniteReserve, Is.False);
+            Assert.That(restored.Destruction, Is.EqualTo(Destruction.Off));
+        }
+
+        [Test]
+        public void EveryModeKeepsDestructionOff()
+        {
+            var built = Build();
+
+            foreach (var definition in built)
+            {
+                Assert.That(definition.ToRules().Destruction, Is.EqualTo(Destruction.Off), definition.name);
+            }
         }
 
         [Test]

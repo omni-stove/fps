@@ -265,6 +265,7 @@ namespace Fps.Editor
             definition.FalloffStart = spec.Falloff.StartDistance;
             definition.FalloffEnd = spec.Falloff.EndDistance;
             definition.FalloffMinMultiplier = spec.Falloff.MinMultiplier;
+            definition.ExplosionRadius = spec.ExplosionRadius;
 
             // spec は検査済みだが、アセットの形で読み直せることも確かめる。不正なら保存しない。
             definition.ToSpec();

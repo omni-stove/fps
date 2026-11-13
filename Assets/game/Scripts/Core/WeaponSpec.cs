@@ -40,6 +40,9 @@ namespace Fps.Core
         /// <summary>距離によるダメージ減衰。null にならない。</summary>
         public DamageFalloff Falloff { get; }
 
+        /// <summary>建造物に当たったときに被害を広げる半径 (m)。0 なら当たった物だけ。0 以上の有限値。</summary>
+        public float ExplosionRadius { get; }
+
         /// <param name="id">識別子。前後の空白は除く。除いた後が小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。</param>
         /// <param name="displayName">表示名。null・空白のみなら <paramref name="id"/> を使う。</param>
         /// <param name="category">武器の種別。定義済みの値のみ。</param>
@@ -51,6 +54,7 @@ namespace Fps.Core
         /// <param name="damage">1 発あたりのダメージ。0 以上。</param>
         /// <param name="range">射程 (m)。0 より大きい有限値。</param>
         /// <param name="falloff">距離減衰。null 不可 (減衰しないなら <see cref="DamageFalloff.None"/>)。</param>
+        /// <param name="explosionRadius">建造物への被害を広げる半径 (m)。0 以上の有限値。</param>
         public WeaponSpec(
             string id,
             string displayName,
@@ -62,7 +66,8 @@ namespace Fps.Core
             float reloadSeconds,
             int damage,
             float range,
-            DamageFalloff falloff)
+            DamageFalloff falloff,
+            float explosionRadius = 0f)
         {
             var normalizedId = NormalizeId(id);
 
@@ -106,6 +111,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(range), range, "range must be positive and finite");
             }
 
+            if (!IsNonNegativeFinite(explosionRadius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(explosionRadius), explosionRadius, "explosionRadius must be a non-negative finite number");
+            }
+
             Id = normalizedId;
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? normalizedId : displayName.Trim();
             Category = category;
@@ -117,6 +127,7 @@ namespace Fps.Core
             Damage = damage;
             Range = range;
             Falloff = falloff ?? throw new ArgumentNullException(nameof(falloff));
+            ExplosionRadius = explosionRadius;
         }
 
         private static string NormalizeId(string id)

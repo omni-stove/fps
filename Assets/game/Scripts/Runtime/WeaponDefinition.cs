@@ -56,6 +56,10 @@ namespace Fps.Runtime
         [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("最大まで減衰したときの倍率")]
         private float _falloffMinMultiplier = 0.5f;
 
+        [Header("建造物")]
+        [SerializeField, Min(0f), Tooltip("建造物に当たったときに被害を広げる半径 (m)。0 なら当たった物だけ")]
+        private float _explosionRadius;
+
         public string Id
         {
             get => _id ?? string.Empty;
@@ -134,6 +138,12 @@ namespace Fps.Runtime
             set => _falloffMinMultiplier = value;
         }
 
+        public float ExplosionRadius
+        {
+            get => _explosionRadius;
+            set => _explosionRadius = value;
+        }
+
         /// <summary>Id が空 (空白のみを含む) なら新しい UUID を入れて true を返す。既に値があれば変えずに false。</summary>
         public bool AssignIdIfEmpty()
         {
@@ -185,7 +195,8 @@ namespace Fps.Runtime
                     _reloadSeconds,
                     _damage,
                     _range,
-                    falloff);
+                    falloff,
+                    _explosionRadius);
             }
             catch (ArgumentException e)
             {

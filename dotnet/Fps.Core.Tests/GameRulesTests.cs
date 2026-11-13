@@ -14,7 +14,8 @@ namespace Fps.Core.Tests
             DeathBody deathBody = DeathBody.Vanish,
             DeathCamera deathCamera = DeathCamera.None,
             bool infiniteReserve = false,
-            float reserveAmmoMultiplier = 1f)
+            float reserveAmmoMultiplier = 1f,
+            Destruction destruction = Destruction.Off)
         {
             return new GameRules(
                 friendlyFire,
@@ -25,7 +26,8 @@ namespace Fps.Core.Tests
                 deathBody,
                 deathCamera,
                 infiniteReserve,
-                reserveAmmoMultiplier);
+                reserveAmmoMultiplier,
+                destruction);
         }
 
         [Test]
@@ -43,6 +45,7 @@ namespace Fps.Core.Tests
             Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.None));
             Assert.That(rules.InfiniteReserve, Is.False);
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(1f));
+            Assert.That(rules.Destruction, Is.EqualTo(Destruction.Off));
         }
 
         [Test]
@@ -66,7 +69,8 @@ namespace Fps.Core.Tests
                 DeathBody.Collapse,
                 DeathCamera.Killer,
                 true,
-                2.5f);
+                2.5f,
+                Destruction.On);
 
             Assert.That(rules.FriendlyFire, Is.EqualTo(FriendlyFire.Reflect));
             Assert.That(rules.RespawnMode, Is.EqualTo(RespawnMode.Wave));
@@ -77,6 +81,7 @@ namespace Fps.Core.Tests
             Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Killer));
             Assert.That(rules.InfiniteReserve, Is.True);
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(2.5f));
+            Assert.That(rules.Destruction, Is.EqualTo(Destruction.On));
         }
 
         [Test]
@@ -100,6 +105,11 @@ namespace Fps.Core.Tests
             foreach (DeathCamera value in Enum.GetValues<DeathCamera>())
             {
                 Assert.That(Rules(deathCamera: value).DeathCamera, Is.EqualTo(value));
+            }
+
+            foreach (Destruction value in Enum.GetValues<Destruction>())
+            {
+                Assert.That(Rules(destruction: value).Destruction, Is.EqualTo(value));
             }
         }
 
@@ -143,6 +153,14 @@ namespace Fps.Core.Tests
         {
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(deathCamera: (DeathCamera)value));
             Assert.That(ex.ParamName, Is.EqualTo("deathCamera"));
+        }
+
+        [TestCase(-1)]
+        [TestCase(2)]
+        public void RejectsAnUndefinedDestruction(int value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(destruction: (Destruction)value));
+            Assert.That(ex.ParamName, Is.EqualTo("destruction"));
         }
 
         [TestCase(0f)]

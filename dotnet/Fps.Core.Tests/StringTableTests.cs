@@ -6,6 +6,9 @@ namespace Fps.Core.Tests
 {
     public sealed class StringTableTests
     {
+        private static readonly string[] ExpectedKeys = { "settings.title", "settings.back" };
+        private static readonly int[] ExpectedPlaceholders = { 0, 2 };
+
         private List<string> _warnings;
 
         [SetUp]
@@ -22,7 +25,7 @@ namespace Fps.Core.Tests
             Assert.That(table.Get("settings.title"), Is.EqualTo("設定"));
             Assert.That(table.Get("settings.back"), Is.EqualTo("戻る"));
             Assert.That(table.Count, Is.EqualTo(2));
-            Assert.That(table.Keys, Is.EquivalentTo(new[] { "settings.title", "settings.back" }));
+            Assert.That(table.Keys, Is.EquivalentTo(ExpectedKeys));
             Assert.That(_warnings, Is.Empty);
         }
 
@@ -144,7 +147,7 @@ namespace Fps.Core.Tests
         [Test]
         public void PlaceholdersOfListsEachNumberOnceInOrder()
         {
-            Assert.That(StringTable.PlaceholdersOf("{2} {0} {2} {{1}} {x}"), Is.EqualTo(new[] { 0, 2 }));
+            Assert.That(StringTable.PlaceholdersOf("{2} {0} {2} {{1}} {x}"), Is.EqualTo(ExpectedPlaceholders));
             Assert.That(StringTable.PlaceholdersOf("none"), Is.Empty);
         }
 

@@ -6,7 +6,9 @@ namespace Fps.Core
     /// <summary>
     /// ロビーに付ける公開の属性 1 つ。値は文字列か整数で、検索で比べられる。SDK の型には依存しない。
     /// </summary>
+#pragma warning disable CA1711 // ロビーの「属性」を表す名前で、System.Attribute の派生ではない
     public sealed class LobbyAttribute
+#pragma warning restore CA1711
     {
         /// <summary>キーの最大の長さ。EOS の属性キーの上限より十分短くしておく。</summary>
         public const int MaxKeyLength = 32;

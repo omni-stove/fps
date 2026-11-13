@@ -21,6 +21,7 @@ namespace Fps.Net
         private readonly string _bucketId;
         private Operation _operation;
         private bool _leaveWhenSettled;
+        private readonly System.Collections.Generic.List<Action<string>> _leaveWaiters = new System.Collections.Generic.List<Action<string>>();
         private bool _updating;
         private bool _disposed;
 
@@ -294,12 +295,27 @@ namespace Fps.Net
 
             if (_operation == Operation.Create || _operation == Operation.Join)
             {
+                // 作り終えて実際に出るまで完了にしない。先に完了にすると、呼び出し側が閉じ終えたと誤解する
                 _leaveWhenSettled = true;
-                done?.Invoke(null);
+                if (done != null)
+                {
+                    _leaveWaiters.Add(done);
+                }
+
                 return;
             }
 
-            if (Current == null || _operation == Operation.Leave)
+            if (_operation == Operation.Leave)
+            {
+                if (done != null)
+                {
+                    _leaveWaiters.Add(done);
+                }
+
+                return;
+            }
+
+            if (Current == null)
             {
                 done?.Invoke(null);
                 return;
@@ -328,7 +344,23 @@ namespace Fps.Net
                 }
 
                 done?.Invoke(error);
+                FlushLeaveWaiters(error);
             }));
+        }
+
+        private void FlushLeaveWaiters(string error)
+        {
+            if (_leaveWaiters.Count == 0)
+            {
+                return;
+            }
+
+            var waiters = _leaveWaiters.ToArray();
+            _leaveWaiters.Clear();
+            foreach (var waiter in waiters)
+            {
+                waiter(error);
+            }
         }
 
         /// <summary>ロビーに入っていれば出る要求を出し、バックエンドを閉じる。以後のコールバックは呼ばない。</summary>
@@ -455,6 +487,7 @@ namespace Fps.Net
             if (error != null)
             {
                 _leaveWhenSettled = false;
+                FlushLeaveWaiters(null);
                 return false;
             }
 
@@ -471,7 +504,7 @@ namespace Fps.Net
             }
 
             _leaveWhenSettled = false;
-            LeaveLobby();
+            LeaveLobby(FlushLeaveWaiters);
             return true;
         }
 

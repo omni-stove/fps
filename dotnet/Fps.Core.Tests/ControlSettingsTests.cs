@@ -725,7 +725,7 @@ namespace Fps.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + "}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + ",'language':'ja'}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.ShowSubtitles, Is.EqualTo(show));

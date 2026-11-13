@@ -53,6 +53,10 @@ namespace Fps.Net
                 Debug.Log(MatchLog.Held(playerId, _session.ReconnectGraceSeconds));
             }
 
+            BotsPlayerLeft(playerId);
+            IdlePlayerLeft(playerId);
+            ObjectivePlayerLeft(playerId);
+
             // 停止中は配る先がもう無いので、同期する一覧には触らない
             if (NetworkManager != null && NetworkManager.ShutdownInProgress)
             {
@@ -150,6 +154,9 @@ namespace Fps.Net
                 }
 
                 _session.Join(playerId, key);
+                BotsPlayerJoined(playerId, player);
+                IdlePlayerJoined(playerId, player);
+                ObjectivePlayerJoined(playerId, player);
             }
         }
 

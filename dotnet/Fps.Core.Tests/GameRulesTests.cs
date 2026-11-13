@@ -18,7 +18,10 @@ namespace Fps.Core.Tests
             Destruction destruction = Destruction.Off,
             float spawnProtectionSeconds = 0f,
             FallDamage fallDamage = FallDamage.Off,
-            HudDensity hudDensity = HudDensity.Full)
+            HudDensity hudDensity = HudDensity.Full,
+            MatchObjective objective = MatchObjective.None,
+            int minPlayers = 0,
+            float idleKickSeconds = 0f)
         {
             return new GameRules(
                 friendlyFire,
@@ -34,7 +37,10 @@ namespace Fps.Core.Tests
                 null,
                 spawnProtectionSeconds,
                 fallDamage,
-                hudDensity);
+                hudDensity,
+                objective,
+                minPlayers,
+                idleKickSeconds);
         }
 
         [Test]
@@ -56,6 +62,9 @@ namespace Fps.Core.Tests
             Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f));
             Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off));
             Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full));
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.None));
+            Assert.That(rules.MinPlayers, Is.EqualTo(0));
+            Assert.That(rules.IdleKickSeconds, Is.EqualTo(0f));
         }
 
         [Test]
@@ -76,6 +85,53 @@ namespace Fps.Core.Tests
             Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f));
             Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off));
             Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full));
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.None));
+            Assert.That(rules.MinPlayers, Is.EqualTo(0));
+            Assert.That(rules.IdleKickSeconds, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void KeepsTheGivenObjectiveMinPlayersAndIdleKick()
+        {
+            var rules = Rules(objective: MatchObjective.Domination, minPlayers: GameRules.MaxMinPlayers, idleKickSeconds: 90.5f);
+
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Domination));
+            Assert.That(rules.MinPlayers, Is.EqualTo(GameRules.MaxMinPlayers));
+            Assert.That(rules.IdleKickSeconds, Is.EqualTo(90.5f));
+        }
+
+        [TestCase(-1)]
+        [TestCase(2)]
+        public void RejectsAnUndefinedObjective(int value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(objective: (MatchObjective)value));
+            Assert.That(ex.ParamName, Is.EqualTo("objective"));
+        }
+
+        [TestCase(-1)]
+        [TestCase(GameRules.MaxMinPlayers + 1)]
+        public void RejectsMinPlayersOutsideTheRange(int value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(minPlayers: value));
+            Assert.That(ex.ParamName, Is.EqualTo("minPlayers"));
+        }
+
+        [TestCase(-0.01f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void RejectsANegativeOrNonFiniteIdleKick(float value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(idleKickSeconds: value));
+            Assert.That(ex.ParamName, Is.EqualTo("idleKickSeconds"));
+        }
+
+        [Test]
+        public void MatchObjectiveHasNoneAndDominationInThatOrder()
+        {
+            // 値の並びがアセットの直列化に乗るので、後ろに足したことを固定する。
+            Assert.That((int)MatchObjective.None, Is.EqualTo(0));
+            Assert.That((int)MatchObjective.Domination, Is.EqualTo(1));
         }
 
         [Test]

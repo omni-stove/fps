@@ -26,6 +26,11 @@ namespace Fps.Net
     /// <para>
     /// HUD も同じ条件 (<see cref="NetStartup.ShouldCreateHud"/>) で生成時に <see cref="NetHud.Create"/> で作り、消滅時に消す。
     /// </para>
+    /// <para>
+    /// 倒れると見た目と当たりを消す。試合のルール (<see cref="NetTeamDeathmatch.SyncedRules"/>) のやられ演出が Collapse なら、
+    /// 画面のあるクライアントでだけ <see cref="DeathBodyPresenter"/> が抜け殻をサーバーから届いた最後の被弾の向きへ倒し、リスポーンで消す。
+    /// 抜け殻はローカルな見た目だけで、判定と同期には関わらない。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -61,6 +66,9 @@ namespace Fps.Net
 
         private readonly NetworkVariable<Team> _team = new NetworkVariable<Team>(Team.Alpha);
 
+        // 最後に受けた弾の進む向き (単位ベクトル)。まだ撃たれていなければ zero。倒れた体を倒す向きにだけ使い、判定には使わない
+        private readonly NetworkVariable<Vector3> _lastHitDirection = new NetworkVariable<Vector3>(Vector3.zero);
+
         // 0 は倒れているか、まだ試合に参加していないことを表す
         private readonly NetworkVariable<int> _health = new NetworkVariable<int>(0);
 
@@ -92,6 +100,10 @@ namespace Fps.Net
 
         // HUD を作ったときだけ。自分のプレイヤーで画面があるときに作る
         private NetHud _hud;
+
+        // やられ演出。画面のあるクライアント (ホストを含む) でだけ付ける。倒れた tick の LateUpdate で出す
+        private DeathBodyPresenter _deathBody;
+        private bool _deathBodyPending;
 
         public Team Team => _team.Value;
         public int Health => _health.Value;
@@ -158,6 +170,13 @@ namespace Fps.Net
             {
                 CreateHud();
             }
+
+            // サーバーだけのインスタンスには見る人がいないので作らない (専用サーバーは IsPresentationAvailable でも弾く)
+            if (IsClient && DeathBodyPresenter.IsPresentationAvailable)
+            {
+                _deathBody = DeathBodyPresenter.Attach(gameObject);
+                _deathBody.Id = "client=" + OwnerClientId.ToString(CultureInfo.InvariantCulture);
+            }
         }
 
         public override void OnNetworkDespawn()
@@ -172,6 +191,12 @@ namespace Fps.Net
             ReleaseAttackAction();
             SetLocalView(false);
             DestroyHud();
+
+            _deathBodyPending = false;
+            if (_deathBody != null)
+            {
+                _deathBody.Clear(DeathBodyPresenter.ReasonDestroyed);
+            }
 
             if (IsServer && NetTeamDeathmatch.Current != null)
             {
@@ -674,6 +699,60 @@ namespace Fps.Net
                 ResetStance(isAlive ? CrouchInput.ReasonRespawn : CrouchInput.ReasonDeath);
                 ReleaseSprint(isAlive ? SprintInput.ReasonRespawn : SprintInput.ReasonDeath);
             }
+
+            if (_deathBody == null)
+            {
+                return;
+            }
+
+            if (wasAlive && !isAlive)
+            {
+                // 弾の向きは体力と同じ tick に届くが、ホストではサーバーが体力を書いた後に書くので、ここではまだ古い。
+                // LateUpdate まで待てばどちらでも揃っている
+                _deathBodyPending = true;
+            }
+            else if (isAlive)
+            {
+                _deathBodyPending = false;
+                _deathBody.Clear(DeathBodyPresenter.ReasonRespawn);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (!_deathBodyPending)
+            {
+                return;
+            }
+
+            _deathBodyPending = false;
+            if (_deathBody == null || IsAlive)
+            {
+                return;
+            }
+
+            // 試合のルールが届く前か、知らない値が届いたときは今までどおり消すだけにする
+            var match = NetTeamDeathmatch.Current;
+            var mode = match != null ? match.SyncedRules.DeathBody : DeathBody.Vanish;
+            _deathBody.Mode = Enum.IsDefined(typeof(DeathBody), mode) ? mode : DeathBody.Vanish;
+
+            var direction = _lastHitDirection.Value;
+            _deathBody.Present(direction.sqrMagnitude > 0f ? direction : (Vector3?)null);
+        }
+
+        /// <summary>
+        /// サーバーから、このプレイヤーが最後に受けた弾の進む向きを書き込む。倒れたときのやられ演出 (<see cref="DeathBodyPresenter"/>) にだけ使う。
+        /// 長さが 0 か有限でない向きは無視する。
+        /// </summary>
+        internal void ServerSetLastHitDirection(Vector3 direction)
+        {
+            RequireServer();
+            if (!NetMath.IsFinite(direction) || direction.sqrMagnitude < 1e-12f)
+            {
+                return;
+            }
+
+            _lastHitDirection.Value = direction.normalized;
         }
 
         /// <summary>チームの色を塗り、倒れている間は見た目と当たりを消す。</summary>

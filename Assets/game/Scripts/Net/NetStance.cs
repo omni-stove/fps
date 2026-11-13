@@ -173,12 +173,21 @@ namespace Fps.Net
         /// </remarks>
         public bool HasHeadroomToStand()
         {
+            return IsStandingClear(Vector3.zero);
+        }
+
+        /// <summary>
+        /// 立った高さのカプセルを今の位置から offset (ワールド、m) だけずらした所に置いたとき、<see cref="HasHeadroomToStand"/> と同じ規則で
+        /// 何にも重ならないか。乗り越えの軌跡の上を体が通れるかの検査 (<see cref="NetVaultSensor"/>) に使う。
+        /// </summary>
+        public bool IsStandingClear(Vector3 offset)
+        {
             Geometry.SphereCenters(Geometry.Standing, out var bottomY, out var topY);
             var scale = _root.lossyScale;
             var radius = Geometry.Radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
             var margin = Mathf.Min(_controller.skinWidth, radius * 0.5f);
-            var bottom = _root.TransformPoint(new Vector3(_standingCenter.x, bottomY, _standingCenter.z));
-            var top = _root.TransformPoint(new Vector3(_standingCenter.x, topY, _standingCenter.z));
+            var bottom = _root.TransformPoint(new Vector3(_standingCenter.x, bottomY, _standingCenter.z)) + offset;
+            var top = _root.TransformPoint(new Vector3(_standingCenter.x, topY, _standingCenter.z)) + offset;
 
             var count = Physics.OverlapCapsuleNonAlloc(
                 bottom, top, radius - margin, _overlapBuffer, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);

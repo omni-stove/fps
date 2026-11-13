@@ -17,14 +17,23 @@ namespace Fps.Runtime
         /// <summary>前方の障害物を探す Ray の、足元からの高さ (m)。<see cref="VaultProbe.MinHeight"/> より上で、低い障害物にも当たる高さ。</summary>
         public const float VaultProbeHeight = 0.35f;
 
-        // 上端を測る Ray は乗り越えられる高さよりこれだけ上から下ろす。上限を少し超える壁も「高すぎる」と測れるようにするため。
-        private const float VaultTopProbeMargin = 0.3f;
+        /// <summary>
+        /// 上端を測る Ray を、乗り越えられる高さよりこれだけ上から下ろす (m)。上限を少し超える壁も「高すぎる」と測れるようにするため。
+        /// ネット対戦 (NetVaultSensor) も同じ値で測る。
+        /// </summary>
+        public const float VaultTopProbeMargin = 0.3f;
 
-        // 上端と奥行きを測る Ray を、当たった面から障害物の内側へずらす量 (m)。面のちょうど上を通って外さないため。
-        private const float VaultSurfaceInset = 0.02f;
+        /// <summary>
+        /// 上端と奥行きを測る Ray を、当たった面から障害物の内側へずらす量 (m)。面のちょうど上を通って外さないため。
+        /// ネット対戦も同じ値で測る。
+        /// </summary>
+        public const float VaultSurfaceInset = 0.02f;
 
-        // 奥行きは、手前の面から MaxDepth よりこれだけ先から戻る Ray で測る。ちょうど MaxDepth の厚さも測れるようにするため。
-        private const float VaultDepthSlack = 0.05f;
+        /// <summary>
+        /// 奥行きは、手前の面から <see cref="VaultProbe.MaxDepth"/> よりこれだけ先から戻る Ray で測る (m)。
+        /// ちょうど MaxDepth の厚さも測れるようにするため。ネット対戦も同じ値で測る。
+        /// </summary>
+        public const float VaultDepthSlack = 0.05f;
 
         private const int MaxVaultCastHits = 16;
 

@@ -6,7 +6,7 @@ namespace Fps.Net
     public readonly struct MotorState
     {
         /// <summary>
-        /// 姿勢かカバーの状態が食い違ったときの <see cref="PositionError"/>。どんな許容値も超えるので必ず巻き戻す。
+        /// 姿勢・カバー・回避・乗り越えの状態が食い違ったときの <see cref="PositionError"/>。どんな許容値も超えるので必ず巻き戻す。
         /// </summary>
         public const float StanceMismatchError = float.PositiveInfinity;
 
@@ -25,30 +25,60 @@ namespace Fps.Net
         /// <summary>この tick の後のカバーの状態。</summary>
         public NetCoverState Cover { get; }
 
+        /// <summary>この tick の後の回避の状態 (転がりの進みと待ち時間)。</summary>
+        public NetDodgeState Dodge { get; }
+
+        /// <summary>この tick の後の乗り越えの状態 (たどっている軌跡と進み)。</summary>
+        public NetVaultState Vault { get; }
+
         public MotorState(Vector3 position, Vector3 velocity, bool isGrounded, bool isCrouched)
             : this(position, velocity, isGrounded, isCrouched, NetCoverState.Out)
         {
         }
 
         public MotorState(Vector3 position, Vector3 velocity, bool isGrounded, bool isCrouched, NetCoverState cover)
+            : this(position, velocity, isGrounded, isCrouched, cover, NetDodgeState.Ready, NetVaultState.None)
+        {
+        }
+
+        public MotorState(
+            Vector3 position,
+            Vector3 velocity,
+            bool isGrounded,
+            bool isCrouched,
+            NetCoverState cover,
+            NetDodgeState dodge,
+            NetVaultState vault)
         {
             Position = position;
             Velocity = velocity;
             IsGrounded = isGrounded;
             IsCrouched = isCrouched;
             Cover = cover;
+            Dodge = dodge;
+            Vault = vault;
         }
 
-        /// <summary>位置と速度がすべて有限値で、カバーの状態が正しいか。ネットワークから受け取った値の検査に使う。</summary>
-        public bool IsFinite => NetMath.IsFinite(Position) && NetMath.IsFinite(Velocity) && Cover.IsValid;
+        /// <summary>回避の最中か。</summary>
+        public bool IsDodging => Dodge.IsRolling;
+
+        /// <summary>乗り越えの最中か。</summary>
+        public bool IsVaulting => Vault.IsVaulting;
 
         /// <summary>
-        /// 予測と確定状態のずれ。姿勢とカバーの状態が同じなら位置の距離 (m)、しゃがみ・カバーの段階 (<see cref="NetCoverState.Phase"/>)・
-        /// カバー中の壁の高さのどれかが食い違っていれば <see cref="StanceMismatchError"/>。
+        /// 位置と速度がすべて有限値で、カバー・回避・乗り越えの状態が正しいか。ネットワークから受け取った値の検査に使う。
+        /// </summary>
+        public bool IsFinite => NetMath.IsFinite(Position) && NetMath.IsFinite(Velocity) && Cover.IsValid && Dodge.IsValid && Vault.IsValid;
+
+        /// <summary>
+        /// 予測と確定状態のずれ。姿勢とカバー・回避・乗り越えの状態が同じなら位置の距離 (m)、しゃがみ・カバーの段階 (<see cref="NetCoverState.Phase"/>)・
+        /// カバー中の壁の高さ・転がっているか・乗り越えているかのどれかが食い違っていれば <see cref="StanceMismatchError"/>。
         /// </summary>
         /// <remarks>
         /// 位置が一致していても姿勢が違えばカプセルの高さが違い、以降の移動 (頭上の検査・しゃがみの速さ) も目の高さも変わるので、
         /// 位置の許容値に埋もれさせず必ず巻き戻す。カバーも同じで、段階が違えば以降の移動の向きと速さ、ブラインドファイアの始点が変わる。
+        /// 回避と乗り越えも、始めた直後は位置がまだ近くても以降の動きがまるで違い、射撃の可否も変わるので同じ扱いにする。
+        /// 待ち時間の食い違いだけでは巻き戻さない (次に始められるかが変われば、そのとき転がっているかが食い違う)。
         /// </remarks>
         public static float PositionError(MotorState predicted, MotorState authoritative)
         {
@@ -60,6 +90,11 @@ namespace Fps.Net
             var mine = predicted.Cover;
             var theirs = authoritative.Cover;
             if (mine.Phase != theirs.Phase || (mine.IsInCover && mine.Height != theirs.Height))
+            {
+                return StanceMismatchError;
+            }
+
+            if (predicted.IsDodging != authoritative.IsDodging || predicted.IsVaulting != authoritative.IsVaulting)
             {
                 return StanceMismatchError;
             }

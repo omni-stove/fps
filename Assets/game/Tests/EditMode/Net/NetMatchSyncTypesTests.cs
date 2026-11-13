@@ -169,6 +169,67 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void MatchRulesCarryDodgeAndVault()
+        {
+            var actions = ActionRules.Default.WithDodge(Dodge.On).WithVault(Vault.On);
+            var synced = NetMatchRules.From(GameRules.Default.WithActions(actions));
+
+            Assert.That(synced.Dodge, Is.EqualTo(Dodge.On));
+            Assert.That(synced.Vault, Is.EqualTo(Vault.On));
+            Assert.That(synced.DodgeEnabled, Is.True);
+            Assert.That(synced.VaultEnabled, Is.True);
+            Assert.That(RoundTrip(synced), Is.EqualTo(synced));
+            Assert.That(synced, Is.Not.EqualTo(NetMatchRules.Default));
+
+            var dodgeOnly = NetMatchRules.From(GameRules.Default.WithActions(ActionRules.Default.WithDodge(Dodge.On)));
+            Assert.That(dodgeOnly, Is.Not.EqualTo(synced), "vault is part of the equality");
+            Assert.That(dodgeOnly.VaultEnabled, Is.False);
+
+            Assert.That(NetMatchRules.Default.DodgeEnabled, Is.False, "dodge is off until the server says otherwise");
+            Assert.That(NetMatchRules.Default.VaultEnabled, Is.False);
+        }
+
+        [Test]
+        public void DodgeStateSerializesTheRollAndOnlyTheCooldownWhileReady()
+        {
+            var rolling = new NetDodgeState(new DodgeSnapshot(true, new System.Numerics.Vector2(0.6f, -0.8f), 0.1f, 0f));
+
+            var received = RoundTrip(rolling);
+
+            Assert.That(received, Is.EqualTo(rolling));
+            Assert.That(received.Snapshot, Is.EqualTo(rolling.Snapshot));
+            Assert.That(received.IsValid, Is.True);
+
+            // 転がっていない間の向きは持たず、待ち時間だけ送る
+            var waiting = new NetDodgeState(new DodgeSnapshot(false, new System.Numerics.Vector2(1f, 0f), 0f, 0.25f));
+            Assert.That(waiting.Direction, Is.EqualTo(UnityEngine.Vector2.zero));
+            Assert.That(RoundTrip(waiting), Is.EqualTo(waiting));
+            Assert.That(RoundTrip(waiting).CooldownRemaining, Is.EqualTo(0.25f));
+            Assert.That(RoundTrip(NetDodgeState.Ready), Is.EqualTo(NetDodgeState.Ready));
+        }
+
+        [Test]
+        public void VaultStateSerializesThePathWhileVaultingAndNothingElseOutside()
+        {
+            var path = VaultProbe.PlanPath(new System.Numerics.Vector3(1f, 0f, 0f), 0.8f, 0.8f, 0.4f, 0.5f);
+            var vaulting = new NetVaultState(path, 0.2f);
+
+            var received = RoundTrip(vaulting);
+
+            Assert.That(received, Is.EqualTo(vaulting));
+            Assert.That(received.IsValid, Is.True);
+            Assert.That(received.HasSamePath(path), Is.True);
+            Assert.That(received.ToPath().Points, Is.EqualTo(path.Points));
+            Assert.That(received.ToPath().Duration, Is.EqualTo(path.Duration));
+            Assert.That(RoundTrip(NetVaultState.None), Is.EqualTo(NetVaultState.None));
+
+            Assert.Throws<System.ArgumentException>(
+                () => new NetVaultState(new VaultPath(new[] { System.Numerics.Vector3.Zero, System.Numerics.Vector3.UnitX }, VaultProbe.Speed), 0f),
+                "only paths planned by VaultProbe can be carried");
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new NetVaultState(path, -0.1f));
+        }
+
+        [Test]
         public void CoverStateSerializesEveryFieldInCoverAndOnlyThePhaseOutside()
         {
             var snapshot = new CoverSnapshot(

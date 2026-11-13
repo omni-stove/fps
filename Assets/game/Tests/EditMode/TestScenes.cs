@@ -30,6 +30,19 @@ namespace Fps.Tests.EditMode
             return EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
         }
 
+        /// <summary>
+        /// 保存済みのシーンでプレイヤーに配線されているべき武器 (rifle, handgun のアセット)。
+        /// どちらかのアセットが無ければ null を含むので、比べると失敗する (先に WeaponAssetBuilder.Build を走らせる)。
+        /// </summary>
+        public static Fps.Runtime.WeaponDefinition[] ExpectedPlayerWeapons()
+        {
+            return new[]
+            {
+                UnityEditor.AssetDatabase.LoadAssetAtPath<Fps.Runtime.WeaponDefinition>(Fps.Editor.WeaponAssetBuilder.RiflePath),
+                UnityEditor.AssetDatabase.LoadAssetAtPath<Fps.Runtime.WeaponDefinition>(Fps.Editor.WeaponAssetBuilder.HandgunPath),
+            };
+        }
+
         private static void OpenBaseScene()
         {
             if (File.Exists(BaseScenePath))

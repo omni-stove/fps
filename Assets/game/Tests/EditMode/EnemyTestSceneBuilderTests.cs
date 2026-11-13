@@ -69,9 +69,9 @@ namespace Fps.Tests.EditMode
             var catalog = NewCatalog("WeaponCatalog", handgun, rifle);
             try
             {
-                var agent = EnemyTestSceneBuilder.CreateActors(_scene, playerWeapon, catalog);
+                var agent = EnemyTestSceneBuilder.CreateActors(_scene, new[] { playerWeapon, handgun }, catalog);
 
-                AssertActorsAreWired(agent, playerWeapon);
+                AssertActorsAreWired(agent, new[] { playerWeapon, handgun });
                 Assert.That(agent.WeaponDefinition, Is.SameAs(rifle), "the enemy shoots the catalog's weapon with its id");
                 Assert.That(agent.WeaponDefinition.Id, Is.EqualTo(EnemyTestSceneBuilder.EnemyWeaponId));
             }
@@ -92,7 +92,8 @@ namespace Fps.Tests.EditMode
             try
             {
                 Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, null, catalog));
-                Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, rifle, null));
+                Assert.Throws<ArgumentException>(() => EnemyTestSceneBuilder.CreateActors(_scene, Array.Empty<WeaponDefinition>(), catalog));
+                Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, new[] { rifle }, null));
                 Assert.That(_scene.rootCount, Is.Zero);
             }
             finally
@@ -110,7 +111,7 @@ namespace Fps.Tests.EditMode
             var catalog = NewCatalog("HandgunOnly", handgun);
             try
             {
-                var e = Assert.Throws<KeyNotFoundException>(() => EnemyTestSceneBuilder.CreateActors(_scene, rifle, catalog));
+                var e = Assert.Throws<KeyNotFoundException>(() => EnemyTestSceneBuilder.CreateActors(_scene, new[] { rifle }, catalog));
 
                 Assert.That(e.Message, Does.Contain($"'{EnemyTestSceneBuilder.EnemyId}'"), "names the placement");
                 Assert.That(e.Message, Does.Contain($"'{EnemyTestSceneBuilder.EnemyWeaponId}'"), "names the weapon id");
@@ -132,7 +133,7 @@ namespace Fps.Tests.EditMode
             var empty = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
             try
             {
-                Assert.Throws<WeaponDefinitionException>(() => EnemyTestSceneBuilder.CreateActors(_scene, rifle, empty));
+                Assert.Throws<WeaponDefinitionException>(() => EnemyTestSceneBuilder.CreateActors(_scene, new[] { rifle }, empty));
                 Assert.That(_scene.rootCount, Is.Zero, "nothing is placed");
             }
             finally
@@ -142,12 +143,12 @@ namespace Fps.Tests.EditMode
             }
         }
 
-        private void AssertActorsAreWired(EnemyAgent agent, WeaponDefinition playerWeapon)
+        private void AssertActorsAreWired(EnemyAgent agent, WeaponDefinition[] playerWeapons)
         {
             var bootstrap = Find(EnemyTestSceneBuilder.BootstrapObjectName).GetComponent<GameBootstrap>();
             Assert.That(bootstrap, Is.Not.Null);
             Assert.That(bootstrap.CreatesFloor, Is.False, "the scene's own floor carries the baked NavMesh");
-            Assert.That(bootstrap.WeaponDefinition, Is.SameAs(playerWeapon), "the player shoots the rifle");
+            Assert.That(bootstrap.WeaponDefinitions, Is.EqualTo(playerWeapons), "the player carries the loadout");
 
             Assert.That(agent.name, Is.EqualTo(EnemyTestSceneBuilder.EnemyName));
             Assert.That(agent.gameObject.scene, Is.EqualTo(_scene));

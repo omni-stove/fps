@@ -59,6 +59,29 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void LegacySavesAreReadAsTheRiflesAmmo()
+        {
+            // 武器 1 本の頃のセーブには Id が無く、CampaignSave はその残弾をこの Id の武器に持たせる。
+            Assert.That(CampaignSave.LegacyWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
+        }
+
+        [Test]
+        public void ThePlayerLoadoutIsTheCommittedRifleThenHandgun()
+        {
+            Assume.That(
+                AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(WeaponAssetBuilder.LoadoutPath),
+                Is.Not.Null,
+                $"run {nameof(WeaponAssetBuilder)}.Build first");
+
+            var weapons = WeaponAssetBuilder.LoadPlayerLoadout();
+
+            Assert.That(weapons, Is.EqualTo(TestScenes.ExpectedPlayerWeapons()));
+            Assert.That(weapons, Has.None.Null);
+            Assert.That(weapons[0].ToSpec().Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(weapons[1].ToSpec().Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
+        }
+
+        [Test]
         public void LoadDefinitionReturnsTheBuiltAsset()
         {
             Build();

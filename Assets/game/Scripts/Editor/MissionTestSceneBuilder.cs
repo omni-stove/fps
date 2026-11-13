@@ -91,11 +91,11 @@ namespace Fps.Editor
 
             // NewScene(Single) は参照されていないアセットをアンロードし、先に読んだ定義が null になるので、シーンを作ってから読む。
             // 武器のアセットが無ければ何も保存せずに止める (先に WeaponAssetBuilder.Build を走らせる)。
-            var rifle = WeaponAssetBuilder.LoadRifle();
+            var weapons = WeaponAssetBuilder.LoadPlayerLoadout();
             var definition = CreateOrUpdateDefinition(definitionPath);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
-            PopulateScene(scene, definition, rifle);
+            PopulateScene(scene, definition, weapons);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -134,9 +134,9 @@ namespace Fps.Editor
 
         /// <summary>
         /// 空のシーンにテスト用ミッションの物を置き、参照をすべて設定する。Edit Mode では Awake/Start が走らないので、
-        /// ミッションは Play したときに始まる。プレイヤーは weapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で撃つ。
+        /// ミッションは Play したときに始まる。プレイヤーは weapons (通常は <see cref="WeaponAssetBuilder.LoadPlayerLoadout"/> の rifle, handgun) を持つ。
         /// </summary>
-        public static MissionTestLayout PopulateScene(Scene scene, MissionDefinition definition, WeaponDefinition weapon)
+        public static MissionTestLayout PopulateScene(Scene scene, MissionDefinition definition, IReadOnlyList<WeaponDefinition> weapons)
         {
             if (!scene.IsValid() || !scene.isLoaded)
             {
@@ -148,10 +148,7 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(definition));
             }
 
-            if (weapon == null)
-            {
-                throw new ArgumentNullException(nameof(weapon));
-            }
+            SceneBuildHelpers.RequirePlayerWeapons(weapons, nameof(weapons));
 
             if (scene.rootCount != 0)
             {
@@ -163,7 +160,7 @@ namespace Fps.Editor
             try
             {
                 var bootstrap = Track(created, new GameObject(BootstrapObjectName, typeof(GameBootstrap)));
-                bootstrap.GetComponent<GameBootstrap>().WeaponDefinition = weapon;
+                bootstrap.GetComponent<GameBootstrap>().WeaponDefinitions = weapons;
 
                 var runnerObject = Track(created, new GameObject(RunnerObjectName));
                 var runner = runnerObject.AddComponent<MissionRunner>();

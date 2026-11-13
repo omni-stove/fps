@@ -15,6 +15,9 @@ namespace Fps.Core
         /// <summary>武器がまだ無いときの表示。</summary>
         public const string NoAmmo = "-- / --";
 
+        /// <summary>武器がまだ無いときの武器名の表示。空文字のときは HUD が武器名の欄を隠す。</summary>
+        public const string NoWeaponName = "";
+
         /// <summary>試合がまだ無いときの表示。</summary>
         public const string NoTime = "--:--";
 

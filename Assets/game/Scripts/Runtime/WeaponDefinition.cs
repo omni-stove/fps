@@ -56,6 +56,10 @@ namespace Fps.Runtime
         [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("最大まで減衰したときの倍率")]
         private float _falloffMinMultiplier = 0.5f;
 
+        [Header("建造物")]
+        [SerializeField, Min(0f), Tooltip("建造物に当たったときに被害を広げる半径 (m)。0 なら当たった物だけ")]
+        private float _explosionRadius;
+
         [Header("覗き込み (ADS)")]
         [SerializeField, Min(0f), Tooltip("覗き込み切ったときのカメラの縦の視野角 (度)。0 なら共通の初期値 (Fps.Core.AdsZoom.DefaultFieldOfView)")]
         private float _adsFieldOfView = UnsetAdsFieldOfView;
@@ -143,6 +147,12 @@ namespace Fps.Runtime
             set => _falloffMinMultiplier = value;
         }
 
+        public float ExplosionRadius
+        {
+            get => _explosionRadius;
+            set => _explosionRadius = value;
+        }
+
         /// <summary>覗き込み切ったときの視野角 (度)。<see cref="UnsetAdsFieldOfView"/> なら <see cref="ToSpec"/> は共通の初期値を使う。</summary>
         public float AdsFieldOfView
         {
@@ -202,6 +212,7 @@ namespace Fps.Runtime
                     _damage,
                     _range,
                     falloff,
+                    _explosionRadius,
                     // 負の値などは未設定と見なさず、WeaponSpec の検査で不正として弾く。
                     _adsFieldOfView == UnsetAdsFieldOfView ? (float?)null : _adsFieldOfView);
             }

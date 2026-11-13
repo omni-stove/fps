@@ -22,7 +22,8 @@ namespace Fps.Core.Tests
             int damage = 25,
             float range = 100f,
             DamageFalloff falloff = null,
-            bool nullFalloff = false)
+            bool nullFalloff = false,
+            float explosionRadius = 0f)
         {
             return new WeaponSpec(
                 id,
@@ -35,7 +36,8 @@ namespace Fps.Core.Tests
                 reloadSeconds,
                 damage,
                 range,
-                nullFalloff ? null : falloff ?? _falloff);
+                nullFalloff ? null : falloff ?? _falloff,
+                explosionRadius);
         }
 
         [Test]
@@ -66,7 +68,7 @@ namespace Fps.Core.Tests
         public void KeepsAnAdsFieldOfView()
         {
             var spec = new WeaponSpec(
-                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff, 42f);
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff, adsFieldOfView: 42f);
 
             Assert.That(spec.AdsFieldOfView, Is.EqualTo(42f));
         }
@@ -79,7 +81,7 @@ namespace Fps.Core.Tests
         public void RejectsAnAdsFieldOfViewThatCannotBeProjected(float fieldOfView)
         {
             var e = Assert.Throws<ArgumentOutOfRangeException>(() => new WeaponSpec(
-                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff, fieldOfView));
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff, adsFieldOfView: fieldOfView));
             Assert.That(e.ParamName, Is.EqualTo("adsFieldOfView"));
         }
 
@@ -236,6 +238,31 @@ namespace Fps.Core.Tests
         public void AcceptsNoFalloff()
         {
             Assert.That(Create(falloff: DamageFalloff.None).Falloff, Is.SameAs(DamageFalloff.None));
+        }
+
+        [Test]
+        public void ExplosionRadiusIsZeroWhenOmitted()
+        {
+            var spec = new WeaponSpec(_rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff);
+
+            Assert.That(spec.ExplosionRadius, Is.EqualTo(0f));
+        }
+
+        [TestCase(0f)]
+        [TestCase(3.5f)]
+        public void KeepsTheExplosionRadius(float explosionRadius)
+        {
+            Assert.That(Create(explosionRadius: explosionRadius).ExplosionRadius, Is.EqualTo(explosionRadius));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void RejectsInvalidExplosionRadius(float explosionRadius)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => Create(explosionRadius: explosionRadius));
+            Assert.That(e.ParamName, Is.EqualTo("explosionRadius"));
         }
     }
 }

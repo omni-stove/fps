@@ -336,6 +336,15 @@ namespace Fps.Net
             Debug.Log("[Net] fire weapon=" + weaponId + " tick=" + time.Tick.ToString(CultureInfo.InvariantCulture)
                 + " alpha=" + time.Alpha.ToString("F2", CultureInfo.InvariantCulture), this);
             FireServerRpc(new FixedString64Bytes(weaponId), origin, direction, time.Tick, time.Alpha);
+            ReleaseSprint(SprintInput.ReasonFire);
+        }
+
+        private void ReleaseSprint(string reason)
+        {
+            if (_motor != null)
+            {
+                _motor.ReleaseSprint(reason);
+            }
         }
 
         /// <summary>
@@ -560,7 +569,7 @@ namespace Fps.Net
         {
             if (aiming && _motor != null)
             {
-                _motor.ReleaseSprint();
+                ReleaseSprint(SprintInput.ReasonAim);
             }
         }
 
@@ -620,6 +629,7 @@ namespace Fps.Net
         {
             // サーバーがテレポートさせるのは出現位置に置くとき (リスポーン) だけ
             ResetStance(CrouchInput.ReasonRespawn);
+            ReleaseSprint(SprintInput.ReasonRespawn);
             Teleported?.Invoke(position, rotation);
         }
 
@@ -656,11 +666,13 @@ namespace Fps.Net
         {
             ApplyVisuals();
 
+            // しゃがみ・ダッシュの入力の状態はオーナーの NetworkPlayerMotor にしか無く、他では何もしない
             var wasAlive = previous > 0;
             var isAlive = current > 0;
             if (wasAlive != isAlive)
             {
                 ResetStance(isAlive ? CrouchInput.ReasonRespawn : CrouchInput.ReasonDeath);
+                ReleaseSprint(isAlive ? SprintInput.ReasonRespawn : SprintInput.ReasonDeath);
             }
         }
 

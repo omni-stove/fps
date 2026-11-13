@@ -229,7 +229,8 @@ namespace Fps.Core.Tests
                 d.DeathBody,
                 d.DeathCamera,
                 infiniteReserve,
-                reserveAmmoMultiplier);
+                reserveAmmoMultiplier,
+                d.Destruction);
         }
 
         [Test]

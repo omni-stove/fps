@@ -111,6 +111,9 @@ namespace Fps.Runtime
         /// <summary><see cref="StartReload"/> でリロードが始まったときに、リロードする Weapon を渡して呼ばれる。</summary>
         public event Action<Weapon> ReloadStarted;
 
+        /// <summary><see cref="Fire"/> で弾が出たときに、撃った Weapon を渡して呼ばれる (当たり判定の前)。</summary>
+        public event Action<Weapon> Fired;
+
         /// <summary>今持っている武器の距離減衰。未初期化なら null。</summary>
         public DamageFalloff Falloff => Weapon?.Spec.Falloff;
 
@@ -403,6 +406,7 @@ namespace Fps.Runtime
         /// <summary>
         /// 今の武器で 1 発撃つ。<see cref="Weapon.TryFire"/> が false なら何もせず false。
         /// 撃てたら照準の正面へ Raycast し、Hitbox に当たればダメージを渡す。
+        /// Hitbox の無い物に当たれば <see cref="StructureDamage.Apply"/> に武器の <see cref="WeaponSpec.ExplosionRadius"/> で渡す。
         /// </summary>
         public bool Fire()
         {
@@ -415,11 +419,19 @@ namespace Fps.Runtime
             }
 
             Debug.Log($"[Combat] fire ammo={weapon.AmmoInMagazine}", this);
+            Fired?.Invoke(weapon);
 
             ResolveShot(out var origin, out var direction);
             if (TryRaycast(origin, direction, out var hit))
             {
-                TryApplyHit(hit.collider, hit.distance, weapon.Spec.Damage, weapon.Spec.Falloff, this, origin);
+                if (Hitbox.FindFor(hit.collider) == null)
+                {
+                    StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
+                }
+                else
+                {
+                    TryApplyHit(hit.collider, hit.distance, weapon.Spec.Damage, weapon.Spec.Falloff, this, origin);
+                }
             }
 
             return true;

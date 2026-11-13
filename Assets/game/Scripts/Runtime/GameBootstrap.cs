@@ -255,6 +255,9 @@ namespace Fps.Runtime
                 damageable.Initialize(PlayerName, PlayerMaxHealth);
                 player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
                 WireDeathAndRespawn(damageable, mover, ads);
+
+                // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
+                mover.BindSprintRelease(weapon, damageable);
             }
             catch
             {
@@ -378,7 +381,7 @@ namespace Fps.Runtime
             {
                 if (aiming && mover != null)
                 {
-                    mover.ReleaseSprint();
+                    mover.ReleaseSprint(SprintInput.ReasonAim);
                 }
             };
 

@@ -392,6 +392,22 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void FiredIsRaisedOnlyWhenAShotIsFired()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var fired = 0;
+            _controller.Fired += weapon =>
+            {
+                Assert.That(weapon, Is.SameAs(_controller.Weapon));
+                fired++;
+            };
+
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(_controller.Fire(), Is.False, "within the fire interval");
+            Assert.That(fired, Is.EqualTo(1));
+        }
+
+        [Test]
         public void AutoWeaponKeepsFiringWhileTheTriggerIsHeld()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);

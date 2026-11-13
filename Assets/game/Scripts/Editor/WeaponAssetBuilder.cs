@@ -55,7 +55,7 @@ namespace Fps.Editor
                 25,
                 100f,
                 new DamageFalloff(20f, 60f, 0.5f),
-                RifleAdsFieldOfView);
+                adsFieldOfView: RifleAdsFieldOfView);
         }
 
         /// <summary>
@@ -141,7 +141,7 @@ namespace Fps.Editor
                 34,
                 60f,
                 new DamageFalloff(15f, 40f, 0.6f),
-                HandgunAdsFieldOfView);
+                adsFieldOfView: HandgunAdsFieldOfView);
         }
 
         /// <summary>
@@ -277,6 +277,7 @@ namespace Fps.Editor
             definition.FalloffStart = spec.Falloff.StartDistance;
             definition.FalloffEnd = spec.Falloff.EndDistance;
             definition.FalloffMinMultiplier = spec.Falloff.MinMultiplier;
+            definition.ExplosionRadius = spec.ExplosionRadius;
             definition.AdsFieldOfView = spec.AdsFieldOfView;
 
             // spec は検査済みだが、アセットの形で読み直せることも確かめる。不正なら保存しない。

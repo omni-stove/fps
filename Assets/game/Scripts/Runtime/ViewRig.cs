@@ -30,6 +30,9 @@ namespace Fps.Runtime
         /// <summary>カメラが壁にめり込まないよう目から飛ばす球の半径 (m)。</summary>
         public const float DefaultCollisionRadius = 0.2f;
 
+        /// <summary><see cref="ResolveFreeMove"/> で、壁に当たる手前に残す隙間 (m)。触れたままだと次の移動で重なりとみなして除き、壁を抜けてしまうため。</summary>
+        public const float FreeMoveSkin = 0.05f;
+
         /// <summary>狙う点を探すカメラの Ray の既定の長さ (m)。武器の射程が分からないとき (ネットの射撃など) に使う。</summary>
         public const float DefaultAimDistance = 1000f;
 
@@ -393,6 +396,15 @@ namespace Fps.Runtime
         /// </summary>
         public Vector3 ResolveBoomPosition(Vector3 origin, Vector3 offset)
         {
+            return ResolveBoomPosition(origin, offset, null);
+        }
+
+        /// <summary>
+        /// <see cref="ResolveBoomPosition(Vector3, Vector3)"/> の、自分の体に加えて ignoreRoot の子孫にも当たらないもの。
+        /// 他のプレイヤーの目からその肩越しへカメラを置くとき (観戦) に、その体で縮まないよう ignoreRoot に渡す。null なら自分の体だけ除く。
+        /// </summary>
+        public Vector3 ResolveBoomPosition(Vector3 origin, Vector3 offset, Transform ignoreRoot)
+        {
             var desired = offset.magnitude;
             if (!(desired >= 1e-6f) || float.IsInfinity(desired))
             {
@@ -400,9 +412,44 @@ namespace Fps.Runtime
             }
 
             var direction = offset / desired;
-            float? blockedAt = TryNearestCast(origin, direction, desired, out var hitDistance) ? hitDistance : (float?)null;
+            float? blockedAt = TryNearestCast(origin, direction, desired, ignoreRoot, false, out var hitDistance, out _)
+                ? hitDistance
+                : (float?)null;
             var length = CameraBoom.Length(desired, blockedAt, _minBoomLength);
             return origin + (direction * length);
+        }
+
+        /// <summary>
+        /// 自由に動かすカメラ (観戦) を from から delta だけ動かした先。三人称のカメラと同じ半径・レイヤーの球を飛ばし、
+        /// 壁 (自分の体を除く) の <see cref="FreeMoveSkin"/> 手前で止め、残りは当たった面に沿って 1 回だけ滑らせる。
+        /// 動き始めにもう重なっているもの (壁の中から始めたときなど) では止めないので、重なりからは抜け出せる。初期化していなくても使える。
+        /// </summary>
+        public Vector3 ResolveFreeMove(Vector3 from, Vector3 delta)
+        {
+            var position = from;
+            var remaining = delta;
+
+            // 1 回目は進む向き、2 回目は当たった面に沿って滑る分
+            for (var i = 0; i < 2; i++)
+            {
+                var length = remaining.magnitude;
+                if (!(length >= 1e-6f) || float.IsInfinity(length))
+                {
+                    return position;
+                }
+
+                var direction = remaining / length;
+                if (!TryNearestCast(position, direction, length + FreeMoveSkin, null, true, out var hitDistance, out var normal))
+                {
+                    return position + remaining;
+                }
+
+                var travel = Mathf.Clamp(hitDistance - FreeMoveSkin, 0f, length);
+                position += direction * travel;
+                remaining = Vector3.ProjectOnPlane(remaining - (direction * travel), normal);
+            }
+
+            return position;
         }
 
         /// <summary>
@@ -484,9 +531,22 @@ namespace Fps.Runtime
 
         private bool TryNearestCast(Vector3 origin, Vector3 direction, float distance, out float hitDistance)
         {
+            return TryNearestCast(origin, direction, distance, null, false, out hitDistance, out _);
+        }
+
+        private bool TryNearestCast(
+            Vector3 origin,
+            Vector3 direction,
+            float distance,
+            Transform alsoIgnore,
+            bool skipStartOverlaps,
+            out float hitDistance,
+            out Vector3 normal)
+        {
             var count = Physics.SphereCastNonAlloc(
                 origin, _collisionRadius, direction, _castBuffer, distance, _collisionMask, QueryTriggerInteraction.Ignore);
-            var found = TryNearest(count, transform, out hitDistance, out _);
+            var found = TryNearest(count, transform, alsoIgnore, skipStartOverlaps, out hitDistance, out var index);
+            normal = found ? _castBuffer[index].normal : Vector3.zero;
             Array.Clear(_castBuffer, 0, count);
             return found;
         }
@@ -504,12 +564,26 @@ namespace Fps.Runtime
         // バッファの先頭 count 件から、ignoreRoot の子孫を除いた最も近い命中を選ぶ。
         private static bool TryNearest(int count, Transform ignoreRoot, out float distance, out int index)
         {
+            return TryNearest(count, ignoreRoot, null, false, out distance, out index);
+        }
+
+        // skipStartOverlaps なら、飛ばし始めに重なっていた命中 (Unity は距離 0・点 0 で返す) も除く。
+        private static bool TryNearest(
+            int count, Transform ignoreRoot, Transform alsoIgnore, bool skipStartOverlaps, out float distance, out int index)
+        {
             distance = 0f;
             index = -1;
             for (var i = 0; i < count; i++)
             {
                 var candidate = _castBuffer[i];
-                if (ignoreRoot != null && candidate.collider.transform.IsChildOf(ignoreRoot))
+                var hitTransform = candidate.collider.transform;
+                if ((ignoreRoot != null && hitTransform.IsChildOf(ignoreRoot))
+                    || (alsoIgnore != null && hitTransform.IsChildOf(alsoIgnore)))
+                {
+                    continue;
+                }
+
+                if (skipStartOverlaps && candidate.distance <= 0f && candidate.point == Vector3.zero)
                 {
                     continue;
                 }

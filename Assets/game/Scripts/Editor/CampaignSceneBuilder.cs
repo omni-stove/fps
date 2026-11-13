@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Fps.Core;
 using Fps.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
@@ -12,11 +13,12 @@ using Object = UnityEngine.Object;
 namespace Fps.Editor
 {
     /// <summary>
-    /// キャンペーンの最初のミッション Campaign01 のシーンとミッション定義を生成する。
-    /// 地形 (床・外周の壁・仕切り・遮蔽物) を置いて <see cref="NavMeshSurface"/> で NavMesh を焼き、
+    /// キャンペーンのミッション (<see cref="Missions"/>: Campaign01 と <see cref="Campaign02Mission"/>) のシーンとミッション定義を生成する。
+    /// ミッションごとの配置は <see cref="CampaignMissionSpec"/> で受け取り、次の順にシーンの直下へ置く:
+    /// 地形 (床・壁・遮蔽物、<see cref="LevelObjectName"/>) を置いて <see cref="NavMeshSurface"/> で NavMesh を焼き、
     /// NavMeshData をシーンの隣に保存してから、<see cref="GameBootstrap"/> (床は作らない)、<see cref="MissionRunner"/>、
-    /// 3 つの目標 (区域 A に到達 → 敵 4 体を倒す → 出口に到達) と敵 4 体、セーブと再開を受け持つ <see cref="CampaignRunner"/> と
-    /// 2 つの <see cref="CheckpointTrigger"/> (開始地点 <c>start</c>・区域 A <c>area_a</c>) を置く。参照はすべてここでコードから設定する。
+    /// <see cref="CampaignMissionSpec.Elements"/> (目標の範囲・敵の組・遮蔽点)、セーブと再開を受け持つ <see cref="CampaignRunner"/>、
+    /// <see cref="CampaignMissionSpec.Checkpoints"/> の <see cref="CheckpointTrigger"/>。参照はすべてここでコードから設定する。
     /// ルールは CampaignNormal を既定にし、CampaignRunner には <c>-difficulty</c> 用に CampaignEasy / Normal / Hard を配線する
     /// (先に <see cref="GameRulesAssetBuilder.Build"/> を走らせておく)。
     /// 保存したシーンは Build Settings の末尾に加える (先頭の起動シーンは変えない)。何度実行しても同じ結果になる。
@@ -24,6 +26,8 @@ namespace Fps.Editor
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.CampaignSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
+    /// Campaign01 は 3 つの目標 (区域 A に到達 → 敵 4 体を倒す → 出口に到達) と敵 4 体、
+    /// 2 つのチェックポイント (開始地点 <c>start</c>・区域 A <c>area_a</c>) を持つ。
     /// 配置 (上から見て、プレイヤーは原点で +Z を向く。床は x = ±15、z = -10〜70):
     /// <list type="bullet">
     /// <item>z &lt; 30 は開始区画。GameBootstrap が実行時に z = 10 へ標的ダミーを並べる。</item>
@@ -46,8 +50,11 @@ namespace Fps.Editor
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
         public const string NavMeshDataPath = "Assets/game/Scenes/Campaign01/NavMesh-Level.asset";
 
-        public const string MenuPath = "Fps/Build Campaign01 Scene";
+        public const string MenuPath = "Fps/Build Campaign Scenes";
         public const string LogTag = "[CampaignSceneBuilder]";
+
+        /// <summary>Campaign01 のミッション Id。定義のアセット名 (<see cref="DefinitionPath"/>) と同じ。</summary>
+        public const string MissionId = "Campaign01";
 
         public const string MissionDisplayName = "Campaign 01";
 
@@ -137,8 +144,22 @@ namespace Fps.Editor
         /// </summary>
         public static IReadOnlyList<CoverPointPlacement> CoverPoints()
         {
+            return HighCoverPoints(Covers);
+        }
+
+        /// <summary>
+        /// 立ったまま隠れる高い遮蔽物 (直方体) の横に置く遮蔽点。南北の両面の左右の端に 1 つずつ置き、
+        /// 覗くときは近い方の端の外へ <see cref="CoverPeekOutset"/> だけ出る。
+        /// </summary>
+        public static IReadOnlyList<CoverPointPlacement> HighCoverPoints(IEnumerable<LevelBox> covers)
+        {
+            if (covers == null)
+            {
+                throw new ArgumentNullException(nameof(covers));
+            }
+
             var points = new List<CoverPointPlacement>();
-            foreach (var cover in Covers)
+            foreach (var cover in covers)
             {
                 var halfX = cover.Size.x / 2f;
                 var halfZ = cover.Size.z / 2f;
@@ -153,6 +174,44 @@ namespace Fps.Editor
                 points.Add(CoverPointPlacement.High($"{cover.Name}_NE", new Vector3(east, 0f, north), Vector3.back, new Vector3(peek, 0f, 0f)));
                 points.Add(CoverPointPlacement.High($"{cover.Name}_SW", new Vector3(west, 0f, south), Vector3.forward, new Vector3(-peek, 0f, 0f)));
                 points.Add(CoverPointPlacement.High($"{cover.Name}_SE", new Vector3(east, 0f, south), Vector3.forward, new Vector3(peek, 0f, 0f)));
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// しゃがんで隠れる低い遮蔽物 (<see cref="CoverProbe.LowWallHeight"/> 未満の直方体) の横に置く遮蔽点。
+        /// 南北の両面の左右の端に 1 つずつ置き、覗くときはその場で立ち上がる。高すぎる遮蔽物があれば <see cref="ArgumentException"/> を投げる。
+        /// </summary>
+        public static IReadOnlyList<CoverPointPlacement> LowCoverPoints(IEnumerable<LevelBox> covers)
+        {
+            if (covers == null)
+            {
+                throw new ArgumentNullException(nameof(covers));
+            }
+
+            var points = new List<CoverPointPlacement>();
+            foreach (var cover in covers)
+            {
+                // 立ち上がっても頭が出ない高さだと、覗いても撃てない。
+                if (!(cover.Size.y < CoverProbe.LowWallHeight))
+                {
+                    throw new ArgumentException(
+                        $"cover '{cover.Name}' is {cover.Size.y}m tall; a low cover must be lower than {CoverProbe.LowWallHeight}m",
+                        nameof(covers));
+                }
+
+                var halfX = cover.Size.x / 2f;
+                var halfZ = cover.Size.z / 2f;
+                var west = cover.Center.x - halfX + CoverPointEdgeInset;
+                var east = cover.Center.x + halfX - CoverPointEdgeInset;
+                var north = cover.Center.z + halfZ + CoverPointStandOff;
+                var south = cover.Center.z - halfZ - CoverPointStandOff;
+
+                points.Add(CoverPointPlacement.Low($"{cover.Name}_NW", new Vector3(west, 0f, north), Vector3.back));
+                points.Add(CoverPointPlacement.Low($"{cover.Name}_NE", new Vector3(east, 0f, north), Vector3.back));
+                points.Add(CoverPointPlacement.Low($"{cover.Name}_SW", new Vector3(west, 0f, south), Vector3.forward));
+                points.Add(CoverPointPlacement.Low($"{cover.Name}_SE", new Vector3(east, 0f, south), Vector3.forward));
             }
 
             return points;
@@ -232,18 +291,29 @@ namespace Fps.Editor
             return all;
         }
 
-        /// <summary>
-        /// <see cref="AllEnemies"/> と同じ順に、各配置の <see cref="EnemyPlacement.WeaponId"/> の武器を catalog から引く。
-        /// どれかの Id が catalog に無ければ、配置の Id と武器の Id を添えて <see cref="KeyNotFoundException"/> を投げる。
-        /// </summary>
+        /// <summary>Campaign01 の <see cref="AllEnemies"/> の武器を引く (<see cref="ResolveEnemyWeapons(CampaignMissionSpec, WeaponCatalogAsset)"/>)。</summary>
         public static WeaponDefinition[] ResolveEnemyWeapons(WeaponCatalogAsset catalog)
         {
+            return ResolveEnemyWeapons(Campaign01(), catalog);
+        }
+
+        /// <summary>
+        /// spec の <see cref="CampaignMissionSpec.AllEnemies"/> と同じ順に、各配置の <see cref="EnemyPlacement.WeaponId"/> の武器を catalog から引く。
+        /// どれかの Id が catalog に無ければ、配置の Id と武器の Id を添えて <see cref="KeyNotFoundException"/> を投げる。
+        /// </summary>
+        public static WeaponDefinition[] ResolveEnemyWeapons(CampaignMissionSpec spec, WeaponCatalogAsset catalog)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
             if (catalog == null)
             {
                 throw new ArgumentNullException(nameof(catalog));
             }
 
-            var placements = AllEnemies();
+            var placements = spec.AllEnemies();
             var weapons = new WeaponDefinition[placements.Count];
             for (var i = 0; i < placements.Count; i++)
             {
@@ -264,8 +334,44 @@ namespace Fps.Editor
             };
         }
 
+        /// <summary>Campaign01 の配置。上の定数と一覧から組み立てる。</summary>
+        public static CampaignMissionSpec Campaign01()
+        {
+            return new CampaignMissionSpec(
+                MissionId,
+                MissionDisplayName,
+                ScenePath,
+                DefinitionPath,
+                NavMeshDataPath,
+                FloorCenter,
+                FloorScale,
+                Walls,
+                Covers,
+                CoverPoints(),
+                CampaignObjectives(),
+                new CampaignElement[]
+                {
+                    CampaignAreaElement.Reach(AreaAObjectName, ReachAreaAId, AreaAPosition, AreaAPadScale),
+                    new CampaignEnemyGroupElement(EnemiesObjectName, AllEnemies(), KillEnemiesId),
+                    new CampaignCoverPointsElement(CoverPointsObjectName),
+                    CampaignAreaElement.Reach(ExitObjectName, ReachExitId, ExitPosition, ExitPadScale),
+                },
+                new[]
+                {
+                    new CampaignCheckpoint(StartCheckpointObjectName, StartCheckpointId, StartCheckpointPosition),
+                    new CampaignCheckpoint(AreaACheckpointObjectName, AreaACheckpointId, AreaACheckpointPosition),
+                });
+        }
+
+        /// <summary>生成するミッション。この順に作り、ミッションの一覧 (<see cref="MissionCatalogBuilder"/>) にもこの順に並べる。</summary>
+        public static IReadOnlyList<CampaignMissionSpec> Missions()
+        {
+            return new[] { Campaign01(), Campaign02Mission.Spec() };
+        }
+
         /// <summary>
-        /// 定義アセットとシーンを既定の場所に生成し、シーンを Build Settings に加え、ミッションの一覧 (<see cref="MissionCatalogBuilder"/>) も作り直す。
+        /// <see cref="Missions"/> の定義アセットとシーンを既定の場所に生成し、シーンを Build Settings に加え、
+        /// ミッションの一覧 (<see cref="MissionCatalogBuilder"/>) も作り直す。
         /// 失敗したら例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
         /// </summary>
         [MenuItem(MenuPath)]
@@ -278,13 +384,39 @@ namespace Fps.Editor
                 return;
             }
 
-            BuildAt(ScenePath, DefinitionPath, NavMeshDataPath);
+            foreach (var spec in Missions())
+            {
+                BuildAt(spec);
+            }
+
             MissionCatalogBuilder.Build();
         }
 
-        /// <summary>definitionPath に定義を、navMeshDataPath に焼いた NavMesh を、scenePath にシーンを生成・保存する。</summary>
+        /// <summary>Campaign01 を definitionPath・navMeshDataPath・scenePath に生成・保存する。</summary>
         public static void BuildAt(string scenePath, string definitionPath, string navMeshDataPath)
         {
+            BuildAt(Campaign01(), scenePath, definitionPath, navMeshDataPath);
+        }
+
+        /// <summary>spec を spec の既定の場所に生成・保存する。</summary>
+        public static void BuildAt(CampaignMissionSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            BuildAt(spec, spec.ScenePath, spec.DefinitionPath, spec.NavMeshDataPath);
+        }
+
+        /// <summary>spec の定義を definitionPath に、焼いた NavMesh を navMeshDataPath に、シーンを scenePath に生成・保存する。</summary>
+        public static void BuildAt(CampaignMissionSpec spec, string scenePath, string definitionPath, string navMeshDataPath)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
             definitionPath = SceneBuildHelpers.ValidateAssetPath(definitionPath);
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
@@ -296,13 +428,13 @@ namespace Fps.Editor
             // ルールのアセットも同じく、無ければ何も保存せずに止める (先に GameRulesAssetBuilder.Build を走らせる)。
             var playerWeapons = WeaponAssetBuilder.LoadPlayerLoadout();
             var catalog = WeaponAssetBuilder.LoadCatalog();
-            ResolveEnemyWeapons(catalog);
+            ResolveEnemyWeapons(spec, catalog);
             var rules = LoadRules();
-            var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(definitionPath, Configure);
+            var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(definitionPath, d => Configure(d, spec));
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
-            var layout = PopulateScene(scene, definition, playerWeapons, catalog, rules);
+            var layout = PopulateScene(scene, spec, definition, playerWeapons, catalog, rules);
             SceneBuildHelpers.SaveNavMeshData(layout.Surface, navMeshDataPath);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -313,7 +445,7 @@ namespace Fps.Editor
             BuildSceneList.Register(scenePath);
             AssetDatabase.SaveAssets();
 
-            Debug.Log($"{LogTag} saved '{definitionPath}', '{navMeshDataPath}' and '{scenePath}' and registered the scene in Build Settings");
+            Debug.Log($"{LogTag} saved mission={spec.Id} '{definitionPath}', '{navMeshDataPath}' and '{scenePath}' and registered the scene in Build Settings");
         }
 
         /// <summary>
@@ -332,21 +464,43 @@ namespace Fps.Editor
         /// <summary>definition の中身を Campaign01 にし、Mission に変換できることを確かめる。</summary>
         public static void Configure(MissionDefinition definition)
         {
+            Configure(definition, Campaign01());
+        }
+
+        /// <summary>definition の中身を spec の表示名と目標にし、Mission に変換できることを確かめる。</summary>
+        public static void Configure(MissionDefinition definition, CampaignMissionSpec spec)
+        {
             if (definition == null)
             {
                 throw new ArgumentNullException(nameof(definition));
             }
 
-            definition.DisplayName = MissionDisplayName;
-            definition.SetObjectives(CampaignObjectives());
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            definition.DisplayName = spec.DisplayName;
+            definition.SetObjectives(spec.Objectives);
 
             // 不正ならここで MissionDefinitionException になり、壊れたアセットを保存しない。
             definition.CreateMission();
         }
 
+        /// <summary>Campaign01 を置く (<see cref="PopulateScene(Scene, CampaignMissionSpec, MissionDefinition, IReadOnlyList{WeaponDefinition}, WeaponCatalogAsset, CampaignRules)"/>)。</summary>
+        public static CampaignLayout PopulateScene(
+            Scene scene,
+            MissionDefinition definition,
+            IReadOnlyList<WeaponDefinition> playerWeapons,
+            WeaponCatalogAsset enemyWeapons,
+            CampaignRules rules)
+        {
+            return PopulateScene(scene, Campaign01(), definition, playerWeapons, enemyWeapons, rules);
+        }
+
         /// <summary>
-        /// 空のシーンに地形を置いて NavMesh を焼き (アセットには保存しない)、敵・目標・GameBootstrap・MissionRunner・
-        /// CampaignRunner・チェックポイントを置いて
+        /// 空のシーンに spec の地形を置いて NavMesh を焼き (アセットには保存しない)、GameBootstrap・MissionRunner・
+        /// spec の目標の範囲・敵の組・遮蔽点・CampaignRunner・チェックポイントを置いて
         /// 参照をすべて設定する。焼いた NavMesh に敵の位置・巡回地点・区域・チェックポイントが乗っていて、開始地点から
         /// 歩いて行けることを確かめ、そうでなければ例外を投げる。失敗したときは置いた物をすべて片付ける。
         /// Edit Mode では Awake/Start が走らないので、ミッションと敵は Play したときに動き出す。
@@ -357,12 +511,18 @@ namespace Fps.Editor
         /// </summary>
         public static CampaignLayout PopulateScene(
             Scene scene,
+            CampaignMissionSpec spec,
             MissionDefinition definition,
             IReadOnlyList<WeaponDefinition> playerWeapons,
             WeaponCatalogAsset enemyWeapons,
             CampaignRules rules)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the campaign scene");
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
             if (definition == null)
             {
                 throw new ArgumentNullException(nameof(definition));
@@ -375,15 +535,15 @@ namespace Fps.Editor
 
             SceneBuildHelpers.RequirePlayerWeapons(playerWeapons, nameof(playerWeapons));
 
-            var weapons = ResolveEnemyWeapons(enemyWeapons);
+            var weapons = ResolveEnemyWeapons(spec, enemyWeapons);
 
             NavMeshSurface surface = null;
             try
             {
                 // 敵のコライダーや区域のトリガーで NavMesh に穴が空かないよう、地形だけを置いた状態で焼く。
-                surface = CreateLevel(scene);
+                surface = CreateLevel(scene, spec);
                 SceneBuildHelpers.BakeNavMesh(surface);
-                RequireNavigable();
+                RequireNavigable(spec);
 
                 var bootstrapObject = new GameObject(BootstrapObjectName);
                 SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
@@ -397,43 +557,41 @@ namespace Fps.Editor
                 var runner = runnerObject.AddComponent<MissionRunner>();
                 runner.Definition = definition;
 
-                var areaA = CreateArea(scene, AreaAObjectName, AreaAPosition, AreaAPadScale, ReachAreaAId, runner);
-
-                var enemiesRoot = new GameObject(EnemiesObjectName);
-                SceneManager.MoveGameObjectToScene(enemiesRoot, scene);
                 var body = new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth);
-                var placements = AllEnemies();
-                var enemies = new EnemyAgent[placements.Count];
-                var targets = new Damageable[placements.Count];
-                for (var i = 0; i < placements.Count; i++)
+                var areas = new List<ObjectiveAreaBase>();
+                var kills = new List<KillTargetObjective>();
+                var reveals = new List<ObjectiveReveal>();
+                var enemies = new List<EnemyAgent>();
+                CoverPointRegistry coverRegistry = null;
+                foreach (var element in spec.Elements)
                 {
-                    var placement = placements[i];
-                    enemies[i] = SceneBuildHelpers.CreateEnemy(
-                        scene,
-                        enemiesRoot.transform,
-                        placement.Name,
-                        placement.Id,
-                        placement.Position,
-                        placement.Rotation,
-                        placement.PatrolRoute,
-                        body,
-                        weapons[i]);
-                    targets[i] = enemies[i].GetComponent<Damageable>();
+                    switch (element)
+                    {
+                        case CampaignAreaElement area:
+                            areas.Add(CreateArea(scene, area, runner));
+                            break;
+
+                        case CampaignEnemyGroupElement group:
+                            CreateEnemyGroup(scene, group, runner, body, weapons, enemies, kills, reveals);
+                            break;
+
+                        case CampaignCoverPointsElement coverPoints:
+                            coverRegistry = SceneBuildHelpers.CreateCoverPoints(scene, null, coverPoints.ObjectName, spec.CoverPoints);
+                            break;
+
+                        default:
+                            throw new NotSupportedException($"unknown campaign element '{element.GetType().Name}' ({element.ObjectName})");
+                    }
                 }
 
                 // 敵どうしで同じ点を取り合わないよう、全員に同じ registry を渡す。
-                var coverRegistry = SceneBuildHelpers.CreateCoverPoints(scene, null, CoverPointsObjectName, CoverPoints());
-                foreach (var enemy in enemies)
+                if (coverRegistry != null)
                 {
-                    enemy.CoverRegistry = coverRegistry;
+                    foreach (var enemy in enemies)
+                    {
+                        enemy.CoverRegistry = coverRegistry;
+                    }
                 }
-
-                var kill = enemiesRoot.AddComponent<KillTargetObjective>();
-                kill.ObjectiveId = KillEnemiesId;
-                kill.Runner = runner;
-                kill.SetTargets(targets);
-
-                var exit = CreateArea(scene, ExitObjectName, ExitPosition, ExitPadScale, ReachExitId, runner);
 
                 // セーブの置き場所は CampaignRunner が実行時に FileSaveStorage.CreateDefault (スロットはミッション Id ごと) で決める。
                 // プレイヤーは GameBootstrap が実行時に作るので、CampaignRunner は GameBootstrap から受け取る。
@@ -447,14 +605,15 @@ namespace Fps.Editor
                 campaign.NormalRules = rules.Normal;
                 campaign.HardRules = rules.Hard;
 
-                var startCheckpoint = CreateCheckpoint(
-                    scene, StartCheckpointObjectName, StartCheckpointPosition, StartCheckpointId, campaign);
-                var areaACheckpoint = CreateCheckpoint(
-                    scene, AreaACheckpointObjectName, AreaACheckpointPosition, AreaACheckpointId, campaign);
+                var checkpoints = new List<CheckpointTrigger>();
+                foreach (var checkpoint in spec.Checkpoints)
+                {
+                    checkpoints.Add(CreateCheckpoint(scene, checkpoint.ObjectName, checkpoint.Feet, checkpoint.Id, campaign));
+                }
 
                 EditorSceneManager.MarkSceneDirty(scene);
                 return new CampaignLayout(
-                    bootstrap, runner, surface, areaA, kill, enemies, exit, campaign, startCheckpoint, areaACheckpoint, coverRegistry);
+                    bootstrap, runner, surface, areas, kills, reveals, enemies, campaign, checkpoints, coverRegistry);
             }
             catch
             {
@@ -474,12 +633,23 @@ namespace Fps.Editor
             }
         }
 
-        /// <summary>
-        /// 地形 (床・壁・遮蔽物) を <see cref="LevelObjectName"/> の下に置き、その子だけから焼く NavMeshSurface を返す。
-        /// 子だけを集めるので、同時に開いている他のシーンの物は NavMesh に入らない。
-        /// </summary>
+        /// <summary>Campaign01 の地形を置く (<see cref="CreateLevel(Scene, CampaignMissionSpec)"/>)。</summary>
         public static NavMeshSurface CreateLevel(Scene scene)
         {
+            return CreateLevel(scene, Campaign01());
+        }
+
+        /// <summary>
+        /// spec の地形 (床・壁・遮蔽物) を <see cref="LevelObjectName"/> の下に置き、その子だけから焼く NavMeshSurface を返す。
+        /// 子だけを集めるので、同時に開いている他のシーンの物は NavMesh に入らない。
+        /// </summary>
+        public static NavMeshSurface CreateLevel(Scene scene, CampaignMissionSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
             SceneBuildHelpers.RequireEmpty(scene, "the campaign level");
 
             var level = new GameObject(LevelObjectName);
@@ -487,13 +657,13 @@ namespace Fps.Editor
             SceneManager.MoveGameObjectToScene(level, scene);
             var surface = SceneBuildHelpers.AddNavMeshSurface(level, CollectObjects.Children);
 
-            SceneBuildHelpers.CreateStaticPlane(scene, level.transform, FloorName, FloorCenter, FloorScale);
-            foreach (var wall in Walls)
+            SceneBuildHelpers.CreateStaticPlane(scene, level.transform, FloorName, spec.FloorCenter, spec.FloorScale);
+            foreach (var wall in spec.Walls)
             {
                 SceneBuildHelpers.CreateStaticBox(scene, level.transform, wall.Name, wall.Center, wall.Size);
             }
 
-            foreach (var cover in Covers)
+            foreach (var cover in spec.Covers)
             {
                 SceneBuildHelpers.CreateStaticBox(scene, level.transform, cover.Name, cover.Center, cover.Size);
             }
@@ -502,42 +672,105 @@ namespace Fps.Editor
             return surface;
         }
 
-        /// <summary>NavMesh の上で開始地点から行かなければならない点 (足元)。遮蔽点の立つ位置と覗く位置も含む。</summary>
+        /// <summary>Campaign01 の、NavMesh の上で開始地点から行かなければならない点 (<see cref="CampaignMissionSpec.RequiredPoints"/>)。</summary>
         public static IReadOnlyList<Vector3> RequiredPoints()
         {
-            var points = new List<Vector3> { AreaACheckpointPosition, AreaAPosition, ExitPosition };
-            foreach (var enemy in AllEnemies())
+            return Campaign01().RequiredPoints();
+        }
+
+        private static void RequireNavigable(CampaignMissionSpec spec)
+        {
+            var start = CampaignMissionSpec.PlayerStart;
+            var points = spec.RequiredPoints();
+            SceneBuildHelpers.RequireOnNavMesh(new[] { start }, NavMeshCheckRadius, $"{spec.Id} player start");
+            SceneBuildHelpers.RequireOnNavMesh(points, NavMeshCheckRadius, $"{spec.Id} campaign point");
+            SceneBuildHelpers.RequireReachable(start, points, NavMeshCheckRadius, $"{spec.Id} campaign point");
+        }
+
+        private static ObjectiveAreaBase CreateArea(Scene scene, CampaignAreaElement area, MissionRunner runner)
+        {
+            var pad = SceneBuildHelpers.CreateAreaPad(area.ObjectName, area.Position, area.PadScale, AreaTriggerHeight);
+            SceneManager.MoveGameObjectToScene(pad, scene);
+            ObjectiveAreaBase trigger;
+            switch (area.Kind)
             {
-                points.Add(enemy.Position);
-                points.AddRange(enemy.PatrolRoute);
+                case CampaignAreaKind.Reach:
+                    trigger = pad.AddComponent<ReachAreaTrigger>();
+                    break;
+
+                case CampaignAreaKind.Interact:
+                    trigger = pad.AddComponent<InteractObjective>();
+                    break;
+
+                default:
+                    throw new NotSupportedException($"unknown area kind {area.Kind} ({area.ObjectName})");
             }
 
-            points.AddRange(SceneBuildHelpers.CoverStandPoints(CoverPoints()));
-            return points;
-        }
-
-        private static void RequireNavigable()
-        {
-            var points = RequiredPoints();
-            SceneBuildHelpers.RequireOnNavMesh(new[] { StartCheckpointPosition }, NavMeshCheckRadius, "start checkpoint");
-            SceneBuildHelpers.RequireOnNavMesh(points, NavMeshCheckRadius, "campaign point");
-            SceneBuildHelpers.RequireReachable(StartCheckpointPosition, points, NavMeshCheckRadius, "campaign point");
-        }
-
-        private static ReachAreaTrigger CreateArea(
-            Scene scene,
-            string name,
-            Vector3 position,
-            Vector3 padScale,
-            string objectiveId,
-            MissionRunner runner)
-        {
-            var pad = SceneBuildHelpers.CreateAreaPad(name, position, padScale, AreaTriggerHeight);
-            SceneManager.MoveGameObjectToScene(pad, scene);
-            var trigger = pad.AddComponent<ReachAreaTrigger>();
-            trigger.ObjectiveId = objectiveId;
+            trigger.ObjectiveId = area.ObjectiveId;
             trigger.Runner = runner;
             return trigger;
+        }
+
+        /// <summary>
+        /// group の敵を group の GameObject の子に置き、enemies に足す。weapons は <see cref="CampaignMissionSpec.AllEnemies"/> の順の武器で、
+        /// 先頭から enemies に入っている数だけ飛ばした所から使う。
+        /// </summary>
+        private static void CreateEnemyGroup(
+            Scene scene,
+            CampaignEnemyGroupElement group,
+            MissionRunner runner,
+            EnemyBody body,
+            IReadOnlyList<WeaponDefinition> weapons,
+            List<EnemyAgent> enemies,
+            List<KillTargetObjective> kills,
+            List<ObjectiveReveal> reveals)
+        {
+            var root = new GameObject(group.ObjectName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+
+            var targets = new Damageable[group.Enemies.Count];
+            var members = new GameObject[group.Enemies.Count];
+            for (var i = 0; i < group.Enemies.Count; i++)
+            {
+                var placement = group.Enemies[i];
+                var enemy = SceneBuildHelpers.CreateEnemy(
+                    scene,
+                    root.transform,
+                    placement.Name,
+                    placement.Id,
+                    placement.Position,
+                    placement.Rotation,
+                    placement.PatrolRoute,
+                    body,
+                    weapons[enemies.Count]);
+                enemies.Add(enemy);
+                targets[i] = enemy.GetComponent<Damageable>();
+                members[i] = enemy.gameObject;
+            }
+
+            if (group.KillObjectiveId != null)
+            {
+                var kill = root.AddComponent<KillTargetObjective>();
+                kill.ObjectiveId = group.KillObjectiveId;
+                kill.Runner = runner;
+                kill.SetTargets(targets);
+                kills.Add(kill);
+            }
+
+            if (group.RevealObjectiveId != null)
+            {
+                // 目標が Active になるまでは撃てない・撃ってこないように、敵ごと消しておく (KillTargetObjective は Active 前の撃破を数えない)。
+                foreach (var member in members)
+                {
+                    member.SetActive(false);
+                }
+
+                var reveal = root.AddComponent<ObjectiveReveal>();
+                reveal.ObjectiveId = group.RevealObjectiveId;
+                reveal.Runner = runner;
+                reveal.SetTargets(members);
+                reveals.Add(reveal);
+            }
         }
 
         /// <summary>
@@ -647,56 +880,112 @@ namespace Fps.Editor
         }
     }
 
-    /// <summary><see cref="CampaignSceneBuilder.PopulateScene"/> が置いたもの。</summary>
+    /// <summary>CampaignSceneBuilder.PopulateScene が置いたもの。</summary>
     public sealed class CampaignLayout
     {
         public GameBootstrap Bootstrap { get; }
         public MissionRunner Runner { get; }
         public NavMeshSurface Surface { get; }
-        public ReachAreaTrigger AreaA { get; }
-        public KillTargetObjective KillEnemies { get; }
 
-        /// <summary>巡回の敵、待ち伏せの敵の順。</summary>
+        /// <summary>目標の範囲 (<see cref="ReachAreaTrigger"/> と <see cref="InteractObjective"/>)。置いた順。</summary>
+        public IReadOnlyList<ObjectiveAreaBase> Areas { get; }
+
+        /// <summary>敵の組の撃破で進める目標。置いた順。</summary>
+        public IReadOnlyList<KillTargetObjective> KillObjectives { get; }
+
+        /// <summary>目標が Active になるまで敵を隠しておくもの。置いた順。</summary>
+        public IReadOnlyList<ObjectiveReveal> Reveals { get; }
+
+        /// <summary>全員。<see cref="CampaignMissionSpec.AllEnemies"/> と同じ順。</summary>
         public IReadOnlyList<EnemyAgent> Enemies { get; }
-
-        public ReachAreaTrigger Exit { get; }
 
         /// <summary>セーブと再開を受け持つ。<see cref="Runner"/> と <see cref="Bootstrap"/> につないである。</summary>
         public CampaignRunner Campaign { get; }
 
-        /// <summary>開始地点のチェックポイント (Id は <see cref="CampaignSceneBuilder.StartCheckpointId"/>)。</summary>
-        public CheckpointTrigger StartCheckpoint { get; }
+        /// <summary>チェックポイント。<see cref="CampaignMissionSpec.Checkpoints"/> と同じ順。</summary>
+        public IReadOnlyList<CheckpointTrigger> Checkpoints { get; }
 
-        /// <summary>区域 A のチェックポイント (Id は <see cref="CampaignSceneBuilder.AreaACheckpointId"/>)。</summary>
-        public CheckpointTrigger AreaACheckpoint { get; }
-
-        /// <summary>遮蔽点をまとめたもの。<see cref="Enemies"/> の全員に渡してある。</summary>
+        /// <summary>遮蔽点をまとめたもの。<see cref="Enemies"/> の全員に渡してある。遮蔽点が無いミッションでは null。</summary>
         public CoverPointRegistry CoverRegistry { get; }
 
         public CampaignLayout(
             GameBootstrap bootstrap,
             MissionRunner runner,
             NavMeshSurface surface,
-            ReachAreaTrigger areaA,
-            KillTargetObjective killEnemies,
+            IReadOnlyList<ObjectiveAreaBase> areas,
+            IReadOnlyList<KillTargetObjective> killObjectives,
+            IReadOnlyList<ObjectiveReveal> reveals,
             IReadOnlyList<EnemyAgent> enemies,
-            ReachAreaTrigger exit,
             CampaignRunner campaign,
-            CheckpointTrigger startCheckpoint,
-            CheckpointTrigger areaACheckpoint,
-            CoverPointRegistry coverRegistry = null)
+            IReadOnlyList<CheckpointTrigger> checkpoints,
+            CoverPointRegistry coverRegistry)
         {
             Bootstrap = bootstrap;
             Runner = runner;
             Surface = surface;
-            AreaA = areaA;
-            KillEnemies = killEnemies;
-            Enemies = enemies;
-            Exit = exit;
+            Areas = areas ?? throw new ArgumentNullException(nameof(areas));
+            KillObjectives = killObjectives ?? throw new ArgumentNullException(nameof(killObjectives));
+            Reveals = reveals ?? throw new ArgumentNullException(nameof(reveals));
+            Enemies = enemies ?? throw new ArgumentNullException(nameof(enemies));
             Campaign = campaign;
-            StartCheckpoint = startCheckpoint;
-            AreaACheckpoint = areaACheckpoint;
+            Checkpoints = checkpoints ?? throw new ArgumentNullException(nameof(checkpoints));
             CoverRegistry = coverRegistry;
+        }
+
+        /// <summary>objectiveId を進める範囲。無ければ <see cref="KeyNotFoundException"/>。</summary>
+        public ObjectiveAreaBase Area(string objectiveId)
+        {
+            foreach (var area in Areas)
+            {
+                if (string.Equals(area.ObjectiveId, objectiveId, StringComparison.Ordinal))
+                {
+                    return area;
+                }
+            }
+
+            throw new KeyNotFoundException($"no area progresses objective '{objectiveId}'");
+        }
+
+        /// <summary>objectiveId を進める撃破の目標。無ければ <see cref="KeyNotFoundException"/>。</summary>
+        public KillTargetObjective KillObjective(string objectiveId)
+        {
+            foreach (var kill in KillObjectives)
+            {
+                if (string.Equals(kill.ObjectiveId, objectiveId, StringComparison.Ordinal))
+                {
+                    return kill;
+                }
+            }
+
+            throw new KeyNotFoundException($"no kill objective progresses objective '{objectiveId}'");
+        }
+
+        /// <summary>objectiveId が Active になったら敵を出すもの。無ければ <see cref="KeyNotFoundException"/>。</summary>
+        public ObjectiveReveal Reveal(string objectiveId)
+        {
+            foreach (var reveal in Reveals)
+            {
+                if (string.Equals(reveal.ObjectiveId, objectiveId, StringComparison.Ordinal))
+                {
+                    return reveal;
+                }
+            }
+
+            throw new KeyNotFoundException($"nothing is revealed by objective '{objectiveId}'");
+        }
+
+        /// <summary>Id が checkpointId のチェックポイント。無ければ <see cref="KeyNotFoundException"/>。</summary>
+        public CheckpointTrigger Checkpoint(string checkpointId)
+        {
+            foreach (var checkpoint in Checkpoints)
+            {
+                if (string.Equals(checkpoint.CheckpointId, checkpointId, StringComparison.Ordinal))
+                {
+                    return checkpoint;
+                }
+            }
+
+            throw new KeyNotFoundException($"no checkpoint '{checkpointId}'");
         }
     }
 }

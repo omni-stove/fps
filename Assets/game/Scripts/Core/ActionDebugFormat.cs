@@ -53,7 +53,9 @@ namespace Fps.Core
         /// その場で終わった後も残るので、リロード中かどうかに関わらず括弧で出す。
         /// </summary>
         /// <example><c>Reload(true, 0.456f, null)</c> は <c>ON 45% (アクティブ: -)</c>、<c>Reload(false, 0f, Success)</c> は <c>OFF (アクティブ: 成功)</c></example>
+        /// <param name="reloading">リロード中か。</param>
         /// <param name="progress">0 以上 1 以下。リロード中でなければ使わない。</param>
+        /// <param name="activeReload">直前のアクティブリロードの結果。まだ無ければ null。</param>
         public static string Reload(bool reloading, float progress, ActiveReloadResult? activeReload)
         {
             if (!(progress >= 0f && progress <= 1f))

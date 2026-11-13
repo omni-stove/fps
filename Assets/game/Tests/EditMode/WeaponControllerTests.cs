@@ -483,6 +483,27 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void SpreadGrowsWithEachShotAndRecoversAfterTheDelay()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            Assert.That(_controller.SpreadFraction, Is.EqualTo(0f));
+
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(_controller.SpreadFraction, Is.EqualTo(WeaponController.SpreadPerShot));
+
+            // 戻り始めるまでの間は広がったまま。
+            _controller.Tick(WeaponController.SpreadRecoveryDelaySeconds);
+            Assert.That(_controller.SpreadFraction, Is.EqualTo(WeaponController.SpreadPerShot));
+
+            _controller.Tick(WeaponController.SpreadPerShot / WeaponController.SpreadRecoveryPerSecond / 2f);
+            Assert.That(_controller.SpreadFraction, Is.EqualTo(WeaponController.SpreadPerShot / 2f).Within(1e-5f));
+
+            _controller.Tick(10f);
+            Assert.That(_controller.SpreadFraction, Is.EqualTo(0f));
+        }
+
+        [Test]
         public void FireLogsTheRemainingAmmoAndRespectsTheFireInterval()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);

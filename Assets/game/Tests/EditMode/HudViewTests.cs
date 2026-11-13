@@ -79,6 +79,47 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheCrosshairHasADotAndFourLines()
+        {
+            var crosshair = CloneLayout().Q<VisualElement>(HudView.CrosshairName);
+
+            Assert.That(crosshair.Q<VisualElement>(HudView.CrosshairDotName), Is.Not.Null);
+            Assert.That(crosshair.Q<VisualElement>(HudView.CrosshairTopName), Is.Not.Null);
+            Assert.That(crosshair.Q<VisualElement>(HudView.CrosshairBottomName), Is.Not.Null);
+            Assert.That(crosshair.Q<VisualElement>(HudView.CrosshairLeftName), Is.Not.Null);
+            Assert.That(crosshair.Q<VisualElement>(HudView.CrosshairRightName), Is.Not.Null);
+        }
+
+        [Test]
+        public void TheCrosshairLinesMoveOutWithTheSpreadAndTheCrosshairHidesWhenAsked()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.CrosshairTop.style.translate.value.y.value, Is.EqualTo(-HudView.MinCrosshairGap));
+            Assert.That(view.CrosshairRight.style.translate.value.x.value, Is.EqualTo(HudView.MinCrosshairGap));
+
+            model.SetCrosshair(1f, true);
+            Assert.That(view.CrosshairTop.style.translate.value.y.value, Is.EqualTo(-HudView.MaxCrosshairGap));
+            Assert.That(view.CrosshairBottom.style.translate.value.y.value, Is.EqualTo(HudView.MaxCrosshairGap));
+            Assert.That(view.CrosshairLeft.style.translate.value.x.value, Is.EqualTo(-HudView.MaxCrosshairGap));
+            Assert.That(view.CrosshairRight.style.translate.value.x.value, Is.EqualTo(HudView.MaxCrosshairGap));
+
+            model.SetCrosshair(1f, false);
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void CrosshairGapGrowsFromTheMinimumToTheMaximum()
+        {
+            Assert.That(HudView.CrosshairGap(0f), Is.EqualTo(HudView.MinCrosshairGap));
+            Assert.That(HudView.CrosshairGap(1f), Is.EqualTo(HudView.MaxCrosshairGap));
+            Assert.That(HudView.CrosshairGap(0.5f), Is.GreaterThan(HudView.MinCrosshairGap).And.LessThan(HudView.MaxCrosshairGap));
+            Assert.That(HudView.CrosshairGap(2f), Is.EqualTo(HudView.MaxCrosshairGap));
+        }
+
+        [Test]
         public void TheReloadBarIsHiddenUntilThereIsProgress()
         {
             var view = new HudView(CloneLayout(), new HudModel());

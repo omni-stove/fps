@@ -120,6 +120,9 @@ namespace Fps.Runtime
         /// <summary>しゃがんでいるか。</summary>
         public bool IsCrouched => _isCrouched;
 
+        /// <summary>直前の <see cref="CharacterController.Move"/> で接地していたか。未初期化なら false。</summary>
+        public bool IsGrounded => _controller != null && _controller.isGrounded;
+
         /// <summary>
         /// <see cref="Tick"/> が姿勢を決める前に、移動・ダッシュ・しゃがみ・ジャンプの入力を書き換える差し込み口 (カバーなど)。
         /// null なら入力をそのまま使う。

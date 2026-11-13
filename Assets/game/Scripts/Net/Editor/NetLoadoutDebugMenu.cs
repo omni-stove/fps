@@ -53,7 +53,7 @@ namespace Fps.Editor
 
         private static NetPlayerWeapon FindLocalWeapon()
         {
-            foreach (var weapon in Object.FindObjectsByType<NetPlayerWeapon>(FindObjectsSortMode.None))
+            foreach (var weapon in Object.FindObjectsByType<NetPlayerWeapon>())
             {
                 if (weapon.IsSpawned && weapon.IsOwner)
                 {

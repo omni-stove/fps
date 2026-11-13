@@ -216,7 +216,7 @@ namespace Fps.Runtime
             }
 
             var anyActive = false;
-            foreach (var look in FindObjectsByType<FirstPersonLook>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            foreach (var look in FindObjectsByType<FirstPersonLook>(FindObjectsInactive.Exclude))
             {
                 if (look.isActiveAndEnabled && look.IsInitialized)
                 {

@@ -156,7 +156,7 @@ namespace Fps.Runtime
                 SuspendPlayerInput();
             }
 
-            if (IsOpen && (Cursor.lockState != CursorLockMode.None || !Cursor.visible))
+            if (IsOpen && (UnityEngine.Cursor.lockState != CursorLockMode.None || !UnityEngine.Cursor.visible))
             {
                 ShowCursor();
             }
@@ -317,8 +317,8 @@ namespace Fps.Runtime
 
         private static void ShowCursor()
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
         }
 
         private void ReloadActiveScene()

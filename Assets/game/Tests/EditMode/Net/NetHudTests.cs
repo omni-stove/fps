@@ -152,14 +152,14 @@ namespace Fps.Net.Tests
         [Test]
         public void AmmoFollowsTheWeaponAndShowsTheReload()
         {
-            Arrive(_weapon.StateVariable, default, new NetWeaponState(30, 90, false));
+            Arrive(_weapon.StateVariable, default, new NetWeaponState(30, 90, false, 0, 1, false));
             Assert.That(_view.AmmoLabel.text, Is.EqualTo("30 / 90"));
 
-            Arrive(_weapon.StateVariable, new NetWeaponState(30, 90, false), new NetWeaponState(0, 90, true));
+            Arrive(_weapon.StateVariable, new NetWeaponState(30, 90, false, 0, 1, false), new NetWeaponState(0, 90, true, 0, 1, false));
             Assert.That(_view.AmmoLabel.text, Is.EqualTo(HudFormat.Ammo(0, 90, true)));
             Assert.That(_view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.True);
 
-            Arrive(_weapon.StateVariable, new NetWeaponState(0, 90, true), new NetWeaponState(30, 60, false));
+            Arrive(_weapon.StateVariable, new NetWeaponState(0, 90, true, 0, 1, false), new NetWeaponState(30, 60, false, 0, 1, false));
             Assert.That(_view.AmmoLabel.text, Is.EqualTo("30 / 60"));
             Assert.That(_view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.False);
         }

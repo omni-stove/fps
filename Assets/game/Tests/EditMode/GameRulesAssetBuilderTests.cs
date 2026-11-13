@@ -14,6 +14,16 @@ namespace Fps.Tests.EditMode
     /// </summary>
     public sealed class GameRulesAssetBuilderTests
     {
+        // BuildAt と同じ並び (teamDeathmatch, campaignEasy, campaignNormal, campaignHard, range)。
+        private static readonly (Downed Downed, Cover Cover, BlindFire BlindFire, ActiveReload ActiveReload)[] _expectedActions =
+        {
+            (Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On),
+            (Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+            (Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+            (Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+            (Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+        };
+
         private string _folder;
         private string _teamDeathmatchPath;
         private string _campaignEasyPath;
@@ -181,9 +191,10 @@ namespace Fps.Tests.EditMode
             teamDeathmatch.RegenPerSecond = 1f;
             teamDeathmatch.InfiniteReserve = true;
             teamDeathmatch.Destruction = Destruction.Off;
-            teamDeathmatch.Downed = Downed.Revive;
+            teamDeathmatch.Downed = Downed.Off;
             teamDeathmatch.ReviveSeconds = 9f;
             teamDeathmatch.Cover = Cover.On;
+            teamDeathmatch.ActiveReload = ActiveReload.Off;
             EditorUtility.SetDirty(teamDeathmatch);
             AssetDatabase.SaveAssets();
 
@@ -196,37 +207,93 @@ namespace Fps.Tests.EditMode
             Assert.That(restored.RegenPerSecond, Is.EqualTo(20f));
             Assert.That(restored.InfiniteReserve, Is.False);
             Assert.That(restored.Destruction, Is.EqualTo(Destruction.On));
-            AssertDefaultActions(restored.Actions, rebuilt[0].name);
+            AssertActions(restored.Actions, _expectedActions[0], rebuilt[0].name);
         }
 
         [Test]
-        public void EveryModeKeepsTheDefaultActions()
+        public void EveryModeAssetGetsItsActions()
         {
             var built = Build();
 
-            foreach (var definition in built)
+            for (var i = 0; i < built.Length; i++)
             {
-                AssertDefaultActions(definition.ToRules().Actions, definition.name);
+                AssertActions(built[i].ToRules().Actions, _expectedActions[i], built[i].name);
             }
         }
 
         [Test]
-        public void EveryModeRulesUseTheDefaultActions()
+        public void TeamDeathmatchDownsAndActiveReloadsButHasNoCoverOrBlindFire()
         {
-            Assert.That(GameRulesAssetBuilder.TeamDeathmatchRules().Actions, Is.SameAs(ActionRules.Default));
-            Assert.That(GameRulesAssetBuilder.CampaignEasyRules().Actions, Is.SameAs(ActionRules.Default));
-            Assert.That(GameRulesAssetBuilder.CampaignNormalRules().Actions, Is.SameAs(ActionRules.Default));
-            Assert.That(GameRulesAssetBuilder.CampaignHardRules().Actions, Is.SameAs(ActionRules.Default));
-            Assert.That(GameRulesAssetBuilder.RangeRules().Actions, Is.SameAs(ActionRules.Default));
+            var actions = GameRulesAssetBuilder.TeamDeathmatchRules().Actions;
+
+            Assert.That(actions.Downed, Is.EqualTo(Downed.Revive));
+            Assert.That(actions.ActiveReload, Is.EqualTo(ActiveReload.On));
+            Assert.That(actions.Cover, Is.EqualTo(Cover.Off), "the online player does not support cover");
+            Assert.That(actions.BlindFire, Is.EqualTo(BlindFire.Off), "the online player does not support blind fire");
         }
 
-        private static void AssertDefaultActions(ActionRules actual, string message)
+        [Test]
+        public void CampaignsCoverBlindFireAndActiveReloadWithoutDowned()
         {
-            var expected = ActionRules.Default;
+            var campaigns = new[]
+            {
+                GameRulesAssetBuilder.CampaignEasyRules(),
+                GameRulesAssetBuilder.CampaignNormalRules(),
+                GameRulesAssetBuilder.CampaignHardRules(),
+            };
+
+            foreach (var rules in campaigns)
+            {
+                Assert.That(rules.Actions.Cover, Is.EqualTo(Cover.On));
+                Assert.That(rules.Actions.BlindFire, Is.EqualTo(BlindFire.On));
+                Assert.That(rules.Actions.ActiveReload, Is.EqualTo(ActiveReload.On));
+                Assert.That(rules.Actions.Downed, Is.EqualTo(Downed.Off));
+            }
+        }
+
+        [Test]
+        public void RangeCoversBlindFiresAndActiveReloads()
+        {
+            var actions = GameRulesAssetBuilder.RangeRules().Actions;
+
+            Assert.That(actions.Cover, Is.EqualTo(Cover.On));
+            Assert.That(actions.BlindFire, Is.EqualTo(BlindFire.On));
+            Assert.That(actions.ActiveReload, Is.EqualTo(ActiveReload.On));
+            Assert.That(actions.Downed, Is.EqualTo(Downed.Off));
+        }
+
+        [Test]
+        public void EveryModeRulesMatchTheirActionFactories()
+        {
+            var rules = new[]
+            {
+                GameRulesAssetBuilder.TeamDeathmatchRules(),
+                GameRulesAssetBuilder.CampaignEasyRules(),
+                GameRulesAssetBuilder.CampaignNormalRules(),
+                GameRulesAssetBuilder.CampaignHardRules(),
+                GameRulesAssetBuilder.RangeRules(),
+            };
+
+            for (var i = 0; i < rules.Length; i++)
+            {
+                AssertActions(rules[i].Actions, _expectedActions[i], $"mode {i}");
+            }
+
+            AssertActions(GameRulesAssetBuilder.TeamDeathmatchActions(), _expectedActions[0], nameof(GameRulesAssetBuilder.TeamDeathmatchActions));
+            AssertActions(GameRulesAssetBuilder.CampaignActions(), _expectedActions[1], nameof(GameRulesAssetBuilder.CampaignActions));
+            AssertActions(GameRulesAssetBuilder.RangeActions(), _expectedActions[4], nameof(GameRulesAssetBuilder.RangeActions));
+        }
+
+        private static void AssertActions(
+            ActionRules actual,
+            (Downed Downed, Cover Cover, BlindFire BlindFire, ActiveReload ActiveReload) expected,
+            string message)
+        {
+            var defaults = ActionRules.Default;
             Assert.That(actual.Downed, Is.EqualTo(expected.Downed), message);
-            Assert.That(actual.DownedBleedoutSeconds, Is.EqualTo(expected.DownedBleedoutSeconds), message);
-            Assert.That(actual.DownedHealthFraction, Is.EqualTo(expected.DownedHealthFraction), message);
-            Assert.That(actual.ReviveSeconds, Is.EqualTo(expected.ReviveSeconds), message);
+            Assert.That(actual.DownedBleedoutSeconds, Is.EqualTo(defaults.DownedBleedoutSeconds), message);
+            Assert.That(actual.DownedHealthFraction, Is.EqualTo(defaults.DownedHealthFraction), message);
+            Assert.That(actual.ReviveSeconds, Is.EqualTo(defaults.ReviveSeconds), message);
             Assert.That(actual.Cover, Is.EqualTo(expected.Cover), message);
             Assert.That(actual.BlindFire, Is.EqualTo(expected.BlindFire), message);
             Assert.That(actual.ActiveReload, Is.EqualTo(expected.ActiveReload), message);
@@ -275,7 +342,7 @@ namespace Fps.Tests.EditMode
             Assert.That(restored.SpawnProtectionSeconds, Is.EqualTo(0f));
             Assert.That(restored.FallDamage, Is.EqualTo(FallDamage.Off));
             Assert.That(restored.HudDensity, Is.EqualTo(HudDensity.Full));
-            AssertDefaultActions(restored.Actions, range.name);
+            AssertActions(restored.Actions, _expectedActions[4], range.name);
         }
 
         [Test]
@@ -290,13 +357,14 @@ namespace Fps.Tests.EditMode
                 GameRulesAssetBuilder.RangePath,
             };
 
-            foreach (var path in paths)
+            for (var i = 0; i < paths.Length; i++)
             {
+                var path = paths[i];
                 var rules = GameRulesAssetBuilder.LoadRules(path).ToRules();
                 Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(0f), path);
                 Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off), path);
                 Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full), path);
-                AssertDefaultActions(rules.Actions, path);
+                AssertActions(rules.Actions, _expectedActions[i], path + $" (rerun {nameof(GameRulesAssetBuilder)}.Build)");
             }
         }
 

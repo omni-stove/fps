@@ -161,5 +161,71 @@ namespace Fps.Core
             Grenade = grenade;
             GrenadeCount = grenadeCount;
         }
+
+        /// <summary><see cref="Downed"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithDowned(Downed value) => Copy(downed: value);
+
+        /// <summary><see cref="DownedBleedoutSeconds"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithDownedBleedoutSeconds(float value) => Copy(downedBleedoutSeconds: value);
+
+        /// <summary><see cref="DownedHealthFraction"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithDownedHealthFraction(float value) => Copy(downedHealthFraction: value);
+
+        /// <summary><see cref="ReviveSeconds"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithReviveSeconds(float value) => Copy(reviveSeconds: value);
+
+        /// <summary>
+        /// <see cref="Cover"/> だけを value にした複製。値の検査はコンストラクターと同じで、
+        /// <see cref="BlindFire"/> が On のまま Off にすると <see cref="ArgumentException"/> (先に <see cref="WithBlindFire"/> で切る)。
+        /// </summary>
+        public ActionRules WithCover(Cover value) => Copy(cover: value);
+
+        /// <summary>
+        /// <see cref="BlindFire"/> だけを value にした複製。値の検査はコンストラクターと同じで、
+        /// <see cref="Cover"/> が Off のまま On にすると <see cref="ArgumentException"/> (先に <see cref="WithCover"/> で入れる)。
+        /// </summary>
+        public ActionRules WithBlindFire(BlindFire value) => Copy(blindFire: value);
+
+        /// <summary><see cref="ActiveReload"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithActiveReload(ActiveReload value) => Copy(activeReload: value);
+
+        /// <summary><see cref="Dodge"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithDodge(Dodge value) => Copy(dodge: value);
+
+        /// <summary><see cref="Vault"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithVault(Vault value) => Copy(vault: value);
+
+        /// <summary><see cref="Grenade"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithGrenade(Grenade value) => Copy(grenade: value);
+
+        /// <summary><see cref="GrenadeCount"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithGrenadeCount(int value) => Copy(grenadeCount: value);
+
+        private ActionRules Copy(
+            Downed? downed = null,
+            float? downedBleedoutSeconds = null,
+            float? downedHealthFraction = null,
+            float? reviveSeconds = null,
+            Cover? cover = null,
+            BlindFire? blindFire = null,
+            ActiveReload? activeReload = null,
+            Dodge? dodge = null,
+            Vault? vault = null,
+            Grenade? grenade = null,
+            int? grenadeCount = null)
+        {
+            return new ActionRules(
+                downed ?? Downed,
+                downedBleedoutSeconds ?? DownedBleedoutSeconds,
+                downedHealthFraction ?? DownedHealthFraction,
+                reviveSeconds ?? ReviveSeconds,
+                cover ?? Cover,
+                blindFire ?? BlindFire,
+                activeReload ?? ActiveReload,
+                dodge ?? Dodge,
+                vault ?? Vault,
+                grenade ?? Grenade,
+                grenadeCount ?? GrenadeCount);
+        }
     }
 }

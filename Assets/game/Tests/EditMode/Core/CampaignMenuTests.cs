@@ -240,7 +240,7 @@ namespace Fps.Core.Tests
         [Test]
         public void EveryStartItemHasALabel()
         {
-            foreach (CampaignMenuItemKind kind in Enum.GetValues(typeof(CampaignMenuItemKind)))
+            foreach (CampaignMenuItemKind kind in Enum.GetValues<CampaignMenuItemKind>())
             {
                 if (kind == CampaignMenuItemKind.Mission || kind == CampaignMenuItemKind.Difficulty)
                 {

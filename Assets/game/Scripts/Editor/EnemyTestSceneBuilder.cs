@@ -87,15 +87,16 @@ namespace Fps.Editor
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
 
-            // 武器のアセットが無い・敵の武器がカタログに無いなら何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // NewScene(Single) は参照されていないアセットをアンロードし、先に読んだ定義が null になるので、シーンを作ってから読む。
+            // 武器のアセットが無い・敵の武器がカタログに無いなら何も保存せずに止める (先に WeaponAssetBuilder.Build を走らせる)。
             var rifle = WeaponAssetBuilder.LoadRifle();
             var catalog = WeaponAssetBuilder.LoadCatalog();
             WeaponAssetBuilder.FindInCatalog(catalog, EnemyId, EnemyWeaponId);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
-
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             // 敵のコライダーで NavMesh に穴が空かないよう、地形だけを置いた状態で焼く。
             var surface = CreateLevel(scene);

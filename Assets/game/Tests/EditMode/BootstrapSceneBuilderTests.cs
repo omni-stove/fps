@@ -87,7 +87,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PopulatedSceneHoldsOnlyTheBootstrap()
         {
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            var scene = TestScenes.NewAdditive();
             var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             try
             {
@@ -112,7 +112,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void RefusesToPopulateANonEmptySceneOrWithoutAWeapon()
         {
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            var scene = TestScenes.NewAdditive();
             var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             try
             {

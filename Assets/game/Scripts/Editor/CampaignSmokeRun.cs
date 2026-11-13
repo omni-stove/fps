@@ -157,6 +157,13 @@ namespace Fps.Editor
 
             if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
             {
+                // Unity 6000.6.0f1 の batchmode では、Editor の起動時インデックス (SearchInit.IndexationOnStartup) が
+                // Play 中に例外を投げることがある。ゲームのコードではないので、これだけは判定から外す。
+                if (stackTrace != null && stackTrace.Contains("UnityEditor.Search.SearchInit.IndexationOnStartup"))
+                {
+                    return;
+                }
+
                 _errors.Add($"{type}: {condition}");
                 return;
             }

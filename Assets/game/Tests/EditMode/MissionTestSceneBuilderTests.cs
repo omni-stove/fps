@@ -23,11 +23,11 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
+            _scene = TestScenes.NewAdditive();
             _definition = ScriptableObject.CreateInstance<MissionDefinition>();
             _definition.name = "TestMission";
             MissionTestSceneBuilder.Configure(_definition);
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
-            _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
         }
 
         [TearDown]
@@ -43,7 +43,7 @@ namespace Fps.Tests.EditMode
         {
             var mission = _definition.CreateMission();
 
-            Assert.That(mission.Objectives, Has.Count.EqualTo(3));
+            Assert.That(mission.Objectives.Count, Is.EqualTo(3));
             Assert.That(mission.Objectives[0].Id, Is.EqualTo(MissionTestSceneBuilder.ReachAreaId));
             Assert.That(mission.Objectives[1].Id, Is.EqualTo(MissionTestSceneBuilder.KillTargetsId));
             Assert.That(mission.Objectives[1].RequiredCount, Is.EqualTo(MissionTestSceneBuilder.TargetCount));
@@ -69,7 +69,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(layout.KillTargets.ObjectiveId, Is.EqualTo(MissionTestSceneBuilder.KillTargetsId));
             Assert.That(layout.KillTargets.Runner, Is.SameAs(layout.Runner));
-            Assert.That(layout.Targets, Has.Count.EqualTo(MissionTestSceneBuilder.TargetCount));
+            Assert.That(layout.Targets.Count, Is.EqualTo(MissionTestSceneBuilder.TargetCount));
             foreach (var target in layout.Targets)
             {
                 Assert.That(target.transform.parent, Is.SameAs(layout.KillTargets.transform));
@@ -215,7 +215,7 @@ namespace Fps.Tests.EditMode
                 Is.Not.Null,
                 $"run {nameof(MissionTestSceneBuilder)}.Build first");
 
-            Assert.That(definition.CreateMission().Objectives, Has.Count.EqualTo(3));
+            Assert.That(definition.CreateMission().Objectives.Count, Is.EqualTo(3));
 
             var scene = EditorSceneManager.OpenScene(MissionTestSceneBuilder.ScenePath, OpenSceneMode.Additive);
             try

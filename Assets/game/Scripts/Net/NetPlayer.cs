@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Fps.Core;
 using Fps.Runtime;
@@ -70,10 +71,10 @@ namespace Fps.Net
         private InputAction _attackAction;
         private bool _enabledAttackAction;
 
-        // 装備中の武器の射撃モードと連射間隔。持ち主だけが ResolveTrigger で作る。_triggerWeaponId と _triggerCatalog はどの武器で引いたか
+        // 装備中の武器の射撃モードと連射間隔。持ち主だけが ResolveTrigger で作る。_triggerWeaponId と _triggerLoadout はどの武器で引いたか
         private FireTrigger _trigger;
         private string _triggerWeaponId;
-        private WeaponCatalogAsset _triggerCatalog;
+        private LoadoutDefinition _triggerLoadout;
         private string _triggerError;
         private bool _triggerResolved;
 
@@ -221,23 +222,23 @@ namespace Fps.Net
 
         /// <summary>
         /// 装備中の武器 (<see cref="NetPlayerWeapon.WeaponId"/>) の射撃モードと連射間隔で判断する <see cref="FireTrigger"/>。
-        /// 試合 (<see cref="NetTeamDeathmatch.Current"/>) の <see cref="NetTeamDeathmatch.Catalog"/> から引き、武器か Catalog が変わったら作り直す。
-        /// 武器がまだ届いていない・Catalog に無い・Catalog が不正なら null。
+        /// 試合 (<see cref="NetTeamDeathmatch.Current"/>) の <see cref="NetTeamDeathmatch.Loadout"/> から引き、武器か Loadout が変わったら作り直す。
+        /// 武器がまだ届いていない・Loadout に無い・Loadout が不正なら null。
         /// </summary>
         private FireTrigger ResolveTrigger()
         {
             var weaponId = _weapon != null ? _weapon.WeaponId : string.Empty;
             var match = NetTeamDeathmatch.Current;
-            var catalog = match != null ? match.Catalog : null;
-            // 引けなかったときも覚えておき、毎フレーム Catalog を作り直さない
-            if (_triggerResolved && _triggerCatalog == catalog && string.Equals(_triggerWeaponId, weaponId, StringComparison.Ordinal))
+            var loadout = match != null ? match.Loadout : null;
+            // 引けなかったときも覚えておき、毎フレーム Loadout の武器を作り直さない
+            if (_triggerResolved && _triggerLoadout == loadout && string.Equals(_triggerWeaponId, weaponId, StringComparison.Ordinal))
             {
                 return _trigger;
             }
 
             _trigger = null;
             _triggerWeaponId = weaponId;
-            _triggerCatalog = catalog;
+            _triggerLoadout = loadout;
             _triggerError = null;
             _triggerResolved = true;
             if (string.IsNullOrEmpty(weaponId))
@@ -246,29 +247,34 @@ namespace Fps.Net
                 return null;
             }
 
-            if (catalog == null)
+            if (loadout == null)
             {
-                _triggerError = "without the match's weapon catalog";
+                _triggerError = "without the match's loadout";
                 return null;
             }
 
-            WeaponSpec spec;
+            IReadOnlyList<WeaponSpec> specs;
             try
             {
-                if (!catalog.ToCatalog().TryGet(weaponId, out spec))
-                {
-                    _triggerError = "with weapon '" + weaponId + "' missing from '" + catalog.name + "'";
-                    return null;
-                }
+                specs = loadout.ToSpecs();
             }
             catch (WeaponDefinitionException e)
             {
-                _triggerError = "with an invalid weapon catalog: " + e.Message;
+                _triggerError = "with an invalid loadout: " + e.Message;
                 return null;
             }
 
-            _trigger = new FireTrigger(spec);
-            return _trigger;
+            foreach (var spec in specs)
+            {
+                if (string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
+                {
+                    _trigger = new FireTrigger(spec);
+                    return _trigger;
+                }
+            }
+
+            _triggerError = "with weapon '" + weaponId + "' missing from '" + loadout.name + "'";
+            return null;
         }
 
         private void WarnUnknownWeapon()

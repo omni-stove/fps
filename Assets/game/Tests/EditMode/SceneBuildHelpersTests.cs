@@ -22,7 +22,7 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            _scene = TestScenes.NewAdditive();
         }
 
         [TearDown]

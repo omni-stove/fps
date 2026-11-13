@@ -215,7 +215,7 @@ namespace Fps.Runtime
             var maxHeight = _motor.Spec.VaultMaxHeight;
             var topHeight = MeasureVaultTop(hit, into, feetY, maxHeight);
             var depth = into == Vector3.zero ? float.PositiveInfinity : MeasureVaultDepth(hit, into);
-            var sample = new VaultObstacleSample(hit.distance * Vector3.Dot(forward, into),hit.normal.ToNumerics(), topHeight, depth);
+            var sample = new VaultObstacleSample(hit.distance * Vector3.Dot(forward, into), hit.normal.ToNumerics(), topHeight, depth);
             return VaultProbe.Evaluate(sample, forward.ToNumerics(), maxHeight, VaultBodyRadius(), IsVaultPathClear);
         }
 

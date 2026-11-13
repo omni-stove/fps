@@ -27,14 +27,21 @@ namespace Fps.Tests.EditMode
             _created.Clear();
         }
 
+        private const string _rifleId = "00000000-0000-4000-8000-000000000001";
+        private const string _handgunId = "00000000-0000-4000-8000-000000000002";
+        private const string _uuidPattern = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+
         [Test]
-        public void DefaultsMatchTheRifle()
+        public void DefaultsMatchTheRifleExceptTheId()
         {
-            var spec = NewDefinition("Default").ToSpec();
+            var definition = NewDefinition("Default", string.Empty);
+            definition.AssignIdIfEmpty();
+            var spec = definition.ToSpec();
             var rifle = WeaponAssetBuilder.RifleSpec();
 
-            Assert.That(spec.Id, Is.EqualTo(rifle.Id));
-            Assert.That(spec.DisplayName, Is.EqualTo(rifle.Id), "the display name is left empty and falls back to the id");
+            Assert.That(spec.Id, Does.Match(_uuidPattern));
+            Assert.That(spec.DisplayName, Is.EqualTo(spec.Id), "the display name is left empty and falls back to the id");
+            Assert.That(spec.Category, Is.EqualTo(rifle.Category));
             Assert.That(spec.FireMode, Is.EqualTo(rifle.FireMode));
             Assert.That(spec.MagazineSize, Is.EqualTo(rifle.MagazineSize));
             Assert.That(spec.ReserveAmmo, Is.EqualTo(rifle.ReserveAmmo));
@@ -48,10 +55,51 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ANewDefinitionHasNoIdUntilOneIsAssigned()
+        {
+            var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _created.Add(definition);
+
+            // OnValidate が CreateInstance で呼ばれる版でも呼ばれない版でも、空か UUID のどちらか
+            Assert.That(definition.Id, Is.Empty.Or.Match(_uuidPattern));
+
+            definition.Id = string.Empty;
+            Assert.That(definition.AssignIdIfEmpty(), Is.True);
+            Assert.That(definition.Id, Does.Match(_uuidPattern));
+            Assert.That(definition.ToSpec().Id, Is.EqualTo(definition.Id));
+        }
+
+        [TestCase("")]
+        [TestCase("   ")]
+        public void AssignIdIfEmptyGivesEachDefinitionADifferentUuid(string empty)
+        {
+            var first = NewDefinition("First", empty);
+            var second = NewDefinition("Second", empty);
+
+            Assert.That(first.AssignIdIfEmpty(), Is.True);
+            Assert.That(second.AssignIdIfEmpty(), Is.True);
+
+            Assert.That(first.Id, Does.Match(_uuidPattern));
+            Assert.That(second.Id, Does.Match(_uuidPattern));
+            Assert.That(second.Id, Is.Not.EqualTo(first.Id));
+        }
+
+        [TestCase(_rifleId)]
+        [TestCase("not-a-uuid")]
+        public void AssignIdIfEmptyKeepsAnExistingId(string id)
+        {
+            var definition = NewDefinition("Kept", id);
+
+            Assert.That(definition.AssignIdIfEmpty(), Is.False);
+            Assert.That(definition.Id, Is.EqualTo(id));
+        }
+
+        [Test]
         public void ToSpecCopiesEveryField()
         {
-            var definition = NewDefinition("Handgun", " handgun ");
+            var definition = NewDefinition("Handgun", " " + _handgunId + " ");
             definition.DisplayName = " Handgun ";
+            definition.Category = WeaponCategory.Handgun;
             definition.FireMode = FireMode.Semi;
             definition.MagazineSize = 12;
             definition.ReserveAmmo = 48;
@@ -65,8 +113,9 @@ namespace Fps.Tests.EditMode
 
             var spec = definition.ToSpec();
 
-            Assert.That(spec.Id, Is.EqualTo("handgun"));
+            Assert.That(spec.Id, Is.EqualTo(_handgunId));
             Assert.That(spec.DisplayName, Is.EqualTo("Handgun"));
+            Assert.That(spec.Category, Is.EqualTo(WeaponCategory.Handgun));
             Assert.That(spec.FireMode, Is.EqualTo(FireMode.Semi));
             Assert.That(spec.MagazineSize, Is.EqualTo(12));
             Assert.That(spec.ReserveAmmo, Is.EqualTo(48));
@@ -92,7 +141,9 @@ namespace Fps.Tests.EditMode
         }
 
         [TestCase("Id", "")]
-        [TestCase("Id", "Rifle")]
+        [TestCase("Id", "rifle")]
+        [TestCase("Id", "00000000-0000-4000-8000-00000000000A")]
+        [TestCase("Category", "")]
         [TestCase("FireMode", "")]
         [TestCase("MagazineSize", "")]
         [TestCase("ReserveAmmo", "")]
@@ -110,6 +161,9 @@ namespace Fps.Tests.EditMode
             {
                 case "Id":
                     definition.Id = id;
+                    break;
+                case "Category":
+                    definition.Category = (WeaponCategory)99;
                     break;
                 case "FireMode":
                     definition.FireMode = (FireMode)99;
@@ -154,28 +208,28 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ToCatalogKeepsTheOrderAndLooksUpById()
         {
-            var rifle = NewDefinition("Rifle", "rifle");
-            var handgun = NewDefinition("Handgun", "handgun");
+            var rifle = NewDefinition("Rifle", _rifleId);
+            var handgun = NewDefinition("Handgun", _handgunId);
             handgun.FireMode = FireMode.Semi;
             var asset = NewCatalog("Catalog", rifle, handgun);
 
             var catalog = asset.ToCatalog();
 
             Assert.That(catalog.Count, Is.EqualTo(2));
-            Assert.That(catalog.All[0].Id, Is.EqualTo("rifle"));
-            Assert.That(catalog.All[1].Id, Is.EqualTo("handgun"));
-            Assert.That(catalog.Get("handgun").FireMode, Is.EqualTo(FireMode.Semi));
+            Assert.That(catalog.All[0].Id, Is.EqualTo(_rifleId));
+            Assert.That(catalog.All[1].Id, Is.EqualTo(_handgunId));
+            Assert.That(catalog.Get(_handgunId).FireMode, Is.EqualTo(FireMode.Semi));
             Assert.That(asset.ToCatalog(), Is.Not.SameAs(catalog));
         }
 
         [Test]
         public void SetWeaponsCopiesTheList()
         {
-            var rifle = NewDefinition("Rifle", "rifle");
+            var rifle = NewDefinition("Rifle", _rifleId);
             var source = new List<WeaponDefinition> { rifle };
             var asset = NewCatalog("Catalog");
             asset.SetWeapons(source);
-            source.Add(NewDefinition("Handgun", "handgun"));
+            source.Add(NewDefinition("Handgun", _handgunId));
 
             Assert.That(asset.Weapons, Has.Count.EqualTo(1));
             Assert.That(asset.Weapons[0], Is.SameAs(rifle));
@@ -194,11 +248,11 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ToCatalogRejectsNullAndDestroyedEntries()
         {
-            var rifle = NewDefinition("Rifle", "rifle");
+            var rifle = NewDefinition("Rifle", _rifleId);
             var e = Assert.Throws<WeaponDefinitionException>(() => NewCatalog("HoleyCatalog", rifle, null).ToCatalog());
             Assert.That(e.Message, Does.Contain("HoleyCatalog").And.Contain("#1"));
 
-            var destroyed = NewDefinition("Gone", "gone");
+            var destroyed = NewDefinition("Gone", _handgunId);
             var catalog = NewCatalog("StaleCatalog", destroyed, rifle);
             Object.DestroyImmediate(destroyed);
             e = Assert.Throws<WeaponDefinitionException>(() => catalog.ToCatalog());
@@ -208,18 +262,18 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ToCatalogRejectsDuplicateIdsWithBothAssetNames()
         {
-            var first = NewDefinition("RifleA", "rifle");
-            var second = NewDefinition("RifleB", " rifle ");
+            var first = NewDefinition("RifleA", _rifleId);
+            var second = NewDefinition("RifleB", " " + _rifleId + " ");
 
             var e = Assert.Throws<WeaponDefinitionException>(() => NewCatalog("DupCatalog", first, second).ToCatalog());
-            Assert.That(e.Message, Does.Contain("DupCatalog").And.Contain("RifleA").And.Contain("RifleB").And.Contain("'rifle'"));
+            Assert.That(e.Message, Does.Contain("DupCatalog").And.Contain("RifleA").And.Contain("RifleB").And.Contain("'" + _rifleId + "'"));
         }
 
         [Test]
         public void ToCatalogNamesBothTheCatalogAndTheBrokenWeapon()
         {
-            var rifle = NewDefinition("Rifle", "rifle");
-            var broken = NewDefinition("BrokenWeapon", "broken");
+            var rifle = NewDefinition("Rifle", _rifleId);
+            var broken = NewDefinition("BrokenWeapon", _handgunId);
             broken.MagazineSize = 0;
 
             var e = Assert.Throws<WeaponDefinitionException>(() => NewCatalog("MainCatalog", rifle, broken).ToCatalog());
@@ -227,15 +281,11 @@ namespace Fps.Tests.EditMode
             Assert.That(e.InnerException, Is.InstanceOf<WeaponDefinitionException>());
         }
 
-        private WeaponDefinition NewDefinition(string assetName, string id = null)
+        private WeaponDefinition NewDefinition(string assetName, string id = _rifleId)
         {
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             definition.name = assetName;
-            if (id != null)
-            {
-                definition.Id = id;
-            }
-
+            definition.Id = id;
             _created.Add(definition);
             return definition;
         }

@@ -7,10 +7,11 @@ namespace Fps.Core.Tests
     public sealed class HudModelTests
     {
         private const int _playerId = 0;
+        private const string _rifleId = "00000000-0000-4000-8000-000000000001";
 
         private static Weapon NewWeapon(int magazine = 30, int reserve = 90, float fireInterval = 0f, float reloadSeconds = 1f)
         {
-            return new Weapon(new WeaponSpec("rifle", null, FireMode.Auto, magazine, reserve, fireInterval, reloadSeconds, 25, 100f, DamageFalloff.None));
+            return new Weapon(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, magazine, reserve, fireInterval, reloadSeconds, 25, 100f, DamageFalloff.None));
         }
 
         private static List<HudField> Record(HudModel model)

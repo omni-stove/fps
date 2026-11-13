@@ -195,6 +195,7 @@ namespace Fps.Tests.EditMode
             _rig.UpdateCameraPosition();
             var weapon = _camera.gameObject.AddComponent<WeaponController>();
             var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            rifle.AssignIdIfEmpty();
             try
             {
                 weapon.Initialize(_camera.transform, _attack, _reload, rifle);

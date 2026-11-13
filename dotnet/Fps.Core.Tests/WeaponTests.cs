@@ -5,9 +5,11 @@ namespace Fps.Core.Tests
 {
     public sealed class WeaponTests
     {
+        private const string _rifleId = "00000000-0000-4000-8000-000000000001";
+
         private static Weapon Create(int magazineSize = 3, int reserveAmmo = 10, float fireInterval = 0.5f, float reloadSeconds = 2f, int damage = 10)
         {
-            return new Weapon(new WeaponSpec("rifle", null, FireMode.Auto, magazineSize, reserveAmmo, fireInterval, reloadSeconds, damage, 100f, DamageFalloff.None));
+            return new Weapon(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, magazineSize, reserveAmmo, fireInterval, reloadSeconds, damage, 100f, DamageFalloff.None));
         }
 
         private static void Empty(Weapon weapon, float fireInterval)
@@ -234,7 +236,7 @@ namespace Fps.Core.Tests
         [Test]
         public void StartsWithTheGivenAmmo()
         {
-            var spec = new WeaponSpec("rifle", null, FireMode.Auto, 5, 10, 0.5f, 1f, 10, 100f, DamageFalloff.None);
+            var spec = new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, 5, 10, 0.5f, 1f, 10, 100f, DamageFalloff.None);
 
             var weapon = new Weapon(spec, 2, 7);
 
@@ -253,7 +255,7 @@ namespace Fps.Core.Tests
         [Test]
         public void AcceptsEmptyAndFullAmmo()
         {
-            var spec = new WeaponSpec("rifle", null, FireMode.Auto, 5, 10, 0.5f, 1f, 10, 100f, DamageFalloff.None);
+            var spec = new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, 5, 10, 0.5f, 1f, 10, 100f, DamageFalloff.None);
 
             Assert.That(new Weapon(spec, 0, 0).AmmoInMagazine, Is.Zero);
             Assert.That(new Weapon(spec, 5, 0).AmmoInMagazine, Is.EqualTo(5));
@@ -264,7 +266,7 @@ namespace Fps.Core.Tests
         [TestCase(0, -1)]
         public void RejectsAmmoOutOfRange(int ammoInMagazine, int reserveAmmo)
         {
-            var spec = new WeaponSpec("rifle", null, FireMode.Auto, 5, 10, 0.5f, 1f, 10, 100f, DamageFalloff.None);
+            var spec = new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, 5, 10, 0.5f, 1f, 10, 100f, DamageFalloff.None);
 
             Assert.Throws<ArgumentOutOfRangeException>(() => new Weapon(spec, ammoInMagazine, reserveAmmo));
         }
@@ -288,7 +290,7 @@ namespace Fps.Core.Tests
         public void RejectsInvalidSpec(int magazineSize, int reserveAmmo, float fireInterval, float reloadSeconds, int damage)
         {
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => new WeaponSpec("rifle", null, FireMode.Auto, magazineSize, reserveAmmo, fireInterval, reloadSeconds, damage, 100f, DamageFalloff.None));
+                () => new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, magazineSize, reserveAmmo, fireInterval, reloadSeconds, damage, 100f, DamageFalloff.None));
         }
     }
 }

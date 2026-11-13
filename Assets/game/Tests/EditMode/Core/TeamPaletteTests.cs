@@ -23,7 +23,10 @@ namespace Fps.Core.Tests
         [Test]
         public void AllListsEveryKindOnceInOrder()
         {
+            // Unity の .NET Standard 2.1 には Enum.GetValues<T>() が無いため、非ジェネリック版を使う
+#pragma warning disable CA2263
             var kinds = (ColorPalette[])Enum.GetValues(typeof(ColorPalette));
+#pragma warning restore CA2263
 
             Assert.That(TeamPalette.All.Count, Is.EqualTo(kinds.Length));
             for (var i = 0; i < kinds.Length; i++)

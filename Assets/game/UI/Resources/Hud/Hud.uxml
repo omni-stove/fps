@@ -60,5 +60,16 @@
         <!-- スコアボード。Scoreboard を押している間だけ ScoreboardView が行を作って出す。 -->
         <ui:VisualElement name="scoreboard" class="scoreboard" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="loadout-select" picking-mode="Ignore" style="display: none;" />
+        <!-- ポーズ画面。開いている間だけ PauseMenu が出す。画面全体を覆い、後ろへのクリックを止める。 -->
+        <ui:VisualElement name="pause-menu" class="pause" style="display: none;">
+            <ui:VisualElement class="pause__panel">
+                <ui:Label text="ポーズ" class="pause__title" />
+                <!-- オンラインでは試合が止まらないことの案内。オフラインでは PauseMenu が隠す。 -->
+                <ui:Label name="pause-note" text="" class="pause__note" style="display: none;" />
+                <ui:Button name="pause-resume" text="再開" class="pause__button" />
+                <ui:Button name="pause-settings" text="設定" class="pause__button" />
+                <ui:Button name="pause-return-to-menu" text="メニューに戻る" class="pause__button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

@@ -148,7 +148,7 @@ namespace Fps.Runtime
             jumpPressed = false;
         }
 
-        partial void TryOverrideMoveForDodge(
+        private void TryOverrideMoveForDodge(
             Vector2 move, bool jumpPressed, float deltaSeconds, ref bool overridden, ref Vector3 displacement)
         {
             if (_dodgeMotion == null)

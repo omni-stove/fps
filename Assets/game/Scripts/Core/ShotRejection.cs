@@ -2,7 +2,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// サーバーが射撃を捨てる理由。<see cref="ShotValidator.Check"/> の結果に、連射の制限 (<see cref="ShotBudget"/>) と
-    /// 弾倉の状態 (<see cref="ServerWeapon.TryFire"/>)、撃った武器の Id の検査 (<see cref="ServerLoadout"/>) を加えたもの。
+    /// 弾倉の状態 (<see cref="ServerWeapon.TryFire"/>)・持ち替え中かどうか (<see cref="Loadout{T}"/>)、撃った武器の Id の検査 (<see cref="ServerLoadout"/>) を加えたもの。
     /// </summary>
     public enum ShotRejection
     {
@@ -36,10 +36,13 @@ namespace Fps.Core
         /// <summary>弾倉が空で撃てない (予備弾があればサーバーがリロードを始める)。</summary>
         OutOfAmmo,
 
-        /// <summary>送られてきた武器の Id がサーバーの <see cref="WeaponCatalog"/> に無い。</summary>
+        /// <summary>送られてきた武器の Id が、サーバーが試合で配るロードアウトに無い (<see cref="ServerLoadout.Contains"/>)。</summary>
         UnknownWeapon,
 
         /// <summary>送られてきた武器の Id が、サーバーが持たせている武器と違う (<see cref="ServerLoadout.CheckWeapon"/>)。</summary>
         WeaponMismatch,
+
+        /// <summary>武器を持ち替えている途中で撃てない (<see cref="Loadout{T}.IsSwitching"/>)。</summary>
+        Switching,
     }
 }

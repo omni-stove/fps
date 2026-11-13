@@ -16,6 +16,7 @@ namespace Fps.Tests.EditMode
         private GameObject _host;
         private BootstrapWorld _world;
         private WeaponDefinition _rifle;
+        private WeaponDefinition _handgun;
 
         [SetUp]
         public void SetUp()
@@ -23,10 +24,13 @@ namespace Fps.Tests.EditMode
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
             WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            _handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _handgun.name = "Handgun";
+            WeaponAssetBuilder.Configure(_handgun, WeaponAssetBuilder.HandgunSpec());
 
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
-            bootstrap.WeaponDefinition = _rifle;
+            bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
             LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
             _world = bootstrap.Build();
         }
@@ -37,6 +41,7 @@ namespace Fps.Tests.EditMode
             DestroyWorld(_world);
             Object.DestroyImmediate(_host);
             Object.DestroyImmediate(_rifle);
+            Object.DestroyImmediate(_handgun);
         }
 
         private static void DestroyWorld(BootstrapWorld world)
@@ -188,7 +193,7 @@ namespace Fps.Tests.EditMode
                 var bootstrap = host.AddComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
                 bootstrap.ViewMode = ViewMode.ThirdPerson;
-                bootstrap.WeaponDefinition = _rifle;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
                 LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
 
                 world = bootstrap.Build();
@@ -271,7 +276,7 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(_world.Weapon, Is.Not.Null);
             Assert.That(_world.Weapon, Is.SameAs(_world.Camera.GetComponent<WeaponController>()));
-            Assert.That(_world.Weapon.Definition, Is.SameAs(_rifle), "the bootstrap hands its weapon definition to the player");
+            Assert.That(_world.Weapon.Definitions, Is.EqualTo(new[] { _rifle, _handgun }), "the bootstrap hands its loadout to the player");
             Assert.That(_world.Camera.gameObject.activeSelf, Is.True, "the camera is active again after the weapon is attached");
         }
 
@@ -280,7 +285,7 @@ namespace Fps.Tests.EditMode
         {
             var targets = _world.Targets;
 
-            Assert.That(targets, Has.Count.EqualTo(GameBootstrap.TargetDummyCount));
+            Assert.That(targets.Count, Is.EqualTo(GameBootstrap.TargetDummyCount));
             Assert.That(GameBootstrap.TargetDummyCount, Is.EqualTo(5));
             Assert.That(_world.TargetRoot.name, Is.EqualTo(GameBootstrap.TargetsName));
 
@@ -420,8 +425,19 @@ namespace Fps.Tests.EditMode
                 controller.Initialize(_world.Camera.transform, attack, reload);
                 Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize, _rifle.ReserveAmmo)));
 
+                Assert.That(model.WeaponNameText, Is.EqualTo(_rifle.DisplayName));
+
                 Assert.That(controller.Weapon.TryFire(), Is.True);
                 Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize - 1, _rifle.ReserveAmmo)));
+
+                // 持ち替えると HUD は新しい武器を購読し直し、しまった武器の射撃では変わらない。
+                var rifle = controller.Weapon;
+                Assert.That(controller.SelectNext(), Is.True);
+                Assert.That(model.WeaponNameText, Is.EqualTo(_handgun.DisplayName));
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo)));
+                rifle.Tick(_rifle.FireInterval);
+                rifle.TryFire();
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo)));
             }
             finally
             {

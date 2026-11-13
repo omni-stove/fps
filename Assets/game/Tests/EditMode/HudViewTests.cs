@@ -11,7 +11,7 @@ namespace Fps.Tests.EditMode
     {
         private static WeaponSpec NewSpec()
         {
-            return new WeaponSpec("00000000-0000-4000-8000-000000000001", null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
+            return new WeaponSpec("00000000-0000-4000-8000-000000000001", "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
         }
 
         private static VisualElement CloneLayout()
@@ -34,6 +34,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(root.Q<Label>(HudView.HealthLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.AmmoLabelName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.WeaponNameLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.TimeLabelName), Is.Not.Null);
             Assert.That(root.Q<VisualElement>(HudView.CrosshairName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.NoticeLabelName), Is.Not.Null);
@@ -103,6 +104,27 @@ namespace Fps.Tests.EditMode
             model.SetHealth(100, 100);
             Assert.That(view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.False);
             Assert.That(view.HealthLabel.ClassListContains(HudView.LowHealthClass), Is.False);
+        }
+
+        [Test]
+        public void TheWeaponNameFollowsTheBoundWeaponAndIsHiddenWithoutOne()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            model.BindWeapon(new Weapon(NewSpec()));
+            Assert.That(view.WeaponNameLabel.text, Is.EqualTo("Rifle"));
+            Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            model.BindWeapon(new Weapon(new WeaponSpec(
+                "00000000-0000-4000-8000-000000000002", "Handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None)));
+            Assert.That(view.WeaponNameLabel.text, Is.EqualTo("Handgun"));
+            Assert.That(view.AmmoLabel.text, Is.EqualTo("12 / 48"));
+
+            model.BindWeapon(null);
+            Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 
         [Test]

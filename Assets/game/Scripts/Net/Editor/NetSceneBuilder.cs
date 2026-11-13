@@ -67,38 +67,38 @@ namespace Fps.Editor
                 return;
             }
 
-            var catalog = LoadOrBuildWeaponCatalog();
+            var loadout = LoadOrBuildLoadout();
             var playerPrefab = BuildPrefab(PlayerPrefabPath, CreatePlayerSource);
-            var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(catalog));
+            var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout));
             BuildScene(playerPrefab, matchPrefab);
             AddSceneToBuildSettings(NetBootstrap.ScenePath);
             AssetDatabase.SaveAssets();
             Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath
-                + " (weapons from " + WeaponAssetBuilder.CatalogPath + ")");
+                + " (loadout " + WeaponAssetBuilder.LoadoutPath + ")");
         }
 
         /// <summary>
-        /// 試合の進行役に渡す武器の一覧 (<see cref="WeaponAssetBuilder.CatalogPath"/>) を読む。無ければ
-        /// <see cref="WeaponAssetBuilder.Build"/> と同じものを作る (既にあれば中身は上書きしない)。
-        /// サーバーの起動時と同じく <see cref="NetTeamDeathmatch.TryCreateLoadout"/> に通らなければ、プレハブを書かずに例外を投げる。
+        /// 試合の進行役に渡すデフォルトロードアウト (<see cref="WeaponAssetBuilder.LoadoutPath"/>) を
+        /// <see cref="WeaponAssetBuilder.LoadDefaultLoadout"/> で読む。無ければ <see cref="WeaponAssetBuilder.Build"/> と同じものを作る
+        /// (既にあれば中身は上書きしない)。サーバーの起動時と同じく <see cref="NetTeamDeathmatch.TryCreateLoadout"/> に通らなければ、
+        /// プレハブを書かずに例外を投げる。
         /// </summary>
-        public static WeaponCatalogAsset LoadOrBuildWeaponCatalog()
+        public static LoadoutDefinition LoadOrBuildLoadout()
         {
-            var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(WeaponAssetBuilder.CatalogPath);
-            if (catalog == null)
+            if (AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(WeaponAssetBuilder.LoadoutPath) == null)
             {
-                Debug.Log("[Net] NetSceneBuilder: " + WeaponAssetBuilder.CatalogPath + " is missing; running WeaponAssetBuilder.Build");
-                catalog = WeaponAssetBuilder.BuildAt(
-                    WeaponAssetBuilder.RiflePath, WeaponAssetBuilder.HandgunPath, WeaponAssetBuilder.CatalogPath, WeaponAssetBuilder.LoadoutPath);
+                Debug.Log("[Net] NetSceneBuilder: " + WeaponAssetBuilder.LoadoutPath + " is missing; running WeaponAssetBuilder.Build");
+                WeaponAssetBuilder.Build();
             }
 
-            if (!NetTeamDeathmatch.TryCreateLoadout(catalog, out _, out var error))
+            var loadout = WeaponAssetBuilder.LoadDefaultLoadout();
+            if (!NetTeamDeathmatch.TryCreateLoadout(loadout, out _, out var error))
             {
                 throw new InvalidOperationException(
-                    "[Net] NetSceneBuilder: " + WeaponAssetBuilder.CatalogPath + " cannot be used by the match: " + error);
+                    "[Net] NetSceneBuilder: " + WeaponAssetBuilder.LoadoutPath + " cannot be used by the match: " + error);
             }
 
-            return catalog;
+            return loadout;
         }
 
         private static GameObject CreatePlayerSource()
@@ -155,13 +155,13 @@ namespace Fps.Editor
             source.AddComponent<FirstPersonLook>().enabled = false;
         }
 
-        private static GameObject CreateMatchSource(WeaponCatalogAsset catalog)
+        private static GameObject CreateMatchSource(LoadoutDefinition loadout)
         {
             var source = new GameObject("NetMatch");
             source.AddComponent<NetworkObject>();
 
             // 武器の値はプレハブに持たず、アセットへの参照だけを持つ (サーバーは試合の開始時に読む)
-            source.AddComponent<NetTeamDeathmatch>().Catalog = catalog;
+            source.AddComponent<NetTeamDeathmatch>().Loadout = loadout;
             return source;
         }
 

@@ -15,5 +15,8 @@ namespace Fps.Core
 
         /// <summary>試合結果 (勝ったチームか引き分け)。試合が終わっている間だけ出す。</summary>
         Result,
+
+        /// <summary>持っている武器の表示名。武器が無ければ出さない。</summary>
+        WeaponName,
     }
 }

@@ -6,7 +6,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// 敵味方の色の組。<see cref="ColorPalette"/> ごとに味方・敵・中立・強調の色と、ネームプレートに付ける形の印を持つ。不変。
-    /// キャラクター・ネームプレート・キルログ・拠点・HUD の点数は <see cref="ColorOf"/> で、頭への命中のような注意を引く印は <see cref="Highlight"/> で塗る。
+    /// キャラクター・ネームプレート・キルログ・拠点・HUD の点数は <see cref="ColorOf(TeamRelation)"/> で、頭への命中のような注意を引く印は <see cref="Highlight"/> で塗る。
     /// 色を見分けにくい人向けの組 (<see cref="ColorPalette.RedGreen"/>・<see cref="ColorPalette.BlueYellow"/>) は、
     /// 色だけに頼らないよう <see cref="MarkOf"/> で味方と敵に違う形の印を付ける。
     /// </summary>

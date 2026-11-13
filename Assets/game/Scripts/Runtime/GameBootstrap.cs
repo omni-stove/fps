@@ -251,6 +251,9 @@ namespace Fps.Runtime
                 damageable = player.AddComponent<Damageable>();
                 damageable.Initialize(PlayerName, PlayerMaxHealth);
                 player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
+
+                // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
+                mover.BindSprintRelease(weapon, damageable);
             }
             catch
             {

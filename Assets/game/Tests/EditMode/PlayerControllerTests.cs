@@ -1,6 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 using Fps.Core;
+using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
@@ -140,6 +141,130 @@ namespace Fps.Tests.EditMode
             Assert.That(_player.MoveAction, Is.SameAs(actions.FindAction(PlayerController.MoveActionPath)));
             Assert.That(_player.SprintAction, Is.SameAs(actions.FindAction(PlayerController.SprintActionPath)));
             Assert.That(_player.JumpAction, Is.SameAs(actions.FindAction(PlayerController.JumpActionPath)));
+        }
+
+        [Test]
+        public void SprintUsesTheDefaultSettingsUntilLoaded()
+        {
+            Assert.That(_player.ControlSettings, Is.EqualTo(ControlSettings.Default));
+            Assert.Throws<ArgumentNullException>(() => _player.ControlSettings = null);
+        }
+
+        [Test]
+        public void ToggleSprintKeepsGoingAfterOnePressAndStopsOnTheNext()
+        {
+            _player.ControlSettings = ControlSettings.Default.With(InputDeviceKind.KeyboardMouse, HoldAction.Sprint, HoldMode.Toggle);
+            LogAssert.Expect(LogType.Log, "[Player] sprint=off mode=toggle reason=mode");
+            LogAssert.Expect(LogType.Log, "[Player] sprint=on mode=toggle reason=button");
+
+            Assert.That(_player.UpdateSprint(Vector2.up, true, true, InputDeviceKind.KeyboardMouse), Is.True);
+            Assert.That(_player.UpdateSprint(Vector2.up, false, false, InputDeviceKind.KeyboardMouse), Is.True);
+            Assert.That(_player.IsSprinting, Is.True);
+            Assert.That(_player.SprintMode, Is.EqualTo(HoldMode.Toggle));
+
+            LogAssert.Expect(LogType.Log, "[Player] sprint=off mode=toggle reason=button");
+            Assert.That(_player.UpdateSprint(Vector2.up, true, true, InputDeviceKind.KeyboardMouse), Is.False);
+            Assert.That(_player.UpdateSprint(Vector2.up, false, false, InputDeviceKind.KeyboardMouse), Is.False);
+        }
+
+        [Test]
+        public void ToggleSprintIsReleasedWhenTheMoveInputStops()
+        {
+            _player.ControlSettings = ControlSettings.Default.With(InputDeviceKind.KeyboardMouse, HoldAction.Sprint, HoldMode.Toggle);
+            _player.UpdateSprint(Vector2.up, true, true, InputDeviceKind.KeyboardMouse);
+
+            LogAssert.Expect(LogType.Log, "[Player] sprint=off mode=toggle reason=stopped");
+            Assert.That(_player.UpdateSprint(Vector2.zero, false, false, InputDeviceKind.KeyboardMouse), Is.False);
+            Assert.That(_player.UpdateSprint(Vector2.up, false, false, InputDeviceKind.KeyboardMouse), Is.False);
+        }
+
+        [Test]
+        public void HoldSprintsOnlyWhilePressedAsBefore()
+        {
+            Assert.That(_player.ControlSettings.Get(InputDeviceKind.KeyboardMouse, HoldAction.Sprint), Is.EqualTo(HoldMode.Hold));
+
+            Assert.That(_player.UpdateSprint(Vector2.up, false, false, InputDeviceKind.KeyboardMouse), Is.False);
+            Assert.That(_player.UpdateSprint(Vector2.up, true, true, InputDeviceKind.KeyboardMouse), Is.True);
+            Assert.That(_player.UpdateSprint(Vector2.zero, true, false, InputDeviceKind.KeyboardMouse), Is.True, "stopping while held keeps sprinting");
+            Assert.That(_player.UpdateSprint(Vector2.up, true, false, InputDeviceKind.KeyboardMouse), Is.True);
+            Assert.That(_player.UpdateSprint(Vector2.up, false, false, InputDeviceKind.KeyboardMouse), Is.False);
+        }
+
+        [Test]
+        public void SprintModeFollowsTheDevice()
+        {
+            // 初期値ではキーボード／マウスが Hold、ゲームパッドが Toggle。
+            _player.UpdateSprint(Vector2.up, false, false, InputDeviceKind.Gamepad);
+            Assert.That(_player.ActiveDevice, Is.EqualTo(InputDeviceKind.Gamepad));
+            Assert.That(_player.SprintMode, Is.EqualTo(HoldMode.Toggle));
+
+            LogAssert.Expect(LogType.Log, "[Player] sprint=off mode=hold reason=mode");
+            _player.UpdateSprint(Vector2.up, false, false, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.SprintMode, Is.EqualTo(HoldMode.Hold));
+        }
+
+        [Test]
+        public void ReleaseSprintStopsUntilPressedAgain()
+        {
+            _player.UpdateSprint(Vector2.up, true, true, InputDeviceKind.KeyboardMouse);
+
+            LogAssert.Expect(LogType.Log, "[Player] sprint=off mode=hold reason=aim");
+            Assert.That(_player.ReleaseSprint("aim"), Is.True);
+            Assert.That(_player.UpdateSprint(Vector2.up, true, false, InputDeviceKind.KeyboardMouse), Is.False);
+            Assert.That(_player.ReleaseSprint("aim"), Is.False);
+        }
+
+        [Test]
+        public void DeathAndRespawnReleaseTheBoundSprint()
+        {
+            var damageable = _body.AddComponent<Damageable>();
+            damageable.Initialize("Player", 100);
+            _player.BindSprintRelease(null, damageable);
+
+            _player.UpdateSprint(Vector2.up, true, true, InputDeviceKind.Gamepad);
+            LogAssert.Expect(LogType.Log, "[Player] sprint=off mode=toggle reason=death");
+            damageable.Kill();
+            Assert.That(_player.IsSprinting, Is.False);
+
+            _player.UpdateSprint(Vector2.up, true, true, InputDeviceKind.Gamepad);
+            LogAssert.Expect(LogType.Log, "[Player] sprint=off mode=toggle reason=respawn");
+            damageable.ResetHealth();
+            Assert.That(_player.IsSprinting, Is.False);
+
+            _player.BindSprintRelease(null, null);
+            _player.UpdateSprint(Vector2.up, true, true, InputDeviceKind.Gamepad);
+            damageable.Kill();
+            Assert.That(_player.IsSprinting, Is.True, "unbound damageable no longer releases");
+        }
+
+        [Test]
+        public void FiringReleasesTheBoundSprint()
+        {
+            var camera = new GameObject("Camera", typeof(Camera));
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
+            try
+            {
+                camera.transform.SetParent(_body.transform, false);
+                WeaponAssetBuilder.Configure(rifle, WeaponAssetBuilder.RifleSpec());
+                var weapon = camera.AddComponent<WeaponController>();
+                weapon.Initialize(camera.transform, attack, reload, rifle);
+                _player.BindSprintRelease(weapon, null);
+
+                _player.UpdateSprint(Vector2.up, true, true, InputDeviceKind.KeyboardMouse);
+                LogAssert.Expect(LogType.Log, "[Player] sprint=off mode=hold reason=fire");
+                Assert.That(weapon.Fire(), Is.True);
+                Assert.That(_player.IsSprinting, Is.False);
+            }
+            finally
+            {
+                _player.BindSprintRelease(null, null);
+                attack.Dispose();
+                reload.Dispose();
+                Object.DestroyImmediate(camera);
+                Object.DestroyImmediate(rifle);
+            }
         }
     }
 }

@@ -113,6 +113,25 @@ namespace Fps.Core
             return Reloading + AmmoSeparator + reserve.ToString(CultureInfo.InvariantCulture);
         }
 
+        /// <summary>予備弾が無限 (<see cref="GameRules.InfiniteReserve"/>) のときに予備の数の代わりに出す文字列。</summary>
+        public const string InfiniteReserve = "∞";
+
+        /// <summary>
+        /// 弾数。<paramref name="infiniteReserve"/> なら予備の数の代わりに <see cref="InfiniteReserve"/> を出す
+        /// (無限のときの予備の数は減らないので、数を出すと有限に見えてしまうため)。それ以外は <see cref="Ammo(int, int, bool)"/> と同じ。
+        /// </summary>
+        /// <example><c>Ammo(30, 90, false, true)</c> は <c>30 / ∞</c>、<c>Ammo(0, 90, true, true)</c> は <c>リロード中 / ∞</c></example>
+        public static string Ammo(int magazine, int reserve, bool reloading, bool infiniteReserve)
+        {
+            var text = Ammo(magazine, reserve, reloading);
+            if (!infiniteReserve)
+            {
+                return text;
+            }
+
+            return (reloading ? Reloading : magazine.ToString(CultureInfo.InvariantCulture)) + AmmoSeparator + InfiniteReserve;
+        }
+
         /// <summary>
         /// 体力が少ないと見なす割合。最大体力のこの割合以下 (0 は除く) で HUD が体力を警告の色にする。
         /// </summary>

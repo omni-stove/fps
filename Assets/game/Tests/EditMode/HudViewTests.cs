@@ -107,6 +107,30 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AnInfiniteReserveIsShownAsInfinity()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+            var infinite = new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                GameRules.DefaultWaveIntervalSeconds,
+                0f,
+                0f,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                true,
+                1f,
+                Destruction.Off);
+
+            model.BindWeapon(new Weapon(NewSpec(), infinite));
+            Assert.That(view.AmmoLabel.text, Is.EqualTo("30 / " + HudFormat.InfiniteReserve));
+
+            model.BindWeapon(new Weapon(NewSpec()));
+            Assert.That(view.AmmoLabel.text, Is.EqualTo("30 / 90"), "a finite reserve shows the number");
+        }
+
+        [Test]
         public void TheWeaponNameFollowsTheBoundWeaponAndIsHiddenWithoutOne()
         {
             var model = new HudModel();

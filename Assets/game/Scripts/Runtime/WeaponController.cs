@@ -65,6 +65,8 @@ namespace Fps.Runtime
         private Loadout<Weapon> _loadout;
         private WeaponSpec[] _specs;
         private WeaponDefinition[] _loadedDefinitions;
+        private GameRules _rules = GameRules.Default;
+        private GameRules _loadedRules;
 
         /// <summary>射撃の向きと起点。未初期化なら null。</summary>
         public Transform Aim => _aim;
@@ -80,6 +82,20 @@ namespace Fps.Runtime
             get => _definitions ?? Array.Empty<WeaponDefinition>();
             set => _definitions = value != null ? ToArray(value) : Array.Empty<WeaponDefinition>();
         }
+
+        /// <summary>
+        /// 武器を作るときの予備弾のルール (<see cref="GameRules.ReserveAmmoMultiplier"/> と <see cref="GameRules.InfiniteReserve"/>)。
+        /// 既定は <see cref="GameRules.Default"/>。<see cref="Definitions"/> と同じく、設定しただけでは今の <see cref="Loadout"/> は変わらず、
+        /// 次の初期化から使う。今の武器に効かせるなら <see cref="ApplyRules"/> を呼ぶ。null を設定すると既定に戻る。
+        /// </summary>
+        public GameRules Rules
+        {
+            get => _rules;
+            set => _rules = value ?? GameRules.Default;
+        }
+
+        /// <summary>今の <see cref="Loadout"/> を作ったときのルール。未初期化なら null。</summary>
+        public GameRules LoadedRules => _loadout != null ? _loadedRules : null;
 
         /// <summary>今持っている武器の定義。未初期化なら null。</summary>
         public WeaponDefinition Definition => _loadout != null ? _loadedDefinitions[_loadout.CurrentIndex] : null;
@@ -149,7 +165,7 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
-            SetLoadout(null, null, null);
+            SetLoadout(null, null, null, null);
         }
 
         private void Update()
@@ -310,7 +326,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 参照と武器の定義の並びを直接渡して初期化する。武器は各定義の <see cref="WeaponDefinition.ToSpec"/> から満タンで作り直し、0 番を持つ。
+        /// 参照と武器の定義の並びを直接渡して初期化する。武器は各定義の <see cref="WeaponDefinition.ToSpec"/> から <see cref="Rules"/> の予備弾で
+        /// 満タンに作り直し、0 番を持つ。
         /// 成功したら <see cref="Definitions"/> も definitions にし、<see cref="WeaponChanged"/> を呼ぶ。
         /// 定義が不正なら <see cref="WeaponDefinitionException"/>、並びが空・null を含む・Id が重複していれば <see cref="ArgumentException"/> を投げ、
         /// 状態は変えない。
@@ -343,7 +360,8 @@ namespace Fps.Runtime
             // 先に検査を通してから差し替える (失敗しても前の状態が残る)。
             var loaded = ToArray(definitions ?? throw new ArgumentNullException(nameof(definitions)));
             var specs = ToSpecs(loaded);
-            var loadout = WeaponLoadout.Create(specs);
+            var rules = _rules;
+            var loadout = WeaponLoadout.Create(specs, rules);
 
             ReplaceAction(ref _attackAction, ref _enabledAttackAction, attackAction);
             ReplaceAction(ref _reloadAction, ref _enabledReloadAction, reloadAction);
@@ -353,7 +371,7 @@ namespace Fps.Runtime
             _aim = aim;
             _rig = aim.GetComponentInParent<ViewRig>(true);
             _definitions = loaded;
-            SetLoadout(loadout, specs, loaded);
+            SetLoadout(loadout, specs, loaded, rules);
 
             // Edit Mode では OnDisable が呼ばれず無効に戻せないので、Play 中だけ有効にする。
             if (Application.isPlaying && isActiveAndEnabled)
@@ -365,9 +383,30 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// rules の予備弾で全武器を満タンに作り直し、0 番を持つ。<see cref="Rules"/> も rules にする。
+        /// キャンペーンが開始時に難易度のルールを効かせるのに使う (セーブから戻すのはこの後の <see cref="RestoreLoadout"/>)。
+        /// <see cref="WeaponChanged"/> を呼ぶので HUD は購読し直す。
+        /// </summary>
+        public void ApplyRules(GameRules rules)
+        {
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
+            EnsureInitialized();
+            var loadout = WeaponLoadout.Create(_specs, rules);
+            _rules = rules;
+            SetLoadout(loadout, _specs, _loadedDefinitions, rules);
+            WeaponChanged?.Invoke(Weapon);
+        }
+
+        /// <summary>
         /// 持っている全武器の弾数と持っている武器をセーブデータから戻す。リロード中なら取り消す。
         /// Id が ammo にある武器はその弾数 (弾倉の容量を超える分は容量に揃える)、無い武器は満タンにし、equippedWeaponId の武器を持つ
         /// (持っていない Id か空なら 0 番)。ammo にあって持っていない武器は警告を出して捨てる。
+        /// 予備弾はセーブの値をそのまま使い、<see cref="GameRules.ReserveAmmoMultiplier"/> は掛け直さない。
+        /// 無限予備弾かどうかは今の <see cref="LoadedRules"/> に従う。
         /// <see cref="WeaponChanged"/> を呼ぶので HUD は購読し直す。
         /// </summary>
         /// <param name="ammo">武器ごとの残弾 (<see cref="CampaignSave.Weapons"/>)。null を含まない。</param>
@@ -376,7 +415,7 @@ namespace Fps.Runtime
         {
             EnsureInitialized();
 
-            var loadout = WeaponLoadout.Restore(_specs, ammo, equippedWeaponId, out var unknown);
+            var loadout = WeaponLoadout.Restore(_specs, ammo, equippedWeaponId, _loadedRules, out var unknown);
             foreach (var id in unknown)
             {
                 Debug.LogWarning($"[WeaponController] '{name}' は武器 '{id}' を持っていないため、セーブされたその残弾を捨てます。", this);
@@ -389,7 +428,7 @@ namespace Fps.Runtime
                     this);
             }
 
-            SetLoadout(loadout, _specs, _loadedDefinitions);
+            SetLoadout(loadout, _specs, _loadedDefinitions, _loadedRules);
             WeaponChanged?.Invoke(Weapon);
         }
 
@@ -536,7 +575,7 @@ namespace Fps.Runtime
             return found;
         }
 
-        private void SetLoadout(Loadout<Weapon> loadout, WeaponSpec[] specs, WeaponDefinition[] definitions)
+        private void SetLoadout(Loadout<Weapon> loadout, WeaponSpec[] specs, WeaponDefinition[] definitions, GameRules rules)
         {
             if (_loadout != null)
             {
@@ -550,6 +589,7 @@ namespace Fps.Runtime
             _loadout = loadout;
             _specs = specs;
             _loadedDefinitions = definitions;
+            _loadedRules = rules;
             if (_loadout != null)
             {
                 _loadout.Switched += OnSwitched;

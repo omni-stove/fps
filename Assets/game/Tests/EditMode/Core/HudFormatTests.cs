@@ -77,6 +77,23 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(0, -1, true));
         }
 
+        [TestCase(30, 90, false, false, "30 / 90")]
+        [TestCase(30, 90, false, true, "30 / ∞")]
+        [TestCase(0, 0, false, true, "0 / ∞")]
+        [TestCase(0, 90, true, true, "リロード中 / ∞")]
+        [TestCase(0, 90, true, false, "リロード中 / 90")]
+        public void AmmoShowsInfinityInPlaceOfAnInfiniteReserve(int magazine, int reserve, bool reloading, bool infinite, string expected)
+        {
+            Assert.That(HudFormat.Ammo(magazine, reserve, reloading, infinite), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void AmmoWithAnInfiniteReserveStillRejectsNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(-1, 0, false, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(0, -1, false, true));
+        }
+
         [TestCase(25, 100, true)]
         [TestCase(1, 100, true)]
         [TestCase(26, 100, false)]

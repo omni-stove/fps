@@ -82,6 +82,37 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AnInfiniteReserveIsShownAsInfinityThroughReloads()
+        {
+            var rules = new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                GameRules.DefaultWaveIntervalSeconds,
+                0f,
+                0f,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                true,
+                1f,
+                Destruction.Off);
+            var weapon = new Weapon(
+                new WeaponSpec(_rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 2, 0, 0f, 1f, 25, 100f, DamageFalloff.None),
+                rules);
+            var model = new HudModel();
+
+            model.BindWeapon(weapon);
+            Assert.That(model.AmmoText, Is.EqualTo("2 / " + HudFormat.InfiniteReserve));
+
+            weapon.TryFire();
+            Assert.That(weapon.TryStartReload(), Is.True);
+            model.SetAmmo(weapon.AmmoInMagazine, weapon.ReserveAmmo, weapon.IsReloading, weapon.HasInfiniteReserve);
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Reloading + " / " + HudFormat.InfiniteReserve));
+
+            weapon.Tick(1f);
+            Assert.That(model.AmmoText, Is.EqualTo("2 / " + HudFormat.InfiniteReserve), "the reload refills from the infinite reserve");
+        }
+
+        [Test]
         public void WeaponNameDoesNotNotifyWhenTheNameStaysTheSame()
         {
             var model = new HudModel();

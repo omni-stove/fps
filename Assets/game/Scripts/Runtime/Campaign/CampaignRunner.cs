@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Fps.Core;
@@ -22,6 +23,9 @@ namespace Fps.Runtime
     /// トリガーより先にミッションを戻すため、既定の実行順より前に Start を走らせる。
     /// セーブの場所 (<see cref="Storage"/>) とシーンの読み直し (<see cref="SceneReloader"/>) は差し替えられる。
     /// セーブしたことと再開までの秒数は <see cref="Notice"/> に出し、GameBootstrap の HUD があればそこに表示する。
+    /// 始めるときにルール (<see cref="RulesDefinition"/>、コマンドライン引数 <c>-difficulty easy|normal|hard</c> があれば
+    /// <see cref="EasyRules"/> / <see cref="NormalRules"/> / <see cref="HardRules"/>) を読み、プレイヤーの自動回復 (<see cref="HealthRegen"/>) と
+    /// 武器の予備弾 (<see cref="WeaponController.ApplyRules"/>) に効かせてからセーブを戻す。セーブの予備弾には倍率を掛け直さない。
     /// 状態の変化は <see cref="LogTag"/> を付けて Debug.Log に出す。
     /// </summary>
     [DisallowMultipleComponent]
@@ -47,6 +51,21 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("プレイヤーが倒れてからシーンを読み直すまでの秒数")]
         private float _reloadDelaySeconds = DefaultReloadDelaySeconds;
 
+        [Header("ルール")]
+        [SerializeField, Tooltip("-difficulty が無いときのルール。空なら GameRules.Default を使い警告を出す。シーン生成スクリプトが CampaignNormal を配線する")]
+        private GameRulesDefinition _rules;
+
+        [SerializeField, Tooltip("-difficulty easy のときのルール (CampaignEasy)")]
+        private GameRulesDefinition _easyRules;
+
+        [SerializeField, Tooltip("-difficulty normal のときのルール (CampaignNormal)")]
+        private GameRulesDefinition _normalRules;
+
+        [SerializeField, Tooltip("-difficulty hard のときのルール (CampaignHard)")]
+        private GameRulesDefinition _hardRules;
+
+        private IReadOnlyList<string> _launchArgs;
+        private GameRules _activeRules;
         private ISaveStorage _storage;
         private Action _sceneReloader;
         private Mission _mission;
@@ -95,6 +114,63 @@ namespace Fps.Runtime
         {
             get => _bootstrap;
             set => _bootstrap = value;
+        }
+
+        /// <summary><c>-difficulty</c> が無いときに使うルール。null なら <see cref="GameRules.Default"/> を使い、開始時に警告を出す。</summary>
+        public GameRulesDefinition RulesDefinition
+        {
+            get => _rules;
+            set => _rules = value;
+        }
+
+        /// <summary><c>-difficulty easy</c> のときに使うルール。</summary>
+        public GameRulesDefinition EasyRules
+        {
+            get => _easyRules;
+            set => _easyRules = value;
+        }
+
+        /// <summary><c>-difficulty normal</c> のときに使うルール。</summary>
+        public GameRulesDefinition NormalRules
+        {
+            get => _normalRules;
+            set => _normalRules = value;
+        }
+
+        /// <summary><c>-difficulty hard</c> のときに使うルール。</summary>
+        public GameRulesDefinition HardRules
+        {
+            get => _hardRules;
+            set => _hardRules = value;
+        }
+
+        /// <summary>
+        /// <c>-difficulty</c> を探すコマンドライン引数。null なら <see cref="Environment.GetCommandLineArgs"/>。テストで差し替える。
+        /// 設定すると写しを持つ。
+        /// </summary>
+        public IReadOnlyList<string> LaunchArgs
+        {
+            get => _launchArgs;
+            set => _launchArgs = value != null ? new List<string>(value) : null;
+        }
+
+        /// <summary>開始時にプレイヤーへ効かせたルール。開始前か、ルールを渡さずに <see cref="Begin(MissionRunner, Damageable, WeaponController, ISaveStorage, Action)"/> したときは null。</summary>
+        public GameRules Rules => _activeRules;
+
+        /// <summary>difficulty のときに使うルールの定義。配線されていなければ null。</summary>
+        public GameRulesDefinition RulesFor(CampaignDifficulty difficulty)
+        {
+            switch (difficulty)
+            {
+                case CampaignDifficulty.Easy:
+                    return _easyRules;
+                case CampaignDifficulty.Normal:
+                    return _normalRules;
+                case CampaignDifficulty.Hard:
+                    return _hardRules;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(difficulty), difficulty, "unknown difficulty");
+            }
         }
 
         /// <summary>HUD に一時的に出す案内 (セーブした・再開まで N 秒)。</summary>
@@ -217,7 +293,7 @@ namespace Fps.Runtime
         /// <summary>
         /// world (GameBootstrap の生成物) のプレイヤーと、<see cref="Runner"/> (null ならシーンの MissionRunner) で <see cref="Begin"/> し、
         /// world に HUD があれば <see cref="Notice"/> を出させる。セーブの置き場所は <see cref="Storage"/>、無ければ
-        /// <see cref="FileSaveStorage.CreateDefault"/> のスロット <see cref="SaveSlot"/>。
+        /// <see cref="FileSaveStorage.CreateDefault"/> のスロット <see cref="SaveSlot"/>。ルールは <see cref="TryResolveRules"/> で決める。
         /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryBeginWith(BootstrapWorld world)
@@ -239,6 +315,11 @@ namespace Fps.Runtime
                 return false;
             }
 
+            if (!TryResolveRules(out var rules))
+            {
+                return false;
+            }
+
             ISaveStorage storage;
             try
             {
@@ -252,7 +333,7 @@ namespace Fps.Runtime
 
             try
             {
-                Begin(runner, world.PlayerDamageable, world.Weapon, storage, _sceneReloader ?? ReloadActiveScene);
+                Begin(runner, world.PlayerDamageable, world.Weapon, storage, _sceneReloader ?? ReloadActiveScene, rules);
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
             {
@@ -261,6 +342,66 @@ namespace Fps.Runtime
             }
 
             BindHud(world.Hud);
+            return true;
+        }
+
+        /// <summary>
+        /// 開始時に使うルールを決める。<see cref="LaunchArgs"/> に <c>-difficulty</c> があればその難易度のルール
+        /// (<see cref="RulesFor"/>)、無ければ <see cref="RulesDefinition"/>。
+        /// <list type="bullet">
+        /// <item>引数が読めない (値が無い・知らない難易度など) ときは警告を出し、<c>-difficulty</c> が無いものとして扱う。</item>
+        /// <item>選んだ難易度のルールが配線されていないときはエラーを出し、<see cref="RulesDefinition"/> を使う。</item>
+        /// <item>使うルールが無ければ警告を出して <see cref="GameRules.Default"/>。</item>
+        /// </list>
+        /// 使うルールの値が不正なら理由を Debug.LogError に出して false (rules は null)。
+        /// </summary>
+        public bool TryResolveRules(out GameRules rules)
+        {
+            var args = _launchArgs ?? Environment.GetCommandLineArgs();
+            if (!CampaignLaunchOptions.TryParse(args, out var options, out var parseError))
+            {
+                Debug.LogWarning($"{LogTag} コマンドライン引数を無視します ({parseError})。シーンに配線したルールを使います。", this);
+                options = CampaignLaunchOptions.None;
+            }
+
+            var definition = _rules;
+            if (options.Difficulty.HasValue)
+            {
+                var chosen = RulesFor(options.Difficulty.Value);
+                if (chosen != null)
+                {
+                    definition = chosen;
+                }
+                else
+                {
+                    Debug.LogError(
+                        $"{LogTag} {CampaignLaunchOptions.DifficultyFlag} {options} のルールが '{name}' に配線されていないため、既定のルールを使います。シーン生成スクリプトで配線してください。",
+                        this);
+                }
+            }
+
+            string source;
+            if (definition == null)
+            {
+                Debug.LogWarning(
+                    $"{LogTag} '{name}' に GameRulesDefinition が設定されていないため GameRules.Default を使います。シーン生成スクリプトでルールを配線してください。",
+                    this);
+                rules = GameRules.Default;
+                source = "(default)";
+            }
+            else if (definition.TryToRules(out rules, out var ruleError))
+            {
+                source = definition.name;
+            }
+            else
+            {
+                Debug.LogError($"{LogTag} キャンペーンを始められません: {ruleError}", this);
+                return false;
+            }
+
+            Debug.Log(
+                $"{LogTag} rules={source} difficulty={options} regen={rules.RegenPerSecond.ToString("0.##", CultureInfo.InvariantCulture)}/s after {rules.RegenDelaySeconds.ToString("0.##", CultureInfo.InvariantCulture)}s reserve=x{rules.ReserveAmmoMultiplier.ToString("0.##", CultureInfo.InvariantCulture)} infinite={rules.InfiniteReserve}",
+                this);
             return true;
         }
 
@@ -291,12 +432,30 @@ namespace Fps.Runtime
         /// <param name="weapon">プレイヤーの武器。初期化済みであること。</param>
         /// <param name="storage">セーブの置き場所。</param>
         /// <param name="sceneReloader">プレイヤーが倒れたあとにシーンを読み直す処理。</param>
+        /// <remarks>ルールは効かせ直さず、プレイヤーの今の自動回復と武器のままにする。</remarks>
         public void Begin(
             MissionRunner missionRunner,
             Damageable player,
             WeaponController weapon,
             ISaveStorage storage,
             Action sceneReloader)
+        {
+            Begin(missionRunner, player, weapon, storage, sceneReloader, null);
+        }
+
+        /// <summary>
+        /// <see cref="Begin(MissionRunner, Damageable, WeaponController, ISaveStorage, Action)"/> と同じだが、セーブを戻す前に rules を
+        /// プレイヤーに効かせる。武器は rules の予備弾で満タンに作り直し (<see cref="WeaponController.ApplyRules"/>)、
+        /// プレイヤーの <see cref="HealthRegen"/> (無ければ付ける) を rules で付け直す。セーブがあればその後で弾数を戻すので、
+        /// セーブの予備弾には倍率を掛け直さない。rules が null ならルールは効かせ直さない。
+        /// </summary>
+        public void Begin(
+            MissionRunner missionRunner,
+            Damageable player,
+            WeaponController weapon,
+            ISaveStorage storage,
+            Action sceneReloader,
+            GameRules rules)
         {
             if (missionRunner == null)
             {
@@ -338,6 +497,12 @@ namespace Fps.Runtime
                 throw new ArgumentException($"MissionRunner '{missionRunner.name}' cannot start its mission", nameof(missionRunner));
             }
 
+            if (rules != null)
+            {
+                ApplyRules(player, weapon, rules);
+            }
+
+            _activeRules = rules;
             _mission = missionRunner.Mission;
             _missionId = missionRunner.Definition != null ? missionRunner.Definition.name : string.Empty;
             _player = player;
@@ -467,8 +632,22 @@ namespace Fps.Runtime
             _missionId = null;
             _player = null;
             _weapon = null;
+            _activeRules = null;
             _reloadPending = false;
             _reloadRemaining = 0f;
+        }
+
+        private static void ApplyRules(Damageable player, WeaponController weapon, GameRules rules)
+        {
+            weapon.ApplyRules(rules);
+
+            var regen = player.GetComponent<HealthRegen>();
+            if (regen == null)
+            {
+                regen = player.gameObject.AddComponent<HealthRegen>();
+            }
+
+            regen.Bind(player, rules);
         }
 
         /// <summary>セーブがあれば今のシーンに戻す。戻せたら true。戻せないときは理由をログに出し、最初からの状態のままにする。</summary>

@@ -305,6 +305,106 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentException>(() => _controller.RestoreLoadout(new WeaponAmmo[] { null }, null));
         }
 
+        private static Fps.Core.GameRules ReserveRules(bool infinite, float multiplier)
+        {
+            return new Fps.Core.GameRules(
+                Fps.Core.FriendlyFire.Off,
+                Fps.Core.RespawnMode.Individual,
+                Fps.Core.GameRules.DefaultWaveIntervalSeconds,
+                0f,
+                0f,
+                Fps.Core.DeathBody.Vanish,
+                Fps.Core.DeathCamera.None,
+                infinite,
+                multiplier,
+                Fps.Core.Destruction.Off);
+        }
+
+        [Test]
+        public void InitializeBuildsTheWeaponsWithTheConfiguredRules()
+        {
+            Assert.That(_controller.Rules, Is.SameAs(Fps.Core.GameRules.Default), "the default before anything is set");
+            var rules = ReserveRules(true, 2f);
+            _controller.Rules = rules;
+
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+
+            Assert.That(_controller.LoadedRules, Is.SameAs(rules));
+            Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(_rifle.ReserveAmmo * 2));
+            Assert.That(_controller.Weapon.HasInfiniteReserve, Is.True);
+
+            _controller.Rules = null;
+            Assert.That(_controller.Rules, Is.SameAs(Fps.Core.GameRules.Default), "null resets to the default");
+            Assert.That(_controller.Weapon.HasInfiniteReserve, Is.True, "setting Rules does not rebuild the current weapons");
+        }
+
+        [Test]
+        public void ApplyRulesRebuildsEveryWeaponFullWithTheNewReserve()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                InitializeWithRifleAndHandgun(handgun);
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+                _controller.Fire();
+                _controller.SelectNext();
+                Fps.Core.Weapon changed = null;
+                _controller.WeaponChanged += weapon => changed = weapon;
+                var rules = ReserveRules(false, 0.6f);
+
+                _controller.ApplyRules(rules);
+
+                Assert.That(_controller.Rules, Is.SameAs(rules));
+                Assert.That(_controller.LoadedRules, Is.SameAs(rules));
+                Assert.That(_controller.CurrentIndex, Is.Zero, "starts again with the first weapon");
+                Assert.That(changed, Is.SameAs(_controller.Weapon));
+                var rifle = _controller.Loadout.Items[0];
+                Assert.That(rifle.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize), "rebuilt full");
+                Assert.That(rifle.ReserveAmmo, Is.EqualTo(Fps.Core.Weapon.ScaleReserveAmmo(_rifle.ReserveAmmo, 0.6f)));
+                Assert.That(
+                    _controller.Loadout.Items[1].ReserveAmmo,
+                    Is.EqualTo(Fps.Core.Weapon.ScaleReserveAmmo(handgun.ReserveAmmo, 0.6f)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void RestoreLoadoutKeepsTheSavedReserveAndTheInfiniteFlagOfTheRules()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                InitializeWithRifleAndHandgun(handgun);
+                _controller.ApplyRules(ReserveRules(true, 1.5f));
+
+                _controller.RestoreLoadout(new[] { new WeaponAmmo(WeaponAssetBuilder.RifleId, 7, 12) }, WeaponAssetBuilder.RifleId);
+
+                Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(12), "the multiplier is not applied again");
+                Assert.That(_controller.Weapon.HasInfiniteReserve, Is.True);
+                Assert.That(
+                    _controller.Loadout.Items[1].ReserveAmmo,
+                    Is.EqualTo(Fps.Core.Weapon.ScaleReserveAmmo(handgun.ReserveAmmo, 1.5f)),
+                    "a weapon missing from the save starts with the multiplier");
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void ApplyRulesNeedsInitializeAndRules()
+        {
+            Assert.Throws<InvalidOperationException>(() => _controller.ApplyRules(Fps.Core.GameRules.Default));
+            Assert.That(_controller.LoadedRules, Is.Null);
+
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            Assert.Throws<ArgumentNullException>(() => _controller.ApplyRules(null));
+        }
+
         [Test]
         public void InitializeBuildsTheWeaponFromTheDefinition()
         {

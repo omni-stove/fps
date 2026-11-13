@@ -90,9 +90,10 @@ namespace Fps.Tests.EditMode
             var scene = TestScenes.NewAdditive();
             var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             var handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var range = ScriptableObject.CreateInstance<GameRulesDefinition>();
             try
             {
-                var bootstrap = BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle, handgun });
+                var bootstrap = BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle, handgun }, range);
 
                 var roots = scene.GetRootGameObjects();
                 Assert.That(roots, Has.Length.EqualTo(1));
@@ -103,6 +104,7 @@ namespace Fps.Tests.EditMode
                     bootstrap.GetComponent<GameBootstrap>().WeaponDefinitions,
                     Is.EqualTo(new[] { rifle, handgun }),
                     "the player's loadout is wired");
+                Assert.That(bootstrap.GetComponent<GameBootstrap>().RulesDefinition, Is.SameAs(range), "the range rules are wired");
                 Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null, "the bootstrap scene runs a solo match");
                 Assert.That(bootstrap.transform.childCount, Is.Zero, "everything else is built at runtime");
             }
@@ -111,30 +113,34 @@ namespace Fps.Tests.EditMode
                 EditorSceneManager.CloseScene(scene, true);
                 UnityEngine.Object.DestroyImmediate(rifle);
                 UnityEngine.Object.DestroyImmediate(handgun);
+                UnityEngine.Object.DestroyImmediate(range);
             }
         }
 
         [Test]
-        public void RefusesToPopulateANonEmptySceneOrWithoutAWeapon()
+        public void RefusesToPopulateANonEmptySceneOrWithoutAWeaponOrRules()
         {
             var scene = TestScenes.NewAdditive();
             var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var range = ScriptableObject.CreateInstance<GameRulesDefinition>();
             try
             {
-                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.PopulateScene(scene, null));
-                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.PopulateScene(scene, Array.Empty<WeaponDefinition>()));
-                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle, null }));
+                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.PopulateScene(scene, null, range));
+                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.PopulateScene(scene, Array.Empty<WeaponDefinition>(), range));
+                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle, null }, range));
+                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle }, null));
                 Assert.That(scene.rootCount, Is.Zero);
 
                 var stray = new GameObject("Stray");
                 SceneManager.MoveGameObjectToScene(stray, scene);
 
-                Assert.Throws<InvalidOperationException>(() => BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle }));
+                Assert.Throws<InvalidOperationException>(() => BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle }, range));
             }
             finally
             {
                 EditorSceneManager.CloseScene(scene, true);
                 UnityEngine.Object.DestroyImmediate(rifle);
+                UnityEngine.Object.DestroyImmediate(range);
             }
         }
 
@@ -155,6 +161,12 @@ namespace Fps.Tests.EditMode
                     roots[0].GetComponent<GameBootstrap>().WeaponDefinitions,
                     Is.EqualTo(TestScenes.ExpectedPlayerWeapons()),
                     $"rerun {nameof(BootstrapSceneBuilder)}.Build");
+                var range = AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(GameRulesAssetBuilder.RangePath);
+                Assert.That(range, Is.Not.Null, $"run {nameof(GameRulesAssetBuilder)}.Build");
+                Assert.That(
+                    roots[0].GetComponent<GameBootstrap>().RulesDefinition,
+                    Is.SameAs(range),
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build to wire the range rules");
                 Assert.That(EditorBuildSettings.scenes, Is.Not.Empty);
                 Assert.That(EditorBuildSettings.scenes[0].path, Is.EqualTo(path));
             }

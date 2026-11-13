@@ -182,7 +182,14 @@ namespace Fps.Core
         /// <exception cref="ArgumentOutOfRangeException">magazine か reserve が負。</exception>
         public void SetAmmo(int magazine, int reserve, bool reloading)
         {
-            ApplyAmmo(HudFormat.Ammo(magazine, reserve, reloading), reloading);
+            SetAmmo(magazine, reserve, reloading, false);
+        }
+
+        /// <summary>弾数を出す。infiniteReserve なら予備の数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">magazine か reserve が負。</exception>
+        public void SetAmmo(int magazine, int reserve, bool reloading, bool infiniteReserve)
+        {
+            ApplyAmmo(HudFormat.Ammo(magazine, reserve, reloading, infiniteReserve), reloading);
         }
 
         /// <summary>弾数を仮の表示に戻す。</summary>
@@ -279,7 +286,7 @@ namespace Fps.Core
         {
             if (_weapon != null)
             {
-                SetAmmo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, _weapon.IsReloading);
+                SetAmmo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, _weapon.IsReloading, _weapon.HasInfiniteReserve);
             }
             else
             {

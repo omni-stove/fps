@@ -203,7 +203,7 @@ namespace Fps.Runtime
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(
                     _viewMode, WeaponDefinitions, rules, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon,
-                    out var ads, out var playerDamageable, out var regen, out var actionReader);
+                    out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 BindDeathBodies(dummies, rules);
@@ -211,12 +211,12 @@ namespace Fps.Runtime
                 Hud hudComponent = null;
                 if (!NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
                 {
-                    hud = CreateHud(playerDamageable, weapon, rules, out hudComponent, out hudPanelSettings);
+                    hud = CreateHud(playerDamageable, weapon, grenades, rules, out hudComponent, out hudPanelSettings);
                 }
 
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
-                    hudComponent, hudPanelSettings, rig, ads, rules, regen, actionReader);
+                    hudComponent, hudPanelSettings, rig, ads, rules, regen, actionReader, grenades);
             }
             catch
             {
@@ -301,7 +301,8 @@ namespace Fps.Runtime
             out AimDownSights ads,
             out Damageable damageable,
             out HealthRegen regen,
-            out PlayerActionReader actionReader)
+            out PlayerActionReader actionReader,
+            out GrenadeThrower grenades)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
@@ -320,6 +321,8 @@ namespace Fps.Runtime
                 // 回復しないルール (RegenPerSecond = 0) でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため。
                 regen = player.AddComponent<HealthRegen>();
                 regen.Bind(damageable, rules);
+                grenades = player.GetComponent<GrenadeThrower>();
+                WireGrenades(grenades, mover, weapon, ads);
                 PlayerActions.Attach(player, rules);
                 mover.ApplyRules(rules);
 
@@ -473,6 +476,32 @@ namespace Fps.Runtime
                     ads.Release();
                 }
             };
+        }
+
+        /// <summary>
+        /// 回避・乗り越えの間はグレネードを投げさせず、投げている間 (<see cref="GrenadeThrower.IsThrowing"/>) は撃たせず、
+        /// 投げたら覗き込みを解かせる。投げられるかと数はルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら投げないので、ここは常に配線しておく。
+        /// <see cref="WireDodgeAndVault"/> の後に呼ぶ (その射撃の止め方に足す)。
+        /// </summary>
+        private static void WireGrenades(GrenadeThrower grenades, PlayerController mover, WeaponController weapon, AimDownSights ads)
+        {
+            if (grenades == null)
+            {
+                return;
+            }
+
+            grenades.ThrowBlocker = () => mover != null && (mover.IsDodging || mover.IsVaulting);
+
+            if (weapon != null)
+            {
+                var previous = weapon.FireBlocker;
+                weapon.FireBlocker = () => (previous != null && previous()) || (grenades != null && grenades.IsThrowing);
+            }
+
+            if (ads != null)
+            {
+                grenades.Thrown += _ => ads.Release();
+            }
         }
 
         /// <summary>
@@ -658,17 +687,23 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。オフラインなので、ポーズ中は時間を止める
-        /// (<see cref="PauseTimeMode.Freeze"/>)。
+        /// (<see cref="PauseTimeMode.Freeze"/>)。グレネードの残り (<see cref="GrenadeCountView"/>) も出す。
         /// </summary>
         private static GameObject CreateHud(
             Damageable player,
             WeaponController weapon,
+            GrenadeThrower grenades,
             GameRules rules,
             out Hud hud,
             out PanelSettings panelSettings)
         {
             hud = Hud.Create(HudName, player, weapon, null);
             panelSettings = hud.OwnedPanelSettings;
+            if (grenades != null)
+            {
+                GrenadeCountView.AttachTo(hud).Show(grenades);
+            }
+
             hud.ApplyDensity(rules.HudDensity);
             hud.PauseMenu.TimeMode = PauseTimeMode.Freeze;
             return hud.gameObject;
@@ -744,6 +779,9 @@ namespace Fps.Runtime
         /// <summary>プレイヤーの今のアクションをまとめたもの。デバッグ表示と自機モックはここから読む。</summary>
         public PlayerActionReader ActionReader { get; }
 
+        /// <summary>プレイヤーのグレネード。投げられるかと数はルールで決まる。</summary>
+        public GrenadeThrower Grenades { get; }
+
         /// <summary>HUD 用に作った PanelSettings。<see cref="Hud"/> が破棄されるときに一緒に消える。専用サーバーでは null。</summary>
         public PanelSettings HudPanelSettings { get; }
 
@@ -765,9 +803,11 @@ namespace Fps.Runtime
             AimDownSights ads = null,
             GameRules rules = null,
             HealthRegen regen = null,
-            PlayerActionReader actionReader = null)
+            PlayerActionReader actionReader = null,
+            GrenadeThrower grenades = null)
         {
             ActionReader = actionReader;
+            Grenades = grenades;
             Rig = rig;
             Ads = ads;
             Rules = rules ?? GameRules.Default;

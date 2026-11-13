@@ -16,6 +16,7 @@ namespace Fps.Runtime
         /// player に <see cref="CoverController"/> と <see cref="BlindFireController"/> を (無ければ) 付け、rules で有効・無効を決める。
         /// player に <see cref="PlayerController"/> があれば回避 (<see cref="PlayerController.DodgeRule"/>) と
         /// 乗り越え (<see cref="PlayerController.VaultRule"/>) も rules にし、カバー中は回避させない。
+        /// player に <see cref="GrenadeThrower"/> があれば、グレネードの有無と数も rules にする (<see cref="GrenadeThrower.Configure"/>)。
         /// 何度呼んでもコンポーネントは増えず、最後に渡した rules に従う。決めた内容を <see cref="FormatLog"/> の 1 行でログに出す。
         /// </summary>
         public static void Attach(GameObject player, GameRules rules)
@@ -34,6 +35,14 @@ namespace Fps.Runtime
             cover.Configure(rules);
             GetOrAdd<BlindFireController>(player).Configure(rules);
             ConfigureMover(player.GetComponent<PlayerController>(), cover, rules);
+
+            // 投げるのは CharacterComponents.Attach が付けた本体だけなので、ここでは付け足さない。
+            var thrower = player.GetComponent<GrenadeThrower>();
+            if (thrower != null)
+            {
+                thrower.Configure(rules);
+            }
+
             Debug.Log(FormatLog(rules.Actions), player);
         }
 

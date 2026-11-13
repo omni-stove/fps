@@ -1,0 +1,130 @@
+/*
+ * ロードアウトを選ぶ画面の中身。Fps.Runtime.LoadoutSelectPanel が入れ物に読み込むので、HUD とメインメニューの両方で同じ見た目になる。
+ * 入れ物の位置と幅は置く側 (Hud.uss の .hud__loadout、MainMenu.uss の .menu__loadout-slot) が決める。
+ */
+
+.loadout-select {
+    padding: 20px 28px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.loadout-select__title {
+    margin: 0 0 12px 0;
+    padding: 0;
+    font-size: 32px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.loadout-select__slot {
+    margin: 0 0 12px 0;
+    padding: 8px 12px;
+    border-left-width: 6px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 4px;
+}
+
+/* ゲームパッド・キーボードで選んでいる行。 */
+.loadout-select__slot--focused {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.loadout-select__slot-title {
+    margin: 0 0 6px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.loadout-select__options {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.loadout-select__option {
+    min-width: 200px;
+    margin: 0 12px 8px 0;
+    padding: 8px 16px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    align-items: flex-start;
+}
+
+.loadout-select__option:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.loadout-select__option:focus {
+    border-color: rgb(255, 255, 255);
+}
+
+/* そのスロットで選んでいる武器。 */
+.loadout-select__option--selected {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.25);
+}
+
+.loadout-select__option:disabled {
+    opacity: 0.4;
+}
+
+.loadout-select__option-name {
+    margin: 0;
+    padding: 0;
+    font-size: 24px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.loadout-select__option-category {
+    margin: 2px 0 0 0;
+    padding: 0;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.loadout-select__no-option {
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.loadout-select__confirm {
+    height: 56px;
+    margin: 8px 0 0 0;
+    border-width: 0;
+    border-left-width: 6px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgb(255, 255, 255);
+    font-size: 26px;
+    -unity-font-style: bold;
+}
+
+.loadout-select__confirm--focused,
+.loadout-select__confirm:focus {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.2);
+}
+
+.loadout-select__confirm:disabled {
+    opacity: 0.4;
+}
+
+.loadout-select__status {
+    margin: 12px 0 0 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgb(160, 230, 160);
+    white-space: normal;
+}
+
+.loadout-select__status--error {
+    color: rgb(255, 120, 100);
+}

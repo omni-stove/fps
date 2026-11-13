@@ -439,6 +439,13 @@ namespace Fps.Runtime
             {
                 killFeed.SetAllowed(_visibility.KillFeed);
             }
+
+            // グレネードの数は持っている弾の一種なので、弾数と一緒に出し入れする。
+            var grenades = GetComponent<GrenadeCountView>();
+            if (grenades != null)
+            {
+                grenades.SetAllowed(_visibility.Ammo);
+            }
         }
 
         private static void AddIfMissing<T>(GameObject target)

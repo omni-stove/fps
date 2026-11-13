@@ -355,5 +355,21 @@ namespace Fps.Core
 
             return "チェックポイントから再開まで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
         }
+
+        /// <summary>残りのグレネードの数の頭に付ける文字列。</summary>
+        public const string GrenadePrefix = "グレネード ";
+
+        /// <summary>残りのグレネードの数。</summary>
+        /// <example><c>Grenades(2)</c> は <c>グレネード 2</c></example>
+        /// <exception cref="ArgumentOutOfRangeException">remaining が負。</exception>
+        public static string Grenades(int remaining)
+        {
+            if (remaining < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(remaining), remaining, "remaining must not be negative");
+            }
+
+            return GrenadePrefix + remaining.ToString(CultureInfo.InvariantCulture);
+        }
     }
 }

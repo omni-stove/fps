@@ -102,8 +102,8 @@ namespace Fps.Tests.EditMode
         {
             var layout = Populate();
 
-            // Level, GameBootstrap, MissionRunner, AreaA, Enemies, Exit, CampaignRunner, 2 つのチェックポイント。
-            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(9));
+            // Level, GameBootstrap, MissionRunner, AreaA, Enemies, CoverPoints, Exit, CampaignRunner, 2 つのチェックポイント。
+            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(10));
 
             Assert.That(layout.Bootstrap, Is.Not.Null);
             Assert.That(layout.Bootstrap.gameObject.scene, Is.EqualTo(_scene));
@@ -136,6 +136,50 @@ namespace Fps.Tests.EditMode
             Assert.That(layout.Exit.ObjectiveId, Is.EqualTo(CampaignSceneBuilder.ReachExitId));
             Assert.That(layout.Exit.Runner, Is.SameAs(layout.Runner));
             Assert.That(layout.Exit.GetComponent<BoxCollider>().isTrigger, Is.True);
+        }
+
+        [Test]
+        public void CoverPointsSitBesideTheCoversAndAreSharedByAllEnemies()
+        {
+            var layout = Populate();
+
+            var registry = layout.CoverRegistry;
+            Assert.That(registry, Is.Not.Null);
+            Assert.That(registry.name, Is.EqualTo(CampaignSceneBuilder.CoverPointsObjectName));
+            Assert.That(registry.gameObject.scene, Is.EqualTo(_scene));
+            foreach (var enemy in layout.Enemies)
+            {
+                Assert.That(enemy.CoverRegistry, Is.SameAs(registry), $"{enemy.Id} shares the registry so enemies do not pick the same point");
+            }
+
+            var placements = CampaignSceneBuilder.CoverPoints();
+            Assert.That(placements.Count, Is.EqualTo(CampaignSceneBuilder.Covers.Count * 4), "both faces, both ends of every cover");
+            Assert.That(registry.Points.Count, Is.EqualTo(placements.Count));
+            Physics.SyncTransforms();
+            for (var i = 0; i < placements.Count; i++)
+            {
+                var point = registry.Points[i];
+                Assert.That(point.name, Is.EqualTo(placements[i].Name));
+                Assert.That(point.transform.IsChildOf(registry.transform), Is.True);
+                Assert.That(point.Height, Is.EqualTo(CoverHeight.High), "the 2m covers hide a standing enemy");
+                Assert.That(Vector3.Distance(point.Position, placements[i].Position), Is.LessThan(1e-4f));
+                Assert.That(Vector3.Distance(point.PeekPosition, placements[i].PeekPosition), Is.LessThan(1e-4f));
+
+                // 点から向きの方へ進むと、その遮蔽物に当たる。
+                var origin = point.Position + Vector3.up;
+                Assert.That(
+                    Physics.Raycast(origin, point.Facing, out var hit, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore),
+                    Is.True,
+                    $"{point.name} faces a cover");
+                Assert.That(hit.collider.name, Does.StartWith("Cover_"), $"{point.name} faces a cover");
+
+                // 覗く位置からは、遮蔽物の端を越えて向きの方が見通せる。
+                var peekOrigin = point.PeekPosition + Vector3.up;
+                Assert.That(
+                    Physics.Raycast(peekOrigin, point.Facing, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore),
+                    Is.False,
+                    $"{point.name} peeks past the edge");
+            }
         }
 
         [Test]

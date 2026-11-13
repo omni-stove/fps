@@ -237,6 +237,98 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BeingShotIsPerceivedOnceWithTheShooterAndTheHealthLeft()
+        {
+            var damageable = PrepareShootableEnemy(Damageable.DefaultMaxHealth);
+            var shooter = new Vector3(0f, 0f, -10f);
+
+            damageable.TakeDamage(30, shooter);
+
+            var perception = _agent.Perceive();
+            Assert.That(perception.WasHit, Is.True);
+            Assert.That(perception.HitSource, Is.EqualTo(shooter.ToNumerics()));
+            Assert.That(perception.HealthFraction, Is.EqualTo(0.7f).Within(1e-5f));
+
+            var next = _agent.Perceive();
+            Assert.That(next.WasHit, Is.False, "the hit is used for one perception only");
+            Assert.That(next.HitSource.HasValue, Is.False);
+            Assert.That(next.HealthFraction, Is.EqualTo(0.7f).Within(1e-5f), "the health stays low");
+        }
+
+        [Test]
+        public void DamageWithoutAShooterPositionIsStillAHit()
+        {
+            var damageable = PrepareShootableEnemy(Damageable.DefaultMaxHealth);
+
+            damageable.TakeDamage(10);
+
+            var perception = _agent.Perceive();
+            Assert.That(perception.WasHit, Is.True);
+            Assert.That(perception.HitSource.HasValue, Is.False);
+            Assert.That(perception.HeardNoise, Is.False);
+        }
+
+        [Test]
+        public void CoverSettingsReachTheBrain()
+        {
+            Assert.That(_agent.TryInitialize(), Is.True);
+
+            Assert.That(_agent.Brain.Spec.CoverHideSeconds, Is.EqualTo(EnemySpec.DefaultCoverHideSeconds));
+            Assert.That(_agent.Brain.Spec.CoverPeekSeconds, Is.EqualTo(EnemySpec.DefaultCoverPeekSeconds));
+            Assert.That(_agent.Brain.Spec.CoverHealthFraction, Is.EqualTo(EnemySpec.DefaultCoverHealthFraction));
+            Assert.That(_agent.CrouchHeight, Is.EqualTo(EnemyAgent.DefaultCrouchHeight));
+            Assert.That(_agent.IsCrouching, Is.False);
+            Assert.That(_agent.CoverRegistry, Is.Null, "enemies without a registry do not take cover");
+        }
+
+        [Test]
+        public void ShotEnemyClaimsACoverPointFromTheRegistry()
+        {
+            var damageable = PrepareShootableEnemy(Damageable.DefaultMaxHealth);
+            var registryObject = new GameObject("CoverPoints");
+            try
+            {
+                // 撃った者 (-z 側) へ向いた点。敵から 3m ほどで、点から撃った者への向きは点の向きとほぼ同じ。
+                var marker = new GameObject("Cover-A").AddComponent<Fps.Runtime.CoverPoint>();
+                marker.transform.SetParent(registryObject.transform, false);
+                marker.transform.SetPositionAndRotation(new Vector3(2f, 0f, -2f), Quaternion.LookRotation(Vector3.back));
+                marker.Height = CoverHeight.Low;
+                var registry = registryObject.AddComponent<CoverPointRegistry>();
+                registry.SetPoints(new[] { marker });
+                _agent.CoverRegistry = registry;
+                Assert.That(registry.Selector, Is.Not.Null);
+
+                // Edit Mode では Update が走らないので、Update と同じく registry の selector を渡してから知覚を渡す。
+                _agent.Brain.UseCover(registry.Selector);
+                damageable.TakeDamage(10, new Vector3(0f, 0f, -10f));
+                LogAssert.Expect(LogType.Log, "[AI] id=enemy-1 state=TakeCover prev=Idle");
+                var decision = _agent.Brain.Tick(0.1f, _agent.Perceive());
+
+                Assert.That(_agent.State, Is.EqualTo(EnemyState.TakeCover));
+                Assert.That(_agent.Brain.CoverPhase, Is.EqualTo(EnemyCoverPhase.Moving));
+                Assert.That(registry.MarkerAt(_agent.Brain.CoverPointIndex), Is.SameAs(marker));
+                Assert.That(registry.IsOccupied(marker), Is.True);
+                Assert.That(decision.MoveTo.HasValue, Is.True, "heads to the cover point");
+                Assert.That(decision.Fire, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(registryObject);
+            }
+        }
+
+        [Test]
+        public void FormatsCoverLog()
+        {
+            Assert.That(
+                EnemyAgent.FormatCoverLog("enemy-2", EnemyCoverPhase.Hiding, "Cover-A"),
+                Is.EqualTo("[AI] id=enemy-2 cover phase=Hiding point=Cover-A"));
+            Assert.That(
+                EnemyAgent.FormatCoverLog("enemy-2", EnemyCoverPhase.None, null),
+                Is.EqualTo("[AI] id=enemy-2 cover phase=None point=none"));
+        }
+
+        [Test]
         public void PerceiveRequiresInitialization()
         {
             Assert.Throws<System.InvalidOperationException>(() => _agent.Perceive());

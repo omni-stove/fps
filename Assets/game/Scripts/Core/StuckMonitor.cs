@@ -12,7 +12,7 @@ namespace Fps.Core
     /// 詰まる前は、最後に進めた地点から <see cref="ProgressDistance"/> 動けば進めたとみなす (追う目標が逃げていても誤って詰まりとしない)。
     /// 立て直しを始めた後は、目的地までの距離が詰まった時点より <see cref="ProgressDistance"/> 縮んだときだけ立ち直ったとみなす。
     /// 寄り道で横へ動いたり、同じ所を行き来したりしただけで段階が最初に戻るのを防ぐため。
-    /// 立て直しの途中で目的地が <see cref="GoalChangeDistance"/> 以上変わったら、段階はそのままに、新しい目的地までの距離から測り直す。
+    /// 立て直しの途中で目的地が <see cref="GoalChangeDistance"/> 以上変わったら、段階も経過時間もそのままに、新しい目的地までの距離から測り直す。
     /// </remarks>
     public sealed class StuckMonitor
     {
@@ -112,11 +112,10 @@ namespace Fps.Core
             }
             else if (Vector3.DistanceSquared(goal.Value, _goal) >= GoalChangeDistance * GoalChangeDistance)
             {
-                // 段階は戻さない。目的地をあきらめても体が挟まったままなら、次は Warp まで進める必要がある。
+                // 段階も経過時間も戻さない。目的地をあきらめても体が挟まったままなら次は Warp まで進める必要があり、
+                // 動き続ける目標を追う間も時間は積み上げないと段階が先へ進まない。
                 _goal = goal.Value;
                 _stuckGoalDistance = Vector3.Distance(position, goal.Value);
-                StalledSeconds = 0f;
-                return StuckRecovery.None;
             }
             else if (Vector3.Distance(position, goal.Value) <= _stuckGoalDistance - ProgressDistance)
             {

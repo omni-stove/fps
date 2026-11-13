@@ -6,9 +6,11 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ServerDrainTests
     {
+        private static readonly char[] Separators = { ' ' };
+
         private static string[] Args(string commandLine)
         {
-            return commandLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return commandLine.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
         }
 
         [Test]

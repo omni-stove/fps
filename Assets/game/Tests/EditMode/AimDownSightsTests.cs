@@ -195,6 +195,79 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void UsesTheDefaultSettingsUntilLoaded()
+        {
+            Assert.That(_ads.ControlSettings, Is.EqualTo(ControlSettings.Default));
+            Assert.Throws<ArgumentNullException>(() => _ads.ControlSettings = null);
+        }
+
+        [Test]
+        public void ToggleKeepsTheZoomAfterOnePressAndRestoresOnTheNext()
+        {
+            Initialize();
+            _ads.ControlSettings = ControlSettings.Default.With(InputDeviceKind.KeyboardMouse, HoldAction.Aim, HoldMode.Toggle);
+
+            LogAssert.Expect(LogType.Log, "[View] ads=true");
+            _ads.Tick(true, true, InputDeviceKind.KeyboardMouse, 1f);
+            _ads.Tick(false, false, InputDeviceKind.KeyboardMouse, 1f);
+
+            Assert.That(_ads.Mode, Is.EqualTo(HoldMode.Toggle));
+            Assert.That(_ads.IsAiming, Is.True, "letting go keeps aiming");
+            Assert.That(_camera.fieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView).Within(1e-4f));
+
+            LogAssert.Expect(LogType.Log, "[View] ads=false");
+            _ads.Tick(true, true, InputDeviceKind.KeyboardMouse, 1f);
+            _ads.Tick(false, false, InputDeviceKind.KeyboardMouse, 1f);
+
+            Assert.That(_ads.IsAiming, Is.False);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(_hip).Within(1e-4f));
+        }
+
+        [Test]
+        public void ModeFollowsTheDeviceAndSwitchingItStopsAiming()
+        {
+            Initialize();
+            _ads.ControlSettings = ControlSettings.Default.With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle);
+
+            _ads.Tick(true, true, InputDeviceKind.Gamepad, 1f);
+            _ads.Tick(false, false, 0f);
+            Assert.That(_ads.ActiveDevice, Is.EqualTo(InputDeviceKind.Gamepad));
+            Assert.That(_ads.IsAiming, Is.True, "the last device's mode stays in use while nothing is pressed");
+
+            LogAssert.Expect(LogType.Log, "[View] ads=false");
+            _ads.Tick(false, false, InputDeviceKind.KeyboardMouse, 0f);
+            Assert.That(_ads.Mode, Is.EqualTo(HoldMode.Hold));
+            Assert.That(_ads.IsAiming, Is.False);
+        }
+
+        [TestCase(HoldMode.Hold)]
+        [TestCase(HoldMode.Toggle)]
+        public void ReleaseStopsAimingAndZoomsOutGradually(HoldMode mode)
+        {
+            Initialize();
+            _ads.ControlSettings = ControlSettings.Default.With(InputDeviceKind.KeyboardMouse, HoldAction.Aim, mode);
+            var changes = new List<bool>();
+            _ads.Tick(true, true, InputDeviceKind.KeyboardMouse, 1f);
+            _ads.AimingChanged += changes.Add;
+
+            LogAssert.Expect(LogType.Log, "[View] ads=false");
+            Assert.That(_ads.Release(), Is.True);
+            Assert.That(_ads.Release(), Is.False, "already released");
+            Assert.That(changes, Is.EqualTo(new[] { false }));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView).Within(1e-4f), "the zoom is not snapped back");
+
+            _ads.Tick(true, false, InputDeviceKind.KeyboardMouse, _ads.TransitionSeconds / 2f);
+            Assert.That(_ads.IsAiming, Is.False, "holding the button through a release does not aim again");
+            Assert.That(_camera.fieldOfView, Is.GreaterThan(AdsZoom.DefaultFieldOfView).And.LessThan(_hip));
+        }
+
+        [Test]
+        public void ReleaseBeforeInitializeDoesNothing()
+        {
+            Assert.That(_ads.Release(), Is.False);
+        }
+
+        [Test]
         public void ResolvingWithoutCameraLogsAnError()
         {
             var bare = new GameObject("Bare");

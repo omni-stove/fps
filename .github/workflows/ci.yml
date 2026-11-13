@@ -59,13 +59,16 @@ jobs:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('dotnet/**/*.csproj', 'dotnet/Directory.Build.props') }}
 
-      - name: Restore
-        id: restore
-        run: scripts/install.sh
-
-      # 抜けた .meta を diff --git で出し、自動修正がエージェントより先に regen-command で作り直せるようにする
+      # 抜けた .meta を diff --git でログに出す。これだけで落ちた PR は、自動修正がエージェントを起動せず
+      # regen-command の差分だけを積む。dotnet を使わないので Restore の失敗に巻き込まれないよう先に走らせる
       - name: Generated .meta
         run: scripts/lint.sh --fix-meta && git diff --cached --exit-code
+
+      # 上で落ちても dotnet の lint を走らせ、残りの指摘を一緒に出す
+      - name: Restore
+        id: restore
+        if: ${{ !cancelled() }}
+        run: scripts/install.sh
 
       # 上で落ちても残りの lint の指摘を一緒に出す
       - name: Lint

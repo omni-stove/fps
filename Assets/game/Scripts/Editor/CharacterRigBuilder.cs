@@ -13,6 +13,7 @@ namespace Fps.Editor
     /// プリミティブで胴・頭・腕・脚を組んだ人型のリグを作るか上書きする。
     /// <list type="bullet">
     /// <item><see cref="PrefabPath"/>: 関節 (空の GameObject) とその子の見た目 (MeshFilter と MeshRenderer) を組み、根に Animator を付けたプレハブ。
+    /// <see cref="Fps.Runtime.CharacterAnimator"/> が Resources から読み、プレイヤーと敵の子に置く。
     /// 見た目だけのリグなので、コライダーは付けない (当たり判定は今までどおり Hitbox が持つ)。</item>
     /// <item><see cref="ClipFolder"/>: <see cref="CharacterRigClips"/> の姿勢ごとの AnimationClip。関節の回転と腰の位置をコードでキーにする。</item>
     /// <item><see cref="ControllerPath"/>: クリップを <see cref="CharacterPose"/> のパラメーターでつなぐ AnimatorController。</item>
@@ -24,7 +25,8 @@ namespace Fps.Editor
     public static class CharacterRigBuilder
     {
         public const string Folder = "Assets/game/Characters";
-        public const string PrefabPath = Folder + "/CharacterRig.prefab";
+        // CharacterAnimator が実行時に Resources.Load で読むので、プレハブだけ Resources の下に置く。
+        public const string PrefabPath = Folder + "/Resources/" + Fps.Runtime.CharacterAnimator.RigResourcePath + ".prefab";
         public const string ControllerPath = Folder + "/CharacterRig.controller";
         public const string ClipFolder = Folder + "/Clips";
 

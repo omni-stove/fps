@@ -55,7 +55,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void DefaultPathsAreUnderGameCharacters()
         {
-            Assert.That(CharacterRigBuilder.PrefabPath, Is.EqualTo("Assets/game/Characters/CharacterRig.prefab"));
+            Assert.That(CharacterRigBuilder.PrefabPath, Is.EqualTo("Assets/game/Characters/Resources/Characters/CharacterRig.prefab"));
             Assert.That(CharacterRigBuilder.ControllerPath, Is.EqualTo("Assets/game/Characters/CharacterRig.controller"));
             Assert.That(CharacterRigBuilder.ClipFolder, Is.EqualTo("Assets/game/Characters/Clips"));
         }

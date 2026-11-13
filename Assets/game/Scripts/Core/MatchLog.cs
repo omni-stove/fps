@@ -113,6 +113,67 @@ namespace Fps.Core
             return Tag + " next match in=" + delaySeconds.ToString("F1", CultureInfo.InvariantCulture) + "s";
         }
 
+        /// <summary>試合で全員に配るロードアウト。name はアセット名 (空なら <c>-</c>)、switch は持ち替え秒数 (小数 2 桁)。</summary>
+        /// <example><c>[Match] loadout name=DefaultLoadout slots=2 switch=0.40s</c></example>
+        public static string Loadout(string name, ServerLoadout loadout)
+        {
+            if (loadout == null)
+            {
+                throw new ArgumentNullException(nameof(loadout));
+            }
+
+            return Tag + " loadout name=" + (string.IsNullOrWhiteSpace(name) ? "-" : name)
+                + " slots=" + loadout.Weapons.Count.ToString(CultureInfo.InvariantCulture)
+                + " switch=" + Seconds(loadout.SwitchSeconds);
+        }
+
+        /// <summary>
+        /// ロードアウトの slot 番の武器と、サーバーが射撃の判定に使う値。falloff は減衰しないなら <c>none</c>、
+        /// するなら <c>始まり-終わりm*最小倍率</c> (key=value を空白で区切って読めるよう、値に空白を入れない)。
+        /// </summary>
+        /// <example>
+        /// <c>[Match] weapon slot=0 name=Rifle id=6c1f3b2a-... category=AssaultRifle mode=Auto damage=25 range=100.0m
+        /// falloff=20.0-60.0m*0.50 fireInterval=0.10s magazine=30 reserve=90 reload=2.00s</c> (実際は 1 行)
+        /// </example>
+        public static string Weapon(int slot, WeaponSpec weapon)
+        {
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
+
+            return Tag + " weapon slot=" + slot.ToString(CultureInfo.InvariantCulture)
+                + " name=" + weapon.DisplayName
+                + " id=" + weapon.Id
+                + " category=" + weapon.Category
+                + " mode=" + weapon.FireMode
+                + " damage=" + weapon.Damage.ToString(CultureInfo.InvariantCulture)
+                + " range=" + weapon.Range.ToString("F1", CultureInfo.InvariantCulture) + "m"
+                + " falloff=" + Falloff(weapon.Falloff)
+                + " fireInterval=" + Seconds(weapon.FireInterval)
+                + " magazine=" + weapon.MagazineSize.ToString(CultureInfo.InvariantCulture)
+                + " reserve=" + weapon.ReserveAmmo.ToString(CultureInfo.InvariantCulture)
+                + " reload=" + Seconds(weapon.ReloadSeconds);
+        }
+
+        private static string Falloff(DamageFalloff falloff)
+        {
+            // DamageFalloff.None は float.MaxValue の距離を持つので、そのまま書くと読めない
+            if (falloff.MinMultiplier >= 1f)
+            {
+                return "none";
+            }
+
+            return falloff.StartDistance.ToString("F1", CultureInfo.InvariantCulture)
+                + "-" + falloff.EndDistance.ToString("F1", CultureInfo.InvariantCulture)
+                + "m*" + falloff.MinMultiplier.ToString("F2", CultureInfo.InvariantCulture);
+        }
+
+        private static string Seconds(float seconds)
+        {
+            return seconds.ToString("F2", CultureInfo.InvariantCulture) + "s";
+        }
+
         private static string SoloStateName(Match match)
         {
             switch (match.State)

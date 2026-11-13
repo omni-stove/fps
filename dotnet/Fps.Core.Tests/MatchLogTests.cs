@@ -92,11 +92,35 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void FormatsTheLoadoutAndEachWeapon()
+        {
+            var rifle = new WeaponSpec(
+                "00000000-0000-4000-8000-000000000001", "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto,
+                30, 90, 0.1f, 2f, 25, 100f, new DamageFalloff(20f, 60f, 0.5f));
+            var handgun = new WeaponSpec(
+                "00000000-0000-4000-8000-000000000002", "Handgun", WeaponCategory.Handgun, FireMode.Semi,
+                12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None);
+            var rule = new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } });
+            var loadout = new ServerLoadout(rule, new[] { rifle, handgun }, 0.4f);
+
+            Assert.That(MatchLog.Loadout("DefaultLoadout", loadout), Is.EqualTo("[Match] loadout name=DefaultLoadout slots=2 switch=0.40s"));
+            Assert.That(MatchLog.Loadout(null, loadout), Is.EqualTo("[Match] loadout name=- slots=2 switch=0.40s"));
+            Assert.That(MatchLog.Weapon(0, rifle), Is.EqualTo(
+                "[Match] weapon slot=0 name=Rifle id=00000000-0000-4000-8000-000000000001 category=AssaultRifle mode=Auto"
+                + " damage=25 range=100.0m falloff=20.0-60.0m*0.50 fireInterval=0.10s magazine=30 reserve=90 reload=2.00s"));
+            Assert.That(MatchLog.Weapon(1, handgun), Is.EqualTo(
+                "[Match] weapon slot=1 name=Handgun id=00000000-0000-4000-8000-000000000002 category=Handgun mode=Semi"
+                + " damage=34 range=60.0m falloff=none fireInterval=0.20s magazine=12 reserve=48 reload=1.50s"));
+        }
+
+        [Test]
         public void RejectsInvalidArguments()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => MatchLog.Ended((Team)99));
             Assert.Throws<ArgumentNullException>(() => MatchLog.Spawn(1, null));
             Assert.Throws<ArgumentNullException>(() => MatchLog.SoloState(null));
+            Assert.Throws<ArgumentNullException>(() => MatchLog.Loadout("DefaultLoadout", null));
+            Assert.Throws<ArgumentNullException>(() => MatchLog.Weapon(0, null));
         }
     }
 }

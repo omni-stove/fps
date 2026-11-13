@@ -70,7 +70,10 @@ namespace Fps.Core.Tests
         public void EveryListedDestinationHasAPlanAndTheListHasNoDuplicates()
         {
             Assert.That(MenuRoute.Destinations, Is.Unique);
+            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
+#pragma warning disable CA2263
             foreach (MenuDestination destination in Enum.GetValues(typeof(MenuDestination)))
+#pragma warning restore CA2263
             {
                 Assert.That(MenuRoute.Destinations, Has.Member(destination));
                 Assert.That(MenuRoute.Plan(destination), Is.Not.Null);

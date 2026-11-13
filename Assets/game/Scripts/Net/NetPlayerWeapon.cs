@@ -14,8 +14,8 @@ namespace Fps.Net
     /// プレイヤーが持つ武器の並び (ロードアウト) と、今持っている武器の弾倉・予備弾・リロード。
     /// 武器はサーバーだけが <see cref="ServerWeapon"/> を並べた <see cref="Loadout{T}"/> で持ち、今の武器の弾数・リロード中かどうか・
     /// 持っている番号・持ち替え中かどうかを持ち主だけが読める NetworkVariable で配る (他人には送らない)。
-    /// 持ち主が Reload を押すと <see cref="ReloadServerRpc"/>、Next / Previous を押すと <see cref="SwitchServerRpc"/> を送り、
-    /// サーバーがリロード・持ち替えを判定する。
+    /// 持ち主が Reload を押すと <see cref="ReloadServerRpc"/>、Next / Previous を押すと持ち替え先の武器の Id を
+    /// <see cref="SwitchWeaponServerRpc"/> で送り、サーバーがリロード・持ち替えを判定する。
     /// </summary>
     /// <remarks>
     /// 武器の設定 (<see cref="WeaponSpec"/>) は <see cref="NetTeamDeathmatch"/> がロードアウトのアセット (<see cref="LoadoutDefinition"/>) から引き、
@@ -263,48 +263,114 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 持ち主で、サーバーに index 番の武器への持ち替えを頼む。届いている状態で範囲外か今の番号と同じなら送らず false。
-        /// 持ち替え中でも送る (持ち替えの時間はサーバーでそこから数え直す)。
+        /// 持ち主で、サーバーに weaponId の武器への持ち替えを頼む。空・<see cref="MaxWeaponIdBytes"/> に収まらない・
+        /// 今持っている武器 (<see cref="WeaponId"/>) と同じ・倒れている、のどれかなら送らず false。
+        /// ロードアウトにあるかどうかはサーバーが確かめる。持ち替え中でも送る (持ち替えの時間はサーバーでそこから数え直す)。
         /// </summary>
-        public bool RequestSwitch(int index)
+        public bool RequestSwitch(string weaponId)
         {
             if (!IsSpawned || !IsOwner)
             {
                 return false;
             }
 
-            var state = _state.Value;
-            if (index < 0 || index >= state.WeaponCount || index == state.EquippedIndex || (_player != null && !_player.IsAlive))
+            if (string.IsNullOrEmpty(weaponId) || !FitsWeaponId(weaponId)
+                || string.Equals(weaponId, WeaponId, StringComparison.Ordinal)
+                || (_player != null && !_player.IsAlive))
             {
                 return false;
             }
 
-            SwitchServerRpc((byte)index);
+            SwitchWeaponServerRpc(new FixedString64Bytes(weaponId));
             return true;
         }
 
-        /// <summary>持ち主で、次の番号 (最後の次は 0 番) の武器への持ち替えを頼む。1 本しか無ければ送らず false。</summary>
+        /// <summary>
+        /// 持ち主で、試合のロードアウト (<see cref="NetTeamDeathmatch.Loadout"/>) で今の武器の次 (最後の次は先頭) の武器への持ち替えを頼む。
+        /// 1 本しか無い・今の武器が分からない・ロードアウトが読めないなら送らず false。
+        /// </summary>
         public bool RequestNextWeapon()
         {
-            var state = _state.Value;
-            if (state.WeaponCount <= 1)
-            {
-                return false;
-            }
-
-            return RequestSwitch((state.EquippedIndex + 1) % state.WeaponCount);
+            return RequestNeighbour(1);
         }
 
-        /// <summary>持ち主で、前の番号 (0 番の前は最後) の武器への持ち替えを頼む。1 本しか無ければ送らず false。</summary>
+        /// <summary>持ち主で、試合のロードアウトで今の武器の前 (先頭の前は最後) の武器への持ち替えを頼む。送れなければ false。</summary>
         public bool RequestPreviousWeapon()
         {
-            var state = _state.Value;
-            if (state.WeaponCount <= 1)
+            return RequestNeighbour(-1);
+        }
+
+        private bool RequestNeighbour(int step)
+        {
+            if (!IsSpawned || !IsOwner)
             {
                 return false;
             }
 
-            return RequestSwitch((state.EquippedIndex + state.WeaponCount - 1) % state.WeaponCount);
+            var target = NeighbourWeaponId(ResolveClientSpecs(), WeaponId, step);
+            return target != null && RequestSwitch(target);
+        }
+
+        /// <summary>
+        /// specs の中で currentId の武器から step だけ進めた (端では反対側へ回り込む) 武器の Id。
+        /// specs が null か 1 本以下、currentId が specs に無い、step が 0 なら null。
+        /// </summary>
+        internal static string NeighbourWeaponId(IReadOnlyList<WeaponSpec> specs, string currentId, int step)
+        {
+            if (specs == null || specs.Count <= 1 || step == 0)
+            {
+                return null;
+            }
+
+            var current = IndexOf(specs, currentId);
+            if (current < 0)
+            {
+                return null;
+            }
+
+            var count = specs.Count;
+            var next = ((current + (step % count)) % count + count) % count;
+            return specs[next].Id;
+        }
+
+        // クライアントは武器の並びを持たないので、サーバーが全員に配っているのと同じロードアウトのアセットから引く
+        private IReadOnlyList<WeaponSpec> ResolveClientSpecs()
+        {
+            var match = NetTeamDeathmatch.Current;
+            var loadout = match != null ? match.Loadout : null;
+            if (loadout == null)
+            {
+                Debug.LogWarning("[Net] cannot switch weapons without the match's loadout", this);
+                return null;
+            }
+
+            try
+            {
+                return loadout.ToSpecs();
+            }
+            catch (WeaponDefinitionException e)
+            {
+                Debug.LogWarning("[Net] cannot switch weapons with an invalid loadout: " + e.Message, this);
+                return null;
+            }
+        }
+
+        private static int IndexOf(IReadOnlyList<WeaponSpec> specs, string weaponId)
+        {
+            if (weaponId == null)
+            {
+                return -1;
+            }
+
+            for (var i = 0; i < specs.Count; i++)
+            {
+                if (specs[i] != null && string.Equals(specs[i].Id, weaponId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         /// <summary>武器の Id が <see cref="MaxWeaponIdBytes"/> (射撃の RPC と <see cref="WeaponId"/> の同期) に収まるか。</summary>
@@ -437,11 +503,16 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// サーバーで、senderClientId から届いた index 番への持ち替えの要求を処理する。持ち主以外からの要求と範囲外の番号は
-        /// 警告を出して捨てる。今の番号と同じなら何もしない。持ち替えを始めたら true (今の武器のリロードはやめる)。
+        /// サーバーで、senderClientId から届いた weaponId の武器への持ち替えの要求を処理する。持ち主以外からの要求と、
+        /// このプレイヤーのロードアウトに無い Id (大文字・小文字は区別する) は警告を出して捨てる。今の武器と同じなら何もしない。
+        /// 持ち替えを始めたら true (今の武器のリロードはやめ、各武器の残弾はそのまま)。
         /// </summary>
+        /// <remarks>
+        /// 連射の制限 (<see cref="ShotBudget"/>) は <see cref="ServerLoadout.TryFire"/> が持ち替え先の武器で最初に撃ったときに
+        /// その武器の間隔で作り直す。持ち替え前の Id で届いた射撃はそこで <see cref="ShotRejection.WeaponMismatch"/> になる。
+        /// </remarks>
         /// <exception cref="InvalidOperationException">Spawn 済みのクライアントで呼んだ。</exception>
-        public bool ServerHandleSwitchRequest(ulong senderClientId, int index)
+        public bool ServerHandleSwitchRequest(ulong senderClientId, string weaponId)
         {
             RequireServerSide();
             if (senderClientId != OwnerClientId)
@@ -455,13 +526,33 @@ namespace Fps.Net
                 return false;
             }
 
-            if (index < 0 || index >= _loadout.Count)
+            var index = IndexOfWeapon(weaponId);
+            if (index < 0)
             {
-                Debug.LogWarning("[Net] ignored switch client=" + senderClientId + " index=" + index + " count=" + _loadout.Count, this);
+                Debug.LogWarning("[Net] ignored switch client=" + senderClientId + " weapon='" + weaponId + "' not in the loadout", this);
                 return false;
             }
 
             return _loadout.TrySelect(index);
+        }
+
+        private int IndexOfWeapon(string weaponId)
+        {
+            if (weaponId == null)
+            {
+                return -1;
+            }
+
+            var items = _loadout.Items;
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (string.Equals(items[i].Spec.Id, weaponId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
@@ -471,9 +562,9 @@ namespace Fps.Net
         }
 
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
-        private void SwitchServerRpc(byte index, RpcParams rpcParams = default)
+        private void SwitchWeaponServerRpc(FixedString64Bytes weaponId, RpcParams rpcParams = default)
         {
-            ServerHandleSwitchRequest(rpcParams.Receive.SenderClientId, index);
+            ServerHandleSwitchRequest(rpcParams.Receive.SenderClientId, weaponId.ToString());
         }
 
         private void SetLoadout(Loadout<ServerWeapon> loadout)
@@ -537,7 +628,7 @@ namespace Fps.Net
 
         private void HandleSwitched(int index)
         {
-            Debug.Log("[Net] switch client=" + OwnerClientId + " index=" + index, this);
+            Debug.Log("[Net] switch client=" + OwnerClientId + " index=" + index + " weapon=" + _loadout.Items[index].Spec.Id, this);
             SyncState();
         }
 

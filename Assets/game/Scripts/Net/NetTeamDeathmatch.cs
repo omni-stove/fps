@@ -454,6 +454,24 @@ namespace Fps.Net
             return rejection;
         }
 
+        /// <summary>
+        /// 出現・リスポーンで weapon に loadout の武器を全部満タンで渡し直し、先頭 (rifle) を持ち替えの待ち時間なしで構えさせる。
+        /// 持ち替え中・リロード中だった状態と、倒れる前の残弾は捨てる。weapon が null なら何もしない。
+        /// </summary>
+        internal static void ArmForSpawn(ServerLoadout loadout, NetPlayerWeapon weapon)
+        {
+            if (loadout == null)
+            {
+                throw new ArgumentNullException(nameof(loadout));
+            }
+
+            // ServerLoadout は開始時に ServerEquip と同じ条件で検査済みなので、ここでは投げない
+            if (weapon != null)
+            {
+                weapon.ServerEquip(loadout.Weapons, loadout.SwitchSeconds);
+            }
+        }
+
         // サーバーの知る本人の目の位置から始点までの間に、プレイヤー以外のコライダー (壁など) があれば true。
         private static bool IsOriginBlocked(NetPlayer shooter, Vector3 origin)
         {
@@ -920,11 +938,7 @@ namespace Fps.Net
             // 出現より前の時点まで巻き戻した射撃には、その時点にいなかったものとして当たらない
             _lagCompensator?.Remove(playerId);
 
-            // 満タンの武器を 0 番を構えた状態で渡し直す。ServerLoadout は開始時に ServerEquip と同じ条件で検査済みなので、ここでは投げない
-            if (player.Weapon != null)
-            {
-                player.Weapon.ServerEquip(_serverLoadout.Weapons, _serverLoadout.SwitchSeconds);
-            }
+            ArmForSpawn(_serverLoadout, player.Weapon);
 
             var p = point.Position;
             player.ServerTeleport(new Vector3(p.X, p.Y, p.Z));

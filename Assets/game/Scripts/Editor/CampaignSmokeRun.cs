@@ -23,8 +23,8 @@ namespace Fps.Editor
     /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.CampaignSmokeRun.Run -logFile -</code>
     /// </summary>
     /// <remarks>
-    /// セーブ無しから始めるため、この Editor の <c>Application.persistentDataPath</c> にあるスロット
-    /// <see cref="CampaignRunner.SaveSlot"/> のセーブを走らせる前に消す。走っている間に開始地点のチェックポイントでセーブされるので、
+    /// セーブ無しから始めるため、この Editor の <c>Application.persistentDataPath</c> にある Campaign01 のスロット
+    /// (<see cref="CampaignSaveSlots.For"/> と古いスロット <see cref="CampaignSaveSlots.Legacy"/>) のセーブを走らせる前に消す。走っている間に開始地点のチェックポイントでセーブされるので、
     /// 終えるときにもう一度消す。Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
     /// </remarks>
     [InitializeOnLoad]
@@ -359,8 +359,12 @@ namespace Fps.Editor
         private static void DeleteSave(string when)
         {
             var storage = FileSaveStorage.CreateDefault();
-            storage.Delete(CampaignRunner.SaveSlot);
-            Debug.Log($"{LogTag} deleted save slot={CampaignRunner.SaveSlot} {when} path={storage.PathFor(CampaignRunner.SaveSlot)}");
+            var slots = new[] { CampaignSaveSlots.For(MissionCatalogBuilder.Campaign01Id), CampaignSaveSlots.Legacy };
+            foreach (var slot in slots)
+            {
+                storage.Delete(slot);
+                Debug.Log($"{LogTag} deleted save slot={slot} {when} path={storage.PathFor(slot)}");
+            }
         }
     }
 }

@@ -206,7 +206,8 @@ namespace Fps.Tests.EditMode
                 layout.Runner.Progress(CampaignSceneBuilder.ReachAreaAId);
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=area_a "));
                 Assert.That(layout.AreaACheckpoint.HandleEnter(player), Is.True);
-                Assert.That(storage.TryRead(CampaignRunner.SaveSlot, out var text), Is.True);
+                Assert.That(layout.Campaign.SaveSlot, Is.EqualTo(CampaignSaveSlots.Prefix + "Campaign01"));
+                Assert.That(storage.TryRead(layout.Campaign.SaveSlot, out var text), Is.True);
                 var saved = CampaignSave.FromJson(text);
                 Assert.That(saved.CheckpointId, Is.EqualTo(CampaignSceneBuilder.AreaACheckpointId));
                 Assert.That(saved.Weapons, Has.Count.EqualTo(2), "every weapon in the loadout is saved");

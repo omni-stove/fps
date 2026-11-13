@@ -700,7 +700,7 @@ namespace Fps.Tests.EditMode
             {
                 Assert.That(view.Element, Is.Not.Null, view.ElementName);
                 Assert.That(view.Element.name, Is.EqualTo(view.ElementName));
-                Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None), "nothing new is shown yet");
+                Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None), "nothing is shown until something happens");
             }
         }
 

@@ -182,6 +182,65 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BeginListsThePlayerAndTheTargetsOnTheScoreboard()
+        {
+            var sections = _world.Hud.Scoreboard.Sections;
+
+            Assert.That(sections[0].Team, Is.EqualTo(Team.Alpha));
+            Assert.That(sections[0].Rows, Has.Count.EqualTo(1));
+            var player = sections[0].Rows[0];
+            Assert.That(player.PlayerId, Is.EqualTo(MatchRunner.PlayerId));
+            Assert.That(player.Name, Is.EqualTo(ScoreboardRows.LocalPlayerName));
+            Assert.That(player.IsLocal, Is.True);
+            Assert.That(player.Connection, Is.EqualTo(ScoreboardConnection.None));
+
+            Assert.That(sections[1].Team, Is.EqualTo(Team.Bravo));
+            Assert.That(sections[1].Rows, Has.Count.EqualTo(_world.Targets.Count));
+            for (var i = 0; i < _world.Targets.Count; i++)
+            {
+                var target = sections[1].Rows[i];
+                Assert.That(target.PlayerId, Is.EqualTo(MatchRunner.PlayerId + i + 1));
+                Assert.That(target.Name, Is.EqualTo(ScoreboardRows.TargetName(i + 1)));
+                Assert.That(target.IsLocal, Is.False);
+                Assert.That(target.Kills, Is.Zero);
+                Assert.That(target.Deaths, Is.Zero);
+            }
+        }
+
+        [Test]
+        public void KillsAndDeathsUpdateTheScoreboardRightAway()
+        {
+            var scoreboard = _world.Hud.Scoreboard;
+            var firstTargetId = MatchRunner.PlayerId + 1;
+
+            _world.Targets[0].Damageable.Kill();
+
+            Assert.That(scoreboard.Sections[0].Rows[0].Kills, Is.EqualTo(1));
+            Assert.That(_runner.TargetDeaths(firstTargetId), Is.EqualTo(1));
+            var targets = scoreboard.Sections[1].Rows;
+            Assert.That(targets[targets.Count - 1].PlayerId, Is.EqualTo(firstTargetId), "the target killed the most is listed last");
+            Assert.That(targets[targets.Count - 1].Deaths, Is.EqualTo(1));
+            Assert.That(scoreboard.Sections[1].Deaths, Is.EqualTo(1));
+
+            LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=1 remaining=30.0");
+            _world.PlayerDamageable.Kill();
+
+            Assert.That(_runner.PlayerDeaths, Is.EqualTo(1));
+            Assert.That(scoreboard.Sections[0].Rows[0].Deaths, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DeathsAfterTheMatchIsOverAreNotCounted()
+        {
+            LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=0 remaining=30.0");
+            _world.PlayerDamageable.Kill();
+            _world.Targets[0].Damageable.Kill();
+
+            Assert.That(_runner.TargetDeaths(MatchRunner.PlayerId + 1), Is.Zero);
+            Assert.That(_world.Hud.Scoreboard.Sections[1].Deaths, Is.Zero);
+        }
+
+        [Test]
         public void DefaultsAreReachableInTheBootstrapScene()
         {
             Assert.That(MatchRunner.KillsToWin, Is.GreaterThan(0));

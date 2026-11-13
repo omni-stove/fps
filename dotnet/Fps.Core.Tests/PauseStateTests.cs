@@ -5,14 +5,17 @@ namespace Fps.Core.Tests
 {
     public sealed class PauseStateTests
     {
-        private const string Pause = "Player/Pause";
-        private const string Move = "Player/Move";
-        private const string Attack = "Player/Attack";
-        private const string Look = "Player/Look";
+        private const string _pause = "Player/Pause";
+        private const string _move = "Player/Move";
+        private const string _attack = "Player/Attack";
+        private const string _look = "Player/Look";
+
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Names(params string[] names) => names;
 
         private static PauseState NewState(PauseTimeMode mode)
         {
-            return new PauseState(mode, new[] { Pause });
+            return new PauseState(mode, new[] { _pause });
         }
 
         [TestCase(PauseTimeMode.Freeze)]
@@ -80,12 +83,12 @@ namespace Fps.Core.Tests
             var state = NewState(PauseTimeMode.KeepRunning);
             state.Open(1f, out _);
 
-            var suspended = state.Suspend(new[] { Move, Pause, Attack });
+            var suspended = state.Suspend(new[] { _move, _pause, _attack });
 
-            Assert.That(suspended, Is.EqualTo(new[] { Move, Attack }));
-            Assert.That(state.SuspendedActions, Is.EqualTo(new[] { Move, Attack }));
-            Assert.That(state.KeepsEnabled(Pause), Is.True);
-            Assert.That(state.KeepsEnabled(Move), Is.False);
+            Assert.That(suspended, Is.EqualTo(new[] { _move, _attack }));
+            Assert.That(state.SuspendedActions, Is.EqualTo(new[] { _move, _attack }));
+            Assert.That(state.KeepsEnabled(_pause), Is.True);
+            Assert.That(state.KeepsEnabled(_move), Is.False);
         }
 
         [Test]
@@ -93,11 +96,11 @@ namespace Fps.Core.Tests
         {
             var state = NewState(PauseTimeMode.Freeze);
             state.Open(1f, out _);
-            state.Suspend(new[] { Move });
+            state.Suspend(new[] { _move });
 
-            Assert.That(state.Suspend(new[] { Move, Look, Look }), Is.EqualTo(new[] { Look }), "a respawned part re-enabled Look while paused");
-            Assert.That(state.Suspend(new[] { Pause }), Is.Empty);
-            Assert.That(state.SuspendedActions, Is.EqualTo(new[] { Move, Look }));
+            Assert.That(state.Suspend(new[] { _move, _look, _look }), Is.EqualTo(new[] { _look }), "a respawned part re-enabled Look while paused");
+            Assert.That(state.Suspend(new[] { _pause }), Is.Empty);
+            Assert.That(state.SuspendedActions, Is.EqualTo(new[] { _move, _look }));
         }
 
         [Test]
@@ -105,11 +108,11 @@ namespace Fps.Core.Tests
         {
             var state = NewState(PauseTimeMode.Freeze);
             state.Open(1f, out _);
-            state.Suspend(new[] { Move, Attack });
+            state.Suspend(new[] { _move, _attack });
 
             state.Close(out _, out var toEnable);
 
-            Assert.That(toEnable, Is.EqualTo(new[] { Move, Attack }));
+            Assert.That(toEnable, Is.EqualTo(new[] { _move, _attack }));
             Assert.That(state.SuspendedActions, Is.Empty);
 
             state.Open(1f, out _);
@@ -122,7 +125,7 @@ namespace Fps.Core.Tests
         {
             var state = NewState(PauseTimeMode.Freeze);
 
-            Assert.Throws<InvalidOperationException>(() => state.Suspend(new[] { Move }));
+            Assert.Throws<InvalidOperationException>(() => state.Suspend(new[] { _move }));
         }
 
         [Test]
@@ -131,7 +134,7 @@ namespace Fps.Core.Tests
             var state = NewState(PauseTimeMode.KeepRunning);
             state.Open(1f, out _);
 
-            Assert.That(state.Suspend(new[] { "player/pause" }), Is.EqualTo(new[] { "player/pause" }));
+            Assert.That(state.Suspend(Names("player/pause")), Is.EqualTo(Names("player/pause")));
         }
 
         [Test]
@@ -163,13 +166,13 @@ namespace Fps.Core.Tests
         public void RejectsInvalidArguments()
         {
             Assert.Throws<ArgumentNullException>(() => new PauseState(PauseTimeMode.Freeze, null));
-            Assert.Throws<ArgumentException>(() => new PauseState(PauseTimeMode.Freeze, new[] { "" }));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new PauseState((PauseTimeMode)99, new[] { Pause }));
+            Assert.Throws<ArgumentException>(() => new PauseState(PauseTimeMode.Freeze, Names("")));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PauseState((PauseTimeMode)99, new[] { _pause }));
 
             var state = NewState(PauseTimeMode.Freeze);
             state.Open(1f, out _);
             Assert.Throws<ArgumentNullException>(() => state.Suspend(null));
-            Assert.Throws<ArgumentException>(() => state.Suspend(new[] { Move, null }));
+            Assert.Throws<ArgumentException>(() => state.Suspend(new[] { _move, null }));
             Assert.That(state.SuspendedActions, Is.Empty, "a rejected call suspends nothing");
             Assert.Throws<ArgumentOutOfRangeException>(() => state.TimeMode = (PauseTimeMode)99);
         }

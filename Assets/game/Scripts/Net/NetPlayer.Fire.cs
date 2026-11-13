@@ -38,8 +38,9 @@ namespace Fps.Net
 
             trigger.Tick(Time.deltaTime);
 
-            // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う
-            if (IsAlive && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
+            // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う。
+            // ダウン中の射撃はサーバーが捨てるので送らない
+            if (IsAlive && !IsDowned && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
             {
                 Fire();
             }

@@ -56,9 +56,11 @@ namespace Fps.Net
 
         /// <summary>
         /// 状態から 1 tick 進める。CharacterController を実際に動かすので、終わったとき本体は結果の位置と姿勢にある。
+        /// ダウン中の入力 (<see cref="MotorInput.Downed"/>) は <see cref="MotorInput.Restrained"/> にしてから動かす (重力は効く)。
         /// </summary>
         public MotorState Step(MotorState state, MotorInput input)
         {
+            input = input.Restrained();
             Place(state);
             var crouched = ResolveCrouch(state.IsCrouched, input.Crouch);
 

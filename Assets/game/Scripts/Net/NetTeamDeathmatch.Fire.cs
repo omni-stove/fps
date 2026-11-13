@@ -16,7 +16,7 @@ namespace Fps.Net
         /// 巻き戻せるのは <see cref="LagCompensator.MaxRewindTicks"/> tick 前まで。
         /// 射程・ダメージ・減衰は、サーバーが shooter に今持たせている武器 (<see cref="NetPlayerWeapon.CurrentSpec"/>) の値を使う (クライアントの値は使わない)。
         /// </summary>
-        /// <param name="shooter">撃った人。試合に参加していて生きていなければ何もしない。</param>
+        /// <param name="shooter">撃った人。試合に参加していて生きていなければ (ダウン中も) 何もしない (<see cref="CanFire"/>)。</param>
         /// <param name="weaponId">クライアントが送ってきた、撃った武器の Id。ロードアウトに無い・今持っている武器と違えば捨てる。</param>
         /// <param name="origin">クライアントが送ってきた始点。</param>
         /// <param name="direction">クライアントが送ってきた向き。</param>
@@ -28,8 +28,9 @@ namespace Fps.Net
                 return;
             }
 
+            // ダウン中の射撃も、倒れている人の射撃と同じく弾を減らさずに捨てる
             var shooterId = shooter.ServerPlayerId;
-            if (_session.State != GameModeState.Playing || !_session.IsAlive(shooterId))
+            if (!CanFire(_session, shooterId))
             {
                 return;
             }

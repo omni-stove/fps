@@ -63,13 +63,13 @@ namespace Fps.Net
                 return;
             }
 
-            var index = FindRow(player.OwnerClientId);
+            var index = FindRow(player.RosterId);
             if (index >= 0)
             {
                 _players.RemoveAt(index);
             }
 
-            RemoveSpawnProtectionRow(player.OwnerClientId);
+            RemoveSpawnProtectionRow(player.RosterId);
         }
 
         /// <summary>まだ試合に入っていない接続済みプレイヤーを、接続順に加える。</summary>
@@ -107,7 +107,8 @@ namespace Fps.Net
                     continue;
                 }
 
-                if (client.ClientId > int.MaxValue)
+                // Bot の Id (BotRoster.FirstBotPlayerId 以上) と重なるクライアントは、成績の行で Bot と見分けられない
+                if (client.ClientId > int.MaxValue || BotRoster.IsBotId(client.ClientId))
                 {
                     _rejectedClients.Add(client.ClientId);
                     Debug.LogError("[Match] client id " + client.ClientId + " does not fit a player id");

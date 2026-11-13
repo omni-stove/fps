@@ -24,6 +24,7 @@ namespace Fps.Net
     /// <item><see cref="CombatEvents.Killed"/>: 全員。</item>
     /// </list>
     /// 専用サーバー自身は宛先に入れない (演出も UI も無い)。ホストはクライアントでもあるので、ほかのクライアントと同じく宛先に入る。
+    /// Bot (<see cref="NetPlayer.IsBot"/>) の射撃は誰も除かずに送り、Bot が撃った・撃たれたヒットと被弾はだれにも送らない。
     /// ヒット・被弾・キルは受け取ったクライアントで <c>[Combat]</c> 行を出す。射撃と着弾は 1 発ごとにログを埋めるので出さない。
     /// </remarks>
     [DisallowMultipleComponent]
@@ -134,7 +135,9 @@ namespace Fps.Net
                 return;
             }
 
-            CollectRecipients(NetworkManager.ConnectedClientsIds, NetworkManager.ServerClientId, IsHost, shooter.OwnerClientId, _recipients);
+            // Bot は自分で射撃の演出を出さないので、持ち主 (サーバー。ホストなら画面もある) を除かない
+            var excluded = shooter.IsBot ? (ulong?)null : shooter.OwnerClientId;
+            CollectRecipients(NetworkManager.ConnectedClientsIds, NetworkManager.ServerClientId, IsHost, excluded, _recipients);
             if (_recipients.Count == 0)
             {
                 return;
@@ -151,7 +154,8 @@ namespace Fps.Net
         /// <summary>サーバーで、shooter が生きている相手に当てたことを shooter の持ち主にだけ送る。</summary>
         internal void ServerHitConfirm(NetPlayer shooter, HitConfirm confirm)
         {
-            if (!CanSendFromServer() || shooter == null)
+            // Bot の持ち主はサーバーで、ホストならホストの人にヒットの表示が出てしまう
+            if (!CanSendFromServer() || shooter == null || shooter.IsBot)
             {
                 return;
             }
@@ -171,7 +175,7 @@ namespace Fps.Net
         /// </summary>
         internal void ServerDamageTaken(NetPlayer victim, Vector3? sourcePosition, int amount)
         {
-            if (!CanSendFromServer() || victim == null)
+            if (!CanSendFromServer() || victim == null || victim.IsBot)
             {
                 return;
             }

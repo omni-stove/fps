@@ -4,6 +4,7 @@ using System.Linq;
 using Fps.Core;
 using Fps.Net;
 using Fps.Runtime;
+using Unity.AI.Navigation;
 using Unity.Netcode;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -39,6 +40,15 @@ namespace Fps.Editor
 
         /// <summary>床の高さ。カプセルの中心が y=0 のとき足元が床に接する。</summary>
         public const float GroundY = -PlayerHeight / 2f;
+
+        /// <summary>サーバーの Bot が経路を引く、NetTest の焼いた NavMesh (<see cref="ModeSceneBuilder.NavMeshDataPathFor"/> と同じ置き場所)。</summary>
+        public static readonly string NavMeshDataPath = ModeSceneBuilder.NavMeshDataPathFor(NetBootstrap.ScenePath);
+
+        /// <summary>
+        /// 出現地点が NavMesh に乗っているかを確かめるときに探す半径 (m)。出現地点はカプセルの中心 (床から <see cref="PlayerHeight"/> の半分上) なので、
+        /// それより広くとる。
+        /// </summary>
+        public const float NavMeshCheckRadius = 1.5f;
 
         /// <summary>
         /// 出現地点。チームごとの陣地を南北に 2 か所ずつ、どちらも使える地点を東西に 1 か所ずつ置く。
@@ -398,10 +408,30 @@ namespace Fps.Editor
                 pointObject.AddComponent<NetSpawnPoint>().Team = team;
             }
 
+            BakeNavMesh(ground);
+
             if (!EditorSceneManager.SaveScene(scene, NetBootstrap.ScenePath))
             {
                 throw new InvalidOperationException("failed to save " + NetBootstrap.ScenePath);
             }
+        }
+
+        /// <summary>
+        /// サーバーの Bot (<see cref="NetTeamDeathmatch"/> の .Bots.cs) が経路を引く NavMesh を、床と壁から焼いて
+        /// <see cref="NavMeshDataPath"/> に保存し、床の NavMeshSurface に持たせる (シーンを開くと読み込まれる)。
+        /// どの出現地点も NavMesh に乗っていて、最初の出現地点から歩いて行けることを確かめる。
+        /// </summary>
+        private static void BakeNavMesh(GameObject ground)
+        {
+            // Bot の生成前のシーンで焼くので、プレイヤーのカプセルで穴は空かない
+            var surface = SceneBuildHelpers.AddNavMeshSurface(ground, CollectObjects.All);
+            SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(NavMeshDataPath));
+            SceneBuildHelpers.BakeNavMesh(surface);
+            SceneBuildHelpers.SaveNavMeshData(surface, NavMeshDataPath);
+
+            var spawns = SpawnPoints.Select(point => point.Position).ToList();
+            SceneBuildHelpers.RequireOnNavMesh(spawns, NavMeshCheckRadius, "spawn point");
+            SceneBuildHelpers.RequireReachable(spawns[0], spawns, NavMeshCheckRadius, "spawn point");
         }
 
         private static void EnsureFolder(string path)

@@ -68,7 +68,7 @@ namespace Fps.Net
             }
 
             var seconds = NetSpawnProtection.SecondsFrom(_session.GetSpawnProtectionRemaining(playerId));
-            var clientId = player.OwnerClientId;
+            var clientId = player.RosterId;
             var index = FindSpawnProtectionRow(clientId);
             if (seconds <= 0)
             {

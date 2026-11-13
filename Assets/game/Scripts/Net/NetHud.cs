@@ -664,6 +664,7 @@ namespace Fps.Net
         /// <summary>
         /// <see cref="NetTeamDeathmatch.Players"/> の 1 行をスコアボードの行にする。サーバーはプレイヤー Id にクライアント Id を
         /// そのまま使い、int に収まらないクライアントは試合に入れないので、収まらない行は false を返して載せない。
+        /// Bot の行 (Id が <see cref="BotRoster.FirstBotPlayerId"/> 以上) は名前の頭に <see cref="BotRoster.Tag"/> を付ける。
         /// </summary>
         /// <param name="localClientId">この画面のプレイヤーのクライアント Id。分からなければ null (どの行も自分にしない)。</param>
         internal static bool TryToScoreboardEntry(NetPlayerStats row, ulong? localClientId, out ScoreboardEntry entry)
@@ -677,7 +678,7 @@ namespace Fps.Net
             var playerId = (int)row.ClientId;
             entry = new ScoreboardEntry(
                 playerId,
-                ScoreboardRows.PlayerName(playerId),
+                BotRoster.ScoreboardName(playerId),
                 row.Team,
                 Math.Max(0, row.Kills),
                 Math.Max(0, row.Deaths),

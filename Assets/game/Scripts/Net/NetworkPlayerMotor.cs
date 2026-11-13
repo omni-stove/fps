@@ -300,9 +300,13 @@ namespace Fps.Net
             _simulation.Stance.Apply(false);
             Register();
 
+            // Bot はサーバーが持ち主だが、入力はキーボードではなく試合 (NetTeamDeathmatch.Bots) から ServerApplyBotInput で受ける
+            _isBot = TryGetComponent<NetPlayer>(out var player) && player.IsBot;
+            var ownsInput = IsOwner && !_isBot;
+
             if (IsServer)
             {
-                _role = IsOwner ? NetworkPlayerRole.HostOwner : NetworkPlayerRole.ServerSimulated;
+                _role = ownsInput ? NetworkPlayerRole.HostOwner : NetworkPlayerRole.ServerSimulated;
                 _controller.enabled = true;
                 _serverState = new MotorState(transform.position, Vector3.zero, false, false);
                 _serverYaw = transform.eulerAngles.y * Mathf.Deg2Rad;
@@ -332,7 +336,7 @@ namespace Fps.Net
                 _hasRemoteState = false;
             }
 
-            if (IsOwner)
+            if (ownsInput)
             {
                 _clock = new TickClock(TickRate);
                 _jumpLatched = false;
@@ -991,6 +995,7 @@ namespace Fps.Net
             _remoteGroundedHistory = null;
             _remoteGrounded = true;
             _hasPendingState = false;
+            _isBot = false;
             _role = NetworkPlayerRole.None;
         }
 

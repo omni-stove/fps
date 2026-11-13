@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Fps.Core;
 using Fps.Runtime;
@@ -12,7 +13,8 @@ namespace Fps.Net
 {
     /// <summary>
     /// 接続したクライアントごとのプレイヤー。チームと体力をサーバーから受け取って見た目に反映し、
-    /// サーバーの指示でテレポートする。Attack で撃つと射撃を <see cref="FireServerRpc"/> で送るだけで、
+    /// サーバーの指示でテレポートする。Attack で撃つと (装備中の武器の <see cref="FireMode"/> に従い、Auto は押している間
+    /// 連射間隔ごと、Semi は押すたびに) 射撃を <see cref="FireServerRpc"/> で送るだけで、
     /// 当たり判定 (ラグ補償) とダメージを含む試合の判断はすべて <see cref="NetTeamDeathmatch"/> (その先の
     /// <see cref="TeamDeathmatchSession"/>) が行う。
     /// <para>
@@ -30,7 +32,7 @@ namespace Fps.Net
     public sealed class NetPlayer : NetworkBehaviour
     {
         /// <summary>Assets/InputSystem_Actions.inputactions の Attack アクション。</summary>
-        public const string AttackActionPath = "Player/Attack";
+        public const string AttackActionPath = InputActionPaths.Attack;
 
         /// <summary>参加前を表す <see cref="ServerPlayerId"/>。</summary>
         public const int NotJoined = -1;
@@ -68,6 +70,13 @@ namespace Fps.Net
         private Material[] _ownedMaterials = Array.Empty<Material>();
         private InputAction _attackAction;
         private bool _enabledAttackAction;
+
+        // 装備中の武器の射撃モードと連射間隔。持ち主だけが ResolveTrigger で作る。_triggerWeaponId と _triggerLoadout はどの武器で引いたか
+        private FireTrigger _trigger;
+        private string _triggerWeaponId;
+        private LoadoutDefinition _triggerLoadout;
+        private string _triggerError;
+        private bool _triggerResolved;
 
         // 視点。View (目) は射撃の始点にも使うので、カメラを有効にしないプレイヤーでも解決しておく
         private Transform _view;
@@ -188,16 +197,94 @@ namespace Fps.Net
                 return;
             }
 
+            var isPressed = _attackAction.IsPressed();
+            var wasPressed = _attackAction.WasPressedThisFrame();
+            var trigger = ResolveTrigger();
+            if (trigger == null)
+            {
+                if (wasPressed)
+                {
+                    // 射撃モードと連射間隔が分からない間は、サーバーに弾かれない頻度が分からないので撃たない
+                    WarnUnknownWeapon();
+                }
+
+                return;
+            }
+
+            trigger.Tick(Time.deltaTime);
+
             // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う
-            if (_attackAction.WasPressedThisFrame() && IsAlive && (_weapon == null || _weapon.PrepareFire()))
+            if (IsAlive && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
             {
                 Fire();
             }
         }
 
         /// <summary>
+        /// 装備中の武器 (<see cref="NetPlayerWeapon.WeaponId"/>) の射撃モードと連射間隔で判断する <see cref="FireTrigger"/>。
+        /// 試合 (<see cref="NetTeamDeathmatch.Current"/>) の <see cref="NetTeamDeathmatch.Loadout"/> から引き、武器か Loadout が変わったら作り直す。
+        /// 武器がまだ届いていない・Loadout に無い・Loadout が不正なら null。
+        /// </summary>
+        private FireTrigger ResolveTrigger()
+        {
+            var weaponId = _weapon != null ? _weapon.WeaponId : string.Empty;
+            var match = NetTeamDeathmatch.Current;
+            var loadout = match != null ? match.Loadout : null;
+            // 引けなかったときも覚えておき、毎フレーム Loadout の武器を作り直さない
+            if (_triggerResolved && _triggerLoadout == loadout && string.Equals(_triggerWeaponId, weaponId, StringComparison.Ordinal))
+            {
+                return _trigger;
+            }
+
+            _trigger = null;
+            _triggerWeaponId = weaponId;
+            _triggerLoadout = loadout;
+            _triggerError = null;
+            _triggerResolved = true;
+            if (string.IsNullOrEmpty(weaponId))
+            {
+                _triggerError = "before the server equips a weapon";
+                return null;
+            }
+
+            if (loadout == null)
+            {
+                _triggerError = "without the match's loadout";
+                return null;
+            }
+
+            IReadOnlyList<WeaponSpec> specs;
+            try
+            {
+                specs = loadout.ToSpecs();
+            }
+            catch (WeaponDefinitionException e)
+            {
+                _triggerError = "with an invalid loadout: " + e.Message;
+                return null;
+            }
+
+            foreach (var spec in specs)
+            {
+                if (string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
+                {
+                    _trigger = new FireTrigger(spec);
+                    return _trigger;
+                }
+            }
+
+            _triggerError = "with weapon '" + weaponId + "' missing from '" + loadout.name + "'";
+            return null;
+        }
+
+        private void WarnUnknownWeapon()
+        {
+            Debug.LogWarning("[Net] cannot fire " + (_triggerError ?? "without a weapon"), this);
+        }
+
+        /// <summary>
         /// 1 発撃つ。目から画面中央が指す点への向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) と装備中の武器の Id を添えて
-        /// サーバーに送るだけで、武器の値 (ダメージ・射程など) は送らない。当たり判定とダメージはサーバーが Catalog の値で行う。
+        /// サーバーに送るだけで、武器の値 (ダメージ・射程など) は送らない。当たり判定とダメージはサーバーが今持たせている武器の値で行う。
         /// </summary>
         private void Fire()
         {
@@ -396,8 +483,8 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 射撃をサーバーへ送る。weaponId は撃った武器の Id で、武器の値は送らない (サーバーが Catalog から引く)。
-        /// Catalog に無い・サーバーが持たせている武器と違う Id の射撃は捨てられる。
+        /// 射撃をサーバーへ送る。weaponId は撃った武器の Id で、武器の値は送らない (サーバーが今持たせている武器の値を使う)。
+        /// 試合のロードアウトに無い・サーバーが今持たせている武器と違う Id の射撃は捨てられる。
         /// clientTick + interpolationAlpha は撃った側が他人を見ていた時点 (サーバーの tick)。
         /// サーバーはその時点まで巻き戻して当たり判定をする (<see cref="NetTeamDeathmatch.ServerFire"/>)。
         /// </summary>

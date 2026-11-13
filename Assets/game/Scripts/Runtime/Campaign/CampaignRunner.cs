@@ -389,13 +389,12 @@ namespace Fps.Runtime
                 return false;
             }
 
-            var weapon = _weapon.Weapon;
             var save = new CampaignSave(
                 _missionId,
                 checkpointId,
                 _player.Health.Current,
-                weapon.AmmoInMagazine,
-                weapon.ReserveAmmo,
+                _weapon.SnapshotAmmo(),
+                _weapon.Weapon.Spec.Id,
                 _mission.Snapshot());
 
             try
@@ -412,7 +411,7 @@ namespace Fps.Runtime
             _passedCheckpointIds.Add(checkpointId);
             _notice.ShowSaved(SavedNoticeSeconds);
             Debug.Log(
-                $"{LogTag} saved mission={_missionId} checkpoint={checkpointId} health={save.Health} ammo={save.AmmoInMagazine}/{save.ReserveAmmo}",
+                $"{LogTag} saved mission={_missionId} checkpoint={checkpointId} health={save.Health} equipped={save.EquippedWeaponId} ammo={FormatAmmo(save.Weapons)}",
                 this);
             return true;
         }
@@ -515,11 +514,11 @@ namespace Fps.Runtime
 
             MovePlayerTo(save.CheckpointId);
             _player.RestoreHealth(save.Health);
-            _weapon.RestoreAmmo(save.AmmoInMagazine, save.ReserveAmmo);
+            _weapon.RestoreLoadout(save.Weapons, save.EquippedWeaponId);
             _lastCheckpointId = save.CheckpointId;
 
             Debug.Log(
-                $"{LogTag} restored mission={_missionId} checkpoint={save.CheckpointId} health={_player.Health.Current} ammo={_weapon.Weapon.AmmoInMagazine}/{_weapon.Weapon.ReserveAmmo} state={_mission.State}",
+                $"{LogTag} restored mission={_missionId} checkpoint={save.CheckpointId} health={_player.Health.Current} equipped={_weapon.Weapon.Spec.Id} ammo={FormatAmmo(_weapon.SnapshotAmmo())} state={_mission.State}",
                 this);
 
             // 達成したらセーブを消すので普通は起きないが、消す前に落ちたセーブから戻ったときはここで片付ける。
@@ -529,6 +528,20 @@ namespace Fps.Runtime
             }
 
             return true;
+        }
+
+        /// <summary>ログ用の「Id:弾倉/予備」をカンマで並べた文字列。</summary>
+        private static string FormatAmmo(System.Collections.Generic.IReadOnlyList<WeaponAmmo> weapons)
+        {
+            var parts = new string[weapons.Count];
+            for (var i = 0; i < parts.Length; i++)
+            {
+                var weapon = weapons[i];
+                parts[i] = weapon.WeaponId + ":" + weapon.AmmoInMagazine.ToString(CultureInfo.InvariantCulture) + "/"
+                    + weapon.ReserveAmmo.ToString(CultureInfo.InvariantCulture);
+            }
+
+            return string.Join(",", parts);
         }
 
         private void MovePlayerTo(string checkpointId)

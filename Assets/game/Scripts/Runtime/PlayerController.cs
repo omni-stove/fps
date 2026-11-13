@@ -20,10 +20,10 @@ namespace Fps.Runtime
     public sealed class PlayerController : MonoBehaviour
     {
         /// <summary>Assets/InputSystem_Actions.inputactions のアクション。</summary>
-        public const string MoveActionPath = "Player/Move";
-        public const string SprintActionPath = "Player/Sprint";
-        public const string CrouchActionPath = "Player/Crouch";
-        public const string JumpActionPath = "Player/Jump";
+        public const string MoveActionPath = InputActionPaths.Move;
+        public const string SprintActionPath = InputActionPaths.Sprint;
+        public const string CrouchActionPath = InputActionPaths.Crouch;
+        public const string JumpActionPath = InputActionPaths.Jump;
 
         public const string LogTag = "[Player]";
 

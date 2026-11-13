@@ -346,6 +346,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void CrouchMovesAtCrouchSpeedEvenWhileSprinting()
         {
+            // 床の無い宙で Tick するので、空中制御で速度が薄まらないよう 1 にする
+            _spec = new MotorSpec(5f, 8f, 1.2f, 20f, 1f, 2.5f);
             InitializeWithLook();
 
             LogAssert.Expect(LogType.Log, "[Player] crouched=true");

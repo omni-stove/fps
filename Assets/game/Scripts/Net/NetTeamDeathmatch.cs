@@ -16,6 +16,7 @@ namespace Fps.Net
     /// <remarks>
     /// サーバーは接続順 (<see cref="NetworkManager.ConnectedClientsList"/> の順) にプレイヤーを試合に加える。
     /// ダメージはすべて <see cref="ApplyDamage"/> を通し、体力が尽きたら Core 側が ReportKill する。
+    /// 味方に倒されたときは <see cref="MatchLog.TeamKill"/> で敵のキルと分けてログに出す。
     /// 出現・リスポーンの地点は Core の SpawnSelector が選び、ここでは <see cref="NetPlayer.ServerTeleport"/> を呼ぶだけ。
     /// <para>
     /// 射撃はサーバー権威のヒットスキャンで、ラグ補償をかける。毎フレームの終わりに全プレイヤーの位置を
@@ -25,14 +26,15 @@ namespace Fps.Net
     /// 体力は <see cref="NetPlayer"/> の NetworkVariable で配る。
     /// </para>
     /// <para>
-    /// 武器の値はここに持たず、<see cref="WeaponCatalog"/> (<see cref="WeaponCatalogAsset"/>) から引く。試合の開始時に
-    /// <see cref="WeaponCatalogAsset.ToCatalog"/> して <see cref="ServerLoadout"/> に保持し、未設定・不正なら試合を始めない。
-    /// 各プレイヤーには参加時に装備中の武器 (今は全員 <see cref="DefaultWeaponId"/>) を決めて持たせ、
-    /// 連射間隔・ダメージ・射程・減衰・弾倉はすべてその武器の <see cref="WeaponSpec"/> を使う。
-    /// クライアントは撃った武器の Id だけを送り、Catalog に無い・装備中の武器と違う射撃は捨てる。
+    /// 武器の値はここに持たず、ロードアウトのアセット (<see cref="LoadoutDefinition"/>) から引く。試合の開始時に
+    /// <see cref="LoadoutDefinition.ToRule"/> と <see cref="LoadoutDefinition.ToSpecs"/> で検査して <see cref="Fps.Core.ServerLoadout"/> に保持し、
+    /// 未設定・不正なら試合を始めない。全員に同じロードアウトを、出現・リスポーンのたびに <see cref="NetPlayerWeapon.ServerEquip"/> で持たせる。
+    /// 持ち替えは <see cref="NetPlayerWeapon"/> がサーバーで判定し、射撃の判定 (ダメージ・射程・減衰・連射間隔) には
+    /// 撃った人がその時に持っている武器 (<see cref="NetPlayerWeapon.CurrentSpec"/>) の値を使う。
+    /// クライアントは撃った武器の Id だけを送り、ロードアウトに無い・今持っている武器と違う射撃は捨てる。
     /// </para>
     /// <para>
-    /// 弾倉と予備弾はサーバーが各プレイヤーの <see cref="NetPlayerWeapon"/> で持つ。出現・リスポーンと試合の開始で満タンに戻す。
+    /// 弾倉と予備弾はサーバーが各プレイヤーの <see cref="NetPlayerWeapon"/> で持つ。出現・リスポーンで武器ごと渡し直し、試合の開始で満タンに戻す。
     /// 射撃は当たり判定の前に 1 発消費し、弾が無ければ捨てる。
     /// </para>
     /// <para>
@@ -46,12 +48,6 @@ namespace Fps.Net
     [RequireComponent(typeof(NetworkObject))]
     public sealed class NetTeamDeathmatch : NetworkBehaviour
     {
-        /// <summary>
-        /// 参加したプレイヤーに持たせる武器の Id。持ち替えが入るまでは全員これ。<see cref="WeaponCatalog"/> に無ければ試合を始めない。
-        /// rifle (<see cref="WeaponCategory.AssaultRifle"/>、Fps.Editor.WeaponAssetBuilder.RifleId と同じ値)。
-        /// </summary>
-        public const string DefaultWeaponId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
-
         /// <summary>試合が終わってから次の試合を始めるまでの秒数の既定値。</summary>
         public const float DefaultRestartDelaySeconds = 10f;
 
@@ -79,8 +75,8 @@ namespace Fps.Net
         [SerializeField, Min(0f), Tooltip("この距離 (m) 以内に敵がいる地点には、他に候補があればリスポーンしない")]
         private float _minEnemySpawnDistance = SpawnSelector.DefaultMinEnemyDistance;
 
-        [SerializeField, Tooltip("武器の一覧 (Assets/game/Weapons/WeaponCatalog.asset)。ダメージ・射程・減衰・連射間隔・弾倉はここから引く")]
-        private WeaponCatalogAsset _weaponCatalog;
+        [SerializeField, Tooltip("全員に持たせるロードアウト (Assets/game/Weapons/DefaultLoadout.asset)。ダメージ・射程・減衰・連射間隔・弾倉・持ち替え秒数はここから引く")]
+        private LoadoutDefinition _loadout;
 
         [SerializeField, Min(0f), Tooltip("射撃の始点とサーバー上の本人の位置のずれ (m) の上限。超えた射撃は捨てる")]
         private float _maxShotOriginOffset = ShotValidator.DefaultMaxOriginOffset;
@@ -105,8 +101,8 @@ namespace Fps.Net
         private LagCompensator _lagCompensator;
         private int _lastRecordedTick = _noRecordedTick;
 
-        // 試合の開始時に Catalog から作る。各プレイヤーの装備中の武器と連射の制限 (サーバーだけ)
-        private ServerLoadout _loadout;
+        // 試合の開始時に _loadout から作る。全員に配る武器と各プレイヤーの連射の制限 (サーバーだけ)
+        private ServerLoadout _serverLoadout;
         private float _activeMaxShotOriginOffset;
         private float _nextRejectWarningTime;
 
@@ -200,18 +196,18 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 武器の一覧のアセット。試合の開始時 (Spawn 時) に <see cref="WeaponCatalogAsset.ToCatalog"/> で読む。
-        /// 未設定・不正・<see cref="DefaultWeaponId"/> を含まないなら、サーバーはエラーを出して試合を始めない。
+        /// 全員に持たせるロードアウトのアセット。試合の開始時 (Spawn 時) に <see cref="TryCreateLoadout"/> で読む。
+        /// 未設定・不正なら、サーバーはエラーを出して試合を始めない。
         /// プレハブでは <c>Fps.Editor.NetSceneBuilder</c> が配線し、テストでは Spawn 前にここへ渡す。
         /// </summary>
-        public WeaponCatalogAsset Catalog
+        public LoadoutDefinition Loadout
         {
-            get => _weaponCatalog;
-            set => _weaponCatalog = value;
+            get => _loadout;
+            set => _loadout = value;
         }
 
-        /// <summary>サーバーで試合が動いている間の、各プレイヤーの装備中の武器。試合の開始前とクライアントでは null。</summary>
-        internal ServerLoadout Loadout => _loadout;
+        /// <summary>サーバーで試合が動いている間の、全員に配る武器と各プレイヤーの連射の制限。試合の開始前とクライアントでは null。</summary>
+        internal ServerLoadout ServerLoadout => _serverLoadout;
 
         private void Awake()
         {
@@ -261,7 +257,7 @@ namespace Fps.Net
             _lagCompensator = null;
             _lastRecordedTick = _noRecordedTick;
             _rewindTargets.Clear();
-            _loadout = null;
+            _serverLoadout = null;
 
             if (Current == this)
             {
@@ -338,16 +334,16 @@ namespace Fps.Net
         /// サーバーで shooter の射撃 1 発を処理する。撃った武器・連射の間隔・始点を確かめ、弾倉から 1 発消費してから、shooter が見ていた時点 time まで
         /// 他のプレイヤーを巻き戻して Raycast し、当たればダメージを与えて <c>[Net] hit attacker=.. victim=.. rewindTicks=..</c> を出す。
         /// 巻き戻せるのは <see cref="LagCompensator.MaxRewindTicks"/> tick 前まで。
-        /// 射程・ダメージ・減衰は、サーバーが shooter に持たせている武器の <see cref="WeaponSpec"/> を使う (クライアントの値は使わない)。
+        /// 射程・ダメージ・減衰は、サーバーが shooter に今持たせている武器 (<see cref="NetPlayerWeapon.CurrentSpec"/>) の値を使う (クライアントの値は使わない)。
         /// </summary>
         /// <param name="shooter">撃った人。試合に参加していて生きていなければ何もしない。</param>
-        /// <param name="weaponId">クライアントが送ってきた、撃った武器の Id。Catalog に無い・装備中の武器と違えば捨てる。</param>
+        /// <param name="weaponId">クライアントが送ってきた、撃った武器の Id。ロードアウトに無い・今持っている武器と違えば捨てる。</param>
         /// <param name="origin">クライアントが送ってきた始点。</param>
         /// <param name="direction">クライアントが送ってきた向き。</param>
         /// <param name="time">クライアントが見ていた時点。</param>
         internal void ServerFire(NetPlayer shooter, string weaponId, Vector3 origin, Vector3 direction, ShotTime time)
         {
-            if (!IsServer || _session == null || _lagCompensator == null || _loadout == null || shooter == null || !IsJoined(shooter))
+            if (!IsServer || _session == null || _lagCompensator == null || _serverLoadout == null || shooter == null || !IsJoined(shooter))
             {
                 return;
             }
@@ -358,9 +354,9 @@ namespace Fps.Net
                 return;
             }
 
-            // 武器の Id を確かめ、その武器の連射間隔 (ShotBudget) で制限する。ServerWeapon は弾倉とリロードだけを見る。
+            // 武器の Id を確かめ、今の武器の連射間隔 (ShotBudget) で制限する。ServerWeapon は弾倉とリロードだけを見る。
             // RPC の届く時刻は揺れるので、間隔どおりの射撃がまとめて届いても Burst 発までは受け入れ、速すぎる連打だけを捨てる
-            var weaponCheck = _loadout.TryFire(shooterId, weaponId, NetworkManager.ServerTime.Time, out var spec);
+            var weaponCheck = CheckWeaponShot(_serverLoadout, shooterId, shooter.Weapon, weaponId, NetworkManager.ServerTime.Time, out var spec);
             if (weaponCheck != ShotRejection.None)
             {
                 WarnRejected(shooterId, weaponCheck);
@@ -439,6 +435,43 @@ namespace Fps.Net
             Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome));
         }
 
+        /// <summary>
+        /// <see cref="ServerFire"/> の武器の検査。weapon が今持っている武器 (<see cref="NetPlayerWeapon.CurrentSpec"/>、持ち替え中は持ち替え先) で
+        /// weaponId と連射の制限を確かめ、通ればその武器を spec に返す。持ち替えていれば、連射の制限はその武器の間隔で作り直す。
+        /// weapon が null か装備前なら <see cref="ShotRejection.NoWeapon"/> (weaponId がロードアウトにあるとき)。
+        /// </summary>
+        internal static ShotRejection CheckWeaponShot(
+            ServerLoadout loadout, int shooterId, NetPlayerWeapon weapon, string weaponId, double nowSeconds, out WeaponSpec spec)
+        {
+            if (loadout == null)
+            {
+                throw new ArgumentNullException(nameof(loadout));
+            }
+
+            var held = weapon != null ? weapon.CurrentSpec : null;
+            var rejection = loadout.TryFire(shooterId, held, weaponId, nowSeconds);
+            spec = rejection == ShotRejection.None ? held : null;
+            return rejection;
+        }
+
+        /// <summary>
+        /// 出現・リスポーンで weapon に loadout の武器を全部満タンで渡し直し、先頭 (rifle) を持ち替えの待ち時間なしで構えさせる。
+        /// 持ち替え中・リロード中だった状態と、倒れる前の残弾は捨てる。weapon が null なら何もしない。
+        /// </summary>
+        internal static void ArmForSpawn(ServerLoadout loadout, NetPlayerWeapon weapon)
+        {
+            if (loadout == null)
+            {
+                throw new ArgumentNullException(nameof(loadout));
+            }
+
+            // ServerLoadout は開始時に ServerEquip と同じ条件で検査済みなので、ここでは投げない
+            if (weapon != null)
+            {
+                weapon.ServerEquip(loadout.Weapons, loadout.SwitchSeconds);
+            }
+        }
+
         // サーバーの知る本人の目の位置から始点までの間に、プレイヤー以外のコライダー (壁など) があれば true。
         private static bool IsOriginBlocked(NetPlayer shooter, Vector3 origin)
         {
@@ -474,7 +507,7 @@ namespace Fps.Net
             player.ServerPlayerId = NetPlayer.NotJoined;
             _playerById.Remove(playerId);
             _lagCompensator?.Remove(playerId);
-            _loadout?.Remove(playerId);
+            _serverLoadout?.Remove(playerId);
             if (_session != null && _session.HasPlayer(playerId))
             {
                 _session.Leave(playerId);
@@ -512,9 +545,9 @@ namespace Fps.Net
                 return;
             }
 
-            if (!TryCreateLoadout(_weaponCatalog, out var loadout, out var weaponError))
+            if (!TryCreateLoadout(_loadout, out var loadout, out var loadoutError))
             {
-                Debug.LogError("[Match] invalid weapon catalog on " + name + ": " + weaponError + "; run Fps.Editor.NetSceneBuilder.Build");
+                Debug.LogError("[Match] invalid loadout on " + name + ": " + loadoutError + "; run Fps.Editor.NetSceneBuilder.Build");
                 return;
             }
 
@@ -530,7 +563,7 @@ namespace Fps.Net
                 return;
             }
 
-            _loadout = loadout;
+            _serverLoadout = loadout;
             _activeMaxShotOriginOffset = _maxShotOriginOffset;
             _lagCompensator = new LagCompensator();
             _lastRecordedTick = _noRecordedTick;
@@ -550,34 +583,39 @@ namespace Fps.Net
             SyncNextMatchSeconds();
 
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
-                + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count);
+                + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count
+                + " friendlyFire=" + spec.Rules.FriendlyFire);
             Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
                 + " tickRate=" + NetworkPlayerMotor.TickRate);
-            foreach (var weapon in _loadout.Catalog.All)
+            Debug.Log(MatchLog.Loadout(_loadout.name, _serverLoadout));
+            for (var i = 0; i < _serverLoadout.Weapons.Count; i++)
             {
-                Debug.Log(WeaponLog(weapon));
+                Debug.Log(MatchLog.Weapon(i, _serverLoadout.Weapons[i]));
             }
         }
 
         /// <summary>
-        /// asset から Catalog を作り、試合で使う <see cref="ServerLoadout"/> にする。asset が未設定・不正、
-        /// <see cref="DefaultWeaponId"/> を含まない、RPC で送れない長さの Id がある、のどれかなら false と理由を返す。
+        /// asset のルール (<see cref="LoadoutDefinition.ToRule"/>) と武器 (<see cref="LoadoutDefinition.ToSpecs"/>) を検査し、
+        /// 試合で使う <see cref="Fps.Core.ServerLoadout"/> にする。asset が未設定・ルールか武器が不正・ルールに合わない・
+        /// <see cref="NetPlayerWeapon.MaxWeaponCount"/> 本より多い・RPC で送れない長さの Id がある、のどれかなら false と理由を返す。
         /// </summary>
-        public static bool TryCreateLoadout(WeaponCatalogAsset asset, out ServerLoadout loadout, out string error)
+        public static bool TryCreateLoadout(LoadoutDefinition asset, out ServerLoadout loadout, out string error)
         {
             loadout = null;
 
             // 参照切れ (破棄されたアセット) も Unity の == null で拾う
             if (asset == null)
             {
-                error = "no weapon catalog is assigned";
+                error = "no loadout is assigned";
                 return false;
             }
 
-            WeaponCatalog catalog;
+            LoadoutRule rule;
+            IReadOnlyList<WeaponSpec> specs;
             try
             {
-                catalog = asset.ToCatalog();
+                rule = asset.ToRule();
+                specs = asset.ToSpecs();
             }
             catch (WeaponDefinitionException e)
             {
@@ -585,33 +623,36 @@ namespace Fps.Net
                 return false;
             }
 
-            if (!catalog.Contains(DefaultWeaponId))
+            if (specs.Count > NetPlayerWeapon.MaxWeaponCount)
             {
-                error = "weapon catalog '" + asset.name + "' has no '" + DefaultWeaponId + "' to give to joining players";
+                error = "loadout '" + asset.name + "' has " + specs.Count + " weapons but at most "
+                    + NetPlayerWeapon.MaxWeaponCount + " can be synced";
                 return false;
             }
 
-            foreach (var weapon in catalog.All)
+            foreach (var weapon in specs)
             {
                 if (!NetPlayerWeapon.FitsWeaponId(weapon.Id))
                 {
-                    error = "weapon id '" + weapon.Id + "' in '" + asset.name + "' is longer than "
+                    error = "weapon id '" + weapon.Id + "' in loadout '" + asset.name + "' is longer than "
                         + NetPlayerWeapon.MaxWeaponIdBytes + " bytes and cannot be sent with a shot";
                     return false;
                 }
             }
 
-            loadout = new ServerLoadout(catalog);
+            try
+            {
+                // ToRule と ToSpecs の間にアセットが書き換わっても、ここで同じルールに合うことを確かめ直す
+                loadout = new ServerLoadout(rule, specs, asset.SwitchSeconds);
+            }
+            catch (ArgumentException e)
+            {
+                error = "loadout '" + asset.name + "' is invalid: " + e.Message;
+                return false;
+            }
+
             error = null;
             return true;
-        }
-
-        private static string WeaponLog(WeaponSpec weapon)
-        {
-            return "[Net] weapon id=" + weapon.Id + " name=" + weapon.DisplayName + " category=" + weapon.Category
-                + " damage=" + weapon.Damage + " range=" + weapon.Range
-                + " fireInterval=" + weapon.FireInterval + " magazine=" + weapon.MagazineSize + " reserve=" + weapon.ReserveAmmo
-                + " reload=" + weapon.ReloadSeconds + "s";
         }
 
         /// <summary>Inspector で入る射撃の検査の値を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>
@@ -697,22 +738,10 @@ namespace Fps.Net
                 player.ServerPlayerId = playerId;
                 _playerById[playerId] = player;
 
-                // Join の中で出現 (Spawned) するので、その前に持たせておく。持ち替えが入るまでは全員 DefaultWeaponId
-                ServerEquip(player, DefaultWeaponId);
+                // 武器は Join の中の出現 (HandleSpawned) で持たせる
                 Debug.Log(MatchLog.Joined(playerId, _session.NextTeam));
                 _session.Join(playerId);
             }
-        }
-
-        /// <summary>
-        /// サーバーで、参加済みの player に Catalog の weaponId の武器を持たせる。弾倉・予備弾は満タンになり、連射の制限はやり直す。
-        /// 以後この Id 以外の射撃は <see cref="ShotRejection.WeaponMismatch"/> で捨てる。
-        /// </summary>
-        /// <exception cref="KeyNotFoundException">weaponId が Catalog に無い。</exception>
-        private void ServerEquip(NetPlayer player, string weaponId)
-        {
-            var spec = _loadout.Equip(player.ServerPlayerId, weaponId);
-            player.Weapon.ServerEquip(spec);
         }
 
         private void SyncRemainingSeconds()
@@ -894,7 +923,8 @@ namespace Fps.Net
 
         private void HandleKilled(int killerId, int victimId)
         {
-            Debug.Log(MatchLog.Kill(killerId, victimId));
+            var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
+            Debug.Log(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId));
         }
 
         private void HandleSpawned(int playerId, SpawnPoint point)
@@ -908,10 +938,7 @@ namespace Fps.Net
             // 出現より前の時点まで巻き戻した射撃には、その時点にいなかったものとして当たらない
             _lagCompensator?.Remove(playerId);
 
-            if (player.Weapon != null)
-            {
-                player.Weapon.ServerRefill();
-            }
+            ArmForSpawn(_serverLoadout, player.Weapon);
 
             var p = point.Position;
             player.ServerTeleport(new Vector3(p.X, p.Y, p.Z));
@@ -934,7 +961,7 @@ namespace Fps.Net
             _status.Value = new NetMatchStatus(GameModeState.Waiting, null);
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
-            _loadout?.ResetBudgets();
+            _serverLoadout?.ResetBudgets();
             Debug.Log(MatchLog.Restart());
         }
 

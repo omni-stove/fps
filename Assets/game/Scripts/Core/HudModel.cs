@@ -35,6 +35,9 @@ namespace Fps.Core
         /// <summary>リロード中か。<see cref="AmmoText"/> にも出るが、View が見た目を変えるのに使う。</summary>
         public bool IsReloading { get; private set; }
 
+        /// <summary>弾数の上に出す、持っている武器の表示名 (<see cref="WeaponSpec.DisplayName"/>)。武器が無ければ <see cref="HudFormat.NoWeaponName"/>。</summary>
+        public string WeaponNameText { get; private set; } = HudFormat.NoWeaponName;
+
         /// <summary>上中央の残り時間 (mm:ss)。</summary>
         public string TimeText { get; private set; } = HudFormat.NoTime;
 
@@ -73,7 +76,10 @@ namespace Fps.Core
             OnHealthChanged();
         }
 
-        /// <summary>弾数の源を差し替える。射撃 (Fired) とリロード完了 (Reloaded) で更新する。null なら仮の表示に戻す。</summary>
+        /// <summary>
+        /// 弾数と武器名の源を差し替える。弾数は射撃 (Fired) とリロード完了 (Reloaded) で更新し、武器名はここで
+        /// <see cref="WeaponSpec.DisplayName"/> にする。null なら両方とも仮の表示に戻す。
+        /// </summary>
         public void BindWeapon(Weapon weapon)
         {
             if (_weapon != null)
@@ -90,6 +96,7 @@ namespace Fps.Core
             }
 
             OnWeaponChanged();
+            SetWeaponName(_weapon != null ? _weapon.Spec.DisplayName : HudFormat.NoWeaponName);
         }
 
         /// <summary>残り時間の源を差し替える。null なら仮の表示に戻す。</summary>
@@ -182,6 +189,25 @@ namespace Fps.Core
         public void ClearAmmo()
         {
             ApplyAmmo(HudFormat.NoAmmo, false);
+        }
+
+        /// <summary>武器名を出す。null は <see cref="HudFormat.NoWeaponName"/> (出さない) として扱う。</summary>
+        public void SetWeaponName(string displayName)
+        {
+            displayName ??= HudFormat.NoWeaponName;
+            if (displayName == WeaponNameText)
+            {
+                return;
+            }
+
+            WeaponNameText = displayName;
+            Changed?.Invoke(HudField.WeaponName);
+        }
+
+        /// <summary>武器名を消す。</summary>
+        public void ClearWeaponName()
+        {
+            SetWeaponName(HudFormat.NoWeaponName);
         }
 
         /// <summary>残り時間 (秒) を出す。表示は秒の桁が変わったときだけ変わる (<see cref="HudFormat.Time"/>)。</summary>

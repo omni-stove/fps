@@ -140,7 +140,7 @@ namespace Fps.Tests.EditMode
             _agent.SetPatrolRoute(new[] { new Vector3(0f, 0f, 5f), new Vector3(5f, 0f, 5f) });
 
             Assert.That(_agent.State, Is.EqualTo(EnemyState.Patrol));
-            Assert.That(_agent.PatrolRoute, Has.Count.EqualTo(2));
+            Assert.That(_agent.PatrolRoute.Count, Is.EqualTo(2));
         }
 
         [Test]
@@ -148,7 +148,7 @@ namespace Fps.Tests.EditMode
         {
             _agent.SetPatrolRoute(new[] { new Vector3(1f, 0f, 2f) });
 
-            Assert.That(_agent.PatrolRoute, Has.Count.EqualTo(1));
+            Assert.That(_agent.PatrolRoute.Count, Is.EqualTo(1));
             Assert.That(_agent.PatrolRoute[0], Is.EqualTo(new Vector3(1f, 0f, 2f)));
             Assert.That(_agent.State, Is.EqualTo(EnemyState.Idle), "the brain receives the route on Start");
         }

@@ -25,12 +25,24 @@ namespace Fps.Core
 
         // 連射間隔を 0 にした Spec。内側の Weapon はこれで作る
         private readonly WeaponSpec _innerSpec;
+        private readonly GameRules _rules;
         private Weapon _weapon;
 
-        /// <param name="spec">武器の設定。<see cref="WeaponSpec.FireInterval"/> は使わない (<see cref="ShotBudget"/> に渡す)。</param>
+        /// <param name="spec">武器の設定。<see cref="WeaponSpec.FireInterval"/> は使わない (<see cref="ShotBudget"/> に渡す)。予備弾は有限で倍率 1。</param>
         public ServerWeapon(WeaponSpec spec)
+            : this(spec, GameRules.Default)
+        {
+        }
+
+        /// <param name="spec">武器の設定。<see cref="WeaponSpec.FireInterval"/> は使わない (<see cref="ShotBudget"/> に渡す)。</param>
+        /// <param name="rules">
+        /// 予備弾のルール。初期の予備弾と <see cref="Refill"/> で戻す値に <see cref="GameRules.ReserveAmmoMultiplier"/> を掛け、
+        /// <see cref="GameRules.InfiniteReserve"/> ならリロードで予備弾を減らさない。
+        /// </param>
+        public ServerWeapon(WeaponSpec spec, GameRules rules)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
+            _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _innerSpec = spec.FireInterval == 0f
                 ? spec
                 : new WeaponSpec(
@@ -55,10 +67,13 @@ namespace Fps.Core
         public int ReserveAmmo => _weapon.ReserveAmmo;
         public bool IsReloading => _weapon.IsReloading;
 
+        /// <summary>true ならリロードで予備弾を減らさず、予備弾が 0 でもリロードできる。</summary>
+        public bool HasInfiniteReserve => _weapon.HasInfiniteReserve;
+
         /// <summary>
         /// 1 発撃つ。撃てたら弾倉を 1 減らして <see cref="ShotRejection.None"/>。
         /// リロード中なら <see cref="ShotRejection.Reloading"/>、弾倉が空なら <see cref="ShotRejection.OutOfAmmo"/> を返し、
-        /// 空のときは予備弾があればリロードを始める。
+        /// 空のときは予備弾があれば (<see cref="HasInfiniteReserve"/> なら常に) リロードを始める。
         /// </summary>
         public ShotRejection TryFire()
         {
@@ -84,7 +99,7 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// リロードを始める。弾倉が満タンか、予備弾が無いか、もうリロード中なら何もせず false。
+        /// リロードを始める。弾倉が満タンか、予備弾が無い (<see cref="HasInfiniteReserve"/> なら問わない) か、もうリロード中なら何もせず false。
         /// 補充は <see cref="Tick"/> で <see cref="WeaponSpec.ReloadSeconds"/> 経ったときに行う。
         /// </summary>
         public bool TryStartReload()
@@ -110,7 +125,7 @@ namespace Fps.Core
             _weapon.Tick(deltaSeconds);
         }
 
-        /// <summary>弾倉と予備弾を初期値 (満タン) に戻し、リロード中ならやめる。リスポーンと試合の開始時に呼ぶ。</summary>
+        /// <summary>弾倉と予備弾を初期値 (満タン、予備弾は倍率を掛けた値) に戻し、リロード中ならやめる。リスポーンと試合の開始時に呼ぶ。</summary>
         public void Refill()
         {
             _weapon.Reloaded -= HandleReloaded;
@@ -132,7 +147,7 @@ namespace Fps.Core
 
         private Weapon CreateWeapon()
         {
-            var weapon = new Weapon(_innerSpec);
+            var weapon = new Weapon(_innerSpec, _rules);
             weapon.Reloaded += HandleReloaded;
             return weapon;
         }

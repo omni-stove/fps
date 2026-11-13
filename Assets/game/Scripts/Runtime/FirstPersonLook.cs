@@ -17,7 +17,7 @@ namespace Fps.Runtime
     public sealed class FirstPersonLook : MonoBehaviour
     {
         /// <summary>Assets/InputSystem_Actions.inputactions の Look アクション。</summary>
-        public const string LookActionPath = "Player/Look";
+        public const string LookActionPath = InputActionPaths.Look;
 
         /// <summary>マウスの 1 ピクセルあたりの回転 (度)。</summary>
         public const float DefaultMouseSensitivity = 0.1f;

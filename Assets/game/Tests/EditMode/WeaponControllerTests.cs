@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using WeaponAmmo = Fps.Core.WeaponAmmo;
 
 namespace Fps.Tests.EditMode
 {
@@ -59,14 +60,139 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void InitializeUsesTheAssignedDefinition()
+        public void InitializeUsesTheAssignedDefinitions()
         {
-            _controller.Definition = _rifle;
+            var handgun = CreateHandgun();
+            try
+            {
+                _controller.Definitions = new[] { _rifle, handgun };
 
-            _controller.Initialize(_camera.transform, _attack, _reload);
+                _controller.Initialize(_camera.transform, _attack, _reload);
 
-            Assert.That(_controller.IsInitialized, Is.True);
-            Assert.That(_controller.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+                Assert.That(_controller.IsInitialized, Is.True);
+                Assert.That(_controller.Loadout.Count, Is.EqualTo(2));
+                Assert.That(_controller.CurrentIndex, Is.Zero);
+                Assert.That(_controller.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+                Assert.That(_controller.Definition, Is.SameAs(_rifle));
+                Assert.That(_controller.NextAction, Is.Null, "no switch input unless passed");
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void DefinitionsCopyTheAssignedListAndTreatNullAsEmpty()
+        {
+            var list = new System.Collections.Generic.List<WeaponDefinition> { _rifle };
+            _controller.Definitions = list;
+            list.Clear();
+
+            Assert.That(_controller.Definitions, Has.Count.EqualTo(1));
+
+            _controller.Definitions = null;
+            Assert.That(_controller.Definitions, Is.Empty);
+        }
+
+        [Test]
+        public void NextAndPreviousSwitchWeaponsAndWrapAround()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                InitializeWithRifleAndHandgun(handgun);
+                var changes = new System.Collections.Generic.List<Fps.Core.Weapon>();
+                _controller.WeaponChanged += changes.Add;
+                var rifle = _controller.Weapon;
+
+                Assert.That(_controller.SelectNext(), Is.True);
+                Assert.That(_controller.CurrentIndex, Is.EqualTo(1));
+                Assert.That(_controller.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
+                Assert.That(_controller.Definition, Is.SameAs(handgun));
+                Assert.That(_controller.HitscanRange, Is.EqualTo(handgun.Range), "the range follows the held weapon");
+
+                Assert.That(_controller.SelectNext(), Is.True, "next after the last wraps to the first");
+                Assert.That(_controller.Weapon, Is.SameAs(rifle), "switching back holds the same weapon");
+
+                Assert.That(_controller.SelectPrevious(), Is.True, "previous before the first wraps to the last");
+                Assert.That(_controller.CurrentIndex, Is.EqualTo(1));
+
+                Assert.That(_controller.Select(WeaponAssetBuilder.RifleId), Is.True);
+                Assert.That(_controller.Select(WeaponAssetBuilder.RifleId), Is.False, "already held");
+                Assert.That(_controller.Select("00000000-0000-4000-8000-00000000ffff"), Is.False, "not in the loadout");
+                Assert.That(_controller.Select(5), Is.False);
+
+                Assert.That(changes, Has.Count.EqualTo(4));
+                Assert.That(changes[3], Is.SameAs(rifle));
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void ASingleWeaponDoesNotSwitch()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+
+            Assert.That(_controller.SelectNext(), Is.False);
+            Assert.That(_controller.SelectPrevious(), Is.False);
+            Assert.That(_controller.CurrentIndex, Is.Zero);
+        }
+
+        [Test]
+        public void SwitchingCancelsTheReloadAndBothWeaponsFire()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                InitializeWithRifleAndHandgun(handgun);
+                var rifle = _controller.Weapon;
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+                Assert.That(_controller.PullTrigger(true, true), Is.True);
+                Assert.That(_controller.StartReload(), Is.True);
+
+                _controller.SelectNext();
+                Assert.That(rifle.IsReloading, Is.False, "the holstered rifle stops reloading");
+
+                // 持ち替えた handgun は Semi: 押したときだけ撃ち、押し続けても 2 発目は出ない。
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={handgun.MagazineSize - 1}");
+                Assert.That(_controller.PullTrigger(true, true), Is.True);
+                _controller.Tick(handgun.FireInterval);
+                Assert.That(_controller.PullTrigger(true, false), Is.False);
+
+                _controller.Tick(_rifle.ReloadSeconds);
+                Assert.That(rifle.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize - 1), "a cancelled reload does not refill");
+
+                // rifle に戻ると Auto: 押し続けている間撃つ。
+                // しまっている武器の時間は進まないので、rifle の連射間隔は戻ってから経たせる。
+                _controller.SelectPrevious();
+                _controller.Tick(_rifle.FireInterval);
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 2}");
+                Assert.That(_controller.PullTrigger(true, false), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void DuplicateWeaponIdsAreRejectedAndKeepThePreviousLoadout()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var previous = _controller.Weapon;
+
+            Assert.Throws<ArgumentException>(
+                () => _controller.Initialize(_camera.transform, _attack, _reload, null, null, new[] { _rifle, _rifle }));
+            Assert.Throws<ArgumentException>(
+                () => _controller.Initialize(_camera.transform, _attack, _reload, null, null, new WeaponDefinition[] { _rifle, null }));
+            Assert.Throws<ArgumentException>(
+                () => _controller.Initialize(_camera.transform, _attack, _reload, null, null, Array.Empty<WeaponDefinition>()));
+
+            Assert.That(_controller.Weapon, Is.SameAs(previous));
         }
 
         [Test]
@@ -102,37 +228,81 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void RestoreAmmoReplacesTheWeaponAndCancelsReload()
+        public void RestoreLoadoutReplacesTheWeaponsAndCancelsReload()
         {
-            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
-            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
-            _controller.Fire();
-            Assert.That(_controller.StartReload(), Is.True);
-            var previous = _controller.Weapon;
-            Fps.Core.Weapon changed = null;
-            _controller.WeaponChanged += weapon => changed = weapon;
+            var handgun = CreateHandgun();
+            try
+            {
+                InitializeWithRifleAndHandgun(handgun);
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+                _controller.Fire();
+                Assert.That(_controller.StartReload(), Is.True);
+                var previous = _controller.Weapon;
+                Fps.Core.Weapon changed = null;
+                _controller.WeaponChanged += weapon => changed = weapon;
 
-            _controller.RestoreAmmo(7, 12);
+                _controller.RestoreLoadout(
+                    new[] { new WeaponAmmo(WeaponAssetBuilder.RifleId, 7, 12), new WeaponAmmo(WeaponAssetBuilder.HandgunId, 3, 9) },
+                    WeaponAssetBuilder.HandgunId);
 
-            Assert.That(_controller.Weapon, Is.Not.SameAs(previous));
-            Assert.That(changed, Is.SameAs(_controller.Weapon));
-            Assert.That(_controller.Weapon.Spec, Is.SameAs(previous.Spec));
-            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(7));
-            Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(12));
-            Assert.That(_controller.Weapon.IsReloading, Is.False);
+                Assert.That(_controller.CurrentIndex, Is.EqualTo(1), "the saved weapon is held");
+                Assert.That(changed, Is.SameAs(_controller.Weapon));
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(3));
+                Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(9));
+                var rifle = _controller.Loadout.Items[0];
+                Assert.That(rifle, Is.Not.SameAs(previous));
+                Assert.That(rifle.Spec, Is.SameAs(previous.Spec));
+                Assert.That(rifle.AmmoInMagazine, Is.EqualTo(7));
+                Assert.That(rifle.ReserveAmmo, Is.EqualTo(12));
+                Assert.That(rifle.IsReloading, Is.False);
+                Assert.That(_controller.SnapshotAmmo(), Has.Count.EqualTo(2));
 
-            _controller.RestoreAmmo(_rifle.MagazineSize + 5, 0);
-            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize), "clamped to the magazine");
+                // 戻した後も持ち替えられ、WeaponChanged が来る。
+                Assert.That(_controller.SelectNext(), Is.True);
+                Assert.That(changed, Is.SameAs(rifle));
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
         }
 
         [Test]
-        public void RestoreAmmoRejectsNegativeValuesAndNeedsInitialize()
+        public void RestoreLoadoutClampsFillsMissingWeaponsAndWarnsAboutUnknownOnes()
         {
-            Assert.Throws<InvalidOperationException>(() => _controller.RestoreAmmo(1, 1));
+            var handgun = CreateHandgun();
+            try
+            {
+                InitializeWithRifleAndHandgun(handgun);
+                const string unknownId = "00000000-0000-4000-8000-00000000ffff";
+                LogAssert.Expect(LogType.Warning, new Regex(@"^\[WeaponController\] 'Camera' は武器 '" + unknownId + "' を持っていない"));
+                LogAssert.Expect(LogType.Warning, new Regex(@"^\[WeaponController\] 'Camera' はセーブで持っていた武器 '" + unknownId + "' を持っていない"));
+
+                _controller.RestoreLoadout(
+                    new[] { new WeaponAmmo(WeaponAssetBuilder.RifleId, _rifle.MagazineSize + 5, 0), new WeaponAmmo(unknownId, 1, 1) },
+                    unknownId);
+
+                Assert.That(_controller.CurrentIndex, Is.Zero, "an unknown equipped weapon falls back to the first");
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize), "clamped to the magazine");
+                Assert.That(_controller.Weapon.ReserveAmmo, Is.Zero);
+                Assert.That(_controller.Loadout.Items[1].AmmoInMagazine, Is.EqualTo(handgun.MagazineSize), "a weapon missing from the save starts full");
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void RestoreLoadoutNeedsInitializeAndRejectsNull()
+        {
+            Assert.Throws<InvalidOperationException>(() => _controller.RestoreLoadout(Array.Empty<WeaponAmmo>(), null));
+            Assert.Throws<InvalidOperationException>(() => _controller.SnapshotAmmo());
+            Assert.Throws<InvalidOperationException>(() => _controller.SelectNext());
 
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
-            Assert.Throws<ArgumentOutOfRangeException>(() => _controller.RestoreAmmo(-1, 0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => _controller.RestoreAmmo(0, -1));
+            Assert.Throws<ArgumentNullException>(() => _controller.RestoreLoadout(null, null));
+            Assert.Throws<ArgumentException>(() => _controller.RestoreLoadout(new WeaponAmmo[] { null }, null));
         }
 
         [Test]
@@ -204,6 +374,60 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AutoWeaponKeepsFiringWhileTheTriggerIsHeld()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var full = _rifle.MagazineSize;
+
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 1}");
+            Assert.That(_controller.PullTrigger(true, true), Is.True);
+            Assert.That(_controller.PullTrigger(true, false), Is.False, "still within the fire interval");
+
+            _controller.Tick(_rifle.FireInterval);
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 2}");
+            Assert.That(_controller.PullTrigger(true, false), Is.True);
+
+            _controller.Tick(_rifle.FireInterval);
+            Assert.That(_controller.PullTrigger(false, false), Is.False, "released");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void SemiWeaponFiresOncePerPress()
+        {
+            var handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                handgun.name = "Handgun";
+                WeaponAssetBuilder.Configure(handgun, WeaponAssetBuilder.HandgunSpec());
+                Assert.That(handgun.FireMode, Is.EqualTo(Fps.Core.FireMode.Semi));
+                _controller.Initialize(_camera.transform, _attack, _reload, handgun);
+                var full = handgun.MagazineSize;
+
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 1}");
+                Assert.That(_controller.PullTrigger(true, true), Is.True);
+
+                // 連射間隔を過ぎても押し続けている間は 2 発目が出ない。
+                for (var i = 0; i < 5; i++)
+                {
+                    _controller.Tick(handgun.FireInterval);
+                    Assert.That(_controller.PullTrigger(true, false), Is.False);
+                }
+
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(full - 1));
+
+                Assert.That(_controller.PullTrigger(false, false), Is.False);
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 2}");
+                Assert.That(_controller.PullTrigger(true, true), Is.True, "pressed again");
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
         public void ReloadLogsWhenTheMagazineIsRefilled()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
@@ -235,13 +459,28 @@ namespace Fps.Tests.EditMode
         {
             var actions = InputSystem.actions;
             Assert.That(actions, Is.Not.Null, "Project-wide Input Actions must be assigned");
-            _controller.Definition = _rifle;
+            _controller.Definitions = new[] { _rifle };
 
             Assert.That(_controller.TryInitializeFromHierarchy(), Is.True);
             Assert.That(_controller.Aim, Is.SameAs(_camera.transform));
             Assert.That(_controller.AttackAction, Is.SameAs(actions.FindAction(WeaponController.AttackActionPath)));
             Assert.That(_controller.ReloadAction, Is.SameAs(actions.FindAction(WeaponController.ReloadActionPath)));
+            Assert.That(_controller.NextAction, Is.Not.Null);
+            Assert.That(_controller.NextAction, Is.SameAs(actions.FindAction(WeaponController.NextActionPath)));
+            Assert.That(_controller.PreviousAction, Is.Not.Null);
+            Assert.That(_controller.PreviousAction, Is.SameAs(actions.FindAction(WeaponController.PreviousActionPath)));
             Assert.That(_controller.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+        }
+
+        [Test]
+        public void ResolvingWithDuplicateWeaponsIsReportedAndRejected()
+        {
+            _controller.Definitions = new[] { _rifle, _rifle };
+
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[WeaponController\] 'Camera' のロードアウトが不正です: .*" + WeaponAssetBuilder.RifleId));
+
+            Assert.That(_controller.TryInitializeFromHierarchy(), Is.False);
+            Assert.That(_controller.IsInitialized, Is.False);
         }
 
         [Test]
@@ -257,12 +496,32 @@ namespace Fps.Tests.EditMode
         public void ResolvingWithAnInvalidDefinitionIsReportedAndRejected()
         {
             _rifle.Range = 0f;
-            _controller.Definition = _rifle;
+            _controller.Definitions = new[] { _rifle };
 
             LogAssert.Expect(LogType.Error, new Regex(@"^\[WeaponController\] 'Camera' の武器定義が不正です: weapon 'Rifle'"));
 
             Assert.That(_controller.TryInitializeFromHierarchy(), Is.False);
             Assert.That(_controller.IsInitialized, Is.False);
+        }
+
+        private WeaponDefinition CreateHandgun()
+        {
+            var handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
+            handgun.name = "Handgun";
+            WeaponAssetBuilder.Configure(handgun, WeaponAssetBuilder.HandgunSpec());
+            return handgun;
+        }
+
+        private void InitializeWithRifleAndHandgun(WeaponDefinition handgun)
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, null, null, new[] { _rifle, handgun });
+        }
+
+        [Test]
+        public void NextAndPreviousActionsExistInTheProjectWideActions()
+        {
+            Assert.That(InputSystem.actions.FindAction(WeaponController.NextActionPath), Is.Not.Null);
+            Assert.That(InputSystem.actions.FindAction(WeaponController.PreviousActionPath), Is.Not.Null);
         }
 
         [Test]

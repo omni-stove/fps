@@ -12,7 +12,7 @@ namespace Fps.Runtime
     /// <see cref="GameBootstrap"/> が作った <see cref="BootstrapWorld"/> を拾い、試合を始めて Update で時間を進める。
     /// 標的ダミーの死亡はプレイヤーのキル、プレイヤーの死亡は敗北として Match に渡すだけで、勝敗の判断は Match が行う。
     /// 状態が変わるたびに <see cref="MatchLog.SoloState"/> の書式で Debug.Log に出し、終わったらプレイヤーの移動と射撃を止める。
-    /// 終了後に <see cref="RestartActionPath"/> (キーボードの R) を押すと今のシーンを読み込み直して最初からやり直す。
+    /// 終了後に <see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) を押すと今のシーンを読み込み直して最初からやり直す。
     /// 勝敗をすぐ確かめたいときは <see cref="KillsToWin"/> と <see cref="TimeLimitSeconds"/> を小さくする。
     /// </summary>
     [DisallowMultipleComponent]
@@ -30,10 +30,10 @@ namespace Fps.Runtime
         public const int PlayerId = 0;
 
         /// <summary>
-        /// 再開に使うアクション。Assets/InputSystem_Actions.inputactions の Reload (キーボードの R)。
+        /// 再開に使うアクション。Assets/InputSystem_Actions.inputactions の Reload (キーボードの R、ゲームパッドの X)。
         /// 終了後は <see cref="WeaponController"/> を止めるので、リロードと取り合うことはない。
         /// </summary>
-        public const string RestartActionPath = WeaponController.ReloadActionPath;
+        public const string RestartActionPath = InputActionPaths.Reload;
 
         private readonly Dictionary<Damageable, int> _targetIds = new Dictionary<Damageable, int>();
         private Match _match;

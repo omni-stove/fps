@@ -51,8 +51,8 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// <see cref="RiflePath"/> の rifle の定義を読む。シーン生成スクリプトがプレイヤーの <see cref="WeaponController"/>
-        /// に配線するのに使う (敵の武器は <see cref="LoadCatalog"/> の一覧から配置ごとに引く)。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
+        /// <see cref="RiflePath"/> の rifle の定義を読む (プレイヤーの武器は <see cref="LoadPlayerLoadout"/>、敵の武器は
+        /// <see cref="LoadCatalog"/> の一覧から配置ごとに引く)。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
         /// 値が不正でも例外を投げ、壊れた定義をシーンに配線しない。
         /// </summary>
         public static WeaponDefinition LoadRifle()
@@ -139,6 +139,25 @@ namespace Fps.Editor
         public static LoadoutDefinition LoadDefaultLoadout()
         {
             return LoadLoadout(LoadoutPath);
+        }
+
+        /// <summary>
+        /// オフラインのプレイヤーの既定ロードアウト。<see cref="LoadDefaultLoadout"/> のスロット順の武器の定義 (rifle, handgun) で、
+        /// シーン生成スクリプトが <see cref="GameBootstrap.WeaponDefinitions"/> に配線する。
+        /// ネット対戦と同じアセットから引くので、並びを変えるときは <see cref="DefaultLoadoutSlots"/> だけを直せばよい。
+        /// 持ち替え秒数 (<see cref="LoadoutDefinition.SwitchSeconds"/>) はオフラインでは使わない。
+        /// </summary>
+        public static WeaponDefinition[] LoadPlayerLoadout()
+        {
+            var loadout = LoadDefaultLoadout();
+            var weapons = new WeaponDefinition[loadout.Slots.Count];
+            for (var i = 0; i < weapons.Length; i++)
+            {
+                // LoadDefaultLoadout が ToSpecs を通しているので、どのスロットにも武器がある。
+                weapons[i] = loadout.Slots[i].Weapon;
+            }
+
+            return weapons;
         }
 
         /// <summary>path の <see cref="LoadoutDefinition"/> を読み、<see cref="LoadoutDefinition.ToSpecs"/> に通ることを確かめて返す。</summary>

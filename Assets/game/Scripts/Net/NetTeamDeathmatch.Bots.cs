@@ -634,7 +634,8 @@ namespace Fps.Net
             }
 
             var health = _session.GetHealth(selfId);
-            var wasHit = health < agent.LastHealth;
+            // int.MaxValue は「前の値がまだ無い」印なので、出現直後の最初の tick は被弾に数えない。
+            var wasHit = agent.LastHealth != int.MaxValue && health < agent.LastHealth;
             agent.LastHealth = health;
             var healthFraction = _session.MaxHealth > 0 ? Mathf.Clamp01((float)health / _session.MaxHealth) : 1f;
 

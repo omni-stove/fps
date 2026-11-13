@@ -10,7 +10,8 @@ namespace Fps.Editor
     /// <summary>
     /// 武器のアセット (<see cref="RiflePath"/>・<see cref="HandgunPath"/> の <see cref="WeaponDefinition"/>、
     /// それを rifle・handgun の順に並べた <see cref="CatalogPath"/> の <see cref="WeaponCatalogAsset"/>、
-    /// それをスロットに入れた <see cref="LoadoutPath"/> の <see cref="LoadoutDefinition"/>) を作るか上書きする。
+    /// それをスロットに入れた <see cref="LoadoutPath"/> の <see cref="LoadoutDefinition"/>、カタログに入れない <see cref="LauncherPath"/> の
+    /// <see cref="WeaponDefinition"/>) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
@@ -22,6 +23,7 @@ namespace Fps.Editor
         public const string HandgunPath = "Assets/game/Weapons/Handgun.asset";
         public const string CatalogPath = "Assets/game/Weapons/WeaponCatalog.asset";
         public const string LoadoutPath = "Assets/game/Weapons/DefaultLoadout.asset";
+        public const string LauncherPath = "Assets/game/Weapons/Launcher.asset";
 
         public const string MenuPath = "Fps/Build Weapon Assets";
         public const string LogTag = "[WeaponAssetBuilder]";
@@ -29,6 +31,13 @@ namespace Fps.Editor
         // 再ビルドしても Id が変わらないよう固定する。サーバーとクライアントはこの Id で武器を突き合わせる
         public const string RifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
         public const string HandgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
+        public const string LauncherId = "e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96";
+
+        /// <summary>launcher の 1 発が建造物に被害を広げる半径 (m)。</summary>
+        public const float LauncherExplosionRadius = 4f;
+
+        /// <summary>launcher の連射間隔 (秒)。弾倉が 1 発なので、実際の間隔はリロード時間で決まる。</summary>
+        public const float LauncherFireInterval = 0.5f;
 
         /// <summary>rifle を覗き込み切ったときの縦の視野角 (度)。共通の初期値 (<see cref="AdsZoom.DefaultFieldOfView"/>) より狭く、遠くを狙いやすくする。</summary>
         public const float RifleAdsFieldOfView = 45f;
@@ -177,6 +186,36 @@ namespace Fps.Editor
         }
 
         /// <summary>
+        /// launcher の値 (Launcher、Semi、1/4 発、<see cref="LauncherFireInterval"/> 秒、リロード 3 秒、120 ダメージ、射程 150m、減衰なし、
+        /// 建造物への被害の半径 <see cref="LauncherExplosionRadius"/>m)。建造物を壊す確認用で、既定のロードアウトとカタログには入れない。
+        /// </summary>
+        public static WeaponSpec LauncherSpec()
+        {
+            return new WeaponSpec(
+                LauncherId,
+                "Launcher",
+                WeaponCategory.Launcher,
+                FireMode.Semi,
+                1,
+                4,
+                LauncherFireInterval,
+                3f,
+                120,
+                150f,
+                DamageFalloff.None,
+                explosionRadius: LauncherExplosionRadius);
+        }
+
+        /// <summary>
+        /// <see cref="LauncherPath"/> の launcher の定義を読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
+        /// 値が不正でも例外を投げ、壊れた定義をシーンに配線しない。
+        /// </summary>
+        public static WeaponDefinition LoadLauncher()
+        {
+            return LoadDefinition(LauncherPath);
+        }
+
+        /// <summary>
         /// <see cref="LoadoutPath"/> のデフォルトロードアウトを読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう
         /// 例外を投げる。値が不正でも例外を投げ、壊れたロードアウトを配線しない。
         /// </summary>
@@ -255,6 +294,22 @@ namespace Fps.Editor
         public static void Build()
         {
             BuildAt(RiflePath, HandgunPath, CatalogPath, LoadoutPath);
+            BuildLauncherAt(LauncherPath);
+        }
+
+        /// <summary>
+        /// path に launcher の定義を作るか上書きして保存し、返す。カタログとロードアウトには入れないので、
+        /// <see cref="BuildAt"/> のパスと重ならない Assets/ 以下の .asset であること。
+        /// </summary>
+        public static WeaponDefinition BuildLauncherAt(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+
+            var spec = LauncherSpec();
+            var launcher = SceneBuildHelpers.CreateOrUpdateAsset<WeaponDefinition>(path, d => Configure(d, spec));
+
+            Debug.Log($"{LogTag} saved '{path}'");
+            return launcher;
         }
 
         /// <summary>

@@ -151,13 +151,14 @@ namespace Fps.Core.Tests
         [TestCase(WeaponCategory.SniperRifle)]
         [TestCase(WeaponCategory.LightMachineGun)]
         [TestCase(WeaponCategory.Handgun)]
+        [TestCase(WeaponCategory.Launcher)]
         public void AcceptsEveryDefinedCategory(WeaponCategory category)
         {
             Assert.That(Create(category: category).Category, Is.EqualTo(category));
         }
 
         [TestCase(-1)]
-        [TestCase(7)]
+        [TestCase(8)]
         [TestCase(99)]
         public void RejectsUndefinedCategory(int category)
         {

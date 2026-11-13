@@ -81,6 +81,49 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlayerHasTheActionReaderWiredToTheOverlayAndTheMockBody()
+        {
+            var player = _world.Player;
+            var reader = _world.ActionReader;
+
+            Assert.That(reader, Is.Not.Null);
+            Assert.That(reader, Is.SameAs(player.GetComponent<PlayerActionReader>()));
+            Assert.That(reader.IsBound, Is.True);
+            Assert.That(reader.Mover, Is.SameAs(_world.Mover));
+            Assert.That(reader.Weapon, Is.SameAs(_world.Weapon));
+            Assert.That(reader.Ads, Is.SameAs(_world.Ads));
+            Assert.That(reader.Cover, Is.SameAs(player.GetComponent<CoverController>()));
+            Assert.That(reader.BlindFire, Is.SameAs(player.GetComponent<BlindFireController>()));
+            Assert.That(reader.Damageable, Is.SameAs(_world.PlayerDamageable));
+            Assert.That(reader.Rig, Is.SameAs(_world.Rig));
+
+            Assert.That(player.GetComponent<ActionDebugOverlay>().Reader, Is.SameAs(reader));
+            Assert.That(player.GetComponent<PlayerMockBody>().Reader, Is.SameAs(reader));
+        }
+
+        [Test]
+        public void ActionReaderReadsTheViewFromTheRig()
+        {
+            var reader = _world.ActionReader;
+
+            var firstPerson = reader.Refresh(0f);
+            Assert.That(firstPerson.ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(firstPerson.Shoulder, Is.EqualTo(ShoulderSide.Right));
+            Assert.That(firstPerson.IsFiring, Is.False);
+            Assert.That(firstPerson.IsReloading, Is.False);
+            Assert.That(firstPerson.IsInCover, Is.False);
+            Assert.That(firstPerson.IsDowned, Is.False);
+
+            _world.Rig.Mode = ViewMode.ThirdPerson;
+            _world.Rig.Shoulder = ShoulderSide.Left;
+
+            var thirdPerson = reader.Refresh(0f);
+            Assert.That(thirdPerson.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+            Assert.That(thirdPerson.Shoulder, Is.EqualTo(ShoulderSide.Left));
+            Assert.That(reader.Current, Is.EqualTo(thirdPerson));
+        }
+
+        [Test]
         public void TargetDummiesDoNotRegenerate()
         {
             foreach (var dummy in _world.Targets)

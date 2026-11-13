@@ -50,6 +50,19 @@ namespace Fps.Runtime
         /// <summary>ブラインドファイアになるのに、高い壁で端にいないので撃てないか。この間は Attack を止める。</summary>
         public bool IsFireBlocked => IsBlindFiring && _cover.CoverHeight == CoverHeight.High && EdgeSide() == 0;
 
+        /// <summary>
+        /// 今撃ったときに弾が散らばる最大の角度 (度)。ブラインドファイアになるときは今の武器の <see cref="WeaponSpec.BlindFireSpreadDegrees"/>、
+        /// それ以外 (通常の射撃は散らさない) と武器が無いときは 0。
+        /// </summary>
+        public float SpreadDegrees
+        {
+            get
+            {
+                var weapon = IsBlindFiring ? _weapon.Weapon : null;
+                return weapon != null ? weapon.Spec.BlindFireSpreadDegrees : 0f;
+            }
+        }
+
         /// <summary>Attack を止めているか。</summary>
         public bool IsAttackBlocked => _blockedAttack != null;
 

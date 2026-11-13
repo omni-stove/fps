@@ -1,10 +1,15 @@
+using Fps.Core;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Fps.Runtime
 {
     /// <summary>
     /// 弾が当たったことを照準の周りに出すビュー。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// 今は要素を受け取るだけで何も出さない (<see cref="CombatEvents.HitConfirmed"/> を出す側の配線が先)。
+    /// <see cref="CombatEvents.HitConfirmed"/> を受けるたびに <see cref="DisplaySeconds"/> 秒だけ印を出し、
+    /// 頭に当てたら <see cref="HeadClass"/>、倒したら <see cref="KillClass"/> を付ける (色と大きさは Hud.uss が決める)。
+    /// <see cref="PresentationCatalog"/> に音があれば小さく鳴らし、無ければ見た目だけ出す。
+    /// オフラインとオンラインで同じ HUD (<see cref="Hud.AddViews"/>) に付き、どちらも同じイベントを受ける。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class HitMarkerView : HudElementView
@@ -12,6 +17,143 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml のヒットマーカーの要素。</summary>
         public const string UxmlName = "hit-marker";
 
+        /// <summary>頭に当てたときに要素に付けるクラス。</summary>
+        public const string HeadClass = "hit-marker--head";
+
+        /// <summary>倒したときに要素に付けるクラス。</summary>
+        public const string KillClass = "hit-marker--kill";
+
+        /// <summary>1 回の命中で印を出しておく秒数。</summary>
+        public const float DisplaySeconds = 0.15f;
+
+        private float _remaining;
+        private bool _headshot;
+        private bool _killed;
+        private PresentationCatalog _catalog;
+        private bool _catalogResolved;
+        private AudioSource _audio;
+
         public override string ElementName => UxmlName;
+
+        /// <summary>今印を出しているか。</summary>
+        public bool IsShowing => _remaining > 0f;
+
+        /// <summary>印を消すまでの残りの秒数。出していなければ 0。</summary>
+        public float Remaining => _remaining;
+
+        /// <summary>最後の命中が頭だったか。</summary>
+        public bool IsHeadshot => _headshot;
+
+        /// <summary>最後の命中で倒したか。</summary>
+        public bool IsKill => _killed;
+
+        /// <summary>
+        /// 音を引く設定。初めて読んだときに <see cref="PresentationCatalog.Load"/> で探し、無ければ null (音を鳴らさない)。
+        /// 代入すると探さずにそれを使う (null で音を止める)。
+        /// </summary>
+        public PresentationCatalog Catalog
+        {
+            get
+            {
+                if (!_catalogResolved)
+                {
+                    _catalog = PresentationCatalog.Load();
+                    _catalogResolved = true;
+                }
+
+                return _catalog;
+            }
+            set
+            {
+                _catalog = value;
+                _catalogResolved = true;
+            }
+        }
+
+        private void OnEnable()
+        {
+            CombatEvents.HitConfirmed += Show;
+        }
+
+        private void OnDisable()
+        {
+            CombatEvents.HitConfirmed -= Show;
+            _remaining = 0f;
+            Apply();
+        }
+
+        private void Update()
+        {
+            // ポーズ中に出ていた印が残り続けないよう、時間の止まらない経過で消す。
+            Tick(Time.unscaledDeltaTime);
+        }
+
+        /// <summary>confirm の命中の印を出し直し、音があれば鳴らす。出している途中でも残りの秒数を戻す。</summary>
+        public void Show(HitConfirm confirm)
+        {
+            _remaining = DisplaySeconds;
+            _headshot = confirm.Zone == HitZone.Head;
+            _killed = confirm.Killed;
+            Apply();
+            PlaySound(confirm.Killed);
+        }
+
+        /// <summary>deltaSeconds 秒進め、残りが無くなったら印を消す。0 以下か有限でない値では進めない。</summary>
+        public void Tick(float deltaSeconds)
+        {
+            if (_remaining <= 0f || !(deltaSeconds > 0f) || float.IsInfinity(deltaSeconds))
+            {
+                return;
+            }
+
+            _remaining -= deltaSeconds;
+            if (_remaining <= 0f)
+            {
+                _remaining = 0f;
+                Apply();
+            }
+        }
+
+        protected override void OnBound(VisualElement element)
+        {
+            Apply();
+        }
+
+        private void Apply()
+        {
+            var element = Element;
+            if (element == null)
+            {
+                return;
+            }
+
+            element.EnableInClassList(HeadClass, _headshot);
+            element.EnableInClassList(KillClass, _killed);
+            element.style.display = IsShowing ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        private void PlaySound(bool killed)
+        {
+            var catalog = Catalog;
+            if (catalog == null)
+            {
+                return;
+            }
+
+            var clip = catalog.HitMarkerSoundFor(killed);
+            if (clip == null)
+            {
+                return;
+            }
+
+            if (_audio == null)
+            {
+                _audio = gameObject.AddComponent<AudioSource>();
+                _audio.playOnAwake = false;
+                _audio.spatialBlend = 0f;
+            }
+
+            _audio.PlayOneShot(clip, catalog.HitMarkerVolume);
+        }
     }
 }

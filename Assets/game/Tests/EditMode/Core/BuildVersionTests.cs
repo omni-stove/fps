@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class BuildVersionTests
     {
-        private static readonly string[] _blankValueArgs ={ "-buildVersion", " " };
+        private static readonly string[] _blankValueArgs = {"-buildVersion", " " };
 
         private static string[] Args(string commandLine)
         {

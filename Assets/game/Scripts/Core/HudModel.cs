@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// HUD に出す文字列を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo"/>・<see cref="SetTime"/> などで直接渡すか、
+    /// HUD に出す文字列を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo(int, int, bool, bool)"/>・<see cref="SetTime"/> などで直接渡すか、
     /// <see cref="Health"/>・<see cref="Weapon"/>・<see cref="Match"/>・<see cref="CampaignNotice"/> を Bind してそのイベントで受ける
     /// (Bind 系も中では Set 系を呼ぶ)。毎フレーム値を読みに行かず、値が来たときだけ書式を通し、表示が変わったときだけ
     /// <see cref="Changed"/> を呼ぶ (残り時間は秒の桁が変わったときだけ)。Bind で源を差し替えると前の源の購読は外し、今の値をすぐ反映する。

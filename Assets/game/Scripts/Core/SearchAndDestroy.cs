@@ -300,6 +300,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must be finite and not negative");
             }
 
+            if (Phase == RoundPhase.Live && _mode.State == GameModeState.Playing)
+            {
+                CheckStanding();
+            }
+
             if (Phase == RoundPhase.Live && _mode.State == GameModeState.Playing && !_decidedReason.HasValue)
             {
                 var generation = _generation;

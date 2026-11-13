@@ -9,7 +9,8 @@ namespace Fps.Runtime
     /// <summary>
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
     /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/> + 自動回復の <see cref="HealthRegen"/>
-    /// + 演出と手榴弾 (<see cref="CharacterComponents.Attach"/>))
+    /// + 演出と手榴弾 (<see cref="CharacterComponents.Attach"/>) + 今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読む
+    /// <see cref="ActionDebugOverlay"/>・<see cref="PlayerMockBody"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
@@ -191,7 +192,7 @@ namespace Fps.Runtime
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(
                     _viewMode, WeaponDefinitions, rules, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon,
-                    out var ads, out var playerDamageable, out var regen);
+                    out var ads, out var playerDamageable, out var regen, out var actionReader);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 BindDeathBodies(dummies, rules);
@@ -204,7 +205,7 @@ namespace Fps.Runtime
 
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
-                    hudComponent, hudPanelSettings, rig, ads, rules, regen);
+                    hudComponent, hudPanelSettings, rig, ads, rules, regen, actionReader);
             }
             catch
             {
@@ -278,7 +279,8 @@ namespace Fps.Runtime
             out WeaponController weapon,
             out AimDownSights ads,
             out Damageable damageable,
-            out HealthRegen regen)
+            out HealthRegen regen,
+            out PlayerActionReader actionReader)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
@@ -301,6 +303,8 @@ namespace Fps.Runtime
 
                 // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
                 mover.BindSprintRelease(weapon, damageable);
+
+                actionReader = AttachActionReader(player, mover, weapon, ads, damageable, rig);
             }
             catch
             {
@@ -435,6 +439,37 @@ namespace Fps.Runtime
                 weapon.ReloadStarted += _ => ads.Release();
                 weapon.WeaponChanged += _ => ads.Release();
             }
+        }
+
+        /// <summary>
+        /// プレイヤーの今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読むデバッグ表示 (<see cref="ActionDebugOverlay"/>)・
+        /// 自機モック (<see cref="PlayerMockBody"/>) を付けて配線する。カバーとブラインドファイア (<see cref="PlayerActions.Attach"/>) の後に呼ぶ。
+        /// Play 中は Reader の Awake が自力で読み元を解決するので、解決できなかったら失敗にする。Edit Mode では Awake が走らないのでここで渡す。
+        /// </summary>
+        private static PlayerActionReader AttachActionReader(
+            GameObject player,
+            PlayerController mover,
+            WeaponController weapon,
+            AimDownSights ads,
+            Damageable damageable,
+            ViewRig rig)
+        {
+            var reader = player.AddComponent<PlayerActionReader>();
+            if (!reader.IsBound)
+            {
+                if (Application.isPlaying)
+                {
+                    throw new InvalidOperationException(
+                        "PlayerActionReader could not resolve the player's components; see the error above");
+                }
+
+                reader.Bind(
+                    mover, weapon, ads, player.GetComponent<CoverController>(), player.GetComponent<BlindFireController>(), damageable, rig);
+            }
+
+            player.AddComponent<ActionDebugOverlay>().Bind(reader);
+            player.AddComponent<PlayerMockBody>().Bind(reader);
+            return reader;
         }
 
         /// <summary>
@@ -614,6 +649,9 @@ namespace Fps.Runtime
         /// <summary>プレイヤーの自動回復。</summary>
         public HealthRegen Regen { get; }
 
+        /// <summary>プレイヤーの今のアクションをまとめたもの。デバッグ表示と自機モックはここから読む。</summary>
+        public PlayerActionReader ActionReader { get; }
+
         /// <summary>HUD 用に作った PanelSettings。<see cref="Hud"/> が破棄されるときに一緒に消える。専用サーバーでは null。</summary>
         public PanelSettings HudPanelSettings { get; }
 
@@ -634,8 +672,10 @@ namespace Fps.Runtime
             ViewRig rig = null,
             AimDownSights ads = null,
             GameRules rules = null,
-            HealthRegen regen = null)
+            HealthRegen regen = null,
+            PlayerActionReader actionReader = null)
         {
+            ActionReader = actionReader;
             Rig = rig;
             Ads = ads;
             Rules = rules ?? GameRules.Default;

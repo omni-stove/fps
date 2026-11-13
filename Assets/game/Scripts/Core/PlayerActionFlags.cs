@@ -4,7 +4,7 @@ namespace Fps.Core
 {
     /// <summary><see cref="PlayerActionState"/> の、その瞬間に立っている状態の組み合わせ。</summary>
     [Flags]
-    public enum PlayerActionFlags
+    public enum PlayerActionConditions
     {
         None = 0,
 

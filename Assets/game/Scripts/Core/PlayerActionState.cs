@@ -12,18 +12,18 @@ namespace Fps.Core
     public readonly struct PlayerActionState : IEquatable<PlayerActionState>
     {
         /// <summary>定義済みのフラグをすべて立てた値。</summary>
-        public const PlayerActionFlags AllFlags =
-            PlayerActionFlags.Sprinting
-            | PlayerActionFlags.Crouching
-            | PlayerActionFlags.Dodging
-            | PlayerActionFlags.Vaulting
-            | PlayerActionFlags.Grounded
-            | PlayerActionFlags.InCover
-            | PlayerActionFlags.BlindFiring
-            | PlayerActionFlags.Aiming
-            | PlayerActionFlags.Firing
-            | PlayerActionFlags.Reloading
-            | PlayerActionFlags.Downed;
+        public const PlayerActionConditions AllFlags =
+            PlayerActionConditions.Sprinting
+            | PlayerActionConditions.Crouching
+            | PlayerActionConditions.Dodging
+            | PlayerActionConditions.Vaulting
+            | PlayerActionConditions.Grounded
+            | PlayerActionConditions.InCover
+            | PlayerActionConditions.BlindFiring
+            | PlayerActionConditions.Aiming
+            | PlayerActionConditions.Firing
+            | PlayerActionConditions.Reloading
+            | PlayerActionConditions.Downed;
 
         /// <summary>
         /// 1 発撃ってから射撃中と見なし続ける最短の秒数。連射間隔がこれより短い (またはセミオートを 1 回だけ撃った) ときも、
@@ -37,7 +37,7 @@ namespace Fps.Core
         private readonly string _weaponName;
 
         /// <summary>立っている状態の組み合わせ。</summary>
-        public PlayerActionFlags Flags { get; }
+        public PlayerActionConditions Flags { get; }
 
         /// <summary>リロードの進み。0〜1。リロード中でなければ 0。</summary>
         public float ReloadProgress { get; }
@@ -60,27 +60,27 @@ namespace Fps.Core
         /// <summary>今撃ったときに弾が狙いから散らばる最大の角度 (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</summary>
         public float SpreadDegrees { get; }
 
-        public bool IsSprinting => Has(PlayerActionFlags.Sprinting);
-        public bool IsCrouching => Has(PlayerActionFlags.Crouching);
-        public bool IsDodging => Has(PlayerActionFlags.Dodging);
-        public bool IsVaulting => Has(PlayerActionFlags.Vaulting);
-        public bool IsGrounded => Has(PlayerActionFlags.Grounded);
-        public bool IsInCover => Has(PlayerActionFlags.InCover);
-        public bool IsBlindFiring => Has(PlayerActionFlags.BlindFiring);
-        public bool IsAiming => Has(PlayerActionFlags.Aiming);
-        public bool IsFiring => Has(PlayerActionFlags.Firing);
-        public bool IsReloading => Has(PlayerActionFlags.Reloading);
-        public bool IsDowned => Has(PlayerActionFlags.Downed);
+        public bool IsSprinting => Has(PlayerActionConditions.Sprinting);
+        public bool IsCrouching => Has(PlayerActionConditions.Crouching);
+        public bool IsDodging => Has(PlayerActionConditions.Dodging);
+        public bool IsVaulting => Has(PlayerActionConditions.Vaulting);
+        public bool IsGrounded => Has(PlayerActionConditions.Grounded);
+        public bool IsInCover => Has(PlayerActionConditions.InCover);
+        public bool IsBlindFiring => Has(PlayerActionConditions.BlindFiring);
+        public bool IsAiming => Has(PlayerActionConditions.Aiming);
+        public bool IsFiring => Has(PlayerActionConditions.Firing);
+        public bool IsReloading => Has(PlayerActionConditions.Reloading);
+        public bool IsDowned => Has(PlayerActionConditions.Downed);
 
         /// <param name="flags">立っている状態。<see cref="AllFlags"/> の外のビットは渡せない。</param>
-        /// <param name="reloadProgress">リロードの進み。0 以上 1 以下。<see cref="PlayerActionFlags.Reloading"/> が無ければ 0。</param>
+        /// <param name="reloadProgress">リロードの進み。0 以上 1 以下。<see cref="PlayerActionConditions.Reloading"/> が無ければ 0。</param>
         /// <param name="activeReload">アクティブリロードの結果。未判定なら null。</param>
         /// <param name="shoulder">三人称のカメラの肩。定義済みの値。</param>
         /// <param name="viewMode">視点。定義済みの値。</param>
         /// <param name="weaponName">武器の表示名。null なら空文字。</param>
         /// <param name="spreadDegrees">ばらつき (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</param>
         public PlayerActionState(
-            PlayerActionFlags flags,
+            PlayerActionConditions flags,
             float reloadProgress,
             ActiveReloadResult? activeReload,
             ShoulderSide shoulder,
@@ -98,7 +98,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(reloadProgress), reloadProgress, "reloadProgress must be between 0 and 1");
             }
 
-            if ((flags & PlayerActionFlags.Reloading) == 0 && reloadProgress != 0f)
+            if ((flags & PlayerActionConditions.Reloading) == 0 && reloadProgress != 0f)
             {
                 throw new ArgumentException("reloadProgress must be 0 while not reloading", nameof(reloadProgress));
             }
@@ -200,7 +200,7 @@ namespace Fps.Core
                 SpreadDegrees);
         }
 
-        private bool Has(PlayerActionFlags flag)
+        private bool Has(PlayerActionConditions flag)
         {
             return (Flags & flag) != 0;
         }

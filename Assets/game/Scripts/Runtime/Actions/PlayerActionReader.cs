@@ -176,18 +176,18 @@ namespace Fps.Runtime
             _shotSinceRefresh = false;
 
             var weapon = _weapon.Weapon;
-            var flags = PlayerActionFlags.None;
-            Set(ref flags, PlayerActionFlags.Sprinting, _mover.IsSprinting);
-            Set(ref flags, PlayerActionFlags.Crouching, _mover.IsCrouched);
-            Set(ref flags, PlayerActionFlags.Dodging, _mover.IsDodging);
-            Set(ref flags, PlayerActionFlags.Vaulting, _mover.IsVaulting);
-            Set(ref flags, PlayerActionFlags.Grounded, _mover.IsGrounded);
-            Set(ref flags, PlayerActionFlags.InCover, _cover.IsInCover);
-            Set(ref flags, PlayerActionFlags.BlindFiring, _blindFire.IsBlindFiring);
-            Set(ref flags, PlayerActionFlags.Aiming, _ads.IsAiming);
-            Set(ref flags, PlayerActionFlags.Firing, weapon != null && PlayerActionState.IsFiringAfter(_secondsSinceShot, weapon.Spec.FireInterval));
-            Set(ref flags, PlayerActionFlags.Reloading, weapon != null && weapon.IsReloading);
-            Set(ref flags, PlayerActionFlags.Downed, _damageable.IsDowned);
+            var flags = PlayerActionConditions.None;
+            Set(ref flags, PlayerActionConditions.Sprinting, _mover.IsSprinting);
+            Set(ref flags, PlayerActionConditions.Crouching, _mover.IsCrouched);
+            Set(ref flags, PlayerActionConditions.Dodging, _mover.IsDodging);
+            Set(ref flags, PlayerActionConditions.Vaulting, _mover.IsVaulting);
+            Set(ref flags, PlayerActionConditions.Grounded, _mover.IsGrounded);
+            Set(ref flags, PlayerActionConditions.InCover, _cover.IsInCover);
+            Set(ref flags, PlayerActionConditions.BlindFiring, _blindFire.IsBlindFiring);
+            Set(ref flags, PlayerActionConditions.Aiming, _ads.IsAiming);
+            Set(ref flags, PlayerActionConditions.Firing, weapon != null && PlayerActionState.IsFiringAfter(_secondsSinceShot, weapon.Spec.FireInterval));
+            Set(ref flags, PlayerActionConditions.Reloading, weapon != null && weapon.IsReloading);
+            Set(ref flags, PlayerActionConditions.Downed, _damageable.IsDowned);
 
             _current = new PlayerActionState(
                 flags,
@@ -292,7 +292,7 @@ namespace Fps.Runtime
             }
         }
 
-        private static void Set(ref PlayerActionFlags flags, PlayerActionFlags flag, bool on)
+        private static void Set(ref PlayerActionConditions flags, PlayerActionConditions flag, bool on)
         {
             if (on)
             {

@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
     public sealed class PlayerActionStateTests
     {
         private static PlayerActionState Create(
-            PlayerActionFlags flags = PlayerActionFlags.None,
+            PlayerActionConditions flags = PlayerActionConditions.None,
             float reloadProgress = 0f,
             ActiveReloadResult? activeReload = null,
             ShoulderSide shoulder = ShoulderSide.Right,
@@ -22,7 +22,7 @@ namespace Fps.Core.Tests
         {
             var state = default(PlayerActionState);
 
-            Assert.That(state.Flags, Is.EqualTo(PlayerActionFlags.None));
+            Assert.That(state.Flags, Is.EqualTo(PlayerActionConditions.None));
             Assert.That(state.ReloadProgress, Is.Zero);
             Assert.That(state.ActiveReload, Is.Null);
             Assert.That(state.Shoulder, Is.EqualTo(ShoulderSide.Right));
@@ -32,38 +32,38 @@ namespace Fps.Core.Tests
             Assert.That(state, Is.EqualTo(Create(weaponName: null)));
         }
 
-        [TestCase(PlayerActionFlags.Sprinting)]
-        [TestCase(PlayerActionFlags.Crouching)]
-        [TestCase(PlayerActionFlags.Dodging)]
-        [TestCase(PlayerActionFlags.Vaulting)]
-        [TestCase(PlayerActionFlags.Grounded)]
-        [TestCase(PlayerActionFlags.InCover)]
-        [TestCase(PlayerActionFlags.BlindFiring)]
-        [TestCase(PlayerActionFlags.Aiming)]
-        [TestCase(PlayerActionFlags.Firing)]
-        [TestCase(PlayerActionFlags.Reloading)]
-        [TestCase(PlayerActionFlags.Downed)]
-        public void EachFlagTurnsOnOnlyItsOwnProperty(PlayerActionFlags flag)
+        [TestCase(PlayerActionConditions.Sprinting)]
+        [TestCase(PlayerActionConditions.Crouching)]
+        [TestCase(PlayerActionConditions.Dodging)]
+        [TestCase(PlayerActionConditions.Vaulting)]
+        [TestCase(PlayerActionConditions.Grounded)]
+        [TestCase(PlayerActionConditions.InCover)]
+        [TestCase(PlayerActionConditions.BlindFiring)]
+        [TestCase(PlayerActionConditions.Aiming)]
+        [TestCase(PlayerActionConditions.Firing)]
+        [TestCase(PlayerActionConditions.Reloading)]
+        [TestCase(PlayerActionConditions.Downed)]
+        public void EachFlagTurnsOnOnlyItsOwnProperty(PlayerActionConditions flag)
         {
             var state = Create(flag);
 
-            Assert.That(state.IsSprinting, Is.EqualTo(flag == PlayerActionFlags.Sprinting));
-            Assert.That(state.IsCrouching, Is.EqualTo(flag == PlayerActionFlags.Crouching));
-            Assert.That(state.IsDodging, Is.EqualTo(flag == PlayerActionFlags.Dodging));
-            Assert.That(state.IsVaulting, Is.EqualTo(flag == PlayerActionFlags.Vaulting));
-            Assert.That(state.IsGrounded, Is.EqualTo(flag == PlayerActionFlags.Grounded));
-            Assert.That(state.IsInCover, Is.EqualTo(flag == PlayerActionFlags.InCover));
-            Assert.That(state.IsBlindFiring, Is.EqualTo(flag == PlayerActionFlags.BlindFiring));
-            Assert.That(state.IsAiming, Is.EqualTo(flag == PlayerActionFlags.Aiming));
-            Assert.That(state.IsFiring, Is.EqualTo(flag == PlayerActionFlags.Firing));
-            Assert.That(state.IsReloading, Is.EqualTo(flag == PlayerActionFlags.Reloading));
-            Assert.That(state.IsDowned, Is.EqualTo(flag == PlayerActionFlags.Downed));
+            Assert.That(state.IsSprinting, Is.EqualTo(flag == PlayerActionConditions.Sprinting));
+            Assert.That(state.IsCrouching, Is.EqualTo(flag == PlayerActionConditions.Crouching));
+            Assert.That(state.IsDodging, Is.EqualTo(flag == PlayerActionConditions.Dodging));
+            Assert.That(state.IsVaulting, Is.EqualTo(flag == PlayerActionConditions.Vaulting));
+            Assert.That(state.IsGrounded, Is.EqualTo(flag == PlayerActionConditions.Grounded));
+            Assert.That(state.IsInCover, Is.EqualTo(flag == PlayerActionConditions.InCover));
+            Assert.That(state.IsBlindFiring, Is.EqualTo(flag == PlayerActionConditions.BlindFiring));
+            Assert.That(state.IsAiming, Is.EqualTo(flag == PlayerActionConditions.Aiming));
+            Assert.That(state.IsFiring, Is.EqualTo(flag == PlayerActionConditions.Firing));
+            Assert.That(state.IsReloading, Is.EqualTo(flag == PlayerActionConditions.Reloading));
+            Assert.That(state.IsDowned, Is.EqualTo(flag == PlayerActionConditions.Downed));
         }
 
         [Test]
         public void KeepsEveryValueItWasBuiltWith()
         {
-            var flags = PlayerActionFlags.Grounded | PlayerActionFlags.InCover | PlayerActionFlags.Reloading;
+            var flags = PlayerActionConditions.Grounded | PlayerActionConditions.InCover | PlayerActionConditions.Reloading;
             var state = new PlayerActionState(flags, 0.4f, ActiveReloadResult.Fail, ShoulderSide.Left, ViewMode.ThirdPerson, "Handgun", 12f);
 
             Assert.That(state.Flags, Is.EqualTo(flags));
@@ -98,26 +98,26 @@ namespace Fps.Core.Tests
         [Test]
         public void EqualStatesCompareEqualAndDifferentOnesDoNot()
         {
-            var a = Create(PlayerActionFlags.Aiming, weaponName: "Rifle", spreadDegrees: 8f);
-            var b = Create(PlayerActionFlags.Aiming, weaponName: "Rifle", spreadDegrees: 8f);
+            var a = Create(PlayerActionConditions.Aiming, weaponName: "Rifle", spreadDegrees: 8f);
+            var b = Create(PlayerActionConditions.Aiming, weaponName: "Rifle", spreadDegrees: 8f);
 
             Assert.That(a == b, Is.True);
             Assert.That(a.Equals((object)b), Is.True);
             Assert.That(a.GetHashCode(), Is.EqualTo(b.GetHashCode()));
 
-            Assert.That(a != Create(PlayerActionFlags.Firing, weaponName: "Rifle", spreadDegrees: 8f), Is.True);
-            Assert.That(a != Create(PlayerActionFlags.Aiming, weaponName: "Handgun", spreadDegrees: 8f), Is.True);
-            Assert.That(a != Create(PlayerActionFlags.Aiming, weaponName: "Rifle", spreadDegrees: 0f), Is.True);
-            Assert.That(a != Create(PlayerActionFlags.Aiming, shoulder: ShoulderSide.Left, spreadDegrees: 8f), Is.True);
-            Assert.That(a != Create(PlayerActionFlags.Aiming, viewMode: ViewMode.ThirdPerson, spreadDegrees: 8f), Is.True);
-            Assert.That(a != Create(PlayerActionFlags.Aiming, activeReload: ActiveReloadResult.Fail, spreadDegrees: 8f), Is.True);
+            Assert.That(a != Create(PlayerActionConditions.Firing, weaponName: "Rifle", spreadDegrees: 8f), Is.True);
+            Assert.That(a != Create(PlayerActionConditions.Aiming, weaponName: "Handgun", spreadDegrees: 8f), Is.True);
+            Assert.That(a != Create(PlayerActionConditions.Aiming, weaponName: "Rifle", spreadDegrees: 0f), Is.True);
+            Assert.That(a != Create(PlayerActionConditions.Aiming, shoulder: ShoulderSide.Left, spreadDegrees: 8f), Is.True);
+            Assert.That(a != Create(PlayerActionConditions.Aiming, viewMode: ViewMode.ThirdPerson, spreadDegrees: 8f), Is.True);
+            Assert.That(a != Create(PlayerActionConditions.Aiming, activeReload: ActiveReloadResult.Fail, spreadDegrees: 8f), Is.True);
         }
 
         [Test]
         public void ToStringNamesTheFlagsAndValues()
         {
             var state = new PlayerActionState(
-                PlayerActionFlags.Grounded | PlayerActionFlags.Reloading,
+                PlayerActionConditions.Grounded | PlayerActionConditions.Reloading,
                 0.5f,
                 ActiveReloadResult.Success,
                 ShoulderSide.Left,
@@ -134,7 +134,7 @@ namespace Fps.Core.Tests
         [Test]
         public void RejectsUndefinedFlagBits()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => Create((PlayerActionFlags)(1 << 20)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Create((PlayerActionConditions)(1 << 20)));
         }
 
         [TestCase(-0.01f)]
@@ -142,14 +142,14 @@ namespace Fps.Core.Tests
         [TestCase(float.NaN)]
         public void RejectsReloadProgressOutsideZeroToOne(float progress)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => Create(PlayerActionFlags.Reloading, reloadProgress: progress));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Create(PlayerActionConditions.Reloading, reloadProgress: progress));
         }
 
         [Test]
         public void RejectsReloadProgressWhileNotReloading()
         {
             Assert.Throws<ArgumentException>(() => Create(reloadProgress: 0.5f));
-            Assert.DoesNotThrow(() => Create(PlayerActionFlags.Reloading, reloadProgress: 0.5f));
+            Assert.DoesNotThrow(() => Create(PlayerActionConditions.Reloading, reloadProgress: 0.5f));
         }
 
         [Test]

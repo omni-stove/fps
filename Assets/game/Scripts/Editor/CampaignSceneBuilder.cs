@@ -17,6 +17,8 @@ namespace Fps.Editor
     /// NavMeshData をシーンの隣に保存してから、<see cref="GameBootstrap"/> (床は作らない)、<see cref="MissionRunner"/>、
     /// 3 つの目標 (区域 A に到達 → 敵 4 体を倒す → 出口に到達) と敵 4 体、セーブと再開を受け持つ <see cref="CampaignRunner"/> と
     /// 2 つの <see cref="CheckpointTrigger"/> (開始地点 <c>start</c>・区域 A <c>area_a</c>) を置く。参照はすべてここでコードから設定する。
+    /// ルールは CampaignNormal を既定にし、CampaignRunner には <c>-difficulty</c> 用に CampaignEasy / Normal / Hard を配線する
+    /// (先に <see cref="GameRulesAssetBuilder.Build"/> を走らせておく)。
     /// 保存したシーンは Build Settings の末尾に加える (先頭の起動シーンは変えない)。何度実行しても同じ結果になる。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.CampaignSceneBuilder.Build</code>
@@ -247,14 +249,16 @@ namespace Fps.Editor
 
             // NewScene(Single) は参照されていないアセットをアンロードし、先に読んだ定義が null になるので、シーンを作ってから読む。
             // 武器のアセットが無い・敵の武器がカタログに無いなら何も保存せずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            // ルールのアセットも同じく、無ければ何も保存せずに止める (先に GameRulesAssetBuilder.Build を走らせる)。
             var playerWeapons = WeaponAssetBuilder.LoadPlayerLoadout();
             var catalog = WeaponAssetBuilder.LoadCatalog();
             ResolveEnemyWeapons(catalog);
+            var rules = LoadRules();
             var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(definitionPath, Configure);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
-            var layout = PopulateScene(scene, definition, playerWeapons, catalog);
+            var layout = PopulateScene(scene, definition, playerWeapons, catalog, rules);
             SceneBuildHelpers.SaveNavMeshData(layout.Surface, navMeshDataPath);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -266,6 +270,19 @@ namespace Fps.Editor
             AssetDatabase.SaveAssets();
 
             Debug.Log($"{LogTag} saved '{definitionPath}', '{navMeshDataPath}' and '{scenePath}' and registered the scene in Build Settings");
+        }
+
+        /// <summary>
+        /// キャンペーンの難易度別のルール (<see cref="GameRulesAssetBuilder.CampaignEasyPath"/> /
+        /// <see cref="GameRulesAssetBuilder.CampaignNormalPath"/> / <see cref="GameRulesAssetBuilder.CampaignHardPath"/>) を読む。
+        /// どれかが無いか不正なら例外を投げる。
+        /// </summary>
+        public static CampaignRules LoadRules()
+        {
+            return new CampaignRules(
+                GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.CampaignEasyPath),
+                GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.CampaignNormalPath),
+                GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.CampaignHardPath));
         }
 
         /// <summary>definition の中身を Campaign01 にし、Mission に変換できることを確かめる。</summary>
@@ -292,17 +309,24 @@ namespace Fps.Editor
         /// プレイヤーは playerWeapons (通常は <see cref="WeaponAssetBuilder.LoadPlayerLoadout"/> の rifle, handgun) を持ち、敵は配置ごとに
         /// <see cref="EnemyPlacement.WeaponId"/> の武器を enemyWeapons から引いて撃つ。Id が enemyWeapons に無ければ
         /// 何も置かずに <see cref="KeyNotFoundException"/> を投げる。
+        /// ルールは GameBootstrap と CampaignRunner の既定に rules の Normal を、CampaignRunner の <c>-difficulty</c> 用に 3 つとも配線する。
         /// </summary>
         public static CampaignLayout PopulateScene(
             Scene scene,
             MissionDefinition definition,
             IReadOnlyList<WeaponDefinition> playerWeapons,
-            WeaponCatalogAsset enemyWeapons)
+            WeaponCatalogAsset enemyWeapons,
+            CampaignRules rules)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the campaign scene");
             if (definition == null)
             {
                 throw new ArgumentNullException(nameof(definition));
+            }
+
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
             }
 
             SceneBuildHelpers.RequirePlayerWeapons(playerWeapons, nameof(playerWeapons));
@@ -322,6 +346,7 @@ namespace Fps.Editor
                 var bootstrap = bootstrapObject.AddComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
                 bootstrap.WeaponDefinitions = playerWeapons;
+                bootstrap.RulesDefinition = rules.Normal;
 
                 var runnerObject = new GameObject(RunnerObjectName);
                 SceneManager.MoveGameObjectToScene(runnerObject, scene);
@@ -366,6 +391,10 @@ namespace Fps.Editor
                 var campaign = campaignObject.AddComponent<CampaignRunner>();
                 campaign.Runner = runner;
                 campaign.Bootstrap = bootstrap;
+                campaign.RulesDefinition = rules.Normal;
+                campaign.EasyRules = rules.Easy;
+                campaign.NormalRules = rules.Normal;
+                campaign.HardRules = rules.Hard;
 
                 var startCheckpoint = CreateCheckpoint(
                     scene, StartCheckpointObjectName, StartCheckpointPosition, StartCheckpointId, campaign);
@@ -478,6 +507,22 @@ namespace Fps.Editor
             checkpoint.PlayerTag = GameBootstrap.PlayerTag;
             checkpoint.RespawnOffset = new Vector3(0f, (GameBootstrap.PlayerHeight / 2f) - (CheckpointPadScale.y / 2f), 0f);
             return checkpoint;
+        }
+    }
+
+    /// <summary>キャンペーンの難易度別のルール。<see cref="CampaignSceneBuilder.LoadRules"/> で読む。</summary>
+    public sealed class CampaignRules
+    {
+        public GameRulesDefinition Easy { get; }
+        public GameRulesDefinition Normal { get; }
+        public GameRulesDefinition Hard { get; }
+
+        /// <exception cref="ArgumentNullException">どれかが null。</exception>
+        public CampaignRules(GameRulesDefinition easy, GameRulesDefinition normal, GameRulesDefinition hard)
+        {
+            Easy = easy != null ? easy : throw new ArgumentNullException(nameof(easy));
+            Normal = normal != null ? normal : throw new ArgumentNullException(nameof(normal));
+            Hard = hard != null ? hard : throw new ArgumentNullException(nameof(hard));
         }
     }
 

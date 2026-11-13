@@ -9,29 +9,59 @@ namespace Fps.Core
     /// </summary>
     public static class WeaponLoadout
     {
-        /// <summary>specs の武器を 1 本ずつ満タンで持ち、0 番を持った並びを作る。</summary>
+        /// <summary>specs の武器を 1 本ずつ満タンで持ち、0 番を持った並びを作る。予備弾は <see cref="GameRules.Default"/> (有限・倍率 1)。</summary>
         /// <param name="specs">持つ武器。1 本以上で、null と重複した Id を含まない。</param>
         /// <exception cref="ArgumentNullException">specs が null。</exception>
         /// <exception cref="ArgumentException">specs が空、null を含む、または Id が重複している。</exception>
         public static Loadout<Weapon> Create(IReadOnlyList<WeaponSpec> specs)
         {
-            return Restore(specs, Array.Empty<WeaponAmmo>(), null, out _);
+            return Create(specs, GameRules.Default);
+        }
+
+        /// <summary>
+        /// specs の武器を 1 本ずつ満タンで持ち、0 番を持った並びを作る。予備弾は <see cref="WeaponSpec.ReserveAmmo"/> に
+        /// <see cref="GameRules.ReserveAmmoMultiplier"/> を掛けた数で、<see cref="GameRules.InfiniteReserve"/> なら減らない。
+        /// </summary>
+        /// <param name="specs">持つ武器。1 本以上で、null と重複した Id を含まない。</param>
+        /// <param name="rules">予備弾のルール。</param>
+        /// <exception cref="ArgumentNullException">specs か rules が null。</exception>
+        /// <exception cref="ArgumentException">specs が空、null を含む、または Id が重複している。</exception>
+        public static Loadout<Weapon> Create(IReadOnlyList<WeaponSpec> specs, GameRules rules)
+        {
+            return Restore(specs, Array.Empty<WeaponAmmo>(), null, rules, out _);
+        }
+
+        /// <summary>
+        /// <see cref="Restore(IReadOnlyList{WeaponSpec}, IEnumerable{WeaponAmmo}, string, GameRules, out IReadOnlyList{string})"/> を
+        /// <see cref="GameRules.Default"/> (有限・倍率 1) で呼ぶ。
+        /// </summary>
+        public static Loadout<Weapon> Restore(
+            IReadOnlyList<WeaponSpec> specs,
+            IEnumerable<WeaponAmmo> ammo,
+            string equippedWeaponId,
+            out IReadOnlyList<string> unknownWeaponIds)
+        {
+            return Restore(specs, ammo, equippedWeaponId, GameRules.Default, out unknownWeaponIds);
         }
 
         /// <summary>
         /// specs の武器を持ち、Id が ammo にある武器はその弾数で、無い武器は満タンで作る。弾倉の容量を超える分は容量に揃える。
         /// equippedWeaponId の武器を持った状態で返し、その Id が specs に無い (空を含む) なら 0 番を持つ。
+        /// ammo にある武器の予備弾はセーブの値をそのまま使い、<see cref="GameRules.ReserveAmmoMultiplier"/> を掛け直さない
+        /// (作ったときに掛けた値がセーブされているため)。ammo に無い武器は <see cref="Create(IReadOnlyList{WeaponSpec}, GameRules)"/> と同じく倍率を掛ける。
         /// </summary>
         /// <param name="specs">持つ武器。1 本以上で、null と重複した Id を含まない。</param>
         /// <param name="ammo">武器ごとの残弾 (セーブデータ)。null を含まない。同じ Id が複数あれば後のものを使う。</param>
         /// <param name="equippedWeaponId">持っていた武器の Id。null か空なら 0 番。</param>
+        /// <param name="rules">予備弾のルール。</param>
         /// <param name="unknownWeaponIds">ammo にあるが specs に無かった武器の Id (ロードアウトが変わったセーブ)。呼ぶ側が警告に使う。</param>
-        /// <exception cref="ArgumentNullException">specs か ammo が null。</exception>
+        /// <exception cref="ArgumentNullException">specs・ammo・rules のいずれかが null。</exception>
         /// <exception cref="ArgumentException">specs が空、null を含む、Id が重複している、または ammo が null を含む。</exception>
         public static Loadout<Weapon> Restore(
             IReadOnlyList<WeaponSpec> specs,
             IEnumerable<WeaponAmmo> ammo,
             string equippedWeaponId,
+            GameRules rules,
             out IReadOnlyList<string> unknownWeaponIds)
         {
             if (specs == null)
@@ -42,6 +72,11 @@ namespace Fps.Core
             if (ammo == null)
             {
                 throw new ArgumentNullException(nameof(ammo));
+            }
+
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
             }
 
             if (specs.Count == 0)
@@ -85,8 +120,8 @@ namespace Fps.Core
             {
                 var spec = specs[i];
                 weapons[i] = saved.TryGetValue(spec.Id, out var entry)
-                    ? new Weapon(spec, Math.Min(entry.AmmoInMagazine, spec.MagazineSize), entry.ReserveAmmo)
-                    : new Weapon(spec);
+                    ? new Weapon(spec, Math.Min(entry.AmmoInMagazine, spec.MagazineSize), entry.ReserveAmmo, rules)
+                    : new Weapon(spec, rules);
             }
 
             var loadout = new Loadout<Weapon>(weapons, 0f, Holster);

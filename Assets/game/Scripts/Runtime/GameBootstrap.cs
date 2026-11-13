@@ -8,12 +8,13 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
-    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/>)
+    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/> + 自動回復の <see cref="HealthRegen"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
+    /// 自動回復と予備弾の倍率・無限は <see cref="RulesDefinition"/> のルールで決める (標的ダミーには効かせない)。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
     /// </summary>
     [DisallowMultipleComponent]
@@ -82,6 +83,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義の並び (既定のロードアウト)。シーン生成スクリプトが rifle, handgun を配線する")]
         private WeaponDefinition[] _weaponDefinitions = Array.Empty<WeaponDefinition>();
 
+        [SerializeField, Tooltip("プレイヤーの自動回復と予備弾のルール。空なら GameRules.Default を使い警告を出す。シーン生成スクリプトが配線する")]
+        private GameRulesDefinition _rules;
+
         private BootstrapWorld _world;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
@@ -136,6 +140,16 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>
+        /// <see cref="Build"/> でプレイヤーに効かせるルール (自動回復の <see cref="HealthRegen"/> と、武器の予備弾)。
+        /// null なら <see cref="GameRules.Default"/> を使い、Build 時に警告を出す。
+        /// </summary>
+        public GameRulesDefinition RulesDefinition
+        {
+            get => _rules;
+            set => _rules = value;
+        }
+
         private void Awake()
         {
             try
@@ -153,6 +167,7 @@ namespace Fps.Runtime
         /// <summary>
         /// 床・プレイヤー・ライト・標的ダミー・HUD を生成する。2 回目以降は何もせず最初の結果を返す。
         /// 途中で失敗したら作りかけのオブジェクトを片付けてから例外を投げ直す。
+        /// <see cref="RulesDefinition"/> の値が不正なら何も作らずに <see cref="GameRulesDefinitionException"/> を投げる。
         /// </summary>
         public BootstrapWorld Build()
         {
@@ -160,6 +175,8 @@ namespace Fps.Runtime
             {
                 return _world;
             }
+
+            var rules = ResolveRules();
 
             GameObject floor = null;
             GameObject player = null;
@@ -171,8 +188,8 @@ namespace Fps.Runtime
             {
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(
-                    _viewMode, WeaponDefinitions, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon,
-                    out var ads, out var playerDamageable);
+                    _viewMode, WeaponDefinitions, rules, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon,
+                    out var ads, out var playerDamageable, out var regen);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
@@ -184,7 +201,7 @@ namespace Fps.Runtime
 
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
-                    hudComponent, hudPanelSettings, rig, ads);
+                    hudComponent, hudPanelSettings, rig, ads, rules, regen);
             }
             catch
             {
@@ -200,6 +217,20 @@ namespace Fps.Runtime
             Debug.Log(ReadyLog, this);
             NotifyBuilt(_world);
             return _world;
+        }
+
+        /// <summary><see cref="RulesDefinition"/> を変換する。未設定なら警告を出して <see cref="GameRules.Default"/>。</summary>
+        private GameRules ResolveRules()
+        {
+            if (_rules == null)
+            {
+                Debug.LogWarning(
+                    "[Bootstrap] GameRulesDefinition が設定されていないため GameRules.Default を使います。シーン生成スクリプトでルールを配線してください。",
+                    this);
+                return GameRules.Default;
+            }
+
+            return _rules.ToRules();
         }
 
         private void NotifyBuilt(BootstrapWorld world)
@@ -235,6 +266,7 @@ namespace Fps.Runtime
         private static GameObject CreatePlayer(
             ViewMode viewMode,
             IReadOnlyList<WeaponDefinition> weaponDefinitions,
+            GameRules rules,
             out CharacterController controller,
             out ViewRig rig,
             out Camera camera,
@@ -242,19 +274,24 @@ namespace Fps.Runtime
             out PlayerController mover,
             out WeaponController weapon,
             out AimDownSights ads,
-            out Damageable damageable)
+            out Damageable damageable,
+            out HealthRegen regen)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
             {
                 ConfigurePlayer(
-                    player, viewMode, weaponDefinitions, out controller, out rig, out camera, out look, out mover, out weapon, out ads);
+                    player, viewMode, weaponDefinitions, rules, out controller, out rig, out camera, out look, out mover, out weapon, out ads);
 
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
                 damageable.Initialize(PlayerName, PlayerMaxHealth);
                 player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
                 WireDeathAndRespawn(damageable, mover, ads);
+
+                // 回復しないルール (RegenPerSecond = 0) でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため。
+                regen = player.AddComponent<HealthRegen>();
+                regen.Bind(damageable, rules);
 
                 // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
                 mover.BindSprintRelease(weapon, damageable);
@@ -272,6 +309,7 @@ namespace Fps.Runtime
             GameObject player,
             ViewMode viewMode,
             IReadOnlyList<WeaponDefinition> weaponDefinitions,
+            GameRules rules,
             out CharacterController controller,
             out ViewRig rig,
             out Camera camera,
@@ -347,6 +385,7 @@ namespace Fps.Runtime
             {
                 weapon = cameraObject.AddComponent<WeaponController>();
                 weapon.Definitions = weaponDefinitions;
+                weapon.Rules = rules;
             }
             finally
             {
@@ -548,6 +587,12 @@ namespace Fps.Runtime
         /// <summary>HUD。専用サーバーでは作らないので null。</summary>
         public Hud Hud { get; }
 
+        /// <summary>生成時にプレイヤーへ効かせたルール。<see cref="GameBootstrap.RulesDefinition"/> が空なら <see cref="GameRules.Default"/>。</summary>
+        public GameRules Rules { get; }
+
+        /// <summary>プレイヤーの自動回復。</summary>
+        public HealthRegen Regen { get; }
+
         /// <summary>HUD 用に作った PanelSettings。<see cref="Hud"/> が破棄されるときに一緒に消える。専用サーバーでは null。</summary>
         public PanelSettings HudPanelSettings { get; }
 
@@ -566,10 +611,14 @@ namespace Fps.Runtime
             Hud hud,
             PanelSettings hudPanelSettings,
             ViewRig rig = null,
-            AimDownSights ads = null)
+            AimDownSights ads = null,
+            GameRules rules = null,
+            HealthRegen regen = null)
         {
             Rig = rig;
             Ads = ads;
+            Rules = rules ?? GameRules.Default;
+            Regen = regen;
             Hud = hud;
             HudPanelSettings = hudPanelSettings;
             Floor = floor;

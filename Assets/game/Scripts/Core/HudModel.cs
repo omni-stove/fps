@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// HUD に出す文字列を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo"/>・<see cref="SetTime"/> などで直接渡すか、
+    /// HUD に出す文字列を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo(int, int, bool, bool)"/>・<see cref="SetTime"/> などで直接渡すか、
     /// <see cref="Health"/>・<see cref="Weapon"/>・<see cref="Match"/>・<see cref="CampaignNotice"/> を Bind してそのイベントで受ける
     /// (Bind 系も中では Set 系を呼ぶ)。毎フレーム値を読みに行かず、値が来たときだけ書式を通し、表示が変わったときだけ
     /// <see cref="Changed"/> を呼ぶ (残り時間は秒の桁が変わったときだけ)。Bind で源を差し替えると前の源の購読は外し、今の値をすぐ反映する。
@@ -182,7 +182,14 @@ namespace Fps.Core
         /// <exception cref="ArgumentOutOfRangeException">magazine か reserve が負。</exception>
         public void SetAmmo(int magazine, int reserve, bool reloading)
         {
-            ApplyAmmo(HudFormat.Ammo(magazine, reserve, reloading), reloading);
+            SetAmmo(magazine, reserve, reloading, false);
+        }
+
+        /// <summary>弾数を出す。infiniteReserve なら予備の数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">magazine か reserve が負。</exception>
+        public void SetAmmo(int magazine, int reserve, bool reloading, bool infiniteReserve)
+        {
+            ApplyAmmo(HudFormat.Ammo(magazine, reserve, reloading, infiniteReserve), reloading);
         }
 
         /// <summary>弾数を仮の表示に戻す。</summary>
@@ -279,7 +286,7 @@ namespace Fps.Core
         {
             if (_weapon != null)
             {
-                SetAmmo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, _weapon.IsReloading);
+                SetAmmo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, _weapon.IsReloading, _weapon.HasInfiniteReserve);
             }
             else
             {

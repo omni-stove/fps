@@ -23,6 +23,9 @@ namespace Fps.Tests.EditMode
         private WeaponDefinition _rifle;
         private WeaponDefinition _handgun;
         private WeaponCatalogAsset _catalog;
+        private GameRulesDefinition _easyRules;
+        private GameRulesDefinition _normalRules;
+        private GameRulesDefinition _hardRules;
         private Scene _scene;
         private NavMeshData _baked;
 
@@ -42,6 +45,17 @@ namespace Fps.Tests.EditMode
             _catalog = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
             _catalog.name = "WeaponCatalog";
             WeaponAssetBuilder.Configure(_catalog, new[] { _rifle, _handgun });
+            _easyRules = NewRules("CampaignEasy", GameRulesAssetBuilder.CampaignEasyRules());
+            _normalRules = NewRules("CampaignNormal", GameRulesAssetBuilder.CampaignNormalRules());
+            _hardRules = NewRules("CampaignHard", GameRulesAssetBuilder.CampaignHardRules());
+        }
+
+        private static GameRulesDefinition NewRules(string assetName, GameRules rules)
+        {
+            var definition = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            definition.name = assetName;
+            GameRulesAssetBuilder.Configure(definition, rules);
+            return definition;
         }
 
         [TearDown]
@@ -62,6 +76,9 @@ namespace Fps.Tests.EditMode
             Object.DestroyImmediate(_rifle);
             Object.DestroyImmediate(_handgun);
             Object.DestroyImmediate(_catalog);
+            Object.DestroyImmediate(_easyRules);
+            Object.DestroyImmediate(_normalRules);
+            Object.DestroyImmediate(_hardRules);
         }
 
         [Test]
@@ -424,7 +441,7 @@ namespace Fps.Tests.EditMode
                 WeaponAssetBuilder.Configure(rifleOnly, new[] { _rifle });
 
                 var e = Assert.Throws<System.Collections.Generic.KeyNotFoundException>(
-                    () => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, rifleOnly));
+                    () => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, rifleOnly, Rules));
                 var ambusher = CampaignSceneBuilder.Ambushers[0];
                 Assert.That(e.Message, Does.Contain($"'{ambusher.Id}'"), "names the placement");
                 Assert.That(e.Message, Does.Contain($"'{WeaponAssetBuilder.HandgunId}'"), "names the weapon id");
@@ -468,31 +485,69 @@ namespace Fps.Tests.EditMode
             SceneManager.MoveGameObjectToScene(new GameObject("Stray"), _scene);
 
             Assert.Throws<InvalidOperationException>(
-                () => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, _catalog));
+                () => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, _catalog, Rules));
             Assert.That(_scene.rootCount, Is.EqualTo(1), "nothing is left behind");
         }
 
         [Test]
         public void RefusesToPopulateWithoutDefinition()
         {
-            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, null, PlayerWeapons, _catalog));
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, null, PlayerWeapons, _catalog, Rules));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
         [Test]
         public void RefusesToPopulateWithoutAPlayerWeapon()
         {
-            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, null, _catalog));
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, null, _catalog, Rules));
             Assert.Throws<ArgumentException>(
-                () => CampaignSceneBuilder.PopulateScene(_scene, _definition, new WeaponDefinition[] { _rifle, null }, _catalog));
+                () => CampaignSceneBuilder.PopulateScene(_scene, _definition, new WeaponDefinition[] { _rifle, null }, _catalog, Rules));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
         [Test]
         public void RefusesToPopulateWithoutAWeaponCatalog()
         {
-            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, null));
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, null, Rules));
             Assert.That(_scene.rootCount, Is.Zero);
+        }
+
+        [Test]
+        public void RefusesToPopulateWithoutRules()
+        {
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, _catalog, null));
+            Assert.That(_scene.rootCount, Is.Zero);
+            Assert.Throws<ArgumentNullException>(() => new CampaignRules(null, _normalRules, _hardRules));
+            Assert.Throws<ArgumentNullException>(() => new CampaignRules(_easyRules, null, _hardRules));
+            Assert.Throws<ArgumentNullException>(() => new CampaignRules(_easyRules, _normalRules, null));
+        }
+
+        [Test]
+        public void RulesAreWiredToTheBootstrapAndTheCampaignRunner()
+        {
+            var layout = Populate();
+
+            Assert.That(layout.Bootstrap.RulesDefinition, Is.SameAs(_normalRules), "the player starts with the normal rules");
+            Assert.That(layout.Campaign.RulesDefinition, Is.SameAs(_normalRules), "no -difficulty means normal");
+            Assert.That(layout.Campaign.EasyRules, Is.SameAs(_easyRules));
+            Assert.That(layout.Campaign.NormalRules, Is.SameAs(_normalRules));
+            Assert.That(layout.Campaign.HardRules, Is.SameAs(_hardRules));
+            Assert.That(layout.Campaign.RulesFor(CampaignDifficulty.Hard), Is.SameAs(_hardRules));
+        }
+
+        [Test]
+        public void LoadRulesReadsTheCommittedCampaignRules()
+        {
+            Assume.That(
+                AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(GameRulesAssetBuilder.CampaignNormalPath),
+                Is.Not.Null,
+                $"run {nameof(GameRulesAssetBuilder)}.Build first");
+
+            var rules = CampaignSceneBuilder.LoadRules();
+
+            Assert.That(AssetDatabase.GetAssetPath(rules.Easy), Is.EqualTo(GameRulesAssetBuilder.CampaignEasyPath));
+            Assert.That(AssetDatabase.GetAssetPath(rules.Normal), Is.EqualTo(GameRulesAssetBuilder.CampaignNormalPath));
+            Assert.That(AssetDatabase.GetAssetPath(rules.Hard), Is.EqualTo(GameRulesAssetBuilder.CampaignHardPath));
         }
 
         [Test]
@@ -543,6 +598,16 @@ namespace Fps.Tests.EditMode
             }
 
             Assert.That(ids, Is.EquivalentTo(new[] { CampaignSceneBuilder.StartCheckpointId, CampaignSceneBuilder.AreaACheckpointId }));
+
+            var normal = AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(GameRulesAssetBuilder.CampaignNormalPath);
+            Assert.That(normal, Is.Not.Null, $"run {nameof(GameRulesAssetBuilder)}.Build");
+            Assert.That(bootstrap.RulesDefinition, Is.SameAs(normal), $"rerun {nameof(CampaignSceneBuilder)}.Build to wire the rules");
+            Assert.That(campaigns[0].RulesDefinition, Is.SameAs(normal), $"rerun {nameof(CampaignSceneBuilder)}.Build to wire the rules");
+            Assert.That(
+                AssetDatabase.GetAssetPath(campaigns[0].EasyRules), Is.EqualTo(GameRulesAssetBuilder.CampaignEasyPath));
+            Assert.That(campaigns[0].NormalRules, Is.SameAs(normal));
+            Assert.That(
+                AssetDatabase.GetAssetPath(campaigns[0].HardRules), Is.EqualTo(GameRulesAssetBuilder.CampaignHardPath));
             Assert.That(triggers, Is.EqualTo(2));
             Assert.That(enemies, Is.EqualTo(CampaignSceneBuilder.EnemyCount));
 
@@ -569,9 +634,11 @@ namespace Fps.Tests.EditMode
 
         private WeaponDefinition[] PlayerWeapons => new[] { _rifle, _handgun };
 
+        private CampaignRules Rules => new CampaignRules(_easyRules, _normalRules, _hardRules);
+
         private CampaignLayout Populate()
         {
-            var layout = CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, _catalog);
+            var layout = CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, _catalog, Rules);
             _baked = layout.Surface.navMeshData;
             return layout;
         }

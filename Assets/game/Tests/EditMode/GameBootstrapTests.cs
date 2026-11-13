@@ -17,6 +17,20 @@ namespace Fps.Tests.EditMode
         private BootstrapWorld _world;
         private WeaponDefinition _rifle;
         private WeaponDefinition _handgun;
+        private GameRulesDefinition _rules;
+
+        /// <summary>SetUp で配線するルール。2 秒後から毎秒 10 回復、予備弾は 2 倍で無限。</summary>
+        private static readonly GameRules _testRules = new GameRules(
+            FriendlyFire.Off,
+            RespawnMode.Individual,
+            GameRules.DefaultWaveIntervalSeconds,
+            2f,
+            10f,
+            DeathBody.Vanish,
+            DeathCamera.None,
+            true,
+            2f,
+            Destruction.Off);
 
         [SetUp]
         public void SetUp()
@@ -27,10 +41,14 @@ namespace Fps.Tests.EditMode
             _handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
             _handgun.name = "Handgun";
             WeaponAssetBuilder.Configure(_handgun, WeaponAssetBuilder.HandgunSpec());
+            _rules = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            _rules.name = "TestRules";
+            GameRulesAssetBuilder.Configure(_rules, _testRules);
 
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
             bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+            bootstrap.RulesDefinition = _rules;
             LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
             _world = bootstrap.Build();
         }
@@ -42,6 +60,97 @@ namespace Fps.Tests.EditMode
             Object.DestroyImmediate(_host);
             Object.DestroyImmediate(_rifle);
             Object.DestroyImmediate(_handgun);
+            Object.DestroyImmediate(_rules);
+        }
+
+        [Test]
+        public void PlayerRegeneratesHealthWithTheWiredRules()
+        {
+            var regen = _world.Regen;
+
+            Assert.That(regen, Is.Not.Null);
+            Assert.That(regen, Is.SameAs(_world.Player.GetComponent<HealthRegen>()));
+            Assert.That(regen.Target, Is.SameAs(_world.PlayerDamageable));
+            Assert.That(regen.Rules.RegenPerSecond, Is.EqualTo(10f));
+            Assert.That(_world.Rules.RegenDelaySeconds, Is.EqualTo(2f));
+
+            _world.PlayerDamageable.TakeDamage(50);
+            Assert.That(regen.Tick(2f), Is.Zero, "waits for the delay after a hit");
+            Assert.That(regen.Tick(1f), Is.EqualTo(10));
+            Assert.That(_world.PlayerDamageable.Health.Current, Is.EqualTo(60));
+        }
+
+        [Test]
+        public void TargetDummiesDoNotRegenerate()
+        {
+            foreach (var dummy in _world.Targets)
+            {
+                Assert.That(dummy.GetComponentInChildren<HealthRegen>(true), Is.Null, $"{dummy.name} has no regen");
+            }
+        }
+
+        [Test]
+        public void PlayerWeaponsUseTheWiredReserveRules()
+        {
+            Assert.That(_world.Weapon.Rules, Is.SameAs(_world.Rules));
+            Assert.That(_world.Rules.InfiniteReserve, Is.True);
+            Assert.That(_world.Rules.ReserveAmmoMultiplier, Is.EqualTo(2f));
+        }
+
+        [Test]
+        public void WithoutRulesTheDefaultIsUsedWithAWarning()
+        {
+            var host = new GameObject("Bootstrap-NoRules");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+
+                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"^\[Bootstrap\] GameRulesDefinition が設定されていない"));
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Rules, Is.SameAs(GameRules.Default));
+                Assert.That(world.Regen.Rules, Is.SameAs(GameRules.Default));
+                Assert.That(world.Weapon.Rules, Is.SameAs(GameRules.Default));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void InvalidRulesFailTheBuildBeforeCreatingAnything()
+        {
+            var host = new GameObject("Bootstrap-BrokenRules");
+            var broken = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            try
+            {
+                broken.name = "BrokenRules";
+                broken.RegenPerSecond = -1f;
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = broken;
+                var playersBefore = Object.FindObjectsByType<Damageable>(FindObjectsSortMode.None).Length;
+
+                var e = Assert.Throws<GameRulesDefinitionException>(() => bootstrap.Build());
+                Assert.That(e.Message, Does.Contain("BrokenRules"));
+                Assert.That(bootstrap.World, Is.Null);
+                Assert.That(
+                    Object.FindObjectsByType<Damageable>(FindObjectsSortMode.None).Length,
+                    Is.EqualTo(playersBefore),
+                    "no player is left behind");
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(broken);
+            }
         }
 
         private static void DestroyWorld(BootstrapWorld world)

@@ -114,7 +114,7 @@ namespace Fps.Core
             return margin == 0 ? text + "  1位と同点" : text + "  1位と " + Number(margin);
         }
 
-        /// <summary>今の順位を <see cref="RankText"/> で返す。</summary>
+        /// <summary>今の順位を <see cref="RankText(FreeForAllStanding)"/> で返す。</summary>
         public static string RankText(ModeSession session, Side side) => RankText(Standing(session, side));
 
         private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
@@ -165,6 +165,10 @@ namespace Fps.Core
         }
 
         public override bool Equals(object obj) => obj is FreeForAllStanding other && Equals(other);
+
+        public static bool operator ==(FreeForAllStanding left, FreeForAllStanding right) => left.Equals(right);
+
+        public static bool operator !=(FreeForAllStanding left, FreeForAllStanding right) => !left.Equals(right);
 
         public override int GetHashCode()
         {

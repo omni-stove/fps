@@ -6,9 +6,9 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class FreeForAllModeTests
     {
-        private const float TimeLimit = 60f;
-        private const int ScoreLimit = 3;
-        private const float Respawn = 2f;
+        private const float _timeLimit = 60f;
+        private const int _scoreLimit = 3;
+        private const float _respawn = 2f;
 
         [Test]
         public void EveryPlayerGetsTheirOwnSide()
@@ -63,10 +63,10 @@ namespace Fps.Core.Tests
             session.ReportKill(0, 1);
             Assert.That(session.IsAwaitingRespawn(1), Is.True);
 
-            session.Tick(Respawn / 2f);
+            session.Tick(_respawn / 2f);
             Assert.That(respawned, Is.EqualTo(-1));
 
-            session.Tick(Respawn / 2f);
+            session.Tick(_respawn / 2f);
             Assert.That(respawned, Is.EqualTo(1));
             Assert.That(session.IsDown(1), Is.False);
         }
@@ -83,7 +83,7 @@ namespace Fps.Core.Tests
                 endedCount++;
             };
 
-            KillTimes(session, 2, 0, ScoreLimit - 1);
+            KillTimes(session, 2, 0, _scoreLimit - 1);
             session.ReportKill(1, 0);
             Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
 
@@ -100,11 +100,11 @@ namespace Fps.Core.Tests
         {
             var session = Started(3);
             session.ReportKill(2, 1);
-            session.Tick(Respawn);
+            session.Tick(_respawn);
             session.ReportKill(1, 0);
             session.ReportKill(1, 2);
 
-            session.Tick(TimeLimit);
+            session.Tick(_timeLimit);
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(session.Winner, Is.EqualTo((Side?)new Side(1)));
@@ -117,7 +117,7 @@ namespace Fps.Core.Tests
             session.ReportKill(1, 0);
             session.ReportKill(2, 3);
 
-            session.Tick(TimeLimit);
+            session.Tick(_timeLimit);
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(session.Winner, Is.Null);
@@ -128,7 +128,7 @@ namespace Fps.Core.Tests
         {
             var session = Started(4);
 
-            session.Tick(TimeLimit);
+            session.Tick(_timeLimit);
 
             Assert.That(session.Winner, Is.Null);
         }
@@ -136,21 +136,21 @@ namespace Fps.Core.Tests
         [Test]
         public void CreateRejectsBadSettings()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllMode.Create(0f, ScoreLimit, Respawn));
-            Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllMode.Create(TimeLimit, 0, Respawn));
-            Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllMode.Create(TimeLimit, ScoreLimit, -1f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllMode.Create(TimeLimit, ScoreLimit, float.PositiveInfinity));
+            Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllMode.Create(0f, _scoreLimit, _respawn));
+            Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllMode.Create(_timeLimit, 0, _respawn));
+            Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllMode.Create(_timeLimit, _scoreLimit, -1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllMode.Create(_timeLimit, _scoreLimit, float.PositiveInfinity));
         }
 
         [Test]
         public void TheCreatedSessionWaitsWithNoPlayers()
         {
-            var session = FreeForAllMode.Create(TimeLimit, ScoreLimit, Respawn);
+            var session = FreeForAllMode.Create(_timeLimit, _scoreLimit, _respawn);
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Waiting));
             Assert.That(session.PlayerCount, Is.Zero);
-            Assert.That(session.ScoreLimit, Is.EqualTo((double?)ScoreLimit));
-            Assert.That(session.TimeLimitSeconds, Is.EqualTo(TimeLimit));
+            Assert.That(session.ScoreLimit, Is.EqualTo((double?)_scoreLimit));
+            Assert.That(session.TimeLimitSeconds, Is.EqualTo(_timeLimit));
             Assert.That(session.TracksDowns, Is.True);
         }
 
@@ -160,7 +160,7 @@ namespace Fps.Core.Tests
             var session = Started(4);
             KillTimes(session, 0, 3, 2);
             session.ReportKill(1, 3);
-            session.Tick(Respawn);
+            session.Tick(_respawn);
             session.ReportKill(2, 3);
 
             Assert.That(FreeForAllMode.Standing(session, new Side(0)), Is.EqualTo(new FreeForAllStanding(1, 4, 2, 1)));
@@ -232,7 +232,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new FreeForAllStanding(1, 0, 0, null));
         }
 
-        private static ModeSession Create() => FreeForAllMode.Create(TimeLimit, ScoreLimit, Respawn);
+        private static ModeSession Create() => FreeForAllMode.Create(_timeLimit, _scoreLimit, _respawn);
 
         /// <summary>count 人を参加順に陣営 0, 1, ... へ入れて始める。プレイヤーの ID は陣営の ID と同じ。</summary>
         private static ModeSession Started(int count)
@@ -253,7 +253,7 @@ namespace Fps.Core.Tests
             for (var i = 0; i < times; i++)
             {
                 session.ReportKill(killer, victim);
-                session.Tick(Respawn);
+                session.Tick(_respawn);
             }
         }
     }

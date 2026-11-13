@@ -20,6 +20,9 @@ namespace Fps.Core
         /// <summary>サーバーが止まるときに、つないでいるクライアントへ送る切断理由。</summary>
         public const string ServerStoppedReason = ReasonPrefix + "server-stopped";
 
+        /// <summary>入力が <see cref="GameRules.IdleKickSeconds"/> 秒無かったクライアントを切るときの切断理由。</summary>
+        public const string IdleKickedReason = ReasonPrefix + "idle-kicked";
+
         /// <summary>版が違うクライアントを断るときの切断理由の接頭辞。続けてサーバーの版を付ける。</summary>
         public const string VersionMismatchPrefix = ReasonPrefix + "version-mismatch:";
 
@@ -34,6 +37,7 @@ namespace Fps.Core
         public const string ConnectTimedOutMessage = "サーバーに接続できませんでした (タイムアウト)。";
         public const string RejectedMessage = "サーバーに接続を断られました。";
         public const string VersionMismatchMessage = "版が違います。";
+        public const string IdleKickedMessage = "操作が無い時間が続いたため、サーバーから切断されました (放置)。";
 
         private DisconnectNotice(
             DisconnectKind kind, bool wasConnected, string message, string serverVersion, string detail, string rawReason)
@@ -113,6 +117,7 @@ namespace Fps.Core
         /// 受け取った切断理由から、接続を失った理由を分ける。
         /// <list type="bullet">
         /// <item><see cref="ServerStoppedReason"/> なら <see cref="DisconnectKind.ServerStopped"/>。</item>
+        /// <item><see cref="IdleKickedReason"/> なら <see cref="DisconnectKind.IdleKicked"/>。</item>
         /// <item><see cref="VersionMismatchPrefix"/> で始まれば <see cref="DisconnectKind.VersionMismatch"/>。</item>
         /// <item><see cref="RejectedPrefix"/> で始まれば <see cref="DisconnectKind.Rejected"/>。</item>
         /// <item>それ以外 (空、知らない符号、Netcode や transport の文言) は <see cref="DisconnectKind.TimedOut"/>。</item>
@@ -129,6 +134,11 @@ namespace Fps.Core
             if (string.Equals(code, ServerStoppedReason, StringComparison.Ordinal))
             {
                 return new DisconnectNotice(DisconnectKind.ServerStopped, wasConnected, ServerStoppedMessage, null, null, raw);
+            }
+
+            if (string.Equals(code, IdleKickedReason, StringComparison.Ordinal))
+            {
+                return new DisconnectNotice(DisconnectKind.IdleKicked, wasConnected, IdleKickedMessage, null, null, raw);
             }
 
             if (code.StartsWith(VersionMismatchPrefix, StringComparison.Ordinal))

@@ -14,5 +14,8 @@ namespace Fps.Core
 
         /// <summary>サーバーが、版が違うとして承認で断った。</summary>
         VersionMismatch,
+
+        /// <summary>入力が無い時間が続いたので、サーバーが切った (放置)。</summary>
+        IdleKicked,
     }
 }

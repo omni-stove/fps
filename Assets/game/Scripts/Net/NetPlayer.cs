@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Fps.Core;
 using Fps.Runtime;
-using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -26,10 +24,18 @@ namespace Fps.Net
     /// <para>
     /// HUD も同じ条件 (<see cref="NetStartup.ShouldCreateHud"/>) で生成時に <see cref="NetHud.Create"/> で作り、消滅時に消す。
     /// </para>
+    /// <para>
+    /// 倒れると見た目と当たりを消す。試合のルール (<see cref="NetTeamDeathmatch.SyncedRules"/>) のやられ演出が Collapse なら、
+    /// 画面のあるクライアントでだけ <see cref="DeathBodyPresenter"/> が抜け殻をサーバーから届いた最後の被弾の向きへ倒し、リスポーンで消す。
+    /// 抜け殻はローカルな見た目だけで、判定と同期には関わらない。
+    /// </para>
+    /// <para>
+    /// 射撃の入力と <see cref="FireServerRpc"/> は .Fire.cs に分けてある。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
-    public sealed class NetPlayer : NetworkBehaviour
+    public sealed partial class NetPlayer : NetworkBehaviour
     {
         /// <summary>Assets/InputSystem_Actions.inputactions の Attack アクション。</summary>
         public const string AttackActionPath = InputActionPaths.Attack;
@@ -60,6 +66,9 @@ namespace Fps.Net
         public event Action<Vector3, Quaternion> Teleported;
 
         private readonly NetworkVariable<Team> _team = new NetworkVariable<Team>(Team.Alpha);
+
+        // 最後に受けた弾の進む向き (単位ベクトル)。まだ撃たれていなければ zero。倒れた体を倒す向きにだけ使い、判定には使わない
+        private readonly NetworkVariable<Vector3> _lastHitDirection = new NetworkVariable<Vector3>(Vector3.zero);
 
         // 0 は倒れているか、まだ試合に参加していないことを表す
         private readonly NetworkVariable<int> _health = new NetworkVariable<int>(0);
@@ -92,6 +101,10 @@ namespace Fps.Net
 
         // HUD を作ったときだけ。自分のプレイヤーで画面があるときに作る
         private NetHud _hud;
+
+        // やられ演出。画面のあるクライアント (ホストを含む) でだけ付ける。倒れた tick の LateUpdate で出す
+        private DeathBodyPresenter _deathBody;
+        private bool _deathBodyPending;
 
         // 映している間は射撃の入力を読まない。プレハブに無ければ null
         private NetDeathCamera _deathCamera;
@@ -176,6 +189,13 @@ namespace Fps.Net
             {
                 CreateHud();
             }
+
+            // サーバーだけのインスタンスには見る人がいないので作らない (専用サーバーは IsPresentationAvailable でも弾く)
+            if (IsClient && DeathBodyPresenter.IsPresentationAvailable)
+            {
+                _deathBody = DeathBodyPresenter.Attach(gameObject);
+                _deathBody.Id = "client=" + OwnerClientId.ToString(CultureInfo.InvariantCulture);
+            }
         }
 
         public override void OnNetworkDespawn()
@@ -190,6 +210,12 @@ namespace Fps.Net
             ReleaseAttackAction();
             SetLocalView(false);
             DestroyHud();
+
+            _deathBodyPending = false;
+            if (_deathBody != null)
+            {
+                _deathBody.Clear(DeathBodyPresenter.ReasonDestroyed);
+            }
 
             if (IsServer && NetTeamDeathmatch.Current != null)
             {
@@ -218,143 +244,6 @@ namespace Fps.Net
 
             _ownedMaterials = Array.Empty<Material>();
             base.OnDestroy();
-        }
-
-        private void Update()
-        {
-            if (!IsSpawned || !IsOwner || _attackAction == null || IsWatchingDeathCamera)
-            {
-                return;
-            }
-
-            var isPressed = _attackAction.IsPressed();
-            var wasPressed = _attackAction.WasPressedThisFrame();
-            var trigger = ResolveTrigger();
-            if (trigger == null)
-            {
-                if (wasPressed)
-                {
-                    // 射撃モードと連射間隔が分からない間は、サーバーに弾かれない頻度が分からないので撃たない
-                    WarnUnknownWeapon();
-                }
-
-                return;
-            }
-
-            trigger.Tick(Time.deltaTime);
-
-            // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う
-            if (IsAlive && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
-            {
-                Fire();
-            }
-        }
-
-        /// <summary>
-        /// 装備中の武器 (<see cref="NetPlayerWeapon.WeaponId"/>) の射撃モードと連射間隔で判断する <see cref="FireTrigger"/>。
-        /// 試合 (<see cref="NetTeamDeathmatch.Current"/>) の <see cref="NetTeamDeathmatch.Loadout"/> から引き、武器か Loadout が変わったら作り直す。
-        /// 武器がまだ届いていない・Loadout に無い・Loadout が不正なら null。
-        /// </summary>
-        private FireTrigger ResolveTrigger()
-        {
-            var weaponId = _weapon != null ? _weapon.WeaponId : string.Empty;
-            var match = NetTeamDeathmatch.Current;
-            var loadout = match != null ? match.Loadout : null;
-            // 引けなかったときも覚えておき、毎フレーム Loadout の武器を作り直さない
-            if (_triggerResolved && _triggerLoadout == loadout && string.Equals(_triggerWeaponId, weaponId, StringComparison.Ordinal))
-            {
-                return _trigger;
-            }
-
-            _trigger = null;
-            _triggerSpec = null;
-            _triggerWeaponId = weaponId;
-            _triggerLoadout = loadout;
-            _triggerError = null;
-            _triggerResolved = true;
-            if (string.IsNullOrEmpty(weaponId))
-            {
-                _triggerError = "before the server equips a weapon";
-                return null;
-            }
-
-            if (loadout == null)
-            {
-                _triggerError = "without the match's loadout";
-                return null;
-            }
-
-            IReadOnlyList<WeaponSpec> specs;
-            try
-            {
-                specs = loadout.ToSpecs();
-            }
-            catch (WeaponDefinitionException e)
-            {
-                _triggerError = "with an invalid loadout: " + e.Message;
-                return null;
-            }
-
-            foreach (var spec in specs)
-            {
-                if (string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
-                {
-                    _trigger = new FireTrigger(spec);
-                    _triggerSpec = spec;
-                    return _trigger;
-                }
-            }
-
-            _triggerError = "with weapon '" + weaponId + "' missing from '" + loadout.name + "'";
-            return null;
-        }
-
-        /// <summary>
-        /// 装備中の武器の値。<see cref="ResolveTrigger"/> と同じく試合の Loadout から引く。引けなければ null
-        /// (<see cref="AimDownSights"/> は共通の初期値の視野角を使う)。
-        /// </summary>
-        internal WeaponSpec ResolveEquippedSpec()
-        {
-            ResolveTrigger();
-            return _triggerSpec;
-        }
-
-        private void WarnUnknownWeapon()
-        {
-            Debug.LogWarning("[Net] cannot fire " + (_triggerError ?? "without a weapon"), this);
-        }
-
-        /// <summary>
-        /// 1 発撃つ。目から画面中央が指す点への向きへ、いま見ている時点 (サーバーの時刻 − 補間の遅れ) と装備中の武器の Id を添えて
-        /// サーバーに送るだけで、武器の値 (ダメージ・射程など) は送らない。当たり判定とダメージはサーバーが今持たせている武器の値で行う。
-        /// </summary>
-        private void Fire()
-        {
-            var serverTime = NetworkManager.ServerTime.Time;
-            if (double.IsNaN(serverTime) || double.IsInfinity(serverTime) || serverTime < 0d)
-            {
-                Debug.LogWarning("[Net] cannot fire before the server time is known", this);
-                return;
-            }
-
-            // 装備中の武器はサーバーから届く。届く前 (参加直後) や長すぎる Id は送ってもサーバーが捨てるので送らない
-            var weaponId = _weapon != null ? _weapon.WeaponId : string.Empty;
-            if (string.IsNullOrEmpty(weaponId) || !NetPlayerWeapon.FitsWeaponId(weaponId))
-            {
-                Debug.LogWarning("[Net] cannot fire before the server equips a weapon", this);
-                return;
-            }
-
-            var origin = AimOrigin();
-            var direction = AimDirection();
-
-            // ホストは他人をサーバー上の今の位置で見ている (補間しない) ので遅れは 0
-            var delay = IsServer ? 0 : NetworkPlayerMotor.InterpolationDelayTicks;
-            var time = FireTiming.ViewTime(serverTime, NetworkPlayerMotor.TickRate, delay);
-            Debug.Log("[Net] fire weapon=" + weaponId + " tick=" + time.Tick.ToString(CultureInfo.InvariantCulture)
-                + " alpha=" + time.Alpha.ToString("F2", CultureInfo.InvariantCulture), this);
-            FireServerRpc(new FixedString64Bytes(weaponId), origin, direction, time.Tick, time.Alpha);
-            ReleaseSprint(SprintInput.ReasonFire);
         }
 
         private void ReleaseSprint(string reason)
@@ -661,30 +550,6 @@ namespace Fps.Net
             Teleported?.Invoke(position, rotation);
         }
 
-        /// <summary>
-        /// 射撃をサーバーへ送る。weaponId は撃った武器の Id で、武器の値は送らない (サーバーが今持たせている武器の値を使う)。
-        /// 試合のロードアウトに無い・サーバーが今持たせている武器と違う Id の射撃は捨てられる。
-        /// clientTick + interpolationAlpha は撃った側が他人を見ていた時点 (サーバーの tick)。
-        /// サーバーはその時点まで巻き戻して当たり判定をする (<see cref="NetTeamDeathmatch.ServerFire"/>)。
-        /// </summary>
-        [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable)]
-        private void FireServerRpc(
-            FixedString64Bytes weaponId, Vector3 origin, Vector3 direction, int clientTick, float interpolationAlpha, RpcParams rpcParams = default)
-        {
-            if (rpcParams.Receive.SenderClientId != OwnerClientId)
-            {
-                Debug.LogWarning("[Net] ignored shot from client " + rpcParams.Receive.SenderClientId
-                    + " for player owned by " + OwnerClientId);
-                return;
-            }
-
-            var match = NetTeamDeathmatch.Current;
-            if (match != null)
-            {
-                match.ServerFire(this, weaponId.ToString(), origin, direction, new ShotTime(clientTick, interpolationAlpha));
-            }
-        }
-
         private void HandleTeamChanged(Team previous, Team current)
         {
             ApplyVisuals();
@@ -702,6 +567,60 @@ namespace Fps.Net
                 ResetStance(isAlive ? CrouchInput.ReasonRespawn : CrouchInput.ReasonDeath);
                 ReleaseSprint(isAlive ? SprintInput.ReasonRespawn : SprintInput.ReasonDeath);
             }
+
+            if (_deathBody == null)
+            {
+                return;
+            }
+
+            if (wasAlive && !isAlive)
+            {
+                // 弾の向きは体力と同じ tick に届くが、ホストではサーバーが体力を書いた後に書くので、ここではまだ古い。
+                // LateUpdate まで待てばどちらでも揃っている
+                _deathBodyPending = true;
+            }
+            else if (isAlive)
+            {
+                _deathBodyPending = false;
+                _deathBody.Clear(DeathBodyPresenter.ReasonRespawn);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (!_deathBodyPending)
+            {
+                return;
+            }
+
+            _deathBodyPending = false;
+            if (_deathBody == null || IsAlive)
+            {
+                return;
+            }
+
+            // 試合のルールが届く前か、知らない値が届いたときは今までどおり消すだけにする
+            var match = NetTeamDeathmatch.Current;
+            var mode = match != null ? match.SyncedRules.DeathBody : DeathBody.Vanish;
+            _deathBody.Mode = Enum.IsDefined(typeof(DeathBody), mode) ? mode : DeathBody.Vanish;
+
+            var direction = _lastHitDirection.Value;
+            _deathBody.Present(direction.sqrMagnitude > 0f ? direction : (Vector3?)null);
+        }
+
+        /// <summary>
+        /// サーバーから、このプレイヤーが最後に受けた弾の進む向きを書き込む。倒れたときのやられ演出 (<see cref="DeathBodyPresenter"/>) にだけ使う。
+        /// 長さが 0 か有限でない向きは無視する。
+        /// </summary>
+        internal void ServerSetLastHitDirection(Vector3 direction)
+        {
+            RequireServer();
+            if (!NetMath.IsFinite(direction) || direction.sqrMagnitude < 1e-12f)
+            {
+                return;
+            }
+
+            _lastHitDirection.Value = direction.normalized;
         }
 
         /// <summary>チームの色を塗り、倒れている間は見た目と当たりを消す。</summary>
@@ -759,41 +678,6 @@ namespace Fps.Net
             }
 
             _hud = null;
-        }
-
-        private void ResolveAttackAction()
-        {
-            if (Application.isBatchMode)
-            {
-                // 画面なしでは入力が無い
-                return;
-            }
-
-            var actions = InputSystem.actions;
-            var attack = actions != null ? actions.FindAction(AttackActionPath) : null;
-            if (attack == null)
-            {
-                Debug.LogWarning("[Net] input action '" + AttackActionPath + "' was not found; firing is disabled");
-                return;
-            }
-
-            _attackAction = attack;
-            if (!_attackAction.enabled)
-            {
-                _attackAction.Enable();
-                _enabledAttackAction = true;
-            }
-        }
-
-        private void ReleaseAttackAction()
-        {
-            if (_enabledAttackAction && _attackAction != null)
-            {
-                _attackAction.Disable();
-            }
-
-            _enabledAttackAction = false;
-            _attackAction = null;
         }
 
         private void RequireServer()

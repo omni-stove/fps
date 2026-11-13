@@ -39,6 +39,11 @@ description = "Build the dedicated server (macos by default, or linux) into Buil
 usage = 'arg "[platform]" help="macos or linux" default="macos"'
 run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform "${usage_platform:-macos}"'
 
+[server-image]
+description = "Build the Linux dedicated server and package it as a Docker image with docker/server/Dockerfile (close the Editor first). Options: --tag <name:tag> (default fps-server:local), --skip-build to reuse Builds/server-linux/"
+# 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
+run = "bash scripts/server-image.sh"
+
 [test-unity]
 description = "Run the Unity EditMode tests headlessly in batch mode (close the Editor first)"
 run = "unity test --mode EditMode"

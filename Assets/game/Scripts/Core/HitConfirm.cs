@@ -57,6 +57,16 @@ namespace Fps.Core
             return obj is HitConfirm other && Equals(other);
         }
 
+        public static bool operator ==(HitConfirm left, HitConfirm right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(HitConfirm left, HitConfirm right)
+        {
+            return !left.Equals(right);
+        }
+
         public override int GetHashCode()
         {
             return HashCode.Combine(Damage, (int)Zone, Killed, Downed);

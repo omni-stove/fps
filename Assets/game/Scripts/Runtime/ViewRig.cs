@@ -1,6 +1,7 @@
 using System;
 using Fps.Core;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 namespace Fps.Runtime
@@ -15,7 +16,9 @@ namespace Fps.Runtime
     /// <see cref="Mode"/> が <see cref="ViewMode.FirstPerson"/> ならカメラを目に重ねて自分の体を影だけにし、
     /// <see cref="ViewMode.ThirdPerson"/> なら目から <see cref="ThirdPersonOffset"/> 離して置き (壁があれば手前まで縮める)、体を描く。
     /// どちらの視点でも狙いは <see cref="ResolveAim"/> で、画面中央が指す点へ目から撃つ (<see cref="AimSolver"/>)。
-    /// 参照はコードで解決するので Inspector の配線は要らない: カメラは子階層の <see cref="Camera"/>、目はその親。
+    /// 三人称では、この端末のプレイヤーの視点 (<see cref="IsLocalView"/>) の間だけ <see cref="SwapShoulderActionPath"/> を読み、
+    /// 押すたびにカメラを反対の肩へ <see cref="ShoulderBlend.DefaultSeconds"/> 秒で移す。カメラだけの話なので同期はしない。
+    /// 参照はコードで解決するので Inspector の配線は要らない: カメラは子階層の <see cref="Camera"/>、目はその親、入力はプロジェクト全体のアクション。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ViewRig : MonoBehaviour
@@ -28,6 +31,12 @@ namespace Fps.Runtime
 
         /// <summary>狙う点を探すカメラの Ray の既定の長さ (m)。武器の射程が分からないとき (ネットの射撃など) に使う。</summary>
         public const float DefaultAimDistance = 1000f;
+
+        /// <summary>肩を入れ替える入力のパス (プロジェクト全体の Input Actions)。</summary>
+        public const string SwapShoulderActionPath = InputActionPaths.SwapShoulder;
+
+        /// <summary>視点の状態のログに付けるタグ。<see cref="AimDownSights.LogTag"/> と揃える。</summary>
+        public const string ViewLogTag = AimDownSights.LogTag;
 
         private const string LogTag = "[ViewRig]";
 
@@ -53,6 +62,11 @@ namespace Fps.Runtime
 
         private Transform _eye;
         private Camera _camera;
+        private readonly ShoulderBlend _shoulder = new ShoulderBlend();
+        private InputAction _swapShoulderAction;
+        private bool _enabledSwapShoulderAction;
+        private bool _isLocalView;
+        private bool _isLive;
 
         /// <summary>
         /// 一人称か三人称か。変えるとカメラの位置と体の描き方をすぐ直す (有効な間だけ。無効なら次に有効になったとき)。
@@ -82,6 +96,37 @@ namespace Fps.Runtime
             get => _thirdPersonOffset;
             set => _thirdPersonOffset = value;
         }
+
+        /// <summary>
+        /// 三人称のカメラをどちらの肩越しに置くか (補間の目標)。既定は <see cref="ShoulderSide.Right"/>。
+        /// Left なら <see cref="ThirdPersonOffset"/> の x を反転した位置へ向かう。変えると <see cref="Tick"/> で
+        /// <see cref="ShoulderBlend.DefaultSeconds"/> 秒かけて移り、<c>[View] shoulder=Left</c> のようにログに出す。
+        /// </summary>
+        public ShoulderSide Shoulder
+        {
+            get => _shoulder.Target;
+            set
+            {
+                if (_shoulder.SetTarget(value))
+                {
+                    ReportShoulder();
+                }
+            }
+        }
+
+        /// <summary>今 <see cref="ThirdPersonOffset"/> の x に掛けている符号。右肩で +1、左肩で -1、入れ替えの途中はその間。</summary>
+        public float ShoulderOffsetSign => _shoulder.OffsetSign;
+
+        /// <summary>肩を入れ替えている途中か。</summary>
+        public bool IsSwappingShoulder => _shoulder.IsBlending;
+
+        /// <summary>
+        /// この端末のプレイヤーの視点か。最後に <see cref="ApplyBodyVisibility"/> へ渡した値で、true の間だけ肩の入れ替えの入力を読む。
+        /// </summary>
+        public bool IsLocalView => _isLocalView;
+
+        /// <summary>肩を入れ替える入力。見つからなかったか未設定なら null (肩は入れ替わらないが、視点はそのまま使える)。</summary>
+        public InputAction SwapShoulderAction => _swapShoulderAction;
 
         public float CollisionRadius
         {
@@ -121,23 +166,72 @@ namespace Fps.Runtime
                 return;
             }
 
+            _isLive = true;
             ApplyBodyVisibility(true);
             UpdateCameraPosition();
         }
 
         private void OnDisable()
         {
+            _isLive = false;
             ApplyBodyVisibility(false);
         }
 
         private void LateUpdate()
         {
             // 体の移動と視点の回転 (Update) が済んでから置く。
+            var swapPressed = _isLocalView && _swapShoulderAction != null && _swapShoulderAction.WasPressedThisFrame();
+            Tick(swapPressed, Time.deltaTime);
+        }
+
+        /// <summary>
+        /// 1 フレーム分進める。swapPressedThisFrame が true で、三人称かつこの端末のプレイヤーの視点 (<see cref="IsLocalView"/>) なら
+        /// 肩を入れ替える。それから肩の補間を deltaSeconds だけ進め、カメラを置き直す (<see cref="UpdateCameraPosition"/>)。
+        /// </summary>
+        /// <param name="swapPressedThisFrame">今フレームに肩の入れ替えが押されたか。</param>
+        /// <param name="deltaSeconds">進める秒数。0 以上の有限値。</param>
+        public void Tick(bool swapPressedThisFrame, float deltaSeconds)
+        {
+            EnsureInitialized();
+            // 入れ替えてから秒数の不正で投げると、肩だけ変わってカメラが置き直されない。
+            ShoulderBlend.ValidateDeltaSeconds(deltaSeconds);
+
+            if (swapPressedThisFrame && _isLocalView && _mode == ViewMode.ThirdPerson)
+            {
+                _shoulder.Toggle();
+                ReportShoulder();
+            }
+
+            _shoulder.Tick(deltaSeconds);
             UpdateCameraPosition();
         }
 
         /// <summary>
+        /// 肩の入れ替えの入力を差し替える。null なら入力を読まない。
+        /// 動作中なら、自分が有効にした古いアクションを戻してから、この端末の視点のときだけ新しいものを有効にする。
+        /// </summary>
+        public void SetSwapShoulderAction(InputAction action)
+        {
+            if (action == _swapShoulderAction)
+            {
+                return;
+            }
+
+            ReleaseSwapShoulderAction();
+            _swapShoulderAction = action;
+            RefreshSwapShoulderAction();
+        }
+
+        /// <summary>肩を入れ替えたときのログ。例: <c>[View] shoulder=Left</c>。</summary>
+        public static string FormatShoulderLog(ShoulderSide side)
+        {
+            return $"{ViewLogTag} shoulder={side}";
+        }
+
+        /// <summary>
         /// 子階層のカメラと、その親 (目) を探して初期化する。見つからなければ理由を Debug.LogError に出して false を返す。
+        /// 肩の入れ替えの入力 (<see cref="SwapShoulderActionPath"/>) もプロジェクト全体のアクションから探す。
+        /// こちらは無くても視点は使えるので、警告を出すだけで初期化は続ける。
         /// </summary>
         public bool TryInitializeFromHierarchy()
         {
@@ -158,6 +252,7 @@ namespace Fps.Runtime
             }
 
             Initialize(eye, camera);
+            SetSwapShoulderAction(FindSwapShoulderAction());
             return true;
         }
 
@@ -216,13 +311,17 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// カメラを目からのオフセットへ置く。三人称では目からカメラへ球を飛ばし、自分の体以外に当たればその手前まで縮める。
+        /// カメラを目からのオフセット (x に <see cref="ShoulderOffsetSign"/> を掛けたもの) へ置く。
+        /// 三人称では目からカメラへ球を飛ばし、自分の体以外に当たればその手前まで縮める (肩の入れ替えの途中でも同じ)。
+        /// 肩の補間は進めない (進めるのは <see cref="Tick"/>)。
         /// </summary>
         public void UpdateCameraPosition()
         {
             EnsureInitialized();
 
-            var offset = CameraBoom.Offset(_mode, _thirdPersonOffset.ToNumerics()).ToUnity();
+            var shoulderOffset = _thirdPersonOffset;
+            shoulderOffset.x *= _shoulder.OffsetSign;
+            var offset = CameraBoom.Offset(_mode, shoulderOffset.ToNumerics()).ToUnity();
             var cameraTransform = _camera.transform;
             var desired = offset.magnitude;
             if (desired < 1e-6f)
@@ -266,10 +365,13 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 自分の体の描き方を決める。isLocalView (この端末のプレイヤーの視点) かつ一人称なら影だけ描いて視界をふさがず、
-        /// それ以外 (三人称や他人のプレイヤー) は普通に描く。
+        /// それ以外 (三人称や他人のプレイヤー) は普通に描く。isLocalView の間だけ肩の入れ替えの入力を読む (<see cref="IsLocalView"/>)。
         /// </summary>
         public void ApplyBodyVisibility(bool isLocalView)
         {
+            _isLocalView = isLocalView;
+            RefreshSwapShoulderAction();
+
             var shadowMode = isLocalView && _mode == ViewMode.FirstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
             foreach (var bodyRenderer in GetComponentsInChildren<Renderer>(true))
             {
@@ -378,6 +480,60 @@ namespace Fps.Runtime
             }
 
             return index >= 0;
+        }
+
+        private InputAction FindSwapShoulderAction()
+        {
+            var actions = InputSystem.actions;
+            if (actions == null)
+            {
+                Debug.LogWarning(
+                    $"{LogTag} プロジェクト全体の Input Actions が設定されていません (Project Settings > Input System Package)。肩は入れ替えられません。",
+                    this);
+                return null;
+            }
+
+            var swap = actions.FindAction(SwapShoulderActionPath);
+            if (swap == null)
+            {
+                Debug.LogWarning(
+                    $"{LogTag} Input Actions '{actions.name}' に '{SwapShoulderActionPath}' がありません。肩は入れ替えられません。",
+                    this);
+            }
+
+            return swap;
+        }
+
+        private void ReportShoulder()
+        {
+            Debug.Log(FormatShoulderLog(_shoulder.Target), this);
+        }
+
+        private void RefreshSwapShoulderAction()
+        {
+            if (_isLive && _isLocalView && _swapShoulderAction != null)
+            {
+                // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたときだけ後で無効に戻す。
+                if (!_swapShoulderAction.enabled)
+                {
+                    _swapShoulderAction.Enable();
+                    _enabledSwapShoulderAction = true;
+                }
+            }
+            else
+            {
+                ReleaseSwapShoulderAction();
+            }
+        }
+
+        private void ReleaseSwapShoulderAction()
+        {
+            if (_enabledSwapShoulderAction && _swapShoulderAction != null)
+            {
+                _swapShoulderAction.Disable();
+            }
+
+            _enabledSwapShoulderAction = false;
         }
 
         private static bool IsEyeOf(Transform eye, Transform body)

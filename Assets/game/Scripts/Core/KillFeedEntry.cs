@@ -56,6 +56,16 @@ namespace Fps.Core
             return obj is KillFeedEntry other && Equals(other);
         }
 
+        public static bool operator ==(KillFeedEntry left, KillFeedEntry right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(KillFeedEntry left, KillFeedEntry right)
+        {
+            return !left.Equals(right);
+        }
+
         public override int GetHashCode()
         {
             return HashCode.Combine(KillerId, VictimId, StringComparer.Ordinal.GetHashCode(WeaponId), Headshot, Friendly);

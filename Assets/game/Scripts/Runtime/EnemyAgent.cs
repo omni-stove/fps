@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Fps.Core;
 using UnityEngine;
 using UnityEngine.AI;
@@ -17,6 +18,9 @@ namespace Fps.Runtime
     /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
     /// 撃たれたら (<see cref="Damageable.Damaged"/>) 撃った者の位置を次の知覚 1 回だけ物音として渡し、
     /// 視界の外から撃たれても <see cref="EnemyBrain"/> がその位置を Search するようにする。
+    /// 動こうとしているのに進めなければ (<see cref="StuckMonitor"/>)、経路の引き直し → 寄り道 → 目的地をあきらめる →
+    /// 瞬間移動の順に立て直し、<c>[AI] id=.. stuck recovery=..</c> をログに出す。NavMesh から外れたら近くの NavMesh に戻し
+    /// (近くに無ければ瞬間移動の段階で出現地点へ戻し)、位置が NaN などになったら最後に正常だった位置に戻す。判断の良し悪しはここでは直さない (<see cref="EnemyBrain"/> 側で調整する)。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
@@ -48,6 +52,36 @@ namespace Fps.Runtime
 
         /// <summary>目標が見つからないときに探し直す間隔 (秒)。</summary>
         public const float TargetSearchInterval = 1f;
+
+        /// <summary>進めないまま次の立て直しへ移るまでの秒数。</summary>
+        public const float StuckSeconds = 2f;
+
+        /// <summary>これだけ動けば (立て直し中は目的地へこれだけ近づけば) 進めたとみなす距離 (メートル)。</summary>
+        public const float StuckProgressDistance = 0.5f;
+
+        /// <summary>立て直しの途中で目的地がこれ以上変わったら、新しい目的地までの距離から測り直す距離 (メートル)。</summary>
+        public const float StuckGoalChangeDistance = 2f;
+
+        /// <summary>寄り道の行き先を探す半径 (メートル)。</summary>
+        public const float SidestepRadius = 2f;
+
+        /// <summary>寄り道の行き先として、今の位置からこれ以上離れた地点を選ぶ (メートル)。</summary>
+        public const float SidestepMinDistance = 0.75f;
+
+        /// <summary>寄り道の行き先を探し直す回数。</summary>
+        public const int SidestepAttempts = 6;
+
+        /// <summary>寄り道を切り上げて元の目的地へ向かい直すまでの秒数。</summary>
+        public const float SidestepSeconds = 1.5f;
+
+        /// <summary>瞬間移動の行き先にする経路の角は、今の位置からこれ以上先のもの (メートル)。</summary>
+        public const float WarpLookAhead = 1.5f;
+
+        /// <summary>NavMesh から外れたときに戻る先を探す半径 (メートル)。</summary>
+        public const float OffMeshSnapRadius = 3f;
+
+        /// <summary>NavMesh に戻れなかったときに試し直す間隔 (秒)。</summary>
+        public const float OffMeshRetryInterval = 1f;
 
         [SerializeField, Tooltip("ログに出す識別子。空なら Damageable の Id")]
         private string _id = string.Empty;
@@ -92,6 +126,13 @@ namespace Fps.Runtime
         private float _nextTargetSearch;
         private bool _warnedNoTarget;
         private bool _warnedOffMesh;
+        private StuckMonitor _stuck;
+        private Vector3? _goal;
+        private Vector3? _detour;
+        private float _detourEndsAt;
+        private Vector3 _spawnPosition;
+        private Vector3 _lastFinitePosition;
+        private float _nextOffMeshRetry;
 
         /// <summary>ログに出す識別子。</summary>
         public string Id
@@ -228,6 +269,8 @@ namespace Fps.Runtime
                 return false;
             }
 
+            _stuck = new StuckMonitor(StuckSeconds, StuckProgressDistance, StuckGoalChangeDistance);
+            _stuck.Recovered += OnUnstuck;
             _brain = new EnemyBrain(spec);
             _brain.StateChanged += OnStateChanged;
             _weapon = new Weapon(weaponSpec);
@@ -253,6 +296,17 @@ namespace Fps.Runtime
             return EnemySenses.Perceive(GroundPosition, EyePosition, _target, _sightRange, transform, noise);
         }
 
+        /// <summary>立て直しのログ。</summary>
+        public static string FormatStuckLog(
+            string id, StuckRecovery recovery, EnemyState state, float stalledSeconds, Vector3 position, Vector3? goal, string path)
+        {
+            var goalText = goal.HasValue ? goal.Value.ToString("F1") : "none";
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} id={1} stuck recovery={2} state={3} stalled={4:F1}s pos={5} goal={6} path={7}",
+                LogTag, id, recovery, state, stalledSeconds, position.ToString("F1"), goalText, path);
+        }
+
         /// <summary>状態変化のログ。</summary>
         public static string FormatStateLog(string id, EnemyState previous, EnemyState next)
         {
@@ -273,6 +327,11 @@ namespace Fps.Runtime
             ApplyPatrolRoute();
             ResolveTarget(force: true);
 
+            _lastFinitePosition = transform.position;
+            _spawnPosition = NavMesh.SamplePosition(GroundPosition, out var spawnHit, OffMeshSnapRadius, NavMesh.AllAreas)
+                ? spawnHit.position
+                : GroundPosition;
+
             if (!_agent.isOnNavMesh)
             {
                 Debug.LogError(
@@ -287,6 +346,11 @@ namespace Fps.Runtime
             if (_brain != null)
             {
                 _brain.StateChanged -= OnStateChanged;
+            }
+
+            if (_stuck != null)
+            {
+                _stuck.Recovered -= OnUnstuck;
             }
 
             if (_weapon != null)
@@ -308,6 +372,11 @@ namespace Fps.Runtime
                 return;
             }
 
+            if (!RecoverNonFinitePosition())
+            {
+                return;
+            }
+
             var deltaSeconds = Time.deltaTime;
             _weapon.Tick(deltaSeconds);
 
@@ -324,6 +393,7 @@ namespace Fps.Runtime
             }
 
             MoveTo(decision.MoveTo);
+            WatchProgress(deltaSeconds);
             Face(decision.LookAt, deltaSeconds);
             if (decision.Fire)
             {
@@ -382,20 +452,17 @@ namespace Fps.Runtime
 
         private void MoveTo(System.Numerics.Vector3? moveTo)
         {
-            if (!_agent.isOnNavMesh)
+            _goal = moveTo.HasValue ? moveTo.Value.ToUnity() : (Vector3?)null;
+            if (!_agent.isOnNavMesh && !TryReturnToNavMesh())
             {
-                if (!_warnedOffMesh)
-                {
-                    Debug.LogError($"{LogTag} id={Id} が NavMesh の上にいないので移動できません。", this);
-                    _warnedOffMesh = true;
-                }
-
                 return;
             }
 
-            if (!moveTo.HasValue)
+            if (!_goal.HasValue)
             {
-                if (_destination.HasValue)
+                bool hadDetour = _detour.HasValue;
+                _detour = null;
+                if (_destination.HasValue || hadDetour)
                 {
                     _agent.ResetPath();
                     _destination = null;
@@ -404,7 +471,18 @@ namespace Fps.Runtime
                 return;
             }
 
-            var destination = moveTo.Value.ToUnity();
+            if (_detour.HasValue)
+            {
+                if (Time.time < _detourEndsAt && HorizontalDistance(GroundPosition, _detour.Value) > EnemyBrain.ArrivalDistance)
+                {
+                    return;
+                }
+
+                _detour = null;
+                _destination = null;
+            }
+
+            var destination = _goal.Value;
             if (_destination.HasValue && (destination - _destination.Value).sqrMagnitude < RepathDistance * RepathDistance)
             {
                 return;
@@ -416,6 +494,238 @@ namespace Fps.Runtime
             {
                 Debug.LogWarning($"{LogTag} id={Id} cannot path to {destination}", this);
             }
+        }
+
+        /// <summary>
+        /// NavMesh から外れていたら近くの NavMesh に戻す。戻れなければ <see cref="OffMeshRetryInterval"/> ごとに試し直し、
+        /// 警告は 1 回だけ出す (戻れないまま進めずにいれば、<see cref="WatchProgress"/> が出現地点へ瞬間移動させる)。
+        /// 戻れたら (または外れていなければ) true。
+        /// </summary>
+        private bool TryReturnToNavMesh()
+        {
+            if (_agent.isOnNavMesh)
+            {
+                return true;
+            }
+
+            if (Time.time < _nextOffMeshRetry)
+            {
+                return false;
+            }
+
+            _nextOffMeshRetry = Time.time + OffMeshRetryInterval;
+            if (NavMesh.SamplePosition(GroundPosition, out var hit, OffMeshSnapRadius, NavMesh.AllAreas) && _agent.Warp(hit.position))
+            {
+                Debug.LogWarning($"{LogTag} id={Id} returned to NavMesh from={GroundPosition.ToString("F1")} to={hit.position.ToString("F1")}", this);
+                _destination = null;
+                _warnedOffMesh = false;
+                return true;
+            }
+
+            if (!_warnedOffMesh)
+            {
+                Debug.LogWarning($"{LogTag} id={Id} が NavMesh の上にいないので移動できません。近くに NavMesh が無いので、進めないままなら出現地点へ戻します。", this);
+                _warnedOffMesh = true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 位置が NaN や無限大になっていたら、最後に正常だった位置へ戻す。戻せなかったらこのフレームは何もしない (false)。
+        /// </summary>
+        private bool RecoverNonFinitePosition()
+        {
+            var position = transform.position;
+            if (StuckMonitor.IsFinite(position.ToNumerics()))
+            {
+                _lastFinitePosition = position;
+                return true;
+            }
+
+            Debug.LogWarning($"{LogTag} id={Id} position was not finite ({position}); restoring {_lastFinitePosition.ToString("F1")}", this);
+            transform.position = _lastFinitePosition;
+            _destination = null;
+            _detour = null;
+            _stuck.Reset();
+            return StuckMonitor.IsFinite(transform.position.ToNumerics());
+        }
+
+        /// <summary>進めているかを見張り、進めていなければ <see cref="StuckMonitor"/> の返した立て直しをする。</summary>
+        private void WatchProgress(float deltaSeconds)
+        {
+            // 寄り道中も元の目的地に近づけたかで測る。寄り道先で測ると、寄り道しただけで立ち直ったことになる。
+            var ground = GroundPosition;
+            var heading = _goal.HasValue && HorizontalDistance(ground, _goal.Value) > EnemyBrain.ArrivalDistance
+                ? _goal
+                : null;
+            // 経路の角の取得は毎回ヒープを確保するので、経路の向きを使う立て直し中だけ計算する。
+            var waypoint = _stuck.Stage == StuckRecovery.None ? null : PathWaypoint(heading);
+            var recovery = _stuck.Tick(
+                deltaSeconds,
+                ground.ToNumerics(),
+                heading.HasValue ? heading.Value.ToNumerics() : (System.Numerics.Vector3?)null,
+                waypoint.HasValue ? waypoint.Value.ToNumerics() : (System.Numerics.Vector3?)null);
+            if (recovery == StuckRecovery.None)
+            {
+                return;
+            }
+
+            var path = _agent.isOnNavMesh ? _agent.pathStatus.ToString() : "OffMesh";
+            Debug.Log(FormatStuckLog(Id, recovery, _brain.State, _stuck.TotalStalledSeconds, ground, heading, path), this);
+            switch (recovery)
+            {
+                case StuckRecovery.Repath:
+                    Repath();
+                    break;
+                case StuckRecovery.Sidestep:
+                    Sidestep(ground, heading);
+                    break;
+                case StuckRecovery.AbandonGoal:
+                    _brain.AbandonGoal();
+                    Repath();
+                    break;
+                case StuckRecovery.Warp:
+                    Warp(ground);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 目的地への今の経路で、<see cref="StuckProgressDistance"/> 以上先にある最初の角 (無ければ最後の角)。
+        /// 寄り道中は経路の終点が寄り道先なので null。寄り道先へ歩いただけで立ち直ったことにしないため。
+        /// </summary>
+        private Vector3? PathWaypoint(Vector3? goal)
+        {
+            if (!goal.HasValue || _detour.HasValue || !_agent.isOnNavMesh || !_agent.hasPath || _agent.pathPending)
+            {
+                return null;
+            }
+
+            var corners = _agent.path.corners;
+            if (corners.Length == 0)
+            {
+                return null;
+            }
+
+            var ground = GroundPosition;
+            foreach (var corner in corners)
+            {
+                if (HorizontalDistance(ground, corner) >= StuckProgressDistance)
+                {
+                    return corner;
+                }
+            }
+
+            return corners[corners.Length - 1];
+        }
+
+        private void Repath()
+        {
+            _detour = null;
+            _destination = null;
+            if (_agent.isOnNavMesh)
+            {
+                _agent.ResetPath();
+            }
+        }
+
+        /// <summary>
+        /// 近くの、経路が最後までつながる地点へ少しだけ寄り道させる。見つからなければ経路の引き直しだけにする。
+        /// 目的地へ <see cref="StuckProgressDistance"/> 以上近づく地点は選ばない。選ぶと、寄り道しただけで
+        /// <see cref="StuckMonitor"/> が立ち直ったとみなし、届かない目的地でも段階が先へ進まなくなる。
+        /// </summary>
+        private void Sidestep(Vector3 ground, Vector3? goal)
+        {
+            Repath();
+            if (!_agent.isOnNavMesh)
+            {
+                return;
+            }
+
+            var path = new NavMeshPath();
+            for (var i = 0; i < SidestepAttempts; i++)
+            {
+                var offset = UnityEngine.Random.insideUnitCircle * SidestepRadius;
+                var candidate = ground + new Vector3(offset.x, 0f, offset.y);
+                if (!NavMesh.SamplePosition(candidate, out var hit, SidestepRadius, NavMesh.AllAreas)
+                    || HorizontalDistance(ground, hit.position) < SidestepMinDistance
+                    || (goal.HasValue && MovesTowardGoal(ground, hit.position, goal.Value))
+                    || !_agent.CalculatePath(hit.position, path)
+                    || path.status != NavMeshPathStatus.PathComplete)
+                {
+                    continue;
+                }
+
+                _detour = hit.position;
+                _detourEndsAt = Time.time + SidestepSeconds;
+                _agent.isStopped = false;
+                _agent.SetPath(path);
+                return;
+            }
+        }
+
+        // StuckMonitor の寄り道中の判定 (基準点から目的地の方向への射影) と同じ基準にそろえる。
+        private static bool MovesTowardGoal(Vector3 from, Vector3 to, Vector3 goal)
+        {
+            var toGoal = goal - from;
+            toGoal.y = 0f;
+            if (toGoal.sqrMagnitude <= 0f)
+            {
+                return false;
+            }
+
+            var move = to - from;
+            move.y = 0f;
+            return Vector3.Dot(move, toGoal.normalized) >= StuckProgressDistance;
+        }
+
+        /// <summary>
+        /// 経路上で <see cref="WarpLookAhead"/> より先の角へ瞬間移動させる。そういう角が無く NavMesh からも外れていれば出現地点へ戻す。
+        /// どちらでもなければ (目的地のすぐ手前で詰まっているだけなら) 動かさない。
+        /// </summary>
+        private void Warp(Vector3 ground)
+        {
+            Vector3? to = null;
+            if (_agent.isOnNavMesh && _agent.hasPath)
+            {
+                foreach (var corner in _agent.path.corners)
+                {
+                    if (HorizontalDistance(ground, corner) > WarpLookAhead)
+                    {
+                        to = corner;
+                        break;
+                    }
+                }
+            }
+            else if (!_agent.isOnNavMesh)
+            {
+                to = _spawnPosition;
+            }
+
+            Repath();
+            if (!to.HasValue)
+            {
+                Debug.Log($"{LogTag} id={Id} warp skipped: no point ahead on the path", this);
+                return;
+            }
+
+            if (!_agent.Warp(to.Value))
+            {
+                Debug.LogWarning($"{LogTag} id={Id} warp to {to.Value.ToString("F1")} failed", this);
+                return;
+            }
+
+            // 詰まった地点で測った基準のままだと、目的地から遠い出現地点へ戻した後は普通に歩けていても立て直しが走り続ける。
+            _stuck.Reset();
+            Debug.Log($"{LogTag} id={Id} warped from={ground.ToString("F1")} to={to.Value.ToString("F1")}", this);
+        }
+
+        private static float HorizontalDistance(Vector3 a, Vector3 b)
+        {
+            var delta = a - b;
+            delta.y = 0f;
+            return delta.magnitude;
         }
 
         private void Face(System.Numerics.Vector3? lookAt, float deltaSeconds)
@@ -483,6 +793,11 @@ namespace Fps.Runtime
             return result.RaycastHit.collider.name;
         }
 
+        private void OnUnstuck(float stalledSeconds)
+        {
+            Debug.Log(string.Format(CultureInfo.InvariantCulture, "{0} id={1} unstuck after={2:F1}s", LogTag, Id, stalledSeconds), this);
+        }
+
         private void OnStateChanged(EnemyState previous, EnemyState next)
         {
             Debug.Log(FormatStateLog(Id, previous, next), this);
@@ -517,6 +832,9 @@ namespace Fps.Runtime
             }
 
             _destination = null;
+            _detour = null;
+            _goal = null;
+            _stuck.Reset();
             _agent.enabled = false;
         }
     }

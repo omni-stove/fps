@@ -11,11 +11,12 @@ namespace Fps.Core
         /// <summary>射撃に成功するたびに呼ばれる。</summary>
         public event Action Fired;
 
-        /// <summary>リロードが完了し弾倉が補充されたときに呼ばれる。</summary>
+        /// <summary>リロードが完了し弾倉が補充されたときに呼ばれる。アクティブリロードに成功してその場で終えたときも呼ばれる。</summary>
         public event Action Reloaded;
 
         private float _cooldownRemaining;
         private float _reloadRemaining;
+        private float _reloadElapsed;
 
         public WeaponSpec Spec { get; }
         public int AmmoInMagazine { get; private set; }
@@ -27,6 +28,39 @@ namespace Fps.Core
         /// <see cref="ReserveAmmo"/> は表示用にそのままの値を残す。
         /// </summary>
         public bool HasInfiniteReserve { get; }
+
+        /// <summary>
+        /// true ならリロード中の <see cref="TryActiveReload"/> で判定する (<see cref="ActionRules.ActiveReload"/> が
+        /// <see cref="ActiveReload.On"/>)。false なら <see cref="TryActiveReload"/> は常に false。
+        /// </summary>
+        public bool HasActiveReload { get; }
+
+        /// <summary>今のリロードで <see cref="TryActiveReload"/> の判定を済ませたか。リロード中でなければ false。</summary>
+        public bool HasJudgedActiveReload { get; private set; }
+
+        /// <summary>
+        /// リロードの進み (経過時間 / リロードにかかる時間)。0〜1。リロード中でなければ 0。
+        /// アクティブリロードに失敗すると、かかる時間が <see cref="WeaponSpec.ActiveReloadFailSeconds"/> だけ延びるので進みは下がる。
+        /// </summary>
+        public float ReloadProgress
+        {
+            get
+            {
+                if (!IsReloading)
+                {
+                    return 0f;
+                }
+
+                // 経過と残りの和を分母にするのは、失敗で延びた時間も含めて 1 で終わる進みにするため。
+                var total = _reloadElapsed + _reloadRemaining;
+                if (!(total > 0f))
+                {
+                    return 0f;
+                }
+
+                return Math.Min(1f, Math.Max(0f, _reloadElapsed / total));
+            }
+        }
 
         /// <param name="spec">武器の設定。開始時は弾倉満タン、予備弾は spec の初期値。予備弾は有限。</param>
         public Weapon(WeaponSpec spec)
@@ -50,6 +84,7 @@ namespace Fps.Core
             AmmoInMagazine = spec.MagazineSize;
             ReserveAmmo = ScaleReserveAmmo(spec.ReserveAmmo, rules.ReserveAmmoMultiplier);
             HasInfiniteReserve = rules.InfiniteReserve;
+            HasActiveReload = rules.Actions.ActiveReload == ActiveReload.On;
         }
 
         /// <summary>弾数を指定して作る。セーブデータから戻すときに使う。リロード中でも連射の待ち中でもない状態で始まる。</summary>
@@ -68,7 +103,10 @@ namespace Fps.Core
         /// <param name="spec">武器の設定。</param>
         /// <param name="ammoInMagazine">弾倉の弾数。0 以上 <see cref="WeaponSpec.MagazineSize"/> 以下。</param>
         /// <param name="reserveAmmo">予備弾の数。0 以上。</param>
-        /// <param name="rules">予備弾のルール。<see cref="GameRules.InfiniteReserve"/> だけを使う。</param>
+        /// <param name="rules">
+        /// 予備弾とアクティブリロードのルール。<see cref="GameRules.InfiniteReserve"/> と <see cref="GameRules.Actions"/> の
+        /// <see cref="ActionRules.ActiveReload"/> だけを使う。
+        /// </param>
         public Weapon(WeaponSpec spec, int ammoInMagazine, int reserveAmmo, GameRules rules)
             : this(spec, rules)
         {
@@ -157,6 +195,37 @@ namespace Fps.Core
 
             IsReloading = true;
             _reloadRemaining = Spec.ReloadSeconds;
+            _reloadElapsed = 0f;
+            HasJudgedActiveReload = false;
+            return true;
+        }
+
+        /// <summary>
+        /// リロード中にもう一度 Reload を押したときのアクティブリロード。今の <see cref="ReloadProgress"/> を
+        /// <see cref="ActiveReloadJudge.Judge"/> で判定し、成功ならその場で補充してリロードを終え (<see cref="Reloaded"/> を呼ぶ)、
+        /// 失敗なら残り時間に <see cref="WeaponSpec.ActiveReloadFailSeconds"/> を足す。判定したら true。
+        /// <see cref="HasActiveReload"/> が false、リロード中でない、今のリロードで判定済みのときは何もせず false。
+        /// </summary>
+        /// <param name="result">判定の結果。false を返したときは <see cref="ActiveReloadResult.Fail"/> で、意味を持たない。</param>
+        public bool TryActiveReload(out ActiveReloadResult result)
+        {
+            result = ActiveReloadResult.Fail;
+            if (!HasActiveReload || !IsReloading || HasJudgedActiveReload)
+            {
+                return false;
+            }
+
+            result = ActiveReloadJudge.Judge(ReloadProgress, Spec.ActiveReloadWindowStart, Spec.ActiveReloadWindowLength);
+            HasJudgedActiveReload = true;
+            if (result == ActiveReloadResult.Success)
+            {
+                CompleteReload();
+            }
+            else
+            {
+                _reloadRemaining += Spec.ActiveReloadFailSeconds;
+            }
+
             return true;
         }
 
@@ -165,6 +234,8 @@ namespace Fps.Core
         {
             IsReloading = false;
             _reloadRemaining = 0f;
+            _reloadElapsed = 0f;
+            HasJudgedActiveReload = false;
         }
 
         /// <summary>連射のクールダウンとリロードを deltaSeconds 進める。</summary>
@@ -183,11 +254,17 @@ namespace Fps.Core
             }
 
             _reloadRemaining -= deltaSeconds;
+            _reloadElapsed += deltaSeconds;
             if (_reloadRemaining > 0f)
             {
                 return;
             }
 
+            CompleteReload();
+        }
+
+        private void CompleteReload()
+        {
             var missing = Spec.MagazineSize - AmmoInMagazine;
             if (HasInfiniteReserve)
             {
@@ -201,6 +278,8 @@ namespace Fps.Core
             }
 
             _reloadRemaining = 0f;
+            _reloadElapsed = 0f;
+            HasJudgedActiveReload = false;
             IsReloading = false;
             Reloaded?.Invoke();
         }

@@ -18,6 +18,7 @@ namespace Fps.Tests.EditMode
         private WeaponDefinition _rifle;
         private InputAction _attack;
         private InputAction _reload;
+        private readonly System.Collections.Generic.List<GameObject> _created = new System.Collections.Generic.List<GameObject>();
 
         [SetUp]
         public void SetUp()
@@ -38,6 +39,12 @@ namespace Fps.Tests.EditMode
             _reload.Dispose();
             Object.DestroyImmediate(_camera);
             Object.DestroyImmediate(_rifle);
+            foreach (var created in _created)
+            {
+                Object.DestroyImmediate(created);
+            }
+
+            _created.Clear();
         }
 
         [Test]
@@ -242,6 +249,8 @@ namespace Fps.Tests.EditMode
         {
             Assert.Throws<InvalidOperationException>(() => _controller.Fire());
             Assert.Throws<InvalidOperationException>(() => _controller.StartReload());
+            Assert.Throws<InvalidOperationException>(() => _controller.PressReload());
+            Assert.Throws<InvalidOperationException>(() => _controller.TryActiveReload());
             Assert.Throws<InvalidOperationException>(() => _controller.Tick(0.1f));
         }
 
@@ -492,6 +501,67 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ShotFilterIsNullByDefaultAndTheShotGoesStraightAhead()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
+            var aside = CreateStructure("Aside", new Vector3(20f, 0f, 10f));
+
+            Assert.That(_controller.ShotFilter, Is.Null);
+            Assert.That(_controller.Fire(), Is.True);
+
+            Assert.That(ahead.Calls, Has.Count.EqualTo(1));
+            Assert.That(aside.Calls, Is.Empty);
+        }
+
+        [Test]
+        public void ShotFilterOriginIsWhereTheRaycastStarts()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
+            var aside = CreateStructure("Aside", new Vector3(20f, 0f, 10f));
+            var filter = new RewritingShotFilter { Origin = new Vector3(20f, 0f, 0f) };
+            _controller.ShotFilter = filter;
+
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+            Assert.That(_controller.Fire(), Is.True);
+
+            Assert.That(filter.Calls, Is.EqualTo(1));
+            Assert.That(filter.SeenOrigin, Is.EqualTo(_camera.transform.position), "the filter gets the resolved shot");
+            Assert.That(filter.SeenDirection, Is.EqualTo(_camera.transform.forward));
+            Assert.That(ahead.Calls, Is.Empty);
+            Assert.That(aside.Calls, Has.Count.EqualTo(1));
+            Assert.That(aside.Calls[0].Point.x, Is.EqualTo(20f).Within(1e-4f));
+        }
+
+        [Test]
+        public void ShotFilterDirectionIsWhereTheRaycastGoes()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
+            var right = CreateStructure("Right", new Vector3(10f, 0f, 0f));
+            _controller.ShotFilter = new RewritingShotFilter { Direction = Vector3.right };
+
+            Assert.That(_controller.Fire(), Is.True);
+
+            Assert.That(ahead.Calls, Is.Empty);
+            Assert.That(right.Calls, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void ShotFilterIsNotCalledWhenTheWeaponCannotFire()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var filter = new RewritingShotFilter();
+            _controller.ShotFilter = filter;
+
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(_controller.Fire(), Is.False, "within the fire interval");
+
+            Assert.That(filter.Calls, Is.EqualTo(1));
+        }
+
+        [Test]
         public void FiredIsRaisedOnlyWhenAShotIsFired()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
@@ -580,6 +650,96 @@ namespace Fps.Tests.EditMode
             LogAssert.NoUnexpectedReceived();
         }
 
+        private static Fps.Core.GameRules ActiveReloadRules(Fps.Core.ActiveReload activeReload)
+        {
+            var d = Fps.Core.GameRules.Default;
+            var a = Fps.Core.ActionRules.Default;
+            return new Fps.Core.GameRules(
+                d.FriendlyFire,
+                d.RespawnMode,
+                d.WaveIntervalSeconds,
+                d.RegenDelaySeconds,
+                d.RegenPerSecond,
+                d.DeathBody,
+                d.DeathCamera,
+                d.InfiniteReserve,
+                d.ReserveAmmoMultiplier,
+                d.Destruction,
+                new Fps.Core.ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload));
+        }
+
+        private void StartReloadWithRules(Fps.Core.ActiveReload activeReload)
+        {
+            _controller.Rules = ActiveReloadRules(activeReload);
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+            _controller.Fire();
+            Assert.That(_controller.PressReload(), Is.True, "the first press starts the reload");
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+        }
+
+        [Test]
+        public void PressingReloadInsideTheWindowJudgesASuccessAndRefillsAtOnce()
+        {
+            StartReloadWithRules(Fps.Core.ActiveReload.On);
+            var judged = new System.Collections.Generic.List<Fps.Core.ActiveReloadResult>();
+            _controller.ActiveReloadJudged += (weapon, result) =>
+            {
+                Assert.That(weapon, Is.SameAs(_controller.Weapon));
+                judged.Add(result);
+            };
+            _controller.Tick(_rifle.ReloadSeconds * (_rifle.ActiveReloadWindowStart + (_rifle.ActiveReloadWindowLength / 2f)));
+
+            LogAssert.Expect(LogType.Log, WeaponController.ReloadedLog);
+            LogAssert.Expect(LogType.Log, "[Combat] active-reload success");
+            Assert.That(_controller.PressReload(), Is.True);
+
+            Assert.That(judged, Is.EqualTo(new[] { Fps.Core.ActiveReloadResult.Success }));
+            Assert.That(_controller.Weapon.IsReloading, Is.False);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void PressingReloadOutsideTheWindowJudgesAFailOnlyOnce()
+        {
+            StartReloadWithRules(Fps.Core.ActiveReload.On);
+            _controller.Tick(_rifle.ReloadSeconds * _rifle.ActiveReloadWindowStart / 2f);
+
+            LogAssert.Expect(LogType.Log, "[Combat] active-reload fail");
+            Assert.That(_controller.PressReload(), Is.True);
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+            Assert.That(_controller.Weapon.HasJudgedActiveReload, Is.True);
+
+            Assert.That(_controller.PressReload(), Is.False, "the second press of the same reload is ignored");
+            Assert.That(_controller.TryActiveReload(), Is.False);
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void PressingReloadWhileReloadingDoesNothingWhenTheRuleIsOff()
+        {
+            StartReloadWithRules(Fps.Core.ActiveReload.Off);
+            var judged = 0;
+            _controller.ActiveReloadJudged += (weapon, result) => judged++;
+            _controller.Tick(_rifle.ReloadSeconds * (_rifle.ActiveReloadWindowStart + (_rifle.ActiveReloadWindowLength / 2f)));
+
+            Assert.That(_controller.PressReload(), Is.False);
+
+            Assert.That(judged, Is.Zero);
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize - 1));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ActiveReloadLogNamesTheResult()
+        {
+            Assert.That(WeaponController.ActiveReloadLog(Fps.Core.ActiveReloadResult.Success), Is.EqualTo("[Combat] active-reload success"));
+            Assert.That(WeaponController.ActiveReloadLog(Fps.Core.ActiveReloadResult.Fail), Is.EqualTo("[Combat] active-reload fail"));
+        }
+
         [Test]
         public void ReloadWithFullMagazineDoesNothing()
         {
@@ -649,6 +809,37 @@ namespace Fps.Tests.EditMode
         private void InitializeWithRifleAndHandgun(WeaponDefinition handgun)
         {
             _controller.Initialize(_camera.transform, _attack, _reload, null, null, new[] { _rifle, handgun });
+        }
+
+        // Hitbox の無い 1m の立方体。撃たれると StructureDamage から被害を記録する。
+        private StructureHitRecorder CreateStructure(string name, Vector3 position)
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(cube);
+            cube.name = name;
+            cube.transform.position = position;
+            Physics.SyncTransforms();
+            return cube.AddComponent<StructureHitRecorder>();
+        }
+
+        // 受け取った始点と向きを覚え、値を決めた方だけ書き換える。
+        private sealed class RewritingShotFilter : IShotFilter
+        {
+            public Vector3? Origin { get; set; }
+            public Vector3? Direction { get; set; }
+
+            public int Calls { get; private set; }
+            public Vector3 SeenOrigin { get; private set; }
+            public Vector3 SeenDirection { get; private set; }
+
+            public void Filter(ref Vector3 origin, ref Vector3 direction)
+            {
+                Calls++;
+                SeenOrigin = origin;
+                SeenDirection = direction;
+                origin = Origin ?? origin;
+                direction = Direction ?? direction;
+            }
         }
 
         [Test]

@@ -26,6 +26,7 @@ namespace Fps.Runtime
     /// 始めるときにルール (<see cref="RulesDefinition"/>、コマンドライン引数 <c>-difficulty easy|normal|hard</c> があれば
     /// <see cref="EasyRules"/> / <see cref="NormalRules"/> / <see cref="HardRules"/>) を読み、プレイヤーの自動回復 (<see cref="HealthRegen"/>) と
     /// 武器の予備弾 (<see cref="WeaponController.ApplyRules"/>) に効かせてからセーブを戻す。セーブの予備弾には倍率を掛け直さない。
+    /// 同じルールの <see cref="GameRules.DeathBody"/> で、シーンの敵と標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も決める。
     /// 状態の変化は <see cref="LogTag"/> を付けて Debug.Log に出す。
     /// </summary>
     [DisallowMultipleComponent]
@@ -446,7 +447,7 @@ namespace Fps.Runtime
         /// <summary>
         /// <see cref="Begin(MissionRunner, Damageable, WeaponController, ISaveStorage, Action)"/> と同じだが、セーブを戻す前に rules を
         /// プレイヤーに効かせる。武器は rules の予備弾で満タンに作り直し (<see cref="WeaponController.ApplyRules"/>)、
-        /// プレイヤーの <see cref="HealthRegen"/> (無ければ付ける) を rules で付け直す。セーブがあればその後で弾数を戻すので、
+        /// プレイヤーの <see cref="HealthRegen"/> (無ければ付ける) とアクション (<see cref="PlayerActions.Attach"/>) を rules で付け直す。セーブがあればその後で弾数を戻すので、
         /// セーブの予備弾には倍率を掛け直さない。rules が null ならルールは効かせ直さない。
         /// </summary>
         public void Begin(
@@ -500,6 +501,7 @@ namespace Fps.Runtime
             if (rules != null)
             {
                 ApplyRules(player, weapon, rules);
+                ApplyDeathBody(rules);
             }
 
             _activeRules = rules;
@@ -648,6 +650,35 @@ namespace Fps.Runtime
             }
 
             regen.Bind(player, rules);
+            PlayerActions.Attach(player.gameObject, rules);
+        }
+
+        /// <summary>
+        /// 読み込んだシーンの敵 (<see cref="EnemyAgent"/>) と標的ダミー (<see cref="TargetDummy"/>) のやられ演出を rules の
+        /// <see cref="GameRules.DeathBody"/> にする (<see cref="DeathBodyPresenter"/>)。GameBootstrap が付けた標的ダミーの設定は、難易度のルールで上書きする。
+        /// </summary>
+        private void ApplyDeathBody(GameRules rules)
+        {
+            var targets = new List<Damageable>();
+            foreach (var enemy in FindObjectsByType<EnemyAgent>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                var damageable = enemy.GetComponent<Damageable>();
+                if (damageable != null)
+                {
+                    targets.Add(damageable);
+                }
+            }
+
+            foreach (var dummy in FindObjectsByType<TargetDummy>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (dummy.Damageable != null)
+                {
+                    targets.Add(dummy.Damageable);
+                }
+            }
+
+            var bound = DeathBodyPresenter.BindAll(targets, rules.DeathBody);
+            Debug.Log($"{LogTag} deathBody={rules.DeathBody} targets={bound.ToString(CultureInfo.InvariantCulture)}", this);
         }
 
         /// <summary>セーブがあれば今のシーンに戻す。戻せたら true。戻せないときは理由をログに出し、最初からの状態のままにする。</summary>

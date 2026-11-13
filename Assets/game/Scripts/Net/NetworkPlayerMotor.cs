@@ -38,10 +38,13 @@ namespace Fps.Net
     /// 送るのは解釈した後の「しゃがみたいか」だけにする (サーバーはモードを知らない)。ジャンプとダッシュの開始で解除し、
     /// 死亡・リスポーンでは <see cref="NetPlayer"/> が <see cref="ReleaseCrouch"/> を呼ぶ。
     /// </para>
+    /// <para>
+    /// サーバーで確定した着地は .Landing.cs の partial メソッドに渡す。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
-    public sealed class NetworkPlayerMotor : NetworkBehaviour
+    public sealed partial class NetworkPlayerMotor : NetworkBehaviour
     {
         /// <summary>予測と確定状態の位置のずれ (m) がこれを超えたら照合する。</summary>
         public const float ReconcileTolerance = 0.05f;
@@ -439,12 +442,15 @@ namespace Fps.Net
         private void ApplyAuthoritative(int tick, MotorInput input)
         {
             var wasCrouched = _serverState.IsCrouched;
+            var wasGrounded = _serverState.IsGrounded;
             _serverState = _simulation.Step(_serverState, input);
             _serverYaw = input.Yaw;
             if (_serverState.IsCrouched != wasCrouched)
             {
                 Debug.Log(FormatStanceLog(OwnerClientId, tick, _serverState.IsCrouched), this);
             }
+
+            ReportServerLanding(tick, wasGrounded, _serverState);
 
             if (_role == NetworkPlayerRole.ServerSimulated)
             {

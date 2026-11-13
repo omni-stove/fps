@@ -18,10 +18,11 @@ namespace Fps.Runtime
     /// (<see cref="InputSystem.actions"/>) の Move / Sprint / Crouch / Jump。解決できなければエラーを出して自分を無効にする。
     /// Sprint は <see cref="ControlSettings"/> のモード (押している間／押すたびに切り替え) で <see cref="SprintInput"/> が解釈し、
     /// 射撃・死亡・リスポーンでの解除は <see cref="BindSprintRelease"/> で購読する。
+    /// 着地 (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs) は、<see cref="Tick"/> から呼ぶ partial メソッドとして別のファイルに置く。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
-    public sealed class PlayerController : MonoBehaviour
+    public sealed partial class PlayerController : MonoBehaviour
     {
         /// <summary>Assets/InputSystem_Actions.inputactions のアクション。</summary>
         public const string MoveActionPath = InputActionPaths.Move;
@@ -118,6 +119,12 @@ namespace Fps.Runtime
 
         /// <summary>しゃがんでいるか。</summary>
         public bool IsCrouched => _isCrouched;
+
+        /// <summary>
+        /// <see cref="Tick"/> が姿勢を決める前に、移動・ダッシュ・しゃがみ・ジャンプの入力を書き換える差し込み口 (カバーなど)。
+        /// null なら入力をそのまま使う。
+        /// </summary>
+        public IPlayerMoveFilter MoveFilter { get; set; }
 
         public bool IsInitialized =>
             _controller != null
@@ -374,6 +381,7 @@ namespace Fps.Runtime
         /// <summary>
         /// 1 フレーム分の入力でしゃがみの姿勢を決め、<see cref="PlayerMotor.Step"/> を呼び、変位を CharacterController に適用する。
         /// 向きは <see cref="FirstPersonLook"/> 本体 (この GameObject) の yaw を使う。
+        /// <see cref="MoveFilter"/> があれば、姿勢を決める前に入力を書き換えさせる。
         /// </summary>
         /// <param name="crouch">しゃがみたいか (<see cref="UpdateCrouch"/> の結果)。false でも頭上が塞がっていればしゃがんだまま。</param>
         public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, float deltaSeconds)
@@ -388,20 +396,45 @@ namespace Fps.Runtime
                 return;
             }
 
+            MoveFilter?.Filter(ref move, ref sprint, ref crouch, ref jumpPressed);
             UpdateStance(crouch);
 
-            var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
-            var displacement = _motor.Step(
-                move.ToNumerics(),
-                yawRadians,
-                sprint,
-                _isCrouched,
-                jumpPressed,
-                _controller.isGrounded,
-                deltaSeconds);
+            if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out var displacement))
+            {
+                var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
+                displacement = _motor.Step(
+                    move.ToNumerics(),
+                    yawRadians,
+                    sprint,
+                    _isCrouched,
+                    jumpPressed,
+                    _controller.isGrounded,
+                    deltaSeconds).ToUnity();
+            }
 
-            _controller.Move(displacement.ToUnity());
-            ReportGrounded(_controller.isGrounded);
+            _controller.Move(displacement);
+            var grounded = _controller.isGrounded;
+            ReportLanding(grounded);
+            ReportGrounded(grounded);
+        }
+
+        /// <summary>
+        /// 乗り越え・回避の最中なら、<see cref="PlayerMotor.Step"/> の代わりに動かす変位を displacement に入れて true を返す。
+        /// どちらも動いていなければ false (displacement は 0)。
+        /// </summary>
+        private bool TryOverrideMove(Vector2 move, bool jumpPressed, float deltaSeconds, out Vector3 displacement)
+        {
+            var overridden = false;
+            displacement = Vector3.zero;
+
+            // 乗り越えは足場の縁までの決まった軌道で、途中で回避に切り替えると縁にめり込むので先に聞く
+            TryOverrideMoveForVault(move, jumpPressed, deltaSeconds, ref overridden, ref displacement);
+            if (!overridden)
+            {
+                TryOverrideMoveForDodge(move, jumpPressed, deltaSeconds, ref overridden, ref displacement);
+            }
+
+            return overridden;
         }
 
         /// <summary>

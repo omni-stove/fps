@@ -59,6 +59,15 @@ namespace Fps.Core
         /// <summary>試合結果。試合が終わっていなければ <see cref="HudFormat.NoResult"/>。</summary>
         public string ResultText { get; private set; } = HudFormat.NoResult;
 
+        /// <summary>リロードの進捗 (0〜1)。出さないときは null。</summary>
+        public float? ReloadProgress { get; private set; }
+
+        /// <summary>アクティブリロードで成功になる区間の始め (進捗と同じ 0〜1)。<see cref="ReloadProgress"/> が null なら 0。</summary>
+        public float ReloadWindowStart { get; private set; }
+
+        /// <summary>アクティブリロードで成功になる区間の終わり (進捗と同じ 0〜1)。<see cref="ReloadProgress"/> が null なら 0。</summary>
+        public float ReloadWindowEnd { get; private set; }
+
         /// <summary>体力の源を差し替える。null なら仮の表示に戻す。</summary>
         public void BindHealth(Health health)
         {
@@ -277,6 +286,66 @@ namespace Fps.Core
             ApplyResult(HudFormat.NoResult);
         }
 
+        /// <summary>リロードの進捗と、成功になる区間を出す。どれも 0〜1 で、windowStart は windowEnd 以下。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">値が 0〜1 の外か NaN、または windowStart が windowEnd より大きい。</exception>
+        public void SetReloadProgress(float progress, float windowStart, float windowEnd)
+        {
+            if (!IsFraction(progress))
+            {
+                throw new ArgumentOutOfRangeException(nameof(progress), progress, "progress must be between 0 and 1");
+            }
+
+            if (!IsFraction(windowStart))
+            {
+                throw new ArgumentOutOfRangeException(nameof(windowStart), windowStart, "windowStart must be between 0 and 1");
+            }
+
+            if (!IsFraction(windowEnd))
+            {
+                throw new ArgumentOutOfRangeException(nameof(windowEnd), windowEnd, "windowEnd must be between 0 and 1");
+            }
+
+            if (windowStart > windowEnd)
+            {
+                throw new ArgumentOutOfRangeException(nameof(windowStart), windowStart, "windowStart must not exceed windowEnd");
+            }
+
+            ApplyReloadProgress(progress, windowStart, windowEnd);
+        }
+
+        /// <summary>リロードの進捗を消す。</summary>
+        public void ClearReloadProgress()
+        {
+            ApplyReloadProgress(null, 0f, 0f);
+        }
+
+        /// <summary>
+        /// Bind した武器の今の <see cref="Weapon.ReloadProgress"/> を読み、アクティブリロードを使う武器 (<see cref="Weapon.HasActiveReload"/>) が
+        /// リロード中なら <see cref="SetReloadProgress"/>、そうでなければ <see cref="ClearReloadProgress"/> を呼ぶ。
+        /// 進みは時間で変わりイベントが無いので、HUD が毎フレーム呼ぶ。判定を済ませた後は判定の幅を 0 (始め = 終わり = 0) にして出さない。
+        /// </summary>
+        public void RefreshReloadProgress()
+        {
+            if (_weapon == null || !_weapon.HasActiveReload || !_weapon.IsReloading)
+            {
+                ClearReloadProgress();
+                return;
+            }
+
+            if (_weapon.HasJudgedActiveReload)
+            {
+                // 失敗で時間が延びた後は、幅の位置が進みの尺と合わなくなるため出さない。
+                SetReloadProgress(_weapon.ReloadProgress, 0f, 0f);
+                return;
+            }
+
+            var spec = _weapon.Spec;
+            SetReloadProgress(
+                _weapon.ReloadProgress,
+                spec.ActiveReloadWindowStart,
+                spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength);
+        }
+
         private void OnHealthChanged()
         {
             if (_health != null)
@@ -299,6 +368,9 @@ namespace Fps.Core
             {
                 ClearAmmo();
             }
+
+            // 次のフレームを待たずに、リロードが終わった・武器が替わった時点で進みを消すため。
+            RefreshReloadProgress();
         }
 
         private void ApplyHealth(string text, bool low)
@@ -359,6 +431,24 @@ namespace Fps.Core
 
             ResultText = text;
             Changed?.Invoke(HudField.Result);
+        }
+
+        private void ApplyReloadProgress(float? progress, float windowStart, float windowEnd)
+        {
+            if (progress == ReloadProgress && windowStart == ReloadWindowStart && windowEnd == ReloadWindowEnd)
+            {
+                return;
+            }
+
+            ReloadProgress = progress;
+            ReloadWindowStart = windowStart;
+            ReloadWindowEnd = windowEnd;
+            Changed?.Invoke(HudField.ReloadProgress);
+        }
+
+        private static bool IsFraction(float value)
+        {
+            return value >= 0f && value <= 1f;
         }
     }
 }

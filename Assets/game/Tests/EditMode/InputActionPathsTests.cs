@@ -26,6 +26,8 @@ namespace Fps.Tests.EditMode
         [TestCase(InputActionPaths.Interact)]
         [TestCase(InputActionPaths.Previous)]
         [TestCase(InputActionPaths.Next)]
+        [TestCase(InputActionPaths.Cover)]
+        [TestCase(InputActionPaths.SwapShoulder)]
         [TestCase(InputActionPaths.Pause)]
         [TestCase(InputActionPaths.Scoreboard)]
         [TestCase(InputActionPaths.Dodge)]
@@ -87,6 +89,26 @@ namespace Fps.Tests.EditMode
             Assert.That(reload.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/r"));
             Assert.That(reload.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/buttonWest"));
             Assert.That(MatchRunner.RestartActionPath, Is.EqualTo(InputActionPaths.Reload));
+        }
+
+        [Test]
+        public void CoverIsAButtonOnQAndTheRightShoulder()
+        {
+            var cover = Find(InputActionPaths.Cover);
+
+            Assert.That(cover.type, Is.EqualTo(InputActionType.Button));
+            Assert.That(cover.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/q" && b.groups == "Keyboard&Mouse"));
+            Assert.That(cover.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/rightShoulder" && b.groups == "Gamepad"));
+        }
+
+        [Test]
+        public void SwapShoulderIsAButtonOnVAndTheRightStickPress()
+        {
+            var swap = Find(InputActionPaths.SwapShoulder);
+
+            Assert.That(swap.type, Is.EqualTo(InputActionType.Button));
+            Assert.That(swap.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/v" && b.groups == "Keyboard&Mouse"));
+            Assert.That(swap.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/rightStickPress" && b.groups == "Gamepad"));
         }
 
         [Test]

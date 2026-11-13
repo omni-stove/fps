@@ -492,6 +492,210 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ReloadProgressStartsHidden()
+        {
+            var model = new HudModel();
+
+            Assert.That(model.ReloadProgress, Is.Null);
+            Assert.That(model.ReloadWindowStart, Is.EqualTo(0f));
+            Assert.That(model.ReloadWindowEnd, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void SetReloadProgressShowsTheProgressAndTheWindow()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetReloadProgress(0.25f, 0.5f, 0.65f);
+
+            Assert.That(model.ReloadProgress, Is.EqualTo(0.25f));
+            Assert.That(model.ReloadWindowStart, Is.EqualTo(0.5f));
+            Assert.That(model.ReloadWindowEnd, Is.EqualTo(0.65f));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.ReloadProgress }));
+        }
+
+        [Test]
+        public void ReloadProgressNotifiesOnlyWhenAValueChanges()
+        {
+            var model = new HudModel();
+            model.SetReloadProgress(0.25f, 0.5f, 0.65f);
+            var changes = Record(model);
+
+            model.SetReloadProgress(0.25f, 0.5f, 0.65f);
+            Assert.That(changes, Is.Empty, "same values");
+
+            model.SetReloadProgress(0.3f, 0.5f, 0.65f);
+            model.SetReloadProgress(0.3f, 0.4f, 0.65f);
+            model.SetReloadProgress(0.3f, 0.4f, 0.6f);
+            Assert.That(changes, Is.EqualTo(new[] { HudField.ReloadProgress, HudField.ReloadProgress, HudField.ReloadProgress }));
+        }
+
+        [Test]
+        public void ClearReloadProgressHidesItAndNotifiesOnce()
+        {
+            var model = new HudModel();
+            model.SetReloadProgress(0.75f, 0.5f, 0.65f);
+            var changes = Record(model);
+
+            model.ClearReloadProgress();
+            model.ClearReloadProgress();
+
+            Assert.That(model.ReloadProgress, Is.Null);
+            Assert.That(model.ReloadWindowStart, Is.EqualTo(0f));
+            Assert.That(model.ReloadWindowEnd, Is.EqualTo(0f));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.ReloadProgress }));
+        }
+
+        [Test]
+        public void ClearingAHiddenReloadProgressDoesNotNotify()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.ClearReloadProgress();
+
+            Assert.That(changes, Is.Empty);
+        }
+
+        [Test]
+        public void ReloadProgressAtZeroIsShownEvenWithAnEmptyWindow()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetReloadProgress(0f, 0f, 0f);
+
+            Assert.That(model.ReloadProgress, Is.EqualTo(0f));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.ReloadProgress }));
+        }
+
+        [Test]
+        public void SetReloadProgressRejectsInvalidValuesAndKeepsTheShownOne()
+        {
+            var model = new HudModel();
+            model.SetReloadProgress(0.25f, 0.5f, 0.65f);
+            var changes = Record(model);
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(-0.1f, 0.5f, 0.65f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(1.1f, 0.5f, 0.65f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(float.NaN, 0.5f, 0.65f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(0.5f, -0.1f, 0.65f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(0.5f, 0.5f, 1.1f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(0.5f, 0.7f, 0.65f));
+
+            Assert.That(model.ReloadProgress, Is.EqualTo(0.25f));
+            Assert.That(changes, Is.Empty);
+        }
+
+        private static Weapon NewActiveReloadWeapon(ActiveReload activeReload)
+        {
+            var d = GameRules.Default;
+            var a = ActionRules.Default;
+            var rules = new GameRules(
+                d.FriendlyFire,
+                d.RespawnMode,
+                d.WaveIntervalSeconds,
+                d.RegenDelaySeconds,
+                d.RegenPerSecond,
+                d.DeathBody,
+                d.DeathCamera,
+                d.InfiniteReserve,
+                d.ReserveAmmoMultiplier,
+                d.Destruction,
+                new ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload));
+            var spec = new WeaponSpec(
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 2f, 25, 100f, DamageFalloff.None,
+                activeReloadWindowStart: 0.5f,
+                activeReloadWindowLength: 0.25f,
+                activeReloadFailSeconds: 0.5f);
+            var weapon = new Weapon(spec, rules);
+            Assert.That(weapon.TryFire(), Is.True);
+            return weapon;
+        }
+
+        [Test]
+        public void RefreshReloadProgressFollowsTheBoundWeaponWhileItReloads()
+        {
+            var model = new HudModel();
+            var weapon = NewActiveReloadWeapon(ActiveReload.On);
+            model.BindWeapon(weapon);
+            var changes = Record(model);
+
+            model.RefreshReloadProgress();
+            Assert.That(model.ReloadProgress, Is.Null, "not reloading");
+            Assert.That(changes, Is.Empty);
+
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(0.5f);
+            model.RefreshReloadProgress();
+            Assert.That(model.ReloadProgress, Is.EqualTo(0.25f));
+            Assert.That(model.ReloadWindowStart, Is.EqualTo(0.5f));
+            Assert.That(model.ReloadWindowEnd, Is.EqualTo(0.75f));
+
+            weapon.Tick(1.5f);
+            Assert.That(model.ReloadProgress, Is.Null, "the finished reload clears it without waiting for the next refresh");
+        }
+
+        [Test]
+        public void AJudgedReloadKeepsTheProgressButHidesTheWindow()
+        {
+            var model = new HudModel();
+            var weapon = NewActiveReloadWeapon(ActiveReload.On);
+            model.BindWeapon(weapon);
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(0.5f);
+
+            Assert.That(weapon.TryActiveReload(out var result), Is.True);
+            Assert.That(result, Is.EqualTo(ActiveReloadResult.Fail));
+            model.RefreshReloadProgress();
+
+            Assert.That(model.ReloadProgress, Is.EqualTo(0.2f), "the fail stretches the reload to 2.5 seconds");
+            Assert.That(model.ReloadWindowStart, Is.EqualTo(0f));
+            Assert.That(model.ReloadWindowEnd, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void ASuccessfulActiveReloadClearsTheProgressAtOnce()
+        {
+            var model = new HudModel();
+            var weapon = NewActiveReloadWeapon(ActiveReload.On);
+            model.BindWeapon(weapon);
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(1.25f);
+            model.RefreshReloadProgress();
+            Assert.That(model.ReloadProgress, Is.EqualTo(0.625f));
+
+            Assert.That(weapon.TryActiveReload(out var result), Is.True);
+
+            Assert.That(result, Is.EqualTo(ActiveReloadResult.Success));
+            Assert.That(model.ReloadProgress, Is.Null);
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(30, 89, false)));
+        }
+
+        [Test]
+        public void RefreshReloadProgressShowsNothingWhenTheRuleIsOffOrNoWeaponIsBound()
+        {
+            var model = new HudModel();
+            var weapon = NewActiveReloadWeapon(ActiveReload.Off);
+            model.BindWeapon(weapon);
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(0.5f);
+
+            model.RefreshReloadProgress();
+            Assert.That(model.ReloadProgress, Is.Null, "the rule is off");
+
+            var active = NewActiveReloadWeapon(ActiveReload.On);
+            model.BindWeapon(active);
+            Assert.That(active.TryStartReload(), Is.True);
+            model.RefreshReloadProgress();
+            Assert.That(model.ReloadProgress, Is.EqualTo(0f));
+
+            model.BindWeapon(null);
+            Assert.That(model.ReloadProgress, Is.Null, "unbinding the weapon clears it");
+        }
+
+        [Test]
         public void SettersRejectInvalidValues()
         {
             var model = new HudModel();

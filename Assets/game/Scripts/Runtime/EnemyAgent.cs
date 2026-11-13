@@ -710,6 +710,22 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// 生きていても倒れていても、groundPosition (足元) に戻して <see cref="Respawn"/> と同じく初めからにする。
+        /// ラウンド制のモードが、生き残った敵も含めて全員を出現点に並べ直すのに使う。未初期化なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ResetTo(Vector3 groundPosition, Quaternion rotation)
+        {
+            if (_brain == null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
+            }
+
+            // Respawn は倒れた敵だけを戻す約束なので、生きていれば判断だけ倒れたことにしてから同じ手順で戻す。
+            _brain.Kill();
+            Respawn(groundPosition, rotation);
+        }
+
+        /// <summary>
         /// 倒れた敵を groundPosition (足元) に戻して生き返らせる。体力を満たし、武器を弾の満ちた状態で作り直し、NavMeshAgent を有効に戻して
         /// 近くの NavMesh に置き、判断 (<see cref="EnemyBrain.Revive"/>)・経路・立て直し・撃たれた記録を初めからにして、目標を選び直す。
         /// 出現地点 (NavMesh から外れたときの戻り先) も置いた位置にする。

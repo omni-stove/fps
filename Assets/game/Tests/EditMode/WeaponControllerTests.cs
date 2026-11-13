@@ -18,6 +18,7 @@ namespace Fps.Tests.EditMode
         private WeaponDefinition _rifle;
         private InputAction _attack;
         private InputAction _reload;
+        private readonly System.Collections.Generic.List<GameObject> _created = new System.Collections.Generic.List<GameObject>();
 
         [SetUp]
         public void SetUp()
@@ -38,6 +39,12 @@ namespace Fps.Tests.EditMode
             _reload.Dispose();
             Object.DestroyImmediate(_camera);
             Object.DestroyImmediate(_rifle);
+            foreach (var created in _created)
+            {
+                Object.DestroyImmediate(created);
+            }
+
+            _created.Clear();
         }
 
         [Test]
@@ -492,6 +499,67 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ShotFilterIsNullByDefaultAndTheShotGoesStraightAhead()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
+            var aside = CreateStructure("Aside", new Vector3(20f, 0f, 10f));
+
+            Assert.That(_controller.ShotFilter, Is.Null);
+            Assert.That(_controller.Fire(), Is.True);
+
+            Assert.That(ahead.Calls, Has.Count.EqualTo(1));
+            Assert.That(aside.Calls, Is.Empty);
+        }
+
+        [Test]
+        public void ShotFilterOriginIsWhereTheRaycastStarts()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
+            var aside = CreateStructure("Aside", new Vector3(20f, 0f, 10f));
+            var filter = new RewritingShotFilter { Origin = new Vector3(20f, 0f, 0f) };
+            _controller.ShotFilter = filter;
+
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+            Assert.That(_controller.Fire(), Is.True);
+
+            Assert.That(filter.Calls, Is.EqualTo(1));
+            Assert.That(filter.SeenOrigin, Is.EqualTo(_camera.transform.position), "the filter gets the resolved shot");
+            Assert.That(filter.SeenDirection, Is.EqualTo(_camera.transform.forward));
+            Assert.That(ahead.Calls, Is.Empty);
+            Assert.That(aside.Calls, Has.Count.EqualTo(1));
+            Assert.That(aside.Calls[0].Point.x, Is.EqualTo(20f).Within(1e-4f));
+        }
+
+        [Test]
+        public void ShotFilterDirectionIsWhereTheRaycastGoes()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
+            var right = CreateStructure("Right", new Vector3(10f, 0f, 0f));
+            _controller.ShotFilter = new RewritingShotFilter { Direction = Vector3.right };
+
+            Assert.That(_controller.Fire(), Is.True);
+
+            Assert.That(ahead.Calls, Is.Empty);
+            Assert.That(right.Calls, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void ShotFilterIsNotCalledWhenTheWeaponCannotFire()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var filter = new RewritingShotFilter();
+            _controller.ShotFilter = filter;
+
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(_controller.Fire(), Is.False, "within the fire interval");
+
+            Assert.That(filter.Calls, Is.EqualTo(1));
+        }
+
+        [Test]
         public void FiredIsRaisedOnlyWhenAShotIsFired()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
@@ -649,6 +717,37 @@ namespace Fps.Tests.EditMode
         private void InitializeWithRifleAndHandgun(WeaponDefinition handgun)
         {
             _controller.Initialize(_camera.transform, _attack, _reload, null, null, new[] { _rifle, handgun });
+        }
+
+        // Hitbox の無い 1m の立方体。撃たれると StructureDamage から被害を記録する。
+        private StructureHitRecorder CreateStructure(string name, Vector3 position)
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(cube);
+            cube.name = name;
+            cube.transform.position = position;
+            Physics.SyncTransforms();
+            return cube.AddComponent<StructureHitRecorder>();
+        }
+
+        // 受け取った始点と向きを覚え、値を決めた方だけ書き換える。
+        private sealed class RewritingShotFilter : IShotFilter
+        {
+            public Vector3? Origin { get; set; }
+            public Vector3? Direction { get; set; }
+
+            public int Calls { get; private set; }
+            public Vector3 SeenOrigin { get; private set; }
+            public Vector3 SeenDirection { get; private set; }
+
+            public void Filter(ref Vector3 origin, ref Vector3 direction)
+            {
+                Calls++;
+                SeenOrigin = origin;
+                SeenDirection = direction;
+                origin = Origin ?? origin;
+                direction = Direction ?? direction;
+            }
         }
 
         [Test]

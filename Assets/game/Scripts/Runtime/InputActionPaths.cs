@@ -16,5 +16,7 @@ namespace Fps.Runtime
         public const string Interact = "Player/Interact";
         public const string Previous = "Player/Previous";
         public const string Next = "Player/Next";
+        public const string Cover = "Player/Cover";
+        public const string SwapShoulder = "Player/SwapShoulder";
     }
 }

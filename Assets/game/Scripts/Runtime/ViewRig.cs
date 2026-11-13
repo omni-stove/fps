@@ -53,6 +53,7 @@ namespace Fps.Runtime
 
         private Transform _eye;
         private Camera _camera;
+        private ShoulderSide _shoulder = ShoulderSide.Right;
 
         /// <summary>
         /// 一人称か三人称か。変えるとカメラの位置と体の描き方をすぐ直す (有効な間だけ。無効なら次に有効になったとき)。
@@ -81,6 +82,24 @@ namespace Fps.Runtime
         {
             get => _thirdPersonOffset;
             set => _thirdPersonOffset = value;
+        }
+
+        /// <summary>
+        /// 三人称のカメラをどちらの肩越しに置くか。既定は <see cref="ShoulderSide.Right"/>。
+        /// Left なら <see cref="ThirdPersonOffset"/> の x を反転して置く。変えると次の <see cref="UpdateCameraPosition"/> からすぐ使う (補間しない)。
+        /// </summary>
+        public ShoulderSide Shoulder
+        {
+            get => _shoulder;
+            set
+            {
+                if (value != ShoulderSide.Right && value != ShoulderSide.Left)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "unknown shoulder side");
+                }
+
+                _shoulder = value;
+            }
         }
 
         public float CollisionRadius
@@ -216,13 +235,13 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// カメラを目からのオフセットへ置く。三人称では目からカメラへ球を飛ばし、自分の体以外に当たればその手前まで縮める。
+        /// カメラを目からのオフセット (<see cref="Shoulder"/> の側) へ置く。三人称では目からカメラへ球を飛ばし、自分の体以外に当たればその手前まで縮める。
         /// </summary>
         public void UpdateCameraPosition()
         {
             EnsureInitialized();
 
-            var offset = CameraBoom.Offset(_mode, _thirdPersonOffset.ToNumerics()).ToUnity();
+            var offset = CameraBoom.Offset(_mode, _thirdPersonOffset.ToNumerics(), _shoulder).ToUnity();
             var cameraTransform = _camera.transform;
             var desired = offset.magnitude;
             if (desired < 1e-6f)

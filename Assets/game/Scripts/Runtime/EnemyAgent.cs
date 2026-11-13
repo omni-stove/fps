@@ -21,6 +21,7 @@ namespace Fps.Runtime
     /// 動こうとしているのに進めなければ (<see cref="StuckMonitor"/>)、経路の引き直し → 寄り道 → 目的地をあきらめる →
     /// 瞬間移動の順に立て直し、<c>[AI] id=.. stuck recovery=..</c> をログに出す。NavMesh から外れたら近くの NavMesh に戻し
     /// (近くに無ければ瞬間移動の段階で出現地点へ戻し)、位置が NaN などになったら最後に正常だった位置に戻す。判断の良し悪しはここでは直さない (<see cref="EnemyBrain"/> 側で調整する)。
+    /// 倒れた後は <see cref="Respawn"/> で生き返らせられる (キャンペーンでは呼ばない)。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
@@ -321,6 +322,49 @@ namespace Fps.Runtime
             var noise = _pendingNoise;
             _pendingNoise = null;
             return EnemySenses.Perceive(GroundPosition, EyePosition, _target, _sightRange, transform, noise);
+        }
+
+        /// <summary>
+        /// 倒れた敵を足元 ground・向き rotation の位置で生き返らせる。体力を満タンに作り直し、武器を弾の満ちた状態で作り直し、
+        /// 判断を <see cref="EnemyBrain.Revive"/> で巡回の最初からやり直させ、NavMeshAgent を有効に戻す。出現地点 (NavMesh から
+        /// 外れたときの戻り先) も ground にする。拠点制圧 (<see cref="DominationRunner"/>) のように倒れた敵を戻すモードが呼ぶ。
+        /// 未初期化か、まだ生きていれば何もせず false。
+        /// </summary>
+        public bool Respawn(Vector3 ground, Quaternion rotation)
+        {
+            if (_brain == null || !_brain.IsDead)
+            {
+                return false;
+            }
+
+            // NavMeshAgent は有効なまま Transform を書き換えると元の位置へ戻すので、切った状態で動かしてから有効にする。
+            _agent.enabled = false;
+            transform.SetPositionAndRotation(ground + (Vector3.up * _agent.baseOffset), rotation);
+            _agent.enabled = true;
+            if (_agent.isOnNavMesh)
+            {
+                _agent.Warp(ground);
+                _agent.ResetPath();
+                _agent.isStopped = false;
+            }
+
+            _weapon.Reloaded -= OnReloaded;
+            _weapon = new Weapon(_weapon.Spec);
+            _weapon.Reloaded += OnReloaded;
+
+            _pendingNoise = null;
+            _destination = null;
+            _detour = null;
+            _goal = null;
+            _stuck.Reset();
+            _spawnPosition = ground;
+            _lastFinitePosition = transform.position;
+            _warnedOffMesh = false;
+
+            _self.ResetHealth();
+            _brain.Revive();
+            Debug.Log($"{LogTag} id={Id} respawned at={ground.ToString("F1")} state={_brain.State}", this);
+            return true;
         }
 
         /// <summary>立て直しのログ。</summary>

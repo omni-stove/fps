@@ -13,7 +13,7 @@ namespace Fps.Editor
     /// <summary>
     /// Bootstrap シーン (射撃場) を生成する。シーンには <see cref="GameBootstrap"/> と試合を進める <see cref="MatchRunner"/> を
     /// 置いた GameObject と、カバーを試す遮蔽物 (<see cref="Covers"/>) を入れ、残りは実行時に GameBootstrap がコードで作る。
-    /// 保存したシーンは Build Settings の先頭に登録する。
+    /// 保存したシーンは Build Settings に登録する (先頭はメインメニューなので、既にあれば位置は変えない)。
     /// Editor を閉じた状態で次のように呼べる (保存先は -bootstrapScenePath で変えられる):
     /// <code>unity -batchmode -quit -executeMethod Fps.Editor.BootstrapSceneBuilder.Build</code>
     /// </summary>
@@ -59,7 +59,7 @@ namespace Fps.Editor
         public static LevelBox HighCover => Covers[1];
 
         /// <summary>
-        /// コマンドライン引数で決まる場所に Bootstrap シーンを生成し、Build Settings の先頭に登録する。
+        /// コマンドライン引数で決まる場所に Bootstrap シーンを生成し、Build Settings に登録する。
         /// 失敗したら例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
         /// </summary>
         [MenuItem(MenuPath)]
@@ -76,7 +76,7 @@ namespace Fps.Editor
             BuildAt(path);
         }
 
-        /// <summary>path に Bootstrap シーンを生成・保存し、Build Settings の先頭に登録する。</summary>
+        /// <summary>path に Bootstrap シーンを生成・保存し、Build Settings に登録する。</summary>
         public static void BuildAt(string path)
         {
             path = ValidateScenePath(path);
@@ -102,10 +102,11 @@ namespace Fps.Editor
                 throw new IOException($"Failed to save the bootstrap scene to '{path}'");
             }
 
-            BuildSceneList.RegisterStartScene(path);
+            // 起動時のシーンはメインメニュー (MenuSceneBuilder が先頭に置く) なので、射撃場は並びを変えずに加える
+            BuildSceneList.Register(path);
             AssetDatabase.SaveAssets();
 
-            Debug.Log($"[BootstrapSceneBuilder] saved '{path}' and registered it first in Build Settings");
+            Debug.Log($"[BootstrapSceneBuilder] saved '{path}' and registered it in Build Settings");
         }
 
         /// <summary>

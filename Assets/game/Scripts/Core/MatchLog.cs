@@ -53,6 +53,16 @@ namespace Fps.Core
                 + " victim=" + victimId.ToString(CultureInfo.InvariantCulture);
         }
 
+        /// <summary>
+        /// 味方に倒された (<see cref="FriendlyFire.On"/>) ことを、点数の入る <see cref="Kill"/> と区別して書く。
+        /// </summary>
+        /// <example><c>[Match] teamkill killer=0 victim=2</c></example>
+        public static string TeamKill(int killerId, int victimId)
+        {
+            return Tag + " teamkill killer=" + killerId.ToString(CultureInfo.InvariantCulture)
+                + " victim=" + victimId.ToString(CultureInfo.InvariantCulture);
+        }
+
         /// <example><c>[Match] spawn player=1 at=(0.00, 0.00, 20.00)</c></example>
         public static string Spawn(int playerId, SpawnPoint point)
         {

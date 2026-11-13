@@ -30,6 +30,7 @@ namespace Fps.Core.Tests
         {
             Assert.That(MatchLog.Joined(2, Team.Bravo), Is.EqualTo("[Match] joined player=2 team=Bravo"));
             Assert.That(MatchLog.Kill(1, 2), Is.EqualTo("[Match] kill killer=1 victim=2"));
+            Assert.That(MatchLog.TeamKill(1, 3), Is.EqualTo("[Match] teamkill killer=1 victim=3"));
             Assert.That(MatchLog.Spawn(2, new SpawnPoint(new Vector3(1f, 0f, -20.5f))),
                 Is.EqualTo("[Match] spawn player=2 at=(1.00, 0.00, -20.50)"));
         }

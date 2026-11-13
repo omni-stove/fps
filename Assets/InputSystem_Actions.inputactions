@@ -157,6 +157,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "NetStats",
+                    "type": "Button",
+                    "id": "e4b17c92-5a3f-4d68-9e0b-7f2c81d6a4b3",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -729,6 +738,17 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "Grenade",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1c6d0a8f-93e2-4b75-a2f4-5d8e3b9c07a1",
+                    "path": "<Keyboard>/f3",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "NetStats",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -108,9 +108,10 @@ namespace Fps.Net
         private InputAction _crouchAction;
         private readonly List<InputAction> _enabledActions = new List<InputAction>();
         private bool _jumpLatched;
-
-        // ReleaseSprint の後は押し直すまでダッシュしない。tick の進まないフレームの押下も拾うよう、フレームごとに更新する
-        private readonly HoldToggleState _sprintState = new HoldToggleState(HoldMode.Hold);
+        private bool _sprintPressLatched;
+        private SprintInput _sprint;
+        private ControlSettings _controlSettings = ControlSettings.Default;
+        private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
         private PredictionBuffer<MotorInput, MotorState> _prediction;
 
         // サーバー
@@ -148,16 +149,17 @@ namespace Fps.Net
         /// <summary>このインスタンスで今しゃがんでいるか (オーナーは予測、他人は補間表示の姿勢)。</summary>
         public bool IsCrouched => _simulation != null && _simulation.Stance.IsCrouched;
 
-        /// <summary>次の入力でダッシュを送るか。オーナー以外では常に false。</summary>
-        public bool IsSprintActive => _sprintState.IsActive;
+        /// <summary>オーナーでダッシュ中か (モードどおりに解釈し、自動解除した後の値)。オーナー以外では false。</summary>
+        public bool IsSprinting => _sprint != null && _sprint.IsActive;
 
         /// <summary>
-        /// ダッシュを外から解除する (ADS を始めたときなど)。ボタンを押し続けていても、押し直すまでダッシュを送らない。
-        /// サーバーは送られた入力どおりに動かすだけなので、解除はオーナーの入力の側で行う。
+        /// オーナーのダッシュを解除する。Hold でもボタンを押し直すまでダッシュしない。次の tick の入力から効く。
+        /// 射撃・死亡・リスポーン (<see cref="NetPlayer"/>) や ADS から呼ぶ。オーナー以外では何もしない。ダッシュ中だったら true。
         /// </summary>
-        public void ReleaseSprint()
+        /// <param name="reason">ログに出す理由 (<see cref="SprintInput.ReasonFire"/> など)。</param>
+        public bool ReleaseSprint(string reason)
         {
-            _sprintState.Release();
+            return _sprint != null && _sprint.Release(reason);
         }
 
         private void Awake()
@@ -236,6 +238,11 @@ namespace Fps.Net
             {
                 _clock = new TickClock(TickRate);
                 _jumpLatched = false;
+                _sprintPressLatched = false;
+                _controlSettings = new ControlSettingsStore().Load();
+                _device = InputDeviceKind.KeyboardMouse;
+                _sprint = new SprintInput();
+                _sprint.Changed += OnSprintChanged;
                 ResolveInputActions();
             }
 
@@ -286,14 +293,14 @@ namespace Fps.Net
                 _jumpLatched = true;
             }
 
-            if (_sprintAction != null)
+            // 切り替えも押したフレームで起きるので、ジャンプと同じく次の tick まで覚えておく
+            if (_sprintAction != null && _sprintAction.WasPressedThisFrame())
             {
-                _sprintState.Update(_sprintAction.IsPressed(), _sprintAction.WasPressedThisFrame());
+                _sprintPressLatched = true;
             }
-            else
-            {
-                _sprintState.Release();
-            }
+
+            // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
+            _device = InputDeviceKinds.Of(_sprintAction, InputDeviceKinds.Of(_moveAction, _device));
 
             var ticks = _clock.Advance(deltaSeconds);
             var firstTick = _clock.CurrentTick - ticks + 1;
@@ -306,13 +313,33 @@ namespace Fps.Net
         private MotorInput SampleInput()
         {
             var move = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
-            var sprint = _sprintState.IsActive;
+            var sprint = SampleSprint(move);
             var crouch = _crouchAction != null && _crouchAction.IsPressed();
             var jump = _jumpLatched;
             _jumpLatched = false;
 
             var yaw = SampleYaw(_look, transform);
             return new MotorInput(move, yaw, sprint, jump, crouch);
+        }
+
+        // サーバーへはモードを解釈した後の「ダッシュ中か」だけを送る (サーバー側は押し方を知らなくてよい)
+        private bool SampleSprint(Vector2 move)
+        {
+            var wasPressed = _sprintPressLatched;
+            _sprintPressLatched = false;
+            if (_sprint == null)
+            {
+                return false;
+            }
+
+            var isPressed = _sprintAction != null && _sprintAction.IsPressed();
+            var mode = _controlSettings.Get(_device, HoldAction.Sprint);
+            return _sprint.Update(mode, NetMath.ToNumerics(move), isPressed, wasPressed);
+        }
+
+        private void OnSprintChanged(SprintChange change)
+        {
+            Debug.Log(SprintInput.FormatLog(change), this);
         }
 
         /// <summary>
@@ -670,7 +697,13 @@ namespace Fps.Net
             _jumpAction = null;
             _sprintAction = null;
             _crouchAction = null;
-            _sprintState.Release();
+            if (_sprint != null)
+            {
+                _sprint.Changed -= OnSprintChanged;
+                _sprint = null;
+            }
+
+            _sprintPressLatched = false;
             _prediction = null;
             _remoteHistory = null;
             _remoteYawHistory = null;

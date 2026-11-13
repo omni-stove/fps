@@ -108,6 +108,9 @@ namespace Fps.Runtime
         /// </summary>
         public event Action<Weapon> WeaponChanged;
 
+        /// <summary><see cref="Fire"/> で弾が出たときに、撃った Weapon を渡して呼ばれる (当たり判定の前)。</summary>
+        public event Action<Weapon> Fired;
+
         /// <summary>今持っている武器の距離減衰。未初期化なら null。</summary>
         public DamageFalloff Falloff => Weapon?.Spec.Falloff;
 
@@ -413,6 +416,7 @@ namespace Fps.Runtime
             }
 
             Debug.Log($"[Combat] fire ammo={weapon.AmmoInMagazine}", this);
+            Fired?.Invoke(weapon);
 
             ResolveShot(out var origin, out var direction);
             if (TryRaycast(origin, direction, out var hit))

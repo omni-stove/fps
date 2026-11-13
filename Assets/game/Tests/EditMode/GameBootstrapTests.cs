@@ -299,12 +299,12 @@ namespace Fps.Tests.EditMode
                 _world.Weapon.Initialize(_world.Camera.transform, attack, reload);
                 var hip = _world.Camera.fieldOfView;
 
-                Assert.That(_world.Mover.UpdateSprint(true, true), Is.True);
+                Assert.That(_world.Mover.UpdateSprint(Vector2.up, true, true, InputDeviceKind.KeyboardMouse), Is.True);
                 LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(true));
                 ads.Tick(true, true, 1f);
 
-                Assert.That(_world.Mover.IsSprintActive, Is.False, "aiming down sights stops the sprint");
-                Assert.That(_world.Mover.UpdateSprint(true, false), Is.False, "holding Sprint does not resume it");
+                Assert.That(_world.Mover.IsSprinting, Is.False, "aiming down sights stops the sprint");
+                Assert.That(_world.Mover.UpdateSprint(Vector2.up, true, false, InputDeviceKind.KeyboardMouse), Is.False, "holding Sprint does not resume it");
                 Assert.That(_world.Camera.fieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView).Within(1e-4f));
                 Assert.That(_world.Look.SensitivityMultiplier, Is.LessThan(1f));
 

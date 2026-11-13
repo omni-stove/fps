@@ -50,6 +50,14 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void FallDamageLogShowsOwnerTickSpeedDamageAndOutcome()
+        {
+            Assert.That(
+                NetworkPlayerMotor.FormatFallDamageLog(1, 42, 17.9f, 45, Fps.Core.DamageOutcome.Damaged),
+                Is.EqualTo("[Net] fall owner=1 tick=42 speed=17.90 damage=45 outcome=Damaged"));
+        }
+
+        [Test]
         public void ReconcileLogShowsBothStances()
         {
             var result = new ReconcileResult(ReconcileOutcome.Corrected, 12, MotorState.StanceMismatchError, 3);

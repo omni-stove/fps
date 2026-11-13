@@ -52,12 +52,15 @@ namespace Fps.Net
         private bool _enabledReloadAction;
 
         /// <summary>
-        /// 持ち主で弾数かリロード中かどうかが変わったときに呼ばれる (サーバーから届いたとき)。HUD はこれを購読して <see cref="State"/> を読む。
+        /// 持ち主で弾数かリロード中かどうかが変わったときに呼ばれる (サーバーから届いたとき)。
         /// </summary>
         public event Action<NetWeaponState> StateChanged;
 
         /// <summary>サーバーから届いた武器の状態。持ち主とサーバーでだけ意味がある (他人の分は届かず既定値のまま)。</summary>
         public NetWeaponState State => _state.Value;
+
+        /// <summary><see cref="NetHud"/> が OnValueChanged を購読する武器の状態の同期値。</summary>
+        internal NetworkVariable<NetWeaponState> StateVariable => _state;
 
         public int AmmoInMagazine => _state.Value.AmmoInMagazine;
         public int ReserveAmmo => _state.Value.ReserveAmmo;

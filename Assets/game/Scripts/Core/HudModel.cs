@@ -3,10 +3,15 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// HUD に出す文字列を持ち、<see cref="Health"/>・<see cref="Weapon"/>・<see cref="Match"/>・<see cref="CampaignNotice"/> のイベントで更新する。
-    /// 毎フレーム値を読みに行かず、イベントが来たときだけ書式を通し、表示が変わったときだけ <see cref="Changed"/> を呼ぶ
-    /// (残り時間は秒の桁が変わったときだけ)。Bind で源を差し替えると前の源の購読は外し、今の値をすぐ反映する。
+    /// HUD に出す文字列を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo"/>・<see cref="SetTime"/> などで直接渡すか、
+    /// <see cref="Health"/>・<see cref="Weapon"/>・<see cref="Match"/>・<see cref="CampaignNotice"/> を Bind してそのイベントで受ける
+    /// (Bind 系も中では Set 系を呼ぶ)。毎フレーム値を読みに行かず、値が来たときだけ書式を通し、表示が変わったときだけ
+    /// <see cref="Changed"/> を呼ぶ (残り時間は秒の桁が変わったときだけ)。Bind で源を差し替えると前の源の購読は外し、今の値をすぐ反映する。
     /// null を渡すとその項目は仮の表示に戻る。
+    /// <para>
+    /// 同じ項目を Bind しながら Set 系でも書くと、次に来た方が表示に残る。ネットワークの値のように Core の型が無い源は
+    /// Bind せずに Set 系だけで書く。
+    /// </para>
     /// </summary>
     public sealed class HudModel
     {
@@ -21,14 +26,35 @@ namespace Fps.Core
         /// <summary>左下の体力。</summary>
         public string HealthText { get; private set; } = HudFormat.NoHealth;
 
+        /// <summary>体力が少なく、警告の色で出すべきか (<see cref="HudFormat.IsLowHealth"/>)。</summary>
+        public bool IsHealthLow { get; private set; }
+
         /// <summary>右下の「弾倉 / 予備」。</summary>
         public string AmmoText { get; private set; } = HudFormat.NoAmmo;
+
+        /// <summary>リロード中か。<see cref="AmmoText"/> にも出るが、View が見た目を変えるのに使う。</summary>
+        public bool IsReloading { get; private set; }
 
         /// <summary>上中央の残り時間 (mm:ss)。</summary>
         public string TimeText { get; private set; } = HudFormat.NoTime;
 
         /// <summary>画面上部に一時的に出す案内。空文字なら出さない。</summary>
         public string NoticeText { get; private set; } = HudFormat.NoNotice;
+
+        /// <summary>先に出すチーム (自分のチーム)。点数が無ければ null。</summary>
+        public Team? FirstScoreTeam { get; private set; }
+
+        /// <summary>先に出すチームの「チーム名 点数」。点数が無ければ <see cref="HudFormat.NoScore"/>。</summary>
+        public string FirstScoreText { get; private set; } = HudFormat.NoScore;
+
+        /// <summary>後に出すチーム (相手のチーム)。点数が無ければ null。</summary>
+        public Team? SecondScoreTeam => FirstScoreTeam.HasValue ? HudFormat.Opponent(FirstScoreTeam.Value) : (Team?)null;
+
+        /// <summary>後に出すチームの「チーム名 点数」。点数が無ければ <see cref="HudFormat.NoScore"/>。</summary>
+        public string SecondScoreText { get; private set; } = HudFormat.NoScore;
+
+        /// <summary>試合結果。試合が終わっていなければ <see cref="HudFormat.NoResult"/>。</summary>
+        public string ResultText { get; private set; } = HudFormat.NoResult;
 
         /// <summary>体力の源を差し替える。null なら仮の表示に戻す。</summary>
         public void BindHealth(Health health)
@@ -71,16 +97,19 @@ namespace Fps.Core
         {
             if (_match != null)
             {
-                _match.RemainingSecondsChanged -= OnRemainingSecondsChanged;
+                _match.RemainingSecondsChanged -= SetTime;
             }
 
             _match = match;
             if (_match != null)
             {
-                _match.RemainingSecondsChanged += OnRemainingSecondsChanged;
+                _match.RemainingSecondsChanged += SetTime;
+                SetTime(_match.RemainingSeconds);
             }
-
-            SetTime(_match != null ? HudFormat.Time(_match.RemainingSeconds) : HudFormat.NoTime);
+            else
+            {
+                ClearTime();
+            }
         }
 
         /// <summary>案内の源を差し替える。null なら案内を消す。</summary>
@@ -118,7 +147,7 @@ namespace Fps.Core
 
             if (_match != null)
             {
-                _match.RemainingSecondsChanged -= OnRemainingSecondsChanged;
+                _match.RemainingSecondsChanged -= SetTime;
                 _match = null;
             }
 
@@ -129,36 +158,134 @@ namespace Fps.Core
             }
         }
 
+        /// <summary>体力を出す。max は警告の色にするかどうかの判断にだけ使う。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">current が負か、max が 1 未満。</exception>
+        public void SetHealth(int current, int max)
+        {
+            ApplyHealth(HudFormat.Health(current), HudFormat.IsLowHealth(current, max));
+        }
+
+        /// <summary>体力を仮の表示に戻す。</summary>
+        public void ClearHealth()
+        {
+            ApplyHealth(HudFormat.NoHealth, false);
+        }
+
+        /// <summary>弾倉と予備の弾数と、リロード中かどうかを出す。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">magazine か reserve が負。</exception>
+        public void SetAmmo(int magazine, int reserve, bool reloading)
+        {
+            ApplyAmmo(HudFormat.Ammo(magazine, reserve, reloading), reloading);
+        }
+
+        /// <summary>弾数を仮の表示に戻す。</summary>
+        public void ClearAmmo()
+        {
+            ApplyAmmo(HudFormat.NoAmmo, false);
+        }
+
+        /// <summary>残り時間 (秒) を出す。表示は秒の桁が変わったときだけ変わる (<see cref="HudFormat.Time"/>)。</summary>
+        public void SetTime(float remainingSeconds)
+        {
+            ApplyTime(HudFormat.Time(remainingSeconds));
+        }
+
+        /// <summary>残り時間を仮の表示に戻す。</summary>
+        public void ClearTime()
+        {
+            ApplyTime(HudFormat.NoTime);
+        }
+
+        /// <summary>一時的な案内を出す。null か空文字なら消す。</summary>
+        public void SetNotice(string text)
+        {
+            text ??= HudFormat.NoNotice;
+            if (text == NoticeText)
+            {
+                return;
+            }
+
+            NoticeText = text;
+            Changed?.Invoke(HudField.Notice);
+        }
+
+        /// <summary>チームの点数を、ownTeam を先にして出す。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">点数が負か、ownTeam が Team の値でない。</exception>
+        public void SetScores(Team ownTeam, int alphaScore, int bravoScore)
+        {
+            var opponent = HudFormat.Opponent(ownTeam);
+            var first = HudFormat.TeamScore(ownTeam, ownTeam == Team.Alpha ? alphaScore : bravoScore);
+            var second = HudFormat.TeamScore(opponent, opponent == Team.Alpha ? alphaScore : bravoScore);
+            ApplyScores(ownTeam, first, second);
+        }
+
+        /// <summary>チームの点数を消す。</summary>
+        public void ClearScores()
+        {
+            ApplyScores(null, HudFormat.NoScore, HudFormat.NoScore);
+        }
+
+        /// <summary>試合結果 (winner が null なら引き分け) を出す。</summary>
+        public void SetResult(Team? winner)
+        {
+            ApplyResult(HudFormat.Result(winner));
+        }
+
+        /// <summary>試合結果を消す。</summary>
+        public void ClearResult()
+        {
+            ApplyResult(HudFormat.NoResult);
+        }
+
         private void OnHealthChanged()
         {
-            var text = _health != null ? HudFormat.Health(_health.Current) : HudFormat.NoHealth;
-            if (text == HealthText)
+            if (_health != null)
+            {
+                SetHealth(_health.Current, _health.Max);
+            }
+            else
+            {
+                ClearHealth();
+            }
+        }
+
+        private void OnWeaponChanged()
+        {
+            if (_weapon != null)
+            {
+                SetAmmo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, _weapon.IsReloading);
+            }
+            else
+            {
+                ClearAmmo();
+            }
+        }
+
+        private void ApplyHealth(string text, bool low)
+        {
+            if (text == HealthText && low == IsHealthLow)
             {
                 return;
             }
 
             HealthText = text;
+            IsHealthLow = low;
             Changed?.Invoke(HudField.Health);
         }
 
-        private void OnWeaponChanged()
+        private void ApplyAmmo(string text, bool reloading)
         {
-            var text = _weapon != null ? HudFormat.Ammo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo) : HudFormat.NoAmmo;
-            if (text == AmmoText)
+            if (text == AmmoText && reloading == IsReloading)
             {
                 return;
             }
 
             AmmoText = text;
+            IsReloading = reloading;
             Changed?.Invoke(HudField.Ammo);
         }
 
-        private void OnRemainingSecondsChanged(float remainingSeconds)
-        {
-            SetTime(HudFormat.Time(remainingSeconds));
-        }
-
-        private void SetTime(string text)
+        private void ApplyTime(string text)
         {
             if (text == TimeText)
             {
@@ -169,16 +296,29 @@ namespace Fps.Core
             Changed?.Invoke(HudField.Time);
         }
 
-        private void SetNotice(string text)
+        private void ApplyScores(Team? firstTeam, string first, string second)
         {
-            text ??= HudFormat.NoNotice;
-            if (text == NoticeText)
+            if (firstTeam == FirstScoreTeam && first == FirstScoreText && second == SecondScoreText)
             {
                 return;
             }
 
-            NoticeText = text;
-            Changed?.Invoke(HudField.Notice);
+            FirstScoreTeam = firstTeam;
+            FirstScoreText = first;
+            SecondScoreText = second;
+            Changed?.Invoke(HudField.Score);
+        }
+
+        private void ApplyResult(string text)
+        {
+            text ??= HudFormat.NoResult;
+            if (text == ResultText)
+            {
+                return;
+            }
+
+            ResultText = text;
+            Changed?.Invoke(HudField.Result);
         }
     }
 }

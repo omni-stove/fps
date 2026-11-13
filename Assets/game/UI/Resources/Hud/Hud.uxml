@@ -1,12 +1,19 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
-    <!-- HUD。GameBootstrap が UIDocument に読み込み、Fps.Runtime.HudView が name で Label を探して文字列を入れる。 -->
+    <!-- HUD。GameBootstrap と NetHud が UIDocument に読み込み、Fps.Runtime.HudView が name で Label を探して文字列を入れる。 -->
     <Style src="Hud.uss" />
     <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
         <ui:VisualElement name="hud-time-panel" class="hud__panel hud__panel--top-center" picking-mode="Ignore">
             <ui:Label name="hud-time" text="--:--" class="hud__value hud__value--time" picking-mode="Ignore" />
         </ui:VisualElement>
+        <!-- チームの点数 (自分のチームが先)。チーム戦でなければ HudView が隠す。 -->
+        <ui:VisualElement name="hud-score-panel" class="hud__panel hud__panel--top-left" picking-mode="Ignore" style="display: none;">
+            <ui:Label name="hud-score-first" text="" class="hud__score" picking-mode="Ignore" />
+            <ui:Label name="hud-score-second" text="" class="hud__score hud__score--second" picking-mode="Ignore" />
+        </ui:VisualElement>
         <!-- 一時的な案内 (セーブした・再開まで N 秒)。HudView が空のときは隠す。 -->
         <ui:Label name="hud-notice" text="" class="hud__notice" picking-mode="Ignore" style="display: none;" />
+        <!-- 試合結果 (勝ったチーム・引き分け)。試合が終わっている間だけ HudView が出す。 -->
+        <ui:Label name="hud-result" text="" class="hud__result" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-health-panel" class="hud__panel hud__panel--bottom-left" picking-mode="Ignore">
             <ui:Label text="HP" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-health" text="--" class="hud__value" picking-mode="Ignore" />

@@ -62,6 +62,84 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(0, -1));
         }
 
+        [TestCase(30, 90, false, "30 / 90")]
+        [TestCase(0, 90, true, "リロード中 / 90")]
+        [TestCase(12, 0, true, "リロード中 / 0")]
+        public void AmmoShowsReloadingInPlaceOfTheMagazine(int magazine, int reserve, bool reloading, string expected)
+        {
+            Assert.That(HudFormat.Ammo(magazine, reserve, reloading), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void AmmoWhileReloadingStillRejectsNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(-1, 0, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(0, -1, true));
+        }
+
+        [TestCase(25, 100, true)]
+        [TestCase(1, 100, true)]
+        [TestCase(26, 100, false)]
+        [TestCase(100, 100, false)]
+        [TestCase(0, 100, false)]
+        [TestCase(150, 100, false)]
+        public void LowHealthIsAQuarterOrLessWhileAlive(int current, int max, bool expected)
+        {
+            Assert.That(HudFormat.IsLowHealth(current, max), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void LowHealthRejectsInvalidValues()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.IsLowHealth(-1, 100));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.IsLowHealth(0, 0));
+        }
+
+        [TestCase(Team.Alpha, 0, "ALPHA 0")]
+        [TestCase(Team.Bravo, 3, "BRAVO 3")]
+        [TestCase(Team.Alpha, 12, "ALPHA 12")]
+        public void TeamScoreIsTheTeamNameAndTheScore(Team team, int score, string expected)
+        {
+            Assert.That(HudFormat.TeamScore(team, score), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TeamScoreRejectsNegativeAndUnknownTeams()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.TeamScore(Team.Alpha, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.TeamName((Team)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Opponent((Team)99));
+        }
+
+        [Test]
+        public void OpponentIsTheOtherTeam()
+        {
+            Assert.That(HudFormat.Opponent(Team.Alpha), Is.EqualTo(Team.Bravo));
+            Assert.That(HudFormat.Opponent(Team.Bravo), Is.EqualTo(Team.Alpha));
+        }
+
+        [Test]
+        public void ResultNamesTheWinnerOrADraw()
+        {
+            Assert.That(HudFormat.Result(Team.Alpha), Is.EqualTo("ALPHA の勝ち"));
+            Assert.That(HudFormat.Result(Team.Bravo), Is.EqualTo("BRAVO の勝ち"));
+            Assert.That(HudFormat.Result(null), Is.EqualTo(HudFormat.Draw));
+            Assert.That(HudFormat.Draw, Is.EqualTo("引き分け"));
+        }
+
+        [TestCase(3, "リスポーンまで 3 秒")]
+        [TestCase(0, "リスポーンまで 0 秒")]
+        public void RespawnShowsTheSecondsLeft(int seconds, string expected)
+        {
+            Assert.That(HudFormat.Respawn(seconds), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void RespawnRejectsNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Respawn(-1));
+        }
+
         [TestCase(180f, "03:00")]
         [TestCase(65f, "01:05")]
         [TestCase(59f, "00:59")]

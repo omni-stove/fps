@@ -217,6 +217,165 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void SetHealthShowsTheValueAndWarnsWhenLow()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetHealth(100, 100);
+            Assert.That(model.HealthText, Is.EqualTo("100"));
+            Assert.That(model.IsHealthLow, Is.False);
+
+            model.SetHealth(20, 100);
+            Assert.That(model.HealthText, Is.EqualTo("20"));
+            Assert.That(model.IsHealthLow, Is.True);
+
+            model.SetHealth(20, 100);
+            model.ClearHealth();
+            Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
+            Assert.That(model.IsHealthLow, Is.False);
+
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Health, HudField.Health, HudField.Health }));
+        }
+
+        [Test]
+        public void SetHealthNotifiesWhenOnlyTheWarningChanges()
+        {
+            var model = new HudModel();
+            model.SetHealth(30, 100);
+            var changes = Record(model);
+
+            model.SetHealth(30, 200);
+
+            Assert.That(model.IsHealthLow, Is.True);
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Health }));
+        }
+
+        [Test]
+        public void BoundHealthWarnsBelowAQuarterOfItsMax()
+        {
+            var model = new HudModel();
+            var health = new Health(100);
+            model.BindHealth(health);
+
+            health.TakeDamage(80);
+
+            Assert.That(model.IsHealthLow, Is.True);
+        }
+
+        [Test]
+        public void SetAmmoShowsReloading()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetAmmo(5, 90, false);
+            Assert.That(model.AmmoText, Is.EqualTo("5 / 90"));
+            Assert.That(model.IsReloading, Is.False);
+
+            model.SetAmmo(5, 90, true);
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(5, 90, true)));
+            Assert.That(model.IsReloading, Is.True);
+
+            model.SetAmmo(30, 65, false);
+            Assert.That(model.AmmoText, Is.EqualTo("30 / 65"));
+            Assert.That(model.IsReloading, Is.False);
+
+            model.ClearAmmo();
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo, HudField.Ammo, HudField.Ammo, HudField.Ammo }));
+        }
+
+        [Test]
+        public void SetTimeNotifiesOnlyWhenTheShownSecondChanges()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetTime(65f);
+            model.SetTime(64.5f);
+            model.SetTime(64f);
+            model.ClearTime();
+
+            Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Time, HudField.Time, HudField.Time }));
+        }
+
+        [Test]
+        public void ScoresStartHiddenAndPutTheOwnTeamFirst()
+        {
+            var model = new HudModel();
+            Assert.That(model.FirstScoreTeam, Is.Null);
+            Assert.That(model.SecondScoreTeam, Is.Null);
+            Assert.That(model.FirstScoreText, Is.EqualTo(HudFormat.NoScore));
+            Assert.That(model.SecondScoreText, Is.EqualTo(HudFormat.NoScore));
+            var changes = Record(model);
+
+            model.SetScores(Team.Bravo, 2, 5);
+            Assert.That(model.FirstScoreTeam, Is.EqualTo(Team.Bravo));
+            Assert.That(model.FirstScoreText, Is.EqualTo("BRAVO 5"));
+            Assert.That(model.SecondScoreTeam, Is.EqualTo(Team.Alpha));
+            Assert.That(model.SecondScoreText, Is.EqualTo("ALPHA 2"));
+
+            model.SetScores(Team.Bravo, 2, 5);
+            model.SetScores(Team.Alpha, 2, 5);
+            Assert.That(model.FirstScoreText, Is.EqualTo("ALPHA 2"));
+            Assert.That(model.SecondScoreText, Is.EqualTo("BRAVO 5"));
+
+            model.ClearScores();
+            Assert.That(model.FirstScoreTeam, Is.Null);
+            Assert.That(model.FirstScoreText, Is.EqualTo(HudFormat.NoScore));
+
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Score, HudField.Score, HudField.Score }));
+        }
+
+        [Test]
+        public void ResultShowsTheWinnerOrDrawUntilCleared()
+        {
+            var model = new HudModel();
+            Assert.That(model.ResultText, Is.EqualTo(HudFormat.NoResult));
+            var changes = Record(model);
+
+            model.SetResult(Team.Alpha);
+            Assert.That(model.ResultText, Is.EqualTo(HudFormat.Result(Team.Alpha)));
+
+            model.SetResult(null);
+            Assert.That(model.ResultText, Is.EqualTo(HudFormat.Draw));
+
+            model.ClearResult();
+            model.ClearResult();
+            Assert.That(model.ResultText, Is.EqualTo(HudFormat.NoResult));
+
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Result, HudField.Result, HudField.Result }));
+        }
+
+        [Test]
+        public void SetNoticeTreatsNullAsEmpty()
+        {
+            var model = new HudModel();
+            model.SetNotice(HudFormat.Respawn(3));
+            var changes = Record(model);
+
+            model.SetNotice(null);
+
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Notice }));
+        }
+
+        [Test]
+        public void SettersRejectInvalidValues()
+        {
+            var model = new HudModel();
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetHealth(-1, 100));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetHealth(10, 0));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetAmmo(-1, 0, false));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetScores(Team.Alpha, -1, 0));
+            Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
+        }
+
+        [Test]
         public void UnbindingTheNoticeClearsItAndStopsListening()
         {
             var model = new HudModel();

@@ -1,0 +1,301 @@
+using Fps.Core;
+using Fps.Runtime;
+using NUnit.Framework;
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
+
+namespace Fps.Net.Tests
+{
+    /// <summary>
+    /// <see cref="NetHud"/> が NetworkVariable の変化を HUD の Label に写すこと。ネットワークは起動せず、
+    /// 値が届いたときに NGO が呼ぶのと同じ OnValueChanged を直接呼ぶ。Label は Edit Mode でも木が作れるよう
+    /// Hud.uxml を複製して <see cref="HudView"/> を作る (<c>HudViewTests</c> と同じ)。
+    /// </summary>
+    public sealed class NetHudTests
+    {
+        private const float _respawnSeconds = 3f;
+        private const int _maxHealth = 100;
+
+        private GameObject _playerObject;
+        private GameObject _matchObject;
+        private NetPlayer _player;
+        private NetPlayerWeapon _weapon;
+        private NetTeamDeathmatch _match;
+        private NetHud _netHud;
+        private HudView _view;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _playerObject = new GameObject("TestNetPlayer");
+            _playerObject.AddComponent<NetworkObject>();
+            _player = _playerObject.AddComponent<NetPlayer>();
+            _weapon = _playerObject.AddComponent<NetPlayerWeapon>();
+
+            _matchObject = new GameObject("TestNetMatch");
+            _matchObject.AddComponent<NetworkObject>();
+            _match = _matchObject.AddComponent<NetTeamDeathmatch>();
+            _match.RespawnSeconds = _respawnSeconds;
+            _match.MaxHealth = _maxHealth;
+
+            _netHud = NetHud.Create(_player);
+            _view = new HudView(CloneLayout(), _netHud.Hud.Model);
+            _view.SetTeamColors(NetPlayer.AlphaColor, NetPlayer.BravoColor);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _view?.Dispose();
+
+            if (_netHud != null)
+            {
+                // Edit Mode では OnDestroy が走らないので、試合の差し替えの購読を他のテストへ持ち越さない
+                _netHud.UnbindAll();
+                var settings = _netHud.Hud.OwnedPanelSettings;
+                Object.DestroyImmediate(_netHud.gameObject);
+                if (settings != null)
+                {
+                    Object.DestroyImmediate(settings);
+                }
+            }
+
+            if (_playerObject != null)
+            {
+                Object.DestroyImmediate(_playerObject);
+            }
+
+            if (_matchObject != null)
+            {
+                Object.DestroyImmediate(_matchObject);
+            }
+        }
+
+        private static VisualElement CloneLayout()
+        {
+            var layout = Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath);
+            Assert.That(layout, Is.Not.Null, "Assets/game/UI/Resources/Hud/Hud.uxml should be loadable from Resources");
+            return layout.CloneTree();
+        }
+
+        // サーバーから値が届いたときに NGO が呼ぶのと同じ呼び出し
+        private static void Arrive<T>(NetworkVariable<T> variable, T previous, T current)
+        {
+            Assert.That(variable.OnValueChanged, Is.Not.Null, "NetHud should listen to this NetworkVariable");
+            variable.OnValueChanged(previous, current);
+        }
+
+        private static NetMatchStatus Status(GameModeState state, Team? winner = null)
+        {
+            return new NetMatchStatus(state, winner);
+        }
+
+        private void StartPlaying()
+        {
+            Arrive(_match.StatusVariable, Status(GameModeState.Waiting), Status(GameModeState.Playing));
+        }
+
+        private static bool IsShown(VisualElement element)
+        {
+            return element.style.display.value != DisplayStyle.None;
+        }
+
+        [Test]
+        public void CreatesAHudObjectWithTheTeamColors()
+        {
+            Assert.That(_netHud.name, Is.EqualTo(NetHud.ObjectName));
+            Assert.That(_netHud.GetComponent<UIDocument>(), Is.Not.Null);
+            Assert.That(_netHud.Hud.OwnedPanelSettings, Is.Not.Null);
+            Assert.That(_netHud.Player, Is.SameAs(_player));
+            Assert.That(_netHud.Hud.TeamColor(Team.Alpha), Is.EqualTo(NetPlayer.AlphaColor));
+            Assert.That(_netHud.Hud.TeamColor(Team.Bravo), Is.EqualTo(NetPlayer.BravoColor));
+        }
+
+        [Test]
+        public void WithoutAMatchTheScoresAndTimeAreHidden()
+        {
+            Assert.That(_netHud.Match, Is.Null);
+            Assert.That(IsShown(_view.ScorePanel), Is.False);
+            Assert.That(IsShown(_view.ResultLabel), Is.False);
+            Assert.That(_view.TimeLabel.text, Is.EqualTo(HudFormat.NoTime));
+            Assert.That(_view.Crosshair, Is.Not.Null, "the crosshair stays in the centre of the screen");
+        }
+
+        [Test]
+        public void BindingTheMatchShowsTheScoresAndTime()
+        {
+            _netHud.BindMatch(_match);
+
+            Assert.That(_netHud.Match, Is.SameAs(_match));
+            Assert.That(IsShown(_view.ScorePanel), Is.True);
+            Assert.That(_view.FirstScoreLabel.text, Is.EqualTo(HudFormat.TeamScore(Team.Alpha, 0)));
+            Assert.That(_view.SecondScoreLabel.text, Is.EqualTo(HudFormat.TeamScore(Team.Bravo, 0)));
+            Assert.That(_view.TimeLabel.text, Is.EqualTo(HudFormat.Time(0f)));
+        }
+
+        [Test]
+        public void HealthFollowsThePlayerAgainstTheMaxHealth()
+        {
+            _netHud.BindMatch(_match);
+
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            Assert.That(_view.HealthLabel.text, Is.EqualTo("100"));
+            Assert.That(_view.HealthLabel.ClassListContains(HudView.LowHealthClass), Is.False);
+
+            Arrive(_player.HealthVariable, _maxHealth, 20);
+            Assert.That(_view.HealthLabel.text, Is.EqualTo("20"));
+            Assert.That(_view.HealthLabel.ClassListContains(HudView.LowHealthClass), Is.True);
+        }
+
+        [Test]
+        public void AmmoFollowsTheWeaponAndShowsTheReload()
+        {
+            Arrive(_weapon.StateVariable, default, new NetWeaponState(30, 90, false));
+            Assert.That(_view.AmmoLabel.text, Is.EqualTo("30 / 90"));
+
+            Arrive(_weapon.StateVariable, new NetWeaponState(30, 90, false), new NetWeaponState(0, 90, true));
+            Assert.That(_view.AmmoLabel.text, Is.EqualTo(HudFormat.Ammo(0, 90, true)));
+            Assert.That(_view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.True);
+
+            Arrive(_weapon.StateVariable, new NetWeaponState(0, 90, true), new NetWeaponState(30, 60, false));
+            Assert.That(_view.AmmoLabel.text, Is.EqualTo("30 / 60"));
+            Assert.That(_view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.False);
+        }
+
+        [Test]
+        public void TimeFollowsTheRemainingSeconds()
+        {
+            _netHud.BindMatch(_match);
+
+            Arrive(_match.RemainingSecondsVariable, 0, 125);
+            Assert.That(_view.TimeLabel.text, Is.EqualTo("02:05"));
+
+            Arrive(_match.RemainingSecondsVariable, 125, 124);
+            Assert.That(_view.TimeLabel.text, Is.EqualTo("02:04"));
+        }
+
+        [Test]
+        public void ScoresPutTheOwnTeamFirstInItsColor()
+        {
+            _netHud.BindMatch(_match);
+
+            Arrive(_player.TeamVariable, Team.Alpha, Team.Bravo);
+            Arrive(_match.AlphaScoreVariable, 0, 2);
+            Arrive(_match.BravoScoreVariable, 0, 5);
+
+            Assert.That(_view.FirstScoreLabel.text, Is.EqualTo("BRAVO 5"));
+            Assert.That(_view.SecondScoreLabel.text, Is.EqualTo("ALPHA 2"));
+            Assert.That(_view.FirstScoreLabel.style.color.value, Is.EqualTo(NetPlayer.BravoColor));
+            Assert.That(_view.SecondScoreLabel.style.color.value, Is.EqualTo(NetPlayer.AlphaColor));
+
+            Arrive(_player.TeamVariable, Team.Bravo, Team.Alpha);
+            Assert.That(_view.FirstScoreLabel.text, Is.EqualTo("ALPHA 2"));
+            Assert.That(_view.FirstScoreLabel.style.color.value, Is.EqualTo(NetPlayer.AlphaColor));
+        }
+
+        [Test]
+        public void ShowsTheRespawnCountdownWhileDown()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+
+            Arrive(_player.HealthVariable, _maxHealth, 0);
+            Assert.That(_netHud.IsAwaitingRespawn, Is.True);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(3)));
+            Assert.That(IsShown(_view.NoticeLabel), Is.True);
+
+            _netHud.Tick(1.2f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(2)));
+
+            // 数え終わってもサーバーが出現させるまでは 0 秒のまま待つ
+            _netHud.Tick(5f);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(0)));
+
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            Assert.That(_netHud.IsAwaitingRespawn, Is.False);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [Test]
+        public void NoRespawnCountdownBeforeTheMatchIsPlaying()
+        {
+            _netHud.BindMatch(_match);
+
+            Arrive(_player.HealthVariable, _maxHealth, 0);
+
+            Assert.That(_netHud.IsAwaitingRespawn, Is.False);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [Test]
+        public void ShowsTheResultAndTheNextMatchCountdownAfterTheEnd()
+        {
+            _netHud.BindMatch(_match);
+            StartPlaying();
+            Arrive(_player.HealthVariable, 0, _maxHealth);
+            Arrive(_player.HealthVariable, _maxHealth, 0);
+
+            Arrive(_match.StatusVariable, Status(GameModeState.Playing), Status(GameModeState.Ended, Team.Bravo));
+            Arrive(_match.NextMatchSecondsVariable, 0, 10);
+
+            Assert.That(_netHud.IsAwaitingRespawn, Is.False, "nobody respawns until the next match starts");
+            Assert.That(_view.ResultLabel.text, Is.EqualTo(HudFormat.Result(Team.Bravo)));
+            Assert.That(IsShown(_view.ResultLabel), Is.True);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NextMatch(10)));
+
+            Arrive(_match.NextMatchSecondsVariable, 10, 9);
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NextMatch(9)));
+
+            // クライアントには Ended → Playing で届くことがある
+            Arrive(_match.StatusVariable, Status(GameModeState.Ended, Team.Bravo), Status(GameModeState.Playing));
+            Arrive(_match.NextMatchSecondsVariable, 9, 0);
+            Assert.That(IsShown(_view.ResultLabel), Is.False);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+        }
+
+        [Test]
+        public void ShowsADraw()
+        {
+            _netHud.BindMatch(_match);
+
+            Arrive(_match.StatusVariable, Status(GameModeState.Playing), Status(GameModeState.Ended));
+
+            Assert.That(_view.ResultLabel.text, Is.EqualTo(HudFormat.Draw));
+        }
+
+        [Test]
+        public void UnbindingTheMatchHidesItsFields()
+        {
+            _netHud.BindMatch(_match);
+            Arrive(_match.StatusVariable, Status(GameModeState.Playing), Status(GameModeState.Ended, Team.Alpha));
+            var status = _match.StatusVariable;
+
+            _netHud.BindMatch(null);
+
+            Assert.That(IsShown(_view.ScorePanel), Is.False);
+            Assert.That(IsShown(_view.ResultLabel), Is.False);
+            Assert.That(IsShown(_view.NoticeLabel), Is.False);
+            Assert.That(_view.TimeLabel.text, Is.EqualTo(HudFormat.NoTime));
+            Assert.That(status.OnValueChanged, Is.Null, "the old match is no longer listened to");
+        }
+
+        [Test]
+        public void UnbindAllStopsListening()
+        {
+            _netHud.BindMatch(_match);
+
+            _netHud.UnbindAll();
+
+            Assert.That(_player.HealthVariable.OnValueChanged, Is.Null);
+            Assert.That(_player.TeamVariable.OnValueChanged, Is.Null);
+            Assert.That(_weapon.StateVariable.OnValueChanged, Is.Null);
+            Assert.That(_match.AlphaScoreVariable.OnValueChanged, Is.Null);
+            Assert.That(_match.RemainingSecondsVariable.OnValueChanged, Is.Null);
+            Assert.That(_match.StatusVariable.OnValueChanged, Is.Null);
+        }
+    }
+}

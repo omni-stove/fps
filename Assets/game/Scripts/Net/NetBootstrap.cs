@@ -37,8 +37,11 @@ namespace Fps.Net
     [DisallowMultipleComponent]
     public sealed partial class NetBootstrap : MonoBehaviour
     {
-        /// <summary>このコンポーネントを置くシーン。<c>Fps.Editor.NetSceneBuilder</c> が生成する。</summary>
-        public const string ScenePath = "Assets/game/Scenes/NetTest.unity";
+        /// <summary>
+        /// 実行時に読むこのコンポーネントのシーン (<see cref="KitPaths.DefaultRoot"/> の下)。<c>Fps.Editor.NetSceneBuilder</c> が生成する。
+        /// 別のルートの下から読むなら <see cref="MenuRoute.NetSceneUnder"/>。
+        /// </summary>
+        public const string ScenePath = MenuRoute.NetScene;
 
         public const int ExitDisconnected = 0;
         public const int ExitInvalidArguments = 2;

@@ -27,10 +27,10 @@ namespace Fps.Editor
     /// </remarks>
     public static class EnemyTestSceneBuilder
     {
-        public const string ScenePath = BuildSceneList.EnemyAiTestScene;
+        public static string ScenePath => BuildSceneList.EnemyAiTestScene;
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
-        public const string NavMeshDataPath = "Assets/game/Scenes/EnemyAiTest/NavMesh-Floor.asset";
+        public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
         public const string MenuPath = "Fps/Build Enemy AI Test Scene";
         public const string LogTag = "[EnemyTestSceneBuilder]";

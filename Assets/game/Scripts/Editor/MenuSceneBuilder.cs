@@ -18,7 +18,7 @@ namespace Fps.Editor
     /// </summary>
     public static class MenuSceneBuilder
     {
-        public const string ScenePath = BuildSceneList.MainMenuScene;
+        public static string ScenePath => BuildSceneList.MainMenuScene;
         public const string MenuPath = "Fps/Build Main Menu Scene";
         public const string LogTag = "[MenuSceneBuilder]";
 

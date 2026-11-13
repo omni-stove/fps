@@ -28,10 +28,10 @@ namespace Fps.Editor
     /// </remarks>
     public static class DestructionTestSceneBuilder
     {
-        public const string ScenePath = BuildSceneList.DestructionTestScene;
+        public static string ScenePath => BuildSceneList.DestructionTestScene;
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
-        public const string NavMeshDataPath = "Assets/game/Scenes/DestructionTest/NavMesh-Floor.asset";
+        public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
         public const string MenuPath = "Fps/Build Destruction Test Scene";
         public const string LogTag = "[DestructionTestSceneBuilder]";

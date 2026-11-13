@@ -18,8 +18,13 @@ namespace Fps.Editor
     /// </summary>
     public static class NetSceneBuilder
     {
-        public const string PlayerPrefabPath = "Assets/game/Prefabs/Net/NetPlayer.prefab";
-        public const string MatchPrefabPath = "Assets/game/Prefabs/Net/NetMatch.prefab";
+        public static string PlayerPrefabPath => FpsKitRoot.OutputPath("Prefabs/Net/NetPlayer.prefab");
+        public static string MatchPrefabPath => FpsKitRoot.OutputPath("Prefabs/Net/NetMatch.prefab");
+
+        /// <summary>
+        /// 生成して保存するシーン。出力先ルート (<see cref="FpsKitRoot.Output"/>) の下で、既定なら実行時に読む <see cref="NetBootstrap.ScenePath"/> と同じ。
+        /// </summary>
+        public static string ScenePath => BuildSceneList.NetTestScene;
 
         /// <summary>プレイヤーのカプセルの高さと半径 (m)。プリミティブの Capsule と同じ大きさ。</summary>
         public const float PlayerHeight = 2f;
@@ -87,9 +92,9 @@ namespace Fps.Editor
             var playerPrefab = BuildPrefab(PlayerPrefabPath, () => CreatePlayerSource(rig));
             var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout, catalog, rules));
             BuildScene(playerPrefab, matchPrefab);
-            BuildSceneList.Register(NetBootstrap.ScenePath);
+            BuildSceneList.Register(ScenePath);
             AssetDatabase.SaveAssets();
-            Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath
+            Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + MatchPrefabPath + " and " + ScenePath
                 + " (loadout " + WeaponAssetBuilder.LoadoutPath + ", catalog " + WeaponAssetBuilder.CatalogPath
                 + ", rules " + GameRulesAssetBuilder.TeamDeathmatchPath + ", rig " + CharacterRigBuilder.PrefabPath + ")");
         }
@@ -353,7 +358,8 @@ namespace Fps.Editor
 
         private static void BuildScene(GameObject playerPrefab, GameObject matchPrefab)
         {
-            EnsureFolder(System.IO.Path.GetDirectoryName(NetBootstrap.ScenePath));
+            var scenePath = ScenePath;
+            EnsureFolder(System.IO.Path.GetDirectoryName(scenePath));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -398,9 +404,9 @@ namespace Fps.Editor
                 pointObject.AddComponent<NetSpawnPoint>().Team = team;
             }
 
-            if (!EditorSceneManager.SaveScene(scene, NetBootstrap.ScenePath))
+            if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
-                throw new InvalidOperationException("failed to save " + NetBootstrap.ScenePath);
+                throw new InvalidOperationException("failed to save " + scenePath);
             }
         }
 

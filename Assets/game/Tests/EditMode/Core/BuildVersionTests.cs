@@ -6,6 +6,8 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class BuildVersionTests
     {
+        private static readonly string[] BlankValueArgs = { "-buildVersion", " " };
+
         private static string[] Args(string commandLine)
         {
             return commandLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -69,7 +71,7 @@ namespace Fps.Core.Tests
             var max = new string('1', BuildVersion.MaxLength);
             Assert.That(NormalizeOrFail(max), Is.EqualTo(max));
             Assert.That(NormalizeOrFail("v" + max), Is.EqualTo(max));
-            Assert.That(NormalizeError(max + "1"), Does.Contain(BuildVersion.MaxLength.ToString()));
+            Assert.That(NormalizeError(max + "1"), Does.Contain(BuildVersion.MaxLength.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
 
         [TestCase("0.2.0 beta")]
@@ -155,7 +157,7 @@ namespace Fps.Core.Tests
         [Test]
         public void RejectsBlankValue()
         {
-            var ok = BuildVersion.TryParseArgs(new[] { "-buildVersion", " " }, out var version, out var error);
+            var ok = BuildVersion.TryParseArgs(BlankValueArgs, out var version, out var error);
 
             Assert.That(ok, Is.False);
             Assert.That(version, Is.Null);

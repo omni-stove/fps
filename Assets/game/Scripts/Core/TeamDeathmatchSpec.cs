@@ -16,10 +16,14 @@ namespace Fps.Core
         /// <summary>倒されてからリスポーンできるまでの秒数。0 以上の有限値。0 なら倒された時点ですぐ出る。</summary>
         public float RespawnSeconds { get; }
 
+        /// <summary>このモードのルール。指定しなければ <see cref="GameRules.Default"/>。</summary>
+        public GameRules Rules { get; }
+
         /// <param name="scoreLimit">勝利に必要な点数。1 以上。</param>
         /// <param name="timeLimitSeconds">制限時間 (秒)。0 より大きい有限値。</param>
         /// <param name="respawnSeconds">リスポーンまでの秒数。0 以上の有限値。</param>
-        public TeamDeathmatchSpec(int scoreLimit, float timeLimitSeconds, float respawnSeconds)
+        /// <param name="rules">モードのルール。null なら <see cref="GameRules.Default"/>。</param>
+        public TeamDeathmatchSpec(int scoreLimit, float timeLimitSeconds, float respawnSeconds, GameRules rules = null)
         {
             if (scoreLimit <= 0)
             {
@@ -39,6 +43,7 @@ namespace Fps.Core
             ScoreLimit = scoreLimit;
             TimeLimitSeconds = timeLimitSeconds;
             RespawnSeconds = respawnSeconds;
+            Rules = rules ?? GameRules.Default;
         }
     }
 }

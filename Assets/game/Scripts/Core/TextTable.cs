@@ -75,7 +75,20 @@ namespace Fps.Core
                 throw new ArgumentNullException(nameof(json));
             }
 
-            return new TextTable(TextTableJson.Parse(json));
+            if (!FlatJsonObject.TryParse(json, out var values, out var error))
+            {
+                throw new FormatException(error);
+            }
+
+            try
+            {
+                return new TextTable(values);
+            }
+            catch (ArgumentException e)
+            {
+                // 空キーは FlatJsonObject が通すので、表を作るときの検査で弾かれた理由を FormatException に直す
+                throw new FormatException(e.Message, e);
+            }
         }
 
         public bool Contains(string key)

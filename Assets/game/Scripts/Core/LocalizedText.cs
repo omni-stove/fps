@@ -12,7 +12,7 @@ namespace Fps.Core
     /// </summary>
     public readonly struct LocalizedText : IEquatable<LocalizedText>
     {
-        private static readonly object[] _noArgs =Array.Empty<object>();
+        private static readonly object[] _noArgs = Array.Empty<object>();
 
         private readonly string _key;
         private readonly object[] _args;

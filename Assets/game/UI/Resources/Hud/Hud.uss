@@ -234,6 +234,88 @@
     left: 0;
 }
 
+/* スコアボード。Scoreboard を押している間だけ画面の中央に出す。行は ScoreboardView が作る。 */
+.scoreboard {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: 720px;
+    padding: 16px 24px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.scoreboard__section {
+    margin-top: 12px;
+}
+
+.scoreboard__caption,
+.scoreboard__team,
+.scoreboard__row {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 8px;
+}
+
+/* 文字の見た目はテーマの Label の既定より強くなるよう、行の子の Label に当てる。 */
+.scoreboard__caption > .unity-label {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.scoreboard__team {
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+/* チーム名の文字の色は ScoreboardView がチームの色で塗る。 */
+.scoreboard__team > .unity-label {
+    font-size: 26px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.scoreboard__row > .unity-label {
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+}
+
+.scoreboard__row--local {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.scoreboard__row--local > .unity-label {
+    -unity-font-style: bold;
+}
+
+.scoreboard__row--disconnected > .unity-label {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.scoreboard__name {
+    flex-grow: 1;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.scoreboard__count {
+    width: 72px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-right;
+}
+
+.scoreboard__connection {
+    width: 120px;
+    margin: 0 0 0 24px;
+    padding: 0;
+    -unity-text-align: middle-right;
+}
+
 /*
  * ヒットマーカー。照準と同じく大きさ 0 の箱を画面の中央に置き、腕 (大きさ 0) を斜めに回して、その先に線を置く。
  * 拡大・回転の中心は大きさ 0 の箱の点 (= 画面の中央) になる。

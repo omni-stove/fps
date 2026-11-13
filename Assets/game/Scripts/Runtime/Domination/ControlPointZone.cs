@@ -10,7 +10,8 @@ namespace Fps.Runtime
     /// この GameObject の位置を中心とした円柱 (<see cref="ControlPointArea"/>) を範囲にする。
     /// 範囲にいる生きた参加者は <see cref="DominationRunner"/> が毎フレーム <see cref="Scan"/> で調べ直す (このコンポーネントは自分では調べない。
     /// 誰が参加者かを知っているのは Runner なので)。試合中に拠点を動かすことは考えない。
-    /// Play 中は足元に範囲を示す薄い円盤を作り、持ち主のチームの色 (<see cref="ShowOwner"/>) で塗る。Scene ビューには範囲を線で描く。
+    /// Play 中は足元に範囲を示す薄い円盤を作り、持ち主のチームの色 (<see cref="ShowOwner"/>) で塗る。色は画面のプレイヤーのチーム
+    /// (<see cref="ViewerTeam"/>) から見た敵味方の色で、設定の色の組 (<see cref="TeamColors"/>) が変わったら塗り直す。Scene ビューには範囲を線で描く。
     /// ハードポイントのように有効な拠点が 1 つだけのモードは、<see cref="SetHighlight"/> で有効な拠点の円盤を光らせ、他を暗くする。
     /// </summary>
     [DisallowMultipleComponent]
@@ -24,10 +25,6 @@ namespace Fps.Runtime
 
         /// <summary>円盤の厚み (m)。床に埋もれず、上に立っても段差にならない薄さにする。</summary>
         public const float MarkerThickness = 0.04f;
-
-        public static readonly Color AlphaColor = new Color(0.25f, 0.5f, 1f);
-        public static readonly Color BravoColor = new Color(1f, 0.3f, 0.25f);
-        public static readonly Color NeutralColor = new Color(0.85f, 0.85f, 0.85f);
 
         /// <summary>光らせていない (<see cref="SetHighlight"/> に false を渡した) 拠点の円盤の明るさ。</summary>
         public const float DimmedBrightness = 0.3f;
@@ -56,6 +53,22 @@ namespace Fps.Runtime
         private Material _markerMaterial;
         private Team? _owner;
         private bool? _highlight;
+        private Team? _viewerTeam = TeamColors.OfflineViewer;
+        private bool _followsSettings;
+
+        /// <summary>
+        /// 画面のプレイヤーのチーム。持ち主がこのチームなら味方の色、違えば敵の色で塗る。既定はオフラインのプレイヤーのチーム
+        /// (<see cref="TeamColors.OfflineViewer"/>)。null なら Alpha を味方の色にする。
+        /// </summary>
+        public Team? ViewerTeam
+        {
+            get => _viewerTeam;
+            set
+            {
+                _viewerTeam = value;
+                ApplyMarkerColor();
+            }
+        }
 
         /// <summary>拠点の番号。0 以上。</summary>
         public int Index
@@ -170,10 +183,12 @@ namespace Fps.Runtime
             ApplyMarkerColor();
         }
 
-        /// <summary>持ち主と光らせ方に応じた円盤の色。暗くするときは <see cref="DimmedBrightness"/> を掛ける (不透明度はそのまま)。</summary>
-        public static Color MarkerColorOf(Team? owner, bool? highlight)
+        /// <summary>
+        /// 持ち主と光らせ方に応じた円盤の色 (今の色の組で、viewer から見た色)。暗くするときは <see cref="DimmedBrightness"/> を掛ける (不透明度はそのまま)。
+        /// </summary>
+        public static Color MarkerColorOf(Team? owner, bool? highlight, Team? viewer = TeamColors.OfflineViewer)
         {
-            var color = ColorOf(owner);
+            var color = ColorOf(owner, viewer);
             if (highlight == false)
             {
                 color = new Color(color.r * DimmedBrightness, color.g * DimmedBrightness, color.b * DimmedBrightness, color.a);
@@ -182,18 +197,10 @@ namespace Fps.Runtime
             return color;
         }
 
-        /// <summary>持ち主のチームの色。中立なら <see cref="NeutralColor"/>。</summary>
-        public static Color ColorOf(Team? owner)
+        /// <summary>今の色の組で、viewer のチームから見た持ち主の色。中立 (null) なら組の中立の色。</summary>
+        public static Color ColorOf(Team? owner, Team? viewer = TeamColors.OfflineViewer)
         {
-            switch (owner)
-            {
-                case Team.Alpha:
-                    return AlphaColor;
-                case Team.Bravo:
-                    return BravoColor;
-                default:
-                    return NeutralColor;
-            }
+            return TeamColors.Of(owner, viewer);
         }
 
         /// <summary>
@@ -234,6 +241,12 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
+            if (_followsSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _followsSettings = false;
+            }
+
             if (_markerMaterial != null)
             {
                 DestroySafely(_markerMaterial);
@@ -241,8 +254,22 @@ namespace Fps.Runtime
             }
         }
 
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            if (this != null)
+            {
+                ApplyMarkerColor();
+            }
+        }
+
         private void CreateMarker()
         {
+            if (!_followsSettings)
+            {
+                AppliedControlSettings.Changed += HandleSettingsChanged;
+                _followsSettings = true;
+            }
+
             var marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             marker.name = MarkerName;
             DestroySafely(marker.GetComponent<Collider>());
@@ -265,7 +292,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            _markerMaterial.color = MarkerColorOf(_owner, _highlight);
+            _markerMaterial.color = MarkerColorOf(_owner, _highlight, _viewerTeam);
 
             // 発光を持たないシェーダーでは色だけ変える。
             if (!_markerMaterial.HasProperty(EmissionColorId))
@@ -276,7 +303,7 @@ namespace Fps.Runtime
             if (_highlight == true)
             {
                 _markerMaterial.EnableKeyword(EmissionKeyword);
-                _markerMaterial.SetColor(EmissionColorId, ColorOf(_owner) * HighlightEmission);
+                _markerMaterial.SetColor(EmissionColorId, ColorOf(_owner, _viewerTeam) * HighlightEmission);
             }
             else
             {
@@ -292,7 +319,8 @@ namespace Fps.Runtime
                 return;
             }
 
-            Gizmos.color = ColorOf(_owner);
+            // 編集中に保存した設定を読みに行かない (読むと全体の音量まで当ててしまう) よう、標準の組で描く
+            Gizmos.color = TeamColors.Of(TeamPalette.Standard, _owner, _viewerTeam);
             var center = transform.position;
             var half = Vector3.up * (_height * 0.5f);
             var previous = center + new Vector3(_radius, 0f, 0f);

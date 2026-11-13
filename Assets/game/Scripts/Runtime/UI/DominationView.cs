@@ -156,6 +156,16 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>チームの色 (<see cref="Hud.TeamColor"/>) が変わったときに呼ぶ。点数と拠点の欄を塗り直す。</summary>
+        public void RefreshTeamColors()
+        {
+            ApplyScoreColors();
+            for (var i = 0; i < _pointLabels.Count; i++)
+            {
+                ApplyPoint(i);
+            }
+        }
+
         private void LateUpdate()
         {
             Refresh();
@@ -213,10 +223,9 @@ namespace Fps.Runtime
             var scores = new VisualElement { pickingMode = PickingMode.Ignore };
             scores.AddToClassList(ScoresClass);
             _alphaLabel = CreateLabel(AlphaScoreText, ScoreClass);
-            _alphaLabel.style.color = ControlPointZone.AlphaColor;
             _timeLabel = CreateLabel(TimeText, TimeClass);
             _bravoLabel = CreateLabel(BravoScoreText, ScoreClass);
-            _bravoLabel.style.color = ControlPointZone.BravoColor;
+            ApplyScoreColors();
             scores.Add(_alphaLabel);
             scores.Add(_timeLabel);
             scores.Add(_bravoLabel);
@@ -251,8 +260,29 @@ namespace Fps.Runtime
 
             var label = _pointLabels[index];
             label.text = _pointTexts[index];
-            label.style.color = ControlPointZone.ColorOf(_shownOwners[index]);
+            var owner = _shownOwners[index];
+            label.style.color = owner.HasValue ? TeamColorOf(owner.Value) : TeamColors.Neutral;
             label.EnableInClassList(ContestedClass, _shownContested[index]);
+        }
+
+        private void ApplyScoreColors()
+        {
+            if (_alphaLabel != null)
+            {
+                _alphaLabel.style.color = TeamColorOf(Team.Alpha);
+            }
+
+            if (_bravoLabel != null)
+            {
+                _bravoLabel.style.color = TeamColorOf(Team.Bravo);
+            }
+        }
+
+        // 拠点の円盤 (ControlPointZone) と色を揃えるため、Hud が色の組に従っていなければ、オフラインのプレイヤー (Alpha) から見た今の組の色にする
+        private Color TeamColorOf(Team team)
+        {
+            var hud = GetComponent<Hud>();
+            return hud != null && hud.FollowsTeamPalette ? hud.TeamColor(team) : TeamColors.Of(team, TeamColors.OfflineViewer);
         }
 
         /// <summary>残り時間はこちらで出すので、同じ上中央にある Hud の残り時間の欄を隠す。</summary>

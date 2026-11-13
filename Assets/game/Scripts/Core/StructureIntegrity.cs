@@ -16,7 +16,7 @@ namespace Fps.Core
     /// </remarks>
     public sealed class StructureIntegrity
     {
-        private const int BitsPerWord = 64;
+        private const int _bitsPerWord = 64;
 
         public StructureLayout Layout { get; }
 
@@ -24,7 +24,7 @@ namespace Fps.Core
         public int DestroyedCount { get; private set; }
 
         /// <summary><see cref="ToBitset"/> の要素数。部品数を 64 で割って切り上げた値。</summary>
-        public int BitsetLength => (Layout.PieceCount + BitsPerWord - 1) / BitsPerWord;
+        public int BitsetLength => (Layout.PieceCount + _bitsPerWord - 1) / _bitsPerWord;
 
         private readonly int[] _health;
         private readonly bool[] _destroyed;
@@ -121,7 +121,7 @@ namespace Fps.Core
                 throw new ArgumentException($"bitset has {bitset.Length} words but {BitsetLength} are needed for {_destroyed.Length} pieces", nameof(bitset));
             }
 
-            var usedBits = _destroyed.Length % BitsPerWord;
+            var usedBits = _destroyed.Length % _bitsPerWord;
             if (usedBits != 0 && (bitset[bitset.Length - 1] >> usedBits) != 0UL)
             {
                 throw new ArgumentException($"bitset has bits set beyond piece {_destroyed.Length - 1}", nameof(bitset));
@@ -129,7 +129,7 @@ namespace Fps.Core
 
             for (var i = 0; i < _destroyed.Length; i++)
             {
-                SetDestroyed(i, (bitset[i / BitsPerWord] & (1UL << (i % BitsPerWord))) != 0UL);
+                SetDestroyed(i, (bitset[i / _bitsPerWord] & (1UL << (i % _bitsPerWord))) != 0UL);
             }
         }
 
@@ -141,7 +141,7 @@ namespace Fps.Core
             {
                 if (_destroyed[i])
                 {
-                    bitset[i / BitsPerWord] |= 1UL << (i % BitsPerWord);
+                    bitset[i / _bitsPerWord] |= 1UL << (i % _bitsPerWord);
                 }
             }
 

@@ -336,6 +336,8 @@ namespace Fps.Core.Tests
         public void LayoutRejectsInvalidInput()
         {
             var noEdges = Array.Empty<(int A, int B)>();
+            var twoHealth = new[] { 1, 1 };
+            var groundFirst = new[] { true, false };
 
             Assert.Throws<ArgumentNullException>(() => new StructureLayout(null, new[] { true }, noEdges));
             Assert.Throws<ArgumentNullException>(() => new StructureLayout(new[] { 1 }, null, noEdges));
@@ -346,9 +348,9 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new StructureLayout(new[] { 1, -3 }, new[] { true, false }, noEdges));
             Assert.Throws<ArgumentOutOfRangeException>(() => new StructureLayout(new[] { 1, 1 }, new[] { true, false }, new[] { (0, 2) }));
             Assert.Throws<ArgumentOutOfRangeException>(() => new StructureLayout(new[] { 1, 1 }, new[] { true, false }, new[] { (-1, 0) }));
-            Assert.Throws<ArgumentException>(() => new StructureLayout(new[] { 1, 1 }, new[] { true, false }, new[] { (1, 1) }));
-            Assert.Throws<ArgumentException>(() => new StructureLayout(new[] { 1, 1 }, new[] { true, false }, new[] { (0, 1), (0, 1) }));
-            Assert.Throws<ArgumentException>(() => new StructureLayout(new[] { 1, 1 }, new[] { true, false }, new[] { (0, 1), (1, 0) }));
+            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, groundFirst, new[] { (1, 1) }));
+            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, groundFirst, new[] { (0, 1), (0, 1) }));
+            Assert.Throws<ArgumentException>(() => new StructureLayout(twoHealth, groundFirst, new[] { (0, 1), (1, 0) }));
         }
 
         [Test]

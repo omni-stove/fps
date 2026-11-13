@@ -732,7 +732,7 @@ namespace Fps.Runtime
         private void ApplyDeathBody(GameRules rules)
         {
             var targets = new List<Damageable>();
-            foreach (var enemy in FindObjectsByType<EnemyAgent>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var enemy in FindObjectsByType<EnemyAgent>(FindObjectsInactive.Include))
             {
                 var damageable = enemy.GetComponent<Damageable>();
                 if (damageable != null)
@@ -741,7 +741,7 @@ namespace Fps.Runtime
                 }
             }
 
-            foreach (var dummy in FindObjectsByType<TargetDummy>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var dummy in FindObjectsByType<TargetDummy>(FindObjectsInactive.Include))
             {
                 if (dummy.Damageable != null)
                 {

@@ -29,7 +29,7 @@ namespace Fps.Runtime
         /// <summary>シーンにある有効な出現点をすべて返す (順番は決まっていない)。</summary>
         public static SideSpawnPoint[] FindAll()
         {
-            return FindObjectsByType<SideSpawnPoint>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            return FindObjectsByType<SideSpawnPoint>(FindObjectsInactive.Exclude);
         }
 
         private void OnDrawGizmos()

@@ -167,7 +167,7 @@ namespace Fps.Runtime
         /// 乗り越えの最中か、このフレームの Jump で乗り越え始めたら、この <see cref="Tick"/> で動かす変位を displacement に入れ、overridden を true にする。
         /// 回避より先に呼ばれる (<see cref="TryOverrideMove"/>)。乗り越えられなければ何もせず、Jump は <see cref="PlayerMotor"/> のジャンプになる。
         /// </summary>
-        partial void TryOverrideMoveForVault(
+        private void TryOverrideMoveForVault(
             Vector2 move, bool jumpPressed, float deltaSeconds, ref bool overridden, ref Vector3 displacement)
         {
             if (!IsVaulting && (!jumpPressed || !TryStartVault()))

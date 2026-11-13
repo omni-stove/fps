@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Fps.Core;
 using Fps.Runtime;
@@ -33,10 +34,16 @@ namespace Fps.Net
     /// 射撃の入力と <see cref="FireServerRpc"/> は .Fire.cs に、ダウンと蘇生 (同期・見た目・頭の上の印・Interact と <see cref="ReviveRpc"/>) は
     /// .Downed.cs に分けてある。ダウン中は撃てない。
     /// </para>
+    /// <para>
+    /// 見た目はプレハブに置いた人型のリグ (NetSceneBuilder) で、チームの色はリグの材質に塗る。リグは
+    /// <see cref="CharacterAnimator"/> が <see cref="ICharacterPoseSource"/> としてのこのプレイヤーから状態を読んで動かす。
+    /// 読む値はどれも他のクライアントにも同期されているもの (しゃがみ・接地は <see cref="NetworkPlayerMotor"/>、ダウン・体力・武器の Id)。
+    /// ADS だけは持ち主の画面にしか無いので、持ち主が <see cref="IsAiming"/> の同期値に書く (見た目だけで、サーバーは判断に使わない)。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
-    public sealed partial class NetPlayer : NetworkBehaviour
+    public sealed partial class NetPlayer : NetworkBehaviour, ICharacterPoseSource
     {
         /// <summary>Assets/InputSystem_Actions.inputactions の Attack アクション。</summary>
         public const string AttackActionPath = InputActionPaths.Attack;
@@ -74,11 +81,20 @@ namespace Fps.Net
         // 0 は倒れているか、まだ試合に参加していないことを表す
         private readonly NetworkVariable<int> _health = new NetworkVariable<int>(0);
 
+        // 持ち主が覗き込んでいるか。他のクライアントでリグを構えさせるためだけの値なので、サーバーを通さず持ち主が書く
+        private readonly NetworkVariable<bool> _aiming = new NetworkVariable<bool>(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+        private bool _canPublishAiming;
+
         private NetworkPlayerMotor _motor;
         private NetPlayerWeapon _weapon;
         private Renderer[] _renderers = Array.Empty<Renderer>();
         private Collider[] _colliders = Array.Empty<Collider>();
+
+        // チームの色を塗る、元の材質ごとの複製。リグは部品ごとに Renderer を持つので、renderer.material では部品の数だけ複製ができる
         private Material[] _ownedMaterials = Array.Empty<Material>();
+        private bool _teamMaterialsReady;
         private InputAction _attackAction;
         private bool _enabledAttackAction;
 
@@ -202,6 +218,9 @@ namespace Fps.Net
                     _weapon.ReloadOrSwitchStarted += HandleReloadOrSwitchStarted;
                     _weapon.ReloadStarted += HandleReloadStarted;
                 }
+
+                _canPublishAiming = true;
+                PublishAiming(_ads != null && _ads.IsAiming);
             }
 
             if (NetStartup.ShouldCreateHud(IsOwner, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
@@ -221,6 +240,8 @@ namespace Fps.Net
 
         public override void OnNetworkDespawn()
         {
+            // 下の SetLocalView(false) で ADS が解除されて AimingChanged が来るが、消滅中には同期値を書かない
+            _canPublishAiming = false;
             _team.OnValueChanged -= HandleTeamChanged;
             _health.OnValueChanged -= HandleHealthChanged;
             if (_weapon != null)
@@ -312,13 +333,8 @@ namespace Fps.Net
         {
             get
             {
-                // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で探す
-                if (_motor == null)
-                {
-                    _motor = GetComponent<NetworkPlayerMotor>();
-                }
-
-                return _motor != null ? _motor.Stance : null;
+                var motor = ResolveMotor();
+                return motor != null ? motor.Stance : null;
             }
         }
 
@@ -520,6 +536,109 @@ namespace Fps.Net
             {
                 ReleaseSprint(SprintInput.ReasonAim);
             }
+
+            PublishAiming(aiming);
+        }
+
+        private void PublishAiming(bool aiming)
+        {
+            if (!_canPublishAiming || !IsSpawned || !IsOwner || _aiming.Value == aiming)
+            {
+                return;
+            }
+
+            _aiming.Value = aiming;
+        }
+
+        /// <summary>
+        /// 覗き込んで構えているか。持ち主は自分の <see cref="AimDownSights"/> の今の値、他では持ち主が書いた同期値。
+        /// リグの姿勢 (<see cref="CharacterAnimator"/>) にだけ使う。
+        /// </summary>
+        public bool IsAiming
+        {
+            get
+            {
+                EnsureViewResolved();
+                if (IsSpawned && IsOwner && _ads != null && _ads.IsInitialized)
+                {
+                    return _ads.IsAiming;
+                }
+
+                return _aiming.Value;
+            }
+        }
+
+        /// <summary>歩きの水平速度 (m/s)。<see cref="NetworkPlayerMotor"/> が無ければ <see cref="PlayerController.DefaultWalkSpeed"/>。</summary>
+        public float WalkSpeed
+        {
+            get
+            {
+                var motor = ResolveMotor();
+                return motor != null ? motor.WalkSpeed : PlayerController.DefaultWalkSpeed;
+            }
+        }
+
+        /// <summary>ダッシュ中の水平速度 (m/s)。<see cref="NetworkPlayerMotor"/> が無ければ <see cref="PlayerController.DefaultSprintSpeed"/>。</summary>
+        public float SprintSpeed
+        {
+            get
+            {
+                var motor = ResolveMotor();
+                return motor != null ? motor.SprintSpeed : PlayerController.DefaultSprintSpeed;
+            }
+        }
+
+        /// <summary>しゃがみ中の水平速度 (m/s)。<see cref="NetworkPlayerMotor"/> が無ければ <see cref="PlayerController.DefaultCrouchSpeed"/>。</summary>
+        public float CrouchSpeed
+        {
+            get
+            {
+                var motor = ResolveMotor();
+                return motor != null ? motor.CrouchSpeed : PlayerController.DefaultCrouchSpeed;
+            }
+        }
+
+        /// <summary>
+        /// リグの姿勢を決める今の状態 (<see cref="ICharacterPoseSource"/>)。しゃがみ・接地はこのインスタンスで当てている値、
+        /// ダウン・体力・武器の Id・ADS は同期値なので、どのクライアントでも同じ姿勢になる。
+        /// </summary>
+        /// <param name="horizontalSpeed">位置の変化から求めた水平の速さ (m/s)。0 以上の有限値。</param>
+        public CharacterPoseInput ReadPose(float horizontalSpeed)
+        {
+            var motor = ResolveMotor();
+            var spec = ResolveEquippedSpec();
+            return PoseInput(
+                horizontalSpeed,
+                WalkSpeed,
+                motor == null || motor.IsGrounded,
+                IsCrouched,
+                IsAiming,
+                IsDowned,
+                IsAlive,
+                spec != null ? spec.Category : (WeaponCategory?)null);
+        }
+
+        /// <summary>
+        /// 同期された値からリグの姿勢の入力を作る。倒れている (体力 0) なら死亡として渡す。
+        /// ダッシュしているかは他人に同期されないので、立っていて歩きより速く動いていればダッシュとみなす
+        /// (<see cref="NetworkPlayerMotor"/> で歩きより速く動けるのはダッシュだけ)。
+        /// </summary>
+        internal static CharacterPoseInput PoseInput(
+            float horizontalSpeed, float walkSpeed, bool grounded, bool crouched, bool aiming, bool downed, bool alive, WeaponCategory? weapon)
+        {
+            var sprinting = !crouched && horizontalSpeed > walkSpeed;
+            return new CharacterPoseInput(horizontalSpeed, grounded, crouched, sprinting, aiming, null, downed, !alive, weapon);
+        }
+
+        private NetworkPlayerMotor ResolveMotor()
+        {
+            // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で探す
+            if (_motor == null)
+            {
+                _motor = GetComponent<NetworkPlayerMotor>();
+            }
+
+            return _motor;
         }
 
         // サーバーが確かめたリロード・持ち替えだけで解除する (満タンで断られたリロードでは覗き込みを続ける)
@@ -666,32 +785,102 @@ namespace Fps.Net
             _lastHitDirection.Value = direction.normalized;
         }
 
-        /// <summary>チームの色を塗り、倒れている間は見た目と当たりを消す。</summary>
+        /// <summary>チームの色 (<see cref="AlphaColor"/> か <see cref="BravoColor"/>)。</summary>
+        public static Color TeamColor(Team team)
+        {
+            return team == Team.Bravo ? BravoColor : AlphaColor;
+        }
+
+        /// <summary>チームの色を見た目 (リグ) の材質に塗り、倒れている間は見た目と当たりを消す。</summary>
         private void ApplyVisuals()
         {
             var alive = IsAlive;
-            var color = _team.Value == Team.Bravo ? BravoColor : AlphaColor;
+            var color = TeamColor(_team.Value);
+            EnsureTeamMaterials();
 
-            if (_ownedMaterials.Length != _renderers.Length)
+            foreach (var bodyRenderer in _renderers)
             {
-                // renderer.material は複製を作るので、自分で破棄できるよう控えておく
-                _ownedMaterials = new Material[_renderers.Length];
-                for (var i = 0; i < _renderers.Length; i++)
+                if (bodyRenderer != null)
                 {
-                    _ownedMaterials[i] = _renderers[i].material;
+                    bodyRenderer.enabled = alive;
                 }
             }
 
-            for (var i = 0; i < _renderers.Length; i++)
+            foreach (var material in _ownedMaterials)
             {
-                _renderers[i].enabled = alive;
-                _ownedMaterials[i].color = color;
+                if (material != null)
+                {
+                    material.color = color;
+                }
             }
 
             foreach (var hitbox in _colliders)
             {
                 hitbox.enabled = alive;
             }
+        }
+
+        // 複製はこのプレイヤーだけのもので、OnDestroy で破棄する
+        private void EnsureTeamMaterials()
+        {
+            if (_teamMaterialsReady)
+            {
+                return;
+            }
+
+            _teamMaterialsReady = true;
+            _ownedMaterials = ReplaceWithCopies(_renderers);
+        }
+
+        /// <summary>
+        /// renderers の材質を、元の材質ごとに 1 つずつ作った複製へ差し替え、作った複製を返す。
+        /// 同じ元の材質の部品は同じ複製を共有する。元の材質 (リグのプレハブの共有の材質) は変えない。null の Renderer と材質は飛ばす。
+        /// 複製の破棄は呼んだ側が行う。
+        /// </summary>
+        internal static Material[] ReplaceWithCopies(IReadOnlyList<Renderer> renderers)
+        {
+            if (renderers == null)
+            {
+                throw new ArgumentNullException(nameof(renderers));
+            }
+
+            var copies = new Dictionary<Material, Material>();
+            var owned = new List<Material>();
+            foreach (var bodyRenderer in renderers)
+            {
+                if (bodyRenderer == null)
+                {
+                    continue;
+                }
+
+                var materials = bodyRenderer.sharedMaterials;
+                var replaced = false;
+                for (var i = 0; i < materials.Length; i++)
+                {
+                    var source = materials[i];
+                    if (source == null)
+                    {
+                        continue;
+                    }
+
+                    if (!copies.TryGetValue(source, out var copy))
+                    {
+                        copy = new Material(source) { name = source.name + " (Team)" };
+                        copies.Add(source, copy);
+                        owned.Add(copy);
+                    }
+
+                    materials[i] = copy;
+                    replaced = true;
+                }
+
+                if (replaced)
+                {
+                    bodyRenderer.sharedMaterials = materials;
+                }
+            }
+
+            return owned.ToArray();
         }
 
         private void CreateHud()

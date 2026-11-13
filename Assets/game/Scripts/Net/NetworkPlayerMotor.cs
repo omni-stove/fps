@@ -141,6 +141,10 @@ namespace Fps.Net
         // 角度のまま補間すると 359° と 1° の間で逆回りしてしまうため
         private HitboxHistory _remoteYawHistory;
         private StanceHistory _remoteStanceHistory;
+
+        // 接地もしゃがみと同じく tick で切り替わる bool なので、同じ履歴で持つ。見た目 (足を動かすか) にだけ使う
+        private StanceHistory _remoteGroundedHistory;
+        private bool _remoteGrounded = true;
         private bool _hasRemoteState;
         private int _latestRemoteTick;
         private double _renderTick;
@@ -159,6 +163,39 @@ namespace Fps.Net
 
         /// <summary>このインスタンスで今しゃがんでいるか (オーナーは予測、他人は補間表示の姿勢)。</summary>
         public bool IsCrouched => _simulation != null && _simulation.Stance.IsCrouched;
+
+        /// <summary>歩きの水平速度 (m/s)。</summary>
+        public float WalkSpeed => _walkSpeed;
+
+        /// <summary>ダッシュ中の水平速度 (m/s)。</summary>
+        public float SprintSpeed => _sprintSpeed;
+
+        /// <summary>しゃがみ中の水平速度 (m/s)。移動の計算 (<see cref="MotorSpec"/>) と同じ値。</summary>
+        public float CrouchSpeed => PlayerController.DefaultCrouchSpeed;
+
+        /// <summary>
+        /// このインスタンスで今接地しているか。サーバー (ホストを含む) は確定状態、予測するオーナーは最新の予測、
+        /// 他人のクライアントは届いた確定状態を位置と同じ遅れで当てた値。生成前と、他人で状態がまだ届いていないときは true。
+        /// 見た目 (<see cref="Fps.Runtime.CharacterAnimator"/>) に使う。
+        /// </summary>
+        public bool IsGrounded
+        {
+            get
+            {
+                switch (_role)
+                {
+                    case NetworkPlayerRole.HostOwner:
+                    case NetworkPlayerRole.ServerSimulated:
+                        return _serverState.IsGrounded;
+                    case NetworkPlayerRole.Predicted:
+                        return _prediction == null || _prediction.Current.IsGrounded;
+                    case NetworkPlayerRole.Interpolated:
+                        return _remoteGrounded;
+                    default:
+                        return true;
+                }
+            }
+        }
 
         /// <summary>オーナーでダッシュ中か (モードどおりに解釈し、自動解除した後の値)。オーナー以外では false。</summary>
         public bool IsSprinting => _sprint != null && _sprint.IsActive;
@@ -255,6 +292,8 @@ namespace Fps.Net
                 _remoteHistory = new HitboxHistory();
                 _remoteYawHistory = new HitboxHistory();
                 _remoteStanceHistory = new StanceHistory();
+                _remoteGroundedHistory = new StanceHistory();
+                _remoteGrounded = true;
                 _hasRemoteState = false;
             }
 
@@ -518,6 +557,11 @@ namespace Fps.Net
             _remoteStanceHistory.Record(tick, false);
             ShowRemoteStance(tick, false);
 
+            // サーバーはテレポートで宙に置き直す (着地は次の確定状態で届く)
+            _remoteGroundedHistory = new StanceHistory();
+            _remoteGroundedHistory.Record(tick, false);
+            _remoteGrounded = false;
+
             _latestRemoteTick = tick;
             _renderTick = tick;
             _hasRemoteState = true;
@@ -584,7 +628,7 @@ namespace Fps.Net
                     Reconcile(tick, state);
                     break;
                 case NetworkPlayerRole.Interpolated:
-                    ReceiveRemoteState(tick, position, yaw, isCrouched);
+                    ReceiveRemoteState(tick, position, yaw, isCrouched, isGrounded);
                     break;
             }
         }
@@ -620,7 +664,7 @@ namespace Fps.Net
                 predictedCrouched ? "true" : "false");
         }
 
-        private void ReceiveRemoteState(int tick, Vector3 position, float yaw, bool crouched)
+        private void ReceiveRemoteState(int tick, Vector3 position, float yaw, bool crouched, bool grounded)
         {
             // 信頼性なしで送るので順番が入れ替わることがある。古いものは捨てる
             if (_hasRemoteState && tick <= _latestRemoteTick)
@@ -631,6 +675,7 @@ namespace Fps.Net
             _remoteHistory.Record(tick, NetMath.ToNumerics(position));
             _remoteYawHistory.Record(tick, YawDirection(yaw));
             _remoteStanceHistory.Record(tick, crouched);
+            _remoteGroundedHistory.Record(tick, grounded);
             _latestRemoteTick = tick;
 
             if (!_hasRemoteState)
@@ -639,6 +684,7 @@ namespace Fps.Net
                 _renderTick = tick;
                 transform.SetPositionAndRotation(position, YawRotation(yaw));
                 ShowRemoteStance(tick, crouched);
+                _remoteGrounded = grounded;
             }
         }
 
@@ -691,6 +737,11 @@ namespace Fps.Net
             if (_remoteStanceHistory.TrySample((float)_renderTick, out var crouched))
             {
                 ShowRemoteStance((int)Math.Floor(_renderTick), crouched);
+            }
+
+            if (_remoteGroundedHistory.TrySample((float)_renderTick, out var grounded))
+            {
+                _remoteGrounded = grounded;
             }
         }
 
@@ -782,6 +833,8 @@ namespace Fps.Net
             _remoteHistory = null;
             _remoteYawHistory = null;
             _remoteStanceHistory = null;
+            _remoteGroundedHistory = null;
+            _remoteGrounded = true;
             _hasPendingState = false;
             _role = NetworkPlayerRole.None;
         }

@@ -12,9 +12,12 @@ namespace Fps.Runtime
     /// <list type="bullet">
     /// <item>読み元 (<see cref="TryBind"/>): 同じ GameObject に <see cref="PlayerController"/> があればプレイヤーとして、それと
     /// <see cref="WeaponController"/> (子のカメラに付く)・<see cref="AimDownSights"/>・<see cref="CoverController"/>・<see cref="Damageable"/> を読む。
-    /// 無くて <see cref="EnemyAgent"/> があれば敵として、それと NavMeshAgent・Damageable を読む。どちらも無ければ (NetPlayer など) 何もしない。</item>
-    /// <item>リグ (<see cref="BuildRig"/>): <see cref="RigPrefab"/> (未設定なら Resources の <see cref="RigResourcePath"/>) を本体の子に置き、
-    /// 足元に合わせる。本体自身のレンダラー (プリミティブのカプセル) は消し、<see cref="PlayerMockBody"/> があればその体も出さない
+    /// 無くて <see cref="EnemyAgent"/> があれば敵として、それと NavMeshAgent・Damageable を読む。
+    /// どちらも無くて <see cref="ICharacterPoseSource"/> (ネット対戦の NetPlayer) があればそこから読み、水平の速さは本体の位置の変化から
+    /// <see cref="HorizontalSpeedMeter"/> で求めて渡す。どれも無ければ何もしない。</item>
+    /// <item>リグ (<see cref="BuildRig"/>): 本体の直下に <see cref="RigObjectName"/> の子 (根に Animator) が既にあれば
+    /// (NetSceneBuilder がプレハブに置いたリグ) それを使う。無ければ <see cref="RigPrefab"/> (未設定なら Resources の <see cref="RigResourcePath"/>)
+    /// を本体の子に置く。どちらも足元に合わせる。本体自身のレンダラー (プリミティブのカプセル) は消し、<see cref="PlayerMockBody"/> があればその体も出さない
     /// (一人称の銃は残す)。プレハブが無ければ警告を出してカプセルのまま止まる。</item>
     /// <item>毎フレーム (<see cref="Refresh"/>): 状態を <see cref="CharacterPose"/> で Animator のパラメーターにして渡す。
     /// この端末のプレイヤーの一人称 (<see cref="ViewRig"/>) ではリグを影だけにし、自分の体が視界に入らないようにする。</item>
@@ -54,6 +57,8 @@ namespace Fps.Runtime
         private Damageable _damageable;
         private EnemyAgent _enemy;
         private NavMeshAgent _navAgent;
+        private ICharacterPoseSource _network;
+        private readonly HorizontalSpeedMeter _speedMeter = new HorizontalSpeedMeter();
         private ViewRig _view;
 
         private CharacterPose _pose;
@@ -63,6 +68,7 @@ namespace Fps.Runtime
         private bool _warnedInvalidSpeeds;
 
         private Transform _rig;
+        private bool _ownsRig;
         private Animator _animator;
         private Renderer[] _rigRenderers = Array.Empty<Renderer>();
         private Renderer _hostRenderer;
@@ -106,6 +112,12 @@ namespace Fps.Runtime
 
         /// <summary>置いたリグの根。無ければ null。</summary>
         public Transform Rig => _rig;
+
+        /// <summary>リグを自分で置いたか (<see cref="Dismantle"/> で壊すか)。プレハブにあったリグを使っているなら false。</summary>
+        public bool OwnsRig => _rig != null && _ownsRig;
+
+        /// <summary><see cref="CharacterAnimatorSource.Network"/> で、位置の変化から求めた今の水平の速さ (m/s)。</summary>
+        public float MeasuredSpeed => _speedMeter.Speed;
 
         /// <summary>リグの Animator。無ければ null。</summary>
         public Animator Animator => _animator;
@@ -159,15 +171,19 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 同じ GameObject から読み元を探す。<see cref="PlayerController"/> があればプレイヤー、無くて <see cref="EnemyAgent"/> があれば敵。
-        /// どちらも無ければ false (NetPlayer のように別の仕組みで動くキャラ。ログは出さない)。
+        /// 同じ GameObject から読み元を探す。<see cref="PlayerController"/> があればプレイヤー、無くて <see cref="EnemyAgent"/> があれば敵、
+        /// どちらも無くて <see cref="ICharacterPoseSource"/> があればそれ (ネット対戦の NetPlayer)。
+        /// どれも無ければ false (ログは出さない)。
         /// </summary>
         public bool TryBind()
         {
             _mover = GetComponent<PlayerController>();
             _enemy = _mover == null ? GetComponent<EnemyAgent>() : null;
+            // GetComponent はエディタで、無い部品に null でない偽物を返すことがあり、インターフェイスでは == null で見分けられない
+            _network = _mover == null && _enemy == null && TryGetComponent<ICharacterPoseSource>(out var network) ? network : null;
             _damageable = GetComponent<Damageable>();
             _view = GetComponent<ViewRig>();
+            _speedMeter.Reset();
 
             if (_mover != null)
             {
@@ -181,6 +197,14 @@ namespace Fps.Runtime
             {
                 _source = CharacterAnimatorSource.Enemy;
                 _navAgent = GetComponent<NavMeshAgent>();
+                _weapon = null;
+                _ads = null;
+                _cover = null;
+            }
+            else if (_network != null)
+            {
+                _source = CharacterAnimatorSource.Network;
+                _navAgent = null;
                 _weapon = null;
                 _ads = null;
                 _cover = null;
@@ -203,11 +227,17 @@ namespace Fps.Runtime
 
         /// <summary>
         /// リグのプレハブを本体の子に置き、本体のカプセルと自機モックの体を隠す。置き済みなら何もせず true。
+        /// 本体の直下に <see cref="RigObjectName"/> の子があって根に Animator があれば、置かずにそれを使う (<see cref="OwnsRig"/> は false)。
         /// プレハブが無ければ警告を、根に Animator が無ければエラーを出し、何も変えずに false を返す。
         /// </summary>
         public bool BuildRig()
         {
             if (IsBuilt)
+            {
+                return true;
+            }
+
+            if (TryAdoptRig())
             {
                 return true;
             }
@@ -237,6 +267,7 @@ namespace Fps.Runtime
                 SetLayer(instance.transform, gameObject.layer);
 
                 _rig = instance.transform;
+                _ownsRig = true;
                 _animator = instance.GetComponent<Animator>();
                 _rigRenderers = instance.GetComponentsInChildren<Renderer>(true);
             }
@@ -244,11 +275,44 @@ namespace Fps.Runtime
             {
                 DestroySafely(instance);
                 _rig = null;
+                _ownsRig = false;
                 _animator = null;
                 _rigRenderers = Array.Empty<Renderer>();
                 throw;
             }
 
+            FinishRig("built");
+            return true;
+        }
+
+        // プレハブに置いたリグのコライダーは消さない。本体の部品 (NetPlayer) は Awake で子のコライダーを集めているので、
+        // ここで消すと壊れた参照が残る。プレハブを作る側 (NetSceneBuilder) がコライダーを持たせない。
+        private bool TryAdoptRig()
+        {
+            var existing = transform.Find(RigObjectName);
+            if (existing == null)
+            {
+                return false;
+            }
+
+            var animator = existing.GetComponent<Animator>();
+            if (animator == null)
+            {
+                Debug.LogWarning($"{LogTag} '{name}' の子 '{RigObjectName}' の根に Animator がないので、使わずにプレハブから置きます。", this);
+                return false;
+            }
+
+            SetLayer(existing, gameObject.layer);
+            _rig = existing;
+            _ownsRig = false;
+            _animator = animator;
+            _rigRenderers = existing.GetComponentsInChildren<Renderer>(true);
+            FinishRig("adopted");
+            return true;
+        }
+
+        private void FinishRig(string how)
+        {
             _animatorParameters.Clear();
             _hasParameterTable = false;
             _hasParameters = false;
@@ -257,8 +321,7 @@ namespace Fps.Runtime
             HideMockBody();
             SubscribeHealthReset();
 
-            Debug.Log($"{LogTag} rig built for '{name}' source={_source} renderers={_rigRenderers.Length}", this);
-            return true;
+            Debug.Log($"{LogTag} rig {how} for '{name}' source={_source} renderers={_rigRenderers.Length}", this);
         }
 
         /// <summary>
@@ -278,6 +341,12 @@ namespace Fps.Runtime
                 throw new InvalidOperationException($"CharacterAnimator '{name}' has no state source; call TryBind first");
             }
 
+            if (_source == CharacterAnimatorSource.Network)
+            {
+                var position = transform.position;
+                _speedMeter.Sample(position.x, position.z, deltaSeconds);
+            }
+
             EnsurePose();
             _parameters = _pose.Evaluate(ReadState());
             _hasParameters = true;
@@ -292,7 +361,10 @@ namespace Fps.Runtime
             return _parameters;
         }
 
-        /// <summary>読み元から今の状態を集める。読み元が無ければ例外を投げる。</summary>
+        /// <summary>
+        /// 読み元から今の状態を集める。読み元が無ければ例外を投げる。
+        /// <see cref="CharacterAnimatorSource.Network"/> の速さは、最後の <see cref="Refresh"/> までの位置の変化から求めた値 (<see cref="MeasuredSpeed"/>)。
+        /// </summary>
         public CharacterPoseInput ReadState()
         {
             switch (_source)
@@ -301,21 +373,27 @@ namespace Fps.Runtime
                     return ReadPlayer();
                 case CharacterAnimatorSource.Enemy:
                     return ReadEnemy();
+                case CharacterAnimatorSource.Network:
+                    return _network.ReadPose(_speedMeter.Speed);
                 default:
                     throw new InvalidOperationException($"CharacterAnimator '{name}' has no state source; call TryBind first");
             }
         }
 
-        /// <summary>リグを壊し、本体のカプセルと自機モックの体を元に戻す。置いていなければ何もしない。</summary>
+        /// <summary>
+        /// リグを壊し、本体のカプセルと自機モックの体を元に戻す。置いていなければ何もしない。
+        /// プレハブにあったリグ (<see cref="OwnsRig"/> が false) は壊さず、使うのをやめるだけにする。
+        /// </summary>
         public void Dismantle()
         {
             UnsubscribeHealthReset();
-            if (_rig != null)
+            if (_rig != null && _ownsRig)
             {
                 DestroySafely(_rig.gameObject);
             }
 
             _rig = null;
+            _ownsRig = false;
             _animator = null;
             _rigRenderers = Array.Empty<Renderer>();
             _animatorParameters.Clear();
@@ -390,6 +468,12 @@ namespace Fps.Runtime
                 walk = _mover.WalkSpeed;
                 sprint = _mover.SprintSpeed;
                 crouch = _mover.CrouchSpeed;
+            }
+            else if (_source == CharacterAnimatorSource.Network)
+            {
+                walk = _network.WalkSpeed;
+                sprint = _network.SprintSpeed;
+                crouch = _network.CrouchSpeed;
             }
             else
             {

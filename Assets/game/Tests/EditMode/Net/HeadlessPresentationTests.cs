@@ -77,6 +77,19 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void DisablesTheRigsAnimator()
+        {
+            // NetSceneBuilder が NetPlayer のプレハブに置くリグと同じく、本体の子の根に Animator がある
+            var root = Create("NetPlayer");
+            var rig = Create(CharacterAnimator.RigObjectName, root.transform).AddComponent<Animator>();
+
+            var disabled = HeadlessPresentation.DisableUnder(root);
+
+            Assert.That(disabled, Is.EqualTo(1));
+            Assert.That(rig.enabled, Is.False);
+        }
+
+        [Test]
         public void KeepsOtherComponentsAndCountsOnlyNewlyDisabled()
         {
             var root = Create("Root");

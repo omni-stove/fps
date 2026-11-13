@@ -13,7 +13,8 @@ namespace Fps.Net
     /// <see cref="NetPlayer"/> のうち、ダウンと蘇生。
     /// <list type="bullet">
     /// <item>ダウン中かどうか・出血の残り・蘇生の進みを <see cref="NetDownedState"/> の NetworkVariable で受け取り、
-    /// 移動 (<see cref="NetworkPlayerMotor.SetDowned"/>) を止め、見た目を寝かせる (<see cref="NetStance.SetLying"/>)。</item>
+    /// 移動 (<see cref="NetworkPlayerMotor.SetDowned"/>) を止め、見た目を寝かせる (リグは <see cref="CharacterAnimator"/> が
+    /// <see cref="IsDowned"/> から Downed の姿勢にする。<see cref="NetStance.BodyName"/> の見た目があれば <see cref="NetStance.SetLying"/> で倒す)。</item>
     /// <item>画面のあるクライアントでは、ダウン中の味方の頭の上に印 (<see cref="DownedMarkerName"/>) を出す。自分と敵には出さない。</item>
     /// <item>持ち主は Interact を押している間、<see cref="ReviveRange"/> 以内でいちばん近いダウン中の味方を選び、
     /// 移動の入力と同じ tick ごとに <see cref="ReviveRpc"/> を送る。距離・チーム・状態の判断はサーバー

@@ -406,7 +406,7 @@ namespace Fps.Runtime
             }
         }
 
-        private Focusable CurrentFocusTarget()
+        private Button CurrentFocusTarget()
         {
             if (_focusRow >= ConfirmRow)
             {

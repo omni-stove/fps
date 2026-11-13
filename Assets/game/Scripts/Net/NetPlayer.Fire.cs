@@ -151,9 +151,10 @@ namespace Fps.Net
 
             // ブラインドファイアの始点と散らばりは曳光弾の予測にだけ使う。サーバーへは目の始点を送り、サーバーが自分の知るカバーの状態で決め直す
             var tracerOrigin = origin;
-            var blind = spec != null && ResolveBlindFire(out var blindOrigin) == BlindFireAim.Blind;
-            if (blind)
+            var blind = false;
+            if (spec != null && ResolveBlindFire(out var blindOrigin) == BlindFireAim.Blind)
             {
+                blind = true;
                 tracerOrigin = blindOrigin;
                 direction = NetBlindFire.Spread(direction, spec, playerId, shotIndex);
             }

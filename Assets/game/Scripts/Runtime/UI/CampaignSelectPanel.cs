@@ -447,7 +447,7 @@ namespace Fps.Runtime
             }
         }
 
-        private Focusable CurrentFocusTarget()
+        private Button CurrentFocusTarget()
         {
             var focused = _menu.FocusedItem;
             switch (focused.Kind)

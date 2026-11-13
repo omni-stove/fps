@@ -52,10 +52,11 @@ namespace Fps.Runtime
             }
 
             var colliders = Physics.OverlapSphere(point, radius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-            var count = 0;
+            // 子コライダーを持つ部品が、コライダーの数だけ被害を重ねて受けないよう、部品ごとに最大の被害を 1 回だけ渡す。
+            var entries = new System.Collections.Generic.List<(IStructureHittable hittable, Collider collider, int damage)>();
+            var indexByKey = new System.Collections.Generic.Dictionary<(IStructureHittable, Object), int>();
             foreach (var collider in colliders)
             {
-                // 前の部品への被害で、この部品が DestroyImmediate されていることがある。
                 if (collider == null)
                 {
                     continue;
@@ -68,7 +69,33 @@ namespace Fps.Runtime
                 }
 
                 var distance = Vector3.Distance(point, ClosestPoint(collider, point));
-                hittable.ApplyStructureHit(collider, point, Scale(damage, distance, radius));
+                var scaled = Scale(damage, distance, radius);
+                var piece = collider.GetComponentInParent<DestructiblePiece>();
+                var key = (hittable, piece != null ? (Object)piece : collider);
+                if (indexByKey.TryGetValue(key, out var existing))
+                {
+                    if (scaled > entries[existing].damage)
+                    {
+                        entries[existing] = (hittable, collider, scaled);
+                    }
+                }
+                else
+                {
+                    indexByKey[key] = entries.Count;
+                    entries.Add((hittable, collider, scaled));
+                }
+            }
+
+            var count = 0;
+            foreach (var entry in entries)
+            {
+                // 前の部品への被害で、この部品が DestroyImmediate されていることがある。
+                if (entry.collider == null)
+                {
+                    continue;
+                }
+
+                entry.hittable.ApplyStructureHit(entry.collider, point, entry.damage);
                 count++;
             }
 

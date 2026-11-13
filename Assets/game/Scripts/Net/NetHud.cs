@@ -14,9 +14,11 @@ namespace Fps.Net
     /// <see cref="NetPlayer"/> が自分のプレイヤーで画面があるときだけ <see cref="Create"/> で作り、消滅時に GameObject ごと消す。
     /// 試合は <see cref="NetTeamDeathmatch.CurrentChanged"/> で待つ (プレイヤーより後に Spawn されることがあるため)。
     /// <para>
-    /// 倒れている間の「リスポーンまで N 秒」だけは時間で進むので、倒れた値が届いたときに <see cref="RespawnCountdown"/> を
-    /// 始め、<see cref="Tick"/> で数える。サーバーは待ち時間を配らないので、同じプレハブの <see cref="NetTeamDeathmatch.RespawnSeconds"/>
-    /// から数える。表示は秒の桁が変わったときだけ変わる。
+    /// 倒れている間の案内はリスポーン方式 (<see cref="NetTeamDeathmatch.SyncedRules"/> の <see cref="NetMatchRules.RespawnMode"/>) で変わる。
+    /// Individual の「リスポーンまで N 秒」だけは時間で進むので、倒れた値が届いたときに <see cref="RespawnCountdown"/> を
+    /// 始め、<see cref="Tick"/> で数える。サーバーは個人の待ち時間を配らないので、同じプレハブの <see cref="NetTeamDeathmatch.RespawnSeconds"/>
+    /// から数える。表示は秒の桁が変わったときだけ変わる。Wave ではサーバーが配る次のウェーブまでの秒数
+    /// (<see cref="NetTeamDeathmatch.NextWaveSeconds"/>) を、None では次の試合まで戻らないことを出す。
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -38,7 +40,12 @@ namespace Fps.Net
         private int _alphaScore;
         private int _bravoScore;
         private int _nextMatchSeconds;
+        private int _nextWaveSeconds;
         private NetMatchStatus _status = new NetMatchStatus(GameModeState.Waiting, null);
+        private NetMatchRules _rules = NetMatchRules.Default;
+
+        // 試合中に倒れてから、出現するか試合が終わるまで true。_respawn は Individual の表示に使う数え (待ち時間が不正なら null)
+        private bool _isDown;
         private RespawnCountdown _respawn;
 
         /// <summary>流し込み先の HUD。</summary>
@@ -50,8 +57,8 @@ namespace Fps.Net
         /// <summary>購読している試合。まだ無ければ null。</summary>
         public NetTeamDeathmatch Match => _match;
 
-        /// <summary>倒れてからリスポーンを待っている間 true。</summary>
-        public bool IsAwaitingRespawn => _respawn != null;
+        /// <summary>試合中に倒れてから、出現するか試合が終わるまで true (None で次の試合を待っている間を含む)。</summary>
+        public bool IsAwaitingRespawn => _isDown;
 
         /// <summary>
         /// HUD (<see cref="Hud.Create"/>) を作り、player とその武器、今の試合 (<see cref="NetTeamDeathmatch.Current"/>) を購読する。
@@ -137,7 +144,9 @@ namespace Fps.Net
                 _alphaScore = 0;
                 _bravoScore = 0;
                 _nextMatchSeconds = 0;
+                _nextWaveSeconds = 0;
                 _status = new NetMatchStatus(GameModeState.Waiting, null);
+                _rules = NetMatchRules.Default;
                 Model.ClearTime();
                 Model.ClearScores();
                 Model.ClearResult();
@@ -149,12 +158,16 @@ namespace Fps.Net
             _alphaScore = _match.AlphaScoreVariable.Value;
             _bravoScore = _match.BravoScoreVariable.Value;
             _nextMatchSeconds = _match.NextMatchSecondsVariable.Value;
+            _nextWaveSeconds = _match.NextWaveSecondsVariable.Value;
             _status = _match.StatusVariable.Value;
+            _rules = _match.RulesVariable.Value;
             _match.AlphaScoreVariable.OnValueChanged += HandleAlphaScoreChanged;
             _match.BravoScoreVariable.OnValueChanged += HandleBravoScoreChanged;
             _match.RemainingSecondsVariable.OnValueChanged += HandleRemainingSecondsChanged;
             _match.NextMatchSecondsVariable.OnValueChanged += HandleNextMatchSecondsChanged;
+            _match.NextWaveSecondsVariable.OnValueChanged += HandleNextWaveSecondsChanged;
             _match.StatusVariable.OnValueChanged += HandleStatusChanged;
+            _match.RulesVariable.OnValueChanged += HandleRulesChanged;
 
             Model.SetTime(_match.RemainingSecondsVariable.Value);
             ShowHealth();
@@ -242,7 +255,9 @@ namespace Fps.Net
             _match.BravoScoreVariable.OnValueChanged -= HandleBravoScoreChanged;
             _match.RemainingSecondsVariable.OnValueChanged -= HandleRemainingSecondsChanged;
             _match.NextMatchSecondsVariable.OnValueChanged -= HandleNextMatchSecondsChanged;
+            _match.NextWaveSecondsVariable.OnValueChanged -= HandleNextWaveSecondsChanged;
             _match.StatusVariable.OnValueChanged -= HandleStatusChanged;
+            _match.RulesVariable.OnValueChanged -= HandleRulesChanged;
             _match = null;
         }
 
@@ -297,6 +312,18 @@ namespace Fps.Net
             ShowNotice();
         }
 
+        private void HandleNextWaveSecondsChanged(int previous, int current)
+        {
+            _nextWaveSeconds = current;
+            ShowNotice();
+        }
+
+        private void HandleRulesChanged(NetMatchRules previous, NetMatchRules current)
+        {
+            _rules = current;
+            ShowNotice();
+        }
+
         private void HandleStatusChanged(NetMatchStatus previous, NetMatchStatus current)
         {
             _status = current;
@@ -317,6 +344,9 @@ namespace Fps.Net
                 return;
             }
 
+            _isDown = true;
+
+            // ルールが後から届いて Individual になっても数えられるよう、方式によらず数え始める
             var delay = _match.RespawnSeconds;
             if (!(delay >= 0f) || float.IsInfinity(delay))
             {
@@ -330,6 +360,7 @@ namespace Fps.Net
 
         private void CancelRespawn()
         {
+            _isDown = false;
             _respawn = null;
         }
 
@@ -370,20 +401,47 @@ namespace Fps.Net
             }
         }
 
-        /// <summary>終わっていれば次の試合まで、倒れていればリスポーンまでの秒数を案内に出す。どちらでもなければ消す。</summary>
+        /// <summary>
+        /// 終わっていれば次の試合までの秒数を、倒れていればリスポーン方式に合わせた案内 (Individual は自分のリスポーンまで、
+        /// Wave は次のウェーブまでの秒数、None は次の試合まで復活なし) を出す。どちらでもなければ消す。
+        /// </summary>
         private void ShowNotice()
         {
             if (_match != null && _status.State == GameModeState.Ended)
             {
                 Model.SetNotice(HudFormat.NextMatch(Math.Max(0, _nextMatchSeconds)));
+                return;
             }
-            else if (_respawn != null)
-            {
-                Model.SetNotice(HudFormat.Respawn(HudFormat.DisplayedSeconds(_respawn.RemainingSeconds)));
-            }
-            else
+
+            if (!_isDown)
             {
                 Model.SetNotice(HudFormat.NoNotice);
+                return;
+            }
+
+            switch (_rules.RespawnMode)
+            {
+                case RespawnMode.Individual:
+                    if (_respawn != null)
+                    {
+                        Model.SetRespawnNotice(RespawnMode.Individual, HudFormat.DisplayedSeconds(_respawn.RemainingSeconds));
+                    }
+                    else
+                    {
+                        Model.SetNotice(HudFormat.NoNotice);
+                    }
+
+                    break;
+                case RespawnMode.Wave:
+                    Model.SetRespawnNotice(RespawnMode.Wave, Math.Max(0, _nextWaveSeconds));
+                    break;
+                case RespawnMode.None:
+                    Model.SetRespawnNotice(RespawnMode.None, 0);
+                    break;
+                default:
+                    // 古いサーバーなど知らない方式が届いても HUD を落とさない
+                    Model.SetNotice(HudFormat.NoNotice);
+                    break;
             }
         }
 

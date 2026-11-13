@@ -128,6 +128,34 @@ namespace Fps.Core
         }
 
         /// <summary>
+        /// 試合で使うルールの全項目。name はアセット名で、アセットが無く <see cref="GameRules.Default"/> を使うときは <c>default</c> を渡す
+        /// (空なら <c>-</c>)。秒と倍率は小数 2 桁、真偽値は小文字。
+        /// </summary>
+        /// <example>
+        /// <c>[Match] rules name=TeamDeathmatch friendlyFire=Off respawnMode=Individual waveInterval=10.00s regenDelay=4.00s
+        /// regenPerSecond=20.00 deathBody=Collapse deathCamera=Killer infiniteReserve=false reserveMultiplier=1.00 destruction=Off</c> (実際は 1 行)
+        /// </example>
+        public static string Rules(string name, GameRules rules)
+        {
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
+            return Tag + " rules name=" + (string.IsNullOrWhiteSpace(name) ? "-" : name)
+                + " friendlyFire=" + rules.FriendlyFire
+                + " respawnMode=" + rules.RespawnMode
+                + " waveInterval=" + Seconds(rules.WaveIntervalSeconds)
+                + " regenDelay=" + Seconds(rules.RegenDelaySeconds)
+                + " regenPerSecond=" + rules.RegenPerSecond.ToString("F2", CultureInfo.InvariantCulture)
+                + " deathBody=" + rules.DeathBody
+                + " deathCamera=" + rules.DeathCamera
+                + " infiniteReserve=" + (rules.InfiniteReserve ? "true" : "false")
+                + " reserveMultiplier=" + rules.ReserveAmmoMultiplier.ToString("F2", CultureInfo.InvariantCulture)
+                + " destruction=" + rules.Destruction;
+        }
+
+        /// <summary>
         /// ロードアウトの slot 番の武器と、サーバーが射撃の判定に使う値。falloff は減衰しないなら <c>none</c>、
         /// するなら <c>始まり-終わりm*最小倍率</c> (key=value を空白で区切って読めるよう、値に空白を入れない)。
         /// </summary>

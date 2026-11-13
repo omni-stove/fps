@@ -61,6 +61,7 @@ namespace Fps.Editor
             try
             {
                 WeaponAssetBuilder.Build();
+                GameRulesAssetBuilder.Build();
                 BootstrapSceneBuilder.Build();
                 EditorSceneManager.OpenScene(BootstrapSceneBuilder.DefaultScenePath, OpenSceneMode.Single);
 

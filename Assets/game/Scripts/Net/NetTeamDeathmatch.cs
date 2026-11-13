@@ -38,6 +38,12 @@ namespace Fps.Net
     /// 射撃は当たり判定の前に 1 発消費し、弾が無ければ捨てる。
     /// </para>
     /// <para>
+    /// ルール (味方撃ち・リスポーン方式・回復など) はアセット (<see cref="GameRulesDefinition"/>) から試合の開始時に読み、
+    /// <see cref="TeamDeathmatchSpec"/> に渡してサーバーの判定に使う。クライアントには見た目と HUD に要る値だけを
+    /// <see cref="SyncedRules"/> で、Wave の次のウェーブまでの秒数を <see cref="NextWaveSeconds"/> で、
+    /// 各プレイヤーを最後に倒した相手を <see cref="Players"/> の <see cref="NetPlayerStats.Killer"/> で配る。
+    /// </para>
+    /// <para>
     /// 試合が終わると、サーバーは <see cref="RestartDelaySeconds"/> 秒待って同じ Session で次の試合を始める
     /// (<see cref="TeamDeathmatchSession.Restart"/>)。チーム分けはそのままで、点数・キル数・デス数・残り時間を戻し、
     /// 全員を体力満タンで出現させる。待っている間の残り秒数は <see cref="NextMatchSeconds"/> で配る。
@@ -81,12 +87,20 @@ namespace Fps.Net
         [SerializeField, Min(0f), Tooltip("射撃の始点とサーバー上の本人の位置のずれ (m) の上限。超えた射撃は捨てる")]
         private float _maxShotOriginOffset = ShotValidator.DefaultMaxOriginOffset;
 
+        [SerializeField, Tooltip("試合のルール (Assets/game/Rules/TeamDeathmatch.asset)。味方撃ち・リスポーン方式・回復・やられ演出・予備弾はここから引く。未設定なら既定のルールで始める")]
+        private GameRulesDefinition _rules;
+
         private readonly NetworkVariable<int> _alphaScore = new NetworkVariable<int>();
         private readonly NetworkVariable<int> _bravoScore = new NetworkVariable<int>();
         private readonly NetworkVariable<int> _remainingSeconds = new NetworkVariable<int>();
         private readonly NetworkVariable<int> _nextMatchSeconds = new NetworkVariable<int>();
+        private readonly NetworkVariable<int> _nextWaveSeconds = new NetworkVariable<int>();
         private readonly NetworkVariable<NetMatchStatus> _status =
             new NetworkVariable<NetMatchStatus>(new NetMatchStatus(GameModeState.Waiting, null));
+        private readonly NetworkVariable<NetMatchRules> _syncedRules = new NetworkVariable<NetMatchRules>(NetMatchRules.Default);
+
+        // 最後に倒した相手 (サーバーだけ)。NetPlayerStats.Killer で配る
+        private readonly LastKillerTable _lastKillers = new LastKillerTable();
 
         // NetworkList は Awake で作る (フィールド初期化子だとエディタで破棄されずに残ることがある)
         private NetworkList<NetPlayerStats> _players;
@@ -136,6 +150,8 @@ namespace Fps.Net
         internal NetworkVariable<int> RemainingSecondsVariable => _remainingSeconds;
         internal NetworkVariable<int> NextMatchSecondsVariable => _nextMatchSeconds;
         internal NetworkVariable<NetMatchStatus> StatusVariable => _status;
+        internal NetworkVariable<int> NextWaveSecondsVariable => _nextWaveSeconds;
+        internal NetworkVariable<NetMatchRules> RulesVariable => _syncedRules;
 
         public int AlphaScore => _alphaScore.Value;
         public int BravoScore => _bravoScore.Value;
@@ -148,6 +164,18 @@ namespace Fps.Net
         /// HUD は <see cref="State"/> が Ended の間これを <see cref="HudFormat.NextMatch"/> で出す。
         /// </summary>
         public int NextMatchSeconds => _nextMatchSeconds.Value;
+
+        /// <summary>
+        /// <see cref="RespawnMode.Wave"/> の試合中、次のウェーブまでの残り秒数 (切り上げ)。Wave 以外と試合中以外は 0。
+        /// HUD は倒れている間これを出す。
+        /// </summary>
+        public int NextWaveSeconds => _nextWaveSeconds.Value;
+
+        /// <summary>
+        /// 試合のルールのうち、クライアントが見た目と HUD に使う値。サーバーが試合を始めた時点の <see cref="Rules"/> の値で、
+        /// それまでは <see cref="NetMatchRules.Default"/>。
+        /// </summary>
+        public NetMatchRules SyncedRules => _syncedRules.Value;
 
         public GameModeState State => _status.Value.State;
         public Team? Winner => _status.Value.Winner;
@@ -206,6 +234,17 @@ namespace Fps.Net
             set => _loadout = value;
         }
 
+        /// <summary>
+        /// 試合のルールのアセット。試合の開始時 (Spawn 時) に <see cref="TryLoadRules"/> で読む。
+        /// 未設定なら警告を出して <see cref="GameRules.Default"/> で、不正ならエラーを出して試合を始めない。
+        /// プレハブでは <c>Fps.Editor.NetSceneBuilder</c> が配線し、テストでは Spawn 前にここへ渡す。
+        /// </summary>
+        public GameRulesDefinition Rules
+        {
+            get => _rules;
+            set => _rules = value;
+        }
+
         /// <summary>サーバーで試合が動いている間の、全員に配る武器と各プレイヤーの連射の制限。試合の開始前とクライアントでは null。</summary>
         internal ServerLoadout ServerLoadout => _serverLoadout;
 
@@ -258,6 +297,7 @@ namespace Fps.Net
             _lastRecordedTick = _noRecordedTick;
             _rewindTargets.Clear();
             _serverLoadout = null;
+            _lastKillers.Clear();
 
             if (Current == this)
             {
@@ -282,6 +322,7 @@ namespace Fps.Net
             _session.Tick(Time.deltaTime);
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
+            SyncNextWaveSeconds();
         }
 
         // 入力 (RPC) とホストの移動 (Update) が反映された後の位置を記録する
@@ -526,6 +567,7 @@ namespace Fps.Net
             _playerById.Remove(playerId);
             _lagCompensator?.Remove(playerId);
             _serverLoadout?.Remove(playerId);
+            _lastKillers.Remove(playerId);
             if (_session != null && _session.HasPlayer(playerId))
             {
                 _session.Leave(playerId);
@@ -548,11 +590,24 @@ namespace Fps.Net
 
         private void StartSession()
         {
+            if (!TryLoadRules(_rules, out var rules, out var usedDefaultRules, out var rulesError))
+            {
+                Debug.LogError("[Match] invalid game rules on " + name + ": " + rulesError
+                    + "; fix the asset or run Fps.Editor.GameRulesAssetBuilder.Build");
+                return;
+            }
+
+            if (usedDefaultRules)
+            {
+                Debug.LogWarning("[Match] no game rules are assigned to " + name + "; using the default rules"
+                    + "; run Fps.Editor.NetSceneBuilder.Build");
+            }
+
             TeamDeathmatchSpec spec;
             SpawnSelector selector;
             try
             {
-                spec = new TeamDeathmatchSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds);
+                spec = new TeamDeathmatchSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds, rules);
                 selector = new SpawnSelector(_minEnemySpawnDistance);
                 ValidateShotSettings();
                 ValidateRestartDelay();
@@ -594,15 +649,19 @@ namespace Fps.Net
             _session.Spawned += HandleSpawned;
             _session.Ended += HandleEnded;
 
+            _lastKillers.Clear();
+
             _alphaScore.Value = 0;
             _bravoScore.Value = 0;
+            _syncedRules.Value = NetMatchRules.From(spec.Rules);
             _status.Value = new NetMatchStatus(_session.State, null);
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
+            SyncNextWaveSeconds();
 
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
-                + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count
-                + " friendlyFire=" + spec.Rules.FriendlyFire);
+                + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s spawnPoints=" + spawnPoints.Count);
+            Debug.Log(MatchLog.Rules(usedDefaultRules ? "default" : _rules.name, spec.Rules));
             Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
                 + " tickRate=" + NetworkPlayerMotor.TickRate);
             Debug.Log(MatchLog.Loadout(_loadout.name, _serverLoadout));
@@ -671,6 +730,26 @@ namespace Fps.Net
 
             error = null;
             return true;
+        }
+
+        /// <summary>
+        /// 試合で使うルールを asset から読む (<see cref="GameRulesDefinition.TryToRules"/>)。
+        /// asset が未設定 (破棄されたアセットを含む) なら <see cref="GameRules.Default"/> を rules に入れ、usedDefault を true にして true を返す
+        /// (警告を出すかは呼び出し側が決める)。値が不正なら rules を null、error にアセット名を含む理由を入れて false を返す。
+        /// </summary>
+        public static bool TryLoadRules(GameRulesDefinition asset, out GameRules rules, out bool usedDefault, out string error)
+        {
+            // 参照切れ (破棄されたアセット) も Unity の == null で拾う
+            if (asset == null)
+            {
+                rules = GameRules.Default;
+                usedDefault = true;
+                error = null;
+                return true;
+            }
+
+            usedDefault = false;
+            return asset.TryToRules(out rules, out error);
         }
 
         /// <summary>Inspector で入る射撃の検査の値を確かめる。おかしければ <see cref="ArgumentOutOfRangeException"/>。</summary>
@@ -777,6 +856,16 @@ namespace Fps.Net
             if (_nextMatchSeconds.Value != seconds)
             {
                 _nextMatchSeconds.Value = seconds;
+            }
+        }
+
+        private void SyncNextWaveSeconds()
+        {
+            var remaining = _session.SecondsUntilNextWave;
+            var seconds = remaining.HasValue ? HudFormat.DisplayedSeconds(remaining.Value) : 0;
+            if (_nextWaveSeconds.Value != seconds)
+            {
+                _nextWaveSeconds.Value = seconds;
             }
         }
 
@@ -913,6 +1002,7 @@ namespace Fps.Net
         private void HandleStarted()
         {
             _status.Value = new NetMatchStatus(GameModeState.Playing, null);
+            SyncNextWaveSeconds();
 
             // 待っている間にリロードを始めていた人も、満タンでそろえて始める
             foreach (var player in _playerById.Values)
@@ -943,7 +1033,11 @@ namespace Fps.Net
             var team = _session.GetTeam(playerId);
             player.ServerSetState(team, _session.GetHealth(playerId));
 
-            var row = new NetPlayerStats(player.OwnerClientId, team, _session.GetKills(playerId), _session.GetDeaths(playerId));
+            // playerId はクライアント Id をそのまま使っている (JoinNewPlayers) ので、抜けた相手でもクライアント Id に戻せる
+            var killer = _lastKillers.Get(playerId);
+            var row = new NetPlayerStats(
+                player.OwnerClientId, team, _session.GetKills(playerId), _session.GetDeaths(playerId),
+                killer.HasValue ? (ulong)killer.Value : (ulong?)null);
             var index = FindRow(row.ClientId);
             if (index < 0)
             {
@@ -955,8 +1049,10 @@ namespace Fps.Net
             }
         }
 
+        // Session は Killed の直後に倒された人の PlayerChanged を出すので、ここで記録すればその行に載る
         private void HandleKilled(int killerId, int victimId)
         {
+            _lastKillers.Record(killerId, victimId);
             var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
             Debug.Log(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId));
         }
@@ -984,6 +1080,7 @@ namespace Fps.Net
             _status.Value = new NetMatchStatus(GameModeState.Ended, winner);
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
+            SyncNextWaveSeconds();
             Debug.Log(MatchLog.Ended(winner));
             Debug.Log(MatchLog.NextMatch(_session.RestartRemainingSeconds));
         }
@@ -995,7 +1092,11 @@ namespace Fps.Net
             _status.Value = new NetMatchStatus(GameModeState.Waiting, null);
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
+            SyncNextWaveSeconds();
             _serverLoadout?.ResetBudgets();
+
+            // 続く PlayerChanged で各行が倒した相手なしに戻る
+            _lastKillers.Clear();
             Debug.Log(MatchLog.Restart());
         }
 

@@ -21,6 +21,21 @@ namespace Fps.Core.Tests
         private static readonly string[] _unknownOther = { _otherId };
         private static readonly string[] _expectedSnapshot = { _rifleId + ":29/90", _handgunId + ":10/48" };
 
+        private static GameRules Rules(bool infiniteReserve, float multiplier)
+        {
+            return new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                GameRules.DefaultWaveIntervalSeconds,
+                0f,
+                0f,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                infiniteReserve,
+                multiplier,
+                Destruction.Off);
+        }
+
         private static Loadout<Weapon> Create()
         {
             return WeaponLoadout.Create(new[] { _rifle, _handgun });
@@ -164,8 +179,46 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void CreateScalesTheReserveAndPassesInfiniteReserve()
+        {
+            var loadout = WeaponLoadout.Create(new[] { _rifle, _handgun }, Rules(infiniteReserve: true, multiplier: 1.5f));
+
+            Assert.That(loadout.Items[0].ReserveAmmo, Is.EqualTo(135));
+            Assert.That(loadout.Items[1].ReserveAmmo, Is.EqualTo(72));
+            Assert.That(loadout.Items.All(w => w.HasInfiniteReserve), Is.True);
+            Assert.That(loadout.Items[0].AmmoInMagazine, Is.EqualTo(30), "the magazine is not scaled");
+        }
+
+        [Test]
+        public void RestoreKeepsTheSavedReserveWithoutScalingItAgain()
+        {
+            var saved = new[] { new WeaponAmmo(_rifleId, 7, 20) };
+
+            var loadout = WeaponLoadout.Restore(new[] { _rifle, _handgun }, saved, _rifleId, Rules(false, 0.6f), out _);
+
+            Assert.That(loadout.Items[0].ReserveAmmo, Is.EqualTo(20), "the saved reserve already had the multiplier");
+            Assert.That(loadout.Items[0].AmmoInMagazine, Is.EqualTo(7));
+            Assert.That(loadout.Items[1].ReserveAmmo, Is.EqualTo(29), "a weapon missing from the save starts with 48 x 0.6");
+            Assert.That(loadout.Items.Any(w => w.HasInfiniteReserve), Is.False);
+        }
+
+        [Test]
+        public void RestorePassesInfiniteReserveToSavedWeapons()
+        {
+            var saved = new[] { new WeaponAmmo(_rifleId, 0, 0) };
+
+            var loadout = WeaponLoadout.Restore(new[] { _rifle }, saved, _rifleId, Rules(true, 1f), out _);
+
+            Assert.That(loadout.Current.HasInfiniteReserve, Is.True);
+            Assert.That(loadout.Current.TryStartReload(), Is.True, "an empty reserve can still reload when it is infinite");
+        }
+
+        [Test]
         public void RejectsInvalidArguments()
         {
+            Assert.Throws<ArgumentNullException>(() => WeaponLoadout.Create(new[] { _rifle }, null));
+            Assert.Throws<ArgumentNullException>(
+                () => WeaponLoadout.Restore(new[] { _rifle }, Array.Empty<WeaponAmmo>(), null, null, out _));
             Assert.Throws<ArgumentNullException>(() => WeaponLoadout.Create(null));
             Assert.Throws<ArgumentException>(() => WeaponLoadout.Create(Array.Empty<WeaponSpec>()));
             Assert.Throws<ArgumentException>(() => WeaponLoadout.Create(new[] { _rifle, null }));

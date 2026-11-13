@@ -1,0 +1,20 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- メインメニュー。Fps.Runtime.MainMenuScreen が UIDocument に読み込み、name でボタンを探して押したときの行き先をつなぐ。 -->
+    <Style src="MainMenu.uss" />
+    <ui:VisualElement name="main-menu" class="menu">
+        <ui:Label name="menu-title" text="FPS" class="menu__title" />
+        <ui:VisualElement name="menu-buttons" class="menu__buttons">
+            <!-- 並び順がゲームパッドで上下に動かすフォーカスの順番 (MainMenuScreen.ButtonNames と同じ)。 -->
+            <ui:Button name="menu-campaign" text="CAMPAIGN" class="menu__button" />
+            <ui:Button name="menu-create-lobby" text="ONLINE - CREATE LOBBY" class="menu__button" />
+            <ui:Button name="menu-join-lobby" text="ONLINE - JOIN LOBBY" class="menu__button" />
+            <ui:Button name="menu-range" text="FIRING RANGE" class="menu__button" />
+            <ui:Button name="menu-settings" text="SETTINGS" class="menu__button" />
+            <ui:Button name="menu-quit" text="QUIT" class="menu__button" />
+        </ui:VisualElement>
+        <!-- 案内 (切断の理由・シーンが無いなど)。空のときは MainMenuScreen が隠す。 -->
+        <ui:Label name="menu-notice" text="" class="menu__notice" style="display: none;" />
+        <!-- 設定画面の差し込み口。設定画面を作る側が MainMenuScreen.SettingsRequested で受け取って中身を入れる。 -->
+        <ui:VisualElement name="menu-settings-slot" class="menu__settings-slot" style="display: none;" />
+    </ui:VisualElement>
+</ui:UXML>

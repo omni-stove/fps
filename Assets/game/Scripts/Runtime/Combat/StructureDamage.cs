@@ -51,6 +51,33 @@ namespace Fps.Runtime
                 return 1;
             }
 
+            return SpreadAround(point, damage, radius);
+        }
+
+        /// <summary>
+        /// 当たったコライダーの無い被害 (グレネードの爆発など) を、point を中心に radius の球の中の建造物の部品へ配り、
+        /// <see cref="IStructureHittable.ApplyStructureHit"/> を呼んだ回数を返す。配り方は <see cref="Apply"/> の radius が 0 より大きいときと同じ。
+        /// </summary>
+        /// <param name="point">爆発の中心。</param>
+        /// <param name="damage">中心での被害。0 以上。</param>
+        /// <param name="radius">被害を広げる半径 (m)。0 より大きい有限値。</param>
+        public static int ApplyAround(Vector3 point, int damage, float radius)
+        {
+            if (damage < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(damage), damage, "damage must not be negative");
+            }
+
+            if (!(radius > 0f) || float.IsInfinity(radius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(radius), radius, "radius must be positive and finite");
+            }
+
+            return SpreadAround(point, damage, radius);
+        }
+
+        private static int SpreadAround(Vector3 point, int damage, float radius)
+        {
             var colliders = Physics.OverlapSphere(point, radius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
             // 子コライダーを持つ部品が、コライダーの数だけ被害を重ねて受けないよう、部品ごとに最大の被害を 1 回だけ渡す。
             var entries = new System.Collections.Generic.List<(IStructureHittable hittable, Collider collider, int damage)>();

@@ -746,6 +746,11 @@ namespace Fps.Runtime
             {
                 _world.Mover.enabled = active;
             }
+
+            if (_world.Grenades != null)
+            {
+                _world.Grenades.enabled = active;
+            }
         }
 
         /// <summary>HUD (専用サーバーでは無い) に <see cref="DominationView"/> を付けて試合を出す。</summary>

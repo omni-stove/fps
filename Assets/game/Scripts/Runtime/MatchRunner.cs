@@ -347,6 +347,11 @@ namespace Fps.Runtime
             {
                 _world.Mover.enabled = false;
             }
+
+            if (_world.Grenades != null)
+            {
+                _world.Grenades.enabled = false;
+            }
         }
 
         private InputAction ResolveRestartAction()

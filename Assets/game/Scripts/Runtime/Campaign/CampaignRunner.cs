@@ -632,6 +632,14 @@ namespace Fps.Runtime
 
             _lastCheckpointId = checkpointId;
             _passedCheckpointIds.Add(checkpointId);
+
+            // セーブにグレネードの数を持たせないのは、チェックポイントで満タンに戻すので、再開したときの数 (満タン) と食い違わないため。
+            var grenades = _player.GetComponent<GrenadeThrower>();
+            if (grenades != null)
+            {
+                grenades.Refill();
+            }
+
             _notice.ShowSaved(SavedNoticeSeconds);
             Debug.Log(
                 $"{LogTag} saved mission={_missionId} checkpoint={checkpointId} health={save.Health} equipped={save.EquippedWeaponId} ammo={FormatAmmo(save.Weapons)}",

@@ -155,5 +155,71 @@ namespace Fps.Core.Tests
         {
             Assert.That(Vector3.Distance(DeathCamFraming.Forward(yaw, pitch), new Vector3(x, y, z)), Is.LessThan(1e-5f));
         }
+
+        [Test]
+        public void ShoulderSitsBehindAndRightOfTheAllyFacingForward()
+        {
+            var eye = new Vector3(3f, 1.6f, -2f);
+            var offset = new Vector3(0.5f, 0.2f, -2.5f);
+
+            var position = DeathCamFraming.ShoulderPosition(eye, 0f, offset);
+
+            Assert.That(Vector3.Distance(position, eye + offset), Is.LessThan(1e-5f));
+        }
+
+        [Test]
+        public void ShoulderTurnsWithTheAlly()
+        {
+            // +X を向いた味方の右は -Z、後ろは -X
+            var position = DeathCamFraming.ShoulderPosition(Vector3.Zero, 90f, new Vector3(0.5f, 0.2f, -2.5f));
+
+            Assert.That(Vector3.Distance(position, new Vector3(-2.5f, 0.2f, -0.5f)), Is.LessThan(1e-5f));
+        }
+
+        [Test]
+        public void FreeMovesAlongTheViewIncludingPitch()
+        {
+            // 45° 上を向いて前へ進むと、前と上へ同じだけ進む
+            var delta = DeathCamFraming.FreeMoveDelta(new Vector2(0f, 1f), 0f, -45f, 4f, 0.5f);
+
+            Assert.That(delta.Length(), Is.EqualTo(2f).Within(1e-4f));
+            Assert.That(delta.Y, Is.EqualTo(delta.Z).Within(1e-4f));
+            Assert.That(delta.Y, Is.GreaterThan(0f));
+            Assert.That(delta.X, Is.EqualTo(0f).Within(1e-5f));
+        }
+
+        [Test]
+        public void FreeStrafesToTheRightOfTheYaw()
+        {
+            var delta = DeathCamFraming.FreeMoveDelta(new Vector2(1f, 0f), 90f, 30f, 1f, 1f);
+
+            Assert.That(Vector3.Distance(delta, new Vector3(0f, 0f, -1f)), Is.LessThan(1e-5f), "strafing stays level");
+        }
+
+        [Test]
+        public void FreeDiagonalIsNotFaster()
+        {
+            var delta = DeathCamFraming.FreeMoveDelta(new Vector2(1f, 1f), 0f, 0f, 3f, 1f);
+
+            Assert.That(delta.Length(), Is.EqualTo(3f).Within(1e-4f));
+        }
+
+        [TestCase(0f, 0f)]
+        [TestCase(float.NaN, 1f)]
+        [TestCase(float.PositiveInfinity, 0f)]
+        public void FreeStaysWithoutValidInput(float x, float y)
+        {
+            Assert.That(DeathCamFraming.FreeMoveDelta(new Vector2(x, y), 0f, 0f, 6f, 1f), Is.EqualTo(Vector3.Zero));
+        }
+
+        [TestCase(-1f, 1f)]
+        [TestCase(float.NaN, 1f)]
+        [TestCase(1f, -0.1f)]
+        [TestCase(1f, float.PositiveInfinity)]
+        public void FreeRejectsInvalidSpeedOrTime(float speed, float deltaSeconds)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => DeathCamFraming.FreeMoveDelta(Vector2.UnitY, 0f, 0f, speed, deltaSeconds));
+        }
     }
 }

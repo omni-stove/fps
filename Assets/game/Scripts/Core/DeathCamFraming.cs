@@ -7,6 +7,7 @@ namespace Fps.Core
     /// デスカム (<see cref="DeathCamera.Killer"/>) のカメラの置き場所と向きの計算。
     /// カメラは倒れた目の位置から、相手と反対側へ少し下がって上へ持ち上げた所 (<see cref="BoomOffset"/>) に置き、
     /// そこから相手 (いなければ倒れた目の位置) を向く (<see cref="LookAt"/>)。
+    /// 味方の肩越し (<see cref="DeathCamera.Ally"/>) は <see cref="ShoulderPosition"/>、自由カメラ (<see cref="DeathCamera.Free"/>) の移動は <see cref="FreeMoveDelta"/>。
     /// 角度は <see cref="LookAngles"/> と同じく Unity の規則で、yaw は +Z を 0 として +X へ回る向きが正、pitch は正が下向き。
     /// </summary>
     public static class DeathCamFraming
@@ -16,6 +17,9 @@ namespace Fps.Core
 
         /// <summary>倒れた目から、相手と反対側へカメラを下げる水平の距離 (m)。倒れた位置も画面に入れるため。</summary>
         public const float DefaultBackDistance = 2f;
+
+        /// <summary>自由カメラ (<see cref="DeathCamera.Free"/>) を倒し切ったときの速さ (m/s)。</summary>
+        public const float DefaultFreeSpeed = 6f;
 
         // これより短い水平の距離は、向きが決まらないとみなす。
         private const float _minLengthSquared = 1e-8f;
@@ -85,6 +89,52 @@ namespace Fps.Core
 
             yaw = angles.Yaw;
             pitch = angles.Pitch;
+        }
+
+        /// <summary>
+        /// 味方の肩越し (<see cref="DeathCamera.Ally"/>) のカメラの位置。味方の目から、味方の yaw で回した shoulderOffset (目のローカル座標、
+        /// x が右・y が上・z が前) の先。壁で縮めるのは呼び出し側。
+        /// </summary>
+        /// <param name="eye">味方の目の位置。</param>
+        /// <param name="yaw">味方の体の向き (度)。有限でなければ 0 とみなす。</param>
+        /// <param name="shoulderOffset">目から見たカメラの位置。三人称のカメラと同じ値を渡す。</param>
+        public static Vector3 ShoulderPosition(Vector3 eye, float yaw, Vector3 shoulderOffset)
+        {
+            var forward = YawForward(yaw);
+            var right = new Vector3(forward.Z, 0f, -forward.X);
+            return eye + (right * shoulderOffset.X) + (Vector3.UnitY * shoulderOffset.Y) + (forward * shoulderOffset.Z);
+        }
+
+        /// <summary>
+        /// 自由カメラ (<see cref="DeathCamera.Free"/>) の 1 フレームの移動量 (ワールド座標、m)。
+        /// move の y は向いている方 (pitch を含むので、上を向いて進めば上る)、x は右へ進む。move は長さ 1 に収める。
+        /// 壁で止めるのは呼び出し側。
+        /// </summary>
+        /// <param name="move">Move 入力。有限でなければ動かない。</param>
+        /// <param name="yaw">カメラの左右の向き (度)。</param>
+        /// <param name="pitch">カメラの上下の向き (度、正が下)。</param>
+        /// <param name="speed">倒し切ったときの速さ (m/s)。0 以上の有限値。</param>
+        /// <param name="deltaSeconds">経過時間 (秒)。0 以上の有限値。</param>
+        public static Vector3 FreeMoveDelta(Vector2 move, float yaw, float pitch, float speed, float deltaSeconds)
+        {
+            RequireFiniteNonNegative(speed, nameof(speed));
+            RequireFiniteNonNegative(deltaSeconds, nameof(deltaSeconds));
+
+            var lengthSquared = move.LengthSquared();
+            if (!IsFinite(lengthSquared) || lengthSquared < _minLengthSquared)
+            {
+                return Vector3.Zero;
+            }
+
+            if (lengthSquared > 1f)
+            {
+                move /= (float)Math.Sqrt(lengthSquared);
+            }
+
+            var flat = YawForward(yaw);
+            var right = new Vector3(flat.Z, 0f, -flat.X);
+            var direction = (Forward(yaw, pitch) * move.Y) + (right * move.X);
+            return direction * (speed * deltaSeconds);
         }
 
         /// <summary>yaw (度) の水平の正面。Unity の Quaternion.Euler(0, yaw, 0) * Vector3.forward と同じ向き。</summary>

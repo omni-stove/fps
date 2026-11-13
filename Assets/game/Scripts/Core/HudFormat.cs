@@ -91,6 +91,116 @@ namespace Fps.Core
             return "次の試合まで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
         }
 
+        /// <summary>リロード中に弾倉の数の代わりに出す文字列。</summary>
+        public const string Reloading = "リロード中";
+
+        /// <summary>
+        /// 弾数。リロード中は弾倉の数の代わりに <see cref="Reloading"/> を出し、予備はそのまま出す
+        /// (弾倉の数はリロードが終わるまで変わらず、撃てるように見えてしまうため)。
+        /// </summary>
+        /// <example><c>Ammo(0, 90, true)</c> は <c>リロード中 / 90</c>、<c>Ammo(30, 90, false)</c> は <c>30 / 90</c></example>
+        public static string Ammo(int magazine, int reserve, bool reloading)
+        {
+            var text = Ammo(magazine, reserve);
+            if (!reloading)
+            {
+                return text;
+            }
+
+            return Reloading + AmmoSeparator + reserve.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// 体力が少ないと見なす割合。最大体力のこの割合以下 (0 は除く) で HUD が体力を警告の色にする。
+        /// </summary>
+        public const float LowHealthRatio = 0.25f;
+
+        /// <summary>体力が警告の色で出すほど少ないか。倒れている (0) ときと最大体力を超えるときは false。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">current が負か、max が 1 未満。</exception>
+        public static bool IsLowHealth(int current, int max)
+        {
+            if (current < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(current), current, "current must not be negative");
+            }
+
+            if (max < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(max), max, "max must be at least 1");
+            }
+
+            return current > 0 && current <= max * LowHealthRatio;
+        }
+
+        /// <summary>チームの点数がまだ無い (チーム戦でない) ときの表示。空文字のときは HUD が点数の欄ごと隠す。</summary>
+        public const string NoScore = "";
+
+        /// <summary>HUD に出すチーム名。</summary>
+        /// <example><c>TeamName(Team.Alpha)</c> は <c>ALPHA</c></example>
+        public static string TeamName(Team team)
+        {
+            switch (team)
+            {
+                case Team.Alpha:
+                    return "ALPHA";
+                case Team.Bravo:
+                    return "BRAVO";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(team), team, "team is not a valid Team");
+            }
+        }
+
+        /// <summary>チーム名と点数。</summary>
+        /// <example><c>TeamScore(Team.Bravo, 3)</c> は <c>BRAVO 3</c></example>
+        public static string TeamScore(Team team, int score)
+        {
+            if (score < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(score), score, "score must not be negative");
+            }
+
+            return TeamName(team) + " " + score.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>自分のチームの相手。点数を自分のチーム・相手の順に並べるのに使う。</summary>
+        public static Team Opponent(Team team)
+        {
+            switch (team)
+            {
+                case Team.Alpha:
+                    return Team.Bravo;
+                case Team.Bravo:
+                    return Team.Alpha;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(team), team, "team is not a valid Team");
+            }
+        }
+
+        /// <summary>試合結果がまだ無い (試合中か開始前) ときの表示。空文字のときは HUD が結果の欄ごと隠す。</summary>
+        public const string NoResult = "";
+
+        /// <summary>引き分けで終わったときの結果。</summary>
+        public const string Draw = "引き分け";
+
+        /// <summary>試合が終わったときの結果。勝ったチームか、勝者がいなければ引き分け。</summary>
+        /// <example><c>Result(Team.Alpha)</c> は <c>ALPHA の勝ち</c>、<c>Result(null)</c> は <c>引き分け</c></example>
+        public static string Result(Team? winner)
+        {
+            return winner.HasValue ? TeamName(winner.Value) + " の勝ち" : Draw;
+        }
+
+        /// <summary>倒れてからリスポーンするまでの案内。秒数は切り上げた整数で受ける。</summary>
+        /// <example><c>Respawn(3)</c> は <c>リスポーンまで 3 秒</c></example>
+        public static string Respawn(int seconds)
+        {
+            if (seconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
+            }
+
+            return "リスポーンまで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+        }
+
         /// <summary>案内が無いときの表示。空文字のときは HUD が案内の欄ごと隠す。</summary>
         public const string NoNotice = "";
 

@@ -163,6 +163,15 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void CreatesTheHudOnlyForOwnerWithScreen()
+        {
+            Assert.That(NetStartup.ShouldCreateHud(true, false, false), Is.True);
+            Assert.That(NetStartup.ShouldCreateHud(false, false, false), Is.False);
+            Assert.That(NetStartup.ShouldCreateHud(true, true, false), Is.False);
+            Assert.That(NetStartup.ShouldCreateHud(true, false, true), Is.False);
+        }
+
+        [Test]
         public void RejectsNullArguments()
         {
             Assert.Throws<ArgumentNullException>(

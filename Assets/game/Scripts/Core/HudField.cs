@@ -7,7 +7,13 @@ namespace Fps.Core
         Ammo,
         Time,
 
-        /// <summary>一時的な案内 (キャンペーンのセーブ・再開までの秒数)。</summary>
+        /// <summary>一時的な案内 (キャンペーンのセーブ・再開までの秒数、リスポーン・次の試合までの秒数)。</summary>
         Notice,
+
+        /// <summary>チームの点数 (自分のチームが先)。チーム戦でなければ出さない。</summary>
+        Score,
+
+        /// <summary>試合結果 (勝ったチームか引き分け)。試合が終わっている間だけ出す。</summary>
+        Result,
     }
 }

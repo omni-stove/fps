@@ -37,6 +37,72 @@ namespace Fps.Tests.EditMode
             Assert.That(root.Q<Label>(HudView.TimeLabelName), Is.Not.Null);
             Assert.That(root.Q<VisualElement>(HudView.CrosshairName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.NoticeLabelName), Is.Not.Null);
+            Assert.That(root.Q<VisualElement>(HudView.ScorePanelName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.FirstScoreLabelName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.SecondScoreLabelName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.ResultLabelName), Is.Not.Null);
+        }
+
+        [Test]
+        public void TheOfflineHudHidesTheScoresAndTheResult()
+        {
+            var view = new HudView(CloneLayout(), new HudModel());
+
+            Assert.That(view.ScorePanel.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void ScoresShowTheOwnTeamFirstInTheTeamColors()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+            var alpha = new Color(0f, 0f, 1f);
+            var bravo = new Color(1f, 0f, 0f);
+            view.SetTeamColors(alpha, bravo);
+
+            model.SetScores(Team.Bravo, 1, 4);
+
+            Assert.That(view.ScorePanel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.FirstScoreLabel.text, Is.EqualTo("BRAVO 4"));
+            Assert.That(view.SecondScoreLabel.text, Is.EqualTo("ALPHA 1"));
+            Assert.That(view.FirstScoreLabel.style.color.value, Is.EqualTo(bravo));
+            Assert.That(view.SecondScoreLabel.style.color.value, Is.EqualTo(alpha));
+
+            model.ClearScores();
+            Assert.That(view.ScorePanel.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheResultIsShownOnlyWhileItHasText()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            model.SetResult(null);
+            Assert.That(view.ResultLabel.text, Is.EqualTo(HudFormat.Draw));
+            Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            model.ClearResult();
+            Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void ReloadingAndLowHealthChangeTheStyle()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            model.SetAmmo(0, 90, true);
+            model.SetHealth(10, 100);
+            Assert.That(view.AmmoLabel.text, Is.EqualTo(HudFormat.Ammo(0, 90, true)));
+            Assert.That(view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.True);
+            Assert.That(view.HealthLabel.ClassListContains(HudView.LowHealthClass), Is.True);
+
+            model.SetAmmo(30, 60, false);
+            model.SetHealth(100, 100);
+            Assert.That(view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.False);
+            Assert.That(view.HealthLabel.ClassListContains(HudView.LowHealthClass), Is.False);
         }
 
         [Test]

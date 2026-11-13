@@ -148,5 +148,14 @@ namespace Fps.Core
         {
             return isOwner && !isBatchMode && !ShouldDisablePresentation(isDedicatedServer);
         }
+
+        /// <summary>
+        /// ネットワークのプレイヤーの生成時に HUD を作るか。自分が操作するプレイヤー (オーナー) だけで、
+        /// 画面の無い batchmode と専用サーバーでは作らない。
+        /// </summary>
+        public static bool ShouldCreateHud(bool isOwner, bool isBatchMode, bool isDedicatedServer)
+        {
+            return isOwner && !isBatchMode && !ShouldDisablePresentation(isDedicatedServer);
+        }
     }
 }

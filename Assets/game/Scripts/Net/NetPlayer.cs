@@ -20,6 +20,9 @@ namespace Fps.Net
     /// 自分のプレイヤー (オーナー) で画面があるときだけ有効にし、シーンの <see cref="NetSpectatorCamera"/> を止める。
     /// 一人称か三人称かは ViewRig の Mode で決まり、射撃はどちらでも目から画面中央が指す点へ撃つ。
     /// </para>
+    /// <para>
+    /// HUD も同じ条件 (<see cref="NetStartup.ShouldCreateHud"/>) で生成時に <see cref="NetHud.Create"/> で作り、消滅時に消す。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -74,9 +77,21 @@ namespace Fps.Net
         private bool _hasLocalView;
         private bool _viewResolved;
 
+        // HUD を作ったときだけ。自分のプレイヤーで画面があるときに作る
+        private NetHud _hud;
+
         public Team Team => _team.Value;
         public int Health => _health.Value;
         public bool IsAlive => _health.Value > 0;
+
+        /// <summary><see cref="NetHud"/> が OnValueChanged を購読するチームの同期値。</summary>
+        internal NetworkVariable<Team> TeamVariable => _team;
+
+        /// <summary><see cref="NetHud"/> が OnValueChanged を購読する体力の同期値。</summary>
+        internal NetworkVariable<int> HealthVariable => _health;
+
+        /// <summary>このプレイヤーの HUD。自分のプレイヤーで画面があるときだけあり、他では null。</summary>
+        public NetHud LocalHud => _hud;
 
         /// <summary>同じオブジェクトの武器 (弾倉・リロード)。プレハブに無ければ null。</summary>
         public NetPlayerWeapon Weapon => _weapon;
@@ -121,6 +136,11 @@ namespace Fps.Net
             {
                 ResolveAttackAction();
             }
+
+            if (NetStartup.ShouldCreateHud(IsOwner, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
+            {
+                CreateHud();
+            }
         }
 
         public override void OnNetworkDespawn()
@@ -129,6 +149,7 @@ namespace Fps.Net
             _health.OnValueChanged -= HandleHealthChanged;
             ReleaseAttackAction();
             SetLocalView(false);
+            DestroyHud();
 
             if (IsServer && NetTeamDeathmatch.Current != null)
             {
@@ -144,6 +165,8 @@ namespace Fps.Net
                 _hasLocalView = false;
                 NetSpectatorCamera.RemoveLocalView();
             }
+
+            DestroyHud();
 
             foreach (var material in _ownedMaterials)
             {
@@ -420,6 +443,35 @@ namespace Fps.Net
             {
                 hitbox.enabled = alive;
             }
+        }
+
+        private void CreateHud()
+        {
+            if (_hud != null)
+            {
+                return;
+            }
+
+            try
+            {
+                _hud = NetHud.Create(this);
+                Debug.Log("[Net] HUD created for " + name, this);
+            }
+            catch (InvalidOperationException e)
+            {
+                // HUD が無くても遊べるので、プレイヤーの生成は止めない
+                Debug.LogError("[Net] could not create the HUD: " + e.Message, this);
+            }
+        }
+
+        private void DestroyHud()
+        {
+            if (_hud != null)
+            {
+                Destroy(_hud.gameObject);
+            }
+
+            _hud = null;
         }
 
         private void ResolveAttackAction()

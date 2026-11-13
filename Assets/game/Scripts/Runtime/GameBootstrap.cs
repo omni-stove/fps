@@ -68,10 +68,10 @@ namespace Fps.Runtime
         public const float TargetDummyRespawnDelay = TargetDummy.DefaultRespawnDelay;
 
         public const string HudName = "HUD";
-        public const string HudPanelSettingsName = "HudPanelSettings";
+        public const string HudPanelSettingsName = Hud.PanelSettingsName;
 
         /// <summary>HUD の基準解像度。これより大きい・小さい画面では幅と高さの中間で拡縮する。</summary>
-        public static readonly Vector2Int HudReferenceResolution = new Vector2Int(1920, 1080);
+        public static readonly Vector2Int HudReferenceResolution = Hud.ReferenceResolution;
 
         [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
         private bool _createFloor = true;
@@ -396,67 +396,16 @@ namespace Fps.Runtime
             return root;
         }
 
-        /// <summary>
-        /// HUD 用の PanelSettings と UIDocument を作り、Resources の Hud.uxml とテーマを読み込んで <see cref="Hud"/> に源を渡す。
-        /// UIDocument が有効になる前に参照をすべて設定するため、GameObject は無効で作ってから有効にする。
-        /// </summary>
+        /// <summary>HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡す。</summary>
         private static GameObject CreateHud(
             Damageable player,
             WeaponController weapon,
             out Hud hud,
             out PanelSettings panelSettings)
         {
-            var layout = Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath);
-            if (layout == null)
-            {
-                throw new InvalidOperationException(
-                    $"HUD layout 'Resources/{Hud.LayoutResourcePath}.uxml' was not found (expected under Assets/game/UI/Resources)");
-            }
-
-            var theme = Resources.Load<ThemeStyleSheet>(Hud.ThemeResourcePath);
-            if (theme == null)
-            {
-                throw new InvalidOperationException(
-                    $"HUD theme 'Resources/{Hud.ThemeResourcePath}.tss' was not found (expected under Assets/game/UI/Resources)");
-            }
-
-            panelSettings = null;
-            GameObject hudObject = null;
-            try
-            {
-                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-                panelSettings.name = HudPanelSettingsName;
-                panelSettings.themeStyleSheet = theme;
-                panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-                panelSettings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
-                panelSettings.referenceResolution = HudReferenceResolution;
-                panelSettings.match = 0.5f;
-
-                hudObject = new GameObject(HudName);
-                hudObject.SetActive(false);
-                var document = hudObject.AddComponent<UIDocument>();
-                document.panelSettings = panelSettings;
-                document.visualTreeAsset = layout;
-
-                hud = hudObject.AddComponent<Hud>();
-                hud.Initialize(player, weapon, null, panelSettings);
-
-                // 有効にすると UIDocument が木を作り、Play 中は Hud の OnEnable が Label を探す。
-                // Edit Mode では Hud の OnEnable が走らないので、木ができていればここで探す。
-                hudObject.SetActive(true);
-                if (!Application.isPlaying)
-                {
-                    hud.RebuildView();
-                }
-            }
-            catch
-            {
-                DestroySafely(hudObject);
-                DestroySafely(panelSettings);
-                throw;
-            }
-
-            return hudObject;
+            hud = Hud.Create(HudName, player, weapon, null);
+            panelSettings = hud.OwnedPanelSettings;
+            return hud.gameObject;
         }
 
         private static GameObject CreateLight(out Light light)

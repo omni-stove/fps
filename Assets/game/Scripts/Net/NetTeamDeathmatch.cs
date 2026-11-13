@@ -134,8 +134,36 @@ namespace Fps.Net
         private float _activeMaxShotOriginOffset;
         private float _nextRejectWarningTime;
 
+        private static NetTeamDeathmatch _current;
+
         /// <summary>このプロセスで Spawn されている試合。サーバーでもクライアントでも設定される。無ければ null。</summary>
-        public static NetTeamDeathmatch Current { get; private set; }
+        public static NetTeamDeathmatch Current
+        {
+            get => _current;
+            private set
+            {
+                if (_current == value)
+                {
+                    return;
+                }
+
+                _current = value;
+                CurrentChanged?.Invoke(value);
+            }
+        }
+
+        /// <summary>
+        /// <see cref="Current"/> が変わったときに新しい値 (消えたら null) を渡して呼ばれる。
+        /// プレイヤーと試合のどちらが先に Spawn されるかは決まっていないので、HUD はこれで試合を待つ。
+        /// </summary>
+        public static event Action<NetTeamDeathmatch> CurrentChanged;
+
+        /// <summary><see cref="NetHud"/> が OnValueChanged を購読する同期値。</summary>
+        internal NetworkVariable<int> AlphaScoreVariable => _alphaScore;
+        internal NetworkVariable<int> BravoScoreVariable => _bravoScore;
+        internal NetworkVariable<int> RemainingSecondsVariable => _remainingSeconds;
+        internal NetworkVariable<int> NextMatchSecondsVariable => _nextMatchSeconds;
+        internal NetworkVariable<NetMatchStatus> StatusVariable => _status;
 
         public int AlphaScore => _alphaScore.Value;
         public int BravoScore => _bravoScore.Value;

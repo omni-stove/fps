@@ -11,6 +11,8 @@ namespace Fps.Runtime
     /// <see cref="Initialize"/> でコードから渡す。値はそれぞれのイベントで <see cref="HudModel"/> が更新し、
     /// <see cref="HudView"/> が Label に写す。毎フレームは読みに行かない。
     /// Health や Weapon が作り直されたとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
+    /// オンライン (Fps.Net の NetHud) は源を渡さずに作り、<see cref="Model"/> の Set 系で値を書く。チームの点数 (左上) と
+    /// 試合結果 (中央上) はそのときだけ出る。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(UIDocument))]
@@ -24,17 +26,104 @@ namespace Fps.Runtime
         /// <summary>Resources からのランタイムテーマ (Assets/game/UI/Resources/Hud/HudTheme.tss)。</summary>
         public const string ThemeResourcePath = "Hud/HudTheme";
 
+        /// <summary><see cref="Create"/> が作る PanelSettings の名前。</summary>
+        public const string PanelSettingsName = "HudPanelSettings";
+
+        /// <summary>HUD の基準解像度。Hud.uss の寸法はこの解像度で決めてあり、画面の大きさに合わせて拡縮する。</summary>
+        public static readonly Vector2Int ReferenceResolution = new Vector2Int(1920, 1080);
+
         private readonly HudModel _model = new HudModel();
         private HudView _view;
         private Damageable _player;
         private WeaponController _weapon;
         private PanelSettings _ownedPanelSettings;
+        private Color _alphaColor = Color.white;
+        private Color _bravoColor = Color.white;
 
         /// <summary>表示中の文字列。</summary>
         public HudModel Model => _model;
 
         /// <summary>Label に写している View。UIDocument の木がまだ無ければ null。</summary>
         public HudView View => _view;
+
+        /// <summary>この HUD 用に作り、破棄時に一緒に消す PanelSettings。無ければ null。</summary>
+        public PanelSettings OwnedPanelSettings => _ownedPanelSettings;
+
+        /// <summary>
+        /// HUD 用の PanelSettings と UIDocument を持つ GameObject を objectName で作り、Resources の Hud.uxml とテーマを読み込んで
+        /// <see cref="Initialize"/> で源を渡す。源はどれも null 可 (Set 系で <see cref="Model"/> に直接書く場合)。
+        /// UIDocument が有効になる前に参照をすべて設定するため、GameObject は無効で作ってから有効にする。
+        /// 失敗したら作りかけのものは消して例外を投げる。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Resources にレイアウトかテーマが無い。</exception>
+        public static Hud Create(string objectName, Damageable player, WeaponController weapon, Match match)
+        {
+            var layout = Resources.Load<VisualTreeAsset>(LayoutResourcePath);
+            if (layout == null)
+            {
+                throw new InvalidOperationException(
+                    $"HUD layout 'Resources/{LayoutResourcePath}.uxml' was not found (expected under Assets/game/UI/Resources)");
+            }
+
+            var theme = Resources.Load<ThemeStyleSheet>(ThemeResourcePath);
+            if (theme == null)
+            {
+                throw new InvalidOperationException(
+                    $"HUD theme 'Resources/{ThemeResourcePath}.tss' was not found (expected under Assets/game/UI/Resources)");
+            }
+
+            PanelSettings panelSettings = null;
+            GameObject hudObject = null;
+            try
+            {
+                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                panelSettings.name = PanelSettingsName;
+                panelSettings.themeStyleSheet = theme;
+                panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+                panelSettings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+                panelSettings.referenceResolution = ReferenceResolution;
+                panelSettings.match = 0.5f;
+
+                hudObject = new GameObject(objectName);
+                hudObject.SetActive(false);
+                var document = hudObject.AddComponent<UIDocument>();
+                document.panelSettings = panelSettings;
+                document.visualTreeAsset = layout;
+
+                var hud = hudObject.AddComponent<Hud>();
+                hud.Initialize(player, weapon, match, panelSettings);
+
+                // 有効にすると UIDocument が木を作り、Play 中は Hud の OnEnable が Label を探す。
+                // Edit Mode では Hud の OnEnable が走らないので、木ができていればここで探す。
+                hudObject.SetActive(true);
+                if (!Application.isPlaying)
+                {
+                    hud.RebuildView();
+                }
+
+                return hud;
+            }
+            catch
+            {
+                DestroySafely(hudObject);
+                DestroySafely(panelSettings);
+                throw;
+            }
+        }
+
+        /// <summary>チームの点数を塗る色を決める。View を作り直しても引き継ぐ。</summary>
+        public void SetTeamColors(Color alpha, Color bravo)
+        {
+            _alphaColor = alpha;
+            _bravoColor = bravo;
+            _view?.SetTeamColors(alpha, bravo);
+        }
+
+        /// <summary>team の点数を塗る色。<see cref="SetTeamColors"/> の前は白。</summary>
+        public Color TeamColor(Team team)
+        {
+            return team == Team.Bravo ? _bravoColor : _alphaColor;
+        }
 
         /// <summary>
         /// 値の源を渡して購読する。どれも null 可 (その項目は仮の表示になる)。前に渡した源の購読は外す。
@@ -101,6 +190,7 @@ namespace Fps.Runtime
             }
 
             _view = new HudView(root, _model);
+            _view.SetTeamColors(_alphaColor, _bravoColor);
             return true;
         }
 
@@ -153,6 +243,23 @@ namespace Fps.Runtime
             {
                 Destroy(_ownedPanelSettings);
                 _ownedPanelSettings = null;
+            }
+        }
+
+        private static void DestroySafely(UnityEngine.Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
             }
         }
 

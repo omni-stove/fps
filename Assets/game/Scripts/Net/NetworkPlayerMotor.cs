@@ -39,7 +39,7 @@ namespace Fps.Net
     /// 死亡・リスポーンでは <see cref="NetPlayer"/> が <see cref="ReleaseCrouch"/> を呼ぶ。
     /// </para>
     /// <para>
-    /// サーバーで確定した着地は .Landing.cs の partial メソッドに渡す。ダウン中に動けなくする処理は .Downed.cs に分けてある。
+    /// サーバーで確定した着地 (落下ダメージ) は .Landing.cs で扱う。ダウン中に動けなくする処理は .Downed.cs に分けてある。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]

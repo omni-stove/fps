@@ -48,7 +48,10 @@ namespace Fps.Core.Tests
         [Test]
         public void DefaultIsTheSameInstanceEveryTime()
         {
-            Assert.That(GameRules.Default, Is.SameAs(GameRules.Default));
+            var first = GameRules.Default;
+            var second = GameRules.Default;
+
+            Assert.That(first, Is.SameAs(second));
         }
 
         [Test]
@@ -79,22 +82,22 @@ namespace Fps.Core.Tests
         [Test]
         public void AcceptsEveryDefinedEnumValue()
         {
-            foreach (FriendlyFire value in Enum.GetValues(typeof(FriendlyFire)))
+            foreach (FriendlyFire value in Enum.GetValues<FriendlyFire>())
             {
                 Assert.That(Rules(friendlyFire: value).FriendlyFire, Is.EqualTo(value));
             }
 
-            foreach (RespawnMode value in Enum.GetValues(typeof(RespawnMode)))
+            foreach (RespawnMode value in Enum.GetValues<RespawnMode>())
             {
                 Assert.That(Rules(respawnMode: value).RespawnMode, Is.EqualTo(value));
             }
 
-            foreach (DeathBody value in Enum.GetValues(typeof(DeathBody)))
+            foreach (DeathBody value in Enum.GetValues<DeathBody>())
             {
                 Assert.That(Rules(deathBody: value).DeathBody, Is.EqualTo(value));
             }
 
-            foreach (DeathCamera value in Enum.GetValues(typeof(DeathCamera)))
+            foreach (DeathCamera value in Enum.GetValues<DeathCamera>())
             {
                 Assert.That(Rules(deathCamera: value).DeathCamera, Is.EqualTo(value));
             }

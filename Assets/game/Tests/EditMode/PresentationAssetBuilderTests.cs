@@ -44,7 +44,27 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(PresentationAssetBuilder.AudioFolder, Is.EqualTo("Assets/game/Audio"));
             Assert.That(PresentationAssetBuilder.PresentationFolder, Is.EqualTo("Assets/game/Presentation"));
-            Assert.That(PresentationAssetBuilder.CatalogPath, Is.EqualTo("Assets/game/Presentation/PresentationCatalog.asset"));
+            Assert.That(
+                PresentationAssetBuilder.CatalogPath, Is.EqualTo("Assets/game/Presentation/Resources/Presentation/PresentationCatalog.asset"));
+        }
+
+        [Test]
+        public void CatalogPathIsWherePresentationCatalogLoadLooks()
+        {
+            Assert.That(
+                PresentationAssetBuilder.CatalogPath,
+                Does.EndWith("/Resources/" + PresentationCatalog.ResourcePath + ".asset"),
+                "WeaponPresentation and HitMarkerView read the catalog with Resources.Load");
+        }
+
+        [Test]
+        public void BuildCreatesTheCatalogFolderWhenItIsNested()
+        {
+            var nested = _presentationFolder + "/Resources/Presentation/PresentationCatalog.asset";
+
+            var catalog = PresentationAssetBuilder.BuildAt(_audioFolder, _presentationFolder, nested);
+
+            Assert.That(catalog, Is.SameAs(AssetDatabase.LoadAssetAtPath<PresentationCatalog>(nested)));
         }
 
         [Test]

@@ -150,6 +150,7 @@ namespace Fps.Core.Tests
             loadout.Current.TryFire();
             loadout.SelectNext();
             loadout.Current.TryFire();
+            loadout.Current.Tick(1f);
             loadout.Current.TryFire();
 
             var snapshot = loadout.SnapshotAmmo();

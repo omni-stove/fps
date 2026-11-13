@@ -3,6 +3,7 @@
     "rootNamespace": "Fps.Net.Tests",
     "references": [
         "Fps.Core",
+        "Fps.Editor",
         "Fps.Net",
         "Fps.Net.Editor",
         "Fps.Runtime",

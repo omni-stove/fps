@@ -72,6 +72,19 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void MatchPrefabTakesWeaponsFromTheCatalogAsset()
+        {
+            var match = MatchPrefabComponent();
+
+            Assert.That(match.Catalog, Is.Not.Null, "the match has no weapon catalog; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(AssetDatabase.GetAssetPath(match.Catalog), Is.EqualTo(Fps.Editor.WeaponAssetBuilder.CatalogPath));
+
+            // サーバーの起動時と同じ検査に通り、参加者に持たせる武器がある
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(match.Catalog, out var loadout, out var error), Is.True, error);
+            Assert.That(loadout.Catalog.Contains(NetTeamDeathmatch.DefaultWeaponId), Is.True);
+        }
+
+        [Test]
         public void SpawnPointsCanStartTeamDeathmatch()
         {
             var points = _scene.GetRootGameObjects()

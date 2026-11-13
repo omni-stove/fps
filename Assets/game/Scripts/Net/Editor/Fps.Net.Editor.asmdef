@@ -3,6 +3,7 @@
     "rootNamespace": "Fps.Editor",
     "references": [
         "Fps.Core",
+        "Fps.Editor",
         "Fps.Net",
         "Fps.Runtime",
         "Unity.Netcode.Runtime"

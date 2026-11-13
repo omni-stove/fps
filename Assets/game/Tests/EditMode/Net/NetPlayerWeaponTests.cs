@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Fps.Core;
+using Fps.Runtime;
 using NUnit.Framework;
 using Unity.Netcode;
 using UnityEngine;
@@ -30,22 +31,18 @@ namespace Fps.Net.Tests
             _created.Clear();
         }
 
+        // ネット対戦と同じく、武器の値は定義アセット (WeaponDefinition の既定 = rifle) から引く
         private static WeaponSpec DefaultSpec()
         {
-            return new WeaponSpec(
-                NetTeamDeathmatch.DefaultWeaponId,
-                null,
-                FireMode.Auto,
-                NetPlayerWeapon.DefaultMagazineSize,
-                NetPlayerWeapon.DefaultReserveAmmo,
-                NetTeamDeathmatch.DefaultFireInterval,
-                NetPlayerWeapon.DefaultReloadSeconds,
-                NetTeamDeathmatch.DefaultWeaponDamage,
-                NetTeamDeathmatch.DefaultWeaponRange,
-                new DamageFalloff(
-                    NetTeamDeathmatch.DefaultFalloffStart,
-                    NetTeamDeathmatch.DefaultFalloffEnd,
-                    NetTeamDeathmatch.DefaultFalloffMinMultiplier));
+            var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                return definition.ToSpec();
+            }
+            finally
+            {
+                Object.DestroyImmediate(definition);
+            }
         }
 
         private NetPlayerWeapon CreateWeapon()
@@ -60,20 +57,51 @@ namespace Fps.Net.Tests
 
         private static void EmptyMagazine(NetPlayerWeapon weapon)
         {
-            for (var i = 0; i < NetPlayerWeapon.DefaultMagazineSize; i++)
+            for (var i = 0; i < weapon.ServerWeapon.Spec.MagazineSize; i++)
             {
                 Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.None), "shot " + i);
             }
         }
 
         [Test]
-        public void DefaultsMatchTheOfflineWeapon()
+        public void DefaultSpecIsTheRifleOfTheOfflineWeapon()
         {
-            // オフラインの WeaponController (Fps.Runtime) と同じ 30 発 / 予備 90 / 連射間隔 0.1 秒 / リロード 2 秒
-            Assert.That(NetPlayerWeapon.DefaultMagazineSize, Is.EqualTo(30));
-            Assert.That(NetPlayerWeapon.DefaultReserveAmmo, Is.EqualTo(90));
-            Assert.That(NetTeamDeathmatch.DefaultFireInterval, Is.EqualTo(0.1f));
-            Assert.That(NetPlayerWeapon.DefaultReloadSeconds, Is.EqualTo(2f));
+            // 以下のテストの弾数は、オフラインの WeaponController と同じ rifle (30 発 / 予備 90 / リロード 2 秒) を前提にする
+            var spec = DefaultSpec();
+            Assert.That(spec.Id, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(spec.MagazineSize, Is.EqualTo(30));
+            Assert.That(spec.ReserveAmmo, Is.EqualTo(90));
+            Assert.That(spec.ReloadSeconds, Is.EqualTo(2f));
+        }
+
+        [Test]
+        public void EquipSetsTheWeaponIdSentWithShots()
+        {
+            var go = new GameObject("Unequipped");
+            _created.Add(go);
+            go.AddComponent<NetworkObject>();
+            var weapon = go.AddComponent<NetPlayerWeapon>();
+            Assert.That(weapon.WeaponId, Is.Empty, "no weapon id is sent before the server equips one");
+
+            weapon.ServerEquip(DefaultSpec());
+            Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+
+            weapon.ServerEquip(new WeaponSpec("handgun", null, FireMode.Semi, 5, 10, 0.1f, 1f, 25, 50f, DamageFalloff.None));
+            Assert.That(weapon.WeaponId, Is.EqualTo("handgun"));
+        }
+
+        [Test]
+        public void RejectsAWeaponIdTooLongToSend()
+        {
+            var weapon = CreateWeapon();
+            var longId = new string('a', 30);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(new string('a', 29)), Is.True);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(longId), Is.False);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(null), Is.False);
+
+            Assert.Throws<System.ArgumentException>(
+                () => weapon.ServerEquip(new WeaponSpec(longId, null, FireMode.Auto, 5, 10, 0.1f, 1f, 25, 50f, DamageFalloff.None)));
+            Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId), "the previous weapon is kept");
         }
 
         [Test]
@@ -121,7 +149,7 @@ namespace Fps.Net.Tests
             EmptyMagazine(weapon);
             weapon.ServerTryFire();
 
-            weapon.ServerWeapon.Tick(NetPlayerWeapon.DefaultReloadSeconds);
+            weapon.ServerWeapon.Tick(weapon.ServerWeapon.Spec.ReloadSeconds);
 
             Assert.That(weapon.ServerWeapon.IsReloading, Is.False);
             Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(30));
@@ -140,7 +168,7 @@ namespace Fps.Net.Tests
             Assert.That(weapon.ServerWeapon.IsReloading, Is.True);
             Assert.That(weapon.ServerTryFire(), Is.EqualTo(ShotRejection.Reloading));
 
-            weapon.ServerWeapon.Tick(NetPlayerWeapon.DefaultReloadSeconds);
+            weapon.ServerWeapon.Tick(weapon.ServerWeapon.Spec.ReloadSeconds);
 
             Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(30));
             Assert.That(weapon.ServerWeapon.ReserveAmmo, Is.EqualTo(89));
@@ -167,7 +195,7 @@ namespace Fps.Net.Tests
             var weapon = CreateWeapon();
             EmptyMagazine(weapon);
             weapon.ServerTryFire();
-            weapon.ServerWeapon.Tick(NetPlayerWeapon.DefaultReloadSeconds);
+            weapon.ServerWeapon.Tick(weapon.ServerWeapon.Spec.ReloadSeconds);
             EmptyMagazine(weapon);
             weapon.ServerTryFire();
             Assert.That(weapon.ServerWeapon.IsReloading, Is.True);

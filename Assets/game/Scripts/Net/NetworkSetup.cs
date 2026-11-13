@@ -11,6 +11,7 @@ namespace Fps.Net
     /// <see cref="NetworkManager"/> と transport (UDP なら <see cref="UnityTransport"/>、EOS なら
     /// <see cref="NetTransportFactories.Eos"/> が作るもの) をコードで組み立てる。
     /// シーンやプレハブに設定を持たせず、ここだけで構成が決まるようにする。
+    /// 接続の承認は <see cref="NetConnectionKeys"/> が受け持ち、承認データには切断して戻ってきた人を見分ける鍵を載せる。
     /// </summary>
     public static class NetworkSetup
     {
@@ -114,7 +115,9 @@ namespace Fps.Net
                     "NetworkManager must be on a root GameObject ('" + target.name + "' has a parent)", nameof(target));
             }
 
-            if (target.GetComponent<NetworkManager>() != null || target.GetComponent<NetworkTransport>() != null)
+            if (target.GetComponent<NetworkManager>() != null
+                || target.GetComponent<NetworkTransport>() != null
+                || target.GetComponent<NetConnectionKeys>() != null)
             {
                 throw new InvalidOperationException("'" + target.name + "' is already configured for networking");
             }
@@ -142,7 +145,11 @@ namespace Fps.Net
             var config = manager.NetworkConfig;
             config.NetworkTransport = transport;
             config.PlayerPrefab = playerPrefab;
-            config.ConnectionApproval = false;
+            // 切断して戻ってきた人を見分ける鍵を承認データで受け取る (NetConnectionKeys)。承認そのものはいつも通す。
+            // EOS のクライアントはログインした後に transport が ProductUserId へ差し替える
+            config.ConnectionApproval = true;
+            config.ConnectionData = RejoinKey.Encode(NetConnectionKeys.DeviceKey);
+            target.AddComponent<NetConnectionKeys>().Attach(manager);
             // シーンの同期はまだ要らない。有効だとクライアントが NetTest を読み直して Bootstrap が二重になる
             config.EnableSceneManagement = false;
 

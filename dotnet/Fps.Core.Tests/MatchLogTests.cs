@@ -36,6 +36,23 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void FormatsHoldingAndRejoining()
+        {
+            Assert.That(MatchLog.Held(1, 60f), Is.EqualTo("[Match] holding player=1 for=60s"));
+            Assert.That(MatchLog.Held(1, 2.5f), Is.EqualTo("[Match] holding player=1 for=2.5s"));
+            Assert.That(MatchLog.HoldExpired(1), Is.EqualTo("[Match] hold expired player=1"));
+            Assert.That(MatchLog.Rejoined(5, new HeldPlayer(1, Team.Alpha, 2, 1, 30f)),
+                Is.EqualTo("[Match] rejoined player=5 was=1 team=Alpha kills=2 deaths=1"));
+        }
+
+        [Test]
+        public void FormatsSyncedState()
+        {
+            Assert.That(MatchLog.Synced(3, 1, 120, GameModeState.Playing),
+                Is.EqualTo("[Match] synced A=3 B=1 remaining=120s state=Playing"));
+        }
+
+        [Test]
         public void FormatsSoloStateWhileWaitingAndPlaying()
         {
             var match = new Match(60f, 3, 0);

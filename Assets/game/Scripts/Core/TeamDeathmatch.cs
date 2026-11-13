@@ -83,6 +83,15 @@ namespace Fps.Core
         }
 
         /// <summary>
+        /// プレイヤーを team に加え、キル数とデス数を kills と deaths から数える。切断して戻ってきた人の成績を引き継ぐときに使う。
+        /// チームの点数は動かさない (そのキルは抜ける前にもう入っている)。
+        /// </summary>
+        public void AddPlayer(int playerId, Team team, int kills, int deaths)
+        {
+            _session.AddPlayer(playerId, Side.FromTeam(team), kills, deaths);
+        }
+
+        /// <summary>
         /// プレイヤーを抜く。待っていたリスポーンは取り消す。チームの点数はそのまま残す。
         /// None で抜けたことによりチームが全滅した場合は、次の <see cref="Tick"/> で終える。
         /// </summary>

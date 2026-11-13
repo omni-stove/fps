@@ -79,5 +79,5 @@ MonoBehaviour:
   _restartDelaySeconds: 10
   _maxHealth: 100
   _minEnemySpawnDistance: 15
-  _weaponCatalog: {fileID: 11400000, guid: bdb6d928a88544083bbc2feed93c745b, type: 2}
+  _loadout: {fileID: 11400000, guid: 3f5a0db52a32942a3b0b6b2514c48144, type: 2}
   _maxShotOriginOffset: 3

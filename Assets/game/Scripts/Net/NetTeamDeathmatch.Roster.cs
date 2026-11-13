@@ -23,6 +23,7 @@ namespace Fps.Net
             _lagCompensator?.Remove(playerId);
             _serverLoadout?.Remove(playerId);
             _lastKillers.Remove(playerId);
+            ForgetDowned(playerId);
             if (_session != null && _session.HasPlayer(playerId))
             {
                 _session.Leave(playerId);

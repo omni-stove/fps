@@ -93,6 +93,38 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void LyingLaysTheBodyOnTheFloorWithoutChangingTheCapsule()
+        {
+            var player = CreatePlayer("Player", new Vector3(0f, 1f, 0f), withEyeAndBody: true);
+            var stance = NetStance.FromHierarchy(player, _crouchHeight);
+            var body = player.transform.Find(NetStance.BodyName);
+            var standingScale = body.localScale;
+
+            // ダウン中はしゃがみのカプセルで動かすので、しゃがんだ後に寝かせても見た目は立ちの大きさのまま
+            stance.Apply(true);
+            stance.SetLying(true);
+
+            Assert.That(stance.IsLying, Is.True);
+            Assert.That(player.height, Is.EqualTo(_crouchHeight).Within(_tolerance), "the capsule keeps the stance");
+            Assert.That(Quaternion.Angle(body.localRotation, Quaternion.Euler(90f, 0f, 0f)), Is.LessThan(0.01f));
+            Assert.That(body.localScale, Is.EqualTo(standingScale));
+
+            // 足元 (本体の中心から 1m 下) に半径ぶん浮かせて置く
+            Assert.That(body.localPosition.y, Is.EqualTo(-_height / 2f + _radius).Within(_tolerance));
+
+            // 寝かせたまま姿勢が変わっても、見た目は寝かせたまま
+            stance.Apply(false);
+            Assert.That(body.localPosition.y, Is.EqualTo(-_height / 2f + _radius).Within(_tolerance));
+
+            stance.SetLying(false);
+
+            Assert.That(stance.IsLying, Is.False);
+            Assert.That(Quaternion.Angle(body.localRotation, Quaternion.identity), Is.LessThan(0.01f));
+            Assert.That(body.localPosition.y, Is.EqualTo(0f).Within(_tolerance));
+            Assert.That(body.localScale.y, Is.EqualTo(1f).Within(_tolerance));
+        }
+
+        [Test]
         public void EyeWithoutTransformUsesEyeHeightRule()
         {
             var player = CreatePlayer("Player", new Vector3(0f, 1f, 0f), withEyeAndBody: false);

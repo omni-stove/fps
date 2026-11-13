@@ -28,6 +28,59 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.NextMatch(-1));
         }
 
+        [TestCase(12, "ダウン中 あと 12 秒")]
+        [TestCase(1, "ダウン中 あと 1 秒")]
+        [TestCase(0, "ダウン中 あと 0 秒")]
+        public void DownedShowsTheBleedoutSecondsLeft(int seconds, string expected)
+        {
+            Assert.That(HudFormat.Downed(seconds), Is.EqualTo(expected));
+        }
+
+        [TestCase(12, 40, "ダウン中 あと 12 秒 (蘇生 40%)")]
+        [TestCase(3, 99, "ダウン中 あと 3 秒 (蘇生 99%)")]
+        [TestCase(12, 0, "ダウン中 あと 12 秒")]
+        public void DownedAddsTheReviveProgressOnlyWhileSomeoneRevives(int seconds, int percent, string expected)
+        {
+            Assert.That(HudFormat.Downed(seconds, percent), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void DownedRejectsNegativeSecondsAndPercentOutOfRange()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Downed(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Downed(-1, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Downed(5, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Downed(5, 101));
+        }
+
+        [TestCase(0, "蘇生中 0%")]
+        [TestCase(40, "蘇生中 40%")]
+        [TestCase(100, "蘇生中 100%")]
+        public void RevivingShowsThePercent(int percent, string expected)
+        {
+            Assert.That(HudFormat.Reviving(percent), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void RevivingRejectsPercentOutOfRange()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Reviving(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Reviving(101));
+        }
+
+        [TestCase(0f, 0)]
+        [TestCase(0.426f, 42)]
+        [TestCase(0.999f, 99)]
+        [TestCase(0.99999994f, 99)]
+        [TestCase(1f, 100)]
+        [TestCase(1.5f, 100)]
+        [TestCase(-0.5f, 0)]
+        [TestCase(float.NaN, 0)]
+        public void RevivePercentRoundsDownAndReachesOneHundredOnlyWhenDone(float progress, int expected)
+        {
+            Assert.That(HudFormat.RevivePercent(progress), Is.EqualTo(expected));
+        }
+
         [TestCase(RespawnMode.Individual, 3, "リスポーンまで 3 秒")]
         [TestCase(RespawnMode.Wave, 7, "リスポーンまで 7 秒")]
         [TestCase(RespawnMode.None, 0, "次の試合まで復活なし")]

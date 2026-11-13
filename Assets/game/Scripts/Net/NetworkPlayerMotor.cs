@@ -39,7 +39,7 @@ namespace Fps.Net
     /// 死亡・リスポーンでは <see cref="NetPlayer"/> が <see cref="ReleaseCrouch"/> を呼ぶ。
     /// </para>
     /// <para>
-    /// サーバーで確定した着地は .Landing.cs の partial メソッドに渡す。
+    /// サーバーで確定した着地は .Landing.cs の partial メソッドに渡す。ダウン中に動けなくする処理は .Downed.cs に分けてある。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -353,7 +353,7 @@ namespace Fps.Net
             var crouch = SampleCrouch(jump, sprint);
 
             var yaw = SampleYaw(_look, transform);
-            return new MotorInput(move, yaw, sprint, jump, crouch);
+            return new MotorInput(move, yaw, sprint, jump, crouch, _downed);
         }
 
         // サーバーへはモードを解釈した後の「ダッシュ中か」だけを送る (サーバー側は押し方を知らなくてよい)
@@ -432,11 +432,14 @@ namespace Fps.Net
             if (_role == NetworkPlayerRole.HostOwner)
             {
                 ApplyAuthoritative(tick, input);
-                return;
+            }
+            else
+            {
+                _prediction.Predict(tick, input);
+                SubmitInputRpc(tick, input.Move, input.Yaw, input.Sprint, input.Jump, input.Crouch);
             }
 
-            _prediction.Predict(tick, input);
-            SubmitInputRpc(tick, input.Move, input.Yaw, input.Sprint, input.Jump, input.Crouch);
+            OwnerTicked?.Invoke(tick);
         }
 
         private void ApplyAuthoritative(int tick, MotorInput input)
@@ -554,7 +557,9 @@ namespace Fps.Net
             }
 
             _inputBudget -= 1f;
-            ApplyAuthoritative(tick, new MotorInput(move, yaw, sprint, jump, crouch));
+
+            // ダウンはクライアントの申告ではなく、サーバーの知る状態で決める
+            ApplyAuthoritative(tick, new MotorInput(move, yaw, sprint, jump, crouch, _downed));
         }
 
         [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable)]
@@ -772,6 +777,7 @@ namespace Fps.Net
 
             _sprintPressLatched = false;
             _crouchPressLatched = false;
+            _downed = false;
             _prediction = null;
             _remoteHistory = null;
             _remoteYawHistory = null;

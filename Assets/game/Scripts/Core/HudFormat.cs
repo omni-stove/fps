@@ -249,6 +249,67 @@ namespace Fps.Core
         /// <summary>案内が無いときの表示。空文字のときは HUD が案内の欄ごと隠す。</summary>
         public const string NoNotice = "";
 
+        /// <summary>
+        /// 蘇生の進み (0〜1) を、HUD に出す百分率の整数にする。端数は切り捨てる (100% になるのは起き上がったときだけ)。
+        /// 負・NaN は 0、1 を超える値は 100。
+        /// </summary>
+        /// <example><c>RevivePercent(0.426f)</c> は <c>42</c></example>
+        public static int RevivePercent(float progress)
+        {
+            if (!(progress > 0f))
+            {
+                return 0;
+            }
+
+            if (progress >= 1f)
+            {
+                return 100;
+            }
+
+            return Math.Min(99, (int)Math.Floor(progress * 100f));
+        }
+
+        /// <summary>ダウン中の人の案内。出血で倒れるまでの秒数は切り上げた整数で受ける。</summary>
+        /// <example><c>Downed(12)</c> は <c>ダウン中 あと 12 秒</c></example>
+        public static string Downed(int seconds)
+        {
+            if (seconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
+            }
+
+            return "ダウン中 あと " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+        }
+
+        /// <summary>
+        /// ダウン中の人の案内に、味方に起こされている進みを添える。revivePercent が 0 なら誰も起こしていないので <see cref="Downed(int)"/> と同じ。
+        /// </summary>
+        /// <example><c>Downed(12, 40)</c> は <c>ダウン中 あと 12 秒 (蘇生 40%)</c>、<c>Downed(12, 0)</c> は <c>ダウン中 あと 12 秒</c></example>
+        /// <exception cref="ArgumentOutOfRangeException">seconds が負か、revivePercent が 0〜100 の外。</exception>
+        public static string Downed(int seconds, int revivePercent)
+        {
+            CheckPercent(revivePercent);
+            var text = Downed(seconds);
+            return revivePercent == 0 ? text : text + " (蘇生 " + revivePercent.ToString(CultureInfo.InvariantCulture) + "%)";
+        }
+
+        /// <summary>味方を起こしている人の案内。</summary>
+        /// <example><c>Reviving(40)</c> は <c>蘇生中 40%</c></example>
+        /// <exception cref="ArgumentOutOfRangeException">percent が 0〜100 の外。</exception>
+        public static string Reviving(int percent)
+        {
+            CheckPercent(percent);
+            return "蘇生中 " + percent.ToString(CultureInfo.InvariantCulture) + "%";
+        }
+
+        private static void CheckPercent(int percent)
+        {
+            if (percent < 0 || percent > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(percent), percent, "percent must be between 0 and 100");
+            }
+        }
+
         /// <summary>キャンペーンのチェックポイントでセーブしたときの案内。</summary>
         public const string CheckpointSaved = "チェックポイントでセーブしました";
 

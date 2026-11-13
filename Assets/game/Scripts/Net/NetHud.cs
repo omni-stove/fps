@@ -24,6 +24,10 @@ namespace Fps.Net
     /// 予備弾は <see cref="NetMatchRules.InfiniteReserve"/> が true なら数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。
     /// </para>
     /// <para>
+    /// ダウン中は自分の <see cref="NetPlayer.DownedState"/> から「ダウン中 あと N 秒」と起こされている進み (<see cref="HudFormat.Downed(int, int)"/>) を、
+    /// 味方を起こしている間は相手 (<see cref="NetPlayer.ReviveTarget"/>) の進み (<see cref="HudFormat.Reviving"/>) を案内の欄に出す。
+    /// </para>
+    /// <para>
     /// アクティブリロードの進みも時間で進むので、毎フレーム <see cref="RefreshReloadProgress"/> で、届いた <see cref="NetWeaponState"/> の
     /// 開始時刻と長さから求めて <see cref="HudModel.SetReloadProgress"/> に渡す。時刻は NetworkManager.LocalTime を使う。
     /// LocalTime はサーバーの時刻の尺で、今送った RPC がサーバーに着く頃を指すので、バーが「今押したらサーバーで判定される進み」になる。
@@ -56,6 +60,10 @@ namespace Fps.Net
         // 試合中に倒れてから、出現するか試合が終わるまで true。_respawn は Individual の表示に使う数え (待ち時間が不正なら null)
         private bool _isDown;
         private RespawnCountdown _respawn;
+
+        // 自分のダウンの状態と、自分が起こしている味方の蘇生の進み (起こしていなければ null)
+        private NetDownedState _downedState;
+        private int? _revivingPercent;
 
         /// <summary>流し込み先の HUD。</summary>
         public Hud Hud => _hud;
@@ -124,6 +132,9 @@ namespace Fps.Net
             _health = player.HealthVariable.Value;
             player.TeamVariable.OnValueChanged += HandleTeamChanged;
             player.HealthVariable.OnValueChanged += HandleHealthChanged;
+            _downedState = player.DownedStateVariable.Value;
+            _revivingPercent = null;
+            player.DownedStateVariable.OnValueChanged += HandleDownedStateChanged;
 
             // NetPlayer.Weapon は Awake で解決するので、Awake を経ない Edit Mode でも見つかるよう自分で探す
             _weapon = player.GetComponent<NetPlayerWeapon>();
@@ -136,7 +147,31 @@ namespace Fps.Net
             ShowAmmo();
             ShowHealth();
             ShowScores();
+            ShowNotice();
             RefreshReloadProgressNow();
+        }
+
+        /// <summary>
+        /// 自分が味方を起こしている進み (0〜100) を出す。null なら起こしていない。変わったときだけ案内を書き直す。
+        /// Play 中は Update が、自分のプレイヤーの <see cref="NetPlayer.ReviveTarget"/> の <see cref="NetPlayer.DownedState"/> から呼ぶ。
+        /// </summary>
+        internal void ShowReviving(int? percent)
+        {
+            var clamped = percent.HasValue ? Math.Max(0, Math.Min(100, percent.Value)) : (int?)null;
+            if (clamped == _revivingPercent)
+            {
+                return;
+            }
+
+            _revivingPercent = clamped;
+            ShowNotice();
+        }
+
+        // 相手の進みは相手の NetworkVariable に届くので、購読せずに毎フレーム読む (起こす相手はフレームごとに変わりうる)
+        private int? ReadRevivingPercent()
+        {
+            var target = _player != null ? _player.ReviveTarget : null;
+            return target != null && target.IsDowned ? target.DownedState.RevivePercent : (int?)null;
         }
 
         /// <summary>
@@ -228,6 +263,7 @@ namespace Fps.Net
         private void Update()
         {
             Tick(Time.deltaTime);
+            ShowReviving(ReadRevivingPercent());
             RefreshReloadProgressNow();
         }
 
@@ -283,6 +319,7 @@ namespace Fps.Net
             {
                 _player.TeamVariable.OnValueChanged -= HandleTeamChanged;
                 _player.HealthVariable.OnValueChanged -= HandleHealthChanged;
+                _player.DownedStateVariable.OnValueChanged -= HandleDownedStateChanged;
                 _player = null;
             }
 
@@ -330,6 +367,12 @@ namespace Fps.Net
                 StartRespawn();
             }
 
+            ShowNotice();
+        }
+
+        private void HandleDownedStateChanged(NetDownedState previous, NetDownedState current)
+        {
+            _downedState = current;
             ShowNotice();
         }
 
@@ -467,8 +510,9 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 終わっていれば次の試合までの秒数を、倒れていればリスポーン方式に合わせた案内 (Individual は自分のリスポーンまで、
-        /// Wave は次のウェーブまでの秒数、None は次の試合まで復活なし) を出す。どちらでもなければ消す。
+        /// 終わっていれば次の試合までの秒数を、ダウン中なら出血で倒れるまでの秒数と起こされている進みを、
+        /// 倒れていればリスポーン方式に合わせた案内 (Individual は自分のリスポーンまで、Wave は次のウェーブまでの秒数、
+        /// None は次の試合まで復活なし) を、味方を起こしていればその進みを出す。どれでもなければ消す。
         /// </summary>
         private void ShowNotice()
         {
@@ -478,9 +522,16 @@ namespace Fps.Net
                 return;
             }
 
+            if (_downedState.IsDowned)
+            {
+                Model.SetNotice(HudFormat.Downed(
+                    Math.Max(0, _downedState.BleedoutSeconds), Math.Min(100, (int)_downedState.RevivePercent)));
+                return;
+            }
+
             if (!_isDown)
             {
-                Model.SetNotice(HudFormat.NoNotice);
+                Model.SetNotice(_revivingPercent.HasValue ? HudFormat.Reviving(_revivingPercent.Value) : HudFormat.NoNotice);
                 return;
             }
 

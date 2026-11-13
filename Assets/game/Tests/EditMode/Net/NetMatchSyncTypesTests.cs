@@ -146,6 +146,67 @@ namespace Fps.Net.Tests
             Assert.That(RoundTrip(new NetMatchStatus(GameModeState.Ended, null)).Winner, Is.Null);
         }
 
+        [Test]
+        public void WeaponStateSerializesAllFields()
+        {
+            var idle = new NetWeaponState(30, 90, false, 1, 2, false);
+            var reloading = new NetWeaponState(0, 60, true, 0, 2, false, 1234.5678d, 2.5f, 0.5f, 0.65f);
+
+            Assert.That(RoundTrip(idle), Is.EqualTo(idle));
+            Assert.That(RoundTrip(reloading), Is.EqualTo(reloading));
+            Assert.That(RoundTrip(reloading).ReloadStartedAt, Is.EqualTo(1234.5678d), "the server time keeps its double precision");
+        }
+
+        [Test]
+        public void ReloadProgressIsComputedFromTheSyncedStartAndLength()
+        {
+            var state = RoundTrip(new NetWeaponState(0, 60, true, 0, 1, false, 100d, 2f, 0.5f, 0.65f));
+
+            Assert.That(state.HasReloadProgress, Is.True);
+            Assert.That(state.HasActiveReloadWindow, Is.True);
+            Assert.That(state.ReloadProgressAt(100d), Is.Zero);
+            Assert.That(state.ReloadProgressAt(101d), Is.EqualTo(0.5f));
+            Assert.That(state.ReloadProgressAt(101.5d), Is.EqualTo(0.75f));
+            Assert.That(state.ReloadProgressAt(99d), Is.Zero, "a clock slightly behind the start does not go negative");
+            Assert.That(state.ReloadProgressAt(103d), Is.EqualTo(1f), "a late frame does not overshoot");
+            Assert.That(state.ReloadProgressAt(double.NaN), Is.Zero);
+        }
+
+        [Test]
+        public void ReloadProgressMatchesTheServerWeaponAfterTheRoundTrip()
+        {
+            var a = ActionRules.Default;
+            var d = GameRules.Default;
+            var rules = new GameRules(
+                d.FriendlyFire, d.RespawnMode, d.WaveIntervalSeconds, d.RegenDelaySeconds, d.RegenPerSecond, d.DeathBody, d.DeathCamera,
+                d.InfiniteReserve, d.ReserveAmmoMultiplier, d.Destruction,
+                new ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, ActiveReload.On));
+            var spec = new WeaponSpec(
+                "00000000-0000-4000-8000-000000000001", null, WeaponCategory.AssaultRifle, FireMode.Auto, 3, 10, 0.1f, 2f, 25, 100f, DamageFalloff.None,
+                activeReloadWindowStart: 0.5f,
+                activeReloadWindowLength: 0.25f,
+                activeReloadFailSeconds: 0.5f);
+            var weapon = new ServerWeapon(spec, rules);
+            weapon.TryFire();
+            Assert.That(weapon.TryStartReload(), Is.True);
+            const double startedAt = 50d;
+
+            weapon.Tick(0.5f);
+            var state = RoundTrip(NetPlayerWeapon.BuildState(weapon, 0, 1, false, startedAt));
+            Assert.That(state.ReloadProgressAt(startedAt + 0.5d), Is.EqualTo(weapon.ReloadProgress));
+            Assert.That(state.ActiveReloadWindowStart, Is.EqualTo(0.5f));
+            Assert.That(state.ActiveReloadWindowEnd, Is.EqualTo(0.75f));
+
+            // 失敗で長さが延びても、開始時刻は変えずに同じ進みになる
+            Assert.That(weapon.TryActiveReload(out var result), Is.True);
+            Assert.That(result, Is.EqualTo(ActiveReloadResult.Fail));
+            weapon.Tick(0.75f);
+            var failed = RoundTrip(NetPlayerWeapon.BuildState(weapon, 0, 1, false, startedAt));
+            Assert.That(failed.ReloadSeconds, Is.EqualTo(2.5f));
+            Assert.That(failed.ReloadProgressAt(startedAt + 1.25d), Is.EqualTo(weapon.ReloadProgress));
+            Assert.That(failed.HasActiveReloadWindow, Is.False);
+        }
+
         // NetworkVariable / NetworkList が送るときと同じく INetworkSerializable で書いて読み戻す
         private static T RoundTrip<T>(T value)
             where T : INetworkSerializable, new()

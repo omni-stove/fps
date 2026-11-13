@@ -2,8 +2,9 @@ namespace Fps.Core
 {
     /// <summary>
     /// デスカムを映すかの判断。毎フレーム <see cref="Update"/> に今の状態を渡す。
-    /// ルールが <see cref="DeathCamera.Killer"/> で、自分の視点があり、試合が終わっていないときに、生きていた状態から倒れたら始め、
-    /// 生き返る・試合が終わる・視点が無くなる・ルールが変わるのどれかで止める。
+    /// ルールが <see cref="DeathCamera.None"/> 以外で、自分の視点があり、試合が終わっていないときに、生きていた状態から倒れたら始め、
+    /// 生き返る・試合が終わる・視点が無くなる・ルールが None になるのどれかで止める。
+    /// 映している間にルールが None 以外の別の演出 (Killer から Ally など) に変わっても止めず、何を映すかは呼び出し側が今のルールで決める。
     /// 始めるのは倒れた瞬間だけなので、参加前 (体力 0) や視点を得る前から倒れていた分では始めない。
     /// </summary>
     public sealed class DeathCamSwitch
@@ -34,7 +35,7 @@ namespace Fps.Core
                 return reason;
             }
 
-            if (died && mode == DeathCamera.Killer && hasLocalView && !matchEnded)
+            if (died && mode != DeathCamera.None && hasLocalView && !matchEnded)
             {
                 IsActive = true;
                 return DeathCamTransition.Started;
@@ -65,7 +66,7 @@ namespace Fps.Core
                 return DeathCamTransition.MatchEnded;
             }
 
-            if (mode != DeathCamera.Killer)
+            if (mode == DeathCamera.None)
             {
                 return DeathCamTransition.RuleDisabled;
             }

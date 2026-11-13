@@ -8,10 +8,12 @@ using UnityEngine;
 namespace Fps.Editor
 {
     /// <summary>
-    /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/> 7 つ) を作るか上書きする。
+    /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/>。<see cref="BuildAt"/> の 7 つと、
+    /// 対戦・PvE モードの <see cref="ModeNames"/> の 9 つ) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
-    /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) だけ <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、
-    /// 他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す (<see cref="GameRules"/> の既定)。
+    /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) と、そこから作る個別リスポーンのモードだけ
+    /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す・
+    /// 拠点なし・Bot で埋めない・放置で切らない (<see cref="GameRules"/> の既定)。
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
     /// TPS 射撃場がそれに回避・乗り越え・グレネードを足したもの。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
@@ -30,6 +32,52 @@ namespace Fps.Editor
         public const string TpsRangePath = Folder + "/TpsRange.asset";
         public const string DominationPath = Folder + "/Domination.asset";
 
+        public const string FreeForAllName = "FreeForAll";
+        public const string KillConfirmedName = "KillConfirmed";
+        public const string GunGameName = "GunGame";
+        public const string HardpointName = "Hardpoint";
+        public const string GuardianName = "Guardian";
+        public const string ExecutionName = "Execution";
+        public const string SearchAndDestroyName = "SearchAndDestroy";
+        public const string HordeName = "Horde";
+        public const string BattleRoyaleName = "BattleRoyale";
+
+        public const string FreeForAllPath = Folder + "/" + FreeForAllName + ".asset";
+        public const string KillConfirmedPath = Folder + "/" + KillConfirmedName + ".asset";
+        public const string GunGamePath = Folder + "/" + GunGameName + ".asset";
+        public const string HardpointPath = Folder + "/" + HardpointName + ".asset";
+        public const string GuardianPath = Folder + "/" + GuardianName + ".asset";
+        public const string ExecutionPath = Folder + "/" + ExecutionName + ".asset";
+        public const string SearchAndDestroyPath = Folder + "/" + SearchAndDestroyName + ".asset";
+        public const string HordePath = Folder + "/" + HordeName + ".asset";
+        public const string BattleRoyalePath = Folder + "/" + BattleRoyaleName + ".asset";
+
+        /// <summary><see cref="HordeRules"/> で、倒れた人がまとめて戻る波の間隔 (秒)。</summary>
+        public const float HordeWaveIntervalSeconds = 30f;
+
+        /// <summary><see cref="HordeRules"/> の予備弾の倍率。敵の数が多く、倒れても戻るまで補給できないので多めに持たせる。</summary>
+        public const float HordeReserveAmmoMultiplier = 2f;
+
+        /// <summary><see cref="BattleRoyaleRules"/> の予備弾の倍率。長く生き残るほど撃つので多めに持たせる。</summary>
+        public const float BattleRoyaleReserveAmmoMultiplier = 2f;
+
+        /// <summary>
+        /// 対戦・PvE モードの名前。<see cref="BuildModesAt"/> はこの順に <c>&lt;フォルダ&gt;/&lt;名前&gt;.asset</c> を作って返す。
+        /// シーンは <see cref="BuildSceneList"/> の <c>Assets/game/Scenes/&lt;名前&gt;.unity</c>。
+        /// </summary>
+        public static IReadOnlyList<string> ModeNames { get; } = new[]
+        {
+            FreeForAllName,
+            KillConfirmedName,
+            GunGameName,
+            HardpointName,
+            GuardianName,
+            ExecutionName,
+            SearchAndDestroyName,
+            HordeName,
+            BattleRoyaleName,
+        };
+
         /// <summary><see cref="TpsRangeActions"/> で出撃ごとに持つグレネードの数。</summary>
         public const int TpsRangeGrenadeCount = 3;
 
@@ -43,7 +91,7 @@ namespace Fps.Editor
         public const float TeamDeathmatchSpawnProtectionSeconds = 2f;
 
         /// <summary>
-        /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、倒した相手を映す、予備弾は有限で 1 倍、
+        /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、リスポーンまで生きている味方の視点で観戦する、予備弾は有限で 1 倍、
         /// 建造物は弾で壊れる、出現直後は <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒無敵。アクションは <see cref="TeamDeathmatchActions"/>。
         /// </summary>
         public static GameRules TeamDeathmatchRules()
@@ -55,7 +103,7 @@ namespace Fps.Editor
                 4f,
                 20f,
                 DeathBody.Collapse,
-                DeathCamera.Killer,
+                DeathCamera.Ally,
                 false,
                 1f,
                 Destruction.On,
@@ -139,6 +187,136 @@ namespace Fps.Editor
         }
 
         /// <summary>
+        /// フリーフォーオール。<see cref="TeamDeathmatchRules"/> のうち、味方がいないので死亡カメラを倒した相手 (<see cref="DeathCamera.Killer"/>) にし、
+        /// アクションを <see cref="FreeForAllActions"/> (起こす味方がいないのでダウンしない) にしたもの。
+        /// </summary>
+        public static GameRules FreeForAllRules()
+        {
+            return TeamDeathmatchRules()
+                .WithDeathCamera(DeathCamera.Killer)
+                .WithActions(FreeForAllActions());
+        }
+
+        /// <summary>キルコンファームド。今は <see cref="TeamDeathmatchRules"/> と同じ値 (呼び出して作るので付いて変わる)。</summary>
+        public static GameRules KillConfirmedRules()
+        {
+            return TeamDeathmatchRules();
+        }
+
+        /// <summary>
+        /// ガンゲーム。<see cref="FreeForAllRules"/> のうち、キルのたびに武器が替わって補給の機会が無いので予備弾を無限にしたもの。
+        /// </summary>
+        public static GameRules GunGameRules()
+        {
+            return FreeForAllRules().WithInfiniteReserve(true);
+        }
+
+        /// <summary>ハードポイント。今は <see cref="TeamDeathmatchRules"/> と同じ値 (ドミネーションと同じく拠点の取り合い)。</summary>
+        public static GameRules HardpointRules()
+        {
+            return TeamDeathmatchRules();
+        }
+
+        /// <summary>ガーディアン (VIP の護衛)。今は <see cref="TeamDeathmatchRules"/> と同じ値。</summary>
+        public static GameRules GuardianRules()
+        {
+            return TeamDeathmatchRules();
+        }
+
+        /// <summary>
+        /// エクスキューション。<see cref="TeamDeathmatchRules"/> のうち、ラウンド中は戻らない (<see cref="RespawnMode.None"/>) ので出現直後の無敵を無くしたもの。
+        /// ダウンは <see cref="TeamDeathmatchActions"/> のまま (<see cref="Downed.Revive"/>) で、味方が起こせる。
+        /// </summary>
+        public static GameRules ExecutionRules()
+        {
+            return TeamDeathmatchRules()
+                .WithRespawnMode(RespawnMode.None)
+                .WithSpawnProtectionSeconds(0f);
+        }
+
+        /// <summary>
+        /// 爆破 (サーチアンドデストロイ)。<see cref="ExecutionRules"/> のうち、倒れたらその場で終わるようダウンを切ったもの
+        /// (<see cref="SearchAndDestroyActions"/>)。
+        /// </summary>
+        public static GameRules SearchAndDestroyRules()
+        {
+            return ExecutionRules().WithActions(SearchAndDestroyActions());
+        }
+
+        /// <summary>
+        /// ホード (PvE)。<see cref="TeamDeathmatchRules"/> のうち、倒れた人は <see cref="HordeWaveIntervalSeconds"/> 秒ごとの波でまとめて戻り
+        /// (<see cref="RespawnMode.Wave"/>、戻るので出現直後の無敵も残す)、予備弾を <see cref="HordeReserveAmmoMultiplier"/> 倍にしたもの。
+        /// ダウンは <see cref="Downed.Revive"/> で、味方が起こせる。
+        /// </summary>
+        public static GameRules HordeRules()
+        {
+            return TeamDeathmatchRules()
+                .WithRespawnMode(RespawnMode.Wave)
+                .WithWaveIntervalSeconds(HordeWaveIntervalSeconds)
+                .WithReserveAmmoMultiplier(HordeReserveAmmoMultiplier);
+        }
+
+        /// <summary>
+        /// バトルロイヤル。<see cref="TeamDeathmatchRules"/> のうち、倒れたら戻らず (<see cref="RespawnMode.None"/>、出現直後の無敵なし)、
+        /// 予備弾を <see cref="BattleRoyaleReserveAmmoMultiplier"/> 倍にしたもの。ダウンは <see cref="Downed.Revive"/> で、分隊の味方が起こせる。
+        /// </summary>
+        public static GameRules BattleRoyaleRules()
+        {
+            return TeamDeathmatchRules()
+                .WithRespawnMode(RespawnMode.None)
+                .WithSpawnProtectionSeconds(0f)
+                .WithReserveAmmoMultiplier(BattleRoyaleReserveAmmoMultiplier);
+        }
+
+        /// <summary>
+        /// <see cref="ModeNames"/> の name のルールを作る。知らない名前なら <see cref="ArgumentException"/>。
+        /// </summary>
+        public static GameRules ModeRules(string name)
+        {
+            switch (name)
+            {
+                case FreeForAllName:
+                    return FreeForAllRules();
+                case KillConfirmedName:
+                    return KillConfirmedRules();
+                case GunGameName:
+                    return GunGameRules();
+                case HardpointName:
+                    return HardpointRules();
+                case GuardianName:
+                    return GuardianRules();
+                case ExecutionName:
+                    return ExecutionRules();
+                case SearchAndDestroyName:
+                    return SearchAndDestroyRules();
+                case HordeName:
+                    return HordeRules();
+                case BattleRoyaleName:
+                    return BattleRoyaleRules();
+                default:
+                    throw new ArgumentException($"'{name}' is not one of the mode names ({string.Join(", ", ModeNames)})", nameof(name));
+            }
+        }
+
+        /// <summary><see cref="ModeNames"/> の name のルールを置くパス (<see cref="Folder"/> の <c>&lt;名前&gt;.asset</c>)。知らない名前なら <see cref="ArgumentException"/>。</summary>
+        public static string ModeRulesPath(string name)
+        {
+            return ModeRulesPath(Folder, name);
+        }
+
+        /// <summary>フリーフォーオールのアクション。<see cref="TeamDeathmatchActions"/> のうち、起こす味方がいないのでダウンしないようにしたもの。</summary>
+        public static ActionRules FreeForAllActions()
+        {
+            return TeamDeathmatchActions().WithDowned(Downed.Off);
+        }
+
+        /// <summary>爆破のアクション。<see cref="TeamDeathmatchActions"/> のうち、倒れたらその場でラウンドから外れるようダウンしないようにしたもの。</summary>
+        public static ActionRules SearchAndDestroyActions()
+        {
+            return TeamDeathmatchActions().WithDowned(Downed.Off);
+        }
+
+        /// <summary>
         /// TPS 射撃場のアクション。<see cref="RangeActions"/> に回避・乗り越え・グレネード (<see cref="TpsRangeGrenadeCount"/> 個) を足したもの。
         /// </summary>
         public static ActionRules TpsRangeActions()
@@ -195,6 +373,66 @@ namespace Fps.Editor
         {
             BuildAt(
                 TeamDeathmatchPath, CampaignEasyPath, CampaignNormalPath, CampaignHardPath, RangePath, TpsRangePath, DominationPath);
+            BuildModesAt(Folder);
+        }
+
+        /// <summary>
+        /// folder に <see cref="ModeNames"/> の各モードのルール (<c>&lt;名前&gt;.asset</c>) を作るか上書きして保存し、<see cref="ModeNames"/> の順に返す。
+        /// folder は Assets/ 以下のフォルダ (無ければ作る)。ルールの検査に通らなければ、そのアセットから先は保存せずに例外を投げる。
+        /// </summary>
+        public static GameRulesDefinition[] BuildModesAt(string folder)
+        {
+            var paths = ModeRulesPaths(folder);
+
+            // 書き始める前にすべてのルールを作っておき、値が不正なモードがあれば 1 つも保存しない。
+            var rules = new GameRules[ModeNames.Count];
+            for (var i = 0; i < rules.Length; i++)
+            {
+                rules[i] = ModeRules(ModeNames[i]);
+            }
+
+            var built = new GameRulesDefinition[paths.Length];
+            for (var i = 0; i < paths.Length; i++)
+            {
+                var modeRules = rules[i];
+                built[i] = SceneBuildHelpers.CreateOrUpdateAsset<GameRulesDefinition>(paths[i], d => Configure(d, modeRules));
+            }
+
+            Debug.Log($"{LogTag} saved {string.Join(", ", Array.ConvertAll(paths, p => "'" + p + "'"))}");
+            return built;
+        }
+
+        /// <summary>folder の中の、name のルールを置くパス。folder か name が不正なら <see cref="ArgumentException"/>。</summary>
+        public static string ModeRulesPath(string folder, string name)
+        {
+            var known = false;
+            foreach (var mode in ModeNames)
+            {
+                known |= string.Equals(mode, name, StringComparison.Ordinal);
+            }
+
+            if (!known)
+            {
+                throw new ArgumentException($"'{name}' is not one of the mode names ({string.Join(", ", ModeNames)})", nameof(name));
+            }
+
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                throw new ArgumentException("rules folder must not be empty", nameof(folder));
+            }
+
+            return SceneBuildHelpers.ValidateAssetPath(folder.Trim().Replace('\\', '/').TrimEnd('/') + "/" + name + ".asset");
+        }
+
+        private static string[] ModeRulesPaths(string folder)
+        {
+            var paths = new string[ModeNames.Count];
+            for (var i = 0; i < paths.Length; i++)
+            {
+                paths[i] = ModeRulesPath(folder, ModeNames[i]);
+            }
+
+            return paths;
         }
 
         /// <summary>
@@ -296,7 +534,10 @@ namespace Fps.Editor
                 actions,
                 source.SpawnProtectionSeconds,
                 source.FallDamage,
-                source.HudDensity);
+                source.HudDensity,
+                source.Objective,
+                source.MinPlayers,
+                source.IdleKickSeconds);
         }
     }
 }

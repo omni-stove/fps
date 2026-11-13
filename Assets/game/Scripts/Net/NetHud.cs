@@ -48,10 +48,14 @@ namespace Fps.Net
     /// キルフィード (<see cref="KillFeedView"/>) の名前は、自分のクライアント Id と試合の参加者・ロードアウトで引く
     /// <see cref="NetKillFeedNames"/> に替える。行そのものは <see cref="NetCombatFeed"/> が配る。
     /// </para>
+    /// <para>
+    /// 回線の Ping・ロスの表示は .NetStats.cs、拠点の表示は .Objective.cs が受け持つ。それぞれの差し込み口を、
+    /// 試合を購読したとき (<see cref="BindMatch"/>)・外したとき・毎フレーム (<see cref="Tick"/>)・すべての購読を外すとき (<see cref="UnbindAll"/>) に呼ぶ。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Hud))]
-    public sealed class NetHud : MonoBehaviour
+    public sealed partial class NetHud : MonoBehaviour
     {
         /// <summary><see cref="Create"/> が作る GameObject の名前。</summary>
         public const string ObjectName = "NetHUD";
@@ -298,6 +302,8 @@ namespace Fps.Net
                 ShowHealth();
                 ShowNotice();
                 ShowScoreboard();
+                NetStatsMatchBound();
+                ObjectiveMatchBound();
                 return;
             }
 
@@ -331,11 +337,17 @@ namespace Fps.Net
             ShowResult();
             ShowNotice();
             ShowScoreboard();
+            NetStatsMatchBound();
+            ObjectiveMatchBound();
         }
 
-        /// <summary>リスポーンまでの秒数を deltaSeconds 進める。待っていなければ何もしない。Play 中は Update が呼ぶ。</summary>
+        /// <summary>
+        /// リスポーンまでの秒数を deltaSeconds 進める (待っていなければ進めない)。続けて回線と拠点の表示の差し込み口を進める。Play 中は Update が呼ぶ。
+        /// </summary>
         internal void Tick(float deltaSeconds)
         {
+            NetStatsTick(deltaSeconds);
+            ObjectiveTick(deltaSeconds);
             if (_respawn == null)
             {
                 return;
@@ -397,6 +409,8 @@ namespace Fps.Net
 
             UnbindMatch();
             UnbindPlayer();
+            NetStatsReleased();
+            ObjectiveReleased();
         }
 
         private void ListenForMatch()
@@ -431,6 +445,9 @@ namespace Fps.Net
 
         private void UnbindMatch()
         {
+            // 差し込み口が試合の同期値の購読を外せるよう、_match を消す前に呼ぶ
+            NetStatsMatchUnbinding();
+            ObjectiveMatchUnbinding();
             if (_players != null)
             {
                 _players.OnListChanged -= HandlePlayersChanged;

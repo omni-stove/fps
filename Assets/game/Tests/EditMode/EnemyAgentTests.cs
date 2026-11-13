@@ -49,6 +49,12 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void RespawnNeedsAnInitializedAgent()
+        {
+            Assert.Throws<System.InvalidOperationException>(() => _agent.Respawn(Vector3.zero, Quaternion.identity));
+        }
+
+        [Test]
         public void InitializeBuildsTheBrainFromTheDefaults()
         {
             Assert.That(_agent.TryInitialize(), Is.True);
@@ -92,6 +98,71 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.Falloff.EndDistance, Is.EqualTo(expected.Falloff.EndDistance));
             Assert.That(spec.Falloff.MinMultiplier, Is.EqualTo(expected.Falloff.MinMultiplier));
             Assert.That(_agent.Weapon.AmmoInMagazine, Is.EqualTo(expected.MagazineSize));
+        }
+
+        [Test]
+        public void EquipWeaponRebuildsTheWeaponWithTheGivenRules()
+        {
+            var handgun = Handgun();
+            try
+            {
+                Assert.That(_agent.TryInitialize(), Is.True);
+                var rules = GameRules.Default.WithInfiniteReserve(true);
+
+                _agent.EquipWeapon(handgun, rules);
+
+                Assert.That(_agent.WeaponDefinition, Is.SameAs(handgun));
+                Assert.That(_agent.WeaponRules, Is.SameAs(rules));
+                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
+                Assert.That(_agent.Weapon.AmmoInMagazine, Is.EqualTo(_agent.Weapon.Spec.MagazineSize));
+
+                _agent.EquipWeapon(_rifle);
+                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+                Assert.That(_agent.WeaponRules, Is.SameAs(rules), "without rules the current ones are kept");
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void EquipWeaponBeforeInitializeIsUsedByInitialize()
+        {
+            var handgun = Handgun();
+            try
+            {
+                _agent.EquipWeapon(handgun);
+                Assert.That(_agent.Weapon, Is.Null);
+
+                Assert.That(_agent.TryInitialize(), Is.True);
+                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void EquipWeaponKeepsTheCurrentWeaponWhenTheDefinitionIsInvalid()
+        {
+            var handgun = Handgun();
+            try
+            {
+                Assert.That(_agent.TryInitialize(), Is.True);
+                handgun.MagazineSize = 0;
+
+                Assert.Throws<WeaponDefinitionException>(() => _agent.EquipWeapon(handgun));
+                Assert.Throws<System.ArgumentNullException>(() => _agent.EquipWeapon(null));
+
+                Assert.That(_agent.WeaponDefinition, Is.SameAs(_rifle));
+                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
         }
 
         [Test]
@@ -365,6 +436,14 @@ namespace Fps.Tests.EditMode
             Physics.SyncTransforms();
             Assert.That(_agent.TryInitialize(), Is.True);
             return damageable;
+        }
+
+        private static WeaponDefinition Handgun()
+        {
+            var handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
+            handgun.name = "Handgun";
+            WeaponAssetBuilder.Configure(handgun, WeaponAssetBuilder.HandgunSpec());
+            return handgun;
         }
     }
 }

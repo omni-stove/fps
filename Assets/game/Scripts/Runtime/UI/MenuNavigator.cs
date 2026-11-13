@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// メインメニューと他のシーンの行き来をまとめる。メニューのボタンは <see cref="Go"/>、ポーズや切断から戻る画面は
-    /// <see cref="ReturnToMenu"/> を呼ぶ。どのシーンを読むかは <see cref="MenuRoute"/> が決め、ここは Build Settings から番号を引いて読む。
+    /// <see cref="ReturnToMenu"/>、キャンペーンの選択画面は <see cref="StartCampaign"/> を呼ぶ。どのシーンを読むかは <see cref="MenuRoute"/> が決め、ここは Build Settings から番号を引いて読む。
     /// オンラインを選んだときのロビーの設定は、NetTest の NetBootstrap が <see cref="TakeLobbyRequest"/> で受け取る
     /// (起動引数の <c>-lobby</c> と同じ扱いになる)。
     /// チュートリアルを選んだことは、射撃場の <see cref="TutorialPresenter"/> が <see cref="TakeTutorialRequest"/> で受け取る。
@@ -49,6 +49,49 @@ namespace Fps.Runtime
         public static bool Go(MenuDestination destination)
         {
             return Execute(MenuRoute.Plan(destination));
+        }
+
+        /// <summary>
+        /// catalog の launch のミッションを、その難易度で始める。シーンが Build Settings に入っていることを確かめてから beforeLoad
+        /// (「最初から」でセーブを消すなど) を呼び、<see cref="CampaignLaunchSelection.Launch"/> で選択を入れてシーンを読む。
+        /// シーンが Build Settings に無ければエラーログを出して false を返し、beforeLoad も呼ばずに何もしない。
+        /// </summary>
+        /// <exception cref="MissionCatalogException">catalog が不正。</exception>
+        /// <exception cref="ArgumentException">launch のミッションが catalog に無い。</exception>
+        /// <remarks>beforeLoad が投げた例外はそのまま投げ、選択もシーンも変えない。</remarks>
+        public static bool StartCampaign(MissionCatalog catalog, CampaignLaunch launch, Action beforeLoad = null)
+        {
+            if (catalog == null)
+            {
+                throw new ArgumentNullException(nameof(catalog));
+            }
+
+            if (launch == null)
+            {
+                throw new ArgumentNullException(nameof(launch));
+            }
+
+            if (!catalog.TryFind(launch.MissionId, out var entry))
+            {
+                throw new ArgumentException($"mission '{launch.MissionId}' is not in mission catalog '{catalog.name}'", nameof(launch));
+            }
+
+            var buildIndex = _host.BuildIndexOf(entry.ScenePath);
+            if (buildIndex < 0)
+            {
+                LogMissingScene(entry.ScenePath, "Fps.Editor.CampaignSceneBuilder.Build");
+                return false;
+            }
+
+            beforeLoad?.Invoke();
+            CampaignLaunchSelection.Launch(catalog, launch.MissionId, launch.Difficulty, path =>
+            {
+                _pendingLobby = LobbyLaunchOptions.None;
+                _pendingTutorial = false;
+                Debug.Log(LogTag + " campaign " + launch + " -> " + path);
+                _host.Load(buildIndex);
+            });
+            return true;
         }
 
         /// <summary>

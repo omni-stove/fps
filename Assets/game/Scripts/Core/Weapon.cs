@@ -14,6 +14,9 @@ namespace Fps.Core
         /// <summary>リロードが完了し弾倉が補充されたときに呼ばれる。アクティブリロードに成功してその場で終えたときも呼ばれる。</summary>
         public event Action Reloaded;
 
+        /// <summary><see cref="AddReserveAmmo"/> で予備弾が 1 発以上増えたときに呼ばれる。</summary>
+        public event Action ReserveAmmoAdded;
+
         private float _cooldownRemaining;
         private float _reloadRemaining;
         private float _reloadElapsed;
@@ -83,6 +86,7 @@ namespace Fps.Core
 
             AmmoInMagazine = spec.MagazineSize;
             ReserveAmmo = ScaleReserveAmmo(spec.ReserveAmmo, rules.ReserveAmmoMultiplier);
+            MaxReserveAmmo = ReserveAmmo;
             HasInfiniteReserve = rules.InfiniteReserve;
             HasActiveReload = rules.Actions.ActiveReload == ActiveReload.On;
         }
@@ -123,6 +127,38 @@ namespace Fps.Core
 
             AmmoInMagazine = ammoInMagazine;
             ReserveAmmo = reserveAmmo;
+            MaxReserveAmmo = Math.Max(MaxReserveAmmo, reserveAmmo);
+        }
+
+        /// <summary>
+        /// 予備弾を拾って持てる上限。作ったときの予備弾 (<see cref="WeaponSpec.ReserveAmmo"/> × <see cref="GameRules.ReserveAmmoMultiplier"/>) で、
+        /// 弾数を指定して作ったときはそれと渡した予備弾の大きい方。撃ったりリロードしたりしても変わらない。
+        /// </summary>
+        public int MaxReserveAmmo { get; }
+
+        /// <summary>予備弾をあと何発拾えるか。<see cref="HasInfiniteReserve"/> なら拾う意味が無いので 0。</summary>
+        public int ReserveAmmoRoom => HasInfiniteReserve ? 0 : Math.Max(0, MaxReserveAmmo - ReserveAmmo);
+
+        /// <summary>
+        /// 予備弾を amount 足す。<see cref="MaxReserveAmmo"/> を超える分は捨て、実際に足した数を返す。
+        /// <see cref="HasInfiniteReserve"/> なら何もせず 0。リロード中でも足せ、足した分はそのリロードの補充に使う。
+        /// </summary>
+        /// <param name="amount">足す数。0 以上。</param>
+        public int AddReserveAmmo(int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
+            }
+
+            var added = Math.Min(amount, ReserveAmmoRoom);
+            if (added > 0)
+            {
+                ReserveAmmo += added;
+                ReserveAmmoAdded?.Invoke();
+            }
+
+            return added;
         }
 
         /// <summary>

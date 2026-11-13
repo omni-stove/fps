@@ -11,6 +11,8 @@ namespace Fps.Net
     /// <see cref="NetworkManager"/> と transport (UDP なら <see cref="UnityTransport"/>、EOS なら
     /// <see cref="NetTransportFactories.Eos"/> が作るもの) をコードで組み立てる。
     /// シーンやプレハブに設定を持たせず、ここだけで構成が決まるようにする。
+    /// 接続の承認は <see cref="NetConnectionKeys"/> が受け持ち、承認データ (<see cref="ConnectionPayload"/>) にはビルドの版と、
+    /// 切断して戻ってきた人を見分ける鍵を載せる。サーバーは版が違うクライアントを断る。
     /// </summary>
     public static class NetworkSetup
     {
@@ -114,9 +116,16 @@ namespace Fps.Net
                     "NetworkManager must be on a root GameObject ('" + target.name + "' has a parent)", nameof(target));
             }
 
-            if (target.GetComponent<NetworkManager>() != null || target.GetComponent<NetworkTransport>() != null)
+            if (target.GetComponent<NetworkManager>() != null
+                || target.GetComponent<NetworkTransport>() != null
+                || target.GetComponent<NetConnectionKeys>() != null)
             {
                 throw new InvalidOperationException("'" + target.name + "' is already configured for networking");
+            }
+
+            if (!TryGetLocalVersion(out var version, out var versionError))
+            {
+                throw new InvalidOperationException("cannot send the build version on connect: " + versionError);
             }
 
             var options = plan.Options;
@@ -142,7 +151,11 @@ namespace Fps.Net
             var config = manager.NetworkConfig;
             config.NetworkTransport = transport;
             config.PlayerPrefab = playerPrefab;
-            config.ConnectionApproval = false;
+            // 承認データで版と、切断して戻ってきた人を見分ける鍵を受け取り、版が違う相手は断る (NetConnectionKeys)。
+            // EOS のクライアントはログインした後に transport が鍵を ProductUserId へ差し替える
+            config.ConnectionApproval = true;
+            config.ConnectionData = ConnectionPayload.Encode(version, NetConnectionKeys.DeviceKey);
+            target.AddComponent<NetConnectionKeys>().Attach(manager, version);
             // シーンの同期はまだ要らない。有効だとクライアントが NetTest を読み直して Bootstrap が二重になる
             config.EnableSceneManagement = false;
 
@@ -152,6 +165,72 @@ namespace Fps.Net
             }
 
             return manager;
+        }
+
+        /// <summary>
+        /// このビルドの版 (<see cref="Application.version"/>) を <see cref="BuildVersion.TryNormalize"/> で正規化したもの。
+        /// 接続の承認データに載せ、サーバーはこれと同じ版のクライアントだけを入れる。
+        /// </summary>
+        /// <returns>版として読めなければ false (version は null、error に理由)。</returns>
+        public static bool TryGetLocalVersion(out string version, out string error)
+        {
+            if (BuildVersion.TryNormalize(Application.version, out version, out error))
+            {
+                return true;
+            }
+
+            error = "Application.version: " + error;
+            return false;
+        }
+
+        /// <summary>
+        /// サーバーで、つないでいるリモートのクライアントすべてに reason (<see cref="DisconnectNotice"/> の符号) を送って切る。
+        /// Host 自身のクライアントは切らない。サーバーとして待ち受けていなければ何もしない。
+        /// </summary>
+        /// <returns>切ったクライアントの数。</returns>
+        public static int DisconnectRemoteClients(NetworkManager manager, string reason)
+        {
+            if (manager == null)
+            {
+                throw new ArgumentNullException(nameof(manager));
+            }
+
+            if (!manager.IsServer || !manager.IsListening || manager.ShutdownInProgress)
+            {
+                return 0;
+            }
+
+            // 切るたびに ConnectedClientsIds が縮むので、先に写してから回す
+            var clients = new List<ulong>(manager.ConnectedClientsIds);
+            var disconnected = 0;
+            foreach (var clientId in clients)
+            {
+                if (clientId == NetworkManager.ServerClientId)
+                {
+                    continue;
+                }
+
+                manager.DisconnectClient(clientId, reason);
+                disconnected++;
+            }
+
+            return disconnected;
+        }
+
+        /// <summary>
+        /// クライアントで、サーバーとの接続を失った理由を <see cref="NetworkManager.DisconnectReason"/> から分ける。
+        /// </summary>
+        /// <param name="manager">切れたクライアントの NetworkManager。</param>
+        /// <param name="wasConnected">切れる前に承認されてつながっていたか。</param>
+        public static DisconnectNotice ClassifyDisconnect(NetworkManager manager, bool wasConnected)
+        {
+            if (manager == null)
+            {
+                throw new ArgumentNullException(nameof(manager));
+            }
+
+            TryGetLocalVersion(out var version, out _);
+            return DisconnectNotice.Classify(manager.DisconnectReason, wasConnected, version);
         }
 
         private static UnityTransport AddUnityTransport(GameObject target, NetLaunchOptions options)

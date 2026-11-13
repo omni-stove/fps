@@ -13,7 +13,10 @@ namespace Fps.Runtime
     /// <see cref="NavMeshAgent.SetDestination"/>・向きの変更・射撃 (<see cref="Hitscan.Fire"/>) に変換するだけをする。
     /// 参照はコードで解決する: NavMeshAgent と自分の <see cref="Damageable"/> は同じ GameObject、
     /// 目標は <see cref="TargetTag"/> のタグが付いた GameObject の Damageable。
-    /// 武器は 1 本だけ持ち、持ち替えない。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
+    /// 同じ GameObject に <see cref="SideMember"/> があれば、タグの代わりに自分と違う陣営で生きている、いちばん近い相手を
+    /// <see cref="TargetSearchInterval"/> ごとに (目標が倒れたらすぐに) 選び直す (<see cref="EnemySenses.SelectHostile"/>)。
+    /// モードが倒れた敵を戻すときは <see cref="Respawn"/> を呼ぶ。
+    /// 武器は 1 本だけ持ち、自分では持ち替えない (ガンゲームのようにモードが <see cref="EquipWeapon"/> で替えることはある)。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
     /// (シーン生成スクリプトが、敵の配置ごとに指定した Id の武器を武器の一覧 <see cref="WeaponCatalogAsset"/> から引いて配線する)。
     /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
     /// 撃たれたら (<see cref="Damageable.Damaged"/>) 撃った者の位置を次の知覚 1 回だけ物音として渡し、
@@ -28,7 +31,6 @@ namespace Fps.Runtime
     /// 覗くときは立ち上がり、点に覗く位置 (<see cref="CoverPoint.PeekPosition"/>) があればそこへ出て撃ち、隠れ直すときに点へ戻る。
     /// 使う点や段階が変わるたびに <c>[AI] id=.. cover phase=.. point=..</c> をログに出す。
     /// </para>
-    /// 倒れた後は <see cref="Respawn"/> で生き返らせられる (キャンペーンでは呼ばない)。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
@@ -172,6 +174,7 @@ namespace Fps.Runtime
         private Damageable _target;
         private EnemyBrain _brain;
         private Weapon _weapon;
+        private GameRules _weaponRules = GameRules.Default;
         private Vector3? _destination;
         private Vector3? _pendingNoise;
         private bool _pendingHit;
@@ -219,7 +222,10 @@ namespace Fps.Runtime
         /// <summary>今の状態。未初期化なら Idle。</summary>
         public EnemyState State => _brain?.State ?? EnemyState.Idle;
 
-        /// <summary>今の目標。null なら次の Update で <see cref="TargetTag"/> から探す。</summary>
+        /// <summary>
+        /// 今の目標。null なら次の Update で <see cref="TargetTag"/> から探す。<see cref="SideMember"/> があるときは
+        /// <see cref="TargetSearchInterval"/> ごとに選び直すので、設定しても次の選び直しまでしか続かない。
+        /// </summary>
         public Damageable Target
         {
             get => _target;
@@ -230,12 +236,46 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 撃つ武器の定義。<see cref="TryInitialize"/> がこれから <see cref="Weapon"/> を作るので、それより前に設定する
-        /// (初期化後に変えても今の武器は変わらない)。
+        /// (初期化後に変えても今の武器は変わらない。初期化後に持ち替えるなら <see cref="EquipWeapon"/>)。
         /// </summary>
         public WeaponDefinition WeaponDefinition
         {
             get => _weaponDefinition;
             set => _weaponDefinition = value;
+        }
+
+        /// <summary>武器を作るときの予備弾のルール。既定は <see cref="GameRules.Default"/>。<see cref="EquipWeapon"/> で変える。</summary>
+        public GameRules WeaponRules => _weaponRules;
+
+        /// <summary>
+        /// 持つ武器を definition に替え、rules (null なら今の <see cref="WeaponRules"/>) の予備弾で満タンに作り直す。リロード中なら取り消す。
+        /// 以後の <see cref="Respawn"/> もこの武器とルールで作り直す。未初期化なら定義とルールを覚えるだけで、<see cref="TryInitialize"/> がそれで作る。
+        /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、今の武器はそのまま残す。
+        /// </summary>
+        public void EquipWeapon(WeaponDefinition definition, GameRules rules = null)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            var spec = definition.ToSpec();
+            var weaponRules = rules ?? _weaponRules;
+            _weaponDefinition = definition;
+            _weaponRules = weaponRules;
+            if (_brain == null)
+            {
+                return;
+            }
+
+            if (_weapon != null)
+            {
+                _weapon.Reloaded -= OnReloaded;
+            }
+
+            _weapon = new Weapon(spec, weaponRules);
+            _weapon.Reloaded += OnReloaded;
+            Debug.Log($"{LogTag} id={Id} equip weapon={spec.DisplayName} ammo={_weapon.AmmoInMagazine}", this);
         }
 
         /// <summary>巡回地点 (ワールド座標の足元)。</summary>
@@ -340,18 +380,7 @@ namespace Fps.Runtime
             EnemySpec spec;
             try
             {
-                spec = new EnemySpec(
-                    _sightRange,
-                    _attackRange,
-                    _loseSightSeconds,
-                    _searchSeconds,
-                    _reactionSeconds,
-                    _openingSpreadDegrees,
-                    _settledSpreadDegrees,
-                    _openingShots,
-                    _coverHideSeconds,
-                    _coverPeekSeconds,
-                    _coverHealthFraction);
+                spec = CreateSpec();
             }
             catch (ArgumentException e)
             {
@@ -386,11 +415,73 @@ namespace Fps.Runtime
             _stuck.Recovered += OnUnstuck;
             _brain = new EnemyBrain(spec);
             _brain.StateChanged += OnStateChanged;
-            _weapon = new Weapon(weaponSpec);
+            _weapon = new Weapon(weaponSpec, _weaponRules);
             _weapon.Reloaded += OnReloaded;
             _self.Died += OnDied;
             _self.Damaged += OnDamaged;
             return true;
+        }
+
+        /// <summary>
+        /// Inspector の値から判断の設定を作る。値が不正なら <see cref="ArgumentException"/>。
+        /// </summary>
+        public EnemySpec CreateSpec()
+        {
+            return new EnemySpec(
+                _sightRange,
+                _attackRange,
+                _loseSightSeconds,
+                _searchSeconds,
+                _reactionSeconds,
+                _openingSpreadDegrees,
+                _settledSpreadDegrees,
+                _openingShots,
+                _coverHideSeconds,
+                _coverPeekSeconds,
+                _coverHealthFraction);
+        }
+
+        /// <summary>
+        /// 判断の設定を spec の値にする。<see cref="TryInitialize"/> がこの値から <see cref="EnemyBrain"/> を作るので、それより前
+        /// (GameObject を有効にする前) に呼ぶ。波で出す敵を強くするのに使う。初期化後なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ApplySpec(EnemySpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (_brain != null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is already initialized; apply the spec before activating it");
+            }
+
+            _sightRange = spec.SightRange;
+            _attackRange = spec.AttackRange;
+            _loseSightSeconds = spec.LoseSightSeconds;
+            _searchSeconds = spec.SearchSeconds;
+            _reactionSeconds = spec.ReactionSeconds;
+            _openingSpreadDegrees = spec.OpeningSpreadDegrees;
+            _settledSpreadDegrees = spec.SettledSpreadDegrees;
+            _openingShots = spec.OpeningShots;
+            _coverHideSeconds = spec.CoverHideSeconds;
+            _coverPeekSeconds = spec.CoverPeekSeconds;
+            _coverHealthFraction = spec.CoverHealthFraction;
+        }
+
+        /// <summary>
+        /// position の物音を次の知覚 1 回だけ渡す。Idle・Patrol・Search 中ならその位置を Search しに行く (<see cref="EnemyBrain"/>)。
+        /// 視界の外に出した敵を目標の方へ向かわせるのに使う。倒れていれば何もしない。
+        /// </summary>
+        public void Alert(Vector3 position)
+        {
+            if (_brain != null && _brain.IsDead)
+            {
+                return;
+            }
+
+            _pendingNoise = position;
         }
 
         /// <summary>
@@ -433,53 +524,6 @@ namespace Fps.Runtime
             return $"{LogTag} id={id} cover phase={phase} point={(string.IsNullOrEmpty(point) ? "none" : point)}";
         }
 
-        /// <summary>
-        /// 倒れた敵を足元 ground・向き rotation の位置で生き返らせる。体力を満タンに作り直し、武器を弾の満ちた状態で作り直し、
-        /// 判断を <see cref="EnemyBrain.Revive"/> で巡回の最初からやり直させ、NavMeshAgent を有効に戻す。出現地点 (NavMesh から
-        /// 外れたときの戻り先) も ground にする。拠点制圧 (<see cref="DominationRunner"/>) のように倒れた敵を戻すモードが呼ぶ。
-        /// 未初期化か、まだ生きていれば何もせず false。
-        /// </summary>
-        public bool Respawn(Vector3 ground, Quaternion rotation)
-        {
-            if (_brain == null || !_brain.IsDead)
-            {
-                return false;
-            }
-
-            // NavMeshAgent は有効なまま Transform を書き換えると元の位置へ戻すので、切った状態で動かしてから有効にする。
-            _agent.enabled = false;
-            transform.SetPositionAndRotation(ground + (Vector3.up * _agent.baseOffset), rotation);
-            _agent.enabled = true;
-            if (_agent.isOnNavMesh)
-            {
-                _agent.Warp(ground);
-                _agent.ResetPath();
-                _agent.isStopped = false;
-            }
-
-            _weapon.Reloaded -= OnReloaded;
-            _weapon = new Weapon(_weapon.Spec);
-            _weapon.Reloaded += OnReloaded;
-
-            _pendingNoise = null;
-            _pendingHit = false;
-            _pendingHitSource = null;
-            _loggedCoverIndex = -1;
-            _loggedCoverPhase = EnemyCoverPhase.None;
-            _destination = null;
-            _detour = null;
-            _goal = null;
-            _stuck.Reset();
-            _spawnPosition = ground;
-            _lastFinitePosition = transform.position;
-            _warnedOffMesh = false;
-
-            _self.ResetHealth();
-            _brain.Revive();
-            Debug.Log($"{LogTag} id={Id} respawned at={ground.ToString("F1")} state={_brain.State}", this);
-            return true;
-        }
-
         /// <summary>立て直しのログ。</summary>
         public static string FormatStuckLog(
             string id, StuckRecovery recovery, EnemyState state, float stalledSeconds, Vector3 position, Vector3? goal, string path)
@@ -509,7 +553,16 @@ namespace Fps.Runtime
         {
             Debug.Log($"{LogTag} id={Id} state={_brain.State}", this);
             ApplyPatrolRoute();
-            ResolveTarget(force: true);
+            var sideMember = GetComponent<SideMember>();
+            if (sideMember != null)
+            {
+                // Player タグの相手を先に目標にすると、間隔が過ぎるまで同陣営のプレイヤーを狙ってしまう。
+                ResolveHostile(sideMember, force: true);
+            }
+            else
+            {
+                ResolveTarget(force: true);
+            }
 
             _lastFinitePosition = transform.position;
             _spawnPosition = NavMesh.SamplePosition(GroundPosition, out var spawnHit, OffMeshSnapRadius, NavMesh.AllAreas)
@@ -564,7 +617,13 @@ namespace Fps.Runtime
             var deltaSeconds = Time.deltaTime;
             _weapon.Tick(deltaSeconds);
 
-            if (_target == null)
+            var member = GetComponent<SideMember>();
+            if (member != null)
+            {
+                // 陣営で狙う相手は動き回り倒れもするので、見つかっていても間隔ごとに選び直す。倒れたらすぐ次を探す。
+                ResolveHostile(member, force: _target != null && _target.IsDead);
+            }
+            else if (_target == null)
             {
                 ResolveTarget(force: false);
             }
@@ -710,6 +769,117 @@ namespace Fps.Runtime
             _target = target;
             _warnedNoTarget = false;
             Debug.Log($"{LogTag} id={Id} target={target.Id}", this);
+        }
+
+        /// <summary>
+        /// member の陣営から見た、いちばん近い生きている敵を目標にする。force でなければ <see cref="TargetSearchInterval"/> ごとにだけ探す。
+        /// 敵がいなければ目標を外す (全員倒れている間など)。目標が変わったときだけログに出す。
+        /// </summary>
+        private void ResolveHostile(SideMember member, bool force)
+        {
+            if (!force && Time.time < _nextTargetSearch)
+            {
+                return;
+            }
+
+            _nextTargetSearch = Time.time + TargetSearchInterval;
+
+            var hostile = EnemySenses.SelectHostile(member, SideMember.FindAll());
+            var target = hostile != null ? hostile.Damageable : null;
+            if (target == _target)
+            {
+                return;
+            }
+
+            _target = target;
+            Debug.Log($"{LogTag} id={Id} side={member.Side.Id} target={(target != null ? target.Id : "none")}", this);
+        }
+
+        /// <summary>
+        /// 倒れた敵を groundPosition (足元) に戻して生き返らせる。体力を満たし、武器を弾の満ちた状態で作り直し、NavMeshAgent を有効に戻して
+        /// 近くの NavMesh に置き、判断 (<see cref="EnemyBrain.Revive"/>)・経路・立て直し・撃たれた記録を初めからにして、目標を選び直す。
+        /// 出現地点 (NavMesh から外れたときの戻り先) も置いた位置にする。
+        /// まだ生きていれば何もせず false。未初期化なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public bool Respawn(Vector3 groundPosition, Quaternion rotation)
+        {
+            if (_brain == null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
+            }
+
+            if (!_brain.IsDead)
+            {
+                return false;
+            }
+
+            PlaceAndStartOver(groundPosition, rotation, "respawned");
+            return true;
+        }
+
+        /// <summary>
+        /// 生死を問わず、<see cref="Respawn"/> と同じく groundPosition (足元) に置き直して体力・武器・判断・経路を初めからにする。
+        /// ラウンド制のモードがラウンドの頭で、生き残っていた敵も含めて全員を出現点に戻すときに使う。未初期化なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ResetTo(Vector3 groundPosition, Quaternion rotation)
+        {
+            if (_brain == null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
+            }
+
+            PlaceAndStartOver(groundPosition, rotation, "reset");
+        }
+
+        private void PlaceAndStartOver(Vector3 groundPosition, Quaternion rotation, string logVerb)
+        {
+            var ground = NavMesh.SamplePosition(groundPosition, out var hit, OffMeshSnapRadius, NavMesh.AllAreas)
+                ? hit.position
+                : groundPosition;
+
+            _pendingNoise = null;
+            _pendingHit = false;
+            _pendingHitSource = null;
+            _loggedCoverIndex = -1;
+            _loggedCoverPhase = EnemyCoverPhase.None;
+            _destination = null;
+            _detour = null;
+            _goal = null;
+            _stuck.Reset();
+            SetCrouching(false);
+
+            _weapon.Reloaded -= OnReloaded;
+            _weapon = new Weapon(_weapon.Spec, _weaponRules);
+            _weapon.Reloaded += OnReloaded;
+
+            // 無効のまま Transform を動かしてから有効にすると、NavMeshAgent は新しい位置の近くの NavMesh に載る。
+            if (_agent.enabled && _agent.isOnNavMesh)
+            {
+                _agent.ResetPath();
+            }
+
+            _agent.enabled = false;
+            transform.SetPositionAndRotation(ground + (Vector3.up * _agent.baseOffset), rotation);
+            _agent.enabled = true;
+            if (_agent.isOnNavMesh)
+            {
+                _agent.Warp(ground);
+                _agent.isStopped = false;
+                _warnedOffMesh = false;
+            }
+            else
+            {
+                Debug.LogWarning($"{LogTag} id={Id} respawn point {ground.ToString("F1")} is not on the NavMesh", this);
+            }
+
+            _spawnPosition = ground;
+            _lastFinitePosition = transform.position;
+
+            _self.ResetHealth();
+            _brain.Restart();
+            _target = null;
+            _nextTargetSearch = 0f;
+            Debug.Log($"{LogTag} id={Id} {logVerb} at={ground.ToString("F1")} state={_brain.State}", this);
         }
 
         private void MoveTo(System.Numerics.Vector3? moveTo)

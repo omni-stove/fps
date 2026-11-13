@@ -60,6 +60,35 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void RestartSendsALivingBrainBackToTheStartOfItsRoute()
+        {
+            var brain = PatrollingBrain(out _);
+            brain.Tick(0.1f, Nothing(Vector3.Zero));
+            brain.Tick(1f, Sees(Vector3.Zero, new Vector3(0f, 0f, 5f)));
+            brain.Tick(1f, Sees(Vector3.Zero, new Vector3(0f, 0f, 5f)));
+            Assert.That(brain.State, Is.Not.EqualTo(EnemyState.Patrol), "seeing a target leaves the patrol");
+
+            brain.Restart();
+            var decision = brain.Tick(0.1f, Nothing(Vector3.Zero));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol));
+            Assert.That(decision.MoveTo, Is.EqualTo(new Vector3(0f, 0f, 10f)));
+            Assert.That(brain.ShotsInAttack, Is.Zero);
+        }
+
+        [Test]
+        public void RestartRevivesADeadBrainLikeRevive()
+        {
+            var brain = PatrollingBrain(out _);
+            brain.Kill();
+
+            brain.Restart();
+
+            Assert.That(brain.IsDead, Is.False);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol));
+        }
+
+        [Test]
         public void ClearingRouteDuringPatrolGoesIdle()
         {
             var brain = PatrollingBrain(out var changes);

@@ -20,6 +20,7 @@ namespace Fps.Tests.EditMode
             MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
+            CampaignLaunchSelection.Clear();
         }
 
         [TearDown]
@@ -29,6 +30,7 @@ namespace Fps.Tests.EditMode
             MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
+            CampaignLaunchSelection.Clear();
             Time.timeScale = 1f;
         }
 
@@ -37,6 +39,7 @@ namespace Fps.Tests.EditMode
         [TestCase(MenuDestination.Tutorial, MenuRoute.RangeScene)]
         [TestCase(MenuDestination.CreateLobby, MenuRoute.NetScene)]
         [TestCase(MenuDestination.JoinLobby, MenuRoute.NetScene)]
+        [TestCase(MenuDestination.QuickMatch, MenuRoute.NetScene)]
         public void GoLoadsTheDestinationScene(MenuDestination destination, string scene)
         {
             Assert.That(MenuNavigator.Go(destination), Is.True);
@@ -194,6 +197,77 @@ namespace Fps.Tests.EditMode
             Assert.That(called, Is.False, "nothing is torn down when the game cannot leave");
             Assert.That(_host.Loaded, Is.Empty);
             Assert.That(MenuNavigator.PendingNotice, Is.Null);
+        }
+
+        [Test]
+        public void StartCampaignSelectsTheLaunchAndLoadsTheMissionScene()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                MenuNavigator.Go(MenuDestination.CreateLobby);
+                _host.Loaded.Clear();
+                var launch = new CampaignLaunch(CampaignTestCatalog.Mission01, CampaignDifficulty.Easy);
+                var order = new List<string>();
+
+                Assert.That(
+                    MenuNavigator.StartCampaign(missions.Catalog, launch, () => order.Add("before:" + _host.Loaded.Count)),
+                    Is.True);
+
+                Assert.That(order, Is.EqualTo(new[] { "before:0" }), "beforeLoad runs once, before the scene is loaded");
+                Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(MenuRoute.CampaignScene) }));
+                Assert.That(CampaignLaunchSelection.Current.ToString(), Is.EqualTo(launch.ToString()));
+                Assert.That(MenuNavigator.PendingLobby.IsRequested, Is.False, "an offline scene clears an unused lobby request");
+            }
+        }
+
+        [Test]
+        public void StartCampaignDoesNothingWhenTheMissionSceneIsNotInTheBuild()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                var called = false;
+                LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(CampaignTestCatalog.NotBuiltScene) + ".*not in the build settings"));
+
+                Assert.That(
+                    MenuNavigator.StartCampaign(
+                        missions.Catalog,
+                        new CampaignLaunch(CampaignTestCatalog.Mission02, CampaignDifficulty.Hard),
+                        () => called = true),
+                    Is.False);
+
+                Assert.That(called, Is.False, "the save is not deleted for a mission that cannot start");
+                Assert.That(_host.Loaded, Is.Empty);
+                Assert.That(CampaignLaunchSelection.Current, Is.Null);
+            }
+        }
+
+        [Test]
+        public void StartCampaignLeavesEverythingWhenBeforeLoadFails()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                var launch = new CampaignLaunch(CampaignTestCatalog.Mission01, CampaignDifficulty.Normal);
+
+                Assert.Throws<System.IO.IOException>(
+                    () => MenuNavigator.StartCampaign(missions.Catalog, launch, () => throw new System.IO.IOException("locked")));
+
+                Assert.That(_host.Loaded, Is.Empty);
+                Assert.That(CampaignLaunchSelection.Current, Is.Null);
+            }
+        }
+
+        [Test]
+        public void StartCampaignRejectsAnUnknownMission()
+        {
+            using (var missions = new CampaignTestCatalog())
+            {
+                Assert.Throws<System.ArgumentException>(
+                    () => MenuNavigator.StartCampaign(missions.Catalog, new CampaignLaunch("Elsewhere", CampaignDifficulty.Normal)));
+                Assert.Throws<System.ArgumentNullException>(
+                    () => MenuNavigator.StartCampaign(null, new CampaignLaunch("Elsewhere", CampaignDifficulty.Normal)));
+                Assert.Throws<System.ArgumentNullException>(() => MenuNavigator.StartCampaign(missions.Catalog, null));
+                Assert.That(_host.Loaded, Is.Empty);
+            }
         }
 
         [Test]

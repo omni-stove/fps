@@ -46,9 +46,9 @@ namespace Fps.Net
             trigger.Tick(Time.deltaTime);
 
             // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う。
-            // ダウン中の射撃と、高い壁で端にいないブラインドファイアはサーバーが捨てるので送らない
+            // ダウン中・回避中・乗り越え中の射撃と、高い壁で端にいないブラインドファイアはサーバーが捨てるので送らない
             // 投げている間は撃たない (オフラインと同じ)。サーバーはこの間の射撃を断らないので、持ち主の側だけで止める
-            if (IsAlive && !IsDowned && !IsThrowingGrenade && ResolveBlindFire(out _) != BlindFireAim.Blocked
+            if (IsAlive && !IsDowned && !IsThrowingGrenade && MoveActionShotRejection == ShotRejection.None && ResolveBlindFire(out _) != BlindFireAim.Blocked
                 && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
             {
                 Fire();
@@ -153,9 +153,10 @@ namespace Fps.Net
 
             // ブラインドファイアの始点と散らばりは曳光弾の予測にだけ使う。サーバーへは目の始点を送り、サーバーが自分の知るカバーの状態で決め直す
             var tracerOrigin = origin;
-            var blind = spec != null && ResolveBlindFire(out var blindOrigin) == BlindFireAim.Blind;
-            if (blind)
+            var blind = false;
+            if (spec != null && ResolveBlindFire(out var blindOrigin) == BlindFireAim.Blind)
             {
+                blind = true;
                 tracerOrigin = blindOrigin;
                 direction = NetBlindFire.Spread(direction, spec, playerId, shotIndex);
             }
@@ -178,6 +179,30 @@ namespace Fps.Net
             }
 
             ReleaseSprint(SprintInput.ReasonFire);
+        }
+
+        /// <summary>
+        /// 回避・乗り越えの最中で撃てないなら、その理由 (<see cref="ShotRejection.Dodging"/>・<see cref="ShotRejection.Vaulting"/>)。撃てるなら None。
+        /// 状態はこのインスタンスの最新の値 (<see cref="NetworkPlayerMotor.IsDodging"/>。持ち主は予測、サーバーは確定状態)。動きを持たなければ None。
+        /// </summary>
+        internal ShotRejection MoveActionShotRejection
+        {
+            get
+            {
+                var motor = ResolveMotor();
+                return motor != null ? CheckMoveActionShot(motor.IsDodging, motor.IsVaulting) : ShotRejection.None;
+            }
+        }
+
+        /// <summary>回避中なら <see cref="ShotRejection.Dodging"/>、乗り越え中なら <see cref="ShotRejection.Vaulting"/>、どちらでもなければ None。</summary>
+        internal static ShotRejection CheckMoveActionShot(bool dodging, bool vaulting)
+        {
+            if (dodging)
+            {
+                return ShotRejection.Dodging;
+            }
+
+            return vaulting ? ShotRejection.Vaulting : ShotRejection.None;
         }
 
         /// <summary>

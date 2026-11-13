@@ -135,7 +135,7 @@ namespace Fps.Runtime
             }
 
             CheckpointTrigger found = null;
-            foreach (var candidate in FindObjectsByType<CheckpointTrigger>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            foreach (var candidate in FindObjectsByType<CheckpointTrigger>(FindObjectsInactive.Exclude))
             {
                 if (!string.Equals(candidate._checkpointId, checkpointId, StringComparison.Ordinal))
                 {

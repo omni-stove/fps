@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -10,6 +11,36 @@ namespace Fps.Runtime
     /// </summary>
     public static class EnemySenses
     {
+        /// <summary>
+        /// self の陣営から見た、いちばん近い生きている敵を members から選ぶ。体力 (<see cref="Damageable"/>) の無い相手と self 自身は選ばない。
+        /// いなければ null。距離は足元 (<see cref="SideMember.GroundPosition"/>) 同士で測り、判定は <see cref="HostileSelector"/> に任せる。
+        /// </summary>
+        /// <param name="self">狙う側。</param>
+        /// <param name="members">候補 (シーンの <see cref="SideMember"/> など)。null の要素は飛ばす。</param>
+        public static SideMember SelectHostile(SideMember self, IReadOnlyList<SideMember> members)
+        {
+            if (self == null)
+            {
+                throw new ArgumentNullException(nameof(self));
+            }
+
+            if (members == null)
+            {
+                throw new ArgumentNullException(nameof(members));
+            }
+
+            var targets = new List<SideMember>(members.Count);
+            foreach (var member in members)
+            {
+                if (member != null && member != self && member.Damageable != null)
+                {
+                    targets.Add(member);
+                }
+            }
+
+            return SideMember.NearestHostile(self.Side, self.GroundPosition, targets);
+        }
+
         /// <summary>
         /// 1 tick 分の知覚を作る。target が無いか死んでいれば Target は null。
         /// 視線は sightRange 以内のときだけ目の高さから Raycast で調べる (それより遠ければ Raycast しない)。

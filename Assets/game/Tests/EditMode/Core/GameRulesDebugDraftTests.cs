@@ -45,7 +45,10 @@ namespace Fps.Core.Tests
         [Test]
         public void FieldsCoverEveryDefinedFieldInOrder()
         {
-            var defined = Enum.GetValues<GameRulesDebugField>();
+            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
+#pragma warning disable CA2263
+            var defined = (GameRulesDebugField[])Enum.GetValues(typeof(GameRulesDebugField));
+#pragma warning restore CA2263
 
             Assert.That(GameRulesDebugDraft.Fields, Is.EqualTo(defined));
             Assert.That(defined.Length, Is.EqualTo(15));

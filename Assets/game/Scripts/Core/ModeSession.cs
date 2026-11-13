@@ -223,6 +223,28 @@ namespace Fps.Core
         /// <exception cref="InvalidOperationException">side が満員。</exception>
         public void AddPlayer(int playerId, Side side)
         {
+            AddPlayer(playerId, side, 0, 0);
+        }
+
+        /// <summary>
+        /// プレイヤーを side に加え、キル数とデス数を kills と deaths から数える。切断して戻ってきた人の成績を引き継ぐときに使う。
+        /// 陣営の得点は動かさない (そのキルは抜ける前にもう入っている)。参加順の番号は進めない。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">kills か deaths が負、または side がチーム分けにない。</exception>
+        /// <exception cref="ArgumentException">すでに参加している。</exception>
+        /// <exception cref="InvalidOperationException">side が満員。</exception>
+        public void AddPlayer(int playerId, Side side, int kills, int deaths)
+        {
+            if (kills < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kills), kills, "kills must not be negative");
+            }
+
+            if (deaths < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(deaths), deaths, "deaths must not be negative");
+            }
+
             if (!_layout.Contains(side))
             {
                 throw new ArgumentOutOfRangeException(nameof(side), side, "side is not part of this team layout");
@@ -240,6 +262,9 @@ namespace Fps.Core
             }
 
             AddRecord(playerId, side);
+            var record = _players[playerId];
+            record.Kills = kills;
+            record.Deaths = deaths;
         }
 
         /// <summary>

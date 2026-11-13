@@ -8,6 +8,8 @@
             <ui:Button name="menu-campaign" text="CAMPAIGN" class="menu__button" />
             <ui:Button name="menu-create-lobby" text="ONLINE - CREATE LOBBY" class="menu__button" />
             <ui:Button name="menu-join-lobby" text="ONLINE - JOIN LOBBY" class="menu__button" />
+            <!-- -register-lobby で載った専用サーバーから、版が同じで満員でないものを選んで UDP でつなぐ。 -->
+            <ui:Button name="menu-quick-match" text="ONLINE - QUICK MATCH" class="menu__button" />
             <ui:Button name="menu-loadout" text="ONLINE - LOADOUT" class="menu__button" />
             <ui:Button name="menu-range" text="FIRING RANGE" class="menu__button" />
             <!-- 射撃場を読み、終えたことがあってもチュートリアルを最初から出す。 -->
@@ -21,5 +23,7 @@
         <ui:VisualElement name="menu-settings-slot" class="menu__settings-slot" style="display: none;" />
         <!-- オンラインで持っていく武器を選ぶ画面の差し込み口。MainMenuScreen が LoadoutSelectPanel で中身を作る。 -->
         <ui:VisualElement name="menu-loadout-slot" class="menu__loadout-slot" style="display: none;" />
+        <!-- キャンペーンのミッションと難易度を選ぶ画面の差し込み口。MainMenuScreen が CampaignSelectPanel で中身を作る。 -->
+        <ui:VisualElement name="menu-campaign-slot" class="menu__campaign-slot" style="display: none;" />
     </ui:VisualElement>
 </ui:UXML>

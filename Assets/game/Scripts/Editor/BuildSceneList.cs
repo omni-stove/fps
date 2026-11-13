@@ -36,6 +36,30 @@ namespace Fps.Editor
         /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
         public const string DominationScene = "Assets/game/Scenes/Domination.unity";
 
+        /// <summary>PvE の波で敵を出す部品 (WaveSpawner) を試すシーン。</summary>
+        public const string WaveTestScene = "Assets/game/Scenes/WaveTest.unity";
+
+        // 対戦・PvE モード。名前とルールはそれぞれ GameRulesAssetBuilder.ModeNames と <名前>Path に揃える (一致はテストで確かめる)。
+        public const string FreeForAllScene = "Assets/game/Scenes/FreeForAll.unity";
+
+        /// <summary>キルコンファームド。生成は <see cref="KillConfirmedSceneBuilder"/>。</summary>
+        public const string KillConfirmedScene = "Assets/game/Scenes/KillConfirmed.unity";
+
+        /// <summary>ガンゲーム。生成は <see cref="GunGameSceneBuilder"/>。</summary>
+        public const string GunGameScene = "Assets/game/Scenes/GunGame.unity";
+
+        /// <summary>ハードポイント。生成は <see cref="HardpointSceneBuilder"/>。</summary>
+        public const string HardpointScene = "Assets/game/Scenes/Hardpoint.unity";
+
+        public const string GuardianScene = "Assets/game/Scenes/Guardian.unity";
+        public const string ExecutionScene = "Assets/game/Scenes/Execution.unity";
+        public const string SearchAndDestroyScene = "Assets/game/Scenes/SearchAndDestroy.unity";
+        public const string HordeScene = "Assets/game/Scenes/Horde.unity";
+        public const string BattleRoyaleScene = "Assets/game/Scenes/BattleRoyale.unity";
+
+        /// <summary><see cref="ModeSceneBuilder"/> の動作確認用シーン (最小の TDM)。生成は <see cref="ModeTestSceneBuilder"/>。</summary>
+        public const string ModeTestScene = "Assets/game/Scenes/ModeTest.unity";
+
         /// <summary>
         /// ネット対戦のシーン。実行時に読み込む側 (Fps.Net の NetBootstrap.ScenePath) と同じ値で、
         /// この Editor のアセンブリは Fps.Net を参照しないため文字列で持つ (一致はテストで確かめる)。
@@ -54,8 +78,51 @@ namespace Fps.Editor
             Campaign02Scene,
             TpsRangeScene,
             DominationScene,
+            WaveTestScene,
+            FreeForAllScene,
+            KillConfirmedScene,
+            GunGameScene,
+            HardpointScene,
+            GuardianScene,
+            ExecutionScene,
+            SearchAndDestroyScene,
+            HordeScene,
+            BattleRoyaleScene,
+            ModeTestScene,
             NetTestScene,
         };
+
+        /// <summary>
+        /// <see cref="GameRulesAssetBuilder.ModeNames"/> の name のモードのシーン (<c>Assets/game/Scenes/&lt;名前&gt;.unity</c>)。
+        /// 知らない名前なら <see cref="ArgumentException"/>。
+        /// </summary>
+        public static string ModeScene(string name)
+        {
+            switch (name)
+            {
+                case GameRulesAssetBuilder.FreeForAllName:
+                    return FreeForAllScene;
+                case GameRulesAssetBuilder.KillConfirmedName:
+                    return KillConfirmedScene;
+                case GameRulesAssetBuilder.GunGameName:
+                    return GunGameScene;
+                case GameRulesAssetBuilder.HardpointName:
+                    return HardpointScene;
+                case GameRulesAssetBuilder.GuardianName:
+                    return GuardianScene;
+                case GameRulesAssetBuilder.ExecutionName:
+                    return ExecutionScene;
+                case GameRulesAssetBuilder.SearchAndDestroyName:
+                    return SearchAndDestroyScene;
+                case GameRulesAssetBuilder.HordeName:
+                    return HordeScene;
+                case GameRulesAssetBuilder.BattleRoyaleName:
+                    return BattleRoyaleScene;
+                default:
+                    throw new ArgumentException(
+                        $"'{name}' is not one of the mode names ({string.Join(", ", GameRulesAssetBuilder.ModeNames)})", nameof(name));
+            }
+        }
 
         /// <summary>専用サーバーのビルドに入れるシーン。メニューと一人称カメラの射撃場は要らないので、ネット対戦のシーンだけを最初に置く。</summary>
         public static IReadOnlyList<string> ServerScenes { get; } = new[] { NetTestScene };

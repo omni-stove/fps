@@ -116,6 +116,80 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void AllySitsOverTheAllysShoulderAndRestoresOnRespawn()
+        {
+            var player = InstantiateLocalPlayer(out var deathCam);
+            var rig = player.GetComponent<ViewRig>();
+            var camera = rig.Camera;
+            rig.UpdateCameraPosition();
+            var localPosition = camera.transform.localPosition;
+
+            deathCam.Step(DeathCamera.Ally, true, false);
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathCam\] started on .*\(Ally\)"));
+            Assert.That(deathCam.Step(DeathCamera.Ally, false, false), Is.EqualTo(DeathCamTransition.Started));
+            Assert.That(player.IsWatchingDeathCamera, Is.True);
+
+            // 味方は離れた所で +X を向いている
+            var allyEye = new Vector3(20f, 1.6f, 0f);
+            deathCam.FrameAlly(allyEye, 90f, null);
+
+            var expected = allyEye + (Quaternion.Euler(0f, 90f, 0f) * rig.ThirdPersonOffset);
+            Assert.That(Vector3.Distance(camera.transform.position, expected), Is.LessThan(1e-3f), "over the ally's shoulder");
+            Assert.That(Vector3.Dot(camera.transform.forward, Vector3.right), Is.GreaterThan(0.999f), "faces where the ally faces");
+            Assert.That(deathCam.IsFreeCamera, Is.False);
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathCam\] stopped on .*\(Respawned\)"));
+            Assert.That(deathCam.Step(DeathCamera.Ally, true, false), Is.EqualTo(DeathCamTransition.Respawned));
+            Assert.That(camera.transform.localPosition, Is.EqualTo(localPosition));
+            Assert.That(rig.enabled, Is.True);
+        }
+
+        [Test]
+        public void FreeTurnsAndFliesFromAboveTheDeathSpot()
+        {
+            var player = InstantiateLocalPlayer(out var deathCam);
+            var camera = player.GetComponent<ViewRig>().Camera;
+            var eye = player.AimOrigin();
+            deathCam.FreeSpeed = 4f;
+
+            deathCam.Step(DeathCamera.Free, true, false);
+            deathCam.Step(DeathCamera.Free, false, false);
+            var start = camera.transform.position;
+            Assert.That(start.y, Is.GreaterThan(eye.y + 0.5f), "starts above where the player fell");
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathCam\] free camera on "));
+            deathCam.MoveFree(Vector2.zero, Vector2.zero, 0f);
+            Assert.That(deathCam.IsFreeCamera, Is.True);
+            Assert.That(Vector3.Distance(camera.transform.position, start), Is.LessThan(1e-4f), "no input keeps the camera still");
+
+            var yawBefore = camera.transform.eulerAngles.y;
+            deathCam.MoveFree(new Vector2(0f, 1f), new Vector2(30f, 10f), 0.5f);
+
+            Assert.That(Mathf.DeltaAngle(yawBefore, camera.transform.eulerAngles.y), Is.EqualTo(30f).Within(1e-2f), "Look turns the camera");
+            var expected = start + (camera.transform.forward * 2f);
+            Assert.That(Vector3.Distance(camera.transform.position, expected), Is.LessThan(1e-3f), "Move flies the way it faces");
+            Assert.That(player.GetComponent<FirstPersonLook>().InputSuspended, Is.True, "the dead body does not turn");
+        }
+
+        [Test]
+        public void SwitchingFromFreeToAllyLeavesTheFreeCamera()
+        {
+            var player = InstantiateLocalPlayer(out var deathCam);
+            var camera = player.GetComponent<ViewRig>().Camera;
+
+            deathCam.Step(DeathCamera.Ally, true, false);
+            deathCam.Step(DeathCamera.Ally, false, false);
+
+            // 映せる味方がいない間は自由カメラ、味方が現れたら肩越しへ
+            deathCam.MoveFree(new Vector2(0f, 1f), Vector2.zero, 0.5f);
+            Assert.That(deathCam.IsFreeCamera, Is.True);
+            deathCam.FrameAlly(new Vector3(-20f, 1.6f, 0f), 0f, null);
+
+            Assert.That(deathCam.IsFreeCamera, Is.False);
+            Assert.That(Vector3.Dot(camera.transform.forward, Vector3.forward), Is.GreaterThan(0.999f));
+        }
+
+        [Test]
         public void NoneKeepsTheOwnView()
         {
             var player = InstantiateLocalPlayer(out var deathCam);
@@ -126,6 +200,8 @@ namespace Fps.Net.Tests
 
             Assert.That(deathCam.Step(DeathCamera.None, false, false), Is.EqualTo(DeathCamTransition.None));
             deathCam.Frame(new Vector3(10f, 1.6f, 0f));
+            deathCam.FrameAlly(new Vector3(10f, 1.6f, 0f), 0f, null);
+            deathCam.MoveFree(Vector2.one, Vector2.one, 1f);
 
             Assert.That(deathCam.IsActive, Is.False);
             Assert.That(camera.transform.localPosition, Is.EqualTo(localPosition));

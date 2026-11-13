@@ -112,6 +112,7 @@ namespace Fps.Core.Tests
 
         [TestCase("-lobby create")]
         [TestCase("-lobby join")]
+        [TestCase("-lobby quickmatch")]
         public void DedicatedServerRejectsLobby(string commandLine)
         {
             var ok = NetStartup.TryResolveLobby(Args(commandLine), true, out var options, out var error);

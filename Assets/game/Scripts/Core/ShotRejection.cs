@@ -50,5 +50,11 @@ namespace Fps.Core
         /// (<see cref="BlindFireShot.TryResolveOrigin"/> が false)。弾は減らさない。
         /// </summary>
         BlindFireBlocked,
+
+        /// <summary>サーバーの知る移動の状態で回避 (<see cref="DodgeMotion.IsRolling"/>) の最中なので撃てない。弾は減らさない。</summary>
+        Dodging,
+
+        /// <summary>サーバーの知る移動の状態で乗り越え (<see cref="VaultPath"/> をたどっている) の最中なので撃てない。弾は減らさない。</summary>
+        Vaulting,
     }
 }

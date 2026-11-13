@@ -265,7 +265,7 @@ namespace Fps.Tests.EditMode
         private static int CountShells(string id)
         {
             var count = 0;
-            foreach (var body in Object.FindObjectsByType<Rigidbody>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var body in Object.FindObjectsByType<Rigidbody>(FindObjectsInactive.Include))
             {
                 if (body.name == id + DeathBodyPresenter.ShellSuffix)
                 {

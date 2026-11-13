@@ -46,6 +46,42 @@ namespace Fps.Core
             return Tag + " left player=" + playerId.ToString(CultureInfo.InvariantCulture);
         }
 
+        /// <summary>切断した人の成績を残し始めたこと。</summary>
+        /// <example><c>[Match] holding player=1 for=60s</c></example>
+        public static string Held(int playerId, float seconds)
+        {
+            return Tag + " holding player=" + playerId.ToString(CultureInfo.InvariantCulture)
+                + " for=" + seconds.ToString("0.##", CultureInfo.InvariantCulture) + "s";
+        }
+
+        /// <summary>切断した人が戻らないまま、残していた成績を捨てたこと。</summary>
+        /// <example><c>[Match] hold expired player=1</c></example>
+        public static string HoldExpired(int playerId)
+        {
+            return Tag + " hold expired player=" + playerId.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>切断した人が戻ってきて、前の playerId の成績を引き継いだこと。</summary>
+        /// <example><c>[Match] rejoined player=5 was=1 team=Alpha kills=2 deaths=1</c></example>
+        public static string Rejoined(int playerId, HeldPlayer held)
+        {
+            return Tag + " rejoined player=" + playerId.ToString(CultureInfo.InvariantCulture)
+                + " was=" + held.PlayerId.ToString(CultureInfo.InvariantCulture)
+                + " team=" + TeamName(held.Team)
+                + " kills=" + held.Kills.ToString(CultureInfo.InvariantCulture)
+                + " deaths=" + held.Deaths.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>クライアントが試合に途中から入ったときに受け取った、点数・残り時間・状態。</summary>
+        /// <example><c>[Match] synced A=3 B=1 remaining=120s state=Playing</c></example>
+        public static string Synced(int alphaScore, int bravoScore, int remainingSeconds, GameModeState state)
+        {
+            return Tag + " synced A=" + alphaScore.ToString(CultureInfo.InvariantCulture)
+                + " B=" + bravoScore.ToString(CultureInfo.InvariantCulture)
+                + " remaining=" + remainingSeconds.ToString(CultureInfo.InvariantCulture) + "s"
+                + " state=" + state;
+        }
+
         /// <example><c>[Match] kill killer=0 victim=1</c></example>
         public static string Kill(int killerId, int victimId)
         {

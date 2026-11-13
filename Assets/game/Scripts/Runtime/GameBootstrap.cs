@@ -16,7 +16,7 @@ namespace Fps.Runtime
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
-    /// 自動回復と予備弾の倍率・無限は <see cref="RulesDefinition"/> のルールで決める (標的ダミーには効かせない)。
+    /// 自動回復と予備弾の倍率・無限・落下ダメージは <see cref="RulesDefinition"/> のルール (<see cref="GameRulesOverride"/> があればそちら) で決める (標的ダミーには効かせない)。
     /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す項目は
     /// <see cref="GameRules.HudDensity"/> (<see cref="Hud.ApplyDensity"/>) で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
@@ -25,6 +25,15 @@ namespace Fps.Runtime
     public sealed class GameBootstrap : MonoBehaviour
     {
         public const string ReadyLog = "[Bootstrap] ready";
+
+        /// <summary>
+        /// <see cref="GameRulesOverride"/> のルールを使うときのログ。definitionName は上書きされたシーンのルールの名前で、未設定なら null。
+        /// </summary>
+        public static string FormatOverrideLog(string definitionName)
+        {
+            var replaced = string.IsNullOrEmpty(definitionName) ? "(none)" : "'" + definitionName + "'";
+            return $"[Bootstrap] rules overridden by GameRulesOverride; scene rules {replaced} are ignored";
+        }
 
         public const string FloorName = "Floor";
         public const string PlayerName = "Player";
@@ -171,7 +180,8 @@ namespace Fps.Runtime
         /// <summary>
         /// 床・プレイヤー・ライト・標的ダミー・HUD を生成する。2 回目以降は何もせず最初の結果を返す。
         /// 途中で失敗したら作りかけのオブジェクトを片付けてから例外を投げ直す。
-        /// <see cref="RulesDefinition"/> の値が不正なら何も作らずに <see cref="GameRulesDefinitionException"/> を投げる。
+        /// <see cref="RulesDefinition"/> の値が不正なら何も作らずに <see cref="GameRulesDefinitionException"/> を投げる
+        /// (<see cref="GameRulesOverride"/> で上書き中は <see cref="RulesDefinition"/> を読まない)。
         /// </summary>
         public BootstrapWorld Build()
         {
@@ -224,9 +234,19 @@ namespace Fps.Runtime
             return _world;
         }
 
-        /// <summary><see cref="RulesDefinition"/> を変換する。未設定なら警告を出して <see cref="GameRules.Default"/>。</summary>
+        /// <summary>
+        /// <see cref="GameRulesOverride.Current"/> があればそれを使い、上書き中とログに出す。
+        /// 無ければ <see cref="RulesDefinition"/> を変換する。未設定なら警告を出して <see cref="GameRules.Default"/>。
+        /// </summary>
         private GameRules ResolveRules()
         {
+            var overridden = GameRulesOverride.Current;
+            if (overridden != null)
+            {
+                Debug.Log(FormatOverrideLog(_rules != null ? _rules.name : null), this);
+                return overridden;
+            }
+
             if (_rules == null)
             {
                 Debug.LogWarning(
@@ -301,6 +321,7 @@ namespace Fps.Runtime
                 regen = player.AddComponent<HealthRegen>();
                 regen.Bind(damageable, rules);
                 PlayerActions.Attach(player, rules);
+                mover.ApplyRules(rules);
 
                 // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
                 mover.BindSprintRelease(weapon, damageable);
@@ -418,6 +439,70 @@ namespace Fps.Runtime
             }
 
             WireAds(ads, weapon, mover);
+            WireSpreadAndRecoil(weapon, ads, mover, look);
+            WireDodgeAndVault(mover, weapon, ads);
+        }
+
+        /// <summary>
+        /// 回避・乗り越えの間は撃たせず、覗き込みを解かせる (始めたときと、その最中に覗き込もうとしたとき)。
+        /// 使うかはルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら始まらないので、ここは常に配線しておく。
+        /// </summary>
+        private static void WireDodgeAndVault(PlayerController mover, WeaponController weapon, AimDownSights ads)
+        {
+            if (mover == null)
+            {
+                return;
+            }
+
+            if (weapon != null)
+            {
+                weapon.FireBlocker = () => mover != null && (mover.IsDodging || mover.IsVaulting);
+            }
+
+            if (ads == null)
+            {
+                return;
+            }
+
+            mover.DodgeStarted += _ => ads.Release();
+            mover.VaultStarted += _ => ads.Release();
+            ads.AimingChanged += aiming =>
+            {
+                if (aiming && mover != null && (mover.IsDodging || mover.IsVaulting))
+                {
+                    ads.Release();
+                }
+            };
+        }
+
+        /// <summary>
+        /// 射撃のばらつきに覗き込みの進み具合と移動の速さ (歩きの速さで足し切る) を読ませ、射撃の反動を視点に足させる。
+        /// WireAds と同じく、読むのは実行時なので Edit Mode では配線だけしておく。
+        /// </summary>
+        private static void WireSpreadAndRecoil(WeaponController weapon, AimDownSights ads, PlayerController mover, FirstPersonLook look)
+        {
+            if (weapon == null)
+            {
+                return;
+            }
+
+            weapon.AdsProgressSource = () => ads != null ? ads.Progress : 0f;
+            weapon.MoveFractionSource = () =>
+            {
+                var controller = mover != null ? mover.Controller : null;
+                if (controller == null)
+                {
+                    return 0f;
+                }
+
+                var velocity = controller.velocity;
+                return SpreadPattern.MoveFraction(new Vector2(velocity.x, velocity.z).magnitude, mover.WalkSpeed);
+            };
+
+            if (look != null)
+            {
+                look.Recoil = weapon.Recoil;
+            }
         }
 
         /// <summary>
@@ -571,7 +656,10 @@ namespace Fps.Runtime
             DeathBodyPresenter.BindAll(targets, rules.DeathBody);
         }
 
-        /// <summary>HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。</summary>
+        /// <summary>
+        /// HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。オフラインなので、ポーズ中は時間を止める
+        /// (<see cref="PauseTimeMode.Freeze"/>)。
+        /// </summary>
         private static GameObject CreateHud(
             Damageable player,
             WeaponController weapon,
@@ -582,6 +670,7 @@ namespace Fps.Runtime
             hud = Hud.Create(HudName, player, weapon, null);
             panelSettings = hud.OwnedPanelSettings;
             hud.ApplyDensity(rules.HudDensity);
+            hud.PauseMenu.TimeMode = PauseTimeMode.Freeze;
             return hud.gameObject;
         }
 

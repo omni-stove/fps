@@ -16,13 +16,25 @@ namespace Fps.Editor
         public const string MenuPath = "Fps/Register Build Scenes";
         public const string LogTag = "[BuildSceneList]";
 
-        /// <summary>射撃場。起動時のシーンなので Build Settings の先頭に置く。</summary>
+        /// <summary>メインメニュー。起動時のシーンなので Build Settings の先頭に置く。実行時に読む側 (<see cref="Fps.Core.MenuRoute"/>) と同じ値。</summary>
+        public const string MainMenuScene = Fps.Core.MenuRoute.MainMenuScene;
+
+        /// <summary>射撃場。メニューから読む。</summary>
         public const string BootstrapScene = "Assets/game/Scenes/Bootstrap.unity";
 
         public const string EnemyAiTestScene = "Assets/game/Scenes/EnemyAiTest.unity";
         public const string MissionTestScene = "Assets/game/Scenes/MissionTest.unity";
         public const string DestructionTestScene = "Assets/game/Scenes/DestructionTest.unity";
         public const string CampaignScene = "Assets/game/Scenes/Campaign01.unity";
+
+        /// <summary>キャンペーンの 2 本目のミッション。ミッションの一覧 (MissionCatalog) から読む。</summary>
+        public const string Campaign02Scene = "Assets/game/Scenes/Campaign02.unity";
+
+        /// <summary>TPS のアクションを試す射撃場。ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/>。</summary>
+        public const string TpsRangeScene = "Assets/game/Scenes/TpsRange.unity";
+
+        /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
+        public const string DominationScene = "Assets/game/Scenes/Domination.unity";
 
         /// <summary>
         /// ネット対戦のシーン。実行時に読み込む側 (Fps.Net の NetBootstrap.ScenePath) と同じ値で、
@@ -33,15 +45,19 @@ namespace Fps.Editor
         /// <summary>ビルドに入れるシーン。この順に Build Settings へ並べる (先頭が起動時のシーン)。</summary>
         public static IReadOnlyList<string> Scenes { get; } = new[]
         {
+            MainMenuScene,
             BootstrapScene,
             EnemyAiTestScene,
             MissionTestScene,
             DestructionTestScene,
             CampaignScene,
+            Campaign02Scene,
+            TpsRangeScene,
+            DominationScene,
             NetTestScene,
         };
 
-        /// <summary>専用サーバーのビルドに入れるシーン。一人称カメラの射撃場は要らないので、ネット対戦のシーンだけを最初に置く。</summary>
+        /// <summary>専用サーバーのビルドに入れるシーン。メニューと一人称カメラの射撃場は要らないので、ネット対戦のシーンだけを最初に置く。</summary>
         public static IReadOnlyList<string> ServerScenes { get; } = new[] { NetTestScene };
 
         /// <summary>path を起動時のシーンとして Build Settings の先頭に有効な状態で置く (<see cref="WithStartScene"/>)。</summary>

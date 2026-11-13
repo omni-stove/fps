@@ -18,17 +18,49 @@ namespace Fps.Tests.EditMode
             Assert.That(MissionTestSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.MissionTestScene));
             Assert.That(DestructionTestSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.DestructionTestScene));
             Assert.That(CampaignSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.CampaignScene));
+            Assert.That(Campaign02Mission.ScenePath, Is.EqualTo(BuildSceneList.Campaign02Scene));
+            Assert.That(MenuSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.MainMenuScene));
         }
 
         [Test]
-        public void ListStartsWithTheBootstrapAndHasNoDuplicates()
+        public void TheMenuLoadsTheListedScenes()
         {
-            Assert.That(BuildSceneList.Scenes[0], Is.EqualTo(BuildSceneList.BootstrapScene));
+            Assert.That(Fps.Core.MenuRoute.MainMenuScene, Is.EqualTo(BuildSceneList.MainMenuScene));
+            Assert.That(Fps.Core.MenuRoute.RangeScene, Is.EqualTo(BuildSceneList.BootstrapScene));
+            Assert.That(Fps.Core.MenuRoute.CampaignScene, Is.EqualTo(BuildSceneList.CampaignScene));
+            Assert.That(Fps.Core.MenuRoute.NetScene, Is.EqualTo(BuildSceneList.NetTestScene));
+        }
+
+        [Test]
+        public void ListStartsWithTheMainMenuAndHasNoDuplicates()
+        {
+            Assert.That(BuildSceneList.Scenes[0], Is.EqualTo(BuildSceneList.MainMenuScene));
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.BootstrapScene));
             Assert.That(BuildSceneList.Scenes, Is.Unique);
             foreach (var path in BuildSceneList.Scenes)
             {
                 Assert.That(BootstrapSceneBuilder.ValidateScenePath(path), Is.EqualTo(path));
             }
+        }
+
+        [Test]
+        public void ListHasTheTpsRangeAndDominationScenes()
+        {
+            Assert.That(BuildSceneList.TpsRangeScene, Is.EqualTo("Assets/game/Scenes/TpsRange.unity"));
+            Assert.That(BuildSceneList.DominationScene, Is.EqualTo("Assets/game/Scenes/Domination.unity"));
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.TpsRangeScene));
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.DominationScene));
+        }
+
+        [Test]
+        public void ArrangeSkipsTheNewScenesUntilTheyAreBuilt()
+        {
+            var scenes = BuildSceneList.Arrange(
+                null, path => path != BuildSceneList.TpsRangeScene && path != BuildSceneList.DominationScene);
+
+            Assert.That(scenes.Select(s => s.path), Has.No.Member(BuildSceneList.TpsRangeScene));
+            Assert.That(scenes.Select(s => s.path), Has.No.Member(BuildSceneList.DominationScene));
+            Assert.That(scenes[0].path, Is.EqualTo(BuildSceneList.MainMenuScene));
         }
 
         [Test]

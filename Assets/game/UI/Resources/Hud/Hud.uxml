@@ -55,8 +55,24 @@
         </ui:VisualElement>
         <!-- 被弾方向。DamageDirectionView が撃たれた方向ごとに弧の子要素を足す。 -->
         <ui:VisualElement name="damage-direction" class="damage-direction" picking-mode="Ignore" style="display: none;" />
-        <ui:VisualElement name="kill-feed" picking-mode="Ignore" style="display: none;" />
-        <ui:VisualElement name="scoreboard" picking-mode="Ignore" style="display: none;" />
+        <!-- 画面右上のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
+        <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
+        <!-- スコアボード。Scoreboard を押している間だけ ScoreboardView が行を作って出す。 -->
+        <ui:VisualElement name="scoreboard" class="scoreboard" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="loadout-select" picking-mode="Ignore" style="display: none;" />
+        <!-- ポーズ画面。開いている間だけ PauseMenu が出す。画面全体を覆い、後ろへのクリックを止める。 -->
+        <ui:VisualElement name="pause-menu" class="pause" style="display: none;">
+            <!-- ボタンの枠。設定画面を開いている間は PauseSettingsView が隠す。 -->
+            <ui:VisualElement name="pause-panel" class="pause__panel">
+                <ui:Label text="ポーズ" class="pause__title" />
+                <!-- オンラインでは試合が止まらないことの案内。オフラインでは PauseMenu が隠す。 -->
+                <ui:Label name="pause-note" text="" class="pause__note" style="display: none;" />
+                <ui:Button name="pause-resume" text="再開" class="pause__button" />
+                <ui:Button name="pause-settings" text="設定" class="pause__button" />
+                <ui:Button name="pause-return-to-menu" text="メニューに戻る" class="pause__button" />
+            </ui:VisualElement>
+            <!-- 設定画面の枠。「設定」で PauseSettingsView が SettingsView の中身を入れて出す。 -->
+            <ui:VisualElement name="pause-settings-slot" class="pause__settings" style="display: none;" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

@@ -87,6 +87,21 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void MatchPrefabLetsPlayersChooseFromTheWeaponCatalog()
+        {
+            var match = MatchPrefabComponent();
+
+            Assert.That(match.Catalog, Is.Not.Null, "the match has no weapon catalog; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(AssetDatabase.GetAssetPath(match.Catalog), Is.EqualTo(Fps.Editor.WeaponAssetBuilder.CatalogPath));
+
+            // サーバーの起動時と同じ検査に通り、テスト用のメニューの並びは片方だけが通る
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(match.Loadout, match.Catalog, out var loadout, out var error), Is.True, error);
+            Assert.That(loadout.TryChoose(1, Fps.Editor.NetLoadoutDebugMenu.ValidWeaponIds, out var reason), Is.True, reason);
+            Assert.That(loadout.TryChoose(2, Fps.Editor.NetLoadoutDebugMenu.InvalidWeaponIds, out reason), Is.False);
+            Assert.That(reason, Does.Contain("slot 0 does not accept Handgun"));
+        }
+
+        [Test]
         public void MatchPrefabTakesRulesFromTheTeamDeathmatchAsset()
         {
             var match = MatchPrefabComponent();
@@ -245,23 +260,52 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void PlayerPrefabCanCrouchWithBodyAndEye()
+        public void PlayerPrefabCanCrouchWithTheEye()
         {
             var prefab = _scene.GetRootGameObjects()
                 .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
                 .Single()
                 .PlayerPrefab;
 
-            var body = prefab.transform.Find(NetStance.BodyName);
-            Assert.That(body, Is.Not.Null, "NetPlayer has no '" + NetStance.BodyName + "'; run Fps.Editor.NetSceneBuilder.Build");
-            Assert.That(body.GetComponent<Renderer>(), Is.Not.Null);
-            Assert.That(prefab.GetComponent<Renderer>(), Is.Null, "the mesh must be on the body child so crouching squashes only the look");
-
-            // プレハブの寸法でしゃがみの寸法が作れる (NetworkPlayerMotor の Awake と同じ)
+            // プレハブの寸法でしゃがみの寸法が作れる (NetworkPlayerMotor の Awake と同じ)。
+            // 見た目はリグで、しゃがみ・ダウンの姿勢は Animator が付けるので、NetStance が縮める Body は持たない
             var stance = NetStance.FromHierarchy(prefab.GetComponent<CharacterController>(), Fps.Runtime.PlayerController.DefaultCrouchHeight);
             Assert.That(stance.Eye, Is.SameAs(prefab.transform.Find(NetPlayer.ViewName)));
-            Assert.That(stance.Body, Is.SameAs(body));
+            Assert.That(stance.Body, Is.Null, "the rig must not also be squashed and laid down by NetStance; run Fps.Editor.NetSceneBuilder.Build");
             Assert.That(stance.Geometry.Standing.EyeY, Is.EqualTo(NetPlayer.EyeHeight).Within(1e-4f));
+        }
+
+        [Test]
+        public void PlayerPrefabLooksLikeTheHumanoidRigStandingOnItsFeet()
+        {
+            var prefab = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single()
+                .PlayerPrefab;
+            const string rerun = "run Fps.Editor.NetSceneBuilder.Build";
+
+            var rig = prefab.transform.Find(Fps.Runtime.CharacterAnimator.RigObjectName);
+            Assert.That(rig, Is.Not.Null, "NetPlayer has no humanoid rig; " + rerun);
+            Assert.That(rig.parent, Is.SameAs(prefab.transform), "CharacterAnimator looks for the rig right under the body");
+
+            var animator = rig.GetComponent<Animator>();
+            Assert.That(animator, Is.Not.Null);
+            Assert.That(animator.runtimeAnimatorController, Is.Not.Null, "the rig has no controller; run Fps.Editor.CharacterRigBuilder.Build");
+
+            // CharacterRigBuilder のプレハブのままなので、リグを作り直すと NetPlayer の見た目も変わる
+            Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(rig.gameObject), Is.Not.Null, rerun);
+            Assert.That(
+                AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(rig.gameObject)),
+                Is.EqualTo(Fps.Editor.CharacterRigBuilder.PrefabPath));
+
+            var controller = prefab.GetComponent<CharacterController>();
+            Assert.That(rig.localPosition.y, Is.EqualTo(controller.center.y - (controller.height / 2f)).Within(1e-4f), "the rig stands on the capsule's feet");
+
+            // カプセルの見た目は無く、チームの色を塗る Renderer はリグの部品だけ
+            var renderers = prefab.GetComponentsInChildren<Renderer>(true);
+            Assert.That(renderers, Is.Not.Empty);
+            Assert.That(renderers.All(r => r.transform.IsChildOf(rig)), Is.True, "only the rig is drawn; " + rerun);
+            Assert.That(prefab.transform.Find(NetStance.BodyName), Is.Null, "the capsule body is replaced by the rig; " + rerun);
         }
 
         [Test]
@@ -341,6 +385,7 @@ namespace Fps.Net.Tests
         public void BuildSceneListNamesTheSceneTheRuntimeLoads()
         {
             Assert.That(Fps.Editor.BuildSceneList.NetTestScene, Is.EqualTo(NetBootstrap.ScenePath));
+            Assert.That(Fps.Core.MenuRoute.NetScene, Is.EqualTo(NetBootstrap.ScenePath), "the menu's online buttons load this scene");
             Assert.That(Fps.Editor.BuildSceneList.Scenes, Has.Member(NetBootstrap.ScenePath));
             Assert.That(Fps.Editor.ServerBuilder.ServerScenePaths(), Is.EqualTo(new[] { NetBootstrap.ScenePath }));
         }

@@ -7,11 +7,13 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 視点操作 (一人称・三人称共通)。Look 入力で本体 (この GameObject) を yaw、子の pitch の軸を pitch (±85°) で回す。
-    /// 有効な間はカーソルをロックする。参照はコードで解決するので Inspector の配線は要らない:
+    /// 有効な間はカーソルをロックする (<see cref="PauseMenu"/> が開いている間を除く)。参照はコードで解決するので Inspector の配線は要らない:
     /// pitch の軸は、本体に <see cref="ViewRig"/> があればその目 (カメラの親)、無ければ子階層の <see cref="Camera"/>。
     /// 入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の <see cref="LookActionPath"/>。
     /// 三人称でもカメラは目の子なので、目を回せば肩越しのカメラも一緒に回る。
+    /// <see cref="Recoil"/> があれば、その反動のずれを pitch の軸にだけ足す (本体の yaw と <see cref="Yaw"/> / <see cref="Pitch"/> は変えない)。
     /// 解決できなければエラーを出して自分を無効にする。
+    /// 感度には操作設定 (<see cref="ControlSettings"/>) のマウス・ゲームパッドごとの倍率を掛け、設定画面で変えるとその場で効く。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class FirstPersonLook : MonoBehaviour
@@ -36,6 +38,23 @@ namespace Fps.Runtime
         private InputAction _lookAction;
         private bool _enabledLookAction;
         private float _sensitivityMultiplier = 1f;
+        private ControlSettings _controlSettings = ControlSettings.Default;
+        private bool _listeningToSettings;
+        private float _recoilPitchUp;
+        private float _recoilYaw;
+        private float _appliedRecoilPitchUp;
+
+        /// <summary>
+        /// 視点に足す反動。null なら足さない。射撃 (<see cref="WeaponController.Recoil"/>) と同じものを配線する。
+        /// ずれは毎フレームの LateUpdate で pitch の軸に足す。ずれが変わらないフレームは軸を書き換えないので、反動の無い武器では今までと同じ。
+        /// </summary>
+        public RecoilState Recoil { get; set; }
+
+        /// <summary>今 pitch の軸に足している反動の上向きの角度 (度)。視点の上限で削られた後の値。</summary>
+        public float AppliedRecoilPitchUp => _appliedRecoilPitchUp;
+
+        /// <summary>今 pitch の軸に足している反動の左右の角度 (度)。正で右。</summary>
+        public float AppliedRecoilYaw => _recoilYaw;
 
         /// <summary>pitch を回す Transform (ViewRig の目、無ければカメラ)。未初期化なら null。</summary>
         public Transform PitchPivot => _pitchPivot;
@@ -78,11 +97,27 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>今効いているマウスの感度 (<see cref="MouseSensitivity"/> × <see cref="SensitivityMultiplier"/>)。</summary>
-        public float EffectiveMouseSensitivity => _mouseSensitivity * _sensitivityMultiplier;
+        /// <summary>
+        /// 感度の倍率 (<see cref="ControlSettings.LookSensitivity"/>) を決める操作設定。Awake で <see cref="AppliedControlSettings.Current"/> を読み、
+        /// 設定画面で変わるたびに入れ直す (Edit Mode では Awake が走らないので初期値)。変えると次のフレームから使う。
+        /// </summary>
+        public ControlSettings ControlSettings
+        {
+            get => _controlSettings;
+            set => _controlSettings = value ?? throw new ArgumentNullException(nameof(value));
+        }
 
-        /// <summary>今効いているスティックの感度 (<see cref="StickSensitivity"/> × <see cref="SensitivityMultiplier"/>)。</summary>
-        public float EffectiveStickSensitivity => _stickSensitivity * _sensitivityMultiplier;
+        /// <summary>
+        /// 今効いているマウスの感度 (<see cref="MouseSensitivity"/> × 設定のマウス感度 × <see cref="SensitivityMultiplier"/>)。
+        /// </summary>
+        public float EffectiveMouseSensitivity =>
+            _mouseSensitivity * _controlSettings.LookSensitivity(InputDeviceKind.KeyboardMouse) * _sensitivityMultiplier;
+
+        /// <summary>
+        /// 今効いているスティックの感度 (<see cref="StickSensitivity"/> × 設定のゲームパッド感度 × <see cref="SensitivityMultiplier"/>)。
+        /// </summary>
+        public float EffectiveStickSensitivity =>
+            _stickSensitivity * _controlSettings.LookSensitivity(InputDeviceKind.Gamepad) * _sensitivityMultiplier;
 
         /// <summary>
         /// Look 入力を読まずに向きを止めるか。既定は false。デスカムの間のように、すぐ戻す一時停止に使う。
@@ -100,10 +135,27 @@ namespace Fps.Runtime
                 return;
             }
 
+            _controlSettings = AppliedControlSettings.Current;
+            AppliedControlSettings.Changed += HandleSettingsChanged;
+            _listeningToSettings = true;
             if (!IsInitialized && !TryInitializeFromHierarchy())
             {
                 enabled = false;
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (_listeningToSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _listeningToSettings = false;
+            }
+        }
+
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            _controlSettings = settings;
         }
 
         private void OnEnable()
@@ -124,7 +176,11 @@ namespace Fps.Runtime
                 _enabledLookAction = true;
             }
 
-            LockCursor(true);
+            // ポーズ中に出現し直したプレイヤーが、メニューを操作しているカーソルを奪わないようにする。閉じたときに PauseMenu がロックする。
+            if (!PauseMenu.IsAnyOpen)
+            {
+                LockCursor(true);
+            }
         }
 
         private void OnDisable()
@@ -141,10 +197,29 @@ namespace Fps.Runtime
         private void OnApplicationFocus(bool hasFocus)
         {
             // フォーカスを失うと OS がロックを外すので、戻ったときにかけ直す。
-            if (hasFocus && isActiveAndEnabled)
+            if (hasFocus && isActiveAndEnabled && !PauseMenu.IsAnyOpen)
             {
                 LockCursor(true);
             }
+        }
+
+        /// <summary>
+        /// 有効で初期化済みの視点操作がシーンにあればカーソルをロックして隠し、無ければ外して出す。
+        /// <see cref="PauseMenu"/> を閉じたときに呼ぶ (開いている間に視点操作が有効・無効になっていることがあるため、開く前の状態には戻さない)。
+        /// </summary>
+        public static void RefreshCursorLock()
+        {
+            var anyActive = false;
+            foreach (var look in FindObjectsByType<FirstPersonLook>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (look.isActiveAndEnabled && look.IsInitialized)
+                {
+                    anyActive = true;
+                    break;
+                }
+            }
+
+            LockCursor(anyActive);
         }
 
         private void Update()
@@ -164,6 +239,35 @@ namespace Fps.Runtime
             var isPointer = _lookAction.activeControl?.device is Pointer;
             var degrees = isPointer ? raw * EffectiveMouseSensitivity : raw * (EffectiveStickSensitivity * Time.deltaTime);
             ApplyLookDelta(degrees);
+        }
+
+        // 射撃 (WeaponController.Update) が反動を足した後に向きへ反映する。
+        private void LateUpdate()
+        {
+            ApplyRecoil();
+        }
+
+        /// <summary>
+        /// <see cref="Recoil"/> の今のずれを pitch の軸に反映する。足しているずれと同じなら何もしない。Play 中は LateUpdate が毎フレーム呼ぶ。
+        /// </summary>
+        public void ApplyRecoil()
+        {
+            if (!IsInitialized)
+            {
+                return;
+            }
+
+            var recoil = Recoil;
+            var pitchUp = recoil != null ? recoil.PitchUpDegrees : 0f;
+            var yaw = recoil != null ? recoil.YawDegrees : 0f;
+            if (pitchUp == _recoilPitchUp && yaw == _recoilYaw)
+            {
+                return;
+            }
+
+            _recoilPitchUp = pitchUp;
+            _recoilYaw = yaw;
+            ApplyRotation();
         }
 
         /// <summary>
@@ -230,6 +334,14 @@ namespace Fps.Runtime
                 _enabledLookAction = false;
             }
 
+            if (_pitchPivot != pitchPivot)
+            {
+                // 足していた反動は前の軸に書いたものなので、新しい軸の向きから引かない。次の LateUpdate で足し直す。
+                _recoilPitchUp = 0f;
+                _recoilYaw = 0f;
+                _appliedRecoilPitchUp = 0f;
+            }
+
             _pitchPivot = pitchPivot;
             _lookAction = lookAction;
             SyncAnglesFromTransforms();
@@ -246,8 +358,16 @@ namespace Fps.Runtime
             }
 
             _angles.Rotate(degrees.x, degrees.y);
+            ApplyRotation();
+        }
+
+        // 反動は向き (_angles) に混ぜず、軸に書くときだけ足す。混ぜると戻ったときに視点操作の分まで戻ってしまう。
+        private void ApplyRotation()
+        {
             transform.localRotation = Quaternion.Euler(0f, _angles.Yaw, 0f);
-            _pitchPivot.localRotation = Quaternion.Euler(_angles.Pitch, 0f, 0f);
+            var pitch = Mathf.Clamp(_angles.Pitch - _recoilPitchUp, -_angles.MaxPitch, _angles.MaxPitch);
+            _appliedRecoilPitchUp = _angles.Pitch - pitch;
+            _pitchPivot.localRotation = Quaternion.Euler(pitch, _recoilYaw, 0f);
         }
 
         /// <summary>子孫 (自分自身は除く) から最初の Camera を探す。無ければ null。</summary>
@@ -276,7 +396,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            _angles.Set(transform.localEulerAngles.y, _pitchPivot.localEulerAngles.x);
+            _angles.Set(transform.localEulerAngles.y, LookAngles.ToSigned(_pitchPivot.localEulerAngles.x) + _appliedRecoilPitchUp);
         }
 
         private static void LockCursor(bool locked)

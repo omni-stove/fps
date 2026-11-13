@@ -13,6 +13,10 @@ namespace Fps.Editor
     /// <list type="bullet">
     /// <item>プレイヤーの武器が撃てる (Play 直後に 1 発撃ち、<c>[Combat] fire ammo=...</c> が出る)。</item>
     /// <item>巡回してきた敵がプレイヤーを撃つ (<c>[AI] id=enemy-1 fire ammo=...</c> が出る)。</item>
+    /// <item>
+    /// 敵が撃ち始めたら、プレイヤーの位置から撃たれたことにして敵に <see cref="HitDamage"/> のダメージを与え、
+    /// 敵が遮蔽点に移って隠れる (<c>[AI] id=enemy-1 state=TakeCover</c> の後に <c>[AI] id=enemy-1 cover phase=Hiding</c> が出る)。
+    /// </item>
     /// <item>Play 中にエラー・例外・Assert のログが出ない。</item>
     /// </list>
     /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。走らせる秒数は <see cref="SecondsArgument"/> で変えられる。
@@ -30,8 +34,11 @@ namespace Fps.Editor
         /// <summary>Play Mode で走らせる秒数を渡す引数。例: <c>-enemyFireSmokeSeconds 60</c>。</summary>
         public const string SecondsArgument = "-enemyFireSmokeSeconds";
 
-        /// <summary>敵が巡回路を回って壁の端から出てきて、撃ち始めるまでに足りる秒数。</summary>
-        public const float DefaultSeconds = 40f;
+        /// <summary>敵が巡回路を回って壁の端から出てきて撃ち始め、撃たれて遮蔽点に着くまでに足りる秒数。</summary>
+        public const float DefaultSeconds = 60f;
+
+        /// <summary>撃ち始めた敵に与えるダメージ。倒さずに TakeCover に移らせる量。</summary>
+        public const int HitDamage = 20;
 
         /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
@@ -47,10 +54,18 @@ namespace Fps.Editor
 
         private static readonly string EnemyFirePrefix = $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} fire ammo=";
 
+        private static readonly string TakeCoverPrefix = $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} state={Fps.Core.EnemyState.TakeCover} ";
+
+        private static readonly string HidingPrefix =
+            $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} cover phase={Fps.Core.EnemyCoverPhase.Hiding} point=";
+
         private static readonly List<string> _errors = new List<string>();
         private static bool _playerFired;
         private static bool _enemyFired;
         private static bool _triggerPulled;
+        private static bool _enemyHit;
+        private static bool _tookCover;
+        private static bool _reachedCover;
         private static double _playStartedAt = -1d;
         private static bool _finished;
 
@@ -143,6 +158,9 @@ namespace Fps.Editor
             _playerFired = false;
             _enemyFired = false;
             _triggerPulled = false;
+            _enemyHit = false;
+            _tookCover = false;
+            _reachedCover = false;
             _playStartedAt = -1d;
             _finished = false;
         }
@@ -180,6 +198,14 @@ namespace Fps.Editor
             else if (condition.StartsWith(EnemyFirePrefix, StringComparison.Ordinal))
             {
                 _enemyFired = true;
+            }
+            else if (_enemyHit && condition.StartsWith(TakeCoverPrefix, StringComparison.Ordinal))
+            {
+                _tookCover = true;
+            }
+            else if (_tookCover && condition.StartsWith(HidingPrefix, StringComparison.Ordinal))
+            {
+                _reachedCover = true;
             }
         }
 
@@ -223,8 +249,15 @@ namespace Fps.Editor
                 }
             }
 
+            // 撃ち始めた敵を、プレイヤーの位置から撃たれたことにする。プレイヤーに狙わせるより確実に当たり、判定がぶれない。
+            if (_enemyFired && !_enemyHit)
+            {
+                _enemyHit = true;
+                HitEnemy();
+            }
+
             var seconds = SessionState.GetFloat(SecondsKey, DefaultSeconds);
-            if (!(_enemyFired && _playerFired) && now - _playStartedAt < seconds)
+            if (!(_enemyFired && _playerFired && _reachedCover) && now - _playStartedAt < seconds)
             {
                 return;
             }
@@ -239,13 +272,22 @@ namespace Fps.Editor
             {
                 problems.Add($"no '{EnemyFirePrefix}...' line within {seconds}s; the enemy did not fire");
             }
+            else if (!_tookCover)
+            {
+                problems.Add($"no '{TakeCoverPrefix}...' line within {seconds}s; the enemy did not take cover after being shot");
+            }
+            else if (!_reachedCover)
+            {
+                problems.Add($"no '{HidingPrefix}...' line within {seconds}s; the enemy did not reach a cover point");
+            }
 
             foreach (var error in _errors)
             {
                 problems.Add(error);
             }
 
-            Debug.Log($"{LogTag} player fired={_playerFired} enemy fired={_enemyFired} errors={_errors.Count}");
+            Debug.Log(
+                $"{LogTag} player fired={_playerFired} enemy fired={_enemyFired} took cover={_tookCover} reached cover={_reachedCover} errors={_errors.Count}");
             if (problems.Count == 0)
             {
                 Finish(SuccessExitCode, "passed");
@@ -254,6 +296,35 @@ namespace Fps.Editor
             {
                 Finish(FailureExitCode, "failed:\n  " + string.Join("\n  ", problems));
             }
+        }
+
+        private static void HitEnemy()
+        {
+            EnemyAgent enemy = null;
+            foreach (var agent in UnityEngine.Object.FindObjectsByType<EnemyAgent>(FindObjectsSortMode.None))
+            {
+                if (agent.Id == EnemyTestSceneBuilder.EnemyId)
+                {
+                    enemy = agent;
+                    break;
+                }
+            }
+
+            var player = GameObject.FindGameObjectWithTag(GameBootstrap.PlayerTag);
+            var damageable = enemy != null ? enemy.GetComponent<Damageable>() : null;
+            if (damageable == null || player == null)
+            {
+                _errors.Add($"could not shoot the enemy: enemy '{EnemyTestSceneBuilder.EnemyId}' found={damageable != null} player found={player != null}");
+                return;
+            }
+
+            if (enemy.CoverRegistry == null)
+            {
+                _errors.Add($"enemy '{EnemyTestSceneBuilder.EnemyId}' has no CoverRegistry; rerun EnemyTestSceneBuilder.Build");
+            }
+
+            Debug.Log($"{LogTag} shooting {EnemyTestSceneBuilder.EnemyId} for {HitDamage} from {player.transform.position}");
+            damageable.TakeDamage(HitDamage, player.transform.position);
         }
 
         private static void Finish(int exitCode, string summary)

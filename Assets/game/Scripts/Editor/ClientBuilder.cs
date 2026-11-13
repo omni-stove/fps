@@ -10,7 +10,7 @@ namespace Fps.Editor
 {
     /// <summary>
     /// クライアント (プレイヤー) をビルドして <c>Builds/client-&lt;platform&gt;/</c> に出力する。
-    /// 入れるシーンは <see cref="BuildSceneList.Scenes"/> のうちプロジェクトにあるもので、先頭の <see cref="BuildSceneList.BootstrapScene"/> が起動時のシーンになる。
+    /// 入れるシーンは <see cref="BuildSceneList.Scenes"/> のうちプロジェクトにあるもので、先頭の <see cref="BuildSceneList.MainMenuScene"/> が起動時のシーンになる。
     /// 版は <see cref="BuildVersionStamper"/> が <c>-buildVersion</c> か git describe から決め、ビルドの間だけ bundleVersion に入れる。
     /// Editor を閉じた状態で次のように呼ぶ (<c>make build</c> / <c>make build windows</c>):
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ClientBuilder.Build -clientPlatform windows|macos [-buildVersion v0.2.0]</code>
@@ -171,11 +171,11 @@ namespace Fps.Editor
             var scenes = ClientScenePaths(
                 BuildSceneList.Scenes, path => AssetDatabase.LoadAssetAtPath<SceneAsset>(path) != null, skipped);
 
-            if (scenes.Length == 0 || scenes[0] != BuildSceneList.BootstrapScene)
+            if (scenes.Length == 0 || scenes[0] != BuildSceneList.MainMenuScene)
             {
                 throw new InvalidOperationException(
-                    LogTag + " ClientBuilder: the start scene " + BuildSceneList.BootstrapScene
-                    + " does not exist; run BootstrapSceneBuilder.Build and commit the scene");
+                    LogTag + " ClientBuilder: the start scene " + BuildSceneList.MainMenuScene
+                    + " does not exist; run MenuSceneBuilder.Build and commit the scene");
             }
 
             if (skipped.Count > 0)

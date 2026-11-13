@@ -31,6 +31,19 @@ namespace Fps.Core
         /// <summary>OpeningSpreadDegrees から SettledSpreadDegrees まで絞るのにかける発数。0 なら最初から SettledSpreadDegrees。</summary>
         public int OpeningShots { get; }
 
+        /// <summary>TakeCover で遮蔽点に着いてから、また隠れ直してから、覗くまでしゃがんでいる時間。</summary>
+        public float CoverHideSeconds { get; }
+
+        /// <summary>TakeCover で 1 回覗いている時間。覗き始めてから ReactionSeconds 経つまでは撃たない。</summary>
+        public float CoverPeekSeconds { get; }
+
+        /// <summary>体力の割合がこれを下回ったら、撃たれていなくても TakeCover に移る。0 なら体力では移らない。</summary>
+        public float CoverHealthFraction { get; }
+
+        public const float DefaultCoverHideSeconds = 1.5f;
+        public const float DefaultCoverPeekSeconds = 2f;
+        public const float DefaultCoverHealthFraction = 0.5f;
+
         /// <param name="sightRange">視認距離。0 より大きい。</param>
         /// <param name="attackRange">攻撃距離。0 より大きく sightRange 以下。</param>
         /// <param name="loseSightSeconds">見失ってから Search までの時間。0 以上。</param>
@@ -39,6 +52,9 @@ namespace Fps.Core
         /// <param name="openingSpreadDegrees">Attack に入って最初の 1 発の散らばりの半角 (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</param>
         /// <param name="settledSpreadDegrees">撃ち始めの数発が過ぎた後の散らばりの半角 (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</param>
         /// <param name="openingShots">散らばりを絞るのにかける発数。0 以上。</param>
+        /// <param name="coverHideSeconds">TakeCover でしゃがんで隠れている時間。0 以上。</param>
+        /// <param name="coverPeekSeconds">TakeCover で 1 回覗いている時間。0 以上。</param>
+        /// <param name="coverHealthFraction">体力の割合がこれを下回ったら TakeCover に移る。0 以上 1 以下。</param>
         public EnemySpec(
             float sightRange,
             float attackRange,
@@ -47,7 +63,10 @@ namespace Fps.Core
             float reactionSeconds,
             float openingSpreadDegrees = 0f,
             float settledSpreadDegrees = 0f,
-            int openingShots = 0)
+            int openingShots = 0,
+            float coverHideSeconds = DefaultCoverHideSeconds,
+            float coverPeekSeconds = DefaultCoverPeekSeconds,
+            float coverHealthFraction = DefaultCoverHealthFraction)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
             {
@@ -69,6 +88,13 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(openingShots), openingShots, "openingShots must be non-negative");
             }
 
+            RequireNonNegativeSeconds(coverHideSeconds, nameof(coverHideSeconds));
+            RequireNonNegativeSeconds(coverPeekSeconds, nameof(coverPeekSeconds));
+            if (!(coverHealthFraction >= 0f) || coverHealthFraction > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(coverHealthFraction), coverHealthFraction, "coverHealthFraction must be between 0 and 1");
+            }
+
             SightRange = sightRange;
             AttackRange = attackRange;
             LoseSightSeconds = loseSightSeconds;
@@ -77,9 +103,12 @@ namespace Fps.Core
             OpeningSpreadDegrees = openingSpreadDegrees;
             SettledSpreadDegrees = settledSpreadDegrees;
             OpeningShots = openingShots;
+            CoverHideSeconds = coverHideSeconds;
+            CoverPeekSeconds = coverPeekSeconds;
+            CoverHealthFraction = coverHealthFraction;
         }
 
-        /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread"/>) が受け付ける範囲に合わせる。</summary>
+        /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread(System.Numerics.Vector3, float, System.Random)"/>) が受け付ける範囲に合わせる。</summary>
         public const float MaxSpreadDegrees = BlindFireShot.MaxSpreadDegrees;
 
         /// <summary>

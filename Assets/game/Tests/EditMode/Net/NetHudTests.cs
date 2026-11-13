@@ -114,6 +114,26 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ThePauseMenuKeepsTheMatchTimeRunning()
+        {
+            var pause = _netHud.Hud.PauseMenu;
+            Assert.That(pause, Is.Not.Null);
+            Assert.That(pause.TimeMode, Is.EqualTo(PauseTimeMode.KeepRunning));
+
+            var timeScaleBefore = Time.timeScale;
+            try
+            {
+                pause.Open();
+                Assert.That(Time.timeScale, Is.EqualTo(timeScaleBefore), "opening the pause menu online must not stop time");
+            }
+            finally
+            {
+                // Edit Mode では OnDisable が走らないので、開いたまま他のテストへ持ち越さない
+                pause.Close();
+            }
+        }
+
+        [Test]
         public void WithoutAMatchTheScoresAndTimeAreHidden()
         {
             Assert.That(_netHud.Match, Is.Null);
@@ -553,6 +573,56 @@ namespace Fps.Net.Tests
             Arrive(_player.DownedStateVariable, NetDownedState.None, new NetDownedState(true, 9, 0));
 
             Assert.That(_view.NoticeLabel.text, Is.EqualTo("ダウン中 あと 9 秒"));
+        }
+
+        [Test]
+        public void PlayerStatsBecomeConnectedScoreboardRows()
+        {
+            var row = new NetPlayerStats(3, Team.Bravo, 5, 2);
+
+            Assert.That(NetHud.TryToScoreboardEntry(row, 3, out var local), Is.True);
+            Assert.That(local.PlayerId, Is.EqualTo(3));
+            Assert.That(local.Name, Is.EqualTo(ScoreboardRows.PlayerName(3)));
+            Assert.That(local.Team, Is.EqualTo(Team.Bravo));
+            Assert.That(local.Kills, Is.EqualTo(5));
+            Assert.That(local.Deaths, Is.EqualTo(2));
+            Assert.That(local.Connection, Is.EqualTo(ScoreboardConnection.Connected));
+            Assert.That(local.IsLocal, Is.True);
+
+            Assert.That(NetHud.TryToScoreboardEntry(row, 4, out var other), Is.True);
+            Assert.That(other.IsLocal, Is.False);
+            Assert.That(NetHud.TryToScoreboardEntry(row, null, out var unknown), Is.True);
+            Assert.That(unknown.IsLocal, Is.False);
+        }
+
+        [Test]
+        public void PlayerStatsWithAnIdTooLargeForAPlayerIdAreSkipped()
+        {
+            var row = new NetPlayerStats((ulong)int.MaxValue + 1, Team.Alpha, 0, 0);
+
+            Assert.That(NetHud.TryToScoreboardEntry(row, null, out _), Is.False);
+        }
+
+        [Test]
+        public void NegativeCountsFromTheWireAreShownAsZero()
+        {
+            var row = new NetPlayerStats(1, Team.Alpha, -1, -4);
+
+            Assert.That(NetHud.TryToScoreboardEntry(row, null, out var entry), Is.True);
+            Assert.That(entry.Kills, Is.Zero);
+            Assert.That(entry.Deaths, Is.Zero);
+        }
+
+        [Test]
+        public void WithoutASyncedPlayerListTheScoreboardIsEmpty()
+        {
+            // Edit Mode では試合の Awake が走らず Players が無い。そのときも HUD を作り続ける
+            _netHud.BindMatch(_match);
+
+            var sections = _netHud.Hud.Scoreboard.Sections;
+            Assert.That(sections, Has.Count.EqualTo(2));
+            Assert.That(sections[0].Rows, Is.Empty);
+            Assert.That(sections[1].Rows, Is.Empty);
         }
     }
 }

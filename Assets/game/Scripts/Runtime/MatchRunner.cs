@@ -14,6 +14,7 @@ namespace Fps.Runtime
     /// 状態が変わるたびに <see cref="MatchLog.SoloState"/> の書式で Debug.Log に出し、終わったらプレイヤーの移動と射撃を止める。
     /// 終了後に <see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) を押すと今のシーンを読み込み直して最初からやり直す。
     /// 勝敗をすぐ確かめたいときは <see cref="KillsToWin"/> と <see cref="TimeLimitSeconds"/> を小さくする。
+    /// HUD があれば、開始時とキル・デスのたびに自分と標的のキル数・デス数を <see cref="ScoreboardView"/> に渡す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MatchRunner : MonoBehaviour
@@ -36,6 +37,10 @@ namespace Fps.Runtime
         public const string RestartActionPath = InputActionPaths.Reload;
 
         private readonly Dictionary<Damageable, int> _targetIds = new Dictionary<Damageable, int>();
+
+        // スコアボードに出す、試合中に倒された回数 (Id ごと)。Match はプレイヤーのキル数しか数えないのでここで数える
+        private readonly Dictionary<int, int> _deaths = new Dictionary<int, int>();
+        private readonly List<ScoreboardEntry> _scoreboardEntries = new List<ScoreboardEntry>();
         private Match _match;
         private BootstrapWorld _world;
         private Damageable _player;
@@ -191,6 +196,7 @@ namespace Fps.Runtime
             _world = world;
             _player = world.PlayerDamageable;
             _match = match;
+            _deaths.Clear();
             foreach (var pair in ids)
             {
                 _targetIds.Add(pair.Key, pair.Value);
@@ -207,6 +213,48 @@ namespace Fps.Runtime
             }
 
             _match.Start();
+            ShowScoreboard();
+        }
+
+        /// <summary>プレイヤーの、この試合で倒された回数。開始前は 0。</summary>
+        public int PlayerDeaths => DeathsOf(PlayerId);
+
+        /// <summary>targetId の標的が、この試合で倒された回数。知らない Id は 0。</summary>
+        public int TargetDeaths(int targetId) => DeathsOf(targetId);
+
+        private int DeathsOf(int id)
+        {
+            return _deaths.TryGetValue(id, out var count) ? count : 0;
+        }
+
+        private void CountDeath(int id)
+        {
+            _deaths[id] = DeathsOf(id) + 1;
+        }
+
+        /// <summary>
+        /// 自分 (Alpha) と標的 (Bravo) のキル数・デス数を HUD のスコアボードに渡す。標的は撃ち返さないのでキル数はいつも 0。
+        /// HUD が無ければ (専用サーバー) 何もしない。
+        /// </summary>
+        private void ShowScoreboard()
+        {
+            var scoreboard = _world != null && _world.Hud != null ? _world.Hud.Scoreboard : null;
+            if (scoreboard == null || _match == null)
+            {
+                return;
+            }
+
+            _scoreboardEntries.Clear();
+            _scoreboardEntries.Add(new ScoreboardEntry(
+                PlayerId, ScoreboardRows.LocalPlayerName, Team.Alpha, _match.Kills, PlayerDeaths, ScoreboardConnection.None, true));
+            foreach (var targetId in _targetIds.Values)
+            {
+                _scoreboardEntries.Add(new ScoreboardEntry(
+                    targetId, ScoreboardRows.TargetName(targetId - PlayerId), Team.Bravo, 0, DeathsOf(targetId),
+                    ScoreboardConnection.None, false));
+            }
+
+            scoreboard.SetEntries(_scoreboardEntries, Team.Alpha);
         }
 
         /// <summary>試合の時間を deltaSeconds 進める。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。</summary>
@@ -246,14 +294,32 @@ namespace Fps.Runtime
         {
             if (_match != null && _targetIds.TryGetValue(target, out var targetId))
             {
+                // 終わった後に倒れても Match はキルを数えないので、デスもそれに合わせて数えない。
+                if (_match.State == GameModeState.Playing)
+                {
+                    CountDeath(targetId);
+                }
+
                 // ソロでは標的を倒せるのはプレイヤーだけなので、倒したのはプレイヤーとして報告する。
                 _match.ReportKill(PlayerId, targetId);
+                ShowScoreboard();
             }
         }
 
         private void OnPlayerDied(Damageable _)
         {
-            _match?.ReportDeath(PlayerId);
+            if (_match == null)
+            {
+                return;
+            }
+
+            if (_match.State == GameModeState.Playing)
+            {
+                CountDeath(PlayerId);
+            }
+
+            _match.ReportDeath(PlayerId);
+            ShowScoreboard();
         }
 
         private void OnStateChanged(GameModeState state)

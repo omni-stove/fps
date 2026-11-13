@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using Fps.Runtime;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Fps.Net
@@ -28,6 +30,10 @@ namespace Fps.Net
     /// 試合がまだ届いていない間と試合が無くなったときは <see cref="NetMatchRules.Default"/> (Full) に戻す。
     /// </para>
     /// <para>
+    /// スコアボード (<see cref="ScoreboardView"/>) には、試合の <see cref="NetTeamDeathmatch.Players"/> を OnListChanged のたびに
+    /// 読み直して渡す。自分のチームの欄を先に出し、自分の行を目立たせる。抜けた人の行はサーバーが消すので、載っている人はみな接続中。
+    /// </para>
+    /// <para>
     /// ダウン中は自分の <see cref="NetPlayer.DownedState"/> から「ダウン中 あと N 秒」と起こされている進み (<see cref="HudFormat.Downed(int, int)"/>) を、
     /// 味方を起こしている間は相手 (<see cref="NetPlayer.ReviveTarget"/>) の進み (<see cref="HudFormat.Reviving"/>) を案内の欄に出す。
     /// </para>
@@ -35,6 +41,10 @@ namespace Fps.Net
     /// アクティブリロードの進みも時間で進むので、毎フレーム <see cref="RefreshReloadProgress"/> で、届いた <see cref="NetWeaponState"/> の
     /// 開始時刻と長さから求めて <see cref="HudModel.SetReloadProgress"/> に渡す。時刻は NetworkManager.LocalTime を使う。
     /// LocalTime はサーバーの時刻の尺で、今送った RPC がサーバーに着く頃を指すので、バーが「今押したらサーバーで判定される進み」になる。
+    /// </para>
+    /// <para>
+    /// キルフィード (<see cref="KillFeedView"/>) の名前は、自分のクライアント Id と試合の参加者・ロードアウトで引く
+    /// <see cref="NetKillFeedNames"/> に替える。行そのものは <see cref="NetCombatFeed"/> が配る。
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -69,6 +79,10 @@ namespace Fps.Net
         private NetDownedState _downedState;
         private int? _revivingPercent;
 
+        // 購読している試合の Players。試合が先に破棄されても購読を外せるよう、試合とは別に持つ
+        private NetworkList<NetPlayerStats> _players;
+        private readonly List<ScoreboardEntry> _scoreboardEntries = new List<ScoreboardEntry>();
+
         /// <summary>流し込み先の HUD。</summary>
         public Hud Hud => _hud;
 
@@ -101,6 +115,7 @@ namespace Fps.Net
                 var netHud = hud.gameObject.AddComponent<NetHud>();
                 netHud.Initialize(player);
                 netHud.ListenForMatch();
+                ConfigurePauseMenu(hud.PauseMenu);
                 return netHud;
             }
             catch
@@ -109,6 +124,20 @@ namespace Fps.Net
                 DestroySafely(hud.gameObject);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// オンラインのポーズ画面は時間を止めない (<see cref="PauseTimeMode.KeepRunning"/>)。「メニューに戻る」での切断は
+        /// NetBootstrap が <see cref="MenuNavigator.ReturningToMenu"/> で行う。
+        /// </summary>
+        internal static void ConfigurePauseMenu(PauseMenu pauseMenu)
+        {
+            if (pauseMenu == null)
+            {
+                throw new ArgumentNullException(nameof(pauseMenu));
+            }
+
+            pauseMenu.TimeMode = PauseTimeMode.KeepRunning;
         }
 
         /// <summary>
@@ -152,7 +181,9 @@ namespace Fps.Net
             ShowHealth();
             ShowScores();
             ShowNotice();
+            ShowScoreboard();
             RefreshReloadProgressNow();
+            BindKillFeedNames();
         }
 
         /// <summary>
@@ -211,6 +242,7 @@ namespace Fps.Net
             CancelRespawn();
 
             _match = match;
+            BindKillFeedNames();
             if (_match == null)
             {
                 _alphaScore = 0;
@@ -226,6 +258,7 @@ namespace Fps.Net
                 ShowAmmo();
                 ShowHealth();
                 ShowNotice();
+                ShowScoreboard();
                 return;
             }
 
@@ -244,12 +277,21 @@ namespace Fps.Net
             _match.RulesVariable.OnValueChanged += HandleRulesChanged;
 
             ApplyDensity();
+
+            // NetworkList は Awake で作るので、Awake を経ない Edit Mode の試合では無い
+            _players = _match.Players;
+            if (_players != null)
+            {
+                _players.OnListChanged += HandlePlayersChanged;
+            }
+
             Model.SetTime(_match.RemainingSecondsVariable.Value);
             ShowAmmo();
             ShowHealth();
             ShowScores();
             ShowResult();
             ShowNotice();
+            ShowScoreboard();
         }
 
         /// <summary>リスポーンまでの秒数を deltaSeconds 進める。待っていなければ何もしない。Play 中は Update が呼ぶ。</summary>
@@ -265,6 +307,16 @@ namespace Fps.Net
         }
 
         private HudModel Model => _hud.Model;
+
+        // キルフィードの Id はプレイヤー Id なので、オフラインの引き先から自分と試合で引くものに替える
+        private void BindKillFeedNames()
+        {
+            var killFeed = _hud != null ? _hud.KillFeed : null;
+            if (killFeed != null && _player != null)
+            {
+                killFeed.Names = NetKillFeedNames.For(_match, _player.OwnerClientId);
+            }
+        }
 
         private void Update()
         {
@@ -338,6 +390,12 @@ namespace Fps.Net
 
         private void UnbindMatch()
         {
+            if (_players != null)
+            {
+                _players.OnListChanged -= HandlePlayersChanged;
+                _players = null;
+            }
+
             if (ReferenceEquals(_match, null))
             {
                 return;
@@ -357,6 +415,12 @@ namespace Fps.Net
         {
             _team = current;
             ShowScores();
+            ShowScoreboard();
+        }
+
+        private void HandlePlayersChanged(NetworkListEvent<NetPlayerStats> change)
+        {
+            ShowScoreboard();
         }
 
         private void HandleHealthChanged(int previous, int current)
@@ -515,6 +579,65 @@ namespace Fps.Net
             }
 
             Model.SetScores(_team, Math.Max(0, _alphaScore), Math.Max(0, _bravoScore));
+        }
+
+        /// <summary>
+        /// 試合の <see cref="NetTeamDeathmatch.Players"/> を、自分のチームを先にしてスコアボードに渡す。試合が無ければ空にする。
+        /// </summary>
+        private void ShowScoreboard()
+        {
+            var scoreboard = _hud != null ? _hud.Scoreboard : null;
+            if (scoreboard == null)
+            {
+                return;
+            }
+
+            if (_match == null || _players == null)
+            {
+                scoreboard.ClearEntries();
+                return;
+            }
+
+            var localClientId = _player != null ? _player.OwnerClientId : (ulong?)null;
+            _scoreboardEntries.Clear();
+            for (var i = 0; i < _players.Count; i++)
+            {
+                if (TryToScoreboardEntry(_players[i], localClientId, out var entry))
+                {
+                    _scoreboardEntries.Add(entry);
+                }
+                else
+                {
+                    Debug.LogWarning("[Net] the scoreboard skips client " + _players[i].ClientId + " whose id does not fit a player id", this);
+                }
+            }
+
+            scoreboard.SetEntries(_scoreboardEntries, _team);
+        }
+
+        /// <summary>
+        /// <see cref="NetTeamDeathmatch.Players"/> の 1 行をスコアボードの行にする。サーバーはプレイヤー Id にクライアント Id を
+        /// そのまま使い、int に収まらないクライアントは試合に入れないので、収まらない行は false を返して載せない。
+        /// </summary>
+        /// <param name="localClientId">この画面のプレイヤーのクライアント Id。分からなければ null (どの行も自分にしない)。</param>
+        internal static bool TryToScoreboardEntry(NetPlayerStats row, ulong? localClientId, out ScoreboardEntry entry)
+        {
+            if (row.ClientId > int.MaxValue)
+            {
+                entry = default;
+                return false;
+            }
+
+            var playerId = (int)row.ClientId;
+            entry = new ScoreboardEntry(
+                playerId,
+                ScoreboardRows.PlayerName(playerId),
+                row.Team,
+                Math.Max(0, row.Kills),
+                Math.Max(0, row.Deaths),
+                ScoreboardConnection.Connected,
+                localClientId == row.ClientId);
+            return true;
         }
 
         private void ShowResult()

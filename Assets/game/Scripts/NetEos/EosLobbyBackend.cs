@@ -6,6 +6,8 @@ using Epic.OnlineServices.Platform;
 using Fps.Core;
 using Fps.Net;
 using UnityEngine;
+// Lobby と Connect の名前空間を両方開くと型名がぶつかりうるので、Connect は別名で参照する
+using EosConnect = Epic.OnlineServices.Connect;
 // SDK の名前空間に同名の型が増えても、こちらを指すようにする
 using LobbyInfo = Fps.Core.LobbyInfo;
 
@@ -18,6 +20,8 @@ namespace Fps.NetEos
     /// <remarks>
     /// ロビーは公開 (検索で見つかる)・プレゼンス無し・ID での参加を許可・ホスト移行なしで作る。
     /// Host が抜けたら試合は続けられないので、オーナーを他のメンバーに移さない。
+    /// 属性は作成の直後に公開の属性として付け、付けられなければロビーを閉じて失敗にする。
+    /// Connect の認証の期限が近づいたら Device ID でログインし直し、ログインが切れたら <see cref="LoggedOut"/> で知らせる。
     /// プラットフォームが解放された後 (終了時) は SDK を呼ばず、失敗として返す。
     /// </remarks>
     internal sealed class EosLobbyBackend : ILobbyBackend
@@ -29,9 +33,13 @@ namespace Fps.NetEos
         private readonly string _displayName;
         private PlatformInterface _platform;
         private LobbyInterface _lobby;
+        private EosConnect.ConnectInterface _connect;
         private ProductUserId _localUserId;
         private EosDeviceLogin _login;
+        private EosDeviceLogin _refresh;
         private ulong _memberStatusNotification;
+        private ulong _authExpirationNotification;
+        private ulong _loginStatusNotification;
         private string _currentLobbyId;
         private bool _disposed;
 
@@ -46,6 +54,8 @@ namespace Fps.NetEos
         public event Action<LobbyInfo> MembersChanged;
 
         public event Action<string, string> Removed;
+
+        public event Action<string> LoggedOut;
 
         /// <summary>このバックエンドが使っているプラットフォームが、まだ解放されていないか。</summary>
         private bool PlatformAlive => _platform != null && ReferenceEquals(EosPlatform.Current, _platform);
@@ -66,7 +76,7 @@ namespace Fps.NetEos
             }
 
             ThrowIfDisposed();
-            if (_platform != null)
+            if (_login != null || _localUserId != null)
             {
                 throw new InvalidOperationException("already logged in or logging in");
             }
@@ -89,6 +99,7 @@ namespace Fps.NetEos
 
             _platform = platform;
             _lobby = lobby;
+            _connect = connect;
 
             var loggedIn = EosPlatform.LocalUserId;
             if (loggedIn != null)
@@ -105,11 +116,17 @@ namespace Fps.NetEos
             });
         }
 
-        public void CreateLobby(string bucketId, int maxMembers, Action<LobbyInfo, string> done)
+        public void CreateLobby(
+            string bucketId, int maxMembers, IReadOnlyList<Fps.Core.LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
             if (done == null)
             {
                 throw new ArgumentNullException(nameof(done));
+            }
+
+            if (attributes == null)
+            {
+                throw new ArgumentNullException(nameof(attributes));
             }
 
             if (!CanCall(out var unavailable))
@@ -140,7 +157,56 @@ namespace Fps.NetEos
                     return;
                 }
 
-                EnteredLobby(lobbyId, true, done);
+                if (attributes.Count == 0 || _disposed)
+                {
+                    EnteredLobby(lobbyId, true, done);
+                    return;
+                }
+
+                // CreateLobby は属性を受け取らないので、作った直後に足す
+                ApplyAttributes(lobbyId, attributes, attributeError =>
+                {
+                    if (attributeError == null)
+                    {
+                        EnteredLobby(lobbyId, true, done);
+                        return;
+                    }
+
+                    // 属性の無いサーバーのロビーは検索で選ばれても使えないので残さない
+                    if (PlatformAlive)
+                    {
+                        SendLeave(lobbyId, true, _ => { });
+                    }
+
+                    Complete(done, null, attributeError);
+                });
+            });
+        }
+
+        public void UpdateAttributes(string lobbyId, IReadOnlyList<Fps.Core.LobbyAttribute> attributes, Action<string> done)
+        {
+            if (done == null)
+            {
+                throw new ArgumentNullException(nameof(done));
+            }
+
+            if (attributes == null)
+            {
+                throw new ArgumentNullException(nameof(attributes));
+            }
+
+            if (!CanCall(out var unavailable))
+            {
+                done(unavailable);
+                return;
+            }
+
+            ApplyAttributes(lobbyId, attributes, error =>
+            {
+                if (!_disposed)
+                {
+                    done(error);
+                }
             });
         }
 
@@ -277,15 +343,33 @@ namespace Fps.NetEos
             _disposed = true;
             _login?.Cancel();
             _login = null;
+            _refresh?.Cancel();
+            _refresh = null;
 
-            if (PlatformAlive && _memberStatusNotification != 0)
+            if (PlatformAlive)
             {
-                _lobby.RemoveNotifyLobbyMemberStatusReceived(_memberStatusNotification);
+                if (_memberStatusNotification != 0)
+                {
+                    _lobby.RemoveNotifyLobbyMemberStatusReceived(_memberStatusNotification);
+                }
+
+                if (_authExpirationNotification != 0)
+                {
+                    _connect.RemoveNotifyAuthExpiration(_authExpirationNotification);
+                }
+
+                if (_loginStatusNotification != 0)
+                {
+                    _connect.RemoveNotifyLoginStatusChanged(_loginStatusNotification);
+                }
             }
 
             _memberStatusNotification = 0;
+            _authExpirationNotification = 0;
+            _loginStatusNotification = 0;
             MembersChanged = null;
             Removed = null;
+            LoggedOut = null;
         }
 
         private void FinishLogin(ProductUserId userId, string error, Action<string, string> done)
@@ -307,16 +391,140 @@ namespace Fps.NetEos
                 return;
             }
 
-            _localUserId = userId;
-            var options = new AddNotifyLobbyMemberStatusReceivedOptions();
-            _memberStatusNotification = _lobby.AddNotifyLobbyMemberStatusReceived(ref options, null, HandleMemberStatus);
+            // ログインし直したときは登録済みの通知をそのまま使う
             if (_memberStatusNotification == 0)
             {
-                done(null, "EOS lobby member notifications could not be registered");
+                var options = new AddNotifyLobbyMemberStatusReceivedOptions();
+                _memberStatusNotification = _lobby.AddNotifyLobbyMemberStatusReceived(ref options, null, HandleMemberStatus);
+                if (_memberStatusNotification == 0)
+                {
+                    done(null, "EOS lobby member notifications could not be registered");
+                    return;
+                }
+            }
+
+            if (_authExpirationNotification == 0)
+            {
+                var options = new EosConnect.AddNotifyAuthExpirationOptions();
+                _authExpirationNotification = _connect.AddNotifyAuthExpiration(ref options, null, HandleAuthExpiration);
+            }
+
+            if (_loginStatusNotification == 0)
+            {
+                var options = new EosConnect.AddNotifyLoginStatusChangedOptions();
+                _loginStatusNotification = _connect.AddNotifyLoginStatusChanged(ref options, null, HandleLoginStatusChanged);
+            }
+
+            if (_authExpirationNotification == 0 || _loginStatusNotification == 0)
+            {
+                // ログインはできているので続ける。長く動かすと認証の期限が切れ、ロビーから外れたときに気づけない
+                Debug.LogWarning("[Lobby] EOS connect notifications could not be registered; the login will not be refreshed");
+            }
+
+            _localUserId = userId;
+            done(userId.ToString(), null);
+        }
+
+        /// <summary>Connect の認証の期限が近い。期限が切れる前に Device ID でログインし直して更新する。</summary>
+        private void HandleAuthExpiration(ref EosConnect.AuthExpirationCallbackInfo info)
+        {
+            if (_disposed || _refresh != null || _localUserId == null || !IsLocalUser(info.LocalUserId) || !PlatformAlive)
+            {
                 return;
             }
 
-            done(userId.ToString(), null);
+            _refresh = new EosDeviceLogin(_connect, _displayName, SystemInfo.deviceModel);
+            _refresh.Begin((userId, error) =>
+            {
+                _refresh = null;
+                if (error != null)
+                {
+                    // 期限が切れればログインの状態の通知が来て、LoggedOut からやり直しになる
+                    Debug.LogWarning("[Lobby] refreshing the EOS login failed: " + error);
+                    return;
+                }
+
+                Debug.Log("[Lobby] refreshed the EOS login user=" + userId);
+            });
+        }
+
+        private void HandleLoginStatusChanged(ref EosConnect.LoginStatusChangedCallbackInfo info)
+        {
+            if (_disposed || _localUserId == null || !IsLocalUser(info.LocalUserId) || info.CurrentStatus == LoginStatus.LoggedIn)
+            {
+                return;
+            }
+
+            var reason = "the EOS connect login became " + info.CurrentStatus;
+            EosPlatform.ForgetLogin(_localUserId);
+            _localUserId = null;
+            _refresh?.Cancel();
+            _refresh = null;
+
+            var lobbyId = _currentLobbyId;
+            _currentLobbyId = null;
+            if (lobbyId != null)
+            {
+                Removed?.Invoke(lobbyId, reason);
+            }
+
+            LoggedOut?.Invoke(reason);
+        }
+
+        private bool IsLocalUser(ProductUserId userId)
+        {
+            return userId != null && _localUserId != null
+                && string.Equals(userId.ToString(), _localUserId.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// オーナーとして入っているロビーに公開の属性を足して送る。結果は (Dispose 後でも) 1 回だけ渡すので、
+        /// 呼び出し側が Dispose 後の扱いを決める。
+        /// </summary>
+        private void ApplyAttributes(string lobbyId, IReadOnlyList<Fps.Core.LobbyAttribute> attributes, Action<string> done)
+        {
+            var modificationOptions = new UpdateLobbyModificationOptions { LobbyId = lobbyId, LocalUserId = _localUserId };
+            var result = _lobby.UpdateLobbyModification(ref modificationOptions, out var modification);
+            if (result != Result.Success || modification == null)
+            {
+                done("preparing the update of EOS lobby " + lobbyId + " failed: " + result);
+                return;
+            }
+
+            try
+            {
+                foreach (var attribute in attributes)
+                {
+                    var addOptions = new LobbyModificationAddAttributeOptions
+                    {
+                        Attribute = new AttributeData
+                        {
+                            Key = attribute.Key,
+                            Value = attribute.IsText
+                                ? new AttributeDataValue { AsUtf8 = attribute.Text }
+                                : new AttributeDataValue { AsInt64 = attribute.Number },
+                        },
+                        Visibility = LobbyAttributeVisibility.Public,
+                    };
+                    result = modification.AddAttribute(ref addOptions);
+                    if (result != Result.Success)
+                    {
+                        done("setting " + attribute + " on EOS lobby " + lobbyId + " failed: " + result);
+                        return;
+                    }
+                }
+
+                var updateOptions = new UpdateLobbyOptions { LobbyModificationHandle = modification };
+                _lobby.UpdateLobby(ref updateOptions, null, (ref UpdateLobbyCallbackInfo info) =>
+                    done(info.ResultCode == Result.Success
+                        ? null
+                        : "updating EOS lobby " + lobbyId + " failed: " + info.ResultCode));
+            }
+            finally
+            {
+                // UpdateLobby は呼んだ時点で変更を写し取るので、完了を待たずに解放してよい
+                modification.Release();
+            }
         }
 
         /// <summary>作成・参加が終わったロビーを読んで返す。Dispose 後に終わったなら、残らないよう出る。</summary>

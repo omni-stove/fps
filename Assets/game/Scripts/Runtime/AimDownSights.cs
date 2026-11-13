@@ -11,6 +11,8 @@ namespace Fps.Runtime
     /// ボタンは <see cref="ControlSettings"/> のモードで解釈する (押している間／押すたびに切り替え。機器は最後に Aim を押した機器)。
     /// リロードや持ち替えでは <see cref="Release"/>、死亡・リスポーンでは <see cref="ResetView"/> を、配線した側が呼ぶ。
     /// 視野角に合わせて同じ GameObject の <see cref="FirstPersonLook.SensitivityMultiplier"/> を下げる。計算は <see cref="AdsZoom"/>。
+    /// 腰だめの視野角と覗き込み中の感度の倍率は操作設定 (<see cref="ControlSettings.FieldOfView"/> / <see cref="ControlSettings.AdsSensitivity"/>)
+    /// から取り、設定画面で変えるとその場で直す (<see cref="ApplyControlSettings"/>)。
     /// 覗き込み始めと終わりに <see cref="AimingChanged"/> を呼び、<c>[View] ads=true</c> / <c>[View] ads=false</c> をログに出す
     /// (ダッシュの解除は購読した側が行う)。見た目だけの機能で、サーバーには何も送らない。
     /// 参照はコードで解決するので Inspector の配線は要らない: カメラは子階層の <see cref="Camera"/>、<see cref="FirstPersonLook"/> は同じ
@@ -38,6 +40,7 @@ namespace Fps.Runtime
 
         private readonly HoldToggleState _aimState = new HoldToggleState(HoldMode.Hold);
         private ControlSettings _controlSettings = ControlSettings.Default;
+        private bool _listeningToSettings;
         private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
 
         /// <summary>
@@ -67,13 +70,30 @@ namespace Fps.Runtime
         public bool IsAiming => _aimState.IsActive;
 
         /// <summary>
-        /// ADS のモードを決める操作設定。Awake で <see cref="ControlSettingsStore"/> から読む (Edit Mode では Awake が走らないので初期値)。
-        /// 変えると次の <see cref="Tick(bool, bool, InputDeviceKind, float)"/> から使う。
+        /// ADS のモードと、覗き込み中の感度の倍率 (<see cref="ControlSettings.AdsSensitivity"/>) を決める操作設定。
+        /// Awake で <see cref="AppliedControlSettings.Current"/> を読む (Edit Mode では Awake が走らないので初期値)。
+        /// 変えると次の <see cref="Tick(bool, bool, InputDeviceKind, float)"/> から使う。視野角まで入れ直すのは <see cref="ApplyControlSettings"/>。
         /// </summary>
         public ControlSettings ControlSettings
         {
             get => _controlSettings;
             set => _controlSettings = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
+        /// <summary>
+        /// settings を <see cref="ControlSettings"/> にし、腰だめの視野角を <see cref="ControlSettings.FieldOfView"/> にして、
+        /// 今の覗き込みの進み具合のままカメラと感度をすぐ直す。設定画面で変わったときに呼ばれる。未初期化なら設定を持つだけ。
+        /// </summary>
+        public void ApplyControlSettings(ControlSettings settings)
+        {
+            ControlSettings = settings;
+            if (!IsInitialized)
+            {
+                return;
+            }
+
+            HipFieldOfView = settings.FieldOfView;
+            Apply(_zoom.FieldOfView(_hipFieldOfView, TargetFieldOfView));
         }
 
         /// <summary>最後に Aim を押した機器。ADS のモードはこの機器の設定を使う。</summary>
@@ -117,10 +137,22 @@ namespace Fps.Runtime
                 return;
             }
 
-            _controlSettings = new ControlSettingsStore().Load();
+            AppliedControlSettings.Changed += ApplyControlSettings;
+            _listeningToSettings = true;
             if (!IsInitialized && !TryInitializeFromHierarchy())
             {
                 enabled = false;
+            }
+
+            ApplyControlSettings(AppliedControlSettings.Current);
+        }
+
+        private void OnDestroy()
+        {
+            if (_listeningToSettings)
+            {
+                AppliedControlSettings.Changed -= ApplyControlSettings;
+                _listeningToSettings = false;
             }
         }
 
@@ -186,7 +218,8 @@ namespace Fps.Runtime
                 ReportAiming(aiming);
             }
 
-            _zoom.Step(aiming, deltaSeconds);
+            // AimingChanged の購読側が同じフレームで Release することがある (回避中など) ので、決めた後の状態で寄せる。
+            _zoom.Step(_aimState.IsActive, deltaSeconds);
             Apply(_zoom.FieldOfView(_hipFieldOfView, TargetFieldOfView));
         }
 
@@ -343,7 +376,10 @@ namespace Fps.Runtime
         private void Apply(float fieldOfView)
         {
             _camera.fieldOfView = fieldOfView;
-            _look.SensitivityMultiplier = AdsZoom.SensitivityMultiplier(_hipFieldOfView, fieldOfView);
+
+            // 設定の ADS 感度は覗き込みの進み具合に合わせて効かせ、腰だめに戻ったら 1 に戻す。
+            var adsScale = 1f + ((_controlSettings.AdsSensitivity - 1f) * _zoom.Progress);
+            _look.SensitivityMultiplier = AdsZoom.SensitivityMultiplier(_hipFieldOfView, fieldOfView) * adsScale;
         }
 
         private void ReportAiming(bool aiming)

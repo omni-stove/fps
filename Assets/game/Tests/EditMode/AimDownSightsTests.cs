@@ -262,6 +262,65 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ApplyingSettingsMovesTheHipFieldOfViewRightAway()
+        {
+            Initialize();
+
+            _ads.ApplyControlSettings(ControlSettings.Default.With(ControlValue.FieldOfView, 80));
+
+            Assert.That(_ads.HipFieldOfView, Is.EqualTo(80f));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(80f), "the camera follows without waiting for the next tick");
+            Assert.That(_look.SensitivityMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ApplyingSettingsWhileAimingKeepsTheZoom()
+        {
+            Initialize();
+            _ads.Tick(true, true, 1f);
+
+            _ads.ApplyControlSettings(ControlSettings.Default.With(ControlValue.FieldOfView, 80));
+
+            Assert.That(_ads.IsAiming, Is.True);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView).Within(1e-4f));
+            Assert.That(
+                _look.SensitivityMultiplier,
+                Is.EqualTo(AdsZoom.SensitivityMultiplier(80f, AdsZoom.DefaultFieldOfView)).Within(1e-5f),
+                "the zoom multiplier is measured from the new hip field of view");
+        }
+
+        [Test]
+        public void AdsSensitivityScalesOnlyWhileAiming()
+        {
+            Initialize();
+            _ads.ApplyControlSettings(ControlSettings.Default.With(ControlValue.AdsSensitivity, 50));
+            Assert.That(_look.SensitivityMultiplier, Is.EqualTo(1f), "the hip sensitivity is untouched");
+
+            _ads.Tick(true, true, 1f);
+
+            var zoom = AdsZoom.SensitivityMultiplier(_hip, AdsZoom.DefaultFieldOfView);
+            Assert.That(_look.SensitivityMultiplier, Is.EqualTo(zoom * 0.5f).Within(1e-5f));
+
+            _ads.Tick(true, false, 0f);
+            _ads.ApplyControlSettings(ControlSettings.Default.With(ControlValue.AdsSensitivity, 200));
+            Assert.That(_look.SensitivityMultiplier, Is.EqualTo(zoom * 2f).Within(1e-5f), "a change applies while aiming");
+
+            _ads.ResetView();
+            Assert.That(_look.SensitivityMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ApplyingSettingsBeforeInitializeOnlyKeepsThem()
+        {
+            var settings = ControlSettings.Default.With(ControlValue.FieldOfView, 80);
+
+            _ads.ApplyControlSettings(settings);
+
+            Assert.That(_ads.ControlSettings, Is.SameAs(settings));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(_hip));
+        }
+
+        [Test]
         public void ReleaseBeforeInitializeDoesNothing()
         {
             Assert.That(_ads.Release(), Is.False);

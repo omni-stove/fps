@@ -56,6 +56,7 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
+            GameRulesOverride.Clear();
             DestroyWorld(_world);
             Object.DestroyImmediate(_host);
             Object.DestroyImmediate(_rifle);
@@ -161,6 +162,23 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlayerDodgeFollowsTheRulesAndBlocksTheWeapon()
+        {
+            Assert.That(_world.Mover.DodgeRule, Is.EqualTo(_world.Rules.Actions.Dodge));
+            Assert.That(_world.Mover.DodgeBlocker, Is.Not.Null, "cover blocks the dodge");
+            Assert.That(_world.Weapon.FireBlocker, Is.Not.Null);
+            Assert.That(_world.Weapon.IsFireBlocked, Is.False, "not dodging");
+        }
+
+        [Test]
+        public void PlayerVaultFollowsTheRules()
+        {
+            Assert.That(_world.Mover.VaultRule, Is.EqualTo(_world.Rules.Actions.Vault));
+            Assert.That(_world.Mover.IsVaulting, Is.False);
+            Assert.That(_world.Weapon.IsFireBlocked, Is.False, "not vaulting");
+        }
+
+        [Test]
         public void PlayerWeaponsUseTheWiredReserveRules()
         {
             Assert.That(_world.Weapon.Rules, Is.SameAs(_world.Rules));
@@ -192,6 +210,108 @@ namespace Fps.Tests.EditMode
                 DestroyWorld(world);
                 Object.DestroyImmediate(host);
             }
+        }
+
+        [Test]
+        public void TheWiredRulesAreUsedWhenNothingOverridesThem()
+        {
+            Assert.That(GameRulesOverride.Current, Is.Null);
+            Assert.That(_world.Rules.RegenPerSecond, Is.EqualTo(_testRules.RegenPerSecond));
+            Assert.That(_world.Rules.ReserveAmmoMultiplier, Is.EqualTo(_testRules.ReserveAmmoMultiplier));
+        }
+
+        [Test]
+        public void OverrideRulesWinOverTheWiredRulesAndAreLogged()
+        {
+            var overridden = _testRules.WithRegenPerSecond(30f).WithInfiniteReserve(false);
+            GameRulesOverride.Set(overridden);
+            var host = new GameObject("Bootstrap-Overridden");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+
+                LogAssert.Expect(LogType.Log, GameBootstrap.FormatOverrideLog(_rules.name));
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Rules, Is.SameAs(overridden));
+                Assert.That(world.Regen.Rules, Is.SameAs(overridden));
+                Assert.That(world.Weapon.Rules, Is.SameAs(overridden));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void OverrideRulesReplaceAMissingOrBrokenDefinitionWithoutTheWarning()
+        {
+            GameRulesOverride.Set(_testRules);
+            var broken = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            var hosts = new[] { new GameObject("Bootstrap-OverriddenNoRules"), new GameObject("Bootstrap-OverriddenBroken") };
+            var worlds = new BootstrapWorld[hosts.Length];
+            try
+            {
+                broken.RegenPerSecond = -1f;
+                for (var i = 0; i < hosts.Length; i++)
+                {
+                    var bootstrap = hosts[i].AddComponent<GameBootstrap>();
+                    bootstrap.CreatesFloor = false;
+                    bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                    bootstrap.RulesDefinition = i == 0 ? null : broken;
+
+                    LogAssert.Expect(LogType.Log, GameBootstrap.FormatOverrideLog(i == 0 ? null : broken.name));
+                    LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                    worlds[i] = bootstrap.Build();
+
+                    Assert.That(worlds[i].Rules, Is.SameAs(_testRules), hosts[i].name);
+                }
+
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                foreach (var world in worlds)
+                {
+                    DestroyWorld(world);
+                }
+
+                foreach (var host in hosts)
+                {
+                    Object.DestroyImmediate(host);
+                }
+
+                Object.DestroyImmediate(broken);
+            }
+        }
+
+        [Test]
+        public void OverrideCanBeClearedAndRejectsNull()
+        {
+            Assert.Throws<System.ArgumentNullException>(() => GameRulesOverride.Set(null));
+            Assert.That(GameRulesOverride.Current, Is.Null);
+
+            GameRulesOverride.Set(GameRules.Default);
+            Assert.That(GameRulesOverride.Current, Is.SameAs(GameRules.Default));
+            GameRulesOverride.Set(_testRules);
+            Assert.That(GameRulesOverride.Current, Is.SameAs(_testRules), "a later Set replaces the earlier one");
+
+            GameRulesOverride.Clear();
+            Assert.That(GameRulesOverride.Current, Is.Null);
+        }
+
+        [Test]
+        public void OverrideLogNamesTheReplacedRules()
+        {
+            Assert.That(GameBootstrap.FormatOverrideLog("Range"), Does.StartWith("[Bootstrap] ").And.Contain("'Range'"));
+            Assert.That(GameBootstrap.FormatOverrideLog(null), Does.StartWith("[Bootstrap] ").And.Contain("(none)"));
+            Assert.That(GameBootstrap.FormatOverrideLog(string.Empty), Is.EqualTo(GameBootstrap.FormatOverrideLog(null)));
         }
 
         [Test]
@@ -692,6 +812,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(views, Has.None.Null);
             Assert.That(hud.PauseMenu, Is.Not.Null);
+            Assert.That(hud.PauseMenu.TimeMode, Is.EqualTo(PauseTimeMode.Freeze), "offline pauses stop time");
 
             // Edit Mode では UIDocument が木を作らないことがあり、そのときは View もビューの要素も無い。
             Assume.That(hud.View, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");

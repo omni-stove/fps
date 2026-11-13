@@ -38,6 +38,16 @@ namespace Fps.NetEos
             }
         }
 
+        /// <summary>ログインが切れたユーザーを忘れ、次のログインで Device ID からやり直させる。</summary>
+        public static void ForgetLogin(ProductUserId userId)
+        {
+            if (_localUserId != null && userId != null
+                && string.Equals(_localUserId.ToString(), userId.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                _localUserId = null;
+            }
+        }
+
         /// <summary>
         /// プラットフォームを作る (作成済みならそれを返す)。SDK の初期化・ネイティブライブラリの読み込みの失敗は
         /// 例外にせず <paramref name="error"/> で返す。

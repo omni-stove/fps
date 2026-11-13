@@ -22,6 +22,10 @@ namespace Fps.Tests.EditMode
         // GameBootstrap のプレイヤーと同じ寸法。足元が y = 0 に来るよう本体を y = 1 に置く。
         private const float _height = 2f;
         private const float _radius = 0.5f;
+
+        // 乗り越えの検査で正面に置く壁の、体の中心から手前の面までの距離と厚さ。
+        private const float _wallNearZ = 0.8f;
+        private const float _wallDepth = 0.4f;
         private static readonly Vector3 _bodyPosition = new Vector3(0f, 1f, 0f);
         private static readonly Vector3 _eyeOffset = new Vector3(0f, 0.6f, 0f);
 
@@ -34,6 +38,8 @@ namespace Fps.Tests.EditMode
         private InputAction _crouch;
         private InputAction _jump;
         private MotorSpec _spec;
+        private GameObject _floor;
+        private GameObject _wall;
 
         [SetUp]
         public void SetUp()
@@ -60,6 +66,15 @@ namespace Fps.Tests.EditMode
             _crouch.Dispose();
             _jump.Dispose();
             Object.DestroyImmediate(_body);
+            if (_floor != null)
+            {
+                Object.DestroyImmediate(_floor);
+            }
+
+            if (_wall != null)
+            {
+                Object.DestroyImmediate(_wall);
+            }
         }
 
         [Test]
@@ -698,6 +713,321 @@ namespace Fps.Tests.EditMode
             Physics.SyncTransforms();
             TickCrouch(true, false, false, false, InputDeviceKind.KeyboardMouse);
             Assert.That(_player.IsCrouched, Is.False, "holding Crouch through a release does not crouch again");
+        }
+
+        [Test]
+        public void DodgeIsOffByDefaultAndDoesNothing()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+
+            Assert.That(_player.DodgeRule, Is.EqualTo(Dodge.Off));
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.False);
+            Assert.That(_player.IsDodging, Is.False);
+        }
+
+        [Test]
+        public void DodgeRollsTheSpecDistanceTowardsTheInput()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            var start = _body.transform.position;
+            Vector3? startedTowards = null;
+            var ended = 0;
+            _player.DodgeStarted += direction => startedTowards = direction;
+            _player.DodgeEnded += () => ended++;
+
+            LogAssert.Expect(LogType.Log, "[Player] dodging=true");
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.True);
+            Assert.That(_player.IsDodging, Is.True);
+            Assert.That(startedTowards, Is.Not.Null);
+            Assert.That(startedTowards.Value.x, Is.EqualTo(1f).Within(_tolerance));
+
+            LogAssert.Expect(LogType.Log, "[Player] dodging=false");
+            TickUntilDodgeEnds();
+
+            var moved = _body.transform.position - start;
+            Assert.That(moved.x, Is.EqualTo(MotorSpec.DefaultDodgeDistance).Within(0.01f));
+            Assert.That(moved.z, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(ended, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DodgeWithoutInputRollsBackwards()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            var start = _body.transform.position;
+
+            Assert.That(_player.TryStartDodge(Vector2.zero), Is.True);
+            TickUntilDodgeEnds();
+
+            var moved = _body.transform.position - start;
+            Assert.That(moved.z, Is.EqualTo(-MotorSpec.DefaultDodgeDistance).Within(0.01f));
+            Assert.That(moved.x, Is.EqualTo(0f).Within(0.01f));
+        }
+
+        [Test]
+        public void DodgeNeedsGround()
+        {
+            InitializeWithLook();
+            _player.DodgeRule = Dodge.On;
+
+            Assert.That(_player.IsGrounded, Is.False);
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.False);
+        }
+
+        [Test]
+        public void DodgeIsNotRestartedUntilTheCooldownPasses()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.True);
+            Assert.That(_player.TryStartDodge(new Vector2(-1f, 0f)), Is.False, "not while rolling");
+            TickUntilDodgeEnds();
+            Assert.That(_player.TryStartDodge(new Vector2(-1f, 0f)), Is.False, "not right after the roll");
+
+            for (var i = 0; i < 26; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, 0.02f);
+            }
+
+            Assert.That(_player.TryStartDodge(new Vector2(-1f, 0f)), Is.True, "after the cooldown");
+        }
+
+        [Test]
+        public void DodgeIsNotStartedWhileBlocked()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            var blocked = true;
+            _player.DodgeBlocker = () => blocked;
+
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.False);
+
+            blocked = false;
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.True);
+        }
+
+        [Test]
+        public void DodgeReleasesCrouchAndSprintAndKeepsThemOffWhileRolling()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            // 0 秒の Tick では動かず接地が外れるので、時間を進めて床に押し付けたまましゃがむ。
+            var crouch = _player.UpdateCrouch(true, true, false, false, InputDeviceKind.KeyboardMouse);
+            _player.Tick(Vector2.zero, false, crouch, false, 0.02f);
+            _player.UpdateSprint(new Vector2(0f, 1f), true, true, InputDeviceKind.KeyboardMouse);
+            Assert.That(_player.IsCrouched, Is.True);
+            Assert.That(_player.IsSprinting, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Player] crouch=off mode=hold reason=dodge");
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.True);
+            Assert.That(_player.IsCrouchActive, Is.False);
+            Assert.That(_player.IsSprinting, Is.False);
+
+            // しゃがみとジャンプを押し続けても、転がっている間は立ったまま跳ばない。
+            Physics.SyncTransforms();
+            _player.Tick(Vector2.zero, true, true, true, 0.02f);
+
+            Assert.That(_player.IsCrouched, Is.False);
+            Assert.That(_player.Motor.Velocity.Y, Is.LessThanOrEqualTo(0f));
+        }
+
+        [Test]
+        public void TurningDodgeOffStopsTheRoll()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.DodgeRule = Dodge.On;
+            _player.TryStartDodge(new Vector2(1f, 0f));
+
+            LogAssert.Expect(LogType.Log, "[Player] dodging=false");
+            _player.DodgeRule = Dodge.Off;
+
+            Assert.That(_player.IsDodging, Is.False);
+        }
+
+        [Test]
+        public void DodgingLogHasTagAndLowercaseValue()
+        {
+            Assert.That(PlayerController.FormatDodgingLog(true), Is.EqualTo("[Player] dodging=true"));
+            Assert.That(PlayerController.FormatDodgingLog(false), Is.EqualTo("[Player] dodging=false"));
+        }
+
+        [Test]
+        public void VaultIsOffByDefaultAndJumpStaysAJump()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            PlaceWallInFront(1f);
+
+            Assert.That(_player.VaultRule, Is.EqualTo(Vault.Off));
+            _player.Tick(Vector2.zero, false, false, true, 0.02f);
+
+            Assert.That(_player.IsVaulting, Is.False);
+            Assert.That(_player.Motor.Velocity.Y, Is.GreaterThan(0f), "jumped");
+        }
+
+        [Test]
+        public void JumpInFrontOfALowWallVaultsOverIt()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+            PlaceWallInFront(1f);
+            var start = _body.transform.position;
+            Vector3? startedTowards = null;
+            var ended = 0;
+            _player.VaultStarted += direction => startedTowards = direction;
+            _player.VaultEnded += () => ended++;
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Player\] vault=Vault height=\d\.\d\d depth=0\.40$"));
+            LogAssert.Expect(LogType.Log, "[Player] vaulting=true");
+            _player.Tick(Vector2.zero, false, false, true, 0.02f);
+
+            Assert.That(_player.IsVaulting, Is.True);
+            Assert.That(_player.LastVaultProbe.CanVault, Is.True);
+            Assert.That(startedTowards, Is.Not.Null);
+            Assert.That(startedTowards.Value.z, Is.EqualTo(1f).Within(_tolerance));
+
+            var highest = float.MinValue;
+            LogAssert.Expect(LogType.Log, "[Player] vaulting=false");
+            for (var i = 0; i < 100 && _player.IsVaulting; i++)
+            {
+                _player.Tick(Vector2.zero, true, true, true, 0.02f);
+                highest = Mathf.Max(highest, FeetY());
+                Assert.That(_player.IsCrouched, Is.False, "crouch is held off while vaulting");
+            }
+
+            Assert.That(_player.IsVaulting, Is.False, "the vault ends");
+            Assert.That(ended, Is.EqualTo(1));
+            Assert.That(highest, Is.GreaterThan(1f), "the feet went over the top of the wall");
+
+            var moved = _body.transform.position - start;
+            var farSide = _wallNearZ + _wallDepth + _radius;
+            Assert.That(_body.transform.position.z, Is.GreaterThan(farSide), "landed beyond the wall");
+            Assert.That(moved.x, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(moved.y, Is.EqualTo(0f).Within(0.1f), "back down at the floor");
+        }
+
+        [Test]
+        public void JumpInFrontOfAHighWallJumpsInstead()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+            PlaceWallInFront(2f);
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Player\] vault=TooHigh "));
+            _player.Tick(Vector2.zero, false, false, true, 0.02f);
+
+            Assert.That(_player.IsVaulting, Is.False);
+            Assert.That(_player.LastVaultProbe.Verdict, Is.EqualTo(VaultVerdict.TooHigh));
+            Assert.That(_player.Motor.Velocity.Y, Is.GreaterThan(0f), "jumped");
+        }
+
+        [Test]
+        public void JumpWithNothingInFrontJumps()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+
+            _player.Tick(Vector2.zero, false, false, true, 0.02f);
+
+            Assert.That(_player.IsVaulting, Is.False);
+            Assert.That(_player.LastVaultProbe.Verdict, Is.EqualTo(VaultVerdict.NoObstacle));
+            Assert.That(_player.Motor.Velocity.Y, Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void VaultNeedsGround()
+        {
+            InitializeWithLook();
+            _player.VaultRule = Vault.On;
+
+            Assert.That(_player.IsGrounded, Is.False);
+            Assert.That(_player.TryStartVault(), Is.False);
+        }
+
+        [Test]
+        public void VaultIsNotStartedWhileDodging()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+            _player.DodgeRule = Dodge.On;
+            PlaceWallInFront(1f);
+
+            Assert.That(_player.TryStartDodge(new Vector2(1f, 0f)), Is.True);
+            Assert.That(_player.TryStartVault(), Is.False);
+        }
+
+        [Test]
+        public void TurningVaultOffStopsTheVault()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+            PlaceWallInFront(1f);
+            Assert.That(_player.TryStartVault(), Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Player] vaulting=false");
+            _player.VaultRule = Vault.Off;
+
+            Assert.That(_player.IsVaulting, Is.False);
+        }
+
+        [Test]
+        public void VaultLogsHaveTagAndValues()
+        {
+            Assert.That(PlayerController.FormatVaultingLog(true), Is.EqualTo("[Player] vaulting=true"));
+            Assert.That(PlayerController.FormatVaultingLog(false), Is.EqualTo("[Player] vaulting=false"));
+
+            var result = new VaultProbeResult(VaultVerdict.TooDeep, 1f, float.PositiveInfinity, System.Numerics.Vector3.UnitZ, null);
+            Assert.That(PlayerController.FormatVaultProbeLog(result), Is.EqualTo("[Player] vault=TooDeep height=1.00 depth=inf"));
+        }
+
+        // 正面 (+Z) の、体の中心から _wallNearZ 先に、厚さ _wallDepth・高さ height の壁を床の上に置く。
+        private void PlaceWallInFront(float height)
+        {
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = new Vector3(0f, height / 2f, _wallNearZ + (_wallDepth / 2f));
+            _wall.transform.localScale = new Vector3(3f, height, _wallDepth);
+            Physics.SyncTransforms();
+        }
+
+        // 足元 (y = 0) の下に床を置き、接地するまで落とす。
+        private void LandOnFloor()
+        {
+            _floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _floor.transform.position = new Vector3(0f, -0.5f, 0f);
+            _floor.transform.localScale = new Vector3(40f, 1f, 40f);
+            Physics.SyncTransforms();
+
+            for (var i = 0; i < 10 && !_player.IsGrounded; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, 0.02f);
+            }
+
+            Assert.That(_player.IsGrounded, Is.True, "landed on the floor");
+        }
+
+        private void TickUntilDodgeEnds()
+        {
+            for (var i = 0; i < 100 && _player.IsDodging; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, 0.02f);
+            }
+
+            Assert.That(_player.IsDodging, Is.False, "the roll ends");
         }
 
         // UpdateCrouch で解釈した結果を Tick に渡す (Update と同じ流れ)。

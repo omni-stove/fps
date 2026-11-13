@@ -15,6 +15,8 @@ namespace Fps.Runtime
     /// 持ち替えに時間はかからず、しまった武器のリロードは取り消す。
     /// Reload で <see cref="Weapon.TryStartReload"/> (リロード中なら <see cref="Weapon.TryActiveReload"/>)、毎フレーム今の武器の <see cref="Weapon.Tick"/> を呼ぶ。
     /// 弾数・連射間隔・リロードの判断は <see cref="Weapon"/>、ダメージ量は <see cref="DamageCalculator"/> が行う。
+    /// 弾の向きは武器のばらつき (<see cref="SpreadPattern"/>) で円錐の中へずらし、撃つたびに <see cref="Recoil"/> に反動を足す。
+    /// どちらも種は <see cref="PlayerId"/> と発射番号 (<see cref="ShotCount"/>) で、値が 0 の武器では何も変わらない。
     /// 武器の値 (弾数・連射間隔・ダメージ・射程・距離減衰) は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない。
     /// 参照はコードで解決する: 照準は同じ GameObject の <see cref="Camera"/>、入力はプロジェクト全体のアクション、
     /// 定義はシーン生成スクリプト (または <see cref="GameBootstrap"/>) が <see cref="Definitions"/> に配線する。
@@ -79,8 +81,32 @@ namespace Fps.Runtime
         private WeaponDefinition[] _loadedDefinitions;
         private GameRules _rules = GameRules.Default;
         private GameRules _loadedRules;
+        private readonly RecoilState _recoil = new RecoilState();
         private float _spread;
         private float _secondsSinceShot;
+        private int _shotCount;
+
+        /// <summary>撃つたびに反動を足し、<see cref="Tick"/> で戻す。視点 (<see cref="FirstPersonLook.Recoil"/>) に同じものを配線して揺らす。</summary>
+        public RecoilState Recoil => _recoil;
+
+        /// <summary>
+        /// ばらつきと反動の種にするプレイヤー Id。既定は 0 (オフラインで撃つのは手元のプレイヤーだけ)。
+        /// </summary>
+        public int PlayerId { get; set; }
+
+        /// <summary>このコンポーネントで撃った弾の数。次に撃つ弾の発射番号でもある。</summary>
+        public int ShotCount => _shotCount;
+
+        /// <summary>
+        /// 覗き込み (ADS) の進み具合 (0 で腰撃ち、1 で覗き込み切り) を返す。撃つたびにばらつきを決めるのに読む。null なら腰撃ちとして扱う。
+        /// </summary>
+        public Func<float> AdsProgressSource { get; set; }
+
+        /// <summary>
+        /// 移動の速さの割合 (<see cref="SpreadPattern.MoveFraction"/>、0 で止まっている) を返す。撃つたびにばらつきを決めるのに読む。
+        /// null なら止まっているとして扱う。
+        /// </summary>
+        public Func<float> MoveFractionSource { get; set; }
 
         /// <summary>
         /// 今のばらつき (0〜1)。撃つたびに <see cref="SpreadPerShot"/> 増え、撃ち止めて <see cref="SpreadRecoveryDelaySeconds"/> 経つと
@@ -158,6 +184,15 @@ namespace Fps.Runtime
         /// null ならそのまま撃つ。
         /// </summary>
         public IShotFilter ShotFilter { get; set; }
+
+        /// <summary>
+        /// true を返す間は <see cref="Fire"/> が撃たない (回避中など)。弾は減らず、連射間隔も進めない。null なら止めない。
+        /// オフラインは <see cref="GameBootstrap"/> が配線する。
+        /// </summary>
+        public Func<bool> FireBlocker { get; set; }
+
+        /// <summary><see cref="FireBlocker"/> が今の射撃を止めているか。</summary>
+        public bool IsFireBlocked => FireBlocker != null && FireBlocker();
 
         /// <summary>今持っている武器の距離減衰。未初期化なら null。</summary>
         public DamageFalloff Falloff => Weapon?.Spec.Falloff;
@@ -472,7 +507,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 今の武器で 1 発撃つ。<see cref="Weapon.TryFire"/> が false なら何もせず false。
+        /// 今の武器で 1 発撃つ。<see cref="FireBlocker"/> が止めているか <see cref="Weapon.TryFire"/> が false なら何もせず false。
         /// 撃てたら照準の正面へ (<see cref="ShotFilter"/> があれば書き換えた始点と向きで) Raycast し、Hitbox に当たればダメージを渡す。
         /// Hitbox の無い物に当たれば <see cref="StructureDamage.Apply"/> に武器の <see cref="WeaponSpec.ExplosionRadius"/> で渡す。
         /// 撃つと <see cref="CombatEvents.ShotFired"/>、何かに当たると <see cref="CombatEvents.Impact"/>、
@@ -484,7 +519,7 @@ namespace Fps.Runtime
             EnsureInitialized();
 
             var weapon = Weapon;
-            if (!weapon.TryFire())
+            if (IsFireBlocked || !weapon.TryFire())
             {
                 return false;
             }
@@ -492,9 +527,14 @@ namespace Fps.Runtime
             Debug.Log($"[Combat] fire ammo={weapon.AmmoInMagazine}", this);
             _spread = Mathf.Min(1f, _spread + SpreadPerShot);
             _secondsSinceShot = 0f;
+            var shotIndex = _shotCount;
+            _shotCount = unchecked(_shotCount + 1);
             Fired?.Invoke(weapon);
 
+            // この弾は今の視点の向きで撃ち、反動はカメラが次に向きを書くとき (FirstPersonLook.LateUpdate) から効く。
             ResolveShot(out var origin, out var direction);
+            direction = ApplySpread(weapon.Spec, direction, shotIndex);
+            _recoil.Kick(weapon.Spec, PlayerId, shotIndex);
             ShotFilter?.Filter(ref origin, ref direction);
 
             var shooter = _aim.root.gameObject;
@@ -576,11 +616,45 @@ namespace Fps.Runtime
             return $"{ActiveReloadLogPrefix} {(result == ActiveReloadResult.Success ? "success" : "fail")}";
         }
 
-        /// <summary>今の武器の時間と、<see cref="SpreadFraction"/> の戻りを deltaSeconds 進める。</summary>
+        /// <summary>
+        /// direction を、今の覗き込みと移動の速さで決まる spec の散らばり (<see cref="SpreadPattern.ConeDegrees"/>) の円錐の中へ、
+        /// 種 (<see cref="PlayerId"/>・shotIndex) で決めた向きにずらす。散らばりが 0 なら direction をそのまま返す。
+        /// </summary>
+        public Vector3 ApplySpread(WeaponSpec spec, Vector3 direction, int shotIndex)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            var cone = CurrentConeDegrees(spec);
+            if (cone <= 0f)
+            {
+                return direction;
+            }
+
+            return SpreadPattern.Direction(direction.ToNumerics(), cone, PlayerId, shotIndex).ToUnity();
+        }
+
+        /// <summary>今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読む。</summary>
+        public float CurrentConeDegrees(WeaponSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
+            var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
+            return SpreadPattern.ConeDegrees(spec, ads, move);
+        }
+
+        /// <summary>今の武器の時間と、<see cref="SpreadFraction"/> と <see cref="Recoil"/> の戻りを deltaSeconds 進める。</summary>
         public void Tick(float deltaSeconds)
         {
             EnsureInitialized();
             Weapon.Tick(deltaSeconds);
+            _recoil.Tick(deltaSeconds);
 
             var waiting = Mathf.Max(0f, SpreadRecoveryDelaySeconds - _secondsSinceShot);
             var recovering = Mathf.Max(0f, deltaSeconds - waiting);

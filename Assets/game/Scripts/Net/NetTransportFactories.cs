@@ -20,8 +20,9 @@ namespace Fps.Net
 
         /// <summary>
         /// 認証情報から EOS のロビーのバックエンドを作る。未登録 (EOS を含まないビルド) なら null。
+        /// 2 つ目の引数は、Device ID で初めてログインしたときに作るユーザーの表示名 (null なら実装の既定)。
         /// SDK の初期化とログインは作った後の <see cref="ILobbyBackend.Login"/> で行い、失敗はそこで返す。
         /// </summary>
-        public static Func<EosCredentials, ILobbyBackend> EosLobby { get; set; }
+        public static Func<EosCredentials, string, ILobbyBackend> EosLobby { get; set; }
     }
 }

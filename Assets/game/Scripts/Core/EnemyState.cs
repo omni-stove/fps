@@ -20,5 +20,11 @@ namespace Fps.Core
 
         /// <summary>死亡。以後は何も決定しない。</summary>
         Dead,
+
+        /// <summary>
+        /// 撃たれたか体力が減って、遮蔽点 (<see cref="CoverPoint"/>) へ移り、しゃがんで隠れる・立って覗いて撃つを繰り返している。
+        /// 段階は <see cref="EnemyBrain.CoverPhase"/>。値を変えないよう、既存の状態の後ろに足している。
+        /// </summary>
+        TakeCover,
     }
 }

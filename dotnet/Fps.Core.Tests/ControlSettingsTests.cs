@@ -9,6 +9,12 @@ namespace Fps.Core.Tests
             "{'version':1,'keyboardMouse':{'sprint':'toggle','crouch':'hold','aim':'toggle'}," +
             "'gamepad':{'sprint':'hold','crouch':'toggle','aim':'toggle'}}";
 
+        private const string _validV2 =
+            "{'version':2,'keyboardMouse':{'sprint':'toggle','crouch':'hold','aim':'toggle'}," +
+            "'gamepad':{'sprint':'hold','crouch':'toggle','aim':'toggle'}," +
+            "'mouseSensitivity':150,'gamepadSensitivity':80,'adsSensitivity':120," +
+            "'fieldOfView':75,'masterVolume':40,'effectsVolume':0}";
+
         private static readonly InputDeviceKind[] _devices = { InputDeviceKind.KeyboardMouse, InputDeviceKind.Gamepad };
         private static readonly HoldAction[] _actions = { HoldAction.Sprint, HoldAction.Crouch, HoldAction.Aim };
 
@@ -80,8 +86,10 @@ namespace Fps.Core.Tests
             Assert.That(
                 ControlSettings.Default.ToJson(),
                 Is.EqualTo(Json(
-                    "{'version':1,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
-                    "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}}")));
+                    "{'version':2,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
+                    "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}," +
+                    "'mouseSensitivity':100,'gamepadSensitivity':100,'adsSensitivity':100," +
+                    "'fieldOfView':60,'masterVolume':100,'effectsVolume':100}")));
         }
 
         [Test]
@@ -131,7 +139,8 @@ namespace Fps.Core.Tests
         [TestCase("{'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':'1','gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':0,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
-        [TestCase("{'version':2,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':3,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':-1,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         public void BrokenDataFallsBackToAllDefaults(string text)
         {
             var loaded = ControlSettings.FromJson(Json(text), out var problems);
@@ -143,9 +152,9 @@ namespace Fps.Core.Tests
         [Test]
         public void ReportsTheVersionItRejected()
         {
-            ControlSettings.FromJson(Json("{'version':2}"), out var problems);
+            ControlSettings.FromJson(Json("{'version':3}"), out var problems);
 
-            Assert.That(problems[0], Does.Contain("version 2"));
+            Assert.That(problems[0], Does.Contain("version 3"));
         }
 
         // 1 つの操作の値が欠けている・型違い・知らない名前なら、その操作だけ初期値
@@ -230,6 +239,241 @@ namespace Fps.Core.Tests
         public void RejectsNullInput()
         {
             Assert.Throws<ArgumentNullException>(() => ControlSettings.FromJson(null, out _));
+        }
+
+        [TestCase(ControlValue.MouseSensitivity, 10, 500, 100)]
+        [TestCase(ControlValue.GamepadSensitivity, 10, 500, 100)]
+        [TestCase(ControlValue.AdsSensitivity, 10, 200, 100)]
+        [TestCase(ControlValue.FieldOfView, 60, 90, 60)]
+        [TestCase(ControlValue.MasterVolume, 0, 100, 100)]
+        [TestCase(ControlValue.EffectsVolume, 0, 100, 100)]
+        public void ValueRangesAndDefaults(ControlValue value, int min, int max, int expectedDefault)
+        {
+            var range = ControlSettings.RangeOf(value);
+
+            Assert.That(range.Min, Is.EqualTo(min));
+            Assert.That(range.Max, Is.EqualTo(max));
+            Assert.That(range.Default, Is.EqualTo(expectedDefault));
+            Assert.That(ControlSettings.Default.Get(value), Is.EqualTo(expectedDefault));
+        }
+
+        [Test]
+        public void ListsEveryValueOnce()
+        {
+            Assert.That(ControlSettings.Values, Is.EquivalentTo(Enum.GetValues<ControlValue>()));
+            Assert.That(ControlSettings.Values, Is.Unique);
+        }
+
+        [Test]
+        public void DefaultsKeepTheViewAsItWasBeforeSettings()
+        {
+            var settings = ControlSettings.Default;
+
+            Assert.That(settings.LookSensitivity(InputDeviceKind.KeyboardMouse), Is.EqualTo(1f));
+            Assert.That(settings.LookSensitivity(InputDeviceKind.Gamepad), Is.EqualTo(1f));
+            Assert.That(settings.AdsSensitivity, Is.EqualTo(1f));
+            Assert.That(settings.FieldOfView, Is.EqualTo(60f));
+            Assert.That(settings.MasterVolume, Is.EqualTo(1f));
+            Assert.That(settings.EffectsVolume, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void WithValueChangesOnlyThatValue()
+        {
+            var changed = ControlSettings.Default.With(ControlValue.GamepadSensitivity, 250);
+
+            Assert.That(changed.Get(ControlValue.GamepadSensitivity), Is.EqualTo(250));
+            Assert.That(changed.LookSensitivity(InputDeviceKind.Gamepad), Is.EqualTo(2.5f));
+            Assert.That(changed.LookSensitivity(InputDeviceKind.KeyboardMouse), Is.EqualTo(1f));
+            Assert.That(ControlSettings.Default.Get(ControlValue.GamepadSensitivity), Is.EqualTo(100));
+            Assert.That(changed, Is.Not.EqualTo(ControlSettings.Default));
+            Assert.That(changed.With(ControlValue.GamepadSensitivity, 100), Is.EqualTo(ControlSettings.Default));
+        }
+
+        [Test]
+        public void WithValueKeepsTheModesAndWithModeKeepsTheValues()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.FieldOfView, 75)
+                .With(InputDeviceKind.KeyboardMouse, HoldAction.Aim, HoldMode.Toggle)
+                .With(ControlValue.EffectsVolume, 0);
+
+            Assert.That(settings.FieldOfView, Is.EqualTo(75f));
+            Assert.That(settings.EffectsVolume, Is.EqualTo(0f));
+            Assert.That(settings.Get(InputDeviceKind.KeyboardMouse, HoldAction.Aim), Is.EqualTo(HoldMode.Toggle));
+        }
+
+        [Test]
+        public void WithTheSameValueReturnsTheSameSettings()
+        {
+            Assert.That(ControlSettings.Default.With(ControlValue.MasterVolume, 100), Is.SameAs(ControlSettings.Default));
+        }
+
+        [TestCase(ControlValue.MouseSensitivity, 9)]
+        [TestCase(ControlValue.MouseSensitivity, 501)]
+        [TestCase(ControlValue.AdsSensitivity, 201)]
+        [TestCase(ControlValue.FieldOfView, 59)]
+        [TestCase(ControlValue.FieldOfView, 91)]
+        [TestCase(ControlValue.MasterVolume, -1)]
+        [TestCase(ControlValue.EffectsVolume, 101)]
+        public void WithValueRejectsValuesOutsideTheRange(ControlValue value, int amount)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.With(value, amount));
+
+            Assert.That(e.ParamName, Is.EqualTo("amount"));
+        }
+
+        [TestCase(ControlValue.MouseSensitivity, 10)]
+        [TestCase(ControlValue.MouseSensitivity, 500)]
+        [TestCase(ControlValue.FieldOfView, 90)]
+        [TestCase(ControlValue.MasterVolume, 0)]
+        public void WithValueAcceptsBothEnds(ControlValue value, int amount)
+        {
+            Assert.That(ControlSettings.Default.With(value, amount).Get(value), Is.EqualTo(amount));
+        }
+
+        [Test]
+        public void RejectsUnknownValues()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.Get((ControlValue)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.With((ControlValue)99, 1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.RangeOf((ControlValue)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.LookSensitivity((InputDeviceKind)2));
+        }
+
+        [Test]
+        public void RoundTripsEveryValue()
+        {
+            foreach (var value in ControlSettings.Values)
+            {
+                foreach (var amount in new[] { ControlSettings.RangeOf(value).Min, ControlSettings.RangeOf(value).Max })
+                {
+                    var settings = ControlSettings.Default
+                        .With(InputDeviceKind.KeyboardMouse, HoldAction.Sprint, HoldMode.Toggle)
+                        .With(value, amount);
+
+                    var loaded = ControlSettings.FromJson(settings.ToJson(), out var problems);
+
+                    Assert.That(problems, Is.Empty);
+                    Assert.That(loaded, Is.EqualTo(settings), $"{value}={amount}");
+                }
+            }
+        }
+
+        [Test]
+        public void ReadsVersionOneWithDefaultValuesAndNoProblems()
+        {
+            var loaded = ControlSettings.FromJson(Json(_valid), out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded.Get(InputDeviceKind.KeyboardMouse, HoldAction.Sprint), Is.EqualTo(HoldMode.Toggle), "the saved mode");
+            Assert.That(loaded.Get(InputDeviceKind.Gamepad, HoldAction.Aim), Is.EqualTo(HoldMode.Toggle), "the saved mode");
+            foreach (var value in ControlSettings.Values)
+            {
+                Assert.That(loaded.Get(value), Is.EqualTo(ControlSettings.RangeOf(value).Default), value.ToString());
+            }
+        }
+
+        [Test]
+        public void SavingVersionOneDataWritesTheCurrentVersion()
+        {
+            var loaded = ControlSettings.FromJson(Json(_valid), out _);
+
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':2,")));
+            Assert.That(ControlSettings.FromJson(loaded.ToJson(), out var problems), Is.EqualTo(loaded));
+            Assert.That(problems, Is.Empty);
+        }
+
+        [Test]
+        public void ReadsHandWrittenVersionTwo()
+        {
+            var loaded = ControlSettings.FromJson(Json(_validV2), out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded.Get(ControlValue.MouseSensitivity), Is.EqualTo(150));
+            Assert.That(loaded.Get(ControlValue.GamepadSensitivity), Is.EqualTo(80));
+            Assert.That(loaded.Get(ControlValue.AdsSensitivity), Is.EqualTo(120));
+            Assert.That(loaded.Get(ControlValue.FieldOfView), Is.EqualTo(75));
+            Assert.That(loaded.Get(ControlValue.MasterVolume), Is.EqualTo(40));
+            Assert.That(loaded.Get(ControlValue.EffectsVolume), Is.EqualTo(0));
+            Assert.That(loaded.Get(InputDeviceKind.KeyboardMouse, HoldAction.Sprint), Is.EqualTo(HoldMode.Toggle));
+        }
+
+        // 1 つの数値が欠けている・整数でないなら、その数値だけ初期値
+        [TestCase("'fieldOfView':75,", "")]
+        [TestCase("'fieldOfView':75", "'fieldOfView':'75'")]
+        [TestCase("'fieldOfView':75", "'fieldOfView':null")]
+        [TestCase("'fieldOfView':75", "'fieldOfView':true")]
+        [TestCase("'fieldOfView':75", "'fieldOfView':[75]")]
+        public void BrokenValueFallsBackOnlyForThatValue(string from, string to)
+        {
+            Assert.That(_validV2.Contains(from, StringComparison.Ordinal), Is.True);
+            var loaded = ControlSettings.FromJson(Json(_validV2.Replace(from, to, StringComparison.Ordinal)), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("fieldOfView"));
+            Assert.That(loaded.Get(ControlValue.FieldOfView), Is.EqualTo(60), "the default");
+            Assert.That(loaded.Get(ControlValue.MouseSensitivity), Is.EqualTo(150), "the saved value");
+            Assert.That(loaded.Get(InputDeviceKind.KeyboardMouse, HoldAction.Sprint), Is.EqualTo(HoldMode.Toggle), "the saved mode");
+        }
+
+        // 小数は SaveJson が読まないので、JSON 全体が壊れている扱いになる
+        [Test]
+        public void FractionalValueBreaksTheWholeDocument()
+        {
+            var loaded = ControlSettings.FromJson(
+                Json(_validV2.Replace("'fieldOfView':75", "'fieldOfView':75.5", StringComparison.Ordinal)), out var problems);
+
+            Assert.That(loaded, Is.EqualTo(ControlSettings.Default));
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("not valid JSON"));
+        }
+
+        [TestCase("'fieldOfView':75", "'fieldOfView':120", ControlValue.FieldOfView, 90)]
+        [TestCase("'fieldOfView':75", "'fieldOfView':0", ControlValue.FieldOfView, 60)]
+        [TestCase("'masterVolume':40", "'masterVolume':-5", ControlValue.MasterVolume, 0)]
+        [TestCase("'mouseSensitivity':150", "'mouseSensitivity':99999999999", ControlValue.MouseSensitivity, 500)]
+        public void ValueOutsideTheRangeIsClampedAndReported(string from, string to, ControlValue value, int expected)
+        {
+            Assert.That(_validV2.Contains(from, StringComparison.Ordinal), Is.True);
+            var loaded = ControlSettings.FromJson(Json(_validV2.Replace(from, to, StringComparison.Ordinal)), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("outside"));
+            Assert.That(loaded.Get(value), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void UnknownKeysInVersionTwoAreReportedAndIgnored()
+        {
+            var expected = ControlSettings.FromJson(Json(_validV2), out _);
+
+            var loaded = ControlSettings.FromJson(
+                Json(_validV2.Replace("'version':2,", "'version':2,'brightness':50,", StringComparison.Ordinal)), out var problems);
+
+            Assert.That(loaded, Is.EqualTo(expected));
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("'brightness'"));
+        }
+
+        [Test]
+        public void EqualityAndHashIncludeTheValues()
+        {
+            var a = ControlSettings.Default.With(ControlValue.AdsSensitivity, 50);
+            var b = ControlSettings.Default.With(ControlValue.AdsSensitivity, 50);
+
+            Assert.That(a, Is.EqualTo(b));
+            Assert.That(a.GetHashCode(), Is.EqualTo(b.GetHashCode()));
+            Assert.That(a, Is.Not.EqualTo(ControlSettings.Default.With(ControlValue.AdsSensitivity, 51)));
+        }
+
+        [Test]
+        public void RangeRejectsAnInconsistentDefinition()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ControlValueRange(10, 5, 7));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ControlValueRange(0, 10, 11));
+            Assert.That(new ControlValueRange(0, 10, 5).Clamp(long.MaxValue), Is.EqualTo(10));
+            Assert.That(new ControlValueRange(0, 10, 5).Clamp(long.MinValue), Is.EqualTo(0));
         }
 
         /// <summary>読みやすさのため ' で書いた JSON を " に直す。</summary>

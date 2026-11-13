@@ -524,6 +524,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ShotFilterIsNullByDefaultAndTheShotGoesStraightAhead()
         {
+            _rifle.HipSpreadDegrees = 0f;
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
             var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
             var aside = CreateStructure("Aside", new Vector3(20f, 0f, 10f));
@@ -538,6 +539,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ShotFilterOriginIsWhereTheRaycastStarts()
         {
+            _rifle.HipSpreadDegrees = 0f;
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
             var ahead = CreateStructure("Ahead", new Vector3(0f, 0f, 10f));
             var aside = CreateStructure("Aside", new Vector3(20f, 0f, 10f));
@@ -580,6 +582,119 @@ namespace Fps.Tests.EditMode
             Assert.That(_controller.Fire(), Is.False, "within the fire interval");
 
             Assert.That(filter.Calls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void FireBlockerStopsShotsWithoutSpendingAmmo()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var blocked = true;
+            var fired = 0;
+            _controller.Fired += _ => fired++;
+            _controller.FireBlocker = () => blocked;
+
+            Assert.That(_controller.IsFireBlocked, Is.True);
+            Assert.That(_controller.Fire(), Is.False);
+            Assert.That(_controller.PullTrigger(true, true), Is.False);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize));
+            Assert.That(_controller.ShotCount, Is.EqualTo(0));
+            Assert.That(fired, Is.EqualTo(0));
+
+            blocked = false;
+            LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(fired, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void FireBlockerIsNullByDefault()
+        {
+            Assert.That(_controller.FireBlocker, Is.Null);
+            Assert.That(_controller.IsFireBlocked, Is.False);
+        }
+
+        [Test]
+        public void AWeaponWithoutSpreadOrRecoilShootsStraightAndLeavesTheViewAlone()
+        {
+            _rifle.HipSpreadDegrees = 0f;
+            _rifle.MoveSpreadDegrees = 0f;
+            _rifle.RecoilPitchDegrees = 0f;
+            _rifle.RecoilYawDegrees = 0f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            _controller.MoveFractionSource = () => 1f;
+            var filter = new RewritingShotFilter();
+            _controller.ShotFilter = filter;
+
+            Assert.That(_controller.Fire(), Is.True);
+
+            Assert.That(filter.SeenDirection, Is.EqualTo(_camera.transform.forward));
+            Assert.That(_controller.Recoil.IsAtRest, Is.True);
+            Assert.That(_controller.ShotCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void HipFireSpreadsTheShotsInsideTheConeBySeed()
+        {
+            _rifle.HipSpreadDegrees = 10f;
+            _rifle.AdsSpreadDegrees = 0f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            _controller.PlayerId = 3;
+            var filter = new RewritingShotFilter();
+            _controller.ShotFilter = filter;
+            var forward = _camera.transform.forward;
+            var expected = Fps.Core.SpreadPattern.Direction(forward.ToNumerics(), 10f, 3, 0).ToUnity();
+
+            Assert.That(_controller.Fire(), Is.True);
+
+            Assert.That(Vector3.Angle(forward, filter.SeenDirection), Is.GreaterThan(0f).And.LessThanOrEqualTo(10f + 1e-3f));
+            Assert.That(Vector3.Distance(filter.SeenDirection, expected), Is.LessThan(1e-5f), "the seed decides the direction");
+
+            _controller.Tick(_rifle.FireInterval);
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(Vector3.Distance(filter.SeenDirection, expected), Is.GreaterThan(1e-4f), "the next shot uses the next seed");
+        }
+
+        [Test]
+        public void AimingFullyUsesTheAdsSpread()
+        {
+            _rifle.HipSpreadDegrees = 10f;
+            _rifle.AdsSpreadDegrees = 0f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            _controller.AdsProgressSource = () => 1f;
+            var filter = new RewritingShotFilter();
+            _controller.ShotFilter = filter;
+
+            Assert.That(_controller.CurrentConeDegrees(_controller.Weapon.Spec), Is.EqualTo(0f));
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(filter.SeenDirection, Is.EqualTo(_camera.transform.forward));
+        }
+
+        [Test]
+        public void MovingAddsTheMoveSpread()
+        {
+            _rifle.HipSpreadDegrees = 2f;
+            _rifle.MoveSpreadDegrees = 4f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+
+            Assert.That(_controller.CurrentConeDegrees(_controller.Weapon.Spec), Is.EqualTo(2f));
+
+            _controller.MoveFractionSource = () => 0.5f;
+            Assert.That(_controller.CurrentConeDegrees(_controller.Weapon.Spec), Is.EqualTo(4f).Within(1e-5f));
+        }
+
+        [Test]
+        public void FiringKicksTheRecoilAndTickRecoversIt()
+        {
+            _rifle.RecoilPitchDegrees = 2f;
+            _rifle.RecoilYawDegrees = 0f;
+            _rifle.RecoilRecoveryPerSecond = 100f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+
+            Assert.That(_controller.Fire(), Is.True);
+            Assert.That(_controller.Recoil.PitchUpDegrees, Is.EqualTo(2f));
+
+            _controller.Tick(10f);
+            Assert.That(_controller.Recoil.IsAtRest, Is.True);
         }
 
         [Test]

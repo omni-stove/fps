@@ -297,7 +297,8 @@ namespace Fps.Net
 
         /// <summary>
         /// サーバーで attacker が victim に amount のダメージを与える。命中判定 (B/H) はここを呼ぶ。
-        /// 体力が尽きたら Core 側で ReportKill され、点数とリスポーンが進む。
+        /// 体力が尽きたら Core 側で ReportKill され、点数とリスポーンが進む。ダウンが On なら倒さずにダウンさせ、
+        /// <see cref="DamageOutcome.Downed"/> を返す (体力が変わったことは <see cref="DamageOutcome.Damaged"/> と同じに扱う)。
         /// </summary>
         /// <exception cref="InvalidOperationException">サーバー以外で呼んだ。</exception>
         public DamageOutcome ApplyDamage(NetPlayer attacker, NetPlayer victim, int amount)

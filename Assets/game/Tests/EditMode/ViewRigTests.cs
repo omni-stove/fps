@@ -136,6 +136,32 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BoomPositionReachesTheOffsetInTheOpen()
+        {
+            var origin = _eye.position;
+
+            var position = _rig.ResolveBoomPosition(origin, new Vector3(0f, 1.5f, -2f));
+
+            Assert.That(Vector3.Distance(position, origin + new Vector3(0f, 1.5f, -2f)), Is.LessThan(1e-4f));
+            Assert.That(_rig.ResolveBoomPosition(origin, Vector3.zero), Is.EqualTo(origin));
+        }
+
+        [Test]
+        public void BoomPositionStopsShortOfACeiling()
+        {
+            var origin = _eye.position;
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = origin + new Vector3(0f, 1f, 0f);
+            _wall.transform.localScale = new Vector3(4f, 0.2f, 4f);
+            Physics.SyncTransforms();
+
+            var position = _rig.ResolveBoomPosition(origin, new Vector3(0f, 3f, 0f));
+
+            Assert.That(position.y - origin.y, Is.LessThan(0.9f), "the camera must stay under the ceiling (1m up minus its 0.1m half thickness)");
+            Assert.That(position.y - origin.y, Is.GreaterThanOrEqualTo(CameraBoom.DefaultMinLength - 1e-4f));
+        }
+
+        [Test]
         public void FirstPersonAimsAlongTheCameraForwardFromTheEye()
         {
             _rig.Initialize(_eye, _camera);

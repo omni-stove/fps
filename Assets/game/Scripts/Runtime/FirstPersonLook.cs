@@ -84,6 +84,12 @@ namespace Fps.Runtime
         /// <summary>今効いているスティックの感度 (<see cref="StickSensitivity"/> × <see cref="SensitivityMultiplier"/>)。</summary>
         public float EffectiveStickSensitivity => _stickSensitivity * _sensitivityMultiplier;
 
+        /// <summary>
+        /// Look 入力を読まずに向きを止めるか。既定は false。デスカムの間のように、すぐ戻す一時停止に使う。
+        /// 無効にするのと違い、カーソルのロックとアクションの有効状態は保つので、止めている間にカーソルが出ない。
+        /// </summary>
+        public bool InputSuspended { get; set; }
+
         private void Awake()
         {
             // 専用サーバーには画面も入力も無く、視点を動かす相手がいない。カーソル操作も要らないので最初から止める。
@@ -143,6 +149,11 @@ namespace Fps.Runtime
 
         private void Update()
         {
+            if (InputSuspended)
+            {
+                return;
+            }
+
             var raw = _lookAction.ReadValue<Vector2>();
             if (raw == Vector2.zero)
             {

@@ -59,6 +59,41 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BuildsTheLauncherOutsideTheCatalogAndLoadout()
+        {
+            Build();
+            var launcherPath = _folder + "/Launcher.asset";
+
+            var built = WeaponAssetBuilder.BuildLauncherAt(launcherPath);
+
+            Assert.That(built, Is.SameAs(AssetDatabase.LoadAssetAtPath<WeaponDefinition>(launcherPath)));
+            Assert.That(WeaponAssetBuilder.LauncherPath, Is.EqualTo("Assets/game/Weapons/Launcher.asset"));
+            Assert.That(WeaponAssetBuilder.LauncherId, Is.Not.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(WeaponAssetBuilder.LauncherId, Is.Not.EqualTo(WeaponAssetBuilder.HandgunId));
+
+            var launcher = built.ToSpec();
+            Assert.That(launcher.Id, Is.EqualTo(WeaponAssetBuilder.LauncherId));
+            Assert.That(launcher.Category, Is.EqualTo(WeaponCategory.Launcher));
+            Assert.That(launcher.FireMode, Is.EqualTo(FireMode.Semi));
+            Assert.That(launcher.MagazineSize, Is.EqualTo(1));
+            Assert.That(launcher.ReserveAmmo, Is.EqualTo(4));
+            Assert.That(launcher.Damage, Is.EqualTo(120));
+            Assert.That(launcher.Range, Is.EqualTo(150f));
+            Assert.That(launcher.ExplosionRadius, Is.EqualTo(4f));
+            Assert.That(launcher.ReloadSeconds, Is.EqualTo(3f));
+            Assert.That(built.ExplosionRadius, Is.EqualTo(4f), "the asset stores the value");
+
+            var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(_catalogPath);
+            Assert.That(catalog.TryFind(WeaponAssetBuilder.LauncherId, out _), Is.False, "the catalog stays rifle, handgun");
+
+            var guid = AssetDatabase.AssetPathToGUID(launcherPath);
+            built.Damage = 1;
+            Assert.That(WeaponAssetBuilder.BuildLauncherAt(launcherPath), Is.SameAs(built));
+            Assert.That(AssetDatabase.AssetPathToGUID(launcherPath), Is.EqualTo(guid));
+            Assert.That(built.Damage, Is.EqualTo(120), "a second run restores the values");
+        }
+
+        [Test]
         public void LegacySavesAreReadAsTheRiflesAmmo()
         {
             // 武器 1 本の頃のセーブには Id が無く、CampaignSave はその残弾をこの Id の武器に持たせる。

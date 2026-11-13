@@ -75,8 +75,13 @@ namespace Fps.Core
             }
 
             // float のまま掛けると 0.3f が 0.30000001 なので 100 * 0.3f が 31 に切り上がる。
-            // decimal への変換は有効桁 7 桁に丸めるので、書いたとおりの 0.3 で掛けられる。
-            var health = (int)Math.Ceiling(maxHealth * (decimal)fraction);
+            // (decimal)fraction の変換は実行環境によって 0.30000001... を残すことがあるので、
+            // 最短の往復表記 ("0.3") を経由して、書いたとおりの値で掛ける。
+            var exact = decimal.Parse(
+                fraction.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture);
+            var health = (int)Math.Ceiling(maxHealth * exact);
             return Math.Max(1, Math.Min(maxHealth, health));
         }
 

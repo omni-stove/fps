@@ -149,6 +149,33 @@ namespace Fps.Core
         }
 
         /// <summary>
+        /// 死亡から生き返らせる (モードのリスポーン)。見た位置・反応・散らばり・探索の経過と、着けなかった遮蔽点の記録を捨て、
+        /// 巡回ルートがあれば最初の地点からの Patrol、無ければ Idle に戻す。遮蔽点の一覧 (<see cref="UseCover"/>) はそのまま使う。
+        /// 死んでいなければ何もしない。
+        /// </summary>
+        public void Revive()
+        {
+            if (!IsDead)
+            {
+                return;
+            }
+
+            _routeIndex = 0;
+            _lastSeen = default;
+            _searchPoint = default;
+            _reactionElapsed = 0f;
+            _shotsInAttack = 0;
+            _lostElapsed = 0f;
+            _searchElapsed = 0f;
+            _coverIndex = -1;
+            _coverElapsed = 0f;
+            _coverThreat = default;
+            _unreachableCover.Clear();
+            CoverPhase = EnemyCoverPhase.None;
+            SetState(_route.Length > 0 ? EnemyState.Patrol : EnemyState.Idle);
+        }
+
+        /// <summary>
         /// 今向かっている先に届かないとき、その目的地をあきらめる。
         /// Patrol なら次の巡回地点へ進め、Search なら打ち切って次の tick で Patrol (ルートが無ければ Idle) に戻す。
         /// 見失った後の Chase なら Search を飛ばして同じく戻す。目標が見えていれば次の tick でまた追う。

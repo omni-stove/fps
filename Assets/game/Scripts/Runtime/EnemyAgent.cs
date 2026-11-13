@@ -13,6 +13,9 @@ namespace Fps.Runtime
     /// <see cref="NavMeshAgent.SetDestination"/>・向きの変更・射撃 (<see cref="Hitscan.Fire"/>) に変換するだけをする。
     /// 参照はコードで解決する: NavMeshAgent と自分の <see cref="Damageable"/> は同じ GameObject、
     /// 目標は <see cref="TargetTag"/> のタグが付いた GameObject の Damageable。
+    /// 同じ GameObject に <see cref="SideMember"/> があれば、タグの代わりに自分と違う陣営で生きている、いちばん近い相手を
+    /// <see cref="TargetSearchInterval"/> ごとに (目標が倒れたらすぐに) 選び直す (<see cref="EnemySenses.SelectHostile"/>)。
+    /// モードが倒れた敵を戻すときは <see cref="Respawn"/> を呼ぶ。
     /// 武器は 1 本だけ持ち、持ち替えない。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
     /// (シーン生成スクリプトが、敵の配置ごとに指定した Id の武器を武器の一覧 <see cref="WeaponCatalogAsset"/> から引いて配線する)。
     /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
@@ -218,7 +221,10 @@ namespace Fps.Runtime
         /// <summary>今の状態。未初期化なら Idle。</summary>
         public EnemyState State => _brain?.State ?? EnemyState.Idle;
 
-        /// <summary>今の目標。null なら次の Update で <see cref="TargetTag"/> から探す。</summary>
+        /// <summary>
+        /// 今の目標。null なら次の Update で <see cref="TargetTag"/> から探す。<see cref="SideMember"/> があるときは
+        /// <see cref="TargetSearchInterval"/> ごとに選び直すので、設定しても次の選び直しまでしか続かない。
+        /// </summary>
         public Damageable Target
         {
             get => _target;
@@ -516,7 +522,13 @@ namespace Fps.Runtime
             var deltaSeconds = Time.deltaTime;
             _weapon.Tick(deltaSeconds);
 
-            if (_target == null)
+            var member = GetComponent<SideMember>();
+            if (member != null)
+            {
+                // 陣営で狙う相手は動き回り倒れもするので、見つかっていても間隔ごとに選び直す。倒れたらすぐ次を探す。
+                ResolveHostile(member, force: _target != null && _target.IsDead);
+            }
+            else if (_target == null)
             {
                 ResolveTarget(force: false);
             }
@@ -662,6 +674,85 @@ namespace Fps.Runtime
             _target = target;
             _warnedNoTarget = false;
             Debug.Log($"{LogTag} id={Id} target={target.Id}", this);
+        }
+
+        /// <summary>
+        /// member の陣営から見た、いちばん近い生きている敵を目標にする。force でなければ <see cref="TargetSearchInterval"/> ごとにだけ探す。
+        /// 敵がいなければ目標を外す (全員倒れている間など)。目標が変わったときだけログに出す。
+        /// </summary>
+        private void ResolveHostile(SideMember member, bool force)
+        {
+            if (!force && Time.time < _nextTargetSearch)
+            {
+                return;
+            }
+
+            _nextTargetSearch = Time.time + TargetSearchInterval;
+
+            var hostile = EnemySenses.SelectHostile(member, SideMember.FindAll());
+            var target = hostile != null ? hostile.Damageable : null;
+            if (target == _target)
+            {
+                return;
+            }
+
+            _target = target;
+            Debug.Log($"{LogTag} id={Id} side={member.Side.Id} target={(target != null ? target.Id : "none")}", this);
+        }
+
+        /// <summary>
+        /// 倒れた敵を groundPosition (足元) に戻して生き返らせる。体力を満たし、NavMeshAgent を有効に戻して近くの NavMesh に置き、
+        /// 判断 (<see cref="EnemyBrain.Revive"/>)・経路・立て直し・撃たれた記録を初めからにして、目標を選び直す。
+        /// 生きているときに呼んでも同じく置き直す。未初期化なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void Respawn(Vector3 groundPosition, Quaternion rotation)
+        {
+            if (_brain == null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
+            }
+
+            var ground = NavMesh.SamplePosition(groundPosition, out var hit, OffMeshSnapRadius, NavMesh.AllAreas)
+                ? hit.position
+                : groundPosition;
+
+            _pendingNoise = null;
+            _pendingHit = false;
+            _pendingHitSource = null;
+            _destination = null;
+            _detour = null;
+            _goal = null;
+            _stuck.Reset();
+            SetCrouching(false);
+
+            // 無効のまま Transform を動かしてから有効にすると、NavMeshAgent は新しい位置の近くの NavMesh に載る。
+            if (_agent.enabled && _agent.isOnNavMesh)
+            {
+                _agent.ResetPath();
+            }
+
+            _agent.enabled = false;
+            transform.SetPositionAndRotation(ground + (Vector3.up * _agent.baseOffset), rotation);
+            _agent.enabled = true;
+            if (_agent.isOnNavMesh)
+            {
+                _agent.Warp(ground);
+                _agent.isStopped = false;
+                _warnedOffMesh = false;
+            }
+            else
+            {
+                Debug.LogWarning($"{LogTag} id={Id} respawn point {ground.ToString("F1")} is not on the NavMesh", this);
+            }
+
+            _spawnPosition = ground;
+            _lastFinitePosition = transform.position;
+
+            _self.ResetHealth();
+            _brain.Revive();
+            _target = null;
+            _nextTargetSearch = 0f;
+            Debug.Log($"{LogTag} id={Id} respawned at={ground.ToString("F1")} state={_brain.State}", this);
         }
 
         private void MoveTo(System.Numerics.Vector3? moveTo)

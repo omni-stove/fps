@@ -49,6 +49,12 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void RespawnNeedsAnInitializedAgent()
+        {
+            Assert.Throws<System.InvalidOperationException>(() => _agent.Respawn(Vector3.zero, Quaternion.identity));
+        }
+
+        [Test]
         public void InitializeBuildsTheBrainFromTheDefaults()
         {
             Assert.That(_agent.TryInitialize(), Is.True);

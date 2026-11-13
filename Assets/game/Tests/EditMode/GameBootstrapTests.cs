@@ -102,6 +102,20 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ActionDebugOverlayIsSupportedInTheEditorAndStartsVisible()
+        {
+            var overlay = _world.Player.GetComponent<ActionDebugOverlay>();
+
+            Assert.That(ActionDebugOverlay.IsSupported, Is.True);
+            Assert.That(overlay.IsVisible, Is.True);
+
+            overlay.SetVisible(false);
+            Assert.That(overlay.IsVisible, Is.False);
+            overlay.SetVisible(true);
+            Assert.That(overlay.IsVisible, Is.True);
+        }
+
+        [Test]
         public void ActionReaderReadsTheViewFromTheRig()
         {
             var reader = _world.ActionReader;

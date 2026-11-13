@@ -104,6 +104,11 @@ namespace Fps.Tests.EditMode
 
             // Level, GameBootstrap, MissionRunner, AreaA, Enemies, CoverPoints, Exit, CampaignRunner, 2 つのチェックポイント。
             Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(10));
+            Assert.That(layout.Reveals, Is.Empty, "every Campaign01 enemy is there from the start");
+            foreach (var enemy in layout.Enemies)
+            {
+                Assert.That(enemy.gameObject.activeSelf, Is.True);
+            }
 
             Assert.That(layout.Bootstrap, Is.Not.Null);
             Assert.That(layout.Bootstrap.gameObject.scene, Is.EqualTo(_scene));
@@ -125,17 +130,17 @@ namespace Fps.Tests.EditMode
             Assert.That(layout.Runner.Definition, Is.SameAs(_definition));
             Assert.That(layout.Runner.gameObject.scene, Is.EqualTo(_scene));
 
-            Assert.That(layout.AreaA.ObjectiveId, Is.EqualTo(CampaignSceneBuilder.ReachAreaAId));
-            Assert.That(layout.AreaA.Runner, Is.SameAs(layout.Runner));
-            Assert.That(layout.AreaA.GetComponent<BoxCollider>().isTrigger, Is.True);
-            Assert.That(layout.AreaA.GetComponent<Rigidbody>().isKinematic, Is.True);
+            Assert.That(layout.Area(CampaignSceneBuilder.ReachAreaAId).ObjectiveId, Is.EqualTo(CampaignSceneBuilder.ReachAreaAId));
+            Assert.That(layout.Area(CampaignSceneBuilder.ReachAreaAId).Runner, Is.SameAs(layout.Runner));
+            Assert.That(layout.Area(CampaignSceneBuilder.ReachAreaAId).GetComponent<BoxCollider>().isTrigger, Is.True);
+            Assert.That(layout.Area(CampaignSceneBuilder.ReachAreaAId).GetComponent<Rigidbody>().isKinematic, Is.True);
 
-            Assert.That(layout.KillEnemies.ObjectiveId, Is.EqualTo(CampaignSceneBuilder.KillEnemiesId));
-            Assert.That(layout.KillEnemies.Runner, Is.SameAs(layout.Runner));
+            Assert.That(layout.KillObjective(CampaignSceneBuilder.KillEnemiesId).ObjectiveId, Is.EqualTo(CampaignSceneBuilder.KillEnemiesId));
+            Assert.That(layout.KillObjective(CampaignSceneBuilder.KillEnemiesId).Runner, Is.SameAs(layout.Runner));
 
-            Assert.That(layout.Exit.ObjectiveId, Is.EqualTo(CampaignSceneBuilder.ReachExitId));
-            Assert.That(layout.Exit.Runner, Is.SameAs(layout.Runner));
-            Assert.That(layout.Exit.GetComponent<BoxCollider>().isTrigger, Is.True);
+            Assert.That(layout.Area(CampaignSceneBuilder.ReachExitId).ObjectiveId, Is.EqualTo(CampaignSceneBuilder.ReachExitId));
+            Assert.That(layout.Area(CampaignSceneBuilder.ReachExitId).Runner, Is.SameAs(layout.Runner));
+            Assert.That(layout.Area(CampaignSceneBuilder.ReachExitId).GetComponent<BoxCollider>().isTrigger, Is.True);
         }
 
         [Test]
@@ -197,17 +202,17 @@ namespace Fps.Tests.EditMode
 
             var checkpoints = Components<CheckpointTrigger>();
             Assert.That(checkpoints, Has.Length.EqualTo(2));
-            Assert.That(checkpoints, Does.Contain(layout.StartCheckpoint));
-            Assert.That(checkpoints, Does.Contain(layout.AreaACheckpoint));
+            Assert.That(checkpoints, Does.Contain(layout.Checkpoint(CampaignSceneBuilder.StartCheckpointId)));
+            Assert.That(checkpoints, Does.Contain(layout.Checkpoint(CampaignSceneBuilder.AreaACheckpointId)));
 
-            AssertCheckpoint(layout.StartCheckpoint, layout, CampaignSceneBuilder.StartCheckpointId, CampaignSceneBuilder.StartCheckpointPosition);
-            AssertCheckpoint(layout.AreaACheckpoint, layout, CampaignSceneBuilder.AreaACheckpointId, CampaignSceneBuilder.AreaACheckpointPosition);
+            AssertCheckpoint(layout.Checkpoint(CampaignSceneBuilder.StartCheckpointId), layout, CampaignSceneBuilder.StartCheckpointId, CampaignSceneBuilder.StartCheckpointPosition);
+            AssertCheckpoint(layout.Checkpoint(CampaignSceneBuilder.AreaACheckpointId), layout, CampaignSceneBuilder.AreaACheckpointId, CampaignSceneBuilder.AreaACheckpointPosition);
             Assert.That(CampaignSceneBuilder.StartCheckpointId, Is.EqualTo("start"));
             Assert.That(CampaignSceneBuilder.AreaACheckpointId, Is.EqualTo("area_a"));
 
             // 開始地点のチェックポイントからは、GameBootstrap がプレイヤーを出す位置そのままで再開する。
             Assert.That(
-                Vector3.Distance(layout.StartCheckpoint.RespawnPosition, GameBootstrap.PlayerSpawn),
+                Vector3.Distance(layout.Checkpoint(CampaignSceneBuilder.StartCheckpointId).RespawnPosition, GameBootstrap.PlayerSpawn),
                 Is.LessThan(1e-4f));
         }
 
@@ -244,12 +249,12 @@ namespace Fps.Tests.EditMode
 
                 var player = world.Controller;
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=start "));
-                Assert.That(layout.StartCheckpoint.HandleEnter(player), Is.True);
+                Assert.That(layout.Checkpoint(CampaignSceneBuilder.StartCheckpointId).HandleEnter(player), Is.True);
                 Assert.That(world.Hud.Model.NoticeText, Is.EqualTo(HudFormat.CheckpointSaved));
 
                 layout.Runner.Progress(CampaignSceneBuilder.ReachAreaAId);
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=area_a "));
-                Assert.That(layout.AreaACheckpoint.HandleEnter(player), Is.True);
+                Assert.That(layout.Checkpoint(CampaignSceneBuilder.AreaACheckpointId).HandleEnter(player), Is.True);
                 Assert.That(layout.Campaign.SaveSlot, Is.EqualTo(CampaignSaveSlots.Prefix + "Campaign01"));
                 Assert.That(storage.TryRead(layout.Campaign.SaveSlot, out var text), Is.True);
                 var saved = CampaignSave.FromJson(text);
@@ -302,7 +307,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(agent.name, Is.EqualTo(placement.Name));
                 Assert.That(agent.Id, Is.EqualTo(placement.Id));
                 Assert.That(agent.gameObject.scene, Is.EqualTo(_scene));
-                Assert.That(agent.transform.parent, Is.SameAs(layout.KillEnemies.transform));
+                Assert.That(agent.transform.parent, Is.SameAs(layout.KillObjective(CampaignSceneBuilder.KillEnemiesId).transform));
                 Assert.That(agent.PatrolRoute, Is.EqualTo(placement.PatrolRoute));
                 patrolling += agent.PatrolRoute.Count > 0 ? 1 : 0;
 
@@ -356,7 +361,7 @@ namespace Fps.Tests.EditMode
             var playerFeet = GameBootstrap.PlayerSpawn - (Vector3.up * (GameBootstrap.PlayerHeight / 2f));
             Assert.That(CampaignSceneBuilder.StartCheckpointPosition, Is.EqualTo(playerFeet));
 
-            var area = layout.AreaA.GetComponent<BoxCollider>();
+            var area = layout.Area(CampaignSceneBuilder.ReachAreaAId).GetComponent<BoxCollider>();
             Assert.That(IsInside(area, CampaignSceneBuilder.AreaACheckpointPosition + Vector3.up), Is.True);
             Assert.That(IsInside(area, CampaignSceneBuilder.StartCheckpointPosition + Vector3.up), Is.False);
         }
@@ -365,7 +370,7 @@ namespace Fps.Tests.EditMode
         public void AreaAFillsTheWidthInFrontOfTheOnlyDoorway()
         {
             var layout = Populate();
-            var area = layout.AreaA.GetComponent<BoxCollider>();
+            var area = layout.Area(CampaignSceneBuilder.ReachAreaAId).GetComponent<BoxCollider>();
 
             // 仕切りの手前を幅いっぱいに覆うので、仕切りを抜けるには必ず区域 A を通る。
             var halfWidth = CampaignSceneBuilder.FloorScale.x * 5f;
@@ -432,18 +437,18 @@ namespace Fps.Tests.EditMode
                 var collider = player.AddComponent<CapsuleCollider>();
 
                 Assert.That(layout.Runner.TryStart(), Is.True);
-                Assert.That(layout.AreaA.Bind(layout.Runner), Is.True);
-                Assert.That(layout.KillEnemies.Bind(layout.Runner), Is.True);
-                Assert.That(layout.Exit.Bind(layout.Runner), Is.True);
-                Assert.That(layout.KillEnemies.BoundTargets.Count, Is.EqualTo(CampaignSceneBuilder.EnemyCount));
+                Assert.That(layout.Area(CampaignSceneBuilder.ReachAreaAId).Bind(layout.Runner), Is.True);
+                Assert.That(layout.KillObjective(CampaignSceneBuilder.KillEnemiesId).Bind(layout.Runner), Is.True);
+                Assert.That(layout.Area(CampaignSceneBuilder.ReachExitId).Bind(layout.Runner), Is.True);
+                Assert.That(layout.KillObjective(CampaignSceneBuilder.KillEnemiesId).BoundTargets.Count, Is.EqualTo(CampaignSceneBuilder.EnemyCount));
                 var mission = layout.Runner.Mission;
 
-                layout.AreaA.HandleEnter(collider);
+                layout.Area(CampaignSceneBuilder.ReachAreaAId).HandleEnter(collider);
                 Assert.That(mission.GetState(CampaignSceneBuilder.ReachAreaAId), Is.EqualTo(ObjectiveState.Completed));
                 Assert.That(mission.GetState(CampaignSceneBuilder.KillEnemiesId), Is.EqualTo(ObjectiveState.Active));
 
-                layout.Exit.HandleEnter(collider);
-                layout.Exit.HandleExit(collider);
+                layout.Area(CampaignSceneBuilder.ReachExitId).HandleEnter(collider);
+                layout.Area(CampaignSceneBuilder.ReachExitId).HandleExit(collider);
                 Assert.That(mission.GetState(CampaignSceneBuilder.ReachExitId), Is.EqualTo(ObjectiveState.Locked));
 
                 foreach (var enemy in layout.Enemies)
@@ -454,7 +459,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(mission.GetState(CampaignSceneBuilder.KillEnemiesId), Is.EqualTo(ObjectiveState.Completed));
 
                 LogAssert.Expect(LogType.Log, MissionReporter.CompletedLine);
-                layout.Exit.HandleEnter(collider);
+                layout.Area(CampaignSceneBuilder.ReachExitId).HandleEnter(collider);
                 Assert.That(mission.State, Is.EqualTo(MissionState.Completed));
             }
             finally

@@ -22,7 +22,11 @@ namespace Fps.Editor
     {
         public const string AudioFolder = "Assets/game/Audio";
         public const string PresentationFolder = "Assets/game/Presentation";
-        public const string CatalogPath = PresentationFolder + "/PresentationCatalog.asset";
+        /// <summary>
+        /// カタログの置き場所。実行時に <see cref="PresentationCatalog.Load"/> で読めるよう、Resources の
+        /// <see cref="PresentationCatalog.ResourcePath"/> に置く。
+        /// </summary>
+        public const string CatalogPath = PresentationFolder + "/Resources/" + PresentationCatalog.ResourcePath + ".asset";
 
         public const string MenuPath = "Fps/Build Presentation Assets";
         public const string LogTag = "[PresentationAssetBuilder]";
@@ -193,6 +197,7 @@ namespace Fps.Editor
 
             SceneBuildHelpers.EnsureFolder(audioFolder);
             SceneBuildHelpers.EnsureFolder(presentationFolder);
+            SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(catalogPath)?.Replace('\\', '/'));
 
             var clips = new Dictionary<string, AudioClip>(StringComparer.Ordinal);
             foreach (var spec in SoundSpecs())

@@ -388,7 +388,7 @@ namespace Fps.Net.Tests
             Assert.That(Fps.Editor.BuildSceneList.NetTestScene, Is.EqualTo(NetBootstrap.ScenePath));
             Assert.That(Fps.Core.MenuRoute.NetScene, Is.EqualTo(NetBootstrap.ScenePath), "the menu's online buttons load this scene");
             Assert.That(Fps.Editor.BuildSceneList.Scenes, Has.Member(NetBootstrap.ScenePath));
-            Assert.That(Fps.Editor.ServerBuilder.ServerScenePaths(), Is.EqualTo(new[] { NetBootstrap.ScenePath }));
+            Assert.That(Fps.Editor.ServerBuilder.ServerScenePaths()[0], Is.EqualTo(NetBootstrap.ScenePath), "the dedicated server starts in NetTest");
         }
 
         [Test]

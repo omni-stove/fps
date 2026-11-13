@@ -8,6 +8,7 @@ using Unity.Netcode;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Fps.Editor
 {
@@ -351,28 +352,135 @@ namespace Fps.Editor
             return prefab;
         }
 
+        /// <summary>
+        /// プレイヤーと試合の進行役のプレハブ (<see cref="PlayerPrefabPath"/> と <see cref="MatchPrefabPath"/>) が揃っているか。
+        /// 揃っていなければ <see cref="Build"/> で作る。別のシーン (マップ) を作る前に呼ぶ。Build は NetTest を開くので、
+        /// 呼び出し側は自分のシーンをこの後に作る。
+        /// </summary>
+        /// <remarks>
+        /// 揃っていれば作り直さない。プレハブを作り直すと、すでに配ったクライアントのビルドと食い違うおそれがあるため。
+        /// </remarks>
+        public static void EnsurePrefabs()
+        {
+            if (TryLoadPrefabs(out _, out _, out var problem))
+            {
+                return;
+            }
+
+            Debug.Log("[Net] NetSceneBuilder: " + problem + "; running NetSceneBuilder.Build");
+            Build();
+        }
+
+        /// <summary>
+        /// 保存済みのプレイヤーと試合の進行役のプレハブを読む。無いか、NetBootstrap が求めるコンポーネントが無ければ例外を投げる
+        /// (<see cref="EnsurePrefabs"/> を先に呼ぶ)。
+        /// </summary>
+        public static (GameObject Player, GameObject Match) LoadPrefabs()
+        {
+            if (!TryLoadPrefabs(out var player, out var match, out var problem))
+            {
+                throw new InvalidOperationException("[Net] NetSceneBuilder: " + problem + "; run Fps.Editor.NetSceneBuilder.Build");
+            }
+
+            return (player, match);
+        }
+
+        /// <summary>
+        /// NetTest と同じ配線の NetBootstrap (プレイヤーと試合の進行役のプレハブ) を scene の直下に置く。
+        /// どのシーンでも NetworkManager はこれがコードで組み立てるので、シーンには NetworkManager を保存しない。
+        /// </summary>
+        public static NetBootstrap CreateBootstrap(Scene scene, GameObject playerPrefab, GameObject matchPrefab)
+        {
+            if (playerPrefab == null)
+            {
+                throw new ArgumentNullException(nameof(playerPrefab));
+            }
+
+            if (matchPrefab == null)
+            {
+                throw new ArgumentNullException(nameof(matchPrefab));
+            }
+
+            var bootstrapObject = new GameObject("NetBootstrap");
+            SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
+            var bootstrap = bootstrapObject.AddComponent<NetBootstrap>();
+            bootstrap.PlayerPrefab = playerPrefab;
+            bootstrap.MatchPrefab = matchPrefab;
+            return bootstrap;
+        }
+
+        /// <summary>
+        /// 自分のプレイヤーが居ない間 (サーバーや接続前) の観戦用のカメラを scene に置く。
+        /// 自分のプレイヤーが生成されたら NetSpectatorCamera が止め、一人称カメラに替わる。
+        /// </summary>
+        public static Camera CreateSpectatorCamera(Scene scene, Vector3 position, Quaternion rotation)
+        {
+            var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
+            SceneManager.MoveGameObjectToScene(cameraObject, scene);
+            var camera = cameraObject.AddComponent<Camera>();
+            cameraObject.AddComponent<NetSpectatorCamera>();
+            cameraObject.transform.SetPositionAndRotation(position, rotation);
+            return camera;
+        }
+
+        /// <summary>NetTest と同じ向きの平行光源を scene に置く。</summary>
+        public static Light CreateSun(Scene scene)
+        {
+            var lightObject = new GameObject("Directional Light");
+            SceneManager.MoveGameObjectToScene(lightObject, scene);
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            return light;
+        }
+
+        /// <summary>出現地点の目印を parent の下に置く。position はカプセルの中心 (足元は <see cref="PlayerHeight"/> の半分下)。</summary>
+        public static NetSpawnPoint CreateSpawnPoint(Transform parent, string pointName, Vector3 position, NetSpawnPoint.SpawnTeam team)
+        {
+            if (parent == null)
+            {
+                throw new ArgumentNullException(nameof(parent));
+            }
+
+            var pointObject = new GameObject(pointName);
+            pointObject.transform.SetParent(parent, false);
+            pointObject.transform.localPosition = position;
+            var point = pointObject.AddComponent<NetSpawnPoint>();
+            point.Team = team;
+            return point;
+        }
+
+        private static bool TryLoadPrefabs(out GameObject player, out GameObject match, out string problem)
+        {
+            player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            match = AssetDatabase.LoadAssetAtPath<GameObject>(MatchPrefabPath);
+            if (player == null || player.GetComponent<NetworkObject>() == null || player.GetComponent<NetPlayer>() == null)
+            {
+                problem = PlayerPrefabPath + " is missing or has no NetworkObject and NetPlayer";
+                return false;
+            }
+
+            if (match == null || match.GetComponent<NetworkObject>() == null || match.GetComponent<NetTeamDeathmatch>() == null)
+            {
+                problem = MatchPrefabPath + " is missing or has no NetworkObject and NetTeamDeathmatch";
+                return false;
+            }
+
+            problem = null;
+            return true;
+        }
+
         private static void BuildScene(GameObject playerPrefab, GameObject matchPrefab)
         {
             EnsureFolder(System.IO.Path.GetDirectoryName(NetBootstrap.ScenePath));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            var bootstrapObject = new GameObject("NetBootstrap");
-            var bootstrap = bootstrapObject.AddComponent<NetBootstrap>();
-            bootstrap.PlayerPrefab = playerPrefab;
-            bootstrap.MatchPrefab = matchPrefab;
+            CreateBootstrap(scene, playerPrefab, matchPrefab);
 
-            // 自分のプレイヤーが居ない間 (サーバーや接続前) の観戦用に、両陣地のカプセルが見えるよう上から見下ろす。
-            // 自分のプレイヤーが生成されたら NetSpectatorCamera が止め、一人称カメラに替わる
-            var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
-            cameraObject.AddComponent<Camera>();
-            cameraObject.AddComponent<NetSpectatorCamera>();
-            cameraObject.transform.SetPositionAndRotation(new Vector3(0f, 38f, -38f), Quaternion.Euler(45f, 0f, 0f));
-
-            var lightObject = new GameObject("Directional Light");
-            var light = lightObject.AddComponent<Light>();
-            light.type = LightType.Directional;
-            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            // 両陣地のカプセルが見えるよう上から見下ろす
+            CreateSpectatorCamera(scene, new Vector3(0f, 38f, -38f), Quaternion.Euler(45f, 0f, 0f));
+            CreateSun(scene);
 
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
@@ -392,10 +500,7 @@ namespace Fps.Editor
             var spawnRoot = new GameObject("SpawnPoints");
             foreach (var (pointName, position, team) in SpawnPoints)
             {
-                var pointObject = new GameObject(pointName);
-                pointObject.transform.SetParent(spawnRoot.transform, false);
-                pointObject.transform.localPosition = position;
-                pointObject.AddComponent<NetSpawnPoint>().Team = team;
+                CreateSpawnPoint(spawnRoot.transform, pointName, position, team);
             }
 
             if (!EditorSceneManager.SaveScene(scene, NetBootstrap.ScenePath))

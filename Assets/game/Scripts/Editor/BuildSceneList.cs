@@ -36,6 +36,9 @@ namespace Fps.Editor
         /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
         public const string DominationScene = "Assets/game/Scenes/Domination.unity";
 
+        /// <summary>PvE の波で敵を出す部品 (WaveSpawner) を試すシーン。</summary>
+        public const string WaveTestScene = "Assets/game/Scenes/WaveTest.unity";
+
         /// <summary>
         /// ネット対戦のシーン。実行時に読み込む側 (Fps.Net の NetBootstrap.ScenePath) と同じ値で、
         /// この Editor のアセンブリは Fps.Net を参照しないため文字列で持つ (一致はテストで確かめる)。
@@ -54,6 +57,7 @@ namespace Fps.Editor
             Campaign02Scene,
             TpsRangeScene,
             DominationScene,
+            WaveTestScene,
             NetTestScene,
         };
 

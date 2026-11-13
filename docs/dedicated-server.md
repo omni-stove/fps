@@ -30,6 +30,10 @@ make server-image ARGS="--version v0.2.0"          # サーバーに入れる版
 ```
 
 EOS のロビーは版ごとに分かれる (`fps:<版>` のバケツ) ので、クライアントとサーバーは同じ版でビルドしたものを使う。
+クライアントは接続の承認データに自分の版を載せ、サーバー (Host を含む) は版が違うクライアントを承認で断る。
+サーバーには `[Net] rejected client <Id>: version mismatch (client 0.1.0, server 0.2.0)` が出て、クライアントは
+「版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。」を出してメインメニューに戻る。版を載せない古いビルドのクライアントも
+(`unreadable connection payload` として) 断られ、「サーバーに接続を断られました。」と出る。
 
 イメージは `linux/amd64` で作る (サーバーは x86_64 の Linux 向けにしかビルドしないため)。
 Apple Silicon の Mac でも Docker Desktop のエミュレーションで動く。
@@ -47,6 +51,10 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local
 ```
 
 止めるときは `docker stop fps-server` (SIGTERM でサーバーが終了する)。
+サーバーは止まる前につないでいるクライアントへ止まると知らせて切り (`[Net] server stopping; told <人数> client(s) and disconnected them`)、
+クライアントは「サーバーが止まりました。」を出してメインメニューに戻る。知らせが届かずに切れたとき (サーバーが落ちた・回線が切れた) は、
+クライアントは Netcode が切断に気づいたところで「サーバーからの応答が途絶えました (タイムアウト)。」を出して戻る。
+クライアントのログには `[Net] disconnected from server id=<Id> kind=ServerStopped connected=True reason="fps:server-stopped"` のように理由が出る。
 
 ### 手元のクライアントからつなぐ
 

@@ -244,28 +244,38 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void SendsTheDeviceKeyAndApprovesThroughConnectionKeys()
+        public void SendsTheVersionAndDeviceKeyAndApprovesThroughConnectionKeys()
         {
             var target = Create("Net");
             var options = new NetLaunchOptions(NetLaunchMode.Client, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort);
 
             var manager = NetworkSetup.Configure(target, options, CreatePlayerPrefab());
 
+            Assert.That(NetworkSetup.TryGetLocalVersion(out var localVersion, out _), Is.True);
             var keys = target.GetComponent<NetConnectionKeys>();
             Assert.That(keys, Is.Not.Null);
+            Assert.That(keys.ServerVersion, Is.EqualTo(localVersion));
             Assert.That(manager.ConnectionApprovalCallback, Is.Not.Null);
-            Assert.That(RejoinKey.TryDecode(manager.NetworkConfig.ConnectionData, out var key), Is.True);
+            Assert.That(ConnectionPayload.TryDecode(manager.NetworkConfig.ConnectionData, out var version, out var key), Is.True);
+            Assert.That(version, Is.EqualTo(localVersion));
             Assert.That(key, Is.EqualTo(NetConnectionKeys.DeviceKey));
         }
 
-        [Test]
-        public void ConnectionKeysRememberAValidKeyPerClient()
+        private NetConnectionKeys CreateKeys(string serverVersion)
         {
             var keys = Create("Keys").AddComponent<NetConnectionKeys>();
+            keys.ServerVersion = serverVersion;
+            return keys;
+        }
+
+        [Test]
+        public void ConnectionKeysRememberTheKeyOfAClientOnTheSameVersion()
+        {
+            var keys = CreateKeys("0.2.0");
             var response = new NetworkManager.ConnectionApprovalResponse();
 
             keys.Approve(
-                new NetworkManager.ConnectionApprovalRequest { ClientNetworkId = 3, Payload = RejoinKey.Encode(ServerId) },
+                new NetworkManager.ConnectionApprovalRequest { ClientNetworkId = 3, Payload = ConnectionPayload.Encode("0.2.0", ServerId) },
                 response);
 
             Assert.That(response.Approved, Is.True);
@@ -277,20 +287,63 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void ConnectionKeysStillApproveWithoutAKey()
+        public void ConnectionKeysRejectAnotherVersionWithTheReason()
         {
-            var keys = Create("Keys").AddComponent<NetConnectionKeys>();
+            var keys = CreateKeys("0.2.0");
             var response = new NetworkManager.ConnectionApprovalResponse();
-            LogAssert.Expect(LogType.Warning, new Regex("client 5 sent no valid rejoin key"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"rejected client 6: version mismatch \(client 0\.1\.0, server 0\.2\.0\)"));
 
             keys.Approve(
-                new NetworkManager.ConnectionApprovalRequest { ClientNetworkId = 5, Payload = new byte[] { 0xff } },
+                new NetworkManager.ConnectionApprovalRequest { ClientNetworkId = 6, Payload = ConnectionPayload.Encode("0.1.0", ServerId) },
                 response);
 
-            Assert.That(response.Approved, Is.True);
-            Assert.That(response.CreatePlayerObject, Is.True);
+            Assert.That(response.Approved, Is.False);
+            Assert.That(response.CreatePlayerObject, Is.False);
+            Assert.That(response.Pending, Is.False);
+            Assert.That(response.Reason, Is.EqualTo(DisconnectNotice.VersionMismatchReason("0.2.0")));
+            Assert.That(keys.TryGet(6, out _), Is.False);
+            Assert.That(DisconnectNotice.Classify(response.Reason, false, "0.1.0").Kind, Is.EqualTo(DisconnectKind.VersionMismatch));
+        }
+
+        [Test]
+        public void ConnectionKeysRejectAnUnreadablePayload()
+        {
+            var keys = CreateKeys("0.2.0");
+            var response = new NetworkManager.ConnectionApprovalResponse();
+            LogAssert.Expect(LogType.Warning, new Regex("rejected client 5: unreadable connection payload"));
+
+            keys.Approve(
+                new NetworkManager.ConnectionApprovalRequest { ClientNetworkId = 5, Payload = RejoinKey.Encode(ServerId) },
+                response);
+
+            Assert.That(response.Approved, Is.False);
+            Assert.That(response.Reason, Is.EqualTo(DisconnectNotice.RejectedReason(ConnectionApproval.InvalidPayloadDetail)));
             Assert.That(keys.TryGet(5, out _), Is.False);
             Assert.That(keys.Count, Is.Zero);
+        }
+
+        [Test]
+        public void ConnectionKeysNeedAServerVersion()
+        {
+            var keys = Create("Keys").AddComponent<NetConnectionKeys>();
+
+            Assert.Throws<ArgumentException>(() => keys.ServerVersion = "v0.2.0");
+            Assert.Throws<InvalidOperationException>(() => keys.Approve(
+                new NetworkManager.ConnectionApprovalRequest { ClientNetworkId = 1, Payload = ConnectionPayload.Encode("0.2.0", ServerId) },
+                new NetworkManager.ConnectionApprovalResponse()));
+        }
+
+        [Test]
+        public void DisconnectHelpersIgnoreAManagerThatIsNotServing()
+        {
+            var manager = NetworkSetup.Configure(
+                Create("Net"),
+                new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),
+                CreatePlayerPrefab());
+
+            Assert.That(NetworkSetup.DisconnectRemoteClients(manager, DisconnectNotice.ServerStoppedReason), Is.Zero);
+            Assert.Throws<ArgumentNullException>(() => NetworkSetup.ClassifyDisconnect(null, true));
+            Assert.Throws<ArgumentNullException>(() => NetworkSetup.DisconnectRemoteClients(null, DisconnectNotice.ServerStoppedReason));
         }
     }
 }

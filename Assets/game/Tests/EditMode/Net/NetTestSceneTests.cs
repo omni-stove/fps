@@ -334,5 +334,28 @@ namespace Fps.Net.Tests
             Assert.That(entry, Is.Not.Null);
             Assert.That(entry.enabled, Is.True);
         }
+
+        [Test]
+        public void BuildSceneListNamesTheSceneTheRuntimeLoads()
+        {
+            Assert.That(Fps.Editor.BuildSceneList.NetTestScene, Is.EqualTo(NetBootstrap.ScenePath));
+            Assert.That(Fps.Editor.BuildSceneList.Scenes, Has.Member(NetBootstrap.ScenePath));
+            Assert.That(Fps.Editor.ServerBuilder.ServerScenePaths(), Is.EqualTo(new[] { NetBootstrap.ScenePath }));
+        }
+
+        [Test]
+        public void PlayerPrefabHasThePresentationAndGrenadeComponents()
+        {
+            var prefab = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetBootstrap>(true))
+                .Single()
+                .PlayerPrefab;
+
+            const string rerun = "run Fps.Editor.NetSceneBuilder.Build";
+            Assert.That(prefab.GetComponent<Fps.Runtime.WeaponPresentation>(), Is.Not.Null, rerun);
+            Assert.That(prefab.GetComponent<Fps.Runtime.CharacterAudio>(), Is.Not.Null, rerun);
+            Assert.That(prefab.GetComponent<Fps.Runtime.CharacterAnimator>(), Is.Not.Null, rerun);
+            Assert.That(prefab.GetComponent<Fps.Runtime.GrenadeThrower>(), Is.Not.Null, rerun);
+        }
     }
 }

@@ -79,6 +79,12 @@ namespace Fps.Runtime
         /// <summary>死んでいれば true。Health をまだ作っていなければ false (ここでは作らない)。</summary>
         public bool IsDead => _health != null && _health.IsDead;
 
+        /// <summary>
+        /// この画面で操作しているプレイヤーか。true のときだけ被弾を <see cref="CombatEvents.DamageTaken"/> に流す。
+        /// 実行時にプレイヤーを組み立てる <see cref="GameBootstrap"/> が設定する (シーンには保存しない)。
+        /// </summary>
+        public bool IsLocalPlayer { get; set; }
+
         private void Awake()
         {
             _ = Health;
@@ -108,22 +114,53 @@ namespace Fps.Runtime
         public int ApplyHit(int baseDamage, HitZone zone, float distance, DamageFalloff falloff, Vector3? sourcePosition = null)
         {
             var damage = DamageCalculator.Calculate(baseDamage, zone, distance, falloff);
-            TakeDamage(damage, sourcePosition);
+            TakeDamageCore(damage, sourcePosition, zone);
             return damage;
         }
 
-        /// <summary>体力を amount 減らし、生きていたなら <see cref="Damaged"/> を呼ぶ。死亡後は何もしない。</summary>
+        /// <summary>
+        /// 体力を amount 減らし、生きていたなら <see cref="Damaged"/> を呼ぶ。死亡後は何もしない。
+        /// 生きていたなら、<see cref="IsLocalPlayer"/> のときは <see cref="CombatEvents.DamageTaken"/> を、
+        /// この減りで倒れたときは <see cref="CombatEvents.Killed"/> を出す (<see cref="Damaged"/> の後)。
+        /// </summary>
         /// <param name="amount">ダメージ量。0 以上。</param>
         /// <param name="sourcePosition">ダメージを与えた者の位置。分からなければ null。</param>
         public void TakeDamage(int amount, Vector3? sourcePosition = null)
         {
+            TakeDamageCore(amount, sourcePosition, null);
+        }
+
+        private void TakeDamageCore(int amount, Vector3? sourcePosition, HitZone? zone)
+        {
             var health = Health;
             var wasAlive = !health.IsDead;
             health.TakeDamage(amount);
-            if (wasAlive)
+            if (!wasAlive)
             {
-                Damaged?.Invoke(this, new DamageReport(amount, sourcePosition));
+                return;
             }
+
+            Damaged?.Invoke(this, new DamageReport(amount, sourcePosition));
+
+            if (IsLocalPlayer)
+            {
+                CombatEvents.RaiseDamageTaken(sourcePosition, amount);
+            }
+
+            if (health.IsDead)
+            {
+                CombatEvents.RaiseKilled(KillFeedEntryFor(zone));
+            }
+        }
+
+        // 帰属が無い死 (Inspector の Kill・落下など) は、KillFeedEntry の決まりに合わせて自滅として出す。
+        private KillFeedEntry KillFeedEntryFor(HitZone? zone)
+        {
+            var victimId = CombatEvents.OfflineId(gameObject);
+            var attribution = CombatEvents.CurrentAttribution;
+            var killerId = attribution.HasValue ? attribution.Value.KillerId : victimId;
+            var weaponId = attribution.HasValue ? attribution.Value.WeaponId : string.Empty;
+            return new KillFeedEntry(killerId, victimId, weaponId, zone == HitZone.Head, friendly: false);
         }
 
         /// <summary>残りの体力ぶんのダメージを与えて倒す。Play 中に Inspector の右クリックメニューからも呼べる。</summary>

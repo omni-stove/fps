@@ -28,7 +28,7 @@ namespace Fps.Editor
     /// </remarks>
     public static class DestructionTestSceneBuilder
     {
-        public const string ScenePath = "Assets/game/Scenes/DestructionTest.unity";
+        public const string ScenePath = BuildSceneList.DestructionTestScene;
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
         public const string NavMeshDataPath = "Assets/game/Scenes/DestructionTest/NavMesh-Floor.asset";
@@ -129,7 +129,7 @@ namespace Fps.Editor
                 throw new IOException($"Failed to save the destruction test scene to '{scenePath}'");
             }
 
-            EditorBuildSettings.scenes = SceneBuildHelpers.WithSceneAppended(EditorBuildSettings.scenes, scenePath);
+            BuildSceneList.Register(scenePath);
             AssetDatabase.SaveAssets();
 
             Debug.Log($"{LogTag} saved '{scenePath}' and '{navMeshDataPath}'");

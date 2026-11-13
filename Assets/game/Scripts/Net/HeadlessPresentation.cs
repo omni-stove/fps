@@ -1,10 +1,12 @@
+using Fps.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Fps.Net
 {
     /// <summary>
-    /// 専用サーバーで要らない描画・音声のコンポーネント (Camera / AudioListener / AudioSource) を止める。
+    /// 専用サーバーで要らない描画・音声のコンポーネント (Camera / AudioListener / AudioSource と、演出の
+    /// <see cref="WeaponPresentation"/> / <see cref="CharacterAudio"/> / <see cref="CharacterAnimator"/>) を止める。
     /// 止めるかどうかは <see cref="Fps.Core.NetStartup.ShouldDisablePresentation"/> で決め、ここは止める処理だけを持つ。
     /// </summary>
     public static class HeadlessPresentation
@@ -40,7 +42,10 @@ namespace Fps.Net
 
             return Disable(root.GetComponentsInChildren<Camera>(true))
                 + Disable(root.GetComponentsInChildren<AudioListener>(true))
-                + Disable(root.GetComponentsInChildren<AudioSource>(true));
+                + Disable(root.GetComponentsInChildren<AudioSource>(true))
+                + Disable(root.GetComponentsInChildren<WeaponPresentation>(true))
+                + Disable(root.GetComponentsInChildren<CharacterAudio>(true))
+                + Disable(root.GetComponentsInChildren<CharacterAnimator>(true));
         }
 
         private static int Disable(Behaviour[] behaviours)

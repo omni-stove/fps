@@ -20,7 +20,7 @@ namespace Fps.Editor
     /// </summary>
     public static class MissionTestSceneBuilder
     {
-        public const string ScenePath = "Assets/game/Scenes/MissionTest.unity";
+        public const string ScenePath = BuildSceneList.MissionTestScene;
         public const string DefinitionPath = "Assets/game/Missions/TestMission.asset";
         public const string MenuPath = "Fps/Build Mission Test Scene";
         public const string LogTag = "[MissionTestSceneBuilder]";
@@ -102,7 +102,7 @@ namespace Fps.Editor
                 throw new IOException($"Failed to save the mission test scene to '{scenePath}'");
             }
 
-            EditorBuildSettings.scenes = WithSceneAppended(EditorBuildSettings.scenes, scenePath);
+            BuildSceneList.Register(scenePath);
             AssetDatabase.SaveAssets();
 
             Debug.Log($"{LogTag} saved '{definitionPath}' and '{scenePath}' and registered the scene in Build Settings");

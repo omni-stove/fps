@@ -25,7 +25,7 @@ namespace Fps.Editor
     /// </remarks>
     public static class EnemyTestSceneBuilder
     {
-        public const string ScenePath = "Assets/game/Scenes/EnemyAiTest.unity";
+        public const string ScenePath = BuildSceneList.EnemyAiTestScene;
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
         public const string NavMeshDataPath = "Assets/game/Scenes/EnemyAiTest/NavMesh-Floor.asset";
@@ -109,7 +109,7 @@ namespace Fps.Editor
                 throw new IOException($"Failed to save the enemy AI test scene to '{scenePath}'");
             }
 
-            EditorBuildSettings.scenes = WithSceneAppended(EditorBuildSettings.scenes, scenePath);
+            BuildSceneList.Register(scenePath);
             AssetDatabase.SaveAssets();
 
             Debug.Log($"{LogTag} saved '{scenePath}' and '{navMeshDataPath}'");

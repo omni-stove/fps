@@ -176,6 +176,12 @@ namespace Fps.Net
 
             SetLocalView(NetStartup.ShouldEnableFirstPersonView(IsOwner, Application.isBatchMode, NetStartup.IsDedicatedServerBuild));
 
+            // NetBootstrap が止めるのは起動時のシーンだけなので、後から生成されるプレイヤーの演出はここで止める
+            if (NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
+            {
+                HeadlessPresentation.DisableUnder(gameObject);
+            }
+
             if (IsOwner)
             {
                 ResolveAttackAction();

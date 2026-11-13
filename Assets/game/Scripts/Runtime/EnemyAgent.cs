@@ -774,7 +774,7 @@ namespace Fps.Runtime
             }
 
             var spec = _weapon.Spec;
-            var result = Hitscan.Fire(eye, direction, spec.Range, spec.Damage, spec.Falloff, transform);
+            var result = Hitscan.Fire(eye, direction, spec.Range, spec.Damage, spec.Falloff, transform, weaponId: spec.Id);
             Debug.Log($"{LogTag} id={Id} fire ammo={_weapon.AmmoInMagazine} hit={DescribeHit(result)} dmg={result.Damage}", this);
         }
 

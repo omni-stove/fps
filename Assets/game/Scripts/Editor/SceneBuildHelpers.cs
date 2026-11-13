@@ -77,46 +77,11 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// Build Settings のシーン一覧に path を有効な状態で加える。既にあれば位置を変えずに有効にし (重複は落とす)、
-        /// 他のシーンは順番と有効/無効をそのまま残す。
+        /// Build Settings のシーン一覧に path を有効な状態で加える (<see cref="BuildSceneList.WithScene"/>)。
         /// </summary>
         public static EditorBuildSettingsScene[] WithSceneAppended(IReadOnlyList<EditorBuildSettingsScene> current, string path)
         {
-            path = BootstrapSceneBuilder.ValidateScenePath(path);
-
-            var scenes = new List<EditorBuildSettingsScene>();
-            var found = false;
-            if (current != null)
-            {
-                foreach (var scene in current)
-                {
-                    if (scene == null || string.IsNullOrEmpty(scene.path))
-                    {
-                        continue;
-                    }
-
-                    if (string.Equals(scene.path.Replace('\\', '/'), path, StringComparison.Ordinal))
-                    {
-                        if (found)
-                        {
-                            continue;
-                        }
-
-                        found = true;
-                        scenes.Add(new EditorBuildSettingsScene(path, true));
-                        continue;
-                    }
-
-                    scenes.Add(scene);
-                }
-            }
-
-            if (!found)
-            {
-                scenes.Add(new EditorBuildSettingsScene(path, true));
-            }
-
-            return scenes.ToArray();
+            return BuildSceneList.WithScene(current, path);
         }
 
         /// <summary>scene が読み込み済みの有効なシーンであることを確かめる。</summary>
@@ -405,7 +370,8 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// カプセルの敵 (<see cref="EnemyAgent"/>、NavMeshAgent、Damageable、胴の Hitbox) を feet (足元) に置く。
+        /// カプセルの敵 (<see cref="EnemyAgent"/>、NavMeshAgent、Damageable、胴の Hitbox、演出の
+        /// <see cref="CharacterComponents.Attach"/>) を feet (足元) に置く。
         /// patrolRoute が空なら Idle のまま、その場で待つ。parent が null ならシーンの直下に置く。
         /// 敵は weapon の武器で撃つ (<see cref="EnemyAgent.WeaponDefinition"/> に配線する)。
         /// </summary>
@@ -459,6 +425,9 @@ namespace Fps.Editor
             agent.Id = id;
             agent.WeaponDefinition = weapon;
             agent.SetPatrolRoute(patrolRoute);
+
+            // 敵は手榴弾を投げない。演出だけを付ける。
+            CharacterComponents.Attach(capsule, throwsGrenades: false);
             return agent;
         }
 

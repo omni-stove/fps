@@ -33,5 +33,11 @@
             <ui:VisualElement class="hud__crosshair-line hud__crosshair-line--horizontal" picking-mode="Ignore" />
             <ui:VisualElement class="hud__crosshair-line hud__crosshair-line--vertical" picking-mode="Ignore" />
         </ui:VisualElement>
+        <!-- 以下は Hud と同じ GameObject のビュー (HudElementView) が name で受け取る枠。中身はまだ無く、隠しておく。 -->
+        <ui:VisualElement name="hit-marker" picking-mode="Ignore" style="display: none;" />
+        <ui:VisualElement name="damage-direction" picking-mode="Ignore" style="display: none;" />
+        <ui:VisualElement name="kill-feed" picking-mode="Ignore" style="display: none;" />
+        <ui:VisualElement name="scoreboard" picking-mode="Ignore" style="display: none;" />
+        <ui:VisualElement name="loadout-select" picking-mode="Ignore" style="display: none;" />
     </ui:VisualElement>
 </ui:UXML>

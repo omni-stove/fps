@@ -39,7 +39,6 @@ namespace Fps.Core
 
         private Vector3 _anchor;
         private Vector3 _goal;
-        private Vector3 _pathAnchor;
         private Vector3? _pathDirection;
         private bool _tracking;
 
@@ -175,14 +174,13 @@ namespace Fps.Core
                 var length = toWaypoint.Length();
                 if (length > 0f)
                 {
-                    _pathAnchor = position;
                     _pathDirection = toWaypoint / length;
                 }
 
                 return false;
             }
 
-            return Vector3.Dot(position - _pathAnchor, _pathDirection.Value) >= ProgressDistance;
+            return Vector3.Dot(position - _anchor, _pathDirection.Value) >= ProgressDistance;
         }
 
         // 目的地までの距離だけだと、動かない敵へ目標のほうが近づいただけで立ち直ったことになってしまう。

@@ -101,6 +101,25 @@ namespace Fps.Core
         /// <summary>プレイヤーを team に加える。キル数とデス数は 0 から数える。</summary>
         public void AddPlayer(int playerId, Team team)
         {
+            AddPlayer(playerId, team, 0, 0);
+        }
+
+        /// <summary>
+        /// プレイヤーを team に加え、キル数とデス数を kills と deaths から数える。切断して戻ってきた人の成績を引き継ぐときに使う。
+        /// チームの点数は動かさない (そのキルは抜ける前にもう入っている)。
+        /// </summary>
+        public void AddPlayer(int playerId, Team team, int kills, int deaths)
+        {
+            if (kills < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kills), kills, "kills must not be negative");
+            }
+
+            if (deaths < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(deaths), deaths, "deaths must not be negative");
+            }
+
             if (team != Team.Alpha && team != Team.Bravo)
             {
                 throw new ArgumentOutOfRangeException(nameof(team), team, "team is not a valid Team");
@@ -111,7 +130,7 @@ namespace Fps.Core
                 throw new ArgumentException($"player {playerId} has already been added", nameof(playerId));
             }
 
-            _players.Add(playerId, new PlayerRecord(team));
+            _players.Add(playerId, new PlayerRecord(team) { Kills = kills, Deaths = deaths });
         }
 
         /// <summary>

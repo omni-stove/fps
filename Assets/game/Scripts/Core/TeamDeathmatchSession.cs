@@ -6,7 +6,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// サーバーで動かすチームデスマッチの進行役。<see cref="TeamDeathmatch"/> (点数・時間・リスポーン待ち) に、
-    /// 参加順のチーム割り当て (<see cref="TeamAssigner"/>)、プレイヤーごとの <see cref="Health"/>、
+    /// 人数と点数によるチーム割り当て (<see cref="TeamAssigner"/>)、切断した人の成績の保持、プレイヤーごとの <see cref="Health"/>、
     /// <see cref="SpawnSelector"/> による出現地点の選択をまとめる。ネットワークの層はここを呼び、
     /// イベントを受けて同期するだけにする。
     /// </summary>
@@ -31,6 +31,10 @@ namespace Fps.Core
     /// <item>出現 (参加・リスポーン・<see cref="Restart"/>) から <see cref="GameRules.SpawnProtectionSeconds"/> の間は、どこからのダメージも受けない
     /// (<see cref="GetSpawnProtectionRemaining"/>)。その間に自分が撃ったら、呼び出し側が <see cref="EndSpawnProtection"/> ですぐ解く。
     /// 0 なら無敵にしない。</item>
+    /// <item>参加する人は今いる人数の少ないチームに入れ、同じなら点の低いチームに入れる (<see cref="TeamAssigner"/>)。
+    /// 鍵を付けて参加した人が抜けたら、チームの人数からは外したうえで、チーム・キル数・デス数を
+    /// <see cref="ReconnectGraceSeconds"/> の間だけ残す。その間に同じ鍵で参加したら、人数によらず同じチームに戻して成績を引き継ぐ。
+    /// 待つ時間は <see cref="Tick"/> で試合の状態によらず減り、切れたら <see cref="HeldExpired"/> を出して捨てる。</item>
     /// </list>
     /// </remarks>
     public sealed class TeamDeathmatchSession
@@ -78,10 +82,18 @@ namespace Fps.Core
         /// </summary>
         public event Action<int> DownedChanged;
 
+        /// <summary>
+        /// 切断した人の成績を、戻ってこないまま <see cref="ReconnectGraceSeconds"/> が過ぎて捨てたときに呼ばれる。
+        /// 引数は捨てた成績 (<see cref="HeldPlayer.RemainingSeconds"/> は 0)。
+        /// </summary>
+        public event Action<HeldPlayer> HeldExpired;
+
+        /// <summary>切断した人の成績を残す秒数の既定値。</summary>
+        public const float DefaultReconnectGraceSeconds = 60f;
+
         private static readonly Team[] _teams = { Team.Alpha, Team.Bravo };
 
         private readonly TeamDeathmatch _match;
-        private readonly TeamAssigner _assigner = new TeamAssigner();
         private readonly SpawnSelector _selector;
         private readonly SpawnPoint[] _spawnPoints;
         private readonly Func<int, Vector3> _positionOf;
@@ -97,6 +109,14 @@ namespace Fps.Core
         // 出現直後の無敵の残り秒数。無敵の人だけが入る (SpawnProtectionSeconds が 0 なら空のまま)
         private readonly Dictionary<int, float> _spawnProtection = new Dictionary<int, float>();
         private readonly List<int> _protectedIds = new List<int>();
+
+        // 鍵を付けて参加中の人の鍵と、その逆引き
+        private readonly Dictionary<int, string> _keyByPlayer = new Dictionary<int, string>();
+        private readonly Dictionary<string, int> _playerByKey = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        // 切断して戻るのを待っている人の成績。鍵ごとに 1 つ
+        private readonly Dictionary<string, HeldPlayer> _held = new Dictionary<string, HeldPlayer>(StringComparer.Ordinal);
+        private readonly List<string> _heldKeys = new List<string>();
 
         private readonly Queue<Action> _deferred = new Queue<Action>();
         private int _busy;
@@ -125,8 +145,16 @@ namespace Fps.Core
         public Team? Winner => _match.Winner;
         public int PlayerCount => _health.Count;
 
-        /// <summary>次に参加する人のチーム。</summary>
-        public Team NextTeam => _assigner.Peek;
+        /// <summary>切断した人の成績を残す秒数。0 なら残さない。</summary>
+        public float ReconnectGraceSeconds { get; }
+
+        /// <summary>切断して戻るのを待っている人の数。</summary>
+        public int HeldCount => _held.Count;
+
+        /// <summary>
+        /// 鍵を持たない (または成績が残っていない) 人が次に参加したときのチーム。今いる人数の少ないチーム、同じなら点の低いチーム。
+        /// </summary>
+        public Team NextTeam => TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), GetScore(Team.Alpha), GetScore(Team.Bravo));
 
         /// <param name="spec">試合の設定。</param>
         /// <param name="maxHealth">プレイヤーの最大体力。1 以上。</param>
@@ -136,17 +164,25 @@ namespace Fps.Core
         /// <param name="restartDelaySeconds">
         /// 終わってから自動で次の試合を始めるまでの秒数。0 以上の有限値。null なら自動では始めない。
         /// </param>
+        /// <param name="reconnectGraceSeconds">切断した人の成績を残す秒数。0 以上の有限値。0 なら残さない。</param>
         public TeamDeathmatchSession(
             TeamDeathmatchSpec spec,
             int maxHealth,
             IReadOnlyList<SpawnPoint> spawnPoints,
             SpawnSelector selector,
             Func<int, Vector3> positionOf,
-            float? restartDelaySeconds = null)
+            float? restartDelaySeconds = null,
+            float reconnectGraceSeconds = DefaultReconnectGraceSeconds)
         {
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (!(reconnectGraceSeconds >= 0f) || float.IsInfinity(reconnectGraceSeconds))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(reconnectGraceSeconds), reconnectGraceSeconds, "reconnectGraceSeconds must not be negative and must be finite");
             }
 
             if (restartDelaySeconds.HasValue
@@ -179,6 +215,7 @@ namespace Fps.Core
             _positionOf = positionOf ?? throw new ArgumentNullException(nameof(positionOf));
             MaxHealth = maxHealth;
             _restartDelaySeconds = restartDelaySeconds;
+            ReconnectGraceSeconds = reconnectGraceSeconds;
 
             var actions = spec.Rules.Actions;
             if (actions.Downed == Fps.Core.Downed.Revive)
@@ -296,20 +333,47 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// プレイヤーを参加させ、参加順に交互にチームを割り当てる。<see cref="PlayerChanged"/> と
+        /// プレイヤーを参加させる。key の成績が残っていれば (<see cref="FindHeld"/>) そのチームに戻してキル数とデス数を引き継ぎ、
+        /// 残っていなければ <see cref="NextTeam"/> に入れて 0 から数える。<see cref="PlayerChanged"/> と
         /// <see cref="Spawned"/> を出し、両チームがそろったら試合を始める。
         /// </summary>
+        /// <param name="playerId">参加する人の id。切断前と違っていてよい。</param>
+        /// <param name="key">
+        /// 切断して戻ってきたと見分ける鍵 (<see cref="RejoinKey"/>)。null なら抜けたときに成績を残さない。
+        /// </param>
         /// <returns>割り当てたチーム。</returns>
-        /// <exception cref="ArgumentException">すでに参加している。</exception>
-        public Team Join(int playerId)
+        /// <exception cref="ArgumentException">すでに参加している、または同じ鍵の人が参加中 (<see cref="IsKeyInUse"/>)。</exception>
+        public Team Join(int playerId, string key = null)
         {
             if (_health.ContainsKey(playerId))
             {
                 throw new ArgumentException($"player {playerId} has already joined", nameof(playerId));
             }
 
-            var team = _assigner.Assign();
-            _match.AddPlayer(playerId, team);
+            if (key != null && _playerByKey.TryGetValue(key, out var owner))
+            {
+                throw new ArgumentException($"key is already used by player {owner}", nameof(key));
+            }
+
+            Team team;
+            if (key != null && _held.TryGetValue(key, out var held))
+            {
+                team = held.Team;
+                _match.AddPlayer(playerId, team, held.Kills, held.Deaths);
+                _held.Remove(key);
+            }
+            else
+            {
+                team = NextTeam;
+                _match.AddPlayer(playerId, team);
+            }
+
+            if (key != null)
+            {
+                _keyByPlayer[playerId] = key;
+                _playerByKey[key] = playerId;
+            }
+
             ResetHealth(playerId);
 
             PlayerChanged?.Invoke(playerId);
@@ -321,10 +385,26 @@ namespace Fps.Core
         /// <summary>
         /// プレイヤーを抜く。チームの点数はそのまま残し、リスポーン待ちとダウンは取り消す。抜けた人にはそれ以後キルを付けない。
         /// 抜けたことでチームの全員がダウンか死亡になったら、ダウン中の人をその場で倒す。
+        /// 鍵を付けて参加していて <see cref="ReconnectGraceSeconds"/> が 0 より大きければ、チーム・キル数・デス数をその秒数だけ残す。
+        /// 残す間もチームの人数には数えない。
         /// </summary>
-        public void Leave(int playerId)
+        /// <returns>成績を残したら true。</returns>
+        public bool Leave(int playerId)
         {
             FindHealth(playerId);
+            var held = false;
+            if (_keyByPlayer.TryGetValue(playerId, out var key))
+            {
+                _keyByPlayer.Remove(playerId);
+                _playerByKey.Remove(key);
+                if (ReconnectGraceSeconds > 0f)
+                {
+                    _held[key] = new HeldPlayer(
+                        playerId, GetTeam(playerId), GetKills(playerId), GetDeaths(playerId), ReconnectGraceSeconds);
+                    held = true;
+                }
+            }
+
             _match.RemovePlayer(playerId);
             _health.Remove(playerId);
             _regenerators.Remove(playerId);
@@ -334,6 +414,17 @@ namespace Fps.Core
                 _downed.RemovePlayer(playerId);
                 KillWipedOutTeams();
             }
+
+            return held;
+        }
+
+        /// <summary>key で参加中の人がいれば true。前の接続が切れたと分かる前に同じ人がつなぎ直してきたときに立つ。</summary>
+        public bool IsKeyInUse(string key) => key != null && _playerByKey.ContainsKey(key);
+
+        /// <summary>key の切断した人の成績が残っていればそれを、なければ null を返す。</summary>
+        public HeldPlayer? FindHeld(string key)
+        {
+            return key != null && _held.TryGetValue(key, out var held) ? held : (HeldPlayer?)null;
         }
 
         /// <summary>
@@ -611,7 +702,7 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 時間を進める。試合の状態によらず、まず出現直後の無敵の残りを減らす。試合中なら次に各プレイヤーの体力を自動回復させ (<see cref="GameRules.RegenPerSecond"/> が
+        /// 時間を進める。試合の状態によらず、まず切断した人の成績を残す時間を減らし (切れたら <see cref="HeldExpired"/>)、出現直後の無敵の残りを減らす。試合中なら次に各プレイヤーの体力を自動回復させ (<see cref="GameRules.RegenPerSecond"/> が
         /// 0 なら何もしない)、体力が変わった人ごとに <see cref="PlayerChanged"/> を出す。次に、前の Tick から
         /// <see cref="TryRevive"/> されなかったダウン中の人の蘇生の累計を 0 に戻し、出血を進めて、秒数が過ぎた人を倒す。続けて
         /// リスポーン待ちが終わった人を出現させ、時間切れなら試合を終える。
@@ -626,6 +717,8 @@ namespace Fps.Core
             }
 
             var waitingForRestart = _restartPending && State == GameModeState.Ended;
+
+            TickHeld(deltaSeconds);
 
             // この Tick の中で出現した人 (リスポーン・Restart) の無敵を減らさないよう、_match.Tick より先に回す
             TickSpawnProtection(deltaSeconds);
@@ -658,6 +751,7 @@ namespace Fps.Core
         /// 残り時間を初期値に戻し、全員を体力満タンにしてダウンを消し、出現直後の無敵を付け直して、自分のチームの地点へ出現させる (<see cref="Spawned"/>)。
         /// ダウンしていた人には、<see cref="PlayerChanged"/> を出し終えた後に <see cref="DownedChanged"/> を出す。
         /// 両チームに 1 人以上いればそのまま始まり、いなければ Waiting に戻って参加を待つ。
+        /// 切断した人の残している成績もキル数とデス数を 0 にする (チームと残す時間はそのまま)。
         /// </summary>
         /// <exception cref="InvalidOperationException">試合がまだ終わっていない。</exception>
         public void Restart()
@@ -670,6 +764,14 @@ namespace Fps.Core
             _restartPending = false;
             _restartRemaining = 0f;
             _match.Reset();
+
+            // 前の試合の成績を次の試合へ持ち込ませない
+            _heldKeys.Clear();
+            _heldKeys.AddRange(_held.Keys);
+            foreach (var key in _heldKeys)
+            {
+                _held[key] = _held[key].WithoutStats();
+            }
 
             var playerIds = new List<int>(_health.Keys);
             List<int> wasDowned = null;
@@ -843,6 +945,57 @@ namespace Fps.Core
             }
 
             return _downed != null && _downed.Remove(playerId);
+        }
+
+        // 試合の状態によらず減らす。終わった後の次の試合までの待ちも、戻ってくる人にとっては同じ時間なので数える
+        private void TickHeld(float deltaSeconds)
+        {
+            if (_held.Count == 0)
+            {
+                return;
+            }
+
+            // 受け手が参加させても回している最中の辞書を崩さないよう、捨てる分を先に決めてから知らせる
+            _heldKeys.Clear();
+            _heldKeys.AddRange(_held.Keys);
+            List<HeldPlayer> expired = null;
+            foreach (var key in _heldKeys)
+            {
+                var held = _held[key];
+                var remaining = held.RemainingSeconds - deltaSeconds;
+                if (remaining > 0f)
+                {
+                    _held[key] = held.WithRemaining(remaining);
+                    continue;
+                }
+
+                _held.Remove(key);
+                (expired ??= new List<HeldPlayer>()).Add(held.WithRemaining(0f));
+            }
+
+            if (expired == null)
+            {
+                return;
+            }
+
+            foreach (var held in expired)
+            {
+                HeldExpired?.Invoke(held);
+            }
+        }
+
+        private int CountPlayers(Team team)
+        {
+            var count = 0;
+            foreach (var playerId in _health.Keys)
+            {
+                if (GetTeam(playerId) == team)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         // 試合の状態によらず減らす。待っている間と終わった後はそもそもダメージが通らないので、出現からの実時間で切れればよい

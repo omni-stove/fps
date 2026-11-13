@@ -220,6 +220,28 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AddPlayerWithStatsStartsFromThemWithoutScoring()
+        {
+            var match = new TeamDeathmatch(new TeamDeathmatchSpec(10, 60f, 3f));
+
+            match.AddPlayer(_alpha1, Team.Alpha, 4, 2);
+
+            Assert.That(match.GetKills(_alpha1), Is.EqualTo(4));
+            Assert.That(match.GetDeaths(_alpha1), Is.EqualTo(2));
+            Assert.That(match.GetScore(Team.Alpha), Is.Zero);
+        }
+
+        [Test]
+        public void AddPlayerRejectsNegativeStats()
+        {
+            var match = new TeamDeathmatch(new TeamDeathmatchSpec(10, 60f, 3f));
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => match.AddPlayer(_alpha1, Team.Alpha, -1, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => match.AddPlayer(_alpha1, Team.Alpha, 0, -1));
+            Assert.That(match.HasPlayer(_alpha1), Is.False);
+        }
+
+        [Test]
         public void ReportDeathIsIgnoredWhileWaitingAndAfterEnd()
         {
             var waiting = new TeamDeathmatch(new TeamDeathmatchSpec(10, 60f, 3f));

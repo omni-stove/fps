@@ -138,6 +138,75 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void MatchRulesCarryCoverAndBlindFire()
+        {
+            var actions = ActionRules.Default.WithCover(Cover.On).WithBlindFire(BlindFire.On);
+            var rules = GameRules.Default.WithActions(actions);
+
+            var synced = NetMatchRules.From(rules);
+
+            Assert.That(synced.Cover, Is.EqualTo(Cover.On));
+            Assert.That(synced.BlindFire, Is.EqualTo(BlindFire.On));
+            Assert.That(synced.CoverEnabled, Is.True);
+            Assert.That(synced.BlindFireEnabled, Is.True);
+            Assert.That(RoundTrip(synced), Is.EqualTo(synced));
+            Assert.That(synced, Is.Not.EqualTo(NetMatchRules.Default));
+
+            Assert.That(NetMatchRules.Default.CoverEnabled, Is.False, "cover is off until the server says otherwise");
+            Assert.That(NetMatchRules.Default.BlindFireEnabled, Is.False);
+
+            // カバーが Off なら、届いた値が食い違っていてもブラインドファイアは使わない
+            var inconsistent = new NetMatchRules(DeathBody.Vanish, DeathCamera.None, RespawnMode.Individual, false, Cover.Off, BlindFire.On);
+            Assert.That(inconsistent.BlindFireEnabled, Is.False);
+        }
+
+        [Test]
+        public void CoverStateSerializesEveryFieldInCoverAndOnlyThePhaseOutside()
+        {
+            var snapshot = new CoverSnapshot(
+                CoverPhase.Peeking, CoverHeight.High, new System.Numerics.Vector3(0f, 0f, -1f), -0.6f, 0.15f, 0.05f, -1f);
+            var inCover = new NetCoverState(snapshot, 2.5f, CoverEdge.Left, -0.4f);
+
+            var received = RoundTrip(inCover);
+
+            Assert.That(received, Is.EqualTo(inCover));
+            Assert.That(received.Snapshot, Is.EqualTo(snapshot));
+            Assert.That(received.IsValid, Is.True);
+
+            // 外に出た後の古い壁の値は送らず、覗く側の好みだけ残す
+            var left = new NetCoverState(
+                new CoverSnapshot(CoverPhase.Out, CoverHeight.High, new System.Numerics.Vector3(0f, 0f, -1f), 0f, 0f, 0f, -1f),
+                2.5f,
+                CoverEdge.None,
+                0f);
+            var receivedOut = RoundTrip(left);
+            Assert.That(receivedOut.IsInCover, Is.False);
+            Assert.That(receivedOut.PreferredSide, Is.EqualTo(-1f));
+            Assert.That(receivedOut.Normal, Is.EqualTo(UnityEngine.Vector3.zero));
+            Assert.That(RoundTrip(NetCoverState.Out), Is.EqualTo(NetCoverState.Out));
+        }
+
+        [Test]
+        public void CoverStateRejectsBrokenValues()
+        {
+            var noNormal = new NetCoverState(
+                new CoverSnapshot(CoverPhase.In, CoverHeight.Low, System.Numerics.Vector3.Zero, 0f, 0f, 0f, 1f), 0.8f, CoverEdge.None, 0f);
+            var nanTop = new NetCoverState(
+                new CoverSnapshot(CoverPhase.In, CoverHeight.Low, new System.Numerics.Vector3(1f, 0f, 0f), 0f, 0f, 0f, 1f), float.NaN, CoverEdge.None, 0f);
+            var badPhase = new NetCoverState(
+                new CoverSnapshot((CoverPhase)9, CoverHeight.Low, new System.Numerics.Vector3(1f, 0f, 0f), 0f, 0f, 0f, 1f), 0.8f, CoverEdge.None, 0f);
+
+            Assert.That(noNormal.IsValid, Is.False);
+            Assert.That(nanTop.IsValid, Is.False);
+            Assert.That(badPhase.IsValid, Is.False);
+            Assert.That(
+                new MotorState(UnityEngine.Vector3.zero, UnityEngine.Vector3.zero, true, false, nanTop).IsFinite,
+                Is.False,
+                "the state is dropped as a whole");
+            Assert.That(NetCoverState.Out.IsValid, Is.True);
+        }
+
+        [Test]
         public void MatchStatusSerializesStateAndWinner()
         {
             var status = new NetMatchStatus(GameModeState.Ended, Team.Bravo);

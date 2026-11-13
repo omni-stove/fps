@@ -67,6 +67,17 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ADrainingServerSaysItIsGettingReadyToStop()
+        {
+            var notice = DisconnectNotice.Classify(DisconnectNotice.RejectedReason(DisconnectNotice.ServerDrainingDetail), false, "0.2.0");
+
+            Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.Rejected));
+            Assert.That(notice.Detail, Is.EqualTo("server-draining"));
+            Assert.That(notice.Message, Does.StartWith("サーバーが止まる準備中"));
+            Assert.That(notice.Describe(), Does.Contain("detail=server-draining"));
+        }
+
+        [Test]
         public void ARejectionDropsAnUnreadableDetail()
         {
             var notice = DisconnectNotice.Classify("fps:rejected:Not Allowed!", false, "0.2.0");

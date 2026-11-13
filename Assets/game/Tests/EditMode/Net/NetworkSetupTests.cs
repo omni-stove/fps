@@ -323,6 +323,27 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ConnectionKeysRejectEvenTheSameVersionWhileDraining()
+        {
+            var keys = CreateKeys("0.2.0");
+            keys.Draining = true;
+            var response = new NetworkManager.ConnectionApprovalResponse();
+            LogAssert.Expect(LogType.Warning, new Regex("rejected client 7: the server is draining"));
+
+            keys.Approve(
+                new NetworkManager.ConnectionApprovalRequest { ClientNetworkId = 7, Payload = ConnectionPayload.Encode("0.2.0", ServerId) },
+                response);
+
+            Assert.That(response.Approved, Is.False);
+            Assert.That(response.CreatePlayerObject, Is.False);
+            Assert.That(response.Pending, Is.False);
+            Assert.That(response.Reason, Is.EqualTo(DisconnectNotice.RejectedReason(DisconnectNotice.ServerDrainingDetail)));
+            Assert.That(keys.TryGet(7, out _), Is.False);
+            Assert.That(
+                DisconnectNotice.Classify(response.Reason, false, "0.2.0").Message, Is.EqualTo(DisconnectNotice.ServerDrainingMessage));
+        }
+
+        [Test]
         public void ConnectionKeysNeedAServerVersion()
         {
             var keys = Create("Keys").AddComponent<NetConnectionKeys>();

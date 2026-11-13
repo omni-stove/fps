@@ -26,6 +26,9 @@ namespace Fps.Core
         /// <summary>版の違い以外で断るときの切断理由の接頭辞。続けて断った訳の符号を付ける。</summary>
         public const string RejectedPrefix = ReasonPrefix + "rejected:";
 
+        /// <summary>サーバーが止まる準備中 (<see cref="ServerDrain"/>) で新しい参加を断るときの、断った訳の符号。</summary>
+        public const string ServerDrainingDetail = "server-draining";
+
         /// <summary>断った訳の符号の最長の文字数。これより長い・使えない文字を含む符号は捨てる。</summary>
         public const int MaxDetailLength = 32;
 
@@ -34,6 +37,7 @@ namespace Fps.Core
         public const string ConnectTimedOutMessage = "サーバーに接続できませんでした (タイムアウト)。";
         public const string RejectedMessage = "サーバーに接続を断られました。";
         public const string VersionMismatchMessage = "版が違います。";
+        public const string ServerDrainingMessage = "サーバーが止まる準備中のため参加できません。別のサーバーにつないでください。";
 
         private DisconnectNotice(
             DisconnectKind kind, bool wasConnected, string message, string serverVersion, string detail, string rawReason)
@@ -114,7 +118,8 @@ namespace Fps.Core
         /// <list type="bullet">
         /// <item><see cref="ServerStoppedReason"/> なら <see cref="DisconnectKind.ServerStopped"/>。</item>
         /// <item><see cref="VersionMismatchPrefix"/> で始まれば <see cref="DisconnectKind.VersionMismatch"/>。</item>
-        /// <item><see cref="RejectedPrefix"/> で始まれば <see cref="DisconnectKind.Rejected"/>。</item>
+        /// <item><see cref="RejectedPrefix"/> で始まれば <see cref="DisconnectKind.Rejected"/>。訳が <see cref="ServerDrainingDetail"/> なら
+        /// 文は <see cref="ServerDrainingMessage"/>、それ以外は <see cref="RejectedMessage"/>。</item>
         /// <item>それ以外 (空、知らない符号、Netcode や transport の文言) は <see cref="DisconnectKind.TimedOut"/>。</item>
         /// </list>
         /// </summary>
@@ -147,8 +152,13 @@ namespace Fps.Core
             if (code.StartsWith(RejectedPrefix, StringComparison.Ordinal))
             {
                 var detail = code.Substring(RejectedPrefix.Length);
-                return new DisconnectNotice(
-                    DisconnectKind.Rejected, wasConnected, RejectedMessage, null, IsValidDetail(detail) ? detail : null, raw);
+                if (!IsValidDetail(detail))
+                {
+                    detail = null;
+                }
+
+                var message = string.Equals(detail, ServerDrainingDetail, StringComparison.Ordinal) ? ServerDrainingMessage : RejectedMessage;
+                return new DisconnectNotice(DisconnectKind.Rejected, wasConnected, message, null, detail, raw);
             }
 
             return new DisconnectNotice(

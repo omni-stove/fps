@@ -808,7 +808,7 @@ namespace Fps.Tests.EditMode
         public void HudHasThePartViewsBoundToTheLayout()
         {
             var hud = _world.Hud;
-            HudElementView[] views = { hud.HitMarker, hud.DamageDirection, hud.KillFeed, hud.Scoreboard, hud.LoadoutSelect };
+            HudElementView[] views = { hud.HitMarker, hud.DamageDirection, hud.KillFeed, hud.Scoreboard, hud.LoadoutSelect, hud.TutorialPrompt };
 
             Assert.That(views, Has.None.Null);
             Assert.That(hud.PauseMenu, Is.Not.Null);

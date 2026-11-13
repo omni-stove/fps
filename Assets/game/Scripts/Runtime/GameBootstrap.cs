@@ -332,7 +332,7 @@ namespace Fps.Runtime
             if (Application.isPlaying && !mover.IsInitialized)
             {
                 throw new InvalidOperationException(
-                    "PlayerController could not resolve its references or Move/Sprint/Jump actions; see the error above");
+                    "PlayerController could not resolve its references or Move/Sprint/Crouch/Jump actions; see the error above");
             }
 
             // 射撃は視点の向きで撃つのでカメラに付ける。参照の解決は FirstPersonLook と同じく Play 中の Awake に任せる。

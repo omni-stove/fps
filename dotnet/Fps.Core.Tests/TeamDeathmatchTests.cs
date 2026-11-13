@@ -19,9 +19,16 @@ namespace Fps.Core.Tests
         private const int _bravo1 = 11;
         private const int _bravo2 = 12;
 
-        private static TeamDeathmatch CreateStarted(int scoreLimit = 10, float timeLimitSeconds = 60f, float respawnSeconds = 3f)
+        private static GameRules RulesWith(RespawnMode respawnMode, float waveIntervalSeconds = GameRules.DefaultWaveIntervalSeconds)
         {
-            var match = new TeamDeathmatch(new TeamDeathmatchSpec(scoreLimit, timeLimitSeconds, respawnSeconds));
+            return new GameRules(
+                FriendlyFire.Off, respawnMode, waveIntervalSeconds, 0f, 0f, DeathBody.Vanish, DeathCamera.None, false, 1f);
+        }
+
+        private static TeamDeathmatch CreateStarted(
+            int scoreLimit = 10, float timeLimitSeconds = 60f, float respawnSeconds = 3f, GameRules rules = null)
+        {
+            var match = new TeamDeathmatch(new TeamDeathmatchSpec(scoreLimit, timeLimitSeconds, respawnSeconds, rules));
             match.AddPlayer(_alpha1, Team.Alpha);
             match.AddPlayer(_alpha2, Team.Alpha);
             match.AddPlayer(_bravo1, Team.Bravo);
@@ -460,6 +467,348 @@ namespace Fps.Core.Tests
             match.Tick(3f);
 
             Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
+        }
+
+        [Test]
+        public void DefaultRulesUseIndividualRespawn()
+        {
+            var match = CreateStarted();
+
+            Assert.That(match.Spec.Rules.RespawnMode, Is.EqualTo(RespawnMode.Individual));
+            Assert.That(match.SecondsUntilNextWave, Is.Null);
+        }
+
+        [Test]
+        public void IndividualRespawnRemainingCountsDownFromDeath()
+        {
+            var match = CreateStarted(respawnSeconds: 3f);
+
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.Null);
+
+            match.ReportKill(_alpha1, _bravo1);
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.EqualTo(3f));
+
+            match.Tick(2f);
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.EqualTo(1f));
+
+            match.Tick(1f);
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.Null);
+        }
+
+        [Test]
+        public void WaveRespawnsEveryoneReadyAtTheWaveTogether()
+        {
+            var match = CreateStarted(respawnSeconds: 3f, rules: RulesWith(RespawnMode.Wave, 10f));
+            var respawned = new List<int>();
+            match.RespawnReady += id => respawned.Add(id);
+
+            match.Tick(2f);
+            match.ReportKill(_alpha1, _bravo1);
+            match.Tick(3f);
+            match.ReportKill(_alpha1, _bravo2);
+
+            match.Tick(4f);
+            Assert.That(respawned, Is.Empty);
+            Assert.That(match.IsAwaitingRespawn(_bravo1), Is.True);
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.EqualTo(1f));
+            Assert.That(match.GetRespawnRemaining(_bravo2), Is.EqualTo(1f));
+
+            match.Tick(1f);
+
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1, _bravo2 }));
+            Assert.That(match.IsAwaitingRespawn(_bravo1), Is.False);
+            Assert.That(match.IsAwaitingRespawn(_bravo2), Is.False);
+        }
+
+        [Test]
+        public void WaveSkipsPlayersWhoHaveNotWaitedRespawnSeconds()
+        {
+            var match = CreateStarted(respawnSeconds: 3f, rules: RulesWith(RespawnMode.Wave, 10f));
+            var respawned = new List<int>();
+            match.RespawnReady += id => respawned.Add(id);
+
+            match.Tick(8f);
+            match.ReportKill(_alpha1, _bravo1);
+
+            match.Tick(2f);
+            Assert.That(respawned, Is.Empty);
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.EqualTo(10f));
+
+            match.Tick(9f);
+            Assert.That(respawned, Is.Empty);
+
+            match.Tick(1f);
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
+        }
+
+        [Test]
+        public void WaveRespawnsPlayerWhoseWaitEndsExactlyAtTheWave()
+        {
+            var match = CreateStarted(respawnSeconds: 3f, rules: RulesWith(RespawnMode.Wave, 10f));
+            var respawned = new List<int>();
+            match.RespawnReady += id => respawned.Add(id);
+
+            match.Tick(7f);
+            match.ReportKill(_alpha1, _bravo1);
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.EqualTo(3f));
+
+            match.Tick(3f);
+
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
+        }
+
+        [Test]
+        public void WaveKillAtTheWaveTimeWaitsForTheNextWave()
+        {
+            var match = CreateStarted(respawnSeconds: 0f, rules: RulesWith(RespawnMode.Wave, 10f));
+            var respawned = new List<int>();
+            match.RespawnReady += id => respawned.Add(id);
+
+            match.Tick(10f);
+            match.ReportKill(_alpha1, _bravo1);
+
+            Assert.That(respawned, Is.Empty);
+            Assert.That(match.IsAwaitingRespawn(_bravo1), Is.True);
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.EqualTo(10f));
+
+            match.Tick(9f);
+            Assert.That(respawned, Is.Empty);
+
+            match.Tick(1f);
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
+        }
+
+        [Test]
+        public void WaveWithZeroRespawnSecondsStillWaitsForTheWave()
+        {
+            var match = CreateStarted(respawnSeconds: 0f, rules: RulesWith(RespawnMode.Wave, 10f));
+            var respawned = new List<int>();
+            match.RespawnReady += id => respawned.Add(id);
+
+            match.ReportKill(_alpha1, _bravo1);
+
+            Assert.That(respawned, Is.Empty);
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.EqualTo(10f));
+        }
+
+        [Test]
+        public void WaveLongTickReleasesAtTheFirstWaveTheWaitHasEnded()
+        {
+            var match = CreateStarted(respawnSeconds: 7f, rules: RulesWith(RespawnMode.Wave, 5f));
+            var respawned = new List<int>();
+            match.RespawnReady += id => respawned.Add(id);
+            match.ReportKill(_alpha1, _bravo1);
+
+            match.Tick(12f);
+
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
+            Assert.That(match.SecondsUntilNextWave, Is.EqualTo(3f));
+        }
+
+        [Test]
+        public void WavePlayerKilledInRespawnHandlerWaitsFromTheEndOfTheTick()
+        {
+            var match = CreateStarted(respawnSeconds: 3f, rules: RulesWith(RespawnMode.Wave, 5f));
+            var respawned = new List<int>();
+            match.RespawnReady += id =>
+            {
+                respawned.Add(id);
+                if (respawned.Count == 1)
+                {
+                    match.ReportKill(_alpha1, id);
+                }
+            };
+            match.ReportKill(_alpha1, _bravo1);
+
+            // 5 秒の波で戻ってすぐ倒され、10 秒の波は待ちが足りずに見送る
+            match.Tick(12f);
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.EqualTo(3f));
+
+            match.Tick(3f);
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1, _bravo1 }));
+        }
+
+        [Test]
+        public void SecondsUntilNextWaveCountsFromMatchStart()
+        {
+            var match = new TeamDeathmatch(new TeamDeathmatchSpec(10, 60f, 3f, RulesWith(RespawnMode.Wave, 10f)));
+            match.AddPlayer(_alpha1, Team.Alpha);
+            match.AddPlayer(_bravo1, Team.Bravo);
+
+            Assert.That(match.SecondsUntilNextWave, Is.Null);
+
+            match.Start();
+            Assert.That(match.SecondsUntilNextWave, Is.EqualTo(10f));
+
+            match.Tick(3f);
+            Assert.That(match.SecondsUntilNextWave, Is.EqualTo(7f));
+
+            match.Tick(7f);
+            Assert.That(match.SecondsUntilNextWave, Is.EqualTo(10f));
+        }
+
+        [Test]
+        public void ResetRestartsWaveTimes()
+        {
+            var match = CreateStarted(respawnSeconds: 0f, rules: RulesWith(RespawnMode.Wave, 10f));
+            var respawned = new List<int>();
+            match.RespawnReady += id => respawned.Add(id);
+            match.Tick(8f);
+            match.ReportKill(_alpha1, _bravo1);
+
+            match.Reset();
+            match.Start();
+
+            Assert.That(match.IsAwaitingRespawn(_bravo1), Is.False);
+            Assert.That(match.SecondsUntilNextWave, Is.EqualTo(10f));
+
+            match.ReportKill(_alpha1, _bravo1);
+            match.Tick(2f);
+            Assert.That(respawned, Is.Empty);
+
+            match.Tick(8f);
+            Assert.That(respawned, Is.EqualTo(new[] { _bravo1 }));
+        }
+
+        [Test]
+        public void NoneNeverRespawnsDuringTheMatch()
+        {
+            var match = CreateStarted(respawnSeconds: 0f, rules: RulesWith(RespawnMode.None));
+            var respawned = new List<int>();
+            match.RespawnReady += id => respawned.Add(id);
+
+            match.ReportKill(_alpha1, _bravo1);
+            match.Tick(30f);
+
+            Assert.That(respawned, Is.Empty);
+            Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(match.IsEliminated(_bravo1), Is.True);
+            Assert.That(match.IsAwaitingRespawn(_bravo1), Is.False);
+            Assert.That(match.GetRespawnRemaining(_bravo1), Is.Null);
+            Assert.That(match.IsEliminated(_bravo2), Is.False);
+
+            match.ReportKill(_alpha1, _bravo1);
+            match.ReportDeath(_bravo1);
+            Assert.That(match.GetDeaths(_bravo1), Is.EqualTo(1));
+            Assert.That(match.GetKills(_alpha1), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void NoneWipeOutEndsAtTheNextTickWithOpponentWinning()
+        {
+            var match = CreateStarted(rules: RulesWith(RespawnMode.None));
+            var ended = new List<Team?>();
+            match.Ended += winner => ended.Add(winner);
+
+            match.ReportKill(_bravo1, _alpha1);
+            match.ReportDeath(_alpha2);
+            Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
+
+            match.Tick(0f);
+
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(match.Winner, Is.EqualTo(Team.Bravo));
+            Assert.That(ended, Is.EqualTo(new Team?[] { Team.Bravo }));
+            Assert.That(match.IsEliminated(_alpha1), Is.False);
+        }
+
+        [Test]
+        public void NoneWipeOutWinsEvenIfTheOpponentHasMorePoints()
+        {
+            var match = CreateStarted(rules: RulesWith(RespawnMode.None));
+            match.ReportKill(_alpha1, _bravo1);
+            match.ReportDeath(_alpha1);
+            match.ReportDeath(_alpha2);
+
+            match.Tick(1f);
+
+            Assert.That(match.GetScore(Team.Alpha), Is.EqualTo(1));
+            Assert.That(match.GetScore(Team.Bravo), Is.Zero);
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(match.Winner, Is.EqualTo(Team.Bravo));
+        }
+
+        [Test]
+        public void NoneSimultaneousWipeOutIsDraw()
+        {
+            var match = CreateStarted(rules: RulesWith(RespawnMode.None));
+            var ended = new List<Team?>();
+            match.Ended += winner => ended.Add(winner);
+
+            // 最後の 2 人が同じ Tick の間に相打ちになった
+            match.ReportKill(_alpha1, _bravo1);
+            match.ReportKill(_bravo2, _alpha2);
+            match.ReportKill(_alpha1, _bravo2);
+            match.ReportKill(_bravo2, _alpha1);
+
+            match.Tick(0.5f);
+
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(match.Winner, Is.Null);
+            Assert.That(ended, Is.EqualTo(new Team?[] { null }));
+        }
+
+        [Test]
+        public void NoneWipeOutIsCheckedBeforeTimeUp()
+        {
+            var match = CreateStarted(timeLimitSeconds: 60f, rules: RulesWith(RespawnMode.None));
+            match.ReportDeath(_bravo1);
+            match.ReportDeath(_bravo2);
+
+            match.Tick(60f);
+
+            Assert.That(match.Winner, Is.EqualTo(Team.Alpha));
+            Assert.That(match.RemainingSeconds, Is.EqualTo(60f));
+        }
+
+        [Test]
+        public void NoneLeavingLastSurvivorWipesOutTheTeam()
+        {
+            var match = CreateStarted(rules: RulesWith(RespawnMode.None));
+            match.ReportKill(_alpha1, _bravo1);
+
+            match.RemovePlayer(_bravo2);
+            match.Tick(0f);
+
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(match.Winner, Is.EqualTo(Team.Alpha));
+        }
+
+        [Test]
+        public void NoneEmptyTeamIsNotWipedOut()
+        {
+            var match = CreateStarted(rules: RulesWith(RespawnMode.None));
+
+            match.RemovePlayer(_bravo1);
+            match.RemovePlayer(_bravo2);
+            match.Tick(1f);
+
+            Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
+
+            match.ReportDeath(_alpha1);
+            match.ReportDeath(_alpha2);
+            match.Tick(0f);
+
+            Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(match.Winner, Is.EqualTo(Team.Bravo));
+        }
+
+        [Test]
+        public void NoneResetRevivesEliminatedPlayers()
+        {
+            var match = CreateStarted(rules: RulesWith(RespawnMode.None));
+            match.ReportDeath(_bravo1);
+            match.ReportDeath(_bravo2);
+            match.Tick(0f);
+
+            match.Reset();
+            match.Start();
+            match.Tick(1f);
+
+            Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(match.IsEliminated(_bravo1), Is.False);
+            Assert.That(match.IsEliminated(_bravo2), Is.False);
         }
 
         [Test]

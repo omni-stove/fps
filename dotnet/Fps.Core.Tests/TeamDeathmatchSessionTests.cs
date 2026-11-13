@@ -32,6 +32,7 @@ namespace Fps.Core.Tests
             float timeLimitSeconds = 60f,
             float respawnSeconds = 3f,
             float? restartDelaySeconds = null,
+            GameRules rules = null,
             FriendlyFire friendlyFire = FriendlyFire.Off)
         {
             var points = new[]
@@ -40,7 +41,7 @@ namespace Fps.Core.Tests
                 new SpawnPoint(_bravoBase, Team.Bravo),
             };
             var d = GameRules.Default;
-            var rules = new GameRules(
+            rules ??= new GameRules(
                 friendlyFire,
                 d.RespawnMode,
                 d.WaveIntervalSeconds,
@@ -426,6 +427,105 @@ namespace Fps.Core.Tests
             Assert.That(session.IsAlive(2), Is.True);
         }
 
+        private static GameRules RegenRules(float regenDelaySeconds, float regenPerSecond)
+        {
+            return new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                GameRules.DefaultWaveIntervalSeconds,
+                regenDelaySeconds,
+                regenPerSecond,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                false,
+                1f);
+        }
+
+        [Test]
+        public void RegeneratesAfterDelayAndRaisesPlayerChanged()
+        {
+            var session = Create(rules: RegenRules(2f, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, 50);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+
+            session.Tick(2f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(50));
+            Assert.That(changed, Is.Empty);
+
+            session.Tick(1f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(60));
+            Assert.That(changed, Is.EqualTo(Ids(2)));
+        }
+
+        [Test]
+        public void DamageResetsRegenDelay()
+        {
+            var session = Create(rules: RegenRules(2f, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, 50);
+            session.Tick(1.5f);
+
+            session.ApplyDamage(1, 2, 10);
+            session.Tick(1.5f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(40));
+
+            session.Tick(1f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(45));
+        }
+
+        [Test]
+        public void DefaultRulesDoNotRegenerate()
+        {
+            var session = Create();
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, 40);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+
+            session.Tick(30f);
+
+            Assert.That(session.GetHealth(2), Is.EqualTo(60));
+            Assert.That(changed, Is.Empty);
+        }
+
+        [Test]
+        public void RespawnedPlayerRegeneratesWithNewHealth()
+        {
+            var session = Create(respawnSeconds: 3f, rules: RegenRules(2f, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, _maxHealth);
+            session.Tick(3.1f);
+            Assert.That(session.GetHealth(2), Is.EqualTo(_maxHealth));
+
+            session.ApplyDamage(1, 2, 50);
+            session.Tick(2f);
+            session.Tick(1f);
+
+            Assert.That(session.GetHealth(2), Is.EqualTo(60));
+        }
+
+        [Test]
+        public void DoesNotRegenerateAfterMatchEnds()
+        {
+            var session = Create(scoreLimit: 1, rules: RegenRules(0f, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            session.ApplyDamage(2, 3, 50);
+            session.ApplyDamage(2, 1, _maxHealth);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+
+            session.Tick(10f);
+
+            Assert.That(session.GetHealth(3), Is.EqualTo(50));
+        }
+
         [Test]
         public void EndsWhenScoreLimitReached()
         {
@@ -711,6 +811,160 @@ namespace Fps.Core.Tests
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
             Assert.That(session.GetScore(Team.Alpha), Is.Zero);
+        }
+
+        private static GameRules RulesWith(RespawnMode respawnMode, float waveIntervalSeconds = GameRules.DefaultWaveIntervalSeconds)
+        {
+            return new GameRules(
+                FriendlyFire.Off, respawnMode, waveIntervalSeconds, 0f, 0f, DeathBody.Vanish, DeathCamera.None, false, 1f);
+        }
+
+        [Test]
+        public void IndividualReportsRespawnRemaining()
+        {
+            var session = Create(respawnSeconds: 3f);
+            session.Join(1);
+            session.Join(2);
+
+            Assert.That(session.GetRespawnRemaining(2), Is.Null);
+
+            session.ApplyDamage(1, 2, _maxHealth);
+            session.Tick(1f);
+
+            Assert.That(session.GetRespawnRemaining(2), Is.EqualTo(2f));
+            Assert.That(session.SecondsUntilNextWave, Is.Null);
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.GetRespawnRemaining(99));
+        }
+
+        [Test]
+        public void WaveRespawnsDeadPlayersTogetherAtTheWave()
+        {
+            var session = Create(respawnSeconds: 3f, rules: RulesWith(RespawnMode.Wave, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            session.Join(4);
+            session.ApplyDamage(1, 2, _maxHealth);
+            session.Tick(4f);
+            session.ApplyDamage(3, 4, _maxHealth);
+            _events.Clear();
+
+            Assert.That(session.GetRespawnRemaining(2), Is.EqualTo(6f));
+            Assert.That(session.GetRespawnRemaining(4), Is.EqualTo(6f));
+
+            session.Tick(5f);
+            Assert.That(_events, Is.Empty);
+            Assert.That(session.IsAlive(2), Is.False);
+
+            session.Tick(1f);
+
+            Assert.That(_events, Is.EqualTo(Events("spawn 2", "spawn 4")));
+            Assert.That(session.GetHealth(2), Is.EqualTo(_maxHealth));
+            Assert.That(session.GetHealth(4), Is.EqualTo(_maxHealth));
+        }
+
+        [Test]
+        public void WaveZeroRespawnSecondsDoesNotRespawnOnTheKill()
+        {
+            var session = Create(respawnSeconds: 0f, rules: RulesWith(RespawnMode.Wave, 10f));
+            session.Join(1);
+            session.Join(2);
+            _events.Clear();
+
+            session.ApplyDamage(1, 2, _maxHealth);
+
+            Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 1-0")));
+            Assert.That(session.IsAlive(2), Is.False);
+            Assert.That(session.GetRespawnRemaining(2), Is.EqualTo(10f));
+        }
+
+        [Test]
+        public void WaveRestartResetsWaveTimes()
+        {
+            var session = Create(scoreLimit: 1, respawnSeconds: 0f, restartDelaySeconds: 1f, rules: RulesWith(RespawnMode.Wave, 10f));
+            session.Join(1);
+            session.Join(2);
+            session.Tick(8f);
+            session.ApplyDamage(1, 2, _maxHealth);
+
+            session.Tick(1f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(session.SecondsUntilNextWave, Is.EqualTo(10f));
+        }
+
+        [Test]
+        public void NoneWipeOutEndsOnTheNextTick()
+        {
+            var session = Create(respawnSeconds: 0f, rules: RulesWith(RespawnMode.None));
+            session.Join(1);
+            session.Join(2);
+            _events.Clear();
+
+            session.ApplyDamage(1, 2, _maxHealth);
+
+            Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 1-0")));
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(session.IsEliminated(2), Is.True);
+            Assert.That(session.GetRespawnRemaining(2), Is.Null);
+
+            session.Tick(0f);
+
+            Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 1-0", "ended Alpha")));
+            Assert.That(session.Winner, Is.EqualTo(Team.Alpha));
+            Assert.That(session.IsAlive(2), Is.False);
+        }
+
+        [Test]
+        public void NoneTradeKillInTheSameTickIsDraw()
+        {
+            var session = Create(rules: RulesWith(RespawnMode.None));
+            session.Join(1);
+            session.Join(2);
+
+            session.ApplyDamage(1, 2, _maxHealth);
+            Assert.That(session.ApplyDamage(2, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+            session.Tick(0.1f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(session.Winner, Is.Null);
+            Assert.That(_events[_events.Count - 1], Is.EqualTo("ended draw"));
+        }
+
+        [Test]
+        public void NoneLeavingLastSurvivorEndsTheMatch()
+        {
+            var session = Create(rules: RulesWith(RespawnMode.None));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            session.Leave(3);
+            session.Tick(0f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(session.Winner, Is.EqualTo(Team.Bravo));
+        }
+
+        [Test]
+        public void NoneRestartBringsEveryoneBack()
+        {
+            var session = Create(restartDelaySeconds: 2f, rules: RulesWith(RespawnMode.None));
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, _maxHealth);
+            session.Tick(0f);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+
+            session.Tick(2f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(session.IsAlive(2), Is.True);
+            Assert.That(session.IsEliminated(2), Is.False);
+
+            session.Tick(1f);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
         }
 
         [TestCase(-1f)]

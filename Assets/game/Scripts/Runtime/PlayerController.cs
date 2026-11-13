@@ -7,10 +7,13 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 移動入力を <see cref="PlayerMotor"/> に渡し、返ってきた変位を <see cref="CharacterController.Move"/> に適用する。
-    /// 移動量の計算はすべて <see cref="PlayerMotor"/> が行い、ここは入力の読み取りと結果の適用だけを受け持つ。
+    /// 移動量の計算はすべて <see cref="PlayerMotor"/> が、しゃがみの寸法は <see cref="StanceGeometry"/> が行い、
+    /// ここは入力の読み取りと結果の適用だけを受け持つ。
+    /// しゃがみは Crouch を押している間だけで、CharacterController の height と center を縮め (足元は動かさない)、目も下げる。
+    /// 離したときは立った高さのカプセルが自分以外のコライダーに重ならないときだけ立ち上がる。
     /// 参照はコードで解決するので Inspector の配線は要らない: CharacterController と <see cref="FirstPersonLook"/> は同じ
-    /// GameObject、入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の Move / Sprint / Jump。
-    /// 解決できなければエラーを出して自分を無効にする。
+    /// GameObject、目は <see cref="ViewRig.FindEye"/> (無ければ子のカメラ)、入力はプロジェクト全体のアクション
+    /// (<see cref="InputSystem.actions"/>) の Move / Sprint / Crouch / Jump。解決できなければエラーを出して自分を無効にする。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
@@ -19,21 +22,34 @@ namespace Fps.Runtime
         /// <summary>Assets/InputSystem_Actions.inputactions のアクション。</summary>
         public const string MoveActionPath = InputActionPaths.Move;
         public const string SprintActionPath = InputActionPaths.Sprint;
+        public const string CrouchActionPath = InputActionPaths.Crouch;
         public const string JumpActionPath = InputActionPaths.Jump;
 
         public const string LogTag = "[Player]";
 
         public const float DefaultWalkSpeed = 5f;
         public const float DefaultSprintSpeed = 8f;
+        public const float DefaultCrouchSpeed = 2.5f;
         public const float DefaultJumpHeight = 1.2f;
         public const float DefaultGravity = 20f;
         public const float DefaultAirControl = 0.1f;
+
+        /// <summary>しゃがみのカプセルの高さ (m)。立ち 2m・半径 0.5m のプレイヤーで、目は足元から 0.8m になる。</summary>
+        public const float DefaultCrouchHeight = 1.2f;
+
+        // 自分のコライダーを除いて頭上の障害物を探すための一時バッファ。毎フレームの確保を避ける。
+        private const int MaxOverlapHits = 16;
+
+        private static readonly Collider[] _overlapBuffer = new Collider[MaxOverlapHits];
 
         [SerializeField, Min(0f), Tooltip("歩きの水平速度 (m/s)")]
         private float _walkSpeed = DefaultWalkSpeed;
 
         [SerializeField, Min(0f), Tooltip("ダッシュ中の水平速度 (m/s)")]
         private float _sprintSpeed = DefaultSprintSpeed;
+
+        [SerializeField, Min(0f), Tooltip("しゃがみ中の水平速度 (m/s)。しゃがみ中はダッシュしない")]
+        private float _crouchSpeed = DefaultCrouchSpeed;
 
         [SerializeField, Min(0f), Tooltip("ジャンプで到達する高さ (m)")]
         private float _jumpHeight = DefaultJumpHeight;
@@ -44,14 +60,31 @@ namespace Fps.Runtime
         [SerializeField, Range(0f, 1f), Tooltip("空中で水平速度を入力方向へ寄せる 1 フレームあたりの割合")]
         private float _airControl = DefaultAirControl;
 
+        [SerializeField, Min(0.01f), Tooltip("しゃがみのカプセルの高さ (m)。半径の 2 倍以上、立ちの高さ以下")]
+        private float _crouchHeight = DefaultCrouchHeight;
+
+        [SerializeField, Tooltip("立ち上がれるかを調べるときに頭上の障害物として扱うレイヤー")]
+        private LayerMask _headroomMask = Physics.DefaultRaycastLayers;
+
         private CharacterController _controller;
         private FirstPersonLook _look;
         private InputAction _moveAction;
         private InputAction _sprintAction;
+        private InputAction _crouchAction;
         private InputAction _jumpAction;
         private PlayerMotor _motor;
+        private StanceGeometry _stance;
+        private Transform _eye;
+
+        // 立ちの目の位置 (本体のローカル座標)。しゃがみでは Y だけ変える。
+        private Vector3 _standingEyeLocal;
+
+        // 立ちの center。しゃがみでは Y だけ変え、X と Z は元のまま保つ。
+        private Vector3 _standingCenter;
+        private bool _isCrouched;
         private bool _enabledMove;
         private bool _enabledSprint;
+        private bool _enabledCrouch;
         private bool _enabledJump;
         private bool _isLive;
         private bool? _lastGrounded;
@@ -63,19 +96,38 @@ namespace Fps.Runtime
         public FirstPersonLook Look => _look;
         public InputAction MoveAction => _moveAction;
         public InputAction SprintAction => _sprintAction;
+        public InputAction CrouchAction => _crouchAction;
         public InputAction JumpAction => _jumpAction;
 
         /// <summary>移動計算。未初期化なら null。</summary>
         public PlayerMotor Motor => _motor;
 
+        /// <summary>立ちとしゃがみの寸法。未初期化なら null。</summary>
+        public StanceGeometry Stance => _stance;
+
+        /// <summary>しゃがみで上下させる目。目もカメラも無ければ null (カプセルだけ縮める)。</summary>
+        public Transform Eye => _eye;
+
+        /// <summary>しゃがんでいるか。</summary>
+        public bool IsCrouched => _isCrouched;
+
         public bool IsInitialized =>
-            _controller != null && _look != null && _moveAction != null && _sprintAction != null && _jumpAction != null && _motor != null;
+            _controller != null
+            && _look != null
+            && _moveAction != null
+            && _sprintAction != null
+            && _crouchAction != null
+            && _jumpAction != null
+            && _motor != null
+            && _stance != null;
 
         public float WalkSpeed => _walkSpeed;
         public float SprintSpeed => _sprintSpeed;
+        public float CrouchSpeed => _crouchSpeed;
         public float JumpHeight => _jumpHeight;
         public float Gravity => _gravity;
         public float AirControl => _airControl;
+        public float CrouchHeight => _crouchHeight;
 
         /// <summary>ダッシュしているか (最後の <see cref="UpdateSprint"/> の結果。<see cref="ReleaseSprint"/> で false になる)。</summary>
         public bool IsSprintActive => _sprintState.IsActive;
@@ -112,6 +164,7 @@ namespace Fps.Runtime
         {
             _enabledMove = EnableIfNeeded(_moveAction);
             _enabledSprint = EnableIfNeeded(_sprintAction);
+            _enabledCrouch = EnableIfNeeded(_crouchAction);
             _enabledJump = EnableIfNeeded(_jumpAction);
         }
 
@@ -119,6 +172,7 @@ namespace Fps.Runtime
         {
             DisableIfOwned(_moveAction, ref _enabledMove);
             DisableIfOwned(_sprintAction, ref _enabledSprint);
+            DisableIfOwned(_crouchAction, ref _enabledCrouch);
             DisableIfOwned(_jumpAction, ref _enabledJump);
         }
 
@@ -127,6 +181,7 @@ namespace Fps.Runtime
             Tick(
                 _moveAction.ReadValue<Vector2>(),
                 UpdateSprint(_sprintAction.IsPressed(), _sprintAction.WasPressedThisFrame()),
+                _crouchAction.IsPressed(),
                 _jumpAction.WasPressedThisFrame(),
                 Time.deltaTime);
         }
@@ -146,10 +201,11 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 1 フレーム分の入力で <see cref="PlayerMotor.Step"/> を呼び、変位を CharacterController に適用する。
+        /// 1 フレーム分の入力でしゃがみの姿勢を決め、<see cref="PlayerMotor.Step"/> を呼び、変位を CharacterController に適用する。
         /// 向きは <see cref="FirstPersonLook"/> 本体 (この GameObject) の yaw を使う。
         /// </summary>
-        public void Tick(Vector2 move, bool sprint, bool jumpPressed, float deltaSeconds)
+        /// <param name="crouch">しゃがみを押しているか。離しても頭上が塞がっていればしゃがんだまま。</param>
+        public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, float deltaSeconds)
         {
             if (!IsInitialized)
             {
@@ -161,11 +217,14 @@ namespace Fps.Runtime
                 return;
             }
 
+            UpdateStance(crouch);
+
             var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
             var displacement = _motor.Step(
                 move.ToNumerics(),
                 yawRadians,
                 sprint,
+                _isCrouched,
                 jumpPressed,
                 _controller.isGrounded,
                 deltaSeconds);
@@ -175,7 +234,44 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 同じ GameObject の CharacterController と FirstPersonLook、プロジェクト全体の Move / Sprint / Jump を探して初期化する。
+        /// 立った高さのカプセルが自分以外のコライダー (トリガーを除く) に重ならないか。
+        /// 床や横の壁に触れているだけで塞がっていると見なさないよう、カプセルを CharacterController の skinWidth だけ細くして調べる。
+        /// </summary>
+        public bool HasHeadroomToStand()
+        {
+            if (!IsInitialized)
+            {
+                throw new InvalidOperationException("PlayerController is not initialized");
+            }
+
+            _stance.SphereCenters(_stance.Standing, out var bottomY, out var topY);
+            var body = transform;
+            var scale = body.lossyScale;
+            var radius = _stance.Radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+            var margin = Mathf.Min(_controller.skinWidth, radius * 0.5f);
+            var bottom = body.TransformPoint(new Vector3(_standingCenter.x, bottomY, _standingCenter.z));
+            var top = body.TransformPoint(new Vector3(_standingCenter.x, topY, _standingCenter.z));
+
+            // Physics.CheckCapsule では自分の CharacterController にも当たってしまうので、重なりを列挙して自分を除く。
+            var count = Physics.OverlapCapsuleNonAlloc(
+                bottom, top, radius - margin, _overlapBuffer, _headroomMask, QueryTriggerInteraction.Ignore);
+            var blocked = false;
+            for (var i = 0; i < count; i++)
+            {
+                var hit = _overlapBuffer[i];
+                if (hit != null && !hit.transform.IsChildOf(body))
+                {
+                    blocked = true;
+                    break;
+                }
+            }
+
+            Array.Clear(_overlapBuffer, 0, count);
+            return !blocked;
+        }
+
+        /// <summary>
+        /// 同じ GameObject の CharacterController と FirstPersonLook、プロジェクト全体の Move / Sprint / Crouch / Jump を探して初期化する。
         /// 見つからないか設定値が不正なら理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryInitializeFromHierarchy()
@@ -207,36 +303,40 @@ namespace Fps.Runtime
 
             var move = actions.FindAction(MoveActionPath);
             var sprint = actions.FindAction(SprintActionPath);
+            var crouch = actions.FindAction(CrouchActionPath);
             var jump = actions.FindAction(JumpActionPath);
-            if (move == null || sprint == null || jump == null)
+            if (move == null || sprint == null || crouch == null || jump == null)
             {
                 Debug.LogError(
-                    $"{LogTag} Input Actions '{actions.name}' に {MissingActions(move, sprint, jump)} がありません。",
+                    $"{LogTag} Input Actions '{actions.name}' に {MissingActions(move, sprint, crouch, jump)} がありません。",
                     this);
                 return false;
             }
 
-            MotorSpec spec;
             try
             {
-                spec = CreateSpec();
+                Initialize(controller, look, move, sprint, crouch, jump, CreateSpec());
             }
             catch (ArgumentOutOfRangeException e)
             {
-                Debug.LogError($"{LogTag} 移動の設定値が不正です: {e.Message}", this);
+                Debug.LogError($"{LogTag} 移動またはしゃがみの設定値が不正です: {e.Message}", this);
                 return false;
             }
 
-            Initialize(controller, look, move, sprint, jump, spec);
             return true;
         }
 
-        /// <summary>参照を直接渡して初期化する。controller と look はこの GameObject のものであること。</summary>
+        /// <summary>
+        /// 参照を直接渡して初期化する。controller と look はこの GameObject のものであること。
+        /// 立ちの寸法は今の controller の height / center / radius と目の位置から取り、しゃがみの高さは <see cref="CrouchHeight"/>。
+        /// しゃがみの高さが controller と合わなければ ArgumentOutOfRangeException。
+        /// </summary>
         public void Initialize(
             CharacterController controller,
             FirstPersonLook look,
             InputAction moveAction,
             InputAction sprintAction,
+            InputAction crouchAction,
             InputAction jumpAction,
             MotorSpec spec)
         {
@@ -260,6 +360,11 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(sprintAction));
             }
 
+            if (crouchAction == null)
+            {
+                throw new ArgumentNullException(nameof(crouchAction));
+            }
+
             if (jumpAction == null)
             {
                 throw new ArgumentNullException(nameof(jumpAction));
@@ -280,6 +385,18 @@ namespace Fps.Runtime
                 throw new ArgumentException($"look must be on '{name}' so movement follows its yaw", nameof(look));
             }
 
+            // しゃがんだまま測ると縮んだ寸法を立ちと取り違えるので、先に立ちへ戻す。
+            if (_isCrouched && _controller != null)
+            {
+                ApplyStance(false);
+            }
+
+            var eye = ResolveEye();
+            var standingEyeLocal = eye != null ? transform.InverseTransformPoint(eye.position) : Vector3.zero;
+            var standingCenter = controller.center;
+            var stance = new StanceGeometry(
+                controller.height, standingCenter.y, standingEyeLocal.y, _crouchHeight, controller.radius);
+
             // OnEnable 済み (動作中) に差し替えるなら、自分が有効にした古いアクションを戻してから新しいものを有効にする。
             if (_isLive)
             {
@@ -290,8 +407,14 @@ namespace Fps.Runtime
             _look = look;
             _moveAction = moveAction;
             _sprintAction = sprintAction;
+            _crouchAction = crouchAction;
             _jumpAction = jumpAction;
             _motor = new PlayerMotor(spec);
+            _stance = stance;
+            _eye = eye;
+            _standingEyeLocal = standingEyeLocal;
+            _standingCenter = standingCenter;
+            _isCrouched = false;
             _lastGrounded = null;
 
             if (_isLive)
@@ -303,13 +426,66 @@ namespace Fps.Runtime
         /// <summary>シリアライズされた値から <see cref="MotorSpec"/> を作る。値が不正なら ArgumentOutOfRangeException。</summary>
         public MotorSpec CreateSpec()
         {
-            return new MotorSpec(_walkSpeed, _sprintSpeed, _jumpHeight, _gravity, _airControl);
+            return new MotorSpec(_walkSpeed, _sprintSpeed, _jumpHeight, _gravity, _airControl, _crouchSpeed);
         }
 
         /// <summary>接地状態のログ。例: <c>[Player] grounded=true</c>。</summary>
         public static string FormatGroundedLog(bool grounded)
         {
             return $"{LogTag} grounded={(grounded ? "true" : "false")}";
+        }
+
+        /// <summary>しゃがみ状態のログ。例: <c>[Player] crouched=true</c>。</summary>
+        public static string FormatCrouchedLog(bool crouched)
+        {
+            return $"{LogTag} crouched={(crouched ? "true" : "false")}";
+        }
+
+        private void UpdateStance(bool wantsCrouch)
+        {
+            if (wantsCrouch == _isCrouched)
+            {
+                return;
+            }
+
+            if (!wantsCrouch && !HasHeadroomToStand())
+            {
+                return;
+            }
+
+            ApplyStance(wantsCrouch);
+        }
+
+        private void ApplyStance(bool crouched)
+        {
+            var shape = _stance.Shape(crouched);
+            _controller.height = shape.Height;
+            _controller.center = new Vector3(_standingCenter.x, shape.CenterY, _standingCenter.z);
+            if (_eye != null)
+            {
+                _eye.position = transform.TransformPoint(new Vector3(_standingEyeLocal.x, shape.EyeY, _standingEyeLocal.z));
+            }
+
+            if (_isCrouched == crouched)
+            {
+                return;
+            }
+
+            _isCrouched = crouched;
+            Debug.Log(FormatCrouchedLog(crouched), this);
+        }
+
+        // ViewRig の Awake より先でも決まるよう、ViewRig.FindEye も自分で階層を探す。
+        private Transform ResolveEye()
+        {
+            var eye = ViewRig.FindEye(transform);
+            if (eye != null)
+            {
+                return eye;
+            }
+
+            var camera = FirstPersonLook.FindChildCamera(transform);
+            return camera != null ? camera.transform : null;
         }
 
         private void ReportGrounded(bool grounded)
@@ -344,9 +520,9 @@ namespace Fps.Runtime
             owned = false;
         }
 
-        private static string MissingActions(InputAction move, InputAction sprint, InputAction jump)
+        private static string MissingActions(InputAction move, InputAction sprint, InputAction crouch, InputAction jump)
         {
-            var missing = new System.Collections.Generic.List<string>(3);
+            var missing = new System.Collections.Generic.List<string>(4);
             if (move == null)
             {
                 missing.Add($"'{MoveActionPath}'");
@@ -355,6 +531,11 @@ namespace Fps.Runtime
             if (sprint == null)
             {
                 missing.Add($"'{SprintActionPath}'");
+            }
+
+            if (crouch == null)
+            {
+                missing.Add($"'{CrouchActionPath}'");
             }
 
             if (jump == null)

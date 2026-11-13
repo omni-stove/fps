@@ -45,6 +45,10 @@ namespace Fps.Net
     /// ADS の同期値と移動の速さ (<see cref="SpreadMoveFraction"/>) で決める。持ち主も同じ種 (<see cref="NetShotSequence"/>) で予測して曳光弾を出し、
     /// 反動 (<see cref="RecoilState"/>) は持ち主のカメラ (<see cref="FirstPersonLook.Recoil"/>) にだけ効かせる。
     /// </para>
+    /// <para>
+    /// ブラインドファイア (ルールの <see cref="NetMatchRules.BlindFire"/> が On でカバー中に覗かずに撃つ) は <see cref="NetBlindFire"/> で決める。
+    /// 持ち主は予測したカバーの状態から始点と散らばりを予測して曳光弾を出すが、サーバーへは目の始点を送り、判定の始点はサーバーが決める。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -629,6 +633,7 @@ namespace Fps.Net
                 motor == null || motor.IsGrounded,
                 IsCrouched,
                 IsAiming,
+                motor != null ? motor.PoseCoverHeight : null,
                 IsDowned,
                 IsAlive,
                 spec != null ? spec.Category : (WeaponCategory?)null);
@@ -639,11 +644,43 @@ namespace Fps.Net
         /// ダッシュしているかは他人に同期されないので、立っていて歩きより速く動いていればダッシュとみなす
         /// (<see cref="NetworkPlayerMotor"/> で歩きより速く動けるのはダッシュだけ)。
         /// </summary>
+        /// <param name="coverHeight">張り付いている壁の高さ (<see cref="NetworkPlayerMotor.PoseCoverHeight"/>)。張り付いていなければ null。</param>
         internal static CharacterPoseInput PoseInput(
-            float horizontalSpeed, float walkSpeed, bool grounded, bool crouched, bool aiming, bool downed, bool alive, WeaponCategory? weapon)
+            float horizontalSpeed,
+            float walkSpeed,
+            bool grounded,
+            bool crouched,
+            bool aiming,
+            CoverHeight? coverHeight,
+            bool downed,
+            bool alive,
+            WeaponCategory? weapon)
         {
             var sprinting = !crouched && horizontalSpeed > walkSpeed;
-            return new CharacterPoseInput(horizontalSpeed, grounded, crouched, sprinting, aiming, null, downed, !alive, weapon);
+            return new CharacterPoseInput(horizontalSpeed, grounded, crouched, sprinting, aiming, coverHeight, downed, !alive, weapon);
+        }
+
+        /// <summary>
+        /// このインスタンスの最新のカバーの状態 (<see cref="NetworkPlayerMotor.Cover"/>)。サーバーでは確定状態、持ち主では最新の予測。
+        /// 動きを持たなければカバーの外。ブラインドファイアの始点に使う。
+        /// </summary>
+        internal NetCoverState CurrentCover
+        {
+            get
+            {
+                var motor = ResolveMotor();
+                return motor != null ? motor.Cover : NetCoverState.Out;
+            }
+        }
+
+        /// <summary>体の半径 (m)。動きを持たなければ 0。</summary>
+        internal float BodyRadius
+        {
+            get
+            {
+                var motor = ResolveMotor();
+                return motor != null ? motor.BodyRadius : 0f;
+            }
         }
 
         private NetworkPlayerMotor ResolveMotor()

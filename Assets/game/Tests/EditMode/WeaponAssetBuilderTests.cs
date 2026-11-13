@@ -430,6 +430,19 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheHandgunDoesNotClimbWhenFiredAtItsFastestInterval()
+        {
+            var handgun = WeaponAssetBuilder.HandgunSpec();
+            var recoil = new RecoilState();
+            for (var shot = 0; shot < 12; shot++)
+            {
+                recoil.Kick(handgun, 1, 0);
+                Assert.That(recoil.PitchUpDegrees, Is.EqualTo(handgun.RecoilPitchDegrees), "shot " + shot);
+                recoil.Tick(0.2f);
+            }
+        }
+
+        [Test]
         public void AimingTightensTheSpreadAndMovingWidensIt()
         {
             foreach (var spec in new[] { WeaponAssetBuilder.RifleSpec(), WeaponAssetBuilder.HandgunSpec() })

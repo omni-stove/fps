@@ -85,10 +85,10 @@ namespace Fps.Editor
         public const float HandgunRecoilYawDegrees = 0.6f;
 
         /// <summary>
-        /// handgun の反動が戻る速さ (度/秒)。1 発分 (約 2.5°) が戻り待ちの後 0.1 秒ほどで戻るので、
-        /// 連射間隔 0.2 秒で撃ち続けても上へはほとんど溜まらない。
+        /// handgun の反動が戻る速さ (度/秒)。連射間隔 0.2 秒のうち戻り待ち 0.15 秒を除いた 0.05 秒で
+        /// 1 発分 (縦横で最大約 2.57°) が戻るので、最短間隔で撃ち続けても上へは溜まらない。
         /// </summary>
-        public const float HandgunRecoilRecoveryPerSecond = 25f;
+        public const float HandgunRecoilRecoveryPerSecond = 60f;
 
         /// <summary>handgun を腰だめで撃ったときの散らばりの最大角度 (度)。近距離用なので rifle より狭い。</summary>
         public const float HandgunHipSpreadDegrees = 2f;

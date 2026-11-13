@@ -37,6 +37,9 @@ namespace Fps.Editor
         public const string WallName = "Wall";
         public const string EnemyName = "Enemy-1";
         public const string EnemyId = "enemy-1";
+
+        /// <summary>敵に持たせる武器の Id。シーンを生成するときに武器の一覧から引く。</summary>
+        public const string EnemyWeaponId = WeaponAssetBuilder.RifleId;
         public const string BootstrapObjectName = "GameBootstrap";
 
         /// <summary>Plane は 10m 四方なので、4 倍で 40m 四方 (x, z とも ±20m)。</summary>
@@ -84,8 +87,10 @@ namespace Fps.Editor
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
 
-            // 武器のアセットが無ければ何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            // 武器のアセットが無い・敵の武器がカタログに無いなら何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
             var rifle = WeaponAssetBuilder.LoadRifle();
+            var catalog = WeaponAssetBuilder.LoadCatalog();
+            WeaponAssetBuilder.FindInCatalog(catalog, EnemyId, EnemyWeaponId);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
@@ -96,7 +101,7 @@ namespace Fps.Editor
             var surface = CreateLevel(scene);
             BakeNavMesh(surface, navMeshDataPath);
             SceneBuildHelpers.RequireOnNavMesh(PatrolRoute, NavMeshCheckRadius, "patrol point");
-            CreateActors(scene, rifle);
+            CreateActors(scene, rifle, catalog);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -141,21 +146,30 @@ namespace Fps.Editor
 
         /// <summary>
         /// GameBootstrap (床は作らない) と敵 1 体を置く。敵は巡回路の最初の地点に立たせる。参照はすべてここで設定する。
-        /// プレイヤーと敵はどちらも weapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で撃つ。
+        /// プレイヤーは playerWeapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で、敵は enemyWeapons から
+        /// <see cref="EnemyWeaponId"/> で引いた武器で撃つ。Id が enemyWeapons に無ければ何も置かずに
+        /// <see cref="KeyNotFoundException"/> を投げる。
         /// </summary>
-        public static EnemyAgent CreateActors(Scene scene, WeaponDefinition weapon)
+        public static EnemyAgent CreateActors(Scene scene, WeaponDefinition playerWeapon, WeaponCatalogAsset enemyWeapons)
         {
             SceneBuildHelpers.RequireLoaded(scene);
-            if (weapon == null)
+            if (playerWeapon == null)
             {
-                throw new ArgumentNullException(nameof(weapon));
+                throw new ArgumentNullException(nameof(playerWeapon));
             }
+
+            if (enemyWeapons == null)
+            {
+                throw new ArgumentNullException(nameof(enemyWeapons));
+            }
+
+            var enemyWeapon = WeaponAssetBuilder.FindInCatalog(enemyWeapons, EnemyId, EnemyWeaponId);
 
             var bootstrapObject = new GameObject(BootstrapObjectName);
             SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
             var bootstrap = bootstrapObject.AddComponent<GameBootstrap>();
             bootstrap.CreatesFloor = false;
-            bootstrap.WeaponDefinition = weapon;
+            bootstrap.WeaponDefinition = playerWeapon;
 
             var enemy = SceneBuildHelpers.CreateEnemy(
                 scene,
@@ -166,7 +180,7 @@ namespace Fps.Editor
                 Quaternion.LookRotation(PatrolRoute[1] - PatrolRoute[0], Vector3.up),
                 PatrolRoute,
                 new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth),
-                weapon);
+                enemyWeapon);
             EditorSceneManager.MarkSceneDirty(scene);
             return enemy;
         }

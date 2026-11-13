@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -62,31 +63,91 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ActorsAreWiredInCode()
         {
-            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var playerWeapon = NewWeapon("PlayerRifle", WeaponAssetBuilder.RifleSpec());
+            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var handgun = NewWeapon("Handgun", WeaponAssetBuilder.HandgunSpec());
+            var catalog = NewCatalog("WeaponCatalog", handgun, rifle);
             try
             {
-                AssertActorsAreWired(EnemyTestSceneBuilder.CreateActors(_scene, rifle), rifle);
+                var agent = EnemyTestSceneBuilder.CreateActors(_scene, playerWeapon, catalog);
+
+                AssertActorsAreWired(agent, playerWeapon);
+                Assert.That(agent.WeaponDefinition, Is.SameAs(rifle), "the enemy shoots the catalog's weapon with its id");
+                Assert.That(agent.WeaponDefinition.Id, Is.EqualTo(EnemyTestSceneBuilder.EnemyWeaponId));
             }
             finally
             {
+                UnityEngine.Object.DestroyImmediate(catalog);
+                UnityEngine.Object.DestroyImmediate(handgun);
+                UnityEngine.Object.DestroyImmediate(rifle);
+                UnityEngine.Object.DestroyImmediate(playerWeapon);
+            }
+        }
+
+        [Test]
+        public void ActorsNeedAPlayerWeaponAndACatalog()
+        {
+            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var catalog = NewCatalog("WeaponCatalog", rifle);
+            try
+            {
+                Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, null, catalog));
+                Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, rifle, null));
+                Assert.That(_scene.rootCount, Is.Zero);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(catalog);
                 UnityEngine.Object.DestroyImmediate(rifle);
             }
         }
 
         [Test]
-        public void ActorsNeedAWeapon()
+        public void ActorsRefuseAWeaponIdThatIsNotInTheCatalog()
         {
-            Assert.Throws<ArgumentNullException>(() => EnemyTestSceneBuilder.CreateActors(_scene, null));
-            Assert.That(_scene.rootCount, Is.Zero);
+            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var handgun = NewWeapon("Handgun", WeaponAssetBuilder.HandgunSpec());
+            var catalog = NewCatalog("HandgunOnly", handgun);
+            try
+            {
+                var e = Assert.Throws<KeyNotFoundException>(() => EnemyTestSceneBuilder.CreateActors(_scene, rifle, catalog));
+
+                Assert.That(e.Message, Does.Contain($"'{EnemyTestSceneBuilder.EnemyId}'"), "names the placement");
+                Assert.That(e.Message, Does.Contain($"'{EnemyTestSceneBuilder.EnemyWeaponId}'"), "names the weapon id");
+                Assert.That(e.Message, Does.Contain("'HandgunOnly'"), "names the catalog");
+                Assert.That(_scene.rootCount, Is.Zero, "nothing is placed");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(catalog);
+                UnityEngine.Object.DestroyImmediate(handgun);
+                UnityEngine.Object.DestroyImmediate(rifle);
+            }
         }
 
-        private void AssertActorsAreWired(EnemyAgent agent, WeaponDefinition rifle)
+        [Test]
+        public void ActorsRefuseAnInvalidCatalog()
+        {
+            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var empty = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
+            try
+            {
+                Assert.Throws<WeaponDefinitionException>(() => EnemyTestSceneBuilder.CreateActors(_scene, rifle, empty));
+                Assert.That(_scene.rootCount, Is.Zero, "nothing is placed");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(empty);
+                UnityEngine.Object.DestroyImmediate(rifle);
+            }
+        }
+
+        private void AssertActorsAreWired(EnemyAgent agent, WeaponDefinition playerWeapon)
         {
             var bootstrap = Find(EnemyTestSceneBuilder.BootstrapObjectName).GetComponent<GameBootstrap>();
             Assert.That(bootstrap, Is.Not.Null);
             Assert.That(bootstrap.CreatesFloor, Is.False, "the scene's own floor carries the baked NavMesh");
-            Assert.That(bootstrap.WeaponDefinition, Is.SameAs(rifle), "the player shoots the rifle");
-            Assert.That(agent.WeaponDefinition, Is.SameAs(rifle), "the enemy shoots the rifle");
+            Assert.That(bootstrap.WeaponDefinition, Is.SameAs(playerWeapon), "the player shoots the rifle");
 
             Assert.That(agent.name, Is.EqualTo(EnemyTestSceneBuilder.EnemyName));
             Assert.That(agent.gameObject.scene, Is.EqualTo(_scene));
@@ -187,9 +248,26 @@ namespace Fps.Tests.EditMode
             Assert.That(agent, Is.Not.Null);
             Assert.That(agent.PatrolRoute, Is.Not.Empty);
 
-            var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);
-            Assert.That(rifle, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
-            Assert.That(agent.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(EnemyTestSceneBuilder)}.Build");
+            var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(WeaponAssetBuilder.CatalogPath);
+            Assert.That(catalog, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
+            Assert.That(catalog.TryFind(EnemyTestSceneBuilder.EnemyWeaponId, out var expected), Is.True);
+            Assert.That(agent.WeaponDefinition, Is.SameAs(expected), $"rerun {nameof(EnemyTestSceneBuilder)}.Build");
+        }
+
+        private static WeaponDefinition NewWeapon(string name, WeaponSpec spec)
+        {
+            var weapon = ScriptableObject.CreateInstance<WeaponDefinition>();
+            weapon.name = name;
+            WeaponAssetBuilder.Configure(weapon, spec);
+            return weapon;
+        }
+
+        private static WeaponCatalogAsset NewCatalog(string name, params WeaponDefinition[] weapons)
+        {
+            var catalog = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
+            catalog.name = name;
+            WeaponAssetBuilder.Configure(catalog, weapons);
+            return catalog;
         }
 
         private GameObject Find(string name)

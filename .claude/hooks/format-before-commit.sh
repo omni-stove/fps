@@ -8,4 +8,8 @@ printf '%s' "$cmd" | grep -Eq '(^|[^[:alnum:]_-])git(([[:space:]]+-c[[:space:]]+
 command -v make >/dev/null 2>&1 && command -v mise >/dev/null 2>&1 || exit 0
 
 cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"
+staged="$(mktemp)"
+git diff --cached -z --name-only --diff-filter=ACMR -- '*.cs' >"$staged"
 make format >/dev/null 2>&1 || true
+xargs -0 git add -- <"$staged"
+rm -f "$staged"

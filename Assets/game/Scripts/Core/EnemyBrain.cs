@@ -84,6 +84,29 @@ namespace Fps.Core
             SetState(EnemyState.Dead);
         }
 
+        /// <summary>
+        /// 今向かっている先に届かないとき、その目的地をあきらめる。
+        /// Patrol なら次の巡回地点へ進め、Search なら打ち切って次の tick で Patrol (ルートが無ければ Idle) に戻す。
+        /// 見失った後の Chase なら Search を飛ばして同じく戻す。目標が見えていれば次の tick でまた追う。
+        /// 目的地を持たない状態 (Idle・Attack・Dead) では何もせず false を返す。
+        /// </summary>
+        public bool AbandonGoal()
+        {
+            switch (State)
+            {
+                case EnemyState.Patrol when _route.Length > 0:
+                    _routeIndex = (_routeIndex + 1) % _route.Length;
+                    return true;
+                case EnemyState.Search:
+                case EnemyState.Chase:
+                    StartSearch(_searchPoint);
+                    _searchElapsed = _spec.SearchSeconds;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         /// <summary>時間を deltaSeconds 進め、この tick の決定を返す。</summary>
         /// <param name="deltaSeconds">前の tick からの経過秒。0 以上。</param>
         /// <param name="perception">この tick の知覚。</param>

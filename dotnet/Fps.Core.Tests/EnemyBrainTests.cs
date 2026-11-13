@@ -400,6 +400,87 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AbandoningDuringPatrolSkipsToTheNextPoint()
+        {
+            var brain = PatrollingBrain(out _);
+            brain.Tick(0.1f, Nothing(Vector3.Zero));
+
+            Assert.That(brain.AbandonGoal(), Is.True);
+
+            Assert.That(brain.Tick(0.1f, Nothing(Vector3.Zero)).MoveTo, Is.EqualTo(new Vector3(10f, 0f, 10f)));
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol));
+        }
+
+        [Test]
+        public void AbandoningTheLastPatrolPointWrapsAround()
+        {
+            var brain = PatrollingBrain(out _);
+            brain.AbandonGoal();
+            brain.AbandonGoal();
+
+            Assert.That(brain.Tick(0.1f, Nothing(Vector3.Zero)).MoveTo, Is.EqualTo(new Vector3(0f, 0f, 10f)));
+        }
+
+        [Test]
+        public void AbandoningSearchReturnsToPatrolOnTheNextTick()
+        {
+            var brain = PatrollingBrain(out _);
+            brain.Tick(0.1f, Hears(Vector3.Zero, new Vector3(3f, 0f, 0f)));
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Search));
+
+            Assert.That(brain.AbandonGoal(), Is.True);
+            var decision = brain.Tick(0.1f, Nothing(Vector3.Zero));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol));
+            Assert.That(decision.MoveTo, Is.EqualTo(new Vector3(0f, 0f, 10f)));
+        }
+
+        [Test]
+        public void AbandoningChaseAfterLosingSightReturnsToPatrol()
+        {
+            var brain = PatrollingBrain(out _);
+            brain.Tick(0.1f, Sees(Vector3.Zero, new Vector3(0f, 0f, 15f)));
+            brain.Tick(0.1f, Nothing(Vector3.Zero));
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+
+            Assert.That(brain.AbandonGoal(), Is.True);
+            brain.Tick(0.1f, Nothing(Vector3.Zero));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol));
+        }
+
+        [Test]
+        public void AbandoningChaseStillChasesATargetThatIsSeen()
+        {
+            var brain = PatrollingBrain(out _);
+            var target = new Vector3(0f, 0f, 15f);
+            brain.Tick(0.1f, Sees(Vector3.Zero, target));
+
+            brain.AbandonGoal();
+            var decision = brain.Tick(0.1f, Sees(Vector3.Zero, target));
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+            Assert.That(decision.MoveTo, Is.EqualTo(target));
+        }
+
+        [Test]
+        public void AbandoningWithoutAGoalDoesNothing()
+        {
+            var idle = new EnemyBrain(DefaultSpec());
+            Assert.That(idle.AbandonGoal(), Is.False);
+            Assert.That(idle.State, Is.EqualTo(EnemyState.Idle));
+
+            var attacking = new EnemyBrain(DefaultSpec());
+            attacking.Tick(0.1f, Sees(Vector3.Zero, new Vector3(0f, 0f, 5f)));
+            Assert.That(attacking.AbandonGoal(), Is.False);
+            Assert.That(attacking.State, Is.EqualTo(EnemyState.Attack));
+
+            var dead = new EnemyBrain(DefaultSpec());
+            dead.Kill();
+            Assert.That(dead.AbandonGoal(), Is.False);
+        }
+
+        [Test]
         public void RejectsNullArguments()
         {
             Assert.Throws<ArgumentNullException>(() => new EnemyBrain(null));

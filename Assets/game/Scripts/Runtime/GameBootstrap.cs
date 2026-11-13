@@ -418,6 +418,37 @@ namespace Fps.Runtime
             }
 
             WireAds(ads, weapon, mover);
+            WireSpreadAndRecoil(weapon, ads, mover, look);
+        }
+
+        /// <summary>
+        /// 射撃のばらつきに覗き込みの進み具合と移動の速さ (歩きの速さで足し切る) を読ませ、射撃の反動を視点に足させる。
+        /// WireAds と同じく、読むのは実行時なので Edit Mode では配線だけしておく。
+        /// </summary>
+        private static void WireSpreadAndRecoil(WeaponController weapon, AimDownSights ads, PlayerController mover, FirstPersonLook look)
+        {
+            if (weapon == null)
+            {
+                return;
+            }
+
+            weapon.AdsProgressSource = () => ads != null ? ads.Progress : 0f;
+            weapon.MoveFractionSource = () =>
+            {
+                var controller = mover != null ? mover.Controller : null;
+                if (controller == null)
+                {
+                    return 0f;
+                }
+
+                var velocity = controller.velocity;
+                return SpreadPattern.MoveFraction(new Vector2(velocity.x, velocity.z).magnitude, mover.WalkSpeed);
+            };
+
+            if (look != null)
+            {
+                look.Recoil = weapon.Recoil;
+            }
         }
 
         /// <summary>

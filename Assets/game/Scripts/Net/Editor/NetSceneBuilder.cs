@@ -215,6 +215,9 @@ namespace Fps.Editor
             var match = source.AddComponent<NetTeamDeathmatch>();
             match.Loadout = loadout;
             match.Rules = rules;
+
+            // 射撃・ヒット・被弾・キルをクライアントへ配る。NetTeamDeathmatch が同じ GameObject から探す
+            source.AddComponent<NetCombatFeed>();
             return source;
         }
 

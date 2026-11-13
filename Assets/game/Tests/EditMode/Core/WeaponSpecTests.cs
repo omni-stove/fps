@@ -57,6 +57,33 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AdsFieldOfViewFallsBackToTheCommonDefault()
+        {
+            Assert.That(Create().AdsFieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView));
+        }
+
+        [Test]
+        public void KeepsAnAdsFieldOfView()
+        {
+            var spec = new WeaponSpec(
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff, 42f);
+
+            Assert.That(spec.AdsFieldOfView, Is.EqualTo(42f));
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        [TestCase(180f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void RejectsAnAdsFieldOfViewThatCannotBeProjected(float fieldOfView)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => new WeaponSpec(
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff, fieldOfView));
+            Assert.That(e.ParamName, Is.EqualTo("adsFieldOfView"));
+        }
+
+        [Test]
         public void TrimsTheId()
         {
             Assert.That(Create(id: "  " + _rifleId + " \t").Id, Is.EqualTo(_rifleId));

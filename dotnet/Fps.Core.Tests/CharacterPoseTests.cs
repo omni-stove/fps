@@ -145,7 +145,7 @@ namespace Fps.Core.Tests
         [Test]
         public void EveryWeaponCategoryPassesThrough()
         {
-            foreach (WeaponCategory category in Enum.GetValues(typeof(WeaponCategory)))
+            foreach (WeaponCategory category in Enum.GetValues<WeaponCategory>())
             {
                 Assert.That(Pose().Evaluate(Input(weapon: category)).WeaponCategory, Is.EqualTo((int)category), category.ToString());
                 Assert.That((int)category, Is.Not.EqualTo(CharacterPose.NoWeapon));

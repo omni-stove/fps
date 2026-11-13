@@ -9,6 +9,8 @@
             <ui:Button name="menu-create-lobby" text="ONLINE - CREATE LOBBY" class="menu__button" />
             <ui:Button name="menu-join-lobby" text="ONLINE - JOIN LOBBY" class="menu__button" />
             <ui:Button name="menu-range" text="FIRING RANGE" class="menu__button" />
+            <!-- 射撃場を読み、終えたことがあってもチュートリアルを最初から出す。 -->
+            <ui:Button name="menu-tutorial" text="TUTORIAL" class="menu__button" />
             <ui:Button name="menu-settings" text="SETTINGS" class="menu__button" />
             <ui:Button name="menu-quit" text="QUIT" class="menu__button" />
         </ui:VisualElement>

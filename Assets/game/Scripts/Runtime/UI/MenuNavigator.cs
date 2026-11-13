@@ -10,6 +10,7 @@ namespace Fps.Runtime
     /// <see cref="ReturnToMenu"/> を呼ぶ。どのシーンを読むかは <see cref="MenuRoute"/> が決め、ここは Build Settings から番号を引いて読む。
     /// オンラインを選んだときのロビーの設定は、NetTest の NetBootstrap が <see cref="TakeLobbyRequest"/> で受け取る
     /// (起動引数の <c>-lobby</c> と同じ扱いになる)。
+    /// チュートリアルを選んだことは、射撃場の <see cref="TutorialPresenter"/> が <see cref="TakeTutorialRequest"/> で受け取る。
     /// </summary>
     public static class MenuNavigator
     {
@@ -18,6 +19,7 @@ namespace Fps.Runtime
         private static IMenuSceneHost _host = SceneManagerHost.Instance;
         private static LobbyLaunchOptions _pendingLobby = LobbyLaunchOptions.None;
         private static string _notice;
+        private static bool _pendingTutorial;
 
         /// <summary>
         /// <see cref="ReturnToMenu"/> でメニューのシーンを読む直前に呼ぶ。シーンをまたいで残るもの (NetworkManager など) は
@@ -34,6 +36,9 @@ namespace Fps.Runtime
 
         /// <summary>NetBootstrap にまだ渡していない、メニューで選んだロビーの設定。無ければ <see cref="LobbyLaunchOptions.None"/>。</summary>
         public static LobbyLaunchOptions PendingLobby => _pendingLobby;
+
+        /// <summary>射撃場にまだ渡していない、メニューでチュートリアルを選んだこと。</summary>
+        public static bool PendingTutorial => _pendingTutorial;
 
         /// <summary>メニューに戻ったときに出す案内 (切断の理由など)。無ければ null。</summary>
         public static string PendingNotice => _notice;
@@ -82,6 +87,7 @@ namespace Fps.Runtime
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             _pendingLobby = LobbyLaunchOptions.None;
+            _pendingTutorial = false;
             _notice = string.IsNullOrWhiteSpace(notice) ? null : notice;
 
             Debug.Log(LogTag + " back to the menu" + (_notice == null ? "" : " (" + _notice + ")"));
@@ -95,6 +101,14 @@ namespace Fps.Runtime
             var lobby = _pendingLobby;
             _pendingLobby = LobbyLaunchOptions.None;
             return lobby;
+        }
+
+        /// <summary>メニューでチュートリアルを選んだかを受け取り、持っていた分は消す。</summary>
+        public static bool TakeTutorialRequest()
+        {
+            var requested = _pendingTutorial;
+            _pendingTutorial = false;
+            return requested;
         }
 
         /// <summary>メニューに出す案内を受け取り、持っていた分は消す。無ければ null。</summary>
@@ -122,6 +136,7 @@ namespace Fps.Runtime
             }
 
             _pendingLobby = transition.Lobby;
+            _pendingTutorial = transition.StartsTutorial;
             Debug.Log(LogTag + " " + transition);
             _host.Load(buildIndex);
             return true;
@@ -139,6 +154,7 @@ namespace Fps.Runtime
         {
             _host = SceneManagerHost.Instance;
             _pendingLobby = LobbyLaunchOptions.None;
+            _pendingTutorial = false;
             _notice = null;
             ReturningToMenu = null;
         }

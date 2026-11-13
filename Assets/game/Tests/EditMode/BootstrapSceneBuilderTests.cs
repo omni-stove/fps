@@ -109,6 +109,7 @@ namespace Fps.Tests.EditMode
                     "the player's loadout is wired");
                 Assert.That(bootstrap.GetComponent<GameBootstrap>().RulesDefinition, Is.SameAs(range), "the range rules are wired");
                 Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null, "the bootstrap scene runs a solo match");
+                Assert.That(bootstrap.GetComponent<TutorialPresenter>(), Is.Not.Null, "the range shows the tutorial");
                 Assert.That(bootstrap.transform.childCount, Is.Zero, "everything else is built at runtime");
             }
             finally
@@ -162,6 +163,10 @@ namespace Fps.Tests.EditMode
                 Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
                 AssertCovers(roots[1]);
                 Assert.That(roots[0].GetComponent<MatchRunner>(), Is.Not.Null, $"rerun {nameof(BootstrapSceneBuilder)}.Build");
+                Assert.That(
+                    roots[0].GetComponent<TutorialPresenter>(),
+                    Is.Not.Null,
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the tutorial");
                 Assert.That(
                     roots[0].GetComponent<GameBootstrap>().WeaponDefinitions,
                     Is.EqualTo(TestScenes.ExpectedPlayerWeapons()),

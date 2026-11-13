@@ -41,7 +41,10 @@ namespace Fps.Editor
 
         // 対戦・PvE モード。名前とルールはそれぞれ GameRulesAssetBuilder.ModeNames と <名前>Path に揃える (一致はテストで確かめる)。
         public const string FreeForAllScene = "Assets/game/Scenes/FreeForAll.unity";
+
+        /// <summary>キルコンファームド。生成は <see cref="KillConfirmedSceneBuilder"/>。</summary>
         public const string KillConfirmedScene = "Assets/game/Scenes/KillConfirmed.unity";
+
         /// <summary>ガンゲーム。生成は <see cref="GunGameSceneBuilder"/>。</summary>
         public const string GunGameScene = "Assets/game/Scenes/GunGame.unity";
 

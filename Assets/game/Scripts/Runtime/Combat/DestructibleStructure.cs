@@ -116,6 +116,12 @@ namespace Fps.Runtime
 
         private void Awake()
         {
+            // AddComponent 直後は部品がまだ無いので、ここで失敗扱いにせず最初に触れたときまで組み立てを待つ。
+            if (GetComponentInChildren<DestructiblePiece>(true) == null)
+            {
+                return;
+            }
+
             TryEnsureBuilt();
         }
 

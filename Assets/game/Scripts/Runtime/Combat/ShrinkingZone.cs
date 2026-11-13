@@ -511,7 +511,8 @@ namespace Fps.Runtime
             // プリミティブを作るのは、その描画パイプラインの既定の材質を得るため。メッシュは上下の開いた筒に差し替える。
             var boundary = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             boundary.name = BoundaryName;
-            DestroySafely(boundary.GetComponent<Collider>());
+            // Destroy はフレーム末まで残り、その間に拡大した Collider が移動や射撃の判定に当たるため即時に消す。
+            DestroyImmediate(boundary.GetComponent<Collider>());
             boundary.transform.SetParent(transform, false);
 
             _boundaryMesh = BuildTubeMesh(BoundarySegments);

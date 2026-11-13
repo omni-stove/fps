@@ -25,7 +25,7 @@ call_site_pattern()     { echo "at $(source_root)/[^)]+\)"; }
 
 # --- Build / run ------------------------------------------------------------
 # Batch-mode macOS player build into Builds/ (gitignored). Fails if the Editor has the project open.
-build_cmd()          { echo "unity build --target StandaloneOSX -o Builds/fps.app"; }
+build_cmd()          { echo "unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ClientBuilder.Build"; }
 # Play Mode needs the Editor GUI; `unity open` launches it with the project's pinned version.
 run_cmd()            { echo "# Run \`unity open\` to launch the Editor on this project, then press Play. This tool cannot enter Play Mode."; }
 # Headless EditMode tests in batch mode (needs the Editor closed on this project). Results go to test-results.xml.

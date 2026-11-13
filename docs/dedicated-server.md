@@ -12,7 +12,24 @@ Dedicated Server Build Support (Linux) のモジュールを入れておくこ�
 make server-image                                  # Builds/server-linux/ を作り直し、fps-server:local を作る
 make server-image ARGS="--tag fps-server:dev"      # タグを変える
 make server-image ARGS="--skip-build"              # 今ある Builds/server-linux/ をそのまま使う
+make server-image ARGS="--version v0.2.0"          # サーバーに入れる版を決める
 ```
+
+### 版
+
+ビルドの版 (実行時の `Application.version`) は `--version` で渡したもの、無ければ `git describe --tags --always --dirty`
+の出力になる。先頭の `v` は外すので、`v0.2.0` のタグを付けたコミットなら `0.2.0`、タグの無いコミットなら短い sha
+(`abc1234`)、コミットしていない変更があれば `-dirty` が付く。版は英数字と `. - _` で 32 文字以内でなければならない。
+`make build` / `make build-server` でも同じで、`make build-server linux ARGS="--version v0.2.0"` のように渡す。
+
+版はビルドの間だけ `ProjectSettings/ProjectSettings.asset` の `bundleVersion` に入れ、ビルドが終われば (失敗しても)
+元に戻すので、ビルドのあとに `ProjectSettings` の差分は残らない。クライアントもサーバーも起動するとまず次の行を出す。
+
+```
+[Version] 0.2.0
+```
+
+EOS のロビーは版ごとに分かれる (`fps:<版>` のバケツ) ので、クライアントとサーバーは同じ版でビルドしたものを使う。
 
 イメージは `linux/amd64` で作る (サーバーは x86_64 の Linux 向けにしかビルドしないため)。
 Apple Silicon の Mac でも Docker Desktop のエミュレーションで動く。
@@ -77,7 +94,9 @@ EOS のサーバーでは `[Net] EOS server ready id=<サーバーの ID>` が�
 ## CI でのリリース
 
 `v*` のタグを push すると `.github/workflows/server-image.yml` が専用サーバーをビルドし、
-`ghcr.io/<owner>/<repo>/server` に push する。タグはタグ名そのもの (`v1.2.3`) と、semver なら `1.2.3` と `1.2` も付く。
+`ghcr.io/<owner>/<repo>/server` に push する。タグはタグ名そのもの (`v1.2.3`)、サーバーが `[Version]` で出す版
+(`1.2.3`、`v1-rc` なら `1-rc`) と、semver なら `1.2` も付く。版はタグ名から `-buildVersion` で渡し、git describe は使わない。
+版にできないタグ名 (`+` を含むものなど) ではビルドの前に失敗する。
 
 ```sh
 docker pull ghcr.io/<owner>/<repo>/server:v1.2.3

@@ -14,7 +14,8 @@ namespace Fps.Editor
     /// 専用サーバー (Dedicated Server) をビルドして <c>Builds/server-&lt;platform&gt;/</c> に出力する。
     /// 入れるシーンは NetTest だけで、起動するとそのままサーバーとして待ち受ける (<see cref="NetStartup"/>)。
     /// Editor を閉じた状態で次のように呼ぶ (<c>make build-server</c> / <c>make build-server linux</c>):
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform macos|linux</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform macos|linux [-buildVersion v0.2.0]</code>
+    /// 版は <see cref="BuildVersionStamper"/> が <c>-buildVersion</c> か git describe から決め、ビルドの間だけ bundleVersion に入れる。
     /// 失敗したら例外を投げるので、batchmode の Unity は終了コード 1 で終わる。
     /// </summary>
     public static class ServerBuilder
@@ -22,7 +23,10 @@ namespace Fps.Editor
         public const string MenuPathMacOS = "Fps/Net/Build Dedicated Server (macOS)";
         public const string MenuPathLinux = "Fps/Net/Build Dedicated Server (Linux)";
 
-        /// <summary>コマンドライン引数 <c>-serverPlatform</c> (既定は macos) で決まる OS 向けにビルドする。</summary>
+        /// <summary>
+        /// コマンドライン引数 <c>-serverPlatform</c> (既定は macos) で決まる OS 向けに、
+        /// <c>-buildVersion</c> (無ければ git describe) の版でビルドする。
+        /// </summary>
         public static void Build()
         {
             if (!ServerBuildOptions.TryParse(
@@ -31,19 +35,19 @@ namespace Fps.Editor
                 throw new ArgumentException("[Net] ServerBuilder: invalid arguments: " + error);
             }
 
-            BuildFor(options);
+            BuildVersionStamper.BuildWithResolvedVersion(() => BuildFor(options));
         }
 
         [MenuItem(MenuPathMacOS)]
         private static void BuildMacOSFromMenu()
         {
-            BuildFor(new ServerBuildOptions(ServerPlatform.MacOS));
+            BuildVersionStamper.BuildWithResolvedVersion(() => BuildFor(new ServerBuildOptions(ServerPlatform.MacOS)));
         }
 
         [MenuItem(MenuPathLinux)]
         private static void BuildLinuxFromMenu()
         {
-            BuildFor(new ServerBuildOptions(ServerPlatform.Linux));
+            BuildVersionStamper.BuildWithResolvedVersion(() => BuildFor(new ServerBuildOptions(ServerPlatform.Linux)));
         }
 
         /// <summary>
@@ -94,7 +98,7 @@ namespace Fps.Editor
                 options = BuildOptions.StrictMode,
             };
 
-            Debug.Log("[Net] ServerBuilder: building dedicated server " + options);
+            Debug.Log("[Net] ServerBuilder: building dedicated server " + options + " version " + PlayerSettings.bundleVersion);
             var report = BuildPipeline.BuildPlayer(buildOptions);
             var summary = report.summary;
             if (summary.result != BuildResult.Succeeded)

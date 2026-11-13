@@ -27,8 +27,26 @@ jobs:
           key: unity-library-server-linux-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
           restore-keys: unity-library-server-linux-
 
+      # タグ名は unity-builder の中でシェルのコマンドラインに埋め込まれるので、Fps.Core.BuildVersion と同じ規則
+      # (v の直後が数字なら v を外す、英数字と . - _ だけで . と - では始まらず 32 文字以内) で先に確かめ、通ったものだけを使う
+      - id: version
+        name: Resolve the build version from the tag
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="$TAG_NAME"
+          if [[ "$version" =~ ^[vV][0-9] ]]; then
+            version="${version:1}"
+          fi
+          if [[ ! "$version" =~ ^[A-Za-z0-9_][A-Za-z0-9._-]{0,31}$ ]]; then
+            echo "::error::tag '$TAG_NAME' is not a usable build version (letters, digits, . - _ only, not starting with . or -, at most 32 characters after the leading v)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       # ServerBuilder.Build は Unity 自身の引数や unity-builder の -customBuildPath などを無視し、
-      # -serverPlatform linux を見て Builds/server-linux/ に出力する (make build-server linux と同じ)
+      # -serverPlatform linux と -buildVersion を見て Builds/server-linux/ に出力する (make build-server linux と同じ)。
+      # コンテナの中では git describe に頼れない (浅いクローンでタグが無い) ので、版はタグ名から渡す
       - name: Build the Linux dedicated server
         uses: game-ci/unity-builder@v4
         env:
@@ -38,7 +56,7 @@ jobs:
         with:
           targetPlatform: StandaloneLinux64
           buildMethod: Fps.Editor.ServerBuilder.Build
-          customParameters: -serverPlatform linux
+          customParameters: -serverPlatform linux -buildVersion ${{ steps.version.outputs.version }}
           versioning: None
 
       - name: Check the build output
@@ -56,11 +74,15 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}/server
-          # semver でないタグ (v1-rc など) でも push できるよう、タグの名前そのものも付ける
+          # semver でないタグ (v1-rc など) でも push できるよう、タグの名前そのものも付ける。
+          # サーバーが起動時に [Version] で出す版と同じ文字列のタグも付け、ログからイメージを引けるようにする
           tags: |
             type=ref,event=tag
+            type=raw,value=${{ steps.version.outputs.version }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
 
       # Builds/ は git に入っていないので、git のコンテキストではなくチェックアウトしたディレクトリを渡す
       - uses: docker/build-push-action@v6

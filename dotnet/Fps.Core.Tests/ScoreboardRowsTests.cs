@@ -6,6 +6,9 @@ namespace Fps.Core.Tests
 {
     public sealed class ScoreboardRowsTests
     {
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static int[] Ids(params int[] expected) => expected;
+
         private static ScoreboardEntry Entry(
             int id, Team team, int kills, int deaths,
             ScoreboardConnection connection = ScoreboardConnection.Connected, bool isLocal = false)
@@ -26,8 +29,8 @@ namespace Fps.Core.Tests
             var sections = ScoreboardRows.Build(entries, Team.Bravo);
 
             Assert.That(sections.Select(s => s.Team), Is.EqualTo(new[] { Team.Bravo, Team.Alpha }));
-            Assert.That(sections[0].Rows.Select(r => r.PlayerId), Is.EqualTo(new[] { 1 }));
-            Assert.That(sections[1].Rows.Select(r => r.PlayerId), Is.EqualTo(new[] { 2, 0 }));
+            Assert.That(sections[0].Rows.Select(r => r.PlayerId), Is.EqualTo(Ids(1)));
+            Assert.That(sections[1].Rows.Select(r => r.PlayerId), Is.EqualTo(Ids(2, 0)));
         }
 
         [Test]
@@ -44,7 +47,7 @@ namespace Fps.Core.Tests
 
             var rows = ScoreboardRows.Build(entries, Team.Alpha)[0].Rows;
 
-            Assert.That(rows.Select(r => r.PlayerId), Is.EqualTo(new[] { 1, 2, 3, 5, 4 }));
+            Assert.That(rows.Select(r => r.PlayerId), Is.EqualTo(Ids(1, 2, 3, 5, 4)));
         }
 
         [Test]

@@ -47,6 +47,9 @@ namespace Fps.Net
         /// <summary>姿勢。</summary>
         public NetStance Stance { get; }
 
+        /// <summary>移動の設定 (落下ダメージの閾値を含む)。</summary>
+        public MotorSpec Spec => _motor.Spec;
+
         public float TickSeconds { get; }
 
         public float KillPlaneY { get; }

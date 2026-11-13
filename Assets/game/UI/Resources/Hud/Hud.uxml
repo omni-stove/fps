@@ -37,9 +37,24 @@
             <ui:VisualElement name="hud-crosshair-left" class="hud__crosshair-line hud__crosshair-line--left" picking-mode="Ignore" />
             <ui:VisualElement name="hud-crosshair-right" class="hud__crosshair-line hud__crosshair-line--right" picking-mode="Ignore" />
         </ui:VisualElement>
-        <!-- 以下は Hud と同じ GameObject のビュー (HudElementView) が name で受け取る枠。中身はまだ無く、隠しておく。 -->
-        <ui:VisualElement name="hit-marker" picking-mode="Ignore" style="display: none;" />
-        <ui:VisualElement name="damage-direction" picking-mode="Ignore" style="display: none;" />
+        <!-- 以下は Hud と同じ GameObject のビュー (HudElementView) が name で受け取る枠。ビューが出すまで隠しておく。 -->
+        <!-- ヒットマーカー (照準の周りの斜めの 4 本)。HitMarkerView が当てた直後だけ出し、頭・キルのクラスを付ける。 -->
+        <ui:VisualElement name="hit-marker" class="hit-marker" picking-mode="Ignore" style="display: none;">
+            <ui:VisualElement class="hit-marker__arm hit-marker__arm--top-right" picking-mode="Ignore">
+                <ui:VisualElement class="hit-marker__line" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hit-marker__arm hit-marker__arm--bottom-right" picking-mode="Ignore">
+                <ui:VisualElement class="hit-marker__line" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hit-marker__arm hit-marker__arm--bottom-left" picking-mode="Ignore">
+                <ui:VisualElement class="hit-marker__line" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hit-marker__arm hit-marker__arm--top-left" picking-mode="Ignore">
+                <ui:VisualElement class="hit-marker__line" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <!-- 被弾方向。DamageDirectionView が撃たれた方向ごとに弧の子要素を足す。 -->
+        <ui:VisualElement name="damage-direction" class="damage-direction" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="kill-feed" picking-mode="Ignore" style="display: none;" />
         <!-- スコアボード。Scoreboard を押している間だけ ScoreboardView が行を作って出す。 -->
         <ui:VisualElement name="scoreboard" class="scoreboard" picking-mode="Ignore" style="display: none;" />

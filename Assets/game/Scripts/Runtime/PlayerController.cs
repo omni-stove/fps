@@ -18,7 +18,7 @@ namespace Fps.Runtime
     /// (<see cref="InputSystem.actions"/>) の Move / Sprint / Crouch / Jump。解決できなければエラーを出して自分を無効にする。
     /// Sprint は <see cref="ControlSettings"/> のモード (押している間／押すたびに切り替え) で <see cref="SprintInput"/> が解釈し、
     /// 射撃・死亡・リスポーンでの解除は <see cref="BindSprintRelease"/> で購読する。
-    /// 着地 (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs) は、<see cref="Tick"/> から呼ぶ partial メソッドとして別のファイルに置く。
+    /// 着地と落下ダメージ (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs) は、<see cref="Tick"/> から呼ぶメソッドとして別のファイルに置く。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]

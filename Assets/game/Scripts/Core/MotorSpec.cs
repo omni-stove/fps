@@ -7,10 +7,14 @@ namespace Fps.Core
     /// </summary>
     public sealed class MotorSpec
     {
-        /// <summary>生成時に指定しなかったときの <see cref="SafeFallSpeed"/>。</summary>
+        /// <summary>
+        /// 生成時に指定しなかったときの <see cref="SafeFallSpeed"/>。
+        /// プレイヤーの既定 (重力 20 m/s²・ジャンプ 1.2 m) で、平地のジャンプ (約 6.9 m/s) も、乗り越えられる高さ (<see cref="DefaultVaultMaxHeight"/>) の
+        /// 段からジャンプして降りたとき (約 9.8 m/s) も減らない。同じ重力なら約 3.6 m の段から歩いて降りるまでは減らない。
+        /// </summary>
         public const float DefaultSafeFallSpeed = 12f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="LethalFallSpeed"/>。</summary>
+        /// <summary>生成時に指定しなかったときの <see cref="LethalFallSpeed"/>。既定の重力 20 m/s² で約 15.6 m の高さから落ちた速さ。</summary>
         public const float DefaultLethalFallSpeed = 25f;
 
         /// <summary>生成時に指定しなかったときの <see cref="DodgeDistance"/>。</summary>

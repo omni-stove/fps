@@ -8,6 +8,8 @@ namespace Fps.Core.Tests
 {
     public sealed class TextTableTests
     {
+        private static readonly string[] _menuStartKeys = { "Menu.Start" };
+
         private static TextTable Table(params string[] keysAndFormats)
         {
             var entries = new List<KeyValuePair<string, string>>();
@@ -178,7 +180,7 @@ namespace Fps.Core.Tests
             Assert.That(table.TryGetFormat("Menu.Start", out var format), Is.True);
             Assert.That(format, Is.EqualTo("はじめる"));
             Assert.That(table.TryGetFormat(null, out _), Is.False);
-            Assert.That(table.Keys, Is.EquivalentTo(new[] { "Menu.Start" }));
+            Assert.That(table.Keys, Is.EquivalentTo(_menuStartKeys));
         }
 
         [Test]

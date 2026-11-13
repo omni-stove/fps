@@ -12,7 +12,7 @@ namespace Fps.Core
     /// </summary>
     public readonly struct LocalizedText : IEquatable<LocalizedText>
     {
-        private static readonly object[] NoArgs = Array.Empty<object>();
+        private static readonly object[] _noArgs =Array.Empty<object>();
 
         private readonly string _key;
         private readonly object[] _args;
@@ -21,7 +21,7 @@ namespace Fps.Core
         public string Key => _key ?? string.Empty;
 
         /// <summary>書式の <c>{0}</c>, <c>{1}</c>… に埋める引数。要素は int・float・string・<see cref="LocalizedText"/> のどれか。</summary>
-        public IReadOnlyList<object> Args => _args ?? NoArgs;
+        public IReadOnlyList<object> Args => _args ?? _noArgs;
 
         /// <summary>表を引かずに <see cref="Key"/> をそのまま出すか。</summary>
         public bool IsLiteral { get; }
@@ -51,7 +51,7 @@ namespace Fps.Core
         private LocalizedText(string text, bool isLiteral)
         {
             _key = text;
-            _args = NoArgs;
+            _args = _noArgs;
             IsLiteral = isLiteral;
         }
 
@@ -154,7 +154,7 @@ namespace Fps.Core
         {
             if (args == null || args.Length == 0)
             {
-                return NoArgs;
+                return _noArgs;
             }
 
             var copy = new object[args.Length];

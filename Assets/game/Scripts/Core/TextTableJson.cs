@@ -82,7 +82,7 @@ namespace Fps.Core
 
         private sealed class Reader
         {
-            private const int End = -1;
+            private const int _end = -1;
 
             private readonly string _json;
             private int _position;
@@ -98,7 +98,7 @@ namespace Fps.Core
 
             public int Peek()
             {
-                return AtEnd ? End : _json[_position];
+                return AtEnd ? _end : _json[_position];
             }
 
             public void Advance()

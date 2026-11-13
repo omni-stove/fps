@@ -90,6 +90,20 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TargetDummiesPresentDeathWithTheWiredRules()
+        {
+            foreach (var dummy in _world.Targets)
+            {
+                var presenter = dummy.GetComponent<DeathBodyPresenter>();
+                Assert.That(presenter, Is.Not.Null, $"{dummy.name} has a death body presenter");
+                Assert.That(presenter.Target, Is.SameAs(dummy.Damageable));
+                Assert.That(presenter.Mode, Is.EqualTo(DeathBody.Vanish));
+            }
+
+            Assert.That(_world.Player.GetComponent<DeathBodyPresenter>(), Is.Null, "the player's own body is not collapsed");
+        }
+
+        [Test]
         public void PlayerWeaponsUseTheWiredReserveRules()
         {
             Assert.That(_world.Weapon.Rules, Is.SameAs(_world.Rules));

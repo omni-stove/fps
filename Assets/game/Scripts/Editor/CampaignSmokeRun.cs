@@ -14,6 +14,8 @@ namespace Fps.Editor
     /// <list type="bullet">
     /// <item>ミッションが始まる (<c>[Mission] objective=... state=Active</c> が出る)。</item>
     /// <item>キャンペーンがセーブ無しの状態から始まる (<c>[Campaign] no save; starting ...</c> が出る)。</item>
+    /// <item>Play に入って <see cref="KillDummyAfterSeconds"/> 秒後に標的ダミーを 1 体倒すと、キャンペーンのルール (体は倒れる) で
+    /// 抜け殻ができる (<c>[DeathBody] collapse ...</c> が出る)。</item>
     /// <item>Play 中にエラー・例外・Assert のログが出ない。</item>
     /// </list>
     /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。走らせる秒数は <see cref="SecondsArgument"/> で変えられる。
@@ -35,6 +37,12 @@ namespace Fps.Editor
 
         public const float DefaultSeconds = 5f;
 
+        /// <summary>Play に入ってから標的ダミーを倒すまでの秒数。ダミーの復活 (3 秒) で抜け殻が消えるところまで既定の秒数に収まる。</summary>
+        public const float KillDummyAfterSeconds = 0.5f;
+
+        /// <summary>倒すダミーを撃ったことにする位置の、ダミーの正面への距離 (m)。抜け殻はダミーの後ろへ倒れる。</summary>
+        private const float KillSourceDistance = 5f;
+
         /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
@@ -49,6 +57,10 @@ namespace Fps.Editor
         private static bool _missionStarted;
         private static bool _startedWithoutSave;
         private static bool _savedAtStart;
+        private static bool _killedDummy;
+        private static bool _deathBodyCollapsed;
+        private static bool _deathBodyRemoved;
+        private static string _killProblem;
         private static double _playStartedAt = -1d;
         private static bool _finished;
 
@@ -145,6 +157,10 @@ namespace Fps.Editor
             _missionStarted = false;
             _startedWithoutSave = false;
             _savedAtStart = false;
+            _killedDummy = false;
+            _deathBodyCollapsed = false;
+            _deathBodyRemoved = false;
+            _killProblem = null;
             _playStartedAt = -1d;
             _finished = false;
         }
@@ -189,6 +205,35 @@ namespace Fps.Editor
             {
                 _savedAtStart = true;
             }
+            else if (condition.StartsWith(DeathBodyPresenter.LogTag + " collapse ", StringComparison.Ordinal))
+            {
+                _deathBodyCollapsed = true;
+            }
+            else if (condition.StartsWith(DeathBodyPresenter.LogTag + " removed ", StringComparison.Ordinal))
+            {
+                _deathBodyRemoved = true;
+            }
+        }
+
+        /// <summary>シーンの標的ダミーを 1 体、正面から撃ったことにして倒す。見つからなければ問題として返す。</summary>
+        private static string KillOneDummy()
+        {
+            var dummies = UnityEngine.Object.FindObjectsByType<TargetDummy>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID);
+            foreach (var dummy in dummies)
+            {
+                var damageable = dummy.Damageable;
+                if (damageable == null || damageable.IsDead)
+                {
+                    continue;
+                }
+
+                var source = dummy.transform.position + (dummy.transform.forward * KillSourceDistance);
+                Debug.Log($"{LogTag} killing target id={damageable.Id} to check the death body");
+                damageable.TakeDamage(damageable.Health.Current, source);
+                return null;
+            }
+
+            return "no living TargetDummy to kill; the death body could not be checked";
         }
 
         private static void OnUpdate()
@@ -216,6 +261,12 @@ namespace Fps.Editor
                 return;
             }
 
+            if (!_killedDummy && now - _playStartedAt >= KillDummyAfterSeconds)
+            {
+                _killedDummy = true;
+                _killProblem = KillOneDummy();
+            }
+
             var seconds = SessionState.GetFloat(SecondsKey, DefaultSeconds);
             if (now - _playStartedAt < seconds)
             {
@@ -223,6 +274,19 @@ namespace Fps.Editor
             }
 
             var problems = new List<string>();
+            if (_killProblem != null)
+            {
+                problems.Add(_killProblem);
+            }
+            else if (!_killedDummy)
+            {
+                problems.Add($"the run ended before {KillDummyAfterSeconds}s; no TargetDummy was killed");
+            }
+            else if (!_deathBodyCollapsed)
+            {
+                problems.Add($"no '{DeathBodyPresenter.LogTag} collapse ...' line after killing a TargetDummy; the campaign rules did not collapse the body");
+            }
+
             if (!_missionStarted)
             {
                 problems.Add($"no '{MissionReporter.Tag} objective=... state=Active' line; the mission did not start");
@@ -239,7 +303,7 @@ namespace Fps.Editor
             }
 
             Debug.Log(
-                $"{LogTag} mission started={_missionStarted} started without save={_startedWithoutSave} saved at checkpoint={CampaignSceneBuilder.StartCheckpointId}={_savedAtStart} errors={_errors.Count}");
+                $"{LogTag} mission started={_missionStarted} started without save={_startedWithoutSave} saved at checkpoint={CampaignSceneBuilder.StartCheckpointId}={_savedAtStart} death body collapsed={_deathBodyCollapsed} removed={_deathBodyRemoved} errors={_errors.Count}");
             if (problems.Count == 0)
             {
                 Finish(SuccessExitCode, "passed");

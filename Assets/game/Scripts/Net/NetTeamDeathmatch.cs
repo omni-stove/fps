@@ -494,8 +494,26 @@ namespace Fps.Net
             var zone = ZoneOf(victim, hit);
             var damage = DamageCalculator.Calculate(spec.Damage, zone, hit.RaycastHit.distance, spec.Falloff);
             var outcome = ApplyDamage(shooter, victim, damage);
+            RecordHitDirection(shooter, victim, outcome, direction);
             var health = _session.HasPlayer(hit.TargetId) ? _session.GetHealth(hit.TargetId) : 0;
             Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome, hit.TargetCrouched));
+        }
+
+        /// <summary>
+        /// 体力が変わった人 (跳ね返した味方撃ちなら撃った本人) に、受けた弾の向きを持たせる。
+        /// クライアントのやられ演出 (<see cref="DeathBodyPresenter"/>) が、倒れた体をこの向きへ倒す。
+        /// </summary>
+        private void RecordHitDirection(NetPlayer shooter, NetPlayer victim, DamageOutcome outcome, Vector3 direction)
+        {
+            if (outcome == DamageOutcome.Ignored)
+            {
+                return;
+            }
+
+            var reflected = shooter != victim
+                && _session.Spec.Rules.FriendlyFire == FriendlyFire.Reflect
+                && _session.GetTeam(shooter.ServerPlayerId) == _session.GetTeam(victim.ServerPlayerId);
+            (reflected ? shooter : victim).ServerSetLastHitDirection(direction);
         }
 
         /// <summary>

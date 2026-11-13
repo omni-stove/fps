@@ -148,7 +148,8 @@ namespace Fps.Net
 
             try
             {
-                _motor = new PlayerMotor(new MotorSpec(_walkSpeed, _sprintSpeed, _jumpHeight, _gravity, _airControl));
+                _motor = new PlayerMotor(new MotorSpec(
+                    _walkSpeed, _sprintSpeed, _jumpHeight, _gravity, _airControl, PlayerController.DefaultCrouchSpeed));
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -546,8 +547,9 @@ namespace Fps.Net
             PlaceAt(state.Position);
             _motor.SetVelocity(NetMath.ToNumerics(state.Velocity));
 
+            // ネット対戦のしゃがみは入力と状態の同期が要るので、まだしゃがまない。
             var displacement = _motor.Step(
-                NetMath.ToNumerics(input.Move), input.Yaw, input.Sprint, input.Jump, state.IsGrounded, TickSeconds);
+                NetMath.ToNumerics(input.Move), input.Yaw, input.Sprint, false, input.Jump, state.IsGrounded, TickSeconds);
             _controller.Move(NetMath.ToUnity(displacement));
 
             var position = transform.position;

@@ -22,12 +22,16 @@ namespace Fps.Core
         /// <summary>空中で水平速度を入力方向へ寄せる 1 ステップあたりの割合。0 で操作不能、1 で即座に入力どおり。</summary>
         public float AirControl { get; }
 
+        /// <summary>しゃがみ中の水平速度。しゃがみ中はダッシュしてもこの速度になる。</summary>
+        public float CrouchSpeed { get; }
+
         /// <param name="walkSpeed">歩きの水平速度。0 以上。</param>
         /// <param name="sprintSpeed">ダッシュ中の水平速度。0 以上。</param>
         /// <param name="jumpHeight">ジャンプで到達する高さ。0 以上。</param>
         /// <param name="gravity">重力加速度の大きさ。正の値。</param>
         /// <param name="airControl">空中制御の割合。0〜1。</param>
-        public MotorSpec(float walkSpeed, float sprintSpeed, float jumpHeight, float gravity, float airControl)
+        /// <param name="crouchSpeed">しゃがみ中の水平速度。0 以上。</param>
+        public MotorSpec(float walkSpeed, float sprintSpeed, float jumpHeight, float gravity, float airControl, float crouchSpeed)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -54,11 +58,17 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(airControl), airControl, "airControl must be between 0 and 1");
             }
 
+            if (!(crouchSpeed >= 0f) || float.IsInfinity(crouchSpeed))
+            {
+                throw new ArgumentOutOfRangeException(nameof(crouchSpeed), crouchSpeed, "crouchSpeed must be finite and not negative");
+            }
+
             WalkSpeed = walkSpeed;
             SprintSpeed = sprintSpeed;
             JumpHeight = jumpHeight;
             Gravity = gravity;
             AirControl = airControl;
+            CrouchSpeed = crouchSpeed;
         }
     }
 }

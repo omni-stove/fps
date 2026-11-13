@@ -266,6 +266,8 @@ namespace Fps.Tests.EditMode
             Assert.That(mover, Is.SameAs(_world.Player.GetComponent<PlayerController>()));
             Assert.That(mover.WalkSpeed, Is.EqualTo(PlayerController.DefaultWalkSpeed));
             Assert.That(mover.SprintSpeed, Is.EqualTo(PlayerController.DefaultSprintSpeed));
+            Assert.That(mover.CrouchSpeed, Is.EqualTo(PlayerController.DefaultCrouchSpeed));
+            Assert.That(mover.CrouchHeight, Is.EqualTo(PlayerController.DefaultCrouchHeight));
             Assert.That(mover.JumpHeight, Is.EqualTo(PlayerController.DefaultJumpHeight));
             Assert.That(mover.Gravity, Is.EqualTo(PlayerController.DefaultGravity));
             Assert.That(mover.AirControl, Is.EqualTo(PlayerController.DefaultAirControl));

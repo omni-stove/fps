@@ -4,7 +4,7 @@ using System.Numerics;
 namespace Fps.Core
 {
     /// <summary>
-    /// プレイヤーの移動量を計算する (歩き・ダッシュ・ジャンプ・重力)。衝突判定はせず、
+    /// プレイヤーの移動量を計算する (歩き・ダッシュ・しゃがみ・ジャンプ・重力)。衝突判定はせず、
     /// <see cref="Step"/> の戻り値をそのまま CharacterController.Move に渡す想定。座標は Y が上。
     /// </summary>
     public sealed class PlayerMotor
@@ -31,11 +31,13 @@ namespace Fps.Core
         /// </summary>
         /// <param name="moveInput">移動入力。X が右、Y が前。長さ 1 を超える分は切り詰める。</param>
         /// <param name="yawRadians">向き (Y 軸まわり、ラジアン)。0 で +Z が前、正で右回り (+X 側) へ向く。</param>
-        /// <param name="sprint">ダッシュ中か。</param>
+        /// <param name="sprint">ダッシュ中か。crouched が true なら無視する。</param>
+        /// <param name="crouched">しゃがみ中か。<see cref="MotorSpec.CrouchSpeed"/> で動く。</param>
         /// <param name="jumpPressed">今フレームにジャンプが押されたか。接地中でなければ無視する。</param>
         /// <param name="isGrounded">接地しているか。</param>
         /// <param name="deltaSeconds">経過秒数。0 以上。</param>
-        public Vector3 Step(Vector2 moveInput, float yawRadians, bool sprint, bool jumpPressed, bool isGrounded, float deltaSeconds)
+        public Vector3 Step(
+            Vector2 moveInput, float yawRadians, bool sprint, bool crouched, bool jumpPressed, bool isGrounded, float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
             {
@@ -52,7 +54,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(yawRadians), yawRadians, "yawRadians must be finite");
             }
 
-            var speed = sprint ? Spec.SprintSpeed : Spec.WalkSpeed;
+            var speed = crouched ? Spec.CrouchSpeed : sprint ? Spec.SprintSpeed : Spec.WalkSpeed;
             var desired = ToWorld(ClampLength(moveInput), yawRadians) * speed;
             var current = new Vector2(Velocity.X, Velocity.Z);
 

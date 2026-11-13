@@ -109,5 +109,55 @@ namespace Fps.Core.Tests
             Assert.That(compensator.ClampTick(12f, 10), Is.EqualTo(10f));
             Assert.That(compensator.ClampTick(float.NaN, 10), Is.NaN);
         }
+
+        [Test]
+        public void RewindCrouchedReturnsTheStanceAtTheTickWithoutInterpolating()
+        {
+            var compensator = new LagCompensator();
+            compensator.Record(10, 1, Vector3.Zero, false);
+            compensator.Record(11, 1, Vector3.UnitX, true);
+            compensator.Record(11, 2, Vector3.UnitZ, true);
+
+            var at = compensator.RewindCrouched(10.5f);
+
+            // 位置は補間するが、しゃがみは tick 10 のまま
+            Assert.That(compensator.Rewind(10.5f)[1], Is.EqualTo(new Vector3(0.5f, 0, 0)));
+            Assert.That(at, Has.Count.EqualTo(1));
+            Assert.That(at[1], Is.False);
+            Assert.That(compensator.RewindCrouched(11f)[1], Is.True);
+            Assert.That(compensator.RewindCrouched(11f)[2], Is.True);
+        }
+
+        [Test]
+        public void PositionOnlyRecordsHaveNoStance()
+        {
+            var compensator = new LagCompensator();
+            compensator.Record(10, 1, Vector3.Zero);
+
+            Assert.That(compensator.Rewind(10f), Has.Count.EqualTo(1));
+            Assert.That(compensator.RewindCrouched(10f), Is.Empty);
+        }
+
+        [Test]
+        public void RemoveDropsStanceHistoryToo()
+        {
+            var compensator = new LagCompensator();
+            compensator.Record(10, 1, Vector3.Zero, true);
+
+            Assert.That(compensator.Remove(1), Is.True);
+            Assert.That(compensator.Rewind(10f), Is.Empty);
+            Assert.That(compensator.RewindCrouched(10f), Is.Empty);
+            Assert.That(compensator.Remove(1), Is.False);
+        }
+
+        [Test]
+        public void StanceIsNotRecordedWhenThePositionTickIsRejected()
+        {
+            var compensator = new LagCompensator();
+            compensator.Record(10, 1, Vector3.Zero, false);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => compensator.Record(9, 1, Vector3.Zero, true));
+            Assert.That(compensator.RewindCrouched(10f)[1], Is.False);
+        }
     }
 }

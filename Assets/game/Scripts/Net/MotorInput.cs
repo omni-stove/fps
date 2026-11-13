@@ -16,12 +16,16 @@ namespace Fps.Net
         /// <summary>この tick にジャンプが押されたか。</summary>
         public bool Jump { get; }
 
-        public MotorInput(Vector2 move, float yaw, bool sprint, bool jump)
+        /// <summary>しゃがみを押しているか。離しても頭上が塞がっていればしゃがんだまま。</summary>
+        public bool Crouch { get; }
+
+        public MotorInput(Vector2 move, float yaw, bool sprint, bool jump, bool crouch)
         {
             Move = Vector2.ClampMagnitude(move, 1f);
             Yaw = yaw;
             Sprint = sprint;
             Jump = jump;
+            Crouch = crouch;
         }
 
         /// <summary>移動入力と向きがすべて有限値か。ネットワークから受け取った値の検査に使う。</summary>

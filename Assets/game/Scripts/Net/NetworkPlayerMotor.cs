@@ -39,7 +39,8 @@ namespace Fps.Net
     /// 死亡・リスポーンでは <see cref="NetPlayer"/> が <see cref="ReleaseCrouch"/> を呼ぶ。
     /// </para>
     /// <para>
-    /// サーバーで確定した着地 (落下ダメージ) は .Landing.cs で扱う。ダウン中に動けなくする処理は .Downed.cs に分けてある。
+    /// サーバーで確定した着地 (落下ダメージ) は .Landing.cs で扱う。ダウン中に動けなくする処理は .Downed.cs に、
+    /// 演出 (足音) に見せる接地とダッシュは .Grounded.cs に分けてある。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -255,6 +256,7 @@ namespace Fps.Net
                 _remoteHistory = new HitboxHistory();
                 _remoteYawHistory = new HitboxHistory();
                 _remoteStanceHistory = new StanceHistory();
+                ClearRemoteGrounded();
                 _hasRemoteState = false;
             }
 
@@ -518,6 +520,9 @@ namespace Fps.Net
             _remoteStanceHistory.Record(tick, false);
             ShowRemoteStance(tick, false);
 
+            // サーバーはテレポート先を宙にいる状態から始める
+            RestartRemoteGrounded(tick, false);
+
             _latestRemoteTick = tick;
             _renderTick = tick;
             _hasRemoteState = true;
@@ -584,7 +589,7 @@ namespace Fps.Net
                     Reconcile(tick, state);
                     break;
                 case NetworkPlayerRole.Interpolated:
-                    ReceiveRemoteState(tick, position, yaw, isCrouched);
+                    ReceiveRemoteState(tick, position, yaw, isCrouched, isGrounded);
                     break;
             }
         }
@@ -620,7 +625,7 @@ namespace Fps.Net
                 predictedCrouched ? "true" : "false");
         }
 
-        private void ReceiveRemoteState(int tick, Vector3 position, float yaw, bool crouched)
+        private void ReceiveRemoteState(int tick, Vector3 position, float yaw, bool crouched, bool grounded)
         {
             // 信頼性なしで送るので順番が入れ替わることがある。古いものは捨てる
             if (_hasRemoteState && tick <= _latestRemoteTick)
@@ -631,6 +636,7 @@ namespace Fps.Net
             _remoteHistory.Record(tick, NetMath.ToNumerics(position));
             _remoteYawHistory.Record(tick, YawDirection(yaw));
             _remoteStanceHistory.Record(tick, crouched);
+            RecordRemoteGrounded(tick, grounded);
             _latestRemoteTick = tick;
 
             if (!_hasRemoteState)
@@ -692,6 +698,8 @@ namespace Fps.Net
             {
                 ShowRemoteStance((int)Math.Floor(_renderTick), crouched);
             }
+
+            ShowRemoteGrounded((float)_renderTick);
         }
 
         private void ResolveInputActions()
@@ -782,6 +790,7 @@ namespace Fps.Net
             _remoteHistory = null;
             _remoteYawHistory = null;
             _remoteStanceHistory = null;
+            ClearRemoteGrounded();
             _hasPendingState = false;
             _role = NetworkPlayerRole.None;
         }

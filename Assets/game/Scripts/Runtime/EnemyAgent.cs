@@ -25,7 +25,7 @@ namespace Fps.Runtime
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Damageable))]
-    public sealed class EnemyAgent : MonoBehaviour
+    public sealed class EnemyAgent : MonoBehaviour, ICharacterMotionSource
     {
         public const string LogTag = "[AI]";
 
@@ -216,6 +216,22 @@ namespace Fps.Runtime
 
         /// <summary>視線と射撃の始点。</summary>
         public Vector3 EyePosition => GroundPosition + (Vector3.up * _eyeHeight);
+
+        /// <summary>NavMesh の上にいて、Off-Mesh Link (飛び降りなど) を渡っている最中でなければ接地している。未初期化なら false。</summary>
+        bool ICharacterMotionSource.IsGrounded => _agent != null && _agent.enabled && _agent.isOnNavMesh && !_agent.isOnOffMeshLink;
+
+        /// <summary>敵はしゃがまない。</summary>
+        bool ICharacterMotionSource.IsCrouched => false;
+
+        /// <summary>NavMeshAgent の速さ。未初期化なら 0。</summary>
+        float ICharacterMotionSource.WalkSpeed => _agent != null ? _agent.speed : 0f;
+
+        /// <summary>敵はダッシュしない (追うときも NavMeshAgent の速さのまま歩く)。</summary>
+        bool ICharacterMotionSource.TryGetSprinting(out bool sprinting)
+        {
+            sprinting = false;
+            return true;
+        }
 
         /// <summary>
         /// 巡回地点を設定する。初期化済みなら NavMesh 上に寄せてすぐ <see cref="EnemyBrain.SetPatrolRoute"/> に渡す。

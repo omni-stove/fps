@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class GuardianRespawnTests
     {
-        private const float RespawnSeconds = 3f;
+        private const float _respawnSeconds = 3f;
 
         private static readonly int[] _three = { 3 };
         private static readonly string[] _chosenZeroAndOne = { "Side 0:0", "Side 1:1" };
@@ -18,7 +18,7 @@ namespace Fps.Core.Tests
         public void StartingTheMatchPicksOneLeaderPerTeam()
         {
             var chosen = new List<string>();
-            var session = GuardianMode.CreateSession(60f, RespawnSeconds, count => count - 1, out var leaders);
+            var session = GuardianMode.CreateSession(60f, _respawnSeconds, count => count - 1, out var leaders);
             leaders.LeaderChosen += (side, id) => chosen.Add(side + ":" + id);
             AddTeams(session, 3);
 
@@ -42,10 +42,10 @@ namespace Fps.Core.Tests
             session.ReportKill(0, 3);
 
             Assert.That(session.IsAwaitingRespawn(3), Is.True);
-            Assert.That(session.GetRespawnRemaining(3), Is.EqualTo(RespawnSeconds));
+            Assert.That(session.GetRespawnRemaining(3), Is.EqualTo(_respawnSeconds));
             Assert.That(leaders.CanRespawn(Side.Bravo), Is.True);
 
-            session.Tick(RespawnSeconds);
+            session.Tick(_respawnSeconds);
 
             Assert.That(released, Is.EqualTo(_three));
             Assert.That(session.IsDown(3), Is.False);
@@ -70,7 +70,7 @@ namespace Fps.Core.Tests
             Assert.That(session.IsEliminated(3), Is.True, "the wait that had begun is cancelled");
             Assert.That(session.GetRespawnRemaining(3), Is.Null);
 
-            session.Tick(RespawnSeconds * 2f);
+            session.Tick(_respawnSeconds * 2f);
             Assert.That(released, Is.Empty);
             Assert.That(session.State, Is.EqualTo(GameModeState.Playing), "member 5 is still standing");
 
@@ -127,7 +127,7 @@ namespace Fps.Core.Tests
             Assert.That(leaders.GetLeader(Side.Bravo), Is.EqualTo((int?)1), "the leader stays recorded");
             Assert.That(session.IsEliminated(3), Is.True);
 
-            session.Tick(RespawnSeconds * 2f);
+            session.Tick(_respawnSeconds * 2f);
             Assert.That(released, Is.Empty);
         }
 
@@ -160,7 +160,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ATeamWithoutPlayersGetsNoLeaderAndDoesNotDecideTheTimeUp()
         {
-            var session = GuardianMode.CreateSession(10f, RespawnSeconds, _ => 0, out var leaders);
+            var session = GuardianMode.CreateSession(10f, _respawnSeconds, _ => 0, out var leaders);
             session.AddPlayer(0, Side.Alpha);
             session.AddPlayer(2, Side.Alpha);
             session.Start();
@@ -176,7 +176,7 @@ namespace Fps.Core.Tests
         public void ResetForgetsTheLeadersAndTheNextStartPicksAgain()
         {
             var picks = 0;
-            var session = GuardianMode.CreateSession(60f, RespawnSeconds, count => picks++ % count, out var leaders);
+            var session = GuardianMode.CreateSession(60f, _respawnSeconds, count => picks++ % count, out var leaders);
             AddTeams(session, 3);
             session.Start();
             session.ReportKill(0, leaders.GetLeader(Side.Bravo).Value);
@@ -209,7 +209,7 @@ namespace Fps.Core.Tests
         [Test]
         public void SetLeaderRejectsASecondLeaderAndTreatsADownedPlayerAsFallen()
         {
-            var leaders = new GuardianRespawn(new IndividualRespawn(RespawnSeconds));
+            var leaders = new GuardianRespawn(new IndividualRespawn(_respawnSeconds));
             var session = new ModeSession(new TwoTeams(), 60f, Array.Empty<IScoreRule>(), leaders, Array.Empty<IWinCondition>());
             AddTeams(session, 2);
             session.Start();
@@ -227,7 +227,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ChooseLeadersRejectsAPickOutsideTheTeam()
         {
-            var session = GuardianMode.CreateSession(60f, RespawnSeconds, count => count, out _);
+            var session = GuardianMode.CreateSession(60f, _respawnSeconds, count => count, out _);
             AddTeams(session, 2);
 
             Assert.Throws<InvalidOperationException>(() => session.Start());
@@ -259,7 +259,7 @@ namespace Fps.Core.Tests
         public void TheLeadersArePickedFromEachTeamInPlayerIdOrder()
         {
             var chosen = new List<string>();
-            var session = GuardianMode.CreateSession(60f, RespawnSeconds, _ => 0, out var leaders);
+            var session = GuardianMode.CreateSession(60f, _respawnSeconds, _ => 0, out var leaders);
             leaders.LeaderChosen += (side, id) => chosen.Add(side + ":" + id);
             AddTeams(session, 2);
             session.Start();
@@ -270,7 +270,7 @@ namespace Fps.Core.Tests
         /// <summary>Alpha に 0, 2, 4...、Bravo に 1, 3, 5... を入れ、各チームの最小の ID (Alpha 0・Bravo 1) をリーダーにして始める。</summary>
         private static ModeSession Playing(out GuardianRespawn leaders, float timeLimitSeconds = 60f)
         {
-            var session = GuardianMode.CreateSession(timeLimitSeconds, RespawnSeconds, _ => 0, out leaders);
+            var session = GuardianMode.CreateSession(timeLimitSeconds, _respawnSeconds, _ => 0, out leaders);
             AddTeams(session, 3);
             session.Start();
             return session;

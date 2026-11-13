@@ -136,9 +136,9 @@ namespace Fps.Core
             }
 
             var side = session.GetSide(playerId);
-            if (_leaders.ContainsKey(side))
+            if (_leaders.TryGetValue(side, out var existing))
             {
-                throw new InvalidOperationException($"{side} already has a leader (player {_leaders[side]})");
+                throw new InvalidOperationException($"{side} already has a leader (player {existing})");
             }
 
             Assign(side, playerId);

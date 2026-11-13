@@ -107,6 +107,7 @@ namespace Fps.Core
         /// <summary>
         /// 初期の予備弾 <paramref name="reserveAmmo"/> × <paramref name="multiplier"/> を整数にする。
         /// 端数は四捨五入 (0.5 は 0 から遠い側)、0 未満にはせず、int に収まらなければ <see cref="int.MaxValue"/>。
+        /// <paramref name="reserveAmmo"/> か <paramref name="multiplier"/> が 0 なら倍率の大きさに関わらず 0。
         /// </summary>
         /// <param name="reserveAmmo">倍率を掛ける前の予備弾。0 以上。</param>
         /// <param name="multiplier">倍率。0 以上の有限値。</param>
@@ -122,14 +123,24 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(multiplier), multiplier, "multiplier must be a non-negative finite number");
             }
 
+            // 0 のときは積が 0 のままなので、下の decimal 変換 (倍率が巨大だと OverflowException) に進めない。
+            if (reserveAmmo == 0 || multiplier == 0f)
+            {
+                return 0;
+            }
+
             if ((double)reserveAmmo * multiplier >= int.MaxValue)
             {
                 return int.MaxValue;
             }
 
             // decimal で掛けるのは、0.7f のような倍率が 2 進では 0.69999... になり、ちょうど .5 になる積が切り捨てられるのを避けるため。
-            // float から decimal への変換は有効桁 7 桁に丸めるので、設定に書いた 0.7 のまま掛けられる。
-            var scaled = Math.Round(reserveAmmo * (decimal)multiplier, MidpointRounding.AwayFromZero);
+            // float の最短往復表記 ("R") を経由するのは、(decimal)float の丸め桁数が実行環境で変わっても設定に書いた 0.7 のまま掛けるため。
+            var decimalMultiplier = decimal.Parse(
+                multiplier.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture);
+            var scaled = Math.Round(reserveAmmo * decimalMultiplier, MidpointRounding.AwayFromZero);
             return (int)Math.Min(Math.Max(scaled, 0m), int.MaxValue);
         }
 

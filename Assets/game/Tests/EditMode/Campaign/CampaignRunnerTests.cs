@@ -398,6 +398,7 @@ namespace Fps.Tests.EditMode
                 var camera = new GameObject("Camera", typeof(Camera));
                 camera.transform.SetParent(player.transform, false);
                 Rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+                Rifle.AssignIdIfEmpty();
                 Created.Add(Rifle);
                 Weapon = camera.AddComponent<WeaponController>();
                 Weapon.Initialize(camera.transform, _attack, _reload, Rifle);

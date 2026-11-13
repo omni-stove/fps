@@ -47,6 +47,15 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void IdsAreFixedDistinctUuids()
+        {
+            Assert.That(WeaponAssetBuilder.RifleId, Is.Not.EqualTo(WeaponAssetBuilder.HandgunId));
+            Assert.That(WeaponAssetBuilder.RifleSpec().Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(WeaponAssetBuilder.HandgunSpec().Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
+            Assert.That(WeaponAssetBuilder.RifleSpec().Id, Is.EqualTo(WeaponAssetBuilder.RifleSpec().Id), "rebuilding keeps the id");
+        }
+
+        [Test]
         public void LoadDefinitionReturnsTheBuiltAsset()
         {
             Build();
@@ -93,10 +102,11 @@ namespace Fps.Tests.EditMode
 
             var catalog = catalogAsset.ToCatalog();
             Assert.That(catalog.Count, Is.EqualTo(2));
-            Assert.That(catalog.All[0].Id, Is.EqualTo("rifle"));
-            Assert.That(catalog.All[1].Id, Is.EqualTo("handgun"));
+            Assert.That(catalog.All[0].Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(catalog.All[1].Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
 
-            var rifle = catalog.Get("rifle");
+            var rifle = catalog.Get(WeaponAssetBuilder.RifleId);
+            Assert.That(rifle.Category, Is.EqualTo(WeaponCategory.AssaultRifle));
             Assert.That(rifle.FireMode, Is.EqualTo(FireMode.Auto));
             Assert.That(rifle.MagazineSize, Is.EqualTo(30));
             Assert.That(rifle.ReserveAmmo, Is.EqualTo(90));
@@ -108,7 +118,8 @@ namespace Fps.Tests.EditMode
             Assert.That(rifle.Falloff.EndDistance, Is.EqualTo(60f));
             Assert.That(rifle.Falloff.MinMultiplier, Is.EqualTo(0.5f));
 
-            var handgun = catalog.Get("handgun");
+            var handgun = catalog.Get(WeaponAssetBuilder.HandgunId);
+            Assert.That(handgun.Category, Is.EqualTo(WeaponCategory.Handgun));
             Assert.That(handgun.FireMode, Is.EqualTo(FireMode.Semi));
             Assert.That(handgun.MagazineSize, Is.EqualTo(12));
             Assert.That(handgun.ReserveAmmo, Is.EqualTo(48));
@@ -135,6 +146,8 @@ namespace Fps.Tests.EditMode
             // 手で書き換えられたアセットも、2 回目で GUID を保ったまま既定の値に戻る。
             var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_riflePath);
             rifle.Damage = 1;
+            rifle.Id = "00000000-0000-4000-8000-000000000099";
+            rifle.Category = WeaponCategory.SniperRifle;
             EditorUtility.SetDirty(rifle);
             var catalogAsset = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(_catalogPath);
             catalogAsset.SetWeapons(new[] { rifle });
@@ -147,7 +160,9 @@ namespace Fps.Tests.EditMode
             Assert.That(AssetDatabase.AssetPathToGUID(_handgunPath), Is.EqualTo(handgunGuid));
             Assert.That(AssetDatabase.AssetPathToGUID(_catalogPath), Is.EqualTo(catalogGuid));
             Assert.That(rebuilt, Is.SameAs(catalogAsset));
-            Assert.That(rebuilt.ToCatalog().Get("rifle").Damage, Is.EqualTo(25));
+            var restored = rebuilt.ToCatalog().Get(WeaponAssetBuilder.RifleId);
+            Assert.That(restored.Damage, Is.EqualTo(25));
+            Assert.That(restored.Category, Is.EqualTo(WeaponCategory.AssaultRifle));
             Assert.That(rebuilt.Weapons, Has.Count.EqualTo(2));
         }
 

@@ -13,6 +13,11 @@ namespace Fps.Net.Tests
     /// </summary>
     public sealed class NetTeamDeathmatchWeaponTests
     {
+        private const string _handgunId = "00000000-0000-4000-8000-000000000002";
+
+        // Catalog に無い Id
+        private const string _shotgunId = "00000000-0000-4000-8000-000000000003";
+
         private readonly List<Object> _created = new List<Object>();
 
         [TearDown]
@@ -53,7 +58,7 @@ namespace Fps.Net.Tests
         {
             var catalog = Catalog(
                 Definition("Rifle", NetTeamDeathmatch.DefaultWeaponId, damage: 25, fireInterval: 0.1f),
-                Definition("Handgun", "handgun", damage: 34, fireInterval: 0.2f));
+                Definition("Handgun", _handgunId, damage: 34, fireInterval: 0.2f));
             Assert.That(NetTeamDeathmatch.TryCreateLoadout(catalog, out var loadout, out var error), Is.True, error);
             return loadout;
         }
@@ -81,7 +86,7 @@ namespace Fps.Net.Tests
 
             Assert.That(loadout.Catalog.Count, Is.EqualTo(2));
             Assert.That(loadout.Catalog.Get(NetTeamDeathmatch.DefaultWeaponId).Damage, Is.EqualTo(25));
-            Assert.That(loadout.Catalog.Get("handgun").Damage, Is.EqualTo(34));
+            Assert.That(loadout.Catalog.Get(_handgunId).Damage, Is.EqualTo(34));
             Assert.That(loadout.Count, Is.Zero, "nobody holds a weapon until they join");
         }
 
@@ -115,7 +120,7 @@ namespace Fps.Net.Tests
         [Test]
         public void RefusesToStartWithoutTheWeaponGivenToJoiningPlayers()
         {
-            var catalog = Catalog(Definition("Handgun", "handgun"));
+            var catalog = Catalog(Definition("Handgun", _handgunId));
 
             Assert.That(NetTeamDeathmatch.TryCreateLoadout(catalog, out var loadout, out var error), Is.False);
             Assert.That(loadout, Is.Null);
@@ -123,14 +128,13 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void RefusesToStartWithAnIdTooLongToSend()
+        public void RefusesToStartWithANonUuidId()
         {
-            var longId = new string('a', 30);
-            var catalog = Catalog(Definition("Rifle", NetTeamDeathmatch.DefaultWeaponId), Definition("Long", longId));
+            var catalog = Catalog(Definition("Rifle", NetTeamDeathmatch.DefaultWeaponId), Definition("OldHandgun", "handgun"));
 
             Assert.That(NetTeamDeathmatch.TryCreateLoadout(catalog, out var loadout, out var error), Is.False);
             Assert.That(loadout, Is.Null);
-            Assert.That(error, Does.Contain(longId));
+            Assert.That(error, Does.Contain("OldHandgun"));
         }
 
         [Test]
@@ -139,10 +143,12 @@ namespace Fps.Net.Tests
             var loadout = RifleAndHandgunLoadout();
             loadout.Equip(0, NetTeamDeathmatch.DefaultWeaponId);
 
-            Assert.That(loadout.TryFire(0, "shotgun", 0d, out var spec), Is.EqualTo(ShotRejection.UnknownWeapon));
+            Assert.That(loadout.TryFire(0, _shotgunId, 0d, out var spec), Is.EqualTo(ShotRejection.UnknownWeapon));
             Assert.That(spec, Is.Null);
             Assert.That(loadout.TryFire(0, string.Empty, 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
-            Assert.That(loadout.TryFire(0, "RIFLE", 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
+            Assert.That(loadout.TryFire(0, "rifle", 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
+            Assert.That(
+                loadout.TryFire(0, NetTeamDeathmatch.DefaultWeaponId.ToUpperInvariant(), 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
         }
 
         [Test]
@@ -152,7 +158,7 @@ namespace Fps.Net.Tests
             loadout.Equip(0, NetTeamDeathmatch.DefaultWeaponId);
 
             // handgun は Catalog にあるが、サーバーが持たせているのは rifle
-            Assert.That(loadout.TryFire(0, "handgun", 0d, out var spec), Is.EqualTo(ShotRejection.WeaponMismatch));
+            Assert.That(loadout.TryFire(0, _handgunId, 0d, out var spec), Is.EqualTo(ShotRejection.WeaponMismatch));
             Assert.That(spec, Is.Null);
         }
 
@@ -175,8 +181,8 @@ namespace Fps.Net.Tests
 
             for (var i = 0; i < 10; i++)
             {
-                Assert.That(loadout.TryFire(0, "handgun", 0d, out _), Is.EqualTo(ShotRejection.WeaponMismatch));
-                Assert.That(loadout.TryFire(0, "shotgun", 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
+                Assert.That(loadout.TryFire(0, _handgunId, 0d, out _), Is.EqualTo(ShotRejection.WeaponMismatch));
+                Assert.That(loadout.TryFire(0, _shotgunId, 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
             }
 
             // 武器が正しい射撃だけが rifle の連射間隔 (ShotBudget) を減らす
@@ -192,15 +198,15 @@ namespace Fps.Net.Tests
         public void FireRateFollowsTheEquippedWeapon()
         {
             var loadout = RifleAndHandgunLoadout();
-            loadout.Equip(0, "handgun");
+            loadout.Equip(0, _handgunId);
             for (var i = 0; i < ShotBudget.DefaultBurst; i++)
             {
-                Assert.That(loadout.TryFire(0, "handgun", 0d, out _), Is.EqualTo(ShotRejection.None), "shot " + i);
+                Assert.That(loadout.TryFire(0, _handgunId, 0d, out _), Is.EqualTo(ShotRejection.None), "shot " + i);
             }
 
             // rifle の間隔 (0.1 秒) では handgun (0.2 秒) は 1 発ぶんも戻らない
-            Assert.That(loadout.TryFire(0, "handgun", 0.1d, out _), Is.EqualTo(ShotRejection.FireRateExceeded));
-            Assert.That(loadout.TryFire(0, "handgun", 0.3d, out _), Is.EqualTo(ShotRejection.None));
+            Assert.That(loadout.TryFire(0, _handgunId, 0.1d, out _), Is.EqualTo(ShotRejection.FireRateExceeded));
+            Assert.That(loadout.TryFire(0, _handgunId, 0.3d, out _), Is.EqualTo(ShotRejection.None));
         }
 
         [Test]

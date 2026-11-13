@@ -24,11 +24,12 @@ namespace Fps.Editor
         public const string MenuPath = "Fps/Build Weapon Assets";
         public const string LogTag = "[WeaponAssetBuilder]";
 
-        public const string RifleId = "rifle";
-        public const string HandgunId = "handgun";
+        // 再ビルドしても Id が変わらないよう固定する。サーバーとクライアントはこの Id で武器を突き合わせる
+        public const string RifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
+        public const string HandgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
 
         /// <summary>
-        /// rifle の値 (Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰)。
+        /// rifle の値 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰)。
         /// オフラインのプレイヤー (<see cref="WeaponController"/>) と敵 (<see cref="EnemyAgent"/>) が使う。
         /// </summary>
         public static WeaponSpec RifleSpec()
@@ -36,6 +37,7 @@ namespace Fps.Editor
             return new WeaponSpec(
                 RifleId,
                 "Rifle",
+                WeaponCategory.AssaultRifle,
                 FireMode.Auto,
                 30,
                 90,
@@ -72,12 +74,13 @@ namespace Fps.Editor
             return definition;
         }
 
-        /// <summary>handgun の値 (Semi、12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰)。</summary>
+        /// <summary>handgun の値 (Handgun、Semi、12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰)。</summary>
         public static WeaponSpec HandgunSpec()
         {
             return new WeaponSpec(
                 HandgunId,
                 "Handgun",
+                WeaponCategory.Handgun,
                 FireMode.Semi,
                 12,
                 48,
@@ -131,6 +134,7 @@ namespace Fps.Editor
 
             definition.Id = spec.Id;
             definition.DisplayName = spec.DisplayName;
+            definition.Category = spec.Category;
             definition.FireMode = spec.FireMode;
             definition.MagazineSize = spec.MagazineSize;
             definition.ReserveAmmo = spec.ReserveAmmo;

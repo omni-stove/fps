@@ -156,12 +156,18 @@ namespace Fps.Runtime
         /// <summary>同じ GameObject のポーズメニュー。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();
 
-        /// <summary>チームの点数を塗る色を決める。View を作り直しても引き継ぐ。</summary>
+        /// <summary>チームの点数とスコアボードの見出しを塗る色を決める。View を作り直しても引き継ぐ。</summary>
         public void SetTeamColors(Color alpha, Color bravo)
         {
             _alphaColor = alpha;
             _bravoColor = bravo;
             _view?.SetTeamColors(alpha, bravo);
+
+            var scoreboard = Scoreboard;
+            if (scoreboard != null)
+            {
+                scoreboard.RefreshTeamColors();
+            }
         }
 
         /// <summary>team の点数を塗る色。<see cref="SetTeamColors"/> の前は白。</summary>

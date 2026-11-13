@@ -41,7 +41,8 @@
         <ui:VisualElement name="hit-marker" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="damage-direction" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="kill-feed" picking-mode="Ignore" style="display: none;" />
-        <ui:VisualElement name="scoreboard" picking-mode="Ignore" style="display: none;" />
+        <!-- スコアボード。Scoreboard を押している間だけ ScoreboardView が行を作って出す。 -->
+        <ui:VisualElement name="scoreboard" class="scoreboard" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="loadout-select" picking-mode="Ignore" style="display: none;" />
     </ui:VisualElement>
 </ui:UXML>

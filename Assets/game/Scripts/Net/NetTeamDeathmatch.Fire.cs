@@ -16,13 +16,22 @@ namespace Fps.Net
         /// 巻き戻せるのは <see cref="LagCompensator.MaxRewindTicks"/> tick 前まで。
         /// 射程・ダメージ・減衰は、サーバーが shooter に今持たせている武器 (<see cref="NetPlayerWeapon.CurrentSpec"/>) の値を使う (クライアントの値は使わない)。
         /// 弾を消費した射撃は、着弾・ヒット・被弾と合わせて <see cref="NetCombatFeed"/> でクライアントへ配る。
+        /// <para>
+        /// 判定の向きは、クライアントの向きにばらつき (<see cref="SpreadPattern"/>) を掛けたもの。種はサーバーが数えた発射番号
+        /// (<see cref="ServerShotSequence"/>、弾を消費した射撃だけを数える) と shooter のプレイヤー Id、散らばりはその武器の値と、
+        /// サーバーが持つ ADS の同期値・確定した移動の速さで決め、<c>[Net] shot attacker=.. index=.. cone=.. dir=..</c> を出す。
+        /// クライアントの番号と食い違えば持ち主へ訂正を送る。
+        /// </para>
         /// </summary>
         /// <param name="shooter">撃った人。試合に参加していて生きていなければ (ダウン中も) 何もしない (<see cref="CanFire"/>)。</param>
         /// <param name="weaponId">クライアントが送ってきた、撃った武器の Id。ロードアウトに無い・今持っている武器と違えば捨てる。</param>
         /// <param name="origin">クライアントが送ってきた始点。</param>
-        /// <param name="direction">クライアントが送ってきた向き。</param>
+        /// <param name="direction">クライアントが送ってきた、ばらつきを掛ける前の向き。</param>
         /// <param name="time">クライアントが見ていた時点。</param>
-        internal void ServerFire(NetPlayer shooter, string weaponId, Vector3 origin, Vector3 direction, ShotTime time)
+        /// <param name="clientShotIndex">クライアントが予測に使った発射番号。突き合わせにだけ使う。</param>
+        /// <param name="clientShotGeneration">クライアントが受け入れていた番号の訂正の世代。</param>
+        internal void ServerFire(
+            NetPlayer shooter, string weaponId, Vector3 origin, Vector3 direction, ShotTime time, int clientShotIndex, int clientShotGeneration)
         {
             if (!IsServer || _session == null || _lagCompensator == null || _serverLoadout == null || shooter == null || !IsJoined(shooter))
             {
@@ -71,6 +80,8 @@ namespace Fps.Net
                 WarnRejected(shooterId, ammo);
                 return;
             }
+
+            direction = ApplyServerSpread(shooter, shooterId, spec, direction, clientShotIndex, clientShotGeneration);
 
             if (_lastRecordedTick == _noRecordedTick)
             {
@@ -146,6 +157,25 @@ namespace Fps.Net
             SendHitResult(shooter, victim, outcome, damage, zone);
             var health = _session.HasPlayer(hit.TargetId) ? _session.GetHealth(hit.TargetId) : 0;
             Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome, hit.TargetCrouched));
+        }
+
+        /// <summary>
+        /// 受け入れた弾にサーバーの発射番号を付け、ずれていれば持ち主へ訂正を送り、ばらつきを掛けた判定の向きを返す。
+        /// </summary>
+        private Vector3 ApplyServerSpread(
+            NetPlayer shooter, int shooterId, WeaponSpec spec, Vector3 aim, int clientShotIndex, int clientShotGeneration)
+        {
+            var numbering = shooter.ServerAssignShotIndex(clientShotIndex, clientShotGeneration);
+            if (numbering.NeedsCorrection)
+            {
+                Debug.Log(NetHitLog.ShotIndexCorrected(shooterId, clientShotIndex, numbering.Index, numbering.Generation), this);
+                shooter.ServerCorrectShotIndex(numbering, clientShotIndex);
+            }
+
+            var cone = NetPlayer.SpreadConeDegrees(spec, shooter.AimingForSpread, shooter.SpreadMoveFraction());
+            var direction = NetPlayer.SpreadDirection(aim, cone, shooterId, numbering.Index);
+            Debug.Log(NetHitLog.Shot(shooterId, numbering.Index, cone, direction.x, direction.y, direction.z), this);
+            return direction;
         }
 
         /// <summary>

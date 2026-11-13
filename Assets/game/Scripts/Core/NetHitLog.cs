@@ -53,6 +53,40 @@ namespace Fps.Core
                 + " victimCrouched=" + (victimCrouched ? "true" : "false");
         }
 
+        /// <summary>
+        /// サーバーがばらつきを掛けた後の判定の向き。持ち主の <c>[Net] fire</c> のログの index と dir と突き合わせる。
+        /// </summary>
+        /// <example><c>[Net] shot attacker=1 index=5 cone=2.50 dir=(0.0123,-0.0456,0.9989)</c></example>
+        /// <param name="attackerId">撃った人のプレイヤー id。</param>
+        /// <param name="shotIndex">サーバーが付けた発射番号。</param>
+        /// <param name="coneDegrees">掛けた散らばりの半角 (度)。</param>
+        public static string Shot(int attackerId, int shotIndex, float coneDegrees, float x, float y, float z)
+        {
+            return Tag + " shot attacker=" + attackerId.ToString(CultureInfo.InvariantCulture)
+                + " index=" + shotIndex.ToString(CultureInfo.InvariantCulture)
+                + " cone=" + coneDegrees.ToString("F2", CultureInfo.InvariantCulture)
+                + " dir=" + Direction(x, y, z);
+        }
+
+        /// <summary>サーバーが発射番号を自分の値に直したとき。</summary>
+        /// <example><c>[Net] shot index corrected attacker=1 client=7 server=5 generation=1</c></example>
+        public static string ShotIndexCorrected(int attackerId, int clientIndex, int serverIndex, int generation)
+        {
+            return Tag + " shot index corrected attacker=" + attackerId.ToString(CultureInfo.InvariantCulture)
+                + " client=" + clientIndex.ToString(CultureInfo.InvariantCulture)
+                + " server=" + serverIndex.ToString(CultureInfo.InvariantCulture)
+                + " generation=" + generation.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>ログの向きの書式。小数 4 桁で、クライアントとサーバーのログで同じ書式にする。</summary>
+        /// <example><c>(0.0123,-0.0456,0.9989)</c></example>
+        public static string Direction(float x, float y, float z)
+        {
+            return "(" + x.ToString("F4", CultureInfo.InvariantCulture)
+                + "," + y.ToString("F4", CultureInfo.InvariantCulture)
+                + "," + z.ToString("F4", CultureInfo.InvariantCulture) + ")";
+        }
+
         /// <example><c>[Net] rejected shot attacker=0 reason=OriginTooFar</c></example>
         public static string Rejected(int attackerId, ShotRejection reason)
         {

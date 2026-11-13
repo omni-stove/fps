@@ -197,6 +197,32 @@ namespace Fps.Net
             }
         }
 
+        /// <summary>
+        /// このインスタンスの最新の水平の速さ (m/s)。サーバー (ホストを含む) は確定状態、予測するオーナーは最新の予測の速度から出す。
+        /// 他人のクライアントは速度を受け取らないので 0。射撃のばらつき (<see cref="NetPlayer.SpreadMoveFraction"/>) に使う。
+        /// </summary>
+        public float HorizontalSpeed
+        {
+            get
+            {
+                Vector3 velocity;
+                switch (_role)
+                {
+                    case NetworkPlayerRole.HostOwner:
+                    case NetworkPlayerRole.ServerSimulated:
+                        velocity = _serverState.Velocity;
+                        break;
+                    case NetworkPlayerRole.Predicted:
+                        velocity = _prediction != null ? _prediction.Current.Velocity : Vector3.zero;
+                        break;
+                    default:
+                        return 0f;
+                }
+
+                return new Vector2(velocity.x, velocity.z).magnitude;
+            }
+        }
+
         /// <summary>オーナーでダッシュ中か (モードどおりに解釈し、自動解除した後の値)。オーナー以外では false。</summary>
         public bool IsSprinting => _sprint != null && _sprint.IsActive;
 

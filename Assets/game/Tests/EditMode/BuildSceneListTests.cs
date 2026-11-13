@@ -18,6 +18,7 @@ namespace Fps.Tests.EditMode
             Assert.That(MissionTestSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.MissionTestScene));
             Assert.That(DestructionTestSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.DestructionTestScene));
             Assert.That(CampaignSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.CampaignScene));
+            Assert.That(Campaign02Mission.ScenePath, Is.EqualTo(BuildSceneList.Campaign02Scene));
             Assert.That(MenuSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.MainMenuScene));
         }
 

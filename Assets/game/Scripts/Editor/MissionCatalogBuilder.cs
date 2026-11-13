@@ -8,7 +8,7 @@ namespace Fps.Editor
 {
     /// <summary>
     /// キャンペーンのミッションの一覧 (<see cref="CatalogPath"/> の <see cref="MissionCatalog"/>) を作るか上書きする。
-    /// 今は Campaign01 だけを入れる。既存のアセットは GUID を保って中身だけ更新する。
+    /// <see cref="CampaignSceneBuilder.Missions"/> のミッション (Campaign01, Campaign02) をこの順に入れる。既存のアセットは GUID を保って中身だけ更新する。
     /// ミッションの定義とシーンは先に <see cref="CampaignSceneBuilder.Build"/> で作っておく (無ければ何も保存せずに止める)。
     /// 何度実行しても同じ結果になる。不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
@@ -21,7 +21,10 @@ namespace Fps.Editor
         public const string LogTag = "[MissionCatalogBuilder]";
 
         /// <summary>Campaign01 のミッション Id。定義のアセット名 (<see cref="CampaignSceneBuilder.DefinitionPath"/>) と同じ。</summary>
-        public const string Campaign01Id = "Campaign01";
+        public const string Campaign01Id = CampaignSceneBuilder.MissionId;
+
+        /// <summary>Campaign02 のミッション Id。定義のアセット名 (<see cref="Campaign02Mission.DefinitionPath"/>) と同じ。</summary>
+        public const string Campaign02Id = Campaign02Mission.MissionId;
 
         /// <summary>カタログに入れるミッションの、定義とシーンの場所。</summary>
         public readonly struct MissionSource
@@ -43,14 +46,13 @@ namespace Fps.Editor
         /// <summary>カタログに入れるミッション (並び順がメニューの順)。</summary>
         public static IReadOnlyList<MissionSource> DefaultMissions()
         {
-            return new[]
+            var missions = new List<MissionSource>();
+            foreach (var spec in CampaignSceneBuilder.Missions())
             {
-                new MissionSource(
-                    Campaign01Id,
-                    CampaignSceneBuilder.MissionDisplayName,
-                    CampaignSceneBuilder.ScenePath,
-                    CampaignSceneBuilder.DefinitionPath),
-            };
+                missions.Add(new MissionSource(spec.Id, spec.DisplayName, spec.ScenePath, spec.DefinitionPath));
+            }
+
+            return missions;
         }
 
         [MenuItem(MenuPath)]

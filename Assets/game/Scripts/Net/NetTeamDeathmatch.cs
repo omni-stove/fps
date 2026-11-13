@@ -712,7 +712,9 @@ namespace Fps.Net
         private void ServerEquip(NetPlayer player, string weaponId)
         {
             var spec = _loadout.Equip(player.ServerPlayerId, weaponId);
-            player.Weapon.ServerEquip(spec);
+
+            // _loadout は 1 人 1 本しか覚えないので、持ち替えると射撃が WeaponMismatch になる。それまでは 1 本だけ渡す
+            player.Weapon.ServerEquip(new[] { spec }, LoadoutDefinition.DefaultSwitchSeconds);
         }
 
         private void SyncRemainingSeconds()

@@ -16,7 +16,7 @@ namespace Fps.Runtime
     /// 同じ GameObject に <see cref="SideMember"/> があれば、タグの代わりに自分と違う陣営で生きている、いちばん近い相手を
     /// <see cref="TargetSearchInterval"/> ごとに (目標が倒れたらすぐに) 選び直す (<see cref="EnemySenses.SelectHostile"/>)。
     /// モードが倒れた敵を戻すときは <see cref="Respawn"/> を呼ぶ。
-    /// 武器は 1 本だけ持ち、持ち替えない。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
+    /// 武器は 1 本だけ持ち、自分では持ち替えない (ガンゲームのようにモードが <see cref="EquipWeapon"/> で替えることはある)。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
     /// (シーン生成スクリプトが、敵の配置ごとに指定した Id の武器を武器の一覧 <see cref="WeaponCatalogAsset"/> から引いて配線する)。
     /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
     /// 撃たれたら (<see cref="Damageable.Damaged"/>) 撃った者の位置を次の知覚 1 回だけ物音として渡し、
@@ -174,6 +174,7 @@ namespace Fps.Runtime
         private Damageable _target;
         private EnemyBrain _brain;
         private Weapon _weapon;
+        private GameRules _weaponRules = GameRules.Default;
         private Vector3? _destination;
         private Vector3? _pendingNoise;
         private bool _pendingHit;
@@ -235,12 +236,46 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 撃つ武器の定義。<see cref="TryInitialize"/> がこれから <see cref="Weapon"/> を作るので、それより前に設定する
-        /// (初期化後に変えても今の武器は変わらない)。
+        /// (初期化後に変えても今の武器は変わらない。初期化後に持ち替えるなら <see cref="EquipWeapon"/>)。
         /// </summary>
         public WeaponDefinition WeaponDefinition
         {
             get => _weaponDefinition;
             set => _weaponDefinition = value;
+        }
+
+        /// <summary>武器を作るときの予備弾のルール。既定は <see cref="GameRules.Default"/>。<see cref="EquipWeapon"/> で変える。</summary>
+        public GameRules WeaponRules => _weaponRules;
+
+        /// <summary>
+        /// 持つ武器を definition に替え、rules (null なら今の <see cref="WeaponRules"/>) の予備弾で満タンに作り直す。リロード中なら取り消す。
+        /// 以後の <see cref="Respawn"/> もこの武器とルールで作り直す。未初期化なら定義とルールを覚えるだけで、<see cref="TryInitialize"/> がそれで作る。
+        /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、今の武器はそのまま残す。
+        /// </summary>
+        public void EquipWeapon(WeaponDefinition definition, GameRules rules = null)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            var spec = definition.ToSpec();
+            var weaponRules = rules ?? _weaponRules;
+            _weaponDefinition = definition;
+            _weaponRules = weaponRules;
+            if (_brain == null)
+            {
+                return;
+            }
+
+            if (_weapon != null)
+            {
+                _weapon.Reloaded -= OnReloaded;
+            }
+
+            _weapon = new Weapon(spec, weaponRules);
+            _weapon.Reloaded += OnReloaded;
+            Debug.Log($"{LogTag} id={Id} equip weapon={spec.DisplayName} ammo={_weapon.AmmoInMagazine}", this);
         }
 
         /// <summary>巡回地点 (ワールド座標の足元)。</summary>
@@ -380,7 +415,7 @@ namespace Fps.Runtime
             _stuck.Recovered += OnUnstuck;
             _brain = new EnemyBrain(spec);
             _brain.StateChanged += OnStateChanged;
-            _weapon = new Weapon(weaponSpec);
+            _weapon = new Weapon(weaponSpec, _weaponRules);
             _weapon.Reloaded += OnReloaded;
             _self.Died += OnDied;
             _self.Damaged += OnDamaged;
@@ -794,7 +829,7 @@ namespace Fps.Runtime
             SetCrouching(false);
 
             _weapon.Reloaded -= OnReloaded;
-            _weapon = new Weapon(_weapon.Spec);
+            _weapon = new Weapon(_weapon.Spec, _weaponRules);
             _weapon.Reloaded += OnReloaded;
 
             // 無効のまま Transform を動かしてから有効にすると、NavMeshAgent は新しい位置の近くの NavMesh に載る。

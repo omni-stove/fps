@@ -94,7 +94,16 @@ namespace Fps.Runtime
         protected abstract ModeSession CreateSession();
 
         /// <summary>
+        /// <see cref="Begin"/> で参加者を入れてモードを始め、HUD を書いた直後に 1 度だけ呼ばれる。<see cref="Members"/> と <see cref="Session"/> は揃っている。
+        /// 参加者に持たせる物 (武器など) をモードに合わせるならここで行う。
+        /// </summary>
+        protected virtual void OnBegan()
+        {
+        }
+
+        /// <summary>
         /// 参加者が倒れ、モードに報告した直後に呼ばれる。killer は倒した参加者で、分からないときと自滅では null。
+        /// 倒した武器は <see cref="CombatEvents.CurrentAttribution"/> でまだ読める。
         /// リスポーンの部品を持たないモードは、ここで <see cref="Respawn"/> を呼ぶなどして戻し方を決める。
         /// </summary>
         protected virtual void OnKill(SideMember killer, SideMember victim)
@@ -343,6 +352,7 @@ namespace Fps.Runtime
             _session.Ended += OnSessionEnded;
             _session.Start();
             RefreshHud();
+            OnBegan();
         }
 
         /// <summary>

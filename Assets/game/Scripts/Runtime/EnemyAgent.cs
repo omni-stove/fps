@@ -559,7 +559,9 @@ namespace Fps.Runtime
             var heading = _goal.HasValue && HorizontalDistance(ground, _goal.Value) > EnemyBrain.ArrivalDistance
                 ? _goal
                 : null;
-            var recovery = _stuck.Tick(deltaSeconds, ground.ToNumerics(), heading.HasValue ? heading.Value.ToNumerics() : (System.Numerics.Vector3?)null, PathRemainingDistance(heading));
+            // 経路の角の取得は毎回ヒープを確保するので、残り距離を使う立て直し中だけ計算する。
+            var remaining = _stuck.Stage == StuckRecovery.None ? null : PathRemainingDistance(heading);
+            var recovery = _stuck.Tick(deltaSeconds, ground.ToNumerics(), heading.HasValue ? heading.Value.ToNumerics() : (System.Numerics.Vector3?)null, remaining);
             if (recovery == StuckRecovery.None)
             {
                 return;

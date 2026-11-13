@@ -163,7 +163,9 @@ namespace Fps.Core
                 return false;
             }
 
-            return _anchorRemaining.Value - remainingDistance.Value >= ProgressDistance;
+            // 追う目標のほうが近づいただけでも残り距離は縮むので、敵自身が動いたことも要る。
+            return _anchorRemaining.Value - remainingDistance.Value >= ProgressDistance
+                && Vector3.DistanceSquared(position, _anchor) >= ProgressDistance * ProgressDistance;
         }
 
         // 目的地までの距離だけだと、動かない敵へ目標のほうが近づいただけで立ち直ったことになってしまう。

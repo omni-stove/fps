@@ -14,6 +14,8 @@ namespace Fps.Runtime
     /// Health や Weapon が作り直されたとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
     /// オンライン (Fps.Net の NetHud) は源を渡さずに作り、<see cref="Model"/> の Set 系で値を書く。チームの点数 (左上) と
     /// 試合結果 (中央上) はそのときだけ出る。
+    /// ヒットマーカーなど HUD の部分ごとのビュー (<see cref="HudElementView"/>) は <see cref="Create"/> が同じ GameObject に付け
+    /// (<see cref="AddViews"/>)、View を作り直すたびに Hud.uxml の要素を渡し直す。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(UIDocument))]
@@ -92,6 +94,7 @@ namespace Fps.Runtime
                 document.visualTreeAsset = layout;
 
                 var hud = hudObject.AddComponent<Hud>();
+                AddViews(hudObject);
                 hud.Initialize(player, weapon, match, panelSettings);
 
                 // 有効にすると UIDocument が木を作り、Play 中は Hud の OnEnable が Label を探す。
@@ -111,6 +114,45 @@ namespace Fps.Runtime
                 throw;
             }
         }
+
+        /// <summary>
+        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>・
+        /// <see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>) と <see cref="PauseMenu"/> を hudObject に付ける。
+        /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
+        /// 既に付いているものは付け直さない。
+        /// </summary>
+        public static void AddViews(GameObject hudObject)
+        {
+            if (hudObject == null)
+            {
+                throw new ArgumentNullException(nameof(hudObject));
+            }
+
+            AddIfMissing<HitMarkerView>(hudObject);
+            AddIfMissing<DamageDirectionView>(hudObject);
+            AddIfMissing<KillFeedView>(hudObject);
+            AddIfMissing<ScoreboardView>(hudObject);
+            AddIfMissing<LoadoutSelectView>(hudObject);
+            AddIfMissing<PauseMenu>(hudObject);
+        }
+
+        /// <summary>同じ GameObject のヒットマーカー。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public HitMarkerView HitMarker => GetComponent<HitMarkerView>();
+
+        /// <summary>同じ GameObject の被弾方向。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public DamageDirectionView DamageDirection => GetComponent<DamageDirectionView>();
+
+        /// <summary>同じ GameObject のキルフィード。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public KillFeedView KillFeed => GetComponent<KillFeedView>();
+
+        /// <summary>同じ GameObject のスコアボード。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public ScoreboardView Scoreboard => GetComponent<ScoreboardView>();
+
+        /// <summary>同じ GameObject のロードアウト選択。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public LoadoutSelectView LoadoutSelect => GetComponent<LoadoutSelectView>();
+
+        /// <summary>同じ GameObject のポーズメニュー。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public PauseMenu PauseMenu => GetComponent<PauseMenu>();
 
         /// <summary>チームの点数を塗る色を決める。View を作り直しても引き継ぐ。</summary>
         public void SetTeamColors(Color alpha, Color bravo)
@@ -192,6 +234,11 @@ namespace Fps.Runtime
 
             _view = new HudView(root, _model);
             _view.SetTeamColors(_alphaColor, _bravoColor);
+            foreach (var view in GetComponents<HudElementView>())
+            {
+                view.Bind(root);
+            }
+
             return true;
         }
 
@@ -275,6 +322,15 @@ namespace Fps.Runtime
 
         private void DisposeView()
         {
+            foreach (var view in GetComponents<HudElementView>())
+            {
+                // 破棄の途中では先に消えたビューが null として返ることがある。
+                if (view != null)
+                {
+                    view.Unbind();
+                }
+            }
+
             if (_view == null)
             {
                 return;
@@ -282,6 +338,15 @@ namespace Fps.Runtime
 
             _view.Dispose();
             _view = null;
+        }
+
+        private static void AddIfMissing<T>(GameObject target)
+            where T : Component
+        {
+            if (target.GetComponent<T>() == null)
+            {
+                target.AddComponent<T>();
+            }
         }
 
         private void UnsubscribeSources()

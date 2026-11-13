@@ -47,6 +47,21 @@ namespace Fps.Editor
         }
 
         /// <summary>
+        /// 専用サーバーのビルドに入れるシーン (<see cref="BuildSceneList.ServerScenes"/>)。
+        /// 一人称カメラの Bootstrap は要らないので、NetTest を最初のシーンにしてそのまま待ち受ける。
+        /// </summary>
+        public static string[] ServerScenePaths()
+        {
+            var scenes = new string[BuildSceneList.ServerScenes.Count];
+            for (var i = 0; i < scenes.Length; i++)
+            {
+                scenes[i] = BuildSceneList.ServerScenes[i];
+            }
+
+            return scenes;
+        }
+
+        /// <summary>
         /// NetTest シーンが無ければ <see cref="NetSceneBuilder.Build"/> で作り、専用サーバーをビルドする。
         /// </summary>
         public static BuildReport BuildFor(ServerBuildOptions options)
@@ -71,8 +86,7 @@ namespace Fps.Editor
             Directory.CreateDirectory(options.OutputDirectory);
             var buildOptions = new BuildPlayerOptions
             {
-                // サーバーには一人称カメラの Bootstrap は要らない。NetTest を最初のシーンにしてそのまま待ち受ける
-                scenes = new[] { NetBootstrap.ScenePath },
+                scenes = ServerScenePaths(),
                 locationPathName = options.ExecutablePath,
                 target = target,
                 targetGroup = BuildTargetGroup.Standalone,

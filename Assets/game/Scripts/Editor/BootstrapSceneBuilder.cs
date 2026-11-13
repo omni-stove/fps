@@ -17,7 +17,7 @@ namespace Fps.Editor
     /// </summary>
     public static class BootstrapSceneBuilder
     {
-        public const string DefaultScenePath = "Assets/game/Scenes/Bootstrap.unity";
+        public const string DefaultScenePath = BuildSceneList.BootstrapScene;
         public const string ScenePathArgument = "-bootstrapScenePath";
         public const string BootstrapObjectName = "GameBootstrap";
         public const string MenuPath = "Fps/Build Bootstrap Scene";
@@ -66,7 +66,7 @@ namespace Fps.Editor
                 throw new IOException($"Failed to save the bootstrap scene to '{path}'");
             }
 
-            EditorBuildSettings.scenes = WithSceneFirst(EditorBuildSettings.scenes, path);
+            BuildSceneList.RegisterStartScene(path);
             AssetDatabase.SaveAssets();
 
             Debug.Log($"[BootstrapSceneBuilder] saved '{path}' and registered it first in Build Settings");
@@ -107,28 +107,11 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// Build Settings のシーン一覧の先頭に path を有効な状態で置く。既にあるものは先頭へ移し、
-        /// 他のシーンは順番と有効/無効をそのまま残す。
+        /// Build Settings のシーン一覧の先頭に path を有効な状態で置く (<see cref="BuildSceneList.WithStartScene"/>)。
         /// </summary>
         public static EditorBuildSettingsScene[] WithSceneFirst(IReadOnlyList<EditorBuildSettingsScene> current, string path)
         {
-            path = ValidateScenePath(path);
-
-            var scenes = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(path, true) };
-            if (current != null)
-            {
-                foreach (var scene in current)
-                {
-                    if (scene == null || string.IsNullOrEmpty(scene.path) || SamePath(scene.path, path))
-                    {
-                        continue;
-                    }
-
-                    scenes.Add(scene);
-                }
-            }
-
-            return scenes.ToArray();
+            return BuildSceneList.WithStartScene(current, path);
         }
 
         /// <summary>
@@ -194,11 +177,6 @@ namespace Fps.Editor
             }
 
             return normalized;
-        }
-
-        private static bool SamePath(string a, string b)
-        {
-            return string.Equals(a.Replace('\\', '/'), b, StringComparison.Ordinal);
         }
     }
 }

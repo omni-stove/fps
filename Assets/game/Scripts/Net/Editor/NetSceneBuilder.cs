@@ -72,7 +72,7 @@ namespace Fps.Editor
             var playerPrefab = BuildPrefab(PlayerPrefabPath, CreatePlayerSource);
             var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout, rules));
             BuildScene(playerPrefab, matchPrefab);
-            AddSceneToBuildSettings(NetBootstrap.ScenePath);
+            BuildSceneList.Register(NetBootstrap.ScenePath);
             AssetDatabase.SaveAssets();
             Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath
                 + " (loadout " + WeaponAssetBuilder.LoadoutPath + ", rules " + GameRulesAssetBuilder.TeamDeathmatchPath + ")");
@@ -166,6 +166,9 @@ namespace Fps.Editor
 
             // 弾倉・予備弾・リロード。弾数はサーバーが持ち、持ち主にだけ同期する
             source.AddComponent<NetPlayerWeapon>();
+
+            // 演出と手榴弾。専用サーバーでは演出だけを HeadlessPresentation が止める
+            CharacterComponents.Attach(source, throwsGrenades: true);
             return source;
         }
 
@@ -287,28 +290,6 @@ namespace Fps.Editor
             {
                 throw new InvalidOperationException("failed to save " + NetBootstrap.ScenePath);
             }
-        }
-
-        /// <summary>既存のシーンの並び (起動時の最初のシーン) は変えず、無ければ末尾に加える。</summary>
-        private static void AddSceneToBuildSettings(string scenePath)
-        {
-            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-            var existing = scenes.FindIndex(s => s.path == scenePath);
-            if (existing >= 0)
-            {
-                if (scenes[existing].enabled)
-                {
-                    return;
-                }
-
-                scenes[existing] = new EditorBuildSettingsScene(scenePath, true);
-            }
-            else
-            {
-                scenes.Add(new EditorBuildSettingsScene(scenePath, true));
-            }
-
-            EditorBuildSettings.scenes = scenes.ToArray();
         }
 
         private static void EnsureFolder(string path)

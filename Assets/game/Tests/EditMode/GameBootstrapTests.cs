@@ -628,6 +628,38 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void HudHasThePartViewsBoundToTheLayout()
+        {
+            var hud = _world.Hud;
+            HudElementView[] views = { hud.HitMarker, hud.DamageDirection, hud.KillFeed, hud.Scoreboard, hud.LoadoutSelect };
+
+            Assert.That(views, Has.None.Null);
+            Assert.That(hud.PauseMenu, Is.Not.Null);
+
+            // Edit Mode では UIDocument が木を作らないことがあり、そのときは View もビューの要素も無い。
+            Assume.That(hud.View, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
+            foreach (var view in views)
+            {
+                Assert.That(view.Element, Is.Not.Null, view.ElementName);
+                Assert.That(view.Element.name, Is.EqualTo(view.ElementName));
+                Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None), "nothing new is shown yet");
+            }
+        }
+
+        [Test]
+        public void PlayerHasThePresentationAndGrenadeComponentsAndIsTheLocalPlayer()
+        {
+            var player = _world.Player;
+
+            Assert.That(player.GetComponent<WeaponPresentation>(), Is.Not.Null);
+            Assert.That(player.GetComponent<CharacterAudio>(), Is.Not.Null);
+            Assert.That(player.GetComponent<CharacterAnimator>(), Is.Not.Null);
+            Assert.That(player.GetComponent<GrenadeThrower>(), Is.Not.Null);
+            Assert.That(_world.PlayerDamageable.IsLocalPlayer, Is.True);
+            Assert.That(_world.Targets[0].Damageable.IsLocalPlayer, Is.False);
+        }
+
+        [Test]
         public void HudShowsThePlayerHealthAndWaitsForTheMatch()
         {
             var model = _world.Hud.Model;

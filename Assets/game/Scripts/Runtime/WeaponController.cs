@@ -458,6 +458,9 @@ namespace Fps.Runtime
         /// 今の武器で 1 発撃つ。<see cref="Weapon.TryFire"/> が false なら何もせず false。
         /// 撃てたら照準の正面へ (<see cref="ShotFilter"/> があれば書き換えた始点と向きで) Raycast し、Hitbox に当たればダメージを渡す。
         /// Hitbox の無い物に当たれば <see cref="StructureDamage.Apply"/> に武器の <see cref="WeaponSpec.ExplosionRadius"/> で渡す。
+        /// 撃つと <see cref="CombatEvents.ShotFired"/>、何かに当たると <see cref="CombatEvents.Impact"/>、
+        /// 生きている相手に当てると <see cref="CombatEvents.HitConfirmed"/> を出す。倒した相手の <see cref="CombatEvents.Killed"/> は
+        /// このプレイヤーと武器の帰属 (<see cref="CombatEvents.Attribute"/>) で <see cref="Damageable"/> が出す。
         /// </summary>
         public bool Fire()
         {
@@ -474,15 +477,28 @@ namespace Fps.Runtime
 
             ResolveShot(out var origin, out var direction);
             ShotFilter?.Filter(ref origin, ref direction);
-            if (TryRaycast(origin, direction, out var hit))
+
+            var shooter = _aim.root.gameObject;
+            CombatEvents.RaiseShotFired(shooter, origin, direction, weapon.Spec.Id);
+            if (!TryRaycast(origin, direction, out var hit))
             {
-                if (Hitbox.FindFor(hit.collider) == null)
+                return true;
+            }
+
+            CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
+            if (Hitbox.FindFor(hit.collider) == null)
+            {
+                StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
+                return true;
+            }
+
+            using (CombatEvents.Attribute(shooter, weapon.Spec.Id))
+            {
+                if (TryApplyHit(hit.collider, hit.distance, weapon.Spec.Damage, weapon.Spec.Falloff, this, origin, out var result)
+                    && result.WasAlive)
                 {
-                    StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
-                }
-                else
-                {
-                    TryApplyHit(hit.collider, hit.distance, weapon.Spec.Damage, weapon.Spec.Falloff, this, origin);
+                    // オフラインで WeaponController を持つのは手元のプレイヤーだけなので、ここが撃った本人のクライアントになる。
+                    CombatEvents.RaiseHitConfirmed(new HitConfirm(result.Damage, result.Zone, result.Killed, downed: false));
                 }
             }
 
@@ -566,6 +582,19 @@ namespace Fps.Runtime
             UnityEngine.Object context = null,
             Vector3? sourcePosition = null)
         {
+            return TryApplyHit(collider, distance, baseDamage, falloff, context, sourcePosition, out _);
+        }
+
+        private static bool TryApplyHit(
+            Collider collider,
+            float distance,
+            int baseDamage,
+            DamageFalloff falloff,
+            UnityEngine.Object context,
+            Vector3? sourcePosition,
+            out AppliedHit result)
+        {
+            result = default;
             if (collider == null)
             {
                 throw new ArgumentNullException(nameof(collider));
@@ -577,15 +606,35 @@ namespace Fps.Runtime
                 return false;
             }
 
-            if (hitbox.Owner == null)
+            var owner = hitbox.Owner;
+            if (owner == null)
             {
                 Debug.LogError($"[Combat] Hitbox '{hitbox.name}' has no Damageable owner; the hit is ignored", hitbox);
                 return false;
             }
 
+            var wasAlive = !owner.IsDead;
             var damage = hitbox.ApplyHit(baseDamage, distance, falloff, sourcePosition);
             Debug.Log($"[Combat] hit zone={hitbox.Zone} dmg={damage}", context != null ? context : hitbox);
+            result = new AppliedHit(damage, hitbox.Zone, wasAlive, wasAlive && owner.IsDead);
             return true;
+        }
+
+        // ヒットの確認 (HitConfirm) を作るのに要る、1 回の命中の結果。
+        private readonly struct AppliedHit
+        {
+            public int Damage { get; }
+            public HitZone Zone { get; }
+            public bool WasAlive { get; }
+            public bool Killed { get; }
+
+            public AppliedHit(int damage, HitZone zone, bool wasAlive, bool killed)
+            {
+                Damage = damage;
+                Zone = zone;
+                WasAlive = wasAlive;
+                Killed = killed;
+            }
         }
 
         /// <summary>

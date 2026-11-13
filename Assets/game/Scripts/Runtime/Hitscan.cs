@@ -81,6 +81,13 @@ namespace Fps.Runtime
         /// <see cref="Damageable.Damaged"/> に渡す。
         /// </param>
         /// <param name="explosionRadius">建造物への被害を広げる半径 (m)。0 以上の有限値。0 なら当たった物だけ。</param>
+        /// <param name="weaponId">
+        /// 撃った武器の Id。<see cref="CombatEvents.ShotFired"/> と、倒したときの <see cref="CombatEvents.Killed"/> に渡す。null なら空文字。
+        /// </param>
+        /// <remarks>
+        /// 値の検査を通ったら <see cref="CombatEvents.ShotFired"/>、何かに当たったら <see cref="CombatEvents.Impact"/> を出す。
+        /// <see cref="CombatEvents.HitConfirmed"/> は出さない (撃った本人のクライアントで出すもので、ここを使う敵には要らない)。
+        /// </remarks>
         public static HitscanResult Fire(
             Vector3 origin,
             Vector3 direction,
@@ -88,7 +95,8 @@ namespace Fps.Runtime
             int baseDamage,
             DamageFalloff falloff,
             Transform shooterRoot,
-            float explosionRadius = 0f)
+            float explosionRadius = 0f,
+            string weaponId = null)
         {
             if (baseDamage < 0)
             {
@@ -106,11 +114,16 @@ namespace Fps.Runtime
                 throw new ArgumentOutOfRangeException(nameof(explosionRadius), explosionRadius, "explosionRadius must be a non-negative finite number");
             }
 
-            if (!TryFirstHit(origin, direction, range, shooterRoot, out var hit))
+            // TryFirstHit が向きと射程を検査するので、撃ったことはその後に知らせる (例外になった弾を撃ったことにしない)。
+            var found = TryFirstHit(origin, direction, range, shooterRoot, out var hit);
+            var shooter = shooterRoot != null ? shooterRoot.gameObject : null;
+            CombatEvents.RaiseShotFired(shooter, origin, direction, weaponId);
+            if (!found)
             {
                 return HitscanResult.Miss;
             }
 
+            CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
             var hitbox = Hitbox.FindFor(hit.collider);
             if (hitbox == null)
             {
@@ -132,7 +145,12 @@ namespace Fps.Runtime
 
             // 撃たれた側 (敵) が撃った方向へ向かえるよう、撃った者の位置を渡す。
             Vector3? sourcePosition = shooterRoot != null ? shooterRoot.position : (Vector3?)null;
-            var damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff, sourcePosition);
+            int damage;
+            using (CombatEvents.Attribute(shooter, weaponId))
+            {
+                damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff, sourcePosition);
+            }
+
             Debug.Log($"{Damageable.LogTag} hit zone={hitbox.Zone} dmg={damage} id={owner.Id} hp={owner.Health.Current}", hitbox);
             return new HitscanResult(true, hit, hitbox, damage);
         }

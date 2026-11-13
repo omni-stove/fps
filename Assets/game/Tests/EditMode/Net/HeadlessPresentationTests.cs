@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -53,6 +54,26 @@ namespace Fps.Net.Tests
             Assert.That(camera.enabled, Is.False);
             Assert.That(listener.enabled, Is.False);
             Assert.That(source.enabled, Is.False);
+        }
+
+        [Test]
+        public void DisablesThePresentationComponents()
+        {
+            var root = Create("Root");
+            var weapon = root.AddComponent<WeaponPresentation>();
+            var audio = root.AddComponent<CharacterAudio>();
+            var inactive = Create("Inactive", root.transform);
+            inactive.SetActive(false);
+            var animator = inactive.AddComponent<CharacterAnimator>();
+            var grenade = root.AddComponent<GrenadeThrower>();
+
+            var disabled = HeadlessPresentation.DisableUnder(root);
+
+            Assert.That(disabled, Is.EqualTo(3));
+            Assert.That(weapon.enabled, Is.False);
+            Assert.That(audio.enabled, Is.False);
+            Assert.That(animator.enabled, Is.False);
+            Assert.That(grenade.enabled, Is.True, "throwing is gameplay, not presentation");
         }
 
         [Test]

@@ -170,6 +170,11 @@ namespace Fps.Tests.EditMode
             Assert.That(hitbox.Zone, Is.EqualTo(HitZone.Body));
             Assert.That(hitbox.Owner, Is.SameAs(damageable));
             Assert.That(agent.GetComponent<CapsuleCollider>(), Is.Not.Null);
+
+            Assert.That(agent.GetComponent<WeaponPresentation>(), Is.Not.Null, "rerun EnemyTestSceneBuilder.Build");
+            Assert.That(agent.GetComponent<CharacterAudio>(), Is.Not.Null, "rerun EnemyTestSceneBuilder.Build");
+            Assert.That(agent.GetComponent<CharacterAnimator>(), Is.Not.Null, "rerun EnemyTestSceneBuilder.Build");
+            Assert.That(agent.GetComponent<GrenadeThrower>(), Is.Null, "enemies do not throw grenades");
         }
 
         [Test]

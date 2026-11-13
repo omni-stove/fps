@@ -38,7 +38,7 @@ namespace Fps.Editor
     /// </remarks>
     public static class CampaignSceneBuilder
     {
-        public const string ScenePath = "Assets/game/Scenes/Campaign01.unity";
+        public const string ScenePath = BuildSceneList.CampaignScene;
         public const string DefinitionPath = "Assets/game/Missions/Campaign01.asset";
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
@@ -266,7 +266,7 @@ namespace Fps.Editor
                 throw new IOException($"Failed to save the campaign scene to '{scenePath}'");
             }
 
-            EditorBuildSettings.scenes = SceneBuildHelpers.WithSceneAppended(EditorBuildSettings.scenes, scenePath);
+            BuildSceneList.Register(scenePath);
             AssetDatabase.SaveAssets();
 
             Debug.Log($"{LogTag} saved '{definitionPath}', '{navMeshDataPath}' and '{scenePath}' and registered the scene in Build Settings");

@@ -8,7 +8,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
-    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/> + 自動回復の <see cref="HealthRegen"/>)
+    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/> + 自動回復の <see cref="HealthRegen"/>
+    /// + 演出と手榴弾 (<see cref="CharacterComponents.Attach"/>))
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
@@ -288,7 +289,9 @@ namespace Fps.Runtime
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
                 damageable.Initialize(PlayerName, PlayerMaxHealth);
+                damageable.IsLocalPlayer = true;
                 player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
+                CharacterComponents.Attach(player, throwsGrenades: true);
                 WireDeathAndRespawn(damageable, mover, ads);
 
                 // 回復しないルール (RegenPerSecond = 0) でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため。

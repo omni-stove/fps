@@ -11,6 +11,7 @@ namespace Fps.Editor
     /// メインメニューのシーン MainMenu を生成し、起動時のシーンとして Build Settings の先頭に登録する。
     /// シーンには背景を塗るカメラと <see cref="MainMenuScreen"/> を置いた GameObject だけを入れ、UI Toolkit の UIDocument と
     /// PanelSettings は実行時に MainMenuScreen がコードで作る (Resources の MainMenu.uxml を読む)。
+    /// MainMenuScreen にはロードアウトの選択に使うデフォルトロードアウトと武器の一覧のアセット (<see cref="WeaponAssetBuilder"/>) を配線する。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.MenuSceneBuilder.Build</code>
     /// </summary>
@@ -77,10 +78,26 @@ namespace Fps.Editor
             SceneManager.MoveGameObjectToScene(cameraObject, scene);
 
             var menu = new GameObject(MenuObjectName, typeof(MainMenuScreen));
+            var screen = menu.GetComponent<MainMenuScreen>();
+            screen.Loadout = LoadOrBuildWeaponAsset(WeaponAssetBuilder.LoadoutPath, WeaponAssetBuilder.LoadDefaultLoadout);
+            screen.Catalog = LoadOrBuildWeaponAsset(WeaponAssetBuilder.CatalogPath, WeaponAssetBuilder.LoadCatalog);
             SceneManager.MoveGameObjectToScene(menu, scene);
 
             EditorSceneManager.MarkSceneDirty(scene);
             return menu;
+        }
+
+        // ロードアウトの選択はオンラインの試合と同じアセットから並べるので、無ければ NetSceneBuilder と同じく先に作る
+        private static T LoadOrBuildWeaponAsset<T>(string path, System.Func<T> load)
+            where T : Object
+        {
+            if (AssetDatabase.LoadAssetAtPath<T>(path) == null)
+            {
+                Debug.Log($"{LogTag} {path} is missing; running {WeaponAssetBuilder.MenuPath}");
+                WeaponAssetBuilder.Build();
+            }
+
+            return load();
         }
     }
 }

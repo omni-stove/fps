@@ -40,7 +40,7 @@ namespace Fps.Editor
         public const float TeamDeathmatchSpawnProtectionSeconds = 2f;
 
         /// <summary>
-        /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、倒した相手を映す、予備弾は有限で 1 倍、
+        /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、リスポーンまで生きている味方の視点で観戦する、予備弾は有限で 1 倍、
         /// 建造物は弾で壊れる、出現直後は <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒無敵。アクションは <see cref="TeamDeathmatchActions"/>。
         /// </summary>
         public static GameRules TeamDeathmatchRules()
@@ -52,7 +52,7 @@ namespace Fps.Editor
                 4f,
                 20f,
                 DeathBody.Collapse,
-                DeathCamera.Killer,
+                DeathCamera.Ally,
                 false,
                 1f,
                 Destruction.On,

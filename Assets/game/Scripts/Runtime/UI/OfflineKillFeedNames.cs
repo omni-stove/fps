@@ -45,6 +45,12 @@ namespace Fps.Runtime
                 return string.Empty;
             }
 
+            // グレネードはロードアウトの武器ではないので、持っている武器からは名前を引けない。
+            if (string.Equals(weaponId, GrenadeThrower.WeaponId, StringComparison.Ordinal))
+            {
+                return GrenadeThrower.DisplayName;
+            }
+
             var controller = killer.GetComponentInChildren<WeaponController>(true);
             var loadout = controller != null ? controller.Loadout : null;
             if (loadout != null)

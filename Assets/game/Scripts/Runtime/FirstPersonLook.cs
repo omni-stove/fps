@@ -176,8 +176,8 @@ namespace Fps.Runtime
                 _enabledLookAction = true;
             }
 
-            // ポーズ中に出現し直したプレイヤーが、メニューを操作しているカーソルを奪わないようにする。閉じたときに PauseMenu がロックする。
-            if (!PauseMenu.IsAnyOpen)
+            // ポーズ中やロードアウト選択中に出現し直したプレイヤーが、画面を操作しているカーソルを奪わないようにする。閉じたときに各画面がロックする。
+            if (!PauseMenu.IsAnyOpen && !LoadoutSelectView.IsAnyOpen)
             {
                 LockCursor(true);
             }
@@ -197,7 +197,7 @@ namespace Fps.Runtime
         private void OnApplicationFocus(bool hasFocus)
         {
             // フォーカスを失うと OS がロックを外すので、戻ったときにかけ直す。
-            if (hasFocus && isActiveAndEnabled && !PauseMenu.IsAnyOpen)
+            if (hasFocus && isActiveAndEnabled && !PauseMenu.IsAnyOpen && !LoadoutSelectView.IsAnyOpen)
             {
                 LockCursor(true);
             }
@@ -209,6 +209,12 @@ namespace Fps.Runtime
         /// </summary>
         public static void RefreshCursorLock()
         {
+            if (LoadoutSelectView.IsAnyOpen)
+            {
+                LockCursor(false);
+                return;
+            }
+
             var anyActive = false;
             foreach (var look in FindObjectsByType<FirstPersonLook>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
             {
@@ -229,16 +235,36 @@ namespace Fps.Runtime
                 return;
             }
 
-            var raw = _lookAction.ReadValue<Vector2>();
-            if (raw == Vector2.zero)
+            var degrees = ReadLookDegrees(Time.deltaTime);
+            if (degrees == Vector2.zero)
             {
                 return;
             }
 
+            ApplyLookDelta(degrees);
+        }
+
+        /// <summary>
+        /// このフレームの Look 入力を、今の感度で回転量 (度) にしたもの。x は正で右、y は正で上。
+        /// <see cref="InputSuspended"/> でも読めるので、視点を止めている間に別のカメラ (観戦の自由カメラ) を同じ感度で回すのに使う。
+        /// 未初期化なら zero。
+        /// </summary>
+        public Vector2 ReadLookDegrees(float deltaSeconds)
+        {
+            if (_lookAction == null)
+            {
+                return Vector2.zero;
+            }
+
+            var raw = _lookAction.ReadValue<Vector2>();
+            if (raw == Vector2.zero)
+            {
+                return Vector2.zero;
+            }
+
             // マウスやタッチの delta はフレームあたりの移動量なので deltaTime を掛けない。スティックは速度として扱う。
             var isPointer = _lookAction.activeControl?.device is Pointer;
-            var degrees = isPointer ? raw * EffectiveMouseSensitivity : raw * (EffectiveStickSensitivity * Time.deltaTime);
-            ApplyLookDelta(degrees);
+            return isPointer ? raw * EffectiveMouseSensitivity : raw * (EffectiveStickSensitivity * deltaSeconds);
         }
 
         // 射撃 (WeaponController.Update) が反動を足した後に向きへ反映する。

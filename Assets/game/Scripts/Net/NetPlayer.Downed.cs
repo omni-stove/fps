@@ -52,6 +52,9 @@ namespace Fps.Net
         private Material _downedMarkerMaterial;
         private float _markerHeight;
 
+        /// <summary>このプロセスで生成中のプレイヤー (自分を含む)。観戦 (<see cref="NetDeathCamera"/>) が映す味方を探すのに使う。</summary>
+        internal static IReadOnlyList<NetPlayer> SpawnedPlayers => _spawnedPlayers;
+
         /// <summary>このプロセスの自分のプレイヤー (持ち主)。印を味方にだけ出すのに使う。無ければ null。</summary>
         public static NetPlayer Local { get; private set; }
 

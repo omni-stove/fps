@@ -66,6 +66,14 @@
     white-space: normal;
 }
 
+/* ロードアウトの選択の差し込み口。中身の見た目は Resources/Loadout/LoadoutSelect.uss。 */
+.menu__loadout-slot {
+    position: absolute;
+    left: 760px;
+    top: 160px;
+    right: 160px;
+}
+
 .menu__settings-slot {
     position: absolute;
     left: 760px;

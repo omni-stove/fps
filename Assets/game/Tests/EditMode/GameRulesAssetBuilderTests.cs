@@ -82,7 +82,7 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void BuildsCampaignNormalAsTheDefaultWithCollapse()
+        public void BuildsCampaignNormalAsTheDefaultWithCollapseAndRegen()
         {
             var rules = BuildAndLoad(_campaignNormalPath);
             var expected = GameRules.Default;
@@ -90,8 +90,8 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.FriendlyFire, Is.EqualTo(expected.FriendlyFire));
             Assert.That(rules.RespawnMode, Is.EqualTo(expected.RespawnMode));
             Assert.That(rules.WaveIntervalSeconds, Is.EqualTo(expected.WaveIntervalSeconds));
-            Assert.That(rules.RegenDelaySeconds, Is.EqualTo(expected.RegenDelaySeconds));
-            Assert.That(rules.RegenPerSecond, Is.EqualTo(expected.RegenPerSecond));
+            Assert.That(rules.RegenDelaySeconds, Is.EqualTo(5f));
+            Assert.That(rules.RegenPerSecond, Is.EqualTo(15f));
             Assert.That(rules.DeathBody, Is.EqualTo(DeathBody.Collapse));
             Assert.That(rules.DeathCamera, Is.EqualTo(expected.DeathCamera));
             Assert.That(rules.InfiniteReserve, Is.EqualTo(expected.InfiniteReserve));
@@ -103,7 +103,8 @@ namespace Fps.Tests.EditMode
         {
             var rules = BuildAndLoad(_campaignHardPath);
 
-            Assert.That(rules.RegenPerSecond, Is.EqualTo(0f), "no regeneration");
+            Assert.That(rules.RegenDelaySeconds, Is.EqualTo(7f));
+            Assert.That(rules.RegenPerSecond, Is.EqualTo(10f));
             Assert.That(rules.DeathBody, Is.EqualTo(DeathBody.Collapse));
             Assert.That(rules.InfiniteReserve, Is.False);
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(0.6f));
@@ -116,7 +117,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(rules.FriendlyFire, Is.EqualTo(FriendlyFire.Off));
             Assert.That(rules.RespawnMode, Is.EqualTo(RespawnMode.Individual));
-            Assert.That(rules.RegenPerSecond, Is.EqualTo(0f), "no regeneration");
+            Assert.That(rules.RegenDelaySeconds, Is.EqualTo(4f));
+            Assert.That(rules.RegenPerSecond, Is.EqualTo(20f));
             Assert.That(rules.DeathBody, Is.EqualTo(DeathBody.Vanish));
             Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.None));
             Assert.That(rules.InfiniteReserve, Is.True);

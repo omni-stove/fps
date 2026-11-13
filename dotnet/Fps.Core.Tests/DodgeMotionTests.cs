@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
 {
     public sealed class DodgeMotionTests
     {
-        private const float Tolerance = 1e-4f;
+        private const float _tolerance = 1e-4f;
 
         private static MotorSpec Spec(float dodgeDistance = 3f, float dodgeSeconds = 0.3f)
         {
@@ -60,13 +60,13 @@ namespace Fps.Core.Tests
             Assert.That(motion.TryStart(new Vector2(0f, 5f)), Is.True);
             Assert.That(motion.IsRolling, Is.True);
             Assert.That(motion.Direction, Is.EqualTo(new Vector2(0f, 1f)));
-            Assert.That(motion.Velocity.Y, Is.EqualTo(10f).Within(Tolerance));
+            Assert.That(motion.Velocity.Y, Is.EqualTo(10f).Within(_tolerance));
 
             var step = motion.Step(0.1f);
 
-            Assert.That(step.X, Is.EqualTo(0f).Within(Tolerance));
-            Assert.That(step.Y, Is.EqualTo(1f).Within(Tolerance));
-            Assert.That(motion.Elapsed, Is.EqualTo(0.1f).Within(Tolerance));
+            Assert.That(step.X, Is.EqualTo(0f).Within(_tolerance));
+            Assert.That(step.Y, Is.EqualTo(1f).Within(_tolerance));
+            Assert.That(motion.Elapsed, Is.EqualTo(0.1f).Within(_tolerance));
         }
 
         [TestCase(1f / 60f)]
@@ -87,8 +87,8 @@ namespace Fps.Core.Tests
                 Assert.That(steps, Is.LessThan(10000));
             }
 
-            Assert.That(total.Length(), Is.EqualTo(3f).Within(Tolerance));
-            Assert.That(total.X, Is.EqualTo(total.Y).Within(Tolerance));
+            Assert.That(total.Length(), Is.EqualTo(3f).Within(_tolerance));
+            Assert.That(total.X, Is.EqualTo(total.Y).Within(_tolerance));
         }
 
         [Test]
@@ -103,7 +103,7 @@ namespace Fps.Core.Tests
             motion.Step(0.1f);
             Assert.That(motion.IsRolling, Is.False);
             Assert.That(motion.Velocity, Is.EqualTo(Vector2.Zero));
-            Assert.That(motion.CooldownRemaining, Is.EqualTo(0.5f).Within(Tolerance));
+            Assert.That(motion.CooldownRemaining, Is.EqualTo(0.5f).Within(_tolerance));
             Assert.That(motion.IsReady, Is.False);
             Assert.That(motion.TryStart(new Vector2(1f, 0f)), Is.False, "cannot start during the cooldown");
 
@@ -124,8 +124,8 @@ namespace Fps.Core.Tests
 
             var step = motion.Step(0.5f);
 
-            Assert.That(step.X, Is.EqualTo(3f).Within(Tolerance), "stops at the full distance");
-            Assert.That(motion.CooldownRemaining, Is.EqualTo(0.3f).Within(Tolerance));
+            Assert.That(step.X, Is.EqualTo(3f).Within(_tolerance), "stops at the full distance");
+            Assert.That(motion.CooldownRemaining, Is.EqualTo(0.3f).Within(_tolerance));
         }
 
         [Test]
@@ -201,13 +201,13 @@ namespace Fps.Core.Tests
         public void DirectionFollowsTheInputRotatedByYaw()
         {
             var right = DodgeMotion.ResolveDirection(new Vector2(1f, 0f), 0f);
-            Assert.That(right.X, Is.EqualTo(1f).Within(Tolerance));
-            Assert.That(right.Y, Is.EqualTo(0f).Within(Tolerance));
+            Assert.That(right.X, Is.EqualTo(1f).Within(_tolerance));
+            Assert.That(right.Y, Is.EqualTo(0f).Within(_tolerance));
 
             // 右 (+X) を向いているときの前入力は +X へ。
             var forward = DodgeMotion.ResolveDirection(new Vector2(0f, 1f), MathF.PI / 2f);
-            Assert.That(forward.X, Is.EqualTo(1f).Within(Tolerance));
-            Assert.That(forward.Y, Is.EqualTo(0f).Within(Tolerance));
+            Assert.That(forward.X, Is.EqualTo(1f).Within(_tolerance));
+            Assert.That(forward.Y, Is.EqualTo(0f).Within(_tolerance));
         }
 
         [Test]
@@ -215,20 +215,20 @@ namespace Fps.Core.Tests
         {
             var light = DodgeMotion.ResolveDirection(new Vector2(0.2f, 0.2f), 0f);
 
-            Assert.That(light.Length(), Is.EqualTo(1f).Within(Tolerance));
-            Assert.That(light.X, Is.EqualTo(light.Y).Within(Tolerance));
+            Assert.That(light.Length(), Is.EqualTo(1f).Within(_tolerance));
+            Assert.That(light.X, Is.EqualTo(light.Y).Within(_tolerance));
         }
 
         [Test]
         public void NoInputRollsBackwards()
         {
             var still = DodgeMotion.ResolveDirection(Vector2.Zero, 0f);
-            Assert.That(still.X, Is.EqualTo(0f).Within(Tolerance));
-            Assert.That(still.Y, Is.EqualTo(-1f).Within(Tolerance));
+            Assert.That(still.X, Is.EqualTo(0f).Within(_tolerance));
+            Assert.That(still.Y, Is.EqualTo(-1f).Within(_tolerance));
 
             var turned = DodgeMotion.ResolveDirection(new Vector2(0.001f, 0f), MathF.PI / 2f);
-            Assert.That(turned.X, Is.EqualTo(-1f).Within(Tolerance), "a dead-zone input counts as none");
-            Assert.That(turned.Y, Is.EqualTo(0f).Within(Tolerance));
+            Assert.That(turned.X, Is.EqualTo(-1f).Within(_tolerance), "a dead-zone input counts as none");
+            Assert.That(turned.Y, Is.EqualTo(0f).Within(_tolerance));
         }
 
         [Test]

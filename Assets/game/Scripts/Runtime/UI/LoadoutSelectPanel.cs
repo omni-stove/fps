@@ -376,6 +376,12 @@ namespace Fps.Runtime
 
         private void FocusCurrent()
         {
+            // PauseMenu は開くときに 1 度しかフォーカスを取らないので、ここで奪うとポーズのボタンへ戻らなくなる
+            if (PauseMenu.IsAnyOpen)
+            {
+                return;
+            }
+
             var target = CurrentFocusTarget();
             if (target == null)
             {
@@ -392,7 +398,7 @@ namespace Fps.Runtime
                 var row = _focusRow;
                 target.schedule.Execute(() =>
                 {
-                    if (!_disposed && _focusRow == row)
+                    if (!_disposed && _focusRow == row && !PauseMenu.IsAnyOpen)
                     {
                         target.Focus();
                     }

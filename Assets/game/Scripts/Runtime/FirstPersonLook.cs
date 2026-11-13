@@ -11,6 +11,7 @@ namespace Fps.Runtime
     /// pitch の軸は、本体に <see cref="ViewRig"/> があればその目 (カメラの親)、無ければ子階層の <see cref="Camera"/>。
     /// 入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の <see cref="LookActionPath"/>。
     /// 三人称でもカメラは目の子なので、目を回せば肩越しのカメラも一緒に回る。
+    /// <see cref="Recoil"/> があれば、その反動のずれを pitch の軸にだけ足す (本体の yaw と <see cref="Yaw"/> / <see cref="Pitch"/> は変えない)。
     /// 解決できなければエラーを出して自分を無効にする。
     /// </summary>
     [DisallowMultipleComponent]
@@ -36,6 +37,21 @@ namespace Fps.Runtime
         private InputAction _lookAction;
         private bool _enabledLookAction;
         private float _sensitivityMultiplier = 1f;
+        private float _recoilPitchUp;
+        private float _recoilYaw;
+        private float _appliedRecoilPitchUp;
+
+        /// <summary>
+        /// 視点に足す反動。null なら足さない。射撃 (<see cref="WeaponController.Recoil"/>) と同じものを配線する。
+        /// ずれは毎フレームの LateUpdate で pitch の軸に足す。ずれが変わらないフレームは軸を書き換えないので、反動の無い武器では今までと同じ。
+        /// </summary>
+        public RecoilState Recoil { get; set; }
+
+        /// <summary>今 pitch の軸に足している反動の上向きの角度 (度)。視点の上限で削られた後の値。</summary>
+        public float AppliedRecoilPitchUp => _appliedRecoilPitchUp;
+
+        /// <summary>今 pitch の軸に足している反動の左右の角度 (度)。正で右。</summary>
+        public float AppliedRecoilYaw => _recoilYaw;
 
         /// <summary>pitch を回す Transform (ViewRig の目、無ければカメラ)。未初期化なら null。</summary>
         public Transform PitchPivot => _pitchPivot;
@@ -166,6 +182,35 @@ namespace Fps.Runtime
             ApplyLookDelta(degrees);
         }
 
+        // 射撃 (WeaponController.Update) が反動を足した後に向きへ反映する。
+        private void LateUpdate()
+        {
+            ApplyRecoil();
+        }
+
+        /// <summary>
+        /// <see cref="Recoil"/> の今のずれを pitch の軸に反映する。足しているずれと同じなら何もしない。Play 中は LateUpdate が毎フレーム呼ぶ。
+        /// </summary>
+        public void ApplyRecoil()
+        {
+            if (!IsInitialized)
+            {
+                return;
+            }
+
+            var recoil = Recoil;
+            var pitchUp = recoil != null ? recoil.PitchUpDegrees : 0f;
+            var yaw = recoil != null ? recoil.YawDegrees : 0f;
+            if (pitchUp == _recoilPitchUp && yaw == _recoilYaw)
+            {
+                return;
+            }
+
+            _recoilPitchUp = pitchUp;
+            _recoilYaw = yaw;
+            ApplyRotation();
+        }
+
         /// <summary>
         /// pitch の軸 (<see cref="ViewRig"/> の目か、子階層のカメラ) とプロジェクト全体の Look アクションを探して初期化する。
         /// 見つからなければ理由を Debug.LogError に出して false を返す。
@@ -230,6 +275,14 @@ namespace Fps.Runtime
                 _enabledLookAction = false;
             }
 
+            if (_pitchPivot != pitchPivot)
+            {
+                // 足していた反動は前の軸に書いたものなので、新しい軸の向きから引かない。次の LateUpdate で足し直す。
+                _recoilPitchUp = 0f;
+                _recoilYaw = 0f;
+                _appliedRecoilPitchUp = 0f;
+            }
+
             _pitchPivot = pitchPivot;
             _lookAction = lookAction;
             SyncAnglesFromTransforms();
@@ -246,8 +299,16 @@ namespace Fps.Runtime
             }
 
             _angles.Rotate(degrees.x, degrees.y);
+            ApplyRotation();
+        }
+
+        // 反動は向き (_angles) に混ぜず、軸に書くときだけ足す。混ぜると戻ったときに視点操作の分まで戻ってしまう。
+        private void ApplyRotation()
+        {
             transform.localRotation = Quaternion.Euler(0f, _angles.Yaw, 0f);
-            _pitchPivot.localRotation = Quaternion.Euler(_angles.Pitch, 0f, 0f);
+            var pitch = Mathf.Clamp(_angles.Pitch - _recoilPitchUp, -_angles.MaxPitch, _angles.MaxPitch);
+            _appliedRecoilPitchUp = _angles.Pitch - pitch;
+            _pitchPivot.localRotation = Quaternion.Euler(pitch, _recoilYaw, 0f);
         }
 
         /// <summary>子孫 (自分自身は除く) から最初の Camera を探す。無ければ null。</summary>
@@ -276,7 +337,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            _angles.Set(transform.localEulerAngles.y, _pitchPivot.localEulerAngles.x);
+            _angles.Set(transform.localEulerAngles.y, LookAngles.ToSigned(_pitchPivot.localEulerAngles.x) + _appliedRecoilPitchUp);
         }
 
         private static void LockCursor(bool locked)

@@ -286,3 +286,80 @@
 .hud__crosshair-line--right {
     left: 0;
 }
+
+/*
+ * ヒットマーカー。照準と同じく大きさ 0 の箱を画面の中央に置き、腕 (大きさ 0) を斜めに回して、その先に線を置く。
+ * 拡大・回転の中心は大きさ 0 の箱の点 (= 画面の中央) になる。
+ */
+.hit-marker {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    overflow: visible;
+}
+
+.hit-marker__arm {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    overflow: visible;
+}
+
+.hit-marker__arm--top-right {
+    rotate: -45deg;
+}
+
+.hit-marker__arm--bottom-right {
+    rotate: 45deg;
+}
+
+.hit-marker__arm--bottom-left {
+    rotate: 135deg;
+}
+
+.hit-marker__arm--top-left {
+    rotate: -135deg;
+}
+
+.hit-marker__line {
+    position: absolute;
+    left: 10px;
+    top: -2px;
+    width: 14px;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.7);
+}
+
+/* 頭に当てたとき。 */
+.hit-marker--head .hit-marker__line {
+    background-color: rgb(255, 70, 60);
+}
+
+/* 倒したとき。 */
+.hit-marker--kill {
+    scale: 1.6 1.6;
+}
+
+/* 被弾方向。画面全体を覆い、弧の子要素 (大きさは親と同じ) を中央を軸に回す。弧の色は color で決める。 */
+.damage-direction {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.damage-direction__arc {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    color: rgba(255, 60, 50, 0.85);
+}

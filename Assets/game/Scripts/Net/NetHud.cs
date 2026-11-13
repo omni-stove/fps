@@ -34,7 +34,7 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// キルフィード (<see cref="KillFeedView"/>) の名前は、自分のクライアント Id と試合の参加者・ロードアウトで引く
-    /// <see cref="NetKillFeedNames"/> に替える。行そのものは <see cref="NetTeamDeathmatch"/> が配る。
+    /// <see cref="NetKillFeedNames"/> に替える。行そのものは <see cref="NetCombatFeed"/> が配る。
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]

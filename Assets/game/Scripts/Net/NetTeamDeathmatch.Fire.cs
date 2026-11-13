@@ -15,6 +15,7 @@ namespace Fps.Net
         /// 他のプレイヤーを巻き戻して Raycast し、当たればダメージを与えて <c>[Net] hit attacker=.. victim=.. rewindTicks=..</c> を出す。
         /// 巻き戻せるのは <see cref="LagCompensator.MaxRewindTicks"/> tick 前まで。
         /// 射程・ダメージ・減衰は、サーバーが shooter に今持たせている武器 (<see cref="NetPlayerWeapon.CurrentSpec"/>) の値を使う (クライアントの値は使わない)。
+        /// 弾を消費した射撃は、着弾・ヒット・被弾と合わせて <see cref="NetCombatFeed"/> でクライアントへ配る。
         /// </summary>
         /// <param name="shooter">撃った人。試合に参加していて生きていなければ (ダウン中も) 何もしない (<see cref="CanFire"/>)。</param>
         /// <param name="weaponId">クライアントが送ってきた、撃った武器の Id。ロードアウトに無い・今持っている武器と違えば捨てる。</param>
@@ -73,7 +74,8 @@ namespace Fps.Net
 
             if (_lastRecordedTick == _noRecordedTick)
             {
-                // 試合が始まった直後のフレームで、まだ巻き戻す履歴が無い
+                // 試合が始まった直後のフレームで、まだ巻き戻す履歴が無い。弾は撃ったので、射撃だけは配る
+                SendShot(shooter, spec.Id, origin, direction, null);
                 return;
             }
 
@@ -106,6 +108,7 @@ namespace Fps.Net
                 _rewindTargets.Clear();
             }
 
+            SendShot(shooter, spec.Id, origin, direction, any ? hit.RaycastHit : (RaycastHit?)null);
             if (!any)
             {
                 return;
@@ -129,19 +132,18 @@ namespace Fps.Net
             var zone = ZoneOf(victim, hit);
             var damage = DamageCalculator.Calculate(spec.Damage, zone, hit.RaycastHit.distance, spec.Falloff);
             DamageOutcome outcome;
-            _shotWeaponId = spec.Id;
-            _shotHeadshot = zone == HitZone.Head;
+            _killShot = new KillShot(shooterId, hit.TargetId, spec.Id, zone);
             try
             {
                 outcome = ApplyDamage(shooter, victim, damage);
             }
             finally
             {
-                _shotWeaponId = null;
-                _shotHeadshot = false;
+                _killShot = null;
             }
 
             RecordHitDirection(shooter, victim, outcome, direction);
+            SendHitResult(shooter, victim, outcome, damage, zone);
             var health = _session.HasPlayer(hit.TargetId) ? _session.GetHealth(hit.TargetId) : 0;
             Debug.Log(NetHitLog.Hit(shooterId, hit.TargetId, currentTick - rewindTick, zone, damage, health, outcome, hit.TargetCrouched));
         }
@@ -157,10 +159,15 @@ namespace Fps.Net
                 return;
             }
 
-            var reflected = shooter != victim
+            (IsReflected(shooter, victim) ? shooter : victim).ServerSetLastHitDirection(direction);
+        }
+
+        /// <summary>shooter が味方の victim に当てた弾が、ルール (<see cref="FriendlyFire.Reflect"/>) で撃った本人に跳ね返るか。</summary>
+        private bool IsReflected(NetPlayer shooter, NetPlayer victim)
+        {
+            return shooter != victim
                 && _session.Spec.Rules.FriendlyFire == FriendlyFire.Reflect
                 && _session.GetTeam(shooter.ServerPlayerId) == _session.GetTeam(victim.ServerPlayerId);
-            (reflected ? shooter : victim).ServerSetLastHitDirection(direction);
         }
 
         /// <summary>

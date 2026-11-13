@@ -420,6 +420,12 @@ namespace Fps.Runtime
 
         private void HandleMove(NavigationMoveEvent evt)
         {
+            // 同じパネルの根を共有するポーズメニューが開いている間は、入力をそちらに任せる
+            if (PauseMenu.IsAnyOpen)
+            {
+                return;
+            }
+
             evt.StopPropagation();
             _navigationRoot.focusController?.IgnoreEvent(evt);
             switch (evt.direction)
@@ -443,6 +449,11 @@ namespace Fps.Runtime
 
         private void HandleSubmit(NavigationSubmitEvent evt)
         {
+            if (PauseMenu.IsAnyOpen)
+            {
+                return;
+            }
+
             // フォーカスしているボタンにも届くと、選び直しと決定が二重に走るので、ここで止めて行の順で扱う
             evt.StopPropagation();
             _navigationRoot.focusController?.IgnoreEvent(evt);
@@ -458,6 +469,11 @@ namespace Fps.Runtime
 
         private void HandleCancel(NavigationCancelEvent evt)
         {
+            if (PauseMenu.IsAnyOpen)
+            {
+                return;
+            }
+
             evt.StopPropagation();
             _navigationRoot.focusController?.IgnoreEvent(evt);
             Cancelled?.Invoke();

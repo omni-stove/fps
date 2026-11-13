@@ -1,4 +1,5 @@
 using Fps.Core;
+using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
@@ -14,12 +15,18 @@ namespace Fps.Tests.EditMode
     {
         private GameObject _host;
         private BootstrapWorld _world;
+        private WeaponDefinition _rifle;
 
         [SetUp]
         public void SetUp()
         {
+            _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _rifle.name = "Rifle";
+            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
+            bootstrap.WeaponDefinition = _rifle;
             LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
             _world = bootstrap.Build();
         }
@@ -29,6 +36,7 @@ namespace Fps.Tests.EditMode
         {
             DestroyWorld(_world);
             Object.DestroyImmediate(_host);
+            Object.DestroyImmediate(_rifle);
         }
 
         private static void DestroyWorld(BootstrapWorld world)
@@ -180,6 +188,7 @@ namespace Fps.Tests.EditMode
                 var bootstrap = host.AddComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
                 bootstrap.ViewMode = ViewMode.ThirdPerson;
+                bootstrap.WeaponDefinition = _rifle;
                 LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
 
                 world = bootstrap.Build();
@@ -262,6 +271,8 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(_world.Weapon, Is.Not.Null);
             Assert.That(_world.Weapon, Is.SameAs(_world.Camera.GetComponent<WeaponController>()));
+            Assert.That(_world.Weapon.Definition, Is.SameAs(_rifle), "the bootstrap hands its weapon definition to the player");
+            Assert.That(_world.Camera.gameObject.activeSelf, Is.True, "the camera is active again after the weapon is attached");
         }
 
         [Test]
@@ -285,7 +296,7 @@ namespace Fps.Tests.EditMode
                 var position = dummy.transform.position;
                 Assert.That(position.y, Is.EqualTo(0f).Within(1e-4f), "stands on the floor");
                 Assert.That(position.z, Is.EqualTo(GameBootstrap.TargetDummyDistance).Within(1e-4f), "in front of the player (+Z)");
-                Assert.That(position.z, Is.LessThan(WeaponController.DefaultRange));
+                Assert.That(position.z, Is.LessThan(_rifle.Range));
                 Assert.That(dummy.HomePosition, Is.EqualTo(position));
             }
 
@@ -322,7 +333,7 @@ namespace Fps.Tests.EditMode
             Physics.SyncTransforms();
 
             var eye = _world.Camera.transform.position;
-            Assert.That(Hitscan.TryFirstHit(eye, Vector3.forward, WeaponController.DefaultRange, _world.Player.transform, out var hit), Is.True);
+            Assert.That(Hitscan.TryFirstHit(eye, Vector3.forward, _rifle.Range, _world.Player.transform, out var hit), Is.True);
 
             var hitbox = Hitbox.FindFor(hit.collider);
             Assert.That(hitbox, Is.Not.Null);
@@ -407,10 +418,10 @@ namespace Fps.Tests.EditMode
             try
             {
                 controller.Initialize(_world.Camera.transform, attack, reload);
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(WeaponController.DefaultMagazineSize, WeaponController.DefaultReserveAmmo)));
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize, _rifle.ReserveAmmo)));
 
                 Assert.That(controller.Weapon.TryFire(), Is.True);
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(WeaponController.DefaultMagazineSize - 1, WeaponController.DefaultReserveAmmo)));
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize - 1, _rifle.ReserveAmmo)));
             }
             finally
             {

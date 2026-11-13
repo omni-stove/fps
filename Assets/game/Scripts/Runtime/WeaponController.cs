@@ -12,7 +12,9 @@ namespace Fps.Runtime
     /// 無ければカメラの位置から正面へ撃つ。
     /// Reload で <see cref="Weapon.TryStartReload"/>、毎フレーム <see cref="Weapon.Tick"/> を呼ぶ。
     /// 弾数・連射間隔・リロードの判断は <see cref="Weapon"/>、ダメージ量は <see cref="DamageCalculator"/> が行う。
-    /// 参照はコードで解決する: 照準は同じ GameObject の <see cref="Camera"/>、入力はプロジェクト全体のアクション。
+    /// 武器の値 (弾数・連射間隔・ダメージ・射程・距離減衰) は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない。
+    /// 参照はコードで解決する: 照準は同じ GameObject の <see cref="Camera"/>、入力はプロジェクト全体のアクション、
+    /// 定義はシーン生成スクリプト (または <see cref="GameBootstrap"/>) が <see cref="Definition"/> に配線する。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Camera))]
@@ -26,54 +28,16 @@ namespace Fps.Runtime
 
         public const string ReloadedLog = "[Combat] reloaded";
 
-        /// <summary>このコンポーネントが作る武器の Id。定義アセットに置き換えるまでは固定。</summary>
-        public const string DefaultWeaponId = "rifle";
-
-        public const int DefaultMagazineSize = 30;
-        public const int DefaultReserveAmmo = 90;
-        public const float DefaultFireInterval = 0.1f;
-        public const float DefaultReloadSeconds = 2f;
-        public const int DefaultDamage = 25;
-        public const float DefaultRange = 100f;
-        public const float DefaultFalloffStart = 20f;
-        public const float DefaultFalloffEnd = 60f;
-        public const float DefaultFalloffMinMultiplier = 0.5f;
-
         // 自分の体を除いて最も近い命中を選ぶための一時バッファ。毎発の確保を避ける。
         private const int MaxRaycastHits = 16;
 
         [Header("Weapon")]
-        [SerializeField, Min(1), Tooltip("弾倉の容量")]
-        private int _magazineSize = DefaultMagazineSize;
-
-        [SerializeField, Min(0), Tooltip("予備弾の初期値")]
-        private int _reserveAmmo = DefaultReserveAmmo;
-
-        [SerializeField, Min(0f), Tooltip("射撃から次に撃てるまでの秒数")]
-        private float _fireInterval = DefaultFireInterval;
-
-        [SerializeField, Min(0f), Tooltip("リロード開始から補充までの秒数")]
-        private float _reloadSeconds = DefaultReloadSeconds;
-
-        [SerializeField, Min(0), Tooltip("1 発あたりの基本ダメージ")]
-        private int _damage = DefaultDamage;
+        [SerializeField, Tooltip("撃つ武器の定義 (弾数・連射間隔・ダメージ・射程・距離減衰)。シーン生成スクリプトが配線する")]
+        private WeaponDefinition _definition;
 
         [Header("Hitscan")]
-        [SerializeField, Min(0.01f), Tooltip("射程 (m)")]
-        private float _range = DefaultRange;
-
         [SerializeField, Tooltip("Raycast が当たるレイヤー")]
         private LayerMask _hitMask = Physics.DefaultRaycastLayers;
-
-        [Header("Damage falloff")]
-        [SerializeField, Min(0f), Tooltip("この距離までは減衰しない (m)")]
-        private float _falloffStart = DefaultFalloffStart;
-
-        [SerializeField, Min(0f), Tooltip("この距離以上で最小倍率になる (m)")]
-        private float _falloffEnd = DefaultFalloffEnd;
-
-        [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("最大まで減衰したときの倍率")]
-        private float _falloffMinMultiplier = DefaultFalloffMinMultiplier;
 
         private readonly RaycastHit[] _hitBuffer = new RaycastHit[MaxRaycastHits];
         private Transform _aim;
@@ -84,9 +48,21 @@ namespace Fps.Runtime
         private bool _enabledReloadAction;
         private Weapon _weapon;
         private DamageFalloff _falloff;
+        private float _range;
 
         /// <summary>射撃の向きと起点。未初期化なら null。</summary>
         public Transform Aim => _aim;
+
+        /// <summary>
+        /// 撃つ武器の定義。Awake (<see cref="TryInitializeFromHierarchy"/>) はこれから武器を作る。
+        /// 設定しただけでは今の <see cref="Weapon"/> は変わらない。作り直すなら <see cref="Initialize(Transform, InputAction, InputAction, WeaponDefinition)"/> を呼ぶ。
+        /// 実行時に AddComponent するときは、GameObject を無効にした状態で付けてここを設定してから有効にする (Awake より先に設定するため)。
+        /// </summary>
+        public WeaponDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
 
         public InputAction AttackAction => _attackAction;
         public InputAction ReloadAction => _reloadAction;
@@ -95,14 +71,14 @@ namespace Fps.Runtime
         public Weapon Weapon => _weapon;
 
         /// <summary>
-        /// <see cref="Initialize"/> で <see cref="Weapon"/> を作り直したときに、新しい Weapon を渡して呼ばれる。
+        /// <see cref="Initialize(Transform, InputAction, InputAction, WeaponDefinition)"/> や <see cref="RestoreAmmo"/> で <see cref="Weapon"/> を作り直したときに、新しい Weapon を渡して呼ばれる。
         /// Weapon のイベントを直接購読している側 (HUD など) はここで購読し直す。
         /// </summary>
         public event Action<Weapon> WeaponChanged;
 
         public DamageFalloff Falloff => _falloff;
 
-        /// <summary>Raycast の射程 (m)。</summary>
+        /// <summary>Raycast の射程 (m)。武器の <see cref="WeaponSpec.Range"/>。未初期化なら 0。</summary>
         public float HitscanRange => _range;
 
         public bool IsInitialized => _aim != null && _attackAction != null && _reloadAction != null && _weapon != null;
@@ -170,11 +146,19 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 同じ GameObject のカメラとプロジェクト全体の Attack / Reload アクションを探して初期化する。
-        /// 見つからなければ理由を Debug.LogError に出して false を返す。
+        /// 同じ GameObject のカメラとプロジェクト全体の Attack / Reload アクションを探し、<see cref="Definition"/> の武器で初期化する。
+        /// 見つからない・定義が未設定か不正なら理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryInitializeFromHierarchy()
         {
+            if (_definition == null)
+            {
+                Debug.LogError(
+                    $"[WeaponController] '{name}' に WeaponDefinition が設定されていません。シーン生成スクリプトで配線してください。",
+                    this);
+                return false;
+            }
+
             var camera = GetComponent<Camera>();
             if (camera == null)
             {
@@ -207,12 +191,12 @@ namespace Fps.Runtime
 
             try
             {
-                Initialize(camera.transform, attack, reload);
+                Initialize(camera.transform, attack, reload, _definition);
             }
-            catch (ArgumentException e)
+            catch (WeaponDefinitionException e)
             {
-                // Inspector で不正な値 (falloff の終わりが始まりより手前など) にされた場合。
-                Debug.LogError($"[WeaponController] '{name}' の武器設定が不正です: {e.Message}", this);
+                // アセットの値が不正な場合 (falloff の終わりが始まりより手前など)。
+                Debug.LogError($"[WeaponController] '{name}' の武器定義が不正です: {e.Message}", _definition);
                 return false;
             }
 
@@ -220,10 +204,26 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 参照を直接渡して初期化する。武器と距離減衰はこのコンポーネントの設定値で作り直す。
-        /// 設定値が不正なら <see cref="ArgumentException"/> を投げ、状態は変えない。
+        /// 参照を直接渡し、<see cref="Definition"/> の武器で初期化する。定義が未設定なら <see cref="InvalidOperationException"/>、
+        /// 不正なら <see cref="WeaponDefinitionException"/> を投げ、状態は変えない。
         /// </summary>
         public void Initialize(Transform aim, InputAction attackAction, InputAction reloadAction)
+        {
+            if (_definition == null)
+            {
+                throw new InvalidOperationException(
+                    $"WeaponController '{name}' has no WeaponDefinition; set Definition or pass one to Initialize");
+            }
+
+            Initialize(aim, attackAction, reloadAction, _definition);
+        }
+
+        /// <summary>
+        /// 参照と武器の定義を直接渡して初期化する。武器と距離減衰は definition.<see cref="WeaponDefinition.ToSpec"/> から作り直し、
+        /// 射程は <see cref="WeaponSpec.Range"/> にする。成功したら <see cref="Definition"/> も definition にする。
+        /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、状態は変えない。
+        /// </summary>
+        public void Initialize(Transform aim, InputAction attackAction, InputAction reloadAction, WeaponDefinition definition)
         {
             if (aim == null)
             {
@@ -240,24 +240,13 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(reloadAction));
             }
 
-            if (!(_range > 0f) || float.IsInfinity(_range))
+            if (definition == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(HitscanRange), _range, "range must be a positive finite number");
+                throw new ArgumentNullException(nameof(definition));
             }
 
-            // 先に両方作って検査を通してから差し替える (途中で失敗しても前の状態が残る)。
-            var falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
-            var spec = new WeaponSpec(
-                DefaultWeaponId,
-                null,
-                FireMode.Auto,
-                _magazineSize,
-                _reserveAmmo,
-                _fireInterval,
-                _reloadSeconds,
-                _damage,
-                _range,
-                falloff);
+            // 先に検査を通してから差し替える (失敗しても前の状態が残る)。
+            var spec = definition.ToSpec();
 
             if (_enabledAttackAction && _attackAction != null && _attackAction != attackAction)
             {
@@ -280,7 +269,9 @@ namespace Fps.Runtime
             _rig = aim.GetComponentInParent<ViewRig>(true);
             _attackAction = attackAction;
             _reloadAction = reloadAction;
-            _falloff = falloff;
+            _definition = definition;
+            _falloff = spec.Falloff;
+            _range = spec.Range;
             _weapon = new Weapon(spec);
             _weapon.Reloaded += OnReloaded;
 

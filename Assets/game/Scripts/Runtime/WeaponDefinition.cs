@@ -8,13 +8,14 @@ namespace Fps.Runtime
     /// 武器 1 種類の値をアセットとして持つ。クライアントと専用サーバーは同じアセットを読み、<see cref="ToSpec"/> で
     /// 不変の <see cref="WeaponSpec"/> に変換して使う。検証は <see cref="WeaponSpec"/> と <see cref="DamageFalloff"/> に任せ、
     /// 失敗したらどのアセットの値かを添えて <see cref="WeaponDefinitionException"/> を投げる。
-    /// 既定値は <see cref="WeaponController"/> の既定 (rifle) と同じ。
+    /// 新しく作ったときの値は rifle (Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰)。
+    /// 実際に使う値はアセット (Assets/game/Weapons/*.asset、Fps.Editor.WeaponAssetBuilder が作る) の側にある。
     /// </summary>
     [CreateAssetMenu(fileName = "Weapon", menuName = "Fps/Weapon Definition")]
     public sealed class WeaponDefinition : ScriptableObject
     {
         [SerializeField, Tooltip("武器の識別子。小文字英数字・ハイフン・アンダースコアのみ (例: rifle)")]
-        private string _id = WeaponController.DefaultWeaponId;
+        private string _id = "rifle";
 
         [SerializeField, Tooltip("プレイヤーに見せる名前。空なら Id")]
         private string _displayName = string.Empty;
@@ -23,32 +24,32 @@ namespace Fps.Runtime
         private FireMode _fireMode = FireMode.Auto;
 
         [SerializeField, Min(1), Tooltip("弾倉の容量")]
-        private int _magazineSize = WeaponController.DefaultMagazineSize;
+        private int _magazineSize = 30;
 
         [SerializeField, Min(0), Tooltip("予備弾の初期値")]
-        private int _reserveAmmo = WeaponController.DefaultReserveAmmo;
+        private int _reserveAmmo = 90;
 
         [SerializeField, Min(0f), Tooltip("射撃から次に撃てるまでの秒数")]
-        private float _fireInterval = WeaponController.DefaultFireInterval;
+        private float _fireInterval = 0.1f;
 
         [SerializeField, Min(0f), Tooltip("リロード開始から補充までの秒数")]
-        private float _reloadSeconds = WeaponController.DefaultReloadSeconds;
+        private float _reloadSeconds = 2f;
 
         [SerializeField, Min(0), Tooltip("1 発あたりの基本ダメージ")]
-        private int _damage = WeaponController.DefaultDamage;
+        private int _damage = 25;
 
         [SerializeField, Min(0.01f), Tooltip("射程 (m)")]
-        private float _range = WeaponController.DefaultRange;
+        private float _range = 100f;
 
         [Header("距離減衰")]
         [SerializeField, Min(0f), Tooltip("この距離までは減衰しない (m)")]
-        private float _falloffStart = WeaponController.DefaultFalloffStart;
+        private float _falloffStart = 20f;
 
         [SerializeField, Min(0f), Tooltip("この距離以上で最小倍率になる (m)")]
-        private float _falloffEnd = WeaponController.DefaultFalloffEnd;
+        private float _falloffEnd = 60f;
 
         [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("最大まで減衰したときの倍率")]
-        private float _falloffMinMultiplier = WeaponController.DefaultFalloffMinMultiplier;
+        private float _falloffMinMultiplier = 0.5f;
 
         public string Id
         {

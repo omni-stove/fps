@@ -337,8 +337,8 @@ namespace Fps.Tests.EditMode
             Assert.That(scene.Campaign.IsStarted, Is.True);
             Assert.That(scene.Player.transform.position, Is.EqualTo(_spawnPosition));
             Assert.That(scene.Player.Health.Current, Is.EqualTo(scene.Player.MaxHealth));
-            Assert.That(scene.Weapon.Weapon.AmmoInMagazine, Is.EqualTo(WeaponController.DefaultMagazineSize));
-            Assert.That(scene.Weapon.Weapon.ReserveAmmo, Is.EqualTo(WeaponController.DefaultReserveAmmo));
+            Assert.That(scene.Weapon.Weapon.AmmoInMagazine, Is.EqualTo(scene.Rifle.MagazineSize));
+            Assert.That(scene.Weapon.Weapon.ReserveAmmo, Is.EqualTo(scene.Rifle.ReserveAmmo));
             Assert.That(scene.Missions.Mission.GetState("reach"), Is.EqualTo(ObjectiveState.Active));
             Assert.That(scene.Checkpoint.IsReached, Is.False);
             Assert.That(scene.Campaign.LastCheckpointId, Is.Empty);
@@ -397,8 +397,10 @@ namespace Fps.Tests.EditMode
 
                 var camera = new GameObject("Camera", typeof(Camera));
                 camera.transform.SetParent(player.transform, false);
+                Rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+                Created.Add(Rifle);
                 Weapon = camera.AddComponent<WeaponController>();
-                Weapon.Initialize(camera.transform, _attack, _reload);
+                Weapon.Initialize(camera.transform, _attack, _reload, Rifle);
 
                 var checkpoint = Add(new GameObject("Checkpoint"));
                 checkpoint.transform.position = checkpointPosition;
@@ -415,6 +417,10 @@ namespace Fps.Tests.EditMode
             public CharacterController Controller { get; }
             public Collider PlayerCollider => Controller;
             public WeaponController Weapon { get; }
+
+            /// <summary>プレイヤーの武器の定義 (既定値の rifle)。</summary>
+            public WeaponDefinition Rifle { get; }
+
             public CheckpointTrigger Checkpoint { get; }
             public CampaignRunner Campaign { get; }
 

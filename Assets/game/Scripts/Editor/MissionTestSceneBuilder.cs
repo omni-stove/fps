@@ -87,11 +87,13 @@ namespace Fps.Editor
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
             definitionPath = ValidateAssetPath(definitionPath);
 
+            // 武器のアセットが無ければ何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            var rifle = WeaponAssetBuilder.LoadRifle();
             var definition = CreateOrUpdateDefinition(definitionPath);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            PopulateScene(scene, definition);
+            PopulateScene(scene, definition, rifle);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -130,9 +132,9 @@ namespace Fps.Editor
 
         /// <summary>
         /// 空のシーンにテスト用ミッションの物を置き、参照をすべて設定する。Edit Mode では Awake/Start が走らないので、
-        /// ミッションは Play したときに始まる。
+        /// ミッションは Play したときに始まる。プレイヤーは weapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で撃つ。
         /// </summary>
-        public static MissionTestLayout PopulateScene(Scene scene, MissionDefinition definition)
+        public static MissionTestLayout PopulateScene(Scene scene, MissionDefinition definition, WeaponDefinition weapon)
         {
             if (!scene.IsValid() || !scene.isLoaded)
             {
@@ -142,6 +144,11 @@ namespace Fps.Editor
             if (definition == null)
             {
                 throw new ArgumentNullException(nameof(definition));
+            }
+
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
             }
 
             if (scene.rootCount != 0)
@@ -154,6 +161,7 @@ namespace Fps.Editor
             try
             {
                 var bootstrap = Track(created, new GameObject(BootstrapObjectName, typeof(GameBootstrap)));
+                bootstrap.GetComponent<GameBootstrap>().WeaponDefinition = weapon;
 
                 var runnerObject = Track(created, new GameObject(RunnerObjectName));
                 var runner = runnerObject.AddComponent<MissionRunner>();

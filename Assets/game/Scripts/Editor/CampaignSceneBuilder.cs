@@ -214,13 +214,15 @@ namespace Fps.Editor
             definitionPath = SceneBuildHelpers.ValidateAssetPath(definitionPath);
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
 
+            // 武器のアセットが無ければ何も作らずに止める (先に WeaponAssetBuilder.Build を走らせる)。
+            var rifle = WeaponAssetBuilder.LoadRifle();
             var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(definitionPath, Configure);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var layout = PopulateScene(scene, definition);
+            var layout = PopulateScene(scene, definition, rifle);
             SceneBuildHelpers.SaveNavMeshData(layout.Surface, navMeshDataPath);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -255,13 +257,19 @@ namespace Fps.Editor
         /// 参照をすべて設定する。焼いた NavMesh に敵の位置・巡回地点・区域・チェックポイントが乗っていて、開始地点から
         /// 歩いて行けることを確かめ、そうでなければ例外を投げる。失敗したときは置いた物をすべて片付ける。
         /// Edit Mode では Awake/Start が走らないので、ミッションと敵は Play したときに動き出す。
+        /// プレイヤーと敵はどちらも weapon (通常は <see cref="WeaponAssetBuilder.LoadRifle"/> の rifle) で撃つ。
         /// </summary>
-        public static CampaignLayout PopulateScene(Scene scene, MissionDefinition definition)
+        public static CampaignLayout PopulateScene(Scene scene, MissionDefinition definition, WeaponDefinition weapon)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the campaign scene");
             if (definition == null)
             {
                 throw new ArgumentNullException(nameof(definition));
+            }
+
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
             }
 
             NavMeshSurface surface = null;
@@ -276,6 +284,7 @@ namespace Fps.Editor
                 SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
                 var bootstrap = bootstrapObject.AddComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinition = weapon;
 
                 var runnerObject = new GameObject(RunnerObjectName);
                 SceneManager.MoveGameObjectToScene(runnerObject, scene);
@@ -301,7 +310,8 @@ namespace Fps.Editor
                         placement.Position,
                         placement.Rotation,
                         placement.PatrolRoute,
-                        body);
+                        body,
+                        weapon);
                     targets[i] = enemies[i].GetComponent<Damageable>();
                 }
 

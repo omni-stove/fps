@@ -194,13 +194,21 @@ namespace Fps.Tests.EditMode
             _rig.Mode = ViewMode.ThirdPerson;
             _rig.UpdateCameraPosition();
             var weapon = _camera.gameObject.AddComponent<WeaponController>();
-            weapon.Initialize(_camera.transform, _attack, _reload);
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                weapon.Initialize(_camera.transform, _attack, _reload, rifle);
 
-            weapon.ResolveShot(out var origin, out var direction);
+                weapon.ResolveShot(out var origin, out var direction);
 
-            Assert.That(Vector3.Distance(origin, _eye.position), Is.LessThan(1e-5f));
-            Assert.That(Vector3.Distance(origin, _camera.transform.position), Is.GreaterThan(1f));
-            Assert.That(direction.z, Is.GreaterThan(0.99f));
+                Assert.That(Vector3.Distance(origin, _eye.position), Is.LessThan(1e-5f));
+                Assert.That(Vector3.Distance(origin, _camera.transform.position), Is.GreaterThan(1f));
+                Assert.That(direction.z, Is.GreaterThan(0.99f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(rifle);
+            }
         }
 
         [Test]

@@ -28,8 +28,8 @@ namespace Fps.Editor
         public const string HandgunId = "handgun";
 
         /// <summary>
-        /// rifle の値。<see cref="WeaponController"/> の既定値と同じ
-        /// (Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰)。
+        /// rifle の値 (Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰)。
+        /// オフラインのプレイヤー (<see cref="WeaponController"/>) と敵 (<see cref="EnemyAgent"/>) が使う。
         /// </summary>
         public static WeaponSpec RifleSpec()
         {
@@ -37,16 +37,39 @@ namespace Fps.Editor
                 RifleId,
                 "Rifle",
                 FireMode.Auto,
-                WeaponController.DefaultMagazineSize,
-                WeaponController.DefaultReserveAmmo,
-                WeaponController.DefaultFireInterval,
-                WeaponController.DefaultReloadSeconds,
-                WeaponController.DefaultDamage,
-                WeaponController.DefaultRange,
-                new DamageFalloff(
-                    WeaponController.DefaultFalloffStart,
-                    WeaponController.DefaultFalloffEnd,
-                    WeaponController.DefaultFalloffMinMultiplier));
+                30,
+                90,
+                0.1f,
+                2f,
+                25,
+                100f,
+                new DamageFalloff(20f, 60f, 0.5f));
+        }
+
+        /// <summary>
+        /// <see cref="RiflePath"/> の rifle の定義を読む。シーン生成スクリプトが <see cref="WeaponController"/> や
+        /// <see cref="EnemyAgent"/> に配線するのに使う。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
+        /// 値が不正でも例外を投げ、壊れた定義をシーンに配線しない。
+        /// </summary>
+        public static WeaponDefinition LoadRifle()
+        {
+            return LoadDefinition(RiflePath);
+        }
+
+        /// <summary>path の <see cref="WeaponDefinition"/> を読み、<see cref="WeaponDefinition.ToSpec"/> に通ることを確かめて返す。</summary>
+        public static WeaponDefinition LoadDefinition(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+
+            var definition = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(path);
+            if (definition == null)
+            {
+                throw new InvalidOperationException(
+                    $"weapon definition '{path}' was not found; run {MenuPath} (Fps.Editor.WeaponAssetBuilder.Build) first");
+            }
+
+            definition.ToSpec();
+            return definition;
         }
 
         /// <summary>handgun の値 (Semi、12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰)。</summary>

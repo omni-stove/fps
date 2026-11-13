@@ -537,6 +537,7 @@ namespace Fps.Runtime
                 return false;
             }
 
+            AppliedInputBindings.EnsureLoaded();
             var actions = InputSystem.actions;
             if (actions == null)
             {

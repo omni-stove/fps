@@ -96,3 +96,54 @@
     justify-content: flex-end;
     margin: 24px 0 0 0;
 }
+
+.settings__scroll {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.settings__note {
+    margin: 4px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.settings__bind {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 36px;
+}
+
+/* 既定から変えた割り当てが分かるように、文字の色を変える。 */
+.settings__bind--overridden {
+    color: rgb(255, 214, 120);
+}
+
+.settings__bind--waiting {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.35);
+}
+
+.settings__bind--conflict {
+    border-color: rgb(255, 96, 80);
+}
+
+.settings__notice-row {
+    flex-direction: row;
+    align-items: center;
+    margin: 12px 0 0 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background-color: rgba(255, 196, 64, 0.12);
+}
+
+.settings__notice {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin: 0;
+    padding: 0;
+    font-size: 22px;
+    white-space: normal;
+    color: rgb(255, 255, 255);
+}

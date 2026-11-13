@@ -476,6 +476,13 @@ namespace Fps.Runtime
             }
 
             evt.StopPropagation();
+
+            // 設定画面で割り当ての入力を待っている間の Esc / Start は、待つのをやめるためのもの。
+            if (PlayerBindings.IsCapturingInput)
+            {
+                return;
+            }
+
             CloseSettings();
         }
 

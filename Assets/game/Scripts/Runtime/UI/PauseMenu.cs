@@ -133,7 +133,8 @@ namespace Fps.Runtime
 
         private void Update()
         {
-            if (_pauseAction != null && _pauseAction.WasPressedThisFrame())
+            // 設定画面で割り当ての入力を待っている間の Esc / Start は、待つのをやめるためのもの。
+            if (_pauseAction != null && _pauseAction.WasPressedThisFrame() && !PlayerBindings.IsCapturingInput)
             {
                 Toggle();
             }

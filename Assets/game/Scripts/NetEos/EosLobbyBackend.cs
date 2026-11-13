@@ -708,7 +708,67 @@ namespace Fps.NetEos
             }
 
             error = null;
-            return new LobbyInfo(lobbyId, owner.ToString(), (int)Math.Min(info.MaxMembers, (uint)int.MaxValue), members);
+            return new LobbyInfo(
+                lobbyId, owner.ToString(), (int)Math.Min(info.MaxMembers, (uint)int.MaxValue), members, ReadAttributes(details, lobbyId));
+        }
+
+        /// <summary>
+        /// ロビーの公開の属性のうち、文字列と整数のものを読む。読めない・形の合わない属性は飛ばす
+        /// (クイックマッチの選び方が、欠けた属性のロビーを選ばないので、ロビーごと捨てなくてよい)。
+        /// </summary>
+        private static List<Fps.Core.LobbyAttribute> ReadAttributes(LobbyDetails details, string lobbyId)
+        {
+            var countOptions = new LobbyDetailsGetAttributeCountOptions();
+            var count = details.GetAttributeCount(ref countOptions);
+            var attributes = new List<Fps.Core.LobbyAttribute>((int)Math.Min(count, 64u));
+            for (uint i = 0; i < count; i++)
+            {
+                var copyOptions = new LobbyDetailsCopyAttributeByIndexOptions { AttrIndex = i };
+                var result = details.CopyAttributeByIndex(ref copyOptions, out var copied);
+                if (result != Result.Success || !copied.HasValue || !copied.Value.Data.HasValue)
+                {
+                    Debug.LogWarning("[Lobby] skipped attribute " + i + " of id=" + lobbyId + ": " + result);
+                    continue;
+                }
+
+                var data = copied.Value.Data.Value;
+                var key = Text(data.Key);
+                if (key == null)
+                {
+                    continue;
+                }
+
+                // EOS は属性キーの大文字・小文字を区別せず、大文字にして返すことがある。作る側 (Fps.Core.LobbyAttribute) の表記に戻す
+                key = key.ToLowerInvariant();
+                try
+                {
+                    switch (data.Value.ValueType)
+                    {
+                        case AttributeType.String:
+                            var text = Text(data.Value.AsUtf8);
+                            if (text != null)
+                            {
+                                attributes.Add(Fps.Core.LobbyAttribute.OfText(key, text));
+                            }
+
+                            break;
+                        case AttributeType.Int64:
+                            if (data.Value.AsInt64.HasValue)
+                            {
+                                attributes.Add(Fps.Core.LobbyAttribute.OfNumber(key, data.Value.AsInt64.Value));
+                            }
+
+                            break;
+                    }
+                }
+                catch (ArgumentException e)
+                {
+                    // 同じバケットに別の作り方のロビーが混ざっても、検索全体は失敗させない
+                    Debug.LogWarning("[Lobby] skipped attribute " + key + " of id=" + lobbyId + ": " + e.Message);
+                }
+            }
+
+            return attributes;
         }
 
         private bool CanCall(out string error)

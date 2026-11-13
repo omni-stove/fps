@@ -79,7 +79,7 @@ namespace Fps.Core
                 timeLimitSeconds,
                 Array.Empty<IScoreRule>(),
                 new NoRespawn(),
-                new IWinCondition[] { new LastSideStandingWin(), new MostStandingAtTimeUp(this) });
+                new IWinCondition[] { new LastSquadStanding(this), new MostStandingAtTimeUp(this) });
             _mode.Ended += OnModeEnded;
         }
 
@@ -483,6 +483,45 @@ namespace Fps.Core
             {
                 throw new ArgumentOutOfRangeException(paramName, playerId, "no player with this id");
             }
+        }
+
+        /// <summary>
+        /// 試合に参加した分隊のうち脱落していないものが 1 つ以下になったら終える。1 つならその分隊の勝ち、なければ引き分け。
+        /// <see cref="LastSideStandingWin"/> は誰もいない分隊を勝ちにしうるので使わない。
+        /// </summary>
+        private sealed class LastSquadStanding : IWinCondition
+        {
+            private readonly BattleRoyaleSession _owner;
+
+            public LastSquadStanding(BattleRoyaleSession owner)
+            {
+                _owner = owner;
+            }
+
+            public double? ScoreLimit => null;
+
+            public ModeOutcome CheckStanding(ModeSession session)
+            {
+                var standingCount = 0;
+                Side standing = default;
+                foreach (var squad in _owner._entrants)
+                {
+                    if (!_owner._placements.ContainsKey(squad) && !_owner.IsOut(squad))
+                    {
+                        standingCount++;
+                        standing = squad;
+                    }
+                }
+
+                if (standingCount > 1)
+                {
+                    return ModeOutcome.Undecided;
+                }
+
+                return standingCount == 1 ? ModeOutcome.Win(standing) : ModeOutcome.Draw;
+            }
+
+            public ModeOutcome CheckTimeUp(ModeSession session) => ModeOutcome.Undecided;
         }
 
         /// <summary>時間切れのとき、立っている人のいちばん多い分隊の勝ち。同じなら残っている人で比べ、それも同じなら引き分け。</summary>

@@ -326,10 +326,11 @@ namespace Fps.Core.Tests
         private static List<string> Record(BattleRoyaleSession br)
         {
             var log = new List<string>();
-            br.PlayerDowned += (player, by) => log.Add("downed " + player + " by " + (by.HasValue ? by.Value.ToString() : "-"));
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            br.PlayerDowned += (player, by) => log.Add("downed " + player + " by " + (by.HasValue ? by.Value.ToString(inv) : "-"));
             br.PlayerRevived += (by, player) => log.Add("revived " + player + " by " + by);
-            br.PlayerBledOut += (player, credit) => log.Add("bledout " + player + " credit " + (credit.HasValue ? credit.Value.ToString() : "-"));
-            br.PlayerFinished += (player, credit) => log.Add("finished " + player + " credit " + (credit.HasValue ? credit.Value.ToString() : "-"));
+            br.PlayerBledOut += (player, credit) => log.Add("bledout " + player + " credit " + (credit.HasValue ? credit.Value.ToString(inv) : "-"));
+            br.PlayerFinished += (player, credit) => log.Add("finished " + player + " credit " + (credit.HasValue ? credit.Value.ToString(inv) : "-"));
             return log;
         }
     }

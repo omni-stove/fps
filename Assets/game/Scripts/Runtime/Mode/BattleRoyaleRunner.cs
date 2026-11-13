@@ -412,9 +412,11 @@ namespace Fps.Runtime
                 _battleRoyale, localId >= 0 ? localId : (int?)null, _localReviveTarget, zoneLine, unarmed));
         }
 
+        // 順位を付け終えてから終えたいので、ModeSession の終わりではなく BattleRoyaleSession.Ended で EndMatch を呼ぶ。
+        protected override bool EndsMatchWithSession => false;
+
         protected override string SessionEndedLog(Side? winner)
         {
-            // 順位を付け終えてから出したいので、BattleRoyaleSession.Ended で出す。
             return null;
         }
 
@@ -580,6 +582,12 @@ namespace Fps.Runtime
             var collector = Pickup.Describe(member.Damageable);
             foreach (var pickup in pickups)
             {
+                // Interact の物は bot が触れても拾えないので、行き先にすると着いたまま動かなくなる。
+                if (pickup.CollectMode != PickupCollectMode.Touch)
+                {
+                    continue;
+                }
+
                 PickupOutcome outcome;
                 try
                 {
@@ -728,10 +736,10 @@ namespace Fps.Runtime
 
         private void OnBattleRoyaleEnded(Side? winner)
         {
-            Debug.Log(ModeLog.Ended(winner), this);
-            Debug.Log(BattleRoyaleLog.Placements(_battleRoyale), this);
             StopZone();
             ClearErrands();
+            EndMatch(winner);
+            Debug.Log(BattleRoyaleLog.Placements(_battleRoyale), this);
         }
 
         /// <summary>

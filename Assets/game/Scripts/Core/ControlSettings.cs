@@ -9,19 +9,20 @@ namespace Fps.Core
     /// <summary>
     /// 操作設定。<see cref="HoldAction"/> ごとの <see cref="HoldMode"/> を、キーボード／マウスとゲームパッドで別々に持ち、
     /// 感度・視野角・音量 (<see cref="ControlValue"/>) を整数で持ち、オンラインの回線の表示を出すか (<see cref="ShowNetStats"/>) と
-    /// 敵味方の色の組 (<see cref="Palette"/>) と音の合図の字幕を出すか (<see cref="ShowSubtitles"/>) を持つ。不変。
-    /// <see cref="ToJson"/> と <see cref="FromJson"/> で文字列にして保存する。
+    /// 敵味方の色の組 (<see cref="Palette"/>) と音の合図の字幕を出すか (<see cref="ShowSubtitles"/>) と画面の言語 (<see cref="Language"/>) を持つ。不変。
+    /// <see cref="ToJson"/> と <see cref="FromJson(string, GameLanguage, out IReadOnlyList{string})"/> で文字列にして保存する。
     /// </summary>
     public sealed class ControlSettings : IEquatable<ControlSettings>
     {
         /// <summary>このコードが書き出す形式のバージョン。</summary>
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
 
         /// <summary>
         /// 読める最も古い形式のバージョン。1 は Hold/Toggle だけを持ち、数値の設定は初期値で補う。
         /// 2 は回線の表示 (<see cref="ShowNetStats"/>) を持たず、初期値 (出さない) で補う。
         /// 3 は色の組 (<see cref="Palette"/>) を持たず、初期値 (<see cref="ColorPalette.Standard"/>) で補う。
         /// 4 は字幕 (<see cref="ShowSubtitles"/>) を持たず、初期値 (出さない) で補う。
+        /// 5 は言語 (<see cref="Language"/>) を持たず、読む側が渡した既定の言語 (OS の言語) で補う。
         /// </summary>
         public const int OldestReadableVersion = 1;
 
@@ -40,6 +41,7 @@ namespace Fps.Core
         private const string _showNetStatsKey = "showNetStats";
         private const string _paletteKey = "colorPalette";
         private const string _showSubtitlesKey = "showSubtitles";
+        private const string _languageKey = "language";
         private const string _standardPaletteName = "standard";
         private const string _redGreenPaletteName = "redGreen";
         private const string _blueYellowPaletteName = "blueYellow";
@@ -96,12 +98,20 @@ namespace Fps.Core
             _showNetStatsKey, _paletteKey,
         };
 
-        private static readonly string[] _rootKeys =
+        private static readonly string[] _versionFiveRootKeys =
         {
             _versionKey, _keyboardMouseKey, _gamepadKey,
             _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
             _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
             _showNetStatsKey, _paletteKey, _showSubtitlesKey,
+        };
+
+        private static readonly string[] _rootKeys =
+        {
+            _versionKey, _keyboardMouseKey, _gamepadKey,
+            _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
+            _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
+            _showNetStatsKey, _paletteKey, _showSubtitlesKey, _languageKey,
         };
 
         private static readonly string[] _actionKeys = { _sprintKey, _crouchKey, _aimKey };
@@ -110,6 +120,7 @@ namespace Fps.Core
         /// 初期値。キーボード／マウスはすべて Hold。
         /// ゲームパッドはスティックを押し込み続けにくいのでダッシュとしゃがみを Toggle にし、ADS はトリガーなので Hold。
         /// 数値は <see cref="RangeOf"/> の初期値。回線の表示は出さない。色の組は <see cref="ColorPalette.Standard"/>。字幕は出さない。
+        /// 言語は日本語。初めて起動したときの言語は OS で決まるので、Core の外 (ControlSettingsStore) が <see cref="DefaultFor"/> で選ぶ。
         /// </summary>
         public static ControlSettings Default { get; } = new ControlSettings(
             new[]
@@ -120,7 +131,8 @@ namespace Fps.Core
             DefaultValues(),
             false,
             ColorPalette.Standard,
-            false);
+            false,
+            GameLanguage.Japanese);
 
         // 添字は Index(device, action)。
         private readonly HoldMode[] _modes;
@@ -134,13 +146,29 @@ namespace Fps.Core
 
         private readonly bool _showSubtitles;
 
-        private ControlSettings(HoldMode[] modes, int[] amounts, bool showNetStats, ColorPalette palette, bool showSubtitles)
+        private readonly GameLanguage _language;
+
+        private ControlSettings(
+            HoldMode[] modes,
+            int[] amounts,
+            bool showNetStats,
+            ColorPalette palette,
+            bool showSubtitles,
+            GameLanguage language)
         {
             _modes = modes;
             _amounts = amounts;
             _showNetStats = showNetStats;
             _palette = palette;
             _showSubtitles = showSubtitles;
+            _language = language;
+        }
+
+        /// <summary>言語だけを language にした初期値 (<see cref="Default"/>)。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public static ControlSettings DefaultFor(GameLanguage language)
+        {
+            return Default.WithLanguage(language);
         }
 
         /// <summary>数値の設定をすべて、並べる順に返す。</summary>
@@ -199,6 +227,9 @@ namespace Fps.Core
         /// <summary>銃声・足音・爆発・リロードの音の合図を、種類と方向の字幕にして画面の下に出すか。</summary>
         public bool ShowSubtitles => _showSubtitles;
 
+        /// <summary>画面に出す文字の言語。</summary>
+        public GameLanguage Language => _language;
+
         /// <summary>device の action だけを mode に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings With(InputDeviceKind device, HoldAction action, HoldMode mode)
         {
@@ -215,7 +246,7 @@ namespace Fps.Core
 
             var modes = (HoldMode[])_modes.Clone();
             modes[index] = mode;
-            return new ControlSettings(modes, _amounts, _showNetStats, _palette, _showSubtitles);
+            return new ControlSettings(modes, _amounts, _showNetStats, _palette, _showSubtitles, _language);
         }
 
         /// <summary>数値の設定 value だけを amount に変えた設定を返す。この設定は変わらない。</summary>
@@ -239,13 +270,13 @@ namespace Fps.Core
 
             var amounts = (int[])_amounts.Clone();
             amounts[index] = amount;
-            return new ControlSettings(_modes, amounts, _showNetStats, _palette, _showSubtitles);
+            return new ControlSettings(_modes, amounts, _showNetStats, _palette, _showSubtitles, _language);
         }
 
         /// <summary>回線の表示 (<see cref="ShowNetStats"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowNetStats(bool show)
         {
-            return show == _showNetStats ? this : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles);
+            return show == _showNetStats ? this : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles, _language);
         }
 
         /// <summary>色の組 (<see cref="Palette"/>) だけを palette に変えた設定を返す。この設定は変わらない。</summary>
@@ -253,13 +284,21 @@ namespace Fps.Core
         public ControlSettings WithPalette(ColorPalette palette)
         {
             PaletteName(palette);
-            return palette == _palette ? this : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles);
+            return palette == _palette ? this : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles, _language);
         }
 
         /// <summary>字幕 (<see cref="ShowSubtitles"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowSubtitles(bool show)
         {
-            return show == _showSubtitles ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show);
+            return show == _showSubtitles ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show, _language);
+        }
+
+        /// <summary>言語 (<see cref="Language"/>) だけを language に変えた設定を返す。この設定は変わらない。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public ControlSettings WithLanguage(GameLanguage language)
+        {
+            GameLanguages.Code(language);
+            return language == _language ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, language);
         }
 
         /// <summary>JSON の文字列に書き出す。<see cref="FromJson"/> で同じ内容に戻る。</summary>
@@ -299,6 +338,9 @@ namespace Fps.Core
             SaveJson.AppendString(builder, PaletteName(_palette));
             builder.Append(',');
             AppendKey(builder, _showSubtitlesKey).Append(_showSubtitles ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _languageKey);
+            SaveJson.AppendString(builder, GameLanguages.Code(_language));
             builder.Append('}');
             return builder.ToString();
         }
@@ -312,16 +354,32 @@ namespace Fps.Core
         /// バージョン 1・2 (回線の表示が無い形式) は、回線の表示を何も言わずに初期値で補う。
         /// バージョン 1〜3 (色の組が無い形式) は、色の組を何も言わずに初期値で補う。
         /// バージョン 1〜4 (字幕が無い形式) は、字幕を何も言わずに初期値で補う。知らない項目は読み飛ばす。
+        /// 言語は <see cref="Default"/> の言語 (日本語) を既定にする。
         /// </summary>
         /// <param name="json">読む文字列。</param>
         /// <param name="problems">初期値に戻した所や読み飛ばした所の理由。問題が無ければ空。</param>
         public static ControlSettings FromJson(string json, out IReadOnlyList<string> problems)
+        {
+            return FromJson(json, Default._language, out problems);
+        }
+
+        /// <summary>
+        /// <see cref="FromJson(string, out IReadOnlyList{string})"/> と同じく読み、初期値に戻すときの言語を defaultLanguage にする。
+        /// 言語は、無い・文字列でない・知らない言語コードなら defaultLanguage にして理由を残す。
+        /// バージョン 1〜5 (言語が無い形式) は、言語を何も言わずに defaultLanguage で補う。
+        /// </summary>
+        /// <param name="json">読む文字列。</param>
+        /// <param name="defaultLanguage">保存した言語が無いか読めないときの言語。ゲームでは OS の言語。</param>
+        /// <param name="problems">初期値に戻した所や読み飛ばした所の理由。問題が無ければ空。</param>
+        /// <exception cref="ArgumentOutOfRangeException">defaultLanguage が定義済みの値でない。</exception>
+        public static ControlSettings FromJson(string json, GameLanguage defaultLanguage, out IReadOnlyList<string> problems)
         {
             if (json == null)
             {
                 throw new ArgumentNullException(nameof(json));
             }
 
+            var fallback = DefaultFor(defaultLanguage);
             var found = new List<string>();
             problems = new ReadOnlyCollection<string>(found);
 
@@ -333,34 +391,36 @@ namespace Fps.Core
             catch (FormatException e)
             {
                 found.Add("not valid JSON: " + e.Message);
-                return Default;
+                return fallback;
             }
 
             if (!(parsed is Dictionary<string, object> root))
             {
                 found.Add("the root must be an object");
-                return Default;
+                return fallback;
             }
 
             // 形式が変わったときに古い解釈で読み違えないよう、読めるバージョンでなければ中身は見ない。
             if (!root.TryGetValue(_versionKey, out var versionValue))
             {
                 found.Add($"missing '{_versionKey}'");
-                return Default;
+                return fallback;
             }
 
             if (!(versionValue is long version) || version < OldestReadableVersion || version > CurrentVersion)
             {
                 found.Add(
                     $"unsupported version {Describe(versionValue)} (expected {Format(OldestReadableVersion)} to {Format(CurrentVersion)})");
-                return Default;
+                return fallback;
             }
 
             var hasValues = version >= 2;
             var hasShowNetStats = version >= 3;
             var hasPalette = version >= 4;
             var hasShowSubtitles = version >= 5;
-            var knownKeys = hasShowSubtitles ? _rootKeys
+            var hasLanguage = version >= 6;
+            var knownKeys = hasLanguage ? _rootKeys
+                : hasShowSubtitles ? _versionFiveRootKeys
                 : hasPalette ? _versionFourRootKeys
                 : hasShowNetStats ? _versionThreeRootKeys
                 : hasValues ? _versionTwoRootKeys
@@ -379,7 +439,8 @@ namespace Fps.Core
             var showSubtitles = hasShowSubtitles
                 ? ReadFlag(root, _showSubtitlesKey, Default._showSubtitles, found)
                 : Default._showSubtitles;
-            return new ControlSettings(modes, amounts, showNetStats, palette, showSubtitles);
+            var language = hasLanguage ? ReadLanguage(root, defaultLanguage, found) : defaultLanguage;
+            return new ControlSettings(modes, amounts, showNetStats, palette, showSubtitles, language);
         }
 
         public bool Equals(ControlSettings other)
@@ -405,7 +466,10 @@ namespace Fps.Core
                 }
             }
 
-            return _showNetStats == other._showNetStats && _palette == other._palette && _showSubtitles == other._showSubtitles;
+            return _showNetStats == other._showNetStats
+                && _palette == other._palette
+                && _showSubtitles == other._showSubtitles
+                && _language == other._language;
         }
 
         public override bool Equals(object obj)
@@ -428,7 +492,8 @@ namespace Fps.Core
 
             hash = unchecked((hash * 31) + (_showNetStats ? 1 : 0));
             hash = unchecked((hash * 31) + (int)_palette);
-            return unchecked((hash * 31) + (_showSubtitles ? 1 : 0));
+            hash = unchecked((hash * 31) + (_showSubtitles ? 1 : 0));
+            return unchecked((hash * 31) + (int)_language);
         }
 
         public override string ToString()
@@ -536,6 +601,29 @@ namespace Fps.Core
             }
 
             return palette;
+        }
+
+        private static GameLanguage ReadLanguage(Dictionary<string, object> root, GameLanguage fallback, List<string> problems)
+        {
+            if (!root.TryGetValue(_languageKey, out var raw))
+            {
+                problems.Add($"missing '{_languageKey}'");
+                return fallback;
+            }
+
+            if (!(raw is string code) || !GameLanguages.TryParseCode(code, out var language))
+            {
+                var expected = new List<string>();
+                foreach (var known in GameLanguages.All)
+                {
+                    expected.Add("\"" + GameLanguages.Code(known) + "\"");
+                }
+
+                problems.Add($"'{_languageKey}' must be one of {string.Join(", ", expected)} but was {Describe(raw)}");
+                return fallback;
+            }
+
+            return language;
         }
 
         private float Percent(ControlValue value)

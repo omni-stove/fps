@@ -178,7 +178,7 @@ namespace Fps.Tests.EditMode
             teamDeathmatch.FriendlyFire = FriendlyFire.On;
             teamDeathmatch.RegenPerSecond = 1f;
             teamDeathmatch.InfiniteReserve = true;
-            teamDeathmatch.Destruction = Destruction.On;
+            teamDeathmatch.Destruction = Destruction.Off;
             teamDeathmatch.Downed = Downed.Revive;
             teamDeathmatch.ReviveSeconds = 9f;
             teamDeathmatch.Cover = Cover.On;
@@ -193,7 +193,7 @@ namespace Fps.Tests.EditMode
             Assert.That(restored.FriendlyFire, Is.EqualTo(FriendlyFire.Off));
             Assert.That(restored.RegenPerSecond, Is.EqualTo(20f));
             Assert.That(restored.InfiniteReserve, Is.False);
-            Assert.That(restored.Destruction, Is.EqualTo(Destruction.Off));
+            Assert.That(restored.Destruction, Is.EqualTo(Destruction.On));
             AssertDefaultActions(restored.Actions, rebuilt[0].name);
         }
 
@@ -231,14 +231,15 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void EveryModeKeepsDestructionOff()
+        public void DestructionIsOnOnlyForTeamDeathmatchAndRange()
         {
             var built = Build();
 
-            foreach (var definition in built)
-            {
-                Assert.That(definition.ToRules().Destruction, Is.EqualTo(Destruction.Off), definition.name);
-            }
+            Assert.That(built[0].ToRules().Destruction, Is.EqualTo(Destruction.On), built[0].name);
+            Assert.That(built[1].ToRules().Destruction, Is.EqualTo(Destruction.Off), built[1].name);
+            Assert.That(built[2].ToRules().Destruction, Is.EqualTo(Destruction.Off), built[2].name);
+            Assert.That(built[3].ToRules().Destruction, Is.EqualTo(Destruction.Off), built[3].name);
+            Assert.That(built[4].ToRules().Destruction, Is.EqualTo(Destruction.On), built[4].name);
         }
 
         [Test]

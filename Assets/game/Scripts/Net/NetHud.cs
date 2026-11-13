@@ -26,6 +26,10 @@ namespace Fps.Net
     /// 予備弾は <see cref="NetMatchRules.InfiniteReserve"/> が true なら数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。
     /// </para>
     /// <para>
+    /// 出す項目は、サーバーから届いたルールの <see cref="NetMatchRules.HudDensity"/> で <see cref="Hud.ApplyDensity"/> に決めさせる。
+    /// 試合がまだ届いていない間と試合が無くなったときは <see cref="NetMatchRules.Default"/> (Full) に戻す。
+    /// </para>
+    /// <para>
     /// スコアボード (<see cref="ScoreboardView"/>) には、試合の <see cref="NetTeamDeathmatch.Players"/> を OnListChanged のたびに
     /// 読み直して渡す。自分のチームの欄を先に出し、自分の行を目立たせる。抜けた人の行はサーバーが消すので、載っている人はみな接続中。
     /// </para>
@@ -275,6 +279,7 @@ namespace Fps.Net
                 _nextWaveSeconds = 0;
                 _status = new NetMatchStatus(GameModeState.Waiting, null);
                 _rules = NetMatchRules.Default;
+                ApplyDensity();
                 Model.ClearTime();
                 Model.ClearScores();
                 Model.ClearResult();
@@ -298,6 +303,8 @@ namespace Fps.Net
             _match.NextWaveSecondsVariable.OnValueChanged += HandleNextWaveSecondsChanged;
             _match.StatusVariable.OnValueChanged += HandleStatusChanged;
             _match.RulesVariable.OnValueChanged += HandleRulesChanged;
+
+            ApplyDensity();
 
             // NetworkList は Awake で作るので、Awake を経ない Edit Mode の試合では無い
             _players = _match.Players;
@@ -509,8 +516,22 @@ namespace Fps.Net
         private void HandleRulesChanged(NetMatchRules previous, NetMatchRules current)
         {
             _rules = current;
+            ApplyDensity();
             ShowAmmo();
             ShowNotice();
+        }
+
+        // 新しいサーバーが足した値を古いクライアントが知らないこともあるので、知らない量は落とさず Full で出す
+        private void ApplyDensity()
+        {
+            var density = _rules.HudDensity;
+            if (!Enum.IsDefined(typeof(HudDensity), density))
+            {
+                Debug.LogWarning("[Net] the server sent an unknown HUD density " + (int)density + "; the HUD shows everything", this);
+                density = HudDensity.Full;
+            }
+
+            _hud.ApplyDensity(density);
         }
 
         private void HandleStatusChanged(NetMatchStatus previous, NetMatchStatus current)

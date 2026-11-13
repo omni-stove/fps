@@ -20,6 +20,9 @@ namespace Fps.Core
         private Match _match;
         private CampaignNotice _notice;
 
+        // 予備を出すかを後から切り替えても書き直せるよう、最後に渡された弾数を持つ (武器が無ければ null)
+        private AmmoValues? _ammo;
+
         /// <summary>表示の文字列が変わった項目を渡して呼ばれる。呼ばれた時点で文字列は更新済み。</summary>
         public event Action<HudField> Changed;
 
@@ -29,8 +32,11 @@ namespace Fps.Core
         /// <summary>体力が少なく、警告の色で出すべきか (<see cref="HudFormat.IsLowHealth"/>)。</summary>
         public bool IsHealthLow { get; private set; }
 
-        /// <summary>右下の「弾倉 / 予備」。</summary>
+        /// <summary>右下の「弾倉 / 予備」。<see cref="ShowsReserveAmmo"/> が false なら弾倉の数だけ。</summary>
         public string AmmoText { get; private set; } = HudFormat.NoAmmo;
+
+        /// <summary>弾数に予備の数を並べるか (<see cref="HudVisibility.ReserveAmmo"/>)。<see cref="SetReserveAmmoShown"/> で変える。</summary>
+        public bool ShowsReserveAmmo { get; private set; } = true;
 
         /// <summary>リロード中か。<see cref="AmmoText"/> にも出るが、View が見た目を変えるのに使う。</summary>
         public bool IsReloading { get; private set; }
@@ -204,13 +210,40 @@ namespace Fps.Core
         /// <exception cref="ArgumentOutOfRangeException">magazine か reserve が負。</exception>
         public void SetAmmo(int magazine, int reserve, bool reloading, bool infiniteReserve)
         {
-            ApplyAmmo(HudFormat.Ammo(magazine, reserve, reloading, infiniteReserve), reloading);
+            // 予備を出さないときも、負の予備を受け入れないよう同じ検証を通す
+            var full = HudFormat.Ammo(magazine, reserve, reloading, infiniteReserve);
+            _ammo = new AmmoValues(magazine, reserve, reloading, infiniteReserve);
+            ApplyAmmo(ShowsReserveAmmo ? full : HudFormat.Magazine(magazine, reloading), reloading);
         }
 
         /// <summary>弾数を仮の表示に戻す。</summary>
         public void ClearAmmo()
         {
-            ApplyAmmo(HudFormat.NoAmmo, false);
+            _ammo = null;
+            ApplyAmmo(ShowsReserveAmmo ? HudFormat.NoAmmo : HudFormat.NoMagazine, false);
+        }
+
+        /// <summary>
+        /// 弾数に予備の数を並べるかを決め、今の弾数を書き直す。false なら弾倉の数だけ (<see cref="HudFormat.Magazine"/>) にする。
+        /// HUD の量 (<see cref="HudVisibility.ReserveAmmo"/>) に合わせて HUD が呼ぶ。
+        /// </summary>
+        public void SetReserveAmmoShown(bool shown)
+        {
+            if (shown == ShowsReserveAmmo)
+            {
+                return;
+            }
+
+            ShowsReserveAmmo = shown;
+            if (_ammo.HasValue)
+            {
+                var ammo = _ammo.Value;
+                SetAmmo(ammo.Magazine, ammo.Reserve, ammo.Reloading, ammo.InfiniteReserve);
+            }
+            else
+            {
+                ClearAmmo();
+            }
         }
 
         /// <summary>武器名を出す。null は <see cref="HudFormat.NoWeaponName"/> (出さない) として扱う。</summary>
@@ -480,6 +513,22 @@ namespace Fps.Core
         private static bool IsFraction(float value)
         {
             return value >= 0f && value <= 1f;
+        }
+
+        private readonly struct AmmoValues
+        {
+            public readonly int Magazine;
+            public readonly int Reserve;
+            public readonly bool Reloading;
+            public readonly bool InfiniteReserve;
+
+            public AmmoValues(int magazine, int reserve, bool reloading, bool infiniteReserve)
+            {
+                Magazine = magazine;
+                Reserve = reserve;
+                Reloading = reloading;
+                InfiniteReserve = infiniteReserve;
+            }
         }
     }
 }

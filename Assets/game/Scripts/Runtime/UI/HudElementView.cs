@@ -8,6 +8,8 @@ namespace Fps.Runtime
     /// HUD の一部を受け持つビューの土台。<see cref="Hud"/> と同じ GameObject に付き、Hud が UIDocument の木を作り直すたびに
     /// <see cref="Bind"/> で Hud.uxml の自分の要素 (<see cref="ElementName"/>) を受け取る。
     /// 何を出すかは派生クラスが決める。
+    /// HUD の量 (<see cref="Fps.Core.HudVisibility"/>) で出さないとき (<see cref="IsAllowed"/> が false) は、要素の visibility を隠す。
+    /// display は派生クラスが「今出すものがあるか」で切り替えるので、量による隠し方はそれと混ぜない。
     /// </summary>
     [RequireComponent(typeof(Hud))]
     public abstract class HudElementView : MonoBehaviour
@@ -17,6 +19,29 @@ namespace Fps.Runtime
 
         /// <summary>今の木の自分の要素。<see cref="Bind"/> の前か <see cref="Unbind"/> の後は null。</summary>
         public VisualElement Element { get; private set; }
+
+        /// <summary>HUD の量で出してよいか。<see cref="SetAllowed"/> で変える。初めは true。</summary>
+        public bool IsAllowed { get; private set; } = true;
+
+        /// <summary>
+        /// HUD の量で出してよいかを決める。false なら要素を隠し、<see cref="OnAllowedChanged"/> で派生クラスに出しかけのものを片付けさせる。
+        /// 要素を持つ前に呼んでも、<see cref="Bind"/> したときに効く。
+        /// </summary>
+        public void SetAllowed(bool allowed)
+        {
+            if (allowed == IsAllowed)
+            {
+                return;
+            }
+
+            IsAllowed = allowed;
+            if (Element != null)
+            {
+                ApplyAllowed(Element);
+            }
+
+            OnAllowedChanged(allowed);
+        }
 
         /// <summary>
         /// root の下から <see cref="ElementName"/> の要素を探して持つ。
@@ -38,6 +63,7 @@ namespace Fps.Runtime
 
             Unbind();
             Element = element;
+            ApplyAllowed(element);
             OnBound(element);
         }
 
@@ -61,6 +87,16 @@ namespace Fps.Runtime
         /// <summary><see cref="Unbind"/> で要素を手放す直前に呼ばれる。</summary>
         protected virtual void OnUnbinding(VisualElement element)
         {
+        }
+
+        /// <summary><see cref="SetAllowed"/> で出してよいかが変わった直後に呼ばれる (要素の visibility は直してある)。</summary>
+        protected virtual void OnAllowedChanged(bool allowed)
+        {
+        }
+
+        private void ApplyAllowed(VisualElement element)
+        {
+            element.style.visibility = IsAllowed ? Visibility.Visible : Visibility.Hidden;
         }
     }
 }

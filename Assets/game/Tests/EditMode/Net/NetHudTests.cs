@@ -253,6 +253,55 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void TheHudDensityFollowsTheSyncedRules()
+        {
+            var hud = _netHud.Hud;
+            var hardcore = new NetMatchRules(DeathBody.Vanish, DeathCamera.None, RespawnMode.Individual, false, HudDensity.Hardcore);
+            var minimal = new NetMatchRules(DeathBody.Vanish, DeathCamera.None, RespawnMode.Individual, false, HudDensity.Minimal);
+            _netHud.BindMatch(_match);
+            Arrive(_weapon.StateVariable, default, new NetWeaponState(30, 90, false, 0, 1, false));
+            Assert.That(hud.Visibility, Is.SameAs(HudVisibility.Full));
+
+            Arrive(_match.RulesVariable, NetMatchRules.Default, hardcore);
+            Assert.That(hud.Visibility, Is.SameAs(HudVisibility.Hardcore));
+            Assert.That(hud.HitMarker.IsAllowed, Is.False);
+            Assert.That(hud.KillFeed.IsAllowed, Is.True);
+
+            Arrive(_match.RulesVariable, hardcore, minimal);
+            Assert.That(hud.Visibility, Is.SameAs(HudVisibility.Minimal));
+            Assert.That(_view.AmmoLabel.text, Is.EqualTo("30"), "Minimal shows only the magazine");
+            Assert.That(hud.HitMarker.IsAllowed, Is.True);
+
+            Arrive(_match.RulesVariable, minimal, NetMatchRules.Default);
+            Assert.That(hud.Visibility, Is.SameAs(HudVisibility.Full));
+            Assert.That(_view.AmmoLabel.text, Is.EqualTo("30 / 90"));
+        }
+
+        [Test]
+        public void TheHudDensityGoesBackToFullWithoutAMatch()
+        {
+            var hardcore = new NetMatchRules(DeathBody.Vanish, DeathCamera.None, RespawnMode.Individual, false, HudDensity.Hardcore);
+            _netHud.BindMatch(_match);
+            Arrive(_match.RulesVariable, NetMatchRules.Default, hardcore);
+
+            _netHud.BindMatch(null);
+
+            Assert.That(_netHud.Hud.Visibility, Is.SameAs(HudVisibility.Full));
+        }
+
+        [Test]
+        public void AnUnknownHudDensityFromTheServerShowsEverything()
+        {
+            var unknown = new NetMatchRules(DeathBody.Vanish, DeathCamera.None, RespawnMode.Individual, false, (HudDensity)99);
+            _netHud.BindMatch(_match);
+
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("unknown HUD density"));
+            Arrive(_match.RulesVariable, NetMatchRules.Default, unknown);
+
+            Assert.That(_netHud.Hud.Visibility, Is.SameAs(HudVisibility.Full));
+        }
+
+        [Test]
         public void TimeFollowsTheRemainingSeconds()
         {
             _netHud.BindMatch(_match);

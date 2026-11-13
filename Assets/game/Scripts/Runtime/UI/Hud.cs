@@ -44,6 +44,7 @@ namespace Fps.Runtime
         private PanelSettings _ownedPanelSettings;
         private Color _alphaColor = Color.white;
         private Color _bravoColor = Color.white;
+        private HudVisibility _visibility = HudVisibility.Full;
 
         /// <summary>表示中の文字列。</summary>
         public HudModel Model => _model;
@@ -186,6 +187,43 @@ namespace Fps.Runtime
             return team == Team.Bravo ? _bravoColor : _alphaColor;
         }
 
+        /// <summary>今出している項目。<see cref="ApplyDensity"/> の前は <see cref="HudVisibility.Full"/>。</summary>
+        public HudVisibility Visibility => _visibility;
+
+        /// <summary>
+        /// HUD の量 (<see cref="GameRules.HudDensity"/>) に合わせて出す項目を切り替える (<see cref="HudVisibility.For"/>)。
+        /// オフラインは GameBootstrap とキャンペーンがルールを決めたときに、オンラインは NetHud がサーバーのルールが届いたときに呼ぶ。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">density が定義済みの値でない。</exception>
+        public void ApplyDensity(HudDensity density)
+        {
+            ApplyVisibility(HudVisibility.For(density));
+        }
+
+        /// <summary>
+        /// 出す項目を visibility に替える。弾数の書式 (<see cref="HudModel.SetReserveAmmoShown"/>)、Label の欄 (<see cref="HudView"/>)、
+        /// 部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>) に効かせる。
+        /// View を作り直しても引き継ぐ。
+        /// </summary>
+        public void ApplyVisibility(HudVisibility visibility)
+        {
+            if (visibility == null)
+            {
+                throw new ArgumentNullException(nameof(visibility));
+            }
+
+            var changed = visibility != _visibility;
+            _visibility = visibility;
+            _model.SetReserveAmmoShown(visibility.ReserveAmmo);
+            _view?.ApplyVisibility(visibility);
+            ApplyVisibilityToElementViews();
+
+            if (changed)
+            {
+                Debug.Log($"{LogTag} density={visibility.Density}", this);
+            }
+        }
+
         /// <summary>
         /// 値の源を渡して購読する。どれも null 可 (その項目は仮の表示になる)。前に渡した源の購読は外す。
         /// UIDocument の木が既にあればすぐ Label に反映する。
@@ -253,8 +291,9 @@ namespace Fps.Runtime
                 return false;
             }
 
-            _view = new HudView(root, _model);
+            _view = new HudView(root, _model, _visibility);
             _view.SetTeamColors(_alphaColor, _bravoColor);
+            ApplyVisibilityToElementViews();
             foreach (var view in GetComponents<HudElementView>())
             {
                 view.Bind(root);
@@ -378,6 +417,28 @@ namespace Fps.Runtime
 
             _view.Dispose();
             _view = null;
+        }
+
+        // スコアボード・ロードアウト選択・ポーズは自分で開くものなので、HUD の量では隠さない
+        private void ApplyVisibilityToElementViews()
+        {
+            var hitMarker = HitMarker;
+            if (hitMarker != null)
+            {
+                hitMarker.SetAllowed(_visibility.HitMarker);
+            }
+
+            var damageDirection = DamageDirection;
+            if (damageDirection != null)
+            {
+                damageDirection.SetAllowed(_visibility.DamageDirection);
+            }
+
+            var killFeed = KillFeed;
+            if (killFeed != null)
+            {
+                killFeed.SetAllowed(_visibility.KillFeed);
+            }
         }
 
         private static void AddIfMissing<T>(GameObject target)

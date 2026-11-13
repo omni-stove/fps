@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ActionDebugFormatTests
     {
-        static readonly string[] DefaultTexts =
+        private static readonly string[] _defaultTexts =
         {
             "ダッシュ: OFF",
             "しゃがみ: OFF",
@@ -31,7 +31,7 @@ namespace Fps.Core.Tests
         {
             var lines = ActionDebugFormat.Lines(default);
 
-            Assert.That(lines.Select(line => line.Text).ToArray(), Is.EqualTo(DefaultTexts));
+            Assert.That(lines.Select(line => line.Text).ToArray(), Is.EqualTo(_defaultTexts));
             Assert.That(lines.Length, Is.EqualTo(ActionDebugFormat.LineCount));
             Assert.That(lines.Any(line => line.IsActive), Is.False);
         }

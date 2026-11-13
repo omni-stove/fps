@@ -108,6 +108,9 @@ namespace Fps.Net
         private DeathBodyPresenter _deathBody;
         private bool _deathBodyPending;
 
+        // 武器の演出。プレハブに無ければ null
+        private WeaponPresentation _presentation;
+
         // 映している間は射撃の入力を読まない。プレハブに無ければ null
         private NetDeathCamera _deathCamera;
         private bool _deathCameraResolved;
@@ -184,12 +187,20 @@ namespace Fps.Net
                 HeadlessPresentation.DisableUnder(gameObject);
             }
 
+            // 自分の銃声とリロード音は 2D、他人の銃声は本体の位置から 3D で鳴らす
+            _presentation = GetComponent<WeaponPresentation>();
+            if (_presentation != null)
+            {
+                _presentation.IsLocal = IsOwner;
+            }
+
             if (IsOwner)
             {
                 ResolveAttackAction();
                 if (_weapon != null)
                 {
                     _weapon.ReloadOrSwitchStarted += HandleReloadOrSwitchStarted;
+                    _weapon.ReloadStarted += HandleReloadStarted;
                 }
             }
 
@@ -215,6 +226,7 @@ namespace Fps.Net
             if (_weapon != null)
             {
                 _weapon.ReloadOrSwitchStarted -= HandleReloadOrSwitchStarted;
+                _weapon.ReloadStarted -= HandleReloadStarted;
             }
 
             ReleaseAttackAction();
@@ -516,6 +528,15 @@ namespace Fps.Net
             if (_ads != null)
             {
                 _ads.Release();
+            }
+        }
+
+        // 専用サーバーでは HeadlessPresentation が WeaponPresentation を止めているので、enabled を見て鳴らさない
+        private void HandleReloadStarted(string weaponId)
+        {
+            if (_presentation != null && _presentation.isActiveAndEnabled)
+            {
+                _presentation.PlayReload(weaponId);
             }
         }
 

@@ -10,7 +10,8 @@ namespace Fps.Runtime
     /// (着弾・曳光弾・足音・着地・被弾の声・爆発・ヒットマーカーの音) はプロパティで引く。
     /// ヒットマーカーは Resources の <see cref="ResourcePath"/> に置いたものを <see cref="Load"/> で読み、
     /// 置いていなければ音を鳴らさずに見た目だけ出す。
-    /// 中身は Fps.Editor.PresentationAssetBuilder が生成した仮の素材 (Assets/game/Presentation/PresentationCatalog.asset) で、
+    /// 武器の演出 (<see cref="WeaponPresentation"/>) も同じく <see cref="Load"/> で読む。
+    /// 中身は Fps.Editor.PresentationAssetBuilder が生成した仮の素材 (Assets/game/Presentation/Resources/Presentation/PresentationCatalog.asset) で、
     /// 本物の素材に替えるときはこのアセットの参照を差し替える。
     /// </summary>
     [CreateAssetMenu(fileName = "PresentationCatalog", menuName = "Fps/Presentation Catalog")]

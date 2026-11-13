@@ -31,6 +31,7 @@ namespace Fps.Tests.EditMode
             _definition.name = "Campaign01";
             CampaignSceneBuilder.Configure(_definition);
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _rifle.AssignIdIfEmpty();
             _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
         }
 

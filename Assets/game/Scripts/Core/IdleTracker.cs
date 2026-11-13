@@ -136,6 +136,7 @@ namespace Fps.Core
         /// 数えている playerId の残りを deltaSeconds 減らす。0 になれば <see cref="IdleChange.Kicked"/> (以後この人は何も返さない)、
         /// 警告の範囲に入れば <see cref="IdleChange.Warned"/>。数えていない・加えていない人は何もしない。
         /// </summary>
+        /// <param name="playerId">進める対象のプレイヤー。</param>
         /// <param name="deltaSeconds">進める秒数。0 以上の有限値。</param>
         public IdleChange Advance(int playerId, float deltaSeconds)
         {

@@ -41,8 +41,23 @@ namespace Fps.Tests.EditMode
             _store.Delete();
             MenuNavigator.Host = null;
             MenuNavigator.TakeLobbyRequest();
+            MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
             UnityEngine.Object.DestroyImmediate(_owner);
+        }
+
+        [Test]
+        public void TheTutorialButtonSitsNextToTheRangeAndOpensTheRangeWithTheTutorial()
+        {
+            var names = MainMenuScreen.ButtonNames.ToList();
+            Assert.That(names.IndexOf(MainMenuScreen.TutorialButtonName), Is.EqualTo(names.IndexOf(MainMenuScreen.RangeButtonName) + 1));
+
+            _screen.Bind(_root);
+
+            Assert.That(_screen.Choose(MenuDestination.Tutorial), Is.True);
+
+            Assert.That(_host.Loaded, Is.EqualTo(new[] { MenuRoute.RangeScene }));
+            Assert.That(MenuNavigator.TakeTutorialRequest(), Is.True);
         }
 
         [Test]

@@ -37,6 +37,7 @@ namespace Fps.Runtime
         public const string JoinLobbyButtonName = "menu-join-lobby";
         public const string LoadoutButtonName = "menu-loadout";
         public const string RangeButtonName = "menu-range";
+        public const string TutorialButtonName = "menu-tutorial";
         public const string SettingsButtonName = "menu-settings";
         public const string QuitButtonName = "menu-quit";
         public const string NoticeName = "menu-notice";
@@ -57,6 +58,7 @@ namespace Fps.Runtime
             JoinLobbyButtonName,
             LoadoutButtonName,
             RangeButtonName,
+            TutorialButtonName,
             SettingsButtonName,
             QuitButtonName,
         };
@@ -539,6 +541,9 @@ namespace Fps.Runtime
                     break;
                 case RangeButtonName:
                     Choose(MenuDestination.Range);
+                    break;
+                case TutorialButtonName:
+                    Choose(MenuDestination.Tutorial);
                     break;
                 case SettingsButtonName:
                     OpenSettings();

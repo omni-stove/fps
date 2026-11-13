@@ -15,6 +15,9 @@ namespace Fps.Core.Tests
 
         private static readonly GameModeState[] _expectedStatesToEnd = { GameModeState.Playing, GameModeState.Ended };
 
+        private static readonly string[] _expectedCapturedAlpha1 = { "1 Alpha" };
+        private static readonly string[] _expectedNeutralizedAlpha2 = { "2 Alpha" };
+
         private static Domination CreateStarted(int pointCount = 3, int scoreLimit = 100, float timeLimitSeconds = 600f, int maxCapturers = 1)
         {
             var mode = new Domination(new DominationSpec(
@@ -53,7 +56,7 @@ namespace Fps.Core.Tests
             Assert.That(mode.GetOwner(0), Is.Null);
             Assert.That(mode.GetOwner(2), Is.Null);
             Assert.That(mode.CountOwned(Team.Alpha), Is.EqualTo(1));
-            Assert.That(captured, Is.EqualTo(new[] { "1 Alpha" }));
+            Assert.That(captured, Is.EqualTo(_expectedCapturedAlpha1));
         }
 
         [Test]
@@ -233,7 +236,7 @@ namespace Fps.Core.Tests
             mode.Tick(_captureSeconds);
 
             Assert.That(mode.GetOwner(2), Is.Null);
-            Assert.That(neutralized, Is.EqualTo(new[] { "2 Alpha" }));
+            Assert.That(neutralized, Is.EqualTo(_expectedNeutralizedAlpha2));
         }
 
         [Test]

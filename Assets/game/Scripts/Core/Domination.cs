@@ -252,17 +252,18 @@ namespace Fps.Core
             var alphaRate = CountOwned(Team.Alpha) * (double)Spec.PointsPerSecond;
             var bravoRate = CountOwned(Team.Bravo) * (double)Spec.PointsPerSecond;
 
-            UpdatePoints(elapsed);
+            var alphaReach = SecondsToLimit(_alphaScore, alphaRate);
+            var bravoReach = SecondsToLimit(_bravoScore, bravoRate);
+            var firstReach = Math.Min(alphaReach, bravoReach);
+
+            // 拠点も勝利ポイントに届く時刻までしか進めない。
+            UpdatePoints((float)Math.Min(elapsed, firstReach));
 
             // 拠点のイベントのハンドラで Reset されたら、ここで点を足さない。
             if (State != GameModeState.Playing)
             {
                 return;
             }
-
-            var alphaReach = SecondsToLimit(_alphaScore, alphaRate);
-            var bravoReach = SecondsToLimit(_bravoScore, bravoRate);
-            var firstReach = Math.Min(alphaReach, bravoReach);
 
             // 1 回の Tick が長くても、勝利ポイントに届いた時刻で止めて、そこで勝敗を決める。
             if (firstReach <= elapsed)

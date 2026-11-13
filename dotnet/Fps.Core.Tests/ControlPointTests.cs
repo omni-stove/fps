@@ -8,6 +8,9 @@ namespace Fps.Core.Tests
     {
         private const float _captureSeconds = 5f;
 
+        private static readonly string[] _expectedCaptureNeutralizeCapture = { "captured Alpha", "neutralized Alpha", "captured Bravo" };
+        private static readonly string[] _expectedNeutralizeCapture = { "neutralized Bravo", "captured Alpha" };
+
         private static void UpdateMany(ControlPoint point, int alpha, int bravo, float seconds, float step = 0.1f)
         {
             var steps = (int)Math.Round(seconds / step);
@@ -92,7 +95,7 @@ namespace Fps.Core.Tests
             UpdateMany(point, 0, 1, _captureSeconds);
 
             Assert.That(point.Owner, Is.EqualTo(Team.Bravo));
-            Assert.That(events, Is.EqualTo(new[] { "captured Alpha", "neutralized Alpha", "captured Bravo" }));
+            Assert.That(events, Is.EqualTo(_expectedCaptureNeutralizeCapture));
         }
 
         [Test]
@@ -107,7 +110,7 @@ namespace Fps.Core.Tests
             point.Update(1, 0, _captureSeconds * 10f);
 
             Assert.That(point.Owner, Is.EqualTo(Team.Alpha));
-            Assert.That(events, Is.EqualTo(new[] { "neutralized Bravo", "captured Alpha" }));
+            Assert.That(events, Is.EqualTo(_expectedNeutralizeCapture));
         }
 
         [Test]

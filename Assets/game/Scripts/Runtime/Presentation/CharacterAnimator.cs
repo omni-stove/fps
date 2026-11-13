@@ -67,6 +67,10 @@ namespace Fps.Runtime
         private Renderer[] _rigRenderers = Array.Empty<Renderer>();
         private Renderer _hostRenderer;
         private bool _hostRendererWasEnabled;
+
+        /// <summary>リグに置き換えて隠したカプセルの Renderer。隠していなければ null。DeathBodyPresenter が抜け殻に写さない判定に使う。</summary>
+        public Renderer HiddenHostRenderer => _hostRenderer;
+
         private PlayerMockBody _mockBody;
         private Damageable _resetSource;
 

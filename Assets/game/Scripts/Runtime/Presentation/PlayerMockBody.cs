@@ -12,6 +12,7 @@ namespace Fps.Runtime
     /// <item>三人称: 胴 (カプセル)・頭 (球)・銃 (細長い箱) を本体の子に置き、<see cref="PlayerMockPose"/> の姿勢へ寄せる。</item>
     /// <item>一人称: 体は影だけにし、カメラの子に置いた銃 (ビューモデル) だけを右下に見せる。</item>
     /// </list>
+    /// <see cref="CharacterAnimator"/> が人型のリグを置いたら体は出さず (<see cref="ShowsBody"/>)、一人称の銃だけを受け持つ。
     /// 部品にはコライダーを付けない (当たり判定は CharacterController のまま)。部品と重ならないよう、本体自身のレンダラー
     /// (プリミティブのカプセル) は組み立てている間だけ消し、外すときに元へ戻す。
     /// 読み元は <see cref="GameBootstrap"/> が <see cref="Bind"/> で渡す。渡されないまま Awake を迎えたら同じ GameObject から探し、
@@ -58,6 +59,7 @@ namespace Fps.Runtime
         private Quaternion _lean = Quaternion.identity;
         private MockPartPose _gunPose;
         private MockPartPose _viewPose;
+        private bool _showsBody = true;
 
         /// <summary>見せるアクションの読み元。未配線なら null。</summary>
         public PlayerActionReader Reader => _reader;
@@ -79,6 +81,23 @@ namespace Fps.Runtime
 
         /// <summary>今の反動の強さ。0 (なし) 〜 1 (撃った瞬間)。</summary>
         public float Kick => _kick;
+
+        /// <summary>
+        /// 三人称の体 (<see cref="BodyRoot"/>) を出すか。既定は true。<see cref="CharacterAnimator"/> が人型のリグを置いたら false にし、
+        /// 一人称の銃 (ビューモデル) だけを残す。変えるとすぐ反映する。
+        /// </summary>
+        public bool ShowsBody
+        {
+            get => _showsBody;
+            set
+            {
+                _showsBody = value;
+                if (_bodyRoot != null && !value && _bodyRoot.gameObject.activeSelf)
+                {
+                    _bodyRoot.gameObject.SetActive(false);
+                }
+            }
+        }
 
         private void Awake()
         {
@@ -325,9 +344,9 @@ namespace Fps.Runtime
         private void ApplyView(ViewMode mode)
         {
             var firstPerson = mode == ViewMode.FirstPerson;
-            if (!_bodyRoot.gameObject.activeSelf)
+            if (_bodyRoot.gameObject.activeSelf != _showsBody)
             {
-                _bodyRoot.gameObject.SetActive(true);
+                _bodyRoot.gameObject.SetActive(_showsBody);
             }
 
             var bodyShadow = firstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;

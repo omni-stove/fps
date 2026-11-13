@@ -445,12 +445,21 @@ namespace Fps.Runtime
             }
 
             _shoulderOverridden = leftEdge;
-            _rig.Shoulder = leftEdge ? ShoulderSide.Left : _savedShoulder;
+            if (leftEdge)
+            {
+                _savedShoulder = _rig.Shoulder;
+                _rig.Shoulder = ShoulderSide.Left;
+            }
+            else if (_rig.Shoulder == ShoulderSide.Left)
+            {
+                // 上書き中にプレイヤーが切り替えた肩は戻さない。
+                _rig.Shoulder = _savedShoulder;
+            }
         }
 
         private void OnExited()
         {
-            if (_rig != null && _shoulderOverridden)
+            if (_rig != null && _shoulderOverridden && _rig.Shoulder == ShoulderSide.Left)
             {
                 _rig.Shoulder = _savedShoulder;
             }

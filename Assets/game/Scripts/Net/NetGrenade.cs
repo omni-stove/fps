@@ -92,6 +92,11 @@ namespace Fps.Net
             _remaining = fuseSeconds;
             _armed = true;
             IgnoreCollisionsWith(thrower.gameObject);
+            // クライアントは球の当たりを切っているので、サーバーでも全員の CharacterController と衝突させず予測をそろえる
+            foreach (var controller in FindObjectsByType<CharacterController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                IgnoreCollisionsWith(controller.gameObject);
+            }
         }
 
         public override void OnNetworkSpawn()

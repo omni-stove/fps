@@ -43,7 +43,7 @@ namespace Fps.Net.Tests
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             try
             {
-                definition.Id = NetTeamDeathmatch.DefaultWeaponId;
+                definition.Id = WeaponAssetBuilder.RifleId;
                 return definition.ToSpec();
             }
             finally
@@ -65,7 +65,7 @@ namespace Fps.Net.Tests
             return go.AddComponent<NetPlayerWeapon>();
         }
 
-        /// <summary>ネット対戦が今渡しているのと同じ、rifle 1 本だけの武器。</summary>
+        /// <summary>rifle 1 本だけの武器。</summary>
         private NetPlayerWeapon CreateWeapon()
         {
             var weapon = CreateUnequipped();
@@ -108,7 +108,7 @@ namespace Fps.Net.Tests
         {
             // 以下のテストの弾数は、オフラインの WeaponController と同じ rifle (30 発 / 予備 90 / リロード 2 秒) を前提にする
             var spec = DefaultSpec();
-            Assert.That(spec.Id, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
             Assert.That(spec.Category, Is.EqualTo(WeaponCategory.AssaultRifle));
             Assert.That(spec.MagazineSize, Is.EqualTo(30));
             Assert.That(spec.ReserveAmmo, Is.EqualTo(90));
@@ -123,8 +123,8 @@ namespace Fps.Net.Tests
             Assert.That(weapon.CurrentSpec, Is.Null);
 
             weapon.ServerEquip(new[] { DefaultSpec() }, _switchSeconds);
-            Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
-            Assert.That(weapon.CurrentSpec.Id, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(weapon.WeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(weapon.CurrentSpec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
 
             weapon.ServerEquip(new[] { HandgunSpec() }, _switchSeconds);
             Assert.That(weapon.WeaponId, Is.EqualTo(_handgunId));
@@ -134,20 +134,12 @@ namespace Fps.Net.Tests
         [Test]
         public void UuidWeaponIdsFitTheShotRpc()
         {
-            Assert.That(NetPlayerWeapon.FitsWeaponId(NetTeamDeathmatch.DefaultWeaponId), Is.True);
+            Assert.That(NetPlayerWeapon.FitsWeaponId(WeaponAssetBuilder.RifleId), Is.True);
             Assert.That(NetPlayerWeapon.FitsWeaponId(WeaponAssetBuilder.RifleId), Is.True);
             Assert.That(NetPlayerWeapon.FitsWeaponId(WeaponAssetBuilder.HandgunId), Is.True);
             Assert.That(NetPlayerWeapon.FitsWeaponId(new string('a', NetPlayerWeapon.MaxWeaponIdBytes)), Is.True);
             Assert.That(NetPlayerWeapon.FitsWeaponId(new string('a', NetPlayerWeapon.MaxWeaponIdBytes + 1)), Is.False);
             Assert.That(NetPlayerWeapon.FitsWeaponId(null), Is.False);
-        }
-
-        [Test]
-        public void DefaultWeaponIdIsTheRifleOfTheWeaponAssets()
-        {
-            // DefaultWeaponId は Fps.Net から Fps.Editor を参照できないのでリテラルで持つ。ずれたら試合が始まらない
-            Assert.That(NetTeamDeathmatch.DefaultWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
-            Assert.That(WeaponAssetBuilder.RifleSpec().Category, Is.EqualTo(WeaponCategory.AssaultRifle));
         }
 
         [Test]
@@ -160,7 +152,7 @@ namespace Fps.Net.Tests
             Assert.That(weapon.Loadout.SwitchSeconds, Is.EqualTo(_switchSeconds));
             Assert.That(weapon.Loadout.CurrentIndex, Is.EqualTo(0));
             Assert.That(weapon.Loadout.IsSwitching, Is.False);
-            Assert.That(weapon.Loadout.Items[0].Spec.Id, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(weapon.Loadout.Items[0].Spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
             Assert.That(weapon.Loadout.Items[1].Spec.Id, Is.EqualTo(_handgunId));
             Assert.That(weapon.ServerWeapon, Is.SameAs(weapon.Loadout.Items[0]));
             Assert.That(weapon.ServerWeapon.AmmoInMagazine, Is.EqualTo(30));
@@ -191,7 +183,7 @@ namespace Fps.Net.Tests
             Assert.Throws<ArgumentException>(() => weapon.ServerEquip(tooMany, _switchSeconds));
 
             Assert.That(weapon.Loadout, Is.SameAs(previous));
-            Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(weapon.WeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
         }
 
         [Test]
@@ -417,7 +409,7 @@ namespace Fps.Net.Tests
             Assert.That(weapon.Loadout.CurrentIndex, Is.EqualTo(0));
             Assert.That(weapon.Loadout.IsSwitching, Is.False, "a respawned player can fire at once");
             Assert.That(weapon.ServerWeapon, Is.SameAs(rifle));
-            Assert.That(weapon.WeaponId, Is.EqualTo(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(weapon.WeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
             Assert.That(rifle.AmmoInMagazine, Is.EqualTo(30));
             Assert.That(rifle.ReserveAmmo, Is.EqualTo(90));
             Assert.That(weapon.Loadout.Items[1].AmmoInMagazine, Is.EqualTo(5));

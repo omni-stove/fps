@@ -8,15 +8,25 @@ using UnityEngine;
 namespace Fps.Net.Tests
 {
     /// <summary>
-    /// ネット対戦の武器が <see cref="WeaponCatalogAsset"/> から引かれ、射撃に載った武器の Id で検査されるか。
-    /// 試合の開始時に <see cref="NetTeamDeathmatch"/> が使うのと同じ経路 (<see cref="NetTeamDeathmatch.TryCreateLoadout"/>) で確かめる。
+    /// ネット対戦の武器がロードアウトのアセット (<see cref="LoadoutDefinition"/>) から配られ、射撃が撃った人の今の武器で判定されるか。
+    /// 試合の開始時に <see cref="NetTeamDeathmatch"/> が使うのと同じ経路 (<see cref="NetTeamDeathmatch.TryCreateLoadout"/>) で読み、
+    /// 射撃の武器の検査は <see cref="NetTeamDeathmatch.ServerFire"/> と同じ <see cref="NetTeamDeathmatch.CheckWeaponShot"/> を、
+    /// Spawn していない <see cref="NetPlayerWeapon"/> (サーバー側の状態だけを持つ) で確かめる。
     /// </summary>
     public sealed class NetTeamDeathmatchWeaponTests
     {
+        private const string _rifleId = "00000000-0000-4000-8000-000000000001";
         private const string _handgunId = "00000000-0000-4000-8000-000000000002";
 
-        // Catalog に無い Id
+        // ロードアウトに無い Id
         private const string _shotgunId = "00000000-0000-4000-8000-000000000003";
+
+        private const int _rifleDamage = 25;
+        private const int _handgunDamage = 34;
+        private const float _rifleInterval = 0.1f;
+        private const float _handgunInterval = 0.3f;
+        private const float _switchSeconds = 0.4f;
+        private const int _shooterId = 1;
 
         private readonly List<Object> _created = new List<Object>();
 
@@ -34,179 +44,310 @@ namespace Fps.Net.Tests
             _created.Clear();
         }
 
-        private WeaponDefinition Definition(string assetName, string id, int damage = 25, float fireInterval = 0.1f)
+        private WeaponDefinition Rifle()
+        {
+            return Definition("Rifle", _rifleId, WeaponCategory.AssaultRifle, FireMode.Auto, _rifleDamage, _rifleInterval);
+        }
+
+        private WeaponDefinition Handgun()
+        {
+            return Definition("Handgun", _handgunId, WeaponCategory.Handgun, FireMode.Semi, _handgunDamage, _handgunInterval);
+        }
+
+        private WeaponDefinition Definition(string assetName, string id, WeaponCategory category, FireMode fireMode, int damage, float fireInterval)
         {
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             _created.Add(definition);
             definition.name = assetName;
             definition.Id = id;
+            definition.DisplayName = assetName;
+            definition.Category = category;
+            definition.FireMode = fireMode;
             definition.Damage = damage;
             definition.FireInterval = fireInterval;
             return definition;
         }
 
-        private WeaponCatalogAsset Catalog(params WeaponDefinition[] weapons)
+        private LoadoutDefinition LoadoutAsset(params LoadoutSlotDefinition[] slots)
         {
-            var catalog = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
-            _created.Add(catalog);
-            catalog.name = "TestWeaponCatalog";
-            catalog.SetWeapons(weapons);
-            return catalog;
+            var loadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
+            _created.Add(loadout);
+            loadout.name = "TestLoadout";
+            loadout.SetSlots(slots);
+            loadout.SwitchSeconds = _switchSeconds;
+            return loadout;
+        }
+
+        private static LoadoutSlotDefinition Slot(WeaponCategory category, WeaponDefinition weapon)
+        {
+            return new LoadoutSlotDefinition(new[] { category }, weapon);
+        }
+
+        /// <summary>0 番が rifle、1 番が handgun のロードアウト。</summary>
+        private LoadoutDefinition RifleAndHandgunAsset()
+        {
+            return LoadoutAsset(Slot(WeaponCategory.AssaultRifle, Rifle()), Slot(WeaponCategory.Handgun, Handgun()));
         }
 
         private ServerLoadout RifleAndHandgunLoadout()
         {
-            var catalog = Catalog(
-                Definition("Rifle", NetTeamDeathmatch.DefaultWeaponId, damage: 25, fireInterval: 0.1f),
-                Definition("Handgun", _handgunId, damage: 34, fireInterval: 0.2f));
-            Assert.That(NetTeamDeathmatch.TryCreateLoadout(catalog, out var loadout, out var error), Is.True, error);
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(RifleAndHandgunAsset(), out var loadout, out var error), Is.True, error);
             return loadout;
         }
 
+        /// <summary>出現したときと同じく、loadout を <see cref="NetPlayerWeapon.ServerEquip"/> で持たせたプレイヤー。</summary>
+        private NetPlayerWeapon EquippedWeapon(ServerLoadout loadout)
+        {
+            var weapon = UnequippedWeapon();
+            weapon.ServerEquip(loadout.Weapons, loadout.SwitchSeconds);
+            return weapon;
+        }
+
+        private NetPlayerWeapon UnequippedWeapon()
+        {
+            var go = new GameObject("TestNetPlayer");
+            _created.Add(go);
+            go.AddComponent<NetworkObject>();
+            return go.AddComponent<NetPlayerWeapon>();
+        }
+
+        /// <summary>サーバーと同じく持ち主からの要求で index に持ち替え、持ち替えが終わるまで時間を進める。</summary>
+        private static void SwitchAndWait(NetPlayerWeapon weapon, int index)
+        {
+            Assert.That(weapon.ServerHandleSwitchRequest(weapon.OwnerClientId, index), Is.True);
+            weapon.ServerTick(_switchSeconds);
+            Assert.That(weapon.Loadout.IsSwitching, Is.False);
+        }
+
+        private static ShotRejection Fire(ServerLoadout loadout, NetPlayerWeapon weapon, string weaponId, double now, out WeaponSpec spec)
+        {
+            return NetTeamDeathmatch.CheckWeaponShot(loadout, _shooterId, weapon, weaponId, now, out spec);
+        }
+
         [Test]
-        public void MatchTakesTheCatalogBeforeSpawn()
+        public void MatchTakesTheLoadoutBeforeSpawn()
         {
             var go = new GameObject("TestNetMatch");
             _created.Add(go);
             go.AddComponent<NetworkObject>();
             var match = go.AddComponent<NetTeamDeathmatch>();
-            var catalog = Catalog(Definition("Rifle", NetTeamDeathmatch.DefaultWeaponId));
+            var asset = RifleAndHandgunAsset();
 
-            Assert.That(match.Catalog, Is.Null, "a new match has no weapons until the catalog is wired");
-            match.Catalog = catalog;
+            Assert.That(match.Loadout, Is.Null, "a new match has no weapons until the loadout is wired");
+            match.Loadout = asset;
 
-            Assert.That(match.Catalog, Is.SameAs(catalog));
-            Assert.That(match.Loadout, Is.Null, "the catalog is read when the match starts on the server");
+            Assert.That(match.Loadout, Is.SameAs(asset));
+            Assert.That(match.ServerLoadout, Is.Null, "the loadout is read when the match starts on the server");
         }
 
         [Test]
-        public void LoadsEveryWeaponOfTheCatalog()
+        public void LoadsEveryWeaponOfTheLoadoutInSlotOrder()
         {
             var loadout = RifleAndHandgunLoadout();
 
-            Assert.That(loadout.Catalog.Count, Is.EqualTo(2));
-            Assert.That(loadout.Catalog.Get(NetTeamDeathmatch.DefaultWeaponId).Damage, Is.EqualTo(25));
-            Assert.That(loadout.Catalog.Get(_handgunId).Damage, Is.EqualTo(34));
-            Assert.That(loadout.Count, Is.Zero, "nobody holds a weapon until they join");
+            Assert.That(loadout.Weapons.Count, Is.EqualTo(2));
+            Assert.That(loadout.Weapons[0].Id, Is.EqualTo(_rifleId));
+            Assert.That(loadout.Weapons[0].DisplayName, Is.EqualTo("Rifle"));
+            Assert.That(loadout.Weapons[0].Damage, Is.EqualTo(_rifleDamage));
+            Assert.That(loadout.Weapons[1].Id, Is.EqualTo(_handgunId));
+            Assert.That(loadout.Weapons[1].Damage, Is.EqualTo(_handgunDamage));
+            Assert.That(loadout.SwitchSeconds, Is.EqualTo(_switchSeconds));
+            Assert.That(loadout.Rule.SlotCount, Is.EqualTo(2));
+            Assert.That(loadout.PlayerCount, Is.Zero, "nobody has a fire rate budget until they shoot");
         }
 
         [Test]
-        public void RefusesToStartWithoutACatalog()
+        public void RefusesToStartWithoutALoadout()
         {
             Assert.That(NetTeamDeathmatch.TryCreateLoadout(null, out var loadout, out var error), Is.False);
             Assert.That(loadout, Is.Null);
-            Assert.That(error, Does.Contain("no weapon catalog"));
+            Assert.That(error, Does.Contain("no loadout"));
         }
 
         [Test]
-        public void RefusesToStartWithAnEmptyCatalog()
+        public void RefusesToStartWithALoadoutWithoutSlots()
         {
-            Assert.That(NetTeamDeathmatch.TryCreateLoadout(Catalog(), out var loadout, out var error), Is.False);
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(LoadoutAsset(), out var loadout, out var error), Is.False);
             Assert.That(loadout, Is.Null);
-            Assert.That(error, Does.Contain("TestWeaponCatalog"));
+            Assert.That(error, Does.Contain("TestLoadout"));
+        }
+
+        [Test]
+        public void RefusesToStartWithASlotWithoutAWeapon()
+        {
+            var asset = LoadoutAsset(Slot(WeaponCategory.AssaultRifle, Rifle()), Slot(WeaponCategory.Handgun, null));
+
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(asset, out var loadout, out var error), Is.False);
+            Assert.That(loadout, Is.Null);
+            Assert.That(error, Does.Contain("slot #1"));
         }
 
         [Test]
         public void RefusesToStartWithABrokenWeapon()
         {
-            var broken = Definition("Broken", NetTeamDeathmatch.DefaultWeaponId);
+            var broken = Rifle();
+            broken.name = "Broken";
             broken.MagazineSize = 0;
+            var asset = LoadoutAsset(Slot(WeaponCategory.AssaultRifle, broken), Slot(WeaponCategory.Handgun, Handgun()));
 
-            Assert.That(NetTeamDeathmatch.TryCreateLoadout(Catalog(broken), out var loadout, out var error), Is.False);
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(asset, out var loadout, out var error), Is.False);
             Assert.That(loadout, Is.Null);
             Assert.That(error, Does.Contain("Broken"));
         }
 
         [Test]
-        public void RefusesToStartWithoutTheWeaponGivenToJoiningPlayers()
+        public void RefusesToStartWhenAWeaponDoesNotFitItsSlot()
         {
-            var catalog = Catalog(Definition("Handgun", _handgunId));
+            var asset = LoadoutAsset(Slot(WeaponCategory.AssaultRifle, Handgun()), Slot(WeaponCategory.Handgun, Rifle()));
 
-            Assert.That(NetTeamDeathmatch.TryCreateLoadout(catalog, out var loadout, out var error), Is.False);
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(asset, out var loadout, out var error), Is.False);
             Assert.That(loadout, Is.Null);
-            Assert.That(error, Does.Contain(NetTeamDeathmatch.DefaultWeaponId));
+            Assert.That(error, Does.Contain("does not accept"));
+        }
+
+        [Test]
+        public void RefusesToStartWithTheSameWeaponInTwoSlots()
+        {
+            var rifle = Rifle();
+            var asset = LoadoutAsset(
+                new LoadoutSlotDefinition(new[] { WeaponCategory.AssaultRifle }, rifle),
+                new LoadoutSlotDefinition(new[] { WeaponCategory.AssaultRifle }, rifle));
+
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(asset, out var loadout, out var error), Is.False);
+            Assert.That(loadout, Is.Null);
+            Assert.That(error, Does.Contain("already in slot"));
+        }
+
+        [Test]
+        public void RefusesToStartWithAnInvalidSwitchTime()
+        {
+            var asset = RifleAndHandgunAsset();
+            asset.SwitchSeconds = float.NaN;
+
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(asset, out var loadout, out var error), Is.False);
+            Assert.That(loadout, Is.Null);
+            Assert.That(error, Does.Contain("switch seconds"));
         }
 
         [Test]
         public void RefusesToStartWithANonUuidId()
         {
-            var catalog = Catalog(Definition("Rifle", NetTeamDeathmatch.DefaultWeaponId), Definition("OldHandgun", "handgun"));
+            var old = Handgun();
+            old.name = "OldHandgun";
+            old.Id = "handgun";
+            var asset = LoadoutAsset(Slot(WeaponCategory.AssaultRifle, Rifle()), Slot(WeaponCategory.Handgun, old));
 
-            Assert.That(NetTeamDeathmatch.TryCreateLoadout(catalog, out var loadout, out var error), Is.False);
+            Assert.That(NetTeamDeathmatch.TryCreateLoadout(asset, out var loadout, out var error), Is.False);
             Assert.That(loadout, Is.Null);
             Assert.That(error, Does.Contain("OldHandgun"));
+        }
+
+        [Test]
+        public void DamageFollowsTheHeldWeapon()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = EquippedWeapon(loadout);
+
+            Assert.That(Fire(loadout, weapon, _rifleId, 0d, out var spec), Is.EqualTo(ShotRejection.None));
+            Assert.That(spec, Is.SameAs(weapon.CurrentSpec));
+            Assert.That(DamageCalculator.Calculate(spec.Damage, HitZone.Body, 10f, spec.Falloff), Is.EqualTo(_rifleDamage));
+
+            SwitchAndWait(weapon, 1);
+
+            Assert.That(Fire(loadout, weapon, _handgunId, 1d, out spec), Is.EqualTo(ShotRejection.None));
+            Assert.That(spec.Id, Is.EqualTo(_handgunId));
+            Assert.That(DamageCalculator.Calculate(spec.Damage, HitZone.Body, 10f, spec.Falloff), Is.EqualTo(_handgunDamage));
+        }
+
+        [Test]
+        public void ShotWithTheWeaponHeldBeforeASwitchIsDropped()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = EquippedWeapon(loadout);
+
+            Assert.That(Fire(loadout, weapon, _handgunId, 0d, out var spec), Is.EqualTo(ShotRejection.WeaponMismatch), "the handgun is not drawn yet");
+            Assert.That(spec, Is.Null);
+
+            SwitchAndWait(weapon, 1);
+
+            // 持ち替えた後に届いた rifle の射撃は、rifle の値で判定しない
+            Assert.That(Fire(loadout, weapon, _rifleId, 0d, out spec), Is.EqualTo(ShotRejection.WeaponMismatch));
+            Assert.That(spec, Is.Null);
+        }
+
+        [Test]
+        public void FireRateFollowsTheWeaponAfterASwitch()
+        {
+            var loadout = RifleAndHandgunLoadout();
+            var weapon = EquippedWeapon(loadout);
+            for (var i = 0; i < ShotBudget.DefaultBurst; i++)
+            {
+                Assert.That(Fire(loadout, weapon, _rifleId, 0d, out _), Is.EqualTo(ShotRejection.None), "rifle shot " + i);
+            }
+
+            Assert.That(Fire(loadout, weapon, _rifleId, 0d, out _), Is.EqualTo(ShotRejection.FireRateExceeded));
+            Assert.That(loadout.TryGetBudget(_shooterId, out var budget), Is.True);
+            Assert.That(budget.FireInterval, Is.EqualTo(_rifleInterval));
+
+            SwitchAndWait(weapon, 1);
+
+            // 持ち替えたら handgun の間隔で作り直すので、溜めは満タンから
+            for (var i = 0; i < ShotBudget.DefaultBurst; i++)
+            {
+                Assert.That(Fire(loadout, weapon, _handgunId, 1d, out _), Is.EqualTo(ShotRejection.None), "handgun shot " + i);
+            }
+
+            Assert.That(loadout.TryGetBudget(_shooterId, out budget), Is.True);
+            Assert.That(budget.FireInterval, Is.EqualTo(_handgunInterval));
+
+            // rifle の間隔 (0.1 秒) なら 1 発ぶん戻るが、handgun (0.3 秒) では戻らない
+            Assert.That(Fire(loadout, weapon, _handgunId, 1.1d, out _), Is.EqualTo(ShotRejection.FireRateExceeded));
+            Assert.That(Fire(loadout, weapon, _handgunId, 1.35d, out _), Is.EqualTo(ShotRejection.None));
         }
 
         [Test]
         public void ShotWithAnUnknownWeaponIdIsDropped()
         {
             var loadout = RifleAndHandgunLoadout();
-            loadout.Equip(0, NetTeamDeathmatch.DefaultWeaponId);
+            var weapon = EquippedWeapon(loadout);
 
-            Assert.That(loadout.TryFire(0, _shotgunId, 0d, out var spec), Is.EqualTo(ShotRejection.UnknownWeapon));
+            Assert.That(Fire(loadout, weapon, _shotgunId, 0d, out var spec), Is.EqualTo(ShotRejection.UnknownWeapon));
             Assert.That(spec, Is.Null);
-            Assert.That(loadout.TryFire(0, string.Empty, 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
-            Assert.That(loadout.TryFire(0, "rifle", 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
-            Assert.That(
-                loadout.TryFire(0, NetTeamDeathmatch.DefaultWeaponId.ToUpperInvariant(), 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
+            Assert.That(Fire(loadout, weapon, string.Empty, 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
+            Assert.That(Fire(loadout, weapon, null, 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
+            Assert.That(Fire(loadout, weapon, _rifleId.ToUpperInvariant(), 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
         }
 
         [Test]
-        public void ShotWithAnotherWeaponThanTheEquippedOneIsDropped()
+        public void ShotBeforeTheWeaponIsGivenIsDropped()
         {
             var loadout = RifleAndHandgunLoadout();
-            loadout.Equip(0, NetTeamDeathmatch.DefaultWeaponId);
 
-            // handgun は Catalog にあるが、サーバーが持たせているのは rifle
-            Assert.That(loadout.TryFire(0, _handgunId, 0d, out var spec), Is.EqualTo(ShotRejection.WeaponMismatch));
+            Assert.That(Fire(loadout, UnequippedWeapon(), _rifleId, 0d, out var spec), Is.EqualTo(ShotRejection.NoWeapon));
             Assert.That(spec, Is.Null);
-        }
-
-        [Test]
-        public void ShotWithTheEquippedWeaponUsesTheServerValues()
-        {
-            var loadout = RifleAndHandgunLoadout();
-            loadout.Equip(0, NetTeamDeathmatch.DefaultWeaponId);
-
-            Assert.That(loadout.TryFire(0, NetTeamDeathmatch.DefaultWeaponId, 0d, out var spec), Is.EqualTo(ShotRejection.None));
-            Assert.That(spec, Is.SameAs(loadout.Catalog.Get(NetTeamDeathmatch.DefaultWeaponId)));
-            Assert.That(spec.Damage, Is.EqualTo(25));
+            Assert.That(Fire(loadout, null, _rifleId, 0d, out spec), Is.EqualTo(ShotRejection.NoWeapon));
+            Assert.That(spec, Is.Null);
         }
 
         [Test]
         public void DroppedShotsDoNotUseUpTheFireRate()
         {
             var loadout = RifleAndHandgunLoadout();
-            loadout.Equip(0, NetTeamDeathmatch.DefaultWeaponId);
+            var weapon = EquippedWeapon(loadout);
 
             for (var i = 0; i < 10; i++)
             {
-                Assert.That(loadout.TryFire(0, _handgunId, 0d, out _), Is.EqualTo(ShotRejection.WeaponMismatch));
-                Assert.That(loadout.TryFire(0, _shotgunId, 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
+                Assert.That(Fire(loadout, weapon, _handgunId, 0d, out _), Is.EqualTo(ShotRejection.WeaponMismatch));
+                Assert.That(Fire(loadout, weapon, _shotgunId, 0d, out _), Is.EqualTo(ShotRejection.UnknownWeapon));
             }
 
             // 武器が正しい射撃だけが rifle の連射間隔 (ShotBudget) を減らす
             for (var i = 0; i < ShotBudget.DefaultBurst; i++)
             {
-                Assert.That(loadout.TryFire(0, NetTeamDeathmatch.DefaultWeaponId, 0d, out _), Is.EqualTo(ShotRejection.None), "shot " + i);
+                Assert.That(Fire(loadout, weapon, _rifleId, 0d, out _), Is.EqualTo(ShotRejection.None), "shot " + i);
             }
 
-            Assert.That(loadout.TryFire(0, NetTeamDeathmatch.DefaultWeaponId, 0d, out _), Is.EqualTo(ShotRejection.FireRateExceeded));
-        }
-
-        [Test]
-        public void FireRateFollowsTheEquippedWeapon()
-        {
-            var loadout = RifleAndHandgunLoadout();
-            loadout.Equip(0, _handgunId);
-            for (var i = 0; i < ShotBudget.DefaultBurst; i++)
-            {
-                Assert.That(loadout.TryFire(0, _handgunId, 0d, out _), Is.EqualTo(ShotRejection.None), "shot " + i);
-            }
-
-            // rifle の間隔 (0.1 秒) では handgun (0.2 秒) は 1 発ぶんも戻らない
-            Assert.That(loadout.TryFire(0, _handgunId, 0.1d, out _), Is.EqualTo(ShotRejection.FireRateExceeded));
-            Assert.That(loadout.TryFire(0, _handgunId, 0.3d, out _), Is.EqualTo(ShotRejection.None));
+            Assert.That(Fire(loadout, weapon, _rifleId, 0d, out _), Is.EqualTo(ShotRejection.FireRateExceeded));
         }
 
         [Test]

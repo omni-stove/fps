@@ -18,7 +18,8 @@ namespace Fps.Net
     /// サーバーがリロード・持ち替えを判定する。
     /// </summary>
     /// <remarks>
-    /// 武器の設定 (<see cref="WeaponSpec"/>) は <see cref="NetTeamDeathmatch"/> が WeaponCatalog から引き、参加時に <see cref="ServerEquip"/> で渡す。
+    /// 武器の設定 (<see cref="WeaponSpec"/>) は <see cref="NetTeamDeathmatch"/> がロードアウトのアセット (<see cref="LoadoutDefinition"/>) から引き、
+    /// 出現・リスポーンのたびに <see cref="ServerEquip"/> で渡す。
     /// 今持っている武器の Id (<see cref="WeaponId"/>) は全員に配り、持ち主は射撃の RPC にこの Id を載せる (数値は送らない)。
     /// 射撃 1 発ぶんの消費は <see cref="NetTeamDeathmatch.ServerFire"/> が当たり判定の前に <see cref="ServerTryFire"/> で行う。
     /// <para>

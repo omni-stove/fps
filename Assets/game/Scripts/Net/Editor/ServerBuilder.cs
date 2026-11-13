@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Fps.Core;
 using Fps.Net;
+using Fps.Runtime;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -64,6 +66,7 @@ namespace Fps.Editor
             }
 
             EnsureNetScene();
+            RequireLoadoutInBuild();
 
             Directory.CreateDirectory(options.OutputDirectory);
             var buildOptions = new BuildPlayerOptions
@@ -107,21 +110,21 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// NetTest シーンとプレイヤーのプレハブが無いか、試合の進行役に武器の一覧が配線されていなければ生成する。
+        /// NetTest シーンとプレイヤーのプレハブが無いか、試合の進行役にロードアウトが配線されていなければ生成する。
         /// そろっていれば作り直さない (プレハブを作り直すと、すでに配ったクライアントのビルドと食い違うおそれがあるため)。
         /// </summary>
         private static void EnsureNetScene()
         {
             var hasScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(NetBootstrap.ScenePath) != null;
             var hasPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NetSceneBuilder.PlayerPrefabPath) != null;
-            var hasCatalog = MatchHasWeaponCatalog();
-            if (hasScene && hasPrefab && hasCatalog)
+            var hasLoadout = MatchLoadout() != null;
+            if (hasScene && hasPrefab && hasLoadout)
             {
                 return;
             }
 
             Debug.Log("[Net] ServerBuilder: " + NetBootstrap.ScenePath + " or " + NetSceneBuilder.PlayerPrefabPath
-                + " is missing, or " + NetSceneBuilder.MatchPrefabPath + " has no weapon catalog;"
+                + " is missing, or " + NetSceneBuilder.MatchPrefabPath + " has no usable loadout;"
                 + " running NetSceneBuilder.Build (commit the generated files)");
             NetSceneBuilder.Build();
 
@@ -131,22 +134,110 @@ namespace Fps.Editor
                     "[Net] ServerBuilder: " + NetBootstrap.ScenePath + " was not created by NetSceneBuilder.Build");
             }
 
-            if (!MatchHasWeaponCatalog())
+            if (MatchLoadout() == null)
             {
                 throw new InvalidOperationException(
-                    "[Net] ServerBuilder: " + NetSceneBuilder.MatchPrefabPath + " has no usable weapon catalog after NetSceneBuilder.Build");
+                    "[Net] ServerBuilder: " + NetSceneBuilder.MatchPrefabPath + " has no usable loadout after NetSceneBuilder.Build");
             }
         }
 
         /// <summary>
-        /// 試合の進行役のプレハブに、サーバーが起動時に読める武器の一覧が配線されているか。
+        /// 試合の進行役のプレハブに配線された、サーバーが起動時に読めるロードアウト。無い・読めなければ null。
         /// 無いままビルドすると専用サーバーは試合を始められずに終わるので、ビルドの前に確かめる。
         /// </summary>
-        private static bool MatchHasWeaponCatalog()
+        private static LoadoutDefinition MatchLoadout()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(NetSceneBuilder.MatchPrefabPath);
             var match = prefab != null ? prefab.GetComponent<NetTeamDeathmatch>() : null;
-            return match != null && NetTeamDeathmatch.TryCreateLoadout(match.Catalog, out _, out _);
+            if (match == null || !NetTeamDeathmatch.TryCreateLoadout(match.Loadout, out _, out _))
+            {
+                return null;
+            }
+
+            return match.Loadout;
+        }
+
+        /// <summary>
+        /// 試合の進行役のロードアウトとその武器の定義が、ビルドに入れるシーン (<see cref="NetBootstrap.ScenePath"/>) から
+        /// 参照をたどって届き、プレイヤーに含まれることを確かめる。届かなければ例外を投げる。
+        /// </summary>
+        private static void RequireLoadoutInBuild()
+        {
+            var loadout = MatchLoadout();
+            if (loadout == null)
+            {
+                throw new InvalidOperationException(
+                    "[Net] ServerBuilder: " + NetSceneBuilder.MatchPrefabPath + " has no usable loadout");
+            }
+
+            var missing = MissingFromScene(NetBootstrap.ScenePath, LoadoutAssetPaths(loadout));
+            if (missing.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "[Net] ServerBuilder: " + string.Join(", ", missing) + " would not be in the build of " + NetBootstrap.ScenePath
+                    + "; run NetSceneBuilder.Build");
+            }
+
+            Debug.Log("[Net] ServerBuilder: the build includes loadout " + AssetDatabase.GetAssetPath(loadout));
+        }
+
+        /// <summary>loadout のアセットと、そのスロットに入っている武器の定義のアセットのパス。保存されていないアセットは空文字になる。</summary>
+        public static IReadOnlyList<string> LoadoutAssetPaths(LoadoutDefinition loadout)
+        {
+            if (loadout == null)
+            {
+                throw new ArgumentNullException(nameof(loadout));
+            }
+
+            var paths = new List<string>();
+            AddAssetPath(paths, loadout);
+            foreach (var slot in loadout.Slots)
+            {
+                if (slot != null && slot.Weapon != null)
+                {
+                    AddAssetPath(paths, slot.Weapon);
+                }
+            }
+
+            return paths;
+        }
+
+        /// <summary>
+        /// required のうち、scenePath のシーンから参照をたどって届かない (ビルドに入らない) アセットのパス。
+        /// 空のパスは保存されていないアセットなので、届かないものとして返す。
+        /// </summary>
+        public static IReadOnlyList<string> MissingFromScene(string scenePath, IEnumerable<string> required)
+        {
+            if (string.IsNullOrEmpty(scenePath))
+            {
+                throw new ArgumentException("scenePath must not be empty", nameof(scenePath));
+            }
+
+            if (required == null)
+            {
+                throw new ArgumentNullException(nameof(required));
+            }
+
+            var dependencies = new HashSet<string>(AssetDatabase.GetDependencies(scenePath, true), StringComparer.Ordinal);
+            var missing = new List<string>();
+            foreach (var path in required)
+            {
+                if (string.IsNullOrEmpty(path) || !dependencies.Contains(path))
+                {
+                    missing.Add(string.IsNullOrEmpty(path) ? "(unsaved asset)" : path);
+                }
+            }
+
+            return missing;
+        }
+
+        private static void AddAssetPath(List<string> paths, UnityEngine.Object asset)
+        {
+            var path = AssetDatabase.GetAssetPath(asset);
+            if (!paths.Contains(path))
+            {
+                paths.Add(path);
+            }
         }
     }
 }

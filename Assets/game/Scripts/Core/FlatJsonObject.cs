@@ -12,6 +12,11 @@ namespace Fps.Core
     /// </summary>
     public static class FlatJsonObject
     {
+        // 文字リテラルに U+2028 / U+2029 や BOM を直接書くと、C# が改行として扱ったり不可視で読めなくなったりするため、数値で書く
+        private const char _lineSeparator = (char)0x2028;
+        private const char _paragraphSeparator = (char)0x2029;
+        private const char _byteOrderMark = (char)0xFEFF;
+
         /// <summary>
         /// キーと値を、渡した順に空白も改行も入れない 1 行の JSON オブジェクトにする。
         /// 制御文字・<c>"</c>・<c>\</c>・行区切り (U+2028 / U+2029)・対になっていないサロゲートはエスケープするので、
@@ -93,7 +98,7 @@ namespace Fps.Core
                 }
 
                 // 行区切りは JSON としては正しいが、行ごとに読むログの集め方では改行として扱われることがある
-                if (c < ' ' || c == ' ' || c == ' ' || char.IsSurrogate(c))
+                if (c < ' ' || c == _lineSeparator || c == _paragraphSeparator || char.IsSurrogate(c))
                 {
                     builder.Append("\\u").Append(((int)c).ToString("x4", CultureInfo.InvariantCulture));
                     continue;
@@ -120,7 +125,7 @@ namespace Fps.Core
             var reader = new Reader(text);
             var result = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            if (reader.Peek() == '﻿')
+            if (reader.Peek() == _byteOrderMark)
             {
                 reader.Advance();
             }

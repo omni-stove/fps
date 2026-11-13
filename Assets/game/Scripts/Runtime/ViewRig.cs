@@ -246,6 +246,25 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// origin からワールド座標の offset の先へカメラを置くときの位置。間に自分の体以外があれば、三人称のカメラと同じ半径・レイヤーで
+        /// 球を飛ばして手前まで縮める (<see cref="CameraBoom.Length"/>)。デスカムのように目からのオフセットでなくカメラを置くときに使う。
+        /// 初期化していなくても使える。
+        /// </summary>
+        public Vector3 ResolveBoomPosition(Vector3 origin, Vector3 offset)
+        {
+            var desired = offset.magnitude;
+            if (!(desired >= 1e-6f) || float.IsInfinity(desired))
+            {
+                return origin;
+            }
+
+            var direction = offset / desired;
+            float? blockedAt = TryNearestCast(origin, direction, desired, out var hitDistance) ? hitDistance : (float?)null;
+            var length = CameraBoom.Length(desired, blockedAt, _minBoomLength);
+            return origin + (direction * length);
+        }
+
+        /// <summary>
         /// 自分の体の描き方を決める。isLocalView (この端末のプレイヤーの視点) かつ一人称なら影だけ描いて視界をふさがず、
         /// それ以外 (三人称や他人のプレイヤー) は普通に描く。
         /// </summary>

@@ -16,6 +16,7 @@ namespace Fps.Net
         /// 巻き戻せるのは <see cref="LagCompensator.MaxRewindTicks"/> tick 前まで。
         /// 射程・ダメージ・減衰は、サーバーが shooter に今持たせている武器 (<see cref="NetPlayerWeapon.CurrentSpec"/>) の値を使う (クライアントの値は使わない)。
         /// 弾を消費した射撃は、着弾・ヒット・被弾と合わせて <see cref="NetCombatFeed"/> でクライアントへ配る。
+        /// 弾を消費したら、当たったかどうかによらず shooter の出現直後の無敵を解く (<see cref="TeamDeathmatchSession.EndSpawnProtection"/>)。
         /// <para>
         /// 判定の向きは、クライアントの向きにばらつき (<see cref="SpreadPattern"/>) を掛けたもの。種はサーバーが数えた発射番号
         /// (<see cref="ServerShotSequence"/>、弾を消費した射撃だけを数える) と shooter のプレイヤー Id、散らばりはその武器の値と、
@@ -94,6 +95,9 @@ namespace Fps.Net
                 WarnRejected(shooterId, ammo);
                 return;
             }
+
+            // 弾を撃った時点で解く (外れても)。跳ね返しの味方撃ちが撃った本人に届くよう、ダメージより先に
+            ServerEndSpawnProtection(shooterId);
 
             if (blind == BlindFireAim.Blind)
             {

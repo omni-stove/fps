@@ -33,6 +33,6 @@ MonoBehaviour:
   _vault: 0
   _grenade: 0
   _grenadeCount: 0
-  _spawnProtectionSeconds: 0
+  _spawnProtectionSeconds: 2
   _fallDamage: 0
   _hudDensity: 0

@@ -1,0 +1,193 @@
+name: Client release
+
+# v* のタグを push したら、Windows (StandaloneWindows64) と macOS のクライアントをビルドして zip にし、そのタグの GitHub Release に添付する。
+# macOS は署名も公証もしないので、zip と Release の本文に docs/client-readme.md (右クリックで開く手順) を入れる。
+# v0.0.0-test のように - を含むタグは pre-release にする。出す手順は docs/client-release.md を参照
+on:
+  push:
+    tags: ["v*"]
+
+# 同じタグを付け直して push したときに古い方が後から zip を上書きしないよう、取り消さずに順に走らせる
+concurrency:
+  group: client-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      # タグ名は unity-builder の中でシェルのコマンドラインに埋め込まれ、zip の名前にも使うので、Fps.Core.BuildVersion と同じ規則
+      # (v の直後が数字なら v を外す、英数字と . - _ だけで . と - では始まらず 32 文字以内) で先に確かめ、通ったものだけを使う
+      - id: version
+        name: Resolve the build version from the tag
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="$TAG_NAME"
+          if [[ "$version" =~ ^[vV][0-9] ]]; then
+            version="${version:1}"
+          fi
+          if [[ ! "$version" =~ ^[A-Za-z0-9_][A-Za-z0-9._-]{0,31}$ ]]; then
+            echo "::error::tag '$TAG_NAME' is not a usable build version (letters, digits, . - _ only, not starting with . or -, at most 32 characters after the leading v)"
+            exit 1
+          fi
+          prerelease=false
+          if [[ "$version" == *-* ]]; then
+            prerelease=true
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      # 片方でも失敗すれば Release は作らないので、残りを待たずに止める
+      fail-fast: true
+      matrix:
+        include:
+          - platform: windows
+            target: StandaloneWindows64
+            cache: win64
+          - platform: macos
+            target: StandaloneOSX
+            cache: osx
+    env:
+      PLATFORM: ${{ matrix.platform }}
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      # macOS は nightly の client ジョブと同じキーにして、Library を使い回す
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: unity-library-client-${{ matrix.cache }}-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: unity-library-client-${{ matrix.cache }}-
+
+      # ClientBuilder.Build は Unity 自身の引数や unity-builder の -customBuildPath などを無視し、
+      # -clientPlatform と -buildVersion を見て Builds/client-<platform>/ に出力する (make build windows|macos と同じ)。
+      # Standalone は Mono なので Linux のランナーでも両方の OS 向けにビルドできる。
+      # unity-builder は自分でも -buildVersion を足し、customParameters に書くと 2 回指定で失敗するので、versioning: Custom で渡す
+      - name: Build the ${{ matrix.platform }} client
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: ${{ matrix.target }}
+          buildMethod: Fps.Editor.ClientBuilder.Build
+          customParameters: -clientPlatform ${{ matrix.platform }}
+          versioning: Custom
+          version: ${{ needs.version.outputs.version }}
+
+      - name: Check the build output
+        run: |
+          set -euo pipefail
+          case "$PLATFORM" in
+          windows)
+            test -f Builds/client-windows/fps.exe
+            test -d Builds/client-windows/fps_Data
+            ;;
+          macos)
+            test -f Builds/client-macos/fps.app/Contents/Info.plist
+            test -f Builds/client-macos/fps.app/Contents/MacOS/fps
+            ;;
+          esac
+
+      # actions/upload-artifact は実行権限とシンボリックリンクを落とすので、先に zip にしてから渡す。
+      # zip の中は fps-<版>-<platform>/ の 1 階層にまとめ、展開したときにファイルが散らばらないようにする
+      - id: package
+        name: Package the zip
+        run: |
+          set -euo pipefail
+          name="fps-$VERSION-$PLATFORM"
+          stage="dist/$name"
+
+          # unity-builder のコンテナは root で書き出すので、ランナーのユーザーで読み書きできるようにする
+          sudo chown -R "$(id -u):$(id -g)" Builds
+
+          mkdir -p "$stage"
+          cp -a "Builds/client-$PLATFORM/." "$stage/"
+          # IL2CPP や Burst のデバッグ用の出力は配らない (Unity が「配るな」という名前で出す)
+          rm -rf "$stage"/*_BurstDebugInformation_DoNotShip "$stage"/*_BackUpThisFolder_ButDontShipItWithYourGame
+          cp docs/client-readme.md "$stage/README.md"
+
+          if [ "$PLATFORM" = macos ]; then
+            # Linux 上のビルドで実行権限が付かないことがあり、無いと macOS で「壊れている」と出て開けない
+            chmod +x "$stage/fps.app/Contents/MacOS/"*
+          fi
+
+          (cd dist && zip -r -y -X -9 -q "$name.zip" "$name")
+          unzip -l "dist/$name.zip" | tail -n 1
+          echo "zip=dist/$name.zip" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-${{ matrix.platform }}
+          path: ${{ steps.package.outputs.zip }}
+          retention-days: 7
+          if-no-files-found: error
+
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: client-*
+          path: dist
+          merge-multiple: true
+
+      # タグを付け直して push したときは Release を作り直さず、同じ名前の zip を差し替える
+      - name: Attach the zips to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          assets=("dist/fps-$VERSION-windows.zip" "dist/fps-$VERSION-macos.zip")
+          for asset in "${assets[@]}"; do
+            if [ ! -f "$asset" ]; then
+              echo "::error::$asset was not built"
+              ls -l dist || true
+              exit 1
+            fi
+          done
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${assets[@]}" --clobber
+            echo "replaced the zips on the existing release $TAG"
+          else
+            flags=()
+            if [ "$PRERELEASE" = true ]; then
+              flags+=(--prerelease)
+            fi
+            gh release create "$TAG" "${assets[@]}" --verify-tag --title "$TAG" --notes-file docs/client-readme.md "${flags[@]}"
+            echo "created the release $TAG"
+          fi
+
+          {
+            echo "Attached to [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG):"
+            echo
+            for asset in "${assets[@]}"; do
+              echo "- \`$(basename "$asset")\` ($(stat -c %s "$asset") bytes)"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

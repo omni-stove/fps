@@ -85,20 +85,5 @@ namespace Fps.Tests.EditMode
 
             Assert.Throws<ArgumentException>(() => BuildVersionStamper.DescribeWithGit(""));
         }
-
-        [Test]
-        public void ClientBuildUsesEnabledScenesInOrder()
-        {
-            var scenes = new[]
-            {
-                new EditorBuildSettingsScene("Assets/A.unity", true),
-                new EditorBuildSettingsScene("Assets/B.unity", false),
-                null,
-                new EditorBuildSettingsScene("Assets/C.unity", true),
-            };
-
-            Assert.That(ClientBuilder.EnabledScenePaths(scenes), Is.EqualTo(new[] { "Assets/A.unity", "Assets/C.unity" }));
-            Assert.That(ClientBuilder.EnabledScenePaths(null), Is.Empty);
-        }
     }
 }

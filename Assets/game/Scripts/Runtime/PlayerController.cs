@@ -9,8 +9,10 @@ namespace Fps.Runtime
     /// 移動入力を <see cref="PlayerMotor"/> に渡し、返ってきた変位を <see cref="CharacterController.Move"/> に適用する。
     /// 移動量の計算はすべて <see cref="PlayerMotor"/> が、しゃがみの寸法は <see cref="StanceGeometry"/> が行い、
     /// ここは入力の読み取りと結果の適用だけを受け持つ。
-    /// しゃがみは Crouch を押している間だけで、CharacterController の height と center を縮め (足元は動かさない)、目も下げる。
-    /// 離したときは立った高さのカプセルが自分以外のコライダーに重ならないときだけ立ち上がる。
+    /// しゃがみは Crouch を <see cref="ControlSettings"/> のモード (押している間／押すたびに切り替え) で <see cref="CrouchInput"/> が解釈し、
+    /// ジャンプとダッシュの開始で解除する (頭上が塞がっていれば解除しない)。死亡・リスポーンでの解除は <see cref="ReleaseCrouch"/> を呼ぶ。
+    /// しゃがむと CharacterController の height と center を縮め (足元は動かさない)、目も下げる。
+    /// 立つときは立った高さのカプセルが自分以外のコライダーに重ならないときだけ立ち上がる。
     /// 参照はコードで解決するので Inspector の配線は要らない: CharacterController と <see cref="FirstPersonLook"/> は同じ
     /// GameObject、目は <see cref="ViewRig.FindEye"/> (無ければ子のカメラ)、入力はプロジェクト全体のアクション
     /// (<see cref="InputSystem.actions"/>) の Move / Sprint / Crouch / Jump。解決できなければエラーを出して自分を無効にする。
@@ -95,6 +97,8 @@ namespace Fps.Runtime
         private SprintInput _sprint;
         private WeaponController _releaseWeapon;
         private Damageable _releaseDamageable;
+        private InputDeviceKind _crouchDevice = InputDeviceKind.KeyboardMouse;
+        private CrouchInput _crouchInput;
 
         public CharacterController Controller => _controller;
         public FirstPersonLook Look => _look;
@@ -134,8 +138,8 @@ namespace Fps.Runtime
         public float CrouchHeight => _crouchHeight;
 
         /// <summary>
-        /// ダッシュのモードを決める操作設定。Awake で <see cref="ControlSettingsStore"/> から読む (Edit Mode では Awake が走らないので初期値)。
-        /// 変えると次の <see cref="UpdateSprint"/> から使う。
+        /// ダッシュとしゃがみのモードを決める操作設定。Awake で <see cref="ControlSettingsStore"/> から読む (Edit Mode では Awake が走らないので初期値)。
+        /// 変えると次の <see cref="UpdateSprint"/> / <see cref="UpdateCrouch"/> から使う。
         /// </summary>
         public ControlSettings ControlSettings
         {
@@ -164,6 +168,33 @@ namespace Fps.Runtime
                 }
 
                 return _sprint;
+            }
+        }
+
+        /// <summary>最後にしゃがみか移動の入力をした機器。しゃがみのモードはこの機器の設定を使う。</summary>
+        public InputDeviceKind CrouchDevice => _crouchDevice;
+
+        /// <summary>
+        /// しゃがみたいか (ボタンをモードどおりに解釈し、自動解除した後の値)。
+        /// 頭上が塞がっていると、false でも <see cref="IsCrouched"/> は true のことがある。
+        /// </summary>
+        public bool IsCrouchActive => Crouch.IsActive;
+
+        /// <summary>今使っているしゃがみのモード。</summary>
+        public HoldMode CrouchMode => Crouch.Mode;
+
+        private CrouchInput Crouch
+        {
+            get
+            {
+                // Edit Mode では Awake が走らないので、初めて触れたときに作る。
+                if (_crouchInput == null)
+                {
+                    _crouchInput = new CrouchInput(CanStandForCrouchInput);
+                    _crouchInput.Changed += OnCrouchInputChanged;
+                }
+
+                return _crouchInput;
             }
         }
 
@@ -224,7 +255,47 @@ namespace Fps.Runtime
             // 押されたダッシュボタンの機器を優先し、どちらも動いていなければ直前の機器のまま。
             var device = InputDeviceKinds.Of(_sprintAction, InputDeviceKinds.Of(_moveAction, _device));
             var sprint = UpdateSprint(move, _sprintAction.IsPressed(), _sprintAction.WasPressedThisFrame(), device);
-            Tick(move, sprint, _crouchAction.IsPressed(), _jumpAction.WasPressedThisFrame(), Time.deltaTime);
+            var jump = _jumpAction.WasPressedThisFrame();
+
+            var crouchDevice = InputDeviceKinds.Of(_crouchAction, InputDeviceKinds.Of(_moveAction, _crouchDevice));
+            // 空中で押したジャンプは跳ばない (PlayerMotor) ので、しゃがみも解かない。
+            var crouch = UpdateCrouch(
+                _crouchAction.IsPressed(), _crouchAction.WasPressedThisFrame(), jump && _controller.isGrounded, sprint, crouchDevice);
+            Tick(move, sprint, crouch, jump, Time.deltaTime);
+        }
+
+        /// <summary>
+        /// 1 フレーム分のしゃがみボタンを device の <see cref="ControlSettings"/> のモードで解釈し、しゃがみたいかを返す。
+        /// しゃがんでいる間にジャンプするかダッシュを始めると、頭上が空いていれば解除する (<see cref="CrouchInput"/>)。
+        /// jumpPressed は実際に跳ぶジャンプ (接地中の押下) だけを渡す。
+        /// 変化は <c>[Player] crouch=..</c> でログに出す。結果は <see cref="Tick"/> の crouch に渡す。
+        /// </summary>
+        public bool UpdateCrouch(bool isPressed, bool wasPressedThisFrame, bool jumpPressed, bool sprinting, InputDeviceKind device)
+        {
+            var mode = _controlSettings.Get(device, HoldAction.Crouch);
+            _crouchDevice = device;
+            return Crouch.Update(mode, isPressed, wasPressedThisFrame, jumpPressed, sprinting);
+        }
+
+        /// <summary>
+        /// しゃがみを解除する (死亡・リスポーンなど)。頭上は確かめないが、実際に立つのは次の <see cref="Tick"/> で頭上が空いているときだけ。
+        /// Hold でもボタンを押し直すまでしゃがまない。しゃがみたい状態だったら true。
+        /// </summary>
+        /// <param name="reason">ログに出す理由 (<see cref="CrouchInput.ReasonDeath"/> など)。</param>
+        public bool ReleaseCrouch(string reason)
+        {
+            return Crouch.Release(reason);
+        }
+
+        // 未初期化では頭上を調べられないので、立てるものとして解除させる (姿勢を当てる Tick も動かない)。
+        private bool CanStandForCrouchInput()
+        {
+            return !IsInitialized || HasHeadroomToStand();
+        }
+
+        private void OnCrouchInputChanged(CrouchInput input, string reason)
+        {
+            Debug.Log(CrouchInput.FormatLog(input.IsActive, input.Mode, reason), this);
         }
 
         /// <summary>
@@ -304,7 +375,7 @@ namespace Fps.Runtime
         /// 1 フレーム分の入力でしゃがみの姿勢を決め、<see cref="PlayerMotor.Step"/> を呼び、変位を CharacterController に適用する。
         /// 向きは <see cref="FirstPersonLook"/> 本体 (この GameObject) の yaw を使う。
         /// </summary>
-        /// <param name="crouch">しゃがみを押しているか。離しても頭上が塞がっていればしゃがんだまま。</param>
+        /// <param name="crouch">しゃがみたいか (<see cref="UpdateCrouch"/> の結果)。false でも頭上が塞がっていればしゃがんだまま。</param>
         public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, float deltaSeconds)
         {
             if (!IsInitialized)

@@ -49,6 +49,13 @@ namespace Fps.Tests.EditMode
             definition.InfiniteReserve = true;
             definition.ReserveAmmoMultiplier = 0.6f;
             definition.Destruction = Destruction.On;
+            definition.Downed = Downed.Revive;
+            definition.DownedBleedoutSeconds = 20f;
+            definition.DownedHealthFraction = 0.5f;
+            definition.ReviveSeconds = 4f;
+            definition.Cover = Cover.On;
+            definition.BlindFire = BlindFire.On;
+            definition.ActiveReload = ActiveReload.On;
 
             var rules = definition.ToRules();
 
@@ -62,6 +69,13 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.InfiniteReserve, Is.True);
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(0.6f));
             Assert.That(rules.Destruction, Is.EqualTo(Destruction.On));
+            Assert.That(rules.Actions.Downed, Is.EqualTo(Downed.Revive));
+            Assert.That(rules.Actions.DownedBleedoutSeconds, Is.EqualTo(20f));
+            Assert.That(rules.Actions.DownedHealthFraction, Is.EqualTo(0.5f));
+            Assert.That(rules.Actions.ReviveSeconds, Is.EqualTo(4f));
+            Assert.That(rules.Actions.Cover, Is.EqualTo(Cover.On));
+            Assert.That(rules.Actions.BlindFire, Is.EqualTo(BlindFire.On));
+            Assert.That(rules.Actions.ActiveReload, Is.EqualTo(ActiveReload.On));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
 
@@ -78,7 +92,8 @@ namespace Fps.Tests.EditMode
                 DeathCamera.Killer,
                 true,
                 2f,
-                Destruction.On);
+                Destruction.On,
+                new ActionRules(Downed.Revive, 12f, 0.25f, 2.5f, Cover.On, BlindFire.On, ActiveReload.On));
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -96,6 +111,14 @@ namespace Fps.Tests.EditMode
         [TestCase("DeathCamera")]
         [TestCase("ReserveAmmoMultiplier")]
         [TestCase("Destruction")]
+        [TestCase("Downed")]
+        [TestCase("DownedBleedoutSeconds")]
+        [TestCase("DownedHealthFraction")]
+        [TestCase("ReviveSeconds")]
+        [TestCase("Cover")]
+        [TestCase("BlindFire")]
+        [TestCase("BlindFireWithoutCover")]
+        [TestCase("ActiveReload")]
         public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
         {
             var definition = NewBroken("BrokenRules", field);
@@ -152,6 +175,13 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.InfiniteReserve, Is.EqualTo(expected.InfiniteReserve));
             Assert.That(actual.ReserveAmmoMultiplier, Is.EqualTo(expected.ReserveAmmoMultiplier));
             Assert.That(actual.Destruction, Is.EqualTo(expected.Destruction));
+            Assert.That(actual.Actions.Downed, Is.EqualTo(expected.Actions.Downed));
+            Assert.That(actual.Actions.DownedBleedoutSeconds, Is.EqualTo(expected.Actions.DownedBleedoutSeconds));
+            Assert.That(actual.Actions.DownedHealthFraction, Is.EqualTo(expected.Actions.DownedHealthFraction));
+            Assert.That(actual.Actions.ReviveSeconds, Is.EqualTo(expected.Actions.ReviveSeconds));
+            Assert.That(actual.Actions.Cover, Is.EqualTo(expected.Actions.Cover));
+            Assert.That(actual.Actions.BlindFire, Is.EqualTo(expected.Actions.BlindFire));
+            Assert.That(actual.Actions.ActiveReload, Is.EqualTo(expected.Actions.ActiveReload));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)
@@ -185,6 +215,32 @@ namespace Fps.Tests.EditMode
                     break;
                 case "Destruction":
                     definition.Destruction = (Destruction)99;
+                    break;
+                case "Downed":
+                    definition.Downed = (Downed)99;
+                    break;
+                case "DownedBleedoutSeconds":
+                    definition.DownedBleedoutSeconds = 0f;
+                    break;
+                case "DownedHealthFraction":
+                    definition.DownedHealthFraction = 1.5f;
+                    break;
+                case "ReviveSeconds":
+                    definition.ReviveSeconds = float.PositiveInfinity;
+                    break;
+                case "Cover":
+                    definition.Cover = (Cover)99;
+                    break;
+                case "BlindFire":
+                    definition.Cover = Cover.On;
+                    definition.BlindFire = (BlindFire)99;
+                    break;
+                case "BlindFireWithoutCover":
+                    definition.Cover = Cover.Off;
+                    definition.BlindFire = BlindFire.On;
+                    break;
+                case "ActiveReload":
+                    definition.ActiveReload = (ActiveReload)99;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

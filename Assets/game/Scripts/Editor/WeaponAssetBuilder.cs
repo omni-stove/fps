@@ -36,9 +36,33 @@ namespace Fps.Editor
         /// <summary>handgun を覗き込み切ったときの縦の視野角 (度)。近距離で使うので rifle より広い。</summary>
         public const float HandgunAdsFieldOfView = 55f;
 
+        /// <summary>rifle を隠れたまま撃ったときの散らばりの最大角度 (度)。</summary>
+        public const float RifleBlindFireSpreadDegrees = 8f;
+
+        /// <summary>rifle のアクティブリロードの判定の幅の始まり (リロード時間に対する割合)。</summary>
+        public const float RifleActiveReloadWindowStart = 0.5f;
+
+        /// <summary>rifle のアクティブリロードの判定の幅の長さ (リロード時間に対する割合)。0.5〜0.65 になる。</summary>
+        public const float RifleActiveReloadWindowLength = 0.15f;
+
+        /// <summary>rifle のアクティブリロードに失敗したときに足される秒数。</summary>
+        public const float RifleActiveReloadFailSeconds = 0.6f;
+
+        /// <summary>handgun を隠れたまま撃ったときの散らばりの最大角度 (度)。片手で構えるので rifle より広い。</summary>
+        public const float HandgunBlindFireSpreadDegrees = 12f;
+
+        /// <summary>handgun のアクティブリロードの判定の幅の始まり (リロード時間に対する割合)。</summary>
+        public const float HandgunActiveReloadWindowStart = 0.45f;
+
+        /// <summary>handgun のアクティブリロードの判定の幅の長さ (リロード時間に対する割合)。0.45〜0.65 になる。</summary>
+        public const float HandgunActiveReloadWindowLength = 0.2f;
+
+        /// <summary>handgun のアクティブリロードに失敗したときに足される秒数。</summary>
+        public const float HandgunActiveReloadFailSeconds = 0.4f;
+
         /// <summary>
         /// rifle の値 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰、
-        /// ADS の視野角 <see cref="RifleAdsFieldOfView"/>)。
+        /// ADS の視野角 <see cref="RifleAdsFieldOfView"/>、ブラインドファイアの散らばり 8°、アクティブリロードの判定の幅 0.5〜0.65・失敗 0.6 秒)。
         /// オフラインのプレイヤー (<see cref="WeaponController"/>) と、配置でこの Id を指定した敵 (<see cref="EnemyAgent"/>) が使う。
         /// </summary>
         public static WeaponSpec RifleSpec()
@@ -55,7 +79,11 @@ namespace Fps.Editor
                 25,
                 100f,
                 new DamageFalloff(20f, 60f, 0.5f),
-                adsFieldOfView: RifleAdsFieldOfView);
+                adsFieldOfView: RifleAdsFieldOfView,
+                blindFireSpreadDegrees: RifleBlindFireSpreadDegrees,
+                activeReloadWindowStart: RifleActiveReloadWindowStart,
+                activeReloadWindowLength: RifleActiveReloadWindowLength,
+                activeReloadFailSeconds: RifleActiveReloadFailSeconds);
         }
 
         /// <summary>
@@ -125,7 +153,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// handgun の値 (Handgun、Semi、12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰、
-        /// ADS の視野角 <see cref="HandgunAdsFieldOfView"/>)。
+        /// ADS の視野角 <see cref="HandgunAdsFieldOfView"/>、ブラインドファイアの散らばり 12°、アクティブリロードの判定の幅 0.45〜0.65・失敗 0.4 秒)。
         /// </summary>
         public static WeaponSpec HandgunSpec()
         {
@@ -141,7 +169,11 @@ namespace Fps.Editor
                 34,
                 60f,
                 new DamageFalloff(15f, 40f, 0.6f),
-                adsFieldOfView: HandgunAdsFieldOfView);
+                adsFieldOfView: HandgunAdsFieldOfView,
+                blindFireSpreadDegrees: HandgunBlindFireSpreadDegrees,
+                activeReloadWindowStart: HandgunActiveReloadWindowStart,
+                activeReloadWindowLength: HandgunActiveReloadWindowLength,
+                activeReloadFailSeconds: HandgunActiveReloadFailSeconds);
         }
 
         /// <summary>
@@ -279,6 +311,10 @@ namespace Fps.Editor
             definition.FalloffMinMultiplier = spec.Falloff.MinMultiplier;
             definition.ExplosionRadius = spec.ExplosionRadius;
             definition.AdsFieldOfView = spec.AdsFieldOfView;
+            definition.BlindFireSpreadDegrees = spec.BlindFireSpreadDegrees;
+            definition.ActiveReloadWindowStart = spec.ActiveReloadWindowStart;
+            definition.ActiveReloadWindowLength = spec.ActiveReloadWindowLength;
+            definition.ActiveReloadFailSeconds = spec.ActiveReloadFailSeconds;
 
             // spec は検査済みだが、アセットの形で読み直せることも確かめる。不正なら保存しない。
             definition.ToSpec();

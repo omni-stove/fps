@@ -14,6 +14,7 @@ namespace Fps.Core.Tests
 
         private Dictionary<int, Vector3> _positions;
         private List<string> _events;
+        private List<int> _downedChanged;
 
         // 定数配列を直接渡すと CA1861 になるので params で受ける
         private static string[] Events(params string[] expected) => expected;
@@ -25,6 +26,7 @@ namespace Fps.Core.Tests
         {
             _positions = new Dictionary<int, Vector3>();
             _events = new List<string>();
+            _downedChanged = new List<int>();
         }
 
         private TeamDeathmatchSession Create(
@@ -71,6 +73,9 @@ namespace Fps.Core.Tests
             session.Killed += (killer, victim) => _events.Add("kill " + killer + ">" + victim);
             session.ScoreChanged += (a, b) => _events.Add("score " + a + "-" + b);
             session.Ended += winner => _events.Add("ended " + (winner?.ToString() ?? "draw"));
+            session.Downed += (attacker, victim) => _events.Add("down " + attacker + ">" + victim);
+            session.Revived += (reviver, target) => _events.Add("revive " + reviver + ">" + target);
+            session.DownedChanged += id => _downedChanged.Add(id);
             return session;
         }
 
@@ -967,6 +972,445 @@ namespace Fps.Core.Tests
 
             session.Tick(1f);
             Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+        }
+
+        // ceil(_maxHealth * 0.3)
+        private const int _downedHealth = 30;
+
+        private const float _bleedoutSeconds = 15f;
+
+        private const float _reviveSeconds = 3f;
+
+        private static GameRules DownedRules(
+            FriendlyFire friendlyFire = FriendlyFire.Off,
+            RespawnMode respawnMode = RespawnMode.Individual,
+            float regenDelaySeconds = 0f,
+            float regenPerSecond = 0f)
+        {
+            var actions = new ActionRules(
+                Downed.Revive, _bleedoutSeconds, 0.3f, _reviveSeconds, Cover.Off, BlindFire.Off, ActiveReload.Off);
+            return new GameRules(
+                friendlyFire,
+                respawnMode,
+                GameRules.DefaultWaveIntervalSeconds,
+                regenDelaySeconds,
+                regenPerSecond,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                false,
+                1f,
+                Destruction.Off,
+                actions);
+        }
+
+        /// <summary>Alpha に 1 と 3、Bravo に 2 と 4 を入れて始め、ここまでのイベントを消す。</summary>
+        private TeamDeathmatchSession CreateTwoOnTwo(
+            GameRules rules,
+            int scoreLimit = 10,
+            float respawnSeconds = 3f,
+            float? restartDelaySeconds = null)
+        {
+            var session = Create(scoreLimit: scoreLimit, respawnSeconds: respawnSeconds, restartDelaySeconds: restartDelaySeconds, rules: rules);
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            session.Join(4);
+            _events.Clear();
+            _downedChanged.Clear();
+            return session;
+        }
+
+        [Test]
+        public void DownedOffKillsImmediatelyAsBefore()
+        {
+            var session = Create();
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            session.Join(4);
+            _events.Clear();
+
+            Assert.That(session.ApplyDamage(2, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(_events, Is.EqualTo(Events("kill 2>1", "score 0-1")));
+            Assert.That(session.IsAlive(1), Is.False);
+            Assert.That(session.IsDowned(1), Is.False);
+            Assert.That(session.GetDownedRemaining(1), Is.Null);
+            Assert.That(session.GetReviveProgress(1), Is.Zero);
+            Assert.That(session.TryRevive(3, 1, 1f), Is.False);
+            Assert.That(_downedChanged, Is.Empty);
+        }
+
+        [Test]
+        public void LethalDamageDownsInsteadOfKilling()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+
+            Assert.That(session.ApplyDamage(2, 1, _maxHealth), Is.EqualTo(DamageOutcome.Downed));
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1")));
+            Assert.That(_downedChanged, Is.EqualTo(Ids(1)));
+            Assert.That(session.IsAlive(1), Is.True);
+            Assert.That(session.IsDowned(1), Is.True);
+            Assert.That(session.GetHealth(1), Is.EqualTo(_downedHealth));
+            Assert.That(session.GetDownedRemaining(1), Is.EqualTo(_bleedoutSeconds));
+            Assert.That(session.GetScore(Team.Bravo), Is.Zero);
+            Assert.That(session.GetDeaths(1), Is.Zero);
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.IsDowned(99));
+        }
+
+        [Test]
+        public void DownedPlayerIsNotCountedAsStanding()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+            session.ApplyDamage(1, 2, _maxHealth);
+
+            Assert.That(session.FindNearestEnemy(1), Is.EqualTo(4));
+            Assert.That(session.FindNearestEnemy(2), Is.Null);
+        }
+
+        [Test]
+        public void FinishingADownedPlayerCreditsTheLastEnemy()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.ApplyDamage(4, 1, 10), Is.EqualTo(DamageOutcome.Damaged));
+            Assert.That(session.GetHealth(1), Is.EqualTo(_downedHealth - 10));
+
+            Assert.That(session.ApplyDamage(4, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "kill 4>1", "score 0-1")));
+            Assert.That(_downedChanged, Is.EqualTo(Ids(1, 1)));
+            Assert.That(session.IsAlive(1), Is.False);
+            Assert.That(session.IsDowned(1), Is.False);
+            Assert.That(session.GetKills(4), Is.EqualTo(1));
+            Assert.That(session.GetKills(2), Is.Zero);
+            Assert.That(session.GetDeaths(1), Is.EqualTo(1));
+            Assert.That(session.ApplyDamage(4, 1, 10), Is.EqualTo(DamageOutcome.Ignored));
+        }
+
+        [Test]
+        public void BleedingOutCreditsTheEnemyWhoDowned()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+            session.ApplyDamage(2, 1, _maxHealth);
+            session.ApplyDamage(4, 1, 10);
+
+            session.Tick(_bleedoutSeconds - 1f);
+            Assert.That(session.IsDowned(1), Is.True);
+            Assert.That(session.GetDownedRemaining(1), Is.EqualTo(1f));
+
+            session.Tick(1f);
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "kill 2>1", "score 0-1")));
+            Assert.That(session.IsAlive(1), Is.False);
+            Assert.That(session.GetKills(2), Is.EqualTo(1));
+            Assert.That(session.GetKills(4), Is.Zero);
+        }
+
+        [Test]
+        public void DownedPlayerDoesNotRegenerate()
+        {
+            var session = CreateTwoOnTwo(DownedRules(regenDelaySeconds: 0f, regenPerSecond: 10f));
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            session.Tick(2f);
+
+            Assert.That(session.GetHealth(1), Is.EqualTo(_downedHealth));
+        }
+
+        [Test]
+        public void HoldingReviveRaisesTheDownedAlly()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.TryRevive(3, 1, 1f), Is.True);
+            Assert.That(session.GetReviveProgress(1), Is.EqualTo(1f / _reviveSeconds).Within(1e-6f));
+            session.Tick(1f);
+            Assert.That(session.TryRevive(3, 1, 1f), Is.True);
+            session.Tick(1f);
+            Assert.That(session.TryRevive(3, 1, 1f), Is.True);
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "revive 3>1")));
+            Assert.That(_downedChanged, Is.EqualTo(Ids(1, 1)));
+            Assert.That(session.IsDowned(1), Is.False);
+            Assert.That(session.IsAlive(1), Is.True);
+            Assert.That(session.GetHealth(1), Is.EqualTo(_downedHealth));
+            Assert.That(session.GetDownedRemaining(1), Is.Null);
+            Assert.That(session.GetReviveProgress(1), Is.Zero);
+            Assert.That(session.GetDeaths(1), Is.Zero);
+        }
+
+        [Test]
+        public void RevivedPlayerCanBeDownedAgain()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+            session.ApplyDamage(2, 1, _maxHealth);
+            session.TryRevive(3, 1, _reviveSeconds);
+
+            Assert.That(session.ApplyDamage(2, 1, _downedHealth), Is.EqualTo(DamageOutcome.Downed));
+            Assert.That(session.GetHealth(1), Is.EqualTo(_downedHealth));
+            Assert.That(session.GetDownedRemaining(1), Is.EqualTo(_bleedoutSeconds));
+        }
+
+        [Test]
+        public void StoppingReviveStartsOver()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            session.TryRevive(3, 1, 2f);
+            session.Tick(1f);
+            session.Tick(1f);
+
+            Assert.That(session.GetReviveProgress(1), Is.Zero);
+
+            session.TryRevive(3, 1, 2f);
+            session.Tick(1f);
+            Assert.That(session.IsDowned(1), Is.True);
+
+            session.TryRevive(3, 1, 1f);
+            Assert.That(session.IsDowned(1), Is.False);
+        }
+
+        [Test]
+        public void ReviveIsRejectedUnlessAStandingAllyRevivesADownedPlayer()
+        {
+            var session = Create(rules: DownedRules());
+            for (var id = 1; id <= 6; id++)
+            {
+                session.Join(id);
+            }
+
+            Assert.That(session.TryRevive(3, 1, 1f), Is.False, "target is not downed");
+
+            session.ApplyDamage(2, 1, _maxHealth);
+            session.ApplyDamage(2, 3, _maxHealth);
+
+            Assert.That(session.TryRevive(2, 1, 1f), Is.False, "enemy");
+            Assert.That(session.TryRevive(1, 1, 1f), Is.False, "self");
+            Assert.That(session.TryRevive(3, 1, 1f), Is.False, "downed reviver");
+            Assert.That(session.TryRevive(5, 1, 1f), Is.True);
+            Assert.That(session.GetReviveProgress(1), Is.EqualTo(1f / _reviveSeconds).Within(1e-6f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.TryRevive(5, 1, -1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.TryRevive(99, 1, 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.TryRevive(5, 99, 1f));
+        }
+
+        [Test]
+        public void OnlyOneAllyCanReviveTheSameTargetInATick()
+        {
+            var session = Create(rules: DownedRules());
+            for (var id = 1; id <= 6; id++)
+            {
+                session.Join(id);
+            }
+
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.TryRevive(3, 1, 2f), Is.True);
+            Assert.That(session.TryRevive(5, 1, 2f), Is.False);
+            Assert.That(session.IsDowned(1), Is.True);
+        }
+
+        [Test]
+        public void SuicideKillsWithoutDowning()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+
+            Assert.That(session.ApplyDamage(1, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(_events, Is.EqualTo(Events("kill 1>1")));
+            Assert.That(session.IsDowned(1), Is.False);
+            Assert.That(session.IsAlive(1), Is.False);
+        }
+
+        [Test]
+        public void FriendlyFireOffIgnoresShotsAtADownedAlly()
+        {
+            var session = CreateTwoOnTwo(DownedRules(FriendlyFire.Off));
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.ApplyDamage(3, 1, _maxHealth), Is.EqualTo(DamageOutcome.Ignored));
+            Assert.That(session.GetHealth(1), Is.EqualTo(_downedHealth));
+        }
+
+        [Test]
+        public void FriendlyFireOnAllyFinishingADownedPlayerCreditsTheEnemy()
+        {
+            var session = CreateTwoOnTwo(DownedRules(FriendlyFire.On));
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.ApplyDamage(3, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "kill 2>1", "score 0-1")));
+            Assert.That(session.GetKills(2), Is.EqualTo(1));
+            Assert.That(session.GetKills(3), Is.Zero);
+        }
+
+        [Test]
+        public void FriendlyFireOnAllyDownedPlayerBleedsOutAsADeathOnly()
+        {
+            // 出血で倒れた回の Tick 全体がリスポーン待ちに数えられるので、出現が同じ Tick に出ないよう長く待たせる
+            var session = CreateTwoOnTwo(DownedRules(FriendlyFire.On), respawnSeconds: 100f);
+
+            Assert.That(session.ApplyDamage(3, 1, _maxHealth), Is.EqualTo(DamageOutcome.Downed));
+            session.Tick(_bleedoutSeconds);
+
+            Assert.That(_events, Is.EqualTo(Events("down 3>1", "kill 3>1")));
+            Assert.That(session.GetDeaths(1), Is.EqualTo(1));
+            Assert.That(session.GetKills(3), Is.Zero);
+            Assert.That(session.GetScore(Team.Alpha), Is.Zero);
+            Assert.That(session.GetScore(Team.Bravo), Is.Zero);
+        }
+
+        [Test]
+        public void FriendlyFireReflectHitsTheShooterNotTheDownedAlly()
+        {
+            var session = CreateTwoOnTwo(DownedRules(FriendlyFire.Reflect));
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.ApplyDamage(3, 1, 10), Is.EqualTo(DamageOutcome.Damaged));
+
+            Assert.That(session.GetHealth(1), Is.EqualTo(_downedHealth));
+            Assert.That(session.GetHealth(3), Is.EqualTo(_maxHealth - 10));
+        }
+
+        [Test]
+        public void FriendlyFireReflectKillsTheShooterWithoutDowningAndWipesTheTeam()
+        {
+            var session = CreateTwoOnTwo(DownedRules(FriendlyFire.Reflect));
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.ApplyDamage(3, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "kill 3>3", "kill 2>1", "score 0-1")));
+            Assert.That(session.IsDowned(3), Is.False);
+            Assert.That(session.IsAlive(1), Is.False);
+        }
+
+        [Test]
+        public void LastStandingPlayerIsKilledWithoutDowning()
+        {
+            var session = Create(rules: DownedRules());
+            session.Join(1);
+            session.Join(2);
+            _events.Clear();
+
+            Assert.That(session.ApplyDamage(2, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(_events, Is.EqualTo(Events("kill 2>1", "score 0-1")));
+            Assert.That(_downedChanged, Is.Empty);
+        }
+
+        [Test]
+        public void WipingOutTheTeamKillsTheDownedPlayers()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.ApplyDamage(4, 3, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "kill 4>3", "score 0-1", "kill 2>1", "score 0-2")));
+            Assert.That(session.IsAlive(1), Is.False);
+            Assert.That(session.IsAlive(3), Is.False);
+            Assert.That(session.IsDowned(1), Is.False);
+        }
+
+        [Test]
+        public void DeadAllyAwaitingRespawnDoesNotKeepTheDownedAlive()
+        {
+            var session = CreateTwoOnTwo(DownedRules(), respawnSeconds: 10f);
+            session.ApplyDamage(1, 1, _maxHealth);
+            Assert.That(session.IsAlive(1), Is.False);
+
+            Assert.That(session.ApplyDamage(2, 3, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+            Assert.That(session.IsDowned(3), Is.False);
+        }
+
+        [Test]
+        public void LeavingLastStandingAllyKillsTheDowned()
+        {
+            var session = CreateTwoOnTwo(DownedRules());
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            session.Leave(3);
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "kill 2>1", "score 0-1")));
+            Assert.That(session.IsAlive(1), Is.False);
+        }
+
+        [Test]
+        public void BleedoutAfterTheDownerLeftCountsOnlyTheDeath()
+        {
+            // 出血で倒れた回の Tick 全体がリスポーン待ちに数えられるので、出現が同じ Tick に出ないよう長く待たせる
+            var session = CreateTwoOnTwo(DownedRules(), respawnSeconds: 100f);
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            session.Leave(2);
+            session.Tick(_bleedoutSeconds);
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "kill 1>1")));
+            Assert.That(session.GetDeaths(1), Is.EqualTo(1));
+            Assert.That(session.GetScore(Team.Bravo), Is.Zero);
+        }
+
+        [Test]
+        public void NoneEndsTheMatchWhenTheTeamIsDownedOrDead()
+        {
+            var session = CreateTwoOnTwo(DownedRules(respawnMode: RespawnMode.None));
+            session.ApplyDamage(2, 1, _maxHealth);
+            session.Tick(0f);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+
+            session.ApplyDamage(4, 3, _maxHealth);
+            session.Tick(0f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(session.Winner, Is.EqualTo(Team.Bravo));
+            Assert.That(session.IsEliminated(1), Is.False);
+        }
+
+        [Test]
+        public void RespawnClearsTheDownedState()
+        {
+            var session = CreateTwoOnTwo(DownedRules(), respawnSeconds: 3f);
+            session.ApplyDamage(2, 1, _maxHealth);
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            session.Tick(3f);
+
+            Assert.That(session.IsAlive(1), Is.True);
+            Assert.That(session.IsDowned(1), Is.False);
+            Assert.That(session.GetHealth(1), Is.EqualTo(_maxHealth));
+            Assert.That(session.GetDownedRemaining(1), Is.Null);
+            Assert.That(session.ApplyDamage(2, 1, _maxHealth), Is.EqualTo(DamageOutcome.Downed));
+        }
+
+        [Test]
+        public void RestartClearsPlayersLeftDownedAtTheEnd()
+        {
+            var session = CreateTwoOnTwo(DownedRules(), scoreLimit: 1, restartDelaySeconds: 1f);
+            session.ApplyDamage(1, 2, _maxHealth);
+            session.ApplyDamage(4, 1, _maxHealth);
+
+            // 4 を倒した 1 点で上限に届いて終わるので、全滅した Bravo の 2 も Alpha の 1 もダウンのまま残る
+            session.ApplyDamage(3, 4, _maxHealth);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(session.IsDowned(1), Is.True);
+            Assert.That(session.IsDowned(2), Is.True);
+            Assert.That(session.TryRevive(3, 1, _reviveSeconds), Is.False);
+            _downedChanged.Clear();
+
+            session.Tick(1f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(session.IsDowned(1), Is.False);
+            Assert.That(session.IsDowned(2), Is.False);
+            Assert.That(session.GetHealth(1), Is.EqualTo(_maxHealth));
+            Assert.That(_downedChanged, Is.EqualTo(Ids(1, 2)));
         }
 
         [TestCase(-1f)]

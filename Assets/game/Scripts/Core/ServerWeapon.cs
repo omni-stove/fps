@@ -58,7 +58,11 @@ namespace Fps.Core
                     spec.Range,
                     spec.Falloff,
                     spec.ExplosionRadius,
-                    spec.AdsFieldOfView);
+                    spec.AdsFieldOfView,
+                    spec.BlindFireSpreadDegrees,
+                    spec.ActiveReloadWindowStart,
+                    spec.ActiveReloadWindowLength,
+                    spec.ActiveReloadFailSeconds);
             _weapon = CreateWeapon();
         }
 

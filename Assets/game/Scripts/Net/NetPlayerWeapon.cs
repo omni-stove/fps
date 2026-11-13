@@ -82,6 +82,12 @@ namespace Fps.Net
         /// </summary>
         public event Action<NetWeaponState> StateChanged;
 
+        /// <summary>
+        /// 持ち主で、サーバーから届いた状態でリロードか持ち替えが始まったとき (<see cref="StartsReloadOrSwitch"/>) に、届いた状態を渡して呼ばれる。
+        /// 弾倉が空になったときのサーバーの自動リロードも含む。
+        /// </summary>
+        public event Action<NetWeaponState> ReloadOrSwitchStarted;
+
         /// <summary>サーバーから届いた武器の状態。持ち主とサーバーでだけ意味がある (他人の分は届かず既定値のまま)。</summary>
         public NetWeaponState State => _state.Value;
 
@@ -646,9 +652,29 @@ namespace Fps.Net
             Debug.Log("[Net] reloaded client=" + OwnerClientId + " ammo=" + weapon.AmmoInMagazine + " reserve=" + weapon.ReserveAmmo, this);
         }
 
+        /// <summary>
+        /// previous から current への変化で、リロードか持ち替えが始まったか (リロード中・持ち替え中になったか、持っている番号が変わったか)。
+        /// 装備前 (武器の数が 0) からの最初の同期は始まりとみなさない。
+        /// </summary>
+        public static bool StartsReloadOrSwitch(NetWeaponState previous, NetWeaponState current)
+        {
+            if (previous.WeaponCount == 0)
+            {
+                return false;
+            }
+
+            return (current.IsReloading && !previous.IsReloading)
+                || (current.IsSwitching && !previous.IsSwitching)
+                || current.EquippedIndex != previous.EquippedIndex;
+        }
+
         private void HandleStateChanged(NetWeaponState previous, NetWeaponState current)
         {
             StateChanged?.Invoke(current);
+            if (StartsReloadOrSwitch(previous, current))
+            {
+                ReloadOrSwitchStarted?.Invoke(current);
+            }
         }
 
         private void ResolveInputActions()

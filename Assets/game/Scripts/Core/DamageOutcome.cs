@@ -9,10 +9,16 @@ namespace Fps.Core
         /// <summary>ダメージを与えなかった (試合中でない・相手がすでに倒れている・味方撃ちが Off の味方・ダメージ 0)。</summary>
         Ignored,
 
-        /// <summary>体力を減らしたが倒してはいない。</summary>
+        /// <summary>体力 (ダウン中ならダウン中の体力) を減らしたが倒してはいない。</summary>
         Damaged,
 
         /// <summary>このダメージで倒した。</summary>
         Killed,
+
+        /// <summary>
+        /// このダメージで体力が 0 になり、倒さずにダウンさせた (<see cref="ActionRules.Downed"/> が <see cref="Core.Downed.Revive"/> のときだけ)。
+        /// 体力が変わったことの扱いは <see cref="Damaged"/> と同じ。
+        /// </summary>
+        Downed,
     }
 }

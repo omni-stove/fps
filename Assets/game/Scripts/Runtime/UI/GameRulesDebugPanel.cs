@@ -55,6 +55,7 @@ namespace Fps.Runtime
         private static GameRulesDebugPanel _instance;
 
         private readonly List<InputAction> _suspendedActions = new List<InputAction>();
+        private bool _warnedMissingMap;
         private readonly Dictionary<GameRulesDebugField, VisualElement> _controls = new Dictionary<GameRulesDebugField, VisualElement>();
 
         private GameObject _documentObject;
@@ -150,6 +151,11 @@ namespace Fps.Runtime
             }
 
             // FirstPersonLook はフォーカスが戻るとカーソルをロックし直すので、開いている間は外し続ける。
+            if (IsOpen)
+            {
+                SuspendPlayerInput();
+            }
+
             if (IsOpen && (Cursor.lockState != CursorLockMode.None || !Cursor.visible))
             {
                 ShowCursor();
@@ -181,6 +187,8 @@ namespace Fps.Runtime
             }
 
             _world = world;
+            _suspendedActions.Clear();
+            _warnedMissingMap = false;
             SuspendPlayerInput();
             ShowCursor();
             return true;
@@ -265,22 +273,29 @@ namespace Fps.Runtime
 
         private void SuspendPlayerInput()
         {
-            _suspendedActions.Clear();
             var actions = InputSystem.actions;
             var map = actions != null ? actions.FindActionMap(PlayerActionMapName) : null;
             if (map == null)
             {
-                Debug.LogWarning($"{LogTag} 入力の '{PlayerActionMapName}' マップが見つからないため、開いている間もプレイヤーの操作を止められません。");
+                if (!_warnedMissingMap)
+                {
+                    _warnedMissingMap = true;
+                    Debug.LogWarning($"{LogTag} 入力の '{PlayerActionMapName}' マップが見つからないため、開いている間もプレイヤーの操作を止められません。");
+                }
+
                 return;
             }
 
-            // 部品は自分が有効にしたアクションだけを後で無効にするので、元から有効だったものだけを止めて戻す。
+            // 開いている間に別の部品 (PauseMenu の再開など) が有効に戻したものも毎フレーム止め直す。部品は自分が有効にしたアクションだけを後で無効にするので、元から有効だったものだけを止めて戻す。
             foreach (var action in map.actions)
             {
                 if (action.enabled)
                 {
                     action.Disable();
-                    _suspendedActions.Add(action);
+                    if (!_suspendedActions.Contains(action))
+                    {
+                        _suspendedActions.Add(action);
+                    }
                 }
             }
         }

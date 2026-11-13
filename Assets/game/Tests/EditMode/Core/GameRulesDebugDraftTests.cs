@@ -45,7 +45,7 @@ namespace Fps.Core.Tests
         [Test]
         public void FieldsCoverEveryDefinedFieldInOrder()
         {
-            var defined = (GameRulesDebugField[])Enum.GetValues(typeof(GameRulesDebugField));
+            var defined = Enum.GetValues<GameRulesDebugField>();
 
             Assert.That(GameRulesDebugDraft.Fields, Is.EqualTo(defined));
             Assert.That(defined.Length, Is.EqualTo(15));

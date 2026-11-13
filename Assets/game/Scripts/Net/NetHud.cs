@@ -112,7 +112,8 @@ namespace Fps.Net
         /// <summary>
         /// HUD (<see cref="Hud.Create"/>) を作り、player とその武器、今の試合 (<see cref="NetTeamDeathmatch.Current"/>) を購読する。
         /// ヒットマーカー・キルフィードなどのビューと <see cref="PauseMenu"/> は、オフラインと同じく <see cref="Hud.Create"/> が
-        /// (<see cref="Hud.AddViews"/> で) 付ける。倒されている間のロードアウトの選択は <see cref="NetLoadoutChooser"/> を付けてつなぐ。
+        /// (<see cref="Hud.AddViews"/> で) 付ける。倒されている間のロードアウトの選択は <see cref="NetLoadoutChooser"/> を、
+        /// 他のプレイヤーの頭の上の名前は <see cref="NetNameplates"/> を付けてつなぐ。
         /// 失敗したら作りかけのものは消して例外を投げる。
         /// </summary>
         /// <exception cref="InvalidOperationException">Resources に HUD のレイアウトかテーマが無い。</exception>
@@ -131,6 +132,7 @@ namespace Fps.Net
                 netHud.ListenForMatch();
                 ConfigurePauseMenu(hud.PauseMenu);
                 hud.gameObject.AddComponent<NetLoadoutChooser>().Initialize(netHud);
+                hud.gameObject.AddComponent<NetNameplates>().Initialize(player);
                 return netHud;
             }
             catch
@@ -157,7 +159,7 @@ namespace Fps.Net
 
         /// <summary>
         /// player とその武器 (<see cref="NetPlayer.Weapon"/>) の同期値を購読し、今の値をすぐ出す。前に渡したプレイヤーの購読は外す。
-        /// チームの色は <see cref="NetPlayer.AlphaColor"/> / <see cref="NetPlayer.BravoColor"/> で塗る。
+        /// チームの色は、player のチームから見た敵味方の色を設定の色の組から引いて塗る (<see cref="Hud.UseTeamPalette"/>)。
         /// </summary>
         internal void Initialize(NetPlayer player)
         {
@@ -173,10 +175,10 @@ namespace Fps.Net
             }
 
             UnbindPlayer();
-            _hud.SetTeamColors(NetPlayer.AlphaColor, NetPlayer.BravoColor);
 
             _player = player;
             _team = player.TeamVariable.Value;
+            _hud.UseTeamPalette(_team);
             _health = player.HealthVariable.Value;
             player.TeamVariable.OnValueChanged += HandleTeamChanged;
             player.HealthVariable.OnValueChanged += HandleHealthChanged;
@@ -475,6 +477,7 @@ namespace Fps.Net
         private void HandleTeamChanged(Team previous, Team current)
         {
             _team = current;
+            _hud.UseTeamPalette(current);
             ShowScores();
             ShowScoreboard();
         }

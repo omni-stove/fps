@@ -762,7 +762,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            hud.SetTeamColors(ControlPointZone.AlphaColor, ControlPointZone.BravoColor);
+            hud.UseTeamPalette(TeamColors.OfflineViewer);
             _view = hud.GetComponent<DominationView>();
             if (_view == null)
             {

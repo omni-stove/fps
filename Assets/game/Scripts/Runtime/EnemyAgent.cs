@@ -727,6 +727,26 @@ namespace Fps.Runtime
                 return false;
             }
 
+            PlaceAndStartOver(groundPosition, rotation, "respawned");
+            return true;
+        }
+
+        /// <summary>
+        /// 生死を問わず、<see cref="Respawn"/> と同じく groundPosition (足元) に置き直して体力・武器・判断・経路を初めからにする。
+        /// ラウンド制のモードがラウンドの頭で、生き残っていた敵も含めて全員を出現点に戻すときに使う。未初期化なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ResetTo(Vector3 groundPosition, Quaternion rotation)
+        {
+            if (_brain == null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
+            }
+
+            PlaceAndStartOver(groundPosition, rotation, "reset");
+        }
+
+        private void PlaceAndStartOver(Vector3 groundPosition, Quaternion rotation, string logVerb)
+        {
             var ground = NavMesh.SamplePosition(groundPosition, out var hit, OffMeshSnapRadius, NavMesh.AllAreas)
                 ? hit.position
                 : groundPosition;
@@ -770,11 +790,10 @@ namespace Fps.Runtime
             _lastFinitePosition = transform.position;
 
             _self.ResetHealth();
-            _brain.Revive();
+            _brain.Restart();
             _target = null;
             _nextTargetSearch = 0f;
-            Debug.Log($"{LogTag} id={Id} respawned at={ground.ToString("F1")} state={_brain.State}", this);
-            return true;
+            Debug.Log($"{LogTag} id={Id} {logVerb} at={ground.ToString("F1")} state={_brain.State}", this);
         }
 
         private void MoveTo(System.Numerics.Vector3? moveTo)

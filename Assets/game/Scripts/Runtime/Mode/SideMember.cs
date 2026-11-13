@@ -105,7 +105,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 体力を満たして groundPosition (足元) に戻す。<see cref="EnemyAgent"/> なら <see cref="EnemyAgent.Respawn"/> に任せる。
+        /// 生死を問わず、体力を満たして groundPosition (足元) に戻す。<see cref="EnemyAgent"/> なら <see cref="EnemyAgent.ResetTo"/> に任せる
+        /// (ラウンド制のモードはラウンドの頭で生き残っていた bot も戻すので、倒れているときだけ戻す <see cref="EnemyAgent.Respawn"/> は使わない)。
         /// それ以外 (プレイヤー) は CharacterController を切って足元が groundPosition に来るように移し、体力を作り直す。
         /// プレイヤーの向きは視点の部品 (<see cref="FirstPersonLook"/>) が持っているので変えない。
         /// </summary>
@@ -114,7 +115,7 @@ namespace Fps.Runtime
             var agent = GetComponent<EnemyAgent>();
             if (agent != null)
             {
-                agent.Respawn(groundPosition, rotation);
+                agent.ResetTo(groundPosition, rotation);
                 return;
             }
 

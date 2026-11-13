@@ -119,7 +119,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>・
-        /// <see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>) と <see cref="PauseMenu"/> を hudObject に付ける。
+        /// <see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>) と <see cref="PauseMenu"/> を hudObject に付ける。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
         /// 既に付いているものは付け直さない。
         /// </summary>
@@ -135,6 +135,7 @@ namespace Fps.Runtime
             AddIfMissing<KillFeedView>(hudObject);
             AddIfMissing<ScoreboardView>(hudObject);
             AddIfMissing<LoadoutSelectView>(hudObject);
+            AddIfMissing<TutorialPromptView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
         }
 
@@ -152,6 +153,9 @@ namespace Fps.Runtime
 
         /// <summary>同じ GameObject のロードアウト選択。<see cref="AddViews"/> で付けていなければ null。</summary>
         public LoadoutSelectView LoadoutSelect => GetComponent<LoadoutSelectView>();
+
+        /// <summary>同じ GameObject のチュートリアルの案内。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public TutorialPromptView TutorialPrompt => GetComponent<TutorialPromptView>();
 
         /// <summary>同じ GameObject のポーズメニュー。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();

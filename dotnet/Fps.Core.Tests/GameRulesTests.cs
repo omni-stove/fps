@@ -300,7 +300,9 @@ namespace Fps.Core.Tests
         [Test]
         public void DefaultActionsAreTheSameInstanceEveryTime()
         {
-            Assert.That(ActionRules.Default, Is.SameAs(ActionRules.Default));
+            var first = ActionRules.Default;
+
+            Assert.That(ActionRules.Default, Is.SameAs(first));
         }
 
         [Test]

@@ -1,0 +1,246 @@
+name: Nightly
+
+# 毎日 JST 3:00 に Unity の EditMode テストと SmokeSuite.RunAll (Play Mode のスモーク) を回し、JST の日曜は macOS クライアントもビルドする。
+# 同じ sha で前に通っていれば飛ばす。どれかが失敗したら nightly-failure ラベルの issue を開け、開いたものがあればコメントを足す。
+# ローカルで同じ手順を回すなら make nightly-local
+on:
+  schedule:
+    - cron: "0 18 * * *"  # UTC 18:00 = JST 3:00
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "同じ sha で前に通っていても走らせる"
+        type: boolean
+        default: false
+      build-client:
+        description: "日曜でなくても macOS クライアントをビルドする"
+        type: boolean
+        default: false
+
+# 同じ sha の判定と結果の記録が食い違わないよう、取り消さずに順に走らせる
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PASSED_KEY: nightly-passed-${{ github.sha }}
+  CLIENT_KEY: nightly-client-${{ github.sha }}
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run-checks: ${{ steps.decide.outputs.run-checks }}
+      build-client: ${{ steps.decide.outputs.build-client }}
+      passed-before: ${{ steps.passed.outputs.cache-hit }}
+      built-before: ${{ steps.built.outputs.cache-hit }}
+    steps:
+      # 通った sha と クライアントをビルドした sha は、中身の要らない cache のキーとして覚えておく
+      - id: passed
+        uses: actions/cache/restore@v6
+        with:
+          path: .nightly-passed
+          key: ${{ env.PASSED_KEY }}
+          lookup-only: true
+
+      - id: built
+        uses: actions/cache/restore@v6
+        with:
+          path: .nightly-client
+          key: ${{ env.CLIENT_KEY }}
+          lookup-only: true
+
+      - id: decide
+        env:
+          PASSED: ${{ steps.passed.outputs.cache-hit }}
+          BUILT: ${{ steps.built.outputs.cache-hit }}
+          FORCE: ${{ inputs.force || false }}
+          CLIENT_INPUT: ${{ inputs.build-client || false }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          run_checks=true
+          if [ "$PASSED" = true ] && [ "$FORCE" != true ]; then
+            run_checks=false
+            echo "::notice title=Nightly skipped::$SHA has not changed since it last passed; skipped the EditMode tests and the smoke suite (run with force to run them anyway)"
+            echo "$SHA has not changed since it last passed nightly; skipped the EditMode tests and the smoke suite." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          build_client=false
+          if [ "$(TZ=Asia/Tokyo date +%u)" = 7 ] || [ "$CLIENT_INPUT" = true ]; then
+            if [ "$BUILT" = true ] && [ "$FORCE" != true ]; then
+              echo "::notice title=Client build skipped::the macOS client was already built for $SHA"
+              echo "The macOS client was already built for $SHA; skipped the client build." >> "$GITHUB_STEP_SUMMARY"
+            else
+              build_client=true
+            fi
+          fi
+
+          echo "run-checks=$run_checks" >> "$GITHUB_OUTPUT"
+          echo "build-client=$build_client" >> "$GITHUB_OUTPUT"
+
+  editmode:
+    needs: gate
+    if: needs.gate.outputs.run-checks == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: unity-library-nightly-editmode-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: unity-library-nightly-editmode-
+
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          testMode: editmode
+          artifactsPath: test-results
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: editmode-test-results
+          path: test-results
+          retention-days: 14
+          if-no-files-found: ignore
+
+  smoke:
+    needs: gate
+    if: needs.gate.outputs.run-checks == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: unity-library-nightly-smoke-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: unity-library-nightly-smoke-
+
+      # unity-builder の buildMethod は -quit 付きで呼ばれ、Play Mode に入る前に Editor が閉じるので使わない (scripts/nightly-smoke-ci.sh)
+      - name: Run the smoke suite
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: bash scripts/nightly-smoke-ci.sh
+
+  client:
+    needs: gate
+    if: needs.gate.outputs.build-client == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: unity-library-client-osx-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: unity-library-client-osx-
+
+      # Standalone は Mono なので Linux のランナーでも macOS 向けにビルドできる。シーンは Build Settings のもの (make build と同じ)
+      - name: Build the macOS client
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: StandaloneOSX
+          buildName: fps
+          versioning: None
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fps-macos-${{ github.sha }}
+          path: build/StandaloneOSX
+          retention-days: 14
+          if-no-files-found: error
+
+      - if: needs.gate.outputs.built-before != 'true'
+        run: mkdir -p .nightly-client && echo "${{ github.sha }}" > .nightly-client/sha
+
+      - if: needs.gate.outputs.built-before != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: .nightly-client
+          key: ${{ env.CLIENT_KEY }}
+
+  record:
+    needs: [gate, editmode, smoke]
+    if: needs.editmode.result == 'success' && needs.smoke.result == 'success' && needs.gate.outputs.passed-before != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: mkdir -p .nightly-passed && echo "${{ github.sha }}" > .nightly-passed/sha
+
+      - uses: actions/cache/save@v6
+        with:
+          path: .nightly-passed
+          key: ${{ env.PASSED_KEY }}
+
+  report:
+    needs: [gate, editmode, smoke, client, record]
+    # ジョブの timeout は cancelled になるので、それも失敗として知らせる
+    if: always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the nightly-failure issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          LABEL: nightly-failure
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref_name }}
+          EVENT: ${{ github.event_name }}
+          GATE: ${{ needs.gate.result }}
+          EDITMODE: ${{ needs.editmode.result }}
+          SMOKE: ${{ needs.smoke.result }}
+          CLIENT: ${{ needs.client.result }}
+          RECORD: ${{ needs.record.result }}
+        run: |
+          set -euo pipefail
+
+          # 既にあれば失敗するので、その場合は無視する。無いまま作れなかったなら下の issue create が失敗して知らせる
+          gh label create "$LABEL" --color B60205 --description "The nightly workflow failed" >/dev/null 2>&1 || true
+
+          body="$(mktemp)"
+          {
+            echo "Nightly が失敗した: $RUN_URL"
+            echo
+            echo "- 日時 (JST): $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M')"
+            echo "- ref: \`$REF\` (\`$EVENT\`)"
+            echo "- sha: \`$SHA\`"
+            echo
+            echo "| job | result |"
+            echo "| --- | --- |"
+            echo "| gate | $GATE |"
+            echo "| editmode | $EDITMODE |"
+            echo "| smoke | $SMOKE |"
+            echo "| client | $CLIENT |"
+            echo "| record | $RECORD |"
+            echo
+            echo "smoke の失敗は、ログの \`[SmokeSuite]\` の行と FAILED になった SmokeRun のタグの行を見る。ローカルでは \`make nightly-local\` で同じ手順を回せる。"
+          } > "$body"
+
+          existing="$(gh issue list --label "$LABEL" --state open --limit 1 --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file "$body"
+            echo "commented on #$existing"
+          else
+            gh issue create --title "Nightly が失敗している" --label "$LABEL" --body-file "$body"
+          fi

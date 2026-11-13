@@ -22,6 +22,12 @@ namespace Fps.Net
         /// サーバーが持つ ADS の同期値・確定した移動の速さで決め、<c>[Net] shot attacker=.. index=.. cone=.. dir=..</c> を出す。
         /// クライアントの番号と食い違えば持ち主へ訂正を送る。
         /// </para>
+        /// <para>
+        /// ルールの Cover と BlindFire が On で、サーバーの知る shooter のカバーの状態が「カバー中で覗いていない」なら、ブラインドファイアにする
+        /// (<see cref="NetBlindFire"/>)。判定の始点はクライアントの始点ではなく、その状態から決めた壁の上か端の横で、向きには武器の
+        /// <see cref="WeaponSpec.BlindFireSpreadDegrees"/> の散らばりを同じ種で足す。高い壁で端にいなければ弾を減らさずに捨てる
+        /// (<see cref="ShotRejection.BlindFireBlocked"/>)。
+        /// </para>
         /// </summary>
         /// <param name="shooter">撃った人。試合に参加していて生きていなければ (ダウン中も) 何もしない (<see cref="CanFire"/>)。</param>
         /// <param name="weaponId">クライアントが送ってきた、撃った武器の Id。ロードアウトに無い・今持っている武器と違えば捨てる。</param>
@@ -72,6 +78,14 @@ namespace Fps.Net
                 return;
             }
 
+            // ブラインドファイアの始点はクライアントの始点ではなく、サーバーの知るカバーの状態と目の位置から決める
+            var blind = ResolveServerBlindFire(_session.Spec.Rules, shooter, out var blindOrigin);
+            if (blind == BlindFireAim.Blocked)
+            {
+                WarnRejected(shooterId, ShotRejection.BlindFireBlocked);
+                return;
+            }
+
             // 不正な射撃では弾を減らさないよう、検査を通ってから 1 発消費する。弾倉が空ならここでリロードが始まる
             var weapon = shooter.Weapon;
             var ammo = weapon != null ? weapon.ServerTryFire() : ShotRejection.NoWeapon;
@@ -81,7 +95,12 @@ namespace Fps.Net
                 return;
             }
 
-            direction = ApplyServerSpread(shooter, shooterId, spec, direction, clientShotIndex, clientShotGeneration);
+            if (blind == BlindFireAim.Blind)
+            {
+                origin = blindOrigin;
+            }
+
+            direction = ApplyServerSpread(shooter, shooterId, spec, direction, clientShotIndex, clientShotGeneration, blind == BlindFireAim.Blind, origin);
 
             if (_lastRecordedTick == _noRecordedTick)
             {
@@ -161,9 +180,18 @@ namespace Fps.Net
 
         /// <summary>
         /// 受け入れた弾にサーバーの発射番号を付け、ずれていれば持ち主へ訂正を送り、ばらつきを掛けた判定の向きを返す。
+        /// ブラインドファイアなら、武器のばらつきの後に <see cref="WeaponSpec.BlindFireSpreadDegrees"/> の散らばりを同じ種で足し、
+        /// <c>[Net] blind-fire attacker=.. index=.. spread=.. origin=..</c> を出す。
         /// </summary>
         private Vector3 ApplyServerSpread(
-            NetPlayer shooter, int shooterId, WeaponSpec spec, Vector3 aim, int clientShotIndex, int clientShotGeneration)
+            NetPlayer shooter,
+            int shooterId,
+            WeaponSpec spec,
+            Vector3 aim,
+            int clientShotIndex,
+            int clientShotGeneration,
+            bool blindFire,
+            Vector3 origin)
         {
             var numbering = shooter.ServerAssignShotIndex(clientShotIndex, clientShotGeneration);
             if (numbering.NeedsCorrection)
@@ -174,8 +202,34 @@ namespace Fps.Net
 
             var cone = NetPlayer.SpreadConeDegrees(spec, shooter.AimingForSpread, shooter.SpreadMoveFraction());
             var direction = NetPlayer.SpreadDirection(aim, cone, shooterId, numbering.Index);
+            if (blindFire)
+            {
+                direction = NetBlindFire.Spread(direction, spec, shooterId, numbering.Index);
+                Debug.Log(NetBlindFire.FormatLog(shooterId, numbering.Index, spec.BlindFireSpreadDegrees, origin), this);
+            }
+
             Debug.Log(NetHitLog.Shot(shooterId, numbering.Index, cone, direction.x, direction.y, direction.z), this);
             return direction;
+        }
+
+        /// <summary>
+        /// サーバーで、shooter の今の射撃がブラインドファイアになるかとその始点を決める。ルールは試合の <see cref="ActionRules"/>
+        /// (Cover と BlindFire がどちらも On のときだけ)、カバーの状態は shooter の確定状態、目はサーバーの知る今の姿勢の高さ (<see cref="NetPlayer.EyePosition"/>)。
+        /// </summary>
+        internal static BlindFireAim ResolveServerBlindFire(GameRules rules, NetPlayer shooter, out Vector3 origin)
+        {
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
+            if (shooter == null)
+            {
+                throw new ArgumentNullException(nameof(shooter));
+            }
+
+            var enabled = rules.Actions.Cover == Cover.On && rules.Actions.BlindFire == BlindFire.On;
+            return NetBlindFire.Resolve(enabled, shooter.CurrentCover, shooter.EyePosition(), shooter.BodyRadius, out origin);
         }
 
         /// <summary>

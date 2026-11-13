@@ -22,6 +22,12 @@ namespace Fps.Core
         /// <summary>反動の左右 (<see cref="RecoilState"/>) を選ぶ値の系列。</summary>
         public const uint RecoilYawStream = 3u;
 
+        /// <summary>ブラインドファイアの散らばり (<see cref="BlindFireShot.Spread(Vector3, float, int, int)"/>) の極角を選ぶ値の系列。</summary>
+        public const uint BlindFirePolarStream = 4u;
+
+        /// <summary>ブラインドファイアの散らばりの方位角を選ぶ値の系列。</summary>
+        public const uint BlindFireAzimuthStream = 5u;
+
         private const float _minLength = 1e-6f;
 
         // 2^-53。64 ビットの上位 53 ビットを [0, 1) の double にする。
@@ -96,6 +102,16 @@ namespace Fps.Core
         /// <exception cref="ArgumentOutOfRangeException">aim が有限でないか長さ 0、halfAngleDegrees が範囲外のとき。</exception>
         public static Vector3 Direction(Vector3 aim, float halfAngleDegrees, int playerId, int shotIndex)
         {
+            return Direction(aim, halfAngleDegrees, playerId, shotIndex, PolarStream, AzimuthStream);
+        }
+
+        /// <summary>
+        /// <see cref="Direction(Vector3, float, int, int)"/> と同じく円錐の中の向きを決めるが、極角と方位角を選ぶ値の系列を指定する。
+        /// 同じ弾に 2 度目の散らばりを掛ける (ブラインドファイア) とき、1 度目と別の系列にして同じ向きへ重ならないようにする。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">aim が有限でないか長さ 0、halfAngleDegrees が範囲外のとき。</exception>
+        public static Vector3 Direction(Vector3 aim, float halfAngleDegrees, int playerId, int shotIndex, uint polarStream, uint azimuthStream)
+        {
             if (!IsFinite(aim.X) || !IsFinite(aim.Y) || !IsFinite(aim.Z) || aim.Length() < _minLength)
             {
                 throw new ArgumentOutOfRangeException(nameof(aim), aim, "aim must be finite and not zero");
@@ -115,9 +131,9 @@ namespace Fps.Core
 
             // 円錐の上で一様にするには、極角ではなくその cos を [cos(半角), 1] で一様に選ぶ (球帯の面積は高さに比例する)。
             var cosMax = Math.Cos(halfAngleDegrees * Math.PI / 180.0);
-            var cosTheta = 1.0 - (Sample(playerId, shotIndex, PolarStream) * (1.0 - cosMax));
+            var cosTheta = 1.0 - (Sample(playerId, shotIndex, polarStream) * (1.0 - cosMax));
             var sinTheta = Math.Sqrt(Math.Max(0.0, 1.0 - (cosTheta * cosTheta)));
-            var phi = Sample(playerId, shotIndex, AzimuthStream) * 2.0 * Math.PI;
+            var phi = Sample(playerId, shotIndex, azimuthStream) * 2.0 * Math.PI;
 
             Perpendiculars(forward, out var u, out var v);
             var sideways = (u * (float)Math.Cos(phi)) + (v * (float)Math.Sin(phi));

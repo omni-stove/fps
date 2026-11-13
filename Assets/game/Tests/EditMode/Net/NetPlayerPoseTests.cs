@@ -39,9 +39,9 @@ namespace Fps.Net.Tests
         [Test]
         public void MovingFasterThanWalkingWhileStandingCountsAsSprinting()
         {
-            var walking = NetPlayer.PoseInput(5f, 5f, true, false, false, false, true, WeaponCategory.AssaultRifle);
-            var running = NetPlayer.PoseInput(7f, 5f, true, false, false, false, true, WeaponCategory.AssaultRifle);
-            var crouching = NetPlayer.PoseInput(7f, 5f, true, true, false, false, true, null);
+            var walking = NetPlayer.PoseInput(5f, 5f, true, false, false, null, false, true, WeaponCategory.AssaultRifle);
+            var running = NetPlayer.PoseInput(7f, 5f, true, false, false, null, false, true, WeaponCategory.AssaultRifle);
+            var crouching = NetPlayer.PoseInput(7f, 5f, true, true, false, null, false, true, null);
 
             Assert.That(walking.IsSprinting, Is.False);
             Assert.That(running.IsSprinting, Is.True);
@@ -55,17 +55,28 @@ namespace Fps.Net.Tests
         [Test]
         public void PoseInputCarriesTheSyncedState()
         {
-            var input = NetPlayer.PoseInput(0f, 5f, false, true, true, true, true, WeaponCategory.Handgun);
+            var input = NetPlayer.PoseInput(0f, 5f, false, true, true, null, true, true, WeaponCategory.Handgun);
 
             Assert.That(input.IsGrounded, Is.False);
             Assert.That(input.IsCrouching, Is.True);
             Assert.That(input.IsAiming, Is.True);
             Assert.That(input.IsDowned, Is.True);
             Assert.That(input.IsDead, Is.False);
-            Assert.That(input.IsInCover, Is.False, "online play has no cover");
+            Assert.That(input.IsInCover, Is.False);
             Assert.That(input.WeaponCategory, Is.EqualTo(WeaponCategory.Handgun));
 
-            Assert.That(NetPlayer.PoseInput(0f, 5f, true, false, false, false, false, null).IsDead, Is.True, "no health means dead");
+            Assert.That(NetPlayer.PoseInput(0f, 5f, true, false, false, null, false, false, null).IsDead, Is.True, "no health means dead");
+        }
+
+        [Test]
+        public void PoseInputCarriesTheSyncedCoverHeight()
+        {
+            var low = NetPlayer.PoseInput(0f, 5f, true, true, false, CoverHeight.Low, false, true, WeaponCategory.AssaultRifle);
+            var high = NetPlayer.PoseInput(0f, 5f, true, false, false, CoverHeight.High, false, true, WeaponCategory.AssaultRifle);
+
+            Assert.That(low.IsInCover, Is.True);
+            Assert.That(low.CoverHeight, Is.EqualTo(CoverHeight.Low));
+            Assert.That(high.CoverHeight, Is.EqualTo(CoverHeight.High));
         }
 
         [Test]

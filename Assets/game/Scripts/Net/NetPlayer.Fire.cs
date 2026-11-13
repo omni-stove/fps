@@ -45,8 +45,9 @@ namespace Fps.Net
             trigger.Tick(Time.deltaTime);
 
             // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う。
-            // ダウン中の射撃はサーバーが捨てるので送らない
-            if (IsAlive && !IsDowned && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
+            // ダウン中の射撃と、高い壁で端にいないブラインドファイアはサーバーが捨てるので送らない
+            if (IsAlive && !IsDowned && ResolveBlindFire(out _) != BlindFireAim.Blocked
+                && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
             {
                 Fire();
             }
@@ -147,15 +148,26 @@ namespace Fps.Net
             var shotIndex = _shots.Take();
             var cone = spec != null ? SpreadConeDegrees(spec, AimingForSpread, SpreadMoveFraction()) : 0f;
             var direction = SpreadDirection(aim, cone, playerId, shotIndex);
+
+            // ブラインドファイアの始点と散らばりは曳光弾の予測にだけ使う。サーバーへは目の始点を送り、サーバーが自分の知るカバーの状態で決め直す
+            var tracerOrigin = origin;
+            var blind = spec != null && ResolveBlindFire(out var blindOrigin) == BlindFireAim.Blind;
+            if (blind)
+            {
+                tracerOrigin = blindOrigin;
+                direction = NetBlindFire.Spread(direction, spec, playerId, shotIndex);
+            }
+
             Debug.Log("[Net] fire weapon=" + weaponId + " tick=" + time.Tick.ToString(CultureInfo.InvariantCulture)
                 + " alpha=" + time.Alpha.ToString("F2", CultureInfo.InvariantCulture)
                 + " index=" + shotIndex.ToString(CultureInfo.InvariantCulture)
                 + " cone=" + cone.ToString("F2", CultureInfo.InvariantCulture)
-                + " dir=" + NetHitLog.Direction(direction.x, direction.y, direction.z), this);
+                + " dir=" + NetHitLog.Direction(direction.x, direction.y, direction.z)
+                + (blind ? " blind=true" : string.Empty), this);
             FireServerRpc(new FixedString64Bytes(weaponId), origin, aim, time.Tick, time.Alpha, shotIndex, generation);
 
             // 撃った本人の演出は返事を待たずに出す (サーバーの NetCombatFeed は本人にだけ射撃を送らない)
-            CombatEvents.RaiseShotFired(gameObject, origin, direction, weaponId);
+            CombatEvents.RaiseShotFired(gameObject, tracerOrigin, direction, weaponId);
 
             // この弾は今の視点の向きで撃ち、反動はカメラが次に向きを書くとき (FirstPersonLook.LateUpdate) から次の弾に効く
             if (spec != null)
@@ -164,6 +176,17 @@ namespace Fps.Net
             }
 
             ReleaseSprint(SprintInput.ReasonFire);
+        }
+
+        /// <summary>
+        /// 今撃つとブラインドファイアになるか (<see cref="NetBlindFire.Resolve"/>)。ルールは試合の同期値 (<see cref="NetMatchRules.BlindFireEnabled"/>)、
+        /// カバーの状態はこのインスタンスの最新の値 (持ち主は予測、サーバーは確定状態)、目は今の姿勢の高さ (<see cref="EyePosition"/>)。
+        /// </summary>
+        internal BlindFireAim ResolveBlindFire(out Vector3 origin)
+        {
+            var match = NetTeamDeathmatch.Current;
+            var enabled = match != null && match.SyncedRules.BlindFireEnabled;
+            return NetBlindFire.Resolve(enabled, CurrentCover, EyePosition(), BodyRadius, out origin);
         }
 
         /// <summary>

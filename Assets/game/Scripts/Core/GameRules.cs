@@ -8,7 +8,8 @@ namespace Fps.Core
     public sealed class GameRules
     {
         /// <summary>
-        /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない、アクションは <see cref="ActionRules.Default"/>。
+        /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない、アクションは <see cref="ActionRules.Default"/>、
+        /// リスポーン直後の無敵なし、落下ダメージなし、HUD はすべて出す。
         /// </summary>
         public static readonly GameRules Default = new GameRules(
             FriendlyFire.Off,
@@ -58,6 +59,15 @@ namespace Fps.Core
         /// <summary>TPS のアクションのルール。null にならない。</summary>
         public ActionRules Actions { get; }
 
+        /// <summary>リスポーンしてからダメージを受けなくなる秒数。0 なら守らない。0 以上の有限値。</summary>
+        public float SpawnProtectionSeconds { get; }
+
+        /// <summary>高い所から落ちたときにダメージを受けるか。</summary>
+        public FallDamage FallDamage { get; }
+
+        /// <summary>HUD にどれだけの情報を出すか。</summary>
+        public HudDensity HudDensity { get; }
+
         /// <param name="friendlyFire">味方撃ちの扱い。定義済みの値。</param>
         /// <param name="respawnMode">リスポーン方式。定義済みの値。</param>
         /// <param name="waveIntervalSeconds">波の間隔 (秒)。0 より大きい有限値。</param>
@@ -69,6 +79,9 @@ namespace Fps.Core
         /// <param name="reserveAmmoMultiplier">初期予備弾の倍率。0 以上の有限値。</param>
         /// <param name="destruction">建造物を壊せるか。定義済みの値。</param>
         /// <param name="actions">アクションのルール。null なら <see cref="ActionRules.Default"/>。</param>
+        /// <param name="spawnProtectionSeconds">リスポーン直後にダメージを受けない秒数。0 以上の有限値。</param>
+        /// <param name="fallDamage">落下ダメージ。定義済みの値。</param>
+        /// <param name="hudDensity">HUD の情報量。定義済みの値。</param>
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -80,7 +93,10 @@ namespace Fps.Core
             bool infiniteReserve,
             float reserveAmmoMultiplier,
             Destruction destruction,
-            ActionRules actions = null)
+            ActionRules actions = null,
+            float spawnProtectionSeconds = 0f,
+            FallDamage fallDamage = FallDamage.Off,
+            HudDensity hudDensity = HudDensity.Full)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -128,6 +144,21 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(destruction), destruction, "destruction is not a defined Destruction");
             }
 
+            if (!(spawnProtectionSeconds >= 0f) || float.IsInfinity(spawnProtectionSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(spawnProtectionSeconds), spawnProtectionSeconds, "spawnProtectionSeconds must be a non-negative finite number");
+            }
+
+            if (!Enum.IsDefined(typeof(FallDamage), fallDamage))
+            {
+                throw new ArgumentOutOfRangeException(nameof(fallDamage), fallDamage, "fallDamage is not a defined FallDamage");
+            }
+
+            if (!Enum.IsDefined(typeof(HudDensity), hudDensity))
+            {
+                throw new ArgumentOutOfRangeException(nameof(hudDensity), hudDensity, "hudDensity is not a defined HudDensity");
+            }
+
             FriendlyFire = friendlyFire;
             RespawnMode = respawnMode;
             WaveIntervalSeconds = waveIntervalSeconds;
@@ -139,6 +170,9 @@ namespace Fps.Core
             ReserveAmmoMultiplier = reserveAmmoMultiplier;
             Destruction = destruction;
             Actions = actions ?? ActionRules.Default;
+            SpawnProtectionSeconds = spawnProtectionSeconds;
+            FallDamage = fallDamage;
+            HudDensity = hudDensity;
         }
     }
 }

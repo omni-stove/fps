@@ -70,6 +70,24 @@ namespace Fps.Core
         /// <summary>アクティブリロードで判定の幅を外したときに、リロードに足される秒数。0 以上の有限値。</summary>
         public float ActiveReloadFailSeconds { get; }
 
+        /// <summary>1 発ごとに視線が上へ跳ねる角度 (度)。0 以上 90 以下。</summary>
+        public float RecoilPitchDegrees { get; }
+
+        /// <summary>1 発ごとに視線が左右へぶれる最大の角度 (度)。0 以上 90 以下。</summary>
+        public float RecoilYawDegrees { get; }
+
+        /// <summary>撃ち止めてから跳ねた視線が戻る速さ (度/秒)。0 なら戻らない。0 以上の有限値。</summary>
+        public float RecoilRecoveryPerSecond { get; }
+
+        /// <summary>腰だめで撃ったときに、狙った向きから弾が散らばる最大の角度 (度)。0 以上 90 以下。</summary>
+        public float HipSpreadDegrees { get; }
+
+        /// <summary>覗き込み (ADS) し切って撃ったときに弾が散らばる最大の角度 (度)。0 以上 90 以下。</summary>
+        public float AdsSpreadDegrees { get; }
+
+        /// <summary>動きながら撃ったときに散らばりへ足す最大の角度 (度)。0 以上 90 以下。</summary>
+        public float MoveSpreadDegrees { get; }
+
         /// <param name="id">識別子。前後の空白は除く。除いた後が小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。</param>
         /// <param name="displayName">表示名。null・空白のみなら <paramref name="id"/> を使う。</param>
         /// <param name="category">武器の種別。定義済みの値のみ。</param>
@@ -87,6 +105,12 @@ namespace Fps.Core
         /// <param name="activeReloadWindowStart">アクティブリロードの判定の幅の始まり (リロード時間に対する割合)。0 以上 1 未満。</param>
         /// <param name="activeReloadWindowLength">アクティブリロードの判定の幅の長さ (リロード時間に対する割合)。0 より大きく、activeReloadWindowStart との和が 1 以下。</param>
         /// <param name="activeReloadFailSeconds">アクティブリロードに失敗したときに足される秒数。0 以上の有限値。</param>
+        /// <param name="recoilPitchDegrees">1 発ごとの縦の反動 (度)。0 以上 90 以下。</param>
+        /// <param name="recoilYawDegrees">1 発ごとの横の反動の最大 (度)。0 以上 90 以下。</param>
+        /// <param name="recoilRecoveryPerSecond">反動が戻る速さ (度/秒)。0 以上の有限値。</param>
+        /// <param name="hipSpreadDegrees">腰だめの散らばりの最大角度 (度)。0 以上 90 以下。</param>
+        /// <param name="adsSpreadDegrees">ADS の散らばりの最大角度 (度)。0 以上 90 以下。</param>
+        /// <param name="moveSpreadDegrees">移動中に足す散らばりの最大角度 (度)。0 以上 90 以下。</param>
         public WeaponSpec(
             string id,
             string displayName,
@@ -104,7 +128,13 @@ namespace Fps.Core
             float blindFireSpreadDegrees = 0f,
             float activeReloadWindowStart = DefaultActiveReloadWindowStart,
             float activeReloadWindowLength = DefaultActiveReloadWindowLength,
-            float activeReloadFailSeconds = DefaultActiveReloadFailSeconds)
+            float activeReloadFailSeconds = DefaultActiveReloadFailSeconds,
+            float recoilPitchDegrees = 0f,
+            float recoilYawDegrees = 0f,
+            float recoilRecoveryPerSecond = 0f,
+            float hipSpreadDegrees = 0f,
+            float adsSpreadDegrees = 0f,
+            float moveSpreadDegrees = 0f)
         {
             var normalizedId = NormalizeId(id);
 
@@ -178,6 +208,18 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(activeReloadFailSeconds), activeReloadFailSeconds, "activeReloadFailSeconds must be a non-negative finite number");
             }
 
+            ValidateAngle(recoilPitchDegrees, nameof(recoilPitchDegrees));
+            ValidateAngle(recoilYawDegrees, nameof(recoilYawDegrees));
+
+            if (!IsNonNegativeFinite(recoilRecoveryPerSecond))
+            {
+                throw new ArgumentOutOfRangeException(nameof(recoilRecoveryPerSecond), recoilRecoveryPerSecond, "recoilRecoveryPerSecond must be a non-negative finite number");
+            }
+
+            ValidateAngle(hipSpreadDegrees, nameof(hipSpreadDegrees));
+            ValidateAngle(adsSpreadDegrees, nameof(adsSpreadDegrees));
+            ValidateAngle(moveSpreadDegrees, nameof(moveSpreadDegrees));
+
             Id = normalizedId;
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? normalizedId : displayName.Trim();
             Category = category;
@@ -195,6 +237,20 @@ namespace Fps.Core
             ActiveReloadWindowStart = activeReloadWindowStart;
             ActiveReloadWindowLength = activeReloadWindowLength;
             ActiveReloadFailSeconds = activeReloadFailSeconds;
+            RecoilPitchDegrees = recoilPitchDegrees;
+            RecoilYawDegrees = recoilYawDegrees;
+            RecoilRecoveryPerSecond = recoilRecoveryPerSecond;
+            HipSpreadDegrees = hipSpreadDegrees;
+            AdsSpreadDegrees = adsSpreadDegrees;
+            MoveSpreadDegrees = moveSpreadDegrees;
+        }
+
+        private static void ValidateAngle(float degrees, string paramName)
+        {
+            if (!(degrees >= 0f && degrees <= 90f))
+            {
+                throw new ArgumentOutOfRangeException(paramName, degrees, paramName + " must be between 0 and 90");
+            }
         }
 
         private static string NormalizeId(string id)

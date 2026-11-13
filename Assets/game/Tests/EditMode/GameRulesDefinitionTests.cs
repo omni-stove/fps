@@ -56,6 +56,13 @@ namespace Fps.Tests.EditMode
             definition.Cover = Cover.On;
             definition.BlindFire = BlindFire.On;
             definition.ActiveReload = ActiveReload.On;
+            definition.Dodge = Dodge.On;
+            definition.Vault = Vault.On;
+            definition.Grenade = Grenade.On;
+            definition.GrenadeCount = 2;
+            definition.SpawnProtectionSeconds = 1.5f;
+            definition.FallDamage = FallDamage.On;
+            definition.HudDensity = HudDensity.Minimal;
 
             var rules = definition.ToRules();
 
@@ -76,6 +83,13 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.Cover, Is.EqualTo(Cover.On));
             Assert.That(rules.Actions.BlindFire, Is.EqualTo(BlindFire.On));
             Assert.That(rules.Actions.ActiveReload, Is.EqualTo(ActiveReload.On));
+            Assert.That(rules.Actions.Dodge, Is.EqualTo(Dodge.On));
+            Assert.That(rules.Actions.Vault, Is.EqualTo(Vault.On));
+            Assert.That(rules.Actions.Grenade, Is.EqualTo(Grenade.On));
+            Assert.That(rules.Actions.GrenadeCount, Is.EqualTo(2));
+            Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(1.5f));
+            Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.On));
+            Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Minimal));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
 
@@ -93,7 +107,10 @@ namespace Fps.Tests.EditMode
                 true,
                 2f,
                 Destruction.On,
-                new ActionRules(Downed.Revive, 12f, 0.25f, 2.5f, Cover.On, BlindFire.On, ActiveReload.On));
+                new ActionRules(Downed.Revive, 12f, 0.25f, 2.5f, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, 3),
+                2f,
+                FallDamage.On,
+                HudDensity.Hardcore);
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -119,6 +136,13 @@ namespace Fps.Tests.EditMode
         [TestCase("BlindFire")]
         [TestCase("BlindFireWithoutCover")]
         [TestCase("ActiveReload")]
+        [TestCase("Dodge")]
+        [TestCase("Vault")]
+        [TestCase("Grenade")]
+        [TestCase("GrenadeCount")]
+        [TestCase("SpawnProtectionSeconds")]
+        [TestCase("FallDamage")]
+        [TestCase("HudDensity")]
         public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
         {
             var definition = NewBroken("BrokenRules", field);
@@ -182,6 +206,13 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.Actions.Cover, Is.EqualTo(expected.Actions.Cover));
             Assert.That(actual.Actions.BlindFire, Is.EqualTo(expected.Actions.BlindFire));
             Assert.That(actual.Actions.ActiveReload, Is.EqualTo(expected.Actions.ActiveReload));
+            Assert.That(actual.Actions.Dodge, Is.EqualTo(expected.Actions.Dodge));
+            Assert.That(actual.Actions.Vault, Is.EqualTo(expected.Actions.Vault));
+            Assert.That(actual.Actions.Grenade, Is.EqualTo(expected.Actions.Grenade));
+            Assert.That(actual.Actions.GrenadeCount, Is.EqualTo(expected.Actions.GrenadeCount));
+            Assert.That(actual.SpawnProtectionSeconds, Is.EqualTo(expected.SpawnProtectionSeconds));
+            Assert.That(actual.FallDamage, Is.EqualTo(expected.FallDamage));
+            Assert.That(actual.HudDensity, Is.EqualTo(expected.HudDensity));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)
@@ -241,6 +272,27 @@ namespace Fps.Tests.EditMode
                     break;
                 case "ActiveReload":
                     definition.ActiveReload = (ActiveReload)99;
+                    break;
+                case "Dodge":
+                    definition.Dodge = (Dodge)99;
+                    break;
+                case "Vault":
+                    definition.Vault = (Vault)99;
+                    break;
+                case "Grenade":
+                    definition.Grenade = (Grenade)99;
+                    break;
+                case "GrenadeCount":
+                    definition.GrenadeCount = -1;
+                    break;
+                case "SpawnProtectionSeconds":
+                    definition.SpawnProtectionSeconds = float.NaN;
+                    break;
+                case "FallDamage":
+                    definition.FallDamage = (FallDamage)99;
+                    break;
+                case "HudDensity":
+                    definition.HudDensity = (HudDensity)99;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

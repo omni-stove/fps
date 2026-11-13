@@ -1,0 +1,9 @@
+# docker/server/Dockerfile のビルドコンテキスト (リポジトリのルート) から、イメージに入れるものだけを残す。
+# Library/ などを送らないよう、すべてを除いてから必要なものを戻す
+*
+!Builds/server-linux/
+!docker/server/entrypoint.sh
+
+# Unity がビルドの隣に出す、配布してはいけないデバッグ情報
+Builds/server-linux/*_BurstDebugInformation_DoNotShip/
+Builds/server-linux/*_BackUpThisFolder_ButDontShipItWithYourGame/

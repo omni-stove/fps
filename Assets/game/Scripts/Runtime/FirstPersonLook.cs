@@ -209,6 +209,12 @@ namespace Fps.Runtime
         /// </summary>
         public static void RefreshCursorLock()
         {
+            if (LoadoutSelectView.IsAnyOpen)
+            {
+                LockCursor(false);
+                return;
+            }
+
             var anyActive = false;
             foreach (var look in FindObjectsByType<FirstPersonLook>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
             {

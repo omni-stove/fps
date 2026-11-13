@@ -13,7 +13,7 @@ namespace Fps.Runtime
     /// 開く・閉じるのと、決めた並びをどこへ送るかは持ち主が決める。オンラインでは Fps.Net の NetLoadoutChooser が、
     /// 倒されてリスポーンを待っている間に <see cref="Open"/> し、<see cref="Confirmed"/> で受けた並びをサーバーへ送って
     /// 答えを <see cref="ShowAnswer"/> で出す。
-    /// 開いている間 (Play 中) はカーソルのロックを外してマウスで押せるようにし、閉じたら開く前の状態に戻す。
+    /// 開いている間 (Play 中) はカーソルのロックを外してマウスで押せるようにし、閉じたら <see cref="FirstPersonLook.RefreshCursorLock"/> で決め直す。
     /// HUD の木が作り直されたときは、開いていれば同じ選択の中身で作り直す。
     /// </remarks>
     [DisallowMultipleComponent]
@@ -28,8 +28,10 @@ namespace Fps.Runtime
         private bool _statusIsError;
         private bool _busy;
         private bool _restoreCursor;
-        private CursorLockMode _previousLockState;
-        private bool _previousCursorVisible;
+        private static int _openCursorCount;
+
+        /// <summary>カーソルを解放して開いているロードアウト画面があるか。<see cref="FirstPersonLook.RefreshCursorLock"/> がロックしないために見る。</summary>
+        public static bool IsAnyOpen => _openCursorCount > 0;
 
         public override string ElementName => UxmlName;
 
@@ -182,9 +184,8 @@ namespace Fps.Runtime
                 return;
             }
 
-            _previousLockState = UnityEngine.Cursor.lockState;
-            _previousCursorVisible = UnityEngine.Cursor.visible;
             _restoreCursor = true;
+            _openCursorCount++;
             UnityEngine.Cursor.lockState = CursorLockMode.None;
             UnityEngine.Cursor.visible = true;
         }
@@ -197,8 +198,13 @@ namespace Fps.Runtime
             }
 
             _restoreCursor = false;
-            UnityEngine.Cursor.lockState = _previousLockState;
-            UnityEngine.Cursor.visible = _previousCursorVisible;
+            _openCursorCount = Math.Max(0, _openCursorCount - 1);
+            // 開いている間に PauseMenu が開閉したり視点操作が切り替わったりするので、控えた値は戻さず決め直す。
+            // ポーズ中はメニューがカーソルを使うので触らず、閉じるときに PauseMenu が決め直す。
+            if (!PauseMenu.IsAnyOpen)
+            {
+                FirstPersonLook.RefreshCursorLock();
+            }
         }
     }
 }

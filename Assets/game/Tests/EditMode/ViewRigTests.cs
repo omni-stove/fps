@@ -108,6 +108,60 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void DefaultsToTheRightShoulder()
+        {
+            Assert.That(_rig.Shoulder, Is.EqualTo(ShoulderSide.Right));
+        }
+
+        [Test]
+        public void LeftShoulderMirrorsTheThirdPersonCameraToTheLeft()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+
+            _rig.Shoulder = ShoulderSide.Left;
+            _rig.UpdateCameraPosition();
+
+            var expected = ViewRig.DefaultThirdPersonOffset;
+            expected.x = -expected.x;
+            Assert.That(_camera.transform.localPosition.x, Is.LessThan(0f));
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, expected), Is.LessThan(1e-4f));
+            Assert.That(_rig.ThirdPersonOffset, Is.EqualTo(ViewRig.DefaultThirdPersonOffset), "the stored offset stays on the right");
+        }
+
+        [Test]
+        public void SwappingBackToTheRightShoulderRestoresTheCamera()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+            _rig.Shoulder = ShoulderSide.Left;
+            _rig.UpdateCameraPosition();
+
+            _rig.Shoulder = ShoulderSide.Right;
+            _rig.UpdateCameraPosition();
+
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, ViewRig.DefaultThirdPersonOffset), Is.LessThan(1e-4f));
+        }
+
+        [Test]
+        public void ShoulderDoesNotMoveTheFirstPersonCamera()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Shoulder = ShoulderSide.Left;
+
+            _rig.UpdateCameraPosition();
+
+            Assert.That(_camera.transform.localPosition, Is.EqualTo(Vector3.zero));
+        }
+
+        [Test]
+        public void RejectsUnknownShoulder()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rig.Shoulder = (ShoulderSide)99);
+            Assert.That(_rig.Shoulder, Is.EqualTo(ShoulderSide.Right));
+        }
+
+        [Test]
         public void OtherPlayersBodyIsDrawnInFirstPerson()
         {
             _rig.Initialize(_eye, _camera);

@@ -292,6 +292,7 @@ namespace Fps.Runtime
                 // 回復しないルール (RegenPerSecond = 0) でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため。
                 regen = player.AddComponent<HealthRegen>();
                 regen.Bind(damageable, rules);
+                PlayerActions.Attach(player, rules);
 
                 // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
                 mover.BindSprintRelease(weapon, damageable);

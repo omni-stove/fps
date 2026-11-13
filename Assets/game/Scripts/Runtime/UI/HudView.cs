@@ -147,6 +147,9 @@ namespace Fps.Runtime
                 case HudField.WeaponName:
                     ShowWeaponName();
                     break;
+                case HudField.ReloadProgress:
+                    // 進捗の描画はアクティブリロードの issue で足す。それまでは受けても何も描かない。
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a valid HudField");
             }

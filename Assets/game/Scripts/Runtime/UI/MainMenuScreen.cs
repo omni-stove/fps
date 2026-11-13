@@ -140,8 +140,8 @@ namespace Fps.Runtime
                     $"theme 'Resources/{ThemeResourcePath}.tss' was not found (expected under Assets/game/UI/Resources)");
             }
 
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
 
             _ownedPanelSettings = ScriptableObject.CreateInstance<PanelSettings>();
             _ownedPanelSettings.name = PanelSettingsName;

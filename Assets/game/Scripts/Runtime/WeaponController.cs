@@ -21,10 +21,10 @@ namespace Fps.Runtime
     public sealed class WeaponController : MonoBehaviour
     {
         /// <summary>Assets/InputSystem_Actions.inputactions の Attack アクション。</summary>
-        public const string AttackActionPath = "Player/Attack";
+        public const string AttackActionPath = InputActionPaths.Attack;
 
-        /// <summary>Assets/InputSystem_Actions.inputactions の Reload アクション (キーボードの R)。</summary>
-        public const string ReloadActionPath = "Player/Reload";
+        /// <summary>Assets/InputSystem_Actions.inputactions の Reload アクション (キーボードの R、ゲームパッドの X)。</summary>
+        public const string ReloadActionPath = InputActionPaths.Reload;
 
         public const string ReloadedLog = "[Combat] reloaded";
 

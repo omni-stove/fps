@@ -530,5 +530,27 @@ namespace Fps.Net.Tests
             Assert.That(state.Equals(new NetWeaponState(12, 60, false, 1, 3, false)), Is.False);
             Assert.That(state.Equals(new NetWeaponState(12, 60, false, 1, 2, true)), Is.False);
         }
+
+        [Test]
+        public void ReloadOrSwitchStartsWhenTheServerBeginsOne()
+        {
+            var idle = new NetWeaponState(12, 60, false, 0, 2, false);
+
+            Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(idle, new NetWeaponState(12, 60, true, 0, 2, false)), Is.True, "reload");
+            Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(idle, new NetWeaponState(12, 60, false, 1, 2, true)), Is.True, "switch");
+            Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(idle, new NetWeaponState(7, 30, false, 1, 2, false)), Is.True, "equipped index changed");
+        }
+
+        [Test]
+        public void ShotsFinishedReloadsAndTheFirstSyncAreNotAStart()
+        {
+            var idle = new NetWeaponState(12, 60, false, 0, 2, false);
+            var reloading = new NetWeaponState(12, 60, true, 0, 2, false);
+
+            Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(idle, new NetWeaponState(11, 60, false, 0, 2, false)), Is.False, "a shot");
+            Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(reloading, new NetWeaponState(30, 42, false, 0, 2, false)), Is.False, "reload done");
+            Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(reloading, new NetWeaponState(11, 42, true, 0, 2, false)), Is.False, "still reloading");
+            Assert.That(NetPlayerWeapon.StartsReloadOrSwitch(default, new NetWeaponState(30, 90, false, 1, 2, false)), Is.False, "first sync");
+        }
     }
 }

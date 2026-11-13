@@ -91,7 +91,7 @@ namespace Fps.Tests.EditMode
             Assert.That(layout.Bootstrap, Is.Not.Null);
             Assert.That(layout.Bootstrap.gameObject.scene, Is.EqualTo(_scene));
             Assert.That(layout.Bootstrap.CreatesFloor, Is.False, "the scene's own floor carries the baked NavMesh");
-            Assert.That(layout.Bootstrap.WeaponDefinition, Is.SameAs(_rifle), "the player shoots the rifle");
+            Assert.That(layout.Bootstrap.WeaponDefinitions, Is.EqualTo(PlayerWeapons), "the player carries the rifle and the handgun");
             var placements = CampaignSceneBuilder.AllEnemies();
             Assert.That(layout.Enemies.Count, Is.EqualTo(placements.Count));
             for (var i = 0; i < placements.Count; i++)
@@ -190,7 +190,10 @@ namespace Fps.Tests.EditMode
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=area_a "));
                 Assert.That(layout.AreaACheckpoint.HandleEnter(player), Is.True);
                 Assert.That(storage.TryRead(CampaignRunner.SaveSlot, out var text), Is.True);
-                Assert.That(CampaignSave.FromJson(text).CheckpointId, Is.EqualTo(CampaignSceneBuilder.AreaACheckpointId));
+                var saved = CampaignSave.FromJson(text);
+                Assert.That(saved.CheckpointId, Is.EqualTo(CampaignSceneBuilder.AreaACheckpointId));
+                Assert.That(saved.Weapons, Has.Count.EqualTo(2), "every weapon in the loadout is saved");
+                Assert.That(saved.EquippedWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
 
                 layout.Campaign.Tick(CampaignRunner.SavedNoticeSeconds);
                 Assert.That(world.Hud.Model.NoticeText, Is.EqualTo(HudFormat.NoNotice), "the saved notice disappears");
@@ -421,7 +424,7 @@ namespace Fps.Tests.EditMode
                 WeaponAssetBuilder.Configure(rifleOnly, new[] { _rifle });
 
                 var e = Assert.Throws<System.Collections.Generic.KeyNotFoundException>(
-                    () => CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle, rifleOnly));
+                    () => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, rifleOnly));
                 var ambusher = CampaignSceneBuilder.Ambushers[0];
                 Assert.That(e.Message, Does.Contain($"'{ambusher.Id}'"), "names the placement");
                 Assert.That(e.Message, Does.Contain($"'{WeaponAssetBuilder.HandgunId}'"), "names the weapon id");
@@ -465,14 +468,14 @@ namespace Fps.Tests.EditMode
             SceneManager.MoveGameObjectToScene(new GameObject("Stray"), _scene);
 
             Assert.Throws<InvalidOperationException>(
-                () => CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle, _catalog));
+                () => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, _catalog));
             Assert.That(_scene.rootCount, Is.EqualTo(1), "nothing is left behind");
         }
 
         [Test]
         public void RefusesToPopulateWithoutDefinition()
         {
-            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, null, _rifle, _catalog));
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, null, PlayerWeapons, _catalog));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
@@ -480,13 +483,15 @@ namespace Fps.Tests.EditMode
         public void RefusesToPopulateWithoutAPlayerWeapon()
         {
             Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, null, _catalog));
+            Assert.Throws<ArgumentException>(
+                () => CampaignSceneBuilder.PopulateScene(_scene, _definition, new WeaponDefinition[] { _rifle, null }, _catalog));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
         [Test]
         public void RefusesToPopulateWithoutAWeaponCatalog()
         {
-            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle, null));
+            Assert.Throws<ArgumentNullException>(() => CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, null));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
@@ -543,7 +548,7 @@ namespace Fps.Tests.EditMode
 
             var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);
             Assert.That(rifle, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
-            Assert.That(bootstrap.WeaponDefinition, Is.SameAs(rifle), $"rerun {nameof(CampaignSceneBuilder)}.Build");
+            Assert.That(bootstrap.WeaponDefinitions, Is.EqualTo(TestScenes.ExpectedPlayerWeapons()), $"rerun {nameof(CampaignSceneBuilder)}.Build");
             var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(WeaponAssetBuilder.CatalogPath);
             Assert.That(catalog, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
             var expected = CampaignSceneBuilder.ResolveEnemyWeapons(catalog);
@@ -562,9 +567,11 @@ namespace Fps.Tests.EditMode
             Assert.That(AssetDatabase.GetAssetPath(surface.navMeshData), Is.EqualTo(CampaignSceneBuilder.NavMeshDataPath));
         }
 
+        private WeaponDefinition[] PlayerWeapons => new[] { _rifle, _handgun };
+
         private CampaignLayout Populate()
         {
-            var layout = CampaignSceneBuilder.PopulateScene(_scene, _definition, _rifle, _catalog);
+            var layout = CampaignSceneBuilder.PopulateScene(_scene, _definition, PlayerWeapons, _catalog);
             _baked = layout.Surface.navMeshData;
             return layout;
         }

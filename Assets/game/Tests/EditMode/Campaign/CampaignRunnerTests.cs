@@ -22,6 +22,10 @@ namespace Fps.Tests.EditMode
         private const string MissionName = "CampaignTestMission";
         private const string CheckpointId = "cp1";
 
+        // 古い形式のセーブは rifle の残弾として読むので、テストの rifle にもその Id を使う。
+        private const string RifleId = CampaignSave.LegacyWeaponId;
+        private const string HandgunId = "00000000-0000-4000-8000-0000000000a2";
+
         private static readonly Vector3 _checkpointPosition = new Vector3(5f, 0f, 10f);
         private static readonly Vector3 _spawnPosition = new Vector3(0f, 1f, 0f);
 
@@ -77,8 +81,16 @@ namespace Fps.Tests.EditMode
             first.Player.TakeDamage(30);
             LogAssert.Expect(LogType.Log, "[Combat] fire ammo=29");
             Assert.That(first.Weapon.Fire(), Is.True);
+            first.Weapon.Tick(1f);
+            LogAssert.Expect(LogType.Log, "[Combat] fire ammo=28");
+            Assert.That(first.Weapon.Fire(), Is.True);
 
-            ExpectCampaign($"saved mission={MissionName} checkpoint={CheckpointId} health=70 ammo=29/90");
+            // 持ち替えた武器と、武器ごとの残弾がセーブされる。
+            Assert.That(first.Weapon.SelectNext(), Is.True);
+            LogAssert.Expect(LogType.Log, "[Combat] fire ammo=29");
+            Assert.That(first.Weapon.Fire(), Is.True);
+
+            ExpectCampaign($"saved mission={MissionName} checkpoint={CheckpointId} health=70 equipped={HandgunId} ammo={RifleId}:28/90,{HandgunId}:29/90");
             Assert.That(first.Checkpoint.HandleEnter(first.PlayerCollider), Is.True);
             Assert.That(first.Checkpoint.IsReached, Is.True);
             Assert.That(first.Campaign.LastCheckpointId, Is.EqualTo(CheckpointId));
@@ -108,15 +120,17 @@ namespace Fps.Tests.EditMode
             first.Dispose();
             var second = BuildScene();
             ExpectCampaign($"started mission={MissionName}");
-            ExpectCampaign($"restored mission={MissionName} checkpoint={CheckpointId} health=70 ammo=29/90 state=Active");
+            ExpectCampaign($"restored mission={MissionName} checkpoint={CheckpointId} health=70 equipped={HandgunId} ammo={RifleId}:28/90,{HandgunId}:29/90 state=Active");
             second.Begin(_storage, () => _reloads++);
 
             Assert.That(Vector3.Distance(second.Player.transform.position, second.Checkpoint.RespawnPosition), Is.LessThan(1e-4f));
             Assert.That(second.Checkpoint.RespawnPosition, Is.EqualTo(_checkpointPosition + new Vector3(0f, GameBootstrap.PlayerHeight / 2f, 0f)));
             Assert.That(second.Controller.enabled, Is.True, "the CharacterController is enabled again after the move");
             Assert.That(second.Player.Health.Current, Is.EqualTo(70));
+            Assert.That(second.Weapon.CurrentIndex, Is.EqualTo(1), "the handgun is held again");
             Assert.That(second.Weapon.Weapon.AmmoInMagazine, Is.EqualTo(29));
             Assert.That(second.Weapon.Weapon.ReserveAmmo, Is.EqualTo(90));
+            Assert.That(second.Weapon.Loadout.Items[0].AmmoInMagazine, Is.EqualTo(28), "the rifle keeps its own ammo");
             var mission = second.Missions.Mission;
             Assert.That(mission.GetState("reach"), Is.EqualTo(ObjectiveState.Completed));
             Assert.That(mission.GetState("kill"), Is.EqualTo(ObjectiveState.Active));
@@ -200,7 +214,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void IgnoresASaveOfAnotherMission()
         {
-            var other = new CampaignSave("OtherMission", CheckpointId, 10, 1, 2, new[]
+            var other = new CampaignSave("OtherMission", CheckpointId, 10, RifleAmmo(1, 2), RifleId, new[]
             {
                 new ObjectiveProgress("reach", ObjectiveState.Completed, 1),
                 new ObjectiveProgress("kill", ObjectiveState.Active, 0),
@@ -234,7 +248,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void IgnoresASaveWhoseObjectivesNoLongerMatch()
         {
-            var stale = new CampaignSave(MissionName, CheckpointId, 10, 1, 2, new[]
+            var stale = new CampaignSave(MissionName, CheckpointId, 10, RifleAmmo(1, 2), RifleId, new[]
             {
                 new ObjectiveProgress("removed", ObjectiveState.Completed, 1),
             });
@@ -251,7 +265,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void RestoresTheRestWhenTheCheckpointIsMissing()
         {
-            var save = new CampaignSave(MissionName, "gone", 40, 3, 4, new[]
+            var save = new CampaignSave(MissionName, "gone", 40, RifleAmmo(3, 4), RifleId, new[]
             {
                 new ObjectiveProgress("reach", ObjectiveState.Completed, 1),
                 new ObjectiveProgress("kill", ObjectiveState.Active, 1),
@@ -262,13 +276,40 @@ namespace Fps.Tests.EditMode
 
             ExpectCampaign($"started mission={MissionName}");
             LogAssert.Expect(LogType.Warning, "[Campaign] checkpoint=gone is not in the scene; the player stays at the spawn point");
-            ExpectCampaign($"restored mission={MissionName} checkpoint=gone health=40 ammo=3/4 state=Active");
+            ExpectCampaign($"restored mission={MissionName} checkpoint=gone health=40 equipped={RifleId} ammo={RifleId}:3/4,{HandgunId}:30/90 state=Active");
             scene.Begin(_storage, () => _reloads++);
 
             Assert.That(scene.Player.transform.position, Is.EqualTo(_spawnPosition));
             Assert.That(scene.Player.Health.Current, Is.EqualTo(40));
             Assert.That(scene.Missions.Mission.GetCount("kill"), Is.EqualTo(1));
             Assert.That(scene.Checkpoint.IsReached, Is.False);
+        }
+
+        [Test]
+        public void RestoresALegacySingleWeaponSaveAsTheRiflesAmmo()
+        {
+            _storage.Write(
+                CampaignRunner.SaveSlot,
+                "{\"version\":1,\"missionId\":\"" + MissionName + "\",\"checkpointId\":\"" + CheckpointId + "\",\"health\":55," +
+                "\"ammoInMagazine\":5,\"reserveAmmo\":6,\"objectives\":[" +
+                "{\"id\":\"reach\",\"state\":\"completed\",\"count\":1}," +
+                "{\"id\":\"kill\",\"state\":\"active\",\"count\":0}," +
+                "{\"id\":\"extract\",\"state\":\"locked\",\"count\":0}]}");
+            var scene = BuildScene();
+
+            ExpectCampaign($"started mission={MissionName}");
+            ExpectCampaign($"restored mission={MissionName} checkpoint={CheckpointId} health=55 equipped={RifleId} ammo={RifleId}:5/6,{HandgunId}:30/90 state=Active");
+            scene.Begin(_storage, () => _reloads++);
+
+            Assert.That(scene.Weapon.CurrentIndex, Is.Zero, "the rifle is held");
+            Assert.That(scene.Weapon.Weapon.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(scene.Weapon.Weapon.ReserveAmmo, Is.EqualTo(6));
+            Assert.That(scene.Weapon.Loadout.Items[1].AmmoInMagazine, Is.EqualTo(scene.Handgun.MagazineSize), "the handgun was not in the old save");
+
+            // 次のセーブは新しい形式で書く。
+            scene.Campaign.SaveAt("next");
+            Assert.That(_storage.TryRead(CampaignRunner.SaveSlot, out var text), Is.True);
+            Assert.That(text, Does.StartWith("{\"version\":" + CampaignSave.CurrentVersion + ","));
         }
 
         [Test]
@@ -287,7 +328,7 @@ namespace Fps.Tests.EditMode
             Assert.That(scene.Campaign.LastCheckpointId, Is.Empty);
 
             storage.FailWrites = false;
-            ExpectCampaign($"saved mission={MissionName} checkpoint={CheckpointId} health=100 ammo=30/90");
+            ExpectCampaign($"saved mission={MissionName} checkpoint={CheckpointId} health=100 equipped={RifleId} ammo={RifleId}:30/90,{HandgunId}:30/90");
             Assert.That(scene.Checkpoint.HandleEnter(scene.PlayerCollider), Is.True);
             Assert.That(storage.Text, Does.Contain(CheckpointId));
         }
@@ -344,6 +385,11 @@ namespace Fps.Tests.EditMode
             Assert.That(scene.Campaign.LastCheckpointId, Is.Empty);
         }
 
+        private static WeaponAmmo[] RifleAmmo(int magazine, int reserve)
+        {
+            return new[] { new WeaponAmmo(RifleId, magazine, reserve) };
+        }
+
         private void BeginQuietly(CampaignScene scene)
         {
             ExpectCampaign($"started mission={MissionName}");
@@ -397,11 +443,15 @@ namespace Fps.Tests.EditMode
 
                 var camera = new GameObject("Camera", typeof(Camera));
                 camera.transform.SetParent(player.transform, false);
+                // 読み直した後のシーンでも同じ武器と分かるよう、Id は固定する (値は既定のまま)。
                 Rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
-                Rifle.AssignIdIfEmpty();
+                Rifle.Id = RifleId;
                 Created.Add(Rifle);
+                Handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
+                Handgun.Id = HandgunId;
+                Created.Add(Handgun);
                 Weapon = camera.AddComponent<WeaponController>();
-                Weapon.Initialize(camera.transform, _attack, _reload, Rifle);
+                Weapon.Initialize(camera.transform, _attack, _reload, null, null, new[] { Rifle, Handgun });
 
                 var checkpoint = Add(new GameObject("Checkpoint"));
                 checkpoint.transform.position = checkpointPosition;
@@ -419,8 +469,11 @@ namespace Fps.Tests.EditMode
             public Collider PlayerCollider => Controller;
             public WeaponController Weapon { get; }
 
-            /// <summary>プレイヤーの武器の定義 (既定値の rifle)。</summary>
+            /// <summary>プレイヤーの 0 番の武器の定義 (既定値、Id は <see cref="RifleId"/>)。</summary>
             public WeaponDefinition Rifle { get; }
+
+            /// <summary>プレイヤーの 1 番の武器の定義 (既定値、Id は <see cref="HandgunId"/>)。</summary>
+            public WeaponDefinition Handgun { get; }
 
             public CheckpointTrigger Checkpoint { get; }
             public CampaignRunner Campaign { get; }

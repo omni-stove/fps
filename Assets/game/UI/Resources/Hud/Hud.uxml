@@ -18,6 +18,8 @@
             <ui:Label text="HP" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-health" text="--" class="hud__value" picking-mode="Ignore" />
         </ui:VisualElement>
+        <!-- 持っている武器の名前。武器が無ければ HudView が隠す。 -->
+        <ui:Label name="hud-weapon-name" text="" class="hud__weapon-name" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-ammo-panel" class="hud__panel hud__panel--bottom-right" picking-mode="Ignore">
             <ui:Label text="AMMO" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-ammo" text="-- / --" class="hud__value" picking-mode="Ignore" />

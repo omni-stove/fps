@@ -68,7 +68,7 @@ namespace Fps.Editor
             {
                 var seconds = ParseSeconds(Environment.GetCommandLineArgs());
 
-                // シーンはプレイヤーに rifle を、敵に武器の一覧から引いた武器を配線するので、先に武器のアセットを作り直しておく。
+                // シーンはプレイヤーに既定のロードアウト (rifle, handgun) を、敵に武器の一覧から引いた武器を配線するので、先に武器のアセットを作り直しておく。
                 WeaponAssetBuilder.Build();
                 CampaignSceneBuilder.Build();
                 DeleteSave("before the run");

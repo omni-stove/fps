@@ -101,7 +101,7 @@ namespace Fps.Core.Tests
         [Test]
         public void OwnedWeaponTurnsIntoItsReserveAmmo()
         {
-            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_rifle,30), Armed(rifleReserve: 80));
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_rifle, 30), Armed(rifleReserve: 80));
 
             Assert.That(outcome.IsCollected, Is.True);
             Assert.That(outcome.AddsWeapon, Is.False);
@@ -112,14 +112,14 @@ namespace Fps.Core.Tests
         [Test]
         public void OwnedWeaponIsLeftWhenItsReserveIsFullOrItGivesNoAmmo()
         {
-            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_rifle,30), Armed(rifleReserve: 90)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
-            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_rifle,0), Armed(rifleReserve: 0)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
+            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_rifle, 30), Armed(rifleReserve: 90)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
+            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_rifle, 0), Armed(rifleReserve: 0)).Rejection, Is.EqualTo(PickupRejection.AmmoFull));
         }
 
         [Test]
         public void CollectorsWithoutWeaponsCannotTakeWeaponsOrAmmo()
         {
-            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_rifle,30), Healthy()).Rejection, Is.EqualTo(PickupRejection.CannotHoldWeapons));
+            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_rifle, 30), Healthy()).Rejection, Is.EqualTo(PickupRejection.CannotHoldWeapons));
             Assert.That(PickupJudge.Judge(PickupSpec.ReserveAmmo(30), Healthy()).Rejection, Is.EqualTo(PickupRejection.CannotHoldWeapons));
         }
 
@@ -189,7 +189,7 @@ namespace Fps.Core.Tests
         {
             Assert.Throws<ArgumentException>(() => PickupSpec.Weapon(null, 0));
             Assert.Throws<ArgumentException>(() => PickupSpec.Weapon(string.Empty, 0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.Weapon(_rifle,-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.Weapon(_rifle, -1));
             Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.ReserveAmmo(0));
             Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.Health(0));
             Assert.Throws<ArgumentOutOfRangeException>(() => PickupSpec.Armor(-5));

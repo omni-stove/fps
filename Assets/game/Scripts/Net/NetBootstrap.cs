@@ -29,7 +29,7 @@ namespace Fps.Net
     /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
     /// <para>
     /// <c>-map</c> は .Map.cs、<c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> は .NetSimulation.cs、
-    /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、試合のイベントのログは .Log.cs が受け持つ。
+    /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、<c>-log-format</c> と試合のイベントの JSON のログは .Log.cs が受け持つ。
     /// それぞれの起動の前 (<c>*BeforeStart</c>)・起動の後 (<c>*AfterStart</c>)・終了の要求 (<c>*QuitRequested</c>) の差し込み口を
     /// <see cref="StartNetwork"/> と <see cref="HandleWantsToQuit"/> から呼ぶ。
     /// </para>
@@ -566,6 +566,7 @@ namespace Fps.Net
         private void OnDestroy()
         {
             MenuNavigator.ReturningToMenu -= HandleReturningToMenu;
+            StopServerEventLog();
 
             if (_lobby != null)
             {

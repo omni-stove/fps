@@ -53,6 +53,7 @@ namespace Fps.Net
                 Debug.Log(MatchLog.Held(playerId, _session.ReconnectGraceSeconds));
             }
 
+            ServerEventsPlayerLeft(playerId);
             BotsPlayerLeft(playerId);
             IdlePlayerLeft(playerId);
             ObjectivePlayerLeft(playerId);
@@ -147,12 +148,14 @@ namespace Fps.Net
 
                 // 武器は Join の中の出現 (HandleSpawned) で持たせる
                 var held = _session.FindHeld(key);
-                Debug.Log(MatchLog.Joined(playerId, held.HasValue ? held.Value.Team : _session.NextTeam));
+                var team = held.HasValue ? held.Value.Team : _session.NextTeam;
+                Debug.Log(MatchLog.Joined(playerId, team));
                 if (held.HasValue)
                 {
                     Debug.Log(MatchLog.Rejoined(playerId, held.Value));
                 }
 
+                ServerEventsPlayerJoined(playerId, key, team, held.HasValue);
                 _session.Join(playerId, key);
                 BotsPlayerJoined(playerId, player);
                 IdlePlayerJoined(playerId, player);

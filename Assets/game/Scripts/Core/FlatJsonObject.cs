@@ -6,11 +6,105 @@ using System.Text;
 namespace Fps.Core
 {
     /// <summary>
-    /// 値がすべて文字列の、入れ子の無い JSON オブジェクト (<c>{"KEY": "value", ...}</c>) を読む。
-    /// 設定ファイル <c>eos.local.json</c> のためのもので、Unity にも外部ライブラリにも依存しない。
+    /// 値がすべて文字列の、入れ子の無い JSON オブジェクト (<c>{"KEY": "value", ...}</c>) を読み書きする。
+    /// 読むのは設定ファイル <c>eos.local.json</c>、書くのはサーバーのイベントのログ (<see cref="ServerEventLog"/>) のためのもので、
+    /// Unity にも外部ライブラリにも依存しない。
     /// </summary>
     public static class FlatJsonObject
     {
+        /// <summary>
+        /// キーと値を、渡した順に空白も改行も入れない 1 行の JSON オブジェクトにする。
+        /// 制御文字・<c>"</c>・<c>\</c>・行区切り (U+2028 / U+2029)・対になっていないサロゲートはエスケープするので、
+        /// どんな文字列を渡しても結果は 1 行で、<see cref="TryParse"/> で同じキーと値に読み戻せる。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">values か、そのキー・値のどれかが null。</exception>
+        /// <exception cref="ArgumentException">同じキーが 2 度ある。</exception>
+        public static string Format(IReadOnlyList<KeyValuePair<string, string>> values)
+        {
+            if (values == null)
+            {
+                throw new ArgumentNullException(nameof(values));
+            }
+
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            var builder = new StringBuilder();
+            builder.Append('{');
+            for (var i = 0; i < values.Count; i++)
+            {
+                var pair = values[i];
+                if (pair.Key == null)
+                {
+                    throw new ArgumentNullException(nameof(values), "key at index " + i.ToString(CultureInfo.InvariantCulture) + " is null");
+                }
+
+                if (pair.Value == null)
+                {
+                    throw new ArgumentNullException(nameof(values), "value of \"" + pair.Key + "\" is null");
+                }
+
+                if (!keys.Add(pair.Key))
+                {
+                    throw new ArgumentException("duplicate key \"" + pair.Key + "\"", nameof(values));
+                }
+
+                if (i > 0)
+                {
+                    builder.Append(',');
+                }
+
+                AppendString(builder, pair.Key);
+                builder.Append(':');
+                AppendString(builder, pair.Value);
+            }
+
+            builder.Append('}');
+            return builder.ToString();
+        }
+
+        private static void AppendString(StringBuilder builder, string text)
+        {
+            builder.Append('"');
+            for (var i = 0; i < text.Length; i++)
+            {
+                var c = text[i];
+                switch (c)
+                {
+                    case '"':
+                        builder.Append("\\\"");
+                        continue;
+                    case '\\':
+                        builder.Append("\\\\");
+                        continue;
+                    case '\n':
+                        builder.Append("\\n");
+                        continue;
+                    case '\r':
+                        builder.Append("\\r");
+                        continue;
+                    case '\t':
+                        builder.Append("\\t");
+                        continue;
+                }
+
+                if (char.IsHighSurrogate(c) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
+                {
+                    builder.Append(c).Append(text[++i]);
+                    continue;
+                }
+
+                // 行区切りは JSON としては正しいが、行ごとに読むログの集め方では改行として扱われることがある
+                if (c < ' ' || c == ' ' || c == ' ' || char.IsSurrogate(c))
+                {
+                    builder.Append("\\u").Append(((int)c).ToString("x4", CultureInfo.InvariantCulture));
+                    continue;
+                }
+
+                builder.Append(c);
+            }
+
+            builder.Append('"');
+        }
+
         /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
         /// <param name="values">成功したときのキーと値。失敗したときは null。</param>
         /// <param name="error">失敗したときの理由 (何文字目か付き)。成功したときは null。</param>

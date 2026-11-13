@@ -261,7 +261,7 @@ namespace Fps.Core
             }
         }
 
-        private static string TeamName(Team team)
+        internal static string TeamName(Team team)
         {
             switch (team)
             {

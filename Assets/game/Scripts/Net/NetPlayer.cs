@@ -148,6 +148,10 @@ namespace Fps.Net
             if (IsOwner)
             {
                 ResolveAttackAction();
+                if (_weapon != null)
+                {
+                    _weapon.ReloadOrSwitchStarted += HandleReloadOrSwitchStarted;
+                }
             }
 
             if (NetStartup.ShouldCreateHud(IsOwner, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
@@ -160,6 +164,11 @@ namespace Fps.Net
         {
             _team.OnValueChanged -= HandleTeamChanged;
             _health.OnValueChanged -= HandleHealthChanged;
+            if (_weapon != null)
+            {
+                _weapon.ReloadOrSwitchStarted -= HandleReloadOrSwitchStarted;
+            }
+
             ReleaseAttackAction();
             SetLocalView(false);
             DestroyHud();
@@ -564,6 +573,29 @@ namespace Fps.Net
             }
         }
 
+        // サーバーが確かめたリロード・持ち替えだけで解除する (満タンで断られたリロードでは覗き込みを続ける)
+        private void HandleReloadOrSwitchStarted(NetWeaponState state)
+        {
+            if (_ads != null)
+            {
+                _ads.Release();
+            }
+        }
+
+        // しゃがみはオーナーの NetworkPlayerMotor にしか状態が無く、ADS は視点のある持ち主でしか初期化されないので、他では何もしない
+        private void ResetStance(string reason)
+        {
+            if (_motor != null)
+            {
+                _motor.ReleaseCrouch(reason);
+            }
+
+            if (_ads != null && _ads.IsInitialized)
+            {
+                _ads.ResetView();
+            }
+        }
+
         /// <summary>サーバーから、試合で決まったチームと体力を書き込む。</summary>
         internal void ServerSetState(Team team, int health)
         {
@@ -596,6 +628,7 @@ namespace Fps.Net
         private void TeleportedRpc(Vector3 position, Quaternion rotation)
         {
             // サーバーがテレポートさせるのは出現位置に置くとき (リスポーン) だけ
+            ResetStance(CrouchInput.ReasonRespawn);
             ReleaseSprint(SprintInput.ReasonRespawn);
             Teleported?.Invoke(position, rotation);
         }
@@ -633,11 +666,12 @@ namespace Fps.Net
         {
             ApplyVisuals();
 
-            // ダッシュの状態はオーナーの NetworkPlayerMotor にしか無く、他では何もしない
+            // しゃがみ・ダッシュの入力の状態はオーナーの NetworkPlayerMotor にしか無く、他では何もしない
             var wasAlive = previous > 0;
             var isAlive = current > 0;
             if (wasAlive != isAlive)
             {
+                ResetStance(isAlive ? CrouchInput.ReasonRespawn : CrouchInput.ReasonDeath);
                 ReleaseSprint(isAlive ? SprintInput.ReasonRespawn : SprintInput.ReasonDeath);
             }
         }

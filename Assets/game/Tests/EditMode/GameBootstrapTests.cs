@@ -417,8 +417,14 @@ namespace Fps.Tests.EditMode
                 Assert.That(_world.Camera.fieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView).Within(1e-4f));
                 Assert.That(_world.Look.SensitivityMultiplier, Is.LessThan(1f));
 
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(false));
                 Assert.That(_world.Weapon.SelectNext(), Is.True);
-                ads.Tick(true, false, 0f);
+                Assert.That(ads.IsAiming, Is.False, "switching weapons stops aiming");
+                ads.Tick(true, false, 1f);
+                Assert.That(ads.IsAiming, Is.False, "holding Aim through the switch does not aim again");
+
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(true));
+                ads.Tick(true, true, 1f);
                 Assert.That(_world.Camera.fieldOfView, Is.EqualTo(WeaponAssetBuilder.HandgunAdsFieldOfView).Within(1e-4f));
 
                 LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(false));
@@ -431,6 +437,77 @@ namespace Fps.Tests.EditMode
                 aim.Dispose();
                 attack.Dispose();
                 reload.Dispose();
+            }
+        }
+
+        [Test]
+        public void StartingAReloadStopsAToggledAds()
+        {
+            var ads = _world.Ads;
+            var aim = new InputAction("Aim", InputActionType.Button);
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
+            try
+            {
+                ads.Initialize(_world.Camera, _world.Look, aim);
+                _world.Weapon.Initialize(_world.Camera.transform, attack, reload);
+                ads.ControlSettings = ControlSettings.Default.With(InputDeviceKind.KeyboardMouse, HoldAction.Aim, HoldMode.Toggle);
+                var hip = _world.Camera.fieldOfView;
+
+                ads.Tick(true, true, InputDeviceKind.KeyboardMouse, 1f);
+                ads.Tick(false, false, InputDeviceKind.KeyboardMouse, 1f);
+                Assert.That(ads.IsAiming, Is.True, "a toggled ADS stays on after letting go");
+
+                Assert.That(_world.Weapon.Fire(), Is.True);
+                Assert.That(ads.IsAiming, Is.True, "firing does not stop aiming");
+
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(false));
+                Assert.That(_world.Weapon.StartReload(), Is.True);
+                Assert.That(ads.IsAiming, Is.False, "starting a reload stops aiming");
+
+                ads.Tick(false, false, InputDeviceKind.KeyboardMouse, 1f);
+                Assert.That(_world.Camera.fieldOfView, Is.EqualTo(hip).Within(1e-4f));
+
+                Assert.That(_world.Weapon.StartReload(), Is.False, "already reloading");
+            }
+            finally
+            {
+                aim.Dispose();
+                attack.Dispose();
+                reload.Dispose();
+            }
+        }
+
+        [Test]
+        public void DeathAndRespawnReleaseTheCrouchAndSnapTheAdsBack()
+        {
+            var ads = _world.Ads;
+            var aim = new InputAction("Aim", InputActionType.Button);
+            try
+            {
+                ads.Initialize(_world.Camera, _world.Look, aim);
+                var hip = _world.Camera.fieldOfView;
+
+                // 初期値ではゲームパッドのしゃがみは Toggle。
+                Assert.That(_world.Mover.UpdateCrouch(true, true, false, false, InputDeviceKind.Gamepad), Is.True);
+                ads.Tick(true, true, 1f);
+
+                LogAssert.Expect(LogType.Log, CrouchInput.FormatLog(false, HoldMode.Toggle, CrouchInput.ReasonDeath));
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(false));
+                _world.PlayerDamageable.Kill();
+
+                Assert.That(_world.Mover.IsCrouchActive, Is.False);
+                Assert.That(ads.IsAiming, Is.False);
+                Assert.That(_world.Camera.fieldOfView, Is.EqualTo(hip), "death snaps the view back to the hip");
+
+                _world.Mover.UpdateCrouch(true, true, false, false, InputDeviceKind.Gamepad);
+                LogAssert.Expect(LogType.Log, CrouchInput.FormatLog(false, HoldMode.Toggle, CrouchInput.ReasonRespawn));
+                _world.PlayerDamageable.ResetHealth();
+                Assert.That(_world.Mover.IsCrouchActive, Is.False);
+            }
+            finally
+            {
+                aim.Dispose();
             }
         }
 

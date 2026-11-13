@@ -301,7 +301,7 @@ namespace Fps.Core
             return language == _language ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, language);
         }
 
-        /// <summary>JSON の文字列に書き出す。<see cref="FromJson"/> で同じ内容に戻る。</summary>
+        /// <summary>JSON の文字列に書き出す。<see cref="FromJson(string, out IReadOnlyList{string})"/> で同じ内容に戻る。</summary>
         public string ToJson()
         {
             var builder = new StringBuilder();

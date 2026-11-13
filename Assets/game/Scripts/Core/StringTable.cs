@@ -160,7 +160,7 @@ namespace Fps.Core
         }
 
         // builder が null なら番号を集めるだけ。unmatched は args に無い番号のうち最初のもの (無ければ -1)。
-        private static void Scan(string template, object[] args, StringBuilder builder, ISet<int> indices, out int unmatched)
+        private static void Scan(string template, object[] args, StringBuilder builder, SortedSet<int> indices, out int unmatched)
         {
             unmatched = -1;
             var i = 0;

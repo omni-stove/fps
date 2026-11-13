@@ -15,7 +15,7 @@ namespace Fps.Net.Tests
     /// </summary>
     public sealed class NetTeamDeathmatchWeaponTests
     {
-        private const string _rifleId = "00000000-0000-4000-8000-000000000001";
+        private const string _rifleId = "00000000-0000-4000-8000-00000000000a";
         private const string _handgunId = "00000000-0000-4000-8000-000000000002";
 
         // ロードアウトに無い Id

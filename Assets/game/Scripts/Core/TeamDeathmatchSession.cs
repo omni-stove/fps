@@ -16,7 +16,8 @@ namespace Fps.Core
     /// <item>味方へのダメージは <see cref="GameRules.FriendlyFire"/> に従い、無視する・与える・撃った本人に跳ね返すを切り替える (自滅はいつも数える)。</item>
     /// <item>体力が 0 になったら <see cref="TeamDeathmatch.ReportKill"/> (味方に倒されたときと跳ね返しで倒れたときは
     /// <see cref="TeamDeathmatch.ReportDeath"/>) を呼び、リスポーン待ちが終わったら
-    /// 体力を満タンに戻して地点を選び <see cref="Spawned"/> を出す。</item>
+    /// 体力を満タンに戻して地点を選び <see cref="Spawned"/> を出す。いつ待ちが終わるかは
+    /// <see cref="GameRules.RespawnMode"/> に従う (None では試合中は戻らず、全滅したチームの負けになる)。</item>
     /// <item>イベントはいつも「倒した → 点数 → リスポーン/終了」の順に出す
     /// (RespawnSeconds が 0 でも倒したことより先にリスポーンを出さない)。</item>
     /// <item>再開までの秒数 (<see cref="RestartDelaySeconds"/>) を渡したときは、終わってからその秒数だけ
@@ -168,6 +169,23 @@ namespace Fps.Core
         public int GetHealth(int playerId) => FindHealth(playerId).Current;
 
         public bool IsAlive(int playerId) => !FindHealth(playerId).IsDead;
+
+        /// <inheritdoc cref="TeamDeathmatch.IsEliminated"/>
+        public bool IsEliminated(int playerId)
+        {
+            FindHealth(playerId);
+            return _match.IsEliminated(playerId);
+        }
+
+        /// <inheritdoc cref="TeamDeathmatch.GetRespawnRemaining"/>
+        public float? GetRespawnRemaining(int playerId)
+        {
+            FindHealth(playerId);
+            return _match.GetRespawnRemaining(playerId);
+        }
+
+        /// <inheritdoc cref="TeamDeathmatch.SecondsUntilNextWave"/>
+        public float? SecondsUntilNextWave => _match.SecondsUntilNextWave;
 
         /// <summary>参加中のプレイヤーの id を昇順で返す。</summary>
         public IReadOnlyList<int> GetPlayerIds()

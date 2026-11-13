@@ -307,6 +307,12 @@
     background-color: rgba(20, 20, 24, 0.9);
 }
 
+/* 設定画面の枠。中身 (SettingsView) は Menu/Settings.uss で塗り、ここでは大きさだけ決める。 */
+.pause__settings {
+    width: 1000px;
+    height: 760px;
+}
+
 .pause__title {
     margin: 0 0 24px 0;
     font-size: 48px;

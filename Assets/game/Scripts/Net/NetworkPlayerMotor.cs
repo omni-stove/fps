@@ -119,6 +119,7 @@ namespace Fps.Net
         private bool _sprintPressLatched;
         private SprintInput _sprint;
         private ControlSettings _controlSettings = ControlSettings.Default;
+        private bool _listeningToSettings;
         private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
         private bool _crouchPressLatched;
         private CrouchInput _crouch;
@@ -303,7 +304,13 @@ namespace Fps.Net
                 _jumpLatched = false;
                 _sprintPressLatched = false;
                 _crouchPressLatched = false;
-                _controlSettings = new ControlSettingsStore().Load();
+                _controlSettings = AppliedControlSettings.Current;
+                if (!_listeningToSettings)
+                {
+                    AppliedControlSettings.Changed += HandleSettingsChanged;
+                    _listeningToSettings = true;
+                }
+
                 _device = InputDeviceKind.KeyboardMouse;
                 _crouchDevice = InputDeviceKind.KeyboardMouse;
                 _sprint = new SprintInput();
@@ -797,9 +804,19 @@ namespace Fps.Net
             _active.Add(this);
         }
 
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            _controlSettings = settings;
+        }
+
         private void Shutdown()
         {
             _active.Remove(this);
+            if (_listeningToSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _listeningToSettings = false;
+            }
 
             foreach (var action in _enabledActions)
             {

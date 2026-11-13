@@ -12,7 +12,8 @@ namespace Fps.Net
 {
     /// <summary>
     /// 接続したクライアントごとのプレイヤー。チームと体力をサーバーから受け取って見た目に反映し、
-    /// サーバーの指示でテレポートする。Attack で撃つと射撃を <see cref="FireServerRpc"/> で送るだけで、
+    /// サーバーの指示でテレポートする。Attack で撃つと (装備中の武器の <see cref="FireMode"/> に従い、Auto は押している間
+    /// 連射間隔ごと、Semi は押すたびに) 射撃を <see cref="FireServerRpc"/> で送るだけで、
     /// 当たり判定 (ラグ補償) とダメージを含む試合の判断はすべて <see cref="NetTeamDeathmatch"/> (その先の
     /// <see cref="TeamDeathmatchSession"/>) が行う。
     /// <para>
@@ -68,6 +69,13 @@ namespace Fps.Net
         private Material[] _ownedMaterials = Array.Empty<Material>();
         private InputAction _attackAction;
         private bool _enabledAttackAction;
+
+        // 装備中の武器の射撃モードと連射間隔。持ち主だけが ResolveTrigger で作る。_triggerWeaponId と _triggerCatalog はどの武器で引いたか
+        private FireTrigger _trigger;
+        private string _triggerWeaponId;
+        private WeaponCatalogAsset _triggerCatalog;
+        private string _triggerError;
+        private bool _triggerResolved;
 
         // 視点。View (目) は射撃の始点にも使うので、カメラを有効にしないプレイヤーでも解決しておく
         private Transform _view;
@@ -188,11 +196,84 @@ namespace Fps.Net
                 return;
             }
 
+            var isPressed = _attackAction.IsPressed();
+            var wasPressed = _attackAction.WasPressedThisFrame();
+            var trigger = ResolveTrigger();
+            if (trigger == null)
+            {
+                if (wasPressed)
+                {
+                    // 射撃モードと連射間隔が分からない間は、サーバーに弾かれない頻度が分からないので撃たない
+                    WarnUnknownWeapon();
+                }
+
+                return;
+            }
+
+            trigger.Tick(Time.deltaTime);
+
             // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う
-            if (_attackAction.WasPressedThisFrame() && IsAlive && (_weapon == null || _weapon.PrepareFire()))
+            if (IsAlive && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
             {
                 Fire();
             }
+        }
+
+        /// <summary>
+        /// 装備中の武器 (<see cref="NetPlayerWeapon.WeaponId"/>) の射撃モードと連射間隔で判断する <see cref="FireTrigger"/>。
+        /// 試合 (<see cref="NetTeamDeathmatch.Current"/>) の <see cref="NetTeamDeathmatch.Catalog"/> から引き、武器か Catalog が変わったら作り直す。
+        /// 武器がまだ届いていない・Catalog に無い・Catalog が不正なら null。
+        /// </summary>
+        private FireTrigger ResolveTrigger()
+        {
+            var weaponId = _weapon != null ? _weapon.WeaponId : string.Empty;
+            var match = NetTeamDeathmatch.Current;
+            var catalog = match != null ? match.Catalog : null;
+            // 引けなかったときも覚えておき、毎フレーム Catalog を作り直さない
+            if (_triggerResolved && _triggerCatalog == catalog && string.Equals(_triggerWeaponId, weaponId, StringComparison.Ordinal))
+            {
+                return _trigger;
+            }
+
+            _trigger = null;
+            _triggerWeaponId = weaponId;
+            _triggerCatalog = catalog;
+            _triggerError = null;
+            _triggerResolved = true;
+            if (string.IsNullOrEmpty(weaponId))
+            {
+                _triggerError = "before the server equips a weapon";
+                return null;
+            }
+
+            if (catalog == null)
+            {
+                _triggerError = "without the match's weapon catalog";
+                return null;
+            }
+
+            WeaponSpec spec;
+            try
+            {
+                if (!catalog.ToCatalog().TryGet(weaponId, out spec))
+                {
+                    _triggerError = "with weapon '" + weaponId + "' missing from '" + catalog.name + "'";
+                    return null;
+                }
+            }
+            catch (WeaponDefinitionException e)
+            {
+                _triggerError = "with an invalid weapon catalog: " + e.Message;
+                return null;
+            }
+
+            _trigger = new FireTrigger(spec);
+            return _trigger;
+        }
+
+        private void WarnUnknownWeapon()
+        {
+            Debug.LogWarning("[Net] cannot fire " + (_triggerError ?? "without a weapon"), this);
         }
 
         /// <summary>

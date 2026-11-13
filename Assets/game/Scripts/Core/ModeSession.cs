@@ -426,9 +426,9 @@ namespace Fps.Core
         /// </summary>
         public void Tick(float deltaSeconds)
         {
-            if (!(deltaSeconds >= 0f))
+            if (!(deltaSeconds >= 0f) || float.IsPositiveInfinity(deltaSeconds))
             {
-                throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must not be negative");
+                throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must be finite and not negative");
             }
 
             if (State != GameModeState.Playing)
@@ -493,7 +493,7 @@ namespace Fps.Core
             }
 
             // 1 回の Tick が長くても、得点上限に届いた時刻で止めて、そこで勝敗を決める。
-            if (firstReach <= elapsed)
+            if (!double.IsPositiveInfinity(firstReach) && firstReach <= elapsed)
             {
                 Accrue(sides, rates, firstReach);
                 RemainingSeconds = (float)Math.Max(0d, RemainingSeconds - firstReach);

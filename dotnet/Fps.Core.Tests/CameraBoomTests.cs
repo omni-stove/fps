@@ -24,6 +24,43 @@ namespace Fps.Core.Tests
         public void RejectsUnknownMode()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => CameraBoom.Offset((ViewMode)99, _shoulder));
+            Assert.Throws<ArgumentOutOfRangeException>(() => CameraBoom.Offset((ViewMode)99, _shoulder, ShoulderSide.Left));
+        }
+
+        [Test]
+        public void LeftShoulderMirrorsTheOffsetSideways()
+        {
+            Assert.That(
+                CameraBoom.Offset(ViewMode.ThirdPerson, _shoulder, ShoulderSide.Left),
+                Is.EqualTo(new Vector3(-0.5f, 0.2f, -2.5f)));
+        }
+
+        [Test]
+        public void RightShoulderKeepsTheOffset()
+        {
+            Assert.That(CameraBoom.Offset(ViewMode.ThirdPerson, _shoulder, ShoulderSide.Right), Is.EqualTo(_shoulder));
+        }
+
+        [TestCase(ViewMode.FirstPerson)]
+        [TestCase(ViewMode.ThirdPerson)]
+        public void TwoArgumentOverloadMatchesTheRightShoulder(ViewMode mode)
+        {
+            Assert.That(
+                CameraBoom.Offset(mode, _shoulder),
+                Is.EqualTo(CameraBoom.Offset(mode, _shoulder, ShoulderSide.Right)));
+        }
+
+        [Test]
+        public void FirstPersonIgnoresTheShoulder()
+        {
+            Assert.That(CameraBoom.Offset(ViewMode.FirstPerson, _shoulder, ShoulderSide.Left), Is.EqualTo(Vector3.Zero));
+        }
+
+        [Test]
+        public void RejectsUnknownShoulder()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => CameraBoom.Offset(ViewMode.ThirdPerson, _shoulder, (ShoulderSide)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => CameraBoom.Offset(ViewMode.FirstPerson, _shoulder, (ShoulderSide)99));
         }
 
         [Test]

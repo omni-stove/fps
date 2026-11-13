@@ -492,6 +492,103 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ReloadProgressStartsHidden()
+        {
+            var model = new HudModel();
+
+            Assert.That(model.ReloadProgress, Is.Null);
+            Assert.That(model.ReloadWindowStart, Is.EqualTo(0f));
+            Assert.That(model.ReloadWindowEnd, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void SetReloadProgressShowsTheProgressAndTheWindow()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetReloadProgress(0.25f, 0.5f, 0.65f);
+
+            Assert.That(model.ReloadProgress, Is.EqualTo(0.25f));
+            Assert.That(model.ReloadWindowStart, Is.EqualTo(0.5f));
+            Assert.That(model.ReloadWindowEnd, Is.EqualTo(0.65f));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.ReloadProgress }));
+        }
+
+        [Test]
+        public void ReloadProgressNotifiesOnlyWhenAValueChanges()
+        {
+            var model = new HudModel();
+            model.SetReloadProgress(0.25f, 0.5f, 0.65f);
+            var changes = Record(model);
+
+            model.SetReloadProgress(0.25f, 0.5f, 0.65f);
+            Assert.That(changes, Is.Empty, "same values");
+
+            model.SetReloadProgress(0.3f, 0.5f, 0.65f);
+            model.SetReloadProgress(0.3f, 0.4f, 0.65f);
+            model.SetReloadProgress(0.3f, 0.4f, 0.6f);
+            Assert.That(changes, Is.EqualTo(new[] { HudField.ReloadProgress, HudField.ReloadProgress, HudField.ReloadProgress }));
+        }
+
+        [Test]
+        public void ClearReloadProgressHidesItAndNotifiesOnce()
+        {
+            var model = new HudModel();
+            model.SetReloadProgress(0.75f, 0.5f, 0.65f);
+            var changes = Record(model);
+
+            model.ClearReloadProgress();
+            model.ClearReloadProgress();
+
+            Assert.That(model.ReloadProgress, Is.Null);
+            Assert.That(model.ReloadWindowStart, Is.EqualTo(0f));
+            Assert.That(model.ReloadWindowEnd, Is.EqualTo(0f));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.ReloadProgress }));
+        }
+
+        [Test]
+        public void ClearingAHiddenReloadProgressDoesNotNotify()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.ClearReloadProgress();
+
+            Assert.That(changes, Is.Empty);
+        }
+
+        [Test]
+        public void ReloadProgressAtZeroIsShownEvenWithAnEmptyWindow()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetReloadProgress(0f, 0f, 0f);
+
+            Assert.That(model.ReloadProgress, Is.EqualTo(0f));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.ReloadProgress }));
+        }
+
+        [Test]
+        public void SetReloadProgressRejectsInvalidValuesAndKeepsTheShownOne()
+        {
+            var model = new HudModel();
+            model.SetReloadProgress(0.25f, 0.5f, 0.65f);
+            var changes = Record(model);
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(-0.1f, 0.5f, 0.65f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(1.1f, 0.5f, 0.65f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(float.NaN, 0.5f, 0.65f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(0.5f, -0.1f, 0.65f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(0.5f, 0.5f, 1.1f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetReloadProgress(0.5f, 0.7f, 0.65f));
+
+            Assert.That(model.ReloadProgress, Is.EqualTo(0.25f));
+            Assert.That(changes, Is.Empty);
+        }
+
+        [Test]
         public void SettersRejectInvalidValues()
         {
             var model = new HudModel();

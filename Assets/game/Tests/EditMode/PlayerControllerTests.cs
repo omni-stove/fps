@@ -483,6 +483,98 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void MoveFilterIsNullByDefault()
+        {
+            Assert.That(_player.MoveFilter, Is.Null);
+        }
+
+        [Test]
+        public void MoveFilterSeesTheInputPassedToTick()
+        {
+            InitializeWithLook();
+            var filter = new RewritingMoveFilter();
+            _player.MoveFilter = filter;
+
+            _player.Tick(new Vector2(0.5f, 1f), true, false, true, 0f);
+
+            Assert.That(filter.Calls, Is.EqualTo(1));
+            Assert.That(filter.SeenMove, Is.EqualTo(new Vector2(0.5f, 1f)));
+            Assert.That(filter.SeenSprint, Is.True);
+            Assert.That(filter.SeenCrouch, Is.False);
+            Assert.That(filter.SeenJump, Is.True);
+        }
+
+        [Test]
+        public void MoveFilterRewritesMoveSprintAndCrouchBeforeTheMotor()
+        {
+            // 床の無い宙で Tick するので、空中制御で速度が薄まらないよう 1 にする
+            _spec = new MotorSpec(5f, 8f, 1.2f, 20f, 1f, 2.5f);
+            InitializeWithLook();
+            _player.MoveFilter = new RewritingMoveFilter { Move = new Vector2(1f, 0f), Sprint = false, Crouch = true };
+
+            LogAssert.Expect(LogType.Log, "[Player] crouched=true");
+            _player.Tick(new Vector2(0f, 1f), true, false, false, 0.01f);
+
+            Assert.That(_player.IsCrouched, Is.True);
+            var velocity = _player.Motor.Velocity;
+            Assert.That(velocity.X, Is.EqualTo(_spec.CrouchSpeed).Within(_tolerance), "moves along the rewritten input (right)");
+            Assert.That(velocity.Z, Is.EqualTo(0f).Within(_tolerance));
+        }
+
+        [Test]
+        public void MoveFilterCanStartASprint()
+        {
+            _spec = new MotorSpec(5f, 8f, 1.2f, 20f, 1f, 2.5f);
+            InitializeWithLook();
+            _player.MoveFilter = new RewritingMoveFilter { Sprint = true };
+
+            _player.Tick(new Vector2(0f, 1f), false, false, false, 0.01f);
+
+            var velocity = _player.Motor.Velocity;
+            Assert.That(new Vector2(velocity.X, velocity.Z).magnitude, Is.EqualTo(_spec.SprintSpeed).Within(_tolerance));
+        }
+
+        [Test]
+        public void MoveFilterCannotStandUpUnderACeiling()
+        {
+            InitializeWithLook();
+            LogAssert.Expect(LogType.Log, "[Player] crouched=true");
+            _player.Tick(Vector2.zero, false, true, false, 0f);
+
+            var ceiling = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                ceiling.transform.position = new Vector3(0f, 1.7f, 0f);
+                ceiling.transform.localScale = new Vector3(3f, 0.4f, 3f);
+                Physics.SyncTransforms();
+                _player.MoveFilter = new RewritingMoveFilter { Crouch = false };
+
+                _player.Tick(Vector2.zero, false, true, false, 0f);
+
+                Assert.That(_player.IsCrouched, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(ceiling);
+            }
+        }
+
+        [Test]
+        public void WithoutMoveFilterTheInputReachesTheMotorAsBefore()
+        {
+            _spec = new MotorSpec(5f, 8f, 1.2f, 20f, 1f, 2.5f);
+            InitializeWithLook();
+            _player.MoveFilter = null;
+
+            _player.Tick(new Vector2(0f, 1f), true, false, false, 0.01f);
+
+            Assert.That(_player.IsCrouched, Is.False);
+            var velocity = _player.Motor.Velocity;
+            Assert.That(velocity.X, Is.EqualTo(0f).Within(_tolerance));
+            Assert.That(velocity.Z, Is.EqualTo(_spec.SprintSpeed).Within(_tolerance));
+        }
+
+        [Test]
         public void CrouchUsesTheDefaultSettingsUntilLoaded()
         {
             Assert.That(_player.ControlSettings, Is.EqualTo(ControlSettings.Default));
@@ -624,6 +716,34 @@ namespace Fps.Tests.EditMode
         private float FeetY()
         {
             return _body.transform.position.y + _characterController.center.y - (_characterController.height * 0.5f);
+        }
+
+        // 受け取った値を覚え、値を決めた項目だけ書き換える。
+        private sealed class RewritingMoveFilter : IPlayerMoveFilter
+        {
+            public Vector2? Move { get; set; }
+            public bool? Sprint { get; set; }
+            public bool? Crouch { get; set; }
+            public bool? Jump { get; set; }
+
+            public int Calls { get; private set; }
+            public Vector2 SeenMove { get; private set; }
+            public bool SeenSprint { get; private set; }
+            public bool SeenCrouch { get; private set; }
+            public bool SeenJump { get; private set; }
+
+            public void Filter(ref Vector2 move, ref bool sprint, ref bool crouch, ref bool jumpPressed)
+            {
+                Calls++;
+                SeenMove = move;
+                SeenSprint = sprint;
+                SeenCrouch = crouch;
+                SeenJump = jumpPressed;
+                move = Move ?? move;
+                sprint = Sprint ?? sprint;
+                crouch = Crouch ?? crouch;
+                jumpPressed = Jump ?? jumpPressed;
+            }
         }
     }
 }

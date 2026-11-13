@@ -7,7 +7,7 @@ namespace Fps.Runtime
     /// <summary>
     /// <see cref="DestructibleStructure"/> の部品 1 つ。建造物の子孫に置き、添字・最大耐久値・地面に接しているか・当たり判定のコライダーを持つ。
     /// 隣接は建造物がコライダーの範囲の重なりから作るので、ここでは設定しない。
-    /// 壊れると (<see cref="SetBroken"/>) コライダー・自分と子孫の Renderer・<see cref="NavMeshObstacle"/> を無効にする。
+    /// 壊れると (<see cref="SetBroken"/>) 自分と子孫のコライダー・Renderer・<see cref="NavMeshObstacle"/> を無効にする。
     /// 部品を GameObject ごと消さないのは、同期で「壊れていない」に戻されたときに元へ戻せるようにするため。
     /// </summary>
     [DisallowMultipleComponent]
@@ -150,6 +150,11 @@ namespace Fps.Runtime
             if (collider != null)
             {
                 collider.enabled = !broken;
+            }
+
+            foreach (var child in GetComponentsInChildren<Collider>(true))
+            {
+                child.enabled = !broken;
             }
 
             foreach (var renderer in GetComponentsInChildren<Renderer>(true))

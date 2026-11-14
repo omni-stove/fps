@@ -15,6 +15,28 @@ jobs:
     permissions:
       pull-requests: read
 
+  # 抜けた .meta を作り直し、差分があればその場で PR に [regen] コミットとして push する。
+  # CI Gate に積ませると、レビュー・lint・test を作り直す前のコミットで最後まで回してから push することになるため。
+  # push が起こした次の run が .meta を含めて全部を検証し、この run は concurrency で取り消される
+  meta:
+    needs: precheck
+    if: needs.precheck.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Generate .meta
+        run: scripts/lint.sh --fix-meta
+
+      - uses: omni-stove/.github/actions/regen-diff@main
+        with:
+          pathspec: '*.meta'
+          app-id: ${{ secrets.AGENT_GH_APP_ID }}
+          app-private-key: ${{ secrets.AGENT_GH_APP_PRIVATE_KEY }}
+
   checks:
     needs: precheck
     if: needs.precheck.outputs.proceed == 'true'
@@ -59,15 +81,6 @@ jobs:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('dotnet/**/*.csproj', 'dotnet/Directory.Build.props') }}
 
-      # 抜けた .meta の差分を CI Gate に渡し、PR に [regen] コミットとして積ませる。
-      # dotnet を使わないので Restore の失敗に巻き込まれないよう先に走らせる
-      - name: Generate .meta
-        run: scripts/lint.sh --fix-meta
-
-      - uses: omni-stove/.github/actions/regen-diff@main
-        with:
-          pathspec: '*.meta'
-
       - name: Restore
         run: scripts/install.sh
 
@@ -100,7 +113,7 @@ jobs:
         run: scripts/test.sh
 
   ci:
-    needs: [precheck, checks, lint, test]
+    needs: [precheck, meta, checks, lint, test]
     if: always()
     uses: omni-stove/.github/.github/workflows/ci-gate.yml@main
     permissions:

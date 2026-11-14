@@ -34,15 +34,15 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 「Ping 123 ms  ロス 4%  tick 5678」の形の 1 行。分からない値は <see cref="Unknown"/> にする。
+        /// 「Ping 123 ms  ロス 4%  tick 5678」の形の 1 行 (表のキー <c>net.stats.line</c>)。分からない値は <see cref="Unknown"/> にする。
         /// 負の Ping とロスは 0 に、100 を超えるロスは 100 に収める。
         /// </summary>
-        public static string Text(int? pingMs, int? lossPercent, int? serverTick)
+        public static LocalizedText Text(int? pingMs, int? lossPercent, int? serverTick)
         {
             var ping = pingMs.HasValue ? Number(Math.Max(0, pingMs.Value)) : Unknown;
             var loss = lossPercent.HasValue ? Number(Math.Max(0, Math.Min(100, lossPercent.Value))) : Unknown;
             var tick = serverTick.HasValue ? Number(serverTick.Value) : Unknown;
-            return GameText.Format("netStats.line", ping, loss, tick);
+            return new LocalizedText("net.stats.line", ping, loss, tick);
         }
 
         /// <summary>トランスポートが返す往復時間 (ms) を表示用の int にする。int に収まらなければ <see cref="int.MaxValue"/>。</summary>

@@ -26,20 +26,21 @@ namespace Fps.Core.Tests
         [Test]
         public void TextShowsEveryValue()
         {
-            Assert.That(NetStatsFormat.Text(123, 4, 5678), Is.EqualTo("Ping 123 ms  ロス 4%  tick 5678"));
+            Assert.That(NetStatsFormat.Text(123, 4, 5678), Is.EqualTo(new LocalizedText("net.stats.line", "123", "4", "5678")));
+            Assert.That(GameText.Resolve(NetStatsFormat.Text(123, 4, 5678)), Is.EqualTo("Ping 123 ms  ロス 4%  tick 5678"));
         }
 
         [Test]
         public void TextShowsUnknownValuesAsDashes()
         {
-            Assert.That(NetStatsFormat.Text(null, null, null), Is.EqualTo("Ping -- ms  ロス --%  tick --"));
+            Assert.That(GameText.Resolve(NetStatsFormat.Text(null, null, null)), Is.EqualTo("Ping -- ms  ロス --%  tick --"));
         }
 
         [Test]
         public void TextClampsOutOfRangeValues()
         {
-            Assert.That(NetStatsFormat.Text(-5, 150, 0), Is.EqualTo("Ping 0 ms  ロス 100%  tick 0"));
-            Assert.That(NetStatsFormat.Text(10, -3, 1), Is.EqualTo("Ping 10 ms  ロス 0%  tick 1"));
+            Assert.That(GameText.Resolve(NetStatsFormat.Text(-5, 150, 0)), Is.EqualTo("Ping 0 ms  ロス 100%  tick 0"));
+            Assert.That(GameText.Resolve(NetStatsFormat.Text(10, -3, 1)), Is.EqualTo("Ping 10 ms  ロス 0%  tick 1"));
         }
 
         [Test]

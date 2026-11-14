@@ -12,7 +12,8 @@ namespace Fps.Core.Tests
             var notice = DisconnectNotice.Classify(DisconnectNotice.ServerStoppedReason, wasConnected, "0.2.0");
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.ServerStopped));
-            Assert.That(notice.Message, Is.EqualTo("サーバーが止まりました。"));
+            Assert.That(notice.Message, Is.EqualTo(new LocalizedText("net.disconnect.serverStopped")));
+            Assert.That(GameText.Resolve(notice.Message), Is.EqualTo("サーバーが止まりました。"));
             Assert.That(notice.WasConnected, Is.EqualTo(wasConnected));
         }
 
@@ -31,8 +32,10 @@ namespace Fps.Core.Tests
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.VersionMismatch));
             Assert.That(notice.ServerVersion, Is.EqualTo("0.2.0"));
-            Assert.That(notice.Message, Does.StartWith("版が違います"));
-            Assert.That(notice.Message, Does.Contain("サーバー 0.2.0").And.Contain("このゲーム 0.1.0"));
+            Assert.That(notice.Message, Is.EqualTo(new LocalizedText("net.disconnect.versionMismatchDetail", "0.2.0", "0.1.0")));
+            Assert.That(
+                GameText.Resolve(notice.Message),
+                Is.EqualTo("版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。サーバーと同じ版のゲームでつないでください。"));
         }
 
         [TestCase("fps:version-mismatch:")]
@@ -44,8 +47,8 @@ namespace Fps.Core.Tests
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.VersionMismatch));
             Assert.That(notice.ServerVersion, Is.Null);
-            Assert.That(notice.Message, Does.StartWith("版が違います。"));
-            Assert.That(notice.Message, Does.Not.Contain("<b>"));
+            Assert.That(notice.Message, Is.EqualTo(new LocalizedText("net.disconnect.versionMismatchAdvice", DisconnectNotice.VersionMismatchMessage)));
+            Assert.That(GameText.Resolve(notice.Message), Is.EqualTo("版が違います。サーバーと同じ版のゲームでつないでください。"));
         }
 
         [Test]
@@ -53,7 +56,7 @@ namespace Fps.Core.Tests
         {
             var notice = DisconnectNotice.Classify(DisconnectNotice.VersionMismatchReason("0.2.0"), false, null);
 
-            Assert.That(notice.Message, Does.StartWith("版が違います。"));
+            Assert.That(GameText.Resolve(notice.Message), Is.EqualTo("版が違います。サーバーと同じ版のゲームでつないでください。"));
         }
 
         [Test]
@@ -73,7 +76,8 @@ namespace Fps.Core.Tests
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.Rejected));
             Assert.That(notice.Detail, Is.EqualTo("server-draining"));
-            Assert.That(notice.Message, Does.StartWith("サーバーが止まる準備中"));
+            Assert.That(notice.Message, Is.EqualTo(DisconnectNotice.ServerDrainingMessage));
+            Assert.That(GameText.Resolve(notice.Message), Does.StartWith("サーバーが止まる準備中"));
             Assert.That(notice.Describe(), Does.Contain("detail=server-draining"));
         }
 
@@ -94,7 +98,7 @@ namespace Fps.Core.Tests
             Assert.That(DisconnectNotice.IdleKickedReason, Is.EqualTo("fps:idle-kicked"));
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.IdleKicked));
             Assert.That(notice.Message, Is.EqualTo(DisconnectNotice.IdleKickedMessage));
-            Assert.That(notice.Message, Does.Contain("放置"));
+            Assert.That(GameText.Resolve(notice.Message), Does.Contain("放置"));
             Assert.That(notice.WasConnected, Is.True);
             Assert.That(notice.Describe(), Is.EqualTo("kind=IdleKicked connected=True reason=\"fps:idle-kicked\""));
         }

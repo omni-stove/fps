@@ -4,6 +4,7 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
@@ -234,6 +235,45 @@ namespace Fps.Tests.EditMode
 
             _runner.TagLifetimeSeconds = 0f;
             Assert.Throws<ArgumentOutOfRangeException>(() => _runner.CreateSpec());
+        }
+
+        [Test]
+        public void AWiredDefinitionReplacesTheInspectorValues()
+        {
+            _runner.ScoreLimit = 40;
+            _runner.TagLifetimeSeconds = 15f;
+            var definition = Track(ScriptableObject.CreateInstance<KillConfirmedDefinition>());
+            definition.ScoreLimit = 5;
+            definition.TimeLimitSeconds = 90f;
+            definition.RespawnSeconds = 2f;
+            definition.TagLifetimeSeconds = 6f;
+            _runner.Definition = definition;
+
+            var spec = _runner.CreateSpec();
+
+            Assert.That(spec.ScoreLimit, Is.EqualTo(5));
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(90f));
+            Assert.That(spec.RespawnSeconds, Is.EqualTo(2f));
+            Assert.That(spec.TagLifetimeSeconds, Is.EqualTo(6f));
+
+            _runner.Definition = null;
+            Assert.That(_runner.CreateSpec().ScoreLimit, Is.EqualTo(40), "without the asset the Inspector values come back");
+        }
+
+        [Test]
+        public void TryBeginFailsWithAnInvalidDefinitionAndNamesIt()
+        {
+            var definition = Track(ScriptableObject.CreateInstance<KillConfirmedDefinition>());
+            definition.name = "BrokenKillConfirmed";
+            definition.TagLifetimeSeconds = 0f;
+            _runner.Definition = definition;
+
+            var error = Assert.Throws<InvalidOperationException>(() => _runner.CreateSpec());
+            StringAssert.Contains("BrokenKillConfirmed", error.Message);
+
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("BrokenKillConfirmed"));
+            Assert.That(_runner.TryBegin(), Is.False);
+            Assert.That(_runner.IsStarted, Is.False);
         }
 
         [Test]

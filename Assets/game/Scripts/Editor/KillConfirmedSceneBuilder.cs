@@ -11,13 +11,18 @@ namespace Fps.Editor
     /// ルールは <see cref="GameRulesAssetBuilder.KillConfirmedPath"/>。地形と遮蔽物は土台の既定のまま、2 チームが 3 人ずつ
     /// (プレイヤーの陣営 0 に bot 2 体、陣営 1 に bot 3 体) で向かい合う。
     /// bot にはタグだけを落とす <see cref="DropOnDeath"/> (<see cref="ConfigureBotDrop"/>) を付ける。タグは Runner が始めたときにフックで足し、
-    /// 実行時に作られるプレイヤーの DropOnDeath も Runner が付ける。Editor を閉じた状態で次のように呼べる:
+    /// 実行時に作られるプレイヤーの DropOnDeath も Runner が付ける。得点・時間・タグの秒数は <see cref="DefinitionPath"/> のアセットを Runner に配線して読ませる
+    /// (無ければ既定値で作り、あれば値を変えない)。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.KillConfirmedSceneBuilder.Build</code>
     /// </summary>
     public sealed class KillConfirmedSceneBuilder : ModeSceneBuilder
     {
         public static string ScenePathValue => BuildSceneList.KillConfirmedScene;
         public static string RulesPathValue => GameRulesAssetBuilder.KillConfirmedPath;
+
+        /// <summary>Runner に配線する調整値のアセット (<see cref="KillConfirmedDefinition"/>)。</summary>
+        public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.KillConfirmedName);
+
         public const string MenuPath = "Fps/Build Kill Confirmed Scene";
 
         /// <summary>プレイヤーの陣営の bot の数。プレイヤーを合わせて <see cref="EnemySideBots"/> と同じ人数になる。</summary>
@@ -56,13 +61,29 @@ namespace Fps.Editor
 
         protected override ModeRunnerBase AddRunner(GameObject host, ModeSceneContext context)
         {
+            // NewScene(Single) は参照されていないアセットをアンロードするので、シーンを作った後のここで読む。
+            var definition = LoadOrCreateDefinition(DefinitionPath);
+
             var runner = host.AddComponent<KillConfirmedRunner>();
+            runner.Definition = definition;
             runner.ScoreLimit = KillConfirmedRunner.DefaultScoreLimit;
             runner.TimeLimitSeconds = KillConfirmedRunner.DefaultTimeLimitSeconds;
             runner.RespawnSeconds = KillConfirmedRunner.DefaultRespawnSeconds;
             runner.TagLifetimeSeconds = KillConfirmedRunner.DefaultTagLifetimeSeconds;
             runner.TagRadius = KillConfirmedRunner.DefaultTagRadius;
             return runner;
+        }
+
+        /// <summary>path の調整値のアセットを返す。無ければ <see cref="KillConfirmedRunner"/> の既定値で作る。既にあれば値は変えない。</summary>
+        public static KillConfirmedDefinition LoadOrCreateDefinition(string path)
+        {
+            return ModeDefinitionAssets.LoadOrCreate<KillConfirmedDefinition>(
+                path,
+                d => d.CopyFrom(new Fps.Core.KillConfirmedSpec(
+                    KillConfirmedRunner.DefaultScoreLimit,
+                    KillConfirmedRunner.DefaultTimeLimitSeconds,
+                    KillConfirmedRunner.DefaultRespawnSeconds,
+                    KillConfirmedRunner.DefaultTagLifetimeSeconds)));
         }
 
         protected override void AddModeObjects(ModeSceneContext context)

@@ -64,6 +64,8 @@
         <ui:VisualElement name="damage-direction" class="damage-direction" picking-mode="Ignore" style="display: none;" />
         <!-- 敵や場所に付けた印。オフラインのプレイヤーの PingController が PingMarkersView を付けたときだけ、印ごとの子要素 (ping-marker) を足して出す。 -->
         <ui:VisualElement name="ping-markers" class="ping-markers" picking-mode="Ignore" style="display: none;" />
+        <!-- 分隊への指示の印 (守る場所・狙う敵)。プレイヤーの SquadCommandController が SquadOrderMarkerView を付けたときだけ、印 (squad-order__marker) を足して出す。 -->
+        <ui:VisualElement name="squad-order" class="squad-order" picking-mode="Ignore" style="display: none;" />
         <!-- 画面右上のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
         <!-- 画面下の音の合図の字幕 ([銃声 左後ろ] など)。設定で字幕を On にしているとき、SubtitleView が行 (subtitles__line) を入れ、行があるときだけ出す。 -->

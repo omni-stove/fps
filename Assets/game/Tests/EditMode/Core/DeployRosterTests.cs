@@ -6,6 +6,9 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class DeployRosterTests
     {
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Names(params string[] names) => names;
+
         [Test]
         public void RejectsInvalidSettings()
         {
@@ -25,7 +28,7 @@ namespace Fps.Core.Tests
             Assert.That(roster.Add("a"), Is.Empty);
             Assert.That(roster.Add("b"), Is.Empty);
 
-            Assert.That(roster.Items, Is.EqualTo(new[] { "a", "b" }));
+            Assert.That(roster.Items, Is.EqualTo(Names("a", "b")));
             Assert.That(roster.Count, Is.EqualTo(2));
         }
 
@@ -37,10 +40,10 @@ namespace Fps.Core.Tests
             roster.Add("b");
 
             Assert.That(roster.CanPlace, Is.True);
-            Assert.That(roster.Add("c"), Is.EqualTo(new[] { "a" }));
-            Assert.That(roster.Items, Is.EqualTo(new[] { "b", "c" }));
-            Assert.That(roster.Add("d"), Is.EqualTo(new[] { "b" }));
-            Assert.That(roster.Items, Is.EqualTo(new[] { "c", "d" }));
+            Assert.That(roster.Add("c"), Is.EqualTo(Names("a")));
+            Assert.That(roster.Items, Is.EqualTo(Names("b", "c")));
+            Assert.That(roster.Add("d"), Is.EqualTo(Names("b")));
+            Assert.That(roster.Items, Is.EqualTo(Names("c", "d")));
         }
 
         [Test]
@@ -51,7 +54,7 @@ namespace Fps.Core.Tests
 
             Assert.That(roster.CanPlace, Is.False);
             Assert.Throws<InvalidOperationException>(() => roster.Add("b"));
-            Assert.That(roster.Items, Is.EqualTo(new[] { "a" }));
+            Assert.That(roster.Items, Is.EqualTo(Names("a")));
 
             Assert.That(roster.Remove("a"), Is.True);
             Assert.That(roster.CanPlace, Is.True);
@@ -68,7 +71,7 @@ namespace Fps.Core.Tests
             Assert.That(roster.Remove("a"), Is.False, "already removed");
             Assert.That(roster.Remove(null), Is.False);
             Assert.That(roster.Add("c"), Is.Empty);
-            Assert.That(roster.Items, Is.EqualTo(new[] { "b", "c" }));
+            Assert.That(roster.Items, Is.EqualTo(Names("b", "c")));
         }
 
         [Test]
@@ -88,8 +91,8 @@ namespace Fps.Core.Tests
             roster.Add("b");
             roster.Add("c");
 
-            Assert.That(roster.Configure(1, DeployOverflow.Refuse), Is.EqualTo(new[] { "a", "b" }));
-            Assert.That(roster.Items, Is.EqualTo(new[] { "c" }));
+            Assert.That(roster.Configure(1, DeployOverflow.Refuse), Is.EqualTo(Names("a", "b")));
+            Assert.That(roster.Items, Is.EqualTo(Names("c")));
             Assert.That(roster.MaxActive, Is.EqualTo(1));
             Assert.That(roster.Overflow, Is.EqualTo(DeployOverflow.Refuse));
             Assert.That(roster.Configure(2, DeployOverflow.Refuse), Is.Empty);
@@ -102,7 +105,7 @@ namespace Fps.Core.Tests
             roster.Add("a");
             roster.Add("b");
 
-            Assert.That(roster.Clear(), Is.EqualTo(new[] { "a", "b" }));
+            Assert.That(roster.Clear(), Is.EqualTo(Names("a", "b")));
             Assert.That(roster.Count, Is.Zero);
         }
     }

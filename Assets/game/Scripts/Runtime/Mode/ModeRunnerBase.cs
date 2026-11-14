@@ -75,6 +75,12 @@ namespace Fps.Runtime
         /// </summary>
         protected virtual bool EndsMatchWithSession => true;
 
+        /// <summary>
+        /// 陣営がそのまま分隊 (少人数の組) なら true。分隊への指示 (<see cref="SquadCommandController"/>) は、true なら離れていても分隊の全員に、
+        /// false (既定。陣営が大人数のチームか、陣営が無い) なら近くの同じ陣営の bot にだけ出す。
+        /// </summary>
+        public virtual bool HasSquads => false;
+
         /// <summary>出現点。null は除いてある。</summary>
         protected IReadOnlyList<SideSpawnPoint> SpawnPoints => _spawnPoints;
 

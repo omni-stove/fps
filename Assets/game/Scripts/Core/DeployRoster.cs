@@ -68,7 +68,7 @@ namespace Fps.Core
             return all;
         }
 
-        private IReadOnlyList<T> TrimTo(int count)
+        private T[] TrimTo(int count)
         {
             var excess = _items.Count - count;
             if (excess <= 0)

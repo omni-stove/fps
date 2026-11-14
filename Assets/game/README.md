@@ -200,6 +200,7 @@ Editor からは **Fps > Import Game Rules From JSON**。
 | `GameRulesDefinition` (`<root>/Rules/*.asset`) | フレンドリーファイア・リスポーン・自動回復・死亡時の見せ方・弾薬・建造物の破壊・ダウンやカバーなどのアクション・スポーン保護・落下ダメージ・HUD の量・勝敗の決め方 |
 | `GrenadeThrower` (プレイヤーのコンポーネント) | 爆発までの秒数・投げる間隔・初速・ダメージ・爆発の半径・建造物への被害 |
 | `PingController` (プレイヤーのコンポーネント) | 印が消えるまでの秒数・同時に付けられる数・照準の先を探す距離・照準が外れていても敵に付ける角度 |
+| `SquadCommandController` (プレイヤーのコンポーネント) | 長押しとみなす秒数・照準の先を探す距離・照準が外れていても敵を指したとみなす角度・分隊の無いモードで指示が届く距離・付いてくる bot が寄ってくる距離と撃ち合いをやめて戻る距離 |
 | `BossController` (ボスのコンポーネント) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点) |
 
 JSON から取り込み直すと、そのアセットの値は JSON の値で上書きされる。Inspector で変えた値を残したいなら、JSON にも同じ値を書く。
@@ -227,6 +228,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | `GameUi.Menu` | `IMenuNavigator` | メインメニューへ戻る・メニューで選んだロビーやチュートリアルを受け取る | `Fps.Runtime.UI` のメニューのシーンとの行き来 |
 | `NetUi.HudFactory` (Netcode を入れたときだけ) | `INetHudFactory` (作るのは `INetHud`) | オンラインの自分のプレイヤーの HUD (`NetPlayer` が作る) | `Fps.Net.UI` の HUD |
 | `PingUi.ViewFactory` | `IPingViewFactory` (作るのは `IPingView`) | オフラインのプレイヤーが付けた印 (`PingController`) を画面に出す。画面の外の印は端に寄せて向きを出す | 既定の HUD (`Hud`) に付く `PingMarkersView`。ほかの HUD には出さない (`null` を返す) |
+| `SquadOrderUi.ViewFactory` | `ISquadOrderViewFactory` (作るのは `ISquadOrderView`) | プレイヤーが味方の bot に出した指示 (`SquadCommandController`) の守る場所・狙う敵を画面に出す | 既定の HUD (`Hud`) に付く `SquadOrderMarkerView`。ほかの HUD には出さない (`null` を返す) |
 
 - 入れた実装は、登録の順番に依らず既定より優先される。`null` を入れると既定に戻る。
 - 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
@@ -405,6 +407,23 @@ public sealed class MyPingViewFactory : IPingViewFactory
     }
 }
 ```
+
+### 分隊への指示
+
+プレイヤーの `SquadCommandController` が SquadCommand (キーボードは B) の入力を読み、同じ陣営 (`SideMember`) の味方の bot (`EnemyAgent`) に指示を出す。
+
+| 押し方 | 照準の先 | bot がすること |
+| --- | --- | --- |
+| 短く押して離す | 地面や物 | そこへ行って守る (`EnemyAgent.OrderHold`)。撃たれたり敵が見えたりすれば反撃するが、追って離れない |
+| 短く押して離す | 敵 | その敵を狙う (`EnemyAgent.OrderAttack`)。見えなければ居場所へ向かい、倒したら付いてくるのに戻る |
+| 長押し | — | 指示を取り消して付いてくる (`EnemyAgent.OrderFollow`) |
+
+- 指示は bot 自身の判断やモードの用事 (`EnemyAgent.SetErrand`) より優先し、合わせ方は `Fps.Core.BotDriver.FollowOrder` が決める。
+- 分隊のあるモード (`ModeRunnerBase.HasSquads` が true。既定ではバトルロイヤル) では分隊の全員に、ほかでは近くの同じ陣営の bot にだけ出す。
+- 指示の印は `SquadOrderUi.ViewFactory` の表示 (既定は `SquadOrderMarkerView`、見た目は `Hud.uss` の `.squad-order__*`) に出る。
+- bot の応答は字幕 (`SubtitleFeed.Say`) に出る。文は表 (`Resources/Localization/<言語>/squad.json` の `squad.reply.*`) から引く。
+- ログは `[Squad] order` / `refused` (指示した側)、`[Squad] accepted` / `arrived` / `engage` / `done` (bot)。
+- TPS の射撃場 (`Fps/Build TPS Range Scene`) の右の中ほどに、味方の bot (`SquadCommandYard/SquadBot`) が置かれる。プレイヤーに同じ陣営 (0) を持たせると指示を出せる。
 
 ### フォトモード
 

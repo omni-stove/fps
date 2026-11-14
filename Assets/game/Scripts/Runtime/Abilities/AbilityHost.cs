@@ -11,7 +11,7 @@ namespace Fps.Runtime
     /// 枠には <see cref="Equip(int, AbilityDefinition)"/> で能力の定義を入れ、回数と時間は枠ごとの <see cref="AbilitySlot"/>、
     /// 振る舞いは定義が作る <see cref="IAbility"/> が受け持つ。ルールの <see cref="ActionRules.Abilities"/> が Off の間は使えず、
     /// 使っている途中で Off になったら止める。倒れた・ダウンした・操作を手放した (<see cref="PlayerController.Handoff"/>) ときも止める。
-    /// 入力は同じ GameObject の <see cref="PlayerActionReader.PressedCommands"/> を毎フレーム読む。
+    /// 入力は同じ GameObject の <see cref="PlayerActionReader.PressedCommands"/> と <see cref="PlayerActionReader.HeldCommands"/> を毎フレーム読む。
     /// 体力が戻った (<see cref="Damageable.HealthReset"/>、出撃し直し) ら回数と待ち時間を戻す。
     /// 使った・効果が出た・終えた・断った・回数が戻ったことを <see cref="LogTag"/> 付きのログに出す。
     /// オフラインでは <see cref="AbilityActionInstaller"/> が付けてルールを渡し、<see cref="GameBootstrap"/> が枠に入れる。
@@ -44,6 +44,8 @@ namespace Fps.Runtime
 
         /// <summary>ルールで能力を使うことになっているか。</summary>
         public bool UsesAbilities => _rule == Abilities.On;
+
+        public PlayerCommands HeldCommands { get; private set; }
 
         /// <summary>同じ GameObject の移動。無ければ null。</summary>
         public PlayerController Mover
@@ -379,11 +381,18 @@ namespace Fps.Runtime
         /// <exception cref="ArgumentOutOfRangeException">deltaSeconds が負か有限でない。</exception>
         public void Step(PlayerCommands pressed, float deltaSeconds)
         {
+            Step(pressed, PlayerCommands.None, deltaSeconds);
+        }
+
+        // 押し続けているボタンは入力の部品を持たないテストや smoke からも渡せるよう、読んだ結果を引数で受ける。
+        public void Step(PlayerCommands pressed, PlayerCommands held, float deltaSeconds)
+        {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
             {
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must not be negative and must be finite");
             }
 
+            HeldCommands = held;
             var stopped = _rule != Abilities.On || IsIncapacitated;
             for (var i = 0; i < SlotCount; i++)
             {
@@ -425,8 +434,10 @@ namespace Fps.Runtime
         private void Update()
         {
             var input = Input;
-            var pressed = input != null && input.isActiveAndEnabled ? input.PressedCommands : PlayerCommands.None;
-            Step(pressed, Time.deltaTime);
+            var live = input != null && input.isActiveAndEnabled;
+            var pressed = live ? input.PressedCommands : PlayerCommands.None;
+            var held = live ? input.HeldCommands : PlayerCommands.None;
+            Step(pressed, held, Time.deltaTime);
         }
 
         private void OnDisable()

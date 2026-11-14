@@ -135,12 +135,13 @@ namespace Fps.Editor
 
             var fixtures = Fixtures();
 
-            // 能力の枠を試せるよう、Ability1 に何もしない能力を入れる。使えるかはルールの Abilities で決まる (射撃場の既定は Off)。
+            // 能力の枠を試せるよう、Ability1 に何もしない能力、Ability2 に展開式の盾を入れる。使えるかはルールの Abilities で決まる (射撃場の既定は Off)。
             var ability = AbilityAssetBuilder.LoadOrBuildNullAbility();
+            var shield = AbilityAssetBuilder.LoadOrBuildShieldAbility();
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(path));
             var bootstrap = PopulateScene(scene, weapons, rules, fixtures);
-            bootstrap.AbilityDefinitions = new AbilityDefinition[] { ability };
+            bootstrap.AbilityDefinitions = new AbilityDefinition[] { ability, shield };
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {

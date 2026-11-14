@@ -727,6 +727,11 @@ namespace Fps.Runtime
                 return true;
             }
 
+            if (Deployable.TryStopBullet(hit.collider, weapon.Spec.Damage, hit.distance, weapon.Spec.Falloff, origin, direction, shooter))
+            {
+                return true;
+            }
+
             if (Hitbox.FindFor(hit.collider) == null)
             {
                 // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
@@ -947,7 +952,7 @@ namespace Fps.Runtime
             direction = _aim.forward;
         }
 
-        // origin から direction へ射程まで撃ち、自分の体 (照準と同じルートの階層) を除いた最も近い命中を返す。
+        // origin から direction へ射程まで撃ち、自分の体 (照準と同じルートの階層) と自分の弾を通す置いた物を除いた最も近い命中を返す。
         private bool TryRaycast(Vector3 origin, Vector3 direction, out RaycastHit nearest)
         {
             var ray = new Ray(origin, direction);
@@ -960,6 +965,11 @@ namespace Fps.Runtime
             {
                 var candidate = _hitBuffer[i];
                 if (candidate.collider.transform.IsChildOf(self))
+                {
+                    continue;
+                }
+
+                if (Deployable.LetsThrough(candidate.collider, self.gameObject))
                 {
                     continue;
                 }

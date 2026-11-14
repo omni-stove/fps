@@ -32,6 +32,31 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void SetSurfaceMaterialAddsOnceAndOverwritesTheId()
+        {
+            var box = SceneBuildHelpers.CreateStaticBox(_scene, null, "Box", Vector3.zero, Vector3.one);
+
+            var first = SceneBuildHelpers.SetSurfaceMaterial(box, "metal");
+            var second = SceneBuildHelpers.SetSurfaceMaterial(box, " wood ");
+
+            Assert.That(second, Is.SameAs(first));
+            Assert.That(box.GetComponents<SurfaceMaterial>(), Has.Length.EqualTo(1));
+            Assert.That(SurfaceMaterial.IdOf(box.GetComponent<Collider>()), Is.EqualTo("wood"));
+            Assert.Throws<ArgumentNullException>(() => SceneBuildHelpers.SetSurfaceMaterial(null, "metal"));
+        }
+
+        [Test]
+        public void SurfaceIdOfFallsBackToTheDefaultMaterial()
+        {
+            var ids = new System.Collections.Generic.Dictionary<string, string> { ["Wall"] = "concrete" };
+
+            Assert.That(SceneBuildHelpers.SurfaceIdOf(ids, "Wall"), Is.EqualTo("concrete"));
+            Assert.That(SceneBuildHelpers.SurfaceIdOf(ids, "Door"), Is.EqualTo(SurfaceMaterial.DefaultId));
+            Assert.That(SceneBuildHelpers.SurfaceIdOf(ids, null), Is.EqualTo(SurfaceMaterial.DefaultId));
+            Assert.That(SceneBuildHelpers.SurfaceIdOf(null, "Wall"), Is.EqualTo(SurfaceMaterial.DefaultId));
+        }
+
+        [Test]
         public void BuildersShareTheSameBuildSettingsAndPathRules()
         {
             var current = new[]

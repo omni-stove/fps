@@ -21,6 +21,8 @@ namespace Fps.Tests.EditMode
             Assert.That(builder.RulesPath, Is.EqualTo(GameRulesAssetBuilder.ModeRulesPath(GameRulesAssetBuilder.HardpointName)));
             Assert.That(builder.NavMeshDataPath, Is.EqualTo("Assets/game/Scenes/Hardpoint/NavMesh-Floor.asset"));
             Assert.That(builder.LogTag, Is.EqualTo("[HardpointSceneBuilder]"));
+            Assert.That(HardpointSceneBuilder.DefinitionPath, Is.EqualTo("Assets/game/Modes/Hardpoint.asset"));
+            Assert.That(DominationSceneBuilder.DefinitionPath, Is.EqualTo("Assets/game/Modes/Domination.asset"));
         }
 
         [Test]

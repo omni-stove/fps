@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 自機の今のアクション (<see cref="PlayerActionReader.Current"/>) を、プリミティブで作った仮の体で見せる自機モック。
+    /// 自機の今のアクション (<see cref="PlayerActionReader.Current"/>) を、プリミティブで作った仮の体 (<see cref="Prefabs"/> があればその形) で見せる自機モック。
     /// <list type="bullet">
     /// <item>三人称: 胴 (カプセル)・頭 (球)・銃 (細長い箱) を本体の子に置き、<see cref="PlayerMockPose"/> の姿勢へ寄せる。</item>
     /// <item>一人称: 体は影だけにし、カメラの子に置いた銃 (ビューモデル) だけを右下に見せる。</item>
@@ -37,6 +37,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("見せるアクションの読み元。GameBootstrap が配線する")]
         private PlayerActionReader _reader;
 
+        [SerializeField, Tooltip("胴・頭・銃の見た目。空の部品だけ仮の形を作る。GameBootstrap が配線する")]
+        private PlayerMockBodyPrefabs _prefabs = new PlayerMockBodyPrefabs();
+
         private Transform _bodyRoot;
         private Transform _torso;
         private Transform _head;
@@ -63,6 +66,13 @@ namespace Fps.Runtime
 
         /// <summary>見せるアクションの読み元。未配線なら null。</summary>
         public PlayerActionReader Reader => _reader;
+
+        /// <summary>胴・頭・銃の見た目。次に組み立てるとき (<see cref="Build"/>) から使う。null を設定するとすべて仮の形になる。</summary>
+        public PlayerMockBodyPrefabs Prefabs
+        {
+            get => _prefabs ?? (_prefabs = new PlayerMockBodyPrefabs());
+            set => _prefabs = value ?? new PlayerMockBodyPrefabs();
+        }
 
         /// <summary>部品を組み立て済みか。</summary>
         public bool IsBuilt => _bodyRoot != null && _viewModelRoot != null;
@@ -234,19 +244,19 @@ namespace Fps.Runtime
 
             // 途中で失敗したときに半端な部品を残さない。
             Dismantle();
+            var prefabs = Prefabs;
             try
             {
                 _bodyRoot = CreateRoot(BodyRootName, transform);
-                _torso = CreatePart(PrimitiveType.Capsule, "Torso", _bodyRoot, isGun: false, _bodyRenderers);
-                _head = CreatePart(PrimitiveType.Sphere, "Head", _bodyRoot, isGun: false, _bodyRenderers);
+                _torso = CreatePart(prefabs.Torso, PrimitiveType.Capsule, "Torso", _bodyRoot, isGun: false, _bodyRenderers);
+                _head = CreatePart(prefabs.Head, PrimitiveType.Sphere, "Head", _bodyRoot, isGun: false, _bodyRenderers);
                 _head.localScale = Vector3.one * PlayerMockPose.HeadDiameter;
                 _bodyGun = CreateRoot("Gun", _bodyRoot);
-                CreatePart(PrimitiveType.Cube, "GunBox", _bodyGun, isGun: true, _bodyRenderers).localScale = PlayerMockPose.GunSize;
+                CreateGun(prefabs.Gun, _bodyGun, _bodyRenderers);
 
                 _viewModelRoot = CreateRoot(ViewModelRootName, camera);
                 _viewModelGun = CreateRoot("Gun", _viewModelRoot);
-                var viewBox = CreatePart(PrimitiveType.Cube, "GunBox", _viewModelGun, isGun: true, _viewModelRenderers);
-                viewBox.localScale = PlayerMockPose.GunSize;
+                CreateGun(prefabs.Gun, _viewModelGun, _viewModelRenderers);
                 foreach (var viewRenderer in _viewModelRenderers)
                 {
                     // 銃がカメラの手前にあるので、影を落とすと画面に大きな影が出る。
@@ -457,6 +467,30 @@ namespace Fps.Runtime
             return root;
         }
 
+        private void CreateGun(GameObject prefab, Transform gunRoot, List<Renderer> renderers)
+        {
+            var box = CreatePart(prefab, PrimitiveType.Cube, "GunBox", gunRoot, isGun: true, renderers);
+            if (prefab == null)
+            {
+                box.localScale = PlayerMockPose.GunSize;
+            }
+        }
+
+        // プレハブは名前の付いた空の根の子に置く。根の位置と大きさは姿勢 (Apply) が毎フレーム上書きするが、プレハブ自身の置き方は残すため。
+        private Transform CreatePart(GameObject prefab, PrimitiveType type, string partName, Transform parent, bool isGun, List<Renderer> renderers)
+        {
+            if (prefab == null)
+            {
+                return CreatePart(type, partName, parent, isGun, renderers);
+            }
+
+            var root = CreateRoot(partName, parent);
+            var model = VisualPrefab.Instantiate(prefab, root, prefab.name, stripColliders: true);
+            VisualPrefab.SetLayer(model, parent.gameObject.layer);
+            renderers.AddRange(model.GetComponentsInChildren<Renderer>(true));
+            return root;
+        }
+
         private Transform CreatePart(PrimitiveType type, string partName, Transform parent, bool isGun, List<Renderer> renderers)
         {
             var part = GameObject.CreatePrimitive(type);
@@ -544,6 +578,51 @@ namespace Fps.Runtime
             {
                 DestroyImmediate(target);
             }
+        }
+    }
+
+    /// <summary>
+    /// <see cref="PlayerMockBody"/> の部品の見た目。どれも当たり判定を外して置く。空の部品は仮の形 (胴は Capsule、頭は Sphere、銃は箱) を作る。
+    /// </summary>
+    [Serializable]
+    public sealed class PlayerMockBodyPrefabs
+    {
+        [SerializeField, Tooltip("胴。Unity の Capsule と同じく中心が原点で、幅 1m・高さ 2m の形にする (姿勢に合わせて拡大する)。空なら仮のカプセル")]
+        private GameObject _torso;
+
+        [SerializeField, Tooltip("頭。中心が原点で直径 1m の形にする (頭の大きさへ縮める)。空なら仮の球")]
+        private GameObject _head;
+
+        [SerializeField, Tooltip("銃。三人称の体と一人称の画面の両方に置く。中心が原点、前が +Z で、大きさはプレハブのまま。空なら仮の箱")]
+        private GameObject _gun;
+
+        public PlayerMockBodyPrefabs()
+        {
+        }
+
+        public PlayerMockBodyPrefabs(GameObject torso, GameObject head, GameObject gun)
+        {
+            _torso = torso;
+            _head = head;
+            _gun = gun;
+        }
+
+        public GameObject Torso
+        {
+            get => _torso;
+            set => _torso = value;
+        }
+
+        public GameObject Head
+        {
+            get => _head;
+            set => _head = value;
+        }
+
+        public GameObject Gun
+        {
+            get => _gun;
+            set => _gun = value;
         }
     }
 }

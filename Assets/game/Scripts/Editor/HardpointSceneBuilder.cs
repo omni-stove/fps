@@ -10,7 +10,7 @@ namespace Fps.Editor
     /// <summary>
     /// ハードポイントのシーン Hardpoint を組む。<see cref="ModeSceneBuilder"/> の既定の地形・出現点・bot (プレイヤーの陣営 0 に bot 2 体、陣営 1 に 3 体) に、
     /// 拠点 (<see cref="ControlPointZone"/>) を <see cref="Points"/> の 4 つ置き、<see cref="HardpointRunner"/> に配線する。
-    /// ルールは <see cref="GameRulesAssetBuilder.HardpointPath"/>。拠点の中心が NavMesh に乗っていて、プレイヤーの出現点から歩けることを確かめ、
+    /// ルールは <see cref="GameRulesAssetBuilder.HardpointPath"/>、秒数や得点は <see cref="DefinitionPath"/> (無ければ既定値で作る)。拠点の中心が NavMesh に乗っていて、プレイヤーの出現点から歩けることを確かめ、
     /// 満たさなければシーンを保存せずに例外を投げる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.HardpointSceneBuilder.Build</code>
     /// </summary>
@@ -18,6 +18,9 @@ namespace Fps.Editor
     {
         public static string ScenePathValue => BuildSceneList.HardpointScene;
         public static string RulesPathValue => GameRulesAssetBuilder.HardpointPath;
+
+        /// <summary>Runner に配線する調整値のアセット (<see cref="HardpointDefinition"/>)。</summary>
+        public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.HardpointName);
         public const string MenuPath = "Fps/Build Hardpoint Scene";
 
         public const string PointsRootName = "ControlPoints";
@@ -50,13 +53,19 @@ namespace Fps.Editor
 
         protected override ModeRunnerBase AddRunner(GameObject host, ModeSceneContext context)
         {
+            // NewScene(Single) は参照されていないアセットをアンロードするので、シーンを作った後のここで読む。
+            var tuning = LoadOrCreateDefinition(DefinitionPath);
             var runner = host.AddComponent<HardpointRunner>();
-            runner.RotateSeconds = HardpointRunner.DefaultRotateSeconds;
-            runner.PointsPerSecond = HardpointRunner.DefaultPointsPerSecond;
-            runner.ScoreLimit = HardpointRunner.DefaultScoreLimit;
-            runner.TimeLimitSeconds = HardpointRunner.DefaultTimeLimitSeconds;
-            runner.RespawnSeconds = HardpointRunner.DefaultRespawnSeconds;
+            runner.Definition = tuning;
             return runner;
+        }
+
+        /// <summary>path の調整値のアセットを返す。無ければ既定値で作る。既にあれば値は変えず、通ることだけ確かめる。</summary>
+        public static HardpointDefinition LoadOrCreateDefinition(string path)
+        {
+            var definition = ModeDefinitionAssets.LoadOrCreate<HardpointDefinition>(path, _ => { });
+            definition.Validate();
+            return definition;
         }
 
         /// <summary>bot は最初に有効になる拠点 (番号 0) へ向かう。始まった後は Runner が有効な拠点の巡回路に替える。</summary>

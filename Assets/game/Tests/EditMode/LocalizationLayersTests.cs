@@ -242,11 +242,90 @@ namespace Fps.Tests.EditMode
         {
             Assert.Throws<ArgumentNullException>(() => Localizer.AvailableLanguages(null));
             Assert.Throws<ArgumentNullException>(() => Localizer.NativeNameOf(GameLanguage.Japanese, null));
-            Assert.Throws<ArgumentOutOfRangeException>(() => Localizer.NativeNameOf((GameLanguage)99));
-            Assert.Throws<ArgumentOutOfRangeException>(() => _store.Save((GameLanguage)99));
-            Assert.Throws<ArgumentOutOfRangeException>(() => Localizer.SwitchTo((GameLanguage)99, _store));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Localizer.NativeNameOf(default));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _store.Save(default));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Localizer.SwitchTo(default, _store));
             Assert.Throws<ArgumentNullException>(() => Localizer.Build(GameLanguage.Japanese, null));
+            Assert.Throws<ArgumentNullException>(() => Localizer.LoadLanguageList(null));
             Assert.That(_store.HasSaved, Is.False);
+        }
+
+        [Test]
+        public void TheResourcesListJapaneseAndEnglish()
+        {
+            var list = Localizer.LoadLanguageList(Localizer.ReadLanguageLists);
+
+            Assert.That(list.Languages, Is.EqualTo(new[] { GameLanguage.Japanese, GameLanguage.English }));
+            Assert.That(Localizer.ReadLanguageLists().Select(l => l.Key), Does.Contain("Resources/Localization/Languages/languages"));
+            Assert.That(Localizer.LanguageList.Languages, Is.EqualTo(list.Languages));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ALanguageInTheListWithAFolderIsOfferedAndShowsItsStrings()
+        {
+            var french = new GameLanguage("fr");
+            var list = Localizer.LoadLanguageList(() => new[]
+            {
+                Layer("kit", "{\"languages\":[{\"code\":\"ja\",\"name\":\"日本語\"},{\"code\":\"en\",\"name\":\"English\"}]}"),
+                Layer("zz-game", "{\"languages\":[{\"code\":\"fr\",\"name\":\"Français\",\"systemLanguages\":[\"French\"]}]}"),
+            });
+            var frenchLayers = new[] { Layer("settings", "{\"settings.language.name\":\"Français\",\"settings.title\":\"Paramètres\"}") };
+            Func<GameLanguage, IReadOnlyList<KeyValuePair<string, string>>> read =
+                language => language == french ? frenchLayers : Reader(english: new[] { Layer("settings", "{}") })(language);
+
+            var before = GameLanguages.Source;
+            GameLanguages.Use(() => list);
+            try
+            {
+                Assert.That(Localizer.AvailableLanguages(read), Is.EqualTo(new[] { GameLanguage.Japanese, GameLanguage.English, french }));
+                Assert.That(Localizer.NativeNameOf(french, read), Is.EqualTo("Français"));
+                Assert.That(Localizer.Build(french, read).Get("settings.title"), Is.EqualTo("Paramètres"));
+                Assert.That(Localizer.FromSystemLanguage(SystemLanguage.French), Is.EqualTo(french));
+                Assert.That(Localizer.FromSystemLanguage(SystemLanguage.German), Is.EqualTo(GameLanguage.Japanese), "no otherSystemLanguages: the first");
+            }
+            finally
+            {
+                GameLanguages.Use(before);
+            }
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void AnUnreadableListFallsBackToTheBuiltInOneWithAnError()
+        {
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Localization\] broken: .*skipping it"));
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[Localization\] no language could be read .*using ja, en instead"));
+
+            var list = Localizer.LoadLanguageList(() => new[] { Layer("broken", "{\"languages\":") });
+
+            Assert.That(list, Is.SameAs(GameLanguageList.BuiltIn));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void NoListFallsBackToTheBuiltInOneWithAnError()
+        {
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[Localization\] no language list was found in Resources/Localization/Languages/"));
+
+            Assert.That(Localizer.LoadLanguageList(() => null), Is.SameAs(GameLanguageList.BuiltIn));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void AnUnknownSystemLanguageNameIsWarned()
+        {
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Localization\] ja: 'Nihongo' is not a UnityEngine\.SystemLanguage name"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Localization\] ja: '10' is not a UnityEngine\.SystemLanguage name"));
+
+            var list = Localizer.LoadLanguageList(() => new[]
+            {
+                Layer("a", "{\"languages\":[{\"code\":\"ja\",\"name\":\"日本語\",\"systemLanguages\":[\"Nihongo\",\"10\",\"Japanese\"]}]}"),
+            });
+
+            Assert.That(list.ForSystemLanguage(SystemLanguage.Japanese.ToString()), Is.EqualTo(GameLanguage.Japanese));
+            LogAssert.NoUnexpectedReceived();
         }
 
         private static KeyValuePair<string, string> Layer(string name, string json)

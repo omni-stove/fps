@@ -1,0 +1,7 @@
+{
+  "otherSystemLanguages": "en",
+  "languages": [
+    { "code": "ja", "name": "日本語", "systemLanguages": ["Japanese"] },
+    { "code": "en", "name": "English", "systemLanguages": ["English"] }
+  ]
+}

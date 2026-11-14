@@ -15,7 +15,7 @@ namespace Fps.Editor
     /// 拠点制圧 (<see cref="DominationRunner"/>) を一人称で遊ぶシーン Domination を生成する。床 (NavMeshSurface 付き)・外周の壁・遮蔽物を置いて
     /// NavMesh を焼き (<see cref="EnemyTestSceneBuilder.BakeNavMesh"/>)、両チームの出現点、<see cref="GameBootstrap"/> (一人称・床は作らない・
     /// ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>)、Bravo の敵 (<see cref="EnemyAgent"/>)、拠点 A/B/C
-    /// (<see cref="ControlPointZone"/> と旗竿の目印)、<see cref="DominationRunner"/> を置く。プレイヤー・ライト・HUD は実行時に GameBootstrap が作る。
+    /// (<see cref="ControlPointZone"/> と旗竿の目印)、<see cref="DominationRunner"/> (調整値は <see cref="DefinitionPath"/>、無ければ既定値で作る) を置く。プレイヤー・ライト・HUD は実行時に GameBootstrap が作る。
     /// 保存したシーンは Build Settings に (並びを変えずに) 加える。何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.DominationSceneBuilder.Build</code>
     /// </summary>
@@ -30,6 +30,18 @@ namespace Fps.Editor
     public static class DominationSceneBuilder
     {
         public static string ScenePath => BuildSceneList.DominationScene;
+
+        /// <summary>Runner に配線する調整値のアセット (<see cref="DominationDefinition"/>)。</summary>
+        public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.DominationName);
+
+        /// <summary>path の調整値のアセットを返す。無ければ既定値で作る。既にあれば値は変えず、通ることだけ確かめる。</summary>
+        public static DominationDefinition LoadOrCreateDefinition(string path)
+        {
+            var definition = ModeDefinitionAssets.LoadOrCreate<DominationDefinition>(path, _ => { });
+            definition.Validate();
+            return definition;
+        }
+
         public const string MenuPath = "Fps/Build Domination Scene";
         public const string LogTag = "[DominationSceneBuilder]";
 
@@ -198,6 +210,7 @@ namespace Fps.Editor
             var catalog = WeaponAssetBuilder.LoadCatalog();
             var botWeapon = WeaponAssetBuilder.FindInCatalog(catalog, BotsRootName, BotWeaponId);
             var rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.DominationPath);
+            var tuning = LoadOrCreateDefinition(DefinitionPath);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
@@ -207,7 +220,7 @@ namespace Fps.Editor
             EnemyTestSceneBuilder.BakeNavMesh(surface, navMeshDataPath);
             RequireWalkable();
 
-            var runner = PopulateScene(scene, playerWeapons, rules, botWeapon);
+            var runner = PopulateScene(scene, playerWeapons, rules, botWeapon, tuning);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -291,11 +304,16 @@ namespace Fps.Editor
 
         /// <summary>
         /// 地形を置いたシーン (<see cref="CreateLevel"/> の後) に、両チームの出現点、GameBootstrap (一人称・床は作らない、playerWeapons と rules を配線)、
-        /// Bravo の敵 (botWeapon で撃つ)、拠点と目印、DominationRunner (出現点を配線) を置き、DominationRunner を返す。
+        /// Bravo の敵 (botWeapon で撃つ)、拠点と目印、DominationRunner (出現点と調整値 tuning を配線) を置き、DominationRunner を返す。
+        /// tuning が null なら DominationRunner は自身の既定値で動く。
         /// 引数が不正なら何も置かずに例外を投げる。途中で失敗したら置いた物を消してから投げ直す。
         /// </summary>
         public static DominationRunner PopulateScene(
-            Scene scene, IReadOnlyList<WeaponDefinition> playerWeapons, GameRulesDefinition rules, WeaponDefinition botWeapon)
+            Scene scene,
+            IReadOnlyList<WeaponDefinition> playerWeapons,
+            GameRulesDefinition rules,
+            WeaponDefinition botWeapon,
+            DominationDefinition tuning = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);
             SceneBuildHelpers.RequirePlayerWeapons(playerWeapons, nameof(playerWeapons));
@@ -311,6 +329,10 @@ namespace Fps.Editor
 
             // 不正なルールを配線しないよう、何か置く前に検査する。
             rules.ToRules();
+            if (tuning != null)
+            {
+                tuning.Validate();
+            }
 
             var created = new List<GameObject>();
             try
@@ -362,6 +384,7 @@ namespace Fps.Editor
                 var runner = runnerObject.AddComponent<DominationRunner>();
                 runner.SetSpawnPoints(Team.Alpha, alphaSpawns);
                 runner.SetSpawnPoints(Team.Bravo, bravoSpawns);
+                runner.Definition = tuning;
 
                 EditorSceneManager.MarkSceneDirty(scene);
                 return runner;

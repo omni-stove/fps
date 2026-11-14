@@ -307,6 +307,125 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheTuningAssetDecidesTheCaptureTimeAndTheScoreLimit()
+        {
+            var tuning = Tuning();
+            tuning.CaptureSeconds = 2f;
+            tuning.PointsPerSecond = 5f;
+            tuning.ScoreLimit = 10;
+            tuning.TimeLimitSeconds = TimeLimit;
+            _runner.Definition = tuning;
+
+            Begin();
+
+            _runner.Tick(CaptureSeconds);
+            Assert.That(_runner.Domination.GetOwner(0), Is.Null, "the runner's own one second is not used");
+
+            LogAssert.Expect(LogType.Log, "[Domination] captured point=A team=Alpha");
+            _runner.Tick(1f);
+            Assert.That(_runner.Domination.GetOwner(0), Is.EqualTo(Team.Alpha));
+
+            LogAssert.Expect(LogType.Log, "[Domination] state=Ended A=10 B=0 remaining=56.0");
+            LogAssert.Expect(LogType.Log, "[Domination] ended winner=Alpha A=10 B=0");
+            _runner.Tick(2f);
+
+            Assert.That(_runner.Domination.Winner, Is.EqualTo(Team.Alpha));
+        }
+
+        [Test]
+        public void TheTuningAssetDecidesTheRespawnSeconds()
+        {
+            var tuning = Tuning();
+            tuning.TimeLimitSeconds = TimeLimit;
+            tuning.RespawnSeconds = RespawnSeconds * 2f;
+            _runner.Definition = tuning;
+            Assert.That(_runner.EffectiveRespawnSeconds, Is.EqualTo(RespawnSeconds * 2f));
+
+            Begin();
+
+            LogAssert.Expect(LogType.Log, "[Domination] death player=0");
+            _world.PlayerDamageable.Kill();
+
+            _runner.Tick(RespawnSeconds);
+            Assert.That(_world.PlayerDamageable.IsDead, Is.True, "the runner's own respawn seconds are not used");
+
+            _runner.Tick(RespawnSeconds);
+            Assert.That(_world.PlayerDamageable.IsDead, Is.False);
+        }
+
+        [Test]
+        public void WithoutTuningTheRunnerUsesItsOwnValues()
+        {
+            Assert.That(_runner.Definition, Is.Null);
+            Assert.That(_runner.EffectiveRespawnSeconds, Is.EqualTo(RespawnSeconds));
+
+            var spec = _runner.CreateSpec(2);
+
+            Assert.That(spec.PointCount, Is.EqualTo(2));
+            Assert.That(spec.CaptureSeconds, Is.EqualTo(CaptureSeconds));
+            Assert.That(spec.PointsPerSecond, Is.EqualTo(PointsPerSecond));
+            Assert.That(spec.ScoreLimit, Is.EqualTo(ScoreLimit));
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(TimeLimit));
+        }
+
+        [Test]
+        public void ANewTuningAssetHoldsTheDefaults()
+        {
+            var tuning = Tuning();
+            var spec = tuning.ToSpec(3);
+
+            Assert.That(spec.PointCount, Is.EqualTo(3));
+            Assert.That(spec.CaptureSeconds, Is.EqualTo(DominationRunner.DefaultCaptureSeconds));
+            Assert.That(spec.PointsPerSecond, Is.EqualTo(DominationRunner.DefaultPointsPerSecond));
+            Assert.That(spec.ScoreLimit, Is.EqualTo(DominationRunner.DefaultScoreLimit));
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(DominationRunner.DefaultTimeLimitSeconds));
+            Assert.That(spec.MaxCapturers, Is.EqualTo(DominationSpec.DefaultMaxCapturers));
+            Assert.That(tuning.RespawnSeconds, Is.EqualTo(DominationRunner.DefaultRespawnSeconds));
+            Assert.DoesNotThrow(tuning.Validate);
+        }
+
+        [Test]
+        public void AnInvalidTuningAssetIsRejectedWithItsName()
+        {
+            var tuning = Tuning();
+            tuning.ScoreLimit = 0;
+            _runner.Definition = tuning;
+
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => _runner.CreateSpec(1));
+            StringAssert.Contains("'DominationTuning'", e.Message);
+            Assert.That(e.ParamName, Is.EqualTo("scoreLimit"));
+
+            tuning.ScoreLimit = 1;
+            tuning.RespawnSeconds = -1f;
+            Assert.Throws<ArgumentOutOfRangeException>(tuning.Validate);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _runner.CreateSpec(1));
+            Assert.That(_runner.IsStarted, Is.False);
+        }
+
+        [Test]
+        public void CopyFromTakesEveryValueOfTheTuningAsset()
+        {
+            var tuning = Tuning();
+            tuning.CaptureSeconds = 3f;
+            tuning.PointsPerSecond = 4f;
+            tuning.ScoreLimit = 50;
+            tuning.TimeLimitSeconds = 90f;
+            tuning.MaxCapturers = 2;
+            tuning.RespawnSeconds = 6f;
+
+            _runner.CopyFrom(tuning);
+
+            Assert.That(_runner.CaptureSeconds, Is.EqualTo(3f));
+            Assert.That(_runner.PointsPerSecond, Is.EqualTo(4f));
+            Assert.That(_runner.ScoreLimit, Is.EqualTo(50));
+            Assert.That(_runner.TimeLimitSeconds, Is.EqualTo(90f));
+            Assert.That(_runner.MaxCapturers, Is.EqualTo(2));
+            Assert.That(_runner.RespawnSeconds, Is.EqualTo(6f));
+            Assert.That(_runner.Definition, Is.Null, "copying does not wire the asset");
+            Assert.Throws<ArgumentNullException>(() => _runner.CopyFrom(null));
+        }
+
+        [Test]
         public void ZoneScanCountsOnlyLivingCandidatesInside()
         {
             var inside = _world.PlayerDamageable;
@@ -325,6 +444,14 @@ namespace Fps.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Domination] joined player=1 team=Bravo name=enemy-1");
             LogAssert.Expect(LogType.Log, "[Domination] state=Playing A=0 B=0 remaining=60.0");
             _runner.Begin(_world, new[] { _zone }, new[] { _enemy }, _runner.CreateSpec(1));
+        }
+
+        private DominationDefinition Tuning()
+        {
+            var tuning = ScriptableObject.CreateInstance<DominationDefinition>();
+            tuning.name = "DominationTuning";
+            _created.Add(tuning);
+            return tuning;
         }
 
         private ControlPointZone CreateZone(string name, int index, Vector3 position)

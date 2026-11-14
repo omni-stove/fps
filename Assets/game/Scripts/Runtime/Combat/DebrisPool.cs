@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 建造物が壊れたときに出す破片 (Rigidbody 付きの小さな Cube) をまとめて持つ。破片は見た目だけで、
+    /// 建造物が壊れたときに出す破片 (Rigidbody 付きの小さな Cube。<see cref="DebrisPrefab"/> があればその形) をまとめて持つ。破片は見た目だけで、
     /// 出すときにダメージの出し方を渡したものだけがキャラクターに当たるとダメージを与える (<see cref="DebrisCrusher"/>)。
     /// 破片は <see cref="Lifetime"/> 秒で消え、<see cref="Capacity"/> 個を超えたら古い物から消す。
     /// シーンに 1 つあればよく、<see cref="GetOrCreate"/> で探すか作る。
@@ -34,8 +34,18 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("破片が消えるまでの秒数")]
         private float _lifetime = DefaultLifetime;
 
+        [SerializeField, Tooltip("破片の見た目。大きさ 1m の形にする (出すときに破片の大きさへ拡大する)。当たり判定が無ければ箱の当たり判定を足す。空なら仮の箱を作る")]
+        private GameObject _debrisPrefab;
+
         private readonly List<Entry> _entries = new List<Entry>();
         private double _clock;
+
+        /// <summary>破片の見た目。null なら仮の箱 (Cube) を作る。これから出す破片から使う。</summary>
+        public GameObject DebrisPrefab
+        {
+            get => _debrisPrefab;
+            set => _debrisPrefab = value;
+        }
 
         /// <summary>同時に存在できる破片の数。0 なら破片を出さない。下げたときは超えた分をすぐ古い物から消す。</summary>
         public int Capacity
@@ -126,7 +136,7 @@ namespace Fps.Runtime
         /// <param name="position">中心の位置。</param>
         /// <param name="rotation">向き。</param>
         /// <param name="size">大きさ (m)。各軸 0 より大きい。</param>
-        /// <param name="material">見た目の材質。null なら Cube の既定のまま。</param>
+        /// <param name="material">仮の箱の材質。null なら Cube の既定のまま。<see cref="DebrisPrefab"/> から出すときはプレハブの材質のまま使う。</param>
         /// <param name="velocity">出したときの速度。</param>
         public GameObject Spawn(Vector3 position, Quaternion rotation, Vector3 size, Material material, Vector3 velocity)
         {
@@ -163,20 +173,35 @@ namespace Fps.Runtime
             Prune();
             TrimTo(_capacity - 1);
 
-            var debris = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var debris = _debrisPrefab != null
+                ? VisualPrefab.Instantiate(_debrisPrefab, transform, DebrisName, stripColliders: false)
+                : GameObject.CreatePrimitive(PrimitiveType.Cube);
             try
             {
                 debris.name = DebrisName;
-                debris.layer = DebrisLayer;
+                VisualPrefab.SetLayer(debris, DebrisLayer);
                 debris.transform.SetParent(transform, false);
                 debris.transform.SetPositionAndRotation(position, rotation);
                 debris.transform.localScale = size;
-                if (material != null)
+                if (_debrisPrefab != null)
+                {
+                    // 当たり判定が無いと床をすり抜けて落ち続け、下敷きのダメージ (DebrisCrusher) も起きない。
+                    if (debris.GetComponentInChildren<Collider>(true) == null)
+                    {
+                        debris.AddComponent<BoxCollider>();
+                    }
+                }
+                else if (material != null)
                 {
                     debris.GetComponent<Renderer>().sharedMaterial = material;
                 }
 
-                var body = debris.AddComponent<Rigidbody>();
+                var body = debris.GetComponent<Rigidbody>();
+                if (body == null)
+                {
+                    body = debris.AddComponent<Rigidbody>();
+                }
+
                 body.mass = Mathf.Max(0.05f, size.x * size.y * size.z * 100f);
                 body.linearVelocity = velocity;
 

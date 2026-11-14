@@ -255,6 +255,25 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void WiresTheTuningAssetToTheRunnerAndRefusesAnInvalidOne()
+        {
+            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var rules = NewRules(GameRulesAssetBuilder.DominationRules());
+            var tuning = ScriptableObject.CreateInstance<DominationDefinition>();
+            _assets.Add(tuning);
+            tuning.ScoreLimit = 0;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => DominationSceneBuilder.PopulateScene(_scene, new[] { rifle }, rules, rifle, tuning));
+            Assert.That(_scene.rootCount, Is.Zero, "nothing is placed");
+
+            tuning.ScoreLimit = 40;
+            var runner = DominationSceneBuilder.PopulateScene(_scene, new[] { rifle }, rules, rifle, tuning);
+
+            Assert.That(runner.Definition, Is.SameAs(tuning));
+            Assert.That(runner.CreateSpec(DominationSceneBuilder.ControlPoints.Count).ScoreLimit, Is.EqualTo(40));
+        }
+
+        [Test]
         public void CreateLevelRefusesANonEmptyScene()
         {
             var stray = new GameObject("Stray");

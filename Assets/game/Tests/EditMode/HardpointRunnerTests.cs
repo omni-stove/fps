@@ -220,6 +220,88 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => _runner.CreateSpec(4));
         }
 
+        [Test]
+        public void TheSpecComesFromTheTuningAssetWhenOneIsSet()
+        {
+            _runner.RotateSeconds = 15f;
+            var tuning = Tuning();
+            tuning.RotateSeconds = 20f;
+            tuning.PointsPerSecond = 3f;
+            tuning.ScoreLimit = 60;
+            tuning.TimeLimitSeconds = 200f;
+            tuning.RespawnSeconds = 5f;
+            _runner.Definition = tuning;
+
+            var spec = _runner.CreateSpec(3);
+
+            Assert.That(spec.PointCount, Is.EqualTo(3));
+            Assert.That(spec.RotateSeconds, Is.EqualTo(20f), "the runner's own value is not used");
+            Assert.That(spec.PointsPerSecond, Is.EqualTo(3f));
+            Assert.That(spec.ScoreLimit, Is.EqualTo(60));
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(200f));
+            Assert.That(spec.RespawnSeconds, Is.EqualTo(5f));
+
+            _runner.Definition = null;
+            Assert.That(_runner.CreateSpec(3).RotateSeconds, Is.EqualTo(15f), "without the asset the runner's own values are used");
+        }
+
+        [Test]
+        public void TheMatchMovesAndEndsWithTheTuningValues()
+        {
+            var tuning = Tuning();
+            tuning.RotateSeconds = 4f;
+            tuning.PointsPerSecond = 2f;
+            tuning.ScoreLimit = 12;
+            _runner.Definition = tuning;
+
+            var zones = Zones();
+            var player = Member("Player", 0, PointA);
+            _runner.Begin(new Hardpoint(_runner.CreateSpec(zones.Length)), zones, new[] { player }, Array.Empty<SideSpawnPoint>(), player);
+
+            _runner.Tick(1f);
+            Assert.That(_runner.Session.GetScore(Side.Alpha), Is.EqualTo(2d));
+
+            _runner.Tick(3f);
+            Assert.That(_runner.Hardpoint.ActivePoint, Is.EqualTo(1), "the point moves after the tuning's four seconds");
+            Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Playing));
+
+            player.transform.position = PointB;
+            _runner.Tick(3f);
+
+            Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended), "the tuning's score limit ends the match");
+            Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)Side.Alpha));
+        }
+
+        [Test]
+        public void ANewTuningAssetHoldsTheDefaultsAndRejectsBadValuesWithItsName()
+        {
+            var tuning = Tuning();
+            var spec = tuning.ToSpec(2);
+
+            Assert.That(spec.RotateSeconds, Is.EqualTo(HardpointRunner.DefaultRotateSeconds));
+            Assert.That(spec.PointsPerSecond, Is.EqualTo(HardpointRunner.DefaultPointsPerSecond));
+            Assert.That(spec.ScoreLimit, Is.EqualTo(HardpointRunner.DefaultScoreLimit));
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(HardpointRunner.DefaultTimeLimitSeconds));
+            Assert.That(spec.RespawnSeconds, Is.EqualTo(HardpointRunner.DefaultRespawnSeconds));
+            Assert.DoesNotThrow(tuning.Validate);
+
+            tuning.RespawnSeconds = -1f;
+            var e = Assert.Throws<ArgumentOutOfRangeException>(tuning.Validate);
+            StringAssert.Contains("'HardpointTuning'", e.Message);
+            Assert.That(e.ParamName, Is.EqualTo("respawnSeconds"));
+
+            _runner.Definition = tuning;
+            Assert.Throws<ArgumentOutOfRangeException>(() => _runner.CreateSpec(2));
+        }
+
+        private HardpointDefinition Tuning()
+        {
+            var tuning = ScriptableObject.CreateInstance<HardpointDefinition>();
+            tuning.name = "HardpointTuning";
+            _objects.Add(tuning);
+            return tuning;
+        }
+
         private void Begin(IReadOnlyList<ControlPointZone> zones, IReadOnlyList<SideMember> members, SideMember localPlayer, ModeHudView hud = null)
         {
             _runner.Begin(CreateHardpoint(), zones, members, Array.Empty<SideSpawnPoint>(), localPlayer, hud);

@@ -103,6 +103,42 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void OfflineAndNetworkPlayersReadTheSameMotorSettings()
+        {
+            var settings = ScriptableObject.CreateInstance<MotorSettings>();
+            var offline = new GameObject("OfflinePlayer");
+            try
+            {
+                settings.WalkSpeed = 4f;
+                settings.SprintSpeed = 9f;
+                settings.CrouchSpeed = 1.5f;
+                offline.AddComponent<CharacterController>();
+                var mover = offline.AddComponent<PlayerController>();
+                mover.MotorSettings = settings;
+
+                var player = InstantiatePlayer();
+                var motor = player.GetComponent<NetworkPlayerMotor>();
+                motor.MotorSettings = settings;
+                var animator = player.GetComponent<CharacterAnimator>();
+                Assert.That(animator.TryBind(), Is.True);
+
+                Assert.That(motor.WalkSpeed, Is.EqualTo(mover.WalkSpeed).And.EqualTo(4f));
+                Assert.That(motor.SprintSpeed, Is.EqualTo(mover.SprintSpeed).And.EqualTo(9f));
+                Assert.That(motor.CrouchSpeed, Is.EqualTo(mover.CrouchSpeed).And.EqualTo(1.5f));
+                Assert.That(player.WalkSpeed, Is.EqualTo(4f));
+                Assert.That(player.CrouchSpeed, Is.EqualTo(1.5f));
+                Assert.That(animator.Pose.WalkSpeed, Is.EqualTo(4f));
+                Assert.That(animator.Pose.SprintSpeed, Is.EqualTo(9f));
+                Assert.That(animator.Pose.CrouchSpeed, Is.EqualTo(1.5f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(offline);
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Test]
         public void CharacterAnimatorUsesTheRigInThePrefab()
         {
             var player = InstantiatePlayer();

@@ -505,7 +505,20 @@ namespace Fps.Runtime
                     _warnedInvalidSpeeds = true;
                 }
 
-                _pose = new CharacterPose(PlayerController.DefaultWalkSpeed, PlayerController.DefaultSprintSpeed, PlayerController.DefaultCrouchSpeed);
+                _pose = FallbackPose();
+            }
+        }
+
+        // MotorSpec は歩きと走りが同じ速さでも受け付けるが CharacterPose は受け付けないので、設定された値でも決められなければコードの既定値で決める。
+        private static CharacterPose FallbackPose()
+        {
+            try
+            {
+                return CharacterPose.FromMotor(MotorSettings.ResolveOrDefault(null));
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return CharacterPose.FromMotor(MotorSpec.Default);
             }
         }
 

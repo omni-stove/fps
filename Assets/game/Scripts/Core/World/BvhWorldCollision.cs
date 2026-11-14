@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -10,6 +11,8 @@ namespace Fps.Core
 
         // 葉を数の中央で割るので深さは log2(形の数) で収まり、int の数の形でも 64 段の探索の積み荷を超えない
         private const int _stackSize = 64;
+
+        private const int _startOverlapCapacity = 32;
 
         private readonly Primitive[] _primitives;
         private readonly Node[] _nodes;
@@ -150,48 +153,10 @@ namespace Fps.Core
                 return 0;
             }
 
-            var extent = new Vector3(radius);
-            var min = Vector3.Min(point0, point1) - extent;
-            var max = Vector3.Max(point0, point1) + extent;
-            var radiusSq = radius * radius;
-            var count = 0;
-            Span<int> stack = stackalloc int[_stackSize];
-            var top = 0;
-            stack[top++] = 0;
-            while (top > 0)
+            var count = CollectOverlaps(point0, point1, radius, layerMask, true, results);
+            for (var i = 0; i < count; i++)
             {
-                ref readonly var node = ref _nodes[stack[--top]];
-                if ((node.LayerBits & layerMask) == 0 || !WorldGeometry.AabbOverlap(min, max, node.Min, node.Max))
-                {
-                    continue;
-                }
-
-                if (node.Count == 0)
-                {
-                    stack[top++] = node.Start;
-                    stack[top++] = node.Start + 1;
-                    continue;
-                }
-
-                for (var i = node.Start; i < node.Start + node.Count; i++)
-                {
-                    ref readonly var primitive = ref _primitives[i];
-                    if (!Selectable(primitive.Collider, layerMask)
-                        || !WorldGeometry.AabbOverlap(min, max, primitive.Min, primitive.Max)
-                        || Contains(results, count, _colliderIds[primitive.Collider]))
-                    {
-                        continue;
-                    }
-
-                    if (DistanceSq(primitive, point0, point1, out _, out _) <= radiusSq)
-                    {
-                        results[count++] = _colliderIds[primitive.Collider];
-                        if (count == results.Length)
-                        {
-                            return count;
-                        }
-                    }
-                }
+                results[i] = _colliderIds[results[i]];
             }
 
             return count;
@@ -207,6 +172,31 @@ namespace Fps.Core
                 return false;
             }
 
+            // Unity と同じく、動かす前から重なっているコライダーは三角形単位ではなく丸ごと外す
+            Span<int> startOverlaps = stackalloc int[_startOverlapCapacity];
+            var overlapCount = CollectOverlaps(point0, point1, radius, layerMask, false, startOverlaps);
+            if (overlapCount < startOverlaps.Length)
+            {
+                return Sweep(point0, point1, radius, dir, maxDistance, layerMask, startOverlaps.Slice(0, overlapCount), out hit);
+            }
+
+            var pooled = ArrayPool<int>.Shared.Rent(_colliderIds.Length);
+            try
+            {
+                overlapCount = CollectOverlaps(point0, point1, radius, layerMask, false, pooled);
+                return Sweep(point0, point1, radius, dir, maxDistance, layerMask, pooled.AsSpan(0, overlapCount), out hit);
+            }
+            finally
+            {
+                ArrayPool<int>.Shared.Return(pooled);
+            }
+        }
+
+        private bool Sweep(
+            Vector3 point0, Vector3 point1, float radius, Vector3 dir, float maxDistance, int layerMask,
+            ReadOnlySpan<int> startOverlaps, out WorldHit hit)
+        {
+            hit = default;
             var center = (point0 + point1) * 0.5f;
             var extent = Vector3.Abs(point1 - point0) * 0.5f + new Vector3(radius);
             var best = maxDistance;
@@ -235,7 +225,8 @@ namespace Fps.Core
                 {
                     ref readonly var primitive = ref _primitives[i];
                     if (!Selectable(primitive.Collider, layerMask)
-                        || !WorldGeometry.RayAabb(center, dir, primitive.Min - extent, primitive.Max + extent, best))
+                        || !WorldGeometry.RayAabb(center, dir, primitive.Min - extent, primitive.Max + extent, best)
+                        || startOverlaps.IndexOf(primitive.Collider) >= 0)
                     {
                         continue;
                     }
@@ -262,22 +253,60 @@ namespace Fps.Core
             return true;
         }
 
-        private bool Selectable(int collider, int layerMask)
+        private int CollectOverlaps(
+            Vector3 point0, Vector3 point1, float radius, int layerMask, bool includeTouching, Span<int> colliders)
         {
-            return _colliderEnabled[collider] && (layerMask & (1 << _colliderLayers[collider])) != 0;
-        }
-
-        private static bool Contains(int[] results, int count, int id)
-        {
-            for (var i = 0; i < count; i++)
+            var extent = new Vector3(radius);
+            var min = Vector3.Min(point0, point1) - extent;
+            var max = Vector3.Max(point0, point1) + extent;
+            var radiusSq = radius * radius;
+            var count = 0;
+            Span<int> stack = stackalloc int[_stackSize];
+            var top = 0;
+            stack[top++] = 0;
+            while (top > 0)
             {
-                if (results[i] == id)
+                ref readonly var node = ref _nodes[stack[--top]];
+                if ((node.LayerBits & layerMask) == 0 || !WorldGeometry.AabbOverlap(min, max, node.Min, node.Max))
                 {
-                    return true;
+                    continue;
+                }
+
+                if (node.Count == 0)
+                {
+                    stack[top++] = node.Start;
+                    stack[top++] = node.Start + 1;
+                    continue;
+                }
+
+                for (var i = node.Start; i < node.Start + node.Count; i++)
+                {
+                    ref readonly var primitive = ref _primitives[i];
+                    if (!Selectable(primitive.Collider, layerMask)
+                        || !WorldGeometry.AabbOverlap(min, max, primitive.Min, primitive.Max)
+                        || colliders.Slice(0, count).IndexOf(primitive.Collider) >= 0)
+                    {
+                        continue;
+                    }
+
+                    var distanceSq = DistanceSq(primitive, point0, point1, out _, out _);
+                    if (includeTouching ? distanceSq <= radiusSq : distanceSq < radiusSq)
+                    {
+                        colliders[count++] = primitive.Collider;
+                        if (count == colliders.Length)
+                        {
+                            return count;
+                        }
+                    }
                 }
             }
 
-            return false;
+            return count;
+        }
+
+        private bool Selectable(int collider, int layerMask)
+        {
+            return _colliderEnabled[collider] && (layerMask & (1 << _colliderLayers[collider])) != 0;
         }
 
         private static bool TryNormalize(Vector3 direction, out Vector3 normalized)
@@ -375,9 +404,7 @@ namespace Fps.Core
             {
                 case WorldShapeKind.Mesh:
                     // 裏から近づく三角形は、Raycast と同じく当てない
-                    if (Vector3.Dot(primitive.Normal, direction) > 0f
-                        || WorldGeometry.SegmentTriangleDistanceSq(p, q, primitive.A, primitive.B, primitive.C, primitive.Normal, out _, out _)
-                            < radius * radius)
+                    if (Vector3.Dot(primitive.Normal, direction) > 0f)
                     {
                         return false;
                     }
@@ -393,11 +420,6 @@ namespace Fps.Core
                     var localP = Vector3.Transform(p - primitive.A, inverse);
                     var localQ = Vector3.Transform(q - primitive.A, inverse);
                     var localDirection = Vector3.Transform(direction, inverse);
-                    if (WorldGeometry.SegmentBoxDistanceSq(localP, localQ, primitive.B, out _, out _) < radius * radius)
-                    {
-                        return false;
-                    }
-
                     for (var axis = 0; axis < 3; axis++)
                     {
                         for (var corner = 0; corner < 4; corner++)
@@ -417,14 +439,7 @@ namespace Fps.Core
 
                     break;
                 default:
-                    var total = radius + primitive.Radius;
-                    WorldGeometry.ClosestPointsSegmentSegment(p, q, primitive.A, primitive.B, out var onSegment, out var onAxis);
-                    if (Vector3.DistanceSquared(onSegment, onAxis) < total * total)
-                    {
-                        return false;
-                    }
-
-                    WorldGeometry.SweepSegmentSegment(p, q, direction, primitive.A, primitive.B, total, ref best, ref normal);
+                    WorldGeometry.SweepSegmentSegment(p, q, direction, primitive.A, primitive.B, radius + primitive.Radius, ref best, ref normal);
                     break;
             }
 

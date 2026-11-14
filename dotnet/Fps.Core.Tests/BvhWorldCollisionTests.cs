@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using NUnit.Framework;
 
@@ -24,6 +25,14 @@ namespace Fps.Core.Tests
 
         private static readonly int[] _floorIndices = { 0, 1, 2, 0, 2, 3 };
         private static readonly int[] _slopeIndices = { 0, 2, 1, 0, 3, 2 };
+
+        private static readonly Vector3[] _roomVertices =
+        {
+            new Vector3(-5f, 0f, -5f), new Vector3(-5f, 0f, 5f), new Vector3(5f, 0f, 5f), new Vector3(5f, 0f, -5f),
+            new Vector3(3f, 0f, -5f), new Vector3(3f, 0f, 5f), new Vector3(3f, 3f, 5f), new Vector3(3f, 3f, -5f),
+        };
+
+        private static readonly int[] _roomIndices = { 0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7 };
 
         private static readonly float _slopeTop = 5f * (float)Math.Tan(Math.PI / 6.0);
         private static readonly Vector3 _slopeNormal = new Vector3(0.5f, (float)Math.Sqrt(3.0) / 2f, 0f);
@@ -269,6 +278,39 @@ namespace Fps.Core.Tests
             Assert.That(_world.CapsuleCast(
                 new Vector3(0f, 0.3f, 0f), new Vector3(0f, 1.5f, 0f), 0.5f, Vector3.UnitX, 10f, _everything, out var hit), Is.True);
             Assert.That(hit.ColliderId, Is.EqualTo(_wallId));
+        }
+
+        [Test]
+        public void CapsuleCastIgnoresEveryTriangleOfAMeshItAlreadyOverlaps()
+        {
+            var room = new BvhWorldCollision(new WorldMap(new[]
+            {
+                WorldCollider.Mesh(1, _defaultLayer, WorldCollider.StaticGroup, _roomVertices, _roomIndices),
+            }));
+            var top = new Vector3(0f, 1.5f, 0f);
+
+            Assert.That(room.CapsuleCast(new Vector3(0f, 0.3f, 0f), top, 0.5f, Vector3.UnitX, 10f, _everything, out _), Is.False);
+
+            Assert.That(room.CapsuleCast(new Vector3(0f, 0.6f, 0f), top, 0.5f, Vector3.UnitX, 10f, _everything, out var hit), Is.True);
+            Assert.That(hit.Distance, Is.EqualTo(2.5f).Within(_tolerance));
+            AssertVector(hit.Normal, -Vector3.UnitX);
+        }
+
+        [Test]
+        public void CapsuleCastIgnoresManyCollidersItAlreadyOverlaps()
+        {
+            var colliders = new List<WorldCollider>();
+            for (var i = 0; i < 40; i++)
+            {
+                colliders.Add(WorldCollider.Sphere(i, _defaultLayer, WorldCollider.StaticGroup, new Vector3(0f, 1f, i * 0.001f), 0.1f));
+            }
+
+            colliders.Add(WorldCollider.Box(100, _defaultLayer, WorldCollider.StaticGroup, new Vector3(3f, 1f, 0f), new Vector3(0.5f), Quaternion.Identity));
+            var world = new BvhWorldCollision(new WorldMap(colliders));
+
+            Assert.That(world.CapsuleCast(new Vector3(0f, 1f, 0f), new Vector3(0f, 1f, 0f), 0.3f, Vector3.UnitX, 10f, _everything, out var hit), Is.True);
+            Assert.That(hit.ColliderId, Is.EqualTo(100));
+            Assert.That(hit.Distance, Is.EqualTo(2.2f).Within(_tolerance));
         }
 
         [Test]

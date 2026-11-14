@@ -16,6 +16,7 @@ namespace Fps.Runtime
     /// <list type="bullet">
     /// <item><see cref="DestructionEnabled"/> が false (既定) の間は弾が当たっても何もしない。</item>
     /// <item><see cref="HasAuthority"/> が false (ネットのクライアント) の間はダメージを無視し、<see cref="ApplyDestroyedBitset"/> だけを反映する。</item>
+    /// <item><see cref="DebrisCrushEnabled"/> が false (既定) の間は、破片はキャラクターに当たってもダメージを与えない。</item>
     /// </list>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -47,6 +48,18 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("破片を出す先。空ならシーンのものを探すか作る")]
         private DebrisPool _debrisPool;
+
+        [SerializeField, Tooltip("弾や爆発で壊したときの破片が、キャラクターに当たるとダメージを与えるか")]
+        private bool _debrisCrushEnabled;
+
+        [SerializeField, Min(0f), Tooltip("破片がこれ以下の速さ (m/s) で当たってもダメージを与えない")]
+        private float _crushMinSpeed = DebrisCrushDamage.DefaultMinSpeed;
+
+        [SerializeField, Min(0f), Tooltip("破片の運動量 1 kg·m/s あたりのダメージ")]
+        private float _crushDamagePerMomentum = DebrisCrushDamage.DefaultDamagePerMomentum;
+
+        [SerializeField, Min(0), Tooltip("破片 1 つが 1 回に与えるダメージの上限")]
+        private int _crushMaxDamage = DebrisCrushDamage.DefaultMaxDamage;
 
         private StructureIntegrity _integrity;
         private DestructiblePiece[] _pieces = Array.Empty<DestructiblePiece>();
@@ -85,6 +98,36 @@ namespace Fps.Runtime
         {
             get => _debrisPool;
             set => _debrisPool = value;
+        }
+
+        /// <summary>
+        /// 権威側で壊したときの破片が、キャラクターに当たるとダメージを与えるか。既定は false (破片は見た目だけ)。
+        /// true なら破片に <see cref="DebrisCrusher"/> を付け、壊した時の帰属 (<see cref="CombatEvents.CurrentAttribution"/>) を持ち越す。
+        /// <see cref="ApplyDestroyedBitset"/> で出す破片には付けない (ダメージは権威側だけが計算する)。
+        /// </summary>
+        public bool DebrisCrushEnabled
+        {
+            get => _debrisCrushEnabled;
+            set => _debrisCrushEnabled = value;
+        }
+
+        /// <summary>破片が当たったときのダメージの出し方。読むたびに今の設定から作る。</summary>
+        /// <exception cref="ArgumentNullException">null を設定した。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Inspector で不正な値 (負の値・有限でない値) にされている。</exception>
+        public DebrisCrushDamage CrushDamage
+        {
+            get => new DebrisCrushDamage(_crushMinSpeed, _crushDamagePerMomentum, _crushMaxDamage);
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+
+                _crushMinSpeed = value.MinSpeed;
+                _crushDamagePerMomentum = value.DamagePerMomentum;
+                _crushMaxDamage = value.MaxDamage;
+            }
         }
 
         /// <summary>部品の耐久値と壊れたかどうか。初めて触れたときに組み立てる。部品の設定が不正なら例外を投げる。</summary>
@@ -156,6 +199,8 @@ namespace Fps.Runtime
         /// <summary>
         /// collider の部品に damage の被害を与える。<see cref="DestructionEnabled"/> が false か <see cref="HasAuthority"/> が false なら何もしない。
         /// この建物の部品でないコライダーなら何もしない。部品が壊れたら見た目を消し、破片を出し、ログを出して <see cref="PiecesDestroyed"/> を呼ぶ。
+        /// <see cref="DebrisCrushEnabled"/> なら、呼ばれた時の <see cref="CombatEvents.CurrentAttribution"/> を壊した者として破片に持たせる
+        /// (撃つ側は <see cref="CombatEvents.Attribute(GameObject, string)"/> で囲んで呼ぶ)。
         /// 部品の設定が不正で組み立てられないときは、エラーを 1 度ログに出して以後は何もしない (撃った側を止めないため)。
         /// </summary>
         public void ApplyStructureHit(Collider collider, Vector3 point, int damage)
@@ -181,14 +226,15 @@ namespace Fps.Runtime
                 return;
             }
 
+            var crush = ResolveCrush();
             foreach (var destroyed in result.Destroyed)
             {
-                BreakPiece(destroyed, point, collapsed: false);
+                BreakPiece(destroyed, point, collapsed: false, crush: crush);
             }
 
             foreach (var collapsed in result.Collapsed)
             {
-                BreakPiece(collapsed, point, collapsed: true);
+                BreakPiece(collapsed, point, collapsed: true, crush: crush);
             }
 
             Debug.Log(FormatDestroyedLog(name, result.Destroyed, result.Collapsed), this);
@@ -226,7 +272,7 @@ namespace Fps.Runtime
                 {
                     broken.Add(i);
                     // 同期では直接壊れたか崩落したかが分からないので、どれも小さな破片にする。
-                    BreakPiece(i, null, collapsed: false);
+                    BreakPiece(i, null, collapsed: false, crush: null);
                 }
                 else
                 {
@@ -399,7 +445,26 @@ namespace Fps.Runtime
             return new StructureLayout(maxHealth, grounded, adjacency);
         }
 
-        private void BreakPiece(int index, Vector3? hitPoint, bool collapsed)
+        private Crush? ResolveCrush()
+        {
+            if (!_debrisCrushEnabled || !_spawnDebris)
+            {
+                return null;
+            }
+
+            try
+            {
+                return new Crush(CrushDamage, CombatEvents.CurrentAttribution);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                // 撃った側を止めないよう、破片を見た目だけにして続ける。
+                Debug.LogError($"{LogTag} DestructibleStructure '{name}' の破片のダメージの設定が不正です: {e.Message}", this);
+                return null;
+            }
+        }
+
+        private void BreakPiece(int index, Vector3? hitPoint, bool collapsed, Crush? crush)
         {
             var piece = _pieces[index];
             if (piece == null)
@@ -418,11 +483,13 @@ namespace Fps.Runtime
             }
 
             var pool = ResolveDebrisPool();
+            var crushDamage = crush.HasValue ? crush.Value.Damage : null;
+            var attribution = crush.HasValue ? crush.Value.Attribution : null;
             if (collapsed)
             {
                 if (size.x > 0f && size.y > 0f && size.z > 0f)
                 {
-                    pool.Spawn(center, rotation, size, material, Vector3.zero);
+                    pool.Spawn(center, rotation, size, material, Vector3.zero, crushDamage, attribution, name);
                 }
 
                 return;
@@ -441,7 +508,7 @@ namespace Fps.Runtime
                 var away = hitPoint.HasValue ? position - hitPoint.Value : offset;
                 var direction = away.sqrMagnitude > 1e-6f ? away.normalized : Vector3.up;
                 var velocity = (direction + Vector3.up * 0.5f).normalized * FragmentSpeed;
-                pool.Spawn(position, UnityEngine.Random.rotation, fragmentSize, material, velocity);
+                pool.Spawn(position, UnityEngine.Random.rotation, fragmentSize, material, velocity, crushDamage, attribution, name);
             }
         }
 
@@ -453,6 +520,19 @@ namespace Fps.Runtime
             }
 
             return _debrisPool;
+        }
+
+        private readonly struct Crush
+        {
+            public DebrisCrushDamage Damage { get; }
+
+            public ShotAttribution? Attribution { get; }
+
+            public Crush(DebrisCrushDamage damage, ShotAttribution? attribution)
+            {
+                Damage = damage;
+                Attribution = attribution;
+            }
         }
     }
 }

@@ -25,6 +25,7 @@ namespace Fps.Runtime
     /// 時間は制限時間があれば残り、無ければ経過を出す。</item>
     /// <item>分隊が脱落するたびに <c>[Mode] eliminated</c>、終わったら <c>[Mode] ended</c> と全分隊の順位 <c>[Mode] placements</c> のログ (<see cref="BattleRoyaleLog"/>) を出す。</item>
     /// <item>ダウン・ルールはシーンの <see cref="GameBootstrap"/> のルールから読む。ダウンを使わないルールでも、このモードはダウンを使う。</item>
+    /// <item><see cref="StartFrom"/> が <see cref="BattleRoyaleStart.Parachute"/> なら、始めたときにプレイヤーを上空に出してパラシュートで降ろす (<c>[Mode] drop</c>)。既定は地面から。</item>
     /// </list>
     /// </remarks>
     public sealed class BattleRoyaleRunner : ModeRunnerBase
@@ -43,6 +44,9 @@ namespace Fps.Runtime
 
         /// <summary>Assets/InputSystem_Actions.inputactions の Interact アクション。</summary>
         public const string InteractActionPath = InputActionPaths.Interact;
+
+        /// <summary><see cref="StartFrom"/> が <see cref="BattleRoyaleStart.Parachute"/> のとき、出現点からどれだけ上に出すか (m) の既定値。</summary>
+        public const float DefaultDropHeight = 60f;
 
         [SerializeField, Min(2), Tooltip("分隊の数。参加者の陣営の ID はこれより小さいこと")]
         private int _squadCount = DefaultSquadCount;
@@ -67,6 +71,12 @@ namespace Fps.Runtime
 
         [SerializeField, Min(0f), Tooltip("bot がダウンした味方と拾える物を探す半径 (m)")]
         private float _botSearchRadius = BattleRoyaleBotPlanner.DefaultSearchRadius;
+
+        [SerializeField, Tooltip("始めたときにプレイヤーを地面から始めるか、上空からパラシュートで降ろすか")]
+        private BattleRoyaleStart _start = BattleRoyaleStart.Ground;
+
+        [SerializeField, Min(0f), Tooltip("パラシュートで降ろすとき、出現点からどれだけ上に出すか (m)")]
+        private float _dropHeight = DefaultDropHeight;
 
         private readonly List<Damageable> _zoneTargets = new List<Damageable>();
         private readonly Dictionary<int, BotErrandKind> _loggedErrands = new Dictionary<int, BotErrandKind>();
@@ -137,6 +147,40 @@ namespace Fps.Runtime
         {
             get => _botSearchRadius;
             set => _botSearchRadius = value;
+        }
+
+        /// <summary>
+        /// 始めたときにプレイヤーをどこから始めさせるか。既定は <see cref="BattleRoyaleStart.Ground"/> (出現点の地面)。
+        /// <see cref="BattleRoyaleStart.Parachute"/> なら、<see cref="ParachuteMovement"/> を持つ参加者 (bot は持たない) を
+        /// 出現点の <see cref="DropHeight"/> 上に出してパラシュートを開かせる。ルールでパラシュートを開けなければその参加者は地面から始める。
+        /// </summary>
+        public BattleRoyaleStart StartFrom
+        {
+            get => _start;
+            set
+            {
+                if (!Enum.IsDefined(typeof(BattleRoyaleStart), value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "value is not a defined BattleRoyaleStart");
+                }
+
+                _start = value;
+            }
+        }
+
+        /// <summary><see cref="StartFrom"/> が <see cref="BattleRoyaleStart.Parachute"/> のとき、出現点からどれだけ上に出すか (m)。</summary>
+        public float DropHeight
+        {
+            get => _dropHeight;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "value must be finite and not negative");
+                }
+
+                _dropHeight = value;
+            }
         }
 
         /// <summary>
@@ -320,6 +364,11 @@ namespace Fps.Runtime
                 {
                     Disarm(member);
                 }
+
+                if (_start == BattleRoyaleStart.Parachute)
+                {
+                    DropByParachute(member);
+                }
             }
 
             StartZone();
@@ -494,6 +543,30 @@ namespace Fps.Runtime
                 {
                     agent.ClearErrand();
                 }
+            }
+        }
+
+        /// <summary>
+        /// member に <see cref="ParachuteMovement"/> があれば、出現した位置の <see cref="DropHeight"/> 上でパラシュートを開かせ、結果を <c>[Mode] drop</c> のログに出す。
+        /// 開けなければ (ルールが Off など) 地面に残して警告を出す。無い参加者 (NavMesh で動く bot) は地面から始める。
+        /// </summary>
+        private void DropByParachute(SideMember member)
+        {
+            var parachute = member.GetComponent<ParachuteMovement>();
+            if (parachute == null || !parachute.IsInitialized)
+            {
+                return;
+            }
+
+            var verdict = parachute.TryOpenAt(member.transform.position + (Vector3.up * _dropHeight));
+            var line = BattleRoyaleLog.Drop(IdOf(member), _dropHeight, verdict);
+            if (verdict == ParachuteOpenVerdict.Open)
+            {
+                Debug.Log(line, member);
+            }
+            else
+            {
+                Debug.LogWarning($"{line} (パラシュートを開けないため、地面から始めます)", member);
             }
         }
 

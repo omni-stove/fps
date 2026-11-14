@@ -12,7 +12,7 @@ namespace Fps.Runtime
         public const string ReasonLanded = "landed";
         public const string ReasonTimeout = "timeout";
 
-        // 受け手が無い相手 (標的ダミー) も、倒れていれば既定の Spec で抜け殻を押す。爆発の向きに倒れるのは誰でも同じにしたいので。
+        // 受け手が無い相手 (標的ダミー) も、倒れていれば調整値の JSON の Spec で抜け殻を押す。爆発の向きに倒れるのは誰でも同じにしたいので。
         public static bool Apply(Damageable target, DamageKind kind, Vector3 direction, float strength)
         {
             if (!TryGetVelocity(target, kind, direction, strength, out var velocity))
@@ -54,7 +54,9 @@ namespace Fps.Runtime
             }
 
             var receiver = target.GetComponent<IKnockbackReceiver>();
-            var spec = receiver != null && receiver.KnockbackSpec != null ? receiver.KnockbackSpec : KnockbackSpec.Default;
+            var spec = receiver != null && receiver.KnockbackSpec != null ? receiver.KnockbackSpec : KitTuning.Knockback;
+
+            // 受け手の無い相手はプレイヤーでも敵でもないので、どちらの重さでもなく、重さの係数が効かない 1 にする。
             var weight = receiver != null ? receiver.KnockbackWeight : KnockbackSpec.DefaultWeight;
             var found = spec.TryGetVelocity(kind, direction.ToNumerics(), strength, weight, out var numerics);
             velocity = numerics.ToUnity();

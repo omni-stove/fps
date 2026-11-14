@@ -379,6 +379,28 @@ public sealed class MyPauseState : IPauseState
 
 `GameUi.Menu` (`IMenuNavigator`) は、既定のメインメニューのシーンを使わないときに差し替える。`ReturnToMenu` はメニューのシーンを読めなければ `false` を返して今のシーンに留まり、`ReturningToMenu` はシーンをまたいで残るもの (NetworkManager など) を片付けるために、メニューのシーンを読む直前に呼ぶ。
 
+### フォトモード
+
+既定の HUD のポーズ画面の「フォトモード」で入る (`PhotoModeView`、HUD の `PhotoMode`)。時間はポーズ画面の扱いのまま (オフラインは止まり、オンラインは進む) で、HUD を隠し、自分のカメラだけをプレイヤーの目から `PhotoModeSpec.Radius` の中で自由に動かす。
+
+| 操作 | アクション |
+| --- | --- |
+| 動かす・向きを変える | Move・Look |
+| 撮る | Attack |
+| 寄る・引く (視野角) | Next・Previous |
+| 左・右に傾ける | Cover・Interact |
+| 視野角と傾きを戻す | Reload |
+| 抜ける (ポーズも閉じる) | Pause |
+
+撮った画像は既定で `Application.persistentDataPath/Photos/` に PNG で出し、`[PhotoMode] saved <パス>` のログを出す。フィルターや枠を付ける・保存先を変えるときは `IPhotoCapture` を実装して `PhotoModeView.PhotoCapture` に入れる。範囲・速さ・視野角・傾きの幅は `PhotoModeSpec` を作って `PhotoModeView.Spec` に入れる。
+
+```csharp
+var photo = hud.PhotoMode;
+photo.Spec = new PhotoModeSpec(radius: 12f, moveSpeed: 4f, minFieldOfView: 15f, maxFieldOfView: 90f,
+    fieldOfViewStep: 5f, maxRoll: 30f, rollSpeed: 30f, startHeight: 0.6f, startBackDistance: 2.5f);
+photo.PhotoCapture = new MyFramedCapture();
+```
+
 ## 言語を足す・文を変える
 
 画面に出す文は、言語ごとの表 (キーから文への JSON) から引く。表は Resources の次の場所から読み、前から順に重ねて、同じキーは後のものが勝つ。

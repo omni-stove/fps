@@ -83,6 +83,7 @@
   "pause.title": "Paused",
   "pause.resume": "Resume",
   "pause.settings": "Settings",
+  "pause.photoMode": "Photo mode",
   "pause.returnToMenu": "Return to menu",
   "pause.keepRunningNote": "The match does not stop while online",
   "actionDebug.label.sprint": "Sprint",

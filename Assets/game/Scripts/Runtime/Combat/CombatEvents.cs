@@ -102,6 +102,17 @@ namespace Fps.Runtime
             return new AttributionScope(previous);
         }
 
+        /// <summary>
+        /// <see cref="CurrentAttribution"/> で前に読んだ帰属を、戻り値を Dispose するまでの間の帰属にする。
+        /// 倒れるのが命中より後になるもの (崩れ落ちる破片など) が、壊した時の帰属を持ち越すのに使う。null なら帰属を外す。
+        /// </summary>
+        public static AttributionScope Attribute(ShotAttribution? attribution)
+        {
+            var previous = _attribution;
+            _attribution = attribution;
+            return new AttributionScope(previous);
+        }
+
         public static void RaiseShotFired(GameObject shooter, Vector3 origin, Vector3 direction, string weaponId)
         {
             Invoke(ShotFired, new ShotFiredInfo(shooter, origin, direction, weaponId));

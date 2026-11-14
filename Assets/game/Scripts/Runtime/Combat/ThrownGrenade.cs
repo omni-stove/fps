@@ -205,7 +205,12 @@ namespace Fps.Runtime
                 }
             }
 
-            var structures = StructureDamage.ApplyAround(center, _structureDamage, _explosion.Radius);
+            int structures;
+            using (CombatEvents.Attribute(_thrower, GrenadeThrower.WeaponId))
+            {
+                structures = StructureDamage.ApplyAround(center, _structureDamage, _explosion.Radius);
+            }
+
             var result = new GrenadeExplosion(center, damaged, killed, structures);
             Debug.Log(FormatLog(result), this);
 

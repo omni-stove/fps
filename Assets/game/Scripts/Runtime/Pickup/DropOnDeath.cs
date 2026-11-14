@@ -40,6 +40,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("2 つ以上落とすときに並べる円の半径 (m)")]
         private float _spreadRadius = DefaultSpreadRadius;
 
+        [SerializeField, Tooltip("落とした物の見た目 (Pickup.VisualPrefab)。空なら中身の種類で色を分けた仮の箱")]
+        private GameObject _visualPrefab;
+
         private readonly List<PickupContents> _decided = new List<PickupContents>();
         private Damageable _damageable;
 
@@ -95,6 +98,13 @@ namespace Fps.Runtime
         {
             get => _spreadRadius;
             set => _spreadRadius = Mathf.Max(0f, value);
+        }
+
+        /// <summary>落とした物の見た目 (<see cref="Pickup.VisualPrefab"/>)。null なら仮の箱。次に落とす物から使う。</summary>
+        public GameObject VisualPrefab
+        {
+            get => _visualPrefab;
+            set => _visualPrefab = value;
         }
 
         /// <summary>購読している体力。未購読なら null。</summary>
@@ -175,7 +185,7 @@ namespace Fps.Runtime
                 Pickup pickup;
                 try
                 {
-                    pickup = Pickup.Create(valid[i], position, _collectMode);
+                    pickup = Pickup.Create(valid[i], position, _collectMode, visualPrefab: _visualPrefab);
                 }
                 catch (ArgumentException e)
                 {

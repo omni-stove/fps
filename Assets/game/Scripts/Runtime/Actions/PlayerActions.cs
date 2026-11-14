@@ -8,7 +8,7 @@ namespace Fps.Runtime
     /// <summary>
     /// プレイヤーに TPS のアクションを付け、ルールでどれを有効にするかを決める。アクションごとの取り付けは <see cref="IPlayerActionInstaller"/> で、
     /// 組み込みのカバー (<see cref="CoverActionInstaller"/>)・ブラインドファイア (<see cref="BlindFireActionInstaller"/>)・
-    /// 回避と乗り越え (<see cref="MoveActionInstaller"/>)・伏せ (<see cref="ProneActionInstaller"/>)・グレネード (<see cref="GrenadeActionInstaller"/>) に、
+    /// 回避・乗り越え・崖のぼり (<see cref="MoveActionInstaller"/>)・伏せ (<see cref="ProneActionInstaller"/>)・時間の速さ (<see cref="SlowMotionActionInstaller"/>)・グレネード (<see cref="GrenadeActionInstaller"/>) に、
     /// <see cref="Register"/> で足したものを加えて <see cref="IPlayerActionInstaller.Order"/> の順に呼ぶ。
     /// オフラインの <see cref="GameBootstrap"/> と <see cref="CampaignRunner"/> がルールを読んだ後に呼ぶ。
     /// </summary>
@@ -22,6 +22,7 @@ namespace Fps.Runtime
             new BlindFireActionInstaller(),
             new MoveActionInstaller(),
             new ProneActionInstaller(),
+            new SlowMotionActionInstaller(),
             new GrenadeActionInstaller(),
         };
 

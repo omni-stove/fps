@@ -15,7 +15,7 @@ namespace Fps.Runtime
     /// (Dodge と Prone は無くても警告だけで、回避・伏せを入力からできなくなる)。
     /// 乗り物の座席などが <see cref="Handoff"/> で操作を引き取っている間は、入力を読まず何も押していないものとして動く。
     /// 姿勢 (.Stance.cs)・伏せ (.Prone.cs)・ダッシュ (.Sprint.cs)・着地と落下ダメージ (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs)・
-    /// 移動の横取り (.MovementOverride.cs) は、<see cref="Tick"/> から呼ぶメソッドとして別のファイルに置く。
+    /// 崖のぼり (.Mantle.cs)・移動の横取り (.MovementOverride.cs) は、<see cref="Tick"/> から呼ぶメソッドとして別のファイルに置く。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
@@ -184,6 +184,7 @@ namespace Fps.Runtime
             CancelDodge();
             CancelVault();
             CancelDive();
+            CancelMantle();
             EndMovementOverride();
         }
 
@@ -282,6 +283,7 @@ namespace Fps.Runtime
         /// 向きは <see cref="FirstPersonLook"/> 本体 (この GameObject) の yaw を使う。
         /// <see cref="MoveFilter"/> があれば、姿勢を決める前に入力を書き換えさせる。
         /// <see cref="VaultRule"/> が On なら、Jump で前方の低い障害物を乗り越える (乗り越えられなければふつうにジャンプする)。
+        /// <see cref="MantleRule"/> が On なら、乗り越えなかった Jump で、それより高い段によじ登る (よじ登れなければふつうにジャンプする)。
         /// 登録した <see cref="IMovementOverride"/> のどれかが有効なら、姿勢と移動はそれに任せる (<see cref="ActiveMovementOverride"/>)。
         /// </summary>
         /// <param name="crouch">しゃがみたいか (<see cref="UpdateCrouch"/> の結果)。false でも頭上が塞がっていればしゃがんだまま。</param>
@@ -301,6 +303,7 @@ namespace Fps.Runtime
             FilterInputForDodge(ref sprint, ref crouch, ref jumpPressed);
             FilterInputForVault(ref sprint, ref crouch, ref jumpPressed);
             FilterInputForProne(ref sprint, ref jumpPressed);
+            FilterInputForMantle(ref sprint, ref crouch, ref jumpPressed);
 
             Vector3 displacement;
             var movementOverride = SelectMovementOverride();
@@ -335,7 +338,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 乗り越え・回避・飛び込みの最中なら、<see cref="PlayerMotor.Step"/> の代わりに動かす変位を displacement に入れて true を返す。
+        /// 乗り越え・崖のぼり・回避・飛び込みの最中なら、<see cref="PlayerMotor.Step"/> の代わりに動かす変位を displacement に入れて true を返す。
         /// どれも動いていなければ false (displacement は 0)。
         /// </summary>
         private bool TryOverrideMove(Vector2 move, bool jumpPressed, float deltaSeconds, out Vector3 displacement)
@@ -345,6 +348,13 @@ namespace Fps.Runtime
 
             // 乗り越えは足場の縁までの決まった軌道で、途中で回避に切り替えると縁にめり込むので先に聞く
             TryOverrideMoveForVault(move, jumpPressed, deltaSeconds, ref overridden, ref displacement);
+
+            // 同じ Jump で乗り越えが始まらなかったときだけよじ登る。低い障害物は今までどおり乗り越えになる。
+            if (!overridden)
+            {
+                TryOverrideMoveForMantle(jumpPressed, deltaSeconds, ref overridden, ref displacement);
+            }
+
             if (!overridden)
             {
                 TryOverrideMoveForDodge(move, jumpPressed, deltaSeconds, ref overridden, ref displacement);
@@ -509,6 +519,7 @@ namespace Fps.Runtime
             CancelDodge();
             CancelVault();
             CancelDive();
+            CancelMantle();
             EndMovementOverride();
             _motor = new PlayerMotor(spec);
             _dodgeMotion = new DodgeMotion(spec);

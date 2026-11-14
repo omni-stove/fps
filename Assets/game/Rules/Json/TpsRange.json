@@ -21,7 +21,8 @@
     "vault": "On",
     "grenade": "On",
     "grenadeCount": 3,
-    "prone": "On"
+    "prone": "On",
+    "mantle": "On"
   },
   "spawnProtectionSeconds": 0,
   "fallDamage": "Off",

@@ -111,6 +111,7 @@ namespace Fps.Runtime
             CancelDodge();
             CancelVault();
             CancelDive();
+            CancelMantle();
         }
 
         private void OnHealthReset(Health _)
@@ -119,6 +120,7 @@ namespace Fps.Runtime
             CancelDodge();
             CancelVault();
             CancelDive();
+            CancelMantle();
 
             // 戻った位置で、倒れる前の待ち時間に縛られずすぐ回避できるようにする。
             _dodgeMotion?.Reset();

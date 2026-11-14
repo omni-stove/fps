@@ -276,6 +276,17 @@ namespace Fps.Tests.EditMode
 
             PlayerActions.Attach(_player, GameRules.Default);
             Assert.That(mover.ProneRule, Is.EqualTo(Prone.Off));
+        public void MantleFollowsTheRulesOnThePlayerController()
+        {
+            var mover = _player.AddComponent<PlayerController>();
+            Assert.That(mover.MantleRule, Is.EqualTo(Mantle.Off));
+
+            PlayerActions.Attach(_player, GameRules.Default.WithActions(ActionRules.Default.WithMantle(Mantle.On)));
+            Assert.That(mover.MantleRule, Is.EqualTo(Mantle.On));
+            Assert.That(mover.VaultRule, Is.EqualTo(Vault.Off), "mantle does not turn the vault on");
+
+            PlayerActions.Attach(_player, GameRules.Default);
+            Assert.That(mover.MantleRule, Is.EqualTo(Mantle.Off));
         }
 
         [Test]

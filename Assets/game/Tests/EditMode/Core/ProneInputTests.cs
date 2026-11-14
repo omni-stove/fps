@@ -10,6 +10,9 @@ namespace Fps.Core.Tests
         private ProneInput _prone;
         private List<string> _logs;
 
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Logs(params string[] expected) => expected;
+
         [SetUp]
         public void SetUp()
         {
@@ -33,7 +36,7 @@ namespace Fps.Core.Tests
             Assert.That(Update(), Is.True, "letting go keeps lying down");
             Assert.That(Update(prone: true), Is.False);
 
-            Assert.That(_logs, Is.EqualTo(new[] { "[Player] prone=on reason=button", "[Player] prone=off reason=button" }));
+            Assert.That(_logs, Is.EqualTo(Logs("[Player] prone=on reason=button", "[Player] prone=off reason=button")));
         }
 
         [Test]
@@ -58,7 +61,7 @@ namespace Fps.Core.Tests
             Assert.That(_prone.Update(true, true, false, false, true, out var dive), Is.True);
 
             Assert.That(dive, Is.True);
-            Assert.That(_logs, Is.EqualTo(new[] { "[Player] prone=on reason=dive" }));
+            Assert.That(_logs, Is.EqualTo(Logs("[Player] prone=on reason=dive")));
         }
 
         [Test]

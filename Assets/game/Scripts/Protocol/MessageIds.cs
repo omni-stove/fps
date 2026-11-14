@@ -12,6 +12,8 @@ namespace Fps.Protocol
         public const ushort ServerDisconnecting = 4;
         public const ushort NetStatsProbe = 5;
         public const ushort NetStatsEcho = 6;
+        public const ushort AntiCheatToServer = 7;
+        public const ushort AntiCheatToClient = 8;
 
         // クライアントからの入力と要求 (16-47)
         public const ushort Input = 16;

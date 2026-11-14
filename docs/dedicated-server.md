@@ -297,7 +297,7 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠、
 上の運用 (版の確認・drain・JSON のイベント)、EOS のロビーへの登録 (`-register-lobby`) と、試合のルール (TDM・Domination・ダウンと蘇生・印・
 出現と出現直後の無敵・ロードアウトの選択・放置で切る)、移動、戦闘 (射撃・巻き戻しの当たり判定・ダメージ・武器・グレネード・壊せる建物)、Bot を行う。
-EAC はまだ無い。
+EAC は `-transport eos` と `-eac` で動かす ([anti-cheat.md](anti-cheat.md))。
 
 ```sh
 make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
@@ -397,7 +397,7 @@ make server-dotnet
   batchmode では今と同じ終了コード (切断 0・つながらない 5) で終わる。
 - `-transport eos -eos-server <サーバーの ID>` で .NET の EOS のサーバーへ P2P でつなぐ (EOS のプラグインと Netcode が入ったビルドだけ)。
   認証情報が欠けていれば `[Net] EOS credentials missing, using UDP` を出して `-address` へ UDP でつなぐ。
-  EAC はまだ v2 の経路に無いので `-noeac` を付ける。
+  エディタの外では EAC が既定で有効なので、EAC を通さずにつなぐなら `-noeac` を付ける ([anti-cheat.md](anti-cheat.md))。
 
   ```sh
   <ビルドしたゲーム> -mode client -netstack v2 -transport eos -eos-server <サーバーの ID> -noeac

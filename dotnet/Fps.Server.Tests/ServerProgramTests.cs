@@ -209,7 +209,18 @@ namespace Fps.Server.Tests
             TestMaps.Write(_data.Path, "NetTest", points: TestRules.Points());
 
             Assert.That(RunWithServerModules(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
-            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 5 module(s)"));
+            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 6 module(s)"));
+            Assert.That(_output.ToString(), Does.Contain("[AntiCheat] disabled on the dedicated server by default"));
+            Assert.That(_output.ToString(), Does.Contain("[AntiCheat] session not started (disabled)"));
+        }
+
+        [Test]
+        public void EacWithoutTheEosTransportIsAUsageError()
+        {
+            var code = RunWithServerModules("-eac");
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitUsage));
+            Assert.That(_error.ToString(), Does.Contain("-eac needs -transport eos"));
         }
 
         [Test]
@@ -237,6 +248,14 @@ namespace Fps.Server.Tests
             Assert.That(log, Does.Contain("[Net] missing EOS settings: EOS_PRODUCT_ID"));
             Assert.That(log, Does.Contain("[Net] server listening on 0.0.0.0:" + _port));
             Assert.That(log, Does.Contain("\"transport\":\"udp\""));
+        }
+
+        [Test]
+        public void EosWithAntiCheatButWithoutCredentialsDoesNotFallBackToUdp()
+        {
+            Assert.That(Run("-transport", "eos", "-eac"), Is.EqualTo(ServerProgram.ExitMisconfigured));
+            Assert.That(_error.ToString(), Does.Contain("[AntiCheat] -eac needs EOS credentials; missing EOS_PRODUCT_ID"));
+            Assert.That(_output.ToString(), Does.Not.Contain("listening"));
         }
 
         [Test]

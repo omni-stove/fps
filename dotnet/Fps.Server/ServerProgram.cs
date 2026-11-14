@@ -64,6 +64,7 @@ namespace Fps.Server
 
             launch = launch.WithOptions(plan.Options);
             output.WriteLine(LogTag + " " + launch.Options);
+            output.WriteLine(launch.AntiCheat.Describe());
             output.WriteLine(EosSdkBuild.LogLine(AppContext.BaseDirectory));
 
             if (!ServerMapData.TryLoad(launch.Map, runtime.MapSearchRoots, out var map, out problem))
@@ -153,6 +154,15 @@ namespace Fps.Server
             }
 
             plan = NetTransportPlan.Decide(launch.Options, credentials, missing);
+            if (plan.FellBackToUdp && launch.AntiCheat.Enabled)
+            {
+                // EAC はクライアントを ProductUserId で登録するので、UDP に切り替えて守られないまま待ち受けない
+                error = AntiCheatSettings.LogTag + " " + AntiCheatSettings.EacFlag + " needs EOS credentials; missing " + string.Join(", ", plan.MissingCredentials)
+                    + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")";
+                plan = null;
+                return false;
+            }
+
             if (plan.FellBackToUdp)
             {
                 runtime.Output.WriteLine(NetTransportPlan.CredentialsMissingLog);

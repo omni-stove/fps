@@ -16,6 +16,7 @@
     <InternalsVisibleTo Include="fps-server" />
     <InternalsVisibleTo Include="Fps.Server.Eos.Tests" />
     <InternalsVisibleTo Include="Fps.Server.Tests" />
+    <InternalsVisibleTo Include="Fps.NetV2.Client.Tests" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Fps.Core/Fps.Core.csproj" />

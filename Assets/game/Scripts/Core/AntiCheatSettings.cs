@@ -5,8 +5,8 @@ namespace Fps.Core
 {
     /// <summary>
     /// Easy Anti-Cheat (EAC) を使うかどうかの決定。コマンドライン引数・エディタかどうか・ネットワークの起動設定から決める。
-    /// EAC はホスト型の P2P (Anti-Cheat Client インターフェースの PeerToPeer モード) でだけ使い、
-    /// ピアを EOS の ProductUserId で登録するので EOS の transport が要る。
+    /// EAC はホスト型の P2P (Anti-Cheat Client インターフェースの PeerToPeer モード) と、.NET の専用サーバー
+    /// (Anti-Cheat Server インターフェース) で使い、相手を EOS の ProductUserId で登録するので EOS の transport が要る。
     /// </summary>
     public sealed class AntiCheatSettings
     {
@@ -18,6 +18,11 @@ namespace Fps.Core
 
         /// <summary>ログの接頭辞。</summary>
         public const string LogTag = "[AntiCheat]";
+
+        /// <summary>
+        /// EAC で切るときの <see cref="DisconnectNotice.RejectedReason"/> の訳。サーバーとクライアントのどちらが先に切っても同じ文を出すため 1 つにする。
+        /// </summary>
+        public const string RejectedDetail = "anti-cheat";
 
         private AntiCheatSettings(bool enabled, string reason)
         {
@@ -104,6 +109,57 @@ namespace Fps.Core
                 settings = new AntiCheatSettings(true, "enabled (peer-to-peer, " + NetLaunchOptions.ModeName(options.Mode) + ")");
             }
 
+            return true;
+        }
+
+        /// <summary>
+        /// .NET の専用サーバーで EAC を使うかを決める。既定で無効にするのは、EAC を通さないクライアント (<see cref="NoEacFlag"/>) が
+        /// 専用サーバーにつなげる今の運用を、ポータルでクライアントとサーバーの保護を用意するまで変えないため。
+        /// </summary>
+        public static bool TryResolveDedicatedServer(
+            IReadOnlyList<string> args,
+            NetLaunchOptions options,
+            out AntiCheatSettings settings,
+            out string error)
+        {
+            if (args == null)
+            {
+                throw new ArgumentNullException(nameof(args));
+            }
+
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
+
+            settings = null;
+            var noEac = HasFlag(args, NoEacFlag);
+            var eac = HasFlag(args, EacFlag);
+            if (noEac && eac)
+            {
+                error = NoEacFlag + " and " + EacFlag + " cannot be given together";
+                return false;
+            }
+
+            if (!eac)
+            {
+                error = null;
+                settings = Disabled(noEac
+                    ? "disabled by " + NoEacFlag
+                    : "disabled on the dedicated server by default; pass " + EacFlag + " with " + NetLaunchOptions.TransportFlag + " "
+                        + NetLaunchOptions.TransportName(NetTransportKind.Eos) + " to protect the match");
+                return true;
+            }
+
+            if (options.Transport != NetTransportKind.Eos)
+            {
+                error = EacFlag + " needs " + NetLaunchOptions.TransportFlag + " " + NetLaunchOptions.TransportName(NetTransportKind.Eos)
+                    + ": clients are registered by EOS product user id";
+                return false;
+            }
+
+            error = null;
+            settings = new AntiCheatSettings(true, "enabled (client-server, dedicated server)");
             return true;
         }
 

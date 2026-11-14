@@ -23,8 +23,9 @@ namespace Fps.Server
         /// <summary>Unity の NetMatch.prefab がこのルールに配線されているため。</summary>
         public const string DefaultRules = "TeamDeathmatch";
 
-        private ServerLaunch(NetLaunchOptions options, string version, int drainTimeoutSeconds, string rules)
+        private ServerLaunch(NetLaunchOptions options, string version, int drainTimeoutSeconds, string rules, AntiCheatSettings antiCheat)
         {
+            AntiCheat = antiCheat;
             Options = options;
             Version = version;
             DrainTimeoutSeconds = drainTimeoutSeconds;
@@ -43,11 +44,13 @@ namespace Fps.Server
 
         public string Rules { get; }
 
+        public AntiCheatSettings AntiCheat { get; }
+
         /// <summary>EOS の認証情報が無くて UDP に切り替えたときなど、実際に使う設定だけを差し替える。</summary>
         public ServerLaunch WithOptions(NetLaunchOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
-            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules);
+            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat);
         }
 
         public static bool TryParse(
@@ -98,7 +101,12 @@ namespace Fps.Server
                 return false;
             }
 
-            launch = new ServerLaunch(options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules);
+            if (!AntiCheatSettings.TryResolveDedicatedServer(args, options, out var antiCheat, out error))
+            {
+                return false;
+            }
+
+            launch = new ServerLaunch(options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules, antiCheat);
             return true;
         }
 

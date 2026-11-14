@@ -5,6 +5,7 @@
         "Fps.Core",
         "Fps.Net",
         "Fps.NetV2",
+        "Fps.NetV2.Client",
         "Fps.Protocol",
         "Unity.Netcode.Runtime",
         "com.Epic.OnlineServices",

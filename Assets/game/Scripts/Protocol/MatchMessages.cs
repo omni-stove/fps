@@ -12,6 +12,7 @@ namespace Fps.Protocol
             {
                 new ConnectRequestMessage(),
                 new NetStatsProbeMessage(),
+                new AntiCheatToServerMessage(),
                 new InputMessage(),
                 new FireRequestMessage(),
                 new WeaponActionRequestMessage(),
@@ -32,6 +33,7 @@ namespace Fps.Protocol
                 new ConnectRejectedMessage(),
                 new ServerDisconnectingMessage(),
                 new NetStatsEchoMessage(),
+                new AntiCheatToClientMessage(),
                 new SnapshotMessage(),
                 new StructureStateMessage(),
                 new ShotMessage(),

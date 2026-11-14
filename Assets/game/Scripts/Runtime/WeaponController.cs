@@ -219,7 +219,7 @@ namespace Fps.Runtime
         /// </summary>
         public Func<bool> FireBlocker { get; set; }
 
-        /// <summary><see cref="FireBlocker"/> が今の射撃を止めているか。</summary>
+        /// <summary><see cref="FireBlocker"/> か、登録された modifier (<see cref="IsFireBlockedByModifier"/>) が今の射撃を止めているか。</summary>
         public bool IsFireBlocked => (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
 
         /// <summary>
@@ -748,7 +748,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今の武器の <see cref="Weapon.TryStartReload"/> を呼ぶ。補充は <see cref="Tick"/> で時間が経ったときに行う。
-        /// 始まったら <see cref="ReloadStarted"/> を呼んで true。
+        /// 始まったら <see cref="ReloadStarted"/> を呼んで true。modifier がリロードを止めている間は始めず false。
         /// </summary>
         public bool StartReload()
         {
@@ -819,7 +819,7 @@ namespace Fps.Runtime
             return SpreadPattern.Direction(direction.ToNumerics(), cone, PlayerId, shotIndex).ToUnity();
         }
 
-        /// <summary>今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読む。</summary>
+        /// <summary>今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読み、登録された modifier の倍率を掛ける。</summary>
         public float CurrentConeDegrees(WeaponSpec spec)
         {
             if (spec == null)

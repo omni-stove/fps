@@ -30,7 +30,6 @@ namespace Fps.Core
             return $"{LogTag} miss id={attackerId}";
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">reason が None か、定義されていない値。</exception>
         public static string Refused(string attackerId, MeleeRefusal reason)
         {
             if (reason == MeleeRefusal.None || !Enum.IsDefined(typeof(MeleeRefusal), reason))

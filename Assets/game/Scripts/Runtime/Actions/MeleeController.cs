@@ -257,7 +257,6 @@ namespace Fps.Runtime
             return true;
         }
 
-        // 当たりを判定した Tick だけ true (当たったかどうかは問わない)。
         public bool Tick(float deltaSeconds)
         {
             var swing = EnsureSwing();

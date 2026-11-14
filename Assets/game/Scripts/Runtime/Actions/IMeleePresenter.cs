@@ -9,7 +9,6 @@ namespace Fps.Runtime
     {
         void OnSwingStarted(GameObject attacker, MeleeSpec spec);
 
-        // direction は水平で長さ 1 (MeleeJudge.HitDirection)。
         void OnHit(GameObject attacker, Damageable target, Vector3 point, Vector3 direction, int damage);
 
         void OnMissed(GameObject attacker);

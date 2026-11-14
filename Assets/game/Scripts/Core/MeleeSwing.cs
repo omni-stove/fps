@@ -33,7 +33,6 @@ namespace Fps.Core
 
         public bool CanStart => _swingSpec == null && _cooldownRemaining <= 0f;
 
-        // 今の振りの値。振っていなければ次に振るときの値。
         public MeleeSpec CurrentSpec => _swingSpec ?? _spec;
 
         public bool TryStart()

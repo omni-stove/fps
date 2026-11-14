@@ -18,7 +18,6 @@ namespace Fps.Core
 
         public bool Enabled { get; set; } = true;
 
-        // 直前の TryOverride で、目標が届く距離にいて振りたかったか。待ち時間で振れないときも true。
         public bool WantsSwing { get; private set; }
 
         public bool TryOverride(EnemyBrain brain, float deltaSeconds, EnemyPerception perception, EnemyDecision planned, out EnemyDecision decision)

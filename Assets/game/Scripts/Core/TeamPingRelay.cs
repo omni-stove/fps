@@ -89,7 +89,7 @@ namespace Fps.Core
             {
                 foreach (var marker in pair.Value.Board.Markers)
                 {
-                    if (marker.Kind == PingKind.Enemy && marker.IsTracking && pair.Value.SharedIds.TryGetValue(marker.Id, out var sharedId))
+                    if (marker.Kind == PingKind.Enemy && pair.Value.SharedIds.TryGetValue(marker.Id, out var sharedId))
                     {
                         into.Add(ToShared(pair.Key, pair.Value.Team, sharedId, marker));
                     }

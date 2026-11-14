@@ -272,7 +272,7 @@ namespace Fps.Net
                 _playerById.TryGetValue(targetId, out var target);
                 var alive = target != null && _session.HasPlayer(targetId) && _session.IsAlive(targetId);
                 _playerById.TryGetValue(ping.PingerId, out var pinger);
-                var visible = alive && pinger != null && HasPingLineOfSight(pinger.EyePosition(), target, maxDistance);
+                var visible = alive && ping.Marker.IsTracking && pinger != null && HasPingLineOfSight(pinger.EyePosition(), target, maxDistance);
                 var position = visible ? NetMath.ToNumerics(PingAimPoint(target)) : System.Numerics.Vector3.Zero;
                 _pingRelay.Track(ping.Id, alive, visible, position, _pingChanges);
             }

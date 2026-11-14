@@ -135,7 +135,7 @@ namespace Fps.Core.Tests
             Assert.That(_changes[0].Kind, Is.EqualTo(SharedPingChangeKind.Lost));
             Assert.That(_changes[0].Ping.Marker.Position, Is.EqualTo(_there));
             relay.CollectTracking(tracking);
-            Assert.That(tracking, Is.Empty);
+            Assert.That(tracking.Count, Is.EqualTo(1));
 
             _changes.Clear();
             relay.Track(ping.Id, false, false, Vector3.Zero, _changes);

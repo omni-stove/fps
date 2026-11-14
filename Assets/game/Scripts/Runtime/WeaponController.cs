@@ -222,6 +222,15 @@ namespace Fps.Runtime
         /// <summary><see cref="FireBlocker"/> が今の射撃を止めているか。</summary>
         public bool IsFireBlocked => FireBlocker != null && FireBlocker();
 
+        /// <summary>
+        /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous を読まない (武器の時間は進める)。
+        /// null なら手放さない。オフラインは <see cref="GameBootstrap"/> が <see cref="PlayerController.Handoff"/> と同じものを配線する。
+        /// </summary>
+        public ControlHandoff Handoff { get; set; }
+
+        /// <summary><see cref="Handoff"/> を誰かが引き取っていて、入力を読まないか。</summary>
+        public bool IsInputHandedOff => Handoff != null && Handoff.IsHandedOff;
+
         /// <summary>今持っている武器の距離減衰。未初期化なら null。</summary>
         public DamageFalloff Falloff => Weapon?.Spec.Falloff;
 
@@ -265,7 +274,7 @@ namespace Fps.Runtime
 
         private void Update()
         {
-            if (_unarmed)
+            if (_unarmed || IsInputHandedOff)
             {
                 Tick(Time.deltaTime);
                 return;

@@ -18,6 +18,9 @@ namespace Fps.Runtime
     {
         public const string ObjectName = "Grenade";
 
+        /// <summary>差し替えた見た目のプレハブを置く子の名前。</summary>
+        public const string VisualName = "Visual";
+
         /// <summary>グレネードの球の半径 (m)。</summary>
         public const float BodyRadius = 0.08f;
 
@@ -81,14 +84,42 @@ namespace Fps.Runtime
             ExplosionDamage explosion,
             int structureDamage)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            return Spawn(thrower, position, velocity, fuseSeconds, explosion, structureDamage, null);
+        }
+
+        /// <summary>
+        /// <see cref="Spawn(GameObject, Vector3, Vector3, float, ExplosionDamage, int)"/> と同じく投げ、見た目を visualPrefab にする。
+        /// 跳ね方と当たり判定は仮の球と同じ半径 <see cref="BodyRadius"/> の球のままにし、プレハブは当たり判定を外して子に置く。
+        /// </summary>
+        /// <param name="visualPrefab">グレネードの見た目。中心が原点。null なら仮の球を作る。</param>
+        public static ThrownGrenade Spawn(
+            GameObject thrower,
+            Vector3 position,
+            Vector3 velocity,
+            float fuseSeconds,
+            ExplosionDamage explosion,
+            int structureDamage,
+            GameObject visualPrefab)
+        {
+            var go = visualPrefab != null ? new GameObject(ObjectName) : GameObject.CreatePrimitive(PrimitiveType.Sphere);
             try
             {
                 go.name = ObjectName;
                 go.transform.SetPositionAndRotation(position, Quaternion.identity);
-                go.transform.localScale = Vector3.one * (BodyRadius * 2f);
+                SphereCollider collider;
+                if (visualPrefab != null)
+                {
+                    // 根を拡大するとプレハブの大きさまで変わるので、根は等倍のまま球の半径で合わせる。
+                    collider = go.AddComponent<SphereCollider>();
+                    collider.radius = BodyRadius;
+                    VisualPrefab.Instantiate(visualPrefab, go.transform, VisualName, stripColliders: true);
+                }
+                else
+                {
+                    go.transform.localScale = Vector3.one * (BodyRadius * 2f);
+                    collider = go.GetComponent<SphereCollider>();
+                }
 
-                var collider = go.GetComponent<SphereCollider>();
                 collider.sharedMaterial = SharedPhysicsMaterial();
                 if (thrower != null)
                 {

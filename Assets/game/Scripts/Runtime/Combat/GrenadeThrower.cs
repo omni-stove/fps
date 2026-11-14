@@ -57,6 +57,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("爆発の中心で建造物に与える被害")]
         private int _structureDamageAtCenter = GrenadeSpec.DefaultStructureDamageAtCenter;
 
+        [SerializeField, Tooltip("投げたグレネードの見た目。中心が原点。当たり判定は外し、跳ね方は仮の球のまま。空なら仮の球を作る")]
+        private GameObject _grenadePrefab;
+
         // 投げるたびに検証し直さないよう持っておき、OnValidate で捨てる。
         private GrenadeSpec _spec;
         private GrenadePouch _pouch = new GrenadePouch(0);
@@ -99,6 +102,13 @@ namespace Fps.Runtime
         /// 値が不正なら ArgumentOutOfRangeException。
         /// </summary>
         public GrenadeSpec Spec => _spec ?? (_spec = CreateSpec());
+
+        /// <summary>投げたグレネードの見た目 (<see cref="ThrownGrenade.Spawn(GameObject, Vector3, Vector3, float, ExplosionDamage, int, GameObject)"/>)。null なら仮の球。</summary>
+        public GameObject GrenadePrefab
+        {
+            get => _grenadePrefab;
+            set => _grenadePrefab = value;
+        }
 
         /// <summary>シリアライズされた値から <see cref="GrenadeSpec"/> を作る。値が不正なら ArgumentOutOfRangeException。</summary>
         public GrenadeSpec CreateSpec()
@@ -255,7 +265,8 @@ namespace Fps.Runtime
 
             _throwRemaining = spec.ThrowSeconds;
             var velocity = (direction * spec.ThrowSpeed) + (Vector3.up * spec.ThrowLiftSpeed);
-            var grenade = ThrownGrenade.Spawn(gameObject, position, velocity, spec.FuseSeconds, spec.Explosion, spec.StructureDamageAtCenter);
+            var grenade = ThrownGrenade.Spawn(
+                gameObject, position, velocity, spec.FuseSeconds, spec.Explosion, spec.StructureDamageAtCenter, _grenadePrefab);
             Debug.Log($"{LogTag} thrown remaining={_pouch.Remaining}", this);
             Thrown?.Invoke(grenade);
             return true;

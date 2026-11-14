@@ -360,5 +360,59 @@ namespace Fps.Net.Tests
         {
             Assert.That(NetPlayer.ShouldShowDownedMarker(false, true, Team.Alpha, null), Is.False);
         }
+
+        [Test]
+        public void MarkerUsesThePrefabWithoutColliders()
+        {
+            var prefab = new GameObject("Cross");
+            var model = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            model.name = "Model";
+            model.transform.SetParent(prefab.transform, false);
+            prefab.transform.localScale = Vector3.one * 0.6f;
+            GameObject marker = null;
+            try
+            {
+                marker = NetPlayer.CreateDownedMarkerObject(prefab, "DownedMarker (client=1)", out var ownedMaterial);
+
+                Assert.That(marker.name, Is.EqualTo("DownedMarker (client=1)"));
+                Assert.That(marker.activeSelf, Is.False, "hidden until an ally is down");
+                Assert.That(marker.transform.Find("Model"), Is.Not.Null);
+                Assert.That(marker.GetComponentsInChildren<Collider>(true), Is.Empty, "shots pass through the marker");
+                Assert.That(marker.transform.localScale, Is.EqualTo(prefab.transform.localScale), "the prefab keeps its own size");
+                Assert.That(ownedMaterial, Is.Null, "the prefab keeps its own material");
+                Assert.That(
+                    marker.GetComponentInChildren<Renderer>(true).sharedMaterial,
+                    Is.SameAs(model.GetComponent<Renderer>().sharedMaterial));
+            }
+            finally
+            {
+                Object.DestroyImmediate(marker);
+                Object.DestroyImmediate(prefab);
+            }
+        }
+
+        [Test]
+        public void MarkerWithoutAPrefabIsTheYellowPlaceholderSphere()
+        {
+            GameObject marker = null;
+            Material ownedMaterial = null;
+            try
+            {
+                marker = NetPlayer.CreateDownedMarkerObject(null, "DownedMarker (client=1)", out ownedMaterial);
+
+                Assert.That(marker.activeSelf, Is.False);
+                Assert.That(marker.GetComponent<MeshFilter>(), Is.Not.Null);
+                Assert.That(marker.GetComponent<Collider>() == null, Is.True);
+                Assert.That(marker.transform.localScale.x, Is.LessThan(1f));
+                Assert.That(ownedMaterial, Is.Not.Null);
+                Assert.That(marker.GetComponent<Renderer>().sharedMaterial, Is.SameAs(ownedMaterial));
+                Assert.That(ownedMaterial.color.b, Is.LessThan(ownedMaterial.color.r), "yellow, not the default white");
+            }
+            finally
+            {
+                Object.DestroyImmediate(marker);
+                Object.DestroyImmediate(ownedMaterial);
+            }
+        }
     }
 }

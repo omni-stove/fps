@@ -34,6 +34,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("リーダーの頭上に目印を出すか")]
         private bool _showLeaderMarkers = true;
 
+        [SerializeField, Tooltip("リーダーの頭上の目印の見た目。原点が目印の下端で、縦の軸で回す。当たり判定は外し、材質はチームの色に塗る。空なら仮の菱形を作る")]
+        private GameObject _leaderMarkerPrefab;
+
         private readonly Dictionary<int, GuardianLeaderMarker> _markers = new Dictionary<int, GuardianLeaderMarker>();
         private GuardianRespawn _leaders;
         private Transform _markerRoot;
@@ -61,6 +64,13 @@ namespace Fps.Runtime
         {
             get => _showLeaderMarkers;
             set => _showLeaderMarkers = value;
+        }
+
+        /// <summary>リーダーの頭上の目印の見た目。null なら仮の菱形。これから出す目印から使う。</summary>
+        public GameObject LeaderMarkerPrefab
+        {
+            get => _leaderMarkerPrefab;
+            set => _leaderMarkerPrefab = value;
         }
 
         /// <summary>今のモードのリーダー。モードを組む前は null。</summary>
@@ -155,7 +165,7 @@ namespace Fps.Runtime
                 _markerRoot.SetParent(transform, false);
             }
 
-            var marker = GuardianLeaderMarker.Create(member);
+            var marker = GuardianLeaderMarker.Create(member, _leaderMarkerPrefab);
             marker.ViewerTeam = PlayerSide.TryGetTeam(out var playerTeam) ? playerTeam : (Team?)null;
             marker.transform.SetParent(_markerRoot, true);
             _markers[playerId] = marker;

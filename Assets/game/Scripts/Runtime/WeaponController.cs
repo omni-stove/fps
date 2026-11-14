@@ -121,6 +121,22 @@ namespace Fps.Runtime
         public Func<float> MoveFractionSource { get; set; }
 
         /// <summary>
+        /// 姿勢で散らばりに掛ける倍率 (伏せなら <see cref="PlayerController.SpreadScale"/>) を返す。撃つたびと照準の広がりを出すたびに読む。
+        /// null なら 1 として扱う。
+        /// </summary>
+        public Func<float> SpreadScaleSource { get; set; }
+
+        /// <summary>今の姿勢で散らばりに掛ける倍率。<see cref="SpreadScaleSource"/> の値を 0〜1 に収めたもの (NaN は 1)。</summary>
+        public float SpreadScale
+        {
+            get
+            {
+                var scale = SpreadScaleSource != null ? SpreadScaleSource() : 1f;
+                return float.IsNaN(scale) ? 1f : Mathf.Clamp01(scale);
+            }
+        }
+
+        /// <summary>
         /// 今のばらつき (0〜1)。撃つたびに <see cref="SpreadPerShot"/> 増え、撃ち止めて <see cref="SpreadRecoveryDelaySeconds"/> 経つと
         /// <see cref="SpreadRecoveryPerSecond"/> で 0 へ戻る。時間は <see cref="Tick"/> (Play 中は Update) で進む。HUD が照準の広がりに使う。
         /// </summary>
@@ -833,7 +849,7 @@ namespace Fps.Runtime
             return SpreadPattern.Direction(direction.ToNumerics(), cone, PlayerId, shotIndex).ToUnity();
         }
 
-        /// <summary>今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読み、登録された modifier の倍率を掛ける。</summary>
+        /// <summary>今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読み、<see cref="SpreadScale"/> と登録された modifier の倍率を掛ける。</summary>
         public float CurrentConeDegrees(WeaponSpec spec)
         {
             if (spec == null)
@@ -843,7 +859,7 @@ namespace Fps.Runtime
 
             var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
             var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
-            return SpreadPattern.ConeDegrees(spec, ads, move) * ModifierSpreadMultiplier();
+            return SpreadPattern.ConeDegrees(spec, ads, move) * SpreadScale * ModifierSpreadMultiplier();
         }
 
         /// <summary>今の武器の時間 (武器を持っていなければ進めない) と、<see cref="SpreadFraction"/> と <see cref="Recoil"/> の戻りを deltaSeconds 進める。</summary>

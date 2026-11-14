@@ -43,6 +43,7 @@ namespace Fps.Runtime
         private float _recoilPitchUp;
         private float _recoilYaw;
         private float _appliedRecoilPitchUp;
+        private float _pitchLimit = LookAngles.DefaultMaxPitch;
 
         /// <summary>
         /// 視点に足す反動。null なら足さない。射撃 (<see cref="WeaponController.Recoil"/>) と同じものを配線する。
@@ -65,6 +66,33 @@ namespace Fps.Runtime
         public bool IsInitialized => _pitchPivot != null && _lookAction != null;
         public float Yaw => _angles.Yaw;
         public float Pitch => _angles.Pitch;
+
+        /// <summary>pitch の上限 (度)。<see cref="PitchLimit"/> はこれより広げられない。</summary>
+        public float MaxPitch => _angles.MaxPitch;
+
+        /// <summary>
+        /// 今向ける pitch の上限 (度、水平から上下それぞれ)。既定は <see cref="MaxPitch"/>。伏せ (<see cref="PlayerController.ProneSpec"/>) が絞る。
+        /// 狭めたときに今の向きが外にあれば、その場で上限まで戻す。<see cref="MaxPitch"/> より大きい値は <see cref="MaxPitch"/> として扱う。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">0 以下か NaN のとき。</exception>
+        public float PitchLimit
+        {
+            get => _pitchLimit;
+            set
+            {
+                if (!(value > 0f))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "pitch limit must be positive");
+                }
+
+                _pitchLimit = Mathf.Min(value, _angles.MaxPitch);
+                if (IsInitialized && Mathf.Abs(_angles.Pitch) > _pitchLimit)
+                {
+                    _angles.Set(_angles.Yaw, Mathf.Clamp(_angles.Pitch, -_pitchLimit, _pitchLimit));
+                    ApplyRotation();
+                }
+            }
+        }
 
         public float MouseSensitivity
         {
@@ -390,6 +418,11 @@ namespace Fps.Runtime
             }
 
             _angles.Rotate(degrees.x, degrees.y);
+            if (Mathf.Abs(_angles.Pitch) > _pitchLimit)
+            {
+                _angles.Set(_angles.Yaw, Mathf.Clamp(_angles.Pitch, -_pitchLimit, _pitchLimit));
+            }
+
             ApplyRotation();
         }
 
@@ -397,7 +430,7 @@ namespace Fps.Runtime
         private void ApplyRotation()
         {
             transform.localRotation = Quaternion.Euler(0f, _angles.Yaw, 0f);
-            var pitch = Mathf.Clamp(_angles.Pitch - _recoilPitchUp, -_angles.MaxPitch, _angles.MaxPitch);
+            var pitch = Mathf.Clamp(_angles.Pitch - _recoilPitchUp, -_pitchLimit, _pitchLimit);
             _appliedRecoilPitchUp = _angles.Pitch - pitch;
             _pitchPivot.localRotation = Quaternion.Euler(pitch, _recoilYaw, 0f);
         }

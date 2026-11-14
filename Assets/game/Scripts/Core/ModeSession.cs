@@ -393,6 +393,28 @@ namespace Fps.Core
         }
 
         /// <summary>
+        /// このセッションの得点の外 (別に数えている拠点のポイントなど) で決まった勝敗で、試合をすぐ終える。
+        /// Playing のときだけ終えて <see cref="Ended"/> を出し、true を返す。それ以外では何もせず false を返す。
+        /// </summary>
+        /// <param name="winner">勝った陣営。引き分けなら null。</param>
+        /// <exception cref="ArgumentOutOfRangeException">winner がチーム分けにない。</exception>
+        public bool Finish(Side? winner)
+        {
+            if (winner.HasValue && !_layout.Contains(winner.Value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(winner), winner, "winner is not part of this team layout");
+            }
+
+            if (State != GameModeState.Playing)
+            {
+                return false;
+            }
+
+            End(winner);
+            return true;
+        }
+
+        /// <summary>
         /// killerId が victimId を倒したことを報告する。別の陣営を倒したら倒した人の Kills が増え、得点の部品が返した点が倒した人の陣営に入る。
         /// 味方や自滅では倒された人の Deaths だけ増える。得点上限に届いたら倒した側の勝ちで終える。
         /// Waiting・Ended の間と、リスポーンを扱うときに倒された人がすでに倒れているとき (二重の報告) は何もしない。

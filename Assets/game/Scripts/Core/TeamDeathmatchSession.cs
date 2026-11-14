@@ -747,6 +747,15 @@ namespace Fps.Core
         }
 
         /// <summary>
+        /// キル数の外 (拠点のポイントなど) で決まった勝敗で、試合をすぐ終える。時間切れで終わったときと同じく、
+        /// リスポーン待ちを取り消し、<see cref="RestartDelaySeconds"/> があれば次の試合までの待ちを始めて <see cref="Ended"/> を出す。
+        /// Playing のときだけ終えて true を返し、それ以外では何もせず false を返す。
+        /// </summary>
+        /// <param name="winner">勝ったチーム。引き分けなら null。</param>
+        /// <exception cref="ArgumentOutOfRangeException">winner が定義されていない値。</exception>
+        public bool Finish(Team? winner) => _match.Finish(winner);
+
+        /// <summary>
         /// 終わった試合を同じ顔ぶれ・同じチーム分けで始め直す。チームの点数、各プレイヤーのキル数とデス数、
         /// 残り時間を初期値に戻し、全員を体力満タンにしてダウンを消し、出現直後の無敵を付け直して、自分のチームの地点へ出現させる (<see cref="Spawned"/>)。
         /// ダウンしていた人には、<see cref="PlayerChanged"/> を出し終えた後に <see cref="DownedChanged"/> を出す。

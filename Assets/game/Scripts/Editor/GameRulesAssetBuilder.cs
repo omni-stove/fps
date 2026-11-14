@@ -13,8 +13,9 @@ namespace Fps.Editor
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) と、そこから作る個別リスポーンのモードだけ
     /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す・
-    /// 拠点なし・Bot で埋めない (<see cref="GameRules"/> の既定)。放置で切るのは、オンラインの試合が使うチームデスマッチと、
+    /// Bot で埋めない (<see cref="GameRules"/> の既定)。放置で切るのは、オンラインの試合が使うチームデスマッチと、
     /// その値から作るモード (ドミネーション・対戦・PvE のモード) だけで <see cref="OnlineIdleKickSeconds"/> 秒。キャンペーンと射撃場は切らない。
+    /// オンラインの試合の勝敗を拠点で決める (<see cref="MatchObjective.Domination"/>) のはドミネーションだけで、他のモードは拠点なし。
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
     /// TPS 射撃場がそれに回避・乗り越え・グレネードを足したもの。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
@@ -189,12 +190,14 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// ドミネーション。今は <see cref="TeamDeathmatchRules"/> と同じ値 (アクションも <see cref="TeamDeathmatchActions"/>)。
+        /// ドミネーション。<see cref="TeamDeathmatchRules"/> (アクションも <see cref="TeamDeathmatchActions"/>) のうち、
+        /// オンラインの試合の勝敗を拠点のポイントで決める (<see cref="MatchObjective.Domination"/>) ようにしたもの。
         /// チームデスマッチの値を後で変えてもドミネーションが付いて変わるよう、値を写さずに呼び出して作る。
+        /// オフラインの DominationRunner は Objective を読まず、いつも拠点で勝敗を決める。
         /// </summary>
         public static GameRules DominationRules()
         {
-            return TeamDeathmatchRules();
+            return TeamDeathmatchRules().WithObjective(MatchObjective.Domination);
         }
 
         /// <summary>

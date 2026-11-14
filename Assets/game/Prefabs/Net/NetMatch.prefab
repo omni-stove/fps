@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1101980089410533897}
   - component: {fileID: 4125894837459918015}
   - component: {fileID: 8133085526445257810}
+  - component: {fileID: 345682231069558447}
   m_Layer: 0
   m_Name: NetMatch
   m_TagString: Untagged
@@ -73,6 +74,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Fps.Net::Fps.Net.NetTeamDeathmatch
   ShowTopMostFoldoutHeaderGroup: 1
+  _grenadePrefab: {fileID: 2823355436212875547, guid: fb7fd2ebb58474396aab4652062be31b, type: 3}
+  _dominationScoreLimit: 100
+  _captureSeconds: 8
+  _pointsPerSecond: 1
+  _maxCapturers: 3
+  _reconnectGraceSeconds: 60
   _scoreLimit: 10
   _timeLimitSeconds: 300
   _respawnSeconds: 3
@@ -80,4 +87,19 @@ MonoBehaviour:
   _maxHealth: 100
   _minEnemySpawnDistance: 15
   _loadout: {fileID: 11400000, guid: 3f5a0db52a32942a3b0b6b2514c48144, type: 2}
+  _catalog: {fileID: 11400000, guid: bdb6d928a88544083bbc2feed93c745b, type: 2}
   _maxShotOriginOffset: 3
+  _rules: {fileID: 11400000, guid: cadf78082be6e47a9a9c808d9445c1aa, type: 2}
+--- !u!114 &345682231069558447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 880139535695014619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da36ad86b81aa5492adcb1fbd0c3ac10, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetCombatFeed
+  ShowTopMostFoldoutHeaderGroup: 1

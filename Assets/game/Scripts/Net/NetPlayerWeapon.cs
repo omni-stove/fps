@@ -67,6 +67,9 @@ namespace Fps.Net
         /// <summary>アクティブリロードの判定のログの頭。続けて <c>player=&lt;id&gt; success|fail</c> を出す (<see cref="ActiveReloadLog"/>)。</summary>
         public const string ActiveReloadLogPrefix = "[Net] active-reload";
 
+        /// <summary>持ち主が弾切れでトリガーを引いたときのログの頭。続けて <c>weapon=&lt;id&gt;</c> を出す。</summary>
+        public const string DryFireLogPrefix = "[Net] dry-fire";
+
         /// <summary>
         /// 今持っている武器の Id。全員が読める (持ち替えの見た目に使えるよう)。値は Id だけで、弾数は <see cref="_state"/> で持ち主にだけ送る。
         /// </summary>
@@ -118,6 +121,12 @@ namespace Fps.Net
         /// 弾倉が空になったときのサーバーの自動リロードも含む。リロード音 (<see cref="WeaponPresentation.PlayReload"/>) に使う。
         /// </summary>
         public event Action<string> ReloadStarted;
+
+        /// <summary>
+        /// 持ち主で、<see cref="NotifyDryFire"/> が届いている状態を空撃ちと判断したときに、今持っている武器の Id を渡して呼ばれる。
+        /// 空撃ちの音 (<see cref="DryFireSound.Play"/>) に使う。
+        /// </summary>
+        public event Action<string> DryFired;
 
         /// <summary>
         /// 持ち主で、<see cref="RequestLoadout"/> で送った並びの結果がサーバーから届いたときに呼ばれる。
@@ -316,6 +325,33 @@ namespace Fps.Net
 
             RequestReload();
             return false;
+        }
+
+        /// <summary>
+        /// 持ち主で、Attack を押したのに <see cref="PrepareFire"/> が撃たせなかったときに呼ぶ。届いている状態が空撃ち (<see cref="IsDryFire"/>) なら
+        /// ログを出して <see cref="DryFired"/> を呼び、true を返す。弾数・リロードの頼み方は変えない。
+        /// 武器がまだ届いていない (<see cref="WeaponId"/> が空) なら、既定値の弾数 0 を弾切れと取り違えないよう false。
+        /// </summary>
+        public bool NotifyDryFire()
+        {
+            var weaponId = WeaponId;
+            if (string.IsNullOrEmpty(weaponId) || !IsDryFire(_state.Value))
+            {
+                return false;
+            }
+
+            Debug.Log(DryFireLogPrefix + " weapon=" + weaponId, this);
+            DryFired?.Invoke(weaponId);
+            return true;
+        }
+
+        /// <summary>
+        /// state で撃とうとすると空撃ちになるか。弾倉が空で、リロード中でも持ち替え中でもないとき true。
+        /// <see cref="PrepareFire"/> の RequestReload はサーバーの返事が届くまで state を変えないので、同じフレームの判断にそのまま使える。
+        /// </summary>
+        public static bool IsDryFire(NetWeaponState state)
+        {
+            return !state.IsReloading && !state.IsSwitching && state.AmmoInMagazine <= 0;
         }
 
         /// <summary>

@@ -15,10 +15,11 @@ namespace Fps.Runtime
         [SerializeField, Range(0f, 1f), Tooltip("明るさの代わりの係数。1 で明るい所、0 で敵のゲージがまったくたまらない")]
         private float _lightFactor = 1f;
 
-        // 伏せはプレイヤーの側にまだ無いので、伏せを足すときにここを立てる。しゃがみは ICharacterMotionSource から読む。
+        // プレイヤー以外 (PlayerController の無い目標) が伏せを示すときにここを立てる。しゃがみは ICharacterMotionSource から読む。
         [SerializeField]
         private bool _prone;
 
+        private PlayerController _player;
         private ICharacterMotionSource _motion;
         private Vector3 _lastPosition;
         private bool _hasLastPosition;
@@ -64,7 +65,9 @@ namespace Fps.Runtime
         {
             get
             {
-                if (_prone)
+                // IsCrouched は伏せているとき false を返すので、伏せはプレイヤーから別に読まないと立ちとして数えてしまう。
+                _player ??= GetComponent<PlayerController>();
+                if (_prone || (_player != null && _player.IsProne))
                 {
                     return AwarenessPosture.Prone;
                 }

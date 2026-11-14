@@ -148,6 +148,20 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// HUD の得点の下に足す行を、表のキーの文で lines に入れる。HUD を書き直すたびに呼ばれる (lines にはリスポーンの案内が先に入っていることがある)。
+        /// 既定は <see cref="AppendHudLines"/> の行を表を引かない文にして足す。文を表のキーで作る派生はこちらを置き換える。
+        /// </summary>
+        protected virtual void AppendHudTexts(List<LocalizedText> lines)
+        {
+            _hudLines.Clear();
+            AppendHudLines(_hudLines);
+            foreach (var line in _hudLines)
+            {
+                lines.Add(LiteralOrEmpty(line));
+            }
+        }
+
+        /// <summary>
         /// <see cref="Begin"/> が参加者を入れる前に、session をこの Runner で進められるか確かめる。進められなければ <see cref="ArgumentException"/> を投げる。
         /// 既定では何もしない。ModeSession を包む別の進め方 (ラウンド制など) を使う派生は、包んだものと session が合うかをここで確かめる。
         /// </summary>
@@ -663,12 +677,7 @@ namespace Fps.Runtime
                 }
             }
 
-            _hudLines.Clear();
-            AppendHudLines(_hudLines);
-            foreach (var line in _hudLines)
-            {
-                _hudLineTexts.Add(LiteralOrEmpty(line));
-            }
+            AppendHudTexts(_hudLineTexts);
 
             var ownSide = _localPlayer != null ? _localPlayer.Side : (Side?)null;
             _hudView.Show(HudTime(), HudScores(ownSide), _hudLineTexts, HudResult());

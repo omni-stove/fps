@@ -28,15 +28,16 @@ namespace Fps.Net
         private readonly List<PingCandidate> _pingCandidates = new List<PingCandidate>();
         private readonly SharedPingMarkers _sharedPings = new SharedPingMarkers();
 
-        private PingSpec _pingSpec = PingSpec.Default;
+        // MonoBehaviour のフィールドの初期化では Resources を読めないので、初めて使うときに調整値の JSON から取る。
+        private PingSpec _pingSpec;
         private TeamPingRelay _pingRelay;
         private float _nextPingTrackTime;
         private float _nextPingRefusalLogTime;
 
-        // 試合の開始時に読むので、試合中に差し替えても次の試合 (Spawn) まで効かない。
+        // 差し替えなければ調整値の JSON (KitTuning.Ping)。試合の開始時に読むので、試合中に差し替えても次の試合 (Spawn) まで効かない。
         public PingSpec PingSpec
         {
-            get => _pingSpec;
+            get => _pingSpec ?? (_pingSpec = KitTuning.Ping);
             set => _pingSpec = value ?? throw new ArgumentNullException(nameof(value));
         }
 
@@ -234,11 +235,12 @@ namespace Fps.Net
         {
             _sharedPings.Clear();
             _pingChanges.Clear();
-            _pingRelay = rules.Actions.Ping == Fps.Core.Ping.On ? new TeamPingRelay(_pingSpec) : null;
+            var spec = PingSpec;
+            _pingRelay = rules.Actions.Ping == Fps.Core.Ping.On ? new TeamPingRelay(spec) : null;
             _nextPingTrackTime = 0f;
             _nextPingRefusalLogTime = 0f;
-            Debug.Log(PingLog.Rule(rules.Actions.Ping, _pingSpec) + " interval="
-                + _pingSpec.MinIntervalSeconds.ToString("0.00", CultureInfo.InvariantCulture), this);
+            Debug.Log(PingLog.Rule(rules.Actions.Ping, spec) + " interval="
+                + spec.MinIntervalSeconds.ToString("0.00", CultureInfo.InvariantCulture), this);
         }
 
         // Session の Tick の後に呼ぶ。倒れた敵の印をその tick のうちに消すため。

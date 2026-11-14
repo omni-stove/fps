@@ -43,6 +43,9 @@ namespace Fps.Net
 
         private readonly NetworkVariable<NetDownedState> _downedState = new NetworkVariable<NetDownedState>(NetDownedState.None);
 
+        [SerializeField, Tooltip("ダウン中の味方の頭の上に出す印の見た目。原点を印の中心にする。当たり判定は外す。空なら仮の黄色い球を作る")]
+        private GameObject _downedMarkerPrefab;
+
         private InputAction _interactAction;
         private bool _enabledInteractAction;
         private NetworkPlayerMotor _tickSource;
@@ -75,6 +78,13 @@ namespace Fps.Net
 
         /// <summary>頭の上の印。画面のあるクライアントでだけ作る。無ければ null。</summary>
         internal GameObject DownedMarker => _downedMarker;
+
+        /// <summary>ダウン中の味方の頭の上に出す印の見た目。null なら仮の球。生成 (OnNetworkSpawn) の前に設定したものを使う。</summary>
+        public GameObject DownedMarkerPrefab
+        {
+            get => _downedMarkerPrefab;
+            set => _downedMarkerPrefab = value;
+        }
 
         /// <summary>
         /// 頭の上の印を出すか。他のプレイヤーで、ダウン中で、自分のプレイヤーと同じチームのときだけ true。
@@ -300,27 +310,52 @@ namespace Fps.Net
                 ? controller.center.y + (controller.height / 2f) + _markerClearance
                 : EyeHeight + _markerClearance;
 
-            var marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            marker.name = DownedMarkerName + " (client=" + OwnerClientId.ToString(CultureInfo.InvariantCulture) + ")";
-            marker.SetActive(false);
-            var markerCollider = marker.GetComponent<Collider>();
-            if (markerCollider != null)
+            var markerName = DownedMarkerName + " (client=" + OwnerClientId.ToString(CultureInfo.InvariantCulture) + ")";
+            _downedMarker = CreateDownedMarkerObject(_downedMarkerPrefab, markerName, out _downedMarkerMaterial);
+        }
+
+        /// <summary>
+        /// 隠した状態の印を作る。prefab があれば当たり判定を外して置き (大きさと材質はプレハブのまま)、ownedMaterial は null。
+        /// 無ければ仮の黄色い球を作り、塗るために複製した材質を ownedMaterial で返す (印と一緒に消すこと)。
+        /// </summary>
+        internal static GameObject CreateDownedMarkerObject(GameObject prefab, string markerName, out Material ownedMaterial)
+        {
+            ownedMaterial = null;
+            GameObject marker;
+            if (prefab != null)
             {
                 // 射撃の Raycast に当たらないよう、当たりは持たせない
-                Destroy(markerCollider);
+                marker = VisualPrefab.Instantiate(prefab, null, markerName, stripColliders: true);
+                marker.SetActive(false);
+            }
+            else
+            {
+                marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                marker.name = markerName;
+                marker.SetActive(false);
+                var markerCollider = marker.GetComponent<Collider>();
+                if (markerCollider != null)
+                {
+                    // 射撃の Raycast に当たらないよう、当たりは持たせない
+                    DestroyImmediate(markerCollider);
+                }
+
+                marker.transform.localScale = Vector3.one * _markerSize;
             }
 
-            marker.transform.localScale = Vector3.one * _markerSize;
-            var markerRenderer = marker.GetComponent<Renderer>();
-            if (markerRenderer != null)
+            foreach (var markerRenderer in marker.GetComponentsInChildren<Renderer>(true))
             {
                 markerRenderer.shadowCastingMode = ShadowCastingMode.Off;
                 markerRenderer.receiveShadows = false;
-                _downedMarkerMaterial = markerRenderer.material;
-                _downedMarkerMaterial.color = _markerColor;
+                if (prefab == null && ownedMaterial == null && markerRenderer.sharedMaterial != null)
+                {
+                    // renderer.material は Edit Mode で複製を漏らすので、自分で複製して持つ
+                    ownedMaterial = new Material(markerRenderer.sharedMaterial) { color = _markerColor };
+                    markerRenderer.sharedMaterial = ownedMaterial;
+                }
             }
 
-            _downedMarker = marker;
+            return marker;
         }
 
         private void RefreshDownedMarker()

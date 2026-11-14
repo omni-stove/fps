@@ -9,7 +9,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 拠点制圧 (<see cref="Fps.Core.Domination"/>) をシーンで進める。Start で <see cref="GameBootstrap"/> の生成物と、シーンの
-    /// <see cref="ControlPointZone"/>・<see cref="EnemyAgent"/> を拾い、Inspector の設定から <see cref="DominationSpec"/> を作って試合を始める。
+    /// <see cref="ControlPointZone"/>・<see cref="EnemyAgent"/> を拾い、調整値のアセット (<see cref="Definition"/>) か、それが無ければ Inspector の設定から
+    /// <see cref="DominationSpec"/> を作って試合を始める。
     /// プレイヤーは Alpha (Id <see cref="PlayerId"/>)、敵は名前の順に Bravo (Id 1, 2, ...) として加える。
     /// </summary>
     /// <remarks>
@@ -17,7 +18,7 @@ namespace Fps.Runtime
     /// <item>Update で、各拠点に範囲の参加者を調べさせ (<see cref="ControlPointZone.Scan"/>)、生きている参加者がいる拠点を
     /// <see cref="ControlPointMap.Locate"/> で決めて <see cref="Fps.Core.Domination.SetPlayerPoint"/> に渡してから <see cref="Fps.Core.Domination.Tick"/> する。</item>
     /// <item>倒れたら、倒した者 (<see cref="CombatEvents.CurrentAttribution"/>) が参加者なら <see cref="Fps.Core.Domination.ReportKill"/>、
-    /// そうでなければ <see cref="Fps.Core.Domination.ReportDeath"/> に渡し、<see cref="RespawnSeconds"/> 秒後に自チームの出現点へ戻す。
+    /// そうでなければ <see cref="Fps.Core.Domination.ReportDeath"/> に渡し、<see cref="EffectiveRespawnSeconds"/> 秒後に自チームの出現点へ戻す。
     /// 出現点は <see cref="SetSpawnPoints"/> で渡した Transform (足元の位置) から <see cref="SpawnSelector"/> で選ぶ。渡していないチームは、
     /// 試合を始めたときにそのチームの参加者が立っていた位置を使う。倒れている間のプレイヤーは動けず撃てない。</item>
     /// <item>状態の変化・拠点の占領と中立化・終了と勝者・キルとリスポーンを <see cref="DominationLog"/> の書式 (<c>[Domination]</c>) でログに出す。</item>
@@ -45,6 +46,9 @@ namespace Fps.Runtime
         public const string RestartActionPath = MatchRunner.RestartActionPath;
 
         [Header("Rules")]
+        [SerializeField, Tooltip("調整値のアセット。設定すれば下の値の代わりにこれを使う")]
+        private DominationDefinition _definition;
+
         [SerializeField, Min(0.01f), Tooltip("1 人で中立の拠点を占領し終えるまでの秒数")]
         private float _captureSeconds = DefaultCaptureSeconds;
 
@@ -99,6 +103,20 @@ namespace Fps.Runtime
 
         /// <summary>終了後に押すと再開するアクション。解決できなければ null (試合は進むが再開できない)。</summary>
         public InputAction RestartAction => _restartAction;
+
+        /// <summary>
+        /// 調整値のアセット。設定されていれば <see cref="CreateSpec"/> とリスポーンの秒数はこれの値を使い、
+        /// <see cref="CaptureSeconds"/> などの Runner 自身の値は使わない。null なら Runner 自身の値 (既定は Default*) を使う。
+        /// 試合を始めた後に変えても、その試合には効かない。
+        /// </summary>
+        public DominationDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
+
+        /// <summary>試合で使うリスポーンの秒数。<see cref="Definition"/> があればその値、無ければ <see cref="RespawnSeconds"/>。</summary>
+        public float EffectiveRespawnSeconds => _definition != null ? _definition.RespawnSeconds : _respawnSeconds;
 
         public float CaptureSeconds
         {
@@ -171,10 +189,34 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>Inspector の設定から、拠点が pointCount 個の <see cref="DominationSpec"/> を作る。値が不正なら <see cref="ArgumentOutOfRangeException"/>。</summary>
+        /// <summary>
+        /// 拠点が pointCount 個の <see cref="DominationSpec"/> を、<see cref="Definition"/> があればその値から、無ければ Inspector の設定から作る。
+        /// 値が不正なら <see cref="ArgumentOutOfRangeException"/>。
+        /// </summary>
         public DominationSpec CreateSpec(int pointCount)
         {
+            if (_definition != null)
+            {
+                return _definition.ToSpec(pointCount);
+            }
+
             return new DominationSpec(pointCount, _captureSeconds, _pointsPerSecond, _scoreLimit, _timeLimitSeconds, _maxCapturers);
+        }
+
+        /// <summary>definition の値を Runner 自身の値 (<see cref="CaptureSeconds"/> など) に写す。<see cref="Definition"/> は変えない。</summary>
+        public void CopyFrom(DominationDefinition definition)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            _captureSeconds = definition.CaptureSeconds;
+            _pointsPerSecond = definition.PointsPerSecond;
+            _scoreLimit = definition.ScoreLimit;
+            _timeLimitSeconds = definition.TimeLimitSeconds;
+            _maxCapturers = definition.MaxCapturers;
+            _respawnSeconds = definition.RespawnSeconds;
         }
 
         private void Start()
@@ -221,7 +263,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// <see cref="GameBootstrap"/> の生成物・シーンの <see cref="ControlPointZone"/> と <see cref="EnemyAgent"/> を拾い、
-        /// Inspector の設定で試合を始める。既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
+        /// <see cref="CreateSpec"/> の値で試合を始める。既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryBeginFromScene()
         {
@@ -314,9 +356,10 @@ namespace Fps.Runtime
                 throw new ArgumentException("world has no player Damageable", nameof(world));
             }
 
-            if (!(_respawnSeconds >= 0f) || float.IsInfinity(_respawnSeconds))
+            var respawnSeconds = EffectiveRespawnSeconds;
+            if (!(respawnSeconds >= 0f) || float.IsInfinity(respawnSeconds))
             {
-                throw new ArgumentOutOfRangeException(nameof(RespawnSeconds), _respawnSeconds, "RespawnSeconds must be a finite, non-negative value");
+                throw new ArgumentOutOfRangeException(nameof(RespawnSeconds), respawnSeconds, "RespawnSeconds must be a finite, non-negative value");
             }
 
             var map = BuildMap(zones);
@@ -326,7 +369,7 @@ namespace Fps.Runtime
                     $"the scene has {map.Count} control point(s) but spec.PointCount is {spec.PointCount}", nameof(spec));
             }
 
-            var participants = BuildParticipants(world, enemies, _respawnSeconds);
+            var participants = BuildParticipants(world, enemies, respawnSeconds);
             var domination = new Domination(spec);
             foreach (var participant in participants)
             {

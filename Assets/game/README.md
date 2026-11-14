@@ -200,6 +200,8 @@ Editor からは **Fps > Import Game Rules From JSON**。
 | `WeaponCatalogAsset`・`LoadoutDefinition` | 使える武器の一覧と、最初に持つ武器 |
 | `GameRulesDefinition` (`<root>/Rules/*.asset`) | フレンドリーファイア・リスポーン・自動回復・死亡時の見せ方・弾薬・建造物の破壊・ダウンやカバーなどのアクション・スポーン保護・落下ダメージ・HUD の量・勝敗の決め方 |
 | `GrenadeThrower` (プレイヤーのコンポーネント) | 爆発までの秒数・投げる間隔・初速・ダメージ・爆発の半径・建造物への被害 |
+| `EnemyStealth` (敵のコンポーネント) | 発見ゲージの視野・たまる速さと距離・角度・姿勢・動きの係数・減り方・気づき/警戒/交戦の境目・仲間に交戦を伝える範囲・頭上の印のプレハブ |
+| `StealthTarget` (プレイヤーのコンポーネント) | 明るさの代わりの係数 (暗がりを作るゲームがここを書き換える)・伏せているか |
 | `PingController` (プレイヤーのコンポーネント) | 印が消えるまでの秒数・同時に付けられる数・照準の先を探す距離・照準が外れていても敵に付ける角度 |
 | `SquadCommandController` (プレイヤーのコンポーネント) | 長押しとみなす秒数・照準の先を探す距離・照準が外れていても敵を指したとみなす角度・分隊の無いモードで指示が届く距離・付いてくる bot が寄ってくる距離と撃ち合いをやめて戻る距離 |
 | `BossController` (ボスのコンポーネント) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点) |
@@ -237,6 +239,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 - 既定の HUD を差し替えると、その HUD に載っていたポーズメニューやロードアウトの画面も出なくなる。自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
 - `IHud` の `Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さない (プレイヤーがグレネードや能力の枠を持つと、返した値の `Show` をすぐ呼ぶ)。
 - 登録はシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単。
+- 発見ゲージの頭上の印 (ルールの `stealth` が On のときだけ出る) は、根に `IAwarenessIndicator` を実装したコンポーネントを持つプレハブを、どこかの Resources フォルダの `Presentation/AwarenessIndicatorCatalog.asset` (`AwarenessIndicatorCatalog`) に入れると差し替わる。敵ごとに変えるなら `EnemyStealth` の印のプレハブに入れる。どちらも空なら仮の球を出す。
 
 ### 最小の例: オフラインの HUD
 
@@ -485,7 +488,7 @@ photo.PhotoCapture = new MyFramedCapture();
 - **ファイル名は、パッケージのどのファイル名よりも後に並ぶものにする** (例: `zz-` で始める)。前に並ぶと、パッケージの表に上書きし返される。パッケージと **同じ名前** にすると、どちらが後になるかは決まらない。
 - 利用側に `Resources/Strings/<言語コード>.json` を置かない。パッケージの同じパスの表とぶつかり、片方しか読まれない。
 - 表は、Play の開始時と初めて引いたときに読み、Play の間は持ち続ける。JSON を変えたら Play に入り直す (`Localizer.Reload()` を呼んでも読み直す)。
-- 言語は、初めて起動したときに OS の言語から選ばれる (日本語なら `ja`、それ以外は `en`)。`ja` の上書きを確かめるときに `en` が出ていたら、ポーズ > 設定の言語で日本語を選ぶ (選んだ言語は保存される)。
+- 言語は、初めて起動したときに OS の言語から選ばれる (パッケージの一覧では、日本語なら `ja`、それ以外は `en`。[言語を足す](#言語を足す) の `systemLanguages`)。`ja` の上書きを確かめるときに `en` が出ていたら、ポーズ > 設定の言語で日本語を選ぶ (選んだ言語は保存される)。
 - 自分の UI で表を引くときは `Fps.Runtime.Localizer.Get(key)`・`Localizer.Format(key, 引数…)`・`Localizer.Resolve(LocalizedText)` を使う。言語が変わると `Localizer.Changed` が呼ばれるので、文を持ち続ける画面はそこで引き直す。
 
 ### 書式
@@ -504,10 +507,39 @@ photo.PhotoCapture = new MyFramedCapture();
 
 ### 言語を足す
 
-設定画面の言語の選択に出るのは、`Resources/Localization/<言語コード>/` に表が 1 つでもある言語。選べる言語コードはパッケージの `Fps.Core.GameLanguage` で決まっていて、今は `ja` と `en` だけ。
+設定画面の言語の選択に出るのは、言語の一覧 (`Resources/Localization/Languages/` の JSON) にあり、`Resources/Localization/<言語コード>/` に表が 1 つでもある言語。並びは一覧の順。パッケージの一覧 (`Resources/Localization/Languages/languages.json`) は `ja` と `en`。
 
-- `en` の文をそろえる・直すときは、`Assets/Resources/Localization/en/` に上と同じ形で JSON を置く。`en` に無いキーは `ja` の文にはならず、キーそのものが出る。
-- `ja`・`en` 以外の言語 (例: `fr`) は、利用側に `Resources/Localization/fr/` を置いても読まれない。足すにはパッケージの `GameLanguage`・`GameLanguages` に言語を加える変更が要る。
+```json
+{
+  "otherSystemLanguages": "en",
+  "languages": [
+    { "code": "ja", "name": "日本語", "systemLanguages": ["Japanese"] },
+    { "code": "en", "name": "English", "systemLanguages": ["English"] }
+  ]
+}
+```
+
+| キー | 意味 |
+| --- | --- |
+| `code` | 言語コード。保存する設定とフォルダー名 (`Localization/<言語コード>/`) に使う。ASCII の英字で始まり、英数字・`-`・`_` だけで 35 文字まで。大文字小文字を区別する |
+| `name` | その言語自身での名前。表に `settings.language.name` が無いときに設定画面に出る |
+| `systemLanguages` | 初めて起動したとき、OS の言語がこの名前 (Unity の `SystemLanguage` の名前) ならこの言語にする。省いてよい |
+| `otherSystemLanguages` | OS の言語がどの `systemLanguages` にも無いときの言語。省くと一覧の最初の言語 |
+
+言語 (例: `fr`) を足すには、コードを変えずに次の 2 つを置く。
+
+1. 利用側に `Assets/Resources/Localization/Languages/zz-mygame.json` を作り、足す言語の行だけを書く。
+
+   ```json
+   { "languages": [ { "code": "fr", "name": "Français", "systemLanguages": ["French"] } ] }
+   ```
+
+2. `Assets/Resources/Localization/fr/` に、`ja` と同じキーの表 (`settings.json` など) を置く。
+
+- 一覧のファイルは、表と同じくファイル名 (拡張子なし) の順に重なる。後のファイルにある言語は、前の行を同じ位置のまま置き換える (名前を変えるときに使う)。新しい言語は後ろに足される。`otherSystemLanguages` は最後に書いたファイルのものが効く。**パッケージと同じ `languages.json` という名前にしない** (どちらが読まれるかが決まらない)。
+- 一覧の読めないファイルや行は `[Localization]` の警告を出して飛ばす。言語が 1 つも読めなければエラーを出し、`ja` と `en` で続ける。
+- 保存した設定の言語が一覧に無い (一覧から消した) ときは、`[Input]` の警告を出して OS の言語に戻す。
+- `en` の文をそろえる・直すときは、`Assets/Resources/Localization/en/` に上と同じ形で JSON を置く。`en` に無いキーは `ja` の文にはならず、キーそのものが出る。足した言語も同じで、表が壊れていると `ja` の表で続ける。
 
 ### 訳さないもの
 

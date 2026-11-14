@@ -16,6 +16,7 @@ namespace Fps.Runtime
     /// 言語の表が見つからない・壊れているときは警告を出して <see cref="FallbackLanguage"/> の表で続け、それも読めなければエラーを出し、
     /// 読めた分だけ (無ければキーそのものを出す空の表) で続ける。無いキーは <c>[Localization]</c> 付きの警告で知らせる。
     /// Core の書式 (<see cref="HudFormat"/> など) が引く <see cref="GameText"/> にも、Play の開始時とエディターの読み込み時に同じ表を渡す。
+    /// 選べる言語は Resources の <see cref="LanguageListFolder"/> にある一覧 (<see cref="LanguageList"/>) で決まり、同じ時に <see cref="GameLanguages"/> に渡す。
     /// </summary>
     public static class Localizer
     {
@@ -27,14 +28,21 @@ namespace Fps.Runtime
         /// <summary>Resources の中で、言語コードのフォルダーごとに重ねる表を置くフォルダー。</summary>
         public const string LayerFolder = "Localization";
 
+        /// <summary>
+        /// Resources の中で、選べる言語の一覧 (<see cref="GameLanguageList"/> の JSON) を置くフォルダー。
+        /// 中の TextAsset をファイル名の順に重ねるので、利用側は自分の Resources に別の名前のファイルを置いて言語を足せる。
+        /// </summary>
+        public const string LanguageListFolder = LayerFolder + "/Languages";
+
         /// <summary>言語の表が読めないときに代わりに使う言語。</summary>
-        public const GameLanguage FallbackLanguage = GameLanguage.Japanese;
+        public static readonly GameLanguage FallbackLanguage = GameLanguage.Japanese;
 
         /// <summary>言語の選択に出す、その言語自身での名前を置くキー (各言語の settings.json)。</summary>
         public const string NativeNameKey = "settings.language.name";
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<GameLanguage, StringTable> _tables = new Dictionary<GameLanguage, StringTable>();
+        private static GameLanguageList _languageList;
 
         /// <summary>
         /// 言語が変わったとき。購読した側は受け取った言語で文字を引き直す。1 つの購読先が投げても、ほかの購読先には届ける。
@@ -65,11 +73,75 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// OS の言語 system に合う言語。日本語なら日本語、それ以外 (分からないときも含む) は、日本語を読めない人の方が多いので英語。
+        /// OS の言語 system に合う言語。言語の一覧 (<see cref="GameLanguages.Current"/>) で system の名前を systemLanguages に持つ言語、
+        /// どれにも無ければ (分からないときも含む) 一覧の otherSystemLanguages。
         /// </summary>
         public static GameLanguage FromSystemLanguage(SystemLanguage system)
         {
-            return system == SystemLanguage.Japanese ? GameLanguage.Japanese : GameLanguage.English;
+            EnsureLanguageList();
+            return GameLanguages.Current.ForSystemLanguage(system.ToString());
+        }
+
+        /// <summary>Resources の言語の一覧から作った一覧。まだ読んでいなければ読む。</summary>
+        public static GameLanguageList LanguageList => _languageList ??= LoadLanguageList(ReadLanguageLists);
+
+        /// <summary>
+        /// Resources の <see cref="LanguageListFolder"/> にある TextAsset を、ファイル名 (拡張子なし) の順 (大文字小文字を区別する) に読む。
+        /// </summary>
+        public static IReadOnlyList<KeyValuePair<string, string>> ReadLanguageLists()
+        {
+            var assets = Resources.LoadAll<TextAsset>(LanguageListFolder);
+            return assets
+                .OrderBy(a => a.name, StringComparer.Ordinal)
+                .Select(a => new KeyValuePair<string, string>($"Resources/{LanguageListFolder}/{a.name}", a.text))
+                .ToList();
+        }
+
+        /// <summary>
+        /// read が返す一覧の JSON を重ねて言語の一覧を作る (<see cref="GameLanguageList.TryRead"/>)。読めない所は警告を出して飛ばし、
+        /// 言語が 1 つも読めなければエラーを出して <see cref="GameLanguageList.BuiltIn"/> で続ける。
+        /// OS の言語の名前が Unity の <see cref="SystemLanguage"/> に無ければ警告を出す (その名前はどの OS にも合わない)。
+        /// </summary>
+        /// <param name="read">一覧の名前と JSON の文字列を重ねる順に返す。Resources を使わずに試すときは別のものを渡す。</param>
+        /// <exception cref="ArgumentNullException">read が null。</exception>
+        public static GameLanguageList LoadLanguageList(Func<IReadOnlyList<KeyValuePair<string, string>>> read)
+        {
+            if (read == null)
+            {
+                throw new ArgumentNullException(nameof(read));
+            }
+
+            Action<string> warn = message => Debug.LogWarning($"{LogTag} {message}");
+            if (!GameLanguageList.TryRead(read() ?? Array.Empty<KeyValuePair<string, string>>(), warn, out var list, out var error))
+            {
+                var builtIn = GameLanguageList.BuiltIn;
+                Debug.LogError(
+                    $"{LogTag} {error} in Resources/{LanguageListFolder}/; using {string.Join(", ", builtIn.Languages.Select(l => l.Code))} instead");
+                return builtIn;
+            }
+
+            foreach (var entry in list.Entries)
+            {
+                foreach (var system in entry.SystemLanguages)
+                {
+                    if (!Enum.TryParse<SystemLanguage>(system, false, out var parsed) || parsed.ToString() != system)
+                    {
+                        warn($"{entry.Language.Code}: '{system}' is not a UnityEngine.SystemLanguage name, so no system matches it");
+                    }
+                }
+            }
+
+            return list;
+        }
+
+        // GameLanguages を引く前に呼ぶ。InitializeOnLoad の順は決まらないので、ほかのクラスの読み込み時に保存した設定を読んでも
+        // Resources の一覧で言語コードを確かめられるようにする。テストが差し替えた引き先は外さない。
+        internal static void EnsureLanguageList()
+        {
+            if (GameLanguages.Source == null)
+            {
+                GameLanguages.Use(CurrentLanguageList);
+            }
         }
 
         /// <summary>今の言語で key の文字列。無ければキーそのもの (警告を出す)。</summary>
@@ -144,10 +216,11 @@ namespace Fps.Runtime
             (store ?? new LanguagePreferenceStore()).Save(language);
         }
 
-        /// <summary>読んだ表をすべて捨て、次に引くときに Resources から読み直させる。</summary>
+        /// <summary>読んだ表と言語の一覧をすべて捨て、次に引くときに Resources から読み直させる。</summary>
         public static void Reload()
         {
             _tables.Clear();
+            _languageList = null;
         }
 
         /// <summary>
@@ -222,10 +295,11 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 設定画面で選べる言語を <see cref="GameLanguages.All"/> の並びで返す。Resources の Localization/&lt;言語コード&gt;/ に表が 1 つでもある言語。
+        /// 設定画面で選べる言語を <see cref="GameLanguages.All"/> の並びで返す。言語の一覧にあり、Resources の Localization/&lt;言語コード&gt;/ に表が 1 つでもある言語。
         /// </summary>
         public static IReadOnlyList<GameLanguage> AvailableLanguages()
         {
+            EnsureLanguageList();
             return AvailableLanguages(ReadLayers);
         }
 
@@ -379,6 +453,7 @@ namespace Fps.Runtime
         private static void ResetOnPlay()
         {
             _tables.Clear();
+            _languageList = null;
             Changed = null;
             UseForCore();
         }
@@ -398,11 +473,17 @@ namespace Fps.Runtime
         private static void UseForCore()
         {
             GameText.Use(CurrentTable);
+            GameLanguages.Use(CurrentLanguageList);
         }
 
         private static StringTable CurrentTable()
         {
             return TableOf(Language);
+        }
+
+        private static GameLanguageList CurrentLanguageList()
+        {
+            return LanguageList;
         }
     }
 }

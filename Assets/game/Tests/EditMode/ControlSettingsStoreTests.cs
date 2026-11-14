@@ -41,10 +41,11 @@ namespace Fps.Tests.EditMode
             Assert.That(_store.Defaults, Is.EqualTo(ControlSettings.DefaultFor(expected)));
         }
 
-        [TestCase(GameLanguage.Japanese)]
-        [TestCase(GameLanguage.English)]
-        public void TheFirstLoadUsesTheGivenDefaultLanguage(GameLanguage language)
+        [TestCase("ja")]
+        [TestCase("en")]
+        public void TheFirstLoadUsesTheGivenDefaultLanguage(string code)
         {
+            var language = new GameLanguage(code);
             var store = new ControlSettingsStore(_store.Key, language);
 
             Assert.That(store.Load(), Is.EqualTo(ControlSettings.DefaultFor(language)));

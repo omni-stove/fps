@@ -61,6 +61,7 @@ namespace Fps.Runtime
 
             // 同じキーに整数や小数が入っていると GetString は空文字を返し、壊れた値として初期値に戻る。
             var text = PlayerPrefs.GetString(Key, string.Empty);
+            Localizer.EnsureLanguageList();
             var settings = ControlSettings.FromJson(text, Defaults.Language, out var problems);
             foreach (var problem in problems)
             {

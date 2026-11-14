@@ -204,13 +204,39 @@ namespace Fps.Tests.EditMode
             _animator.TryBind();
             var before = _animator.Pose;
 
-            var serialized = new UnityEditor.SerializedObject(_mover);
-            serialized.FindProperty("_walkSpeed").floatValue = 4f;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+            _mover.Initialize(
+                _player.GetComponent<CharacterController>(),
+                _player.GetComponent<FirstPersonLook>(),
+                _move,
+                _sprint,
+                _crouch,
+                _jump,
+                new MotorSpec(4f, 8f, 1.2f, 20f, 0.1f, 2.5f));
             _animator.Refresh(DeltaSeconds);
 
             Assert.That(_animator.Pose, Is.Not.SameAs(before));
             Assert.That(_animator.Pose.WalkSpeed, Is.EqualTo(4f));
+        }
+
+        [Test]
+        public void SettingsThatThePoseRejectsFallBackToADefaultPose()
+        {
+            _mover.Initialize(
+                _player.GetComponent<CharacterController>(),
+                _player.GetComponent<FirstPersonLook>(),
+                _move,
+                _sprint,
+                _crouch,
+                _jump,
+                new MotorSpec(5f, 5f, 1.2f, 20f, 0.1f, 2.5f));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[CharacterAnimator\] 'Player' の速さが姿勢の計算に使えない"));
+
+            Assert.That(_animator.TryBind(), Is.True);
+
+            var expected = MotorSettings.ResolveOrDefault(null);
+            Assert.That(_animator.Pose.WalkSpeed, Is.EqualTo(expected.WalkSpeed));
+            Assert.That(_animator.Pose.SprintSpeed, Is.EqualTo(expected.SprintSpeed));
+            Assert.That(_animator.Pose.CrouchSpeed, Is.EqualTo(expected.CrouchSpeed));
         }
 
         [Test]

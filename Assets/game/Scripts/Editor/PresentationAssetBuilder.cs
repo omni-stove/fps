@@ -697,7 +697,7 @@ namespace Fps.Editor
         /// 読み込んだ中身に値だけを貼り付けて保存する。作り直すとプレハブ内の fileID が毎回変わり、差分が出るため。
         /// 組み方が変わったときだけ丸ごと上書きする (アセットの GUID は保たれる)。
         /// </summary>
-        private static GameObject SavePrefab(string folder, string name, Action<GameObject> build)
+        internal static GameObject SavePrefab(string folder, string name, Action<GameObject> build)
         {
             var path = $"{folder}/{name}.prefab";
             var existing = AssetDatabase.LoadMainAssetAtPath(path);

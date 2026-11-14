@@ -714,6 +714,59 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PressingTheTriggerOnAnEmptyMagazineRaisesDryFiredOncePerPress()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            _controller.RestoreLoadout(new[] { new WeaponAmmo(WeaponAssetBuilder.RifleId, 0, 12) }, WeaponAssetBuilder.RifleId);
+            var dry = new System.Collections.Generic.List<Fps.Core.Weapon>();
+            _controller.DryFired += dry.Add;
+
+            Assert.That(WeaponController.IsDryFire(_controller.Weapon), Is.True);
+            LogAssert.Expect(LogType.Log, $"{WeaponController.DryFireLogPrefix} id={WeaponAssetBuilder.RifleId}");
+            Assert.That(_controller.PullTrigger(true, true), Is.False);
+            Assert.That(dry, Has.Count.EqualTo(1));
+            Assert.That(dry[0], Is.SameAs(_controller.Weapon));
+
+            _controller.Tick(_rifle.FireInterval);
+            Assert.That(_controller.PullTrigger(true, false), Is.False);
+            Assert.That(dry, Has.Count.EqualTo(1), "holding the trigger does not click again");
+
+            // 空撃ちは弾数もリロードも変えない (リロードは従来どおり押したときだけ始まる)。
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.Zero);
+            Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(12));
+            Assert.That(_controller.Weapon.IsReloading, Is.False);
+            Assert.That(_controller.ShotCount, Is.Zero);
+
+            LogAssert.Expect(LogType.Log, $"{WeaponController.DryFireLogPrefix} id={WeaponAssetBuilder.RifleId}");
+            Assert.That(_controller.PullTrigger(true, true), Is.False);
+            Assert.That(dry, Has.Count.EqualTo(2), "pressed again");
+
+            Assert.That(_controller.StartReload(), Is.True);
+            Assert.That(WeaponController.IsDryFire(_controller.Weapon), Is.False);
+            Assert.That(_controller.PullTrigger(true, true), Is.False);
+            Assert.That(dry, Has.Count.EqualTo(2), "a reloading weapon does not click");
+        }
+
+        [Test]
+        public void DryFiredIsNotRaisedWithAmmoOrWhileFiringIsBlocked()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var dry = 0;
+            _controller.DryFired += _ => dry++;
+
+            Assert.That(_controller.PullTrigger(true, true), Is.True);
+            Assert.That(_controller.PullTrigger(true, true), Is.False, "within the fire interval");
+            Assert.That(dry, Is.Zero, "a weapon with ammo waiting for its fire interval is not empty");
+
+            _controller.RestoreLoadout(new[] { new WeaponAmmo(WeaponAssetBuilder.RifleId, 0, 12) }, WeaponAssetBuilder.RifleId);
+            _controller.FireBlocker = () => true;
+            Assert.That(_controller.PullTrigger(true, true), Is.False);
+            Assert.That(dry, Is.Zero, "a blocked trigger (dodging) does not click");
+
+            Assert.That(WeaponController.IsDryFire(null), Is.False);
+        }
+
+        [Test]
         public void AutoWeaponKeepsFiringWhileTheTriggerIsHeld()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);

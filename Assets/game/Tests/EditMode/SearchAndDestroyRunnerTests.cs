@@ -215,7 +215,7 @@ namespace Fps.Tests.EditMode
             _runner.Tick(PlantSeconds);
 
             Assert.That(hud.TimeText, Is.EqualTo("00:02"));
-            Assert.That(hud.Lines, Has.Member(SearchAndDestroyText.Fuse(0, FuseSeconds)));
+            Assert.That(hud.Lines, Has.Member("爆弾 A に設置: 起爆まで 2 秒"));
         }
 
         private void Begin(ModeHudView hud = null)

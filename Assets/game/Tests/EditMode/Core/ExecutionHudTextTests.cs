@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Fps.Core.Tests
@@ -32,13 +34,22 @@ namespace Fps.Core.Tests
         [Test]
         public void TheSmallTextsReadNaturally()
         {
-            Assert.That(ExecutionHudText.Round(2, 3), Is.EqualTo("ラウンド 2 (3 本先取)"));
-            Assert.That(ExecutionHudText.Preparation(3), Is.EqualTo("開始まで 3 秒"));
-            Assert.That(ExecutionHudText.RoundResult(Side.Bravo), Is.EqualTo("前のラウンド: BRAVO の勝ち"));
-            Assert.That(ExecutionHudText.RoundResult(null), Is.EqualTo("前のラウンド: 引き分け"));
-            Assert.That(ExecutionHudText.Remaining(Side.Bravo, 3, 1), Is.EqualTo("BRAVO 残り 3 (ダウン 1)"));
-            Assert.That(ExecutionHudText.Remaining(Side.Alpha, 2, 0), Is.EqualTo("ALPHA 残り 2"));
-            Assert.That(ExecutionHudText.Executing(40), Is.EqualTo("とどめ 40%"));
+            Assert.That(GameText.Resolve(ExecutionHudText.Round(2, 3)), Is.EqualTo("ラウンド 2 (3 本先取)"));
+            Assert.That(GameText.Resolve(ExecutionHudText.Preparation(3)), Is.EqualTo("開始まで 3 秒"));
+            Assert.That(GameText.Resolve(ExecutionHudText.RoundResult(Side.Bravo)), Is.EqualTo("前のラウンド: BRAVO の勝ち"));
+            Assert.That(GameText.Resolve(ExecutionHudText.RoundResult(null)), Is.EqualTo("前のラウンド: 引き分け"));
+            Assert.That(GameText.Resolve(ExecutionHudText.Remaining(Side.Bravo, 3, 1)), Is.EqualTo("BRAVO 残り 3 (ダウン 1)"));
+            Assert.That(GameText.Resolve(ExecutionHudText.Remaining(Side.Alpha, 2, 0)), Is.EqualTo("ALPHA 残り 2"));
+            Assert.That(GameText.Resolve(ExecutionHudText.Executing(40)), Is.EqualTo("とどめ 40%"));
+        }
+
+        [Test]
+        public void TheTextsAreKeysOfTheRoundModeTable()
+        {
+            Assert.That(ExecutionHudText.Round(2, 3), Is.EqualTo(new LocalizedText("mode.execution.round", 2, 3)));
+            Assert.That(ExecutionHudText.Preparation(3), Is.EqualTo(new LocalizedText("mode.execution.startsIn", 3)));
+            Assert.That(ExecutionHudText.RoundResult(null), Is.EqualTo(new LocalizedText("mode.execution.previousRound", HudFormat.Draw)));
+            Assert.That(ExecutionHudText.Executing(40), Is.EqualTo(new LocalizedText("mode.execution.executing", 40)));
         }
 
         [Test]
@@ -61,7 +72,7 @@ namespace Fps.Core.Tests
             var execution = Create();
             execution.Start();
 
-            Assert.That(ExecutionHudText.Lines(execution, _alphaOne, null), Is.EqualTo(_expectedPreparingLines));
+            Assert.That(Resolved(ExecutionHudText.Lines(execution, _alphaOne, null)), Is.EqualTo(_expectedPreparingLines));
         }
 
         [Test]
@@ -72,7 +83,7 @@ namespace Fps.Core.Tests
             execution.Tick(3f);
             execution.ReportLethal(_bravoOne, _alphaOne);
 
-            Assert.That(ExecutionHudText.Lines(execution, _bravoTwo, null), Is.EqualTo(_expectedOwnSideFirst));
+            Assert.That(Resolved(ExecutionHudText.Lines(execution, _bravoTwo, null)), Is.EqualTo(_expectedOwnSideFirst));
         }
 
         [Test]
@@ -83,7 +94,7 @@ namespace Fps.Core.Tests
             execution.Tick(3f);
             execution.ReportLethal(_alphaOne, _bravoOne);
 
-            Assert.That(ExecutionHudText.Lines(execution, _alphaOne, null), Is.EqualTo(_expectedLocalDowned));
+            Assert.That(Resolved(ExecutionHudText.Lines(execution, _alphaOne, null)), Is.EqualTo(_expectedLocalDowned));
         }
 
         [Test]
@@ -95,7 +106,7 @@ namespace Fps.Core.Tests
             execution.ReportLethal(_bravoOne, _alphaOne);
             execution.Interact(_alphaOne, _bravoOne, 1f);
 
-            Assert.That(ExecutionHudText.Lines(execution, _alphaOne, _bravoOne), Is.EqualTo(_expectedExecuting));
+            Assert.That(Resolved(ExecutionHudText.Lines(execution, _alphaOne, _bravoOne)), Is.EqualTo(_expectedExecuting));
         }
 
         [Test]
@@ -106,7 +117,7 @@ namespace Fps.Core.Tests
             execution.Tick(3f);
             WinRoundForAlpha(execution);
 
-            Assert.That(ExecutionHudText.Lines(execution, _alphaOne, null), Is.EqualTo(_expectedAfterRound));
+            Assert.That(Resolved(ExecutionHudText.Lines(execution, _alphaOne, null)), Is.EqualTo(_expectedAfterRound));
         }
 
         [Test]
@@ -135,12 +146,12 @@ namespace Fps.Core.Tests
             execution.Tick(3f);
             WinRoundForAlpha(execution);
 
-            Assert.That(ExecutionHudText.Result(execution), Is.EqualTo(HudFormat.NoResult), "one round is not the match");
+            Assert.That(ExecutionHudText.Result(execution).IsEmpty, Is.True, "one round is not the match");
 
             execution.Tick(3f);
             WinRoundForAlpha(execution);
 
-            Assert.That(ExecutionHudText.Result(execution), Is.EqualTo("ALPHA の勝ち"));
+            Assert.That(GameText.Resolve(ExecutionHudText.Result(execution)), Is.EqualTo("ALPHA の勝ち"));
         }
 
         [Test]
@@ -161,6 +172,11 @@ namespace Fps.Core.Tests
             Assert.That(ExecutionLog.RoundEnded(execution.Round, Side.Alpha), Is.EqualTo("[Mode] round=2 ended winner=0 wins=0:1,1:0"));
             Assert.That(ExecutionLog.RoundEnded(execution.Round, null), Is.EqualTo("[Mode] round=2 ended winner=draw wins=0:1,1:0"));
             Assert.Throws<ArgumentNullException>(() => ExecutionLog.RoundEnded(null, null));
+        }
+
+        private static string[] Resolved(IReadOnlyList<LocalizedText> lines)
+        {
+            return lines.Select(GameText.Resolve).ToArray();
         }
 
         private static ExecutionSession Create()

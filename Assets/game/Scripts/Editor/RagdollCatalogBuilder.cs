@@ -135,6 +135,7 @@ namespace Fps.Editor
             catalog.BaseSpeed = RagdollCatalog.DefaultBaseSpeed;
             catalog.SpeedPerDamage = RagdollCatalog.DefaultSpeedPerDamage;
             catalog.MaxSpeed = RagdollCatalog.DefaultMaxSpeed;
+            catalog.FootSpeedRatio = RagdollCatalog.DefaultFootSpeedRatio;
         }
 
         private readonly struct BoneJoint

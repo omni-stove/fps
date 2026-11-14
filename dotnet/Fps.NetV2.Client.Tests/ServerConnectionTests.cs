@@ -277,7 +277,7 @@ namespace Fps.NetV2.Tests
             Assert.Fail("timed out waiting for the server and the clients\n" + _output);
         }
 
-        private static ushort FreePort()
+        internal static ushort FreePort()
         {
             using (var probe = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)))
             {
@@ -289,7 +289,7 @@ namespace Fps.NetV2.Tests
         /// コミットした server-data の写し。対戦マップの NavMesh (.fpsnav) の書き出し (#584) がまだ無いうちもサーバーを起動できるよう、
         /// 無ければ 1 枚の三角形の NavMesh を置く (クライアントは NavMesh を使わない)。
         /// </summary>
-        private static string ServerDataCopy()
+        internal static string ServerDataCopy()
         {
             var source = Path.Combine(RepositoryRoot(), "server-data");
             var root = Path.Combine(Path.GetTempPath(), "fps-netv2-" + Guid.NewGuid().ToString("N"));
@@ -365,7 +365,7 @@ namespace Fps.NetV2.Tests
             }
         }
 
-        private sealed class StopSignal : IStopSignal
+        internal sealed class StopSignal : IStopSignal
         {
             private Action _onStop;
 

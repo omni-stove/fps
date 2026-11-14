@@ -49,6 +49,14 @@ namespace Fps.Server
             ArgumentNullException.ThrowIfNull(modules);
             ArgumentNullException.ThrowIfNull(motorSettings);
 
+            if (!TryCreateAntiCheat(launch, runtime, libraryDirectory, out var antiCheat, out error))
+            {
+                return false;
+            }
+
+            // Hello は承認の直後に送り合うので、他のモジュールより先に接続を知らせる
+            modules.Add(antiCheat);
+
             // スナップショットは移動が tick の入力を処理し、ルールと戦闘がその tick を進めた後の状態を載せるので、どれより後にも登録する。
             // 戦闘はルールが出現させた後の位置を当たり判定に残すので、ルールより後
             var movement = new ServerMovement(motorSettings);
@@ -62,23 +70,14 @@ namespace Fps.Server
             modules.Add(new ServerBots(rules, movement, combat));
             modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat }));
 
-            error = null;
             if (!launch.Options.RegistersLobby)
             {
                 return true;
             }
 
             var flag = NetLaunchOptions.RegisterLobbyFlag;
-            if (!EosCredentialSource.TryLoad(runtime.Environment, runtime.CredentialSearchRoots, out var credentials, out var missing, out var loadError))
+            if (!TryLoadCredentials(runtime, ServerLobbyService.LogPrefix, flag, out var credentials, out error))
             {
-                error = ServerLobbyService.LogPrefix + "cannot load EOS credentials: " + loadError;
-                return false;
-            }
-
-            if (credentials == null)
-            {
-                error = ServerLobbyService.LogPrefix + flag + " needs EOS credentials; missing " + string.Join(", ", missing)
-                    + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")";
                 return false;
             }
 
@@ -89,6 +88,54 @@ namespace Fps.Server
             }
 
             modules.Add(new ServerLobbyModule(createBackend, launch.Options.RegisterLobbyEndpoint));
+            return true;
+        }
+
+        private static bool TryCreateAntiCheat(
+            ServerLaunch launch, ServerRuntime runtime, string libraryDirectory, out ServerAntiCheat antiCheat, out string error)
+        {
+            antiCheat = null;
+            var settings = launch.AntiCheat;
+            if (!settings.Enabled)
+            {
+                antiCheat = new ServerAntiCheat(settings, null);
+                error = null;
+                return true;
+            }
+
+            var prefix = AntiCheatSettings.LogTag + " ";
+            var flag = AntiCheatSettings.EacFlag;
+            if (!TryLoadCredentials(runtime, prefix, flag, out var credentials, out error))
+            {
+                return false;
+            }
+
+            if (!EosServerAntiCheat.TryPrepare(credentials, launch.Version, libraryDirectory, out var createBackend, out var sdkError))
+            {
+                error = prefix + flag + " cannot use EOS: " + sdkError;
+                return false;
+            }
+
+            antiCheat = new ServerAntiCheat(settings, createBackend);
+            return true;
+        }
+
+        private static bool TryLoadCredentials(ServerRuntime runtime, string prefix, string flag, out EosCredentials credentials, out string error)
+        {
+            if (!EosCredentialSource.TryLoad(runtime.Environment, runtime.CredentialSearchRoots, out credentials, out var missing, out var loadError))
+            {
+                error = prefix + "cannot load EOS credentials: " + loadError;
+                return false;
+            }
+
+            if (credentials == null)
+            {
+                error = prefix + flag + " needs EOS credentials; missing " + string.Join(", ", missing)
+                    + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")";
+                return false;
+            }
+
+            error = null;
             return true;
         }
     }

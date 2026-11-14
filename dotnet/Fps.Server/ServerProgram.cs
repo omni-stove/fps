@@ -55,6 +55,7 @@ namespace Fps.Server
 
             output.WriteLine(BuildVersion.LogLine(launch.Version));
             output.WriteLine(LogTag + " " + launch.Options);
+            output.WriteLine(launch.AntiCheat.Describe());
             output.WriteLine(EosSdkBuild.LogLine(AppContext.BaseDirectory));
 
             if (!ServerMapData.TryLoad(launch.Map, runtime.MapSearchRoots, out var map, out problem))

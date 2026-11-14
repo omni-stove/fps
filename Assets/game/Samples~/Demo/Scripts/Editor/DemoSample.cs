@@ -66,7 +66,8 @@ namespace Fps.Editor
         public static void WriteMenuSceneSettings()
         {
             var root = FpsKitRoot.Output;
-            var path = KitPaths.Combine(root, MenuSceneSettingsRelativePath);
+            // 出力先がサンプルのルートと違っても、同梱の設定そのものを更新する。別の場所に作ると同じ Resources パスが 2 つになり、どちらが読まれるか決まらない。
+            var path = KitPaths.Combine(Root ?? root, MenuSceneSettingsRelativePath);
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(path)?.Replace('\\', '/'));
             SceneBuildHelpers.CreateOrUpdateAsset<MenuSceneSettings>(path, s =>
             {

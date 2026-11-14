@@ -23,6 +23,9 @@
 
 ### できていること
 
+- パッケージ: `Assets/game` が UPM パッケージ `com.omnistove.fps` になっていて、ゲームのプロジェクトから
+  `?path=/Assets/game` で入れられる。シーンやアセットを作るスクリプトは出力先ルート (`-fpsKitRoot`) の下に書く
+  (`Assets/game/README.md`)。
 - 武器: `Assets/game/Weapons/Json/*.json` → `WeaponSpec`。表示名は表のキー (`nameKey`)。
 - ルール: `Assets/game/Rules/Json/*.json` → `GameRules`。
 - 音とエフェクト: `PresentationCatalog` (Resources の `Presentation/PresentationCatalog`) を差し替えれば変わる。
@@ -35,7 +38,7 @@
 
 - 移動: `PlayerController` (`DefaultWalkSpeed` など) と `NetworkPlayerMotor` (`_walkSpeed = 5f` など) が別々に持っている
 - 敵 AI: `EnemyAgent` (`DefaultSightRange`、`DefaultReactionSeconds` など)。`EnemySpec` との関係を整理する
-- グレネード: `GrenadeSpec.Default*`
+- グレネード: `GrenadeSpec.Default*`。`GrenadeThrower` の Inspector では変えられるが、ルールや武器のような JSON は無い
 - 各モード: `DominationSpec`・`HordeSpec`・`SearchAndDestroySpec`・`KillConfirmedSpec`・`HardpointSpec`・`TeamDeathmatchSpec`・`PickupSpec` と、それぞれの `*Runner`
 - その他: `DestructiblePiece`、`ShrinkingZone`、`Damageable`、`CameraBoom`、`AdsZoom`、`RecoilState` などの `Default*`
 
@@ -59,17 +62,20 @@
 
 → `PresentationCatalog` と同じく、カタログにプレハブの枠を設け、空のときだけ仮の形を作る。
 
-### キット本体とサンプルの境目が無い
+### パッケージの中でキット本体とサンプルの境目が無い
 
-コードもサンプルの中身も `Assets/game` にまとめて入っている。
+パッケージ (`Assets/game`) の中に、コードと並んでサンプルの中身 (`Weapons/Json`、`Rules/Json`、`Missions`、
+`Scenes`、`Characters`、`Prefabs`) がそのまま入っている。ゲームのプロジェクトにパッケージを入れると、
+仮の中身も必ず一緒に入る。
 
 ## 移行の順番
 
 1. **移動の値の統一** (上記「定数を直接見ている箇所」)。小さく、実害があるので先にやる。
-2. **キット本体とサンプルの分離**。
+2. **パッケージの中でキット本体とサンプルを分ける**。
    - 本体: `Scripts/Core`・`Runtime`・`Runtime/UI`・`Net`・`Net/UI`・`NetEos` と、そのエディタ拡張。
-     最終的には UPM パッケージ (`Packages/` 以下) にする。
    - サンプル: 武器・ルールの JSON、ミッション、シーン、`*SceneBuilder` などシーンを組むエディタスクリプト、仮の素材。
+     パッケージの `Samples~` に移し、`package.json` の `samples` に載せて、ゲーム側が選んで取り込む形にする。
+     サンプルの JSON をパッケージの中から読んでいるところ (README の「同梱のサンプル JSON」) も合わせて直す。
    - 移動は `.meta` ごと行い、GUID を変えない。ファイルの移動が多く衝突しやすいので、並行作業の少ない時期にまとめて行う。
    - 本体のテストがサンプルの数値 (Rifle のダメージなど) に頼っていれば、テスト用のデータをテスト側に持たせる。
 3. **残りの調整値をデータへ**。敵 AI、グレネード、各モードの Spec。
@@ -78,7 +84,7 @@
    - 固定の列挙 (`Team` が `Alpha`/`Bravo` の 2 つなど) を、キットとして固定するか開くか決める。
    - ルール・武器・カタログ・キャラクター・文言の表を指す入口のアセットを 1 つ設け、ゲームはそれを差し替える。
    - 差し替え漏れ (武器の Id に演出が無い、文言のキーが無いなど) をまとめて報告する点検を `-executeMethod` で動かせるようにする。
-   - 「何をどこに置けば何が変わるか」の差し替えガイドを書く。
+   - `Assets/game/README.md` の「データの差し込み」「UI を差し替える」に並べて、調整値と見た目・音の差し替え方を書く。
 
 ## 新しく書くコードの決まり
 

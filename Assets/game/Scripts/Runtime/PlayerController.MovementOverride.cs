@@ -8,8 +8,9 @@ namespace Fps.Runtime
     /// <summary>
     /// <see cref="PlayerController"/> のうち、移動の横取り (<see cref="IMovementOverride"/>) の処理。
     /// <see cref="Tick"/> のたびに登録されたものから有効で優先度の最も高いものを選び、選ばれたものがあれば
-    /// 姿勢と移動を <see cref="PlayerMotor"/>・回避・乗り越えの代わりにそれへ任せる。
-    /// 選ばれた時点で回避と乗り越えをやめさせ、選ばれている間は始めさせない (<see cref="TryStartDodge"/> / <see cref="TryStartVault"/>)。
+    /// 姿勢と移動を <see cref="PlayerMotor"/>・回避・乗り越え・崖のぼりの代わりにそれへ任せる。
+    /// 選ばれた時点で回避・乗り越え・崖のぼりをやめさせ、選ばれている間は始めさせない
+    /// (<see cref="TryStartDodge"/> / <see cref="TryStartVault"/> / <see cref="TryStartMantle"/>)。
     /// 選ばれたもの・外れたものは <c>[Player] override=.. active=..</c> でログに出す。
     /// </summary>
     public sealed partial class PlayerController
@@ -114,6 +115,7 @@ namespace Fps.Runtime
         {
             CancelDodge();
             CancelVault();
+            CancelMantle();
             _activeMovementOverride = movementOverride;
             Debug.Log(FormatMovementOverrideLog(movementOverride, true), this);
             movementOverride.Begin(this);

@@ -142,118 +142,118 @@ namespace Fps.Editor
                     return false;
 
                 case Phase.PushWhileOff:
-                {
-                    var movement = world.Player.GetComponent<LadderMovement>();
-                    if (_grabs > 0 || (movement != null && movement.IsClimbing))
                     {
-                        problem = "the player grabbed the ladder while the Ladder rule was Off";
-                        return false;
-                    }
+                        var movement = world.Player.GetComponent<LadderMovement>();
+                        if (_grabs > 0 || (movement != null && movement.IsClimbing))
+                        {
+                            problem = "the player grabbed the ladder while the Ladder rule was Off";
+                            return false;
+                        }
 
-                    if (feet.y > _offStartY + OffRiseLimit)
-                    {
-                        problem = $"the player rose to {Format(feet.y)}m in front of the ladder while the Ladder rule was Off";
-                        return false;
-                    }
+                        if (feet.y > _offStartY + OffRiseLimit)
+                        {
+                            problem = $"the player rose to {Format(feet.y)}m in front of the ladder while the Ladder rule was Off";
+                            return false;
+                        }
 
-                    if (Time.time - _phaseStartedAt < LadderOffSeconds)
-                    {
-                        return false;
-                    }
-
-                    new LadderActionInstaller().Install(world.Player, WithLadder(LadderRule.On));
-                    movement = world.Player.GetComponent<LadderMovement>();
-                    if (movement == null || movement.Rule != LadderRule.On)
-                    {
-                        problem = "LadderActionInstaller did not give the player a LadderMovement with the rule On";
-                        return false;
-                    }
-
-                    PlaceInFront(world, span);
-                    _phase = Phase.ClimbUp;
-                    return false;
-                }
-
-                case Phase.ClimbUp:
-                {
-                    var movement = world.Player.GetComponent<LadderMovement>();
-                    if (movement != null && movement.IsClimbing && !_checkedWhileClimbing)
-                    {
-                        problem = CheckWhileClimbing(world);
-                        _checkedWhileClimbing = true;
-                        if (problem != null)
+                        if (Time.time - _phaseStartedAt < LadderOffSeconds)
                         {
                             return false;
                         }
-                    }
 
-                    if (!_sawExitTop)
-                    {
+                        new LadderActionInstaller().Install(world.Player, WithLadder(LadderRule.On));
+                        movement = world.Player.GetComponent<LadderMovement>();
+                        if (movement == null || movement.Rule != LadderRule.On)
+                        {
+                            problem = "LadderActionInstaller did not give the player a LadderMovement with the rule On";
+                            return false;
+                        }
+
+                        PlaceInFront(world, span);
+                        _phase = Phase.ClimbUp;
                         return false;
                     }
 
-                    _filter.Move = Vector2.zero;
-                    if (_frontGrabs == 0 || !_checkedWhileClimbing)
+                case Phase.ClimbUp:
                     {
-                        problem = $"the player reached the top without a '{LadderLog.GrabPrefix}... entry=Front' line or without being seen on the ladder";
+                        var movement = world.Player.GetComponent<LadderMovement>();
+                        if (movement != null && movement.IsClimbing && !_checkedWhileClimbing)
+                        {
+                            problem = CheckWhileClimbing(world);
+                            _checkedWhileClimbing = true;
+                            if (problem != null)
+                            {
+                                return false;
+                            }
+                        }
+
+                        if (!_sawExitTop)
+                        {
+                            return false;
+                        }
+
+                        _filter.Move = Vector2.zero;
+                        if (_frontGrabs == 0 || !_checkedWhileClimbing)
+                        {
+                            problem = $"the player reached the top without a '{LadderLog.GrabPrefix}... entry=Front' line or without being seen on the ladder";
+                            return false;
+                        }
+
+                        _phase = Phase.RestOnTop;
                         return false;
                     }
-
-                    _phase = Phase.RestOnTop;
-                    return false;
-                }
 
                 case Phase.RestOnTop:
-                {
-                    var movement = world.Player.GetComponent<LadderMovement>();
-                    if (!mover.IsGrounded || movement == null || movement.RegrabRemaining > 0f)
                     {
+                        var movement = world.Player.GetComponent<LadderMovement>();
+                        if (!mover.IsGrounded || movement == null || movement.RegrabRemaining > 0f)
+                        {
+                            return false;
+                        }
+
+                        var top = span.Top.ToUnity();
+                        if (Mathf.Abs(feet.y - top.y) > LandingTolerance || Vector3.Dot(feet - top, span.Facing.ToUnity()) <= 0f)
+                        {
+                            problem = $"after leaving at the top the player stood at {Format(feet)}, not on the platform at {Format(top)}";
+                            return false;
+                        }
+
+                        // 上の足場では はしごと同じ向き (足場の奥) を向いているので、後ろへ下がると縁へ進む。
+                        _filter.Move = Vector2.down;
+                        _phase = Phase.ClimbDown;
                         return false;
                     }
-
-                    var top = span.Top.ToUnity();
-                    if (Mathf.Abs(feet.y - top.y) > LandingTolerance || Vector3.Dot(feet - top, span.Facing.ToUnity()) <= 0f)
-                    {
-                        problem = $"after leaving at the top the player stood at {Format(feet)}, not on the platform at {Format(top)}";
-                        return false;
-                    }
-
-                    // 上の足場では はしごと同じ向き (足場の奥) を向いているので、後ろへ下がると縁へ進む。
-                    _filter.Move = Vector2.down;
-                    _phase = Phase.ClimbDown;
-                    return false;
-                }
 
                 case Phase.ClimbDown:
-                {
-                    if (!_sawExitBottom)
                     {
-                        return false;
-                    }
+                        if (!_sawExitBottom)
+                        {
+                            return false;
+                        }
 
-                    _filter.Move = Vector2.zero;
-                    if (!mover.IsGrounded)
-                    {
-                        return false;
-                    }
+                        _filter.Move = Vector2.zero;
+                        if (!mover.IsGrounded)
+                        {
+                            return false;
+                        }
 
-                    if (_topGrabs == 0)
-                    {
-                        problem = $"the player left at the bottom without a '{LadderLog.GrabPrefix}... entry=Top' line";
-                        return false;
-                    }
+                        if (_topGrabs == 0)
+                        {
+                            problem = $"the player left at the bottom without a '{LadderLog.GrabPrefix}... entry=Top' line";
+                            return false;
+                        }
 
-                    var bottom = span.Bottom.ToUnity();
-                    if (Mathf.Abs(feet.y - bottom.y) > LandingTolerance || Vector3.Dot(feet - bottom, span.Facing.ToUnity()) >= 0f)
-                    {
-                        problem = $"after leaving at the bottom the player stood at {Format(feet)}, not on the ground in front of the ladder at {Format(bottom)}";
-                        return false;
-                    }
+                        var bottom = span.Bottom.ToUnity();
+                        if (Mathf.Abs(feet.y - bottom.y) > LandingTolerance || Vector3.Dot(feet - bottom, span.Facing.ToUnity()) >= 0f)
+                        {
+                            problem = $"after leaving at the bottom the player stood at {Format(feet)}, not on the ground in front of the ladder at {Format(bottom)}";
+                            return false;
+                        }
 
-                    RestoreFilter();
-                    _phase = Phase.Done;
-                    return true;
-                }
+                        RestoreFilter();
+                        _phase = Phase.Done;
+                        return true;
+                    }
 
                 default:
                     return true;

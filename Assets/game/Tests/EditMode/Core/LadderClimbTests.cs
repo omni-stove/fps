@@ -8,7 +8,7 @@ namespace Fps.Core.Tests
     public sealed class LadderClimbTests
     {
         // 2 進で割り切れる刻みにして、高さを足し合わせても誤差が出ないようにする。
-        private const float StepSeconds = 0.125f;
+        private const float _stepSeconds = 0.125f;
 
         // 高さ 3m、2 m/s で上り下りするはしご。
         private static readonly LadderSpan _span = new LadderSpan(Vector3.Zero, Vector3.UnitZ, 3f, 0.8f);
@@ -19,7 +19,7 @@ namespace Fps.Core.Tests
         {
             var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 0f);
 
-            var outcome = climb.Step(1f, false, true, StepSeconds);
+            var outcome = climb.Step(1f, false, true, _stepSeconds);
             Assert.That(outcome, Is.EqualTo(LadderOutcome.Climbing), "standing on the ground does not end the climb up");
             Assert.That(climb.Height, Is.EqualTo(0.25f));
             Assert.That(climb.VerticalSpeed, Is.EqualTo(2f));
@@ -27,7 +27,7 @@ namespace Fps.Core.Tests
             var steps = 1;
             while (outcome == LadderOutcome.Climbing && steps < 100)
             {
-                outcome = climb.Step(1f, false, false, StepSeconds);
+                outcome = climb.Step(1f, false, false, _stepSeconds);
                 steps++;
             }
 
@@ -45,7 +45,7 @@ namespace Fps.Core.Tests
             var steps = 0;
             while (outcome == LadderOutcome.Climbing && steps < 100)
             {
-                outcome = climb.Step(-1f, false, false, StepSeconds);
+                outcome = climb.Step(-1f, false, false, _stepSeconds);
                 steps++;
             }
 
@@ -59,7 +59,7 @@ namespace Fps.Core.Tests
         {
             var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 2f);
 
-            Assert.That(climb.Step(-1f, false, true, StepSeconds), Is.EqualTo(LadderOutcome.ExitBottom));
+            Assert.That(climb.Step(-1f, false, true, _stepSeconds), Is.EqualTo(LadderOutcome.ExitBottom));
             Assert.That(climb.Height, Is.EqualTo(1.75f));
         }
 
@@ -68,7 +68,7 @@ namespace Fps.Core.Tests
         {
             var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f);
 
-            Assert.That(climb.Step(0.05f, false, false, StepSeconds), Is.EqualTo(LadderOutcome.Climbing));
+            Assert.That(climb.Step(0.05f, false, false, _stepSeconds), Is.EqualTo(LadderOutcome.Climbing));
             Assert.That(climb.Height, Is.EqualTo(1f));
             Assert.That(climb.VerticalSpeed, Is.EqualTo(0f));
         }
@@ -78,7 +78,7 @@ namespace Fps.Core.Tests
         {
             var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f);
 
-            Assert.That(climb.Step(1f, true, false, StepSeconds), Is.EqualTo(LadderOutcome.JumpOff));
+            Assert.That(climb.Step(1f, true, false, _stepSeconds), Is.EqualTo(LadderOutcome.JumpOff));
             Assert.That(climb.Height, Is.EqualTo(1f));
             var away = _span.JumpOffVelocity(_spec.JumpOffSpeed);
             Assert.That(away.Z, Is.EqualTo(-4f), "away from the ladder");
@@ -93,13 +93,13 @@ namespace Fps.Core.Tests
             Assert.That(forwardIn.Height, Is.EqualTo(3f - LadderSpan.TopEntryDepth).Within(1e-5f));
             Assert.That(forwardIn.IsInputLatched, Is.True);
 
-            Assert.That(forwardIn.Step(1f, false, false, StepSeconds), Is.EqualTo(LadderOutcome.Climbing));
+            Assert.That(forwardIn.Step(1f, false, false, _stepSeconds), Is.EqualTo(LadderOutcome.Climbing));
             Assert.That(forwardIn.VerticalSpeed, Is.EqualTo(-2f), "walked off the edge forwards, so forward climbs down");
-            Assert.That(forwardIn.Step(-1f, false, false, StepSeconds), Is.EqualTo(LadderOutcome.Climbing));
+            Assert.That(forwardIn.Step(-1f, false, false, _stepSeconds), Is.EqualTo(LadderOutcome.Climbing));
             Assert.That(forwardIn.VerticalSpeed, Is.EqualTo(2f), "the other way climbs up");
 
             var backIn = new LadderClimb(_span, _spec, LadderEntry.Top, 3f);
-            backIn.Step(-1f, false, false, StepSeconds);
+            backIn.Step(-1f, false, false, _stepSeconds);
             Assert.That(backIn.VerticalSpeed, Is.EqualTo(-2f), "backed off the edge, so back climbs down");
         }
 
@@ -107,12 +107,12 @@ namespace Fps.Core.Tests
         public void ReleasingTheStickAfterATopGrabRestoresForwardAsUp()
         {
             var climb = new LadderClimb(_span, _spec, LadderEntry.Top, 3f);
-            climb.Step(1f, false, false, StepSeconds);
+            climb.Step(1f, false, false, _stepSeconds);
 
-            climb.Step(0f, false, false, StepSeconds);
+            climb.Step(0f, false, false, _stepSeconds);
             Assert.That(climb.IsInputLatched, Is.False);
 
-            climb.Step(1f, false, false, StepSeconds);
+            climb.Step(1f, false, false, _stepSeconds);
             Assert.That(climb.VerticalSpeed, Is.EqualTo(2f));
         }
 
@@ -142,7 +142,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new LadderClimb(_span, _spec, LadderEntry.Front, float.NaN));
 
             var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 0f);
-            Assert.Throws<ArgumentOutOfRangeException>(() => climb.Step(float.NaN, false, false, StepSeconds));
+            Assert.Throws<ArgumentOutOfRangeException>(() => climb.Step(float.NaN, false, false, _stepSeconds));
             Assert.Throws<ArgumentOutOfRangeException>(() => climb.Step(1f, false, false, -1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => climb.Step(1f, false, false, float.PositiveInfinity));
         }

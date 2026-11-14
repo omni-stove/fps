@@ -77,6 +77,8 @@ namespace Fps.Core
         /// どちらでもなければ <see cref="LadderOutcome.Climbing"/>。
         /// </summary>
         /// <param name="forward">前後の入力。有限値。</param>
+        /// <param name="jumpPressed">この Tick にジャンプが押されたか。</param>
+        /// <param name="grounded">直前の移動で足が地面に着いたか。</param>
         /// <param name="deltaSeconds">進める秒数。0 以上の有限値。</param>
         public LadderOutcome Step(float forward, bool jumpPressed, bool grounded, float deltaSeconds)
         {

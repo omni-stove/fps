@@ -190,39 +190,39 @@ namespace Fps.Runtime.Traversal
             switch (outcome)
             {
                 case LadderOutcome.ExitTop:
-                {
-                    var feet = span.TopExit(radius).ToUnity() + (Vector3.up * LandingLift);
-                    Leave(LadderOutcome.ExitTop);
-                    return new MovementOverrideStep(Vector3.down * LandingDrop, Vector3.zero, RootFor(mover, feet), crouched: false);
-                }
-
-                case LadderOutcome.ExitBottom:
-                {
-                    var feet = climb.Feet(radius).ToUnity() + (Vector3.up * LandingLift);
-                    Leave(LadderOutcome.ExitBottom);
-                    return new MovementOverrideStep(Vector3.down * LandingDrop, Vector3.zero, RootFor(mover, feet), crouched: false);
-                }
-
-                case LadderOutcome.JumpOff:
-                {
-                    var velocity = span.JumpOffVelocity(climb.Spec.JumpOffSpeed).ToUnity();
-                    Leave(LadderOutcome.JumpOff);
-                    return new MovementOverrideStep(velocity * deltaSeconds, velocity, crouched: false);
-                }
-
-                default:
-                {
-                    var target = climb.Feet(radius).ToUnity();
-                    var velocity = Vector3.up * climb.VerticalSpeed;
-                    if (!_placed)
                     {
-                        _placed = true;
-                        return new MovementOverrideStep(
-                            Vector3.zero, velocity, RootFor(mover, target), FacingYaw(span), crouched: false);
+                        var feet = span.TopExit(radius).ToUnity() + (Vector3.up * LandingLift);
+                        Leave(LadderOutcome.ExitTop);
+                        return new MovementOverrideStep(Vector3.down * LandingDrop, Vector3.zero, RootFor(mover, feet), crouched: false);
                     }
 
-                    return new MovementOverrideStep(target - FeetOf(mover), velocity, crouched: false);
-                }
+                case LadderOutcome.ExitBottom:
+                    {
+                        var feet = climb.Feet(radius).ToUnity() + (Vector3.up * LandingLift);
+                        Leave(LadderOutcome.ExitBottom);
+                        return new MovementOverrideStep(Vector3.down * LandingDrop, Vector3.zero, RootFor(mover, feet), crouched: false);
+                    }
+
+                case LadderOutcome.JumpOff:
+                    {
+                        var velocity = span.JumpOffVelocity(climb.Spec.JumpOffSpeed).ToUnity();
+                        Leave(LadderOutcome.JumpOff);
+                        return new MovementOverrideStep(velocity * deltaSeconds, velocity, crouched: false);
+                    }
+
+                default:
+                    {
+                        var target = climb.Feet(radius).ToUnity();
+                        var velocity = Vector3.up * climb.VerticalSpeed;
+                        if (!_placed)
+                        {
+                            _placed = true;
+                            return new MovementOverrideStep(
+                                Vector3.zero, velocity, RootFor(mover, target), FacingYaw(span), crouched: false);
+                        }
+
+                        return new MovementOverrideStep(target - FeetOf(mover), velocity, crouched: false);
+                    }
             }
         }
 

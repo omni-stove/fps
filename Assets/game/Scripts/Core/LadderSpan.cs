@@ -137,6 +137,9 @@ namespace Fps.Core
         /// </list>
         /// どちらも横へは <see cref="Width"/> の半分まで。
         /// </summary>
+        /// <param name="feet">人の足元の位置。</param>
+        /// <param name="velocity">人の水平の速度 (m/s)。</param>
+        /// <param name="radius">人の体の半径 (m)。</param>
         /// <param name="grabDistance">体の表面からはしごの面までの、つかまれる距離 (m)。0 以上。</param>
         public LadderEntry Probe(Vector3 feet, Vector3 velocity, float radius, float grabDistance)
         {

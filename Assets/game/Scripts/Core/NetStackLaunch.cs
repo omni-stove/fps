@@ -61,7 +61,7 @@ namespace Fps.Core
             return true;
         }
 
-        /// <summary><c>-netstack v2</c> が付いているか。値が正しくなければ false (Netcode の起動がその誤りを出す)。</summary>
+        /// <summary><c>-netstack v2</c> が付いているか。値が正しくなければ false (<c>NetBootstrap</c> が <see cref="TryParse"/> で誤りを出して止める)。</summary>
         public static bool RequestsV2(IReadOnlyList<string> args)
         {
             return TryParse(args, out var stack, out _) && stack == NetStackKind.V2;

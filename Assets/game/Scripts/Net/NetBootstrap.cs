@@ -208,6 +208,13 @@ namespace Fps.Net
             }
 
             var args = Environment.GetCommandLineArgs();
+            // 値の誤りは RequestsV2 では false になるだけなので、黙って Netcode で起動しないようここで止める
+            if (!isDedicatedServer && !NetStackLaunch.TryParse(args, out _, out var stackError))
+            {
+                Fail(ExitInvalidArguments, "[Net] invalid arguments: " + stackError);
+                return;
+            }
+
             if (!NetStartup.TryResolveLobby(args, isDedicatedServer, out var lobbyOptions, out var lobbyError))
             {
                 Fail(ExitInvalidArguments, "[Lobby] invalid arguments: " + lobbyError);

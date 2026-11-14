@@ -6,7 +6,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// メニューから移るシーンの名前を、ゲームが <see cref="MenuRoute"/> の既定から変えるためのデータ。
-    /// Resources の <see cref="ResourcePath"/> に置くと、メニューの遷移 (MenuNavigator) とネット対戦の起動 (NetBootstrap) がこの名前を読む。
+    /// 入口 (<see cref="GameContent.MenuScenes"/>) に割り当てるか Resources の <see cref="ResourcePath"/> に置くと、メニューの遷移 (MenuNavigator) とネット対戦の起動 (NetBootstrap) がこの名前を読む。
     /// 置かなければ、また空にした欄は既定の名前 (<see cref="MenuScenes.Default"/>) を使う。
     /// </summary>
     [CreateAssetMenu(fileName = "MenuSceneSettings", menuName = "Fps/Menu Scene Settings")]
@@ -62,10 +62,11 @@ namespace Fps.Runtime
             set => _sceneRoot = value;
         }
 
-        /// <summary>Resources の <see cref="ResourcePath"/> の設定。無ければ null。</summary>
+        /// <summary>入口 (<see cref="GameContent.MenuScenes"/>) の設定、無ければ Resources の <see cref="ResourcePath"/> の設定。どちらも無ければ null。</summary>
         public static MenuSceneSettings Load()
         {
-            return Resources.Load<MenuSceneSettings>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.MenuScenes);
+            return fromContent != null ? fromContent : Resources.Load<MenuSceneSettings>(ResourcePath);
         }
 
         /// <summary>
@@ -83,7 +84,7 @@ namespace Fps.Runtime
             try
             {
                 var scenes = settings.ToScenes();
-                Debug.Log($"{LogTag} scenes from Resources/{ResourcePath}: {scenes}", settings);
+                Debug.Log($"{LogTag} scenes from '{settings.name}': {scenes}", settings);
                 return scenes;
             }
             catch (MenuSceneSettingsException e)

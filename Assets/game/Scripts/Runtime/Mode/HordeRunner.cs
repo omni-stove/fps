@@ -35,7 +35,7 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("波の敵の陣営の ID。WaveSpawner の敵の陣営と合わせる")]
         private int _enemySideId = DefaultEnemySideId;
 
-        [SerializeField, Tooltip("通貨と波の調整値。空なら HordeSpec の既定値と、WaveSpawner に設定された波を使う")]
+        [SerializeField, Tooltip("通貨と波の調整値。空なら入口 (GameContent) のもの、それも無ければ HordeSpec の既定値と、WaveSpawner に設定された波を使う")]
         private HordeDefinition _definition;
 
         private readonly HashSet<Damageable> _enemies = new HashSet<Damageable>();
@@ -69,6 +69,9 @@ namespace Fps.Runtime
             set => _definition = value;
         }
 
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public HordeDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Horde);
+
         /// <summary>HUD の案内に出す、直す・置く操作のキー。空なら出さない。<see cref="HordeInteractInput"/> が入れる。</summary>
         public string InteractKeyLabel { get; set; }
 
@@ -93,7 +96,7 @@ namespace Fps.Runtime
         /// <summary><see cref="Definition"/> (無ければ既定値) から <see cref="HordeSpec"/> を作る。値が不正なら <see cref="ArgumentException"/>。</summary>
         public HordeSpec CreateSpec()
         {
-            return _definition != null ? _definition.ToSpec(PlayerSide, EnemySide) : new HordeSpec(PlayerSide, EnemySide);
+            return EffectiveDefinition is { } definition ? definition.ToSpec(PlayerSide, EnemySide) : new HordeSpec(PlayerSide, EnemySide);
         }
 
         /// <summary>
@@ -102,9 +105,10 @@ namespace Fps.Runtime
         /// </summary>
         public WaveSchedule CreateSchedule()
         {
-            if (_definition != null)
+            var definition = EffectiveDefinition;
+            if (definition != null)
             {
-                return _definition.CreateSchedule();
+                return definition.CreateSchedule();
             }
 
             if (_spawner == null)

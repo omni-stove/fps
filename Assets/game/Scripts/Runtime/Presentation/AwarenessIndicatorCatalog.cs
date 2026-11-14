@@ -22,7 +22,8 @@ namespace Fps.Runtime
 
         public static AwarenessIndicatorCatalog Load()
         {
-            return Resources.Load<AwarenessIndicatorCatalog>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.AwarenessIndicator);
+            return fromContent != null ? fromContent : Resources.Load<AwarenessIndicatorCatalog>(ResourcePath);
         }
     }
 }

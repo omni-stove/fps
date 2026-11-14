@@ -1,0 +1,16 @@
+{
+  "mode.domination.pointOwner": "{0} {1}",
+  "mode.domination.neutral": "--",
+  "mode.hardpoint.empty": "拠点は無人",
+  "mode.hardpoint.contested": "争奪中",
+  "mode.hardpoint.activePoint": "拠点 {0} (次は {1} まで {2} 秒)",
+  "mode.hardpoint.held": "{0} が確保中",
+  "mode.killConfirmed.perSide": "{0} {1} / {2} {3}",
+  "mode.killConfirmed.confirmed": "確定 {0}",
+  "mode.killConfirmed.denied": "阻止 {0}",
+  "mode.killConfirmed.tagsOnField": "落ちているタグ {0}",
+  "mode.freeForAll.rank": "順位 {0}/{1}",
+  "mode.freeForAll.aheadOfSecond": "{0}  2位と +{1}",
+  "mode.freeForAll.tiedForFirst": "{0}  1位と同点",
+  "mode.freeForAll.behindFirst": "{0}  1位と -{1}"
+}

@@ -172,7 +172,7 @@ namespace Fps.Runtime
 
                 _shownOwners[i] = owner;
                 _shownContested[i] = contested;
-                _pointTexts[i] = DominationHudFormat.PointOwner(i, owner);
+                _pointTexts[i] = Localizer.Resolve(DominationHudFormat.PointOwner(i, owner));
                 ApplyPoint(i);
             }
 
@@ -243,7 +243,7 @@ namespace Fps.Runtime
             _pointTexts.Clear();
             for (var i = 0; i < count; i++)
             {
-                _pointTexts.Add(DominationHudFormat.PointOwner(i, null));
+                _pointTexts.Add(Localizer.Resolve(DominationHudFormat.PointOwner(i, null)));
             }
         }
 

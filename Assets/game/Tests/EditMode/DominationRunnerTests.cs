@@ -263,7 +263,7 @@ namespace Fps.Tests.EditMode
             Assert.That(view.AlphaScoreText, Is.EqualTo("ALPHA 0"));
             Assert.That(view.BravoScoreText, Is.EqualTo("BRAVO 0"));
             Assert.That(view.TimeText, Is.EqualTo(HudFormat.Time(TimeLimit)));
-            Assert.That(view.PointTexts, Is.EqualTo(new[] { "A " + DominationHudFormat.Neutral }));
+            Assert.That(view.PointTexts, Is.EqualTo(new[] { "A --" }));
             Assert.That(view.ResultText, Is.Empty);
 
             LogAssert.Expect(LogType.Log, "[Domination] captured point=A team=Alpha");

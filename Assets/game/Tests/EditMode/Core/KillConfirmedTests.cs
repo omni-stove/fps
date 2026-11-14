@@ -260,7 +260,7 @@ namespace Fps.Core.Tests
             mode.Collect(denied.Id, _bravo1);
             mode.DropTag(_alpha1);
 
-            Assert.That(KillConfirmedText.HudLines(mode), Is.EqualTo(_expectedHudLines));
+            Assert.That(Array.ConvertAll(KillConfirmedText.HudLines(mode), GameText.Resolve), Is.EqualTo(_expectedHudLines));
             Assert.Throws<ArgumentNullException>(() => KillConfirmedText.HudLines(null));
         }
 

@@ -149,6 +149,7 @@ namespace Fps.Tests.EditMode
             Assert.That(builder.NavMeshDataPath, Is.EqualTo("Assets/game/Scenes/ModeTest/NavMesh-Floor.asset"));
             Assert.That(builder.LogTag, Is.EqualTo("[ModeTestSceneBuilder]"));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.ModeTestScene));
+            Assert.That(ModeTestSceneBuilder.DefinitionPath, Is.EqualTo("Assets/game/Modes/TeamDeathmatch.asset"));
         }
     }
 }

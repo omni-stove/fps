@@ -25,7 +25,10 @@ namespace Fps.Core.Tests
             _actions,
             2f,
             FallDamage.On,
-            HudDensity.Hardcore);
+            HudDensity.Hardcore,
+            MatchObjective.Domination,
+            4,
+            60f);
 
         [Test]
         public void EachGameRulesWithReplacesOnlyItsValue()
@@ -47,6 +50,9 @@ namespace Fps.Core.Tests
                 (nameof(GameRules.SpawnProtectionSeconds), r => r.WithSpawnProtectionSeconds(0f), 0f),
                 (nameof(GameRules.FallDamage), r => r.WithFallDamage(FallDamage.Off), FallDamage.Off),
                 (nameof(GameRules.HudDensity), r => r.WithHudDensity(HudDensity.Full), HudDensity.Full),
+                (nameof(GameRules.Objective), r => r.WithObjective(MatchObjective.None), MatchObjective.None),
+                (nameof(GameRules.MinPlayers), r => r.WithMinPlayers(0), 0),
+                (nameof(GameRules.IdleKickSeconds), r => r.WithIdleKickSeconds(0f), 0f),
             };
 
             AssertEveryPropertyHasACase(typeof(GameRules), cases.Length);
@@ -134,6 +140,9 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithSpawnProtectionSeconds(-0.5f));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithFallDamage((FallDamage)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithHudDensity((HudDensity)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithObjective((MatchObjective)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithMinPlayers(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithIdleKickSeconds(float.NaN));
         }
 
         [Test]

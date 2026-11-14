@@ -93,6 +93,16 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("HUD にどれだけの情報を出すか")]
         private HudDensity _hudDensity = HudDensity.Full;
 
+        [Header("オンラインの試合")]
+        [SerializeField, Tooltip("勝敗を何で決めるか。None はキル数、Domination は拠点のポイント")]
+        private MatchObjective _objective = MatchObjective.None;
+
+        [SerializeField, UnityEngine.Range(0, GameRules.MaxMinPlayers), Tooltip("人がこれより少なければ足りない分を Bot で埋める。0 なら埋めない")]
+        private int _minPlayers;
+
+        [SerializeField, Min(0f), Tooltip("入力がこの秒数無いプレイヤーをサーバーから切る。0 なら切らない")]
+        private float _idleKickSeconds;
+
         public FriendlyFire FriendlyFire
         {
             get => _friendlyFire;
@@ -237,6 +247,24 @@ namespace Fps.Runtime
             set => _hudDensity = value;
         }
 
+        public MatchObjective Objective
+        {
+            get => _objective;
+            set => _objective = value;
+        }
+
+        public int MinPlayers
+        {
+            get => _minPlayers;
+            set => _minPlayers = value;
+        }
+
+        public float IdleKickSeconds
+        {
+            get => _idleKickSeconds;
+            set => _idleKickSeconds = value;
+        }
+
         /// <summary>定義を不変の <see cref="GameRules"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="GameRulesDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ToRules()
@@ -268,7 +296,10 @@ namespace Fps.Runtime
                         _grenadeCount),
                     _spawnProtectionSeconds,
                     _fallDamage,
-                    _hudDensity);
+                    _hudDensity,
+                    _objective,
+                    _minPlayers,
+                    _idleKickSeconds);
             }
             catch (ArgumentException e)
             {
@@ -317,6 +348,9 @@ namespace Fps.Runtime
             _spawnProtectionSeconds = rules.SpawnProtectionSeconds;
             _fallDamage = rules.FallDamage;
             _hudDensity = rules.HudDensity;
+            _objective = rules.Objective;
+            _minPlayers = rules.MinPlayers;
+            _idleKickSeconds = rules.IdleKickSeconds;
 
             var actions = rules.Actions;
             _downed = actions.Downed;

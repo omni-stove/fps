@@ -105,16 +105,18 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 体力を満たして groundPosition (足元) に戻す。<see cref="EnemyAgent"/> なら <see cref="EnemyAgent.Respawn"/> に任せる。
+        /// 体力を満たして groundPosition (足元) に戻す。生きていても戻す (ラウンドの始めに全員を並べ直すため)。
+        /// 初期化済みの <see cref="EnemyAgent"/> なら <see cref="EnemyAgent.ResetTo"/> に任せる。
         /// それ以外 (プレイヤー) は CharacterController を切って足元が groundPosition に来るように移し、体力を作り直す。
         /// プレイヤーの向きは視点の部品 (<see cref="FirstPersonLook"/>) が持っているので変えない。
         /// </summary>
         public void Respawn(Vector3 groundPosition, Quaternion rotation)
         {
+            // 初期化に失敗した敵は判断を持たず自分で止まっているので、プレイヤーと同じく位置と体力だけ戻す。
             var agent = GetComponent<EnemyAgent>();
-            if (agent != null)
+            if (agent != null && agent.IsInitialized)
             {
-                agent.Respawn(groundPosition, rotation);
+                agent.ResetTo(groundPosition, rotation);
                 return;
             }
 
@@ -145,6 +147,31 @@ namespace Fps.Runtime
             if (weapon != null && weapon.IsInitialized)
             {
                 weapon.ApplyRules(weapon.Rules);
+            }
+        }
+
+        /// <summary>
+        /// ダウンから起き上がらせる。その場に留まり、体力を health にする。プレイヤーは位置も弾も変えない。
+        /// 初期化済みの <see cref="EnemyAgent"/> は判断と NavMeshAgent が倒れたままなので、<see cref="EnemyAgent.ResetTo"/> でその場に戻してから体力を合わせる。
+        /// 操作と行動は戻さないので、呼んだ側が <see cref="SetActing"/> する。
+        /// </summary>
+        /// <param name="health">起き上がった後の体力。1 以上 (最大体力を超える値は最大体力にする)。</param>
+        public void Revive(int health)
+        {
+            if (health <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(health), health, "health must be positive");
+            }
+
+            var agent = GetComponent<EnemyAgent>();
+            if (agent != null && agent.IsInitialized)
+            {
+                agent.ResetTo(agent.GroundPosition, transform.rotation);
+            }
+
+            if (Damageable != null)
+            {
+                Damageable.RestoreHealth(health);
             }
         }
 

@@ -177,7 +177,7 @@ namespace Fps.Runtime
             StopWaves();
         }
 
-        protected override string HudTimeText(ModeSession session)
+        protected override string HudTime(ModeSession session)
         {
             return HudFormat.Time((float)session.ElapsedSeconds);
         }

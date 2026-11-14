@@ -156,8 +156,9 @@ namespace Fps.Net
             config.ConnectionApproval = true;
             config.ConnectionData = ConnectionPayload.Encode(version, NetConnectionKeys.DeviceKey);
             target.AddComponent<NetConnectionKeys>().Attach(manager, version);
-            // シーンの同期はまだ要らない。有効だとクライアントが NetTest を読み直して Bootstrap が二重になる
-            config.EnableSceneManagement = false;
+            // サーバーが -map で選んだシーンにクライアントを合わせるため、シーンの同期は Netcode に任せる。
+            // 同期で読み直したシーンの NetBootstrap は、動いている NetworkManager を見て自分を消す (NetBootstrap.Awake)
+            config.EnableSceneManagement = true;
 
             foreach (var prefab in extraPrefabs)
             {

@@ -27,9 +27,18 @@ namespace Fps.Net
     /// <see cref="DisconnectNotice"/> で分けた理由 (サーバー停止・タイムアウト・拒否・版違い) を添えてメニューへ戻る。
     /// サーバー (Host を含む) は止まる前に、つないでいるクライアントへ止まると知らせてから切る。
     /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
+    /// <para>
+    /// <c>-bots</c> は試合の進行役を Spawn する前に <see cref="NetTeamDeathmatch.LaunchBots"/> へ渡す (Bot を足すのは試合の .Bots.cs)。
+    /// <c>-map</c> は .Map.cs、<c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> は .NetSimulation.cs、
+    /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、試合のイベントのログは .Log.cs が受け持つ。
+    /// それぞれの起動の前 (<c>*BeforeStart</c>)・起動の後 (<c>*AfterStart</c>)・終了の要求 (<c>*QuitRequested</c>) の差し込み口を
+    /// <see cref="StartNetwork"/> と <see cref="HandleWantsToQuit"/> から呼ぶ。
+    /// <c>-map</c> のシーンが今のシーンと違えば、NetworkManager を組み立てる前に .Map.cs (<c>MapHandOff</c>) がそのシーンへ移り、
+    /// 起動はそのシーンの NetBootstrap に任せる。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class NetBootstrap : MonoBehaviour
+    public sealed partial class NetBootstrap : MonoBehaviour
     {
         /// <summary>このコンポーネントを置くシーン。<c>Fps.Editor.NetSceneBuilder</c> が生成する。</summary>
         public const string ScenePath = "Assets/game/Scenes/NetTest.unity";
@@ -137,7 +146,16 @@ namespace Fps.Net
         {
             if (NetworkManager.Singleton != null)
             {
-                Debug.LogWarning("[Net] a NetworkManager already exists; destroying duplicate " + name);
+                if (NetworkManager.Singleton.IsListening)
+                {
+                    // Netcode がサーバーのシーンに合わせて読んだシーンにも NetBootstrap があるので、動いている方を使い続ける
+                    Debug.Log("[Net] scene " + gameObject.scene.name + " was loaded while the network is running; removing its " + name);
+                }
+                else
+                {
+                    Debug.LogWarning("[Net] a NetworkManager already exists; destroying duplicate " + name);
+                }
+
                 Destroy(gameObject);
                 return;
             }
@@ -199,6 +217,14 @@ namespace Fps.Net
             {
                 // 起動モードと接続先はロビーが決まってから分かるので、NetworkManager はそのときに組み立てる
                 PrepareLobby(lobbyOptions);
+                return;
+            }
+
+            // EOS のプラットフォームは 1 プロセスで 1 度しか作れないので、transport やロビーを組み立てる前に移る
+            var handedOff = false;
+            MapHandOff(ref handedOff);
+            if (handedOff)
+            {
                 return;
             }
 
@@ -288,6 +314,30 @@ namespace Fps.Net
             return true;
         }
 
+        /// <summary>
+        /// サーバーが実行中に Spawn するプレハブ。試合の進行役 matchPrefab と、その <see cref="NetTeamDeathmatch.GrenadePrefab"/>。
+        /// グレネードのプレハブが使えなければ (<see cref="NetTeamDeathmatch.TryValidateGrenadePrefab"/>) 登録せずに警告を出す
+        /// (サーバーもクライアントも同じ NetMatch プレハブから決めるので、どちらも登録しない側にそろう)。
+        /// </summary>
+        internal static GameObject[] SpawnablePrefabs(GameObject matchPrefab)
+        {
+            if (matchPrefab == null)
+            {
+                throw new ArgumentNullException(nameof(matchPrefab));
+            }
+
+            var match = matchPrefab.GetComponent<NetTeamDeathmatch>();
+            var grenade = match != null ? match.GrenadePrefab : null;
+            if (!NetTeamDeathmatch.TryValidateGrenadePrefab(grenade, out var error))
+            {
+                Debug.LogWarning("[Net] " + error + " on " + matchPrefab.name + "; grenades cannot be thrown online"
+                    + "; run Fps.Editor.NetSceneBuilder.Build");
+                return new[] { matchPrefab };
+            }
+
+            return new[] { matchPrefab, grenade };
+        }
+
         /// <summary>NetworkManager と transport を組み立て、イベントを購読する。失敗したら false。</summary>
         private bool ConfigureNetwork(NetTransportPlan plan)
         {
@@ -295,7 +345,7 @@ namespace Fps.Net
 
             try
             {
-                _manager = NetworkSetup.Configure(gameObject, plan, _playerPrefab, new[] { _matchPrefab });
+                _manager = NetworkSetup.Configure(gameObject, plan, _playerPrefab, SpawnablePrefabs(_matchPrefab));
             }
             catch (ArgumentException e)
             {
@@ -314,6 +364,7 @@ namespace Fps.Net
             _manager.OnTransportFailure += HandleTransportFailure;
             // 専用サーバーは docker stop (SIGTERM) で終了するので、Netcode が終了で止まる前にクライアントへ知らせる
             Application.quitting += TellClientsServerStopping;
+            Application.wantsToQuit += HandleWantsToQuit;
             return true;
         }
 
@@ -474,6 +525,19 @@ namespace Fps.Net
         {
             // StartHost は接続のコールバックを同期で呼ぶので、開始のログは先に出す
             Debug.Log("[Net] starting " + _options + " transport=" + NetLaunchOptions.TransportName(_options.Transport));
+
+            // transport の設定は待ち受け・接続を始めた後に変えても効かないので、起動の前に差し込み口を呼ぶ
+            string beforeStartError = null;
+            MapBeforeStart(ref beforeStartError);
+            NetSimulationBeforeStart(ref beforeStartError);
+            ShutdownBeforeStart(ref beforeStartError);
+            LogBeforeStart(ref beforeStartError);
+            if (beforeStartError != null)
+            {
+                Fail(ExitMisconfigured, beforeStartError);
+                return;
+            }
+
             var started = false;
             try
             {
@@ -507,6 +571,24 @@ namespace Fps.Net
             }
 
             _nextStatusLogTime = Time.unscaledTime + _statusLogInterval;
+            MapAfterStart();
+            NetSimulationAfterStart();
+            ShutdownAfterStart();
+            LogAfterStart();
+        }
+
+        /// <summary>
+        /// 終了の要求 (<see cref="Application.wantsToQuit"/>) を差し込み口に渡す。どれかが allowQuit を false にすれば終了を待たせる。
+        /// 待たせた差し込み口は、待ち終えたら自分で <see cref="Application.Quit()"/> を呼ぶ。
+        /// </summary>
+        private bool HandleWantsToQuit()
+        {
+            var allowQuit = true;
+            MapQuitRequested(ref allowQuit);
+            NetSimulationQuitRequested(ref allowQuit);
+            ShutdownQuitRequested(ref allowQuit);
+            LogQuitRequested(ref allowQuit);
+            return allowQuit;
         }
 
         private void Update()
@@ -542,6 +624,7 @@ namespace Fps.Net
             }
 
             Application.quitting -= TellClientsServerStopping;
+            Application.wantsToQuit -= HandleWantsToQuit;
             if (_manager == null)
             {
                 return;
@@ -575,6 +658,9 @@ namespace Fps.Net
             {
                 instance = Instantiate(_matchPrefab);
                 instance.name = _matchPrefab.name;
+
+                // 試合は Spawn の中で始まる (OnNetworkSpawn) ので、Bot の数はその前に渡す
+                instance.GetComponent<NetTeamDeathmatch>().LaunchBots = _options.Bots;
                 instance.GetComponent<NetworkObject>().Spawn(true);
             }
             catch (Exception e)

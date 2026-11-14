@@ -45,6 +45,7 @@ namespace Fps.Net
             _serverLoadout?.Remove(playerId);
             _lastKillers.Remove(playerId);
             ForgetDowned(playerId);
+            ForgetGrenades(playerId);
             var held = _session != null && _session.HasPlayer(playerId) && _session.Leave(playerId);
 
             Debug.Log(MatchLog.Left(playerId));
@@ -53,19 +54,23 @@ namespace Fps.Net
                 Debug.Log(MatchLog.Held(playerId, _session.ReconnectGraceSeconds));
             }
 
+            BotsPlayerLeft(playerId);
+            IdlePlayerLeft(playerId);
+            ObjectivePlayerLeft(playerId);
+
             // 停止中は配る先がもう無いので、同期する一覧には触らない
             if (NetworkManager != null && NetworkManager.ShutdownInProgress)
             {
                 return;
             }
 
-            var index = FindRow(player.OwnerClientId);
+            var index = FindRow(player.RosterId);
             if (index >= 0)
             {
                 _players.RemoveAt(index);
             }
 
-            RemoveSpawnProtectionRow(player.OwnerClientId);
+            RemoveSpawnProtectionRow(player.RosterId);
         }
 
         /// <summary>まだ試合に入っていない接続済みプレイヤーを、接続順に加える。</summary>
@@ -103,7 +108,8 @@ namespace Fps.Net
                     continue;
                 }
 
-                if (client.ClientId > int.MaxValue)
+                // Bot の Id (BotRoster.FirstBotPlayerId 以上) と重なるクライアントは、成績の行で Bot と見分けられない
+                if (client.ClientId > int.MaxValue || BotRoster.IsBotId(client.ClientId))
                 {
                     _rejectedClients.Add(client.ClientId);
                     Debug.LogError("[Match] client id " + client.ClientId + " does not fit a player id");
@@ -150,6 +156,9 @@ namespace Fps.Net
                 }
 
                 _session.Join(playerId, key);
+                BotsPlayerJoined(playerId, player);
+                IdlePlayerJoined(playerId, player);
+                ObjectivePlayerJoined(playerId, player);
             }
         }
 

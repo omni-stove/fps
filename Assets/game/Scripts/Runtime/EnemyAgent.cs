@@ -16,7 +16,7 @@ namespace Fps.Runtime
     /// 同じ GameObject に <see cref="SideMember"/> があれば、タグの代わりに自分と違う陣営で生きている、いちばん近い相手を
     /// <see cref="TargetSearchInterval"/> ごとに (目標が倒れたらすぐに) 選び直す (<see cref="EnemySenses.SelectHostile"/>)。
     /// モードが倒れた敵を戻すときは <see cref="Respawn"/> を呼ぶ。
-    /// 武器は 1 本だけ持ち、持ち替えない。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
+    /// 武器は 1 本だけ持ち、自分では持ち替えない (ガンゲームのようにモードが <see cref="EquipWeapon"/> で替えることはある)。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
     /// (シーン生成スクリプトが、敵の配置ごとに指定した Id の武器を武器の一覧 <see cref="WeaponCatalogAsset"/> から引いて配線する)。
     /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
     /// 撃たれたら (<see cref="Damageable.Damaged"/>) 撃った者の位置を次の知覚 1 回だけ物音として渡し、
@@ -31,11 +31,16 @@ namespace Fps.Runtime
     /// 覗くときは立ち上がり、点に覗く位置 (<see cref="CoverPoint.PeekPosition"/>) があればそこへ出て撃ち、隠れ直すときに点へ戻る。
     /// 使う点や段階が変わるたびに <c>[AI] id=.. cover phase=.. point=..</c> をログに出す。
     /// </para>
+    /// <para>
+    /// モードは <see cref="Disarm"/> で武器を持たせずに始められる (撃たない)。拾える物 (<see cref="Pickup"/>) から武器を拾う (<see cref="AddWeapon"/>) と持つ。
+    /// モードは <see cref="SetErrand"/> で戦いのほかの行き先 (縮むエリアの中・拾える物など) を渡せる。巡回・待機・捜索の間はその行き先へ動き、
+    /// 戦いより優先する行き先 (overridesCombat が true) か武器を持っていない間は、追跡・攻撃・隠れる最中でもそこへ動く (向きと射撃は判断のまま)。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Damageable))]
-    public sealed class EnemyAgent : MonoBehaviour, ICharacterMotionSource
+    public sealed class EnemyAgent : MonoBehaviour, ICharacterMotionSource, IWeaponHolder
     {
         public const string LogTag = "[AI]";
 
@@ -174,6 +179,7 @@ namespace Fps.Runtime
         private Damageable _target;
         private EnemyBrain _brain;
         private Weapon _weapon;
+        private GameRules _weaponRules = GameRules.Default;
         private Vector3? _destination;
         private Vector3? _pendingNoise;
         private bool _pendingHit;
@@ -194,6 +200,9 @@ namespace Fps.Runtime
         private Vector3 _spawnPosition;
         private Vector3 _lastFinitePosition;
         private float _nextOffMeshRetry;
+        private bool _unarmed;
+        private Vector3? _errand;
+        private bool _errandOverridesCombat;
         private readonly System.Random _random = new System.Random();
 
         /// <summary>ログに出す識別子。</summary>
@@ -231,16 +240,144 @@ namespace Fps.Runtime
             set => _target = value;
         }
 
-        public Weapon Weapon => _weapon;
+        /// <summary>持っている武器。未初期化か武器を持っていなければ (<see cref="IsUnarmed"/>) null。</summary>
+        public Weapon Weapon => _unarmed ? null : _weapon;
+
+        /// <summary><see cref="Disarm"/> してから、武器を拾うか <see cref="EquipWeapon"/> するまで true。この間は撃たない。</summary>
+        public bool IsUnarmed => _unarmed;
+
+        /// <summary><see cref="SetErrand"/> で渡した行き先 (足元)。無ければ null。</summary>
+        public Vector3? Errand => _errand;
+
+        /// <summary><see cref="Errand"/> を戦いより優先するなら true。</summary>
+        public bool ErrandOverridesCombat => _errandOverridesCombat;
+
+        /// <summary>
+        /// 戦いのほかの行き先を渡す。巡回・待機・捜索の間はそこへ動く。overridesCombat が true か武器を持っていなければ、追跡・攻撃・隠れる最中もそこへ動く。
+        /// 着いても消さないので、要らなくなったら <see cref="ClearErrand"/> を呼ぶ。
+        /// </summary>
+        public void SetErrand(Vector3 destination, bool overridesCombat)
+        {
+            _errand = destination;
+            _errandOverridesCombat = overridesCombat;
+        }
+
+        /// <summary><see cref="SetErrand"/> の行き先を消し、いつもの判断に戻す。</summary>
+        public void ClearErrand()
+        {
+            _errand = null;
+            _errandOverridesCombat = false;
+        }
+
+        /// <summary>
+        /// 武器を持っていない状態にする。リロード中なら取り消す。武器を拾う (<see cref="AddWeapon"/>) か <see cref="EquipWeapon"/> すると持った状態に戻る。
+        /// 未初期化でも呼べる (初期化しても持っていないまま)。もう持っていなければ何もせず false。
+        /// </summary>
+        public bool Disarm()
+        {
+            if (_unarmed)
+            {
+                return false;
+            }
+
+            _weapon?.CancelReload();
+            _unarmed = true;
+            Debug.Log($"{LogTag} id={Id} disarmed", this);
+            return true;
+        }
+
+        /// <summary>持っている武器 (1 本) の今の予備弾。武器を持っていないか未初期化なら空。</summary>
+        public IReadOnlyList<PickupWeaponState> DescribeWeapons(out string currentWeaponId)
+        {
+            var weapon = Weapon;
+            if (weapon == null)
+            {
+                currentWeaponId = null;
+                return Array.Empty<PickupWeaponState>();
+            }
+
+            currentWeaponId = weapon.Spec.Id;
+            return new[] { PickupWeaponState.Of(weapon) };
+        }
+
+        /// <summary>
+        /// 拾った武器を持つ。bot は 1 本しか持たないので、別の武器を持っていればそれと持ち替える (<see cref="EquipWeapon"/>、今の <see cref="WeaponRules"/> で満タン)。
+        /// 同じ Id の武器を持っていれば何もせず false。
+        /// </summary>
+        public bool AddWeapon(WeaponDefinition definition)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            var spec = definition.ToSpec();
+            var current = Weapon;
+            if (current != null && string.Equals(current.Spec.Id, spec.Id, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            EquipWeapon(definition, _weaponRules);
+            return true;
+        }
+
+        /// <summary>持っている武器の Id が weaponId なら予備弾を amount 足し、実際に足した数を返す。違う武器か武器を持っていなければ 0。</summary>
+        public int AddReserveAmmo(string weaponId, int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
+            }
+
+            var weapon = Weapon;
+            return weapon != null && string.Equals(weapon.Spec.Id, weaponId, StringComparison.Ordinal) ? weapon.AddReserveAmmo(amount) : 0;
+        }
 
         /// <summary>
         /// 撃つ武器の定義。<see cref="TryInitialize"/> がこれから <see cref="Weapon"/> を作るので、それより前に設定する
-        /// (初期化後に変えても今の武器は変わらない)。
+        /// (初期化後に変えても今の武器は変わらない。初期化後に持ち替えるなら <see cref="EquipWeapon"/>)。
         /// </summary>
         public WeaponDefinition WeaponDefinition
         {
             get => _weaponDefinition;
             set => _weaponDefinition = value;
+        }
+
+        /// <summary>武器を作るときの予備弾のルール。既定は <see cref="GameRules.Default"/>。<see cref="EquipWeapon"/> で変える。</summary>
+        public GameRules WeaponRules => _weaponRules;
+
+        /// <summary>
+        /// 持つ武器を definition に替え、rules (null なら今の <see cref="WeaponRules"/>) の予備弾で満タンに作り直す。リロード中なら取り消す。
+        /// 以後の <see cref="Respawn"/> もこの武器とルールで作り直す。未初期化なら定義とルールを覚えるだけで、<see cref="TryInitialize"/> がそれで作る。
+        /// 武器を持っていなければ (<see cref="IsUnarmed"/>)、持った状態に戻す。
+        /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、今の武器はそのまま残す。
+        /// </summary>
+        public void EquipWeapon(WeaponDefinition definition, GameRules rules = null)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            var spec = definition.ToSpec();
+            var weaponRules = rules ?? _weaponRules;
+            _weaponDefinition = definition;
+            _weaponRules = weaponRules;
+            _unarmed = false;
+            if (_brain == null)
+            {
+                return;
+            }
+
+            if (_weapon != null)
+            {
+                _weapon.Reloaded -= OnReloaded;
+            }
+
+            _weapon = new Weapon(spec, weaponRules);
+            _weapon.Reloaded += OnReloaded;
+            Debug.Log($"{LogTag} id={Id} equip weapon={spec.DisplayName} ammo={_weapon.AmmoInMagazine}", this);
         }
 
         /// <summary>巡回地点 (ワールド座標の足元)。</summary>
@@ -380,7 +517,7 @@ namespace Fps.Runtime
             _stuck.Recovered += OnUnstuck;
             _brain = new EnemyBrain(spec);
             _brain.StateChanged += OnStateChanged;
-            _weapon = new Weapon(weaponSpec);
+            _weapon = new Weapon(weaponSpec, _weaponRules);
             _weapon.Reloaded += OnReloaded;
             _self.Died += OnDied;
             _self.Damaged += OnDamaged;
@@ -604,14 +741,39 @@ namespace Fps.Runtime
             }
 
             LogCoverChange();
-            SetCrouching(decision.Crouch && _brain.CurrentCoverPoint?.Height == CoverHeight.Low);
-            MoveTo(CoverMoveTo(decision));
+            var errand = ErrandMoveTo();
+            SetCrouching(!errand.HasValue && decision.Crouch && _brain.CurrentCoverPoint?.Height == CoverHeight.Low);
+            MoveTo(errand ?? CoverMoveTo(decision));
             WatchProgress(deltaSeconds);
             Face(decision.LookAt, deltaSeconds);
-            if (decision.Fire)
+            if (decision.Fire && !_unarmed)
             {
                 Shoot();
             }
+        }
+
+        /// <summary>
+        /// 今のフレームで判断の移動先の代わりに向かう <see cref="Errand"/>。巡回・待機・捜索の間か、戦いより優先する行き先か、武器を持っていなければ返す。
+        /// 着いていれば (<see cref="EnemyBrain.ArrivalDistance"/> 以内) その場に留まるよう null にせず今の足元を返す。
+        /// </summary>
+        private System.Numerics.Vector3? ErrandMoveTo()
+        {
+            if (!_errand.HasValue)
+            {
+                return null;
+            }
+
+            var state = _brain.State;
+            var engaged = state == EnemyState.Chase || state == EnemyState.Attack || state == EnemyState.TakeCover;
+            if (engaged && !_errandOverridesCombat && !_unarmed)
+            {
+                return null;
+            }
+
+            var destination = _errand.Value;
+            return HorizontalDistance(GroundPosition, destination) > EnemyBrain.ArrivalDistance
+                ? destination.ToNumerics()
+                : GroundPosition.ToNumerics();
         }
 
         /// <summary>
@@ -778,6 +940,26 @@ namespace Fps.Runtime
                 return false;
             }
 
+            PlaceAndStartOver(groundPosition, rotation, "respawned");
+            return true;
+        }
+
+        /// <summary>
+        /// 生死を問わず、<see cref="Respawn"/> と同じく groundPosition (足元) に置き直して体力・武器・判断・経路を初めからにする。
+        /// ラウンド制のモードがラウンドの頭で、生き残っていた敵も含めて全員を出現点に戻すときに使う。未初期化なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ResetTo(Vector3 groundPosition, Quaternion rotation)
+        {
+            if (_brain == null)
+            {
+                throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
+            }
+
+            PlaceAndStartOver(groundPosition, rotation, "reset");
+        }
+
+        private void PlaceAndStartOver(Vector3 groundPosition, Quaternion rotation, string logVerb)
+        {
             var ground = NavMesh.SamplePosition(groundPosition, out var hit, OffMeshSnapRadius, NavMesh.AllAreas)
                 ? hit.position
                 : groundPosition;
@@ -794,7 +976,7 @@ namespace Fps.Runtime
             SetCrouching(false);
 
             _weapon.Reloaded -= OnReloaded;
-            _weapon = new Weapon(_weapon.Spec);
+            _weapon = new Weapon(_weapon.Spec, _weaponRules);
             _weapon.Reloaded += OnReloaded;
 
             // 無効のまま Transform を動かしてから有効にすると、NavMeshAgent は新しい位置の近くの NavMesh に載る。
@@ -821,11 +1003,10 @@ namespace Fps.Runtime
             _lastFinitePosition = transform.position;
 
             _self.ResetHealth();
-            _brain.Revive();
+            _brain.Restart();
             _target = null;
             _nextTargetSearch = 0f;
-            Debug.Log($"{LogTag} id={Id} respawned at={ground.ToString("F1")} state={_brain.State}", this);
-            return true;
+            Debug.Log($"{LogTag} id={Id} {logVerb} at={ground.ToString("F1")} state={_brain.State}", this);
         }
 
         private void MoveTo(System.Numerics.Vector3? moveTo)

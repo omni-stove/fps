@@ -9,7 +9,7 @@ namespace Fps.Core
     {
         /// <summary>
         /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない、アクションは <see cref="ActionRules.Default"/>、
-        /// リスポーン直後の無敵なし、落下ダメージなし、HUD はすべて出す。
+        /// リスポーン直後の無敵なし、落下ダメージなし、HUD はすべて出す、拠点なし (<see cref="MatchObjective.None"/>)、人数を Bot で埋めない、放置しても切らない。
         /// </summary>
         public static readonly GameRules Default = new GameRules(
             FriendlyFire.Off,
@@ -25,6 +25,9 @@ namespace Fps.Core
 
         /// <summary><see cref="Default"/> の <see cref="WaveIntervalSeconds"/>。Wave 以外では使われない。</summary>
         public const float DefaultWaveIntervalSeconds = 10f;
+
+        /// <summary><see cref="MinPlayers"/> の上限。サーバーが Bot を際限なく足さないようにする。</summary>
+        public const int MaxMinPlayers = 64;
 
         /// <summary>味方に弾が当たったときの扱い。</summary>
         public FriendlyFire FriendlyFire { get; }
@@ -68,6 +71,17 @@ namespace Fps.Core
         /// <summary>HUD にどれだけの情報を出すか。</summary>
         public HudDensity HudDensity { get; }
 
+        /// <summary>オンラインの試合の勝敗を何で決めるか。</summary>
+        public MatchObjective Objective { get; }
+
+        /// <summary>
+        /// オンラインの試合で、人がこれより少なければ足りない分を Bot で埋める人数。0 なら埋めない。0 以上 <see cref="MaxMinPlayers"/> 以下。
+        /// </summary>
+        public int MinPlayers { get; }
+
+        /// <summary>オンラインの試合で、入力がこの秒数無ければサーバーから切る。0 なら切らない。0 以上の有限値。</summary>
+        public float IdleKickSeconds { get; }
+
         /// <param name="friendlyFire">味方撃ちの扱い。定義済みの値。</param>
         /// <param name="respawnMode">リスポーン方式。定義済みの値。</param>
         /// <param name="waveIntervalSeconds">波の間隔 (秒)。0 より大きい有限値。</param>
@@ -82,6 +96,9 @@ namespace Fps.Core
         /// <param name="spawnProtectionSeconds">リスポーン直後にダメージを受けない秒数。0 以上の有限値。</param>
         /// <param name="fallDamage">落下ダメージ。定義済みの値。</param>
         /// <param name="hudDensity">HUD の情報量。定義済みの値。</param>
+        /// <param name="objective">勝敗の決め方。定義済みの値。</param>
+        /// <param name="minPlayers">Bot で埋める人数。0 以上 <see cref="MaxMinPlayers"/> 以下。</param>
+        /// <param name="idleKickSeconds">放置で切るまでの秒数。0 以上の有限値。</param>
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -96,7 +113,10 @@ namespace Fps.Core
             ActionRules actions = null,
             float spawnProtectionSeconds = 0f,
             FallDamage fallDamage = FallDamage.Off,
-            HudDensity hudDensity = HudDensity.Full)
+            HudDensity hudDensity = HudDensity.Full,
+            MatchObjective objective = MatchObjective.None,
+            int minPlayers = 0,
+            float idleKickSeconds = 0f)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -159,6 +179,21 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(hudDensity), hudDensity, "hudDensity is not a defined HudDensity");
             }
 
+            if (!Enum.IsDefined(typeof(MatchObjective), objective))
+            {
+                throw new ArgumentOutOfRangeException(nameof(objective), objective, "objective is not a defined MatchObjective");
+            }
+
+            if (minPlayers < 0 || minPlayers > MaxMinPlayers)
+            {
+                throw new ArgumentOutOfRangeException(nameof(minPlayers), minPlayers, "minPlayers must be between 0 and " + MaxMinPlayers);
+            }
+
+            if (!(idleKickSeconds >= 0f) || float.IsInfinity(idleKickSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(idleKickSeconds), idleKickSeconds, "idleKickSeconds must be a non-negative finite number");
+            }
+
             FriendlyFire = friendlyFire;
             RespawnMode = respawnMode;
             WaveIntervalSeconds = waveIntervalSeconds;
@@ -173,6 +208,9 @@ namespace Fps.Core
             SpawnProtectionSeconds = spawnProtectionSeconds;
             FallDamage = fallDamage;
             HudDensity = hudDensity;
+            Objective = objective;
+            MinPlayers = minPlayers;
+            IdleKickSeconds = idleKickSeconds;
         }
 
         /// <summary><see cref="FriendlyFire"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
@@ -228,6 +266,15 @@ namespace Fps.Core
         /// <summary><see cref="HudDensity"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
         public GameRules WithHudDensity(HudDensity value) => Copy(hudDensity: value);
 
+        /// <summary><see cref="Objective"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithObjective(MatchObjective value) => Copy(objective: value);
+
+        /// <summary><see cref="MinPlayers"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithMinPlayers(int value) => Copy(minPlayers: value);
+
+        /// <summary><see cref="IdleKickSeconds"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithIdleKickSeconds(float value) => Copy(idleKickSeconds: value);
+
         private GameRules Copy(
             FriendlyFire? friendlyFire = null,
             RespawnMode? respawnMode = null,
@@ -242,7 +289,10 @@ namespace Fps.Core
             ActionRules actions = null,
             float? spawnProtectionSeconds = null,
             FallDamage? fallDamage = null,
-            HudDensity? hudDensity = null)
+            HudDensity? hudDensity = null,
+            MatchObjective? objective = null,
+            int? minPlayers = null,
+            float? idleKickSeconds = null)
         {
             return new GameRules(
                 friendlyFire ?? FriendlyFire,
@@ -258,7 +308,10 @@ namespace Fps.Core
                 actions ?? Actions,
                 spawnProtectionSeconds ?? SpawnProtectionSeconds,
                 fallDamage ?? FallDamage,
-                hudDensity ?? HudDensity);
+                hudDensity ?? HudDensity,
+                objective ?? Objective,
+                minPlayers ?? MinPlayers,
+                idleKickSeconds ?? IdleKickSeconds);
         }
     }
 }

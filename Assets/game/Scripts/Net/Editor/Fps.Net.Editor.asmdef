@@ -6,6 +6,7 @@
         "Fps.Editor",
         "Fps.Net",
         "Fps.Runtime",
+        "Unity.AI.Navigation",
         "Unity.Netcode.Runtime"
     ],
     "includePlatforms": [

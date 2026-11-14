@@ -41,7 +41,11 @@ namespace Fps.Editor
 
         // 対戦・PvE モード。名前とルールはそれぞれ GameRulesAssetBuilder.ModeNames と <名前>Path に揃える (一致はテストで確かめる)。
         public const string FreeForAllScene = "Assets/game/Scenes/FreeForAll.unity";
+
+        /// <summary>キルコンファームド。生成は <see cref="KillConfirmedSceneBuilder"/>。</summary>
         public const string KillConfirmedScene = "Assets/game/Scenes/KillConfirmed.unity";
+
+        /// <summary>ガンゲーム。生成は <see cref="GunGameSceneBuilder"/>。</summary>
         public const string GunGameScene = "Assets/game/Scenes/GunGame.unity";
 
         /// <summary>ハードポイント。生成は <see cref="HardpointSceneBuilder"/>。</summary>
@@ -66,6 +70,12 @@ namespace Fps.Editor
         /// </summary>
         public const string NetTestScene = "Assets/game/Scenes/NetTest.unity";
 
+        /// <summary>
+        /// ネット対戦のマップ。サーバーは <c>-map NetArena01</c> でこのシーンへ移る。生成は Fps.Net.Editor の ArenaSceneBuilder
+        /// (この Editor のアセンブリは Fps.Net.Editor を参照しないため文字列で持つ。一致はテストで確かめる)。
+        /// </summary>
+        public const string NetArena01Scene = "Assets/game/Scenes/NetArena01.unity";
+
         /// <summary>ビルドに入れるシーン。この順に Build Settings へ並べる (先頭が起動時のシーン)。</summary>
         public static IReadOnlyList<string> Scenes { get; } = new[]
         {
@@ -89,6 +99,7 @@ namespace Fps.Editor
             HordeScene,
             BattleRoyaleScene,
             ModeTestScene,
+            NetArena01Scene,
             NetTestScene,
         };
 
@@ -124,8 +135,11 @@ namespace Fps.Editor
             }
         }
 
-        /// <summary>専用サーバーのビルドに入れるシーン。メニューと一人称カメラの射撃場は要らないので、ネット対戦のシーンだけを最初に置く。</summary>
-        public static IReadOnlyList<string> ServerScenes { get; } = new[] { NetTestScene };
+        /// <summary>
+        /// 専用サーバーのビルドに入れるシーン。メニューと一人称カメラの射撃場は要らないので、ネット対戦のシーンを最初に置き、
+        /// <c>-map</c> で選べるマップを続ける。
+        /// </summary>
+        public static IReadOnlyList<string> ServerScenes { get; } = new[] { NetTestScene, NetArena01Scene };
 
         /// <summary>path を起動時のシーンとして Build Settings の先頭に有効な状態で置く (<see cref="WithStartScene"/>)。</summary>
         public static void RegisterStartScene(string path)

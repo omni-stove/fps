@@ -63,6 +63,9 @@ namespace Fps.Tests.EditMode
             definition.SpawnProtectionSeconds = 1.5f;
             definition.FallDamage = FallDamage.On;
             definition.HudDensity = HudDensity.Minimal;
+            definition.Objective = MatchObjective.Domination;
+            definition.MinPlayers = 6;
+            definition.IdleKickSeconds = 45f;
 
             var rules = definition.ToRules();
 
@@ -90,6 +93,9 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(1.5f));
             Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.On));
             Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Minimal));
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Domination));
+            Assert.That(rules.MinPlayers, Is.EqualTo(6));
+            Assert.That(rules.IdleKickSeconds, Is.EqualTo(45f));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
 
@@ -110,7 +116,10 @@ namespace Fps.Tests.EditMode
                 new ActionRules(Downed.Revive, 12f, 0.25f, 2.5f, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, 3),
                 2f,
                 FallDamage.On,
-                HudDensity.Hardcore);
+                HudDensity.Hardcore,
+                MatchObjective.Domination,
+                8,
+                120f);
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -143,6 +152,9 @@ namespace Fps.Tests.EditMode
         [TestCase("SpawnProtectionSeconds")]
         [TestCase("FallDamage")]
         [TestCase("HudDensity")]
+        [TestCase("Objective")]
+        [TestCase("MinPlayers")]
+        [TestCase("IdleKickSeconds")]
         public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
         {
             var definition = NewBroken("BrokenRules", field);
@@ -213,6 +225,9 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.SpawnProtectionSeconds, Is.EqualTo(expected.SpawnProtectionSeconds));
             Assert.That(actual.FallDamage, Is.EqualTo(expected.FallDamage));
             Assert.That(actual.HudDensity, Is.EqualTo(expected.HudDensity));
+            Assert.That(actual.Objective, Is.EqualTo(expected.Objective));
+            Assert.That(actual.MinPlayers, Is.EqualTo(expected.MinPlayers));
+            Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)
@@ -293,6 +308,15 @@ namespace Fps.Tests.EditMode
                     break;
                 case "HudDensity":
                     definition.HudDensity = (HudDensity)99;
+                    break;
+                case "Objective":
+                    definition.Objective = (MatchObjective)99;
+                    break;
+                case "MinPlayers":
+                    definition.MinPlayers = -1;
+                    break;
+                case "IdleKickSeconds":
+                    definition.IdleKickSeconds = float.NegativeInfinity;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

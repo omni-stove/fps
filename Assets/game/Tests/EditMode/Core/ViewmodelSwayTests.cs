@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ViewmodelSwayTests
     {
-        private const float _frame =1f / 60f;
+        private const float _frame = 1f / 60f;
 
         private static void Run(ViewmodelSway sway, float seconds, float speed = 0f, float yawRate = 0f, float pitchRate = 0f, float ads = 0f)
         {

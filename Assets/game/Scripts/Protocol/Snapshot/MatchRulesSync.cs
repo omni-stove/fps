@@ -17,6 +17,8 @@ namespace Fps.Protocol
         public Vault Vault { get; set; }
         public HudDensity HudDensity { get; set; }
         public Ping Ping { get; set; }
+        public Prone Prone { get; set; }
+        public Ladder Ladder { get; set; }
 
         /// <exception cref="System.ArgumentNullException">rules が null。</exception>
         public static MatchRulesSync From(GameRules rules)
@@ -39,6 +41,8 @@ namespace Fps.Protocol
                 Vault = actions.Vault,
                 HudDensity = rules.HudDensity,
                 Ping = actions.Ping,
+                Prone = actions.Prone,
+                Ladder = actions.Ladder,
             };
         }
 
@@ -53,7 +57,9 @@ namespace Fps.Protocol
                 && Dodge == other.Dodge
                 && Vault == other.Vault
                 && HudDensity == other.HudDensity
-                && Ping == other.Ping;
+                && Ping == other.Ping
+                && Prone == other.Prone
+                && Ladder == other.Ladder;
         }
 
         internal void Write(MessageWriter writer)
@@ -68,6 +74,8 @@ namespace Fps.Protocol
             writer.WriteByte((byte)Vault);
             writer.WriteByte((byte)HudDensity);
             writer.WriteByte((byte)Ping);
+            writer.WriteByte((byte)Prone);
+            writer.WriteByte((byte)Ladder);
         }
 
         internal static MatchRulesSync Read(MessageReader reader)
@@ -84,6 +92,8 @@ namespace Fps.Protocol
                 Vault = (Vault)reader.ReadByteBelow(EnumRange<Vault>.Count, "vault rule"),
                 HudDensity = (HudDensity)reader.ReadByteBelow(EnumRange<HudDensity>.Count, "hud density"),
                 Ping = (Ping)reader.ReadByteBelow(EnumRange<Ping>.Count, "ping rule"),
+                Prone = (Prone)reader.ReadByteBelow(EnumRange<Prone>.Count, "prone rule"),
+                Ladder = (Ladder)reader.ReadByteBelow(EnumRange<Ladder>.Count, "ladder rule"),
             };
         }
     }

@@ -364,6 +364,10 @@ namespace Fps.Server
             _accepted.ServerTick = (int)Math.Min(_host.TickCount, int.MaxValue);
             _accepted.Map = _launch.Map;
             _accepted.MaxHealth = _rules?.Settings.MaxHealth ?? NetMatchSettings.DefaultMaxHealth;
+
+            // 移動のモジュールは同じルールのファイルの値 (ServerModules.MotorSettingsFrom) で動くので、クライアントの予測にも同じ値を渡す
+            _accepted.Motor = _rules?.Motor ?? NetMotorSettings.Default;
+            _accepted.KillPlaneY = ServerMotorSettings.DefaultKillPlaneY;
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 

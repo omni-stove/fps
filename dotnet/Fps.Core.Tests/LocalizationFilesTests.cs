@@ -46,6 +46,20 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheNetTextsAreReadFromTheNetTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var layers = JapaneseGameTextSetUp.LoadLayers(language);
+                var net = layers.Single(layer => layer.Key.EndsWith("net.json", StringComparison.Ordinal)).Value;
+
+                Assert.That(net.Keys.All(key => key.StartsWith("net.", StringComparison.Ordinal)), Is.True, GameLanguages.Code(language));
+                Assert.That(net.Contains("net.stats.line"), Is.True, GameLanguages.Code(language));
+                Assert.That(net.Contains("net.disconnect.serverStopped"), Is.True, GameLanguages.Code(language));
+            }
+        }
+
+        [Test]
         public void TheControlModeTextsAreReadFromTheJapaneseModesControlTable()
         {
             var modes = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)

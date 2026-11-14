@@ -10,6 +10,7 @@ namespace Fps.Net
     /// オンラインの HUD の右上に、サーバーとの回線の Ping・パケットロス・tick (<see cref="NetStatsFormat.Text"/>) を出す。
     /// Hud.uxml の <see cref="UxmlName"/> を使う。中身と出し入れは <see cref="NetHud"/> が決める。
     /// Ping の段階 (<see cref="NetPingLevel"/>) で <see cref="WarningClass"/> (黄) か <see cref="BadClass"/> (赤) を付ける。
+    /// 受け取った文は今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら文にし直す。
     /// </summary>
     /// <remarks>
     /// 遊ぶ人が自分で出した表示なので、HUD の量 (<see cref="HudVisibility"/>) では隠さない。
@@ -31,8 +32,11 @@ namespace Fps.Net
         /// <summary>出しているか。</summary>
         public bool IsShown { get; private set; }
 
-        /// <summary>出している文字列。隠している間は空文字。</summary>
+        /// <summary>出している文字列 (今の言語の文)。隠している間は空文字。</summary>
         public string Text { get; private set; } = string.Empty;
+
+        /// <summary>出している文。隠している間は <c>default</c>。</summary>
+        public LocalizedText Source { get; private set; }
 
         /// <summary>出している Ping の段階。隠している間は <see cref="NetPingLevel.Good"/>。</summary>
         public NetPingLevel Level { get; private set; }
@@ -68,10 +72,11 @@ namespace Fps.Net
         }
 
         /// <summary>text を level の色で出す。</summary>
-        public void Show(string text, NetPingLevel level)
+        public void Show(LocalizedText text, NetPingLevel level)
         {
             IsShown = true;
-            Text = text ?? string.Empty;
+            Source = text;
+            Text = Localizer.Resolve(text);
             Level = level;
             Refresh();
         }
@@ -80,6 +85,7 @@ namespace Fps.Net
         public void Hide()
         {
             IsShown = false;
+            Source = default;
             Text = string.Empty;
             Level = NetPingLevel.Good;
             Refresh();
@@ -87,6 +93,14 @@ namespace Fps.Net
 
         protected override void OnBound(VisualElement element)
         {
+            // 要素を持っていない間の言語の変更は届かないので、受けたときに今の言語で文にし直す
+            Text = Localizer.Resolve(Source);
+            Refresh();
+        }
+
+        protected override void OnLanguageChanged()
+        {
+            Text = Localizer.Resolve(Source);
             Refresh();
         }
 

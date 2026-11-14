@@ -219,8 +219,17 @@ namespace Fps.Runtime
         /// </summary>
         public Func<bool> FireBlocker { get; set; }
 
-        /// <summary><see cref="FireBlocker"/> か、登録された modifier (<see cref="IsFireBlockedByModifier"/>) が今の射撃を止めているか。</summary>
-        public bool IsFireBlocked => (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
+        /// <summary><see cref="FireBlocker"/> か、武器をしまわせているもの (<see cref="Holster"/>) か、登録された modifier (<see cref="IsFireBlockedByModifier"/>) が今の射撃を止めているか。</summary>
+        public bool IsFireBlocked => IsHolstered || (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
+
+        /// <summary>
+        /// 武器をしまわせる口。はしごなどが <see cref="ControlHandoff.Claim"/> している間は撃たず (<see cref="IsFireBlocked"/>)、
+        /// 一人称の武器 (<see cref="ViewmodelPresenter"/>) と自機モックの銃を隠す。すべてが <see cref="ControlHandoff.Release"/> したら戻す。
+        /// </summary>
+        public ControlHandoff Holster { get; } = new ControlHandoff();
+
+        /// <summary>誰かが武器をしまわせているか (<see cref="Holster"/>)。</summary>
+        public bool IsHolstered => Holster.IsHandedOff;
 
         /// <summary>
         /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous を読まない (武器の時間は進める)。

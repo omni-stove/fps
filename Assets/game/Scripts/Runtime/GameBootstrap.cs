@@ -495,6 +495,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 回避・乗り越え・崖のぼりの間は撃たせず、覗き込みを解かせる (始めたときと、その最中に覗き込もうとしたとき)。
+        /// 武器をしまっている間 (<see cref="WeaponController.IsHolstered"/>、はしごなど) も覗き込ませない。
         /// 使うかはルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら始まらないので、ここは常に配線しておく。
         /// </summary>
         private static void WireDodgeAndVault(PlayerController mover, WeaponController weapon, AimDownSights ads)
@@ -519,7 +520,7 @@ namespace Fps.Runtime
             mover.MantleStarted += _ => ads.Release();
             ads.AimingChanged += aiming =>
             {
-                if (aiming && mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling))
+                if (aiming && ((mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling)) || (weapon != null && weapon.IsHolstered)))
                 {
                     ads.Release();
                 }
@@ -527,7 +528,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 回避・乗り越え・崖のぼりの間はグレネードを投げさせず、投げている間 (<see cref="GrenadeThrower.IsThrowing"/>) は撃たせず、
+        /// 回避・乗り越え・崖のぼりの間と武器をしまっている間はグレネードを投げさせず、投げている間 (<see cref="GrenadeThrower.IsThrowing"/>) は撃たせず、
         /// 投げたら覗き込みを解かせる。投げられるかと数はルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら投げないので、ここは常に配線しておく。
         /// <see cref="WireDodgeAndVault"/> の後に呼ぶ (その射撃の止め方に足す)。
         /// </summary>
@@ -538,7 +539,8 @@ namespace Fps.Runtime
                 return;
             }
 
-            grenades.ThrowBlocker = () => mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling);
+            grenades.ThrowBlocker = () =>
+                (mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling)) || (weapon != null && weapon.IsHolstered);
 
             if (weapon != null)
             {

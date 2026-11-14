@@ -148,7 +148,7 @@ namespace Fps.Runtime
             int damage;
             using (CombatEvents.Attribute(shooter, weaponId))
             {
-                damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff, sourcePosition);
+                damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff, sourcePosition, direction);
             }
 
             Debug.Log($"{Damageable.LogTag} hit zone={hitbox.Zone} dmg={damage} id={owner.Id} hp={owner.Health.Current}", hitbox);

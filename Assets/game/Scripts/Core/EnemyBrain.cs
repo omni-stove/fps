@@ -47,6 +47,8 @@ namespace Fps.Core
         // 着けなかった点。また選んで同じ点で詰まり続けないよう、巡回や待機に戻るか遮蔽点の一覧が変わるまで選ばない。
         private readonly HashSet<int> _unreachableCover = new HashSet<int>();
 
+        private readonly List<IEnemyBehavior> _behaviors = new List<IEnemyBehavior>();
+
         public EnemySpec Spec => _spec;
         public EnemyState State { get; private set; } = EnemyState.Idle;
         public bool IsDead => State == EnemyState.Dead;
@@ -219,12 +221,63 @@ namespace Fps.Core
             var decision = Decide(deltaSeconds, perception);
 
             // StateChanged の購読者が Kill() した場合も、死亡後は何も決定しない。
-            return IsDead ? EnemyDecision.None : decision;
+            if (IsDead)
+            {
+                return EnemyDecision.None;
+            }
+
+            // 振る舞いの中で登録や解除をされても、この tick に呼ぶ相手が変わらないよう写しを回す。
+            if (_behaviors.Count > 0)
+            {
+                var behaviors = _behaviors.ToArray();
+                foreach (var behavior in behaviors)
+                {
+                    if (behavior.TryOverride(this, deltaSeconds, perception, decision, out var overridden))
+                    {
+                        decision = overridden;
+                    }
+
+                    if (IsDead)
+                    {
+                        return EnemyDecision.None;
+                    }
+                }
+            }
+
+            return decision;
+        }
+
+        public IReadOnlyList<IEnemyBehavior> Behaviors => _behaviors;
+
+        // 登録した順に呼び、後の振る舞いは前の振る舞いが上書きした決定を受け取る。
+        public void AddBehavior(IEnemyBehavior behavior)
+        {
+            if (behavior == null)
+            {
+                throw new ArgumentNullException(nameof(behavior));
+            }
+
+            if (_behaviors.Contains(behavior))
+            {
+                throw new ArgumentException("behavior is already added", nameof(behavior));
+            }
+
+            _behaviors.Add(behavior);
+        }
+
+        public bool RemoveBehavior(IEnemyBehavior behavior)
+        {
+            if (behavior == null)
+            {
+                throw new ArgumentNullException(nameof(behavior));
+            }
+
+            return _behaviors.Remove(behavior);
         }
 
         private EnemyDecision Decide(float deltaSeconds, EnemyPerception p)
         {
-            var seen = p.HasLineOfSight && p.Target.HasValue
+            var seen = p.HasLineOfSight && p.Awareness >= EnemyPerception.FullAwareness && p.Target.HasValue
                 && Vector3.Distance(p.Self, p.Target.Value) <= _spec.SightRange;
 
             if ((State == EnemyState.TakeCover || ShouldTakeCover(p))

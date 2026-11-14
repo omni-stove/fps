@@ -40,7 +40,7 @@ namespace Fps.Runtime
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Damageable))]
-    public sealed class EnemyAgent : MonoBehaviour, ICharacterMotionSource, IWeaponHolder
+    public sealed partial class EnemyAgent : MonoBehaviour, ICharacterMotionSource, IWeaponHolder
     {
         public const string LogTag = "[AI]";
 
@@ -123,6 +123,9 @@ namespace Fps.Runtime
         private Vector3[] _patrolRoute = Array.Empty<Vector3>();
 
         [Header("Brain")]
+        [SerializeField, Tooltip("敵の種類")]
+        private EnemyArchetype _archetype = EnemyArchetype.Rifleman;
+
         [SerializeField, Min(0.01f)]
         private float _sightRange = DefaultSightRange;
 
@@ -179,37 +182,15 @@ namespace Fps.Runtime
 
         private NavMeshAgent _agent;
         private Damageable _self;
-        private Damageable _target;
         private EnemyBrain _brain;
-        private Weapon _weapon;
-        private GameRules _weaponRules = GameRules.Default;
-        private Vector3? _destination;
-        private Vector3? _pendingNoise;
-        private bool _pendingHit;
-        private Vector3? _pendingHitSource;
         private CapsuleCollider _capsule;
         private float _standingCapsuleHeight;
         private Vector3 _standingCapsuleCenter;
         private bool _crouching;
         private int _loggedCoverIndex = -1;
         private EnemyCoverPhase _loggedCoverPhase = EnemyCoverPhase.None;
-        private float _nextTargetSearch;
-        private bool _warnedNoTarget;
-        private bool _warnedOffMesh;
-        private StuckMonitor _stuck;
-        private Vector3? _goal;
-        private Vector3? _detour;
-        private float _detourEndsAt;
-        private Vector3 _spawnPosition;
-        private Vector3 _lastFinitePosition;
-        private float _nextOffMeshRetry;
-        private bool _unarmed;
         private Vector3? _errand;
         private bool _errandOverridesCombat;
-        private readonly System.Random _random = new System.Random();
-        private readonly RecoilState _recoil = new RecoilState();
-        private int _spreadSeed;
-        private int _shotCount;
         private float _walkSpeed;
         private bool _sprinting;
         private bool _aiming;
@@ -230,10 +211,6 @@ namespace Fps.Runtime
 
         public bool IsSprinting => _sprinting;
         public bool IsAiming => _aiming;
-        public RecoilState Recoil => _recoil;
-        public int ShotCount => _shotCount;
-
-        public event Action<Weapon> Fired;
 
         /// <summary>ログに出す識別子。</summary>
         public string Id
@@ -260,21 +237,7 @@ namespace Fps.Runtime
         /// <summary>今の状態。未初期化なら Idle。</summary>
         public EnemyState State => _brain?.State ?? EnemyState.Idle;
 
-        /// <summary>
-        /// 今の目標。null なら次の Update で <see cref="TargetTag"/> から探す。<see cref="SideMember"/> があるときは
-        /// <see cref="TargetSearchInterval"/> ごとに選び直すので、設定しても次の選び直しまでしか続かない。
-        /// </summary>
-        public Damageable Target
-        {
-            get => _target;
-            set => _target = value;
-        }
-
-        /// <summary>持っている武器。未初期化か武器を持っていなければ (<see cref="IsUnarmed"/>) null。</summary>
-        public Weapon Weapon => _unarmed ? null : _weapon;
-
-        /// <summary><see cref="Disarm"/> してから、武器を拾うか <see cref="EquipWeapon"/> するまで true。この間は撃たない。</summary>
-        public bool IsUnarmed => _unarmed;
+        public EnemyArchetype Archetype => _archetype;
 
         /// <summary><see cref="SetErrand"/> で渡した行き先 (足元)。無ければ null。</summary>
         public Vector3? Errand => _errand;
@@ -297,118 +260,6 @@ namespace Fps.Runtime
         {
             _errand = null;
             _errandOverridesCombat = false;
-        }
-
-        /// <summary>
-        /// 武器を持っていない状態にする。リロード中なら取り消す。武器を拾う (<see cref="AddWeapon"/>) か <see cref="EquipWeapon"/> すると持った状態に戻る。
-        /// 未初期化でも呼べる (初期化しても持っていないまま)。もう持っていなければ何もせず false。
-        /// </summary>
-        public bool Disarm()
-        {
-            if (_unarmed)
-            {
-                return false;
-            }
-
-            _weapon?.CancelReload();
-            _unarmed = true;
-            Debug.Log($"{LogTag} id={Id} disarmed", this);
-            return true;
-        }
-
-        /// <summary>持っている武器 (1 本) の今の予備弾。武器を持っていないか未初期化なら空。</summary>
-        public IReadOnlyList<PickupWeaponState> DescribeWeapons(out string currentWeaponId)
-        {
-            var weapon = Weapon;
-            if (weapon == null)
-            {
-                currentWeaponId = null;
-                return Array.Empty<PickupWeaponState>();
-            }
-
-            currentWeaponId = weapon.Spec.Id;
-            return new[] { PickupWeaponState.Of(weapon) };
-        }
-
-        /// <summary>
-        /// 拾った武器を持つ。bot は 1 本しか持たないので、別の武器を持っていればそれと持ち替える (<see cref="EquipWeapon"/>、今の <see cref="WeaponRules"/> で満タン)。
-        /// 同じ Id の武器を持っていれば何もせず false。
-        /// </summary>
-        public bool AddWeapon(WeaponDefinition definition)
-        {
-            if (definition == null)
-            {
-                throw new ArgumentNullException(nameof(definition));
-            }
-
-            var spec = definition.ToSpec();
-            var current = Weapon;
-            if (current != null && string.Equals(current.Spec.Id, spec.Id, StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            EquipWeapon(definition, _weaponRules);
-            return true;
-        }
-
-        /// <summary>持っている武器の Id が weaponId なら予備弾を amount 足し、実際に足した数を返す。違う武器か武器を持っていなければ 0。</summary>
-        public int AddReserveAmmo(string weaponId, int amount)
-        {
-            if (amount < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
-            }
-
-            var weapon = Weapon;
-            return weapon != null && string.Equals(weapon.Spec.Id, weaponId, StringComparison.Ordinal) ? weapon.AddReserveAmmo(amount) : 0;
-        }
-
-        /// <summary>
-        /// 撃つ武器の定義。<see cref="TryInitialize"/> がこれから <see cref="Weapon"/> を作るので、それより前に設定する
-        /// (初期化後に変えても今の武器は変わらない。初期化後に持ち替えるなら <see cref="EquipWeapon"/>)。
-        /// </summary>
-        public WeaponDefinition WeaponDefinition
-        {
-            get => _weaponDefinition;
-            set => _weaponDefinition = value;
-        }
-
-        /// <summary>武器を作るときの予備弾のルール。既定は <see cref="GameRules.Default"/>。<see cref="EquipWeapon"/> で変える。</summary>
-        public GameRules WeaponRules => _weaponRules;
-
-        /// <summary>
-        /// 持つ武器を definition に替え、rules (null なら今の <see cref="WeaponRules"/>) の予備弾で満タンに作り直す。リロード中なら取り消す。
-        /// 以後の <see cref="Respawn"/> もこの武器とルールで作り直す。未初期化なら定義とルールを覚えるだけで、<see cref="TryInitialize"/> がそれで作る。
-        /// 武器を持っていなければ (<see cref="IsUnarmed"/>)、持った状態に戻す。
-        /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、今の武器はそのまま残す。
-        /// </summary>
-        public void EquipWeapon(WeaponDefinition definition, GameRules rules = null)
-        {
-            if (definition == null)
-            {
-                throw new ArgumentNullException(nameof(definition));
-            }
-
-            var spec = definition.ToSpec();
-            var weaponRules = rules ?? _weaponRules;
-            _weaponDefinition = definition;
-            _weaponRules = weaponRules;
-            _unarmed = false;
-            if (_brain == null)
-            {
-                return;
-            }
-
-            if (_weapon != null)
-            {
-                _weapon.Reloaded -= OnReloaded;
-            }
-
-            _weapon = new Weapon(spec, weaponRules);
-            _weapon.Reloaded += OnReloaded;
-            _recoil.Reset();
-            Debug.Log($"{LogTag} id={Id} equip weapon={spec.LogName} ammo={_weapon.AmmoInMagazine}", this);
         }
 
         /// <summary>巡回地点 (ワールド座標の足元)。</summary>
@@ -571,7 +422,8 @@ namespace Fps.Runtime
                 _openingShots,
                 _coverHideSeconds,
                 _coverPeekSeconds,
-                _coverHealthFraction);
+                _coverHealthFraction,
+                _archetype);
         }
 
         /// <summary>
@@ -601,54 +453,7 @@ namespace Fps.Runtime
             _coverHideSeconds = spec.CoverHideSeconds;
             _coverPeekSeconds = spec.CoverPeekSeconds;
             _coverHealthFraction = spec.CoverHealthFraction;
-        }
-
-        /// <summary>
-        /// position の物音を次の知覚 1 回だけ渡す。Idle・Patrol・Search 中ならその位置を Search しに行く (<see cref="EnemyBrain"/>)。
-        /// 視界の外に出した敵を目標の方へ向かわせるのに使う。倒れていれば何もしない。
-        /// </summary>
-        public void Alert(Vector3 position)
-        {
-            if (_brain != null && _brain.IsDead)
-            {
-                return;
-            }
-
-            _pendingNoise = position;
-        }
-
-        /// <summary>
-        /// 今の位置・目標・視線・体力の割合と、前の知覚の後に撃たれていれば撃たれたこと・撃った者の位置 (物音としても渡す) から、
-        /// 1 tick 分の知覚を組み立てる。撃たれた情報はここで使い切るので、次の呼び出しでは撃たれていないことになる。
-        /// 未初期化なら <see cref="InvalidOperationException"/>。
-        /// </summary>
-        public EnemyPerception Perceive()
-        {
-            if (_brain == null)
-            {
-                throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
-            }
-
-            var noise = _pendingNoise;
-            var wasHit = _pendingHit;
-            var hitSource = _pendingHitSource;
-            _pendingNoise = null;
-            _pendingHit = false;
-            _pendingHitSource = null;
-            return EnemySenses.Perceive(
-                GroundPosition, EyePosition, _target, _sightRange, transform, noise, wasHit, hitSource, HealthFraction(_self));
-        }
-
-        /// <summary>体力の割合 (0 以上 1 以下)。self が無ければ 1。</summary>
-        public static float HealthFraction(Damageable self)
-        {
-            if (self == null)
-            {
-                return 1f;
-            }
-
-            var health = self.Health;
-            return health.Max > 0 ? Mathf.Clamp01((float)health.Current / health.Max) : 0f;
+            _archetype = spec.Archetype;
         }
 
         /// <summary>遮蔽点の段階が変わったときのログ。</summary>
@@ -762,6 +567,11 @@ namespace Fps.Runtime
                 ResolveTarget(force: false);
             }
 
+            if (HoldWhileInterrupted(deltaSeconds))
+            {
+                return;
+            }
+
             // 同じ selector なら何もしないので毎フレーム渡し、registry の差し替えや作り直しに追いつかせる。
             _brain.UseCover(_coverRegistry != null ? _coverRegistry.Selector : null);
 
@@ -796,23 +606,6 @@ namespace Fps.Runtime
             _aiming = !_unarmed && EnemyGait.IsAiming(_brain.State, phase);
             _sprinting = EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing);
             _agent.speed = EnemyGait.Speed(_walkSpeed, _sprinting, _crouching);
-        }
-
-        // プレイヤーと同じく、撃ち合いの合間 (戦っていないときと遮蔽点に隠れている間) に減った弾倉を詰め直す。
-        private void TopUpMagazine()
-        {
-            if (_unarmed || _weapon.IsReloading || _weapon.AmmoInMagazine >= _weapon.Spec.MagazineSize)
-            {
-                return;
-            }
-
-            var state = _brain.State;
-            var lull = state == EnemyState.Idle || state == EnemyState.Patrol || state == EnemyState.Search
-                || (state == EnemyState.TakeCover && _brain.CoverPhase == EnemyCoverPhase.Hiding);
-            if (lull && _weapon.TryStartReload())
-            {
-                Debug.Log($"{LogTag} id={Id} reload", this);
-            }
         }
 
         /// <summary>
@@ -912,79 +705,6 @@ namespace Fps.Runtime
             Debug.Log(FormatCoverLog(Id, phase, marker != null ? marker.name : null), this);
         }
 
-        private void ApplyPatrolRoute()
-        {
-            var route = new System.Numerics.Vector3[_patrolRoute.Length];
-            for (var i = 0; i < route.Length; i++)
-            {
-                route[i] = SnapToNavMesh(_patrolRoute[i]).ToNumerics();
-            }
-
-            _brain.SetPatrolRoute(route);
-        }
-
-        private Vector3 SnapToNavMesh(Vector3 point)
-        {
-            if (NavMesh.SamplePosition(point, out var hit, RouteSnapRadius, NavMesh.AllAreas))
-            {
-                return hit.position;
-            }
-
-            Debug.LogWarning($"{LogTag} id={Id} patrol point {point} is not on the NavMesh; using it as is", this);
-            return point;
-        }
-
-        private void ResolveTarget(bool force)
-        {
-            if (!force && Time.time < _nextTargetSearch)
-            {
-                return;
-            }
-
-            _nextTargetSearch = Time.time + TargetSearchInterval;
-
-            var targetObject = GameObject.FindGameObjectWithTag(TargetTag);
-            var target = targetObject != null ? targetObject.GetComponentInParent<Damageable>() : null;
-            if (target == null)
-            {
-                if (!_warnedNoTarget)
-                {
-                    Debug.LogWarning($"{LogTag} id={Id} '{TargetTag}' タグの Damageable が見つかりません。見つかるまで探し続けます。", this);
-                    _warnedNoTarget = true;
-                }
-
-                return;
-            }
-
-            _target = target;
-            _warnedNoTarget = false;
-            Debug.Log($"{LogTag} id={Id} target={target.Id}", this);
-        }
-
-        /// <summary>
-        /// member の陣営から見た、いちばん近い生きている敵を目標にする。force でなければ <see cref="TargetSearchInterval"/> ごとにだけ探す。
-        /// 敵がいなければ目標を外す (全員倒れている間など)。目標が変わったときだけログに出す。
-        /// </summary>
-        private void ResolveHostile(SideMember member, bool force)
-        {
-            if (!force && Time.time < _nextTargetSearch)
-            {
-                return;
-            }
-
-            _nextTargetSearch = Time.time + TargetSearchInterval;
-
-            var hostile = EnemySenses.SelectHostile(member, SideMember.FindAll());
-            var target = hostile != null ? hostile.Damageable : null;
-            if (target == _target)
-            {
-                return;
-            }
-
-            _target = target;
-            Debug.Log($"{LogTag} id={Id} side={member.Side.Id} target={(target != null ? target.Id : "none")}", this);
-        }
-
         /// <summary>
         /// 倒れた敵を groundPosition (足元) に戻して生き返らせる。体力を満たし、武器を弾の満ちた状態で作り直し、NavMeshAgent を有効に戻して
         /// 近くの NavMesh に置き、判断 (<see cref="EnemyBrain.Revive"/>)・経路・立て直し・撃たれた記録を初めからにして、目標を選び直す。
@@ -1027,9 +747,8 @@ namespace Fps.Runtime
                 ? hit.position
                 : groundPosition;
 
-            _pendingNoise = null;
-            _pendingHit = false;
-            _pendingHitSource = null;
+            ClearPendingPerception();
+            _interruption.Clear();
             _loggedCoverIndex = -1;
             _loggedCoverPhase = EnemyCoverPhase.None;
             _destination = null;
@@ -1076,398 +795,6 @@ namespace Fps.Runtime
             Debug.Log($"{LogTag} id={Id} {logVerb} at={ground.ToString("F1")} state={_brain.State}", this);
         }
 
-        private void MoveTo(System.Numerics.Vector3? moveTo)
-        {
-            _goal = moveTo.HasValue ? moveTo.Value.ToUnity() : (Vector3?)null;
-            if (!_agent.isOnNavMesh && !TryReturnToNavMesh())
-            {
-                return;
-            }
-
-            if (!_goal.HasValue)
-            {
-                bool hadDetour = _detour.HasValue;
-                _detour = null;
-                if (_destination.HasValue || hadDetour)
-                {
-                    _agent.ResetPath();
-                    _destination = null;
-                }
-
-                return;
-            }
-
-            if (_detour.HasValue)
-            {
-                if (Time.time < _detourEndsAt && HorizontalDistance(GroundPosition, _detour.Value) > EnemyBrain.ArrivalDistance)
-                {
-                    return;
-                }
-
-                _detour = null;
-                _destination = null;
-            }
-
-            var destination = _goal.Value;
-            if (_destination.HasValue && (destination - _destination.Value).sqrMagnitude < RepathDistance * RepathDistance)
-            {
-                return;
-            }
-
-            _destination = destination;
-            _agent.isStopped = false;
-            if (!_agent.SetDestination(destination))
-            {
-                Debug.LogWarning($"{LogTag} id={Id} cannot path to {destination}", this);
-            }
-        }
-
-        /// <summary>
-        /// NavMesh から外れていたら近くの NavMesh に戻す。戻れなければ <see cref="OffMeshRetryInterval"/> ごとに試し直し、
-        /// 警告は 1 回だけ出す (戻れないまま進めずにいれば、<see cref="WatchProgress"/> が出現地点へ瞬間移動させる)。
-        /// 戻れたら (または外れていなければ) true。
-        /// </summary>
-        private bool TryReturnToNavMesh()
-        {
-            if (_agent.isOnNavMesh)
-            {
-                return true;
-            }
-
-            if (Time.time < _nextOffMeshRetry)
-            {
-                return false;
-            }
-
-            _nextOffMeshRetry = Time.time + OffMeshRetryInterval;
-            if (NavMesh.SamplePosition(GroundPosition, out var hit, OffMeshSnapRadius, NavMesh.AllAreas) && _agent.Warp(hit.position))
-            {
-                Debug.LogWarning($"{LogTag} id={Id} returned to NavMesh from={GroundPosition.ToString("F1")} to={hit.position.ToString("F1")}", this);
-                _destination = null;
-                _warnedOffMesh = false;
-                return true;
-            }
-
-            if (!_warnedOffMesh)
-            {
-                Debug.LogWarning($"{LogTag} id={Id} が NavMesh の上にいないので移動できません。近くに NavMesh が無いので、進めないままなら出現地点へ戻します。", this);
-                _warnedOffMesh = true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// 位置が NaN や無限大になっていたら、最後に正常だった位置へ戻す。戻せなかったらこのフレームは何もしない (false)。
-        /// </summary>
-        private bool RecoverNonFinitePosition()
-        {
-            var position = transform.position;
-            if (StuckMonitor.IsFinite(position.ToNumerics()))
-            {
-                _lastFinitePosition = position;
-                return true;
-            }
-
-            Debug.LogWarning($"{LogTag} id={Id} position was not finite ({position}); restoring {_lastFinitePosition.ToString("F1")}", this);
-            transform.position = _lastFinitePosition;
-            _destination = null;
-            _detour = null;
-            _stuck.Reset();
-            return StuckMonitor.IsFinite(transform.position.ToNumerics());
-        }
-
-        /// <summary>進めているかを見張り、進めていなければ <see cref="StuckMonitor"/> の返した立て直しをする。</summary>
-        private void WatchProgress(float deltaSeconds)
-        {
-            // 寄り道中も元の目的地に近づけたかで測る。寄り道先で測ると、寄り道しただけで立ち直ったことになる。
-            var ground = GroundPosition;
-            var heading = _goal.HasValue && HorizontalDistance(ground, _goal.Value) > EnemyBrain.ArrivalDistance
-                ? _goal
-                : null;
-            // 経路の角の取得は毎回ヒープを確保するので、経路の向きを使う立て直し中だけ計算する。
-            var waypoint = _stuck.Stage == StuckRecovery.None ? null : PathWaypoint(heading);
-            var recovery = _stuck.Tick(
-                deltaSeconds,
-                ground.ToNumerics(),
-                heading.HasValue ? heading.Value.ToNumerics() : (System.Numerics.Vector3?)null,
-                waypoint.HasValue ? waypoint.Value.ToNumerics() : (System.Numerics.Vector3?)null);
-            if (recovery == StuckRecovery.None)
-            {
-                return;
-            }
-
-            var path = _agent.isOnNavMesh ? _agent.pathStatus.ToString() : "OffMesh";
-            Debug.Log(FormatStuckLog(Id, recovery, _brain.State, _stuck.TotalStalledSeconds, ground, heading, path), this);
-            switch (recovery)
-            {
-                case StuckRecovery.Repath:
-                    Repath();
-                    break;
-                case StuckRecovery.Sidestep:
-                    Sidestep(ground, heading);
-                    break;
-                case StuckRecovery.AbandonGoal:
-                    _brain.AbandonGoal();
-                    Repath();
-                    break;
-                case StuckRecovery.Warp:
-                    Warp(ground);
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// 目的地への今の経路で、<see cref="StuckProgressDistance"/> 以上先にある最初の角 (無ければ最後の角)。
-        /// 寄り道中は経路の終点が寄り道先なので null。寄り道先へ歩いただけで立ち直ったことにしないため。
-        /// </summary>
-        private Vector3? PathWaypoint(Vector3? goal)
-        {
-            if (!goal.HasValue || _detour.HasValue || !_agent.isOnNavMesh || !_agent.hasPath || _agent.pathPending)
-            {
-                return null;
-            }
-
-            var corners = _agent.path.corners;
-            if (corners.Length == 0)
-            {
-                return null;
-            }
-
-            var ground = GroundPosition;
-            foreach (var corner in corners)
-            {
-                if (HorizontalDistance(ground, corner) >= StuckProgressDistance)
-                {
-                    return corner;
-                }
-            }
-
-            return corners[corners.Length - 1];
-        }
-
-        private void Repath()
-        {
-            _detour = null;
-            _destination = null;
-            if (_agent.isOnNavMesh)
-            {
-                _agent.ResetPath();
-            }
-        }
-
-        /// <summary>
-        /// 近くの、経路が最後までつながる地点へ少しだけ寄り道させる。見つからなければ経路の引き直しだけにする。
-        /// 目的地へ <see cref="StuckProgressDistance"/> 以上近づく地点は選ばない。選ぶと、寄り道しただけで
-        /// <see cref="StuckMonitor"/> が立ち直ったとみなし、届かない目的地でも段階が先へ進まなくなる。
-        /// </summary>
-        private void Sidestep(Vector3 ground, Vector3? goal)
-        {
-            Repath();
-            if (!_agent.isOnNavMesh)
-            {
-                return;
-            }
-
-            var path = new NavMeshPath();
-            for (var i = 0; i < SidestepAttempts; i++)
-            {
-                var offset = UnityEngine.Random.insideUnitCircle * SidestepRadius;
-                var candidate = ground + new Vector3(offset.x, 0f, offset.y);
-                if (!NavMesh.SamplePosition(candidate, out var hit, SidestepRadius, NavMesh.AllAreas)
-                    || HorizontalDistance(ground, hit.position) < SidestepMinDistance
-                    || (goal.HasValue && MovesTowardGoal(ground, hit.position, goal.Value))
-                    || !_agent.CalculatePath(hit.position, path)
-                    || path.status != NavMeshPathStatus.PathComplete)
-                {
-                    continue;
-                }
-
-                _detour = hit.position;
-                _detourEndsAt = Time.time + SidestepSeconds;
-                _agent.isStopped = false;
-                _agent.SetPath(path);
-                return;
-            }
-        }
-
-        // StuckMonitor の寄り道中の判定 (基準点から目的地の方向への射影) と同じ基準にそろえる。
-        private static bool MovesTowardGoal(Vector3 from, Vector3 to, Vector3 goal)
-        {
-            var toGoal = goal - from;
-            toGoal.y = 0f;
-            if (toGoal.sqrMagnitude <= 0f)
-            {
-                return false;
-            }
-
-            var move = to - from;
-            move.y = 0f;
-            return Vector3.Dot(move, toGoal.normalized) >= StuckProgressDistance;
-        }
-
-        /// <summary>
-        /// 経路上で <see cref="WarpLookAhead"/> より先の角へ瞬間移動させる。そういう角が無く NavMesh からも外れていれば出現地点へ戻す。
-        /// どちらでもなければ (目的地のすぐ手前で詰まっているだけなら) 動かさない。
-        /// </summary>
-        private void Warp(Vector3 ground)
-        {
-            Vector3? to = null;
-            if (_agent.isOnNavMesh && _agent.hasPath)
-            {
-                foreach (var corner in _agent.path.corners)
-                {
-                    if (HorizontalDistance(ground, corner) > WarpLookAhead)
-                    {
-                        to = corner;
-                        break;
-                    }
-                }
-            }
-            else if (!_agent.isOnNavMesh)
-            {
-                to = _spawnPosition;
-            }
-
-            Repath();
-            if (!to.HasValue)
-            {
-                Debug.Log($"{LogTag} id={Id} warp skipped: no point ahead on the path", this);
-                return;
-            }
-
-            if (!_agent.Warp(to.Value))
-            {
-                Debug.LogWarning($"{LogTag} id={Id} warp to {to.Value.ToString("F1")} failed", this);
-                return;
-            }
-
-            // 詰まった地点で測った基準のままだと、目的地から遠い出現地点へ戻した後は普通に歩けていても立て直しが走り続ける。
-            _stuck.Reset();
-            Debug.Log($"{LogTag} id={Id} warped from={ground.ToString("F1")} to={to.Value.ToString("F1")}", this);
-        }
-
-        private static float HorizontalDistance(Vector3 a, Vector3 b)
-        {
-            var delta = a - b;
-            delta.y = 0f;
-            return delta.magnitude;
-        }
-
-        private void Face(System.Numerics.Vector3? lookAt, float deltaSeconds)
-        {
-            if (!lookAt.HasValue)
-            {
-                // 向きの指定が無ければ、NavMeshAgent に進む向きを向かせる。
-                _agent.updateRotation = true;
-                return;
-            }
-
-            _agent.updateRotation = false;
-            var direction = lookAt.Value.ToUnity() - transform.position;
-            direction.y = 0f;
-            if (direction.sqrMagnitude < 1e-6f)
-            {
-                return;
-            }
-
-            var goal = Quaternion.LookRotation(direction, Vector3.up);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, goal, _turnSpeed * deltaSeconds);
-        }
-
-        private void Shoot()
-        {
-            if (_target == null || _target.IsDead)
-            {
-                return;
-            }
-
-            if (!_weapon.TryFire())
-            {
-                if (_weapon.AmmoInMagazine == 0 && _weapon.TryStartReload())
-                {
-                    Debug.Log($"{LogTag} id={Id} reload", this);
-                }
-
-                return;
-            }
-
-            var eye = EyePosition;
-            var direction = _target.AimPoint - eye;
-            if (direction.sqrMagnitude < 1e-6f)
-            {
-                direction = transform.forward;
-            }
-
-            // プレイヤー (WeaponController.Fire) と同じ順: 武器のばらつき → たまった反動 → この弾の反動を次の弾へ足す。
-            // 判断の散らばり (撃ち始めは外しやすい) はその上に重ねる。
-            var spec = _weapon.Spec;
-            var shotIndex = _shotCount;
-            _shotCount = unchecked(_shotCount + 1);
-            var cone = SpreadPattern.ConeDegrees(spec, _aiming ? 1f : 0f, MoveFraction());
-            if (cone > 0f)
-            {
-                direction = SpreadPattern.Direction(direction.ToNumerics(), cone, _spreadSeed, shotIndex).ToUnity();
-            }
-
-            direction = WithRecoil(direction, _recoil, RecoilControl);
-            _recoil.Kick(spec, _spreadSeed, shotIndex);
-
-            var spread = _brain.NextShotSpreadDegrees;
-            direction = BlindFireShot.Spread(direction.ToNumerics(), spread, _random).ToUnity();
-            _brain.RecordShot();
-            Fired?.Invoke(_weapon);
-
-            var result = Hitscan.Fire(eye, direction, spec.Range, spec.Damage, spec.Falloff, transform, spec.ExplosionRadius, spec.Id);
-            Debug.Log(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    "{0} id={1} fire ammo={2} spread={3:F1} cone={4:F1} hit={5} dmg={6}",
-                    LogTag, Id, _weapon.AmmoInMagazine, spread, cone, DescribeHit(result), result.Damage),
-                this);
-        }
-
-        private float MoveFraction()
-        {
-            var velocity = _agent.enabled ? _agent.velocity : Vector3.zero;
-            return SpreadPattern.MoveFraction(new Vector2(velocity.x, velocity.z).magnitude, _walkSpeed);
-        }
-
-        public static Vector3 WithRecoil(Vector3 direction, RecoilState recoil, float control)
-        {
-            if (recoil == null)
-            {
-                throw new ArgumentNullException(nameof(recoil));
-            }
-
-            var keep = 1f - Mathf.Clamp01(control);
-            var pitch = recoil.PitchUpDegrees * keep;
-            var yaw = recoil.YawDegrees * keep;
-            if (pitch == 0f && yaw == 0f)
-            {
-                return direction;
-            }
-
-            var flat = new Vector3(direction.x, 0f, direction.z);
-            var right = flat.sqrMagnitude > 1e-8f ? Vector3.Cross(Vector3.up, flat).normalized : Vector3.right;
-            return Quaternion.AngleAxis(yaw, Vector3.up) * (Quaternion.AngleAxis(-pitch, right) * direction);
-        }
-
-        private static string DescribeHit(HitscanResult result)
-        {
-            if (!result.Hit)
-            {
-                return "none";
-            }
-
-            if (result.Hitbox != null && result.Hitbox.Owner != null)
-            {
-                return result.Hitbox.Owner.Id;
-            }
-
-            return result.RaycastHit.collider.name;
-        }
-
         private void OnUnstuck(float stalledSeconds)
         {
             Debug.Log(string.Format(CultureInfo.InvariantCulture, "{0} id={1} unstuck after={2:F1}s", LogTag, Id, stalledSeconds), this);
@@ -1478,37 +805,10 @@ namespace Fps.Runtime
             Debug.Log(FormatStateLog(Id, previous, next), this);
         }
 
-        private void OnReloaded()
-        {
-            Debug.Log($"{LogTag} id={Id} reloaded ammo={_weapon.AmmoInMagazine}", this);
-        }
-
-        private void OnDamaged(Damageable self, DamageReport report)
-        {
-            // 死んだ敵は反応しない (とどめの 1 発では Died の後にここへ来る)。
-            if (_brain == null || _brain.IsDead || self.IsDead)
-            {
-                return;
-            }
-
-            // 撃った者が分からなくても、目標が見えていれば EnemyBrain はその位置から隠れられるので、撃たれたことは伝える。
-            _pendingHit = true;
-            if (!report.SourcePosition.HasValue)
-            {
-                Debug.Log($"{LogTag} id={Id} damaged dmg={report.Amount} from=unknown", this);
-                return;
-            }
-
-            _pendingNoise = report.SourcePosition.Value;
-            _pendingHitSource = report.SourcePosition.Value;
-            Debug.Log($"{LogTag} id={Id} damaged dmg={report.Amount} from={report.SourcePosition.Value}", this);
-        }
-
         private void OnDied(Damageable self)
         {
-            _pendingNoise = null;
-            _pendingHit = false;
-            _pendingHitSource = null;
+            ClearPendingPerception();
+            _interruption.Clear();
             SetCrouching(false);
             _sprinting = false;
             _aiming = false;

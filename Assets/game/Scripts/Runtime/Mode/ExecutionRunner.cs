@@ -239,9 +239,9 @@ namespace Fps.Runtime
             return ExecutionHudText.RoundWins(_execution, ownSide);
         }
 
-        protected override string HudResult()
+        protected override LocalizedText HudResult()
         {
-            return ExecutionHudText.Result(_execution);
+            return LiteralOrEmpty(ExecutionHudText.Result(_execution));
         }
 
         protected override void AppendHudLines(List<string> lines)

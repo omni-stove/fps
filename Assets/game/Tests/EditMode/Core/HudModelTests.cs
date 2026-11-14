@@ -106,7 +106,7 @@ namespace Fps.Core.Tests
             weapon.TryFire();
             Assert.That(weapon.TryStartReload(), Is.True);
             model.SetAmmo(weapon.AmmoInMagazine, weapon.ReserveAmmo, weapon.IsReloading, weapon.HasInfiniteReserve);
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Reloading + " / " + HudFormat.InfiniteReserve));
+            Assert.That(model.AmmoText, Is.EqualTo(GameText.Resolve(HudFormat.Reloading) + " / " + HudFormat.InfiniteReserve));
 
             weapon.Tick(1f);
             Assert.That(model.AmmoText, Is.EqualTo("2 / " + HudFormat.InfiniteReserve), "the reload refills from the infinite reserve");
@@ -315,14 +315,14 @@ namespace Fps.Core.Tests
             var changes = Record(model);
 
             model.BindNotice(notice);
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.CheckpointSaved), "binding shows the current notice at once");
+            Assert.That(model.NoticeText, Is.EqualTo(GameText.Resolve(HudFormat.CheckpointSaved)), "binding shows the current notice at once");
 
             notice.Tick(1f);
             Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
 
             notice.ShowRestartCountdown(3f);
             notice.ShowRestartCountdown(2.5f);
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.CheckpointRestart(3)));
+            Assert.That(model.NoticeText, Is.EqualTo(GameText.Resolve(HudFormat.CheckpointRestart(3))));
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Notice, HudField.Notice, HudField.Notice }));
         }
@@ -410,7 +410,7 @@ namespace Fps.Core.Tests
             Assert.That(model.AmmoText, Is.EqualTo("12"));
 
             model.SetAmmo(0, 48, true, false);
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Reloading));
+            Assert.That(model.AmmoText, Is.EqualTo(GameText.Resolve(HudFormat.Reloading)));
             Assert.That(model.IsReloading, Is.True);
 
             model.SetReserveAmmoShown(true);
@@ -511,10 +511,10 @@ namespace Fps.Core.Tests
             var changes = Record(model);
 
             model.SetResult(Team.Alpha);
-            Assert.That(model.ResultText, Is.EqualTo(HudFormat.Result(Team.Alpha)));
+            Assert.That(model.ResultText, Is.EqualTo("ALPHA の勝ち"));
 
             model.SetResult(null);
-            Assert.That(model.ResultText, Is.EqualTo(HudFormat.Draw));
+            Assert.That(model.ResultText, Is.EqualTo(GameText.Resolve(HudFormat.Draw)));
 
             model.ClearResult();
             model.ClearResult();
@@ -537,16 +537,28 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void SetNoticeWithAKeyedTextShowsItInTheCurrentLanguageAndAnEmptyTextClears()
+        {
+            var model = new HudModel();
+
+            model.SetNotice(HudFormat.Respawn(3));
+            Assert.That(model.NoticeText, Is.EqualTo("リスポーンまで 3 秒"));
+
+            model.SetNotice(default(LocalizedText));
+            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+        }
+
+        [Test]
         public void SetRespawnNoticeFollowsTheRespawnMode()
         {
             var model = new HudModel();
             var changes = Record(model);
 
             model.SetRespawnNotice(RespawnMode.Wave, 5);
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.Respawn(5)));
+            Assert.That(model.NoticeText, Is.EqualTo("リスポーンまで 5 秒"));
 
             model.SetRespawnNotice(RespawnMode.None, 0);
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoRespawnUntilNextMatch));
+            Assert.That(model.NoticeText, Is.EqualTo(GameText.Resolve(HudFormat.NoRespawnUntilNextMatch)));
 
             // 表示が変わらなければ知らせない
             model.SetRespawnNotice(RespawnMode.None, 3);
@@ -858,7 +870,7 @@ namespace Fps.Core.Tests
             var changes = Record(model);
             notice.Clear();
             Assert.That(changes, Is.Empty);
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.CheckpointRestart(1)), "UnbindAll keeps the text");
+            Assert.That(model.NoticeText, Is.EqualTo(GameText.Resolve(HudFormat.CheckpointRestart(1))), "UnbindAll keeps the text");
         }
     }
 }

@@ -785,7 +785,7 @@ namespace Fps.Runtime
                 var isLocal = participant.Enemy == null;
                 _scoreboardEntries.Add(new ScoreboardEntry(
                     participant.Id,
-                    isLocal ? ScoreboardRows.LocalPlayerName : participant.Name,
+                    isLocal ? ScoreboardRows.LocalPlayerName : LocalizedText.Literal(participant.Name ?? string.Empty),
                     participant.Team,
                     _domination.GetKills(participant.Id),
                     _domination.GetDeaths(participant.Id),

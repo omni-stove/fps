@@ -133,7 +133,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Playing), "some allies are still standing");
             Assert.That(_runner.Session.IsEliminated(ModeRunnerBase.LocalPlayerId), Is.True);
             Assert.That(hud.Lines, Does.Contain(GuardianText.NoRespawnLeaderDown));
-            Assert.That(hud.Lines, Does.Not.Contain(HudFormat.Respawn(0)).And.Not.Contain(HudFormat.Respawn(1)));
+            Assert.That(hud.Lines, Does.Not.Contain(Localizer.Resolve(HudFormat.Respawn(0))).And.Not.Contain(Localizer.Resolve(HudFormat.Respawn(1))));
 
             var leaderLines = GuardianText.Leaders(_runner.Leaders, Side.Alpha);
             Assert.That(leaderLines[0], Is.EqualTo(GuardianText.Leader(Side.Alpha, true)), "the own leader comes first");

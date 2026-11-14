@@ -106,7 +106,7 @@ namespace Fps.Tests.EditMode
             KillBy(a, player);
             _runner.Tick(0f);
 
-            Assert.That(hud.Lines, Is.EqualTo(new[] { HudFormat.Respawn(1), "順位 2/2  1位と -1" }));
+            Assert.That(hud.Lines, Is.EqualTo(new[] { Localizer.Resolve(HudFormat.Respawn(1)), "順位 2/2  1位と -1" }));
         }
 
         [Test]
@@ -146,7 +146,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.Null);
-            Assert.That(hud.ResultText, Is.EqualTo(HudFormat.Draw));
+            Assert.That(hud.ResultText, Is.EqualTo(Localizer.Resolve(HudFormat.Draw)));
         }
 
         [Test]

@@ -10,13 +10,13 @@ namespace Fps.Tests.EditMode
 {
     public sealed class ModeHudViewTests
     {
-        private const string ConnectionCaptionKey = "scoreboard.connectionCaption";
+        private const string ConnectionCaptionKey = "hud.scoreboard.connectionCaption";
 
         private static readonly ModeHudScoreLine[] _scores =
         {
-            new ModeHudScoreLine(Side.Bravo, "BRAVO 1", true, false),
-            new ModeHudScoreLine(Side.Alpha, "ALPHA 3", false, true),
-            new ModeHudScoreLine(new Side(2), "SIDE 2 0", false, false),
+            new ModeHudScoreLine(Side.Bravo, LocalizedText.Literal("BRAVO 1"), true, false),
+            new ModeHudScoreLine(Side.Alpha, LocalizedText.Literal("ALPHA 3"), false, true),
+            new ModeHudScoreLine(new Side(2), LocalizedText.Literal("SIDE 2 0"), false, false),
         };
 
         private static readonly LocalizedText[] _lines =
@@ -146,6 +146,21 @@ namespace Fps.Tests.EditMode
             Assert.That(_view.TimeText, Is.EqualTo(expected));
             Assert.That(_view.Lines, Is.EqualTo(new[] { expected }));
             Assert.That(_view.Element.Q<Label>(className: ModeHudView.TimeClass).text, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ScoreLinesAreResolvedInTheCurrentLanguage()
+        {
+            _view.Bind(_root);
+            var scores = new[] { new ModeHudScoreLine(Side.Alpha, ModeHudText.ScoreText(Side.Alpha, 3d), true, true) };
+
+            _view.Show(Text("01:00"), scores, null, ModeHudText.Remaining(Side.Bravo, 2));
+
+            var expected = Localizer.Resolve(ModeHudText.ScoreText(Side.Alpha, 3d));
+            Assert.That(expected, Does.Not.StartWith("hud."), "the key exists in the current language's table");
+            Assert.That(_view.ScoreTexts, Is.EqualTo(new[] { expected }));
+            Assert.That(_view.Element.Q<Label>(className: ModeHudView.ScoreClass).text, Is.EqualTo(expected));
+            Assert.That(_view.ResultText, Is.EqualTo(Localizer.Resolve(ModeHudText.Remaining(Side.Bravo, 2))));
         }
 
         [Test]

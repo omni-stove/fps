@@ -64,8 +64,8 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(downed), downed, "downed must not be negative");
             }
 
-            var text = GameText.Format("battleRoyale.squad", standing);
-            return downed == 0 ? text : ModeHudText.WithDowned(text, downed);
+            var text = new LocalizedText("battleRoyale.squad", standing);
+            return GameText.Resolve(downed == 0 ? text : ModeHudText.WithDowned(text, downed));
         }
 
         /// <summary>
@@ -90,7 +90,7 @@ namespace Fps.Core
                 }
 
                 var text = place.HasValue
-                    ? GameText.Format("battleRoyale.squadPlace", ModeHudText.SideName(side), place.Value)
+                    ? new LocalizedText("battleRoyale.squadPlace", ModeHudText.SideName(side), place.Value)
                     : ModeHudText.Remaining(side, session.CountRemaining(side));
                 var line = new ModeHudScoreLine(side, text, side == ownSide, place == 1);
                 if (line.IsOwn)
@@ -158,13 +158,13 @@ namespace Fps.Core
             if (session.IsDowned(local.Value))
             {
                 var bleedout = session.GetBleedoutRemaining(local.Value) ?? 0f;
-                lines.Add(HudFormat.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value))));
+                lines.Add(GameText.Resolve(HudFormat.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value)))));
                 return lines;
             }
 
             if (reviveTargetId.HasValue && mode.HasPlayer(reviveTargetId.Value) && session.IsDowned(reviveTargetId.Value))
             {
-                lines.Add(HudFormat.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(reviveTargetId.Value))));
+                lines.Add(GameText.Resolve(HudFormat.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(reviveTargetId.Value)))));
             }
 
             if (unarmed && session.IsStanding(local.Value))
@@ -184,7 +184,7 @@ namespace Fps.Core
                 throw new ArgumentNullException(nameof(session));
             }
 
-            return ModeHudText.Result(session.Mode);
+            return GameText.Resolve(ModeHudText.Result(session.Mode));
         }
     }
 }

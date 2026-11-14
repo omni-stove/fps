@@ -7,11 +7,18 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class CampaignNoticeTests
     {
+        private static string Saved => GameText.Resolve(HudFormat.CheckpointSaved);
+
         private static List<string> Record(CampaignNotice notice)
         {
             var texts = new List<string>();
             notice.TextChanged += texts.Add;
             return texts;
+        }
+
+        private static string Restart(int seconds)
+        {
+            return GameText.Resolve(HudFormat.CheckpointRestart(seconds));
         }
 
         [Test]
@@ -30,14 +37,14 @@ namespace Fps.Core.Tests
             var texts = Record(notice);
 
             notice.ShowSaved(2f);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointSaved));
+            Assert.That(notice.Text, Is.EqualTo("チェックポイントでセーブしました"));
 
             notice.Tick(1.5f);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointSaved));
+            Assert.That(notice.Text, Is.EqualTo(Saved));
 
             notice.Tick(0.5f);
             Assert.That(notice.Text, Is.EqualTo(HudFormat.NoNotice));
-            Assert.That(texts, Is.EqualTo(new[] { HudFormat.CheckpointSaved, HudFormat.NoNotice }));
+            Assert.That(texts, Is.EqualTo(new[] { Saved, HudFormat.NoNotice }));
         }
 
         [Test]
@@ -51,7 +58,7 @@ namespace Fps.Core.Tests
             notice.ShowSaved(2f);
             notice.Tick(1.5f);
 
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointSaved));
+            Assert.That(notice.Text, Is.EqualTo(Saved));
             Assert.That(texts, Is.Empty);
         }
 
@@ -67,14 +74,14 @@ namespace Fps.Core.Tests
             notice.ShowRestartCountdown(0.1f);
 
             Assert.That(notice.IsCountingDown, Is.True);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointRestart(1)));
+            Assert.That(notice.Text, Is.EqualTo("チェックポイントから再開まで 1 秒"));
             Assert.That(
                 texts,
                 Is.EqualTo(new[]
                 {
-                    HudFormat.CheckpointRestart(3),
-                    HudFormat.CheckpointRestart(2),
-                    HudFormat.CheckpointRestart(1),
+                    Restart(3),
+                    Restart(2),
+                    Restart(1),
                 }));
         }
 
@@ -88,7 +95,7 @@ namespace Fps.Core.Tests
             notice.ShowSaved(2f);
             notice.Tick(10f);
 
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointRestart(3)));
+            Assert.That(notice.Text, Is.EqualTo(Restart(3)));
         }
 
         [Test]
@@ -103,7 +110,7 @@ namespace Fps.Core.Tests
             Assert.That(notice.IsCountingDown, Is.False);
 
             notice.ShowSaved(1f);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointSaved), "saving shows again after the countdown is cleared");
+            Assert.That(notice.Text, Is.EqualTo(Saved), "saving shows again after the countdown is cleared");
         }
 
         [Test]

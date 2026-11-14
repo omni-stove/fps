@@ -68,7 +68,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_zone.IsRunning, Is.False);
             Assert.That(outside.Health.Current, Is.EqualTo(100));
-            Assert.That(_zone.HudLine, Is.Empty);
+            Assert.That(_zone.HudLine.IsEmpty, Is.True);
             Assert.That(_zone.SecondsUntilShrink, Is.Zero);
         }
 
@@ -132,7 +132,7 @@ namespace Fps.Tests.EditMode
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Zone\] phase=1/1 stage=Waiting radius=20\.00 "));
             _zone.Begin();
             Assert.That(_zone.SecondsUntilShrink, Is.EqualTo(10f));
-            Assert.That(_zone.HudLine, Is.EqualTo("エリア縮小まで 00:10"));
+            Assert.That(Localizer.Resolve(_zone.HudLine), Is.EqualTo("エリア縮小まで 00:10"));
 
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Zone\] phase=1/1 stage=Shrinking radius=17\.50 "));
             _zone.Tick(12.5f);
@@ -143,7 +143,7 @@ namespace Fps.Tests.EditMode
             _zone.Tick(10f);
 
             Assert.That(stages, Is.EqualTo(new[] { ZoneStage.Waiting, ZoneStage.Shrinking, ZoneStage.Closed }));
-            Assert.That(_zone.HudLine, Is.EqualTo("最終エリア"));
+            Assert.That(Localizer.Resolve(_zone.HudLine), Is.EqualTo("最終エリア"));
         }
 
         [Test]

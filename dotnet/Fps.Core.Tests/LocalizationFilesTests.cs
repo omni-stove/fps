@@ -5,7 +5,7 @@ using NUnit.Framework;
 namespace Fps.Core.Tests
 {
     /// <summary>
-    /// ゲームが読む文字列表 (Assets/game/Localization/Resources/Strings/*.json) が読め、どの言語にも同じキーがあり、
+    /// ゲームが読む文字列表 (Assets/game/Localization/Resources/Strings/*.json に Assets/game/Resources/Localization/&lt;言語コード&gt;/ を重ねたもの) が読め、どの言語にも同じキーがあり、
     /// 同じキーが同じ番号の値を差し込むこと。片方の言語にだけ足したキーは、もう片方でキーそのものが画面に出てしまう。
     /// </summary>
     public sealed class LocalizationFilesTests

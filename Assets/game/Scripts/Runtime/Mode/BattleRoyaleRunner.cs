@@ -383,11 +383,11 @@ namespace Fps.Runtime
             return true;
         }
 
-        protected override string HudTime()
+        protected override LocalizedText HudTime()
         {
             var mode = _battleRoyale.Mode;
             return float.IsPositiveInfinity(mode.TimeLimitSeconds)
-                ? HudFormat.Time((float)mode.ElapsedSeconds)
+                ? LocalizedText.Literal(HudFormat.Time((float)mode.ElapsedSeconds))
                 : base.HudTime();
         }
 
@@ -396,9 +396,9 @@ namespace Fps.Runtime
             return BattleRoyaleHudText.Squads(_battleRoyale, ownSide);
         }
 
-        protected override string HudResult()
+        protected override LocalizedText HudResult()
         {
-            return BattleRoyaleHudText.Result(_battleRoyale);
+            return LiteralOrEmpty(BattleRoyaleHudText.Result(_battleRoyale));
         }
 
         protected override void AppendHudLines(List<string> lines)
@@ -407,7 +407,7 @@ namespace Fps.Runtime
             var localId = local != null ? IdOf(local) : -1;
             var controller = local != null ? local.GetComponentInChildren<WeaponController>(true) : null;
             var unarmed = controller != null && controller.IsInitialized && controller.IsUnarmed;
-            var zoneLine = _runningZone != null ? _runningZone.HudLine : null;
+            var zoneLine = _runningZone != null ? Localizer.Resolve(_runningZone.HudLine) : null;
             lines.AddRange(BattleRoyaleHudText.Lines(
                 _battleRoyale, localId >= 0 ? localId : (int?)null, _localReviveTarget, zoneLine, unarmed));
         }

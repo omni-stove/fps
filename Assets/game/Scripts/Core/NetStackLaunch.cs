@@ -5,7 +5,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// <c>-netstack</c> の読み方。新しい手順 (<see cref="NetStackKind.V2"/>) は置き換えが終わるまで、付けたときだけ使う。
-    /// v2 は .NET のサーバーへつなぐクライアントだけなので、<c>-mode client</c> を求め、まだ移していない起動 (ロビー・EOS の通信路・回線のシミュレーション) は断る。
+    /// v2 は .NET のサーバーへつなぐクライアントだけなので、<c>-mode client</c> を求め、まだ移していない起動 (ロビー・回線のシミュレーション) は断る。
     /// </summary>
     public static class NetStackLaunch
     {
@@ -103,13 +103,6 @@ namespace Fps.Core
             {
                 error = Flag + " " + V2Name + " only runs " + NetLaunchOptions.ModeFlag + " client (got "
                     + NetLaunchOptions.ModeName(parsed.Mode) + "); run the server with make server-dotnet";
-                return false;
-            }
-
-            if (parsed.Transport != NetTransportKind.Udp)
-            {
-                error = NetLaunchOptions.TransportFlag + " " + NetLaunchOptions.TransportName(parsed.Transport) + " is not supported with "
-                    + Flag + " " + V2Name + " yet; use udp";
                 return false;
             }
 

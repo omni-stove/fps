@@ -43,6 +43,13 @@ namespace Fps.Server
 
         public string Rules { get; }
 
+        /// <summary>EOS の認証情報が無くて UDP に切り替えたときなど、実際に使う設定だけを差し替える。</summary>
+        public ServerLaunch WithOptions(NetLaunchOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules);
+        }
+
         public static bool TryParse(
             IReadOnlyList<string> args, Func<string, string> environment, out ServerLaunch launch, out string error)
         {
@@ -184,12 +191,6 @@ namespace Fps.Server
         // 黙って無視すると、ロビーや Bot が動いていると運用する人が思い込むので、移すまでは起動させない
         private static string Unsupported(NetLaunchOptions options)
         {
-            if (options.Transport != NetTransportKind.Udp)
-            {
-                return NetLaunchOptions.TransportFlag + " " + NetLaunchOptions.TransportName(options.Transport)
-                    + " is not supported by the .NET server yet; use " + NetLaunchOptions.TransportName(NetTransportKind.Udp);
-            }
-
             if (options.Bots > 0)
             {
                 return NetLaunchOptions.BotsFlag + " is not supported by the .NET server yet (it has no bot module)";

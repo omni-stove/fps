@@ -58,7 +58,7 @@ namespace Fps.Net
         public const int ExitLobbyFailed = 7;
 
         /// <summary>EOS を要求されたが認証情報が揃わず、UDP に切り替えたときのログ。</summary>
-        public const string CredentialsMissingLog = "[Net] EOS credentials missing, using UDP";
+        public const string CredentialsMissingLog = NetTransportPlan.CredentialsMissingLog;
 
         /// <summary>終了の前に、登録したロビーを閉じ終えるのを待つ最長の秒数。</summary>
         public const float ServerLobbyCloseWaitSeconds = 3f;
@@ -422,8 +422,7 @@ namespace Fps.Net
             if (plan.FellBackToUdp)
             {
                 Debug.LogWarning(CredentialsMissingLog);
-                Debug.Log("[Net] missing EOS settings: " + string.Join(", ", plan.MissingCredentials)
-                    + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")");
+                Debug.Log(plan.DescribeMissingCredentials());
             }
 
             return WithAntiCheat(plan);

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using Fps.Core;
 using Fps.EosSdk;
+using Fps.Protocol;
+using Fps.Server.Eos;
 
 namespace Fps.Server
 {
@@ -54,6 +56,13 @@ namespace Fps.Server
             }
 
             output.WriteLine(BuildVersion.LogLine(launch.Version));
+            if (!TryPlanTransport(launch, runtime, out var plan, out problem))
+            {
+                error.WriteLine(problem);
+                return ExitMisconfigured;
+            }
+
+            launch = launch.WithOptions(plan.Options);
             output.WriteLine(LogTag + " " + launch.Options);
             output.WriteLine(EosSdkBuild.LogLine(AppContext.BaseDirectory));
 
@@ -92,7 +101,13 @@ namespace Fps.Server
                 output.WriteLine("[Net] match events are also written to stdout as JSON lines (" + NetLaunchOptions.LogFormatFlag + " json)");
             }
 
-            using (var transport = runtime.CreateTransport())
+            if (!TryCreateTransport(launch, plan, runtime, out var created, out problem))
+            {
+                error.WriteLine(problem);
+                return ExitMisconfigured;
+            }
+
+            using (var transport = created)
             {
                 var server = new MatchServer(
                     launch,
@@ -119,6 +134,54 @@ namespace Fps.Server
                 var stopped = Shutdown(server, error);
                 return stopped == ExitOk ? server.ExitCode : stopped;
             }
+        }
+
+        /// <summary>
+        /// Unity のサーバー (<c>NetBootstrap</c>) と同じく、EOS を求められても認証情報が揃わなければ UDP で待ち受ける。
+        /// 認証情報のファイルが壊れているときは、黙って UDP にすると誤りに気づけないので止める。
+        /// </summary>
+        private static bool TryPlanTransport(ServerLaunch launch, ServerRuntime runtime, out NetTransportPlan plan, out string error)
+        {
+            plan = null;
+            EosCredentials credentials = null;
+            IReadOnlyList<string> missing = null;
+            if (launch.Options.Transport == NetTransportKind.Eos
+                && !EosCredentialSource.TryLoad(runtime.Environment, runtime.CredentialSearchRoots, out credentials, out missing, out var loadError))
+            {
+                error = "[Net] cannot load EOS credentials: " + loadError;
+                return false;
+            }
+
+            plan = NetTransportPlan.Decide(launch.Options, credentials, missing);
+            if (plan.FellBackToUdp)
+            {
+                runtime.Output.WriteLine(NetTransportPlan.CredentialsMissingLog);
+                runtime.Output.WriteLine(plan.DescribeMissingCredentials());
+            }
+
+            error = null;
+            return true;
+        }
+
+        private static bool TryCreateTransport(
+            ServerLaunch launch, NetTransportPlan plan, ServerRuntime runtime, out IMatchTransport transport, out string error)
+        {
+            if (launch.Options.Transport != NetTransportKind.Eos)
+            {
+                transport = runtime.CreateTransport();
+                error = null;
+                return true;
+            }
+
+            if (!runtime.CreateEosTransport(plan.Credentials, launch.Version, runtime.Output, out transport, out var eosError))
+            {
+                error = "[Net] " + NetLaunchOptions.TransportFlag + " " + NetLaunchOptions.TransportName(NetTransportKind.Eos)
+                    + " cannot use EOS: " + eosError;
+                return false;
+            }
+
+            error = null;
+            return true;
         }
 
         private static int Start(MatchServer server, TextWriter error)

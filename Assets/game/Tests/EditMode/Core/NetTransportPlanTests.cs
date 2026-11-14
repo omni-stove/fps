@@ -64,6 +64,16 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void FallbackNamesWhatIsMissingAndWhereToPutIt()
+        {
+            var plan = NetTransportPlan.Decide(EosClient(), null, new[] { EosCredentials.ProductIdVariable, EosCredentials.ClientSecretVariable });
+
+            Assert.That(NetTransportPlan.CredentialsMissingLog, Is.EqualTo("[Net] EOS credentials missing, using UDP"));
+            Assert.That(plan.DescribeMissingCredentials(), Is.EqualTo(
+                "[Net] missing EOS settings: EOS_PRODUCT_ID, EOS_CLIENT_SECRET (set them as environment variables or in eos.local.json)"));
+        }
+
+        [Test]
         public void FallbackWithoutMissingListReportsEmpty()
         {
             var requested = new NetLaunchOptions(

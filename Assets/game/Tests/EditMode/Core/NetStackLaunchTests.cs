@@ -48,13 +48,33 @@ namespace Fps.Core.Tests
         [TestCase("Game.exe -mode host -netstack v2", "make server-dotnet")]
         [TestCase("Game.exe -mode client -netstack v2 -map NetArena01", "-map")]
         [TestCase("Game.exe -mode client -netstack v2 -lobby quickmatch", "-lobby")]
-        [TestCase("Game.exe -mode client -netstack v2 -transport eos -eos-server 0123456789abcdef0123456789abcdef", "-transport eos")]
         [TestCase("Game.exe -mode client -netstack v2 -net-latency 100", "-net-latency")]
         public void RefusesWhatTheV2ClientCannotRunYet(string commandLine, string mentioned)
         {
             Assert.That(NetStackLaunch.TryResolveV2Client(Args(commandLine), out var options, out var error), Is.False);
             Assert.That(options, Is.Null);
             Assert.That(error, Does.Contain(mentioned));
+        }
+
+        [Test]
+        public void AV2ClientCanConnectOverEosToAServerId()
+        {
+            Assert.That(
+                NetStackLaunch.TryResolveV2Client(
+                    Args("Game.exe -mode client -netstack v2 -transport eos -eos-server 0123456789abcdef0123456789abcdef -noeac"),
+                    out var options,
+                    out var error),
+                Is.True,
+                error);
+            Assert.That(options.Transport, Is.EqualTo(NetTransportKind.Eos));
+            Assert.That(options.EosServerId, Is.EqualTo("0123456789abcdef0123456789abcdef"));
+        }
+
+        [Test]
+        public void AV2EosClientNeedsTheServerId()
+        {
+            Assert.That(NetStackLaunch.TryResolveV2Client(Args("Game.exe -mode client -netstack v2 -transport eos"), out _, out var error), Is.False);
+            Assert.That(error, Does.Contain("-eos-server"));
         }
 
         [Test]

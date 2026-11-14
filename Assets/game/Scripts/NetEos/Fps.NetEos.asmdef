@@ -4,6 +4,8 @@
     "references": [
         "Fps.Core",
         "Fps.Net",
+        "Fps.NetV2",
+        "Fps.Protocol",
         "Unity.Netcode.Runtime",
         "com.Epic.OnlineServices",
         "com.playeveryware.eos.core"

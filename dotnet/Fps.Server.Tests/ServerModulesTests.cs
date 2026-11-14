@@ -92,8 +92,8 @@ namespace Fps.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777"), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(4));
-            Assert.That(_modules[3], Is.InstanceOf<ServerLobbyModule>());
+            Assert.That(_modules, Has.Exactly(1).InstanceOf<ServerLobbyModule>());
+            Assert.That(_modules[_modules.Count - 1], Is.InstanceOf<ServerLobbyModule>());
         }
 
         [Test]

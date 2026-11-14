@@ -297,7 +297,7 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠、
 上の運用 (版の確認・drain・JSON のイベント)、EOS のロビーへの登録 (`-register-lobby`) と、試合のルール (TDM・Domination・ダウンと蘇生・印・
 出現と出現直後の無敵・ロードアウトの選択・放置で切る)、移動、戦闘 (射撃・巻き戻しの当たり判定・ダメージ・武器・グレネード・壊せる建物) を行う。
-Bot・EOS の P2P・EAC はまだ無い。
+Bot・EAC はまだ無い。
 
 ```sh
 make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
@@ -308,7 +308,13 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
 - 引数 (`-map`・`-drain-timeout`・`-log-format`・`-buildVersion`) と環境変数 (`FPS_SERVER_ADDRESS`・`FPS_SERVER_PORT`) は Unity のサーバーと同じ意味。
   `-address` / `-port` が無ければ環境変数、それも無ければ `0.0.0.0` / `7777` で待ち受ける。引数と環境変数の両方で渡すと
   `[Net] invalid arguments: -port is given more than once (FPS_SERVER_PORT is set too) ...` で終わる (終了コード 2)。
-- まだ動かせない `-transport eos`・`-bots`・`-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
+- まだ動かせない `-bots`・`-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
+- `-transport eos` は EOS の P2P (ソケット名 `fps`、Unity のサーバーと同じチャンネル) で待ち受け、Device ID でログインできたら
+  `[Net] EOS server ready id=<サーバーの ID> ...` を出す。EOS の C# SDK を [dotnet/ThirdParty/EOSSDK](../dotnet/ThirdParty/EOSSDK/README.md)
+  に置いてビルドしたサーバーでだけ使え、SDK かそのライブラリが無ければ理由を出して終了コード 3、ログインできなければ
+  `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。認証情報 (環境変数か `eos.local.json`) が欠けていれば
+  Unity のサーバーと同じく `[Net] EOS credentials missing, using UDP` を出して UDP で待ち受ける。
+  EOS でつないだ人は、名乗った鍵ではなく EOS が確かめた ProductUserId で見分け (つなぎ直しの成績の引き継ぎも)、JSON のイベントに `productUserId` を付ける。
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む (`-map` が無ければ `NetTest`)。作業ディレクトリの `server-data/`、
   無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
   ファイルは Unity の Editor から `make export-server-data` で書き出す。
@@ -367,7 +373,15 @@ make server-dotnet
   今の HUD とエフェクト (`CombatEvents`) に流し、`[Combat]` の行を出す。
 - サーバーとの接続を失うと、今のクライアントと同じ文 (「サーバーが止まりました。」・タイムアウト・断られた・版が違う) を出してメニューへ戻る。
   batchmode では今と同じ終了コード (切断 0・つながらない 5) で終わる。
-- まだ使えない `-lobby`・`-transport eos`・`-net-latency` / `-net-loss` / `-net-jitter` や、`-mode client` 以外と一緒に付けると
+- `-transport eos -eos-server <サーバーの ID>` で .NET の EOS のサーバーへ P2P でつなぐ (EOS のプラグインと Netcode が入ったビルドだけ)。
+  認証情報が欠けていれば `[Net] EOS credentials missing, using UDP` を出して `-address` へ UDP でつなぐ。
+  EAC はまだ v2 の経路に無いので `-noeac` を付ける。
+
+  ```sh
+  <ビルドしたゲーム> -mode client -netstack v2 -transport eos -eos-server <サーバーの ID> -noeac
+  ```
+
+- まだ使えない `-lobby`・`-net-latency` / `-net-loss` / `-net-jitter` や、`-mode client` 以外と一緒に付けると
   `[Net] invalid arguments: ...` を出して終了コード 2 で終わる。
 
 ## CI でのリリース

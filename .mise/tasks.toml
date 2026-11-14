@@ -47,7 +47,7 @@ flag "--version <version>" help="build version such as v0.2.0 (default: git desc
 run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
 
 [server-dotnet]
-description = "Build the Unity-independent .NET server (dotnet/Fps.Server) and run it with -mode server. The version is git describe --tags --always --dirty"
+description = "Build the Unity-independent .NET server (dotnet/Fps.Server) and run it with -mode server on 0.0.0.0:7777 (FPS_SERVER_ADDRESS / FPS_SERVER_PORT change it). It needs server-data/maps/<map>.fpsmap and .fpsnav (make export-server-data). Ctrl+C or SIGTERM drains; a second one stops at once. The version is git describe --tags --always --dirty"
 run = [
   "dotnet build dotnet/Fps.Server/Fps.Server.csproj -c Release -v q --nologo",
   'dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -- -mode server -buildVersion "$(git describe --tags --always --dirty)"',

@@ -9,8 +9,9 @@ namespace Fps.Runtime
     /// <list type="bullet">
     /// <item>グレネード: <see cref="GrenadeResourcePath"/> (<see cref="Grenade"/>)。オフラインの <see cref="GrenadeThrower"/> とネット対戦が使う。</item>
     /// <item>印: <see cref="PingResourcePath"/> (<see cref="Ping"/>)。オフラインの <see cref="PingController"/> とネット対戦が使う。</item>
+    /// <item>吹き飛ばし: <see cref="KnockbackResourcePath"/> (<see cref="Knockback"/>)。プレイヤーの <see cref="KnockbackMovement"/> と <see cref="EnemyAgent"/> が使う。</item>
     /// </list>
-    /// ファイルが無ければ Spec の既定値 (<see cref="GrenadeSpec.Default"/>・<see cref="PingSpec.Default"/>) で動く。
+    /// ファイルが無ければ Spec の既定値 (<see cref="GrenadeSpec.Default"/>・<see cref="PingSpec.Default"/>・<see cref="KnockbackSpec.Default"/>) で動く。
     /// 壊れている・値が不正なら、ファイル名と項目名を添えたエラーを出して既定値で続ける。
     /// 初めて使うときに読み、Play の間は持ち続ける (Play の開始時に読み直す)。
     /// </summary>
@@ -24,9 +25,13 @@ namespace Fps.Runtime
         /// <summary>印の調整値を置く Resources のパス (拡張子なし)。</summary>
         public const string PingResourcePath = "Tuning/ping";
 
+        /// <summary>吹き飛ばしの調整値を置く Resources のパス (拡張子なし)。</summary>
+        public const string KnockbackResourcePath = "Tuning/knockback";
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GrenadeSpec _grenade;
         private static PingSpec _ping;
+        private static KnockbackSpec _knockback;
 
         /// <summary>グレネードの調整値。<see cref="GrenadeResourcePath"/> が無いか読めなければ <see cref="GrenadeSpec.Default"/>。</summary>
         public static GrenadeSpec Grenade => _grenade ?? (_grenade = Load(GrenadeResourcePath, TuningJson.ParseGrenade, GrenadeSpec.Default));
@@ -34,11 +39,16 @@ namespace Fps.Runtime
         /// <summary>印の調整値。<see cref="PingResourcePath"/> が無いか読めなければ <see cref="PingSpec.Default"/>。</summary>
         public static PingSpec Ping => _ping ?? (_ping = Load(PingResourcePath, TuningJson.ParsePing, PingSpec.Default));
 
+        /// <summary>吹き飛ばしの調整値。<see cref="KnockbackResourcePath"/> が無いか読めなければ <see cref="KnockbackSpec.Default"/>。</summary>
+        public static KnockbackSpec Knockback =>
+            _knockback ?? (_knockback = Load(KnockbackResourcePath, TuningJson.ParseKnockback, KnockbackSpec.Default));
+
         /// <summary>読んだ値を捨て、次に使うときに Resources から読み直させる。</summary>
         public static void Reload()
         {
             _grenade = null;
             _ping = null;
+            _knockback = null;
         }
 
         /// <summary>

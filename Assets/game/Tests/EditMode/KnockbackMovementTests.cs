@@ -151,6 +151,36 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheTunedForceAndPlayerWeightSetHowFarThePlayerFlies()
+        {
+            var tuning = new KnockbackSpec(
+                explosion: new KnockbackForce(12f, 0f, 1f),
+                playerWeight: 3f,
+                enemyWeight: 0.5f);
+
+            _movement.ApplyTuning(tuning);
+
+            Assert.That(_movement.KnockbackSpec, Is.SameAs(tuning));
+            Assert.That(_movement.KnockbackWeight, Is.EqualTo(3f), "the player reads the player weight, not the enemy one");
+            Assert.That(Knockback.Apply(_damageable, DamageKind.Explosion, Vector3.right, 1f), Is.True);
+            Assert.That(_movement.Velocity.magnitude, Is.EqualTo(12f / 3f).Within(1e-4f));
+        }
+
+        [Test]
+        public void TuningDoesNotOverwriteValuesSetByCode()
+        {
+            var set = new KnockbackSpec(gravity: 30f);
+            _movement.KnockbackSpec = set;
+            _movement.KnockbackWeight = 2f;
+
+            _movement.ApplyTuning(new KnockbackSpec(gravity: 10f, playerWeight: 5f));
+
+            Assert.That(_movement.KnockbackSpec, Is.SameAs(set));
+            Assert.That(_movement.KnockbackWeight, Is.EqualTo(2f));
+            Assert.Throws<ArgumentNullException>(() => _movement.ApplyTuning(null));
+        }
+
+        [Test]
         public void TheDeadAreNotLaunchedAndDyingStopsTheFlight()
         {
             _movement.Launch(Vector3.up * 3f, DamageKind.Explosion);

@@ -112,6 +112,17 @@ namespace Fps.Server
             }
         }
 
+        public void OnMessage(ConnectionId connection, IMessage message)
+        {
+            ThrowIfNotRunning();
+            ThrowIfNone(connection);
+            ArgumentNullException.ThrowIfNull(message);
+            foreach (var module in _modules)
+            {
+                module.OnMessage(connection, message);
+            }
+        }
+
         /// <summary>
         /// 登録と逆の順にモジュールを止める。止まらなかったモジュールがあっても残りを止めてから
         /// <see cref="AggregateException"/> で知らせる。起動前・停止後に呼んでも何もしない。

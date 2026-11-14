@@ -16,6 +16,12 @@ namespace Fps.Net
         private bool _serverEventOutputBroken;
         private bool _wroteServerStopping;
 
+        partial void LogBeforeStart(ref string error);
+
+        partial void LogAfterStart();
+
+        partial void LogQuitRequested(ref bool allowQuit);
+
         /// <summary>NetworkManager を組み立てた後、待ち受け・接続を始める前に呼ぶ。</summary>
         /// <param name="error">起動を止めるならその理由を入れる (<c>[Net]</c> 付きの文)。既に入っていれば触らない。</param>
         partial void LogBeforeStart(ref string error)

@@ -9,7 +9,30 @@ namespace Fps.Core.Tests
     {
         // 既定とどの項目も違う値にしておき、差し替えなかった項目が既定に戻っていないことまで見分けられるようにする。
         private static readonly ActionRules _actions = new ActionRules(
-            Downed.Revive, 20f, 0.5f, 4f, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, 2);
+            Downed.Revive,
+            20f,
+            0.5f,
+            4f,
+            Cover.On,
+            BlindFire.On,
+            ActiveReload.On,
+            Dodge.On,
+            Vault.On,
+            Grenade.On,
+            2,
+            Melee.On,
+            Stagger.On,
+            Slide.On,
+            Mantle.On,
+            Prone.On,
+            Ladder.On,
+            Zipline.On,
+            Parachute.On,
+            Stealth.On,
+            Suppression.On,
+            Ping.On,
+            Abilities.On,
+            SlowMotion.On);
 
         private static readonly GameRules _rules = new GameRules(
             FriendlyFire.On,
@@ -80,6 +103,19 @@ namespace Fps.Core.Tests
                 (nameof(ActionRules.Vault), a => a.WithVault(Vault.Off), Vault.Off),
                 (nameof(ActionRules.Grenade), a => a.WithGrenade(Grenade.Off), Grenade.Off),
                 (nameof(ActionRules.GrenadeCount), a => a.WithGrenadeCount(0), 0),
+                (nameof(ActionRules.Melee), a => a.WithMelee(Melee.Off), Melee.Off),
+                (nameof(ActionRules.Stagger), a => a.WithStagger(Stagger.Off), Stagger.Off),
+                (nameof(ActionRules.Slide), a => a.WithSlide(Slide.Off), Slide.Off),
+                (nameof(ActionRules.Mantle), a => a.WithMantle(Mantle.Off), Mantle.Off),
+                (nameof(ActionRules.Prone), a => a.WithProne(Prone.Off), Prone.Off),
+                (nameof(ActionRules.Ladder), a => a.WithLadder(Ladder.Off), Ladder.Off),
+                (nameof(ActionRules.Zipline), a => a.WithZipline(Zipline.Off), Zipline.Off),
+                (nameof(ActionRules.Parachute), a => a.WithParachute(Parachute.Off), Parachute.Off),
+                (nameof(ActionRules.Stealth), a => a.WithStealth(Stealth.Off), Stealth.Off),
+                (nameof(ActionRules.Suppression), a => a.WithSuppression(Suppression.Off), Suppression.Off),
+                (nameof(ActionRules.Ping), a => a.WithPing(Ping.Off), Ping.Off),
+                (nameof(ActionRules.Abilities), a => a.WithAbilities(Abilities.Off), Abilities.Off),
+                (nameof(ActionRules.SlowMotion), a => a.WithSlowMotion(SlowMotion.Off), SlowMotion.Off),
             };
 
             // Cover は BlindFire が On のままでは Off にできないので、BlindFire を切った値から確かめる。
@@ -159,6 +195,45 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => _actions.WithVault((Vault)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => _actions.WithGrenade((Grenade)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => _actions.WithGrenadeCount(-1));
+            AssertRejected(() => _actions.WithMelee((Melee)99), "melee");
+            AssertRejected(() => _actions.WithStagger((Stagger)99), "stagger");
+            AssertRejected(() => _actions.WithSlide((Slide)99), "slide");
+            AssertRejected(() => _actions.WithMantle((Mantle)99), "mantle");
+            AssertRejected(() => _actions.WithProne((Prone)99), "prone");
+            AssertRejected(() => _actions.WithLadder((Ladder)99), "ladder");
+            AssertRejected(() => _actions.WithZipline((Zipline)99), "zipline");
+            AssertRejected(() => _actions.WithParachute((Parachute)99), "parachute");
+            AssertRejected(() => _actions.WithStealth((Stealth)99), "stealth");
+            AssertRejected(() => _actions.WithSuppression((Suppression)99), "suppression");
+            AssertRejected(() => _actions.WithPing((Ping)99), "ping");
+            AssertRejected(() => _actions.WithAbilities((Abilities)99), "abilities");
+            AssertRejected(() => _actions.WithSlowMotion((SlowMotion)99), "slowMotion");
+        }
+
+        [Test]
+        public void DefaultActionRulesLeaveEveryNewActionOff()
+        {
+            var actions = ActionRules.Default;
+
+            Assert.That(actions.Melee, Is.EqualTo(Melee.Off));
+            Assert.That(actions.Stagger, Is.EqualTo(Stagger.Off));
+            Assert.That(actions.Slide, Is.EqualTo(Slide.Off));
+            Assert.That(actions.Mantle, Is.EqualTo(Mantle.Off));
+            Assert.That(actions.Prone, Is.EqualTo(Prone.Off));
+            Assert.That(actions.Ladder, Is.EqualTo(Ladder.Off));
+            Assert.That(actions.Zipline, Is.EqualTo(Zipline.Off));
+            Assert.That(actions.Parachute, Is.EqualTo(Parachute.Off));
+            Assert.That(actions.Stealth, Is.EqualTo(Stealth.Off));
+            Assert.That(actions.Suppression, Is.EqualTo(Suppression.Off));
+            Assert.That(actions.Ping, Is.EqualTo(Ping.Off));
+            Assert.That(actions.Abilities, Is.EqualTo(Abilities.Off));
+            Assert.That(actions.SlowMotion, Is.EqualTo(SlowMotion.Off));
+        }
+
+        private static void AssertRejected(Func<ActionRules> with, string paramName)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => with());
+            Assert.That(e.ParamName, Is.EqualTo(paramName));
         }
 
         [Test]

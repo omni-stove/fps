@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -53,6 +55,27 @@ namespace Fps.Tests.EditMode
             Assert.That(mission.Objectives[1].Prerequisites, Is.EqualTo(new[] { MissionTestSceneBuilder.ReachAreaId }));
             Assert.That(mission.Objectives[2].Id, Is.EqualTo(MissionTestSceneBuilder.ExtractId));
             Assert.That(mission.Objectives[2].Prerequisites, Is.EqualTo(new[] { MissionTestSceneBuilder.KillTargetsId }));
+        }
+
+        [Test]
+        public void EveryMissionTextTheBuildersWriteIsInEveryLanguage()
+        {
+            var keys = new List<string> { MissionTestSceneBuilder.MissionNameKey };
+            keys.AddRange(MissionTestSceneBuilder.TestObjectives().Select(o => o.DescriptionKey));
+            foreach (var spec in CampaignSceneBuilder.Missions())
+            {
+                keys.Add(spec.NameKey);
+                keys.AddRange(spec.Objectives.Select(o => o.DescriptionKey));
+            }
+
+            foreach (var language in GameLanguages.All)
+            {
+                var table = Localizer.TableOf(language);
+                foreach (var key in keys)
+                {
+                    Assert.That(table.Contains(key), Is.True, $"{GameLanguages.Code(language)}: {key}");
+                }
+            }
         }
 
         [Test]
@@ -221,6 +244,10 @@ namespace Fps.Tests.EditMode
                 $"run {nameof(MissionTestSceneBuilder)}.Build first");
 
             Assert.That(definition.CreateMission().Objectives.Count, Is.EqualTo(3));
+            Assert.That(definition.DisplayNameKey, Is.EqualTo(MissionTestSceneBuilder.MissionNameKey));
+            Assert.That(
+                definition.Objectives.Select(o => o.DescriptionKey),
+                Is.EqualTo(MissionTestSceneBuilder.TestObjectives().Select(o => o.DescriptionKey)));
 
             var scene = EditorSceneManager.OpenScene(MissionTestSceneBuilder.ScenePath, OpenSceneMode.Additive);
             try

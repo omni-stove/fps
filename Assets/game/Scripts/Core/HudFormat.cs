@@ -374,7 +374,7 @@ namespace Fps.Core
         }
 
         /// <summary>キャンペーンのチェックポイントでセーブしたときの案内。</summary>
-        public static LocalizedText CheckpointSaved => new LocalizedText("hud.checkpointSaved");
+        public static LocalizedText CheckpointSaved => new LocalizedText("campaign.checkpoint.saved");
 
         /// <summary>キャンペーンでプレイヤーが倒れた後、チェックポイントから再開するまでの案内。秒数は切り上げた整数で受ける。</summary>
         /// <example><c>CheckpointRestart(3)</c> は <c>チェックポイントから再開まで 3 秒</c></example>
@@ -385,7 +385,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return new LocalizedText("hud.checkpointRestart", seconds);
+            return new LocalizedText("campaign.checkpoint.restart", seconds);
         }
 
         /// <summary>残りのグレネードの数。</summary>

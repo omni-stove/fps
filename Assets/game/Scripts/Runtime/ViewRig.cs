@@ -12,7 +12,10 @@ namespace Fps.Runtime
     /// 本体 (yaw を回す。ViewRig と FirstPersonLook)
     ///   └ 目 (pitch を回す。射撃の始点)
     ///       └ カメラ (目からのオフセットは ViewRig が決める)
+    ///           ├ ShakeRoot (画面の揺れの演出が使う。<see cref="ShakeRoot"/>)
+    ///           └ ViewmodelRoot (一人称の武器と腕を置く。<see cref="ViewmodelRoot"/>)
     /// </code>
+    /// ShakeRoot と ViewmodelRoot は初期化 (<see cref="Initialize"/>) のときに名前で探し、無ければ作る。どちらも ViewRig は動かさない。
     /// <see cref="Mode"/> が <see cref="ViewMode.FirstPerson"/> ならカメラを目に重ねて自分の体を影だけにし、
     /// <see cref="ViewMode.ThirdPerson"/> なら目から <see cref="ThirdPersonOffset"/> 離して置き (壁があれば手前まで縮める)、体を描く。
     /// どちらの視点でも狙いは <see cref="ResolveAim"/> で、画面中央が指す点へ目から撃つ (<see cref="AimSolver"/>)。
@@ -42,6 +45,12 @@ namespace Fps.Runtime
         /// <summary>視点の状態のログに付けるタグ。<see cref="AimDownSights.LogTag"/> と揃える。</summary>
         public const string ViewLogTag = AimDownSights.LogTag;
 
+        /// <summary>画面の揺れ用にカメラの直下に置く GameObject の名前。</summary>
+        public const string ShakeRootName = "ShakeRoot";
+
+        /// <summary>ビューモデル用にカメラの直下に置く GameObject の名前。</summary>
+        public const string ViewmodelRootName = "ViewmodelRoot";
+
         private const string LogTag = "[ViewRig]";
 
         // 自分の体を除いて最も近い命中を選ぶための一時バッファ。毎フレームの確保を避ける。
@@ -66,6 +75,8 @@ namespace Fps.Runtime
 
         private Transform _eye;
         private Camera _camera;
+        private Transform _shakeRoot;
+        private Transform _viewmodelRoot;
         private readonly ShoulderBlend _shoulder = new ShoulderBlend();
         private InputAction _swapShoulderAction;
         private bool _enabledSwapShoulderAction;
@@ -144,6 +155,15 @@ namespace Fps.Runtime
 
         /// <summary>目の子のカメラ。未初期化なら null。</summary>
         public Camera Camera => _camera;
+
+        /// <summary>カメラの直下の、画面の揺れの演出が使う Transform (<see cref="ShakeRootName"/>)。未初期化なら null。</summary>
+        public Transform ShakeRoot => _shakeRoot;
+
+        /// <summary>
+        /// カメラの直下の、一人称の武器と腕を置く Transform (<see cref="ViewmodelRootName"/>)。<see cref="ShakeRoot"/> とは兄弟で、
+        /// 揺れの演出が ShakeRoot を動かしてもこちらは動かない。未初期化なら null。
+        /// </summary>
+        public Transform ViewmodelRoot => _viewmodelRoot;
 
         public bool IsInitialized => _eye != null && _camera != null;
 
@@ -301,7 +321,10 @@ namespace Fps.Runtime
             return true;
         }
 
-        /// <summary>参照を直接渡して初期化する。eye はこの本体の子孫 (本体自身ではない)、camera は eye の直下であること。</summary>
+        /// <summary>
+        /// 参照を直接渡して初期化する。eye はこの本体の子孫 (本体自身ではない)、camera は eye の直下であること。
+        /// カメラの直下の <see cref="ShakeRoot"/> と <see cref="ViewmodelRoot"/> は名前で探し、無ければ作る (<see cref="EnsureCameraChild"/>)。
+        /// </summary>
         public void Initialize(Transform eye, Camera camera)
         {
             if (eye == null)
@@ -326,6 +349,42 @@ namespace Fps.Runtime
 
             _eye = eye;
             _camera = camera;
+            _shakeRoot = EnsureCameraChild(camera, ShakeRootName);
+            _viewmodelRoot = EnsureCameraChild(camera, ViewmodelRootName);
+        }
+
+        /// <summary>
+        /// camera の直下で名前が name の Transform を返す。無ければ位置・回転・拡縮を揃えた空の GameObject をカメラと同じレイヤーで作る。
+        /// 何度呼んでも同じ名前のものは 1 つだけ。
+        /// </summary>
+        public static Transform EnsureCameraChild(Camera camera, string name)
+        {
+            if (camera == null)
+            {
+                throw new ArgumentNullException(nameof(camera));
+            }
+
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentException("child name must not be empty", nameof(name));
+            }
+
+            var parent = camera.transform;
+            for (var i = 0; i < parent.childCount; i++)
+            {
+                var child = parent.GetChild(i);
+                if (string.Equals(child.name, name, StringComparison.Ordinal))
+                {
+                    return child;
+                }
+            }
+
+            var created = new GameObject(name) { layer = camera.gameObject.layer }.transform;
+            created.SetParent(parent, false);
+            created.localPosition = Vector3.zero;
+            created.localRotation = Quaternion.identity;
+            created.localScale = Vector3.one;
+            return created;
         }
 
         /// <summary>
@@ -454,7 +513,8 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 自分の体の描き方を決める。isLocalView (この端末のプレイヤーの視点) かつ一人称なら影だけ描いて視界をふさがず、
-        /// それ以外 (三人称や他人のプレイヤー) は普通に描く。isLocalView の間だけ肩の入れ替えの入力を読む (<see cref="IsLocalView"/>)。
+        /// それ以外 (三人称や他人のプレイヤー) は普通に描く。<see cref="ViewmodelRoot"/> の配下は体ではないので触らない。
+        /// isLocalView の間だけ肩の入れ替えの入力を読む (<see cref="IsLocalView"/>)。
         /// </summary>
         public void ApplyBodyVisibility(bool isLocalView)
         {
@@ -464,7 +524,8 @@ namespace Fps.Runtime
             var shadowMode = isLocalView && _mode == ViewMode.FirstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
             foreach (var bodyRenderer in GetComponentsInChildren<Renderer>(true))
             {
-                if (bodyRenderer != null)
+                // ビューモデルは体ではなく、一人称でこそ描くものなので、体の描き方に巻き込まない。
+                if (bodyRenderer != null && (_viewmodelRoot == null || !bodyRenderer.transform.IsChildOf(_viewmodelRoot)))
                 {
                     bodyRenderer.shadowCastingMode = shadowMode;
                 }

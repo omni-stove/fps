@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Fps.Runtime
 {
@@ -101,8 +102,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("ミッション Id。MissionDefinition のアセット名と同じにする。セーブのスロット名にも使う")]
         private string _id = string.Empty;
 
-        [SerializeField, Tooltip("メニューに出す名前")]
-        private string _displayName = string.Empty;
+        // 文を直に持っていた頃のアセットは、その文がキーとして読まれ、表に無いキーとして警告付きでそのまま画面に出る。
+        [SerializeField, FormerlySerializedAs("_displayName"), Tooltip("メニューに出す名前の、言語の表のキー (campaign.mission.<Id>.name)")]
+        private string _displayNameKey = string.Empty;
 
         [SerializeField, Tooltip("ミッションのシーンのパス (Assets/.../*.unity)。Build Settings に入っていること")]
         private string _scenePath = string.Empty;
@@ -114,17 +116,21 @@ namespace Fps.Runtime
         {
         }
 
-        public MissionCatalogEntry(string id, string displayName, string scenePath, MissionDefinition definition)
+        public MissionCatalogEntry(string id, string displayNameKey, string scenePath, MissionDefinition definition)
         {
             _id = id ?? string.Empty;
-            _displayName = displayName ?? string.Empty;
+            _displayNameKey = displayNameKey ?? string.Empty;
             _scenePath = scenePath ?? string.Empty;
             _definition = definition;
         }
 
         public string Id => _id ?? string.Empty;
 
-        public string DisplayName => _displayName ?? string.Empty;
+        /// <summary>メニューに出す名前の、言語の表のキー。</summary>
+        public string DisplayNameKey => _displayNameKey ?? string.Empty;
+
+        /// <summary>メニューに出す名前。<see cref="DisplayNameKey"/> が空なら <c>default</c> (文にすると空文字)。</summary>
+        public LocalizedText DisplayName => string.IsNullOrWhiteSpace(_displayNameKey) ? default : new LocalizedText(_displayNameKey.Trim());
 
         /// <summary>SceneManager.LoadScene に渡せるシーンのパス (Assets/ から始まり .unity で終わる)。</summary>
         public string ScenePath => _scenePath ?? string.Empty;
@@ -133,11 +139,11 @@ namespace Fps.Runtime
 
         public MissionCatalogEntry Clone()
         {
-            return new MissionCatalogEntry(_id, _displayName, _scenePath, _definition);
+            return new MissionCatalogEntry(_id, _displayNameKey, _scenePath, _definition);
         }
 
         /// <summary>
-        /// Id がミッション Id として使え (<see cref="CampaignLaunch.IsValidMissionId"/>)、表示名が空でなく、シーンのパスが Assets/ 以下の .unity で、
+        /// Id がミッション Id として使え (<see cref="CampaignLaunch.IsValidMissionId"/>)、表示名のキーが空でなく、シーンのパスが Assets/ 以下の .unity で、
         /// 定義があってその名前が Id と同じで、ミッションに変換できることを確かめる。不正なら <see cref="MissionCatalogException"/>。
         /// </summary>
         public void Validate()
@@ -149,9 +155,9 @@ namespace Fps.Runtime
                     $"id '{Id}' must be 1-{CampaignLaunch.MaxMissionIdLength} characters of letters, digits, '_' or '-'");
             }
 
-            if (string.IsNullOrWhiteSpace(DisplayName))
+            if (string.IsNullOrWhiteSpace(DisplayNameKey))
             {
-                throw new MissionCatalogException($"mission '{Id}' has no display name");
+                throw new MissionCatalogException($"mission '{Id}' has no display name key");
             }
 
             if (!ScenePath.StartsWith("Assets/", StringComparison.Ordinal)

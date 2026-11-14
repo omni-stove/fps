@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace Fps.Core
 {
@@ -28,7 +27,7 @@ namespace Fps.Core
         public const float DefaultTeleportMeters = 2f;
 
         /// <summary>すべて終えたときに出す文。</summary>
-        public static string CompletedText => GameText.Get("tutorial.completed");
+        public static LocalizedText CompletedText => new LocalizedText("tutorial.completed");
 
         /// <summary>手順の並び。この順に進む。</summary>
         public static IReadOnlyList<TutorialStep> Order { get; } = new[]
@@ -182,11 +181,11 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 画面に出す文。今の手順を keyLabel のキーで案内し、頭に「[今の番号/手順の数]」を付ける (例: <c>[1/6] WASD で移動</c>)。
+        /// 画面に出す文。今の手順を keyLabel のキーで案内し、頭に「[今の番号/手順の数]」を付ける (日本語の表で <c>[1/6] WASD で移動</c>)。
         /// 射撃の手順では当てた回数も付ける。すべて終えたら <see cref="CompletedText"/>。
         /// </summary>
         /// <param name="keyLabel">今の手順で使うキー (またはボタン) の表記。空にはできない。すべて終えていれば使わない。</param>
-        public string Prompt(string keyLabel)
+        public LocalizedText Prompt(string keyLabel)
         {
             if (IsComplete)
             {
@@ -196,17 +195,17 @@ namespace Fps.Core
             var body = Instruction(Current, keyLabel, _hitsRequired);
             if (Current == TutorialStep.Shoot)
             {
-                body += string.Format(CultureInfo.InvariantCulture, " ({0}/{1})", _hits, _hitsRequired);
+                body = new LocalizedText("tutorial.shootProgress", body, _hits, _hitsRequired);
             }
 
-            return string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] {2}", _index + 1, Order.Count, body);
+            return new LocalizedText("tutorial.prompt", _index + 1, Order.Count, body);
         }
 
         /// <summary>step を keyLabel のキーで行うよう案内する文 (番号や進みは付けない)。</summary>
         /// <param name="step">案内する手順。</param>
         /// <param name="keyLabel">操作に使うキーの表記。空にはできない。</param>
         /// <param name="hitsRequired">射撃の手順で当てる回数。1 以上。</param>
-        public static string Instruction(TutorialStep step, string keyLabel, int hitsRequired = DefaultHitsRequired)
+        public static LocalizedText Instruction(TutorialStep step, string keyLabel, int hitsRequired = DefaultHitsRequired)
         {
             if (string.IsNullOrWhiteSpace(keyLabel))
             {
@@ -227,7 +226,7 @@ namespace Fps.Core
                 case TutorialStep.Reload:
                 case TutorialStep.Crouch:
                 case TutorialStep.Cover:
-                    return GameText.Format("tutorial.step." + step, key, hitsRequired);
+                    return new LocalizedText("tutorial.step." + step, key, hitsRequired);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(step), step, "unknown tutorial step");
             }

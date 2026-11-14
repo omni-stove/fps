@@ -63,6 +63,74 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void InitializeCreatesSeparateShakeAndViewmodelRootsUnderTheCamera()
+        {
+            Assert.That(_rig.ShakeRoot, Is.Null, "nothing before initializing");
+            Assert.That(_rig.ViewmodelRoot, Is.Null);
+            _camera.gameObject.layer = 5;
+
+            _rig.Initialize(_eye, _camera);
+
+            Assert.That(_rig.ShakeRoot, Is.Not.Null);
+            Assert.That(_rig.ViewmodelRoot, Is.Not.Null);
+            Assert.That(_rig.ShakeRoot, Is.Not.SameAs(_rig.ViewmodelRoot));
+            Assert.That(_rig.ShakeRoot.name, Is.EqualTo(ViewRig.ShakeRootName));
+            Assert.That(_rig.ViewmodelRoot.name, Is.EqualTo(ViewRig.ViewmodelRootName));
+            Assert.That(_rig.ShakeRoot.parent, Is.SameAs(_camera.transform));
+            Assert.That(_rig.ViewmodelRoot.parent, Is.SameAs(_camera.transform));
+            Assert.That(_rig.ShakeRoot.localPosition, Is.EqualTo(Vector3.zero));
+            Assert.That(_rig.ViewmodelRoot.localRotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(_rig.ViewmodelRoot.gameObject.layer, Is.EqualTo(5), "the roots share the camera's layer");
+        }
+
+        [Test]
+        public void InitializingAgainReusesTheRoots()
+        {
+            _rig.Initialize(_eye, _camera);
+            var shake = _rig.ShakeRoot;
+            var viewmodel = _rig.ViewmodelRoot;
+
+            Assert.That(_rig.TryInitializeFromHierarchy(), Is.True);
+
+            Assert.That(_rig.ShakeRoot, Is.SameAs(shake));
+            Assert.That(_rig.ViewmodelRoot, Is.SameAs(viewmodel));
+            Assert.That(_camera.transform.childCount, Is.EqualTo(2), "no duplicate roots");
+        }
+
+        [Test]
+        public void RootsAlreadyUnderTheCameraAreUsed()
+        {
+            var placed = new GameObject(ViewRig.ViewmodelRootName).transform;
+            placed.SetParent(_camera.transform, false);
+            placed.localPosition = new Vector3(0.1f, -0.2f, 0.3f);
+
+            _rig.Initialize(_eye, _camera);
+
+            Assert.That(_rig.ViewmodelRoot, Is.SameAs(placed));
+            Assert.That(placed.localPosition, Is.EqualTo(new Vector3(0.1f, -0.2f, 0.3f)), "an existing root is not moved");
+        }
+
+        [Test]
+        public void CameraPlacementDoesNotMoveTheRoots()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+
+            _rig.UpdateCameraPosition();
+
+            Assert.That(_camera.transform.localPosition, Is.Not.EqualTo(Vector3.zero), "the camera sits behind the shoulder");
+            Assert.That(_rig.ShakeRoot.localPosition, Is.EqualTo(Vector3.zero));
+            Assert.That(_rig.ViewmodelRoot.localPosition, Is.EqualTo(Vector3.zero));
+        }
+
+        [Test]
+        public void EnsureCameraChildRejectsMissingArguments()
+        {
+            Assert.Throws<ArgumentNullException>(() => ViewRig.EnsureCameraChild(null, ViewRig.ShakeRootName));
+            Assert.Throws<ArgumentException>(() => ViewRig.EnsureCameraChild(_camera, string.Empty));
+        }
+
+        [Test]
         public void CameraDirectlyUnderTheBodyIsRejected()
         {
             _camera.transform.SetParent(_body.transform, false);

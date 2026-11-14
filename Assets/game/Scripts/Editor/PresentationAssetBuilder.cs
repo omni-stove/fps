@@ -17,6 +17,7 @@ namespace Fps.Editor
     /// 既存のアセットは GUID を保って中身だけ更新し、同じコードからは同じファイルができる (2 回走らせても差分が出ない)。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.PresentationAssetBuilder.Build</code>
+    /// 演出の仮素材をまとめて作る入口 (<see cref="PresentationAssetSteps.BuildAll"/>) からは <see cref="PresentationCatalogAssetStep"/> として呼ばれる。
     /// </summary>
     public static class PresentationAssetBuilder
     {
@@ -282,7 +283,7 @@ namespace Fps.Editor
             return new SoundLayer(start, duration, duration * 0.3f, duration * 0.35f, 0.35f, 2500f);
         }
 
-        private static string ValidateFolderPath(string path, string parameterName)
+        internal static string ValidateFolderPath(string path, string parameterName)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -312,7 +313,7 @@ namespace Fps.Editor
             return Path.Combine(projectRoot ?? string.Empty, assetPath);
         }
 
-        private static AudioClip WriteSound(string path, SoundSpec spec)
+        internal static AudioClip WriteSound(string path, SoundSpec spec)
         {
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
             if (existing != null && !(existing is AudioClip))
@@ -696,7 +697,7 @@ namespace Fps.Editor
         /// 読み込んだ中身に値だけを貼り付けて保存する。作り直すとプレハブ内の fileID が毎回変わり、差分が出るため。
         /// 組み方が変わったときだけ丸ごと上書きする (アセットの GUID は保たれる)。
         /// </summary>
-        private static GameObject SavePrefab(string folder, string name, Action<GameObject> build)
+        internal static GameObject SavePrefab(string folder, string name, Action<GameObject> build)
         {
             var path = $"{folder}/{name}.prefab";
             var existing = AssetDatabase.LoadMainAssetAtPath(path);

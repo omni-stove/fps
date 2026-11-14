@@ -14,6 +14,7 @@ namespace Fps.Runtime
     /// F1 で開閉する (入力アセットは変えず <see cref="Keyboard.current"/> を直接読む)。開くと今のシーンの <see cref="GameBootstrap"/> が使ったルール
     /// (<see cref="BootstrapWorld.Rules"/>) を初期値に、オンオフの項目はトグル、それ以外はドロップダウンで出す。
     /// 適用 (APPLY) で <see cref="GameRulesOverride.Set"/>、リセット (RESET) で <see cref="GameRulesOverride.Clear"/> してから今のシーンを読み直す。
+    /// SLOW-MO は今のルールのまま時間の速さを要求する (<see cref="RequestSlowMotion"/>)。
     /// 開いている間はプロジェクト全体の入力の Player マップを止め、カーソルを出す。
     /// 表示は HUD とは別の UIDocument と PanelSettings をコードで作って出す。
     /// </summary>
@@ -37,8 +38,26 @@ namespace Fps.Runtime
         /// <summary>リセットボタンの名前。</summary>
         public const string ResetButtonName = "rules-debug-reset";
 
+        /// <summary>時間の速さを要求するボタンの名前。</summary>
+        public const string SlowMotionButtonName = "rules-debug-slow-motion";
+
+        /// <summary>時間の速さを要求するボタンが <see cref="TimeScaleArbiter.Request"/> に渡す理由。</summary>
+        public const string SlowMotionReason = "debug";
+
+        /// <summary><see cref="SlowMotionScale"/> の既定値。</summary>
+        public const float DefaultSlowMotionScale = 0.3f;
+
+        /// <summary><see cref="SlowMotionSeconds"/> の既定値。</summary>
+        public const float DefaultSlowMotionSeconds = 5f;
+
         /// <summary>止める入力のマップ。<see cref="InputActionPaths"/> のアクションはすべてここにある。</summary>
         public const string PlayerActionMapName = "Player";
+
+        /// <summary>項目を並べるスクロールの枠の名前。</summary>
+        public const string FieldsName = "rules-debug-fields";
+
+        /// <summary>項目の見出しを引く表のキーの頭。後ろに <see cref="GameRulesDebugField"/> の名前を付ける。</summary>
+        public const string FieldLabelKeyPrefix = "debug.rules.field.";
 
         /// <summary>HUD (0) と <see cref="ActionDebugOverlay"/> (100) より手前に出す。</summary>
         public const float SortingOrder = 200f;
@@ -63,6 +82,32 @@ namespace Fps.Runtime
         private VisualElement _container;
         private GameRulesDebugDraft _draft;
         private BootstrapWorld _world;
+        private float _slowMotionScale = DefaultSlowMotionScale;
+        private float _slowMotionSeconds = DefaultSlowMotionSeconds;
+
+        /// <summary>時間の速さのボタンで要求する倍率 (0 より大きく 1 以下)。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">範囲外。</exception>
+        public float SlowMotionScale
+        {
+            get => _slowMotionScale;
+            set
+            {
+                TimeScaleArbitration.Validate(SlowMotionReason, value, _slowMotionSeconds);
+                _slowMotionScale = value;
+            }
+        }
+
+        /// <summary>時間の速さのボタンで要求する実時間の秒数 (0 より大きい)。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">範囲外。</exception>
+        public float SlowMotionSeconds
+        {
+            get => _slowMotionSeconds;
+            set
+            {
+                TimeScaleArbitration.Validate(SlowMotionReason, _slowMotionScale, value);
+                _slowMotionSeconds = value;
+            }
+        }
 
         /// <summary>この Build でパネルを使えるか。Editor と Development Build だけ true。</summary>
         public static bool IsSupported
@@ -85,6 +130,18 @@ namespace Fps.Runtime
 
         /// <summary>開いている間の編集中の値。閉じていれば null。</summary>
         public GameRulesDebugDraft Draft => _draft;
+
+        /// <summary>field の見出しを引く表のキー。</summary>
+        public static string FieldLabelKey(GameRulesDebugField field)
+        {
+            return FieldLabelKeyPrefix + field;
+        }
+
+        /// <summary>今の言語での field の見出し。表に無ければ項目の名前をそのまま出す。</summary>
+        public static string FieldLabel(GameRulesDebugField field)
+        {
+            return Localizer.TryGet(FieldLabelKey(field), out var text) ? text : field.ToString();
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
@@ -262,6 +319,15 @@ namespace Fps.Runtime
             ReloadActiveScene();
         }
 
+        /// <summary>
+        /// <see cref="SlowMotionScale"/> の速さを <see cref="SlowMotionSeconds"/> 秒だけ <see cref="TimeScaleArbiter.Request"/> で要求する。
+        /// 受けたか断ったか (とその理由) は TimeScaleArbiter がログに出す。パネルは閉じない (ルールを読み直さずに試せるように)。
+        /// </summary>
+        public TimeScaleRefusal RequestSlowMotion()
+        {
+            return TimeScaleArbiter.Request(SlowMotionReason, _slowMotionScale, _slowMotionSeconds);
+        }
+
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             // 新しいシーンの部品は有効になるときに入力を自分で入れ直すので、ここで戻すと誰も止めない入力が残る。
@@ -401,6 +467,8 @@ namespace Fps.Runtime
             _container.style.paddingTop = Padding;
             _container.style.paddingBottom = Padding;
             _container.style.backgroundColor = BackgroundColor;
+            // 基準解像度の高さで上限を決めると、横長の画面で下が画面外に出るため、上下を両方固定する。
+            _container.style.bottom = ScreenMargin;
 
             var title = new Label("GameRules (F1)");
             title.style.fontSize = FontSize;
@@ -409,19 +477,25 @@ namespace Fps.Runtime
             title.style.marginBottom = RowSpacing * 2f;
             _container.Add(title);
 
+            // 項目が画面の高さに収まらないので、項目だけをスクロールさせて適用とリセットのボタンは常に見せる。
+            var fields = new ScrollView(ScrollViewMode.Vertical) { name = FieldsName };
+            fields.style.flexShrink = 1f;
             foreach (var field in GameRulesDebugDraft.Fields)
             {
                 var control = CreateControl(field);
                 control.style.marginBottom = RowSpacing;
                 _controls[field] = control;
-                _container.Add(control);
+                fields.Add(control);
             }
+
+            _container.Add(fields);
 
             var buttons = new VisualElement();
             buttons.style.flexDirection = FlexDirection.Row;
             buttons.style.justifyContent = Justify.FlexEnd;
             buttons.style.marginTop = RowSpacing * 2f;
             // テーマのフォントが日本語の字形を持つとは限らないので、他の画面 (MainMenu.uxml) と同じく英字にする。
+            buttons.Add(CreateButton(SlowMotionButtonName, "SLOW-MO", () => RequestSlowMotion()));
             buttons.Add(CreateButton(ResetButtonName, "RESET", ResetRules));
             buttons.Add(CreateButton(ApplyButtonName, "APPLY", () => Apply()));
             _container.Add(buttons);
@@ -433,7 +507,7 @@ namespace Fps.Runtime
 
         private VisualElement CreateControl(GameRulesDebugField field)
         {
-            var label = field.ToString();
+            var label = FieldLabel(field);
             if (GameRulesDebugDraft.IsToggle(field))
             {
                 var toggle = new Toggle(label);

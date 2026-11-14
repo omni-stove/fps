@@ -44,6 +44,45 @@ namespace Fps.Core
         /// <summary><see cref="ActionRules.Grenade"/>。</summary>
         Grenade,
 
+        /// <summary><see cref="ActionRules.Melee"/>。</summary>
+        Melee,
+
+        /// <summary><see cref="ActionRules.Stagger"/>。</summary>
+        Stagger,
+
+        /// <summary><see cref="ActionRules.Slide"/>。</summary>
+        Slide,
+
+        /// <summary><see cref="ActionRules.Mantle"/>。</summary>
+        Mantle,
+
+        /// <summary><see cref="ActionRules.Prone"/>。</summary>
+        Prone,
+
+        /// <summary><see cref="ActionRules.Ladder"/>。</summary>
+        Ladder,
+
+        /// <summary><see cref="ActionRules.Zipline"/>。</summary>
+        Zipline,
+
+        /// <summary><see cref="ActionRules.Parachute"/>。</summary>
+        Parachute,
+
+        /// <summary><see cref="ActionRules.Stealth"/>。</summary>
+        Stealth,
+
+        /// <summary><see cref="ActionRules.Suppression"/>。</summary>
+        Suppression,
+
+        /// <summary><see cref="ActionRules.Ping"/>。</summary>
+        Ping,
+
+        /// <summary><see cref="ActionRules.Abilities"/>。</summary>
+        Abilities,
+
+        /// <summary><see cref="ActionRules.SlowMotion"/>。</summary>
+        SlowMotion,
+
         /// <summary><see cref="GameRules.FallDamage"/>。</summary>
         FallDamage,
 

@@ -49,9 +49,17 @@ namespace Fps.Net
             // ダウン中・回避中・乗り越え中の射撃と、高い壁で端にいないブラインドファイアはサーバーが捨てるので送らない
             // 投げている間は撃たない (オフラインと同じ)。サーバーはこの間の射撃を断らないので、持ち主の側だけで止める
             if (IsAlive && !IsDowned && !IsThrowingGrenade && MoveActionShotRejection == ShotRejection.None && ResolveBlindFire(out _) != BlindFireAim.Blocked
-                && trigger.Pull(isPressed, wasPressed) && (_weapon == null || _weapon.PrepareFire()))
+                && trigger.Pull(isPressed, wasPressed))
             {
-                Fire();
+                if (_weapon == null || _weapon.PrepareFire())
+                {
+                    Fire();
+                }
+                else if (wasPressed)
+                {
+                    // 押し続けている間は鳴らさない (オフラインの WeaponController と同じ)
+                    _weapon.NotifyDryFire();
+                }
             }
         }
 

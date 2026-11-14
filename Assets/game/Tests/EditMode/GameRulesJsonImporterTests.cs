@@ -114,6 +114,32 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void WrittenRulesWithEveryNewActionOnSurviveTheAsset()
+        {
+            var rules = GameRules.Default.WithActions(ActionRules.Default
+                .WithMelee(Melee.On)
+                .WithStagger(Stagger.On)
+                .WithSlide(Slide.On)
+                .WithMantle(Mantle.On)
+                .WithProne(Prone.On)
+                .WithLadder(Ladder.On)
+                .WithZipline(Zipline.On)
+                .WithParachute(Parachute.On)
+                .WithStealth(Stealth.On)
+                .WithSuppression(Suppression.On)
+                .WithPing(Fps.Core.Ping.On)
+                .WithAbilities(Abilities.On)
+                .WithSlowMotion(SlowMotion.On));
+            var path = WriteJson("Actions.json", GameRulesJson.Write(rules));
+
+            var imported = GameRulesJsonImporter.ImportFrom(path, _folder)[0];
+
+            Assert.That(imported.Melee, Is.EqualTo(Melee.On));
+            Assert.That(imported.SlowMotion, Is.EqualTo(SlowMotion.On));
+            AssertSameRules(imported.ToRules(), rules, imported.name);
+        }
+
+        [Test]
         public void OutOfRangeValueSavesNothingAndNamesTheFileAndItem()
         {
             WriteJson("A.json", "{}");
@@ -273,6 +299,19 @@ namespace Fps.Tests.EditMode
             Assert.That(a.Vault, Is.EqualTo(b.Vault), name + " actions.vault");
             Assert.That(a.Grenade, Is.EqualTo(b.Grenade), name + " actions.grenade");
             Assert.That(a.GrenadeCount, Is.EqualTo(b.GrenadeCount), name + " actions.grenadeCount");
+            Assert.That(a.Melee, Is.EqualTo(b.Melee), name + " actions.melee");
+            Assert.That(a.Stagger, Is.EqualTo(b.Stagger), name + " actions.stagger");
+            Assert.That(a.Slide, Is.EqualTo(b.Slide), name + " actions.slide");
+            Assert.That(a.Mantle, Is.EqualTo(b.Mantle), name + " actions.mantle");
+            Assert.That(a.Prone, Is.EqualTo(b.Prone), name + " actions.prone");
+            Assert.That(a.Ladder, Is.EqualTo(b.Ladder), name + " actions.ladder");
+            Assert.That(a.Zipline, Is.EqualTo(b.Zipline), name + " actions.zipline");
+            Assert.That(a.Parachute, Is.EqualTo(b.Parachute), name + " actions.parachute");
+            Assert.That(a.Stealth, Is.EqualTo(b.Stealth), name + " actions.stealth");
+            Assert.That(a.Suppression, Is.EqualTo(b.Suppression), name + " actions.suppression");
+            Assert.That(a.Ping, Is.EqualTo(b.Ping), name + " actions.ping");
+            Assert.That(a.Abilities, Is.EqualTo(b.Abilities), name + " actions.abilities");
+            Assert.That(a.SlowMotion, Is.EqualTo(b.SlowMotion), name + " actions.slowMotion");
         }
     }
 }

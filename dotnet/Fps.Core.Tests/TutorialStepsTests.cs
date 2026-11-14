@@ -153,7 +153,7 @@ namespace Fps.Core.Tests
 
             Assert.That(steps.Observe(Frame(hits: 1)), Is.False);
             Assert.That(steps.Hits, Is.EqualTo(1));
-            Assert.That(steps.Prompt("LMB"), Does.EndWith("(1/3)"));
+            Assert.That(GameText.Resolve(steps.Prompt("LMB")), Does.EndWith("(1/3)"));
             Assert.That(steps.Observe(Frame(hits: 1)), Is.False);
             Assert.That(steps.Observe(Frame(hits: 1)), Is.True);
 
@@ -233,8 +233,8 @@ namespace Fps.Core.Tests
         {
             var steps = new TutorialSteps();
 
-            Assert.That(steps.Prompt("WASD"), Is.EqualTo("[1/6] WASD で移動"));
-            Assert.That(steps.Prompt(" Left Stick "), Is.EqualTo("[1/6] Left Stick で移動"));
+            Assert.That(GameText.Resolve(steps.Prompt("WASD")), Is.EqualTo("[1/6] WASD で移動"));
+            Assert.That(GameText.Resolve(steps.Prompt(" Left Stick ")), Is.EqualTo("[1/6] Left Stick で移動"));
             Assert.Throws<ArgumentException>(() => steps.Prompt(" "));
         }
 
@@ -243,10 +243,10 @@ namespace Fps.Core.Tests
         {
             foreach (var step in TutorialSteps.Order)
             {
-                Assert.That(TutorialSteps.Instruction(step, "KEY"), Does.Contain("KEY"), step.ToString());
+                Assert.That(GameText.Resolve(TutorialSteps.Instruction(step, "KEY")), Does.Contain("KEY"), step.ToString());
             }
 
-            Assert.That(TutorialSteps.Instruction(TutorialStep.Shoot, "RT", 5), Does.Contain("5 回"));
+            Assert.That(GameText.Resolve(TutorialSteps.Instruction(TutorialStep.Shoot, "RT", 5)), Does.Contain("5 回"));
             Assert.Throws<ArgumentOutOfRangeException>(() => TutorialSteps.Instruction((TutorialStep)99, "KEY"));
             Assert.Throws<ArgumentOutOfRangeException>(() => TutorialSteps.Instruction(TutorialStep.Shoot, "RT", 0));
         }

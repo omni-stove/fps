@@ -93,6 +93,16 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlayerHasTheViewmodelPresenterAndMotion()
+        {
+            var player = _world.Player;
+
+            Assert.That(player.GetComponent<ViewmodelPresenter>(), Is.Not.Null);
+            Assert.That(player.GetComponent<ViewmodelMotion>(), Is.Not.Null);
+            Assert.That(player.GetComponent<WeaponPresentation>(), Is.Not.Null, "the viewmodel hands its muzzle socket to the weapon presentation");
+        }
+
+        [Test]
         public void PlayerHasTheActionReaderWiredToTheOverlayAndTheMockBody()
         {
             var player = _world.Player;
@@ -489,6 +499,17 @@ namespace Fps.Tests.EditMode
             Assert.That(rig.Eye, Is.SameAs(_world.Camera.transform.parent));
             Assert.That(rig.Camera, Is.SameAs(_world.Camera));
             Assert.That(_world.Player.GetComponent<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.ShadowsOnly));
+        }
+
+        [Test]
+        public void RigHasShakeAndViewmodelRootsUnderTheCamera()
+        {
+            var rig = _world.Rig;
+
+            Assert.That(rig.ShakeRoot, Is.Not.Null);
+            Assert.That(rig.ViewmodelRoot, Is.Not.Null);
+            Assert.That(rig.ShakeRoot.parent, Is.SameAs(_world.Camera.transform));
+            Assert.That(rig.ViewmodelRoot.parent, Is.SameAs(_world.Camera.transform));
         }
 
         [Test]

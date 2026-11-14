@@ -68,6 +68,7 @@ namespace Fps.Runtime
         /// 1 発撃つ。最初に当たったコライダーに <see cref="Hitbox"/> があれば <see cref="Hitbox.ApplyHit"/> でダメージを与え、
         /// <c>[Combat] hit zone=.. dmg=.. id=.. hp=..</c> をログに出す。
         /// 壁など Hitbox の無いものに当たるか、持ち主がいないか既に死んでいれば、そこで止まりダメージは 0。
+        /// 構えた盾 (<see cref="BulletShield"/>) に当たったときも、そこで止まりダメージは 0 で、建造物への被害も出さない。
         /// Hitbox の無いものに当たったときは <see cref="StructureDamage.Apply"/> に baseDamage と explosionRadius を渡す
         /// (結果の <see cref="HitscanResult.Damage"/> には含めない)。
         /// </summary>
@@ -124,10 +125,20 @@ namespace Fps.Runtime
             }
 
             CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
+            if (BulletShield.TryBlock(hit.collider, baseDamage, shooterRoot != null ? shooterRoot.position : (Vector3?)null, shooter))
+            {
+                return new HitscanResult(true, hit, null, 0);
+            }
+
             var hitbox = Hitbox.FindFor(hit.collider);
             if (hitbox == null)
             {
-                StructureDamage.Apply(hit.collider, hit.point, baseDamage, explosionRadius);
+                // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
+                using (CombatEvents.Attribute(shooter, weaponId))
+                {
+                    StructureDamage.Apply(hit.collider, hit.point, baseDamage, explosionRadius);
+                }
+
                 return new HitscanResult(true, hit, null, 0);
             }
 
@@ -148,7 +159,7 @@ namespace Fps.Runtime
             int damage;
             using (CombatEvents.Attribute(shooter, weaponId))
             {
-                damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff, sourcePosition);
+                damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff, sourcePosition, direction);
             }
 
             Debug.Log($"{Damageable.LogTag} hit zone={hitbox.Zone} dmg={damage} id={owner.Id} hp={owner.Health.Current}", hitbox);

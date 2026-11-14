@@ -66,6 +66,22 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ResolveUsesTheCurrentTableAndShowsTheKeyWithoutOne()
+        {
+            GameText.Use(() => Table("リロード中"));
+
+            Assert.That(GameText.Resolve(new LocalizedText("hud.reloading")), Is.EqualTo("リロード中"));
+            Assert.That(GameText.Resolve(LocalizedText.Literal("as is")), Is.EqualTo("as is"));
+            Assert.That(GameText.Resolve(default), Is.Empty);
+
+            GameText.Use(null);
+
+            Assert.That(GameText.Resolve(new LocalizedText("hud.reloading")), Is.EqualTo("hud.reloading"));
+            Assert.That(GameText.Resolve(LocalizedText.Literal("as is")), Is.EqualTo("as is"));
+            Assert.That(GameText.Resolve(default), Is.Empty);
+        }
+
+        [Test]
         public void ASourceReturningNullShowsTheKey()
         {
             GameText.Use(() => null);

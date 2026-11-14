@@ -83,11 +83,45 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AnEmptySceneRootIsTheKitRoot()
+        {
+            Assert.That(_settings.ToSceneRoot(), Is.EqualTo(KitPaths.DefaultRoot));
+
+            _settings.SceneRoot = "  ";
+
+            Assert.That(_settings.ToSceneRoot(), Is.EqualTo(KitPaths.DefaultRoot));
+        }
+
+        [Test]
+        public void TheSceneRootIsNormalizedAndResetClearsIt()
+        {
+            _settings.SceneRoot = "Assets\\MyGame\\";
+
+            Assert.That(_settings.ToSceneRoot(), Is.EqualTo("Assets/MyGame"));
+
+            _settings.ResetToDefaults();
+
+            Assert.That(_settings.SceneRoot, Is.Empty);
+        }
+
+        [Test]
+        public void AnInvalidSceneRootIsReportedWithTheAssetName()
+        {
+            _settings.name = "BrokenRoot";
+            _settings.SceneRoot = "Assets/../Elsewhere";
+
+            var e = Assert.Throws<MenuSceneSettingsException>(() => _settings.ToSceneRoot());
+
+            Assert.That(e.Message, Does.Contain("BrokenRoot"));
+        }
+
+        [Test]
         public void WithoutAnAssetTheDefaultsAreLoaded()
         {
             Assume.That(MenuSceneSettings.Load(), Is.Null, "this project provides its own Resources/" + MenuSceneSettings.ResourcePath);
 
             Assert.That(MenuSceneSettings.LoadScenes(), Is.SameAs(MenuScenes.Default));
+            Assert.That(MenuSceneSettings.LoadSceneRoot(), Is.EqualTo(KitPaths.DefaultRoot));
         }
     }
 }

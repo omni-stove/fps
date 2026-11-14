@@ -161,8 +161,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void EveryoneStartsUnarmedAndArmsByPickingUpAWeapon()
         {
-            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
-            var handgun = NewWeapon("Handgun", WeaponAssetBuilder.HandgunSpec());
+            var rifle = NewWeapon("Rifle", TestWeapons.RifleSpec());
+            var handgun = NewWeapon("Handgun", TestWeapons.HandgunSpec());
             var player = Member("Player", 0, ZeroSpawn);
             var weapons = AttachWeapons(player, rifle);
             var enemy = Member("Bot-1-1", 1, OneSpawn);
@@ -186,9 +186,9 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AFallenPlayerDropsTheWeaponTheyPickedUp()
         {
-            var handgun = NewWeapon("Handgun", WeaponAssetBuilder.HandgunSpec());
+            var handgun = NewWeapon("Handgun", TestWeapons.HandgunSpec());
             var player = Member("Player", 0, ZeroSpawn);
-            var weapons = AttachWeapons(player, NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec()));
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
             var enemy = Member("Bot-1-1", 1, OneSpawn);
             Begin(new[] { player, enemy }, player);
             weapons.AddWeapon(handgun);
@@ -396,7 +396,7 @@ namespace Fps.Tests.EditMode
         {
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             definition.name = name;
-            WeaponAssetBuilder.Configure(definition, spec);
+            WeaponAssets.Configure(definition, spec);
             _objects.Add(definition);
             return definition;
         }

@@ -14,7 +14,7 @@ namespace Fps.Runtime
     /// <item><see cref="DamageIntervalSeconds"/> ごとに、円の外にいる生きた <see cref="Damageable"/> へ、その間の
     /// <see cref="ZoneState.DamagePerSecond"/> ぶんのダメージを与える。端数は相手ごとに持ち越す。高さは見ない。</item>
     /// <item>段階か動き (待ち・縮み・最後) が変わるたびと、相手が外に出た・中に戻ったときに <c>[Zone]</c> ログを出す。</item>
-    /// <item>Play 中は境界を、上下が開いた半透明の筒で出す (中からも外からも見えるよう両面を描く)。</item>
+    /// <item>Play 中は境界を、上下が開いた半透明の筒で出す (中からも外からも見えるよう両面を描く)。<see cref="BoundaryPrefab"/> があればその形で出す。</item>
     /// </list>
     /// HUD は <see cref="SecondsUntilShrink"/> か <see cref="HudLine"/> を読む (このコンポーネントは自分では HUD に書かない。
     /// どの HUD に出すかはモードの Runner が決めるので)。
@@ -112,6 +112,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("境界の筒に使う材質。空なら既定の材質を半透明にして使う")]
         private Material _boundaryMaterial;
 
+        [SerializeField, Tooltip("境界の見た目。原点を中心にした半径 1m・高さ 1m の筒の形にする (円の半径と筒の高さまで拡大する)。当たり判定は外し、材質と色はプレハブのまま。空なら仮の筒を作る")]
+        private GameObject _boundaryPrefab;
+
         private readonly Dictionary<Damageable, float> _owedDamage = new Dictionary<Damageable, float>();
         private readonly HashSet<Damageable> _outside = new HashSet<Damageable>();
         private readonly List<Damageable> _targets = new List<Damageable>();
@@ -124,7 +127,7 @@ namespace Fps.Runtime
         private float _damageTimer;
         private Vector3 _origin;
 
-        private Renderer _boundary;
+        private GameObject _boundary;
         private Mesh _boundaryMesh;
         private Material _boundaryMaterialInstance;
 
@@ -155,8 +158,15 @@ namespace Fps.Runtime
         /// <summary>最後にダメージを与える判定をしたとき、外にいた者。</summary>
         public IReadOnlyCollection<Damageable> Outside => _outside;
 
-        /// <summary>Play 中に作った境界の筒。作っていなければ null。</summary>
-        public Renderer Boundary => _boundary;
+        /// <summary>Play 中に作った境界の筒 (<see cref="BoundaryName"/>)。作っていなければ null。</summary>
+        public GameObject Boundary => _boundary;
+
+        /// <summary>境界の見た目。null なら仮の半透明の筒。筒を作る (<see cref="RefreshBoundary"/>) 前に設定したものを使う。</summary>
+        public GameObject BoundaryPrefab
+        {
+            get => _boundaryPrefab;
+            set => _boundaryPrefab = value;
+        }
 
         public bool BeginsOnStart
         {
@@ -523,6 +533,19 @@ namespace Fps.Runtime
 
         private void CreateBoundary()
         {
+            if (_boundaryPrefab != null)
+            {
+                // 縮む円に合わせて拡大した当たり判定が、移動や射撃を遮らないように外す。
+                _boundary = VisualPrefab.Instantiate(_boundaryPrefab, transform, BoundaryName, stripColliders: true);
+                foreach (var prefabRenderer in _boundary.GetComponentsInChildren<Renderer>(true))
+                {
+                    prefabRenderer.shadowCastingMode = ShadowCastingMode.Off;
+                    prefabRenderer.receiveShadows = false;
+                }
+
+                return;
+            }
+
             // プリミティブを作るのは、その描画パイプラインの既定の材質を得るため。メッシュは上下の開いた筒に差し替える。
             var boundary = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             boundary.name = BoundaryName;
@@ -533,21 +556,22 @@ namespace Fps.Runtime
             _boundaryMesh = BuildTubeMesh(BoundarySegments);
             boundary.GetComponent<MeshFilter>().sharedMesh = _boundaryMesh;
 
-            _boundary = boundary.GetComponent<Renderer>();
-            _boundary.shadowCastingMode = ShadowCastingMode.Off;
-            _boundary.receiveShadows = false;
+            _boundary = boundary;
+            var renderer = boundary.GetComponent<Renderer>();
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
 
             if (_boundaryMaterial != null)
             {
-                _boundary.sharedMaterial = _boundaryMaterial;
+                renderer.sharedMaterial = _boundaryMaterial;
                 return;
             }
 
             // 共有の既定の材質を書き換えると他のプリミティブまで透けるので、このエリア用に複製する。
-            _boundaryMaterialInstance = new Material(_boundary.sharedMaterial) { name = BoundaryName };
+            _boundaryMaterialInstance = new Material(renderer.sharedMaterial) { name = BoundaryName };
             MakeTranslucentAndDoubleSided(_boundaryMaterialInstance);
             _boundaryMaterialInstance.color = _boundaryColor;
-            _boundary.sharedMaterial = _boundaryMaterialInstance;
+            renderer.sharedMaterial = _boundaryMaterialInstance;
         }
 
         /// <summary>半径 1・高さ 1 (y は -0.5 から 0.5)、上下の開いた筒。法線は外向き (両面描画で内側からも見せる)。</summary>

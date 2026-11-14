@@ -21,6 +21,7 @@ namespace Fps.Runtime
         private static LocalizedText _notice;
         private static bool _pendingTutorial;
         private static MenuScenes _scenes;
+        private static string _sceneRoot;
 
         /// <summary>
         /// <see cref="ReturnToMenu"/> でメニューのシーンを読む直前に呼ぶ。シーンをまたいで残るもの (NetworkManager など) は
@@ -45,10 +46,20 @@ namespace Fps.Runtime
             set => _scenes = value;
         }
 
-        /// <summary><see cref="Scenes"/> の名前で、<see cref="KitPaths.DefaultRoot"/> の下から destination へ行く遷移。</summary>
+        /// <summary>
+        /// シーンを読むルート。初めて使うときに <see cref="MenuSceneSettings.LoadSceneRoot"/> で Resources の設定から決める
+        /// (無ければ <see cref="KitPaths.DefaultRoot"/>)。null を入れると次に使うときに設定から決め直す (テストで差し替える)。
+        /// </summary>
+        public static string SceneRoot
+        {
+            get => _sceneRoot ??= MenuSceneSettings.LoadSceneRoot();
+            set => _sceneRoot = value;
+        }
+
+        /// <summary><see cref="Scenes"/> の名前で、<see cref="SceneRoot"/> の下から destination へ行く遷移。</summary>
         public static MenuTransition Plan(MenuDestination destination)
         {
-            return MenuRoute.Plan(destination, KitPaths.DefaultRoot, Scenes);
+            return MenuRoute.Plan(destination, SceneRoot, Scenes);
         }
 
         /// <summary>NetBootstrap にまだ渡していない、メニューで選んだロビーの設定。無ければ <see cref="LobbyLaunchOptions.None"/>。</summary>
@@ -120,7 +131,7 @@ namespace Fps.Runtime
         /// </param>
         public static bool ReturnToMenu(LocalizedText notice = default)
         {
-            var transition = MenuRoute.BackToMenu(KitPaths.DefaultRoot, Scenes);
+            var transition = MenuRoute.BackToMenu(SceneRoot, Scenes);
             var buildIndex = _host.BuildIndexOf(transition.ScenePath);
             if (buildIndex < 0)
             {

@@ -37,7 +37,7 @@ namespace Fps.Tests.EditMode
             var definition = NewDefinition("Default", string.Empty);
             definition.AssignIdIfEmpty();
             var spec = definition.ToSpec();
-            var rifle = WeaponAssetBuilder.RifleSpec();
+            var rifle = TestWeapons.RifleSpec();
 
             Assert.That(spec.Id, Does.Match(_uuidPattern));
             Assert.That(spec.NameKey, Is.Empty, "the name key is left empty");

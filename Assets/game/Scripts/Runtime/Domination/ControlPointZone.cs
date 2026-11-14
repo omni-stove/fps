@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// この GameObject の位置を中心とした円柱 (<see cref="ControlPointArea"/>) を範囲にする。
     /// 範囲にいる生きた参加者は <see cref="DominationRunner"/> が毎フレーム <see cref="Scan"/> で調べ直す (このコンポーネントは自分では調べない。
     /// 誰が参加者かを知っているのは Runner なので)。試合中に拠点を動かすことは考えない。
-    /// Play 中は足元に範囲を示す薄い円盤を作り、持ち主のチームの色 (<see cref="ShowOwner"/>) で塗る。色は画面のプレイヤーのチーム
+    /// Play 中は足元に範囲を示す薄い円盤 (<see cref="MarkerPrefab"/> があればその形) を作り、持ち主のチームの色 (<see cref="ShowOwner"/>) で塗る。色は画面のプレイヤーのチーム
     /// (<see cref="ViewerTeam"/>) から見た敵味方の色で、設定の色の組 (<see cref="TeamColors"/>) が変わったら塗り直す。Scene ビューには範囲を線で描く。
     /// ハードポイントのように有効な拠点が 1 つだけのモードは、<see cref="SetHighlight"/> で有効な拠点の円盤を光らせ、他を暗くする。
     /// </summary>
@@ -48,9 +48,13 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("Play 中に範囲を示す円盤を足元に出すか")]
         private bool _showMarker = true;
 
+        [SerializeField, Tooltip("範囲を示す印の見た目。原点を中心にした直径 1m の形にする (水平に範囲の直径まで拡大し、高さはそのまま)。当たり判定は外し、材質はチームの色で塗る。空なら仮の薄い円盤を作る")]
+        private GameObject _markerPrefab;
+
         private readonly List<Damageable> _occupants = new List<Damageable>();
-        private Renderer _marker;
-        private Material _markerMaterial;
+        private readonly List<Material> _markerMaterials = new List<Material>();
+        private GameObject _marker;
+        private bool _markerFromPrefab;
         private Team? _owner;
         private bool? _highlight;
         private Team? _viewerTeam = TeamColors.OfflineViewer;
@@ -115,6 +119,13 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>範囲を示す印の見た目。null なら仮の薄い円盤。円盤を作る (<see cref="RefreshMarker"/>) 前に設定したものを使う。</summary>
+        public GameObject MarkerPrefab
+        {
+            get => _markerPrefab;
+            set => _markerPrefab = value;
+        }
+
         /// <summary>Play 中に範囲を示す円盤を出すか。開始後に変えても、作った円盤はそのまま。</summary>
         public bool ShowsMarker
         {
@@ -136,8 +147,8 @@ namespace Fps.Runtime
         /// </summary>
         public bool? Highlight => _highlight;
 
-        /// <summary>Play 中に作った円盤。作っていなければ null。</summary>
-        public Renderer Marker => _marker;
+        /// <summary>Play 中に作った円盤 (<see cref="MarkerName"/>)。作っていなければ null。</summary>
+        public GameObject Marker => _marker;
 
         /// <summary>position が範囲の中 (境界を含む) なら true。</summary>
         public bool Contains(Vector3 position)
@@ -219,14 +230,77 @@ namespace Fps.Runtime
                 CreateMarker();
             }
 
-            // 親の拡縮を打ち消し、世界で直径 2r・厚み MarkerThickness にする (Cylinder は高さ 2・直径 1)。
-            var parentScale = transform.lossyScale;
-            _marker.transform.localScale = new Vector3(
-                SafeDivide(_radius * 2f, parentScale.x),
-                SafeDivide(MarkerThickness * 0.5f, parentScale.y),
-                SafeDivide(_radius * 2f, parentScale.z));
-            _marker.transform.localPosition = Vector3.zero;
-            _marker.transform.localRotation = Quaternion.identity;
+            FitMarker(_marker.transform, transform.lossyScale, _radius, _markerFromPrefab);
+        }
+
+        /// <summary>
+        /// 親の拡縮を打ち消し、印を世界で直径 2 × radius にする。仮の円盤 (Cylinder は高さ 2・直径 1) は厚みを <see cref="MarkerThickness"/> にし、
+        /// プレハブ (直径 1m) は高さをプレハブのままにする。
+        /// </summary>
+        internal static void FitMarker(Transform marker, Vector3 parentScale, float radius, bool fromPrefab)
+        {
+            var height = fromPrefab ? 1f : MarkerThickness * 0.5f;
+            marker.localScale = new Vector3(
+                SafeDivide(radius * 2f, parentScale.x),
+                SafeDivide(height, parentScale.y),
+                SafeDivide(radius * 2f, parentScale.z));
+            marker.localPosition = Vector3.zero;
+            marker.localRotation = Quaternion.identity;
+        }
+
+        /// <summary>
+        /// 範囲を示す印を parent の子に作る。prefab があれば当たり判定を外して置き、無ければ当たり判定の無い Cylinder を作る。
+        /// 影は落とさない。塗るための材質は Renderer ごとに複製して materials に足す (印と一緒に消すこと)。
+        /// </summary>
+        internal static GameObject CreateMarkerObject(GameObject prefab, Transform parent, string markerName, List<Material> materials)
+        {
+            GameObject marker;
+            if (prefab != null)
+            {
+                marker = VisualPrefab.Instantiate(prefab, parent, markerName, stripColliders: true);
+            }
+            else
+            {
+                marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                marker.name = markerName;
+                // Destroy は次のフレームまで残り、その間に弾や移動の判定に当たるので、すぐ消す。
+                DestroyImmediate(marker.GetComponent<Collider>());
+                marker.transform.SetParent(parent, false);
+            }
+
+            foreach (var renderer in marker.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+
+                // 共有のマテリアルを塗り替えると同じ材質の他の物まで色が変わるので、この印用に複製する。
+                var shared = renderer.sharedMaterials;
+                for (var i = 0; i < shared.Length; i++)
+                {
+                    if (shared[i] == null)
+                    {
+                        continue;
+                    }
+
+                    shared[i] = new Material(shared[i]) { name = markerName };
+                    materials.Add(shared[i]);
+                }
+
+                renderer.sharedMaterials = shared;
+            }
+
+            return marker;
+        }
+
+        /// <summary>materials をすべて消して空にする。</summary>
+        internal static void DestroyMaterials(List<Material> materials)
+        {
+            foreach (var material in materials)
+            {
+                DestroySafely(material);
+            }
+
+            materials.Clear();
         }
 
         private void Start()
@@ -247,11 +321,7 @@ namespace Fps.Runtime
                 _followsSettings = false;
             }
 
-            if (_markerMaterial != null)
-            {
-                DestroySafely(_markerMaterial);
-                _markerMaterial = null;
-            }
+            DestroyMaterials(_markerMaterials);
         }
 
         private void HandleSettingsChanged(ControlSettings settings)
@@ -270,45 +340,41 @@ namespace Fps.Runtime
                 _followsSettings = true;
             }
 
-            var marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            marker.name = MarkerName;
-            DestroySafely(marker.GetComponent<Collider>());
-            marker.transform.SetParent(transform, false);
-
-            _marker = marker.GetComponent<Renderer>();
-            _marker.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _marker.receiveShadows = false;
-
-            // 共有のマテリアルを塗り替えると他のプリミティブまで色が変わるので、この拠点用に複製する。
-            _markerMaterial = new Material(_marker.sharedMaterial) { name = MarkerName };
-            _marker.sharedMaterial = _markerMaterial;
+            _markerFromPrefab = _markerPrefab != null;
+            _marker = CreateMarkerObject(_markerPrefab, transform, MarkerName, _markerMaterials);
             ApplyMarkerColor();
         }
 
         private void ApplyMarkerColor()
         {
-            if (_markerMaterial == null)
+            foreach (var material in _markerMaterials)
             {
-                return;
+                if (material != null)
+                {
+                    ApplyMarkerColor(material);
+                }
             }
+        }
 
-            _markerMaterial.color = MarkerColorOf(_owner, _highlight, _viewerTeam);
+        private void ApplyMarkerColor(Material material)
+        {
+            material.color = MarkerColorOf(_owner, _highlight, _viewerTeam);
 
             // 発光を持たないシェーダーでは色だけ変える。
-            if (!_markerMaterial.HasProperty(EmissionColorId))
+            if (!material.HasProperty(EmissionColorId))
             {
                 return;
             }
 
             if (_highlight == true)
             {
-                _markerMaterial.EnableKeyword(EmissionKeyword);
-                _markerMaterial.SetColor(EmissionColorId, ColorOf(_owner, _viewerTeam) * HighlightEmission);
+                material.EnableKeyword(EmissionKeyword);
+                material.SetColor(EmissionColorId, ColorOf(_owner, _viewerTeam) * HighlightEmission);
             }
             else
             {
-                _markerMaterial.DisableKeyword(EmissionKeyword);
-                _markerMaterial.SetColor(EmissionColorId, Color.black);
+                material.DisableKeyword(EmissionKeyword);
+                material.SetColor(EmissionColorId, Color.black);
             }
         }
 

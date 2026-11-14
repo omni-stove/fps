@@ -7,9 +7,9 @@ namespace Fps.Core.Tests
 {
     public sealed class GameLanguagesTests
     {
-        private static readonly string[] ShippedNativeNames = { "日本語", "English" };
-        private static readonly string[] ExpectedWarningKinds = { "missing", "notJson", "array", "noLanguages" };
-        private static readonly string[] EmptySystemLanguage = { "" };
+        private static readonly string[] _shippedNativeNames ={ "日本語", "English" };
+        private static readonly string[] _expectedWarningKinds ={ "missing", "notJson", "array", "noLanguages" };
+        private static readonly string[] _emptySystemLanguage ={ "" };
 
         private Func<GameLanguageList> _before;
 
@@ -31,7 +31,7 @@ namespace Fps.Core.Tests
             var shipped = JapaneseGameTextSetUp.LoadLanguageList();
 
             Assert.That(shipped.Languages, Is.EqualTo(new[] { GameLanguage.Japanese, GameLanguage.English }));
-            Assert.That(shipped.Entries.Select(e => e.NativeName), Is.EqualTo(ShippedNativeNames));
+            Assert.That(shipped.Entries.Select(e => e.NativeName), Is.EqualTo(_shippedNativeNames));
             Assert.That(shipped.ForSystemLanguage("Japanese"), Is.EqualTo(GameLanguage.Japanese));
             Assert.That(shipped.ForSystemLanguage("French"), Is.EqualTo(GameLanguage.English));
         }
@@ -274,7 +274,7 @@ namespace Fps.Core.Tests
 
             Assert.That(ok, Is.True);
             Assert.That(list.Languages, Is.EqualTo(new[] { GameLanguage.English }));
-            Assert.That(warnings.Select(w => w.Substring(0, w.IndexOf(':'))), Is.EqualTo(ExpectedWarningKinds));
+            Assert.That(warnings.Select(w => w.Substring(0, w.IndexOf(':'))), Is.EqualTo(_expectedWarningKinds));
         }
 
         [Test]
@@ -303,7 +303,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentException>(() => _ = new GameLanguageList(new[] { japanese }, GameLanguage.English));
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = new GameLanguageEntry(default, "x"));
             Assert.Throws<ArgumentException>(() => _ = new GameLanguageEntry(GameLanguage.English, " "));
-            Assert.Throws<ArgumentException>(() => _ = new GameLanguageEntry(GameLanguage.English, "English", EmptySystemLanguage));
+            Assert.Throws<ArgumentException>(() => _ = new GameLanguageEntry(GameLanguage.English, "English", _emptySystemLanguage));
             Assert.That(new GameLanguageList(new[] { japanese }).Contains(default), Is.False);
             Assert.That(new GameLanguageList(new[] { japanese }).TryGet(default, out _), Is.False);
         }

@@ -137,6 +137,10 @@ namespace Fps.Runtime
 
             _target = target;
             Debug.Log($"{LogTag} id={Id} side={member.Side.Id} target={(target != null ? target.Id : "none")}", this);
+            if (PingController.IsMarkedFor(member.Side, target))
+            {
+                Debug.Log(PingLog.AllyTarget(Id, member.Side, target.Id), this);
+            }
         }
 
         private void OnDamaged(Damageable self, DamageReport report)

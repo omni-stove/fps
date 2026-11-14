@@ -19,7 +19,7 @@ namespace Fps.Runtime
     /// <item><see cref="ModeSession.RespawnReady"/> を受けたら、次の <see cref="Tick"/> の終わりに自陣営の <see cref="SideSpawnPoint"/> のうち
     /// 敵からいちばん離れた点 (<see cref="SideSpawnSelector"/>) に戻し、体力を満たす。ダメージの処理の途中で生き返らせないよう、すぐには戻さない。</item>
     /// <item>Update で <see cref="Tick"/> し、状態が変わるたび・倒れるたび・終わったときに <c>[Mode]</c> のログ (<see cref="ModeLog"/>) を出す。
-    /// HUD があれば <see cref="IModeHud"/> に残り時間・得点・自分のリスポーンまでの秒数・派生モードの行 (<see cref="AppendHudLines"/>)・結果を出す。</item>
+    /// HUD があれば <see cref="IModeHud"/> に残り時間・得点・自分のリスポーンまでの秒数・派生モードの行 (<see cref="AppendHudTexts"/>・<see cref="AppendHudLines"/>)・結果を出す。</item>
     /// <item>終わったら全員の操作と行動を止め、<see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) でシーンを読み直す。</item>
     /// <item><see cref="HidesTargetDummies"/> が true (既定) なら、始めたときに GameBootstrap の標的ダミーを隠す。</item>
     /// <item>ModeSession をラウンドとして繰り返す派生は、始め方 (<see cref="StartSession"/>)・進め方 (<see cref="AdvanceSession"/>)・
@@ -144,6 +144,14 @@ namespace Fps.Runtime
 
         /// <summary>HUD の得点の下に足す行を lines に入れる。HUD を書き直すたびに空の lines で呼ばれる。</summary>
         protected virtual void AppendHudLines(List<string> lines)
+        {
+        }
+
+        /// <summary>
+        /// HUD の得点の下に足す行を、表のキーの文で lines に入れる。<see cref="AppendHudLines"/> の行の後に並ぶ。
+        /// lines にはリスポーンの行などが先に入っているので、消さずに足す。
+        /// </summary>
+        protected virtual void AppendHudTexts(List<LocalizedText> lines)
         {
         }
 
@@ -669,6 +677,8 @@ namespace Fps.Runtime
             {
                 _hudLineTexts.Add(LiteralOrEmpty(line));
             }
+
+            AppendHudTexts(_hudLineTexts);
 
             var ownSide = _localPlayer != null ? _localPlayer.Side : (Side?)null;
             _hudView.Show(HudTime(), HudScores(ownSide), _hudLineTexts, HudResult());

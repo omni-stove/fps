@@ -249,8 +249,18 @@ namespace Fps.Core.Tests
             var session = Playing(out var leaders);
             session.ReportKill(0, 1);
 
-            Assert.That(GuardianText.Leaders(leaders, Side.Bravo), Is.EqualTo(_leaderLinesOwnBravo));
-            Assert.That(GuardianText.Leaders(leaders, null)[0], Is.EqualTo("ALPHA リーダー 生存"));
+            var ownBravo = GuardianText.Leaders(leaders, Side.Bravo);
+            var resolved = new string[ownBravo.Count];
+            for (var i = 0; i < ownBravo.Count; i++)
+            {
+                resolved[i] = GameText.Resolve(ownBravo[i]);
+            }
+
+            Assert.That(resolved, Is.EqualTo(_leaderLinesOwnBravo));
+            Assert.That(ownBravo[0], Is.EqualTo(new LocalizedText("mode.guardian.leader", ModeHudText.SideName(Side.Bravo), GuardianText.Fallen)));
+            Assert.That(GameText.Resolve(GuardianText.Leaders(leaders, null)[0]), Is.EqualTo("ALPHA リーダー 生存"));
+            Assert.That(GameText.Resolve(GuardianText.YouAreLeader), Is.EqualTo("あなたがリーダー"));
+            Assert.That(GameText.Resolve(GuardianText.NoRespawnLeaderDown), Is.EqualTo("リーダーが倒れたため復活なし"));
             Assert.That(GuardianText.LeaderChosenLog(Side.Bravo, 4), Is.EqualTo("[Mode] leader side=1 player=4"));
             Assert.That(GuardianText.LeaderFellLog(Side.Bravo, 4), Is.EqualTo("[Mode] leader-down side=1 player=4 respawn=off"));
         }

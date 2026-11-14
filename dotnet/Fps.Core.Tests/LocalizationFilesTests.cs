@@ -46,6 +46,22 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheSurvivalModeTextsAreReadFromTheJapaneseModesSurvivalTable()
+        {
+            var modes = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("modes-survival.json", StringComparison.Ordinal))
+                .Value;
+
+            foreach (var prefix in new[] { "mode.guardian.", "mode.gungame.", "mode.br." })
+            {
+                Assert.That(modes.Keys.Any(key => key.StartsWith(prefix, StringComparison.Ordinal)), Is.True, prefix);
+            }
+
+            Assert.That(modes.Get("mode.guardian.youAreLeader"), Is.EqualTo("あなたがリーダー"));
+            Assert.That(modes.Get("mode.br.noWeapon"), Is.EqualTo("武器なし: 落ちている武器を拾う"));
+        }
+
+        [Test]
         public void EveryLanguageHasAReadableTable()
         {
             foreach (var language in GameLanguages.All)

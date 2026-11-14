@@ -45,7 +45,9 @@
 - 印: `PingSpec.Default*`。オフラインは `PingController` の Inspector、ネット対戦は `NetTeamDeathmatch.PingSpec` をコードで差し替えられるが、JSON は無い
 - 吹き飛ばし: `KnockbackSpec.Default*`。`KnockbackMovement` / `EnemyAgent` の `KnockbackSpec` をコードで差し替えられ、重さだけ Inspector で変えられるが、JSON は無い
 - 各モード: `DominationSpec`・`HordeSpec`・`SearchAndDestroySpec`・`KillConfirmedSpec`・`HardpointSpec`・`TeamDeathmatchSpec`・`PickupSpec` と、それぞれの `*Runner`
-- その他: `DestructiblePiece`、`ShrinkingZone`、`Damageable`、`CameraBoom`、`AdsZoom`、`RecoilState` などの `Default*`
+- その他: `DestructiblePiece`・`ShrinkingZone`・`Damageable`・`CameraBoom`・`AdsZoom` の `Default*` はコンポーネントの値
+  (オフラインのプレイヤーの体力・三人称のカメラ・覗き込みの秒数は `GameBootstrap` の値) の既定になり、反動の戻り始めまでの秒数は
+  武器の JSON (`recoilRecoveryDelaySeconds`) に移った。プレイヤーまわりの値を JSON から読む口はまだ無い
 
 ### 設定した値でなく定数を直接見ている箇所
 

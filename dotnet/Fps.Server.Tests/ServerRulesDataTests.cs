@@ -34,7 +34,8 @@ namespace Fps.Server.Tests
             Assert.That(data.Path, Is.EqualTo(Path.GetFullPath(path)));
             Assert.That(data.Ping, Is.SameAs(PingSpec.Default));
             Assert.That(data.PingPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
+            Assert.That(data.Grenade, Is.SameAs(GrenadeSpec.Default));
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
         }
 
         [Test]
@@ -49,6 +50,33 @@ namespace Fps.Server.Tests
 
             Assert.That(data.Ping.MaxMarkers, Is.EqualTo(5));
             Assert.That(data.PingPath, Does.EndWith(ServerRulesData.PingTuningFileName));
+        }
+
+        [Test]
+        public void ReadsTheGrenadeTuningBesideTheRules()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.GrenadeTuningFileName), "{\"fuseSeconds\": 1.5, \"damageRadius\": 4}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Grenade.FuseSeconds, Is.EqualTo(1.5f));
+            Assert.That(data.Grenade.DamageRadius, Is.EqualTo(4f));
+            Assert.That(data.GrenadePath, Does.EndWith(ServerRulesData.GrenadeTuningFileName));
+        }
+
+        [Test]
+        public void BrokenGrenadeTuningStopsTheLoad()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.GrenadeTuningFileName), "{\"fuseSeconds\": -1}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("cannot read grenade tuning: "));
         }
 
         [Test]

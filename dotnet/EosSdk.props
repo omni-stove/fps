@@ -1,0 +1,37 @@
+<Project>
+  <!--
+    EOS の C# SDK は配布の条件からリポジトリに入れず、各自が dotnet/ThirdParty/EOSSDK に置く (置き方は同じ場所の README.md)。
+    この props を読み込んだプロジェクトは、SDK があるときだけ EosSdkAvailable が true になり、EOS_SDK が定義される。
+    SDK の場所は EosSdkDir (環境変数か -p:EosSdkDir=) で差し替えられる。
+  -->
+  <PropertyGroup>
+    <EosSdkDir Condition="'$(EosSdkDir)' == ''">$(MSBuildThisFileDirectory)ThirdParty/EOSSDK/</EosSdkDir>
+    <!-- -p: で渡された EosSdkDir は上書きできないので、末尾の / を揃えたものは別の名前で持つ -->
+    <EosSdkRoot>$([MSBuild]::EnsureTrailingSlash('$(EosSdkDir)'))</EosSdkRoot>
+    <EosSdkSourceDir>$(EosSdkRoot)Source/</EosSdkSourceDir>
+    <EosSdkRid Condition="'$(EosSdkRid)' == ''">$(RuntimeIdentifier)</EosSdkRid>
+    <EosSdkRid Condition="'$(EosSdkRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</EosSdkRid>
+    <EosSdkBinDir>$(EosSdkRoot)Bin/$(EosSdkRid)/</EosSdkBinDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EosSdkAvailable>false</EosSdkAvailable>
+    <EosSdkAvailable Condition="Exists('$(EosSdkSourceDir)') And $([System.IO.Directory]::GetFiles('$(EosSdkSourceDir)', '*.cs', System.IO.SearchOption.AllDirectories).Length) &gt; 0">true</EosSdkAvailable>
+    <!-- SDK はライブラリの名前を定数で持つので、どの OS 向けかをコンパイル時に決める -->
+    <EosSdkPlatform Condition="$(EosSdkRid.StartsWith('linux'))">EOS_PLATFORM_LINUX</EosSdkPlatform>
+    <EosSdkPlatform Condition="$(EosSdkRid.StartsWith('osx'))">EOS_PLATFORM_OSX</EosSdkPlatform>
+    <EosSdkPlatform Condition="$(EosSdkRid.StartsWith('win')) And $(EosSdkRid.EndsWith('arm64'))">EOS_PLATFORM_WINDOWS_ARM64</EosSdkPlatform>
+    <EosSdkPlatform Condition="$(EosSdkRid.StartsWith('win')) And !$(EosSdkRid.EndsWith('arm64'))">EOS_PLATFORM_WINDOWS_64</EosSdkPlatform>
+    <DefineConstants Condition="'$(EosSdkAvailable)' == 'true'">$(DefineConstants);EOS_SDK;$(EosSdkPlatform)</DefineConstants>
+  </PropertyGroup>
+
+  <!--
+    ネイティブのライブラリは Bin/<RID>/ にあるものを出力先の直下へ写す。
+    この版の SDK は Linux の arm64 でも libEOSSDK-Linux-Shipping.so を読みに行くので、arm64 版はその名前で写す。
+  -->
+  <ItemGroup Condition="'$(EosSdkAvailable)' == 'true'">
+    <EosSdkSource Include="$(EosSdkSourceDir)**/*.cs" />
+    <EosSdkNative Include="$(EosSdkBinDir)*" Exclude="$(EosSdkBinDir)libEOSSDK-LinuxArm64-Shipping.so" Link="%(Filename)%(Extension)" />
+    <EosSdkNative Include="$(EosSdkBinDir)libEOSSDK-LinuxArm64-Shipping.so" Condition="Exists('$(EosSdkBinDir)libEOSSDK-LinuxArm64-Shipping.so')" Link="libEOSSDK-Linux-Shipping.so" />
+  </ItemGroup>
+</Project>

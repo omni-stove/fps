@@ -63,6 +63,10 @@ namespace Fps.Core
 
         public override int GetHashCode() => Id;
 
+        public static bool operator ==(PingMarker left, PingMarker right) => left.Equals(right);
+
+        public static bool operator !=(PingMarker left, PingMarker right) => !left.Equals(right);
+
         public override string ToString() => PingLog.Describe(this);
     }
 }

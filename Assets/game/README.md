@@ -200,8 +200,19 @@ Editor からは **Fps > Import Game Rules From JSON**。
 | `GameRulesDefinition` (`<root>/Rules/*.asset`) | フレンドリーファイア・リスポーン・自動回復・死亡時の見せ方・弾薬・建造物の破壊・ダウンやカバーなどのアクション・スポーン保護・落下ダメージ・HUD の量・勝敗の決め方 |
 | `GrenadeThrower` (プレイヤーのコンポーネント) | 爆発までの秒数・投げる間隔・初速・ダメージ・爆発の半径・建造物への被害 |
 | `PingController` (プレイヤーのコンポーネント) | 印が消えるまでの秒数・同時に付けられる数・照準の先を探す距離・照準が外れていても敵に付ける角度 |
+| `BossController` (ボスのコンポーネント) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点) |
 
 JSON から取り込み直すと、そのアセットの値は JSON の値で上書きされる。Inspector で変えた値を残したいなら、JSON にも同じ値を書く。
+
+### ボスの段階と弱点
+
+`BossController` は体力の割合で段階を進め、段階ごとに `EnemyAgent` の `EnemySpec`・`IEnemyBehavior`・動きの速さの倍率と、出す弱点 (`BossWeakPoint`、部位は `HitZone.WeakPoint`) を差し替える。
+振る舞いや、体力以外の条件 (経過時間・仕掛けが壊れたなど) で進む段階は Inspector に書けないので、コードで `Fps.Core.BossPhases` を組んで `BossController.UsePhases` に渡す。
+行動の合図で弱点を出し入れするときは `SetWeakPointExposed`、条件を待たずに次へ進めるときは `Advance` を呼ぶ。
+
+段階が変わると `CombatEvents.BossPhaseChanged` が出る (復活で最初の段階に戻ったときは `IsReset` が true)。カメラ・音・HUD の体力バーはここを購読して出す。
+ログは `[Boss] id=.. phase=0->1 from=.. to=.. reason=..`、命中ごとに `[Boss] id=.. hit zone=.. damage=..`、弱点の出し入れは `[Boss] id=.. weakpoint=.. exposed=..`。
+TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で弱点が出て速くなる仮のボス (`RangeBoss`) が置かれる。
 
 ## UI を差し替える
 
@@ -391,6 +402,28 @@ public sealed class MyPingViewFactory : IPingViewFactory
         PingUi.ViewFactory = new MyPingViewFactory();
     }
 }
+```
+
+### フォトモード
+
+既定の HUD のポーズ画面の「フォトモード」で入る (`PhotoModeView`、HUD の `PhotoMode`)。時間はポーズ画面の扱いのまま (オフラインは止まり、オンラインは進む) で、HUD を隠し、自分のカメラだけをプレイヤーの目から `PhotoModeSpec.Radius` の中で自由に動かす。
+
+| 操作 | アクション |
+| --- | --- |
+| 動かす・向きを変える | Move・Look |
+| 撮る | Attack |
+| 寄る・引く (視野角) | Next・Previous |
+| 左・右に傾ける | Cover・Interact |
+| 視野角と傾きを戻す | Reload |
+| 抜ける (ポーズも閉じる) | Pause |
+
+撮った画像は既定で `Application.persistentDataPath/Photos/` に PNG で出し、`[PhotoMode] saved <パス>` のログを出す。フィルターや枠を付ける・保存先を変えるときは `IPhotoCapture` を実装して `PhotoModeView.PhotoCapture` に入れる。範囲・速さ・視野角・傾きの幅は `PhotoModeSpec` を作って `PhotoModeView.Spec` に入れる。
+
+```csharp
+var photo = hud.PhotoMode;
+photo.Spec = new PhotoModeSpec(radius: 12f, moveSpeed: 4f, minFieldOfView: 15f, maxFieldOfView: 90f,
+    fieldOfViewStep: 5f, maxRoll: 30f, rollSpeed: 30f, startHeight: 0.6f, startBackDistance: 2.5f);
+photo.PhotoCapture = new MyFramedCapture();
 ```
 
 ## 言語を足す・文を変える

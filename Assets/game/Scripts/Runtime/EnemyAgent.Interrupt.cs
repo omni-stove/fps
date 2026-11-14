@@ -60,7 +60,7 @@ namespace Fps.Runtime
 
             _sprinting = false;
             _aiming = false;
-            _agent.speed = _walkSpeed;
+            _agent.speed = _walkSpeed * _moveSpeedMultiplier;
             MoveTo(null);
             WatchProgress(deltaSeconds);
             return true;

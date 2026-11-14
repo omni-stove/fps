@@ -57,6 +57,42 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void RaycastColliderOnlyHitsThatCollider()
+        {
+            var origin = new Vector3(5f, 5f, 0f);
+            var down = new Vector3(0f, -1f, 0f);
+
+            Assert.That(_world.RaycastCollider(_floorId, origin, down, 10f, out var floor), Is.True);
+            Assert.That(floor.ColliderId, Is.EqualTo(_floorId));
+            Assert.That(floor.Distance, Is.EqualTo(5f).Within(_tolerance));
+
+            Assert.That(_world.RaycastCollider(_wallId, origin, down, 10f, out var wall), Is.True);
+            Assert.That(wall.ColliderId, Is.EqualTo(_wallId));
+            AssertVector(wall.Point, new Vector3(5f, 3f, 0f));
+            AssertVector(wall.Normal, Vector3.UnitY);
+
+            Assert.That(_world.RaycastCollider(_propId, origin, down, 10f, out _), Is.False);
+            Assert.That(_world.RaycastCollider(99, origin, down, 10f, out _), Is.False);
+        }
+
+        [Test]
+        public void RaycastColliderFromInsideABoxMissesIt()
+        {
+            Assert.That(_world.RaycastCollider(_wallId, new Vector3(5f, 1f, 0f), Vector3.UnitY, 10f, out _), Is.False);
+        }
+
+        [Test]
+        public void RaycastColliderSkipsADisabledGroup()
+        {
+            var origin = new Vector3(-3f, 5f, -8f);
+            Assert.That(_world.RaycastCollider(_crateId, origin, -Vector3.UnitY, 10f, out _), Is.True);
+
+            _world.SetGroupEnabled(_crateGroup, false);
+
+            Assert.That(_world.RaycastCollider(_crateId, origin, -Vector3.UnitY, 10f, out _), Is.False);
+        }
+
+        [Test]
         public void RayShorterThanTheFloorMisses()
         {
             Assert.That(_world.Raycast(new Vector3(1f, 2f, -1f), -Vector3.UnitY, 1.9f, _everything, out var hit), Is.False);

@@ -18,6 +18,7 @@ namespace Fps.Tests.EditMode
             _host = new FakeHost();
             MenuNavigator.Host = _host;
             MenuNavigator.Scenes = MenuScenes.Default;
+            MenuNavigator.SceneRoot = KitPaths.DefaultRoot;
             MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
@@ -29,6 +30,7 @@ namespace Fps.Tests.EditMode
         {
             MenuNavigator.Host = null;
             MenuNavigator.Scenes = null;
+            MenuNavigator.SceneRoot = null;
             MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();

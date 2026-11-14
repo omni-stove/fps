@@ -13,7 +13,7 @@ namespace Fps.Tests.EditMode
 {
     /// <summary>
     /// スライディング (<see cref="SlideMovement"/>) が、ダッシュ中のしゃがみで始まり、速さが落ちるかジャンプで終わること、
-    /// ルールが Off・カバー中・乗り越え中は始まらないこと、坂 (<see cref="SlideSlopeFixture"/> の形) では平らな床より長く滑ること。
+    /// ルールが Off・カバー中・乗り越え中は始まらないこと、坂では平らな床より長く滑ること。
     /// </summary>
     public sealed class SlideMovementTests
     {
@@ -230,18 +230,39 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheRangeSlopeSlidesFurtherThanTheFlatLane()
+        public void ASlopeSlidesFurtherThanAFlatLane()
         {
             _obstacle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            _obstacle.transform.SetPositionAndRotation(SlideSlopeFixture.RampCenter, SlideSlopeFixture.RampRotation);
-            _obstacle.transform.localScale = new Vector3(SlideSlopeFixture.RampWidth, SlideSlopeFixture.RampThickness, SlideSlopeFixture.RampLength);
+            _obstacle.transform.SetPositionAndRotation(TestSlope.RampCenter, TestSlope.RampRotation);
+            _obstacle.transform.localScale = new Vector3(TestSlope.RampWidth, TestSlope.RampThickness, TestSlope.RampLength);
             Physics.SyncTransforms();
 
-            var flat = SlideFrom(SlideSlopeFixture.FlatStart);
-            var slope = SlideFrom(SlideSlopeFixture.SlopeStart);
+            var flat = SlideFrom(TestSlope.FlatStart);
+            var slope = SlideFrom(TestSlope.SlopeStart);
 
             Assert.That(flat, Is.EqualTo(7f).Within(0.5f));
-            Assert.That(slope, Is.GreaterThan(flat * SlideSmokeStep.MinSlopeRatio));
+            Assert.That(slope, Is.GreaterThan(flat * TestSlope.MinSlopeRatio));
+        }
+
+        /// <summary>12° の坂と、その足元から続く平らな走路。ゲームの射撃場の坂を変えてもこのテストの前提が動かないよう、テストの側に持つ。</summary>
+        private static class TestSlope
+        {
+            public const float SlopeDegrees = 12f;
+            public const float RampLength = 14f;
+            public const float RampWidth = 4f;
+            public const float RampThickness = 0.5f;
+            public const float SlopeStartFromTop = 1.5f;
+            public const float MinSlopeRatio = 1.5f;
+
+            public static readonly Vector3 RampFoot = new Vector3(-18f, 0f, -8f);
+            public static readonly Vector3 FlatStart = RampFoot + new Vector3(0f, 0f, -4f);
+
+            public static Quaternion RampRotation => Quaternion.Euler(-SlopeDegrees, 0f, 0f);
+
+            public static Vector3 RampCenter => RampFoot - (RampRotation * new Vector3(0f, RampThickness / 2f, -RampLength / 2f));
+
+            public static Vector3 SlopeStart =>
+                RampCenter + (RampRotation * new Vector3(0f, RampThickness / 2f, (RampLength / 2f) - SlopeStartFromTop));
         }
 
         [Test]

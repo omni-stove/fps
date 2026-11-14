@@ -25,8 +25,15 @@
     ],
     "autoReferenced": false,
     "defineConstraints": [
-        "UNITY_INCLUDE_TESTS"
+        "UNITY_INCLUDE_TESTS",
+        "FPS_NETCODE"
     ],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.netcode.gameobjects",
+            "expression": "2.14.0",
+            "define": "FPS_NETCODE"
+        }
+    ],
     "noEngineReferences": false
 }

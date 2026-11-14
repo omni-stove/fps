@@ -113,7 +113,7 @@ namespace Fps.Core
 
             return margin == 0
                 ? GameText.Format("freeForAll.tiedForFirst", text)
-                : GameText.Format("freeForAll.behindFirst", text, Number(margin));
+                : GameText.Format("freeForAll.behindFirst", text, Number(-margin));
         }
 
         /// <summary>今の順位を <see cref="RankText(FreeForAllStanding)"/> で返す。</summary>

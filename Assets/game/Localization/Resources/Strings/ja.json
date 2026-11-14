@@ -114,7 +114,7 @@
   "freeForAll.rank": "順位 {0}/{1}",
   "freeForAll.aheadOfSecond": "{0}  2位と {1}",
   "freeForAll.tiedForFirst": "{0}  1位と同点",
-  "freeForAll.behindFirst": "{0}  1位と {1}",
+  "freeForAll.behindFirst": "{0}  1位と -{1}",
   "zone.waiting": "エリア縮小まで {0}",
   "zone.shrinking": "エリア縮小中 {0}",
   "zone.closed": "最終エリア",

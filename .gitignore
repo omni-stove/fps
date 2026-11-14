@@ -42,3 +42,7 @@ eos.local.json
 
 # Claude Code の worktree
 /.claude/worktrees/
+
+# EOS の C# SDK は配布の条件からコミットせず、各自が置く (dotnet/ThirdParty/EOSSDK/README.md)
+/dotnet/ThirdParty/EOSSDK/*
+!/dotnet/ThirdParty/EOSSDK/README.md

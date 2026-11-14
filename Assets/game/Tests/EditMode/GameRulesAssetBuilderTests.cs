@@ -362,6 +362,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.Vault, Is.EqualTo(Vault.On));
             Assert.That(rules.Actions.Grenade, Is.EqualTo(Grenade.On));
             Assert.That(rules.Actions.GrenadeCount, Is.GreaterThan(0), "grenades are on, so there must be some to throw");
+            Assert.That(rules.Actions.Stealth, Is.EqualTo(Stealth.On), "the range has a stealth area to try the detection meter in");
         }
 
         private static void AssertActions(ActionRules actual, ExpectedActions expected, string message)

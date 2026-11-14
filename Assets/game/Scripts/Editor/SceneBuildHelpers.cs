@@ -370,7 +370,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// カプセルの敵 (<see cref="EnemyAgent"/>、NavMeshAgent、Damageable、胴の Hitbox、演出の
+        /// カプセルの敵 (<see cref="EnemyAgent"/>、発見ゲージの <see cref="EnemyStealth"/>、NavMeshAgent、Damageable、胴の Hitbox、演出の
         /// <see cref="CharacterComponents.Attach"/>) を feet (足元) に置く。
         /// patrolRoute が空なら Idle のまま、その場で待つ。parent が null ならシーンの直下に置く。
         /// 敵は weapon の武器で撃つ (<see cref="EnemyAgent.WeaponDefinition"/> に配線する)。
@@ -425,6 +425,9 @@ namespace Fps.Editor
             agent.Id = id;
             agent.WeaponDefinition = weapon;
             agent.SetPatrolRoute(patrolRoute);
+
+            // 相手のルールが Off ならすぐ交戦する (今までどおり) ので、どのモードの敵にも付けておく。
+            capsule.AddComponent<EnemyStealth>();
 
             // 敵は手榴弾を投げない。演出だけを付ける。
             CharacterComponents.Attach(capsule, throwsGrenades: false);

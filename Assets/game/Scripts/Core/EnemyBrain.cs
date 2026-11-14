@@ -48,6 +48,7 @@ namespace Fps.Core
         private readonly HashSet<int> _unreachableCover = new HashSet<int>();
 
         private readonly List<IEnemyBehavior> _behaviors = new List<IEnemyBehavior>();
+        private readonly List<IPerceptionContributor> _contributors = new List<IPerceptionContributor>();
 
         public EnemySpec Spec => _spec;
         public EnemyState State { get; private set; } = EnemyState.Idle;
@@ -218,6 +219,19 @@ namespace Fps.Core
                 return EnemyDecision.None;
             }
 
+            if (_contributors.Count > 0)
+            {
+                var contributors = _contributors.ToArray();
+                foreach (var contributor in contributors)
+                {
+                    perception = contributor.Contribute(this, deltaSeconds, perception);
+                    if (IsDead)
+                    {
+                        return EnemyDecision.None;
+                    }
+                }
+            }
+
             var decision = Decide(deltaSeconds, perception);
 
             // StateChanged の購読者が Kill() した場合も、死亡後は何も決定しない。
@@ -273,6 +287,34 @@ namespace Fps.Core
             }
 
             return _behaviors.Remove(behavior);
+        }
+
+        public IReadOnlyList<IPerceptionContributor> PerceptionContributors => _contributors;
+
+        // 登録した順に呼び、後のものは前のものが書き換えた知覚を受け取る。振る舞い (AddBehavior) にも、書き換えた後の知覚を渡す。
+        public void AddPerceptionContributor(IPerceptionContributor contributor)
+        {
+            if (contributor == null)
+            {
+                throw new ArgumentNullException(nameof(contributor));
+            }
+
+            if (_contributors.Contains(contributor))
+            {
+                throw new ArgumentException("contributor is already added", nameof(contributor));
+            }
+
+            _contributors.Add(contributor);
+        }
+
+        public bool RemovePerceptionContributor(IPerceptionContributor contributor)
+        {
+            if (contributor == null)
+            {
+                throw new ArgumentNullException(nameof(contributor));
+            }
+
+            return _contributors.Remove(contributor);
         }
 
         private EnemyDecision Decide(float deltaSeconds, EnemyPerception p)

@@ -369,7 +369,7 @@ namespace Fps.Core
                 {
                     if (string.Equals(candidate, node.Text, StringComparison.Ordinal))
                     {
-                        return (T)System.Enum.Parse(typeof(T), candidate);
+                        return (T)System.Enum.Parse<T>(candidate);
                     }
                 }
 

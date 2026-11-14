@@ -29,10 +29,7 @@ namespace Fps.Server
         /// <exception cref="InvalidOperationException">起動した後か、同じモジュールを 2 度足した。</exception>
         public void Register(IServerModule module)
         {
-            if (module == null)
-            {
-                throw new ArgumentNullException(nameof(module));
-            }
+            ArgumentNullException.ThrowIfNull(module);
 
             if (State != ServerHostState.NotStarted)
             {

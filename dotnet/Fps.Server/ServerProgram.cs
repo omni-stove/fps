@@ -33,25 +33,13 @@ namespace Fps.Server
         /// <param name="error">誤りの出力先。</param>
         public static int Run(IReadOnlyList<string> args, IEnumerable<IServerModule> modules, TextWriter output, TextWriter error)
         {
-            if (args == null)
-            {
-                throw new ArgumentNullException(nameof(args));
-            }
+            ArgumentNullException.ThrowIfNull(args);
 
-            if (modules == null)
-            {
-                throw new ArgumentNullException(nameof(modules));
-            }
+            ArgumentNullException.ThrowIfNull(modules);
 
-            if (output == null)
-            {
-                throw new ArgumentNullException(nameof(output));
-            }
+            ArgumentNullException.ThrowIfNull(output);
 
-            if (error == null)
-            {
-                throw new ArgumentNullException(nameof(error));
-            }
+            ArgumentNullException.ThrowIfNull(error);
 
             if (!TryParseArgs(args, out var options, out var version, out var problem))
             {
@@ -108,10 +96,7 @@ namespace Fps.Server
         public static bool TryParseArgs(
             IReadOnlyList<string> args, out NetLaunchOptions options, out string version, out string error)
         {
-            if (args == null)
-            {
-                throw new ArgumentNullException(nameof(args));
-            }
+            ArgumentNullException.ThrowIfNull(args);
 
             version = null;
             if (!NetLaunchOptions.TryParse(args, NetLaunchMode.Server, out options, out error))

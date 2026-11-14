@@ -38,14 +38,12 @@ namespace Fps.Server.Tests
             host.OnDisconnected(new ConnectionId(7));
             host.Stop();
 
-            Assert.That(_calls, Is.EqualTo(new[]
-            {
+            Assert.That(_calls, Is.EqualTo(Calls(
                 "a.Start", "b.Start",
                 "a.Tick1", "b.Tick1",
                 "a.Connected#7", "b.Connected#7",
                 "a.Disconnected#7", "b.Disconnected#7",
-                "b.Stop", "a.Stop",
-            }));
+                "b.Stop", "a.Stop")));
             Assert.That(host.State, Is.EqualTo(ServerHostState.Stopped));
             Assert.That(host.TickCount, Is.EqualTo(1));
         }
@@ -60,7 +58,7 @@ namespace Fps.Server.Tests
 
             Assert.Throws<InvalidOperationException>(() => host.Start(Context()));
 
-            Assert.That(_calls, Is.EqualTo(new[] { "a.Start", "b.Start", "a.Stop" }));
+            Assert.That(_calls, Is.EqualTo(Calls("a.Start", "b.Start", "a.Stop")));
             Assert.That(host.State, Is.EqualTo(ServerHostState.Stopped));
             Assert.That(_log.ToString(), Does.Contain("module b failed to start"));
         }
@@ -90,7 +88,7 @@ namespace Fps.Server.Tests
             host.Stop();
             host.Stop();
 
-            Assert.That(_calls, Is.EqualTo(new[] { "a.Start", "a.Stop" }));
+            Assert.That(_calls, Is.EqualTo(Calls("a.Start", "a.Stop")));
         }
 
         [Test]
@@ -134,6 +132,9 @@ namespace Fps.Server.Tests
             Assert.Throws<ArgumentException>(() => host.OnConnected(ConnectionId.None));
             Assert.That(host.TickCount, Is.Zero);
         }
+
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Calls(params string[] calls) => calls;
 
         private ServerContext Context()
         {

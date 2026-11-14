@@ -27,7 +27,7 @@ namespace Fps.Server.Tests
         [Test]
         public void PrintsTheVersionAndExitsZero()
         {
-            var code = Run(new[] { "-mode", "server", "-buildVersion", "v1.2.3" });
+            var code = Run("-mode", "server", "-buildVersion", "v1.2.3");
 
             Assert.That(code, Is.EqualTo(ServerProgram.ExitOk));
             Assert.That(FirstLine(_output), Is.EqualTo("[Version] 1.2.3"));
@@ -37,7 +37,7 @@ namespace Fps.Server.Tests
         [Test]
         public void WithoutVersionPrintsUnknown()
         {
-            var code = Run(new[] { "-mode", "server" });
+            var code = Run("-mode", "server");
 
             Assert.That(code, Is.EqualTo(ServerProgram.ExitOk));
             Assert.That(FirstLine(_output), Is.EqualTo("[Version] unknown"));
@@ -54,7 +54,7 @@ namespace Fps.Server.Tests
         [TestCase("client")]
         public void OtherModesAreRejected(string mode)
         {
-            var code = Run(new[] { "-mode", mode });
+            var code = Run("-mode", mode);
 
             Assert.That(code, Is.EqualTo(ServerProgram.ExitUsage));
             Assert.That(_error.ToString(), Does.Contain("-mode must be server"));
@@ -64,8 +64,8 @@ namespace Fps.Server.Tests
         [Test]
         public void BadArgumentsAreRejected()
         {
-            Assert.That(Run(new[] { "-mode", "server", "-port", "0" }), Is.EqualTo(ServerProgram.ExitUsage));
-            Assert.That(Run(new[] { "-mode", "server", "-buildVersion", "+bad" }), Is.EqualTo(ServerProgram.ExitUsage));
+            Assert.That(Run("-mode", "server", "-port", "0"), Is.EqualTo(ServerProgram.ExitUsage));
+            Assert.That(Run("-mode", "server", "-buildVersion", "+bad"), Is.EqualTo(ServerProgram.ExitUsage));
         }
 
         [Test]
@@ -74,10 +74,10 @@ namespace Fps.Server.Tests
             var calls = new List<string>();
 
             var code = ServerProgram.Run(
-                new[] { "-mode", "server" }, new[] { new RecordingModule("a", calls) }, _output, _error);
+                Args("-mode", "server"), new[] { new RecordingModule("a", calls) }, _output, _error);
 
             Assert.That(code, Is.EqualTo(ServerProgram.ExitOk));
-            Assert.That(calls, Is.EqualTo(new[] { "a.Start", "a.Stop" }));
+            Assert.That(calls, Is.EqualTo(Calls("a.Start", "a.Stop")));
         }
 
         [Test]
@@ -86,9 +86,9 @@ namespace Fps.Server.Tests
             var calls = new List<string>();
 
             var startCode = ServerProgram.Run(
-                new[] { "-mode", "server" }, new[] { new RecordingModule("a", calls) { ThrowOnStart = true } }, _output, _error);
+                Args("-mode", "server"), new[] { new RecordingModule("a", calls) { ThrowOnStart = true } }, _output, _error);
             var stopCode = ServerProgram.Run(
-                new[] { "-mode", "server" }, new[] { new RecordingModule("b", calls) { ThrowOnStop = true } }, _output, _error);
+                Args("-mode", "server"), new[] { new RecordingModule("b", calls) { ThrowOnStop = true } }, _output, _error);
 
             Assert.That(startCode, Is.EqualTo(ServerProgram.ExitFailure));
             Assert.That(stopCode, Is.EqualTo(ServerProgram.ExitFailure));
@@ -96,10 +96,15 @@ namespace Fps.Server.Tests
             Assert.That(_error.ToString(), Does.Contain("failed to stop: b cannot stop"));
         }
 
-        private int Run(string[] args)
+        private int Run(params string[] args)
         {
             return ServerProgram.Run(args, Array.Empty<IServerModule>(), _output, _error);
         }
+
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Args(params string[] args) => args;
+
+        private static string[] Calls(params string[] calls) => calls;
 
         private static string FirstLine(StringWriter writer)
         {

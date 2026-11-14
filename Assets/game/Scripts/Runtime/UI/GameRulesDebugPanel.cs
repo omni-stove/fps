@@ -40,6 +40,12 @@ namespace Fps.Runtime
         /// <summary>止める入力のマップ。<see cref="InputActionPaths"/> のアクションはすべてここにある。</summary>
         public const string PlayerActionMapName = "Player";
 
+        /// <summary>項目を並べるスクロールの枠の名前。</summary>
+        public const string FieldsName = "rules-debug-fields";
+
+        /// <summary>項目の見出しを引く表のキーの頭。後ろに <see cref="GameRulesDebugField"/> の名前を付ける。</summary>
+        public const string FieldLabelKeyPrefix = "debug.rules.field.";
+
         /// <summary>HUD (0) と <see cref="ActionDebugOverlay"/> (100) より手前に出す。</summary>
         public const float SortingOrder = 200f;
 
@@ -85,6 +91,18 @@ namespace Fps.Runtime
 
         /// <summary>開いている間の編集中の値。閉じていれば null。</summary>
         public GameRulesDebugDraft Draft => _draft;
+
+        /// <summary>field の見出しを引く表のキー。</summary>
+        public static string FieldLabelKey(GameRulesDebugField field)
+        {
+            return FieldLabelKeyPrefix + field;
+        }
+
+        /// <summary>今の言語での field の見出し。表に無ければ項目の名前をそのまま出す。</summary>
+        public static string FieldLabel(GameRulesDebugField field)
+        {
+            return Localizer.TryGet(FieldLabelKey(field), out var text) ? text : field.ToString();
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
@@ -401,6 +419,8 @@ namespace Fps.Runtime
             _container.style.paddingTop = Padding;
             _container.style.paddingBottom = Padding;
             _container.style.backgroundColor = BackgroundColor;
+            // 基準解像度の高さで上限を決めると、横長の画面で下が画面外に出るため、上下を両方固定する。
+            _container.style.bottom = ScreenMargin;
 
             var title = new Label("GameRules (F1)");
             title.style.fontSize = FontSize;
@@ -409,13 +429,18 @@ namespace Fps.Runtime
             title.style.marginBottom = RowSpacing * 2f;
             _container.Add(title);
 
+            // 項目が画面の高さに収まらないので、項目だけをスクロールさせて適用とリセットのボタンは常に見せる。
+            var fields = new ScrollView(ScrollViewMode.Vertical) { name = FieldsName };
+            fields.style.flexShrink = 1f;
             foreach (var field in GameRulesDebugDraft.Fields)
             {
                 var control = CreateControl(field);
                 control.style.marginBottom = RowSpacing;
                 _controls[field] = control;
-                _container.Add(control);
+                fields.Add(control);
             }
+
+            _container.Add(fields);
 
             var buttons = new VisualElement();
             buttons.style.flexDirection = FlexDirection.Row;
@@ -433,7 +458,7 @@ namespace Fps.Runtime
 
         private VisualElement CreateControl(GameRulesDebugField field)
         {
-            var label = field.ToString();
+            var label = FieldLabel(field);
             if (GameRulesDebugDraft.IsToggle(field))
             {
                 var toggle = new Toggle(label);

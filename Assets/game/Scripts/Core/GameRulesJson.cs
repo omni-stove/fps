@@ -45,6 +45,19 @@ namespace Fps.Core
         public const string VaultItem = "vault";
         public const string GrenadeItem = "grenade";
         public const string GrenadeCountItem = "grenadeCount";
+        public const string MeleeItem = "melee";
+        public const string StaggerItem = "stagger";
+        public const string SlideItem = "slide";
+        public const string MantleItem = "mantle";
+        public const string ProneItem = "prone";
+        public const string LadderItem = "ladder";
+        public const string ZiplineItem = "zipline";
+        public const string ParachuteItem = "parachute";
+        public const string StealthItem = "stealth";
+        public const string SuppressionItem = "suppression";
+        public const string PingItem = "ping";
+        public const string AbilitiesItem = "abilities";
+        public const string SlowMotionItem = "slowMotion";
 
         /// <summary>入れ子の深さの上限。項目は 2 段までなので、それより深いものは読む前に断る。</summary>
         private const int _maxDepth = 8;
@@ -87,6 +100,19 @@ namespace Fps.Core
             VaultItem,
             GrenadeItem,
             GrenadeCountItem,
+            MeleeItem,
+            StaggerItem,
+            SlideItem,
+            MantleItem,
+            ProneItem,
+            LadderItem,
+            ZiplineItem,
+            ParachuteItem,
+            StealthItem,
+            SuppressionItem,
+            PingItem,
+            AbilitiesItem,
+            SlowMotionItem,
         };
 
         /// <summary>text を 1 つのルールとして読む。</summary>
@@ -147,6 +173,65 @@ namespace Fps.Core
             }
         }
 
+        /// <summary>
+        /// rules のすべての項目を <see cref="Parse"/> が読める JSON にする。並びは <see cref="ItemNames"/> と <see cref="ActionItemNames"/> の順で、
+        /// 省略はしない。小数は読み直すと同じ float になる最短の形で書くので、<see cref="Parse"/> に通すと同じ値に戻る。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">rules が null。</exception>
+        public static string Write(GameRules rules)
+        {
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
+            var actions = rules.Actions;
+            var writer = new Writer();
+            writer.Enum(FriendlyFireItem, rules.FriendlyFire);
+            writer.Enum(RespawnModeItem, rules.RespawnMode);
+            writer.Float(WaveIntervalSecondsItem, rules.WaveIntervalSeconds);
+            writer.Float(RegenDelaySecondsItem, rules.RegenDelaySeconds);
+            writer.Float(RegenPerSecondItem, rules.RegenPerSecond);
+            writer.Enum(DeathBodyItem, rules.DeathBody);
+            writer.Enum(DeathCameraItem, rules.DeathCamera);
+            writer.Bool(InfiniteReserveItem, rules.InfiniteReserve);
+            writer.Float(ReserveAmmoMultiplierItem, rules.ReserveAmmoMultiplier);
+            writer.Enum(DestructionItem, rules.Destruction);
+            writer.BeginObject(ActionsItem);
+            writer.Enum(DownedItem, actions.Downed);
+            writer.Float(DownedBleedoutSecondsItem, actions.DownedBleedoutSeconds);
+            writer.Float(DownedHealthFractionItem, actions.DownedHealthFraction);
+            writer.Float(ReviveSecondsItem, actions.ReviveSeconds);
+            writer.Enum(CoverItem, actions.Cover);
+            writer.Enum(BlindFireItem, actions.BlindFire);
+            writer.Enum(ActiveReloadItem, actions.ActiveReload);
+            writer.Enum(DodgeItem, actions.Dodge);
+            writer.Enum(VaultItem, actions.Vault);
+            writer.Enum(GrenadeItem, actions.Grenade);
+            writer.Int(GrenadeCountItem, actions.GrenadeCount);
+            writer.Enum(MeleeItem, actions.Melee);
+            writer.Enum(StaggerItem, actions.Stagger);
+            writer.Enum(SlideItem, actions.Slide);
+            writer.Enum(MantleItem, actions.Mantle);
+            writer.Enum(ProneItem, actions.Prone);
+            writer.Enum(LadderItem, actions.Ladder);
+            writer.Enum(ZiplineItem, actions.Zipline);
+            writer.Enum(ParachuteItem, actions.Parachute);
+            writer.Enum(StealthItem, actions.Stealth);
+            writer.Enum(SuppressionItem, actions.Suppression);
+            writer.Enum(PingItem, actions.Ping);
+            writer.Enum(AbilitiesItem, actions.Abilities);
+            writer.Enum(SlowMotionItem, actions.SlowMotion);
+            writer.EndObject();
+            writer.Float(SpawnProtectionSecondsItem, rules.SpawnProtectionSeconds);
+            writer.Enum(FallDamageItem, rules.FallDamage);
+            writer.Enum(HudDensityItem, rules.HudDensity);
+            writer.Enum(ObjectiveItem, rules.Objective);
+            writer.Int(MinPlayersItem, rules.MinPlayers);
+            writer.Float(IdleKickSecondsItem, rules.IdleKickSeconds);
+            return writer.Finish();
+        }
+
         private static ActionRules ReadActions(string source, Fields top, ActionRules defaults)
         {
             var node = top.ReadNested(ActionsItem);
@@ -170,7 +255,20 @@ namespace Fps.Core
                     fields.ReadEnum(DodgeItem, defaults.Dodge),
                     fields.ReadEnum(VaultItem, defaults.Vault),
                     fields.ReadEnum(GrenadeItem, defaults.Grenade),
-                    fields.ReadInt(GrenadeCountItem, defaults.GrenadeCount));
+                    fields.ReadInt(GrenadeCountItem, defaults.GrenadeCount),
+                    fields.ReadEnum(MeleeItem, defaults.Melee),
+                    fields.ReadEnum(StaggerItem, defaults.Stagger),
+                    fields.ReadEnum(SlideItem, defaults.Slide),
+                    fields.ReadEnum(MantleItem, defaults.Mantle),
+                    fields.ReadEnum(ProneItem, defaults.Prone),
+                    fields.ReadEnum(LadderItem, defaults.Ladder),
+                    fields.ReadEnum(ZiplineItem, defaults.Zipline),
+                    fields.ReadEnum(ParachuteItem, defaults.Parachute),
+                    fields.ReadEnum(StealthItem, defaults.Stealth),
+                    fields.ReadEnum(SuppressionItem, defaults.Suppression),
+                    fields.ReadEnum(PingItem, defaults.Ping),
+                    fields.ReadEnum(AbilitiesItem, defaults.Abilities),
+                    fields.ReadEnum(SlowMotionItem, defaults.SlowMotion));
             }
             catch (ArgumentException e)
             {
@@ -404,6 +502,82 @@ namespace Fps.Core
                 var item = _prefix + name;
                 return new GameRulesJsonException(
                     _source, item, $"game rules JSON '{_source}' item '{item}' {problem} ({node.Position})", inner);
+            }
+        }
+
+        /// <summary>項目を書いた順に、2 文字の字下げで 1 行 1 項目に並べる。項目名と列挙の名前は英数字だけなので、文字列の逃がしは要らない。</summary>
+        private sealed class Writer
+        {
+            private readonly StringBuilder _builder = new StringBuilder("{");
+            private int _depth = 1;
+            private bool _first = true;
+
+            public void Enum<T>(string name, T value)
+                where T : struct, System.Enum
+            {
+                Raw(name, "\"" + value.ToString() + "\"");
+            }
+
+            public void Float(string name, float value)
+            {
+                // Unity の Mono は "R" でも読み直して別の値になる字句を返すことがあるので、そのときは必ず戻る 9 桁で書く。
+                var text = value.ToString("R", CultureInfo.InvariantCulture);
+                if (float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture) != value)
+                {
+                    text = value.ToString("G9", CultureInfo.InvariantCulture);
+                }
+
+                Raw(name, text);
+            }
+
+            public void Int(string name, int value)
+            {
+                Raw(name, value.ToString(CultureInfo.InvariantCulture));
+            }
+
+            public void Bool(string name, bool value)
+            {
+                Raw(name, value ? "true" : "false");
+            }
+
+            public void BeginObject(string name)
+            {
+                Raw(name, "{");
+                _depth++;
+                _first = true;
+            }
+
+            public void EndObject()
+            {
+                _depth--;
+                NewLine();
+                _builder.Append('}');
+                _first = false;
+            }
+
+            public string Finish()
+            {
+                _depth = 0;
+                NewLine();
+                _builder.Append('}').Append('\n');
+                return _builder.ToString();
+            }
+
+            private void Raw(string name, string value)
+            {
+                if (!_first)
+                {
+                    _builder.Append(',');
+                }
+
+                NewLine();
+                _builder.Append('"').Append(name).Append("\": ").Append(value);
+                _first = false;
+            }
+
+            private void NewLine()
+            {
+                _builder.Append('\n').Append(' ', _depth * 2);
             }
         }
 

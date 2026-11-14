@@ -23,7 +23,17 @@ namespace Fps.Core
             | PlayerActionConditions.Aiming
             | PlayerActionConditions.Firing
             | PlayerActionConditions.Reloading
-            | PlayerActionConditions.Downed;
+            | PlayerActionConditions.Downed
+            | PlayerActionConditions.Meleeing
+            | PlayerActionConditions.Staggered
+            | PlayerActionConditions.Sliding
+            | PlayerActionConditions.Mantling
+            | PlayerActionConditions.Prone
+            | PlayerActionConditions.OnLadder
+            | PlayerActionConditions.Ziplining
+            | PlayerActionConditions.Parachuting
+            | PlayerActionConditions.InVehicle
+            | PlayerActionConditions.AbilityMoving;
 
         /// <summary>
         /// 1 発撃ってから射撃中と見なし続ける最短の秒数。連射間隔がこれより短い (またはセミオートを 1 回だけ撃った) ときも、
@@ -71,6 +81,16 @@ namespace Fps.Core
         public bool IsFiring => Has(PlayerActionConditions.Firing);
         public bool IsReloading => Has(PlayerActionConditions.Reloading);
         public bool IsDowned => Has(PlayerActionConditions.Downed);
+        public bool IsMeleeing => Has(PlayerActionConditions.Meleeing);
+        public bool IsStaggered => Has(PlayerActionConditions.Staggered);
+        public bool IsSliding => Has(PlayerActionConditions.Sliding);
+        public bool IsMantling => Has(PlayerActionConditions.Mantling);
+        public bool IsProne => Has(PlayerActionConditions.Prone);
+        public bool IsOnLadder => Has(PlayerActionConditions.OnLadder);
+        public bool IsZiplining => Has(PlayerActionConditions.Ziplining);
+        public bool IsParachuting => Has(PlayerActionConditions.Parachuting);
+        public bool IsInVehicle => Has(PlayerActionConditions.InVehicle);
+        public bool IsAbilityMoving => Has(PlayerActionConditions.AbilityMoving);
 
         /// <param name="flags">立っている状態。<see cref="AllFlags"/> の外のビットは渡せない。</param>
         /// <param name="reloadProgress">リロードの進み。0 以上 1 以下。<see cref="PlayerActionConditions.Reloading"/> が無ければ 0。</param>

@@ -213,7 +213,43 @@ namespace Fps.Core
             var bestPrimitive = -1;
             var bestNormal = Vector3.Zero;
             Span<int> stack = stackalloc int[_stackSize];
+            // Unity は掃引前から重なっているコライダーを丸ごと外すので、メッシュは三角形ごとでなくコライダーごとに印を付ける
+            Span<bool> overlapped = stackalloc bool[_colliderIds.Length];
+            var overlapMin = Vector3.Min(point0, point1) - new Vector3(radius);
+            var overlapMax = Vector3.Max(point0, point1) + new Vector3(radius);
+            var radiusSq = radius * radius;
             var top = 0;
+            stack[top++] = 0;
+            while (top > 0)
+            {
+                ref readonly var node = ref _nodes[stack[--top]];
+                if ((node.LayerBits & layerMask) == 0 || !WorldGeometry.AabbOverlap(overlapMin, overlapMax, node.Min, node.Max))
+                {
+                    continue;
+                }
+
+                if (node.Count == 0)
+                {
+                    stack[top++] = node.Start;
+                    stack[top++] = node.Start + 1;
+                    continue;
+                }
+
+                for (var i = node.Start; i < node.Start + node.Count; i++)
+                {
+                    ref readonly var primitive = ref _primitives[i];
+                    if (primitive.Kind == WorldShapeKind.Mesh
+                        && !overlapped[primitive.Collider]
+                        && Selectable(primitive.Collider, layerMask)
+                        && WorldGeometry.AabbOverlap(overlapMin, overlapMax, primitive.Min, primitive.Max)
+                        && DistanceSq(primitive, point0, point1, out _, out _) < radiusSq)
+                    {
+                        overlapped[primitive.Collider] = true;
+                    }
+                }
+            }
+
+            top = 0;
             stack[top++] = 0;
             while (top > 0)
             {
@@ -234,7 +270,8 @@ namespace Fps.Core
                 for (var i = node.Start; i < node.Start + node.Count; i++)
                 {
                     ref readonly var primitive = ref _primitives[i];
-                    if (!Selectable(primitive.Collider, layerMask)
+                    if (overlapped[primitive.Collider]
+                        || !Selectable(primitive.Collider, layerMask)
                         || !WorldGeometry.RayAabb(center, dir, primitive.Min - extent, primitive.Max + extent, best))
                     {
                         continue;
@@ -375,9 +412,7 @@ namespace Fps.Core
             {
                 case WorldShapeKind.Mesh:
                     // 裏から近づく三角形は、Raycast と同じく当てない
-                    if (Vector3.Dot(primitive.Normal, direction) > 0f
-                        || WorldGeometry.SegmentTriangleDistanceSq(p, q, primitive.A, primitive.B, primitive.C, primitive.Normal, out _, out _)
-                            < radius * radius)
+                    if (Vector3.Dot(primitive.Normal, direction) > 0f)
                     {
                         return false;
                     }

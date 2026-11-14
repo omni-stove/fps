@@ -285,6 +285,30 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void CapsuleCastSkipsAWholeMeshItOverlapsAtTheStart()
+        {
+            // 床と壁が 1 つのメッシュ。床にめり込んだカプセルは、同じメッシュの壁にも当たらない
+            var mesh = WorldCollider.Mesh(
+                _floorId,
+                _defaultLayer,
+                WorldCollider.StaticGroup,
+                new[]
+                {
+                    new Vector3(-20f, 0f, -20f), new Vector3(-20f, 0f, 20f), new Vector3(20f, 0f, 20f), new Vector3(20f, 0f, -20f),
+                    new Vector3(10f, 0f, -2f), new Vector3(10f, 3f, -2f), new Vector3(10f, 3f, 2f), new Vector3(10f, 0f, 2f),
+                },
+                new[] { 0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6 });
+            var world = new BvhWorldCollision(new WorldMap(new[] { mesh }));
+            var point0 = new Vector3(0f, 0.2f, 0f);
+            var point1 = new Vector3(0f, 0.4f, 0f);
+            Assert.That(world.CapsuleCast(point0, point1, 0.3f, Vector3.UnitX, 20f, _everything, out _), Is.False);
+
+            var above = new Vector3(0f, 1f, 0f);
+            Assert.That(world.CapsuleCast(above, above + new Vector3(0f, 0.2f, 0f), 0.3f, Vector3.UnitX, 20f, _everything, out var hit), Is.True);
+            Assert.That(hit.Distance, Is.EqualTo(9.7f).Within(_tolerance));
+        }
+
+        [Test]
         public void CapsuleCastAgainstACapsuleStopsAtTheSumOfRadii()
         {
             Assert.That(_world.CapsuleCast(

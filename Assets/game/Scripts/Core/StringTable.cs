@@ -83,6 +83,36 @@ namespace Fps.Core
             return true;
         }
 
+        /// <summary>
+        /// tables を前から順に重ねた表。同じキーは後の表の文字列になる。
+        /// </summary>
+        /// <param name="tables">重ねる表。重ねた後に元の表は変わらない。</param>
+        /// <param name="warn">重ねた表の、無いキーや差し込めない所の知らせの受け取り先。null なら知らせない。</param>
+        /// <exception cref="ArgumentNullException">tables が null か、null の表を含む。</exception>
+        public static StringTable Merge(IEnumerable<StringTable> tables, Action<string> warn = null)
+        {
+            if (tables == null)
+            {
+                throw new ArgumentNullException(nameof(tables));
+            }
+
+            var entries = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var table in tables)
+            {
+                if (table == null)
+                {
+                    throw new ArgumentNullException(nameof(tables), "tables must not contain null");
+                }
+
+                foreach (var pair in table._entries)
+                {
+                    entries[pair.Key] = pair.Value;
+                }
+            }
+
+            return new StringTable(entries, warn);
+        }
+
         /// <summary>key が表にあるか。</summary>
         public bool Contains(string key)
         {

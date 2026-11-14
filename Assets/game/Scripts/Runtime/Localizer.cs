@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using UnityEngine;
 
@@ -7,17 +8,27 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 画面に出す文字を、今効いている設定の言語 (<see cref="AppliedControlSettings.Current"/> の <see cref="ControlSettings.Language"/>) の
-    /// <see cref="StringTable"/> から引く。表は Assets/game/Localization/Resources/Strings/ja.json と en.json を Resources から
-    /// 初めて使うときに読み、Play の間は持ち続ける。言語が変わると (<see cref="AppliedControlSettings.Apply"/>) <see cref="Changed"/> で知らせる。
-    /// 表が見つからない・壊れているときはエラーを出し、空の表 (キーそのものを出す) で続ける。無いキーは <c>[Localization]</c> 付きの警告で知らせる。
+    /// <see cref="StringTable"/> から引く。表は Resources の Strings/&lt;言語コード&gt;.json と、Localization/&lt;言語コード&gt;/ にあるすべての
+    /// TextAsset をファイル名の順に重ねて作り (<see cref="ReadResources"/>)、同じキーは後のものが勝つ。
+    /// 利用側のプロジェクトの Resources/Localization/&lt;言語コード&gt;/ も同じく読むので、キーの上書きや文の追加ができる。
+    /// 表は初めて使うときと Play の開始時に読み、Play の間は持ち続ける。言語が変わると (<see cref="AppliedControlSettings.Apply"/>・<see cref="SwitchTo"/>)
+    /// <see cref="Changed"/> で知らせる。
+    /// 言語の表が見つからない・壊れているときは警告を出して <see cref="FallbackLanguage"/> の表で続け、それも読めなければエラーを出し、
+    /// 読めた分だけ (無ければキーそのものを出す空の表) で続ける。無いキーは <c>[Localization]</c> 付きの警告で知らせる。
     /// Core の書式 (<see cref="HudFormat"/> など) が引く <see cref="GameText"/> にも、Play の開始時とエディターの読み込み時に同じ表を渡す。
     /// </summary>
     public static class Localizer
     {
         public const string LogTag = "[Localization]";
 
-        /// <summary>Resources の中で言語ごとの表を置くフォルダー。</summary>
+        /// <summary>Resources の中で言語ごとの表 (&lt;言語コード&gt;.json) を置くフォルダー。</summary>
         public const string ResourceFolder = "Strings";
+
+        /// <summary>Resources の中で、言語コードのフォルダーごとに重ねる表を置くフォルダー。</summary>
+        public const string LayerFolder = "Localization";
+
+        /// <summary>言語の表が読めないときに代わりに使う言語。</summary>
+        public const GameLanguage FallbackLanguage = GameLanguage.Japanese;
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<GameLanguage, StringTable> _tables = new Dictionary<GameLanguage, StringTable>();
@@ -34,6 +45,12 @@ namespace Fps.Runtime
         public static string ResourcePathOf(GameLanguage language)
         {
             return ResourceFolder + "/" + GameLanguages.Code(language);
+        }
+
+        /// <summary>language の重ねる表を置く Resources のフォルダー。</summary>
+        public static string LayerFolderOf(GameLanguage language)
+        {
+            return LayerFolder + "/" + GameLanguages.Code(language);
         }
 
         /// <summary>
@@ -93,11 +110,104 @@ namespace Fps.Runtime
         {
             if (!_tables.TryGetValue(language, out var table))
             {
-                table = Load(language);
+                table = Build(language, ReadResources);
                 _tables[language] = table;
             }
 
             return table;
+        }
+
+        /// <summary>
+        /// language を今の言語にし、<paramref name="store"/> に保存する。表を Resources から読み直し、
+        /// 前と同じ言語でも <see cref="Changed"/> を呼ぶ (読み直した文を画面に出し直させるため)。
+        /// </summary>
+        /// <param name="language">切り替える言語。</param>
+        /// <param name="store">保存先。null なら既定のキーの <see cref="LanguagePreferenceStore"/>。</param>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public static void SwitchTo(GameLanguage language, LanguagePreferenceStore store = null)
+        {
+            _ = GameLanguages.Code(language);
+            Reload();
+            var current = AppliedControlSettings.Current;
+            if (current.Language == language)
+            {
+                NotifyChanged(language);
+            }
+            else
+            {
+                AppliedControlSettings.Apply(current.WithLanguage(language));
+            }
+
+            (store ?? new LanguagePreferenceStore()).Save(language);
+        }
+
+        /// <summary>読んだ表をすべて捨て、次に引くときに Resources から読み直させる。</summary>
+        public static void Reload()
+        {
+            _tables.Clear();
+        }
+
+        /// <summary>
+        /// read が返す表 (前から順に重ねる。名前は警告に出す) から language の表を作る。
+        /// 1 つも無いか 1 つでも壊れていれば警告を出して <see cref="FallbackLanguage"/> の表を作る。
+        /// <see cref="FallbackLanguage"/> の表は、壊れたものだけエラーを出して飛ばし、1 つも読めなければエラーを出して空の表にする。
+        /// </summary>
+        /// <param name="language">作る表の言語。</param>
+        /// <param name="read">言語ごとに、表の名前と JSON の文字列を重ねる順に返す。Resources を使わずに試すときは別のものを渡す。</param>
+        /// <exception cref="ArgumentNullException">read が null。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public static StringTable Build(GameLanguage language, Func<GameLanguage, IReadOnlyList<KeyValuePair<string, string>>> read)
+        {
+            if (read == null)
+            {
+                throw new ArgumentNullException(nameof(read));
+            }
+
+            var code = GameLanguages.Code(language);
+            if (language != FallbackLanguage)
+            {
+                if (TryCompose(code, read(language), false, out var table, out var problem))
+                {
+                    return table;
+                }
+
+                Debug.LogWarning($"{LogTag} {code}: {problem}; using {GameLanguages.Code(FallbackLanguage)} instead");
+            }
+
+            var fallbackCode = GameLanguages.Code(FallbackLanguage);
+            if (TryCompose(fallbackCode, read(FallbackLanguage), true, out var fallback, out var fallbackProblem))
+            {
+                return fallback;
+            }
+
+            Debug.LogError($"{LogTag} {fallbackCode}: {fallbackProblem}; showing the keys instead");
+            return new StringTable(Array.Empty<KeyValuePair<string, string>>(), WarnFor(fallbackCode));
+        }
+
+        /// <summary>
+        /// Resources にある language の表を重ねる順に読む。先に <see cref="ResourcePathOf"/> の表、続けて
+        /// <see cref="LayerFolderOf"/> のフォルダーにある TextAsset をファイル名 (拡張子なし) の順 (大文字小文字を区別する) に並べる。
+        /// 同じ名前のものは Resources が返した順のまま並べる。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public static IReadOnlyList<KeyValuePair<string, string>> ReadResources(GameLanguage language)
+        {
+            var layers = new List<KeyValuePair<string, string>>();
+            var path = ResourcePathOf(language);
+            var single = Resources.Load<TextAsset>(path);
+            if (single != null)
+            {
+                layers.Add(new KeyValuePair<string, string>($"Resources/{path}.json", single.text));
+            }
+
+            var folder = LayerFolderOf(language);
+            var assets = Resources.LoadAll<TextAsset>(folder);
+            foreach (var asset in assets.OrderBy(a => a.name, StringComparer.Ordinal))
+            {
+                layers.Add(new KeyValuePair<string, string>($"Resources/{folder}/{asset.name}", asset.text));
+            }
+
+            return layers;
         }
 
         // AppliedControlSettings.Apply が、効いている言語が前と変わったときに呼ぶ。
@@ -124,27 +234,56 @@ namespace Fps.Runtime
             }
         }
 
-        private static StringTable Load(GameLanguage language)
+        // skipBroken が false なら壊れた表が 1 つでもあれば読まない。true なら壊れた表だけエラーを出して飛ばす。
+        private static bool TryCompose(
+            string code,
+            IReadOnlyList<KeyValuePair<string, string>> layers,
+            bool skipBroken,
+            out StringTable table,
+            out string problem)
         {
-            var code = GameLanguages.Code(language);
-            var path = ResourcePathOf(language);
-            void Warn(string message) => Debug.LogWarning($"{LogTag} {code}: {message}");
-
-            var asset = Resources.Load<TextAsset>(path);
-            if (asset == null)
+            table = null;
+            problem = null;
+            var parsed = new List<StringTable>();
+            var anyBroken = false;
+            foreach (var layer in layers ?? Array.Empty<KeyValuePair<string, string>>())
             {
-                Debug.LogError(
-                    $"{LogTag} strings 'Resources/{path}.json' were not found (expected under Assets/game/Localization/Resources); showing the keys instead");
-                return new StringTable(Array.Empty<KeyValuePair<string, string>>(), Warn);
+                string error;
+                if (layer.Value == null)
+                {
+                    error = "the text is missing";
+                }
+                else if (StringTable.TryParse(layer.Value, null, out var one, out error))
+                {
+                    parsed.Add(one);
+                    continue;
+                }
+
+                problem = $"strings '{layer.Key}' could not be read: {error}";
+                if (!skipBroken)
+                {
+                    return false;
+                }
+
+                anyBroken = true;
+                Debug.LogError($"{LogTag} {code}: {problem}; skipping it");
             }
 
-            if (!StringTable.TryParse(asset.text, Warn, out var table, out var error))
+            if (parsed.Count == 0)
             {
-                Debug.LogError($"{LogTag} strings 'Resources/{path}.json' could not be read: {error}; showing the keys instead");
-                return new StringTable(Array.Empty<KeyValuePair<string, string>>(), Warn);
+                problem = anyBroken
+                    ? "none of the strings could be read"
+                    : $"no strings were found at Resources/{ResourceFolder}/{code}.json or in Resources/{LayerFolder}/{code}/";
+                return false;
             }
 
-            return table;
+            table = StringTable.Merge(parsed, WarnFor(code));
+            return true;
+        }
+
+        private static Action<string> WarnFor(string code)
+        {
+            return message => Debug.LogWarning($"{LogTag} {code}: {message}");
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -153,6 +292,13 @@ namespace Fps.Runtime
             _tables.Clear();
             Changed = null;
             UseForCore();
+        }
+
+        // 表が見つからない・壊れているという知らせを、最初の画面を開く前の起動時に出す。
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void LoadOnPlay()
+        {
+            _ = TableOf(Language);
         }
 
         // Core の書式 (HudFormat など) は Unity に依らないので、今の言語の表を GameText 越しに渡す。

@@ -26,6 +26,12 @@ namespace Fps.Net
         private bool _watchingMatchForDrain;
         private float _nextDrainStatusLogTime;
 
+        partial void ShutdownBeforeStart(ref string error);
+
+        partial void ShutdownAfterStart();
+
+        partial void ShutdownQuitRequested(ref bool allowQuit);
+
         /// <summary>NetworkManager を組み立てた後、待ち受け・接続を始める前に呼ぶ。</summary>
         /// <param name="error">起動を止めるならその理由を入れる (<c>[Net]</c> 付きの文)。既に入っていれば触らない。</param>
         partial void ShutdownBeforeStart(ref string error)

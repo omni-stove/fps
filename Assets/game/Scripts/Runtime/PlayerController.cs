@@ -292,7 +292,7 @@ namespace Fps.Runtime
 
             // 押されたダッシュボタンの機器を優先し、どちらも動いていなければ直前の機器のまま。
             var device = InputDeviceKinds.Of(_sprintAction, InputDeviceKinds.Of(_moveAction, _device));
-            var sprint = UpdateSprint(move, _sprintAction.IsPressed(), _sprintAction.WasPressedThisFrame(), device);
+            var sprint = UpdateSprint(move, HeldInput.IsHeld(_sprintAction), _sprintAction.WasPressedThisFrame(), device);
             var jump = _jumpAction.WasPressedThisFrame();
 
             var crouchDevice = InputDeviceKinds.Of(_crouchAction, InputDeviceKinds.Of(_moveAction, _crouchDevice));

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -8,7 +9,7 @@ namespace Fps.Runtime
     /// 爆破 (<see cref="SearchAndDestroyRunner"/>) の設置地点 1 つ。地点の番号 (<see cref="Index"/>、0 始まりで HUD とログでは A, B, ...) と
     /// 範囲の半径・高さを持ち、この GameObject の位置を中心とした円柱 (<see cref="ControlPointArea"/>) を範囲にする。
     /// 誰が中にいるかは Runner が <see cref="Contains"/> で調べる。試合中に地点を動かすことは考えない。
-    /// Play 中は足元に範囲を示す薄い円盤を作り、設置されたら <see cref="PlantedColor"/> で塗る (<see cref="ShowPlanted"/>)。
+    /// Play 中は足元に範囲を示す薄い円盤 (<see cref="MarkerPrefab"/> があればその形) を作り、設置されたら <see cref="PlantedColor"/> で塗る (<see cref="ShowPlanted"/>)。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class BombSite : MonoBehaviour
@@ -36,8 +37,12 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("Play 中に範囲を示す円盤を足元に出すか")]
         private bool _showMarker = true;
 
-        private Renderer _marker;
-        private Material _markerMaterial;
+        [SerializeField, Tooltip("範囲を示す印の見た目。原点を中心にした直径 1m の形にする (水平に範囲の直径まで拡大し、高さはそのまま)。当たり判定は外し、材質は設置されたかの色で塗る。空なら仮の薄い円盤を作る")]
+        private GameObject _markerPrefab;
+
+        private readonly List<Material> _markerMaterials = new List<Material>();
+        private GameObject _marker;
+        private bool _markerFromPrefab;
         private bool _planted;
 
         /// <summary>地点の番号。0 以上。</summary>
@@ -85,6 +90,13 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>範囲を示す印の見た目。null なら仮の薄い円盤。円盤を作る (<see cref="RefreshMarker"/>) 前に設定したものを使う。</summary>
+        public GameObject MarkerPrefab
+        {
+            get => _markerPrefab;
+            set => _markerPrefab = value;
+        }
+
         public bool ShowsMarker
         {
             get => _showMarker;
@@ -97,8 +109,8 @@ namespace Fps.Runtime
         /// <summary>この地点に設置されているか (<see cref="ShowPlanted"/> で最後に渡した値)。</summary>
         public bool IsPlanted => _planted;
 
-        /// <summary>Play 中に作った円盤。作っていなければ null。</summary>
-        public Renderer Marker => _marker;
+        /// <summary>Play 中に作った円盤 (<see cref="MarkerName"/>)。作っていなければ null。</summary>
+        public GameObject Marker => _marker;
 
         /// <summary>position が範囲の中 (境界を含む) なら true。</summary>
         public bool Contains(Vector3 position)
@@ -110,10 +122,7 @@ namespace Fps.Runtime
         public void ShowPlanted(bool planted)
         {
             _planted = planted;
-            if (_markerMaterial != null)
-            {
-                _markerMaterial.color = planted ? PlantedColor : IdleColor;
-            }
+            ApplyMarkerColor();
         }
 
         /// <summary>範囲を示す円盤を作るか、作ってあれば今の半径に大きさを合わせる。当たり判定は持たせない。<see cref="ShowsMarker"/> が false なら何もしない。</summary>
@@ -126,29 +135,23 @@ namespace Fps.Runtime
 
             if (_marker == null)
             {
-                var marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                marker.name = MarkerName;
-                DestroySafely(marker.GetComponent<Collider>());
-                marker.transform.SetParent(transform, false);
-
-                _marker = marker.GetComponent<Renderer>();
-                _marker.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                _marker.receiveShadows = false;
-
-                // 共有のマテリアルを塗り替えると他のプリミティブまで色が変わるので、この地点用に複製する。
-                _markerMaterial = new Material(_marker.sharedMaterial) { name = MarkerName };
-                _marker.sharedMaterial = _markerMaterial;
-                _markerMaterial.color = _planted ? PlantedColor : IdleColor;
+                _markerFromPrefab = _markerPrefab != null;
+                _marker = ControlPointZone.CreateMarkerObject(_markerPrefab, transform, MarkerName, _markerMaterials);
+                ApplyMarkerColor();
             }
 
-            // 親の拡縮を打ち消し、世界で直径 2r・厚み ControlPointZone.MarkerThickness にする (Cylinder は高さ 2・直径 1)。
-            var parentScale = transform.lossyScale;
-            _marker.transform.localScale = new Vector3(
-                SafeDivide(_radius * 2f, parentScale.x),
-                SafeDivide(ControlPointZone.MarkerThickness * 0.5f, parentScale.y),
-                SafeDivide(_radius * 2f, parentScale.z));
-            _marker.transform.localPosition = Vector3.zero;
-            _marker.transform.localRotation = Quaternion.identity;
+            ControlPointZone.FitMarker(_marker.transform, transform.lossyScale, _radius, _markerFromPrefab);
+        }
+
+        private void ApplyMarkerColor()
+        {
+            foreach (var material in _markerMaterials)
+            {
+                if (material != null)
+                {
+                    material.color = _planted ? PlantedColor : IdleColor;
+                }
+            }
         }
 
         private void Start()
@@ -163,11 +166,7 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
-            if (_markerMaterial != null)
-            {
-                DestroySafely(_markerMaterial);
-                _markerMaterial = null;
-            }
+            ControlPointZone.DestroyMaterials(_markerMaterials);
         }
 
         private void OnDrawGizmos()
@@ -189,28 +188,6 @@ namespace Fps.Runtime
                 Gizmos.DrawLine(previous + half, next + half);
                 Gizmos.DrawLine(previous, next);
                 previous = next;
-            }
-        }
-
-        private static float SafeDivide(float value, float divisor)
-        {
-            return Mathf.Abs(divisor) > 1e-6f ? value / divisor : value;
-        }
-
-        private static void DestroySafely(UnityEngine.Object target)
-        {
-            if (target == null)
-            {
-                return;
-            }
-
-            if (Application.isPlaying)
-            {
-                Destroy(target);
-            }
-            else
-            {
-                DestroyImmediate(target);
             }
         }
     }

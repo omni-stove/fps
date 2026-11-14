@@ -203,7 +203,7 @@ namespace Fps.Tests.EditMode
             Assert.That(boundary.transform.localScale.x, Is.EqualTo(15f).Within(1e-4f));
             Assert.That(boundary.transform.position.x, Is.EqualTo(center.X).Within(1e-4f));
             Assert.That(boundary.transform.position.z, Is.EqualTo(center.Y).Within(1e-4f));
-            _created.Add(boundary.sharedMaterial);
+            _created.Add(boundary.GetComponent<Renderer>().sharedMaterial);
             _created.Add(boundary.GetComponent<MeshFilter>().sharedMesh);
         }
 
@@ -234,7 +234,7 @@ namespace Fps.Tests.EditMode
             var boundary = _zone.Boundary;
             Assert.That(boundary, Is.Not.Null);
             Assert.That(boundary.transform.localScale.y, Is.EqualTo(12f).Within(1e-4f));
-            _created.Add(boundary.sharedMaterial);
+            _created.Add(boundary.GetComponent<Renderer>().sharedMaterial);
             _created.Add(boundary.GetComponent<MeshFilter>().sharedMesh);
         }
 

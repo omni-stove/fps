@@ -97,7 +97,10 @@ namespace Fps.Core
         /// <summary>回線の劣化 (遅れ・ロス・ゆらぎ) をどれか 1 つでも求められているか。</summary>
         public bool SimulatesNetwork => NetLatencyMs > 0 || NetLossPercent > 0 || NetJitterMs > 0;
 
-        /// <summary>サーバーが終了を求められてから、今の試合が終わるのを待つ最長の秒数。0 なら待たずに止まる。</summary>
+        /// <summary>
+        /// サーバーが終了を求められてから、今の試合が終わるのを待つ最長の秒数。0 なら待たずに止まる。
+        /// <c>-drain-timeout</c> が無いときも 0 になるので、サーバーは <see cref="ServerDrain.ResolveTimeoutSeconds"/> で既定の秒数に読み替える。
+        /// </summary>
         public int DrainTimeoutSeconds { get; }
 
         /// <summary>ログ向けの接続先・待ち受け先。UDP は <c>address:port</c>、EOS は <c>eos</c> か <c>eos:&lt;サーバーの ID&gt;</c>。</summary>

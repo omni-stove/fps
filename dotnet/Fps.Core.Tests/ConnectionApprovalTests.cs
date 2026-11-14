@@ -57,6 +57,43 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ADrainingServerRejectsEveryoneAsDraining()
+        {
+            foreach (var payload in new[] { ConnectionPayload.Encode("0.2.0", Key), ConnectionPayload.Encode("0.1.0", Key), null })
+            {
+                var verdict = ConnectionApproval.Judge("0.2.0", payload, true);
+
+                Assert.That(verdict.Approved, Is.False);
+                Assert.That(verdict.RejoinKey, Is.Null);
+                Assert.That(verdict.RejectReason, Is.EqualTo("fps:rejected:server-draining"));
+                Assert.That(verdict.LogText, Does.Contain("draining"));
+            }
+        }
+
+        [Test]
+        public void ADrainingServerStillLogsTheClientVersion()
+        {
+            var verdict = ConnectionApproval.Judge("0.2.0", ConnectionPayload.Encode("0.1.0", Key), true);
+
+            Assert.That(verdict.ClientVersion, Is.EqualTo("0.1.0"));
+        }
+
+        [Test]
+        public void ANonDrainingServerJudgesAsBefore()
+        {
+            var verdict = ConnectionApproval.Judge("0.2.0", ConnectionPayload.Encode("0.2.0", Key), false);
+
+            Assert.That(verdict.Approved, Is.True);
+            Assert.That(verdict.RejoinKey, Is.EqualTo(Key));
+        }
+
+        [Test]
+        public void ADrainingServerStillNeedsANormalizedVersion()
+        {
+            Assert.Throws<ArgumentException>(() => ConnectionApproval.Judge("v0.2.0", null, true));
+        }
+
+        [Test]
         public void TheRejectionsAreClassifiedOnTheClient()
         {
             var mismatch = ConnectionApproval.Judge("0.2.0", ConnectionPayload.Encode("0.1.0", Key));

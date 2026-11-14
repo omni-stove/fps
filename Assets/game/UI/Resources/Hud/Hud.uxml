@@ -69,6 +69,8 @@
         <ui:VisualElement name="loadout-select" class="hud__loadout" picking-mode="Ignore" style="display: none;" />
         <!-- 拠点制圧のポイント・残り時間・拠点の持ち主。DominationRunner が DominationView を付けたときだけ出す。 -->
         <ui:VisualElement name="domination" class="domination" picking-mode="Ignore" style="display: none;" />
+        <!-- オンラインの拠点制圧の拠点ごとの持ち主と占領の進み (リング)。NetHud が拠点制圧の試合のときだけ NetControlPointsView に渡して出す。 -->
+        <ui:VisualElement name="net-control-points" class="net-control-points" picking-mode="Ignore" style="display: none;" />
         <!-- オフラインのモードの残り時間・陣営ごとの得点・モードが足す行・結果。ModeRunnerBase が ModeHudView に渡している間だけ出し、行は ModeHudView が足す。 -->
         <ui:VisualElement name="mode-hud" class="mode-hud" picking-mode="Ignore" style="display: none;" />
         <!-- チュートリアルの今の手順。射撃場で TutorialPresenter が TutorialPromptView に文を渡している間だけ出す。 -->

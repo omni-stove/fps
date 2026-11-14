@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d3a7c15e2f84b06b1c8a4e6f0d52b73, type: 3}
+  m_Name: Domination
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.GameRulesDefinition
+  _friendlyFire: 0
+  _respawnMode: 0
+  _waveIntervalSeconds: 10
+  _regenDelaySeconds: 4
+  _regenPerSecond: 20
+  _deathBody: 1
+  _deathCamera: 2
+  _infiniteReserve: 0
+  _reserveAmmoMultiplier: 1
+  _destruction: 1
+  _downed: 1
+  _downedBleedoutSeconds: 15
+  _downedHealthFraction: 0.3
+  _reviveSeconds: 3
+  _cover: 0
+  _blindFire: 0
+  _activeReload: 1
+  _dodge: 0
+  _vault: 0
+  _grenade: 1
+  _grenadeCount: 2
+  _spawnProtectionSeconds: 2
+  _fallDamage: 0
+  _hudDensity: 0
+  _objective: 1
+  _minPlayers: 0
+  _idleKickSeconds: 120

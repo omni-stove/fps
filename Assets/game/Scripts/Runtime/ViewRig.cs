@@ -513,7 +513,8 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 自分の体の描き方を決める。isLocalView (この端末のプレイヤーの視点) かつ一人称なら影だけ描いて視界をふさがず、
-        /// それ以外 (三人称や他人のプレイヤー) は普通に描く。isLocalView の間だけ肩の入れ替えの入力を読む (<see cref="IsLocalView"/>)。
+        /// それ以外 (三人称や他人のプレイヤー) は普通に描く。<see cref="ViewmodelRoot"/> の配下は体ではないので触らない。
+        /// isLocalView の間だけ肩の入れ替えの入力を読む (<see cref="IsLocalView"/>)。
         /// </summary>
         public void ApplyBodyVisibility(bool isLocalView)
         {
@@ -523,7 +524,8 @@ namespace Fps.Runtime
             var shadowMode = isLocalView && _mode == ViewMode.FirstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
             foreach (var bodyRenderer in GetComponentsInChildren<Renderer>(true))
             {
-                if (bodyRenderer != null)
+                // ビューモデルは体ではなく、一人称でこそ描くものなので、体の描き方に巻き込まない。
+                if (bodyRenderer != null && (_viewmodelRoot == null || !bodyRenderer.transform.IsChildOf(_viewmodelRoot)))
                 {
                     bodyRenderer.shadowCastingMode = shadowMode;
                 }

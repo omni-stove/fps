@@ -315,6 +315,9 @@ namespace Fps.Runtime
                 damageable.IsLocalPlayer = true;
                 player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
                 CharacterComponents.Attach(player, throwsGrenades: true);
+
+                // CharacterComponents は敵とネットのプレハブにも付けるので、一人称で手元に出すビューモデルは手元のプレイヤーにだけここで付ける。
+                player.AddComponent<ViewmodelPresenter>();
                 WireDeathAndRespawn(damageable, mover, ads);
 
                 // 回復しないルール (RegenPerSecond = 0) でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため。

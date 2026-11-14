@@ -177,7 +177,7 @@ namespace Fps.Editor
             _filter = new ScriptedMoveFilter(_mover.MoveFilter) { Move = Vector2.up, Crouch = true };
             _mover.MoveFilter = _filter;
 
-            _enemy.ResetTo(StealthRangeFixture.EnemyFeet, Quaternion.LookRotation(Vector3.forward, Vector3.up));
+            _enemy.ResetTo(StealthRangeFixture.EnemyFeet, StealthRangeFixture.EnemyFacing);
             _stealth.ResetAwareness();
             Teleport(world.Controller, StealthRangeFixture.ApproachStart + (Vector3.up * GameBootstrap.PlayerSpawn.y));
             FaceTowards(world, StealthRangeFixture.EnemyFeet);
@@ -267,7 +267,7 @@ namespace Fps.Editor
 
             var forward = _enemy.transform.forward;
             forward.y = 0f;
-            forward = forward.sqrMagnitude > 1e-6f ? forward.normalized : Vector3.forward;
+            forward = forward.sqrMagnitude > 1e-6f ? forward.normalized : StealthRangeFixture.EnemyFacing * Vector3.forward;
             var feet = ClampToArea(_enemy.GroundPosition + (forward * EngageDistance));
             _filter.Crouch = false;
             Teleport(world.Controller, feet + (Vector3.up * GameBootstrap.PlayerSpawn.y));
@@ -298,7 +298,7 @@ namespace Fps.Editor
 
             _target.Rule = Stealth.Off;
             Teleport(world.Controller, GameBootstrap.PlayerSpawn);
-            _enemy.ResetTo(StealthRangeFixture.EnemyFeet, Quaternion.LookRotation(Vector3.forward, Vector3.up));
+            _enemy.ResetTo(StealthRangeFixture.EnemyFeet, StealthRangeFixture.EnemyFacing);
             _stealth.ResetAwareness();
             _phase = Phase.SwitchOff;
             return null;
@@ -312,7 +312,7 @@ namespace Fps.Editor
                 return null;
             }
 
-            var feet = ClampToArea(StealthRangeFixture.EnemyFeet + (Vector3.forward * OffCheckDistance));
+            var feet = ClampToArea(StealthRangeFixture.EnemyFeet + (StealthRangeFixture.EnemyFacing * Vector3.forward * OffCheckDistance));
             Teleport(world.Controller, feet + (Vector3.up * GameBootstrap.PlayerSpawn.y));
             FaceTowards(world, StealthRangeFixture.EnemyFeet);
             _offIndex = _stages.Count;

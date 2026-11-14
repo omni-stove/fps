@@ -241,10 +241,10 @@ namespace Fps.Runtime
 
         protected override LocalizedText HudResult()
         {
-            return LiteralOrEmpty(ExecutionHudText.Result(_execution));
+            return ExecutionHudText.Result(_execution);
         }
 
-        protected override void AppendHudLines(List<string> lines)
+        protected override void AppendHudTexts(List<LocalizedText> lines)
         {
             var local = LocalPlayer;
             lines.AddRange(ExecutionHudText.Lines(_execution, local != null ? IdOf(local) : (int?)null, _localInteractTarget));

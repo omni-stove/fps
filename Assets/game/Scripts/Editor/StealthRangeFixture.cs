@@ -27,28 +27,31 @@ namespace Fps.Editor
         public const float WallHeight = 3.5f;
         public const float WallThickness = 0.4f;
 
-        public static readonly Vector3 AreaCenter = new Vector3(-7f, 0f, -16f);
+        public static readonly Vector3 AreaCenter = new Vector3(-7f, 0f, 17.25f);
 
         // 高さは床の上下を含めて焼けるように取る。
-        public static readonly Vector3 AreaSize = new Vector3(12f, 8f, 16f);
+        public static readonly Vector3 AreaSize = new Vector3(5f, 8f, 13.5f);
 
-        public static readonly Vector3 EnemyFeet = new Vector3(-7f, 0f, -22f);
+        public static readonly Vector3 EnemyFeet = new Vector3(-7f, 0f, 22.5f);
+
+        // 床の奥の端に置くので、端を背にして出現位置の側を向かせる。
+        public static readonly Quaternion EnemyFacing = Quaternion.LookRotation(Vector3.back, Vector3.up);
 
         // 敵の視認距離 (EnemyAgent.DefaultSightRange) より手前だが、遠くからたまり始めるのを確かめられる距離。
-        public static readonly Vector3 ApproachStart = new Vector3(-7f, 0f, -9.5f);
+        public static readonly Vector3 ApproachStart = new Vector3(-7f, 0f, 11.5f);
 
-        // 出現位置や近くの置く物 (近接の的・パラシュートの塔・崖のぼりの段) に視認距離の内側で接するので、壁と屋根で囲んで見えなくする。
-        // 南の端だけは床の端とのあいだを開けておき、手で遊ぶときにそこから入る。
-        public static readonly Vector3 WallCenter = new Vector3(-7f, WallHeight / 2f, -8.25f);
-        public static readonly Vector3 WallSize = new Vector3(11.9f, WallHeight, WallThickness);
+        // 標的ダミーの列や近くの置く物 (怯みの的・ボス) に視認距離の内側で接するので、壁と屋根で囲んで見えなくする。
+        // 北の端だけは床の端とのあいだを開けておき、手で遊ぶときにそこから入る。
+        public static readonly Vector3 WallCenter = new Vector3(-7f, WallHeight / 2f, 10.75f);
+        public static readonly Vector3 WallSize = new Vector3(4.9f, WallHeight, WallThickness);
 
-        public static readonly Vector3 LeftWallCenter = new Vector3(-12.75f, WallHeight / 2f, -16f);
-        public static readonly Vector3 RightWallCenter = new Vector3(-1.25f, WallHeight / 2f, -16f);
-        public static readonly Vector3 SideWallSize = new Vector3(WallThickness, WallHeight, 15.9f);
+        public static readonly Vector3 LeftWallCenter = new Vector3(-9.25f, WallHeight / 2f, 17.25f);
+        public static readonly Vector3 RightWallCenter = new Vector3(-4.75f, WallHeight / 2f, 17.25f);
+        public static readonly Vector3 SideWallSize = new Vector3(WallThickness, WallHeight, 13.4f);
 
         // 角度は水平にしか見ないので、高い塔の上は壁だけでは隠れない。
-        public static readonly Vector3 RoofCenter = new Vector3(-7f, WallHeight + 0.1f, -16f);
-        public static readonly Vector3 RoofSize = new Vector3(11.9f, 0.2f, 15.9f);
+        public static readonly Vector3 RoofCenter = new Vector3(-7f, WallHeight + 0.1f, 17.25f);
+        public static readonly Vector3 RoofSize = new Vector3(4.9f, 0.2f, 13.4f);
 
         public int Order => 100;
 
@@ -76,7 +79,7 @@ namespace Fps.Editor
                     EnemyName,
                     EnemyId,
                     EnemyFeet,
-                    Quaternion.LookRotation(Vector3.forward, Vector3.up),
+                    EnemyFacing,
                     Array.Empty<Vector3>(),
                     new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth),
                     weapon);

@@ -35,6 +35,9 @@ namespace Fps.Core
         /// <summary>回避を始めた。</summary>
         public const string ReasonDodge = "dodge";
 
+        /// <summary>伏せた。</summary>
+        public const string ReasonProne = "prone";
+
         private readonly HoldToggleState _state = new HoldToggleState(HoldMode.Hold);
         private readonly Func<bool> _canStand;
         private bool _hasMode;

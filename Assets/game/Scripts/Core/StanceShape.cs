@@ -1,7 +1,7 @@
 namespace Fps.Core
 {
     /// <summary>
-    /// 1 つの姿勢 (立ち・しゃがみ) でのカプセルと目の寸法。Y はすべてプレイヤー本体のローカル座標 (m)。
+    /// 1 つの姿勢 (立ち・しゃがみ・伏せ) でのカプセルと目の寸法。Y はすべてプレイヤー本体のローカル座標 (m)。
     /// </summary>
     public readonly struct StanceShape
     {

@@ -59,6 +59,16 @@ namespace Fps.Editor
         public static LevelBox HighCover => Covers[1];
 
         /// <summary>
+        /// 遮蔽物の名前ごとの面の材質 (<see cref="SurfaceMaterial"/> の Id)。着弾の演出を材質ごとに見比べられるよう、低い壁と高い壁で変える。
+        /// 載っていない遮蔽物は <see cref="SurfaceMaterial.DefaultId"/>。
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> CoverSurfaceIds = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [LowCoverName] = SurfaceImpactAssetStep.ConcreteId,
+            [HighCoverName] = SurfaceImpactAssetStep.MetalId,
+        };
+
+        /// <summary>
         /// コマンドライン引数で決まる場所に Bootstrap シーンを生成し、Build Settings に登録する。
         /// 失敗したら例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
         /// </summary>
@@ -148,6 +158,7 @@ namespace Fps.Editor
         /// <summary>
         /// <see cref="Covers"/> の遮蔽物を、シーン直下の <see cref="CoversName"/> の子として置いて親を返す。
         /// 床は GameBootstrap が実行時に作るので、遮蔽物は床の上 (y = 0 から) に立つ大きさと位置にしてある。
+        /// 遮蔽物には <see cref="CoverSurfaceIds"/> の材質を付ける。
         /// </summary>
         public static GameObject CreateCovers(Scene scene)
         {
@@ -157,7 +168,8 @@ namespace Fps.Editor
             SceneManager.MoveGameObjectToScene(root, scene);
             foreach (var cover in Covers)
             {
-                SceneBuildHelpers.CreateStaticBox(scene, root.transform, cover.Name, cover.Center, cover.Size);
+                var box = SceneBuildHelpers.CreateStaticBox(scene, root.transform, cover.Name, cover.Center, cover.Size);
+                SceneBuildHelpers.SetSurfaceMaterial(box, SceneBuildHelpers.SurfaceIdOf(CoverSurfaceIds, cover.Name));
             }
 
             return root;

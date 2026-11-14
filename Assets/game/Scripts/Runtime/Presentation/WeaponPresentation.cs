@@ -8,8 +8,9 @@ using UnityEngine.SceneManagement;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 武器の演出 (銃声・マズルフラッシュ・曳光弾・着弾の火花と音・リロード音) を受け持つ。撃つ人 (プレイヤー・NetPlayer・敵) の本体に付ける。
-    /// 音とエフェクトは <see cref="Catalog"/> (<see cref="PresentationCatalog"/>) から武器の Id で引く。
+    /// 武器の演出 (銃声・マズルフラッシュ・曳光弾・着弾の火花と音と銃痕・リロード音) を受け持つ。撃つ人 (プレイヤー・NetPlayer・敵) の本体に付ける。
+    /// 音とエフェクトは <see cref="Catalog"/> (<see cref="PresentationCatalog"/>) から武器の Id で引く。着弾の演出は、<see cref="SurfaceImpacts"/>
+    /// (<see cref="SurfaceImpactCatalog"/>) があればそこから当たった面の材質の Id で引き、無ければ <see cref="Catalog"/> の火花と音を使う。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -19,7 +20,8 @@ namespace Fps.Runtime
     /// <item>自分 (<see cref="IsLocal"/>) の銃声とリロード音は 2D、他人の銃声は本体の 3D の音源、着弾と撃った者の分からない銃声は
     /// その場所に置いた 3D の音源で鳴らし、距離で減衰させる。</item>
     /// <item>マズルフラッシュ・着弾の火花・曳光弾 (短い <see cref="LineRenderer"/>)・3D の音源は <see cref="PresentationPool{T}"/> で使い回し、
-    /// 上限を超えたら古いものから取り上げる。部品はキャラの外の <see cref="PoolRoot"/> の下に置く (キャラが動いても着弾の跡は動かない)。</item>
+    /// 上限を超えたら古いものから取り上げる。部品はキャラの外の <see cref="PoolRoot"/> の下に置く (キャラが動いても着弾の跡は動かない)。
+    /// 銃痕だけは撃った者が消えても残るよう、シーンに 1 つの <see cref="ImpactDecals"/> に貼る。</item>
     /// <item>リロード音は、同じ階層の <see cref="WeaponController.ReloadStarted"/> (オフラインのプレイヤー) と、
     /// <see cref="PlayReload"/> を呼ぶ側 (ネット対戦では <c>Fps.Net.NetPlayer</c>) から鳴らす。</item>
     /// <item>銃声とリロード音を鳴らしたら、字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。自分のリロード音は位置を付けない。</item>
@@ -89,6 +91,9 @@ namespace Fps.Runtime
 
         private PresentationCatalog _catalog;
         private bool _catalogResolved;
+        private SurfaceImpactCatalog _surfaceImpacts;
+        private bool _surfaceImpactsResolved;
+        private ImpactDecals _decals;
         private GameObject _tracerSource;
         private Material _tracerMaterial;
         private Gradient _tracerGradient;
@@ -126,6 +131,47 @@ namespace Fps.Runtime
                 _catalogResolved = true;
                 _tracerSource = null;
             }
+        }
+
+        /// <summary>
+        /// 材質ごとの着弾の演出を引く設定。初めて読んだときに <see cref="SurfaceImpactCatalog.Load"/> で探し、無ければ null
+        /// (着弾には <see cref="Catalog"/> の火花と音を使い、銃痕は貼らない)。代入すると探さずにそれを使う。
+        /// </summary>
+        public SurfaceImpactCatalog SurfaceImpacts
+        {
+            get
+            {
+                if (!_surfaceImpactsResolved)
+                {
+                    _surfaceImpacts = SurfaceImpactCatalog.Load();
+                    _surfaceImpactsResolved = true;
+                }
+
+                return _surfaceImpacts;
+            }
+            set
+            {
+                _surfaceImpacts = value;
+                _surfaceImpactsResolved = true;
+            }
+        }
+
+        /// <summary>
+        /// 銃痕を貼る先。読んだときに無い (破棄されたものを含む) と、この本体のシーンの <see cref="ImpactDecals.For"/> を使う。
+        /// 代入するとそれを使う。
+        /// </summary>
+        public ImpactDecals Decals
+        {
+            get
+            {
+                if (_decals == null)
+                {
+                    _decals = ImpactDecals.For(gameObject.scene);
+                }
+
+                return _decals;
+            }
+            set => _decals = value;
         }
 
         /// <summary>
@@ -302,21 +348,26 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// impact の着弾の火花と音を出す。同じフレームの直前の <see cref="PlayShot"/> の曳光弾は、当たった点で止まるようにする。
-        /// 素材の有無にかかわらず、1 回ごとに材質と部位を <see cref="FormatImpactLog"/> の形でログに出す。
+        /// impact の着弾のエフェクトと音を出し、キャラ以外の面なら銃痕を貼る (<see cref="Decals"/>)。同じフレームの直前の
+        /// <see cref="PlayShot"/> の曳光弾は、当たった点で止まるようにする。
+        /// <see cref="SurfaceImpacts"/> があれば材質の Id で引いた素材 (<see cref="SurfaceImpactCatalog.Resolve"/>) を使い、引けなければ何も出さない。
+        /// 無ければ <see cref="Catalog"/> の火花と音を使い、銃痕は貼らない。
+        /// 素材の有無にかかわらず、1 回ごとに材質・部位・使った素材を <see cref="FormatImpactLog"/> の形でログに出す。
         /// </summary>
         public void PlayImpact(ImpactInfo impact)
         {
-            Debug.Log(FormatImpactLog(impact), this);
             var now = Time.time;
             var tracer = _pendingTracerFrame == Time.frameCount ? _pendingTracer : null;
             _pendingTracer = null;
 
             var catalog = Catalog;
+            var surfaces = SurfaceImpacts;
+            var surface = surfaces != null ? surfaces.Resolve(impact.MaterialId) : null;
+            Debug.Log(FormatImpactLog(impact, ImpactSourceLabel(surfaces, surface)), this);
+
             if (catalog == null)
             {
                 WarnMissingCatalog();
-                return;
             }
 
             if (tracer != null)
@@ -324,15 +375,32 @@ namespace Fps.Runtime
                 RetargetTracer(tracer, impact.Point, now);
             }
 
-            var normal = impact.Normal.sqrMagnitude > 0f ? impact.Normal.normalized : Vector3.up;
-            if (catalog.ImpactSpark != null)
+            GameObject effect;
+            AudioClip sound;
+            if (surfaces != null)
             {
-                SpawnEffect(catalog.ImpactSpark, ImpactSparkCapacity, impact.Point, Quaternion.LookRotation(normal), now);
+                effect = surface?.Effect;
+                sound = surface?.Sound;
+                if (surface != null && surface.Decal != null && !impact.IsCharacter)
+                {
+                    Decals.Place(impact, surface);
+                }
+            }
+            else
+            {
+                effect = catalog != null ? catalog.ImpactSpark : null;
+                sound = catalog != null ? catalog.ImpactSound : null;
             }
 
-            if (catalog.ImpactSound != null)
+            var normal = impact.Normal.sqrMagnitude > 0f ? impact.Normal.normalized : Vector3.up;
+            if (effect != null)
             {
-                PlayAt(catalog.ImpactSound, impact.Point, now);
+                SpawnEffect(effect, ImpactSparkCapacity, impact.Point, Quaternion.LookRotation(normal), now);
+            }
+
+            if (sound != null)
+            {
+                PlayAt(sound, impact.Point, now);
             }
         }
 
@@ -400,10 +468,27 @@ namespace Fps.Runtime
             return WeaponSockets.None.MuzzlePose(origin, direction).position;
         }
 
-        /// <summary>着弾の演出を出すときのログ。例: <c>[Presentation] impact material=default character=True zone=Head</c>。</summary>
-        public static string FormatImpactLog(ImpactInfo impact)
+        /// <summary>
+        /// 着弾の演出を出すときのログ。source は使った素材 (<see cref="ImpactSourceLabel"/>)。
+        /// 例: <c>[Presentation] impact material=metal character=False zone=none source=surface:metal</c>。
+        /// </summary>
+        public static string FormatImpactLog(ImpactInfo impact, string source)
         {
-            return LogTag + " impact " + impact;
+            return LogTag + " impact " + impact + " source=" + source;
+        }
+
+        /// <summary>
+        /// 着弾に使った素材の名前。surfaces が無ければ <c>legacy</c> (<see cref="PresentationCatalog"/> の火花と音)、
+        /// surfaces はあるが引けなければ <c>none</c>、引けたら <c>surface:&lt;引けた材質の Id&gt;</c> (default に寄せたら default)。
+        /// </summary>
+        public static string ImpactSourceLabel(SurfaceImpactCatalog surfaces, SurfaceImpactAssets surface)
+        {
+            if (surfaces == null)
+            {
+                return "legacy";
+            }
+
+            return surface != null ? "surface:" + surface.MaterialId : "none";
         }
 
         /// <summary>

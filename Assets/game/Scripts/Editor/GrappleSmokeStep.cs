@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Fps.Editor
 {
-    // batchmode には入力が無いので、Ability2 の代わりに AbilityHost.TryUse を、照準の代わりに FirstPersonLook を回し、
+    // batchmode には入力が無いので、Ability1 / Ability2 の代わりに AbilityHost.TryUse を、照準の代わりに FirstPersonLook を回し、
     // Jump の代わりに MoveFilter への差し込みを使う。射撃場のルールは Abilities を Off のままにしているので、
     // まず使えないことを確かめてから、この手順の間だけ On にする。壁は GrappleWallFixture。
     public sealed class GrappleSmokeStep : ITpsActionSmokeStep

@@ -16,7 +16,7 @@
 上の依存パッケージは `package.json` の `dependencies` にあるので、Package Manager が自動で入れる。自分で manifest に書く必要は無い。
 
 - 入力は Input System だけを使う。**Edit > Project Settings > Player > Active Input Handling** を `Input System Package (New)` か `Both` にする。
-- 武器の音と光の素材を作る `Fps/Build Presentation Assets` だけは URP (`com.unity.render-pipelines.universal`) のシェーダーを使う。URP が無くてもほかの機能と smoke は動き、武器の音と光が出ないという警告が出るだけ。薬莢と空撃ちの音の素材 (`Presentation/WeaponExtrasCatalog`) も同じく URP のシェーダーを使い、`Fps/Build All Presentation Assets` (`Fps.Editor.PresentationAssetSteps.BuildAll`) で作る。無ければ薬莢と空撃ちの音が出ないという警告が出るだけ。
+- 武器の音と光の素材を作る `Fps/Build Presentation Assets` だけは URP (`com.unity.render-pipelines.universal`) のシェーダーを使う。URP が無くてもほかの機能と smoke は動き、武器の音と光が出ないという警告が出るだけ。薬莢と空撃ちの音の素材 (`Presentation/WeaponExtrasCatalog`) も同じく URP のシェーダーを使い、`Fps/Build All Presentation Assets` (`Fps.Editor.PresentationAssetSteps.BuildAll`) で作る。無ければ薬莢と空撃ちの音が出ないという警告が出るだけ。材質ごとの銃痕と着弾の素材 (`Presentation/SurfaceImpactCatalog`) も同じシェーダーを使い、同じ `Fps/Build All Presentation Assets` で作る。無ければ着弾は従来の火花と音になる。
 
 ### 任意: ネット対戦 (`Fps.Net`) と EOS (`Fps.NetEos`)
 

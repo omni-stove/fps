@@ -153,6 +153,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("散らばりを絞り切るまでの発数")]
         private int _openingShots = DefaultOpeningShots;
 
+        [SerializeField, Min(0f), Tooltip("怯みにくさ。0 で既定、1 で怯むのに 2 倍のダメージが要り、怯む長さは半分になる")]
+        private float _staggerResistance;
+
         [Header("Body")]
         [SerializeField, Min(0f)]
         private float _eyeHeight = DefaultEyeHeight;
@@ -242,6 +245,8 @@ namespace Fps.Runtime
         public EnemyState State => _brain?.State ?? EnemyState.Idle;
 
         public EnemyArchetype Archetype => _archetype;
+
+        public float StaggerResistance => _staggerResistance;
 
         /// <summary><see cref="SetErrand"/> で渡した行き先 (足元)。無ければ null。</summary>
         public Vector3? Errand => _errand;
@@ -398,6 +403,7 @@ namespace Fps.Runtime
 
             // 歩きの速さはシーン生成スクリプトが NavMeshAgent に書いた値。以後 agent.speed は足の運びで毎フレーム書き換える。
             _walkSpeed = _agent.speed;
+            _agent.autoTraverseOffMeshLink = false;
             _spreadSeed = _random.Next();
             _stuck = new StuckMonitor(StuckSeconds, StuckProgressDistance, StuckGoalChangeDistance);
             _stuck.Recovered += OnUnstuck;
@@ -431,7 +437,8 @@ namespace Fps.Runtime
                 CreateShieldSpec(),
                 CreateSniperSpec(),
                 CreateChargerSpec(),
-                CreateBomberSpec());
+                CreateBomberSpec(),
+                _staggerResistance);
         }
 
         /// <summary>
@@ -496,6 +503,7 @@ namespace Fps.Runtime
             _coverHealthFraction = spec.CoverHealthFraction;
             _archetype = spec.Archetype;
             CopyArchetypeSpecs(spec);
+            _staggerResistance = spec.StaggerResistance;
         }
 
         /// <summary>遮蔽点の段階が変わったときのログ。</summary>
@@ -542,6 +550,12 @@ namespace Fps.Runtime
             else
             {
                 ResolveTarget(force: true);
+
+                // 置かれたタレットの近くで有効になった敵が、選び直しの間隔が過ぎるまで遠いプレイヤーを狙わないように。
+                if (Turret.Armed.Count > 0)
+                {
+                    ResolveTurretTarget(force: true);
+                }
             }
 
             _lastFinitePosition = transform.position;
@@ -611,8 +625,18 @@ namespace Fps.Runtime
             {
                 ResolveTarget(force: false);
             }
+            else if (!pinned && (Turret.Armed.Count > 0 || _target.GetComponent<Turret>() != null))
+            {
+                // タレットが無くなった後も、狙っていたのがタレットならタグの相手へ戻す。
+                ResolveTurretTarget(force: _target.IsDead);
+            }
 
-            if (TickKnockback(deltaSeconds) || HoldWhileInterrupted(deltaSeconds))
+            if (TickKnockback(deltaSeconds) || TraverseOffMeshLink(deltaSeconds))
+            {
+                return;
+            }
+
+            if (HoldWhileInterrupted(deltaSeconds))
             {
                 return;
             }
@@ -818,6 +842,7 @@ namespace Fps.Runtime
             _detour = null;
             _goal = null;
             _stuck.Reset();
+            ClearLinkTraversal();
             SetCrouching(false);
 
             _weapon.Reloaded -= OnReloaded;
@@ -889,6 +914,7 @@ namespace Fps.Runtime
             _detour = null;
             _goal = null;
             _stuck.Reset();
+            ClearLinkTraversal();
             _agent.enabled = false;
         }
     }

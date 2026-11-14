@@ -243,6 +243,33 @@ namespace Fps.Editor
         }
 
         /// <summary>
+        /// target に材質 materialId の <see cref="SurfaceMaterial"/> を付けて (既にあればその Id を書き換えて) 返す。
+        /// 子のコライダーにも効く (<see cref="SurfaceMaterial.IdOf"/>)。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">target が null。</exception>
+        public static SurfaceMaterial SetSurfaceMaterial(GameObject target, string materialId)
+        {
+            if (target == null)
+            {
+                throw new ArgumentNullException(nameof(target));
+            }
+
+            if (!target.TryGetComponent<SurfaceMaterial>(out var surface))
+            {
+                surface = target.AddComponent<SurfaceMaterial>();
+            }
+
+            surface.Id = materialId;
+            return surface;
+        }
+
+        /// <summary>名前ごとの材質の表 ids から name の材質の Id を引く。載っていない・ids が null なら <see cref="SurfaceMaterial.DefaultId"/>。</summary>
+        public static string SurfaceIdOf(IReadOnlyDictionary<string, string> ids, string name)
+        {
+            return ids != null && name != null && ids.TryGetValue(name, out var id) ? SurfaceMaterial.Normalize(id) : SurfaceMaterial.DefaultId;
+        }
+
+        /// <summary>
         /// surface の NavMesh を焼いて (アセットには保存せず) 返す。焼いた NavMesh はすぐ NavMesh のクエリに使える。
         /// 保存は <see cref="SaveNavMeshData"/>。
         /// </summary>

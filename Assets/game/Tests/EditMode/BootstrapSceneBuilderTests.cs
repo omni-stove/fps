@@ -272,6 +272,9 @@ namespace Fps.Tests.EditMode
                 Assert.That(collider.isTrigger, Is.False, expected.Name);
                 Assert.That(box.gameObject.isStatic, Is.True, expected.Name);
             }
+
+            Assert.That(SurfaceMaterial.IdOf(low.GetComponent<Collider>()), Is.EqualTo(SurfaceImpactAssetStep.ConcreteId));
+            Assert.That(SurfaceMaterial.IdOf(high.GetComponent<Collider>()), Is.EqualTo(SurfaceImpactAssetStep.MetalId));
         }
     }
 }

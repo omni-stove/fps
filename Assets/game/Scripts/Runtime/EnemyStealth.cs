@@ -320,7 +320,8 @@ namespace Fps.Runtime
                 _awareness.Observe(
                     transform.forward.ToNumerics(), _observedStealth.Posture, Mathf.Clamp01(_observedStealth.LightFactor), _observedStealth.Speed);
             }
-            else
+            // 目標が無いあいだはルールを持ち越す。ResetTo で目標が外れると、次の tick で目標を拾ったその判断が Off のまま走ってすぐ交戦するため。
+            else if (target != null)
             {
                 _awareness.Rule = Stealth.Off;
                 _awareness.Observe(transform.forward.ToNumerics(), AwarenessPosture.Standing, 1f, 0f);

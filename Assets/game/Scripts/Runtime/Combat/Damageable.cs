@@ -92,6 +92,9 @@ namespace Fps.Runtime
         /// </summary>
         public bool IsLocalPlayer { get; set; }
 
+        // 置いた盾 (Deployable) のように、壊れてもキルフィードや得点に載せない物があるため。組み立てる側が決めるので、シーンには保存しない。
+        public bool ReportsKills { get; set; } = true;
+
         // シーンに保存しない。ボスの段階のように実行時に組み立てる側が持つ値で、Damageable ごとに Inspector で同じ値を書かせないため。
         public ZoneDamageMultipliers ZoneMultipliers
         {
@@ -144,7 +147,7 @@ namespace Fps.Runtime
         /// <summary>
         /// 体力を amount 減らし、生きていたなら <see cref="Damaged"/> を呼ぶ。死亡後は何もしない。
         /// 生きていたなら、<see cref="IsLocalPlayer"/> のときは <see cref="CombatEvents.DamageTaken"/> を、
-        /// この減りで倒れたときは <see cref="CombatEvents.Killed"/> を出す (<see cref="Damaged"/> の後)。
+        /// この減りで倒れたときは <see cref="ReportsKills"/> なら <see cref="CombatEvents.Killed"/> を出す (<see cref="Damaged"/> の後)。
         /// </summary>
         /// <param name="amount">ダメージ量。0 以上。</param>
         /// <param name="sourcePosition">ダメージを与えた者の位置。分からなければ null。</param>
@@ -181,7 +184,7 @@ namespace Fps.Runtime
                 CombatEvents.RaiseDamageTaken(sourcePosition, amount);
             }
 
-            if (health.IsDead)
+            if (health.IsDead && ReportsKills)
             {
                 CombatEvents.RaiseKilled(KillFeedEntryFor(zone));
             }

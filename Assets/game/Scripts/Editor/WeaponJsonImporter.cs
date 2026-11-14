@@ -557,6 +557,16 @@ namespace Fps.Editor
                 }
             }
 
+            // Id の重なりは ToCatalog でしか拾えず、これは保存の後の Configure で初めて呼ばれるので、ここで先に通す
+            try
+            {
+                catalog.ToCatalog();
+            }
+            catch (WeaponDefinitionException e)
+            {
+                throw new WeaponDefinitionException($"weapon catalog '{catalogPath}': {e.Message}", e);
+            }
+
             return catalog;
         }
 

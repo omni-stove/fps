@@ -6,7 +6,8 @@ using Fps.Core;
 namespace Fps.Server
 {
     /// <summary>
-    /// 試合に出ている各プレイヤーの体 (位置・向き・姿勢)。移動のモジュールが動かし、ルール・戦闘・Bot のモジュールが読む。
+    /// 試合に出ている各プレイヤーの体 (位置・向き・姿勢・ダウン)。位置の持ち主は移動のモジュールで、入力を処理するたびにここへ写す。
+    /// ルールのモジュールは出現 (<see cref="Teleport"/>) とダウン (<see cref="SetDowned"/>) をここに書き、移動のモジュールがそれを受ける。
     /// 1 つにまとめるのは、どのモジュールも同じ tick の同じ位置で判定するため。
     /// </summary>
     /// <remarks>位置は Unity の NetPlayer の transform.position と同じ点 (カプセルの寸法の原点) で、スナップショットにもこの値を載せる。</remarks>
@@ -21,6 +22,9 @@ namespace Fps.Server
 
         /// <summary>置き直した直後に呼ばれる。移動のモジュールはこれで予測の照合や速度を捨てる。</summary>
         public event Action<ServerBody> Teleported;
+
+        /// <summary><see cref="ServerBody.IsDowned"/> が変わった直後に呼ばれる。移動のモジュールはこれでダウン中の動きを止める。</summary>
+        public event Action<ServerBody> DownedChanged;
 
         public StanceGeometry Geometry { get; }
 
@@ -60,6 +64,22 @@ namespace Fps.Server
             body.Teleport(position, yaw, tick);
             Teleported?.Invoke(body);
         }
+
+        public void SetDowned(int playerId, bool downed)
+        {
+            if (!_bodies.TryGetValue(playerId, out var body))
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerId), playerId, "no body for this player");
+            }
+
+            if (body.IsDowned == downed)
+            {
+                return;
+            }
+
+            body.IsDowned = downed;
+            DownedChanged?.Invoke(body);
+        }
     }
 
     internal sealed class ServerBody
@@ -77,6 +97,8 @@ namespace Fps.Server
         public Vector3 Position { get; private set; }
 
         public float Yaw { get; private set; }
+
+        public bool IsDowned { get; internal set; }
 
         public PlayerStance Stance { get; private set; }
 

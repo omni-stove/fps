@@ -20,11 +20,12 @@ namespace Fps.Server
     /// (Session には待ち時間を渡さず、待ちを 2 か所で数えない)。
     /// </para>
     /// <para>
-    /// 射撃とダメージは戦闘のモジュールが <see cref="ApplyDamage"/> を通し、スナップショットは移動のモジュールが
-    /// <see cref="FillMatch"/>・<see cref="FillPlayer"/>・<see cref="FillControlPoints"/> で埋める。
+    /// 射撃とダメージは戦闘のモジュールが <see cref="ApplyDamage"/> を通す。スナップショットにはルールの持つ部分だけを
+    /// <see cref="Contribute"/> で載せ、位置は移動のモジュールが載せる。位置の持ち主は移動のモジュールで、ここは出現とダウンを
+    /// <see cref="ServerBodies"/> に書いて伝え、判定には <see cref="ServerBodies"/> に写された位置を使う。
     /// </para>
     /// </remarks>
-    internal sealed partial class MatchRulesModule : IServerModule
+    internal sealed partial class MatchRulesModule : IServerModule, ISnapshotContributor
     {
         // 不正な要求の警告を出す最短の間隔 (秒)。連打でログを埋めないため
         private const float _rejectWarningInterval = 1f;
@@ -231,6 +232,26 @@ namespace Fps.Server
                 _damageAttackerId = null;
                 _damageVictimId = null;
             }
+        }
+
+        /// <summary>試合の状態・各プレイヤーのチームと体力と成績・拠点を載せる。位置などの移動の状態は移動のモジュールが載せる。</summary>
+        public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)
+        {
+            ArgumentNullException.ThrowIfNull(snapshot);
+            if (_session == null)
+            {
+                return;
+            }
+
+            FillMatch(ref snapshot.Match);
+            var players = snapshot.Players;
+            for (var i = 0; i < players.Count; i++)
+            {
+                ref var row = ref players[i];
+                FillPlayer(row.PlayerId, ref row);
+            }
+
+            FillControlPoints(snapshot.ControlPoints);
         }
 
         /// <summary>試合中で、倒れておらずダウン中でもないときだけ撃てる。戦闘のモジュールはそれ以外の射撃を弾を減らさずに捨てる。</summary>

@@ -199,7 +199,7 @@ namespace Fps.Runtime
         private float _coverHealthFraction = EnemySpec.DefaultCoverHealthFraction;
 
         [Header("Weapon")]
-        [SerializeField, Tooltip("撃つ武器の定義 (弾数・連射間隔・ダメージ・射程・距離減衰)。シーン生成スクリプトが配置ごとに武器の一覧から引いて配線する")]
+        [SerializeField, RequiredReference, Tooltip("撃つ武器の定義 (弾数・連射間隔・ダメージ・射程・距離減衰)。シーン生成スクリプトが配置ごとに武器の一覧から引いて配線する")]
         private WeaponDefinition _weaponDefinition;
 
         private NavMeshAgent _agent;

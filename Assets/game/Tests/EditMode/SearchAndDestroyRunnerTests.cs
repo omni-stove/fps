@@ -218,6 +218,59 @@ namespace Fps.Tests.EditMode
             Assert.That(hud.Lines, Has.Member("爆弾 A に設置: 起爆まで 2 秒"));
         }
 
+        [Test]
+        public void AWiredDefinitionReplacesTheInspectorValues()
+        {
+            var definition = Definition("SndTuning");
+            definition.RoundSeconds = 90f;
+            definition.PlantSeconds = PlantSeconds * 3f;
+            definition.DefuseSeconds = 4f;
+            definition.FuseSeconds = 7f;
+            definition.WinsToWin = 2;
+            definition.PreparationSeconds = 0f;
+            definition.SwapEveryRounds = 0;
+            _runner.Definition = definition;
+
+            Begin();
+
+            var spec = _runner.Game.Spec;
+            Assert.That(spec.SiteCount, Is.EqualTo(2), "the scene still decides the sites");
+            Assert.That(spec.RoundSeconds, Is.EqualTo(90f));
+            Assert.That(spec.PlantSeconds, Is.EqualTo(PlantSeconds * 3f));
+            Assert.That(spec.DefuseSeconds, Is.EqualTo(4f));
+            Assert.That(spec.FuseSeconds, Is.EqualTo(7f));
+            Assert.That(spec.WinsToWin, Is.EqualTo(2));
+            Assert.That(spec.SwapEveryRounds, Is.EqualTo(0));
+
+            _alphaOne.transform.position = SiteA;
+            _runner.Tick(PlantSeconds);
+            Assert.That(_runner.Game.Bomb, Is.EqualTo(BombState.Carried), "the Inspector's plant time is no longer used");
+
+            _runner.Tick(PlantSeconds * 2f);
+            Assert.That(_runner.Game.Bomb, Is.EqualTo(BombState.Planted));
+            Assert.That(_runner.Game.FuseRemaining, Is.EqualTo(7f).Within(0.001f));
+        }
+
+        [Test]
+        public void TryBeginFailsWithAnInvalidDefinitionAndNamesIt()
+        {
+            var definition = Definition("BrokenSnd");
+            definition.FuseSeconds = 0f;
+            _runner.Definition = definition;
+            LogAssert.Expect(LogType.Error, new Regex("BrokenSnd"));
+
+            Assert.That(_runner.TryBegin(), Is.False);
+            Assert.That(_runner.IsStarted, Is.False);
+        }
+
+        private SearchAndDestroyDefinition Definition(string name)
+        {
+            var definition = ScriptableObject.CreateInstance<SearchAndDestroyDefinition>();
+            definition.name = name;
+            _objects.Add(definition);
+            return definition;
+        }
+
         private void Begin(ModeHudView hud = null)
         {
             _runner.Begin(

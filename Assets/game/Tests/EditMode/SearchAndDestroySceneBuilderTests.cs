@@ -19,6 +19,7 @@ namespace Fps.Tests.EditMode
             Assert.That(builder.RulesPath, Is.EqualTo(GameRulesAssetBuilder.SearchAndDestroyPath));
             Assert.That(builder.NavMeshDataPath, Is.EqualTo("Assets/game/Scenes/SearchAndDestroy/NavMesh-Floor.asset"));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.SearchAndDestroyScene));
+            Assert.That(SearchAndDestroySceneBuilder.DefinitionPath, Is.EqualTo("Assets/game/Modes/SearchAndDestroy.asset"));
         }
 
         [Test]

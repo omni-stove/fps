@@ -69,6 +69,7 @@ namespace Fps.Editor
         public const string HipSpreadDegreesField = "hipSpreadDegrees";
         public const string AdsSpreadDegreesField = "adsSpreadDegrees";
         public const string MoveSpreadDegreesField = "moveSpreadDegrees";
+        public const string RecoilRecoveryDelaySecondsField = "recoilRecoveryDelaySeconds";
 
         public const string FalloffStartDistanceField = "startDistance";
         public const string FalloffEndDistanceField = "endDistance";
@@ -102,6 +103,7 @@ namespace Fps.Editor
             HipSpreadDegreesField,
             AdsSpreadDegreesField,
             MoveSpreadDegreesField,
+            RecoilRecoveryDelaySecondsField,
         };
 
         private static readonly IReadOnlyList<string> _falloffFields = new[]
@@ -336,6 +338,7 @@ namespace Fps.Editor
             var hipSpreadDegrees = reader.OptionalFloat(HipSpreadDegreesField, 0f);
             var adsSpreadDegrees = reader.OptionalFloat(AdsSpreadDegreesField, 0f);
             var moveSpreadDegrees = reader.OptionalFloat(MoveSpreadDegreesField, 0f);
+            var recoilRecoveryDelaySeconds = reader.OptionalFloat(RecoilRecoveryDelaySecondsField, WeaponSpec.DefaultRecoilRecoveryDelaySeconds);
 
             try
             {
@@ -362,7 +365,8 @@ namespace Fps.Editor
                     recoilRecoveryPerSecond,
                     hipSpreadDegrees,
                     adsSpreadDegrees,
-                    moveSpreadDegrees);
+                    moveSpreadDegrees,
+                    recoilRecoveryDelaySeconds);
             }
             catch (ArgumentException e)
             {

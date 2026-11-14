@@ -194,6 +194,21 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>境界の筒の高さ (m)。0 より大きい有限値。次に筒を合わせるとき (<see cref="RefreshBoundary"/>) から使う。</summary>
+        public float BoundaryHeight
+        {
+            get => _boundaryHeight;
+            set
+            {
+                if (!(value > 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "BoundaryHeight must be positive and finite");
+                }
+
+                _boundaryHeight = value;
+            }
+        }
+
         /// <summary>Play 中に境界の筒を出すか。始めた後に変えても、作った筒はそのまま。</summary>
         public bool ShowsBoundary
         {

@@ -18,8 +18,11 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("撃った後に移る足場 (ワールド座標の足元)。シーン生成スクリプトが配線する。空なら移らない")]
         private Vector3[] _perches = Array.Empty<Vector3>();
 
-        [SerializeField, Tooltip("照準の光線。+Z に長さ 1 の形を、目から目標へ伸ばす。空なら実行時に仮の線を作る")]
+        [SerializeField, Tooltip("照準の光線。+Z に長さ 1 の形を、目から目標へ伸ばす。空なら実行時に光線の見た目のプレハブから作る")]
         private Transform _aimBeam;
+
+        [SerializeField, Tooltip("照準の光線の見た目。原点を中心に +Z へ長さ 1・太さ 1 の形にする (大きさは毎フレーム上書きする)。当たり判定は外す。空なら仮の線を作る")]
+        private GameObject _beamPrefab;
 
         [SerializeField, Min(0.001f), Tooltip("照準の光線の太さ (m)")]
         private float _beamWidth = DefaultBeamWidth;
@@ -28,6 +31,7 @@ namespace Fps.Runtime
         private SniperEnemyBehavior _behavior;
         private EnemyBrain _attachedBrain;
         private float _lastAimElapsed;
+        private bool _ownsBeam;
         private bool _confirming;
         private bool _active;
 
@@ -38,7 +42,17 @@ namespace Fps.Runtime
         public Transform AimBeam
         {
             get => _aimBeam;
-            set => _aimBeam = value;
+            set
+            {
+                _aimBeam = value;
+                _ownsBeam = false;
+            }
+        }
+
+        public GameObject BeamPrefab
+        {
+            get => _beamPrefab;
+            set => _beamPrefab = value;
         }
 
         public bool IsBeamVisible => _aimBeam != null && _aimBeam.gameObject.activeSelf;
@@ -83,7 +97,8 @@ namespace Fps.Runtime
             _agent.Fired += OnFired;
             if (_aimBeam == null)
             {
-                _aimBeam = CreateBeamPlaceholder(null);
+                _aimBeam = CreateBeam(null, _beamPrefab);
+                _ownsBeam = true;
             }
         }
 
@@ -107,8 +122,9 @@ namespace Fps.Runtime
 
             Detach();
 
-            // 光線は持ち主の子にしていない (持ち主の向きや大きさに引きずられないように) ので、仮に作ったものは一緒に消す。
-            if (_aimBeam != null && _aimBeam.name == BeamPlaceholderName && !_aimBeam.IsChildOf(transform))
+            // 光線は持ち主の子にしていない (持ち主の向きや大きさに引きずられないように) ので、自分で作ったものは一緒に消す。
+            // 名前で見分けると、プレハブから作った光線が残る。
+            if (_ownsBeam && _aimBeam != null)
             {
                 if (Application.isPlaying)
                 {
@@ -160,6 +176,18 @@ namespace Fps.Runtime
             {
                 HideBeam();
             }
+        }
+
+        public static Transform CreateBeam(Transform parent, GameObject prefab)
+        {
+            if (prefab == null)
+            {
+                return CreateBeamPlaceholder(parent);
+            }
+
+            var beam = EnemyVisualPrefab.Instantiate(prefab, parent);
+            beam.SetActive(false);
+            return beam.transform;
         }
 
         public static Transform CreateBeamPlaceholder(Transform parent)

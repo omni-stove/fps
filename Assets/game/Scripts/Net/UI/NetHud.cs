@@ -57,7 +57,7 @@ namespace Fps.Net
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Hud))]
-    public sealed partial class NetHud : MonoBehaviour
+    public sealed partial class NetHud : MonoBehaviour, INetHud
     {
         /// <summary><see cref="Create"/> が作る GameObject の名前。</summary>
         public const string ObjectName = "NetHUD";

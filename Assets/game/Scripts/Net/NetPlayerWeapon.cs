@@ -128,7 +128,7 @@ namespace Fps.Net
         /// <summary>サーバーから届いた武器の状態。持ち主とサーバーでだけ意味がある (他人の分は届かず既定値のまま)。</summary>
         public NetWeaponState State => _state.Value;
 
-        /// <summary><see cref="NetHud"/> が OnValueChanged を購読する武器の状態の同期値。</summary>
+        /// <summary>HUD (Fps.Net.UI の NetHud) が OnValueChanged を購読する武器の状態の同期値。</summary>
         internal NetworkVariable<NetWeaponState> StateVariable => _state;
 
         public int AmmoInMagazine => _state.Value.AmmoInMagazine;

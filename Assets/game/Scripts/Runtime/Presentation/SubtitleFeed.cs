@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 鳴らした音の合図を字幕 (<see cref="SubtitleView"/>) に知らせる、静的なイベント。
+    /// 鳴らした音の合図を字幕 (既定の UI では Fps.Runtime.UI の SubtitleView) に知らせる、静的なイベント。
     /// 音を鳴らす側 (<see cref="WeaponPresentation"/> の銃声とリロード音・<see cref="CharacterAudio"/> の足音と着地音・
     /// <see cref="ThrownGrenade.PlayExplosionEffects"/> の爆発音) が、実際に音を鳴らしたときだけ <see cref="Raise"/> を呼ぶ。
     /// 音が聞こえる人と同じ合図だけを字幕にするため、素材が無くて鳴らなかった音は流さない。

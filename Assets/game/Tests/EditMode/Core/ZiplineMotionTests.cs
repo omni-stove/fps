@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
 {
     public sealed class ZiplineMotionTests
     {
-        private const float StepSeconds = 0.02f;
+        private const float _stepSeconds = 0.02f;
 
         private static readonly Vector3 _forward = new Vector3(0f, 0f, 1f);
 
@@ -74,7 +74,7 @@ namespace Fps.Core.Tests
             Assert.That(motion.Speed, Is.EqualTo(6f), "the entry speed is clamped as well");
             for (var i = 0; i < 100 && motion.IsRiding; i++)
             {
-                motion.Step(StepSeconds);
+                motion.Step(_stepSeconds);
                 Assert.That(motion.Speed, Is.LessThanOrEqualTo(6f));
             }
         }
@@ -105,12 +105,12 @@ namespace Fps.Core.Tests
         {
             var motion = new ZiplineMotion(new Vector3(0f, 5f, 0f), new Vector3(0f, 0f, 20f), ZiplineSpec.Default);
             motion.TryGrab(motion.Start, Vector3.Zero, _forward);
-            motion.Step(StepSeconds);
+            motion.Step(_stepSeconds);
 
             Assert.That(motion.Release(), Is.True);
             Assert.That(motion.Release(), Is.False);
             Assert.That(motion.Velocity.Length(), Is.GreaterThan(0f));
-            Assert.That(motion.Step(StepSeconds), Is.EqualTo(Vector3.Zero));
+            Assert.That(motion.Step(_stepSeconds), Is.EqualTo(Vector3.Zero));
             Assert.That(motion.HasArrived, Is.False);
         }
 
@@ -142,8 +142,8 @@ namespace Fps.Core.Tests
             var seconds = 0f;
             for (var i = 0; i < 100000 && motion.IsRiding; i++)
             {
-                motion.Step(StepSeconds);
-                seconds += StepSeconds;
+                motion.Step(_stepSeconds);
+                seconds += _stepSeconds;
             }
 
             Assert.That(motion.HasArrived, Is.True, "reached the end");

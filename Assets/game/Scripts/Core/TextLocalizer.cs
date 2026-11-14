@@ -6,7 +6,7 @@ namespace Fps.Core
     /// 今の言語の表 (<see cref="Current"/>) を持つ。言語を切り替える側が表を差し替え、画面の側は <see cref="Changed"/> を受けて文を引き直す。
     /// Unity のメインスレッドからだけ触る前提で、ロックは取らない。
     /// </summary>
-    public static class Localizer
+    public static class TextLocalizer
     {
         private static TextTable _current = TextTable.Empty;
 

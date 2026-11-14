@@ -149,7 +149,7 @@ namespace Fps.Net.Tests
             Assert.That(labels[0].text, Is.EqualTo("A"));
             Assert.That(labels[1].text, Is.EqualTo("B"));
             Assert.That(labels[0].style.color.value, Is.EqualTo(view.ColorOf(Team.Alpha)), "the owner's colour");
-            Assert.That(labels[1].style.color.value, Is.EqualTo(ControlPointZone.NeutralColor));
+            Assert.That(labels[1].style.color.value, Is.EqualTo(TeamColors.Neutral));
 
             view.Show(new[]
             {
@@ -173,7 +173,7 @@ namespace Fps.Net.Tests
 
             Assert.That(view.ColorOf(Team.Alpha), Is.EqualTo(Color.green));
             Assert.That(view.ColorOf(Team.Bravo), Is.EqualTo(Color.magenta));
-            Assert.That(view.ColorOf(null), Is.EqualTo(ControlPointZone.NeutralColor));
+            Assert.That(view.ColorOf(null), Is.EqualTo(TeamColors.Neutral));
         }
 
         private NetControlPoint CreatePoint(string name, int index, Vector3 position)

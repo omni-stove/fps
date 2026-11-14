@@ -226,6 +226,17 @@ namespace Fps.Runtime
             _hardpoint = hardpoint;
             _activeZones = zones;
             _hardpoint.PointMoved += OnPointMoved;
+
+            // 円盤の既定はオフラインの Alpha から見た色なので、陣営を変えたプレイヤーには自分の陣営から見た色にする
+            var viewer = PlayerSide.TryGetTeam(out var playerTeam) ? playerTeam : (Team?)null;
+            foreach (var zone in _activeZones)
+            {
+                if (zone != null)
+                {
+                    zone.ViewerTeam = viewer;
+                }
+            }
+
             ShowZones();
         }
 

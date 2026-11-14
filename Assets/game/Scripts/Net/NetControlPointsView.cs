@@ -9,7 +9,7 @@ namespace Fps.Net
 {
     /// <summary>
     /// オンラインの拠点制圧の、拠点ごとの状態を HUD に出す。拠点を番号の順に横へ並べ、それぞれを丸い枠で描く。
-    /// 枠の中の呼び名 (A, B, C ...) は持ち主のチームの色 (中立なら <see cref="ControlPointZone.NeutralColor"/>) で塗り、
+    /// 枠の中の呼び名 (A, B, C ...) は持ち主のチームの色 (中立なら <see cref="TeamColors.Neutral"/>) で塗り、
     /// 枠に沿うリングは進みが寄っている側のチームの色で、進み (<see cref="NetControlPointState.Fill"/>) の分だけ上から時計回りに描く。
     /// 両チームがいて進みが止まっている拠点は、リングの下地を <see cref="ContestedColor"/> にする。
     /// Hud.uxml の <see cref="UxmlName"/> を使い、<see cref="NetHud"/> が拠点制圧の試合のときだけ <see cref="Show"/> で状態を渡す。
@@ -42,8 +42,9 @@ namespace Fps.Net
         private readonly List<NetControlPointState> _states = new List<NetControlPointState>();
         private readonly List<string> _names = new List<string>();
         private readonly List<PointElement> _elements = new List<PointElement>();
-        private Color _alphaColor = ControlPointZone.AlphaColor;
-        private Color _bravoColor = ControlPointZone.BravoColor;
+        // 設定の色の組は PlayerPrefs から読むので、フィールドの初期化子では引けない (NetHud が Hud の色で塗り直す)
+        private Color _alphaColor = TeamColors.Of(TeamPalette.Standard, Team.Alpha, TeamColors.OfflineViewer);
+        private Color _bravoColor = TeamColors.Of(TeamPalette.Standard, Team.Bravo, TeamColors.OfflineViewer);
 
         public override string ElementName => UxmlName;
 
@@ -77,7 +78,7 @@ namespace Fps.Net
                 case Team.Bravo:
                     return _bravoColor;
                 default:
-                    return ControlPointZone.NeutralColor;
+                    return TeamColors.Neutral;
             }
         }
 

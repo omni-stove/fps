@@ -32,7 +32,7 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// 射撃の入力と <see cref="FireServerRpc"/> は .Fire.cs に、ダウンと蘇生 (同期・見た目・頭の上の印・Interact と <see cref="ReviveRpc"/>) は
-    /// .Downed.cs に、他人の被弾を演出に知らせる <see cref="Hurt"/> は .Hurt.cs に分けてある。ダウン中は撃てない。
+    /// .Downed.cs に、他人の被弾を演出に知らせる <see cref="Hurt"/> は .Hurt.cs に、グレネードの入力と残りの同期は .Grenade.cs に分けてある。ダウン中は撃てない。
     /// </para>
     /// <para>
     /// 見た目はプレハブに置いた人型のリグ (NetSceneBuilder) で、チームの色はリグの材質に塗る。リグは
@@ -73,9 +73,6 @@ namespace Fps.Net
         /// <summary><see cref="ViewName"/> の子の、カメラを持つ GameObject の名前。</summary>
         public const string ViewCameraName = "ViewCamera";
 
-        public static readonly Color AlphaColor = new Color(0.25f, 0.5f, 1f);
-        public static readonly Color BravoColor = new Color(1f, 0.3f, 0.25f);
-
         /// <summary>
         /// サーバーにテレポートさせられたとき、所有クライアント (ホストなら自分) で呼ばれる。
         /// 予測中の位置は <see cref="NetworkPlayerMotor"/> がサーバーの確定状態との照合で置き直すので、ここでは通知だけ受け取れる。
@@ -105,6 +102,10 @@ namespace Fps.Net
         // チームの色を塗る、元の材質ごとの複製。リグは部品ごとに Renderer を持つので、renderer.material では部品の数だけ複製ができる
         private Material[] _ownedMaterials = Array.Empty<Material>();
         private bool _teamMaterialsReady;
+
+        // 最後に塗ったときの色の組と自分のチーム。どちらかが変われば RefreshTeamColor が塗り直す
+        private ColorPalette _paintedPalette;
+        private Team? _paintedViewer;
         private InputAction _attackAction;
         private bool _enabledAttackAction;
 
@@ -180,6 +181,16 @@ namespace Fps.Net
         /// <summary>視点 (カメラ・音声・視点操作) が有効か。自分のプレイヤーで画面があるときだけ true。</summary>
         public bool HasLocalView => _hasLocalView;
 
+        /// <summary>目の下のカメラ。プレハブに無ければ null。映しているのは <see cref="HasLocalView"/> のときだけ。</summary>
+        internal Camera ViewCamera
+        {
+            get
+            {
+                EnsureViewResolved();
+                return _viewCamera;
+            }
+        }
+
         /// <summary>
         /// やられ演出のデスカム (<see cref="NetDeathCamera"/>) を映しているか。映している間は射撃の入力を読まない
         /// (連射の間隔も進めない)。カメラが自分の目に戻るまでは、狙った所へ撃てないため。
@@ -208,11 +219,14 @@ namespace Fps.Net
 
         public override void OnNetworkSpawn()
         {
+            SpawnBotMark();
             _team.OnValueChanged += HandleTeamChanged;
             _health.OnValueChanged += HandleHealthChanged;
             ApplyVisuals();
 
-            SetLocalView(NetStartup.ShouldEnableFirstPersonView(IsOwner, Application.isBatchMode, NetStartup.IsDedicatedServerBuild));
+            // Bot はサーバーが持ち主なので、IsOwner ではなく人が操作しているかで視点・入力・HUD を付ける
+            var local = IsLocallyControlled;
+            SetLocalView(NetStartup.ShouldEnableFirstPersonView(local, Application.isBatchMode, NetStartup.IsDedicatedServerBuild));
 
             // NetBootstrap が止めるのは起動時のシーンだけなので、後から生成されるプレイヤーの演出はここで止める
             if (NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
@@ -224,12 +238,13 @@ namespace Fps.Net
             _presentation = GetComponent<WeaponPresentation>();
             if (_presentation != null)
             {
-                _presentation.IsLocal = IsOwner;
+                _presentation.IsLocal = local;
             }
 
-            if (IsOwner)
+            if (local)
             {
                 ResolveAttackAction();
+                ResolveGrenadeAction();
                 if (_weapon != null)
                 {
                     _weapon.ReloadOrSwitchStarted += HandleReloadOrSwitchStarted;
@@ -240,7 +255,7 @@ namespace Fps.Net
                 PublishAiming(_ads != null && _ads.IsAiming);
             }
 
-            if (NetStartup.ShouldCreateHud(IsOwner, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
+            if (NetStartup.ShouldCreateHud(local, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
             {
                 CreateHud();
             }
@@ -249,7 +264,7 @@ namespace Fps.Net
             if (IsClient && DeathBodyPresenter.IsPresentationAvailable)
             {
                 _deathBody = DeathBodyPresenter.Attach(gameObject);
-                _deathBody.Id = "client=" + OwnerClientId.ToString(CultureInfo.InvariantCulture);
+                _deathBody.Id = (IsBot ? "bot=" : "client=") + RosterId.ToString(CultureInfo.InvariantCulture);
             }
 
             SpawnDowned();
@@ -268,6 +283,7 @@ namespace Fps.Net
             }
 
             ReleaseAttackAction();
+            ReleaseGrenadeAction();
             DespawnDowned();
             ResetSpawnProtectionLook();
             SetLocalView(false);
@@ -563,7 +579,7 @@ namespace Fps.Net
 
         private void PublishAiming(bool aiming)
         {
-            if (!_canPublishAiming || !IsSpawned || !IsOwner || _aiming.Value == aiming)
+            if (!_canPublishAiming || !IsSpawned || !IsLocallyControlled || _aiming.Value == aiming)
             {
                 return;
             }
@@ -580,7 +596,7 @@ namespace Fps.Net
             get
             {
                 EnsureViewResolved();
-                if (IsSpawned && IsOwner && _ads != null && _ads.IsInitialized)
+                if (IsSpawned && IsLocallyControlled && _ads != null && _ads.IsInitialized)
                 {
                     return _ads.IsAiming;
                 }
@@ -806,6 +822,7 @@ namespace Fps.Net
         {
             RefreshDownedMarker();
             RefreshSpawnProtection();
+            RefreshTeamColor();
 
             if (!_deathBodyPending)
             {
@@ -842,21 +859,48 @@ namespace Fps.Net
             _lastHitDirection.Value = direction.normalized;
         }
 
-        /// <summary>チームの色 (<see cref="AlphaColor"/> か <see cref="BravoColor"/>)。</summary>
+        /// <summary>
+        /// このプロセスで team のプレイヤーを塗る色。自分のプレイヤー (<see cref="Local"/>) のチームから見た敵味方の色を、
+        /// 設定の色の組 (<see cref="TeamColors"/>) から引く。自分のプレイヤーがいなければ Alpha を味方の色にする。
+        /// </summary>
         public static Color TeamColor(Team team)
         {
-            return team == Team.Bravo ? BravoColor : AlphaColor;
+            return TeamColors.Of(team, LocalTeam);
+        }
+
+        /// <summary>このプロセスの自分のプレイヤーのチーム。自分のプレイヤーがいなければ null。</summary>
+        public static Team? LocalTeam => Local != null ? Local.Team : (Team?)null;
+
+        /// <summary>
+        /// 色の組か自分のチームが、最後に塗ったときから変わっていれば塗り直す。自分のプレイヤーのチームは他のプレイヤーの同期値なので、
+        /// 購読せずに毎フレーム比べる。
+        /// </summary>
+        private void RefreshTeamColor()
+        {
+            if (!_teamMaterialsReady || _ownedMaterials.Length == 0)
+            {
+                return;
+            }
+
+            var palette = AppliedControlSettings.Current.Palette;
+            var viewer = LocalTeam;
+            if (palette != _paintedPalette || viewer != _paintedViewer)
+            {
+                ApplyVisuals();
+            }
         }
 
         /// <summary>
-        /// チームの色を見た目 (リグ) の材質に塗り、倒れている間は見た目と当たりを消す。
+        /// チームの色 (<see cref="TeamColor"/>) を見た目 (リグ) の材質に塗り、倒れている間は見た目と当たりを消す。
         /// 出現直後の無敵を見せている間 (<see cref="ShowsSpawnProtection"/>) は、材質を半透明にして色のアルファを <see cref="SpawnProtectionAlpha"/> にする。
         /// </summary>
         private void ApplyVisuals()
         {
             var alive = IsAlive;
             var translucent = _showsSpawnProtection;
-            var color = TeamColor(_team.Value);
+            _paintedPalette = AppliedControlSettings.Current.Palette;
+            _paintedViewer = LocalTeam;
+            var color = TeamColors.Of(TeamPalette.For(_paintedPalette), _team.Value, _paintedViewer);
             color.a = translucent ? SpawnProtectionAlpha : 1f;
             EnsureTeamMaterials();
 

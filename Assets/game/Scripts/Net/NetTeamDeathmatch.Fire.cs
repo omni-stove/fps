@@ -51,6 +51,7 @@ namespace Fps.Net
 
             // ダウン中の射撃も、倒れている人の射撃と同じく弾を減らさずに捨てる
             var shooterId = shooter.ServerPlayerId;
+            IdlePlayerFired(shooterId);
             if (!CanFire(_session, shooterId))
             {
                 return;

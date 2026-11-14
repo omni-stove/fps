@@ -14,11 +14,11 @@ namespace Fps.Net
         public event Action<int> Hurt;
 
         // NetworkBehaviour.IsLocalPlayer はプレイヤーオブジェクトとして生成したときしか立たないので、持ち主かどうかで答える
-        bool ICharacterHurtSource.IsLocalPlayer => IsSpawned && IsOwner;
+        bool ICharacterHurtSource.IsLocalPlayer => IsSpawned && IsLocallyControlled;
 
         private void ReportHurt(int previous, int current)
         {
-            if (previous <= 0 || current >= previous || IsOwner || !IsClient)
+            if (previous <= 0 || current >= previous || IsLocallyControlled || !IsClient)
             {
                 return;
             }

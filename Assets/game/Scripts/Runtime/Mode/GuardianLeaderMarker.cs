@@ -28,6 +28,8 @@ namespace Fps.Runtime
         private Material _material;
         private float _heightAboveHead = DefaultHeightAboveHead;
         private float _spin;
+        private Team? _viewerTeam = TeamColors.OfflineViewer;
+        private bool _followsSettings;
 
         /// <summary>目印を出すリーダー。</summary>
         public SideMember Target => _target;
@@ -74,17 +76,60 @@ namespace Fps.Runtime
 
             // 共有のマテリアルを塗り替えると他のプリミティブまで色が変わるので、目印ごとに複製する。
             marker._material = new Material(marker._renderer.sharedMaterial) { name = go.name };
-            marker._material.color = ColorOf(target.Side);
             marker._renderer.sharedMaterial = marker._material;
+            marker.ApplyColor();
+            AppliedControlSettings.Changed += marker.HandleSettingsChanged;
+            marker._followsSettings = true;
 
             marker.Follow();
             return marker;
         }
 
-        /// <summary>陣営の色。Alpha と Bravo は拠点と同じ色 (<see cref="ControlPointZone.ColorOf"/>)、それ以外は中立の色。</summary>
-        public static Color ColorOf(Side side)
+        /// <summary>
+        /// 画面のプレイヤーのチーム。リーダーがこのチームなら味方の色、違えば敵の色で塗る。既定はオフラインのプレイヤーのチーム
+        /// (<see cref="TeamColors.OfflineViewer"/>)。
+        /// </summary>
+        public Team? ViewerTeam
         {
-            return ControlPointZone.ColorOf(side.TryGetTeam(out var team) ? team : (Team?)null);
+            get => _viewerTeam;
+            set
+            {
+                _viewerTeam = value;
+                ApplyColor();
+            }
+        }
+
+        /// <summary>
+        /// viewer から見た陣営の色 (今の色の組)。Alpha と Bravo は拠点と同じ色 (<see cref="ControlPointZone.ColorOf"/>)、それ以外は中立の色。
+        /// </summary>
+        public static Color ColorOf(Side side, Team? viewer = TeamColors.OfflineViewer)
+        {
+            return ControlPointZone.ColorOf(side.TryGetTeam(out var team) ? team : (Team?)null, viewer);
+        }
+
+        private void ApplyColor()
+        {
+            if (_material != null && _target != null)
+            {
+                _material.color = ColorOf(_target.Side, _viewerTeam);
+            }
+        }
+
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            if (this != null)
+            {
+                ApplyColor();
+            }
+        }
+
+        private void StopFollowingSettings()
+        {
+            if (_followsSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _followsSettings = false;
+            }
         }
 
         /// <summary>目印を見せるか隠す。</summary>
@@ -126,6 +171,7 @@ namespace Fps.Runtime
         /// <summary>目印と複製したマテリアルを消す。Edit Mode では OnDestroy が呼ばれないので、マテリアルもここで消す。</summary>
         public void Remove()
         {
+            StopFollowingSettings();
             if (_material != null)
             {
                 DestroySafely(_material);
@@ -149,6 +195,7 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
+            StopFollowingSettings();
             if (_material != null)
             {
                 DestroySafely(_material);

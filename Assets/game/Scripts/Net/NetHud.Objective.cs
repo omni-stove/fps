@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fps.Core;
+using Fps.Runtime;
 using UnityEngine.UIElements;
 
 namespace Fps.Net
@@ -119,7 +120,24 @@ namespace Fps.Net
                 }
             }
 
-            EnsureControlPointsView().Show(_controlPointStates);
+            var view = EnsureControlPointsView();
+            FollowHudTeamColors(view);
+            view.Show(_controlPointStates);
+        }
+
+        /// <summary>
+        /// 拠点のビューの色を、Hud が点数を塗る色 (自分のチームから見た敵味方と設定の色の組) にそろえる。
+        /// </summary>
+        private void FollowHudTeamColors(NetControlPointsView view)
+        {
+            // Hud は色の組やチームが変わったことを Fps.Net のビューに知らせないので、毎フレーム見比べる
+            var hud = _hud != null ? _hud : GetComponent<Hud>();
+            var alpha = hud.TeamColor(Team.Alpha);
+            var bravo = hud.TeamColor(Team.Bravo);
+            if (view.ColorOf(Team.Alpha) != alpha || view.ColorOf(Team.Bravo) != bravo)
+            {
+                view.SetTeamColors(alpha, bravo);
+            }
         }
 
         // 拠点制圧のときだけ要るビューなので、Hud.AddViews では付けずに初めて要るときに付ける
@@ -135,8 +153,6 @@ namespace Fps.Net
             {
                 _controlPointsView = gameObject.AddComponent<NetControlPointsView>();
             }
-
-            _controlPointsView.SetTeamColors(NetPlayer.AlphaColor, NetPlayer.BravoColor);
 
             // 木を作ったときの Bind には間に合っていないので、今の木があればここで要素を渡す (作り直したときは Hud が渡す)
             var document = GetComponent<UIDocument>();

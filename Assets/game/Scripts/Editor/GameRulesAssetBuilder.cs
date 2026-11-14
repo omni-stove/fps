@@ -13,8 +13,9 @@ namespace Fps.Editor
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) と、そこから作る個別リスポーンのモードだけ
     /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す・
-    /// Bot で埋めない・放置で切らない (<see cref="GameRules"/> の既定)。オンラインの試合の勝敗を拠点で決める
-    /// (<see cref="MatchObjective.Domination"/>) のはドミネーションだけで、他のモードは拠点なし。
+    /// Bot で埋めない (<see cref="GameRules"/> の既定)。放置で切るのは、オンラインの試合が使うチームデスマッチと、
+    /// その値から作るモード (ドミネーション・対戦・PvE のモード) だけで <see cref="OnlineIdleKickSeconds"/> 秒。キャンペーンと射撃場は切らない。
+    /// オンラインの試合の勝敗を拠点で決める (<see cref="MatchObjective.Domination"/>) のはドミネーションだけで、他のモードは拠点なし。
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
     /// TPS 射撃場がそれに回避・乗り越え・グレネードを足したもの。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
@@ -82,6 +83,9 @@ namespace Fps.Editor
         /// <summary><see cref="TpsRangeActions"/> で出撃ごとに持つグレネードの数。</summary>
         public const int TpsRangeGrenadeCount = 3;
 
+        /// <summary><see cref="TeamDeathmatchActions"/> (ドミネーションも同じ) で出撃ごとに持つグレネードの数。</summary>
+        public const int TeamDeathmatchGrenadeCount = 2;
+
         public const string MenuPath = "Fps/Build Game Rules Assets";
         public const string LogTag = "[GameRulesAssetBuilder]";
 
@@ -89,8 +93,14 @@ namespace Fps.Editor
         public const float TeamDeathmatchSpawnProtectionSeconds = 2f;
 
         /// <summary>
+        /// <see cref="TeamDeathmatchRules"/> (オンラインの試合が使うルール) で、入力が無いプレイヤーをサーバーから切るまでの秒数。
+        /// </summary>
+        public const float OnlineIdleKickSeconds = 120f;
+
+        /// <summary>
         /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、リスポーンまで生きている味方の視点で観戦する、予備弾は有限で 1 倍、
-        /// 建造物は弾で壊れる、出現直後は <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒無敵。アクションは <see cref="TeamDeathmatchActions"/>。
+        /// 建造物は弾で壊れる、出現直後は <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒無敵、
+        /// 入力が <see cref="OnlineIdleKickSeconds"/> 秒無ければサーバーから切る。アクションは <see cref="TeamDeathmatchActions"/>。
         /// </summary>
         public static GameRules TeamDeathmatchRules()
         {
@@ -106,7 +116,8 @@ namespace Fps.Editor
                 1f,
                 Destruction.On,
                 TeamDeathmatchActions())
-                .WithSpawnProtectionSeconds(TeamDeathmatchSpawnProtectionSeconds);
+                .WithSpawnProtectionSeconds(TeamDeathmatchSpawnProtectionSeconds)
+                .WithIdleKickSeconds(OnlineIdleKickSeconds);
         }
 
         /// <summary>
@@ -329,12 +340,15 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// チームデスマッチのアクション。倒れたらダウンして味方が起こせ、アクティブリロードを使う。
+        /// チームデスマッチのアクション。倒れたらダウンして味方が起こせ、アクティブリロードを使い、グレネードを
+        /// <see cref="TeamDeathmatchGrenadeCount"/> 個持つ (オンラインではサーバーが数えて投げる)。
         /// カバーとブラインドファイアはオンラインのプレイヤーが対応していないので使わない。
         /// </summary>
         public static ActionRules TeamDeathmatchActions()
         {
-            return WithDefaultDownedTimings(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On);
+            return WithDefaultDownedTimings(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On)
+                .WithGrenade(Grenade.On)
+                .WithGrenadeCount(TeamDeathmatchGrenadeCount);
         }
 
         /// <summary>キャンペーン (どの難易度も) のアクション。カバー・ブラインドファイア・アクティブリロードを使い、ダウンはしない。</summary>

@@ -84,6 +84,23 @@
     height: 36px;
 }
 
+.settings__palette {
+    flex-grow: 1;
+    height: 36px;
+}
+
+/* 色の組の見本。文字の色はコードが組の味方・敵の色で塗る。 */
+.settings__palette-sample {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 8px;
+    padding: 0;
+    font-size: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 /* スライダーもボタンと同じく、ゲームパッドで選んでいる所が分かるようにする。 */
 .settings__slider:focus {
     border-width: 0 0 0 4px;

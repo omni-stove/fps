@@ -12,6 +12,7 @@ namespace Fps.Net
         /// <summary>倒した相手がいない (まだ倒されていないか、自滅など自分以外に倒されていない) ことを表す <see cref="KillerCode"/>。</summary>
         public const ulong NoKiller = 0;
 
+        /// <summary>人ならクライアント Id、Bot なら Bot のプレイヤー Id (<see cref="BotRoster.FirstBotPlayerId"/> 以上、<see cref="NetPlayer.RosterId"/>)。</summary>
         public ulong ClientId;
         public Team Team;
         public int Kills;

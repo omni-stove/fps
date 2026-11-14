@@ -24,6 +24,7 @@ namespace Fps.Core.Tests
 
         private static readonly int[] _floorIndices = { 0, 1, 2, 0, 2, 3 };
         private static readonly int[] _slopeIndices = { 0, 2, 1, 0, 3, 2 };
+        private static readonly int[] _floorAndWallIndices = { 0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6 };
 
         private static readonly float _slopeTop = 5f * (float)Math.Tan(Math.PI / 6.0);
         private static readonly Vector3 _slopeNormal = new Vector3(0.5f, (float)Math.Sqrt(3.0) / 2f, 0f);
@@ -297,7 +298,7 @@ namespace Fps.Core.Tests
                     new Vector3(-20f, 0f, -20f), new Vector3(-20f, 0f, 20f), new Vector3(20f, 0f, 20f), new Vector3(20f, 0f, -20f),
                     new Vector3(10f, 0f, -2f), new Vector3(10f, 3f, -2f), new Vector3(10f, 3f, 2f), new Vector3(10f, 0f, 2f),
                 },
-                new[] { 0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6 });
+                _floorAndWallIndices);
             var world = new BvhWorldCollision(new WorldMap(new[] { mesh }));
             var point0 = new Vector3(0f, 0.2f, 0f);
             var point1 = new Vector3(0f, 0.4f, 0f);

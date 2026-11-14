@@ -214,7 +214,9 @@ namespace Fps.Core
             var bestNormal = Vector3.Zero;
             Span<int> stack = stackalloc int[_stackSize];
             // Unity は掃引前から重なっているコライダーを丸ごと外すので、メッシュは三角形ごとでなくコライダーごとに印を付ける
-            Span<bool> overlapped = stackalloc bool[_colliderIds.Length];
+            // 大きさをコライダー数で決めると巨大なマップでスタックを使い切り、呼ぶたびのゼロ埋めも総数に比例するので、重なった物だけを小さな表に持つ
+            Span<int> overlapped = stackalloc int[16];
+            var overlappedCount = 0;
             var overlapMin = Vector3.Min(point0, point1) - new Vector3(radius);
             var overlapMax = Vector3.Max(point0, point1) + new Vector3(radius);
             var radiusSq = radius * radius;
@@ -239,12 +241,20 @@ namespace Fps.Core
                 {
                     ref readonly var primitive = ref _primitives[i];
                     if (primitive.Kind == WorldShapeKind.Mesh
-                        && !overlapped[primitive.Collider]
+                        && !overlapped[..overlappedCount].Contains(primitive.Collider)
                         && Selectable(primitive.Collider, layerMask)
                         && WorldGeometry.AabbOverlap(overlapMin, overlapMax, primitive.Min, primitive.Max)
                         && DistanceSq(primitive, point0, point1, out _, out _) < radiusSq)
                     {
-                        overlapped[primitive.Collider] = true;
+                        if (overlappedCount == overlapped.Length)
+                        {
+                            // あふれたときだけヒープに移す。印を落とすと重なったメッシュに当たってしまう
+                            var grown = new int[overlapped.Length * 2];
+                            overlapped.CopyTo(grown);
+                            overlapped = grown;
+                        }
+
+                        overlapped[overlappedCount++] = primitive.Collider;
                     }
                 }
             }
@@ -270,7 +280,7 @@ namespace Fps.Core
                 for (var i = node.Start; i < node.Start + node.Count; i++)
                 {
                     ref readonly var primitive = ref _primitives[i];
-                    if (overlapped[primitive.Collider]
+                    if (overlapped[..overlappedCount].Contains(primitive.Collider)
                         || !Selectable(primitive.Collider, layerMask)
                         || !WorldGeometry.RayAabb(center, dir, primitive.Min - extent, primitive.Max + extent, best))
                     {

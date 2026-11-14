@@ -115,12 +115,12 @@ namespace Fps.Runtime
         // 乗っている間は判断も移動も進めず、体を座席に付いていかせる。
         private bool HoldWhileRiding()
         {
-            if (_vehicleSeat == null)
+            if (ReferenceEquals(_vehicleSeat, null))
             {
                 return false;
             }
 
-            if (_vehicleSeat.Vehicle == null)
+            if (_vehicleSeat == null || _vehicleSeat.Vehicle == null)
             {
                 // 座席ごと消えて降ろしてもらえなかったときは、その場で降りたことにする。
                 ((IVehicleRider)this).OnLeft(null, VehicleLeaveReason.RiderRemoved, GroundPosition, transform.rotation);

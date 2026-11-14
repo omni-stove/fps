@@ -199,8 +199,19 @@ Editor からは **Fps > Import Game Rules From JSON**。
 | `WeaponCatalogAsset`・`LoadoutDefinition` | 使える武器の一覧と、最初に持つ武器 |
 | `GameRulesDefinition` (`<root>/Rules/*.asset`) | フレンドリーファイア・リスポーン・自動回復・死亡時の見せ方・弾薬・建造物の破壊・ダウンやカバーなどのアクション・スポーン保護・落下ダメージ・HUD の量・勝敗の決め方 |
 | `GrenadeThrower` (プレイヤーのコンポーネント) | 爆発までの秒数・投げる間隔・初速・ダメージ・爆発の半径・建造物への被害 |
+| `BossController` (ボスのコンポーネント) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点) |
 
 JSON から取り込み直すと、そのアセットの値は JSON の値で上書きされる。Inspector で変えた値を残したいなら、JSON にも同じ値を書く。
+
+### ボスの段階と弱点
+
+`BossController` は体力の割合で段階を進め、段階ごとに `EnemyAgent` の `EnemySpec`・`IEnemyBehavior`・動きの速さの倍率と、出す弱点 (`BossWeakPoint`、部位は `HitZone.WeakPoint`) を差し替える。
+振る舞いや、体力以外の条件 (経過時間・仕掛けが壊れたなど) で進む段階は Inspector に書けないので、コードで `Fps.Core.BossPhases` を組んで `BossController.UsePhases` に渡す。
+行動の合図で弱点を出し入れするときは `SetWeakPointExposed`、条件を待たずに次へ進めるときは `Advance` を呼ぶ。
+
+段階が変わると `CombatEvents.BossPhaseChanged` が出る (復活で最初の段階に戻ったときは `IsReset` が true)。カメラ・音・HUD の体力バーはここを購読して出す。
+ログは `[Boss] id=.. phase=0->1 from=.. to=.. reason=..`、命中ごとに `[Boss] id=.. hit zone=.. damage=..`、弱点の出し入れは `[Boss] id=.. weakpoint=.. exposed=..`。
+TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で弱点が出て速くなる仮のボス (`RangeBoss`) が置かれる。
 
 ## UI を差し替える
 

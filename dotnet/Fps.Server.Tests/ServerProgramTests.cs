@@ -201,12 +201,12 @@ namespace Fps.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyOnlyMovementSnapshotsAndRulesAreAdded()
+        public void WithoutRegisterLobbyOnlyTheMatchModulesAreAdded()
         {
             TestMaps.Write(_data.Path, "NetTest", points: TestRules.Points());
 
             Assert.That(RunWithServerModules(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
-            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 3 module(s)"));
+            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 4 module(s)"));
         }
 
         [Test]

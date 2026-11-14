@@ -24,7 +24,7 @@ namespace Fps.Server.Tests
 
         public static ServerMapData Data(string name = "NetTest", NetMapPoints points = null, NetMapLadders ladders = null)
         {
-            return new ServerMapData(name, World(), NavMesh(), "memory", points, ladders);
+            return new ServerMapData(name, World(), NavMesh(), "memory", points, ladders: ladders);
         }
 
         /// <summary>床の上、原点から +Z へ 3m の所に、+Z を向いて立つ高さ 3m のはしご。</summary>

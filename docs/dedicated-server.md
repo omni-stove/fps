@@ -296,7 +296,8 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 
 Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠、
 上の運用 (版の確認・drain・JSON のイベント)、EOS のロビーへの登録 (`-register-lobby`) と、試合のルール (TDM・Domination・ダウンと蘇生・印・
-出現と出現直後の無敵・ロードアウトの選択・放置で切る) を行う。戦闘・移動・Bot・EOS の P2P・EAC はまだ無い。
+出現と出現直後の無敵・ロードアウトの選択・放置で切る)、移動、戦闘 (射撃・巻き戻しの当たり判定・ダメージ・武器・グレネード・壊せる建物) を行う。
+Bot・EOS の P2P・EAC はまだ無い。
 
 ```sh
 make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
@@ -326,6 +327,12 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
   印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。どれも Unity の Editor から `make export-server-rules`
   (メニューは Fps > Server Data > Export Rules And Points) で書き出す。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
   ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
+- 射撃は Unity のサーバーと同じく、撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
+  ログ (`[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`) と JSON の `kill` の行は今と同じ形。
+  グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値、`make export-server-rules` で書き出す) から読む。
+- 壊せる建物の部品の並びは `server-data/maps/<マップ名>.structures.json` (`make export-server-data` で書き出す) から読む。
+  無いマップでは `[Destruction] map <マップ名> has N destructible structure(s) but no ...` を出し、部品は壊れない壁として残る。
+  破片が当たるダメージ (DebrisCrush) はまだ無い。
 - 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
 - SIGTERM と SIGINT (Ctrl+C) で「試合が終わってから止める」と同じ drain に入り、同じログを出す。
 - 承認は `ConnectRequestMessage` の版と鍵を Netcode の承認データと同じ判定に通すので、断ったときのログ
@@ -345,6 +352,28 @@ set -a; . ./eos.env; set +a                         # EOS_PRODUCT_ID=... の行�
 dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -- \
   -buildVersion "$(git describe --tags --always --dirty)" -register-lobby 127.0.0.1:7777
 ```
+
+### .NET のサーバーにクライアントをつなぐ (`-netstack v2`)
+
+.NET のサーバーへは、新しい通信手順 (`Fps.Protocol` と LiteNetLib) のクライアント (`Assets/game/Scripts/NetV2`) でつなぐ。
+置き換えが終わるまで、`-netstack v2` を付けたときだけこの経路を使い、付けなければ今の Netcode for GameObjects のクライアントのまま。
+
+```sh
+make server-dotnet
+<ビルドしたゲーム> -mode client -netstack v2 -address 127.0.0.1    # 2 つ起動すると互いが見える
+```
+
+- `-address`・`-port` は今のクライアントと同じ意味。マップは `-map` ではなく、承認のときにサーバーが知らせる試合のマップのシーンへ移る
+  (`-map` は今と同じくクライアントには付けられない)。そのシーンがビルドに無い・`.fpsmap` が無ければ理由を出してそのシーンに留まる。
+- 自分の移動はサーバーと同じ Core の移動と `.fpsmap` で予測して入力を送り、スナップショットの処理済みの入力の tick で照合する。
+  食い違って巻き戻したときは `[Net] reconciled tick=... error=...` を出す。他のプレイヤーは 2 tick 遅らせて補間する。
+  他のプレイヤーの見た目は `Resources/NetV2/RemotePlayerBody` のプレハブで差し替えられ、無ければ体の寸法のカプセルを出す。
+- 射撃・リロード・グレネード・印は押したときに要求を送り、保存してあるロードアウトを承認されたときに頼む。キル・被弾・ヒット・爆発は
+  今の HUD とエフェクト (`CombatEvents`) に流し、`[Combat]` の行を出す。
+- サーバーとの接続を失うと、今のクライアントと同じ文 (「サーバーが止まりました。」・タイムアウト・断られた・版が違う) を出してメニューへ戻る。
+  batchmode では今と同じ終了コード (切断 0・つながらない 5) で終わる。
+- まだ使えない `-lobby`・`-transport eos`・`-net-latency` / `-net-loss` / `-net-jitter` や、`-mode client` 以外と一緒に付けると
+  `[Net] invalid arguments: ...` を出して終了コード 2 で終わる。
 
 ## CI でのリリース
 

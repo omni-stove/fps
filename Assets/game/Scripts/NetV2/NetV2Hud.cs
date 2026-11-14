@@ -1,0 +1,303 @@
+using System;
+using System.Collections.Generic;
+using Fps.Core;
+using Fps.Protocol;
+using Fps.Runtime;
+using UnityEngine;
+
+namespace Fps.NetV2
+{
+    /// <summary>
+    /// <c>-netstack v2</c> の HUD。表示はオフライン・Netcode のクライアントと同じ <see cref="Hud"/> (Hud.uxml) を使い、
+    /// 届いたスナップショットの値をその <see cref="Hud.Model"/> に流すだけにする (Netcode の <c>NetHud</c> と同じ出し方)。
+    /// </summary>
+    /// <remarks>
+    /// 値が変わったときだけ書き直す。毎 tick 届くスナップショットのたびに文を作り直さないため。
+    /// 案内の欄の優先は <c>NetHud</c> と同じ: 試合の終わり、放置の警告、ダウン中、倒れている間のリスポーンの案内、出現直後の無敵。
+    /// Individual のリスポーンまでの秒数はスナップショットに無いので、倒れている間は出さない。
+    /// </remarks>
+    [DisallowMultipleComponent]
+    [RequireComponent(typeof(Hud))]
+    public sealed class NetV2Hud : MonoBehaviour
+    {
+        public const string ObjectName = "NetV2HUD";
+
+        private readonly List<ScoreboardEntry> _scoreboard = new List<ScoreboardEntry>();
+        private readonly Dictionary<int, Team> _teams = new Dictionary<int, Team>();
+        private Hud _hud;
+        private int _localId;
+        private int _maxHealth = 1;
+        private bool _shown;
+        private Team _team;
+        private int _health;
+        private int _alpha;
+        private int _bravo;
+        private int _remainingSeconds = -1;
+        private HudDensity _density = HudDensity.Full;
+        private WeaponSync _weapon;
+        private LocalizedText _notice;
+        private bool _noticeShown;
+        private float? _idleRemaining;
+        private int _idleShownSeconds = -1;
+        private SnapshotMessage _latest;
+
+        public Hud Hud => _hud;
+
+        /// <summary>HUD を作る。作れなければ作りかけを消して例外を投げる (Resources に HUD のレイアウトかテーマが無い)。</summary>
+        public static NetV2Hud Create(int localPlayerId, int maxHealth)
+        {
+            var hud = Hud.Create(ObjectName, null, null, null);
+            try
+            {
+                var netHud = hud.gameObject.AddComponent<NetV2Hud>();
+                netHud._hud = hud;
+                netHud._localId = localPlayerId;
+                netHud._maxHealth = Math.Max(1, maxHealth);
+
+                // 対戦では止めても相手は止まらない
+                hud.PauseMenu.TimeMode = PauseTimeMode.KeepRunning;
+                var killFeed = hud.KillFeed;
+                if (killFeed != null)
+                {
+                    killFeed.Names = new Names(netHud);
+                }
+
+                return netHud;
+            }
+            catch
+            {
+                Destroy(hud.gameObject);
+                throw;
+            }
+        }
+
+        /// <summary>届いた最新のスナップショットを出す。</summary>
+        public void Apply(SnapshotMessage snapshot)
+        {
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
+
+            _latest = snapshot;
+            var model = _hud.Model;
+            var match = snapshot.Match;
+            _teams.Clear();
+            var own = -1;
+            for (var i = 0; i < snapshot.Players.Count; i++)
+            {
+                _teams[snapshot.Players[i].PlayerId] = snapshot.Players[i].Team;
+                if (snapshot.Players[i].PlayerId == _localId)
+                {
+                    own = i;
+                }
+            }
+
+            var density = Enum.IsDefined(typeof(HudDensity), match.Rules.HudDensity) ? match.Rules.HudDensity : HudDensity.Full;
+            if (!_shown || density != _density)
+            {
+                _density = density;
+                _hud.ApplyDensity(density);
+            }
+
+            if (own >= 0)
+            {
+                var row = snapshot.Players[own];
+                if (!_shown || row.Team != _team)
+                {
+                    _team = row.Team;
+                    _hud.UseTeamPalette(_team);
+                }
+
+                if (!_shown || row.Health != _health)
+                {
+                    _health = row.Health;
+                    model.SetHealth(Math.Max(0, _health), _maxHealth);
+                }
+            }
+
+            var alpha = match.Objective == MatchObjective.None ? match.AlphaScore : match.AlphaPoints;
+            var bravo = match.Objective == MatchObjective.None ? match.BravoScore : match.BravoPoints;
+            if (!_shown || alpha != _alpha || bravo != _bravo)
+            {
+                _alpha = alpha;
+                _bravo = bravo;
+                model.SetScores(_team, Math.Max(0, alpha), Math.Max(0, bravo));
+            }
+
+            if (!_shown || match.RemainingSeconds != _remainingSeconds)
+            {
+                _remainingSeconds = match.RemainingSeconds;
+                model.SetTime(Math.Max(0, _remainingSeconds));
+            }
+
+            if (snapshot.HasOwner && (!_shown || !snapshot.Owner.Weapon.SameAs(_weapon)))
+            {
+                _weapon = snapshot.Owner.Weapon;
+                if (_weapon.WeaponCount == 0)
+                {
+                    model.ClearAmmo();
+                }
+                else
+                {
+                    model.SetAmmo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, _weapon.IsReloading, match.Rules.InfiniteReserve);
+                }
+            }
+
+            if (match.State == GameModeState.Ended)
+            {
+                model.SetResult(match.HasWinner ? match.Winner : (Team?)null);
+            }
+            else
+            {
+                model.ClearResult();
+            }
+
+            _shown = true;
+            ShowNotice(own >= 0 ? snapshot.Players[own] : default, own >= 0);
+            ShowScoreboard(snapshot);
+        }
+
+        /// <summary>「あと remainingSeconds 秒で切断」の放置の警告を出し、ここから数える。</summary>
+        public void ShowIdleWarning(float remainingSeconds)
+        {
+            _idleRemaining = float.IsNaN(remainingSeconds) ? 0f : Math.Max(0f, remainingSeconds);
+            _idleShownSeconds = -1;
+            Refresh();
+        }
+
+        public void ClearIdleWarning()
+        {
+            if (!_idleRemaining.HasValue)
+            {
+                return;
+            }
+
+            _idleRemaining = null;
+            Refresh();
+        }
+
+        private void Update()
+        {
+            if (!_idleRemaining.HasValue)
+            {
+                return;
+            }
+
+            _idleRemaining = Math.Max(0f, _idleRemaining.Value - Time.unscaledDeltaTime);
+            if (HudFormat.DisplayedSeconds(_idleRemaining.Value) != _idleShownSeconds)
+            {
+                Refresh();
+            }
+        }
+
+        private void Refresh()
+        {
+            if (_latest != null)
+            {
+                var own = _latest.Players.IndexOf(_localId);
+                ShowNotice(own >= 0 ? _latest.Players[own] : default, own >= 0);
+            }
+        }
+
+        private void ShowNotice(PlayerSnapshot own, bool present)
+        {
+            var match = _latest.Match;
+            LocalizedText notice;
+            if (match.State == GameModeState.Ended)
+            {
+                notice = HudFormat.NextMatch(Math.Max(0, match.NextMatchSeconds));
+            }
+            else if (_idleRemaining.HasValue)
+            {
+                _idleShownSeconds = HudFormat.DisplayedSeconds(_idleRemaining.Value);
+                notice = HudFormat.IdleWarning(_idleShownSeconds);
+            }
+            else if (present && own.Downed.IsDowned)
+            {
+                notice = HudFormat.Downed(Math.Max(0, own.Downed.BleedoutSeconds), Math.Min(100, (int)own.Downed.RevivePercent));
+            }
+            else if (present && own.Health <= 0 && match.State == GameModeState.Playing)
+            {
+                notice = match.Rules.RespawnMode == RespawnMode.Wave
+                    ? HudFormat.RespawnNotice(RespawnMode.Wave, Math.Max(0, match.NextWaveSeconds))
+                    : match.Rules.RespawnMode == RespawnMode.None
+                        ? HudFormat.RespawnNotice(RespawnMode.None, 0)
+                        : default;
+            }
+            else if (present && own.SpawnProtectionSeconds > 0)
+            {
+                notice = HudFormat.SpawnProtected(own.SpawnProtectionSeconds);
+            }
+            else
+            {
+                notice = default;
+            }
+
+            if (_noticeShown && notice.Equals(_notice))
+            {
+                return;
+            }
+
+            _notice = notice;
+            _noticeShown = true;
+            if (notice.IsEmpty)
+            {
+                _hud.Model.SetNotice(HudFormat.NoNotice);
+            }
+            else
+            {
+                _hud.Model.SetNotice(notice);
+            }
+        }
+
+        private void ShowScoreboard(SnapshotMessage snapshot)
+        {
+            var scoreboard = _hud.Scoreboard;
+            if (scoreboard == null)
+            {
+                return;
+            }
+
+            _scoreboard.Clear();
+            for (var i = 0; i < snapshot.Players.Count; i++)
+            {
+                var row = snapshot.Players[i];
+                _scoreboard.Add(new ScoreboardEntry(
+                    row.PlayerId,
+                    BotRoster.ScoreboardName(row.PlayerId),
+                    row.Team,
+                    Math.Max(0, row.Kills),
+                    Math.Max(0, row.Deaths),
+                    ScoreboardConnection.Connected,
+                    row.PlayerId == _localId));
+            }
+
+            scoreboard.SetEntries(_scoreboard, _team);
+        }
+
+        /// <summary>キルフィードの名前。Id は .NET のサーバーのプレイヤー Id で、名前は Netcode のクライアントと同じく <see cref="BotRoster.KillFeedName"/>。</summary>
+        private sealed class Names : IKillFeedNames
+        {
+            private readonly NetV2Hud _owner;
+
+            public Names(NetV2Hud owner)
+            {
+                _owner = owner;
+            }
+
+            public KillFeedLine Describe(KillFeedEntry entry)
+            {
+                var killer = NameOf(entry.KillerId);
+                var victim = entry.IsSuicide ? killer : NameOf(entry.VictimId);
+                return new KillFeedLine(entry, killer, victim, default);
+            }
+
+            private KillFeedName NameOf(int playerId)
+            {
+                Team? team = _owner._teams.TryGetValue(playerId, out var known) ? known : (Team?)null;
+                return new KillFeedName(BotRoster.KillFeedName(playerId), team, playerId == _owner._localId);
+            }
+        }
+    }
+}

@@ -145,6 +145,7 @@ namespace Fps.Core
         /// <summary>
         /// 起動直後にネットワークのシーンへ切り替えるか。エディタでは切り替えない。
         /// プレイヤーでは専用サーバーか、<c>-mode</c> か <c>-lobby</c> が指定されたときに切り替える。
+        /// <c>-netstack v2</c> では切り替えない。
         /// </summary>
         public static bool ShouldLoadNetScene(bool isEditor, bool isDedicatedServer, IReadOnlyList<string> args)
         {
@@ -154,6 +155,12 @@ namespace Fps.Core
             }
 
             if (isEditor)
+            {
+                return false;
+            }
+
+            // NetTest には Netcode の NetBootstrap が置いてあり、v2 のクライアントはつないだサーバーのマップのシーンへ自分で移るため
+            if (!isDedicatedServer && NetStackLaunch.RequestsV2(args))
             {
                 return false;
             }

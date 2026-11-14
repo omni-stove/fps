@@ -69,7 +69,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// weapon が撃ったとき、damageable が死んだとき・体力を作り直した (リスポーンした) ときにダッシュを解除するよう購読する。
-        /// 死んだとき・体力を作り直したときは回避もやめる。
+        /// 死んだとき・体力を作り直したときは回避・乗り越え・飛び込みもやめる。
         /// 前に渡したものの購読は外す。どちらも null 可 (その理由では解除しない)。
         /// </summary>
         public void BindSprintRelease(WeaponController weapon, Damageable damageable)
@@ -110,6 +110,7 @@ namespace Fps.Runtime
             ReleaseSprint(SprintInput.ReasonDeath);
             CancelDodge();
             CancelVault();
+            CancelDive();
         }
 
         private void OnHealthReset(Health _)
@@ -117,6 +118,7 @@ namespace Fps.Runtime
             ReleaseSprint(SprintInput.ReasonRespawn);
             CancelDodge();
             CancelVault();
+            CancelDive();
 
             // 戻った位置で、倒れる前の待ち時間に縛られずすぐ回避できるようにする。
             _dodgeMotion?.Reset();

@@ -183,6 +183,7 @@ namespace Fps.Runtime
             var flags = PlayerActionConditions.None;
             Set(ref flags, PlayerActionConditions.Sprinting, _mover.IsSprinting);
             Set(ref flags, PlayerActionConditions.Crouching, _mover.IsCrouched);
+            Set(ref flags, PlayerActionConditions.Prone, _mover.IsProne);
             Set(ref flags, PlayerActionConditions.Dodging, _mover.IsDodging);
             Set(ref flags, PlayerActionConditions.Vaulting, _mover.IsVaulting);
             Set(ref flags, PlayerActionConditions.Grounded, _mover.IsGrounded);

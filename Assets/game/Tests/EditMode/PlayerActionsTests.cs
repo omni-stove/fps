@@ -70,6 +70,7 @@ namespace Fps.Tests.EditMode
                 typeof(CoverActionInstaller),
                 typeof(BlindFireActionInstaller),
                 typeof(MoveActionInstaller),
+                typeof(ProneActionInstaller),
                 typeof(GrenadeActionInstaller),
             };
 
@@ -258,6 +259,23 @@ namespace Fps.Tests.EditMode
 
             PlayerActions.Attach(_player, GameRules.Default);
             Assert.That(mover.VaultRule, Is.EqualTo(Vault.Off));
+        }
+
+        [Test]
+        public void ProneFollowsTheRulesOnThePlayerController()
+        {
+            var mover = _player.AddComponent<PlayerController>();
+            Assert.That(mover.ProneRule, Is.EqualTo(Prone.Off));
+
+            LogAssert.Expect(
+                LogType.Log,
+                "[Actions] cover=Off blindFire=Off activeReload=Off downed=Off dodge=Off vault=Off"
+                    + NewActionsOff.Replace("prone=Off", "prone=On"));
+            PlayerActions.Attach(_player, GameRules.Default.WithActions(ActionRules.Default.WithProne(Prone.On)));
+            Assert.That(mover.ProneRule, Is.EqualTo(Prone.On));
+
+            PlayerActions.Attach(_player, GameRules.Default);
+            Assert.That(mover.ProneRule, Is.EqualTo(Prone.Off));
         }
 
         [Test]

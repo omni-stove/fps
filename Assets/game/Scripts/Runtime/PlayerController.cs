@@ -12,9 +12,9 @@ namespace Fps.Runtime
     /// 参照はコードで解決するので Inspector の配線は要らない: CharacterController と <see cref="FirstPersonLook"/> は同じ
     /// GameObject、目は <see cref="ViewRig.FindEye"/> (無ければ子のカメラ)、入力はプロジェクト全体のアクション
     /// (<see cref="InputSystem.actions"/>) の Move / Sprint / Crouch / Jump。解決できなければエラーを出して自分を無効にする
-    /// (Dodge は無くても警告だけで、回避を入力からできなくなる)。
+    /// (Dodge と Prone は無くても警告だけで、回避・伏せを入力からできなくなる)。
     /// 乗り物の座席などが <see cref="Handoff"/> で操作を引き取っている間は、入力を読まず何も押していないものとして動く。
-    /// しゃがみ (.Stance.cs)・ダッシュ (.Sprint.cs)・着地と落下ダメージ (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs)・
+    /// 姿勢 (.Stance.cs)・伏せ (.Prone.cs)・ダッシュ (.Sprint.cs)・着地と落下ダメージ (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs)・
     /// 移動の横取り (.MovementOverride.cs) は、<see cref="Tick"/> から呼ぶメソッドとして別のファイルに置く。
     /// </summary>
     [DisallowMultipleComponent]
@@ -183,6 +183,7 @@ namespace Fps.Runtime
             ReleaseActions();
             CancelDodge();
             CancelVault();
+            CancelDive();
             EndMovementOverride();
         }
 
@@ -194,6 +195,7 @@ namespace Fps.Runtime
             _enabledCrouch = EnableIfNeeded(_crouchAction);
             _enabledJump = EnableIfNeeded(_jumpAction);
             AcquireDodgeAction();
+            AcquireProneAction();
         }
 
         private void ReleaseActions()
@@ -203,6 +205,7 @@ namespace Fps.Runtime
             DisableIfOwned(_crouchAction, ref _enabledCrouch);
             DisableIfOwned(_jumpAction, ref _enabledJump);
             ReleaseDodgeAction();
+            ReleaseProneAction();
         }
 
         private void Update()
@@ -230,11 +233,13 @@ namespace Fps.Runtime
                 _crouchAction.WasPressedThisFrame(),
                 crouchDevice,
                 _jumpAction.WasPressedThisFrame(),
-                _dodgeAction != null && _dodgeAction.WasPressedThisFrame());
+                _dodgeAction != null && _dodgeAction.WasPressedThisFrame(),
+                _proneAction != null && _proneAction.WasPressedThisFrame());
         }
 
         /// <summary>
-        /// 1 フレーム分の入力で、回避の開始・ダッシュとしゃがみの解釈 (<see cref="UpdateSprint"/> / <see cref="UpdateCrouch"/>) をしてから <see cref="Tick"/> する。
+        /// 1 フレーム分の入力で、回避の開始・ダッシュと伏せとしゃがみの解釈 (<see cref="UpdateSprint"/> / <see cref="UpdateProne"/> / <see cref="UpdateCrouch"/>) をしてから
+        /// <see cref="Tick"/> する。伏せから起き上がるのに押した Jump では跳ばない。
         /// Play 中は Update が Input Actions から読んだ入力で毎フレーム呼ぶ。
         /// <see cref="IsControlHandedOff"/> の間は input を捨て、何も押していない入力 (<see cref="PlayerMoveInput.Idle"/>) として扱う。
         /// </summary>
@@ -258,14 +263,22 @@ namespace Fps.Runtime
 
             var sprint = UpdateSprint(input.Move, input.SprintHeld, input.SprintPressed, input.SprintDevice);
 
+            // しゃがみより先に解釈する。伏せている間のしゃがみの押下を、伏せを解いてからしゃがみとして読ませるため。
+            var wasProne = IsProneActive || IsProne;
+            UpdateProne(input.PronePressed, input.CrouchPressed, input.JumpPressed, sprint, input.Move);
+            sprint = IsSprinting;
+            var jumpPressed = input.JumpPressed && !wasProne;
+
             // 空中で押したジャンプは跳ばない (PlayerMotor) ので、しゃがみも解かない。
             var crouch = UpdateCrouch(
-                input.CrouchHeld, input.CrouchPressed, input.JumpPressed && _controller.isGrounded, sprint, input.CrouchDevice);
-            Tick(input.Move, sprint, crouch, input.JumpPressed, deltaSeconds);
+                input.CrouchHeld, input.CrouchPressed, jumpPressed && _controller.isGrounded, sprint, input.CrouchDevice);
+            Tick(input.Move, sprint, crouch, jumpPressed, deltaSeconds);
         }
 
         /// <summary>
-        /// 1 フレーム分の入力でしゃがみの姿勢を決め、<see cref="PlayerMotor.Step"/> を呼び、変位を CharacterController に適用する。
+        /// 1 フレーム分の入力で姿勢 (立ち・しゃがみ・伏せ) を決め、<see cref="PlayerMotor.Step"/> を呼び、変位を CharacterController に適用する。
+        /// 伏せたいか (<see cref="IsProneActive"/>) は <see cref="UpdateProne"/> が覚えたものを使い、しゃがみより優先する。
+        /// 伏せている間は <see cref="ProneSpec.Speed"/> で動き、ダッシュもジャンプもしない。
         /// 向きは <see cref="FirstPersonLook"/> 本体 (この GameObject) の yaw を使う。
         /// <see cref="MoveFilter"/> があれば、姿勢を決める前に入力を書き換えさせる。
         /// <see cref="VaultRule"/> が On なら、Jump で前方の低い障害物を乗り越える (乗り越えられなければふつうにジャンプする)。
@@ -287,6 +300,7 @@ namespace Fps.Runtime
             MoveFilter?.Filter(ref move, ref sprint, ref crouch, ref jumpPressed);
             FilterInputForDodge(ref sprint, ref crouch, ref jumpPressed);
             FilterInputForVault(ref sprint, ref crouch, ref jumpPressed);
+            FilterInputForProne(ref sprint, ref jumpPressed);
 
             Vector3 displacement;
             var movementOverride = SelectMovementOverride();
@@ -296,18 +310,21 @@ namespace Fps.Runtime
             }
             else
             {
-                UpdateStance(crouch);
+                UpdateStance(crouch, IsProneActive);
                 if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out displacement))
                 {
                     var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
-                    displacement = _motor.Step(
-                        move.ToNumerics(),
-                        yawRadians,
-                        sprint,
-                        _isCrouched,
-                        jumpPressed,
-                        _controller.isGrounded,
-                        deltaSeconds).ToUnity();
+                    displacement = IsProne
+                        ? _motor.StepAtSpeed(
+                            move.ToNumerics(), yawRadians, _proneSpec.Speed, false, _controller.isGrounded, deltaSeconds).ToUnity()
+                        : _motor.Step(
+                            move.ToNumerics(),
+                            yawRadians,
+                            sprint,
+                            IsCrouched,
+                            jumpPressed,
+                            _controller.isGrounded,
+                            deltaSeconds).ToUnity();
                 }
             }
 
@@ -318,8 +335,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 乗り越え・回避の最中なら、<see cref="PlayerMotor.Step"/> の代わりに動かす変位を displacement に入れて true を返す。
-        /// どちらも動いていなければ false (displacement は 0)。
+        /// 乗り越え・回避・飛び込みの最中なら、<see cref="PlayerMotor.Step"/> の代わりに動かす変位を displacement に入れて true を返す。
+        /// どれも動いていなければ false (displacement は 0)。
         /// </summary>
         private bool TryOverrideMove(Vector2 move, bool jumpPressed, float deltaSeconds, out Vector3 displacement)
         {
@@ -331,6 +348,11 @@ namespace Fps.Runtime
             if (!overridden)
             {
                 TryOverrideMoveForDodge(move, jumpPressed, deltaSeconds, ref overridden, ref displacement);
+            }
+
+            if (!overridden)
+            {
+                TryOverrideMoveForDive(deltaSeconds, ref overridden, ref displacement);
             }
 
             return overridden;
@@ -391,12 +413,14 @@ namespace Fps.Runtime
             }
 
             ResolveDodgeAction(actions);
+            ResolveProneAction(actions);
             return true;
         }
 
         /// <summary>
         /// 参照を直接渡して初期化する。controller と look はこの GameObject のものであること。
-        /// 立ちの寸法は今の controller の height / center / radius と目の位置から取り、しゃがみの高さは <see cref="CrouchHeight"/>。
+        /// 立ちの寸法は今の controller の height / center / radius と目の位置から取り、しゃがみの高さは <see cref="CrouchHeight"/>、
+        /// 伏せの高さは <see cref="ProneSpec"/> の <see cref="ProneSpec.Height"/> (合わなければ合う範囲に収める)。
         /// しゃがみの高さが controller と合わなければ ArgumentOutOfRangeException。
         /// </summary>
         public void Initialize(
@@ -453,17 +477,22 @@ namespace Fps.Runtime
                 throw new ArgumentException($"look must be on '{name}' so movement follows its yaw", nameof(look));
             }
 
-            // しゃがんだまま測ると縮んだ寸法を立ちと取り違えるので、先に立ちへ戻す。
-            if (_isCrouched && _controller != null)
+            // しゃがんだまま (伏せたまま) 測ると縮んだ寸法を立ちと取り違えるので、先に立ちへ戻す。
+            if (_currentStance != PlayerStance.Standing && _controller != null)
             {
-                ApplyStance(false);
+                ApplyStance(PlayerStance.Standing);
             }
 
             var eye = ResolveEye();
             var standingEyeLocal = eye != null ? transform.InverseTransformPoint(eye.position) : Vector3.zero;
             var standingCenter = controller.center;
+
+            // しゃがみの高さが合わないときは、伏せの高さに関わらずしゃがみの理由で投げさせる。
+            var proneHeight = _crouchHeight >= controller.radius * 2f && _crouchHeight <= controller.height
+                ? FitProneHeight(_proneSpec.Height, _crouchHeight, controller.radius)
+                : _crouchHeight;
             var stance = new StanceGeometry(
-                controller.height, standingCenter.y, standingEyeLocal.y, _crouchHeight, controller.radius);
+                controller.height, standingCenter.y, standingEyeLocal.y, _crouchHeight, proneHeight, controller.radius);
 
             // OnEnable 済み (動作中) に差し替えるなら、自分が有効にした古いアクションを戻してから新しいものを有効にする。
             if (_isLive)
@@ -479,15 +508,18 @@ namespace Fps.Runtime
             _jumpAction = jumpAction;
             CancelDodge();
             CancelVault();
+            CancelDive();
             EndMovementOverride();
             _motor = new PlayerMotor(spec);
             _dodgeMotion = new DodgeMotion(spec);
+            _dive = new ProneDive(_proneSpec);
             _stance = stance;
             _eye = eye;
             _standingEyeLocal = standingEyeLocal;
             _standingCenter = standingCenter;
-            _isCrouched = false;
+            _currentStance = PlayerStance.Standing;
             _lastGrounded = null;
+            ApplyProneLook();
 
             if (_isLive)
             {

@@ -664,6 +664,12 @@ namespace Fps.Runtime
                 ResolveTurretTarget(force: _target.IsDead);
             }
 
+            // 乗っている間は NavMeshAgent を止めているので、止める処理 (MoveTo) を通る一時停止より先に見る。
+            if (HoldWhileRiding())
+            {
+                return;
+            }
+
             if (TickKnockback(deltaSeconds) || TraverseOffMeshLink(deltaSeconds))
             {
                 return;
@@ -865,6 +871,7 @@ namespace Fps.Runtime
                 ? hit.position
                 : groundPosition;
 
+            LeaveVehicleForReset();
             ClearPendingPerception();
             _interruption.Clear();
             _flight.Clear();
@@ -949,6 +956,7 @@ namespace Fps.Runtime
             _stuck.Reset();
             ClearLinkTraversal();
             _agent.enabled = false;
+            LeaveVehicleOnDeath();
         }
     }
 }

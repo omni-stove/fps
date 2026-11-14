@@ -43,6 +43,7 @@ namespace Fps.Core.Tests
         [TestCase(PlayerActionConditions.Firing)]
         [TestCase(PlayerActionConditions.Reloading)]
         [TestCase(PlayerActionConditions.Downed)]
+        [TestCase(PlayerActionConditions.InVehicle)]
         public void EachFlagTurnsOnOnlyItsOwnProperty(PlayerActionConditions flag)
         {
             var state = Create(flag);
@@ -58,6 +59,7 @@ namespace Fps.Core.Tests
             Assert.That(state.IsFiring, Is.EqualTo(flag == PlayerActionConditions.Firing));
             Assert.That(state.IsReloading, Is.EqualTo(flag == PlayerActionConditions.Reloading));
             Assert.That(state.IsDowned, Is.EqualTo(flag == PlayerActionConditions.Downed));
+            Assert.That(state.IsInVehicle, Is.EqualTo(flag == PlayerActionConditions.InVehicle));
         }
 
         [Test]
@@ -84,6 +86,7 @@ namespace Fps.Core.Tests
 
             Assert.That(state.IsSprinting && state.IsCrouching && state.IsDodging && state.IsVaulting && state.IsGrounded, Is.True);
             Assert.That(state.IsInCover && state.IsBlindFiring && state.IsAiming && state.IsFiring && state.IsReloading && state.IsDowned, Is.True);
+            Assert.That(state.IsInVehicle, Is.True);
         }
 
         [Test]

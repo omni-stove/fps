@@ -5,14 +5,14 @@ namespace Fps.Core
 {
     /// <summary>
     /// プレイヤーの今のアクション (<see cref="PlayerActionState"/>) を、デバッグ表示の行に組み立てる。
-    /// 並びはダッシュ・しゃがみ・回避・乗り越え・接地・カバー・ブラインドファイア・ADS・射撃・リロード・ダウン・肩・視点・武器・ばらつき。
+    /// 並びはダッシュ・しゃがみ・回避・乗り越え・接地・カバー・ブラインドファイア・ADS・射撃・リロード・ダウン・乗り物・肩・視点・武器・ばらつき。
     /// 状態の有無を表す行は <c>名前: ON</c> / <c>名前: OFF</c> で、ON のときだけ <see cref="ActionDebugLine.IsActive"/> が true。
     /// 肩・視点・武器・ばらつきは値を出すだけで、有効にはならない。項目名と値の語は <see cref="GameText"/> から今の言語で引く。
     /// </summary>
     public static class ActionDebugFormat
     {
         /// <summary><see cref="Lines"/> が返す行の数。</summary>
-        public const int LineCount = 15;
+        public const int LineCount = 16;
 
         public const string On = "ON";
 
@@ -41,6 +41,7 @@ namespace Fps.Core
                 Toggle("fire", state.IsFiring),
                 Value("reload", Reload(state.IsReloading, state.ReloadProgress, state.ActiveReload), state.IsReloading),
                 Toggle("downed", state.IsDowned),
+                Toggle("inVehicle", state.IsInVehicle),
                 Value("shoulder", Shoulder(state.Shoulder), false),
                 Value("view", View(state.ViewMode), false),
                 Value("weapon", state.WeaponName.Length > 0 ? state.WeaponName : None, false),

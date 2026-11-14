@@ -70,7 +70,8 @@ namespace Fps.Runtime
                 throw new InvalidOperationException($"EnemyAgent '{name}' is not initialized");
             }
 
-            if (_brain.IsDead)
+            // 座席に留める HoldWhileRiding が吹き飛ばしより先に戻るので、受けると座席の姿勢が外れたまま降りるまで飛べない。
+            if (_brain.IsDead || IsRiding)
             {
                 return false;
             }

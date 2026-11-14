@@ -34,6 +34,7 @@
   "actionDebug.label.fire": "射撃",
   "actionDebug.label.reload": "リロード",
   "actionDebug.label.downed": "ダウン",
+  "actionDebug.label.inVehicle": "乗り物",
   "actionDebug.label.shoulder": "肩",
   "actionDebug.label.view": "視点",
   "actionDebug.label.weapon": "武器",

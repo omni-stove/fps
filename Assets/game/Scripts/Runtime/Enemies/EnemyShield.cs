@@ -102,7 +102,7 @@ namespace Fps.Runtime
             Tick(Time.deltaTime);
         }
 
-        // 殴り始めたか当たりを判定したかを返す。EnemyAgent の判断 (ShieldEnemyBehavior) を読むので、その Update の後に呼ぶ。
+        // EnemyAgent の判断 (ShieldEnemyBehavior) を読むので、その Update の後に呼ぶ。
         public bool Tick(float deltaSeconds)
         {
             EnsureInitialized();
@@ -166,7 +166,6 @@ namespace Fps.Runtime
             return started;
         }
 
-        // 構えていたのを下ろしたら true。
         public bool Lower(float seconds, string cause)
         {
             if (!_active || !_guard.Lower(seconds, cause))

@@ -11,11 +11,9 @@ namespace Fps.Core
 
         public float SecondsRemaining => _remaining;
 
-        /// <summary>今下ろしている理由。構えていれば空。</summary>
         public string Cause { get; private set; } = string.Empty;
 
         // 下ろしている最中にまた受けたら、残りの長いほうに延ばす。短い理由で早く構え直させないように。
-        // 構えていたのを下ろしたときだけ true。
         public bool Lower(float seconds, string cause)
         {
             if (!(seconds >= 0f) || float.IsInfinity(seconds))
@@ -43,7 +41,6 @@ namespace Fps.Core
             return wasRaised;
         }
 
-        // 構え直した Tick だけ true。
         public bool Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))

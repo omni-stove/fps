@@ -46,7 +46,6 @@ namespace Fps.Editor
             }
         }
 
-        // 高台の手前の端・真ん中・奥の端。撃つたびに次の足場へ移る。
         public static Vector3[] Perches()
         {
             var top = DeckCenter + new Vector3(0f, DeckHeight, 0f);

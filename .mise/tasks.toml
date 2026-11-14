@@ -26,7 +26,7 @@ run = "scripts/lint.sh --fix"
 quiet = true
 
 [test]
-description = "Run the Unity-independent C# unit tests (dotnet/Fps.Core.Tests) with dotnet test"
+description = "Run the Unity-independent C# unit tests (every test project in dotnet/Fps.slnx) with dotnet test"
 run = "scripts/test.sh"
 quiet = true
 
@@ -45,6 +45,13 @@ arg "[platform]" help="macos or linux" default="macos"
 flag "--version <version>" help="build version such as v0.2.0 (default: git describe --tags --always --dirty)"
 '''
 run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
+
+[server-dotnet]
+description = "Build the Unity-independent .NET server (dotnet/Fps.Server) and run it with -mode server. The version is git describe --tags --always --dirty"
+run = [
+  "dotnet build dotnet/Fps.Server/Fps.Server.csproj -c Release -v q --nologo",
+  'dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -- -mode server -buildVersion "$(git describe --tags --always --dirty)"',
+]
 
 [server-image]
 description = "Build the Linux dedicated server and package it as a Docker image with docker/server/Dockerfile (close the Editor first). Options: --tag <name:tag> (default fps-server:local), --skip-build to reuse Builds/server-linux/"

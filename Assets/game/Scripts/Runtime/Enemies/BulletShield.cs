@@ -89,6 +89,30 @@ namespace Fps.Runtime
             return true;
         }
 
+        public static BulletShield Create(Transform owner, GameObject prefab)
+        {
+            if (owner == null)
+            {
+                throw new ArgumentNullException(nameof(owner));
+            }
+
+            if (prefab == null)
+            {
+                return CreatePlaceholder(owner);
+            }
+
+            // 弾が止まるかは当たったコライダーと同じ物に BulletShield があるかで見る (TryBlock) ので、子のコライダーでは止まらない。
+            if (prefab.GetComponent<Collider>() == null)
+            {
+                throw new ArgumentException($"shield prefab '{prefab.name}' has no collider on its root; it cannot stop bullets", nameof(prefab));
+            }
+
+            var plate = UnityEngine.Object.Instantiate(prefab, owner, false);
+            plate.name = prefab.name;
+            var shield = plate.GetComponent<BulletShield>();
+            return shield != null ? shield : plate.AddComponent<BulletShield>();
+        }
+
         public static BulletShield CreatePlaceholder(Transform owner)
         {
             if (owner == null)

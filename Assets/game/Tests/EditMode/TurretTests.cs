@@ -81,6 +81,60 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void WithoutPrefabsThePlaceholderBoxesFillTheSize()
+        {
+            var turret = Place(FriendlyFire.Off);
+            var spec = _definition.ToDeploySpec();
+
+            var stand = turret.transform.Find(TurretDeployDefinition.BaseName);
+            Assert.That(stand, Is.Not.Null);
+            Assert.That(stand.localScale, Is.EqualTo(new Vector3(spec.Width, spec.Height * TurretDeployDefinition.BaseHeightFraction, spec.Depth)));
+            Assert.That(turret.Head.Find(TurretDeployDefinition.ShellName), Is.Not.Null);
+        }
+
+        [Test]
+        public void TheBaseAndHeadPrefabsReplaceThePlaceholderBoxes()
+        {
+            var basePrefab = CreateTemplate("BaseArt", new Vector3(0f, 0.3f, 0f), new Vector3(1.2f, 0.6f, 1.2f));
+            var headPrefab = CreateTemplate("HeadArt", new Vector3(0f, 0f, 0.1f), new Vector3(0.3f, 0.3f, 0.9f));
+            _definition.BasePrefab = basePrefab;
+            _definition.HeadPrefab = headPrefab;
+
+            var turret = Place(FriendlyFire.Off);
+
+            var stand = turret.transform.Find(TurretDeployDefinition.BaseName);
+            Assert.That(stand, Is.Not.Null);
+            Assert.That(stand.gameObject, Is.Not.SameAs(basePrefab));
+            Assert.That(stand.localPosition, Is.EqualTo(basePrefab.transform.localPosition));
+            Assert.That(stand.localScale, Is.EqualTo(basePrefab.transform.localScale));
+            Assert.That(turret.Head.name, Is.EqualTo(Turret.HeadName));
+            Assert.That(turret.Head.parent, Is.SameAs(turret.transform));
+            var shell = turret.Head.Find(TurretDeployDefinition.ShellName);
+            Assert.That(shell, Is.Not.Null);
+            Assert.That(shell.localPosition, Is.EqualTo(headPrefab.transform.localPosition));
+            Assert.That(shell.localScale, Is.EqualTo(headPrefab.transform.localScale));
+            Assert.That(turret.GetComponentsInChildren<Collider>(), Has.Length.EqualTo(2), "only the prefabs' colliders, no placeholder boxes");
+
+            var foe = CreateBody("Foe", new Vector3(0f, 0.5f, 5f), Side.Bravo, 40);
+            Run(turret, () => foe.IsDead);
+            Assert.That(foe.IsDead, Is.True, "the head made from the prefab still turns and fires");
+        }
+
+        [Test]
+        public void TheWholePrefabStillWinsOverThePartPrefabs()
+        {
+            var whole = CreateTemplate("WholeArt", Vector3.zero, Vector3.one);
+            _definition.Prefab = whole;
+            _definition.BasePrefab = CreateTemplate("BaseArt", Vector3.zero, Vector3.one);
+            _definition.HeadPrefab = CreateTemplate("HeadArt", Vector3.zero, Vector3.one);
+
+            var turret = Place(FriendlyFire.Off);
+
+            Assert.That(turret.transform.Find(TurretDeployDefinition.BaseName), Is.Null);
+            Assert.That(turret.Head, Is.SameAs(turret.transform), "a whole prefab without a Head child turns as one piece");
+        }
+
+        [Test]
         public void ItShootsAndKillsAHostileInSight()
         {
             var turret = Place(FriendlyFire.Off);
@@ -311,6 +365,20 @@ namespace Fps.Tests.EditMode
             turret.Arm(_definition.ToTurretSpec(), _definition.ToWeaponSpec(), friendlyFire);
             Physics.SyncTransforms();
             return turret;
+        }
+
+        // 型にする物は撃ち合いの線に掛からないよう、遠くに置いておく (複製の位置は型の localPosition で決まる)。
+        private GameObject CreateTemplate(string name, Vector3 localPosition, Vector3 localScale)
+        {
+            var parent = new GameObject(name + "Holder");
+            parent.transform.position = new Vector3(0f, -100f, 0f);
+            _created.Add(parent);
+            var template = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            template.name = name;
+            template.transform.SetParent(parent.transform, false);
+            template.transform.localPosition = localPosition;
+            template.transform.localScale = localScale;
+            return template;
         }
 
         private Damageable CreateBody(string name, Vector3 position, Side? side, int health)

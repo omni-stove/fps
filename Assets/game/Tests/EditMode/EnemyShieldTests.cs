@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -121,6 +122,59 @@ namespace Fps.Tests.EditMode
             Assert.That(shield.Plate.IsRaised, Is.True);
             Assert.That(agent.SprintAllowed, Is.False);
             Assert.That(agent.GaitSpeedMultiplier, Is.EqualTo(ShieldSpec.Default.ApproachSpeedMultiplier));
+        }
+
+        [Test]
+        public void TheShieldEnemyUsesThePlatePrefabWhenOneIsSet()
+        {
+            var (agent, shield) = CreateShieldEnemy(EnemyArchetype.Shield);
+            var prefab = CreatePlateTemplate("CustomPlate");
+            shield.PlatePrefab = prefab;
+
+            shield.Tick(0.1f);
+            Physics.SyncTransforms();
+
+            Assert.That(shield.Plate, Is.Not.Null);
+            Assert.That(shield.Plate.gameObject, Is.Not.SameAs(prefab));
+            Assert.That(shield.Plate.name, Is.EqualTo("CustomPlate"));
+            Assert.That(shield.Plate.transform.parent, Is.SameAs(agent.transform));
+            Assert.That(shield.Plate.transform.localPosition, Is.EqualTo(prefab.transform.localPosition));
+            Assert.That(shield.Plate.transform.localScale, Is.EqualTo(prefab.transform.localScale));
+            Assert.That(agent.transform.Find(BulletShield.PlaceholderName), Is.Null, "no placeholder is made beside the prefab");
+            LogAssert.Expect(LogType.Log, "[AI] id=shield-1 shield blocked dmg=25 by=unknown");
+            Assert.That(FireFromTheFront(25).Damage, Is.Zero);
+        }
+
+        [Test]
+        public void APlatePrefabWithoutARootColliderFallsBackToThePlaceholder()
+        {
+            var (agent, shield) = CreateShieldEnemy(EnemyArchetype.Shield);
+            var prefab = Track(new GameObject("NoCollider"));
+            shield.PlatePrefab = prefab;
+
+            LogAssert.Expect(LogType.Error, new Regex("shield prefab 'NoCollider' has no collider on its root.*using the placeholder shield", RegexOptions.Singleline));
+            shield.Tick(0.1f);
+
+            Assert.That(shield.Plate, Is.Not.Null);
+            Assert.That(shield.Plate.name, Is.EqualTo(BulletShield.PlaceholderName));
+            Assert.That(shield.Plate.transform.parent, Is.SameAs(agent.transform));
+        }
+
+        [Test]
+        public void CreatingFromAPrefabKeepsItsOwnBulletShield()
+        {
+            var owner = Track(new GameObject("Owner"));
+            var prefab = CreatePlateTemplate("Plate");
+            prefab.AddComponent<BulletShield>();
+
+            var plate = BulletShield.Create(owner.transform, prefab);
+
+            Assert.That(plate.gameObject, Is.Not.SameAs(prefab));
+            Assert.That(plate.GetComponents<BulletShield>(), Has.Length.EqualTo(1));
+            Assert.That(plate.Collider, Is.Not.Null);
+            Assert.That(BulletShield.Create(owner.transform, null).name, Is.EqualTo(BulletShield.PlaceholderName));
+            Assert.Throws<System.ArgumentNullException>(() => BulletShield.Create(null, prefab));
+            Assert.Throws<System.ArgumentException>(() => BulletShield.Create(owner.transform, Track(new GameObject("Bare"))));
         }
 
         [Test]
@@ -251,6 +305,16 @@ namespace Fps.Tests.EditMode
         {
             _created.Add(created);
             return created;
+        }
+
+        // 盾の位置に置くと敵の前を塞ぐ大きさにし、見分けられるよう仮の板と違う大きさにする。原点から離れた所に置いて撃つ線に掛からないようにする。
+        private GameObject CreatePlateTemplate(string name)
+        {
+            var template = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            template.name = name;
+            template.transform.localPosition = new Vector3(0f, 0.2f, 0.7f);
+            template.transform.localScale = new Vector3(1.3f, 1.8f, 0.2f);
+            return template;
         }
 
         private static HitscanResult FireFromTheFront(int damage)

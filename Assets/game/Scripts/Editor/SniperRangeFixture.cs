@@ -107,8 +107,7 @@ namespace Fps.Editor
                     var sniper = enemy.gameObject.AddComponent<EnemySniper>();
                     sniper.SetPerches(perches);
 
-                    // 光線は狙撃兵の子にしない。子にすると、狙撃兵の向きに合わせて回り、目から目標へ伸ばした向きがずれる。
-                    sniper.AimBeam = EnemySniper.CreateBeamPlaceholder(root.transform);
+                    // 光線はシーンに焼き込まず、実行時に作らせる。焼き込むと、後で EnemySniper にプレハブを設定しても使われない。
                     enemy.gameObject.SetActive(false);
                     activated.Add(enemy.gameObject);
                 }

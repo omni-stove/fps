@@ -13,6 +13,8 @@ jobs:
   precheck:
     uses: omni-stove/.github/.github/workflows/precheck.yml@main
     permissions:
+      contents: read
+      checks: read
       pull-requests: read
 
   # 抜けた .meta を作り直し、差分があればその場で PR に [regen] コミットとして push する。
@@ -39,7 +41,7 @@ jobs:
 
   checks:
     needs: precheck
-    if: needs.precheck.outputs.proceed == 'true'
+    if: needs.precheck.outputs.review == 'true'
     uses: omni-stove/.github/.github/workflows/ci.yml@main
     permissions:
       contents: read

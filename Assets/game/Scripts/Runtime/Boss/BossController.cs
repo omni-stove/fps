@@ -428,7 +428,11 @@ namespace Fps.Runtime
             if (change.HasValue)
             {
                 OnChanged(change.Value, "reset");
+                return;
             }
+
+            // 段階が変わらなくても、行動の合図で出した弱点が復活後に残らないよう当て直す
+            ApplyPhase(_state.Current);
         }
 
         private float CurrentHealthFraction()

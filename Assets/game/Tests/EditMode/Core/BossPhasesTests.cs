@@ -6,12 +6,17 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class BossPhasesTests
     {
+        private static readonly string[] CoreOnly = { "Core" };
+        private static readonly string[] CoreAndEye = { "Core", "Core", "Eye" };
+        private static readonly string[] CoreEyeDeduped = { "Core", "Eye" };
+        private static readonly string[] EmptyName = { "" };
+
         private static BossPhases TwoPhases()
         {
             return new BossPhases(new[]
             {
                 new BossPhase("Guarded", null),
-                new BossPhase("Exposed", BossPhaseTrigger.HealthAtOrBelow(0.5f), moveSpeedMultiplier: 2f, exposedWeakPoints: new[] { "Core" }),
+                new BossPhase("Exposed", BossPhaseTrigger.HealthAtOrBelow(0.5f), moveSpeedMultiplier: 2f, exposedWeakPoints: CoreOnly),
             });
         }
 
@@ -213,15 +218,15 @@ namespace Fps.Core.Tests
         [Test]
         public void PhaseDropsRepeatedWeakPointsAndRefusesBadValues()
         {
-            var phase = new BossPhase("A", null, exposedWeakPoints: new[] { "Core", "Core", "Eye" });
+            var phase = new BossPhase("A", null, exposedWeakPoints: CoreAndEye);
 
-            Assert.That(phase.ExposedWeakPoints, Is.EqualTo(new[] { "Core", "Eye" }));
+            Assert.That(phase.ExposedWeakPoints, Is.EqualTo(CoreEyeDeduped));
             Assert.That(phase.Exposes("Eye"), Is.True);
             Assert.That(phase.Exposes("Tail"), Is.False);
             Assert.That(new BossPhase("B", null).ExposedWeakPoints, Is.Empty);
 
             Assert.Throws<ArgumentException>(() => new BossPhase(" ", null));
-            Assert.Throws<ArgumentException>(() => new BossPhase("A", null, exposedWeakPoints: new[] { "" }));
+            Assert.Throws<ArgumentException>(() => new BossPhase("A", null, exposedWeakPoints: EmptyName));
             Assert.Throws<ArgumentOutOfRangeException>(() => new BossPhase("A", null, moveSpeedMultiplier: 0f));
             Assert.Throws<ArgumentOutOfRangeException>(() => new BossPhase("A", null, moveSpeedMultiplier: float.PositiveInfinity));
         }

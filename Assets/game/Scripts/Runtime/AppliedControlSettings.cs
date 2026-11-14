@@ -6,7 +6,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 今効いている操作設定。Play の開始時に <see cref="ControlSettingsStore"/> から読み、全体の音量を <see cref="AudioListener.volume"/> に入れる。
-    /// 設定画面 (<see cref="SettingsView"/>) が <see cref="Apply"/> で変えると <see cref="Changed"/> で配り (言語が変わったときは先に <see cref="Localizer.Changed"/> で配る)、
+    /// 設定画面が <see cref="Sink"/> (<see cref="ISettingsSink"/>) 越しに <see cref="Apply"/> で変えると <see cref="Changed"/> で配り (言語が変わったときは先に <see cref="Localizer.Changed"/> で配る)、
     /// <see cref="FirstPersonLook"/>・<see cref="AimDownSights"/>・<see cref="ViewRig"/>・<see cref="PlayerController"/> などが
     /// その場で使い直す。効果音を鳴らす側は <see cref="ControlSettings.EffectsVolume"/> を音量に掛ける。
     /// 保存はしない (保存は設定画面を閉じたときに <see cref="ControlSettingsStore.Save"/> で行う)。
@@ -23,6 +23,9 @@ namespace Fps.Runtime
         /// 1 つの購読先が投げても、ほかの購読先には届ける。
         /// </summary>
         public static event Action<ControlSettings> Changed;
+
+        /// <summary><see cref="Current"/> を読み <see cref="Apply"/> で効かせる、設定画面に渡す先。</summary>
+        public static ISettingsSink Sink { get; } = new AppliedSink();
 
         /// <summary>今効いている設定。まだ読んでいなければ <see cref="ControlSettingsStore"/> (既定のキー) から読む。</summary>
         public static ControlSettings Current
@@ -95,6 +98,16 @@ namespace Fps.Runtime
         private static void LoadOnPlay()
         {
             _ = Current;
+        }
+
+        private sealed class AppliedSink : ISettingsSink
+        {
+            public ControlSettings Current => AppliedControlSettings.Current;
+
+            public void Apply(ControlSettings settings)
+            {
+                AppliedControlSettings.Apply(settings);
+            }
         }
     }
 }

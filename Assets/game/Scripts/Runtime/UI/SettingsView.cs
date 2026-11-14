@@ -12,7 +12,7 @@ namespace Fps.Runtime
     /// 設定画面。感度・ADS 感度・視野角・音量 (<see cref="ControlValue"/>) のスライダー、敵味方の色の組 (<see cref="ColorPalette"/>) の切り替えと見本、
     /// 音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off、入力機器ごとの Hold/Toggle の切り替えを
     /// UI Toolkit の要素としてコードで組み、<see cref="Open"/> で渡された入れ物 (メインメニューの差し込み口やポーズ画面の枠) に入れる。
-    /// 値を変えるとすぐ <see cref="AppliedControlSettings.Apply"/> で効かせ、<see cref="Close"/> (か <see cref="Save"/>) で
+    /// 値を変えるとすぐ <see cref="ISettingsSink.Apply"/> (既定は <see cref="AppliedControlSettings.Sink"/>) で効かせ、<see cref="Close"/> (か <see cref="Save"/>) で
     /// <see cref="ControlSettingsStore"/> に保存する。スライダーを動かすたびにディスクへ書かないよう、保存は閉じるときにまとめる。
     /// 「戻る」とキャンセル (ゲームパッドの B など) では <see cref="BackRequested"/> を呼ぶだけで、閉じるのは開いた側が決める。
     /// <para>
@@ -90,6 +90,7 @@ namespace Fps.Runtime
         private readonly ControlSettingsStore _store;
         private readonly InputBindingOverridesStore _bindingStore;
         private readonly InputActionAsset _actionAsset;
+        private readonly ISettingsSink _sink;
         private readonly Dictionary<ControlValue, SliderInt> _sliders = new Dictionary<ControlValue, SliderInt>();
         private readonly Dictionary<ControlValue, Label> _valueLabels = new Dictionary<ControlValue, Label>();
         private readonly Dictionary<string, Button> _modeButtons = new Dictionary<string, Button>(StringComparer.Ordinal);
@@ -115,11 +116,17 @@ namespace Fps.Runtime
         /// <param name="store">保存先。null ならゲームの既定のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
         /// <param name="bindingStore">割り当ての上書きの保存先。null ならゲームの既定のキー。</param>
         /// <param name="actions">割り当てを変える Input Actions。null なら開くときのプロジェクト全体のもの (<see cref="InputSystem.actions"/>)。</param>
-        public SettingsView(ControlSettingsStore store = null, InputBindingOverridesStore bindingStore = null, InputActionAsset actions = null)
+        /// <param name="sink">今の設定を読み、変えた値を効かせる先。null ならゲーム全体の <see cref="AppliedControlSettings.Sink"/>。</param>
+        public SettingsView(
+            ControlSettingsStore store = null,
+            InputBindingOverridesStore bindingStore = null,
+            InputActionAsset actions = null,
+            ISettingsSink sink = null)
         {
             _store = store ?? new ControlSettingsStore();
             _bindingStore = bindingStore ?? new InputBindingOverridesStore();
             _actionAsset = actions;
+            _sink = sink ?? AppliedControlSettings.Sink;
         }
 
         /// <summary>「戻る」かキャンセルが押されたとき。開いた側が <see cref="Close"/> を呼んで閉じる。</summary>
@@ -254,7 +261,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 今効いている設定 (<see cref="AppliedControlSettings.Current"/>) で画面を組んで container に入れ、最初のスライダーにフォーカスを置く。
+        /// 今効いている設定 (<see cref="ISettingsSink.Current"/>) で画面を組んで container に入れ、最初のスライダーにフォーカスを置く。
         /// 既に開いていれば、前の画面を閉じて (保存して) から開き直す。
         /// </summary>
         public void Open(VisualElement container)
@@ -266,7 +273,7 @@ namespace Fps.Runtime
 
             Close();
 
-            _editing = AppliedControlSettings.Current;
+            _editing = _sink.Current;
             _saved = _editing;
             _bindings = CreateBindings();
             _bindingsDirty = false;
@@ -365,7 +372,7 @@ namespace Fps.Runtime
             var failed = false;
 
             // 開いている間に F3 で切り替えて保存した回線の表示を、開いたときの値で書き戻さない
-            _editing = _editing.WithShowNetStats(AppliedControlSettings.Current.ShowNetStats);
+            _editing = _editing.WithShowNetStats(_sink.Current.ShowNetStats);
             if (!_editing.Equals(_saved))
             {
                 try
@@ -635,14 +642,14 @@ namespace Fps.Runtime
         private void Edit(ControlSettings settings)
         {
             // 回線の表示はこの画面に無く、開いている間にも F3 (Fps.Net の NetHud) で切り替わるので、開いたときの値で戻さない
-            settings = settings.WithShowNetStats(AppliedControlSettings.Current.ShowNetStats);
+            settings = settings.WithShowNetStats(_sink.Current.ShowNetStats);
             if (settings.Equals(_editing))
             {
                 return;
             }
 
             _editing = settings;
-            AppliedControlSettings.Apply(settings);
+            _sink.Apply(settings);
             Refresh();
         }
 

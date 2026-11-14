@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Fps.Core.Tests
 {
     /// <summary>
     /// この名前空間のテストの間、Core の画面の文字 (<see cref="GameText"/>) をゲームと同じ日本語の文字列表
-    /// (<see cref="StringsFolder"/> の ja.json に <see cref="LayerFolder"/> の ja/ を重ねたもの) から引かせ、終わったら前の引き先に戻す。
+    /// (<see cref="StringsFolder"/> の ja.json に <see cref="LayerFolder"/>/ja/ の表を重ねたもの) から引かせ、終わったら前の引き先に戻す。
     /// 書式のテストは日本語の文を期待しているので、エディターや OS の言語で結果が変わらないようにする。
     /// Unity (Fps.Core.Tests) でも dotnet test (dotnet/Fps.Core.Tests) でも同じファイルを読む。
     /// </summary>
@@ -16,9 +17,6 @@ namespace Fps.Core.Tests
     {
         /// <summary>リポジトリの根からの、言語ごとの文字列表のフォルダー。</summary>
         public const string StringsFolder = "Assets/game/Localization/Resources/Strings";
-
-        /// <summary>リポジトリの根からの、言語コードのフォルダーごとに重ねる表を置くフォルダー。</summary>
-        public const string LayerFolder = "Assets/game/Resources/Localization";
 
         private Func<StringTable> _previous;
 
@@ -36,36 +34,46 @@ namespace Fps.Core.Tests
             GameText.Use(_previous);
         }
 
+        /// <summary>リポジトリの根からの、言語コードのフォルダーごとに重ねる表を置くフォルダー。</summary>
+        public const string LayerFolder = "Assets/game/Resources/Localization";
+
         /// <summary>
-        /// language の文字列表をリポジトリから読む。ゲーム (Fps.Runtime の Localizer) と同じく、<see cref="StringsFolder"/> の表に
-        /// <see cref="LayerFolder"/> の言語コードのフォルダーにある JSON をファイル名 (拡張子なし) の順に重ね、同じキーは後のものにする。
+        /// language の文字列表をリポジトリから、ゲーム (Fps.Runtime の Localizer) と同じ順に重ねて読む。
         /// 見つからない・読めなければテストを失敗にする。
         /// </summary>
         public static StringTable LoadTable(GameLanguage language)
         {
+            return StringTable.Merge(LoadLayers(language).Select(layer => layer.Value));
+        }
+
+        /// <summary>
+        /// language の文字列表を、重ねる順にファイルのパスと組にして読む。先に <see cref="StringsFolder"/> の &lt;言語コード&gt;.json、
+        /// 続けて <see cref="LayerFolder"/>/&lt;言語コード&gt;/ の *.json をファイル名 (拡張子なし) の順 (大文字小文字を区別する) に並べる。
+        /// 見つからない・読めなければテストを失敗にする。
+        /// </summary>
+        public static IReadOnlyList<KeyValuePair<string, StringTable>> LoadLayers(GameLanguage language)
+        {
             var root = FindRepositoryRoot();
             var code = GameLanguages.Code(language);
-            var path = Path.Combine(root, StringsFolder, code + ".json");
-            Assert.That(File.Exists(path), Is.True, path);
+            var single = Path.Combine(root, StringsFolder, code + ".json");
+            Assert.That(File.Exists(single), Is.True, single);
 
-            var paths = new List<string> { path };
-            var layerDirectory = Path.Combine(root, LayerFolder, code);
-            if (Directory.Exists(layerDirectory))
+            var paths = new List<string> { single };
+            var folder = Path.Combine(root, LayerFolder, code);
+            if (Directory.Exists(folder))
             {
-                var layers = new List<string>(Directory.GetFiles(layerDirectory, "*.json"));
-                layers.Sort((a, b) => string.CompareOrdinal(Path.GetFileNameWithoutExtension(a), Path.GetFileNameWithoutExtension(b)));
-                paths.AddRange(layers);
+                paths.AddRange(Directory.GetFiles(folder, "*.json")
+                    .OrderBy(Path.GetFileNameWithoutExtension, StringComparer.Ordinal));
             }
 
-            var tables = new List<StringTable>();
-            foreach (var file in paths)
+            var layers = new List<KeyValuePair<string, StringTable>>();
+            foreach (var path in paths)
             {
-                Assert.That(StringTable.TryParse(File.ReadAllText(file), null, out var one, out var error), Is.True, $"{file}: {error}");
-                tables.Add(one);
+                Assert.That(StringTable.TryParse(File.ReadAllText(path), null, out var table, out var error), Is.True, $"{path}: {error}");
+                layers.Add(new KeyValuePair<string, StringTable>(path, table));
             }
 
-            var warnings = new List<string>();
-            return StringTable.Merge(tables, warnings.Add);
+            return layers;
         }
 
         /// <summary>

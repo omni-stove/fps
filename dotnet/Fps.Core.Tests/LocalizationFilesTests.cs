@@ -1,15 +1,50 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 
 namespace Fps.Core.Tests
 {
     /// <summary>
-    /// ゲームが読む文字列表 (Assets/game/Localization/Resources/Strings/*.json に Assets/game/Resources/Localization/&lt;言語コード&gt;/ を重ねたもの) が読め、どの言語にも同じキーがあり、
-    /// 同じキーが同じ番号の値を差し込むこと。片方の言語にだけ足したキーは、もう片方でキーそのものが画面に出てしまう。
+    /// ゲームが読む文字列表 (Assets/game/Localization/Resources/Strings/*.json と Assets/game/Resources/Localization/&lt;言語&gt;/*.json を重ねたもの)
+    /// が読め、どの言語にも同じキーがあり、同じキーが同じ番号の値を差し込むこと。片方の言語にだけ足したキーは、もう片方でキーそのものが画面に出てしまう。
     /// </summary>
     public sealed class LocalizationFilesTests
     {
+        // 重ねる表は後のものが勝つので、同じ言語の 2 つのファイルに同じキーがあると、片方を書き換えても画面が変わらないことがある。
+        [Test]
+        public void EveryKeyIsWrittenInOnlyOneFileOfALanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var owners = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var layer in JapaneseGameTextSetUp.LoadLayers(language))
+                {
+                    foreach (var key in layer.Value.Keys)
+                    {
+                        Assert.That(owners.TryGetValue(key, out var first), Is.False, $"{key} is in both {first} and {layer.Key}");
+                        owners[key] = layer.Key;
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void TheMenuTextsAreReadFromTheJapaneseMenuTable()
+        {
+            var menu = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("menu.json", StringComparison.Ordinal))
+                .Value;
+
+            foreach (var prefix in new[] { "menu.", "pause.", "campaign.", "loadout." })
+            {
+                Assert.That(menu.Keys.Any(key => key.StartsWith(prefix, StringComparison.Ordinal)), Is.True, prefix);
+            }
+
+            Assert.That(menu.Get("campaign.continue"), Is.EqualTo("続きから"));
+            Assert.That(menu.Get("loadout.title"), Is.EqualTo("ロードアウト"));
+        }
+
         [Test]
         public void EveryLanguageHasAReadableTable()
         {

@@ -64,7 +64,7 @@ namespace Fps.Net
         /// <summary>サーバーから届いたダウンの状態。</summary>
         public NetDownedState DownedState => _downedState.Value;
 
-        /// <summary><see cref="NetHud"/> が OnValueChanged を購読するダウンの同期値。</summary>
+        /// <summary>HUD (Fps.Net.UI の NetHud) が OnValueChanged を購読するダウンの同期値。</summary>
         internal NetworkVariable<NetDownedState> DownedStateVariable => _downedState;
 
         /// <summary>

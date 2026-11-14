@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 視点操作 (一人称・三人称共通)。Look 入力で本体 (この GameObject) を yaw、子の pitch の軸を pitch (±85°) で回す。
-    /// 有効な間はカーソルをロックする (<see cref="PauseMenu"/> が開いている間を除く)。参照はコードで解決するので Inspector の配線は要らない:
+    /// 有効な間はカーソルをロックする (ポーズ画面かロードアウトの選択が開いている間 (<see cref="GameUi.IsPauseOpen"/>・<see cref="GameUi.IsLoadoutSelectOpen"/>) を除く)。参照はコードで解決するので Inspector の配線は要らない:
     /// pitch の軸は、本体に <see cref="ViewRig"/> があればその目 (カメラの親)、無ければ子階層の <see cref="Camera"/>。
     /// 入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の <see cref="LookActionPath"/>。
     /// 三人称でもカメラは目の子なので、目を回せば肩越しのカメラも一緒に回る。
@@ -177,7 +177,7 @@ namespace Fps.Runtime
             }
 
             // ポーズ中やロードアウト選択中に出現し直したプレイヤーが、画面を操作しているカーソルを奪わないようにする。閉じたときに各画面がロックする。
-            if (!PauseMenu.IsAnyOpen && !LoadoutSelectView.IsAnyOpen)
+            if (!GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen)
             {
                 LockCursor(true);
             }
@@ -197,7 +197,7 @@ namespace Fps.Runtime
         private void OnApplicationFocus(bool hasFocus)
         {
             // フォーカスを失うと OS がロックを外すので、戻ったときにかけ直す。
-            if (hasFocus && isActiveAndEnabled && !PauseMenu.IsAnyOpen && !LoadoutSelectView.IsAnyOpen)
+            if (hasFocus && isActiveAndEnabled && !GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen)
             {
                 LockCursor(true);
             }
@@ -205,11 +205,11 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 有効で初期化済みの視点操作がシーンにあればカーソルをロックして隠し、無ければ外して出す。
-        /// <see cref="PauseMenu"/> を閉じたときに呼ぶ (開いている間に視点操作が有効・無効になっていることがあるため、開く前の状態には戻さない)。
+        /// ポーズ画面を閉じたときに呼ぶ (開いている間に視点操作が有効・無効になっていることがあるため、開く前の状態には戻さない)。
         /// </summary>
         public static void RefreshCursorLock()
         {
-            if (LoadoutSelectView.IsAnyOpen)
+            if (GameUi.IsLoadoutSelectOpen)
             {
                 LockCursor(false);
                 return;

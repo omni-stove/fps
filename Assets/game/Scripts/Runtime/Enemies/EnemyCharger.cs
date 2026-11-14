@@ -255,11 +255,19 @@ namespace Fps.Runtime
 
         private bool IsWallBetween(Vector3 from, Vector3 to)
         {
-            var hits = Physics.RaycastAll(from, to - from, (to - from).magnitude, _obstacleMask, QueryTriggerInteraction.Ignore);
+            // 壁で止める判定 (TryFindObstacle) と同じ太さで調べる。細い線だと壁の上端より高い所を通り、止まった位置から壁越しに当ててしまう。
+            var offset = to - from;
+            var hits = Physics.SphereCastAll(
+                from, BodyRadius(), offset.normalized, offset.magnitude, _obstacleMask, QueryTriggerInteraction.Ignore);
             foreach (var hit in hits)
             {
                 var collider = hit.collider;
                 if (collider == null || collider.transform.IsChildOf(transform) || FindDamageable(collider) != null)
+                {
+                    continue;
+                }
+
+                if (hit.distance > 0f && hit.normal.y > WalkableNormalY)
                 {
                     continue;
                 }

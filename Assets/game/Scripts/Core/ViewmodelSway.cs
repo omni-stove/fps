@@ -8,7 +8,7 @@ namespace Fps.Core
         // 指数で近づけるだけだと 0 に届かず「静止時は揺れ 0」にならないので、これより小さい差は詰め切る。
         public const float RestEpsilon = 1e-5f;
 
-        private const float TwoPi = 2f * MathF.PI;
+        private const float _twoPi = 2f * MathF.PI;
 
         private ViewmodelSwaySettings _settings;
         private float _bobPhase;
@@ -87,7 +87,7 @@ namespace Fps.Core
 
             var s = _settings;
             _bobWeight = Approach(_bobWeight, Math.Min(1f, horizontalSpeed / s.BobReferenceSpeed), s.BobSharpness, deltaSeconds);
-            _bobPhase = (_bobPhase + (TwoPi * s.BobCyclesPerMeter * horizontalSpeed * deltaSeconds)) % TwoPi;
+            _bobPhase = (_bobPhase + (_twoPi * s.BobCyclesPerMeter * horizontalSpeed * deltaSeconds)) % _twoPi;
 
             var maxLag = s.MaxLookLagDegrees;
             var yawTarget = Math.Clamp(-yawRightDegreesPerSecond * s.LookLagSeconds, -maxLag, maxLag);

@@ -7,14 +7,14 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ViewmodelSwayTests
     {
-        private const float Frame = 1f / 60f;
+        private const float _frame =1f / 60f;
 
         private static void Run(ViewmodelSway sway, float seconds, float speed = 0f, float yawRate = 0f, float pitchRate = 0f, float ads = 0f)
         {
-            var frames = (int)MathF.Round(seconds / Frame);
+            var frames = (int)MathF.Round(seconds / _frame);
             for (var i = 0; i < frames; i++)
             {
-                sway.Tick(Frame, speed, yawRate, pitchRate, ads);
+                sway.Tick(_frame, speed, yawRate, pitchRate, ads);
             }
         }
 
@@ -44,7 +44,7 @@ namespace Fps.Core.Tests
             var minY = 0f;
             for (var i = 0; i < 120; i++)
             {
-                sway.Tick(Frame, 5f, 0f, 0f, 0f);
+                sway.Tick(_frame, 5f, 0f, 0f, 0f);
                 maxX = MathF.Max(maxX, MathF.Abs(sway.Position.X));
                 minY = MathF.Min(minY, sway.Position.Y);
             }
@@ -139,8 +139,8 @@ namespace Fps.Core.Tests
 
             for (var i = 0; i < 40; i++)
             {
-                hip.Tick(Frame, 5f, 120f, 0f, 0f);
-                ads.Tick(Frame, 5f, 120f, 0f, 1f);
+                hip.Tick(_frame, 5f, 120f, 0f, 0f);
+                ads.Tick(_frame, 5f, 120f, 0f, 1f);
             }
 
             hip.Kick();
@@ -184,10 +184,10 @@ namespace Fps.Core.Tests
 
             Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(-1f, 0f, 0f, 0f, 0f));
             Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(float.NaN, 0f, 0f, 0f, 0f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(Frame, -1f, 0f, 0f, 0f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(Frame, 0f, float.PositiveInfinity, 0f, 0f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(Frame, 0f, 0f, float.NaN, 0f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(Frame, 0f, 0f, 0f, float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(_frame, -1f, 0f, 0f, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(_frame, 0f, float.PositiveInfinity, 0f, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(_frame, 0f, 0f, float.NaN, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => sway.Tick(_frame, 0f, 0f, 0f, float.NaN));
             Assert.Throws<ArgumentNullException>(() => sway.Settings = null);
         }
 

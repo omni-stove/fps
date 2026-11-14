@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Fps.Core;
@@ -15,6 +16,9 @@ namespace Fps.Runtime
     /// どの味方を映すかは <see cref="SpectateTargets"/> で決め、Next / Previous で次・前の味方へ移る。
     /// モードが無い (キャンペーン) か、映せる味方がいなければ (<see cref="SpectateTargets.ResolveMode"/>) Free と同じにする。</item>
     /// <item><see cref="DeathCamera.Free"/>: 倒れた位置の上から、Move で向いている方へ飛び、Look で向きを変える。</item>
+    /// <item><see cref="DeathCamera.KillCam"/>: 倒した相手の倒す直前の <see cref="KillCamSeconds"/> 秒を、その肩越しで再生 (<see cref="KillCamReplay"/>) してから Killer と同じにする。
+    /// 生きている間、場にいる <see cref="Damageable"/> (<see cref="KillCamScanSeconds"/> 秒ごとに探し直す) と撃った者 (<see cref="CombatEvents.ShotFired"/>) の
+    /// 目と向きを相手ごとの <see cref="KillCamBuffer"/> にためておき、倒れたら倒した相手の分を切り出す。記録が無い相手ならすぐ Killer にする。</item>
     /// </list>
     /// カメラの置き方と入力はネット対戦の NetDeathCamera と同じ <see cref="DeathCamView"/> に任せる。
     /// モードの試合が終わったら (<see cref="ModeRunnerBase.IsMatchOver"/>、<see cref="MatchRunner"/> の試合の終わり) 試合の終わりの見せ方に譲ってすぐ戻す。
@@ -38,7 +42,24 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("自由カメラ (Free) を倒し切ったときの速さ (m/s)")]
         private float _freeSpeed = DeathCamFraming.DefaultFreeSpeed;
 
+        [SerializeField, Min(_minKillCamSeconds), Tooltip("キルカム (KillCam) で再生する、倒される直前の長さ (秒)")]
+        private float _killCamSeconds = KillCamBuffer.DefaultSeconds;
+
+        /// <summary>キルカムのために姿勢をためる相手を、場から探し直す間隔 (秒)。後から出てきた相手を拾うため。</summary>
+        public const float KillCamScanSeconds = 1f;
+
+        private const float _minKillCamSeconds = 0.1f;
+
         private readonly DeathCamSwitch _switch = new DeathCamSwitch();
+
+        // キルカムのために姿勢をためている相手。倒れたときに倒した相手の分を切り出す
+        private readonly List<KillCamSubject> _killCamSubjects = new List<KillCamSubject>();
+        private double _lastKillCamRecordTime;
+        private bool _hasKillCamRecord;
+        private double _nextKillCamScanTime;
+        private KillCamClip _killCamClip = KillCamClip.Empty;
+        private KillCamReplay _replay;
+        private bool _shotsSubscribed;
         private readonly List<SpectateCandidate> _candidates = new List<SpectateCandidate>();
 
         private Damageable _damageable;
@@ -83,6 +104,30 @@ namespace Fps.Runtime
             set => _freeSpeed = Mathf.Max(0f, value);
         }
 
+        /// <summary>
+        /// キルカム (<see cref="DeathCamera.KillCam"/>) で再生する、倒される直前の長さ (秒)。変えるとそれまでにためた姿勢は捨てる
+        /// (ためておく長さが変わるため)。
+        /// </summary>
+        public float KillCamSeconds
+        {
+            get => _killCamSeconds;
+            set
+            {
+                var seconds = float.IsNaN(value) || float.IsInfinity(value) ? KillCamBuffer.DefaultSeconds : Mathf.Max(_minKillCamSeconds, value);
+                if (seconds != _killCamSeconds)
+                {
+                    _killCamSeconds = seconds;
+                    ClearKillCamSubjects();
+                }
+            }
+        }
+
+        /// <summary>いまキルカムで倒した相手の記録を再生しているか。</summary>
+        public bool IsReplayingKillCam => IsActive && _replay != null && _replay.IsPlaying;
+
+        /// <summary>キルカムのために姿勢をためている相手の数。</summary>
+        public int KillCamSubjectCount => _killCamSubjects.Count;
+
         /// <summary>試合の終わりと味方を読むモード。未設定なら倒れたときにシーンから探す。</summary>
         public ModeRunnerBase ModeRunner
         {
@@ -113,10 +158,30 @@ namespace Fps.Runtime
             EnsureResolved();
         }
 
+        private void OnEnable()
+        {
+            if (!_shotsSubscribed)
+            {
+                CombatEvents.ShotFired += OnShotFired;
+                _shotsSubscribed = true;
+            }
+        }
+
         private void LateUpdate()
         {
             EnsureResolved();
-            Step(_mode, IsSelfAlive(), IsMatchEnded());
+            var alive = IsSelfAlive();
+            if (_mode == DeathCamera.KillCam && alive && !IsActive)
+            {
+                RecordKillCam(Time.timeAsDouble);
+            }
+            else
+            {
+                // 記録が途切れた前後を補間でつながないよう、次に記録し始めるときは空から始める
+                ClearKillCamRecords();
+            }
+
+            Step(_mode, alive, IsMatchEnded());
             if (IsActive)
             {
                 Advance(_view.ReadSpectateStep(), _view.ReadMove(), _view.ReadLookDegrees(Time.deltaTime), Time.deltaTime);
@@ -125,10 +190,18 @@ namespace Fps.Runtime
 
         private void OnDisable()
         {
+            if (_shotsSubscribed)
+            {
+                CombatEvents.ShotFired -= OnShotFired;
+                _shotsSubscribed = false;
+            }
+
+            ClearKillCamSubjects();
+
             // シーンの読み直しやプレイヤーが消えるときも、カメラと入力を戻して次に有効になったときに持ち越さない
             if (_switch.Reset())
             {
-                Restore();
+                Restore("disabled");
                 Debug.Log(LogTag + " stopped on " + name + " (disabled)", this);
             }
         }
@@ -139,6 +212,180 @@ namespace Fps.Runtime
             {
                 _damageable.Died -= OnDied;
             }
+        }
+
+        /// <summary>
+        /// キルカム (<see cref="DeathCamera.KillCam"/>) のために、time (秒) の相手の目と向きをためる。<see cref="KillCamScanSeconds"/> 秒ごとに
+        /// 場の <see cref="Damageable"/> を探し直して相手に加える。無効になっている相手はためず、それまでの分も捨てる。
+        /// Play 中は LateUpdate が、ルールが KillCam で自分が生きている間だけ毎フレーム呼ぶ。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">time が有限でない。</exception>
+        public void RecordKillCam(double time)
+        {
+            if (double.IsNaN(time) || double.IsInfinity(time))
+            {
+                throw new ArgumentOutOfRangeException(nameof(time), time, "time must be finite");
+            }
+
+            EnsureResolved();
+            if (_hasKillCamRecord && time < _lastKillCamRecordTime)
+            {
+                // 時計が戻った (Play のやり直しなど) ので、前の記録とはつながらない
+                ClearKillCamRecords();
+            }
+
+            if (!_hasKillCamRecord || time >= _nextKillCamScanTime)
+            {
+                ScanKillCamSubjects();
+                _nextKillCamScanTime = time + KillCamScanSeconds;
+            }
+
+            for (var i = _killCamSubjects.Count - 1; i >= 0; i--)
+            {
+                var subject = _killCamSubjects[i];
+                if (subject.Target == null)
+                {
+                    _killCamSubjects.RemoveAt(i);
+                    continue;
+                }
+
+                if (!subject.Target.activeInHierarchy || !TryPoseOf(subject.Target, out var pose))
+                {
+                    subject.Buffer.Clear();
+                    continue;
+                }
+
+                subject.Buffer.Record(time, pose);
+            }
+
+            _lastKillCamRecordTime = time;
+            _hasKillCamRecord = true;
+        }
+
+        private void OnShotFired(ShotFiredInfo shot)
+        {
+            // 自分の弾や、場を探す前に撃ってきた相手 (砲台など Damageable を持たないものも) を拾う
+            if (_mode == DeathCamera.KillCam && shot.Shooter != null && IsStanding(_damageable))
+            {
+                AddKillCamSubject(shot.Shooter);
+            }
+        }
+
+        private void ScanKillCamSubjects()
+        {
+            foreach (var candidate in FindObjectsByType<Damageable>(FindObjectsSortMode.None))
+            {
+                AddKillCamSubject(candidate.gameObject);
+            }
+        }
+
+        private void AddKillCamSubject(GameObject target)
+        {
+            if (target == null || target == gameObject || target.transform.IsChildOf(transform))
+            {
+                return;
+            }
+
+            for (var i = 0; i < _killCamSubjects.Count; i++)
+            {
+                if (ReferenceEquals(_killCamSubjects[i].Target, target))
+                {
+                    return;
+                }
+            }
+
+            _killCamSubjects.Add(new KillCamSubject(target, new KillCamBuffer(_killCamSeconds)));
+        }
+
+        // 倒した者は撃った者 (照準のルートなど体の子のこともある) なので、同じものが無ければ親子の関係でも探す
+        private KillCamSubject FindKillCamSubject(GameObject killer)
+        {
+            KillCamSubject related = null;
+            for (var i = 0; i < _killCamSubjects.Count; i++)
+            {
+                var subject = _killCamSubjects[i];
+                if (subject.Target == null)
+                {
+                    continue;
+                }
+
+                if (ReferenceEquals(subject.Target, killer))
+                {
+                    return subject;
+                }
+
+                if (related == null
+                    && (killer.transform.IsChildOf(subject.Target.transform) || subject.Target.transform.IsChildOf(killer.transform)))
+                {
+                    related = subject;
+                }
+            }
+
+            return related;
+        }
+
+        private KillCamClip CaptureKillCam(GameObject killer)
+        {
+            if (killer == null || !_hasKillCamRecord)
+            {
+                return KillCamClip.Empty;
+            }
+
+            var subject = FindKillCamSubject(killer);
+            return subject != null ? subject.Buffer.Capture(_lastKillCamRecordTime) : KillCamClip.Empty;
+        }
+
+        private void BeginKillCam()
+        {
+            var clip = _killCamClip;
+            _killCamClip = KillCamClip.Empty;
+            if (_killer == null)
+            {
+                Debug.Log(KillCamLog.NoKiller(name), this);
+                return;
+            }
+
+            _replay.Begin(clip, _killer.name, KillCamText.Caption(LocalizedText.Literal(_killer.name)), _killer.transform, _view);
+        }
+
+        private static bool TryPoseOf(GameObject target, out KillCamPose pose)
+        {
+            var eye = EyeOf(target);
+            var yaw = target.transform.eulerAngles.y;
+            if (!IsFinite(eye.x) || !IsFinite(eye.y) || !IsFinite(eye.z) || !IsFinite(yaw))
+            {
+                pose = default;
+                return false;
+            }
+
+            pose = new KillCamPose(eye.ToNumerics(), yaw);
+            return true;
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
+        }
+
+        private void ClearKillCamRecords()
+        {
+            if (!_hasKillCamRecord)
+            {
+                return;
+            }
+
+            for (var i = 0; i < _killCamSubjects.Count; i++)
+            {
+                _killCamSubjects[i].Buffer.Clear();
+            }
+
+            _hasKillCamRecord = false;
+        }
+
+        private void ClearKillCamSubjects()
+        {
+            _killCamSubjects.Clear();
+            _hasKillCamRecord = false;
         }
 
         /// <summary>
@@ -158,9 +405,14 @@ namespace Fps.Runtime
                     _view.Begin(EyeOf(gameObject), transform.eulerAngles.y);
                     Debug.Log(LogTag + " started on " + name + " (" + mode + ") at " + DeathCamView.FormatPosition(_view.DeathEye), this);
                     Frame(null);
+                    if (mode == DeathCamera.KillCam)
+                    {
+                        BeginKillCam();
+                    }
+
                     break;
                 default:
-                    Restore();
+                    Restore(transition.ToString());
                     Debug.Log(LogTag + " stopped on " + name + " (" + transition + ")", this);
                     break;
             }
@@ -179,10 +431,23 @@ namespace Fps.Runtime
                 return;
             }
 
+            if (_mode != DeathCamera.KillCam && _replay.IsPlaying)
+            {
+                _replay.Stop("rule changed to " + _mode);
+            }
+
             switch (_mode)
             {
                 case DeathCamera.Killer:
                     Frame(ResolveKillerEye());
+                    break;
+                case DeathCamera.KillCam:
+                    // 再生は倒れていても進め、リスポーンまでの待ちとは別に終わる。終えたフレームから Killer と同じに映す
+                    if (!_replay.Advance(_view, deltaSeconds))
+                    {
+                        Frame(ResolveKillerEye());
+                    }
+
                     break;
                 case DeathCamera.Ally:
                     WatchAlly(spectateStep, move, lookDegrees, deltaSeconds);
@@ -276,6 +541,9 @@ namespace Fps.Runtime
             _killer = killer != null && killer != gameObject && !killer.transform.IsChildOf(transform) ? killer : null;
             _killerResolved = false;
 
+            // 倒した相手の姿勢はこの後も記録が進むので、倒れた時点までをここで切り出しておく
+            _killCamClip = _mode == DeathCamera.KillCam ? CaptureKillCam(_killer) : KillCamClip.Empty;
+
             if (_modeRunner == null)
             {
                 _modeRunner = FindAnyObjectByType<ModeRunnerBase>();
@@ -327,8 +595,10 @@ namespace Fps.Runtime
             return _matchRunner != null && _matchRunner.Match != null && _matchRunner.Match.IsOver;
         }
 
-        private void Restore()
+        private void Restore(string reason)
         {
+            _replay.Stop(reason);
+            _killCamClip = KillCamClip.Empty;
             _view.Restore(true);
             ClearAlly();
             _killer = null;
@@ -358,6 +628,20 @@ namespace Fps.Runtime
             }
 
             _view = new DeathCamView(this, "build the player with GameBootstrap");
+            _replay = new KillCamReplay(this);
+        }
+
+        private sealed class KillCamSubject
+        {
+            public KillCamSubject(GameObject target, KillCamBuffer buffer)
+            {
+                Target = target;
+                Buffer = buffer;
+            }
+
+            public GameObject Target { get; }
+
+            public KillCamBuffer Buffer { get; }
         }
     }
 }

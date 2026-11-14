@@ -127,10 +127,12 @@ namespace Fps.Editor
                     throw new InvalidOperationException($"surface material id '{spec.MaterialId}' is used more than once");
                 }
 
-                var texture = PresentationAssetBuilder.SaveTexture(
+                var texture = PresentationAssetBuilder.WriteTexture(
                     $"{assetFolder}/{spec.DecalTextureName}.asset",
+                    spec.DecalTextureName,
                     DecalTextureSize,
-                    DecalPixels(DecalTextureSize, spec.RimColor, spec.HoleColor, spec.Seed));
+                    DecalPixels(DecalTextureSize, spec.RimColor, spec.HoleColor, spec.Seed),
+                    true);
                 var decal = PresentationAssetBuilder.BuildParticleMaterial(
                     $"{assetFolder}/{spec.DecalMaterialName}.mat", texture, PresentationAssetBuilder.BlendAlpha);
                 var effect = PresentationAssetBuilder.SavePrefab(

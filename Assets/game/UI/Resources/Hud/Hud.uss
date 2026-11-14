@@ -245,6 +245,32 @@
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+/* 体力の欄の上に左寄せで出す、能力の枠ごとの回数と待ち時間。行は AbilitySlotsView が入れる。 */
+.ability-slots {
+    position: absolute;
+    left: 32px;
+    bottom: 104px;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.ability-slots__row {
+    margin: 4px 0 0 0;
+    padding: 4px 14px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.ability-slots__row--waiting {
+    color: rgba(255, 255, 255, 0.55);
+}
+
 /* 弾数の欄のすぐ下に右寄せで出す、アクティブリロードの細いバー。塗りと幅の left / width は HudView が % で入れる。 */
 .hud__reload-bar {
     position: absolute;
@@ -573,6 +599,16 @@
     bottom: 0;
 }
 
+/* 被弾と低体力の画面端の赤。DamageVignetteView が画像と不透明度を入れる。画面の縦横比に合わせて引き伸ばす。 */
+.damage-vignette {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-size: 100% 100%;
+}
+
 .damage-direction__arc {
     position: absolute;
     left: 0;
@@ -580,6 +616,122 @@
     right: 0;
     bottom: 0;
     color: rgba(255, 60, 50, 0.85);
+}
+
+/* 印。画面全体を覆い、印ごとの子要素の中心を PingMarkersView が left / top (%) に置く。 */
+.ping-markers {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.ping-marker {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    translate: -50% -50%;
+    align-items: center;
+    justify-content: center;
+    color: rgb(255, 210, 60);
+}
+
+.ping-marker--enemy {
+    color: rgb(255, 80, 60);
+}
+
+/* 印の形 (ひし形)。色は印の color と揃える。 */
+.ping-marker__icon {
+    width: 14px;
+    height: 14px;
+    rotate: 45deg;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0.6);
+    background-color: rgb(255, 210, 60);
+}
+
+.ping-marker--enemy .ping-marker__icon {
+    background-color: rgb(255, 80, 60);
+}
+
+/* 画面の外の印は少し小さく薄くして、端に寄せたことが分かるようにする。 */
+.ping-marker--offscreen {
+    scale: 0.85 0.85;
+    opacity: 0.85;
+}
+
+/* 画面の外の印の向きの矢印。印と同じ大きさで重ね、要素ごと中央を軸に回す。三角は上の辺の外に描く。 */
+.ping-marker__arrow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* 分隊への指示の印。画面全体を覆い、印の中心を SquadOrderMarkerView が left / top (%) に置く。 */
+.squad-order {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.squad-order__marker {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    translate: -50% -50%;
+    align-items: center;
+    justify-content: center;
+    color: rgb(90, 200, 255);
+}
+
+.squad-order__marker--attack {
+    color: rgb(255, 120, 40);
+}
+
+/* 印の形 (輪)。印 (Ping) のひし形と見分けられるよう丸にする。色は印の color と揃える。 */
+.squad-order__icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    border-width: 3px;
+    border-color: rgb(90, 200, 255);
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.squad-order__marker--attack .squad-order__icon {
+    border-color: rgb(255, 120, 40);
+}
+
+/* 札 (「守れ」「狙え」)。印の下に添える。 */
+.squad-order__label {
+    position: absolute;
+    top: 30px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: rgb(255, 255, 255);
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.squad-order__marker--offscreen {
+    scale: 0.85 0.85;
+    opacity: 0.85;
+}
+
+/* 画面の外の印の向きの矢印。印と同じ大きさで重ね、要素ごと中央を軸に回す。三角は上の辺の外に描く。 */
+.squad-order__arrow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
 }
 
 /* 拠点制圧。Hud の残り時間の欄と同じ上中央に、ポイントと残り時間の行・拠点の持ち主の行・結果を縦に並べる。色は DominationView がチームの色で塗る。 */

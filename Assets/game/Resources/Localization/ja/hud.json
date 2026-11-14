@@ -15,6 +15,9 @@
   "hud.spawnProtected": "保護中 あと {0} 秒",
   "hud.idleWarning": "操作がありません あと {0} 秒で切断されます",
   "hud.grenades": "グレネード {0}",
+  "hud.ability": "能力{0} {1}/{2}",
+  "hud.ability.wait": "能力{0} {1}/{2} あと {3} 秒",
+  "hud.ability.active": "能力{0} {1}/{2} 使用中",
   "hud.mode.remaining": "{0} 残り {1}",
   "hud.mode.withDowned": "{0} (ダウン {1})",
   "hud.zone.waiting": "エリア縮小まで {0}",
@@ -30,5 +33,6 @@
   "hud.killFeed.weaponHeadshot": "[{0}] {1}",
   "hud.killFeed.headshot": "頭",
   "hud.killFeed.friendly": "味方撃ち",
-  "hud.killFeed.suicide": "自滅"
+  "hud.killFeed.suicide": "自滅",
+  "hud.killCam.caption": "キルカム {0}"
 }

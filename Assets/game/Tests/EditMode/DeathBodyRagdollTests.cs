@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
@@ -142,6 +143,49 @@ namespace Fps.Tests.EditMode
             Assert.That(torso.linearVelocity.y, Is.EqualTo(0f).Within(1e-5f));
             Assert.That(torso.linearVelocity.magnitude, Is.EqualTo(6f).Within(1e-3f), "base 1 + 0.1 per damage");
             Assert.That(hips.linearVelocity.magnitude, Is.EqualTo(6f * _presenter.RagdollCatalog.FootSpeedRatio).Within(1e-3f), "the lowest bone is pushed less so the body topples");
+        }
+
+        [Test]
+        public void AnExplosionLaunchesTheRagdollWithTheKnockbackVelocity()
+        {
+            _presenter.RagdollCatalog = NewCatalog();
+            _presenter.Bind(_damageable, DeathBody.Collapse);
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathBody\] collapse id=ragdoll-body ragdoll "));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathBody\] push id=ragdoll-body ragdoll push=\(1,0\) speed=6 damage=50$"));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathBody\] knockback id=ragdoll-body ragdoll=true velocity=\("));
+
+            var center = Home + new Vector3(-1f, 0.3f, 0f);
+            _damageable.TakeDamage(MaxHealth, center, Vector3.right, DamageKind.Explosion);
+            Assert.That(Knockback.Apply(_damageable, DamageKind.Explosion, Vector3.right, 1f), Is.True);
+
+            Assert.That(Knockback.TryGetVelocity(_damageable, DamageKind.Explosion, Vector3.right, 1f, out var expected), Is.True);
+            var torso = _presenter.Shell.transform.Find("Hips/Torso").GetComponent<Rigidbody>();
+            Assert.That(Vector3.Distance(torso.linearVelocity, expected), Is.LessThan(1e-3f), "the top bone gets the whole knockback, not the catalog speed");
+            Assert.That(torso.linearVelocity.x, Is.GreaterThan(0f), "falls away from the blast");
+            Assert.That(torso.linearVelocity.y, Is.GreaterThan(0f), "and is thrown up");
+        }
+
+        [Test]
+        public void AKillingMeleeHitLaunchesTheBodyInsteadOfTheCatalogPush()
+        {
+            _presenter.RagdollCatalog = NewCatalog();
+            _presenter.Bind(_damageable, DeathBody.Collapse);
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathBody\] collapse id=ragdoll-body ragdoll "));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathBody\] knockback id=ragdoll-body ragdoll=true velocity=\("));
+
+            _damageable.TakeDamage(MaxHealth, Home + Vector3.back, Vector3.forward, DamageKind.Melee);
+
+            Assert.That(Knockback.TryGetVelocity(_damageable, DamageKind.Melee, Vector3.forward, 1f, out var expected), Is.True);
+            var torso = _presenter.Shell.transform.Find("Hips/Torso").GetComponent<Rigidbody>();
+            Assert.That(Vector3.Distance(torso.linearVelocity, expected), Is.LessThan(1e-3f));
+            Assert.That(torso.linearVelocity.z, Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void LaunchWithoutABodyDoesNothing()
+        {
+            Assert.That(_presenter.Launch(Vector3.right), Is.False);
+            Assert.Throws<ArgumentException>(() => _presenter.Launch(new Vector3(float.NaN, 0f, 0f)));
         }
 
         [Test]

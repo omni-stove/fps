@@ -5,7 +5,7 @@ using Fps.Core;
 namespace Fps.Net
 {
     /// <summary>
-    /// <see cref="NetTeamDeathmatch"/> のうち、試合のイベント (開始・参加・離脱・キル・終了) を <see cref="ServerEventLog"/> の
+    /// <see cref="NetTeamDeathmatch"/> のうち、試合のイベント (開始・参加・離脱・キル・終了・印) を <see cref="ServerEventLog"/> の
     /// 1 行の JSON にして渡す処理。渡す先は <see cref="NetBootstrap"/> が <c>-log-format json</c> のときだけ
     /// <see cref="SetServerEventWriter"/> で入れ、入っていなければ JSON は作らない。
     /// </summary>
@@ -98,6 +98,25 @@ namespace Fps.Net
             {
                 _serverEventWriter(ServerEventLog.MatchEnded(
                     DateTime.UtcNow, _matchId, winner, _session.GetScore(Team.Alpha), _session.GetScore(Team.Bravo)));
+            }
+        }
+
+        private void ServerEventsPingPlaced(SharedPing ping, bool refreshed)
+        {
+            if (WritesServerEvents)
+            {
+                var marker = ping.Marker;
+                _serverEventWriter(ServerEventLog.PingPlaced(
+                    DateTime.UtcNow, _matchId, ping.PingerId, ProductUserIdOf(ping.PingerId), ping.Team, marker.Id, marker.Kind,
+                    marker.Kind == PingKind.Enemy ? marker.TargetKey : null, refreshed));
+            }
+        }
+
+        private void ServerEventsPingRefused(int playerId, PingRefusal reason)
+        {
+            if (WritesServerEvents)
+            {
+                _serverEventWriter(ServerEventLog.PingRefused(DateTime.UtcNow, _matchId, playerId, ProductUserIdOf(playerId), reason));
             }
         }
 

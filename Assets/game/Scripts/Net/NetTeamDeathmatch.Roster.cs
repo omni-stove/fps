@@ -46,6 +46,7 @@ namespace Fps.Net
             _lastKillers.Remove(playerId);
             ForgetDowned(playerId);
             ForgetGrenades(playerId);
+            PingPlayerLeft(playerId);
             var held = _session != null && _session.HasPlayer(playerId) && _session.Leave(playerId);
 
             Debug.Log(MatchLog.Left(playerId));
@@ -159,6 +160,7 @@ namespace Fps.Net
 
                 ServerEventsPlayerJoined(playerId, key, team, held.HasValue);
                 _session.Join(playerId, key);
+                PingPlayerJoined(playerId, player);
                 BotsPlayerJoined(playerId, player);
                 IdlePlayerJoined(playerId, player);
                 ObjectivePlayerJoined(playerId, player);

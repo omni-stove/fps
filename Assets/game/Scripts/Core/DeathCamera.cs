@@ -16,5 +16,11 @@ namespace Fps.Core
 
         /// <summary>自由に動かせるカメラにする。</summary>
         Free,
+
+        /// <summary>
+        /// 倒した相手の倒す直前の数秒 (<see cref="KillCamClip"/>) をその肩越しで再生してから、<see cref="Killer"/> と同じに映す。
+        /// 相手の記録が無ければすぐ <see cref="Killer"/> にする。値を保存・同期に使うので、最後に足している。
+        /// </summary>
+        KillCam,
     }
 }

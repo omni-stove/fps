@@ -36,10 +36,10 @@ namespace Fps.Editor
         public static readonly Vector3 LegsCenter = new Vector3(0f, -0.6f, 0f);
         public static readonly Vector3 LegsSize = new Vector3(1.1f, 0.8f, 1.1f);
 
-        public static readonly Vector3 Center = new Vector3(20f, 0f, 2f);
+        public static readonly Vector3 Center = new Vector3(20f, 0f, 16f);
 
         // 敵の視界 (EnemySightRange) の内側で、台の外の床の上。
-        public static readonly Vector3 StandPoint = new Vector3(12f, 0f, 2f);
+        public static readonly Vector3 StandPoint = new Vector3(12f, 0f, 16f);
 
         public int Order => 500;
 

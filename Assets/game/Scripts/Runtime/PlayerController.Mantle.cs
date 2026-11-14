@@ -91,7 +91,18 @@ namespace Fps.Runtime
         /// </summary>
         public bool TryStartMantle()
         {
-            if (_mantleRule != Mantle.On || !IsInitialized || !IsGrounded || _isCrouched || IsVaulting || IsMantling || IsDodging || IsMovementOverridden)
+            return StartMantleIfAble(requireGrounded: true);
+        }
+
+        // グラップルなどで壁に掴まって止まっている (接地していない) 所から上るときに使う。接地を問わないほかは TryStartMantle と同じ。
+        public bool TryStartMantleWhileHanging()
+        {
+            return StartMantleIfAble(requireGrounded: false);
+        }
+
+        private bool StartMantleIfAble(bool requireGrounded)
+        {
+            if (_mantleRule != Mantle.On || !IsInitialized || (requireGrounded && !IsGrounded) || _isCrouched || IsVaulting || IsMantling || IsDodging || IsMovementOverridden)
             {
                 return false;
             }

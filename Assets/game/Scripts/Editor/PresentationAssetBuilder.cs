@@ -378,19 +378,23 @@ namespace Fps.Editor
                 }
             }
 
-            return WriteTexture(path, SoftDotSize, pixels);
+            return WriteTexture(path, SoftDotTextureName, SoftDotSize, pixels, true);
         }
 
         /// <summary>
-        /// path に 1 辺 size の RGBA32 のテクスチャを pixels (下の行から) で作るか上書きして返す。既存のアセットは GUID を保って中身だけ書き換える。
+        /// size × size の RGBA32 の pixels (下の行から) を path の Texture2D のアセットに書いて保存する。既存のアセットは GUID を保って中身だけ替える。
+        /// path に別の型のアセットがあれば例外を投げる。
         /// </summary>
-        /// <exception cref="ArgumentException">pixels の数が size * size でない。</exception>
-        /// <exception cref="InvalidOperationException">path に Texture2D でないアセットがある。</exception>
-        internal static Texture2D WriteTexture(string path, int size, Color32[] pixels)
+        internal static Texture2D WriteTexture(string path, string textureName, int size, Color32[] pixels, bool mipChain)
         {
+            if (size < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(size), size, "must be at least 1");
+            }
+
             if (pixels == null || pixels.Length != size * size)
             {
-                throw new ArgumentException($"a {size}x{size} texture needs {size * size} pixels", nameof(pixels));
+                throw new ArgumentException($"texture '{path}' needs {size * size} pixels", nameof(pixels));
             }
 
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
@@ -403,11 +407,12 @@ namespace Fps.Editor
             var created = texture == null;
             if (created)
             {
-                texture = new Texture2D(size, size, TextureFormat.RGBA32, true) { name = Path.GetFileNameWithoutExtension(path) };
+                texture = new Texture2D(size, size, TextureFormat.RGBA32, mipChain) { name = textureName };
             }
-            else if (texture.width != size || texture.height != size || texture.format != TextureFormat.RGBA32)
+            else if (texture.width != size || texture.height != size || texture.format != TextureFormat.RGBA32
+                || (texture.mipmapCount > 1) != mipChain)
             {
-                texture.Reinitialize(size, size, TextureFormat.RGBA32, true);
+                texture.Reinitialize(size, size, TextureFormat.RGBA32, mipChain);
             }
 
             texture.wrapMode = TextureWrapMode.Clamp;

@@ -13,6 +13,7 @@ namespace Fps.Core
     /// <item>ダウン: Downed だけを立て、Speed は 0。</item>
     /// <item>カバー: Cover に壁の高さを入れる。姿勢は壁の高さで決まるので Crouch は立てない。ADS なら覗いて構える (Aim も立てる)。</item>
     /// <item>ADS としゃがみは両方立ちうる (しゃがんで構える)。</item>
+    /// <item>スライディング中は Slide と Crouch を立てる (滑る姿勢の無いリグはしゃがみで見せる)。カバー中は立てない。</item>
     /// <item>宙にいる間は足を動かさない (Speed は 0)。</item>
     /// </list>
     /// 武器の種別はどの状態でもそのまま渡す。
@@ -27,6 +28,7 @@ namespace Fps.Core
         public const string DownedParameter = "Downed";
         public const string DeadParameter = "Dead";
         public const string WeaponCategoryParameter = "WeaponCategory";
+        public const string SlideParameter = "Slide";
 
         /// <summary><see cref="CharacterPoseParameters.Cover"/> の、カバーしていない値。</summary>
         public const int CoverNone = 0;
@@ -115,9 +117,10 @@ namespace Fps.Core
             }
 
             var cover = CoverValue(input.CoverHeight);
-            var crouch = input.IsCrouching && cover == CoverNone;
+            var slide = input.IsSliding && cover == CoverNone;
+            var crouch = (input.IsCrouching || slide) && cover == CoverNone;
             var speed = input.IsGrounded ? SpeedValue(input.HorizontalSpeed, crouch, input.IsSprinting) : IdleSpeedValue;
-            return new CharacterPoseParameters(speed, crouch, input.IsAiming, cover, false, false, weapon);
+            return new CharacterPoseParameters(speed, crouch, input.IsAiming, cover, false, false, weapon, slide);
         }
 
         /// <summary>

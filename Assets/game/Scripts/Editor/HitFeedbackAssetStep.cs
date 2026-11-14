@@ -102,7 +102,8 @@ namespace Fps.Editor
                     root => AddSpray(root, particleMaterial, 8, new Vector2(1f, 2.5f), new Vector2(0.03f, 0.06f), 20f)),
             };
 
-            var texture = PresentationAssetBuilder.WriteTexture($"{folder}/{DecalTextureName}.asset", DecalTextureSize, DecalPixels());
+            var texture = PresentationAssetBuilder.WriteTexture(
+                $"{folder}/{DecalTextureName}.asset", DecalTextureName, DecalTextureSize, DecalPixels(), true);
             var decalMaterial = PresentationAssetBuilder.BuildParticleMaterial(
                 $"{folder}/{DecalMaterialName}.mat", texture, PresentationAssetBuilder.BlendAlpha);
             var decal = PresentationAssetBuilder.SavePrefab(folder, WallDecalPrefab, root => AddDecal(root, decalMaterial));

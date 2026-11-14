@@ -24,6 +24,7 @@ namespace Fps.Net
             // 反動の戻りは撃てない間 (デスカム中など) も進める
             _recoil.Tick(Time.deltaTime);
             UpdateGrenadeInput(Time.deltaTime);
+            UpdatePingInput();
             if (_attackAction == null || IsWatchingDeathCamera)
             {
                 return;

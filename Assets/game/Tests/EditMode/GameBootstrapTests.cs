@@ -846,6 +846,17 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void HudShowsTheAbilitySlots()
+        {
+            var slots = DefaultHud.GetComponent<AbilitySlotsView>();
+
+            Assert.That(_world.Abilities, Is.Not.Null, "PlayerActions.Attach gives the player an AbilityHost");
+            Assert.That(slots, Is.Not.Null, "GameBootstrap attaches the ability slots through IHud");
+            Assert.That(slots.Source, Is.SameAs(_world.Abilities));
+            Assert.That(slots.IsShown, Is.False, "the default rules keep abilities off and no ability is equipped");
+        }
+
+        [Test]
         public void HudHasThePartViewsBoundToTheLayout()
         {
             var hud = DefaultHud;

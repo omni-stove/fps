@@ -550,6 +550,13 @@ namespace Fps.Net
             }
 
             ApplyOwnerMoveActionEffects(previous, current);
+
+            // サーバーの着地 (落下ダメージ) は確定した移動で数えるが、画面の演出は持ち主が待たずに出したいので予測の移動で知らせる。
+            if (!previous.IsGrounded && current.IsGrounded)
+            {
+                CombatEvents.RaiseLanded(gameObject, Mathf.Max(0f, -current.Velocity.y));
+            }
+
             OwnerTicked?.Invoke(tick);
         }
 

@@ -295,7 +295,7 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 ## .NET のサーバー (移行中)
 
 Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠と、
-上の運用 (版の確認・drain・JSON のイベント) だけを行う。戦闘・ルール・移動・Bot・EOS はまだ無い。
+上の運用 (版の確認・drain・JSON のイベント) と、EOS のロビーへの登録 (`-register-lobby`) だけを行う。戦闘・ルール・移動・Bot・EOS の P2P・EAC はまだ無い。
 
 ```sh
 make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
@@ -305,7 +305,7 @@ FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
 - 引数 (`-map`・`-drain-timeout`・`-log-format`・`-buildVersion`) と環境変数 (`FPS_SERVER_ADDRESS`・`FPS_SERVER_PORT`) は Unity のサーバーと同じ意味。
   `-address` / `-port` が無ければ環境変数、それも無ければ `0.0.0.0` / `7777` で待ち受ける。引数と環境変数の両方で渡すと
   `[Net] invalid arguments: -port is given more than once (FPS_SERVER_PORT is set too) ...` で終わる (終了コード 2)。
-- まだ動かせない `-transport eos`・`-register-lobby`・`-bots`・`-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
+- まだ動かせない `-transport eos`・`-bots`・`-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む (`-map` が無ければ `NetTest`)。作業ディレクトリの `server-data/`、
   無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
   ファイルは Unity の Editor から `make export-server-data` で書き出す。
@@ -315,6 +315,19 @@ FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
   (`[Net] rejected client <Id>: ...`) とクライアントへ送る理由は今と同じ。加えて、通信の手順の版 (`MatchProtocol.Version`) が違うクライアントを
   `fps:rejected:protocol-mismatch` で断り、つないでから 10 秒以内に承認のデータを送らない接続を切る。
   同じ鍵のクライアントがつなぎ直してきたら、前の接続を切る。
+- `-register-lobby <公開アドレス:ポート>` は、上の「EOS のロビーに登録する」と同じロビーを同じログで作る
+  (Device ID でログインし、`fps-server:<版>` のバケツに属性を付けて作り、人数を更新し、失ったら 5 秒おきに作り直し、
+  drain に入ったら閉じる。60 秒たっても登録できなければ終了コード 7)。EOS の C# SDK を
+  [dotnet/ThirdParty/EOSSDK](../dotnet/ThirdParty/EOSSDK/README.md) に置いてビルドしたサーバーでだけ使え、
+  SDK かそのライブラリが無い、または認証情報 (環境変数か `eos.local.json`) が欠けていると、理由を出して終了コード 3 で終わる。
+  止まるときは、ロビーを閉じ終えるまで最大 3 秒待つ。
+
+```sh
+dotnet build dotnet/Fps.Server/Fps.Server.csproj -c Release
+set -a; . ./eos.env; set +a                         # EOS_PRODUCT_ID=... の行を環境変数にする
+dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -- \
+  -buildVersion "$(git describe --tags --always --dirty)" -register-lobby 127.0.0.1:7777
+```
 
 ## CI でのリリース
 

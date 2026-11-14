@@ -46,7 +46,7 @@ namespace Fps.Runtime
         public const string RestartActionPath = MatchRunner.RestartActionPath;
 
         [Header("Rules")]
-        [SerializeField, Tooltip("調整値のアセット。設定すれば下の値の代わりにこれを使う")]
+        [SerializeField, Tooltip("調整値のアセット。設定すれば下の値の代わりにこれを使う。空なら入口 (GameContent) のものを使う")]
         private DominationDefinition _definition;
 
         [SerializeField, Min(0.01f), Tooltip("1 人で中立の拠点を占領し終えるまでの秒数")]
@@ -115,8 +115,11 @@ namespace Fps.Runtime
             set => _definition = value;
         }
 
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public DominationDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Domination);
+
         /// <summary>試合で使うリスポーンの秒数。<see cref="Definition"/> があればその値、無ければ <see cref="RespawnSeconds"/>。</summary>
-        public float EffectiveRespawnSeconds => _definition != null ? _definition.RespawnSeconds : _respawnSeconds;
+        public float EffectiveRespawnSeconds => EffectiveDefinition is { } definition ? definition.RespawnSeconds : _respawnSeconds;
 
         public float CaptureSeconds
         {
@@ -195,9 +198,10 @@ namespace Fps.Runtime
         /// </summary>
         public DominationSpec CreateSpec(int pointCount)
         {
-            if (_definition != null)
+            var definition = EffectiveDefinition;
+            if (definition != null)
             {
-                return _definition.ToSpec(pointCount);
+                return definition.ToSpec(pointCount);
             }
 
             return new DominationSpec(pointCount, _captureSeconds, _pointsPerSecond, _scoreLimit, _timeLimitSeconds, _maxCapturers);

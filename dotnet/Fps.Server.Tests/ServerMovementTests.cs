@@ -299,7 +299,7 @@ namespace Fps.Server.Tests
             _host.Register(_movement);
             _host.Register(_snapshots);
             var options = new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort);
-            _host.Start(new ServerContext(options, "0.2.0", _log, TestMaps.Data(), _match, new ServerMessenger(_transport)));
+            _host.Start(new ServerContext(options, "0.2.0", _log, TestMaps.Data(), _match, new ServerMessenger(_transport), new StubControl()));
             _match.Join(_connection, "key");
             _host.OnConnected(_connection);
             _nextInputTick = 0;

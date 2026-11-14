@@ -144,7 +144,8 @@ namespace Fps.Runtime
 
         public static CameraShakeSettings Load()
         {
-            return Resources.Load<CameraShakeSettings>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.CameraShake);
+            return fromContent != null ? fromContent : Resources.Load<CameraShakeSettings>(ResourcePath);
         }
 
         // 連射の武器は 1 発ごとに足すので、1 秒に撃つ数を掛けても DefaultDecayPerSecond を大きく超えない値にして、撃ち続けても揺れが張り付かないようにする。

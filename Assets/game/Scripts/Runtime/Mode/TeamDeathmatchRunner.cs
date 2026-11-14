@@ -23,7 +23,7 @@ namespace Fps.Runtime
         [SerializeField, Min(1), Tooltip("1 つの陣営に入れる人数の上限")]
         private int _sideCapacity = DefaultSideCapacity;
 
-        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の制限時間・キル数・リスポーンの代わりにこれを読む")]
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の制限時間・キル数・リスポーンの代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
         private TeamDeathmatchDefinition _definition;
 
         [SerializeField, Min(1f), Tooltip("制限時間 (秒)")]
@@ -53,6 +53,9 @@ namespace Fps.Runtime
             get => _definition;
             set => _definition = value;
         }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public TeamDeathmatchDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.TeamDeathmatch);
 
         public float TimeLimitSeconds
         {
@@ -93,9 +96,10 @@ namespace Fps.Runtime
         /// </summary>
         public TeamDeathmatchSpec CreateSpec()
         {
-            if (_definition != null)
+            var definition = EffectiveDefinition;
+            if (definition != null)
             {
-                return _definition.ToSpec();
+                return definition.ToSpec();
             }
 
             return new TeamDeathmatchSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds);

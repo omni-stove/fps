@@ -8,7 +8,13 @@ namespace Fps.Server
     internal sealed class ServerContext
     {
         public ServerContext(
-            NetLaunchOptions options, string version, TextWriter log, ServerMapData map, ServerMatch match, ServerMessenger messenger)
+            NetLaunchOptions options,
+            string version,
+            TextWriter log,
+            ServerMapData map,
+            ServerMatch match,
+            ServerMessenger messenger,
+            IServerControl control)
         {
             Options = options ?? throw new ArgumentNullException(nameof(options));
             Version = version;
@@ -16,6 +22,7 @@ namespace Fps.Server
             Map = map ?? throw new ArgumentNullException(nameof(map));
             Match = match ?? throw new ArgumentNullException(nameof(match));
             Messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
+            Control = control ?? throw new ArgumentNullException(nameof(control));
         }
 
         /// <summary>コマンドライン引数から読んだ起動設定。</summary>
@@ -36,5 +43,7 @@ namespace Fps.Server
         public ServerMatch Match { get; }
 
         public ServerMessenger Messenger { get; }
+
+        public IServerControl Control { get; }
     }
 }

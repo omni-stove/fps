@@ -113,6 +113,7 @@ namespace Fps.Editor
             // NewScene(Single) は参照されていないアセットをアンロードし、先に読んだ定義が null になるので、シーンを作ってから読む。
             var playerWeapons = LoadPlayerWeapons();
             var rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.RangePath);
+            var pieceVisualPrefab = DestructiblePieceVisual.Load();
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
@@ -122,7 +123,7 @@ namespace Fps.Editor
             SceneBuildHelpers.BakeNavMesh(surface);
             SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
             SceneBuildHelpers.RequireOnNavMesh(NavMeshCheckPoints(), NavMeshCheckRadius, "point");
-            CreateActors(scene, playerWeapons, rules);
+            CreateActors(scene, playerWeapons, rules, pieceVisualPrefab);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -183,7 +184,8 @@ namespace Fps.Editor
         /// 小屋が弾で壊れるかは rules の <see cref="GameRules.Destruction"/> で決める。
         /// 引数が不正なら何も置かずに例外を投げる。
         /// </summary>
-        public static DestructibleStructure CreateActors(Scene scene, IReadOnlyList<WeaponDefinition> playerWeapons, GameRulesDefinition rules)
+        public static DestructibleStructure CreateActors(
+            Scene scene, IReadOnlyList<WeaponDefinition> playerWeapons, GameRulesDefinition rules, GameObject pieceVisualPrefab = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);
             SceneBuildHelpers.RequirePlayerWeapons(playerWeapons, nameof(playerWeapons));
@@ -207,7 +209,7 @@ namespace Fps.Editor
             SceneManager.MoveGameObjectToScene(poolObject, scene);
             var pool = poolObject.AddComponent<DebrisPool>();
 
-            var hut = CreateHut(scene, destructionEnabled);
+            var hut = CreateHut(scene, destructionEnabled, pieceVisualPrefab);
             hut.DebrisPool = pool;
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -218,7 +220,7 @@ namespace Fps.Editor
         /// <see cref="HutCenter"/> に小屋を置いて返す。壁 4 面 (下段は地面に接する) と屋根を 1m の Cube の部品で組み、
         /// 部品の添字は作った順に 0 から振る。部品の隣接は <see cref="DestructibleStructure"/> がコライダーの重なりから作る。
         /// </summary>
-        public static DestructibleStructure CreateHut(Scene scene, bool destructionEnabled)
+        public static DestructibleStructure CreateHut(Scene scene, bool destructionEnabled, GameObject pieceVisualPrefab = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);
 
@@ -249,15 +251,15 @@ namespace Fps.Editor
                     for (var x = 0; x < HutWidth; x++)
                     {
                         var px = minX + (x * PieceSize);
-                        CreatePiece(front, x, y, new Vector3(px, height, minZ), ref index, grounded);
-                        CreatePiece(back, x, y, new Vector3(px, height, maxZ), ref index, grounded);
+                        CreatePiece(front, x, y, new Vector3(px, height, minZ), ref index, grounded, pieceVisualPrefab);
+                        CreatePiece(back, x, y, new Vector3(px, height, maxZ), ref index, grounded, pieceVisualPrefab);
                     }
 
                     for (var z = 1; z < HutDepth - 1; z++)
                     {
                         var pz = minZ + (z * PieceSize);
-                        CreatePiece(left, z, y, new Vector3(minX, height, pz), ref index, grounded);
-                        CreatePiece(right, z, y, new Vector3(maxX, height, pz), ref index, grounded);
+                        CreatePiece(left, z, y, new Vector3(minX, height, pz), ref index, grounded, pieceVisualPrefab);
+                        CreatePiece(right, z, y, new Vector3(maxX, height, pz), ref index, grounded, pieceVisualPrefab);
                     }
                 }
 
@@ -266,7 +268,7 @@ namespace Fps.Editor
                 {
                     for (var z = 0; z < HutDepth; z++)
                     {
-                        CreatePiece(roof, x, z, new Vector3(minX + (x * PieceSize), roofHeight, minZ + (z * PieceSize)), ref index, false);
+                        CreatePiece(roof, x, z, new Vector3(minX + (x * PieceSize), roofHeight, minZ + (z * PieceSize)), ref index, false, pieceVisualPrefab);
                     }
                 }
 
@@ -286,7 +288,8 @@ namespace Fps.Editor
             return group;
         }
 
-        private static void CreatePiece(Transform group, int column, int row, Vector3 hutLocalPosition, ref int index, bool grounded)
+        private static void CreatePiece(
+            Transform group, int column, int row, Vector3 hutLocalPosition, ref int index, bool grounded, GameObject visualPrefab)
         {
             // グループは小屋の原点に置いたままなので、小屋から見た位置をそのまま使える。
             DestructiblePiece.Create(
@@ -296,7 +299,8 @@ namespace Fps.Editor
                 Vector3.one * PieceSize,
                 index,
                 PieceMaxHealth,
-                grounded);
+                grounded,
+                visualPrefab: visualPrefab);
             index++;
         }
     }

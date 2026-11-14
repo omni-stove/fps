@@ -80,13 +80,13 @@ namespace Fps.Runtime
             QuitButtonName,
         };
 
-        [SerializeField, Tooltip("The online loadout (Assets/game/Weapons/DefaultLoadout.asset); the slot rules and default weapons come from it")]
+        [SerializeField, Tooltip("The online loadout (Assets/game/Weapons/DefaultLoadout.asset); the slot rules and default weapons come from it. Empty uses the GameContent one")]
         private LoadoutDefinition _loadout;
 
-        [SerializeField, Tooltip("The weapons that can be chosen online (Assets/game/Weapons/WeaponCatalog.asset)")]
+        [SerializeField, Tooltip("The weapons that can be chosen online (Assets/game/Weapons/WeaponCatalog.asset). Empty uses the GameContent one")]
         private WeaponCatalogAsset _catalog;
 
-        [SerializeField, Tooltip("The campaign missions (Assets/game/Missions/MissionCatalog.asset)")]
+        [SerializeField, Tooltip("The campaign missions (Assets/game/Missions/MissionCatalog.asset). Empty uses the GameContent one")]
         private MissionCatalog _missions;
 
         private readonly List<Button> _buttons = new List<Button>();
@@ -162,6 +162,12 @@ namespace Fps.Runtime
             get => _missions;
             set => _missions = value;
         }
+
+        public LoadoutDefinition EffectiveLoadout => GameContent.Pick(_loadout, c => c.Loadout);
+
+        public WeaponCatalogAsset EffectiveCatalog => GameContent.Pick(_catalog, c => c.WeaponCatalog);
+
+        public MissionCatalog EffectiveMissions => GameContent.Pick(_missions, c => c.Missions);
 
         /// <summary>
         /// キャンペーンのセーブの置き場所。CampaignRunner と同じ <see cref="FileSaveStorage.CreateDefault"/> を、初めて使うときに作る。
@@ -497,7 +503,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            if (!LoadoutSelectionAssets.TryCreate(_loadout, _catalog, _loadoutStore.Load(), null, out var selection, out var error))
+            if (!LoadoutSelectionAssets.TryCreate(EffectiveLoadout, EffectiveCatalog, _loadoutStore.Load(), null, out var selection, out var error))
             {
                 Debug.LogWarning(LoadoutPreferenceStore.LogTag + " cannot open the loadout screen: " + error, this);
                 ShowNotice(LoadoutUnavailableNotice(error));
@@ -591,15 +597,16 @@ namespace Fps.Runtime
         private bool TryCreateCampaignMenu(out CampaignMenu menu, out string error)
         {
             menu = null;
-            if (_missions == null)
+            var catalog = EffectiveMissions;
+            if (catalog == null)
             {
-                error = "no mission catalog is wired to the menu; rerun Fps/Build Mission Catalog and Fps/Build Main Menu Scene";
+                error = "no mission catalog is wired to the menu or set in the GameContent; rerun Fps/Build Mission Catalog and Fps/Build Main Menu Scene";
                 return false;
             }
 
             try
             {
-                _missions.Validate();
+                catalog.Validate();
             }
             catch (MissionCatalogException e)
             {
@@ -608,8 +615,8 @@ namespace Fps.Runtime
             }
 
             var storage = SaveStorage;
-            var missions = new List<CampaignMenuMission>(_missions.Missions.Count);
-            foreach (var mission in _missions.Missions)
+            var missions = new List<CampaignMenuMission>(catalog.Missions.Count);
+            foreach (var mission in catalog.Missions)
             {
                 var hasSave = ProbeSave(storage, mission.Id);
                 missions.Add(new CampaignMenuMission(mission.Id, Localizer.Resolve(mission.DisplayName), hasSave));
@@ -663,7 +670,7 @@ namespace Fps.Runtime
             string failure;
             try
             {
-                failure = MenuNavigator.StartCampaign(_missions, start.Launch, beforeLoad)
+                failure = MenuNavigator.StartCampaign(EffectiveMissions, start.Launch, beforeLoad)
                     ? null
                     : CampaignMenuFormat.SceneMissing(_campaignPanel.Menu.SelectedMission.DisplayName);
             }

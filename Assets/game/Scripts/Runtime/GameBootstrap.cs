@@ -90,10 +90,10 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("プレイヤーの視点。一人称か三人称 (肩越し)")]
         private ViewMode _viewMode = ViewMode.FirstPerson;
 
-        [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義の並び (既定のロードアウト)。シーン生成スクリプトが rifle, handgun を配線する")]
+        [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義の並び (既定のロードアウト)。空なら入口 (GameContent) のロードアウトのスロットの武器")]
         private WeaponDefinition[] _weaponDefinitions = Array.Empty<WeaponDefinition>();
 
-        [SerializeField, Tooltip("プレイヤーの自動回復と予備弾のルール。空なら GameRules.Default を使い警告を出す。シーン生成スクリプトが配線する")]
+        [SerializeField, Tooltip("プレイヤーの自動回復と予備弾のルール。空なら入口 (GameContent) のルール、それも無ければ GameRules.Default を使い警告を出す")]
         private GameRulesDefinition _rules;
 
         [SerializeField, Tooltip("プレイヤーの能力の枠 (AbilityHost) に入れる能力。i 番目が i 番目の枠 (0 が Ability1)。使えるかはルールの Abilities で決まる")]
@@ -154,7 +154,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// <see cref="Build"/> で作るプレイヤーの <see cref="WeaponController.Definitions"/> (既定のロードアウト)。0 番を持って始める。
-        /// Play 中に空なら WeaponController が初期化できず、<see cref="Build"/> は失敗する。null を設定すると空になる。
+        /// Play 中に空で入口のロードアウト (<see cref="EffectiveWeaponDefinitions"/>) も無ければ WeaponController が初期化できず、<see cref="Build"/> は失敗する。null を設定すると空になる。
         /// </summary>
         public IReadOnlyList<WeaponDefinition> WeaponDefinitions
         {
@@ -175,6 +175,38 @@ namespace Fps.Runtime
                 }
 
                 _weaponDefinitions = copy;
+            }
+        }
+
+        /// <summary>
+        /// プレイヤーに持たせる武器。<see cref="WeaponDefinitions"/> が空なら入口 (<see cref="GameContent.Loadout"/>) のスロットの武器を並べる。
+        /// </summary>
+        public IReadOnlyList<WeaponDefinition> EffectiveWeaponDefinitions
+        {
+            get
+            {
+                var wired = WeaponDefinitions;
+                if (wired.Count > 0)
+                {
+                    return wired;
+                }
+
+                var loadout = GameContent.Pick(c => c.Loadout);
+                if (loadout == null)
+                {
+                    return wired;
+                }
+
+                var weapons = new List<WeaponDefinition>();
+                foreach (var slot in loadout.Slots)
+                {
+                    if (slot != null && slot.Weapon != null)
+                    {
+                        weapons.Add(slot.Weapon);
+                    }
+                }
+
+                return weapons;
             }
         }
 
@@ -315,7 +347,7 @@ namespace Fps.Runtime
             {
                 floor = _createFloor ? CreateFloor(_floorPrefab) : null;
                 player = CreatePlayer(
-                    _viewMode, WeaponDefinitions, AbilityDefinitions, rules, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
+                    _viewMode, EffectiveWeaponDefinitions, AbilityDefinitions, rules, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
                     out var weapon, out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera,
                     out var abilities);
                 ApplyPlayerVisuals(player, grenades, MockBodyPrefabs, _grenadePrefab);
@@ -351,7 +383,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// <see cref="GameRulesOverride.Current"/> があればそれを使い、上書き中とログに出す。
-        /// 無ければ <see cref="RulesDefinition"/> を変換する。未設定なら警告を出して <see cref="GameRules.Default"/>。
+        /// 無ければ <see cref="RulesDefinition"/> (空なら入口 <see cref="GameContent.Rules"/>) を変換する。どちらも未設定なら警告を出して <see cref="GameRules.Default"/>。
         /// </summary>
         private GameRules ResolveRules()
         {
@@ -362,15 +394,16 @@ namespace Fps.Runtime
                 return overridden;
             }
 
-            if (_rules == null)
+            var definition = GameContent.Pick(_rules, c => c.Rules);
+            if (definition == null)
             {
                 Debug.LogWarning(
-                    "[Bootstrap] GameRulesDefinition が設定されていないため GameRules.Default を使います。シーン生成スクリプトでルールを配線してください。",
+                    "[Bootstrap] GameRulesDefinition が設定されていないため GameRules.Default を使います。シーンか入口 (GameContent) にルールを設定してください。",
                     this);
                 return GameRules.Default;
             }
 
-            return _rules.ToRules();
+            return definition.ToRules();
         }
 
         // Inspector の Min は NaN や無限大を止めないので、作り始める前に確かめる。

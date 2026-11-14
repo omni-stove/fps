@@ -53,7 +53,7 @@ namespace Fps.Runtime
         private float _reloadDelaySeconds = DefaultReloadDelaySeconds;
 
         [Header("ルール")]
-        [SerializeField, Tooltip("難易度を選ばずに始めたときのルール。空なら GameRules.Default を使い警告を出す。シーン生成スクリプトが CampaignNormal を配線する")]
+        [SerializeField, Tooltip("難易度を選ばずに始めたときのルール。空なら入口 (GameContent) のルール、それも無ければ GameRules.Default を使い警告を出す。シーン生成スクリプトが CampaignNormal を配線する")]
         private GameRulesDefinition _rules;
 
         [SerializeField, Tooltip("Easy を選んだとき (メニューか -difficulty easy) のルール (CampaignEasy)")]
@@ -397,7 +397,7 @@ namespace Fps.Runtime
                 difficultySource = CampaignLaunchOptions.DifficultyFlag;
             }
 
-            var definition = _rules;
+            var definition = GameContent.Pick(_rules, c => c.Rules);
             if (difficulty.HasValue)
             {
                 var chosen = RulesFor(difficulty.Value);

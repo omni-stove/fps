@@ -5,6 +5,8 @@
   <Project Path="Fps.EosSdk.Tests/Fps.EosSdk.Tests.csproj" />
   <Project Path="Fps.Protocol/Fps.Protocol.csproj" />
   <Project Path="Fps.Protocol.Tests/Fps.Protocol.Tests.csproj" />
+  <Project Path="Fps.Server.Eos/Fps.Server.Eos.csproj" />
+  <Project Path="Fps.Server.Eos.Tests/Fps.Server.Eos.Tests.csproj" />
   <Project Path="Fps.Server/Fps.Server.csproj" />
   <Project Path="Fps.Server.Tests/Fps.Server.Tests.csproj" />
 </Solution>

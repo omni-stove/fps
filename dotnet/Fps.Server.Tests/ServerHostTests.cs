@@ -152,7 +152,8 @@ namespace Fps.Server.Tests
                 _log,
                 TestMaps.Data(),
                 new ServerMatch(0f, _log, events, () => DateTime.UtcNow),
-                new ServerMessenger(_transport));
+                new ServerMessenger(_transport),
+                new StubControl());
         }
     }
 }

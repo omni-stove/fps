@@ -67,6 +67,16 @@ namespace Fps.Core
             return (Eye.GetHashCode() * 397) ^ Yaw.GetHashCode();
         }
 
+        public static bool operator ==(KillCamPose left, KillCamPose right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(KillCamPose left, KillCamPose right)
+        {
+            return !left.Equals(right);
+        }
+
         private static float NormalizeYaw(float yaw)
         {
             var wrapped = yaw % 360f;

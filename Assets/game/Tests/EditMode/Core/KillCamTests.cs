@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class KillCamTests
     {
-        private const float Tolerance = 1e-4f;
+        private const float _tolerance = 1e-4f;
 
         [Test]
         public void BufferCapturesTheLastSecondsAndInterpolatesTheStart()
@@ -21,10 +21,10 @@ namespace Fps.Core.Tests
             var clip = buffer.Capture(3.0, 1.05f);
 
             Assert.That(clip.IsEmpty, Is.False);
-            Assert.That(clip.Duration, Is.EqualTo(1.05f).Within(Tolerance));
-            Assert.That(clip.Sample(0f).Eye.X, Is.EqualTo(19.5f).Within(Tolerance), "the start falls between two records");
-            Assert.That(clip.Sample(clip.Duration).Eye.X, Is.EqualTo(30f).Within(Tolerance), "ends at the time of death");
-            Assert.That(clip.Sample(0.55f).Eye.X, Is.EqualTo(25f).Within(Tolerance));
+            Assert.That(clip.Duration, Is.EqualTo(1.05f).Within(_tolerance));
+            Assert.That(clip.Sample(0f).Eye.X, Is.EqualTo(19.5f).Within(_tolerance), "the start falls between two records");
+            Assert.That(clip.Sample(clip.Duration).Eye.X, Is.EqualTo(30f).Within(_tolerance), "ends at the time of death");
+            Assert.That(clip.Sample(0.55f).Eye.X, Is.EqualTo(25f).Within(_tolerance));
         }
 
         [Test]
@@ -38,8 +38,8 @@ namespace Fps.Core.Tests
 
             var clip = buffer.Capture(6.0);
 
-            Assert.That(clip.Duration, Is.EqualTo(1f).Within(Tolerance));
-            Assert.That(clip.Sample(0f).Eye.X, Is.EqualTo(0f).Within(Tolerance));
+            Assert.That(clip.Duration, Is.EqualTo(1f).Within(_tolerance));
+            Assert.That(clip.Sample(0f).Eye.X, Is.EqualTo(0f).Within(_tolerance));
         }
 
         [Test]
@@ -53,8 +53,8 @@ namespace Fps.Core.Tests
 
             var clip = buffer.Capture(1.0);
 
-            Assert.That(clip.Duration, Is.EqualTo(1f).Within(Tolerance));
-            Assert.That(clip.Sample(clip.Duration).Eye.X, Is.EqualTo(10f).Within(Tolerance));
+            Assert.That(clip.Duration, Is.EqualTo(1f).Within(_tolerance));
+            Assert.That(clip.Sample(clip.Duration).Eye.X, Is.EqualTo(10f).Within(_tolerance));
         }
 
         [Test]
@@ -82,7 +82,7 @@ namespace Fps.Core.Tests
             Assert.That(buffer.Count, Is.EqualTo(1));
 
             buffer.Record(2.0, Pose(4, 0f));
-            Assert.That(buffer.Capture(2.0).Sample(0f).Eye.X, Is.EqualTo(2f).Within(Tolerance), "the same time overwrites");
+            Assert.That(buffer.Capture(2.0).Sample(0f).Eye.X, Is.EqualTo(2f).Within(_tolerance), "the same time overwrites");
         }
 
         [Test]
@@ -125,10 +125,10 @@ namespace Fps.Core.Tests
 
             var middle = KillCamPose.Lerp(from, to, 0.5f);
 
-            Assert.That(middle.Eye.X, Is.EqualTo(1f).Within(Tolerance));
-            Assert.That(middle.Yaw, Is.EqualTo(0f).Within(Tolerance), "crosses 0 instead of turning through 180");
-            Assert.That(new KillCamPose(Vector3.Zero, -90f).Yaw, Is.EqualTo(270f).Within(Tolerance));
-            Assert.That(new KillCamPose(Vector3.Zero, 720f).Yaw, Is.EqualTo(0f).Within(Tolerance));
+            Assert.That(middle.Eye.X, Is.EqualTo(1f).Within(_tolerance));
+            Assert.That(middle.Yaw, Is.EqualTo(0f).Within(_tolerance), "crosses 0 instead of turning through 180");
+            Assert.That(new KillCamPose(Vector3.Zero, -90f).Yaw, Is.EqualTo(270f).Within(_tolerance));
+            Assert.That(new KillCamPose(Vector3.Zero, 720f).Yaw, Is.EqualTo(0f).Within(_tolerance));
             Assert.Throws<ArgumentException>(() => new KillCamPose(new Vector3(float.NaN, 0f, 0f), 0f));
             Assert.Throws<ArgumentException>(() => new KillCamPose(Vector3.Zero, float.PositiveInfinity));
         }
@@ -141,7 +141,7 @@ namespace Fps.Core.Tests
             Assert.That(clip.Sample(-1f).Eye.X, Is.EqualTo(0f));
             Assert.That(clip.Sample(float.NaN).Eye.X, Is.EqualTo(0f));
             Assert.That(clip.Sample(5f).Eye.X, Is.EqualTo(10f));
-            Assert.That(clip.Sample(0.25f).Eye.X, Is.EqualTo(2.5f).Within(Tolerance));
+            Assert.That(clip.Sample(0.25f).Eye.X, Is.EqualTo(2.5f).Within(_tolerance));
 
             Assert.Throws<ArgumentNullException>(() => new KillCamClip(null, new KillCamPose[0]));
             Assert.Throws<ArgumentException>(() => new KillCamClip(new[] { 0f }, new KillCamPose[0]));
@@ -164,13 +164,13 @@ namespace Fps.Core.Tests
 
             var clip = KillCamClip.FromHistories(positions, yaws, 150f, 60f, 0.5f, new Vector3(0f, 1.6f, 0f), 0f);
 
-            Assert.That(clip.Duration, Is.EqualTo(0.5f).Within(Tolerance));
+            Assert.That(clip.Duration, Is.EqualTo(0.5f).Within(_tolerance));
             Assert.That(clip.Count, Is.EqualTo(31), "one pose per tick");
             var start = clip.Sample(0f);
-            Assert.That(start.Eye.X, Is.EqualTo(120f).Within(Tolerance));
-            Assert.That(start.Eye.Y, Is.EqualTo(1.6f).Within(Tolerance), "the eye is above the body");
+            Assert.That(start.Eye.X, Is.EqualTo(120f).Within(_tolerance));
+            Assert.That(start.Eye.Y, Is.EqualTo(1.6f).Within(_tolerance), "the eye is above the body");
             Assert.That(start.Yaw, Is.EqualTo(90f).Within(1e-2f), "facing +X");
-            Assert.That(clip.Sample(clip.Duration).Eye.X, Is.EqualTo(150f).Within(Tolerance));
+            Assert.That(clip.Sample(clip.Duration).Eye.X, Is.EqualTo(150f).Within(_tolerance));
         }
 
         [Test]
@@ -184,9 +184,9 @@ namespace Fps.Core.Tests
 
             var clip = KillCamClip.FromHistories(positions, null, 1000f, 60f, 4f, Vector3.Zero, 45f);
 
-            Assert.That(clip.Duration, Is.EqualTo(0.5f).Within(Tolerance), "from the oldest to the newest record");
-            Assert.That(clip.Sample(0f).Eye.X, Is.EqualTo(10f).Within(Tolerance));
-            Assert.That(clip.Sample(0f).Yaw, Is.EqualTo(45f).Within(Tolerance), "no facing history keeps the fallback yaw");
+            Assert.That(clip.Duration, Is.EqualTo(0.5f).Within(_tolerance), "from the oldest to the newest record");
+            Assert.That(clip.Sample(0f).Eye.X, Is.EqualTo(10f).Within(_tolerance));
+            Assert.That(clip.Sample(0f).Yaw, Is.EqualTo(45f).Within(_tolerance), "no facing history keeps the fallback yaw");
         }
 
         [Test]
@@ -227,9 +227,9 @@ namespace Fps.Core.Tests
 
             Assert.That(playback.IsFinished, Is.False);
             Assert.That(playback.Advance(1f, 0.5f), Is.False);
-            Assert.That(playback.Elapsed, Is.EqualTo(0.5f).Within(Tolerance));
-            Assert.That(playback.Progress, Is.EqualTo(0.25f).Within(Tolerance));
-            Assert.That(playback.Pose.Eye.X, Is.EqualTo(0.5f).Within(Tolerance));
+            Assert.That(playback.Elapsed, Is.EqualTo(0.5f).Within(_tolerance));
+            Assert.That(playback.Progress, Is.EqualTo(0.25f).Within(_tolerance));
+            Assert.That(playback.Pose.Eye.X, Is.EqualTo(0.5f).Within(_tolerance));
 
             Assert.That(playback.Advance(3f, 0.5f), Is.True, "reaches the end on this call");
             Assert.That(playback.IsFinished, Is.True);

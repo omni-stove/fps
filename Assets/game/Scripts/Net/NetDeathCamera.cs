@@ -328,7 +328,7 @@ namespace Fps.Net
             var clip = motor != null
                 ? motor.CaptureKillCam(_killCamSeconds, killer.AimOrigin() - killer.transform.position)
                 : KillCamClip.Empty;
-            var caption = KillCamText.Caption(new LocalizedText("hud.scoreboard.player", killerId.Value));
+            var caption = KillCamText.Caption(BotRoster.ScoreboardName((int)killerId.Value));
             _replay.Begin(clip, killerName, caption, killer != null ? killer.transform : null, _view);
         }
 

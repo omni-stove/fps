@@ -13,7 +13,7 @@ namespace Fps.Protocol
     /// </remarks>
     public struct PlayerSnapshot : ISnapshotEntity<PlayerSnapshot>
     {
-        private const int _motionFlagCount = 3;
+        private const int _motionFlagCount = 4;
 
         public int PlayerId { get; set; }
         public PlayerFields Present { get; set; }
@@ -28,11 +28,16 @@ namespace Fps.Protocol
         public float Yaw { get; set; }
         public bool IsGrounded { get; set; }
         public bool IsCrouched { get; set; }
+
+        /// <summary>伏せているか (実際の姿勢)。<see cref="IsCrouched"/> とは同時に立たない。</summary>
+        public bool IsProne { get; set; }
         public bool IsAiming { get; set; }
 
         public CoverSync Cover { get; set; }
         public DodgeSnapshot Dodge { get; set; }
         public VaultSync Vault { get; set; }
+        public CharacterProneState Prone { get; set; }
+        public CharacterLadderState Ladder { get; set; }
 
         /// <summary>0 は倒れているか、まだ試合に出ていない。</summary>
         public int Health { get; set; }
@@ -76,6 +81,7 @@ namespace Fps.Protocol
                 || !Same.Bits(Yaw, baseline.Yaw)
                 || IsGrounded != baseline.IsGrounded
                 || IsCrouched != baseline.IsCrouched
+                || IsProne != baseline.IsProne
                 || IsAiming != baseline.IsAiming)
             {
                 bits |= PlayerFields.Motion;
@@ -97,6 +103,26 @@ namespace Fps.Protocol
             if (!Vault.SameAs(baseline.Vault))
             {
                 bits |= PlayerFields.Vault;
+            }
+
+            if (Prone.IsActive != baseline.Prone.IsActive
+                || Prone.WasSprinting != baseline.Prone.WasSprinting
+                || Prone.WasCrouching != baseline.Prone.WasCrouching
+                || Prone.IsDiving != baseline.Prone.IsDiving
+                || !Same.Bits(Prone.DiveDirection, baseline.Prone.DiveDirection)
+                || !Same.Bits(Prone.DiveElapsed, baseline.Prone.DiveElapsed))
+            {
+                bits |= PlayerFields.Prone;
+            }
+
+            if (Ladder.Index != baseline.Ladder.Index
+                || Ladder.Entry != baseline.Ladder.Entry
+                || !Same.Bits(Ladder.Height, baseline.Ladder.Height)
+                || Ladder.IsInputLatched != baseline.Ladder.IsInputLatched
+                || Ladder.LatchedDownSign != baseline.Ladder.LatchedDownSign
+                || !Same.Bits(Ladder.RegrabRemaining, baseline.Ladder.RegrabRemaining))
+            {
+                bits |= PlayerFields.Ladder;
             }
 
             if (Health != baseline.Health || !Same.Bits(LastHitDirection, baseline.LastHitDirection))
@@ -142,7 +168,12 @@ namespace Fps.Protocol
                 writer.WriteVector3(Position);
                 writer.WriteVector3(Velocity);
                 writer.WriteSingle(Yaw);
-                writer.WriteByte((byte)((IsGrounded ? 1 : 0) | (IsCrouched ? 2 : 0) | (IsAiming ? 4 : 0)));
+                if (IsCrouched && IsProne)
+                {
+                    throw new System.InvalidOperationException("a player cannot be both crouched and prone");
+                }
+
+                writer.WriteByte((byte)((IsGrounded ? 1 : 0) | (IsCrouched ? 2 : 0) | (IsAiming ? 4 : 0) | (IsProne ? 8 : 0)));
             }
 
             if ((fields & PlayerFields.Cover) != 0)
@@ -195,6 +226,16 @@ namespace Fps.Protocol
             {
                 writer.WriteInt32(SpawnProtectionSeconds);
             }
+
+            if ((fields & PlayerFields.Prone) != 0)
+            {
+                WriteProne(writer, Prone);
+            }
+
+            if ((fields & PlayerFields.Ladder) != 0)
+            {
+                WriteLadder(writer, Ladder);
+            }
         }
 
         public void ReadBits(MessageReader reader, int id, int bits)
@@ -217,6 +258,11 @@ namespace Fps.Protocol
                 IsGrounded = (flags & 1) != 0;
                 IsCrouched = (flags & 2) != 0;
                 IsAiming = (flags & 4) != 0;
+                IsProne = (flags & 8) != 0;
+                if (IsCrouched && IsProne)
+                {
+                    throw new MessageReadException("a player is both crouched and prone");
+                }
             }
 
             if ((fields & PlayerFields.Cover) != 0)
@@ -267,6 +313,16 @@ namespace Fps.Protocol
             {
                 SpawnProtectionSeconds = reader.ReadInt32AtLeast(0, "spawn protection seconds");
             }
+
+            if ((fields & PlayerFields.Prone) != 0)
+            {
+                Prone = ReadProne(reader);
+            }
+
+            if ((fields & PlayerFields.Ladder) != 0)
+            {
+                Ladder = ReadLadder(reader);
+            }
         }
 
         public void FillFrom(in PlayerSnapshot baseline)
@@ -285,6 +341,7 @@ namespace Fps.Protocol
                 Yaw = baseline.Yaw;
                 IsGrounded = baseline.IsGrounded;
                 IsCrouched = baseline.IsCrouched;
+                IsProne = baseline.IsProne;
                 IsAiming = baseline.IsAiming;
             }
 
@@ -332,7 +389,88 @@ namespace Fps.Protocol
                 SpawnProtectionSeconds = baseline.SpawnProtectionSeconds;
             }
 
+            if ((missing & PlayerFields.Prone) != 0)
+            {
+                Prone = baseline.Prone;
+            }
+
+            if ((missing & PlayerFields.Ladder) != 0)
+            {
+                Ladder = baseline.Ladder;
+            }
+
             Present = PlayerFields.All;
+        }
+
+        private static void WriteProne(MessageWriter writer, in CharacterProneState prone)
+        {
+            writer.WriteByte((byte)((prone.IsActive ? 1 : 0) | (prone.WasSprinting ? 2 : 0) | (prone.WasCrouching ? 4 : 0)
+                | (prone.IsDiving ? 8 : 0)));
+            if (prone.IsDiving)
+            {
+                writer.WriteVector2(prone.DiveDirection);
+                writer.WriteSingle(prone.DiveElapsed);
+            }
+        }
+
+        private static CharacterProneState ReadProne(MessageReader reader)
+        {
+            var flags = reader.ReadByteBelow(16, "prone flags");
+            var diving = (flags & 8) != 0;
+            var direction = Vector2.Zero;
+            var elapsed = 0f;
+            if (diving)
+            {
+                direction = reader.ReadFiniteVector2("dive direction");
+                elapsed = reader.ReadFiniteSingle("dive time");
+                if (direction.LengthSquared() <= 0f || elapsed < 0f)
+                {
+                    throw new MessageReadException("a dive needs a direction and a time that is not negative");
+                }
+            }
+
+            return new CharacterProneState((flags & 1) != 0, (flags & 2) != 0, (flags & 4) != 0, diving, direction, elapsed);
+        }
+
+        private static void WriteLadder(MessageWriter writer, in CharacterLadderState ladder)
+        {
+            writer.WriteInt32(ladder.Index);
+            writer.WriteSingle(ladder.RegrabRemaining);
+            if (!ladder.IsClimbing)
+            {
+                return;
+            }
+
+            writer.WriteByte((byte)ladder.Entry);
+            writer.WriteSingle(ladder.Height);
+            writer.WriteBool(ladder.IsInputLatched);
+            writer.WriteByte((byte)(ladder.LatchedDownSign + 1));
+        }
+
+        private static CharacterLadderState ReadLadder(MessageReader reader)
+        {
+            var index = reader.ReadInt32AtLeast(CharacterLadderState.NoLadder, "ladder index");
+            var regrab = reader.ReadFiniteSingle("ladder regrab time");
+            if (regrab < 0f)
+            {
+                throw new MessageReadException("ladder regrab time must not be negative");
+            }
+
+            if (index == CharacterLadderState.NoLadder)
+            {
+                return CharacterLadderState.Off(regrab);
+            }
+
+            var entry = (LadderEntry)reader.ReadByteBelow(EnumRange<LadderEntry>.Count, "ladder entry");
+            if (entry == LadderEntry.None)
+            {
+                throw new MessageReadException("a climbing player has no ladder entry");
+            }
+
+            var height = reader.ReadFiniteSingle("ladder height");
+            var latched = reader.ReadBool();
+            var sign = reader.ReadByteBelow(3, "ladder latched sign") - 1;
+            return CharacterLadderState.Climbing(index, entry, height, latched, sign);
         }
     }
 }

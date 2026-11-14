@@ -32,6 +32,17 @@ namespace Fps.Net
         /// <summary>この tick の後の乗り越えの状態 (たどっている軌跡と進み)。</summary>
         public NetVaultState Vault { get; }
 
+        /// <summary>この tick の後、伏せているか。</summary>
+        public bool IsProne { get; }
+
+        /// <summary>この tick の後の伏せの入力の解釈と飛び込み。</summary>
+        public CharacterProneState Prone { get; }
+
+        /// <summary>この tick の後のはしごの上り下り。</summary>
+        public CharacterLadderState Ladder { get; }
+
+        public PlayerStance Stance => IsProne ? PlayerStance.Prone : IsCrouched ? PlayerStance.Crouching : PlayerStance.Standing;
+
         public MotorState(Vector3 position, Vector3 velocity, bool isGrounded, bool isCrouched)
             : this(position, velocity, isGrounded, isCrouched, NetCoverState.Out)
         {
@@ -50,7 +61,26 @@ namespace Fps.Net
             NetCoverState cover,
             NetDodgeState dodge,
             NetVaultState vault)
+            : this(position, velocity, isGrounded, isCrouched, cover, dodge, vault, false, CharacterProneState.None, CharacterLadderState.None)
         {
+        }
+
+        /// <summary>isCrouched と isProne は同時に立てない。</summary>
+        public MotorState(
+            Vector3 position,
+            Vector3 velocity,
+            bool isGrounded,
+            bool isCrouched,
+            NetCoverState cover,
+            NetDodgeState dodge,
+            NetVaultState vault,
+            bool isProne,
+            CharacterProneState prone,
+            CharacterLadderState ladder)
+        {
+            IsProne = isProne && !isCrouched;
+            Prone = prone;
+            Ladder = ladder;
             Position = position;
             Velocity = velocity;
             IsGrounded = isGrounded;
@@ -71,7 +101,10 @@ namespace Fps.Net
                 state.IsCrouched,
                 NetCoverState.FromCore(state.Cover),
                 new NetDodgeState(state.Dodge),
-                NetVaultState.FromCore(state.Vault));
+                NetVaultState.FromCore(state.Vault),
+                state.IsProne,
+                state.Prone,
+                state.Ladder);
         }
 
         public CharacterMotorState ToCore()
@@ -80,10 +113,12 @@ namespace Fps.Net
                 NetMath.ToNumerics(Position),
                 NetMath.ToNumerics(Velocity),
                 IsGrounded,
-                IsCrouched,
+                Stance,
                 Cover.ToCore(),
                 Dodge.Snapshot,
-                Vault.ToCore());
+                Vault.ToCore(),
+                Prone,
+                Ladder);
         }
 
         public bool IsDodging => Dodge.IsRolling;
@@ -94,7 +129,8 @@ namespace Fps.Net
         /// <summary>
         /// 位置と速度がすべて有限値で、カバー・回避・乗り越えの状態が正しいか。ネットワークから受け取った値の検査に使う。
         /// </summary>
-        public bool IsFinite => NetMath.IsFinite(Position) && NetMath.IsFinite(Velocity) && Cover.IsValid && Dodge.IsValid && Vault.IsValid;
+        public bool IsFinite => NetMath.IsFinite(Position) && NetMath.IsFinite(Velocity) && Cover.IsValid && Dodge.IsValid && Vault.IsValid
+            && Prone.IsValid && Ladder.IsValid;
 
         /// <summary>
         /// 予測と確定状態のずれ。姿勢とカバー・回避・乗り越えの状態が同じなら位置の距離 (m)、しゃがみ・カバーの段階 (<see cref="NetCoverState.Phase"/>)・
@@ -108,7 +144,7 @@ namespace Fps.Net
         /// </remarks>
         public static float PositionError(MotorState predicted, MotorState authoritative)
         {
-            if (predicted.IsCrouched != authoritative.IsCrouched)
+            if (predicted.Stance != authoritative.Stance)
             {
                 return StanceMismatchError;
             }
@@ -120,7 +156,10 @@ namespace Fps.Net
                 return StanceMismatchError;
             }
 
-            if (predicted.IsDodging != authoritative.IsDodging || predicted.IsVaulting != authoritative.IsVaulting)
+            if (predicted.IsDodging != authoritative.IsDodging || predicted.IsVaulting != authoritative.IsVaulting
+                || predicted.Prone.IsDiving != authoritative.Prone.IsDiving
+                || predicted.Ladder.IsClimbing != authoritative.Ladder.IsClimbing
+                || (predicted.Ladder.IsClimbing && predicted.Ladder.Index != authoritative.Ladder.Index))
             {
                 return StanceMismatchError;
             }

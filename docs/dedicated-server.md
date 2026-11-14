@@ -314,6 +314,11 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
 - クライアントと Unity のサーバー (Host を含む) も、プレイヤーの移動の当たりを同じ `.fpsmap` で取る (`NetMapWorld`)。
   Editor では `server-data/maps/` を直接読み、ビルドには `MapCollisionBuildFiles` が `StreamingAssets/maps/` として入れる。
   今のシーンの名前の `.fpsmap` が無ければ `[Net] map <マップ名> has no collision: ...` を出し、プレイヤーは動かない。
+- はしごの形と調整値は `server-data/maps/<マップ名>.ladders.json` から読む (`make export-server-data` が `.fpsmap` と一緒に書き出す)。
+  サーバーとクライアントの予測はどちらもこの並びの番号ではしごを指すので、同じファイルを読む。ファイルが無いマップははしごが無いものとして動く。
+  起動時の `[Server] map ...` の `ladders=` が読んだ本数。はしごと伏せはルールの `actions.ladder` / `actions.prone` が `On` のときだけ使え、
+  伏せの寸法と速さはルールのファイルの `motor` の `proneHeight`・`proneSpeed`・`diveDistance`・`diveSeconds` (無ければ既定値) で決まる。
+  つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
 - ルールは `-rules <名前>` (無ければ `TeamDeathmatch`) で選び、`server-data/rules/<名前>.json` を読む。NetMatch.prefab に焼いてある
   試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値など)・ルールのアセット・ロードアウトと武器の一覧・移動の値と体の寸法
   (MotorSettings と NetPlayer.prefab の CharacterController。サーバーの移動はクライアントの予測と同じこの値で動く) が入っていて、

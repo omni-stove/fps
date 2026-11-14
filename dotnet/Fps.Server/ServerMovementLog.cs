@@ -27,6 +27,22 @@ namespace Fps.Server
             return Head("vault", playerId, tick) + " vaulting=" + Bool(vaulting);
         }
 
+        public static string Prone(int playerId, int tick, bool prone)
+        {
+            return Head("prone", playerId, tick) + " prone=" + Bool(prone);
+        }
+
+        public static string Dive(int playerId, int tick, bool diving)
+        {
+            return Head("dive", playerId, tick) + " diving=" + Bool(diving);
+        }
+
+        public static string Ladder(int playerId, int tick, int ladder)
+        {
+            var log = Head("ladder", playerId, tick) + " climbing=" + Bool(ladder >= 0);
+            return ladder >= 0 ? log + " ladder=" + ladder.ToString(CultureInfo.InvariantCulture) : log;
+        }
+
         private static string Head(string what, int playerId, int tick)
         {
             return "[Net] " + what + " owner=" + playerId.ToString(CultureInfo.InvariantCulture)

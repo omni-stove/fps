@@ -22,12 +22,22 @@ namespace Fps.Server.Tests
                 new[] { new NavTriangle(0, 1, 2, 0) });
         }
 
-        public static ServerMapData Data(string name = "NetTest", NetMapPoints points = null)
+        public static ServerMapData Data(string name = "NetTest", NetMapPoints points = null, NetMapLadders ladders = null)
         {
-            return new ServerMapData(name, World(), NavMesh(), "memory", points);
+            return new ServerMapData(name, World(), NavMesh(), "memory", points, ladders);
         }
 
-        public static string Write(string root, string name, bool collision = true, bool navigation = true, NetMapPoints points = null)
+        /// <summary>床の上、原点から +Z へ 3m の所に、+Z を向いて立つ高さ 3m のはしご。</summary>
+        public static NetMapLadders OneLadder()
+        {
+            return new NetMapLadders(new[]
+            {
+                new MapLadder(new LadderSpan(new Vector3(0f, 0.5f, 3f), Vector3.UnitZ, 3f, 0.8f), LadderSpec.Default),
+            });
+        }
+
+        public static string Write(
+            string root, string name, bool collision = true, bool navigation = true, NetMapPoints points = null, NetMapLadders ladders = null)
         {
             var directory = Path.Combine(root, ServerMapData.DataDirectoryName, ServerMapData.MapsDirectoryName);
             Directory.CreateDirectory(directory);
@@ -50,6 +60,11 @@ namespace Fps.Server.Tests
             if (points != null)
             {
                 File.WriteAllText(Path.Combine(directory, name + NetMapPoints.Extension), NetMapPoints.Write(points));
+            }
+
+            if (ladders != null)
+            {
+                File.WriteAllText(Path.Combine(directory, name + NetMapLadders.Extension), NetMapLadders.Write(ladders));
             }
 
             return directory;

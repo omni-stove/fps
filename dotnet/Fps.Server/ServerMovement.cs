@@ -76,9 +76,11 @@ namespace Fps.Server
             var spawned = _context.Bodies.TryGet(player.PlayerId, out var shared) && shared.HasSpawned;
             var spawn = spawned ? shared.Position : _settings.SpawnPosition;
             var body = new CharacterBody(_context.World, _settings.Mover, _settings.Stance);
-            var simulation = new CharacterMotorSimulation(body, new PlayerMotor(_settings.Motor), _tickSeconds, _settings.KillPlaneY)
+            var simulation = new CharacterMotorSimulation(
+                body, new PlayerMotor(_settings.Motor), _tickSeconds, _settings.KillPlaneY, _settings.Prone)
             {
                 SpawnPosition = spawn,
+                Ladders = _context.Map.Ladders.Ladders,
             };
             var mover = new Mover(player, simulation)
             {
@@ -195,12 +197,15 @@ namespace Fps.Server
                 row.Yaw = mover.Yaw;
                 row.IsGrounded = state.IsGrounded;
                 row.IsCrouched = state.IsCrouched;
+                row.IsProne = state.IsProne;
                 row.IsAiming = mover.Aiming;
                 row.Cover = new CoverSync(state.Cover.Snapshot, state.Cover.TopY, state.Cover.Edges, state.Cover.AppliedPeek);
                 row.Dodge = state.Dodge;
                 row.Vault = state.Vault.IsVaulting
                     ? new VaultSync(true, state.Vault.Rise, state.Vault.Cross, state.Vault.Land, state.Vault.Elapsed)
                     : VaultSync.None;
+                row.Prone = state.Prone;
+                row.Ladder = state.Ladder;
             }
 
             if (_byPlayer.TryGetValue(receiver.PlayerId, out var own))
@@ -251,6 +256,9 @@ namespace Fps.Server
                     frame.Has(InputButtons.Cover),
                     frame.Has(InputButtons.Aim),
                     frame.Has(InputButtons.Dodge),
+                    false,
+                    frame.Has(InputButtons.Prone),
+                    false,
                     false)
                 .WithRules(_settings.Rules.Actions);
 
@@ -270,7 +278,7 @@ namespace Fps.Server
             if (_context.Bodies.TryGet(mover.Player.PlayerId, out var body))
             {
                 var state = mover.State;
-                body.SetPose(state.Position, mover.Yaw, state.IsCrouched ? PlayerStance.Crouching : PlayerStance.Standing);
+                body.SetPose(state.Position, mover.Yaw, state.Stance, state.Ladder.IsClimbing ? state.Ladder.Index : CharacterLadderState.NoLadder);
             }
         }
 
@@ -294,6 +302,23 @@ namespace Fps.Server
             if (previous.IsCrouched != current.IsCrouched)
             {
                 _log.WriteLine(ServerMovementLog.Stance(playerId, tick, current.IsCrouched));
+            }
+
+            if (previous.IsProne != current.IsProne)
+            {
+                _log.WriteLine(ServerMovementLog.Prone(playerId, tick, current.IsProne));
+            }
+
+            if (previous.IsDiving != current.IsDiving)
+            {
+                _log.WriteLine(ServerMovementLog.Dive(playerId, tick, current.IsDiving));
+            }
+
+            if (previous.Ladder.IsClimbing != current.Ladder.IsClimbing
+                || (current.Ladder.IsClimbing && previous.Ladder.Index != current.Ladder.Index))
+            {
+                _log.WriteLine(ServerMovementLog.Ladder(
+                    playerId, tick, current.Ladder.IsClimbing ? current.Ladder.Index : CharacterLadderState.NoLadder));
             }
 
             var before = previous.Cover;

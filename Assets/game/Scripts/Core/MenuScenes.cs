@@ -46,7 +46,7 @@ namespace Fps.Core
             }
 
             var trimmed = name.Trim();
-            if (trimmed.IndexOf('/') >= 0 || trimmed.IndexOf('\\') >= 0)
+            if (trimmed.Contains('/') || trimmed.Contains('\\'))
             {
                 throw new ArgumentException(
                     $"scene name '{name}' must be a plain file name under the Scenes folder, without a folder", parameterName);

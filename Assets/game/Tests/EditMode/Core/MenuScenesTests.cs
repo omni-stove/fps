@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class MenuScenesTests
     {
-        private const string Root = KitPaths.DefaultRoot;
+        private const string _root =KitPaths.DefaultRoot;
 
         [Test]
         public void TheDefaultsAreTheMenuRouteNames()
@@ -59,16 +59,16 @@ namespace Fps.Core.Tests
         {
             var scenes = new MenuScenes("Title", "Training", "Chapter1", "Arena");
 
-            Assert.That(MenuRoute.Plan(MenuDestination.Campaign, Root, scenes).ScenePath, Is.EqualTo("Assets/game/Scenes/Chapter1.unity"));
-            Assert.That(MenuRoute.Plan(MenuDestination.Range, Root, scenes).ScenePath, Is.EqualTo("Assets/game/Scenes/Training.unity"));
-            Assert.That(MenuRoute.Plan(MenuDestination.Tutorial, Root, scenes).ScenePath, Is.EqualTo("Assets/game/Scenes/Training.unity"));
-            Assert.That(MenuRoute.Plan(MenuDestination.Tutorial, Root, scenes).StartsTutorial, Is.True);
-            Assert.That(MenuRoute.BackToMenu(Root, scenes).ScenePath, Is.EqualTo("Assets/game/Scenes/Title.unity"));
-            Assert.That(MenuRoute.Plan(MenuDestination.Quit, Root, scenes).Kind, Is.EqualTo(MenuTransitionKind.Quit));
+            Assert.That(MenuRoute.Plan(MenuDestination.Campaign, _root, scenes).ScenePath, Is.EqualTo("Assets/game/Scenes/Chapter1.unity"));
+            Assert.That(MenuRoute.Plan(MenuDestination.Range, _root, scenes).ScenePath, Is.EqualTo("Assets/game/Scenes/Training.unity"));
+            Assert.That(MenuRoute.Plan(MenuDestination.Tutorial, _root, scenes).ScenePath, Is.EqualTo("Assets/game/Scenes/Training.unity"));
+            Assert.That(MenuRoute.Plan(MenuDestination.Tutorial, _root, scenes).StartsTutorial, Is.True);
+            Assert.That(MenuRoute.BackToMenu(_root, scenes).ScenePath, Is.EqualTo("Assets/game/Scenes/Title.unity"));
+            Assert.That(MenuRoute.Plan(MenuDestination.Quit, _root, scenes).Kind, Is.EqualTo(MenuTransitionKind.Quit));
 
             foreach (var online in new[] { MenuDestination.CreateLobby, MenuDestination.JoinLobby, MenuDestination.QuickMatch })
             {
-                var transition = MenuRoute.Plan(online, Root, scenes);
+                var transition = MenuRoute.Plan(online, _root, scenes);
                 Assert.That(transition.ScenePath, Is.EqualTo("Assets/game/Scenes/Arena.unity"), online.ToString());
                 Assert.That(transition.Lobby.IsRequested, Is.True, online.ToString());
             }
@@ -91,25 +91,25 @@ namespace Fps.Core.Tests
             foreach (var destination in MenuRoute.Destinations)
             {
                 Assert.That(
-                    MenuRoute.Plan(destination, Root, MenuScenes.Default).ScenePath,
+                    MenuRoute.Plan(destination, _root, MenuScenes.Default).ScenePath,
                     Is.EqualTo(MenuRoute.Plan(destination).ScenePath),
                     destination.ToString());
             }
 
-            Assert.That(MenuRoute.Plan(MenuDestination.Campaign, Root, MenuScenes.Default).ScenePath, Is.EqualTo(MenuRoute.CampaignScene));
-            Assert.That(MenuRoute.BackToMenu(Root, MenuScenes.Default).ScenePath, Is.EqualTo(MenuRoute.MainMenuScene));
-            Assert.That(MenuRoute.NetSceneUnder(Root, MenuScenes.Default), Is.EqualTo(MenuRoute.NetScene));
-            Assert.That(MenuRoute.RangeSceneUnder(Root, MenuScenes.Default), Is.EqualTo(MenuRoute.RangeScene));
-            Assert.That(MenuRoute.MainMenuSceneUnder(Root, MenuScenes.Default), Is.EqualTo(MenuRoute.MainMenuScene));
+            Assert.That(MenuRoute.Plan(MenuDestination.Campaign, _root, MenuScenes.Default).ScenePath, Is.EqualTo(MenuRoute.CampaignScene));
+            Assert.That(MenuRoute.BackToMenu(_root, MenuScenes.Default).ScenePath, Is.EqualTo(MenuRoute.MainMenuScene));
+            Assert.That(MenuRoute.NetSceneUnder(_root, MenuScenes.Default), Is.EqualTo(MenuRoute.NetScene));
+            Assert.That(MenuRoute.RangeSceneUnder(_root, MenuScenes.Default), Is.EqualTo(MenuRoute.RangeScene));
+            Assert.That(MenuRoute.MainMenuSceneUnder(_root, MenuScenes.Default), Is.EqualTo(MenuRoute.MainMenuScene));
         }
 
         [Test]
         public void RejectsMissingScenes()
         {
-            Assert.Throws<ArgumentNullException>(() => MenuRoute.Plan(MenuDestination.Campaign, Root, null));
-            Assert.Throws<ArgumentNullException>(() => MenuRoute.Plan(MenuDestination.Quit, Root, null));
-            Assert.Throws<ArgumentNullException>(() => MenuRoute.BackToMenu(Root, null));
-            Assert.Throws<ArgumentNullException>(() => MenuRoute.NetSceneUnder(Root, null));
+            Assert.Throws<ArgumentNullException>(() => MenuRoute.Plan(MenuDestination.Campaign, _root, null));
+            Assert.Throws<ArgumentNullException>(() => MenuRoute.Plan(MenuDestination.Quit, _root, null));
+            Assert.Throws<ArgumentNullException>(() => MenuRoute.BackToMenu(_root, null));
+            Assert.Throws<ArgumentNullException>(() => MenuRoute.NetSceneUnder(_root, null));
         }
     }
 }

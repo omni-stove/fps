@@ -83,6 +83,40 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void HeadshotLinesTakeTheHighlightColorOfThePalette()
+        {
+            var before = AppliedControlSettings.Current;
+            var volume = AudioListener.volume;
+            try
+            {
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.RedGreen));
+                var view = CreateView<HitMarkerView>(out var root);
+                view.Catalog = null;
+                view.Bind(root);
+                var lines = view.Element.Query<VisualElement>(className: HitMarkerView.LineClass).ToList();
+                Assert.That(lines, Has.Count.EqualTo(4));
+
+                view.Show(new HitConfirm(50, HitZone.Head, killed: false, downed: false));
+                foreach (var line in lines)
+                {
+                    Assert.That(line.style.backgroundColor.value, Is.EqualTo(TeamColors.ToColor(TeamPalette.RedGreen.Highlight)));
+                }
+
+                // 頭でなければ Hud.uss の色に戻す
+                view.Show(new HitConfirm(25, HitZone.Body, killed: false, downed: false));
+                foreach (var line in lines)
+                {
+                    Assert.That(line.style.backgroundColor.keyword, Is.EqualTo(StyleKeyword.Null));
+                }
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(before);
+                AudioListener.volume = volume;
+            }
+        }
+
+        [Test]
         public void ANewHitRestartsTheMarkerTime()
         {
             var view = CreateView<HitMarkerView>(out _);

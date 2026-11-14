@@ -264,11 +264,12 @@ namespace Fps.Net
                 var candidate = players[i];
                 if (candidate != null && candidate.IsSpawned)
                 {
-                    _candidates.Add(new SpectateCandidate(candidate.OwnerClientId, candidate.Team, candidate.IsAlive));
+                    // Bot はみなサーバーが持ち主なので、持ち主のクライアント Id では 1 人に決まらない
+                    _candidates.Add(new SpectateCandidate(candidate.RosterId, candidate.Team, candidate.IsAlive));
                 }
             }
 
-            var allyId = SpectateTargets.Pick(_candidates, _player.OwnerClientId, _player.Team, _allyId, step);
+            var allyId = SpectateTargets.Pick(_candidates, _player.RosterId, _player.Team, _allyId, step);
             if (!_allyResolved || allyId != _allyId || (allyId.HasValue && _ally == null))
             {
                 _allyResolved = true;
@@ -299,7 +300,7 @@ namespace Fps.Net
             for (var i = 0; i < players.Count; i++)
             {
                 var candidate = players[i];
-                if (candidate != null && candidate != _player && candidate.IsSpawned && candidate.OwnerClientId == clientId)
+                if (candidate != null && candidate != _player && candidate.IsSpawned && candidate.RosterId == clientId)
                 {
                     return candidate;
                 }
@@ -402,12 +403,12 @@ namespace Fps.Net
         // 試合の行から自分を倒した相手を引き、その目の位置を返す。相手がいない・見つからない・抜けたなら null (倒れた位置を見下ろす)
         private Vector3? ResolveKillerEye(NetTeamDeathmatch match)
         {
-            var killerId = FindKillerId(match, _player.OwnerClientId);
+            var killerId = FindKillerId(match, _player.RosterId);
             if (!_targetResolved || killerId != _killerId)
             {
                 _targetResolved = true;
                 _killerId = killerId;
-                _killer = killerId.HasValue ? FindPlayer(killerId.Value) : null;
+                _killer = killerId.HasValue ? FindSpawnedPlayer(killerId.Value) : null;
                 _hasKiller = _killer != null;
                 if (_hasKiller)
                 {
@@ -453,27 +454,6 @@ namespace Fps.Net
                 {
                     var killer = row.Killer;
                     return killer.HasValue && killer.Value != victim ? killer : null;
-                }
-            }
-
-            return null;
-        }
-
-        // プレイヤーのオブジェクトは所有者のクライアント Id で引ける。クライアントでも生成済みの一覧は持っている
-        private NetPlayer FindPlayer(ulong clientId)
-        {
-            var manager = _player.NetworkManager;
-            if (manager == null || manager.SpawnManager == null)
-            {
-                return null;
-            }
-
-            foreach (var networkObject in manager.SpawnManager.SpawnedObjectsList)
-            {
-                if (networkObject != null && networkObject.IsPlayerObject && networkObject.OwnerClientId == clientId
-                    && networkObject.TryGetComponent<NetPlayer>(out var candidate) && candidate != _player)
-                {
-                    return candidate;
                 }
             }
 

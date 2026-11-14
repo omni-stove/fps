@@ -24,6 +24,7 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// 予備弾は <see cref="NetMatchRules.InfiniteReserve"/> が true なら数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。
+    /// グレネードの残りは自分の <see cref="NetPlayer.Grenades"/> を購読して <see cref="GrenadeCountView"/> に出す。
     /// </para>
     /// <para>
     /// 出す項目は、サーバーから届いたルールの <see cref="NetMatchRules.HudDensity"/> で <see cref="Hud.ApplyDensity"/> に決めさせる。
@@ -77,6 +78,10 @@ namespace Fps.Net
         private NetMatchRules _rules = NetMatchRules.Default;
         private NetWeaponState _weaponState;
 
+        // グレネードの残り。サーバーが持ち主にだけ送る (NetPlayer.Grenades)
+        private GrenadeCountView _grenadeView;
+        private NetGrenadeState _grenadeState;
+
         // 試合中に倒れてから、出現するか試合が終わるまで true。_respawn は Individual の表示に使う数え (待ち時間が不正なら null)
         private bool _isDown;
         private RespawnCountdown _respawn;
@@ -107,7 +112,8 @@ namespace Fps.Net
         /// <summary>
         /// HUD (<see cref="Hud.Create"/>) を作り、player とその武器、今の試合 (<see cref="NetTeamDeathmatch.Current"/>) を購読する。
         /// ヒットマーカー・キルフィードなどのビューと <see cref="PauseMenu"/> は、オフラインと同じく <see cref="Hud.Create"/> が
-        /// (<see cref="Hud.AddViews"/> で) 付ける。倒されている間のロードアウトの選択は <see cref="NetLoadoutChooser"/> を付けてつなぐ。
+        /// (<see cref="Hud.AddViews"/> で) 付ける。倒されている間のロードアウトの選択は <see cref="NetLoadoutChooser"/> を、
+        /// 他のプレイヤーの頭の上の名前は <see cref="NetNameplates"/> を付けてつなぐ。
         /// 失敗したら作りかけのものは消して例外を投げる。
         /// </summary>
         /// <exception cref="InvalidOperationException">Resources に HUD のレイアウトかテーマが無い。</exception>
@@ -126,6 +132,7 @@ namespace Fps.Net
                 netHud.ListenForMatch();
                 ConfigurePauseMenu(hud.PauseMenu);
                 hud.gameObject.AddComponent<NetLoadoutChooser>().Initialize(netHud);
+                hud.gameObject.AddComponent<NetNameplates>().Initialize(player);
                 return netHud;
             }
             catch
@@ -152,7 +159,7 @@ namespace Fps.Net
 
         /// <summary>
         /// player とその武器 (<see cref="NetPlayer.Weapon"/>) の同期値を購読し、今の値をすぐ出す。前に渡したプレイヤーの購読は外す。
-        /// チームの色は <see cref="NetPlayer.AlphaColor"/> / <see cref="NetPlayer.BravoColor"/> で塗る。
+        /// チームの色は、player のチームから見た敵味方の色を設定の色の組から引いて塗る (<see cref="Hud.UseTeamPalette"/>)。
         /// </summary>
         internal void Initialize(NetPlayer player)
         {
@@ -168,10 +175,10 @@ namespace Fps.Net
             }
 
             UnbindPlayer();
-            _hud.SetTeamColors(NetPlayer.AlphaColor, NetPlayer.BravoColor);
 
             _player = player;
             _team = player.TeamVariable.Value;
+            _hud.UseTeamPalette(_team);
             _health = player.HealthVariable.Value;
             player.TeamVariable.OnValueChanged += HandleTeamChanged;
             player.HealthVariable.OnValueChanged += HandleHealthChanged;
@@ -179,6 +186,11 @@ namespace Fps.Net
             _revivingPercent = null;
             _spawnProtectionSeconds = 0;
             player.DownedStateVariable.OnValueChanged += HandleDownedStateChanged;
+            _grenadeState = player.GrenadesVariable.Value;
+            player.GrenadesVariable.OnValueChanged += HandleGrenadesChanged;
+
+            // 試合のルール (HUD の量) を当てる前に付け、弾数と一緒に出し入れされるようにする
+            _grenadeView = GrenadeCountView.AttachTo(_hud);
 
             // NetPlayer.Weapon は Awake で解決するので、Awake を経ない Edit Mode でも見つかるよう自分で探す
             _weapon = player.GetComponent<NetPlayerWeapon>();
@@ -189,6 +201,7 @@ namespace Fps.Net
             }
 
             ShowAmmo();
+            ShowGrenades();
             ShowHealth();
             ShowScores();
             ShowNotice();
@@ -424,6 +437,7 @@ namespace Fps.Net
                 _player.TeamVariable.OnValueChanged -= HandleTeamChanged;
                 _player.HealthVariable.OnValueChanged -= HandleHealthChanged;
                 _player.DownedStateVariable.OnValueChanged -= HandleDownedStateChanged;
+                _player.GrenadesVariable.OnValueChanged -= HandleGrenadesChanged;
                 _player = null;
             }
 
@@ -463,6 +477,7 @@ namespace Fps.Net
         private void HandleTeamChanged(Team previous, Team current)
         {
             _team = current;
+            _hud.UseTeamPalette(current);
             ShowScores();
             ShowScoreboard();
         }
@@ -502,6 +517,12 @@ namespace Fps.Net
 
             // 次のフレームを待たずに、リロードが終わった・判定した時点で進みと幅を変えるため
             RefreshReloadProgressNow();
+        }
+
+        private void HandleGrenadesChanged(NetGrenadeState previous, NetGrenadeState current)
+        {
+            _grenadeState = current;
+            ShowGrenades();
         }
 
         private void HandleAlphaScoreChanged(int previous, int current)
@@ -619,6 +640,15 @@ namespace Fps.Net
                 _rules.InfiniteReserve);
         }
 
+        /// <summary>届いたグレネードの状態を出す。ルールで使わない (<see cref="NetGrenadeState.Enabled"/> が false) 間は隠す。</summary>
+        private void ShowGrenades()
+        {
+            if (_grenadeView != null)
+            {
+                _grenadeView.ShowCount(_grenadeState.Enabled, _grenadeState.Remaining);
+            }
+        }
+
         private void ShowScores()
         {
             if (_match == null)
@@ -667,6 +697,7 @@ namespace Fps.Net
         /// <summary>
         /// <see cref="NetTeamDeathmatch.Players"/> の 1 行をスコアボードの行にする。サーバーはプレイヤー Id にクライアント Id を
         /// そのまま使い、int に収まらないクライアントは試合に入れないので、収まらない行は false を返して載せない。
+        /// Bot の行 (Id が <see cref="BotRoster.FirstBotPlayerId"/> 以上) は名前の頭に <see cref="BotRoster.Tag"/> を付ける。
         /// </summary>
         /// <param name="localClientId">この画面のプレイヤーのクライアント Id。分からなければ null (どの行も自分にしない)。</param>
         internal static bool TryToScoreboardEntry(NetPlayerStats row, ulong? localClientId, out ScoreboardEntry entry)
@@ -680,7 +711,7 @@ namespace Fps.Net
             var playerId = (int)row.ClientId;
             entry = new ScoreboardEntry(
                 playerId,
-                ScoreboardRows.PlayerName(playerId),
+                BotRoster.ScoreboardName(playerId),
                 row.Team,
                 Math.Max(0, row.Kills),
                 Math.Max(0, row.Deaths),

@@ -18,6 +18,10 @@ namespace Fps.Net.Tests
         private const float _respawnSeconds = 3f;
         private const int _maxHealth = 100;
 
+        // テストで作る HudView は Hud の色の組に従わないので、どの組とも違う色で塗って並びだけを確かめる
+        private static readonly Color _alphaColor = new Color(0.1f, 0.2f, 0.9f);
+        private static readonly Color _bravoColor = new Color(0.9f, 0.2f, 0.1f);
+
         private GameObject _playerObject;
         private GameObject _matchObject;
         private NetPlayer _player;
@@ -42,7 +46,7 @@ namespace Fps.Net.Tests
 
             _netHud = NetHud.Create(_player);
             _view = new HudView(CloneLayout(), _netHud.Hud.Model);
-            _view.SetTeamColors(NetPlayer.AlphaColor, NetPlayer.BravoColor);
+            _view.SetTeamColors(_alphaColor, _bravoColor);
         }
 
         [TearDown]
@@ -109,8 +113,54 @@ namespace Fps.Net.Tests
             Assert.That(_netHud.GetComponent<UIDocument>(), Is.Not.Null);
             Assert.That(_netHud.Hud.OwnedPanelSettings, Is.Not.Null);
             Assert.That(_netHud.Player, Is.SameAs(_player));
-            Assert.That(_netHud.Hud.TeamColor(Team.Alpha), Is.EqualTo(NetPlayer.AlphaColor));
-            Assert.That(_netHud.Hud.TeamColor(Team.Bravo), Is.EqualTo(NetPlayer.BravoColor));
+            Assert.That(_netHud.Hud.FollowsTeamPalette, Is.True);
+            Assert.That(_netHud.Hud.TeamColor(Team.Alpha), Is.EqualTo(TeamColors.Of(Team.Alpha, Team.Alpha)), "own team is friendly");
+            Assert.That(_netHud.Hud.TeamColor(Team.Bravo), Is.EqualTo(TeamColors.Of(Team.Bravo, Team.Alpha)), "the other is the enemy");
+            Assert.That(_netHud.GetComponent<NetNameplates>(), Is.Not.Null);
+            Assert.That(_netHud.GetComponent<NetNameplates>().Owner, Is.SameAs(_player));
+        }
+
+        [Test]
+        public void TeamColorsFollowTheOwnTeamAndThePalette()
+        {
+            var before = AppliedControlSettings.Current;
+            try
+            {
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.RedGreen));
+                var friendly = TeamColors.ToColor(TeamPalette.RedGreen.Friendly);
+                var enemy = TeamColors.ToColor(TeamPalette.RedGreen.Enemy);
+                Assert.That(_netHud.Hud.TeamColor(Team.Alpha), Is.EqualTo(friendly));
+                Assert.That(_netHud.Hud.TeamColor(Team.Bravo), Is.EqualTo(enemy));
+
+                Arrive(_player.TeamVariable, Team.Alpha, Team.Bravo);
+                Assert.That(_netHud.Hud.TeamColor(Team.Bravo), Is.EqualTo(friendly), "the new own team");
+                Assert.That(_netHud.Hud.TeamColor(Team.Alpha), Is.EqualTo(enemy));
+
+                AppliedControlSettings.Apply(AppliedControlSettings.Current.WithPalette(ColorPalette.Standard));
+                Assert.That(_netHud.Hud.TeamColor(Team.Bravo), Is.EqualTo(TeamColors.ToColor(TeamPalette.Standard.Friendly)));
+                Assert.That(_netHud.Hud.TeamColor(Team.Alpha), Is.EqualTo(TeamColors.ToColor(TeamPalette.Standard.Enemy)));
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(before);
+            }
+        }
+
+        [Test]
+        public void ShowsTheGrenadeCountOnlyWhileTheRulesUseGrenades()
+        {
+            var grenades = _netHud.GetComponent<GrenadeCountView>();
+            Assert.That(grenades, Is.Not.Null, "NetHud should attach the grenade count");
+            Assert.That(grenades.Text, Is.Empty, "nothing has arrived yet");
+
+            Arrive(_player.GrenadesVariable, NetGrenadeState.None, new NetGrenadeState(true, 2));
+            Assert.That(grenades.Text, Is.EqualTo(HudFormat.Grenades(2)));
+
+            Arrive(_player.GrenadesVariable, new NetGrenadeState(true, 2), new NetGrenadeState(true, 0));
+            Assert.That(grenades.Text, Is.EqualTo(HudFormat.Grenades(0)), "an empty pouch still shows 0 while grenades are on");
+
+            Arrive(_player.GrenadesVariable, new NetGrenadeState(true, 0), new NetGrenadeState(false, 0));
+            Assert.That(grenades.Text, Is.Empty);
         }
 
         [Test]
@@ -324,12 +374,12 @@ namespace Fps.Net.Tests
 
             Assert.That(_view.FirstScoreLabel.text, Is.EqualTo("BRAVO 5"));
             Assert.That(_view.SecondScoreLabel.text, Is.EqualTo("ALPHA 2"));
-            Assert.That(_view.FirstScoreLabel.style.color.value, Is.EqualTo(NetPlayer.BravoColor));
-            Assert.That(_view.SecondScoreLabel.style.color.value, Is.EqualTo(NetPlayer.AlphaColor));
+            Assert.That(_view.FirstScoreLabel.style.color.value, Is.EqualTo(_bravoColor));
+            Assert.That(_view.SecondScoreLabel.style.color.value, Is.EqualTo(_alphaColor));
 
             Arrive(_player.TeamVariable, Team.Bravo, Team.Alpha);
             Assert.That(_view.FirstScoreLabel.text, Is.EqualTo("ALPHA 2"));
-            Assert.That(_view.FirstScoreLabel.style.color.value, Is.EqualTo(NetPlayer.AlphaColor));
+            Assert.That(_view.FirstScoreLabel.style.color.value, Is.EqualTo(_alphaColor));
         }
 
         [Test]
@@ -696,6 +746,18 @@ namespace Fps.Net.Tests
             Assert.That(other.IsLocal, Is.False);
             Assert.That(NetHud.TryToScoreboardEntry(row, null, out var unknown), Is.True);
             Assert.That(unknown.IsLocal, Is.False);
+        }
+
+        [Test]
+        public void BotRowsAreNamedWithTheBotTagAndAreNeverTheLocalPlayer()
+        {
+            var row = new NetPlayerStats((ulong)BotRoster.FirstBotPlayerId + 1, Team.Alpha, 4, 1);
+
+            Assert.That(NetHud.TryToScoreboardEntry(row, 0, out var entry), Is.True);
+            Assert.That(entry.PlayerId, Is.EqualTo(BotRoster.FirstBotPlayerId + 1));
+            Assert.That(entry.Name, Is.EqualTo("[BOT] Bot 2"));
+            Assert.That(entry.Kills, Is.EqualTo(4));
+            Assert.That(entry.IsLocal, Is.False, "the host (client 0) owns bots but is not them");
         }
 
         [Test]

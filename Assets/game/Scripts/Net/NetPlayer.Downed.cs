@@ -111,7 +111,7 @@ namespace Fps.Net
             _downedState.OnValueChanged += HandleDownedStateChanged;
             ApplyDowned();
 
-            if (IsOwner)
+            if (IsLocallyControlled)
             {
                 Local = this;
                 ResolveInteractAction();
@@ -190,7 +190,8 @@ namespace Fps.Net
             _reviveTarget = WantsToRevive() ? FindReviveTarget() : null;
             if (_reviveTarget != null)
             {
-                ReviveRpc(_reviveTarget.OwnerClientId);
+                // サーバーはプレイヤー Id で引くので、Bot の味方は Bot の Id で指す
+                ReviveRpc(_reviveTarget.RosterId);
             }
         }
 
@@ -331,7 +332,7 @@ namespace Fps.Net
 
             var local = Local;
             Team? localTeam = local != null && local.IsSpawned ? local.Team : (Team?)null;
-            var show = ShouldShowDownedMarker(IsOwner, IsDowned, Team, localTeam);
+            var show = ShouldShowDownedMarker(IsLocallyControlled, IsDowned, Team, localTeam);
             if (show)
             {
                 _downedMarker.transform.position = transform.position + (Vector3.up * _markerHeight);

@@ -232,6 +232,25 @@ namespace Fps.Net.Tests
             }
         }
 
+        [Test]
+        public void MatchPrefabSpawnsTheNetworkedGrenadePrefab()
+        {
+            var match = MatchPrefabComponent();
+            const string rerun = "run Fps.Editor.NetSceneBuilder.Build";
+
+            Assert.That(match.GrenadePrefab, Is.Not.Null, rerun);
+            Assert.That(
+                AssetDatabase.GetAssetPath(match.GrenadePrefab), Is.EqualTo(Fps.Editor.NetSceneBuilder.GrenadePrefabPath), rerun);
+            Assert.That(NetTeamDeathmatch.TryValidateGrenadePrefab(match.GrenadePrefab, out var error), Is.True, error + "; " + rerun);
+
+            var sync = match.GrenadePrefab.GetComponent<NetworkTransform>();
+            Assert.That(sync, Is.Not.Null, "clients follow the server's grenade through a NetworkTransform; " + rerun);
+            var body = match.GrenadePrefab.GetComponent<Rigidbody>();
+            Assert.That(body, Is.Not.Null, rerun);
+            Assert.That(body.isKinematic, Is.True, "only the server makes the grenade dynamic; " + rerun);
+            Assert.That(match.GrenadePrefab.GetComponent<Collider>(), Is.Not.Null, rerun);
+        }
+
         private NetTeamDeathmatch MatchPrefabComponent()
         {
             var bootstrap = _scene.GetRootGameObjects()

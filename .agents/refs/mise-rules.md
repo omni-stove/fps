@@ -1,0 +1,1 @@
+/Users/codynog/Documents/fps-3/.agents/refs/mise-rules.md

@@ -144,8 +144,11 @@ namespace Fps.Net.Tests
 
             // リグのプレハブの共有の材質 (他のプレイヤーと敵も使う) は塗らない
             Assert.That(originals.Select(m => m.color), Is.EqualTo(originalColors));
-            Assert.That(NetPlayer.TeamColor(Team.Bravo), Is.EqualTo(NetPlayer.BravoColor));
-            Assert.That(NetPlayer.TeamColor(Team.Alpha), Is.EqualTo(NetPlayer.AlphaColor));
+
+            // 自分のプレイヤーがいない (観戦だけ) ときは、Alpha を味方・Bravo を敵の色にする
+            Assert.That(NetPlayer.LocalTeam, Is.Null);
+            Assert.That(NetPlayer.TeamColor(Team.Bravo), Is.EqualTo(TeamColors.ToColor(TeamColors.Current.Enemy)));
+            Assert.That(NetPlayer.TeamColor(Team.Alpha), Is.EqualTo(TeamColors.ToColor(TeamColors.Current.Friendly)));
         }
 
         private NetPlayer InstantiatePlayer()

@@ -7,8 +7,9 @@ using UnityEngine;
 namespace Fps.Net
 {
     /// <summary>
-    /// オンラインのキルフィードの引き先。Id はプレイヤー Id (= クライアント Id) なので、名前は <see cref="KillFeedFormat.Player"/>、
-    /// チームは試合の <see cref="NetTeamDeathmatch.Players"/>、武器の表示名は試合のロードアウトから引き、自分のクライアントの行を強調する。
+    /// オンラインのキルフィードの引き先。Id はプレイヤー Id (人はクライアント Id、Bot は Bot の Id) なので、名前は <see cref="BotRoster.KillFeedName"/>、
+    /// チームは試合の <see cref="NetTeamDeathmatch.Players"/>、武器の表示名は試合のロードアウト (グレネードは <see cref="GrenadeThrower.DisplayName"/>) から引き、
+    /// 自分のクライアントの行を強調する。
     /// </summary>
     public sealed class NetKillFeedNames : IKillFeedNames
     {
@@ -35,7 +36,7 @@ namespace Fps.Net
             int? localId = localClientId <= int.MaxValue ? (int)localClientId : (int?)null;
             if (match == null)
             {
-                return new NetKillFeedNames(null, null, localId);
+                return new NetKillFeedNames(null, WeaponNames(null, null), localId);
             }
 
             return new NetKillFeedNames(id => TeamOf(match, id), WeaponNames(match.Loadout, match.Catalog), localId);
@@ -52,7 +53,7 @@ namespace Fps.Net
         private KillFeedName NameOf(int playerId)
         {
             var team = _teamOf != null ? _teamOf(playerId) : null;
-            return new KillFeedName(KillFeedFormat.Player(playerId), team, playerId == _localPlayerId);
+            return new KillFeedName(BotRoster.KillFeedName(playerId), team, playerId == _localPlayerId);
         }
 
         // 抜けた人は行が消えているのでチームが分からない (名前は Id のまま出す)
@@ -75,18 +76,26 @@ namespace Fps.Net
             return null;
         }
 
-        // プレイヤーはカタログの武器も選べるので、クライアントの射撃と同じく Loadout とカタログの両方から引く
-        private static Func<string, string> WeaponNames(LoadoutDefinition loadout, WeaponCatalogAsset catalog)
+        /// <summary>
+        /// 武器の Id の表示名を引く関数。グレネード (<see cref="GrenadeThrower.WeaponId"/>) はロードアウトに無いので先に <see cref="GrenadeThrower.DisplayName"/> にする。
+        /// プレイヤーはカタログの武器も選べるので、クライアントの射撃と同じく Loadout とカタログの両方から引く。どちらも無ければグレネード以外は空文字。
+        /// </summary>
+        internal static Func<string, string> WeaponNames(LoadoutDefinition loadout, WeaponCatalogAsset catalog)
         {
-            if (loadout == null && catalog == null)
-            {
-                return null;
-            }
-
             var names = new Dictionary<string, string>(StringComparer.Ordinal);
             var warned = false;
             return id =>
             {
+                if (string.Equals(id, GrenadeThrower.WeaponId, StringComparison.Ordinal))
+                {
+                    return GrenadeThrower.DisplayName;
+                }
+
+                if (loadout == null && catalog == null)
+                {
+                    return string.Empty;
+                }
+
                 if (names.TryGetValue(id, out var cached))
                 {
                     return cached;

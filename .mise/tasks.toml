@@ -59,6 +59,10 @@ run = "unity test --mode EditMode"
 description = "Run every SmokeRun in one batch-mode editor via Fps.Editor.SmokeSuite.RunAll; exits 1 if any fails (close the Editor first)"
 run = "unity -batchmode -projectPath . -executeMethod Fps.Editor.SmokeSuite.RunAll -logFile -"
 
+[perf]
+description = "Host a 16-bot TDM on NetArena01 in one batch-mode editor for 120 s via Fps.Editor.PerfSmokeRun.Run, write the server tick average/max/p95 to Logs/perf.json, and exit 1 if over the budget (avg 4 ms, max 12 ms) (close the Editor first)"
+run = "unity -batchmode -projectPath . -executeMethod Fps.Editor.PerfSmokeRun.Run -logFile -"
+
 [nightly-local]
 description = "Run the nightly workflow's steps locally: EditMode tests, the smoke suite, and on Sundays (JST) the macOS client build (close the Editor first). Options: --client to always build the client, --no-client to never"
 # 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける

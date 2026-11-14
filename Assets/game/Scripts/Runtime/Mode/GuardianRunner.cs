@@ -156,6 +156,7 @@ namespace Fps.Runtime
             }
 
             var marker = GuardianLeaderMarker.Create(member);
+            marker.ViewerTeam = PlayerSide.TryGetTeam(out var playerTeam) ? playerTeam : (Team?)null;
             marker.transform.SetParent(_markerRoot, true);
             _markers[playerId] = marker;
         }

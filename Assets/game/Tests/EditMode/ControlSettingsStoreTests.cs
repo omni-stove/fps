@@ -119,7 +119,9 @@ namespace Fps.Tests.EditMode
                 .With(ControlValue.MasterVolume, 30)
                 .With(ControlValue.EffectsVolume, 0)
                 .With(InputDeviceKind.Gamepad, HoldAction.Crouch, HoldMode.Hold)
-                .WithShowNetStats(true);
+                .WithShowNetStats(true)
+                .WithPalette(ColorPalette.RedGreen)
+                .WithShowSubtitles(true);
 
             _store.Save(settings);
 
@@ -127,7 +129,9 @@ namespace Fps.Tests.EditMode
             var loaded = new ControlSettingsStore(_store.Key).Load();
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.ShowNetStats, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":3"));
+            Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
+            Assert.That(loaded.ShowSubtitles, Is.True);
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":5"));
             LogAssert.NoUnexpectedReceived();
         }
 

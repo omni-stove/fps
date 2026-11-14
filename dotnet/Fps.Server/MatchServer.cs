@@ -9,7 +9,7 @@ using Fps.Protocol;
 namespace Fps.Server
 {
     /// <summary>時刻を呼ぶ側の時計 (秒) で受け取るのは、テストから時間を進められるようにするため。</summary>
-    internal sealed class MatchServer
+    internal sealed class MatchServer : IServerControl
     {
         public const float DefaultApprovalTimeoutSeconds = 10f;
         public const float DrainStatusLogIntervalSeconds = 30f;
@@ -52,6 +52,7 @@ namespace Fps.Server
             ServerRulesData rules = null)
         {
             _rules = rules;
+            Bodies = new ServerBodies((rules?.Motor ?? NetMotorSettings.Default).Stance);
             _launch = launch ?? throw new ArgumentNullException(nameof(launch));
             _transport = transport ?? throw new ArgumentNullException(nameof(transport));
             _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -69,13 +70,16 @@ namespace Fps.Server
 
         public ServerMessenger Messenger { get; }
 
-        public ServerBodies Bodies { get; } = new ServerBodies(ServerBodies.DefaultGeometry);
+        public ServerBodies Bodies { get; }
 
         public float ApprovalTimeoutSeconds { get; set; } = DefaultApprovalTimeoutSeconds;
 
         public bool IsDraining => _drain.IsDraining;
 
         public bool ExitRequested { get; private set; }
+
+        /// <summary>止まった後にプロセスが返す終了コード。<see cref="Fail"/> されていなければ 0。</summary>
+        public int ExitCode { get; private set; } = ServerProgram.ExitOk;
 
         public int ConnectedPlayers => Match.PlayerCount;
 
@@ -90,7 +94,7 @@ namespace Fps.Server
 
             _started = true;
             var options = _launch.Options;
-            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, _rules, Bodies, QueueKick));
+            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, this, _rules, Bodies));
             try
             {
                 _transport.Listen(options.Address, options.Port);
@@ -167,6 +171,24 @@ namespace Fps.Server
             _log.WriteLine(wasDraining
                 ? "[Net] drain cut short: " + _drain.DescribeStop() + "; stopping now (players=" + Count(ConnectedPlayers) + ")"
                 : "[Net] stop requested; stopping now because " + _drain.DescribeStop());
+            ExitRequested = true;
+        }
+
+        public void Fail(int exitCode, string message)
+        {
+            if (ExitRequested)
+            {
+                return;
+            }
+
+            _log.WriteLine(message + "; stopping with exit code " + Count(exitCode));
+            if (_events.Enabled && !_wroteServerStopping)
+            {
+                _wroteServerStopping = true;
+                _events.Write(ServerEventLog.ServerStopping(_utcNow()));
+            }
+
+            ExitCode = exitCode;
             ExitRequested = true;
         }
 
@@ -396,7 +418,7 @@ namespace Fps.Server
             _closing.Add(connection);
         }
 
-        private void QueueKick(ConnectionId connection, string reason, string logText)
+        public void Kick(ConnectionId connection, string reason, string logText)
         {
             _kicks.Add((connection, reason, logText));
         }

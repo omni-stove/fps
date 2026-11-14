@@ -35,7 +35,7 @@ namespace Fps.Runtime
         /// <summary>タグを拾える範囲の既定の半径 (m)。</summary>
         public const float DefaultTagRadius = Pickup.DefaultRadius;
 
-        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の確定数・制限時間・リスポーン・タグの秒数の代わりにこれを読む")]
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の確定数・制限時間・リスポーン・タグの秒数の代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
         private KillConfirmedDefinition _definition;
 
         [SerializeField, Min(1), Tooltip("どちらかのチームがこの確定数に届いたら試合が終わる")]
@@ -68,6 +68,9 @@ namespace Fps.Runtime
             get => _definition;
             set => _definition = value;
         }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public KillConfirmedDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.KillConfirmed);
 
         public int ScoreLimit
         {
@@ -115,9 +118,10 @@ namespace Fps.Runtime
         /// </summary>
         public KillConfirmedSpec CreateSpec()
         {
-            if (_definition != null)
+            var definition = EffectiveDefinition;
+            if (definition != null)
             {
-                return _definition.ToSpec();
+                return definition.ToSpec();
             }
 
             return new KillConfirmedSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds, _tagLifetimeSeconds);

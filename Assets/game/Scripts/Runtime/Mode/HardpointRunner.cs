@@ -37,7 +37,7 @@ namespace Fps.Runtime
         // bot ごとに巡回する向きを黄金角ずつ回し、同じ拠点に集まっても重ならないようにする。
         private const float RouteAngleStepDegrees = 137.5f;
 
-        [SerializeField, Tooltip("調整値のアセット。設定すれば下の値の代わりにこれを使う")]
+        [SerializeField, Tooltip("調整値のアセット。設定すれば下の値の代わりにこれを使う。空なら入口 (GameContent) のものを使う")]
         private HardpointDefinition _definition;
 
         [SerializeField, Min(0.01f), Tooltip("有効な拠点が次の拠点へ移るまでの秒数")]
@@ -80,6 +80,9 @@ namespace Fps.Runtime
             get => _definition;
             set => _definition = value;
         }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public HardpointDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Hardpoint);
 
         public float RotateSeconds
         {
@@ -132,9 +135,10 @@ namespace Fps.Runtime
         /// </summary>
         public HardpointSpec CreateSpec(int pointCount)
         {
-            if (_definition != null)
+            var definition = EffectiveDefinition;
+            if (definition != null)
             {
-                return _definition.ToSpec(pointCount);
+                return definition.ToSpec(pointCount);
             }
 
             return new HardpointSpec(pointCount, _rotateSeconds, _pointsPerSecond, _scoreLimit, _timeLimitSeconds, _respawnSeconds);

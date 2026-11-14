@@ -10,6 +10,9 @@ namespace Fps.Core.Tests
         private const string _rifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
         private const string _handgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
 
+        private const string _handgunJson = "{\"id\": \"" + _handgunId + "\", \"category\": \"Handgun\", \"fireMode\": \"Semi\", \"magazineSize\": 12,"
+            + " \"fireInterval\": 0.2, \"reloadSeconds\": 1.5, \"damage\": 34, \"range\": 60}";
+
         private static WeaponSpec Rifle() => new WeaponSpec(
             _rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f,
             new DamageFalloff(20f, 60f, 0.5f), adsFieldOfView: 45f, recoilPitchDegrees: 0.5f);
@@ -58,6 +61,48 @@ namespace Fps.Core.Tests
             Assert.That(read.CatalogName, Is.EqualTo("WeaponCatalog"));
             Assert.That(read.Catalog.Count, Is.EqualTo(2));
             Assert.That(NetMatchFile.Write(read), Is.EqualTo(text));
+        }
+
+        [Test]
+        public void MotorValuesReadBackAndDefaultWhenLeftOut()
+        {
+            var motor = new NetMotorSettings(
+                new MotorSpec(6f, 9f, 1.5f, 18f, 0.2f, 3f, dodgeDistance: 4f),
+                new StanceGeometry(1.8f, 0.9f, 1.6f, 1.1f, 0.4f),
+                new CapsuleMoverSpec(50f, 0.35f, 0.05f, CapsuleMoverSpec.DefaultLayerMask));
+            var original = new NetMatchFile(
+                "TeamDeathmatch", GameRules.Default, NetMatchSettings.Default, "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } }),
+                new[] { Rifle(), Handgun() }, 0.4f, null, null, motor);
+
+            var read = NetMatchFile.Parse(NetMatchFile.Write(original), "motor.json").Motor;
+
+            Assert.That(read.Motor.WalkSpeed, Is.EqualTo(6f));
+            Assert.That(read.Motor.SprintSpeed, Is.EqualTo(9f));
+            Assert.That(read.Motor.DodgeDistance, Is.EqualTo(4f));
+            Assert.That(read.Stance.Standing.Height, Is.EqualTo(1.8f));
+            Assert.That(read.Stance.Standing.CenterY, Is.EqualTo(0.9f));
+            Assert.That(read.Stance.Standing.EyeY, Is.EqualTo(1.6f));
+            Assert.That(read.Stance.Crouched.Height, Is.EqualTo(1.1f));
+            Assert.That(read.Stance.Radius, Is.EqualTo(0.4f));
+            Assert.That(read.Mover.SlopeLimitDegrees, Is.EqualTo(50f));
+            Assert.That(read.Mover.StepOffset, Is.EqualTo(0.35f));
+            Assert.That(read.Mover.SkinWidth, Is.EqualTo(0.05f));
+
+            var bare = NetMatchFile.Parse(
+                "{\"loadout\": {\"slots\": [[\"Handgun\"]], \"weapons\": [\"" + _handgunId + "\"]}, \"weapons\": [" + _handgunJson + "]}", "bare.json");
+            Assert.That(bare.Motor, Is.SameAs(NetMotorSettings.Default));
+        }
+
+        [TestCase("{\"motor\": {\"radius\": -1}}", "motor.radius")]
+        [TestCase("{\"motor\": {\"walkSpeed\": -1}}", "motor.walkSpeed")]
+        [TestCase("{\"motor\": {\"crouchHeight\": 9}}", "motor.crouchHeight")]
+        [TestCase("{\"motor\": {\"slopeLimitDegrees\": 120}}", "motor.slopeLimitDegrees")]
+        public void BadMotorValuesNameTheItem(string text, string item)
+        {
+            var e = Assert.Throws<ServerDataJsonException>(() => NetMatchFile.Parse(text, "bad.json"));
+
+            Assert.That(e.Item, Is.EqualTo(item));
         }
 
         [Test]

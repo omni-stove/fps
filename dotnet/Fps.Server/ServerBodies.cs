@@ -12,9 +12,6 @@ namespace Fps.Server
     /// <remarks>位置は Unity の NetPlayer の transform.position と同じ点 (カプセルの寸法の原点) で、スナップショットにもこの値を載せる。</remarks>
     internal sealed class ServerBodies
     {
-        // 移動のモジュールが姿勢の寸法をデータから読むまで、Unity の NetPlayer.prefab の CharacterController と同じ寸法で判定する
-        public static readonly StanceGeometry DefaultGeometry = new StanceGeometry(2f, 0f, 0.6f, 1.2f, 0.5f);
-
         private readonly SortedDictionary<int, ServerBody> _bodies = new SortedDictionary<int, ServerBody>();
 
         public ServerBodies(StanceGeometry geometry)

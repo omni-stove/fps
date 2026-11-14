@@ -39,7 +39,7 @@ namespace Fps.Net
                 return new NetKillFeedNames(null, WeaponNames(null, null), localId);
             }
 
-            return new NetKillFeedNames(id => TeamOf(match, id), WeaponNames(match.Loadout, match.Catalog), localId);
+            return new NetKillFeedNames(id => TeamOf(match, id), WeaponNames(match.EffectiveLoadout, match.EffectiveCatalog), localId);
         }
 
         public KillFeedLine Describe(KillFeedEntry entry)

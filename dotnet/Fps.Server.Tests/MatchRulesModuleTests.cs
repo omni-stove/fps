@@ -20,7 +20,7 @@ namespace Fps.Server.Tests
         private ServerMatch _match;
         private ServerContext _context;
         private MatchRulesModule _module;
-        private List<(ConnectionId Connection, string Reason)> _kicks;
+        private StubControl _control;
         private long _tick;
 
         [SetUp]
@@ -29,7 +29,7 @@ namespace Fps.Server.Tests
             _log = new StringWriter();
             _json = new StringWriter();
             _transport = new RecordingTransport();
-            _kicks = new List<(ConnectionId Connection, string Reason)>();
+            _control = new StubControl();
             _tick = 0;
         }
 
@@ -321,15 +321,15 @@ namespace Fps.Server.Tests
             input.Add(new InputFrame(1, new Vector2(0f, 1f), 0f, InputButtons.None));
             _module.OnMessage(new ConnectionId(1), input);
             Assert.That(_transport.Read<IdleWarningMessage>(1, Copy).Last().Active, Is.False);
-            Assert.That(_kicks, Is.Empty);
+            Assert.That(_control.Kicks, Is.Empty);
 
             Advance(5f);
-            Assert.That(_kicks.Select(k => k.Connection.Value), Is.EqualTo(new ulong[] { 2 }));
-            Assert.That(_kicks[0].Reason, Is.EqualTo(DisconnectNotice.IdleKickedReason));
+            Assert.That(_control.Kicks.Select(k => k.Connection.Value), Is.EqualTo(new ulong[] { 2 }));
+            Assert.That(_control.Kicks[0].Reason, Is.EqualTo(DisconnectNotice.IdleKickedReason));
 
             Advance(15.5f);
 
-            Assert.That(_kicks.Select(k => k.Connection.Value), Is.EqualTo(new ulong[] { 2, 1 }));
+            Assert.That(_control.Kicks.Select(k => k.Connection.Value), Is.EqualTo(new ulong[] { 2, 1 }));
             Assert.That(_log.ToString(), Does.Contain("[Match] idle kick player=1 client=1 after=20s"));
         }
 
@@ -391,6 +391,28 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void BodiesUseTheBodySizeFromTheRules()
+        {
+            var motor = new NetMotorSettings(MotorSpec.Default, new StanceGeometry(1.8f, 0.9f, 1.6f, 1.1f, 0.4f), CapsuleMoverSpec.Default);
+            var data = new ServerRulesData("TeamDeathmatch", new NetMatchFile(
+                "TeamDeathmatch", Plain(), NetMatchSettings.Default, "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } }),
+                new[] { TestRules.Rifle(), TestRules.Handgun() }, 0.4f, null, null, motor), PingSpec.Default, "memory", null);
+
+            var context = new ServerContext(
+                new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),
+                "1.0.0", _log, TestMaps.Data(), new ServerMatch(0f, _log, new ServerEventWriter(false, _json, _log), () => _time),
+                new ServerMessenger(_transport), new StubControl(), data);
+
+            Assert.That(context.Bodies.Geometry, Is.SameAs(motor.Stance));
+            Assert.That(data.Motor, Is.SameAs(motor));
+            var body = context.Bodies.Add(1);
+            body.SetPose(Vector3.Zero, 0f, PlayerStance.Standing);
+            Assert.That(body.EyePosition.Y, Is.EqualTo(1.6f));
+            Assert.That(body.Radius, Is.EqualTo(0.4f));
+        }
+
+        [Test]
         public void RayCapsuleFindsTheNearSide()
         {
             Assert.That(
@@ -427,9 +449,8 @@ namespace Fps.Server.Tests
                 TestMaps.Data("NetTest", points ? TestRules.Points(controlPoints) : null),
                 _match,
                 new ServerMessenger(_transport),
-                TestRules.Data(rules, settings),
-                new ServerBodies(ServerBodies.DefaultGeometry),
-                (connection, reason, _) => _kicks.Add((connection, reason)));
+                _control,
+                TestRules.Data(rules, settings));
             var module = new MatchRulesModule();
             module.Start(_context);
             _module = module;
@@ -464,7 +485,7 @@ namespace Fps.Server.Tests
             for (var elapsed = 0f; elapsed < seconds; elapsed += _tickSeconds)
             {
                 Step();
-                foreach (var kick in _kicks)
+                foreach (var kick in _control.Kicks)
                 {
                     _match.Leave(kick.Connection);
                 }

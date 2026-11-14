@@ -19,7 +19,8 @@ namespace Fps.Runtime
 
         public static ViewmodelCatalog Load()
         {
-            return Resources.Load<ViewmodelCatalog>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.Viewmodels);
+            return fromContent != null ? fromContent : Resources.Load<ViewmodelCatalog>(ResourcePath);
         }
 
         public void SetWeapons(IEnumerable<ViewmodelEntry> weapons)

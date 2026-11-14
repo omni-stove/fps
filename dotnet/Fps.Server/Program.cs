@@ -4,7 +4,7 @@ namespace Fps.Server
     {
         private static int Main(string[] args)
         {
-            return ServerProgram.Run(args, new IServerModule[] { new MatchRulesModule() }, ServerRuntime.Process());
+            return ServerProgram.Run(args, ServerModules.Create, ServerRuntime.Process());
         }
     }
 }

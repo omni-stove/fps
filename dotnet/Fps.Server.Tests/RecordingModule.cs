@@ -9,7 +9,6 @@ namespace Fps.Server.Tests
     internal sealed class RecordingModule : IServerModule
     {
         private readonly List<string> _calls;
-        private ServerContext _context;
 
         public RecordingModule(string name, List<string> calls)
         {
@@ -23,11 +22,16 @@ namespace Fps.Server.Tests
 
         public bool ThrowOnStop { get; set; }
 
+        /// <summary>0 でなければ、最初の tick でこの終了コードでサーバーを止めさせる。</summary>
+        public int FailOnTickWith { get; set; }
+
         public ConnectionId KickOnNextTick { get; set; }
+
+        private ServerContext Context { get; set; }
 
         public void Start(ServerContext context)
         {
-            _context = context;
+            Context = context;
             _calls.Add(Name + ".Start");
             if (ThrowOnStart)
             {
@@ -38,9 +42,14 @@ namespace Fps.Server.Tests
         public void Tick(long tick, float deltaSeconds)
         {
             _calls.Add(Name + ".Tick" + tick.ToString(CultureInfo.InvariantCulture));
+            if (FailOnTickWith != 0)
+            {
+                Context.Control.Fail(FailOnTickWith, Name + " cannot go on");
+            }
+
             if (KickOnNextTick.IsValid)
             {
-                _context.Kick(KickOnNextTick, "test-kick", "kicked by " + Name);
+                Context.Control.Kick(KickOnNextTick, "test-kick", "kicked by " + Name);
                 _calls.Add(Name + ".Kicked" + KickOnNextTick);
                 KickOnNextTick = ConnectionId.None;
             }

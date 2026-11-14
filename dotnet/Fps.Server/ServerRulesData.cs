@@ -29,6 +29,9 @@ namespace Fps.Server
 
         public NetMatchSettings Settings => File.Settings;
 
+        /// <summary>移動のモジュール (#586) がクライアントの予測と同じ値で動かすための、移動と体の寸法。</summary>
+        public NetMotorSettings Motor => File.Motor;
+
         public PingSpec Ping { get; }
 
         public string Path { get; }
@@ -39,7 +42,12 @@ namespace Fps.Server
             + " objective=" + Rules.Objective
             + " weapons=" + File.LoadoutWeapons.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Path
-            + " ping=" + (PingPath ?? "default");
+            + " ping=" + (PingPath ?? "default")
+            + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
+            + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
+            + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
+            + " crouchHeight=" + Motor.Stance.Crouched.Height.ToString(CultureInfo.InvariantCulture)
+            + " radius=" + Motor.Stance.Radius.ToString(CultureInfo.InvariantCulture);
 
         public static bool TryLoad(string name, IReadOnlyList<string> searchRoots, out ServerRulesData data, out string error)
         {

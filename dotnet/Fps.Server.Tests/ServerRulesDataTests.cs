@@ -34,7 +34,7 @@ namespace Fps.Server.Tests
             Assert.That(data.Path, Is.EqualTo(Path.GetFullPath(path)));
             Assert.That(data.Ping, Is.SameAs(PingSpec.Default));
             Assert.That(data.PingPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default"));
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
         }
 
         [Test]

@@ -155,7 +155,7 @@ namespace Fps.Server
                         + " after=" + _idleTracker.KickSeconds.ToString("0.##", CultureInfo.InvariantCulture) + "s");
 
                     // 切ると ServerMatch.Leave から HandlePlayerLeft が呼ばれて数えるのをやめる
-                    _context.Kick(player.Connection, DisconnectNotice.IdleKickedReason, "idle for " + _idleTracker.KickSeconds.ToString("0.##", CultureInfo.InvariantCulture) + "s");
+                    _context.Control.Kick(player.Connection, DisconnectNotice.IdleKickedReason, "idle for " + _idleTracker.KickSeconds.ToString("0.##", CultureInfo.InvariantCulture) + "s");
                     break;
             }
         }

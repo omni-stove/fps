@@ -33,9 +33,39 @@ namespace Fps.Core
         public const string PointsPerSecondItem = "pointsPerSecond";
         public const string MaxCapturersItem = "maxCapturers";
 
+        public const string MotorItem = "motor";
+        public const string WalkSpeedItem = "walkSpeed";
+        public const string SprintSpeedItem = "sprintSpeed";
+        public const string JumpHeightItem = "jumpHeight";
+        public const string GravityItem = "gravity";
+        public const string AirControlItem = "airControl";
+        public const string CrouchSpeedItem = "crouchSpeed";
+        public const string SafeFallSpeedItem = "safeFallSpeed";
+        public const string LethalFallSpeedItem = "lethalFallSpeed";
+        public const string DodgeDistanceItem = "dodgeDistance";
+        public const string DodgeSecondsItem = "dodgeSeconds";
+        public const string VaultMaxHeightItem = "vaultMaxHeight";
+        public const string MantleMaxHeightItem = "mantleMaxHeight";
+        public const string MantleSpeedItem = "mantleSpeed";
+        public const string StandingHeightItem = "standingHeight";
+        public const string StandingCenterYItem = "standingCenterY";
+        public const string StandingEyeYItem = "standingEyeY";
+        public const string CrouchHeightItem = "crouchHeight";
+        public const string RadiusItem = "radius";
+        public const string SlopeLimitDegreesItem = "slopeLimitDegrees";
+        public const string StepOffsetItem = "stepOffset";
+        public const string SkinWidthItem = "skinWidth";
+
         private const string _kind = "match rules JSON";
 
-        private static readonly string[] _topItems = { NameItem, RulesItem, MatchItem, LoadoutItem, CatalogItem, WeaponsItem };
+        private static readonly string[] _topItems = { NameItem, RulesItem, MatchItem, MotorItem, LoadoutItem, CatalogItem, WeaponsItem };
+
+        private static readonly string[] _motorItems =
+        {
+            WalkSpeedItem, SprintSpeedItem, JumpHeightItem, GravityItem, AirControlItem, CrouchSpeedItem, SafeFallSpeedItem, LethalFallSpeedItem,
+            DodgeDistanceItem, DodgeSecondsItem, VaultMaxHeightItem, MantleMaxHeightItem, MantleSpeedItem, StandingHeightItem, StandingCenterYItem,
+            StandingEyeYItem, CrouchHeightItem, RadiusItem, SlopeLimitDegreesItem, StepOffsetItem, SkinWidthItem,
+        };
         private static readonly string[] _loadoutItems = { NameItem, SwitchSecondsItem, SlotsItem, WeaponsItem };
         private static readonly string[] _catalogItems = { NameItem, WeaponsItem };
 
@@ -55,8 +85,10 @@ namespace Fps.Core
             IReadOnlyList<WeaponSpec> loadoutWeapons,
             float switchSeconds,
             string catalogName,
-            WeaponCatalog catalog)
+            WeaponCatalog catalog,
+            NetMotorSettings motor = null)
         {
+            Motor = motor ?? NetMotorSettings.Default;
             Name = name ?? string.Empty;
             Rules = rules ?? throw new ArgumentNullException(nameof(rules));
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -76,6 +108,8 @@ namespace Fps.Core
         public GameRules Rules { get; }
 
         public NetMatchSettings Settings { get; }
+
+        public NetMotorSettings Motor { get; }
 
         public string LoadoutName { get; }
 
@@ -104,6 +138,7 @@ namespace Fps.Core
             var rulesNode = top.Find(RulesItem);
             var rules = rulesNode == null ? GameRules.Default : GameRulesJson.FromNode(rulesNode, source, RulesItem + ".");
             var settings = ReadSettings(top.Object(MatchItem, _matchItems));
+            var motor = ReadMotor(top.Object(MotorItem, _motorItems));
             var weapons = ReadWeapons(top);
 
             var loadout = top.Object(LoadoutItem, _loadoutItems)
@@ -137,7 +172,8 @@ namespace Fps.Core
                     loadoutWeapons,
                     switchSeconds,
                     catalogFields?.ReadString(NameItem, string.Empty),
-                    catalog);
+                    catalog,
+                    motor);
             }
             catch (ArgumentException e)
             {
@@ -170,6 +206,33 @@ namespace Fps.Core
             writer.Float(CaptureSecondsItem, s.CaptureSeconds);
             writer.Float(PointsPerSecondItem, s.PointsPerSecond);
             writer.Int(MaxCapturersItem, s.MaxCapturers);
+            writer.EndObject();
+
+            var motor = file.Motor.Motor;
+            var stance = file.Motor.Stance;
+            var mover = file.Motor.Mover;
+            writer.BeginObject(MotorItem);
+            writer.Float(WalkSpeedItem, motor.WalkSpeed);
+            writer.Float(SprintSpeedItem, motor.SprintSpeed);
+            writer.Float(JumpHeightItem, motor.JumpHeight);
+            writer.Float(GravityItem, motor.Gravity);
+            writer.Float(AirControlItem, motor.AirControl);
+            writer.Float(CrouchSpeedItem, motor.CrouchSpeed);
+            writer.Float(SafeFallSpeedItem, motor.SafeFallSpeed);
+            writer.Float(LethalFallSpeedItem, motor.LethalFallSpeed);
+            writer.Float(DodgeDistanceItem, motor.DodgeDistance);
+            writer.Float(DodgeSecondsItem, motor.DodgeSeconds);
+            writer.Float(VaultMaxHeightItem, motor.VaultMaxHeight);
+            writer.Float(MantleMaxHeightItem, motor.MantleMaxHeight);
+            writer.Float(MantleSpeedItem, motor.MantleSpeed);
+            writer.Float(StandingHeightItem, stance.Standing.Height);
+            writer.Float(StandingCenterYItem, stance.Standing.CenterY);
+            writer.Float(StandingEyeYItem, stance.Standing.EyeY);
+            writer.Float(CrouchHeightItem, stance.Crouched.Height);
+            writer.Float(RadiusItem, stance.Radius);
+            writer.Float(SlopeLimitDegreesItem, mover.SlopeLimitDegrees);
+            writer.Float(StepOffsetItem, mover.StepOffset);
+            writer.Float(SkinWidthItem, mover.SkinWidth);
             writer.EndObject();
 
             writer.BeginObject(LoadoutItem);
@@ -247,6 +310,53 @@ namespace Fps.Core
             {
                 // NetMatchSettings の引数名は項目名と同じ
                 throw match.Rejected(e.ParamName == null ? match.Path : match.ItemPath(e.ParamName), e.Message, e);
+            }
+        }
+
+        private static NetMotorSettings ReadMotor(ServerDataJson.Fields fields)
+        {
+            if (fields == null)
+            {
+                return NetMotorSettings.Default;
+            }
+
+            var d = NetMotorSettings.Default;
+            var dm = d.Motor;
+            var ds = d.Stance;
+            var dc = d.Mover;
+            try
+            {
+                return new NetMotorSettings(
+                    new MotorSpec(
+                        fields.ReadFloat(WalkSpeedItem, dm.WalkSpeed),
+                        fields.ReadFloat(SprintSpeedItem, dm.SprintSpeed),
+                        fields.ReadFloat(JumpHeightItem, dm.JumpHeight),
+                        fields.ReadFloat(GravityItem, dm.Gravity),
+                        fields.ReadFloat(AirControlItem, dm.AirControl),
+                        fields.ReadFloat(CrouchSpeedItem, dm.CrouchSpeed),
+                        fields.ReadFloat(SafeFallSpeedItem, dm.SafeFallSpeed),
+                        fields.ReadFloat(LethalFallSpeedItem, dm.LethalFallSpeed),
+                        fields.ReadFloat(DodgeDistanceItem, dm.DodgeDistance),
+                        fields.ReadFloat(DodgeSecondsItem, dm.DodgeSeconds),
+                        fields.ReadFloat(VaultMaxHeightItem, dm.VaultMaxHeight),
+                        fields.ReadFloat(MantleMaxHeightItem, dm.MantleMaxHeight),
+                        fields.ReadFloat(MantleSpeedItem, dm.MantleSpeed)),
+                    new StanceGeometry(
+                        fields.ReadFloat(StandingHeightItem, ds.Standing.Height),
+                        fields.ReadFloat(StandingCenterYItem, ds.Standing.CenterY),
+                        fields.ReadFloat(StandingEyeYItem, ds.Standing.EyeY),
+                        fields.ReadFloat(CrouchHeightItem, ds.Crouched.Height),
+                        fields.ReadFloat(RadiusItem, ds.Radius)),
+                    new CapsuleMoverSpec(
+                        fields.ReadFloat(SlopeLimitDegreesItem, dc.SlopeLimitDegrees),
+                        fields.ReadFloat(StepOffsetItem, dc.StepOffset),
+                        fields.ReadFloat(SkinWidthItem, dc.SkinWidth),
+                        dc.LayerMask));
+            }
+            catch (ArgumentException e)
+            {
+                // MotorSpec・StanceGeometry・CapsuleMoverSpec の引数名は項目名と同じ
+                throw fields.Rejected(e.ParamName == null ? fields.Path : fields.ItemPath(e.ParamName), e.Message, e);
             }
         }
 

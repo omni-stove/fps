@@ -27,10 +27,11 @@ namespace Fps.Runtime
         /// <summary>定義順の材質ごとの音。中身を書き換えるときは <see cref="SetSurfaces"/> を使う。</summary>
         public IReadOnlyList<FootstepSurfaceSounds> Surfaces => _surfaces ??= new List<FootstepSurfaceSounds>();
 
-        /// <summary>Resources の <see cref="ResourcePath"/> から読む。置いていなければ null。</summary>
+        /// <summary>入口 (<see cref="GameContent"/>) のもの、無ければ Resources の <see cref="ResourcePath"/> から読む。どちらも無ければ null。</summary>
         public static FootstepSurfaceCatalog Load()
         {
-            return Resources.Load<FootstepSurfaceCatalog>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.Footsteps);
+            return fromContent != null ? fromContent : Resources.Load<FootstepSurfaceCatalog>(ResourcePath);
         }
 
         /// <summary>材質ごとの音をまとめて差し替える。null は空にする。渡した列は複製して持つ。</summary>

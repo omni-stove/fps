@@ -29,7 +29,66 @@ namespace Fps.Tests.EditMode
         [Test]
         public void LoadsDefaultsSilentlyBeforeTheFirstSave()
         {
-            Assert.That(_store.Load(), Is.EqualTo(ControlSettings.Default));
+            Assert.That(_store.Load(), Is.EqualTo(_store.Defaults));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void TheDefaultsUseTheLanguageOfTheOperatingSystem()
+        {
+            var expected = Localizer.FromSystemLanguage(Application.systemLanguage);
+
+            Assert.That(_store.Defaults, Is.EqualTo(ControlSettings.DefaultFor(expected)));
+        }
+
+        [TestCase(GameLanguage.Japanese)]
+        [TestCase(GameLanguage.English)]
+        public void TheFirstLoadUsesTheGivenDefaultLanguage(GameLanguage language)
+        {
+            var store = new ControlSettingsStore(_store.Key, language);
+
+            Assert.That(store.Load(), Is.EqualTo(ControlSettings.DefaultFor(language)));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void TheSavedLanguageSurvivesARestartWhateverTheDefault()
+        {
+            new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Save(ControlSettings.Default.WithLanguage(GameLanguage.English));
+
+            Assert.That(new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Load().Language, Is.EqualTo(GameLanguage.English));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"language\":\"en\""));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void VersionFiveDataSilentlyGetsTheDefaultLanguage()
+        {
+            // 言語を足す前のゲームが書いた形式。
+            var versionFive = ControlSettings.Default.WithShowSubtitles(true).ToJson()
+                .Replace("\"version\":6", "\"version\":5")
+                .Replace(",\"language\":\"ja\"", string.Empty);
+            PlayerPrefs.SetString(_store.Key, versionFive);
+
+            var loaded = new ControlSettingsStore(_store.Key, GameLanguage.English).Load();
+
+            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.English));
+            Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void AnUnknownLanguageFallsBackToTheDefaultLanguageWithAWarning()
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                ControlSettings.Default.WithPalette(ColorPalette.RedGreen).ToJson().Replace("\"language\":\"ja\"", "\"language\":\"fr\""));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*language"));
+
+            var loaded = new ControlSettingsStore(_store.Key, GameLanguage.English).Load();
+
+            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.English));
+            Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen), "the saved value");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -66,7 +125,7 @@ namespace Fps.Tests.EditMode
             _store.Delete();
 
             Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False);
-            Assert.That(_store.Load(), Is.EqualTo(ControlSettings.Default));
+            Assert.That(_store.Load(), Is.EqualTo(_store.Defaults));
         }
 
         [Test]
@@ -75,7 +134,7 @@ namespace Fps.Tests.EditMode
             PlayerPrefs.SetString(_store.Key, "{not json");
             LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*not valid JSON"));
 
-            Assert.That(_store.Load(), Is.EqualTo(ControlSettings.Default));
+            Assert.That(_store.Load(), Is.EqualTo(_store.Defaults));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -85,7 +144,7 @@ namespace Fps.Tests.EditMode
             PlayerPrefs.SetInt(_store.Key, 1);
             LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] "));
 
-            Assert.That(_store.Load(), Is.EqualTo(ControlSettings.Default));
+            Assert.That(_store.Load(), Is.EqualTo(_store.Defaults));
         }
 
         [Test]
@@ -131,7 +190,7 @@ namespace Fps.Tests.EditMode
             Assert.That(loaded.ShowNetStats, Is.True);
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
             Assert.That(loaded.ShowSubtitles, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":5"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":6"));
             LogAssert.NoUnexpectedReceived();
         }
 

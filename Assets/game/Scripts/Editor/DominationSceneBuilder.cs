@@ -29,7 +29,7 @@ namespace Fps.Editor
     /// </remarks>
     public static class DominationSceneBuilder
     {
-        public const string ScenePath = BuildSceneList.DominationScene;
+        public static string ScenePath => BuildSceneList.DominationScene;
         public const string MenuPath = "Fps/Build Domination Scene";
         public const string LogTag = "[DominationSceneBuilder]";
 
@@ -54,7 +54,7 @@ namespace Fps.Editor
         public const string BotWeaponId = WeaponAssetBuilder.RifleId;
 
         /// <summary>焼いた NavMesh。<see cref="ModeSceneBuilder"/> と同じくシーン名のフォルダに置く。</summary>
-        public static readonly string NavMeshDataPath = ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
+        public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
         public static readonly Vector3 FloorCenter = ModeSceneBuilder.DefaultFloorCenter;
         public static readonly Vector3 FloorScale = ModeSceneBuilder.DefaultFloorScale;

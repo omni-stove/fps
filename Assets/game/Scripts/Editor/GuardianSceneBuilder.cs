@@ -14,8 +14,8 @@ namespace Fps.Editor
     /// </summary>
     public sealed class GuardianSceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.GuardianScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.GuardianPath;
+        public static string ScenePathValue => BuildSceneList.GuardianScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.GuardianPath;
         public const string MenuPath = "Fps/Build Guardian Scene";
 
         /// <summary>1 チームの人数。リーダーが倒れた後に残りを倒し切れる程度に抑える。</summary>

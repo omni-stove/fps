@@ -16,8 +16,8 @@ namespace Fps.Editor
     /// </summary>
     public sealed class SearchAndDestroySceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.SearchAndDestroyScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.SearchAndDestroyPath;
+        public static string ScenePathValue => BuildSceneList.SearchAndDestroyScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.SearchAndDestroyPath;
         public const string MenuPath = "Fps/Build Search And Destroy Scene";
 
         public const string SitesRootName = "BombSites";

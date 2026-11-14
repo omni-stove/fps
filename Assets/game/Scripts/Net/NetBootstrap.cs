@@ -26,11 +26,12 @@ namespace Fps.Net
     /// クライアントがサーバーとの接続を失ったとき (つながらない・承認で断られたのを含む) は、どこから来たかによらず
     /// <see cref="DisconnectNotice"/> で分けた理由 (サーバー停止・タイムアウト・拒否・版違い) を添えてメニューへ戻る。
     /// サーバー (Host を含む) は止まる前に、つないでいるクライアントへ止まると知らせてから切る。
+    /// 専用サーバーは終了を求められても (SIGTERM)、ロビーから外して新しい参加を断り、今の試合が終わるまで止まるのを待つ (.Shutdown.cs)。
     /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
     /// <para>
     /// <c>-bots</c> は試合の進行役を Spawn する前に <see cref="NetTeamDeathmatch.LaunchBots"/> へ渡す (Bot を足すのは試合の .Bots.cs)。
     /// <c>-map</c> は .Map.cs、<c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> は .NetSimulation.cs、
-    /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、試合のイベントのログは .Log.cs が受け持つ。
+    /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、<c>-log-format</c> と試合のイベントの JSON のログは .Log.cs が受け持つ。
     /// それぞれの起動の前 (<c>*BeforeStart</c>)・起動の後 (<c>*AfterStart</c>)・終了の要求 (<c>*QuitRequested</c>) の差し込み口を
     /// <see cref="StartNetwork"/> と <see cref="HandleWantsToQuit"/> から呼ぶ。
     /// <c>-map</c> のシーンが今のシーンと違えば、NetworkManager を組み立てる前に .Map.cs (<c>MapHandOff</c>) がそのシーンへ移り、
@@ -40,8 +41,11 @@ namespace Fps.Net
     [DisallowMultipleComponent]
     public sealed partial class NetBootstrap : MonoBehaviour
     {
-        /// <summary>このコンポーネントを置くシーン。<c>Fps.Editor.NetSceneBuilder</c> が生成する。</summary>
-        public const string ScenePath = "Assets/game/Scenes/NetTest.unity";
+        /// <summary>
+        /// 実行時に読むこのコンポーネントのシーン (<see cref="KitPaths.DefaultRoot"/> の下)。<c>Fps.Editor.NetSceneBuilder</c> が生成する。
+        /// 別のルートの下から読むなら <see cref="MenuRoute.NetSceneUnder"/>。
+        /// </summary>
+        public const string ScenePath = MenuRoute.NetScene;
 
         public const int ExitDisconnected = 0;
         public const int ExitInvalidArguments = 2;
@@ -490,6 +494,14 @@ namespace Fps.Net
         private bool HoldQuitUntilServerLobbyClosed()
         {
             CloseServerLobby();
+
+            // 止まる準備中は .Shutdown.cs が終了を待たせている。ここでも待たせると、閉じ終えたところで呼ぶ
+            // Application.Quit が 2 回目の終了の要求として扱われ、試合を待たずに止まってしまう
+            if (_drain != null && _drain.IsDraining)
+            {
+                return true;
+            }
+
             if (_serverLobby == null || _serverLobbyClosed || Time.unscaledTime >= _serverLobbyCloseDeadline)
             {
                 return true;
@@ -597,6 +609,7 @@ namespace Fps.Net
             _lobbyLauncher?.Tick(Time.unscaledTime);
             _serverLobby?.Tick(Time.unscaledTime);
             QuitWhenServerLobbyClosed();
+            ShutdownUpdate();
 
             if (_manager == null || !_manager.IsServer || Time.unscaledTime < _nextStatusLogTime)
             {
@@ -610,6 +623,8 @@ namespace Fps.Net
         private void OnDestroy()
         {
             MenuNavigator.ReturningToMenu -= HandleReturningToMenu;
+            StopServerEventLog();
+            StopWatchingMatchForDrain();
 
             if (_lobby != null)
             {

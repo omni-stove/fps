@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace Fps.Core.Tests
@@ -72,6 +73,64 @@ namespace Fps.Core.Tests
         public void RejectsNull()
         {
             Assert.Throws<ArgumentNullException>(() => FlatJsonObject.TryParse(null, out _, out _));
+        }
+
+        [Test]
+        public void FormatsPairsInOrderOnOneLine()
+        {
+            var text = FlatJsonObject.Format(new[] { Pair("type", "kill"), Pair("killerId", "0") });
+
+            Assert.That(text, Is.EqualTo("{\"type\":\"kill\",\"killerId\":\"0\"}"));
+        }
+
+        [Test]
+        public void FormatsEmptyObject()
+        {
+            Assert.That(FlatJsonObject.Format(Array.Empty<KeyValuePair<string, string>>()), Is.EqualTo("{}"));
+        }
+
+        [Test]
+        public void FormatEscapesSoTheLineStaysOneLine()
+        {
+            var text = FlatJsonObject.Format(new[] { Pair("k\"", "a\"b\\c\nd\re\tf\u0001g\u2028h") });
+
+            Assert.That(text, Is.EqualTo("{\"k\\\"\":\"a\\\"b\\\\c\\nd\\re\\tf\\u0001g\\u2028h\"}"));
+        }
+
+        [Test]
+        public void FormatKeepsSurrogatePairsAndEscapesLoneSurrogates()
+        {
+            var text = FlatJsonObject.Format(new[] { Pair("k", "😀|\uD800") });
+
+            Assert.That(text, Is.EqualTo("{\"k\":\"😀|\\ud800\"}"));
+        }
+
+        [Test]
+        public void FormattedTextReadsBack()
+        {
+            var pairs = new[] { Pair("a", "x\"y\\z\n\u0000"), Pair("b", ""), Pair("c", "/\u2029") };
+
+            var ok = FlatJsonObject.TryParse(FlatJsonObject.Format(pairs), out var values, out var error);
+
+            Assert.That(ok, Is.True, error);
+            Assert.That(values, Has.Count.EqualTo(3));
+            Assert.That(values["a"], Is.EqualTo("x\"y\\z\n\u0000"));
+            Assert.That(values["b"], Is.Empty);
+            Assert.That(values["c"], Is.EqualTo("/\u2029"));
+        }
+
+        [Test]
+        public void FormatRejectsNullsAndDuplicateKeys()
+        {
+            Assert.Throws<ArgumentNullException>(() => FlatJsonObject.Format(null));
+            Assert.Throws<ArgumentNullException>(() => FlatJsonObject.Format(new[] { Pair(null, "v") }));
+            Assert.Throws<ArgumentNullException>(() => FlatJsonObject.Format(new[] { Pair("k", null) }));
+            Assert.Throws<ArgumentException>(() => FlatJsonObject.Format(new[] { Pair("k", "v"), Pair("k", "w") }));
+        }
+
+        private static KeyValuePair<string, string> Pair(string key, string value)
+        {
+            return new KeyValuePair<string, string>(key, value);
         }
     }
 }

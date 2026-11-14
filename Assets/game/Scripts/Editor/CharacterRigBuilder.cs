@@ -24,11 +24,11 @@ namespace Fps.Editor
     /// </summary>
     public static class CharacterRigBuilder
     {
-        public const string Folder = "Assets/game/Characters";
+        public static string Folder => FpsKitRoot.OutputPath("Characters");
         // CharacterAnimator が実行時に Resources.Load で読むので、プレハブだけ Resources の下に置く。
-        public const string PrefabPath = Folder + "/Resources/" + Fps.Runtime.CharacterAnimator.RigResourcePath + ".prefab";
-        public const string ControllerPath = Folder + "/CharacterRig.controller";
-        public const string ClipFolder = Folder + "/Clips";
+        public static string PrefabPath => Folder + "/Resources/" + Fps.Runtime.CharacterAnimator.RigResourcePath + ".prefab";
+        public static string ControllerPath => Folder + "/CharacterRig.controller";
+        public static string ClipFolder => Folder + "/Clips";
 
         public const string MenuPath = "Fps/Build Character Rig";
         public const string LogTag = "[CharacterRigBuilder]";

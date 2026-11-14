@@ -16,7 +16,7 @@ namespace Fps.Editor
     /// </summary>
     public static class MissionCatalogBuilder
     {
-        public const string CatalogPath = "Assets/game/Missions/MissionCatalog.asset";
+        public static string CatalogPath => FpsKitRoot.OutputPath("Missions/MissionCatalog.asset");
         public const string MenuPath = "Fps/Build Mission Catalog";
         public const string LogTag = "[MissionCatalogBuilder]";
 

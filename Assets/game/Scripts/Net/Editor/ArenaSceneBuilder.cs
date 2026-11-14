@@ -31,10 +31,10 @@ namespace Fps.Editor
         /// <summary><c>-map</c> に渡す名前。シーンのファイル名と同じ。</summary>
         public const string MapName = "NetArena01";
 
-        public const string ScenePath = BuildSceneList.NetArena01Scene;
+        public static string ScenePath => BuildSceneList.NetArena01Scene;
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
-        public const string NavMeshDataPath = "Assets/game/Scenes/NetArena01/NavMesh-Arena.asset";
+        public static string NavMeshDataPath => FpsKitRoot.OutputPath("Scenes/" + MapName + "/NavMesh-Arena.asset");
 
         public const string MenuPath = "Fps/Net/Build NetArena01 Scene";
         public const string LogTag = "[Net] ArenaSceneBuilder:";

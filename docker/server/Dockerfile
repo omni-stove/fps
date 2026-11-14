@@ -26,6 +26,11 @@ ENV FPS_SERVER_ADDRESS=0.0.0.0 \
 
 EXPOSE 7777/udp
 
+# サーバーは SIGTERM を受けると新しい参加を断り、今の試合が終わるまで (最長 -drain-timeout 秒、既定 600 秒) 止まらない。
+# docker stop の猶予 (既定 10 秒) はイメージでは決められないので、止める側で
+# docker stop -t 700 / docker run --stop-timeout 700 / compose の stop_grace_period: 700s を指定する (docs/dedicated-server.md)
+STOPSIGNAL SIGTERM
+
 USER fps:fps
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/fps-server-entrypoint"]

@@ -24,10 +24,10 @@ namespace Fps.Editor
     /// </remarks>
     public static class WaveTestSceneBuilder
     {
-        public const string ScenePath = BuildSceneList.WaveTestScene;
+        public static string ScenePath => BuildSceneList.WaveTestScene;
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
-        public const string NavMeshDataPath = "Assets/game/Scenes/WaveTest/NavMesh-Floor.asset";
+        public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
         public const string MenuPath = "Fps/Build Wave Test Scene";
         public const string LogTag = "[WaveTestSceneBuilder]";

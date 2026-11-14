@@ -5,25 +5,43 @@ namespace Fps.Core
 {
     /// <summary>
     /// メインメニューの遷移先の選び方。ボタンの行き先 (<see cref="MenuDestination"/>) から読むシーンとロビーの設定を決め
-    /// (<see cref="Plan"/>)、起動引数でメニューを飛ばすか (<see cref="ShouldSkipMenu"/>) と、ゲームパッドで動かすフォーカスの
+    /// (<see cref="Plan(MenuDestination, string)"/>。シーンのルートを省くと <see cref="KitPaths.DefaultRoot"/>)、起動引数でメニューを飛ばすか (<see cref="ShouldSkipMenu"/>) と、ゲームパッドで動かすフォーカスの
     /// 次の位置 (<see cref="MoveFocus"/>) を決める。実際にシーンを読むのは Fps.Runtime の MenuNavigator。
     /// </summary>
     public static class MenuRoute
     {
-        /// <summary>メインメニュー。起動時のシーンで、ポーズや切断からもここへ戻る。</summary>
-        public const string MainMenuScene = "Assets/game/Scenes/MainMenu.unity";
+        public const string MainMenuSceneName = "MainMenu";
+        public const string RangeSceneName = "Bootstrap";
+        public const string CampaignSceneName = "Campaign01";
+        public const string NetSceneName = "NetTest";
 
-        /// <summary>射撃場。</summary>
-        public const string RangeScene = "Assets/game/Scenes/Bootstrap.unity";
+        // 以下の既定のシーン経路はテストの属性からも引くので、KitPaths.ScenePath を呼ばずに const で組む。
 
-        /// <summary>キャンペーンの最初のシーン。</summary>
-        public const string CampaignScene = "Assets/game/Scenes/Campaign01.unity";
+        /// <summary><see cref="KitPaths.DefaultRoot"/> のメインメニュー。起動時のシーンで、ポーズや切断からもここへ戻る。</summary>
+        public const string MainMenuScene = KitPaths.DefaultScenesFolder + "/" + MainMenuSceneName + KitPaths.SceneExtension;
+
+        /// <summary><see cref="KitPaths.DefaultRoot"/> の射撃場。</summary>
+        public const string RangeScene = KitPaths.DefaultScenesFolder + "/" + RangeSceneName + KitPaths.SceneExtension;
+
+        /// <summary><see cref="KitPaths.DefaultRoot"/> のキャンペーンの最初のシーン。</summary>
+        public const string CampaignScene = KitPaths.DefaultScenesFolder + "/" + CampaignSceneName + KitPaths.SceneExtension;
 
         /// <summary>
-        /// ネット対戦のシーン。Fps.Net の NetBootstrap.ScenePath と同じ値で、Fps.Core は Fps.Net を参照しないので文字列で持つ
-        /// (一致はテストで確かめる)。
+        /// <see cref="KitPaths.DefaultRoot"/> のネット対戦のシーン。Fps.Net の NetBootstrap.ScenePath はこれを引く。
         /// </summary>
-        public const string NetScene = "Assets/game/Scenes/NetTest.unity";
+        public const string NetScene = KitPaths.DefaultScenesFolder + "/" + NetSceneName + KitPaths.SceneExtension;
+
+        /// <summary>root の下のメインメニュー (<see cref="KitPaths.ScenePath"/>)。</summary>
+        public static string MainMenuSceneUnder(string root) => KitPaths.ScenePath(root, MainMenuSceneName);
+
+        /// <summary>root の下の射撃場。</summary>
+        public static string RangeSceneUnder(string root) => KitPaths.ScenePath(root, RangeSceneName);
+
+        /// <summary>root の下のキャンペーンの最初のシーン。</summary>
+        public static string CampaignSceneUnder(string root) => KitPaths.ScenePath(root, CampaignSceneName);
+
+        /// <summary>root の下のネット対戦のシーン。</summary>
+        public static string NetSceneUnder(string root) => KitPaths.ScenePath(root, NetSceneName);
 
         /// <summary>メニューから選べる行き先。ボタンを並べる順と同じ。</summary>
         public static IReadOnlyList<MenuDestination> Destinations { get; } = new[]
@@ -44,20 +62,27 @@ namespace Fps.Core
         /// </summary>
         public static MenuTransition Plan(MenuDestination destination)
         {
+            return Plan(destination, KitPaths.DefaultRoot);
+        }
+
+        /// <summary><see cref="Plan(MenuDestination)"/> のシーンを sceneRoot の下から読む遷移。</summary>
+        /// <exception cref="ArgumentException">sceneRoot が空か不正な区切りを含む。</exception>
+        public static MenuTransition Plan(MenuDestination destination, string sceneRoot)
+        {
             switch (destination)
             {
                 case MenuDestination.Campaign:
-                    return MenuTransition.Load(CampaignScene);
+                    return MenuTransition.Load(CampaignSceneUnder(sceneRoot));
                 case MenuDestination.CreateLobby:
-                    return MenuTransition.Load(NetScene, LobbyLaunchOptions.Create());
+                    return MenuTransition.Load(NetSceneUnder(sceneRoot), LobbyLaunchOptions.Create());
                 case MenuDestination.JoinLobby:
-                    return MenuTransition.Load(NetScene, LobbyLaunchOptions.Join());
+                    return MenuTransition.Load(NetSceneUnder(sceneRoot), LobbyLaunchOptions.Join());
                 case MenuDestination.QuickMatch:
-                    return MenuTransition.Load(NetScene, LobbyLaunchOptions.QuickMatch());
+                    return MenuTransition.Load(NetSceneUnder(sceneRoot), LobbyLaunchOptions.QuickMatch());
                 case MenuDestination.Range:
-                    return MenuTransition.Load(RangeScene);
+                    return MenuTransition.Load(RangeSceneUnder(sceneRoot));
                 case MenuDestination.Tutorial:
-                    return MenuTransition.Load(RangeScene, startsTutorial: true);
+                    return MenuTransition.Load(RangeSceneUnder(sceneRoot), startsTutorial: true);
                 case MenuDestination.Quit:
                     return MenuTransition.Quit;
                 default:
@@ -68,7 +93,14 @@ namespace Fps.Core
         /// <summary>ポーズや切断からメニューへ戻る遷移。</summary>
         public static MenuTransition BackToMenu()
         {
-            return MenuTransition.Load(MainMenuScene);
+            return BackToMenu(KitPaths.DefaultRoot);
+        }
+
+        /// <summary>sceneRoot の下のメインメニューへ戻る遷移。</summary>
+        /// <exception cref="ArgumentException">sceneRoot が空か不正な区切りを含む。</exception>
+        public static MenuTransition BackToMenu(string sceneRoot)
+        {
+            return MenuTransition.Load(MainMenuSceneUnder(sceneRoot));
         }
 
         /// <summary>

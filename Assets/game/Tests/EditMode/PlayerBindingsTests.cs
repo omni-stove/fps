@@ -21,10 +21,14 @@ namespace Fps.Tests.EditMode
 
         private InputActionAsset _asset;
         private PlayerBindings _bindings;
+        private ControlSettings _appliedBefore;
 
         [SetUp]
         public void SetUp()
         {
+            // 重なりの名前を日本語で確かめるので、この機械で保存した言語に依らないようにする
+            _appliedBefore = AppliedControlSettings.Current;
+            AppliedControlSettings.Apply(_appliedBefore.WithLanguage(GameLanguage.Japanese));
             _asset = ProjectActionsClone.Create();
             _bindings = new PlayerBindings(_asset);
         }
@@ -34,6 +38,7 @@ namespace Fps.Tests.EditMode
         {
             _bindings.Dispose();
             ProjectActionsClone.Destroy(_asset);
+            AppliedControlSettings.Apply(_appliedBefore);
         }
 
         [Test]

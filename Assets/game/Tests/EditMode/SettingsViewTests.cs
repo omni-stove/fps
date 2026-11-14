@@ -356,6 +356,119 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheScreenIsInTheLanguageOfTheSettings()
+        {
+            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
+
+            _view.Open(_container);
+
+            Assert.That(_container.Q<Label>(SettingsView.TitleName).text, Is.EqualTo("Settings"));
+            Assert.That(_container.Q<Button>(SettingsView.LanguageButtonName).text, Is.EqualTo("English"));
+            Assert.That(_container.Q<Button>(SettingsView.BackButtonName).text, Is.EqualTo("Back"));
+            Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo("Off"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ChoosingEnglishTurnsTheOpenScreenEnglishAtOnceAndSavesItOnClose()
+        {
+            _view.Open(_container);
+            Assert.That(_container.Q<Label>(SettingsView.TitleName).text, Is.EqualTo("設定"));
+            Assert.That(_container.Q<Button>(SettingsView.LanguageButtonName).text, Is.EqualTo("日本語"));
+            _view.SetValue(ControlValue.FieldOfView, 70);
+            var changes = new List<GameLanguage>();
+            Action<GameLanguage> record = changes.Add;
+            Localizer.Changed += record;
+            try
+            {
+                _view.SetLanguage(GameLanguages.Next(GameLanguage.Japanese));
+
+                Assert.That(changes, Is.EqualTo(new[] { GameLanguage.English }));
+            }
+            finally
+            {
+                Localizer.Changed -= record;
+            }
+
+            Assert.That(AppliedControlSettings.Current.Language, Is.EqualTo(GameLanguage.English));
+            Assert.That(Localizer.Language, Is.EqualTo(GameLanguage.English));
+            Assert.That(_view.Root.parent, Is.SameAs(_container));
+            Assert.That(_container.childCount, Is.EqualTo(1), "the old screen is gone");
+            Assert.That(_container.Q<Label>(SettingsView.TitleName).text, Is.EqualTo("Settings"));
+            Assert.That(_container.Q<Button>(SettingsView.LanguageButtonName).text, Is.EqualTo("English"));
+            Assert.That(_container.Q<Button>(SettingsView.ResetButtonName).text, Is.EqualTo("Restore defaults"));
+            Assert.That(
+                _container.Q<Button>(SettingsView.ModeButtonName(InputDeviceKind.Gamepad, HoldAction.Sprint)).text,
+                Is.EqualTo("Toggle"));
+            Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.FieldOfView)).value, Is.EqualTo(70), "the edit survives");
+
+            // 組み直した後もボタンが効く
+            _view.SetShowSubtitles(true);
+            Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo("On"));
+
+            _view.Close();
+
+            // 起動し直したときと同じく、OS の言語が日本語でも保存した言語で読む
+            var restarted = new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Load();
+            Assert.That(restarted.Language, Is.EqualTo(GameLanguage.English));
+            Assert.That(restarted.Get(ControlValue.FieldOfView), Is.EqualTo(70));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ChoosingTheSameLanguageAgainDoesNotRebuildTheScreen()
+        {
+            _view.Open(_container);
+            var root = _view.Root;
+            var calls = 0;
+            Action<GameLanguage> count = _ => calls++;
+            Localizer.Changed += count;
+            try
+            {
+                _view.SetLanguage(GameLanguage.Japanese);
+            }
+            finally
+            {
+                Localizer.Changed -= count;
+            }
+
+            Assert.That(calls, Is.Zero);
+            Assert.That(_view.Root, Is.SameAs(root));
+            Assert.That(_view.HasUnsavedChanges, Is.False);
+        }
+
+        [Test]
+        public void ResetToDefaultsKeepsTheLanguage()
+        {
+            _view.Open(_container);
+            _view.SetLanguage(GameLanguage.English);
+            _view.SetValue(ControlValue.MasterVolume, 20);
+
+            _view.ResetToDefaults();
+
+            Assert.That(AppliedControlSettings.Current, Is.EqualTo(ControlSettings.DefaultFor(GameLanguage.English)));
+            Assert.That(_container.Q<Label>(SettingsView.TitleName).text, Is.EqualTo("Settings"));
+        }
+
+        [Test]
+        public void AClosedViewIgnoresLanguageChanges()
+        {
+            _view.Open(_container);
+            _view.Close();
+
+            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
+
+            Assert.That(_view.IsOpen, Is.False);
+            Assert.That(_container.childCount, Is.Zero);
+        }
+
+        [Test]
+        public void SetLanguageNeedsAnOpenView()
+        {
+            Assert.Throws<InvalidOperationException>(() => _view.SetLanguage(GameLanguage.English));
+        }
+
+        [Test]
         public void AppliedSettingsNotifyOnlyOnChangeAndKeepNotifyingAfterAHandlerThrows()
         {
             var calls = 0;

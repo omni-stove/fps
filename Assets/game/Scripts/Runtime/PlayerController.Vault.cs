@@ -109,13 +109,13 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 前方の障害物を乗り越え始める。<see cref="VaultRule"/> が Off・未初期化・接地していない・しゃがんでいる・乗り越え中かよじ登り中か回避中・
+        /// 前方の障害物を乗り越え始める。<see cref="VaultRule"/> が Off・未初期化・接地していない・しゃがんでいるか伏せている・乗り越え中かよじ登り中か回避中・
         /// 移動の横取り (<see cref="IsMovementOverridden"/>) の最中なら調べずに false。調べて障害物があれば結果を <see cref="FormatVaultProbeLog"/> でログに出し、乗り越えられなければ false。
         /// 始めたら <c>[Player] vaulting=true</c> をログに出して <see cref="VaultStarted"/> を呼ぶ。動くのは次の <see cref="Tick"/> から。
         /// </summary>
         public bool TryStartVault()
         {
-            if (_vaultRule != Vault.On || !IsInitialized || !IsGrounded || _isCrouched || IsVaulting || IsMantling || IsDodging || IsMovementOverridden)
+            if (_vaultRule != Vault.On || !IsInitialized || !IsGrounded || _currentStance != PlayerStance.Standing || IsVaulting || IsMantling || IsDodging || IsMovementOverridden)
             {
                 return false;
             }

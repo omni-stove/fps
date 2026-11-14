@@ -61,6 +61,36 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheLadderTowerIsReachedOnlyThroughItsLadder()
+        {
+            var surface = EnemyTestSceneBuilder.CreateLevel(_scene);
+            var tower = EnemyTestSceneBuilder.CreateLadderTower(_scene);
+            SceneBuildHelpers.BakeNavMesh(surface);
+            Physics.SyncTransforms();
+
+            Assert.That(tower.name, Is.EqualTo(EnemyTestSceneBuilder.LadderTowerName));
+            Assert.That(tower.GetComponentInChildren<Fps.Runtime.Traversal.Ladder>(), Is.Not.Null);
+            Assert.DoesNotThrow(() => EnemyTestSceneBuilder.RequireLadderReachable(tower));
+            Assert.Throws<InvalidOperationException>(
+                () => SceneBuildHelpers.RequireReachable(
+                    EnemyTestSceneBuilder.PatrolRoute[0], new[] { EnemyTestSceneBuilder.LadderTowerTop }, EnemyTestSceneBuilder.NavMeshCheckRadius, "top"),
+                "the link is only there while checking (the ladder lays it at run time)");
+
+            // 巡回路と遮蔽点からは離しておく。
+            var bounds = LadderTowerBuilder.Footprint(
+                EnemyTestSceneBuilder.LadderTowerBaseCenter, EnemyTestSceneBuilder.LadderTowerSize, EnemyTestSceneBuilder.LadderTowerSide, 1.5f);
+            foreach (var point in EnemyTestSceneBuilder.PatrolRoute)
+            {
+                Assert.That(bounds.Contains(new Vector3(point.x, bounds.center.y, point.z)), Is.False, $"patrol point {point}");
+            }
+
+            foreach (var stand in SceneBuildHelpers.CoverStandPoints(EnemyTestSceneBuilder.CoverPoints))
+            {
+                Assert.That(bounds.Contains(new Vector3(stand.x, bounds.center.y, stand.z)), Is.False, $"cover point {stand}");
+            }
+        }
+
+        [Test]
         public void ActorsAreWiredInCode()
         {
             var playerWeapon = NewWeapon("PlayerRifle", WeaponAssetBuilder.RifleSpec());

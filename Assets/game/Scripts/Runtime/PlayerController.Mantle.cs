@@ -85,7 +85,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 前方の段によじ登り始める。<see cref="MantleRule"/> が Off・未初期化・接地していない・しゃがんでいる・乗り越え中かよじ登り中か回避中・
+        /// 前方の段によじ登り始める。<see cref="MantleRule"/> が Off・未初期化・接地していない・しゃがんでいるか伏せている・乗り越え中かよじ登り中か回避中・
         /// 移動の横取り (<see cref="IsMovementOverridden"/>) の最中なら調べずに false。調べて段があれば結果を <see cref="FormatMantleProbeLog"/> でログに出し、よじ登れなければ false。
         /// 始めたら <c>[Player] mantling=true</c> をログに出して <see cref="MantleStarted"/> を呼ぶ。動くのは次の <see cref="Tick"/> から。
         /// </summary>
@@ -102,7 +102,7 @@ namespace Fps.Runtime
 
         private bool StartMantleIfAble(bool requireGrounded)
         {
-            if (_mantleRule != Mantle.On || !IsInitialized || (requireGrounded && !IsGrounded) || _isCrouched || IsVaulting || IsMantling || IsDodging || IsMovementOverridden)
+            if (_mantleRule != Mantle.On || !IsInitialized || (requireGrounded && !IsGrounded) || _currentStance != PlayerStance.Standing || IsVaulting || IsMantling || IsDodging || IsMovementOverridden)
             {
                 return false;
             }

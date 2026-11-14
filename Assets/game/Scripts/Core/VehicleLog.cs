@@ -26,6 +26,9 @@ namespace Fps.Core
         /// <summary>乗り込めなかった・移れなかった理由: 指定した座席が塞がっている。</summary>
         public const string ReasonSeatTaken = "seat_taken";
 
+        /// <summary>乗り込めなかった・移れなかった理由: 指定した座席が破棄されている。</summary>
+        public const string ReasonSeatRemoved = "seat_removed";
+
         /// <summary>降りられなかった理由: 降りる場所がすべて塞がっている。</summary>
         public const string ReasonExitBlocked = "exit_blocked";
 

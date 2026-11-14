@@ -616,7 +616,7 @@ namespace Fps.Runtime
             Vector3 origin, Vector3 direction, float distance, Transform shooterRoot, LayerMask mask, out RaycastHit hit)
         {
             var count = Physics.RaycastNonAlloc(origin, direction, _castBuffer, distance, mask, QueryTriggerInteraction.Ignore);
-            var found = TryNearest(count, shooterRoot, out _, out var index);
+            var found = TryNearest(count, shooterRoot, null, false, out _, out var index, shooterRoot);
             hit = found ? _castBuffer[index] : default;
             Array.Clear(_castBuffer, 0, count);
             return found;
@@ -630,7 +630,13 @@ namespace Fps.Runtime
 
         // skipStartOverlaps なら、飛ばし始めに重なっていた命中 (Unity は距離 0・点 0 で返す) も除く。
         private static bool TryNearest(
-            int count, Transform ignoreRoot, Transform alsoIgnore, bool skipStartOverlaps, out float distance, out int index)
+            int count,
+            Transform ignoreRoot,
+            Transform alsoIgnore,
+            bool skipStartOverlaps,
+            out float distance,
+            out int index,
+            Transform deployShooter = null)
         {
             distance = 0f;
             index = -1;
@@ -640,6 +646,12 @@ namespace Fps.Runtime
                 var hitTransform = candidate.collider.transform;
                 if ((ignoreRoot != null && hitTransform.IsChildOf(ignoreRoot))
                     || (alsoIgnore != null && hitTransform.IsChildOf(alsoIgnore)))
+                {
+                    continue;
+                }
+
+                // 弾が抜ける自分の置いた物を狙う点にすると、抜けた弾が照準の先からずれる。
+                if (deployShooter != null && Deployable.LetsThrough(candidate.collider, deployShooter.gameObject))
                 {
                     continue;
                 }

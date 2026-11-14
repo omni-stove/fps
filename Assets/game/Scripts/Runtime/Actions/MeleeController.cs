@@ -35,6 +35,18 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("振るときに前へ踏み込む距離 (m)")]
         private float _lungeDistance = MeleeSpec.DefaultLungeDistance;
 
+        [SerializeField, Min(0.01f), Tooltip("怯んだ相手への処刑技の演出の秒数")]
+        private float _finisherSeconds = MeleeSpec.DefaultFinisherSeconds;
+
+        [SerializeField, Min(0), Tooltip("処刑技で倒したときに得る体力")]
+        private int _finisherHealth = MeleeSpec.DefaultFinisherHealth;
+
+        [SerializeField, Min(0), Tooltip("処刑技で倒したときに持っている武器へ足す予備弾")]
+        private int _finisherAmmo = MeleeSpec.DefaultFinisherAmmo;
+
+        [SerializeField, Tooltip("処刑技の最中にほかから撃たれたら中断するか")]
+        private bool _finisherInterruptible = MeleeSpec.DefaultFinisherInterruptible;
+
         [SerializeField, Tooltip("当たりを探すレイヤー")]
         private LayerMask _hitMask = Physics.DefaultRaycastLayers;
 
@@ -130,7 +142,7 @@ namespace Fps.Runtime
 
             if (_meleeAction != null && !_mover.IsControlHandedOff && _meleeAction.WasPressedThisFrame())
             {
-                TrySwing();
+                TryMelee();
             }
 
             Tick(Time.deltaTime);
@@ -229,12 +241,25 @@ namespace Fps.Runtime
                 || _mover.IsVaulting
                 || _mover.IsMantling
                 || (_mover.IsMovementOverridden && !ReferenceEquals(_mover.ActiveMovementOverride, this))
-                || IsThrowingGrenade())
+                || IsThrowingGrenade()
+                || IsPerformingContextMove())
             {
                 return MeleeRefusal.Busy;
             }
 
             return EnsureSwing().CanStart ? MeleeRefusal.None : MeleeRefusal.Cooldown;
+        }
+
+        // 近接の入力 1 回ぶん。状況に合う技 (ContextMeleeAction) があればそれを出し、無ければふつうに振る。
+        public bool TryMelee()
+        {
+            var context = GetComponent<ContextMeleeAction>();
+            if (context != null && context.enabled && context.TryBegin())
+            {
+                return true;
+            }
+
+            return TrySwing();
         }
 
         public bool TrySwing()
@@ -332,7 +357,7 @@ namespace Fps.Runtime
         }
 
         // 三人称ではカメラと体の向きがずれ得るので、狙っている向き (照準) を水平にして使う。真上・真下を向いていれば体の正面。
-        private Vector3 AimForward()
+        internal Vector3 AimForward()
         {
             var aim = _weapon != null ? _weapon.Aim : null;
             var forward = aim != null ? aim.forward : transform.forward;
@@ -352,6 +377,12 @@ namespace Fps.Runtime
             return grenades != null && grenades.IsThrowing;
         }
 
+        private bool IsPerformingContextMove()
+        {
+            var context = GetComponent<ContextMeleeAction>();
+            return context != null && context.IsPerforming;
+        }
+
         private IMeleePresenter ResolvePresenter()
         {
             return Presenter ?? GetComponent<IMeleePresenter>();
@@ -367,7 +398,18 @@ namespace Fps.Runtime
             MeleeSpec spec;
             try
             {
-                spec = new MeleeSpec(_damage, _reach, _arcDegrees, _swingSeconds, _cooldownSeconds, _impactSeconds, _lungeDistance);
+                spec = new MeleeSpec(
+                    _damage,
+                    _reach,
+                    _arcDegrees,
+                    _swingSeconds,
+                    _cooldownSeconds,
+                    _impactSeconds,
+                    _lungeDistance,
+                    _finisherSeconds,
+                    _finisherHealth,
+                    _finisherAmmo,
+                    _finisherInterruptible);
             }
             catch (ArgumentException e)
             {

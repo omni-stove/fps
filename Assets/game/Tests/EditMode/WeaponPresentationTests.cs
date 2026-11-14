@@ -334,11 +334,106 @@ namespace Fps.Tests.EditMode
         {
             var presenter = Presenter("Shooter");
 
-            LogAssert.Expect(LogType.Log, "[Presentation] impact material=default character=False zone=none");
+            LogAssert.Expect(LogType.Log, "[Presentation] impact material=default character=False zone=none source=legacy");
             presenter.PlayImpact(new ImpactInfo(new Vector3(0f, 0f, 20f), Vector3.back, null));
 
-            LogAssert.Expect(LogType.Log, "[Presentation] impact material=flesh character=True zone=Head");
+            LogAssert.Expect(LogType.Log, "[Presentation] impact material=flesh character=True zone=Head source=legacy");
             presenter.PlayImpact(new ImpactInfo(new Vector3(0f, 0f, 20f), Vector3.back, null, "flesh", true, Fps.Core.HitZone.Head));
+        }
+
+        [Test]
+        public void WithASurfaceCatalogAnImpactUsesTheMaterialsEffectSoundAndDecal()
+        {
+            var presenter = Presenter("Shooter");
+            var surfaces = SurfaceCatalog(out var metal, out _);
+            presenter.SurfaceImpacts = surfaces;
+            var point = new Vector3(1f, 1f, 8f);
+
+            LogAssert.Expect(LogType.Log, "[Presentation] impact material=metal character=False zone=none source=surface:metal");
+            LogAssert.Expect(LogType.Log, ImpactDecals.FormatPlacedLog("metal", "metal", 1, presenter.Decals.Capacity));
+            presenter.PlayImpact(new ImpactInfo(point, Vector3.back, null, "metal", false, null));
+
+            Assert.That(presenter.EffectPoolFor(_spark), Is.Null, "the legacy spark is not used when the surface catalog is there");
+            var effect = presenter.EffectPoolFor(metal.Effect).Items[0];
+            AssertNear(effect.Root.transform.position, point);
+            AssertNear(effect.Root.transform.forward, Vector3.back, "the effect faces away from the surface");
+            Assert.That(presenter.Sounds.Items[0].clip, Is.SameAs(metal.Sound));
+            AssertNear(presenter.Sounds.Items[0].transform.position, point);
+
+            var decal = presenter.Decals.Pool.Items[0];
+            Assert.That(decal.Renderer.sharedMaterial, Is.SameAs(metal.Decal));
+            Assert.That(decal.MaterialId, Is.EqualTo("metal"));
+            AssertNear(decal.Root.transform.position, point + (Vector3.back * ImpactDecals.SurfaceOffset));
+        }
+
+        [Test]
+        public void AnUnknownMaterialFallsBackToTheDefaultSurface()
+        {
+            var presenter = Presenter("Shooter");
+            presenter.SurfaceImpacts = SurfaceCatalog(out _, out var fallback);
+
+            LogAssert.Expect(LogType.Log, "[Presentation] impact material=glass character=False zone=none source=surface:default");
+            LogAssert.Expect(LogType.Log, ImpactDecals.FormatPlacedLog("glass", SurfaceMaterial.DefaultId, 1, presenter.Decals.Capacity));
+            presenter.PlayImpact(new ImpactInfo(Vector3.forward, Vector3.back, null, "glass", false, null));
+
+            Assert.That(presenter.EffectPoolFor(fallback.Effect).ActiveCount, Is.EqualTo(1));
+            Assert.That(presenter.Sounds.Items[0].clip, Is.SameAs(fallback.Sound));
+            Assert.That(presenter.Decals.Pool.Items[0].Renderer.sharedMaterial, Is.SameAs(fallback.Decal));
+        }
+
+        [Test]
+        public void ASurfaceCatalogWithoutTheMaterialOrADefaultShowsNothing()
+        {
+            var presenter = Presenter("Shooter");
+            var surfaces = Track(ScriptableObject.CreateInstance<SurfaceImpactCatalog>());
+            surfaces.SetSurfaces(new[] { new SurfaceImpactAssets("metal", DecalMaterial("Metal"), 0.1f, Effect("MetalHit"), Clip("MetalHit")) });
+            presenter.SurfaceImpacts = surfaces;
+
+            LogAssert.Expect(LogType.Log, "[Presentation] impact material=wood character=False zone=none source=none");
+            presenter.PlayImpact(new ImpactInfo(Vector3.forward, Vector3.back, null, "wood", false, null));
+
+            Assert.That(presenter.EffectPoolFor(_spark), Is.Null, "the legacy spark is not used as a fallback");
+            Assert.That(presenter.Sounds, Is.Null);
+            Assert.That(presenter.Decals.ActiveCount, Is.Zero);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ACharacterImpactPlaysTheEffectButLeavesNoDecal()
+        {
+            var presenter = Presenter("Shooter");
+            presenter.SurfaceImpacts = SurfaceCatalog(out _, out var fallback);
+
+            LogAssert.Expect(LogType.Log, "[Presentation] impact material=default character=True zone=Head source=surface:default");
+            presenter.PlayImpact(new ImpactInfo(Vector3.forward, Vector3.back, null, null, true, Fps.Core.HitZone.Head));
+
+            Assert.That(presenter.EffectPoolFor(fallback.Effect).ActiveCount, Is.EqualTo(1));
+            Assert.That(presenter.Decals.ActiveCount, Is.Zero);
+            Assert.That(presenter.Decals.Pool, Is.Null, "no decal is even created for a character");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ASurfaceCatalogWorksWithoutThePresentationCatalog()
+        {
+            var presenter = Presenter("Shooter");
+            presenter.Catalog = null;
+            presenter.SurfaceImpacts = SurfaceCatalog(out var metal, out _);
+
+            presenter.PlayImpact(new ImpactInfo(Vector3.forward, Vector3.back, null, "metal", false, null));
+
+            Assert.That(presenter.EffectPoolFor(metal.Effect).ActiveCount, Is.EqualTo(1));
+            Assert.That(presenter.Decals.ActiveCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ImpactSourceLabelNamesTheAssetsThatWereUsed()
+        {
+            var surfaces = SurfaceCatalog(out var metal, out _);
+
+            Assert.That(WeaponPresentation.ImpactSourceLabel(null, null), Is.EqualTo("legacy"));
+            Assert.That(WeaponPresentation.ImpactSourceLabel(surfaces, null), Is.EqualTo("none"));
+            Assert.That(WeaponPresentation.ImpactSourceLabel(surfaces, metal), Is.EqualTo("surface:metal"));
         }
 
         [Test]
@@ -361,7 +456,28 @@ namespace Fps.Tests.EditMode
             var body = Track(new GameObject(bodyName));
             var presenter = body.AddComponent<WeaponPresentation>();
             presenter.Catalog = _catalog;
+
+            // 生成済みの SurfaceImpactCatalog が Resources にあっても、従来の火花と音を確かめるテストに混ざらないよう外す。
+            presenter.SurfaceImpacts = null;
+
+            // シーンに残る共有の ImpactDecals を作らせず、テストごとに消せるものを渡す。
+            presenter.Decals = Track(new GameObject(bodyName + " Decals")).AddComponent<ImpactDecals>();
             return presenter;
+        }
+
+        // metal と default の 2 つを持つカタログ。
+        private SurfaceImpactCatalog SurfaceCatalog(out SurfaceImpactAssets metal, out SurfaceImpactAssets fallback)
+        {
+            metal = new SurfaceImpactAssets("metal", DecalMaterial("Metal"), 0.08f, Effect("MetalHit"), Clip("MetalHit"));
+            fallback = new SurfaceImpactAssets(SurfaceMaterial.DefaultId, DecalMaterial("Default"), 0.12f, Effect("DefaultHit"), Clip("DefaultHit"));
+            var surfaces = Track(ScriptableObject.CreateInstance<SurfaceImpactCatalog>());
+            surfaces.SetSurfaces(new[] { metal, fallback });
+            return surfaces;
+        }
+
+        private Material DecalMaterial(string materialName)
+        {
+            return Track(new Material(Shader.Find("Hidden/InternalErrorShader")) { name = materialName });
         }
 
         private static void AssertNear(Vector3 actual, Vector3 expected, string message = null)

@@ -287,6 +287,13 @@ namespace Fps.Runtime
             var distances = new float[_seats.Length];
             for (var i = 0; i < _seats.Length; i++)
             {
+                // NearestFree は NaN の座席を選ばないので、破棄された座席はここで外す。
+                if (_seats[i] == null)
+                {
+                    distances[i] = float.NaN;
+                    continue;
+                }
+
                 distances[i] = _seats[i].DistanceToEnter(from);
                 distance = Mathf.Min(distance, distances[i]);
             }
@@ -340,6 +347,12 @@ namespace Fps.Runtime
             }
 
             RequireSeatIndex(seatIndex);
+            if (_seats[seatIndex] == null)
+            {
+                Debug.Log(VehicleLog.BoardRefused(name, rider.RiderName, VehicleLog.ReasonSeatRemoved), this);
+                return false;
+            }
+
             if (_seating.IsOccupied(seatIndex))
             {
                 Debug.Log(VehicleLog.BoardRefused(name, rider.RiderName, VehicleLog.ReasonSeatTaken), this);
@@ -415,7 +428,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            var to = _seating.NextFree(from.Index, direction);
+            var to = NextLiveFreeSeat(from.Index, direction);
             if (to < 0)
             {
                 Debug.Log(VehicleLog.SwitchRefused(name, rider.RiderName, VehicleLog.ReasonNoFreeSeat), this);
@@ -438,6 +451,12 @@ namespace Fps.Runtime
             RequireSeatIndex(seatIndex);
             if (seatIndex == from.Index)
             {
+                return false;
+            }
+
+            if (_seats[seatIndex] == null)
+            {
+                Debug.Log(VehicleLog.SwitchRefused(name, rider.RiderName, VehicleLog.ReasonSeatRemoved), this);
                 return false;
             }
 
@@ -659,6 +678,21 @@ namespace Fps.Runtime
             Debug.Log(VehicleLog.Board(name, rider.RiderName, index, seat.Role), this);
             rider.OnBoarded(seat);
             Boarded?.Invoke(this, seat, rider);
+        }
+
+        private int NextLiveFreeSeat(int from, int direction)
+        {
+            var seat = from;
+            for (var step = 0; step < _seats.Length; step++)
+            {
+                seat = _seating.NextFree(seat, direction);
+                if (seat < 0 || _seats[seat] != null)
+                {
+                    return seat;
+                }
+            }
+
+            return -1;
         }
 
         private void MoveSeat(IVehicleRider rider, VehicleSeat from, VehicleSeat to)

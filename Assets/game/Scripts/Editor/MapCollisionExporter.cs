@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Fps.Core;
+using Fps.Core.Navigation;
 using Fps.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -154,6 +155,13 @@ namespace Fps.Editor
                     written.Add(path);
                     Debug.Log(LogTag + " wrote " + path + " from " + scenePath + " (" + Describe(map) + ")");
 
+                    var navMesh = NavMeshExporter.Capture(scene);
+                    var navMeshPath = Path.Combine(outputDirectory, MapName(scenePath) + NavMeshFile.Extension);
+                    NavMeshExporter.Write(navMesh, navMeshPath);
+                    written.Add(navMeshPath);
+                    Debug.Log(NavMeshExporter.LogTag + " wrote " + navMeshPath + " from " + scenePath + " (" + navMesh.Vertices.Count
+                        + " vertices, " + navMesh.Triangles.Count + " triangles, " + navMesh.Links.Count + " links)");
+
                     var ladders = CollectLadders(scene.GetRootGameObjects());
                     var laddersPath = Path.Combine(outputDirectory, MapName(scenePath) + NetMapLadders.Extension);
                     WriteText(laddersPath, NetMapLadders.Write(ladders));
@@ -279,6 +287,7 @@ namespace Fps.Editor
             }
 
             var files = new List<string>(Directory.GetFiles(outputDirectory, "*" + FileExtension));
+            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NavMeshFile.Extension));
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapLadders.Extension));
             foreach (var path in files)
             {

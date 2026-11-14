@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Fps.Core;
+using Fps.Protocol;
 
 namespace Fps.Server
 {
@@ -17,8 +18,10 @@ namespace Fps.Server
             ServerMessenger messenger,
             IServerControl control,
             ServerRulesData rules = null,
-            ServerBodies bodies = null)
+            ServerBodies bodies = null,
+            IConnectionUserIds userIds = null)
         {
+            UserIds = userIds;
             Rules = rules;
             Bodies = bodies ?? new ServerBodies((rules?.Motor ?? NetMotorSettings.Default).Stance);
             Options = options ?? throw new ArgumentNullException(nameof(options));
@@ -55,5 +58,8 @@ namespace Fps.Server
         public ServerBodies Bodies { get; }
 
         public IServerControl Control { get; }
+
+        /// <summary>通信路が相手の EOS の ProductUserId を知らない (UDP など) なら null。</summary>
+        public IConnectionUserIds UserIds { get; }
     }
 }

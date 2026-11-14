@@ -37,14 +37,16 @@ namespace Fps.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyAddsMovementRulesCombatAndSnapshots()
+        public void WithoutRegisterLobbyAddsAntiCheatMovementRulesCombatAndSnapshots()
         {
             Assert.That(Create(_library.Path), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(4));
-            Assert.That(_modules[0], Is.InstanceOf<ServerMovement>());
-            Assert.That(_modules[1], Is.InstanceOf<MatchRulesModule>());
-            Assert.That(_modules[2], Is.InstanceOf<ServerCombat>());
-            Assert.That(_modules[3], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules, Has.Count.EqualTo(5));
+            Assert.That(_modules[0], Is.InstanceOf<ServerAntiCheat>());
+            Assert.That(((ServerAntiCheat)_modules[0]).Enabled, Is.False);
+            Assert.That(_modules[1], Is.InstanceOf<ServerMovement>());
+            Assert.That(_modules[2], Is.InstanceOf<MatchRulesModule>());
+            Assert.That(_modules[3], Is.InstanceOf<ServerCombat>());
+            Assert.That(_modules[4], Is.InstanceOf<ServerSnapshots>());
         }
 
         [Test]
@@ -92,8 +94,8 @@ namespace Fps.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777"), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(4));
-            Assert.That(_modules[3], Is.InstanceOf<ServerLobbyModule>());
+            Assert.That(_modules, Has.Count.EqualTo(6));
+            Assert.That(_modules[5], Is.InstanceOf<ServerLobbyModule>());
         }
 
         [Test]

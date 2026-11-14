@@ -113,5 +113,60 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => AntiCheatSettings.TryResolve(null, false, Eos(NetLaunchMode.Host), out _, out _));
             Assert.Throws<ArgumentNullException>(() => AntiCheatSettings.TryResolve(_noArgs, false, null, out _, out _));
         }
+
+        [Test]
+        public void DedicatedServerIsDisabledByDefault()
+        {
+            Assert.That(AntiCheatSettings.TryResolveDedicatedServer(_noArgs, Eos(NetLaunchMode.Server), out var settings, out var error), Is.True);
+
+            Assert.That(error, Is.Null);
+            Assert.That(settings.Enabled, Is.False);
+            Assert.That(settings.Describe(), Does.StartWith("[AntiCheat] disabled").And.Contain("-eac"));
+        }
+
+        [Test]
+        public void DedicatedServerNoEacDisables()
+        {
+            Assert.That(AntiCheatSettings.TryResolveDedicatedServer(_noEacArgs, Eos(NetLaunchMode.Server), out var settings, out _), Is.True);
+
+            Assert.That(settings.Describe(), Is.EqualTo("[AntiCheat] disabled by -noeac"));
+        }
+
+        [Test]
+        public void DedicatedServerEacEnablesWithEos()
+        {
+            Assert.That(AntiCheatSettings.TryResolveDedicatedServer(_eacArgs, Eos(NetLaunchMode.Server), out var settings, out var error), Is.True);
+
+            Assert.That(error, Is.Null);
+            Assert.That(settings.Enabled, Is.True);
+            Assert.That(settings.Describe(), Is.EqualTo("[AntiCheat] enabled (client-server, dedicated server)"));
+        }
+
+        [Test]
+        public void DedicatedServerEacNeedsEos()
+        {
+            var ok = AntiCheatSettings.TryResolveDedicatedServer(_eacArgs, Udp(NetLaunchMode.Server), out var settings, out var error);
+
+            Assert.That(ok, Is.False);
+            Assert.That(settings, Is.Null);
+            Assert.That(error, Does.Contain("-eac needs -transport eos"));
+        }
+
+        [Test]
+        public void DedicatedServerRejectsBothFlags()
+        {
+            var ok = AntiCheatSettings.TryResolveDedicatedServer(_bothArgs, Eos(NetLaunchMode.Server), out var settings, out var error);
+
+            Assert.That(ok, Is.False);
+            Assert.That(settings, Is.Null);
+            Assert.That(error, Does.Contain("-noeac").And.Contain("-eac"));
+        }
+
+        [Test]
+        public void DedicatedServerRejectsNullArguments()
+        {
+            Assert.Throws<ArgumentNullException>(() => AntiCheatSettings.TryResolveDedicatedServer(null, Eos(NetLaunchMode.Server), out _, out _));
+            Assert.Throws<ArgumentNullException>(() => AntiCheatSettings.TryResolveDedicatedServer(_noArgs, null, out _, out _));
+        }
     }
 }

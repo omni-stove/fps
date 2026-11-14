@@ -43,6 +43,7 @@ namespace Fps.NetV2
         public const int ExitInvalidArguments = 2;
         public const int ExitMisconfigured = 3;
         public const int ExitConnectFailed = 5;
+        public const int ExitTransportFailure = 6;
 
         private const string _sceneExtension = ".unity";
 
@@ -60,6 +61,7 @@ namespace Fps.NetV2
         private readonly LoadoutRequestMessage _loadout = new LoadoutRequestMessage();
         private NetLaunchOptions _options;
         private MatchClient _client;
+        private ClientAntiCheat _antiCheat;
         private ClientMatch _match;
         private NetMotorSettings _motor;
         private NetV2LocalPlayer _local;
@@ -116,12 +118,25 @@ namespace Fps.NetV2
                 return;
             }
 
+            if (!AntiCheatSettings.TryResolve(Environment.GetCommandLineArgs(), Application.isEditor, _options, out var antiCheat, out var antiCheatError))
+            {
+                Leave(ExitInvalidArguments, AntiCheatSettings.LogTag + " invalid arguments: " + antiCheatError);
+                return;
+            }
+
+            Debug.Log(antiCheat.Describe(), this);
             _motor = new NetMotorSettings(MotorSettings.ResolveOrDefault(null), NetMotorSettings.Default.Stance, NetMotorSettings.Default.Mover);
             _client = new MatchClient(new UdpMatchTransport(), version, _deviceKey, "", line => Debug.Log(line, this));
             _client.Accepted += HandleAccepted;
             _client.SnapshotReceived += HandleSnapshot;
             _client.MessageReceived += HandleMessage;
             _client.Disconnected += HandleDisconnected;
+            if (!NetV2AntiCheat.TryCreate(antiCheat, _client, HandleAntiCheatRemoved, out _antiCheat, out antiCheatError))
+            {
+                Leave(ExitMisconfigured, AntiCheatSettings.LogTag + " " + antiCheatError);
+                return;
+            }
+
             Debug.Log(LogTag + " starting " + _options + " transport=udp " + NetStackLaunch.Flag + " " + NetStackLaunch.V2Name, this);
             try
             {
@@ -141,6 +156,12 @@ namespace Fps.NetV2
             }
 
             _client.Poll();
+            if (_finished)
+            {
+                return;
+            }
+
+            _antiCheat.Tick(Time.realtimeSinceStartupAsDouble);
             if (_finished)
             {
                 return;
@@ -171,12 +192,19 @@ namespace Fps.NetV2
             }
 
             _match?.Detach();
+            _antiCheat?.End();
             _client?.Dispose();
             DestroyViews();
         }
 
         private void HandleAccepted()
         {
+            if (!_antiCheat.ServerConnected(Time.realtimeSinceStartupAsDouble, out var antiCheatError))
+            {
+                Leave(ExitTransportFailure, AntiCheatSettings.LogTag + " " + antiCheatError + NetV2AntiCheat.LaunchHint);
+                return;
+            }
+
             SendSavedLoadout();
             var map = _client.Map;
             if (SceneManager.GetActiveScene().name == map)
@@ -422,6 +450,9 @@ namespace Fps.NetV2
         {
             switch (message)
             {
+                case AntiCheatToClientMessage antiCheat:
+                    _antiCheat.HandleMessage(antiCheat, Time.realtimeSinceStartupAsDouble);
+                    break;
                 case KilledMessage killed:
                     var entry = new KillFeedEntry(killed.KillerId, killed.VictimId, killed.WeaponId, killed.Headshot, killed.Friendly);
                     Debug.Log(CombatLogTag + " Killed " + entry, this);
@@ -551,8 +582,23 @@ namespace Fps.NetV2
             Debug.Log(LogTag + " player " + playerId.ToString(CultureInfo.InvariantCulture) + " left", this);
         }
 
+        // サーバーに切られる前にこちらから抜けても、サーバーが EAC で切ったときと同じ符号で同じ文を出す
+        private void HandleAntiCheatRemoved(string reason)
+        {
+            if (_finished || _client == null)
+            {
+                return;
+            }
+
+            var wasConnected = _client.State == MatchClientState.Connected;
+            _client.Leave();
+            HandleDisconnected(DisconnectNotice.Classify(
+                DisconnectNotice.RejectedReason(AntiCheatSettings.RejectedDetail), wasConnected, _client.ClientVersion));
+        }
+
         private void HandleDisconnected(DisconnectNotice notice)
         {
+            _antiCheat?.End();
             if (!notice.WasConnected)
             {
                 Leave(ExitConnectFailed, LogTag + " failed to connect to " + _options.Endpoint + " " + notice.Describe(), notice);
@@ -580,6 +626,7 @@ namespace Fps.NetV2
         private void Leave(int exitCode, string message, DisconnectNotice notice = null)
         {
             Debug.LogError(message, this);
+            _antiCheat?.End();
             _client?.Leave();
             if (notice != null)
             {

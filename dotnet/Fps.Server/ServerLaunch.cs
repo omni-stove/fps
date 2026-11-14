@@ -23,8 +23,9 @@ namespace Fps.Server
         /// <summary>Unity の NetMatch.prefab がこのルールに配線されているため。</summary>
         public const string DefaultRules = "TeamDeathmatch";
 
-        private ServerLaunch(NetLaunchOptions options, string version, int drainTimeoutSeconds, string rules)
+        private ServerLaunch(NetLaunchOptions options, string version, int drainTimeoutSeconds, string rules, AntiCheatSettings antiCheat)
         {
+            AntiCheat = antiCheat;
             Options = options;
             Version = version;
             DrainTimeoutSeconds = drainTimeoutSeconds;
@@ -42,6 +43,8 @@ namespace Fps.Server
         public string Map => Options.Map ?? DefaultMap;
 
         public string Rules { get; }
+
+        public AntiCheatSettings AntiCheat { get; }
 
         public static bool TryParse(
             IReadOnlyList<string> args, Func<string, string> environment, out ServerLaunch launch, out string error)
@@ -91,7 +94,12 @@ namespace Fps.Server
                 return false;
             }
 
-            launch = new ServerLaunch(options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules);
+            if (!AntiCheatSettings.TryResolveDedicatedServer(args, options, out var antiCheat, out error))
+            {
+                return false;
+            }
+
+            launch = new ServerLaunch(options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules, antiCheat);
             return true;
         }
 

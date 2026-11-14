@@ -94,7 +94,7 @@ namespace Fps.Server
 
             _started = true;
             var options = _launch.Options;
-            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, this, _rules, Bodies));
+            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, this, _rules, Bodies, _transport as IConnectionUserIds));
             try
             {
                 _transport.Listen(options.Address, options.Port);

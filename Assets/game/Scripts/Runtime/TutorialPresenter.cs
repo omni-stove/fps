@@ -8,7 +8,7 @@ namespace Fps.Runtime
     /// <summary>
     /// 射撃場のチュートリアル。Bootstrap シーン (Fps.Editor.BootstrapSceneBuilder が生成) の <see cref="GameBootstrap"/> と同じ GameObject に置く。
     /// Start で、まだ一度も終えていないか (<see cref="TutorialProgressStore"/>)、メニューのチュートリアルから来たとき
-    /// (<see cref="MenuNavigator.TakeTutorialRequest"/>) だけ始め (<see cref="TutorialSteps.ShouldStart"/>)、そうでなければ自分を無効にする。
+    /// (<see cref="IMenuNavigator.TakeTutorialRequest"/>) だけ始め (<see cref="TutorialSteps.ShouldStart"/>)、そうでなければ自分を無効にする。
     /// 毎フレーム、プレイヤーの今のアクション (<see cref="PlayerActionReader.Current"/>: ADS・リロード・しゃがみ・カバー)・
     /// 歩いた距離・標的に当てた回数 (<see cref="CombatEvents.HitConfirmed"/>) から <see cref="TutorialSteps"/> を進め、
     /// HUD のチュートリアルの案内 (<see cref="ITutorialPrompt"/>) に今の手順と使うキーを出す。キーの表記は最後に操作した入力機器と今の割り当てで決める
@@ -81,7 +81,13 @@ namespace Fps.Runtime
                 return;
             }
 
-            var requested = MenuNavigator.TakeTutorialRequest();
+            var menu = GameUi.Menu;
+            if (menu == null)
+            {
+                Debug.LogWarning(LogTag + " no menu navigator is registered with GameUi.Menu; treating the tutorial as not requested", this);
+            }
+
+            var requested = menu != null && menu.TakeTutorialRequest();
             if (!TutorialSteps.ShouldStart(_store.IsCompleted, requested))
             {
                 Debug.Log(LogTag + " already completed; open it from the main menu to see it again", this);

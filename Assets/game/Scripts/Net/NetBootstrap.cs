@@ -21,13 +21,13 @@ namespace Fps.Net
     /// UDP のサーバーに <c>-register-lobby &lt;公開アドレス:ポート&gt;</c> が付いていれば、待ち受けを始めたところで
     /// <see cref="ServerLobbyRegistrar"/> に EOS のロビーへ登録させ、接続人数を知らせ続け、終了時にロビーを閉じる。
     /// 失敗はすべて <c>[Net]</c> か <c>[Lobby]</c> 付きのエラーログに出し、batchmode のプレイヤーでは終了コード付きで終了する。
-    /// メインメニューの「ロビーを作る／入る／クイックマッチ」から来たときは、<see cref="MenuNavigator.TakeLobbyRequest"/> の設定を <c>-lobby</c> と同じに扱い
+    /// メインメニューの「ロビーを作る／入る／クイックマッチ」から来たときは、<see cref="IMenuNavigator.TakeLobbyRequest"/> (<see cref="GameUi.Menu"/>) の設定を <c>-lobby</c> と同じに扱い
     /// (起動引数が優先、<see cref="NetStartup.ChooseLobby"/>)、失敗ではその理由を添えてメニューへ戻る。
     /// クライアントがサーバーとの接続を失ったとき (つながらない・承認で断られたのを含む) は、どこから来たかによらず
     /// <see cref="DisconnectNotice"/> で分けた理由 (サーバー停止・タイムアウト・拒否・版違い) を添えてメニューへ戻る。
     /// サーバー (Host を含む) は止まる前に、つないでいるクライアントへ止まると知らせてから切る。
     /// 専用サーバーは終了を求められても (SIGTERM)、ロビーから外して新しい参加を断り、今の試合が終わるまで止まるのを待つ (.Shutdown.cs)。
-    /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
+    /// どこからメニューへ戻るときも (<see cref="IMenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
     /// <para>
     /// <c>-bots</c> は試合の進行役を Spawn する前に <see cref="NetTeamDeathmatch.LaunchBots"/> へ渡す (Bot を足すのは試合の .Bots.cs)。
     /// <c>-map</c> は .Map.cs、<c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> は .NetSimulation.cs、
@@ -97,6 +97,7 @@ namespace Fps.Net
         private bool _failed;
         private bool _startedFromMenu;
         private bool _returningToMenu;
+        private IMenuNavigator _menu;
         private float _nextStatusLogTime;
 
         public GameObject PlayerPrefab
@@ -167,8 +168,17 @@ namespace Fps.Net
             var isDedicatedServer = NetStartup.IsDedicatedServerBuild;
 
             // 起動引数が不正で先に止まっても、メニューで選んだ要求を次の起動まで持ち越さないよう最初に受け取る
-            var menuLobby = MenuNavigator.TakeLobbyRequest();
-            MenuNavigator.ReturningToMenu += HandleReturningToMenu;
+            _menu = GameUi.Menu;
+            var menuLobby = LobbyLaunchOptions.None;
+            if (_menu != null)
+            {
+                menuLobby = _menu.TakeLobbyRequest();
+                _menu.ReturningToMenu += HandleReturningToMenu;
+            }
+            else
+            {
+                Debug.LogWarning("[Net] no menu navigator is registered with GameUi.Menu; ignoring lobby requests from the menu and staying here on failure");
+            }
 
             // サーバーとクライアントを同じマシンで並べて動かすので、裏に回っても止めない
             Application.runInBackground = true;
@@ -622,7 +632,12 @@ namespace Fps.Net
 
         private void OnDestroy()
         {
-            MenuNavigator.ReturningToMenu -= HandleReturningToMenu;
+            if (_menu != null)
+            {
+                _menu.ReturningToMenu -= HandleReturningToMenu;
+                _menu = null;
+            }
+
             StopServerEventLog();
             StopWatchingMatchForDrain();
 
@@ -826,8 +841,15 @@ namespace Fps.Net
                 return;
             }
 
-            // メニューがビルドに無ければ MenuNavigator がエラーログを出し、このシーンに留まる
-            MenuNavigator.ReturnToMenu(notice);
+            var menu = _menu ?? GameUi.Menu;
+            if (menu == null)
+            {
+                Debug.LogError("[Net] cannot return to the menu: no menu navigator is registered with GameUi.Menu; staying in this scene");
+                return;
+            }
+
+            // 理由の文はまだ表のキーになっていないので、作った文字列をそのまま運ぶ。メニューがビルドに無ければ menu がエラーログを出し、このシーンに留まる
+            menu.ReturnToMenu(string.IsNullOrWhiteSpace(notice) ? default : LocalizedText.Literal(notice));
         }
 
         /// <summary>

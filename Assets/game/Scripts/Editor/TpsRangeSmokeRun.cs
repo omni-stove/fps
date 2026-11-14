@@ -22,6 +22,8 @@ namespace Fps.Editor
     /// 転がっている間は撃てず、終わったら撃てる。</item>
     /// <item>同じ開けた場所で手榴弾を投げ、残りが <see cref="GameRulesAssetBuilder.TpsRangeGrenadeCount"/> から 1 つ減り
     /// (<c>[Grenade] thrown remaining=</c>)、信管が切れて爆発する (<c>[Grenade] exploded</c>)。</item>
+    /// <item>プレイヤーのすぐ前で小さな爆発を起こして巻き込ませ、それまでの射撃と合わせて画面の揺れのトラウマが
+    /// 発砲・爆発・被弾のそれぞれで足される (<c>[CameraShake] trauma +… source=fire|explosion|damage</c>)。</item>
     /// </list>
     /// どれかが成り立たないか、Play 中にエラー・例外・Assert のログが出たら終了コード 1、すべて成り立てば 0 で終わる。
     /// <see cref="SmokeSuite"/> には入れていない。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
@@ -63,6 +65,13 @@ namespace Fps.Editor
         /// <summary>回避で少なくとも動くべき水平の距離の、<see cref="MotorSpec.DodgeDistance"/> に対する割合。床との摩擦や最後のフレームの端数を見込む。</summary>
         public const float MinDodgeDistanceRatio = 0.5f;
 
+        public const float CloseExplosionDistance = 2f;
+
+        public const float CloseExplosionRadius = 4f;
+
+        // 巻き込んだプレイヤーを倒すと被弾の後のリスポーンが手順に割り込むので、倒さない小ささにする。
+        public const int CloseExplosionDamage = 10;
+
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
@@ -78,6 +87,7 @@ namespace Fps.Editor
         private static readonly string _vaultEndLog = PlayerController.FormatVaultingLog(false);
         private static readonly string _grenadeThrownLog = GrenadeThrower.LogTag + " thrown remaining=";
         private static readonly string _grenadeExplodedLog = GrenadeThrower.LogTag + " exploded ";
+        private static readonly string _shakeTraumaLog = CameraShake.LogTag + " trauma +";
 
         private static readonly List<string> _errors = new List<string>();
         private static Step _step;
@@ -104,6 +114,9 @@ namespace Fps.Editor
         private static bool _grenadeCountDropped;
         private static bool _grenadeExploded;
         private static ThrownGrenade _grenade;
+        private static bool _sawFireShake;
+        private static bool _sawExplosionShake;
+        private static bool _sawDamageShake;
 
         private enum Step
         {
@@ -119,6 +132,8 @@ namespace Fps.Editor
             FireAfterDodge,
             ThrowGrenade,
             WaitGrenadeExplosion,
+            CloseExplosion,
+            WaitCloseExplosionShake,
             Done,
         }
 
@@ -139,6 +154,7 @@ namespace Fps.Editor
                 // シーンは TPS 射撃場のルール (カバー・回避・乗り越えが On) を配線するので、先にアセットを作り直す。
                 WeaponAssetBuilder.Build();
                 GameRulesAssetBuilder.Build();
+                new CameraShakeSettingsAssetStep().Build();
                 TpsRangeSceneBuilder.Build();
                 EditorSceneManager.OpenScene(TpsRangeSceneBuilder.ScenePath, OpenSceneMode.Single);
 
@@ -198,6 +214,9 @@ namespace Fps.Editor
             _grenadeCountDropped = false;
             _grenadeExploded = false;
             _grenade = null;
+            _sawFireShake = false;
+            _sawExplosionShake = false;
+            _sawDamageShake = false;
         }
 
         private static void OnLog(string condition, string stackTrace, LogType type)
@@ -261,6 +280,18 @@ namespace Fps.Editor
             {
                 _sawGrenadeExploded = true;
             }
+            else if (condition.StartsWith(_shakeTraumaLog, StringComparison.Ordinal))
+            {
+                _sawFireShake |= HasShakeSource(condition, CameraShake.SourceFire);
+                _sawExplosionShake |= HasShakeSource(condition, CameraShake.SourceExplosion);
+                _sawDamageShake |= HasShakeSource(condition, CameraShake.SourceDamage);
+            }
+        }
+
+        private static bool HasShakeSource(string line, string source)
+        {
+            var field = " source=" + source;
+            return line.Contains(field + " ", StringComparison.Ordinal) || line.EndsWith(field, StringComparison.Ordinal);
         }
 
         private static void OnUpdate()
@@ -407,6 +438,17 @@ namespace Fps.Editor
 
                 case Step.WaitGrenadeExplosion:
                     return WaitGrenadeExplosion();
+
+                case Step.CloseExplosion:
+                    return StartCloseExplosion(world);
+
+                case Step.WaitCloseExplosionShake:
+                    if (_sawExplosionShake && _sawDamageShake)
+                    {
+                        _step = Step.Done;
+                    }
+
+                    return null;
 
                 default:
                     return null;
@@ -790,7 +832,28 @@ namespace Fps.Editor
                 return $"the grenade exploded but no '{_grenadeExplodedLog}' line was logged";
             }
 
-            _step = Step.Done;
+            _step = Step.CloseExplosion;
+            return null;
+        }
+
+        // 投げた手榴弾はどこまで転がるか決まらず、揺れの届く距離の外で爆発することもあるので、揺れは確実に届く近さの爆発で確かめる。
+        private static string StartCloseExplosion(BootstrapWorld world)
+        {
+            if (!_sawFireShake)
+            {
+                return $"the player's shots logged no '{_shakeTraumaLog}... source={CameraShake.SourceFire}' line";
+            }
+
+            var shake = world.Player.GetComponent<CameraShake>();
+            if (shake == null || !shake.isActiveAndEnabled || !shake.IsLocalView)
+            {
+                return $"the player has no active CameraShake on the local view; check {nameof(CharacterComponents)}.{nameof(CharacterComponents.Attach)}";
+            }
+
+            var body = world.Player.transform;
+            var center = body.position + (body.forward * CloseExplosionDistance);
+            ThrownGrenade.Spawn(null, center, Vector3.zero, 0f, new ExplosionDamage(CloseExplosionDamage, CloseExplosionRadius), 0);
+            _step = Step.WaitCloseExplosionShake;
             return null;
         }
 
@@ -843,7 +906,7 @@ namespace Fps.Editor
 
             problems.AddRange(_errors);
             Debug.Log(
-                $"{LogTag} step={_step} cover enter={_sawCoverEnter} blind fire={_sawBlindFire} vault probe={_sawVaultProbe} vault start={_sawVaultStart} vaulting={_vaultingOnStart} vault end={_sawVaultEnd} vault crossed={_crossedVaultWall} dodge start={_sawDodgeStart} dodge end={_sawDodgeEnd} dodge blocked fire={_dodgeBlockedFire} grenade thrown={_sawGrenadeThrown} grenade count dropped={_grenadeCountDropped} grenade exploded={_grenadeExploded} grenade explosion log={_sawGrenadeExploded} errors={_errors.Count.ToString(CultureInfo.InvariantCulture)}");
+                $"{LogTag} step={_step} cover enter={_sawCoverEnter} blind fire={_sawBlindFire} vault probe={_sawVaultProbe} vault start={_sawVaultStart} vaulting={_vaultingOnStart} vault end={_sawVaultEnd} vault crossed={_crossedVaultWall} dodge start={_sawDodgeStart} dodge end={_sawDodgeEnd} dodge blocked fire={_dodgeBlockedFire} grenade thrown={_sawGrenadeThrown} grenade count dropped={_grenadeCountDropped} grenade exploded={_grenadeExploded} grenade explosion log={_sawGrenadeExploded} shake fire={_sawFireShake} shake explosion={_sawExplosionShake} shake damage={_sawDamageShake} errors={_errors.Count.ToString(CultureInfo.InvariantCulture)}");
 
             var passed = problems.Count == 0
                 && _step == Step.Done
@@ -860,7 +923,10 @@ namespace Fps.Editor
                 && _sawGrenadeThrown
                 && _grenadeCountDropped
                 && _grenadeExploded
-                && _sawGrenadeExploded;
+                && _sawGrenadeExploded
+                && _sawFireShake
+                && _sawExplosionShake
+                && _sawDamageShake;
             if (passed)
             {
                 Finish(SuccessExitCode, "passed");

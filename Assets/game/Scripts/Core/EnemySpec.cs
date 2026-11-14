@@ -53,9 +53,40 @@ namespace Fps.Core
 
         public BomberSpec Bomber { get; }
 
+        public const float DefaultSightRange = 20f;
+        public const float DefaultAttackRange = 12f;
+        public const float DefaultLoseSightSeconds = 2f;
+        public const float DefaultSearchSeconds = 6f;
+        public const float DefaultReactionSeconds = 1.0f;
+
+        /// <summary>Attack に入って最初の 1 発の散らばりの半角 (度)。12m 先で半径 1m ほどに散り、外れやすい。</summary>
+        public const float DefaultOpeningSpreadDegrees = 5f;
+
+        public const float DefaultSettledSpreadDegrees = 0f;
+        public const int DefaultOpeningShots = 3;
         public const float DefaultCoverHideSeconds = 1.5f;
         public const float DefaultCoverPeekSeconds = 2f;
         public const float DefaultCoverHealthFraction = 0.5f;
+        public const float DefaultStaggerResistance = 0f;
+
+        public static readonly EnemySpec Default = new EnemySpec(
+            DefaultSightRange,
+            DefaultAttackRange,
+            DefaultLoseSightSeconds,
+            DefaultSearchSeconds,
+            DefaultReactionSeconds,
+            DefaultOpeningSpreadDegrees,
+            DefaultSettledSpreadDegrees,
+            DefaultOpeningShots,
+            DefaultCoverHideSeconds,
+            DefaultCoverPeekSeconds,
+            DefaultCoverHealthFraction,
+            EnemyArchetype.Rifleman,
+            ShieldSpec.Default,
+            SniperSpec.Default,
+            ChargerSpec.Default,
+            BomberSpec.Default,
+            DefaultStaggerResistance);
 
         /// <param name="sightRange">視認距離。0 より大きい。</param>
         /// <param name="attackRange">攻撃距離。0 より大きく sightRange 以下。</param>

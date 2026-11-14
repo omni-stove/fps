@@ -329,7 +329,7 @@ namespace Fps.Tests.EditMode
             Assert.That(IsVisible(eye, route[2]), Is.True, "the last point is in the open");
             Assert.That(
                 Vector3.Distance(Vector3.zero, route[2]),
-                Is.LessThan(EnemyAgent.DefaultSightRange),
+                Is.LessThan(EnemySpec.DefaultSightRange),
                 "the player is within sight from the last point");
         }
 

@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     // 殴ってくる敵。射撃場の床は GameBootstrap が実行時に作り NavMesh が無いので、自前の足場を置き、Play 中に焼いてから敵を有効にする (NavMeshBakeActivator)。
-    // 出現位置・ほかの smoke の手順の場所・殴る的から視界 (EnemyAgent.DefaultSightRange) の外になる隅に置き、ほかの手順の間に撃ってこないようにする。
+    // 出現位置・ほかの smoke の手順の場所・殴る的から視界 (EnemySpec.DefaultSightRange) の外になる隅に置き、ほかの手順の間に撃ってこないようにする。
     public sealed class MeleeEnemyRangeFixture : ITpsRangeFixture
     {
         public const string RootName = "MeleeEnemyYard";

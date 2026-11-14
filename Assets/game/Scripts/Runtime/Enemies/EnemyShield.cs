@@ -15,6 +15,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("弾を止める盾。シーン生成スクリプトが配線する。空なら実行時に仮の板を作る")]
         private BulletShield _plate;
 
+        [SerializeField, Tooltip("盾が配線されていないときに出す盾の見た目と当たり判定。敵の足元が原点、前が +Z で、根にコライダーが要る。空なら仮の板を作る")]
+        private GameObject _platePrefab;
+
         [SerializeField, Tooltip("殴りの当たりを探すレイヤー")]
         private LayerMask _hitMask = Physics.DefaultRaycastLayers;
 
@@ -31,6 +34,12 @@ namespace Fps.Runtime
         {
             get => _plate;
             set => _plate = value;
+        }
+
+        public GameObject PlatePrefab
+        {
+            get => _platePrefab;
+            set => _platePrefab = value;
         }
 
         public ShieldGuard Guard => _guard;
@@ -77,7 +86,21 @@ namespace Fps.Runtime
             EnsureBehavior();
             if (_plate == null)
             {
-                _plate = BulletShield.CreatePlaceholder(transform);
+                _plate = CreatePlate();
+            }
+        }
+
+        // 使えないプレハブで盾の無い敵にすると弾が素通りして種類の遊び方が崩れるので、誤りは出したうえで仮の板で続ける。
+        private BulletShield CreatePlate()
+        {
+            try
+            {
+                return BulletShield.Create(transform, _platePrefab);
+            }
+            catch (System.ArgumentException e)
+            {
+                Debug.LogError($"{ShieldLog.LogTag} {e.Message}; using the placeholder shield", this);
+                return BulletShield.CreatePlaceholder(transform);
             }
         }
 

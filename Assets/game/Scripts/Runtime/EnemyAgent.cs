@@ -110,6 +110,9 @@ namespace Fps.Runtime
         /// <summary>NavMesh から外れたときに戻る先を探す半径 (メートル)。</summary>
         public const float OffMeshSnapRadius = 3f;
 
+        // プレイヤーは反動で上がる照準を手で引き戻すので、敵もたまった反動の大半を打ち消す。打ち消さないと連射の後半が頭上へ抜ける。
+        public const float RecoilControl = 0.75f;
+
         /// <summary>NavMesh に戻れなかったときに試し直す間隔 (秒)。</summary>
         public const float OffMeshRetryInterval = 1f;
 
@@ -204,6 +207,33 @@ namespace Fps.Runtime
         private Vector3? _errand;
         private bool _errandOverridesCombat;
         private readonly System.Random _random = new System.Random();
+        private readonly RecoilState _recoil = new RecoilState();
+        private int _spreadSeed;
+        private int _shotCount;
+        private float _walkSpeed;
+        private bool _sprinting;
+        private bool _aiming;
+
+        public float WalkSpeed
+        {
+            get
+            {
+                if (_brain != null)
+                {
+                    return _walkSpeed;
+                }
+
+                var agent = _agent != null ? _agent : GetComponent<NavMeshAgent>();
+                return agent != null ? agent.speed : 0f;
+            }
+        }
+
+        public bool IsSprinting => _sprinting;
+        public bool IsAiming => _aiming;
+        public RecoilState Recoil => _recoil;
+        public int ShotCount => _shotCount;
+
+        public event Action<Weapon> Fired;
 
         /// <summary>ログに出す識別子。</summary>
         public string Id
@@ -377,6 +407,7 @@ namespace Fps.Runtime
 
             _weapon = new Weapon(spec, weaponRules);
             _weapon.Reloaded += OnReloaded;
+            _recoil.Reset();
             Debug.Log($"{LogTag} id={Id} equip weapon={spec.LogName} ammo={_weapon.AmmoInMagazine}", this);
         }
 
@@ -417,16 +448,13 @@ namespace Fps.Runtime
         /// <summary>NavMesh の上にいて、Off-Mesh Link (飛び降りなど) を渡っている最中でなければ接地している。未初期化なら false。</summary>
         bool ICharacterMotionSource.IsGrounded => _agent != null && _agent.enabled && _agent.isOnNavMesh && !_agent.isOnOffMeshLink;
 
-        /// <summary>敵はしゃがまない。</summary>
-        bool ICharacterMotionSource.IsCrouched => false;
+        bool ICharacterMotionSource.IsCrouched => _crouching;
 
-        /// <summary>NavMeshAgent の速さ。未初期化なら 0。</summary>
-        float ICharacterMotionSource.WalkSpeed => _agent != null ? _agent.speed : 0f;
+        float ICharacterMotionSource.WalkSpeed => WalkSpeed;
 
-        /// <summary>敵はダッシュしない (追うときも NavMeshAgent の速さのまま歩く)。</summary>
         bool ICharacterMotionSource.TryGetSprinting(out bool sprinting)
         {
-            sprinting = false;
+            sprinting = _sprinting;
             return true;
         }
 
@@ -513,6 +541,9 @@ namespace Fps.Runtime
                 _capsule = null;
             }
 
+            // 歩きの速さはシーン生成スクリプトが NavMeshAgent に書いた値。以後 agent.speed は足の運びで毎フレーム書き換える。
+            _walkSpeed = _agent.speed;
+            _spreadSeed = _random.Next();
             _stuck = new StuckMonitor(StuckSeconds, StuckProgressDistance, StuckGoalChangeDistance);
             _stuck.Recovered += OnUnstuck;
             _brain = new EnemyBrain(spec);
@@ -718,6 +749,7 @@ namespace Fps.Runtime
 
             var deltaSeconds = Time.deltaTime;
             _weapon.Tick(deltaSeconds);
+            _recoil.Tick(deltaSeconds);
 
             var member = GetComponent<SideMember>();
             if (member != null)
@@ -743,12 +775,43 @@ namespace Fps.Runtime
             LogCoverChange();
             var errand = ErrandMoveTo();
             SetCrouching(!errand.HasValue && decision.Crouch && _brain.CurrentCoverPoint?.Height == CoverHeight.Low);
+            var firing = decision.Fire && !_unarmed;
+            UpdateGait(firing);
             MoveTo(errand ?? CoverMoveTo(decision));
             WatchProgress(deltaSeconds);
             Face(decision.LookAt, deltaSeconds);
-            if (decision.Fire && !_unarmed)
+            if (firing)
             {
                 Shoot();
+            }
+            else
+            {
+                TopUpMagazine();
+            }
+        }
+
+        private void UpdateGait(bool firing)
+        {
+            var phase = _brain.CoverPhase;
+            _aiming = !_unarmed && EnemyGait.IsAiming(_brain.State, phase);
+            _sprinting = EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing);
+            _agent.speed = EnemyGait.Speed(_walkSpeed, _sprinting, _crouching);
+        }
+
+        // プレイヤーと同じく、撃ち合いの合間 (戦っていないときと遮蔽点に隠れている間) に減った弾倉を詰め直す。
+        private void TopUpMagazine()
+        {
+            if (_unarmed || _weapon.IsReloading || _weapon.AmmoInMagazine >= _weapon.Spec.MagazineSize)
+            {
+                return;
+            }
+
+            var state = _brain.State;
+            var lull = state == EnemyState.Idle || state == EnemyState.Patrol || state == EnemyState.Search
+                || (state == EnemyState.TakeCover && _brain.CoverPhase == EnemyCoverPhase.Hiding);
+            if (lull && _weapon.TryStartReload())
+            {
+                Debug.Log($"{LogTag} id={Id} reload", this);
             }
         }
 
@@ -978,6 +1041,10 @@ namespace Fps.Runtime
             _weapon.Reloaded -= OnReloaded;
             _weapon = new Weapon(_weapon.Spec, _weaponRules);
             _weapon.Reloaded += OnReloaded;
+            _recoil.Reset();
+            _sprinting = false;
+            _aiming = false;
+            _agent.speed = _walkSpeed;
 
             // 無効のまま Transform を動かしてから有効にすると、NavMeshAgent は新しい位置の近くの NavMesh に載る。
             if (_agent.enabled && _agent.isOnNavMesh)
@@ -1332,18 +1399,58 @@ namespace Fps.Runtime
                 direction = transform.forward;
             }
 
+            // プレイヤー (WeaponController.Fire) と同じ順: 武器のばらつき → たまった反動 → この弾の反動を次の弾へ足す。
+            // 判断の散らばり (撃ち始めは外しやすい) はその上に重ねる。
+            var spec = _weapon.Spec;
+            var shotIndex = _shotCount;
+            _shotCount = unchecked(_shotCount + 1);
+            var cone = SpreadPattern.ConeDegrees(spec, _aiming ? 1f : 0f, MoveFraction());
+            if (cone > 0f)
+            {
+                direction = SpreadPattern.Direction(direction.ToNumerics(), cone, _spreadSeed, shotIndex).ToUnity();
+            }
+
+            direction = WithRecoil(direction, _recoil, RecoilControl);
+            _recoil.Kick(spec, _spreadSeed, shotIndex);
+
             var spread = _brain.NextShotSpreadDegrees;
             direction = BlindFireShot.Spread(direction.ToNumerics(), spread, _random).ToUnity();
             _brain.RecordShot();
+            Fired?.Invoke(_weapon);
 
-            var spec = _weapon.Spec;
-            var result = Hitscan.Fire(eye, direction, spec.Range, spec.Damage, spec.Falloff, transform, weaponId: spec.Id);
+            var result = Hitscan.Fire(eye, direction, spec.Range, spec.Damage, spec.Falloff, transform, spec.ExplosionRadius, spec.Id);
             Debug.Log(
                 string.Format(
                     CultureInfo.InvariantCulture,
-                    "{0} id={1} fire ammo={2} spread={3:F1} hit={4} dmg={5}",
-                    LogTag, Id, _weapon.AmmoInMagazine, spread, DescribeHit(result), result.Damage),
+                    "{0} id={1} fire ammo={2} spread={3:F1} cone={4:F1} hit={5} dmg={6}",
+                    LogTag, Id, _weapon.AmmoInMagazine, spread, cone, DescribeHit(result), result.Damage),
                 this);
+        }
+
+        private float MoveFraction()
+        {
+            var velocity = _agent.enabled ? _agent.velocity : Vector3.zero;
+            return SpreadPattern.MoveFraction(new Vector2(velocity.x, velocity.z).magnitude, _walkSpeed);
+        }
+
+        public static Vector3 WithRecoil(Vector3 direction, RecoilState recoil, float control)
+        {
+            if (recoil == null)
+            {
+                throw new ArgumentNullException(nameof(recoil));
+            }
+
+            var keep = 1f - Mathf.Clamp01(control);
+            var pitch = recoil.PitchUpDegrees * keep;
+            var yaw = recoil.YawDegrees * keep;
+            if (pitch == 0f && yaw == 0f)
+            {
+                return direction;
+            }
+
+            var flat = new Vector3(direction.x, 0f, direction.z);
+            var right = flat.sqrMagnitude > 1e-8f ? Vector3.Cross(Vector3.up, flat).normalized : Vector3.right;
+            return Quaternion.AngleAxis(yaw, Vector3.up) * (Quaternion.AngleAxis(-pitch, right) * direction);
         }
 
         private static string DescribeHit(HitscanResult result)
@@ -1403,6 +1510,8 @@ namespace Fps.Runtime
             _pendingHit = false;
             _pendingHitSource = null;
             SetCrouching(false);
+            _sprinting = false;
+            _aiming = false;
             _brain.Kill();
 
             if (_agent.isOnNavMesh)

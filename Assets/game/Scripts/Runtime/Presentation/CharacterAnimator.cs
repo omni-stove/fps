@@ -40,12 +40,6 @@ namespace Fps.Runtime
         /// <summary>Speed を寄せる秒数。歩きと走りの切り替わりで足の振りが跳ばないようにする。</summary>
         public const float SpeedDampSeconds = 0.1f;
 
-        /// <summary>敵はダッシュしないが、<see cref="CharacterPose"/> は歩きより速いダッシュの速さを求めるので、歩きにこれを掛けて渡す。</summary>
-        public const float EnemySprintRatio = 1.6f;
-
-        /// <summary>敵がしゃがんで動くときの速さの、歩きに対する割合。</summary>
-        public const float EnemyCrouchRatio = 0.5f;
-
         [SerializeField, Tooltip("置くリグのプレハブ。空なら Resources の Characters/CharacterRig を読む")]
         private GameObject _rigPrefab;
 
@@ -146,6 +140,12 @@ namespace Fps.Runtime
             {
                 enabled = false;
                 return;
+            }
+
+            // 生成済みのシーンの敵にも銃を持たせるため、シーン生成スクリプトでなく実行時にここで付ける。
+            if (_enemy != null && GetComponent<EnemyWeaponView>() == null)
+            {
+                gameObject.AddComponent<EnemyWeaponView>();
             }
 
             if (!BuildRig())
@@ -436,7 +436,7 @@ namespace Fps.Runtime
             var velocity = _navAgent != null && _navAgent.enabled ? _navAgent.velocity : Vector3.zero;
             var state = _enemy.State;
             var phase = _enemy.Brain != null ? _enemy.Brain.CoverPhase : EnemyCoverPhase.None;
-            var aiming = state == EnemyState.Attack || (state == EnemyState.TakeCover && phase == EnemyCoverPhase.Peeking);
+            var aiming = EnemyGait.IsAiming(state, phase);
 
             WeaponCategory? category = null;
             if (_enemy.Weapon != null)
@@ -449,7 +449,7 @@ namespace Fps.Runtime
                 HorizontalSpeed(velocity),
                 isGrounded: true,
                 isCrouching: _enemy.IsCrouching,
-                isSprinting: false,
+                isSprinting: _enemy.IsSprinting,
                 isAiming: aiming,
                 coverHeight: null,
                 isDowned: _damageable != null && _damageable.IsDowned,
@@ -477,9 +477,10 @@ namespace Fps.Runtime
             }
             else
             {
-                walk = _navAgent != null ? _navAgent.speed : PlayerController.DefaultWalkSpeed;
-                sprint = walk * EnemySprintRatio;
-                crouch = walk * EnemyCrouchRatio;
+                // NavMeshAgent の速さは足の運びで毎フレーム変わるので、もとの歩きの速さから求める。
+                walk = _enemy.WalkSpeed;
+                sprint = walk * EnemyGait.SprintRatio;
+                crouch = walk * EnemyGait.CrouchRatio;
             }
 
             if (_pose != null && walk.Equals(_poseWalk) && sprint.Equals(_poseSprint) && crouch.Equals(_poseCrouch))

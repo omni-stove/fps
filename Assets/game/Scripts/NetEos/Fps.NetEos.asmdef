@@ -5,7 +5,7 @@
         "Fps.Core",
         "Fps.Net",
         "Unity.Netcode.Runtime",
-        "com.playeveryware.eos-Runtime",
+        "com.Epic.OnlineServices",
         "com.playeveryware.eos.core"
     ],
     "includePlatforms": [],

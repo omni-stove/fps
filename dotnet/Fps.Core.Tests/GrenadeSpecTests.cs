@@ -142,7 +142,7 @@ namespace Fps.Core.Tests
             AssertRejected("structureDamageAtCenter", () => new GrenadeSpec(structureDamageAtCenter: -1));
         }
 
-        private static void AssertRejected(string paramName, Action create)
+        private static void AssertRejected(string paramName, Func<GrenadeSpec> create)
         {
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => create());
             Assert.That(ex.ParamName, Is.EqualTo(paramName));

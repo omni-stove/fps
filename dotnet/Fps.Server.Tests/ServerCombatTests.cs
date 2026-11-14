@@ -174,6 +174,22 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void AnExplosionBreakingManyPiecesOfOneStructureSendsItsStateOnce()
+        {
+            Start(Rules().WithDestruction(Destruction.On), wall: true, destructibleWall: true, wallPieces: 2);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            _combat.Explode(new Vector3(-1f, 2.5f, 0f), 1);
+
+            Assert.That(_log.ToString(), Does.Contain("[Destruction] structure=0"));
+            Assert.That(_context.Map.Collision.IsGroupEnabled(MapColliderGroups.Piece(0, 0)), Is.False);
+            Assert.That(_context.Map.Collision.IsGroupEnabled(MapColliderGroups.Piece(0, 1)), Is.False);
+            Assert.That(_transport.Read<StructureStateMessage>(2, m => m), Has.Count.EqualTo(1));
+        }
+
+        [Test]
         public void ALatePlayerIsToldWhichPiecesAreBroken()
         {
             Start(Rules().WithDestruction(Destruction.On), wall: true, destructibleWall: true);
@@ -475,7 +491,7 @@ namespace Fps.Server.Tests
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
-        private void Start(GameRules rules, bool wall = false, bool destructibleWall = false)
+        private void Start(GameRules rules, bool wall = false, bool destructibleWall = false, int wallPieces = 1)
         {
             var colliders = new List<WorldCollider>
             {
@@ -484,11 +500,22 @@ namespace Fps.Server.Tests
             NetMapStructures structures = null;
             if (wall)
             {
-                var group = destructibleWall ? MapColliderGroups.Piece(0, 0) : WorldCollider.StaticGroup;
-                colliders.Add(WorldCollider.Box(2, 0, group, new Vector3(0f, 2.5f, 0f), new Vector3(0.25f, 2f, 3f), Quaternion.Identity));
+                // 部品を横に並べた壁。どの部品も地面に接していて、互いに支え合わない
+                var width = 6f / wallPieces;
+                for (var i = 0; i < wallPieces; i++)
+                {
+                    var group = destructibleWall ? MapColliderGroups.Piece(0, i) : WorldCollider.StaticGroup;
+                    var center = new Vector3(0f, 2.5f, -3f + (width * (i + 0.5f)));
+                    colliders.Add(WorldCollider.Box(2 + i, 0, group, center, new Vector3(0.25f, 2f, width / 2f), Quaternion.Identity));
+                }
+
                 if (destructibleWall)
                 {
-                    structures = new NetMapStructures(new[] { new StructureLayout(_wallHealth, _wallGrounded, Array.Empty<(int, int)>()) });
+                    var health = new int[wallPieces];
+                    var grounded = new bool[wallPieces];
+                    Array.Fill(health, _wallHealth[0]);
+                    Array.Fill(grounded, _wallGrounded[0]);
+                    structures = new NetMapStructures(new[] { new StructureLayout(health, grounded, Array.Empty<(int, int)>()) });
                 }
             }
 

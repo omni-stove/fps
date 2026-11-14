@@ -33,7 +33,8 @@ namespace Fps.Server
         private readonly MatchRulesModule _rules;
         private readonly ServerMovement _movement;
         private readonly Dictionary<int, Fighter> _fighters = new Dictionary<int, Fighter>();
-        private readonly List<int> _changedStructures = new List<int>();
+        // 1 回の着弾・爆発で同じ建物の部品がいくつ壊れても、その建物の状態を送るのは 1 度だけにする
+        private readonly SortedSet<int> _changedStructures = new SortedSet<int>();
         private ServerContext _context;
         private TextWriter _log;
         private ServerMatch _match;

@@ -17,14 +17,14 @@ namespace Fps.Core
         bool SamplePosition(Vector3 position, float maxDistance, int areaMask, out Vector3 nearest);
 
         /// <summary>
-        /// from から to までの経路を求めて path に入れる。path の前の中身は捨てる。
+        /// from から destination までの経路を求めて path に入れる。path の前の中身は捨てる。
         /// はしごなどのリンクを渡る区間は、渡り始める点の <see cref="NavPathPoint.LinkId"/> で示す。
         /// </summary>
         /// <param name="from">出発点。歩ける面の上でなければ経路は求まらない。</param>
-        /// <param name="to">目的地。届かなければいちばん近づける所までの経路 (<see cref="NavPathStatus.Partial"/>) になる。</param>
+        /// <param name="destination">目的地。届かなければいちばん近づける所までの経路 (<see cref="NavPathStatus.Partial"/>) になる。</param>
         /// <param name="areaMask">通れるエリアのマスク。</param>
         /// <param name="path">結果を入れる先。</param>
         /// <returns>経路が求まったか (<see cref="NavPathStatus.Invalid"/> でないか)。</returns>
-        bool CalculatePath(Vector3 from, Vector3 to, int areaMask, NavPath path);
+        bool CalculatePath(Vector3 from, Vector3 destination, int areaMask, NavPath path);
     }
 }

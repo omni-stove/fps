@@ -10,7 +10,9 @@ namespace Fps.Protocol.Tests
         {
             Assert.That(new ConnectionId(3) == new ConnectionId(3), Is.True);
             Assert.That(new ConnectionId(3) != new ConnectionId(4), Is.True);
-            Assert.That(new ConnectionId(3).GetHashCode(), Is.EqualTo(new ConnectionId(3).GetHashCode()));
+            var first = new ConnectionId(3);
+            var second = new ConnectionId(3);
+            Assert.That(first.GetHashCode(), Is.EqualTo(second.GetHashCode()));
         }
 
         [Test]

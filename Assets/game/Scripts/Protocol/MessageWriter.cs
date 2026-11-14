@@ -17,7 +17,7 @@ namespace Fps.Protocol
         /// <summary>文字列 1 つの最長のバイト数 (UTF-8)。長さの前置きが ushort のため。</summary>
         public const int MaxStringBytes = ushort.MaxValue;
 
-        private const int InitialCapacity = 256;
+        private const int _initialCapacity = 256;
 
         private static readonly UTF8Encoding _utf8 = new UTF8Encoding(false, true);
 
@@ -32,7 +32,7 @@ namespace Fps.Protocol
             }
 
             MaxLength = maxLength;
-            _buffer = new byte[Math.Min(InitialCapacity, maxLength)];
+            _buffer = new byte[Math.Min(_initialCapacity,maxLength)];
         }
 
         /// <summary>書ける最長のバイト数。</summary>
@@ -152,8 +152,11 @@ namespace Fps.Protocol
                     "string is " + Text(count) + " bytes in UTF-8; at most " + Text(MaxStringBytes) + " can be written", nameof(value));
             }
 
-            WriteUInt16((ushort)count);
-            var at = Reserve(count);
+            // 前置きと中身を 1 回で取るのは、収まらないときに前置きだけが残らないようにするため。
+            var at = Reserve(2 + count);
+            _buffer[at] = (byte)count;
+            _buffer[at + 1] = (byte)(count >> 8);
+            at += 2;
             _utf8.GetBytes(text, 0, text.Length, _buffer, at);
         }
 

@@ -245,6 +245,32 @@
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+/* 体力の欄の上に左寄せで出す、能力の枠ごとの回数と待ち時間。行は AbilitySlotsView が入れる。 */
+.ability-slots {
+    position: absolute;
+    left: 32px;
+    bottom: 104px;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.ability-slots__row {
+    margin: 4px 0 0 0;
+    padding: 4px 14px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.ability-slots__row--waiting {
+    color: rgba(255, 255, 255, 0.55);
+}
+
 /* 弾数の欄のすぐ下に右寄せで出す、アクティブリロードの細いバー。塗りと幅の left / width は HudView が % で入れる。 */
 .hud__reload-bar {
     position: absolute;

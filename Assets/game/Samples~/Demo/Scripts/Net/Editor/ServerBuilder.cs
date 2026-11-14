@@ -86,8 +86,7 @@ namespace Fps.Editor
                     + " Build Support and Dedicated Server Build Support modules in Unity Hub");
             }
 
-            EnsureNetScene();
-            EnsureArenaScene();
+            EnsureServerScenes();
             RequireLoadoutInBuild();
 
             Directory.CreateDirectory(options.OutputDirectory);
@@ -114,6 +113,12 @@ namespace Fps.Editor
             Debug.Log("[Net] ServerBuilder: wrote " + summary.outputPath + " (" + summary.totalSize + " bytes, "
                 + summary.totalWarnings + " warning(s), " + summary.totalTime + ")");
             return report;
+        }
+
+        public static void EnsureServerScenes()
+        {
+            EnsureNetScene();
+            EnsureArenaScene();
         }
 
         /// <summary>BuildPlayerOptions に渡すターゲット。どちらも Standalone で、subtarget に Server を指定して使う。</summary>

@@ -33,6 +33,16 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ProneShrinksTheTorsoBelowTheCrouch()
+        {
+            var prone = PlayerMockPose.StanceScale(State(PlayerActionConditions.Prone));
+
+            Assert.That(prone, Is.EqualTo(PlayerMockPose.ProneScale));
+            Assert.That(prone, Is.LessThan(PlayerMockPose.CrouchScale));
+            Assert.That(PlayerMockPose.StanceScale(State(PlayerActionConditions.Prone | PlayerActionConditions.Downed)), Is.EqualTo(1f));
+        }
+
+        [Test]
         public void TorsoStandsOnTheFeet()
         {
             PlayerMockPose.Torso(1f, out var position, out var scale);

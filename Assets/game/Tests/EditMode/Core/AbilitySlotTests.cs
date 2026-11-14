@@ -207,6 +207,49 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void RefundGivesBackTheChargeAndClearsTheCooldown()
+        {
+            var slot = new AbilitySlot(new AbilitySpec(2, 5f, 3f, 0f));
+            slot.TryStart();
+            slot.Tick(1f);
+            slot.End();
+
+            slot.Refund();
+
+            Assert.That(slot.Charges, Is.EqualTo(2));
+            Assert.That(slot.CooldownRemaining, Is.Zero);
+            Assert.That(slot.RechargeElapsed, Is.Zero, "full again, so nothing is recharging");
+            Assert.That(slot.CanStart, Is.True);
+        }
+
+        [Test]
+        public void RefundKeepsTheRechargeWhileStillShort()
+        {
+            var slot = new AbilitySlot(new AbilitySpec(3, 5f, 1f, 0f));
+            slot.TryStart();
+            slot.End();
+            slot.Tick(1f);
+            slot.TryStart();
+            slot.Tick(1f);
+            slot.End();
+
+            slot.Refund();
+
+            Assert.That(slot.Charges, Is.EqualTo(2));
+            Assert.That(slot.RechargeElapsed, Is.EqualTo(2f).Within(1e-5f));
+        }
+
+        [Test]
+        public void RefundNeverGoesOverTheMax()
+        {
+            var slot = new AbilitySlot(new AbilitySpec(1, 5f, 1f, 0f));
+
+            slot.Refund();
+
+            Assert.That(slot.Charges, Is.EqualTo(1));
+        }
+
+        [Test]
         public void WaitSecondsRoundUpToATenth()
         {
             Assert.That(HudFormat.AbilityWaitSeconds(3.42f), Is.EqualTo("3.5"));

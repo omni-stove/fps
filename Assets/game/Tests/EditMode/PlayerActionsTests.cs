@@ -71,6 +71,7 @@ namespace Fps.Tests.EditMode
                 typeof(BlindFireActionInstaller),
                 typeof(MoveActionInstaller),
                 typeof(SuppressionActionInstaller),
+                typeof(ProneActionInstaller),
                 typeof(AbilityActionInstaller),
                 typeof(GrenadeActionInstaller),
             };
@@ -263,6 +264,20 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ProneFollowsTheRulesOnThePlayerController()
+        {
+            var mover = _player.AddComponent<PlayerController>();
+            Assert.That(mover.ProneRule, Is.EqualTo(Prone.Off));
+
+            LogAssert.Expect(
+                LogType.Log,
+                "[Actions] cover=Off blindFire=Off activeReload=Off downed=Off dodge=Off vault=Off"
+                    + NewActionsOff.Replace("prone=Off", "prone=On"));
+            PlayerActions.Attach(_player, GameRules.Default.WithActions(ActionRules.Default.WithProne(Prone.On)));
+            Assert.That(mover.ProneRule, Is.EqualTo(Prone.On));
+
+            PlayerActions.Attach(_player, GameRules.Default);
+            Assert.That(mover.ProneRule, Is.EqualTo(Prone.Off));
         public void MantleFollowsTheRulesOnThePlayerController()
         {
             var mover = _player.AddComponent<PlayerController>();

@@ -4,14 +4,16 @@ using System.Collections.Generic;
 namespace Fps.Core
 {
     /// <summary>
-    /// エクスキューション (<see cref="ExecutionSession"/>) の HUD に出す文字列。得点の欄には両チームが取ったラウンドの数を、
+    /// エクスキューション (<see cref="ExecutionSession"/>) の HUD に出す文。得点の欄には両チームが取ったラウンドの数を、
     /// その下にラウンドの番号・待ちの残り・両チームの残り人数・自分のダウンやインタラクトの進みを出す。
+    /// 表のキー <c>mode.execution.*</c> (陣営名や残り人数などの共通の文は <c>hud.*</c>) と引数の <see cref="LocalizedText"/> で返し、
+    /// 受け取った側が今の言語で文にする。
     /// </summary>
     public static class ExecutionHudText
     {
         /// <example><c>Round(2, 3)</c> は <c>ラウンド 2 (3 本先取)</c></example>
         /// <exception cref="ArgumentOutOfRangeException">roundNumber か winsToWin が 1 未満。</exception>
-        public static string Round(int roundNumber, int winsToWin)
+        public static LocalizedText Round(int roundNumber, int winsToWin)
         {
             if (roundNumber < 1)
             {
@@ -23,33 +25,35 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(winsToWin), winsToWin, "winsToWin must be at least 1");
             }
 
-            return GameText.Format("execution.round", roundNumber, winsToWin);
+            return new LocalizedText("mode.execution.round", roundNumber, winsToWin);
         }
 
         /// <summary>ラウンドが始まるまでの案内。秒数は切り上げた整数で受ける。</summary>
         /// <example><c>Preparation(3)</c> は <c>開始まで 3 秒</c></example>
         /// <exception cref="ArgumentOutOfRangeException">seconds が負。</exception>
-        public static string Preparation(int seconds)
+        public static LocalizedText Preparation(int seconds)
         {
             if (seconds < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return GameText.Format("mode.startsIn", seconds);
+            return new LocalizedText("mode.execution.startsIn", seconds);
         }
 
         /// <summary>前のラウンドの結果。winner が null なら引き分け。</summary>
         /// <example><c>RoundResult(Side.Alpha)</c> は <c>前のラウンド: ALPHA の勝ち</c></example>
-        public static string RoundResult(Side? winner)
+        public static LocalizedText RoundResult(Side? winner)
         {
-            return GameText.Format("mode.previousRound", winner.HasValue ? HudFormat.Wins(ModeHudText.SideName(winner.Value)) : HudFormat.Draw);
+            return new LocalizedText(
+                "mode.execution.previousRound",
+                winner.HasValue ? HudFormat.Wins(ModeHudText.SideName(winner.Value)) : HudFormat.Draw);
         }
 
         /// <summary>チームの残り人数。ダウン中がいればその数を添える。</summary>
         /// <example><c>Remaining(Side.Bravo, 3, 1)</c> は <c>BRAVO 残り 3 (ダウン 1)</c>、<c>Remaining(Side.Bravo, 3, 0)</c> は <c>BRAVO 残り 3</c></example>
         /// <exception cref="ArgumentOutOfRangeException">remaining か downed が負か、downed が remaining より多い。</exception>
-        public static string Remaining(Side side, int remaining, int downed)
+        public static LocalizedText Remaining(Side side, int remaining, int downed)
         {
             if (remaining < 0)
             {
@@ -62,20 +66,20 @@ namespace Fps.Core
             }
 
             var text = ModeHudText.Remaining(side, remaining);
-            return GameText.Resolve(downed == 0 ? text : ModeHudText.WithDowned(text, downed));
+            return downed == 0 ? text : ModeHudText.WithDowned(text, downed);
         }
 
         /// <summary>敵にとどめを刺している人の案内。</summary>
         /// <example><c>Executing(40)</c> は <c>とどめ 40%</c></example>
         /// <exception cref="ArgumentOutOfRangeException">percent が 0〜100 の外。</exception>
-        public static string Executing(int percent)
+        public static LocalizedText Executing(int percent)
         {
             if (percent < 0 || percent > 100)
             {
                 throw new ArgumentOutOfRangeException(nameof(percent), percent, "percent must be between 0 and 100");
             }
 
-            return GameText.Format("execution.executing", percent);
+            return new LocalizedText("mode.execution.executing", percent);
         }
 
         /// <summary>
@@ -116,7 +120,7 @@ namespace Fps.Core
         /// <param name="session">読むモード。</param>
         /// <param name="localPlayerId">この画面で操作している人。いなければ null。</param>
         /// <param name="interactTargetId">localPlayerId がいまインタラクトを押している相手。押していなければ null。</param>
-        public static IReadOnlyList<string> Lines(ExecutionSession session, int? localPlayerId, int? interactTargetId)
+        public static IReadOnlyList<LocalizedText> Lines(ExecutionSession session, int? localPlayerId, int? interactTargetId)
         {
             if (session == null)
             {
@@ -124,7 +128,7 @@ namespace Fps.Core
             }
 
             var round = session.Round;
-            var lines = new List<string>();
+            var lines = new List<LocalizedText>();
             if (round.RoundNumber >= 1)
             {
                 lines.Add(Round(round.RoundNumber, round.WinsToWin));
@@ -151,13 +155,13 @@ namespace Fps.Core
             if (local.HasValue && session.IsDowned(local.Value))
             {
                 var bleedout = session.GetBleedoutRemaining(local.Value) ?? 0f;
-                lines.Add(GameText.Resolve(HudFormat.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value)))));
+                lines.Add(HudFormat.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value))));
             }
             else if (local.HasValue && interactTargetId.HasValue && session.IsDowned(interactTargetId.Value) && mode.HasPlayer(interactTargetId.Value))
             {
                 var target = interactTargetId.Value;
                 lines.Add(mode.GetSide(target) == ownSide
-                    ? GameText.Resolve(HudFormat.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(target))))
+                    ? HudFormat.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(target)))
                     : Executing(HudFormat.RevivePercent(session.GetExecuteProgress(target))));
             }
 
@@ -165,8 +169,8 @@ namespace Fps.Core
         }
 
         /// <summary>試合が終わったときの結果。ラウンドの終わりでは出さず、先取数に届いたときだけ出す。</summary>
-        /// <example>終わっていれば <c>ALPHA の勝ち</c>、終わっていなければ <see cref="HudFormat.NoResult"/></example>
-        public static string Result(ExecutionSession session)
+        /// <example>終わっていれば <c>ALPHA の勝ち</c>、終わっていなければ <c>default</c> (空の文)</example>
+        public static LocalizedText Result(ExecutionSession session)
         {
             if (session == null)
             {
@@ -176,10 +180,10 @@ namespace Fps.Core
             var round = session.Round;
             if (round.Phase != RoundPhase.Ended || !round.Winner.HasValue)
             {
-                return HudFormat.NoResult;
+                return default;
             }
 
-            return GameText.Resolve(HudFormat.Wins(ModeHudText.SideName(round.Winner.Value)));
+            return HudFormat.Wins(ModeHudText.SideName(round.Winner.Value));
         }
     }
 }

@@ -62,6 +62,9 @@ namespace Fps.Runtime
         /// </summary>
         public const float CrouchScale = PlayerController.DefaultCrouchHeight / GameBootstrap.PlayerHeight;
 
+        /// <summary>伏せたときに胴の高さに掛ける倍率。<see cref="ProneSpec.DefaultHeight"/> と <see cref="GameBootstrap.PlayerHeight"/> の比 (<see cref="CrouchScale"/> と同じ考え)。</summary>
+        public const float ProneScale = ProneSpec.DefaultHeight / GameBootstrap.PlayerHeight;
+
         /// <summary>立っているときの目の足元からの高さ (m)。ADS で銃をここまで上げる。</summary>
         public const float EyeHeight = 1.6f;
 
@@ -110,10 +113,15 @@ namespace Fps.Runtime
         public static readonly Vector3 ViewReloadPosition = new Vector3(0.22f, -0.36f, 0.4f);
         public static readonly Vector3 ViewReloadEuler = new Vector3(30f, 0f, -20f);
 
-        /// <summary>胴の高さに掛ける倍率。しゃがみなら <see cref="CrouchScale"/>、それ以外は 1。</summary>
+        /// <summary>胴の高さに掛ける倍率。ダウン中は 1、伏せなら <see cref="ProneScale"/>、しゃがみなら <see cref="CrouchScale"/>、それ以外は 1。</summary>
         public static float StanceScale(PlayerActionState state)
         {
-            return state.IsCrouching && !state.IsDowned ? CrouchScale : 1f;
+            if (state.IsDowned)
+            {
+                return 1f;
+            }
+
+            return state.IsProne ? ProneScale : state.IsCrouching ? CrouchScale : 1f;
         }
 
         /// <summary>stanceScale の高さのときの胴の位置 (足元から) と拡縮 (Unity のカプセルは直径 1・高さ 2)。</summary>

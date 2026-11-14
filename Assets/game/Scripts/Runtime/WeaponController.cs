@@ -121,6 +121,22 @@ namespace Fps.Runtime
         public Func<float> MoveFractionSource { get; set; }
 
         /// <summary>
+        /// 姿勢で散らばりに掛ける倍率 (伏せなら <see cref="PlayerController.SpreadScale"/>) を返す。撃つたびと照準の広がりを出すたびに読む。
+        /// null なら 1 として扱う。
+        /// </summary>
+        public Func<float> SpreadScaleSource { get; set; }
+
+        /// <summary>今の姿勢で散らばりに掛ける倍率。<see cref="SpreadScaleSource"/> の値を 0〜1 に収めたもの (NaN は 1)。</summary>
+        public float SpreadScale
+        {
+            get
+            {
+                var scale = SpreadScaleSource != null ? SpreadScaleSource() : 1f;
+                return float.IsNaN(scale) ? 1f : Mathf.Clamp01(scale);
+            }
+        }
+
+        /// <summary>
         /// 今のばらつき (0〜1)。撃つたびに <see cref="SpreadPerShot"/> 増え、撃ち止めて <see cref="SpreadRecoveryDelaySeconds"/> 経つと
         /// <see cref="SpreadRecoveryPerSecond"/> で 0 へ戻る。時間は <see cref="Tick"/> (Play 中は Update) で進む。HUD が照準の広がりに使う。
         /// <see cref="Modifiers"/> があれば、それを通した値 (0〜1 に収める) を返す。
@@ -220,8 +236,17 @@ namespace Fps.Runtime
         /// </summary>
         public Func<bool> FireBlocker { get; set; }
 
-        /// <summary><see cref="FireBlocker"/> か、登録された modifier (<see cref="IsFireBlockedByModifier"/>) が今の射撃を止めているか。</summary>
-        public bool IsFireBlocked => (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
+        /// <summary><see cref="FireBlocker"/> か、武器をしまわせているもの (<see cref="Holster"/>) か、登録された modifier (<see cref="IsFireBlockedByModifier"/>) が今の射撃を止めているか。</summary>
+        public bool IsFireBlocked => IsHolstered || (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
+
+        /// <summary>
+        /// 武器をしまわせる口。はしごなどが <see cref="ControlHandoff.Claim"/> している間は撃たず (<see cref="IsFireBlocked"/>)、
+        /// 一人称の武器 (<see cref="ViewmodelPresenter"/>) と自機モックの銃を隠す。すべてが <see cref="ControlHandoff.Release"/> したら戻す。
+        /// </summary>
+        public ControlHandoff Holster { get; } = new ControlHandoff();
+
+        /// <summary>誰かが武器をしまわせているか (<see cref="Holster"/>)。</summary>
+        public bool IsHolstered => Holster.IsHandedOff;
 
         /// <summary>
         /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous を読まない (武器の時間は進める)。
@@ -731,6 +756,11 @@ namespace Fps.Runtime
                 return true;
             }
 
+            if (Deployable.TryStopBullet(hit.collider, weapon.Spec.Damage, hit.distance, weapon.Spec.Falloff, origin, direction, shooter))
+            {
+                return true;
+            }
+
             if (Hitbox.FindFor(hit.collider) == null)
             {
                 // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
@@ -830,7 +860,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読み、
-        /// 登録された modifier の倍率を掛けてから <see cref="Modifiers"/> の足し引きを通し、0 以上 <see cref="SpreadPattern.MaxDegrees"/> 以下に収める。
+        /// <see cref="SpreadScale"/> と登録された modifier の倍率を掛けてから <see cref="Modifiers"/> の足し引きを通し、0 以上 <see cref="SpreadPattern.MaxDegrees"/> 以下に収める。
         /// </summary>
         public float CurrentConeDegrees(WeaponSpec spec)
         {
@@ -841,7 +871,7 @@ namespace Fps.Runtime
 
             var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
             var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
-            var cone = SpreadPattern.ConeDegrees(spec, ads, move) * ModifierSpreadMultiplier();
+            var cone = SpreadPattern.ConeDegrees(spec, ads, move) * SpreadScale * ModifierSpreadMultiplier();
             if (_modifiers.Count == 0)
             {
                 return cone;
@@ -982,7 +1012,7 @@ namespace Fps.Runtime
             direction = _aim.forward;
         }
 
-        // origin から direction へ射程まで撃ち、自分の体 (照準と同じルートの階層) を除いた最も近い命中を返す。
+        // origin から direction へ射程まで撃ち、自分の体 (照準と同じルートの階層) と自分の弾を通す置いた物を除いた最も近い命中を返す。
         private bool TryRaycast(Vector3 origin, Vector3 direction, out RaycastHit nearest)
         {
             var ray = new Ray(origin, direction);
@@ -995,6 +1025,11 @@ namespace Fps.Runtime
             {
                 var candidate = _hitBuffer[i];
                 if (candidate.collider.transform.IsChildOf(self))
+                {
+                    continue;
+                }
+
+                if (Deployable.LetsThrough(candidate.collider, self.gameObject))
                 {
                     continue;
                 }

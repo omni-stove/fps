@@ -182,7 +182,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// origin から direction へ maxDistance まで Raycast し、shooterRoot の子孫とトリガーを除いた最も近い命中を返す。
+        /// origin から direction へ maxDistance まで Raycast し、shooterRoot の子孫とトリガーと、
+        /// shooterRoot の弾を通す置いた物 (<see cref="Deployable.LetsThrough(Collider, GameObject)"/>) を除いた最も近い命中を返す。
         /// </summary>
         /// <param name="origin">始点。</param>
         /// <param name="direction">向き。長さは問わないが 0 ではないこと。</param>
@@ -219,6 +220,11 @@ namespace Fps.Runtime
                     continue;
                 }
 
+                if (shooterRoot != null && Deployable.LetsThrough(candidate.collider, shooterRoot.gameObject))
+                {
+                    continue;
+                }
+
                 if (!found || candidate.distance < hit.distance)
                 {
                     hit = candidate;
@@ -234,6 +240,8 @@ namespace Fps.Runtime
         /// <c>[Combat] hit zone=.. dmg=.. id=.. hp=..</c> をログに出す。
         /// 壁など Hitbox の無いものに当たるか、持ち主がいないか既に死んでいれば、そこで止まりダメージは 0。
         /// 構えた盾 (<see cref="BulletShield"/>) に当たったときも、そこで止まりダメージは 0 で、建造物への被害も出さない。
+        /// 置いた物 (<see cref="Deployable"/>) は、撃った者の弾を通すものなら素通りし、通さないものならそこで止まって耐久で受ける
+        /// (<see cref="Deployable.TryStopBullet"/>。結果の <see cref="HitscanResult.Damage"/> は 0)。
         /// Hitbox の無いものに当たったときは <see cref="StructureDamage.Apply"/> に baseDamage と explosionRadius を渡す
         /// (結果の <see cref="HitscanResult.Damage"/> には含めない)。
         /// </summary>
@@ -297,6 +305,12 @@ namespace Fps.Runtime
                 return new HitscanResult(true, hit, null, 0);
             }
 
+            if (Deployable.TryStopBullet(
+                hit.collider, baseDamage, hit.distance, falloff, shooterRoot != null ? shooterRoot.position : (Vector3?)null, direction, shooter))
+            {
+                return new HitscanResult(true, hit, null, 0);
+            }
+
             var hitbox = Hitbox.FindFor(hit.collider);
             if (hitbox == null)
             {
@@ -335,7 +349,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// eye から target の狙う点 (<see cref="Damageable.AimPoint"/>) まで遮るものが無いか調べる。
-        /// 間に target 以外のコライダーがあれば false。target が死んでいるか maxDistance より遠ければ false。
+        /// 間に target 以外のコライダーがあれば false (見る側の弾を通す置いた物は数えない)。target が死んでいるか maxDistance より遠ければ false。
         /// </summary>
         /// <param name="eye">目の位置。</param>
         /// <param name="target">見たい相手。null なら false。</param>

@@ -495,6 +495,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 回避・乗り越え・崖のぼりの間は撃たせず、覗き込みを解かせる (始めたときと、その最中に覗き込もうとしたとき)。
+        /// 武器をしまっている間 (<see cref="WeaponController.IsHolstered"/>、はしごなど) も覗き込ませない。
         /// 使うかはルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら始まらないので、ここは常に配線しておく。
         /// </summary>
         private static void WireDodgeAndVault(PlayerController mover, WeaponController weapon, AimDownSights ads)
@@ -519,7 +520,7 @@ namespace Fps.Runtime
             mover.MantleStarted += _ => ads.Release();
             ads.AimingChanged += aiming =>
             {
-                if (aiming && mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling))
+                if (aiming && ((mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling)) || (weapon != null && weapon.IsHolstered)))
                 {
                     ads.Release();
                 }
@@ -527,7 +528,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 回避・乗り越え・崖のぼりの間はグレネードを投げさせず、投げている間 (<see cref="GrenadeThrower.IsThrowing"/>) は撃たせず、
+        /// 回避・乗り越え・崖のぼりの間と武器をしまっている間はグレネードを投げさせず、投げている間 (<see cref="GrenadeThrower.IsThrowing"/>) は撃たせず、
         /// 投げたら覗き込みを解かせる。投げられるかと数はルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら投げないので、ここは常に配線しておく。
         /// <see cref="WireDodgeAndVault"/> の後に呼ぶ (その射撃の止め方に足す)。
         /// </summary>
@@ -538,7 +539,8 @@ namespace Fps.Runtime
                 return;
             }
 
-            grenades.ThrowBlocker = () => mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling);
+            grenades.ThrowBlocker = () =>
+                (mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling)) || (weapon != null && weapon.IsHolstered);
 
             if (weapon != null)
             {
@@ -553,7 +555,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 射撃のばらつきに覗き込みの進み具合と移動の速さ (歩きの速さで足し切る) を読ませ、射撃の反動を視点に足させる。
+        /// 射撃のばらつきに覗き込みの進み具合と移動の速さ (歩きの速さで足し切る) と姿勢の倍率 (<see cref="PlayerController.SpreadScale"/>) を読ませ、
+        /// 射撃の反動を視点に足させる。
         /// WireAds と同じく、読むのは実行時なので Edit Mode では配線だけしておく。
         /// </summary>
         private static void WireSpreadAndRecoil(WeaponController weapon, AimDownSights ads, PlayerController mover, FirstPersonLook look)
@@ -575,6 +578,7 @@ namespace Fps.Runtime
                 var velocity = controller.velocity;
                 return SpreadPattern.MoveFraction(new Vector2(velocity.x, velocity.z).magnitude, mover.WalkSpeed);
             };
+            weapon.SpreadScaleSource = () => mover != null ? mover.SpreadScale : 1f;
 
             if (look != null)
             {
@@ -636,19 +640,20 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 倒れたときと体力を作り直したとき (キャンペーンの再開) に、しゃがみを解除し、覗き込みを即座に腰だめへ戻す。
+        /// 倒れたときと体力を作り直したとき (キャンペーンの再開) に、しゃがみと伏せを解除し、覗き込みを即座に腰だめへ戻す。
         /// </summary>
         private static void WireDeathAndRespawn(Damageable damageable, PlayerController mover, AimDownSights ads)
         {
-            damageable.Died += _ => ResetStance(mover, ads, CrouchInput.ReasonDeath);
-            damageable.HealthReset += _ => ResetStance(mover, ads, CrouchInput.ReasonRespawn);
+            damageable.Died += _ => ResetStance(mover, ads, CrouchInput.ReasonDeath, ProneInput.ReasonDeath);
+            damageable.HealthReset += _ => ResetStance(mover, ads, CrouchInput.ReasonRespawn, ProneInput.ReasonRespawn);
         }
 
-        private static void ResetStance(PlayerController mover, AimDownSights ads, string reason)
+        private static void ResetStance(PlayerController mover, AimDownSights ads, string crouchReason, string proneReason)
         {
             if (mover != null)
             {
-                mover.ReleaseCrouch(reason);
+                mover.ReleaseCrouch(crouchReason);
+                mover.ReleaseProne(proneReason);
             }
 
             // 専用サーバーや Edit Mode では ADS が初期化されておらず、戻す視野角も無い。

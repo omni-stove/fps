@@ -7,7 +7,7 @@ namespace Fps.Core
     /// プレイヤーの今のアクション (<see cref="PlayerActionState"/>) を、デバッグ表示の行に組み立てる。
     /// 並びはダッシュ・しゃがみ・回避・乗り越え・接地・カバー・ブラインドファイア・ADS・射撃・リロード・ダウン・肩・視点・武器・ばらつき。
     /// 状態の有無を表す行は <c>名前: ON</c> / <c>名前: OFF</c> で、ON のときだけ <see cref="ActionDebugLine.IsActive"/> が true。
-    /// 肩・視点・武器・ばらつきは値を出すだけで、有効にはならない。
+    /// 肩・視点・武器・ばらつきは値を出すだけで、有効にはならない。項目名と値の語は <see cref="GameText"/> から今の言語で引く。
     /// </summary>
     public static class ActionDebugFormat
     {
@@ -30,21 +30,21 @@ namespace Fps.Core
         {
             return new[]
             {
-                Toggle("ダッシュ", state.IsSprinting),
-                Toggle("しゃがみ", state.IsCrouching),
-                Toggle("回避", state.IsDodging),
-                Toggle("乗り越え", state.IsVaulting),
-                Toggle("接地", state.IsGrounded),
-                Toggle("カバー", state.IsInCover),
-                Toggle("ブラインドファイア", state.IsBlindFiring),
-                Toggle("ADS", state.IsAiming),
-                Toggle("射撃", state.IsFiring),
-                new ActionDebugLine("リロード: " + Reload(state.IsReloading, state.ReloadProgress, state.ActiveReload), state.IsReloading),
-                Toggle("ダウン", state.IsDowned),
-                new ActionDebugLine("肩: " + Shoulder(state.Shoulder), false),
-                new ActionDebugLine("視点: " + View(state.ViewMode), false),
-                new ActionDebugLine("武器: " + (state.WeaponName.Length > 0 ? state.WeaponName : None), false),
-                new ActionDebugLine("ばらつき: " + Spread(state.SpreadDegrees), false),
+                Toggle("sprint", state.IsSprinting),
+                Toggle("crouch", state.IsCrouching),
+                Toggle("dodge", state.IsDodging),
+                Toggle("vault", state.IsVaulting),
+                Toggle("grounded", state.IsGrounded),
+                Toggle("cover", state.IsInCover),
+                Toggle("blindFire", state.IsBlindFiring),
+                Toggle("ads", state.IsAiming),
+                Toggle("fire", state.IsFiring),
+                Value("reload", Reload(state.IsReloading, state.ReloadProgress, state.ActiveReload), state.IsReloading),
+                Toggle("downed", state.IsDowned),
+                Value("shoulder", Shoulder(state.Shoulder), false),
+                Value("view", View(state.ViewMode), false),
+                Value("weapon", state.WeaponName.Length > 0 ? state.WeaponName : None, false),
+                Value("spread", Spread(state.SpreadDegrees), false),
             };
         }
 
@@ -63,7 +63,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(progress), progress, "progress must be between 0 and 1");
             }
 
-            var active = " (アクティブ: " + ActiveReload(activeReload) + ")";
+            var active = " (" + GameText.Format("actionDebug.activeReload", ActiveReload(activeReload)) + ")";
             if (!reloading)
             {
                 return Off + active;
@@ -85,9 +85,14 @@ namespace Fps.Core
             return degrees.ToString("0.0", CultureInfo.InvariantCulture) + "°";
         }
 
-        private static ActionDebugLine Toggle(string label, bool active)
+        private static ActionDebugLine Toggle(string labelKey, bool active)
         {
-            return new ActionDebugLine(label + ": " + (active ? On : Off), active);
+            return Value(labelKey, active ? On : Off, active);
+        }
+
+        private static ActionDebugLine Value(string labelKey, string value, bool active)
+        {
+            return new ActionDebugLine(GameText.Get("actionDebug.label." + labelKey) + ": " + value, active);
         }
 
         private static string ActiveReload(ActiveReloadResult? result)
@@ -100,9 +105,9 @@ namespace Fps.Core
             switch (result.Value)
             {
                 case ActiveReloadResult.Success:
-                    return "成功";
+                    return GameText.Get("actionDebug.activeReload.success");
                 case ActiveReloadResult.Fail:
-                    return "失敗";
+                    return GameText.Get("actionDebug.activeReload.fail");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(result), result, "result is not a defined ActiveReloadResult");
             }
@@ -113,9 +118,9 @@ namespace Fps.Core
             switch (shoulder)
             {
                 case ShoulderSide.Right:
-                    return "右";
+                    return GameText.Get("actionDebug.shoulder.right");
                 case ShoulderSide.Left:
-                    return "左";
+                    return GameText.Get("actionDebug.shoulder.left");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(shoulder), shoulder, "shoulder is not a defined ShoulderSide");
             }
@@ -126,9 +131,9 @@ namespace Fps.Core
             switch (viewMode)
             {
                 case ViewMode.FirstPerson:
-                    return "一人称";
+                    return GameText.Get("actionDebug.view.firstPerson");
                 case ViewMode.ThirdPerson:
-                    return "三人称";
+                    return GameText.Get("actionDebug.view.thirdPerson");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(viewMode), viewMode, "viewMode is not a defined ViewMode");
             }

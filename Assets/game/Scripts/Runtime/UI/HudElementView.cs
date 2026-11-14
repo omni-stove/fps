@@ -7,7 +7,7 @@ namespace Fps.Runtime
     /// <summary>
     /// HUD の一部を受け持つビューの土台。<see cref="Hud"/> と同じ GameObject に付き、Hud が UIDocument の木を作り直すたびに
     /// <see cref="Bind"/> で Hud.uxml の自分の要素 (<see cref="ElementName"/>) を受け取る。
-    /// 何を出すかは派生クラスが決める。
+    /// 何を出すかは派生クラスが決める。持っている間に言語が変わると <see cref="OnLanguageChanged"/> で派生クラスに知らせる。
     /// HUD の量 (<see cref="Fps.Core.HudVisibility"/>) で出さないとき (<see cref="IsAllowed"/> が false) は、要素の visibility を隠す。
     /// display は派生クラスが「今出すものがあるか」で切り替えるので、量による隠し方はそれと混ぜない。
     /// </summary>
@@ -64,6 +64,7 @@ namespace Fps.Runtime
             Unbind();
             Element = element;
             ApplyAllowed(element);
+            Localizer.Changed += HandleLanguageChanged;
             OnBound(element);
         }
 
@@ -75,8 +76,27 @@ namespace Fps.Runtime
                 return;
             }
 
+            Localizer.Changed -= HandleLanguageChanged;
             OnUnbinding(Element);
             Element = null;
+        }
+
+        /// <summary>
+        /// 要素を持っている間に言語が変わった直後に呼ばれる。コードで入れた文字を今の言語 (<see cref="Localizer"/>) で入れ直す。
+        /// </summary>
+        protected virtual void OnLanguageChanged()
+        {
+        }
+
+        private void HandleLanguageChanged(Fps.Core.GameLanguage language)
+        {
+            // 破棄の後に届いた通知では消えた要素に書かない。
+            if (this == null || Element == null)
+            {
+                return;
+            }
+
+            OnLanguageChanged();
         }
 
         /// <summary><see cref="Bind"/> で要素を持った直後に呼ばれる。</summary>

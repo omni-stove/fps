@@ -42,7 +42,7 @@ namespace Fps.Core
             var ping = pingMs.HasValue ? Number(Math.Max(0, pingMs.Value)) : Unknown;
             var loss = lossPercent.HasValue ? Number(Math.Max(0, Math.Min(100, lossPercent.Value))) : Unknown;
             var tick = serverTick.HasValue ? Number(serverTick.Value) : Unknown;
-            return "Ping " + ping + " ms  ロス " + loss + "%  tick " + tick;
+            return GameText.Format("netStats.line", ping, loss, tick);
         }
 
         /// <summary>トランスポートが返す往復時間 (ms) を表示用の int にする。int に収まらなければ <see cref="int.MaxValue"/>。</summary>

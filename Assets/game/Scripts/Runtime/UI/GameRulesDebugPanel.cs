@@ -110,7 +110,7 @@ namespace Fps.Runtime
         {
             if (_instance != null && _instance != this)
             {
-                Debug.LogWarning($"{LogTag} GameRulesDebugPanel は 1 つだけ常駐させます。重複した '{name}' を消します。", this);
+                Debug.LogWarning($"{LogTag} only one GameRulesDebugPanel stays resident; destroying the duplicate '{name}'", this);
                 Destroy(gameObject);
                 return;
             }
@@ -177,7 +177,7 @@ namespace Fps.Runtime
             var world = bootstrap != null ? bootstrap.World : null;
             if (world == null)
             {
-                Debug.LogWarning($"{LogTag} このシーンには生成済みの GameBootstrap が無いため、ルールのパネルを開けません。");
+                Debug.LogWarning($"{LogTag} this scene has no GameBootstrap that has spawned; the rules panel cannot be opened");
                 return false;
             }
 
@@ -242,7 +242,7 @@ namespace Fps.Runtime
             }
             catch (ArgumentException e)
             {
-                Debug.LogError($"{LogTag} ルールを組み立てられませんでした: {e.Message}");
+                Debug.LogError($"{LogTag} could not build the rules: {e.Message}");
                 return false;
             }
 
@@ -280,7 +280,7 @@ namespace Fps.Runtime
                 if (!_warnedMissingMap)
                 {
                     _warnedMissingMap = true;
-                    Debug.LogWarning($"{LogTag} 入力の '{PlayerActionMapName}' マップが見つからないため、開いている間もプレイヤーの操作を止められません。");
+                    Debug.LogWarning($"{LogTag} the '{PlayerActionMapName}' input map was not found; the player keeps moving while the panel is open");
                 }
 
                 return;
@@ -335,7 +335,7 @@ namespace Fps.Runtime
             UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
                 scene.path, new LoadSceneParameters(LoadSceneMode.Single));
 #else
-            Debug.LogError($"{LogTag} シーン '{scene.path}' が Build Settings にないため読み直せません。次にシーンを読んだときから上書きが効きます。", this);
+            Debug.LogError($"{LogTag} scene '{scene.path}' is not in Build Settings, so it cannot be reloaded; the override takes effect from the next scene load", this);
 #endif
         }
 
@@ -354,7 +354,7 @@ namespace Fps.Runtime
             if (theme == null)
             {
                 Debug.LogError(
-                    $"{LogTag} テーマ 'Resources/{Hud.ThemeResourcePath}.tss' が見つからないため、ルールのパネルを出せません (Assets/game/UI/Resources にあるはず)。",
+                    $"{LogTag} theme 'Resources/{Hud.ThemeResourcePath}.tss' was not found (expected under Assets/game/UI/Resources); the rules panel cannot be shown",
                     this);
                 return false;
             }
@@ -383,7 +383,7 @@ namespace Fps.Runtime
             var root = document != null ? document.rootVisualElement : null;
             if (root == null)
             {
-                Debug.LogError($"{LogTag} UIDocument の木ができていないため、ルールのパネルを出せません。", this);
+                Debug.LogError($"{LogTag} the UIDocument has no visual tree; the rules panel cannot be shown", this);
                 return false;
             }
 

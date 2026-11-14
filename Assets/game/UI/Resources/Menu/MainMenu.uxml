@@ -1,21 +1,22 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <!-- メインメニュー。Fps.Runtime.MainMenuScreen が UIDocument に読み込み、name でボタンを探して押したときの行き先をつなぐ。 -->
+    <!-- text の "#キー" は文字列表 (Assets/game/Localization/Resources/Strings) のキーで、MainMenuScreen が Fps.Runtime.LocalizedTexts で今の言語の文字にする。 -->
     <Style src="MainMenu.uss" />
     <ui:VisualElement name="main-menu" class="menu">
         <ui:Label name="menu-title" text="FPS" class="menu__title" />
         <ui:VisualElement name="menu-buttons" class="menu__buttons">
             <!-- 並び順がゲームパッドで上下に動かすフォーカスの順番 (MainMenuScreen.ButtonNames と同じ)。 -->
-            <ui:Button name="menu-campaign" text="CAMPAIGN" class="menu__button" />
-            <ui:Button name="menu-create-lobby" text="ONLINE - CREATE LOBBY" class="menu__button" />
-            <ui:Button name="menu-join-lobby" text="ONLINE - JOIN LOBBY" class="menu__button" />
+            <ui:Button name="menu-campaign" text="#menu.campaign" class="menu__button" />
+            <ui:Button name="menu-create-lobby" text="#menu.createLobby" class="menu__button" />
+            <ui:Button name="menu-join-lobby" text="#menu.joinLobby" class="menu__button" />
             <!-- -register-lobby で載った専用サーバーから、版が同じで満員でないものを選んで UDP でつなぐ。 -->
-            <ui:Button name="menu-quick-match" text="ONLINE - QUICK MATCH" class="menu__button" />
-            <ui:Button name="menu-loadout" text="ONLINE - LOADOUT" class="menu__button" />
-            <ui:Button name="menu-range" text="FIRING RANGE" class="menu__button" />
+            <ui:Button name="menu-quick-match" text="#menu.quickMatch" class="menu__button" />
+            <ui:Button name="menu-loadout" text="#menu.loadout" class="menu__button" />
+            <ui:Button name="menu-range" text="#menu.range" class="menu__button" />
             <!-- 射撃場を読み、終えたことがあってもチュートリアルを最初から出す。 -->
-            <ui:Button name="menu-tutorial" text="TUTORIAL" class="menu__button" />
-            <ui:Button name="menu-settings" text="SETTINGS" class="menu__button" />
-            <ui:Button name="menu-quit" text="QUIT" class="menu__button" />
+            <ui:Button name="menu-tutorial" text="#menu.tutorial" class="menu__button" />
+            <ui:Button name="menu-settings" text="#menu.settings" class="menu__button" />
+            <ui:Button name="menu-quit" text="#menu.quit" class="menu__button" />
         </ui:VisualElement>
         <!-- 案内 (切断の理由・シーンが無いなど)。空のときは MainMenuScreen が隠す。 -->
         <ui:Label name="menu-notice" text="" class="menu__notice" style="display: none;" />

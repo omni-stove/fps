@@ -12,13 +12,13 @@ namespace Fps.Core
     public static class ScoreboardRows
     {
         /// <summary>オフラインの自分の名前。</summary>
-        public const string LocalPlayerName = "あなた";
+        public static string LocalPlayerName => GameText.Get("scoreboard.you");
 
         /// <summary><see cref="ScoreboardConnection.Connected"/> の表示。</summary>
-        public const string ConnectedText = "接続中";
+        public static string ConnectedText => GameText.Get("scoreboard.connected");
 
         /// <summary><see cref="ScoreboardConnection.Disconnected"/> の表示。</summary>
-        public const string DisconnectedText = "切断";
+        public static string DisconnectedText => GameText.Get("scoreboard.disconnected");
 
         /// <summary>
         /// entries をチームごとに分けて並べる。firstTeam の欄を先に、相手チームの欄を後に、必ず 2 つ返す
@@ -88,7 +88,7 @@ namespace Fps.Core
         /// <example><c>PlayerName(3)</c> は <c>Player 3</c></example>
         public static string PlayerName(int playerId)
         {
-            return "Player " + playerId.ToString(CultureInfo.InvariantCulture);
+            return GameText.Format("scoreboard.player", playerId);
         }
 
         /// <summary>オフラインの標的の名前。number は 1 から数える。</summary>
@@ -101,7 +101,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(number), number, "number must be 1 or more");
             }
 
-            return "標的 " + number.ToString(CultureInfo.InvariantCulture);
+            return GameText.Format("scoreboard.target", number);
         }
 
         /// <summary>キル数・デス数の欄の文字列。</summary>

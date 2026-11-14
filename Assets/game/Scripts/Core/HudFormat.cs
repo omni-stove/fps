@@ -5,7 +5,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// HUD に出す文字列の書式。体力は数値だけ、弾数は「弾倉 / 予備」、残り時間は mm:ss。
-    /// 値がまだ無いときは <see cref="NoHealth"/> などの仮の文字列を出す。
+    /// 値がまだ無いときは <see cref="NoHealth"/> などの仮の文字列を出す。言葉の入る文字列は <see cref="GameText"/> から今の言語で引く。
     /// </summary>
     public static class HudFormat
     {
@@ -91,11 +91,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return "次の試合まで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+            return GameText.Format("hud.nextMatch", seconds);
         }
 
         /// <summary>リロード中に弾倉の数の代わりに出す文字列。</summary>
-        public const string Reloading = "リロード中";
+        public static string Reloading => GameText.Get("hud.reloading");
 
         /// <summary>
         /// 弾数。リロード中は弾倉の数の代わりに <see cref="Reloading"/> を出し、予備はそのまま出す
@@ -220,13 +220,20 @@ namespace Fps.Core
         public const string NoResult = "";
 
         /// <summary>引き分けで終わったときの結果。</summary>
-        public const string Draw = "引き分け";
+        public static string Draw => GameText.Get("hud.draw");
 
         /// <summary>試合が終わったときの結果。勝ったチームか、勝者がいなければ引き分け。</summary>
         /// <example><c>Result(Team.Alpha)</c> は <c>ALPHA の勝ち</c>、<c>Result(null)</c> は <c>引き分け</c></example>
         public static string Result(Team? winner)
         {
-            return winner.HasValue ? TeamName(winner.Value) + " の勝ち" : Draw;
+            return winner.HasValue ? Wins(TeamName(winner.Value)) : Draw;
+        }
+
+        /// <summary>勝った陣営の名前 sideName の結果。モードごとの結果 (<see cref="ModeHudText.Result"/> など) も使う。</summary>
+        /// <example><c>Wins("ALPHA")</c> は <c>ALPHA の勝ち</c></example>
+        public static string Wins(string sideName)
+        {
+            return GameText.Format("hud.wins", sideName);
         }
 
         /// <summary>倒れてからリスポーンするまでの案内。秒数は切り上げた整数で受ける。</summary>
@@ -238,11 +245,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return "リスポーンまで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+            return GameText.Format("hud.respawn", seconds);
         }
 
         /// <summary><see cref="RespawnMode.None"/> で倒れたとき、次の試合が始まるまで戻らないことの案内。</summary>
-        public const string NoRespawnUntilNextMatch = "次の試合まで復活なし";
+        public static string NoRespawnUntilNextMatch => GameText.Get("hud.noRespawnUntilNextMatch");
 
         /// <summary>
         /// 倒れている間の案内を、リスポーン方式に合わせて選ぶ。Individual は自分のリスポーンまで、Wave は次のウェーブまでの秒数を
@@ -296,7 +303,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return "ダウン中 あと " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+            return GameText.Format("hud.downed", seconds);
         }
 
         /// <summary>
@@ -308,7 +315,7 @@ namespace Fps.Core
         {
             CheckPercent(revivePercent);
             var text = Downed(seconds);
-            return revivePercent == 0 ? text : text + " (蘇生 " + revivePercent.ToString(CultureInfo.InvariantCulture) + "%)";
+            return revivePercent == 0 ? text : GameText.Format("hud.downedWithRevive", text, revivePercent);
         }
 
         /// <summary>味方を起こしている人の案内。</summary>
@@ -317,7 +324,7 @@ namespace Fps.Core
         public static string Reviving(int percent)
         {
             CheckPercent(percent);
-            return "蘇生中 " + percent.ToString(CultureInfo.InvariantCulture) + "%";
+            return GameText.Format("hud.reviving", percent);
         }
 
         /// <summary>出現直後の無敵の最中の案内。無敵が切れるまでの秒数は切り上げた整数で受ける。</summary>
@@ -330,7 +337,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return "保護中 あと " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+            return GameText.Format("hud.spawnProtected", seconds);
         }
 
         /// <summary>入力が無いままだとサーバーから切られる (<see cref="GameRules.IdleKickSeconds"/>) ことの警告。切られるまでの秒数は切り上げた整数で受ける。</summary>
@@ -343,7 +350,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return "操作がありません あと " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒で切断されます";
+            return GameText.Format("hud.idleWarning", seconds);
         }
 
         private static void CheckPercent(int percent)
@@ -355,7 +362,7 @@ namespace Fps.Core
         }
 
         /// <summary>キャンペーンのチェックポイントでセーブしたときの案内。</summary>
-        public const string CheckpointSaved = "チェックポイントでセーブしました";
+        public static string CheckpointSaved => GameText.Get("hud.checkpointSaved");
 
         /// <summary>キャンペーンでプレイヤーが倒れた後、チェックポイントから再開するまでの案内。秒数は切り上げた整数で受ける。</summary>
         /// <example><c>CheckpointRestart(3)</c> は <c>チェックポイントから再開まで 3 秒</c></example>
@@ -366,11 +373,8 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return "チェックポイントから再開まで " + seconds.ToString(CultureInfo.InvariantCulture) + " 秒";
+            return GameText.Format("hud.checkpointRestart", seconds);
         }
-
-        /// <summary>残りのグレネードの数の頭に付ける文字列。</summary>
-        public const string GrenadePrefix = "グレネード ";
 
         /// <summary>残りのグレネードの数。</summary>
         /// <example><c>Grenades(2)</c> は <c>グレネード 2</c></example>
@@ -382,7 +386,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(remaining), remaining, "remaining must not be negative");
             }
 
-            return GrenadePrefix + remaining.ToString(CultureInfo.InvariantCulture);
+            return GameText.Format("hud.grenades", remaining);
         }
     }
 }

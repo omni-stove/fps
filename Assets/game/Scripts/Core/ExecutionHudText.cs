@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace Fps.Core
 {
@@ -24,7 +23,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(winsToWin), winsToWin, "winsToWin must be at least 1");
             }
 
-            return "ラウンド " + Number(roundNumber) + " (" + Number(winsToWin) + " 本先取)";
+            return GameText.Format("execution.round", roundNumber, winsToWin);
         }
 
         /// <summary>ラウンドが始まるまでの案内。秒数は切り上げた整数で受ける。</summary>
@@ -37,14 +36,14 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return "開始まで " + Number(seconds) + " 秒";
+            return GameText.Format("mode.startsIn", seconds);
         }
 
         /// <summary>前のラウンドの結果。winner が null なら引き分け。</summary>
         /// <example><c>RoundResult(Side.Alpha)</c> は <c>前のラウンド: ALPHA の勝ち</c></example>
         public static string RoundResult(Side? winner)
         {
-            return "前のラウンド: " + (winner.HasValue ? ModeHudText.SideName(winner.Value) + " の勝ち" : HudFormat.Draw);
+            return GameText.Format("mode.previousRound", winner.HasValue ? HudFormat.Wins(ModeHudText.SideName(winner.Value)) : HudFormat.Draw);
         }
 
         /// <summary>チームの残り人数。ダウン中がいればその数を添える。</summary>
@@ -62,8 +61,8 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(downed), downed, "downed must be between 0 and remaining");
             }
 
-            var text = ModeHudText.SideName(side) + " 残り " + Number(remaining);
-            return downed == 0 ? text : text + " (ダウン " + Number(downed) + ")";
+            var text = ModeHudText.Remaining(side, remaining);
+            return downed == 0 ? text : ModeHudText.WithDowned(text, downed);
         }
 
         /// <summary>敵にとどめを刺している人の案内。</summary>
@@ -76,7 +75,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(percent), percent, "percent must be between 0 and 100");
             }
 
-            return "とどめ " + Number(percent) + "%";
+            return GameText.Format("execution.executing", percent);
         }
 
         /// <summary>
@@ -180,12 +179,7 @@ namespace Fps.Core
                 return HudFormat.NoResult;
             }
 
-            return ModeHudText.SideName(round.Winner.Value) + " の勝ち";
-        }
-
-        private static string Number(int value)
-        {
-            return value.ToString(CultureInfo.InvariantCulture);
+            return HudFormat.Wins(ModeHudText.SideName(round.Winner.Value));
         }
     }
 }

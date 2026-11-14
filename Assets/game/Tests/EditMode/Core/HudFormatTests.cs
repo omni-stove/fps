@@ -16,7 +16,7 @@ namespace Fps.Core.Tests
 
         [TestCase(30, false, "30")]
         [TestCase(0, false, "0")]
-        [TestCase(0, true, HudFormat.Reloading)]
+        [TestCase(0, true, "リロード中")]
         public void MagazineIsTheMagazineCountOrTheReloadingText(int magazine, bool reloading, string expected)
         {
             Assert.That(HudFormat.Magazine(magazine, reloading), Is.EqualTo(expected));

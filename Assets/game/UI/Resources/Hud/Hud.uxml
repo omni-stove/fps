@@ -1,5 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <!-- HUD。GameBootstrap と NetHud が UIDocument に読み込み、Fps.Runtime.HudView が name で Label を探して文字列を入れる。 -->
+    <!-- text の "#キー" は文字列表 (Assets/game/Localization/Resources/Strings) のキーで、Hud が Fps.Runtime.LocalizedTexts で今の言語の文字にする。 -->
     <Style src="Hud.uss" />
     <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
         <ui:VisualElement name="hud-time-panel" class="hud__panel hud__panel--top-center" picking-mode="Ignore">
@@ -15,7 +16,7 @@
         <!-- 試合結果 (勝ったチーム・引き分け)。試合が終わっている間だけ HudView が出す。 -->
         <ui:Label name="hud-result" text="" class="hud__result" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-health-panel" class="hud__panel hud__panel--bottom-left" picking-mode="Ignore">
-            <ui:Label text="HP" class="hud__caption" picking-mode="Ignore" />
+            <ui:Label text="#hud.caption.health" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-health" text="--" class="hud__value" picking-mode="Ignore" />
         </ui:VisualElement>
         <!-- 持っている武器の名前。武器が無ければ HudView が隠す。 -->
@@ -23,7 +24,7 @@
         <!-- 残りのグレネードの数。GameBootstrap が GrenadeCountView を付け、ルールでグレネードを使うときだけ出す。 -->
         <ui:Label name="grenade-count" text="" class="grenade-count" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-ammo-panel" class="hud__panel hud__panel--bottom-right" picking-mode="Ignore">
-            <ui:Label text="AMMO" class="hud__caption" picking-mode="Ignore" />
+            <ui:Label text="#hud.caption.ammo" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-ammo" text="-- / --" class="hud__value" picking-mode="Ignore" />
         </ui:VisualElement>
         <!-- アクティブリロードの進み (塗り) と成功になる幅。リロード中だけ HudView が出し、幅と塗りの長さを % で入れる。 -->
@@ -79,12 +80,12 @@
         <ui:VisualElement name="pause-menu" class="pause" style="display: none;">
             <!-- ボタンの枠。設定画面を開いている間は PauseSettingsView が隠す。 -->
             <ui:VisualElement name="pause-panel" class="pause__panel">
-                <ui:Label text="ポーズ" class="pause__title" />
+                <ui:Label text="#pause.title" class="pause__title" />
                 <!-- オンラインでは試合が止まらないことの案内。オフラインでは PauseMenu が隠す。 -->
                 <ui:Label name="pause-note" text="" class="pause__note" style="display: none;" />
-                <ui:Button name="pause-resume" text="再開" class="pause__button" />
-                <ui:Button name="pause-settings" text="設定" class="pause__button" />
-                <ui:Button name="pause-return-to-menu" text="メニューに戻る" class="pause__button" />
+                <ui:Button name="pause-resume" text="#pause.resume" class="pause__button" />
+                <ui:Button name="pause-settings" text="#pause.settings" class="pause__button" />
+                <ui:Button name="pause-return-to-menu" text="#pause.returnToMenu" class="pause__button" />
             </ui:VisualElement>
             <!-- 設定画面の枠。「設定」で PauseSettingsView が SettingsView の中身を入れて出す。 -->
             <ui:VisualElement name="pause-settings-slot" class="pause__settings" style="display: none;" />

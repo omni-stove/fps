@@ -35,13 +35,13 @@ namespace Fps.Core
         /// <summary>断った訳の符号の最長の文字数。これより長い・使えない文字を含む符号は捨てる。</summary>
         public const int MaxDetailLength = 32;
 
-        public const string ServerStoppedMessage = "サーバーが止まりました。";
-        public const string TimedOutMessage = "サーバーからの応答が途絶えました (タイムアウト)。";
-        public const string ConnectTimedOutMessage = "サーバーに接続できませんでした (タイムアウト)。";
-        public const string RejectedMessage = "サーバーに接続を断られました。";
-        public const string VersionMismatchMessage = "版が違います。";
-        public const string ServerDrainingMessage = "サーバーが止まる準備中のため参加できません。別のサーバーにつないでください。";
-        public const string IdleKickedMessage = "操作が無い時間が続いたため、サーバーから切断されました (放置)。";
+        public static string ServerStoppedMessage => GameText.Get("disconnect.serverStopped");
+        public static string TimedOutMessage => GameText.Get("disconnect.timedOut");
+        public static string ConnectTimedOutMessage => GameText.Get("disconnect.connectTimedOut");
+        public static string RejectedMessage => GameText.Get("disconnect.rejected");
+        public static string VersionMismatchMessage => GameText.Get("disconnect.versionMismatch");
+        public static string ServerDrainingMessage => GameText.Get("disconnect.serverDraining");
+        public static string IdleKickedMessage => GameText.Get("disconnect.idleKicked");
 
         private DisconnectNotice(
             DisconnectKind kind, bool wasConnected, string message, string serverVersion, string detail, string rawReason)
@@ -183,10 +183,10 @@ namespace Fps.Core
         {
             if (string.IsNullOrEmpty(serverVersion) || string.IsNullOrEmpty(localVersion))
             {
-                return VersionMismatchMessage + "サーバーと同じ版のゲームでつないでください。";
+                return GameText.Format("disconnect.versionMismatchAdvice", VersionMismatchMessage);
             }
 
-            return "版が違います (サーバー " + serverVersion + " / このゲーム " + localVersion + ")。サーバーと同じ版のゲームでつないでください。";
+            return GameText.Format("disconnect.versionMismatchDetail", serverVersion, localVersion);
         }
 
         /// <summary>ログに出す 1 行の中身。例: <c>kind=VersionMismatch connected=False server-version=0.2.0 reason="fps:version-mismatch:0.2.0"</c>。</summary>

@@ -10,18 +10,20 @@ namespace Fps.Core
     public static class HardpointText
     {
         /// <summary>有効な拠点に誰もいないときの様子の行。</summary>
-        public const string Empty = "拠点は無人";
+        public static string Empty => GameText.Get("hardpoint.empty");
 
         /// <summary>有効な拠点に両チームがいるときの様子の行。</summary>
-        public const string Contested = "争奪中";
+        public static string Contested => GameText.Get("hardpoint.contested");
 
         /// <summary>有効な拠点と、次の拠点へ移るまでの秒数 (切り上げ)。</summary>
         /// <example><c>ActivePoint(1, 2, 22.3f)</c> は <c>拠点 B (次は C まで 23 秒)</c></example>
         public static string ActivePoint(int pointIndex, int nextPointIndex, float secondsUntilMove)
         {
-            return "拠点 " + DominationHudFormat.PointName(pointIndex)
-                + " (次は " + DominationHudFormat.PointName(nextPointIndex)
-                + " まで " + HudFormat.DisplayedSeconds(secondsUntilMove).ToString(CultureInfo.InvariantCulture) + " 秒)";
+            return GameText.Format(
+                "hardpoint.activePoint",
+                DominationHudFormat.PointName(pointIndex),
+                DominationHudFormat.PointName(nextPointIndex),
+                HudFormat.DisplayedSeconds(secondsUntilMove));
         }
 
         /// <summary>有効な拠点の様子。確保中なら陣営名を出す。</summary>
@@ -41,7 +43,7 @@ namespace Fps.Core
                         throw new ArgumentException("a held point needs a holder", nameof(holder));
                     }
 
-                    return ModeHudText.SideName(holder.Value) + " が確保中";
+                    return GameText.Format("hardpoint.held", ModeHudText.SideName(holder.Value));
                 default:
                     throw new ArgumentOutOfRangeException(nameof(status), status, "status is not a defined HardpointStatus");
             }

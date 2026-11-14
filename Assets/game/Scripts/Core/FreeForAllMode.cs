@@ -99,7 +99,7 @@ namespace Fps.Core
         /// </example>
         public static string RankText(FreeForAllStanding standing)
         {
-            var text = "順位 " + Number(standing.Rank) + "/" + Number(standing.SideCount);
+            var text = GameText.Format("freeForAll.rank", standing.Rank, standing.SideCount);
             if (!standing.Margin.HasValue)
             {
                 return text;
@@ -108,10 +108,12 @@ namespace Fps.Core
             var margin = standing.Margin.Value;
             if (margin > 0)
             {
-                return text + "  2位と +" + Number(margin);
+                return GameText.Format("freeForAll.aheadOfSecond", text, "+" + Number(margin));
             }
 
-            return margin == 0 ? text + "  1位と同点" : text + "  1位と " + Number(margin);
+            return margin == 0
+                ? GameText.Format("freeForAll.tiedForFirst", text)
+                : GameText.Format("freeForAll.behindFirst", text, Number(-margin));
         }
 
         /// <summary>今の順位を <see cref="RankText(FreeForAllStanding)"/> で返す。</summary>

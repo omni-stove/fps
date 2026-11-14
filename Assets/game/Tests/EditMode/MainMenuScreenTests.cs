@@ -203,7 +203,7 @@ namespace Fps.Tests.EditMode
             _screen.OpenLoadout();
 
             Assert.That(_screen.IsLoadoutOpen, Is.False);
-            Assert.That(_screen.Notice, Does.StartWith(MainMenuScreen.LoadoutUnavailableNotice));
+            Assert.That(_screen.Notice, Does.StartWith(MainMenuScreen.LoadoutUnavailableNotice(string.Empty)));
             Assert.That(_screen.LoadoutSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
             Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
         }
@@ -273,7 +273,7 @@ namespace Fps.Tests.EditMode
             _screen.OpenCampaign();
 
             Assert.That(_screen.IsCampaignOpen, Is.False);
-            Assert.That(_screen.Notice, Does.StartWith(CampaignMenuFormat.UnavailableNotice));
+            Assert.That(_screen.Notice, Does.StartWith(CampaignMenuFormat.Unavailable(string.Empty)));
             Assert.That(_screen.CampaignSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
             Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
         }

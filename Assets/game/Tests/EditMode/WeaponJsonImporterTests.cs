@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Editor;
@@ -66,7 +67,7 @@ namespace Fps.Tests.EditMode
         {
             var imported = WeaponJsonImporter.ImportFrom(_samplesFolder, _folder, null);
 
-            Assert.That(imported, Has.Count.EqualTo(3));
+            Assert.That(imported.Count(), Is.EqualTo(3));
             AssertSameSpec(Load("Rifle").ToSpec(), TestWeapons.RifleSpec());
             AssertSameSpec(Load("Handgun").ToSpec(), TestWeapons.HandgunSpec());
             AssertSameSpec(Load("Launcher").ToSpec(), TestWeapons.LauncherSpec());

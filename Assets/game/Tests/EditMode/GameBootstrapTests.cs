@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -277,6 +279,15 @@ namespace Fps.Tests.EditMode
             var broken = ScriptableObject.CreateInstance<GameRulesDefinition>();
             var hosts = new[] { new GameObject("Bootstrap-OverriddenNoRules"), new GameObject("Bootstrap-OverriddenBroken") };
             var worlds = new BootstrapWorld[hosts.Length];
+            var problems = new List<string>();
+            Application.LogCallback record = (message, _, type) =>
+            {
+                if (type != LogType.Log)
+                {
+                    problems.Add(type + ": " + message);
+                }
+            };
+            Application.logMessageReceived += record;
             try
             {
                 broken.RegenPerSecond = -1f;
@@ -294,10 +305,12 @@ namespace Fps.Tests.EditMode
                     Assert.That(worlds[i].Rules, Is.SameAs(_testRules), hosts[i].name);
                 }
 
-                LogAssert.NoUnexpectedReceived();
+                // 組み立ての通常のログは機能が増えるたびに増えるので、全部を並べず警告とエラーが無いことだけを見る。
+                Assert.That(problems, Is.Empty);
             }
             finally
             {
+                Application.logMessageReceived -= record;
                 foreach (var world in worlds)
                 {
                     DestroyWorld(world);
@@ -424,7 +437,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(bootstrap.World, Is.SameAs(world), "a throwing subscriber does not fail the build");
 
                 Assert.That(bootstrap.Build(), Is.SameAs(world));
-                Assert.That(received, Has.Count.EqualTo(1), "raised only when the world is first built");
+                Assert.That(received.Count(), Is.EqualTo(1), "raised only when the world is first built");
             }
             finally
             {
@@ -1079,22 +1092,22 @@ namespace Fps.Tests.EditMode
             try
             {
                 controller.Initialize(_world.Camera.transform, attack, reload);
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize, _rifle.ReserveAmmo)));
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize, _rifle.ReserveAmmo, false, _world.Rules.InfiniteReserve)));
 
                 Assert.That(model.WeaponNameText, Is.EqualTo(Localizer.Resolve(new LocalizedText(_rifle.NameKey))));
                 Assert.That(model.WeaponNameText, Is.Not.EqualTo(_rifle.NameKey), "the HUD shows the text from the table, not the key");
 
                 Assert.That(controller.Weapon.TryFire(), Is.True);
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize - 1, _rifle.ReserveAmmo)));
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize - 1, _rifle.ReserveAmmo, false, _world.Rules.InfiniteReserve)));
 
                 // 持ち替えると HUD は新しい武器を購読し直し、しまった武器の射撃では変わらない。
                 var rifle = controller.Weapon;
                 Assert.That(controller.SelectNext(), Is.True);
                 Assert.That(model.WeaponNameText, Is.EqualTo(Localizer.Resolve(new LocalizedText(_handgun.NameKey))));
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo)));
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo, false, _world.Rules.InfiniteReserve)));
                 rifle.Tick(_rifle.FireInterval);
                 rifle.TryFire();
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo)));
+                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo, false, _world.Rules.InfiniteReserve)));
             }
             finally
             {

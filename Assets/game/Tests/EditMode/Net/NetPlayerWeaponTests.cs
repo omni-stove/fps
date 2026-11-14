@@ -359,6 +359,7 @@ namespace Fps.Net.Tests
             var weapon = CreateTwoWeapons();
             var rifle = weapon.ServerWeapon;
             weapon.ServerTryFire();
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Net\] reload start client=" + weapon.OwnerClientId + " "));
             Assert.That(weapon.ServerHandleReloadRequest(weapon.OwnerClientId), Is.True);
             var intruder = weapon.OwnerClientId + 1;
             const string shotgunId = "00000000-0000-4000-8000-000000000003";

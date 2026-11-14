@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     /// <summary>
-    /// TPS の射撃場にスライディング (<see cref="SlideMovement"/>) を試す場所を置く。左奥に、+Z の端が高く -Z の端が床に着く坂 (<see cref="RampName"/>) と、
+    /// TPS の射撃場にスライディング (<see cref="SlideMovement"/>) を試す場所を置く。左端の外寄り (x = -36..-32) に、+Z の端が高く -Z の端が床に着く坂 (<see cref="RampName"/>) と、
     /// その足元から -Z へ続く平らな走路を用意する。坂の上から -Z へダッシュして滑ると、平らな床より長く滑る。
     /// 平らな床で滑る始点は <see cref="FlatStart"/>、坂で滑る始点は <see cref="SlopeStart"/> (どちらも -Z へ向いて立つ足元)。
     /// </summary>
@@ -32,7 +32,7 @@ namespace Fps.Editor
         public const float FlatLaneLength = 15f;
 
         /// <summary>坂の上の面が床に着く辺の中心。坂はここから +Z へ上る。</summary>
-        public static readonly Vector3 RampFoot = new Vector3(-18f, 0f, -8f);
+        public static readonly Vector3 RampFoot = new Vector3(-34f, 0f, -8f);
 
         /// <summary>平らな床で滑り始める足元。坂の足元から走路へ 4m 入った所。</summary>
         public static readonly Vector3 FlatStart = RampFoot + new Vector3(0f, 0f, -4f);

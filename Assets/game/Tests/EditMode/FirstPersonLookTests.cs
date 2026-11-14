@@ -201,7 +201,7 @@ namespace Fps.Tests.EditMode
             return new Fps.Core.WeaponSpec(
                 "3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13", "Test", Fps.Core.WeaponCategory.AssaultRifle, Fps.Core.FireMode.Auto,
                 30, 90, 0.1f, 2f, 10, 100f, Fps.Core.DamageFalloff.None,
-                recoilPitchDegrees: pitch, recoilYawDegrees: yaw, recoilRecoveryPerSecond: recovery);
+                recoilPitchDegrees: pitch, recoilYawDegrees: yaw, recoilRecoveryPerSecond: recovery, recoilRecoveryDelaySeconds: 0f);
         }
 
         [Test]
@@ -209,7 +209,7 @@ namespace Fps.Tests.EditMode
         {
             _look.Initialize(_pivot, _action);
             _look.ApplyLookDelta(new Vector2(30f, -10f));
-            var recoil = new Fps.Core.RecoilState(0f);
+            var recoil = new Fps.Core.RecoilState();
             _look.Recoil = recoil;
 
             recoil.Kick(RecoilSpec(4f, 0f, 0f), 1, 0);
@@ -225,7 +225,7 @@ namespace Fps.Tests.EditMode
         public void RecoilYawTurnsOnlyThePitchPivot()
         {
             _look.Initialize(_pivot, _action);
-            var recoil = new Fps.Core.RecoilState(0f);
+            var recoil = new Fps.Core.RecoilState();
             _look.Recoil = recoil;
             var spec = RecoilSpec(0f, 3f, 0f);
 
@@ -242,7 +242,7 @@ namespace Fps.Tests.EditMode
         {
             _look.Initialize(_pivot, _action);
             _look.ApplyLookDelta(new Vector2(0f, 5f));
-            var recoil = new Fps.Core.RecoilState(0f);
+            var recoil = new Fps.Core.RecoilState();
             _look.Recoil = recoil;
             recoil.Kick(RecoilSpec(4f, 2f, 100f), 1, 0);
             _look.ApplyRecoil();
@@ -260,7 +260,7 @@ namespace Fps.Tests.EditMode
         {
             _look.Initialize(_pivot, _action);
             _look.ApplyLookDelta(new Vector2(0f, 80f));
-            var recoil = new Fps.Core.RecoilState(0f);
+            var recoil = new Fps.Core.RecoilState();
             _look.Recoil = recoil;
 
             recoil.Kick(RecoilSpec(20f, 0f, 0f), 1, 0);
@@ -285,7 +285,7 @@ namespace Fps.Tests.EditMode
         public void ResyncingKeepsTheAimUnderTheRecoil()
         {
             _look.Initialize(_pivot, _action);
-            var recoil = new Fps.Core.RecoilState(0f);
+            var recoil = new Fps.Core.RecoilState();
             _look.Recoil = recoil;
             recoil.Kick(RecoilSpec(4f, 0f, 0f), 1, 0);
             _look.ApplyRecoil();

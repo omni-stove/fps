@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -117,7 +118,7 @@ namespace Fps.Tests.EditMode
             catalog.SetSprays(sprays);
             sprays.Clear();
 
-            Assert.That(catalog.Sprays, Has.Count.EqualTo(1));
+            Assert.That(catalog.Sprays.Count(), Is.EqualTo(1));
 
             catalog.SetSprays(null);
             Assert.That(catalog.Sprays, Is.Empty);
@@ -131,6 +132,7 @@ namespace Fps.Tests.EditMode
                 new ZoneBloodSpray(HitZone.Head, Track(new GameObject("Head"))),
                 new ZoneBloodSpray(HitZone.Body, Track(new GameObject("Body"))),
                 new ZoneBloodSpray(HitZone.Limb, Track(new GameObject("Limb"))),
+                new ZoneBloodSpray(HitZone.WeakPoint, Track(new GameObject("WeakPoint"))),
             });
             catalog.DefaultSpray = Track(new GameObject("Default"));
             catalog.WallDecal = Track(new GameObject("Decal"));

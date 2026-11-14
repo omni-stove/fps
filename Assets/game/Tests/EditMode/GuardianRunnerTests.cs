@@ -3,6 +3,7 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools.Utils;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
@@ -66,7 +67,7 @@ namespace Fps.Tests.EditMode
             Assert.That(marker.GetComponent<Collider>() == null, Is.True, "the marker does not block shots");
             Assert.That(marker.transform.position.y, Is.GreaterThan(enemyLeader.transform.position.y + 1f));
             Assert.That(marker.transform.position.x, Is.EqualTo(enemyLeader.transform.position.x).Within(1e-4f));
-            Assert.That(marker.Renderer.sharedMaterial.color, Is.EqualTo(GuardianLeaderMarker.ColorOf(Side.Bravo)));
+            Assert.That(marker.Renderer.sharedMaterial.color, Is.EqualTo(GuardianLeaderMarker.ColorOf(Side.Bravo)).Using(ColorEqualityComparer.Instance));
 
             var ownLeaderId = leaders.GetLeader(Side.Alpha).Value;
             if (ownLeaderId == ModeRunnerBase.LocalPlayerId)

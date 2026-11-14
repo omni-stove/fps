@@ -45,6 +45,9 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
+            // NUnit は全テストで同じインスタンスを使い回すので、前のテストの記録を残さない。
+            _left.Clear();
+            _grabbed.Clear();
             _floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             _floor.transform.position = new Vector3(0f, -0.5f, 0f);
             _floor.transform.localScale = new Vector3(40f, 1f, 40f);

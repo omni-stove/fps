@@ -152,7 +152,8 @@ namespace Fps.Tests.EditMode
             var prefab = Track(new GameObject("NoCollider"));
             shield.PlatePrefab = prefab;
 
-            LogAssert.Expect(LogType.Error, new Regex("shield prefab 'NoCollider' has no collider on its root.*using the placeholder shield", RegexOptions.Singleline));
+            // LogAssert は Regex を文字列にして持ち直すので RegexOptions が落ちる。改行をまたぐのはパターンの (?s) で指定する
+            LogAssert.Expect(LogType.Error, new Regex("(?s)shield prefab 'NoCollider' has no collider on its root.*using the placeholder shield"));
             shield.Tick(0.1f);
 
             Assert.That(shield.Plate, Is.Not.Null);

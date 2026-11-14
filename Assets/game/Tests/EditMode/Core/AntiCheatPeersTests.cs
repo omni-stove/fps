@@ -189,7 +189,7 @@ namespace Fps.Core.Tests
             var early = peers.TakeEarlyMessages(1);
 
             Assert.That(peers.IsAwaitingHello(1), Is.False);
-            Assert.That(early, Has.Count.EqualTo(1));
+            Assert.That(early.Count, Is.EqualTo(1));
             var expected = new byte[] { 2, 3 };
             Assert.That(early[0], Is.EqualTo(expected));
             Assert.That(peers.TakeEarlyMessages(1), Is.Empty);

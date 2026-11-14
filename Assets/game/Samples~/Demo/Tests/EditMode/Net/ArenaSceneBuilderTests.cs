@@ -69,7 +69,7 @@ namespace Fps.Net.Tests
 
             Assert.That(alpha, Has.Length.EqualTo(ArenaSceneBuilder.SpawnsPerTeam));
             Assert.That(bravo, Has.Length.EqualTo(ArenaSceneBuilder.SpawnsPerTeam));
-            Assert.That(ArenaSceneBuilder.SpawnPoints, Has.Count.EqualTo(ArenaSceneBuilder.SpawnsPerTeam * 2), "no spawn point is shared");
+            Assert.That(ArenaSceneBuilder.SpawnPoints.Count(), Is.EqualTo(ArenaSceneBuilder.SpawnsPerTeam * 2), "no spawn point is shared");
             Assert.That(ArenaSceneBuilder.SpawnPoints.Select(p => p.Name), Is.Unique);
 
             foreach (var point in alpha)
@@ -305,7 +305,7 @@ namespace Fps.Net.Tests
                 Assert.That(structure.DebrisPool, Is.Not.Null, structure.name);
 
                 var pieces = structure.Pieces;
-                Assert.That(pieces, Has.Count.EqualTo(ArenaSceneBuilder.BuildingPieceCount), structure.name);
+                Assert.That(pieces.Count(), Is.EqualTo(ArenaSceneBuilder.BuildingPieceCount), structure.name);
                 for (var i = 0; i < pieces.Count; i++)
                 {
                     Assert.That(pieces[i].Index, Is.EqualTo(i), structure.name);

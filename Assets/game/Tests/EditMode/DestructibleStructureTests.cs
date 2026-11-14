@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -132,7 +133,7 @@ namespace Fps.Tests.EditMode
             Assert.That(piece.GetComponent<Renderer>().enabled, Is.False);
             Assert.That(piece.GetComponent<NavMeshObstacle>().enabled, Is.False);
             Assert.That(structure.Pieces[1].Collider.enabled, Is.True, "neighbors stay");
-            Assert.That(results, Has.Count.EqualTo(1));
+            Assert.That(results.Count(), Is.EqualTo(1));
             Assert.That(results[0].Destroyed, Is.EqualTo(new[] { 0 }));
             Assert.That(results[0].Collapsed, Is.Empty, "the upper left piece still rests on the lower right one");
             Assert.That(_pool.Count, Is.EqualTo(DestructibleStructure.FragmentsPerDestroyedPiece));
@@ -165,7 +166,7 @@ namespace Fps.Tests.EditMode
             Hit(structure, 0, 100);
             Hit(structure, 1, 100);
 
-            Assert.That(results, Has.Count.EqualTo(2));
+            Assert.That(results.Count(), Is.EqualTo(2));
             Assert.That(results[1].Destroyed, Is.EqualTo(new[] { 1 }));
             Assert.That(results[1].Collapsed, Is.EqualTo(new[] { 2, 3 }));
             for (var i = 0; i < 4; i++)

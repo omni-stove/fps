@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 908fb49db7fa84e0eadfbeadebef1d80, type: 3}
+  m_Name: Campaign02
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.MissionDefinition
+  _displayNameKey: campaign.mission.Campaign02.name
+  _objectives:
+  - _id: enter_building
+    _descriptionKey: campaign.mission.Campaign02.objective.enter_building
+    _requiredCount: 1
+    _optional: 0
+    _prerequisites: []
+  - _id: use_terminal
+    _descriptionKey: campaign.mission.Campaign02.objective.use_terminal
+    _requiredCount: 1
+    _optional: 0
+    _prerequisites:
+    - enter_building
+  - _id: kill_reinforcements
+    _descriptionKey: campaign.mission.Campaign02.objective.kill_reinforcements
+    _requiredCount: 3
+    _optional: 0
+    _prerequisites:
+    - use_terminal
+  - _id: reach_extraction
+    _descriptionKey: campaign.mission.Campaign02.objective.reach_extraction
+    _requiredCount: 1
+    _optional: 0
+    _prerequisites:
+    - kill_reinforcements

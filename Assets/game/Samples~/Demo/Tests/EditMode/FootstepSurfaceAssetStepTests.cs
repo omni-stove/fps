@@ -76,7 +76,7 @@ namespace Fps.Tests.EditMode
             var variants = FootstepSurfaceAssetStep.SoundSpecsFor("concrete").Footsteps
                 .Select(spec => Convert.ToBase64String(ProceduralAudio.Render(spec)))
                 .ToList();
-            Assert.That(variants, Has.Count.EqualTo(FootstepSurfaceAssetStep.FootstepVariants));
+            Assert.That(variants.Count(), Is.EqualTo(FootstepSurfaceAssetStep.FootstepVariants));
             Assert.That(variants.Distinct().Count(), Is.EqualTo(variants.Count), "variants differ so picks do not sound repeated");
         }
 
@@ -91,8 +91,8 @@ namespace Fps.Tests.EditMode
             foreach (var id in FootstepSurfaceAssetStep.Surfaces())
             {
                 Assert.That(catalog.TryGetSurface(id, out var sounds), Is.True, id);
-                Assert.That(sounds.Footsteps, Has.Count.EqualTo(FootstepSurfaceAssetStep.FootstepVariants), id);
-                Assert.That(sounds.Landings, Has.Count.EqualTo(1), id);
+                Assert.That(sounds.Footsteps.Count(), Is.EqualTo(FootstepSurfaceAssetStep.FootstepVariants), id);
+                Assert.That(sounds.Landings.Count(), Is.EqualTo(1), id);
                 Assert.That(sounds.Footsteps.All(clip => clip != null), Is.True, id);
                 Assert.That(sounds.Footsteps[0].name, Is.EqualTo(FootstepSurfaceAssetStep.FootstepSoundName(id, 0)));
                 Assert.That(sounds.Landings[0].name, Is.EqualTo(FootstepSurfaceAssetStep.LandingSoundName(id)));
@@ -119,7 +119,7 @@ namespace Fps.Tests.EditMode
             Assert.That(AssetDatabase.AssetPathToGUID(_catalogPath), Is.EqualTo(catalogGuid));
             Assert.That(AssetDatabase.AssetPathToGUID(clipPath), Is.EqualTo(clipGuid));
             Assert.That(System.IO.File.ReadAllBytes(clipPath), Is.EqualTo(bytes));
-            Assert.That(rebuilt.Surfaces, Has.Count.EqualTo(FootstepSurfaceAssetStep.Surfaces().Count));
+            Assert.That(rebuilt.Surfaces.Count(), Is.EqualTo(FootstepSurfaceAssetStep.Surfaces().Count));
         }
 
         [Test]

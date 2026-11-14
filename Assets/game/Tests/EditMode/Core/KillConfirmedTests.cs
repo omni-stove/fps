@@ -50,7 +50,7 @@ namespace Fps.Core.Tests
             Assert.That(tag.OwnerId, Is.EqualTo(_bravo1));
             Assert.That(tag.OwnerSide, Is.EqualTo(Side.Bravo));
             Assert.That(tag.SecondsLeft, Is.EqualTo(_tagLifetime));
-            Assert.That(mode.Tags, Has.Count.EqualTo(1));
+            Assert.That(mode.Tags.Count, Is.EqualTo(1));
 
             // 倒した本人でなくても、敵のチームの誰が拾っても確定する。
             Assert.That(mode.Collect(tag.Id, _alpha2), Is.EqualTo(KillConfirmedResult.Confirmed));
@@ -88,7 +88,7 @@ namespace Fps.Core.Tests
             var tag = mode.DropTag(_bravo1);
 
             Assert.That(mode.Collect(tag.Id, _bravo1), Is.EqualTo(KillConfirmedResult.CollectorDown), "the owner is still down");
-            Assert.That(mode.Tags, Has.Count.EqualTo(1));
+            Assert.That(mode.Tags.Count, Is.EqualTo(1));
 
             mode.Session.Tick(1f);
             Assert.That(mode.Collect(tag.Id, _bravo1), Is.EqualTo(KillConfirmedResult.Denied));
@@ -200,7 +200,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => mode.DropTag(99));
             Assert.Throws<ArgumentOutOfRangeException>(() => mode.CanDropTag(99));
             Assert.Throws<ArgumentOutOfRangeException>(() => mode.Collect(tag.Id, 99));
-            Assert.That(mode.Tags, Has.Count.EqualTo(1), "a rejected collector leaves the tag on the field");
+            Assert.That(mode.Tags.Count, Is.EqualTo(1), "a rejected collector leaves the tag on the field");
         }
 
         [Test]

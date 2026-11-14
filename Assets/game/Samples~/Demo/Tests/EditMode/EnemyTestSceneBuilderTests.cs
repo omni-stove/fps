@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -257,7 +258,7 @@ namespace Fps.Tests.EditMode
 
             var drop = agent.GetComponent<DropOnDeath>();
             Assert.That(drop, Is.Not.Null, "the enemy drops pickups when it falls");
-            Assert.That(drop.Drops, Has.Count.EqualTo(2));
+            Assert.That(drop.Drops.Count(), Is.EqualTo(2));
             Assert.That(drop.Drops[0].Kind, Is.EqualTo(PickupKind.ReserveAmmo));
             Assert.That(drop.Drops[0].Amount, Is.EqualTo(EnemyTestSceneBuilder.EnemyDropAmmoAmount));
             Assert.That(drop.Drops[1].Kind, Is.EqualTo(PickupKind.Health));

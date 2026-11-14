@@ -455,6 +455,11 @@ namespace Fps.Editor
             fresh.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             fresh.SetOverrideTag("RenderType", "Transparent");
             fresh.renderQueue = (int)RenderQueue.Transparent;
+#if FPS_URP
+            // 新規作成のときだけ URP の MaterialPostprocessor がこの処理でキーワードと無効なパスを書き足し、上書き (CopySerialized) では走らない。
+            // 先にここで揃えておかないと、作り直したときにファイルが変わる。
+            BaseShaderGUI.SetMaterialKeywords(fresh, null, UnityEditor.Rendering.Universal.ShaderGUI.ParticleGUI.SetMaterialKeywords);
+#endif
 
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
             if (existing == null)

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Rifle
   m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
   _id: 6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83
-  _displayName: Rifle
+  _nameKey: weapon.rifle
   _category: 0
   _fireMode: 0
   _magazineSize: 30
@@ -25,3 +25,16 @@ MonoBehaviour:
   _falloffStart: 20
   _falloffEnd: 60
   _falloffMinMultiplier: 0.5
+  _explosionRadius: 0
+  _adsFieldOfView: 45
+  _blindFireSpreadDegrees: 8
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.6
+  _recoilPitchDegrees: 0.5
+  _recoilYawDegrees: 0.2
+  _recoilRecoveryPerSecond: 10
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 3
+  _adsSpreadDegrees: 0.5
+  _moveSpreadDegrees: 3

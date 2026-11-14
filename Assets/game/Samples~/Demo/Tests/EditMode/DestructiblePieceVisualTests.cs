@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -73,7 +74,7 @@ namespace Fps.Tests.EditMode
         {
             var hut = DestructionTestSceneBuilder.CreateHut(_scene, true, Prefab("Brick"));
 
-            Assert.That(hut.Pieces, Has.Count.EqualTo(DestructionTestSceneBuilder.PieceCount));
+            Assert.That(hut.Pieces.Count(), Is.EqualTo(DestructionTestSceneBuilder.PieceCount));
             AssertPrefabLook(hut.Pieces);
         }
 

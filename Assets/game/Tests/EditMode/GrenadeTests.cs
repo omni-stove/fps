@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -104,7 +105,7 @@ namespace Fps.Tests.EditMode
 
             var result = grenade.Explode();
 
-            Assert.That(structure.Calls, Has.Count.EqualTo(1));
+            Assert.That(structure.Calls.Count(), Is.EqualTo(1));
             Assert.That(structure.Calls[0].Damage, Is.GreaterThan(0));
             Assert.That(result.StructureHits, Is.EqualTo(1));
         }

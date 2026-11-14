@@ -140,6 +140,21 @@ namespace Fps.Net
             ApplyBody();
         }
 
+        /// <summary>
+        /// <see cref="Apply"/> してから、物理側のコライダーも同じ寸法にする。Move を挟まずに Raycast する巻き戻し (<see cref="HitboxRewinder"/>) で使う。
+        /// </summary>
+        public void ApplyForQuery(bool crouched)
+        {
+            Apply(crouched);
+
+            // CharacterController の center は Transform が動くまで物理側に反映されない。巻き戻し先が今の位置と同じこともあるので、一度ずらして戻す。
+            var position = _root.position;
+            _root.position = position + Vector3.up;
+            Physics.SyncTransforms();
+            _root.position = position;
+            Physics.SyncTransforms();
+        }
+
         /// <summary>見た目 (<see cref="BodyName"/>) を寝かせているか (ダウン中)。</summary>
         public bool IsLying { get; private set; }
 

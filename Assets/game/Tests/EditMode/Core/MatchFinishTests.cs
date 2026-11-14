@@ -58,7 +58,7 @@ namespace Fps.Core.Tests
             Assert.That(session.RestartRemainingSeconds, Is.EqualTo(5f));
 
             Assert.That(session.Finish(Team.Alpha), Is.False);
-            Assert.That(ended, Has.Count.EqualTo(1));
+            Assert.That(ended.Count, Is.EqualTo(1));
 
             session.Tick(5f);
             Assert.That(session.State, Is.EqualTo(GameModeState.Playing));

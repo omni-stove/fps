@@ -34,6 +34,10 @@ namespace Fps.Tests.EditMode
             var element = _root.Q<Label>(TutorialPromptView.UxmlName);
 
             Assert.That(element, Is.Not.Null);
+
+            // Unity 6.6 は UXML の style 属性を element.style に映さないので、付けたビューが隠したままにすることで確かめる
+            _view.Bind(_root);
+            Assert.That(_view.Element, Is.SameAs(element));
             Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 

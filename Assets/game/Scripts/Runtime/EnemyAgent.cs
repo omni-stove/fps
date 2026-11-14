@@ -313,7 +313,9 @@ namespace Fps.Runtime
         {
             get
             {
-                var offset = _agent != null ? _agent.baseOffset : 0f;
+                // 初期化の前 (Edit Mode で置いた直後など) でも、付いている NavMeshAgent の baseOffset で足元を返す。
+                var navAgent = _agent != null ? _agent : GetComponent<NavMeshAgent>();
+                var offset = navAgent != null ? navAgent.baseOffset : 0f;
                 return transform.position - (Vector3.up * offset);
             }
         }

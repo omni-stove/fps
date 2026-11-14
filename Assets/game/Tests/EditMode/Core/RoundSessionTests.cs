@@ -106,7 +106,7 @@ namespace Fps.Core.Tests
             rounds.Tick(100f);
             Assert.That(rounds.GetRoundWins(Side.Bravo), Is.EqualTo(1));
             Assert.That(rounds.RoundNumber, Is.EqualTo(3));
-            Assert.That(log, Has.Count.EqualTo(_expectedFirstToTwo.Length));
+            Assert.That(log.Count, Is.EqualTo(_expectedFirstToTwo.Length));
         }
 
         [Test]

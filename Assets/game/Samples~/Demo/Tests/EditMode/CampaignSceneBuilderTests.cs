@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Editor;
@@ -262,7 +263,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(storage.TryRead(layout.Campaign.SaveSlot, out var text), Is.True);
                 var saved = CampaignSave.FromJson(text);
                 Assert.That(saved.CheckpointId, Is.EqualTo(CampaignSceneBuilder.AreaACheckpointId));
-                Assert.That(saved.Weapons, Has.Count.EqualTo(2), "every weapon in the loadout is saved");
+                Assert.That(saved.Weapons.Count(), Is.EqualTo(2), "every weapon in the loadout is saved");
                 Assert.That(saved.EquippedWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
 
                 layout.Campaign.Tick(CampaignRunner.SavedNoticeSeconds);

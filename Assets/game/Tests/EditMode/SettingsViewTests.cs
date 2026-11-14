@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -107,7 +108,7 @@ namespace Fps.Tests.EditMode
                 _view.SetValue(ControlValue.MouseSensitivity, 300);
 
                 Assert.That(AppliedControlSettings.Current.Get(ControlValue.MouseSensitivity), Is.EqualTo(300));
-                Assert.That(received, Has.Count.EqualTo(1));
+                Assert.That(received.Count(), Is.EqualTo(1));
                 Assert.That(received[0].LookSensitivity(InputDeviceKind.KeyboardMouse), Is.EqualTo(3f));
                 Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.MouseSensitivity)).value, Is.EqualTo(300));
                 Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.MouseSensitivity)).text, Is.EqualTo("300%"));
@@ -201,7 +202,7 @@ namespace Fps.Tests.EditMode
                 _view.SetPalette(ColorPalette.RedGreen);
 
                 Assert.That(AppliedControlSettings.Current.Palette, Is.EqualTo(ColorPalette.RedGreen));
-                Assert.That(received, Has.Count.EqualTo(1));
+                Assert.That(received.Count(), Is.EqualTo(1));
                 Assert.That(TeamColors.Of(Team.Alpha, Team.Alpha), Is.EqualTo(TeamColors.ToColor(TeamPalette.RedGreen.Friendly)));
                 Assert.That(TeamColors.Of(Team.Bravo, Team.Alpha), Is.EqualTo(TeamColors.ToColor(TeamPalette.RedGreen.Enemy)));
                 Assert.That(_container.Q<Button>(SettingsView.PaletteButtonName).text, Is.EqualTo(SettingsView.FormatPalette(ColorPalette.RedGreen)));
@@ -264,7 +265,7 @@ namespace Fps.Tests.EditMode
                 _view.SetShowSubtitles(true);
 
                 Assert.That(AppliedControlSettings.Current.ShowSubtitles, Is.True);
-                Assert.That(received, Has.Count.EqualTo(1));
+                Assert.That(received.Count(), Is.EqualTo(1));
                 Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo(SettingsView.OnText));
                 Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False, "not written until it closes");
 
@@ -358,6 +359,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheScreenIsInTheLanguageOfTheSettings()
         {
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
             AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
 
             _view.Open(_container);
@@ -381,6 +383,7 @@ namespace Fps.Tests.EditMode
             Localizer.Changed += record;
             try
             {
+                LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
                 _view.SetLanguage(SettingsView.NextLanguage(GameLanguage.Japanese, _view.Languages));
 
                 Assert.That(changes, Is.EqualTo(new[] { GameLanguage.English }));
@@ -406,6 +409,7 @@ namespace Fps.Tests.EditMode
             _view.SetShowSubtitles(true);
             Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo("On"));
 
+            LogAssert.Expect(LogType.Log, new Regex("^" + Regex.Escape(SettingsView.LogTag) + " saved "));
             _view.Close();
 
             // 起動し直したときと同じく、OS の言語が日本語でも保存した言語で読む

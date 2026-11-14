@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Runtime;
 using NUnit.Framework;
 
@@ -52,8 +53,9 @@ namespace Fps.Tests.EditMode
 
             for (var i = 0; i < 1000; i++)
             {
+                // 返すより速く借り続け、上限を超える数を同時に欲しがらせる。
                 pool.Rent(i);
-                pool.ReleaseDue(i - 2);
+                pool.ReleaseDue(i - 5);
             }
 
             Assert.That(_created, Is.EqualTo(4));
@@ -113,7 +115,7 @@ namespace Fps.Tests.EditMode
             Assert.That(pool.Release(new Part()), Is.False);
             Assert.That(pool.Release(part), Is.True);
             Assert.That(pool.Release(part), Is.False, "releasing twice does nothing");
-            Assert.That(_hidden, Has.Count.EqualTo(1));
+            Assert.That(_hidden.Count(), Is.EqualTo(1));
         }
 
         [Test]

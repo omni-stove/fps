@@ -120,7 +120,9 @@ namespace Fps.Tests.EditMode
             _damageable.TakeDamage(30, Vector3.zero, Vector3.forward, DamageKind.Melee);
 
             Assert.That(_reaction.IsStaggered, Is.False);
-            Assert.That(_agent.IsInterrupted, Is.False);
+
+            // 近接の吹き飛ばしは怯みのルールと関係なく止めるので、怯みで止めていないことだけを見る
+            Assert.That(_agent.InterruptReason, Does.Not.StartWith(StaggerReaction.InterruptReasonPrefix));
         }
 
         [Test]

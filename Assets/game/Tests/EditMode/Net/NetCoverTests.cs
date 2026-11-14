@@ -303,7 +303,7 @@ namespace Fps.Net.Tests
         public void BlindFireSpreadIsTheSameForTheSameSeedAndStaysInTheCone()
         {
             var spec = new WeaponSpec(
-                "rifle", "Test", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 10, 100f, DamageFalloff.None,
+                "00000000-0000-4000-8000-000000000002", "Test", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 10, 100f, DamageFalloff.None,
                 blindFireSpreadDegrees: 8f);
             var aim = Vector3.forward;
 

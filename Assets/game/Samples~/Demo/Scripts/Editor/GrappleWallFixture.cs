@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace Fps.Editor
 {
-    // グラップルを試す、-X を向いた高い壁 2 枚。右の中ほど (x = 11..23, z = 3..10) の、開けた場所・小屋・標的の列・高い柱から離れた所に置く。
+    // グラップルを試す、-X を向いた高い壁 2 枚。開けた場所の右 (x = 21..33, z = -8..-1) の、狙撃兵と盾持ちの視界の外に置く。
     // 片方は掴めて縁の上に立てる奥行きがあり、もう片方は同じ形で掴めないレイヤーに置く。手順は GrappleSmokeStep。
     public sealed class GrappleWallFixture : ITpsRangeFixture
     {
@@ -23,12 +23,12 @@ namespace Fps.Editor
         public const float WallThickness = 2f;
 
         public const float WallWidth = 3f;
-        public const float FaceX = 21f;
-        public const float GrabbableWallZ = 4.5f;
-        public const float NotGrabbableWallZ = 8.5f;
+        public const float FaceX = 31f;
+        public const float GrabbableWallZ = -6.5f;
+        public const float NotGrabbableWallZ = -2.5f;
 
         // 目から縁までが GrappleSpec.DefaultMaxRange に十分収まり、GrappleSpec.DefaultMinRange より遠い。
-        public const float StandX = 12f;
+        public const float StandX = 22f;
 
         public int Order => 100;
 

@@ -26,6 +26,12 @@ namespace Fps.Editor
         /// <summary>Assets/ 以下の .asset であることを確かめ、区切りを / に揃えて返す。</summary>
         public static string ValidateAssetPath(string path)
         {
+            return ValidateAssetPath(path, ".asset");
+        }
+
+        /// <summary>Assets/ 以下の extension (例: ".mat") のファイルであることを確かめ、区切りを / に揃えて返す。</summary>
+        public static string ValidateAssetPath(string path, string extension)
+        {
             if (string.IsNullOrWhiteSpace(path))
             {
                 throw new ArgumentException("asset path must not be empty", nameof(path));
@@ -37,9 +43,9 @@ namespace Fps.Editor
                 throw new ArgumentException($"asset path '{path}' must be under Assets/", nameof(path));
             }
 
-            if (!normalized.EndsWith(".asset", StringComparison.OrdinalIgnoreCase))
+            if (!normalized.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
             {
-                throw new ArgumentException($"asset path '{path}' must end with .asset", nameof(path));
+                throw new ArgumentException($"asset path '{path}' must end with {extension}", nameof(path));
             }
 
             foreach (var segment in normalized.Split('/'))

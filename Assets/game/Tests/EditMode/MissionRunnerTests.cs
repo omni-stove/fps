@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -57,7 +58,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_runner.TryStart(), Is.True);
             Assert.That(_runner.IsStarted, Is.True);
-            Assert.That(_runner.Mission.Objectives, Has.Count.EqualTo(3));
+            Assert.That(_runner.Mission.Objectives.Count(), Is.EqualTo(3));
 
             Assert.That(_runner.TryStart(), Is.True, "starting twice keeps the running mission");
             LogAssert.NoUnexpectedReceived();

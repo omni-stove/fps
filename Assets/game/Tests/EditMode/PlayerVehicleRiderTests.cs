@@ -152,7 +152,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_player.IsControlHandedOff, Is.False);
             Assert.That(_player.IsMovementOverridden, Is.False);
-            Assert.That(_player.MovementOverrides, Does.Not.Contain(_rider));
+            Assert.That(_player.MovementOverrides, Has.No.Member(_rider));
             AssertNear(_body.transform.position, _leftExit + Vector3.up, "the root is placed above the exit");
             Assert.That(_player.Motor.Velocity.Length(), Is.Zero, "no momentum is carried out of the seat");
         }

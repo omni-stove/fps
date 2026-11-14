@@ -8,7 +8,7 @@ namespace Fps.Editor
     /// <summary>
     /// TPS の射撃場に置く、パラシュートを試す高い台 (<see cref="TowerName"/>)。上から +Z へ歩いて飛び降りると、
     /// 開ける高さ (<see cref="ParachuteMotion.DefaultMinOpenHeight"/>) を十分に超えたところで開け、開かずに落ちれば落下ダメージを受ける高さにする。
-    /// 左奥 (x = -19..-15, z = -17..-13) に置き、降りる先の +Z 側は空けておく。
+    /// 左端の外寄り (x = -30..-26, z = -14..-10) に置き、降りる先の +Z 側 (開いて流される 20m ほど) は空けておく。
     /// </summary>
     public sealed class ParachuteTowerFixture : ITpsRangeFixture
     {
@@ -24,7 +24,7 @@ namespace Fps.Editor
         public const float TowerWidth = 4f;
 
         /// <summary>台の床面の中心 (地面の高さ)。</summary>
-        public static readonly Vector3 TowerBase = new Vector3(-17f, 0f, -15f);
+        public static readonly Vector3 TowerBase = new Vector3(-28f, 0f, -12f);
 
         public int Order => 0;
 

@@ -29,7 +29,7 @@ namespace Fps.Core.Tests
             Assert.That(leaders.GetLeader(Side.Bravo), Is.EqualTo((int?)5));
             Assert.That(leaders.IsLeader(5), Is.True);
             Assert.That(leaders.IsLeader(3), Is.False);
-            Assert.That(chosen, Has.Count.EqualTo(2));
+            Assert.That(chosen.Count, Is.EqualTo(2));
         }
 
         [Test]
@@ -80,7 +80,7 @@ namespace Fps.Core.Tests
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(session.Winner, Is.EqualTo((Side?)Side.Alpha));
-            Assert.That(fell, Has.Count.EqualTo(1), "the leader falls once");
+            Assert.That(fell.Count, Is.EqualTo(1), "the leader falls once");
         }
 
         [Test]

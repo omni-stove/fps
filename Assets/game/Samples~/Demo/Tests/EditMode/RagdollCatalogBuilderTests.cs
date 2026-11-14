@@ -74,7 +74,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(first, Is.Not.Null);
             Assert.DoesNotThrow(first.Validate);
-            Assert.That(first.Bones, Has.Count.EqualTo(RagdollCatalogBuilder.Entries().Count));
+            Assert.That(first.Bones.Count(), Is.EqualTo(RagdollCatalogBuilder.Entries().Count));
             Assert.That(first.SettleSeconds, Is.EqualTo(RagdollCatalog.DefaultSettleSeconds));
 
             LogAssert.Expect(LogType.Log, new Regex(@"^\[RagdollCatalogBuilder\] saved 11 bone\(s\) to "));

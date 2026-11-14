@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -395,7 +396,7 @@ namespace Fps.Tests.EditMode
             asset.SetWeapons(source);
             source.Add(NewDefinition("Handgun", _handgunId));
 
-            Assert.That(asset.Weapons, Has.Count.EqualTo(1));
+            Assert.That(asset.Weapons.Count(), Is.EqualTo(1));
             Assert.That(asset.Weapons[0], Is.SameAs(rifle));
 
             asset.SetWeapons(null);

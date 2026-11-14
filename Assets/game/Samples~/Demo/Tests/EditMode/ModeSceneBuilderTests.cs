@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using NUnit.Framework;
@@ -20,7 +21,7 @@ namespace Fps.Tests.EditMode
         {
             var sides = ModeSceneBuilder.TwoSides(2, 3);
 
-            Assert.That(sides, Has.Count.EqualTo(2));
+            Assert.That(sides.Count(), Is.EqualTo(2));
             Assert.That(sides[0].Side, Is.EqualTo(new Side(0)));
             Assert.That(sides[1].Side, Is.EqualTo(new Side(1)));
             Assert.That(sides[0].BotCount, Is.EqualTo(2));

@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Text.RegularExpressions;
 using Fps.Core;
@@ -134,7 +135,7 @@ namespace Fps.Tests.EditMode
 
             var result = _view.SetBinding(ReloadKey, "<Keyboard>/e");
 
-            Assert.That(result.Conflicts, Has.Count.EqualTo(1));
+            Assert.That(result.Conflicts.Count(), Is.EqualTo(1));
             Assert.That(result.Conflicts[0].ActionName, Is.EqualTo("Interact"));
             Assert.That(_view.PendingConflict, Is.SameAs(result));
             var notice = _container.Q<Label>(SettingsView.RebindNoticeName);

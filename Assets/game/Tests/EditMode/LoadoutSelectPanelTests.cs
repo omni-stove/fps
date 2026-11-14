@@ -163,7 +163,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_panel.Confirm(), Is.True);
 
-            Assert.That(_confirmed, Has.Count.EqualTo(1));
+            Assert.That(_confirmed.Count(), Is.EqualTo(1));
             Assert.That(_confirmed[0], Is.EqualTo(new[] { _smg, _handgun }));
         }
 

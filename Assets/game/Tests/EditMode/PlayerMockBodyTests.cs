@@ -4,6 +4,7 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.TestTools.Utils;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -122,8 +123,8 @@ namespace Fps.Tests.EditMode
 
             var body = _mock.Torso.GetComponent<Renderer>().sharedMaterial;
             var gun = _mock.BodyGun.GetComponentInChildren<Renderer>().sharedMaterial;
-            Assert.That(body.color, Is.EqualTo(PlayerMockBody.BodyColor));
-            Assert.That(gun.color, Is.EqualTo(PlayerMockBody.GunColor));
+            Assert.That(body.color, Is.EqualTo(PlayerMockBody.BodyColor).Using(ColorEqualityComparer.Instance));
+            Assert.That(gun.color, Is.EqualTo(PlayerMockBody.GunColor).Using(ColorEqualityComparer.Instance));
             Assert.That(_mock.Head.GetComponent<Renderer>().sharedMaterial, Is.SameAs(body));
             Assert.That(_mock.ViewModelGun.GetComponentInChildren<Renderer>().sharedMaterial, Is.SameAs(gun));
         }

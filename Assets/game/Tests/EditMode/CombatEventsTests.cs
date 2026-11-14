@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -59,24 +60,24 @@ namespace Fps.Tests.EditMode
 
             Assert.That(weapon.Fire(), Is.True);
 
-            Assert.That(_recorder.Shots, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Shots.Count(), Is.EqualTo(1));
             var shot = _recorder.Shots[0];
             Assert.That(shot.Shooter, Is.SameAs(weapon.gameObject));
             Assert.That(shot.Origin, Is.EqualTo(weapon.transform.position));
             Assert.That(shot.Direction, Is.EqualTo(Vector3.forward));
             Assert.That(shot.WeaponId, Is.EqualTo(rifle.Id));
 
-            Assert.That(_recorder.Impacts, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Impacts.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Impacts[0].Collider.gameObject, Is.SameAs(target.gameObject));
             Assert.That(_recorder.Impacts[0].Point.z, Is.EqualTo(9.5f).Within(1e-3f), "the near face of the capsule");
             Assert.That(_recorder.Impacts[0].Normal.z, Is.LessThan(0f), "the face looks back at the shooter");
 
-            Assert.That(_recorder.Confirms, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Confirms.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Confirms[0].Killed, Is.True);
             Assert.That(_recorder.Confirms[0].Zone, Is.EqualTo(HitZone.Body));
             Assert.That(_recorder.Confirms[0].Damage, Is.GreaterThan(0));
 
-            Assert.That(_recorder.Kills, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Kills.Count(), Is.EqualTo(1));
             var kill = _recorder.Kills[0];
             Assert.That(kill.KillerId, Is.EqualTo(CombatEvents.OfflineId(weapon.gameObject)));
             Assert.That(kill.VictimId, Is.EqualTo(CombatEvents.OfflineId(target.gameObject)));
@@ -96,9 +97,9 @@ namespace Fps.Tests.EditMode
 
             Assert.That(weapon.Fire(), Is.True);
 
-            Assert.That(_recorder.Shots, Has.Count.EqualTo(1));
-            Assert.That(_recorder.Impacts, Has.Count.EqualTo(1));
-            Assert.That(_recorder.Confirms, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Shots.Count(), Is.EqualTo(1));
+            Assert.That(_recorder.Impacts.Count(), Is.EqualTo(1));
+            Assert.That(_recorder.Confirms.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Confirms[0].Killed, Is.False);
             Assert.That(_recorder.Kills, Is.Empty);
         }
@@ -113,10 +114,10 @@ namespace Fps.Tests.EditMode
             weapon.Tick(rifle.FireInterval);
             Assert.That(weapon.Fire(), Is.True);
 
-            Assert.That(_recorder.Shots, Has.Count.EqualTo(2));
-            Assert.That(_recorder.Impacts, Has.Count.EqualTo(2));
-            Assert.That(_recorder.Confirms, Has.Count.EqualTo(1));
-            Assert.That(_recorder.Kills, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Shots.Count(), Is.EqualTo(2));
+            Assert.That(_recorder.Impacts.Count(), Is.EqualTo(2));
+            Assert.That(_recorder.Confirms.Count(), Is.EqualTo(1));
+            Assert.That(_recorder.Kills.Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -126,7 +127,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(weapon.Fire(), Is.True);
 
-            Assert.That(_recorder.Shots, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Shots.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Impacts, Is.Empty);
             Assert.That(_recorder.Confirms, Is.Empty);
             Assert.That(_recorder.Kills, Is.Empty);
@@ -143,7 +144,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(weapon.Fire(), Is.True);
 
-            Assert.That(_recorder.Impacts, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Impacts.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Impacts[0].Collider.gameObject, Is.SameAs(wall));
             Assert.That(_recorder.Confirms, Is.Empty);
         }
@@ -201,7 +202,7 @@ namespace Fps.Tests.EditMode
             Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, shooter.transform);
             Hitscan.Fire(_eye, (new Vector3(3f, 1f, 5f) - _eye).normalized, 50f, 10, DamageFalloff.None, shooter.transform);
 
-            Assert.That(_recorder.Impacts, Has.Count.EqualTo(2));
+            Assert.That(_recorder.Impacts.Count(), Is.EqualTo(2));
             Assert.That(_recorder.Impacts[0].IsCharacter, Is.True);
             Assert.That(_recorder.Impacts[0].Zone, Is.EqualTo(HitZone.Limb));
             Assert.That(_recorder.Impacts[1].IsCharacter, Is.False);
@@ -254,7 +255,7 @@ namespace Fps.Tests.EditMode
         {
             CombatEvents.RaiseImpact(new ImpactInfo(Vector3.one, Vector3.up, null, "glass", true, HitZone.Head));
 
-            Assert.That(_recorder.Impacts, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Impacts.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Impacts[0].MaterialId, Is.EqualTo("glass"));
             Assert.That(_recorder.Impacts[0].Zone, Is.EqualTo(HitZone.Head));
         }
@@ -267,7 +268,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(weapon.Fire(), Is.False, "within the fire interval");
 
-            Assert.That(_recorder.Shots, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Shots.Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -282,13 +283,13 @@ namespace Fps.Tests.EditMode
             var result = Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, shooter.transform, weaponId: "enemy-rifle");
 
             Assert.That(result.Damage, Is.EqualTo(10));
-            Assert.That(_recorder.Shots, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Shots.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Shots[0].Shooter, Is.SameAs(shooter));
             Assert.That(_recorder.Shots[0].WeaponId, Is.EqualTo("enemy-rifle"));
-            Assert.That(_recorder.Impacts, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Impacts.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Confirms, Is.Empty, "only the shooter's own client confirms hits");
 
-            Assert.That(_recorder.DamageTaken, Has.Count.EqualTo(1));
+            Assert.That(_recorder.DamageTaken.Count(), Is.EqualTo(1));
             Assert.That(_recorder.DamageTaken[0].Amount, Is.EqualTo(10));
             Assert.That(_recorder.DamageTaken[0].SourcePosition, Is.EqualTo(shooter.transform.position));
             Assert.That(_recorder.Kills, Is.Empty);
@@ -303,7 +304,7 @@ namespace Fps.Tests.EditMode
 
             Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, shooter.transform, weaponId: "enemy-rifle");
 
-            Assert.That(_recorder.Kills, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Kills.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Kills[0].KillerId, Is.EqualTo(CombatEvents.OfflineId(shooter)));
             Assert.That(_recorder.Kills[0].VictimId, Is.EqualTo(CombatEvents.OfflineId(target.gameObject)));
             Assert.That(_recorder.Kills[0].WeaponId, Is.EqualTo("enemy-rifle"));
@@ -318,7 +319,7 @@ namespace Fps.Tests.EditMode
             target.Kill();
             target.TakeDamage(5);
 
-            Assert.That(_recorder.Kills, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Kills.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Kills[0].IsSuicide, Is.True);
             Assert.That(_recorder.Kills[0].WeaponId, Is.Empty);
         }
@@ -333,7 +334,7 @@ namespace Fps.Tests.EditMode
             other.TakeDamage(10);
             player.TakeDamage(15, new Vector3(1f, 2f, 3f));
 
-            Assert.That(_recorder.DamageTaken, Has.Count.EqualTo(1));
+            Assert.That(_recorder.DamageTaken.Count(), Is.EqualTo(1));
             Assert.That(_recorder.DamageTaken[0].Amount, Is.EqualTo(15));
             Assert.That(_recorder.DamageTaken[0].SourcePosition, Is.EqualTo(new Vector3(1f, 2f, 3f)));
         }
@@ -413,7 +414,7 @@ namespace Fps.Tests.EditMode
 
             CombatEvents.RaiseExploded(new Vector3(1f, 2f, 3f), null);
 
-            Assert.That(explosions, Has.Count.EqualTo(1));
+            Assert.That(explosions.Count(), Is.EqualTo(1));
             Assert.That(explosions[0].Center, Is.EqualTo(new Vector3(1f, 2f, 3f)));
             Assert.That(explosions[0].WeaponId, Is.Empty, "a missing weapon id reads as empty");
         }
@@ -429,7 +430,7 @@ namespace Fps.Tests.EditMode
             grenade.Explode();
             grenade.Explode();
 
-            Assert.That(explosions, Has.Count.EqualTo(1));
+            Assert.That(explosions.Count(), Is.EqualTo(1));
             Assert.That(explosions[0].Center, Is.EqualTo(new Vector3(0f, 50f, 0f)));
             Assert.That(explosions[0].WeaponId, Is.EqualTo(GrenadeThrower.WeaponId));
         }
@@ -444,7 +445,7 @@ namespace Fps.Tests.EditMode
 
             CombatEvents.RaiseLanded(null, fallSpeed);
 
-            Assert.That(landings, Has.Count.EqualTo(1));
+            Assert.That(landings.Count(), Is.EqualTo(1));
             Assert.That(landings[0].FallSpeed, Is.Zero);
             Assert.That(landings[0].Body, Is.Null);
         }

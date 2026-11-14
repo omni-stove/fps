@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Editor;
@@ -33,7 +34,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(placed.GetComponent<BossStrafeMotion>(), Is.Not.Null);
                 Assert.That(placed.GetComponent<TargetDummy>(), Is.Not.Null);
                 Assert.That(placed.GetComponent<Damageable>().MaxHealth, Is.EqualTo(RangeBossFixture.MaxHealth));
-                Assert.That(boss.CreatePhases().Phases, Has.Count.EqualTo(2));
+                Assert.That(boss.CreatePhases().Phases.Count(), Is.EqualTo(2));
                 Assert.That(boss.CreatePhases().Phases[1].Trigger.HealthFraction, Is.EqualTo(RangeBossFixture.ExposeHealthFraction));
                 Assert.That(boss.CreateZoneMultipliers().Body, Is.LessThan(1.0));
 

@@ -70,8 +70,8 @@ namespace Fps.Tests.EditMode
                 typeof(CoverActionInstaller),
                 typeof(BlindFireActionInstaller),
                 typeof(MoveActionInstaller),
-                typeof(SuppressionActionInstaller),
                 typeof(ProneActionInstaller),
+                typeof(SuppressionActionInstaller),
                 typeof(AbilityActionInstaller),
                 typeof(GrenadeActionInstaller),
             };
@@ -278,6 +278,9 @@ namespace Fps.Tests.EditMode
 
             PlayerActions.Attach(_player, GameRules.Default);
             Assert.That(mover.ProneRule, Is.EqualTo(Prone.Off));
+        }
+
+        [Test]
         public void MantleFollowsTheRulesOnThePlayerController()
         {
             var mover = _player.AddComponent<PlayerController>();
@@ -330,7 +333,7 @@ namespace Fps.Tests.EditMode
 
         private sealed class LateInstaller : IPlayerActionInstaller
         {
-            public int Order => GrenadeActionInstaller.InstallOrder + 1;
+            public int Order => int.MaxValue;
 
             public void Install(GameObject player, GameRules rules)
             {

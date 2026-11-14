@@ -142,7 +142,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_host.Loaded, Is.EqualTo(new[] { MenuRoute.RangeScene }));
             Assert.That(_screen.Buttons.All(b => !b.enabledSelf), Is.True, "no second press while the scene loads");
             Assert.That(_screen.Choose(MenuDestination.Campaign), Is.False);
-            Assert.That(_host.Loaded, Has.Count.EqualTo(1));
+            Assert.That(_host.Loaded.Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -414,7 +414,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(panel.Question, Does.Contain(CampaignTestCatalog.Mission01Name));
                 Assert.That(panel.IsShown(CampaignMenuItemKind.ConfirmRestart), Is.True);
                 Assert.That(panel.IsShown(CampaignMenuItemKind.Continue), Is.False);
-                Assert.That(storage.Slots, Has.Count.EqualTo(2), "nothing is deleted before the answer");
+                Assert.That(storage.Slots.Count(), Is.EqualTo(2), "nothing is deleted before the answer");
                 Assert.That(_host.Loaded, Is.Empty);
 
                 // 確認は取り消しで閉じられる

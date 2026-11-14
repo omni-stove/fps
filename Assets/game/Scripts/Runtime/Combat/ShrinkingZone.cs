@@ -509,7 +509,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            _targets.AddRange(FindObjectsByType<Damageable>(FindObjectsInactive.Exclude, FindObjectsSortMode.None));
+            _targets.AddRange(FindObjectsByType<Damageable>(FindObjectsInactive.Exclude));
         }
 
         // 破棄された・対象から外れた相手の持ち越しと「外にいる」を捨てる。外にいたまま外れた者は、戻ってきたら外に出たとして数え直す。

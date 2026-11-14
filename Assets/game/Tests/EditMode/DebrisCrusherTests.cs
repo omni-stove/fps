@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -170,11 +171,11 @@ namespace Fps.Tests.EditMode
             // (8 - 2) m/s × 100 kg × 0.25
             Assert.That(dealt, Is.EqualTo(150));
             Assert.That(target.IsDead, Is.True);
-            Assert.That(reports, Has.Count.EqualTo(1));
+            Assert.That(reports.Count(), Is.EqualTo(1));
             Assert.That(reports[0].Kind, Is.EqualTo(DamageKind.Environment));
             Assert.That(reports[0].Amount, Is.EqualTo(150));
             Assert.That(reports[0].Zone.HasValue, Is.False);
-            Assert.That(_kills, Has.Count.EqualTo(1));
+            Assert.That(_kills.Count(), Is.EqualTo(1));
             Assert.That(_kills[0].KillerId, Is.EqualTo(CombatEvents.OfflineId(attacker)));
             Assert.That(_kills[0].VictimId, Is.EqualTo(CombatEvents.OfflineId(target.gameObject)));
             Assert.That(_kills[0].WeaponId, Is.EqualTo(WeaponId));
@@ -189,7 +190,7 @@ namespace Fps.Tests.EditMode
 
             crusher.TryCrush(target.GetComponent<Collider>(), 8f);
 
-            Assert.That(_kills, Has.Count.EqualTo(1));
+            Assert.That(_kills.Count(), Is.EqualTo(1));
             Assert.That(_kills[0].IsSuicide, Is.True);
         }
 

@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using Fps.Core;
 using Fps.Runtime;
@@ -36,7 +37,7 @@ namespace Fps.Tests.EditMode
 
             var mission = _definition.CreateMission();
 
-            Assert.That(mission.Objectives, Has.Count.EqualTo(3));
+            Assert.That(mission.Objectives.Count(), Is.EqualTo(3));
             var kill = mission.Objectives[1];
             Assert.That(kill.Id, Is.EqualTo("kill"));
             Assert.That(kill.DescriptionKey, Is.EqualTo("Kill 3"));
@@ -179,14 +180,14 @@ namespace Fps.Tests.EditMode
             {
                 Assert.That(copy.DisplayNameKey, Is.EqualTo("campaign.mission.Op.name"));
                 Assert.That(copy.DisplayName, Is.EqualTo(new LocalizedText("campaign.mission.Op.name")));
-                Assert.That(copy.Objectives, Has.Count.EqualTo(2));
+                Assert.That(copy.Objectives.Count(), Is.EqualTo(2));
                 var b = copy.Objectives[1];
                 Assert.That(b.Id, Is.EqualTo("b"));
                 Assert.That(b.DescriptionKey, Is.EqualTo("second"));
                 Assert.That(b.RequiredCount, Is.EqualTo(2));
                 Assert.That(b.Optional, Is.True);
                 Assert.That(b.Prerequisites, Is.EqualTo(new[] { "a" }));
-                Assert.That(copy.CreateMission().Objectives, Has.Count.EqualTo(2));
+                Assert.That(copy.CreateMission().Objectives.Count(), Is.EqualTo(2));
             }
             finally
             {

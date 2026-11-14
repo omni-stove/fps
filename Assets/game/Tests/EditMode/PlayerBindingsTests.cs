@@ -129,7 +129,7 @@ namespace Fps.Tests.EditMode
         {
             var conflicts = _bindings.FindConflicts(ReloadKey, "<Keyboard>/e");
 
-            Assert.That(conflicts, Has.Count.EqualTo(1));
+            Assert.That(conflicts.Count(), Is.EqualTo(1));
             Assert.That(conflicts[0].ActionName, Is.EqualTo("Interact"));
             Assert.That(conflicts[0].Part, Is.Null);
             Assert.That(conflicts[0].Label, Is.EqualTo(PlayerBindings.LabelOf("Interact")));
@@ -140,7 +140,7 @@ namespace Fps.Tests.EditMode
         {
             var conflicts = _bindings.FindConflicts(ReloadKey, "<Keyboard>/w");
 
-            Assert.That(conflicts, Has.Count.EqualTo(1));
+            Assert.That(conflicts.Count(), Is.EqualTo(1));
             Assert.That(conflicts[0].ActionName, Is.EqualTo("Move"));
             Assert.That(conflicts[0].Part, Is.EqualTo("up"));
             Assert.That(conflicts[0].Label, Is.EqualTo("前へ移動"));
@@ -166,7 +166,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PathsAreComparedIgnoringCase()
         {
-            Assert.That(_bindings.FindConflicts(ReloadKey, "<keyboard>/E"), Has.Count.EqualTo(1));
+            Assert.That(_bindings.FindConflicts(ReloadKey, "<keyboard>/E").Count(), Is.EqualTo(1));
         }
 
         [Test]

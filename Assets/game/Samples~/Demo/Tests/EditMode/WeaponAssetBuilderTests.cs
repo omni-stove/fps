@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using Fps.Core;
 using Fps.Editor;
@@ -250,7 +251,7 @@ namespace Fps.Tests.EditMode
             var loadout = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(_loadoutPath);
             Assert.That(loadout, Is.Not.Null);
             Assert.That(loadout.SwitchSeconds, Is.EqualTo(0.4f));
-            Assert.That(loadout.Slots, Has.Count.EqualTo(2));
+            Assert.That(loadout.Slots.Count(), Is.EqualTo(2));
             Assert.That(loadout.Slots[0].Weapon, Is.SameAs(rifleAsset));
             Assert.That(loadout.Slots[1].Weapon, Is.SameAs(handgunAsset));
 
@@ -315,7 +316,7 @@ namespace Fps.Tests.EditMode
             var rebuilt = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(_loadoutPath);
             Assert.That(rebuilt, Is.SameAs(loadout));
             Assert.That(rebuilt.SwitchSeconds, Is.EqualTo(0.4f));
-            Assert.That(rebuilt.Slots, Has.Count.EqualTo(2));
+            Assert.That(rebuilt.Slots.Count(), Is.EqualTo(2));
             Assert.That(rebuilt.ToSpecs()[0].Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
         }
 
@@ -379,7 +380,7 @@ namespace Fps.Tests.EditMode
             Assert.That(restored.ActiveReloadFailSeconds, Is.EqualTo(WeaponAssetBuilder.RifleActiveReloadFailSeconds));
             Assert.That(restored.RecoilPitchDegrees, Is.EqualTo(WeaponAssetBuilder.RifleRecoilPitchDegrees));
             Assert.That(restored.HipSpreadDegrees, Is.EqualTo(WeaponAssetBuilder.RifleHipSpreadDegrees));
-            Assert.That(rebuilt.Weapons, Has.Count.EqualTo(2));
+            Assert.That(rebuilt.Weapons.Count(), Is.EqualTo(2));
         }
 
         [Test]

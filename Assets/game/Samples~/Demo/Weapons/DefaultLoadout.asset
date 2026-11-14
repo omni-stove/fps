@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: DefaultLoadout
   m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.LoadoutDefinition
   _slots:
-  - _allowedCategories: 000000000100000002000000030000000400000005000000i
+  - _allowedCategories: 00000000010000000200000003000000040000000500000007000000i
     _weapon: {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}
   - _allowedCategories: 06000000i
     _weapon: {fileID: 11400000, guid: d96f9ac9ccfb14f6b9303123108fd62a, type: 2}
   _switchSeconds: 0.4
+  _abilities: []

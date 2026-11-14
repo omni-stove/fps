@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -92,7 +93,7 @@ namespace Fps.Tests.EditMode
             CreateSeat(root.transform, "Gun", Vector3.zero);
             var turret = root.AddComponent<Vehicle>();
 
-            Assert.That(turret.Spec.Seats, Has.Count.EqualTo(1));
+            Assert.That(turret.Spec.Seats.Count(), Is.EqualTo(1));
             Assert.That(turret.Spec.Seats[0].Role, Is.EqualTo(VehicleSeatRole.Passenger));
             Assert.That(turret.Spec.MaxHealth, Is.EqualTo(VehicleSpec.DefaultMaxHealth));
             Assert.That(turret.Spec.EnterRange, Is.EqualTo(VehicleSpec.DefaultEnterRange));
@@ -351,7 +352,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_driver.SubmitInput(stranger, input, 0.02f), Is.False);
             Assert.That(_passenger.SubmitInput(rider, input, 0.02f), Is.False, "not the rider's seat");
 
-            Assert.That(sink.Inputs, Has.Count.EqualTo(1));
+            Assert.That(sink.Inputs.Count(), Is.EqualTo(1));
             Assert.That(sink.Inputs[0].Seat, Is.SameAs(_driver));
             Assert.That(sink.Inputs[0].Input.Move, Is.EqualTo(new Vector2(0f, 1f)));
             Assert.That(sink.Inputs[0].Input.Boost, Is.True);

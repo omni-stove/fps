@@ -151,7 +151,7 @@ namespace Fps.Core.Tests
                 LobbyAttribute.OfText("server", "198.51.100.1:7777"),
             });
 
-            Assert.That(lobby.Attributes, Has.Count.EqualTo(2));
+            Assert.That(lobby.Attributes.Count, Is.EqualTo(2));
             Assert.That(lobby.TryGetText("server", out var server), Is.True);
             Assert.That(server, Is.EqualTo("203.0.113.10:7777"));
             Assert.That(lobby.TryGetNumber("players", out var players), Is.True);

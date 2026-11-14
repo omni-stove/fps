@@ -3,6 +3,7 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools.Utils;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -154,7 +155,7 @@ namespace Fps.Tests.EditMode
             Assert.That(marker.GetComponentsInChildren<Collider>(true), Is.Empty, "the marker does not block shots");
             Assert.That(marker.Renderers, Is.Not.Empty);
             Assert.That(marker.IsShown, Is.True);
-            Assert.That(marker.Renderer.sharedMaterial.color, Is.EqualTo(GuardianLeaderMarker.ColorOf(Side.Bravo)));
+            Assert.That(marker.Renderer.sharedMaterial.color, Is.EqualTo(GuardianLeaderMarker.ColorOf(Side.Bravo)).Using(ColorEqualityComparer.Instance));
             Assert.That(marker.Renderer.sharedMaterial, Is.Not.SameAs(prefabMaterial));
             Assert.That(prefabMaterial.color, Is.EqualTo(prefabColor), "the prefab's own material is not repainted");
 

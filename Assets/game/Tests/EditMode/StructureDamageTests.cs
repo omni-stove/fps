@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -42,7 +43,7 @@ namespace Fps.Tests.EditMode
             var count = StructureDamage.Apply(collider, point, 40, 0f);
 
             Assert.That(count, Is.EqualTo(1));
-            Assert.That(structure.Calls, Has.Count.EqualTo(1));
+            Assert.That(structure.Calls.Count(), Is.EqualTo(1));
             Assert.That(structure.Calls[0].Collider, Is.SameAs(collider));
             Assert.That(structure.Calls[0].Point, Is.EqualTo(point));
             Assert.That(structure.Calls[0].Damage, Is.EqualTo(40));
@@ -56,7 +57,7 @@ namespace Fps.Tests.EditMode
 
             StructureDamage.Apply(hit.GetComponent<Collider>(), new Vector3(0f, 0f, 9.5f), 40, 0f);
 
-            Assert.That(hit.Calls, Has.Count.EqualTo(1));
+            Assert.That(hit.Calls.Count(), Is.EqualTo(1));
             Assert.That(near.Calls, Is.Empty);
         }
 
@@ -71,7 +72,7 @@ namespace Fps.Tests.EditMode
             var count = StructureDamage.Apply(part, new Vector3(0f, 0f, 9.5f), 40, 0f);
 
             Assert.That(count, Is.EqualTo(1));
-            Assert.That(structure.Calls, Has.Count.EqualTo(1));
+            Assert.That(structure.Calls.Count(), Is.EqualTo(1));
             Assert.That(structure.Calls[0].Collider, Is.SameAs(part));
         }
 
@@ -94,10 +95,10 @@ namespace Fps.Tests.EditMode
             var count = StructureDamage.Apply(center.GetComponent<Collider>(), Vector3.zero, 40, 4f);
 
             Assert.That(count, Is.EqualTo(2));
-            Assert.That(center.Calls, Has.Count.EqualTo(1));
+            Assert.That(center.Calls.Count(), Is.EqualTo(1));
             Assert.That(center.Calls[0].Damage, Is.EqualTo(30), "1m of 4m leaves 75%");
             Assert.That(center.Calls[0].Point, Is.EqualTo(Vector3.zero));
-            Assert.That(edge.Calls, Has.Count.EqualTo(1));
+            Assert.That(edge.Calls.Count(), Is.EqualTo(1));
             Assert.That(edge.Calls[0].Damage, Is.EqualTo(15), "2.5m of 4m leaves 37.5%");
             Assert.That(far.Calls, Is.Empty, "outside the radius");
         }
@@ -110,7 +111,7 @@ namespace Fps.Tests.EditMode
 
             StructureDamage.Apply(structure.GetComponent<Collider>(), point, 40, 3f);
 
-            Assert.That(structure.Calls, Has.Count.EqualTo(1));
+            Assert.That(structure.Calls.Count(), Is.EqualTo(1));
             Assert.That(structure.Calls[0].Damage, Is.EqualTo(40));
         }
 
@@ -126,7 +127,7 @@ namespace Fps.Tests.EditMode
             var count = StructureDamage.Apply(left, Vector3.zero, 40, 2f);
 
             Assert.That(count, Is.EqualTo(2));
-            Assert.That(structure.Calls, Has.Count.EqualTo(2));
+            Assert.That(structure.Calls.Count(), Is.EqualTo(2));
             var parts = new[] { structure.Calls[0].Collider, structure.Calls[1].Collider };
             Assert.That(parts, Is.EquivalentTo(new Collider[] { left, right }));
         }
@@ -143,7 +144,7 @@ namespace Fps.Tests.EditMode
             var count = StructureDamage.Apply(structure.GetComponent<Collider>(), Vector3.zero, 40, 3f);
 
             Assert.That(count, Is.EqualTo(1));
-            Assert.That(structure.Calls, Has.Count.EqualTo(1));
+            Assert.That(structure.Calls.Count(), Is.EqualTo(1));
             Assert.That(trigger.Calls, Is.Empty);
         }
 
@@ -190,7 +191,7 @@ namespace Fps.Tests.EditMode
             Assert.That(result.Hit, Is.True);
             Assert.That(result.Hitbox, Is.Null);
             Assert.That(result.Damage, Is.Zero, "structure damage is not reported as player damage");
-            Assert.That(structure.Calls, Has.Count.EqualTo(1));
+            Assert.That(structure.Calls.Count(), Is.EqualTo(1));
             Assert.That(structure.Calls[0].Damage, Is.EqualTo(10));
             Assert.That(structure.Calls[0].Point.z, Is.EqualTo(4.5f).Within(1e-4f));
         }
@@ -203,8 +204,8 @@ namespace Fps.Tests.EditMode
 
             Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, null, 2f);
 
-            Assert.That(hit.Calls, Has.Count.EqualTo(1));
-            Assert.That(near.Calls, Has.Count.EqualTo(1));
+            Assert.That(hit.Calls.Count(), Is.EqualTo(1));
+            Assert.That(near.Calls.Count(), Is.EqualTo(1));
             Assert.That(near.Calls[0].Damage, Is.LessThan(10));
         }
 

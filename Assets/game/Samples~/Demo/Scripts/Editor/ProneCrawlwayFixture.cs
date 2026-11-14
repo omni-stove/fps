@@ -18,7 +18,7 @@ namespace Fps.Editor
         public const string RightWallName = "Wall_Right";
 
         /// <summary>くぐり道の床の中心。射撃場の左手前 (乗り越えの壁より手前、開けた場所の反対側) の空き地。</summary>
-        public static readonly Vector3 Center = new Vector3(-12f, 0f, -12f);
+        public static readonly Vector3 Center = new Vector3(-11.5f, 0f, -9f);
 
         /// <summary>天井の下面の、床からの高さ (m)。伏せとしゃがみの高さの真ん中。</summary>
         public const float CeilingHeight = (ProneSpec.DefaultHeight + PlayerController.DefaultCrouchHeight) / 2f;

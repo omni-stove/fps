@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -253,7 +254,7 @@ namespace Fps.Tests.EditMode
 
             var dropped = dropper.Drop(new[] { PickupContents.ForHealth(10) }, Vector3.zero);
 
-            Assert.That(dropped, Has.Count.EqualTo(1));
+            Assert.That(dropped.Count(), Is.EqualTo(1));
             Track(dropped[0].gameObject);
             Assert.That(dropped[0].transform.Find(Pickup.VisualName).Find(ModelName), Is.Not.Null);
         }

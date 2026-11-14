@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -56,7 +57,7 @@ namespace Fps.Tests.EditMode
 
             entries.Add(Entry("Campaign02"));
 
-            Assert.That(catalog.Missions, Has.Count.EqualTo(1));
+            Assert.That(catalog.Missions.Count(), Is.EqualTo(1));
             Assert.That(catalog.Missions[0], Is.Not.SameAs(entries[0]));
         }
 

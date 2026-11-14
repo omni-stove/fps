@@ -73,7 +73,7 @@ namespace Fps.Core.Tests
             Assert.That(fixedDeltaTime, Is.EqualTo(BaseFixed * 0.2f).Within(Within));
 
             Assert.That(arbitration.Step(1f, false, timeScale, fixedDeltaTime, expired, out timeScale, out fixedDeltaTime), Is.True);
-            Assert.That(expired, Has.Count.EqualTo(1));
+            Assert.That(expired.Count, Is.EqualTo(1));
             Assert.That(expired[0].Reason, Is.EqualTo("short"));
             Assert.That(timeScale, Is.EqualTo(0.5f).Within(Within));
             Assert.That(fixedDeltaTime, Is.EqualTo(BaseFixed * 0.5f).Within(Within));
@@ -82,7 +82,7 @@ namespace Fps.Core.Tests
             Assert.That(arbitration.Requests[0].RemainingSeconds, Is.EqualTo(0.5f).Within(Within));
 
             Assert.That(arbitration.Step(0.5f, false, timeScale, fixedDeltaTime, expired, out timeScale, out fixedDeltaTime), Is.True);
-            Assert.That(expired, Has.Count.EqualTo(2));
+            Assert.That(expired.Count, Is.EqualTo(2));
             Assert.That(expired[1].Reason, Is.EqualTo("long"));
             Assert.That(timeScale, Is.EqualTo(1f));
             Assert.That(fixedDeltaTime, Is.EqualTo(BaseFixed));
@@ -97,7 +97,7 @@ namespace Fps.Core.Tests
 
             Assert.That(arbitration.Request("hit", 0.25f, 4f), Is.False);
 
-            Assert.That(arbitration.Requests, Has.Count.EqualTo(1));
+            Assert.That(arbitration.Requests.Count, Is.EqualTo(1));
             Assert.That(arbitration.Scale, Is.EqualTo(0.25f));
             Assert.That(arbitration.Requests[0].RemainingSeconds, Is.EqualTo(4f));
         }
@@ -138,7 +138,7 @@ namespace Fps.Core.Tests
             Assert.That(arbitration.Requests[0].RemainingSeconds, Is.EqualTo(1.5f).Within(Within));
 
             Assert.That(arbitration.Step(1.5f, false, timeScale, fixedDeltaTime, expired, out timeScale, out fixedDeltaTime), Is.True);
-            Assert.That(expired, Has.Count.EqualTo(1));
+            Assert.That(expired.Count, Is.EqualTo(1));
             Assert.That(timeScale, Is.EqualTo(1f));
             Assert.That(fixedDeltaTime, Is.EqualTo(BaseFixed));
         }
@@ -207,7 +207,7 @@ namespace Fps.Core.Tests
 
             var cancelled = arbitration.CancelAll();
 
-            Assert.That(cancelled, Has.Count.EqualTo(2));
+            Assert.That(cancelled.Count, Is.EqualTo(2));
             Assert.That(cancelled[0].Reason, Is.EqualTo("a"));
             Assert.That(cancelled[1].Reason, Is.EqualTo("b"));
             Assert.That(arbitration.HasRequests, Is.False);

@@ -45,7 +45,7 @@ namespace Fps.Tests.EditMode
 
             ReplacementAudit.CheckStringKeys(strings, findings);
 
-            Assert.That(findings, Has.Count.EqualTo(1));
+            Assert.That(findings.Count(), Is.EqualTo(1));
             Assert.That(findings[0].Area, Is.EqualTo(ReplacementAuditArea.Strings));
             Assert.That(findings[0].Where, Is.EqualTo("en"));
             Assert.That(findings[0].Problem, Does.Contain("'hud.ammo'"));
@@ -102,7 +102,7 @@ namespace Fps.Tests.EditMode
 
             ReplacementAudit.CheckStringKeys(strings, findings);
 
-            Assert.That(findings, Has.Count.EqualTo(1));
+            Assert.That(findings.Count(), Is.EqualTo(1));
             Assert.That(findings[0].Where, Is.EqualTo("en"));
             Assert.That(findings[0].Problem, Does.Contain("'en/broken' could not be read"));
             Assert.That(strings.ReadableLanguages, Is.EqualTo(new[] { GameLanguage.Japanese }));
@@ -118,7 +118,7 @@ namespace Fps.Tests.EditMode
 
             ReplacementAudit.CheckStringKeys(strings, findings);
 
-            Assert.That(findings, Has.Count.EqualTo(1));
+            Assert.That(findings.Count(), Is.EqualTo(1));
             Assert.That(findings[0].Where, Is.EqualTo("en"));
             Assert.That(findings[0].Problem, Does.StartWith("no strings were found"));
         }
@@ -137,7 +137,7 @@ namespace Fps.Tests.EditMode
 
             ReplacementAudit.CheckWeapons(new[] { rifle, null, handgun }, catalog, strings, findings);
 
-            Assert.That(findings, Has.Count.EqualTo(2));
+            Assert.That(findings.Count(), Is.EqualTo(2));
             Assert.That(findings.All(f => f.Where == "Handgun"), Is.True);
             Assert.That(findings[0].Area, Is.EqualTo(ReplacementAuditArea.Presentation));
             Assert.That(findings[0].Problem, Does.Contain("'handgun-id'"));
@@ -165,7 +165,7 @@ namespace Fps.Tests.EditMode
 
             ReplacementAudit.CheckPresentationCatalog(null, findings);
 
-            Assert.That(findings, Has.Count.EqualTo(1));
+            Assert.That(findings.Count(), Is.EqualTo(1));
             Assert.That(findings[0].Area, Is.EqualTo(ReplacementAuditArea.Presentation));
             Assert.That(findings[0].Where, Is.EqualTo("Resources/" + PresentationCatalog.ResourcePath));
         }
@@ -177,7 +177,7 @@ namespace Fps.Tests.EditMode
 
             ReplacementAudit.CheckPresentationCatalog(Catalog("rifle-id"), findings);
 
-            Assert.That(findings, Has.Count.EqualTo(1));
+            Assert.That(findings.Count(), Is.EqualTo(1));
             Assert.That(findings[0].Problem, Does.Contain("fire sound is missing"));
         }
 
@@ -193,7 +193,7 @@ namespace Fps.Tests.EditMode
 
             ReplacementAudit.CheckGameObject(root, "Assets/Test.unity", findings);
 
-            Assert.That(findings, Has.Count.EqualTo(1));
+            Assert.That(findings.Count(), Is.EqualTo(1));
             Assert.That(findings[0].Area, Is.EqualTo(ReplacementAuditArea.Reference));
             Assert.That(findings[0].Where, Is.EqualTo("Assets/Test.unity Mission/Runner"));
             Assert.That(findings[0].Problem, Does.StartWith("MissionRunner 'Definition' is empty"));

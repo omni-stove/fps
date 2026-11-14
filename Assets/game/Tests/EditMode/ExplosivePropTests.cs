@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -174,7 +175,7 @@ namespace Fps.Tests.EditMode
             barrel.ApplyDamage(ExplosivePropSpec.Default.MaxHealth, chained: false);
             barrel.Tick(0f);
 
-            Assert.That(structure.Calls, Has.Count.EqualTo(1));
+            Assert.That(structure.Calls.Count(), Is.EqualTo(1));
             Assert.That(structure.Calls[0].Damage, Is.GreaterThan(0));
             Assert.That(result.HasValue, Is.True);
             Assert.That(result.Value.StructureHits, Is.EqualTo(1));
@@ -233,7 +234,7 @@ namespace Fps.Tests.EditMode
             barrel.Tick(0f);
 
             Assert.That(target.IsDead, Is.True);
-            Assert.That(kills, Has.Count.EqualTo(1));
+            Assert.That(kills.Count(), Is.EqualTo(1));
             Assert.That(kills[0].KillerId, Is.EqualTo(CombatEvents.OfflineId(shooter)));
             Assert.That(kills[0].WeaponId, Is.EqualTo(ExplosiveProp.WeaponId));
             Assert.That(CombatEvents.CurrentAttribution.HasValue, Is.False, "the attribution is restored after the blast");

@@ -65,7 +65,7 @@ namespace Fps.Tests.EditMode
             Assert.That(shield.Damageable.Health.Current, Is.EqualTo(MaxHealth));
             Assert.That(shield.Damageable.ReportsKills, Is.False);
             Assert.That(shield.GetComponent<UnityEngine.AI.NavMeshObstacle>(), Is.Not.Null, "enemies walk around it");
-            Assert.That(shield.GetComponentInChildren<CoverPoint>(), Is.Null, "enemies do not take cover behind it");
+            Assert.That(shield.GetComponentInChildren<Fps.Runtime.CoverPoint>(), Is.Null, "enemies do not take cover behind it");
             Assert.Throws<System.InvalidOperationException>(() => shield.Initialize(_owner, "Owner", Kind, 2, null, MaxHealth));
         }
 

@@ -82,9 +82,10 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ABrokenFileLogsTheItemAndUsesTheDefaults()
         {
+            // LogAssert は Regex を文字列にして持ち直すので RegexOptions が落ちる。改行をまたぐのはパターンの (?s) で指定する
             LogAssert.Expect(
                 LogType.Error,
-                new Regex(@"^\[Tuning\] ping JSON 'ping\.json' item 'maxMarkers' is invalid: .*; using the default values instead$", RegexOptions.Singleline));
+                new Regex(@"(?s)^\[Tuning\] ping JSON 'ping\.json' item 'maxMarkers' is invalid: .*; using the default values instead$"));
 
             var spec = KitTuning.Read("{\"maxMarkers\": 0}", "ping.json", TuningJson.ParsePing, PingSpec.Default);
 

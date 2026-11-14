@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -62,7 +63,13 @@ namespace Fps.Tests.EditMode
             Assert.That(bootstrap.name, Is.EqualTo(TpsRangeSceneBuilder.BootstrapObjectName));
             Assert.That(bootstrap.gameObject.scene, Is.EqualTo(_scene));
             Assert.That(bootstrap.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
-            Assert.That(bootstrap.CreatesFloor, Is.True, "the range has no floor of its own");
+            Assert.That(bootstrap.CreatesFloor, Is.False, "the range places its own, larger floor");
+            var floor = Find(TpsRangeSceneBuilder.FloorName);
+            Assert.That(floor.GetComponent<Collider>(), Is.Not.Null);
+            Assert.That(floor.isStatic, Is.True);
+            Assert.That(floor.transform.position, Is.EqualTo(Vector3.zero));
+            Assert.That(floor.transform.localScale, Is.EqualTo(TpsRangeSceneBuilder.FloorScale));
+            Assert.That(TpsRangeSceneBuilder.FloorHalfExtent, Is.GreaterThan(GameBootstrap.FloorScale.x * 10f / 2f));
             Assert.That(bootstrap.WeaponDefinitions, Is.EqualTo(new[] { rifle, launcher }));
             Assert.That(bootstrap.RulesDefinition, Is.SameAs(rules));
             Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null);
@@ -95,7 +102,7 @@ namespace Fps.Tests.EditMode
             var hut = Find(TpsRangeSceneBuilder.HutName).GetComponent<DestructibleStructure>();
             Assert.That(hut, Is.Not.Null);
             Assert.That(hut.transform.position, Is.EqualTo(TpsRangeSceneBuilder.HutCenter));
-            Assert.That(hut.Pieces, Has.Count.EqualTo(DestructionTestSceneBuilder.PieceCount));
+            Assert.That(hut.Pieces.Count(), Is.EqualTo(DestructionTestSceneBuilder.PieceCount));
             Assert.That(hut.DestructionEnabled, Is.True, "the TPS range rules turn destruction on");
             Assert.That(hut.DebrisPool, Is.SameAs(Find(TpsRangeSceneBuilder.DebrisPoolName).GetComponent<DebrisPool>()));
             foreach (var piece in hut.Pieces)
@@ -117,7 +124,7 @@ namespace Fps.Tests.EditMode
             var vehicle = Find(TpsRangeSceneBuilder.VehicleName).GetComponent<Vehicle>();
             Assert.That(vehicle, Is.Not.Null);
             Assert.That(vehicle.transform.position, Is.EqualTo(TpsRangeSceneBuilder.VehicleOrigin));
-            Assert.That(vehicle.Seats, Has.Count.EqualTo(3));
+            Assert.That(vehicle.Seats.Count(), Is.EqualTo(3));
             Assert.That(vehicle.Seats[0].Role, Is.EqualTo(VehicleSeatRole.Driver));
             Assert.That(vehicle.Seats[1].Role, Is.EqualTo(VehicleSeatRole.Passenger));
             Assert.That(vehicle.Seats[1].ViewPoint, Is.Not.Null);

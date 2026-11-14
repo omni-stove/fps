@@ -57,7 +57,7 @@ namespace Fps.Tests.EditMode
         {
             _receiver.Configure(Suppression.Off, _spec);
 
-            Assert.That(Hitscan.NearMissTargets, Does.Not.Contain(_receiver));
+            Assert.That(Hitscan.NearMissTargets, Has.No.Member(_receiver));
             Assert.That(Hitscan.ReportNearMisses(Vector3.up, Vector3.forward, 50f, null, null), Is.Zero);
             Assert.That(_receiver.Level, Is.EqualTo(0f));
         }
@@ -123,7 +123,7 @@ namespace Fps.Tests.EditMode
             _receiver.Configure(Suppression.Off);
 
             Assert.That(_receiver.Level, Is.EqualTo(0f));
-            Assert.That(Hitscan.NearMissTargets, Does.Not.Contain(_receiver));
+            Assert.That(Hitscan.NearMissTargets, Has.No.Member(_receiver));
             Assert.That(_receiver.Spec, Is.SameAs(_spec), "turning off keeps the tuning");
         }
 
@@ -197,7 +197,7 @@ namespace Fps.Tests.EditMode
             Assert.That(weapon.SpreadFraction, Is.EqualTo(0.3f * 0.5f).Within(1e-5f));
 
             suppression.Configure(Suppression.Off, _spec);
-            Assert.That(weapon.Modifiers, Does.Not.Contain(suppression.Modifier));
+            Assert.That(weapon.Modifiers, Has.No.Member(suppression.Modifier));
             Assert.That(weapon.CurrentConeDegrees(spec), Is.EqualTo(baseCone));
             Assert.That(vignette.Alpha, Is.EqualTo(0f));
         }
@@ -280,7 +280,7 @@ namespace Fps.Tests.EditMode
 
             suppression.Configure(Suppression.Off, _spec);
             Assert.That(agent.PerceptionContributors, Is.Empty);
-            Assert.That(agent.Brain.Behaviors, Does.Not.Contain(suppression.Behavior));
+            Assert.That(agent.Brain.Behaviors, Has.No.Member(suppression.Behavior));
             Assert.That(agent.Perceive().SuppressionLevel, Is.EqualTo(0f));
         }
 

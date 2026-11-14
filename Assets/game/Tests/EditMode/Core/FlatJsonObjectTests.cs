@@ -16,7 +16,7 @@ namespace Fps.Core.Tests
 
             Assert.That(ok, Is.True, error);
             Assert.That(error, Is.Null);
-            Assert.That(values, Has.Count.EqualTo(2));
+            Assert.That(values.Count, Is.EqualTo(2));
             Assert.That(values["EOS_PRODUCT_ID"], Is.EqualTo("abc"));
             Assert.That(values["EOS_CLIENT_SECRET"], Is.EqualTo("s3cr3t"));
         }
@@ -113,7 +113,7 @@ namespace Fps.Core.Tests
             var ok = FlatJsonObject.TryParse(FlatJsonObject.Format(pairs), out var values, out var error);
 
             Assert.That(ok, Is.True, error);
-            Assert.That(values, Has.Count.EqualTo(3));
+            Assert.That(values.Count, Is.EqualTo(3));
             Assert.That(values["a"], Is.EqualTo("x\"y\\z\n\u0000"));
             Assert.That(values["b"], Is.Empty);
             Assert.That(values["c"], Is.EqualTo("/\u2029"));

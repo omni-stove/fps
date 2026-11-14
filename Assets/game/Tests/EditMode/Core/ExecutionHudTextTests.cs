@@ -130,7 +130,7 @@ namespace Fps.Core.Tests
 
             var scores = ExecutionHudText.RoundWins(execution, Side.Bravo);
 
-            Assert.That(scores, Has.Count.EqualTo(2));
+            Assert.That(scores.Count, Is.EqualTo(2));
             Assert.That(GameText.Resolve(scores[0].Text), Is.EqualTo("BRAVO 0"));
             Assert.That(scores[0].IsOwn, Is.True);
             Assert.That(scores[0].IsLeading, Is.False);

@@ -52,7 +52,7 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             _savedRule = StaggerReaction.ActiveRule;
-            StaggerReaction.ActiveRule = Stagger.On;
+            StaggerReaction.ActiveRule = Fps.Core.Stagger.On;
 
             _floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             _floor.name = "Floor";

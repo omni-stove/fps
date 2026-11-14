@@ -2,6 +2,7 @@
     "name": "Fps.Tests.EditMode",
     "rootNamespace": "Fps.Tests.EditMode",
     "references": [
+        "Fps.Tests.Support",
         "Fps.Core",
         "Fps.Runtime",
         "Fps.Runtime.UI",

@@ -1,13 +1,13 @@
-Game workflow: follow `.agents/refs/scriptability-rules.md` (no GUI; wire refs and run headless via script).
+Work the game engine by `.agents/refs/scriptability-rules.md`.
 
-Never edit or regenerate an existing `.meta` (its GUID is what scenes and assets reference).
+Leave existing `.meta` files untouched.
 
-Write a code comment, `///` doc comments included, only to say why the code is not written another way. Leave existing comments as they are unless you change the code they describe.
+Write a code comment, `///` included, only to say why the code is not written another way. Keep existing comments unless you change the code they describe.
 
-This repo is a shooter kit: each game is made by swapping in its own assets and settings, so the weapons, rules, scenes, visuals, sounds and numbers in it are placeholders. When adding code:
+This repo is a shooter kit; each game replaces its content. In kit code:
 
-- A value a game would want to change (weapon stats, rules, movement, enemy AI, mode scores and timers) goes in data (JSON / Spec / ScriptableObject) with only its default in code; a value fixed by the implementation (tick rate, buffer sizes) stays a constant.
-- Read the configured value (the Spec or the component's field), not the `Default*` constant.
-- Get visuals and sounds from a replaceable reference (a catalog or a prefab field); build shapes in code only as the fallback when that reference is empty.
-- Keep player-facing text in `Resources/Localization/<language>/*.json` and read it through `GameText` / `LocalizedText`, with the same keys in every language.
-- Don't write content names (Rifle, Campaign01) in kit code; look them up by Id or data.
+- Put a value a game would tune (weapon stats, rules, movement, enemy AI, mode scores and timers) in data (JSON / Spec / ScriptableObject), with only its default in code.
+- Read the configured value, not the `Default*` constant.
+- Take visuals and sounds from a replaceable reference; build shapes in code only when it is empty.
+- Put player-facing text in `Resources/Localization/<language>/*.json` with the same keys in every language, and read it through `GameText` / `LocalizedTexts`.
+- Look up content by Id or data, never by its name.

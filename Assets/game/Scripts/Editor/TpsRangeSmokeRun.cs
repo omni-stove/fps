@@ -20,14 +20,17 @@ namespace Fps.Editor
     /// ふつうのジャンプで越えたら失敗にする。</item>
     /// <item>開けた場所 (<see cref="TpsRangeSceneBuilder.OpenAreaName"/>) で右へ回避し (<c>[Player] dodging=true</c> → <c>dodging=false</c>)、
     /// 転がっている間は撃てず、終わったら撃てる。</item>
+    /// <item>同じ開けた場所で手榴弾を投げ、残りが <see cref="GameRulesAssetBuilder.TpsRangeGrenadeCount"/> から 1 つ減り
+    /// (<c>[Grenade] thrown remaining=</c>)、信管が切れて爆発する (<c>[Grenade] exploded</c>)。</item>
     /// </list>
     /// どれかが成り立たないか、Play 中にエラー・例外・Assert のログが出たら終了コード 1、すべて成り立てば 0 で終わる。
     /// <see cref="SmokeSuite"/> には入れていない。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
     /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.TpsRangeSmokeRun.Run -logFile -</code>
     /// </summary>
     /// <remarks>
-    /// batchmode には入力が無いので、Cover / Attack / 移動とジャンプ / Dodge の代わりに <see cref="CoverController.Tick"/>・
-    /// <see cref="WeaponController.PullTrigger"/>・<see cref="PlayerController.MoveFilter"/> への差し込み・<see cref="PlayerController.TryStartDodge"/> を使う。
+    /// batchmode には入力が無いので、Cover / Attack / 移動とジャンプ / Dodge / Grenade の代わりに <see cref="CoverController.Tick"/>・
+    /// <see cref="WeaponController.PullTrigger"/>・<see cref="PlayerController.MoveFilter"/> への差し込み・<see cref="PlayerController.TryStartDodge"/>・
+    /// <see cref="GrenadeThrower.TryThrow"/> を使う。
     /// 乗り越えは接地しているフレームにだけ Jump を押し、その Jump で <see cref="PlayerController.VaultStarted"/> が呼ばれて
     /// <see cref="PlayerController.IsVaulting"/> が true になることを確かめる。
     /// </remarks>
@@ -39,8 +42,8 @@ namespace Fps.Editor
         /// <summary>Play Mode に入ってから操作し始めるまでに待つ秒数。GameBootstrap の Awake と各コンポーネントの初期化を済ませるため。</summary>
         public const float WarmUpSeconds = 1f;
 
-        /// <summary>操作し始めてから、すべての手順が終わるまでに待つ秒数の上限。乗り越えで歩く分を見込む。</summary>
-        public const float ExerciseTimeoutSeconds = 20f;
+        /// <summary>操作し始めてから、すべての手順が終わるまでに待つ秒数の上限。乗り越えで歩く分と、手榴弾の信管 (<see cref="GrenadeSpec.DefaultFuseSeconds"/>) を見込む。</summary>
+        public const float ExerciseTimeoutSeconds = 25f;
 
         /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
@@ -73,6 +76,8 @@ namespace Fps.Editor
         private static readonly string _vaultProbeLog = $"{PlayerController.LogTag} vault={VaultVerdict.Vault} ";
         private static readonly string _vaultStartLog = PlayerController.FormatVaultingLog(true);
         private static readonly string _vaultEndLog = PlayerController.FormatVaultingLog(false);
+        private static readonly string _grenadeThrownLog = GrenadeThrower.LogTag + " thrown remaining=";
+        private static readonly string _grenadeExplodedLog = GrenadeThrower.LogTag + " exploded ";
 
         private static readonly List<string> _errors = new List<string>();
         private static Step _step;
@@ -94,6 +99,11 @@ namespace Fps.Editor
         private static bool _finished;
         private static Vector3 _dodgeFrom;
         private static ForwardJumpFilter _vaultFilter;
+        private static bool _sawGrenadeThrown;
+        private static bool _sawGrenadeExploded;
+        private static bool _grenadeCountDropped;
+        private static bool _grenadeExploded;
+        private static ThrownGrenade _grenade;
 
         private enum Step
         {
@@ -107,6 +117,8 @@ namespace Fps.Editor
             StartDodge,
             WaitDodgeEnd,
             FireAfterDodge,
+            ThrowGrenade,
+            WaitGrenadeExplosion,
             Done,
         }
 
@@ -181,6 +193,11 @@ namespace Fps.Editor
             _finished = false;
             _dodgeFrom = Vector3.zero;
             _vaultFilter = null;
+            _sawGrenadeThrown = false;
+            _sawGrenadeExploded = false;
+            _grenadeCountDropped = false;
+            _grenadeExploded = false;
+            _grenade = null;
         }
 
         private static void OnLog(string condition, string stackTrace, LogType type)
@@ -235,6 +252,14 @@ namespace Fps.Editor
             else if (string.Equals(condition, _vaultEndLog, StringComparison.Ordinal))
             {
                 _sawVaultEnd = true;
+            }
+            else if (condition.StartsWith(_grenadeThrownLog, StringComparison.Ordinal))
+            {
+                _sawGrenadeThrown = true;
+            }
+            else if (condition.StartsWith(_grenadeExplodedLog, StringComparison.Ordinal))
+            {
+                _sawGrenadeExploded = true;
             }
         }
 
@@ -377,6 +402,12 @@ namespace Fps.Editor
                 case Step.FireAfterDodge:
                     return FireAfterDodge(weapon);
 
+                case Step.ThrowGrenade:
+                    return ThrowGrenade(world);
+
+                case Step.WaitGrenadeExplosion:
+                    return WaitGrenadeExplosion();
+
                 default:
                     return null;
             }
@@ -385,9 +416,14 @@ namespace Fps.Editor
         private static string CheckView(BootstrapWorld world)
         {
             var actions = world.Rules.Actions;
-            if (actions.Cover != Cover.On || actions.BlindFire != BlindFire.On || actions.Dodge != Dodge.On || actions.Vault != Vault.On)
+            if (actions.Cover != Cover.On
+                || actions.BlindFire != BlindFire.On
+                || actions.Dodge != Dodge.On
+                || actions.Vault != Vault.On
+                || actions.Grenade != Grenade.On
+                || actions.GrenadeCount != GameRulesAssetBuilder.TpsRangeGrenadeCount)
             {
-                return $"the TPS range rules must turn cover, blind fire, dodge and vault on; rerun {GameRulesAssetBuilder.MenuPath} (got {PlayerActions.FormatLog(actions)})";
+                return $"the TPS range rules must turn cover, blind fire, dodge, vault and {GameRulesAssetBuilder.TpsRangeGrenadeCount.ToString(CultureInfo.InvariantCulture)} grenades on; rerun {GameRulesAssetBuilder.MenuPath} (got {PlayerActions.FormatLog(actions)})";
             }
 
             var rig = world.Rig;
@@ -654,6 +690,106 @@ namespace Fps.Editor
                 return null;
             }
 
+            _step = Step.ThrowGrenade;
+            return null;
+        }
+
+        private static string ThrowGrenade(BootstrapWorld world)
+        {
+            var grenades = world.Grenades;
+            if (grenades == null || !grenades.isActiveAndEnabled)
+            {
+                return "the player has no enabled GrenadeThrower";
+            }
+
+            if (!grenades.UsesGrenades || grenades.Capacity != GameRulesAssetBuilder.TpsRangeGrenadeCount)
+            {
+                return $"the player's GrenadeThrower was configured with rule {grenades.Rule} and {grenades.Capacity.ToString(CultureInfo.InvariantCulture)} grenades (expected {Grenade.On} and {GameRulesAssetBuilder.TpsRangeGrenadeCount.ToString(CultureInfo.InvariantCulture)})";
+            }
+
+            var before = grenades.Remaining;
+            if (before != grenades.Capacity)
+            {
+                return $"the player had {before.ToString(CultureInfo.InvariantCulture)} of {grenades.Capacity.ToString(CultureInfo.InvariantCulture)} grenades before throwing any";
+            }
+
+            var mover = world.Mover;
+            if (!grenades.CanThrow)
+            {
+                return $"the player could not throw a grenade in the open area (throwing={grenades.IsThrowing}, dodging={mover.IsDodging}, vaulting={mover.IsVaulting})";
+            }
+
+            grenades.Thrown += OnGrenadeThrown;
+            bool thrown;
+            try
+            {
+                thrown = grenades.TryThrow();
+            }
+            finally
+            {
+                grenades.Thrown -= OnGrenadeThrown;
+            }
+
+            if (!thrown || _grenade == null)
+            {
+                return $"TryThrow did not throw a grenade (thrown={thrown}, remaining {grenades.Remaining.ToString(CultureInfo.InvariantCulture)})";
+            }
+
+            if (grenades.Remaining != before - 1)
+            {
+                return $"throwing a grenade left {grenades.Remaining.ToString(CultureInfo.InvariantCulture)} of {before.ToString(CultureInfo.InvariantCulture)}";
+            }
+
+            _grenadeCountDropped = true;
+            if (!_sawGrenadeThrown)
+            {
+                return $"the throw logged no '{_grenadeThrownLog}' line";
+            }
+
+            _step = Step.WaitGrenadeExplosion;
+            return null;
+        }
+
+        private static void OnGrenadeThrown(ThrownGrenade grenade)
+        {
+            _grenade = grenade;
+            if (grenade != null)
+            {
+                grenade.Exploded += OnGrenadeExploded;
+            }
+        }
+
+        // 爆発したフレームのうちにグレネードは消されるので、OnUpdate で HasExploded を読む代わりにイベントで受ける。
+        private static void OnGrenadeExploded(ThrownGrenade grenade, GrenadeExplosion explosion)
+        {
+            grenade.Exploded -= OnGrenadeExploded;
+            _grenadeExploded = true;
+            _grenade = null;
+        }
+
+        private static void StopWatchingGrenade()
+        {
+            if (_grenade != null)
+            {
+                _grenade.Exploded -= OnGrenadeExploded;
+            }
+
+            _grenade = null;
+        }
+
+        private static string WaitGrenadeExplosion()
+        {
+            if (!_grenadeExploded)
+            {
+                // Unity の null 比較で、爆発せずに消えた (Destroy された) グレネードも見分ける。
+                return _grenade == null ? "the thrown grenade disappeared without exploding" : null;
+            }
+
+            if (!_sawGrenadeExploded)
+            {
+                return $"the grenade exploded but no '{_grenadeExplodedLog}' line was logged";
+            }
+
             _step = Step.Done;
             return null;
         }
@@ -707,7 +843,7 @@ namespace Fps.Editor
 
             problems.AddRange(_errors);
             Debug.Log(
-                $"{LogTag} step={_step} cover enter={_sawCoverEnter} blind fire={_sawBlindFire} vault probe={_sawVaultProbe} vault start={_sawVaultStart} vaulting={_vaultingOnStart} vault end={_sawVaultEnd} vault crossed={_crossedVaultWall} dodge start={_sawDodgeStart} dodge end={_sawDodgeEnd} dodge blocked fire={_dodgeBlockedFire} errors={_errors.Count.ToString(CultureInfo.InvariantCulture)}");
+                $"{LogTag} step={_step} cover enter={_sawCoverEnter} blind fire={_sawBlindFire} vault probe={_sawVaultProbe} vault start={_sawVaultStart} vaulting={_vaultingOnStart} vault end={_sawVaultEnd} vault crossed={_crossedVaultWall} dodge start={_sawDodgeStart} dodge end={_sawDodgeEnd} dodge blocked fire={_dodgeBlockedFire} grenade thrown={_sawGrenadeThrown} grenade count dropped={_grenadeCountDropped} grenade exploded={_grenadeExploded} grenade explosion log={_sawGrenadeExploded} errors={_errors.Count.ToString(CultureInfo.InvariantCulture)}");
 
             var passed = problems.Count == 0
                 && _step == Step.Done
@@ -720,7 +856,11 @@ namespace Fps.Editor
                 && _crossedVaultWall
                 && _sawDodgeStart
                 && _sawDodgeEnd
-                && _dodgeBlockedFire;
+                && _dodgeBlockedFire
+                && _sawGrenadeThrown
+                && _grenadeCountDropped
+                && _grenadeExploded
+                && _sawGrenadeExploded;
             if (passed)
             {
                 Finish(SuccessExitCode, "passed");
@@ -741,6 +881,7 @@ namespace Fps.Editor
             _finished = true;
             Detach();
             StopWatchingVault();
+            StopWatchingGrenade();
             SessionState.EraseBool(ActiveKey);
             SessionState.EraseFloat(RequestedAtKey);
 

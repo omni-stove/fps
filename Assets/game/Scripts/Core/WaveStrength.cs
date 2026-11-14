@@ -39,6 +39,8 @@ namespace Fps.Core
                 spec.CoverPeekSeconds,
                 spec.CoverHealthFraction,
                 spec.Archetype,
+                spec.Shield,
+                spec.Sniper,
                 spec.StaggerResistance);
         }
 

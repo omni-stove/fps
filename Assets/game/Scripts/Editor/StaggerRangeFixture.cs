@@ -96,6 +96,8 @@ namespace Fps.Editor
                     spec.CoverPeekSeconds,
                     spec.CoverHealthFraction,
                     spec.Archetype,
+                    spec.Shield,
+                    spec.Sniper,
                     spec.StaggerResistance));
 
                 var damageable = enemy.GetComponent<Damageable>();

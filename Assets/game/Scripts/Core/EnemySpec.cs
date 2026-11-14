@@ -44,6 +44,11 @@ namespace Fps.Core
 
         public float StaggerResistance { get; }
 
+        // 種類が違っても持たせておく。ボスの段階で種類だけを変えたときに、値を探し直さずに済むように。
+        public ShieldSpec Shield { get; }
+
+        public SniperSpec Sniper { get; }
+
         public const float DefaultCoverHideSeconds = 1.5f;
         public const float DefaultCoverPeekSeconds = 2f;
         public const float DefaultCoverHealthFraction = 0.5f;
@@ -60,6 +65,8 @@ namespace Fps.Core
         /// <param name="coverPeekSeconds">TakeCover で 1 回覗いている時間。0 以上。</param>
         /// <param name="coverHealthFraction">体力の割合がこれを下回ったら TakeCover に移る。0 以上 1 以下。</param>
         /// <param name="archetype">敵の種類。</param>
+        /// <param name="shield">盾持ちの値。null なら既定値。</param>
+        /// <param name="sniper">狙撃兵の値。null なら既定値。</param>
         /// <param name="staggerResistance">怯みにくさ (<see cref="StaggerJudge.Threshold"/>・<see cref="StaggerJudge.Duration"/>)。0 以上の有限値。</param>
         public EnemySpec(
             float sightRange,
@@ -74,6 +81,8 @@ namespace Fps.Core
             float coverPeekSeconds = DefaultCoverPeekSeconds,
             float coverHealthFraction = DefaultCoverHealthFraction,
             EnemyArchetype archetype = EnemyArchetype.Rifleman,
+            ShieldSpec shield = null,
+            SniperSpec sniper = null,
             float staggerResistance = 0f)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
@@ -122,6 +131,8 @@ namespace Fps.Core
             CoverPeekSeconds = coverPeekSeconds;
             CoverHealthFraction = coverHealthFraction;
             Archetype = archetype;
+            Shield = shield ?? ShieldSpec.Default;
+            Sniper = sniper ?? SniperSpec.Default;
             StaggerResistance = staggerResistance;
         }
 

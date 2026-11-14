@@ -195,6 +195,7 @@ namespace Fps.Runtime
         private Vector3? _errand;
         private bool _errandOverridesCombat;
         private float _walkSpeed;
+        private float _moveSpeedMultiplier = 1f;
         private bool _sprinting;
         private bool _aiming;
 
@@ -429,6 +430,8 @@ namespace Fps.Runtime
                 _coverPeekSeconds,
                 _coverHealthFraction,
                 _archetype,
+                CreateShieldSpec(),
+                CreateSniperSpec(),
                 _staggerResistance);
         }
 
@@ -448,6 +451,39 @@ namespace Fps.Runtime
                 throw new InvalidOperationException($"EnemyAgent '{name}' is already initialized; apply the spec before activating it");
             }
 
+            CopySpec(spec);
+        }
+
+        // ApplySpec は初期化後を拒むので、ボスの段階のように戦いの途中で変える口を別に設ける。
+        // 波の強さ (ApplySpec) は出す前に決まるもので、途中で変わったら呼び出し側の誤りとして気付けるよう、そちらの決まりは残す。
+        public void ChangeSpec(EnemySpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            CopySpec(spec);
+            _brain?.ChangeSpec(spec);
+        }
+
+        // 1 未満にもできる。ボスの段階で遅くする使い方を塞がないように。
+        public float MoveSpeedMultiplier
+        {
+            get => _moveSpeedMultiplier;
+            set
+            {
+                if (!(value > 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "MoveSpeedMultiplier must be positive and finite");
+                }
+
+                _moveSpeedMultiplier = value;
+            }
+        }
+
+        private void CopySpec(EnemySpec spec)
+        {
             _sightRange = spec.SightRange;
             _attackRange = spec.AttackRange;
             _loseSightSeconds = spec.LoseSightSeconds;
@@ -460,6 +496,7 @@ namespace Fps.Runtime
             _coverPeekSeconds = spec.CoverPeekSeconds;
             _coverHealthFraction = spec.CoverHealthFraction;
             _archetype = spec.Archetype;
+            CopyArchetypeSpecs(spec);
             _staggerResistance = spec.StaggerResistance;
         }
 
@@ -611,8 +648,8 @@ namespace Fps.Runtime
         {
             var phase = _brain.CoverPhase;
             _aiming = !_unarmed && EnemyGait.IsAiming(_brain.State, phase);
-            _sprinting = EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing);
-            _agent.speed = EnemyGait.Speed(_walkSpeed, _sprinting, _crouching);
+            _sprinting = _sprintAllowed && EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing);
+            _agent.speed = EnemyGait.Speed(GaitWalkSpeed, _sprinting, _crouching);
         }
 
         /// <summary>
@@ -770,7 +807,7 @@ namespace Fps.Runtime
             _recoil.Reset();
             _sprinting = false;
             _aiming = false;
-            _agent.speed = _walkSpeed;
+            _agent.speed = _walkSpeed * _moveSpeedMultiplier;
 
             // 無効のまま Transform を動かしてから有効にすると、NavMeshAgent は新しい位置の近くの NavMesh に載る。
             if (_agent.enabled && _agent.isOnNavMesh)

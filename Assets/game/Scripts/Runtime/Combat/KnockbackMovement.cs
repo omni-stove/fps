@@ -193,7 +193,7 @@ namespace Fps.Runtime
                 airControl = _spec.AirControl;
             }
 
-            var displacement = _flight.Step(deltaSeconds, spec.Gravity, steer, airControl).ToUnity();
+            var displacement = _flight.Step(deltaSeconds, _spec.Gravity, steer, airControl).ToUnity();
             return MovementOverrideStep.Move(displacement, _flight.Velocity.ToUnity());
         }
 

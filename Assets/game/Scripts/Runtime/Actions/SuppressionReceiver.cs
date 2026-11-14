@@ -122,12 +122,14 @@ namespace Fps.Runtime
                 throw new ArgumentOutOfRangeException(nameof(rule), rule, "rule must be a Suppression value");
             }
 
-            if (!ReferenceEquals(spec, EnsureMeter().Spec))
+            // 既定の spec は「調整の指定なし」なので、受け皿に設定済みの Inspector の値を潰さない。
+            if (!ReferenceEquals(spec, SuppressionSpec.Default) && !ReferenceEquals(spec, EnsureMeter().Spec))
             {
                 CopyToFields(spec);
                 _meter = new SuppressionMeter(spec);
             }
 
+            EnsureMeter();
             _rule = rule;
             if (rule != Suppression.On)
             {

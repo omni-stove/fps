@@ -38,6 +38,9 @@
   JSON から作る取り込みはまだ無い。
 - 移動: `MotorSettings` (コンポーネントに割り当てたもの、無ければ Resources の `Movement/MotorSettings`、それも無ければ `MotorSpec.Default`)。
   オフラインの `PlayerController`・ネット対戦の `NetworkPlayerMotor`・`CharacterAnimator` のポーズが同じ値を読む。
+- グレネードと印: `Resources/Tuning/grenade.json` → `GrenadeSpec`、`Resources/Tuning/ping.json` → `PingSpec` (`KitTuning`)。
+  オフライン (`GrenadeThrower`・`PingController`) とネット対戦 (`NetTeamDeathmatch.GrenadeSpec`・`PingSpec`) が同じ値を読む。
+  ファイルが無ければ既定値。
 - メニューから移るシーン名: `MenuSceneSettings` (Resources の `Menu/MenuSceneSettings`) を置けば、メインメニュー・射撃場・
   キャンペーン・ネット対戦のシーン名が `MenuRoute` の既定 (MainMenu / Bootstrap / Campaign01 / NetTest) から変わる。
   キャンペーンの選択画面で選ぶミッションのシーンは、これとは別に `MissionCatalog` が持つ。
@@ -47,8 +50,6 @@
 `const ... Default*` として持っているもの。データに出し、ゲームが上書きできるようにする。
 
 - 敵 AI の体: `EnemyAgent` の目の高さ・向き直る速さ・しゃがんだ高さ (`DefaultEyeHeight` など)。判断の値と違い `EnemyDefinition` には無い
-- グレネード: `GrenadeSpec.Default*`。`GrenadeThrower` の Inspector では変えられるが、ルールや武器のような JSON は無い
-- 印: `PingSpec.Default*`。オフラインは `PingController` の Inspector、ネット対戦は `NetTeamDeathmatch.PingSpec` をコードで差し替えられるが、JSON は無い
 - 吹き飛ばし: `KnockbackSpec.Default*`。`KnockbackMovement` / `EnemyAgent` の `KnockbackSpec` をコードで差し替えられ、重さだけ Inspector で変えられるが、JSON は無い
 - 各モード: `HordeSpec`・`SearchAndDestroySpec`・`KillConfirmedSpec`・`TeamDeathmatchSpec`・`PickupSpec` と、それぞれの `*Runner`。
   オンラインの拠点制圧 (`NetTeamDeathmatch` の `_captureSeconds` など) もまだ `DominationRunner.Default*` を直接持つ
@@ -87,7 +88,7 @@
      サンプルの JSON をパッケージの中から読んでいるところ (README の「同梱のサンプル JSON」) も合わせて直す。
    - 移動は `.meta` ごと行い、GUID を変えない。ファイルの移動が多く衝突しやすいので、並行作業の少ない時期にまとめて行う。
    - 本体のテストがサンプルの数値 (Rifle のダメージなど) に頼っていれば、テスト用のデータをテスト側に持たせる。
-3. **残りの調整値をデータへ**。敵 AI、グレネード、各モードの Spec。
+3. **残りの調整値をデータへ**。敵 AI、各モードの Spec。
 4. **仮の見た目の差し替え口**。カタログにプレハブの枠を足す。
 5. **拡張点と入口の整理**。
    - 固定の列挙 (`Team` が `Alpha`/`Bravo` の 2 つなど) を、キットとして固定するか開くか決める。

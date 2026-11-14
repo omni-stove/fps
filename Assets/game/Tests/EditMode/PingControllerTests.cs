@@ -279,6 +279,18 @@ namespace Fps.Tests.EditMode
             Assert.Throws<System.ArgumentNullException>(() => pinger.Configure(null));
         }
 
+        [Test]
+        public void TheIntervalIsKeptWithTheOtherValues()
+        {
+            var pinger = Pinger();
+            pinger.ApplySpec(new PingSpec(minIntervalSeconds: 2f));
+
+            pinger.Configure(PingRules(Fps.Core.Ping.On));
+
+            Assert.That(pinger.Spec.MinIntervalSeconds, Is.EqualTo(2f));
+            Assert.That(pinger.CreateSpec().MinIntervalSeconds, Is.EqualTo(2f), "the applied values are the serialized ones");
+        }
+
         private PingController Pinger(PingSpec spec = null)
         {
             var go = Track(new GameObject("Pinger"));

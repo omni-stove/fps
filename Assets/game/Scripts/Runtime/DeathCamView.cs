@@ -119,7 +119,6 @@ namespace Fps.Runtime
             _freeLimitRadius = null;
         }
 
-        // 借りている間に別の DeathCamView が同じカメラを借りたとき、戻される直前に呼ばれる (カメラはまだ借りたまま)
         public event Action Preempted;
 
         public static bool IsBorrowed(Camera camera)

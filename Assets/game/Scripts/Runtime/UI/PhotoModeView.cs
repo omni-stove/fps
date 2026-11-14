@@ -73,14 +73,12 @@ namespace Fps.Runtime
             }
         }
 
-        // null なら既定の保存 (ScreenshotPhotoCapture)
         public IPhotoCapture PhotoCapture
         {
             get => _photoCapture;
             set => _photoCapture = value;
         }
 
-        // null ならシーンから、有効な視点操作 (この端末のプレイヤー) を持つものを探す
         public Component Target
         {
             get => _target;
@@ -100,7 +98,6 @@ namespace Fps.Runtime
                 return true;
             }
 
-            // 死亡カメラに奪われたまま、まだ Update で片付けていないもの
             Exit();
 
             var pause = GetComponent<PauseMenu>();

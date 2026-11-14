@@ -153,6 +153,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("散らばりを絞り切るまでの発数")]
         private int _openingShots = DefaultOpeningShots;
 
+        [SerializeField, Min(0f), Tooltip("怯みにくさ。0 で既定、1 で怯むのに 2 倍のダメージが要り、怯む長さは半分になる")]
+        private float _staggerResistance;
+
         [Header("Body")]
         [SerializeField, Min(0f)]
         private float _eyeHeight = DefaultEyeHeight;
@@ -242,6 +245,8 @@ namespace Fps.Runtime
         public EnemyState State => _brain?.State ?? EnemyState.Idle;
 
         public EnemyArchetype Archetype => _archetype;
+
+        public float StaggerResistance => _staggerResistance;
 
         /// <summary><see cref="SetErrand"/> で渡した行き先 (足元)。無ければ null。</summary>
         public Vector3? Errand => _errand;
@@ -432,7 +437,8 @@ namespace Fps.Runtime
                 CreateShieldSpec(),
                 CreateSniperSpec(),
                 CreateChargerSpec(),
-                CreateBomberSpec());
+                CreateBomberSpec(),
+                _staggerResistance);
         }
 
         /// <summary>
@@ -497,6 +503,7 @@ namespace Fps.Runtime
             _coverHealthFraction = spec.CoverHealthFraction;
             _archetype = spec.Archetype;
             CopyArchetypeSpecs(spec);
+            _staggerResistance = spec.StaggerResistance;
         }
 
         /// <summary>遮蔽点の段階が変わったときのログ。</summary>

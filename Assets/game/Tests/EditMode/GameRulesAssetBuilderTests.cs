@@ -365,6 +365,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.GrenadeCount, Is.GreaterThan(0), "grenades are on, so there must be some to throw");
             Assert.That(rules.Actions.Prone, Is.EqualTo(Prone.On));
             Assert.That(rules.Actions.Slide, Is.EqualTo(Slide.On));
+            Assert.That(rules.Actions.Stagger, Is.EqualTo(Stagger.On));
         }
 
         [Test]

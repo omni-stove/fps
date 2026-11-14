@@ -41,18 +41,27 @@ namespace Fps.Protocol.Tests
         public void ConnectionEventsHaveNoPayload()
         {
             var connected = TransportEvent.Connected(new ConnectionId(1));
-            var disconnected = TransportEvent.Disconnected(new ConnectionId(1));
+            var disconnected = TransportEvent.Disconnected(new ConnectionId(1), "fps:server-stopped");
 
             Assert.That(connected.Kind, Is.EqualTo(TransportEventKind.Connected));
             Assert.That(disconnected.Kind, Is.EqualTo(TransportEventKind.Disconnected));
             Assert.That(connected.Payload.Count, Is.Zero);
+            Assert.That(connected.Reason, Is.Empty);
+            Assert.That(disconnected.Reason, Is.EqualTo("fps:server-stopped"));
+        }
+
+        [Test]
+        public void DisconnectedEventTreatsNullReasonAsEmpty()
+        {
+            Assert.That(TransportEvent.Disconnected(new ConnectionId(1), null).Reason, Is.Empty);
+            Assert.That(default(TransportEvent).Reason, Is.Empty);
         }
 
         [Test]
         public void EventsNeedAConnection()
         {
             Assert.Throws<ArgumentException>(() => TransportEvent.Connected(ConnectionId.None));
-            Assert.Throws<ArgumentException>(() => TransportEvent.Disconnected(ConnectionId.None));
+            Assert.Throws<ArgumentException>(() => TransportEvent.Disconnected(ConnectionId.None, ""));
             Assert.Throws<ArgumentException>(
                 () => TransportEvent.Data(ConnectionId.None, TransportChannel.Reliable, new ArraySegment<byte>(new byte[1])));
         }

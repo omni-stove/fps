@@ -4,7 +4,7 @@
 # あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応と、UI のコードに日本語の直書きが無いこと (ui_text_problems) を検査する。
 # 問題が無ければ何も出さず、あれば指摘の行だけを出して 1 で終わる。--fix で直せるものを直す
 # (.meta の抜けは、.cs・.asmdef・.asmref・テキストアセットとフォルダなら Unity と同じ形で作る。本体の無い .meta は消さない。詳しくは fix_metas)。
-# --fix-meta は .meta の抜けだけを直して終わる。CI の lint ジョブが dotnet の復元より前に作り直すため。
+# --fix-meta は .meta の抜けだけを直して終わる。CI の meta ジョブが dotnet 無しで作り直すため。
 # shellcheck source=scripts/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 

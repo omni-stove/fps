@@ -43,7 +43,8 @@ namespace Fps.Net
     {
         /// <summary>
         /// 実行時に読むこのコンポーネントのシーン (<see cref="KitPaths.DefaultRoot"/> の下)。<c>Fps.Editor.NetSceneBuilder</c> が生成する。
-        /// 別のルートの下から読むなら <see cref="MenuRoute.NetSceneUnder"/>。
+        /// 別のルートの下から読むなら <see cref="MenuRoute.NetSceneUnder(string)"/>。
+        /// これは既定の名前の経路で、実行時に読むのは <see cref="MenuSceneSettings"/> で変えた名前のほう。
         /// </summary>
         public const string ScenePath = MenuRoute.NetScene;
 
@@ -120,6 +121,7 @@ namespace Fps.Net
 
         /// <summary>
         /// プレイヤーを <c>-mode</c> 付きで起動したときと専用サーバーでは、最初のシーンが NetTest でなければ NetTest へ切り替える。
+        /// シーンの名前は <see cref="MenuSceneSettings"/> で変えられる (メニューのオンラインのボタンと同じ)。
         /// ふだんの起動 (引数なし) では何もしない。
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -131,15 +133,16 @@ namespace Fps.Net
                 return;
             }
 
-            if (SceneManager.GetActiveScene().path == ScenePath)
+            var scenePath = MenuRoute.NetSceneUnder(KitPaths.DefaultRoot, MenuSceneSettings.LoadScenes());
+            if (SceneManager.GetActiveScene().path == scenePath)
             {
                 return;
             }
 
-            var buildIndex = SceneUtility.GetBuildIndexByScenePath(ScenePath);
+            var buildIndex = SceneUtility.GetBuildIndexByScenePath(scenePath);
             if (buildIndex < 0)
             {
-                Debug.LogError("[Net] " + ScenePath + " is not in the build settings; run Fps.Editor.NetSceneBuilder.Build and rebuild");
+                Debug.LogError("[Net] " + scenePath + " is not in the build settings; run Fps.Editor.NetSceneBuilder.Build and rebuild");
                 QuitIfHeadlessPlayer(ExitMisconfigured);
                 return;
             }
@@ -821,7 +824,8 @@ namespace Fps.Net
                 return;
             }
 
-            ReturnToMenu(reason);
+            // 理由はエラーログと同じ文で訳さないので、表を引かずにそのまま運ぶ
+            ReturnToMenu(string.IsNullOrWhiteSpace(reason) ? default : LocalizedText.Literal(reason));
         }
 
         /// <summary>
@@ -833,7 +837,8 @@ namespace Fps.Net
             ReturnToMenu(notice.Message);
         }
 
-        private void ReturnToMenu(string notice)
+        /// <param name="notice">メニューに出す文。表を引くのはメニューで、戻った先の言語で文にする。空なら出さない。</param>
+        private void ReturnToMenu(LocalizedText notice)
         {
             if (_returningToMenu
                 || NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
@@ -848,8 +853,8 @@ namespace Fps.Net
                 return;
             }
 
-            // 理由の文はまだ表のキーになっていないので、作った文字列をそのまま運ぶ。メニューがビルドに無ければ menu がエラーログを出し、このシーンに留まる
-            menu.ReturnToMenu(string.IsNullOrWhiteSpace(notice) ? default : LocalizedText.Literal(notice));
+            // メニューがビルドに無ければ menu がエラーログを出し、このシーンに留まる
+            menu.ReturnToMenu(notice);
         }
 
         /// <summary>

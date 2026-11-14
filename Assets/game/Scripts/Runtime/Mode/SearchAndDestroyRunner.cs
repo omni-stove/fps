@@ -37,6 +37,9 @@ namespace Fps.Runtime
         public const float ReachHeight = 2f;
 
         [Header("Rules")]
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の Rules の値の代わりにこれを読む")]
+        private SearchAndDestroyDefinition _definition;
+
         [SerializeField, Min(1f), Tooltip("1 ラウンドの制限時間 (秒)。設置すると止まる")]
         private float _roundSeconds = SearchAndDestroySpec.DefaultRoundSeconds;
 
@@ -93,6 +96,13 @@ namespace Fps.Runtime
 
         /// <summary>設置と解除に使う Interact アクション。解決できなければ null (プレイヤーは設置も解除もできない)。</summary>
         public InputAction InteractAction => _interactAction;
+
+        /// <summary>調整値のアセット。null なら Inspector の値 (既定は <see cref="SearchAndDestroySpec"/> の既定値) で始める。</summary>
+        public SearchAndDestroyDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
 
         public float RoundSeconds
         {
@@ -177,9 +187,17 @@ namespace Fps.Runtime
             _sites = copy;
         }
 
-        /// <summary>Inspector の設定から、地点が siteCount 個の <see cref="SearchAndDestroySpec"/> を作る。値が不正なら <see cref="ArgumentOutOfRangeException"/>。</summary>
+        /// <summary>
+        /// 地点が siteCount 個の <see cref="SearchAndDestroySpec"/> を、<see cref="Definition"/> があればその値で、無ければ Inspector の値で作る。
+        /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
+        /// </summary>
         public SearchAndDestroySpec CreateSpec(int siteCount)
         {
+            if (_definition != null)
+            {
+                return _definition.ToSpec(siteCount);
+            }
+
             return new SearchAndDestroySpec(
                 siteCount, _roundSeconds, _plantSeconds, _defuseSeconds, _fuseSeconds, _winsToWin, _preparationSeconds, _swapEveryRounds);
         }

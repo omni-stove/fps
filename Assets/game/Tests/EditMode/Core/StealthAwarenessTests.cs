@@ -248,7 +248,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => awareness.TryOverride(null, 0.1f, Sees(_ahead), EnemyDecision.None, out _));
         }
 
-        private sealed class Recorder : IPerceptionContributor
+        private sealed class Recorder : IBrainPerceptionContributor
         {
             public List<float> Awareness { get; } = new List<float>();
 

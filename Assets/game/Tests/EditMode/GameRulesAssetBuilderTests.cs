@@ -367,6 +367,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.Stealth, Is.EqualTo(Stealth.On), "the range has a stealth area to try the detection meter in");
             Assert.That(rules.Actions.Slide, Is.EqualTo(Slide.On));
             Assert.That(rules.Actions.Stagger, Is.EqualTo(Stagger.On));
+            Assert.That(rules.Actions.Suppression, Is.EqualTo(Suppression.On));
         }
 
         [Test]
@@ -374,6 +375,14 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(GameRulesAssetBuilder.RangeActions().Slide, Is.EqualTo(Slide.Off));
             Assert.That(GameRulesAssetBuilder.TeamDeathmatchActions().Slide, Is.EqualTo(Slide.Off));
+        }
+
+        [Test]
+        public void OnlyTheTpsRangeTurnsSuppressionOn()
+        {
+            Assert.That(GameRulesAssetBuilder.RangeActions().Suppression, Is.EqualTo(Suppression.Off));
+            Assert.That(GameRulesAssetBuilder.CampaignActions().Suppression, Is.EqualTo(Suppression.Off));
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchActions().Suppression, Is.EqualTo(Suppression.Off));
         }
 
         private static void AssertActions(ActionRules actual, ExpectedActions expected, string message)

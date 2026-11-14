@@ -3,7 +3,7 @@
     <!-- text の "#キー" は文字列表 (Assets/game/Resources/Localization/ja/menu.json など) のキーで、MainMenuScreen が Fps.Runtime.LocalizedTexts で今の言語の文字にする。 -->
     <Style src="MainMenu.uss" />
     <ui:VisualElement name="main-menu" class="menu">
-        <ui:Label name="menu-title" text="FPS" class="menu__title" />
+        <ui:Label name="menu-title" text="#menu.title" class="menu__title" />
         <ui:VisualElement name="menu-buttons" class="menu__buttons">
             <!-- 並び順がゲームパッドで上下に動かすフォーカスの順番 (MainMenuScreen.ButtonNames と同じ)。 -->
             <ui:Button name="menu-campaign" text="#menu.campaign" class="menu__button" />

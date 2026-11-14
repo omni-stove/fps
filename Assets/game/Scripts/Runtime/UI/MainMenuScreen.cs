@@ -102,6 +102,7 @@ namespace Fps.Runtime
         private CampaignSelectPanel _campaignPanel;
         private ISaveStorage _saveStorage;
         private Label _notice;
+        private LocalizedText _noticeSource;
         private int _focusIndex = -1;
         private bool _settingsOpen;
         private bool _leaving;
@@ -430,7 +431,7 @@ namespace Fps.Runtime
             {
                 _leaving = false;
                 SetButtonsEnabled(true);
-                ShowNotice(SceneMissingNotice(MenuRoute.Plan(destination).ScenePath));
+                ShowNotice(SceneMissingNotice(MenuNavigator.Plan(destination).ScenePath));
                 FocusAt(_focusIndex);
             }
 
@@ -719,6 +720,19 @@ namespace Fps.Runtime
         /// <summary>案内を出す。null か空なら隠す。</summary>
         public void ShowNotice(string text)
         {
+            _noticeSource = default;
+            ShowNoticeText(text);
+        }
+
+        /// <summary>案内を今の言語 (<see cref="Localizer.Resolve"/>) の文にして出し、言語が変わったら文にし直す。文にして空なら隠す。</summary>
+        public void ShowNotice(LocalizedText text)
+        {
+            _noticeSource = text;
+            ShowNoticeText(Localizer.Resolve(text));
+        }
+
+        private void ShowNoticeText(string text)
+        {
             if (_notice == null)
             {
                 return;
@@ -729,7 +743,8 @@ namespace Fps.Runtime
             SetDisplayed(_notice, shown);
         }
 
-        // 言語は設定画面からしか変わらず、設定画面は自分で組み直すので、ここではメニューのボタンなど UXML の文字だけを書き直す。
+        // 言語は設定画面からしか変わらず、設定画面は自分で組み直すので、ここではメニューのボタンなど UXML の文字と、
+        // 表のキーで受け取った案内 (切断の理由など) だけを書き直す。
         private void HandleLanguageChanged(GameLanguage language)
         {
             if (this == null)
@@ -738,6 +753,10 @@ namespace Fps.Runtime
             }
 
             _texts?.Refresh();
+            if (!_noticeSource.IsEmpty)
+            {
+                ShowNoticeText(Localizer.Resolve(_noticeSource));
+            }
         }
 
         private void Press(string buttonName)
@@ -900,6 +919,7 @@ namespace Fps.Runtime
             _texts = null;
             _navigationRoot = null;
             _notice = null;
+            _noticeSource = default;
             _settingsSlot = null;
             _loadoutSlot = null;
             _campaignSlot = null;

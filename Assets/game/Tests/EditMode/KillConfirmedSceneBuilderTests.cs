@@ -25,6 +25,7 @@ namespace Fps.Tests.EditMode
             Assert.That(builder.NavMeshDataPath, Is.EqualTo("Assets/game/Scenes/KillConfirmed/NavMesh-Floor.asset"));
             Assert.That(builder.LogTag, Is.EqualTo("[KillConfirmedSceneBuilder]"));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.KillConfirmedScene));
+            Assert.That(KillConfirmedSceneBuilder.DefinitionPath, Is.EqualTo("Assets/game/Modes/KillConfirmed.asset"));
         }
 
         [Test]

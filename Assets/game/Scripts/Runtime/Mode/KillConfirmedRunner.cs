@@ -35,6 +35,9 @@ namespace Fps.Runtime
         /// <summary>タグを拾える範囲の既定の半径 (m)。</summary>
         public const float DefaultTagRadius = Pickup.DefaultRadius;
 
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の確定数・制限時間・リスポーン・タグの秒数の代わりにこれを読む")]
+        private KillConfirmedDefinition _definition;
+
         [SerializeField, Min(1), Tooltip("どちらかのチームがこの確定数に届いたら試合が終わる")]
         private int _scoreLimit = DefaultScoreLimit;
 
@@ -58,6 +61,13 @@ namespace Fps.Runtime
 
         /// <summary>進めているキルコンファームド。開始前は null。</summary>
         public KillConfirmed KillConfirmed => _killConfirmed;
+
+        /// <summary>調整値のアセット。null なら Inspector の値 (既定は Default* の値) で始める。</summary>
+        public KillConfirmedDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
 
         public int ScoreLimit
         {
@@ -99,9 +109,17 @@ namespace Fps.Runtime
             return _pickupOf.TryGetValue(tagId, out var pickup) ? pickup : null;
         }
 
-        /// <summary>Inspector の設定から <see cref="KillConfirmedSpec"/> を作る。値が不正なら <see cref="ArgumentOutOfRangeException"/>。</summary>
+        /// <summary>
+        /// <see cref="KillConfirmedSpec"/> を、<see cref="Definition"/> があればその値で、無ければ Inspector の値で作る。
+        /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
+        /// </summary>
         public KillConfirmedSpec CreateSpec()
         {
+            if (_definition != null)
+            {
+                return _definition.ToSpec();
+            }
+
             return new KillConfirmedSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds, _tagLifetimeSeconds);
         }
 

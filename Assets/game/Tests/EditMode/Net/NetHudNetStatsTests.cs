@@ -199,10 +199,12 @@ namespace Fps.Net.Tests
             view.Show(NetStatsFormat.Text(320, 0, 1), NetPingLevel.Bad);
             Assert.That(view.Level, Is.EqualTo(NetPingLevel.Bad));
             Assert.That(view.Text, Is.EqualTo("Ping 320 ms  ロス 0%  tick 1"));
+            Assert.That(view.Source, Is.EqualTo(new LocalizedText("net.stats.line", "320", "0", "1")));
 
             view.Hide();
             Assert.That(view.Level, Is.EqualTo(NetPingLevel.Good));
             Assert.That(view.Text, Is.Empty);
+            Assert.That(view.Source.IsEmpty, Is.True);
         }
     }
 }

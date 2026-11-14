@@ -139,8 +139,9 @@ namespace Fps.Runtime
         /// <summary>
         /// 今のばらつき (0〜1)。撃つたびに <see cref="SpreadPerShot"/> 増え、撃ち止めて <see cref="SpreadRecoveryDelaySeconds"/> 経つと
         /// <see cref="SpreadRecoveryPerSecond"/> で 0 へ戻る。時間は <see cref="Tick"/> (Play 中は Update) で進む。HUD が照準の広がりに使う。
+        /// <see cref="Modifiers"/> があれば、それを通した値 (0〜1 に収める) を返す。
         /// </summary>
-        public float SpreadFraction => _spread;
+        public float SpreadFraction => ModifySpreadFraction(_spread);
 
         /// <summary>射撃の向きと起点。未初期化なら null。</summary>
         public Transform Aim => _aim;
@@ -713,7 +714,8 @@ namespace Fps.Runtime
         /// 撃てたら照準の正面へ (<see cref="ShotFilter"/> があれば書き換えた始点と向きで) Raycast し、Hitbox に当たればダメージを渡す。
         /// Hitbox の無い物に当たれば <see cref="StructureDamage.Apply"/> に武器の <see cref="WeaponSpec.ExplosionRadius"/> で渡す。
         /// 撃つと <see cref="CombatEvents.ShotFired"/>、何かに当たると <see cref="CombatEvents.Impact"/>、
-        /// 生きている相手に当てると <see cref="CombatEvents.HitConfirmed"/> を出す。倒した相手の <see cref="CombatEvents.Killed"/> は
+        /// 生きている相手に当てると <see cref="CombatEvents.HitConfirmed"/> を出す。弾の線の近くを通られた相手には
+        /// <see cref="Hitscan.ReportNearMisses"/> でニアミスを知らせる。倒した相手の <see cref="CombatEvents.Killed"/> は
         /// このプレイヤーと武器の帰属 (<see cref="CombatEvents.Attribute"/>) で <see cref="Damageable"/> が出す。
         /// </summary>
         public bool Fire()
@@ -741,7 +743,9 @@ namespace Fps.Runtime
 
             var shooter = _aim.root.gameObject;
             CombatEvents.RaiseShotFired(shooter, origin, direction, weapon.Spec.Id);
-            if (!TryRaycast(origin, direction, out var hit))
+            var found = TryRaycast(origin, direction, out var hit);
+            Hitscan.ReportNearMisses(origin, direction, found ? hit.distance : HitscanRange, _aim.root, found ? hit.collider : null);
+            if (!found)
             {
                 return true;
             }
@@ -854,7 +858,10 @@ namespace Fps.Runtime
             return SpreadPattern.Direction(direction.ToNumerics(), cone, PlayerId, shotIndex).ToUnity();
         }
 
-        /// <summary>今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読み、<see cref="SpreadScale"/> と登録された modifier の倍率を掛ける。</summary>
+        /// <summary>
+        /// 今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読み、
+        /// <see cref="SpreadScale"/> と登録された modifier の倍率を掛けてから <see cref="Modifiers"/> の足し引きを通し、0 以上 <see cref="SpreadPattern.MaxDegrees"/> 以下に収める。
+        /// </summary>
         public float CurrentConeDegrees(WeaponSpec spec)
         {
             if (spec == null)
@@ -864,7 +871,35 @@ namespace Fps.Runtime
 
             var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
             var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
-            return SpreadPattern.ConeDegrees(spec, ads, move) * SpreadScale * ModifierSpreadMultiplier();
+            var cone = SpreadPattern.ConeDegrees(spec, ads, move) * SpreadScale * ModifierSpreadMultiplier();
+            if (_modifiers.Count == 0)
+            {
+                return cone;
+            }
+
+            // HUD が毎フレーム読むので、写しを作らずに回す (modifier の中で足し外しはしない約束)。
+            for (var i = 0; i < _modifiers.Count; i++)
+            {
+                cone = _modifiers[i].ModifyConeDegrees(spec, cone);
+            }
+
+            // NaN を返す modifier があっても、SpreadPattern.Direction に渡して例外にしない。
+            return float.IsNaN(cone) ? 0f : Mathf.Clamp(cone, 0f, SpreadPattern.MaxDegrees);
+        }
+
+        private float ModifySpreadFraction(float spread)
+        {
+            if (_modifiers.Count == 0)
+            {
+                return spread;
+            }
+
+            for (var i = 0; i < _modifiers.Count; i++)
+            {
+                spread = _modifiers[i].ModifySpreadFraction(spread);
+            }
+
+            return float.IsNaN(spread) ? 0f : Mathf.Clamp01(spread);
         }
 
         /// <summary>今の武器の時間 (武器を持っていなければ進めない) と、<see cref="SpreadFraction"/> と <see cref="Recoil"/> の戻りを deltaSeconds 進める。</summary>

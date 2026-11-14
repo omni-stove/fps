@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Fps.Core;
 using UnityEngine;
@@ -7,6 +8,7 @@ namespace Fps.Runtime
 {
     public sealed partial class EnemyAgent
     {
+        private readonly List<IPerceptionContributor> _contributors = new List<IPerceptionContributor>();
         private Damageable _target;
         private Vector3? _pendingNoise;
         private bool _pendingHit;
@@ -40,7 +42,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今の位置・目標・視線・体力の割合と、前の知覚の後に撃たれていれば撃たれたこと・撃った者の位置 (物音としても渡す) から、
-        /// 1 tick 分の知覚を組み立てる。撃たれた情報はここで使い切るので、次の呼び出しでは撃たれていないことになる。
+        /// 1 tick 分の知覚を組み立て、<see cref="PerceptionContributors"/> に通して返す。撃たれた情報はここで使い切るので、次の呼び出しでは撃たれていないことになる。
         /// 未初期化なら <see cref="InvalidOperationException"/>。
         /// </summary>
         public EnemyPerception Perceive()
@@ -54,8 +56,62 @@ namespace Fps.Runtime
             var wasHit = _pendingHit;
             var hitSource = _pendingHitSource;
             ClearPendingPerception();
-            return EnemySenses.Perceive(
+            var perception = EnemySenses.Perceive(
                 GroundPosition, EyePosition, _target, _sightRange, transform, noise, wasHit, hitSource, HealthFraction(_self));
+            return Contribute(perception);
+        }
+
+        public IReadOnlyList<IPerceptionContributor> PerceptionContributors => _contributors;
+
+        /// <exception cref="ArgumentNullException">contributor が null。</exception>
+        public bool AddPerceptionContributor(IPerceptionContributor contributor)
+        {
+            if (contributor == null)
+            {
+                throw new ArgumentNullException(nameof(contributor));
+            }
+
+            if (_contributors.Contains(contributor))
+            {
+                return false;
+            }
+
+            _contributors.Add(contributor);
+            return true;
+        }
+
+        /// <exception cref="ArgumentNullException">contributor が null。</exception>
+        public bool RemovePerceptionContributor(IPerceptionContributor contributor)
+        {
+            if (contributor == null)
+            {
+                throw new ArgumentNullException(nameof(contributor));
+            }
+
+            return _contributors.Remove(contributor);
+        }
+
+        // 1 つが投げても敵を止めず、その contributor を飛ばして残りを通す。
+        private EnemyPerception Contribute(EnemyPerception perception)
+        {
+            if (_contributors.Count == 0)
+            {
+                return perception;
+            }
+
+            foreach (var contributor in _contributors.ToArray())
+            {
+                try
+                {
+                    perception = contributor.Contribute(perception);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e, this);
+                }
+            }
+
+            return perception;
         }
 
         /// <summary>体力の割合 (0 以上 1 以下)。self が無ければ 1。</summary>

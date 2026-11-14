@@ -71,7 +71,8 @@ namespace Fps.Core
                     spec.RecoilRecoveryPerSecond,
                     spec.HipSpreadDegrees,
                     spec.AdsSpreadDegrees,
-                    spec.MoveSpreadDegrees);
+                    spec.MoveSpreadDegrees,
+                    spec.RecoilRecoveryDelaySeconds);
             _weapon = CreateWeapon();
         }
 

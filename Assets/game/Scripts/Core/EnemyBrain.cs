@@ -48,7 +48,7 @@ namespace Fps.Core
         private readonly HashSet<int> _unreachableCover = new HashSet<int>();
 
         private readonly List<IEnemyBehavior> _behaviors = new List<IEnemyBehavior>();
-        private readonly List<IPerceptionContributor> _contributors = new List<IPerceptionContributor>();
+        private readonly List<IBrainPerceptionContributor> _contributors = new List<IBrainPerceptionContributor>();
 
         public EnemySpec Spec => _spec;
         public EnemyState State { get; private set; } = EnemyState.Idle;
@@ -295,10 +295,10 @@ namespace Fps.Core
             return _behaviors.Remove(behavior);
         }
 
-        public IReadOnlyList<IPerceptionContributor> PerceptionContributors => _contributors;
+        public IReadOnlyList<IBrainPerceptionContributor> PerceptionContributors => _contributors;
 
         // 登録した順に呼び、後のものは前のものが書き換えた知覚を受け取る。振る舞い (AddBehavior) にも、書き換えた後の知覚を渡す。
-        public void AddPerceptionContributor(IPerceptionContributor contributor)
+        public void AddPerceptionContributor(IBrainPerceptionContributor contributor)
         {
             if (contributor == null)
             {
@@ -313,7 +313,7 @@ namespace Fps.Core
             _contributors.Add(contributor);
         }
 
-        public bool RemovePerceptionContributor(IPerceptionContributor contributor)
+        public bool RemovePerceptionContributor(IBrainPerceptionContributor contributor)
         {
             if (contributor == null)
             {

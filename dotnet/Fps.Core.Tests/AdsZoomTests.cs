@@ -118,6 +118,22 @@ namespace Fps.Core.Tests
         public void RejectsInvalidTransitionSeconds(float seconds)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new AdsZoom(seconds));
+
+            var zoom = new AdsZoom(0.2f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => zoom.TransitionSeconds = seconds);
+            Assert.That(zoom.TransitionSeconds, Is.EqualTo(0.2f));
+        }
+
+        [Test]
+        public void ChangingTheTransitionKeepsTheProgressAndUsesTheNewSpeed()
+        {
+            var zoom = new AdsZoom(1f);
+            zoom.Step(true, 0.5f);
+
+            zoom.TransitionSeconds = 0.25f;
+
+            Assert.That(zoom.Progress, Is.EqualTo(0.5f).Within(1e-6f));
+            Assert.That(zoom.Step(true, 0.1f), Is.EqualTo(0.9f).Within(1e-5f));
         }
 
         [TestCase(-0.1f)]

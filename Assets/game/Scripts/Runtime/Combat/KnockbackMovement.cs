@@ -125,6 +125,15 @@ namespace Fps.Runtime
             _body = null;
         }
 
+        /// <summary>
+        /// 飛行中の状態を捨てる。乗り物に座っている間は優先度の高い横取りに負けて Step が呼ばれず、
+        /// 受けた吹き飛ばしが凍ったまま残るので、乗り降りでここから消す。
+        /// </summary>
+        public void ClearFlight()
+        {
+            _flight.Clear();
+        }
+
         public bool Launch(Vector3 velocity, DamageKind kind)
         {
             var sqr = velocity.sqrMagnitude;

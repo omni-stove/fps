@@ -1,0 +1,12 @@
+{
+  "net.stats.line": "Ping {0} ms  ロス {1}%  tick {2}",
+  "net.disconnect.serverStopped": "サーバーが止まりました。",
+  "net.disconnect.timedOut": "サーバーからの応答が途絶えました (タイムアウト)。",
+  "net.disconnect.connectTimedOut": "サーバーに接続できませんでした (タイムアウト)。",
+  "net.disconnect.rejected": "サーバーに接続を断られました。",
+  "net.disconnect.versionMismatch": "版が違います。",
+  "net.disconnect.serverDraining": "サーバーが止まる準備中のため参加できません。別のサーバーにつないでください。",
+  "net.disconnect.idleKicked": "操作が無い時間が続いたため、サーバーから切断されました (放置)。",
+  "net.disconnect.versionMismatchAdvice": "{0}サーバーと同じ版のゲームでつないでください。",
+  "net.disconnect.versionMismatchDetail": "版が違います (サーバー {0} / このゲーム {1})。サーバーと同じ版のゲームでつないでください。"
+}

@@ -958,7 +958,7 @@ namespace Fps.Tests.EditMode
                 player.transform.position = spawnPosition;
                 Controller = player.AddComponent<CharacterController>();
                 Player = player.AddComponent<Damageable>();
-                Player.Initialize(GameBootstrap.PlayerName, GameBootstrap.PlayerMaxHealth);
+                Player.Initialize(GameBootstrap.PlayerName, Damageable.DefaultMaxHealth);
 
                 var camera = new GameObject("Camera", typeof(Camera));
                 camera.transform.SetParent(player.transform, false);

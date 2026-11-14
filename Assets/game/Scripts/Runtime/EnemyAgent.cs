@@ -183,7 +183,7 @@ namespace Fps.Runtime
         private float _coverHealthFraction = EnemySpec.DefaultCoverHealthFraction;
 
         [Header("Weapon")]
-        [SerializeField, Tooltip("撃つ武器の定義 (弾数・連射間隔・ダメージ・射程・距離減衰)。シーン生成スクリプトが配置ごとに武器の一覧から引いて配線する")]
+        [SerializeField, RequiredReference, Tooltip("撃つ武器の定義 (弾数・連射間隔・ダメージ・射程・距離減衰)。シーン生成スクリプトが配置ごとに武器の一覧から引いて配線する")]
         private WeaponDefinition _weaponDefinition;
 
         private NavMeshAgent _agent;
@@ -413,7 +413,40 @@ namespace Fps.Runtime
             _weapon.Reloaded += OnReloaded;
             _self.Died += OnDied;
             _self.Damaged += OnDamaged;
+            NotifyInitialized();
             return true;
+        }
+
+        // 静的にするのは、波で後から出る敵にも、ルールで決まる部品 (EnemySuppression など) を出てくる前から付けられるようにするため。
+        public static event Action<EnemyAgent> Initialized;
+
+        // 受け取り側が投げても、敵の初期化は失敗にしない。
+        private void NotifyInitialized()
+        {
+            var handlers = Initialized;
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (var handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<EnemyAgent>)handler)(this);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e, this);
+                }
+            }
+        }
+
+        // ドメインの再読み込みを切った Play で、前の Play の購読が残らないようにする。
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetInitialized()
+        {
+            Initialized = null;
         }
 
         /// <summary>
@@ -631,6 +664,12 @@ namespace Fps.Runtime
                 ResolveTurretTarget(force: _target.IsDead);
             }
 
+            // 乗っている間は NavMeshAgent を止めているので、止める処理 (MoveTo) を通る一時停止より先に見る。
+            if (HoldWhileRiding())
+            {
+                return;
+            }
+
             if (TickKnockback(deltaSeconds) || TraverseOffMeshLink(deltaSeconds))
             {
                 return;
@@ -832,6 +871,7 @@ namespace Fps.Runtime
                 ? hit.position
                 : groundPosition;
 
+            LeaveVehicleForReset();
             ClearPendingPerception();
             _interruption.Clear();
             _flight.Clear();
@@ -916,6 +956,7 @@ namespace Fps.Runtime
             _stuck.Reset();
             ClearLinkTraversal();
             _agent.enabled = false;
+            LeaveVehicleOnDeath();
         }
     }
 }

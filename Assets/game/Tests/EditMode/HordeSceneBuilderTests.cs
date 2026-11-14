@@ -1,6 +1,7 @@
 using System;
 using Fps.Core;
 using Fps.Editor;
+using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -138,6 +139,31 @@ namespace Fps.Tests.EditMode
             Assert.That(HordeSceneBuilder.WaveCount, Is.GreaterThan(0), "a horde with no end could never be won");
             Assert.That(HordeSceneBuilder.RestSeconds, Is.GreaterThan(0f), "the rest is when walls get repaired");
             Assert.That(new HordeSpec(HordeSceneBuilder.DefenderSide, HordeSceneBuilder.EnemySide).StartingCurrency, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void TheDefinitionCarriesTheSceneWaves()
+        {
+            Assert.That(HordeSceneBuilder.DefinitionPath, Is.EqualTo("Assets/game/Modes/Horde.asset"));
+
+            var definition = ScriptableObject.CreateInstance<HordeDefinition>();
+            try
+            {
+                HordeSceneBuilder.Configure(definition);
+
+                Assert.That(definition.WaveCount, Is.EqualTo(HordeSceneBuilder.WaveCount));
+                Assert.That(definition.RestSeconds, Is.EqualTo(HordeSceneBuilder.RestSeconds));
+                Assert.That(definition.FirstEnemyCount, Is.EqualTo(HordeSceneBuilder.FirstEnemyCount));
+                Assert.That(definition.MaxAlive, Is.EqualTo(HordeSceneBuilder.MaxAlive));
+                Assert.That(definition.StartingCurrency, Is.EqualTo(HordeSpec.DefaultStartingCurrency));
+                Assert.That(definition.PurchasesOnlyBetweenWaves, Is.True);
+                Assert.That(definition.CreateSchedule().WaveCount, Is.EqualTo(HordeSceneBuilder.WaveCount));
+                Assert.Throws<ArgumentNullException>(() => HordeSceneBuilder.Configure(null));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(definition);
+            }
         }
 
         private static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;

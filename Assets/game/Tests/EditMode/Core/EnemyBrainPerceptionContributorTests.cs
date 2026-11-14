@@ -72,7 +72,7 @@ namespace Fps.Core.Tests
             Assert.That(decision.Fire, Is.False);
         }
 
-        private sealed class Contributor : IPerceptionContributor
+        private sealed class Contributor : IBrainPerceptionContributor
         {
             private readonly string _name;
             private readonly List<string> _calls;
@@ -115,7 +115,7 @@ namespace Fps.Core.Tests
             }
         }
 
-        private sealed class Killer : IPerceptionContributor
+        private sealed class Killer : IBrainPerceptionContributor
         {
             public EnemyPerception Contribute(EnemyBrain brain, float deltaSeconds, EnemyPerception perception)
             {

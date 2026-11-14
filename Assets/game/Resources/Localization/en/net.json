@@ -1,0 +1,12 @@
+{
+  "net.stats.line": "Ping {0} ms  Loss {1}%  tick {2}",
+  "net.disconnect.serverStopped": "The server stopped.",
+  "net.disconnect.timedOut": "The server stopped responding (timed out).",
+  "net.disconnect.connectTimedOut": "Could not connect to the server (timed out).",
+  "net.disconnect.rejected": "The server refused the connection.",
+  "net.disconnect.versionMismatch": "The game versions do not match.",
+  "net.disconnect.serverDraining": "The server is shutting down and cannot be joined. Connect to another server.",
+  "net.disconnect.idleKicked": "You were disconnected from the server for being idle too long.",
+  "net.disconnect.versionMismatchAdvice": "{0} Connect with the same version of the game as the server.",
+  "net.disconnect.versionMismatchDetail": "The game versions do not match (server {0} / this game {1}). Connect with the same version of the game as the server."
+}

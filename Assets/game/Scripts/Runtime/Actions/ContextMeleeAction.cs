@@ -87,6 +87,10 @@ namespace Fps.Runtime
 
         float IWeaponModifier.SpreadMultiplier => 1f;
 
+        float IWeaponModifier.ModifyConeDegrees(WeaponSpec spec, float coneDegrees) => coneDegrees;
+
+        float IWeaponModifier.ModifySpreadFraction(float spreadFraction) => spreadFraction;
+
         // MeleeController の Awake がまだのこともあるので、ここではエラーにせず、ルールを受ける Configure で結び直す。
         private void Awake()
         {

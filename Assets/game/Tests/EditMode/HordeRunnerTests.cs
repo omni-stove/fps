@@ -23,15 +23,21 @@ namespace Fps.Tests.EditMode
 
         private readonly List<Object> _objects = new List<Object>();
         private HordeRunner _runner;
+        private HordeDefinition _definition;
         private WaveSchedule _schedule;
 
         [SetUp]
         public void SetUp()
         {
+            _definition = ScriptableObject.CreateInstance<HordeDefinition>();
+            _definition.name = "TestHorde";
+            _objects.Add(_definition);
+            _definition.StartingCurrency = StartingCurrency;
+            _definition.KillReward = KillReward;
+            _definition.KillRewardPerWave = 0;
+
             _runner = Track(new GameObject("Runner")).AddComponent<HordeRunner>();
-            _runner.StartingCurrency = StartingCurrency;
-            _runner.KillReward = KillReward;
-            _runner.KillRewardPerWave = 0;
+            _runner.Definition = _definition;
             _schedule = WaveSchedule.FromTable(new[] { new Wave(2, 1f, 2, RestSeconds), new Wave(2, 1f, 2, RestSeconds) });
         }
 
@@ -59,7 +65,7 @@ namespace Fps.Tests.EditMode
             _runner.BeginHorde(_schedule, new[] { player, ally }, new[] { SpawnPoint(new Vector3(0f, 0f, -2f)) }, player, hud);
 
             Assert.That(_schedule.Phase, Is.EqualTo(WavePhase.Fighting), "the first wave starts with the match");
-            Assert.That(hud.Lines, Does.Contain(HordeText.Wave(1, 2)).And.Contain(HordeText.RemainingEnemies(2)));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Wave(1, 2))).And.Contain(Localizer.Resolve(HordeText.RemainingEnemies(2))));
 
             ally.Damageable.Kill();
             _runner.Tick(30f);
@@ -72,7 +78,8 @@ namespace Fps.Tests.EditMode
             Assert.That(ally.IsAlive, Is.True);
             Assert.That(_runner.Horde.Currency, Is.EqualTo(StartingCurrency + (KillReward * 2)));
             Assert.That(_runner.Session.GetScore(Side.Alpha), Is.EqualTo(2d), "the score counts the enemies killed");
-            Assert.That(hud.Lines, Does.Contain(HordeText.NextWave(RestSeconds)).And.Contain(HordeText.Currency(StartingCurrency + (KillReward * 2))));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.NextWave(RestSeconds)))
+                .And.Contain(Localizer.Resolve(HordeText.Currency(StartingCurrency + (KillReward * 2)))));
         }
 
         [Test]
@@ -90,7 +97,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)Side.Alpha));
             Assert.That(_runner.Horde.IsVictory, Is.True);
-            Assert.That(hud.Lines, Does.Contain(HordeText.Victory));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Victory)));
             Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
         }
 
@@ -104,14 +111,14 @@ namespace Fps.Tests.EditMode
 
             player.Damageable.Kill();
             _runner.Tick(0f);
-            Assert.That(hud.Lines, Does.Contain(HordeText.ReturnsAfterWave));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.ReturnsAfterWave)));
 
             ally.Damageable.Kill();
             _runner.Tick(0f);
 
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)Side.Bravo));
-            Assert.That(hud.Lines, Does.Contain(HordeText.Defeat));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Defeat)));
         }
 
         [Test]
@@ -130,7 +137,8 @@ namespace Fps.Tests.EditMode
             _runner.Tick(0f);
             Assert.That(
                 hud.Lines,
-                Does.Contain(HordeText.Prompt(null, HordeFortificationAction.Repair, "Wall", RepairCostPerPiece, HordePurchaseVerdict.WaveInProgress)));
+                Does.Contain(Localizer.Resolve(
+                    HordeText.Prompt(null, HordeFortificationAction.Repair, "Wall", RepairCostPerPiece, HordePurchaseVerdict.WaveInProgress))));
             Assert.That(_runner.TryInteract(), Is.EqualTo(HordePurchaseVerdict.WaveInProgress));
             Assert.That(structure.Pieces[0].IsBroken, Is.True);
 
@@ -169,8 +177,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PlacingWithoutEnoughCurrencyChangesNothing()
         {
-            _runner.StartingCurrency = 0;
-            _runner.KillReward = 0;
+            _definition.StartingCurrency = 0;
+            _definition.KillReward = 0;
             var player = Member("Player", Vector3.zero);
             var barricade = Fortification("Barricade", new Vector3(0f, 0f, 2f), false);
             _runner.SetFortifications(new[] { barricade });
@@ -215,6 +223,111 @@ namespace Fps.Tests.EditMode
             _runner.TryInteract();
             Assert.That(barricade.Structure.Pieces[0].IsBroken, Is.True, "nobody gets walled in");
             Assert.That(barricade.Structure.Pieces[1].IsBroken, Is.False);
+        }
+
+        [Test]
+        public void TheDefinitionDecidesTheWaveCountAndTheRestBetweenWaves()
+        {
+            _definition.WaveCount = 3;
+            _definition.RestSeconds = 7f;
+            _definition.FirstEnemyCount = 1;
+            _definition.EnemiesPerWave = 0f;
+            _schedule = _runner.CreateSchedule();
+            var player = Member("Player", Vector3.zero);
+            var hud = BoundHudView();
+            _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player, hud);
+
+            Assert.That(_schedule.WaveCount, Is.EqualTo(3));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Wave(1, 3))));
+
+            for (var wave = 1; wave < 3; wave++)
+            {
+                ClearWave();
+                _runner.Tick(0f);
+                Assert.That(_schedule.Phase, Is.EqualTo(WavePhase.Resting));
+                Assert.That(_schedule.RestRemaining, Is.EqualTo(7f));
+                Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.NextWave(7f))));
+
+                _schedule.Tick(6f);
+                Assert.That(_schedule.Phase, Is.EqualTo(WavePhase.Resting), "the rest lasts as long as the definition says");
+                _schedule.Tick(1f);
+                Assert.That(_schedule.WaveNumber, Is.EqualTo(wave + 1));
+            }
+
+            ClearWave();
+            _runner.Tick(0f);
+            Assert.That(_runner.Horde.IsVictory, Is.True, "the third wave was the last");
+        }
+
+        [Test]
+        public void TheDefinitionDecidesTheCurrency()
+        {
+            _definition.StartingCurrency = 7;
+            _definition.KillReward = 3;
+            _definition.KillRewardPerWave = 4;
+            _definition.PurchasesOnlyBetweenWaves = false;
+
+            var spec = _runner.CreateSpec();
+
+            Assert.That(spec.StartingCurrency, Is.EqualTo(7));
+            Assert.That(spec.KillRewardAt(1), Is.EqualTo(3));
+            Assert.That(spec.KillRewardAt(2), Is.EqualTo(7));
+            Assert.That(spec.PurchasesOnlyBetweenWaves, Is.False);
+            Assert.That(spec.Defenders, Is.EqualTo(_runner.PlayerSide));
+            Assert.That(spec.Attackers, Is.EqualTo(_runner.EnemySide));
+        }
+
+        [Test]
+        public void WithoutADefinitionTheDefaultsApplyAndTheWavesComeFromTheSpawner()
+        {
+            _runner.Definition = null;
+
+            var spec = _runner.CreateSpec();
+            Assert.That(spec.StartingCurrency, Is.EqualTo(HordeSpec.DefaultStartingCurrency));
+            Assert.That(spec.KillReward, Is.EqualTo(HordeSpec.DefaultKillReward));
+            Assert.That(spec.KillRewardPerWave, Is.EqualTo(HordeSpec.DefaultKillRewardPerWave));
+            Assert.That(spec.PurchasesOnlyBetweenWaves, Is.True);
+            Assert.Throws<System.InvalidOperationException>(() => _runner.CreateSchedule(), "neither a definition nor a spawner decides the waves");
+
+            var spawner = Track(new GameObject("WaveSpawner")).AddComponent<WaveSpawner>();
+            spawner.SetFormula(1, 0f, 1f, 0f, 1f, 1, 2f, 4);
+            _runner.Spawner = spawner;
+            Assert.That(_runner.CreateSchedule().WaveCount, Is.EqualTo(4));
+
+            _runner.Definition = _definition;
+            _definition.WaveCount = 6;
+            Assert.That(_runner.CreateSchedule().WaveCount, Is.EqualTo(6), "the definition wins over the spawner");
+        }
+
+        [Test]
+        public void ANewDefinitionHoldsTheDefaults()
+        {
+            var fresh = ScriptableObject.CreateInstance<HordeDefinition>();
+            _objects.Add(fresh);
+
+            var spec = fresh.ToSpec(Side.Alpha, Side.Bravo);
+            Assert.That(spec.StartingCurrency, Is.EqualTo(HordeSpec.DefaultStartingCurrency));
+            Assert.That(spec.KillReward, Is.EqualTo(HordeSpec.DefaultKillReward));
+            Assert.That(spec.KillRewardPerWave, Is.EqualTo(HordeSpec.DefaultKillRewardPerWave));
+            Assert.That(fresh.CreateSchedule().WaveCount, Is.EqualTo(WaveSpawner.DefaultWaveCount));
+            Assert.That(fresh.RestSeconds, Is.EqualTo(WaveSpawner.DefaultRestSeconds));
+        }
+
+        [Test]
+        public void AnInvalidDefinitionNamesTheAssetAndStopsTheHorde()
+        {
+            _definition.KillReward = -1;
+            var error = Assert.Throws<System.ArgumentException>(() => _runner.CreateSpec());
+            Assert.That(error.Message, Does.Contain("TestHorde"));
+
+            _definition.KillReward = KillReward;
+            _definition.FirstEnemyCount = 0;
+            error = Assert.Throws<System.ArgumentException>(() => _runner.CreateSchedule());
+            Assert.That(error.Message, Does.Contain("TestHorde"));
+
+            _definition.FirstEnemyCount = 1;
+            _definition.RestSeconds = -1f;
+            Assert.Throws<System.ArgumentException>(() => _definition.Validate(Side.Alpha, Side.Bravo));
         }
 
         private void ClearWave()

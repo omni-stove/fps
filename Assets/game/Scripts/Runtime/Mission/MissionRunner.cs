@@ -15,7 +15,7 @@ namespace Fps.Runtime
     {
         public const string LogTag = MissionReporter.Tag;
 
-        [SerializeField, Tooltip("進めるミッションの定義")]
+        [SerializeField, RequiredReference, Tooltip("進めるミッションの定義")]
         private MissionDefinition _definition;
 
         private Mission _mission;

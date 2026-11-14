@@ -3,52 +3,56 @@ using System.Globalization;
 
 namespace Fps.Core
 {
-    /// <summary>ホード (<see cref="Horde"/>) の HUD の行と <c>[Mode]</c> のログ。</summary>
+    /// <summary>
+    /// ホード (<see cref="Horde"/>) の HUD の行 (表のキー <c>mode.horde.*</c> の <see cref="LocalizedText"/>) と <c>[Mode]</c> のログ。
+    /// </summary>
     public static class HordeText
     {
         /// <summary>自分が倒れていて、戦っている波を味方が越えれば戻れるときに出す行。</summary>
-        public const string ReturnsAfterWave = "波を越えると復活";
+        public static LocalizedText ReturnsAfterWave => new LocalizedText("mode.horde.returnsAfterWave");
 
-        public const string Victory = "防衛成功";
-        public const string Defeat = "防衛失敗";
+        public static LocalizedText Victory => new LocalizedText("mode.horde.victory");
+        public static LocalizedText Defeat => new LocalizedText("mode.horde.defeat");
 
         /// <example><c>Wave(2, 5)</c> は <c>WAVE 2/5</c>、終わりが無ければ <c>WAVE 2</c>、始まる前は <c>WAVE -/5</c></example>
-        public static string Wave(int number, int? waveCount)
+        public static LocalizedText Wave(int number, int? waveCount)
         {
             var current = number > 0 ? Number(number) : "-";
-            return "WAVE " + current + (waveCount.HasValue ? "/" + Number(waveCount.Value) : string.Empty);
+            return waveCount.HasValue
+                ? new LocalizedText("mode.horde.wave", current, waveCount.Value)
+                : new LocalizedText("mode.horde.waveEndless", current);
         }
 
         /// <example><c>RemainingEnemies(4)</c> は <c>残りの敵 4</c></example>
-        public static string RemainingEnemies(int remaining)
+        public static LocalizedText RemainingEnemies(int remaining)
         {
-            return "残りの敵 " + Number(Math.Max(0, remaining));
+            return new LocalizedText("mode.horde.remainingEnemies", Math.Max(0, remaining));
         }
 
         /// <summary>秒は <see cref="HudFormat.DisplayedSeconds"/> と同じく切り上げる。</summary>
         /// <example><c>NextWave(4.2f)</c> は <c>次の波まで 5 秒</c></example>
-        public static string NextWave(float restSeconds)
+        public static LocalizedText NextWave(float restSeconds)
         {
-            return "次の波まで " + Number(HudFormat.DisplayedSeconds(restSeconds)) + " 秒";
+            return new LocalizedText("mode.horde.nextWave", HudFormat.DisplayedSeconds(restSeconds));
         }
 
         /// <example><c>Currency(120)</c> は <c>通貨 120</c></example>
-        public static string Currency(int currency)
+        public static LocalizedText Currency(int currency)
         {
-            return "通貨 " + Number(currency);
+            return new LocalizedText("mode.horde.currency", currency);
         }
 
         /// <summary>防衛物にできることの名前。</summary>
-        public static string ActionName(HordeFortificationAction action)
+        public static LocalizedText ActionName(HordeFortificationAction action)
         {
             switch (action)
             {
                 case HordeFortificationAction.Build:
-                    return "置く";
+                    return new LocalizedText("mode.horde.build");
                 case HordeFortificationAction.Repair:
-                    return "直す";
+                    return new LocalizedText("mode.horde.repair");
                 default:
-                    return "-";
+                    return LocalizedText.Literal("-");
             }
         }
 
@@ -59,17 +63,17 @@ namespace Fps.Core
         /// <c>Prompt("E", Repair, "Wall-North", 30, Ok)</c> は <c>[E] Wall-North を直す (30)</c>、
         /// 波の途中なら <c>Wall-North を直す (30): 波の間だけ</c>
         /// </example>
-        public static string Prompt(string keyLabel, HordeFortificationAction action, string structureName, int cost, HordePurchaseVerdict verdict)
+        public static LocalizedText Prompt(string keyLabel, HordeFortificationAction action, string structureName, int cost, HordePurchaseVerdict verdict)
         {
-            var body = Word(structureName) + " を" + ActionName(action) + " (" + Number(cost) + ")";
+            var body = new LocalizedText("mode.horde.prompt", Word(structureName), ActionName(action), cost);
             switch (verdict)
             {
                 case HordePurchaseVerdict.Ok:
-                    return string.IsNullOrWhiteSpace(keyLabel) ? body : "[" + keyLabel.Trim() + "] " + body;
+                    return string.IsNullOrWhiteSpace(keyLabel) ? body : new LocalizedText("mode.horde.promptKey", keyLabel.Trim(), body);
                 case HordePurchaseVerdict.WaveInProgress:
-                    return body + ": 波の間だけ";
+                    return new LocalizedText("mode.horde.promptBetweenWaves", body);
                 case HordePurchaseVerdict.NotEnoughCurrency:
-                    return body + ": 通貨が足りない";
+                    return new LocalizedText("mode.horde.promptNotEnoughCurrency", body);
                 default:
                     return body;
             }

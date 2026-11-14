@@ -18,8 +18,9 @@ namespace Fps.Runtime
 
         private static IMenuSceneHost _host = SceneManagerHost.Instance;
         private static LobbyLaunchOptions _pendingLobby = LobbyLaunchOptions.None;
-        private static string _notice;
+        private static LocalizedText _notice;
         private static bool _pendingTutorial;
+        private static MenuScenes _scenes;
 
         /// <summary>
         /// <see cref="ReturnToMenu"/> でメニューのシーンを読む直前に呼ぶ。シーンをまたいで残るもの (NetworkManager など) は
@@ -34,21 +35,37 @@ namespace Fps.Runtime
             set => _host = value ?? SceneManagerHost.Instance;
         }
 
+        /// <summary>
+        /// 移るシーンの名前。初めて使うときに <see cref="MenuSceneSettings.LoadScenes"/> で Resources の設定から決める (無ければ既定の名前)。
+        /// null を入れると次に使うときに設定から決め直す (テストで差し替える)。
+        /// </summary>
+        public static MenuScenes Scenes
+        {
+            get => _scenes ??= MenuSceneSettings.LoadScenes();
+            set => _scenes = value;
+        }
+
+        /// <summary><see cref="Scenes"/> の名前で、<see cref="KitPaths.DefaultRoot"/> の下から destination へ行く遷移。</summary>
+        public static MenuTransition Plan(MenuDestination destination)
+        {
+            return MenuRoute.Plan(destination, KitPaths.DefaultRoot, Scenes);
+        }
+
         /// <summary>NetBootstrap にまだ渡していない、メニューで選んだロビーの設定。無ければ <see cref="LobbyLaunchOptions.None"/>。</summary>
         public static LobbyLaunchOptions PendingLobby => _pendingLobby;
 
         /// <summary>射撃場にまだ渡していない、メニューでチュートリアルを選んだこと。</summary>
         public static bool PendingTutorial => _pendingTutorial;
 
-        /// <summary>メニューに戻ったときに出す案内 (切断の理由など)。無ければ null。</summary>
-        public static string PendingNotice => _notice;
+        /// <summary>メニューに戻ったときに出す案内 (切断の理由など)。無ければ <c>default</c>。</summary>
+        public static LocalizedText PendingNotice => _notice;
 
         /// <summary>
         /// destination へ進む。読むシーンが Build Settings に無ければエラーログを出して false を返し、何もしない。
         /// </summary>
         public static bool Go(MenuDestination destination)
         {
-            return Execute(MenuRoute.Plan(destination));
+            return Execute(Plan(destination));
         }
 
         /// <summary>
@@ -98,10 +115,12 @@ namespace Fps.Runtime
         /// メニューへ戻る。<see cref="ReturningToMenu"/> を呼び、止めていた時間とカーソルを戻してから MainMenu を読む。
         /// MainMenu が Build Settings に無ければエラーログを出して false を返し、今のシーンに留まる。
         /// </summary>
-        /// <param name="notice">メニューに出す案内。null なら出さない。</param>
-        public static bool ReturnToMenu(string notice = null)
+        /// <param name="notice">
+        /// メニューに出す案内。メニューが出すときに、その時点の言語で文にする。<c>default</c> か、表を引かない空白だけの文なら出さない。
+        /// </param>
+        public static bool ReturnToMenu(LocalizedText notice = default)
         {
-            var transition = MenuRoute.BackToMenu();
+            var transition = MenuRoute.BackToMenu(KitPaths.DefaultRoot, Scenes);
             var buildIndex = _host.BuildIndexOf(transition.ScenePath);
             if (buildIndex < 0)
             {
@@ -131,9 +150,9 @@ namespace Fps.Runtime
             Cursor.visible = true;
             _pendingLobby = LobbyLaunchOptions.None;
             _pendingTutorial = false;
-            _notice = string.IsNullOrWhiteSpace(notice) ? null : notice;
+            _notice = notice.IsLiteral && string.IsNullOrWhiteSpace(notice.Key) ? default : notice;
 
-            Debug.Log(LogTag + " back to the menu" + (_notice == null ? "" : " (" + _notice + ")"));
+            Debug.Log(LogTag + " back to the menu" + (_notice.IsEmpty ? "" : " (" + _notice + ")"));
             _host.Load(buildIndex);
             return true;
         }
@@ -154,11 +173,11 @@ namespace Fps.Runtime
             return requested;
         }
 
-        /// <summary>メニューに出す案内を受け取り、持っていた分は消す。無ければ null。</summary>
-        public static string TakeNotice()
+        /// <summary>メニューに出す案内を受け取り、持っていた分は消す。無ければ <c>default</c>。</summary>
+        public static LocalizedText TakeNotice()
         {
             var notice = _notice;
-            _notice = null;
+            _notice = default;
             return notice;
         }
 
@@ -198,7 +217,8 @@ namespace Fps.Runtime
             _host = SceneManagerHost.Instance;
             _pendingLobby = LobbyLaunchOptions.None;
             _pendingTutorial = false;
-            _notice = null;
+            _notice = default;
+            _scenes = null;
             ReturningToMenu = null;
         }
 

@@ -1,0 +1,15 @@
+# 専用サーバーを docker compose で動かすときの設定。イメージは先に make server-image で作っておく。
+#   docker compose -f docker/server/compose.yaml up -d
+#   docker compose -f docker/server/compose.yaml stop     # 試合が終わるまで (最長 700 秒) 待って止まる
+# 起動の仕方と環境変数は docs/dedicated-server.md を参照。
+services:
+  server:
+    image: ${FPS_SERVER_IMAGE:-fps-server:local}
+    environment:
+      FPS_SERVER_PORT: "${FPS_SERVER_PORT:-7777}"
+    ports:
+      - "${FPS_SERVER_PORT:-7777}:${FPS_SERVER_PORT:-7777}/udp"
+    # サーバーは SIGTERM の後、今の試合が終わるまで最長 -drain-timeout 秒 (既定 600 秒) 待ち、ロビーを閉じるのに最長 3 秒かかる。
+    # 猶予がそれより短いと、試合の途中で SIGKILL されてクライアントへ止まると知らせられない
+    stop_signal: SIGTERM
+    stop_grace_period: 700s

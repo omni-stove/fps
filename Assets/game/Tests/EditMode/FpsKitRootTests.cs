@@ -96,7 +96,7 @@ namespace Fps.Tests.EditMode
             Assert.That(BuildSceneList.BattleRoyaleScene, Is.EqualTo("Assets/game/Scenes/BattleRoyale.unity"));
             Assert.That(BuildSceneList.ModeTestScene, Is.EqualTo("Assets/game/Scenes/ModeTest.unity"));
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo("Assets/game/Scenes/NetTest.unity"));
-            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { "Assets/game/Scenes/NetTest.unity" }));
+            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { "Assets/game/Scenes/NetTest.unity", "Assets/game/Scenes/NetArena01.unity" }));
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo(MenuRoute.NetScene), "the builder saves where the runtime loads");
         }
 

@@ -56,7 +56,7 @@ namespace Fps.Net.Tests
             Assert.That(NetSceneBuilder.ScenePath, Is.EqualTo("Assets/FpsKit/Scenes/NetTest.unity"));
             Assert.That(NetSceneBuilder.PlayerPrefabPath, Is.EqualTo("Assets/FpsKit/Prefabs/Net/NetPlayer.prefab"));
             Assert.That(NetSceneBuilder.MatchPrefabPath, Is.EqualTo("Assets/FpsKit/Prefabs/Net/NetMatch.prefab"));
-            Assert.That(ServerBuilder.ServerScenePaths(), Is.EqualTo(new[] { "Assets/FpsKit/Scenes/NetTest.unity" }));
+            Assert.That(ServerBuilder.ServerScenePaths(), Is.EqualTo(new[] { "Assets/FpsKit/Scenes/NetTest.unity", "Assets/FpsKit/Scenes/NetArena01.unity" }));
         }
     }
 }

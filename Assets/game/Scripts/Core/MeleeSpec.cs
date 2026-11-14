@@ -11,6 +11,10 @@ namespace Fps.Core
         public const float DefaultImpactSeconds = 0.2f;
         public const float DefaultCooldownSeconds = 0.4f;
         public const float DefaultLungeDistance = 0.75f;
+        public const float DefaultFinisherSeconds = 1.2f;
+        public const int DefaultFinisherHealth = 25;
+        public const int DefaultFinisherAmmo = 30;
+        public const bool DefaultFinisherInterruptible = true;
 
         public const float MaxArcDegrees = 360f;
 
@@ -43,6 +47,15 @@ namespace Fps.Core
 
         public float HalfArcDegrees => ArcDegrees / 2f;
 
+        public float FinisherSeconds { get; }
+
+        public int FinisherHealth { get; }
+
+        public int FinisherAmmo { get; }
+
+        public bool FinisherInterruptible { get; }
+
+        // 処刑技 (ContextMeleeMove.Finisher) の値を省けるのは、敵の近接や盾の殴りなど処刑技を出さない側が値を並べなくて済むようにするため。
         /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。impactSeconds は 0 以上 swingSeconds 以下。</exception>
         public MeleeSpec(
             int damage,
@@ -51,7 +64,11 @@ namespace Fps.Core
             float swingSeconds,
             float cooldownSeconds,
             float impactSeconds,
-            float lungeDistance)
+            float lungeDistance,
+            float finisherSeconds = DefaultFinisherSeconds,
+            int finisherHealth = DefaultFinisherHealth,
+            int finisherAmmo = DefaultFinisherAmmo,
+            bool finisherInterruptible = DefaultFinisherInterruptible)
         {
             if (damage <= 0)
             {
@@ -88,6 +105,21 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(lungeDistance), lungeDistance, "lungeDistance must be a non-negative finite number");
             }
 
+            if (!(finisherSeconds > 0f) || float.IsInfinity(finisherSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(finisherSeconds), finisherSeconds, "finisherSeconds must be positive and finite");
+            }
+
+            if (finisherHealth < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(finisherHealth), finisherHealth, "finisherHealth must not be negative");
+            }
+
+            if (finisherAmmo < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(finisherAmmo), finisherAmmo, "finisherAmmo must not be negative");
+            }
+
             Damage = damage;
             Reach = reach;
             ArcDegrees = arcDegrees;
@@ -95,6 +127,10 @@ namespace Fps.Core
             CooldownSeconds = cooldownSeconds;
             ImpactSeconds = impactSeconds;
             LungeDistance = lungeDistance;
+            FinisherSeconds = finisherSeconds;
+            FinisherHealth = finisherHealth;
+            FinisherAmmo = finisherAmmo;
+            FinisherInterruptible = finisherInterruptible;
         }
 
         // 踏み込みの間は一定の速さで進む。当たりの瞬間が 0 秒なら踏み込まない (0 で割らない)。

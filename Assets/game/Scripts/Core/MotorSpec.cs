@@ -38,6 +38,16 @@ namespace Fps.Core
         /// </summary>
         public const float DefaultMantleSpeed = 3f;
 
+        public const float DefaultWalkSpeed = 5f;
+        public const float DefaultSprintSpeed = 8f;
+        public const float DefaultCrouchSpeed = 2.5f;
+        public const float DefaultJumpHeight = 1.2f;
+        public const float DefaultGravity = 20f;
+        public const float DefaultAirControl = 0.1f;
+
+        public static readonly MotorSpec Default = new MotorSpec(
+            DefaultWalkSpeed, DefaultSprintSpeed, DefaultJumpHeight, DefaultGravity, DefaultAirControl, DefaultCrouchSpeed);
+
         /// <summary>歩きの水平速度。</summary>
         public float WalkSpeed { get; }
 

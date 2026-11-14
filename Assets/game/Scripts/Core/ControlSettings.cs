@@ -493,7 +493,7 @@ namespace Fps.Core
             hash = unchecked((hash * 31) + (_showNetStats ? 1 : 0));
             hash = unchecked((hash * 31) + (int)_palette);
             hash = unchecked((hash * 31) + (_showSubtitles ? 1 : 0));
-            return unchecked((hash * 31) + (int)_language);
+            return unchecked((hash * 31) + _language.GetHashCode());
         }
 
         public override string ToString()

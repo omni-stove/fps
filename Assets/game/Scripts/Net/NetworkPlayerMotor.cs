@@ -85,20 +85,8 @@ namespace Fps.Net
         // 生成中のプレイヤー。互いの衝突を無効にするために持つ。
         private static readonly List<NetworkPlayerMotor> _active = new List<NetworkPlayerMotor>();
 
-        [SerializeField, Min(0f), Tooltip("歩きの水平速度 (m/s)")]
-        private float _walkSpeed = 5f;
-
-        [SerializeField, Min(0f), Tooltip("ダッシュ中の水平速度 (m/s)")]
-        private float _sprintSpeed = 8f;
-
-        [SerializeField, Min(0f), Tooltip("ジャンプで到達する高さ (m)")]
-        private float _jumpHeight = 1.2f;
-
-        [SerializeField, Min(0.01f), Tooltip("重力加速度の大きさ (m/s²)")]
-        private float _gravity = 20f;
-
-        [SerializeField, Range(0f, 1f), Tooltip("空中で水平速度を入力方向へ寄せる 1 tick あたりの割合")]
-        private float _airControl = 0.1f;
+        [SerializeField, Tooltip("移動の調整値。空なら Resources の MotorSettings、それも無ければ既定の値。オフラインの PlayerController と同じものを使う")]
+        private MotorSettings _motorSettings;
 
         [SerializeField, Min(0.01f), Tooltip("しゃがみのカプセルの高さ (m)。半径の 2 倍以上、立ちの高さ以下")]
         private float _crouchHeight = PlayerController.DefaultCrouchHeight;
@@ -171,14 +159,23 @@ namespace Fps.Net
         /// <summary>このインスタンスで今しゃがんでいるか (オーナーは予測、他人は補間表示の姿勢)。</summary>
         public bool IsCrouched => _simulation != null && _simulation.Stance.IsCrouched;
 
+        // Awake を済ませる前に割り当てを変えたときも、Awake で使われる値を返すため設定から作る。
+        public MotorSpec Spec => _simulation != null ? _simulation.Spec : MotorSettings.ResolveOrDefault(_motorSettings);
+
+        public MotorSettings MotorSettings
+        {
+            get => _motorSettings;
+            set => _motorSettings = value;
+        }
+
         /// <summary>歩きの水平速度 (m/s)。</summary>
-        public float WalkSpeed => _walkSpeed;
+        public float WalkSpeed => Spec.WalkSpeed;
 
         /// <summary>ダッシュ中の水平速度 (m/s)。</summary>
-        public float SprintSpeed => _sprintSpeed;
+        public float SprintSpeed => Spec.SprintSpeed;
 
-        /// <summary>しゃがみ中の水平速度 (m/s)。移動の計算 (<see cref="MotorSpec"/>) と同じ値。</summary>
-        public float CrouchSpeed => PlayerController.DefaultCrouchSpeed;
+        /// <summary>しゃがみ中の水平速度 (m/s)。</summary>
+        public float CrouchSpeed => Spec.CrouchSpeed;
 
         /// <summary>
         /// このインスタンスで今接地しているか。サーバー (ホストを含む) は確定状態、予測するオーナーは最新の予測、
@@ -267,8 +264,7 @@ namespace Fps.Net
 
             try
             {
-                var motor = new PlayerMotor(new MotorSpec(
-                    _walkSpeed, _sprintSpeed, _jumpHeight, _gravity, _airControl, PlayerController.DefaultCrouchSpeed));
+                var motor = new PlayerMotor(MotorSettings.Resolve(_motorSettings));
                 var stance = NetStance.FromHierarchy(_controller, _crouchHeight);
                 _simulation = new NetMotorSimulation(_controller, motor, stance, TickSeconds, KillPlaneY, _coverWallMask);
             }

@@ -74,7 +74,7 @@ namespace Fps.Runtime
             public Wave ToWave() => new Wave(EnemyCount, Strength, MaxAlive, RestSeconds);
         }
 
-        [SerializeField, Tooltip("複製して出す敵。無効の GameObject (シーンに置いたもの) か Prefab。シーン生成スクリプトが配線する")]
+        [SerializeField, RequiredReference, Tooltip("複製して出す敵。無効の GameObject (シーンに置いたもの) か Prefab。シーン生成スクリプトが配線する")]
         private EnemyAgent _enemyTemplate;
 
         [SerializeField, Tooltip("出現点。空ならシーンにある敵陣営の SideSpawnPoint を使う")]

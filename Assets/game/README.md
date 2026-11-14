@@ -146,6 +146,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 - `nameKey` は画面に出す武器の名前を引く表のキー。文は `Resources/Localization/<言語>/` の JSON (例: `items.json` に `"weapon.rifle": "Rifle"`) に書く。表に無いキーはキーそのものが出る。空か `null` なら `id` が出る。
 - 前の項目名 `displayName` は読まない (書き換えを促すエラーになる)。
 - `adsFieldOfView` と `nameKey` は `null` も書ける。既定値のある項目は省ける。知らない項目はエラーになる。
+- `recoilRecoveryDelaySeconds` (撃ってから反動が戻り始めるまでの秒数) はサンプルでは省いていて、既定は 0.15。
 
 batchmode で取り込む:
 
@@ -568,6 +569,35 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
 - `FAILED <名前>` の行の SmokeRun が落ちた。その名前のタグ (`[DestructionSmokeRun]` など) でログを探すと理由がある。1 つが 600 秒を超えても終わらないときも、`[SmokeSuite] <名前> did not finish within 600s` を出して `FAILED` になる。
 - `NOT RUN <名前>` は結果を受け取れないままスイートが終わった SmokeRun で、これも失敗に数える。
 - Netcode を入れていないと `PerfSmokeRun` が `smoke run type 'Fps.Editor.PerfSmokeRun, Fps.Net.Editor' was not found` で `FAILED` になり、スイート全体も 1 で終わる。残りの 5 本が `passed` なら、Netcode 以外は動いている。
+
+## 差し替え漏れの点検
+
+`Fps.Editor.ReplacementAudit.Run` は、差し替えたときに抜けやすいものをまとめて洗い出し、一覧をログに出す。Play Mode には入らない。
+
+```sh
+"$UNITY" -batchmode -quit -projectPath . \
+  -executeMethod Fps.Editor.ReplacementAudit.Run \
+  -logFile -
+```
+
+Editor からは **Fps > Audit Replacements** (一覧をログに出すだけで、Editor は閉じない)。
+
+見るもの:
+
+| 種類 | 漏れとして出すもの |
+| --- | --- |
+| `Presentation` | `Resources/Presentation/PresentationCatalog` が無い・`Validate` に通らない。`Assets/` の下の `WeaponDefinition` の Id にカタログの音とエフェクトが無い。武器の Id が空 |
+| `Strings` | `ja`・`en` のどちらかに表が無い・壊れている。どちらかの言語にあってもう一方に無いキー。武器の `nameKey` が空か、どちらかの言語の表に無い |
+| `Reference` | ビルドの一覧のシーン (有効なもの)・`Assets/` の下のプレハブ・アセットで、`[RequiredReference]` を付けた参照が空 (消えたアセットを指すものも含む)。ビルドの一覧のシーンが無い |
+
+`[RequiredReference]` (`Fps.Runtime.RequiredReferenceAttribute`) は、空だと動かない参照 (空なら仮の形や既定値で続けるものは除く) に付ける印。今は `GunGameRunner` の Ladder・`HordeRunner` の Spawner・`WaveSpawner` の Enemy Template・`MissionRunner` の Definition・`EnemyAgent` の Weapon Definition に付いている。ゲームのコンポーネントやアセットのフィールドに付けても同じく見る。
+
+**終了コード** で見分ける: 漏れが無ければ 0、漏れがあれば 1、点検そのものが例外で止まれば 2。
+
+```
+[ReplacementAudit] failed: 1 missing replacement(s) (exit code 1)
+  [Strings] en: key 'hud.reloading' is missing (ja has it in 'Resources/Localization/ja/hud')
+```
 
 ## アセンブリの一覧
 

@@ -180,6 +180,28 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheRecoilRecoveryDelayIsReadAndDefaultsWhenOmitted()
+        {
+            var text = SampleText("Rifle");
+            Assume.That(text, Does.Not.Contain(WeaponJsonImporter.RecoilRecoveryDelaySecondsField));
+            Assume.That(text, Does.Contain("\"recoilRecoveryPerSecond\": 10,"));
+
+            Assert.That(
+                WeaponJsonImporter.ParseSpec(text, "Rifle.json").RecoilRecoveryDelaySeconds,
+                Is.EqualTo(WeaponSpec.DefaultRecoilRecoveryDelaySeconds));
+
+            var slow = WeaponJsonImporter.ParseSpec(
+                text.Replace("\"recoilRecoveryPerSecond\": 10,", "\"recoilRecoveryPerSecond\": 10, \"recoilRecoveryDelaySeconds\": 0.6,"),
+                "Rifle.json");
+            Assert.That(slow.RecoilRecoveryDelaySeconds, Is.EqualTo(0.6f));
+
+            var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ParseSpec(
+                text.Replace("\"recoilRecoveryPerSecond\": 10,", "\"recoilRecoveryPerSecond\": 10, \"recoilRecoveryDelaySeconds\": -1,"),
+                "Rifle.json"));
+            Assert.That(e.Field, Is.EqualTo(WeaponJsonImporter.RecoilRecoveryDelaySecondsField));
+        }
+
+        [Test]
         public void TheImportedNameIsReadFromTheTableByItsKey()
         {
             WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder + "/Launcher.json", _folder, null);
@@ -396,6 +418,7 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.HipSpreadDegrees, Is.EqualTo(expected.HipSpreadDegrees));
             Assert.That(actual.AdsSpreadDegrees, Is.EqualTo(expected.AdsSpreadDegrees));
             Assert.That(actual.MoveSpreadDegrees, Is.EqualTo(expected.MoveSpreadDegrees));
+            Assert.That(actual.RecoilRecoveryDelaySeconds, Is.EqualTo(expected.RecoilRecoveryDelaySeconds));
         }
 
         // 変換後の WeaponSpec だけでなく、Inspector に出るアセットの値そのものが一致することを確かめる

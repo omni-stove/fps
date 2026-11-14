@@ -93,10 +93,7 @@ namespace Fps.Tests.EditMode
             var sniper = agent.GetComponent<EnemySniper>();
             Assert.That(sniper, Is.Not.Null);
             Assert.That(sniper.Perches, Is.EqualTo(SniperRangeFixture.Perches()));
-            Assert.That(sniper.AimBeam, Is.Not.Null);
-            Assert.That(sniper.AimBeam.IsChildOf(agent.transform), Is.False, "the beam does not turn with the sniper");
-            Assert.That(sniper.AimBeam.GetComponent<Collider>(), Is.Null, "the beam does not stop bullets or sight");
-            Assert.That(sniper.AimBeam.gameObject.activeSelf, Is.False);
+            Assert.That(sniper.AimBeam, Is.Null, "the beam is made at run time so a prefab set later is used");
 
             Assert.That(root.GetComponent<NavMeshBakeActivator>().Source, Is.SameAs(deck));
         }

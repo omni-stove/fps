@@ -66,7 +66,7 @@ namespace Fps.Editor
         public const float RifleActiveReloadFailSeconds = 0.6f;
 
         /// <summary>
-        /// rifle の 1 発ごとの縦の反動 (度)。連射間隔 0.1 秒が反動の戻り待ち (<see cref="RecoilState.DefaultRecoveryDelaySeconds"/>) より短いので、
+        /// rifle の 1 発ごとの縦の反動 (度)。連射間隔 0.1 秒が反動の戻り待ち (<see cref="WeaponSpec.DefaultRecoilRecoveryDelaySeconds"/>) より短いので、
         /// 撃ち続ける間は戻らずに上へ溜まり、30 発撃ち切ると 15° 上がる。
         /// </summary>
         public const float RifleRecoilPitchDegrees = 0.5f;
@@ -440,6 +440,7 @@ namespace Fps.Editor
             definition.HipSpreadDegrees = spec.HipSpreadDegrees;
             definition.AdsSpreadDegrees = spec.AdsSpreadDegrees;
             definition.MoveSpreadDegrees = spec.MoveSpreadDegrees;
+            definition.RecoilRecoveryDelaySeconds = spec.RecoilRecoveryDelaySeconds;
 
             // spec は検査済みだが、アセットの形で読み直せることも確かめる。不正なら保存しない。
             definition.ToSpec();

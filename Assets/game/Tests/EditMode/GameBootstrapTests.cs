@@ -551,6 +551,101 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ThePlayerTuningStartsAtTheComponentDefaults()
+        {
+            var bootstrap = _host.GetComponent<GameBootstrap>();
+
+            Assert.That(bootstrap.PlayerMaxHealth, Is.EqualTo(Damageable.DefaultMaxHealth));
+            Assert.That(bootstrap.ThirdPersonOffset, Is.EqualTo(ViewRig.DefaultThirdPersonOffset));
+            Assert.That(bootstrap.MinBoomLength, Is.EqualTo(CameraBoom.DefaultMinLength));
+            Assert.That(bootstrap.AdsTransitionSeconds, Is.EqualTo(AdsZoom.DefaultTransitionSeconds));
+            Assert.That(_world.Rig.ThirdPersonOffset, Is.EqualTo(ViewRig.DefaultThirdPersonOffset));
+            Assert.That(_world.Rig.MinBoomLength, Is.EqualTo(CameraBoom.DefaultMinLength));
+            Assert.That(_world.Ads.TransitionSeconds, Is.EqualTo(AdsZoom.DefaultTransitionSeconds));
+        }
+
+        [Test]
+        public void ThePlayerTuningSetOnTheBootstrapReachesThePlayer()
+        {
+            // SetUp のプレイヤーが同じ場所に立っていると、三人称のカメラがそのカプセルに当たって縮む
+            _world.Player.SetActive(false);
+            Physics.SyncTransforms();
+            var host = new GameObject("BootstrapTuned");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.ViewMode = ViewMode.ThirdPerson;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.PlayerMaxHealth = 150;
+                bootstrap.ThirdPersonOffset = new Vector3(0.4f, 0.1f, -4f);
+                bootstrap.MinBoomLength = 0.5f;
+                bootstrap.AdsTransitionSeconds = 0.4f;
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+
+                world = bootstrap.Build();
+
+                Assert.That(world.PlayerDamageable.MaxHealth, Is.EqualTo(150));
+                Assert.That(world.PlayerDamageable.Health.Max, Is.EqualTo(150));
+                Assert.That(world.PlayerDamageable.Health.Current, Is.EqualTo(150));
+                Assert.That(world.Rig.ThirdPersonOffset, Is.EqualTo(new Vector3(0.4f, 0.1f, -4f)));
+                Assert.That(world.Rig.MinBoomLength, Is.EqualTo(0.5f));
+                Assert.That(world.Camera.transform.localPosition.z, Is.LessThan(-3.5f), "the camera sits at the configured distance");
+                Assert.That(world.Ads.TransitionSeconds, Is.EqualTo(0.4f));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void ThePlayerTuningSettersRejectInvalidValues()
+        {
+            var bootstrap = _host.GetComponent<GameBootstrap>();
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.PlayerMaxHealth = 0);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.ThirdPersonOffset = new Vector3(0f, float.NaN, -2f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.MinBoomLength = -0.1f);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.MinBoomLength = float.PositiveInfinity);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.AdsTransitionSeconds = float.NaN);
+
+            Assert.That(bootstrap.PlayerMaxHealth, Is.EqualTo(Damageable.DefaultMaxHealth), "a rejected value leaves the old one");
+            Assert.That(bootstrap.MinBoomLength, Is.EqualTo(CameraBoom.DefaultMinLength));
+        }
+
+        [Test]
+        public void InvalidPlayerTuningFailsTheBuildBeforeCreatingAnything()
+        {
+            var host = new GameObject("Bootstrap-BrokenTuning");
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+
+                // Inspector の Min を通り抜ける値 (NaN) を、保存された値として入れる。
+                var serialized = new UnityEditor.SerializedObject(bootstrap);
+                serialized.FindProperty("_minBoomLength").floatValue = float.NaN;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                var playersBefore = Object.FindObjectsByType<Damageable>().Length;
+
+                var e = Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.Build());
+                Assert.That(e.ParamName, Is.EqualTo(nameof(GameBootstrap.MinBoomLength)));
+                Assert.That(bootstrap.World, Is.Null);
+                Assert.That(Object.FindObjectsByType<Damageable>().Length, Is.EqualTo(playersBefore), "no player is left behind");
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
         public void PlayerCanBeShotAndFoundByEnemies()
         {
             var player = _world.Player;
@@ -559,7 +654,7 @@ namespace Fps.Tests.EditMode
             Assert.That(player.CompareTag(EnemyAgent.TargetTag), Is.True);
             Assert.That(damageable, Is.SameAs(player.GetComponent<Damageable>()));
             Assert.That(damageable.Id, Is.EqualTo(GameBootstrap.PlayerName));
-            Assert.That(damageable.Health.Max, Is.EqualTo(GameBootstrap.PlayerMaxHealth));
+            Assert.That(damageable.Health.Max, Is.EqualTo(Damageable.DefaultMaxHealth));
 
             var hitbox = Hitbox.FindFor(_world.Controller);
             Assert.That(hitbox, Is.Not.Null, "the CharacterController is the body hitbox");
@@ -895,7 +990,7 @@ namespace Fps.Tests.EditMode
         {
             var model = DefaultHud.Model;
 
-            Assert.That(model.HealthText, Is.EqualTo(HudFormat.Health(GameBootstrap.PlayerMaxHealth)));
+            Assert.That(model.HealthText, Is.EqualTo(HudFormat.Health(Damageable.DefaultMaxHealth)));
             Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime), "MatchRunner binds the time when it begins the match");
 
             _world.PlayerDamageable.TakeDamage(25);

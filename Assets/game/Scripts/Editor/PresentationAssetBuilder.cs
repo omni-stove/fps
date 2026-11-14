@@ -283,7 +283,7 @@ namespace Fps.Editor
             return new SoundLayer(start, duration, duration * 0.3f, duration * 0.35f, 0.35f, 2500f);
         }
 
-        private static string ValidateFolderPath(string path, string parameterName)
+        internal static string ValidateFolderPath(string path, string parameterName)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -313,7 +313,7 @@ namespace Fps.Editor
             return Path.Combine(projectRoot ?? string.Empty, assetPath);
         }
 
-        private static AudioClip WriteSound(string path, SoundSpec spec)
+        internal static AudioClip WriteSound(string path, SoundSpec spec)
         {
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
             if (existing != null && !(existing is AudioClip))

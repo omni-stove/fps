@@ -30,7 +30,7 @@ namespace Fps.Tests.EditMode
         {
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
 
             var cameraObject = Track(new GameObject("ViewCamera"));
             cameraObject.transform.SetPositionAndRotation(_eye, Quaternion.identity);

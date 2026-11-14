@@ -33,6 +33,9 @@ namespace Fps.Runtime
         [SerializeField, Min(Pickup.MinRadius), Tooltip("拾える範囲の半径 (m)")]
         private float _radius = Pickup.DefaultRadius;
 
+        [SerializeField, Tooltip("出す物の見た目 (Pickup.VisualPrefab)。調整値を入れても、これを使う。空なら中身の種類で色を分けた仮の箱")]
+        private GameObject _visualPrefab;
+
         private PickupRespawn _respawn;
         private Pickup _pickup;
 
@@ -92,6 +95,13 @@ namespace Fps.Runtime
         {
             get => _radius;
             set => _radius = Mathf.Max(Pickup.MinRadius, value);
+        }
+
+        /// <summary>出す物の見た目 (<see cref="Pickup.VisualPrefab"/>)。null なら仮の箱。出した後に変えても、次の <see cref="TrySpawn"/> まで効かない。</summary>
+        public GameObject VisualPrefab
+        {
+            get => _visualPrefab;
+            set => _visualPrefab = value;
         }
 
         /// <summary>出している物。出す前や出せなかったときは null。拾われて次を待つ間も同じ物 (無効になっている)。</summary>
@@ -170,7 +180,7 @@ namespace Fps.Runtime
             var contents = definition != null ? definition.Contents : _contents;
             var collectMode = definition != null ? definition.CollectMode : _collectMode;
             var radius = definition != null ? definition.Radius : _radius;
-            _pickup = Pickup.Create(contents, transform.position, collectMode, transform, radius);
+            _pickup = Pickup.Create(contents, transform.position, collectMode, transform, radius, _visualPrefab);
             _pickup.DestroyOnCollect = false;
             _pickup.Collected += OnPickupCollected;
             Debug.Log(PickupLog.Spawned(_pickup.name, spec, transform.position.ToNumerics()), this);

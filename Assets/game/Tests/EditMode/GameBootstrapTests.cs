@@ -37,13 +37,13 @@ namespace Fps.Tests.EditMode
         {
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
             _handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
             _handgun.name = "Handgun";
-            WeaponAssetBuilder.Configure(_handgun, WeaponAssetBuilder.HandgunSpec());
+            WeaponAssets.Configure(_handgun, TestWeapons.HandgunSpec());
             _rules = ScriptableObject.CreateInstance<GameRulesDefinition>();
             _rules.name = "TestRules";
-            GameRulesAssetBuilder.Configure(_rules, _testRules);
+            GameRulesAssets.Configure(_rules, _testRules);
 
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
@@ -785,7 +785,7 @@ namespace Fps.Tests.EditMode
 
                 Assert.That(_world.Mover.IsSprinting, Is.False, "aiming down sights stops the sprint");
                 Assert.That(_world.Mover.UpdateSprint(Vector2.up, true, false, InputDeviceKind.KeyboardMouse), Is.False, "holding Sprint does not resume it");
-                Assert.That(_world.Camera.fieldOfView, Is.EqualTo(WeaponAssetBuilder.RifleAdsFieldOfView).Within(1e-4f));
+                Assert.That(_world.Camera.fieldOfView, Is.EqualTo(TestWeapons.RifleAdsFieldOfView).Within(1e-4f));
                 Assert.That(_world.Look.SensitivityMultiplier, Is.LessThan(1f));
 
                 LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(false));
@@ -796,7 +796,7 @@ namespace Fps.Tests.EditMode
 
                 LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(true));
                 ads.Tick(true, true, 1f);
-                Assert.That(_world.Camera.fieldOfView, Is.EqualTo(WeaponAssetBuilder.HandgunAdsFieldOfView).Within(1e-4f));
+                Assert.That(_world.Camera.fieldOfView, Is.EqualTo(TestWeapons.HandgunAdsFieldOfView).Within(1e-4f));
 
                 LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(false));
                 ads.Tick(false, false, 1f);

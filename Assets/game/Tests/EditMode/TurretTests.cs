@@ -30,7 +30,7 @@ namespace Fps.Tests.EditMode
         {
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
             _created.Add(_rifle);
 
             _definition = ScriptableObject.CreateInstance<TurretDeployDefinition>();

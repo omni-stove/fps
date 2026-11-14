@@ -5,7 +5,6 @@
         "Fps.Core",
         "Fps.Editor",
         "Fps.Net",
-        "Fps.Net.Editor",
         "Fps.Net.UI",
         "Fps.Runtime",
         "Fps.Runtime.UI",

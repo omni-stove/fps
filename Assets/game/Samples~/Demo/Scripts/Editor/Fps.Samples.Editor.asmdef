@@ -1,0 +1,22 @@
+{
+    "name": "Fps.Samples.Editor",
+    "rootNamespace": "Fps.Editor",
+    "references": [
+        "Fps.Core",
+        "Fps.Editor",
+        "Fps.Runtime",
+        "Fps.Runtime.UI",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

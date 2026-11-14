@@ -484,7 +484,7 @@ photo.PhotoCapture = new MyFramedCapture();
 - **ファイル名は、パッケージのどのファイル名よりも後に並ぶものにする** (例: `zz-` で始める)。前に並ぶと、パッケージの表に上書きし返される。パッケージと **同じ名前** にすると、どちらが後になるかは決まらない。
 - 利用側に `Resources/Strings/<言語コード>.json` を置かない。パッケージの同じパスの表とぶつかり、片方しか読まれない。
 - 表は、Play の開始時と初めて引いたときに読み、Play の間は持ち続ける。JSON を変えたら Play に入り直す (`Localizer.Reload()` を呼んでも読み直す)。
-- 言語は、初めて起動したときに OS の言語から選ばれる (日本語なら `ja`、それ以外は `en`)。`ja` の上書きを確かめるときに `en` が出ていたら、ポーズ > 設定の言語で日本語を選ぶ (選んだ言語は保存される)。
+- 言語は、初めて起動したときに OS の言語から選ばれる (パッケージの一覧では、日本語なら `ja`、それ以外は `en`。[言語を足す](#言語を足す) の `systemLanguages`)。`ja` の上書きを確かめるときに `en` が出ていたら、ポーズ > 設定の言語で日本語を選ぶ (選んだ言語は保存される)。
 - 自分の UI で表を引くときは `Fps.Runtime.Localizer.Get(key)`・`Localizer.Format(key, 引数…)`・`Localizer.Resolve(LocalizedText)` を使う。言語が変わると `Localizer.Changed` が呼ばれるので、文を持ち続ける画面はそこで引き直す。
 
 ### 書式
@@ -503,10 +503,39 @@ photo.PhotoCapture = new MyFramedCapture();
 
 ### 言語を足す
 
-設定画面の言語の選択に出るのは、`Resources/Localization/<言語コード>/` に表が 1 つでもある言語。選べる言語コードはパッケージの `Fps.Core.GameLanguage` で決まっていて、今は `ja` と `en` だけ。
+設定画面の言語の選択に出るのは、言語の一覧 (`Resources/Localization/Languages/` の JSON) にあり、`Resources/Localization/<言語コード>/` に表が 1 つでもある言語。並びは一覧の順。パッケージの一覧 (`Resources/Localization/Languages/languages.json`) は `ja` と `en`。
 
-- `en` の文をそろえる・直すときは、`Assets/Resources/Localization/en/` に上と同じ形で JSON を置く。`en` に無いキーは `ja` の文にはならず、キーそのものが出る。
-- `ja`・`en` 以外の言語 (例: `fr`) は、利用側に `Resources/Localization/fr/` を置いても読まれない。足すにはパッケージの `GameLanguage`・`GameLanguages` に言語を加える変更が要る。
+```json
+{
+  "otherSystemLanguages": "en",
+  "languages": [
+    { "code": "ja", "name": "日本語", "systemLanguages": ["Japanese"] },
+    { "code": "en", "name": "English", "systemLanguages": ["English"] }
+  ]
+}
+```
+
+| キー | 意味 |
+| --- | --- |
+| `code` | 言語コード。保存する設定とフォルダー名 (`Localization/<言語コード>/`) に使う。ASCII の英字で始まり、英数字・`-`・`_` だけで 35 文字まで。大文字小文字を区別する |
+| `name` | その言語自身での名前。表に `settings.language.name` が無いときに設定画面に出る |
+| `systemLanguages` | 初めて起動したとき、OS の言語がこの名前 (Unity の `SystemLanguage` の名前) ならこの言語にする。省いてよい |
+| `otherSystemLanguages` | OS の言語がどの `systemLanguages` にも無いときの言語。省くと一覧の最初の言語 |
+
+言語 (例: `fr`) を足すには、コードを変えずに次の 2 つを置く。
+
+1. 利用側に `Assets/Resources/Localization/Languages/zz-mygame.json` を作り、足す言語の行だけを書く。
+
+   ```json
+   { "languages": [ { "code": "fr", "name": "Français", "systemLanguages": ["French"] } ] }
+   ```
+
+2. `Assets/Resources/Localization/fr/` に、`ja` と同じキーの表 (`settings.json` など) を置く。
+
+- 一覧のファイルは、表と同じくファイル名 (拡張子なし) の順に重なる。後のファイルにある言語は、前の行を同じ位置のまま置き換える (名前を変えるときに使う)。新しい言語は後ろに足される。`otherSystemLanguages` は最後に書いたファイルのものが効く。**パッケージと同じ `languages.json` という名前にしない** (どちらが読まれるかが決まらない)。
+- 一覧の読めないファイルや行は `[Localization]` の警告を出して飛ばす。言語が 1 つも読めなければエラーを出し、`ja` と `en` で続ける。
+- 保存した設定の言語が一覧に無い (一覧から消した) ときは、`[Input]` の警告を出して OS の言語に戻す。
+- `en` の文をそろえる・直すときは、`Assets/Resources/Localization/en/` に上と同じ形で JSON を置く。`en` に無いキーは `ja` の文にはならず、キーそのものが出る。足した言語も同じで、表が壊れていると `ja` の表で続ける。
 
 ### 訳さないもの
 

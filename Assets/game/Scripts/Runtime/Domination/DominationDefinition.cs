@@ -9,7 +9,7 @@ namespace Fps.Runtime
     /// <see cref="ToSpec"/> に渡す。新しく作ったときの値は <see cref="DominationRunner"/> の既定値と同じ。
     /// 中身は Fps.Editor.ModeTuningAssetBuilder が無ければ作る。
     /// </summary>
-    [CreateAssetMenu(fileName = "Domination", menuName = "Fps/Domination Tuning")]
+    [CreateAssetMenu(fileName = "Domination", menuName = "Fps/Modes/Domination")]
     public sealed class DominationDefinition : ScriptableObject
     {
         [SerializeField, Min(0.01f), Tooltip("1 人で中立の拠点を占領し終えるまでの秒数")]

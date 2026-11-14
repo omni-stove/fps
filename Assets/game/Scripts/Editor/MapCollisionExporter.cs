@@ -34,21 +34,30 @@ namespace Fps.Editor
         [MenuItem(MenuPath)]
         public static void Export()
         {
-            var scenes = ParseScenesArgument(Environment.GetCommandLineArgs()) ?? _mapScenes?.Invoke();
-            if (scenes == null || scenes.Count == 0)
-            {
-                throw new InvalidOperationException(
-                    LogTag + " no map scenes to export; pass " + ScenesArgument + " <a.unity,b.unity> or register them with UseMapScenes");
-            }
-
+            // 一覧を渡す側は無いシーンを生成して開いているシーンを置き換えることがあるので、保存の確認と構成の控えはその前に済ませる
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
                 Debug.Log(LogTag + " export canceled");
                 return;
             }
 
-            var written = ExportScenes(scenes, OutputDirectory);
-            RemoveStaleFiles(OutputDirectory, written);
+            var setup = EditorSceneManager.GetSceneManagerSetup();
+            try
+            {
+                var scenes = ParseScenesArgument(Environment.GetCommandLineArgs()) ?? _mapScenes?.Invoke();
+                if (scenes == null || scenes.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        LogTag + " no map scenes to export; pass " + ScenesArgument + " <a.unity,b.unity> or register them with UseMapScenes");
+                }
+
+                var written = ExportScenes(scenes, OutputDirectory);
+                RemoveStaleFiles(OutputDirectory, written);
+            }
+            finally
+            {
+                RestoreSetup(setup);
+            }
         }
 
         public static IReadOnlyList<string> ParseScenesArgument(IReadOnlyList<string> args)
@@ -138,14 +147,19 @@ namespace Fps.Editor
             }
             finally
             {
-                // Untitled のシーンは戻せないので、保存済みのシーンだけのときに開き直す
-                if (setup.Length > 0 && Array.TrueForAll(setup, s => !string.IsNullOrEmpty(s.path)))
-                {
-                    EditorSceneManager.RestoreSceneManagerSetup(setup);
-                }
+                RestoreSetup(setup);
             }
 
             return written;
+        }
+
+        private static void RestoreSetup(SceneSetup[] setup)
+        {
+            // Untitled のシーンは戻せないので、保存済みのシーンだけのときに開き直す
+            if (setup.Length > 0 && Array.TrueForAll(setup, s => !string.IsNullOrEmpty(s.path)))
+            {
+                EditorSceneManager.RestoreSceneManagerSetup(setup);
+            }
         }
 
         public static void WriteFile(string path, WorldMap map)

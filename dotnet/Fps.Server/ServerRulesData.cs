@@ -11,9 +11,13 @@ namespace Fps.Server
         public const string RulesDirectoryName = "rules";
         public const string TuningDirectoryName = "tuning";
         public const string PingTuningFileName = "ping.json";
+        public const string GrenadeTuningFileName = "grenade.json";
 
-        public ServerRulesData(string name, NetMatchFile file, PingSpec ping, string path, string pingPath)
+        public ServerRulesData(
+            string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeSpec grenade = null, string grenadePath = null)
         {
+            Grenade = grenade ?? GrenadeSpec.Default;
+            GrenadePath = grenadePath;
             Name = name ?? throw new ArgumentNullException(nameof(name));
             File = file ?? throw new ArgumentNullException(nameof(file));
             Ping = ping ?? throw new ArgumentNullException(nameof(ping));
@@ -38,11 +42,17 @@ namespace Fps.Server
 
         public string PingPath { get; }
 
+        /// <summary>グレネードの信管・間隔・初速・威力と半径。</summary>
+        public GrenadeSpec Grenade { get; }
+
+        public string GrenadePath { get; }
+
         public string LogLine => ServerProgram.LogTag + " rules " + Name
             + " objective=" + Rules.Objective
             + " weapons=" + File.LoadoutWeapons.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Path
             + " ping=" + (PingPath ?? "default")
+            + " grenade=" + (GrenadePath ?? "default")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
@@ -113,7 +123,28 @@ namespace Fps.Server
                 pingPath = null;
             }
 
-            data = new ServerRulesData(name, file, ping, path, pingPath);
+            // グレネードも Unity では Resources の JSON (KitTuning.Grenade) から読むので、無ければ同じく既定値で動かす
+            var grenadePath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, GrenadeTuningFileName));
+            var grenade = GrenadeSpec.Default;
+            if (System.IO.File.Exists(grenadePath))
+            {
+                try
+                {
+                    grenade = TuningJson.ParseGrenade(System.IO.File.ReadAllText(grenadePath), grenadePath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read grenade tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                grenadePath = null;
+            }
+
+            data = new ServerRulesData(name, file, ping, path, pingPath, grenade, grenadePath);
             error = null;
             return true;
         }

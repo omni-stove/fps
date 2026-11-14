@@ -152,6 +152,12 @@ namespace Fps.Editor
                     WriteFile(path, map);
                     written.Add(path);
                     Debug.Log(LogTag + " wrote " + path + " from " + scenePath + " (" + Describe(map) + ")");
+
+                    // サーバーは .fpsmap から部品の形しか分からないので、同じ耐久値と崩れ方で壊せるよう並びも書く
+                    var structures = CollectStructures(scene.GetRootGameObjects());
+                    var structuresPath = Path.Combine(outputDirectory, MapName(scenePath) + NetMapStructures.Extension);
+                    File.WriteAllText(structuresPath, NetMapStructures.Write(structures));
+                    Debug.Log(LogTag + " wrote " + structuresPath + " (" + structures.Structures.Count + " structures)");
                 }
             }
             finally
@@ -302,6 +308,31 @@ namespace Fps.Editor
             }
 
             return new WorldMap(shapes);
+        }
+
+        // 番号は Collect と同じく、有効・無効を問わずシーンの並び順で振る
+        public static NetMapStructures CollectStructures(IReadOnlyList<GameObject> roots)
+        {
+            if (roots == null)
+            {
+                throw new ArgumentNullException(nameof(roots));
+            }
+
+            var layouts = new List<StructureLayout>();
+            foreach (var root in roots)
+            {
+                if (root == null)
+                {
+                    continue;
+                }
+
+                foreach (var structure in root.GetComponentsInChildren<DestructibleStructure>(true))
+                {
+                    layouts.Add(structure.Integrity.Layout);
+                }
+            }
+
+            return new NetMapStructures(layouts);
         }
 
         private static int GroupOf(Collider collider, Dictionary<DestructibleStructure, int> structures, Dictionary<Rigidbody, int> bodies)

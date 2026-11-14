@@ -296,7 +296,8 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 
 Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠、
 上の運用 (版の確認・drain・JSON のイベント)、EOS のロビーへの登録 (`-register-lobby`) と、試合のルール (TDM・Domination・ダウンと蘇生・印・
-出現と出現直後の無敵・ロードアウトの選択・放置で切る) を行う。戦闘・移動・Bot・EOS の P2P・EAC はまだ無い。
+出現と出現直後の無敵・ロードアウトの選択・放置で切る)、移動、戦闘 (射撃・巻き戻しの当たり判定・ダメージ・武器・グレネード・壊せる建物) を行う。
+Bot・EOS の P2P・EAC はまだ無い。
 
 ```sh
 make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
@@ -321,6 +322,12 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
   印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。どれも Unity の Editor から `make export-server-rules`
   (メニューは Fps > Server Data > Export Rules And Points) で書き出す。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
   ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
+- 射撃は Unity のサーバーと同じく、撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
+  ログ (`[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`) と JSON の `kill` の行は今と同じ形。
+  グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値、`make export-server-rules` で書き出す) から読む。
+- 壊せる建物の部品の並びは `server-data/maps/<マップ名>.structures.json` (`make export-server-data` で書き出す) から読む。
+  無いマップでは `[Destruction] map <マップ名> has N destructible structure(s) but no ...` を出し、部品は壊れない壁として残る。
+  破片が当たるダメージ (DebrisCrush) はまだ無い。
 - 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
 - SIGTERM と SIGINT (Ctrl+C) で「試合が終わってから止める」と同じ drain に入り、同じログを出す。
 - 承認は `ConnectRequestMessage` の版と鍵を Netcode の承認データと同じ判定に通すので、断ったときのログ

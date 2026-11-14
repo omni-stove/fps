@@ -134,6 +134,12 @@ namespace Fps.Server
             return false;
         }
 
+        /// <summary>覗き込んでいるか (ルールで覗き込めないときは false)。戦闘のモジュールがばらつきに使う。</summary>
+        public bool IsAiming(int playerId)
+        {
+            return _byPlayer.TryGetValue(playerId, out var mover) && mover.Aiming;
+        }
+
         public int LastProcessedInputTick(int playerId)
         {
             return _byPlayer.TryGetValue(playerId, out var mover) ? mover.LastProcessedTick : -1;

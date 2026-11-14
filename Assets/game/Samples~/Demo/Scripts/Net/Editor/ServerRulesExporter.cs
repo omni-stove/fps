@@ -13,7 +13,7 @@ namespace Fps.Editor
     /// <summary>
     /// Unity 抜きのサーバー (dotnet/Fps.Server) はアセットとシーンを読めないので、NetMatch.prefab に焼いてある試合の設定とルールのアセットを
     /// <c>server-data/rules/&lt;ルール名&gt;.json</c> に、各マップの出現地点と拠点を <c>server-data/maps/&lt;マップ&gt;.points.json</c> に、
-    /// 印の調整値を <c>server-data/tuning/ping.json</c> に書き出す。ルールのファイルには NetPlayer.prefab の移動の値と体の寸法も入れる。サーバーは <c>-rules &lt;ルール名&gt;</c> でルールを選ぶ。
+    /// 印とグレネードの調整値を <c>server-data/tuning/ping.json</c>・<c>grenade.json</c> に書き出す。ルールのファイルには NetPlayer.prefab の移動の値と体の寸法も入れる。サーバーは <c>-rules &lt;ルール名&gt;</c> でルールを選ぶ。
     /// </summary>
     /// <remarks>make export-server-rules: unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export</remarks>
     public static class ServerRulesExporter
@@ -44,6 +44,7 @@ namespace Fps.Editor
             written.AddRange(ExportRules(Path.Combine(root, RulesFolder)));
             written.AddRange(ExportPoints(Path.Combine(root, MapsFolder)));
             written.Add(ExportPingTuning(Path.Combine(root, TuningFolder)));
+            written.Add(ExportGrenadeTuning(Path.Combine(root, TuningFolder)));
             Debug.Log(LogTag + " wrote " + written.Count + " file(s) under " + Path.Combine(root, DataFolder) + "; commit them");
         }
 
@@ -193,6 +194,22 @@ namespace Fps.Editor
             TuningJson.ParsePing(text.text, KitTuning.PingResourcePath);
             Directory.CreateDirectory(directory);
             var output = Path.Combine(directory, "ping.json");
+            File.WriteAllText(output, text.text);
+            return output;
+        }
+
+        // グレネードも同じく、オフラインと同じ値で投げて爆発させるよう同じ JSON を写す
+        public static string ExportGrenadeTuning(string directory)
+        {
+            var text = Resources.Load<TextAsset>(KitTuning.GrenadeResourcePath);
+            if (text == null)
+            {
+                throw new InvalidOperationException(LogTag + " Resources/" + KitTuning.GrenadeResourcePath + ".json is missing");
+            }
+
+            TuningJson.ParseGrenade(text.text, KitTuning.GrenadeResourcePath);
+            Directory.CreateDirectory(directory);
+            var output = Path.Combine(directory, "grenade.json");
             File.WriteAllText(output, text.text);
             return output;
         }

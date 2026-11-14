@@ -1,1 +1,0 @@
-/Users/codynog/Documents/fps-3/.agents/refs/character-format.md

@@ -1,1 +1,0 @@
-/Users/codynog/Documents/fps-3/.agents/refs/setup-rules.md

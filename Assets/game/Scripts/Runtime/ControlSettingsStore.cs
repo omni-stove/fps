@@ -31,14 +31,22 @@ namespace Fps.Runtime
             }
 
             Key = key;
-            Defaults = ControlSettings.DefaultFor(defaultLanguage ?? Localizer.SystemDefault());
+            // Application.systemLanguage は MonoBehaviour のフィールド初期化子から呼ぶと UnityException になるため、最初に使うときまで決めない。
+            _defaultLanguage = defaultLanguage;
+            if (defaultLanguage.HasValue)
+            {
+                _defaults = ControlSettings.DefaultFor(defaultLanguage.Value);
+            }
         }
+
+        private readonly GameLanguage? _defaultLanguage;
+        private ControlSettings _defaults;
 
         /// <summary>読み書きする PlayerPrefs のキー。</summary>
         public string Key { get; }
 
         /// <summary>まだ保存していないときに <see cref="Load"/> が返す設定。<see cref="ControlSettings.Default"/> の言語だけを初期値の言語にしたもの。</summary>
-        public ControlSettings Defaults { get; }
+        public ControlSettings Defaults => _defaults ??= ControlSettings.DefaultFor(_defaultLanguage ?? Localizer.SystemDefault());
 
         /// <summary>
         /// 保存した設定を読む。まだ保存していなければ警告を出さずに <see cref="Defaults"/> を返す。

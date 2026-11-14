@@ -7,6 +7,7 @@
         "Fps.Net",
         "Fps.Net.Editor",
         "Fps.Runtime",
+        "Fps.Runtime.UI",
         "Unity.AI.Navigation",
         "Unity.InputSystem",
         "Unity.Netcode.Runtime",

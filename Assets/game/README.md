@@ -258,6 +258,7 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
 | --- | --- | --- |
 | `Fps.Core` | Unity に依存しないルールと計算 | 常に |
 | `Fps.Runtime` | ゲームプレイのコンポーネントとアセットの型 | 常に |
+| `Fps.Runtime.UI` | 既定の UI (HUD・メニュー・ポーズ・設定)。起動時に `GameUi` へ自分を登録する。外すと HUD 無しで動く | 常に |
 | `Fps.Editor` | シーンとアセットのビルダー、JSON のインポーター、smoke | Editor |
 | `Fps.Net`・`Fps.Net.Editor` | Netcode for GameObjects のネット対戦 | Netcode 2.14.0 以上 |
 | `Fps.NetEos` | EOS のログイン・ロビー・P2P の通信・アンチチート | Netcode と EOS |

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// ゲームごとに変える調整値のうち、Resources の JSON (<see cref="TuningJson"/> の形) から読むもの。
+    /// ゲームごとに変える調整値のうち、JSON (<see cref="TuningJson"/> の形) から読むもの。入口 (<see cref="GameContent"/>) に JSON があればそれを、無ければ Resources の JSON を読む。
     /// <list type="bullet">
     /// <item>グレネード: <see cref="GrenadeResourcePath"/> (<see cref="Grenade"/>)。オフラインの <see cref="GrenadeThrower"/> とネット対戦が使う。</item>
     /// <item>印: <see cref="PingResourcePath"/> (<see cref="Ping"/>)。オフラインの <see cref="PingController"/> とネット対戦が使う。</item>
@@ -34,14 +34,14 @@ namespace Fps.Runtime
         private static KnockbackSpec _knockback;
 
         /// <summary>グレネードの調整値。<see cref="GrenadeResourcePath"/> が無いか読めなければ <see cref="GrenadeSpec.Default"/>。</summary>
-        public static GrenadeSpec Grenade => _grenade ?? (_grenade = Load(GrenadeResourcePath, TuningJson.ParseGrenade, GrenadeSpec.Default));
+        public static GrenadeSpec Grenade => _grenade ?? (_grenade = Load(c => c.GrenadeTuning, GrenadeResourcePath, TuningJson.ParseGrenade, GrenadeSpec.Default));
 
         /// <summary>印の調整値。<see cref="PingResourcePath"/> が無いか読めなければ <see cref="PingSpec.Default"/>。</summary>
-        public static PingSpec Ping => _ping ?? (_ping = Load(PingResourcePath, TuningJson.ParsePing, PingSpec.Default));
+        public static PingSpec Ping => _ping ?? (_ping = Load(c => c.PingTuning, PingResourcePath, TuningJson.ParsePing, PingSpec.Default));
 
         /// <summary>吹き飛ばしの調整値。<see cref="KnockbackResourcePath"/> が無いか読めなければ <see cref="KnockbackSpec.Default"/>。</summary>
         public static KnockbackSpec Knockback =>
-            _knockback ?? (_knockback = Load(KnockbackResourcePath, TuningJson.ParseKnockback, KnockbackSpec.Default));
+            _knockback ?? (_knockback = Load(c => c.KnockbackTuning, KnockbackResourcePath, TuningJson.ParseKnockback, KnockbackSpec.Default));
 
         /// <summary>読んだ値を捨て、次に使うときに Resources から読み直させる。</summary>
         public static void Reload()
@@ -85,9 +85,17 @@ namespace Fps.Runtime
             }
         }
 
-        private static T Load<T>(string path, Func<string, string, T> parse, T fallback)
+        private static T Load<T>(Func<GameContent, TextAsset> select, string path, Func<string, string, T> parse, T fallback)
             where T : class
         {
+            var fromContent = GameContent.Pick(select);
+            if (fromContent != null)
+            {
+                var source = $"GameContent '{GameContent.Current.name}' ({fromContent.name})";
+                Debug.Log($"{LogTag} read {source}");
+                return Read(fromContent.text, source, parse, fallback);
+            }
+
             var asset = Resources.Load<TextAsset>(path);
             var spec = Read(asset != null ? asset.text : null, $"Resources/{path}.json", parse, fallback);
             if (asset != null)

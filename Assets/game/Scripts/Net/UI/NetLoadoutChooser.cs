@@ -13,7 +13,7 @@ namespace Fps.Net
     /// <remarks>
     /// <para>
     /// 倒されてリスポーンを待っている間 (<see cref="NetHud.IsAwaitingRespawn"/>) に画面を開き、出現したら閉じる。
-    /// 並べる武器は試合のプレハブが持つアセット (<see cref="NetTeamDeathmatch.Loadout"/>・<see cref="NetTeamDeathmatch.Catalog"/>) から作り、
+    /// 並べる武器は試合のプレハブが持つアセット、空なら入口のもの (<see cref="NetTeamDeathmatch.EffectiveLoadout"/>・<see cref="NetTeamDeathmatch.EffectiveCatalog"/>) から作り、
     /// 最初に選んでおく並びは保存した並び、なければ今持たされている並び (<see cref="NetPlayerWeapon.EquippedWeaponIds"/>)。
     /// 決めた並びは <see cref="NetPlayerWeapon.RequestLoadout"/> で送り、答え (<see cref="NetPlayerWeapon.LoadoutAnswered"/>) を画面に出す。
     /// 受け入れられた並びだけを <see cref="Store"/> に保存する (断られた並びを次に自動で送らないため)。
@@ -160,7 +160,7 @@ namespace Fps.Net
         private void Open(NetTeamDeathmatch match)
         {
             var fallback = _weapon != null ? _weapon.EquippedWeaponIds : null;
-            if (!LoadoutSelectionAssets.TryCreate(match.Loadout, match.Catalog, _store.Load(), fallback, out var selection, out var error))
+            if (!LoadoutSelectionAssets.TryCreate(match.EffectiveLoadout, match.EffectiveCatalog, _store.Load(), fallback, out var selection, out var error))
             {
                 Debug.LogWarning(LoadoutChoiceLog.Prefix + " cannot show the loadout screen: " + error, this);
                 return;
@@ -179,7 +179,7 @@ namespace Fps.Net
             }
 
             _sentFor = match;
-            var ids = SavedLoadoutToSend(_store.Load(), match.Loadout, match.Catalog, out var reason);
+            var ids = SavedLoadoutToSend(_store.Load(), match.EffectiveLoadout, match.EffectiveCatalog, out var reason);
             if (ids == null)
             {
                 if (reason != null)

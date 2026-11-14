@@ -31,7 +31,7 @@ namespace Fps.Net
     /// <para>
     /// <c>-bots</c> は試合の進行役を Spawn する前に <see cref="NetTeamDeathmatch.LaunchBots"/> へ渡す (Bot を足すのは試合の .Bots.cs)。
     /// <c>-map</c> は .Map.cs、<c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> は .NetSimulation.cs、
-    /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、試合のイベントのログは .Log.cs が受け持つ。
+    /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、<c>-log-format</c> と試合のイベントの JSON のログは .Log.cs が受け持つ。
     /// それぞれの起動の前 (<c>*BeforeStart</c>)・起動の後 (<c>*AfterStart</c>)・終了の要求 (<c>*QuitRequested</c>) の差し込み口を
     /// <see cref="StartNetwork"/> と <see cref="HandleWantsToQuit"/> から呼ぶ。
     /// <c>-map</c> のシーンが今のシーンと違えば、NetworkManager を組み立てる前に .Map.cs (<c>MapHandOff</c>) がそのシーンへ移り、
@@ -623,6 +623,7 @@ namespace Fps.Net
         private void OnDestroy()
         {
             MenuNavigator.ReturningToMenu -= HandleReturningToMenu;
+            StopServerEventLog();
             StopWatchingMatchForDrain();
 
             if (_lobby != null)

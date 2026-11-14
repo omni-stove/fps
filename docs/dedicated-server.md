@@ -193,6 +193,58 @@ docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -register-l
 (メニューから来たときはこの理由を添えてメニューへ戻り、batchmode では終了コード 7)。
 `-lobby quickmatch` は `-transport udp` だけを受け付け、`-lobby-id` / `-lobby-max-players` / `-mode` / `-address` / `-port` とは併用できない。
 
+## 試合のイベントを JSON で出す
+
+`-log-format json` を付けると、今までのログ (`[Net]` / `[Match]` 付きの行) に加えて、サーバーの起動・終了と試合のイベントを
+1 イベント 1 行の JSON で標準出力に出す。付けないとき (`-log-format text`、既定) はこれまでのログのままで、JSON の行は出ない。
+`-log-format json` は `-mode server` でだけ使え、Host やクライアントに付けると `[Net] invalid arguments: -log-format json is only used by -mode server (got host)` で終わる。
+
+```sh
+docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -log-format json
+```
+
+同じ標準出力に今までのログの行も混ざるので、jq では各行を文字列として読み (`-R`)、JSON として読めて `type` のある行だけを拾う。
+
+```sh
+docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type?)'
+docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
+```
+
+```
+{"type":"server_started","time":"2026-11-13T09:00:00.000Z","version":"0.2.0","transport":"udp","endpoint":"0.0.0.0:7777"}
+{"type":"player_joined","time":"2026-11-13T09:00:12.345Z","matchId":"6c1f3b2a9d0e4f5a8b7c6d5e4f3a2b1c","playerId":"1","team":"Alpha","rejoined":"false"}
+{"type":"player_joined","time":"2026-11-13T09:00:15.002Z","matchId":"6c1f3b2a9d0e4f5a8b7c6d5e4f3a2b1c","playerId":"2","team":"Bravo","rejoined":"false"}
+{"type":"match_started","time":"2026-11-13T09:00:15.003Z","matchId":"6c1f3b2a9d0e4f5a8b7c6d5e4f3a2b1c","players":"2"}
+{"type":"kill","time":"2026-11-13T09:00:41.870Z","matchId":"6c1f3b2a9d0e4f5a8b7c6d5e4f3a2b1c","killerId":"1","victimId":"2","teamKill":"false"}
+{"type":"match_ended","time":"2026-11-13T09:05:15.010Z","matchId":"6c1f3b2a9d0e4f5a8b7c6d5e4f3a2b1c","winner":"Alpha","scoreAlpha":"30","scoreBravo":"12"}
+```
+
+### 項目
+
+どの行も `type` と `time` から始まる。値は数も真偽値もすべて文字列 (`"3"`、`"true"`) で、無い値は項目ごと出さない。
+人の名前 (表示名) は出さない。
+
+| 項目 | 内容 |
+| --- | --- |
+| `type` | イベントの種類 (下の表) |
+| `time` | サーバーで起きた時刻。UTC の ISO 8601 でミリ秒まで (`2026-11-13T09:00:12.345Z`) |
+| `matchId` | 試合の Id (32 桁の 16 進数)。サーバーが試合を用意したときと、試合が終わって次の試合を始めるときに作り直す。`server_*` には無い |
+| `playerId` / `killerId` / `victimId` | プレイヤーの Id (サーバーのクライアント Id)。`[Match]` のログの `player=` / `killer=` / `victim=` と同じ番号 |
+| `productUserId` / `killerProductUserId` / `victimProductUserId` | EOS の ProductUserId。`-transport eos` のサーバーにつないだ人だけに付く (UDP では出さない) |
+
+| `type` | いつ | 続く項目 |
+| --- | --- | --- |
+| `server_started` | 待ち受けを始めた | `version` (ビルドの版)、`transport` (`udp` / `eos`)、`endpoint` (待ち受けたアドレスとポート、EOS なら `eos`) |
+| `server_stopping` | 終了を求められた (`docker stop` の SIGTERM など) | なし |
+| `player_joined` | プレイヤーが試合に入った | `matchId`、`playerId`、`productUserId`、`team` (`Alpha` / `Bravo`)、`rejoined` (切断から戻り、前の成績を引き継いだなら `true`) |
+| `player_left` | プレイヤーが試合から抜けた (切断を含む) | `matchId`、`playerId`、`productUserId` |
+| `match_started` | 両チームがそろって試合が始まった | `matchId`、`players` (試合に入っている人数) |
+| `kill` | プレイヤーが倒された | `matchId`、`killerId`、`killerProductUserId`、`victimId`、`victimProductUserId`、`teamKill` (味方に倒されたなら `true`)。自滅では `killerId` と `victimId` が同じ |
+| `match_ended` | 試合が終わった | `matchId`、`winner` (`Alpha` / `Bravo`、引き分けなら `draw`)、`scoreAlpha`、`scoreBravo` |
+
+試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
+標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。
+
 ## CI でのリリース
 
 `v*` のタグを push すると `.github/workflows/server-image.yml` が専用サーバーをビルドし、

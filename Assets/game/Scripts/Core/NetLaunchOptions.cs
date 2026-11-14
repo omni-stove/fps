@@ -7,7 +7,7 @@ namespace Fps.Core
     /// <summary>
     /// ネットワークの起動設定。コマンドライン引数 <c>-mode</c> / <c>-address</c> / <c>-port</c> /
     /// <c>-transport</c> / <c>-eos-server</c> / <c>-register-lobby</c> / <c>-map</c> / <c>-bots</c> / <c>-net-latency</c> / <c>-net-loss</c> /
-    /// <c>-net-jitter</c> / <c>-drain-timeout</c> から作る。知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
+    /// <c>-net-jitter</c> / <c>-drain-timeout</c> / <c>-log-format</c> から作る。知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
     /// </summary>
     public sealed class NetLaunchOptions
     {
@@ -23,6 +23,7 @@ namespace Fps.Core
         public const string NetLossFlag = "-net-loss";
         public const string NetJitterFlag = "-net-jitter";
         public const string DrainTimeoutFlag = "-drain-timeout";
+        public const string LogFormatFlag = "-log-format";
 
         /// <summary><see cref="Map"/> の名前の最長の文字数。</summary>
         public const int MaxMapNameLength = 64;
@@ -56,7 +57,7 @@ namespace Fps.Core
         private static readonly string[] _flags =
         {
             ModeFlag, AddressFlag, PortFlag, TransportFlag, EosServerFlag, RegisterLobbyFlag,
-            MapFlag, BotsFlag, NetLatencyFlag, NetLossFlag, NetJitterFlag, DrainTimeoutFlag,
+            MapFlag, BotsFlag, NetLatencyFlag, NetLossFlag, NetJitterFlag, DrainTimeoutFlag, LogFormatFlag,
         };
 
         public NetLaunchMode Mode { get; }
@@ -102,6 +103,9 @@ namespace Fps.Core
         /// <c>-drain-timeout</c> が無いときも 0 になるので、サーバーは <see cref="ServerDrain.ResolveTimeoutSeconds"/> で既定の秒数に読み替える。
         /// </summary>
         public int DrainTimeoutSeconds { get; }
+
+        /// <summary>サーバーのログの形式。<see cref="ServerLogFormat.Json"/> なら試合のイベントを 1 行の JSON でも出す。</summary>
+        public ServerLogFormat LogFormat { get; }
 
         /// <summary>ログ向けの接続先・待ち受け先。UDP は <c>address:port</c>、EOS は <c>eos</c> か <c>eos:&lt;サーバーの ID&gt;</c>。</summary>
         public string Endpoint
@@ -178,6 +182,43 @@ namespace Fps.Core
             int netLossPercent,
             int netJitterMs,
             int drainTimeoutSeconds)
+            : this(
+                mode, address, port, transport, eosServerId, registerLobbyEndpoint,
+                map, bots, netLatencyMs, netLossPercent, netJitterMs, drainTimeoutSeconds, ServerLogFormat.Text)
+        {
+        }
+
+        /// <param name="mode">起動モード。</param>
+        /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。EOS では使わないが検証はする。</param>
+        /// <param name="port">1 から 65535 のポート番号。</param>
+        /// <param name="transport">transport。</param>
+        /// <param name="eosServerId">EOS のクライアントでは必須の、サーバーの ProductUserId。EOS のクライアント以外では null。</param>
+        /// <param name="registerLobbyEndpoint">
+        /// UDP のサーバーが EOS のロビーに載せる公開アドレス (<c>address:port</c>)。登録しないなら null。
+        /// </param>
+        /// <param name="map">ホスト・サーバーが使うマップ (<see cref="IsMapName"/> に通るシーン名)。今のシーンのままなら null。</param>
+        /// <param name="bots">ホスト・サーバーが足す Bot の数。0 以上 <see cref="MaxBots"/> 以下。クライアントでは 0。</param>
+        /// <param name="netLatencyMs">足す遅れ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
+        /// <param name="netLossPercent">落とすパケットの割合 (%)。0 以上 <see cref="MaxNetLossPercent"/> 以下。</param>
+        /// <param name="netJitterMs">遅れのゆらぎ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
+        /// <param name="drainTimeoutSeconds">
+        /// 終了を求められてから試合の終わりを待つ最長の秒数。0 以上 <see cref="MaxDrainTimeoutSeconds"/> 以下。サーバー以外では 0。
+        /// </param>
+        /// <param name="logFormat">ログの形式。サーバー以外では <see cref="ServerLogFormat.Text"/>。</param>
+        public NetLaunchOptions(
+            NetLaunchMode mode,
+            string address,
+            ushort port,
+            NetTransportKind transport,
+            string eosServerId,
+            string registerLobbyEndpoint,
+            string map,
+            int bots,
+            int netLatencyMs,
+            int netLossPercent,
+            int netJitterMs,
+            int drainTimeoutSeconds,
+            ServerLogFormat logFormat)
         {
             if (!Enum.IsDefined(typeof(NetLaunchMode), mode))
             {
@@ -187,6 +228,11 @@ namespace Fps.Core
             if (!Enum.IsDefined(typeof(NetTransportKind), transport))
             {
                 throw new ArgumentOutOfRangeException(nameof(transport), transport, "unknown transport");
+            }
+
+            if (!Enum.IsDefined(typeof(ServerLogFormat), logFormat))
+            {
+                throw new ArgumentOutOfRangeException(nameof(logFormat), logFormat, "unknown log format");
             }
 
             var addressError = ValidateAddress(mode, address);
@@ -236,6 +282,12 @@ namespace Fps.Core
                 throw new ArgumentException(drainError, nameof(drainTimeoutSeconds));
             }
 
+            var logFormatError = ValidateLogFormat(mode, logFormat);
+            if (logFormatError != null)
+            {
+                throw new ArgumentException(logFormatError, nameof(logFormat));
+            }
+
             Mode = mode;
             Address = address;
             Port = port;
@@ -248,6 +300,7 @@ namespace Fps.Core
             NetLossPercent = netLossPercent;
             NetJitterMs = netJitterMs;
             DrainTimeoutSeconds = drainTimeoutSeconds;
+            LogFormat = logFormat;
         }
 
         /// <summary>引数に <c>-mode</c> が含まれるか。値の妥当性は見ない。</summary>
@@ -277,6 +330,7 @@ namespace Fps.Core
         /// <c>-register-lobby</c> は UDP のサーバーでだけ使える。
         /// <c>-map</c> と <c>-bots</c> はホスト・サーバーで、<c>-drain-timeout</c> はサーバーでだけ使える。
         /// <c>-bots</c> / <c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> / <c>-drain-timeout</c> は 0 以上の整数で、無ければ 0。
+        /// <c>-log-format</c> は <c>text</c> か <c>json</c> で、<c>json</c> はサーバーでだけ使える。無ければ <c>text</c>。
         /// </summary>
         /// <param name="args">コマンドライン引数。先頭が実行ファイルのパスでもよい。</param>
         /// <param name="defaultMode">-mode が無いときのモード。</param>
@@ -391,7 +445,14 @@ namespace Fps.Core
                 return false;
             }
 
-            error = ValidateBots(mode, bots) ?? ValidateDrainTimeout(mode, drainTimeoutSeconds);
+            var logFormat = ServerLogFormat.Text;
+            if (values.TryGetValue(LogFormatFlag, out var logFormatText) && !TryParseLogFormat(logFormatText, out logFormat))
+            {
+                error = LogFormatFlag + " must be text or json (got '" + logFormatText + "')";
+                return false;
+            }
+
+            error = ValidateBots(mode, bots) ?? ValidateDrainTimeout(mode, drainTimeoutSeconds) ?? ValidateLogFormat(mode, logFormat);
             if (error != null)
             {
                 return false;
@@ -399,7 +460,7 @@ namespace Fps.Core
 
             options = new NetLaunchOptions(
                 mode, address, port, transport, eosServerId, registerEndpoint,
-                map, bots, netLatencyMs, netLossPercent, netJitterMs, drainTimeoutSeconds);
+                map, bots, netLatencyMs, netLossPercent, netJitterMs, drainTimeoutSeconds, logFormat);
             return true;
         }
 
@@ -430,6 +491,20 @@ namespace Fps.Core
                     return "eos";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(transport), transport, "unknown transport");
+            }
+        }
+
+        /// <summary>ログ・引数向けの小文字のログの形式の名前 (text / json)。</summary>
+        public static string LogFormatName(ServerLogFormat format)
+        {
+            switch (format)
+            {
+                case ServerLogFormat.Text:
+                    return "text";
+                case ServerLogFormat.Json:
+                    return "json";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(format), format, "unknown log format");
             }
         }
 
@@ -496,7 +571,7 @@ namespace Fps.Core
 
         /// <summary>
         /// transport だけを差し替えた設定を返す。UDP にしたときは EOS のサーバー ID を捨てる。
-        /// ロビーへの登録・マップ・Bot・回線の劣化・終了の待ち時間はそのまま引き継ぐ。
+        /// ロビーへの登録・マップ・Bot・回線の劣化・終了の待ち時間・ログの形式はそのまま引き継ぐ。
         /// </summary>
         /// <exception cref="ArgumentException">
         /// EOS のクライアントにするのにサーバー ID が無い、または EOS にするのにロビーへの登録が指定されている。
@@ -511,12 +586,12 @@ namespace Fps.Core
             var serverId = transport == NetTransportKind.Udp ? null : EosServerId;
             return new NetLaunchOptions(
                 Mode, Address, Port, transport, serverId, RegisterLobbyEndpoint,
-                Map, Bots, NetLatencyMs, NetLossPercent, NetJitterMs, DrainTimeoutSeconds);
+                Map, Bots, NetLatencyMs, NetLossPercent, NetJitterMs, DrainTimeoutSeconds, LogFormat);
         }
 
         /// <summary>
         /// <c>&lt;モード&gt; &lt;接続先&gt;</c> に、指定されたものだけ <c>lobby=</c> / <c>map=</c> / <c>bots=</c> /
-        /// <c>latency=</c> <c>loss=</c> <c>jitter=</c> / <c>drain=</c> を続けたログ向けの文字列。
+        /// <c>latency=</c> <c>loss=</c> <c>jitter=</c> / <c>drain=</c> / <c>log=</c> を続けたログ向けの文字列。
         /// </summary>
         public override string ToString()
         {
@@ -546,6 +621,11 @@ namespace Fps.Core
             if (DrainTimeoutSeconds > 0)
             {
                 text += " drain=" + DrainTimeoutSeconds.ToString(CultureInfo.InvariantCulture) + "s";
+            }
+
+            if (LogFormat != ServerLogFormat.Text)
+            {
+                text += " log=" + LogFormatName(LogFormat);
             }
 
             return text;
@@ -606,6 +686,19 @@ namespace Fps.Core
             }
 
             return DrainTimeoutFlag + " is only used by " + ModeFlag + " " + ModeName(NetLaunchMode.Server)
+                + " (got " + ModeName(mode) + ")";
+        }
+
+        /// <returns>正しければ null、誤りならその理由。</returns>
+        private static string ValidateLogFormat(NetLaunchMode mode, ServerLogFormat format)
+        {
+            // JSON の行は専用サーバーの標準出力を集める運用のためのもので、Host やクライアントには読む先が無い
+            if (format == ServerLogFormat.Text || mode == NetLaunchMode.Server)
+            {
+                return null;
+            }
+
+            return LogFormatFlag + " " + LogFormatName(format) + " is only used by " + ModeFlag + " " + ModeName(NetLaunchMode.Server)
                 + " (got " + ModeName(mode) + ")";
         }
 
@@ -676,6 +769,21 @@ namespace Fps.Core
             }
 
             mode = default;
+            return false;
+        }
+
+        private static bool TryParseLogFormat(string text, out ServerLogFormat format)
+        {
+            foreach (ServerLogFormat candidate in Enum.GetValues(typeof(ServerLogFormat)))
+            {
+                if (string.Equals(text, LogFormatName(candidate), StringComparison.OrdinalIgnoreCase))
+                {
+                    format = candidate;
+                    return true;
+                }
+            }
+
+            format = default;
             return false;
         }
 

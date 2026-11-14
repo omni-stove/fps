@@ -51,7 +51,7 @@ namespace Fps.Net.Tests
         [Test]
         public void ASupplyIsDisabledUntilItIsRefilled()
         {
-            var supply = new ServerGrenadeSupply(GrenadeThrower.ThrowSeconds);
+            var supply = new ServerGrenadeSupply(GrenadeSpec.Default.ThrowSeconds);
 
             Assert.That(supply.Enabled, Is.False);
             Assert.That(supply.State, Is.EqualTo(NetGrenadeState.None));
@@ -61,7 +61,7 @@ namespace Fps.Net.Tests
         [Test]
         public void RefillingFillsTheSupplyToTheRuleCount()
         {
-            var supply = new ServerGrenadeSupply(GrenadeThrower.ThrowSeconds);
+            var supply = new ServerGrenadeSupply(GrenadeSpec.Default.ThrowSeconds);
 
             supply.Refill(Grenades(2));
 
@@ -74,7 +74,7 @@ namespace Fps.Net.Tests
         [Test]
         public void TheRuleTurnedOffGivesNoGrenadesEvenWithACount()
         {
-            var supply = new ServerGrenadeSupply(GrenadeThrower.ThrowSeconds);
+            var supply = new ServerGrenadeSupply(GrenadeSpec.Default.ThrowSeconds);
 
             supply.Refill(ActionRules.Default.WithGrenade(Grenade.Off).WithGrenadeCount(3));
 
@@ -85,7 +85,7 @@ namespace Fps.Net.Tests
         [Test]
         public void CheckingDoesNotTakeAGrenade()
         {
-            var supply = new ServerGrenadeSupply(GrenadeThrower.ThrowSeconds);
+            var supply = new ServerGrenadeSupply(GrenadeSpec.Default.ThrowSeconds);
             supply.Refill(Grenades(1));
 
             supply.Check(_now);
@@ -97,16 +97,16 @@ namespace Fps.Net.Tests
         [Test]
         public void TakingWaitsTheThrowTimeBeforeTheNextOne()
         {
-            var supply = new ServerGrenadeSupply(GrenadeThrower.ThrowSeconds);
+            var supply = new ServerGrenadeSupply(GrenadeSpec.Default.ThrowSeconds);
             supply.Refill(Grenades(3));
 
             Assert.That(supply.Take(_now), Is.EqualTo(GrenadeThrowRejection.None));
             Assert.That(supply.Remaining, Is.EqualTo(2));
 
-            Assert.That(supply.Take(_now + (GrenadeThrower.ThrowSeconds * 0.5f)), Is.EqualTo(GrenadeThrowRejection.TooSoon));
+            Assert.That(supply.Take(_now + (GrenadeSpec.Default.ThrowSeconds * 0.5f)), Is.EqualTo(GrenadeThrowRejection.TooSoon));
             Assert.That(supply.Remaining, Is.EqualTo(2), "a rejected throw keeps the grenade");
 
-            Assert.That(supply.Take(_now + GrenadeThrower.ThrowSeconds), Is.EqualTo(GrenadeThrowRejection.None));
+            Assert.That(supply.Take(_now + GrenadeSpec.Default.ThrowSeconds), Is.EqualTo(GrenadeThrowRejection.None));
             Assert.That(supply.Remaining, Is.EqualTo(1));
         }
 
@@ -127,7 +127,7 @@ namespace Fps.Net.Tests
         [Test]
         public void RefillingClearsTheWaitForTheNextThrow()
         {
-            var supply = new ServerGrenadeSupply(GrenadeThrower.ThrowSeconds);
+            var supply = new ServerGrenadeSupply(GrenadeSpec.Default.ThrowSeconds);
             supply.Refill(Grenades(2));
             supply.Take(_now);
 
@@ -142,7 +142,7 @@ namespace Fps.Net.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new ServerGrenadeSupply(-1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => new ServerGrenadeSupply(float.PositiveInfinity));
 
-            var supply = new ServerGrenadeSupply(GrenadeThrower.ThrowSeconds);
+            var supply = new ServerGrenadeSupply(GrenadeSpec.Default.ThrowSeconds);
             Assert.Throws<ArgumentNullException>(() => supply.Refill(null));
             Assert.Throws<ArgumentOutOfRangeException>(() => supply.Check(double.NaN));
         }
@@ -200,13 +200,13 @@ namespace Fps.Net.Tests
         public void TheExplosionReachesAPlayerWhoseBodyIsInsideTheRadiusEvenIfTheirCenterIsNot()
         {
             // 体の中心は半径の外でも、近い面が半径の内なら当たる (オフラインの ThrownGrenade.DistanceTo と同じ考え方)
-            var bottom = new Vector3(GrenadeThrower.DamageRadius + 0.3f, -1f, 0f);
-            var top = new Vector3(GrenadeThrower.DamageRadius + 0.3f, 1f, 0f);
+            var bottom = new Vector3(GrenadeSpec.Default.DamageRadius + 0.3f, -1f, 0f);
+            var top = new Vector3(GrenadeSpec.Default.DamageRadius + 0.3f, 1f, 0f);
 
             var distance = NetTeamDeathmatch.DistanceToCapsule(Vector3.zero, bottom, top, 0.5f);
 
-            Assert.That(GrenadeThrower.Explosion.Reaches(distance), Is.True);
-            Assert.That(GrenadeThrower.Explosion.At(distance, obstructed: false), Is.GreaterThan(0));
+            Assert.That(GrenadeSpec.Default.Explosion.Reaches(distance), Is.True);
+            Assert.That(GrenadeSpec.Default.Explosion.At(distance, obstructed: false), Is.GreaterThan(0));
         }
 
         [Test]
@@ -214,8 +214,8 @@ namespace Fps.Net.Tests
         {
             var velocity = NetTeamDeathmatch.GrenadeVelocity(Vector3.forward);
 
-            Assert.That(velocity.z, Is.EqualTo(GrenadeThrower.ThrowSpeed).Within(1e-4f));
-            Assert.That(velocity.y, Is.EqualTo(GrenadeThrower.ThrowLiftSpeed).Within(1e-4f));
+            Assert.That(velocity.z, Is.EqualTo(GrenadeSpec.Default.ThrowSpeed).Within(1e-4f));
+            Assert.That(velocity.y, Is.EqualTo(GrenadeSpec.Default.ThrowLiftSpeed).Within(1e-4f));
         }
 
         [Test]

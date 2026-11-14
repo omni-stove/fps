@@ -14,7 +14,7 @@ namespace Fps.Net
     /// <para>
     /// サーバーだけが物理で動かし (Rigidbody を動的にして初速を与える)、位置と回転は NetworkTransform が全員に配る。
     /// クライアントでは Rigidbody を kinematic にして当たりを切り、届いた位置をなぞるだけにする (自分で転がすとサーバーとずれる)。
-    /// 信管 (<see cref="GrenadeThrower.FuseSeconds"/>) もサーバーだけが数え、切れたら試合 (<see cref="NetTeamDeathmatch"/>) に爆発の判定を頼んで Despawn する。
+    /// 信管 (<see cref="GrenadeSpec.FuseSeconds"/>) もサーバーだけが数え、切れたら試合 (<see cref="NetTeamDeathmatch"/>) に爆発の判定を頼んで Despawn する。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]

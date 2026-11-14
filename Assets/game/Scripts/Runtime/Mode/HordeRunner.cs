@@ -182,7 +182,7 @@ namespace Fps.Runtime
             return LocalizedText.Literal(HudFormat.Time((float)session.ElapsedSeconds));
         }
 
-        protected override void AppendHudLines(List<string> lines)
+        protected override void AppendHudTexts(List<LocalizedText> lines)
         {
             if (_horde == null)
             {

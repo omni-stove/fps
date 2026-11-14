@@ -59,7 +59,7 @@ namespace Fps.Tests.EditMode
             _runner.BeginHorde(_schedule, new[] { player, ally }, new[] { SpawnPoint(new Vector3(0f, 0f, -2f)) }, player, hud);
 
             Assert.That(_schedule.Phase, Is.EqualTo(WavePhase.Fighting), "the first wave starts with the match");
-            Assert.That(hud.Lines, Does.Contain(HordeText.Wave(1, 2)).And.Contain(HordeText.RemainingEnemies(2)));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Wave(1, 2))).And.Contain(Localizer.Resolve(HordeText.RemainingEnemies(2))));
 
             ally.Damageable.Kill();
             _runner.Tick(30f);
@@ -72,7 +72,8 @@ namespace Fps.Tests.EditMode
             Assert.That(ally.IsAlive, Is.True);
             Assert.That(_runner.Horde.Currency, Is.EqualTo(StartingCurrency + (KillReward * 2)));
             Assert.That(_runner.Session.GetScore(Side.Alpha), Is.EqualTo(2d), "the score counts the enemies killed");
-            Assert.That(hud.Lines, Does.Contain(HordeText.NextWave(RestSeconds)).And.Contain(HordeText.Currency(StartingCurrency + (KillReward * 2))));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.NextWave(RestSeconds)))
+                .And.Contain(Localizer.Resolve(HordeText.Currency(StartingCurrency + (KillReward * 2)))));
         }
 
         [Test]
@@ -90,7 +91,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)Side.Alpha));
             Assert.That(_runner.Horde.IsVictory, Is.True);
-            Assert.That(hud.Lines, Does.Contain(HordeText.Victory));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Victory)));
             Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
         }
 
@@ -104,14 +105,14 @@ namespace Fps.Tests.EditMode
 
             player.Damageable.Kill();
             _runner.Tick(0f);
-            Assert.That(hud.Lines, Does.Contain(HordeText.ReturnsAfterWave));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.ReturnsAfterWave)));
 
             ally.Damageable.Kill();
             _runner.Tick(0f);
 
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)Side.Bravo));
-            Assert.That(hud.Lines, Does.Contain(HordeText.Defeat));
+            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Defeat)));
         }
 
         [Test]
@@ -130,7 +131,8 @@ namespace Fps.Tests.EditMode
             _runner.Tick(0f);
             Assert.That(
                 hud.Lines,
-                Does.Contain(HordeText.Prompt(null, HordeFortificationAction.Repair, "Wall", RepairCostPerPiece, HordePurchaseVerdict.WaveInProgress)));
+                Does.Contain(Localizer.Resolve(
+                    HordeText.Prompt(null, HordeFortificationAction.Repair, "Wall", RepairCostPerPiece, HordePurchaseVerdict.WaveInProgress))));
             Assert.That(_runner.TryInteract(), Is.EqualTo(HordePurchaseVerdict.WaveInProgress));
             Assert.That(structure.Pieces[0].IsBroken, Is.True);
 

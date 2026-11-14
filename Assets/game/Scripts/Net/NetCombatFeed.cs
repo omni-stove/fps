@@ -37,6 +37,9 @@ namespace Fps.Net
         // 着弾点から法線の向きへ戻ってから、面へ向けて探し直す距離 (m)。サーバーとクライアントで位置がわずかにずれても拾えるだけの幅
         private const float _impactProbeDistance = 0.05f;
 
+        /// <summary>着弾の部位が無い (キャラ以外・部位が分からない) ことを表す、RPC で送る部位の値。</summary>
+        internal const byte NoZone = byte.MaxValue;
+
         // 毎発 List を作らないよう使い回す (サーバーだけ)
         private readonly List<ulong> _recipients = new List<ulong>();
 
@@ -127,9 +130,14 @@ namespace Fps.Net
 
         /// <summary>
         /// サーバーで、shooter の 1 発 (検査を通って弾を消費したもの) を撃った本人以外の全員に送る。
-        /// 何かに当たっていれば impact にその点と法線を渡し、同じ RPC で着弾も送る。
+        /// 何かに当たっていれば impact にその点と法線を渡し、同じ RPC で着弾も送る。着弾の材質はサーバーで
+        /// impact のコライダーから引き (<see cref="SurfaceMaterial.IdOf"/>)、キャラかどうかと部位は渡されたものを送る
+        /// (クライアントでは他のプレイヤーが補間した位置にいて、同じコライダーを探し直せるとは限らない)。
         /// </summary>
-        internal void ServerShot(NetPlayer shooter, string weaponId, Vector3 origin, Vector3 direction, RaycastHit? impact)
+        /// <param name="impactIsCharacter">impact がキャラ (巻き戻した対象) に当たったか。impact が null なら無視する。</param>
+        /// <param name="impactZone">キャラに当たった部位。キャラ以外か分からなければ null。</param>
+        internal void ServerShot(
+            NetPlayer shooter, string weaponId, Vector3 origin, Vector3 direction, RaycastHit? impact, bool impactIsCharacter, HitZone? impactZone)
         {
             if (!CanSendFromServer() || shooter == null)
             {
@@ -147,9 +155,46 @@ namespace Fps.Net
             var hasImpact = impact.HasValue;
             var point = hasImpact ? impact.Value.point : Vector3.zero;
             var normal = hasImpact ? impact.Value.normal : Vector3.zero;
+            var materialId = hasImpact ? ToWireMaterialId(SurfaceMaterial.IdOf(impact.Value.collider)) : default;
+            var isCharacter = hasImpact && impactIsCharacter;
+            var zone = ToWireZone(isCharacter ? impactZone : null);
             ShotRpc(
                 new NetworkObjectReference(shooter.NetworkObject), ToWireWeaponId(weaponId), origin, direction, hasImpact, point, normal,
-                RpcTarget.Group(_recipients, RpcTargetUse.Temp));
+                materialId, isCharacter, zone, RpcTarget.Group(_recipients, RpcTargetUse.Temp));
+        }
+
+        /// <summary>着弾の部位を RPC で送る値。部位が無いときは <see cref="NoZone"/>。</summary>
+        internal static byte ToWireZone(HitZone? zone)
+        {
+            return zone.HasValue ? (byte)zone.Value : NoZone;
+        }
+
+        /// <summary>
+        /// RPC で届いた着弾の材質・キャラかどうか・部位から <see cref="ImpactInfo"/> を作る。部位が <see cref="HitZone"/> に無い値か、
+        /// キャラ以外に部位が付いていれば、部位は捨てる (problem にその理由を入れる)。問題が無ければ problem は null。
+        /// </summary>
+        internal static ImpactInfo ReadImpact(
+            Vector3 point, Vector3 normal, Collider collider, string materialId, bool isCharacter, byte wireZone, out string problem)
+        {
+            problem = null;
+            HitZone? zone = null;
+            if (wireZone != NoZone)
+            {
+                if (!isCharacter)
+                {
+                    problem = "a non-character impact had hit zone " + wireZone.ToString(CultureInfo.InvariantCulture);
+                }
+                else if (!Enum.IsDefined(typeof(HitZone), (int)wireZone))
+                {
+                    problem = "unknown hit zone " + wireZone.ToString(CultureInfo.InvariantCulture);
+                }
+                else
+                {
+                    zone = (HitZone)wireZone;
+                }
+            }
+
+            return new ImpactInfo(point, normal, collider, materialId, isCharacter, zone);
         }
 
         /// <summary>サーバーで、shooter が生きている相手に当てたことを shooter の持ち主にだけ送る。</summary>
@@ -249,6 +294,19 @@ namespace Fps.Net
             return new FixedString64Bytes(weaponId);
         }
 
+        // 収まらない材質の Id で FixedString が例外を投げて射撃の配信が止まらないよう、既定の材質に寄せる
+        private FixedString64Bytes ToWireMaterialId(string materialId)
+        {
+            if (!NetPlayerWeapon.FitsWeaponId(materialId))
+            {
+                Debug.LogWarning(
+                    LogTag + " surface material id '" + materialId + "' is too long to send; sending it as " + SurfaceMaterial.DefaultId, this);
+                return new FixedString64Bytes(SurfaceMaterial.DefaultId);
+            }
+
+            return new FixedString64Bytes(materialId);
+        }
+
         [Rpc(SendTo.SpecifiedInParams, Delivery = RpcDelivery.Reliable)]
         private void ShotRpc(
             NetworkObjectReference shooter,
@@ -258,6 +316,9 @@ namespace Fps.Net
             bool hasImpact,
             Vector3 impactPoint,
             Vector3 impactNormal,
+            FixedString64Bytes impactMaterialId,
+            bool impactIsCharacter,
+            byte impactZone,
             RpcParams rpcParams)
         {
             if (!IsFromServer(rpcParams))
@@ -271,7 +332,16 @@ namespace Fps.Net
 
             if (hasImpact)
             {
-                CombatEvents.RaiseImpact(impactPoint, impactNormal, FindImpactCollider(impactPoint, impactNormal));
+                // 部位がおかしくても着弾の演出は出す (部位が無い着弾として)
+                var impact = ReadImpact(
+                    impactPoint, impactNormal, FindImpactCollider(impactPoint, impactNormal), impactMaterialId.ToString(), impactIsCharacter,
+                    impactZone, out var problem);
+                if (problem != null)
+                {
+                    Debug.LogWarning(LogTag + " ignored the hit zone of an impact from the server: " + problem, this);
+                }
+
+                CombatEvents.RaiseImpact(impact);
             }
         }
 

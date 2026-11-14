@@ -149,6 +149,117 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void WallImpactWithoutASurfaceMaterialIsTheDefaultMaterialAndNotACharacter()
+        {
+            var weapon = CreatePlayerWeapon(out _);
+            CreateWall(new Vector3(0f, 1f, 5f));
+
+            Assert.That(weapon.Fire(), Is.True);
+
+            var impact = _recorder.Impacts[0];
+            Assert.That(impact.MaterialId, Is.EqualTo(SurfaceMaterial.DefaultId));
+            Assert.That(impact.IsCharacter, Is.False);
+            Assert.That(impact.Zone, Is.Null);
+        }
+
+        [Test]
+        public void WallImpactCarriesTheMaterialOfTheWall()
+        {
+            var weapon = CreatePlayerWeapon(out _);
+            var wall = CreateWall(new Vector3(0f, 1f, 5f));
+            wall.AddComponent<SurfaceMaterial>().Id = "metal";
+
+            Assert.That(weapon.Fire(), Is.True);
+
+            Assert.That(_recorder.Impacts[0].MaterialId, Is.EqualTo("metal"));
+            Assert.That(_recorder.Impacts[0].IsCharacter, Is.False);
+        }
+
+        [Test]
+        public void PlayerImpactOnACharacterCarriesTheHitZone()
+        {
+            var weapon = CreatePlayerWeapon(out _);
+            CreateTarget("target", new Vector3(0f, 1f, 10f), maxHealth: 1000, HitZone.Head);
+
+            Assert.That(weapon.Fire(), Is.True);
+
+            var impact = _recorder.Impacts[0];
+            Assert.That(impact.IsCharacter, Is.True);
+            Assert.That(impact.Zone, Is.EqualTo(HitZone.Head));
+            Assert.That(impact.MaterialId, Is.EqualTo(SurfaceMaterial.DefaultId));
+        }
+
+        [Test]
+        public void HitscanImpactOnACharacterCarriesTheHitZoneAndWallImpactDoesNot()
+        {
+            var shooter = new GameObject("enemy");
+            _created.Add(shooter);
+            CreateTarget("player", new Vector3(0f, 1f, 10f), maxHealth: 100, HitZone.Limb);
+            var wall = CreateWall(new Vector3(3f, 1f, 5f));
+            wall.AddComponent<SurfaceMaterial>().Id = "wood";
+
+            Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, shooter.transform);
+            Hitscan.Fire(_eye, (new Vector3(3f, 1f, 5f) - _eye).normalized, 50f, 10, DamageFalloff.None, shooter.transform);
+
+            Assert.That(_recorder.Impacts, Has.Count.EqualTo(2));
+            Assert.That(_recorder.Impacts[0].IsCharacter, Is.True);
+            Assert.That(_recorder.Impacts[0].Zone, Is.EqualTo(HitZone.Limb));
+            Assert.That(_recorder.Impacts[1].IsCharacter, Is.False);
+            Assert.That(_recorder.Impacts[1].Zone, Is.Null);
+            Assert.That(_recorder.Impacts[1].MaterialId, Is.EqualTo("wood"));
+        }
+
+        [Test]
+        public void ImpactOnADamageableWithoutAHitboxIsACharacterWithoutAZone()
+        {
+            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            _created.Add(body);
+            body.AddComponent<Damageable>().Initialize("dummy", 10);
+
+            var impact = new ImpactInfo(Vector3.zero, Vector3.up, body.GetComponent<Collider>());
+
+            Assert.That(impact.IsCharacter, Is.True);
+            Assert.That(impact.Zone, Is.Null);
+        }
+
+        [Test]
+        public void ImpactWithoutAColliderIsTheDefaultMaterialAndNotACharacter()
+        {
+            var impact = new ImpactInfo(Vector3.zero, Vector3.up, null);
+
+            Assert.That(impact.MaterialId, Is.EqualTo(SurfaceMaterial.DefaultId));
+            Assert.That(impact.IsCharacter, Is.False);
+            Assert.That(impact.Zone, Is.Null);
+            Assert.That(default(ImpactInfo).MaterialId, Is.EqualTo(SurfaceMaterial.DefaultId), "default never gives a null id");
+        }
+
+        [Test]
+        public void ExplicitImpactKeepsTheGivenValuesAndRejectsAZoneOnANonCharacter()
+        {
+            var impact = new ImpactInfo(Vector3.one, Vector3.up, null, " metal ", true, HitZone.Body);
+
+            Assert.That(impact.MaterialId, Is.EqualTo("metal"));
+            Assert.That(impact.IsCharacter, Is.True);
+            Assert.That(impact.Zone, Is.EqualTo(HitZone.Body));
+            Assert.That(impact.ToString(), Is.EqualTo("material=metal character=True zone=Body"));
+            Assert.That(new ImpactInfo(Vector3.one, Vector3.up, null, null, false, null).ToString(),
+                Is.EqualTo("material=default character=False zone=none"));
+
+            Assert.Throws<ArgumentException>(() => new ImpactInfo(Vector3.one, Vector3.up, null, "metal", false, HitZone.Head));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ImpactInfo(Vector3.one, Vector3.up, null, "metal", true, (HitZone)99));
+        }
+
+        [Test]
+        public void RaiseImpactWithAnImpactPassesItThrough()
+        {
+            CombatEvents.RaiseImpact(new ImpactInfo(Vector3.one, Vector3.up, null, "glass", true, HitZone.Head));
+
+            Assert.That(_recorder.Impacts, Has.Count.EqualTo(1));
+            Assert.That(_recorder.Impacts[0].MaterialId, Is.EqualTo("glass"));
+            Assert.That(_recorder.Impacts[0].Zone, Is.EqualTo(HitZone.Head));
+        }
+
+        [Test]
         public void NoEventIsRaisedWhenTheWeaponCannotFire()
         {
             var weapon = CreatePlayerWeapon(out _);
@@ -296,6 +407,15 @@ namespace Fps.Tests.EditMode
             var weapon = camera.AddComponent<WeaponController>();
             weapon.Initialize(camera.transform, _attack, _reload, rifle);
             return weapon;
+        }
+
+        private GameObject CreateWall(Vector3 position)
+        {
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(wall);
+            wall.transform.position = position;
+            Physics.SyncTransforms();
+            return wall;
         }
 
         private Damageable CreateTarget(string id, Vector3 position, int maxHealth, HitZone zone = HitZone.Body)

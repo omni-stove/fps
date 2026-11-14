@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -268,6 +269,76 @@ namespace Fps.Tests.EditMode
 
             var straightUp = WeaponPresentation.MuzzlePosition(Vector3.zero, Vector3.up);
             AssertNear(straightUp, Vector3.up * WeaponPresentation.MuzzleOffset.z);
+        }
+
+        [Test]
+        public void OwnShotUsesTheMuzzleSocketOfTheWeaponModel()
+        {
+            var presenter = Presenter("Shooter");
+            var model = Track(new GameObject("RifleModel"));
+            var socket = Track(new GameObject(WeaponSockets.MuzzleName));
+            socket.transform.SetParent(model.transform, false);
+            socket.transform.SetPositionAndRotation(new Vector3(1f, 2f, 3f), Quaternion.Euler(0f, 90f, 0f));
+            presenter.WeaponModel = model.transform;
+
+            presenter.PlayShot(Shot(presenter.gameObject));
+
+            Assert.That(presenter.Sockets.Muzzle, Is.SameAs(socket.transform));
+            var flash = presenter.EffectPoolFor(_flash).Items[0].Root.transform;
+            AssertNear(flash.position, socket.transform.position);
+            Assert.That(Quaternion.Angle(flash.rotation, socket.transform.rotation), Is.LessThan(0.01f));
+            AssertNear(presenter.Tracers.Items[0].From, socket.transform.position, "the tracer starts at the socket");
+        }
+
+        [Test]
+        public void OthersShotsAndModelsWithoutASocketUseTheDefaultMuzzle()
+        {
+            var presenter = Presenter("Shooter");
+            var model = Track(new GameObject("RifleModel"));
+            presenter.WeaponModel = model.transform;
+
+            presenter.PlayShot(Shot(presenter.gameObject));
+
+            Assert.That(presenter.Sockets.Muzzle, Is.Null);
+            AssertNear(presenter.EffectPoolFor(_flash).Items[0].Root.transform.position, WeaponPresentation.MuzzlePosition(Vector3.zero, Vector3.forward));
+
+            var socket = Track(new GameObject(WeaponSockets.MuzzleName));
+            socket.transform.SetParent(model.transform, false);
+            socket.transform.position = new Vector3(5f, 5f, 5f);
+            presenter.WeaponModel = model.transform;
+            presenter.Tick(Time.time + 1000f);
+
+            presenter.PlayShot(Shot(null));
+
+            AssertNear(
+                presenter.EffectPoolFor(_flash).Items[0].Root.transform.position,
+                WeaponPresentation.MuzzlePosition(Vector3.zero, Vector3.forward),
+                "a shot whose shooter is unknown is not drawn from this body's weapon");
+        }
+
+        [Test]
+        public void ClearingTheWeaponModelDropsTheSockets()
+        {
+            var presenter = Presenter("Shooter");
+            var model = Track(new GameObject("RifleModel"));
+            presenter.WeaponModel = model.transform;
+
+            presenter.WeaponModel = null;
+
+            Assert.That(presenter.WeaponModel, Is.Null);
+            Assert.That(presenter.Sockets, Is.SameAs(WeaponSockets.None));
+        }
+
+        [Test]
+        public void AnImpactLogsItsMaterialAndHitZone()
+        {
+            var presenter = Presenter("Shooter");
+
+            LogAssert.Expect(LogType.Log, "[Presentation] impact material=default character=False zone=none");
+            presenter.PlayImpact(new ImpactInfo(new Vector3(0f, 0f, 20f), Vector3.back, null));
+
+            LogAssert.Expect(LogType.Log, "[Presentation] impact material=flesh character=True zone=Head");
+            presenter.PlayImpact(new ImpactInfo(new Vector3(0f, 0f, 20f), Vector3.back, null, "flesh", true, Fps.Core.HitZone.Head));
         }
 
         [Test]

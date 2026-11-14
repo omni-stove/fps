@@ -492,6 +492,17 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void RigHasShakeAndViewmodelRootsUnderTheCamera()
+        {
+            var rig = _world.Rig;
+
+            Assert.That(rig.ShakeRoot, Is.Not.Null);
+            Assert.That(rig.ViewmodelRoot, Is.Not.Null);
+            Assert.That(rig.ShakeRoot.parent, Is.SameAs(_world.Camera.transform));
+            Assert.That(rig.ViewmodelRoot.parent, Is.SameAs(_world.Camera.transform));
+        }
+
+        [Test]
         public void ThirdPersonBuildPutsTheCameraBehindAndShowsTheBody()
         {
             // SetUp のプレイヤーが同じ場所に立っていると、三人称のカメラがそのカプセルに当たって縮む

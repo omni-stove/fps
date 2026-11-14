@@ -12,8 +12,8 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     /// <summary>
-    /// シーン生成スクリプト (<see cref="EnemyTestSceneBuilder"/>、<see cref="MissionTestSceneBuilder"/>、
-    /// <see cref="CampaignSceneBuilder"/>) に共通の処理。パスの検査、フォルダの作成、Build Settings への追加、
+    /// シーン生成スクリプト (<c>EnemyTestSceneBuilder</c>、<c>MissionTestSceneBuilder</c>、
+    /// <c>CampaignSceneBuilder</c>) に共通の処理。パスの検査、フォルダの作成、
     /// 地形と NavMesh、目標の区域、敵の生成をまとめる。どれも呼び出し元の出力を変えないよう、元の実装をそのまま移した。
     /// </summary>
     public static class SceneBuildHelpers
@@ -76,14 +76,6 @@ namespace Fps.Editor
             }
         }
 
-        /// <summary>
-        /// Build Settings のシーン一覧に path を有効な状態で加える (<see cref="BuildSceneList.WithScene"/>)。
-        /// </summary>
-        public static EditorBuildSettingsScene[] WithSceneAppended(IReadOnlyList<EditorBuildSettingsScene> current, string path)
-        {
-            return BuildSceneList.WithScene(current, path);
-        }
-
         /// <summary>scene が読み込み済みの有効なシーンであることを確かめる。</summary>
         public static void RequireLoaded(Scene scene)
         {
@@ -107,7 +99,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// プレイヤーに配線する武器の定義の並び weapons が 1 本以上で null を含まないことを確かめる。
-        /// 値の検査 (<see cref="WeaponDefinition.ToSpec"/>) は読み込み時 (<see cref="WeaponAssetBuilder.LoadPlayerLoadout"/>) に済んでいる。
+        /// 値の検査 (<see cref="WeaponDefinition.ToSpec"/>) は読み込み時 (<c>WeaponAssetBuilder.LoadPlayerLoadout</c>) に済んでいる。
         /// </summary>
         /// <exception cref="ArgumentNullException">weapons が null。</exception>
         /// <exception cref="ArgumentException">weapons が空か null を含む。</exception>

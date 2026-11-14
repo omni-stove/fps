@@ -5,9 +5,10 @@ using System.Globalization;
 namespace Fps.Core
 {
     /// <summary>
-    /// グレネード (<see cref="GrenadeSpec"/>) と印 (<see cref="PingSpec"/>) の調整値を JSON から読む。
-    /// どちらも入れ子の無い 1 つのオブジェクトで、項目の名前はコンストラクターの引数名 (<see cref="GrenadeItemNames"/>・<see cref="PingItemNames"/>)。
-    /// 省略した項目は <see cref="GrenadeSpec.Default"/>・<see cref="PingSpec.Default"/> の値になる。小数は JSON の数、整数は小数点も指数も無い数で書く。
+    /// グレネード (<see cref="GrenadeSpec"/>)・印 (<see cref="PingSpec"/>)・吹き飛ばし (<see cref="KnockbackSpec"/>) の調整値を JSON から読む。
+    /// どれも入れ子の無い 1 つのオブジェクトで、項目の名前はコンストラクターの引数名 (<see cref="GrenadeItemNames"/>・<see cref="PingItemNames"/>・<see cref="KnockbackItemNames"/>)。
+    /// 吹き飛ばしの力 (<see cref="KnockbackForce"/>) だけは入れ子にせず、種類の名前を頭に付けた項目 (explosionSpeed など) に開く。
+    /// 省略した項目は各 Spec の既定値になる。小数は JSON の数、整数は小数点も指数も無い数で書く。
     /// 文法は <see cref="GameRulesJson"/> と同じで、値の範囲の検査は Spec に任せ、どれかに引っかかれば
     /// どのファイルのどの項目かを添えた <see cref="TuningJsonException"/> を投げる。
     /// </summary>
@@ -28,8 +29,28 @@ namespace Fps.Core
         public const string EnemyAimToleranceDegreesItem = "enemyAimToleranceDegrees";
         public const string MinIntervalSecondsItem = "minIntervalSeconds";
 
+        public const string ExplosionSpeedItem = "explosionSpeed";
+        public const string ExplosionUpwardRatioItem = "explosionUpwardRatio";
+        public const string ExplosionWeightFactorItem = "explosionWeightFactor";
+        public const string MeleeSpeedItem = "meleeSpeed";
+        public const string MeleeUpwardRatioItem = "meleeUpwardRatio";
+        public const string MeleeWeightFactorItem = "meleeWeightFactor";
+        public const string ChargeSpeedItem = "chargeSpeed";
+        public const string ChargeUpwardRatioItem = "chargeUpwardRatio";
+        public const string ChargeWeightFactorItem = "chargeWeightFactor";
+        public const string MinSpeedItem = "minSpeed";
+        public const string MinAirSecondsItem = "minAirSeconds";
+        public const string MaxAirSecondsItem = "maxAirSeconds";
+        public const string AirControlItem = "airControl";
+        public const string GravityItem = "gravity";
+        public const string RecoverSecondsItem = "recoverSeconds";
+        public const string LandingSnapRadiusItem = "landingSnapRadius";
+        public const string PlayerWeightItem = "playerWeight";
+        public const string EnemyWeightItem = "enemyWeight";
+
         private const string _grenadeKind = "grenade JSON";
         private const string _pingKind = "ping JSON";
+        private const string _knockbackKind = "knockback JSON";
 
         /// <summary>グレネードの JSON に書ける項目の名前 (<see cref="GrenadeSpec"/> のコンストラクターの並び)。</summary>
         public static IReadOnlyList<string> GrenadeItemNames { get; } = new[]
@@ -52,6 +73,29 @@ namespace Fps.Core
             MaxDistanceItem,
             EnemyAimToleranceDegreesItem,
             MinIntervalSecondsItem,
+        };
+
+        /// <summary>吹き飛ばしの JSON に書ける項目の名前 (<see cref="KnockbackSpec"/> のコンストラクターの並びで、力は種類ごとに 3 つへ開く)。</summary>
+        public static IReadOnlyList<string> KnockbackItemNames { get; } = new[]
+        {
+            ExplosionSpeedItem,
+            ExplosionUpwardRatioItem,
+            ExplosionWeightFactorItem,
+            MeleeSpeedItem,
+            MeleeUpwardRatioItem,
+            MeleeWeightFactorItem,
+            ChargeSpeedItem,
+            ChargeUpwardRatioItem,
+            ChargeWeightFactorItem,
+            MinSpeedItem,
+            MinAirSecondsItem,
+            MaxAirSecondsItem,
+            AirControlItem,
+            GravityItem,
+            RecoverSecondsItem,
+            LandingSnapRadiusItem,
+            PlayerWeightItem,
+            EnemyWeightItem,
         };
 
         /// <summary>text を 1 つのグレネードの調整値として読む。</summary>
@@ -108,6 +152,78 @@ namespace Fps.Core
             catch (ArgumentException e)
             {
                 throw Rejected(source, _pingKind, PingItemNames, e);
+            }
+        }
+
+        /// <summary>text を 1 つの吹き飛ばしの調整値として読む。</summary>
+        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
+        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
+        /// <exception cref="ArgumentNullException">text が null。</exception>
+        /// <exception cref="TuningJsonException">
+        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="KnockbackSpec"/>・<see cref="KnockbackForce"/> の検査に通らない。
+        /// </exception>
+        public static KnockbackSpec ParseKnockback(string text, string sourceName)
+        {
+            var source = SourceOf(sourceName, _knockbackKind);
+            var fields = Fields.Read(text, source, _knockbackKind, KnockbackItemNames);
+            var defaults = KnockbackSpec.Default;
+            var explosion = ReadForce(fields, source, defaults.Explosion, ExplosionSpeedItem, ExplosionUpwardRatioItem, ExplosionWeightFactorItem);
+            var melee = ReadForce(fields, source, defaults.Melee, MeleeSpeedItem, MeleeUpwardRatioItem, MeleeWeightFactorItem);
+            var charge = ReadForce(fields, source, defaults.Charge, ChargeSpeedItem, ChargeUpwardRatioItem, ChargeWeightFactorItem);
+            try
+            {
+                return new KnockbackSpec(
+                    explosion,
+                    melee,
+                    charge,
+                    fields.ReadFloat(MinSpeedItem, defaults.MinSpeed),
+                    fields.ReadFloat(MinAirSecondsItem, defaults.MinAirSeconds),
+                    fields.ReadFloat(MaxAirSecondsItem, defaults.MaxAirSeconds),
+                    fields.ReadFloat(AirControlItem, defaults.AirControl),
+                    fields.ReadFloat(GravityItem, defaults.Gravity),
+                    fields.ReadFloat(RecoverSecondsItem, defaults.RecoverSeconds),
+                    fields.ReadFloat(LandingSnapRadiusItem, defaults.LandingSnapRadius),
+                    fields.ReadFloat(PlayerWeightItem, defaults.PlayerWeight),
+                    fields.ReadFloat(EnemyWeightItem, defaults.EnemyWeight));
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(source, _knockbackKind, KnockbackItemNames, e);
+            }
+        }
+
+        // KnockbackForce の引数名 (speed など) は種類を持たないので、どの種類の項目かをここで添える。
+        private static KnockbackForce ReadForce(
+            Fields fields, string source, KnockbackForce defaults, string speedItem, string upwardRatioItem, string weightFactorItem)
+        {
+            try
+            {
+                return new KnockbackForce(
+                    fields.ReadFloat(speedItem, defaults.Speed),
+                    fields.ReadFloat(upwardRatioItem, defaults.UpwardRatio),
+                    fields.ReadFloat(weightFactorItem, defaults.WeightFactor));
+            }
+            catch (ArgumentException e)
+            {
+                string item;
+                switch (e.ParamName)
+                {
+                    case "speed":
+                        item = speedItem;
+                        break;
+                    case "upwardRatio":
+                        item = upwardRatioItem;
+                        break;
+                    case "weightFactor":
+                        item = weightFactorItem;
+                        break;
+                    default:
+                        item = null;
+                        break;
+                }
+
+                var where = item == null ? string.Empty : $" item '{item}'";
+                throw new TuningJsonException(source, item, $"{_knockbackKind} '{source}'{where} is invalid: {e.Message}", e);
             }
         }
 
@@ -265,7 +381,7 @@ namespace Fps.Core
         }
     }
 
-    /// <summary>グレネードか印の調整値の JSON が読めない、または値が不正。<see cref="SourceName"/> と <see cref="Item"/> でどこが悪いかを示す。</summary>
+    /// <summary>グレネード・印・吹き飛ばしの調整値の JSON が読めない、または値が不正。<see cref="SourceName"/> と <see cref="Item"/> でどこが悪いかを示す。</summary>
     public sealed class TuningJsonException : Exception
     {
         public TuningJsonException()

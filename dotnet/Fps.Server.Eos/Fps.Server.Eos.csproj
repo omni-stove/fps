@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    .NET のサーバーが EOS の C# SDK を直接呼ぶ部分。SDK の型を使うファイルは #if EOS_SDK で囲み、SDK が無くてもビルドが通るようにする。
+    Fps.Server がこれを参照する (transport もここに置くので、逆向きにはしない)。
+  -->
+  <Import Project="../EosSdk.props" />
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <RootNamespace>Fps.Server.Eos</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <!-- Fps.EosSdk と同じく、参照元の -r の OS の SDK でコンパイルするため -->
+    <IsRidAgnostic>false</IsRidAgnostic>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fps.Server" />
+    <InternalsVisibleTo Include="fps-server" />
+    <InternalsVisibleTo Include="Fps.Server.Eos.Tests" />
+    <InternalsVisibleTo Include="Fps.Server.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Fps.Core/Fps.Core.csproj" />
+    <ProjectReference Include="../Fps.EosSdk/Fps.EosSdk.csproj" />
+  </ItemGroup>
+</Project>

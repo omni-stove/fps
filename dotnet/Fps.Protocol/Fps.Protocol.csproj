@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Unity の Fps.Protocol アセンブリ (Assets/game/Scripts/Protocol) を Unity 抜きでビルドする。ソースは Assets 側が正 -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Fps.Core/Fps.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Unity 側 (Assets/Plugins/LiteNetLib/LiteNetLib.dll。この版の netstandard2.1 の DLL を写したもの) と同じ版にそろえる -->
+    <PackageReference Include="LiteNetLib" Version="2.1.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/game/Scripts/Protocol/**/*.cs" />
+  </ItemGroup>
+</Project>

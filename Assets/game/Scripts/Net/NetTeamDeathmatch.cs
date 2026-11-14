@@ -289,6 +289,15 @@ namespace Fps.Net
             set => _rules = value;
         }
 
+        /// <summary>配線した <see cref="Loadout"/>、空なら入口 (<see cref="GameContent.Loadout"/>) のもの。</summary>
+        public LoadoutDefinition EffectiveLoadout => GameContent.Pick(_loadout, c => c.Loadout);
+
+        /// <summary>配線した <see cref="Catalog"/>、空なら入口 (<see cref="GameContent.WeaponCatalog"/>) のもの。</summary>
+        public WeaponCatalogAsset EffectiveCatalog => GameContent.Pick(_catalog, c => c.WeaponCatalog);
+
+        /// <summary>配線した <see cref="Rules"/>、空なら入口 (<see cref="GameContent.Rules"/>) のもの。</summary>
+        public GameRulesDefinition EffectiveRules => GameContent.Pick(_rules, c => c.Rules);
+
         /// <summary>サーバーで試合が動いている間の、全員に配る武器と各プレイヤーの連射の制限。試合の開始前とクライアントでは null。</summary>
         internal ServerLoadout ServerLoadout => _serverLoadout;
 
@@ -453,7 +462,10 @@ namespace Fps.Net
 
         private void StartSession()
         {
-            if (!TryLoadRules(_rules, out var rules, out var usedDefaultRules, out var rulesError))
+            var rulesDefinition = EffectiveRules;
+            var loadoutDefinition = EffectiveLoadout;
+            var catalogDefinition = EffectiveCatalog;
+            if (!TryLoadRules(rulesDefinition, out var rules, out var usedDefaultRules, out var rulesError))
             {
                 Debug.LogError("[Match] invalid game rules on " + name + ": " + rulesError
                     + "; fix the asset or run Fps.Editor.GameRulesAssetBuilder.Build");
@@ -462,7 +474,7 @@ namespace Fps.Net
 
             if (usedDefaultRules)
             {
-                Debug.LogWarning("[Match] no game rules are assigned to " + name + "; using the default rules"
+                Debug.LogWarning("[Match] no game rules are assigned to " + name + " or the GameContent; using the default rules"
                     + "; run Fps.Editor.NetSceneBuilder.Build");
             }
 
@@ -489,15 +501,15 @@ namespace Fps.Net
                 return;
             }
 
-            if (!TryCreateLoadout(_loadout, _catalog, out var loadout, out var loadoutError))
+            if (!TryCreateLoadout(loadoutDefinition, catalogDefinition, out var loadout, out var loadoutError))
             {
                 Debug.LogError("[Match] invalid loadout on " + name + ": " + loadoutError + "; run Fps.Editor.NetSceneBuilder.Build");
                 return;
             }
 
-            if (_catalog == null)
+            if (catalogDefinition == null)
             {
-                Debug.LogWarning("[Match] no weapon catalog is assigned to " + name + "; every player keeps the default loadout"
+                Debug.LogWarning("[Match] no weapon catalog is assigned to " + name + " or the GameContent; every player keeps the default loadout"
                     + "; run Fps.Editor.NetSceneBuilder.Build");
             }
 
@@ -548,12 +560,12 @@ namespace Fps.Net
             Debug.Log("[Match] waiting for players scoreLimit=" + spec.ScoreLimit + " timeLimit=" + spec.TimeLimitSeconds
                 + "s respawn=" + spec.RespawnSeconds + "s restartDelay=" + _restartDelaySeconds + "s reconnectGrace=" + _reconnectGraceSeconds
                 + "s spawnPoints=" + spawnPoints.Count);
-            Debug.Log(MatchLog.Rules(usedDefaultRules ? "default" : _rules.name, spec.Rules));
+            Debug.Log(MatchLog.Rules(usedDefaultRules ? "default" : rulesDefinition.name, spec.Rules));
             Debug.Log(NetDownedLog.Settings(spec.Rules.Actions, ReviveReach.DefaultRange));
             Debug.Log("[Match] destructible structures=" + structures + " destruction=" + spec.Rules.Destruction);
             Debug.Log("[Net] lag compensation maxRewindTicks=" + _lagCompensator.MaxRewindTicks
                 + " tickRate=" + NetworkPlayerMotor.TickRate);
-            Debug.Log(MatchLog.Loadout(_loadout.name, _serverLoadout));
+            Debug.Log(MatchLog.Loadout(loadoutDefinition.name, _serverLoadout));
             for (var i = 0; i < _serverLoadout.Weapons.Count; i++)
             {
                 Debug.Log(MatchLog.Weapon(i, _serverLoadout.Weapons[i]));
@@ -561,7 +573,7 @@ namespace Fps.Net
 
             if (_serverLoadout.Catalog != null)
             {
-                Debug.Log(MatchLog.LoadoutCatalog(_catalog.name, _serverLoadout.Catalog.Count));
+                Debug.Log(MatchLog.LoadoutCatalog(catalogDefinition.name, _serverLoadout.Catalog.Count));
             }
 
             BotsServerStarted();

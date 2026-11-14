@@ -37,7 +37,7 @@ namespace Fps.Runtime
         public const float ReachHeight = 2f;
 
         [Header("Rules")]
-        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の Rules の値の代わりにこれを読む")]
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の Rules の値の代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
         private SearchAndDestroyDefinition _definition;
 
         [SerializeField, Min(1f), Tooltip("1 ラウンドの制限時間 (秒)。設置すると止まる")]
@@ -103,6 +103,9 @@ namespace Fps.Runtime
             get => _definition;
             set => _definition = value;
         }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public SearchAndDestroyDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.SearchAndDestroy);
 
         public float RoundSeconds
         {
@@ -193,9 +196,10 @@ namespace Fps.Runtime
         /// </summary>
         public SearchAndDestroySpec CreateSpec(int siteCount)
         {
-            if (_definition != null)
+            var definition = EffectiveDefinition;
+            if (definition != null)
             {
-                return _definition.ToSpec(siteCount);
+                return definition.ToSpec(siteCount);
             }
 
             return new SearchAndDestroySpec(

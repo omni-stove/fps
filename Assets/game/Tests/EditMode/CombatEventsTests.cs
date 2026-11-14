@@ -457,7 +457,7 @@ namespace Fps.Tests.EditMode
             rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             rifle.name = "Rifle";
             _created.Add(rifle);
-            WeaponAssetBuilder.Configure(rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(rifle, TestWeapons.RifleSpec());
 
             // 着弾点と向きを決め打ちで確かめるので、rifle の腰撃ちのばらつきを切って真っすぐ撃たせる。
             rifle.HipSpreadDegrees = 0f;

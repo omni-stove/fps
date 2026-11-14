@@ -31,7 +31,8 @@ namespace Fps.Runtime
 
         public static SuppressionCatalog Load()
         {
-            return Resources.Load<SuppressionCatalog>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.Suppression);
+            return fromContent != null ? fromContent : Resources.Load<SuppressionCatalog>(ResourcePath);
         }
     }
 }

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Unity 抜きで動く専用サーバー。試合のロジックは Fps.Core、通信の形は Fps.Protocol を Unity と共有する -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <RootNamespace>Fps.Server</RootNamespace>
+    <AssemblyName>fps-server</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fps.Server.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Fps.Core/Fps.Core.csproj" />
+    <ProjectReference Include="../Fps.Protocol/Fps.Protocol.csproj" />
+    <ProjectReference Include="../Fps.EosSdk/Fps.EosSdk.csproj" />
+    <ProjectReference Include="../Fps.Server.Eos/Fps.Server.Eos.csproj" />
+  </ItemGroup>
+</Project>

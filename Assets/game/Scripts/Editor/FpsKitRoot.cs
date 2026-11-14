@@ -10,7 +10,7 @@ namespace Fps.Editor
     /// 生成スクリプトが書き込むルート (<see cref="Output"/>) と、同梱のアセットを読むルート (<see cref="Bundled"/>) を決める。
     /// <para>
     /// 書き込み先は、batchmode の引数 <c>-fpsKitRoot &lt;path&gt;</c>、このプロジェクトの EditorPrefs (<see cref="SetPreferredOutput"/>)、
-    /// 既定の <see cref="KitPaths.DefaultRoot"/> の順に決める。パッケージの中は読み取り専用なので、書き込み先は Assets/ の下に限る。
+    /// 既定の <see cref="DefaultOutput"/> の順に決める。パッケージの中は読み取り専用なので、書き込み先は Assets/ の下に限る。
     /// </para>
     /// <para>
     /// 読み取り元は、このアセンブリを含むパッケージのルート (<c>Packages/com.omnistove.fps</c> など)。
@@ -28,6 +28,13 @@ namespace Fps.Editor
 
         private const string WritablePrefix = "Assets/";
         private const string PackagesPrefix = "Packages/";
+
+        private static string _defaultOutput;
+
+        /// <summary>
+        /// 引数も EditorPrefs も無いときの書き込み先。<see cref="UseDefaultOutput"/> で登録した値、無ければ <see cref="KitPaths.DefaultRoot"/>。
+        /// </summary>
+        public static string DefaultOutput => _defaultOutput ?? KitPaths.DefaultRoot;
 
         /// <summary>このプロジェクトの EditorPrefs の鍵。</summary>
         public static string PrefsKey => PrefsKeyPrefix + Application.dataPath;
@@ -87,7 +94,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// 書き込むルートを決める。args に <see cref="ArgumentName"/> があればその次の値、無ければ prefsValue、
-        /// それも空なら <see cref="KitPaths.DefaultRoot"/>。どれも <see cref="ValidateOutput"/> を通して返す。
+        /// それも空なら <see cref="DefaultOutput"/>。どれも <see cref="ValidateOutput"/> を通して返す。
         /// </summary>
         /// <exception cref="ArgumentException">引数の値が無い・重なっている、または値が Assets/ の下でない。</exception>
         public static string ResolveOutput(IReadOnlyList<string> args, string prefsValue)
@@ -103,7 +110,17 @@ namespace Fps.Editor
                 return ValidateOutput(prefsValue);
             }
 
-            return KitPaths.DefaultRoot;
+            return DefaultOutput;
+        }
+
+        /// <summary>
+        /// 引数も EditorPrefs も無いときの書き込み先を root にする。パッケージの外のフォルダを持つもの (取り込んだサンプルなど) が
+        /// Editor の読み込み時に呼ぶ。null で <see cref="KitPaths.DefaultRoot"/> に戻す。
+        /// </summary>
+        /// <exception cref="ArgumentException">root が Assets/ の下でない。</exception>
+        public static void UseDefaultOutput(string root)
+        {
+            _defaultOutput = root == null ? null : ValidateOutput(root);
         }
 
         /// <summary>
@@ -138,11 +155,11 @@ namespace Fps.Editor
             Debug.Log($"{LogTag} output root set to '{normalized}'");
         }
 
-        /// <summary>EditorPrefs に覚えた書き込み先を消し、既定 (<see cref="KitPaths.DefaultRoot"/>) に戻す。</summary>
+        /// <summary>EditorPrefs に覚えた書き込み先を消し、既定 (<see cref="DefaultOutput"/>) に戻す。</summary>
         public static void ClearPreferredOutput()
         {
             EditorPrefs.DeleteKey(PrefsKey);
-            Debug.Log($"{LogTag} output root reset to '{KitPaths.DefaultRoot}'");
+            Debug.Log($"{LogTag} output root reset to '{DefaultOutput}'");
         }
 
         private static string FindArgument(IReadOnlyList<string> args)

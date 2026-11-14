@@ -2,6 +2,7 @@
 
 一人称・三人称のシューターのゲームプレイ (武器・敵 AI・モード・キャンペーン) と、シーンやアセットを作る Editor のスクリプトをまとめた UPM パッケージ。
 ここに書いた手順だけで、空の Unity プロジェクトに入れて、EditMode テスト・武器 JSON の取り込み・smoke の実行まで進められる。
+武器・ルール・ミッション・シーン・プレハブの中身と、それを組む Editor のスクリプトと smoke は、パッケージのサンプル **Demo Game** にある ([サンプル (Demo Game)](#サンプル-demo-game) を参照)。
 
 ## 必要なもの
 
@@ -24,10 +25,10 @@
 
 | アセンブリ | 有効になる条件 | manifest に足す行 |
 | --- | --- | --- |
-| `Fps.Net`・`Fps.Net.UI`・`Fps.Net.Editor`・`Fps.Net.Tests` | `com.unity.netcode.gameobjects` 2.14.0 以上 | `"com.unity.netcode.gameobjects": "2.14.0"` |
+| `Fps.Net`・`Fps.Net.UI`・`Fps.Net.Tests` (サンプルの `Fps.Samples.Net.Editor`・`Fps.Samples.Net.Tests` も) | `com.unity.netcode.gameobjects` 2.14.0 以上 | `"com.unity.netcode.gameobjects": "2.14.0"` |
 | `Fps.NetEos` | 上に加えて `com.playeveryware.eos` | `"com.playeveryware.eos": "https://github.com/EOS-Contrib/eos_plugin_for_unity_upm.git"` |
 
-smoke の最後の 1 本 (`PerfSmokeRun`) は `Fps.Net.Editor` にあるので、**smoke をすべて通すには Netcode も入れる**こと ([動作確認](#動作確認-smoke) を参照)。
+smoke の最後の 1 本 (`PerfSmokeRun`) はサンプルの `Fps.Samples.Net.Editor` にあるので、**smoke をすべて通すには Netcode も入れる**こと ([動作確認](#動作確認-smoke) を参照)。
 
 ## 導入
 
@@ -55,6 +56,26 @@ smoke の最後の 1 本 (`PerfSmokeRun`) は `Fps.Net.Editor` にあるので�
 
 Unity を開くと Package Manager が取ってきてコンパイルする。Editor のメニューに **Fps** が出れば入っている。
 パッケージの実体は `Library/PackageCache/com.omnistove.fps@<hash>/` に置かれ、Unity からは `Packages/com.omnistove.fps/` として見える (読み取り専用)。
+
+## サンプル (Demo Game)
+
+パッケージの本体 (`Fps.Core`・`Fps.Runtime`・`Fps.Runtime.UI`・`Fps.Net`・`Fps.Net.UI`・`Fps.NetEos`、JSON のインポーターなどの `Fps.Editor`) は、サンプルの中身を参照しない。
+仮のゲームの中身はサンプル **Demo Game** (`Samples~/Demo`) にあり、ゲーム側が選んで取り込む。
+
+| 中身 | 置き場所 (サンプルのルートから) |
+| --- | --- |
+| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`) |
+| ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
+| ミッション・シーン・ネット対戦のプレハブ | `Missions/`・`Scenes/`・`Prefabs/Net/` |
+| メニューから移るシーンのルート (`MenuSceneSettings`) | `Resources/Menu/MenuSceneSettings.asset` |
+| シーンと仮の素材を組む Editor のスクリプト・smoke・クライアントとサーバーのビルド | `Scripts/Editor/` (`Fps.Samples.Editor`)・`Scripts/Net/Editor/` (`Fps.Samples.Net.Editor`) |
+| サンプルのテスト | `Tests/EditMode/` (`Fps.Samples.Tests`)・`Tests/EditMode/Net/` (`Fps.Samples.Net.Tests`) |
+
+取り込み方: **Window > Package Manager** で FPS Kit を選び、**Samples** の **Demo Game** の **Import** を押す。`Assets/Samples/FPS Kit/<版>/Demo Game/` に置かれる。
+
+- 取り込んだサンプルは、Editor を開いたときに自分のフォルダを出力先ルートの既定にする (`Fps.Editor.DemoSample`)。ビルダーと smoke は、`-fpsKitRoot` を付けなければサンプルのフォルダの下に書く。
+- 取り込んだら **Fps > Build Main Menu Scene** を一度実行する。メインメニューのシーンを作り、メニューから移るシーンのルート (`MenuSceneSettings` の Scene Root) を取り込んだ場所に書き直す。
+- このリポジトリでは、`Assets/Samples/FpsKitDemo` が `Assets/game/Samples~/Demo` へのシンボリックリンクになっていて、取り込んだのと同じ形で開ける。サンプルを直すときは `Assets/game/Samples~/Demo` の下を直す。
 
 ## Unity の起動コマンド
 
@@ -87,10 +108,10 @@ UNITY="/c/Program Files/Unity/Hub/Editor/6000.6.0f1/Editor/Unity.exe"
 
 1. batchmode の引数 `-fpsKitRoot <path>` (例: `-fpsKitRoot Assets/FpsKit`)
 2. このプロジェクトの EditorPrefs に覚えた値 (Editor のスクリプトから `Fps.Editor.FpsKitRoot.SetPreferredOutput("Assets/FpsKit")` で設定、`Fps.Editor.FpsKitRoot.ClearPreferredOutput()` で既定に戻す)
-3. 既定の `Assets/game`
+3. 既定の出力先 (`Fps.Editor.FpsKitRoot.DefaultOutput`)。サンプルを取り込んでいればそのフォルダ、無ければ `Assets/game`
 
 パッケージの中は書き込めないので、値は `Assets/` の下のフォルダに限る。`Assets` そのもの、`Packages/...`、`..` を含むパス、`-fpsKitRoot` の値が無い・2 度ある、のどれかなら `ArgumentException` で止まる。
-同梱のサンプル JSON などは出力先ルートとは関係なく、パッケージの中 (`Packages/com.omnistove.fps/`) から読む。
+ゲームのキャラクターのリグ (`Fps/Build Character Rig`) だけは、実行時の既定として本体が読むので、出力先ルートではなくパッケージの中 (`Characters/`) に書く。
 
 ## テスト (EditMode)
 
@@ -114,21 +135,71 @@ batchmode で回す (`-runTests` は自分で Editor を閉じるので `-quit` 
 
 ```sh
 "$UNITY" -batchmode -projectPath . -runTests -testPlatform EditMode \
-  -assemblyNames "Fps.Core.Tests;Fps.Tests.EditMode" \
+  -assemblyNames "Fps.Core.Tests;Fps.Tests.EditMode;Fps.Samples.Tests" \
   -testResults "$PWD/fps-editmode-results.xml" -logFile -
 ```
 
 - 終了コードが 0 ならすべて通った。0 以外なら失敗で、どのテストが落ちたかは `fps-editmode-results.xml` (NUnit 形式) にある。
-- Netcode を入れたなら、`-assemblyNames` に `Fps.Net.Tests` を足すとネットのテストも回る。`-assemblyNames` を省くと、プロジェクトにあるすべての EditMode テストが回る。
+- `Fps.Samples.Tests` はサンプルを取り込んだときだけある (サンプルのテストは `testables` に関係なく、取り込むと読み込まれる)。
+- Netcode を入れたなら、`-assemblyNames` に `Fps.Net.Tests` (とサンプルの `Fps.Samples.Net.Tests`) を足すとネットのテストも回る。`-assemblyNames` を省くと、プロジェクトにあるすべての EditMode テストが回る。
 - テストは `Assets/__<テスト名>_<GUID>` のような一時フォルダにアセットを作り、終わると消す。
 
 Editor からは **Window > General > Test Runner** の EditMode タブで同じテストを回せる。
+
+## ゲームの中身を差し替える (入口のアセット)
+
+キットは、ゲームごとに変える中身を 1 つのアセット `Fps.Runtime.GameContent` (入口) から引く。ゲームは入口を自分のものにすれば、
+シーンを組み直さずに武器・ルール・モードの値・文言・見た目と音が変わる。
+
+### 新しいゲームで差し替える手順
+
+1. 自分のゲームのフォルダに入口を作る。どれでも同じものができる。
+   - Editor の **Fps > Create Game Content** (出力先ルートの `Resources/FpsKit/GameContent.asset` に作る)
+   - batchmode:
+     ```sh
+     "$UNITY" -batchmode -quit -projectPath . \
+       -executeMethod Fps.Editor.GameContentAssets.Create \
+       -gameContent Assets/MyGame/Resources/FpsKit/GameContent.asset \
+       -logFile -
+     ```
+     `-gameContent` を省くと `<出力先ルート>/Resources/FpsKit/GameContent.asset`。値が無い・2 度あるなら例外で終了コード 1。
+   - **Assets > Create > Fps > Game Content** で作り、どこかの `Resources/FpsKit/` の下に置く
+2. 入口の欄に自分のアセットを入れる。`Fps.Editor.GameContentAssets.Create` は、空の欄のうち `Assets/` の下にその型のアセットがちょうど 1 つあるものを埋め
+   (`[GameContentAssets] Rules = '...'`)、0 か 2 つ以上あるものは空のまま名前をログに出す (`... left empty: ...`)。もう一度呼ぶと、埋まっている欄は変えずに空の欄だけを埋め直す。
+   武器・ルールのアセットは [データの差し込み](#データの差し込み) の JSON の取り込みで作れる。
+3. Play を押すと、ログに `[GameContent] using '<名前>' from Resources/FpsKit/` が出る。続けて [差し替え漏れの点検](#差し替え漏れの点検) を回す。
+
+入口は、どこかの Resources フォルダの `FpsKit/` に置いた `GameContent` 型のアセット (名前は問わない) を探して使う。2 つ以上あると
+`[GameContent] 2 assets in Resources/FpsKit/ (...)` のエラーを出し、名前の順で最初のものを使う。サンプルは入口を置かないので、ゲームの入口とぶつからない。
+起動のコードから別の入口に替えるなら、シーンを読む前に `GameContent.Use(content)` を呼ぶ (`null` で Resources のものに戻る)。替えると文言の表と調整値の JSON は読み直す。
+
+### 入口の欄と引く順
+
+どの欄も、上から順に見て最初に見つかったものを使う。シーンのコンポーネントに配線した参照は、そのシーンだけ変えたいときのためのもので、入口より先に使う。
+入口に頼るシーンでは、その参照を空にしておく。
+
+| 入口の欄 | 使う所 | 入口より先に使うもの | 入口が空のとき |
+| --- | --- | --- | --- |
+| `Rules` | `GameBootstrap`・`CampaignRunner` (難易度を選ばないとき)・`NetTeamDeathmatch` | シーンの `RulesDefinition`・`Rules` | `GameRules.Default` (警告) |
+| `Motor` | プレイヤーの移動 (`PlayerController`・`NetworkPlayerMotor`) | コンポーネントの `MotorSettings` | `Resources/Movement/MotorSettings`、無ければ `MotorSpec.Default` |
+| `Enemies` | `EnemyAgent` の判断。Inspector の種類 (`Archetype`) と同じ種類の最初のもの | `EnemyAgent` の `Definition` | `EnemyAgent` の Inspector の値 |
+| `GrenadeTuning`・`PingTuning`・`KnockbackTuning` (JSON) | [グレネード・印・吹き飛ばしの調整値](#グレネード印吹き飛ばしの調整値) | — | `Resources/Tuning/*.json`、無ければ既定値 |
+| `WeaponCatalog`・`Loadout` | メニューのロードアウト選択 (`MainMenuScreen`)・ネット対戦 (`NetTeamDeathmatch`)。オフラインのプレイヤーの武器は `Loadout` のスロットの武器 | `MainMenuScreen`・`NetTeamDeathmatch` の `Catalog`・`Loadout`、`GameBootstrap` の `WeaponDefinitions` | 選べない・持たない (エラー) |
+| `Missions` | メニューのキャンペーン | `MainMenuScreen` の `Missions` | キャンペーンを開けない |
+| `TeamDeathmatch`・`Domination`・`Hardpoint`・`KillConfirmed`・`SearchAndDestroy`・`Horde`・`GunGameLadder` | 各モードの `*Runner` | Runner の `Definition` (`GunGameRunner` は `Ladder`) | Runner の Inspector の値 (`GunGameRunner` は始められない) |
+| `CharacterRig` | プレイヤー・NetPlayer・敵の人型のリグ (`CharacterAnimator`) | `CharacterAnimator` の `RigPrefab` | `Resources/Characters/CharacterRig` |
+| `Texts` (言語コードと表の並び) | 文言 (`Localizer`・`GameText`) | — | `Resources/Localization/<言語>/` の表だけ |
+| `MenuScenes` | メニューから移るシーン (`MenuNavigator`・`NetBootstrap`) | — | `Resources/Menu/MenuSceneSettings`、無ければ既定の名前 |
+| `Presentation` ほか見た目・音のカタログ | [見た目と音を差し替える](#見た目と音を差し替える) | — | `Resources/Presentation/*` |
+
+- `Texts` の表は `Resources/Localization/<言語>/` の表の後に重ねるので、同じキーは入口の文が勝つ。表の形は [言語を足す・文を変える](#言語を足す文を変える) と同じ。言語コードは言語の一覧 (`Localization/Languages`) の `code`。
+- 入口は Play の開始時に探し直す。Edit Mode で入口を置き換えたときは、スクリプトの再読み込みか Play で読み直される。
 
 ## データの差し込み
 
 ### 武器を JSON から取り込む
 
-1 ファイルが武器 1 つで、項目名は `Fps.Core.WeaponSpec` のコンストラクタ引数と同じ。サンプルは `Packages/com.omnistove.fps/Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`)。
+1 ファイルが武器 1 つで、項目名は `Fps.Core.WeaponSpec` のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`)。
 
 ```json
 {
@@ -153,16 +224,16 @@ batchmode で取り込む:
 ```sh
 "$UNITY" -batchmode -quit -projectPath . \
   -executeMethod Fps.Editor.WeaponJsonImporter.Import \
-  -weaponJson Packages/com.omnistove.fps/Weapons/Json \
+  -weaponJson "Assets/Samples/FPS Kit/0.1.0/Demo Game/Weapons/Json" \
   -weaponOut Assets/FpsKit/Weapons \
   -logFile -
 ```
 
 | 引数 | 必須 | 意味 |
 | --- | --- | --- |
-| `-weaponJson <file\|dir>` | 必須 | JSON 1 つか、直下の `*.json` を名前の順に読むフォルダ。プロジェクトからの相対か絶対パス。`Packages/com.omnistove.fps/...` もそのまま渡せる |
+| `-weaponJson <file\|dir>` | 必須 | JSON 1 つか、直下の `*.json` を名前の順に読むフォルダ。プロジェクトからの相対か絶対パス。`Packages/...` もそのまま渡せる |
 | `-weaponOut <dir>` | 省略可 | アセットを置く `Assets/` の下のフォルダ。省くと `<出力先ルート>/Weapons` (`-fpsKitRoot` が効く) |
-| `-weaponCatalog <asset>` | 省略可 | 取り込んだ武器を Id で重複なく足す `WeaponCatalogAsset` のパス (例: `Assets/game/Weapons/WeaponCatalog.asset`)。そのカタログが既に無いとエラー |
+| `-weaponCatalog <asset>` | 省略可 | 取り込んだ武器を Id で重複なく足す `WeaponCatalogAsset` のパス (例: `Assets/FpsKit/Weapons/WeaponCatalog.asset`)。そのカタログが既に無いとエラー |
 
 - アセットの名前は JSON のファイル名 (`Rifle.json` → `Rifle.asset`)。既にあれば GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
 - 成功するとログに `[WeaponJsonImporter] saved '<アセット>' (id '<Id>') from '<JSON>'` が出て、終了コード 0 で終わる。
@@ -172,12 +243,12 @@ Editor からは **Fps > Import Weapons From JSON** でフォルダを選ぶ (�
 
 ### モードのルールを JSON から取り込む
 
-1 ファイルがルール 1 つ (`GameRulesDefinition`)。サンプルは `Packages/com.omnistove.fps/Rules/Json/` にある (`TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`)。
+1 ファイルがルール 1 つ (`GameRulesDefinition`)。例はサンプルの `Rules/Json/` にある (`TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`)。
 
 ```sh
 "$UNITY" -batchmode -quit -projectPath . \
   -executeMethod Fps.Editor.GameRulesJsonImporter.Import \
-  -rulesJson Packages/com.omnistove.fps/Rules/Json \
+  -rulesJson "Assets/Samples/FPS Kit/0.1.0/Demo Game/Rules/Json" \
   -rulesOut Assets/FpsKit/Rules \
   -logFile -
 ```
@@ -190,15 +261,17 @@ Editor からは **Fps > Import Weapons From JSON** でフォルダを選ぶ (�
 成功すると `[GameRulesJsonImporter] saved '...'` が出る。失敗したときの扱い (1 つも保存せず終了コード 1) は武器と同じ。
 Editor からは **Fps > Import Game Rules From JSON**。
 
-### グレネードと印の調整値
+### グレネード・印・吹き飛ばしの調整値
 
-グレネード (`GrenadeSpec`) と印 (`PingSpec`) の値は、取り込みをせずに Play の開始時に Resources の JSON から読む (`Fps.Runtime.KitTuning`)。
+グレネード (`GrenadeSpec`)・印 (`PingSpec`)・吹き飛ばし (`KnockbackSpec`) の値は、取り込みをせずに Play の開始時に Resources の JSON から読む (`Fps.Runtime.KitTuning`)。
 オフラインの `GrenadeThrower`・`PingController` も、ネット対戦のサーバー (`NetTeamDeathmatch.GrenadeSpec`・`PingSpec`) も同じ値を使う。
+吹き飛ばしはプレイヤーの `KnockbackMovement` と敵の `EnemyAgent` が使い、重さはプレイヤーが `playerWeight`、敵が `enemyWeight` を読む。
 
 | Resources のパス | 項目 (名前は Spec のコンストラクターの引数名。省いた項目は既定値) |
 | --- | --- |
 | `Tuning/grenade.json` | `fuseSeconds`・`throwSeconds`・`throwSpeed`・`throwLiftSpeed`・`maxDamage`・`damageRadius`・`fullDamageRadius`・`structureDamageAtCenter` |
 | `Tuning/ping.json` | `lifetimeSeconds`・`maxMarkers`・`maxDistance`・`enemyAimToleranceDegrees`・`minIntervalSeconds` |
+| `Tuning/knockback.json` | 力 (`KnockbackForce`) は種類 (`explosion`・`melee`・`charge`) を頭に付けて開く: `explosionSpeed`・`explosionUpwardRatio`・`explosionWeightFactor`・`meleeSpeed`・`meleeUpwardRatio`・`meleeWeightFactor`・`chargeSpeed`・`chargeUpwardRatio`・`chargeWeightFactor`。ほかは `minSpeed`・`minAirSeconds`・`maxAirSeconds`・`airControl`・`gravity`・`recoverSeconds`・`landingSnapRadius`・`playerWeight`・`enemyWeight` |
 
 ```json
 {
@@ -208,8 +281,9 @@ Editor からは **Fps > Import Game Rules From JSON**。
 ```
 
 - パッケージにも同じパスの JSON (今の既定値) が入っている (`Packages/com.omnistove.fps/Resources/Tuning/`)。利用側に同じパスのファイルを置くと
-  どちらが読まれるか決まらないので、今はパッケージの JSON を書き換えるか、コードで `GrenadeThrower.ApplySpec`・`PingController.ApplySpec`・
-  `NetTeamDeathmatch.GrenadeSpec`・`PingSpec` に渡す。
+  どちらが読まれるか決まらないので、ゲームの値は入口 ([ゲームの中身を差し替える](#ゲームの中身を差し替える-入口のアセット)) の `GrenadeTuning`・`PingTuning`・`KnockbackTuning` に
+  JSON を入れる (入口の JSON があれば Resources の JSON は読まない。ログは `[Tuning] read GameContent '<入口>' (<JSON>)`)。
+  コードからは `GrenadeThrower.ApplySpec`・`PingController.ApplySpec`・`NetTeamDeathmatch.GrenadeSpec`・`PingSpec`、`KnockbackMovement`・`EnemyAgent` の `KnockbackSpec`・`KnockbackWeight` に渡す。
 - ファイルが無ければ既定値で動く。壊れている・値が不正なら `[Tuning]` 付きのエラーにファイル名と項目名を出し、既定値で続ける。
 - Play 中に生まれたコンポーネントは、Inspector の値をこの JSON の値で上書きする (Play 中に Inspector で変えた値はその後に効く)。
 
@@ -241,6 +315,45 @@ JSON から取り込み直すと、そのアセットの値は JSON の値で上
 ログは `[Boss] id=.. phase=0->1 from=.. to=.. reason=..`、命中ごとに `[Boss] id=.. hit zone=.. damage=..`、弱点の出し入れは `[Boss] id=.. weakpoint=.. exposed=..`。
 TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で弱点が出て速くなる仮のボス (`RangeBoss`) が置かれる。
 
+## 調整値を差し替える
+
+ゲームが変える数値は、すべてデータに出してある。コードには既定値だけがある。
+
+| 調整値 | 置き場所 | 入口の欄 |
+| --- | --- | --- |
+| 武器 (弾数・連射・ダメージ・反動など) | `WeaponDefinition` (JSON から取り込む: [武器を JSON から取り込む](#武器を-json-から取り込む)) | `WeaponCatalog`・`Loadout` |
+| ルール (味方撃ち・リスポーン・回復・HUD の量・勝敗など) | `GameRulesDefinition` (JSON から取り込む: [モードのルールを JSON から取り込む](#モードのルールを-json-から取り込む)) | `Rules` |
+| モードの得点・制限時間・リスポーンなど | モードごとの定義 (`TeamDeathmatchDefinition`・`DominationDefinition`・`HardpointDefinition`・`KillConfirmedDefinition`・`SearchAndDestroyDefinition`・`HordeDefinition`・`GunGameLadderDefinition`)。**Assets > Create > Fps > Modes** などで作る | モード名の欄 |
+| 移動 (歩き・ダッシュ・しゃがみの速さ、ジャンプ、重力、空中の操作) | `MotorSettings` (**Assets > Create > Fps > Motor Settings**) | `Motor` |
+| 敵 AI (視界・反応・散らばり・遮蔽・怯み・種類ごとの値) | `EnemyDefinition` (**Assets > Create > Fps > Enemy Definition**) | `Enemies` |
+| グレネード・印・吹き飛ばし | JSON ([グレネード・印・吹き飛ばしの調整値](#グレネード印吹き飛ばしの調整値)) | `GrenadeTuning`・`PingTuning`・`KnockbackTuning` |
+| メニューから移るシーン | `MenuSceneSettings` (**Assets > Create > Fps > Menu Scene Settings**) | `MenuScenes` |
+| そのほか (ステルス・印・分隊・ボスなど) | コンポーネントの Inspector ([Inspector から変えられる値](#inspector-から変えられる値)) | — |
+
+## 見た目と音を差し替える
+
+キットの見た目と音は、差し替えられる参照 (カタログのアセットかコンポーネントのプレハブの欄) から引く。参照が空のときだけ、コードで仮の形 (カプセル・箱・球) を作るか、出さずに進む。
+
+| カタログ (型) | 中身 | 入口の欄 | 入口が空のときの Resources のパス |
+| --- | --- | --- | --- |
+| `PresentationCatalog` | 武器 Id ごとの発射音・マズルフラッシュ・着弾、ヒットマーカーとキルマーカーの音 | `Presentation` | `Presentation/PresentationCatalog` |
+| `ViewmodelCatalog` | 武器 Id ごとの一人称の銃のモデル | `Viewmodels` | `Presentation/ViewmodelCatalog` |
+| `WeaponExtrasCatalog` | 武器 Id ごとの薬莢と空撃ちの音 | `WeaponExtras` | `Presentation/WeaponExtrasCatalog` |
+| `HitFeedbackCatalog` | 部位ごとの血しぶき・背後の壁の血痕 | `HitFeedback` | `Presentation/HitFeedbackCatalog` |
+| `DamageFeedbackCatalog` | 被弾と低体力のときに画面に重ねる赤と、低体力の心音・息の音 | `DamageFeedback` | `Presentation/DamageFeedbackCatalog` |
+| `SurfaceImpactCatalog` | 材質ごとの銃痕と着弾 | `SurfaceImpacts` | `Presentation/SurfaceImpactCatalog` |
+| `FootstepSurfaceCatalog` | 材質ごとの足音 | `Footsteps` | `Presentation/FootstepSurfaceCatalog` |
+| `RagdollCatalog` | やられたときのラグドールの骨 | `Ragdoll` | `Presentation/RagdollCatalog` |
+| `SuppressionCatalog` | 制圧されたときの画面の色 | `Suppression` | `Presentation/SuppressionCatalog` |
+| `AwarenessIndicatorCatalog` | 発見ゲージの頭上の印のプレハブ | `AwarenessIndicator` | `Presentation/AwarenessIndicatorCatalog` |
+| `CameraShakeSettings` | 撃ったときなどのカメラの揺れ | `CameraShake` | `Presentation/CameraShakeSettings` |
+| 人型のリグ (プレハブ) | プレイヤー・NetPlayer・敵の体とアニメーション | `CharacterRig` | `Characters/CharacterRig` |
+
+- カタログは **Assets > Create > Fps > <カタログ名>** で作り、武器の Id や材質の Id で引く (武器の名前では引かない)。サンプルの仮の素材は `Fps/Build All Presentation Assets` (`Fps.Editor.PresentationAssetSteps.BuildAll`) で作れる。
+- 1 つの物だけの見た目は、そのコンポーネントのプレハブの欄で変える (例: `GameBootstrap` の床・標的ダミー・グレネード、`EnemySniper`・`EnemyBomber`・`EnemyShield` の仮の形、`Pickup`・`PickupSpawnPoint`・`BombSite`・`ControlPointZone` の見た目、`TurretDeployDefinition`・`DeployAbilityDefinition` の置く物)。空なら仮の形を作る。
+- 画面 (HUD・メニュー) は [UI を差し替える](#ui-を差し替える) で替える。
+- 武器の Id にカタログの音とエフェクトが無いと、[差し替え漏れの点検](#差し替え漏れの点検) が一覧に出す。
+
 ## UI を差し替える
 
 ゲーム進行 (`Fps.Runtime`・`Fps.Net`) は、画面を具体的なクラスでは持たず、登録口 `Fps.Runtime.GameUi`・`Fps.Net.NetUi` に入っている実装を使う。
@@ -262,7 +375,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 - 既定の HUD を差し替えると、その HUD に載っていたポーズメニューやロードアウトの画面も出なくなる。自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
 - `IHud` の `Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さない (プレイヤーがグレネードや能力の枠を持つと、返した値の `Show` をすぐ呼ぶ)。
 - 登録はシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単。
-- 発見ゲージの頭上の印 (ルールの `stealth` が On のときだけ出る) は、根に `IAwarenessIndicator` を実装したコンポーネントを持つプレハブを、どこかの Resources フォルダの `Presentation/AwarenessIndicatorCatalog.asset` (`AwarenessIndicatorCatalog`) に入れると差し替わる。敵ごとに変えるなら `EnemyStealth` の印のプレハブに入れる。どちらも空なら仮の球を出す。
+- 発見ゲージの頭上の印 (ルールの `stealth` が On のときだけ出る) は、根に `IAwarenessIndicator` を実装したコンポーネントを持つプレハブを、どこかの Resources フォルダの `Presentation/AwarenessIndicatorCatalog.asset` (`AwarenessIndicatorCatalog`、入口の `AwarenessIndicator` が先) に入れると差し替わる。敵ごとに変えるなら `EnemyStealth` の印のプレハブに入れる。どちらも空なら仮の球を出す。
 
 ### 最小の例: オフラインの HUD
 
@@ -575,14 +688,14 @@ photo.PhotoCapture = new MyFramedCapture();
 
 ## 動作確認 (smoke)
 
-`Fps.Editor.SmokeSuite.RunAll` は、次の SmokeRun を 1 つの Editor で順に Play Mode に入れて走らせる。必要な武器・ルール・シーンは各 SmokeRun が出力先ルートに作るので、空のプロジェクトでもそのまま回せる。
+サンプルを取り込んだうえで、`Fps.Editor.SmokeSuite.RunAll` は、次の SmokeRun を 1 つの Editor で順に Play Mode に入れて走らせる。必要な武器・ルール・シーンは各 SmokeRun が出力先ルートに作るので、空のプロジェクトでもそのまま回せる。
 
 1. `CampaignSmokeRun`
 2. `DestructionSmokeRun`
 3. `EnemyFireSmokeRun`
 4. `EnemyStuckSmokeRun`
 5. `WeaponSwitchSmokeRun`
-6. `PerfSmokeRun` (`Fps.Net.Editor`。Netcode が要る。サーバーの tick の平均・最大・p95 を `Logs/perf.json` に書き、予算を超えると失敗)
+6. `PerfSmokeRun` (`Fps.Samples.Net.Editor`。Netcode が要る。サーバーの tick の平均・最大・p95 を `Logs/perf.json` に書き、予算を超えると失敗)
 
 Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに終了コード 1 で終わる)。
 
@@ -593,7 +706,7 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
   -logFile -
 ```
 
-`-fpsKitRoot` を省くと、生成物は `Assets/game` に置かれる。
+`-fpsKitRoot` を省くと、生成物は取り込んだサンプルのフォルダに置かれる。
 
 ### 成功と失敗の見分け方
 
@@ -623,7 +736,7 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
 
 - `FAILED <名前>` の行の SmokeRun が落ちた。その名前のタグ (`[DestructionSmokeRun]` など) でログを探すと理由がある。1 つが 600 秒を超えても終わらないときも、`[SmokeSuite] <名前> did not finish within 600s` を出して `FAILED` になる。
 - `NOT RUN <名前>` は結果を受け取れないままスイートが終わった SmokeRun で、これも失敗に数える。
-- Netcode を入れていないと `PerfSmokeRun` が `smoke run type 'Fps.Editor.PerfSmokeRun, Fps.Net.Editor' was not found` で `FAILED` になり、スイート全体も 1 で終わる。残りの 5 本が `passed` なら、Netcode 以外は動いている。
+- Netcode を入れていないと `PerfSmokeRun` が `smoke run type 'Fps.Editor.PerfSmokeRun, Fps.Samples.Net.Editor' was not found` で `FAILED` になり、スイート全体も 1 で終わる。残りの 5 本が `passed` なら、Netcode 以外は動いている。
 
 ## 差し替え漏れの点検
 
@@ -641,11 +754,11 @@ Editor からは **Fps > Audit Replacements** (一覧をログに出すだけで
 
 | 種類 | 漏れとして出すもの |
 | --- | --- |
-| `Presentation` | `Resources/Presentation/PresentationCatalog` が無い・`Validate` に通らない。`Assets/` の下の `WeaponDefinition` の Id にカタログの音とエフェクトが無い。武器の Id が空 |
-| `Strings` | `ja`・`en` のどちらかに表が無い・壊れている。どちらかの言語にあってもう一方に無いキー。武器の `nameKey` が空か、どちらかの言語の表に無い |
+| `Presentation` | 入口の `Presentation` にも `Resources/Presentation/PresentationCatalog` にもカタログが無い・`Validate` に通らない。`Assets/` の下の `WeaponDefinition` の Id にカタログの音とエフェクトが無い。武器の Id が空 |
+| `Strings` | `ja`・`en` のどちらかに表 (Resources と入口の `Texts`) が無い・壊れている。どちらかの言語にあってもう一方に無いキー。武器の `nameKey` が空か、どちらかの言語の表に無い |
 | `Reference` | ビルドの一覧のシーン (有効なもの)・`Assets/` の下のプレハブ・アセットで、`[RequiredReference]` を付けた参照が空 (消えたアセットを指すものも含む)。ビルドの一覧のシーンが無い |
 
-`[RequiredReference]` (`Fps.Runtime.RequiredReferenceAttribute`) は、空だと動かない参照 (空なら仮の形や既定値で続けるものは除く) に付ける印。今は `GunGameRunner` の Ladder・`HordeRunner` の Spawner・`WaveSpawner` の Enemy Template・`MissionRunner` の Definition・`EnemyAgent` の Weapon Definition に付いている。ゲームのコンポーネントやアセットのフィールドに付けても同じく見る。
+`[RequiredReference]` (`Fps.Runtime.RequiredReferenceAttribute`) は、空だと動かない参照 (空なら仮の形や既定値で続けるものは除く) に付ける印。今は `HordeRunner` の Spawner・`WaveSpawner` の Enemy Template・`MissionRunner` の Definition・`EnemyAgent` の Weapon Definition に付いている。ゲームのコンポーネントやアセットのフィールドに付けても同じく見る。
 
 **終了コード** で見分ける: 漏れが無ければ 0、漏れがあれば 1、点検そのものが例外で止まれば 2。
 
@@ -661,9 +774,12 @@ Editor からは **Fps > Audit Replacements** (一覧をログに出すだけで
 | `Fps.Core` | Unity に依存しないルールと計算 | 常に |
 | `Fps.Runtime` | ゲームプレイのコンポーネントとアセットの型 | 常に |
 | `Fps.Runtime.UI` | 既定の UI (HUD・メニュー・ポーズ・設定)。起動時に `GameUi` へ自分を登録する。外すと HUD 無しで動く | 常に |
-| `Fps.Editor` | シーンとアセットのビルダー、JSON のインポーター、smoke | Editor |
-| `Fps.Net`・`Fps.Net.Editor` | Netcode for GameObjects のネット対戦 | Netcode 2.14.0 以上 |
+| `Fps.Editor` | JSON のインポーター、出力先ルート、ビルダーの共通の処理、キャラクターのリグ、入口のアセットの作成、差し替えの点検 | Editor |
+| `Fps.Net` | Netcode for GameObjects のネット対戦 | Netcode 2.14.0 以上 |
 | `Fps.Net.UI` | ネット対戦の HUD (キルフィードの名前・スコアボード・F3 の回線表示・装備選択・ネームプレート・拠点)。起動時に `NetUi` へ自分を登録する。外すと HUD 無しで動く | Netcode 2.14.0 以上 |
 | `Fps.NetEos` | EOS のログイン・ロビー・P2P の通信・アンチチート | Netcode と EOS |
 | `Fps.Core.Tests`・`Fps.Tests.EditMode` | EditMode テスト | `testables` に入れたとき |
 | `Fps.Net.Tests` | ネットの EditMode テスト | `testables` に入れ、Netcode もあるとき |
+| `Fps.Samples.Editor` (サンプル) | シーンと仮の素材のビルダー、smoke、クライアントのビルド | サンプルを取り込んだとき (Editor) |
+| `Fps.Samples.Net.Editor` (サンプル) | ネット対戦のシーンとプレハブのビルダー、サーバーのビルド、`PerfSmokeRun` | サンプルを取り込み、Netcode もあるとき (Editor) |
+| `Fps.Samples.Tests`・`Fps.Samples.Net.Tests` (サンプル) | サンプルの EditMode テスト | サンプルを取り込んだとき (ネットは Netcode も) |

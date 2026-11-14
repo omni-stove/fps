@@ -11,22 +11,11 @@ using UnityEngine;
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// <see cref="GameRulesJsonImporter"/> を一時フォルダに走らせて、サンプル JSON が今のルールと同じ値になることと、
-    /// 失敗したときに何も保存しないことを確かめる。リポジトリの Assets/game/Rules は触らない。
+    /// <see cref="GameRulesJsonImporter"/> を一時フォルダに走らせて、書いた JSON がそのルールの値になることと、
+    /// 失敗したときに何も保存しないことを確かめる。
     /// </summary>
     public sealed class GameRulesJsonImporterTests
     {
-        private static readonly Dictionary<string, Func<GameRules>> _samples = new Dictionary<string, Func<GameRules>>
-        {
-            { "TeamDeathmatch", GameRulesAssetBuilder.TeamDeathmatchRules },
-            { "CampaignEasy", GameRulesAssetBuilder.CampaignEasyRules },
-            { "CampaignNormal", GameRulesAssetBuilder.CampaignNormalRules },
-            { "CampaignHard", GameRulesAssetBuilder.CampaignHardRules },
-            { "Range", GameRulesAssetBuilder.RangeRules },
-            { "TpsRange", GameRulesAssetBuilder.TpsRangeRules },
-            { "Domination", GameRulesAssetBuilder.DominationRules },
-        };
-
         private string _folder;
         private string _jsonFolder;
 
@@ -56,43 +45,21 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void SamplesFolderIsUnderTheBundledRules()
+        public void ImportingWrittenRulesFillsTheAssetLikeConfigure()
         {
-            Assert.That(GameRulesJsonImporter.SamplesFolder, Is.EqualTo(FpsKitRoot.Bundled + "/Rules/Json"));
-        }
-
-        [Test]
-        public void ImportingTheSamplesGivesTheBuilderRules()
-        {
-            var built = GameRulesJsonImporter.ImportFrom(GameRulesJsonImporter.SamplesFolder, _folder);
-
-            var names = new List<string>();
-            foreach (var definition in built)
-            {
-                names.Add(definition.name);
-                Assert.That(_samples.ContainsKey(definition.name), Is.True, $"unexpected sample '{definition.name}'");
-                Assert.That(AssetDatabase.GetAssetPath(definition), Is.EqualTo(_folder + "/" + definition.name + ".asset"));
-                AssertSameRules(definition.ToRules(), _samples[definition.name](), definition.name);
-            }
-
-            Assert.That(names, Is.EquivalentTo(_samples.Keys));
-        }
-
-        [Test]
-        public void ImportingTheSamplesFillsTheAssetLikeTheBuilder()
-        {
-            var imported = GameRulesJsonImporter.ImportFrom(GameRulesJsonImporter.SamplesFolder + "/TpsRange.json", _folder)[0];
-            var built = ScriptableObject.CreateInstance<GameRulesDefinition>();
-            built.name = imported.name;
+            var rules = GameRules.Default.WithActions(ActionRules.Default.WithCover(Cover.On));
+            var imported = GameRulesJsonImporter.ImportFrom(WriteJson("Written.json", GameRulesJson.Write(rules)), _folder)[0];
+            var configured = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            configured.name = imported.name;
             try
             {
-                GameRulesAssetBuilder.Configure(built, GameRulesAssetBuilder.TpsRangeRules());
+                GameRulesAssets.Configure(configured, rules);
 
-                Assert.That(EditorJsonUtility.ToJson(imported), Is.EqualTo(EditorJsonUtility.ToJson(built)));
+                Assert.That(EditorJsonUtility.ToJson(imported), Is.EqualTo(EditorJsonUtility.ToJson(configured)));
             }
             finally
             {
-                UnityEngine.Object.DestroyImmediate(built);
+                UnityEngine.Object.DestroyImmediate(configured);
             }
         }
 

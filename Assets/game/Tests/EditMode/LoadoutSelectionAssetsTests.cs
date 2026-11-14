@@ -31,18 +31,18 @@ namespace Fps.Tests.EditMode
 
             Assert.That(selection.SlotCount, Is.EqualTo(2));
             Assert.That(selection.OptionsAt(0).Count, Is.EqualTo(2));
-            Assert.That(selection.OptionsAt(0)[0].Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(selection.OptionsAt(0)[0].Id, Is.EqualTo(TestWeapons.RifleId));
             Assert.That(selection.OptionsAt(0)[1].Id, Is.EqualTo(LoadoutTestAssets.SmgId));
             Assert.That(selection.OptionsAt(1).Count, Is.EqualTo(1));
-            Assert.That(selection.OptionsAt(1)[0].Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
-            Assert.That(selection.WeaponIds, Is.EqualTo(new[] { WeaponAssetBuilder.RifleId, WeaponAssetBuilder.HandgunId }));
+            Assert.That(selection.OptionsAt(1)[0].Id, Is.EqualTo(TestWeapons.HandgunId));
+            Assert.That(selection.WeaponIds, Is.EqualTo(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
             Assert.That(selection.RestoredPreference, Is.False);
         }
 
         [Test]
         public void StartsFromThePreferenceThenTheFallback()
         {
-            var saved = new[] { LoadoutTestAssets.SmgId, WeaponAssetBuilder.HandgunId };
+            var saved = new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId };
 
             LoadoutSelectionAssets.TryCreate(_assets.Loadout, _assets.Catalog, saved, null, out var restored, out _);
             Assert.That(restored.RestoredPreference, Is.True);

@@ -31,12 +31,18 @@ namespace Fps.Runtime
 
         private readonly KnockbackFlight _flight = new KnockbackFlight();
         private KnockbackSpec _knockbackSpec = KnockbackSpec.Default;
+        private bool _knockbackSpecApplied;
+        private bool _knockbackWeightApplied;
         private Vector3 _launchGround;
 
         public KnockbackSpec KnockbackSpec
         {
             get => _knockbackSpec;
-            set => _knockbackSpec = value ?? throw new ArgumentNullException(nameof(value));
+            set
+            {
+                _knockbackSpec = value ?? throw new ArgumentNullException(nameof(value));
+                _knockbackSpecApplied = true;
+            }
         }
 
         public float KnockbackWeight
@@ -50,12 +56,32 @@ namespace Fps.Runtime
                 }
 
                 _knockbackWeight = value;
+                _knockbackWeightApplied = true;
             }
         }
 
         public bool IsKnockedBack => _flight.IsFlying;
 
         public Vector3 KnockbackVelocity => _flight.Velocity.ToUnity();
+
+        // Awake を経ずに EditMode のテストから試せるよう、Awake から分けている。
+        internal void ApplyKnockbackTuning(KnockbackSpec tuning)
+        {
+            if (tuning == null)
+            {
+                throw new ArgumentNullException(nameof(tuning));
+            }
+
+            if (!_knockbackSpecApplied)
+            {
+                _knockbackSpec = tuning;
+            }
+
+            if (!_knockbackWeightApplied)
+            {
+                _knockbackWeight = tuning.EnemyWeight;
+            }
+        }
 
         public bool Launch(Vector3 velocity, DamageKind kind)
         {

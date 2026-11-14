@@ -5,7 +5,7 @@ using UnityEditor;
 namespace Fps.Editor
 {
     /// <summary>
-    /// 差し込み口 (<see cref="ITpsRangeFixture"/>・<see cref="ITpsActionSmokeStep"/> など) を実装した型を読み込み済みのアセンブリから探して作る。
+    /// 差し込み口 (<c>ITpsRangeFixture</c>・<c>ITpsActionSmokeStep</c> など) を実装した型を読み込み済みのアセンブリから探して作る。
     /// 拾うのは public な具象クラスだけで、テストの中に private で置いた偽物は拾わない。
     /// </summary>
     public static class ExtensionPoints

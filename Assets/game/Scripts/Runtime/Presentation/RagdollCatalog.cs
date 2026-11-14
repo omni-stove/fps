@@ -73,7 +73,8 @@ namespace Fps.Runtime
 
         public static RagdollCatalog Load()
         {
-            return Resources.Load<RagdollCatalog>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.Ragdoll);
+            return fromContent != null ? fromContent : Resources.Load<RagdollCatalog>(ResourcePath);
         }
 
         public void SetBones(IEnumerable<RagdollBone> bones)

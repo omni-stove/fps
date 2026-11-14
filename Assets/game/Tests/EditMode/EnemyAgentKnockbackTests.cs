@@ -24,7 +24,7 @@ namespace Fps.Tests.EditMode
         {
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
 
             _host = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             _host.name = "Enemy";
@@ -126,6 +126,40 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_agent.IsKnockedBack, Is.False);
             Assert.That(_agent.Launch(new Vector3(5f, 3f, 0f), DamageKind.Explosion), Is.False);
+        }
+
+        [Test]
+        public void TheTunedForceAndEnemyWeightSetHowFarTheEnemyFlies()
+        {
+            Assert.That(_agent.TryInitialize(), Is.True);
+            var tuning = new KnockbackSpec(
+                explosion: new KnockbackForce(12f, 0f, 1f),
+                recoverSeconds: 1.25f,
+                playerWeight: 0.5f,
+                enemyWeight: 4f);
+
+            _agent.ApplyKnockbackTuning(tuning);
+
+            Assert.That(_agent.KnockbackSpec, Is.SameAs(tuning));
+            Assert.That(_agent.KnockbackWeight, Is.EqualTo(4f), "the enemy reads the enemy weight, not the player one");
+            LogAssert.Expect(LogType.Log, "[Knockback] id=enemy-1 launched kind=Explosion velocity=(3.0, 0.0, 0.0)");
+            LogAssert.Expect(LogType.Log, "[AI] id=enemy-1 interrupted reason=knockback seconds=1.25");
+            Assert.That(Knockback.Apply(_damageable, DamageKind.Explosion, Vector3.right, 1f), Is.True);
+            Assert.That(_agent.KnockbackVelocity.magnitude, Is.EqualTo(12f / 4f).Within(1e-4f));
+        }
+
+        [Test]
+        public void TuningDoesNotOverwriteValuesSetByCode()
+        {
+            var set = new KnockbackSpec(gravity: 30f);
+            _agent.KnockbackSpec = set;
+            _agent.KnockbackWeight = 2f;
+
+            _agent.ApplyKnockbackTuning(new KnockbackSpec(gravity: 10f, enemyWeight: 5f));
+
+            Assert.That(_agent.KnockbackSpec, Is.SameAs(set));
+            Assert.That(_agent.KnockbackWeight, Is.EqualTo(2f));
+            Assert.Throws<ArgumentNullException>(() => _agent.ApplyKnockbackTuning(null));
         }
 
         [Test]

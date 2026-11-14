@@ -27,10 +27,11 @@ namespace Fps.Runtime
         /// <summary>定義順の武器ごとの素材。中身を書き換えるときは <see cref="SetWeapons"/> を使う。</summary>
         public IReadOnlyList<WeaponExtrasAssets> Weapons => _weapons ??= new List<WeaponExtrasAssets>();
 
-        /// <summary>Resources の <see cref="ResourcePath"/> から読む。置いていなければ null。</summary>
+        /// <summary>入口 (<see cref="GameContent"/>) のもの、無ければ Resources の <see cref="ResourcePath"/> から読む。どちらも無ければ null。</summary>
         public static WeaponExtrasCatalog Load()
         {
-            return Resources.Load<WeaponExtrasCatalog>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.WeaponExtras);
+            return fromContent != null ? fromContent : Resources.Load<WeaponExtrasCatalog>(ResourcePath);
         }
 
         /// <summary>

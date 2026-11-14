@@ -15,8 +15,8 @@ namespace Fps.Editor
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// どれか 1 つでも読めない・値が不正・書けない場所なら、1 つも保存せずに、ファイル名と項目名を添えた例外を投げる
     /// (batchmode では Unity が終了コード 1 で終わる)。
-    /// Editor を閉じた状態で次のように呼べる (<see cref="OutputArgument"/> を省くと <see cref="GameRulesAssetBuilder.Folder"/>):
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.GameRulesJsonImporter.Import -rulesJson Assets/game/Rules/Json -rulesOut Assets/Scratch/Rules</code>
+    /// Editor を閉じた状態で次のように呼べる (<see cref="OutputArgument"/> を省くと <see cref="GameRulesAssets.Folder"/>):
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.GameRulesJsonImporter.Import -rulesJson Assets/MyGame/Rules/Json -rulesOut Assets/MyGame/Rules</code>
     /// </summary>
     public static class GameRulesJsonImporter
     {
@@ -34,25 +34,17 @@ namespace Fps.Editor
         private const string _assetExtension = ".asset";
         private const string _writablePrefix = "Assets/";
 
-        /// <summary>
-        /// 同梱のサンプル (<see cref="GameRulesAssetBuilder"/> の 7 つのルールの今の値) を置くフォルダ。
-        /// 取り込むと <see cref="GameRulesAssetBuilder.Build"/> と同じ値のアセットになる。
-        /// </summary>
-        public static string SamplesFolder => FpsKitRoot.BundledPath("Rules/Json");
-
         /// <summary>batchmode の入口。引数は <see cref="ResolveArguments"/> のとおり。</summary>
         public static void Import()
         {
-            var (source, output) = ResolveArguments(Environment.GetCommandLineArgs(), () => GameRulesAssetBuilder.Folder);
+            var (source, output) = ResolveArguments(Environment.GetCommandLineArgs(), () => GameRulesAssets.Folder);
             ImportFrom(source, output);
         }
 
         [MenuItem(MenuPath)]
         private static void ImportFromMenu()
         {
-            var samples = FpsKitRoot.PhysicalPath(SamplesFolder);
-            var start = Directory.Exists(samples) ? samples : Directory.GetCurrentDirectory();
-            var source = EditorUtility.OpenFolderPanel("Folder of game rules JSON", start, string.Empty);
+            var source = EditorUtility.OpenFolderPanel("Folder of game rules JSON", Directory.GetCurrentDirectory(), string.Empty);
             if (string.IsNullOrEmpty(source))
             {
                 return;
@@ -60,10 +52,10 @@ namespace Fps.Editor
 
             try
             {
-                var imported = ImportFrom(source, GameRulesAssetBuilder.Folder);
+                var imported = ImportFrom(source, GameRulesAssets.Folder);
                 EditorUtility.DisplayDialog(
                     "Import Game Rules From JSON",
-                    $"Imported {imported.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)} game rules into '{GameRulesAssetBuilder.Folder}'.",
+                    $"Imported {imported.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)} game rules into '{GameRulesAssets.Folder}'.",
                     "OK");
             }
             catch (Exception e)
@@ -148,7 +140,7 @@ namespace Fps.Editor
             {
                 var rules = entries[i].Rules;
                 built[i] = SceneBuildHelpers.CreateOrUpdateAsset<GameRulesDefinition>(
-                    entries[i].Path, d => GameRulesAssetBuilder.Configure(d, rules));
+                    entries[i].Path, d => GameRulesAssets.Configure(d, rules));
             }
 
             Debug.Log($"{LogTag} saved {string.Join(", ", entries.ConvertAll(e => "'" + e.Path + "'"))}");

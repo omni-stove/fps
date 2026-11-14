@@ -25,6 +25,7 @@ namespace Fps.Runtime
         private int _maxHealth = DefaultMaxHealth;
 
         private Health _health;
+        private ZoneDamageMultipliers _zoneMultipliers = ZoneDamageMultipliers.Default;
 
         /// <summary>死亡した瞬間に、死んだ Damageable を渡して 1 度だけ呼ばれる (ResetHealth 後は再び呼ばれ得る)。</summary>
         public event Action<Damageable> Died;
@@ -91,6 +92,13 @@ namespace Fps.Runtime
         /// </summary>
         public bool IsLocalPlayer { get; set; }
 
+        // シーンに保存しない。ボスの段階のように実行時に組み立てる側が持つ値で、Damageable ごとに Inspector で同じ値を書かせないため。
+        public ZoneDamageMultipliers ZoneMultipliers
+        {
+            get => _zoneMultipliers;
+            set => _zoneMultipliers = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
         private void Awake()
         {
             _ = Health;
@@ -128,7 +136,7 @@ namespace Fps.Runtime
             Vector3? direction = null,
             DamageKind kind = DamageKind.Bullet)
         {
-            var damage = DamageCalculator.Calculate(baseDamage, zone, distance, falloff);
+            var damage = DamageCalculator.Calculate(baseDamage, zone, distance, falloff, _zoneMultipliers);
             TakeDamageCore(damage, sourcePosition, zone, direction, kind);
             return damage;
         }

@@ -110,6 +110,7 @@ namespace Fps.Runtime
             ReleaseSprint(SprintInput.ReasonDeath);
             CancelDodge();
             CancelVault();
+            CancelMantle();
         }
 
         private void OnHealthReset(Health _)
@@ -117,6 +118,7 @@ namespace Fps.Runtime
             ReleaseSprint(SprintInput.ReasonRespawn);
             CancelDodge();
             CancelVault();
+            CancelMantle();
 
             // 戻った位置で、倒れる前の待ち時間に縛られずすぐ回避できるようにする。
             _dodgeMotion?.Reset();

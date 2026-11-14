@@ -160,7 +160,7 @@ namespace Fps.Net
         private void Open(NetTeamDeathmatch match)
         {
             var fallback = _weapon != null ? _weapon.EquippedWeaponIds : null;
-            if (!LoadoutSelectionAssets.TryCreate(match.Loadout, match.Catalog, _store.Load(), fallback, out var selection, out var error))
+            if (!LoadoutSelectionAssets.TryCreate(match.EffectiveLoadout, match.EffectiveCatalog, _store.Load(), fallback, out var selection, out var error))
             {
                 Debug.LogWarning(LoadoutChoiceLog.Prefix + " cannot show the loadout screen: " + error, this);
                 return;
@@ -179,7 +179,7 @@ namespace Fps.Net
             }
 
             _sentFor = match;
-            var ids = SavedLoadoutToSend(_store.Load(), match.Loadout, match.Catalog, out var reason);
+            var ids = SavedLoadoutToSend(_store.Load(), match.EffectiveLoadout, match.EffectiveCatalog, out var reason);
             if (ids == null)
             {
                 if (reason != null)

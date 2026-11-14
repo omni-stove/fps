@@ -6,7 +6,8 @@ using ZiplineLine = Fps.Runtime.Traversal.Zipline;
 namespace Fps.Editor
 {
     // 射撃場の左端 (x = -20) を手前から奥へ下る線。手前の足場に坂で上がり、足場に立ったまま掴まれる高さに始点を置く。
-    // 乗り越えの壁 (x = -12..-8) と開けた場所 (右手前) には重ねない。
+    // 乗り越えの壁 (x = -12..-8) と開けた場所 (右手前) には重ねない。崖のぼりの段 (x = -22..-14, z = -10..-8) より奥 (z > -8) に
+    // 足場を置き、坂は線の下を奥へ向かって降ろす。
     public sealed class ZiplineRangeFixture : ITpsRangeFixture
     {
         public const string FixtureName = "Zipline";
@@ -19,7 +20,7 @@ namespace Fps.Editor
         public const float LineX = -20f;
         public const float PlatformHeight = 3f;
         public const float PlatformSize = 3f;
-        public const float PlatformZ = -16f;
+        public const float PlatformZ = -5f;
         public const float RampRun = 6f;
         public const float RampThickness = 0.2f;
         public const float PoleThickness = 0.2f;
@@ -44,7 +45,7 @@ namespace Fps.Editor
             get
             {
                 var bounds = new Bounds(new Vector3(LineX, PlatformHeight / 2f, PlatformZ), Vector3.one * PlatformSize);
-                bounds.Encapsulate(new Vector3(LineX - PoleSideOffset - PoleThickness, 0f, PlatformZ - (PlatformSize / 2f) - RampRun - 0.5f));
+                bounds.Encapsulate(new Vector3(LineX - PoleSideOffset - PoleThickness, 0f, PlatformZ - (PlatformSize / 2f)));
                 bounds.Encapsulate(new Vector3(LineX + (PlatformSize / 2f), StartAnchor.y + PoleThickness, EndAnchor.z + PoleThickness));
                 return bounds;
             }
@@ -70,8 +71,8 @@ namespace Fps.Editor
 
         private static void CreateRamp(Scene scene, Transform parent)
         {
-            var top = new Vector3(LineX, PlatformHeight, PlatformZ - (PlatformSize / 2f));
-            var bottom = new Vector3(LineX, 0f, top.z - RampRun);
+            var top = new Vector3(LineX, PlatformHeight, PlatformZ + (PlatformSize / 2f));
+            var bottom = new Vector3(LineX, 0f, top.z + RampRun);
             var along = top - bottom;
             var rotation = Quaternion.LookRotation(along.normalized, Vector3.up);
 

@@ -151,7 +151,7 @@ namespace Fps.Core.Tests
                 all |= flag;
             }
 
-            Assert.That(PlayerActionState.AllFlags, Is.EqualTo(all));
+            Assert.That(all, Is.EqualTo(PlayerActionState.AllFlags));
 
             var state = Create(
                 PlayerActionConditions.Meleeing

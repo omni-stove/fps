@@ -7,9 +7,9 @@ namespace Fps.Core.Tests
 {
     public sealed class GameLanguagesTests
     {
-        private static readonly string[] _shippedNativeNames ={ "日本語", "English" };
-        private static readonly string[] _expectedWarningKinds ={ "missing", "notJson", "array", "noLanguages" };
-        private static readonly string[] _emptySystemLanguage ={ "" };
+        private static readonly string[] _shippedNativeNames = { "日本語", "English" };
+        private static readonly string[] _expectedWarningKinds = { "missing", "notJson", "array", "noLanguages" };
+        private static readonly string[] _emptySystemLanguage = { "" };
 
         private Func<GameLanguageList> _before;
 

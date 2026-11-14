@@ -36,7 +36,7 @@ namespace Fps.Editor
         public static readonly Vector3 ShowPoint = new Vector3(-16f, 0f, 8f);
 
         /// <summary>敵を隠す位置 (床の高さ)。立つ位置から見て壁の真裏。</summary>
-        public static readonly Vector3 HiddenPoint = new Vector3(-16f, 0f, 13.5f);
+        public static readonly Vector3 HiddenPoint = new Vector3(-16f, 0f, 12.5f);
 
         /// <summary>敵を隠す壁。見せる位置と隠す位置の間に、+Z へ撃つ向きで置く。</summary>
         public static readonly LevelBox Blind = new LevelBox(
@@ -51,7 +51,7 @@ namespace Fps.Editor
 
         // 立つ位置から隠す位置の先 (ダミーの半径) までと、壁の幅を囲む。
         public Bounds Footprint => new Bounds(
-            new Vector3(-16f, BlindHeight / 2f, 8.5f), new Vector3(BlindWidth + 0.5f, BlindHeight, 11.5f));
+            new Vector3(-16f, BlindHeight / 2f, 7.875f), new Vector3(BlindWidth + 0.5f, BlindHeight, 10.25f));
 
         public GameObject Place(Scene scene, GameRules rules)
         {

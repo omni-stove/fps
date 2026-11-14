@@ -116,6 +116,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(names.First(), Is.EqualTo("Resources/Strings/ja.json"));
             Assert.That(names, Does.Contain("Resources/Localization/ja/common"));
+            Assert.That(names, Does.Contain("Resources/Localization/ja/menu"));
             var folder = names.Skip(1).ToList();
             Assert.That(folder, Is.EqualTo(folder.OrderBy(n => n, StringComparer.Ordinal).ToList()));
         }
@@ -126,6 +127,7 @@ namespace Fps.Tests.EditMode
             Localizer.Reload();
 
             Assert.That(Localizer.Get("settings.title"), Is.EqualTo("設定"));
+            Assert.That(Localizer.Get("menu.quit"), Is.EqualTo("終了"));
             LogAssert.NoUnexpectedReceived();
         }
 

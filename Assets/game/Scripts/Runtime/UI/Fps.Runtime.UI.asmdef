@@ -1,0 +1,18 @@
+{
+    "name": "Fps.Runtime.UI",
+    "rootNamespace": "Fps.Runtime",
+    "references": [
+        "Fps.Core",
+        "Fps.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

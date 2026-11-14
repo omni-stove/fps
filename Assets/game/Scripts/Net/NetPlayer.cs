@@ -23,7 +23,8 @@ namespace Fps.Net
     /// 一人称か三人称かは ViewRig の Mode で決まり、射撃はどちらでも目から画面中央が指す点へ撃つ。
     /// </para>
     /// <para>
-    /// HUD も同じ条件 (<see cref="NetStartup.ShouldCreateHud"/>) で生成時に <see cref="NetHud.Create"/> で作り、消滅時に消す。
+    /// HUD も同じ条件 (<see cref="NetStartup.ShouldCreateHud"/>) で生成時に <see cref="NetUi.CreateHud"/> で作り、消滅時に消す。
+    /// 生成役が登録されていなければ (画面のアセンブリ Fps.Net.UI が無ければ) HUD 無しで進める。
     /// </para>
     /// <para>
     /// 倒れると見た目と当たりを消す。試合のルール (<see cref="NetTeamDeathmatch.SyncedRules"/>) のやられ演出が Collapse なら、
@@ -136,7 +137,7 @@ namespace Fps.Net
         private bool _viewResolved;
 
         // HUD を作ったときだけ。自分のプレイヤーで画面があるときに作る
-        private NetHud _hud;
+        private INetHud _hud;
 
         // やられ演出。画面のあるクライアント (ホストを含む) でだけ付ける。倒れた tick の LateUpdate で出す
         private DeathBodyPresenter _deathBody;
@@ -153,14 +154,14 @@ namespace Fps.Net
         public int Health => _health.Value;
         public bool IsAlive => _health.Value > 0;
 
-        /// <summary><see cref="NetHud"/> が OnValueChanged を購読するチームの同期値。</summary>
+        /// <summary>HUD (Fps.Net.UI の NetHud) が OnValueChanged を購読するチームの同期値。</summary>
         internal NetworkVariable<Team> TeamVariable => _team;
 
-        /// <summary><see cref="NetHud"/> が OnValueChanged を購読する体力の同期値。</summary>
+        /// <summary>HUD (Fps.Net.UI の NetHud) が OnValueChanged を購読する体力の同期値。</summary>
         internal NetworkVariable<int> HealthVariable => _health;
 
-        /// <summary>このプレイヤーの HUD。自分のプレイヤーで画面があるときだけあり、他では null。</summary>
-        public NetHud LocalHud => _hud;
+        /// <summary>このプレイヤーの HUD。自分のプレイヤーで画面があり、HUD の生成役が登録されているときだけあり、他では null。</summary>
+        public INetHud LocalHud => _hud;
 
         /// <summary>同じオブジェクトの武器 (弾倉・リロード)。プレハブに無ければ null。</summary>
         public NetPlayerWeapon Weapon => _weapon;
@@ -998,14 +999,20 @@ namespace Fps.Net
 
         private void CreateHud()
         {
-            if (_hud != null)
+            if (GameUi.IsAlive(_hud))
             {
                 return;
             }
 
             try
             {
-                _hud = NetHud.Create(this);
+                _hud = NetUi.CreateHud(this);
+                if (_hud == null)
+                {
+                    Debug.Log(NetUi.NoHudLog, this);
+                    return;
+                }
+
                 Debug.Log("[Net] HUD created for " + name, this);
             }
             catch (InvalidOperationException e)
@@ -1017,7 +1024,7 @@ namespace Fps.Net
 
         private void DestroyHud()
         {
-            if (_hud != null)
+            if (GameUi.IsAlive(_hud))
             {
                 Destroy(_hud.gameObject);
             }

@@ -33,7 +33,7 @@ namespace Fps.Net
         /// <summary>サーバーから届いたグレネードの状態。持ち主とサーバーでだけ読める (他では <see cref="NetGrenadeState.None"/>)。</summary>
         public NetGrenadeState Grenades => _grenades.Value;
 
-        /// <summary><see cref="NetHud"/> が OnValueChanged を購読するグレネードの同期値。</summary>
+        /// <summary>HUD (Fps.Net.UI の NetHud) が OnValueChanged を購読するグレネードの同期値。</summary>
         internal NetworkVariable<NetGrenadeState> GrenadesVariable => _grenades;
 
         /// <summary>

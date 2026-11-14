@@ -6,7 +6,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// ゲーム進行が画面を作るときの登録口。HUD は <see cref="HudFactory"/> の生成役が作る。
-    /// 既定の生成役は UI のコードが起動時に <see cref="UseDefaultHudFactory"/> で登録し、使う側は <see cref="HudFactory"/> に
+    /// 既定の生成役は UI のアセンブリ (Fps.Runtime.UI) が起動時に <see cref="UseDefaultHudFactory"/> で登録し、使う側は <see cref="HudFactory"/> に
     /// 自分の生成役を入れると差し替えられる (null を入れると既定に戻る)。
     /// ポーズ (<see cref="Pause"/>)・ロードアウトの選択 (<see cref="LoadoutSelect"/>)・メニューとの行き来 (<see cref="Menu"/>) も、
     /// 同じく UI のコードが UseDefault… で既定を登録し、プロパティに入れると差し替えられる。
@@ -86,6 +86,15 @@ namespace Fps.Runtime
             _defaultMenu = menu ?? throw new ArgumentNullException(nameof(menu));
         }
 
+        // 既定の UI のアセンブリが無い状態は、テストで登録済みの既定を外さないと作れない。使う側は差し替えれば済むので公開しない
+        internal static void ClearDefaults()
+        {
+            _defaultHudFactory = null;
+            _defaultPause = null;
+            _defaultLoadoutSelect = null;
+            _defaultMenu = null;
+        }
+
         /// <summary>HUD を作る生成役。差し替えていなければ既定の生成役。どちらも無ければ null。</summary>
         public static IHudFactory HudFactory
         {
@@ -103,15 +112,17 @@ namespace Fps.Runtime
             _defaultHudFactory = factory ?? throw new ArgumentNullException(nameof(factory));
         }
 
-        /// <summary><see cref="HudFactory"/> で HUD を作る。</summary>
-        /// <exception cref="InvalidOperationException">生成役が登録されていないか、生成役が null を返した。</exception>
+        /// <summary>
+        /// <see cref="HudFactory"/> で HUD を作る。生成役が登録されていなければ null を返す
+        /// (既定の UI のアセンブリ Fps.Runtime.UI を入れずに使っても、例外で止めずに HUD 無しで進めるため)。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">登録された生成役が null を返した。</exception>
         public static IHud CreateHud(string objectName, Damageable player, WeaponController weapon, Match match)
         {
             var factory = HudFactory;
             if (factory == null)
             {
-                throw new InvalidOperationException(
-                    "no HUD factory is registered; register one with GameUi.HudFactory (the default UI registers itself before the scene loads)");
+                return null;
             }
 
             var hud = factory.Create(objectName, player, weapon, match);

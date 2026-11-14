@@ -30,33 +30,18 @@ namespace Fps.Runtime
 
         public const string LogTag = "[Player]";
 
-        public const float DefaultWalkSpeed = 5f;
-        public const float DefaultSprintSpeed = 8f;
-        public const float DefaultCrouchSpeed = 2.5f;
-        public const float DefaultJumpHeight = 1.2f;
-        public const float DefaultGravity = 20f;
-        public const float DefaultAirControl = 0.1f;
+        public const float DefaultWalkSpeed = MotorSpec.DefaultWalkSpeed;
+        public const float DefaultSprintSpeed = MotorSpec.DefaultSprintSpeed;
+        public const float DefaultCrouchSpeed = MotorSpec.DefaultCrouchSpeed;
+        public const float DefaultJumpHeight = MotorSpec.DefaultJumpHeight;
+        public const float DefaultGravity = MotorSpec.DefaultGravity;
+        public const float DefaultAirControl = MotorSpec.DefaultAirControl;
 
         /// <summary>しゃがみのカプセルの高さ (m)。立ち 2m・半径 0.5m のプレイヤーで、目は足元から 0.8m になる。</summary>
         public const float DefaultCrouchHeight = 1.2f;
 
-        [SerializeField, Min(0f), Tooltip("歩きの水平速度 (m/s)")]
-        private float _walkSpeed = DefaultWalkSpeed;
-
-        [SerializeField, Min(0f), Tooltip("ダッシュ中の水平速度 (m/s)")]
-        private float _sprintSpeed = DefaultSprintSpeed;
-
-        [SerializeField, Min(0f), Tooltip("しゃがみ中の水平速度 (m/s)。しゃがみ中はダッシュしない")]
-        private float _crouchSpeed = DefaultCrouchSpeed;
-
-        [SerializeField, Min(0f), Tooltip("ジャンプで到達する高さ (m)")]
-        private float _jumpHeight = DefaultJumpHeight;
-
-        [SerializeField, Min(0.01f), Tooltip("重力加速度の大きさ (m/s²)。下向きに適用する")]
-        private float _gravity = DefaultGravity;
-
-        [SerializeField, Range(0f, 1f), Tooltip("空中で水平速度を入力方向へ寄せる 1 フレームあたりの割合")]
-        private float _airControl = DefaultAirControl;
+        [SerializeField, Tooltip("移動の調整値。空なら Resources の MotorSettings、それも無ければ既定の値。ネット対戦の NetworkPlayerMotor と同じものを使う")]
+        private MotorSettings _motorSettings;
 
         [SerializeField, Min(0.01f), Tooltip("しゃがみのカプセルの高さ (m)。半径の 2 倍以上、立ちの高さ以下")]
         private float _crouchHeight = DefaultCrouchHeight;
@@ -119,12 +104,21 @@ namespace Fps.Runtime
             && _motor != null
             && _stance != null;
 
-        public float WalkSpeed => _walkSpeed;
-        public float SprintSpeed => _sprintSpeed;
-        public float CrouchSpeed => _crouchSpeed;
-        public float JumpHeight => _jumpHeight;
-        public float Gravity => _gravity;
-        public float AirControl => _airControl;
+        public MotorSettings MotorSettings
+        {
+            get => _motorSettings;
+            set => _motorSettings = value;
+        }
+
+        // 初期化の前でも、初期化したときに使われる値を返すため設定から作る。
+        public MotorSpec Spec => _motor != null ? _motor.Spec : MotorSettings.ResolveOrDefault(_motorSettings);
+
+        public float WalkSpeed => Spec.WalkSpeed;
+        public float SprintSpeed => Spec.SprintSpeed;
+        public float CrouchSpeed => Spec.CrouchSpeed;
+        public float JumpHeight => Spec.JumpHeight;
+        public float Gravity => Spec.Gravity;
+        public float AirControl => Spec.AirControl;
         public float CrouchHeight => _crouchHeight;
 
         /// <summary>
@@ -538,10 +532,10 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>シリアライズされた値から <see cref="MotorSpec"/> を作る。値が不正なら ArgumentOutOfRangeException。</summary>
+        /// <summary><see cref="MotorSettings"/> から <see cref="MotorSpec"/> を作る。値が不正なら ArgumentOutOfRangeException。</summary>
         public MotorSpec CreateSpec()
         {
-            return new MotorSpec(_walkSpeed, _sprintSpeed, _jumpHeight, _gravity, _airControl, _crouchSpeed);
+            return MotorSettings.Resolve(_motorSettings);
         }
 
         /// <summary>接地状態のログ。例: <c>[Player] grounded=true</c>。</summary>

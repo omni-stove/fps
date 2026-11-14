@@ -1,79 +1,73 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace Fps.Core
 {
     /// <summary>
-    /// <see cref="GameLanguage"/> の並び・保存する名前 (言語コード)・その言語自身での名前。
+    /// ゲームで選べる言語の一覧 (<see cref="GameLanguageList"/>) を引く先。一覧を返す関数を <see cref="Use"/> で受け取り、引くたびに呼ぶ。
+    /// ゲームでは Fps.Runtime の Localizer が Resources の一覧から作って渡す。引き先が無い・null を返すときは <see cref="GameLanguageList.BuiltIn"/>。
     /// </summary>
     public static class GameLanguages
     {
-        private const string _japaneseCode = "ja";
-        private const string _englishCode = "en";
+        private static Func<GameLanguageList> _source;
 
-        private static readonly GameLanguage[] _all = { GameLanguage.Japanese, GameLanguage.English };
+        /// <summary>今の引き先 (<see cref="Use"/> で渡した関数)。無ければ null。テストが差し替えて戻すのに使う。</summary>
+        public static Func<GameLanguageList> Source => _source;
+
+        /// <summary>一覧を返す関数を source にする。null なら外す (以後は <see cref="GameLanguageList.BuiltIn"/>)。</summary>
+        public static void Use(Func<GameLanguageList> source)
+        {
+            _source = source;
+        }
+
+        /// <summary>今の一覧。</summary>
+        public static GameLanguageList Current => _source?.Invoke() ?? GameLanguageList.BuiltIn;
 
         /// <summary>設定画面で切り替える順。</summary>
-        public static IReadOnlyList<GameLanguage> All { get; } = new ReadOnlyCollection<GameLanguage>(_all);
+        public static IReadOnlyList<GameLanguage> All => Current.Languages;
 
-        /// <summary>
-        /// 保存した設定と文字列表のファイル名 (ja.json / en.json) に使う言語コード。
-        /// enum の名前を変えても保存した形式とファイル名が変わらないよう、ここで固定する。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        /// <summary>保存した設定と文字列表のファイル名・フォルダー名 (ja.json・Localization/ja/) に使う言語コード。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">language が <c>default</c>。</exception>
         public static string Code(GameLanguage language)
         {
-            switch (language)
+            if (!language.IsDefined)
             {
-                case GameLanguage.Japanese:
-                    return _japaneseCode;
-                case GameLanguage.English:
-                    return _englishCode;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(language), language, "unknown game language");
+                throw new ArgumentOutOfRangeException(nameof(language), language, "the language has no code");
             }
+
+            return language.Code;
         }
 
-        /// <summary>言語コード code の言語。大文字小文字は区別し、知らないコードなら false。</summary>
+        /// <summary>言語コード code の、今の一覧にある言語。大文字小文字は区別し、一覧に無いコードなら false。</summary>
         public static bool TryParseCode(string code, out GameLanguage language)
         {
-            switch (code)
-            {
-                case _japaneseCode:
-                    language = GameLanguage.Japanese;
-                    return true;
-                case _englishCode:
-                    language = GameLanguage.English;
-                    return true;
-                default:
-                    language = default;
-                    return false;
-            }
+            return Current.TryFind(code, out language);
         }
 
         /// <summary>
-        /// その言語自身での名前。今の言語が読めない人でも自分の言語を見つけられるよう、文字列表からは引かない。
+        /// その言語自身での名前 (一覧の名前)。今の言語が読めない人でも自分の言語を見つけられるよう、文字列表からは引かない。
+        /// 一覧に無い言語なら言語コード。
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">language が <c>default</c>。</exception>
         public static string NativeName(GameLanguage language)
         {
-            switch (language)
-            {
-                case GameLanguage.Japanese:
-                    return "日本語";
-                case GameLanguage.English:
-                    return "English";
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(language), language, "unknown game language");
-            }
+            var code = Code(language);
+            return Current.TryGet(language, out var entry) ? entry.NativeName : code;
         }
 
-        /// <summary><see cref="All"/> の並びで language の次の言語。最後の次は最初に戻る。</summary>
+        /// <summary><see cref="All"/> の並びで language の次の言語。最後の次と、一覧に無い言語の次は最初に戻る。</summary>
         public static GameLanguage Next(GameLanguage language)
         {
-            var index = Array.IndexOf(_all, language);
-            return _all[(index + 1) % _all.Length];
+            var all = All;
+            for (var i = 0; i < all.Count; i++)
+            {
+                if (all[i] == language)
+                {
+                    return all[(i + 1) % all.Count];
+                }
+            }
+
+            return all[0];
         }
     }
 }

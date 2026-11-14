@@ -34,11 +34,14 @@ namespace Fps.Tests.EditMode
         {
             foreach (var language in GameLanguages.All)
             {
+                // Strings/<言語コード>.json は移す前の古いキーの置き場で、後から足した言語には無くてよい。
                 var path = Localizer.ResourcePathOf(language);
                 var asset = Resources.Load<TextAsset>(path);
-
-                Assert.That(asset, Is.Not.Null, path);
-                Assert.That(StringTable.TryParse(asset.text, null, out _, out var error), Is.True, $"{path}: {error}");
+                string error;
+                if (asset != null)
+                {
+                    Assert.That(StringTable.TryParse(asset.text, null, out _, out error), Is.True, $"{path}: {error}");
+                }
 
                 var settingsPath = Localizer.LayerFolderOf(language) + "/settings";
                 var settings = Resources.Load<TextAsset>(settingsPath);
@@ -135,14 +138,14 @@ namespace Fps.Tests.EditMode
             Assert.That(seen, Is.EqualTo(new[] { "Settings" }));
         }
 
-        [TestCase(SystemLanguage.Japanese, GameLanguage.Japanese)]
-        [TestCase(SystemLanguage.English, GameLanguage.English)]
-        [TestCase(SystemLanguage.French, GameLanguage.English)]
-        [TestCase(SystemLanguage.ChineseSimplified, GameLanguage.English)]
-        [TestCase(SystemLanguage.Unknown, GameLanguage.English)]
-        public void TheFirstLanguageFollowsTheOperatingSystem(SystemLanguage system, GameLanguage expected)
+        [TestCase(SystemLanguage.Japanese, "ja")]
+        [TestCase(SystemLanguage.English, "en")]
+        [TestCase(SystemLanguage.French, "en")]
+        [TestCase(SystemLanguage.ChineseSimplified, "en")]
+        [TestCase(SystemLanguage.Unknown, "en")]
+        public void TheFirstLanguageFollowsTheOperatingSystem(SystemLanguage system, string expected)
         {
-            Assert.That(Localizer.FromSystemLanguage(system), Is.EqualTo(expected));
+            Assert.That(Localizer.FromSystemLanguage(system), Is.EqualTo(new GameLanguage(expected)));
         }
 
         [Test]

@@ -612,34 +612,19 @@ namespace Fps.Net
             }
         }
 
-        /// <summary>歩きの水平速度 (m/s)。<see cref="NetworkPlayerMotor"/> が無ければ <see cref="PlayerController.DefaultWalkSpeed"/>。</summary>
-        public float WalkSpeed
-        {
-            get
-            {
-                var motor = ResolveMotor();
-                return motor != null ? motor.WalkSpeed : PlayerController.DefaultWalkSpeed;
-            }
-        }
+        /// <summary>歩きの水平速度 (m/s)。<see cref="NetworkPlayerMotor"/> が無ければ <see cref="MotorSettings"/> の値。</summary>
+        public float WalkSpeed => ResolveMotorSpec().WalkSpeed;
 
-        /// <summary>ダッシュ中の水平速度 (m/s)。<see cref="NetworkPlayerMotor"/> が無ければ <see cref="PlayerController.DefaultSprintSpeed"/>。</summary>
-        public float SprintSpeed
-        {
-            get
-            {
-                var motor = ResolveMotor();
-                return motor != null ? motor.SprintSpeed : PlayerController.DefaultSprintSpeed;
-            }
-        }
+        /// <summary>ダッシュ中の水平速度 (m/s)。<see cref="NetworkPlayerMotor"/> が無ければ <see cref="MotorSettings"/> の値。</summary>
+        public float SprintSpeed => ResolveMotorSpec().SprintSpeed;
 
-        /// <summary>しゃがみ中の水平速度 (m/s)。<see cref="NetworkPlayerMotor"/> が無ければ <see cref="PlayerController.DefaultCrouchSpeed"/>。</summary>
-        public float CrouchSpeed
+        /// <summary>しゃがみ中の水平速度 (m/s)。<see cref="NetworkPlayerMotor"/> が無ければ <see cref="MotorSettings"/> の値。</summary>
+        public float CrouchSpeed => ResolveMotorSpec().CrouchSpeed;
+
+        private MotorSpec ResolveMotorSpec()
         {
-            get
-            {
-                var motor = ResolveMotor();
-                return motor != null ? motor.CrouchSpeed : PlayerController.DefaultCrouchSpeed;
-            }
+            var motor = ResolveMotor();
+            return motor != null ? motor.Spec : MotorSettings.ResolveOrDefault(null);
         }
 
         /// <summary>

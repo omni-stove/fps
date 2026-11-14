@@ -3,7 +3,6 @@ using System.Globalization;
 using Fps.Core;
 using Fps.Runtime;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace Fps.Net
 {
@@ -20,7 +19,7 @@ namespace Fps.Net
     /// <item><see cref="DeathCamera.Free"/>: 倒れた位置の上から、Move で向いている方へ飛び、Look で向きを変える。
     /// 壁の中には入らない (<see cref="ViewRig.ResolveFreeMove"/>)。</item>
     /// </list>
-    /// 壁にめり込まないよう縮めるのは <see cref="ViewRig.ResolveBoomPosition(Vector3, Vector3, Transform)"/> で決める。
+    /// カメラの置き方と入力はオフラインの <see cref="PlayerDeathCamera"/> と同じ <see cref="DeathCamView"/> に任せる。
     /// 映している間にルールが別の演出に変わったら、次のフレームからそちらで映す。
     /// <para>
     /// 映している間は <see cref="ViewRig"/> を三人称にして止め (カメラはこちらが置く)、視点操作 (<see cref="FirstPersonLook.InputSuspended"/>) と
@@ -33,7 +32,7 @@ namespace Fps.Net
     [RequireComponent(typeof(NetPlayer))]
     public sealed class NetDeathCamera : MonoBehaviour
     {
-        public const string LogTag = "[DeathCam]";
+        public const string LogTag = DeathCamView.LogTag;
 
         [SerializeField, Min(0f), Tooltip("倒れた目からカメラを持ち上げる高さ (m)")]
         private float _height = DeathCamFraming.DefaultHeight;
@@ -47,21 +46,8 @@ namespace Fps.Net
         private readonly DeathCamSwitch _switch = new DeathCamSwitch();
 
         private NetPlayer _player;
-        private ViewRig _rig;
-        private FirstPersonLook _look;
-        private AimDownSights _ads;
+        private DeathCamView _view;
         private bool _resolved;
-
-        // 映している間だけ使う。倒れた時点の目と体の向き、戻すための元の状態
-        private Camera _camera;
-        private Vector3 _deathEye;
-        private float _fallbackYaw;
-        private Vector3 _savedCameraLocalPosition;
-        private Quaternion _savedCameraLocalRotation;
-        private ViewMode _savedMode;
-        private bool _rigWasEnabled;
-        private bool _adsWasEnabled;
-        private bool _lookWasSuspended;
 
         // 映す相手。Id が変わったときだけ探し直す (見つからない Id を毎フレーム探さない)
         private ulong? _killerId;
@@ -75,19 +61,6 @@ namespace Fps.Net
         private NetPlayer _ally;
         private bool _allyResolved;
 
-        // Free (と、Ally で映せる味方がいないとき) のカメラ。切り替わった時点のカメラの位置と向きから始める
-        private readonly LookAngles _freeAngles = new LookAngles();
-        private Vector3 _freePosition;
-        private bool _freeActive;
-
-        // 映している間だけ読む入力。プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ戻す
-        private InputAction _moveAction;
-        private InputAction _nextAction;
-        private InputAction _previousAction;
-        private bool _enabledMoveAction;
-        private bool _enabledNextAction;
-        private bool _enabledPreviousAction;
-
         /// <summary>いま倒されてからのカメラを映しているか。</summary>
         public bool IsActive => _switch.IsActive;
 
@@ -95,10 +68,10 @@ namespace Fps.Net
         public ulong? KillerClientId => IsActive && _hasKiller ? _killerId : null;
 
         /// <summary>肩越しに映している味方のクライアント Id。映していないか、味方を映していなければ null。</summary>
-        public ulong? AllyClientId => IsActive && !_freeActive && _ally != null ? _allyId : null;
+        public ulong? AllyClientId => IsActive && !IsFreeCamera && _ally != null ? _allyId : null;
 
         /// <summary>いま自由カメラ (Free、または Ally で映せる味方がいないとき) で動かしているか。</summary>
-        public bool IsFreeCamera => IsActive && _freeActive;
+        public bool IsFreeCamera => IsActive && _view != null && _view.IsFreeCamera;
 
         public float Height
         {
@@ -142,10 +115,10 @@ namespace Fps.Net
                     Frame(ResolveKillerEye(match));
                     break;
                 case DeathCamera.Ally:
-                    WatchAlly(ReadSpectateStep());
+                    WatchAlly(_view.ReadSpectateStep());
                     break;
                 default:
-                    MoveFree(ReadMove(), ReadLookDegrees(), Time.deltaTime);
+                    MoveFree(_view.ReadMove(), _view.ReadLookDegrees(Time.deltaTime), Time.deltaTime);
                     break;
             }
         }
@@ -173,8 +146,9 @@ namespace Fps.Net
                 case DeathCamTransition.None:
                     break;
                 case DeathCamTransition.Started:
-                    Begin();
-                    Debug.Log(LogTag + " started on " + name + " (" + mode + ") at " + FormatPosition(_deathEye), this);
+                    ClearTargets();
+                    _view.Begin(_player.AimOrigin(), _player.transform.eulerAngles.y);
+                    Debug.Log(LogTag + " started on " + name + " (" + mode + ") at " + DeathCamView.FormatPosition(_view.DeathEye), this);
                     Frame(null);
                     break;
                 default:
@@ -192,19 +166,10 @@ namespace Fps.Net
         /// </summary>
         internal void Frame(Vector3? killerEye)
         {
-            if (!IsActive || _camera == null)
+            if (IsActive)
             {
-                return;
+                _view.Frame(killerEye, _height, _backDistance);
             }
-
-            _freeActive = false;
-            var target = killerEye ?? _deathEye;
-            var offset = DeathCamFraming.BoomOffset(
-                _deathEye.ToNumerics(), target.ToNumerics(), _fallbackYaw, _height, _backDistance).ToUnity();
-            var position = _rig != null ? _rig.ResolveBoomPosition(_deathEye, offset) : _deathEye + offset;
-            DeathCamFraming.LookAt(
-                position.ToNumerics(), target.ToNumerics(), _fallbackYaw, LookAngles.DefaultMaxPitch, out var yaw, out var pitch);
-            _camera.transform.SetPositionAndRotation(position, Quaternion.Euler(pitch, yaw, 0f));
         }
 
         /// <summary>
@@ -213,16 +178,10 @@ namespace Fps.Net
         /// </summary>
         internal void FrameAlly(Vector3 allyEye, float allyYaw, Transform allyRoot)
         {
-            if (!IsActive || _camera == null)
+            if (IsActive)
             {
-                return;
+                _view.FrameAlly(allyEye, allyYaw, allyRoot);
             }
-
-            _freeActive = false;
-            var shoulderOffset = _rig != null ? _rig.ThirdPersonOffset : ViewRig.DefaultThirdPersonOffset;
-            var desired = DeathCamFraming.ShoulderPosition(allyEye.ToNumerics(), allyYaw, shoulderOffset.ToNumerics()).ToUnity();
-            var position = _rig != null ? _rig.ResolveBoomPosition(allyEye, desired - allyEye, allyRoot) : desired;
-            _camera.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, allyYaw, 0f));
         }
 
         /// <summary>
@@ -232,26 +191,10 @@ namespace Fps.Net
         /// </summary>
         internal void MoveFree(Vector2 move, Vector2 lookDegrees, float deltaSeconds)
         {
-            if (!IsActive || _camera == null)
+            if (IsActive)
             {
-                return;
+                _view.MoveFree(move, lookDegrees, _freeSpeed, deltaSeconds);
             }
-
-            if (!_freeActive)
-            {
-                _freeActive = true;
-                var cameraTransform = _camera.transform;
-                _freePosition = cameraTransform.position;
-                var angles = cameraTransform.eulerAngles;
-                _freeAngles.Set(angles.y, angles.x);
-                Debug.Log(LogTag + " free camera on " + name + " from " + FormatPosition(_freePosition), this);
-            }
-
-            _freeAngles.Rotate(lookDegrees.x, lookDegrees.y);
-            var delta = DeathCamFraming.FreeMoveDelta(
-                move.ToNumerics(), _freeAngles.Yaw, _freeAngles.Pitch, _freeSpeed, Mathf.Max(0f, deltaSeconds)).ToUnity();
-            _freePosition = _rig != null ? _rig.ResolveFreeMove(_freePosition, delta) : _freePosition + delta;
-            _camera.transform.SetPositionAndRotation(_freePosition, Quaternion.Euler(_freeAngles.Pitch, _freeAngles.Yaw, 0f));
         }
 
         // 同期されている各プレイヤーのチームと生死から映す味方を選び、その肩越しへ置く。映せる味方がいなければ自由カメラにする
@@ -287,7 +230,7 @@ namespace Fps.Net
 
             if (SpectateTargets.ResolveMode(DeathCamera.Ally, _ally != null) == DeathCamera.Free)
             {
-                MoveFree(ReadMove(), ReadLookDegrees(), Time.deltaTime);
+                MoveFree(_view.ReadMove(), _view.ReadLookDegrees(Time.deltaTime), Time.deltaTime);
                 return;
             }
 
@@ -309,82 +252,10 @@ namespace Fps.Net
             return null;
         }
 
-        private void Begin()
-        {
-            _deathEye = _player.AimOrigin();
-            _fallbackYaw = _player.transform.eulerAngles.y;
-            ClearTargets();
-
-            _camera = _rig != null && _rig.Camera != null ? _rig.Camera : FirstPersonLook.FindChildCamera(transform);
-            if (_camera == null)
-            {
-                Debug.LogWarning(LogTag + " " + name + " has no camera; run Fps.Editor.NetSceneBuilder.Build", this);
-            }
-            else
-            {
-                _savedCameraLocalPosition = _camera.transform.localPosition;
-                _savedCameraLocalRotation = _camera.transform.localRotation;
-            }
-
-            if (_rig != null)
-            {
-                // カメラはこちらが置くので、ViewRig の LateUpdate に目からのオフセットへ戻させない
-                _rigWasEnabled = _rig.enabled;
-                _savedMode = _rig.Mode;
-                _rig.enabled = false;
-                _rig.Mode = ViewMode.ThirdPerson;
-                _rig.ApplyBodyVisibility(true);
-            }
-
-            if (_ads != null)
-            {
-                _adsWasEnabled = _ads.enabled;
-                _ads.enabled = false;
-            }
-
-            if (_look != null)
-            {
-                // 無効にするとカーソルのロックが外れてしまうので、入力だけ止める
-                _lookWasSuspended = _look.InputSuspended;
-                _look.InputSuspended = true;
-            }
-
-            AcquireActions();
-        }
-
         private void Restore()
         {
-            if (_camera != null)
-            {
-                _camera.transform.localPosition = _savedCameraLocalPosition;
-                _camera.transform.localRotation = _savedCameraLocalRotation;
-            }
-
             // 映している間に視点が無くなっていたら (プレイヤーが消えるときなど)、NetPlayer が止めた部品を有効に戻さない
-            var hasLocalView = _player != null && _player.HasLocalView;
-            if (_rig != null)
-            {
-                _rig.Mode = _savedMode;
-                _rig.enabled = _rigWasEnabled && hasLocalView;
-                _rig.ApplyBodyVisibility(_rig.enabled);
-                if (_rig.enabled && _rig.IsInitialized)
-                {
-                    _rig.UpdateCameraPosition();
-                }
-            }
-
-            if (_ads != null)
-            {
-                _ads.enabled = _adsWasEnabled && hasLocalView;
-            }
-
-            if (_look != null)
-            {
-                _look.InputSuspended = _lookWasSuspended;
-            }
-
-            ReleaseActions();
-            _camera = null;
+            _view.Restore(_player != null && _player.HasLocalView);
             ClearTargets();
         }
 
@@ -397,7 +268,6 @@ namespace Fps.Net
             _allyId = null;
             _ally = null;
             _allyResolved = false;
-            _freeActive = false;
         }
 
         // 試合の行から自分を倒した相手を引き、その目の位置を返す。相手がいない・見つからない・抜けたなら null (倒れた位置を見下ろす)
@@ -460,88 +330,6 @@ namespace Fps.Net
             return null;
         }
 
-        private int ReadSpectateStep()
-        {
-            var step = 0;
-            if (_nextAction != null && _nextAction.WasPressedThisFrame())
-            {
-                step++;
-            }
-
-            if (_previousAction != null && _previousAction.WasPressedThisFrame())
-            {
-                step--;
-            }
-
-            return step;
-        }
-
-        private Vector2 ReadMove()
-        {
-            return _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
-        }
-
-        private Vector2 ReadLookDegrees()
-        {
-            return _look != null ? _look.ReadLookDegrees(Time.deltaTime) : Vector2.zero;
-        }
-
-        private void AcquireActions()
-        {
-            // 画面なし (batchmode) や Edit Mode のテストでは入力が無い
-            if (!Application.isPlaying || Application.isBatchMode)
-            {
-                return;
-            }
-
-            var actions = InputSystem.actions;
-            if (actions == null)
-            {
-                Debug.LogWarning(LogTag + " project-wide input actions are not set; " + name + " cannot move the death camera", this);
-                return;
-            }
-
-            _moveAction = AcquireAction(actions, InputActionPaths.Move, ref _enabledMoveAction);
-            _nextAction = AcquireAction(actions, InputActionPaths.Next, ref _enabledNextAction);
-            _previousAction = AcquireAction(actions, InputActionPaths.Previous, ref _enabledPreviousAction);
-        }
-
-        private InputAction AcquireAction(InputActionAsset actions, string path, ref bool enabledHere)
-        {
-            var action = actions.FindAction(path);
-            if (action == null)
-            {
-                Debug.LogWarning(LogTag + " input action '" + path + "' was not found; " + name + " ignores it while dead", this);
-                return null;
-            }
-
-            if (!action.enabled)
-            {
-                action.Enable();
-                enabledHere = true;
-            }
-
-            return action;
-        }
-
-        private void ReleaseActions()
-        {
-            ReleaseAction(ref _moveAction, ref _enabledMoveAction);
-            ReleaseAction(ref _nextAction, ref _enabledNextAction);
-            ReleaseAction(ref _previousAction, ref _enabledPreviousAction);
-        }
-
-        private static void ReleaseAction(ref InputAction action, ref bool enabledHere)
-        {
-            if (enabledHere && action != null)
-            {
-                action.Disable();
-            }
-
-            enabledHere = false;
-            action = null;
-        }
-
         // Awake を経ない (Edit Mode のテストなど) ときも、使う時点で解決する
         private void EnsureResolved()
         {
@@ -552,16 +340,7 @@ namespace Fps.Net
 
             _resolved = true;
             _player = GetComponent<NetPlayer>();
-            _rig = GetComponent<ViewRig>();
-            _look = GetComponent<FirstPersonLook>();
-            _ads = GetComponent<AimDownSights>();
-        }
-
-        private static string FormatPosition(Vector3 position)
-        {
-            return "(" + position.x.ToString("F1", CultureInfo.InvariantCulture)
-                + ", " + position.y.ToString("F1", CultureInfo.InvariantCulture)
-                + ", " + position.z.ToString("F1", CultureInfo.InvariantCulture) + ")";
+            _view = new DeathCamView(this, "run Fps.Editor.NetSceneBuilder.Build");
         }
     }
 }

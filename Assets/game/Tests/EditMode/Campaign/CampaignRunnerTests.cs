@@ -444,6 +444,22 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TryBeginWithAppliesTheDeathCameraToThePlayer()
+        {
+            var scene = BuildScene();
+            var existing = scene.Player.gameObject.AddComponent<PlayerDeathCamera>();
+            var rules = NewRules("CampaignNormal", 0f, 0f, false, 1f);
+            rules.DeathCamera = DeathCamera.Free;
+            scene.Campaign.RulesDefinition = rules;
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+
+            BeginWithWorldQuietly(scene);
+
+            Assert.That(scene.Player.GetComponents<PlayerDeathCamera>(), Has.Length.EqualTo(1), "the bootstrap's death camera is reused");
+            Assert.That(existing.Mode, Is.EqualTo(DeathCamera.Free));
+        }
+
+        [Test]
         public void TryBeginWithAppliesTheDeathBodyToTargetsInTheScene()
         {
             var scene = BuildScene();

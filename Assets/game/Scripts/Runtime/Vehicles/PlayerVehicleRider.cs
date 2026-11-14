@@ -119,6 +119,7 @@ namespace Fps.Runtime
             && gameObject.activeInHierarchy
             && _mover != null
             && _mover.IsInitialized
+            && !_mover.IsControlHandedOff
             && (!_mover.IsMovementOverridden || ReferenceEquals(_mover.ActiveMovementOverride, this))
             && (_damageable == null || (!_damageable.IsDead && !_damageable.IsDowned));
 

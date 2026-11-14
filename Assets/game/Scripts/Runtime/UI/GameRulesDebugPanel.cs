@@ -419,7 +419,8 @@ namespace Fps.Runtime
             _container.style.paddingTop = Padding;
             _container.style.paddingBottom = Padding;
             _container.style.backgroundColor = BackgroundColor;
-            _container.style.maxHeight = Hud.ReferenceResolution.y - (ScreenMargin * 2f);
+            // 基準解像度の高さで上限を決めると、横長の画面で下が画面外に出るため、上下を両方固定する。
+            _container.style.bottom = ScreenMargin;
 
             var title = new Label("GameRules (F1)");
             title.style.fontSize = FontSize;

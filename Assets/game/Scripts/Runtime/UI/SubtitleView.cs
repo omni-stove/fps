@@ -12,6 +12,7 @@ namespace Fps.Runtime
     /// 同じ種類の合図は 1 行にまとめる。設定 (<see cref="ControlSettings.ShowSubtitles"/>) が Off の間は何も出さず、
     /// Off にしたら出している行を消す。向きは合図を受けたときに決め、後から振り向いても書き換えない。
     /// 字幕は聞こえない人の代わりの情報なので、HUD の量 (<see cref="HudVisibility"/>) では隠さない。
+    /// <see cref="SubtitleFeed.Spoken"/> (分隊の bot の応答など) は話した人ごとに 1 行で出す (<see cref="Show(SubtitleSpeech)"/>)。
     /// オフラインとオンラインで同じ HUD (<see cref="Hud.AddViews"/>) に付く。専用サーバーでは購読しない。
     /// </summary>
     [DisallowMultipleComponent]
@@ -49,6 +50,7 @@ namespace Fps.Runtime
             }
 
             SubtitleFeed.CuePlayed += Show;
+            SubtitleFeed.Spoken += Show;
             AppliedControlSettings.Changed += HandleSettingsChanged;
             _subscribed = true;
         }
@@ -58,6 +60,7 @@ namespace Fps.Runtime
             if (_subscribed)
             {
                 SubtitleFeed.CuePlayed -= Show;
+                SubtitleFeed.Spoken -= Show;
                 AppliedControlSettings.Changed -= HandleSettingsChanged;
                 _subscribed = false;
             }
@@ -83,6 +86,23 @@ namespace Fps.Runtime
             }
 
             if (_lines.Show(cue, _clock))
+            {
+                Refresh();
+            }
+        }
+
+        /// <summary>
+        /// speech (分隊の bot の応答など) を 1 行出す。同じ人の行は書き換える。
+        /// 設定の字幕 (<see cref="ShowsSubtitles"/>、音の字幕) が Off でも出す。話した内容は声の素材が無いと字幕でしか伝わらないので。
+        /// </summary>
+        public void Show(SubtitleSpeech speech)
+        {
+            if (speech.Speaker == null || speech.Text == null)
+            {
+                return;
+            }
+
+            if (_lines.Say(speech.Speaker, speech.Text, _clock))
             {
                 Refresh();
             }

@@ -29,7 +29,10 @@ namespace Fps.Core
         /// <summary>持っている武器の <see cref="Core.WeaponCategory"/> の値。持っていなければ <see cref="CharacterPose.NoWeapon"/>。</summary>
         public int WeaponCategory { get; }
 
-        public CharacterPoseParameters(float speed, bool crouch, bool aim, int cover, bool downed, bool dead, int weaponCategory)
+        /// <summary>スライディングの最中か。立つときは <see cref="Crouch"/> も立つので、滑る姿勢の無いリグはしゃがみで見せる。</summary>
+        public bool Slide { get; }
+
+        public CharacterPoseParameters(float speed, bool crouch, bool aim, int cover, bool downed, bool dead, int weaponCategory, bool slide = false)
         {
             if (!(speed >= 0f && speed <= CharacterPose.RunSpeedValue))
             {
@@ -53,6 +56,7 @@ namespace Fps.Core
             Downed = downed;
             Dead = dead;
             WeaponCategory = weaponCategory;
+            Slide = slide;
         }
 
         public bool Equals(CharacterPoseParameters other)
@@ -63,7 +67,8 @@ namespace Fps.Core
                 && Cover == other.Cover
                 && Downed == other.Downed
                 && Dead == other.Dead
-                && WeaponCategory == other.WeaponCategory;
+                && WeaponCategory == other.WeaponCategory
+                && Slide == other.Slide;
         }
 
         public override bool Equals(object obj)
@@ -83,7 +88,7 @@ namespace Fps.Core
 
         public override int GetHashCode()
         {
-            var flags = (Crouch ? 1 : 0) | (Aim ? 2 : 0) | (Downed ? 4 : 0) | (Dead ? 8 : 0);
+            var flags = (Crouch ? 1 : 0) | (Aim ? 2 : 0) | (Downed ? 4 : 0) | (Dead ? 8 : 0) | (Slide ? 16 : 0);
             return HashCode.Combine(Speed, flags, Cover, WeaponCategory);
         }
 
@@ -91,14 +96,15 @@ namespace Fps.Core
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "Speed={0:0.00} Crouch={1} Aim={2} Cover={3} Downed={4} Dead={5} WeaponCategory={6}",
+                "Speed={0:0.00} Crouch={1} Aim={2} Cover={3} Downed={4} Dead={5} WeaponCategory={6} Slide={7}",
                 Speed,
                 Crouch,
                 Aim,
                 Cover,
                 Downed,
                 Dead,
-                WeaponCategory);
+                WeaponCategory,
+                Slide);
         }
     }
 }

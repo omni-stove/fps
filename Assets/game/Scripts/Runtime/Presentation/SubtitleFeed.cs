@@ -18,6 +18,46 @@ namespace Fps.Runtime
         /// <summary>音の合図が鳴ったとき。</summary>
         public static event Action<SoundCueSource> CuePlayed;
 
+        /// <summary>誰か (分隊の bot の応答など) が話したとき。</summary>
+        public static event Action<SubtitleSpeech> Spoken;
+
+        /// <summary>
+        /// speaker が text (今の言語で組み立てた文) を話したことを知らせる。声の素材が無くても字幕は出す
+        /// (話した内容は音の合図と違い、字幕でしか伝わらないことがあるので)。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">speaker か text が null。</exception>
+        public static void Say(string speaker, string text)
+        {
+            if (speaker == null)
+            {
+                throw new ArgumentNullException(nameof(speaker));
+            }
+
+            if (text == null)
+            {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            var handlers = Spoken;
+            if (handlers == null)
+            {
+                return;
+            }
+
+            var speech = new SubtitleSpeech(speaker, text);
+            foreach (var handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<SubtitleSpeech>)handler)(speech);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
         /// <summary>
         /// kind の音を position で鳴らしたことを知らせる。position が null なら鳴らした本人の耳元の音 (向きを書かない)。
         /// audibleDistance (m) はその音が聞こえなくなる距離で、それより遠い人には字幕を出さない。
@@ -48,6 +88,7 @@ namespace Fps.Runtime
         public static void ClearSubscribers()
         {
             CuePlayed = null;
+            Spoken = null;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -74,5 +115,21 @@ namespace Fps.Runtime
 
         /// <summary>この距離 (m) より遠いと聞こえない。</summary>
         public float AudibleDistance { get; }
+    }
+
+    /// <summary><see cref="SubtitleFeed.Spoken"/> で渡す、話した人と話した文。</summary>
+    public readonly struct SubtitleSpeech
+    {
+        public SubtitleSpeech(string speaker, string text)
+        {
+            Speaker = speaker;
+            Text = text;
+        }
+
+        /// <summary>話した人。同じ人の字幕は 1 行にまとめる。</summary>
+        public string Speaker { get; }
+
+        /// <summary>出す文 (今の言語で組み立て済み)。</summary>
+        public string Text { get; }
     }
 }

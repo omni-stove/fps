@@ -23,6 +23,9 @@ namespace Fps.Net
         /// <summary>HUD に出す項目の量。クライアントの NetHud が <see cref="Fps.Runtime.IHud.ApplyDensity"/> に渡す。</summary>
         public HudDensity HudDensity;
 
+        // オーナーが印の要求を送るかを決めるのに使う。付けてよいかの判断はサーバーが同じ値でやり直す。
+        public Ping Ping;
+
         public NetMatchRules(DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve)
             : this(deathBody, deathCamera, respawnMode, infiniteReserve, Cover.Off, BlindFire.Off)
         {
@@ -49,7 +52,8 @@ namespace Fps.Net
             BlindFire blindFire,
             Dodge dodge,
             Vault vault,
-            HudDensity hudDensity = HudDensity.Full)
+            HudDensity hudDensity = HudDensity.Full,
+            Ping ping = Ping.Off)
         {
             DeathBody = deathBody;
             DeathCamera = deathCamera;
@@ -60,6 +64,7 @@ namespace Fps.Net
             Dodge = dodge;
             Vault = vault;
             HudDensity = hudDensity;
+            Ping = ping;
         }
 
         /// <summary><see cref="GameRules.Default"/> の値。サーバーから届く前と、試合を始められなかったときはこの値のまま。</summary>
@@ -76,6 +81,8 @@ namespace Fps.Net
 
         /// <summary>乗り越えを使えるか。</summary>
         public bool VaultEnabled => Vault == Vault.On;
+
+        public bool PingEnabled => Ping == Ping.On;
 
         /// <summary>rules のうちクライアントへ送る値を写す。</summary>
         public static NetMatchRules From(GameRules rules)
@@ -95,7 +102,8 @@ namespace Fps.Net
                 actions.BlindFire,
                 actions.Dodge,
                 actions.Vault,
-                rules.HudDensity);
+                rules.HudDensity,
+                actions.Ping);
         }
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer)
@@ -110,6 +118,7 @@ namespace Fps.Net
             serializer.SerializeValue(ref Dodge);
             serializer.SerializeValue(ref Vault);
             serializer.SerializeValue(ref HudDensity);
+            serializer.SerializeValue(ref Ping);
         }
 
         public bool Equals(NetMatchRules other)
@@ -122,7 +131,8 @@ namespace Fps.Net
                 && BlindFire == other.BlindFire
                 && Dodge == other.Dodge
                 && Vault == other.Vault
-                && HudDensity == other.HudDensity;
+                && HudDensity == other.HudDensity
+                && Ping == other.Ping;
         }
 
         public override bool Equals(object obj)
@@ -135,7 +145,7 @@ namespace Fps.Net
             // HashCode.Combine は 8 個までしか受け取らない。
             var hash = HashCode.Combine(
                 (int)DeathBody, (int)DeathCamera, (int)RespawnMode, InfiniteReserve, (int)Cover, (int)BlindFire, (int)Dodge, (int)Vault);
-            return HashCode.Combine(hash, (int)HudDensity);
+            return HashCode.Combine(hash, (int)HudDensity, (int)Ping);
         }
 
         public override string ToString()
@@ -143,7 +153,7 @@ namespace Fps.Net
             return "deathBody=" + DeathBody + " deathCamera=" + DeathCamera + " respawnMode=" + RespawnMode
                 + " infiniteReserve=" + (InfiniteReserve ? "true" : "false")
                 + " cover=" + Cover + " blindFire=" + BlindFire
-                + " dodge=" + Dodge + " vault=" + Vault + " hudDensity=" + HudDensity;
+                + " dodge=" + Dodge + " vault=" + Vault + " hudDensity=" + HudDensity + " ping=" + Ping;
         }
     }
 }

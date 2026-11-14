@@ -87,6 +87,7 @@ namespace Fps.Runtime
         private static readonly int DownedHash = Animator.StringToHash(CharacterPose.DownedParameter);
         private static readonly int DeadHash = Animator.StringToHash(CharacterPose.DeadParameter);
         private static readonly int WeaponCategoryHash = Animator.StringToHash(CharacterPose.WeaponCategoryParameter);
+        private static readonly int SlideHash = Animator.StringToHash(CharacterPose.SlideParameter);
 
         /// <summary>
         /// 置くリグのプレハブ。null なら <see cref="BuildRig"/> が Resources の <see cref="RigResourcePath"/> を読む。
@@ -428,7 +429,8 @@ namespace Fps.Runtime
                 cover,
                 _damageable != null && _damageable.IsDowned,
                 _damageable != null && _damageable.IsDead,
-                category);
+                category,
+                (_mover.MovementOverrideConditions & PlayerActionConditions.Sliding) != 0);
         }
 
         private CharacterPoseInput ReadEnemy()
@@ -578,6 +580,7 @@ namespace Fps.Runtime
             SetBool(DownedHash, parameters.Downed);
             SetBool(DeadHash, parameters.Dead);
             SetInt(WeaponCategoryHash, parameters.WeaponCategory);
+            SetBool(SlideHash, parameters.Slide);
         }
 
         // 無いパラメーターを渡すと毎フレーム警告が出るので、あるものだけに渡し、足りなければ一度だけ知らせる。
@@ -602,6 +605,7 @@ namespace Fps.Runtime
             AddIfMissing(missing, CharacterPose.DownedParameter, DownedHash);
             AddIfMissing(missing, CharacterPose.DeadParameter, DeadHash);
             AddIfMissing(missing, CharacterPose.WeaponCategoryParameter, WeaponCategoryHash);
+            AddIfMissing(missing, CharacterPose.SlideParameter, SlideHash);
             if (missing.Count > 0)
             {
                 Debug.LogWarning(

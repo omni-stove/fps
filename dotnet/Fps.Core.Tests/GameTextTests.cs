@@ -55,13 +55,13 @@ namespace Fps.Core.Tests
         {
             var table = new StringTable(new[]
             {
-                new KeyValuePair<string, string>("guardian.leader", "{0} リーダー {1}"),
+                new KeyValuePair<string, string>("mode.guardian.leader", "{0} リーダー {1}"),
                 new KeyValuePair<string, string>("hud.team.bravo", "BRAVO"),
             });
             GameText.Use(() => table);
             var args = new object[] { HudFormat.TeamName(Team.Bravo), "生存" };
 
-            Assert.That(GameText.Format("guardian.leader", args), Is.EqualTo("BRAVO リーダー 生存"));
+            Assert.That(GameText.Format("mode.guardian.leader", args), Is.EqualTo("BRAVO リーダー 生存"));
             Assert.That(args[0], Is.EqualTo(HudFormat.TeamName(Team.Bravo)));
         }
 

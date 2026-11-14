@@ -193,7 +193,7 @@ namespace Fps.Runtime
             _pendingEquips.Clear();
         }
 
-        protected override void AppendHudLines(List<string> lines)
+        protected override void AppendHudTexts(List<LocalizedText> lines)
         {
             var gunGame = GunGame;
             var player = LocalPlayer;

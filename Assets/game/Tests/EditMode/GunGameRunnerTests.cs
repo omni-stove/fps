@@ -151,7 +151,7 @@ namespace Fps.Tests.EditMode
             _runner.Tick(0f);
             KillBy(player, b, WeaponAssetBuilder.LauncherId);
             _runner.Tick(0f);
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "段 3/3 Handgun", GunGameText.Next(null) }));
+            Assert.That(hud.Lines, Is.EqualTo(new[] { "段 3/3 Handgun", "次: なし (この武器で倒せば勝ち)" }));
 
             LogAssert.Expect(LogType.Log, "[Mode] gungame finish player=0 weapon=Handgun");
             KillBy(player, a, WeaponAssetBuilder.HandgunId);

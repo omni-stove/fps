@@ -3,24 +3,28 @@ using System.Globalization;
 namespace Fps.Core
 {
     /// <summary>
-    /// ガンゲーム (<see cref="GunGame"/>) の HUD の行と <c>[Mode] gungame</c> のログの文言。段は 1 から数えて書く。
+    /// ガンゲーム (<see cref="GunGame"/>) の HUD の行 (表のキー <c>mode.gungame.*</c> の <see cref="LocalizedText"/>) と
+    /// <c>[Mode] gungame</c> のログの文言。段は 1 から数えて書く。
     /// </summary>
     public static class GunGameText
     {
         public const string LogPrefix = ModeLog.Tag + " gungame";
 
+        /// <summary>最後の段の人に出す、次の武器の HUD の行。</summary>
+        public static LocalizedText LastTier => new LocalizedText("mode.gungame.lastTier");
+
         /// <summary>今の段と武器の HUD の行。tier は 0 から数えた段で、最後の段を終えた人 (段の数) は最後の段として書く。</summary>
         /// <example><c>Tier(1, 3, "Launcher")</c> は <c>段 2/3 Launcher</c></example>
-        public static string Tier(int tier, int tierCount, string weaponName)
+        public static LocalizedText Tier(int tier, int tierCount, string weaponName)
         {
-            return GameText.Format("gunGame.tier", DisplayedTier(tier, tierCount), tierCount, Name(weaponName));
+            return new LocalizedText("mode.gungame.tier", DisplayedTier(tier, tierCount), tierCount, Name(weaponName));
         }
 
-        /// <summary>次の武器の HUD の行。最後の段なら (next が null) この武器で倒せば勝ちと書く。</summary>
+        /// <summary>次の武器の HUD の行。最後の段なら (next が null) <see cref="LastTier"/>。</summary>
         /// <example><c>Next("Handgun")</c> は <c>次: Handgun</c>、<c>Next(null)</c> は <c>次: なし (この武器で倒せば勝ち)</c></example>
-        public static string Next(string nextWeaponName)
+        public static LocalizedText Next(string nextWeaponName)
         {
-            return nextWeaponName == null ? GameText.Get("gunGame.lastTier") : GameText.Format("gunGame.next", Name(nextWeaponName));
+            return nextWeaponName == null ? LastTier : new LocalizedText("mode.gungame.next", Name(nextWeaponName));
         }
 
         /// <example><c>[Mode] gungame promote player=0 tier=2/3 weapon=Launcher</c></example>

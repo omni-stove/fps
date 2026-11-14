@@ -6,6 +6,17 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class TuningJsonTests
     {
+        private static readonly string[] _expectedGrenadeItemNames =
+        {
+            "fuseSeconds", "throwSeconds", "throwSpeed", "throwLiftSpeed",
+            "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter",
+        };
+
+        private static readonly string[] _expectedPingItemNames =
+        {
+            "lifetimeSeconds", "maxMarkers", "maxDistance", "enemyAimToleranceDegrees", "minIntervalSeconds",
+        };
+
         [Test]
         public void ReadsEveryGrenadeItem()
         {
@@ -65,20 +76,9 @@ namespace Fps.Core.Tests
         [Test]
         public void TheItemNamesAreTheConstructorArguments()
         {
-            Assert.That(TuningJson.GrenadeItemNames, Is.EqualTo(ExpectedGrenadeItemNames));
-            Assert.That(TuningJson.PingItemNames, Is.EqualTo(ExpectedPingItemNames));
+            Assert.That(TuningJson.GrenadeItemNames, Is.EqualTo(_expectedGrenadeItemNames));
+            Assert.That(TuningJson.PingItemNames, Is.EqualTo(_expectedPingItemNames));
         }
-
-        static readonly string[] ExpectedGrenadeItemNames =
-        {
-            "fuseSeconds", "throwSeconds", "throwSpeed", "throwLiftSpeed",
-            "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter",
-        };
-
-        static readonly string[] ExpectedPingItemNames =
-        {
-            "lifetimeSeconds", "maxMarkers", "maxDistance", "enemyAimToleranceDegrees", "minIntervalSeconds",
-        };
 
         [Test]
         public void AnInvalidValueNamesTheFileAndTheItem()

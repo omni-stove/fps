@@ -91,6 +91,10 @@ namespace Fps.Runtime
         void IVehicleRider.OnLeft(VehicleSeat seat, VehicleLeaveReason reason, Vector3 feetPosition, Quaternion rotation)
         {
             _vehicleSeat = null;
+
+            // 乗っている間に受けた吹き飛ばしと怯みは進まず残るので、降りるときに捨てる。
+            _flight.Clear();
+            _interruption.Clear();
             _vehicleHidden.Restore();
             SetCrouching(false);
             var baseOffset = _agent != null ? _agent.baseOffset : 0f;

@@ -523,6 +523,12 @@ namespace Fps.Runtime
             }
 
             _mover.UnregisterMovementOverride(this);
+            var knockback = GetComponent<KnockbackMovement>();
+            if (knockback != null)
+            {
+                knockback.ClearFlight();
+            }
+
             _camera.Restore();
             _hiddenBody.Restore();
             _hiddenViewmodel.Restore();

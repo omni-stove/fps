@@ -292,6 +292,30 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。
 
+## .NET のサーバー (移行中)
+
+Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠と、
+上の運用 (版の確認・drain・JSON のイベント) だけを行う。戦闘・ルール・移動・Bot・EOS はまだ無い。
+
+```sh
+make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
+FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
+```
+
+- 引数 (`-map`・`-drain-timeout`・`-log-format`・`-buildVersion`) と環境変数 (`FPS_SERVER_ADDRESS`・`FPS_SERVER_PORT`) は Unity のサーバーと同じ意味。
+  `-address` / `-port` が無ければ環境変数、それも無ければ `0.0.0.0` / `7777` で待ち受ける。引数と環境変数の両方で渡すと
+  `[Net] invalid arguments: -port is given more than once (FPS_SERVER_PORT is set too) ...` で終わる (終了コード 2)。
+- まだ動かせない `-transport eos`・`-register-lobby`・`-bots`・`-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
+- 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む (`-map` が無ければ `NetTest`)。作業ディレクトリの `server-data/`、
+  無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
+  ファイルは Unity の Editor から `make export-server-data` で書き出す。
+- 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
+- SIGTERM と SIGINT (Ctrl+C) で「試合が終わってから止める」と同じ drain に入り、同じログを出す。
+- 承認は `ConnectRequestMessage` の版と鍵を Netcode の承認データと同じ判定に通すので、断ったときのログ
+  (`[Net] rejected client <Id>: ...`) とクライアントへ送る理由は今と同じ。加えて、通信の手順の版 (`MatchProtocol.Version`) が違うクライアントを
+  `fps:rejected:protocol-mismatch` で断り、つないでから 10 秒以内に承認のデータを送らない接続を切る。
+  同じ鍵のクライアントがつなぎ直してきたら、前の接続を切る。
+
 ## CI でのリリース
 
 `v*` のタグを push すると `.github/workflows/server-image.yml` が専用サーバーをビルドし、

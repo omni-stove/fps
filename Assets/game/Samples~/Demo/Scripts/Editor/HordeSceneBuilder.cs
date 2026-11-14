@@ -319,10 +319,11 @@ namespace Fps.Editor
             SceneManager.MoveGameObjectToScene(baseRoot, context.Scene);
             CreateBaseMarker(baseRoot.transform);
 
+            var pieceVisualPrefab = DestructiblePieceVisual.Load();
             var built = new HordeFortification[Fortifications.Count];
             for (var i = 0; i < built.Length; i++)
             {
-                built[i] = CreateFortification(baseRoot.transform, Fortifications[i], destructionEnabled, pool);
+                built[i] = CreateFortification(baseRoot.transform, Fortifications[i], destructionEnabled, pool, pieceVisualPrefab);
             }
 
             runner.SetFortifications(built);
@@ -341,8 +342,8 @@ namespace Fps.Editor
             UnityEngine.Object.DestroyImmediate(marker.GetComponent<Collider>());
         }
 
-        private static HordeFortification CreateFortification(
-            Transform parent, HordeFortificationPlacement placement, bool destructionEnabled, DebrisPool pool)
+        public static HordeFortification CreateFortification(
+            Transform parent, HordeFortificationPlacement placement, bool destructionEnabled, DebrisPool pool, GameObject pieceVisualPrefab = null)
         {
             var root = new GameObject(placement.Name);
             root.transform.SetParent(parent, false);
@@ -362,7 +363,14 @@ namespace Fps.Editor
                         (row + 0.5f) * PieceSize.y,
                         0f);
                     DestructiblePiece.Create(
-                        root.transform, $"{placement.Name}-{column}-{row}", local, PieceSize, index, PieceMaxHealth, grounded: row == 0);
+                        root.transform,
+                        $"{placement.Name}-{column}-{row}",
+                        local,
+                        PieceSize,
+                        index,
+                        PieceMaxHealth,
+                        grounded: row == 0,
+                        visualPrefab: pieceVisualPrefab);
                     index++;
                 }
             }

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Fps.Core;
 using UnityEngine;
@@ -21,8 +23,14 @@ namespace Fps.Runtime
     {
         public const string LogTag = "[DeathCam]";
 
+        // 同じカメラを二つの持ち主 (死亡カメラとフォトモード) が続けて借りると、後の方が先の方の置いた位置と止めた ViewRig を
+        // 「元」として覚えてしまい戻せなくなる。カメラごとに今の借り手を覚え、後から借りる方が先の方を戻させる。
+        // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で空にする
+        private static readonly Dictionary<Camera, DeathCamView> _borrowers = new Dictionary<Camera, DeathCamView>();
+
         private readonly Component _owner;
         private readonly string _missingCameraHint;
+        private readonly bool _readsInput;
 
         private ViewRig _rig;
         private FirstPersonLook _look;
@@ -44,6 +52,9 @@ namespace Fps.Runtime
         private readonly LookAngles _freeAngles = new LookAngles();
         private Vector3 _freePosition;
         private bool _freeActive;
+        private float _freeRoll;
+        private Vector3 _freeLimitCenter;
+        private float? _freeLimitRadius;
 
         // 映している間だけ読む入力。プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ戻す
         private InputAction _moveAction;
@@ -56,9 +67,17 @@ namespace Fps.Runtime
         /// <param name="owner">カメラを持つプレイヤー。ログの名前と、ViewRig・FirstPersonLook・AimDownSights・カメラを探す起点に使う。</param>
         /// <param name="missingCameraHint">カメラが見つからないときの警告に添える、直し方の一言。</param>
         public DeathCamView(Component owner, string missingCameraHint)
+            : this(owner, missingCameraHint, true)
+        {
+        }
+
+        // readsInput を false にするのは、ポーズ画面が止めている共有の Move・Next・Previous を有効にすると、
+        // ポーズを閉じて戻したものを Restore で止め直してしまう持ち主 (フォトモード) のため
+        public DeathCamView(Component owner, string missingCameraHint, bool readsInput)
         {
             _owner = owner;
             _missingCameraHint = missingCameraHint ?? string.Empty;
+            _readsInput = readsInput;
             Resolve();
         }
 
@@ -73,6 +92,92 @@ namespace Fps.Runtime
 
         /// <summary>いま自由カメラで動かしているか。</summary>
         public bool IsFreeCamera => _engaged && _freeActive;
+
+        public float FreeRoll
+        {
+            get => _freeRoll;
+            set => _freeRoll = float.IsNaN(value) || float.IsInfinity(value) ? 0f : value;
+        }
+
+        public float? FreeLimitRadius => _freeLimitRadius;
+
+        public Vector3 FreeLimitCenter => _freeLimitCenter;
+
+        public void LimitFree(Vector3 center, float radius)
+        {
+            if (!(radius >= 0f) || float.IsInfinity(radius))
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(radius), radius, "radius must be finite and not negative");
+            }
+
+            _freeLimitCenter = center;
+            _freeLimitRadius = radius;
+        }
+
+        public void ClearFreeLimit()
+        {
+            _freeLimitRadius = null;
+        }
+
+        public event Action Preempted;
+
+        public static bool IsBorrowed(Camera camera)
+        {
+            return camera != null && _borrowers.TryGetValue(camera, out var borrower) && borrower._engaged;
+        }
+
+        // 死亡カメラは倒れたら必ず映すので先の借り手を戻させて借りるが、フォトモードのような後回しでよい持ち主は、
+        // 先に借りている方を邪魔しないようこちらで借りるのをやめる
+        public bool TryBegin(Vector3 deathEye, float fallbackYaw)
+        {
+            if (_engaged)
+            {
+                return true;
+            }
+
+            Resolve();
+            var camera = FindCamera();
+            if (camera != null && _borrowers.TryGetValue(camera, out var other) && other != this && other._engaged)
+            {
+                Debug.Log(LogTag + " " + _owner.name + "'s camera is already in use by " + other._owner.name + "; not borrowing it", _owner);
+                return false;
+            }
+
+            Begin(deathEye, fallbackYaw);
+            return true;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay()
+        {
+            _borrowers.Clear();
+        }
+
+        private Camera FindCamera()
+        {
+            return _rig != null && _rig.Camera != null ? _rig.Camera : FirstPersonLook.FindChildCamera(_owner.transform);
+        }
+
+        private void Preempt()
+        {
+            Debug.Log(LogTag + " another view took over " + _owner.name + "'s camera", _owner);
+            if (Preempted != null)
+            {
+                foreach (var handler in Preempted.GetInvocationList())
+                {
+                    try
+                    {
+                        ((Action)handler)();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e, _owner);
+                    }
+                }
+            }
+
+            Restore(true);
+        }
 
         /// <summary>
         /// カメラを借りる。deathEye は倒れた目の位置、fallbackYaw は向ける相手がいないときに使う体の向き (度)。
@@ -91,13 +196,20 @@ namespace Fps.Runtime
             _fallbackYaw = fallbackYaw;
             _freeActive = false;
 
-            _camera = _rig != null && _rig.Camera != null ? _rig.Camera : FirstPersonLook.FindChildCamera(_owner.transform);
+            _camera = FindCamera();
             if (_camera == null)
             {
                 Debug.LogWarning(LogTag + " " + _owner.name + " has no camera; " + _missingCameraHint, _owner);
             }
             else
             {
+                // 先の借り手を戻させてから、元の位置と ViewRig の状態を覚える
+                if (_borrowers.TryGetValue(_camera, out var previous) && previous != this && previous._engaged)
+                {
+                    previous.Preempt();
+                }
+
+                _borrowers[_camera] = this;
                 _savedCameraLocalPosition = _camera.transform.localPosition;
                 _savedCameraLocalRotation = _camera.transform.localRotation;
             }
@@ -168,8 +280,17 @@ namespace Fps.Runtime
             }
 
             ReleaseActions();
+
+            // 消えたカメラも Unity の == では null になるので、参照で比べて表から外す
+            if ((object)_camera != null && _borrowers.TryGetValue(_camera, out var borrower) && borrower == this)
+            {
+                _borrowers.Remove(_camera);
+            }
+
             _camera = null;
             _freeActive = false;
+            _freeRoll = 0f;
+            _freeLimitRadius = null;
         }
 
         /// <summary>
@@ -214,7 +335,8 @@ namespace Fps.Runtime
         /// <summary>
         /// 自由カメラを 1 フレーム動かす。直前まで自由カメラでなければ、今のカメラの位置と向きから始める。
         /// lookDegrees (x は正で右、y は正で上) だけ回してから、move (Move 入力) で向いている方へ speed (m/s) で進め、
-        /// 壁の手前で止める (<see cref="ViewRig.ResolveFreeMove"/>)。借りていなければ何もしない。
+        /// 壁の手前で止める (<see cref="ViewRig.ResolveFreeMove"/>)。<see cref="LimitFree"/> していればその球の中に収め、
+        /// 向きには <see cref="FreeRoll"/> の傾きを付ける。借りていなければ何もしない。
         /// </summary>
         public void MoveFree(Vector2 move, Vector2 lookDegrees, float speed, float deltaSeconds)
         {
@@ -236,8 +358,25 @@ namespace Fps.Runtime
             _freeAngles.Rotate(lookDegrees.x, lookDegrees.y);
             var delta = DeathCamFraming.FreeMoveDelta(
                 move.ToNumerics(), _freeAngles.Yaw, _freeAngles.Pitch, Mathf.Max(0f, speed), Mathf.Max(0f, deltaSeconds)).ToUnity();
+            if (_freeLimitRadius.HasValue)
+            {
+                // 壁の判定より前に縮めておくと、範囲の外へ向かう分で壁沿いに滑ることがない
+                delta = ClampToFreeLimit(_freePosition + delta) - _freePosition;
+            }
+
             _freePosition = _rig != null ? _rig.ResolveFreeMove(_freePosition, delta) : _freePosition + delta;
-            _camera.transform.SetPositionAndRotation(_freePosition, Quaternion.Euler(_freeAngles.Pitch, _freeAngles.Yaw, 0f));
+            if (_freeLimitRadius.HasValue)
+            {
+                // 壁に沿って滑った分や、範囲の外から始めた分で出ないよう、置く前にもう一度収める
+                _freePosition = ClampToFreeLimit(_freePosition);
+            }
+
+            _camera.transform.SetPositionAndRotation(_freePosition, Quaternion.Euler(_freeAngles.Pitch, _freeAngles.Yaw, _freeRoll));
+        }
+
+        private Vector3 ClampToFreeLimit(Vector3 position)
+        {
+            return PhotoModeSpec.ClampWithin(position.ToNumerics(), _freeLimitCenter.ToNumerics(), _freeLimitRadius.Value).ToUnity();
         }
 
         /// <summary>このフレームの Next と Previous の押下をまとめた数。Next で +1、Previous で -1。</summary>
@@ -303,7 +442,7 @@ namespace Fps.Runtime
         private void AcquireActions()
         {
             // 画面なし (batchmode) や Edit Mode のテストでは入力が無い
-            if (!Application.isPlaying || Application.isBatchMode)
+            if (!_readsInput || !Application.isPlaying || Application.isBatchMode)
             {
                 return;
             }

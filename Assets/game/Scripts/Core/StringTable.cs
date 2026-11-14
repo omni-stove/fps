@@ -138,6 +138,32 @@ namespace Fps.Core
         }
 
         /// <summary>
+        /// <see cref="LocalizedText"/> を文にする。入れ子の文は先にこの表で文にして <see cref="Format"/> に渡す。
+        /// <see cref="LocalizedText.Literal"/> はその文字列、<c>default</c> は空文字、表に無いキーは引数を使わずキーそのものを返す。
+        /// </summary>
+        public string Resolve(LocalizedText text)
+        {
+            if (text.IsEmpty)
+            {
+                return string.Empty;
+            }
+
+            if (text.IsLiteral || !_entries.ContainsKey(text.Key))
+            {
+                return text.IsLiteral ? text.Key : Get(text.Key);
+            }
+
+            var args = text.Args;
+            var values = new object[args.Count];
+            for (var i = 0; i < values.Length; i++)
+            {
+                values[i] = args[i] is LocalizedText nested ? Resolve(nested) : args[i];
+            }
+
+            return Format(text.Key, values);
+        }
+
+        /// <summary>
         /// template が差し込む番号を小さい順に重なり無く返す。言語ごとの表で同じキーが同じ値を使っているかを確かめるためのもの。
         /// </summary>
         public static IReadOnlyList<int> PlaceholdersOf(string template)

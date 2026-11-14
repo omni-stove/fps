@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Fps.Core;
+using Fps.Core.Navigation;
 using Fps.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -152,6 +153,13 @@ namespace Fps.Editor
                     WriteFile(path, map);
                     written.Add(path);
                     Debug.Log(LogTag + " wrote " + path + " from " + scenePath + " (" + Describe(map) + ")");
+
+                    var navMesh = NavMeshExporter.Capture(scene);
+                    var navMeshPath = Path.Combine(outputDirectory, MapName(scenePath) + NavMeshFile.Extension);
+                    NavMeshExporter.Write(navMesh, navMeshPath);
+                    written.Add(navMeshPath);
+                    Debug.Log(NavMeshExporter.LogTag + " wrote " + navMeshPath + " from " + scenePath + " (" + navMesh.Vertices.Count
+                        + " vertices, " + navMesh.Triangles.Count + " triangles, " + navMesh.Links.Count + " links)");
                 }
             }
             finally
@@ -211,7 +219,9 @@ namespace Fps.Editor
                 kept.Add(Path.GetFullPath(path));
             }
 
-            foreach (var path in Directory.GetFiles(outputDirectory, "*" + FileExtension))
+            var files = new List<string>(Directory.GetFiles(outputDirectory, "*" + FileExtension));
+            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NavMeshFile.Extension));
+            foreach (var path in files)
             {
                 if (kept.Contains(Path.GetFullPath(path)))
                 {

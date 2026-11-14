@@ -175,9 +175,7 @@ namespace Fps.Runtime.Traversal
             for (var i = 0; i < count; i++)
             {
                 var settings = NavMesh.GetSettingsByIndex(i);
-                var clearance = settings.agentRadius + LinkMargin;
-                var from = span.LinkBottom(clearance).ToUnity();
-                var to = span.LinkTop(clearance).ToUnity();
+                var (from, to) = LinkEnds(span, settings.agentRadius);
                 var data = new NavMeshLinkData
                 {
                     startPosition = from,
@@ -197,6 +195,19 @@ namespace Fps.Runtime.Traversal
             }
 
             return _links.Count;
+        }
+
+        public bool TryGetLinkEnds(float agentRadius, out Vector3 from, out Vector3 to)
+        {
+            if (!TryGetShape(out var span, out _))
+            {
+                from = default;
+                to = default;
+                return false;
+            }
+
+            (from, to) = LinkEnds(span, agentRadius);
+            return true;
         }
 
         /// <summary>張ったリンクをすべて外す。張っていなければ何もしない。</summary>
@@ -264,6 +275,12 @@ namespace Fps.Runtime.Traversal
 
         /// <summary>つかまれるはしごの一覧 (<see cref="Enabled"/>) に載っているか。</summary>
         public bool IsRegistered => _enabled.Contains(this);
+
+        private static (Vector3 From, Vector3 To) LinkEnds(LadderSpan span, float agentRadius)
+        {
+            var clearance = agentRadius + LinkMargin;
+            return (span.LinkBottom(clearance).ToUnity(), span.LinkTop(clearance).ToUnity());
+        }
 
         private void OnEnable()
         {

@@ -4,6 +4,7 @@
   "displayName": "FPS Kit",
   "description": "First-person shooter gameplay, modes, campaign and editor builders. Fps.Net compiles only when com.unity.netcode.gameobjects 2.14.0 or later is installed, and Fps.NetEos only when com.playeveryware.eos is installed as well.",
   "unity": "6000.6",
+  "documentationUrl": "https://github.com/omni-stove/fps/blob/main/Assets/game/README.md",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.14",
     "com.unity.inputsystem": "1.20.0",

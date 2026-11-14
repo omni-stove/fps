@@ -27,6 +27,7 @@ namespace Fps.Editor
         public const string LogTag = "[FpsKitRoot]";
 
         private const string WritablePrefix = "Assets/";
+        private const string PackagesPrefix = "Packages/";
 
         /// <summary>このプロジェクトの EditorPrefs の鍵。</summary>
         public static string PrefsKey => PrefsKeyPrefix + Application.dataPath;
@@ -61,6 +62,27 @@ namespace Fps.Editor
         public static string BundledPath(string relative)
         {
             return KitPaths.Combine(Bundled, relative);
+        }
+
+        /// <summary>
+        /// path が <c>Packages/</c> で始まればディスク上の絶対パス (区切りは /) に直し、そうでなければそのまま返す。
+        /// git や registry から入れたパッケージの実体は <c>Library/PackageCache/&lt;name&gt;@&lt;hash&gt;</c> にあり、
+        /// System.IO からは <c>Packages/&lt;name&gt;</c> が見えないので、Unity が解決する <see cref="System.IO.Path.GetFullPath(string)"/> を通す。
+        /// </summary>
+        public static string PhysicalPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return path;
+            }
+
+            var normalized = path.Replace('\\', '/');
+            if (!normalized.StartsWith(PackagesPrefix, StringComparison.Ordinal))
+            {
+                return path;
+            }
+
+            return System.IO.Path.GetFullPath(normalized).Replace('\\', '/');
         }
 
         /// <summary>

@@ -46,7 +46,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheSamplesLiveUnderTheBundledWeaponsFolder()
         {
-            Assert.That(WeaponJsonImporter.SampleFolder, Is.EqualTo("Assets/game/Weapons/Json"));
+            Assert.That(WeaponJsonImporter.SampleFolder, Is.EqualTo(FpsKitRoot.Bundled + "/Weapons/Json"));
             Assert.That(WeaponJsonImporter.DefaultOutputFolder, Is.EqualTo(WeaponAssetBuilder.Folder));
         }
 
@@ -148,7 +148,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AnInvalidValueNamesTheFileAndFieldAndSavesNothing()
         {
-            File.Copy(WeaponJsonImporter.SampleFolder + "/Rifle.json", Path.Combine(_jsonFolder, "A_Rifle.json"));
+            File.Copy(FpsKitRoot.PhysicalPath(WeaponJsonImporter.SampleFolder + "/Rifle.json"), Path.Combine(_jsonFolder, "A_Rifle.json"));
             WriteJson("B_Broken.json", SampleText("Handgun").Replace("\"magazineSize\": 12", "\"magazineSize\": 0"));
 
             var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ImportFrom(_jsonFolder, _folder, null));
@@ -332,7 +332,7 @@ namespace Fps.Tests.EditMode
 
         private static string SampleText(string name)
         {
-            return File.ReadAllText(WeaponJsonImporter.SampleFolder + "/" + name + ".json");
+            return File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponJsonImporter.SampleFolder + "/" + name + ".json"));
         }
 
         private static void AssertSameSpec(WeaponSpec actual, WeaponSpec expected)

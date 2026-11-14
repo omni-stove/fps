@@ -50,7 +50,8 @@ namespace Fps.Editor
         [MenuItem(MenuPath)]
         private static void ImportFromMenu()
         {
-            var start = Directory.Exists(SamplesFolder) ? SamplesFolder : Directory.GetCurrentDirectory();
+            var samples = FpsKitRoot.PhysicalPath(SamplesFolder);
+            var start = Directory.Exists(samples) ? samples : Directory.GetCurrentDirectory();
             var source = EditorUtility.OpenFolderPanel("Folder of game rules JSON", start, string.Empty);
             if (string.IsNullOrEmpty(source))
             {
@@ -156,7 +157,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// source がファイルならそれだけを、フォルダなら直下の <c>*.json</c> をファイル名の順 (序数比較) に返す。
-        /// 区切りは / に揃える。
+        /// 区切りは / に揃える。<c>Packages/</c> で始まる source は <see cref="FpsKitRoot.PhysicalPath"/> でディスク上のパスに直してから読む。
         /// </summary>
         /// <exception cref="ArgumentException">source が空・存在しない・.json でない、またはフォルダに .json が 1 つも無い。</exception>
         public static IReadOnlyList<string> FindJsonFiles(string source)
@@ -166,7 +167,7 @@ namespace Fps.Editor
                 throw new ArgumentException($"{LogTag} the game rules JSON path must not be empty", nameof(source));
             }
 
-            var trimmed = source.Trim().Replace('\\', '/').TrimEnd('/');
+            var trimmed = FpsKitRoot.PhysicalPath(source.Trim().Replace('\\', '/').TrimEnd('/'));
             if (File.Exists(trimmed))
             {
                 if (!trimmed.EndsWith(JsonExtension, StringComparison.OrdinalIgnoreCase))

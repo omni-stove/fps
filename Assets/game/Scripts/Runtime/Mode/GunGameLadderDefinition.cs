@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// ガンゲームの武器の並びをアセットとして持つ。<see cref="ToLadder"/> で Core の <see cref="GunGameLadder"/> に変換する。
-    /// 段の武器と近接の武器は <see cref="WeaponDefinition"/> で持ち、Id と名前はその <see cref="WeaponDefinition.ToSpec"/> から取る。
+    /// 段の武器と近接の武器は <see cref="WeaponDefinition"/> で持ち、Id と名前のキーはその <see cref="WeaponDefinition.ToSpec"/> から取る。
     /// 中身は Fps.Editor.GunGameSceneBuilder が作る。
     /// </summary>
     [CreateAssetMenu(fileName = "GunGameLadder", menuName = "Fps/Gun Game Ladder")]
@@ -61,7 +61,7 @@ namespace Fps.Runtime
             for (var i = 0; i < converted.Length; i++)
             {
                 var spec = ToSpec(source, "tier", i, tiers[i]);
-                converted[i] = new GunGameTier(spec.Id, spec.DisplayName);
+                converted[i] = new GunGameTier(spec.Id, spec.NameKey);
             }
 
             var melee = MeleeWeapons;

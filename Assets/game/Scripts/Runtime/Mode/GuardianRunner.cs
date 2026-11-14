@@ -115,7 +115,7 @@ namespace Fps.Runtime
             return session;
         }
 
-        protected override void AppendHudLines(List<string> lines)
+        protected override void AppendHudTexts(List<LocalizedText> lines)
         {
             if (_leaders == null || Session == null)
             {

@@ -8,19 +8,19 @@ namespace Fps.Net
 {
     /// <summary>
     /// オンラインのキルフィードの引き先。Id はプレイヤー Id (人はクライアント Id、Bot は Bot の Id) なので、名前は <see cref="BotRoster.KillFeedName"/>、
-    /// チームは試合の <see cref="NetTeamDeathmatch.Players"/>、武器の表示名は試合のロードアウト (グレネードは <see cref="GrenadeThrower.DisplayName"/>) から引き、
+    /// チームは試合の <see cref="NetTeamDeathmatch.Players"/>、武器の名前は試合のロードアウト (グレネードは <see cref="GrenadeThrower.Name"/>) から引き、
     /// 自分のクライアントの行を強調する。
     /// </summary>
     public sealed class NetKillFeedNames : IKillFeedNames
     {
         private readonly Func<int, Team?> _teamOf;
-        private readonly Func<string, string> _weaponNameOf;
+        private readonly Func<string, LocalizedText> _weaponNameOf;
         private readonly int? _localPlayerId;
 
         /// <param name="teamOf">プレイヤー Id のチーム。分からなければ null。null なら誰のチームも分からない。</param>
-        /// <param name="weaponNameOf">武器の Id の表示名。分からなければ空文字か null。null なら武器名を出さない。</param>
+        /// <param name="weaponNameOf">武器の Id の名前。分からなければ <c>default</c>。null なら武器名を出さない。</param>
         /// <param name="localPlayerId">この画面のプレイヤーの Id。無ければ null (どの行も強調しない)。</param>
-        public NetKillFeedNames(Func<int, Team?> teamOf, Func<string, string> weaponNameOf, int? localPlayerId)
+        public NetKillFeedNames(Func<int, Team?> teamOf, Func<string, LocalizedText> weaponNameOf, int? localPlayerId)
         {
             _teamOf = teamOf;
             _weaponNameOf = weaponNameOf;
@@ -46,7 +46,7 @@ namespace Fps.Net
         {
             var killer = NameOf(entry.KillerId);
             var victim = entry.IsSuicide ? killer : NameOf(entry.VictimId);
-            var weapon = entry.WeaponId.Length > 0 && _weaponNameOf != null ? _weaponNameOf(entry.WeaponId) : string.Empty;
+            var weapon = entry.WeaponId.Length > 0 && _weaponNameOf != null ? _weaponNameOf(entry.WeaponId) : default;
             return new KillFeedLine(entry, killer, victim, weapon);
         }
 
@@ -77,23 +77,23 @@ namespace Fps.Net
         }
 
         /// <summary>
-        /// 武器の Id の表示名を引く関数。グレネード (<see cref="GrenadeThrower.WeaponId"/>) はロードアウトに無いので先に <see cref="GrenadeThrower.DisplayName"/> にする。
-        /// プレイヤーはカタログの武器も選べるので、クライアントの射撃と同じく Loadout とカタログの両方から引く。どちらも無ければグレネード以外は空文字。
+        /// 武器の Id の名前 (<see cref="WeaponSpec.Name"/>) を引く関数。グレネード (<see cref="GrenadeThrower.WeaponId"/>) はロードアウトに無いので先に <see cref="GrenadeThrower.Name"/> にする。
+        /// プレイヤーはカタログの武器も選べるので、クライアントの射撃と同じく Loadout とカタログの両方から引く。どちらも無ければグレネード以外は <c>default</c>。
         /// </summary>
-        internal static Func<string, string> WeaponNames(LoadoutDefinition loadout, WeaponCatalogAsset catalog)
+        internal static Func<string, LocalizedText> WeaponNames(LoadoutDefinition loadout, WeaponCatalogAsset catalog)
         {
-            var names = new Dictionary<string, string>(StringComparer.Ordinal);
+            var names = new Dictionary<string, LocalizedText>(StringComparer.Ordinal);
             var warned = false;
             return id =>
             {
                 if (string.Equals(id, GrenadeThrower.WeaponId, StringComparison.Ordinal))
                 {
-                    return GrenadeThrower.DisplayName;
+                    return GrenadeThrower.Name;
                 }
 
                 if (loadout == null && catalog == null)
                 {
-                    return string.Empty;
+                    return default;
                 }
 
                 if (names.TryGetValue(id, out var cached))
@@ -103,8 +103,8 @@ namespace Fps.Net
 
                 if (NetTeamDeathmatch.TryFindWeaponSpec(loadout, catalog, id, out var spec, out var error))
                 {
-                    names[id] = spec.DisplayName;
-                    return spec.DisplayName;
+                    names[id] = spec.Name;
+                    return spec.Name;
                 }
 
                 if (!warned)
@@ -113,7 +113,7 @@ namespace Fps.Net
                     Debug.LogWarning(KillFeedView.LogTag + " cannot read weapon name '" + id + "': " + error);
                 }
 
-                return string.Empty;
+                return default;
             };
         }
     }

@@ -60,6 +60,38 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheSurvivalModeTextsAreReadFromTheJapaneseModesSurvivalTable()
+        {
+            var modes = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("modes-survival.json", StringComparison.Ordinal))
+                .Value;
+
+            foreach (var prefix in new[] { "mode.guardian.", "mode.gungame.", "mode.br." })
+            {
+                Assert.That(modes.Keys.Any(key => key.StartsWith(prefix, StringComparison.Ordinal)), Is.True, prefix);
+            }
+
+            Assert.That(modes.Get("mode.guardian.youAreLeader"), Is.EqualTo("あなたがリーダー"));
+            Assert.That(modes.Get("mode.br.noWeapon"), Is.EqualTo("武器なし: 落ちている武器を拾う"));
+        }
+
+        [Test]
+        public void TheWeaponNamesAreReadFromTheItemsTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var items = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("items.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(items.Get("weapon.rifle"), Is.EqualTo("Rifle"), code);
+                Assert.That(items.Get("weapon.handgun"), Is.EqualTo("Handgun"), code);
+                Assert.That(items.Get("weapon.launcher"), Is.EqualTo("Launcher"), code);
+            }
+        }
+
+        [Test]
         public void EveryLanguageHasAReadableTable()
         {
             foreach (var language in GameLanguages.All)

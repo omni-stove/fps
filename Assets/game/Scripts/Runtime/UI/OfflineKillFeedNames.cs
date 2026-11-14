@@ -7,7 +7,7 @@ namespace Fps.Runtime
     /// <summary>
     /// オフラインのキルフィードの引き先。Id (<see cref="CombatEvents.OfflineId"/>) を GameObject に戻し、名前はその
     /// <see cref="Damageable.Id"/> (無ければ GameObject の名前) にする。チームは無く、<see cref="Damageable.IsLocalPlayer"/> の人を強調する。
-    /// 武器の表示名は、倒した側が持っている武器 (プレイヤーは <see cref="WeaponController"/> の全武器、敵は <see cref="EnemyAgent.Weapon"/>) から引く。
+    /// 武器の名前 (<see cref="WeaponSpec.Name"/>) は、倒した側が持っている武器 (プレイヤーは <see cref="WeaponController"/> の全武器、敵は <see cref="EnemyAgent.Weapon"/>) から引く。
     /// </summary>
     public sealed class OfflineKillFeedNames : IKillFeedNames
     {
@@ -38,17 +38,17 @@ namespace Fps.Runtime
                 : new KillFeedName(gameObject.name, null, false);
         }
 
-        private static string WeaponNameOf(GameObject killer, string weaponId)
+        private static LocalizedText WeaponNameOf(GameObject killer, string weaponId)
         {
             if (killer == null || string.IsNullOrEmpty(weaponId))
             {
-                return string.Empty;
+                return default;
             }
 
             // グレネードはロードアウトの武器ではないので、持っている武器からは名前を引けない。
             if (string.Equals(weaponId, GrenadeThrower.WeaponId, StringComparison.Ordinal))
             {
-                return GrenadeThrower.DisplayName;
+                return GrenadeThrower.Name;
             }
 
             var controller = killer.GetComponentInChildren<WeaponController>(true);
@@ -59,7 +59,7 @@ namespace Fps.Runtime
                 {
                     if (weapon != null && IsWeapon(weapon.Spec, weaponId))
                     {
-                        return weapon.Spec.DisplayName;
+                        return weapon.Spec.Name;
                     }
                 }
             }
@@ -68,10 +68,10 @@ namespace Fps.Runtime
             var enemyWeapon = enemy != null ? enemy.Weapon : null;
             if (enemyWeapon != null && IsWeapon(enemyWeapon.Spec, weaponId))
             {
-                return enemyWeapon.Spec.DisplayName;
+                return enemyWeapon.Spec.Name;
             }
 
-            return string.Empty;
+            return default;
         }
 
         private static bool IsWeapon(WeaponSpec spec, string weaponId)

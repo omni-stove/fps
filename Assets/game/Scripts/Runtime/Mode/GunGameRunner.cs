@@ -153,17 +153,17 @@ namespace Fps.Runtime
 
             if (kill.Demoted)
             {
-                Debug.Log(GunGameText.Demote(kill.VictimId, kill.VictimTier, count, gunGame.GetWeapon(kill.VictimId).DisplayName), victim);
+                Debug.Log(GunGameText.Demote(kill.VictimId, kill.VictimTier, count, gunGame.GetWeapon(kill.VictimId).LogName), victim);
                 QueueEquip(victim);
             }
 
             if (kill.Finished)
             {
-                Debug.Log(GunGameText.Finish(kill.KillerId, gunGame.GetWeapon(kill.KillerId).DisplayName), killer);
+                Debug.Log(GunGameText.Finish(kill.KillerId, gunGame.GetWeapon(kill.KillerId).LogName), killer);
             }
             else if (kill.Promoted)
             {
-                Debug.Log(GunGameText.Promote(kill.KillerId, kill.KillerTier, count, gunGame.GetWeapon(kill.KillerId).DisplayName), killer);
+                Debug.Log(GunGameText.Promote(kill.KillerId, kill.KillerTier, count, gunGame.GetWeapon(kill.KillerId).LogName), killer);
                 QueueEquip(killer);
             }
         }
@@ -193,7 +193,7 @@ namespace Fps.Runtime
             _pendingEquips.Clear();
         }
 
-        protected override void AppendHudLines(List<string> lines)
+        protected override void AppendHudTexts(List<LocalizedText> lines)
         {
             var gunGame = GunGame;
             var player = LocalPlayer;
@@ -209,8 +209,8 @@ namespace Fps.Runtime
             }
 
             var next = gunGame.GetNextWeapon(id);
-            lines.Add(GunGameText.Tier(gunGame.GetTier(id), gunGame.Ladder.TierCount, gunGame.GetWeapon(id).DisplayName));
-            lines.Add(GunGameText.Next(next.HasValue ? next.Value.DisplayName : null));
+            lines.Add(GunGameText.Tier(gunGame.GetTier(id), gunGame.Ladder.TierCount, gunGame.GetWeapon(id).Name));
+            lines.Add(GunGameText.Next(next.HasValue ? next.Value.Name : default));
         }
 
         private void QueueEquip(SideMember member)
@@ -253,7 +253,7 @@ namespace Fps.Runtime
 
             if (changed)
             {
-                Debug.Log(GunGameText.Equip(id, tier, gunGame.Ladder.TierCount, gunGame.GetWeapon(id).DisplayName), member);
+                Debug.Log(GunGameText.Equip(id, tier, gunGame.Ladder.TierCount, gunGame.GetWeapon(id).LogName), member);
             }
         }
 

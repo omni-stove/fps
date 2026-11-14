@@ -1,0 +1,16 @@
+{
+  "mode.guardian.alive": "alive",
+  "mode.guardian.fallen": "down (no respawns)",
+  "mode.guardian.youAreLeader": "You are the leader",
+  "mode.guardian.noRespawnLeaderDown": "No respawn: your leader is down",
+  "mode.guardian.leader": "{0} leader {1}",
+  "mode.gungame.tier": "Tier {0}/{1} {2}",
+  "mode.gungame.next": "Next: {0}",
+  "mode.gungame.lastTier": "Next: none (a kill with this weapon wins)",
+  "mode.br.noWeapon": "No weapon: pick one up from the ground",
+  "mode.br.squadsLeft": "Squads left {0}/{1}",
+  "mode.br.placement": "Placed #{0}",
+  "mode.br.placementAtLeast": "In the top {0}",
+  "mode.br.squad": "Squad alive {0}",
+  "mode.br.squadPlace": "{0} #{1}"
+}

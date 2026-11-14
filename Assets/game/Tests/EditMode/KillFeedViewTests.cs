@@ -67,7 +67,7 @@ namespace Fps.Tests.EditMode
             Assert.That(line.Victim.Text, Is.EqualTo("Dummy-1"));
             Assert.That(line.Killer.Team, Is.Null);
             Assert.That(line.Highlighted, Is.True);
-            Assert.That(line.WeaponText, Is.EqualTo(KillFeedFormat.Weapon(string.Empty, true, false)));
+            Assert.That(line.WeaponText, Is.EqualTo(KillFeedFormat.Weapon(default, true, false)));
         }
 
         [Test]
@@ -208,7 +208,7 @@ namespace Fps.Tests.EditMode
         {
             public KillFeedLine Describe(KillFeedEntry entry)
             {
-                return new KillFeedLine(entry, NameOf(entry.KillerId), NameOf(entry.VictimId), entry.WeaponId.Length > 0 ? "Rifle" : string.Empty);
+                return new KillFeedLine(entry, NameOf(entry.KillerId), NameOf(entry.VictimId), entry.WeaponId.Length > 0 ? new LocalizedText("weapon.rifle") : default);
             }
 
             private static KillFeedName NameOf(int id)

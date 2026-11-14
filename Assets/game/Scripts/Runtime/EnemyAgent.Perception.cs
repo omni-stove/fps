@@ -147,6 +147,8 @@ namespace Fps.Runtime
                 return;
             }
 
+            Knockback.ApplyFromReport(self, report);
+
             // 撃った者が分からなくても、目標が見えていれば EnemyBrain はその位置から隠れられるので、撃たれたことは伝える。
             _pendingHit = true;
             if (report.SourcePosition.HasValue)

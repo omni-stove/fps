@@ -307,13 +307,16 @@ namespace Fps.Runtime
                 return false;
             }
 
+            // 倒れると体の当たり判定が隠され狙う点が動くので、向きはダメージの前に取る。
+            var push = target.AimPoint - center;
             var thrower = _thrower;
             using (CombatEvents.Attribute(thrower, GrenadeThrower.WeaponId))
             {
-                target.TakeDamage(damage, center, target.AimPoint - center, DamageKind.Explosion);
+                target.TakeDamage(damage, center, push, DamageKind.Explosion);
             }
 
             killedTarget = target.IsDead;
+            Knockback.Apply(target, DamageKind.Explosion, push, _explosion.StrengthAt(distance));
             Debug.Log(
                 string.Format(
                     CultureInfo.InvariantCulture,

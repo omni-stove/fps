@@ -77,7 +77,7 @@ namespace Fps.Protocol.Tests
             var reader = new MessageReader(writer.AsSegment());
             Assert.That(reader.ReadMessageId(), Is.EqualTo(EchoMessage.MessageId));
             var echo = new EchoMessage();
-            echo.Read(reader);
+            reader.ReadMessageBody(echo);
             Assert.That(echo.Text, Is.EqualTo("hi"));
             reader.ExpectEnd();
         }
@@ -223,6 +223,8 @@ namespace Fps.Protocol.Tests
             public string Text { get; set; }
 
             public ushort Id => MessageId;
+
+            public byte Version => 1;
 
             public void Write(MessageWriter writer)
             {

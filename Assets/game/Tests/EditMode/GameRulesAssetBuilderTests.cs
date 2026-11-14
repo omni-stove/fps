@@ -366,6 +366,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.Prone, Is.EqualTo(Prone.On));
             Assert.That(rules.Actions.Slide, Is.EqualTo(Slide.On));
             Assert.That(rules.Actions.Stagger, Is.EqualTo(Stagger.On));
+            Assert.That(rules.Actions.Suppression, Is.EqualTo(Suppression.On));
         }
 
         [Test]
@@ -373,6 +374,14 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(GameRulesAssetBuilder.RangeActions().Slide, Is.EqualTo(Slide.Off));
             Assert.That(GameRulesAssetBuilder.TeamDeathmatchActions().Slide, Is.EqualTo(Slide.Off));
+        }
+
+        [Test]
+        public void OnlyTheTpsRangeTurnsSuppressionOn()
+        {
+            Assert.That(GameRulesAssetBuilder.RangeActions().Suppression, Is.EqualTo(Suppression.Off));
+            Assert.That(GameRulesAssetBuilder.CampaignActions().Suppression, Is.EqualTo(Suppression.Off));
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchActions().Suppression, Is.EqualTo(Suppression.Off));
         }
 
         private static void AssertActions(ActionRules actual, ExpectedActions expected, string message)

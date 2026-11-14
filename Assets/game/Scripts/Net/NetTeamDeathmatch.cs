@@ -98,7 +98,7 @@ namespace Fps.Net
         private float _restartDelaySeconds = DefaultRestartDelaySeconds;
 
         [SerializeField, Min(1), Tooltip("プレイヤーの最大体力")]
-        private int _maxHealth = 100;
+        private int _maxHealth = Damageable.DefaultMaxHealth;
 
         [SerializeField, Min(0f), Tooltip("この距離 (m) 以内に敵がいる地点には、他に候補があればリスポーンしない")]
         private float _minEnemySpawnDistance = SpawnSelector.DefaultMinEnemyDistance;

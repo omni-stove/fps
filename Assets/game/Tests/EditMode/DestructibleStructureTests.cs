@@ -102,6 +102,22 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void APieceWithMoreHealthTakesMoreToBreak()
+        {
+            var structure = CreateGrid("Grid");
+            var sturdy = structure.Pieces[0];
+            sturdy.Initialize(sturdy.Index, 250, sturdy.Grounded, sturdy.Collider);
+            structure.Build();
+
+            Hit(structure, 0, DestructiblePiece.DefaultMaxHealth);
+            Hit(structure, 1, DestructiblePiece.DefaultMaxHealth);
+
+            Assert.That(structure.Integrity.Health(0), Is.EqualTo(250 - DestructiblePiece.DefaultMaxHealth));
+            Assert.That(structure.Integrity.IsDestroyed(0), Is.False, "the sturdier piece survives the hit that breaks a default one");
+            Assert.That(structure.Integrity.IsDestroyed(1), Is.True);
+        }
+
+        [Test]
         public void BreakingAPieceDisablesItsColliderRendererAndObstacleAndSpawnsFragments()
         {
             var structure = CreateGrid("Grid");

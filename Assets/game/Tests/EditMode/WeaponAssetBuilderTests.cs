@@ -499,6 +499,7 @@ namespace Fps.Tests.EditMode
             Assert.That(asset.RecoilPitchDegrees, Is.EqualTo(expected.RecoilPitchDegrees), message);
             Assert.That(asset.RecoilYawDegrees, Is.EqualTo(expected.RecoilYawDegrees), message);
             Assert.That(asset.RecoilRecoveryPerSecond, Is.EqualTo(expected.RecoilRecoveryPerSecond), message);
+            Assert.That(asset.RecoilRecoveryDelaySeconds, Is.EqualTo(expected.RecoilRecoveryDelaySeconds), message);
             Assert.That(asset.HipSpreadDegrees, Is.EqualTo(expected.HipSpreadDegrees), message);
             Assert.That(asset.AdsSpreadDegrees, Is.EqualTo(expected.AdsSpreadDegrees), message);
             Assert.That(asset.MoveSpreadDegrees, Is.EqualTo(expected.MoveSpreadDegrees), message);
@@ -507,6 +508,7 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(expected.RecoilPitchDegrees), message);
             Assert.That(spec.RecoilYawDegrees, Is.EqualTo(expected.RecoilYawDegrees), message);
             Assert.That(spec.RecoilRecoveryPerSecond, Is.EqualTo(expected.RecoilRecoveryPerSecond), message);
+            Assert.That(spec.RecoilRecoveryDelaySeconds, Is.EqualTo(expected.RecoilRecoveryDelaySeconds), message);
             Assert.That(spec.HipSpreadDegrees, Is.EqualTo(expected.HipSpreadDegrees), message);
             Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(expected.AdsSpreadDegrees), message);
             Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(expected.MoveSpreadDegrees), message);

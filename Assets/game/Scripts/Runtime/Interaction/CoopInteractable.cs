@@ -26,7 +26,7 @@ namespace Fps.Runtime
         public const string InteractActionPath = InputActionPaths.Interact;
 
         /// <summary>GameBootstrap がプレイヤーに付ける Unity 組み込みのタグ。</summary>
-        public const string DefaultPlayerTag = "Player";
+        public const string DefaultPlayerTag = ObjectiveAreaBase.DefaultPlayerTag;
 
         // 足元の位置が床に置いたトリガーの下の面にちょうど乗っても、浮動小数の誤差で外と判定しない程度の幅。
         private const float RangeToleranceMeters = 0.05f;

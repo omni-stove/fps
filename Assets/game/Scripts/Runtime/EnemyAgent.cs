@@ -567,6 +567,12 @@ namespace Fps.Runtime
                 ResolveTarget(force: false);
             }
 
+            // 乗っている間は NavMeshAgent を止めているので、止める処理 (MoveTo) を通る一時停止より先に見る。
+            if (HoldWhileRiding())
+            {
+                return;
+            }
+
             if (HoldWhileInterrupted(deltaSeconds))
             {
                 return;
@@ -747,6 +753,7 @@ namespace Fps.Runtime
                 ? hit.position
                 : groundPosition;
 
+            LeaveVehicleForReset();
             ClearPendingPerception();
             _interruption.Clear();
             _loggedCoverIndex = -1;
@@ -825,6 +832,7 @@ namespace Fps.Runtime
             _goal = null;
             _stuck.Reset();
             _agent.enabled = false;
+            LeaveVehicleOnDeath();
         }
     }
 }

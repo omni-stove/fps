@@ -326,6 +326,7 @@ namespace Fps.Runtime
                 grenades = player.GetComponent<GrenadeThrower>();
                 WireGrenades(grenades, mover, weapon, ads);
                 PlayerActions.Attach(player, rules);
+                AttachVehicleRider(player, mover, weapon);
                 mover.ApplyRules(rules);
 
                 // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
@@ -594,6 +595,26 @@ namespace Fps.Runtime
             GameUi.AttachActionDebug(player, reader);
             player.AddComponent<PlayerMockBody>().Bind(reader);
             return reader;
+        }
+
+        /// <summary>
+        /// 乗り物に乗る部品 (<see cref="PlayerVehicleRider"/>) を付ける。乗っている間に止める覗き込み・カバー・グレネードを拾うので、
+        /// それらを付けた後 (<see cref="PlayerActions.Attach"/> の後) に呼ぶ。Edit Mode では Awake が走らないのでここで渡す。
+        /// </summary>
+        private static void AttachVehicleRider(GameObject player, PlayerController mover, WeaponController weapon)
+        {
+            var rider = player.AddComponent<PlayerVehicleRider>();
+            if (rider.IsBound)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                throw new InvalidOperationException("PlayerVehicleRider could not resolve the player's components; see the error above");
+            }
+
+            rider.Bind(mover, weapon);
         }
 
         /// <summary>

@@ -108,6 +108,33 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlacesAParkedVehicleWhoseDriverExitIsBlocked()
+        {
+            var rules = NewRules(GameRulesAssetBuilder.TpsRangeRules());
+            TpsRangeSceneBuilder.PopulateScene(_scene, new[] { NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec()) }, rules);
+            Physics.SyncTransforms();
+
+            var vehicle = Find(TpsRangeSceneBuilder.VehicleName).GetComponent<Vehicle>();
+            Assert.That(vehicle, Is.Not.Null);
+            Assert.That(vehicle.transform.position, Is.EqualTo(TpsRangeSceneBuilder.VehicleOrigin));
+            Assert.That(vehicle.Seats, Has.Count.EqualTo(3));
+            Assert.That(vehicle.Seats[0].Role, Is.EqualTo(VehicleSeatRole.Driver));
+            Assert.That(vehicle.Seats[1].Role, Is.EqualTo(VehicleSeatRole.Passenger));
+            Assert.That(vehicle.Seats[1].ViewPoint, Is.Not.Null);
+            Assert.That(vehicle.Seats[2].Role, Is.EqualTo(VehicleSeatRole.Gunner));
+            Assert.That(vehicle.Seats[2].Pose, Is.EqualTo(VehicleSeatPose.Standing));
+            Assert.That(Find(TpsRangeSceneBuilder.VehicleExitBlockerName).GetComponent<BoxCollider>(), Is.Not.Null);
+
+            var rider = new GameObject("Rider").AddComponent<VehicleTestRider>();
+            SceneManager.MoveGameObjectToScene(rider.gameObject, _scene);
+            Assert.That(vehicle.TryEnter(rider, 0, requireInRange: false), Is.True);
+            Assert.That(vehicle.TryFindExit(vehicle.Seats[0], rider, out var feet, out _, out var candidate), Is.True);
+            Assert.That(candidate, Is.EqualTo(1), "the left exit is blocked, so the driver gets out on the right");
+            Assert.That(
+                Vector3.Distance(feet, TpsRangeSceneBuilder.VehicleOrigin + VehicleFixtureBuilder.RightExitLocal), Is.LessThan(Epsilon));
+        }
+
+        [Test]
         public void TheCoversAreOneLowAndOneHighAtLeast()
         {
             var low = 0;

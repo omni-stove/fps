@@ -40,5 +40,8 @@ namespace Fps.Core
 
         /// <summary>ダウンしている。</summary>
         Downed = 1 << 10,
+
+        /// <summary>乗り物の座席に座っている。</summary>
+        InVehicle = 1 << 11,
     }
 }

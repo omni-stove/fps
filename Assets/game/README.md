@@ -212,15 +212,17 @@ Editor からは **Fps > Import Weapons From JSON** でフォルダを選ぶ (�
 成功すると `[GameRulesJsonImporter] saved '...'` が出る。失敗したときの扱い (1 つも保存せず終了コード 1) は武器と同じ。
 Editor からは **Fps > Import Game Rules From JSON**。
 
-### グレネードと印の調整値
+### グレネード・印・吹き飛ばしの調整値
 
-グレネード (`GrenadeSpec`) と印 (`PingSpec`) の値は、取り込みをせずに Play の開始時に Resources の JSON から読む (`Fps.Runtime.KitTuning`)。
+グレネード (`GrenadeSpec`)・印 (`PingSpec`)・吹き飛ばし (`KnockbackSpec`) の値は、取り込みをせずに Play の開始時に Resources の JSON から読む (`Fps.Runtime.KitTuning`)。
 オフラインの `GrenadeThrower`・`PingController` も、ネット対戦のサーバー (`NetTeamDeathmatch.GrenadeSpec`・`PingSpec`) も同じ値を使う。
+吹き飛ばしはプレイヤーの `KnockbackMovement` と敵の `EnemyAgent` が使い、重さはプレイヤーが `playerWeight`、敵が `enemyWeight` を読む。
 
 | Resources のパス | 項目 (名前は Spec のコンストラクターの引数名。省いた項目は既定値) |
 | --- | --- |
 | `Tuning/grenade.json` | `fuseSeconds`・`throwSeconds`・`throwSpeed`・`throwLiftSpeed`・`maxDamage`・`damageRadius`・`fullDamageRadius`・`structureDamageAtCenter` |
 | `Tuning/ping.json` | `lifetimeSeconds`・`maxMarkers`・`maxDistance`・`enemyAimToleranceDegrees`・`minIntervalSeconds` |
+| `Tuning/knockback.json` | 力 (`KnockbackForce`) は種類 (`explosion`・`melee`・`charge`) を頭に付けて開く: `explosionSpeed`・`explosionUpwardRatio`・`explosionWeightFactor`・`meleeSpeed`・`meleeUpwardRatio`・`meleeWeightFactor`・`chargeSpeed`・`chargeUpwardRatio`・`chargeWeightFactor`。ほかは `minSpeed`・`minAirSeconds`・`maxAirSeconds`・`airControl`・`gravity`・`recoverSeconds`・`landingSnapRadius`・`playerWeight`・`enemyWeight` |
 
 ```json
 {
@@ -231,7 +233,7 @@ Editor からは **Fps > Import Game Rules From JSON**。
 
 - パッケージにも同じパスの JSON (今の既定値) が入っている (`Packages/com.omnistove.fps/Resources/Tuning/`)。利用側に同じパスのファイルを置くと
   どちらが読まれるか決まらないので、今はパッケージの JSON を書き換えるか、コードで `GrenadeThrower.ApplySpec`・`PingController.ApplySpec`・
-  `NetTeamDeathmatch.GrenadeSpec`・`PingSpec` に渡す。
+  `NetTeamDeathmatch.GrenadeSpec`・`PingSpec`、`KnockbackMovement`・`EnemyAgent` の `KnockbackSpec`・`KnockbackWeight` に渡す。
 - ファイルが無ければ既定値で動く。壊れている・値が不正なら `[Tuning]` 付きのエラーにファイル名と項目名を出し、既定値で続ける。
 - Play 中に生まれたコンポーネントは、Inspector の値をこの JSON の値で上書きする (Play 中に Inspector で変えた値はその後に効く)。
 

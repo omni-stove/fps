@@ -608,6 +608,12 @@ namespace Fps.Runtime
 
         private void Awake()
         {
+            // 無効なまま置かれた敵は Awake が有効になるまで遅れるので、その間にコードが渡した値を JSON で消さない。
+            if (Application.isPlaying)
+            {
+                ApplyKnockbackTuning(KitTuning.Knockback);
+            }
+
             if (!TryInitialize())
             {
                 enabled = false;

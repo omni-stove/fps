@@ -43,7 +43,9 @@ namespace Fps.Core
             float airControl = DefaultAirControl,
             float gravity = DefaultGravity,
             float recoverSeconds = DefaultRecoverSeconds,
-            float landingSnapRadius = DefaultLandingSnapRadius)
+            float landingSnapRadius = DefaultLandingSnapRadius,
+            float playerWeight = DefaultWeight,
+            float enemyWeight = DefaultWeight)
         {
             RequireNonNegativeFinite(minSpeed, nameof(minSpeed));
             RequireNonNegativeFinite(minAirSeconds, nameof(minAirSeconds));
@@ -52,6 +54,8 @@ namespace Fps.Core
             RequirePositiveFinite(gravity, nameof(gravity));
             RequirePositiveFinite(recoverSeconds, nameof(recoverSeconds));
             RequirePositiveFinite(landingSnapRadius, nameof(landingSnapRadius));
+            RequirePositiveFinite(playerWeight, nameof(playerWeight));
+            RequirePositiveFinite(enemyWeight, nameof(enemyWeight));
 
             // 着地を見始める前に打ち切ると、平らな床でも必ず打ち切りになる。
             if (minAirSeconds >= maxAirSeconds)
@@ -69,6 +73,8 @@ namespace Fps.Core
             Gravity = gravity;
             RecoverSeconds = recoverSeconds;
             LandingSnapRadius = landingSnapRadius;
+            PlayerWeight = playerWeight;
+            EnemyWeight = enemyWeight;
         }
 
         public KnockbackForce Explosion { get; }
@@ -90,6 +96,10 @@ namespace Fps.Core
         public float RecoverSeconds { get; }
 
         public float LandingSnapRadius { get; }
+
+        public float PlayerWeight { get; }
+
+        public float EnemyWeight { get; }
 
         // 銃弾は 1 発ごとに飛ばすと連射で浮き続けるので、種類の無いダメージ (落下など) と同じく飛ばさない。
         public KnockbackForce For(DamageKind kind)

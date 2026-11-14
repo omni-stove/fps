@@ -50,11 +50,48 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local
 [Net] server listening on 0.0.0.0:7777
 ```
 
-止めるときは `docker stop fps-server` (SIGTERM でサーバーが終了する)。
+止めるときは `docker stop -t 700 fps-server`。サーバーは SIGTERM を受けてもすぐには止まらず、今の試合が終わるのを待つ
+(次の「試合が終わってから止める」)。`-t` を付けないと docker は 10 秒で SIGKILL を送るので、試合の途中で落ちる。
 サーバーは止まる前につないでいるクライアントへ止まると知らせて切り (`[Net] server stopping; told <人数> client(s) and disconnected them`)、
 クライアントは「サーバーが止まりました。」を出してメインメニューに戻る。知らせが届かずに切れたとき (サーバーが落ちた・回線が切れた) は、
 クライアントは Netcode が切断に気づいたところで「サーバーからの応答が途絶えました (タイムアウト)。」を出して戻る。
 クライアントのログには `[Net] disconnected from server id=<Id> kind=ServerStopped connected=True reason="fps:server-stopped"` のように理由が出る。
+
+### 試合が終わってから止める
+
+専用サーバー (`-mode server`) は終了を求められると (SIGTERM。`docker stop`、`docker kill -s TERM`、`kill <PID>`)、
+「止まる準備中」になる。
+
+1. EOS のロビーに登録していれば (`-register-lobby`)、すぐにロビーを閉じ、クイックマッチで選ばれないようにする。
+2. 新しく来たクライアントを承認で断る。サーバーには `[Net] rejected client <Id>: the server is draining before it stops` が出て、
+   クライアントは「サーバーが止まる準備中のため参加できません。別のサーバーにつないでください。」を出してメインメニューに戻る
+   (ログは `kind=Rejected connected=False detail=server-draining reason="fps:rejected:server-draining"`)。
+3. 今の試合が終わるか、つないでいるクライアントがいなくなるか、`-drain-timeout <秒>` が過ぎたところで、
+   残っているクライアントへ止まると知らせて終了コード 0 で止まる。
+
+`-drain-timeout` を付けなければ 600 秒待つ。`-drain-timeout 0` なら待たずに止まる (上限は 3600 秒)。
+止まる準備中にもう一度 SIGTERM を受けると、試合を待たずにすぐ止まる。つないでいるクライアントがいない、または試合が終わって
+次の試合を待っているときは、最初の SIGTERM ですぐ止まる。ログには次のように出る。
+
+```
+[Net] stop requested; draining: refusing new players and waiting up to 600s for the match to end (players=1). Send the stop signal again to stop now
+[Lobby] unregistering id=<ロビー Id>
+[Net] draining: waiting for the match to end (players=1, 570s left)
+[Net] drain finished: the match ended; stopping with exit code 0
+```
+
+docker が SIGKILL を送るまでの猶予は、待つ秒数とロビーを閉じる時間 (最長 3 秒) より長くする。猶予はイメージでは決められないので、
+止める側で指定する。
+
+```sh
+docker stop -t 700 fps-server                                   # 止めるたびに指定する
+docker run --rm --stop-timeout 700 -p 7777:7777/udp fps-server:local   # コンテナを作るときに決めておく
+docker compose -f docker/server/compose.yaml stop                # stop_grace_period: 700s を書いてある
+docker kill -s TERM fps-server; docker kill -s TERM fps-server  # 2 回送るとすぐ止まる
+```
+
+`-drain-timeout` を変えたら猶予もそれに合わせる (例: `-drain-timeout 1800` なら `-t 1810` 以上)。
+Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 
 ### 手元のクライアントからつなぐ
 

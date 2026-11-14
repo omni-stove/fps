@@ -1,6 +1,6 @@
 namespace Fps.Core
 {
-    /// <summary><see cref="ConnectionApproval.Judge"/> の結果。</summary>
+    /// <summary><see cref="ConnectionApproval.Judge(string, byte[], bool)"/> の結果。</summary>
     public sealed class ConnectionVerdict
     {
         internal ConnectionVerdict(bool approved, string clientVersion, string rejoinKey, string rejectReason, string logText)

@@ -37,6 +37,12 @@ namespace Fps.Net
         public int Count => _keys.Count;
 
         /// <summary>
+        /// サーバーが止まる準備中なら true。誰も承認せず、<see cref="DisconnectNotice.ServerDrainingDetail"/> を理由に断る。
+        /// NetBootstrap が終了を求められたところで立てる。
+        /// </summary>
+        public bool Draining { get; internal set; }
+
+        /// <summary>
         /// このサーバーの版。これと同じ版のクライアントだけを入れる。<see cref="Attach"/> が入れる (テストでは直接入れる)。
         /// </summary>
         /// <exception cref="ArgumentException">正規化済みの版 (<see cref="ConnectionPayload.IsNormalizedVersion"/>) でない。</exception>
@@ -86,7 +92,7 @@ namespace Fps.Net
 
         /// <summary>
         /// 承認データの版が <see cref="ServerVersion"/> と同じなら承認してプレイヤーオブジェクトを作らせ、鍵を覚える。
-        /// 違う・読めなければ、理由の符号を <see cref="NetworkManager.ConnectionApprovalResponse.Reason"/> に入れて断る。
+        /// 違う・読めない・止まる準備中 (<see cref="Draining"/>) なら、理由の符号を <see cref="NetworkManager.ConnectionApprovalResponse.Reason"/> に入れて断る。
         /// NetworkManager が呼ぶ。テストでは直接呼ぶ。
         /// </summary>
         /// <exception cref="InvalidOperationException"><see cref="ServerVersion"/> がまだ無い。</exception>
@@ -97,7 +103,7 @@ namespace Fps.Net
                 throw new InvalidOperationException("NetConnectionKeys has no server version; attach it through NetworkSetup.Configure");
             }
 
-            var verdict = ConnectionApproval.Judge(_serverVersion, request.Payload);
+            var verdict = ConnectionApproval.Judge(_serverVersion, request.Payload, Draining);
             response.Pending = false;
             response.Approved = verdict.Approved;
             response.CreatePlayerObject = verdict.Approved;

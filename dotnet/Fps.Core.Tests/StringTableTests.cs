@@ -191,9 +191,38 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void MergeLetsTheLaterTableWin()
+        {
+            var first = Parse("{'a':'A1','b':'B1'}");
+            var second = Parse("{'b':'B2','c':'C2'}");
+
+            var merged = StringTable.Merge(new[] { first, second }, _warnings.Add);
+
+            Assert.That(merged.Get("a"), Is.EqualTo("A1"));
+            Assert.That(merged.Get("b"), Is.EqualTo("B2"));
+            Assert.That(merged.Get("c"), Is.EqualTo("C2"));
+            Assert.That(merged.Count, Is.EqualTo(3));
+            Assert.That(first.Get("b"), Is.EqualTo("B1"), "merging leaves the layers as they were");
+            Assert.That(second.Contains("a"), Is.False);
+        }
+
+        [Test]
+        public void MergeOfNothingIsEmptyAndWarnsThroughTheGivenSink()
+        {
+            var merged = StringTable.Merge(Array.Empty<StringTable>(), _warnings.Add);
+
+            Assert.That(merged.Count, Is.Zero);
+            Assert.That(merged.Get("x"), Is.EqualTo("x"));
+            Assert.That(_warnings, Has.Count.EqualTo(1));
+        }
+
+        [Test]
         public void RejectsNullArguments()
         {
             var table = Parse("{'a':'A'}");
+
+            Assert.Throws<ArgumentNullException>(() => StringTable.Merge(null));
+            Assert.Throws<ArgumentNullException>(() => StringTable.Merge(new[] { table, null }));
 
             Assert.Throws<ArgumentNullException>(() => StringTable.TryParse(null, null, out _, out _));
             Assert.Throws<ArgumentNullException>(() => new StringTable(null));

@@ -6,7 +6,8 @@ namespace Fps.NetEos
     /// <summary>
     /// 起動時に <see cref="EosP2PTransport"/> と <see cref="EosLobbyBackend"/> の作り方を
     /// <see cref="NetTransportFactories"/> へ登録する。
-    /// このフォルダは asmdef を持たず、自動参照される EOS plugin の SDK と一緒に Assembly-CSharp でコンパイルされる。
+    /// Fps.NetEos は com.unity.netcode.gameobjects と com.playeveryware.eos の両方があるときだけコンパイルされる。
+    /// 無ければ何も登録されず、Fps.Net は EOS を選ばれたときに「このビルドに無い」というエラーにする。
     /// </summary>
     public static class EosTransportInstaller
     {

@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// ロードアウトをアセットとして持つ。スロットの並び (各スロットが許す種別と入れる武器) と持ち替え秒数。
+    /// ロードアウトをアセットとして持つ。スロットの並び (各スロットが許す種別と入れる武器) と持ち替え秒数、能力の枠に入れる能力 (<see cref="Abilities"/>)。
     /// <see cref="ToRule"/> で Core の <see cref="LoadoutRule"/> に、<see cref="ToSpecs"/> でスロット順の <see cref="WeaponSpec"/> に変換する。
     /// ルールに合わない・武器が空・値が不正なときは、どのアセットかを添えて <see cref="WeaponDefinitionException"/> にする。
     /// </summary>
@@ -21,8 +21,23 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("武器を持ち替えるのにかかる秒数")]
         private float _switchSeconds = DefaultSwitchSeconds;
 
+        [SerializeField, Tooltip("能力の枠に入れる能力。i 番目は AbilityHost の i 番目の枠 (0 が Ability1) に入る。空の要素はその枠を空にする")]
+        private List<AbilityDefinition> _abilities = new List<AbilityDefinition>();
+
         /// <summary>スロット順の定義。中身を書き換えるときは <see cref="SetSlots"/> を使う。</summary>
         public IReadOnlyList<LoadoutSlotDefinition> Slots => _slots ??= new List<LoadoutSlotDefinition>();
+
+        /// <summary>
+        /// 枠の順の能力 (<see cref="AbilityHost.Equip(IReadOnlyList{AbilityDefinition})"/> に渡す)。空の枠は null。
+        /// 中身を書き換えるときは <see cref="SetAbilities"/> を使う。
+        /// </summary>
+        public IReadOnlyList<AbilityDefinition> Abilities => _abilities ??= new List<AbilityDefinition>();
+
+        /// <summary>能力をまとめて差し替える。null は空にする。渡した列は複製して持つ (能力のアセットは共有する)。</summary>
+        public void SetAbilities(IEnumerable<AbilityDefinition> abilities)
+        {
+            _abilities = abilities == null ? new List<AbilityDefinition>() : new List<AbilityDefinition>(abilities);
+        }
 
         /// <summary>武器を持ち替えるのにかかる秒数。<see cref="ToRule"/> が 0 以上の有限値かを確かめる。</summary>
         public float SwitchSeconds

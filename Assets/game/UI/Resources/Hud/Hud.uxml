@@ -25,6 +25,8 @@
         <ui:Label name="hud-weapon-name" text="" class="hud__weapon-name" picking-mode="Ignore" style="display: none;" />
         <!-- 残りのグレネードの数。GameBootstrap が GrenadeCountView を付け、ルールでグレネードを使うときだけ出す。 -->
         <ui:Label name="grenade-count" text="" class="grenade-count" picking-mode="Ignore" style="display: none;" />
+        <!-- 能力の枠ごとの回数と待ち時間。GameBootstrap が AbilitySlotsView を付け、行 (ability-slots__row) を入れる。ルールで能力を使い、枠に能力があるときだけ出す。 -->
+        <ui:VisualElement name="ability-slots" class="ability-slots" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-ammo-panel" class="hud__panel hud__panel--bottom-right" picking-mode="Ignore">
             <ui:Label text="#hud.caption.ammo" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-ammo" text="-- / --" class="hud__value" picking-mode="Ignore" />

@@ -1,0 +1,16 @@
+{
+    "name": "Fps.Protocol",
+    "rootNamespace": "Fps.Protocol",
+    "references": [
+        "Fps.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

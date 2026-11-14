@@ -20,6 +20,10 @@ namespace Fps.Core.Tests
             new SquadOrderCandidate(_mine, new Vector3(0f, 50f, 10f), true),
         };
 
+        private static readonly int[] _nearbyExpected = { 0, 4 };
+        private static readonly int[] _squadExpected = { 0, 2, 4 };
+        private static readonly int[] _edgeExpected = { 0 };
+
         [Test]
         public void WithoutSquadsOnlyNearbyAlliesAreOrdered()
         {
@@ -28,7 +32,7 @@ namespace Fps.Core.Tests
             var count = SquadOrderRecipients.Select(_mine, Vector3.Zero, false, 30f, _bots, recipients);
 
             Assert.That(count, Is.EqualTo(2));
-            Assert.That(recipients, Is.EqualTo(new[] { 0, 4 }), "the enemy, the far ally and the dead ally are left out; height does not count");
+            Assert.That(recipients, Is.EqualTo(_nearbyExpected), "the enemy, the far ally and the dead ally are left out; height does not count");
         }
 
         [Test]
@@ -38,7 +42,7 @@ namespace Fps.Core.Tests
 
             SquadOrderRecipients.Select(_mine, Vector3.Zero, true, 30f, _bots, recipients);
 
-            Assert.That(recipients, Is.EqualTo(new[] { 0, 2, 4 }));
+            Assert.That(recipients, Is.EqualTo(_squadExpected));
         }
 
         [Test]
@@ -48,7 +52,7 @@ namespace Fps.Core.Tests
 
             SquadOrderRecipients.Select(_mine, Vector3.Zero, false, 5f, _bots, recipients);
 
-            Assert.That(recipients, Is.EqualTo(new[] { 0 }));
+            Assert.That(recipients, Is.EqualTo(_edgeExpected));
         }
 
         [Test]

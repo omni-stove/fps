@@ -154,7 +154,7 @@ namespace Fps.Runtime
 
                     return true;
                 case BotErrandKind.Follow:
-                    if (_orderLeader == null)
+                    if (_orderLeader == null || !_orderLeader.IsAlive)
                     {
                         ClearOrder("LeaderGone");
                         return false;
@@ -178,7 +178,7 @@ namespace Fps.Runtime
                 _nextTargetSearch = 0f;
             }
 
-            if (leader == null)
+            if (leader == null || !leader.IsAlive)
             {
                 _orderLeader = null;
                 Debug.Log(SquadOrderLog.Done(Id, BotErrandKind.Attack, "TargetGone", BotErrandKind.None), this);

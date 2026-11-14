@@ -26,7 +26,7 @@ namespace Fps.Runtime
     {
         public const int DefaultEnemySideId = WaveSpawner.DefaultEnemySideId;
 
-        [SerializeField, Tooltip("波の敵を出す WaveSpawner。シーン生成スクリプトが配線する。BeginOnStart は切っておく")]
+        [SerializeField, RequiredReference, Tooltip("波の敵を出す WaveSpawner。シーン生成スクリプトが配線する。BeginOnStart は切っておく")]
         private WaveSpawner _spawner;
 
         [SerializeField, Tooltip("通貨で直す・置く防衛物。空ならシーンの HordeFortification をすべて使う")]

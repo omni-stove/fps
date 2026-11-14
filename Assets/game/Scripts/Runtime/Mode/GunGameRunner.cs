@@ -25,7 +25,7 @@ namespace Fps.Runtime
         public const float DefaultTimeLimitSeconds = 600f;
         public const float DefaultRespawnSeconds = 2f;
 
-        [SerializeField, Tooltip("武器の並び。シーン生成スクリプトが配線する")]
+        [SerializeField, RequiredReference, Tooltip("武器の並び。シーン生成スクリプトが配線する")]
         private GunGameLadderDefinition _ladder;
 
         [SerializeField, Min(1f), Tooltip("制限時間 (秒)。切れたら段のいちばん進んだ人の勝ち")]

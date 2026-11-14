@@ -34,7 +34,7 @@ namespace Fps.Editor
         [MenuItem(MenuPath)]
         public static void Export()
         {
-            // 一覧を渡す側は無いシーンを生成して開いているシーンを置き換えることがあるので、保存の確認と構成の控えはその前に済ませる
+            // 一覧を作る側 (シーンの自動生成) は保存の確認なしにシーンを開き直すので、確認と構成の控えはその前に済ませる
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
                 Debug.Log(LogTag + " export canceled");
@@ -57,6 +57,15 @@ namespace Fps.Editor
             finally
             {
                 RestoreSetup(setup);
+            }
+        }
+
+        private static void RestoreSetup(SceneSetup[] setup)
+        {
+            // Untitled のシーンは戻せないので、保存済みのシーンだけのときに開き直す
+            if (setup.Length > 0 && Array.TrueForAll(setup, s => !string.IsNullOrEmpty(s.path)))
+            {
+                EditorSceneManager.RestoreSceneManagerSetup(setup);
             }
         }
 
@@ -151,15 +160,6 @@ namespace Fps.Editor
             }
 
             return written;
-        }
-
-        private static void RestoreSetup(SceneSetup[] setup)
-        {
-            // Untitled のシーンは戻せないので、保存済みのシーンだけのときに開き直す
-            if (setup.Length > 0 && Array.TrueForAll(setup, s => !string.IsNullOrEmpty(s.path)))
-            {
-                EditorSceneManager.RestoreSceneManagerSetup(setup);
-            }
         }
 
         public static void WriteFile(string path, WorldMap map)

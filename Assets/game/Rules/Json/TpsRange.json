@@ -25,6 +25,7 @@
     "prone": "On",
     "mantle": "On",
     "stagger": "On",
+    "stealth": "On",
     "suppression": "On"
   },
   "spawnProtectionSeconds": 0,

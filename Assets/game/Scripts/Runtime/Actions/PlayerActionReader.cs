@@ -192,6 +192,7 @@ namespace Fps.Runtime
             Set(ref flags, PlayerActionConditions.Firing, weapon != null && PlayerActionState.IsFiringAfter(_secondsSinceShot, weapon.Spec.FireInterval));
             Set(ref flags, PlayerActionConditions.Reloading, weapon != null && weapon.IsReloading);
             Set(ref flags, PlayerActionConditions.Downed, _damageable.IsDowned);
+            Set(ref flags, PlayerActionConditions.Meleeing, IsMeleeing());
             flags |= _mover.MovementOverrideConditions;
 
             _current = new PlayerActionState(
@@ -203,6 +204,14 @@ namespace Fps.Runtime
                 weapon != null ? weapon.Spec.LogName : string.Empty,
                 _blindFire.SpreadDegrees);
             return _current;
+        }
+
+        // 近接攻撃は読み元の必須にしない (ルールで付く・付かないが決まり、Bind の後から付くこともある) ので、その都度探す。
+        // 踏み込みの間は横取りのビットでも立つが、踏み込んだ後の振りの残りの間も立てるためにここで読む。
+        private bool IsMeleeing()
+        {
+            var melee = GetComponent<MeleeController>();
+            return melee != null && melee.enabled && melee.IsSwinging;
         }
 
         private void OnFired(Weapon _)

@@ -28,7 +28,7 @@ namespace Fps.Runtime
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Camera))]
-    public sealed class WeaponController : MonoBehaviour, IWeaponHolder
+    public sealed partial class WeaponController : MonoBehaviour, IWeaponHolder
     {
         /// <summary>武器を手放したときのログ。</summary>
         public const string DisarmedLog = "[Combat] disarmed";
@@ -220,7 +220,7 @@ namespace Fps.Runtime
         public Func<bool> FireBlocker { get; set; }
 
         /// <summary><see cref="FireBlocker"/> が今の射撃を止めているか。</summary>
-        public bool IsFireBlocked => FireBlocker != null && FireBlocker();
+        public bool IsFireBlocked => (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
 
         /// <summary>
         /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous を読まない (武器の時間は進める)。
@@ -754,7 +754,7 @@ namespace Fps.Runtime
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (weapon == null || !weapon.TryStartReload())
+            if (weapon == null || IsReloadBlockedByModifier || !weapon.TryStartReload())
             {
                 return false;
             }
@@ -829,13 +829,14 @@ namespace Fps.Runtime
 
             var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
             var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
-            return SpreadPattern.ConeDegrees(spec, ads, move);
+            return SpreadPattern.ConeDegrees(spec, ads, move) * ModifierSpreadMultiplier();
         }
 
         /// <summary>今の武器の時間 (武器を持っていなければ進めない) と、<see cref="SpreadFraction"/> と <see cref="Recoil"/> の戻りを deltaSeconds 進める。</summary>
         public void Tick(float deltaSeconds)
         {
             EnsureInitialized();
+            CancelReloadBlockedByModifier();
             Weapon?.Tick(deltaSeconds);
             _recoil.Tick(deltaSeconds);
 

@@ -15,7 +15,8 @@ namespace Fps.Runtime
     /// <item>印は HUD の表示 (<see cref="IPingView"/>、<see cref="PingUi"/> が作る) に渡す。</item>
     /// <item>同じ陣営 (<see cref="SideMember"/>) のオフラインの bot は、印の付いた敵を優先して狙う (<see cref="IsMarkedFor"/>)。</item>
     /// </list>
-    /// 寿命・数の上限・届く距離・敵に吸い付く角度は Inspector の値から作る <see cref="Spec"/> に従う。ネット対戦では付けない (共有は別に扱う)。
+    /// 寿命・数の上限・届く距離・敵に吸い付く角度は Inspector の値から作る <see cref="Spec"/> に従う。ネット対戦では付けず、
+    /// <see cref="ShowShared"/> で受け取ったサーバーの印を出すだけにする (付けるのも追うのもサーバーで、ここで付けると味方と食い違うため)。
     /// </summary>
     // PlayerActionReader (DefaultExecutionOrder 100) がその LateUpdate で読んだ押下を、同じフレームのうちに使う。
     [DisallowMultipleComponent]
@@ -57,6 +58,8 @@ namespace Fps.Runtime
         private IPingView _view;
         private float _nextViewSearch;
         private PingRefusal _lastRefusal;
+        private SharedPingMarkers _shared;
+        private int _sharedVersion;
 
         /// <summary>印が付いた・動いた・消えたときに呼ばれる。表示が読み直す。</summary>
         public event Action<PingController> Changed;
@@ -72,7 +75,12 @@ namespace Fps.Runtime
         public PingSpec Spec => _spec ?? (_spec = CreateSpec());
 
         /// <summary>今ある印。古い順。</summary>
-        public IReadOnlyList<PingMarker> Markers => _board != null ? _board.Markers : (IReadOnlyList<PingMarker>)Array.Empty<PingMarker>();
+        public IReadOnlyList<PingMarker> Markers =>
+            _shared != null ? _shared.Markers
+            : _board != null ? _board.Markers
+            : (IReadOnlyList<PingMarker>)Array.Empty<PingMarker>();
+
+        public bool IsShared => _shared != null;
 
         /// <summary>最後に付けようとしたときに付けなかった理由。付けたら <see cref="PingRefusal.None"/>。</summary>
         public PingRefusal LastRefusal => _lastRefusal;
@@ -150,6 +158,7 @@ namespace Fps.Runtime
             var spec = CreateSpec();
             var cleared = _board != null ? _board.Clear(null) : 0;
             _targets.Clear();
+            _shared = null;
             _spec = spec;
             _board = new PingBoard(spec);
             _rule = rules.Actions.Ping;
@@ -166,6 +175,34 @@ namespace Fps.Runtime
             }
 
             Debug.Log(PingLog.Rule(_rule, spec), this);
+            Changed?.Invoke(this);
+        }
+
+        // 中身を写さずに参照で持つ。印はネットワークの知らせのたびに変わり、表示は Version の変化を見て読み直せば足りるため。
+        public void ShowShared(SharedPingMarkers markers)
+        {
+            if (markers == null)
+            {
+                throw new ArgumentNullException(nameof(markers));
+            }
+
+            var cleared = _board != null ? _board.Clear(null) : 0;
+            _targets.Clear();
+            _board = null;
+            _shared = markers;
+            _sharedVersion = markers.Version;
+            _rule = Fps.Core.Ping.On;
+            _configured = true;
+            _lastRefusal = PingRefusal.None;
+            _self = GetComponent<Damageable>();
+            _nextViewSearch = 0f;
+
+            if (cleared > 0)
+            {
+                Debug.Log(PingLog.Cleared(cleared), this);
+            }
+
+            Debug.Log(PingLog.Shared(), this);
             Changed?.Invoke(this);
         }
 
@@ -254,6 +291,17 @@ namespace Fps.Runtime
         /// </summary>
         public void Tick(float now)
         {
+            if (_shared != null)
+            {
+                if (_shared.Version != _sharedVersion)
+                {
+                    _sharedVersion = _shared.Version;
+                    Changed?.Invoke(this);
+                }
+
+                return;
+            }
+
             if (_board == null || _board.Count == 0)
             {
                 return;
@@ -315,6 +363,19 @@ namespace Fps.Runtime
         /// <summary>印をすべて消す。消したら <c>[Ping] cleared</c> をログに出す。</summary>
         public void ClearMarkers()
         {
+            if (_shared != null)
+            {
+                var sharedCount = _shared.Clear();
+                if (sharedCount > 0)
+                {
+                    _sharedVersion = _shared.Version;
+                    Debug.Log(PingLog.Cleared(sharedCount), this);
+                    Changed?.Invoke(this);
+                }
+
+                return;
+            }
+
             if (_board == null || _board.Count == 0)
             {
                 return;
@@ -328,6 +389,11 @@ namespace Fps.Runtime
 
         public bool TryGetMarker(int id, out PingMarker marker)
         {
+            if (_shared != null)
+            {
+                return _shared.TryGet(id, out marker);
+            }
+
             if (_board == null)
             {
                 marker = default;
@@ -454,13 +520,15 @@ namespace Fps.Runtime
                 return;
             }
 
-            if (_reader == null)
+            if (_reader == null && _shared == null)
             {
                 _reader = GetComponent<PlayerActionReader>();
             }
 
             // ポーズ画面のボタンを押したつもりで印が付かないよう、開いている間は読まない。
-            if (_reader != null
+            // サーバーの印を出しているときは、押すたびに断りのログを出さないよう読まない (入力はネットの側が送る)。
+            if (_shared == null
+                && _reader != null
                 && _reader.isActiveAndEnabled
                 && (_reader.PressedCommands & PlayerCommands.Ping) != 0
                 && !GameUi.IsPauseOpen)
@@ -489,6 +557,11 @@ namespace Fps.Runtime
 
         private bool CanPing()
         {
+            if (_shared != null)
+            {
+                return Refuse(PingRefusal.Remote);
+            }
+
             if (!UsesPing)
             {
                 return Refuse(PingRefusal.RuleOff);

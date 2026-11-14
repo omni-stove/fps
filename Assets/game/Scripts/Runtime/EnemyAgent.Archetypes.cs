@@ -14,6 +14,14 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("種類が Sniper のときに使う値")]
         private EnemySniperSettings _sniperSettings = new EnemySniperSettings();
 
+        [Header("Charger")]
+        [SerializeField, Tooltip("種類が Charger のときに使う値")]
+        private EnemyChargerSettings _chargerSettings = new EnemyChargerSettings();
+
+        [Header("Bomber")]
+        [SerializeField, Tooltip("種類が Bomber のときに使う値")]
+        private EnemyBomberSettings _bomberSettings = new EnemyBomberSettings();
+
         private bool _sprintAllowed = true;
         private float _gaitSpeedMultiplier = 1f;
         private float _shotDamageMultiplier = 1f;
@@ -83,10 +91,22 @@ namespace Fps.Runtime
             return _sniperSettings.ToSpec();
         }
 
+        private ChargerSpec CreateChargerSpec()
+        {
+            return _chargerSettings.ToSpec();
+        }
+
+        private BomberSpec CreateBomberSpec()
+        {
+            return _bomberSettings.ToSpec();
+        }
+
         private void CopyArchetypeSpecs(EnemySpec spec)
         {
             _shieldSettings.CopyFrom(spec.Shield);
             _sniperSettings.CopyFrom(spec.Sniper);
+            _chargerSettings.CopyFrom(spec.Charger);
+            _bomberSettings.CopyFrom(spec.Bomber);
         }
     }
 }

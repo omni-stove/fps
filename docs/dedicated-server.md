@@ -286,6 +286,8 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `match_started` | 両チームがそろって試合が始まった | `matchId`、`players` (試合に入っている人数) |
 | `kill` | プレイヤーが倒された | `matchId`、`killerId`、`killerProductUserId`、`victimId`、`victimProductUserId`、`teamKill` (味方に倒されたなら `true`)。自滅では `killerId` と `victimId` が同じ |
 | `match_ended` | 試合が終わった | `matchId`、`winner` (`Alpha` / `Bravo`、引き分けなら `draw`)、`scoreAlpha`、`scoreBravo` |
+| `ping_placed` | プレイヤーが印を付けた (ルールの `ping` が `On` のときだけ)。印は同じ陣営の人にだけ配る | `matchId`、`playerId`、`productUserId`、`team`、`pingId` (試合の中で一意の印の番号。`[Ping] net` のログの `id=` と同じ)、`kind` (`Enemy` / `Location`)、`targetId` (敵の印なら印の付いた敵のプレイヤー Id)、`refreshed` (同じ敵に付け直したなら `true`) |
+| `ping_refused` | 印を付けようとして断った。連打でログを埋めないよう、1 秒に 1 行まで | `matchId`、`playerId`、`productUserId`、`reason` (`RuleOff` / `Dead` / `InvalidAim` / `TooSoon` / `NoTarget`) |
 
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。

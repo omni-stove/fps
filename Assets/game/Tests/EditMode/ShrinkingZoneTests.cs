@@ -208,6 +208,47 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ShorterShrinkSecondsCloseTheCircleFaster()
+        {
+            _zone.Begin();
+            _zone.Tick(12.5f);
+            var slow = _zone.State.Radius;
+
+            _zone.SetPhases(new[] { new ShrinkingZone.PhaseSettings(10f, 5f, 10f, 5f) });
+            _zone.Begin();
+            _zone.Tick(12.5f);
+
+            Assert.That(slow, Is.EqualTo(17.5f).Within(1e-4f), "10 s to shrink: a quarter of the way after 2.5 s");
+            Assert.That(_zone.State.Radius, Is.EqualTo(15f).Within(1e-4f), "5 s to shrink: half way after 2.5 s");
+        }
+
+        [Test]
+        public void TheBoundaryHeightIsTheConfiguredValue()
+        {
+            Assert.That(_zone.BoundaryHeight, Is.EqualTo(ShrinkingZone.DefaultBoundaryHeight));
+            _zone.ShowsBoundary = true;
+            _zone.BoundaryHeight = 12f;
+
+            _zone.Begin();
+
+            var boundary = _zone.Boundary;
+            Assert.That(boundary, Is.Not.Null);
+            Assert.That(boundary.transform.localScale.y, Is.EqualTo(12f).Within(1e-4f));
+            _created.Add(boundary.sharedMaterial);
+            _created.Add(boundary.GetComponent<MeshFilter>().sharedMesh);
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void TheBoundaryHeightRejectsUnusableValues(float value)
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => _zone.BoundaryHeight = value);
+            Assert.That(_zone.BoundaryHeight, Is.EqualTo(ShrinkingZone.DefaultBoundaryHeight));
+        }
+
+        [Test]
         public void TubeMeshIsOpenAndUnitSized()
         {
             var mesh = ShrinkingZone.BuildTubeMesh(8);

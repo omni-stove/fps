@@ -68,6 +68,15 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void RecoilRecoveryDelayStartsAtTheWeaponSpecDefault()
+        {
+            var definition = NewDefinition("Default", _rifleId);
+
+            Assert.That(definition.RecoilRecoveryDelaySeconds, Is.EqualTo(WeaponSpec.DefaultRecoilRecoveryDelaySeconds));
+            Assert.That(definition.ToSpec().RecoilRecoveryDelaySeconds, Is.EqualTo(WeaponSpec.DefaultRecoilRecoveryDelaySeconds));
+        }
+
+        [Test]
         public void RecoilAndSpreadStartAtZero()
         {
             var definition = NewDefinition("Default", _rifleId);
@@ -155,6 +164,7 @@ namespace Fps.Tests.EditMode
             definition.HipSpreadDegrees = 3f;
             definition.AdsSpreadDegrees = 0.5f;
             definition.MoveSpreadDegrees = 2f;
+            definition.RecoilRecoveryDelaySeconds = 0.3f;
 
             var spec = definition.ToSpec();
 
@@ -184,6 +194,7 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.HipSpreadDegrees, Is.EqualTo(3f));
             Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(0.5f));
             Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(2f));
+            Assert.That(spec.RecoilRecoveryDelaySeconds, Is.EqualTo(0.3f));
             Assert.That(definition.ToSpec(), Is.Not.SameAs(spec));
         }
 
@@ -234,6 +245,7 @@ namespace Fps.Tests.EditMode
         [TestCase("HipSpreadDegrees", "")]
         [TestCase("AdsSpreadDegrees", "")]
         [TestCase("MoveSpreadDegrees", "")]
+        [TestCase("RecoilRecoveryDelaySeconds", "")]
         public void ToSpecRejectsInvalidValuesWithTheAssetName(string field, string id)
         {
             var definition = NewDefinition("BrokenWeapon");
@@ -314,6 +326,9 @@ namespace Fps.Tests.EditMode
                     break;
                 case "MoveSpreadDegrees":
                     definition.MoveSpreadDegrees = float.PositiveInfinity;
+                    break;
+                case "RecoilRecoveryDelaySeconds":
+                    definition.RecoilRecoveryDelaySeconds = -0.1f;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Fps.Runtime
 {
-    // EnemyAgent の Inspector に並べる値。EnemyAgent のほかの判断の値と同じく、ここから EnemySpec を作り、ApplySpec で書き戻す。
+    // EnemyAgent と EnemyDefinition の Inspector に並べる値。ほかの判断の値と同じく、ここから EnemySpec を作り、ApplySpec (EnemyDefinition では CopyFrom) で書き戻す。
     [Serializable]
     public sealed class EnemyShieldSettings
     {

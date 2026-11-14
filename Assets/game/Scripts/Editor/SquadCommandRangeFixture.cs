@@ -55,7 +55,7 @@ namespace Fps.Editor
         /// <summary>守らせる場所 (床の高さ)。立つ位置から右前へ 5.5m ほどで、bot の初めの位置と照準の線が重ならない。</summary>
         public static readonly Vector3 HoldPoint = new Vector3(15.5f, 0f, 5f);
 
-        /// <summary>狙わせる標的ダミーを置く位置 (床の高さ)。守らせる場所から bot の攻撃の距離 (<see cref="EnemyAgent.DefaultAttackRange"/>) の内。</summary>
+        /// <summary>狙わせる標的ダミーを置く位置 (床の高さ)。守らせる場所から bot の攻撃の距離 (<see cref="EnemySpec.DefaultAttackRange"/>) の内。</summary>
         public static readonly Vector3 TargetPoint = new Vector3(16f, 0f, 7.5f);
 
         public static readonly EnemyBody BotBody = new EnemyBody(2f, 0.5f, 3.5f, Damageable.DefaultMaxHealth);

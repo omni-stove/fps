@@ -31,13 +31,16 @@
 - 音とエフェクト: `PresentationCatalog` (Resources の `Presentation/PresentationCatalog`) を差し替えれば変わる。
   武器ごとのものは武器の Id で引く。
 - 文言: `Resources/Localization/<言語>/*.json` の表を引く `LocalizedText`。
+- 敵 AI の判断: 既定値は `EnemySpec.Default*` (`EnemySpec.Default`)。`EnemyAgent.Definition` に敵のデータ `EnemyDefinition` を設定すると、
+  視界・反応・散らばり・遮蔽・種類ごとの値をそこから読む。空なら `EnemyAgent` の Inspector の値 (既定は `EnemySpec.Default*`)。
+  JSON から作る取り込みはまだ無い。
 
 ### まだコードに入っている調整値
 
 `const ... Default*` として持っているもの。データに出し、ゲームが上書きできるようにする。
 
 - 移動: `PlayerController` (`DefaultWalkSpeed` など) と `NetworkPlayerMotor` (`_walkSpeed = 5f` など) が別々に持っている
-- 敵 AI: `EnemyAgent` (`DefaultSightRange`、`DefaultReactionSeconds` など)。`EnemySpec` との関係を整理する
+- 敵 AI の体: `EnemyAgent` の目の高さ・向き直る速さ・しゃがんだ高さ (`DefaultEyeHeight` など)。判断の値と違い `EnemyDefinition` には無い
 - グレネード: `GrenadeSpec.Default*`。`GrenadeThrower` の Inspector では変えられるが、ルールや武器のような JSON は無い
 - 印: `PingSpec.Default*`。オフラインは `PingController` の Inspector、ネット対戦は `NetTeamDeathmatch.PingSpec` をコードで差し替えられるが、JSON は無い
 - 吹き飛ばし: `KnockbackSpec.Default*`。`KnockbackMovement` / `EnemyAgent` の `KnockbackSpec` をコードで差し替えられ、重さだけ Inspector で変えられるが、JSON は無い

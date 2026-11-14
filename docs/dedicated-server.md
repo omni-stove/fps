@@ -103,6 +103,51 @@ Builds/client-macos/fps.app/Contents/MacOS/fps -mode client -address 127.0.0.1
 
 ポートを変えたときは `-port` も合わせる。別のマシンのサーバーには `-address` にそのマシンの IPv4 アドレスを渡す。
 
+### NetArena01 で拠点制圧 (Domination) を遊ぶ
+
+マップは起動時に `-map` で選ぶが、試合のルールは試合の進行役のプレハブ (`NetMatch.prefab`) に焼いてあり、起動時には選べない。
+コミットしてあるのはチームデスマッチのルールなので、拠点制圧を遊ぶときはルールを `Domination.asset` にしたプレハブを作り、
+サーバーとクライアントを両方ビルドし直す。マップ NetArena01 には拠点 A (Alpha の陣地寄り)・B (中央)・C (Bravo の陣地寄り) が
+置いてあり、チームデスマッチのときは使われない。
+
+Unity の Editor を閉じてから、リポジトリのルートで次を実行する。
+
+```sh
+# 1. 試合の進行役のルールを Domination にする (NetTest のシーンとプレハブを作り直す)
+unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.BuildWithDominationRules
+# 2. 拠点の入った NetArena01 を作り直す (ServerBuilder はマップがあれば作り直さないので、古いマップが手元にあれば必ず実行する)
+unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ArenaSceneBuilder.Build
+# 3. 同じシーンとプレハブでサーバーのイメージとクライアントを作る (拠点の NetworkObject の ID がそろっていないとつながらない)
+make server-image
+make build
+# 4. NetArena01 で起動する (イメージ名の後ろの引数はサーバーにそのまま渡る)
+docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetArena01
+```
+
+イメージを作らずにビルドしたサーバーを直接動かすときも、`-map NetArena01` を足すだけでよい。
+
+```sh
+Builds/server-linux/fps-server.x86_64 -logFile - -mode server -map NetArena01
+```
+
+試合が始まると、サーバーのログに拠点の数と、占領・中立化のたびに次の行が出る。
+
+```
+[Domination] net points=3 scoreLimit=... captureSeconds=... pointsPerSecond=...
+[Domination] captured point=A team=Alpha
+[Domination] neutralized point=A from=Alpha
+```
+
+2 つのクライアントを `-mode client -address <サーバーのアドレス>` でつなぐと、それぞれ別のチームに入る。HUD に A・B・C の
+3 つの拠点が並び、拠点の床の円と HUD の文字が持ち主のチームの色で塗られる。拠点の中心には旗が立っていて、遠くからでも場所がわかる。
+円の中に立つと占領が進み、両チームがいると止まる。
+
+確かめ終えたら、次でコミットしてあるチームデスマッチのルールに戻す (`NetMatch.prefab` と NetTest の差分が消える)。
+
+```sh
+unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.Build
+```
+
 ## 環境変数
 
 | 名前 | 既定 | 内容 |

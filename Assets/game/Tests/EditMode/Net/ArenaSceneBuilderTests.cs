@@ -109,11 +109,49 @@ namespace Fps.Net.Tests
                 Assert.That(center.z, Is.EqualTo(0f), name + " straddles the middle");
             }
 
-            var anchors = ArenaSceneBuilder.ObjectiveAnchors;
-            Assert.That(anchors.Select(a => a.Name), Is.EqualTo(new[] { "Objective A", "Objective B", "Objective C" }));
-            Assert.That(anchors[0].Position.z, Is.LessThan(0f), "A is on the Alpha side");
-            Assert.That(anchors[1].Position.z, Is.EqualTo(0f), "B is in the middle");
-            Assert.That(Near(anchors[2].Position, ArenaSceneBuilder.MirrorZ(anchors[0].Position)), Is.True, "C mirrors A");
+            var points = ArenaSceneBuilder.ControlPoints;
+            Assert.That(points.Select(p => p.Name), Is.EqualTo(new[] { "Control Point A", "Control Point B", "Control Point C" }));
+            Assert.That(points.Select(p => p.Index), Is.EqualTo(new[] { 0, 1, 2 }));
+            Assert.That(points[0].Position.z, Is.LessThan(0f), "A is on the Alpha side");
+            Assert.That(points[1].Position.z, Is.EqualTo(0f), "B is in the middle");
+            Assert.That(Near(points[2].Position, ArenaSceneBuilder.MirrorZ(points[0].Position)), Is.True, "C mirrors A");
+        }
+
+        [Test]
+        public void ControlPointAreasStayClearOfWallsStepsBuildingsAndSpawns()
+        {
+            Assert.That(ArenaSceneBuilder.ControlPointOverlaps(), Is.Empty);
+            Assert.That(ArenaSceneBuilder.ControlPointClearance, Is.GreaterThanOrEqualTo(NetSceneBuilder.PlayerRadius),
+                "a player standing on the edge of a point does not touch cover");
+
+            foreach (var (name, position, _) in ArenaSceneBuilder.ControlPoints)
+            {
+                Assert.That(position.y, Is.EqualTo(ArenaSceneBuilder.GroundY), name + " sits on the ground");
+
+                // 拠点の円の縁 (クリアランス込み) のどこにも、壁・段差の箱が掛からない
+                var reach = ArenaSceneBuilder.ControlPointRadius + ArenaSceneBuilder.ControlPointClearance;
+                for (var i = 0; i < 32; i++)
+                {
+                    var angle = i * Mathf.PI * 2f / 32;
+                    var edge = position + new Vector3(Mathf.Cos(angle) * reach, 0.1f, Mathf.Sin(angle) * reach);
+                    foreach (var (boxName, center, size) in LevelBoxes())
+                    {
+                        Assert.That(new Bounds(center, size).Contains(edge), Is.False, name + " reaches into " + boxName);
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void ControlPointsCanStartADominationMatch()
+        {
+            var points = ArenaSceneBuilder.ControlPoints
+                .Select(p => ArenaSceneBuilder.CreateControlPoint(_scene, p.Name, p.Position, p.Index))
+                .ToArray();
+
+            Assert.That(NetControlPoint.TryBuildMap(points, out var map, out var byIndex, out var error), Is.True, error);
+            Assert.That(byIndex.Select(p => p.name), Is.EqualTo(ArenaSceneBuilder.ControlPoints.Select(p => p.Name)));
+            Assert.That(() => new DominationObjective(map, 10f, 1f, 200, 600f, 3), Throws.Nothing);
         }
 
         [Test]
@@ -206,7 +244,7 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void PopulatedSceneHasTheBootstrapSpawnPointsAndAnchors()
+        public void PopulatedSceneHasTheBootstrapSpawnPointsAndControlPoints()
         {
             var player = Create("TestPlayer");
             var match = Create("TestMatch");
@@ -225,13 +263,29 @@ namespace Fps.Net.Tests
             Assert.That(spawns.Count(s => s.Team == NetSpawnPoint.SpawnTeam.Alpha), Is.EqualTo(ArenaSceneBuilder.SpawnsPerTeam));
             Assert.That(spawns.Count(s => s.Team == NetSpawnPoint.SpawnTeam.Bravo), Is.EqualTo(ArenaSceneBuilder.SpawnsPerTeam));
 
-            var anchorRoot = _scene.GetRootGameObjects().Single(go => go.name == ArenaSceneBuilder.ObjectiveAnchorsRootName);
-            foreach (var (name, position) in ArenaSceneBuilder.ObjectiveAnchors)
+            var points = Components<NetControlPoint>();
+            Assert.That(points, Has.Length.EqualTo(ArenaSceneBuilder.ControlPoints.Count));
+            foreach (var (name, position, index) in ArenaSceneBuilder.ControlPoints)
             {
-                var anchor = anchorRoot.transform.Find(name);
-                Assert.That(anchor, Is.Not.Null, name);
-                Assert.That(anchor.position, Is.EqualTo(position), name);
-                Assert.That(anchor.GetComponents<Component>(), Has.Length.EqualTo(1), name + " is an empty placeholder");
+                var point = points.Single(p => p.name == name);
+                Assert.That(point.transform.parent, Is.Null, name + " is an in-scene NetworkObject at the root");
+                Assert.That(point.GetComponent<NetworkObject>(), Is.Not.Null, name);
+                Assert.That(point.transform.position, Is.EqualTo(position), name);
+                Assert.That(point.Zone, Is.Not.Null, name);
+                Assert.That(point.Index, Is.EqualTo(index), name);
+                Assert.That(point.Zone.Radius, Is.EqualTo(ArenaSceneBuilder.ControlPointRadius), name);
+                Assert.That(point.Zone.ShowsMarker, Is.True, name + " shows the ground circle while playing");
+
+                // 床に立つプレイヤーのカプセルの中心 (y = 0) が範囲に入る
+                Assert.That(point.Zone.Contains(new Vector3(position.x, 0f, position.z)), Is.True, name);
+
+                foreach (var part in new[] { DominationSceneBuilder.PoleName, DominationSceneBuilder.FlagName })
+                {
+                    var child = point.transform.Find(part);
+                    Assert.That(child, Is.Not.Null, name + " has a " + part);
+                    Assert.That(child.GetComponent<Renderer>(), Is.Not.Null, name + " " + part);
+                    Assert.That(child.GetComponent<Collider>(), Is.Null, name + " " + part + " does not block shots or movement");
+                }
             }
         }
 

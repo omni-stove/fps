@@ -17,7 +17,8 @@ namespace Fps.Editor
     /// ネット対戦のマップ NetArena01 を生成する。サーバーは <c>-map NetArena01</c> でこのシーンへ移り、クライアントは Netcode のシーン管理で合わせる。
     /// 60 m 四方の床と外周の壁に、高い壁・低い壁・乗り越えられる段差を置いて NavMesh を焼き、壊せる建物 2 棟
     /// (<see cref="DestructibleStructure"/> と <see cref="NetDestructibleStructure"/>)、チームごとの出現地点 <see cref="SpawnsPerTeam"/> か所、
-    /// 拠点の置き場の空オブジェクト A/B/C、NetTest と同じ配線の <see cref="NetBootstrap"/> を置く (<see cref="NetSceneBuilder.CreateBootstrap"/>)。
+    /// 拠点制圧の拠点 A/B/C (<see cref="NetControlPoint"/> と旗)、NetTest と同じ配線の <see cref="NetBootstrap"/> を置く (<see cref="NetSceneBuilder.CreateBootstrap"/>)。
+    /// 拠点はルールが <see cref="MatchObjective.Domination"/> の試合でだけ使われ、チームデスマッチでは置いてあるだけになる。
     /// 何度実行しても同じ結果になる。batchmode では
     /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.ArenaSceneBuilder.Build</c> で呼ぶ。
     /// </summary>
@@ -42,7 +43,6 @@ namespace Fps.Editor
         public const string LevelName = "Level";
         public const string GroundName = "Ground";
         public const string SpawnPointsRootName = "SpawnPoints";
-        public const string ObjectiveAnchorsRootName = "ObjectiveAnchors";
 
         /// <summary>床の中心から外周までの距離 (m)。床は 60 m 四方。</summary>
         public const float HalfExtent = 30f;
@@ -87,6 +87,16 @@ namespace Fps.Editor
             (2 * ((BuildingWidth * BuildingWallHeight) - (DoorWidth * DoorHeight)))
             + (2 * (BuildingDepth - 2) * BuildingWallHeight)
             + (BuildingWidth * BuildingDepth);
+
+        /// <summary>拠点の範囲の水平の半径と高さ (m)。高さは足元から上下に半分ずつなので、床に立つカプセルの中心 (y = 0) が入る。</summary>
+        public const float ControlPointRadius = ControlPointZone.DefaultRadius;
+        public const float ControlPointHeight = ControlPointZone.DefaultHeight;
+
+        /// <summary>
+        /// 拠点の範囲の円と、壁・段差・建物との間に空ける幅 (m)。円の縁に立ったプレイヤーのカプセルが遮蔽物にめり込まず、
+        /// 拠点の床で乗り越えや遮蔽の動きが起きないようにする。
+        /// </summary>
+        public const float ControlPointClearance = NetSceneBuilder.PlayerRadius;
 
         /// <summary>NavMesh に乗っていることを確かめる点を探す半径 (m)。</summary>
         public const float NavMeshCheckRadius = 1f;
@@ -147,14 +157,15 @@ namespace Fps.Editor
         public static readonly IReadOnlyList<(string Name, Vector3 Position, NetSpawnPoint.SpawnTeam Team)> SpawnPoints = CreateSpawnLayout();
 
         /// <summary>
-        /// 拠点の置き場 (床の上の点)。A は Alpha の陣地寄り、B は中央、C は Bravo の陣地寄り。
-        /// 拠点のモードはこの名前の空オブジェクトを探して置く。ここでは目印だけで、コンポーネントは付けない。
+        /// 拠点制圧の拠点 (足元、床の高さ) と番号 (HUD とログで 0 = A)。A は Alpha の陣地寄り、B は中央、C は Bravo の陣地寄り。
+        /// A は陣地の前の低い壁と高い壁の間、B は中央の高い壁 2 枚の間に、範囲の円が <see cref="ControlPointClearance"/> を空けて
+        /// どの壁・段差・建物にも掛からないように置く。
         /// </summary>
-        public static readonly IReadOnlyList<(string Name, Vector3 Position)> ObjectiveAnchors = new[]
+        public static readonly IReadOnlyList<(string Name, Vector3 Position, int Index)> ControlPoints = new[]
         {
-            ("Objective A", new Vector3(0f, GroundY, -15f)),
-            ("Objective B", new Vector3(0f, GroundY, 0f)),
-            ("Objective C", new Vector3(0f, GroundY, 15f)),
+            (ControlPointName(0), new Vector3(0f, GroundY, -15f), 0),
+            (ControlPointName(1), new Vector3(0f, GroundY, 0f), 1),
+            (ControlPointName(2), new Vector3(0f, GroundY, 15f), 2),
         };
 
         [MenuItem(MenuPath)]
@@ -172,12 +183,19 @@ namespace Fps.Editor
         /// <summary>
         /// シーンを生成して NavMesh を焼き、両方を保存して Build Settings に加える (既存の並びは変えない)。
         /// プレイヤーと試合の進行役のプレハブが無ければ先に <see cref="NetSceneBuilder.Build"/> で作る。
-        /// NavMesh が出現地点・拠点に届かない、または建物の NetworkObject に ID が付かなければ例外を投げる (batchmode では終了コード 1)。
+        /// 拠点の範囲が壁・段差・建物・出現地点に掛かる、NavMesh が出現地点・拠点に届かない、
+        /// または建物と拠点の NetworkObject に ID が付かなければ例外を投げる (batchmode では終了コード 1)。
         /// </summary>
         public static void BuildAt(string scenePath, string navMeshDataPath)
         {
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
             navMeshDataPath = SceneBuildHelpers.ValidateAssetPath(navMeshDataPath);
+
+            var overlaps = ControlPointOverlaps();
+            if (overlaps.Count > 0)
+            {
+                throw new InvalidOperationException(LogTag + " control point areas overlap the level: " + string.Join("; ", overlaps));
+            }
 
             // NetSceneBuilder.Build は NetTest を開くので、こちらのシーンを作る前に済ませる
             NetSceneBuilder.EnsurePrefabs();
@@ -209,7 +227,7 @@ namespace Fps.Editor
             BuildSceneList.Register(scenePath);
             AssetDatabase.SaveAssets();
             Debug.Log(LogTag + " wrote " + scenePath + " and " + navMeshDataPath + " (" + SpawnPoints.Count + " spawn point(s), "
-                + Buildings.Count + " building(s), " + ObjectiveAnchors.Count + " objective anchor(s)); start a server with "
+                + Buildings.Count + " building(s), " + ControlPoints.Count + " control point(s)); start a server with "
                 + NetLaunchOptions.MapFlag + " " + MapName);
         }
 
@@ -261,7 +279,7 @@ namespace Fps.Editor
                 points.Add(Feet(position));
             }
 
-            foreach (var (_, position) in ObjectiveAnchors)
+            foreach (var (_, position, _) in ControlPoints)
             {
                 points.Add(position);
             }
@@ -277,7 +295,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// NetBootstrap・観戦カメラ・ライト・破片の置き場・建物・出現地点・拠点の置き場を置き、NetBootstrap を返す。
+        /// NetBootstrap・観戦カメラ・ライト・破片の置き場・建物・出現地点・拠点を置き、NetBootstrap を返す。
         /// プレハブの配線は NetTest と同じ (<see cref="NetSceneBuilder.CreateBootstrap"/>)。
         /// </summary>
         public static NetBootstrap PopulateScene(Scene scene, GameObject playerPrefab, GameObject matchPrefab)
@@ -304,17 +322,100 @@ namespace Fps.Editor
                 NetSceneBuilder.CreateSpawnPoint(spawnRoot.transform, pointName, position, team);
             }
 
-            var anchorRoot = new GameObject(ObjectiveAnchorsRootName);
-            SceneManager.MoveGameObjectToScene(anchorRoot, scene);
-            foreach (var (anchorName, position) in ObjectiveAnchors)
+            foreach (var (pointName, position, index) in ControlPoints)
             {
-                var anchor = new GameObject(anchorName);
-                anchor.transform.SetParent(anchorRoot.transform, false);
-                anchor.transform.localPosition = position;
+                CreateControlPoint(scene, pointName, position, index);
             }
 
             EditorSceneManager.MarkSceneDirty(scene);
             return bootstrap;
+        }
+
+        /// <summary>
+        /// position (足元) に拠点を置いて返す。<see cref="NetControlPoint"/> が占領の状態を同期し、<see cref="ControlPointZone"/> が範囲を持って
+        /// Play 中に地面の円盤を出す。中心には遠くから見える旗を立てる (<see cref="DominationSceneBuilder.AddFlag"/>、当たり判定なし)。
+        /// </summary>
+        public static NetControlPoint CreateControlPoint(Scene scene, string pointName, Vector3 position, int index)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+
+            // シーンに置いた NetworkObject は Netcode がシーンの直下から探して Spawn するので、親を付けない
+            var point = new GameObject(pointName);
+            SceneManager.MoveGameObjectToScene(point, scene);
+            point.transform.SetPositionAndRotation(position, Quaternion.identity);
+
+            try
+            {
+                point.AddComponent<NetworkObject>();
+                var zone = point.AddComponent<ControlPointZone>();
+                zone.Index = index;
+                zone.Radius = ControlPointRadius;
+                zone.Height = ControlPointHeight;
+                var networked = point.AddComponent<NetControlPoint>();
+                DominationSceneBuilder.AddFlag(point.transform);
+                return networked;
+            }
+            catch
+            {
+                UnityEngine.Object.DestroyImmediate(point);
+                throw;
+            }
+        }
+
+        /// <summary>シーンと HUD で使う拠点の名前 (番号 0 = "Control Point A")。</summary>
+        public static string ControlPointName(int index)
+        {
+            return "Control Point " + DominationHudFormat.PointName(index);
+        }
+
+        /// <summary>
+        /// 拠点の範囲の円 (半径に <see cref="ControlPointClearance"/> を足したもの) が、壁 (外周を含む)・段差・建物の床面・
+        /// 出現地点・ほかの拠点の範囲に掛かっていれば、その組み合わせを返す。掛かっていなければ空。上から見た平面で調べる。
+        /// </summary>
+        public static List<string> ControlPointOverlaps()
+        {
+            var problems = new List<string>();
+            var reach = ControlPointRadius + ControlPointClearance;
+            var obstacles = new List<(string Name, Vector3 Center, Vector3 Size)>();
+            obstacles.AddRange(BoundaryWalls);
+            obstacles.AddRange(HighWalls);
+            obstacles.AddRange(LowWalls);
+            obstacles.AddRange(Steps);
+            foreach (var (buildingName, groundCenter) in Buildings)
+            {
+                obstacles.Add((buildingName, groundCenter, new Vector3(BuildingWidth, 0f, BuildingDepth) * PieceSize));
+            }
+
+            for (var i = 0; i < ControlPoints.Count; i++)
+            {
+                var (pointName, position, _) = ControlPoints[i];
+                foreach (var (obstacleName, center, size) in obstacles)
+                {
+                    if (HorizontalDistanceToBox(position, center, size) < reach)
+                    {
+                        problems.Add(pointName + " overlaps " + obstacleName);
+                    }
+                }
+
+                foreach (var (spawnName, spawnPosition, _) in SpawnPoints)
+                {
+                    if (HorizontalDistance(position, spawnPosition) < reach)
+                    {
+                        problems.Add(pointName + " covers " + spawnName);
+                    }
+                }
+
+                for (var j = i + 1; j < ControlPoints.Count; j++)
+                {
+                    var (otherName, otherPosition, _) = ControlPoints[j];
+                    if (HorizontalDistance(position, otherPosition) < 2f * reach)
+                    {
+                        problems.Add(pointName + " overlaps " + otherName);
+                    }
+                }
+            }
+
+            return problems;
         }
 
         /// <summary>
@@ -428,6 +529,19 @@ namespace Fps.Editor
             }
 
             return points.ToArray();
+        }
+
+        private static float HorizontalDistance(Vector3 a, Vector3 b)
+        {
+            return new Vector2(a.x - b.x, a.z - b.z).magnitude;
+        }
+
+        /// <summary>point から、center・size の箱を上から見た長方形までの距離。中にあれば 0。</summary>
+        private static float HorizontalDistanceToBox(Vector3 point, Vector3 center, Vector3 size)
+        {
+            var dx = Mathf.Max(0f, Mathf.Abs(point.x - center.x) - (size.x / 2f));
+            var dz = Mathf.Max(0f, Mathf.Abs(point.z - center.z) - (size.z / 2f));
+            return new Vector2(dx, dz).magnitude;
         }
 
         private static Vector3 OnGround(Vector3 footprintCenter, float height)

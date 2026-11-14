@@ -100,6 +100,18 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("プレイヤーの能力の枠 (AbilityHost) に入れる能力。i 番目が i 番目の枠 (0 が Ability1)。使えるかはルールの Abilities で決まる")]
         private AbilityDefinition[] _abilityDefinitions = Array.Empty<AbilityDefinition>();
 
+        [SerializeField, Tooltip("生成する床。原点が床面の中心で、当たり判定を持たせる。大きさはプレハブのまま。空なら 50m 四方の仮の板を作る")]
+        private GameObject _floorPrefab;
+
+        [SerializeField, Tooltip("標的ダミーの見た目。足元が原点、前が +Z。当たり判定は外し、胴と頭の当たり判定は仮の形のまま。空なら仮のカプセルと球を作る")]
+        private GameObject _targetDummyPrefab;
+
+        [SerializeField, Tooltip("プレイヤーの自機モック (PlayerMockBody) の胴・頭・銃の見た目。空の部品だけ仮の形を作る")]
+        private PlayerMockBodyPrefabs _mockBodyPrefabs = new PlayerMockBodyPrefabs();
+
+        [SerializeField, Tooltip("プレイヤーが投げたグレネードの見た目 (GrenadeThrower に渡す)。空なら仮の球を作る")]
+        private GameObject _grenadePrefab;
+
         private BootstrapWorld _world;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
@@ -190,6 +202,34 @@ namespace Fps.Runtime
             set => _rules = value;
         }
 
+        /// <summary><see cref="Build"/> で生成する床。null なら仮の板 (Plane を <see cref="FloorScale"/> 倍) を作る。</summary>
+        public GameObject FloorPrefab
+        {
+            get => _floorPrefab;
+            set => _floorPrefab = value;
+        }
+
+        /// <summary><see cref="Build"/> で並べる標的ダミーの見た目 (<see cref="TargetDummy.Create"/> の visualPrefab)。null なら仮の形。</summary>
+        public GameObject TargetDummyPrefab
+        {
+            get => _targetDummyPrefab;
+            set => _targetDummyPrefab = value;
+        }
+
+        /// <summary><see cref="Build"/> で作るプレイヤーの自機モックの見た目 (<see cref="PlayerMockBody.Prefabs"/>)。null を設定するとすべて仮の形になる。</summary>
+        public PlayerMockBodyPrefabs MockBodyPrefabs
+        {
+            get => _mockBodyPrefabs ?? (_mockBodyPrefabs = new PlayerMockBodyPrefabs());
+            set => _mockBodyPrefabs = value ?? new PlayerMockBodyPrefabs();
+        }
+
+        /// <summary><see cref="Build"/> で作るプレイヤーの投げるグレネードの見た目 (<see cref="GrenadeThrower.GrenadePrefab"/>)。null なら仮の球。</summary>
+        public GameObject GrenadePrefab
+        {
+            get => _grenadePrefab;
+            set => _grenadePrefab = value;
+        }
+
         private void Awake()
         {
             try
@@ -227,13 +267,14 @@ namespace Fps.Runtime
             PanelSettings hudPanelSettings = null;
             try
             {
-                floor = _createFloor ? CreateFloor() : null;
+                floor = _createFloor ? CreateFloor(_floorPrefab) : null;
                 player = CreatePlayer(
                     _viewMode, WeaponDefinitions, AbilityDefinitions, rules, out var controller, out var rig, out var camera, out var look, out var mover,
                     out var weapon, out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera,
                     out var abilities);
+                ApplyPlayerVisuals(player, grenades, MockBodyPrefabs, _grenadePrefab);
                 light = CreateLight(out var lightComponent);
-                targets = CreateTargetDummies(player.transform, out var dummies);
+                targets = CreateTargetDummies(player.transform, _targetDummyPrefab, out var dummies);
                 BindDeathBodies(dummies, rules);
                 // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
                 IHud hudComponent = null;
@@ -307,13 +348,37 @@ namespace Fps.Runtime
             }
         }
 
-        private static GameObject CreateFloor()
+        private static GameObject CreateFloor(GameObject prefab)
         {
+            if (prefab != null)
+            {
+                // 床は立つための当たり判定が要るので、プレハブの当たり判定は残す。
+                var placed = VisualPrefab.Instantiate(prefab, null, FloorName, stripColliders: false);
+                placed.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                return placed;
+            }
+
             var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             floor.name = FloorName;
             floor.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             floor.transform.localScale = FloorScale;
             return floor;
+        }
+
+        // 自機モックは Play 中の最初の LateUpdate で組み立てるので、それより前のここで渡せば間に合う。
+        private static void ApplyPlayerVisuals(
+            GameObject player, GrenadeThrower grenades, PlayerMockBodyPrefabs mockBodyPrefabs, GameObject grenadePrefab)
+        {
+            var mockBody = player.GetComponent<PlayerMockBody>();
+            if (mockBody != null)
+            {
+                mockBody.Prefabs = mockBodyPrefabs;
+            }
+
+            if (grenades != null)
+            {
+                grenades.GrenadePrefab = grenadePrefab;
+            }
         }
 
         private static GameObject CreatePlayer(
@@ -717,7 +782,7 @@ namespace Fps.Runtime
             return forward.sqrMagnitude > 1e-6f ? forward.normalized : Vector3.forward;
         }
 
-        private static GameObject CreateTargetDummies(Transform player, out TargetDummy[] dummies)
+        private static GameObject CreateTargetDummies(Transform player, GameObject visualPrefab, out TargetDummy[] dummies)
         {
             var feet = player.position + (Vector3.down * (PlayerHeight / 2f));
             var positions = TargetDummyPositions(feet, player.rotation);
@@ -732,7 +797,7 @@ namespace Fps.Runtime
                 for (var i = 0; i < positions.Length; i++)
                 {
                     dummies[i] = TargetDummy.Create(
-                        TargetDummyName(i), positions[i], facing, root.transform, TargetDummyMaxHealth, TargetDummyRespawnDelay);
+                        TargetDummyName(i), positions[i], facing, root.transform, TargetDummyMaxHealth, TargetDummyRespawnDelay, visualPrefab);
                 }
             }
             catch

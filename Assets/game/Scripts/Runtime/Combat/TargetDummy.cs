@@ -20,6 +20,9 @@ namespace Fps.Runtime
         public const string BodyName = "Body";
         public const string HeadName = "Head";
 
+        /// <summary>差し替えた見た目のプレハブを置く子の名前。</summary>
+        public const string VisualName = "Visual";
+
         /// <summary>胴体のカプセル。高さ 1.7m (Capsule は高さ 2m なので y を 0.85 倍) で足元から立つ。</summary>
         public static readonly Vector3 BodyLocalPosition = new Vector3(0f, 0.85f, 0f);
         public static readonly Vector3 BodyScale = new Vector3(1f, 0.85f, 1f);
@@ -69,13 +72,18 @@ namespace Fps.Runtime
         /// <param name="parent">親。null ならシーンの直下。</param>
         /// <param name="maxHealth">最大体力。1 以上。</param>
         /// <param name="respawnDelay">復活までの秒数。0 以上の有限値。</param>
+        /// <param name="visualPrefab">
+        /// 見た目。足元が原点、前が +Z。当たり判定を外して <see cref="VisualName"/> の子に置き、胴と頭の当たり判定は仮の形と同じ大きさの
+        /// 見えないコライダーにする。null なら仮の形 (Capsule と Sphere) を作り、その形をそのまま当たり判定に使う。
+        /// </param>
         public static TargetDummy Create(
             string id,
             Vector3 position,
             Quaternion rotation,
             Transform parent = null,
             int maxHealth = DefaultMaxHealth,
-            float respawnDelay = DefaultRespawnDelay)
+            float respawnDelay = DefaultRespawnDelay,
+            GameObject visualPrefab = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -91,8 +99,14 @@ namespace Fps.Runtime
                 var damageable = root.AddComponent<Damageable>();
                 damageable.Initialize(id, maxHealth);
 
-                CreatePart(root.transform, PrimitiveType.Capsule, BodyName, BodyLocalPosition, BodyScale, HitZone.Body, damageable);
-                CreatePart(root.transform, PrimitiveType.Sphere, HeadName, HeadLocalPosition, HeadScale, HitZone.Head, damageable);
+                var visible = visualPrefab == null;
+                CreatePart(root.transform, PrimitiveType.Capsule, BodyName, BodyLocalPosition, BodyScale, HitZone.Body, damageable, visible);
+                CreatePart(root.transform, PrimitiveType.Sphere, HeadName, HeadLocalPosition, HeadScale, HitZone.Head, damageable, visible);
+                if (visualPrefab != null)
+                {
+                    // 撃った弾は胴と頭の当たり判定で受けるので、見た目の当たり判定は外す (残すと部位の分からない所で弾が止まる)。
+                    VisualPrefab.Instantiate(visualPrefab, root.transform, VisualName, stripColliders: true);
+                }
 
                 var dummy = root.AddComponent<TargetDummy>();
                 dummy.Initialize(damageable, respawnDelay);
@@ -236,16 +250,39 @@ namespace Fps.Runtime
             Vector3 localPosition,
             Vector3 localScale,
             HitZone zone,
-            Damageable owner)
+            Damageable owner,
+            bool visible)
         {
-            // プリミティブ付属のコライダーをそのまま当たり判定に使う。
-            var part = GameObject.CreatePrimitive(shape);
+            // プリミティブ付属のコライダーをそのまま当たり判定に使う。見せないときは同じ形のコライダーだけを置く。
+            var part = visible ? GameObject.CreatePrimitive(shape) : CreateInvisiblePart(shape);
             part.name = partName;
             part.transform.SetParent(parent, false);
             part.transform.localPosition = localPosition;
             part.transform.localRotation = Quaternion.identity;
             part.transform.localScale = localScale;
             part.AddComponent<Hitbox>().Initialize(zone, owner);
+        }
+
+        // Unity のプリミティブに付くコライダーと同じ大きさにする (Capsule は高さ 2・半径 0.5、Sphere は半径 0.5)。
+        private static GameObject CreateInvisiblePart(PrimitiveType shape)
+        {
+            var part = new GameObject();
+            switch (shape)
+            {
+                case PrimitiveType.Capsule:
+                    var capsule = part.AddComponent<CapsuleCollider>();
+                    capsule.radius = 0.5f;
+                    capsule.height = 2f;
+                    break;
+                case PrimitiveType.Sphere:
+                    part.AddComponent<SphereCollider>().radius = 0.5f;
+                    break;
+                default:
+                    DestroySafely(part);
+                    throw new ArgumentOutOfRangeException(nameof(shape), shape, "only Capsule and Sphere parts are supported");
+            }
+
+            return part;
         }
 
         private static void DestroySafely(UnityEngine.Object target)

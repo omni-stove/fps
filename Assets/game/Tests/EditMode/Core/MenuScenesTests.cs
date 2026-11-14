@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class MenuScenesTests
     {
-        private const string _root =KitPaths.DefaultRoot;
+        private const string _root = KitPaths.DefaultRoot;
 
         [Test]
         public void TheDefaultsAreTheMenuRouteNames()

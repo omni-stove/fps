@@ -124,7 +124,8 @@ namespace Fps.Editor
         [MenuItem(MenuPath)]
         private static void ImportFromMenu()
         {
-            var start = Directory.Exists(SampleFolder) ? SampleFolder : "Assets";
+            var samples = FpsKitRoot.PhysicalPath(SampleFolder);
+            var start = Directory.Exists(samples) ? samples : "Assets";
             var source = EditorUtility.OpenFolderPanel("Import weapons from JSON", start, string.Empty);
             if (string.IsNullOrEmpty(source))
             {
@@ -227,6 +228,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// source がファイルならそれだけを、フォルダならその直下の *.json を名前の順に返す。区切りは / に揃える。
+        /// <c>Packages/</c> で始まる source は <see cref="FpsKitRoot.PhysicalPath"/> でディスク上のパスに直してから読む。
         /// </summary>
         /// <exception cref="ArgumentException">source が空。</exception>
         /// <exception cref="FileNotFoundException">source が無い、またはフォルダに JSON が無い。</exception>
@@ -237,7 +239,7 @@ namespace Fps.Editor
                 throw new ArgumentException($"{LogTag} the JSON source must not be empty", nameof(source));
             }
 
-            var trimmed = source.Trim();
+            var trimmed = FpsKitRoot.PhysicalPath(source.Trim());
             if (File.Exists(trimmed))
             {
                 return new[] { trimmed.Replace('\\', '/') };

@@ -33,12 +33,37 @@ namespace Fps.Tests.EditMode
             }
         }
 
+        // Assets/game の直書きにしないのは、利用側のプロジェクトに testables で入れたとき (Packages/com.omnistove.fps から読む) も通すため。
+        private static string ExpectedBundled =>
+            UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(FpsKitRoot).Assembly) == null
+                ? "Assets/game"
+                : "Packages/com.omnistove.fps";
+
         [Test]
-        public void OutputAndBundledDefaultToTheRepositoryFolder()
+        public void OutputAndBundledDefaultToTheKitFolders()
         {
             Assert.That(FpsKitRoot.Output, Is.EqualTo("Assets/game"));
-            Assert.That(FpsKitRoot.Bundled, Is.EqualTo("Assets/game"), "this repository opens the kit under Assets, not as a package");
-            Assert.That(FpsKitRoot.BundledPath("UI/Resources"), Is.EqualTo("Assets/game/UI/Resources"));
+            Assert.That(FpsKitRoot.Bundled, Is.EqualTo(ExpectedBundled));
+            Assert.That(FpsKitRoot.BundledPath("UI/Resources"), Is.EqualTo(ExpectedBundled + "/UI/Resources"));
+        }
+
+        [Test]
+        public void PhysicalPathResolvesOnlyPackagePaths()
+        {
+            Assert.That(FpsKitRoot.PhysicalPath("Assets/game/Weapons/Json"), Is.EqualTo("Assets/game/Weapons/Json"));
+            Assert.That(FpsKitRoot.PhysicalPath(null), Is.Null);
+
+            var resolved = FpsKitRoot.PhysicalPath("Packages\\com.omnistove.fps\\Weapons\\Json");
+            Assert.That(System.IO.Path.IsPathRooted(resolved), Is.True, resolved);
+            Assert.That(resolved, Does.Not.Contain("\\"));
+            Assert.That(resolved, Does.EndWith("/Weapons/Json"));
+        }
+
+        [Test]
+        public void TheBundledSamplesCanBeReadFromDisk()
+        {
+            Assert.That(System.IO.Directory.Exists(FpsKitRoot.PhysicalPath(FpsKitRoot.BundledPath("Weapons/Json"))), Is.True);
+            Assert.That(System.IO.Directory.Exists(FpsKitRoot.PhysicalPath(FpsKitRoot.BundledPath("Rules/Json"))), Is.True);
         }
 
         [Test]
@@ -121,7 +146,7 @@ namespace Fps.Tests.EditMode
             Assert.That(BuildSceneList.MainMenuScene, Is.EqualTo("Assets/FpsKit/Scenes/MainMenu.unity"));
             Assert.That(CampaignSceneBuilder.NavMeshDataPath, Is.EqualTo("Assets/FpsKit/Scenes/Campaign01/NavMesh-Level.asset"));
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo("Assets/FpsKit/Scenes/NetTest.unity"));
-            Assert.That(FpsKitRoot.Bundled, Is.EqualTo("Assets/game"), "the bundled source does not follow the output root");
+            Assert.That(FpsKitRoot.Bundled, Is.EqualTo(ExpectedBundled), "the bundled source does not follow the output root");
 
             FpsKitRoot.ClearPreferredOutput();
 

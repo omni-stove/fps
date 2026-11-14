@@ -58,7 +58,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void SamplesFolderIsUnderTheBundledRules()
         {
-            Assert.That(GameRulesJsonImporter.SamplesFolder, Is.EqualTo("Assets/game/Rules/Json"));
+            Assert.That(GameRulesJsonImporter.SamplesFolder, Is.EqualTo(FpsKitRoot.Bundled + "/Rules/Json"));
         }
 
         [Test]

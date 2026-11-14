@@ -912,6 +912,31 @@ namespace Fps.Runtime
             _ignored[rider] = new IgnoredCollisions(riderColliders, vehicleColliders);
         }
 
+        // Collider を無効にすると IgnoreCollision の設定が消える。乗り手が CharacterController を切って置き直した後に呼び直す。
+        internal void ReapplyIgnoredCollisions(IVehicleRider rider)
+        {
+            if (!_ignored.TryGetValue(rider, out var ignored))
+            {
+                return;
+            }
+
+            foreach (var riderCollider in ignored.Rider)
+            {
+                if (riderCollider == null)
+                {
+                    continue;
+                }
+
+                foreach (var vehicleCollider in ignored.Vehicle)
+                {
+                    if (vehicleCollider != null)
+                    {
+                        Physics.IgnoreCollision(riderCollider, vehicleCollider, true);
+                    }
+                }
+            }
+        }
+
         private void RestoreCollisions(IVehicleRider rider)
         {
             if (!_ignored.TryGetValue(rider, out var ignored))

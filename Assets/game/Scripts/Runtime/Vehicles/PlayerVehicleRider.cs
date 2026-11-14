@@ -570,10 +570,14 @@ namespace Fps.Runtime
             var yaw = _snapYaw ? seatYaw : CurrentYaw() + Mathf.DeltaAngle(_lastSeatYaw, seatYaw);
             _snapYaw = false;
             _lastSeatYaw = seatYaw;
+
+            // PlayerController の置き直しは Collider を切って戻すので無視設定が消える。自分で置いて掛け直す。
+            SetBodyPosition(RootPositionFor(seat.SitPosition));
+            seat.Vehicle.ReapplyIgnoredCollisions(this);
             return new MovementOverrideStep(
                 Vector3.zero,
                 Vector3.zero,
-                RootPositionFor(seat.SitPosition),
+                null,
                 yaw,
                 seat.Spec.CrouchesRider);
         }
@@ -616,7 +620,28 @@ namespace Fps.Runtime
                 controller.enabled = true;
             }
 
+            if (_seat != null)
+            {
+                _seat.Vehicle.ReapplyIgnoredCollisions(this);
+            }
+
             _lastSeatYaw = yawDegrees;
+        }
+
+        private void SetBodyPosition(Vector3 rootPosition)
+        {
+            var controller = _mover.Controller;
+            var wasEnabled = controller != null && controller.enabled;
+            if (wasEnabled)
+            {
+                controller.enabled = false;
+            }
+
+            transform.position = rootPosition;
+            if (wasEnabled)
+            {
+                controller.enabled = true;
+            }
         }
 
         private Vector3 RootPositionFor(Vector3 feetPosition)

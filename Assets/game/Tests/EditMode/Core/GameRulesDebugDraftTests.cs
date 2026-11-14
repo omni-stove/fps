@@ -51,7 +51,40 @@ namespace Fps.Core.Tests
 #pragma warning restore CA2263
 
             Assert.That(GameRulesDebugDraft.Fields, Is.EqualTo(defined));
-            Assert.That(defined.Length, Is.EqualTo(15));
+            Assert.That(defined.Length, Is.EqualTo(28));
+        }
+
+        [Test]
+        public void NewActionFieldsStartOffAndTurningOneOnChangesOnlyIt()
+        {
+            var newFields = new[]
+            {
+                GameRulesDebugField.Melee,
+                GameRulesDebugField.Stagger,
+                GameRulesDebugField.Slide,
+                GameRulesDebugField.Mantle,
+                GameRulesDebugField.Prone,
+                GameRulesDebugField.Ladder,
+                GameRulesDebugField.Zipline,
+                GameRulesDebugField.Parachute,
+                GameRulesDebugField.Stealth,
+                GameRulesDebugField.Suppression,
+                GameRulesDebugField.Ping,
+                GameRulesDebugField.Abilities,
+                GameRulesDebugField.SlowMotion,
+            };
+
+            foreach (var field in newFields)
+            {
+                var draft = new GameRulesDebugDraft(GameRules.Default);
+                Assert.That(draft.Get(field), Is.EqualTo(0), field + " starts Off");
+                Assert.That(GameRulesDebugDraft.Options(field), Is.EqualTo(_offOn), field.ToString());
+
+                draft.Set(field, 1);
+                var built = draft.Build();
+
+                Assert.That(GameRulesDebugDraft.Changes(GameRules.Default, built), Is.EqualTo(new[] { field + ": Off -> On" }));
+            }
         }
 
         [Test]
@@ -136,6 +169,19 @@ namespace Fps.Core.Tests
                 GameRulesDebugField.Dodge,
                 GameRulesDebugField.Vault,
                 GameRulesDebugField.Grenade,
+                GameRulesDebugField.Melee,
+                GameRulesDebugField.Stagger,
+                GameRulesDebugField.Slide,
+                GameRulesDebugField.Mantle,
+                GameRulesDebugField.Prone,
+                GameRulesDebugField.Ladder,
+                GameRulesDebugField.Zipline,
+                GameRulesDebugField.Parachute,
+                GameRulesDebugField.Stealth,
+                GameRulesDebugField.Suppression,
+                GameRulesDebugField.Ping,
+                GameRulesDebugField.Abilities,
+                GameRulesDebugField.SlowMotion,
                 GameRulesDebugField.FallDamage,
             }));
         }

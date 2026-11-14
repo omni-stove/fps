@@ -81,6 +81,45 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("出撃ごとに持つグレネードの数。Grenade が Off なら使わない")]
         private int _grenadeCount;
 
+        [SerializeField, Tooltip("近接攻撃を使えるか")]
+        private Melee _melee = Melee.Off;
+
+        [SerializeField, Tooltip("被弾したときに怯むか")]
+        private Stagger _stagger = Stagger.Off;
+
+        [SerializeField, Tooltip("走りながらしゃがんでスライディングできるか")]
+        private Slide _slide = Slide.Off;
+
+        [SerializeField, Tooltip("乗り越えられない高さの段や崖の縁によじ登れるか")]
+        private Mantle _mantle = Mantle.Off;
+
+        [SerializeField, Tooltip("伏せられるか")]
+        private Prone _prone = Prone.Off;
+
+        [SerializeField, Tooltip("はしごを上り下りできるか")]
+        private Ladder _ladder = Ladder.Off;
+
+        [SerializeField, Tooltip("ジップラインを使えるか")]
+        private Zipline _zipline = Zipline.Off;
+
+        [SerializeField, Tooltip("落ちている最中にパラシュートを開けるか")]
+        private Parachute _parachute = Parachute.Off;
+
+        [SerializeField, Tooltip("敵が発見ゲージを溜めて、気づき・警戒・交戦と段階を踏むか")]
+        private Stealth _stealth = Stealth.Off;
+
+        [SerializeField, Tooltip("近くを飛ぶ弾で制圧され、狙いや動きが鈍るか")]
+        private Suppression _suppression = Suppression.Off;
+
+        [SerializeField, Tooltip("敵や場所に印を付けられるか")]
+        private Fps.Core.Ping _ping = Fps.Core.Ping.Off;
+
+        [SerializeField, Tooltip("能力 (回数・待ち時間・入力の枠に乗るもの) を使えるか")]
+        private Abilities _abilities = Abilities.Off;
+
+        [SerializeField, Tooltip("時間の速さを変えられるか。オフラインに限る")]
+        private SlowMotion _slowMotion = SlowMotion.Off;
+
         [Header("リスポーン")]
         [SerializeField, Min(0f), Tooltip("リスポーンしてからダメージを受けなくなる秒数。0 なら守らない")]
         private float _spawnProtectionSeconds;
@@ -229,6 +268,84 @@ namespace Fps.Runtime
             set => _grenadeCount = value;
         }
 
+        public Melee Melee
+        {
+            get => _melee;
+            set => _melee = value;
+        }
+
+        public Stagger Stagger
+        {
+            get => _stagger;
+            set => _stagger = value;
+        }
+
+        public Slide Slide
+        {
+            get => _slide;
+            set => _slide = value;
+        }
+
+        public Mantle Mantle
+        {
+            get => _mantle;
+            set => _mantle = value;
+        }
+
+        public Prone Prone
+        {
+            get => _prone;
+            set => _prone = value;
+        }
+
+        public Ladder Ladder
+        {
+            get => _ladder;
+            set => _ladder = value;
+        }
+
+        public Zipline Zipline
+        {
+            get => _zipline;
+            set => _zipline = value;
+        }
+
+        public Parachute Parachute
+        {
+            get => _parachute;
+            set => _parachute = value;
+        }
+
+        public Stealth Stealth
+        {
+            get => _stealth;
+            set => _stealth = value;
+        }
+
+        public Suppression Suppression
+        {
+            get => _suppression;
+            set => _suppression = value;
+        }
+
+        public Fps.Core.Ping Ping
+        {
+            get => _ping;
+            set => _ping = value;
+        }
+
+        public Abilities Abilities
+        {
+            get => _abilities;
+            set => _abilities = value;
+        }
+
+        public SlowMotion SlowMotion
+        {
+            get => _slowMotion;
+            set => _slowMotion = value;
+        }
+
         public float SpawnProtectionSeconds
         {
             get => _spawnProtectionSeconds;
@@ -293,7 +410,20 @@ namespace Fps.Runtime
                         _dodge,
                         _vault,
                         _grenade,
-                        _grenadeCount),
+                        _grenadeCount,
+                        _melee,
+                        _stagger,
+                        _slide,
+                        _mantle,
+                        _prone,
+                        _ladder,
+                        _zipline,
+                        _parachute,
+                        _stealth,
+                        _suppression,
+                        _ping,
+                        _abilities,
+                        _slowMotion),
                     _spawnProtectionSeconds,
                     _fallDamage,
                     _hudDensity,
@@ -364,6 +494,19 @@ namespace Fps.Runtime
             _vault = actions.Vault;
             _grenade = actions.Grenade;
             _grenadeCount = actions.GrenadeCount;
+            _melee = actions.Melee;
+            _stagger = actions.Stagger;
+            _slide = actions.Slide;
+            _mantle = actions.Mantle;
+            _prone = actions.Prone;
+            _ladder = actions.Ladder;
+            _zipline = actions.Zipline;
+            _parachute = actions.Parachute;
+            _stealth = actions.Stealth;
+            _suppression = actions.Suppression;
+            _ping = actions.Ping;
+            _abilities = actions.Abilities;
+            _slowMotion = actions.SlowMotion;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed game rules)" : name;

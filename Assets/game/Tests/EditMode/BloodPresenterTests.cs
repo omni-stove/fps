@@ -168,6 +168,21 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheWallProbeSkipsCharacterControllersOnTheWay()
+        {
+            var other = Track(new GameObject("NetPlayer"));
+            other.transform.position = new Vector3(0f, 1f, 10.8f);
+            other.AddComponent<CharacterController>();
+            var wall = Wall("Wall", new Vector3(0f, 1f, 11.5f));
+            Physics.SyncTransforms();
+
+            var found = BloodPresenter.TryFindWall(new Vector3(0f, 1f, 10f), Vector3.forward, 2f, out var hit);
+
+            Assert.That(found, Is.True);
+            Assert.That(hit.collider, Is.SameAs(wall.GetComponent<Collider>()));
+        }
+
+        [Test]
         public void TheWallProbeIgnoresTriggers()
         {
             var wall = Wall("Trigger", new Vector3(0f, 1f, 11.5f));

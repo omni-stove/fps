@@ -80,6 +80,8 @@ namespace Fps.Editor
         private static bool _killedDummy;
         private static bool _deathBodyCollapsed;
         private static bool _deathBodyRemoved;
+        private static bool _ragdollCollapsed;
+        private static bool _ragdollFrozen;
         private static string _killProblem;
         private static bool _walkStarted;
         private static bool _collapsedBeforeWalk;
@@ -218,6 +220,8 @@ namespace Fps.Editor
             _killedDummy = false;
             _deathBodyCollapsed = false;
             _deathBodyRemoved = false;
+            _ragdollCollapsed = false;
+            _ragdollFrozen = false;
             _killProblem = null;
             _walkStarted = false;
             _collapsedBeforeWalk = false;
@@ -278,6 +282,11 @@ namespace Fps.Editor
             else if (condition.StartsWith(DeathBodyPresenter.LogTag + " collapse ", StringComparison.Ordinal))
             {
                 _deathBodyCollapsed = true;
+                _ragdollCollapsed |= condition.Contains(" ragdoll ");
+            }
+            else if (condition.StartsWith(DeathRagdoll.LogTag + " ragdoll frozen ", StringComparison.Ordinal))
+            {
+                _ragdollFrozen = true;
             }
             else if (condition.StartsWith(DeathBodyPresenter.LogTag + " removed ", StringComparison.Ordinal))
             {
@@ -551,7 +560,7 @@ namespace Fps.Editor
             problems.AddRange(_errors);
 
             Debug.Log(
-                $"{LogTag} mission={mission.Id} started={_missionStarted} started without save={_startedWithoutSave} saved at checkpoint={_savedAtStart} death body collapsed={_deathBodyCollapsed} removed={_deathBodyRemoved} objectives={_walkStep}/{mission.Objectives.Count} completed={_missionCompleted} errors={_errors.Count}");
+                $"{LogTag} mission={mission.Id} started={_missionStarted} started without save={_startedWithoutSave} saved at checkpoint={_savedAtStart} death body collapsed={_deathBodyCollapsed} ragdoll={_ragdollCollapsed} frozen={_ragdollFrozen} removed={_deathBodyRemoved} objectives={_walkStep}/{mission.Objectives.Count} completed={_missionCompleted} errors={_errors.Count}");
 
             var recorded = SessionState.GetString(ProblemsKey, string.Empty);
             foreach (var problem in problems)

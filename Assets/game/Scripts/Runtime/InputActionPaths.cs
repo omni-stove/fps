@@ -23,5 +23,11 @@ namespace Fps.Runtime
         public const string Dodge = "Player/Dodge";
         public const string Grenade = "Player/Grenade";
         public const string NetStats = "Player/NetStats";
+        public const string Melee = "Player/Melee";
+        public const string Prone = "Player/Prone";
+        public const string Ping = "Player/Ping";
+        public const string Ability1 = "Player/Ability1";
+        public const string Ability2 = "Player/Ability2";
+        public const string SquadCommand = "Player/SquadCommand";
     }
 }

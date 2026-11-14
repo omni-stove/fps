@@ -89,6 +89,19 @@ namespace Fps.Core
                 case GameRulesDebugField.Dodge: return (int)actions.Dodge;
                 case GameRulesDebugField.Vault: return (int)actions.Vault;
                 case GameRulesDebugField.Grenade: return (int)actions.Grenade;
+                case GameRulesDebugField.Melee: return (int)actions.Melee;
+                case GameRulesDebugField.Stagger: return (int)actions.Stagger;
+                case GameRulesDebugField.Slide: return (int)actions.Slide;
+                case GameRulesDebugField.Mantle: return (int)actions.Mantle;
+                case GameRulesDebugField.Prone: return (int)actions.Prone;
+                case GameRulesDebugField.Ladder: return (int)actions.Ladder;
+                case GameRulesDebugField.Zipline: return (int)actions.Zipline;
+                case GameRulesDebugField.Parachute: return (int)actions.Parachute;
+                case GameRulesDebugField.Stealth: return (int)actions.Stealth;
+                case GameRulesDebugField.Suppression: return (int)actions.Suppression;
+                case GameRulesDebugField.Ping: return (int)actions.Ping;
+                case GameRulesDebugField.Abilities: return (int)actions.Abilities;
+                case GameRulesDebugField.SlowMotion: return (int)actions.SlowMotion;
                 case GameRulesDebugField.FallDamage: return (int)rules.FallDamage;
                 case GameRulesDebugField.HudDensity: return (int)rules.HudDensity;
                 default: throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a defined GameRulesDebugField");
@@ -139,7 +152,20 @@ namespace Fps.Core
                 .WithActiveReload((ActiveReload)Get(GameRulesDebugField.ActiveReload))
                 .WithDodge((Dodge)Get(GameRulesDebugField.Dodge))
                 .WithVault((Vault)Get(GameRulesDebugField.Vault))
-                .WithGrenade(grenade);
+                .WithGrenade(grenade)
+                .WithMelee((Melee)Get(GameRulesDebugField.Melee))
+                .WithStagger((Stagger)Get(GameRulesDebugField.Stagger))
+                .WithSlide((Slide)Get(GameRulesDebugField.Slide))
+                .WithMantle((Mantle)Get(GameRulesDebugField.Mantle))
+                .WithProne((Prone)Get(GameRulesDebugField.Prone))
+                .WithLadder((Ladder)Get(GameRulesDebugField.Ladder))
+                .WithZipline((Zipline)Get(GameRulesDebugField.Zipline))
+                .WithParachute((Parachute)Get(GameRulesDebugField.Parachute))
+                .WithStealth((Stealth)Get(GameRulesDebugField.Stealth))
+                .WithSuppression((Suppression)Get(GameRulesDebugField.Suppression))
+                .WithPing((Ping)Get(GameRulesDebugField.Ping))
+                .WithAbilities((Abilities)Get(GameRulesDebugField.Abilities))
+                .WithSlowMotion((SlowMotion)Get(GameRulesDebugField.SlowMotion));
             if (grenade == Grenade.On && actions.GrenadeCount == 0)
             {
                 actions = actions.WithGrenadeCount(DefaultGrenadeCount);
@@ -236,6 +262,19 @@ namespace Fps.Core
                 case GameRulesDebugField.Dodge: return typeof(Dodge);
                 case GameRulesDebugField.Vault: return typeof(Vault);
                 case GameRulesDebugField.Grenade: return typeof(Grenade);
+                case GameRulesDebugField.Melee: return typeof(Melee);
+                case GameRulesDebugField.Stagger: return typeof(Stagger);
+                case GameRulesDebugField.Slide: return typeof(Slide);
+                case GameRulesDebugField.Mantle: return typeof(Mantle);
+                case GameRulesDebugField.Prone: return typeof(Prone);
+                case GameRulesDebugField.Ladder: return typeof(Ladder);
+                case GameRulesDebugField.Zipline: return typeof(Zipline);
+                case GameRulesDebugField.Parachute: return typeof(Parachute);
+                case GameRulesDebugField.Stealth: return typeof(Stealth);
+                case GameRulesDebugField.Suppression: return typeof(Suppression);
+                case GameRulesDebugField.Ping: return typeof(Ping);
+                case GameRulesDebugField.Abilities: return typeof(Abilities);
+                case GameRulesDebugField.SlowMotion: return typeof(SlowMotion);
                 case GameRulesDebugField.FallDamage: return typeof(FallDamage);
                 case GameRulesDebugField.HudDensity: return typeof(HudDensity);
                 default: throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a defined GameRulesDebugField");

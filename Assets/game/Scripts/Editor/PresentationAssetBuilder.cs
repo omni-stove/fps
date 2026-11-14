@@ -313,7 +313,7 @@ namespace Fps.Editor
             return Path.Combine(projectRoot ?? string.Empty, assetPath);
         }
 
-        private static AudioClip WriteSound(string path, SoundSpec spec)
+        internal static AudioClip WriteSound(string path, SoundSpec spec)
         {
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
             if (existing != null && !(existing is AudioClip))

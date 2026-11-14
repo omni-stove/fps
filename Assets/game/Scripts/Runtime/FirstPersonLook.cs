@@ -251,19 +251,25 @@ namespace Fps.Runtime
         /// </summary>
         public Vector2 ReadLookDegrees(float deltaSeconds)
         {
-            if (_lookAction == null)
+            return ReadLookDegrees(_lookAction, deltaSeconds);
+        }
+
+        // ポーズ中のフォトモードは、ポーズ画面が止めている共有の Look を有効にし直さず、複製したアクションを同じ感度で読む
+        public Vector2 ReadLookDegrees(InputAction action, float deltaSeconds)
+        {
+            if (action == null)
             {
                 return Vector2.zero;
             }
 
-            var raw = _lookAction.ReadValue<Vector2>();
+            var raw = action.ReadValue<Vector2>();
             if (raw == Vector2.zero)
             {
                 return Vector2.zero;
             }
 
             // マウスやタッチの delta はフレームあたりの移動量なので deltaTime を掛けない。スティックは速度として扱う。
-            var isPointer = _lookAction.activeControl?.device is Pointer;
+            var isPointer = action.activeControl?.device is Pointer;
             return isPointer ? raw * EffectiveMouseSensitivity : raw * (EffectiveStickSensitivity * deltaSeconds);
         }
 

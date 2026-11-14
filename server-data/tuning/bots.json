@@ -1,0 +1,20 @@
+{
+  "sightRange": 40,
+  "attackRange": 25,
+  "loseSightSeconds": 2,
+  "searchSeconds": 6,
+  "reactionSeconds": 0.6,
+  "maxTurnDegreesPerSecond": 240,
+  "aimErrorPerMeter": 0.03,
+  "aimErrorRefreshSeconds": 0.5,
+  "fireToleranceDegrees": 3,
+  "arrivalDistance": 0.5,
+  "sprintDistance": 8,
+  "sprintMaxAngleDegrees": 30,
+  "crouchWhenHolding": false,
+  "navSampleRadius": 2.5,
+  "repathSeconds": 0.5,
+  "repathDistance": 1,
+  "stuckSeconds": 2,
+  "stuckProgress": 0.5
+}

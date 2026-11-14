@@ -48,9 +48,29 @@ namespace Fps.Core
         public const string PlayerWeightItem = "playerWeight";
         public const string EnemyWeightItem = "enemyWeight";
 
+        public const string SightRangeItem = "sightRange";
+        public const string AttackRangeItem = "attackRange";
+        public const string LoseSightSecondsItem = "loseSightSeconds";
+        public const string SearchSecondsItem = "searchSeconds";
+        public const string ReactionSecondsItem = "reactionSeconds";
+        public const string MaxTurnDegreesPerSecondItem = "maxTurnDegreesPerSecond";
+        public const string AimErrorPerMeterItem = "aimErrorPerMeter";
+        public const string AimErrorRefreshSecondsItem = "aimErrorRefreshSeconds";
+        public const string FireToleranceDegreesItem = "fireToleranceDegrees";
+        public const string ArrivalDistanceItem = "arrivalDistance";
+        public const string SprintDistanceItem = "sprintDistance";
+        public const string SprintMaxAngleDegreesItem = "sprintMaxAngleDegrees";
+        public const string CrouchWhenHoldingItem = "crouchWhenHolding";
+        public const string NavSampleRadiusItem = "navSampleRadius";
+        public const string RepathSecondsItem = "repathSeconds";
+        public const string RepathDistanceItem = "repathDistance";
+        public const string StuckSecondsItem = "stuckSeconds";
+        public const string StuckProgressItem = "stuckProgress";
+
         private const string _grenadeKind = "grenade JSON";
         private const string _pingKind = "ping JSON";
         private const string _knockbackKind = "knockback JSON";
+        private const string _botsKind = "bots JSON";
 
         /// <summary>グレネードの JSON に書ける項目の名前 (<see cref="GrenadeSpec"/> のコンストラクターの並び)。</summary>
         public static IReadOnlyList<string> GrenadeItemNames { get; } = new[]
@@ -96,6 +116,29 @@ namespace Fps.Core
             LandingSnapRadiusItem,
             PlayerWeightItem,
             EnemyWeightItem,
+        };
+
+        // 項目名は EnemySpec・BotInputSpec・NetBotSpec のコンストラクターの引数名にそろえ、値の検査で断られた項目を名前で示せるようにする
+        public static IReadOnlyList<string> BotItemNames { get; } = new[]
+        {
+            SightRangeItem,
+            AttackRangeItem,
+            LoseSightSecondsItem,
+            SearchSecondsItem,
+            ReactionSecondsItem,
+            MaxTurnDegreesPerSecondItem,
+            AimErrorPerMeterItem,
+            AimErrorRefreshSecondsItem,
+            FireToleranceDegreesItem,
+            ArrivalDistanceItem,
+            SprintDistanceItem,
+            SprintMaxAngleDegreesItem,
+            CrouchWhenHoldingItem,
+            NavSampleRadiusItem,
+            RepathSecondsItem,
+            RepathDistanceItem,
+            StuckSecondsItem,
+            StuckProgressItem,
         };
 
         /// <summary>text を 1 つのグレネードの調整値として読む。</summary>
@@ -189,6 +232,43 @@ namespace Fps.Core
             catch (ArgumentException e)
             {
                 throw Rejected(source, _knockbackKind, KnockbackItemNames, e);
+            }
+        }
+
+        public static NetBotSpec ParseBots(string text, string sourceName)
+        {
+            var source = SourceOf(sourceName, _botsKind);
+            var fields = Fields.Read(text, source, _botsKind, BotItemNames);
+            var defaults = NetBotSpec.Default;
+            var brain = defaults.Brain;
+            var input = defaults.Input;
+            try
+            {
+                return new NetBotSpec(
+                    new EnemySpec(
+                        fields.ReadFloat(SightRangeItem, brain.SightRange),
+                        fields.ReadFloat(AttackRangeItem, brain.AttackRange),
+                        fields.ReadFloat(LoseSightSecondsItem, brain.LoseSightSeconds),
+                        fields.ReadFloat(SearchSecondsItem, brain.SearchSeconds),
+                        fields.ReadFloat(ReactionSecondsItem, brain.ReactionSeconds)),
+                    new BotInputSpec(
+                        fields.ReadFloat(MaxTurnDegreesPerSecondItem, input.MaxTurnDegreesPerSecond),
+                        fields.ReadFloat(AimErrorPerMeterItem, input.AimErrorPerMeter),
+                        fields.ReadFloat(AimErrorRefreshSecondsItem, input.AimErrorRefreshSeconds),
+                        fields.ReadFloat(FireToleranceDegreesItem, input.FireToleranceDegrees),
+                        fields.ReadFloat(ArrivalDistanceItem, input.ArrivalDistance),
+                        fields.ReadFloat(SprintDistanceItem, input.SprintDistance),
+                        fields.ReadFloat(SprintMaxAngleDegreesItem, input.SprintMaxAngleDegrees),
+                        fields.ReadBool(CrouchWhenHoldingItem, input.CrouchWhenHolding)),
+                    fields.ReadFloat(NavSampleRadiusItem, defaults.NavSampleRadius),
+                    fields.ReadFloat(RepathSecondsItem, defaults.RepathSeconds),
+                    fields.ReadFloat(RepathDistanceItem, defaults.RepathDistance),
+                    fields.ReadFloat(StuckSecondsItem, defaults.StuckSeconds),
+                    fields.ReadFloat(StuckProgressItem, defaults.StuckProgress));
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(source, _botsKind, BotItemNames, e);
             }
         }
 
@@ -349,6 +429,22 @@ namespace Fps.Core
                 }
 
                 return value;
+            }
+
+            public bool ReadBool(string name, bool fallback)
+            {
+                var node = Find(name);
+                if (node == null)
+                {
+                    return fallback;
+                }
+
+                if (node.Kind != GameRulesJson.NodeKind.True && node.Kind != GameRulesJson.NodeKind.False)
+                {
+                    throw Invalid(name, node, $"must be true or false, but is {node.Describe()}");
+                }
+
+                return node.Kind == GameRulesJson.NodeKind.True;
             }
 
             private GameRulesJson.Node Find(string name)

@@ -65,6 +65,9 @@ namespace Fps.Server
             modules.Add(movement);
             modules.Add(rules);
             modules.Add(combat);
+
+            // Bot は戦闘がこの tick の当たり判定を記録した後の位置へ撃ち、スナップショットには動いた後の位置を載せる
+            modules.Add(new ServerBots(rules, movement, combat));
             modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat }));
 
             if (!launch.Options.RegistersLobby)

@@ -50,7 +50,7 @@ namespace Fps.Server
 
         public void Tick(long tick, float deltaSeconds)
         {
-            _registration.Tick(_context.Match.PlayerCount, _context.Control.IsDraining);
+            _registration.Tick(_context.Match.HumanCount, _context.Control.IsDraining);
         }
 
         public void OnConnected(ConnectionId connection)

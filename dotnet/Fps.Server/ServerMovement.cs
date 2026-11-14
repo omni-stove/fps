@@ -45,6 +45,8 @@ namespace Fps.Server
 
         public int TickRate { get; }
 
+        public float TickSeconds => _tickSeconds;
+
         public ServerMotorSettings Settings => _settings;
 
         public void Start(ServerContext context)
@@ -72,6 +74,53 @@ namespace Fps.Server
                 return;
             }
 
+            _byConnection[connection] = Add(player);
+        }
+
+        /// <summary>Bot は接続を持たないので、Bot のモジュールが試合に加えた直後にここで体を作る。</summary>
+        public void AddBot(ServerPlayer player)
+        {
+            ArgumentNullException.ThrowIfNull(player);
+            if (!player.IsBot)
+            {
+                throw new ArgumentException("player " + player.PlayerId + " is not a bot", nameof(player));
+            }
+
+            if (_byPlayer.ContainsKey(player.PlayerId))
+            {
+                throw new ArgumentException("bot " + player.PlayerId + " already moves", nameof(player));
+            }
+
+            Add(player);
+        }
+
+        public bool RemoveBot(int playerId)
+        {
+            return BotRoster.IsBotId(playerId) && _byPlayer.Remove(playerId);
+        }
+
+        /// <summary>
+        /// Bot の 1 tick の入力を、人の入力と同じ確定処理 (ルールで使えない動き・ダウン中の制限・ログ・着地) に通す。
+        /// 人の入力の予算で縛らないのは、Bot はサーバーの tick ごとに 1 つしか作らないため。
+        /// </summary>
+        public bool ApplyBotInput(int playerId, InputFrame frame)
+        {
+            if (!BotRoster.IsBotId(playerId) || !_byPlayer.TryGetValue(playerId, out var mover))
+            {
+                return false;
+            }
+
+            if (frame.Tick <= mover.LastProcessedTick || !CharacterMotorInput.IsValid(frame.Move, frame.Yaw))
+            {
+                throw new ArgumentException("bot " + playerId + " input for tick " + frame.Tick + " is stale or not finite", nameof(frame));
+            }
+
+            Apply(mover, frame);
+            return true;
+        }
+
+        private Mover Add(ServerPlayer player)
+        {
             // ルールのモジュールは参加の知らせ (この呼び出しより前) のうちに出現させるので、置き直しはもう体に書いてある
             var spawned = _context.Bodies.TryGet(player.PlayerId, out var shared) && shared.HasSpawned;
             var spawn = spawned ? shared.Position : _settings.SpawnPosition;
@@ -91,9 +140,9 @@ namespace Fps.Server
                 Downed = shared != null && shared.IsDowned,
             };
             simulation.Place(mover.State);
-            _byConnection[connection] = mover;
             _byPlayer[player.PlayerId] = mover;
             Publish(mover);
+            return mover;
         }
 
         public void OnDisconnected(ConnectionId connection)

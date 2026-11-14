@@ -20,5 +20,7 @@ namespace Fps.Server
         public Team Team { get; }
 
         public string RejoinKey { get; }
+
+        public bool IsBot => BotRoster.IsBotId(PlayerId);
     }
 }

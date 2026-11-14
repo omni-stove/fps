@@ -206,7 +206,7 @@ namespace Fps.Server.Tests
             TestMaps.Write(_data.Path, "NetTest", points: TestRules.Points());
 
             Assert.That(RunWithServerModules(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
-            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 5 module(s)"));
+            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 6 module(s)"));
             Assert.That(_output.ToString(), Does.Contain("[AntiCheat] disabled on the dedicated server by default"));
             Assert.That(_output.ToString(), Does.Contain("[AntiCheat] session not started (disabled)"));
         }

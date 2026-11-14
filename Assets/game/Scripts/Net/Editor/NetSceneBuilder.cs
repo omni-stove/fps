@@ -21,9 +21,14 @@ namespace Fps.Editor
     /// </summary>
     public static class NetSceneBuilder
     {
-        public const string PlayerPrefabPath = "Assets/game/Prefabs/Net/NetPlayer.prefab";
-        public const string MatchPrefabPath = "Assets/game/Prefabs/Net/NetMatch.prefab";
-        public const string GrenadePrefabPath = "Assets/game/Prefabs/Net/NetGrenade.prefab";
+        public static string PlayerPrefabPath => FpsKitRoot.OutputPath("Prefabs/Net/NetPlayer.prefab");
+        public static string MatchPrefabPath => FpsKitRoot.OutputPath("Prefabs/Net/NetMatch.prefab");
+        public static string GrenadePrefabPath => FpsKitRoot.OutputPath("Prefabs/Net/NetGrenade.prefab");
+
+        /// <summary>
+        /// 生成して保存するシーン。出力先ルート (<see cref="FpsKitRoot.Output"/>) の下で、既定なら実行時に読む <see cref="NetBootstrap.ScenePath"/> と同じ。
+        /// </summary>
+        public static string ScenePath => BuildSceneList.NetTestScene;
 
         /// <summary>
         /// Netcode が既定で使うネットワークのプレハブの一覧。実行時の登録は <see cref="NetBootstrap"/> がコードで行うが、
@@ -51,7 +56,7 @@ namespace Fps.Editor
         public const float GroundY = -PlayerHeight / 2f;
 
         /// <summary>サーバーの Bot が経路を引く、NetTest の焼いた NavMesh (<see cref="ModeSceneBuilder.NavMeshDataPathFor"/> と同じ置き場所)。</summary>
-        public static readonly string NavMeshDataPath = ModeSceneBuilder.NavMeshDataPathFor(NetBootstrap.ScenePath);
+        public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
         /// <summary>
         /// 出現地点が NavMesh に乗っているかを確かめるときに探す半径 (m)。出現地点はカプセルの中心 (床から <see cref="PlayerHeight"/> の半分上) なので、
@@ -108,9 +113,9 @@ namespace Fps.Editor
             var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout, catalog, rules, grenadePrefab));
             RegisterDefaultNetworkPrefabs(playerPrefab, matchPrefab, grenadePrefab);
             BuildScene(playerPrefab, matchPrefab);
-            BuildSceneList.Register(NetBootstrap.ScenePath);
+            BuildSceneList.Register(ScenePath);
             AssetDatabase.SaveAssets();
-            Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + GrenadePrefabPath + ", " + MatchPrefabPath + " and " + NetBootstrap.ScenePath
+            Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + GrenadePrefabPath + ", " + MatchPrefabPath + " and " + ScenePath
                 + " (loadout " + WeaponAssetBuilder.LoadoutPath + ", catalog " + WeaponAssetBuilder.CatalogPath
                 + ", rules " + GameRulesAssetBuilder.TeamDeathmatchPath + ", rig " + CharacterRigBuilder.PrefabPath + ")");
         }
@@ -570,7 +575,8 @@ namespace Fps.Editor
 
         private static void BuildScene(GameObject playerPrefab, GameObject matchPrefab)
         {
-            EnsureFolder(System.IO.Path.GetDirectoryName(NetBootstrap.ScenePath));
+            var scenePath = ScenePath;
+            EnsureFolder(System.IO.Path.GetDirectoryName(scenePath));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -603,9 +609,9 @@ namespace Fps.Editor
 
             BakeNavMesh(ground);
 
-            if (!EditorSceneManager.SaveScene(scene, NetBootstrap.ScenePath))
+            if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
-                throw new InvalidOperationException("failed to save " + NetBootstrap.ScenePath);
+                throw new InvalidOperationException("failed to save " + scenePath);
             }
         }
 

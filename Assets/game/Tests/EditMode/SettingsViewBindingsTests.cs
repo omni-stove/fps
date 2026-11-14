@@ -34,6 +34,9 @@ namespace Fps.Tests.EditMode
         {
             _appliedBefore = AppliedControlSettings.Current;
             _volumeBefore = AudioListener.volume;
+
+            // 案内の文を日本語で確かめるので、この機械で保存した言語に依らないようにする
+            AppliedControlSettings.Apply(_appliedBefore.WithLanguage(GameLanguage.Japanese));
             var suffix = Guid.NewGuid().ToString("N");
             _store = new ControlSettingsStore("Fps.Tests.SettingsViewBindings.Settings." + suffix);
             _bindingStore = new InputBindingOverridesStore("Fps.Tests.SettingsViewBindings.Bindings." + suffix);

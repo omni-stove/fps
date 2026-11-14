@@ -19,8 +19,8 @@ namespace Fps.Editor
     /// </remarks>
     public sealed class FreeForAllSceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.FreeForAllScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.FreeForAllPath;
+        public static string ScenePathValue => BuildSceneList.FreeForAllScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.FreeForAllPath;
         public const string MenuPath = "Fps/Build Free For All Scene";
 
         /// <summary>bot の数。それぞれが自分だけの陣営を持つ。</summary>

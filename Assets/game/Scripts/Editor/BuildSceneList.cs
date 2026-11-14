@@ -16,68 +16,69 @@ namespace Fps.Editor
         public const string MenuPath = "Fps/Register Build Scenes";
         public const string LogTag = "[BuildSceneList]";
 
-        /// <summary>メインメニュー。起動時のシーンなので Build Settings の先頭に置く。実行時に読む側 (<see cref="Fps.Core.MenuRoute"/>) と同じ値。</summary>
-        public const string MainMenuScene = Fps.Core.MenuRoute.MainMenuScene;
-
-        /// <summary>射撃場。メニューから読む。</summary>
-        public const string BootstrapScene = "Assets/game/Scenes/Bootstrap.unity";
-
-        public const string EnemyAiTestScene = "Assets/game/Scenes/EnemyAiTest.unity";
-        public const string MissionTestScene = "Assets/game/Scenes/MissionTest.unity";
-        public const string DestructionTestScene = "Assets/game/Scenes/DestructionTest.unity";
-        public const string CampaignScene = "Assets/game/Scenes/Campaign01.unity";
-
-        /// <summary>キャンペーンの 2 本目のミッション。ミッションの一覧 (MissionCatalog) から読む。</summary>
-        public const string Campaign02Scene = "Assets/game/Scenes/Campaign02.unity";
-
-        /// <summary>TPS のアクションを試す射撃場。ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/>。</summary>
-        public const string TpsRangeScene = "Assets/game/Scenes/TpsRange.unity";
-
-        /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
-        public const string DominationScene = "Assets/game/Scenes/Domination.unity";
-
-        /// <summary>PvE の波で敵を出す部品 (WaveSpawner) を試すシーン。</summary>
-        public const string WaveTestScene = "Assets/game/Scenes/WaveTest.unity";
-
-        // 対戦・PvE モード。名前とルールはそれぞれ GameRulesAssetBuilder.ModeNames と <名前>Path に揃える (一致はテストで確かめる)。
-        public const string FreeForAllScene = "Assets/game/Scenes/FreeForAll.unity";
-
-        /// <summary>キルコンファームド。生成は <see cref="KillConfirmedSceneBuilder"/>。</summary>
-        public const string KillConfirmedScene = "Assets/game/Scenes/KillConfirmed.unity";
-
-        /// <summary>ガンゲーム。生成は <see cref="GunGameSceneBuilder"/>。</summary>
-        public const string GunGameScene = "Assets/game/Scenes/GunGame.unity";
-
-        /// <summary>ハードポイント。生成は <see cref="HardpointSceneBuilder"/>。</summary>
-        public const string HardpointScene = "Assets/game/Scenes/Hardpoint.unity";
-
-        public const string GuardianScene = "Assets/game/Scenes/Guardian.unity";
-        public const string ExecutionScene = "Assets/game/Scenes/Execution.unity";
-        public const string SearchAndDestroyScene = "Assets/game/Scenes/SearchAndDestroy.unity";
-
-        /// <summary>ホード (PvE の防衛)。生成は <see cref="HordeSceneBuilder"/>。</summary>
-        public const string HordeScene = "Assets/game/Scenes/Horde.unity";
-
-
-        public const string BattleRoyaleScene = "Assets/game/Scenes/BattleRoyale.unity";
-
-        /// <summary><see cref="ModeSceneBuilder"/> の動作確認用シーン (最小の TDM)。生成は <see cref="ModeTestSceneBuilder"/>。</summary>
-        public const string ModeTestScene = "Assets/game/Scenes/ModeTest.unity";
+        // シーンはどれも出力先ルート (FpsKitRoot.Output) の Scenes の下に置く。ルートは引数と EditorPrefs で変わるので、読むたびに組む。
 
         /// <summary>
-        /// ネット対戦のシーン。実行時に読み込む側 (Fps.Net の NetBootstrap.ScenePath) と同じ値で、
-        /// この Editor のアセンブリは Fps.Net を参照しないため文字列で持つ (一致はテストで確かめる)。
+        /// メインメニュー。起動時のシーンなので Build Settings の先頭に置く。実行時に読む側 (<see cref="Fps.Core.MenuRoute"/>) と同じ名前で、
+        /// 出力先ルートが既定なら同じパス。
         /// </summary>
-        public const string NetTestScene = "Assets/game/Scenes/NetTest.unity";
+        public static string MainMenuScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.MainMenuSceneName);
+
+        /// <summary>射撃場。メニューから読む。</summary>
+        public static string BootstrapScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.RangeSceneName);
+
+        public static string EnemyAiTestScene => FpsKitRoot.OutputScene("EnemyAiTest");
+        public static string MissionTestScene => FpsKitRoot.OutputScene("MissionTest");
+        public static string DestructionTestScene => FpsKitRoot.OutputScene("DestructionTest");
+        public static string CampaignScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.CampaignSceneName);
+
+        /// <summary>キャンペーンの 2 本目のミッション。ミッションの一覧 (MissionCatalog) から読む。</summary>
+        public static string Campaign02Scene => FpsKitRoot.OutputScene("Campaign02");
+
+        /// <summary>TPS のアクションを試す射撃場。ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/>。</summary>
+        public static string TpsRangeScene => FpsKitRoot.OutputScene("TpsRange");
+
+        /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
+        public static string DominationScene => FpsKitRoot.OutputScene("Domination");
+
+        /// <summary>PvE の波で敵を出す部品 (WaveSpawner) を試すシーン。</summary>
+        public static string WaveTestScene => FpsKitRoot.OutputScene("WaveTest");
+
+        // 対戦・PvE モード。名前とルールはそれぞれ GameRulesAssetBuilder.ModeNames と <名前>Path に揃える (一致はテストで確かめる)。
+        public static string FreeForAllScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.FreeForAllName);
+
+        /// <summary>キルコンファームド。生成は <see cref="KillConfirmedSceneBuilder"/>。</summary>
+        public static string KillConfirmedScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.KillConfirmedName);
+
+        /// <summary>ガンゲーム。生成は <see cref="GunGameSceneBuilder"/>。</summary>
+        public static string GunGameScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.GunGameName);
+
+        /// <summary>ハードポイント。生成は <see cref="HardpointSceneBuilder"/>。</summary>
+        public static string HardpointScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.HardpointName);
+
+        public static string GuardianScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.GuardianName);
+        public static string ExecutionScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.ExecutionName);
+        public static string SearchAndDestroyScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.SearchAndDestroyName);
+        public static string HordeScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.HordeName);
+        public static string BattleRoyaleScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.BattleRoyaleName);
+
+        /// <summary><see cref="ModeSceneBuilder"/> の動作確認用シーン (最小の TDM)。生成は <see cref="ModeTestSceneBuilder"/>。</summary>
+        public static string ModeTestScene => FpsKitRoot.OutputScene("ModeTest");
+
+        /// <summary>
+        /// ネット対戦のシーン。実行時に読み込む側 (Fps.Net の NetBootstrap.ScenePath) と同じ名前で、出力先ルートが既定なら同じパス
+        /// (一致はテストで確かめる)。
+        /// </summary>
+        public static string NetTestScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.NetSceneName);
 
         /// <summary>
         /// ネット対戦のマップ。サーバーは <c>-map NetArena01</c> でこのシーンへ移る。生成は Fps.Net.Editor の ArenaSceneBuilder
         /// (この Editor のアセンブリは Fps.Net.Editor を参照しないため文字列で持つ。一致はテストで確かめる)。
         /// </summary>
-        public const string NetArena01Scene = "Assets/game/Scenes/NetArena01.unity";
+        public static string NetArena01Scene => FpsKitRoot.OutputScene("NetArena01");
 
         /// <summary>ビルドに入れるシーン。この順に Build Settings へ並べる (先頭が起動時のシーン)。</summary>
-        public static IReadOnlyList<string> Scenes { get; } = new[]
+        public static IReadOnlyList<string> Scenes => new[]
         {
             MainMenuScene,
             BootstrapScene,
@@ -104,7 +105,7 @@ namespace Fps.Editor
         };
 
         /// <summary>
-        /// <see cref="GameRulesAssetBuilder.ModeNames"/> の name のモードのシーン (<c>Assets/game/Scenes/&lt;名前&gt;.unity</c>)。
+        /// <see cref="GameRulesAssetBuilder.ModeNames"/> の name のモードのシーン (<c>&lt;出力先ルート&gt;/Scenes/&lt;名前&gt;.unity</c>)。
         /// 知らない名前なら <see cref="ArgumentException"/>。
         /// </summary>
         public static string ModeScene(string name)
@@ -137,9 +138,9 @@ namespace Fps.Editor
 
         /// <summary>
         /// 専用サーバーのビルドに入れるシーン。メニューと一人称カメラの射撃場は要らないので、ネット対戦のシーンを最初に置き、
-        /// <c>-map</c> で選べるマップを続ける。
+        /// <c>-map</c> で選べるマップを続ける。出力先ルートが変わるので、読むたびに組む。
         /// </summary>
-        public static IReadOnlyList<string> ServerScenes { get; } = new[] { NetTestScene, NetArena01Scene };
+        public static IReadOnlyList<string> ServerScenes => new[] { NetTestScene, NetArena01Scene };
 
         /// <summary>path を起動時のシーンとして Build Settings の先頭に有効な状態で置く (<see cref="WithStartScene"/>)。</summary>
         public static void RegisterStartScene(string path)

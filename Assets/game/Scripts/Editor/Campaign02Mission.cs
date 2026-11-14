@@ -29,11 +29,11 @@ namespace Fps.Editor
     {
         public const string MissionId = "Campaign02";
         public const string MissionDisplayName = "Campaign 02";
-        public const string ScenePath = BuildSceneList.Campaign02Scene;
-        public const string DefinitionPath = "Assets/game/Missions/Campaign02.asset";
+        public static string ScenePath => BuildSceneList.Campaign02Scene;
+        public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/" + MissionId + ".asset");
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
-        public const string NavMeshDataPath = "Assets/game/Scenes/Campaign02/NavMesh-Level.asset";
+        public static string NavMeshDataPath => FpsKitRoot.OutputPath("Scenes/" + MissionId + "/" + CampaignSceneBuilder.NavMeshDataFileName);
 
         public const string EnterBuildingId = "enter_building";
         public const string UseTerminalId = "use_terminal";

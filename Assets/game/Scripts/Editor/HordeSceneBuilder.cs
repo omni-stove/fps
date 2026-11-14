@@ -29,8 +29,8 @@ namespace Fps.Editor
     /// </remarks>
     public sealed class HordeSceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.HordeScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.HordePath;
+        public static string ScenePathValue => BuildSceneList.HordeScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.HordePath;
         public const string MenuPath = "Fps/Build Horde Scene";
 
         public const string BaseRootName = "Base";

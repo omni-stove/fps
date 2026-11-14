@@ -44,11 +44,14 @@ namespace Fps.Editor
     /// </remarks>
     public static class CampaignSceneBuilder
     {
-        public const string ScenePath = BuildSceneList.CampaignScene;
-        public const string DefinitionPath = "Assets/game/Missions/Campaign01.asset";
+        public static string ScenePath => BuildSceneList.CampaignScene;
+        public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/" + MissionId + ".asset");
+
+        /// <summary>キャンペーンの焼いた NavMesh のファイル名。</summary>
+        public const string NavMeshDataFileName = "NavMesh-Level.asset";
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
-        public const string NavMeshDataPath = "Assets/game/Scenes/Campaign01/NavMesh-Level.asset";
+        public static string NavMeshDataPath => FpsKitRoot.OutputPath("Scenes/" + MissionId + "/" + NavMeshDataFileName);
 
         public const string MenuPath = "Fps/Build Campaign Scenes";
         public const string LogTag = "[CampaignSceneBuilder]";

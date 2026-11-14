@@ -68,6 +68,9 @@ namespace Fps.Net
     /// 放置の判定には、これに加えて射撃が届いたときにも知らせる (<c>IdlePlayerFired</c>)。
     /// 試合の終わりでは、勝ったチームを <c>ObjectiveDecideWinner</c> が差し替えてから同期とログに使う。
     /// </para>
+    /// <para>
+    /// 試合のイベントを 1 行の JSON (<see cref="ServerEventLog"/>) にする処理は .ServerEvents.cs にある。
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -520,6 +523,7 @@ namespace Fps.Net
 
             _lastKillers.Clear();
             ClearDowned();
+            ServerEventsSessionCreated();
             PrepareGrenades(spec.Rules);
 
             _alphaScore.Value = 0;
@@ -722,6 +726,7 @@ namespace Fps.Net
             }
 
             Debug.Log(MatchLog.Started(_session.PlayerCount));
+            ServerEventsMatchStarted(_session.PlayerCount);
         }
 
         private void HandleScoreChanged(int alpha, int bravo)
@@ -764,6 +769,7 @@ namespace Fps.Net
             _lastKillers.Record(killerId, victimId);
             var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
             Debug.Log(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId));
+            ServerEventsKilled(killerId, victimId, byAlly);
             SendKill(killerId, victimId, byAlly);
             BotsPlayerKilled(killerId, victimId);
             IdlePlayerKilled(killerId, victimId);
@@ -779,6 +785,7 @@ namespace Fps.Net
             SyncNextWaveSeconds();
             Debug.Log(MatchLog.Ended(winner));
             Debug.Log(MatchLog.NextMatch(_session.RestartRemainingSeconds));
+            ServerEventsMatchEnded(winner);
             BotsMatchEnded(winner);
             IdleMatchEnded(winner);
             ObjectiveMatchEnded(winner);
@@ -798,6 +805,7 @@ namespace Fps.Net
             _lastKillers.Clear();
             _reviveHolds.Clear();
             Debug.Log(MatchLog.Restart());
+            ServerEventsMatchRestarted();
             BotsMatchRestarted();
             IdleMatchRestarted();
             ObjectiveMatchRestarted();

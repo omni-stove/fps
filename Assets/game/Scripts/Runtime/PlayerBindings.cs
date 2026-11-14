@@ -137,86 +137,21 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>アクション (と合成の部品) の画面に出す名前。知らない名前ならそのまま返す。</summary>
+        /// <summary>
+        /// 今の言語 (<see cref="Localizer"/>) で、アクション (と合成の部品) の画面に出す名前。
+        /// 文字列表のキーは <c>input.action.{アクション名}</c> と、移動の部品の <c>input.move.{up|down|left|right}</c>。
+        /// 表に無い名前は、Input Actions に足したばかりのアクションでも行が出るよう、警告を出さずにアクション名をそのまま使う。
+        /// </summary>
         public static string LabelOf(string actionName, string part = null)
         {
-            if (part != null && string.Equals(actionName, "Move", StringComparison.Ordinal))
+            if (part != null
+                && string.Equals(actionName, "Move", StringComparison.Ordinal)
+                && Localizer.TryGet("input.move." + part.ToLowerInvariant(), out var direction))
             {
-                switch (part.ToLowerInvariant())
-                {
-                    case "up":
-                        return "前へ移動";
-                    case "down":
-                        return "後ろへ移動";
-                    case "left":
-                        return "左へ移動";
-                    case "right":
-                        return "右へ移動";
-                }
+                return direction;
             }
 
-            string label;
-            switch (actionName)
-            {
-                case "Move":
-                    label = "移動";
-                    break;
-                case "Look":
-                    label = "視点";
-                    break;
-                case "Attack":
-                    label = "撃つ";
-                    break;
-                case "Aim":
-                    label = "覗き込み (ADS)";
-                    break;
-                case "Reload":
-                    label = "リロード";
-                    break;
-                case "Jump":
-                    label = "ジャンプ";
-                    break;
-                case "Sprint":
-                    label = "ダッシュ";
-                    break;
-                case "Crouch":
-                    label = "しゃがみ";
-                    break;
-                case "Interact":
-                    label = "調べる・起こす";
-                    break;
-                case "Previous":
-                    label = "前の武器";
-                    break;
-                case "Next":
-                    label = "次の武器";
-                    break;
-                case "Cover":
-                    label = "カバー";
-                    break;
-                case "SwapShoulder":
-                    label = "肩の入れ替え";
-                    break;
-                case "Pause":
-                    label = "ポーズ";
-                    break;
-                case "Scoreboard":
-                    label = "スコアボード";
-                    break;
-                case "Dodge":
-                    label = "回避";
-                    break;
-                case "Grenade":
-                    label = "グレネード";
-                    break;
-                case "NetStats":
-                    label = "回線の表示";
-                    break;
-                default:
-                    label = actionName;
-                    break;
-            }
-
+            var label = actionName != null && Localizer.TryGet("input.action." + actionName, out var text) ? text : actionName;
             return part == null ? label : label + " (" + part + ")";
         }
 

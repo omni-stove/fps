@@ -12,8 +12,8 @@ namespace Fps.Editor
     /// </summary>
     public sealed class ModeTestSceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.ModeTestScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.TeamDeathmatchPath;
+        public static string ScenePathValue => BuildSceneList.ModeTestScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.TeamDeathmatchPath;
         public const string MenuPath = "Fps/Build Mode Test Scene";
 
         public ModeTestSceneBuilder()

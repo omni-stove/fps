@@ -19,11 +19,14 @@ namespace Fps.Editor
     /// </summary>
     public static class WeaponAssetBuilder
     {
-        public const string RiflePath = "Assets/game/Weapons/Rifle.asset";
-        public const string HandgunPath = "Assets/game/Weapons/Handgun.asset";
-        public const string CatalogPath = "Assets/game/Weapons/WeaponCatalog.asset";
-        public const string LoadoutPath = "Assets/game/Weapons/DefaultLoadout.asset";
-        public const string LauncherPath = "Assets/game/Weapons/Launcher.asset";
+        /// <summary>武器のアセットを置く、出力先ルート (<see cref="FpsKitRoot.Output"/>) の下のフォルダ。</summary>
+        public static string Folder => FpsKitRoot.OutputPath("Weapons");
+
+        public static string RiflePath => Folder + "/Rifle.asset";
+        public static string HandgunPath => Folder + "/Handgun.asset";
+        public static string CatalogPath => Folder + "/WeaponCatalog.asset";
+        public static string LoadoutPath => Folder + "/DefaultLoadout.asset";
+        public static string LauncherPath => Folder + "/Launcher.asset";
 
         public const string MenuPath = "Fps/Build Weapon Assets";
         public const string LogTag = "[WeaponAssetBuilder]";

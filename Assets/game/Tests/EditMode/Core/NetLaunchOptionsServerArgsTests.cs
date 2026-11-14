@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     /// <summary>
     /// <see cref="NetLaunchOptions"/> の <c>-map</c> / <c>-bots</c> / <c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> /
-    /// <c>-drain-timeout</c> の解析と検証。
+    /// <c>-drain-timeout</c> / <c>-log-format</c> の解析と検証。
     /// </summary>
     public sealed class NetLaunchOptionsServerArgsTests
     {
@@ -234,6 +234,85 @@ namespace Fps.Core.Tests
                 Assert.That(options.NetJitterMs, Is.EqualTo(10));
                 Assert.That(options.DrainTimeoutSeconds, Is.EqualTo(120));
             }
+        }
+
+        [Test]
+        public void LogFormatDefaultsToText()
+        {
+            var options = ParseOrFail("-mode server");
+
+            Assert.That(options.LogFormat, Is.EqualTo(ServerLogFormat.Text));
+            Assert.That(new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, 7000).LogFormat, Is.EqualTo(ServerLogFormat.Text));
+            Assert.That(Create(NetLaunchMode.Server).LogFormat, Is.EqualTo(ServerLogFormat.Text));
+        }
+
+        [TestCase("json", ServerLogFormat.Json)]
+        [TestCase("JSON", ServerLogFormat.Json)]
+        [TestCase("text", ServerLogFormat.Text)]
+        public void ParsesLogFormatOnAServer(string value, ServerLogFormat expected)
+        {
+            Assert.That(ParseOrFail("-batchmode -mode server -log-format " + value).LogFormat, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ToStringNamesTheJsonLogFormat()
+        {
+            Assert.That(ParseOrFail("-mode server -log-format json").ToString(), Is.EqualTo("server 127.0.0.1:7777 log=json"));
+            Assert.That(ParseOrFail("-mode server -log-format text").ToString(), Is.EqualTo("server 127.0.0.1:7777"));
+        }
+
+        [TestCase("yaml")]
+        [TestCase("jsonl")]
+        public void RejectsUnknownLogFormats(string value)
+        {
+            Assert.That(
+                ParseError("-mode server -log-format " + value),
+                Is.EqualTo("-log-format must be text or json (got '" + value + "')"));
+        }
+
+        [Test]
+        public void RejectsALogFormatWithoutAValue()
+        {
+            Assert.That(ParseError("-mode server -log-format"), Is.EqualTo("-log-format requires a value"));
+        }
+
+        [TestCase("host")]
+        [TestCase("client")]
+        public void OnlyADedicatedServerWritesJsonLogs(string mode)
+        {
+            Assert.That(
+                ParseError("-mode " + mode + " -log-format json"),
+                Is.EqualTo("-log-format json is only used by -mode server (got " + mode + ")"));
+        }
+
+        [Test]
+        public void TextLogFormatIsAllowedAnywhere()
+        {
+            Assert.That(ParseOrFail("-mode client -log-format text").LogFormat, Is.EqualTo(ServerLogFormat.Text));
+        }
+
+        [Test]
+        public void WithTransportKeepsTheLogFormat()
+        {
+            var options = new NetLaunchOptions(
+                NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, null,
+                null, 0, 0, 0, 0, 0, ServerLogFormat.Json);
+
+            Assert.That(options.WithTransport(NetTransportKind.Eos).LogFormat, Is.EqualTo(ServerLogFormat.Json));
+        }
+
+        [Test]
+        public void ConstructorRejectsJsonLogsOutsideAServerAndUnknownFormats()
+        {
+            var host = Assert.Throws<ArgumentException>(() => new NetLaunchOptions(
+                NetLaunchMode.Host, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, null,
+                null, 0, 0, 0, 0, 0, ServerLogFormat.Json));
+            var unknown = Assert.Throws<ArgumentOutOfRangeException>(() => new NetLaunchOptions(
+                NetLaunchMode.Server, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, null,
+                null, 0, 0, 0, 0, 0, (ServerLogFormat)99));
+
+            Assert.That(host.ParamName, Is.EqualTo("logFormat"));
+            Assert.That(unknown.ParamName, Is.EqualTo("logFormat"));
         }
 
         [TestCase("bots", -1)]

@@ -6,7 +6,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 今効いている操作設定。Play の開始時に <see cref="ControlSettingsStore"/> から読み、全体の音量を <see cref="AudioListener.volume"/> に入れる。
-    /// 設定画面 (<see cref="SettingsView"/>) が <see cref="Apply"/> で変えると <see cref="Changed"/> で配り、
+    /// 設定画面 (<see cref="SettingsView"/>) が <see cref="Apply"/> で変えると <see cref="Changed"/> で配り (言語が変わったときは先に <see cref="Localizer.Changed"/> で配る)、
     /// <see cref="FirstPersonLook"/>・<see cref="AimDownSights"/>・<see cref="ViewRig"/>・<see cref="PlayerController"/> などが
     /// その場で使い直す。効果音を鳴らす側は <see cref="ControlSettings.EffectsVolume"/> を音量に掛ける。
     /// 保存はしない (保存は設定画面を閉じたときに <see cref="ControlSettingsStore.Save"/> で行う)。
@@ -55,6 +55,12 @@ namespace Fps.Runtime
             if (settings.Equals(previous))
             {
                 return;
+            }
+
+            // 初めて読んだときは、まだ文字を引いた画面が無いので知らせない。
+            if (previous != null && previous.Language != settings.Language)
+            {
+                Localizer.NotifyChanged(settings.Language);
             }
 
             var handlers = Changed;

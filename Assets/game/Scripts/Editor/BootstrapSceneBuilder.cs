@@ -19,7 +19,7 @@ namespace Fps.Editor
     /// </summary>
     public static class BootstrapSceneBuilder
     {
-        public const string DefaultScenePath = BuildSceneList.BootstrapScene;
+        public static string DefaultScenePath => BuildSceneList.BootstrapScene;
         public const string ScenePathArgument = "-bootstrapScenePath";
         public const string BootstrapObjectName = "GameBootstrap";
         public const string MenuPath = "Fps/Build Bootstrap Scene";

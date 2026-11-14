@@ -1,6 +1,6 @@
 namespace Fps.Core
 {
-    /// <summary>メインメニューのボタンで選ぶ行き先。どのシーンをどう読むかは <see cref="MenuRoute.Plan"/> が決める。</summary>
+    /// <summary>メインメニューのボタンで選ぶ行き先。どのシーンをどう読むかは <see cref="MenuRoute.Plan(MenuDestination, string)"/> が決める。</summary>
     public enum MenuDestination
     {
         /// <summary>キャンペーン (Campaign01)。</summary>

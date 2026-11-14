@@ -19,6 +19,9 @@ namespace Fps.Runtime
     /// キーとボタンの割り当ては <see cref="PlayerBindings"/> で機器ごとに変え (<see cref="StartRebind"/>)、上書きはすぐ効く。
     /// ほかの割り当てと重なったら知らせ、<see cref="UndoRebind"/> で前の割り当てに戻せる。閉じるときに <see cref="InputBindingOverridesStore"/> に保存する。
     /// </para>
+    /// <para>
+    /// 画面の文字は <see cref="Localizer"/> から引く。言語 (<see cref="SetLanguage"/>) を変えると、開いたまま画面を今の言語で組み直す。
+    /// </para>
     /// </summary>
     public sealed class SettingsView
     {
@@ -28,6 +31,13 @@ namespace Fps.Runtime
         public const string StyleResourcePath = "Menu/Settings";
 
         public const string RootName = "settings";
+
+        /// <summary>画面の見出しの Label の name。</summary>
+        public const string TitleName = "settings-title";
+
+        /// <summary>画面の言語 (<see cref="ControlSettings.Language"/>) を順に切り替えるボタンの name。</summary>
+        public const string LanguageButtonName = "settings-language";
+
         public const string BackButtonName = "settings-back";
         public const string ResetButtonName = "settings-reset";
         public const string BindingsResetButtonName = "settings-bindings-reset";
@@ -48,22 +58,28 @@ namespace Fps.Runtime
         /// <summary>音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string SubtitlesButtonName = "settings-subtitles";
 
-        public const string OnText = "オン";
-        public const string OffText = "オフ";
+        /// <summary>今の言語の「オン」。</summary>
+        public static string OnText => Localizer.Get("settings.on");
 
-        /// <summary>見本の味方の名前。</summary>
-        public const string FriendlySampleText = "味方";
+        /// <summary>今の言語の「オフ」。</summary>
+        public static string OffText => Localizer.Get("settings.off");
 
-        /// <summary>見本の敵の名前。</summary>
-        public const string EnemySampleText = "敵";
+        /// <summary>今の言語の、見本の味方の名前。</summary>
+        public static string FriendlySampleText => Localizer.Get("settings.palette.friendlySample");
 
-        public const string HoldText = "長押し";
-        public const string ToggleText = "切り替え";
+        /// <summary>今の言語の、見本の敵の名前。</summary>
+        public static string EnemySampleText => Localizer.Get("settings.palette.enemySample");
 
-        /// <summary>入力を待っている割り当てのボタンに出す文字。</summary>
-        public const string WaitingText = "入力を待っています…";
+        /// <summary>今の言語の「長押し」。</summary>
+        public static string HoldText => Localizer.Get("settings.mode.hold");
 
-        /// <summary>割り当てを変えられない所 (ゲームパッドの移動など) に出す文字。</summary>
+        /// <summary>今の言語の「切り替え」。</summary>
+        public static string ToggleText => Localizer.Get("settings.mode.toggle");
+
+        /// <summary>今の言語で、入力を待っている割り当てのボタンに出す文字。</summary>
+        public static string WaitingText => Localizer.Get("settings.rebind.waiting");
+
+        /// <summary>割り当てを変えられない所 (ゲームパッドの移動など) に出す文字。言語に依らない。</summary>
         public const string NotRebindableText = "—";
 
         private static readonly InputDeviceKind[] _devices = { InputDeviceKind.KeyboardMouse, InputDeviceKind.Gamepad };
@@ -94,6 +110,7 @@ namespace Fps.Runtime
         private Label _friendlySample;
         private Label _enemySample;
         private Button _subtitlesButton;
+        private Button _languageButton;
 
         /// <param name="store">保存先。null ならゲームの既定のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
         /// <param name="bindingStore">割り当ての上書きの保存先。null ならゲームの既定のキー。</param>
@@ -139,7 +156,7 @@ namespace Fps.Runtime
             return slot.Part == null ? name : name + "-" + slot.Part.ToLowerInvariant();
         }
 
-        /// <summary>重なりを知らせる文。</summary>
+        /// <summary>今の言語で、重なりを知らせる文。</summary>
         public static string FormatConflict(string display, IReadOnlyList<BindingConflict> conflicts)
         {
             if (conflicts == null || conflicts.Count == 0)
@@ -156,7 +173,8 @@ namespace Fps.Runtime
                 }
             }
 
-            return $"{display} は「{string.Join("」「", labels)}」にも割り当てられています。";
+            var joined = string.Join(Localizer.Get("settings.rebind.conflictSeparator"), labels);
+            return Localizer.Format("settings.rebind.conflict", display, joined);
         }
 
         /// <summary>value のスライダーの name。</summary>
@@ -184,33 +202,40 @@ namespace Fps.Runtime
             return value == ControlValue.FieldOfView ? number + "°" : number + "%";
         }
 
-        /// <summary>Hold/Toggle のボタンに出す文字。</summary>
+        /// <summary>今の言語で、Hold/Toggle のボタンに出す文字。</summary>
         public static string FormatMode(HoldMode mode)
         {
             return mode == HoldMode.Toggle ? ToggleText : HoldText;
         }
 
-        /// <summary>On/Off のボタンに出す文字。</summary>
+        /// <summary>今の言語で、On/Off のボタンに出す文字。</summary>
         public static string FormatOnOff(bool on)
         {
             return on ? OnText : OffText;
         }
 
-        /// <summary>色の組のボタンに出す文字。</summary>
+        /// <summary>今の言語で、色の組のボタンに出す文字。</summary>
         /// <exception cref="ArgumentOutOfRangeException">palette が定義済みの値でない。</exception>
         public static string FormatPalette(ColorPalette palette)
         {
             switch (palette)
             {
                 case ColorPalette.Standard:
-                    return "標準";
+                    return Localizer.Get("settings.palette.standard");
                 case ColorPalette.RedGreen:
-                    return "赤緑 (1 型・2 型色覚)";
+                    return Localizer.Get("settings.palette.redGreen");
                 case ColorPalette.BlueYellow:
-                    return "青黄 (3 型色覚)";
+                    return Localizer.Get("settings.palette.blueYellow");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(palette), palette, "unknown color palette");
             }
+        }
+
+        /// <summary>言語のボタンに出す文字。今の言語が読めなくても選べるよう、その言語自身での名前 (<see cref="GameLanguages.NativeName"/>)。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public static string FormatLanguage(GameLanguage language)
+        {
+            return GameLanguages.NativeName(language);
         }
 
         /// <summary><see cref="TeamPalette.All"/> の並びで palette の次の組。最後の次は最初に戻る。</summary>
@@ -249,6 +274,7 @@ namespace Fps.Runtime
             _root = Build();
             container.Add(_root);
             Refresh();
+            Localizer.Changed += HandleLanguageChanged;
             FocusFirst();
         }
 
@@ -265,16 +291,24 @@ namespace Fps.Runtime
 
             _bindings?.CancelRebind();
             var saved = Save();
-            _root.UnregisterCallback<NavigationCancelEvent>(HandleNavigationCancel);
-            _root.RemoveFromHierarchy();
-            _root = null;
-            _scroll = null;
+            Localizer.Changed -= HandleLanguageChanged;
+            DetachElements();
             _editing = null;
             _saved = null;
             _bindings?.Dispose();
             _bindings = null;
             _bindingsDirty = false;
             _pendingConflict = null;
+            return saved;
+        }
+
+        // 画面の要素を外して参照を捨てる。編集中の値と割り当ては残す。
+        private void DetachElements()
+        {
+            _root.UnregisterCallback<NavigationCancelEvent>(HandleNavigationCancel);
+            _root.RemoveFromHierarchy();
+            _root = null;
+            _scroll = null;
             _sliders.Clear();
             _valueLabels.Clear();
             _modeButtons.Clear();
@@ -288,7 +322,33 @@ namespace Fps.Runtime
             _friendlySample = null;
             _enemySample = null;
             _subtitlesButton = null;
-            return saved;
+            _languageButton = null;
+        }
+
+        // 文字は組むときに入れたものが多く、1 つずつ引き直すと入れ忘れが出やすいので、画面ごと今の言語で組み直す。
+        private void HandleLanguageChanged(GameLanguage language)
+        {
+            if (_root == null)
+            {
+                return;
+            }
+
+            var container = _root.parent;
+            var index = container?.IndexOf(_root) ?? -1;
+            var focusedName = OwnNameOf(_root.focusController?.focusedElement as VisualElement);
+            DetachElements();
+
+            _root = Build();
+            if (container != null)
+            {
+                container.Insert(Math.Min(index, container.childCount), _root);
+            }
+
+            Refresh();
+            if (string.IsNullOrEmpty(focusedName) || !FocusLater(_root.Q<VisualElement>(focusedName)))
+            {
+                FocusFirst();
+            }
         }
 
         /// <summary>
@@ -382,14 +442,26 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// 画面の言語 (<see cref="ControlSettings.Language"/>) を language にしてすぐ効かせ、画面を今の言語で組み直す
+        /// (<see cref="Localizer.Changed"/> で知らせる)。保存は閉じるとき。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public void SetLanguage(GameLanguage language)
+        {
+            EnsureOpen();
+            Edit(_editing.WithLanguage(language));
+        }
+
+        /// <summary>
         /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に、字幕も Off に戻す。保存は閉じるとき。
-        /// この画面に無い回線の表示 (<see cref="ControlSettings.ShowNetStats"/>) は今のまま残す。
+        /// この画面に無い回線の表示 (<see cref="ControlSettings.ShowNetStats"/>) と、読めない言語に戻って押した人が戻せなくならないよう言語は、今のまま残す。
         /// </summary>
         /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void ResetToDefaults()
         {
             EnsureOpen();
-            Edit(ControlSettings.Default);
+            Edit(ControlSettings.Default.WithLanguage(_editing.Language));
         }
 
         /// <summary>
@@ -580,7 +652,9 @@ namespace Fps.Runtime
             root.AddToClassList("settings");
             AddStyle(root);
 
-            root.Add(NewLabel("設定", "settings__title"));
+            var title = NewLabel(Localizer.Get("settings.title"), "settings__title");
+            title.name = TitleName;
+            root.Add(title);
 
             // 割り当ての行を足すとポーズ画面の枠に収まらないので、見出しと下のボタン以外はスクロールさせる。
             _scroll = new ScrollView(ScrollViewMode.Vertical);
@@ -589,28 +663,31 @@ namespace Fps.Runtime
             root.Add(_scroll);
             var content = _scroll.contentContainer;
 
-            content.Add(NewLabel("視点と音", "settings__section"));
+            content.Add(NewLabel(Localizer.Get("settings.section.viewAndSound"), "settings__section"));
             foreach (var value in ControlSettings.Values)
             {
                 content.Add(BuildSliderRow(value));
             }
 
-            content.Add(NewLabel("見やすさ", "settings__section"));
+            content.Add(NewLabel(Localizer.Get("settings.section.accessibility"), "settings__section"));
             content.Add(BuildPaletteRow());
             content.Add(BuildPaletteSampleRow());
             content.Add(BuildSubtitlesRow());
 
-            content.Add(NewLabel("ボタンの扱い", "settings__section"));
+            content.Add(NewLabel(Localizer.Get("settings.section.language"), "settings__section"));
+            content.Add(BuildLanguageRow());
+
+            content.Add(NewLabel(Localizer.Get("settings.section.holdModes"), "settings__section"));
             content.Add(BuildDeviceHeader());
             foreach (var action in _actions)
             {
                 content.Add(BuildModeRow(action));
             }
 
-            content.Add(NewLabel("キーとボタンの割り当て", "settings__section"));
+            content.Add(NewLabel(Localizer.Get("settings.section.bindings"), "settings__section"));
             if (_bindings == null)
             {
-                content.Add(NewLabel("入力の割り当てが見つからないため、変えられません。", "settings__note"));
+                content.Add(NewLabel(Localizer.Get("settings.bindings.unavailable"), "settings__note"));
             }
             else
             {
@@ -629,11 +706,11 @@ namespace Fps.Runtime
 
             var footer = new VisualElement();
             footer.AddToClassList("settings__footer");
-            footer.Add(NewButton(ResetButtonName, "初期値に戻す", ResetToDefaults));
-            var resetBindings = NewButton(BindingsResetButtonName, "割り当てを既定に戻す", ResetBindingsToDefaults);
+            footer.Add(NewButton(ResetButtonName, Localizer.Get("settings.reset"), ResetToDefaults));
+            var resetBindings = NewButton(BindingsResetButtonName, Localizer.Get("settings.bindings.reset"), ResetBindingsToDefaults);
             resetBindings.SetEnabled(_bindings != null);
             footer.Add(resetBindings);
-            footer.Add(NewButton(BackButtonName, "戻る", RequestBack));
+            footer.Add(NewButton(BackButtonName, Localizer.Get("settings.back"), RequestBack));
             root.Add(footer);
 
             root.RegisterCallback<NavigationCancelEvent>(HandleNavigationCancel);
@@ -683,9 +760,9 @@ namespace Fps.Runtime
             _rebindNotice.name = RebindNoticeName;
             _rebindNoticeRow.Add(_rebindNotice);
 
-            _rebindCancelButton = NewButton(RebindCancelButtonName, "やめる", CancelRebind);
-            _rebindUndoButton = NewButton(RebindUndoButtonName, "取り消す", () => UndoRebind());
-            _rebindKeepButton = NewButton(RebindKeepButtonName, "このままにする", () => KeepRebind());
+            _rebindCancelButton = NewButton(RebindCancelButtonName, Localizer.Get("settings.rebind.cancel"), CancelRebind);
+            _rebindUndoButton = NewButton(RebindUndoButtonName, Localizer.Get("settings.rebind.undo"), () => UndoRebind());
+            _rebindKeepButton = NewButton(RebindKeepButtonName, Localizer.Get("settings.rebind.keep"), () => KeepRebind());
             _rebindNoticeRow.Add(_rebindCancelButton);
             _rebindNoticeRow.Add(_rebindUndoButton);
             _rebindNoticeRow.Add(_rebindKeepButton);
@@ -737,7 +814,7 @@ namespace Fps.Runtime
         private VisualElement BuildPaletteRow()
         {
             var row = NewRow();
-            row.Add(NewLabel("敵味方の色", "settings__caption"));
+            row.Add(NewLabel(Localizer.Get("settings.palette"), "settings__caption"));
             _paletteButton = NewButton(PaletteButtonName, string.Empty, () => SetPalette(NextPalette(_editing.Palette)));
             _paletteButton.AddToClassList("settings__palette");
             row.Add(_paletteButton);
@@ -782,10 +859,20 @@ namespace Fps.Runtime
         private VisualElement BuildSubtitlesRow()
         {
             var row = NewRow();
-            row.Add(NewLabel("音の字幕", "settings__caption"));
+            row.Add(NewLabel(Localizer.Get("settings.subtitles"), "settings__caption"));
             _subtitlesButton = NewButton(SubtitlesButtonName, string.Empty, () => SetShowSubtitles(!_editing.ShowSubtitles));
             _subtitlesButton.AddToClassList("settings__mode");
             row.Add(_subtitlesButton);
+            return row;
+        }
+
+        private VisualElement BuildLanguageRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get("settings.language"), "settings__caption"));
+            _languageButton = NewButton(LanguageButtonName, string.Empty, () => SetLanguage(GameLanguages.Next(_editing.Language)));
+            _languageButton.AddToClassList("settings__palette");
+            row.Add(_languageButton);
             return row;
         }
 
@@ -831,6 +918,11 @@ namespace Fps.Runtime
                 _subtitlesButton.text = FormatOnOff(_editing.ShowSubtitles);
             }
 
+            if (_languageButton != null)
+            {
+                _languageButton.text = FormatLanguage(_editing.Language);
+            }
+
             RefreshBindings();
         }
 
@@ -858,8 +950,11 @@ namespace Fps.Runtime
             {
                 var slot = waiting.Value;
                 var cancelKey = slot.Device == InputDeviceKind.Gamepad ? "Start" : "Esc";
-                _rebindNotice.text =
-                    $"「{PlayerBindings.LabelOf(slot.ActionName, slot.Part)}」({DeviceText(slot.Device)}) に割り当てる入力をしてください。{cancelKey} でやめます。";
+                _rebindNotice.text = Localizer.Format(
+                    "settings.rebind.prompt",
+                    PlayerBindings.LabelOf(slot.ActionName, slot.Part),
+                    DeviceText(slot.Device),
+                    cancelKey);
                 SetDisplayed(_rebindNoticeRow, true);
                 SetDisplayed(_rebindCancelButton, true);
                 SetDisplayed(_rebindUndoButton, false);
@@ -890,24 +985,49 @@ namespace Fps.Runtime
 
         private void FocusFirst()
         {
-            if (!_sliders.TryGetValue(ControlSettings.Values[0], out var first))
+            if (_sliders.TryGetValue(ControlSettings.Values[0], out var first))
             {
-                return;
+                FocusLater(first);
+            }
+        }
+
+        // スライダーなどは中の部品にフォーカスが入り、その部品の name はどの行でも同じなので、この画面が付けた name を持つ先祖まで遡る。
+        private string OwnNameOf(VisualElement element)
+        {
+            for (var current = element; current != null && current != _root; current = current.parent)
+            {
+                if (current.name != null && current.name.StartsWith(RootName + "-", StringComparison.Ordinal))
+                {
+                    return current.name;
+                }
             }
 
-            first.Focus();
+            return null;
+        }
+
+        // element にフォーカスを置く。置けない要素 (null や focusable でないもの) なら何もせず false。
+        private bool FocusLater(VisualElement element)
+        {
+            if (element == null || !element.focusable)
+            {
+                return false;
+            }
+
+            element.Focus();
 
             // パネルに付いた直後は配置が終わっておらず Focus が効かないことがあるので、次の更新でもう一度選ぶ
-            if (first.panel != null && first.focusController?.focusedElement != first)
+            if (element.panel != null && element.focusController?.focusedElement != element)
             {
-                first.schedule.Execute(() =>
+                element.schedule.Execute(() =>
                 {
-                    if (_root != null && first.panel != null)
+                    if (_root != null && element.panel != null && _root.Contains(element))
                     {
-                        first.Focus();
+                        element.Focus();
                     }
                 });
             }
+
+            return true;
         }
 
         private void HandleNavigationCancel(NavigationCancelEvent evt)
@@ -984,17 +1104,17 @@ namespace Fps.Runtime
             switch (value)
             {
                 case ControlValue.MouseSensitivity:
-                    return "マウス感度";
+                    return Localizer.Get("settings.value.mouseSensitivity");
                 case ControlValue.GamepadSensitivity:
-                    return "ゲームパッド感度";
+                    return Localizer.Get("settings.value.gamepadSensitivity");
                 case ControlValue.AdsSensitivity:
-                    return "ADS 感度";
+                    return Localizer.Get("settings.value.adsSensitivity");
                 case ControlValue.FieldOfView:
-                    return "視野角";
+                    return Localizer.Get("settings.value.fieldOfView");
                 case ControlValue.MasterVolume:
-                    return "全体の音量";
+                    return Localizer.Get("settings.value.masterVolume");
                 case ControlValue.EffectsVolume:
-                    return "効果音の音量";
+                    return Localizer.Get("settings.value.effectsVolume");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }
@@ -1002,7 +1122,7 @@ namespace Fps.Runtime
 
         private static string DeviceText(InputDeviceKind device)
         {
-            return device == InputDeviceKind.Gamepad ? "ゲームパッド" : "キーボード/マウス";
+            return Localizer.Get(device == InputDeviceKind.Gamepad ? "settings.device.gamepad" : "settings.device.keyboardMouse");
         }
 
         private static string ActionText(HoldAction action)
@@ -1010,11 +1130,11 @@ namespace Fps.Runtime
             switch (action)
             {
                 case HoldAction.Sprint:
-                    return "ダッシュ";
+                    return Localizer.Get("settings.action.sprint");
                 case HoldAction.Crouch:
-                    return "しゃがみ";
+                    return Localizer.Get("settings.action.crouch");
                 default:
-                    return "覗き込み (ADS)";
+                    return Localizer.Get("settings.action.aim");
             }
         }
 

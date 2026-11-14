@@ -97,7 +97,7 @@ fix_metas() {
 	done < <(git -c core.quotepath=off ls-files --others --exclude-standard -- 'Assets/*.meta')
 }
 
-# 画面の文字は文字列表 (Assets/game/Localization/Resources/Strings) のキーで引く決まりなので、UI のコード
+# 画面の文字は文字列表 (Assets/game/Localization/Resources/Strings と Assets/game/Resources/Localization/<言語>/) のキーで引く決まりなので、UI のコード
 # (Runtime/UI と Net の HUD・ビュー) の C# の文字列リテラルと UXML の text・label・tooltip に残った日本語を 1 行ずつ出す。
 # コメントの日本語は見ない。新しく足して未追跡のファイルも見る。
 # 日本語は UTF-8 の先頭バイトが E3〜E9 (U+3000〜U+9FFF: 和文の句読点・かな・漢字) の文字で見分ける。

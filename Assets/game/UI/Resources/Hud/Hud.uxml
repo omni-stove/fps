@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <!-- HUD。GameBootstrap と NetHud が UIDocument に読み込み、Fps.Runtime.HudView が name で Label を探して文字列を入れる。 -->
-    <!-- text の "#キー" は文字列表 (Assets/game/Localization/Resources/Strings) のキーで、Hud が Fps.Runtime.LocalizedTexts で今の言語の文字にする。 -->
+    <!-- text の "#キー" は文字列表 (Assets/game/Localization/Resources/Strings と Assets/game/Resources/Localization/(言語)/) のキーで、Hud が Fps.Runtime.LocalizedTexts で今の言語の文字にする。 -->
     <Style src="Hud.uss" />
     <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
         <ui:VisualElement name="hud-time-panel" class="hud__panel hud__panel--top-center" picking-mode="Ignore">

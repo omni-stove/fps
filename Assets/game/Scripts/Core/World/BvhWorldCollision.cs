@@ -20,6 +20,10 @@ namespace Fps.Core
         private readonly int[] _colliderLayers;
         private readonly bool[] _colliderEnabled;
         private readonly Dictionary<int, int[]> _groupColliders;
+        private readonly Dictionary<int, int> _colliderIndices;
+
+        // 木を作ると形の並びが入れ替わるので、作った後の並びで形ごとの位置を引けるようにしておく
+        private readonly int[][] _colliderPrimitives;
 
         public BvhWorldCollision(WorldMap map)
         {
@@ -32,6 +36,7 @@ namespace Fps.Core
             _colliderIds = new int[colliders.Count];
             _colliderLayers = new int[colliders.Count];
             _colliderEnabled = new bool[colliders.Count];
+            _colliderIndices = new Dictionary<int, int>(colliders.Count);
             var groups = new Dictionary<int, List<int>>();
             var primitives = new List<Primitive>();
             for (var i = 0; i < colliders.Count; i++)
@@ -40,6 +45,7 @@ namespace Fps.Core
                 _colliderIds[i] = collider.Id;
                 _colliderLayers[i] = collider.Layer;
                 _colliderEnabled[i] = true;
+                _colliderIndices.Add(collider.Id, i);
                 if (!groups.TryGetValue(collider.Group, out var members))
                 {
                     members = new List<int>();
@@ -58,6 +64,7 @@ namespace Fps.Core
 
             _primitives = primitives.ToArray();
             _nodes = Build(_primitives);
+            _colliderPrimitives = IndexPrimitives(_primitives, colliders.Count);
         }
 
         public int PrimitiveCount => _primitives.Length;
@@ -138,6 +145,38 @@ namespace Fps.Core
 
             var collider = _primitives[bestPrimitive].Collider;
             hit = new WorldHit(origin + (dir * best), bestNormal, best, _colliderIds[collider], _colliderLayers[collider]);
+            return true;
+        }
+
+        public bool RaycastCollider(int colliderId, Vector3 origin, Vector3 direction, float maxDistance, out WorldHit hit)
+        {
+            hit = default;
+            if (!_colliderIndices.TryGetValue(colliderId, out var collider) || !_colliderEnabled[collider]
+                || !TryNormalize(direction, out var dir) || !(maxDistance > 0f) || !WorldGeometry.IsFinite(origin))
+            {
+                return false;
+            }
+
+            var best = maxDistance;
+            var found = false;
+            var bestNormal = Vector3.Zero;
+            foreach (var index in _colliderPrimitives[collider])
+            {
+                if (RaycastPrimitive(_primitives[index], origin, dir, out var distance, out var normal) && distance <= best
+                    && (distance < best || !found))
+                {
+                    best = distance;
+                    bestNormal = normal;
+                    found = true;
+                }
+            }
+
+            if (!found)
+            {
+                return false;
+            }
+
+            hit = new WorldHit(origin + (dir * best), bestNormal, best, colliderId, _colliderLayers[collider]);
             return true;
         }
 
@@ -585,6 +624,30 @@ namespace Fps.Core
                     });
                     break;
             }
+        }
+
+        private static int[][] IndexPrimitives(Primitive[] primitives, int colliderCount)
+        {
+            var counts = new int[colliderCount];
+            foreach (var primitive in primitives)
+            {
+                counts[primitive.Collider]++;
+            }
+
+            var result = new int[colliderCount][];
+            for (var i = 0; i < colliderCount; i++)
+            {
+                result[i] = new int[counts[i]];
+                counts[i] = 0;
+            }
+
+            for (var i = 0; i < primitives.Length; i++)
+            {
+                var collider = primitives[i].Collider;
+                result[collider][counts[collider]++] = i;
+            }
+
+            return result;
         }
 
         private Node[] Build(Primitive[] primitives)

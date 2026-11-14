@@ -71,6 +71,27 @@ namespace Fps.Core.Tests
             return found;
         }
 
+        public bool RaycastCollider(int colliderId, Vector3 origin, Vector3 direction, float maxDistance, out WorldHit hit)
+        {
+            hit = default;
+            var dir = new Vector3D(direction);
+            if (colliderId < 0 || colliderId >= _shapes.Count || dir.Length() == 0d || maxDistance <= 0f)
+            {
+                return false;
+            }
+
+            dir = dir.Normalized();
+            var o = new Vector3D(origin);
+            var shape = _shapes[colliderId];
+            if (!shape.Raycast(o, dir, maxDistance, out var distance, out var normal))
+            {
+                return false;
+            }
+
+            hit = new WorldHit((o + (dir * distance)).ToVector3(), normal.ToVector3(), (float)distance, colliderId, shape.Layer);
+            return true;
+        }
+
         public int OverlapCapsule(Vector3 point0, Vector3 point1, float radius, int layerMask, int[] results)
         {
             if (radius <= 0f)

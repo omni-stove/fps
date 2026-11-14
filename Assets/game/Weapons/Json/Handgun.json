@@ -1,0 +1,29 @@
+{
+  "id": "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45",
+  "displayName": "Handgun",
+  "category": "Handgun",
+  "fireMode": "Semi",
+  "magazineSize": 12,
+  "reserveAmmo": 48,
+  "fireInterval": 0.2,
+  "reloadSeconds": 1.5,
+  "damage": 34,
+  "range": 60,
+  "falloff": {
+    "startDistance": 15,
+    "endDistance": 40,
+    "minMultiplier": 0.6
+  },
+  "explosionRadius": 0,
+  "adsFieldOfView": 55,
+  "blindFireSpreadDegrees": 12,
+  "activeReloadWindowStart": 0.45,
+  "activeReloadWindowLength": 0.2,
+  "activeReloadFailSeconds": 0.4,
+  "recoilPitchDegrees": 2.5,
+  "recoilYawDegrees": 0.6,
+  "recoilRecoveryPerSecond": 60,
+  "hipSpreadDegrees": 2,
+  "adsSpreadDegrees": 0.8,
+  "moveSpreadDegrees": 1.5
+}

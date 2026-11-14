@@ -84,7 +84,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(
                 Vector3.Distance(SquadCommandRangeFixture.HoldPoint, SquadCommandRangeFixture.TargetPoint),
-                Is.LessThan(EnemyAgent.DefaultAttackRange),
+                Is.LessThan(EnemySpec.DefaultAttackRange),
                 "the bot holding its place can reach the target");
         }
 

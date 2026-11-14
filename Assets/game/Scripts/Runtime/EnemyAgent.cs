@@ -50,20 +50,30 @@ namespace Fps.Runtime
         /// <summary>目標を探すタグ。<see cref="GameBootstrap"/> がプレイヤーに付ける。</summary>
         public const string TargetTag = "Player";
 
-        public const float DefaultSightRange = 20f;
-        public const float DefaultAttackRange = 12f;
-        public const float DefaultLoseSightSeconds = 2f;
-        public const float DefaultSearchSeconds = 6f;
-        public const float DefaultReactionSeconds = 1.0f;
+        // キットを使うゲームがこの名前で読んでいても壊れないよう、EnemySpec に移した後も別名として残す。
+        [Obsolete("Use EnemySpec.DefaultSightRange")]
+        public const float DefaultSightRange = EnemySpec.DefaultSightRange;
 
-        /// <summary>Attack に入って最初の 1 発の散らばりの半角 (度)。12m 先で半径 1m ほどに散り、外れやすい。</summary>
-        public const float DefaultOpeningSpreadDegrees = 5f;
+        [Obsolete("Use EnemySpec.DefaultAttackRange")]
+        public const float DefaultAttackRange = EnemySpec.DefaultAttackRange;
 
-        /// <summary>撃ち始めの数発が過ぎた後の散らばりの半角 (度)。</summary>
-        public const float DefaultSettledSpreadDegrees = 0f;
+        [Obsolete("Use EnemySpec.DefaultLoseSightSeconds")]
+        public const float DefaultLoseSightSeconds = EnemySpec.DefaultLoseSightSeconds;
 
-        /// <summary>散らばりを絞り切るまでの発数。</summary>
-        public const int DefaultOpeningShots = 3;
+        [Obsolete("Use EnemySpec.DefaultSearchSeconds")]
+        public const float DefaultSearchSeconds = EnemySpec.DefaultSearchSeconds;
+
+        [Obsolete("Use EnemySpec.DefaultReactionSeconds")]
+        public const float DefaultReactionSeconds = EnemySpec.DefaultReactionSeconds;
+
+        [Obsolete("Use EnemySpec.DefaultOpeningSpreadDegrees")]
+        public const float DefaultOpeningSpreadDegrees = EnemySpec.DefaultOpeningSpreadDegrees;
+
+        [Obsolete("Use EnemySpec.DefaultSettledSpreadDegrees")]
+        public const float DefaultSettledSpreadDegrees = EnemySpec.DefaultSettledSpreadDegrees;
+
+        [Obsolete("Use EnemySpec.DefaultOpeningShots")]
+        public const int DefaultOpeningShots = EnemySpec.DefaultOpeningShots;
 
         /// <summary>足元からの目の高さ (メートル)。</summary>
         public const float DefaultEyeHeight = 1.6f;
@@ -126,35 +136,41 @@ namespace Fps.Runtime
         private Vector3[] _patrolRoute = Array.Empty<Vector3>();
 
         [Header("Brain")]
+        [SerializeField, Tooltip("敵のデータ (視界・反応・散らばり・遮蔽・種類ごとの値)。設定すると、この下の Brain と Cover の値と種類ごとの値の代わりにこれを使う。空ならこの下の値を使う")]
+        private EnemyDefinition _definition;
+
         [SerializeField, Tooltip("敵の種類")]
         private EnemyArchetype _archetype = EnemyArchetype.Rifleman;
 
         [SerializeField, Min(0.01f)]
-        private float _sightRange = DefaultSightRange;
+        private float _sightRange = EnemySpec.DefaultSightRange;
 
         [SerializeField, Min(0.01f)]
-        private float _attackRange = DefaultAttackRange;
+        private float _attackRange = EnemySpec.DefaultAttackRange;
 
         [SerializeField, Min(0f)]
-        private float _loseSightSeconds = DefaultLoseSightSeconds;
+        private float _loseSightSeconds = EnemySpec.DefaultLoseSightSeconds;
 
         [SerializeField, Min(0f)]
-        private float _searchSeconds = DefaultSearchSeconds;
+        private float _searchSeconds = EnemySpec.DefaultSearchSeconds;
 
         [SerializeField, Min(0f)]
-        private float _reactionSeconds = DefaultReactionSeconds;
+        private float _reactionSeconds = EnemySpec.DefaultReactionSeconds;
 
         [SerializeField, Range(0f, EnemySpec.MaxSpreadDegrees), Tooltip("Attack に入って最初の 1 発の散らばりの半角 (度)")]
-        private float _openingSpreadDegrees = DefaultOpeningSpreadDegrees;
+        private float _openingSpreadDegrees = EnemySpec.DefaultOpeningSpreadDegrees;
 
         [SerializeField, Range(0f, EnemySpec.MaxSpreadDegrees), Tooltip("撃ち始めの数発が過ぎた後の散らばりの半角 (度)")]
-        private float _settledSpreadDegrees = DefaultSettledSpreadDegrees;
+        private float _settledSpreadDegrees = EnemySpec.DefaultSettledSpreadDegrees;
 
         [SerializeField, Min(0), Tooltip("散らばりを絞り切るまでの発数")]
-        private int _openingShots = DefaultOpeningShots;
+        private int _openingShots = EnemySpec.DefaultOpeningShots;
 
         [SerializeField, Min(0f), Tooltip("怯みにくさ。0 で既定、1 で怯むのに 2 倍のダメージが要り、怯む長さは半分になる")]
-        private float _staggerResistance;
+        private float _staggerResistance = EnemySpec.DefaultStaggerResistance;
+
+        // ApplySpec・ChangeSpec で渡された値は、波の強さやボスの段階のように敵のデータを元に作り直したものなので、データより優先する。
+        private bool _specApplied;
 
         [Header("Body")]
         [SerializeField, Min(0f)]
@@ -342,7 +358,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 部品を解決し、Inspector の値から <see cref="EnemyBrain"/> を、<see cref="WeaponDefinition"/> から <see cref="Weapon"/> を作る。
+        /// 部品を解決し、<see cref="CreateSpec"/> の値から <see cref="EnemyBrain"/> を、<see cref="WeaponDefinition"/> から <see cref="Weapon"/> を作る。
         /// 失敗したら (定義が未設定・不正なときも) 理由を Debug.LogError に出して false を返す。2 回目以降は何もしない。
         /// </summary>
         public bool TryInitialize()
@@ -377,6 +393,9 @@ namespace Fps.Runtime
                 Debug.LogError($"{LogTag} id={Id} の設定が不正です: {e.Message}", this);
                 return false;
             }
+
+            // 知覚 (視界の距離) や SightRange などはフィールドを読むので、敵のデータから作った値もフィールドに揃える。
+            CopySpec(spec);
 
             WeaponSpec weaponSpec;
             try
@@ -450,10 +469,17 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// Inspector の値から判断の設定を作る。値が不正なら <see cref="ArgumentException"/>。
+        /// 敵のデータ (<see cref="Definition"/>) があればそこから、無ければ Inspector の値から判断の設定を作る。
+        /// <see cref="ApplySpec"/>・<see cref="ChangeSpec"/> を呼んだ後は、データがあってもその値から作る。
+        /// 値が不正なら <see cref="ArgumentException"/> (データの値なら <see cref="EnemyDefinitionException"/>)。
         /// </summary>
         public EnemySpec CreateSpec()
         {
+            if (_definition != null && !_specApplied)
+            {
+                return _definition.ToSpec();
+            }
+
             return new EnemySpec(
                 _sightRange,
                 _attackRange,
@@ -491,6 +517,23 @@ namespace Fps.Runtime
             }
 
             CopySpec(spec);
+            _specApplied = true;
+        }
+
+        // 初期化後の差し替えを拒むのは、判断はもう作られていて、差し替えても何も変わらないことに気付けるようにするため。
+        public EnemyDefinition Definition
+        {
+            get => _definition;
+            set
+            {
+                if (_brain != null)
+                {
+                    throw new InvalidOperationException($"EnemyAgent '{name}' is already initialized; set the definition before activating it");
+                }
+
+                _definition = value;
+                _specApplied = false;
+            }
         }
 
         // ApplySpec は初期化後を拒むので、ボスの段階のように戦いの途中で変える口を別に設ける。
@@ -503,6 +546,7 @@ namespace Fps.Runtime
             }
 
             CopySpec(spec);
+            _specApplied = true;
             _brain?.ChangeSpec(spec);
         }
 

@@ -60,9 +60,9 @@ namespace Fps.Tests.EditMode
             Assert.That(_agent.TryInitialize(), Is.True);
 
             Assert.That(_agent.IsInitialized, Is.True);
-            Assert.That(_agent.Brain.Spec.SightRange, Is.EqualTo(EnemyAgent.DefaultSightRange));
-            Assert.That(_agent.Brain.Spec.AttackRange, Is.EqualTo(EnemyAgent.DefaultAttackRange));
-            Assert.That(_agent.Brain.Spec.ReactionSeconds, Is.EqualTo(EnemyAgent.DefaultReactionSeconds));
+            Assert.That(_agent.Brain.Spec.SightRange, Is.EqualTo(EnemySpec.DefaultSightRange));
+            Assert.That(_agent.Brain.Spec.AttackRange, Is.EqualTo(EnemySpec.DefaultAttackRange));
+            Assert.That(_agent.Brain.Spec.ReactionSeconds, Is.EqualTo(EnemySpec.DefaultReactionSeconds));
             Assert.That(_agent.State, Is.EqualTo(EnemyState.Idle));
             Assert.That(_agent.Weapon, Is.Not.Null);
             Assert.That(_agent.TryInitialize(), Is.True, "a second call is a no-op");
@@ -72,7 +72,7 @@ namespace Fps.Tests.EditMode
         public void InvalidSettingsAreReportedAndRejected()
         {
             var serialized = new SerializedObject(_agent);
-            serialized.FindProperty("_attackRange").floatValue = EnemyAgent.DefaultSightRange + 1f;
+            serialized.FindProperty("_attackRange").floatValue = EnemySpec.DefaultSightRange + 1f;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             LogAssert.Expect(LogType.Error, new Regex(@"^\[AI\] id=.* の設定が不正です"));

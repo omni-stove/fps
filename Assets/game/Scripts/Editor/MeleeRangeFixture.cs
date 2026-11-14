@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace Fps.Editor
 {
-    // 殴る的。敵 (MeleeEnemyRangeFixture) の視界 (EnemyAgent.DefaultSightRange) の外に置き、的を殴っている間に撃たれないようにする。
+    // 殴る的。敵 (MeleeEnemyRangeFixture) の視界 (EnemySpec.DefaultSightRange) の外に置き、的を殴っている間に撃たれないようにする。
     public sealed class MeleeRangeFixture : ITpsRangeFixture
     {
         public const string RootName = "MeleeDummyYard";

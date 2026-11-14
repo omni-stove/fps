@@ -1,0 +1,31 @@
+{
+  "friendlyFire": "Off",
+  "respawnMode": "Individual",
+  "waveIntervalSeconds": 10,
+  "regenDelaySeconds": 4,
+  "regenPerSecond": 20,
+  "deathBody": "Vanish",
+  "deathCamera": "None",
+  "infiniteReserve": true,
+  "reserveAmmoMultiplier": 1,
+  "destruction": "On",
+  "actions": {
+    "downed": "Off",
+    "downedBleedoutSeconds": 15,
+    "downedHealthFraction": 0.3,
+    "reviveSeconds": 3,
+    "cover": "On",
+    "blindFire": "On",
+    "activeReload": "On",
+    "dodge": "Off",
+    "vault": "Off",
+    "grenade": "Off",
+    "grenadeCount": 0
+  },
+  "spawnProtectionSeconds": 0,
+  "fallDamage": "Off",
+  "hudDensity": "Full",
+  "objective": "None",
+  "minPlayers": 0,
+  "idleKickSeconds": 0
+}

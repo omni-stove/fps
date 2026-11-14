@@ -17,5 +17,5 @@ jobs:
       allowed-bots: "omni-stove-agent"  # Unblock が agent App で付けたラベルで起動させる。外部 App は "*" にすると起動してしまうので名指しで許可
       # Unity / .NET の repo なので pnpm / node 系ではなく dotnet / mise / make を許可する
       allowed-tools: "Read,Edit,Write,Glob,Grep,Bash(dotnet:*),Bash(mise:*),Bash(make:*),Bash(git:*),Bash(gh:*),Bash(ls:*),Bash(cat:*),Bash(find:*),Bash(rg:*),Bash(mkdir:*),Bash(mv:*),Bash(cp:*),Bash(rm:*)"
-      instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: wire references in code or editor scripts instead of hand-editing .unity / .prefab / .asset files. Do not write a .meta for a new .cs file or folder under Assets yourself; CI generates it."
+      instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: wire references in code or editor scripts instead of hand-editing .unity / .prefab / .asset files. Do not write a .meta for a new folder or a new .cs, .asmdef, .asmref, .txt, .json, .xml, .html, .htm, .bytes, .csv, .yaml or .fnt file under Assets yourself; CI generates it."
     secrets: inherit

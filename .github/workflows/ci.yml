@@ -113,7 +113,7 @@ jobs:
       run-fix: true
       fix-provider: "claude"
       # 自動修正のエージェントにも Issue Worker と同じ Unity 固有の規約を守らせる
-      fix-instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: never edit or regenerate an existing .meta, and wire references in code or editor scripts instead of hand-editing .unity / .prefab / .asset files. Do not write a .meta for a new .cs file or folder under Assets yourself; CI generates it."
+      fix-instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: never edit or regenerate an existing .meta, and wire references in code or editor scripts instead of hand-editing .unity / .prefab / .asset files. Do not write a .meta for a new folder or a new .cs, .asmdef, .asmref, .txt, .json, .xml, .html, .htm, .bytes, .csv, .yaml or .fnt file under Assets yourself; CI generates it."
       run-merge: true  # CI Gate が通り approve した PR を agent App でマージする。止めるなら skip-automerge ラベル
       results: ${{ toJSON(needs) }}
       conflicted: ${{ needs.precheck.outputs.conflicted }}

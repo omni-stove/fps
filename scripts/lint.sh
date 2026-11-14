@@ -3,7 +3,7 @@
 # Assets/game の全 .cs は書式だけを見る (MonoBehaviour などは Unity 抜きでビルドできないため)。
 # あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応と、UI のコードに日本語の直書きが無いこと (ui_text_problems) を検査する。
 # 問題が無ければ何も出さず、あれば指摘の行だけを出して 1 で終わる。--fix で直せるものを直す
-# (.meta の抜けは、.cs とフォルダなら Unity と同じ形で作る。本体の無い .meta は消さない。詳しくは fix_metas)。
+# (.meta の抜けは、.cs・.asmdef・.asmref・テキストアセットとフォルダなら Unity と同じ形で作る。本体の無い .meta は消さない。詳しくは fix_metas)。
 # --fix-meta は .meta の抜けだけを直して終わる。CI の lint ジョブが dotnet の復元より前に作り直すため。
 # shellcheck source=scripts/_lib.sh
 . "$(dirname "$0")/_lib.sh"
@@ -40,15 +40,38 @@ meta_problems() {
 write_meta() {
 	local guid
 	guid="$(printf '%s' "$1" | git hash-object --stdin | cut -c1-32)"
+	local head importer
+	head="$(printf 'fileFormatVersion: 2\nguid: %s' "$guid")"
 	if [ -d "$1" ]; then
-		printf 'fileFormatVersion: 2\nguid: %s\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n' "$guid"
+		head="$head"$'\nfolderAsset: yes'
+		importer=DefaultImporter
 	else
-		printf 'fileFormatVersion: 2\nguid: %s' "$guid"
-	fi >"$1.meta"
+		case "$1" in
+		*.cs)
+			# MonoImporter の既定値は Unity が取り込み時に足すので、GUID だけで足りる。
+			printf '%s' "$head" >"$1.meta"
+			return
+			;;
+		*.asmdef) importer=AssemblyDefinitionImporter ;;
+		*.asmref) importer=AssemblyDefinitionReferenceImporter ;;
+		*) importer=TextScriptImporter ;;
+		esac
+	fi
+	printf '%s\n%s:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n' "$head" "$importer" >"$1.meta"
+}
+
+# write_meta が Unity と同じ .meta を書ける種類か。テキストアセットは Unity が TextAsset として取り込む拡張子に限る。
+# 他の種類 (画像・シーン・.uss など) は取り込み設定が要るので Unity に任せる。
+meta_writable() {
+	[ -d "$1" ] && return 0
+	case "$1" in
+	*.cs | *.asmdef | *.asmref | *.txt | *.json | *.xml | *.html | *.htm | *.bytes | *.csv | *.yaml | *.fnt) return 0 ;;
+	esac
+	return 1
 }
 
 # meta_problems の指摘のうち直せるものを直す。未追跡の新規ファイルも対象にする。
-# .meta が無ければ、.cs・.json とフォルダに限り作る (他の種類は取り込み設定が要るので Unity に任せる)。
+# .meta が無ければ、meta_writable が認める種類に限り作る。
 # 本体が追跡済みなら .meta を git add し、未追跡なら本体と一緒に add されるよう作業ツリーに置くだけにする。
 # 本体の無い .meta は改名で取り残された GUID かもしれないので、自動では消さず指摘に残す。
 fix_metas() {
@@ -58,7 +81,7 @@ fix_metas() {
 		case "$line" in
 		*"追跡されていない")
 			if [ ! -e "$path.meta" ]; then
-				[ -d "$path" ] || [ "${path%.cs}" != "$path" ] || [ "${path%.json}" != "$path" ] || continue
+				meta_writable "$path" || continue
 				write_meta "$path"
 			fi
 			if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then git add -- "$path.meta"; fi

@@ -68,8 +68,8 @@ namespace Fps.Editor
 
         // URP の BaseShaderGUI の列挙と同じ値。材質をインスペクターを通さずに作るので、ここで直接書く。
         private const float SurfaceTransparent = 1f;
-        private const float BlendAlpha = 0f;
-        private const float BlendAdditive = 2f;
+        internal const float BlendAlpha = 0f;
+        internal const float BlendAdditive = 2f;
 
         /// <summary>
         /// 武器ごとの音とマズルフラッシュの組み合わせ。武器の Id は <see cref="WeaponAssetBuilder"/> の固定値で、
@@ -283,7 +283,7 @@ namespace Fps.Editor
             return new SoundLayer(start, duration, duration * 0.3f, duration * 0.35f, 0.35f, 2500f);
         }
 
-        private static string ValidateFolderPath(string path, string parameterName)
+        internal static string ValidateFolderPath(string path, string parameterName)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -313,7 +313,7 @@ namespace Fps.Editor
             return Path.Combine(projectRoot ?? string.Empty, assetPath);
         }
 
-        private static AudioClip WriteSound(string path, SoundSpec spec)
+        internal static AudioClip WriteSound(string path, SoundSpec spec)
         {
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
             if (existing != null && !(existing is AudioClip))
@@ -363,7 +363,7 @@ namespace Fps.Editor
             return true;
         }
 
-        private static Texture2D BuildSoftDot(string path)
+        internal static Texture2D BuildSoftDot(string path)
         {
             var pixels = new Color32[SoftDotSize * SoftDotSize];
             var center = (SoftDotSize - 1) * 0.5f;
@@ -378,6 +378,20 @@ namespace Fps.Editor
                 }
             }
 
+            return SaveTexture(path, SoftDotSize, pixels);
+        }
+
+        /// <summary>
+        /// 一辺 size の RGBA32 のテクスチャ (端は伸ばさない・ミップマップあり) を pixels で作るか上書きして path に保存する。
+        /// 名前はファイル名 (拡張子なし)。既存のアセットは GUID を保って中身だけ更新する。
+        /// </summary>
+        internal static Texture2D SaveTexture(string path, int size, Color32[] pixels)
+        {
+            if (pixels == null || pixels.Length != size * size)
+            {
+                throw new ArgumentException($"texture '{path}' needs {size * size} pixels", nameof(pixels));
+            }
+
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
             if (existing != null && !(existing is Texture2D))
             {
@@ -388,11 +402,11 @@ namespace Fps.Editor
             var created = texture == null;
             if (created)
             {
-                texture = new Texture2D(SoftDotSize, SoftDotSize, TextureFormat.RGBA32, true) { name = SoftDotTextureName };
+                texture = new Texture2D(size, size, TextureFormat.RGBA32, true) { name = Path.GetFileNameWithoutExtension(path) };
             }
-            else if (texture.width != SoftDotSize || texture.height != SoftDotSize || texture.format != TextureFormat.RGBA32)
+            else if (texture.width != size || texture.height != size || texture.format != TextureFormat.RGBA32)
             {
-                texture.Reinitialize(SoftDotSize, SoftDotSize, TextureFormat.RGBA32, true);
+                texture.Reinitialize(size, size, TextureFormat.RGBA32, true);
             }
 
             texture.wrapMode = TextureWrapMode.Clamp;
@@ -413,7 +427,7 @@ namespace Fps.Editor
             return texture;
         }
 
-        private static Material BuildParticleMaterial(string path, Texture2D texture, float blend)
+        internal static Material BuildParticleMaterial(string path, Texture2D texture, float blend)
         {
             var shader = Shader.Find(ParticleShaderName);
             if (shader == null)
@@ -457,7 +471,7 @@ namespace Fps.Editor
             return material;
         }
 
-        private sealed class ParticleSettings
+        internal sealed class ParticleSettings
         {
             public float Duration = 0.5f;
             public Vector2 Lifetime = new Vector2(0.5f, 0.5f);
@@ -615,7 +629,7 @@ namespace Fps.Editor
             });
         }
 
-        private static Gradient Fade(Color startColor, Color endColor, float startAlpha, float endAlpha)
+        internal static Gradient Fade(Color startColor, Color endColor, float startAlpha, float endAlpha)
         {
             var gradient = new Gradient();
             gradient.SetKeys(
@@ -624,7 +638,7 @@ namespace Fps.Editor
             return gradient;
         }
 
-        private static void AddParticles(GameObject target, ParticleSettings settings)
+        internal static void AddParticles(GameObject target, ParticleSettings settings)
         {
             var system = target.AddComponent<ParticleSystem>();
             system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -697,7 +711,7 @@ namespace Fps.Editor
         /// 読み込んだ中身に値だけを貼り付けて保存する。作り直すとプレハブ内の fileID が毎回変わり、差分が出るため。
         /// 組み方が変わったときだけ丸ごと上書きする (アセットの GUID は保たれる)。
         /// </summary>
-        private static GameObject SavePrefab(string folder, string name, Action<GameObject> build)
+        internal static GameObject SavePrefab(string folder, string name, Action<GameObject> build)
         {
             var path = $"{folder}/{name}.prefab";
             var existing = AssetDatabase.LoadMainAssetAtPath(path);

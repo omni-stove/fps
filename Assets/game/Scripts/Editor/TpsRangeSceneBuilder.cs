@@ -14,7 +14,7 @@ namespace Fps.Editor
     /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) の
     /// <see cref="GameBootstrap"/> と <see cref="MatchRunner"/> を置いた GameObject、高低の遮蔽物 (<see cref="Covers"/>)、
     /// 乗り越え用の低い壁 (<see cref="VaultWall"/>)、回避と手榴弾を試す開けた場所の目印 (<see cref="OpenAreaName"/>)、
-    /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場を入れる。床・プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
+    /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場を入れ、壁や箱には <see cref="SurfaceIds"/> の材質を付ける。床・プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
     /// ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/> を配線する。保存したシーンは Build Settings に (並びを変えずに) 加える。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.TpsRangeSceneBuilder.Build</code>
@@ -86,6 +86,21 @@ namespace Fps.Editor
 
         /// <summary>低い遮蔽物 (<see cref="Covers"/> の 0 番)。</summary>
         public static LevelBox LowCover => Covers[0];
+
+        /// <summary>
+        /// 床に置くものの名前ごとの面の材質 (<see cref="SurfaceMaterial"/> の Id)。遮蔽物は Bootstrap の射撃場と同じ材質を使い
+        /// (<see cref="BootstrapSceneBuilder.CoverSurfaceIds"/>)、着弾の演出を見比べられるよう残りは材質を散らす。小屋は部品すべてに効くよう親に付ける。
+        /// 載っていないものは <see cref="SurfaceMaterial.DefaultId"/>。
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> SurfaceIds = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [LowCoverName] = BootstrapSceneBuilder.CoverSurfaceIds[BootstrapSceneBuilder.LowCoverName],
+            [HighCoverName] = BootstrapSceneBuilder.CoverSurfaceIds[BootstrapSceneBuilder.HighCoverName],
+            [LowCoverBackName] = SurfaceImpactAssetStep.ConcreteId,
+            [HighPillarName] = SurfaceImpactAssetStep.MetalId,
+            [VaultWallName] = SurfaceImpactAssetStep.WoodId,
+            [HutName] = SurfaceImpactAssetStep.WoodId,
+        };
 
         [MenuItem(MenuPath)]
         public static void Build()
@@ -173,7 +188,9 @@ namespace Fps.Editor
                 bootstrap.RulesDefinition = rules;
 
                 created.Add(CreateBoxes(scene, CoversName, Covers));
-                created.Add(SceneBuildHelpers.CreateStaticBox(scene, null, VaultWall.Name, VaultWall.Center, VaultWall.Size));
+                var vaultWall = SceneBuildHelpers.CreateStaticBox(scene, null, VaultWall.Name, VaultWall.Center, VaultWall.Size);
+                created.Add(vaultWall);
+                SceneBuildHelpers.SetSurfaceMaterial(vaultWall, SceneBuildHelpers.SurfaceIdOf(SurfaceIds, VaultWall.Name));
 
                 var openArea = new GameObject(OpenAreaName);
                 created.Add(openArea);
@@ -190,6 +207,7 @@ namespace Fps.Editor
                 created.Add(hut.gameObject);
                 hut.transform.SetPositionAndRotation(HutCenter, Quaternion.identity);
                 hut.DebrisPool = pool;
+                SceneBuildHelpers.SetSurfaceMaterial(hut.gameObject, SceneBuildHelpers.SurfaceIdOf(SurfaceIds, HutName));
 
                 EditorSceneManager.MarkSceneDirty(scene);
                 return bootstrap;
@@ -236,7 +254,8 @@ namespace Fps.Editor
             SceneManager.MoveGameObjectToScene(root, scene);
             foreach (var box in boxes)
             {
-                SceneBuildHelpers.CreateStaticBox(scene, root.transform, box.Name, box.Center, box.Size);
+                var created = SceneBuildHelpers.CreateStaticBox(scene, root.transform, box.Name, box.Center, box.Size);
+                SceneBuildHelpers.SetSurfaceMaterial(created, SceneBuildHelpers.SurfaceIdOf(SurfaceIds, box.Name));
             }
 
             return root;

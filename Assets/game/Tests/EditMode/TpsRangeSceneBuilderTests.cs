@@ -108,6 +108,41 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void WallsAndBoxesCarryTheirSurfaceMaterials()
+        {
+            var rules = NewRules(GameRulesAssetBuilder.TpsRangeRules());
+            TpsRangeSceneBuilder.PopulateScene(_scene, new[] { NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec()) }, rules);
+
+            var covers = Find(TpsRangeSceneBuilder.CoversName).transform;
+            foreach (var box in TpsRangeSceneBuilder.Covers)
+            {
+                var collider = covers.Find(box.Name).GetComponent<Collider>();
+                Assert.That(SurfaceMaterial.IdOf(collider), Is.EqualTo(TpsRangeSceneBuilder.SurfaceIds[box.Name]), box.Name);
+            }
+
+            Assert.That(
+                SurfaceMaterial.IdOf(Find(TpsRangeSceneBuilder.VaultWallName).GetComponent<Collider>()),
+                Is.EqualTo(SurfaceImpactAssetStep.WoodId));
+
+            var hut = Find(TpsRangeSceneBuilder.HutName).GetComponent<DestructibleStructure>();
+            foreach (var piece in hut.Pieces)
+            {
+                Assert.That(SurfaceMaterial.IdOf(piece.Collider), Is.EqualTo(SurfaceImpactAssetStep.WoodId), piece.name);
+            }
+
+            var catalogIds = new HashSet<string>();
+            foreach (var spec in SurfaceImpactAssetStep.Specs())
+            {
+                catalogIds.Add(spec.MaterialId);
+            }
+
+            foreach (var id in TpsRangeSceneBuilder.SurfaceIds.Values)
+            {
+                Assert.That(catalogIds, Does.Contain(id), $"'{id}' has its own impact assets");
+            }
+        }
+
+        [Test]
         public void TheCoversAreOneLowAndOneHighAtLeast()
         {
             var low = 0;

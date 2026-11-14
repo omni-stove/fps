@@ -47,6 +47,12 @@ namespace Fps.Net
         /// </summary>
         public bool VaultAllowed { get; }
 
+        public bool Prone { get; }
+
+        public bool ProneAllowed { get; }
+
+        public bool LadderAllowed { get; }
+
         public MotorInput(Vector2 move, float yaw, bool sprint, bool jump, bool crouch)
             : this(move, yaw, sprint, jump, crouch, false)
         {
@@ -64,6 +70,28 @@ namespace Fps.Net
 
         public MotorInput(
             Vector2 move, float yaw, bool sprint, bool jump, bool crouch, bool downed, bool cover, bool aim, bool dodge, bool vaultAllowed)
+            : this(move, yaw, sprint, jump, crouch, downed, cover, aim, dodge, vaultAllowed, false, false, false)
+        {
+        }
+
+        /// <summary>
+        /// prone はこの tick に Prone が押されたか。proneAllowed・ladderAllowed は <see cref="VaultAllowed"/> と同じく送らず、
+        /// サーバーと予測がそれぞれの知るルール (<see cref="Fps.Core.ActionRules.Prone"/>・<see cref="Fps.Core.ActionRules.Ladder"/>) を入れる。
+        /// </summary>
+        public MotorInput(
+            Vector2 move,
+            float yaw,
+            bool sprint,
+            bool jump,
+            bool crouch,
+            bool downed,
+            bool cover,
+            bool aim,
+            bool dodge,
+            bool vaultAllowed,
+            bool prone,
+            bool proneAllowed,
+            bool ladderAllowed)
         {
             Move = Vector2.ClampMagnitude(move, 1f);
             Yaw = yaw;
@@ -75,6 +103,9 @@ namespace Fps.Net
             Aim = aim;
             Dodge = dodge;
             VaultAllowed = vaultAllowed;
+            Prone = prone;
+            ProneAllowed = proneAllowed;
+            LadderAllowed = ladderAllowed;
         }
 
         /// <summary>
@@ -89,25 +120,32 @@ namespace Fps.Net
         /// <summary>Cover の押下だけを捨てた入力。カバーがルールで Off のときにサーバーが使う。</summary>
         public MotorInput WithoutCover()
         {
-            return Cover ? new MotorInput(Move, Yaw, Sprint, Jump, Crouch, Downed, false, Aim, Dodge, VaultAllowed) : this;
+            return Cover
+                ? new MotorInput(Move, Yaw, Sprint, Jump, Crouch, Downed, false, Aim, Dodge, VaultAllowed, Prone, ProneAllowed, LadderAllowed)
+                : this;
         }
 
         /// <summary>Dodge の押下だけを捨てた入力。回避がルールで Off のときにサーバーが使う。</summary>
         public MotorInput WithoutDodge()
         {
-            return Dodge ? new MotorInput(Move, Yaw, Sprint, Jump, Crouch, Downed, Cover, Aim, false, VaultAllowed) : this;
+            return Dodge
+                ? new MotorInput(Move, Yaw, Sprint, Jump, Crouch, Downed, Cover, Aim, false, VaultAllowed, Prone, ProneAllowed, LadderAllowed)
+                : this;
         }
 
         /// <summary><see cref="VaultAllowed"/> だけを差し替えた入力。サーバーと予測が、それぞれの知るルールを入れるのに使う。</summary>
         public MotorInput WithVaultAllowed(bool allowed)
         {
-            return VaultAllowed == allowed ? this : new MotorInput(Move, Yaw, Sprint, Jump, Crouch, Downed, Cover, Aim, Dodge, allowed);
+            return VaultAllowed == allowed
+                ? this
+                : new MotorInput(Move, Yaw, Sprint, Jump, Crouch, Downed, Cover, Aim, Dodge, allowed, Prone, ProneAllowed, LadderAllowed);
         }
 
         /// <summary>移動入力と向きがすべて有限値か。ネットワークから受け取った値の検査に使う。</summary>
         public CharacterMotorInput ToCore()
         {
-            return new CharacterMotorInput(NetMath.ToNumerics(Move), Yaw, Sprint, Jump, Crouch, Downed, Cover, Aim, Dodge, VaultAllowed);
+            return new CharacterMotorInput(
+                NetMath.ToNumerics(Move), Yaw, Sprint, Jump, Crouch, Downed, Cover, Aim, Dodge, VaultAllowed, Prone, ProneAllowed, LadderAllowed);
         }
 
         public static bool IsValid(Vector2 move, float yaw)

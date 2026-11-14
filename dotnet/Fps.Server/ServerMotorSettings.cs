@@ -19,7 +19,13 @@ namespace Fps.Server
 
         public static readonly ServerMotorSettings Default = new ServerMotorSettings(
             MotorSpec.Default,
-            new StanceGeometry(DefaultStandingHeight, DefaultStandingCenterY, DefaultEyeY, DefaultCrouchHeight, DefaultRadius),
+            new StanceGeometry(
+                DefaultStandingHeight,
+                DefaultStandingCenterY,
+                DefaultEyeY,
+                DefaultCrouchHeight,
+                NetMotorSettings.FitProneHeight(ProneSpec.DefaultHeight, DefaultCrouchHeight, DefaultRadius),
+                DefaultRadius),
             CapsuleMoverSpec.Default,
             GameRules.Default,
             DefaultKillPlaneY,
@@ -27,7 +33,20 @@ namespace Fps.Server
 
         public ServerMotorSettings(
             MotorSpec motor, StanceGeometry stance, CapsuleMoverSpec mover, GameRules rules, float killPlaneY, Vector3 spawnPosition)
+            : this(motor, stance, mover, ProneSpec.Default, rules, killPlaneY, spawnPosition)
         {
+        }
+
+        public ServerMotorSettings(
+            MotorSpec motor,
+            StanceGeometry stance,
+            CapsuleMoverSpec mover,
+            ProneSpec prone,
+            GameRules rules,
+            float killPlaneY,
+            Vector3 spawnPosition)
+        {
+            Prone = prone ?? throw new ArgumentNullException(nameof(prone));
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
             Stance = stance ?? throw new ArgumentNullException(nameof(stance));
             Mover = mover ?? throw new ArgumentNullException(nameof(mover));
@@ -57,6 +76,8 @@ namespace Fps.Server
 
         public CapsuleMoverSpec Mover { get; }
 
+        public ProneSpec Prone { get; }
+
         public GameRules Rules { get; }
 
         public float KillPlaneY { get; }
@@ -65,12 +86,12 @@ namespace Fps.Server
 
         public ServerMotorSettings WithRules(GameRules rules)
         {
-            return new ServerMotorSettings(Motor, Stance, Mover, rules, KillPlaneY, SpawnPosition);
+            return new ServerMotorSettings(Motor, Stance, Mover, Prone, rules, KillPlaneY, SpawnPosition);
         }
 
         public ServerMotorSettings WithSpawnPosition(Vector3 spawnPosition)
         {
-            return new ServerMotorSettings(Motor, Stance, Mover, Rules, KillPlaneY, spawnPosition);
+            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Rules, KillPlaneY, spawnPosition);
         }
     }
 }

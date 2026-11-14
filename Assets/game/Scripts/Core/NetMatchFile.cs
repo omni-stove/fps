@@ -55,6 +55,10 @@ namespace Fps.Core
         public const string SlopeLimitDegreesItem = "slopeLimitDegrees";
         public const string StepOffsetItem = "stepOffset";
         public const string SkinWidthItem = "skinWidth";
+        public const string ProneHeightItem = "proneHeight";
+        public const string ProneSpeedItem = "proneSpeed";
+        public const string DiveDistanceItem = "diveDistance";
+        public const string DiveSecondsItem = "diveSeconds";
 
         private const string _kind = "match rules JSON";
 
@@ -65,6 +69,7 @@ namespace Fps.Core
             WalkSpeedItem, SprintSpeedItem, JumpHeightItem, GravityItem, AirControlItem, CrouchSpeedItem, SafeFallSpeedItem, LethalFallSpeedItem,
             DodgeDistanceItem, DodgeSecondsItem, VaultMaxHeightItem, MantleMaxHeightItem, MantleSpeedItem, StandingHeightItem, StandingCenterYItem,
             StandingEyeYItem, CrouchHeightItem, RadiusItem, SlopeLimitDegreesItem, StepOffsetItem, SkinWidthItem,
+            ProneHeightItem, ProneSpeedItem, DiveDistanceItem, DiveSecondsItem,
         };
         private static readonly string[] _loadoutItems = { NameItem, SwitchSecondsItem, SlotsItem, WeaponsItem };
         private static readonly string[] _catalogItems = { NameItem, WeaponsItem };
@@ -233,6 +238,10 @@ namespace Fps.Core
             writer.Float(SlopeLimitDegreesItem, mover.SlopeLimitDegrees);
             writer.Float(StepOffsetItem, mover.StepOffset);
             writer.Float(SkinWidthItem, mover.SkinWidth);
+            writer.Float(ProneHeightItem, stance.Prone.Height);
+            writer.Float(ProneSpeedItem, file.Motor.Prone.Speed);
+            writer.Float(DiveDistanceItem, file.Motor.Prone.DiveDistance);
+            writer.Float(DiveSecondsItem, file.Motor.Prone.DiveSeconds);
             writer.EndObject();
 
             writer.BeginObject(LoadoutItem);
@@ -324,8 +333,12 @@ namespace Fps.Core
             var dm = d.Motor;
             var ds = d.Stance;
             var dc = d.Mover;
+            var dp = d.Prone;
             try
             {
+                var crouchHeight = fields.ReadFloat(CrouchHeightItem, ds.Crouched.Height);
+                var radius = fields.ReadFloat(RadiusItem, ds.Radius);
+                var prone = ReadProne(fields, dp);
                 return new NetMotorSettings(
                     new MotorSpec(
                         fields.ReadFloat(WalkSpeedItem, dm.WalkSpeed),
@@ -345,18 +358,42 @@ namespace Fps.Core
                         fields.ReadFloat(StandingHeightItem, ds.Standing.Height),
                         fields.ReadFloat(StandingCenterYItem, ds.Standing.CenterY),
                         fields.ReadFloat(StandingEyeYItem, ds.Standing.EyeY),
-                        fields.ReadFloat(CrouchHeightItem, ds.Crouched.Height),
-                        fields.ReadFloat(RadiusItem, ds.Radius)),
+                        crouchHeight,
+                        NetMotorSettings.FitProneHeight(prone.Height, crouchHeight, radius),
+                        radius),
                     new CapsuleMoverSpec(
                         fields.ReadFloat(SlopeLimitDegreesItem, dc.SlopeLimitDegrees),
                         fields.ReadFloat(StepOffsetItem, dc.StepOffset),
                         fields.ReadFloat(SkinWidthItem, dc.SkinWidth),
-                        dc.LayerMask));
+                        dc.LayerMask),
+                    prone);
             }
             catch (ArgumentException e)
             {
                 // MotorSpec・StanceGeometry・CapsuleMoverSpec の引数名は項目名と同じ
                 throw fields.Rejected(e.ParamName == null ? fields.Path : fields.ItemPath(e.ParamName), e.Message, e);
+            }
+        }
+
+        private static ProneSpec ReadProne(ServerDataJson.Fields fields, ProneSpec fallback)
+        {
+            try
+            {
+                return new ProneSpec(
+                    fields.ReadFloat(ProneHeightItem, fallback.Height),
+                    fields.ReadFloat(ProneSpeedItem, fallback.Speed),
+                    fallback.MaxPitchDegrees,
+                    fallback.SpreadScale,
+                    fields.ReadFloat(DiveDistanceItem, fallback.DiveDistance),
+                    fields.ReadFloat(DiveSecondsItem, fallback.DiveSeconds));
+            }
+            catch (ArgumentException e)
+            {
+                // ProneSpec の引数名は項目名と違うので、ここで項目名に直す
+                var item = e.ParamName == "height" ? ProneHeightItem
+                    : e.ParamName == "speed" ? ProneSpeedItem
+                    : e.ParamName;
+                throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
             }
         }
 

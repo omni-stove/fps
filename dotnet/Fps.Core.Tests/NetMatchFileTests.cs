@@ -94,6 +94,26 @@ namespace Fps.Core.Tests
             Assert.That(bare.Motor, Is.SameAs(NetMotorSettings.Default));
         }
 
+        [Test]
+        public void ProneValuesReadBackAndDefaultWhenLeftOut()
+        {
+            var bareText = "{\"loadout\": {\"slots\": [[\"Handgun\"]], \"weapons\": [\"" + _handgunId + "\"]}, \"weapons\": [" + _handgunJson + "]";
+            var read = NetMatchFile.Parse(
+                bareText + ", \"motor\": {\"proneHeight\": 0.9, \"proneSpeed\": 0.8, \"diveDistance\": 3, \"diveSeconds\": 0.6}}", "prone.json").Motor;
+
+            Assert.That(read.Stance.Prone.Height, Is.EqualTo(1f), "fitted to the capsule's lowest height (twice the radius)");
+            Assert.That(read.Prone.Speed, Is.EqualTo(0.8f));
+            Assert.That(read.Prone.DiveDistance, Is.EqualTo(3f));
+            Assert.That(read.Prone.DiveSeconds, Is.EqualTo(0.6f));
+
+            var defaults = NetMatchFile.Parse(bareText + ", \"motor\": {\"walkSpeed\": 5}}", "defaults.json").Motor;
+            Assert.That(defaults.Stance.Prone.Height, Is.EqualTo(ProneSpec.DefaultHeight));
+            Assert.That(defaults.Prone.Speed, Is.EqualTo(ProneSpec.DefaultSpeed));
+            Assert.That(NetMotorSettings.Default.Stance.Prone.Height, Is.EqualTo(ProneSpec.DefaultHeight));
+        }
+
+        [TestCase("{\"motor\": {\"proneSpeed\": -1}}", "motor.proneSpeed")]
+        [TestCase("{\"motor\": {\"diveSeconds\": 0}}", "motor.diveSeconds")]
         [TestCase("{\"motor\": {\"radius\": -1}}", "motor.radius")]
         [TestCase("{\"motor\": {\"walkSpeed\": -1}}", "motor.walkSpeed")]
         [TestCase("{\"motor\": {\"crouchHeight\": 9}}", "motor.crouchHeight")]

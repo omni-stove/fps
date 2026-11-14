@@ -96,6 +96,34 @@ namespace Fps.Core
             return displacement;
         }
 
+        /// <summary>
+        /// 予測の巻き戻しとサーバーの tick の間で、写した途中の中身 (<see cref="IsDiving"/>・<see cref="Direction"/>・<see cref="Elapsed"/>) に戻す。
+        /// 同じ中身から同じ秒数で <see cref="Step"/> すれば同じ変位になる。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">飛び込んでいるのに direction が有限でないか長さ 0、または elapsed が 0 以上 <see cref="Seconds"/> 未満でない。</exception>
+        public void Restore(bool diving, Vector2 direction, float elapsed)
+        {
+            if (!diving)
+            {
+                Finish();
+                return;
+            }
+
+            if (!IsFinite(direction.X) || !IsFinite(direction.Y) || direction.LengthSquared() <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(direction), direction, "direction must be finite and not zero");
+            }
+
+            if (!(elapsed >= 0f && elapsed < Seconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(elapsed), elapsed, "elapsed must be in [0, Seconds)");
+            }
+
+            _direction = direction;
+            _elapsed = elapsed;
+            _isDiving = true;
+        }
+
         /// <summary>飛び込みを途中でやめる (死亡・リスポーンなど)。飛び込んでいたら true。</summary>
         public bool Cancel()
         {

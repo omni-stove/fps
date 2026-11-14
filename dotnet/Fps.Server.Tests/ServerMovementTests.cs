@@ -140,6 +140,79 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void ProneIsIgnoredWhenTheRulesTurnItOff()
+        {
+            Start();
+            Settle();
+
+            Send(Vector2.Zero, InputButtons.Prone);
+
+            _movement.TryGetState(1, out var state);
+            Assert.That(state.IsProne, Is.False);
+        }
+
+        [Test]
+        public void ProneLowersThePlayerAndIsLoggedAndSent()
+        {
+            Start(GameRules.Default.WithActions(ActionRules.Default.WithProne(Prone.On)));
+            Settle();
+
+            Send(Vector2.Zero, InputButtons.Prone);
+            var proneTick = _nextInputTick - 1;
+            _movement.TryGetState(1, out var state);
+            Assert.That(state.Stance, Is.EqualTo(PlayerStance.Prone));
+            Assert.That(_log.ToString(), Does.Contain("[Net] prone owner=1 tick=" + proneTick + " prone=true"));
+
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            var row = OnlySnapshot().Players[0];
+            Assert.That(row.IsProne, Is.True);
+            Assert.That(row.IsCrouched, Is.False);
+            Assert.That(row.Prone.IsActive, Is.True);
+
+            Send(Vector2.Zero, InputButtons.Prone);
+            _movement.TryGetState(1, out state);
+            Assert.That(state.Stance, Is.EqualTo(PlayerStance.Standing));
+            Assert.That(_log.ToString(), Does.Contain("[Net] prone owner=1 tick=" + (_nextInputTick - 1) + " prone=false"));
+        }
+
+        [Test]
+        public void WalkingIntoTheMapLadderClimbsItAndIsLoggedAndSent()
+        {
+            Start(GameRules.Default.WithActions(ActionRules.Default.WithLadder(Ladder.On)), TestMaps.OneLadder());
+            Settle();
+
+            CharacterMotorState state = default;
+            for (var i = 0; i < 120 && !state.IsClimbing; i++)
+            {
+                Send(new Vector2(0f, 1f), InputButtons.None);
+                _movement.TryGetState(1, out state);
+            }
+
+            Assert.That(state.IsClimbing, Is.True);
+            Assert.That(_log.ToString(), Does.Contain("[Net] ladder owner=1 tick=" + (_nextInputTick - 1) + " climbing=true ladder=0"));
+
+            var startY = state.Position.Y;
+            for (var i = 0; i < 20; i++)
+            {
+                Send(new Vector2(0f, 1f), InputButtons.None);
+            }
+
+            _movement.TryGetState(1, out state);
+            Assert.That(state.Position.Y - startY, Is.EqualTo(LadderSpec.DefaultClimbSpeed * 20 * _tickSeconds).Within(1e-3f));
+
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            var row = OnlySnapshot().Players[0];
+            Assert.That(row.Ladder, Is.EqualTo(state.Ladder));
+
+            Send(Vector2.Zero, InputButtons.Jump);
+            _movement.TryGetState(1, out state);
+            Assert.That(state.IsClimbing, Is.False);
+            Assert.That(_log.ToString(), Does.Contain("[Net] ladder owner=1 tick=" + (_nextInputTick - 1) + " climbing=false"));
+        }
+
+        [Test]
         public void ADownedPlayerDoesNotWalk()
         {
             Start();
@@ -287,7 +360,7 @@ namespace Fps.Server.Tests
             return state;
         }
 
-        private void Start(GameRules rules = null)
+        private void Start(GameRules rules = null, NetMapLadders ladders = null)
         {
             _transport?.Dispose();
             _transport = new RecordingTransport();
@@ -299,7 +372,7 @@ namespace Fps.Server.Tests
             _host.Register(_movement);
             _host.Register(_snapshots);
             var options = new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort);
-            _host.Start(new ServerContext(options, "0.2.0", _log, TestMaps.Data(), _match, new ServerMessenger(_transport), new StubControl()));
+            _host.Start(new ServerContext(options, "0.2.0", _log, TestMaps.Data(ladders: ladders), _match, new ServerMessenger(_transport), new StubControl()));
             _match.Join(_connection, "key");
             _host.OnConnected(_connection);
             _nextInputTick = 0;

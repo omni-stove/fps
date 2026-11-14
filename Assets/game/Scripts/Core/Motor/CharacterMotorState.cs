@@ -20,14 +20,39 @@ namespace Fps.Core
             CharacterCoverState cover,
             DodgeSnapshot dodge,
             CharacterVaultState vault)
+            : this(
+                position,
+                velocity,
+                isGrounded,
+                isCrouched ? PlayerStance.Crouching : PlayerStance.Standing,
+                cover,
+                dodge,
+                vault,
+                CharacterProneState.None,
+                CharacterLadderState.None)
+        {
+        }
+
+        public CharacterMotorState(
+            Vector3 position,
+            Vector3 velocity,
+            bool isGrounded,
+            PlayerStance stance,
+            CharacterCoverState cover,
+            DodgeSnapshot dodge,
+            CharacterVaultState vault,
+            CharacterProneState prone,
+            CharacterLadderState ladder)
         {
             Position = position;
             Velocity = velocity;
             IsGrounded = isGrounded;
-            IsCrouched = isCrouched;
+            Stance = stance;
             Cover = cover;
             Dodge = dodge;
             Vault = vault;
+            Prone = prone;
+            Ladder = ladder;
         }
 
         public Vector3 Position { get; }
@@ -36,7 +61,11 @@ namespace Fps.Core
 
         public bool IsGrounded { get; }
 
-        public bool IsCrouched { get; }
+        public PlayerStance Stance { get; }
+
+        public bool IsCrouched => Stance == PlayerStance.Crouching;
+
+        public bool IsProne => Stance == PlayerStance.Prone;
 
         public CharacterCoverState Cover { get; }
 
@@ -44,11 +73,20 @@ namespace Fps.Core
 
         public CharacterVaultState Vault { get; }
 
+        public CharacterProneState Prone { get; }
+
+        public CharacterLadderState Ladder { get; }
+
+        public bool IsDiving => Prone.IsDiving;
+
+        public bool IsClimbing => Ladder.IsClimbing;
+
         public bool IsDodging => Dodge.IsRolling;
 
         public bool IsVaulting => Vault.IsVaulting;
 
-        public bool IsFinite => IsFiniteVector(Position) && IsFiniteVector(Velocity) && Cover.IsValid && Dodge.IsValid && Vault.IsValid;
+        public bool IsFinite => IsFiniteVector(Position) && IsFiniteVector(Velocity) && Cover.IsValid && Dodge.IsValid && Vault.IsValid
+            && Prone.IsValid && Ladder.IsValid && Stance >= PlayerStance.Standing && Stance <= PlayerStance.Prone;
 
         /// <summary>
         /// 位置が一致していても姿勢が違えばカプセルの高さが違い、以降の移動も目の高さも変わるので、位置の許容値に埋もれさせず必ず巻き戻す。
@@ -56,7 +94,7 @@ namespace Fps.Core
         /// </summary>
         public static float PositionError(CharacterMotorState predicted, CharacterMotorState authoritative)
         {
-            if (predicted.IsCrouched != authoritative.IsCrouched)
+            if (predicted.Stance != authoritative.Stance)
             {
                 return StanceMismatchError;
             }
@@ -68,7 +106,10 @@ namespace Fps.Core
                 return StanceMismatchError;
             }
 
-            if (predicted.IsDodging != authoritative.IsDodging || predicted.IsVaulting != authoritative.IsVaulting)
+            if (predicted.IsDodging != authoritative.IsDodging || predicted.IsVaulting != authoritative.IsVaulting
+                || predicted.IsDiving != authoritative.IsDiving
+                || predicted.Ladder.IsClimbing != authoritative.Ladder.IsClimbing
+                || (predicted.Ladder.IsClimbing && predicted.Ladder.Index != authoritative.Ladder.Index))
             {
                 return StanceMismatchError;
             }
@@ -81,10 +122,12 @@ namespace Fps.Core
             return Position.Equals(other.Position)
                 && Velocity.Equals(other.Velocity)
                 && IsGrounded == other.IsGrounded
-                && IsCrouched == other.IsCrouched
+                && Stance == other.Stance
                 && Cover.Equals(other.Cover)
                 && Dodge.Equals(other.Dodge)
-                && Vault.Equals(other.Vault);
+                && Vault.Equals(other.Vault)
+                && Prone.Equals(other.Prone)
+                && Ladder.Equals(other.Ladder);
         }
 
         public override bool Equals(object obj)
@@ -106,8 +149,8 @@ namespace Fps.Core
         {
             unchecked
             {
-                return (Position.GetHashCode() * 397) ^ Velocity.GetHashCode() ^ (IsGrounded ? 1 : 0) ^ (IsCrouched ? 2 : 0)
-                    ^ Cover.GetHashCode() ^ Dodge.GetHashCode() ^ Vault.GetHashCode();
+                return (Position.GetHashCode() * 397) ^ Velocity.GetHashCode() ^ (IsGrounded ? 1 : 0) ^ ((int)Stance << 1)
+                    ^ Cover.GetHashCode() ^ Dodge.GetHashCode() ^ Vault.GetHashCode() ^ Prone.GetHashCode() ^ Ladder.GetHashCode();
             }
         }
 

@@ -17,6 +17,8 @@ namespace Fps.Protocol
         Aim = 16,
         /// <summary>この tick に Dodge が押された。</summary>
         Dodge = 32,
-        All = Sprint | Jump | Crouch | Cover | Aim | Dodge,
+        /// <summary>この tick に Prone が押された (伏せる・起き上がる)。</summary>
+        Prone = 64,
+        All = Sprint | Jump | Crouch | Cover | Aim | Dodge | Prone,
     }
 }

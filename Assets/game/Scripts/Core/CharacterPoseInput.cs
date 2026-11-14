@@ -32,6 +32,9 @@ namespace Fps.Core
         /// <summary>今持っている武器の種別。持っていなければ null。</summary>
         public WeaponCategory? WeaponCategory { get; }
 
+        /// <summary>スライディングの最中か。</summary>
+        public bool IsSliding { get; }
+
         public bool IsInCover => CoverHeight.HasValue;
 
         /// <param name="horizontalSpeed">水平の移動の速さ (m/s)。0 以上の有限値。</param>
@@ -43,6 +46,7 @@ namespace Fps.Core
         /// <param name="isDowned">ダウンしているか。</param>
         /// <param name="isDead">死んでいるか。</param>
         /// <param name="weaponCategory">持っている武器の種別。持っていなければ null。定義済みの値。</param>
+        /// <param name="isSliding">スライディングの最中か。</param>
         public CharacterPoseInput(
             float horizontalSpeed,
             bool isGrounded,
@@ -52,7 +56,8 @@ namespace Fps.Core
             CoverHeight? coverHeight,
             bool isDowned,
             bool isDead,
-            WeaponCategory? weaponCategory)
+            WeaponCategory? weaponCategory,
+            bool isSliding = false)
         {
             if (!(horizontalSpeed >= 0f) || float.IsInfinity(horizontalSpeed))
             {
@@ -78,6 +83,7 @@ namespace Fps.Core
             IsDowned = isDowned;
             IsDead = isDead;
             WeaponCategory = weaponCategory;
+            IsSliding = isSliding;
         }
 
         public bool Equals(CharacterPoseInput other)
@@ -90,7 +96,8 @@ namespace Fps.Core
                 && CoverHeight == other.CoverHeight
                 && IsDowned == other.IsDowned
                 && IsDead == other.IsDead
-                && WeaponCategory == other.WeaponCategory;
+                && WeaponCategory == other.WeaponCategory
+                && IsSliding == other.IsSliding;
         }
 
         public override bool Equals(object obj)
@@ -115,7 +122,8 @@ namespace Fps.Core
                 | (IsSprinting ? 4 : 0)
                 | (IsAiming ? 8 : 0)
                 | (IsDowned ? 16 : 0)
-                | (IsDead ? 32 : 0);
+                | (IsDead ? 32 : 0)
+                | (IsSliding ? 64 : 0);
             return HashCode.Combine(HorizontalSpeed, flags, CoverHeight, WeaponCategory);
         }
 
@@ -123,7 +131,7 @@ namespace Fps.Core
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "speed={0:0.00} grounded={1} crouch={2} sprint={3} aim={4} cover={5} downed={6} dead={7} weapon={8}",
+                "speed={0:0.00} grounded={1} crouch={2} sprint={3} aim={4} cover={5} downed={6} dead={7} weapon={8} slide={9}",
                 HorizontalSpeed,
                 IsGrounded,
                 IsCrouching,
@@ -132,7 +140,8 @@ namespace Fps.Core
                 CoverHeight.HasValue ? CoverHeight.Value.ToString() : "-",
                 IsDowned,
                 IsDead,
-                WeaponCategory.HasValue ? WeaponCategory.Value.ToString() : "-");
+                WeaponCategory.HasValue ? WeaponCategory.Value.ToString() : "-",
+                IsSliding);
         }
     }
 }

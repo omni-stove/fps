@@ -108,6 +108,7 @@ namespace Fps.Tests.EditMode
                 { CharacterPose.DownedParameter, AnimatorControllerParameterType.Bool },
                 { CharacterPose.DeadParameter, AnimatorControllerParameterType.Bool },
                 { CharacterPose.WeaponCategoryParameter, AnimatorControllerParameterType.Int },
+                { CharacterPose.SlideParameter, AnimatorControllerParameterType.Bool },
             }));
         }
 

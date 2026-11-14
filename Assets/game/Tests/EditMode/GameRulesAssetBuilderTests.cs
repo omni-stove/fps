@@ -360,6 +360,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.ActiveReload, Is.EqualTo(ActiveReload.On));
             Assert.That(rules.Actions.Dodge, Is.EqualTo(Dodge.On));
             Assert.That(rules.Actions.Vault, Is.EqualTo(Vault.On));
+            Assert.That(rules.Actions.Mantle, Is.EqualTo(Mantle.On));
             Assert.That(rules.Actions.Grenade, Is.EqualTo(Grenade.On));
             Assert.That(rules.Actions.GrenadeCount, Is.GreaterThan(0), "grenades are on, so there must be some to throw");
         }

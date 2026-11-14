@@ -185,6 +185,7 @@ namespace Fps.Runtime
             Set(ref flags, PlayerActionConditions.Crouching, _mover.IsCrouched);
             Set(ref flags, PlayerActionConditions.Dodging, _mover.IsDodging);
             Set(ref flags, PlayerActionConditions.Vaulting, _mover.IsVaulting);
+            Set(ref flags, PlayerActionConditions.Mantling, _mover.IsMantling);
             Set(ref flags, PlayerActionConditions.Grounded, _mover.IsGrounded);
             Set(ref flags, PlayerActionConditions.InCover, _cover.IsInCover);
             Set(ref flags, PlayerActionConditions.BlindFiring, _blindFire.IsBlindFiring);

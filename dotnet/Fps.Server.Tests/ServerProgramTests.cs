@@ -16,7 +16,7 @@ namespace Fps.Server.Tests
         private StringWriter _output;
         private StringWriter _error;
         private TempDirectory _data;
-        private ImmediateStopSignal _stop;
+        private IStopSignal _stop;
         private Dictionary<string, string> _environment;
         private ushort _port;
 
@@ -145,6 +145,37 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void AModuleThatFailsTheServerSetsTheExitCode()
+        {
+            var calls = new List<string>();
+            _stop = new NeverStopSignal();
+
+            var code = Run(new[] { new RecordingModule("a", calls) { FailOnTickWith = ServerProgram.ExitLobbyFailed } });
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitLobbyFailed));
+            Assert.That(_output.ToString(), Does.Contain("a cannot go on; stopping with exit code 7"));
+            Assert.That(calls[^1], Is.EqualTo("a.Stop"));
+        }
+
+        [Test]
+        public void RegisterLobbyWithoutEosCredentialsExitsMisconfigured()
+        {
+            var code = RunWithServerModules("-register-lobby", "203.0.113.10:7777");
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitMisconfigured));
+            Assert.That(_error.ToString(), Does.StartWith(
+                "[Lobby] -register-lobby needs EOS credentials; missing EOS_PRODUCT_ID, EOS_SANDBOX_ID, EOS_DEPLOYMENT_ID, EOS_CLIENT_ID, EOS_CLIENT_SECRET"));
+            Assert.That(_output.ToString(), Does.Not.Contain("listening"));
+        }
+
+        [Test]
+        public void WithoutRegisterLobbyNoModuleIsAdded()
+        {
+            Assert.That(RunWithServerModules(), Is.EqualTo(ServerProgram.ExitOk));
+            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 0 module(s)"));
+        }
+
+        [Test]
         public void FailingModuleExitsOne()
         {
             var calls = new List<string>();
@@ -163,6 +194,11 @@ namespace Fps.Server.Tests
             return ServerProgram.Run(args, Array.Empty<IServerModule>(), Runtime());
         }
 
+        private int RunWithServerModules(params string[] args)
+        {
+            return ServerProgram.Run(args, ServerModules.Create, Runtime());
+        }
+
         private int Run(IServerModule[] modules)
         {
             return ServerProgram.Run(Array.Empty<string>(), modules, Runtime());
@@ -175,6 +211,7 @@ namespace Fps.Server.Tests
                 _error,
                 name => _environment.TryGetValue(name, out var value) ? value : null,
                 _stop,
+                new[] { _data.Path },
                 new[] { _data.Path },
                 () => new UdpMatchTransport());
         }

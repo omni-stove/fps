@@ -7,6 +7,9 @@
     <ProjectReference Include="../Fps.Server/Fps.Server.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="../Fps.Server.Eos.Tests/FakeLobbyBackend.cs" Link="FakeLobbyBackend.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.1" />
     <PackageReference Include="NUnit" Version="5.0.0" />
     <PackageReference Include="NUnit.Analyzers" Version="4.15.0">

@@ -14,6 +14,7 @@ namespace Fps.Server
             Func<string, string> environment,
             IStopSignal stopSignal,
             IReadOnlyList<string> mapSearchRoots,
+            IReadOnlyList<string> credentialSearchRoots,
             Func<IMatchTransport> createTransport)
         {
             Output = output ?? throw new ArgumentNullException(nameof(output));
@@ -21,6 +22,7 @@ namespace Fps.Server
             Environment = environment ?? throw new ArgumentNullException(nameof(environment));
             StopSignal = stopSignal ?? throw new ArgumentNullException(nameof(stopSignal));
             MapSearchRoots = mapSearchRoots ?? throw new ArgumentNullException(nameof(mapSearchRoots));
+            CredentialSearchRoots = credentialSearchRoots ?? throw new ArgumentNullException(nameof(credentialSearchRoots));
             CreateTransport = createTransport ?? throw new ArgumentNullException(nameof(createTransport));
         }
 
@@ -34,6 +36,9 @@ namespace Fps.Server
 
         public IReadOnlyList<string> MapSearchRoots { get; }
 
+        /// <summary>EOS の認証情報のファイル (<c>eos.local.json</c>) を探すフォルダ。</summary>
+        public IReadOnlyList<string> CredentialSearchRoots { get; }
+
         public Func<IMatchTransport> CreateTransport { get; }
 
         public static ServerRuntime Process()
@@ -43,6 +48,7 @@ namespace Fps.Server
                 Console.Error,
                 System.Environment.GetEnvironmentVariable,
                 new PosixStopSignal(),
+                ServerMapData.DefaultSearchRoots(),
                 ServerMapData.DefaultSearchRoots(),
                 () => new UdpMatchTransport());
         }

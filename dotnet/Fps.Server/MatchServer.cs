@@ -9,7 +9,7 @@ using Fps.Protocol;
 namespace Fps.Server
 {
     /// <summary>時刻を呼ぶ側の時計 (秒) で受け取るのは、テストから時間を進められるようにするため。</summary>
-    internal sealed class MatchServer
+    internal sealed class MatchServer : IServerControl
     {
         public const float DefaultApprovalTimeoutSeconds = 10f;
         public const float DrainStatusLogIntervalSeconds = 30f;
@@ -70,6 +70,9 @@ namespace Fps.Server
 
         public bool ExitRequested { get; private set; }
 
+        /// <summary>止まった後にプロセスが返す終了コード。<see cref="Fail"/> されていなければ 0。</summary>
+        public int ExitCode { get; private set; } = ServerProgram.ExitOk;
+
         public int ConnectedPlayers => Match.PlayerCount;
 
         public bool ListenFailed { get; private set; }
@@ -83,7 +86,7 @@ namespace Fps.Server
 
             _started = true;
             var options = _launch.Options;
-            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger));
+            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, this));
             try
             {
                 _transport.Listen(options.Address, options.Port);
@@ -159,6 +162,24 @@ namespace Fps.Server
             _log.WriteLine(wasDraining
                 ? "[Net] drain cut short: " + _drain.DescribeStop() + "; stopping now (players=" + Count(ConnectedPlayers) + ")"
                 : "[Net] stop requested; stopping now because " + _drain.DescribeStop());
+            ExitRequested = true;
+        }
+
+        public void Fail(int exitCode, string message)
+        {
+            if (ExitRequested)
+            {
+                return;
+            }
+
+            _log.WriteLine(message + "; stopping with exit code " + Count(exitCode));
+            if (_events.Enabled && !_wroteServerStopping)
+            {
+                _wroteServerStopping = true;
+                _events.Write(ServerEventLog.ServerStopping(_utcNow()));
+            }
+
+            ExitCode = exitCode;
             ExitRequested = true;
         }
 

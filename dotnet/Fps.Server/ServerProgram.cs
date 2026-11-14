@@ -21,10 +21,28 @@ namespace Fps.Server
 
         public const int ExitStartFailed = 4;
 
+        public const int ExitLobbyFailed = 7;
+
         public static int Run(IReadOnlyList<string> args, IEnumerable<IServerModule> modules, ServerRuntime runtime)
         {
-            ArgumentNullException.ThrowIfNull(args);
             ArgumentNullException.ThrowIfNull(modules);
+
+            return Run(args, (ServerLaunch _, ServerRuntime _, ICollection<IServerModule> created, out string error) =>
+            {
+                foreach (var module in modules)
+                {
+                    created.Add(module);
+                }
+
+                error = null;
+                return true;
+            }, runtime);
+        }
+
+        public static int Run(IReadOnlyList<string> args, ServerModuleFactory createModules, ServerRuntime runtime)
+        {
+            ArgumentNullException.ThrowIfNull(args);
+            ArgumentNullException.ThrowIfNull(createModules);
             ArgumentNullException.ThrowIfNull(runtime);
 
             var output = runtime.Output;
@@ -46,6 +64,13 @@ namespace Fps.Server
             }
 
             output.WriteLine(map.LogLine);
+
+            var modules = new List<IServerModule>();
+            if (!createModules(launch, runtime, modules, out problem))
+            {
+                error.WriteLine(problem);
+                return ExitMisconfigured;
+            }
 
             var host = new ServerHost();
             foreach (var module in modules)
@@ -75,7 +100,8 @@ namespace Fps.Server
                     loop.Run();
                 }
 
-                return Shutdown(server, error);
+                var stopped = Shutdown(server, error);
+                return stopped == ExitOk ? server.ExitCode : stopped;
             }
         }
 

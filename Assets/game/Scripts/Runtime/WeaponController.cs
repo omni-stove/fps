@@ -28,7 +28,7 @@ namespace Fps.Runtime
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Camera))]
-    public sealed class WeaponController : MonoBehaviour, IWeaponHolder
+    public sealed partial class WeaponController : MonoBehaviour, IWeaponHolder
     {
         /// <summary>武器を手放したときのログ。</summary>
         public const string DisarmedLog = "[Combat] disarmed";
@@ -46,6 +46,9 @@ namespace Fps.Runtime
         public const string PreviousActionPath = "Player/Previous";
 
         public const string ReloadedLog = "[Combat] reloaded";
+
+        /// <summary>弾切れでトリガーを引いたときのログの頭。続けて <c>id=..</c> を出す。</summary>
+        public const string DryFireLogPrefix = "[Combat] dry-fire";
 
         /// <summary>アクティブリロードの判定のログの頭。続けて <c>success</c> か <c>fail</c> を出す (<see cref="ActiveReloadLog"/>)。</summary>
         public const string ActiveReloadLogPrefix = "[Combat] active-reload";
@@ -199,6 +202,12 @@ namespace Fps.Runtime
         public event Action<Weapon> Fired;
 
         /// <summary>
+        /// <see cref="PullTrigger"/> で Attack を押したフレームに、今の武器の弾倉が空でリロード中でもなく撃てなかったときに、その Weapon を渡して呼ばれる。
+        /// 押し続けている間は呼ばない。弾数やリロードは変えない (空撃ちの音を鳴らすためだけのもの)。
+        /// </summary>
+        public event Action<Weapon> DryFired;
+
+        /// <summary>
         /// <see cref="Fire"/> が <see cref="ResolveShot"/> で決めた始点と向きを、Raycast の前に書き換える差し込み口 (カバーなど)。
         /// null ならそのまま撃つ。
         /// </summary>
@@ -210,8 +219,17 @@ namespace Fps.Runtime
         /// </summary>
         public Func<bool> FireBlocker { get; set; }
 
-        /// <summary><see cref="FireBlocker"/> が今の射撃を止めているか。</summary>
-        public bool IsFireBlocked => FireBlocker != null && FireBlocker();
+        /// <summary><see cref="FireBlocker"/> か、登録された modifier (<see cref="IsFireBlockedByModifier"/>) が今の射撃を止めているか。</summary>
+        public bool IsFireBlocked => (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
+
+        /// <summary>
+        /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous を読まない (武器の時間は進める)。
+        /// null なら手放さない。オフラインは <see cref="GameBootstrap"/> が <see cref="PlayerController.Handoff"/> と同じものを配線する。
+        /// </summary>
+        public ControlHandoff Handoff { get; set; }
+
+        /// <summary><see cref="Handoff"/> を誰かが引き取っていて、入力を読まないか。</summary>
+        public bool IsInputHandedOff => Handoff != null && Handoff.IsHandedOff;
 
         /// <summary>今持っている武器の距離減衰。未初期化なら null。</summary>
         public DamageFalloff Falloff => Weapon?.Spec.Falloff;
@@ -256,7 +274,7 @@ namespace Fps.Runtime
 
         private void Update()
         {
-            if (_unarmed)
+            if (_unarmed || IsInputHandedOff)
             {
                 Tick(Time.deltaTime);
                 return;
@@ -285,13 +303,37 @@ namespace Fps.Runtime
         /// <summary>
         /// Attack の入力を今の武器の <see cref="WeaponSpec.FireMode"/> で判断し (<see cref="FireTrigger.Wants"/>)、撃つなら <see cref="Fire"/> する。
         /// Auto は押している間、Semi は押したフレームだけ撃つ。連射間隔は <see cref="Weapon"/> が制限する。撃てたら true。
+        /// 押したフレームに弾倉が空で撃てなければ <see cref="DryFired"/> を呼ぶ (<see cref="IsDryFire"/>)。
         /// </summary>
         /// <param name="isPressed">Attack が押されているか。</param>
         /// <param name="wasPressedThisFrame">Attack がこのフレームに押されたか。</param>
         public bool PullTrigger(bool isPressed, bool wasPressedThisFrame)
         {
             EnsureInitialized();
-            return !_unarmed && FireTrigger.Wants(Weapon.Spec.FireMode, isPressed, wasPressedThisFrame) && Fire();
+            if (_unarmed || !FireTrigger.Wants(Weapon.Spec.FireMode, isPressed, wasPressedThisFrame))
+            {
+                return false;
+            }
+
+            if (Fire())
+            {
+                return true;
+            }
+
+            var weapon = Weapon;
+            if (wasPressedThisFrame && !IsFireBlocked && IsDryFire(weapon))
+            {
+                Debug.Log($"{DryFireLogPrefix} id={weapon.Spec.Id}", this);
+                DryFired?.Invoke(weapon);
+            }
+
+            return false;
+        }
+
+        /// <summary>weapon の弾倉が空で、リロード中でもないか (トリガーを引くと空撃ちになる)。null なら false。</summary>
+        public static bool IsDryFire(Weapon weapon)
+        {
+            return weapon != null && !weapon.IsReloading && weapon.AmmoInMagazine == 0;
         }
 
         /// <summary>次の番号の武器に持ち替える (最後の次は 0 番)。1 本しかないか武器を持っていなければ false。</summary>
@@ -680,15 +722,25 @@ namespace Fps.Runtime
             }
 
             CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
+            if (BulletShield.TryBlock(hit.collider, weapon.Spec.Damage, origin, shooter))
+            {
+                return true;
+            }
+
             if (Hitbox.FindFor(hit.collider) == null)
             {
-                StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
+                // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
+                using (CombatEvents.Attribute(shooter, weapon.Spec.Id))
+                {
+                    StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
+                }
+
                 return true;
             }
 
             using (CombatEvents.Attribute(shooter, weapon.Spec.Id))
             {
-                if (TryApplyHit(hit.collider, hit.distance, weapon.Spec.Damage, weapon.Spec.Falloff, this, origin, out var result)
+                if (TryApplyHit(hit.collider, hit.distance, weapon.Spec.Damage, weapon.Spec.Falloff, this, origin, direction, out var result)
                     && result.WasAlive)
                 {
                     // オフラインで WeaponController を持つのは手元のプレイヤーだけなので、ここが撃った本人のクライアントになる。
@@ -701,13 +753,13 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今の武器の <see cref="Weapon.TryStartReload"/> を呼ぶ。補充は <see cref="Tick"/> で時間が経ったときに行う。
-        /// 始まったら <see cref="ReloadStarted"/> を呼んで true。
+        /// 始まったら <see cref="ReloadStarted"/> を呼んで true。modifier がリロードを止めている間は始めず false。
         /// </summary>
         public bool StartReload()
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (weapon == null || !weapon.TryStartReload())
+            if (weapon == null || IsReloadBlockedByModifier || !weapon.TryStartReload())
             {
                 return false;
             }
@@ -772,7 +824,7 @@ namespace Fps.Runtime
             return SpreadPattern.Direction(direction.ToNumerics(), cone, PlayerId, shotIndex).ToUnity();
         }
 
-        /// <summary>今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読む。</summary>
+        /// <summary>今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読み、登録された modifier の倍率を掛ける。</summary>
         public float CurrentConeDegrees(WeaponSpec spec)
         {
             if (spec == null)
@@ -782,13 +834,14 @@ namespace Fps.Runtime
 
             var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
             var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
-            return SpreadPattern.ConeDegrees(spec, ads, move);
+            return SpreadPattern.ConeDegrees(spec, ads, move) * ModifierSpreadMultiplier();
         }
 
         /// <summary>今の武器の時間 (武器を持っていなければ進めない) と、<see cref="SpreadFraction"/> と <see cref="Recoil"/> の戻りを deltaSeconds 進める。</summary>
         public void Tick(float deltaSeconds)
         {
             EnsureInitialized();
+            CancelReloadBlockedByModifier();
             Weapon?.Tick(deltaSeconds);
             _recoil.Tick(deltaSeconds);
 
@@ -808,15 +861,17 @@ namespace Fps.Runtime
         /// <param name="falloff">距離減衰の設定。</param>
         /// <param name="context">ログの文脈にするオブジェクト。null 可。</param>
         /// <param name="sourcePosition">撃った者の位置。撃たれた敵がこの方向へ向かう。分からなければ null。</param>
+        /// <param name="direction">弾の進む向き。分からなければ null。</param>
         public static bool TryApplyHit(
             Collider collider,
             float distance,
             int baseDamage,
             DamageFalloff falloff,
             UnityEngine.Object context = null,
-            Vector3? sourcePosition = null)
+            Vector3? sourcePosition = null,
+            Vector3? direction = null)
         {
-            return TryApplyHit(collider, distance, baseDamage, falloff, context, sourcePosition, out _);
+            return TryApplyHit(collider, distance, baseDamage, falloff, context, sourcePosition, direction, out _);
         }
 
         private static bool TryApplyHit(
@@ -826,6 +881,7 @@ namespace Fps.Runtime
             DamageFalloff falloff,
             UnityEngine.Object context,
             Vector3? sourcePosition,
+            Vector3? direction,
             out AppliedHit result)
         {
             result = default;
@@ -848,7 +904,7 @@ namespace Fps.Runtime
             }
 
             var wasAlive = !owner.IsDead;
-            var damage = hitbox.ApplyHit(baseDamage, distance, falloff, sourcePosition);
+            var damage = hitbox.ApplyHit(baseDamage, distance, falloff, sourcePosition, direction);
             Debug.Log($"[Combat] hit zone={hitbox.Zone} dmg={damage}", context != null ? context : hitbox);
             result = new AppliedHit(damage, hitbox.Zone, wasAlive, wasAlive && owner.IsDead);
             return true;

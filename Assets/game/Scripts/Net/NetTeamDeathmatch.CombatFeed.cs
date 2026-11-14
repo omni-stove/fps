@@ -83,11 +83,12 @@ namespace Fps.Net
             _combatFeed.ServerDamageTaken(victim, shooter.transform.position, damage);
         }
 
-        private void SendShot(NetPlayer shooter, string weaponId, Vector3 origin, Vector3 direction, RaycastHit? impact)
+        private void SendShot(
+            NetPlayer shooter, string weaponId, Vector3 origin, Vector3 direction, RaycastHit? impact, bool impactIsCharacter, HitZone? impactZone)
         {
             if (_combatFeed != null)
             {
-                _combatFeed.ServerShot(shooter, weaponId, origin, direction, impact);
+                _combatFeed.ServerShot(shooter, weaponId, origin, direction, impact, impactIsCharacter, impactZone);
             }
         }
 

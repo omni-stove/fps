@@ -40,5 +40,35 @@ namespace Fps.Core
 
         /// <summary>ダウンしている。</summary>
         Downed = 1 << 10,
+
+        /// <summary>近接攻撃の最中。</summary>
+        Meleeing = 1 << 11,
+
+        /// <summary>被弾して怯んでいる。</summary>
+        Staggered = 1 << 12,
+
+        /// <summary>スライディングの最中。</summary>
+        Sliding = 1 << 13,
+
+        /// <summary>段や崖の縁によじ登っている最中。</summary>
+        Mantling = 1 << 14,
+
+        /// <summary>伏せている。</summary>
+        Prone = 1 << 15,
+
+        /// <summary>はしごに掴まっている。</summary>
+        OnLadder = 1 << 16,
+
+        /// <summary>ジップラインに掴まって移っている。</summary>
+        Ziplining = 1 << 17,
+
+        /// <summary>パラシュートを開いて降りている。</summary>
+        Parachuting = 1 << 18,
+
+        /// <summary>乗り物に乗っている。</summary>
+        InVehicle = 1 << 19,
+
+        /// <summary>能力による移動 (引き寄せなど) の最中。</summary>
+        AbilityMoving = 1 << 20,
     }
 }

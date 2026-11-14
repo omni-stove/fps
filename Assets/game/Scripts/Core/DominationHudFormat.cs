@@ -6,11 +6,12 @@ namespace Fps.Core
     /// <summary>
     /// 拠点制圧 (<see cref="Domination"/>) の HUD とログに出す文字列。拠点は番号の順に A, B, C ... と呼ぶ。
     /// チームのポイントは小数を持つが、画面とログには切り捨てた整数で出す。
+    /// HUD の文は表のキー <c>mode.domination.*</c> の <see cref="LocalizedText"/> で返す。拠点の呼び名はログやシーンの名前にも使うので、言語に依らない文字列のまま。
     /// </summary>
     public static class DominationHudFormat
     {
-        /// <summary>中立の拠点の持ち主の欄に出す文字列。</summary>
-        public const string Neutral = "--";
+        /// <summary>中立の拠点の持ち主の欄に出す文。</summary>
+        public static LocalizedText Neutral => new LocalizedText("mode.domination.neutral");
 
         private const int _letterCount = 26;
 
@@ -48,16 +49,19 @@ namespace Fps.Core
 
         /// <summary>チーム名と切り捨てたポイント。</summary>
         /// <example><c>TeamScore(Team.Alpha, 12.9f)</c> は <c>ALPHA 12</c></example>
-        public static string TeamScore(Team team, float score)
+        public static LocalizedText TeamScore(Team team, float score)
         {
-            return GameText.Resolve(HudFormat.TeamScore(team, DisplayedScore(score)));
+            return HudFormat.TeamScore(team, DisplayedScore(score));
         }
 
         /// <summary>拠点の呼び名と持ち主。中立なら <see cref="Neutral"/>。</summary>
         /// <example><c>PointOwner(0, Team.Bravo)</c> は <c>A BRAVO</c>、<c>PointOwner(1, null)</c> は <c>B --</c></example>
-        public static string PointOwner(int pointIndex, Team? owner)
+        public static LocalizedText PointOwner(int pointIndex, Team? owner)
         {
-            return PointName(pointIndex) + " " + (owner.HasValue ? GameText.Resolve(HudFormat.TeamName(owner.Value)) : Neutral);
+            return new LocalizedText(
+                "mode.domination.pointOwner",
+                PointName(pointIndex),
+                owner.HasValue ? HudFormat.TeamName(owner.Value) : Neutral);
         }
     }
 }

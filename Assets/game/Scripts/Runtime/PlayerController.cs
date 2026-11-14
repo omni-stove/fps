@@ -9,17 +9,13 @@ namespace Fps.Runtime
     /// 移動入力を <see cref="PlayerMotor"/> に渡し、返ってきた変位を <see cref="CharacterController.Move"/> に適用する。
     /// 移動量の計算はすべて <see cref="PlayerMotor"/> が、しゃがみの寸法は <see cref="StanceGeometry"/> が行い、
     /// ここは入力の読み取りと結果の適用だけを受け持つ。
-    /// しゃがみは Crouch を <see cref="ControlSettings"/> のモード (押している間／押すたびに切り替え) で <see cref="CrouchInput"/> が解釈し、
-    /// ジャンプとダッシュの開始で解除する (頭上が塞がっていれば解除しない)。死亡・リスポーンでの解除は <see cref="ReleaseCrouch"/> を呼ぶ。
-    /// しゃがむと CharacterController の height と center を縮め (足元は動かさない)、目も下げる。
-    /// 立つときは立った高さのカプセルが自分以外のコライダーに重ならないときだけ立ち上がる。
     /// 参照はコードで解決するので Inspector の配線は要らない: CharacterController と <see cref="FirstPersonLook"/> は同じ
     /// GameObject、目は <see cref="ViewRig.FindEye"/> (無ければ子のカメラ)、入力はプロジェクト全体のアクション
     /// (<see cref="InputSystem.actions"/>) の Move / Sprint / Crouch / Jump。解決できなければエラーを出して自分を無効にする
     /// (Dodge は無くても警告だけで、回避を入力からできなくなる)。
-    /// Sprint は <see cref="ControlSettings"/> のモード (押している間／押すたびに切り替え) で <see cref="SprintInput"/> が解釈し、
-    /// 射撃・死亡・リスポーンでの解除は <see cref="BindSprintRelease"/> で購読する。
-    /// 着地と落下ダメージ (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs) は、<see cref="Tick"/> から呼ぶメソッドとして別のファイルに置く。
+    /// 乗り物の座席などが <see cref="Handoff"/> で操作を引き取っている間は、入力を読まず何も押していないものとして動く。
+    /// しゃがみ (.Stance.cs)・ダッシュ (.Sprint.cs)・着地と落下ダメージ (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs)・
+    /// 崖のぼり (.Mantle.cs)・移動の横取り (.MovementOverride.cs) は、<see cref="Tick"/> から呼ぶメソッドとして別のファイルに置く。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
@@ -43,11 +39,6 @@ namespace Fps.Runtime
 
         /// <summary>しゃがみのカプセルの高さ (m)。立ち 2m・半径 0.5m のプレイヤーで、目は足元から 0.8m になる。</summary>
         public const float DefaultCrouchHeight = 1.2f;
-
-        // 自分のコライダーを除いて頭上の障害物を探すための一時バッファ。毎フレームの確保を避ける。
-        private const int MaxOverlapHits = 16;
-
-        private static readonly Collider[] _overlapBuffer = new Collider[MaxOverlapHits];
 
         [SerializeField, Min(0f), Tooltip("歩きの水平速度 (m/s)")]
         private float _walkSpeed = DefaultWalkSpeed;
@@ -73,6 +64,7 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("立ち上がれるか・乗り越えられるかを調べるときに障害物として扱うレイヤー")]
         private LayerMask _headroomMask = Physics.DefaultRaycastLayers;
 
+        private readonly ControlHandoff _handoff = new ControlHandoff();
         private CharacterController _controller;
         private FirstPersonLook _look;
         private InputAction _moveAction;
@@ -80,15 +72,6 @@ namespace Fps.Runtime
         private InputAction _crouchAction;
         private InputAction _jumpAction;
         private PlayerMotor _motor;
-        private StanceGeometry _stance;
-        private Transform _eye;
-
-        // 立ちの目の位置 (本体のローカル座標)。しゃがみでは Y だけ変える。
-        private Vector3 _standingEyeLocal;
-
-        // 立ちの center。しゃがみでは Y だけ変え、X と Z は元のまま保つ。
-        private Vector3 _standingCenter;
-        private bool _isCrouched;
         private bool _enabledMove;
         private bool _enabledSprint;
         private bool _enabledCrouch;
@@ -97,12 +80,6 @@ namespace Fps.Runtime
         private bool? _lastGrounded;
         private ControlSettings _controlSettings = ControlSettings.Default;
         private bool _listeningToSettings;
-        private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
-        private SprintInput _sprint;
-        private WeaponController _releaseWeapon;
-        private Damageable _releaseDamageable;
-        private InputDeviceKind _crouchDevice = InputDeviceKind.KeyboardMouse;
-        private CrouchInput _crouchInput;
 
         public CharacterController Controller => _controller;
         public FirstPersonLook Look => _look;
@@ -114,15 +91,6 @@ namespace Fps.Runtime
         /// <summary>移動計算。未初期化なら null。</summary>
         public PlayerMotor Motor => _motor;
 
-        /// <summary>立ちとしゃがみの寸法。未初期化なら null。</summary>
-        public StanceGeometry Stance => _stance;
-
-        /// <summary>しゃがみで上下させる目。目もカメラも無ければ null (カプセルだけ縮める)。</summary>
-        public Transform Eye => _eye;
-
-        /// <summary>しゃがんでいるか。</summary>
-        public bool IsCrouched => _isCrouched;
-
         /// <summary>直前の <see cref="CharacterController.Move"/> で接地していたか。未初期化なら false。</summary>
         public bool IsGrounded => _controller != null && _controller.isGrounded;
 
@@ -131,6 +99,15 @@ namespace Fps.Runtime
         /// null なら入力をそのまま使う。
         /// </summary>
         public IPlayerMoveFilter MoveFilter { get; set; }
+
+        /// <summary>
+        /// 操作を手放す口。乗り物の座席などが <see cref="ControlHandoff.Claim"/> している間、<see cref="ApplyInput"/> は入力を何も押していないものとして扱う。
+        /// 同じプレイヤーの <see cref="WeaponController.Handoff"/> にも同じものを配線する (オフラインは <see cref="GameBootstrap"/>)。
+        /// </summary>
+        public ControlHandoff Handoff => _handoff;
+
+        /// <summary>操作を手放しているか (<see cref="Handoff"/> を誰かが宣言しているか)。</summary>
+        public bool IsControlHandedOff => _handoff.IsHandedOff;
 
         public bool IsInitialized =>
             _controller != null
@@ -159,64 +136,6 @@ namespace Fps.Runtime
         {
             get => _controlSettings;
             set => _controlSettings = value ?? throw new ArgumentNullException(nameof(value));
-        }
-
-        /// <summary>最後にダッシュか移動の入力をした機器。ダッシュのモードはこの機器の設定を使う。</summary>
-        public InputDeviceKind ActiveDevice => _device;
-
-        /// <summary>ダッシュ中か (ボタンをモードどおりに解釈し、自動解除した後の値)。</summary>
-        public bool IsSprinting => Sprint.IsActive;
-
-        /// <summary>自分の入力でダッシュ中かが常に分かるので、<see cref="IsSprinting"/> を入れて true を返す。</summary>
-        bool ICharacterMotionSource.TryGetSprinting(out bool sprinting)
-        {
-            sprinting = IsSprinting;
-            return true;
-        }
-
-        /// <summary>今使っているダッシュのモード。</summary>
-        public HoldMode SprintMode => Sprint.Mode;
-
-        private SprintInput Sprint
-        {
-            get
-            {
-                // Edit Mode では Awake が走らないので、初めて触れたときに作る。
-                if (_sprint == null)
-                {
-                    _sprint = new SprintInput();
-                    _sprint.Changed += OnSprintChanged;
-                }
-
-                return _sprint;
-            }
-        }
-
-        /// <summary>最後にしゃがみか移動の入力をした機器。しゃがみのモードはこの機器の設定を使う。</summary>
-        public InputDeviceKind CrouchDevice => _crouchDevice;
-
-        /// <summary>
-        /// しゃがみたいか (ボタンをモードどおりに解釈し、自動解除した後の値)。
-        /// 頭上が塞がっていると、false でも <see cref="IsCrouched"/> は true のことがある。
-        /// </summary>
-        public bool IsCrouchActive => Crouch.IsActive;
-
-        /// <summary>今使っているしゃがみのモード。</summary>
-        public HoldMode CrouchMode => Crouch.Mode;
-
-        private CrouchInput Crouch
-        {
-            get
-            {
-                // Edit Mode では Awake が走らないので、初めて触れたときに作る。
-                if (_crouchInput == null)
-                {
-                    _crouchInput = new CrouchInput(CanStandForCrouchInput);
-                    _crouchInput.Changed += OnCrouchInputChanged;
-                }
-
-                return _crouchInput;
-            }
         }
 
         private void Awake()
@@ -264,6 +183,8 @@ namespace Fps.Runtime
             ReleaseActions();
             CancelDodge();
             CancelVault();
+            CancelMantle();
+            EndMovementOverride();
         }
 
         /// <summary>プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。</summary>
@@ -287,134 +208,61 @@ namespace Fps.Runtime
 
         private void Update()
         {
-            var move = _moveAction.ReadValue<Vector2>();
-            UpdateDodgeInput(move);
+            ApplyInput(ReadInput(), Time.deltaTime);
+        }
+
+        // 手放している間はアクションに触れない。押されたままのボタンの機器でモードが切り替わるのも避ける。
+        private PlayerMoveInput ReadInput()
+        {
+            if (IsControlHandedOff)
+            {
+                return PlayerMoveInput.Idle(_device, _crouchDevice);
+            }
 
             // 押されたダッシュボタンの機器を優先し、どちらも動いていなければ直前の機器のまま。
             var device = InputDeviceKinds.Of(_sprintAction, InputDeviceKinds.Of(_moveAction, _device));
-            var sprint = UpdateSprint(move, _sprintAction.IsPressed(), _sprintAction.WasPressedThisFrame(), device);
-            var jump = _jumpAction.WasPressedThisFrame();
-
             var crouchDevice = InputDeviceKinds.Of(_crouchAction, InputDeviceKinds.Of(_moveAction, _crouchDevice));
+            return new PlayerMoveInput(
+                _moveAction.ReadValue<Vector2>(),
+                HeldInput.IsHeld(_sprintAction),
+                _sprintAction.WasPressedThisFrame(),
+                device,
+                _crouchAction.IsPressed(),
+                _crouchAction.WasPressedThisFrame(),
+                crouchDevice,
+                _jumpAction.WasPressedThisFrame(),
+                _dodgeAction != null && _dodgeAction.WasPressedThisFrame());
+        }
+
+        /// <summary>
+        /// 1 フレーム分の入力で、回避の開始・ダッシュとしゃがみの解釈 (<see cref="UpdateSprint"/> / <see cref="UpdateCrouch"/>) をしてから <see cref="Tick"/> する。
+        /// Play 中は Update が Input Actions から読んだ入力で毎フレーム呼ぶ。
+        /// <see cref="IsControlHandedOff"/> の間は input を捨て、何も押していない入力 (<see cref="PlayerMoveInput.Idle"/>) として扱う。
+        /// </summary>
+        public void ApplyInput(PlayerMoveInput input, float deltaSeconds)
+        {
+            if (!IsInitialized)
+            {
+                throw new InvalidOperationException("PlayerController is not initialized");
+            }
+
+            if (IsControlHandedOff)
+            {
+                input = PlayerMoveInput.Idle(_device, _crouchDevice);
+            }
+
+            // ダッシュとしゃがみを解釈する前に始める。回避が解いたしゃがみとダッシュを、同じフレームの押下で戻さないため。
+            if (input.DodgePressed)
+            {
+                TryStartDodge(input.Move);
+            }
+
+            var sprint = UpdateSprint(input.Move, input.SprintHeld, input.SprintPressed, input.SprintDevice);
+
             // 空中で押したジャンプは跳ばない (PlayerMotor) ので、しゃがみも解かない。
             var crouch = UpdateCrouch(
-                _crouchAction.IsPressed(), _crouchAction.WasPressedThisFrame(), jump && _controller.isGrounded, sprint, crouchDevice);
-            Tick(move, sprint, crouch, jump, Time.deltaTime);
-        }
-
-        /// <summary>
-        /// 1 フレーム分のしゃがみボタンを device の <see cref="ControlSettings"/> のモードで解釈し、しゃがみたいかを返す。
-        /// しゃがんでいる間にジャンプするかダッシュを始めると、頭上が空いていれば解除する (<see cref="CrouchInput"/>)。
-        /// jumpPressed は実際に跳ぶジャンプ (接地中の押下) だけを渡す。
-        /// 変化は <c>[Player] crouch=..</c> でログに出す。結果は <see cref="Tick"/> の crouch に渡す。
-        /// </summary>
-        public bool UpdateCrouch(bool isPressed, bool wasPressedThisFrame, bool jumpPressed, bool sprinting, InputDeviceKind device)
-        {
-            var mode = _controlSettings.Get(device, HoldAction.Crouch);
-            _crouchDevice = device;
-            return Crouch.Update(mode, isPressed, wasPressedThisFrame, jumpPressed, sprinting);
-        }
-
-        /// <summary>
-        /// しゃがみを解除する (死亡・リスポーンなど)。頭上は確かめないが、実際に立つのは次の <see cref="Tick"/> で頭上が空いているときだけ。
-        /// Hold でもボタンを押し直すまでしゃがまない。しゃがみたい状態だったら true。
-        /// </summary>
-        /// <param name="reason">ログに出す理由 (<see cref="CrouchInput.ReasonDeath"/> など)。</param>
-        public bool ReleaseCrouch(string reason)
-        {
-            return Crouch.Release(reason);
-        }
-
-        // 未初期化では頭上を調べられないので、立てるものとして解除させる (姿勢を当てる Tick も動かない)。
-        private bool CanStandForCrouchInput()
-        {
-            return !IsInitialized || HasHeadroomToStand();
-        }
-
-        private void OnCrouchInputChanged(CrouchInput input, string reason)
-        {
-            Debug.Log(CrouchInput.FormatLog(input.IsActive, input.Mode, reason), this);
-        }
-
-        /// <summary>
-        /// 1 フレーム分のダッシュボタンと移動入力を、device の <see cref="ControlSettings"/> のモードで解釈し、ダッシュ中かを返す。
-        /// Toggle では移動入力がなくなると解除する (<see cref="SprintInput"/>)。変化は <c>[Player] sprint=..</c> でログに出す。
-        /// </summary>
-        public bool UpdateSprint(Vector2 move, bool isPressed, bool wasPressedThisFrame, InputDeviceKind device)
-        {
-            var mode = _controlSettings.Get(device, HoldAction.Sprint);
-            _device = device;
-            return Sprint.Update(mode, move.ToNumerics(), isPressed, wasPressedThisFrame);
-        }
-
-        /// <summary>
-        /// ダッシュを解除する。Hold でもボタンを押し直すまでダッシュしない。ADS など外の処理から呼ぶ。
-        /// ダッシュ中だったら true。
-        /// </summary>
-        /// <param name="reason">ログに出す理由 (<see cref="SprintInput.ReasonFire"/> など)。</param>
-        public bool ReleaseSprint(string reason)
-        {
-            return Sprint.Release(reason);
-        }
-
-        /// <summary>
-        /// weapon が撃ったとき、damageable が死んだとき・体力を作り直した (リスポーンした) ときにダッシュを解除するよう購読する。
-        /// 死んだとき・体力を作り直したときは回避もやめる。
-        /// 前に渡したものの購読は外す。どちらも null 可 (その理由では解除しない)。
-        /// </summary>
-        public void BindSprintRelease(WeaponController weapon, Damageable damageable)
-        {
-            if (_releaseWeapon != null)
-            {
-                _releaseWeapon.Fired -= OnWeaponFired;
-            }
-
-            if (_releaseDamageable != null)
-            {
-                _releaseDamageable.Died -= OnDied;
-                _releaseDamageable.HealthReset -= OnHealthReset;
-            }
-
-            _releaseWeapon = weapon;
-            _releaseDamageable = damageable;
-
-            if (_releaseWeapon != null)
-            {
-                _releaseWeapon.Fired += OnWeaponFired;
-            }
-
-            if (_releaseDamageable != null)
-            {
-                _releaseDamageable.Died += OnDied;
-                _releaseDamageable.HealthReset += OnHealthReset;
-            }
-        }
-
-        private void OnWeaponFired(Weapon _)
-        {
-            ReleaseSprint(SprintInput.ReasonFire);
-        }
-
-        private void OnDied(Damageable _)
-        {
-            ReleaseSprint(SprintInput.ReasonDeath);
-            CancelDodge();
-            CancelVault();
-        }
-
-        private void OnHealthReset(Health _)
-        {
-            ReleaseSprint(SprintInput.ReasonRespawn);
-            CancelDodge();
-            CancelVault();
-
-            // 戻った位置で、倒れる前の待ち時間に縛られずすぐ回避できるようにする。
-            _dodgeMotion?.Reset();
-        }
-
-        private void OnSprintChanged(SprintChange change)
-        {
-            Debug.Log(SprintInput.FormatLog(change), this);
+                input.CrouchHeld, input.CrouchPressed, input.JumpPressed && _controller.isGrounded, sprint, input.CrouchDevice);
+            Tick(input.Move, sprint, crouch, input.JumpPressed, deltaSeconds);
         }
 
         /// <summary>
@@ -422,6 +270,8 @@ namespace Fps.Runtime
         /// 向きは <see cref="FirstPersonLook"/> 本体 (この GameObject) の yaw を使う。
         /// <see cref="MoveFilter"/> があれば、姿勢を決める前に入力を書き換えさせる。
         /// <see cref="VaultRule"/> が On なら、Jump で前方の低い障害物を乗り越える (乗り越えられなければふつうにジャンプする)。
+        /// <see cref="MantleRule"/> が On なら、乗り越えなかった Jump で、それより高い段によじ登る (よじ登れなければふつうにジャンプする)。
+        /// 登録した <see cref="IMovementOverride"/> のどれかが有効なら、姿勢と移動はそれに任せる (<see cref="ActiveMovementOverride"/>)。
         /// </summary>
         /// <param name="crouch">しゃがみたいか (<see cref="UpdateCrouch"/> の結果)。false でも頭上が塞がっていればしゃがんだまま。</param>
         public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, float deltaSeconds)
@@ -439,19 +289,29 @@ namespace Fps.Runtime
             MoveFilter?.Filter(ref move, ref sprint, ref crouch, ref jumpPressed);
             FilterInputForDodge(ref sprint, ref crouch, ref jumpPressed);
             FilterInputForVault(ref sprint, ref crouch, ref jumpPressed);
-            UpdateStance(crouch);
+            FilterInputForMantle(ref sprint, ref crouch, ref jumpPressed);
 
-            if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out var displacement))
+            Vector3 displacement;
+            var movementOverride = SelectMovementOverride();
+            if (movementOverride != null)
             {
-                var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
-                displacement = _motor.Step(
-                    move.ToNumerics(),
-                    yawRadians,
-                    sprint,
-                    _isCrouched,
-                    jumpPressed,
-                    _controller.isGrounded,
-                    deltaSeconds).ToUnity();
+                displacement = StepMovementOverride(movementOverride, move, sprint, crouch, jumpPressed, deltaSeconds);
+            }
+            else
+            {
+                UpdateStance(crouch);
+                if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out displacement))
+                {
+                    var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
+                    displacement = _motor.Step(
+                        move.ToNumerics(),
+                        yawRadians,
+                        sprint,
+                        _isCrouched,
+                        jumpPressed,
+                        _controller.isGrounded,
+                        deltaSeconds).ToUnity();
+                }
             }
 
             _controller.Move(displacement);
@@ -461,8 +321,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 乗り越え・回避の最中なら、<see cref="PlayerMotor.Step"/> の代わりに動かす変位を displacement に入れて true を返す。
-        /// どちらも動いていなければ false (displacement は 0)。
+        /// 乗り越え・崖のぼり・回避の最中なら、<see cref="PlayerMotor.Step"/> の代わりに動かす変位を displacement に入れて true を返す。
+        /// どれも動いていなければ false (displacement は 0)。
         /// </summary>
         private bool TryOverrideMove(Vector2 move, bool jumpPressed, float deltaSeconds, out Vector3 displacement)
         {
@@ -471,55 +331,19 @@ namespace Fps.Runtime
 
             // 乗り越えは足場の縁までの決まった軌道で、途中で回避に切り替えると縁にめり込むので先に聞く
             TryOverrideMoveForVault(move, jumpPressed, deltaSeconds, ref overridden, ref displacement);
+
+            // 同じ Jump で乗り越えが始まらなかったときだけよじ登る。低い障害物は今までどおり乗り越えになる。
+            if (!overridden)
+            {
+                TryOverrideMoveForMantle(jumpPressed, deltaSeconds, ref overridden, ref displacement);
+            }
+
             if (!overridden)
             {
                 TryOverrideMoveForDodge(move, jumpPressed, deltaSeconds, ref overridden, ref displacement);
             }
 
             return overridden;
-        }
-
-        /// <summary>
-        /// 立った高さのカプセルが自分以外のコライダー (トリガーを除く) に重ならないか。
-        /// 床や横の壁に触れているだけで塞がっていると見なさないよう、カプセルを CharacterController の skinWidth だけ細くして調べる。
-        /// </summary>
-        public bool HasHeadroomToStand()
-        {
-            if (!IsInitialized)
-            {
-                throw new InvalidOperationException("PlayerController is not initialized");
-            }
-
-            return IsStandingCapsuleClear(Vector3.zero);
-        }
-
-        // 立った高さのカプセルを今の位置から offset (ワールド) だけずらした所に置き、自分以外に重ならないか (乗り越えの軌跡の検査と共用)。
-        private bool IsStandingCapsuleClear(Vector3 offset)
-        {
-            _stance.SphereCenters(_stance.Standing, out var bottomY, out var topY);
-            var body = transform;
-            var scale = body.lossyScale;
-            var radius = _stance.Radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
-            var margin = Mathf.Min(_controller.skinWidth, radius * 0.5f);
-            var bottom = body.TransformPoint(new Vector3(_standingCenter.x, bottomY, _standingCenter.z)) + offset;
-            var top = body.TransformPoint(new Vector3(_standingCenter.x, topY, _standingCenter.z)) + offset;
-
-            // Physics.CheckCapsule では自分の CharacterController にも当たってしまうので、重なりを列挙して自分を除く。
-            var count = Physics.OverlapCapsuleNonAlloc(
-                bottom, top, radius - margin, _overlapBuffer, _headroomMask, QueryTriggerInteraction.Ignore);
-            var blocked = false;
-            for (var i = 0; i < count; i++)
-            {
-                var hit = _overlapBuffer[i];
-                if (hit != null && !hit.transform.IsChildOf(body))
-                {
-                    blocked = true;
-                    break;
-                }
-            }
-
-            Array.Clear(_overlapBuffer, 0, count);
-            return !blocked;
         }
 
         /// <summary>
@@ -665,6 +489,8 @@ namespace Fps.Runtime
             _jumpAction = jumpAction;
             CancelDodge();
             CancelVault();
+            CancelMantle();
+            EndMovementOverride();
             _motor = new PlayerMotor(spec);
             _dodgeMotion = new DodgeMotion(spec);
             _stance = stance;
@@ -690,59 +516,6 @@ namespace Fps.Runtime
         public static string FormatGroundedLog(bool grounded)
         {
             return $"{LogTag} grounded={(grounded ? "true" : "false")}";
-        }
-
-        /// <summary>しゃがみ状態のログ。例: <c>[Player] crouched=true</c>。</summary>
-        public static string FormatCrouchedLog(bool crouched)
-        {
-            return $"{LogTag} crouched={(crouched ? "true" : "false")}";
-        }
-
-        private void UpdateStance(bool wantsCrouch)
-        {
-            if (wantsCrouch == _isCrouched)
-            {
-                return;
-            }
-
-            if (!wantsCrouch && !HasHeadroomToStand())
-            {
-                return;
-            }
-
-            ApplyStance(wantsCrouch);
-        }
-
-        private void ApplyStance(bool crouched)
-        {
-            var shape = _stance.Shape(crouched);
-            _controller.height = shape.Height;
-            _controller.center = new Vector3(_standingCenter.x, shape.CenterY, _standingCenter.z);
-            if (_eye != null)
-            {
-                _eye.position = transform.TransformPoint(new Vector3(_standingEyeLocal.x, shape.EyeY, _standingEyeLocal.z));
-            }
-
-            if (_isCrouched == crouched)
-            {
-                return;
-            }
-
-            _isCrouched = crouched;
-            Debug.Log(FormatCrouchedLog(crouched), this);
-        }
-
-        // ViewRig の Awake より先でも決まるよう、ViewRig.FindEye も自分で階層を探す。
-        private Transform ResolveEye()
-        {
-            var eye = ViewRig.FindEye(transform);
-            if (eye != null)
-            {
-                return eye;
-            }
-
-            var camera = FirstPersonLook.FindChildCamera(transform);
-            return camera != null ? camera.transform : null;
         }
 
         private void ReportGrounded(bool grounded)

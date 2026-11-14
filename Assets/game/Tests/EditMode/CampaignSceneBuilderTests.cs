@@ -86,7 +86,8 @@ namespace Fps.Tests.EditMode
         {
             var mission = _definition.CreateMission();
 
-            Assert.That(_definition.DisplayName, Is.EqualTo(CampaignSceneBuilder.MissionDisplayName));
+            Assert.That(_definition.DisplayNameKey, Is.EqualTo(CampaignSceneBuilder.MissionNameKey));
+            Assert.That(Localizer.Resolve(_definition.DisplayName), Is.EqualTo("Campaign 01"));
             Assert.That(mission.Objectives.Count, Is.EqualTo(3));
             Assert.That(mission.Objectives[0].Id, Is.EqualTo(CampaignSceneBuilder.ReachAreaAId));
             Assert.That(mission.Objectives[0].Prerequisites, Is.Empty);

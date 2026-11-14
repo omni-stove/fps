@@ -74,7 +74,7 @@ namespace Fps.Tests.EditMode
             Assert.That(session.GetScore(Side.Alpha), Is.EqualTo(1d));
             Assert.That(session.GetScore(Side.Bravo), Is.Zero, "the bot stands on the inactive point");
             Assert.That(zones[0].Owner, Is.EqualTo((Team?)Team.Alpha));
-            Assert.That(hud.Lines, Is.EqualTo(new[] { HardpointText.ActivePoint(0, 1, RotateSeconds - 1f), "ALPHA が確保中" }));
+            Assert.That(hud.Lines, Is.EqualTo(new[] { Localizer.Resolve(HardpointText.ActivePoint(0, 1, RotateSeconds - 1f)), "ALPHA が確保中" }));
         }
 
         [Test]
@@ -92,7 +92,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Session.GetScore(Side.Bravo), Is.Zero);
             Assert.That(_runner.Hardpoint.Status, Is.EqualTo(HardpointStatus.Contested));
             Assert.That(zones[0].Owner, Is.Null, "a contested point is shown neutral");
-            Assert.That(hud.Lines[1], Is.EqualTo(HardpointText.Contested));
+            Assert.That(hud.Lines[1], Is.EqualTo("争奪中"));
         }
 
         [Test]

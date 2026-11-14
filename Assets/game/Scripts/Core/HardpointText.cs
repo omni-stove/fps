@@ -6,21 +6,22 @@ namespace Fps.Core
     /// <summary>
     /// ハードポイント (<see cref="Hardpoint"/>) の HUD の行と、<c>[Mode]</c> 付きログの文言。
     /// 拠点は <see cref="DominationHudFormat.PointName"/> と同じく番号の順に A, B, C ... と呼ぶ。
+    /// HUD の行は表のキー <c>mode.hardpoint.*</c> の <see cref="LocalizedText"/>、ログは言語に依らない文字列で返す。
     /// </summary>
     public static class HardpointText
     {
         /// <summary>有効な拠点に誰もいないときの様子の行。</summary>
-        public static string Empty => GameText.Get("hardpoint.empty");
+        public static LocalizedText Empty => new LocalizedText("mode.hardpoint.empty");
 
         /// <summary>有効な拠点に両チームがいるときの様子の行。</summary>
-        public static string Contested => GameText.Get("hardpoint.contested");
+        public static LocalizedText Contested => new LocalizedText("mode.hardpoint.contested");
 
         /// <summary>有効な拠点と、次の拠点へ移るまでの秒数 (切り上げ)。</summary>
         /// <example><c>ActivePoint(1, 2, 22.3f)</c> は <c>拠点 B (次は C まで 23 秒)</c></example>
-        public static string ActivePoint(int pointIndex, int nextPointIndex, float secondsUntilMove)
+        public static LocalizedText ActivePoint(int pointIndex, int nextPointIndex, float secondsUntilMove)
         {
-            return GameText.Format(
-                "hardpoint.activePoint",
+            return new LocalizedText(
+                "mode.hardpoint.activePoint",
                 DominationHudFormat.PointName(pointIndex),
                 DominationHudFormat.PointName(nextPointIndex),
                 HudFormat.DisplayedSeconds(secondsUntilMove));
@@ -29,7 +30,7 @@ namespace Fps.Core
         /// <summary>有効な拠点の様子。確保中なら陣営名を出す。</summary>
         /// <example><c>Status(HardpointStatus.Held, Side.Bravo)</c> は <c>BRAVO が確保中</c></example>
         /// <exception cref="ArgumentException">Held なのに holder が null。</exception>
-        public static string Status(HardpointStatus status, Side? holder)
+        public static LocalizedText Status(HardpointStatus status, Side? holder)
         {
             switch (status)
             {
@@ -43,14 +44,14 @@ namespace Fps.Core
                         throw new ArgumentException("a held point needs a holder", nameof(holder));
                     }
 
-                    return GameText.Format("hardpoint.held", ModeHudText.SideName(holder.Value));
+                    return new LocalizedText("mode.hardpoint.held", ModeHudText.SideName(holder.Value));
                 default:
                     throw new ArgumentOutOfRangeException(nameof(status), status, "status is not a defined HardpointStatus");
             }
         }
 
         /// <summary>hardpoint の HUD の 2 行 (有効な拠点と移るまでの秒数、様子)。</summary>
-        public static string[] HudLines(Hardpoint hardpoint)
+        public static LocalizedText[] HudLines(Hardpoint hardpoint)
         {
             if (hardpoint == null)
             {

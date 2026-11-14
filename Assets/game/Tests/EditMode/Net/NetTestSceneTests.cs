@@ -392,6 +392,10 @@ namespace Fps.Net.Tests
             Assert.That(rig.Mode, Is.EqualTo(Fps.Editor.NetSceneBuilder.PlayerViewMode));
             Assert.That(Fps.Runtime.FirstPersonLook.FindChildCamera(prefab.transform), Is.EqualTo(camera));
             Assert.That(Fps.Runtime.ViewRig.FindEye(prefab.transform), Is.EqualTo(view));
+            Assert.That(cameraObject.Find(Fps.Runtime.ViewRig.ShakeRootName), Is.Not.Null,
+                "the camera has no shake root; run Fps.Editor.NetSceneBuilder.Build");
+            Assert.That(cameraObject.Find(Fps.Runtime.ViewRig.ViewmodelRootName), Is.Not.Null,
+                "the camera has no viewmodel root; run Fps.Editor.NetSceneBuilder.Build");
 
             // 他人のプレイヤーで映ったり音を拾ったりしないよう、NetPlayer が自分のプレイヤーでだけ有効にする
             Assert.That(camera.enabled, Is.False);

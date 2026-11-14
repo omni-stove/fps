@@ -25,6 +25,7 @@ namespace Fps.Runtime
         private int _maxHealth = DefaultMaxHealth;
 
         private Health _health;
+        private ZoneDamageMultipliers _zoneMultipliers = ZoneDamageMultipliers.Default;
 
         /// <summary>死亡した瞬間に、死んだ Damageable を渡して 1 度だけ呼ばれる (ResetHealth 後は再び呼ばれ得る)。</summary>
         public event Action<Damageable> Died;
@@ -91,6 +92,13 @@ namespace Fps.Runtime
         /// </summary>
         public bool IsLocalPlayer { get; set; }
 
+        // シーンに保存しない。ボスの段階のように実行時に組み立てる側が持つ値で、Damageable ごとに Inspector で同じ値を書かせないため。
+        public ZoneDamageMultipliers ZoneMultipliers
+        {
+            get => _zoneMultipliers;
+            set => _zoneMultipliers = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
         private void Awake()
         {
             _ = Health;
@@ -117,10 +125,19 @@ namespace Fps.Runtime
         /// <param name="distance">射手から命中点までの距離。0 以上。</param>
         /// <param name="falloff">距離減衰の設定。</param>
         /// <param name="sourcePosition">撃った者の位置。分からなければ null。<see cref="Damaged"/> にそのまま渡す。</param>
-        public int ApplyHit(int baseDamage, HitZone zone, float distance, DamageFalloff falloff, Vector3? sourcePosition = null)
+        /// <param name="direction">弾の進む向き。分からなければ null。長さは問わない。</param>
+        /// <param name="kind">ダメージの種類。部位に当たるのは今は銃弾だけなので既定は Bullet。</param>
+        public int ApplyHit(
+            int baseDamage,
+            HitZone zone,
+            float distance,
+            DamageFalloff falloff,
+            Vector3? sourcePosition = null,
+            Vector3? direction = null,
+            DamageKind kind = DamageKind.Bullet)
         {
-            var damage = DamageCalculator.Calculate(baseDamage, zone, distance, falloff);
-            TakeDamageCore(damage, sourcePosition, zone);
+            var damage = DamageCalculator.Calculate(baseDamage, zone, distance, falloff, _zoneMultipliers);
+            TakeDamageCore(damage, sourcePosition, zone, direction, kind);
             return damage;
         }
 
@@ -133,11 +150,22 @@ namespace Fps.Runtime
         /// <param name="sourcePosition">ダメージを与えた者の位置。分からなければ null。</param>
         public void TakeDamage(int amount, Vector3? sourcePosition = null)
         {
-            TakeDamageCore(amount, sourcePosition, null);
+            TakeDamageCore(amount, sourcePosition, null, null, DamageKind.Other);
         }
 
-        private void TakeDamageCore(int amount, Vector3? sourcePosition, HitZone? zone)
+        /// <param name="direction">力の向き (爆発なら中心から外へ)。分からなければ null。長さは問わない。</param>
+        public void TakeDamage(int amount, Vector3? sourcePosition, Vector3? direction, DamageKind kind)
         {
+            TakeDamageCore(amount, sourcePosition, null, direction, kind);
+        }
+
+        private void TakeDamageCore(int amount, Vector3? sourcePosition, HitZone? zone, Vector3? direction, DamageKind kind)
+        {
+            if (!Enum.IsDefined(typeof(DamageKind), kind))
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, "kind is not a defined DamageKind");
+            }
+
             var health = Health;
             var wasAlive = !health.IsDead;
             health.TakeDamage(amount);
@@ -146,7 +174,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            Damaged?.Invoke(this, new DamageReport(amount, sourcePosition));
+            Damaged?.Invoke(this, new DamageReport(amount, sourcePosition, zone, direction, kind));
 
             if (IsLocalPlayer)
             {
@@ -278,10 +306,43 @@ namespace Fps.Runtime
         /// <summary>ダメージを与えた者の位置。分からなければ null。</summary>
         public Vector3? SourcePosition { get; }
 
+        // 部位を持たないダメージ (爆発・落下など) を Body と見分けられるよう null にする。
+        public HitZone? Zone { get; }
+
+        public Vector3? Direction { get; }
+
+        public DamageKind Kind { get; }
+
         public DamageReport(int amount, Vector3? sourcePosition)
+            : this(amount, sourcePosition, null, null, DamageKind.Other)
+        {
+        }
+
+        // 向きは長さを揃えて持つ。受け取る側が毎回正規化しなくて済むように。長さが 0 か有限でなければ向きが無いものとして null。
+        public DamageReport(int amount, Vector3? sourcePosition, HitZone? zone, Vector3? direction, DamageKind kind)
         {
             Amount = amount;
             SourcePosition = sourcePosition;
+            Zone = zone;
+            Direction = Normalize(direction);
+            Kind = kind;
+        }
+
+        private static Vector3? Normalize(Vector3? direction)
+        {
+            if (!direction.HasValue)
+            {
+                return null;
+            }
+
+            var value = direction.Value;
+            var sqr = value.sqrMagnitude;
+            if (!(sqr > 1e-12f) || float.IsInfinity(sqr))
+            {
+                return null;
+            }
+
+            return value / Mathf.Sqrt(sqr);
         }
     }
 }

@@ -3,7 +3,8 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// TPS のアクション (ダウンと蘇生、カバー、ブラインドファイア、アクティブリロード、回避、乗り越え、グレネード) のルール。
+    /// TPS のアクション (ダウンと蘇生、カバー、ブラインドファイア、アクティブリロード、回避、乗り越え、グレネード、
+    /// 近接攻撃、怯み、スライディング、崖のぼり、伏せ、はしご、ジップライン、パラシュート、発見ゲージ、制圧射撃、印、能力、時間の速さ) のルール。
     /// 生成時に値を検査し、以後は変わらない。<see cref="GameRules.Actions"/> として持つ。
     /// </summary>
     public sealed class ActionRules
@@ -64,6 +65,45 @@ namespace Fps.Core
         /// <summary>出撃ごとに持つグレネードの数。0 以上。<see cref="Core.Grenade.Off"/> なら使わない。</summary>
         public int GrenadeCount { get; }
 
+        /// <summary>近接攻撃を使えるか。</summary>
+        public Melee Melee { get; }
+
+        /// <summary>被弾したときに怯むか。</summary>
+        public Stagger Stagger { get; }
+
+        /// <summary>スライディングできるか。</summary>
+        public Slide Slide { get; }
+
+        /// <summary>段や崖の縁によじ登れるか。</summary>
+        public Mantle Mantle { get; }
+
+        /// <summary>伏せられるか。</summary>
+        public Prone Prone { get; }
+
+        /// <summary>はしごを上り下りできるか。</summary>
+        public Ladder Ladder { get; }
+
+        /// <summary>ジップラインを使えるか。</summary>
+        public Zipline Zipline { get; }
+
+        /// <summary>パラシュートを開けるか。</summary>
+        public Parachute Parachute { get; }
+
+        /// <summary>敵が発見ゲージで段階を踏んで気づくか。</summary>
+        public Stealth Stealth { get; }
+
+        /// <summary>近くを飛ぶ弾で制圧されるか。</summary>
+        public Suppression Suppression { get; }
+
+        /// <summary>敵や場所に印を付けられるか。</summary>
+        public Ping Ping { get; }
+
+        /// <summary>能力を使えるか。</summary>
+        public Abilities Abilities { get; }
+
+        /// <summary>時間の速さを変えられるか。オフラインに限る。</summary>
+        public SlowMotion SlowMotion { get; }
+
         /// <param name="downed">ダウンの扱い。定義済みの値。</param>
         /// <param name="downedBleedoutSeconds">ダウンから倒れるまでの秒数。0 より大きい有限値。</param>
         /// <param name="downedHealthFraction">ダウン中と起こされた後の体力の割合。0 より大きく 1 以下。</param>
@@ -75,6 +115,19 @@ namespace Fps.Core
         /// <param name="vault">乗り越え。定義済みの値。</param>
         /// <param name="grenade">グレネード。定義済みの値。</param>
         /// <param name="grenadeCount">出撃ごとのグレネードの数。0 以上。</param>
+        /// <param name="melee">近接攻撃。定義済みの値。</param>
+        /// <param name="stagger">怯み。定義済みの値。</param>
+        /// <param name="slide">スライディング。定義済みの値。</param>
+        /// <param name="mantle">崖のぼり。定義済みの値。</param>
+        /// <param name="prone">伏せ。定義済みの値。</param>
+        /// <param name="ladder">はしご。定義済みの値。</param>
+        /// <param name="zipline">ジップライン。定義済みの値。</param>
+        /// <param name="parachute">パラシュート。定義済みの値。</param>
+        /// <param name="stealth">発見ゲージ。定義済みの値。</param>
+        /// <param name="suppression">制圧射撃。定義済みの値。</param>
+        /// <param name="ping">印。定義済みの値。</param>
+        /// <param name="abilities">能力。定義済みの値。</param>
+        /// <param name="slowMotion">時間の速さ。定義済みの値。</param>
         public ActionRules(
             Downed downed,
             float downedBleedoutSeconds,
@@ -86,7 +139,20 @@ namespace Fps.Core
             Dodge dodge = Dodge.Off,
             Vault vault = Vault.Off,
             Grenade grenade = Grenade.Off,
-            int grenadeCount = 0)
+            int grenadeCount = 0,
+            Melee melee = Melee.Off,
+            Stagger stagger = Stagger.Off,
+            Slide slide = Slide.Off,
+            Mantle mantle = Mantle.Off,
+            Prone prone = Prone.Off,
+            Ladder ladder = Ladder.Off,
+            Zipline zipline = Zipline.Off,
+            Parachute parachute = Parachute.Off,
+            Stealth stealth = Stealth.Off,
+            Suppression suppression = Suppression.Off,
+            Ping ping = Ping.Off,
+            Abilities abilities = Abilities.Off,
+            SlowMotion slowMotion = SlowMotion.Off)
         {
             if (!Enum.IsDefined(typeof(Downed), downed))
             {
@@ -149,6 +215,20 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(grenadeCount), grenadeCount, "grenadeCount must not be negative");
             }
 
+            RequireDefined(melee, nameof(melee));
+            RequireDefined(stagger, nameof(stagger));
+            RequireDefined(slide, nameof(slide));
+            RequireDefined(mantle, nameof(mantle));
+            RequireDefined(prone, nameof(prone));
+            RequireDefined(ladder, nameof(ladder));
+            RequireDefined(zipline, nameof(zipline));
+            RequireDefined(parachute, nameof(parachute));
+            RequireDefined(stealth, nameof(stealth));
+            RequireDefined(suppression, nameof(suppression));
+            RequireDefined(ping, nameof(ping));
+            RequireDefined(abilities, nameof(abilities));
+            RequireDefined(slowMotion, nameof(slowMotion));
+
             Downed = downed;
             DownedBleedoutSeconds = downedBleedoutSeconds;
             DownedHealthFraction = downedHealthFraction;
@@ -160,6 +240,19 @@ namespace Fps.Core
             Vault = vault;
             Grenade = grenade;
             GrenadeCount = grenadeCount;
+            Melee = melee;
+            Stagger = stagger;
+            Slide = slide;
+            Mantle = mantle;
+            Prone = prone;
+            Ladder = ladder;
+            Zipline = zipline;
+            Parachute = parachute;
+            Stealth = stealth;
+            Suppression = suppression;
+            Ping = ping;
+            Abilities = abilities;
+            SlowMotion = slowMotion;
         }
 
         /// <summary><see cref="Downed"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
@@ -201,6 +294,54 @@ namespace Fps.Core
         /// <summary><see cref="GrenadeCount"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
         public ActionRules WithGrenadeCount(int value) => Copy(grenadeCount: value);
 
+        /// <summary><see cref="Melee"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithMelee(Melee value) => Copy(melee: value);
+
+        /// <summary><see cref="Stagger"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithStagger(Stagger value) => Copy(stagger: value);
+
+        /// <summary><see cref="Slide"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithSlide(Slide value) => Copy(slide: value);
+
+        /// <summary><see cref="Mantle"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithMantle(Mantle value) => Copy(mantle: value);
+
+        /// <summary><see cref="Prone"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithProne(Prone value) => Copy(prone: value);
+
+        /// <summary><see cref="Ladder"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithLadder(Ladder value) => Copy(ladder: value);
+
+        /// <summary><see cref="Zipline"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithZipline(Zipline value) => Copy(zipline: value);
+
+        /// <summary><see cref="Parachute"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithParachute(Parachute value) => Copy(parachute: value);
+
+        /// <summary><see cref="Stealth"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithStealth(Stealth value) => Copy(stealth: value);
+
+        /// <summary><see cref="Suppression"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithSuppression(Suppression value) => Copy(suppression: value);
+
+        /// <summary><see cref="Ping"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithPing(Ping value) => Copy(ping: value);
+
+        /// <summary><see cref="Abilities"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithAbilities(Abilities value) => Copy(abilities: value);
+
+        /// <summary><see cref="SlowMotion"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithSlowMotion(SlowMotion value) => Copy(slowMotion: value);
+
+        private static void RequireDefined<T>(T value, string name)
+            where T : struct, Enum
+        {
+            if (!Enum.IsDefined(typeof(T), value))
+            {
+                throw new ArgumentOutOfRangeException(name, value, $"{name} is not a defined {typeof(T).Name}");
+            }
+        }
+
         private ActionRules Copy(
             Downed? downed = null,
             float? downedBleedoutSeconds = null,
@@ -212,7 +353,20 @@ namespace Fps.Core
             Dodge? dodge = null,
             Vault? vault = null,
             Grenade? grenade = null,
-            int? grenadeCount = null)
+            int? grenadeCount = null,
+            Melee? melee = null,
+            Stagger? stagger = null,
+            Slide? slide = null,
+            Mantle? mantle = null,
+            Prone? prone = null,
+            Ladder? ladder = null,
+            Zipline? zipline = null,
+            Parachute? parachute = null,
+            Stealth? stealth = null,
+            Suppression? suppression = null,
+            Ping? ping = null,
+            Abilities? abilities = null,
+            SlowMotion? slowMotion = null)
         {
             return new ActionRules(
                 downed ?? Downed,
@@ -225,7 +379,20 @@ namespace Fps.Core
                 dodge ?? Dodge,
                 vault ?? Vault,
                 grenade ?? Grenade,
-                grenadeCount ?? GrenadeCount);
+                grenadeCount ?? GrenadeCount,
+                melee ?? Melee,
+                stagger ?? Stagger,
+                slide ?? Slide,
+                mantle ?? Mantle,
+                prone ?? Prone,
+                ladder ?? Ladder,
+                zipline ?? Zipline,
+                parachute ?? Parachute,
+                stealth ?? Stealth,
+                suppression ?? Suppression,
+                ping ?? Ping,
+                abilities ?? Abilities,
+                slowMotion ?? SlowMotion);
         }
     }
 }

@@ -14,8 +14,6 @@
   "hud.reviving": "Reviving {0}%",
   "hud.spawnProtected": "Spawn protection: {0} s left",
   "hud.idleWarning": "No input: you will be disconnected in {0} s",
-  "hud.checkpointSaved": "Checkpoint saved",
-  "hud.checkpointRestart": "Restarting from the checkpoint in {0} s",
   "hud.grenades": "Grenades {0}",
   "hud.mode.remaining": "{0} {1} left",
   "hud.mode.withDowned": "{0} ({1} down)",

@@ -471,7 +471,7 @@ namespace Fps.Net
                 return false;
             }
 
-            var isPressed = _sprintAction != null && _sprintAction.IsPressed();
+            var isPressed = HeldInput.IsHeld(_sprintAction);
             var mode = _controlSettings.Get(_device, HoldAction.Sprint);
             return _sprint.Update(mode, NetMath.ToNumerics(move), isPressed, wasPressed);
         }

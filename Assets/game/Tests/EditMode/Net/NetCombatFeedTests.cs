@@ -19,6 +19,57 @@ namespace Fps.Net.Tests
         private readonly List<ulong> _recipients = new List<ulong>();
 
         [Test]
+        public void ImpactZoneRoundTripsThroughTheWire()
+        {
+            foreach (HitZone zone in System.Enum.GetValues(typeof(HitZone)))
+            {
+                var impact = NetCombatFeed.ReadImpact(
+                    Vector3.zero, Vector3.up, null, "flesh", true, NetCombatFeed.ToWireZone(zone), out var problem);
+
+                Assert.That(problem, Is.Null);
+                Assert.That(impact.IsCharacter, Is.True);
+                Assert.That(impact.Zone, Is.EqualTo(zone));
+                Assert.That(impact.MaterialId, Is.EqualTo("flesh"));
+            }
+
+            Assert.That(NetCombatFeed.ToWireZone(null), Is.EqualTo(NetCombatFeed.NoZone));
+        }
+
+        [Test]
+        public void WallImpactFromTheWireHasNoZoneAndKeepsTheMaterial()
+        {
+            var impact = NetCombatFeed.ReadImpact(Vector3.zero, Vector3.up, null, "metal", false, NetCombatFeed.NoZone, out var problem);
+
+            Assert.That(problem, Is.Null);
+            Assert.That(impact.IsCharacter, Is.False);
+            Assert.That(impact.Zone, Is.Null);
+            Assert.That(impact.MaterialId, Is.EqualTo("metal"));
+        }
+
+        [Test]
+        public void EmptyMaterialFromTheWireIsTheDefault()
+        {
+            var impact = NetCombatFeed.ReadImpact(Vector3.zero, Vector3.up, null, string.Empty, false, NetCombatFeed.NoZone, out _);
+
+            Assert.That(impact.MaterialId, Is.EqualTo(Fps.Runtime.SurfaceMaterial.DefaultId));
+        }
+
+        [Test]
+        public void BadZonesFromTheWireAreDroppedButTheImpactIsKept()
+        {
+            var unknown = NetCombatFeed.ReadImpact(Vector3.zero, Vector3.up, null, "flesh", true, 200, out var unknownProblem);
+            Assert.That(unknownProblem, Does.Contain("unknown hit zone"));
+            Assert.That(unknown.IsCharacter, Is.True);
+            Assert.That(unknown.Zone, Is.Null);
+
+            var onWall = NetCombatFeed.ReadImpact(
+                Vector3.zero, Vector3.up, null, "metal", false, NetCombatFeed.ToWireZone(HitZone.Head), out var wallProblem);
+            Assert.That(wallProblem, Does.Contain("non-character"));
+            Assert.That(onWall.IsCharacter, Is.False);
+            Assert.That(onWall.Zone, Is.Null);
+        }
+
+        [Test]
         public void ShotGoesToEveryoneButTheShooterOnADedicatedServer()
         {
             NetCombatFeed.CollectRecipients(new[] { _clientA, _clientB, _clientC }, _server, serverIsClient: false, _clientA, _recipients);

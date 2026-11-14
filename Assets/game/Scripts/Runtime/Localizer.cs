@@ -30,6 +30,9 @@ namespace Fps.Runtime
         /// <summary>言語の表が読めないときに代わりに使う言語。</summary>
         public const GameLanguage FallbackLanguage = GameLanguage.Japanese;
 
+        /// <summary>言語の選択に出す、その言語自身での名前を置くキー (各言語の settings.json)。</summary>
+        public const string NativeNameKey = "settings.language.name";
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<GameLanguage, StringTable> _tables = new Dictionary<GameLanguage, StringTable>();
 
@@ -200,14 +203,100 @@ namespace Fps.Runtime
                 layers.Add(new KeyValuePair<string, string>($"Resources/{path}.json", single.text));
             }
 
+            layers.AddRange(ReadLayers(language));
+            return layers;
+        }
+
+        /// <summary>
+        /// Resources の <see cref="LayerFolderOf"/> のフォルダーにある language の TextAsset を、ファイル名 (拡張子なし) の順 (大文字小文字を区別する) に読む。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public static IReadOnlyList<KeyValuePair<string, string>> ReadLayers(GameLanguage language)
+        {
             var folder = LayerFolderOf(language);
             var assets = Resources.LoadAll<TextAsset>(folder);
-            foreach (var asset in assets.OrderBy(a => a.name, StringComparer.Ordinal))
+            return assets
+                .OrderBy(a => a.name, StringComparer.Ordinal)
+                .Select(a => new KeyValuePair<string, string>($"Resources/{folder}/{a.name}", a.text))
+                .ToList();
+        }
+
+        /// <summary>
+        /// 設定画面で選べる言語を <see cref="GameLanguages.All"/> の並びで返す。Resources の Localization/&lt;言語コード&gt;/ に表が 1 つでもある言語。
+        /// </summary>
+        public static IReadOnlyList<GameLanguage> AvailableLanguages()
+        {
+            return AvailableLanguages(ReadLayers);
+        }
+
+        /// <summary>readLayers が表を 1 つでも返す言語を、<see cref="GameLanguages.All"/> の並びで返す。</summary>
+        /// <param name="readLayers">言語ごとに、Localization/&lt;言語コード&gt;/ の表の名前と JSON の文字列を返す。Resources を使わずに試すときは別のものを渡す。</param>
+        /// <exception cref="ArgumentNullException">readLayers が null。</exception>
+        public static IReadOnlyList<GameLanguage> AvailableLanguages(Func<GameLanguage, IReadOnlyList<KeyValuePair<string, string>>> readLayers)
+        {
+            if (readLayers == null)
             {
-                layers.Add(new KeyValuePair<string, string>($"Resources/{folder}/{asset.name}", asset.text));
+                throw new ArgumentNullException(nameof(readLayers));
             }
 
-            return layers;
+            // Resources はフォルダーの一覧を返さないので、知っている言語コードのフォルダーごとに中身があるかを見る。
+            var available = new List<GameLanguage>();
+            foreach (var language in GameLanguages.All)
+            {
+                var layers = readLayers(language);
+                if (layers != null && layers.Count > 0)
+                {
+                    available.Add(language);
+                }
+            }
+
+            return available;
+        }
+
+        /// <summary>
+        /// 言語の選択に出す、language 自身での名前。language の表の <see cref="NativeNameKey"/> を引く。
+        /// どの表にも無ければ警告を出して <see cref="GameLanguages.NativeName"/> を返す。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public static string NativeNameOf(GameLanguage language)
+        {
+            return NativeNameOf(language, ReadResources);
+        }
+
+        /// <summary>read が返す language の表を重ねる順に見て、最後に <see cref="NativeNameKey"/> を持つ表の名前。壊れた表は飛ばす。</summary>
+        /// <param name="language">名前を引く言語。</param>
+        /// <param name="read">言語ごとに、表の名前と JSON の文字列を重ねる順に返す。Resources を使わずに試すときは別のものを渡す。</param>
+        /// <exception cref="ArgumentNullException">read が null。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public static string NativeNameOf(GameLanguage language, Func<GameLanguage, IReadOnlyList<KeyValuePair<string, string>>> read)
+        {
+            if (read == null)
+            {
+                throw new ArgumentNullException(nameof(read));
+            }
+
+            var code = GameLanguages.Code(language);
+
+            // TableOf は読めない言語を日本語の表で代えるので、それを引くと別の言語に「日本語」と出てしまう。
+            string name = null;
+            foreach (var layer in read(language) ?? Array.Empty<KeyValuePair<string, string>>())
+            {
+                if (layer.Value != null
+                    && StringTable.TryParse(layer.Value, null, out var table, out _)
+                    && table.Contains(NativeNameKey))
+                {
+                    name = table.Get(NativeNameKey);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                return name;
+            }
+
+            var fallback = GameLanguages.NativeName(language);
+            Debug.LogWarning($"{LogTag} {code}: '{NativeNameKey}' was not found in the strings; showing '{fallback}' instead");
+            return fallback;
         }
 
         // AppliedControlSettings.Apply が、効いている言語が前と変わったときに呼ぶ。

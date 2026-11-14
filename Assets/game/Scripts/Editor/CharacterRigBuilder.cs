@@ -137,6 +137,42 @@ namespace Fps.Editor
             }
         }
 
+        // 部品は回さずに置いた単位の Cube と Sphere だけなので、メッシュを読まずに拡縮をそのまま箱の大きさにしてよい。
+        public static IReadOnlyList<(string Bone, Bounds Volume)> BoneVolumes()
+        {
+            var volumes = new List<(string Bone, Bounds Volume)>();
+            foreach (var bone in Bones)
+            {
+                var found = false;
+                var volume = default(Bounds);
+                foreach (var part in Parts)
+                {
+                    if (!string.Equals(part.Bone, bone.Name, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    var partBounds = new Bounds(part.LocalPosition, part.LocalScale);
+                    if (found)
+                    {
+                        volume.Encapsulate(partBounds);
+                    }
+                    else
+                    {
+                        volume = partBounds;
+                        found = true;
+                    }
+                }
+
+                if (found)
+                {
+                    volumes.Add((bone.Name, volume));
+                }
+            }
+
+            return volumes;
+        }
+
         /// <summary>Animator の状態の名前 (コントローラーに並ぶ順)。</summary>
         public static IReadOnlyList<string> StateNames => new[]
         {

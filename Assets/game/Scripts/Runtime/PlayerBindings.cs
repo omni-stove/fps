@@ -31,6 +31,12 @@ namespace Fps.Runtime
         /// <summary>ゲームパッドの割り当てを待っている間に押すと取り消す入力。</summary>
         public const string GamepadCancelPath = "<Gamepad>/start";
 
+        /// <summary>アクションの画面に出す名前の文字列表のキーの頭。後ろにアクション名を付ける。</summary>
+        public const string ActionLabelKeyPrefix = "settings.input.action.";
+
+        /// <summary>移動の部品の画面に出す名前の文字列表のキーの頭。後ろに部品の名前 (小文字) を付ける。</summary>
+        public const string MoveLabelKeyPrefix = "settings.input.move.";
+
         // 指を離すときに隣のキーへ触れたなど、ほぼ同時に来たほかの候補を比べるための待ち。
         private const float MatchWaitSeconds = 0.1f;
 
@@ -46,6 +52,9 @@ namespace Fps.Runtime
 
         // スティックの方向は少し倒れているだけでも拾い、メニューを動かすつもりの入力が割り当てになりやすい。
         private static readonly string[] _gamepadExcluded = { "<Gamepad>/leftStick", "<Gamepad>/rightStick" };
+
+        // ゲームパッドに空いているボタンが無く割り当てていないので、キーボードの行だけを出すアクション。_slots より先に初期化する。
+        private static readonly string[] _keyboardOnlyActions = { "Melee", "Prone", "Ability1", "Ability2", "SquadCommand", "NetStats" };
 
         private static readonly RebindSlot[] _slots = BuildSlots();
 
@@ -139,19 +148,19 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今の言語 (<see cref="Localizer"/>) で、アクション (と合成の部品) の画面に出す名前。
-        /// 文字列表のキーは <c>input.action.{アクション名}</c> と、移動の部品の <c>input.move.{up|down|left|right}</c>。
+        /// 文字列表のキーは <c>settings.input.action.{アクション名}</c> と、移動の部品の <c>settings.input.move.{up|down|left|right}</c>。
         /// 表に無い名前は、Input Actions に足したばかりのアクションでも行が出るよう、警告を出さずにアクション名をそのまま使う。
         /// </summary>
         public static string LabelOf(string actionName, string part = null)
         {
             if (part != null
                 && string.Equals(actionName, "Move", StringComparison.Ordinal)
-                && Localizer.TryGet("input.move." + part.ToLowerInvariant(), out var direction))
+                && Localizer.TryGet(MoveLabelKeyPrefix + part.ToLowerInvariant(), out var direction))
             {
                 return direction;
             }
 
-            var label = actionName != null && Localizer.TryGet("input.action." + actionName, out var text) ? text : actionName;
+            var label = actionName != null && Localizer.TryGet(ActionLabelKeyPrefix + actionName, out var text) ? text : actionName;
             return part == null ? label : label + " (" + part + ")";
         }
 
@@ -470,17 +479,18 @@ namespace Fps.Runtime
 
             var buttons = new[]
             {
-                "Jump", "Sprint", "Crouch", "Attack", "Aim", "Reload", "Interact", "Next", "Previous", "Cover", "SwapShoulder", "Dodge", "Grenade",
-                "Scoreboard",
+                "Jump", "Sprint", "Crouch", "Prone", "Attack", "Aim", "Reload", "Melee", "Interact", "Next", "Previous", "Cover", "SwapShoulder",
+                "Dodge", "Grenade", "Ability1", "Ability2", "Ping", "SquadCommand", "Scoreboard", "NetStats",
             };
+
             foreach (var action in buttons)
             {
                 slots.Add(new RebindSlot(action, InputDeviceKind.KeyboardMouse));
-                slots.Add(new RebindSlot(action, InputDeviceKind.Gamepad));
+                if (Array.IndexOf(_keyboardOnlyActions, action) < 0)
+                {
+                    slots.Add(new RebindSlot(action, InputDeviceKind.Gamepad));
+                }
             }
-
-            // 回線の表示はゲームパッドに割り当てない (空いているボタンが無い) ので、キーボードの行だけを出す
-            slots.Add(new RebindSlot("NetStats", InputDeviceKind.KeyboardMouse));
 
             return slots.ToArray();
         }

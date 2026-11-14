@@ -59,7 +59,8 @@ namespace Fps.Editor
         /// <summary>Campaign01 のミッション Id。定義のアセット名 (<see cref="DefinitionPath"/>) と同じ。</summary>
         public const string MissionId = "Campaign01";
 
-        public const string MissionDisplayName = "Campaign 01";
+        /// <summary>Campaign01 の名前を引くキー。文は Resources/Localization/&lt;言語コード&gt;/campaign.json に書く。</summary>
+        public static string MissionNameKey => MissionDefinition.NameKeyOf(MissionId);
 
         public const string ReachAreaAId = "reach_area_a";
         public const string KillEnemiesId = "kill_enemies";
@@ -331,9 +332,9 @@ namespace Fps.Editor
         {
             return new[]
             {
-                new ObjectiveDefinition(ReachAreaAId, "区域 A に到達する"),
-                new ObjectiveDefinition(KillEnemiesId, $"敵を {EnemyCount} 体倒す", EnemyCount, false, ReachAreaAId),
-                new ObjectiveDefinition(ReachExitId, "出口に到達する", 1, false, KillEnemiesId),
+                new ObjectiveDefinition(ReachAreaAId, MissionDefinition.ObjectiveKeyOf(MissionId, ReachAreaAId)),
+                new ObjectiveDefinition(KillEnemiesId, MissionDefinition.ObjectiveKeyOf(MissionId, KillEnemiesId), EnemyCount, false, ReachAreaAId),
+                new ObjectiveDefinition(ReachExitId, MissionDefinition.ObjectiveKeyOf(MissionId, ReachExitId), 1, false, KillEnemiesId),
             };
         }
 
@@ -342,7 +343,7 @@ namespace Fps.Editor
         {
             return new CampaignMissionSpec(
                 MissionId,
-                MissionDisplayName,
+                MissionNameKey,
                 ScenePath,
                 DefinitionPath,
                 NavMeshDataPath,
@@ -483,7 +484,7 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(spec));
             }
 
-            definition.DisplayName = spec.DisplayName;
+            definition.DisplayNameKey = spec.NameKey;
             definition.SetObjectives(spec.Objectives);
 
             // 不正ならここで MissionDefinitionException になり、壊れたアセットを保存しない。

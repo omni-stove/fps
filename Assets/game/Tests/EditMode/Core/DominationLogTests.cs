@@ -86,8 +86,9 @@ namespace Fps.Core.Tests
             Assert.That(DominationHudFormat.PointName(26), Is.EqualTo("P27"));
             Assert.Throws<ArgumentOutOfRangeException>(() => DominationHudFormat.PointName(-1));
 
-            Assert.That(DominationHudFormat.PointOwner(0, Team.Bravo), Is.EqualTo("A BRAVO"));
-            Assert.That(DominationHudFormat.PointOwner(1, null), Is.EqualTo("B " + DominationHudFormat.Neutral));
+            Assert.That(GameText.Resolve(DominationHudFormat.PointOwner(0, Team.Bravo)), Is.EqualTo("A BRAVO"));
+            Assert.That(GameText.Resolve(DominationHudFormat.PointOwner(1, null)), Is.EqualTo("B --"));
+            Assert.That(GameText.Resolve(DominationHudFormat.PointOwner(26, null)), Is.EqualTo("P27 --"));
         }
 
         [Test]
@@ -98,7 +99,7 @@ namespace Fps.Core.Tests
             Assert.That(DominationHudFormat.DisplayedScore(-3f), Is.EqualTo(0));
             Assert.That(DominationHudFormat.DisplayedScore(float.NaN), Is.EqualTo(0));
             Assert.That(DominationHudFormat.DisplayedScore(float.PositiveInfinity), Is.EqualTo(int.MaxValue));
-            Assert.That(DominationHudFormat.TeamScore(Team.Alpha, 12.9f), Is.EqualTo("ALPHA 12"));
+            Assert.That(GameText.Resolve(DominationHudFormat.TeamScore(Team.Alpha, 12.9f)), Is.EqualTo("ALPHA 12"));
         }
     }
 }

@@ -57,6 +57,7 @@ namespace Fps.Core
         /// <param name="coverHideSeconds">TakeCover でしゃがんで隠れている時間。0 以上。</param>
         /// <param name="coverPeekSeconds">TakeCover で 1 回覗いている時間。0 以上。</param>
         /// <param name="coverHealthFraction">体力の割合がこれを下回ったら TakeCover に移る。0 以上 1 以下。</param>
+        /// <param name="archetype">敵の種類。</param>
         public EnemySpec(
             float sightRange,
             float attackRange,

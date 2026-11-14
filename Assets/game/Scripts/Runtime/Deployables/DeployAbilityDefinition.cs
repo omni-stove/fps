@@ -1,6 +1,7 @@
 using System;
 using Fps.Core;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Fps.Runtime
 {
@@ -168,6 +169,32 @@ namespace Fps.Runtime
 
         protected virtual void Configure(GameObject placed, DeploySpec spec)
         {
+        }
+
+        // 持ち主の設定 (味方撃ちのルールなど) は置く物を作る時点 (CreateDeployed) には渡らないので、持ち主と陣営が決まった後に別に呼ぶ。
+        protected virtual void OnPlaced(Deployable deployable, AbilityContext context)
+        {
+        }
+
+        internal void NotifyPlaced(Deployable deployable, AbilityContext context)
+        {
+            OnPlaced(deployable, context);
+        }
+
+        // 敵が置いた物に向かって歩き続けないよう、NavMesh に穴を開けて避けさせる。
+        protected static void CarveNavMesh(GameObject placed, DeploySpec spec)
+        {
+            // 差し替えた見た目が自分の形の NavMeshObstacle を持っていれば、そちらを使う。
+            if (placed.GetComponentInChildren<NavMeshObstacle>() != null)
+            {
+                return;
+            }
+
+            var obstacle = placed.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.center = new Vector3(0f, spec.Height / 2f, 0f);
+            obstacle.size = new Vector3(spec.Width, spec.Height, spec.Depth);
+            obstacle.carving = true;
         }
 
         protected static GameObject CreateBox(string name, DeploySpec spec, bool withCollider)

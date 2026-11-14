@@ -84,6 +84,13 @@ namespace Fps.Runtime
                 return false;
             }
 
+            // 置いた物 (タレット) が撃った弾は、それを置いた持ち主と陣営が撃ったものとして扱う。持ち主のタレットの弾が持ち主の盾で止まらないように。
+            var placed = shooter.GetComponentInParent<Deployable>();
+            if (placed != null && placed != this)
+            {
+                return DeployPlacement.LetsThrough(_owner != null && placed._owner == _owner, _side, placed._side);
+            }
+
             var isOwner = _owner != null && shooter.transform.IsChildOf(_owner.transform);
             var member = SideMember.Of(shooter);
             return DeployPlacement.LetsThrough(isOwner, _side, member != null ? member.Side : (Side?)null);

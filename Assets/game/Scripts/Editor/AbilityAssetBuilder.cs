@@ -10,7 +10,8 @@ namespace Fps.Editor
     /// 試し用の何もしない能力 (<see cref="NullAbilityDefinition"/>) のアセットを <see cref="NullAbilityPath"/> に、
     /// グラップル (<see cref="GrappleAbilityDefinition"/>) のアセットを <see cref="GrappleAbilityPath"/> に作るか上書きする。
     /// 回数・回数の戻り・待ち時間・効果が出るまでの秒数がどれも見えるよう、どれも 0 でない値にする。
-    /// あわせて、展開式の盾を置く能力 (<see cref="ShieldDeployDefinition"/>) を <see cref="ShieldAbilityPath"/> に作る。
+    /// あわせて、展開式の盾を置く能力 (<see cref="ShieldDeployDefinition"/>) を <see cref="ShieldAbilityPath"/> に、
+    /// 自動で撃つタレットを置く能力 (<see cref="TurretDeployDefinition"/>) を <see cref="TurretAbilityPath"/> に作る。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンは壊れない。何度実行しても同じ結果になる。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.AbilityAssetBuilder.Build</code>
@@ -31,6 +32,12 @@ namespace Fps.Editor
         public const float ShieldAbilityRechargeSeconds = 15f;
         public const float ShieldAbilityCooldownSeconds = 1f;
         public const float ShieldAbilityWindupSeconds = 0f;
+
+        public const string TurretAbilityId = "deploy-turret";
+        public const int TurretAbilityMaxCharges = 1;
+        public const float TurretAbilityRechargeSeconds = 30f;
+        public const float TurretAbilityCooldownSeconds = 1f;
+        public const float TurretAbilityWindupSeconds = 0f;
 
         public const string GrappleAbilityId = "grapple";
         public const int GrappleMaxCharges = 2;
@@ -54,12 +61,45 @@ namespace Fps.Editor
         public static string ShieldAbilityPath => Folder + "/DeployShield.asset";
         public static string GrappleAbilityPath => Folder + "/GrappleAbility.asset";
 
+        public static string TurretAbilityPath => Folder + "/DeployTurret.asset";
+
+        // タレットは武器のアセットを指すので、WeaponAssetBuilder.Build の後に走らせる (武器が無ければ例外で止まる)。
         [MenuItem(MenuPath)]
         public static void Build()
         {
             BuildAt(NullAbilityPath);
             BuildShieldAt(ShieldAbilityPath);
             BuildGrappleAt(GrappleAbilityPath);
+            BuildTurretAt(TurretAbilityPath);
+        }
+
+        public static TurretDeployDefinition BuildTurretAt(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+
+            // 武器が無ければアセットを作る前に止める。
+            var weapon = WeaponAssetBuilder.FindInCatalog(WeaponAssetBuilder.LoadCatalog(), TurretAbilityId, WeaponAssetBuilder.RifleId);
+            SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'));
+            var ability = SceneBuildHelpers.CreateOrUpdateAsset<TurretDeployDefinition>(path, a => ConfigureTurret(a, weapon));
+            Debug.Log($"{LogTag} saved '{path}'");
+            return ability;
+        }
+
+        // 手で調整した値を射撃場を作り直すたびに消さないよう、あれば中身は上書きしない。
+        public static TurretDeployDefinition LoadOrBuildTurretAbility()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<TurretDeployDefinition>(TurretAbilityPath);
+            if (existing != null)
+            {
+                existing.ToSpec();
+                existing.ToDeploySpec();
+                existing.ToTurretSpec();
+                existing.ToWeaponSpec();
+                return existing;
+            }
+
+            Debug.Log($"{LogTag} '{TurretAbilityPath}' is missing; building it");
+            return BuildTurretAt(TurretAbilityPath);
         }
 
         public static ShieldDeployDefinition BuildShieldAt(string path)
@@ -185,6 +225,34 @@ namespace Fps.Editor
             ability.PreviewPrefab = null;
             ability.ToSpec();
             ability.ToDeploySpec();
+        }
+
+        private static void ConfigureTurret(TurretDeployDefinition ability, WeaponDefinition weapon)
+        {
+            ability.Id = TurretAbilityId;
+            ability.MaxCharges = TurretAbilityMaxCharges;
+            ability.RechargeSeconds = TurretAbilityRechargeSeconds;
+            ability.CooldownSeconds = TurretAbilityCooldownSeconds;
+            ability.WindupSeconds = TurretAbilityWindupSeconds;
+            ability.MaxActive = TurretSpec.DefaultMaxActive;
+            ability.Overflow = Fps.Core.DeploySpec.DefaultOverflow;
+            ability.MaxHealth = TurretSpec.DefaultMaxHealth;
+            ability.MaxRange = Fps.Core.DeploySpec.DefaultMaxRange;
+            ability.MaxSlopeDegrees = Fps.Core.DeploySpec.DefaultMaxSlopeDegrees;
+            ability.MaxStepHeight = Fps.Core.DeploySpec.DefaultMaxStepHeight;
+            ability.Size = new Vector3(TurretSpec.DefaultWidth, TurretSpec.DefaultHeight, TurretSpec.DefaultDepth);
+            ability.Prefab = null;
+            ability.PreviewPrefab = null;
+            ability.Weapon = weapon;
+            ability.Rounds = TurretSpec.DefaultRounds;
+            ability.LifetimeSeconds = TurretSpec.DefaultLifetimeSeconds;
+            ability.SightRange = TurretSpec.DefaultSightRange;
+            ability.TurnDegreesPerSecond = TurretSpec.DefaultTurnDegreesPerSecond;
+            ability.AimToleranceDegrees = TurretSpec.DefaultAimToleranceDegrees;
+            ability.ToSpec();
+            ability.ToDeploySpec();
+            ability.ToTurretSpec();
+            ability.ToWeaponSpec();
         }
     }
 }

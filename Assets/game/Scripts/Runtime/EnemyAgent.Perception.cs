@@ -115,6 +115,29 @@ namespace Fps.Runtime
             Debug.Log($"{LogTag} id={Id} target={target.Id}", this);
         }
 
+        // タグで狙う相手は一度見つけたら選び直さないが、タレットは置かれたり消えたりするので、置かれている間だけ間隔ごとに比べ直す。
+        private void ResolveTurretTarget(bool force)
+        {
+            if (!force && Time.time < _nextTargetSearch)
+            {
+                return;
+            }
+
+            _nextTargetSearch = Time.time + TargetSearchInterval;
+
+            var tagged = GameObject.FindGameObjectWithTag(TargetTag);
+            var player = tagged != null ? tagged.GetComponentInParent<Damageable>() : null;
+            var target = EnemySenses.PreferNearerTurret(
+                gameObject, null, GroundPosition, player, player != null ? player.GroundPoint : Vector3.zero, Turret.Armed);
+            if (target == null || target == _target)
+            {
+                return;
+            }
+
+            _target = target;
+            Debug.Log($"{LogTag} id={Id} target={target.Id}", this);
+        }
+
         /// <summary>
         /// member の陣営から見た、いちばん近い生きている敵を目標にする。force でなければ <see cref="TargetSearchInterval"/> ごとにだけ探す。
         /// 敵がいなければ目標を外す (全員倒れている間など)。目標が変わったときだけログに出す。
@@ -130,6 +153,14 @@ namespace Fps.Runtime
 
             var hostile = EnemySenses.SelectHostile(member, SideMember.FindAll());
             var target = hostile != null ? hostile.Damageable : null;
+
+            // 印の付いた敵は、近くにタレットがあってもそちらを優先する。
+            if (!PingController.IsMarkedFor(member.Side, target))
+            {
+                target = EnemySenses.PreferNearerTurret(
+                    gameObject, member.Side, GroundPosition, target, hostile != null ? hostile.GroundPosition : Vector3.zero, Turret.Armed);
+            }
+
             if (target == _target)
             {
                 return;

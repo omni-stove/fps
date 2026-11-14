@@ -227,11 +227,29 @@ namespace Fps.Runtime
                 collider.enabled = visible;
             }
 
-            foreach (var renderer in GetComponentsInChildren<Renderer>(true))
+            // 見せたときに全 Renderer を点け直すと、プレハブや仮の形で消してある物まで点くので、最初に隠す時点で点いている物だけを覚える。
+            if (_shownRenderers == null)
             {
-                renderer.enabled = visible;
+                _shownRenderers = new System.Collections.Generic.List<Renderer>();
+                foreach (var renderer in GetComponentsInChildren<Renderer>(true))
+                {
+                    if (renderer.enabled)
+                    {
+                        _shownRenderers.Add(renderer);
+                    }
+                }
+            }
+
+            foreach (var renderer in _shownRenderers)
+            {
+                if (renderer != null)
+                {
+                    renderer.enabled = visible;
+                }
             }
         }
+
+        private System.Collections.Generic.List<Renderer> _shownRenderers;
 
         private void Unsubscribe()
         {

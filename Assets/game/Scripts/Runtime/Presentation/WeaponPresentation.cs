@@ -65,10 +65,10 @@ namespace Fps.Runtime
         public const float SoundMaxDistance = 120f;
 
         /// <summary>
-        /// 銃口の位置を、弾の始点 (目) からの右・下・前の距離 (m) で決める。銃のモデルが無いので、
-        /// 一人称で炎が視界の真ん中をふさがないよう右下にずらす。<see cref="Muzzle"/> を設定すればそちらを使う。
+        /// 銃口のソケットが無いときの銃口の位置 (<see cref="WeaponSockets.DefaultMuzzleOffset"/>)。
+        /// <see cref="WeaponModel"/> に <see cref="WeaponSockets.MuzzleName"/> があればそちらを使う。
         /// </summary>
-        public static readonly Vector3 MuzzleOffset = new Vector3(0.15f, -0.12f, 0.6f);
+        public static readonly Vector3 MuzzleOffset = WeaponSockets.DefaultMuzzleOffset;
 
         private static readonly Color DefaultTracerColor = new Color(1f, 0.85f, 0.5f);
 
@@ -98,6 +98,7 @@ namespace Fps.Runtime
         private bool _resolved;
         private bool? _isLocal;
         private bool _subscribedReload;
+        private WeaponSockets _sockets = WeaponSockets.None;
 
         // 直前の射撃の曳光弾。続けて届く着弾で行き先を当たった点に縮める。
         private PooledTracer _pendingTracer;
@@ -153,8 +154,21 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>自分の弾のマズルフラッシュを出す位置と向き (+Z が銃口の向き)。null なら弾の始点から <see cref="MuzzleOffset"/> の位置。</summary>
-        public Transform Muzzle { get; set; }
+        /// <summary>
+        /// 自分の弾の武器のモデルの根。代入するとその配下からソケットを探し直す (<see cref="Sockets"/>)。null ならソケットを持たない。
+        /// 武器を持ち替えてモデルを差し替えたら、新しいモデルを代入し直す。
+        /// </summary>
+        public Transform WeaponModel
+        {
+            get => _sockets.ModelRoot;
+            set => _sockets = value != null ? new WeaponSockets(value) : WeaponSockets.None;
+        }
+
+        /// <summary>
+        /// 自分の弾のマズルフラッシュと曳光弾を出す位置と向き (<see cref="WeaponSockets.MuzzlePose"/>)。
+        /// 銃口のソケットが無ければ弾の始点から <see cref="MuzzleOffset"/> の位置。
+        /// </summary>
+        public WeaponSockets Sockets => _sockets;
 
         /// <summary>プールの部品を置く親。初めて部品を作るまでは null。</summary>
         public Transform PoolRoot => _poolRoot;
@@ -253,7 +267,8 @@ namespace Fps.Runtime
 
             var own = shot.Shooter != null && FindFor(shot.Shooter) == this;
             var direction = shot.Direction.sqrMagnitude > 0f ? shot.Direction : transform.forward;
-            var muzzle = own && Muzzle != null ? Muzzle.position : MuzzlePosition(shot.Origin, direction);
+            var muzzlePose = (own ? _sockets : WeaponSockets.None).MuzzlePose(shot.Origin, direction);
+            var muzzle = muzzlePose.position;
 
             if (catalog.TryGetWeapon(shot.WeaponId, out var assets))
             {
@@ -275,8 +290,7 @@ namespace Fps.Runtime
 
                 if (assets.MuzzleFlash != null)
                 {
-                    var rotation = own && Muzzle != null ? Muzzle.rotation : Quaternion.LookRotation(direction);
-                    SpawnEffect(assets.MuzzleFlash, MuzzleFlashCapacity, muzzle, rotation, now);
+                    SpawnEffect(assets.MuzzleFlash, MuzzleFlashCapacity, muzzle, muzzlePose.rotation, now);
                 }
             }
             else
@@ -289,9 +303,11 @@ namespace Fps.Runtime
 
         /// <summary>
         /// impact の着弾の火花と音を出す。同じフレームの直前の <see cref="PlayShot"/> の曳光弾は、当たった点で止まるようにする。
+        /// 素材の有無にかかわらず、1 回ごとに材質と部位を <see cref="FormatImpactLog"/> の形でログに出す。
         /// </summary>
         public void PlayImpact(ImpactInfo impact)
         {
+            Debug.Log(FormatImpactLog(impact), this);
             var now = Time.time;
             var tracer = _pendingTracerFrame == Time.frameCount ? _pendingTracer : null;
             _pendingTracer = null;
@@ -376,21 +392,18 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 弾の始点 origin から direction へ撃ったときの銃口の位置。direction を前、水平な右を右として <see cref="MuzzleOffset"/> だけずらす。
+        /// 弾の始点 origin から direction へ撃ったときの、銃口のソケットが無いときの銃口の位置
+        /// (<see cref="WeaponSockets.None"/> の <see cref="WeaponSockets.MuzzlePose"/>)。
         /// </summary>
         public static Vector3 MuzzlePosition(Vector3 origin, Vector3 direction)
         {
-            var forward = direction.sqrMagnitude > 0f ? direction.normalized : Vector3.forward;
-            var right = Vector3.Cross(Vector3.up, forward);
-            if (right.sqrMagnitude < 1e-6f)
-            {
-                // 真上か真下へ撃ったときは水平な右が決まらないので、ずらすのは前だけにする。
-                return origin + (forward * MuzzleOffset.z);
-            }
+            return WeaponSockets.None.MuzzlePose(origin, direction).position;
+        }
 
-            right.Normalize();
-            var up = Vector3.Cross(forward, right);
-            return origin + (right * MuzzleOffset.x) + (up * MuzzleOffset.y) + (forward * MuzzleOffset.z);
+        /// <summary>着弾の演出を出すときのログ。例: <c>[Presentation] impact material=default character=True zone=Head</c>。</summary>
+        public static string FormatImpactLog(ImpactInfo impact)
+        {
+            return LogTag + " impact " + impact;
         }
 
         /// <summary>

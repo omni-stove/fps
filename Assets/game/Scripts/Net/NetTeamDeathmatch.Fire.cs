@@ -122,7 +122,7 @@ namespace Fps.Net
             if (_lastRecordedTick == _noRecordedTick)
             {
                 // 試合が始まった直後のフレームで、まだ巻き戻す履歴が無い。弾は撃ったので、射撃だけは配る
-                SendShot(shooter, spec.Id, origin, direction, null);
+                SendShot(shooter, spec.Id, origin, direction, null, false, null);
                 return;
             }
 
@@ -155,7 +155,15 @@ namespace Fps.Net
                 _rewindTargets.Clear();
             }
 
-            SendShot(shooter, spec.Id, origin, direction, any ? hit.RaycastHit : (RaycastHit?)null);
+            // 着弾の演出に部位を載せるので、射撃を配る前に当たった相手と部位を決める
+            NetPlayer victim = null;
+            HitZone? impactZone = null;
+            if (any && hit.HitTarget && _playerById.TryGetValue(hit.TargetId, out victim) && victim != null)
+            {
+                impactZone = ZoneOf(victim, hit);
+            }
+
+            SendShot(shooter, spec.Id, origin, direction, any ? hit.RaycastHit : (RaycastHit?)null, any && hit.HitTarget, impactZone);
             if (!any)
             {
                 return;
@@ -171,12 +179,13 @@ namespace Fps.Net
                 return;
             }
 
-            if (!_playerById.TryGetValue(hit.TargetId, out var victim) || victim == null)
+            // 部位が無いのは当たった相手がもういないときだけで、ダメージを与える相手がいない
+            if (!impactZone.HasValue)
             {
                 return;
             }
 
-            var zone = ZoneOf(victim, hit);
+            var zone = impactZone.Value;
             var damage = DamageCalculator.Calculate(spec.Damage, zone, hit.RaycastHit.distance, spec.Falloff);
             DamageOutcome outcome;
             _killShot = new KillShot(shooterId, hit.TargetId, spec.Id, zone);

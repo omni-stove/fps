@@ -14,11 +14,57 @@ namespace Fps.Runtime
     /// 中身は Fps.Editor.PresentationAssetBuilder が生成した仮の素材 (Assets/game/Presentation/Resources/Presentation/PresentationCatalog.asset) で、
     /// 本物の素材に替えるときはこのアセットの参照を差し替える。
     /// </summary>
+    /// <remarks>
+    /// 演出を足すときの規約 (このカタログもこれに従う):
+    /// <list type="bullet">
+    /// <item>カタログの置き場所: 演出ごとに自分の ScriptableObject のカタログを 1 つ持ち、どこかの Resources フォルダの
+    /// <c>Presentation/&lt;名前&gt;Catalog.asset</c> に置く (Resources からのパスは <see cref="CatalogResourcePath"/>)。
+    /// このカタログに枠を足さず、演出ごとにファイルを分ける。</item>
+    /// <item>仮素材の生成: 仮素材とカタログは Fps.Editor.IPresentationAssetStep の実装が作り、Fps.Editor.PresentationAssetSteps.BuildAll から
+    /// まとめて実行される。既存のアセットは GUID を保って中身だけ更新する。</item>
+    /// <item>任意の枠: 素材の枠は空でもよい。空の枠の演出だけを出さずに続行し、戦闘や他の演出は止めない
+    /// (カタログ自体が無いときも同じで、警告は 1 度だけ)。必須にするのは仮素材が必ず埋める枠だけで、Validate で確かめる。</item>
+    /// </list>
+    /// </remarks>
     [CreateAssetMenu(fileName = "PresentationCatalog", menuName = "Fps/Presentation Catalog")]
     public sealed class PresentationCatalog : ScriptableObject
     {
-        /// <summary>Resources からのパス (どこかの Resources フォルダの Presentation/PresentationCatalog.asset)。</summary>
-        public const string ResourcePath = "Presentation/PresentationCatalog";
+        /// <summary>演出のカタログを置く、Resources からのフォルダ。</summary>
+        public const string ResourceFolder = "Presentation";
+
+        /// <summary>演出のカタログのファイル名の後ろに付ける語。</summary>
+        public const string CatalogSuffix = "Catalog";
+
+        /// <summary>Resources からのパス (どこかの Resources フォルダの Presentation/PresentationCatalog.asset)。<see cref="CatalogResourcePath"/> の "Presentation"。</summary>
+        public const string ResourcePath = ResourceFolder + "/PresentationCatalog";
+
+        /// <summary>
+        /// 名前が name の演出のカタログの、Resources からのパス (<c>Presentation/&lt;name&gt;Catalog</c>、拡張子なし)。
+        /// <see cref="Resources.Load(string)"/> にそのまま渡せる。
+        /// </summary>
+        /// <exception cref="ArgumentException">name が空、空白を含む、パスの区切りを含む、または <see cref="CatalogSuffix"/> で終わる。</exception>
+        public static string CatalogResourcePath(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentException("catalog name must not be empty", nameof(name));
+            }
+
+            foreach (var c in name)
+            {
+                if (char.IsWhiteSpace(c) || c == '/' || c == '\\' || c == '.')
+                {
+                    throw new ArgumentException($"catalog name '{name}' must not contain whitespace, '/', '\\' or '.'", nameof(name));
+                }
+            }
+
+            if (name.EndsWith(CatalogSuffix, StringComparison.Ordinal))
+            {
+                throw new ArgumentException($"catalog name '{name}' must not end with '{CatalogSuffix}'; it is appended", nameof(name));
+            }
+
+            return ResourceFolder + "/" + name + CatalogSuffix;
+        }
 
         [SerializeField, Tooltip("武器ごとの音とエフェクト。Id は重複させない")]
         private List<WeaponPresentationAssets> _weapons = new List<WeaponPresentationAssets>();

@@ -204,6 +204,7 @@ namespace Fps.Editor
 
             // NewScene(Single) は参照されていないアセットをアンロードするので、プレハブはシーンを作ってから読む
             var (playerPrefab, matchPrefab) = NetSceneBuilder.LoadPrefabs();
+            var pieceVisualPrefab = DestructiblePieceVisual.Load();
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
@@ -214,7 +215,7 @@ namespace Fps.Editor
             SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
             RequireNavigable();
 
-            PopulateScene(scene, playerPrefab, matchPrefab);
+            PopulateScene(scene, playerPrefab, matchPrefab, pieceVisualPrefab);
             SaveScene(scene, scenePath);
 
             // シーンに置いた NetworkObject の ID (GlobalObjectIdHash) は、保存済みのシーンを読んだときの OnValidate で決まる。
@@ -298,7 +299,7 @@ namespace Fps.Editor
         /// NetBootstrap・観戦カメラ・ライト・破片の置き場・建物・出現地点・拠点を置き、NetBootstrap を返す。
         /// プレハブの配線は NetTest と同じ (<see cref="NetSceneBuilder.CreateBootstrap"/>)。
         /// </summary>
-        public static NetBootstrap PopulateScene(Scene scene, GameObject playerPrefab, GameObject matchPrefab)
+        public static NetBootstrap PopulateScene(Scene scene, GameObject playerPrefab, GameObject matchPrefab, GameObject pieceVisualPrefab = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);
 
@@ -312,7 +313,7 @@ namespace Fps.Editor
 
             foreach (var (buildingName, groundCenter) in Buildings)
             {
-                CreateBuilding(scene, buildingName, groundCenter, pool);
+                CreateBuilding(scene, buildingName, groundCenter, pool, pieceVisualPrefab);
             }
 
             var spawnRoot = new GameObject(SpawnPointsRootName);
@@ -423,7 +424,8 @@ namespace Fps.Editor
         /// 壁 4 面 (下段は地面に接する) と屋根を 1 m の Cube の部品で組み、南北の壁の中央に出入口を空ける。部品の添字は作った順に 0 から振る。
         /// 弾で壊れるかは試合の開始時に <see cref="NetTeamDeathmatch"/> がルールで決めるので、ここでは壊れない状態にしておく。
         /// </summary>
-        public static DestructibleStructure CreateBuilding(Scene scene, string buildingName, Vector3 groundCenter, DebrisPool pool)
+        public static DestructibleStructure CreateBuilding(
+            Scene scene, string buildingName, Vector3 groundCenter, DebrisPool pool, GameObject pieceVisualPrefab = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);
 
@@ -462,15 +464,15 @@ namespace Fps.Editor
                         }
 
                         var px = minX + (x * PieceSize);
-                        CreatePiece(south, x, y, new Vector3(px, height, minZ), ref index, grounded);
-                        CreatePiece(north, x, y, new Vector3(px, height, maxZ), ref index, grounded);
+                        CreatePiece(south, x, y, new Vector3(px, height, minZ), ref index, grounded, pieceVisualPrefab);
+                        CreatePiece(north, x, y, new Vector3(px, height, maxZ), ref index, grounded, pieceVisualPrefab);
                     }
 
                     for (var z = 1; z < BuildingDepth - 1; z++)
                     {
                         var pz = minZ + (z * PieceSize);
-                        CreatePiece(west, z, y, new Vector3(minX, height, pz), ref index, grounded);
-                        CreatePiece(east, z, y, new Vector3(maxX, height, pz), ref index, grounded);
+                        CreatePiece(west, z, y, new Vector3(minX, height, pz), ref index, grounded, pieceVisualPrefab);
+                        CreatePiece(east, z, y, new Vector3(maxX, height, pz), ref index, grounded, pieceVisualPrefab);
                     }
                 }
 
@@ -479,7 +481,7 @@ namespace Fps.Editor
                 {
                     for (var z = 0; z < BuildingDepth; z++)
                     {
-                        CreatePiece(roof, x, z, new Vector3(minX + (x * PieceSize), roofHeight, minZ + (z * PieceSize)), ref index, false);
+                        CreatePiece(roof, x, z, new Vector3(minX + (x * PieceSize), roofHeight, minZ + (z * PieceSize)), ref index, false, pieceVisualPrefab);
                     }
                 }
 
@@ -588,7 +590,8 @@ namespace Fps.Editor
             return group;
         }
 
-        private static void CreatePiece(Transform group, int column, int row, Vector3 buildingLocalPosition, ref int index, bool grounded)
+        private static void CreatePiece(
+            Transform group, int column, int row, Vector3 buildingLocalPosition, ref int index, bool grounded, GameObject visualPrefab)
         {
             // グループは建物の原点に置いたままなので、建物から見た位置をそのまま使える
             DestructiblePiece.Create(
@@ -598,7 +601,8 @@ namespace Fps.Editor
                 Vector3.one * PieceSize,
                 index,
                 PieceMaxHealth,
-                grounded);
+                grounded,
+                visualPrefab: visualPrefab);
             index++;
         }
 

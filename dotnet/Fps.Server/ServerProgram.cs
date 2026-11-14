@@ -6,51 +6,71 @@ using Fps.EosSdk;
 
 namespace Fps.Server
 {
-    /// <summary>
-    /// サーバーの起動の手順。引数を読み、版を出し、<see cref="ServerHost"/> にモジュールを載せて動かす。
-    /// 引数は Unity の専用サーバーと同じ (<c>-mode server</c> / <c>-address</c> / <c>-port</c> / <c>-buildVersion</c> など) で、
-    /// <c>-mode</c> を省いたときもサーバーとして動く。
-    /// </summary>
+    /// <summary>終了コードを Unity の専用サーバー (<c>NetBootstrap</c>) と同じ番号にするのは、運用の監視をそのまま使えるようにするため。</summary>
     internal static class ServerProgram
     {
         public const string LogTag = "[Server]";
 
-        /// <summary>正常に終わった。</summary>
         public const int ExitOk = 0;
 
-        /// <summary>サーバーが起動・停止に失敗した。</summary>
         public const int ExitFailure = 1;
 
-        /// <summary>引数が正しくない。</summary>
         public const int ExitUsage = 2;
 
-        /// <summary>
-        /// 引数を読んでサーバーを動かし、終了コードを返す。モジュールは <paramref name="modules"/> の順に登録する。
-        /// 試合のループはまだ無いので、すべてのモジュールを起動したらそのまま止める。
-        /// </summary>
-        /// <param name="args">コマンドライン引数。</param>
-        /// <param name="modules">登録するモジュール。</param>
-        /// <param name="output">ログの出力先。</param>
-        /// <param name="error">誤りの出力先。</param>
-        public static int Run(IReadOnlyList<string> args, IEnumerable<IServerModule> modules, TextWriter output, TextWriter error)
-        {
-            ArgumentNullException.ThrowIfNull(args);
+        public const int ExitMisconfigured = 3;
 
+        public const int ExitStartFailed = 4;
+
+        public const int ExitLobbyFailed = 7;
+
+        public static int Run(IReadOnlyList<string> args, IEnumerable<IServerModule> modules, ServerRuntime runtime)
+        {
             ArgumentNullException.ThrowIfNull(modules);
 
-            ArgumentNullException.ThrowIfNull(output);
-
-            ArgumentNullException.ThrowIfNull(error);
-
-            if (!TryParseArgs(args, out var options, out var version, out var problem))
+            return Run(args, (ServerLaunch _, ServerRuntime _, ICollection<IServerModule> created, out string error) =>
             {
-                error.WriteLine(LogTag + " " + problem);
+                foreach (var module in modules)
+                {
+                    created.Add(module);
+                }
+
+                error = null;
+                return true;
+            }, runtime);
+        }
+
+        public static int Run(IReadOnlyList<string> args, ServerModuleFactory createModules, ServerRuntime runtime)
+        {
+            ArgumentNullException.ThrowIfNull(args);
+            ArgumentNullException.ThrowIfNull(createModules);
+            ArgumentNullException.ThrowIfNull(runtime);
+
+            var output = runtime.Output;
+            var error = runtime.Error;
+            if (!ServerLaunch.TryParse(args, runtime.Environment, out var launch, out var problem))
+            {
+                error.WriteLine("[Net] invalid arguments: " + problem);
                 return ExitUsage;
             }
 
-            output.WriteLine(BuildVersion.LogLine(version));
-            output.WriteLine(LogTag + " " + options);
+            output.WriteLine(BuildVersion.LogLine(launch.Version));
+            output.WriteLine(LogTag + " " + launch.Options);
             output.WriteLine(EosSdkBuild.LogLine(AppContext.BaseDirectory));
+
+            if (!ServerMapData.TryLoad(launch.Map, runtime.MapSearchRoots, out var map, out problem))
+            {
+                error.WriteLine(LogTag + " " + problem);
+                return ExitMisconfigured;
+            }
+
+            output.WriteLine(map.LogLine);
+
+            var modules = new List<IServerModule>();
+            if (!createModules(launch, runtime, modules, out problem))
+            {
+                error.WriteLine(problem);
+                return ExitMisconfigured;
+            }
 
             var host = new ServerHost();
             foreach (var module in modules)
@@ -58,22 +78,62 @@ namespace Fps.Server
                 host.Register(module);
             }
 
-            var context = new ServerContext(options, version, output);
+            var json = launch.Options.LogFormat == ServerLogFormat.Json;
+            if (json)
+            {
+                output.WriteLine("[Net] match events are also written to stdout as JSON lines (" + NetLaunchOptions.LogFormatFlag + " json)");
+            }
+
+            using (var transport = runtime.CreateTransport())
+            {
+                var server = new MatchServer(
+                    launch, transport, host, map, output, new ServerEventWriter(json, output, output), () => DateTime.UtcNow);
+                var code = Start(server, error);
+                if (code != ExitOk)
+                {
+                    return code;
+                }
+
+                using (var loop = new ServerLoop(server))
+                using (runtime.StopSignal.Subscribe(loop.RequestStop))
+                {
+                    loop.Run();
+                }
+
+                var stopped = Shutdown(server, error);
+                return stopped == ExitOk ? server.ExitCode : stopped;
+            }
+        }
+
+        private static int Start(MatchServer server, TextWriter error)
+        {
 #pragma warning disable CA1031 // どのモジュールの失敗でも、例外の画面ではなく 1 行の理由と終了コードで知らせるため
             try
             {
-                host.Start(context);
+                server.Start();
+                return ExitOk;
             }
             catch (Exception e)
             {
+                // 待ち受けの失敗はモジュールの失敗と分けて知らせる。監視が設定の誤りとポートの取り合いを見分けられるように
+                if (server.ListenFailed)
+                {
+                    error.WriteLine("[Net] failed to start the server: " + e.Message);
+                    return ExitStartFailed;
+                }
+
                 error.WriteLine(LogTag + " failed to start: " + e.Message);
                 return ExitFailure;
             }
 #pragma warning restore CA1031
+        }
 
+        private static int Shutdown(MatchServer server, TextWriter error)
+        {
             try
             {
-                host.Stop();
+                server.Shutdown();
+                return ExitOk;
             }
             catch (AggregateException e)
             {
@@ -84,43 +144,6 @@ namespace Fps.Server
 
                 return ExitFailure;
             }
-
-            return ExitOk;
-        }
-
-        /// <summary>
-        /// サーバーの引数を読む。<c>-mode</c> は無いか <c>server</c> でなければならない。
-        /// </summary>
-        /// <param name="args">コマンドライン引数。</param>
-        /// <param name="options">成功したときの起動設定。失敗したときは null。</param>
-        /// <param name="version">成功したときの <c>-buildVersion</c> の版。無いか失敗したときは null。</param>
-        /// <param name="error">失敗したときの理由。成功したときは null。</param>
-        public static bool TryParseArgs(
-            IReadOnlyList<string> args, out NetLaunchOptions options, out string version, out string error)
-        {
-            ArgumentNullException.ThrowIfNull(args);
-
-            version = null;
-            if (!NetLaunchOptions.TryParse(args, NetLaunchMode.Server, out options, out error))
-            {
-                return false;
-            }
-
-            if (options.Mode != NetLaunchMode.Server)
-            {
-                error = "this is a dedicated server; " + NetLaunchOptions.ModeFlag + " must be "
-                    + NetLaunchOptions.ModeName(NetLaunchMode.Server) + " (got " + NetLaunchOptions.ModeName(options.Mode) + ")";
-                options = null;
-                return false;
-            }
-
-            if (!BuildVersion.TryParseArgs(args, out version, out error))
-            {
-                options = null;
-                return false;
-            }
-
-            return true;
         }
     }
 }

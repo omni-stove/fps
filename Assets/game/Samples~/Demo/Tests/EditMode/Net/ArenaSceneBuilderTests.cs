@@ -321,6 +321,38 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void BuildingsUseThePieceVisualPrefabWhenOneIsSet()
+        {
+            var prefab = Create("Brick");
+            GameObject.CreatePrimitive(PrimitiveType.Cube).transform.SetParent(prefab.transform, false);
+
+            ArenaSceneBuilder.PopulateScene(_scene, Create("TestPlayer"), Create("TestMatch"), prefab);
+
+            var pieces = Components<DestructiblePiece>();
+            Assert.That(pieces, Has.Length.EqualTo(ArenaSceneBuilder.BuildingPieceCount * ArenaSceneBuilder.Buildings.Count));
+            foreach (var piece in pieces)
+            {
+                Assert.That(piece.GetComponent<MeshFilter>(), Is.Null, piece.name + " has no placeholder cube");
+                Assert.That(piece.Collider, Is.InstanceOf<BoxCollider>(), piece.name);
+                var visual = piece.transform.Find(DestructiblePiece.VisualName);
+                Assert.That(visual, Is.Not.Null, piece.name);
+                Assert.That(visual.GetComponentInChildren<MeshFilter>(), Is.Not.Null, piece.name + " shows the prefab");
+            }
+        }
+
+        [Test]
+        public void BuildingsKeepThePlaceholderCubesWithoutAPrefab()
+        {
+            ArenaSceneBuilder.PopulateScene(_scene, Create("TestPlayer"), Create("TestMatch"));
+
+            foreach (var piece in Components<DestructiblePiece>())
+            {
+                Assert.That(piece.GetComponent<MeshFilter>(), Is.Not.Null, piece.name + " is the placeholder cube");
+                Assert.That(piece.transform.Find(DestructiblePiece.VisualName), Is.Null, piece.name);
+            }
+        }
+
+        [Test]
         public void DoorIsInTheMiddleOfTheWall()
         {
             Assert.That(ArenaSceneBuilder.IsDoor(0, 0), Is.False);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fps.Core;
+using Fps.Runtime;
 using NUnit.Framework;
 using Unity.Netcode;
 using UnityEngine;
@@ -131,7 +132,7 @@ namespace Fps.Net.Tests
             go.AddComponent<NetworkObject>();
             var match = go.AddComponent<NetTeamDeathmatch>();
 
-            Assert.That(match.PingSpec, Is.SameAs(PingSpec.Default));
+            Assert.That(match.PingSpec, Is.SameAs(KitTuning.Ping));
             var spec = new PingSpec(minIntervalSeconds: 2f);
             match.PingSpec = spec;
             Assert.That(match.PingSpec, Is.SameAs(spec));

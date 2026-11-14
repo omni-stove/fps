@@ -31,6 +31,9 @@
 - 音とエフェクト: `PresentationCatalog` (Resources の `Presentation/PresentationCatalog`) を差し替えれば変わる。
   武器ごとのものは武器の Id で引く。
 - 文言: `Resources/Localization/<言語>/*.json` の表を引く `LocalizedText`。
+- グレネードと印: `Resources/Tuning/grenade.json` → `GrenadeSpec`、`Resources/Tuning/ping.json` → `PingSpec` (`KitTuning`)。
+  オフライン (`GrenadeThrower`・`PingController`) とネット対戦 (`NetTeamDeathmatch.GrenadeSpec`・`PingSpec`) が同じ値を読む。
+  ファイルが無ければ既定値。
 
 ### まだコードに入っている調整値
 
@@ -38,8 +41,6 @@
 
 - 移動: `PlayerController` (`DefaultWalkSpeed` など) と `NetworkPlayerMotor` (`_walkSpeed = 5f` など) が別々に持っている
 - 敵 AI: `EnemyAgent` (`DefaultSightRange`、`DefaultReactionSeconds` など)。`EnemySpec` との関係を整理する
-- グレネード: `GrenadeSpec.Default*`。`GrenadeThrower` の Inspector では変えられるが、ルールや武器のような JSON は無い
-- 印: `PingSpec.Default*`。オフラインは `PingController` の Inspector、ネット対戦は `NetTeamDeathmatch.PingSpec` をコードで差し替えられるが、JSON は無い
 - 吹き飛ばし: `KnockbackSpec.Default*`。`KnockbackMovement` / `EnemyAgent` の `KnockbackSpec` をコードで差し替えられ、重さだけ Inspector で変えられるが、JSON は無い
 - 各モード: `DominationSpec`・`HordeSpec`・`SearchAndDestroySpec`・`KillConfirmedSpec`・`HardpointSpec`・`TeamDeathmatchSpec`・`PickupSpec` と、それぞれの `*Runner`
 - その他: `DestructiblePiece`、`ShrinkingZone`、`Damageable`、`CameraBoom`、`AdsZoom`、`RecoilState` などの `Default*`
@@ -80,7 +81,7 @@
      サンプルの JSON をパッケージの中から読んでいるところ (README の「同梱のサンプル JSON」) も合わせて直す。
    - 移動は `.meta` ごと行い、GUID を変えない。ファイルの移動が多く衝突しやすいので、並行作業の少ない時期にまとめて行う。
    - 本体のテストがサンプルの数値 (Rifle のダメージなど) に頼っていれば、テスト用のデータをテスト側に持たせる。
-3. **残りの調整値をデータへ**。敵 AI、グレネード、各モードの Spec。
+3. **残りの調整値をデータへ**。敵 AI、各モードの Spec。
 4. **仮の見た目の差し替え口**。カタログにプレハブの枠を足す。
 5. **拡張点と入口の整理**。
    - 固定の列挙 (`Team` が `Alpha`/`Bravo` の 2 つなど) を、キットとして固定するか開くか決める。

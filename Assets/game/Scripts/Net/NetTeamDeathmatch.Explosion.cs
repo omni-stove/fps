@@ -10,7 +10,7 @@ namespace Fps.Net
 {
     /// <summary>
     /// <see cref="NetTeamDeathmatch"/> のうち、グレネード。投げる要求 (<see cref="NetPlayer"/> の ServerRpc) を確かめてプレハブ (<see cref="NetGrenade"/>) を出し、
-    /// 信管が切れたら爆発の範囲ダメージ (<see cref="GrenadeSpec.Explosion"/>) と建造物への被害を与え、爆発を <see cref="NetCombatFeed"/> で全員に伝える。
+    /// 信管が切れたら爆発の範囲ダメージ (<see cref="Fps.Core.GrenadeSpec.Explosion"/>) と建造物への被害を与え、爆発を <see cref="NetCombatFeed"/> で全員に伝える。
     /// </summary>
     /// <remarks>
     /// <para>
@@ -18,7 +18,8 @@ namespace Fps.Net
     /// <see cref="ActionRules.GrenadeCount"/>) の数に戻す。残りは <see cref="NetPlayer.Grenades"/> で持ち主にだけ同期する。
     /// 投げる位置と初速はクライアントの値を使わず、サーバーの知る目の位置 (<see cref="NetPlayer.EyePosition"/>) とクライアントが送った向きから
     /// オフラインの <see cref="GrenadeThrower"/> と同じ決め方で決める。
-    /// 信管・間隔・初速・威力と半径は <see cref="GrenadeSpec.Default"/> を使い、NetPlayer のプレハブの <see cref="GrenadeThrower"/> の Inspector の値は読まない。
+    /// 信管・間隔・初速・威力と半径は <see cref="GrenadeSpec"/> (差し替えなければ調整値の JSON の <see cref="KitTuning.Grenade"/>) を使い、
+    /// NetPlayer のプレハブの <see cref="GrenadeThrower"/> の Inspector の値は読まない。
     /// </para>
     /// <para>
     /// 爆発のダメージは参加中で生きている (ダウン中を含む) 全員に、体のカプセルのいちばん近い点までの距離で <see cref="ExplosionDamage.At"/> から決め、
@@ -51,6 +52,17 @@ namespace Fps.Net
 
         // 試合の開始時に決める。ルールで On でもプレハブが使えなければ false にし、全員を 0 個にする
         private bool _grenadesAvailable;
+
+        // MonoBehaviour のフィールドの初期化では Resources を読めないので、初めて使うときに調整値の JSON から取る。
+        private GrenadeSpec _grenadeSpec;
+
+        // 投げる間隔は 1 人ごとの残り (ServerGrenadeSupply) を作るときに読むので、試合中に差し替えると間隔は次の試合か後から入った人から、
+        // 信管・初速は次に投げるグレネードから、威力と半径は次に爆発するグレネードから効く。
+        public GrenadeSpec GrenadeSpec
+        {
+            get => _grenadeSpec ?? (_grenadeSpec = KitTuning.Grenade);
+            set => _grenadeSpec = value ?? throw new ArgumentNullException(nameof(value));
+        }
 
         /// <summary>
         /// 投げたグレネードのプレハブ。サーバーは試合の開始時 (Spawn 時) に <see cref="TryValidateGrenadePrefab"/> で確かめ、
@@ -94,10 +106,14 @@ namespace Fps.Net
             return true;
         }
 
-        /// <summary>direction へ投げたときの初速。視線の向きの <see cref="GrenadeSpec.ThrowSpeed"/> に上向きの <see cref="GrenadeSpec.ThrowLiftSpeed"/> を足す。</summary>
-        internal static Vector3 GrenadeVelocity(Vector3 direction)
+        /// <summary>direction へ投げたときの初速。視線の向きの spec の <see cref="Fps.Core.GrenadeSpec.ThrowSpeed"/> に上向きの <see cref="Fps.Core.GrenadeSpec.ThrowLiftSpeed"/> を足す。</summary>
+        internal static Vector3 GrenadeVelocity(Vector3 direction, GrenadeSpec spec)
         {
-            var spec = GrenadeSpec.Default;
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
             return (direction * spec.ThrowSpeed) + (Vector3.up * spec.ThrowLiftSpeed);
         }
 
@@ -263,7 +279,7 @@ namespace Fps.Net
 
             direction.Normalize();
             var position = GrenadeReleasePoint(thrower.EyePosition(), direction, thrower.transform);
-            var velocity = GrenadeVelocity(direction);
+            var velocity = GrenadeVelocity(direction, GrenadeSpec);
             if (!TrySpawnGrenade(thrower, position, velocity, out var grenade))
             {
                 return;
@@ -302,7 +318,7 @@ namespace Fps.Net
                 thrower = null;
             }
 
-            var spec = GrenadeSpec.Default;
+            var spec = GrenadeSpec;
             var explosion = spec.Explosion;
             var damaged = 0;
             var killed = 0;
@@ -462,7 +478,7 @@ namespace Fps.Net
             if (!_grenadeSupplies.TryGetValue(playerId, out var supply))
             {
                 // RPC の届く時刻は揺れるので、持ち主の時計どおりに送られた次の要求が間隔より少し早く届いても捨てない
-                supply = new ServerGrenadeSupply(GrenadeSpec.Default.ThrowSeconds, _grenadeThrowJitterSeconds);
+                supply = new ServerGrenadeSupply(GrenadeSpec.ThrowSeconds, _grenadeThrowJitterSeconds);
                 _grenadeSupplies.Add(playerId, supply);
             }
 
@@ -533,7 +549,7 @@ namespace Fps.Net
                 instance = Instantiate(_grenadePrefab, position, Quaternion.identity);
                 instance.name = _grenadePrefab.name;
                 grenade = instance.GetComponent<NetGrenade>();
-                grenade.ServerLaunch(this, thrower, velocity, GrenadeSpec.Default.FuseSeconds);
+                grenade.ServerLaunch(this, thrower, velocity, GrenadeSpec.FuseSeconds);
                 instance.GetComponent<NetworkObject>().Spawn(true);
                 return true;
             }

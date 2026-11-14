@@ -15,7 +15,9 @@ namespace Fps.Runtime
     /// <item>印は HUD の表示 (<see cref="IPingView"/>、<see cref="PingUi"/> が作る) に渡す。</item>
     /// <item>同じ陣営 (<see cref="SideMember"/>) のオフラインの bot は、印の付いた敵を優先して狙う (<see cref="IsMarkedFor"/>)。</item>
     /// </list>
-    /// 寿命・数の上限・届く距離・敵に吸い付く角度は Inspector の値から作る <see cref="Spec"/> に従う。ネット対戦では付けず、
+    /// 寿命・数の上限・届く距離・敵に吸い付く角度・続けて付ける間隔は Inspector の値から作る <see cref="Spec"/> に従う。
+    /// Play 中に生まれたときは、先に <see cref="ApplySpec"/> で渡されていなければ、Inspector の値を調整値の JSON (<see cref="KitTuning.Ping"/>) で上書きする。
+    /// ネット対戦では付けず、
     /// <see cref="ShowShared"/> で受け取ったサーバーの印を出すだけにする (付けるのも追うのもサーバーで、ここで付けると味方と食い違うため)。
     /// </summary>
     // PlayerActionReader (DefaultExecutionOrder 100) がその LateUpdate で読んだ押下を、同じフレームのうちに使う。
@@ -42,6 +44,9 @@ namespace Fps.Runtime
         [SerializeField, Range(0f, 89f), Tooltip("照準が敵から外れていても敵に付ける角度 (度)")]
         private float _enemyAimToleranceDegrees = PingSpec.DefaultEnemyAimToleranceDegrees;
 
+        [SerializeField, Min(0f), Tooltip("続けて付けるときに空ける秒数")]
+        private float _minIntervalSeconds = PingSpec.DefaultMinIntervalSeconds;
+
         private readonly Dictionary<int, Damageable> _targets = new Dictionary<int, Damageable>();
         private readonly List<PingMarker> _removed = new List<PingMarker>();
         private readonly List<int> _enemyIds = new List<int>();
@@ -49,6 +54,7 @@ namespace Fps.Runtime
         private readonly List<PingCandidate> _candidates = new List<PingCandidate>();
 
         private PingSpec _spec;
+        private bool _specApplied;
         private PingBoard _board;
         private Fps.Core.Ping _rule = Fps.Core.Ping.Off;
         private bool _configured;
@@ -119,11 +125,12 @@ namespace Fps.Runtime
         /// <summary>シリアライズされた値から <see cref="PingSpec"/> を作る。値が不正なら ArgumentOutOfRangeException。</summary>
         public PingSpec CreateSpec()
         {
-            return new PingSpec(_lifetimeSeconds, _maxMarkers, _maxDistance, _enemyAimToleranceDegrees);
+            return new PingSpec(_lifetimeSeconds, _maxMarkers, _maxDistance, _enemyAimToleranceDegrees, _minIntervalSeconds);
         }
 
         /// <summary>
-        /// spec の値をシリアライズされる値に書き込む。シーン・プレハブの生成スクリプトとテストが差し込むのに使う。
+        /// spec の値をシリアライズされる値に書き込む。Play 中のコードとテストが差し込むのに使う。
+        /// Play の外で書き込んだ値は、Play 中に生まれたときに調整値の JSON で上書きされる。
         /// 付いている印には効かず、次の <see cref="Configure"/> から使う。
         /// </summary>
         public void ApplySpec(PingSpec spec)
@@ -137,9 +144,20 @@ namespace Fps.Runtime
             _maxMarkers = spec.MaxMarkers;
             _maxDistance = spec.MaxDistance;
             _enemyAimToleranceDegrees = spec.EnemyAimToleranceDegrees;
+            _minIntervalSeconds = spec.MinIntervalSeconds;
+            _specApplied = true;
             if (!_configured)
             {
                 _spec = spec;
+            }
+        }
+
+        private void Awake()
+        {
+            // 無効なまま置かれた本体は Awake が有効になるまで遅れるので、その間に Play 中のコードが ApplySpec で渡した値を JSON で消さない。
+            if (Application.isPlaying && !_specApplied)
+            {
+                ApplySpec(KitTuning.Ping);
             }
         }
 

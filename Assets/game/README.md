@@ -189,6 +189,29 @@ Editor からは **Fps > Import Weapons From JSON** でフォルダを選ぶ (�
 成功すると `[GameRulesJsonImporter] saved '...'` が出る。失敗したときの扱い (1 つも保存せず終了コード 1) は武器と同じ。
 Editor からは **Fps > Import Game Rules From JSON**。
 
+### グレネードと印の調整値
+
+グレネード (`GrenadeSpec`) と印 (`PingSpec`) の値は、取り込みをせずに Play の開始時に Resources の JSON から読む (`Fps.Runtime.KitTuning`)。
+オフラインの `GrenadeThrower`・`PingController` も、ネット対戦のサーバー (`NetTeamDeathmatch.GrenadeSpec`・`PingSpec`) も同じ値を使う。
+
+| Resources のパス | 項目 (名前は Spec のコンストラクターの引数名。省いた項目は既定値) |
+| --- | --- |
+| `Tuning/grenade.json` | `fuseSeconds`・`throwSeconds`・`throwSpeed`・`throwLiftSpeed`・`maxDamage`・`damageRadius`・`fullDamageRadius`・`structureDamageAtCenter` |
+| `Tuning/ping.json` | `lifetimeSeconds`・`maxMarkers`・`maxDistance`・`enemyAimToleranceDegrees`・`minIntervalSeconds` |
+
+```json
+{
+  "damageRadius": 8,
+  "throwSpeed": 18
+}
+```
+
+- パッケージにも同じパスの JSON (今の既定値) が入っている (`Packages/com.omnistove.fps/Resources/Tuning/`)。利用側に同じパスのファイルを置くと
+  どちらが読まれるか決まらないので、今はパッケージの JSON を書き換えるか、コードで `GrenadeThrower.ApplySpec`・`PingController.ApplySpec`・
+  `NetTeamDeathmatch.GrenadeSpec`・`PingSpec` に渡す。
+- ファイルが無ければ既定値で動く。壊れている・値が不正なら `[Tuning]` 付きのエラーにファイル名と項目名を出し、既定値で続ける。
+- Play 中に生まれたコンポーネントは、Inspector の値をこの JSON の値で上書きする (Play 中に Inspector で変えた値はその後に効く)。
+
 ### Inspector から変えられる値
 
 取り込んだアセットや、ビルダーが置いたコンポーネントは、Inspector で値を変えられる。どの項目にも Tooltip が付いている。
@@ -199,7 +222,7 @@ Editor からは **Fps > Import Game Rules From JSON**。
 | `WeaponCatalogAsset`・`LoadoutDefinition` | 使える武器の一覧と、最初に持つ武器 |
 | `GameRulesDefinition` (`<root>/Rules/*.asset`) | フレンドリーファイア・リスポーン・自動回復・死亡時の見せ方・弾薬・建造物の破壊・ダウンやカバーなどのアクション・スポーン保護・落下ダメージ・HUD の量・勝敗の決め方 |
 | `GrenadeThrower` (プレイヤーのコンポーネント) | 爆発までの秒数・投げる間隔・初速・ダメージ・爆発の半径・建造物への被害 |
-| `PingController` (プレイヤーのコンポーネント) | 印が消えるまでの秒数・同時に付けられる数・照準の先を探す距離・照準が外れていても敵に付ける角度 |
+| `PingController` (プレイヤーのコンポーネント) | 印が消えるまでの秒数・同時に付けられる数・照準の先を探す距離・照準が外れていても敵に付ける角度・続けて付ける間隔 |
 | `SquadCommandController` (プレイヤーのコンポーネント) | 長押しとみなす秒数・照準の先を探す距離・照準が外れていても敵を指したとみなす角度・分隊の無いモードで指示が届く距離・付いてくる bot が寄ってくる距離と撃ち合いをやめて戻る距離 |
 | `BossController` (ボスのコンポーネント) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点) |
 

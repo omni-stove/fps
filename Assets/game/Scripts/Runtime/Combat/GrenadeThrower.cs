@@ -13,6 +13,7 @@ namespace Fps.Runtime
     /// 残りは同じ本体の <see cref="Damageable"/> の体力が作り直されたとき (リスポーン・チェックポイントからの再開) と、
     /// <see cref="Refill"/> (キャンペーンのチェックポイントを通ったとき) に満タンへ戻す。
     /// 信管・初速・爆発の威力と半径は Inspector の値から作る <see cref="Spec"/> (<see cref="GrenadeSpec"/>) に従う。
+    /// Play 中に生まれたときは、先に <see cref="ApplySpec"/> で渡されていなければ、Inspector の値を調整値の JSON (<see cref="KitTuning.Grenade"/>) で上書きする。
     /// 投げてから <see cref="GrenadeSpec.ThrowSeconds"/> 秒の間は <see cref="IsThrowing"/> が true で、次を投げられず、
     /// <see cref="GameBootstrap"/> の配線で武器も撃てない。
     /// </summary>
@@ -59,6 +60,7 @@ namespace Fps.Runtime
 
         // 投げるたびに検証し直さないよう持っておき、OnValidate で捨てる。
         private GrenadeSpec _spec;
+        private bool _specApplied;
         private GrenadePouch _pouch = new GrenadePouch(0);
         private Grenade _rule = Grenade.Off;
         private bool _configured;
@@ -115,8 +117,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// spec の値をシリアライズされる値に書き込み、以後はそれで投げる。シーン・プレハブの生成スクリプトとテストが差し込むのに使う。
-        /// 飛んでいるグレネードは変えない。
+        /// spec の値をシリアライズされる値に書き込み、以後はそれで投げる。Play 中のコードとテストが差し込むのに使う。
+        /// Play の外で書き込んだ値は、Play 中に生まれたときに調整値の JSON で上書きされる。飛んでいるグレネードは変えない。
         /// </summary>
         public void ApplySpec(GrenadeSpec spec)
         {
@@ -134,6 +136,16 @@ namespace Fps.Runtime
             _fullDamageRadius = spec.FullDamageRadius;
             _structureDamageAtCenter = spec.StructureDamageAtCenter;
             _spec = spec;
+            _specApplied = true;
+        }
+
+        private void Awake()
+        {
+            // 無効なまま置かれた本体は Awake が有効になるまで遅れるので、その間に Play 中のコードが ApplySpec で渡した値を JSON で消さない。
+            if (Application.isPlaying && !_specApplied)
+            {
+                ApplySpec(KitTuning.Grenade);
+            }
         }
 
         private void OnValidate()

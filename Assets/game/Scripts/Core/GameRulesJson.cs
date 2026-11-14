@@ -284,7 +284,8 @@ namespace Fps.Core
             return new GameRulesJsonException(source, item, $"game rules JSON '{source}'{where} is invalid: {e.Message}", e);
         }
 
-        private enum NodeKind
+        // グレネードと印の調整値の JSON (TuningJson) も同じ文法・同じ位置の示し方で読むので、Node と Parser はアセンブリの中に開く。
+        internal enum NodeKind
         {
             Object,
             Array,
@@ -295,7 +296,7 @@ namespace Fps.Core
             Null,
         }
 
-        private sealed class Node
+        internal sealed class Node
         {
             public Node(NodeKind kind, string text, int line, int column)
             {
@@ -582,7 +583,7 @@ namespace Fps.Core
         }
 
         /// <summary>JSON (RFC 8259) をそのまま読む。コメントや末尾のカンマなどの拡張は受け付けない。</summary>
-        private sealed class Parser
+        internal sealed class Parser
         {
             private readonly string _text;
             private int _position;

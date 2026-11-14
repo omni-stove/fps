@@ -47,6 +47,9 @@ namespace Fps.Runtime
 
         public const string ReloadedLog = "[Combat] reloaded";
 
+        /// <summary>弾切れでトリガーを引いたときのログの頭。続けて <c>id=..</c> を出す。</summary>
+        public const string DryFireLogPrefix = "[Combat] dry-fire";
+
         /// <summary>アクティブリロードの判定のログの頭。続けて <c>success</c> か <c>fail</c> を出す (<see cref="ActiveReloadLog"/>)。</summary>
         public const string ActiveReloadLogPrefix = "[Combat] active-reload";
 
@@ -199,6 +202,12 @@ namespace Fps.Runtime
         public event Action<Weapon> Fired;
 
         /// <summary>
+        /// <see cref="PullTrigger"/> で Attack を押したフレームに、今の武器の弾倉が空でリロード中でもなく撃てなかったときに、その Weapon を渡して呼ばれる。
+        /// 押し続けている間は呼ばない。弾数やリロードは変えない (空撃ちの音を鳴らすためだけのもの)。
+        /// </summary>
+        public event Action<Weapon> DryFired;
+
+        /// <summary>
         /// <see cref="Fire"/> が <see cref="ResolveShot"/> で決めた始点と向きを、Raycast の前に書き換える差し込み口 (カバーなど)。
         /// null ならそのまま撃つ。
         /// </summary>
@@ -285,13 +294,37 @@ namespace Fps.Runtime
         /// <summary>
         /// Attack の入力を今の武器の <see cref="WeaponSpec.FireMode"/> で判断し (<see cref="FireTrigger.Wants"/>)、撃つなら <see cref="Fire"/> する。
         /// Auto は押している間、Semi は押したフレームだけ撃つ。連射間隔は <see cref="Weapon"/> が制限する。撃てたら true。
+        /// 押したフレームに弾倉が空で撃てなければ <see cref="DryFired"/> を呼ぶ (<see cref="IsDryFire"/>)。
         /// </summary>
         /// <param name="isPressed">Attack が押されているか。</param>
         /// <param name="wasPressedThisFrame">Attack がこのフレームに押されたか。</param>
         public bool PullTrigger(bool isPressed, bool wasPressedThisFrame)
         {
             EnsureInitialized();
-            return !_unarmed && FireTrigger.Wants(Weapon.Spec.FireMode, isPressed, wasPressedThisFrame) && Fire();
+            if (_unarmed || !FireTrigger.Wants(Weapon.Spec.FireMode, isPressed, wasPressedThisFrame))
+            {
+                return false;
+            }
+
+            if (Fire())
+            {
+                return true;
+            }
+
+            var weapon = Weapon;
+            if (wasPressedThisFrame && !IsFireBlocked && IsDryFire(weapon))
+            {
+                Debug.Log($"{DryFireLogPrefix} id={weapon.Spec.Id}", this);
+                DryFired?.Invoke(weapon);
+            }
+
+            return false;
+        }
+
+        /// <summary>weapon の弾倉が空で、リロード中でもないか (トリガーを引くと空撃ちになる)。null なら false。</summary>
+        public static bool IsDryFire(Weapon weapon)
+        {
+            return weapon != null && !weapon.IsReloading && weapon.AmmoInMagazine == 0;
         }
 
         /// <summary>次の番号の武器に持ち替える (最後の次は 0 番)。1 本しかないか武器を持っていなければ false。</summary>

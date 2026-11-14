@@ -510,6 +510,43 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void NoDryFireIsReportedBeforeAWeaponArrives()
+        {
+            var weapon = CreateUnequipped();
+            var dry = 0;
+            weapon.DryFired += _ => dry++;
+
+            Assert.That(weapon.State.AmmoInMagazine, Is.Zero, "the default state looks empty");
+            Assert.That(weapon.NotifyDryFire(), Is.False);
+            Assert.That(dry, Is.Zero);
+        }
+
+        [Test]
+        public void DryFireIsReportedWithTheHeldWeaponWhenTheStateIsEmpty()
+        {
+            // Spawn 前は同期しないので、装備しても届いている状態は既定値 (弾数 0) のまま
+            var weapon = CreateWeapon();
+            var ids = new List<string>();
+            weapon.DryFired += ids.Add;
+
+            LogAssert.Expect(LogType.Log, NetPlayerWeapon.DryFireLogPrefix + " weapon=" + weapon.WeaponId);
+            Assert.That(weapon.NotifyDryFire(), Is.True);
+
+            Assert.That(ids, Is.EqualTo(new[] { weapon.WeaponId }));
+            Assert.That(weapon.State, Is.EqualTo(default(NetWeaponState)), "reporting changes nothing");
+        }
+
+        [Test]
+        public void DryFireMeansAnEmptyMagazineThatIsNeitherReloadingNorSwitching()
+        {
+            Assert.That(NetPlayerWeapon.IsDryFire(new NetWeaponState(0, 10, false, 0, 2, false)), Is.True);
+            Assert.That(NetPlayerWeapon.IsDryFire(new NetWeaponState(0, 0, false, 0, 2, false)), Is.True, "no reserve still clicks");
+            Assert.That(NetPlayerWeapon.IsDryFire(new NetWeaponState(1, 10, false, 0, 2, false)), Is.False);
+            Assert.That(NetPlayerWeapon.IsDryFire(new NetWeaponState(0, 10, true, 0, 2, false)), Is.False, "reloading");
+            Assert.That(NetPlayerWeapon.IsDryFire(new NetWeaponState(0, 10, false, 0, 2, true)), Is.False, "switching");
+        }
+
+        [Test]
         public void SwitchActionsAreTheProjectInputActions()
         {
             Assert.That(NetPlayerWeapon.NextActionPath, Is.EqualTo("Player/Next"));

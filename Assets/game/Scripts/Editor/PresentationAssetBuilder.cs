@@ -283,7 +283,7 @@ namespace Fps.Editor
             return new SoundLayer(start, duration, duration * 0.3f, duration * 0.35f, 0.35f, 2500f);
         }
 
-        private static string ValidateFolderPath(string path, string parameterName)
+        internal static string ValidateFolderPath(string path, string parameterName)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -313,7 +313,7 @@ namespace Fps.Editor
             return Path.Combine(projectRoot ?? string.Empty, assetPath);
         }
 
-        private static AudioClip WriteSound(string path, SoundSpec spec)
+        internal static AudioClip WriteSound(string path, SoundSpec spec)
         {
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
             if (existing != null && !(existing is AudioClip))
@@ -697,7 +697,7 @@ namespace Fps.Editor
         /// 読み込んだ中身に値だけを貼り付けて保存する。作り直すとプレハブ内の fileID が毎回変わり、差分が出るため。
         /// 組み方が変わったときだけ丸ごと上書きする (アセットの GUID は保たれる)。
         /// </summary>
-        private static GameObject SavePrefab(string folder, string name, Action<GameObject> build)
+        internal static GameObject SavePrefab(string folder, string name, Action<GameObject> build)
         {
             var path = $"{folder}/{name}.prefab";
             var existing = AssetDatabase.LoadMainAssetAtPath(path);

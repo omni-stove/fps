@@ -6,7 +6,7 @@ using System.Text;
 namespace Fps.Core
 {
     /// <summary>
-    /// 画面に出す文を、言語の表 (<see cref="TextTable"/>) のキーと書式に埋める引数の並びで表す値。
+    /// 画面に出す文を、言語の表 (<see cref="StringTable"/>) のキーと書式に埋める引数の並びで表す値。
     /// 引数には int・float・string・別の <see cref="LocalizedText"/> を入れられ、入れ子の文は表を引くときに一緒に引く。
     /// 表を通さず決まった文字列をそのまま運ぶときは <see cref="Literal"/> で作る。
     /// </summary>

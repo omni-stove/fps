@@ -65,6 +65,12 @@ namespace Fps.Runtime
             return TableOf(Language).Format(key, args);
         }
 
+        /// <summary>今の言語で <see cref="LocalizedText"/> を文にする (<see cref="StringTable.Resolve"/>)。</summary>
+        public static string Resolve(LocalizedText text)
+        {
+            return TableOf(Language).Resolve(text);
+        }
+
         /// <summary>今の言語の表に key があれば、その文字列を text に入れて true。無ければ警告を出さずに false。</summary>
         /// <exception cref="ArgumentNullException">key が null。</exception>
         public static bool TryGet(string key, out string text)

@@ -93,7 +93,7 @@ namespace Fps.Runtime
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
             SideMember localPlayer = null,
-            ModeHudView hudView = null)
+            IModeHud hudView = null)
         {
             Begin(CreateSession(), members, spawnPoints, localPlayer, hudView);
         }

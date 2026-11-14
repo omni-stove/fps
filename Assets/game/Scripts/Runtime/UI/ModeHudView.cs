@@ -10,8 +10,9 @@ namespace Fps.Runtime
     /// Hud.uxml の <see cref="UxmlName"/> の枠に、行の Label をコードで足す。何を出すかは <see cref="ModeRunnerBase"/> が
     /// <see cref="Show"/> / <see cref="Hide"/> で決める。要素をまだ受けていない間 (HUD の木を作り直している間) も中身を覚えておき、受けたときに合わせる。
     /// 中身が変わらない行は書き直さない (毎フレーム呼ばれるため)。
+    /// 受け取った文は今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら文にし直す。
     /// </summary>
-    public sealed class ModeHudView : HudElementView
+    public sealed class ModeHudView : HudElementView, IModeHud
     {
         /// <summary>Hud.uxml のモードの枠。</summary>
         public const string UxmlName = "mode-hud";
@@ -31,7 +32,10 @@ namespace Fps.Runtime
         public const string ResultClass = "mode-hud__result";
 
         private readonly List<ModeHudScoreLine> _scores = new List<ModeHudScoreLine>();
+        private readonly List<LocalizedText> _lineSources = new List<LocalizedText>();
         private readonly List<string> _lines = new List<string>();
+        private LocalizedText _timeSource;
+        private LocalizedText _resultSource;
         private string _time = string.Empty;
         private string _result = string.Empty;
         private bool _shown;
@@ -46,45 +50,41 @@ namespace Fps.Runtime
         /// <summary>出しているか。</summary>
         public bool IsShown => _shown;
 
-        /// <summary>出している残り時間。</summary>
+        /// <summary>出している残り時間 (今の言語の文)。</summary>
         public string TimeText => _time;
 
         /// <summary>出している得点の行 (上から)。</summary>
         public IReadOnlyList<ModeHudScoreLine> Scores => _scores;
 
-        /// <summary>出している、派生モードが足した行 (上から)。</summary>
+        /// <summary>出している、派生モードが足した行 (上から、今の言語の文)。</summary>
         public IReadOnlyList<string> Lines => _lines;
 
-        /// <summary>出している試合結果。試合中は空文字。</summary>
+        /// <summary>出している試合結果 (今の言語の文)。試合中は空文字。</summary>
         public string ResultText => _result;
 
         /// <summary>
-        /// 中身を差し替えて出す。scores は上から並べる順、lines は得点の下に足す行。null と空の行は出さない。
-        /// result が空なら結果の行を隠す。
+        /// 中身を差し替えて出す。scores は上から並べる順、lines は得点の下に足す行。文にして空になる行は出さない。
+        /// result が文にして空なら結果の行を隠す。
         /// </summary>
-        public void Show(string time, IReadOnlyList<ModeHudScoreLine> scores, IReadOnlyList<string> lines, string result)
+        /// <exception cref="ArgumentNullException">scores が null。</exception>
+        public void Show(LocalizedText time, IReadOnlyList<ModeHudScoreLine> scores, IReadOnlyList<LocalizedText> lines, LocalizedText result)
         {
             if (scores == null)
             {
                 throw new ArgumentNullException(nameof(scores));
             }
 
-            _time = time ?? string.Empty;
-            _result = result ?? string.Empty;
+            _timeSource = time;
+            _resultSource = result;
             _scores.Clear();
             _scores.AddRange(scores);
-            _lines.Clear();
+            _lineSources.Clear();
             if (lines != null)
             {
-                foreach (var line in lines)
-                {
-                    if (!string.IsNullOrEmpty(line))
-                    {
-                        _lines.Add(line);
-                    }
-                }
+                _lineSources.AddRange(lines);
             }
 
+            ResolveTexts();
             _shown = true;
             Refresh();
         }
@@ -103,7 +103,31 @@ namespace Fps.Runtime
             _scoresBox = AddBox(element, ScoresClass);
             _linesBox = AddBox(element, LinesClass);
             _resultLabel = AddLabel(element, ResultClass);
+
+            // 要素を持っていない間の言語の変更は届かないので、受けたときに今の言語で文にし直す
+            ResolveTexts();
             Refresh();
+        }
+
+        protected override void OnLanguageChanged()
+        {
+            ResolveTexts();
+            Refresh();
+        }
+
+        private void ResolveTexts()
+        {
+            _time = Localizer.Resolve(_timeSource);
+            _result = Localizer.Resolve(_resultSource);
+            _lines.Clear();
+            foreach (var source in _lineSources)
+            {
+                var line = Localizer.Resolve(source);
+                if (!string.IsNullOrEmpty(line))
+                {
+                    _lines.Add(line);
+                }
+            }
         }
 
         protected override void OnUnbinding(VisualElement element)

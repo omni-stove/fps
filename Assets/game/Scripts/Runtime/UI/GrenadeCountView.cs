@@ -7,13 +7,13 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 残りのグレネードの数 (<see cref="HudFormat.Grenades"/>) を、弾数の上に出す。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="Hud.AddViews"/> では付けず、オフラインの <see cref="GameBootstrap"/> がプレイヤーの <see cref="GrenadeThrower"/> を
+    /// <see cref="Hud.AddViews"/> では付けず、オフラインの <see cref="GameBootstrap"/> が <see cref="IHud.AttachGrenadeCount"/> で付けてプレイヤーの <see cref="GrenadeThrower"/> を
     /// <see cref="Show"/> し、ネット対戦の HUD (<c>Fps.Net.NetHud</c>) がサーバーから届いた数を <see cref="ShowCount"/> する。
     /// ルールでグレネードを使わない間は隠す。
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class GrenadeCountView : HudElementView
+    public sealed class GrenadeCountView : HudElementView, IGrenadeCount
     {
         /// <summary>Hud.uxml の残りのグレネードの数の Label。</summary>
         public const string UxmlName = "grenade-count";
@@ -128,6 +128,11 @@ namespace Fps.Runtime
         }
 
         protected override void OnBound(VisualElement element)
+        {
+            Refresh();
+        }
+
+        protected override void OnLanguageChanged()
         {
             Refresh();
         }

@@ -21,7 +21,7 @@ namespace Fps.Runtime
     /// 出現点は <see cref="SetSpawnPoints"/> で渡した Transform (足元の位置) から <see cref="SpawnSelector"/> で選ぶ。渡していないチームは、
     /// 試合を始めたときにそのチームの参加者が立っていた位置を使う。倒れている間のプレイヤーは動けず撃てない。</item>
     /// <item>状態の変化・拠点の占領と中立化・終了と勝者・キルとリスポーンを <see cref="DominationLog"/> の書式 (<c>[Domination]</c>) でログに出す。</item>
-    /// <item>HUD があれば <see cref="DominationView"/> を付けて両チームのポイント・残り時間・拠点の持ち主を出し、スコアボードにキル数とデス数を渡す。</item>
+    /// <item>HUD があれば拠点制圧の表示 (<see cref="IHud.AttachDomination"/>) を付けて両チームのポイント・残り時間・拠点の持ち主を出し、スコアボードにキル数とデス数を渡す。</item>
     /// <item>終わったらプレイヤーの移動と射撃を止め、<see cref="MatchRunner"/> と同じく <see cref="RestartActionPath"/> (キーボードの R) で
     /// 今のシーンを読み込み直して最初からやり直す。</item>
     /// </list>
@@ -82,7 +82,7 @@ namespace Fps.Runtime
         private ControlPointMap _map;
         private Domination _domination;
         private BootstrapWorld _world;
-        private DominationView _view;
+        private IDominationHud _view;
         private InputAction _restartAction;
         private bool _enabledRestartAction;
 
@@ -95,7 +95,7 @@ namespace Fps.Runtime
         public IReadOnlyList<ControlPointZone> Zones => _zones;
 
         /// <summary>HUD に出しているビュー。HUD が無い (専用サーバー) か開始前は null。</summary>
-        public DominationView View => _view;
+        public IDominationHud View => _view;
 
         /// <summary>終了後に押すと再開するアクション。解決できなければ null (試合は進むが再開できない)。</summary>
         public InputAction RestartAction => _restartAction;
@@ -478,7 +478,7 @@ namespace Fps.Runtime
                 _domination.PointNeutralized -= OnPointNeutralized;
             }
 
-            if (_view != null && _view.Source == _domination)
+            if (GameUi.IsAlive(_view) && _view.Source == _domination)
             {
                 _view.Clear();
             }
@@ -714,7 +714,7 @@ namespace Fps.Runtime
             }
 
             SetPlayerControl(false);
-            if (_view != null)
+            if (GameUi.IsAlive(_view))
             {
                 _view.Refresh();
             }
@@ -753,40 +753,28 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>HUD (専用サーバーでは無い) に <see cref="DominationView"/> を付けて試合を出す。</summary>
+        /// <summary>HUD (専用サーバーでは無い) に拠点制圧の表示 (<see cref="IHud.AttachDomination"/>) を付けて試合を出す。</summary>
         private void ShowOnHud()
         {
             var hud = _world.Hud;
-            if (hud == null)
+            if (!GameUi.IsAlive(hud))
             {
                 return;
             }
 
             hud.UseTeamPalette(TeamColors.OfflineViewer);
-            _view = hud.GetComponent<DominationView>();
-            if (_view == null)
+            _view = hud.AttachDomination();
+            if (_view != null)
             {
-                _view = hud.gameObject.AddComponent<DominationView>();
-
-                // 付けたばかりのビューは要素を受け取っていないので、Hud に木から渡し直させる。
-                try
-                {
-                    hud.RebuildView();
-                }
-                catch (InvalidOperationException e)
-                {
-                    Debug.LogError($"{LogTag} HUD に拠点制圧の欄を出せません: {e.Message}", hud);
-                }
+                _view.Show(_domination);
             }
-
-            _view.Show(_domination);
         }
 
         /// <summary>自分 (Alpha) と敵 (Bravo) のキル数・デス数を HUD のスコアボードに渡す。HUD が無ければ何もしない。</summary>
         private void ShowScoreboard()
         {
-            var scoreboard = _world != null && _world.Hud != null ? _world.Hud.Scoreboard : null;
-            if (scoreboard == null || _domination == null)
+            var scoreboard = _world != null && GameUi.IsAlive(_world.Hud) ? _world.Hud.Scoreboard : null;
+            if (!GameUi.IsAlive(scoreboard) || _domination == null)
             {
                 return;
             }

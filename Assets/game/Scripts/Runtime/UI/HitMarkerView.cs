@@ -12,7 +12,7 @@ namespace Fps.Runtime
     /// オフラインとオンラインで同じ HUD (<see cref="Hud.AddViews"/>) に付き、どちらも同じイベントを受ける。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class HitMarkerView : HudElementView
+    public sealed class HitMarkerView : HudElementView, IHitMarker
     {
         /// <summary>Hud.uxml のヒットマーカーの要素。</summary>
         public const string UxmlName = "hit-marker";

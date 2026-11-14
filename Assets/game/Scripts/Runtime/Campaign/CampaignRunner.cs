@@ -85,7 +85,7 @@ namespace Fps.Runtime
         private float _reloadRemaining;
 
         private readonly CampaignNotice _notice = new CampaignNotice();
-        private Hud _hud;
+        private IHud _hud;
 
         // Start の時点でプレイヤーがまだ無かったときに、Built を待っている GameBootstrap。
         private GameBootstrap _awaitedBootstrap;
@@ -179,7 +179,7 @@ namespace Fps.Runtime
         public CampaignNotice Notice => _notice;
 
         /// <summary>案内を出している HUD。HUD が無い (専用サーバーなど) か開始前なら null。</summary>
-        public Hud BoundHud => _hud;
+        public IHud BoundHud => _hud;
 
         /// <summary>プレイヤーが倒れてからシーンを読み直すまでの秒数。0 以上。</summary>
         public float ReloadDelaySeconds
@@ -445,15 +445,15 @@ namespace Fps.Runtime
         /// 始めたときのルール (<see cref="Rules"/>) があれば、その <see cref="GameRules.HudDensity"/> を HUD に効かせる。
         /// <see cref="TryBeginWith"/> が GameBootstrap の HUD で呼ぶ。<see cref="Begin"/> を直接呼んだときは自分で呼ぶ。
         /// </summary>
-        public void BindHud(Hud hud)
+        public void BindHud(IHud hud)
         {
-            if (_hud != null && _hud != hud)
+            if (GameUi.IsAlive(_hud) && _hud != hud)
             {
                 _hud.BindNotice(null);
             }
 
             _hud = hud;
-            if (_hud != null)
+            if (GameUi.IsAlive(_hud))
             {
                 _hud.BindNotice(_notice);
 
@@ -556,7 +556,7 @@ namespace Fps.Runtime
             }
 
             _activeRules = rules;
-            if (rules != null && _hud != null)
+            if (rules != null && GameUi.IsAlive(_hud))
             {
                 _hud.ApplyDensity(rules.HudDensity);
             }

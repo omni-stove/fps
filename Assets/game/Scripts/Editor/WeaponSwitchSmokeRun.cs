@@ -186,7 +186,8 @@ namespace Fps.Editor
             }
 
             var weapon = bootstrap.World.Weapon;
-            var hud = bootstrap.World.Hud;
+            // 武器名は既定の HUD の表示から読むので、具体クラスで受ける (別の HUD なら「HUD が無い」として扱う)
+            var hud = bootstrap.World.Hud as Hud;
             if (weapon == null || !weapon.IsInitialized)
             {
                 problems.Add("the player's WeaponController is not initialized");

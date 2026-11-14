@@ -257,9 +257,9 @@ namespace Fps.Tests.EditMode
         {
             Begin();
 
-            var view = _runner.View;
+            var view = _world.Hud.gameObject.GetComponent<DominationView>();
             Assert.That(view, Is.Not.Null);
-            Assert.That(view, Is.SameAs(_world.Hud.GetComponent<DominationView>()));
+            Assert.That(_runner.View, Is.SameAs(view));
             Assert.That(view.AlphaScoreText, Is.EqualTo("ALPHA 0"));
             Assert.That(view.BravoScoreText, Is.EqualTo("BRAVO 0"));
             Assert.That(view.TimeText, Is.EqualTo(HudFormat.Time(TimeLimit)));

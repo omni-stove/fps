@@ -11,7 +11,7 @@ namespace Fps.Runtime
     /// (<see cref="MenuNavigator.TakeTutorialRequest"/>) だけ始め (<see cref="TutorialSteps.ShouldStart"/>)、そうでなければ自分を無効にする。
     /// 毎フレーム、プレイヤーの今のアクション (<see cref="PlayerActionReader.Current"/>: ADS・リロード・しゃがみ・カバー)・
     /// 歩いた距離・標的に当てた回数 (<see cref="CombatEvents.HitConfirmed"/>) から <see cref="TutorialSteps"/> を進め、
-    /// HUD の <see cref="TutorialPromptView"/> に今の手順と使うキーを出す。キーの表記は最後に操作した入力機器と今の割り当てで決める
+    /// HUD のチュートリアルの案内 (<see cref="ITutorialPrompt"/>) に今の手順と使うキーを出す。キーの表記は最後に操作した入力機器と今の割り当てで決める
     /// (<see cref="TutorialKeyLabels"/>)。すべて終えたら記録して完了を <see cref="CompletedDisplaySeconds"/> 秒出し、隠す。
     /// </summary>
     [DisallowMultipleComponent]
@@ -41,7 +41,7 @@ namespace Fps.Runtime
         private TutorialProgressStore _store = new TutorialProgressStore();
         private PlayerActionReader _reader;
         private WeaponController _weapon;
-        private TutorialPromptView _view;
+        private ITutorialPrompt _view;
         private InputAction[] _deviceActions = Array.Empty<InputAction>();
         private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
         private Vector3 _lastPosition;
@@ -161,8 +161,8 @@ namespace Fps.Runtime
         private void BeginWith(BootstrapWorld world)
         {
             // 専用サーバー以外で HUD が無いのは作るのに失敗したときで、そのエラーは GameBootstrap が出している
-            var view = world.Hud != null ? world.Hud.TutorialPrompt : null;
-            if (world.ActionReader == null || view == null)
+            var view = GameUi.IsAlive(world.Hud) ? world.Hud.TutorialPrompt : null;
+            if (world.ActionReader == null || !GameUi.IsAlive(view))
             {
                 Debug.LogError(LogTag + " the range has no player action reader or HUD tutorial view; the tutorial cannot start", this);
                 enabled = false;
@@ -178,14 +178,14 @@ namespace Fps.Runtime
         /// reader のプレイヤーで最初の手順から始め、view に案内を出す。始めていれば最初からやり直す。
         /// 武器の <see cref="WeaponController.ReloadStarted"/> と <see cref="CombatEvents.HitConfirmed"/> を購読する。
         /// </summary>
-        public void Begin(PlayerActionReader reader, TutorialPromptView view)
+        public void Begin(PlayerActionReader reader, ITutorialPrompt view)
         {
             if (reader == null)
             {
                 throw new ArgumentNullException(nameof(reader));
             }
 
-            if (view == null)
+            if (!GameUi.IsAlive(view))
             {
                 throw new ArgumentNullException(nameof(view));
             }
@@ -276,7 +276,7 @@ namespace Fps.Runtime
             Unsubscribe();
             _running = false;
             _shownPrompt = null;
-            if (_view != null)
+            if (GameUi.IsAlive(_view))
             {
                 _view.Hide();
             }
@@ -372,7 +372,9 @@ namespace Fps.Runtime
             }
 
             _shownPrompt = text;
-            _view.Show(text, _steps.IsComplete);
+
+            // 手順の文はまだ表のキーになっていないので、作った文字列をそのまま運ぶ
+            _view.Show(text == null ? default : LocalizedText.Literal(text), _steps.IsComplete);
         }
 
         private void Subscribe()

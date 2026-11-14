@@ -117,6 +117,21 @@ namespace Fps.Core
             return true;
         }
 
+        /// <summary>最も古い記録と最も新しい記録の tick。記録が無ければ false。</summary>
+        public bool TryGetRange(out int oldestTick, out int newestTick)
+        {
+            if (Count == 0)
+            {
+                oldestTick = 0;
+                newestTick = 0;
+                return false;
+            }
+
+            oldestTick = _ticks[IndexOf(0)];
+            newestTick = _ticks[IndexOf(Count - 1)];
+            return true;
+        }
+
         private int IndexOf(int logical)
         {
             return (_start + logical) % Capacity;

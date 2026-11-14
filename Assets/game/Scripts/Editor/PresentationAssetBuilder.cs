@@ -378,6 +378,25 @@ namespace Fps.Editor
                 }
             }
 
+            return WriteTexture(path, SoftDotTextureName, SoftDotSize, pixels, true);
+        }
+
+        /// <summary>
+        /// size × size の RGBA32 の pixels (下の行から) を path の Texture2D のアセットに書いて保存する。既存のアセットは GUID を保って中身だけ替える。
+        /// path に別の型のアセットがあれば例外を投げる。
+        /// </summary>
+        internal static Texture2D WriteTexture(string path, string textureName, int size, Color32[] pixels, bool mipChain)
+        {
+            if (size < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(size), size, "must be at least 1");
+            }
+
+            if (pixels == null || pixels.Length != size * size)
+            {
+                throw new ArgumentException($"texture '{path}' needs {size * size} pixels", nameof(pixels));
+            }
+
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
             if (existing != null && !(existing is Texture2D))
             {
@@ -388,11 +407,12 @@ namespace Fps.Editor
             var created = texture == null;
             if (created)
             {
-                texture = new Texture2D(SoftDotSize, SoftDotSize, TextureFormat.RGBA32, true) { name = SoftDotTextureName };
+                texture = new Texture2D(size, size, TextureFormat.RGBA32, mipChain) { name = textureName };
             }
-            else if (texture.width != SoftDotSize || texture.height != SoftDotSize || texture.format != TextureFormat.RGBA32)
+            else if (texture.width != size || texture.height != size || texture.format != TextureFormat.RGBA32
+                || (texture.mipmapCount > 1) != mipChain)
             {
-                texture.Reinitialize(SoftDotSize, SoftDotSize, TextureFormat.RGBA32, true);
+                texture.Reinitialize(size, size, TextureFormat.RGBA32, mipChain);
             }
 
             texture.wrapMode = TextureWrapMode.Clamp;

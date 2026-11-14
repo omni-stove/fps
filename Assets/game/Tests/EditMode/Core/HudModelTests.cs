@@ -360,6 +360,36 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void SetHealthKeepsTheFractionOfTheMaximum()
+        {
+            var model = new HudModel();
+            Assert.That(model.HealthFraction, Is.Null, "no health before it is set");
+
+            model.SetHealth(30, 120);
+            Assert.That(model.HealthFraction, Is.EqualTo(0.25f));
+
+            model.SetHealth(150, 100);
+            Assert.That(model.HealthFraction, Is.EqualTo(1f), "over the maximum is capped");
+
+            model.ClearHealth();
+            Assert.That(model.HealthFraction, Is.Null);
+        }
+
+        [Test]
+        public void SetHealthNotifiesWhenOnlyTheFractionChanges()
+        {
+            var model = new HudModel();
+            model.SetHealth(80, 100);
+            var changes = Record(model);
+
+            model.SetHealth(80, 200);
+
+            Assert.That(model.HealthText, Is.EqualTo("80"));
+            Assert.That(model.HealthFraction, Is.EqualTo(0.4f));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Health }));
+        }
+
+        [Test]
         public void SetHealthNotifiesWhenOnlyTheWarningChanges()
         {
             var model = new HudModel();

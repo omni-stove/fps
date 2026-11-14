@@ -1,0 +1,10 @@
+{
+  "squad.reply.line": "{0}: {1}",
+  "squad.reply.Hold": "了解、そこを守る",
+  "squad.reply.Attack": "了解、あいつを狙う",
+  "squad.reply.Follow": "了解、付いていく",
+  "squad.reply.targetDown": "片付けた、戻る",
+  "squad.marker.Hold": "守れ",
+  "squad.marker.Attack": "狙え",
+  "squad.marker.Follow": "付いてこい"
+}

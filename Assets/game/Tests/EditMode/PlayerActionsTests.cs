@@ -71,6 +71,7 @@ namespace Fps.Tests.EditMode
                 typeof(BlindFireActionInstaller),
                 typeof(MoveActionInstaller),
                 typeof(ProneActionInstaller),
+                typeof(AbilityActionInstaller),
                 typeof(GrenadeActionInstaller),
             };
 

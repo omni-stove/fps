@@ -13,6 +13,7 @@ namespace Fps.Runtime
     {
         /// <summary>
         /// self の陣営から見た、いちばん近い生きている敵を members から選ぶ。体力 (<see cref="Damageable"/>) の無い相手と self 自身は選ばない。
+        /// 同じ陣営の誰かが印を付けた敵 (<see cref="PingController.IsMarkedFor"/>) がいれば、その中でいちばん近いものを先に選ぶ。
         /// いなければ null。距離は足元 (<see cref="SideMember.GroundPosition"/>) 同士で測り、判定は <see cref="HostileSelector"/> に任せる。
         /// </summary>
         /// <param name="self">狙う側。</param>
@@ -30,15 +31,22 @@ namespace Fps.Runtime
             }
 
             var targets = new List<SideMember>(members.Count);
+            List<SideMember> marked = null;
             foreach (var member in members)
             {
                 if (member != null && member != self && member.Damageable != null)
                 {
                     targets.Add(member);
+                    if (PingController.IsMarkedFor(self.Side, member.Damageable))
+                    {
+                        (marked ?? (marked = new List<SideMember>())).Add(member);
+                    }
                 }
             }
 
-            return SideMember.NearestHostile(self.Side, self.GroundPosition, targets);
+            // 印の付いた敵が全員倒れているか同じ陣営なら、ふだんどおりいちばん近い敵を選ぶ。
+            var preferred = marked != null ? SideMember.NearestHostile(self.Side, self.GroundPosition, marked) : null;
+            return preferred != null ? preferred : SideMember.NearestHostile(self.Side, self.GroundPosition, targets);
         }
 
         /// <summary>

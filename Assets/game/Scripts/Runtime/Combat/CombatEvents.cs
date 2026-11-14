@@ -16,6 +16,8 @@ namespace Fps.Runtime
     /// <item><see cref="HitConfirmed"/>: 撃った本人のクライアントでだけ、生きている相手に当てたとき。オフラインでは <see cref="WeaponController.Fire"/>。</item>
     /// <item><see cref="DamageTaken"/>: 撃たれた本人のクライアントでだけ。オフラインでは <see cref="Damageable.IsLocalPlayer"/> の <see cref="Damageable"/>。</item>
     /// <item><see cref="Killed"/>: 倒れるたび。オフラインでは <see cref="Damageable"/> が倒れたときに、<see cref="Attribute"/> で決めた倒した者と武器で出す。</item>
+    /// <item><see cref="Exploded"/>: 爆発するたび。オフラインでは <see cref="ThrownGrenade.Explode"/>、ネット対戦では <c>Fps.Net.NetCombatFeed</c> が全員に。</item>
+    /// <item><see cref="Landed"/>: この画面で操作しているキャラが着地するたび。オフラインでは <see cref="PlayerController"/>、ネット対戦では持ち主の <c>Fps.Net.NetworkPlayerMotor</c>。</item>
     /// </list>
     /// ネット対戦では、撃った本人の ShotFired は本人のクライアント (<c>Fps.Net.NetPlayer</c>) が出し、それ以外はサーバーから
     /// <c>Fps.Net.NetCombatFeed</c> が届けて各クライアントで出す (Impact の <see cref="ImpactInfo.Collider"/> は見つからなければ null で、
@@ -46,6 +48,10 @@ namespace Fps.Runtime
 
         /// <summary>誰かが倒れたとき。キルフィードの 1 行を渡す。</summary>
         public static event Action<KillFeedEntry> Killed;
+
+        public static event Action<ExplosionInfo> Exploded;
+
+        public static event Action<LandingInfo> Landed;
 
         // 戦闘の結果 (体力・判断) は BossController が先に変え終えてから流す。演出の有無で戦いが変わらないように。
         public static event Action<BossPhaseChangedInfo> BossPhaseChanged;
@@ -145,6 +151,16 @@ namespace Fps.Runtime
             Invoke(Killed, entry);
         }
 
+        public static void RaiseExploded(Vector3 center, string weaponId)
+        {
+            Invoke(Exploded, new ExplosionInfo(center, weaponId));
+        }
+
+        public static void RaiseLanded(GameObject body, float fallSpeed)
+        {
+            Invoke(Landed, new LandingInfo(body, fallSpeed));
+        }
+
         public static void RaiseBossPhaseChanged(BossPhaseChangedInfo info)
         {
             Invoke(BossPhaseChanged, info);
@@ -158,6 +174,8 @@ namespace Fps.Runtime
             HitConfirmed = null;
             DamageTaken = null;
             Killed = null;
+            Exploded = null;
+            Landed = null;
             BossPhaseChanged = null;
             _attribution = null;
         }
@@ -387,6 +405,35 @@ namespace Fps.Runtime
         {
             SourcePosition = sourcePosition;
             Amount = amount;
+        }
+    }
+
+    public readonly struct ExplosionInfo
+    {
+        private readonly string _weaponId;
+
+        public Vector3 Center { get; }
+
+        public string WeaponId => _weaponId ?? string.Empty;
+
+        public ExplosionInfo(Vector3 center, string weaponId)
+        {
+            Center = center;
+            _weaponId = weaponId ?? string.Empty;
+        }
+    }
+
+    public readonly struct LandingInfo
+    {
+        public GameObject Body { get; }
+
+        public float FallSpeed { get; }
+
+        // 呼ぶのは移動の処理の途中なので、演出のための値が壊れていても例外で移動を止めず、着地の強さ 0 として流す。
+        public LandingInfo(GameObject body, float fallSpeed)
+        {
+            Body = body;
+            FallSpeed = fallSpeed >= 0f && !float.IsInfinity(fallSpeed) ? fallSpeed : 0f;
         }
     }
 }

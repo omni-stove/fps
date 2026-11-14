@@ -10,7 +10,7 @@ namespace Fps.Core.Tests
         private static readonly string[] _offOn = { "Off", "On" };
         private static readonly string[] _friendlyFireOptions = { "Off", "On", "Reflect" };
         private static readonly string[] _respawnModeOptions = { "Individual", "Wave", "None" };
-        private static readonly string[] _deathCameraOptions = { "None", "Killer", "Ally", "Free" };
+        private static readonly string[] _deathCameraOptions = { "None", "Killer", "Ally", "Free", "KillCam" };
         private static readonly string[] _hudDensityOptions = { "Full", "Minimal", "Hardcore" };
         private static readonly string[] _downedOptions = { "Off", "Revive" };
 

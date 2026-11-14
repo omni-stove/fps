@@ -93,6 +93,8 @@ namespace Fps.Runtime
         /// <summary>進めているバトルロイヤル。開始前は null。</summary>
         public BattleRoyaleSession BattleRoyale => _battleRoyale;
 
+        public override bool HasSquads => true;
+
         /// <summary>動かしている縮むエリア。無ければ null。</summary>
         public ShrinkingZone RunningZone => _runningZone;
 

@@ -82,16 +82,35 @@ namespace Fps.Tests.EditMode
 
             Assert.That(IsShown, Is.True);
             var teams = _view.Element.Query<VisualElement>(className: ScoreboardView.TeamRowClass).ToList();
-            Assert.That(teams.Select(t => Texts(t)[0]), Is.EqualTo(new[] { HudFormat.TeamName(Team.Alpha), HudFormat.TeamName(Team.Bravo) }));
+            Assert.That(teams.Select(t => Texts(t)[0]), Is.EqualTo(new[] { "ALPHA", "BRAVO" }));
             Assert.That(Texts(teams[0]).Skip(1).Take(2), Is.EqualTo(new[] { "4", "3" }), "team totals");
 
             var rows = PlayerRows();
             Assert.That(rows.Select(r => Texts(r)[0]), Is.EqualTo(new[] { "Player 2", "Player 0", "Player 1" }));
-            Assert.That(Texts(rows[0]), Is.EqualTo(new[] { "Player 2", "3", "1", ScoreboardRows.DisconnectedText }));
-            Assert.That(Texts(rows[1]), Is.EqualTo(new[] { "Player 0", "1", "2", ScoreboardRows.ConnectedText }));
+            Assert.That(Texts(rows[0]), Is.EqualTo(new[] { "Player 2", "3", "1", Localizer.Resolve(ScoreboardRows.DisconnectedText) }));
+            Assert.That(Texts(rows[1]), Is.EqualTo(new[] { "Player 0", "1", "2", Localizer.Resolve(ScoreboardRows.ConnectedText) }));
             Assert.That(rows[0].ClassListContains(ScoreboardView.DisconnectedRowClass), Is.True);
             Assert.That(rows[1].ClassListContains(ScoreboardView.LocalRowClass), Is.True);
             Assert.That(rows[2].ClassListContains(ScoreboardView.LocalRowClass), Is.False);
+        }
+
+        [Test]
+        public void KeyedAndLiteralNamesAreShownInTheCurrentLanguage()
+        {
+            _view.SetEntries(
+                new[]
+                {
+                    new ScoreboardEntry(0, ScoreboardRows.LocalPlayerName, Team.Alpha, 2, 0, ScoreboardConnection.None, true),
+                    new ScoreboardEntry(1, LocalizedText.Literal("[BOT] Bot 1"), Team.Alpha, 1, 0, ScoreboardConnection.None, false),
+                },
+                Team.Alpha);
+
+            _view.SetOpen(true);
+
+            var you = Localizer.Resolve(ScoreboardRows.LocalPlayerName);
+            Assert.That(you, Does.Not.StartWith("hud."), "the key exists in the current language's table");
+            Assert.That(PlayerRows().Select(r => Texts(r)[0]), Is.EqualTo(new[] { you, "[BOT] Bot 1" }));
+            Assert.That(Texts(PlayerRows()[0])[3], Is.Empty, "no connection state offline");
         }
 
         [Test]

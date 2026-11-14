@@ -149,8 +149,8 @@ namespace Fps.Runtime
         /// <summary>次に縮み始めるまでの秒数。待っていなければ (縮んでいる途中・最後の円・始める前) 0。HUD 用。</summary>
         public float SecondsUntilShrink => IsRunning ? _state.SecondsUntilShrink : 0f;
 
-        /// <summary>HUD に出す 1 行 (<see cref="ZoneHudText.Line"/>)。始める前は空文字。</summary>
-        public string HudLine => IsRunning ? ZoneHudText.Line(_state) : string.Empty;
+        /// <summary>HUD に出す 1 行 (<see cref="ZoneHudText.Line"/>)。出す側が今の言語で文にする。始める前は空の文 (<c>default</c>)。</summary>
+        public LocalizedText HudLine => IsRunning ? ZoneHudText.Line(_state) : default;
 
         /// <summary>最後にダメージを与える判定をしたとき、外にいた者。</summary>
         public IReadOnlyCollection<Damageable> Outside => _outside;

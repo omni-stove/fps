@@ -58,7 +58,7 @@ namespace Fps.Core.Tests
 
             var lines = BattleRoyaleHudText.Lines(br, _player, null, null, unarmed: false);
 
-            Assert.That(lines, Does.Contain(HudFormat.Downed(15, 0)));
+            Assert.That(lines, Does.Contain(GameText.Resolve(HudFormat.Downed(15, 0))));
         }
 
         [Test]
@@ -75,10 +75,10 @@ namespace Fps.Core.Tests
 
             Assert.That(lines, Does.Contain("残り分隊 2/3"));
             Assert.That(lines, Does.Contain("順位 3 位"));
-            Assert.That(scores[0].Text, Is.EqualTo("ALPHA 3 位"));
+            Assert.That(GameText.Resolve(scores[0].Text), Is.EqualTo("ALPHA 3 位"));
             Assert.That(scores[0].IsOwn, Is.True);
-            Assert.That(scores[1].Text, Is.EqualTo("BRAVO 残り 1"));
-            Assert.That(scores[2].Text, Is.EqualTo("SIDE 2 残り 1"));
+            Assert.That(GameText.Resolve(scores[1].Text), Is.EqualTo("BRAVO 残り 1"));
+            Assert.That(GameText.Resolve(scores[2].Text), Is.EqualTo("SIDE 2 残り 1"));
             Assert.That(scores.Count, Is.EqualTo(3), "the empty fourth squad is not listed");
         }
 

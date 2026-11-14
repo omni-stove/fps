@@ -40,8 +40,8 @@ namespace Fps.Core
         /// <summary>倒した側の名前を出すか。自滅では倒された側だけを出す。</summary>
         public bool ShowsKiller => !Entry.IsSuicide;
 
-        /// <summary>倒した側と倒された側の間に出す文字列 (<see cref="KillFeedFormat.Weapon"/>)。</summary>
-        public string WeaponText => KillFeedFormat.Weapon(WeaponName, Entry.Headshot, Entry.IsSuicide);
+        /// <summary>倒した側と倒された側の間に出す文 (<see cref="KillFeedFormat.Weapon"/>)。</summary>
+        public LocalizedText WeaponText => KillFeedFormat.Weapon(WeaponName, Entry.Headshot, Entry.IsSuicide);
 
         public bool Equals(KillFeedLine other)
         {

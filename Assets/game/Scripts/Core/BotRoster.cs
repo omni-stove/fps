@@ -119,11 +119,11 @@ namespace Fps.Core
             return playerId - FirstBotPlayerId + 1;
         }
 
-        /// <summary>スコアボードの名前。Bot なら <c>[BOT] Bot 1</c>、人なら <see cref="ScoreboardRows.PlayerName"/>。</summary>
-        public static string ScoreboardName(int playerId)
+        /// <summary>スコアボードの名前。Bot なら <c>[BOT] Bot 1</c> (表を引かずにそのまま運ぶ)、人なら <see cref="ScoreboardRows.PlayerName"/>。</summary>
+        public static LocalizedText ScoreboardName(int playerId)
         {
             return IsBotId(playerId)
-                ? Tag + " Bot " + BotNumber(playerId).ToString(CultureInfo.InvariantCulture)
+                ? LocalizedText.Literal(Tag + " Bot " + BotNumber(playerId).ToString(CultureInfo.InvariantCulture))
                 : ScoreboardRows.PlayerName(playerId);
         }
 

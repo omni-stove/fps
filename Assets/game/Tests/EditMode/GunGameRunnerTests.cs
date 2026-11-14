@@ -162,7 +162,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)new Side(0)));
-            Assert.That(hud.ResultText, Is.EqualTo(ModeHudText.SideName(new Side(0)) + " の勝ち"));
+            Assert.That(hud.ResultText, Is.EqualTo(Localizer.Resolve(ModeHudText.SideName(new Side(0))) + " の勝ち"));
             Assert.That(Controller(player).Definitions, Is.EqualTo(new[] { _handgun }), "the winner keeps the last weapon");
         }
 

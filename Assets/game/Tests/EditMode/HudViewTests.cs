@@ -278,7 +278,7 @@ namespace Fps.Tests.EditMode
             var view = new HudView(CloneLayout(), model);
 
             model.SetResult(null);
-            Assert.That(view.ResultLabel.text, Is.EqualTo(HudFormat.Draw));
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Draw)));
             Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             model.ClearResult();
@@ -359,11 +359,11 @@ namespace Fps.Tests.EditMode
             Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
 
             notice.ShowSaved(1f);
-            Assert.That(view.NoticeLabel.text, Is.EqualTo(HudFormat.CheckpointSaved));
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointSaved)));
             Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             notice.ShowRestartCountdown(2f);
-            Assert.That(view.NoticeLabel.text, Is.EqualTo(HudFormat.CheckpointRestart(2)));
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(2))));
 
             notice.Clear();
             Assert.That(view.NoticeLabel.text, Is.Empty);

@@ -213,7 +213,18 @@ namespace Fps.Core.Tests
         [TestCase("Rifle", false, true, ExpectedResult = "[Rifle]")]
         public string FormatsTheWeapon(string weaponName, bool headshot, bool suicide)
         {
-            return KillFeedFormat.Weapon(weaponName, headshot, suicide);
+            return GameText.Resolve(KillFeedFormat.Weapon(weaponName, headshot, suicide));
+        }
+
+        [Test]
+        public void TheWeaponColumnIsKeyedWithTheMarksNested()
+        {
+            Assert.That(KillFeedFormat.Weapon("Rifle", false, false), Is.EqualTo(new LocalizedText("hud.killFeed.weapon", "Rifle")));
+            Assert.That(
+                KillFeedFormat.Weapon("Rifle", true, false),
+                Is.EqualTo(new LocalizedText("hud.killFeed.weaponHeadshot", "Rifle", KillFeedFormat.HeadshotMark)));
+            Assert.That(KillFeedFormat.Weapon(null, false, true), Is.EqualTo(new LocalizedText("hud.killFeed.weapon", KillFeedFormat.Suicide)));
+            Assert.That(GameText.Resolve(KillFeedFormat.FriendlyMark), Is.EqualTo("味方撃ち"));
         }
 
         [Test]

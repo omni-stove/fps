@@ -229,7 +229,7 @@ namespace Fps.Tests.EditMode
             Begin(new[] { player, enemy }, player, hud);
 
             Assert.That(hud.TimeText, Is.EqualTo("00:00"), "without a time limit the HUD counts up");
-            Assert.That(hud.Scores[0].Text, Is.EqualTo("ALPHA 残り 1"));
+            Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 残り 1"));
             Assert.That(hud.Scores[0].IsOwn, Is.True);
             Assert.That(hud.Lines, Does.Contain("残り分隊 2/2"));
             Assert.That(hud.Lines, Does.Contain("順位 2 位以内"));

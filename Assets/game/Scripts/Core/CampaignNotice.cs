@@ -10,6 +10,7 @@ namespace Fps.Core
     /// (残り秒数は呼ぶ側が毎フレーム渡し直す)。カウントダウン中は「セーブしました」で上書きしない。</item>
     /// </list>
     /// 文字列が変わったときだけ <see cref="TextChanged"/> を呼ぶ (カウントダウンは表示の秒の桁が変わったときだけ)。
+    /// 文字列は出した時点の言語 (<see cref="GameText"/>) で作る。
     /// </summary>
     public sealed class CampaignNotice
     {
@@ -42,7 +43,7 @@ namespace Fps.Core
             }
 
             _savedRemaining = seconds;
-            SetText(HudFormat.CheckpointSaved);
+            SetText(GameText.Resolve(HudFormat.CheckpointSaved));
         }
 
         /// <summary>
@@ -58,7 +59,7 @@ namespace Fps.Core
 
             _countingDown = true;
             _savedRemaining = 0f;
-            SetText(HudFormat.CheckpointRestart(HudFormat.DisplayedSeconds(remainingSeconds)));
+            SetText(GameText.Resolve(HudFormat.CheckpointRestart(HudFormat.DisplayedSeconds(remainingSeconds))));
         }
 
         /// <summary>「セーブしました」の残り時間を deltaSeconds 進め、尽きたら消す。カウントダウンには影響しない。</summary>

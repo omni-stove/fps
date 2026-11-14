@@ -298,11 +298,11 @@ namespace Fps.Runtime
             UpdateObjectiveInput();
         }
 
-        protected override string HudTime(ModeSession session) => SearchAndDestroyText.Clock(_game);
+        protected override LocalizedText HudTime(ModeSession session) => LocalizedText.Literal(SearchAndDestroyText.Clock(_game));
 
         protected override IReadOnlyList<ModeHudScoreLine> HudScores(ModeSession session, Side? ownSide) => SearchAndDestroyText.Scores(_game, ownSide);
 
-        protected override string HudResult(ModeSession session) => SearchAndDestroyText.Result(_game);
+        protected override LocalizedText HudResult(ModeSession session) => LiteralOrEmpty(SearchAndDestroyText.Result(_game));
 
         protected override void AppendHudLines(List<string> lines)
         {

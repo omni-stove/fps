@@ -504,10 +504,10 @@ namespace Fps.Core.Tests
             var lines = SearchAndDestroyText.Scores(game, Side.Bravo);
 
             Assert.That(lines.Count, Is.EqualTo(2));
-            Assert.That(lines[0].Text, Is.EqualTo("BRAVO 0 (防衛)"));
+            Assert.That(GameText.Resolve(lines[0].Text), Is.EqualTo("BRAVO 0 (防衛)"));
             Assert.That(lines[0].IsOwn, Is.True);
             Assert.That(lines[0].IsLeading, Is.False);
-            Assert.That(lines[1].Text, Is.EqualTo("ALPHA 1 (攻撃)"));
+            Assert.That(GameText.Resolve(lines[1].Text), Is.EqualTo("ALPHA 1 (攻撃)"));
             Assert.That(lines[1].IsLeading, Is.True);
         }
 

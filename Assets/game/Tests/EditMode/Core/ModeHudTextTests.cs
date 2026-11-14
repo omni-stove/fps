@@ -26,9 +26,22 @@ namespace Fps.Core.Tests
         [Test]
         public void SideNamesFollowTheTeamNames()
         {
-            Assert.That(ModeHudText.SideName(Side.Alpha), Is.EqualTo("ALPHA"));
-            Assert.That(ModeHudText.SideName(Side.Bravo), Is.EqualTo("BRAVO"));
-            Assert.That(ModeHudText.SideName(new Side(2)), Is.EqualTo("SIDE 2"));
+            Assert.That(ModeHudText.SideName(Side.Alpha), Is.EqualTo(HudFormat.TeamName(Team.Alpha)));
+            Assert.That(ModeHudText.SideName(Side.Bravo), Is.EqualTo(HudFormat.TeamName(Team.Bravo)));
+            Assert.That(ModeHudText.SideName(new Side(2)), Is.EqualTo(new LocalizedText("hud.side", 2)));
+            Assert.That(GameText.Resolve(ModeHudText.SideName(Side.Alpha)), Is.EqualTo("ALPHA"));
+            Assert.That(GameText.Resolve(ModeHudText.SideName(Side.Bravo)), Is.EqualTo("BRAVO"));
+            Assert.That(GameText.Resolve(ModeHudText.SideName(new Side(2))), Is.EqualTo("SIDE 2"));
+        }
+
+        [Test]
+        public void RemainingAndDownedNestTheSideName()
+        {
+            var remaining = ModeHudText.Remaining(Side.Bravo, 3);
+
+            Assert.That(remaining, Is.EqualTo(new LocalizedText("hud.mode.remaining", HudFormat.TeamName(Team.Bravo), 3)));
+            Assert.That(GameText.Resolve(remaining), Is.EqualTo("BRAVO 残り 3"));
+            Assert.That(GameText.Resolve(ModeHudText.WithDowned(remaining, 1)), Is.EqualTo("BRAVO 残り 3 (ダウン 1)"));
         }
 
         [Test]
@@ -38,7 +51,7 @@ namespace Fps.Core.Tests
             Assert.That(ModeHudText.DisplayScore(-1d), Is.Zero);
             Assert.That(ModeHudText.DisplayScore(double.NaN), Is.Zero);
             Assert.That(ModeHudText.DisplayScore(1e12d), Is.EqualTo(int.MaxValue));
-            Assert.That(ModeHudText.ScoreText(new Side(2), 3.7d), Is.EqualTo("SIDE 2 3"));
+            Assert.That(GameText.Resolve(ModeHudText.ScoreText(new Side(2), 3.7d)), Is.EqualTo("SIDE 2 3"));
         }
 
         [Test]
@@ -83,13 +96,14 @@ namespace Fps.Core.Tests
         public void TimeAndResultFollowTheSession()
         {
             var session = ThreeSides(1d);
-            Assert.That(ModeHudText.Time(session), Is.EqualTo("01:30"));
-            Assert.That(ModeHudText.Result(session), Is.EqualTo(HudFormat.NoResult));
+            Assert.That(ModeHudText.Time(session), Is.EqualTo(LocalizedText.Literal("01:30")));
+            Assert.That(ModeHudText.Result(session).IsEmpty, Is.True);
+            Assert.That(GameText.Resolve(ModeHudText.Result(session)), Is.EqualTo(HudFormat.NoResult));
 
             session.Start();
             session.ReportKill(2, 0);
 
-            Assert.That(ModeHudText.Result(session), Is.EqualTo("SIDE 2 の勝ち"));
+            Assert.That(GameText.Resolve(ModeHudText.Result(session)), Is.EqualTo("SIDE 2 の勝ち"));
         }
 
         [Test]
@@ -116,7 +130,7 @@ namespace Fps.Core.Tests
             var texts = new string[lines.Count];
             for (var i = 0; i < texts.Length; i++)
             {
-                texts[i] = lines[i].Text;
+                texts[i] = GameText.Resolve(lines[i].Text);
             }
 
             return texts;

@@ -227,6 +227,7 @@ namespace Fps.Runtime
                 || (_self != null && (_self.IsDead || _self.IsDowned))
                 || _mover.IsDodging
                 || _mover.IsVaulting
+                || _mover.IsMantling
                 || (_mover.IsMovementOverridden && !ReferenceEquals(_mover.ActiveMovementOverride, this))
                 || IsThrowingGrenade())
             {

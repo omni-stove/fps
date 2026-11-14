@@ -84,7 +84,7 @@ namespace Fps.Core.Tests
         {
             var bot = BotRoster.FirstBotPlayerId;
 
-            Assert.That(BotRoster.ScoreboardName(bot), Is.EqualTo("[BOT] Bot 1"));
+            Assert.That(BotRoster.ScoreboardName(bot), Is.EqualTo(LocalizedText.Literal("[BOT] Bot 1")));
             Assert.That(BotRoster.KillFeedName(bot + 1), Is.EqualTo("[BOT] B2"));
             Assert.That(BotRoster.ScoreboardName(3), Is.EqualTo(ScoreboardRows.PlayerName(3)));
             Assert.That(BotRoster.KillFeedName(3), Is.EqualTo(KillFeedFormat.Player(3)));

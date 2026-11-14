@@ -64,7 +64,7 @@ namespace Fps.Net.Tests
             _created.Add(definition);
             definition.name = assetName;
             definition.Id = id;
-            definition.DisplayName = assetName;
+            definition.NameKey = assetName;
             definition.Category = category;
             return definition;
         }

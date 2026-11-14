@@ -154,10 +154,10 @@ namespace Fps.Net.Tests
             Assert.That(grenades.Text, Is.Empty, "nothing has arrived yet");
 
             Arrive(_player.GrenadesVariable, NetGrenadeState.None, new NetGrenadeState(true, 2));
-            Assert.That(grenades.Text, Is.EqualTo(HudFormat.Grenades(2)));
+            Assert.That(grenades.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(2))));
 
             Arrive(_player.GrenadesVariable, new NetGrenadeState(true, 2), new NetGrenadeState(true, 0));
-            Assert.That(grenades.Text, Is.EqualTo(HudFormat.Grenades(0)), "an empty pouch still shows 0 while grenades are on");
+            Assert.That(grenades.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(0))), "an empty pouch still shows 0 while grenades are on");
 
             Arrive(_player.GrenadesVariable, new NetGrenadeState(true, 0), new NetGrenadeState(false, 0));
             Assert.That(grenades.Text, Is.Empty);
@@ -200,8 +200,8 @@ namespace Fps.Net.Tests
 
             Assert.That(_netHud.Match, Is.SameAs(_match));
             Assert.That(IsShown(_view.ScorePanel), Is.True);
-            Assert.That(_view.FirstScoreLabel.text, Is.EqualTo(HudFormat.TeamScore(Team.Alpha, 0)));
-            Assert.That(_view.SecondScoreLabel.text, Is.EqualTo(HudFormat.TeamScore(Team.Bravo, 0)));
+            Assert.That(_view.FirstScoreLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.TeamScore(Team.Alpha, 0))));
+            Assert.That(_view.SecondScoreLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.TeamScore(Team.Bravo, 0))));
             Assert.That(_view.TimeLabel.text, Is.EqualTo(HudFormat.Time(0f)));
         }
 
@@ -392,15 +392,15 @@ namespace Fps.Net.Tests
 
             Arrive(_player.HealthVariable, _maxHealth, 0);
             Assert.That(_netHud.IsAwaitingRespawn, Is.True);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(3)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Respawn(3))));
             Assert.That(IsShown(_view.NoticeLabel), Is.True);
 
             _netHud.Tick(1.2f);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(2)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Respawn(2))));
 
             // 数え終わってもサーバーが出現させるまでは 0 秒のまま待つ
             _netHud.Tick(5f);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(0)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Respawn(0))));
 
             Arrive(_player.HealthVariable, 0, _maxHealth);
             Assert.That(_netHud.IsAwaitingRespawn, Is.False);
@@ -427,13 +427,13 @@ namespace Fps.Net.Tests
 
             Arrive(_player.HealthVariable, _maxHealth, 0);
             Assert.That(_netHud.IsAwaitingRespawn, Is.True);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(7)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Respawn(7))));
 
             // 自分の待ち時間ではなく、サーバーが配る次のウェーブまでの秒数で進む
             _netHud.Tick(1.2f);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(7)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Respawn(7))));
             Arrive(_match.NextWaveSecondsVariable, 7, 6);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(6)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Respawn(6))));
 
             Arrive(_player.HealthVariable, 0, _maxHealth);
             Assert.That(_netHud.IsAwaitingRespawn, Is.False);
@@ -450,16 +450,16 @@ namespace Fps.Net.Tests
 
             Arrive(_player.HealthVariable, _maxHealth, 0);
             Assert.That(_netHud.IsAwaitingRespawn, Is.True);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NoRespawnUntilNextMatch));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.NoRespawnUntilNextMatch)));
 
             _netHud.Tick(10f);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NoRespawnUntilNextMatch));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.NoRespawnUntilNextMatch)));
 
             // 終わったら次の試合までの秒数に替わる
             Arrive(_match.StatusVariable, Status(GameModeState.Playing), Status(GameModeState.Ended, Team.Alpha));
             Arrive(_match.NextMatchSecondsVariable, 0, 10);
             Assert.That(_netHud.IsAwaitingRespawn, Is.False);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NextMatch(10)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.NextMatch(10))));
         }
 
         [Test]
@@ -470,11 +470,11 @@ namespace Fps.Net.Tests
             StartPlaying();
             Arrive(_player.HealthVariable, 0, _maxHealth);
             Arrive(_player.HealthVariable, _maxHealth, 0);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(3)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Respawn(3))));
 
             ArriveRespawnMode(RespawnMode.None);
 
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NoRespawnUntilNextMatch));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.NoRespawnUntilNextMatch)));
         }
 
         [Test]
@@ -500,12 +500,12 @@ namespace Fps.Net.Tests
             Arrive(_match.NextMatchSecondsVariable, 0, 10);
 
             Assert.That(_netHud.IsAwaitingRespawn, Is.False, "nobody respawns until the next match starts");
-            Assert.That(_view.ResultLabel.text, Is.EqualTo(HudFormat.Result(Team.Bravo)));
+            Assert.That(_view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Result(Team.Bravo))));
             Assert.That(IsShown(_view.ResultLabel), Is.True);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NextMatch(10)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.NextMatch(10))));
 
             Arrive(_match.NextMatchSecondsVariable, 10, 9);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NextMatch(9)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.NextMatch(9))));
 
             // クライアントには Ended → Playing で届くことがある
             Arrive(_match.StatusVariable, Status(GameModeState.Ended, Team.Bravo), Status(GameModeState.Playing));
@@ -521,7 +521,7 @@ namespace Fps.Net.Tests
 
             Arrive(_match.StatusVariable, Status(GameModeState.Playing), Status(GameModeState.Ended));
 
-            Assert.That(_view.ResultLabel.text, Is.EqualTo(HudFormat.Draw));
+            Assert.That(_view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Draw)));
         }
 
         [Test]
@@ -661,7 +661,7 @@ namespace Fps.Net.Tests
             Arrive(_player.DownedStateVariable, new NetDownedState(true, 1, 0), NetDownedState.None);
 
             Assert.That(_netHud.IsAwaitingRespawn, Is.True);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.Respawn(3)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Respawn(3))));
         }
 
         [Test]
@@ -711,11 +711,11 @@ namespace Fps.Net.Tests
             Assert.That(IsShown(_view.NoticeLabel), Is.True);
 
             _netHud.Tick(1.5f);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(14)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.IdleWarning(14))));
 
             // 切断が届くまでは 0 秒のまま出しておく
             _netHud.Tick(30f);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(0)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.IdleWarning(0))));
 
             _netHud.ClearIdleWarning();
             Assert.That(_netHud.IsShowingIdleWarning, Is.False);
@@ -731,7 +731,7 @@ namespace Fps.Net.Tests
             _netHud.ShowSpawnProtection(2);
 
             _netHud.ShowIdleWarning(10f);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(10)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.IdleWarning(10))));
 
             _netHud.ClearIdleWarning();
             Assert.That(_view.NoticeLabel.text, Is.EqualTo("保護中 あと 2 秒"));
@@ -739,7 +739,7 @@ namespace Fps.Net.Tests
             _netHud.ShowIdleWarning(10f);
             Arrive(_match.StatusVariable, Status(GameModeState.Playing), Status(GameModeState.Ended, Team.Alpha));
             Arrive(_match.NextMatchSecondsVariable, 0, 10);
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.NextMatch(10)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.NextMatch(10))));
         }
 
         [Test]
@@ -763,7 +763,7 @@ namespace Fps.Net.Tests
 
             _netHud.ShowIdleWarning(seconds);
 
-            Assert.That(_view.NoticeLabel.text, Is.EqualTo(HudFormat.IdleWarning(0)));
+            Assert.That(_view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.IdleWarning(0))));
         }
 
         [Test]
@@ -823,7 +823,7 @@ namespace Fps.Net.Tests
 
             Assert.That(NetHud.TryToScoreboardEntry(row, 0, out var entry), Is.True);
             Assert.That(entry.PlayerId, Is.EqualTo(BotRoster.FirstBotPlayerId + 1));
-            Assert.That(entry.Name, Is.EqualTo("[BOT] Bot 2"));
+            Assert.That(entry.Name, Is.EqualTo(LocalizedText.Literal("[BOT] Bot 2")));
             Assert.That(entry.Kills, Is.EqualTo(4));
             Assert.That(entry.IsLocal, Is.False, "the host (client 0) owns bots but is not them");
         }

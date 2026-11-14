@@ -19,8 +19,16 @@ namespace Fps.Core
         /// <summary>武器の識別子。小文字・ハイフン区切りの UUID (<c>Guid.ToString("D")</c> の形)。</summary>
         public string Id { get; }
 
-        /// <summary>表示名。生成時に空なら <see cref="Id"/>。</summary>
-        public string DisplayName { get; }
+        /// <summary>画面に出す名前を引く表のキー (例: <c>weapon.rifle</c>)。前後の空白を除いた値で、生成時に空なら空文字。</summary>
+        public string NameKey { get; }
+
+        /// <summary>
+        /// 画面に出す名前。<see cref="NameKey"/> があればそのキーの文、無ければ <see cref="Id"/> をそのまま出す <see cref="LocalizedText.Literal"/>。
+        /// </summary>
+        public LocalizedText Name => NameKey.Length > 0 ? new LocalizedText(NameKey) : LocalizedText.Literal(Id);
+
+        /// <summary>ログに書く名前。<see cref="NameKey"/> があればキー、無ければ <see cref="Id"/>。表は引かない。</summary>
+        public string LogName => NameKey.Length > 0 ? NameKey : Id;
 
         /// <summary>武器の種別。ロードアウトの制約と表示にだけ使う。</summary>
         public WeaponCategory Category { get; }
@@ -89,7 +97,7 @@ namespace Fps.Core
         public float MoveSpreadDegrees { get; }
 
         /// <param name="id">識別子。前後の空白は除く。除いた後が小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。</param>
-        /// <param name="displayName">表示名。null・空白のみなら <paramref name="id"/> を使う。</param>
+        /// <param name="nameKey">画面に出す名前を引く表のキー。null・空白のみなら名前は <paramref name="id"/> になる。</param>
         /// <param name="category">武器の種別。定義済みの値のみ。</param>
         /// <param name="fireMode">射撃モード。</param>
         /// <param name="magazineSize">弾倉の容量。1 以上。</param>
@@ -113,7 +121,7 @@ namespace Fps.Core
         /// <param name="moveSpreadDegrees">移動中に足す散らばりの最大角度 (度)。0 以上 90 以下。</param>
         public WeaponSpec(
             string id,
-            string displayName,
+            string nameKey,
             WeaponCategory category,
             FireMode fireMode,
             int magazineSize,
@@ -221,7 +229,7 @@ namespace Fps.Core
             ValidateAngle(moveSpreadDegrees, nameof(moveSpreadDegrees));
 
             Id = normalizedId;
-            DisplayName = string.IsNullOrWhiteSpace(displayName) ? normalizedId : displayName.Trim();
+            NameKey = string.IsNullOrWhiteSpace(nameKey) ? string.Empty : nameKey.Trim();
             Category = category;
             FireMode = fireMode;
             MagazineSize = magazineSize;

@@ -209,7 +209,7 @@ namespace Fps.Tests.EditMode
             var hud = BoundHudView();
             Begin(hud);
             Assert.That(hud.TimeText, Is.EqualTo("01:00"));
-            Assert.That(hud.Scores[0].Text, Is.EqualTo("ALPHA 0 (攻撃)"));
+            Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 0 (攻撃)"));
 
             _alphaOne.transform.position = SiteA;
             _runner.Tick(PlantSeconds);

@@ -98,7 +98,7 @@ namespace Fps.Tests.EditMode
 
             KillBy(player, leader);
             Assert.That(_runner.MarkerOf(leaderId).IsShown, Is.False, "the marker goes away with the leader");
-            Assert.That(hud.Lines, Does.Contain(GuardianText.Leader(Side.Bravo, true)));
+            Assert.That(hud.Lines, Does.Contain("BRAVO リーダー 撃破 (復活不可)"));
 
             KillBy(player, other);
             _runner.Tick(RespawnSeconds * 2f);
@@ -132,13 +132,13 @@ namespace Fps.Tests.EditMode
             Assert.That(player.IsAlive, Is.False);
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Playing), "some allies are still standing");
             Assert.That(_runner.Session.IsEliminated(ModeRunnerBase.LocalPlayerId), Is.True);
-            Assert.That(hud.Lines, Does.Contain(GuardianText.NoRespawnLeaderDown));
-            Assert.That(hud.Lines, Does.Not.Contain(HudFormat.Respawn(0)).And.Not.Contain(HudFormat.Respawn(1)));
+            Assert.That(hud.Lines, Does.Contain("リーダーが倒れたため復活なし"));
+            Assert.That(hud.Lines, Does.Not.Contain(Localizer.Resolve(HudFormat.Respawn(0))).And.Not.Contain(Localizer.Resolve(HudFormat.Respawn(1))));
 
             var leaderLines = GuardianText.Leaders(_runner.Leaders, Side.Alpha);
             Assert.That(leaderLines[0], Is.EqualTo(GuardianText.Leader(Side.Alpha, true)), "the own leader comes first");
             Assert.That(leaderLines[1], Is.EqualTo(GuardianText.Leader(Side.Bravo, false)));
-            Assert.That(hud.Lines, Does.Contain(leaderLines[0]).And.Contain(leaderLines[1]));
+            Assert.That(hud.Lines, Does.Contain("ALPHA リーダー 撃破 (復活不可)").And.Contain("BRAVO リーダー 生存"));
         }
 
         [Test]
@@ -151,7 +151,7 @@ namespace Fps.Tests.EditMode
             _runner.BeginGuardian(new[] { player, enemy }, new SideSpawnPoint[0], player, hud);
 
             Assert.That(_runner.Leaders.GetLeader(Side.Alpha), Is.EqualTo((int?)ModeRunnerBase.LocalPlayerId), "the player is the only Alpha");
-            Assert.That(hud.Lines[0], Is.EqualTo(GuardianText.YouAreLeader));
+            Assert.That(hud.Lines[0], Is.EqualTo("あなたがリーダー"));
             Assert.That(_runner.MarkerOf(ModeRunnerBase.LocalPlayerId), Is.Null);
         }
 

@@ -5,6 +5,8 @@ namespace Fps.Core.Tests
 {
     public sealed class KillFeedTests
     {
+        private static readonly LocalizedText _rifle = new LocalizedText("weapon.rifle");
+
         [Test]
         public void StartsEmptyWithTheDefaultLimits()
         {
@@ -169,17 +171,17 @@ namespace Fps.Core.Tests
             var me = new KillFeedName("P1", Team.Alpha, true);
             var other = new KillFeedName("P2", Team.Bravo, false);
 
-            Assert.That(new KillFeedLine(entry, me, other, "Rifle").Highlighted, Is.True);
-            Assert.That(new KillFeedLine(entry, other, me, "Rifle").Highlighted, Is.True);
-            Assert.That(new KillFeedLine(entry, other, other, "Rifle").Highlighted, Is.False);
+            Assert.That(new KillFeedLine(entry, me, other, _rifle).Highlighted, Is.True);
+            Assert.That(new KillFeedLine(entry, other, me, _rifle).Highlighted, Is.True);
+            Assert.That(new KillFeedLine(entry, other, other, _rifle).Highlighted, Is.False);
         }
 
         [Test]
         public void ASuicideLineHidesTheKiller()
         {
             var name = new KillFeedName("P1", Team.Alpha, false);
-            var suicide = new KillFeedLine(new KillFeedEntry(1, 1, null, false, false), name, name, null);
-            var kill = new KillFeedLine(new KillFeedEntry(1, 2, null, false, false), name, name, null);
+            var suicide = new KillFeedLine(new KillFeedEntry(1, 1, null, false, false), name, name, default);
+            var kill = new KillFeedLine(new KillFeedEntry(1, 2, null, false, false), name, name, default);
 
             Assert.That(suicide.ShowsKiller, Is.False);
             Assert.That(kill.ShowsKiller, Is.True);
@@ -188,7 +190,8 @@ namespace Fps.Core.Tests
         [Test]
         public void DefaultLinesAndNamesReadAsEmptyText()
         {
-            Assert.That(default(KillFeedLine).WeaponName, Is.Empty);
+            Assert.That(default(KillFeedLine).WeaponName.IsEmpty, Is.True);
+            Assert.That(GameText.Resolve(default(KillFeedLine).WeaponName), Is.Empty);
             Assert.That(default(KillFeedName).Text, Is.Empty);
             Assert.That(default(KillFeedName).Team, Is.Null);
         }
@@ -206,14 +209,49 @@ namespace Fps.Core.Tests
             Assert.That(a, Is.Not.EqualTo(new KillFeedName("P1", Team.Bravo, false)));
         }
 
-        [TestCase("Rifle", false, false, ExpectedResult = "[Rifle]")]
-        [TestCase("Rifle", true, false, ExpectedResult = "[Rifle] 頭")]
-        [TestCase("", false, true, ExpectedResult = "[自滅]")]
+        [TestCase("weapon.rifle", false, false, ExpectedResult = "[Rifle]")]
+        [TestCase("weapon.rifle", true, false, ExpectedResult = "[Rifle] 頭")]
+        [TestCase(null, false, true, ExpectedResult = "[自滅]")]
         [TestCase(null, false, false, ExpectedResult = "[-]")]
-        [TestCase("Rifle", false, true, ExpectedResult = "[Rifle]")]
-        public string FormatsTheWeapon(string weaponName, bool headshot, bool suicide)
+        [TestCase("weapon.rifle", false, true, ExpectedResult = "[Rifle]")]
+        public string FormatsTheWeapon(string weaponNameKey, bool headshot, bool suicide)
         {
-            return KillFeedFormat.Weapon(weaponName, headshot, suicide);
+            var name = weaponNameKey == null ? default : new LocalizedText(weaponNameKey);
+            return GameText.Resolve(KillFeedFormat.Weapon(name, headshot, suicide));
+        }
+
+        [Test]
+        public void TheWeaponColumnIsKeyedWithTheNameAndTheMarksNested()
+        {
+            Assert.That(KillFeedFormat.Weapon(_rifle, false, false), Is.EqualTo(new LocalizedText("hud.killFeed.weapon", _rifle)));
+            Assert.That(
+                KillFeedFormat.Weapon(_rifle, true, false),
+                Is.EqualTo(new LocalizedText("hud.killFeed.weaponHeadshot", _rifle, KillFeedFormat.HeadshotMark)));
+            Assert.That(KillFeedFormat.Weapon(default, false, true), Is.EqualTo(new LocalizedText("hud.killFeed.weapon", KillFeedFormat.Suicide)));
+            Assert.That(GameText.Resolve(KillFeedFormat.FriendlyMark), Is.EqualTo("味方撃ち"));
+        }
+
+        [Test]
+        public void AWeaponWithoutANameKeyShowsItsIdAsIs()
+        {
+            var id = "00000000-0000-4000-8000-000000000001";
+            var spec = new WeaponSpec(id, null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, DamageFalloff.None);
+
+            Assert.That(GameText.Resolve(KillFeedFormat.Weapon(spec.Name, false, false)), Is.EqualTo("[" + id + "]"));
+        }
+
+        [Test]
+        public void LinesWithTheSameWeaponNameAreEqual()
+        {
+            var entry = new KillFeedEntry(1, 2, "rifle", false, false);
+            var killer = new KillFeedName("P1", Team.Alpha, false);
+            var victim = new KillFeedName("P2", Team.Bravo, false);
+            var line = new KillFeedLine(entry, killer, victim, _rifle);
+
+            Assert.That(line, Is.EqualTo(new KillFeedLine(entry, killer, victim, new LocalizedText("weapon.rifle"))));
+            Assert.That(line.GetHashCode(), Is.EqualTo(new KillFeedLine(entry, killer, victim, new LocalizedText("weapon.rifle")).GetHashCode()));
+            Assert.That(line, Is.Not.EqualTo(new KillFeedLine(entry, killer, victim, new LocalizedText("weapon.handgun"))));
+            Assert.That(line, Is.Not.EqualTo(new KillFeedLine(entry, killer, victim, LocalizedText.Literal("weapon.rifle"))));
         }
 
         [Test]
@@ -221,8 +259,8 @@ namespace Fps.Core.Tests
         {
             var killer = new KillFeedName("P1", Team.Alpha, false);
             var victim = new KillFeedName("P2", Team.Alpha, false);
-            var friendly = new KillFeedLine(new KillFeedEntry(1, 2, "id", true, true), killer, victim, "Rifle");
-            var suicide = new KillFeedLine(new KillFeedEntry(2, 2, string.Empty, false, false), victim, victim, string.Empty);
+            var friendly = new KillFeedLine(new KillFeedEntry(1, 2, "id", true, true), killer, victim, _rifle);
+            var suicide = new KillFeedLine(new KillFeedEntry(2, 2, string.Empty, false, false), victim, victim, default);
 
             Assert.That(KillFeedFormat.Line(friendly), Is.EqualTo("味方撃ち P1 [Rifle] 頭 P2"));
             Assert.That(KillFeedFormat.Line(suicide), Is.EqualTo("[自滅] P2"));
@@ -243,7 +281,7 @@ namespace Fps.Core.Tests
                 new KillFeedEntry(killerId, victimId, "w", false, false),
                 new KillFeedName(KillFeedFormat.Player(killerId), Team.Alpha, false),
                 new KillFeedName(KillFeedFormat.Player(victimId), Team.Bravo, false),
-                "Rifle");
+                _rifle);
         }
     }
 }

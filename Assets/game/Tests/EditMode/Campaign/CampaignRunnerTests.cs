@@ -170,24 +170,24 @@ namespace Fps.Tests.EditMode
 
             ExpectCampaign(new Regex($@"^\[Campaign\] saved mission={MissionName} checkpoint={CheckpointId} "));
             Assert.That(scene.Checkpoint.HandleEnter(scene.PlayerCollider), Is.True);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointSaved));
+            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointSaved)));
 
             scene.Campaign.Tick(CampaignRunner.SavedNoticeSeconds - 0.1f);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointSaved));
+            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointSaved)));
             scene.Campaign.Tick(0.1f);
             Assert.That(notice.Text, Is.EqualTo(HudFormat.NoNotice), "the saved notice is temporary");
 
             LogAssert.Expect(LogType.Log, "[Combat] target died id=Player");
             ExpectCampaign($"player died; reloading in 3s from checkpoint={CheckpointId}");
             scene.Player.Kill();
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointRestart(3)));
+            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(3))));
 
             scene.Campaign.Tick(0.5f);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointRestart(3)), "2.5s left still reads 3");
+            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(3))), "2.5s left still reads 3");
             scene.Campaign.Tick(1f);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointRestart(2)));
+            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(2))));
             scene.Campaign.Tick(1f);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.CheckpointRestart(1)));
+            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(1))));
 
             ExpectCampaign("reloading scene");
             scene.Campaign.Tick(1f);

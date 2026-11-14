@@ -33,7 +33,7 @@ namespace Fps.Core.Tests
         [TestCase(0, "次の試合まで 0 秒")]
         public void NextMatchShowsTheSecondsLeft(int seconds, string expected)
         {
-            Assert.That(HudFormat.NextMatch(seconds), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.NextMatch(seconds)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -47,7 +47,7 @@ namespace Fps.Core.Tests
         [TestCase(0, "ダウン中 あと 0 秒")]
         public void DownedShowsTheBleedoutSecondsLeft(int seconds, string expected)
         {
-            Assert.That(HudFormat.Downed(seconds), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.Downed(seconds)), Is.EqualTo(expected));
         }
 
         [TestCase(12, 40, "ダウン中 あと 12 秒 (蘇生 40%)")]
@@ -55,7 +55,7 @@ namespace Fps.Core.Tests
         [TestCase(12, 0, "ダウン中 あと 12 秒")]
         public void DownedAddsTheReviveProgressOnlyWhileSomeoneRevives(int seconds, int percent, string expected)
         {
-            Assert.That(HudFormat.Downed(seconds, percent), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.Downed(seconds, percent)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -72,7 +72,7 @@ namespace Fps.Core.Tests
         [TestCase(100, "蘇生中 100%")]
         public void RevivingShowsThePercent(int percent, string expected)
         {
-            Assert.That(HudFormat.Reviving(percent), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.Reviving(percent)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -86,7 +86,7 @@ namespace Fps.Core.Tests
         [TestCase(2, "保護中 あと 2 秒")]
         public void SpawnProtectedShowsTheSeconds(int seconds, string expected)
         {
-            Assert.That(HudFormat.SpawnProtected(seconds), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.SpawnProtected(seconds)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -99,7 +99,7 @@ namespace Fps.Core.Tests
         [TestCase(1, "操作がありません あと 1 秒で切断されます")]
         public void IdleWarningShowsTheSecondsUntilTheKick(int seconds, string expected)
         {
-            Assert.That(HudFormat.IdleWarning(seconds), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.IdleWarning(seconds)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -127,7 +127,7 @@ namespace Fps.Core.Tests
         [TestCase(RespawnMode.None, -1, "次の試合まで復活なし")]
         public void RespawnNoticeFollowsTheRespawnMode(RespawnMode mode, int seconds, string expected)
         {
-            Assert.That(HudFormat.RespawnNotice(mode, seconds), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.RespawnNotice(mode, seconds)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -141,7 +141,7 @@ namespace Fps.Core.Tests
         [TestCase(0, "チェックポイントから再開まで 0 秒")]
         public void CheckpointRestartShowsTheSecondsLeft(int seconds, string expected)
         {
-            Assert.That(HudFormat.CheckpointRestart(seconds), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.CheckpointRestart(seconds)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -226,7 +226,7 @@ namespace Fps.Core.Tests
         [TestCase(Team.Alpha, 12, "ALPHA 12")]
         public void TeamScoreIsTheTeamNameAndTheScore(Team team, int score, string expected)
         {
-            Assert.That(HudFormat.TeamScore(team, score), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.TeamScore(team, score)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -247,17 +247,29 @@ namespace Fps.Core.Tests
         [Test]
         public void ResultNamesTheWinnerOrADraw()
         {
-            Assert.That(HudFormat.Result(Team.Alpha), Is.EqualTo("ALPHA の勝ち"));
-            Assert.That(HudFormat.Result(Team.Bravo), Is.EqualTo("BRAVO の勝ち"));
+            Assert.That(GameText.Resolve(HudFormat.Result(Team.Alpha)), Is.EqualTo("ALPHA の勝ち"));
+            Assert.That(GameText.Resolve(HudFormat.Result(Team.Bravo)), Is.EqualTo("BRAVO の勝ち"));
             Assert.That(HudFormat.Result(null), Is.EqualTo(HudFormat.Draw));
-            Assert.That(HudFormat.Draw, Is.EqualTo("引き分け"));
+            Assert.That(GameText.Resolve(HudFormat.Draw), Is.EqualTo("引き分け"));
+        }
+
+        [Test]
+        public void WordsAreKeysWithTheirArguments()
+        {
+            Assert.That(HudFormat.TeamName(Team.Alpha), Is.EqualTo(new LocalizedText("hud.team.alpha")));
+            Assert.That(HudFormat.TeamScore(Team.Bravo, 3), Is.EqualTo(new LocalizedText("hud.score", new LocalizedText("hud.team.bravo"), 3)));
+            Assert.That(HudFormat.Result(Team.Alpha), Is.EqualTo(new LocalizedText("hud.wins", new LocalizedText("hud.team.alpha"))));
+            Assert.That(HudFormat.Draw, Is.EqualTo(new LocalizedText("hud.draw")));
+            Assert.That(HudFormat.Respawn(3), Is.EqualTo(new LocalizedText("hud.respawn", 3)));
+            Assert.That(HudFormat.Downed(12, 40), Is.EqualTo(new LocalizedText("hud.downedWithRevive", new LocalizedText("hud.downed", 12), 40)));
+            Assert.That(HudFormat.Reloading, Is.EqualTo(new LocalizedText("hud.reloading")));
         }
 
         [TestCase(3, "リスポーンまで 3 秒")]
         [TestCase(0, "リスポーンまで 0 秒")]
         public void RespawnShowsTheSecondsLeft(int seconds, string expected)
         {
-            Assert.That(HudFormat.Respawn(seconds), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.Respawn(seconds)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -304,7 +316,7 @@ namespace Fps.Core.Tests
         [TestCase(12, "グレネード 12")]
         public void GrenadesIsThePrefixAndTheCount(int remaining, string expected)
         {
-            Assert.That(HudFormat.Grenades(remaining), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(HudFormat.Grenades(remaining)), Is.EqualTo(expected));
         }
 
         [Test]

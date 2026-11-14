@@ -50,14 +50,14 @@ namespace Fps.Core
         /// <example><c>TeamScore(Team.Alpha, 12.9f)</c> は <c>ALPHA 12</c></example>
         public static string TeamScore(Team team, float score)
         {
-            return HudFormat.TeamScore(team, DisplayedScore(score));
+            return GameText.Resolve(HudFormat.TeamScore(team, DisplayedScore(score)));
         }
 
         /// <summary>拠点の呼び名と持ち主。中立なら <see cref="Neutral"/>。</summary>
         /// <example><c>PointOwner(0, Team.Bravo)</c> は <c>A BRAVO</c>、<c>PointOwner(1, null)</c> は <c>B --</c></example>
         public static string PointOwner(int pointIndex, Team? owner)
         {
-            return PointName(pointIndex) + " " + (owner.HasValue ? HudFormat.TeamName(owner.Value) : Neutral);
+            return PointName(pointIndex) + " " + (owner.HasValue ? GameText.Resolve(HudFormat.TeamName(owner.Value)) : Neutral);
         }
     }
 }

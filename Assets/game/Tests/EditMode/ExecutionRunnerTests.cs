@@ -162,7 +162,7 @@ namespace Fps.Tests.EditMode
             var hud = BoundHudView();
             Begin(new[] { player, enemy }, player, hud);
 
-            Assert.That(hud.Scores[0].Text, Is.EqualTo("ALPHA 0"));
+            Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 0"));
             Assert.That(hud.Scores[0].IsOwn, Is.True);
             Assert.That(hud.Lines, Does.Contain("ラウンド 1 (2 本先取)"));
             Assert.That(hud.Lines, Does.Contain("開始まで 1 秒"));
@@ -196,7 +196,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Execution.Round.Phase, Is.EqualTo(RoundPhase.Ended));
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
-            Assert.That(hud.Scores[0].Text, Is.EqualTo("ALPHA 2"));
+            Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 2"));
         }
 
         [Test]

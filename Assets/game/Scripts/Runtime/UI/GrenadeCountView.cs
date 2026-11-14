@@ -114,7 +114,7 @@ namespace Fps.Runtime
                 remaining = _count;
             }
 
-            Text = shown ? HudFormat.Grenades(remaining) : string.Empty;
+            Text = shown ? Localizer.Resolve(HudFormat.Grenades(remaining)) : string.Empty;
 
             if (Element is Label label)
             {

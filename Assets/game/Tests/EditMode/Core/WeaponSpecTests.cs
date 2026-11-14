@@ -12,7 +12,7 @@ namespace Fps.Core.Tests
 
         private static WeaponSpec Create(
             string id = _rifleId,
-            string displayName = "Rifle",
+            string nameKey = "weapon.rifle",
             WeaponCategory category = WeaponCategory.AssaultRifle,
             FireMode fireMode = FireMode.Auto,
             int magazineSize = 30,
@@ -27,7 +27,7 @@ namespace Fps.Core.Tests
         {
             return new WeaponSpec(
                 id,
-                displayName,
+                nameKey,
                 category,
                 fireMode,
                 magazineSize,
@@ -46,7 +46,9 @@ namespace Fps.Core.Tests
             var spec = Create(category: WeaponCategory.MarksmanRifle, fireMode: FireMode.Semi);
 
             Assert.That(spec.Id, Is.EqualTo(_rifleId));
-            Assert.That(spec.DisplayName, Is.EqualTo("Rifle"));
+            Assert.That(spec.NameKey, Is.EqualTo("weapon.rifle"));
+            Assert.That(spec.Name, Is.EqualTo(new LocalizedText("weapon.rifle")));
+            Assert.That(spec.LogName, Is.EqualTo("weapon.rifle"));
             Assert.That(spec.Category, Is.EqualTo(WeaponCategory.MarksmanRifle));
             Assert.That(spec.FireMode, Is.EqualTo(FireMode.Semi));
             Assert.That(spec.MagazineSize, Is.EqualTo(30));
@@ -139,9 +141,13 @@ namespace Fps.Core.Tests
         [TestCase(null)]
         [TestCase("")]
         [TestCase("  ")]
-        public void UsesTheIdWhenTheDisplayNameIsEmpty(string displayName)
+        public void ShowsTheIdAsIsWhenTheNameKeyIsEmpty(string nameKey)
         {
-            Assert.That(Create(id: " " + _rifleId + " ", displayName: displayName).DisplayName, Is.EqualTo(_rifleId));
+            var spec = Create(id: " " + _rifleId + " ", nameKey: nameKey);
+
+            Assert.That(spec.NameKey, Is.Empty);
+            Assert.That(spec.Name, Is.EqualTo(LocalizedText.Literal(_rifleId)), "the id is shown without looking up the table");
+            Assert.That(spec.LogName, Is.EqualTo(_rifleId));
         }
 
         [TestCase(WeaponCategory.AssaultRifle)]
@@ -166,9 +172,9 @@ namespace Fps.Core.Tests
             Assert.That(e.ParamName, Is.EqualTo("category"));
         }
         [Test]
-        public void TrimsTheDisplayName()
+        public void TrimsTheNameKey()
         {
-            Assert.That(Create(displayName: "  Assault Rifle ").DisplayName, Is.EqualTo("Assault Rifle"));
+            Assert.That(Create(nameKey: "  weapon.assaultRifle ").NameKey, Is.EqualTo("weapon.assaultRifle"));
         }
 
         [Test]

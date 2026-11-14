@@ -1,6 +1,6 @@
 {
   "id": "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45",
-  "displayName": "Handgun",
+  "nameKey": "weapon.handgun",
   "category": "Handgun",
   "fireMode": "Semi",
   "magazineSize": 12,

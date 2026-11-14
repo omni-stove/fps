@@ -174,21 +174,32 @@ namespace Fps.Core.Tests
         public void EntriesRejectNegativeCounts(int kills, int deaths)
         {
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => new ScoreboardEntry(0, "x", Team.Alpha, kills, deaths, ScoreboardConnection.None, false));
+                () => new ScoreboardEntry(0, LocalizedText.Literal("x"), Team.Alpha, kills, deaths, ScoreboardConnection.None, false));
         }
 
         [Test]
         public void DefaultEntryHasAnEmptyName()
         {
-            Assert.That(default(ScoreboardEntry).Name, Is.EqualTo(string.Empty));
+            Assert.That(default(ScoreboardEntry).Name.IsEmpty, Is.True);
+            Assert.That(GameText.Resolve(default(ScoreboardEntry).Name), Is.EqualTo(string.Empty));
         }
 
         [Test]
-        public void NullNameBecomesEmpty()
+        public void ALiteralNameIsShownAsItIs()
         {
-            var entry = new ScoreboardEntry(0, null, Team.Alpha, 0, 0, ScoreboardConnection.None, false);
+            var entry = new ScoreboardEntry(0, LocalizedText.Literal("[BOT] Bot 1"), Team.Alpha, 0, 0, ScoreboardConnection.None, false);
 
-            Assert.That(entry.Name, Is.EqualTo(string.Empty));
+            Assert.That(GameText.Resolve(entry.Name), Is.EqualTo("[BOT] Bot 1"));
+        }
+
+        [Test]
+        public void EntriesWithDifferentNamesAreNotEqual()
+        {
+            var you = new ScoreboardEntry(0, ScoreboardRows.LocalPlayerName, Team.Alpha, 0, 0, ScoreboardConnection.None, true);
+
+            Assert.That(you, Is.EqualTo(new ScoreboardEntry(0, ScoreboardRows.LocalPlayerName, Team.Alpha, 0, 0, ScoreboardConnection.None, true)));
+            Assert.That(you.GetHashCode(), Is.EqualTo(new ScoreboardEntry(0, ScoreboardRows.LocalPlayerName, Team.Alpha, 0, 0, ScoreboardConnection.None, true).GetHashCode()));
+            Assert.That(you, Is.Not.EqualTo(new ScoreboardEntry(0, ScoreboardRows.PlayerName(0), Team.Alpha, 0, 0, ScoreboardConnection.None, true)));
         }
 
         [TestCase(ScoreboardConnection.None, "")]
@@ -196,7 +207,15 @@ namespace Fps.Core.Tests
         [TestCase(ScoreboardConnection.Disconnected, "切断")]
         public void ConnectionText(ScoreboardConnection connection, string expected)
         {
-            Assert.That(ScoreboardRows.ConnectionText(connection), Is.EqualTo(expected));
+            Assert.That(GameText.Resolve(ScoreboardRows.ConnectionText(connection)), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ConnectionTextIsKeyedAndNoneIsEmpty()
+        {
+            Assert.That(ScoreboardRows.ConnectionText(ScoreboardConnection.None).IsEmpty, Is.True);
+            Assert.That(ScoreboardRows.ConnectionText(ScoreboardConnection.Connected), Is.EqualTo(new LocalizedText("hud.scoreboard.connected")));
+            Assert.That(ScoreboardRows.ConnectionText(ScoreboardConnection.Disconnected), Is.EqualTo(new LocalizedText("hud.scoreboard.disconnected")));
         }
 
         [Test]
@@ -208,8 +227,13 @@ namespace Fps.Core.Tests
         [Test]
         public void Names()
         {
-            Assert.That(ScoreboardRows.PlayerName(3), Is.EqualTo("Player 3"));
-            Assert.That(ScoreboardRows.TargetName(2), Is.EqualTo("標的 2"));
+            Assert.That(ScoreboardRows.PlayerName(3), Is.EqualTo(new LocalizedText("hud.scoreboard.player", 3)));
+            Assert.That(ScoreboardRows.TargetName(2), Is.EqualTo(new LocalizedText("hud.scoreboard.target", 2)));
+            Assert.That(ScoreboardRows.LocalPlayerName, Is.EqualTo(new LocalizedText("hud.scoreboard.you")));
+            Assert.That(GameText.Resolve(ScoreboardRows.PlayerName(3)), Is.EqualTo("Player 3"));
+            Assert.That(GameText.Resolve(ScoreboardRows.TargetName(2)), Is.EqualTo("標的 2"));
+            Assert.That(GameText.Resolve(ScoreboardRows.LocalPlayerName), Is.EqualTo("あなた"));
+            Assert.That(GameText.Resolve(ScoreboardRows.ConnectionCaption), Is.EqualTo("状態"));
             Assert.Throws<ArgumentOutOfRangeException>(() => ScoreboardRows.TargetName(0));
         }
 

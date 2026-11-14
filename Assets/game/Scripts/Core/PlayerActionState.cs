@@ -54,7 +54,7 @@ namespace Fps.Core
         /// <summary>一人称か三人称か。</summary>
         public ViewMode ViewMode { get; }
 
-        /// <summary>今持っている武器の表示名。持っていなければ空文字。</summary>
+        /// <summary>今持っている武器のデバッグ表示用の名前 (<see cref="WeaponSpec.LogName"/>)。持っていなければ空文字。</summary>
         public string WeaponName => _weaponName ?? string.Empty;
 
         /// <summary>今撃ったときに弾が狙いから散らばる最大の角度 (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</summary>
@@ -77,7 +77,7 @@ namespace Fps.Core
         /// <param name="activeReload">アクティブリロードの結果。未判定なら null。</param>
         /// <param name="shoulder">三人称のカメラの肩。定義済みの値。</param>
         /// <param name="viewMode">視点。定義済みの値。</param>
-        /// <param name="weaponName">武器の表示名。null なら空文字。</param>
+        /// <param name="weaponName">武器のデバッグ表示用の名前。null なら空文字。</param>
         /// <param name="spreadDegrees">ばらつき (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</param>
         public PlayerActionState(
             PlayerActionConditions flags,

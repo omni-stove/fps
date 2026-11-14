@@ -19,7 +19,7 @@ namespace Fps.Runtime
     /// <item><see cref="ModeSession.RespawnReady"/> を受けたら、次の <see cref="Tick"/> の終わりに自陣営の <see cref="SideSpawnPoint"/> のうち
     /// 敵からいちばん離れた点 (<see cref="SideSpawnSelector"/>) に戻し、体力を満たす。ダメージの処理の途中で生き返らせないよう、すぐには戻さない。</item>
     /// <item>Update で <see cref="Tick"/> し、状態が変わるたび・倒れるたび・終わったときに <c>[Mode]</c> のログ (<see cref="ModeLog"/>) を出す。
-    /// HUD があれば <see cref="IModeHud"/> に残り時間・得点・自分のリスポーンまでの秒数・派生モードの行 (<see cref="AppendHudLines"/>)・結果を出す。</item>
+    /// HUD があれば <see cref="IModeHud"/> に残り時間・得点・自分のリスポーンまでの秒数・派生モードの行 (<see cref="AppendHudTexts"/>・<see cref="AppendHudLines"/>)・結果を出す。</item>
     /// <item>終わったら全員の操作と行動を止め、<see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) でシーンを読み直す。</item>
     /// <item><see cref="HidesTargetDummies"/> が true (既定) なら、始めたときに GameBootstrap の標的ダミーを隠す。</item>
     /// <item>ModeSession をラウンドとして繰り返す派生は、始め方 (<see cref="StartSession"/>)・進め方 (<see cref="AdvanceSession"/>)・
@@ -148,6 +148,14 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// HUD の得点の下に足す行を、表のキーの文で lines に入れる。<see cref="AppendHudLines"/> の行の後に並ぶ。
+        /// lines にはリスポーンの行などが先に入っているので、消さずに足す。
+        /// </summary>
+        protected virtual void AppendHudTexts(List<LocalizedText> lines)
+        {
+        }
+
+        /// <summary>
         /// <see cref="Begin"/> が参加者を入れる前に、session をこの Runner で進められるか確かめる。進められなければ <see cref="ArgumentException"/> を投げる。
         /// 既定では何もしない。ModeSession を包む別の進め方 (ラウンド制など) を使う派生は、包んだものと session が合うかをここで確かめる。
         /// </summary>
@@ -183,7 +191,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>HUD の残り時間。既定は <see cref="ModeHudText.Time"/>。</summary>
-        protected virtual string HudTime()
+        protected virtual LocalizedText HudTime()
         {
             return HudTime(_session);
         }
@@ -194,20 +202,20 @@ namespace Fps.Runtime
             return HudScores(_session, ownSide);
         }
 
-        /// <summary>HUD の結果。既定は <see cref="ModeHudText.Result"/>。</summary>
-        protected virtual string HudResult()
+        /// <summary>HUD の結果。空の文なら結果を出さない。既定は <see cref="ModeHudText.Result"/>。</summary>
+        protected virtual LocalizedText HudResult()
         {
             return HudResult(_session);
         }
 
         /// <summary><see cref="HudTime()"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。</summary>
-        protected virtual string HudTime(ModeSession session) => ModeHudText.Time(session);
+        protected virtual LocalizedText HudTime(ModeSession session) => ModeHudText.Time(session);
 
         /// <summary><see cref="HudScores(Side?)"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。</summary>
         protected virtual IReadOnlyList<ModeHudScoreLine> HudScores(ModeSession session, Side? ownSide) => ModeHudText.Scores(session, ownSide);
 
         /// <summary><see cref="HudResult()"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。</summary>
-        protected virtual string HudResult(ModeSession session) => ModeHudText.Result(session);
+        protected virtual LocalizedText HudResult(ModeSession session) => ModeHudText.Result(session);
 
         /// <summary>
         /// ModeSession が終わったときに出すログ。null なら出さない。既定は <see cref="ModeLog.Ended"/>。
@@ -653,29 +661,34 @@ namespace Fps.Runtime
                 return;
             }
 
-            _hudLines.Clear();
+            _hudLineTexts.Clear();
             if (_localPlayer != null)
             {
                 var remaining = _session.TracksDowns ? _session.GetRespawnRemaining(LocalPlayerId) : null;
                 if (remaining.HasValue)
                 {
-                    _hudLines.Add(HudFormat.Respawn(HudFormat.DisplayedSeconds(remaining.Value)));
+                    _hudLineTexts.Add(HudFormat.Respawn(HudFormat.DisplayedSeconds(remaining.Value)));
                 }
             }
 
+            _hudLines.Clear();
             AppendHudLines(_hudLines);
-            _hudLineTexts.Clear();
             foreach (var line in _hudLines)
             {
                 _hudLineTexts.Add(LiteralOrEmpty(line));
             }
 
+            AppendHudTexts(_hudLineTexts);
+
             var ownSide = _localPlayer != null ? _localPlayer.Side : (Side?)null;
-            _hudView.Show(LiteralOrEmpty(HudTime()), HudScores(ownSide), _hudLineTexts, LiteralOrEmpty(HudResult()));
+            _hudView.Show(HudTime(), HudScores(ownSide), _hudLineTexts, HudResult());
         }
 
-        // 派生モードの文はまだ表のキーになっていないので、作った文字列をそのまま運ぶ。null は空の文として渡す
-        private static LocalizedText LiteralOrEmpty(string text)
+        /// <summary>
+        /// 派生モードが文字列で作った HUD の文を、表を引かずにそのまま運ぶ文にする。null は空の文。
+        /// 派生モードの文はまだ表のキーになっていないので、<see cref="AppendHudLines"/> の行や置き換えた <see cref="HudResult()"/> がこれで包む。
+        /// </summary>
+        protected static LocalizedText LiteralOrEmpty(string text)
         {
             return text == null ? default : LocalizedText.Literal(text);
         }

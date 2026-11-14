@@ -11,7 +11,7 @@ namespace Fps.Tests.EditMode
     {
         private static WeaponSpec NewSpec()
         {
-            return new WeaponSpec("00000000-0000-4000-8000-000000000001", "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
+            return new WeaponSpec("00000000-0000-4000-8000-000000000001", "weapon.rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
         }
 
         private static VisualElement CloneLayout()
@@ -278,7 +278,7 @@ namespace Fps.Tests.EditMode
             var view = new HudView(CloneLayout(), model);
 
             model.SetResult(null);
-            Assert.That(view.ResultLabel.text, Is.EqualTo(HudFormat.Draw));
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Draw)));
             Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             model.ClearResult();
@@ -340,7 +340,7 @@ namespace Fps.Tests.EditMode
             Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             model.BindWeapon(new Weapon(new WeaponSpec(
-                "00000000-0000-4000-8000-000000000002", "Handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None)));
+                "00000000-0000-4000-8000-000000000002", "weapon.handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None)));
             Assert.That(view.WeaponNameLabel.text, Is.EqualTo("Handgun"));
             Assert.That(view.AmmoLabel.text, Is.EqualTo("12 / 48"));
 
@@ -359,11 +359,11 @@ namespace Fps.Tests.EditMode
             Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
 
             notice.ShowSaved(1f);
-            Assert.That(view.NoticeLabel.text, Is.EqualTo(HudFormat.CheckpointSaved));
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointSaved)));
             Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             notice.ShowRestartCountdown(2f);
-            Assert.That(view.NoticeLabel.text, Is.EqualTo(HudFormat.CheckpointRestart(2)));
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(2))));
 
             notice.Clear();
             Assert.That(view.NoticeLabel.text, Is.Empty);

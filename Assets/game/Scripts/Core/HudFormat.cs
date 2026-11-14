@@ -5,7 +5,9 @@ namespace Fps.Core
 {
     /// <summary>
     /// HUD に出す文字列の書式。体力は数値だけ、弾数は「弾倉 / 予備」、残り時間は mm:ss。
-    /// 値がまだ無いときは <see cref="NoHealth"/> などの仮の文字列を出す。言葉の入る文字列は <see cref="GameText"/> から今の言語で引く。
+    /// 値がまだ無いときは <see cref="NoHealth"/> などの仮の文字列を出す。
+    /// 言葉の入る文 (チーム名・結果・案内など) は表のキー <c>hud.*</c> と引数の <see cref="LocalizedText"/> で返し、受け取った側が今の言語で文にする。
+    /// 数と記号だけの欄 (体力・弾数・残り時間) は言語に依らないので文字列で返す。弾数の「リロード中」だけは <see cref="GameText"/> から今の言語で引く。
     /// </summary>
     public static class HudFormat
     {
@@ -84,21 +86,21 @@ namespace Fps.Core
 
         /// <summary>試合が終わった後、次の試合が始まるまでの案内。秒数は整数 (同期されている切り上げの値) で受ける。</summary>
         /// <example><c>NextMatch(10)</c> は <c>次の試合まで 10 秒</c></example>
-        public static string NextMatch(int seconds)
+        public static LocalizedText NextMatch(int seconds)
         {
             if (seconds < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return GameText.Format("hud.nextMatch", seconds);
+            return new LocalizedText("hud.nextMatch", seconds);
         }
 
-        /// <summary>リロード中に弾倉の数の代わりに出す文字列。</summary>
-        public static string Reloading => GameText.Get("hud.reloading");
+        /// <summary>リロード中に弾倉の数の代わりに出す文。</summary>
+        public static LocalizedText Reloading => new LocalizedText("hud.reloading");
 
         /// <summary>
-        /// 弾数。リロード中は弾倉の数の代わりに <see cref="Reloading"/> を出し、予備はそのまま出す
+        /// 弾数。リロード中は弾倉の数の代わりに <see cref="Reloading"/> を今の言語 (<see cref="GameText"/>) で出し、予備はそのまま出す
         /// (弾倉の数はリロードが終わるまで変わらず、撃てるように見えてしまうため)。
         /// </summary>
         /// <example><c>Ammo(0, 90, true)</c> は <c>リロード中 / 90</c>、<c>Ammo(30, 90, false)</c> は <c>30 / 90</c></example>
@@ -110,7 +112,7 @@ namespace Fps.Core
                 return text;
             }
 
-            return Reloading + AmmoSeparator + reserve.ToString(CultureInfo.InvariantCulture);
+            return GameText.Resolve(Reloading) + AmmoSeparator + reserve.ToString(CultureInfo.InvariantCulture);
         }
 
         /// <summary>予備弾が無限 (<see cref="GameRules.InfiniteReserve"/>) のときに予備の数の代わりに出す文字列。</summary>
@@ -129,7 +131,7 @@ namespace Fps.Core
                 return text;
             }
 
-            return (reloading ? Reloading : magazine.ToString(CultureInfo.InvariantCulture)) + AmmoSeparator + InfiniteReserve;
+            return (reloading ? GameText.Resolve(Reloading) : magazine.ToString(CultureInfo.InvariantCulture)) + AmmoSeparator + InfiniteReserve;
         }
 
         /// <summary>予備を出さない HUD (<see cref="HudVisibility.ReserveAmmo"/> が false) で、武器がまだ無いときの表示。</summary>
@@ -147,7 +149,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(magazine), magazine, "magazine must not be negative");
             }
 
-            return reloading ? Reloading : magazine.ToString(CultureInfo.InvariantCulture);
+            return reloading ? GameText.Resolve(Reloading) : magazine.ToString(CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -177,29 +179,36 @@ namespace Fps.Core
 
         /// <summary>HUD に出すチーム名。</summary>
         /// <example><c>TeamName(Team.Alpha)</c> は <c>ALPHA</c></example>
-        public static string TeamName(Team team)
+        public static LocalizedText TeamName(Team team)
         {
             switch (team)
             {
                 case Team.Alpha:
-                    return "ALPHA";
+                    return new LocalizedText("hud.team.alpha");
                 case Team.Bravo:
-                    return "BRAVO";
+                    return new LocalizedText("hud.team.bravo");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(team), team, "team is not a valid Team");
             }
         }
 
+        /// <summary>陣営名 name と点数 score を並べた得点の文。チームの点数とモードの陣営ごとの得点 (<see cref="ModeHudText.ScoreText"/>) が使う。</summary>
+        /// <example><c>Score(TeamName(Team.Bravo), 3)</c> は <c>BRAVO 3</c></example>
+        public static LocalizedText Score(LocalizedText name, int score)
+        {
+            return new LocalizedText("hud.score", name, score);
+        }
+
         /// <summary>チーム名と点数。</summary>
         /// <example><c>TeamScore(Team.Bravo, 3)</c> は <c>BRAVO 3</c></example>
-        public static string TeamScore(Team team, int score)
+        public static LocalizedText TeamScore(Team team, int score)
         {
             if (score < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(score), score, "score must not be negative");
             }
 
-            return TeamName(team) + " " + score.ToString(CultureInfo.InvariantCulture);
+            return Score(TeamName(team), score);
         }
 
         /// <summary>自分のチームの相手。点数を自分のチーム・相手の順に並べるのに使う。</summary>
@@ -216,40 +225,43 @@ namespace Fps.Core
             }
         }
 
-        /// <summary>試合結果がまだ無い (試合中か開始前) ときの表示。空文字のときは HUD が結果の欄ごと隠す。</summary>
+        /// <summary>
+        /// 試合結果がまだ無い (試合中か開始前) ときの、文字列で持つ側 (<see cref="HudModel"/> など) の表示。空文字のときは HUD が結果の欄ごと隠す。
+        /// <see cref="LocalizedText"/> で返す結果 (<see cref="ModeHudText.Result"/> など) では <c>default</c> (空の文) にあたる。
+        /// </summary>
         public const string NoResult = "";
 
         /// <summary>引き分けで終わったときの結果。</summary>
-        public static string Draw => GameText.Get("hud.draw");
+        public static LocalizedText Draw => new LocalizedText("hud.draw");
 
         /// <summary>試合が終わったときの結果。勝ったチームか、勝者がいなければ引き分け。</summary>
         /// <example><c>Result(Team.Alpha)</c> は <c>ALPHA の勝ち</c>、<c>Result(null)</c> は <c>引き分け</c></example>
-        public static string Result(Team? winner)
+        public static LocalizedText Result(Team? winner)
         {
             return winner.HasValue ? Wins(TeamName(winner.Value)) : Draw;
         }
 
         /// <summary>勝った陣営の名前 sideName の結果。モードごとの結果 (<see cref="ModeHudText.Result"/> など) も使う。</summary>
-        /// <example><c>Wins("ALPHA")</c> は <c>ALPHA の勝ち</c></example>
-        public static string Wins(string sideName)
+        /// <example><c>Wins(TeamName(Team.Alpha))</c> は <c>ALPHA の勝ち</c></example>
+        public static LocalizedText Wins(LocalizedText sideName)
         {
-            return GameText.Format("hud.wins", sideName);
+            return new LocalizedText("hud.wins", sideName);
         }
 
         /// <summary>倒れてからリスポーンするまでの案内。秒数は切り上げた整数で受ける。</summary>
         /// <example><c>Respawn(3)</c> は <c>リスポーンまで 3 秒</c></example>
-        public static string Respawn(int seconds)
+        public static LocalizedText Respawn(int seconds)
         {
             if (seconds < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return GameText.Format("hud.respawn", seconds);
+            return new LocalizedText("hud.respawn", seconds);
         }
 
         /// <summary><see cref="RespawnMode.None"/> で倒れたとき、次の試合が始まるまで戻らないことの案内。</summary>
-        public static string NoRespawnUntilNextMatch => GameText.Get("hud.noRespawnUntilNextMatch");
+        public static LocalizedText NoRespawnUntilNextMatch => new LocalizedText("hud.noRespawnUntilNextMatch");
 
         /// <summary>
         /// 倒れている間の案内を、リスポーン方式に合わせて選ぶ。Individual は自分のリスポーンまで、Wave は次のウェーブまでの秒数を
@@ -257,7 +269,7 @@ namespace Fps.Core
         /// </summary>
         /// <example><c>RespawnNotice(RespawnMode.Wave, 7)</c> は <c>リスポーンまで 7 秒</c></example>
         /// <exception cref="ArgumentOutOfRangeException">mode が定義済みの値でないか、None 以外で seconds が負。</exception>
-        public static string RespawnNotice(RespawnMode mode, int seconds)
+        public static LocalizedText RespawnNotice(RespawnMode mode, int seconds)
         {
             switch (mode)
             {
@@ -296,14 +308,14 @@ namespace Fps.Core
 
         /// <summary>ダウン中の人の案内。出血で倒れるまでの秒数は切り上げた整数で受ける。</summary>
         /// <example><c>Downed(12)</c> は <c>ダウン中 あと 12 秒</c></example>
-        public static string Downed(int seconds)
+        public static LocalizedText Downed(int seconds)
         {
             if (seconds < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return GameText.Format("hud.downed", seconds);
+            return new LocalizedText("hud.downed", seconds);
         }
 
         /// <summary>
@@ -311,46 +323,46 @@ namespace Fps.Core
         /// </summary>
         /// <example><c>Downed(12, 40)</c> は <c>ダウン中 あと 12 秒 (蘇生 40%)</c>、<c>Downed(12, 0)</c> は <c>ダウン中 あと 12 秒</c></example>
         /// <exception cref="ArgumentOutOfRangeException">seconds が負か、revivePercent が 0〜100 の外。</exception>
-        public static string Downed(int seconds, int revivePercent)
+        public static LocalizedText Downed(int seconds, int revivePercent)
         {
             CheckPercent(revivePercent);
             var text = Downed(seconds);
-            return revivePercent == 0 ? text : GameText.Format("hud.downedWithRevive", text, revivePercent);
+            return revivePercent == 0 ? text : new LocalizedText("hud.downedWithRevive", text, revivePercent);
         }
 
         /// <summary>味方を起こしている人の案内。</summary>
         /// <example><c>Reviving(40)</c> は <c>蘇生中 40%</c></example>
         /// <exception cref="ArgumentOutOfRangeException">percent が 0〜100 の外。</exception>
-        public static string Reviving(int percent)
+        public static LocalizedText Reviving(int percent)
         {
             CheckPercent(percent);
-            return GameText.Format("hud.reviving", percent);
+            return new LocalizedText("hud.reviving", percent);
         }
 
         /// <summary>出現直後の無敵の最中の案内。無敵が切れるまでの秒数は切り上げた整数で受ける。</summary>
         /// <example><c>SpawnProtected(2)</c> は <c>保護中 あと 2 秒</c></example>
         /// <exception cref="ArgumentOutOfRangeException">seconds が負。</exception>
-        public static string SpawnProtected(int seconds)
+        public static LocalizedText SpawnProtected(int seconds)
         {
             if (seconds < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return GameText.Format("hud.spawnProtected", seconds);
+            return new LocalizedText("hud.spawnProtected", seconds);
         }
 
         /// <summary>入力が無いままだとサーバーから切られる (<see cref="GameRules.IdleKickSeconds"/>) ことの警告。切られるまでの秒数は切り上げた整数で受ける。</summary>
         /// <example><c>IdleWarning(15)</c> は <c>操作がありません あと 15 秒で切断されます</c></example>
         /// <exception cref="ArgumentOutOfRangeException">seconds が負。</exception>
-        public static string IdleWarning(int seconds)
+        public static LocalizedText IdleWarning(int seconds)
         {
             if (seconds < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return GameText.Format("hud.idleWarning", seconds);
+            return new LocalizedText("hud.idleWarning", seconds);
         }
 
         private static void CheckPercent(int percent)
@@ -362,31 +374,31 @@ namespace Fps.Core
         }
 
         /// <summary>キャンペーンのチェックポイントでセーブしたときの案内。</summary>
-        public static string CheckpointSaved => GameText.Get("campaign.checkpoint.saved");
+        public static LocalizedText CheckpointSaved => new LocalizedText("campaign.checkpoint.saved");
 
         /// <summary>キャンペーンでプレイヤーが倒れた後、チェックポイントから再開するまでの案内。秒数は切り上げた整数で受ける。</summary>
         /// <example><c>CheckpointRestart(3)</c> は <c>チェックポイントから再開まで 3 秒</c></example>
-        public static string CheckpointRestart(int seconds)
+        public static LocalizedText CheckpointRestart(int seconds)
         {
             if (seconds < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return GameText.Format("campaign.checkpoint.restart", seconds);
+            return new LocalizedText("campaign.checkpoint.restart", seconds);
         }
 
         /// <summary>残りのグレネードの数。</summary>
         /// <example><c>Grenades(2)</c> は <c>グレネード 2</c></example>
         /// <exception cref="ArgumentOutOfRangeException">remaining が負。</exception>
-        public static string Grenades(int remaining)
+        public static LocalizedText Grenades(int remaining)
         {
             if (remaining < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(remaining), remaining, "remaining must not be negative");
             }
 
-            return GameText.Format("hud.grenades", remaining);
+            return new LocalizedText("hud.grenades", remaining);
         }
     }
 }

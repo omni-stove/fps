@@ -86,13 +86,13 @@ namespace Fps.Tests.EditMode
             Begin(player, bot, hud);
             Assert.That(hud.Lines, Is.EqualTo(new[] { "段 1/3 Rifle", "次: Launcher" }));
 
-            LogAssert.Expect(LogType.Log, "[Mode] gungame promote player=0 tier=2/3 weapon=Launcher");
+            LogAssert.Expect(LogType.Log, "[Mode] gungame promote player=0 tier=2/3 weapon=weapon.launcher");
             KillBy(player, bot, WeaponAssetBuilder.RifleId);
 
             Assert.That(_runner.GunGame.GetTier(0), Is.EqualTo(1));
             Assert.That(Controller(player).Definitions, Is.EqualTo(new[] { _rifle }), "the weapon is swapped at the next tick, not while firing");
 
-            LogAssert.Expect(LogType.Log, "[Mode] gungame equip player=0 tier=2/3 weapon=Launcher");
+            LogAssert.Expect(LogType.Log, "[Mode] gungame equip player=0 tier=2/3 weapon=weapon.launcher");
             _runner.Tick(0f);
 
             Assert.That(Controller(player).Definitions, Is.EqualTo(new[] { _launcher }));
@@ -129,7 +129,7 @@ namespace Fps.Tests.EditMode
             _runner.Tick(0f);
             Assert.That(Controller(a).Definitions, Is.EqualTo(new[] { _handgun }));
 
-            LogAssert.Expect(LogType.Log, "[Mode] gungame demote player=1 tier=2/3 weapon=Launcher");
+            LogAssert.Expect(LogType.Log, "[Mode] gungame demote player=1 tier=2/3 weapon=weapon.launcher");
             KillBy(player, a, KnifeId);
             _runner.Tick(0f);
 
@@ -151,9 +151,9 @@ namespace Fps.Tests.EditMode
             _runner.Tick(0f);
             KillBy(player, b, WeaponAssetBuilder.LauncherId);
             _runner.Tick(0f);
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "段 3/3 Handgun", GunGameText.Next(null) }));
+            Assert.That(hud.Lines, Is.EqualTo(new[] { "段 3/3 Handgun", "次: なし (この武器で倒せば勝ち)" }));
 
-            LogAssert.Expect(LogType.Log, "[Mode] gungame finish player=0 weapon=Handgun");
+            LogAssert.Expect(LogType.Log, "[Mode] gungame finish player=0 weapon=weapon.handgun");
             KillBy(player, a, WeaponAssetBuilder.HandgunId);
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Playing));
 
@@ -162,7 +162,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)new Side(0)));
-            Assert.That(hud.ResultText, Is.EqualTo(ModeHudText.SideName(new Side(0)) + " の勝ち"));
+            Assert.That(hud.ResultText, Is.EqualTo(Localizer.Resolve(ModeHudText.SideName(new Side(0))) + " の勝ち"));
             Assert.That(Controller(player).Definitions, Is.EqualTo(new[] { _handgun }), "the winner keeps the last weapon");
         }
 
@@ -188,7 +188,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(ladder.TierCount, Is.EqualTo(3));
             Assert.That(ladder.Tiers[0].WeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
-            Assert.That(ladder.Tiers[1].DisplayName, Is.EqualTo("Launcher"));
+            Assert.That(ladder.Tiers[1].NameKey, Is.EqualTo(WeaponAssetBuilder.LauncherNameKey));
+            Assert.That(GameText.Resolve(ladder.Tiers[1].Name), Is.EqualTo("Launcher"));
             Assert.That(ladder.IsMelee(KnifeId), Is.True);
             Assert.That(ladder.DemotesOnMelee, Is.True);
 

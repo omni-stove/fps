@@ -559,7 +559,7 @@ namespace Fps.Runtime
             if (!string.IsNullOrEmpty(equippedWeaponId) && loadout.IndexOf(equippedWeaponId) < 0)
             {
                 Debug.LogWarning(
-                    $"[WeaponController] '{name}' はセーブで持っていた武器 '{equippedWeaponId}' を持っていないため、{loadout.Current.Spec.DisplayName} を持ちます。",
+                    $"[WeaponController] '{name}' はセーブで持っていた武器 '{equippedWeaponId}' を持っていないため、{loadout.Current.Spec.LogName} を持ちます。",
                     this);
             }
 
@@ -589,7 +589,7 @@ namespace Fps.Runtime
                 var armed = WeaponLoadout.Create(only, _loadedRules);
                 SetLoadout(armed, only, new[] { definition }, _loadedRules);
                 _unarmed = false;
-                Debug.Log($"[Combat] weapon added index=0 id={spec.Id} name={spec.DisplayName}", this);
+                Debug.Log($"[Combat] weapon added index=0 id={spec.Id} name={spec.LogName}", this);
                 WeaponChanged?.Invoke(Weapon);
                 return true;
             }
@@ -608,7 +608,7 @@ namespace Fps.Runtime
 
             var loadout = WeaponLoadout.Restore(specs, _loadout.SnapshotAmmo(), Weapon.Spec.Id, _loadedRules, out _);
             SetLoadout(loadout, specs, definitions, _loadedRules);
-            Debug.Log($"[Combat] weapon added index={specs.Length - 1} id={spec.Id} name={spec.DisplayName}", this);
+            Debug.Log($"[Combat] weapon added index={specs.Length - 1} id={spec.Id} name={spec.LogName}", this);
             WeaponChanged?.Invoke(Weapon);
             return true;
         }
@@ -947,7 +947,7 @@ namespace Fps.Runtime
         private void OnSwitched(int index)
         {
             var spec = _loadout.Current.Spec;
-            Debug.Log($"{SwitchedLogPrefix} index={index} id={spec.Id} name={spec.DisplayName}", this);
+            Debug.Log($"{SwitchedLogPrefix} index={index} id={spec.Id} name={spec.LogName}", this);
             WeaponChanged?.Invoke(Weapon);
         }
 

@@ -339,11 +339,12 @@ namespace Fps.Net.Tests
         {
             var withoutMatch = NetKillFeedNames.For(null, 0);
             var line = withoutMatch.Describe(new KillFeedEntry(0, 1, GrenadeThrower.WeaponId, false, false));
-            Assert.That(line.WeaponName, Is.EqualTo(GrenadeThrower.DisplayName));
+            Assert.That(line.WeaponName, Is.EqualTo(GrenadeThrower.Name));
+            Assert.That(GrenadeThrower.Name, Is.EqualTo(new LocalizedText("weapon.grenade")));
 
             var names = NetKillFeedNames.WeaponNames(null, null);
-            Assert.That(names(GrenadeThrower.WeaponId), Is.EqualTo(GrenadeThrower.DisplayName));
-            Assert.That(names("rifle"), Is.Empty);
+            Assert.That(names(GrenadeThrower.WeaponId), Is.EqualTo(GrenadeThrower.Name));
+            Assert.That(names("rifle").IsEmpty, Is.True);
         }
 
         [Test]

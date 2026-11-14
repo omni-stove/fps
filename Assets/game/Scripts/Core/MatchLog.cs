@@ -204,7 +204,7 @@ namespace Fps.Core
         /// するなら <c>始まり-終わりm*最小倍率</c> (key=value を空白で区切って読めるよう、値に空白を入れない)。
         /// </summary>
         /// <example>
-        /// <c>[Match] weapon slot=0 name=Rifle id=6c1f3b2a-... category=AssaultRifle mode=Auto damage=25 range=100.0m
+        /// <c>[Match] weapon slot=0 name=weapon.rifle id=6c1f3b2a-... category=AssaultRifle mode=Auto damage=25 range=100.0m
         /// falloff=20.0-60.0m*0.50 fireInterval=0.10s magazine=30 reserve=90 reload=2.00s</c> (実際は 1 行)
         /// </example>
         public static string Weapon(int slot, WeaponSpec weapon)
@@ -215,7 +215,7 @@ namespace Fps.Core
             }
 
             return Tag + " weapon slot=" + slot.ToString(CultureInfo.InvariantCulture)
-                + " name=" + weapon.DisplayName
+                + " name=" + weapon.LogName
                 + " id=" + weapon.Id
                 + " category=" + weapon.Category
                 + " mode=" + weapon.FireMode

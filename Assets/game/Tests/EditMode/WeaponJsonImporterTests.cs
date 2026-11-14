@@ -180,6 +180,39 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheImportedNameIsReadFromTheTableByItsKey()
+        {
+            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder + "/Launcher.json", _folder, null);
+
+            var launcher = Load("Launcher");
+            Assert.That(launcher.NameKey, Is.EqualTo(WeaponAssetBuilder.LauncherNameKey), "the asset stores the key, not the text");
+            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(launcher.ToSpec().Name), Is.EqualTo("Launcher"));
+        }
+
+        [TestCase("\"\"", "")]
+        [TestCase("null", "")]
+        [TestCase("\"  weapon.carbine \"", "weapon.carbine")]
+        public void TheNameKeyIsTrimmedAndMayBeEmpty(string value, string expected)
+        {
+            var spec = WeaponJsonImporter.ParseSpec(
+                SampleText("Rifle").Replace("\"nameKey\": \"weapon.rifle\"", "\"nameKey\": " + value),
+                "Rifle.json");
+
+            Assert.That(spec.NameKey, Is.EqualTo(expected));
+            Assert.That(spec.Name, Is.EqualTo(expected.Length > 0 ? new LocalizedText(expected) : LocalizedText.Literal(spec.Id)));
+        }
+
+        [Test]
+        public void TheOldDisplayNameFieldAsksForANameKey()
+        {
+            var e = Assert.Throws<WeaponJsonException>(
+                () => WeaponJsonImporter.ParseSpec(SampleText("Rifle").Replace("\"nameKey\": \"weapon.rifle\"", "\"displayName\": \"Rifle\""), "Rifle.json"));
+
+            Assert.That(e.Field, Is.EqualTo(WeaponJsonImporter.LegacyDisplayNameField));
+            Assert.That(e.Message, Does.Contain("Rifle.json").And.Contain(WeaponJsonImporter.NameKeyField));
+        }
+
+        [Test]
         public void AnUnknownFieldIsNamed()
         {
             var e = Assert.Throws<WeaponJsonException>(
@@ -202,6 +235,7 @@ namespace Fps.Tests.EditMode
         [TestCase("\"minMultiplier\": 0.5", "\"minMultiplier\": 0.5, \"curve\": 1", "falloff.curve")]
         [TestCase("\"recoilPitchDegrees\": 0.5", "\"recoilPitchDegrees\": 91", "recoilPitchDegrees")]
         [TestCase("\"damage\": 25", "\"damage\": 25, \"damage\": 26", "damage")]
+        [TestCase("\"nameKey\": \"weapon.rifle\"", "\"nameKey\": 1", "nameKey")]
         public void AnInvalidFieldIsNamed(string original, string replacement, string field)
         {
             var text = SampleText("Rifle");
@@ -241,7 +275,7 @@ namespace Fps.Tests.EditMode
         public void ADuplicateIdAcrossFilesSavesNothing()
         {
             WriteJson("A.json", SampleText("Rifle"));
-            WriteJson("B.json", SampleText("Rifle").Replace("\"displayName\": \"Rifle\"", "\"displayName\": \"Copy\""));
+            WriteJson("B.json", SampleText("Rifle").Replace("\"nameKey\": \"weapon.rifle\"", "\"nameKey\": \"weapon.copy\""));
 
             var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ImportFrom(_jsonFolder, _folder, null));
 
@@ -338,7 +372,7 @@ namespace Fps.Tests.EditMode
         private static void AssertSameSpec(WeaponSpec actual, WeaponSpec expected)
         {
             Assert.That(actual.Id, Is.EqualTo(expected.Id));
-            Assert.That(actual.DisplayName, Is.EqualTo(expected.DisplayName));
+            Assert.That(actual.NameKey, Is.EqualTo(expected.NameKey));
             Assert.That(actual.Category, Is.EqualTo(expected.Category));
             Assert.That(actual.FireMode, Is.EqualTo(expected.FireMode));
             Assert.That(actual.MagazineSize, Is.EqualTo(expected.MagazineSize));

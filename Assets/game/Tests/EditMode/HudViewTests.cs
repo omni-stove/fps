@@ -11,7 +11,7 @@ namespace Fps.Tests.EditMode
     {
         private static WeaponSpec NewSpec()
         {
-            return new WeaponSpec("00000000-0000-4000-8000-000000000001", "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
+            return new WeaponSpec("00000000-0000-4000-8000-000000000001", "weapon.rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
         }
 
         private static VisualElement CloneLayout()
@@ -340,7 +340,7 @@ namespace Fps.Tests.EditMode
             Assert.That(view.WeaponNameLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             model.BindWeapon(new Weapon(new WeaponSpec(
-                "00000000-0000-4000-8000-000000000002", "Handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None)));
+                "00000000-0000-4000-8000-000000000002", "weapon.handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None)));
             Assert.That(view.WeaponNameLabel.text, Is.EqualTo("Handgun"));
             Assert.That(view.AmmoLabel.text, Is.EqualTo("12 / 48"));
 

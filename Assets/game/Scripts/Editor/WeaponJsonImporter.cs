@@ -16,7 +16,10 @@ namespace Fps.Editor
     /// JSON は 1 ファイルに武器 1 つのオブジェクトで、項目名は <see cref="WeaponSpec"/> のコンストラクタ引数と同じ
     /// (既定値の無い引数は必須、既定値のある引数は省略可)。<c>category</c>・<c>fireMode</c> は列挙子の名前の文字列、
     /// <c>falloff</c> は <see cref="DamageFalloff"/> のコンストラクタ引数を項目に持つオブジェクトか、減衰しないなら文字列 <c>"None"</c>、
-    /// <c>adsFieldOfView</c> と <c>displayName</c> は null も書ける。値の検証は <see cref="WeaponSpec"/> に任せる。
+    /// <c>adsFieldOfView</c> と <c>nameKey</c> は null も書ける。値の検証は <see cref="WeaponSpec"/> に任せる。
+    /// </para>
+    /// <para>
+    /// <c>nameKey</c> は画面に出す名前を引く表のキー (例: <c>weapon.rifle</c>) で、文そのものは Resources/Localization/&lt;言語&gt;/ の JSON に書く。
     /// </para>
     /// <para>
     /// アセットは出力先のフォルダに JSON のファイル名 (拡張子を除く) で置き、既存のアセットは GUID を保って中身だけ更新する。
@@ -41,7 +44,10 @@ namespace Fps.Editor
         public const string NoFalloff = "None";
 
         public const string IdField = "id";
-        public const string DisplayNameField = "displayName";
+        public const string NameKeyField = "nameKey";
+
+        /// <summary><see cref="NameKeyField"/> の前の項目名。書かれていたら、知らない項目とは別の文で書き換えを促す。</summary>
+        public const string LegacyDisplayNameField = "displayName";
         public const string CategoryField = "category";
         public const string FireModeField = "fireMode";
         public const string MagazineSizeField = "magazineSize";
@@ -74,7 +80,7 @@ namespace Fps.Editor
         public static readonly IReadOnlyList<string> Fields = new[]
         {
             IdField,
-            DisplayNameField,
+            NameKeyField,
             CategoryField,
             FireModeField,
             MagazineSizeField,
@@ -295,11 +301,20 @@ namespace Fps.Editor
                 throw new WeaponJsonException(file, null, "must be a JSON object whose fields are the WeaponSpec constructor arguments");
             }
 
+            if (fields.ContainsKey(LegacyDisplayNameField))
+            {
+                throw new WeaponJsonException(
+                    file,
+                    LegacyDisplayNameField,
+                    $"is no longer read; write the key of the name (e.g. \"weapon.rifle\") in '{NameKeyField}' "
+                    + "and the text itself in Resources/Localization/<language>/*.json");
+            }
+
             RequireKnownFields(file, null, fields, Fields);
             var reader = new FieldReader(file, fields);
 
             var id = reader.RequiredString(IdField, allowNull: false);
-            var displayName = reader.RequiredString(DisplayNameField, allowNull: true);
+            var nameKey = reader.RequiredString(NameKeyField, allowNull: true);
             var category = reader.RequiredEnum<WeaponCategory>(CategoryField);
             var fireMode = reader.RequiredEnum<FireMode>(FireModeField);
             var magazineSize = reader.RequiredInt(MagazineSizeField);
@@ -326,7 +341,7 @@ namespace Fps.Editor
             {
                 return new WeaponSpec(
                     id,
-                    displayName,
+                    nameKey,
                     category,
                     fireMode,
                     magazineSize,

@@ -298,7 +298,7 @@ namespace Fps.Runtime
                 var button = new Button(() => Select(slot, option)) { text = string.Empty };
                 button.AddToClassList(OptionClass);
 
-                var weaponName = new Label(options[i].DisplayName) { pickingMode = PickingMode.Ignore };
+                var weaponName = new Label(GameText.Resolve(options[i].Name)) { pickingMode = PickingMode.Ignore };
                 weaponName.AddToClassList(OptionNameClass);
                 button.Add(weaponName);
 

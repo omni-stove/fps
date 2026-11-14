@@ -40,7 +40,8 @@ namespace Fps.Tests.EditMode
             var rifle = WeaponAssetBuilder.RifleSpec();
 
             Assert.That(spec.Id, Does.Match(_uuidPattern));
-            Assert.That(spec.DisplayName, Is.EqualTo(spec.Id), "the display name is left empty and falls back to the id");
+            Assert.That(spec.NameKey, Is.Empty, "the name key is left empty");
+            Assert.That(spec.Name, Is.EqualTo(LocalizedText.Literal(spec.Id)), "an empty name key shows the id");
             Assert.That(spec.Category, Is.EqualTo(rifle.Category));
             Assert.That(spec.FireMode, Is.EqualTo(rifle.FireMode));
             Assert.That(spec.MagazineSize, Is.EqualTo(rifle.MagazineSize));
@@ -130,7 +131,7 @@ namespace Fps.Tests.EditMode
         public void ToSpecCopiesEveryField()
         {
             var definition = NewDefinition("Handgun", " " + _handgunId + " ");
-            definition.DisplayName = " Handgun ";
+            definition.NameKey = " weapon.handgun ";
             definition.Category = WeaponCategory.Handgun;
             definition.FireMode = FireMode.Semi;
             definition.MagazineSize = 12;
@@ -158,7 +159,8 @@ namespace Fps.Tests.EditMode
             var spec = definition.ToSpec();
 
             Assert.That(spec.Id, Is.EqualTo(_handgunId));
-            Assert.That(spec.DisplayName, Is.EqualTo("Handgun"));
+            Assert.That(spec.NameKey, Is.EqualTo("weapon.handgun"));
+            Assert.That(spec.Name, Is.EqualTo(new LocalizedText("weapon.handgun")));
             Assert.That(spec.Category, Is.EqualTo(WeaponCategory.Handgun));
             Assert.That(spec.FireMode, Is.EqualTo(FireMode.Semi));
             Assert.That(spec.MagazineSize, Is.EqualTo(12));
@@ -199,10 +201,10 @@ namespace Fps.Tests.EditMode
         {
             var definition = NewDefinition("Nulls");
             definition.Id = null;
-            definition.DisplayName = null;
+            definition.NameKey = null;
 
             Assert.That(definition.Id, Is.Empty);
-            Assert.That(definition.DisplayName, Is.Empty);
+            Assert.That(definition.NameKey, Is.Empty);
         }
 
         [TestCase("Id", "")]

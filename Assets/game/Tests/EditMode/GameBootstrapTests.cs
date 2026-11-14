@@ -900,7 +900,8 @@ namespace Fps.Tests.EditMode
                 controller.Initialize(_world.Camera.transform, attack, reload);
                 Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize, _rifle.ReserveAmmo)));
 
-                Assert.That(model.WeaponNameText, Is.EqualTo(_rifle.DisplayName));
+                Assert.That(model.WeaponNameText, Is.EqualTo(Localizer.Resolve(new LocalizedText(_rifle.NameKey))));
+                Assert.That(model.WeaponNameText, Is.Not.EqualTo(_rifle.NameKey), "the HUD shows the text from the table, not the key");
 
                 Assert.That(controller.Weapon.TryFire(), Is.True);
                 Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize - 1, _rifle.ReserveAmmo)));
@@ -908,7 +909,7 @@ namespace Fps.Tests.EditMode
                 // 持ち替えると HUD は新しい武器を購読し直し、しまった武器の射撃では変わらない。
                 var rifle = controller.Weapon;
                 Assert.That(controller.SelectNext(), Is.True);
-                Assert.That(model.WeaponNameText, Is.EqualTo(_handgun.DisplayName));
+                Assert.That(model.WeaponNameText, Is.EqualTo(Localizer.Resolve(new LocalizedText(_handgun.NameKey))));
                 Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo)));
                 rifle.Tick(_rifle.FireInterval);
                 rifle.TryFire();

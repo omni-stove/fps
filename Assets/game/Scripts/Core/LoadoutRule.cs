@@ -107,12 +107,12 @@ namespace Fps.Core
 
                 if (!_accepted[i].Contains(weapon.Category))
                 {
-                    return "slot " + i + " does not accept " + weapon.Category + " (weapon '" + weapon.DisplayName + "')";
+                    return "slot " + i + " does not accept " + weapon.Category + " (weapon '" + weapon.LogName + "')";
                 }
 
                 if (slotById.TryGetValue(weapon.Id, out var other))
                 {
-                    return "slot " + i + " has weapon '" + weapon.DisplayName + "' (id '" + weapon.Id + "') already in slot " + other;
+                    return "slot " + i + " has weapon '" + weapon.LogName + "' (id '" + weapon.Id + "') already in slot " + other;
                 }
 
                 slotById.Add(weapon.Id, i);

@@ -12,5 +12,19 @@
   "mode.br.placement": "順位 {0} 位",
   "mode.br.placementAtLeast": "順位 {0} 位以内",
   "mode.br.squad": "分隊 生存 {0}",
-  "mode.br.squadPlace": "{0} {1} 位"
+  "mode.br.squadPlace": "{0} {1} 位",
+  "mode.horde.wave": "WAVE {0}/{1}",
+  "mode.horde.waveEndless": "WAVE {0}",
+  "mode.horde.remainingEnemies": "残りの敵 {0}",
+  "mode.horde.nextWave": "次の波まで {0} 秒",
+  "mode.horde.currency": "通貨 {0}",
+  "mode.horde.returnsAfterWave": "波を越えると復活",
+  "mode.horde.victory": "防衛成功",
+  "mode.horde.defeat": "防衛失敗",
+  "mode.horde.build": "置く",
+  "mode.horde.repair": "直す",
+  "mode.horde.prompt": "{0} を{1} ({2})",
+  "mode.horde.promptKey": "[{0}] {1}",
+  "mode.horde.promptBetweenWaves": "{0}: 波の間だけ",
+  "mode.horde.promptNotEnoughCurrency": "{0}: 通貨が足りない"
 }

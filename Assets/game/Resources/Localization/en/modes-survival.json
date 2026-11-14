@@ -12,5 +12,19 @@
   "mode.br.placement": "Placed #{0}",
   "mode.br.placementAtLeast": "In the top {0}",
   "mode.br.squad": "Squad alive {0}",
-  "mode.br.squadPlace": "{0} #{1}"
+  "mode.br.squadPlace": "{0} #{1}",
+  "mode.horde.wave": "WAVE {0}/{1}",
+  "mode.horde.waveEndless": "WAVE {0}",
+  "mode.horde.remainingEnemies": "Enemies left {0}",
+  "mode.horde.nextWave": "Next wave in {0}s",
+  "mode.horde.currency": "Currency {0}",
+  "mode.horde.returnsAfterWave": "You return once the wave is cleared",
+  "mode.horde.victory": "Defense held",
+  "mode.horde.defeat": "Defense fell",
+  "mode.horde.build": "Build",
+  "mode.horde.repair": "Repair",
+  "mode.horde.prompt": "{1} {0} ({2})",
+  "mode.horde.promptKey": "[{0}] {1}",
+  "mode.horde.promptBetweenWaves": "{0}: between waves only",
+  "mode.horde.promptNotEnoughCurrency": "{0}: not enough currency"
 }

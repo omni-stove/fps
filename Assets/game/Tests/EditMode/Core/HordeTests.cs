@@ -241,25 +241,34 @@ namespace Fps.Core.Tests
         [Test]
         public void HudLinesAndLogsReadAsDocumented()
         {
-            Assert.That(HordeText.Wave(2, 5), Is.EqualTo("WAVE 2/5"));
-            Assert.That(HordeText.Wave(2, null), Is.EqualTo("WAVE 2"));
-            Assert.That(HordeText.Wave(0, 5), Is.EqualTo("WAVE -/5"));
-            Assert.That(HordeText.RemainingEnemies(4), Is.EqualTo("残りの敵 4"));
-            Assert.That(HordeText.NextWave(4.2f), Is.EqualTo("次の波まで 5 秒"));
-            Assert.That(HordeText.Currency(120), Is.EqualTo("通貨 120"));
+            Assert.That(GameText.Resolve(HordeText.Wave(2, 5)), Is.EqualTo("WAVE 2/5"));
+            Assert.That(GameText.Resolve(HordeText.Wave(2, null)), Is.EqualTo("WAVE 2"));
+            Assert.That(GameText.Resolve(HordeText.Wave(0, 5)), Is.EqualTo("WAVE -/5"));
+            Assert.That(GameText.Resolve(HordeText.RemainingEnemies(4)), Is.EqualTo("残りの敵 4"));
+            Assert.That(GameText.Resolve(HordeText.NextWave(4.2f)), Is.EqualTo("次の波まで 5 秒"));
+            Assert.That(GameText.Resolve(HordeText.Currency(120)), Is.EqualTo("通貨 120"));
+            Assert.That(GameText.Resolve(HordeText.Victory), Is.EqualTo("防衛成功"));
+            Assert.That(GameText.Resolve(HordeText.Defeat), Is.EqualTo("防衛失敗"));
+            Assert.That(GameText.Resolve(HordeText.ReturnsAfterWave), Is.EqualTo("波を越えると復活"));
 
             Assert.That(
-                HordeText.Prompt("E", HordeFortificationAction.Repair, "Wall-North", 30, HordePurchaseVerdict.Ok),
+                GameText.Resolve(HordeText.Prompt("E", HordeFortificationAction.Repair, "Wall-North", 30, HordePurchaseVerdict.Ok)),
                 Is.EqualTo("[E] Wall-North を直す (30)"));
             Assert.That(
-                HordeText.Prompt(null, HordeFortificationAction.Build, "Barricade NE", 40, HordePurchaseVerdict.Ok),
+                GameText.Resolve(HordeText.Prompt(null, HordeFortificationAction.Build, "Barricade NE", 40, HordePurchaseVerdict.Ok)),
                 Is.EqualTo("Barricade_NE を置く (40)"));
             Assert.That(
-                HordeText.Prompt("E", HordeFortificationAction.Repair, "Wall-North", 30, HordePurchaseVerdict.WaveInProgress),
+                GameText.Resolve(HordeText.Prompt("E", HordeFortificationAction.Repair, "Wall-North", 30, HordePurchaseVerdict.WaveInProgress)),
                 Is.EqualTo("Wall-North を直す (30): 波の間だけ"));
             Assert.That(
-                HordeText.Prompt("E", HordeFortificationAction.Build, "Wall-North", 30, HordePurchaseVerdict.NotEnoughCurrency),
+                GameText.Resolve(HordeText.Prompt("E", HordeFortificationAction.Build, "Wall-North", 30, HordePurchaseVerdict.NotEnoughCurrency)),
                 Is.EqualTo("Wall-North を置く (30): 通貨が足りない"));
+
+            var english = JapaneseGameTextSetUp.LoadTable(GameLanguage.English);
+            Assert.That(english.Resolve(HordeText.RemainingEnemies(4)), Is.EqualTo("Enemies left 4"));
+            Assert.That(
+                english.Resolve(HordeText.Prompt("E", HordeFortificationAction.Repair, "Wall-North", 30, HordePurchaseVerdict.NotEnoughCurrency)),
+                Is.EqualTo("Repair Wall-North (30): not enough currency"));
 
             Assert.That(HordeText.WaveStartedLog(2, 5, 6), Is.EqualTo("[Mode] wave start number=2/5 enemies=6"));
             Assert.That(HordeText.WaveStartedLog(2, null, 6), Is.EqualTo("[Mode] wave start number=2/endless enemies=6"));

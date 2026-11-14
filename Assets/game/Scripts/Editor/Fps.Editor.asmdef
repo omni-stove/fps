@@ -4,6 +4,7 @@
     "references": [
         "Fps.Core",
         "Fps.Runtime",
+        "Fps.Runtime.UI",
         "Unity.AI.Navigation"
     ],
     "includePlatforms": [

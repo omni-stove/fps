@@ -26,6 +26,8 @@ namespace Fps.Runtime
     {
         public const string ReadyLog = "[Bootstrap] ready";
 
+        public const string NoHudLog = "[Bootstrap] no HUD factory is registered with GameUi.HudFactory; running without a HUD";
+
         /// <summary>
         /// <see cref="GameRulesOverride"/> のルールを使うときのログ。definitionName は上書きされたシーンのルールの名前で、未設定なら null。
         /// </summary>
@@ -689,6 +691,7 @@ namespace Fps.Runtime
         /// <summary>
         /// HUD を作り (<see cref="GameUi.CreateHud"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。オフラインなので、ポーズ中は時間を止める
         /// (<see cref="PauseTimeMode.Freeze"/>)。グレネードの残り (<see cref="IHud.AttachGrenadeCount"/>) も出す。
+        /// 生成役が登録されていなければ、既定の UI を外して使う場合もあるので失敗にせず、out をすべて null にして専用サーバーと同じく HUD 無しで進める。
         /// 作った後の設定で失敗したら、呼び出し元が片付けられるよう out に入れてから例外を投げる。
         /// </summary>
         private static void CreateHud(
@@ -701,6 +704,14 @@ namespace Fps.Runtime
             out GameObject hudObject)
         {
             hud = GameUi.CreateHud(HudName, player, weapon, null);
+            if (hud == null)
+            {
+                panelSettings = null;
+                hudObject = null;
+                Debug.Log(NoHudLog);
+                return;
+            }
+
             panelSettings = hud.OwnedPanelSettings;
             hudObject = hud.gameObject;
             if (grenades != null)
@@ -770,7 +781,7 @@ namespace Fps.Runtime
         /// <summary>プレイヤーの体力。敵の射撃はここに届く。</summary>
         public Damageable PlayerDamageable { get; }
 
-        /// <summary>HUD。専用サーバーでは作らないので null。</summary>
+        /// <summary>HUD。専用サーバーと、<see cref="GameUi.HudFactory"/> に生成役が無いときは作らないので null。</summary>
         public IHud Hud { get; }
 
         /// <summary>生成時にプレイヤーへ効かせたルール。<see cref="GameBootstrap.RulesDefinition"/> が空なら <see cref="GameRules.Default"/>。</summary>
@@ -788,7 +799,7 @@ namespace Fps.Runtime
         /// <summary>プレイヤーが倒れてから戻るまでのカメラ。何を映すかはルールの <see cref="GameRules.DeathCamera"/> で決まる。</summary>
         public PlayerDeathCamera DeathCamera { get; }
 
-        /// <summary>HUD 用に作った PanelSettings。<see cref="Hud"/> が破棄されるときに一緒に消える。専用サーバーでは null。</summary>
+        /// <summary>HUD 用に作った PanelSettings。<see cref="Hud"/> が破棄されるときに一緒に消える。<see cref="Hud"/> が無ければ null。</summary>
         public PanelSettings HudPanelSettings { get; }
 
         public BootstrapWorld(

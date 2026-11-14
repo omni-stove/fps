@@ -166,7 +166,7 @@ namespace Fps.Runtime
 
         private void BeginWith(BootstrapWorld world)
         {
-            // 専用サーバー以外で HUD が無いのは作るのに失敗したときで、そのエラーは GameBootstrap が出している
+            // 専用サーバー以外で HUD が無いのは、作るのに失敗したか HUD の生成役が登録されていないときで、どちらも GameBootstrap がログを出している
             var view = GameUi.IsAlive(world.Hud) ? world.Hud.TutorialPrompt : null;
             if (world.ActionReader == null || !GameUi.IsAlive(view))
             {

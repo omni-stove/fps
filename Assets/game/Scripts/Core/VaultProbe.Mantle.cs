@@ -23,6 +23,12 @@ namespace Fps.Core
         /// 理由は TooFar・NotAWall・NotFacing・TooLow・TooHigh・TooNarrow・Blocked の順に調べ、最初に当たったものを返す。通れば <see cref="VaultVerdict.Mantle"/>。
         /// sample の Depth は、手前の面から <see cref="MantleFootingDepth"/> より先まで測ったもの (それより厚ければ無限大でよい)。
         /// </summary>
+        /// <param name="sample">前方への Ray で測った段の標本。</param>
+        /// <param name="facing">向いている向き。</param>
+        /// <param name="minHeight">これ以下の高さは乗り越えの受け持ちで、崖のぼりは TooLow にする。</param>
+        /// <param name="maxHeight">これより高い段には登らない。</param>
+        /// <param name="bodyRadius">体の半径。</param>
+        /// <param name="isPathClear">軌跡の上を体が通れるかを物理で調べる関数。</param>
         /// <param name="speed">軌跡をたどる速さ (<see cref="MotorSpec.MantleSpeed"/>)。</param>
         /// <exception cref="ArgumentOutOfRangeException">sample・facing・高さ・bodyRadius・speed の値が不正なとき。</exception>
         /// <exception cref="ArgumentNullException">isPathClear が null のとき。</exception>

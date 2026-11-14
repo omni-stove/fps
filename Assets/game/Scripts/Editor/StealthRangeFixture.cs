@@ -20,18 +20,35 @@ namespace Fps.Editor
         public const float EnemySpeed = 2.5f;
         public const int EnemyMaxHealth = 100;
 
-        public static readonly Vector3 AreaCenter = new Vector3(-18.5f, 0f, -16f);
+        public const string LeftWallName = "StealthWall_Left";
+        public const string RightWallName = "StealthWall_Right";
+        public const string RoofName = "StealthRoof";
+
+        public const float WallHeight = 3.5f;
+        public const float WallThickness = 0.4f;
+
+        public static readonly Vector3 AreaCenter = new Vector3(-7f, 0f, -16f);
 
         // 高さは床の上下を含めて焼けるように取る。
         public static readonly Vector3 AreaSize = new Vector3(12f, 8f, 16f);
 
-        public static readonly Vector3 EnemyFeet = new Vector3(-18.5f, 0f, -22f);
+        public static readonly Vector3 EnemyFeet = new Vector3(-7f, 0f, -22f);
 
         // 敵の視認距離 (EnemyAgent.DefaultSightRange) より手前だが、遠くからたまり始めるのを確かめられる距離。
-        public static readonly Vector3 ApproachStart = new Vector3(-18.5f, 0f, -9f);
+        public static readonly Vector3 ApproachStart = new Vector3(-7f, 0f, -9.5f);
 
-        public static readonly Vector3 WallCenter = new Vector3(-22f, 1.5f, -13f);
-        public static readonly Vector3 WallSize = new Vector3(4f, 3f, 0.4f);
+        // 出現位置や近くの置く物 (近接の的・パラシュートの塔・崖のぼりの段) に視認距離の内側で接するので、壁と屋根で囲んで見えなくする。
+        // 南の端だけは床の端とのあいだを開けておき、手で遊ぶときにそこから入る。
+        public static readonly Vector3 WallCenter = new Vector3(-7f, WallHeight / 2f, -8.25f);
+        public static readonly Vector3 WallSize = new Vector3(11.9f, WallHeight, WallThickness);
+
+        public static readonly Vector3 LeftWallCenter = new Vector3(-12.75f, WallHeight / 2f, -16f);
+        public static readonly Vector3 RightWallCenter = new Vector3(-1.25f, WallHeight / 2f, -16f);
+        public static readonly Vector3 SideWallSize = new Vector3(WallThickness, WallHeight, 15.9f);
+
+        // 角度は水平にしか見ないので、高い塔の上は壁だけでは隠れない。
+        public static readonly Vector3 RoofCenter = new Vector3(-7f, WallHeight + 0.1f, -16f);
+        public static readonly Vector3 RoofSize = new Vector3(11.9f, 0.2f, 15.9f);
 
         public int Order => 100;
 
@@ -49,6 +66,9 @@ namespace Fps.Editor
             {
                 root.transform.SetPositionAndRotation(AreaCenter, Quaternion.identity);
                 SceneBuildHelpers.CreateStaticBox(scene, root.transform, WallName, WallCenter, WallSize);
+                SceneBuildHelpers.CreateStaticBox(scene, root.transform, LeftWallName, LeftWallCenter, SideWallSize);
+                SceneBuildHelpers.CreateStaticBox(scene, root.transform, RightWallName, RightWallCenter, SideWallSize);
+                SceneBuildHelpers.CreateStaticBox(scene, root.transform, RoofName, RoofCenter, RoofSize);
 
                 var enemy = SceneBuildHelpers.CreateEnemy(
                     scene,

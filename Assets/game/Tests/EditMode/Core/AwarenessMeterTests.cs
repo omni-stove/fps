@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class AwarenessMeterTests
     {
-        private const float SightRange = 20f;
+        private const float _sightRange = 20f;
 
         private static AwarenessSighting Seen(
             float distance = 10f,
@@ -17,14 +17,14 @@ namespace Fps.Core.Tests
             float speed = 0f) =>
             new AwarenessSighting(true, distance, angle, posture, light, speed);
 
-        private static float Gain(AwarenessSighting sighting) => AwarenessMeter.GainPerSecond(AwarenessSpec.Default, SightRange, sighting);
+        private static float Gain(AwarenessSighting sighting) => AwarenessMeter.GainPerSecond(AwarenessSpec.Default, _sightRange, sighting);
 
         [Test]
         public void NothingFillsWithoutLineOfSightOutsideTheViewOrBeyondTheRange()
         {
             Assert.That(Gain(new AwarenessSighting(false, 5f, 0f, AwarenessPosture.Standing, 1f, 0f)), Is.EqualTo(0f));
             Assert.That(Gain(Seen(angle: (AwarenessSpec.DefaultFieldOfViewDegrees / 2f) + 1f)), Is.EqualTo(0f));
-            Assert.That(Gain(Seen(distance: SightRange + 0.1f)), Is.EqualTo(0f));
+            Assert.That(Gain(Seen(distance: _sightRange + 0.1f)), Is.EqualTo(0f));
             Assert.That(Gain(AwarenessSighting.None), Is.EqualTo(0f));
             Assert.That(Gain(Seen(light: 0f)), Is.EqualTo(0f), "complete darkness");
         }
@@ -49,7 +49,7 @@ namespace Fps.Core.Tests
         public void GainMatchesTheFactorsAtTheEdges()
         {
             var spec = AwarenessSpec.Default;
-            var edge = Gain(Seen(distance: SightRange, angle: spec.FieldOfViewDegrees / 2f, speed: spec.FullMotionSpeed));
+            var edge = Gain(Seen(distance: _sightRange, angle: spec.FieldOfViewDegrees / 2f, speed: spec.FullMotionSpeed));
 
             Assert.That(edge, Is.EqualTo(spec.GainPerSecond * spec.FarGainFactor * spec.PeripheralGainFactor).Within(1e-6f));
             Assert.That(
@@ -67,7 +67,7 @@ namespace Fps.Core.Tests
 
             for (var i = 0; i < 200 && meter.Stage != AwarenessStage.Engaged; i++)
             {
-                meter.Tick(0.05f, SightRange, Seen(distance: 3f, speed: 6f));
+                meter.Tick(0.05f, _sightRange, Seen(distance: 3f, speed: 6f));
             }
 
             Assert.That(meter.Level, Is.EqualTo(AwarenessMeter.Full));
@@ -94,14 +94,14 @@ namespace Fps.Core.Tests
             var meter = new AwarenessMeter(spec);
             meter.Raise(0.5f);
 
-            meter.Tick(0.9f, SightRange, AwarenessSighting.None);
+            meter.Tick(0.9f, _sightRange, AwarenessSighting.None);
             Assert.That(meter.Level, Is.EqualTo(0.5f), "still within the delay");
             Assert.That(meter.IsSeeing, Is.False);
 
-            meter.Tick(0.6f, SightRange, AwarenessSighting.None);
+            meter.Tick(0.6f, _sightRange, AwarenessSighting.None);
             Assert.That(meter.Level, Is.EqualTo(0.5f - (0.2f * 0.5f)).Within(1e-5f), "only the time past the delay drains");
 
-            meter.Tick(10f, SightRange, AwarenessSighting.None);
+            meter.Tick(10f, _sightRange, AwarenessSighting.None);
             Assert.That(meter.Level, Is.EqualTo(0f));
             Assert.That(meter.Stage, Is.EqualTo(AwarenessStage.Unaware));
         }
@@ -112,10 +112,10 @@ namespace Fps.Core.Tests
             var spec = new AwarenessSpec(decayDelaySeconds: 1f, decayPerSecond: 0.2f);
             var meter = new AwarenessMeter(spec);
             meter.Raise(0.5f);
-            meter.Tick(0.9f, SightRange, AwarenessSighting.None);
+            meter.Tick(0.9f, _sightRange, AwarenessSighting.None);
 
-            meter.Tick(0f, SightRange, Seen());
-            meter.Tick(0.9f, SightRange, AwarenessSighting.None);
+            meter.Tick(0f, _sightRange, Seen());
+            meter.Tick(0.9f, _sightRange, AwarenessSighting.None);
 
             Assert.That(meter.Level, Is.EqualTo(0.5f));
         }
@@ -130,14 +130,14 @@ namespace Fps.Core.Tests
             meter.StageChanged += (from, to) => changes.Add((from, to));
             meter.Raise(AwarenessMeter.Full);
 
-            meter.Tick(1.5f, SightRange, AwarenessSighting.None);
+            meter.Tick(1.5f, _sightRange, AwarenessSighting.None);
             Assert.That(meter.Level, Is.EqualTo(0.85f).Within(1e-5f));
             Assert.That(meter.Stage, Is.EqualTo(AwarenessStage.Engaged), "a short loss of sight keeps the fight going");
 
-            meter.Tick(1f, SightRange, AwarenessSighting.None);
+            meter.Tick(1f, _sightRange, AwarenessSighting.None);
             Assert.That(meter.Stage, Is.EqualTo(AwarenessStage.Alerted));
 
-            meter.Tick(2f, SightRange, AwarenessSighting.None);
+            meter.Tick(2f, _sightRange, AwarenessSighting.None);
             Assert.That(meter.Stage, Is.EqualTo(AwarenessStage.Noticed));
 
             Assert.That(changes, Is.EqualTo(new[]
@@ -186,8 +186,8 @@ namespace Fps.Core.Tests
             var meter = new AwarenessMeter(AwarenessSpec.Default);
 
             Assert.Throws<ArgumentNullException>(() => _ = new AwarenessMeter(null));
-            Assert.Throws<ArgumentOutOfRangeException>(() => meter.Tick(-1f, SightRange, Seen()));
-            Assert.Throws<ArgumentOutOfRangeException>(() => meter.Tick(float.PositiveInfinity, SightRange, Seen()));
+            Assert.Throws<ArgumentOutOfRangeException>(() => meter.Tick(-1f, _sightRange, Seen()));
+            Assert.Throws<ArgumentOutOfRangeException>(() => meter.Tick(float.PositiveInfinity, _sightRange, Seen()));
             Assert.Throws<ArgumentOutOfRangeException>(() => meter.Tick(0.1f, 0f, Seen()));
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = new AwarenessSighting(true, -1f, 0f, AwarenessPosture.Standing, 1f, 0f));
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = new AwarenessSighting(true, 1f, 181f, AwarenessPosture.Standing, 1f, 0f));
@@ -220,7 +220,7 @@ namespace Fps.Core.Tests
             var seconds = 0f;
             while (meter.Stage == AwarenessStage.Unaware && seconds < 100f)
             {
-                meter.Tick(0.01f, SightRange, sighting);
+                meter.Tick(0.01f, _sightRange, sighting);
                 seconds += 0.01f;
             }
 

@@ -233,7 +233,7 @@ namespace Fps.Editor
             _alertDistance = HorizontalDistance(_enemy.GroundPosition, _alertSpot);
             _peakLevel = _stealth.Level;
 
-            // 視認距離の外 (出現位置) へ移して、確実に見えなくする。
+            // 囲いの外 (出現位置) へ移して、確実に見えなくする。
             _filter.Move = Vector2.zero;
             Teleport(world.Controller, GameBootstrap.PlayerSpawn);
             _phase = Phase.Hide;

@@ -30,7 +30,7 @@ namespace Fps.Core
         /// <summary>状態が変わるたびに（変わる前, 変わった後）で呼ばれる。</summary>
         public event Action<EnemyState, EnemyState> StateChanged;
 
-        private readonly EnemySpec _spec;
+        private EnemySpec _spec;
         private Vector3[] _route = Array.Empty<Vector3>();
         private int _routeIndex;
         private Vector3 _lastSeen;
@@ -88,6 +88,12 @@ namespace Fps.Core
 
         /// <param name="spec">敵の設定。</param>
         public EnemyBrain(EnemySpec spec)
+        {
+            _spec = spec ?? throw new ArgumentNullException(nameof(spec));
+        }
+
+        // 状態や経過時間は持ち越す。ボスの段階の切り替えで、戦っている最中に判断が初めからやり直しにならないように。
+        public void ChangeSpec(EnemySpec spec)
         {
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));
         }

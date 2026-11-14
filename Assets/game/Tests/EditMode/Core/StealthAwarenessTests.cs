@@ -11,6 +11,7 @@ namespace Fps.Core.Tests
         private static readonly Vector3 _self = Vector3.Zero;
         private static readonly Vector3 _ahead = new Vector3(0f, 0f, 15f);
         private static readonly Vector3 _elsewhere = new Vector3(8f, 0f, 15f);
+        private static readonly float[] _fullAwareness = { 1f };
 
         private static EnemySpec BrainSpec() => new EnemySpec(20f, 10f, 1f, 2f, 0.5f, 6f, 0f, 2);
 
@@ -57,7 +58,7 @@ namespace Fps.Core.Tests
             Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
             Assert.That(awareness.Stage, Is.EqualTo(AwarenessStage.Engaged));
             Assert.That(stages, Is.EqualTo(new[] { AwarenessStage.Engaged }));
-            Assert.That(recorder.Awareness, Is.EqualTo(new[] { 1f }), "the perception is passed on unchanged");
+            Assert.That(recorder.Awareness, Is.EqualTo(_fullAwareness), "the perception is passed on unchanged");
         }
 
         [Test]

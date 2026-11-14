@@ -124,6 +124,12 @@ namespace Fps.Core.Tests
                 BattleRoyaleLog.Errand(3, BotErrandKind.Collect, new Vector3(4f, 0f, 12f)),
                 Is.EqualTo("[Mode] errand player=3 kind=Collect at=(4.00, 0.00, 12.00)"));
             Assert.That(BattleRoyaleLog.Errand(3, BotErrandKind.None, Vector3.Zero), Is.EqualTo("[Mode] errand player=3 kind=None"));
+            Assert.That(
+                BattleRoyaleLog.Drop(0, 60f, ParachuteOpenVerdict.Open),
+                Is.EqualTo("[Mode] drop player=0 height=60.00 parachute=Open"));
+            Assert.That(
+                BattleRoyaleLog.Drop(0, 60f, ParachuteOpenVerdict.RuleOff),
+                Is.EqualTo("[Mode] drop player=0 height=60.00 parachute=RuleOff"));
         }
 
         /// <summary>4 分隊のうち 3 分隊に人がいる。分隊 0 にプレイヤーと味方、分隊 1 と 2 に 1 人ずつ。</summary>

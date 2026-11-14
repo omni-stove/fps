@@ -9,6 +9,7 @@ namespace Fps.Core.Tests
     public sealed class EnemyBrainPerceptionContributorTests
     {
         private static readonly Vector3 _near = new Vector3(0f, 0f, 5f);
+        private static readonly string[] _orderedCalls = { "first:1", "second:0.5", "behavior:0.5" };
 
         private static EnemySpec Spec() => new EnemySpec(20f, 10f, 1f, 2f, 0.5f, 6f, 0f, 2);
 
@@ -26,7 +27,7 @@ namespace Fps.Core.Tests
 
             brain.Tick(0.1f, Sees());
 
-            Assert.That(calls, Is.EqualTo(new[] { "first:1", "second:0.5", "behavior:0.5" }));
+            Assert.That(calls, Is.EqualTo(_orderedCalls));
             Assert.That(brain.State, Is.EqualTo(EnemyState.Idle), "the lowered awareness kept the brain from attacking");
         }
 

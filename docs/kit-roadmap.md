@@ -31,6 +31,8 @@
 - 音とエフェクト: `PresentationCatalog` (Resources の `Presentation/PresentationCatalog`) を差し替えれば変わる。
   武器ごとのものは武器の Id で引く。
 - 文言: `Resources/Localization/<言語>/*.json` の表を引く `LocalizedText`。
+- 移動: `MotorSettings` (コンポーネントに割り当てたもの、無ければ Resources の `Movement/MotorSettings`、それも無ければ `MotorSpec.Default`)。
+  オフラインの `PlayerController`・ネット対戦の `NetworkPlayerMotor`・`CharacterAnimator` のポーズが同じ値を読む。
 - メニューから移るシーン名: `MenuSceneSettings` (Resources の `Menu/MenuSceneSettings`) を置けば、メインメニュー・射撃場・
   キャンペーン・ネット対戦のシーン名が `MenuRoute` の既定 (MainMenu / Bootstrap / Campaign01 / NetTest) から変わる。
   キャンペーンの選択画面で選ぶミッションのシーンは、これとは別に `MissionCatalog` が持つ。
@@ -39,7 +41,6 @@
 
 `const ... Default*` として持っているもの。データに出し、ゲームが上書きできるようにする。
 
-- 移動: `PlayerController` (`DefaultWalkSpeed` など) と `NetworkPlayerMotor` (`_walkSpeed = 5f` など) が別々に持っている
 - 敵 AI: `EnemyAgent` (`DefaultSightRange`、`DefaultReactionSeconds` など)。`EnemySpec` との関係を整理する
 - グレネード: `GrenadeSpec.Default*`。`GrenadeThrower` の Inspector では変えられるが、ルールや武器のような JSON は無い
 - 印: `PingSpec.Default*`。オフラインは `PingController` の Inspector、ネット対戦は `NetTeamDeathmatch.PingSpec` をコードで差し替えられるが、JSON は無い
@@ -53,12 +54,7 @@
 
 ゲームが値を変えるとずれる。移行を待たずに直してよい (触る範囲が小さい)。
 
-- `CharacterAnimator.cs` が `PlayerController.DefaultWalkSpeed`・`DefaultSprintSpeed`・`DefaultCrouchSpeed` でポーズを作る
-- `NetPlayer.cs` が motor の無いときに `PlayerController.Default*Speed` を返す
-- `NetworkPlayerMotor.cs` のしゃがみ速度 (`CrouchSpeed`) が `PlayerController.DefaultCrouchSpeed` 固定
-- オフライン (`PlayerController`) とネット (`NetworkPlayerMotor`) で移動の値を別に持っている
-
-→ 移動の値を `MotorSpec` 1 つにまとめ、両方とアニメーションが同じものを読む。
+- (移動の値は `MotorSettings` にまとめた。いま知られている箇所は無い)
 
 ### コードで作っている仮の見た目
 
@@ -77,7 +73,7 @@
 
 ## 移行の順番
 
-1. **移動の値の統一** (上記「定数を直接見ている箇所」)。小さく、実害があるので先にやる。
+1. **移動の値の統一** (済み。`MotorSettings`)。
 2. **パッケージの中でキット本体とサンプルを分ける**。
    - 本体: `Scripts/Core`・`Runtime`・`Runtime/UI`・`Net`・`Net/UI`・`NetEos` と、そのエディタ拡張。
    - サンプル: 武器・ルールの JSON、ミッション、シーン、`*SceneBuilder` などシーンを組むエディタスクリプト、仮の素材。

@@ -127,7 +127,12 @@ namespace Fps.Runtime
             var hitbox = Hitbox.FindFor(hit.collider);
             if (hitbox == null)
             {
-                StructureDamage.Apply(hit.collider, hit.point, baseDamage, explosionRadius);
+                // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
+                using (CombatEvents.Attribute(shooter, weaponId))
+                {
+                    StructureDamage.Apply(hit.collider, hit.point, baseDamage, explosionRadius);
+                }
+
                 return new HitscanResult(true, hit, null, 0);
             }
 

@@ -57,7 +57,20 @@ namespace Fps.Editor
                 return;
             }
 
-            ImportFrom(source, GameRulesAssetBuilder.Folder);
+            try
+            {
+                var imported = ImportFrom(source, GameRulesAssetBuilder.Folder);
+                EditorUtility.DisplayDialog(
+                    "Import Game Rules From JSON",
+                    $"Imported {imported.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)} game rules into '{GameRulesAssetBuilder.Folder}'.",
+                    "OK");
+            }
+            catch (Exception e)
+            {
+                // メニューからの失敗はダイアログにも出し、Console を開いていなくても気づけるようにする
+                Debug.LogException(e);
+                EditorUtility.DisplayDialog("Import Game Rules From JSON failed", e.Message, "OK");
+            }
         }
 
         /// <summary>

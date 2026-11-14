@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -15,6 +16,170 @@ namespace Fps.Runtime
         public const int MaxHits = 32;
 
         private static readonly RaycastHit[] _buffer = new RaycastHit[MaxHits];
+        private static readonly List<INearMissTarget> _nearMissTargets = new List<INearMissTarget>();
+
+        // 相手の OnNearMiss の後に出す。受け皿を持たない仕組み (音・カメラの揺れなど) が、どの弾がどこをかすめたかだけ聞けるように。
+        public static event Action<HitscanNearMiss> NearMissed;
+
+        public static IReadOnlyList<INearMissTarget> NearMissTargets => _nearMissTargets;
+
+        /// <exception cref="ArgumentNullException">target が null。</exception>
+        public static bool RegisterNearMissTarget(INearMissTarget target)
+        {
+            if (target == null)
+            {
+                throw new ArgumentNullException(nameof(target));
+            }
+
+            if (_nearMissTargets.Contains(target))
+            {
+                return false;
+            }
+
+            _nearMissTargets.Add(target);
+            return true;
+        }
+
+        /// <exception cref="ArgumentNullException">target が null。</exception>
+        public static bool UnregisterNearMissTarget(INearMissTarget target)
+        {
+            if (target == null)
+            {
+                throw new ArgumentNullException(nameof(target));
+            }
+
+            return _nearMissTargets.Remove(target);
+        }
+
+        // Fire の中だけでなく公開するのは、Raycast を自前で行う WeaponController (プレイヤーの射撃) からも同じ判定を通すため。
+        // 弾が当たった相手 (struck が相手の子孫) はニアミスではなく被弾として扱うので数えない。
+        /// <param name="travelled">弾が進んだ距離 (当たったならそこまで、外れたなら射程)。</param>
+        /// <exception cref="ArgumentException">direction が 0。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">travelled が 0 以上の有限値でない。</exception>
+        public static int ReportNearMisses(Vector3 origin, Vector3 direction, float travelled, Transform shooterRoot, Collider struck)
+        {
+            if (direction.sqrMagnitude < 1e-12f)
+            {
+                throw new ArgumentException("direction must not be zero", nameof(direction));
+            }
+
+            if (!(travelled >= 0f) || float.IsInfinity(travelled))
+            {
+                throw new ArgumentOutOfRangeException(nameof(travelled), travelled, "travelled must be non-negative and finite");
+            }
+
+            if (_nearMissTargets.Count == 0)
+            {
+                return 0;
+            }
+
+            // 受け取り側が登録を外したり足したりしても、この弾で調べる相手が変わらないよう写しを回す。
+            var targets = _nearMissTargets.ToArray();
+            var shooter = shooterRoot != null ? shooterRoot.gameObject : null;
+            var count = 0;
+            foreach (var target in targets)
+            {
+                // 消された MonoBehaviour が登録を外さずに残っていたら、ここで外す。
+                if (target is UnityEngine.Object unityObject && unityObject == null)
+                {
+                    _nearMissTargets.Remove(target);
+                    continue;
+                }
+
+                if (!TryMeasureNearMiss(target, origin, direction, travelled, shooterRoot, shooter, struck, out var nearMiss))
+                {
+                    continue;
+                }
+
+                count++;
+                Deliver(target, nearMiss);
+            }
+
+            return count;
+        }
+
+        private static bool TryMeasureNearMiss(
+            INearMissTarget target,
+            Vector3 origin,
+            Vector3 direction,
+            float travelled,
+            Transform shooterRoot,
+            GameObject shooter,
+            Collider struck,
+            out HitscanNearMiss nearMiss)
+        {
+            nearMiss = default;
+            var root = target.Root;
+            if (root == null)
+            {
+                return false;
+            }
+
+            if (shooterRoot != null && root.IsChildOf(shooterRoot))
+            {
+                return false;
+            }
+
+            if (struck != null && struck.transform.IsChildOf(root))
+            {
+                return false;
+            }
+
+            var radius = target.NearMissRadius;
+            if (!(radius > 0f) || !target.TryGetNearMissCenter(out var center))
+            {
+                return false;
+            }
+
+            if (!NearMiss.TryDistance(origin.ToNumerics(), direction.ToNumerics(), travelled, center.ToNumerics(), out var distance, out var along)
+                || !(distance < radius))
+            {
+                return false;
+            }
+
+            var closest = origin + (direction.normalized * along);
+            nearMiss = new HitscanNearMiss(target, shooter, origin, direction.normalized, closest, distance);
+            return true;
+        }
+
+        // 受け取り側が投げても弾の処理 (ダメージ) を止めず、ほかの相手にも知らせる。
+        private static void Deliver(INearMissTarget target, HitscanNearMiss nearMiss)
+        {
+            try
+            {
+                target.OnNearMiss(nearMiss);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, target as UnityEngine.Object);
+            }
+
+            var handlers = NearMissed;
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (var handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<HitscanNearMiss>)handler)(nearMiss);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
+        // ドメインの再読み込みを切った Play で、前の Play の相手と購読が残らないようにする。
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetNearMisses()
+        {
+            _nearMissTargets.Clear();
+            NearMissed = null;
+        }
 
         /// <summary>
         /// origin から direction へ maxDistance まで Raycast し、shooterRoot の子孫とトリガーと、
@@ -94,7 +259,8 @@ namespace Fps.Runtime
         /// 撃った武器の Id。<see cref="CombatEvents.ShotFired"/> と、倒したときの <see cref="CombatEvents.Killed"/> に渡す。null なら空文字。
         /// </param>
         /// <remarks>
-        /// 値の検査を通ったら <see cref="CombatEvents.ShotFired"/>、何かに当たったら <see cref="CombatEvents.Impact"/> を出す。
+        /// 値の検査を通ったら <see cref="CombatEvents.ShotFired"/> と、弾の線の近くにいた相手への <see cref="NearMissed"/>
+        /// (<see cref="ReportNearMisses"/>)、何かに当たったら <see cref="CombatEvents.Impact"/> を出す。
         /// <see cref="CombatEvents.HitConfirmed"/> は出さない (撃った本人のクライアントで出すもので、ここを使う敵には要らない)。
         /// </remarks>
         public static HitscanResult Fire(
@@ -127,6 +293,7 @@ namespace Fps.Runtime
             var found = TryFirstHit(origin, direction, range, shooterRoot, out var hit);
             var shooter = shooterRoot != null ? shooterRoot.gameObject : null;
             CombatEvents.RaiseShotFired(shooter, origin, direction, weaponId);
+            ReportNearMisses(origin, direction, found ? hit.distance : range, shooterRoot, found ? hit.collider : null);
             if (!found)
             {
                 return HitscanResult.Miss;
@@ -219,6 +386,32 @@ namespace Fps.Runtime
             }
 
             return hit.collider.transform.IsChildOf(target.transform);
+        }
+    }
+
+    public readonly struct HitscanNearMiss
+    {
+        public INearMissTarget Target { get; }
+
+        // 撃った者が分からない弾 (shooterRoot が null) もあるので null を許す。
+        public GameObject Shooter { get; }
+
+        public Vector3 Origin { get; }
+
+        public Vector3 Direction { get; }
+
+        public Vector3 ClosestPoint { get; }
+
+        public float Distance { get; }
+
+        public HitscanNearMiss(INearMissTarget target, GameObject shooter, Vector3 origin, Vector3 direction, Vector3 closestPoint, float distance)
+        {
+            Target = target;
+            Shooter = shooter;
+            Origin = origin;
+            Direction = direction;
+            ClosestPoint = closestPoint;
+            Distance = distance;
         }
     }
 

@@ -101,6 +101,10 @@ namespace Fps.Runtime
 
         float IWeaponModifier.SpreadMultiplier => 1f;
 
+        float IWeaponModifier.ModifyConeDegrees(WeaponSpec spec, float coneDegrees) => coneDegrees;
+
+        float IWeaponModifier.ModifySpreadFraction(float spreadFraction) => spreadFraction;
+
         int IMovementOverride.Priority => LungePriority;
 
         bool IMovementOverride.IsActive => enabled && IsLunging;

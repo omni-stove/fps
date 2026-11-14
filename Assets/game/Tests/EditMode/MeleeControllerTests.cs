@@ -313,6 +313,10 @@ namespace Fps.Tests.EditMode
             public bool BlocksReload => false;
 
             public float SpreadMultiplier => _multiplier;
+
+            public float ModifyConeDegrees(WeaponSpec spec, float coneDegrees) => coneDegrees;
+
+            public float ModifySpreadFraction(float spreadFraction) => spreadFraction;
         }
 
         private sealed class RecordingPresenter : IMeleePresenter

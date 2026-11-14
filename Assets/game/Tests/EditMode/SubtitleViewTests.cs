@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -88,8 +89,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(Texts(view), Is.EqualTo(new[] { "[足音 左]", "[爆発 正面 遠く]", "[リロード]" }));
             Assert.That(
-                view.Element.Query<Label>(className: SubtitleView.LineClass).ToList(),
-                Has.Count.EqualTo(3));
+                view.Element.Query<Label>(className: SubtitleView.LineClass).ToList().Count(),
+                Is.EqualTo(3));
         }
 
         [Test]
@@ -156,7 +157,7 @@ namespace Fps.Tests.EditMode
 
             SubtitleFeed.Raise(SoundCueKind.Reload, Vector3.one, 120f);
 
-            Assert.That(received, Has.Count.EqualTo(1));
+            Assert.That(received.Count(), Is.EqualTo(1));
             Assert.That(received[0].Kind, Is.EqualTo(SoundCueKind.Reload));
             Assert.That(received[0].Position, Is.EqualTo((Vector3?)Vector3.one));
             Assert.That(received[0].AudibleDistance, Is.EqualTo(120f));

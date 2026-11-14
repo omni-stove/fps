@@ -11,13 +11,13 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     /// <summary>
-    /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) の
+    /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには床 (<see cref="FloorName"/>)、肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) の
     /// <see cref="GameBootstrap"/> と <see cref="MatchRunner"/> を置いた GameObject、高低の遮蔽物 (<see cref="Covers"/>)、
     /// 乗り越え用の低い壁 (<see cref="VaultWall"/>)、回避と手榴弾を試す開けた場所の目印 (<see cref="OpenAreaName"/>)、
     /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場、乗り降りを試す動かない仮の乗り物 (<see cref="VehicleName"/>) と
     /// その左の降りる位置を塞ぐ箱 (<see cref="VehicleExitBlockerName"/>) を入れ、壁や箱には <see cref="SurfaceIds"/> の材質を付け、
     /// 最後に差し込まれた置く物 (<see cref="ITpsRangeFixture"/>、<see cref="Fixtures"/>) を置く。
-    /// 床・プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
+    /// プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
     /// ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/> を配線する。保存したシーンは Build Settings に (並びを変えずに) 加える。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.TpsRangeSceneBuilder.Build</code>
@@ -25,7 +25,7 @@ namespace Fps.Editor
     /// <remarks>
     /// 配置 (上から見て、プレイヤーは原点で +Z を向き、GameBootstrap が z = 10 に標的ダミーを x = -4..4 で並べる):
     /// 遮蔽物は出現位置と標的の間とその周り、乗り越えの壁は左 (x = -10)、開けた場所は右手前 (x = 8..20, z = -12..0)、
-    /// 小屋は右奥 (<see cref="HutCenter"/>)、乗り物は左手前 (<see cref="VehicleOrigin"/>) に置き、どれも GameBootstrap の床 (x, z とも ±25m) に収める。
+    /// 小屋は右奥 (<see cref="HutCenter"/>)、乗り物は出現位置の左手前 (<see cref="VehicleOrigin"/>) に置き、どれも床 (x, z とも ±<see cref="FloorHalfExtent"/>) に収める。
     /// </remarks>
     public static class TpsRangeSceneBuilder
     {
@@ -34,6 +34,7 @@ namespace Fps.Editor
         public const string LogTag = "[TpsRangeSceneBuilder]";
 
         public const string BootstrapObjectName = "GameBootstrap";
+        public const string FloorName = GameBootstrap.FloorName;
         public const string CoversName = BootstrapSceneBuilder.CoversName;
         public const string LowCoverName = BootstrapSceneBuilder.LowCoverName;
         public const string HighCoverName = BootstrapSceneBuilder.HighCoverName;
@@ -65,8 +66,8 @@ namespace Fps.Editor
         public const string VehicleName = VehicleFixtureBuilder.DefaultName;
         public const string VehicleExitBlockerName = "VehicleExitBlocker";
 
-        /// <summary>乗り降りを試す仮の乗り物の原点 (床の高さ)。+Z を向けて左手前に置く。</summary>
-        public static readonly Vector3 VehicleOrigin = new Vector3(-14f, 0f, -12f);
+        /// <summary>乗り降りを試す仮の乗り物の原点 (床の高さ)。+Z を向けて出現位置の左手前に置く。</summary>
+        public static readonly Vector3 VehicleOrigin = new Vector3(-6f, 0f, -11f);
 
         /// <summary>
         /// 乗り物の左に降りる位置 (運転席の最初の候補) を塞ぐ箱。運転席から降りると反対側の候補に降りることを確かめるためのもの。
@@ -76,8 +77,14 @@ namespace Fps.Editor
             VehicleOrigin + VehicleFixtureBuilder.LeftExitLocal + new Vector3(0f, 1f, 0f),
             new Vector3(1f, 2f, 1f));
 
-        /// <summary>GameBootstrap が作る床の x, z 方向の半分の広さ (m)。Plane は 10m 四方。</summary>
-        public static readonly float FloorHalfExtent = GameBootstrap.FloorScale.x * 10f / 2f;
+        /// <summary>
+        /// 床の Plane の倍率。Plane は 10m 四方なので、8 倍で 80m 四方 (x, z とも ±40m)。
+        /// GameBootstrap の床 (<see cref="GameBootstrap.FloorScale"/>) では置く物が収まらないので、シーンに自前の床を置く。
+        /// </summary>
+        public static readonly Vector3 FloorScale = new Vector3(8f, 1f, 8f);
+
+        /// <summary>床の x, z 方向の半分の広さ (m)。</summary>
+        public static readonly float FloorHalfExtent = FloorScale.x * 10f / 2f;
 
         /// <summary>
         /// 遮蔽物。0, 1 番は Bootstrap の射撃場と同じ低い壁と高い壁 (<see cref="BootstrapSceneBuilder.Covers"/>) で、
@@ -123,6 +130,7 @@ namespace Fps.Editor
         public static readonly IReadOnlyList<string> BuiltInNames = new[]
         {
             BootstrapObjectName,
+            FloorName,
             CoversName,
             VaultWallName,
             OpenAreaName,
@@ -211,7 +219,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 空のシーンに GameBootstrap (三人称、weapons と rules を配線) と MatchRunner を置いた GameObject、遮蔽物、乗り越えの壁、
+        /// 空のシーンに床、GameBootstrap (三人称、床は作らない、weapons と rules を配線) と MatchRunner を置いた GameObject、遮蔽物、乗り越えの壁、
         /// 開けた場所の目印、壊せる小屋と破片の置き場、仮の乗り物とその降りる位置を塞ぐ箱を入れ、見つけた置く物 (<see cref="Fixtures"/>) を置いて
         /// GameBootstrap を返す。小屋が壊れるかは rules の <see cref="GameRules.Destruction"/> で決める。引数が不正なら何も置かずに例外を投げる。
         /// </summary>
@@ -251,7 +259,10 @@ namespace Fps.Editor
                 created.Add(bootstrapObject);
                 SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
                 var bootstrap = bootstrapObject.GetComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
                 bootstrap.ViewMode = ViewMode.ThirdPerson;
+
+                created.Add(SceneBuildHelpers.CreateStaticPlane(scene, null, FloorName, Vector3.zero, FloorScale));
                 bootstrap.WeaponDefinitions = weapons;
                 bootstrap.RulesDefinition = rules;
 

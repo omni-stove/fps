@@ -19,6 +19,21 @@ namespace Fps.Net.Tests
         private readonly List<string> _files = new List<string>();
         private Scene _scene;
 
+        // 保存されていない Untitled シーンがあると Additive の NewScene は例外を投げるので、保存済みの空のシーンに置き換えておく。
+        [SetUp]
+        public void SetUp()
+        {
+            for (var i = 0; i < SceneManager.sceneCount; i++)
+            {
+                if (string.IsNullOrEmpty(SceneManager.GetSceneAt(i).path))
+                {
+                    var baseScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                    EditorSceneManager.SaveScene(baseScene, "Temp/FpsNetTestBase.unity");
+                    break;
+                }
+            }
+        }
+
         [TearDown]
         public void TearDown()
         {

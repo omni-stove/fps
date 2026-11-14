@@ -1,3 +1,4 @@
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -853,7 +854,7 @@ namespace Fps.Net.Tests
             _netHud.BindMatch(_match);
 
             var sections = _netHud.Hud.Scoreboard.Sections;
-            Assert.That(sections, Has.Count.EqualTo(2));
+            Assert.That(sections.Count(), Is.EqualTo(2));
             Assert.That(sections[0].Rows, Is.Empty);
             Assert.That(sections[1].Rows, Is.Empty);
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -78,7 +79,7 @@ namespace Fps.Tests.EditMode
         {
             var missions = CampaignSceneBuilder.Missions();
 
-            Assert.That(missions, Has.Count.EqualTo(2));
+            Assert.That(missions.Count(), Is.EqualTo(2));
             Assert.That(missions[0].Id, Is.EqualTo(CampaignSceneBuilder.MissionId));
             Assert.That(missions[0].ScenePath, Is.EqualTo(BuildSceneList.CampaignScene));
             Assert.That(missions[0].DefinitionPath, Is.EqualTo(CampaignSceneBuilder.DefinitionPath));
@@ -101,7 +102,7 @@ namespace Fps.Tests.EditMode
             var reinforcements = Localizer.Resolve(mission.Objectives[2].Description);
             Assert.That(reinforcements, Is.Not.EqualTo(mission.Objectives[2].DescriptionKey), "the description is in the table");
             Assert.That(reinforcements, Does.Contain(Campaign02Mission.Reinforcements.Count.ToString(CultureInfo.InvariantCulture)));
-            Assert.That(mission.Objectives, Has.Count.EqualTo(4));
+            Assert.That(mission.Objectives.Count(), Is.EqualTo(4));
             Assert.That(mission.Objectives[0].Id, Is.EqualTo(Campaign02Mission.EnterBuildingId));
             Assert.That(mission.Objectives[0].Prerequisites, Is.Empty);
             Assert.That(mission.Objectives[1].Id, Is.EqualTo(Campaign02Mission.UseTerminalId));
@@ -142,7 +143,7 @@ namespace Fps.Tests.EditMode
             Assert.That(extraction, Is.InstanceOf<ReachAreaTrigger>());
             Assert.That(extraction.Runner, Is.SameAs(layout.Runner));
 
-            Assert.That(layout.KillObjectives, Has.Count.EqualTo(1), "the guards are not part of any objective");
+            Assert.That(layout.KillObjectives.Count(), Is.EqualTo(1), "the guards are not part of any objective");
             var kill = layout.KillObjective(Campaign02Mission.KillReinforcementsId);
             Assert.That(kill.name, Is.EqualTo(Campaign02Mission.ReinforcementsObjectName));
             Assert.That(kill.Runner, Is.SameAs(layout.Runner));
@@ -150,10 +151,10 @@ namespace Fps.Tests.EditMode
             var reveal = layout.Reveal(Campaign02Mission.KillReinforcementsId);
             Assert.That(reveal.gameObject, Is.SameAs(kill.gameObject));
             Assert.That(reveal.Runner, Is.SameAs(layout.Runner));
-            Assert.That(reveal.Targets, Has.Count.EqualTo(Campaign02Mission.Reinforcements.Count));
+            Assert.That(reveal.Targets.Count(), Is.EqualTo(Campaign02Mission.Reinforcements.Count));
 
             var placements = _spec.AllEnemies();
-            Assert.That(layout.Enemies, Has.Count.EqualTo(placements.Count));
+            Assert.That(layout.Enemies.Count(), Is.EqualTo(placements.Count));
             Assert.That(placements.Count, Is.EqualTo(Campaign02Mission.Guards.Count + Campaign02Mission.Reinforcements.Count));
             for (var i = 0; i < placements.Count; i++)
             {
@@ -177,7 +178,7 @@ namespace Fps.Tests.EditMode
             }
 
             Assert.That(layout.CoverRegistry, Is.Not.Null);
-            Assert.That(layout.CoverRegistry.Points, Has.Count.EqualTo(_spec.CoverPoints.Count));
+            Assert.That(layout.CoverRegistry.Points.Count(), Is.EqualTo(_spec.CoverPoints.Count));
         }
 
         [Test]
@@ -226,7 +227,7 @@ namespace Fps.Tests.EditMode
         {
             var layout = Populate();
 
-            Assert.That(layout.Checkpoints, Has.Count.EqualTo(3));
+            Assert.That(layout.Checkpoints.Count(), Is.EqualTo(3));
             var start = layout.Checkpoint(Campaign02Mission.StartCheckpointId);
             Assert.That(
                 Vector3.Distance(start.RespawnPosition, GameBootstrap.PlayerSpawn),
@@ -314,7 +315,7 @@ namespace Fps.Tests.EditMode
                 var reveal = layout.Reveal(Campaign02Mission.KillReinforcementsId);
                 Assert.That(kill.Bind(layout.Runner), Is.True);
                 Assert.That(reveal.Bind(layout.Runner), Is.True);
-                Assert.That(kill.BoundTargets, Has.Count.EqualTo(Campaign02Mission.Reinforcements.Count));
+                Assert.That(kill.BoundTargets.Count(), Is.EqualTo(Campaign02Mission.Reinforcements.Count));
                 var mission = layout.Runner.Mission;
                 var terminal = (InteractObjective)layout.Area(Campaign02Mission.UseTerminalId);
 
@@ -373,7 +374,7 @@ namespace Fps.Tests.EditMode
                 Is.Not.Null,
                 $"run {nameof(CampaignSceneBuilder)}.Build first");
 
-            Assert.That(definition.CreateMission().Objectives, Has.Count.EqualTo(4));
+            Assert.That(definition.CreateMission().Objectives.Count(), Is.EqualTo(4));
 
             EditorSceneManager.CloseScene(_scene, true);
             _scene = EditorSceneManager.OpenScene(Campaign02Mission.ScenePath, OpenSceneMode.Additive);
@@ -462,7 +463,7 @@ namespace Fps.Tests.EditMode
             var tall = new LevelBox("Cover_Tall", new Vector3(0f, 1f, 0f), new Vector3(2f, 2f, 1f));
 
             Assert.Throws<ArgumentException>(() => CampaignSceneBuilder.LowCoverPoints(new[] { tall }));
-            Assert.That(CampaignSceneBuilder.HighCoverPoints(new[] { tall }), Has.Count.EqualTo(4));
+            Assert.That(CampaignSceneBuilder.HighCoverPoints(new[] { tall }).Count(), Is.EqualTo(4));
         }
 
         private static CampaignMissionSpec Spec(IReadOnlyList<ObjectiveDefinition> objectives, params CampaignElement[] elements)

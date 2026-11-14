@@ -46,7 +46,7 @@ namespace Fps.Tests.EditMode
                 typeof(PresentationCatalogAssetStep),
             });
 
-            Assert.That(steps, Has.Count.EqualTo(1));
+            Assert.That(steps.Count(), Is.EqualTo(1));
             Assert.That(steps[0], Is.InstanceOf<PresentationCatalogAssetStep>());
         }
 

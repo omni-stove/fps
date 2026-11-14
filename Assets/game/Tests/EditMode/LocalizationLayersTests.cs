@@ -206,6 +206,7 @@ namespace Fps.Tests.EditMode
             Assert.That(Localizer.NativeNameOf(GameLanguage.English), Is.EqualTo("English"));
 
             // 今の言語が英語でも、日本語の名前は日本語の表から引く
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
             AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
             Assert.That(Localizer.NativeNameOf(GameLanguage.Japanese), Is.EqualTo("日本語"));
             LogAssert.NoUnexpectedReceived();

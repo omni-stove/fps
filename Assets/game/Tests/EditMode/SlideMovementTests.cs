@@ -31,6 +31,7 @@ namespace Fps.Tests.EditMode
         private GameObject _floor;
         private GameObject _obstacle;
         private bool _crouchWasHeld;
+        private bool _sprintWasHeld;
 
         [SetUp]
         public void SetUp()
@@ -51,6 +52,7 @@ namespace Fps.Tests.EditMode
             _slide = _body.AddComponent<SlideMovement>();
             _slide.Configure(Rules(Slide.On));
             _crouchWasHeld = false;
+            _sprintWasHeld = false;
 
             _floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             _floor.transform.position = new Vector3(0f, -0.5f, 0f);
@@ -143,7 +145,7 @@ namespace Fps.Tests.EditMode
         {
             _slide.Configure(Rules(Slide.Off));
             Assert.That(_slide.enabled, Is.False);
-            Assert.That(_player.MovementOverrides, Does.Not.Contain(_slide));
+            Assert.That(_player.MovementOverrides, Has.No.Member(_slide));
 
             Sprint(10);
             Press(sprint: true, crouch: true);
@@ -279,7 +281,7 @@ namespace Fps.Tests.EditMode
 
             installer.Install(_body, Rules(Slide.Off));
             Assert.That(_slide.enabled, Is.False);
-            Assert.That(_player.MovementOverrides, Does.Not.Contain(_slide));
+            Assert.That(_player.MovementOverrides, Has.No.Member(_slide));
 
             var target = new GameObject("Target");
             try
@@ -360,7 +362,7 @@ namespace Fps.Tests.EditMode
             var input = new PlayerMoveInput(
                 Vector2.up,
                 sprint,
-                false,
+                sprint && !_sprintWasHeld,
                 InputDeviceKind.KeyboardMouse,
                 crouch,
                 crouch && !_crouchWasHeld,
@@ -368,6 +370,7 @@ namespace Fps.Tests.EditMode
                 jump,
                 false);
             _crouchWasHeld = crouch;
+            _sprintWasHeld = sprint;
             _player.ApplyInput(input, StepSeconds);
         }
 

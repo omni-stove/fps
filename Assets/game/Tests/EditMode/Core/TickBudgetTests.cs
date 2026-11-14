@@ -81,7 +81,7 @@ namespace Fps.Core.Tests
             Assert.That(budget.MaxMs, Is.EqualTo(0d));
             Assert.That(budget.P95Ms, Is.EqualTo(0d));
             Assert.That(budget.IsWithinBudget, Is.False, "nothing measured must not pass");
-            Assert.That(budget.Violations(), Has.Count.EqualTo(1));
+            Assert.That(budget.Violations().Count, Is.EqualTo(1));
         }
 
         [Test]
@@ -109,7 +109,7 @@ namespace Fps.Core.Tests
             var budget = Recorded(new TickBudget(), 5d, 5d);
 
             Assert.That(budget.IsWithinBudget, Is.False);
-            Assert.That(budget.Violations(), Has.Count.EqualTo(1));
+            Assert.That(budget.Violations().Count, Is.EqualTo(1));
             Assert.That(budget.Violations()[0], Does.StartWith("average 5 ms"));
         }
 
@@ -120,7 +120,7 @@ namespace Fps.Core.Tests
 
             Assert.That(budget.AverageMs, Is.LessThan(budget.AverageBudgetMs));
             Assert.That(budget.IsWithinBudget, Is.False);
-            Assert.That(budget.Violations(), Has.Count.EqualTo(1));
+            Assert.That(budget.Violations().Count, Is.EqualTo(1));
             Assert.That(budget.Violations()[0], Does.StartWith("max 12.5 ms"));
         }
 
@@ -130,7 +130,7 @@ namespace Fps.Core.Tests
             var budget = Recorded(new TickBudget(0.01d, 0.01d), 0.5d, 0.8d, 1.2d);
 
             Assert.That(budget.IsWithinBudget, Is.False);
-            Assert.That(budget.Violations(), Has.Count.EqualTo(2));
+            Assert.That(budget.Violations().Count, Is.EqualTo(2));
         }
 
         [TestCase(0d)]

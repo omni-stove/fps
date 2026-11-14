@@ -1,3 +1,4 @@
+using System.Linq;
 using Fps.Editor;
 using NUnit.Framework;
 using UnityEngine;
@@ -29,7 +30,7 @@ namespace Fps.Tests.EditMode
             var halfZ = ModeSceneBuilder.DefaultFloorScale.z * 5f;
             var inner = ModeSceneBuilder.BoundaryWallThickness + SearchAndDestroySceneBuilder.SiteRadius;
 
-            Assert.That(SearchAndDestroySceneBuilder.SiteCenters, Has.Count.EqualTo(2));
+            Assert.That(SearchAndDestroySceneBuilder.SiteCenters.Count(), Is.EqualTo(2));
             foreach (var center in SearchAndDestroySceneBuilder.SiteCenters)
             {
                 var local = center - ModeSceneBuilder.DefaultFloorCenter;

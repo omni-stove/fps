@@ -12,7 +12,7 @@ namespace Fps.Editor
     /// smoke の手順は <see cref="ExplosivePropSmokeStep"/>。
     /// </summary>
     /// <remarks>
-    /// 置き場所は左奥 (<see cref="Center"/>)。乗り越えの壁・開けた場所・小屋・GameBootstrap の標的ダミーの列から離す。
+    /// 置き場所は左奥の外寄り (<see cref="Center"/>)。乗り越えの壁・開けた場所・小屋・GameBootstrap の標的ダミーの列から離し、爆発の半径にほかの置く物を入れない。
     /// 標的ダミーは近くの敵の代わりで、射撃場には NavMesh が無く <see cref="EnemyAgent"/> を置けないため。
     /// </remarks>
     public sealed class ExplosivePropRangeFixture : ITpsRangeFixture
@@ -36,7 +36,7 @@ namespace Fps.Editor
         public static readonly Vector3 GasCanSize = new Vector3(0.35f, 0.45f, 0.25f);
 
         /// <summary>樽 A の足元の位置。ほかの物はここから x 方向に <see cref="Spacing"/> ずつ並べる。</summary>
-        public static readonly Vector3 Center = new Vector3(-16f, 0f, 14f);
+        public static readonly Vector3 Center = new Vector3(-28f, 0f, 28f);
 
         /// <summary>樽の値。キットの既定値のまま。</summary>
         public static readonly ExplosivePropSpec BarrelSpec = ExplosivePropSpec.Default;

@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using Fps.Editor;
 using Fps.Runtime;
@@ -30,7 +31,7 @@ namespace Fps.Tests.EditMode
         {
             var points = HardpointSceneBuilder.Points;
 
-            Assert.That(points, Has.Count.EqualTo(4));
+            Assert.That(points.Count(), Is.EqualTo(4));
             for (var i = 0; i < points.Count; i++)
             {
                 Assert.That(points[i].Center.y, Is.Zero, $"{points[i].Name} sits on the floor");

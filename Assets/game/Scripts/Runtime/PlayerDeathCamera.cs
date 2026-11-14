@@ -273,7 +273,7 @@ namespace Fps.Runtime
 
         private void ScanKillCamSubjects()
         {
-            foreach (var candidate in FindObjectsByType<Damageable>(FindObjectsSortMode.None))
+            foreach (var candidate in FindObjectsByType<Damageable>())
             {
                 AddKillCamSubject(candidate.gameObject);
             }

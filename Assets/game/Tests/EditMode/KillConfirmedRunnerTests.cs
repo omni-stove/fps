@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -35,7 +36,7 @@ namespace Fps.Tests.EditMode
         public void TearDown()
         {
             _runner.Stop();
-            foreach (var pickup in Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var pickup in Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include))
             {
                 Object.DestroyImmediate(pickup.gameObject);
             }
@@ -68,7 +69,7 @@ namespace Fps.Tests.EditMode
             Assert.That(configured.Damageable, Is.SameAs(bot.Damageable));
 
             var dropped = KillAndCollectDrops(bot, player);
-            Assert.That(dropped, Has.Count.EqualTo(2), "drops set in the scene are kept next to the tag");
+            Assert.That(dropped.Count(), Is.EqualTo(2), "drops set in the scene are kept next to the tag");
         }
 
         [Test]
@@ -82,7 +83,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_runner.Session.GetKills(0), Is.EqualTo(1));
             Assert.That(_runner.Session.GetScore(Side.Alpha), Is.Zero);
-            Assert.That(_runner.KillConfirmed.Tags, Has.Count.EqualTo(1));
+            Assert.That(_runner.KillConfirmed.Tags.Count(), Is.EqualTo(1));
             Assert.That(tag.Spec.TagOwnerId, Is.EqualTo(_runner.IdOf(bot)));
             Assert.That(tag.Spec.TagOwnerSide, Is.EqualTo((Side?)Side.Bravo));
             Assert.That(tag.LifetimeSeconds, Is.Zero, "the mode counts the lifetime, not the pickup");

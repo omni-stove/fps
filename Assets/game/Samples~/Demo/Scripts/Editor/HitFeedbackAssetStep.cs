@@ -27,6 +27,7 @@ namespace Fps.Editor
         public const string HeadSprayEffect = "BloodSprayHead";
         public const string BodySprayEffect = "BloodSprayBody";
         public const string LimbSprayEffect = "BloodSprayLimb";
+        public const string WeakPointSprayEffect = "BloodSprayWeakPoint";
         public const string WallDecalPrefab = "BloodDecal";
         public const string DecalTextureName = "BloodDecal";
         public const string DecalMaterialName = "BloodDecal";
@@ -57,6 +58,7 @@ namespace Fps.Editor
                 (HitZone.Head, HeadSprayEffect),
                 (HitZone.Body, BodySprayEffect),
                 (HitZone.Limb, LimbSprayEffect),
+                (HitZone.WeakPoint, WeakPointSprayEffect),
             };
         }
 
@@ -80,7 +82,7 @@ namespace Fps.Editor
         {
             folder = PresentationAssetBuilder.ValidateFolderPath(folder, nameof(folder));
             catalogPath = SceneBuildHelpers.ValidateAssetPath(catalogPath);
-            particleMaterialPath = SceneBuildHelpers.ValidateAssetPath(particleMaterialPath);
+            particleMaterialPath = SceneBuildHelpers.ValidateAssetPath(particleMaterialPath, ".mat");
 
             var particleMaterial = AssetDatabase.LoadAssetAtPath<Material>(particleMaterialPath);
             if (particleMaterial == null)
@@ -100,6 +102,8 @@ namespace Fps.Editor
                     root => AddSpray(root, particleMaterial, 14, new Vector2(1.5f, 3.5f), new Vector2(0.04f, 0.09f), 25f)),
                 [LimbSprayEffect] = PresentationAssetBuilder.SavePrefab(folder, LimbSprayEffect,
                     root => AddSpray(root, particleMaterial, 8, new Vector2(1f, 2.5f), new Vector2(0.03f, 0.06f), 20f)),
+                [WeakPointSprayEffect] = PresentationAssetBuilder.SavePrefab(folder, WeakPointSprayEffect,
+                    root => AddSpray(root, particleMaterial, 26, new Vector2(2.5f, 6f), new Vector2(0.04f, 0.08f), 35f)),
             };
 
             var texture = PresentationAssetBuilder.WriteTexture(

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -75,7 +76,7 @@ namespace Fps.Tests.EditMode
 
             var specs = loadout.ToSpecs();
 
-            Assert.That(specs, Has.Count.EqualTo(2));
+            Assert.That(specs.Count(), Is.EqualTo(2));
             Assert.That(specs[0].Id, Is.EqualTo(_rifleId));
             Assert.That(specs[1].Id, Is.EqualTo(_handgunId));
             Assert.That(specs[1].Category, Is.EqualTo(WeaponCategory.Handgun));
@@ -94,7 +95,7 @@ namespace Fps.Tests.EditMode
             source.Add(new LoadoutSlotDefinition(_primary, Rifle()));
             categories.Add(WeaponCategory.Shotgun);
 
-            Assert.That(loadout.Slots, Has.Count.EqualTo(1));
+            Assert.That(loadout.Slots.Count(), Is.EqualTo(1));
             Assert.That(loadout.Slots[0], Is.SameAs(slot));
             Assert.That(slot.AllowedCategories, Is.EqualTo(_secondary));
 
@@ -226,7 +227,7 @@ namespace Fps.Tests.EditMode
                 new LoadoutSlotDefinition(_primary, rifle),
                 new LoadoutSlotDefinition(_primary, smg),
             });
-            Assert.That(loadout.ToSpecs(), Has.Count.EqualTo(2));
+            Assert.That(loadout.ToSpecs().Count(), Is.EqualTo(2));
         }
 
         [Test]

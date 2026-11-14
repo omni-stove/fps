@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -113,7 +114,7 @@ namespace Fps.Tests.EditMode
             _view.Show(_pinger);
 
             var marks = _view.Element.Query<VisualElement>(className: PingMarkersView.MarkerClass).ToList();
-            Assert.That(marks, Has.Count.EqualTo(1));
+            Assert.That(marks.Count(), Is.EqualTo(1));
             Assert.That(marks[0].ClassListContains(PingMarkersView.LocationClass), Is.True);
             Assert.That(marks[0].ClassListContains(PingMarkersView.OffScreenClass), Is.False);
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));

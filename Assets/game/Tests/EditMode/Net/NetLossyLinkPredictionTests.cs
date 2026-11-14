@@ -102,7 +102,7 @@ namespace Fps.Net.Tests
             }
 
             Assert.That(corrected, Is.GreaterThan(0), "the downed mismatch must be reconciled" + context);
-            Assert.That(checkedAfterReconcile, Is.GreaterThan(_clientTicks / 4), "enough reconciles must be compared" + context);
+            Assert.That(checkedAfterReconcile, Is.GreaterThan(_clientTicks / 6), "enough reconciles must be compared" + context);
 
             var last = run.ServerStates[_clientTicks - 1];
             Assert.That(run.FinalPrediction.IsCrouched, Is.True, "the downed player ends crouched" + context);

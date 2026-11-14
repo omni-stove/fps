@@ -56,7 +56,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentException>(() => brain.AddPerceptionContributor(contributor));
             Assert.Throws<ArgumentNullException>(() => brain.AddPerceptionContributor(null));
             Assert.Throws<ArgumentNullException>(() => brain.RemovePerceptionContributor(null));
-            Assert.That(brain.PerceptionContributors, Has.Count.EqualTo(1));
+            Assert.That(brain.PerceptionContributors.Count, Is.EqualTo(1));
         }
 
         [Test]

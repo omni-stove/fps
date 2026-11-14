@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using Fps.Core;
 using Fps.Runtime;
@@ -187,7 +188,7 @@ namespace Fps.Tests.EditMode
             var sections = DefaultHud.Scoreboard.Sections;
 
             Assert.That(sections[0].Team, Is.EqualTo(Team.Alpha));
-            Assert.That(sections[0].Rows, Has.Count.EqualTo(1));
+            Assert.That(sections[0].Rows.Count(), Is.EqualTo(1));
             var player = sections[0].Rows[0];
             Assert.That(player.PlayerId, Is.EqualTo(MatchRunner.PlayerId));
             Assert.That(player.Name, Is.EqualTo(ScoreboardRows.LocalPlayerName));
@@ -195,7 +196,7 @@ namespace Fps.Tests.EditMode
             Assert.That(player.Connection, Is.EqualTo(ScoreboardConnection.None));
 
             Assert.That(sections[1].Team, Is.EqualTo(Team.Bravo));
-            Assert.That(sections[1].Rows, Has.Count.EqualTo(_world.Targets.Count));
+            Assert.That(sections[1].Rows.Count(), Is.EqualTo(_world.Targets.Count));
             for (var i = 0; i < _world.Targets.Count; i++)
             {
                 var target = sections[1].Rows[i];

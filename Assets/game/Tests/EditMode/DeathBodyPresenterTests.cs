@@ -5,6 +5,7 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.TestTools.Utils;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -179,10 +180,10 @@ namespace Fps.Tests.EditMode
             {
                 body.transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
 
-                Assert.That(DeathBodyPresenter.HorizontalDirection(null, body.transform), Is.EqualTo(Vector3.left));
-                Assert.That(DeathBodyPresenter.HorizontalDirection(Vector3.up, body.transform), Is.EqualTo(Vector3.left), "straight down/up has no horizontal part");
-                Assert.That(DeathBodyPresenter.HorizontalDirection(new Vector3(0f, -3f, 2f), body.transform), Is.EqualTo(Vector3.forward));
-                Assert.That(DeathBodyPresenter.HorizontalDirection(null, null), Is.EqualTo(Vector3.back));
+                Assert.That(DeathBodyPresenter.HorizontalDirection(null, body.transform), Is.EqualTo(Vector3.left).Using(Vector3EqualityComparer.Instance));
+                Assert.That(DeathBodyPresenter.HorizontalDirection(Vector3.up, body.transform), Is.EqualTo(Vector3.left).Using(Vector3EqualityComparer.Instance), "straight down/up has no horizontal part");
+                Assert.That(DeathBodyPresenter.HorizontalDirection(new Vector3(0f, -3f, 2f), body.transform), Is.EqualTo(Vector3.forward).Using(Vector3EqualityComparer.Instance));
+                Assert.That(DeathBodyPresenter.HorizontalDirection(null, null), Is.EqualTo(Vector3.back).Using(Vector3EqualityComparer.Instance));
             }
             finally
             {

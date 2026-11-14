@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
@@ -131,7 +132,7 @@ namespace Fps.Tests.EditMode
 
             catalog.SetWeapons(source);
             source.Add(Weapon("b"));
-            Assert.That(catalog.Weapons, Has.Count.EqualTo(1));
+            Assert.That(catalog.Weapons.Count(), Is.EqualTo(1));
 
             catalog.SetWeapons(null);
             Assert.That(catalog.Weapons, Is.Empty);

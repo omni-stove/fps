@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -123,7 +124,7 @@ namespace Fps.Tests.EditMode
             }
 
             Assert.That(shell.GetComponentsInChildren<Damageable>(true), Is.Empty);
-            Assert.That(_presenter.Ragdoll.Bodies, Has.Count.EqualTo(2));
+            Assert.That(_presenter.Ragdoll.Bodies.Count(), Is.EqualTo(2));
             Assert.That(_presenter.Ragdoll.SettleSeconds, Is.EqualTo(catalog.SettleSeconds));
         }
 

@@ -58,6 +58,7 @@ namespace Fps.Tests.EditMode
             Assert.That(Localizer.Language, Is.EqualTo(GameLanguage.Japanese));
             Assert.That(Localizer.Get("settings.title"), Is.EqualTo("設定"));
 
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
             AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
 
             Assert.That(Localizer.Language, Is.EqualTo(GameLanguage.English));
@@ -154,6 +155,7 @@ namespace Fps.Tests.EditMode
             Assert.That(PlayerBindings.LabelOf("Move", "up"), Is.EqualTo("前へ移動"));
             Assert.That(PlayerBindings.LabelOf("Reload"), Is.EqualTo("リロード"));
 
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
             AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
 
             Assert.That(PlayerBindings.LabelOf("Move", "up"), Is.EqualTo("Move forward"));

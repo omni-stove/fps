@@ -153,7 +153,7 @@ namespace Fps.Runtime
         /// <summary>今のシーンで有効な HUD を 1 つ探す。無ければ null。</summary>
         public static IHud FindHud()
         {
-            foreach (var behaviour in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+            foreach (var behaviour in UnityEngine.Object.FindObjectsByType<MonoBehaviour>())
             {
                 if (behaviour is IHud hud)
                 {

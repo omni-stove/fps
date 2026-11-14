@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -37,7 +38,7 @@ namespace Fps.Tests.EditMode
 
             var marker = root.Q<VisualElement>(HitMarkerView.UxmlName);
             Assert.That(marker, Is.Not.Null);
-            Assert.That(marker.Query<VisualElement>(className: "hit-marker__line").ToList(), Has.Count.EqualTo(4));
+            Assert.That(marker.Query<VisualElement>(className: "hit-marker__line").ToList().Count(), Is.EqualTo(4));
             Assert.That(root.Q<VisualElement>(DamageDirectionView.UxmlName), Is.Not.Null);
         }
 
@@ -94,7 +95,7 @@ namespace Fps.Tests.EditMode
                 view.Catalog = null;
                 view.Bind(root);
                 var lines = view.Element.Query<VisualElement>(className: HitMarkerView.LineClass).ToList();
-                Assert.That(lines, Has.Count.EqualTo(4));
+                Assert.That(lines.Count(), Is.EqualTo(4));
 
                 view.Show(new HitConfirm(50, HitZone.Head, killed: false, downed: false));
                 foreach (var line in lines)
@@ -191,7 +192,7 @@ namespace Fps.Tests.EditMode
             Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             var arcs = element.Query<VisualElement>(className: DamageDirectionView.ArcClass).ToList();
-            Assert.That(arcs, Has.Count.EqualTo(1));
+            Assert.That(arcs.Count(), Is.EqualTo(1));
             Assert.That(arcs[0].style.rotate.value.angle.ToDegrees(), Is.EqualTo(90f).Within(1e-3f));
             Assert.That(arcs[0].style.opacity.value, Is.EqualTo(1f).Within(1e-5f));
 
@@ -243,8 +244,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(view.ActiveCount, Is.EqualTo(DamageDirectionView.MaxIndicators));
             Assert.That(
-                view.Element.Query<VisualElement>(className: DamageDirectionView.ArcClass).ToList(),
-                Has.Count.EqualTo(DamageDirectionView.MaxIndicators));
+                view.Element.Query<VisualElement>(className: DamageDirectionView.ArcClass).ToList().Count(),
+                Is.EqualTo(DamageDirectionView.MaxIndicators));
         }
 
         [Test]
@@ -288,7 +289,7 @@ namespace Fps.Tests.EditMode
             view.Bind(CloneLayout());
 
             Assert.That(oldElement.Query<VisualElement>(className: DamageDirectionView.ArcClass).ToList(), Is.Empty);
-            Assert.That(view.Element.Query<VisualElement>(className: DamageDirectionView.ArcClass).ToList(), Has.Count.EqualTo(1));
+            Assert.That(view.Element.Query<VisualElement>(className: DamageDirectionView.ArcClass).ToList().Count(), Is.EqualTo(1));
         }
 
         [Test]

@@ -115,7 +115,7 @@ namespace Fps.Tests.EditMode
             Assert.That(view.IsShown, Is.True);
             Assert.That(view.Root.parent, Is.EqualTo(_host.transform));
             Assert.That(view.Root.GetComponentInChildren<Collider>(), Is.Null, "the gun must not block shots or the agent");
-            Assert.That(presentation.Muzzle, Is.EqualTo(view.Muzzle));
+            Assert.That(presentation.Sockets.Muzzle, Is.EqualTo(view.Muzzle));
 
             var feetY = _agent.GroundPosition.y;
             Assert.That(view.Root.position.y - feetY, Is.EqualTo(PlayerMockPose.BodyHipGunPosition.y).Within(1e-3f), "an idle enemy holds the gun at the hip");

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using NUnit.Framework;
@@ -27,7 +28,7 @@ namespace Fps.Tests.EditMode
         {
             var sides = FreeForAllSceneBuilder.Layout(FreeForAllSceneBuilder.BotCount);
 
-            Assert.That(sides, Has.Count.EqualTo(FreeForAllSceneBuilder.BotCount + 1));
+            Assert.That(sides.Count(), Is.EqualTo(FreeForAllSceneBuilder.BotCount + 1));
             Assert.That(sides[0].Side, Is.EqualTo(new Side(0)));
             Assert.That(sides[0].BotCount, Is.Zero, "side 0 is the player's alone");
 
@@ -72,7 +73,7 @@ namespace Fps.Tests.EditMode
         {
             foreach (var side in FreeForAllSceneBuilder.Layout(FreeForAllSceneBuilder.BotCount))
             {
-                Assert.That(side.Spawns, Has.Count.EqualTo(FreeForAllSceneBuilder.SpawnPool.Count));
+                Assert.That(side.Spawns.Count(), Is.EqualTo(FreeForAllSceneBuilder.SpawnPool.Count));
                 foreach (var point in FreeForAllSceneBuilder.SpawnPool)
                 {
                     var found = false;
@@ -115,7 +116,7 @@ namespace Fps.Tests.EditMode
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllSceneBuilder.Layout(-1));
             Assert.Throws<ArgumentOutOfRangeException>(() => FreeForAllSceneBuilder.Layout(FreeForAllSceneBuilder.SpawnPool.Count));
-            Assert.That(FreeForAllSceneBuilder.Layout(0), Has.Count.EqualTo(1));
+            Assert.That(FreeForAllSceneBuilder.Layout(0).Count(), Is.EqualTo(1));
         }
     }
 }

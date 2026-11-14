@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -121,9 +122,15 @@ namespace Fps.Net.Tests
         [Test]
         public void TheLayoutHasAHiddenControlPointPanel()
         {
-            var element = CloneLayout().Q<VisualElement>(NetControlPointsView.UxmlName);
+            var root = CloneLayout();
+            var element = root.Q<VisualElement>(NetControlPointsView.UxmlName);
 
             Assert.That(element, Is.Not.Null);
+
+            // Unity 6.6 は UXML の style 属性を element.style に映さないので、付けたビューが隠したままにすることで確かめる
+            var view = CreateView();
+            view.Bind(root);
+            Assert.That(view.Element, Is.SameAs(element));
             Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 
@@ -142,7 +149,7 @@ namespace Fps.Net.Tests
 
             Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
             var points = view.Element.Query<VisualElement>(className: NetControlPointsView.PointClass).ToList();
-            Assert.That(points, Has.Count.EqualTo(2));
+            Assert.That(points.Count(), Is.EqualTo(2));
             Assert.That(points[1].ClassListContains(NetControlPointsView.ContestedClass), Is.True);
 
             var labels = view.Element.Query<Label>(className: NetControlPointsView.LabelClass).ToList();

@@ -47,7 +47,7 @@ namespace Fps.Core.Tests
 
             var packets = Split(splitter, message);
 
-            Assert.That(packets, Has.Count.EqualTo(1));
+            Assert.That(packets.Count, Is.EqualTo(1));
             Assert.That(packets[0], Has.Length.EqualTo(_packetSize));
             Assert.That(packets[0][0], Is.EqualTo(PacketSplitter.WholeTag));
 
@@ -75,7 +75,7 @@ namespace Fps.Core.Tests
 
             var packets = Split(splitter, message);
 
-            Assert.That(packets, Has.Count.EqualTo(4));
+            Assert.That(packets.Count, Is.EqualTo(4));
             foreach (var packet in packets)
             {
                 Assert.That(packet.Length, Is.LessThanOrEqualTo(_packetSize));
@@ -128,7 +128,7 @@ namespace Fps.Core.Tests
                 }
             }
 
-            Assert.That(completed, Has.Count.EqualTo(2));
+            Assert.That(completed.Count, Is.EqualTo(2));
             Assert.That(completed, Has.Member(first));
             Assert.That(completed, Has.Member(second));
         }

@@ -25,7 +25,7 @@
   "spawnProtectionSeconds": 2,
   "fallDamage": "Off",
   "hudDensity": "Full",
-  "objective": "None",
+  "objective": "Domination",
   "minPlayers": 0,
   "idleKickSeconds": 120
 }

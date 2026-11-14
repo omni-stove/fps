@@ -667,7 +667,7 @@ namespace Fps.Runtime
             return collider.GetComponentInParent<Damageable>();
         }
 
-        private static int KeyOf(Damageable target) => target.GetInstanceID();
+        private static int KeyOf(Damageable target) => CombatEvents.OfflineId(target.gameObject);
 
         private static bool IsFinite(Vector3 value)
         {

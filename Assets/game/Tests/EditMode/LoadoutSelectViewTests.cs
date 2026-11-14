@@ -60,7 +60,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_view.IsOpen, Is.True);
             Assert.That(IsShown, Is.True);
-            Assert.That(_view.Element.Query<VisualElement>(className: LoadoutSelectPanel.SlotClass).ToList(), Has.Count.EqualTo(2));
+            Assert.That(_view.Element.Query<VisualElement>(className: LoadoutSelectPanel.SlotClass).ToList().Count(), Is.EqualTo(2));
 
             _view.Close();
 
@@ -78,7 +78,7 @@ namespace Fps.Tests.EditMode
 
             _view.Panel.Select(1, 1);
             Assert.That(_view.Panel.Confirm(), Is.True);
-            Assert.That(received, Has.Count.EqualTo(1));
+            Assert.That(received.Count(), Is.EqualTo(1));
             Assert.That(received[0], Is.EqualTo(_view.Selection.WeaponIds));
 
             _view.ShowSending();

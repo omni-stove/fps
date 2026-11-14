@@ -20,7 +20,7 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            foreach (var runner in Object.FindObjectsByType<ModeRunnerBase>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var runner in Object.FindObjectsByType<ModeRunnerBase>(FindObjectsInactive.Include))
             {
                 runner.Stop();
             }

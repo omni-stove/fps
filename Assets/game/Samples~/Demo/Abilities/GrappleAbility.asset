@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69dc932c988fe03e037a7f7f909e7da3, type: 3}
+  m_Name: GrappleAbility
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.GrappleAbilityDefinition
+  _id: grapple
+  _maxCharges: 2
+  _rechargeSeconds: 8
+  _cooldownSeconds: 1
+  _windupSeconds: 0.1
+  _minRange: 2
+  _maxRange: 30
+  _pullSpeed: 18
+  _pullAcceleration: 60
+  _arriveDistance: 0.3
+  _maxPullSeconds: 3
+  _hangHeight: 0.8
+  _edgeSnapDistance: 1.5
+  _hangSeconds: 0.5
+  _grabbableLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  _grabbableTags: []

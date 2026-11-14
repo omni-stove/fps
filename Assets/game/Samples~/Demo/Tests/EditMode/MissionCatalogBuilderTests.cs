@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using Fps.Core;
 using Fps.Editor;
@@ -41,7 +42,7 @@ namespace Fps.Tests.EditMode
             Assert.That(MissionCatalogBuilder.CatalogPath, Is.EqualTo(DemoSample.Root + "/Missions/MissionCatalog.asset"));
             var missions = MissionCatalogBuilder.DefaultMissions();
 
-            Assert.That(missions, Has.Count.EqualTo(2));
+            Assert.That(missions.Count(), Is.EqualTo(2));
             Assert.That(missions[0].Id, Is.EqualTo("Campaign01"));
             Assert.That(missions[0].Id, Is.EqualTo(CampaignSaveSlots.LegacyMissionId), "Campaign01 is the mission that owned the legacy save slot");
             Assert.That(missions[0].NameKey, Is.EqualTo(CampaignSceneBuilder.MissionNameKey));
@@ -76,7 +77,7 @@ namespace Fps.Tests.EditMode
 
             var catalog = MissionCatalogBuilder.BuildAt(_catalogPath, missions);
 
-            Assert.That(catalog.Missions, Has.Count.EqualTo(2));
+            Assert.That(catalog.Missions.Count(), Is.EqualTo(2));
             Assert.That(catalog.Missions[0].Definition, Is.SameAs(first));
             Assert.That(catalog.Missions[1].Id, Is.EqualTo("Campaign02"));
             Assert.That(catalog.Missions[1].Definition, Is.SameAs(second));
@@ -95,7 +96,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(catalog, Is.Not.Null);
             Assert.That(AssetDatabase.LoadAssetAtPath<MissionCatalog>(_catalogPath), Is.SameAs(catalog));
-            Assert.That(catalog.Missions, Has.Count.EqualTo(1));
+            Assert.That(catalog.Missions.Count(), Is.EqualTo(1));
             var entry = catalog.Missions[0];
             Assert.That(entry.Id, Is.EqualTo("Campaign01"));
             Assert.That(entry.DisplayNameKey, Is.EqualTo(CampaignSceneBuilder.MissionNameKey));
@@ -142,7 +143,7 @@ namespace Fps.Tests.EditMode
             Assert.That(
                 () => MissionCatalogBuilder.BuildAt(_catalogPath, Missions("Campaign02")),
                 Throws.InstanceOf<MissionCatalogException>());
-            Assert.That(catalog.Missions, Has.Count.EqualTo(1));
+            Assert.That(catalog.Missions.Count(), Is.EqualTo(1));
             Assert.That(catalog.Missions[0].Id, Is.EqualTo("Campaign01"), "the in-memory catalog is not left with the rejected list");
         }
 

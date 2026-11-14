@@ -41,6 +41,8 @@ namespace Fps.Tests.EditMode
             nameof(TpsActionSmokeRun),
             nameof(TpsRangeSmokeRun),
             nameof(KnockbackSmokeRun),
+            nameof(BattleRoyaleSmokeRun),
+            nameof(DominationSmokeRun),
         };
 
         [Test]

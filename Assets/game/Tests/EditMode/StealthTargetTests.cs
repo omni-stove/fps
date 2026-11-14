@@ -4,6 +4,7 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools.Utils;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -90,15 +91,15 @@ namespace Fps.Tests.EditMode
 
                 marker.Show(AwarenessStage.Noticed, 0.2f);
                 Assert.That(marker.IsShown, Is.True);
-                Assert.That(marker.ShownColor, Is.EqualTo(AwarenessMarker.NoticedColor));
+                Assert.That(marker.ShownColor, Is.EqualTo(AwarenessMarker.NoticedColor).Using(ColorEqualityComparer.Instance));
                 var small = marker.transform.localScale.x;
 
                 marker.Show(AwarenessStage.Alerted, 0.8f);
-                Assert.That(marker.ShownColor, Is.EqualTo(AwarenessMarker.AlertedColor));
+                Assert.That(marker.ShownColor, Is.EqualTo(AwarenessMarker.AlertedColor).Using(ColorEqualityComparer.Instance));
                 Assert.That(marker.transform.localScale.x, Is.GreaterThan(small), "grows as the meter fills");
 
                 marker.Show(AwarenessStage.Engaged, 1f);
-                Assert.That(marker.ShownColor, Is.EqualTo(AwarenessMarker.EngagedColor));
+                Assert.That(marker.ShownColor, Is.EqualTo(AwarenessMarker.EngagedColor).Using(ColorEqualityComparer.Instance));
                 Assert.That(marker.transform.localScale.x, Is.EqualTo(AwarenessMarker.Size).Within(1e-5f));
 
                 marker.Show(AwarenessStage.Unaware, 0f);

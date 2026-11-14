@@ -51,6 +51,7 @@ namespace Fps.Tests.EditMode
             Assert.That(bare.text, Is.EqualTo(LocalizedTexts.KeyPrefix));
             Assert.That(texts.KeyOf(plain), Is.Null);
 
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
             AppliedControlSettings.Apply(AppliedControlSettings.Current.WithLanguage(GameLanguage.English));
             texts.Refresh();
 

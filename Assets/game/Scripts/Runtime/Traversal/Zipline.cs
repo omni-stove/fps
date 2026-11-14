@@ -94,7 +94,7 @@ namespace Fps.Runtime.Traversal
         {
             Zipline best = null;
             var bestDistance = maxDistance;
-            foreach (var line in FindObjectsByType<Zipline>(FindObjectsSortMode.None))
+            foreach (var line in FindObjectsByType<Zipline>())
             {
                 if (!line.IsUsable)
                 {

@@ -165,12 +165,14 @@ namespace Fps.Net.Tests
 
             // 他のプレイヤーは予測するクライアントに確定位置が無いので、サーバーでも世界に入れない
             CreatePlayer("Other", new Vector3(0f, 2.2f, 0f), withEyeAndBody: false);
+            // 立ちの寸法は作ったときのコントローラーから読むので、しゃがませる前に両方作る。
             var open = CreateSimulation(player);
+            CreateCeiling(new Vector3(0f, 1.8f, 0f), new Vector3(3f, 0.4f, 3f));
+            var covered = CreateSimulation(player);
+
             open.Place(crouched);
             Assert.That(open.HasHeadroomToStand(), Is.True);
 
-            CreateCeiling(new Vector3(0f, 1.8f, 0f), new Vector3(3f, 0.4f, 3f));
-            var covered = CreateSimulation(player);
             covered.Place(crouched);
             Assert.That(covered.HasHeadroomToStand(), Is.False);
         }
@@ -270,8 +272,9 @@ namespace Fps.Net.Tests
             var targets = new[] { new RewindTarget(1, target.transform, true, stance) };
             var rewinder = new HitboxRewinder();
 
-            // しゃがんだ頭 (足元から 1.1m、カプセルの 92%) は頭
-            var crouchedHead = new Vector3(0f, 0.1f, 0f);
+            // CharacterController の物理のカプセルは height より上下が少し短いので、頭の範囲 (85% 以上) のうち上端から離した高さを撃つ。
+            // しゃがんだ頭 (足元から 1.05m、カプセルの 88%) は頭
+            var crouchedHead = new Vector3(0f, 0.05f, 0f);
             Assert.That(
                 rewinder.Raycast(targets, compensator.Rewind(10f), compensator.RewindCrouched(10f), crouchedHead, Vector3.forward, _shotRange, null, out var hit),
                 Is.True);
@@ -280,7 +283,7 @@ namespace Fps.Net.Tests
             Assert.That(NetTeamDeathmatch.ZoneOf(stance.Geometry.Shape(hit.TargetCrouched), 1f, hit), Is.EqualTo(HitZone.Head));
 
             // 立った頭の高さはしゃがんだカプセルの上を素通りする
-            var standingHead = new Vector3(0f, 0.9f, 0f);
+            var standingHead = new Vector3(0f, 0.75f, 0f);
             Assert.That(
                 rewinder.Raycast(targets, compensator.Rewind(10f), compensator.RewindCrouched(10f), standingHead, Vector3.forward, _shotRange, null, out _),
                 Is.False);
@@ -313,7 +316,7 @@ namespace Fps.Net.Tests
 
             // 立っていた時点の頭に当たり、判定の後はしゃがみに戻る
             Assert.That(
-                new HitboxRewinder().Raycast(targets, rewound, rewoundCrouched, new Vector3(0f, 0.9f, 0f), Vector3.forward, _shotRange, null, out var hit),
+                new HitboxRewinder().Raycast(targets, rewound, rewoundCrouched, new Vector3(0f, 0.75f, 0f), Vector3.forward, _shotRange, null, out var hit),
                 Is.True);
             Assert.That(hit.TargetCrouched, Is.False);
             Assert.That(stance.IsCrouched, Is.True);

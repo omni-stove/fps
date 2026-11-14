@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     // 置ける物 (展開式の盾) を試す場所。プレイヤーは各レーンの手前 (PlayerZ) に立って +Z へ置く。
+    // 左手前の隅 (x = -35..-22, z = -36..-25) の、自爆兵の囲いの視界の外に置く。
     // 急な坂のレーン 1 本と平らなレーンを並べ、上限を超えて置けるよう平らなレーンは盾の幅より離す。
     // 撃ち手の目印は当たり判定も陣営も持たない (陣営を持たせると、モードの参加者や敵の狙う相手になる)。
     public sealed class DeployRangeFixture : ITpsRangeFixture
@@ -15,20 +16,20 @@ namespace Fps.Editor
         public const string ShooterName = "DeployShooter";
         public const int FixtureOrder = 540;
 
-        public const float PlayerZ = -20f;
-        public const float RampLaneX = -13f;
+        public const float PlayerZ = -35f;
+        public const float RampLaneX = -33f;
         public const float RampTiltDegrees = 40f;
-        public const float ShooterZ = -11f;
+        public const float ShooterZ = -26f;
         public const float ShooterHeight = 1.3f;
 
-        public static readonly Vector3 Center = new Vector3(-8.5f, 0f, -15.5f);
+        public static readonly Vector3 Center = new Vector3(-28.5f, 0f, -30.5f);
         public static readonly Vector3 Size = new Vector3(13f, 3f, 11f);
 
-        public static readonly Vector3 RampCenter = new Vector3(RampLaneX, 1f, -15.5f);
+        public static readonly Vector3 RampCenter = new Vector3(RampLaneX, 1f, -30.5f);
         public static readonly Vector3 RampScale = new Vector3(2.5f, 0.3f, 5f);
 
         // 0 番は撃ち手の正面に置く。
-        public static readonly IReadOnlyList<float> FlatLaneXs = new[] { -9.5f, -6.5f, -3.5f };
+        public static readonly IReadOnlyList<float> FlatLaneXs = new[] { -29.5f, -26.5f, -23.5f };
 
         public int Order => FixtureOrder;
 

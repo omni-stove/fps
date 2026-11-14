@@ -88,8 +88,8 @@ namespace Fps.Tests.EditMode
 
             var file = NavMeshExporter.Capture(_scene);
 
-            Assert.That(file.Vertices, Has.Count.EqualTo(triangulation.vertices.Length));
-            Assert.That(file.Triangles, Has.Count.EqualTo(triangulation.indices.Length / 3));
+            Assert.That(file.Vertices.Count(), Is.EqualTo(triangulation.vertices.Length));
+            Assert.That(file.Triangles.Count(), Is.EqualTo(triangulation.indices.Length / 3));
             for (var i = 0; i < file.Triangles.Count; i++)
             {
                 Assert.That(file.Triangles[i].A, Is.EqualTo(triangulation.indices[i * 3]));

@@ -10,10 +10,10 @@ namespace Fps.Runtime
     public sealed class EnemyWeaponView : MonoBehaviour
     {
         public const string RootName = "EnemyGun";
-        public const string MuzzleName = "Muzzle";
+        public const string MuzzleName = WeaponSockets.MuzzleName;
         public const string ModelName = "Model";
 
-        [SerializeField, Tooltip("銃の見た目。原点が握り、前が +Z。子孫に Muzzle という名前の物があれば銃口に使う。当たり判定は外す。空なら仮の箱を作る")]
+        [SerializeField, Tooltip("銃の見た目。原点が握り、前が +Z。子孫に Socket_Muzzle という名前の物があれば銃口に使う。当たり判定は外す。空なら仮の箱を作る")]
         private GameObject _modelPrefab;
 
         private EnemyAgent _enemy;
@@ -74,9 +74,9 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
-            if (_presentation != null && _presentation.Muzzle == _muzzle)
+            if (_presentation != null && _root != null && _presentation.WeaponModel == _root)
             {
-                _presentation.Muzzle = null;
+                _presentation.WeaponModel = null;
             }
 
             DestroySafely(_root != null ? _root.gameObject : null);
@@ -124,9 +124,9 @@ namespace Fps.Runtime
             }
 
             _presentation = GetComponent<WeaponPresentation>();
-            if (_presentation != null && _presentation.Muzzle == null)
+            if (_presentation != null && _presentation.WeaponModel == null)
             {
-                _presentation.Muzzle = _muzzle;
+                _presentation.WeaponModel = _root;
             }
 
             _hasPose = false;

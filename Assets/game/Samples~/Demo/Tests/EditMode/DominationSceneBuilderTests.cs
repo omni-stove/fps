@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -61,7 +62,7 @@ namespace Fps.Tests.EditMode
         public void ThreeControlPointsLieApartOnTheFloor()
         {
             var points = DominationSceneBuilder.ControlPoints;
-            Assert.That(points, Has.Count.EqualTo(3));
+            Assert.That(points.Count(), Is.EqualTo(3));
 
             var radius = DominationSceneBuilder.ControlPointRadius;
             for (var i = 0; i < points.Count; i++)
@@ -133,7 +134,7 @@ namespace Fps.Tests.EditMode
 
                 var route = DominationSceneBuilder.BotPatrolRoute(i);
                 var perPoint = loiter.Count * DominationSceneBuilder.LoiterLaps;
-                Assert.That(route, Has.Count.EqualTo(objectives.Count * perPoint));
+                Assert.That(route.Count(), Is.EqualTo(objectives.Count * perPoint));
 
                 for (var k = 0; k < route.Count; k++)
                 {
@@ -328,7 +329,7 @@ namespace Fps.Tests.EditMode
 
         private static void AssertSpawns(IReadOnlyList<Transform> actual, IReadOnlyList<ModeSpawnPlacement> expected)
         {
-            Assert.That(actual, Has.Count.EqualTo(expected.Count));
+            Assert.That(actual.Count(), Is.EqualTo(expected.Count));
             for (var i = 0; i < expected.Count; i++)
             {
                 Assert.That(actual[i], Is.Not.Null);

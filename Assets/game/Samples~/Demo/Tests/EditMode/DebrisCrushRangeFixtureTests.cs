@@ -55,7 +55,7 @@ namespace Fps.Tests.EditMode
             Assert.That(pillar.name, Is.EqualTo(DebrisCrushRangeFixture.PillarName));
             Assert.That(pillar.DestructionEnabled, Is.True, "the TPS range rules turn destruction on");
             Assert.That(pillar.DebrisCrushEnabled, Is.True);
-            Assert.That(pillar.Pieces, Has.Count.EqualTo(DebrisCrushRangeFixture.PillarHeight + DebrisCrushRangeFixture.BeamLength));
+            Assert.That(pillar.Pieces.Count(), Is.EqualTo(DebrisCrushRangeFixture.PillarHeight + DebrisCrushRangeFixture.BeamLength));
             Assert.That(pillar.Pieces.Count(p => p.Grounded), Is.EqualTo(1));
             Assert.That(pillar.Pieces[DebrisCrushRangeFixture.BaseIndex].Grounded, Is.True);
 

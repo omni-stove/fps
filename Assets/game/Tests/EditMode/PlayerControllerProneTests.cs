@@ -140,7 +140,8 @@ namespace Fps.Tests.EditMode
             Assert.That(_player.CurrentStance, Is.EqualTo(PlayerStance.Prone));
             Assert.That(_characterController.height, Is.EqualTo(ProneSpec.DefaultHeight).Within(_tolerance));
             Assert.That(_player.HitboxHeight, Is.EqualTo(ProneSpec.DefaultHeight).Within(_tolerance));
-            Assert.That(FeetY(), Is.EqualTo(feetBefore).Within(0.01f));
+            // 着地した直後の CharacterController は、形を変えて次に動いたときに skinWidth だけ床から浮き直すことがある。
+            Assert.That(FeetY(), Is.EqualTo(feetBefore).Within(_characterController.skinWidth + 0.01f));
 
             // 頭のてっぺんが 1m 下がるので、目も 1m 下がる。
             Assert.That(cameraObject.transform.localPosition.y, Is.EqualTo(_eyeOffset.y - 1f).Within(_tolerance));

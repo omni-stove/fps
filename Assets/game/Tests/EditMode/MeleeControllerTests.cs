@@ -114,8 +114,8 @@ namespace Fps.Tests.EditMode
 
             _melee.Configure(Rules(Melee.Off));
             Assert.That(_melee.enabled, Is.False);
-            Assert.That(_weapon.Modifiers, Does.Not.Contain(_melee));
-            Assert.That(_player.MovementOverrides, Does.Not.Contain(_melee));
+            Assert.That(_weapon.Modifiers, Has.No.Member(_melee));
+            Assert.That(_player.MovementOverrides, Has.No.Member(_melee));
         }
 
         [Test]

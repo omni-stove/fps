@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -32,7 +33,7 @@ namespace Fps.Tests.EditMode
 
             target.TakeDamage(5, new Vector3(1f, 0f, 0f));
 
-            Assert.That(reports, Has.Count.EqualTo(1));
+            Assert.That(reports.Count(), Is.EqualTo(1));
             Assert.That(reports[0].Zone.HasValue, Is.False);
             Assert.That(reports[0].Direction.HasValue, Is.False);
             Assert.That(reports[0].Kind, Is.EqualTo(DamageKind.Other));
@@ -100,7 +101,7 @@ namespace Fps.Tests.EditMode
 
             Hitscan.Fire(new Vector3(0f, 1.6f, 0f), new Vector3(0f, 0f, 2f), 50f, 10, DamageFalloff.None, null);
 
-            Assert.That(reports, Has.Count.EqualTo(1));
+            Assert.That(reports.Count(), Is.EqualTo(1));
             Assert.That(reports[0].Zone, Is.EqualTo(HitZone.Head));
             Assert.That(Vector3.Distance(reports[0].Direction.Value, Vector3.forward), Is.LessThan(1e-5f));
             Assert.That(reports[0].Kind, Is.EqualTo(DamageKind.Bullet));

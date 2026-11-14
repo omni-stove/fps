@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Editor;
@@ -38,7 +39,7 @@ namespace Fps.Tests.EditMode
             }
 
             _created.Clear();
-            foreach (var pickup in Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var pickup in Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include))
             {
                 Object.DestroyImmediate(pickup.gameObject);
             }
@@ -102,6 +103,7 @@ namespace Fps.Tests.EditMode
         public void DeadCollectorsAreIgnoredWithoutALog()
         {
             var bot = NewCollector("Bot");
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=Bot");
             bot.Kill();
             var pickup = Pickup.Create(PickupContents.ForHealth(25), Vector3.zero);
 
@@ -352,7 +354,7 @@ namespace Fps.Tests.EditMode
         {
             var point = new GameObject("Spawn").AddComponent<PickupSpawnPoint>();
             _created.Add(point.gameObject);
-            Assert.Throws<System.ArgumentException>(() => point.Contents = PickupContents.ForReserveAmmo(0));
+            Assert.Catch<System.ArgumentException>(() => point.Contents = PickupContents.ForReserveAmmo(0));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => point.RespawnSeconds = -1f);
         }
 
@@ -371,7 +373,7 @@ namespace Fps.Tests.EditMode
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Pickup\] dropped by=Bot pickup=Pickup-Health "));
             bot.Kill();
 
-            Assert.That(dropped, Has.Count.EqualTo(2));
+            Assert.That(dropped.Count(), Is.EqualTo(2));
             var ground = bot.GroundPoint;
             foreach (var pickup in dropped)
             {
@@ -405,14 +407,14 @@ namespace Fps.Tests.EditMode
             Assert.That(seen.HasValue, Is.True);
             Assert.That(seen.Value.Victim, Is.SameAs(bot));
             Assert.That(seen.Value.Killer, Is.Null, "no attribution outside a shot");
-            Assert.That(dropped, Has.Count.EqualTo(1));
+            Assert.That(dropped.Count(), Is.EqualTo(1));
 
             var collector = NewCollector("Player");
             collector.gameObject.AddComponent<SideMember>().Side = Side.Alpha;
             Assert.That(dropped[0].TryCollect(collector, out var outcome), Is.True);
             Assert.That(outcome.TagOwnerId, Is.EqualTo(7));
             Assert.That(outcome.IsOwnSideTag, Is.False);
-            Assert.That(drop.Drops, Has.Count.EqualTo(1), "the hook edits a copy, not the configured drops");
+            Assert.That(drop.Drops.Count, Is.EqualTo(1), "the hook edits a copy, not the configured drops");
         }
 
         [Test]
@@ -427,7 +429,7 @@ namespace Fps.Tests.EditMode
             LogAssert.Expect(LogType.Exception, new Regex("boom"));
             bot.Kill();
 
-            Assert.That(Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include, FindObjectsSortMode.None), Is.Empty);
+            Assert.That(Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include), Is.Empty);
         }
 
         private Damageable NewCollector(string name)

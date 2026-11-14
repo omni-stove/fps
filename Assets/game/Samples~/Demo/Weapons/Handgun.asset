@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Handgun
   m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
   _id: b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45
-  _displayName: Handgun
+  _nameKey: weapon.handgun
   _category: 6
   _fireMode: 1
   _magazineSize: 12
@@ -25,3 +25,16 @@ MonoBehaviour:
   _falloffStart: 15
   _falloffEnd: 40
   _falloffMinMultiplier: 0.6
+  _explosionRadius: 0
+  _adsFieldOfView: 55
+  _blindFireSpreadDegrees: 12
+  _activeReloadWindowStart: 0.45
+  _activeReloadWindowLength: 0.2
+  _activeReloadFailSeconds: 0.4
+  _recoilPitchDegrees: 2.5
+  _recoilYawDegrees: 0.6
+  _recoilRecoveryPerSecond: 60
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 2
+  _adsSpreadDegrees: 0.8
+  _moveSpreadDegrees: 1.5

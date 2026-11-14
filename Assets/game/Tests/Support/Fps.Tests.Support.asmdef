@@ -1,0 +1,19 @@
+{
+    "name": "Fps.Tests.Support",
+    "rootNamespace": "Fps.Tests.EditMode",
+    "references": [
+        "Fps.Core",
+        "Fps.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

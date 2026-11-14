@@ -112,7 +112,7 @@ namespace Fps.Core.Tests
             var path = VaultProbe.PlanMantlePath(Vector3.UnitZ, _distance, 1.8f, _radius, _speed);
             var points = path.Points;
 
-            Assert.That(points, Has.Count.EqualTo(4));
+            Assert.That(points.Count, Is.EqualTo(4));
             Assert.That(points[0], Is.EqualTo(Vector3.Zero));
 
             // 上がりきった所で体の表面は面の WallGap 手前、足元は上端の Clearance 上。

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Editor;
@@ -100,7 +101,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_boss.CurrentPhase.Id, Is.EqualTo("Exposed"));
             Assert.That(_boss.MoveSpeedMultiplier, Is.EqualTo(2.5f));
             Assert.That(_weakPoint.IsExposed, Is.True);
-            Assert.That(_events, Has.Count.EqualTo(1));
+            Assert.That(_events.Count(), Is.EqualTo(1));
             var info = _events[0];
             Assert.That(info.Boss, Is.SameAs(_root));
             Assert.That(info.Damageable, Is.SameAs(_damageable));
@@ -137,7 +138,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_boss.CurrentPhase.Id, Is.EqualTo("Guarded"));
             Assert.That(_weakPoint.IsExposed, Is.False);
-            Assert.That(_events, Has.Count.EqualTo(1));
+            Assert.That(_events.Count(), Is.EqualTo(1));
             Assert.That(_events[0].IsReset, Is.True);
         }
 
@@ -175,7 +176,7 @@ namespace Fps.Tests.EditMode
 
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Boss\] id=Boss phase=0->1 from=Guarded to=Exposed reason=cue "));
             Assert.That(_boss.Advance(), Is.True);
-            Assert.That(_events, Has.Count.EqualTo(1));
+            Assert.That(_events.Count(), Is.EqualTo(1));
             Assert.That(_boss.Advance(), Is.False, "already in the last phase");
         }
 
@@ -195,7 +196,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_boss.CurrentPhase.Id, Is.EqualTo("Fight"));
             Assert.That(_weakPoint.IsExposed, Is.True);
-            Assert.That(_events, Has.Count.EqualTo(1));
+            Assert.That(_events.Count(), Is.EqualTo(1));
             Assert.That(_events[0].PhaseId, Is.EqualTo("Fight"));
         }
 

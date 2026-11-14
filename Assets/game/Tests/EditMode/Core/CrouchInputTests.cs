@@ -37,7 +37,7 @@ namespace Fps.Core.Tests
         {
             _crouch.Update(HoldMode.Toggle, false, false, false, false);
 
-            Assert.That(_reasons, Has.Count.EqualTo(1));
+            Assert.That(_reasons.Count, Is.EqualTo(1));
             Assert.That(_reasons[0], Is.EqualTo("[Player] crouch=off mode=toggle reason=mode"));
         }
 

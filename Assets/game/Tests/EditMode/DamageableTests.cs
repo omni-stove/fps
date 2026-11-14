@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -99,7 +100,7 @@ namespace Fps.Tests.EditMode
             _damageable.TakeDamage(15, source);
             _damageable.TakeDamage(15, source);
 
-            Assert.That(reports, Has.Count.EqualTo(3), "the killing blow is reported, damage after death is not");
+            Assert.That(reports.Count(), Is.EqualTo(3), "the killing blow is reported, damage after death is not");
             Assert.That(reports[0].Amount, Is.EqualTo(5));
             Assert.That(reports[0].SourcePosition, Is.EqualTo(source));
             Assert.That(reports[1].Amount, Is.EqualTo(10));

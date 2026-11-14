@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -30,7 +31,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheLadderStartsWithTheBotWeaponAndHasSeveralTiers()
         {
-            Assert.That(GunGameSceneBuilder.LadderWeaponPaths, Has.Count.GreaterThan(1));
+            Assert.That(GunGameSceneBuilder.LadderWeaponPaths.Count, Is.GreaterThan(1));
             Assert.That(GunGameSceneBuilder.LadderWeaponPaths[0], Is.EqualTo(WeaponAssetBuilder.RiflePath));
             Assert.That(GunGameSceneBuilder.LadderWeaponPaths, Is.Unique);
         }
@@ -40,7 +41,7 @@ namespace Fps.Tests.EditMode
         {
             var sides = GunGameSceneBuilder.FreeForAllSides(GunGameSceneBuilder.BotCount);
 
-            Assert.That(sides, Has.Count.EqualTo(GunGameSceneBuilder.BotCount + 1));
+            Assert.That(sides.Count(), Is.EqualTo(GunGameSceneBuilder.BotCount + 1));
             Assert.That(ModeSceneBuilder.ValidateLayout(sides, new Side(0)), Is.SameAs(sides));
 
             var starts = new HashSet<Vector3>();
@@ -48,7 +49,7 @@ namespace Fps.Tests.EditMode
             {
                 Assert.That(sides[s].Side, Is.EqualTo(new Side(s)));
                 Assert.That(sides[s].BotCount, Is.EqualTo(s == 0 ? 0 : 1), "the player's side has no bot and each bot is alone");
-                Assert.That(sides[s].Spawns, Has.Count.EqualTo(GunGameSceneBuilder.SpawnPositions.Count), "every side can respawn anywhere");
+                Assert.That(sides[s].Spawns.Count(), Is.EqualTo(GunGameSceneBuilder.SpawnPositions.Count), "every side can respawn anywhere");
                 Assert.That(starts.Add(sides[s].Spawns[0].Feet), Is.True, $"side {s} starts apart from the others");
             }
         }

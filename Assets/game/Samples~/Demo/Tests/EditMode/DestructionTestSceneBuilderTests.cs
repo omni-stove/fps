@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -79,7 +80,7 @@ namespace Fps.Tests.EditMode
             Assert.That(hut.DestructionEnabled, Is.True);
 
             var pieces = hut.Pieces;
-            Assert.That(pieces, Has.Count.EqualTo(DestructionTestSceneBuilder.PieceCount));
+            Assert.That(pieces.Count(), Is.EqualTo(DestructionTestSceneBuilder.PieceCount));
             for (var i = 0; i < pieces.Count; i++)
             {
                 Assert.That(pieces[i].Index, Is.EqualTo(i));
@@ -242,7 +243,7 @@ namespace Fps.Tests.EditMode
             Assert.That(AssetDatabase.GetAssetPath(surface.navMeshData), Is.EqualTo(DestructionTestSceneBuilder.NavMeshDataPath));
 
             Assert.That(hut, Is.Not.Null);
-            Assert.That(hut.Pieces, Has.Count.EqualTo(DestructionTestSceneBuilder.PieceCount));
+            Assert.That(hut.Pieces.Count(), Is.EqualTo(DestructionTestSceneBuilder.PieceCount));
             Assert.That(FirstGrounded(hut), Is.Not.Null, "the hut stands on grounded pieces");
             Assert.That(hut.DebrisPool, Is.Not.Null);
             Assert.That(hut.DestructionEnabled, Is.True, $"the range rules turn destruction on; rerun {nameof(GameRulesAssetBuilder)}.Build and {nameof(DestructionTestSceneBuilder)}.Build");

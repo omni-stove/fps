@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Editor;
@@ -361,7 +362,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_settings.DecayPerSecond, Is.EqualTo(CameraShakeSettings.DefaultDecayPerSecond));
             Assert.That(_settings.MaxAngles, Is.EqualTo(CameraShakeSettings.DefaultMaxAngles));
-            Assert.That(_settings.FireByCategory, Has.Count.EqualTo(Enum.GetValues(typeof(WeaponCategory)).Length));
+            Assert.That(_settings.FireByCategory.Count(), Is.EqualTo(Enum.GetValues(typeof(WeaponCategory)).Length));
         }
 
         private T Track<T>(T created)

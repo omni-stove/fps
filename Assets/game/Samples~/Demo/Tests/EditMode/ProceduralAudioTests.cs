@@ -23,7 +23,7 @@ namespace Fps.Tests.EditMode
             var names = PresentationAssetBuilder.SoundSpecs().Select(s => s.Name).ToList();
 
             Assert.That(names, Is.Unique);
-            Assert.That(names, Has.Count.EqualTo(11));
+            Assert.That(names.Count(), Is.EqualTo(11));
         }
 
         [Test]

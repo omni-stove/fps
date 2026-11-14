@@ -28,9 +28,9 @@ namespace Fps.Core.Tests
             Assert.That(spec.MaxHealth, Is.EqualTo(800));
             Assert.That(spec.Seats, Is.EqualTo(_threeSeats));
             Assert.That(spec.DriverSeatIndex, Is.EqualTo(0));
-            Assert.That(spec.Weapons, Has.Count.EqualTo(1));
+            Assert.That(spec.Weapons.Count, Is.EqualTo(1));
             Assert.That(spec.Weapons[0].WeaponId, Is.EqualTo("mg"));
-            Assert.That(spec.Parts, Has.Count.EqualTo(2));
+            Assert.That(spec.Parts.Count, Is.EqualTo(2));
             Assert.That(spec.FindPart("fuel").DamageMultiplier, Is.EqualTo(3f));
             Assert.That(spec.FindPart("wheel"), Is.Null);
             Assert.That(spec.EnterRange, Is.EqualTo(3f));

@@ -30,7 +30,7 @@ namespace Fps.Editor
         public const double LimbMultiplier = 0.1;
         public const double WeakPointMultiplier = 3.0;
 
-        // 標的ダミーの列・乗り越えの壁・小屋から離した左奥。樽とガソリン缶 (z=14) の爆発の半径 5m の外に出すため z=22 にする。
+        // 標的ダミーの列・乗り越えの壁・小屋から離した左奥。樽とガソリン缶 (ExplosivePropRangeFixture.Center) の爆発の半径 5m の外に置く。
         // 爆発は部位の倍率を通らないので、届くと弱点を撃たなくても体力が減ってしまう。
         public static readonly Vector3 Position = new Vector3(-14f, 0f, 22f);
 

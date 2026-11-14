@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using Fps.Core;
 using Fps.Editor;
@@ -191,7 +192,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheCoversAreOneLowAndOneHigh()
         {
-            Assert.That(BootstrapSceneBuilder.Covers, Has.Count.EqualTo(2));
+            Assert.That(BootstrapSceneBuilder.Covers.Count(), Is.EqualTo(2));
             Assert.That(BootstrapSceneBuilder.LowCover.Size.y, Is.EqualTo(1f));
             Assert.That(BootstrapSceneBuilder.HighCover.Size.y, Is.EqualTo(2f));
             Assert.That(BootstrapSceneBuilder.LowCover.Size.y, Is.LessThan(CoverProbe.LowWallHeight), "the player crouches behind the low cover");

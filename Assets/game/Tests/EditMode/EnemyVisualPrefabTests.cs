@@ -147,7 +147,7 @@ namespace Fps.Tests.EditMode
             Assert.That(view.Root.Find(EnemyWeaponView.ModelName), Is.Null, "no placeholder box is made");
             Assert.That(view.Muzzle.IsChildOf(model), Is.True, "the prefab's own muzzle is used");
             Assert.That(view.Muzzle.localPosition, Is.EqualTo(new Vector3(0f, 0.1f, 0.8f)));
-            Assert.That(presentation.Muzzle, Is.SameAs(view.Muzzle));
+            Assert.That(presentation.Sockets.Muzzle, Is.SameAs(view.Muzzle));
         }
 
         [Test]

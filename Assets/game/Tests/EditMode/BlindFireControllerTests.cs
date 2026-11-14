@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using Fps.Core;
 using Fps.Editor;
@@ -235,7 +236,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_blindFire.IsBlindFiring, Is.False);
             Assert.That(_weapon.Fire(), Is.True);
 
-            Assert.That(_wallHits.Calls, Has.Count.EqualTo(1), "a normal shot hits the wall");
+            Assert.That(_wallHits.Calls.Count(), Is.EqualTo(1), "a normal shot hits the wall");
             Assert.That(_targetDamageable.Health.Current, Is.EqualTo(_targetHealth));
         }
 

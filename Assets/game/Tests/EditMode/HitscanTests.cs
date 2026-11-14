@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -208,7 +209,7 @@ namespace Fps.Tests.EditMode
             Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, shooter.transform);
             Hitscan.Fire(_eye, Vector3.forward, 50f, 10, DamageFalloff.None, null);
 
-            Assert.That(reports, Has.Count.EqualTo(2));
+            Assert.That(reports.Count(), Is.EqualTo(2));
             Assert.That(reports[0].Amount, Is.EqualTo(10));
             Assert.That(reports[0].SourcePosition, Is.EqualTo(shooter.transform.position));
             Assert.That(reports[1].SourcePosition.HasValue, Is.False, "no shooter, no position");

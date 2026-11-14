@@ -297,7 +297,7 @@ namespace Fps.Editor
         /// <summary>シーンの標的ダミーを 1 体、正面から撃ったことにして倒す。見つからなければ問題として返す。</summary>
         private static string KillOneDummy()
         {
-            var dummies = UnityEngine.Object.FindObjectsByType<TargetDummy>(FindObjectsInactive.Exclude, FindObjectsSortMode.InstanceID);
+            var dummies = UnityEngine.Object.FindObjectsByType<TargetDummy>(FindObjectsInactive.Exclude);
             foreach (var dummy in dummies)
             {
                 var damageable = dummy.Damageable;

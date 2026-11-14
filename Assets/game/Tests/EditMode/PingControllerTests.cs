@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -149,7 +150,7 @@ namespace Fps.Tests.EditMode
             pinger.TryPingAlong(_eye, Vector3.forward, out var placed);
 
             pinger.Tick(1.9f);
-            Assert.That(pinger.Markers, Has.Count.EqualTo(1));
+            Assert.That(pinger.Markers.Count(), Is.EqualTo(1));
 
             LogAssert.Expect(LogType.Log, new Regex($@"^\[Ping\] expired id={placed.Id} kind=Enemy "));
             pinger.Tick(2f);
@@ -167,7 +168,7 @@ namespace Fps.Tests.EditMode
             pinger.TryPingAlong(_eye, new Vector3(0.1f, 0f, 1f), out _);
             pinger.TryPingAlong(_eye, new Vector3(-0.1f, 0f, 1f), out _);
 
-            Assert.That(pinger.Markers, Has.Count.EqualTo(2));
+            Assert.That(pinger.Markers.Count(), Is.EqualTo(2));
             Assert.That(pinger.TryGetMarker(first.Id, out _), Is.False, "the oldest mark makes room");
         }
 

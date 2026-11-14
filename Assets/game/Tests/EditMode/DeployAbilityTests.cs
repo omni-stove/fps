@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Runtime;
@@ -82,7 +83,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_host.IsRunning(0), Is.False);
             Assert.That(_host.Slot(0).Charges, Is.EqualTo(1), "placing uses the charge");
             var placed = DeployOwner.GetOrAdd(_owner).Active(Kind);
-            Assert.That(placed, Has.Count.EqualTo(1));
+            Assert.That(placed.Count(), Is.EqualTo(1));
             Assert.That(Vector3.Distance(placed[0].transform.position, new Vector3(0f, 0f, Range)), Is.LessThan(0.01f));
             Assert.That(placed[0].Damageable.Health.Current, Is.EqualTo(_definition.MaxHealth));
             Assert.That(Previews(), Is.Empty, "the preview goes away");
@@ -100,7 +101,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_host.IsRunning(0), Is.True);
             var previews = Previews();
-            Assert.That(previews, Has.Count.EqualTo(1));
+            Assert.That(previews.Count(), Is.EqualTo(1));
             Assert.That(previews[0].gameObject.activeSelf, Is.True);
             Assert.That(previews[0].IsValid, Is.True, "green over flat ground");
             Assert.That(previews[0].GetComponentsInChildren<Collider>(), Has.All.Matches<Collider>(c => !c.enabled), "the preview does not stop bullets");
@@ -168,7 +169,7 @@ namespace Fps.Tests.EditMode
 
             var active = DeployOwner.GetOrAdd(_owner).Active(Kind);
             Assert.That(first == null, Is.True, "the oldest is destroyed");
-            Assert.That(active, Has.Count.EqualTo(2));
+            Assert.That(active.Count(), Is.EqualTo(2));
             Assert.That(active[1], Is.SameAs(third));
             Assert.That(third.Serial, Is.EqualTo(3));
         }

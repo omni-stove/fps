@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Text.RegularExpressions;
 using Fps.Editor;
@@ -96,7 +97,7 @@ namespace Fps.Tests.EditMode
             _controller.Definitions = list;
             list.Clear();
 
-            Assert.That(_controller.Definitions, Has.Count.EqualTo(1));
+            Assert.That(_controller.Definitions.Count(), Is.EqualTo(1));
 
             _controller.Definitions = null;
             Assert.That(_controller.Definitions, Is.Empty);
@@ -130,7 +131,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(_controller.Select("00000000-0000-4000-8000-00000000ffff"), Is.False, "not in the loadout");
                 Assert.That(_controller.Select(5), Is.False);
 
-                Assert.That(changes, Has.Count.EqualTo(4));
+                Assert.That(changes.Count(), Is.EqualTo(4));
                 Assert.That(changes[3], Is.SameAs(rifle));
             }
             finally
@@ -282,7 +283,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(rifle.AmmoInMagazine, Is.EqualTo(7));
                 Assert.That(rifle.ReserveAmmo, Is.EqualTo(12));
                 Assert.That(rifle.IsReloading, Is.False);
-                Assert.That(_controller.SnapshotAmmo(), Has.Count.EqualTo(2));
+                Assert.That(_controller.SnapshotAmmo().Count(), Is.EqualTo(2));
 
                 // 戻した後も持ち替えられ、WeaponChanged が来る。
                 Assert.That(_controller.SelectNext(), Is.True);
@@ -532,7 +533,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_controller.ShotFilter, Is.Null);
             Assert.That(_controller.Fire(), Is.True);
 
-            Assert.That(ahead.Calls, Has.Count.EqualTo(1));
+            Assert.That(ahead.Calls.Count(), Is.EqualTo(1));
             Assert.That(aside.Calls, Is.Empty);
         }
 
@@ -553,7 +554,7 @@ namespace Fps.Tests.EditMode
             Assert.That(filter.SeenOrigin, Is.EqualTo(_camera.transform.position), "the filter gets the resolved shot");
             Assert.That(filter.SeenDirection, Is.EqualTo(_camera.transform.forward));
             Assert.That(ahead.Calls, Is.Empty);
-            Assert.That(aside.Calls, Has.Count.EqualTo(1));
+            Assert.That(aside.Calls.Count(), Is.EqualTo(1));
             Assert.That(aside.Calls[0].Point.x, Is.EqualTo(20f).Within(1e-4f));
         }
 
@@ -568,7 +569,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_controller.Fire(), Is.True);
 
             Assert.That(ahead.Calls, Is.Empty);
-            Assert.That(right.Calls, Has.Count.EqualTo(1));
+            Assert.That(right.Calls.Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -707,7 +708,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_controller.RemoveModifier(widen), Is.True);
             Assert.That(_controller.RemoveModifier(widen), Is.False);
-            Assert.That(_controller.Modifiers, Has.Count.EqualTo(2));
+            Assert.That(_controller.Modifiers.Count(), Is.EqualTo(2));
             Assert.Throws<ArgumentNullException>(() => _controller.AddModifier(null));
             Assert.Throws<ArgumentNullException>(() => _controller.RemoveModifier(null));
         }
@@ -725,7 +726,7 @@ namespace Fps.Tests.EditMode
             {
                 Assert.That(_controller.Fire(), Is.True);
 
-                Assert.That(target.NearMisses, Has.Count.EqualTo(1));
+                Assert.That(target.NearMisses.Count(), Is.EqualTo(1));
                 Assert.That(target.NearMisses[0].Distance, Is.EqualTo(0.5f).Within(1e-4f));
                 Assert.That(target.NearMisses[0].Shooter, Is.SameAs(_camera));
             }
@@ -777,12 +778,12 @@ namespace Fps.Tests.EditMode
             Assert.That(WeaponController.IsDryFire(_controller.Weapon), Is.True);
             LogAssert.Expect(LogType.Log, $"{WeaponController.DryFireLogPrefix} id={TestWeapons.RifleId}");
             Assert.That(_controller.PullTrigger(true, true), Is.False);
-            Assert.That(dry, Has.Count.EqualTo(1));
+            Assert.That(dry.Count(), Is.EqualTo(1));
             Assert.That(dry[0], Is.SameAs(_controller.Weapon));
 
             _controller.Tick(_rifle.FireInterval);
             Assert.That(_controller.PullTrigger(true, false), Is.False);
-            Assert.That(dry, Has.Count.EqualTo(1), "holding the trigger does not click again");
+            Assert.That(dry.Count(), Is.EqualTo(1), "holding the trigger does not click again");
 
             // 空撃ちは弾数もリロードも変えない (リロードは従来どおり押したときだけ始まる)。
             Assert.That(_controller.Weapon.AmmoInMagazine, Is.Zero);
@@ -792,12 +793,12 @@ namespace Fps.Tests.EditMode
 
             LogAssert.Expect(LogType.Log, $"{WeaponController.DryFireLogPrefix} id={TestWeapons.RifleId}");
             Assert.That(_controller.PullTrigger(true, true), Is.False);
-            Assert.That(dry, Has.Count.EqualTo(2), "pressed again");
+            Assert.That(dry.Count(), Is.EqualTo(2), "pressed again");
 
             Assert.That(_controller.StartReload(), Is.True);
             Assert.That(WeaponController.IsDryFire(_controller.Weapon), Is.False);
             Assert.That(_controller.PullTrigger(true, true), Is.False);
-            Assert.That(dry, Has.Count.EqualTo(2), "a reloading weapon does not click");
+            Assert.That(dry.Count(), Is.EqualTo(2), "a reloading weapon does not click");
         }
 
         [Test]

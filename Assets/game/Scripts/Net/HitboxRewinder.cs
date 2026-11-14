@@ -148,7 +148,7 @@ namespace Fps.Net
                 {
                     _changedStances.Add(target.Stance);
                     _originalCrouched.Add(target.Stance.IsCrouched);
-                    target.Stance.Apply(crouched);
+                    target.Stance.ApplyForQuery(crouched);
                 }
             }
         }
@@ -158,7 +158,7 @@ namespace Fps.Net
             // 同じ姿勢が 2 度入っていても最初に控えた姿勢に戻るよう、逆順に戻す
             for (var i = _changedStances.Count - 1; i >= 0; i--)
             {
-                _changedStances[i].Apply(_originalCrouched[i]);
+                _changedStances[i].ApplyForQuery(_originalCrouched[i]);
             }
 
             _changedStances.Clear();

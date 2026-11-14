@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Text.RegularExpressions;
 using Fps.Core;
@@ -70,7 +71,7 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(KnockbackMovement.Attach(_player, _damageable), Is.SameAs(_movement));
             Assert.That(_movement.gameObject, Is.SameAs(_damageable.gameObject));
-            Assert.That(_player.MovementOverrides, Has.Count.EqualTo(1));
+            Assert.That(_player.MovementOverrides.Count(), Is.EqualTo(1));
             Assert.That(_player.MovementOverrides[0], Is.SameAs(_movement));
             Assert.That(_movement.IsKnockedBack, Is.False);
         }

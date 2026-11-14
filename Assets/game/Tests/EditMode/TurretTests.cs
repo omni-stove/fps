@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Fps.Core;
 using Fps.Editor;
@@ -73,7 +74,7 @@ namespace Fps.Tests.EditMode
             Assert.That(turret.Head.name, Is.EqualTo(Turret.HeadName));
             Assert.That(turret.Head.position.y, Is.LessThan(TurretSpec.DefaultHeight));
             Assert.That(turret.GetComponent<NavMeshObstacle>(), Is.Not.Null);
-            Assert.That(turret.GetComponentInChildren<CoverPoint>(), Is.Null);
+            Assert.That(turret.GetComponentInChildren<Fps.Runtime.CoverPoint>(), Is.Null);
             Assert.That(turret.Damageable.Health.Current, Is.EqualTo(TurretSpec.DefaultMaxHealth));
             Assert.That(turret.IsArmed, Is.True);
             Assert.That(Turret.Armed, Has.Member(turret));
@@ -334,7 +335,7 @@ namespace Fps.Tests.EditMode
             host.Step(PlayerCommands.None, PlayerCommands.None, 0f);
 
             var active = DeployOwner.GetOrAdd(_owner).Active(Kind);
-            Assert.That(active, Has.Count.EqualTo(1));
+            Assert.That(active.Count(), Is.EqualTo(1));
             var turret = active[0].GetComponent<Turret>();
             Assert.That(turret.IsArmed, Is.True);
             Assert.That(turret.FriendlyFire, Is.EqualTo(FriendlyFire.On));

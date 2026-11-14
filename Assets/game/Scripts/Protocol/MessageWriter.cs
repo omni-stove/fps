@@ -32,7 +32,7 @@ namespace Fps.Protocol
             }
 
             MaxLength = maxLength;
-            _buffer = new byte[Math.Min(_initialCapacity,maxLength)];
+            _buffer = new byte[Math.Min(_initialCapacity, maxLength)];
         }
 
         /// <summary>書ける最長のバイト数。</summary>
@@ -113,8 +113,18 @@ namespace Fps.Protocol
 
         public void WriteUInt64(ulong value)
         {
-            WriteUInt32((uint)value);
-            WriteUInt32((uint)(value >> 32));
+            // 8 バイトを 1 回で取るのは、収まらないときに下位 4 バイトだけが残らないようにするため。
+            var at = Reserve(8);
+            PutUInt32(at, (uint)value);
+            PutUInt32(at + 4, (uint)(value >> 32));
+        }
+
+        private void PutUInt32(int at, uint value)
+        {
+            _buffer[at] = (byte)value;
+            _buffer[at + 1] = (byte)(value >> 8);
+            _buffer[at + 2] = (byte)(value >> 16);
+            _buffer[at + 3] = (byte)(value >> 24);
         }
 
         /// <summary>IEEE 754 の 32 ビットのビット列のまま書く (NaN も書ける。値の妥当性は読む側のメッセージが見る)。</summary>
@@ -126,9 +136,11 @@ namespace Fps.Protocol
         /// <summary>x・y・z の順に <see cref="WriteSingle"/> で書く。</summary>
         public void WriteVector3(Vector3 value)
         {
-            WriteSingle(value.X);
-            WriteSingle(value.Y);
-            WriteSingle(value.Z);
+            // 12 バイトを 1 回で取るのは、収まらないときに x や y だけが残らないようにするため。
+            var at = Reserve(12);
+            PutUInt32(at, unchecked((uint)BitConverter.SingleToInt32Bits(value.X)));
+            PutUInt32(at + 4, unchecked((uint)BitConverter.SingleToInt32Bits(value.Y)));
+            PutUInt32(at + 8, unchecked((uint)BitConverter.SingleToInt32Bits(value.Z)));
         }
 
         /// <summary>UTF-8 のバイト数 (ushort) を書いてから中身を書く。null は空文字列として書く。</summary>

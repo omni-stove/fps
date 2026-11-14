@@ -5,7 +5,8 @@ namespace Fps.Core
 {
     /// <summary>
     /// キルコンファームド (<see cref="KillConfirmed"/>) の HUD の行と <c>[Mode] killconfirmed</c> のログの文言。
-    /// HUD の陣営名は <see cref="ModeHudText.SideName"/>、ログの陣営は ID の数字で書く。
+    /// HUD の行は表のキー <c>mode.killConfirmed.*</c> の <see cref="LocalizedText"/> で返し、陣営名は <see cref="ModeHudText.SideName"/> を引数に入れる。
+    /// ログは言語に依らない文字列で、陣営を ID の数字で書く。
     /// </summary>
     public static class KillConfirmedText
     {
@@ -13,27 +14,27 @@ namespace Fps.Core
 
         /// <summary>陣営ごとの確定数の行。</summary>
         /// <example><c>Confirmed(3, 2)</c> は <c>確定 ALPHA 3 / BRAVO 2</c></example>
-        public static string Confirmed(int alpha, int bravo)
+        public static LocalizedText Confirmed(int alpha, int bravo)
         {
-            return GameText.Format("killConfirmed.confirmed", PerSide(alpha, bravo));
+            return new LocalizedText("mode.killConfirmed.confirmed", PerSide(alpha, bravo));
         }
 
         /// <summary>陣営ごとの阻止数の行。</summary>
         /// <example><c>Denied(1, 0)</c> は <c>阻止 ALPHA 1 / BRAVO 0</c></example>
-        public static string Denied(int alpha, int bravo)
+        public static LocalizedText Denied(int alpha, int bravo)
         {
-            return GameText.Format("killConfirmed.denied", PerSide(alpha, bravo));
+            return new LocalizedText("mode.killConfirmed.denied", PerSide(alpha, bravo));
         }
 
         /// <summary>落ちていて拾われるのを待っているタグの数の行。</summary>
         /// <example><c>TagsOnField(2)</c> は <c>落ちているタグ 2</c></example>
-        public static string TagsOnField(int count)
+        public static LocalizedText TagsOnField(int count)
         {
-            return GameText.Format("killConfirmed.tagsOnField", count);
+            return new LocalizedText("mode.killConfirmed.tagsOnField", count);
         }
 
         /// <summary>killConfirmed の HUD の 3 行 (確定数・阻止数・落ちているタグの数)。</summary>
-        public static string[] HudLines(KillConfirmed killConfirmed)
+        public static LocalizedText[] HudLines(KillConfirmed killConfirmed)
         {
             if (killConfirmed == null)
             {
@@ -103,10 +104,14 @@ namespace Fps.Core
             return " tag=" + Number(tag.Id) + " owner=" + Number(tag.OwnerId) + " side=" + Number(tag.OwnerSide.Id);
         }
 
-        private static string PerSide(int alpha, int bravo)
+        private static LocalizedText PerSide(int alpha, int bravo)
         {
-            return GameText.Resolve(ModeHudText.SideName(Side.Alpha)) + " " + Number(alpha) + " / "
-                + GameText.Resolve(ModeHudText.SideName(Side.Bravo)) + " " + Number(bravo);
+            return new LocalizedText(
+                "mode.killConfirmed.perSide",
+                ModeHudText.SideName(Side.Alpha),
+                alpha,
+                ModeHudText.SideName(Side.Bravo),
+                bravo);
         }
 
         private static string Number(int value)

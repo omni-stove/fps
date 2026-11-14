@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Fps.Runtime
 {
@@ -13,16 +14,41 @@ namespace Fps.Runtime
     [CreateAssetMenu(fileName = "Mission", menuName = "Fps/Mission Definition")]
     public sealed class MissionDefinition : ScriptableObject
     {
-        [SerializeField, Tooltip("プレイヤーに見せるミッション名")]
-        private string _displayName = string.Empty;
+        // 文を直に持っていた頃のアセットは、その文がキーとして読まれ、表に無いキーとして警告付きでそのまま画面に出る。
+        [SerializeField, FormerlySerializedAs("_displayName"), Tooltip("プレイヤーに見せるミッション名の、言語の表のキー (campaign.mission.<Id>.name)")]
+        private string _displayNameKey = string.Empty;
 
         [SerializeField, Tooltip("目標。前提は同じミッションの目標の Id を指す")]
         private List<ObjectiveDefinition> _objectives = new List<ObjectiveDefinition>();
 
-        public string DisplayName
+        /// <summary>プレイヤーに見せるミッション名の、言語の表のキー。</summary>
+        public string DisplayNameKey
         {
-            get => _displayName ?? string.Empty;
-            set => _displayName = value ?? string.Empty;
+            get => _displayNameKey ?? string.Empty;
+            set => _displayNameKey = value ?? string.Empty;
+        }
+
+        /// <summary>プレイヤーに見せるミッション名。<see cref="DisplayNameKey"/> が空なら <c>default</c> (文にすると空文字)。</summary>
+        public LocalizedText DisplayName => string.IsNullOrWhiteSpace(_displayNameKey) ? default : new LocalizedText(_displayNameKey.Trim());
+
+        /// <summary>Id が missionId のミッションの名前を引くキー (<c>campaign.mission.&lt;missionId&gt;.name</c>)。</summary>
+        /// <exception cref="ArgumentException">missionId が null か空白だけ。</exception>
+        public static string NameKeyOf(string missionId)
+        {
+            RequireKeyPart(missionId, nameof(missionId));
+            return "campaign.mission." + missionId + ".name";
+        }
+
+        /// <summary>
+        /// Id が missionId のミッションの、Id が objectiveId の目標の説明を引くキー
+        /// (<c>campaign.mission.&lt;missionId&gt;.objective.&lt;objectiveId&gt;</c>)。
+        /// </summary>
+        /// <exception cref="ArgumentException">missionId か objectiveId が null か空白だけ。</exception>
+        public static string ObjectiveKeyOf(string missionId, string objectiveId)
+        {
+            RequireKeyPart(missionId, nameof(missionId));
+            RequireKeyPart(objectiveId, nameof(objectiveId));
+            return "campaign.mission." + missionId + ".objective." + objectiveId;
         }
 
         /// <summary>定義順の目標。中身を書き換えるときは <see cref="SetObjectives"/> を使う。</summary>
@@ -94,6 +120,14 @@ namespace Fps.Runtime
                 throw new MissionDefinitionException($"mission '{source}' is invalid: {e.Message}", e);
             }
         }
+
+        private static void RequireKeyPart(string part, string parameterName)
+        {
+            if (string.IsNullOrWhiteSpace(part))
+            {
+                throw new ArgumentException("must not be empty", parameterName);
+            }
+        }
     }
 
     /// <summary><see cref="MissionDefinition"/> の 1 目標。Inspector で編集できる形の <see cref="Objective"/>。</summary>
@@ -103,8 +137,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("ミッション内で一意な識別子。トリガーはこの Id で目標を指す")]
         private string _id = string.Empty;
 
-        [SerializeField, Tooltip("プレイヤーに見せる説明")]
-        private string _description = string.Empty;
+        // ミッション名と同じく、文を直に持っていた頃のアセットはその文をキーとして読む。
+        [SerializeField, FormerlySerializedAs("_description"), Tooltip("プレイヤーに見せる説明の、言語の表のキー (campaign.mission.<ミッション Id>.objective.<目標 Id>)")]
+        private string _descriptionKey = string.Empty;
 
         [SerializeField, Min(1), Tooltip("完了までに必要な進み具合")]
         private int _requiredCount = 1;
@@ -121,20 +156,21 @@ namespace Fps.Runtime
 
         public ObjectiveDefinition(
             string id,
-            string description,
+            string descriptionKey,
             int requiredCount = 1,
             bool optional = false,
             params string[] prerequisites)
         {
             _id = id;
-            _description = description;
+            _descriptionKey = descriptionKey;
             _requiredCount = requiredCount;
             _optional = optional;
             _prerequisites = prerequisites == null ? Array.Empty<string>() : (string[])prerequisites.Clone();
         }
 
         public string Id => _id;
-        public string Description => _description;
+        /// <summary>プレイヤーに見せる説明の、言語の表のキー。</summary>
+        public string DescriptionKey => _descriptionKey ?? string.Empty;
         public int RequiredCount => _requiredCount;
         public bool Optional => _optional;
         public IReadOnlyList<string> Prerequisites => _prerequisites ?? Array.Empty<string>();
@@ -152,12 +188,12 @@ namespace Fps.Runtime
                 }
             }
 
-            return new Objective(_id?.Trim() ?? string.Empty, _description, _requiredCount, _optional, prerequisites);
+            return new Objective(_id?.Trim() ?? string.Empty, DescriptionKey.Trim(), _requiredCount, _optional, prerequisites);
         }
 
         public ObjectiveDefinition Clone()
         {
-            return new ObjectiveDefinition(_id, _description, _requiredCount, _optional, _prerequisites);
+            return new ObjectiveDefinition(_id, _descriptionKey, _requiredCount, _optional, _prerequisites);
         }
     }
 

@@ -16,8 +16,8 @@ namespace Fps.Tests.EditMode
     {
         public const string Mission01 = "Campaign01";
         public const string Mission02 = "Campaign02";
-        public const string Mission01Name = "Operation One";
-        public const string Mission02Name = "Operation Two";
+        public const string Mission01NameKey = "campaign.mission.Campaign01.name";
+        public const string Mission02NameKey = "campaign.mission.Campaign02.name";
         public const string NotBuiltScene = "Assets/__not_in_build_settings__/Campaign02.unity";
 
         private readonly List<Object> _created = new List<Object>();
@@ -29,10 +29,16 @@ namespace Fps.Tests.EditMode
             _created.Add(Catalog);
             Catalog.SetMissions(new[]
             {
-                new MissionCatalogEntry(Mission01, Mission01Name, MenuRoute.CampaignScene, Definition(Mission01)),
-                new MissionCatalogEntry(Mission02, Mission02Name, NotBuiltScene, Definition(Mission02)),
+                new MissionCatalogEntry(Mission01, Mission01NameKey, MenuRoute.CampaignScene, Definition(Mission01)),
+                new MissionCatalogEntry(Mission02, Mission02NameKey, NotBuiltScene, Definition(Mission02)),
             });
         }
+
+        /// <summary>メニューに出る <see cref="Mission01"/> の名前 (今の言語の表で <see cref="Mission01NameKey"/> を引いたもの)。</summary>
+        public static string Mission01Name => Localizer.Get(Mission01NameKey);
+
+        /// <summary>メニューに出る <see cref="Mission02"/> の名前 (今の言語の表で <see cref="Mission02NameKey"/> を引いたもの)。</summary>
+        public static string Mission02Name => Localizer.Get(Mission02NameKey);
 
         public MissionCatalog Catalog { get; }
 

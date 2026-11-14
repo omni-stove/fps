@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -83,7 +84,7 @@ namespace Fps.Tests.EditMode
             Assert.That(missions[0].DefinitionPath, Is.EqualTo(CampaignSceneBuilder.DefinitionPath));
             Assert.That(missions[0].NavMeshDataPath, Is.EqualTo(CampaignSceneBuilder.NavMeshDataPath));
             Assert.That(missions[1].Id, Is.EqualTo("Campaign02"));
-            Assert.That(missions[1].DisplayName, Is.EqualTo("Campaign 02"));
+            Assert.That(missions[1].NameKey, Is.EqualTo("campaign.mission.Campaign02.name"));
             Assert.That(missions[1].ScenePath, Is.EqualTo(BuildSceneList.Campaign02Scene));
             Assert.That(missions[1].DefinitionPath, Is.EqualTo("Assets/game/Missions/Campaign02.asset"));
             Assert.That(missions[1].NavMeshDataPath, Is.EqualTo("Assets/game/Scenes/Campaign02/NavMesh-Level.asset"));
@@ -95,7 +96,11 @@ namespace Fps.Tests.EditMode
         {
             var mission = _definition.CreateMission();
 
-            Assert.That(_definition.DisplayName, Is.EqualTo(Campaign02Mission.MissionDisplayName));
+            Assert.That(_definition.DisplayNameKey, Is.EqualTo(Campaign02Mission.MissionNameKey));
+            Assert.That(Localizer.Resolve(_definition.DisplayName), Is.EqualTo("Campaign 02"));
+            var reinforcements = Localizer.Resolve(mission.Objectives[2].Description);
+            Assert.That(reinforcements, Is.Not.EqualTo(mission.Objectives[2].DescriptionKey), "the description is in the table");
+            Assert.That(reinforcements, Does.Contain(Campaign02Mission.Reinforcements.Count.ToString(CultureInfo.InvariantCulture)));
             Assert.That(mission.Objectives, Has.Count.EqualTo(4));
             Assert.That(mission.Objectives[0].Id, Is.EqualTo(Campaign02Mission.EnterBuildingId));
             Assert.That(mission.Objectives[0].Prerequisites, Is.Empty);

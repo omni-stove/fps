@@ -381,7 +381,7 @@ namespace Fps.Tests.EditMode
             Localizer.Changed += record;
             try
             {
-                _view.SetLanguage(GameLanguages.Next(GameLanguage.Japanese));
+                _view.SetLanguage(SettingsView.NextLanguage(GameLanguage.Japanese, _view.Languages));
 
                 Assert.That(changes, Is.EqualTo(new[] { GameLanguage.English }));
             }
@@ -413,6 +413,46 @@ namespace Fps.Tests.EditMode
             Assert.That(restarted.Language, Is.EqualTo(GameLanguage.English));
             Assert.That(restarted.Get(ControlValue.FieldOfView), Is.EqualTo(70));
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void TheLanguageItemOffersTheLanguagesInResourcesByTheirOwnNames()
+        {
+            _view.Open(_container);
+
+            Assert.That(_view.Languages, Is.EqualTo(Localizer.AvailableLanguages()));
+            Assert.That(_view.Languages, Does.Contain(GameLanguage.Japanese));
+            var button = _container.Q<Button>(SettingsView.LanguageButtonName);
+            Assert.That(button.text, Is.EqualTo("日本語"));
+            Assert.That(button.enabledSelf, Is.EqualTo(_view.Languages.Count > 1));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ChoosingALanguageSavesItAtOnce()
+        {
+            _view.Open(_container);
+
+            _view.SetLanguage(GameLanguage.English);
+
+            Assert.That(new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Load().Language, Is.EqualTo(GameLanguage.English), "kept across a restart");
+            Assert.That(_view.HasUnsavedChanges, Is.False);
+            Assert.That(_container.Q<Button>(SettingsView.LanguageButtonName).text, Is.EqualTo("English"));
+            Assert.That(_container.Q<Label>(SettingsView.TitleName).text, Is.EqualTo("Settings"));
+        }
+
+        [Test]
+        public void NextLanguageCyclesThroughTheAvailableLanguages()
+        {
+            var both = new[] { GameLanguage.Japanese, GameLanguage.English };
+            var japaneseOnly = new[] { GameLanguage.Japanese };
+
+            Assert.That(SettingsView.NextLanguage(GameLanguage.Japanese, both), Is.EqualTo(GameLanguage.English));
+            Assert.That(SettingsView.NextLanguage(GameLanguage.English, both), Is.EqualTo(GameLanguage.Japanese));
+            Assert.That(SettingsView.NextLanguage(GameLanguage.Japanese, japaneseOnly), Is.EqualTo(GameLanguage.Japanese));
+            Assert.That(SettingsView.NextLanguage(GameLanguage.English, japaneseOnly), Is.EqualTo(GameLanguage.Japanese), "a language without strings moves to one with");
+            Assert.That(SettingsView.NextLanguage(GameLanguage.English, Array.Empty<GameLanguage>()), Is.EqualTo(GameLanguage.English));
+            Assert.Throws<ArgumentNullException>(() => SettingsView.NextLanguage(GameLanguage.Japanese, null));
         }
 
         [Test]

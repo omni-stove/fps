@@ -295,6 +295,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(_screen.Choose(MenuDestination.Range), Is.False, "the menu does not move while the campaign is open");
                 Assert.That(panel.Menu.Missions.Select(m => m.DisplayName),
                     Is.EqualTo(new[] { CampaignTestCatalog.Mission01Name, CampaignTestCatalog.Mission02Name }));
+                Assert.That(CampaignTestCatalog.Mission01Name, Is.Not.EqualTo(CampaignTestCatalog.Mission01NameKey), "the name comes from the table, not the key");
                 Assert.That(panel.Menu.Difficulty, Is.EqualTo(CampaignDifficulty.Normal));
                 Assert.That(panel.IsShown(CampaignMenuItemKind.Start), Is.True);
                 Assert.That(panel.IsShown(CampaignMenuItemKind.Continue), Is.False);

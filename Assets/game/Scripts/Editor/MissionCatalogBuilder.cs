@@ -29,16 +29,18 @@ namespace Fps.Editor
         /// <summary>カタログに入れるミッションの、定義とシーンの場所。</summary>
         public readonly struct MissionSource
         {
-            public MissionSource(string id, string displayName, string scenePath, string definitionPath)
+            public MissionSource(string id, string nameKey, string scenePath, string definitionPath)
             {
                 Id = id;
-                DisplayName = displayName;
+                NameKey = nameKey;
                 ScenePath = scenePath;
                 DefinitionPath = definitionPath;
             }
 
             public string Id { get; }
-            public string DisplayName { get; }
+
+            /// <summary>メニューに出すミッション名を引く言語の表のキー。</summary>
+            public string NameKey { get; }
             public string ScenePath { get; }
             public string DefinitionPath { get; }
         }
@@ -49,7 +51,7 @@ namespace Fps.Editor
             var missions = new List<MissionSource>();
             foreach (var spec in CampaignSceneBuilder.Missions())
             {
-                missions.Add(new MissionSource(spec.Id, spec.DisplayName, spec.ScenePath, spec.DefinitionPath));
+                missions.Add(new MissionSource(spec.Id, spec.NameKey, spec.ScenePath, spec.DefinitionPath));
             }
 
             return missions;
@@ -129,7 +131,7 @@ namespace Fps.Editor
                     $"scene '{scenePath}' of mission '{mission.Id}' was not found; run {CampaignSceneBuilder.MenuPath} first");
             }
 
-            return new MissionCatalogEntry(mission.Id, mission.DisplayName, scenePath, definition);
+            return new MissionCatalogEntry(mission.Id, mission.NameKey, scenePath, definition);
         }
     }
 }

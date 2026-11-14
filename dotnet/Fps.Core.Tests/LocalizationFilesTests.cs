@@ -46,6 +46,22 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheControlModeTextsAreReadFromTheJapaneseModesControlTable()
+        {
+            var modes = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("modes-control.json", StringComparison.Ordinal))
+                .Value;
+
+            foreach (var prefix in new[] { "mode.domination.", "mode.hardpoint.", "mode.killConfirmed.", "mode.freeForAll." })
+            {
+                Assert.That(modes.Keys.Any(key => key.StartsWith(prefix, StringComparison.Ordinal)), Is.True, prefix);
+            }
+
+            Assert.That(modes.Get("mode.hardpoint.contested"), Is.EqualTo("争奪中"));
+            Assert.That(modes.Get("mode.killConfirmed.tagsOnField"), Is.EqualTo("落ちているタグ {0}"));
+        }
+
+        [Test]
         public void TheSurvivalModeTextsAreReadFromTheJapaneseModesSurvivalTable()
         {
             var modes = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)

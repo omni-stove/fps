@@ -17,6 +17,7 @@ namespace Fps.Editor
     /// 既存のアセットは GUID を保って中身だけ更新し、同じコードからは同じファイルができる (2 回走らせても差分が出ない)。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.PresentationAssetBuilder.Build</code>
+    /// 演出の仮素材をまとめて作る入口 (<see cref="PresentationAssetSteps.BuildAll"/>) からは <see cref="PresentationCatalogAssetStep"/> として呼ばれる。
     /// </summary>
     public static class PresentationAssetBuilder
     {

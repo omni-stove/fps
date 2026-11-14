@@ -38,8 +38,14 @@ namespace Fps.Tests.EditMode
                 var asset = Resources.Load<TextAsset>(path);
 
                 Assert.That(asset, Is.Not.Null, path);
-                Assert.That(StringTable.TryParse(asset.text, null, out var table, out var error), Is.True, $"{path}: {error}");
-                Assert.That(table.Contains("settings.title"), Is.True, path);
+                Assert.That(StringTable.TryParse(asset.text, null, out _, out var error), Is.True, $"{path}: {error}");
+
+                var settingsPath = Localizer.LayerFolderOf(language) + "/settings";
+                var settings = Resources.Load<TextAsset>(settingsPath);
+                Assert.That(settings, Is.Not.Null, settingsPath);
+                Assert.That(StringTable.TryParse(settings.text, null, out var table, out error), Is.True, $"{settingsPath}: {error}");
+                Assert.That(table.Contains("settings.title"), Is.True, settingsPath);
+                Assert.That(table.Contains(Localizer.NativeNameKey), Is.True, settingsPath);
             }
         }
 

@@ -20,7 +20,9 @@ namespace Fps.Runtime
     /// ほかの割り当てと重なったら知らせ、<see cref="UndoRebind"/> で前の割り当てに戻せる。閉じるときに <see cref="InputBindingOverridesStore"/> に保存する。
     /// </para>
     /// <para>
-    /// 画面の文字は <see cref="Localizer"/> から引く。言語 (<see cref="SetLanguage"/>) を変えると、開いたまま画面を今の言語で組み直す。
+    /// 画面の文字は <see cref="Localizer"/> から引く (キーは settings.*、表は Resources/Localization/&lt;言語コード&gt;/settings.json)。
+    /// 言語の項目は Resources/Localization に表のある言語 (<see cref="Languages"/>) を順に切り替え、
+    /// 言語 (<see cref="SetLanguage"/>) を変えると、開いたまま画面を今の言語で組み直す。
     /// </para>
     /// </summary>
     public sealed class SettingsView
@@ -112,6 +114,8 @@ namespace Fps.Runtime
         private Label _enemySample;
         private Button _subtitlesButton;
         private Button _languageButton;
+        private IReadOnlyList<GameLanguage> _languages = Array.Empty<GameLanguage>();
+        private readonly Dictionary<GameLanguage, string> _languageNames = new Dictionary<GameLanguage, string>();
 
         /// <param name="store">保存先。null ならゲームの既定のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
         /// <param name="bindingStore">割り当ての上書きの保存先。null ならゲームの既定のキー。</param>
@@ -149,6 +153,11 @@ namespace Fps.Runtime
 
         /// <summary>開いている画面が割り当てを変える Player マップ。閉じているか、Input Actions が無ければ null。</summary>
         public PlayerBindings Bindings => _bindings;
+
+        /// <summary>
+        /// 言語の項目で選べる言語 (<see cref="Localizer.AvailableLanguages()"/>)。画面を組むときに Resources から読む。閉じていれば空。
+        /// </summary>
+        public IReadOnlyList<GameLanguage> Languages => _languages;
 
         /// <summary>直前に変えた割り当てがほかと重なっていて、まだ取り消すか決めていなければその結果。無ければ null。</summary>
         public RebindResult PendingConflict => _pendingConflict;
@@ -238,11 +247,40 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>言語のボタンに出す文字。今の言語が読めなくても選べるよう、その言語自身での名前 (<see cref="GameLanguages.NativeName"/>)。</summary>
+        /// <summary>
+        /// 言語のボタンに出す文字。今の言語が読めなくても選べるよう、その言語の表にある、その言語自身での名前 (<see cref="Localizer.NativeNameOf(GameLanguage)"/>)。
+        /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
         public static string FormatLanguage(GameLanguage language)
         {
-            return GameLanguages.NativeName(language);
+            return Localizer.NativeNameOf(language);
+        }
+
+        /// <summary>
+        /// available の並びで language の次の言語。最後の次は最初に戻る。language が available に無ければ最初の言語、available が空なら language のまま。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">available が null。</exception>
+        public static GameLanguage NextLanguage(GameLanguage language, IReadOnlyList<GameLanguage> available)
+        {
+            if (available == null)
+            {
+                throw new ArgumentNullException(nameof(available));
+            }
+
+            if (available.Count == 0)
+            {
+                return language;
+            }
+
+            for (var i = 0; i < available.Count; i++)
+            {
+                if (available[i] == language)
+                {
+                    return available[(i + 1) % available.Count];
+                }
+            }
+
+            return available[0];
         }
 
         /// <summary><see cref="TeamPalette.All"/> の並びで palette の次の組。最後の次は最初に戻る。</summary>
@@ -330,6 +368,8 @@ namespace Fps.Runtime
             _enemySample = null;
             _subtitlesButton = null;
             _languageButton = null;
+            _languages = Array.Empty<GameLanguage>();
+            _languageNames.Clear();
         }
 
         // 文字は組むときに入れたものが多く、1 つずつ引き直すと入れ忘れが出やすいので、画面ごと今の言語で組み直す。
@@ -449,15 +489,44 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 画面の言語 (<see cref="ControlSettings.Language"/>) を language にしてすぐ効かせ、画面を今の言語で組み直す
-        /// (<see cref="Localizer.Changed"/> で知らせる)。保存は閉じるとき。
+        /// 画面の言語 (<see cref="ControlSettings.Language"/>) を <see cref="Localizer.SwitchTo"/> で language に切り替える。
+        /// 表を読み直し、<see cref="Localizer.Changed"/> で開いている画面を今の言語で組み直し、言語だけはすぐ保存先のキーに書き出す
+        /// (ほかの値の変更は閉じるときに保存する)。今と同じ言語なら何もしない。
         /// </summary>
         /// <exception cref="InvalidOperationException">開いていない。</exception>
         /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
         public void SetLanguage(GameLanguage language)
         {
             EnsureOpen();
-            Edit(_editing.WithLanguage(language));
+            _ = GameLanguages.Code(language);
+            if (language == _editing.Language)
+            {
+                return;
+            }
+
+            // SwitchTo の知らせで画面を組み直すとき、言語のボタンに新しい言語を出せるよう、先に編集中の値を変える。
+            _editing = _editing.WithLanguage(language).WithShowNetStats(_sink.Current.ShowNetStats);
+            try
+            {
+                Localizer.SwitchTo(language, new LanguagePreferenceStore(_store.Key));
+                _saved = _saved.WithLanguage(language);
+            }
+            catch (Exception e)
+            {
+                // 言語はもう効いているので、保存は閉じるときにもう一度試す。
+                Debug.LogError($"{LogTag} could not save the language to '{_store.Key}': {e.Message}");
+                Debug.LogException(e);
+            }
+
+            // 言語の知らせを受けた側がこの画面を閉じていれば、閉じたときに保存は済んでいる。
+            if (_root == null)
+            {
+                return;
+            }
+
+            // SwitchTo は AppliedControlSettings にだけ効かせるので、別の先を渡されたときもその先に言語を渡す。
+            _sink.Apply(_editing);
+            Refresh();
         }
 
         /// <summary>
@@ -877,10 +946,23 @@ namespace Fps.Runtime
         {
             var row = NewRow();
             row.Add(NewLabel(Localizer.Get("settings.language"), "settings__caption"));
-            _languageButton = NewButton(LanguageButtonName, string.Empty, () => SetLanguage(GameLanguages.Next(_editing.Language)));
+            _languages = Localizer.AvailableLanguages();
+            _languageButton = NewButton(LanguageButtonName, string.Empty, () => SetLanguage(NextLanguage(_editing.Language, _languages)));
             _languageButton.AddToClassList("settings__palette");
             row.Add(_languageButton);
             return row;
+        }
+
+        // Refresh はスライダーを動かすたびに走るので、言語の表を読んで引いた名前は画面を組み直すまで持つ。
+        private string LanguageNameOf(GameLanguage language)
+        {
+            if (!_languageNames.TryGetValue(language, out var name))
+            {
+                name = FormatLanguage(language);
+                _languageNames[language] = name;
+            }
+
+            return name;
         }
 
         private VisualElement BuildModeRow(HoldAction action)
@@ -927,7 +1009,8 @@ namespace Fps.Runtime
 
             if (_languageButton != null)
             {
-                _languageButton.text = FormatLanguage(_editing.Language);
+                _languageButton.text = LanguageNameOf(_editing.Language);
+                _languageButton.SetEnabled(NextLanguage(_editing.Language, _languages) != _editing.Language);
             }
 
             RefreshBindings();
@@ -956,7 +1039,8 @@ namespace Fps.Runtime
             if (waiting.HasValue)
             {
                 var slot = waiting.Value;
-                var cancelKey = slot.Device == InputDeviceKind.Gamepad ? "Start" : "Esc";
+                var cancelKey = Localizer.Get(
+                    slot.Device == InputDeviceKind.Gamepad ? "settings.rebind.cancelKey.gamepad" : "settings.rebind.cancelKey.keyboardMouse");
                 _rebindNotice.text = Localizer.Format(
                     "settings.rebind.prompt",
                     PlayerBindings.LabelOf(slot.ActionName, slot.Part),

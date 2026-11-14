@@ -18,7 +18,8 @@ namespace Fps.Runtime
     /// <item><see cref="Killed"/>: 倒れるたび。オフラインでは <see cref="Damageable"/> が倒れたときに、<see cref="Attribute"/> で決めた倒した者と武器で出す。</item>
     /// </list>
     /// ネット対戦では、撃った本人の ShotFired は本人のクライアント (<c>Fps.Net.NetPlayer</c>) が出し、それ以外はサーバーから
-    /// <c>Fps.Net.NetCombatFeed</c> が届けて各クライアントで出す (Impact の <see cref="ImpactInfo.Collider"/> は見つからなければ null)。
+    /// <c>Fps.Net.NetCombatFeed</c> が届けて各クライアントで出す (Impact の <see cref="ImpactInfo.Collider"/> は見つからなければ null で、
+    /// 材質・キャラかどうか・部位はサーバーが判定したものを載せる)。
     /// 購読者が例外を投げても戦闘の処理は止めず、例外をログに出して残りの購読者を呼ぶ。
     /// 静的なので、ドメインの再読み込みを切った Play でも前回の購読が残らないよう、Play の開始時に購読をすべて外す。
     /// </remarks>
@@ -103,9 +104,16 @@ namespace Fps.Runtime
             Invoke(ShotFired, new ShotFiredInfo(shooter, origin, direction, weaponId));
         }
 
+        /// <summary>collider から材質・キャラかどうか・部位を引いて (<see cref="ImpactInfo"/> のコライダーを渡すコンストラクタ) 着弾を知らせる。</summary>
         public static void RaiseImpact(Vector3 point, Vector3 normal, Collider collider)
         {
             Invoke(Impact, new ImpactInfo(point, normal, collider));
+        }
+
+        /// <summary>組み立て済みの着弾を知らせる。コライダーから引けない情報 (ネット対戦でサーバーが決めた材質と部位) を載せるときに使う。</summary>
+        public static void RaiseImpact(ImpactInfo impact)
+        {
+            Invoke(Impact, impact);
         }
 
         public static void RaiseHitConfirmed(HitConfirm confirm)
@@ -227,6 +235,11 @@ namespace Fps.Runtime
     /// <summary><see cref="CombatEvents.Impact"/> で渡す、弾が当たった所。</summary>
     public readonly struct ImpactInfo
     {
+        // default では null になるので、読むときに既定の材質へ寄せる。
+        private readonly string _materialId;
+        private readonly HitZone _zone;
+        private readonly bool _hasZone;
+
         /// <summary>当たった点。</summary>
         public Vector3 Point { get; }
 
@@ -236,11 +249,73 @@ namespace Fps.Runtime
         /// <summary>当たったコライダー。ネット対戦でサーバーから届いた着弾では、このクライアントで見つからなければ null。</summary>
         public Collider Collider { get; }
 
+        /// <summary>当たった面の材質の Id (<see cref="SurfaceMaterial.IdOf"/>)。分からなければ <see cref="SurfaceMaterial.DefaultId"/>。null にならない。</summary>
+        public string MaterialId => _materialId ?? SurfaceMaterial.DefaultId;
+
+        /// <summary>キャラ (<see cref="Hitbox"/> か <see cref="Damageable"/> を持つもの) に当たったか。</summary>
+        public bool IsCharacter { get; }
+
+        /// <summary>キャラの当たった部位。キャラ以外か、キャラでも部位が分からない (Hitbox の無いところに当たった) ときは null。</summary>
+        public HitZone? Zone => _hasZone ? _zone : (HitZone?)null;
+
+        /// <summary>collider から材質・キャラかどうか・部位を引いて作る (<see cref="SurfaceMaterial.IdOf"/>、親階層の <see cref="Hitbox"/> と <see cref="Damageable"/>)。</summary>
         public ImpactInfo(Vector3 point, Vector3 normal, Collider collider)
+            : this(point, normal, collider, SurfaceMaterial.IdOf(collider), IsCharacterCollider(collider, out var zone), zone)
         {
+        }
+
+        /// <summary>材質・キャラかどうか・部位を直接渡して作る。コライダーが手元で見つからない着弾 (ネット対戦のサーバーから届いたもの) に使う。</summary>
+        /// <param name="materialId">材質の Id。<see cref="SurfaceMaterial.Normalize"/> で揃える (null・空白なら既定の材質)。</param>
+        /// <param name="isCharacter">キャラに当たったか。</param>
+        /// <param name="zone">当たった部位。isCharacter が false なら null であること。</param>
+        /// <exception cref="ArgumentException">キャラ以外に部位を渡した。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">zone が <see cref="HitZone"/> に無い値。</exception>
+        public ImpactInfo(Vector3 point, Vector3 normal, Collider collider, string materialId, bool isCharacter, HitZone? zone)
+        {
+            if (zone.HasValue)
+            {
+                if (!isCharacter)
+                {
+                    throw new ArgumentException("only a character impact can have a hit zone", nameof(zone));
+                }
+
+                if (!Enum.IsDefined(typeof(HitZone), zone.Value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(zone), zone.Value, "unknown hit zone");
+                }
+            }
+
             Point = point;
             Normal = normal;
             Collider = collider;
+            _materialId = SurfaceMaterial.Normalize(materialId);
+            IsCharacter = isCharacter;
+            _zone = zone ?? default;
+            _hasZone = zone.HasValue;
+        }
+
+        /// <example><c>material=default character=True zone=Head</c>。部位が無ければ <c>zone=none</c>。</example>
+        public override string ToString()
+        {
+            return "material=" + MaterialId + " character=" + IsCharacter + " zone=" + (Zone.HasValue ? Zone.Value.ToString() : "none");
+        }
+
+        private static bool IsCharacterCollider(Collider collider, out HitZone? zone)
+        {
+            zone = null;
+            if (collider == null)
+            {
+                return false;
+            }
+
+            var hitbox = collider.GetComponentInParent<Hitbox>(true);
+            if (hitbox != null)
+            {
+                zone = hitbox.Zone;
+                return true;
+            }
+
+            return collider.GetComponentInParent<Damageable>(true) != null;
         }
     }
 

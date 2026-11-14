@@ -200,6 +200,20 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheHudShowsKeyedLinesAfterTheStringLines()
+        {
+            var player = Member("Player", 1, Vector3.zero);
+            var a = Member("Bot-A", 0, new Vector3(0f, 0f, 10f));
+            var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
+            var hud = BoundHudView();
+            _runner.ExtraHudLine = "extra";
+            _runner.ExtraHudText = HardpointText.Contested;
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player, hud);
+
+            Assert.That(hud.Lines, Is.EqualTo(new[] { "extra", "争奪中" }));
+        }
+
+        [Test]
         public void BeginRejectsASideOutsideTheLayout()
         {
             var player = Member("Player", 0, Vector3.zero);

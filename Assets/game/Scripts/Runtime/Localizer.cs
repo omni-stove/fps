@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// 画面に出す文字を、今効いている設定の言語 (<see cref="AppliedControlSettings.Current"/> の <see cref="ControlSettings.Language"/>) の
     /// <see cref="StringTable"/> から引く。表は Resources の Strings/&lt;言語コード&gt;.json と、Localization/&lt;言語コード&gt;/ にあるすべての
     /// TextAsset をファイル名の順に重ねて作り (<see cref="ReadResources"/>)、同じキーは後のものが勝つ。
-    /// 利用側のプロジェクトの Resources/Localization/&lt;言語コード&gt;/ も同じく読むので、キーの上書きや文の追加ができる。
+    /// 利用側のプロジェクトの Resources/Localization/&lt;言語コード&gt;/ も同じく読むので、キーの上書きや文の追加ができる。入口 (<see cref="GameContent"/>) に言語ごとの表があれば、Resources の表の後に重ねる。
     /// 表は初めて使うときと Play の開始時に読み、Play の間は持ち続ける。言語が変わると (<see cref="AppliedControlSettings.Apply"/>・<see cref="SwitchTo"/>)
     /// <see cref="Changed"/> で知らせる。
     /// 言語の表が見つからない・壊れているときは警告を出して <see cref="FallbackLanguage"/> の表で続け、それも読めなければエラーを出し、
@@ -281,16 +281,34 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// Resources の <see cref="LayerFolderOf"/> のフォルダーにある language の TextAsset を、ファイル名 (拡張子なし) の順 (大文字小文字を区別する) に読む。
+        /// Resources の <see cref="LayerFolderOf"/> のフォルダーにある language の TextAsset を、ファイル名 (拡張子なし) の順 (大文字小文字を区別する) に読み、
+        /// 続けて入口 (<see cref="GameContent.Current"/>) の language の表 (<see cref="ReadContentLayers"/>) を並べる。
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
         public static IReadOnlyList<KeyValuePair<string, string>> ReadLayers(GameLanguage language)
         {
             var folder = LayerFolderOf(language);
             var assets = Resources.LoadAll<TextAsset>(folder);
-            return assets
+            var layers = assets
                 .OrderBy(a => a.name, StringComparer.Ordinal)
                 .Select(a => new KeyValuePair<string, string>($"Resources/{folder}/{a.name}", a.text))
+                .ToList();
+            layers.AddRange(ReadContentLayers(GameContent.Current, language));
+            return layers;
+        }
+
+        /// <summary>content (入口) が language に持つ表を、入口に並べた順に読む。content が null なら空。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        public static IReadOnlyList<KeyValuePair<string, string>> ReadContentLayers(GameContent content, GameLanguage language)
+        {
+            var code = GameLanguages.Code(language);
+            if (content == null)
+            {
+                return Array.Empty<KeyValuePair<string, string>>();
+            }
+
+            return content.TextsFor(code)
+                .Select(t => new KeyValuePair<string, string>($"GameContent '{content.name}' {code}/{t.name}", t.text))
                 .ToList();
         }
 

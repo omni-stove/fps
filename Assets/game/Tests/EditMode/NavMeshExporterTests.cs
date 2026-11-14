@@ -201,25 +201,7 @@ namespace Fps.Tests.EditMode
             Assert.That(NavMeshExporter.FromTriangulation(vertices, new[] { 0, 1, 2 }, new[] { 3 }, null, null).Triangles[0].Area, Is.EqualTo(3));
         }
 
-        [Test]
-        public void TheMapNameIsTheSceneFileName()
-        {
-            Assert.That(NavMeshExporter.MapNameOf("Assets/Scenes/NetArena01.unity"), Is.EqualTo("NetArena01"));
-            Assert.That(() => NavMeshExporter.MapNameOf("Assets/Scenes/Bad Name.unity"), Throws.ArgumentException);
-        }
 
-        [Test]
-        public void MapsComeFromTheArgumentsBeforeTheRegisteredOnes()
-        {
-            string[] Registered() => new[] { "Assets/Registered.unity" };
-
-            Assert.That(
-                ServerDataExporter.ResolveMaps(new[] { "Unity", "-serverMap", "Assets/A.unity", "-serverMap", "Assets/B.unity" }, Registered),
-                Is.EqualTo(new[] { "Assets/A.unity", "Assets/B.unity" }));
-            Assert.That(ServerDataExporter.ResolveMaps(new[] { "Unity" }, Registered), Is.EqualTo(new[] { "Assets/Registered.unity" }));
-            Assert.That(() => ServerDataExporter.ResolveMaps(new[] { "Unity", "-serverMap" }, Registered), Throws.ArgumentException);
-            Assert.That(() => ServerDataExporter.ResolveMaps(new[] { "Unity" }, null), Throws.InvalidOperationException);
-        }
 
         private static void AssertNear(NumericsVector3 actual, NumericsVector3 expected)
         {

@@ -47,11 +47,24 @@ flag "--version <version>" help="build version such as v0.2.0 (default: git desc
 run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
 
 [server-dotnet]
-description = "Build the Unity-independent .NET server (dotnet/Fps.Server) and run it with -mode server. The version is git describe --tags --always --dirty"
+description = "Build the Unity-independent .NET server (dotnet/Fps.Server) and run it with -mode server on 0.0.0.0:7777 (FPS_SERVER_ADDRESS / FPS_SERVER_PORT change it). It needs server-data/maps/<map>.fpsmap and .fpsnav (make export-server-data), and server-data/rules/<rules>.json and server-data/maps/<map>.points.json (make export-server-rules); -rules <name> picks the rules (default TeamDeathmatch). Ctrl+C or SIGTERM drains; a second one stops at once. The version is git describe --tags --always --dirty"
 run = [
   "dotnet build dotnet/Fps.Server/Fps.Server.csproj -c Release -v q --nologo",
   'dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -- -mode server -buildVersion "$(git describe --tags --always --dirty)"',
 ]
+
+[export-server-data]
+description = "Write the collision and the NavMesh with its links (ladders) of every map selectable with -map to server-data/maps/<map>.fpsmap and <map>.fpsnav with the Unity editor in batch mode via Fps.Editor.MapCollisionExporter.Export, removing .fpsmap and .fpsnav files of maps no longer listed (close the Editor first). Commit the result"
+run = "unity --non-interactive run . -- -executeMethod Fps.Editor.MapCollisionExporter.Export"
+
+[export-server-rules]
+description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Fps.Editor.ServerRulesExporter.Export (close the Editor first): the NetMatch.prefab settings with each rules asset to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping tuning to server-data/tuning/ping.json. Commit the written files"
+run = "unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export"
+
+[eos-sdk]
+description = "Place the EOS C# SDK in dotnet/ThirdParty/EOSSDK (not committed) from the PlayEveryWare EOS package in Library/PackageCache, or from an Epic Developer Portal SDK zip/folder with --from <path>"
+# 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
+run = "bash scripts/eos-sdk.sh"
 
 [server-image]
 description = "Build the Linux dedicated server and package it as a Docker image with docker/server/Dockerfile (close the Editor first). Options: --tag <name:tag> (default fps-server:local), --skip-build to reuse Builds/server-linux/"
@@ -74,7 +87,3 @@ run = "unity -batchmode -projectPath . -executeMethod Fps.Editor.PerfSmokeRun.Ru
 description = "Run the nightly workflow's steps locally: EditMode tests, the smoke suite, and on Sundays (JST) the macOS client build (close the Editor first). Options: --client to always build the client, --no-client to never"
 # 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
 run = "bash scripts/nightly-local.sh"
-
-[export-server-data]
-description = "Write each server map's NavMesh and its links (ladders) to server-data/maps/<map>.fpsnav with the Unity editor in batch mode via Fps.Editor.ServerDataExporter.Export, generating missing map scenes first (close the Editor first). Commit the written files"
-run = "unity run . -- -executeMethod Fps.Editor.ServerDataExporter.Export"

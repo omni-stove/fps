@@ -126,6 +126,20 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new KnockbackSpec(recoverSeconds: float.NaN));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KnockbackSpec(landingSnapRadius: -1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KnockbackSpec(airControl: float.PositiveInfinity));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KnockbackSpec(playerWeight: 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KnockbackSpec(enemyWeight: float.NaN));
+        }
+
+        [Test]
+        public void WeightsDefaultToTheNeutralWeight()
+        {
+            Assert.That(KnockbackSpec.Default.PlayerWeight, Is.EqualTo(KnockbackSpec.DefaultWeight));
+            Assert.That(KnockbackSpec.Default.EnemyWeight, Is.EqualTo(KnockbackSpec.DefaultWeight));
+
+            var spec = new KnockbackSpec(playerWeight: 2f, enemyWeight: 0.5f);
+
+            Assert.That(spec.PlayerWeight, Is.EqualTo(2f));
+            Assert.That(spec.EnemyWeight, Is.EqualTo(0.5f));
         }
 
         [Test]

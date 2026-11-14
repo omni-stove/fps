@@ -239,13 +239,10 @@ namespace Fps.Net.Tests
             return new MotorInput(new Vector2(0.2f * Mathf.Cos(tick * 0.1f), 1f), yaw, sprint, jump, crouch, downed);
         }
 
-        private static NetMotorSimulation CreateSimulation(CharacterController controller)
+        private NetMotorSimulation CreateSimulation(CharacterController controller)
         {
             // NetworkPlayerMotor の既定値と同じ
-            var motor = new PlayerMotor(new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, PlayerController.DefaultCrouchSpeed));
-            var stance = NetStance.FromHierarchy(controller, _crouchHeight);
-            return new NetMotorSimulation(
-                controller, motor, stance, NetworkPlayerMotor.TickSeconds, NetworkPlayerMotor.KillPlaneY, Physics.DefaultRaycastLayers);
+            return NetTestWorld.CreateSimulation(controller, new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, PlayerController.DefaultCrouchSpeed), _crouchHeight, _created);
         }
 
         private CharacterController CreatePlayer(string name, Vector3 position)

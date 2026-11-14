@@ -19,7 +19,7 @@ namespace Fps.Net.Tests
         private Scene _scene;
         private bool _opened;
 
-        public static IEnumerable<string> Maps => ServerBuilder.ServerScenePaths();
+        public static IEnumerable<string> Maps => BuildSceneList.ServerScenes;
 
         [TearDown]
         public void TearDown()
@@ -53,7 +53,7 @@ namespace Fps.Net.Tests
 
         private static NavMeshFile ReadCommitted(string scenePath)
         {
-            var path = Path.Combine(ServerDataExporter.OutputDirectory, NavMeshExporter.MapNameOf(scenePath) + NavMeshFile.Extension);
+            var path = Path.Combine(MapCollisionExporter.OutputDirectory, MapCollisionExporter.MapName(scenePath) + NavMeshFile.Extension);
             Assert.That(File.Exists(path), Is.True, path + " is missing; run make export-server-data and commit it");
             using (var stream = File.OpenRead(path))
             {

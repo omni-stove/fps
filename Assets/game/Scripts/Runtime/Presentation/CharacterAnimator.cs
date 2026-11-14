@@ -16,7 +16,7 @@ namespace Fps.Runtime
     /// どちらも無くて <see cref="ICharacterPoseSource"/> (ネット対戦の NetPlayer) があればそこから読み、水平の速さは本体の位置の変化から
     /// <see cref="HorizontalSpeedMeter"/> で求めて渡す。どれも無ければ何もしない。</item>
     /// <item>リグ (<see cref="BuildRig"/>): 本体の直下に <see cref="RigObjectName"/> の子 (根に Animator) が既にあれば
-    /// (NetSceneBuilder がプレハブに置いたリグ) それを使う。無ければ <see cref="RigPrefab"/> (未設定なら Resources の <see cref="RigResourcePath"/>)
+    /// (NetSceneBuilder がプレハブに置いたリグ) それを使う。無ければ <see cref="RigPrefab"/> (未設定なら入口 <see cref="GameContent.CharacterRig"/>、それも無ければ Resources の <see cref="RigResourcePath"/>)
     /// を本体の子に置く。どちらも足元に合わせる。本体自身のレンダラー (プリミティブのカプセル) は消し、<see cref="PlayerMockBody"/> があればその体も出さない
     /// (一人称の銃は残す)。プレハブが無ければ警告を出してカプセルのまま止まる。</item>
     /// <item>毎フレーム (<see cref="Refresh"/>): 状態を <see cref="CharacterPose"/> で Animator のパラメーターにして渡す。
@@ -40,7 +40,7 @@ namespace Fps.Runtime
         /// <summary>Speed を寄せる秒数。歩きと走りの切り替わりで足の振りが跳ばないようにする。</summary>
         public const float SpeedDampSeconds = 0.1f;
 
-        [SerializeField, Tooltip("置くリグのプレハブ。空なら Resources の Characters/CharacterRig を読む")]
+        [SerializeField, Tooltip("置くリグのプレハブ。空なら入口 (GameContent) のキャラクターのリグ、それも無ければ Resources の Characters/CharacterRig を読む")]
         private GameObject _rigPrefab;
 
         private CharacterAnimatorSource _source;
@@ -243,7 +243,11 @@ namespace Fps.Runtime
                 return true;
             }
 
-            var prefab = _rigPrefab != null ? _rigPrefab : Resources.Load<GameObject>(RigResourcePath);
+            var prefab = GameContent.Pick(_rigPrefab, c => c.CharacterRig);
+            if (prefab == null)
+            {
+                prefab = Resources.Load<GameObject>(RigResourcePath);
+            }
             if (prefab == null)
             {
                 Debug.LogWarning(

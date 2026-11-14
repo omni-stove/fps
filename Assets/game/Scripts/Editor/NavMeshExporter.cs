@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
 using Fps.Core.Navigation;
 using Fps.Runtime;
 using Fps.Runtime.Traversal;
 using Unity.AI.Navigation;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
@@ -142,21 +140,6 @@ namespace Fps.Editor
             return links;
         }
 
-        public static string Export(string scenePath, string outputDirectory)
-        {
-            if (string.IsNullOrWhiteSpace(outputDirectory))
-            {
-                throw new ArgumentException($"{LogTag} output directory is empty", nameof(outputDirectory));
-            }
-
-            var mapName = MapNameOf(scenePath);
-            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            var file = Capture(scene);
-            var path = Path.Combine(outputDirectory, mapName + NavMeshFile.Extension);
-            Write(file, path);
-            Debug.Log($"{LogTag} wrote {path} from {scenePath} ({file.Vertices.Count} vertices, {file.Triangles.Count} triangles, {file.Links.Count} links)");
-            return path;
-        }
 
         // 書く途中で失敗しても、コミット済みのファイルを半端に壊さないよう、全部できてから書く。
         public static void Write(NavMeshFile file, string path)
@@ -179,16 +162,6 @@ namespace Fps.Editor
             }
         }
 
-        public static string MapNameOf(string scenePath)
-        {
-            var name = Path.GetFileNameWithoutExtension(scenePath ?? string.Empty);
-            if (!NetLaunchOptions.IsMapName(name))
-            {
-                throw new ArgumentException($"{LogTag} scene '{scenePath}' is not named like a map (letters, digits, _ and -)", nameof(scenePath));
-            }
-
-            return name;
-        }
 
         // NavMeshLink が NavMesh に張るのと同じ、拡大を除いた位置と回転で端を世界の座標に直す。
         private static (Vector3 Start, Vector3 End) WorldEnds(NavMeshLink link)

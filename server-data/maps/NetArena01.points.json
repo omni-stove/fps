@@ -1,0 +1,88 @@
+{
+  "spawnPoints": [
+    {
+      "position": [-9, 0, -26],
+      "team": "Alpha"
+    },
+    {
+      "position": [-9, 0, 26],
+      "team": "Bravo"
+    },
+    {
+      "position": [-3, 0, -26],
+      "team": "Alpha"
+    },
+    {
+      "position": [-3, 0, 26],
+      "team": "Bravo"
+    },
+    {
+      "position": [3, 0, -26],
+      "team": "Alpha"
+    },
+    {
+      "position": [3, 0, 26],
+      "team": "Bravo"
+    },
+    {
+      "position": [9, 0, -26],
+      "team": "Alpha"
+    },
+    {
+      "position": [9, 0, 26],
+      "team": "Bravo"
+    },
+    {
+      "position": [-9, 0, -22],
+      "team": "Alpha"
+    },
+    {
+      "position": [-9, 0, 22],
+      "team": "Bravo"
+    },
+    {
+      "position": [-3, 0, -22],
+      "team": "Alpha"
+    },
+    {
+      "position": [-3, 0, 22],
+      "team": "Bravo"
+    },
+    {
+      "position": [3, 0, -22],
+      "team": "Alpha"
+    },
+    {
+      "position": [3, 0, 22],
+      "team": "Bravo"
+    },
+    {
+      "position": [9, 0, -22],
+      "team": "Alpha"
+    },
+    {
+      "position": [9, 0, 22],
+      "team": "Bravo"
+    }
+  ],
+  "controlPoints": [
+    {
+      "index": 0,
+      "center": [0, -1, -15],
+      "radius": 5,
+      "height": 6
+    },
+    {
+      "index": 1,
+      "center": [0, -1, 0],
+      "radius": 5,
+      "height": 6
+    },
+    {
+      "index": 2,
+      "center": [0, -1, 15],
+      "radius": 5,
+      "height": 6
+    }
+  ]
+}

@@ -25,7 +25,7 @@ namespace Fps.Runtime
         public const float DefaultTimeLimitSeconds = 600f;
         public const float DefaultRespawnSeconds = 2f;
 
-        [SerializeField, RequiredReference, Tooltip("武器の並び。シーン生成スクリプトが配線する")]
+        [SerializeField, Tooltip("武器の並び。空なら入口 (GameContent) のものを使う")]
         private GunGameLadderDefinition _ladder;
 
         [SerializeField, Min(1f), Tooltip("制限時間 (秒)。切れたら段のいちばん進んだ人の勝ち")]
@@ -47,6 +47,9 @@ namespace Fps.Runtime
             get => _ladder;
             set => _ladder = value;
         }
+
+        /// <summary>配線した <see cref="Ladder"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public GunGameLadderDefinition EffectiveLadder => GameContent.Pick(_ladder, c => c.GunGameLadder);
 
         public float TimeLimitSeconds
         {
@@ -88,20 +91,21 @@ namespace Fps.Runtime
         /// </summary>
         public ModeSession CreateGunGameSession()
         {
-            if (_ladder == null)
+            var definition = EffectiveLadder;
+            if (definition == null)
             {
                 throw new InvalidOperationException(
-                    $"GunGameRunner '{name}' has no GunGameLadderDefinition; the scene builder (Fps.Editor.GunGameSceneBuilder) wires Ladder");
+                    $"GunGameRunner '{name}' has no GunGameLadderDefinition; wire Ladder or set GunGameLadder in the GameContent");
             }
 
             GunGameLadder ladder;
             try
             {
-                ladder = _ladder.ToLadder();
+                ladder = definition.ToLadder();
             }
             catch (WeaponDefinitionException e)
             {
-                throw new InvalidOperationException($"gun game ladder '{_ladder.name}' is invalid: {e.Message}", e);
+                throw new InvalidOperationException($"gun game ladder '{definition.name}' is invalid: {e.Message}", e);
             }
 
             var gunGame = new GunGame(ladder);
@@ -110,7 +114,7 @@ namespace Fps.Runtime
             _gunGame = gunGame;
             _gunGameSession = session;
             _tierWeapons.Clear();
-            _tierWeapons.AddRange(_ladder.Tiers);
+            _tierWeapons.AddRange(definition.Tiers);
             return session;
         }
 

@@ -22,8 +22,16 @@ namespace Fps.Server.Tests
 
         public bool ThrowOnStop { get; set; }
 
+        /// <summary>0 でなければ、最初の tick でこの終了コードでサーバーを止めさせる。</summary>
+        public int FailOnTickWith { get; set; }
+
+        public ConnectionId KickOnNextTick { get; set; }
+
+        private ServerContext Context { get; set; }
+
         public void Start(ServerContext context)
         {
+            Context = context;
             _calls.Add(Name + ".Start");
             if (ThrowOnStart)
             {
@@ -34,6 +42,17 @@ namespace Fps.Server.Tests
         public void Tick(long tick, float deltaSeconds)
         {
             _calls.Add(Name + ".Tick" + tick.ToString(CultureInfo.InvariantCulture));
+            if (FailOnTickWith != 0)
+            {
+                Context.Control.Fail(FailOnTickWith, Name + " cannot go on");
+            }
+
+            if (KickOnNextTick.IsValid)
+            {
+                Context.Control.Kick(KickOnNextTick, "test-kick", "kicked by " + Name);
+                _calls.Add(Name + ".Kicked" + KickOnNextTick);
+                KickOnNextTick = ConnectionId.None;
+            }
         }
 
         public void OnConnected(ConnectionId connection)
@@ -44,6 +63,11 @@ namespace Fps.Server.Tests
         public void OnDisconnected(ConnectionId connection)
         {
             _calls.Add(Name + ".Disconnected" + connection);
+        }
+
+        public void OnMessage(ConnectionId connection, IMessage message)
+        {
+            _calls.Add(Name + ".Message" + connection + ":" + message.Id.ToString(CultureInfo.InvariantCulture));
         }
 
         public void Stop()

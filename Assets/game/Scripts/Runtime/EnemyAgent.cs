@@ -136,7 +136,7 @@ namespace Fps.Runtime
         private Vector3[] _patrolRoute = Array.Empty<Vector3>();
 
         [Header("Brain")]
-        [SerializeField, Tooltip("敵のデータ (視界・反応・散らばり・遮蔽・種類ごとの値)。設定すると、この下の Brain と Cover の値と種類ごとの値の代わりにこれを使う。空ならこの下の値を使う")]
+        [SerializeField, Tooltip("敵のデータ (視界・反応・散らばり・遮蔽・種類ごとの値)。設定すると、この下の Brain と Cover の値と種類ごとの値の代わりにこれを使う。空なら入口 (GameContent) の同じ種類のデータ、それも無ければこの下の値を使う")]
         private EnemyDefinition _definition;
 
         [SerializeField, Tooltip("敵の種類")]
@@ -469,15 +469,16 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 敵のデータ (<see cref="Definition"/>) があればそこから、無ければ Inspector の値から判断の設定を作る。
+        /// 敵のデータ (<see cref="EffectiveDefinition"/>) があればそこから、無ければ Inspector の値から判断の設定を作る。
         /// <see cref="ApplySpec"/>・<see cref="ChangeSpec"/> を呼んだ後は、データがあってもその値から作る。
         /// 値が不正なら <see cref="ArgumentException"/> (データの値なら <see cref="EnemyDefinitionException"/>)。
         /// </summary>
         public EnemySpec CreateSpec()
         {
-            if (_definition != null && !_specApplied)
+            var definition = EffectiveDefinition;
+            if (definition != null && !_specApplied)
             {
-                return _definition.ToSpec();
+                return definition.ToSpec();
             }
 
             return new EnemySpec(
@@ -535,6 +536,9 @@ namespace Fps.Runtime
                 _specApplied = false;
             }
         }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent.EnemyFor"/>) の、Inspector の種類と同じ敵のデータ。どちらも無ければ null。</summary>
+        public EnemyDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.EnemyFor(_archetype));
 
         // ApplySpec は初期化後を拒むので、ボスの段階のように戦いの途中で変える口を別に設ける。
         // 波の強さ (ApplySpec) は出す前に決まるもので、途中で変わったら呼び出し側の誤りとして気付けるよう、そちらの決まりは残す。
@@ -608,6 +612,12 @@ namespace Fps.Runtime
 
         private void Awake()
         {
+            // 無効なまま置かれた敵は Awake が有効になるまで遅れるので、その間にコードが渡した値を JSON で消さない。
+            if (Application.isPlaying)
+            {
+                ApplyKnockbackTuning(KitTuning.Knockback);
+            }
+
             if (!TryInitialize())
             {
                 enabled = false;

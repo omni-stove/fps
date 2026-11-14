@@ -8,6 +8,10 @@
     <ProjectReference Include="../Fps.Core/Fps.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Unity 側 (Assets/Plugins/LiteNetLib/LiteNetLib.dll。この版の netstandard2.1 の DLL を写したもの) と同じ版にそろえる -->
+    <PackageReference Include="LiteNetLib" Version="2.1.5" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="../../Assets/game/Scripts/Protocol/**/*.cs" />
   </ItemGroup>
 </Project>

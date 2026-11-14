@@ -4,6 +4,10 @@ using UnityEngine;
 
 namespace Fps.Runtime
 {
+    /// <summary>
+    /// Play 中に生まれたときは、先に <see cref="KnockbackSpec"/>・<see cref="KnockbackWeight"/> へ渡されていなければ、
+    /// 調整値の JSON (<see cref="KitTuning.Knockback"/>) の値と、その <see cref="Fps.Core.KnockbackSpec.PlayerWeight"/> で Inspector の重さを上書きする。
+    /// </summary>
     [DisallowMultipleComponent]
     public sealed class KnockbackMovement : MonoBehaviour, IMovementOverride, IKnockbackReceiver
     {
@@ -20,13 +24,19 @@ namespace Fps.Runtime
 
         private readonly KnockbackFlight _flight = new KnockbackFlight();
         private KnockbackSpec _spec = KnockbackSpec.Default;
+        private bool _specApplied;
+        private bool _weightApplied;
         private PlayerController _mover;
         private Damageable _body;
 
         public KnockbackSpec KnockbackSpec
         {
             get => _spec;
-            set => _spec = value ?? throw new ArgumentNullException(nameof(value));
+            set
+            {
+                _spec = value ?? throw new ArgumentNullException(nameof(value));
+                _specApplied = true;
+            }
         }
 
         public float KnockbackWeight
@@ -40,6 +50,7 @@ namespace Fps.Runtime
                 }
 
                 _weight = value;
+                _weightApplied = true;
             }
         }
 
@@ -155,6 +166,34 @@ namespace Fps.Runtime
             _flight.Launch(velocity.ToNumerics());
             Debug.Log(Knockback.FormatLaunchLog(Id, kind, velocity), this);
             return true;
+        }
+
+        // Awake を経ずに EditMode のテストから試せるよう、Awake から分けている。
+        internal void ApplyTuning(KnockbackSpec tuning)
+        {
+            if (tuning == null)
+            {
+                throw new ArgumentNullException(nameof(tuning));
+            }
+
+            if (!_specApplied)
+            {
+                _spec = tuning;
+            }
+
+            if (!_weightApplied)
+            {
+                _weight = tuning.PlayerWeight;
+            }
+        }
+
+        // 無効なまま置かれた本体は Awake が有効になるまで遅れるので、その間にコードが渡した値を JSON で消さない。
+        private void Awake()
+        {
+            if (Application.isPlaying)
+            {
+                ApplyTuning(KitTuning.Knockback);
+            }
         }
 
         void IMovementOverride.Begin(PlayerController mover)

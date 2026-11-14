@@ -292,6 +292,55 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。
 
+## .NET のサーバー (移行中)
+
+Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠、
+上の運用 (版の確認・drain・JSON のイベント)、EOS のロビーへの登録 (`-register-lobby`) と、試合のルール (TDM・Domination・ダウンと蘇生・印・
+出現と出現直後の無敵・ロードアウトの選択・放置で切る) を行う。戦闘・移動・Bot・EOS の P2P・EAC はまだ無い。
+
+```sh
+make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
+FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
+dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules Domination -map NetArena01   # 拠点制圧で動かす
+```
+
+- 引数 (`-map`・`-drain-timeout`・`-log-format`・`-buildVersion`) と環境変数 (`FPS_SERVER_ADDRESS`・`FPS_SERVER_PORT`) は Unity のサーバーと同じ意味。
+  `-address` / `-port` が無ければ環境変数、それも無ければ `0.0.0.0` / `7777` で待ち受ける。引数と環境変数の両方で渡すと
+  `[Net] invalid arguments: -port is given more than once (FPS_SERVER_PORT is set too) ...` で終わる (終了コード 2)。
+- まだ動かせない `-transport eos`・`-bots`・`-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
+- 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む (`-map` が無ければ `NetTest`)。作業ディレクトリの `server-data/`、
+  無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
+  ファイルは Unity の Editor から `make export-server-data` で書き出す。
+- クライアントと Unity のサーバー (Host を含む) も、プレイヤーの移動の当たりを同じ `.fpsmap` で取る (`NetMapWorld`)。
+  Editor では `server-data/maps/` を直接読み、ビルドには `MapCollisionBuildFiles` が `StreamingAssets/maps/` として入れる。
+  今のシーンの名前の `.fpsmap` が無ければ `[Net] map <マップ名> has no collision: ...` を出し、プレイヤーは動かない。
+- ルールは `-rules <名前>` (無ければ `TeamDeathmatch`) で選び、`server-data/rules/<名前>.json` を読む。NetMatch.prefab に焼いてある
+  試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値など)・ルールのアセット・ロードアウトと武器の一覧・移動の値と体の寸法
+  (MotorSettings と NetPlayer.prefab の CharacterController。サーバーの移動はクライアントの予測と同じこの値で動く) が入っていて、
+  `[Server] rules <名前> objective=...` を出す。マップの出現地点と拠点は `server-data/maps/<マップ名>.points.json`、
+  印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。どれも Unity の Editor から `make export-server-rules`
+  (メニューは Fps > Server Data > Export Rules And Points) で書き出す。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
+  ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
+- 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
+- SIGTERM と SIGINT (Ctrl+C) で「試合が終わってから止める」と同じ drain に入り、同じログを出す。
+- 承認は `ConnectRequestMessage` の版と鍵を Netcode の承認データと同じ判定に通すので、断ったときのログ
+  (`[Net] rejected client <Id>: ...`) とクライアントへ送る理由は今と同じ。加えて、通信の手順の版 (`MatchProtocol.Version`) が違うクライアントを
+  `fps:rejected:protocol-mismatch` で断り、つないでから 10 秒以内に承認のデータを送らない接続を切る。
+  同じ鍵のクライアントがつなぎ直してきたら、前の接続を切る。
+- `-register-lobby <公開アドレス:ポート>` は、上の「EOS のロビーに登録する」と同じロビーを同じログで作る
+  (Device ID でログインし、`fps-server:<版>` のバケツに属性を付けて作り、人数を更新し、失ったら 5 秒おきに作り直し、
+  drain に入ったら閉じる。60 秒たっても登録できなければ終了コード 7)。EOS の C# SDK を
+  [dotnet/ThirdParty/EOSSDK](../dotnet/ThirdParty/EOSSDK/README.md) に置いてビルドしたサーバーでだけ使え、
+  SDK かそのライブラリが無い、または認証情報 (環境変数か `eos.local.json`) が欠けていると、理由を出して終了コード 3 で終わる。
+  止まるときは、ロビーを閉じ終えるまで最大 3 秒待つ。
+
+```sh
+dotnet build dotnet/Fps.Server/Fps.Server.csproj -c Release
+set -a; . ./eos.env; set +a                         # EOS_PRODUCT_ID=... の行を環境変数にする
+dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -- \
+  -buildVersion "$(git describe --tags --always --dirty)" -register-lobby 127.0.0.1:7777
+```
+
 ## CI でのリリース
 
 `v*` のタグを push すると `.github/workflows/server-image.yml` が専用サーバーをビルドし、

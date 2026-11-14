@@ -19,16 +19,10 @@ namespace Fps.Editor
     /// 版は <see cref="BuildVersionStamper"/> が <c>-buildVersion</c> か git describe から決め、ビルドの間だけ bundleVersion に入れる。
     /// 失敗したら例外を投げるので、batchmode の Unity は終了コード 1 で終わる。
     /// </summary>
-    [InitializeOnLoad]
     public static class ServerBuilder
     {
         public const string MenuPathMacOS = "Fps/Net/Build Dedicated Server (macOS)";
         public const string MenuPathLinux = "Fps/Net/Build Dedicated Server (Linux)";
-
-        static ServerBuilder()
-        {
-            ServerDataExporter.UseMaps(EnsureServerScenes);
-        }
 
         /// <summary>
         /// コマンドライン引数 <c>-serverPlatform</c> (既定は macos) で決まる OS 向けに、
@@ -92,8 +86,7 @@ namespace Fps.Editor
                     + " Build Support and Dedicated Server Build Support modules in Unity Hub");
             }
 
-            EnsureNetScene();
-            EnsureArenaScene();
+            EnsureServerScenes();
             RequireLoadoutInBuild();
 
             Directory.CreateDirectory(options.OutputDirectory);
@@ -122,11 +115,10 @@ namespace Fps.Editor
             return report;
         }
 
-        public static IReadOnlyList<string> EnsureServerScenes()
+        public static void EnsureServerScenes()
         {
             EnsureNetScene();
             EnsureArenaScene();
-            return ServerScenePaths();
         }
 
         /// <summary>BuildPlayerOptions に渡すターゲット。どちらも Standalone で、subtarget に Server を指定して使う。</summary>

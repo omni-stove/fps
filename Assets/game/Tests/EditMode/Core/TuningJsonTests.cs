@@ -17,6 +17,15 @@ namespace Fps.Core.Tests
             "lifetimeSeconds", "maxMarkers", "maxDistance", "enemyAimToleranceDegrees", "minIntervalSeconds",
         };
 
+        private static readonly string[] _expectedKnockbackItemNames =
+        {
+            "explosionSpeed", "explosionUpwardRatio", "explosionWeightFactor",
+            "meleeSpeed", "meleeUpwardRatio", "meleeWeightFactor",
+            "chargeSpeed", "chargeUpwardRatio", "chargeWeightFactor",
+            "minSpeed", "minAirSeconds", "maxAirSeconds", "airControl", "gravity", "recoverSeconds", "landingSnapRadius",
+            "playerWeight", "enemyWeight",
+        };
+
         [Test]
         public void ReadsEveryGrenadeItem()
         {
@@ -78,6 +87,94 @@ namespace Fps.Core.Tests
         {
             Assert.That(TuningJson.GrenadeItemNames, Is.EqualTo(_expectedGrenadeItemNames));
             Assert.That(TuningJson.PingItemNames, Is.EqualTo(_expectedPingItemNames));
+            Assert.That(TuningJson.KnockbackItemNames, Is.EqualTo(_expectedKnockbackItemNames));
+        }
+
+        [Test]
+        public void ReadsEveryKnockbackItem()
+        {
+            var spec = TuningJson.ParseKnockback(
+                "{\"explosionSpeed\": 12, \"explosionUpwardRatio\": 0.6, \"explosionWeightFactor\": 0.5,"
+                + " \"meleeSpeed\": 3, \"meleeUpwardRatio\": 0.1, \"meleeWeightFactor\": 0,"
+                + " \"chargeSpeed\": 9, \"chargeUpwardRatio\": 0.3, \"chargeWeightFactor\": 2,"
+                + " \"minSpeed\": 2, \"minAirSeconds\": 0.2, \"maxAirSeconds\": 4, \"airControl\": 0.5,"
+                + " \"gravity\": 15, \"recoverSeconds\": 0.8, \"landingSnapRadius\": 6,"
+                + " \"playerWeight\": 1.5, \"enemyWeight\": 3}",
+                "knockback.json");
+
+            Assert.That(spec.Explosion.Speed, Is.EqualTo(12f));
+            Assert.That(spec.Explosion.UpwardRatio, Is.EqualTo(0.6f));
+            Assert.That(spec.Explosion.WeightFactor, Is.EqualTo(0.5f));
+            Assert.That(spec.Melee.Speed, Is.EqualTo(3f));
+            Assert.That(spec.Melee.UpwardRatio, Is.EqualTo(0.1f));
+            Assert.That(spec.Melee.WeightFactor, Is.EqualTo(0f));
+            Assert.That(spec.Charge.Speed, Is.EqualTo(9f));
+            Assert.That(spec.Charge.UpwardRatio, Is.EqualTo(0.3f));
+            Assert.That(spec.Charge.WeightFactor, Is.EqualTo(2f));
+            Assert.That(spec.MinSpeed, Is.EqualTo(2f));
+            Assert.That(spec.MinAirSeconds, Is.EqualTo(0.2f));
+            Assert.That(spec.MaxAirSeconds, Is.EqualTo(4f));
+            Assert.That(spec.AirControl, Is.EqualTo(0.5f));
+            Assert.That(spec.Gravity, Is.EqualTo(15f));
+            Assert.That(spec.RecoverSeconds, Is.EqualTo(0.8f));
+            Assert.That(spec.LandingSnapRadius, Is.EqualTo(6f));
+            Assert.That(spec.PlayerWeight, Is.EqualTo(1.5f));
+            Assert.That(spec.EnemyWeight, Is.EqualTo(3f));
+        }
+
+        [Test]
+        public void OmittedKnockbackItemsUseTheDefaults()
+        {
+            var spec = TuningJson.ParseKnockback("{\"explosionSpeed\": 10, \"enemyWeight\": 2}", "knockback.json");
+
+            Assert.That(spec.Explosion.Speed, Is.EqualTo(10f));
+            Assert.That(spec.Explosion.UpwardRatio, Is.EqualTo(KnockbackSpec.DefaultExplosionUpwardRatio));
+            Assert.That(spec.Explosion.WeightFactor, Is.EqualTo(KnockbackSpec.DefaultExplosionWeightFactor));
+            Assert.That(spec.Melee.Speed, Is.EqualTo(KnockbackSpec.DefaultMeleeSpeed));
+            Assert.That(spec.Charge.Speed, Is.EqualTo(KnockbackSpec.DefaultChargeSpeed));
+            Assert.That(spec.Gravity, Is.EqualTo(KnockbackSpec.DefaultGravity));
+            Assert.That(spec.PlayerWeight, Is.EqualTo(KnockbackSpec.DefaultWeight));
+            Assert.That(spec.EnemyWeight, Is.EqualTo(2f));
+
+            var empty = TuningJson.ParseKnockback("{}", "knockback.json");
+            Assert.That(empty.Explosion.Speed, Is.EqualTo(KnockbackSpec.DefaultExplosionSpeed));
+            Assert.That(empty.LandingSnapRadius, Is.EqualTo(KnockbackSpec.DefaultLandingSnapRadius));
+        }
+
+        [Test]
+        public void AnInvalidForceNamesItsKindAndPart()
+        {
+            var speed = Assert.Throws<TuningJsonException>(() => TuningJson.ParseKnockback("{\"meleeSpeed\": -1}", "knockback.json"));
+            var upward = Assert.Throws<TuningJsonException>(() => TuningJson.ParseKnockback("{\"chargeUpwardRatio\": 1.5}", "knockback.json"));
+            var factor = Assert.Throws<TuningJsonException>(() => TuningJson.ParseKnockback("{\"explosionWeightFactor\": -0.5}", "knockback.json"));
+
+            Assert.That(speed.Item, Is.EqualTo("meleeSpeed"));
+            Assert.That(speed.SourceName, Is.EqualTo("knockback.json"));
+            Assert.That(speed.Message, Does.Contain("knockback.json").And.Contain("meleeSpeed"));
+            Assert.That(speed.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(upward.Item, Is.EqualTo("chargeUpwardRatio"));
+            Assert.That(factor.Item, Is.EqualTo("explosionWeightFactor"));
+        }
+
+        [Test]
+        public void AnInvalidKnockbackValueNamesTheItem()
+        {
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseKnockback("{\"playerWeight\": 0}", "k")).Item,
+                Is.EqualTo("playerWeight"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseKnockback("{\"gravity\": -1}", "k")).Item,
+                Is.EqualTo("gravity"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseKnockback("{\"minAirSeconds\": 5}", "k")).Item,
+                Is.EqualTo("minAirSeconds"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseKnockback("{\"enemyWeight\": \"2\"}", "k")).Item,
+                Is.EqualTo("enemyWeight"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseKnockback("{\"weight\": 2}", "k")).Item,
+                Is.EqualTo("weight"));
+            Assert.Throws<ArgumentNullException>(() => TuningJson.ParseKnockback(null, "k"));
         }
 
         [Test]

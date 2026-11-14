@@ -17,7 +17,8 @@ namespace Fps.Runtime
             bool crouchPressed,
             InputDeviceKind crouchDevice,
             bool jumpPressed,
-            bool dodgePressed)
+            bool dodgePressed,
+            bool pronePressed = false)
         {
             Move = move;
             SprintHeld = sprintHeld;
@@ -28,6 +29,7 @@ namespace Fps.Runtime
             CrouchDevice = crouchDevice;
             JumpPressed = jumpPressed;
             DodgePressed = dodgePressed;
+            PronePressed = pronePressed;
         }
 
         /// <summary>移動入力。x が右、y が前。</summary>
@@ -56,6 +58,9 @@ namespace Fps.Runtime
 
         /// <summary>Dodge がこのフレームに押されたか。</summary>
         public bool DodgePressed { get; }
+
+        /// <summary>Prone がこのフレームに押されたか。</summary>
+        public bool PronePressed { get; }
 
         /// <summary>何も押していない入力。機器は渡したものを使い、モードを切り替えない。</summary>
         public static PlayerMoveInput Idle(InputDeviceKind sprintDevice, InputDeviceKind crouchDevice)

@@ -42,6 +42,8 @@ namespace Fps.Core
 
         public EnemyArchetype Archetype { get; }
 
+        public float StaggerResistance { get; }
+
         // 種類が違っても持たせておく。ボスの段階で種類だけを変えたときに、値を探し直さずに済むように。
         public ShieldSpec Shield { get; }
 
@@ -71,6 +73,7 @@ namespace Fps.Core
         /// <param name="sniper">狙撃兵の値。null なら既定値。</param>
         /// <param name="charger">突進兵の値。null なら既定値。</param>
         /// <param name="bomber">自爆兵の値。null なら既定値。</param>
+        /// <param name="staggerResistance">怯みにくさ (<see cref="StaggerJudge.Threshold"/>・<see cref="StaggerJudge.Duration"/>)。0 以上の有限値。</param>
         public EnemySpec(
             float sightRange,
             float attackRange,
@@ -87,7 +90,8 @@ namespace Fps.Core
             ShieldSpec shield = null,
             SniperSpec sniper = null,
             ChargerSpec charger = null,
-            BomberSpec bomber = null)
+            BomberSpec bomber = null,
+            float staggerResistance = 0f)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
             {
@@ -121,6 +125,8 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(archetype), archetype, "archetype is not a defined EnemyArchetype");
             }
 
+            RequireNonNegativeSeconds(staggerResistance, nameof(staggerResistance));
+
             SightRange = sightRange;
             AttackRange = attackRange;
             LoseSightSeconds = loseSightSeconds;
@@ -137,6 +143,7 @@ namespace Fps.Core
             Sniper = sniper ?? SniperSpec.Default;
             Charger = charger ?? ChargerSpec.Default;
             Bomber = bomber ?? BomberSpec.Default;
+            StaggerResistance = staggerResistance;
         }
 
         /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread(System.Numerics.Vector3, float, System.Random)"/>) が受け付ける範囲に合わせる。</summary>

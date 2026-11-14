@@ -69,7 +69,7 @@ namespace Fps.Editor
         // URP の BaseShaderGUI の列挙と同じ値。材質をインスペクターを通さずに作るので、ここで直接書く。
         private const float SurfaceTransparent = 1f;
         internal const float BlendAlpha = 0f;
-        private const float BlendAdditive = 2f;
+        internal const float BlendAdditive = 2f;
 
         /// <summary>
         /// 武器ごとの音とマズルフラッシュの組み合わせ。武器の Id は <see cref="WeaponAssetBuilder"/> の固定値で、
@@ -363,7 +363,7 @@ namespace Fps.Editor
             return true;
         }
 
-        private static Texture2D BuildSoftDot(string path)
+        internal static Texture2D BuildSoftDot(string path)
         {
             var pixels = new Color32[SoftDotSize * SoftDotSize];
             var center = (SoftDotSize - 1) * 0.5f;
@@ -378,7 +378,7 @@ namespace Fps.Editor
                 }
             }
 
-            return WriteTexture(path, SoftDotTextureName, SoftDotSize, pixels, true);
+            return WriteTexture(path, Path.GetFileNameWithoutExtension(path), SoftDotSize, pixels, true);
         }
 
         /// <summary>

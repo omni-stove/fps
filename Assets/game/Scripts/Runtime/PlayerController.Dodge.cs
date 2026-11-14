@@ -86,12 +86,17 @@ namespace Fps.Runtime
         /// <summary>
         /// move (移動入力、x が右・y が前) の向き (ほぼ 0 なら後ろ) へ転がり始める。
         /// <see cref="DodgeRule"/> が Off・未初期化・接地していない・乗り越えかよじ登りか移動の横取り (<see cref="IsMovementOverridden"/>) の最中・
-        /// 転がり中か待ち時間中・<see cref="DodgeBlocker"/> が true なら何もせず false。
+        /// 伏せているか伏せたい (飛び込みを含む)・転がり中か待ち時間中・<see cref="DodgeBlocker"/> が true なら何もせず false。
         /// 始めたらしゃがみとダッシュを解き、<c>[Player] dodging=true</c> をログに出して <see cref="DodgeStarted"/> を呼ぶ。
         /// </summary>
         public bool TryStartDodge(Vector2 move)
         {
             if (_dodgeRule != Dodge.On || !IsInitialized || !IsGrounded || IsVaulting || IsMantling || IsMovementOverridden)
+            {
+                return false;
+            }
+
+            if (IsProne || IsProneActive || IsDiving)
             {
                 return false;
             }

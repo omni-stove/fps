@@ -42,7 +42,8 @@ namespace Fps.Core
                 spec.Shield,
                 spec.Sniper,
                 spec.Charger,
-                spec.Bomber);
+                spec.Bomber,
+                spec.StaggerResistance);
         }
 
         /// <summary>最大体力 baseHealth に倍率 multiplier を掛けた値。四捨五入し、1 以上 int の最大値以下に収める。</summary>

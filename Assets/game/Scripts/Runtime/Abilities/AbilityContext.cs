@@ -46,6 +46,8 @@ namespace Fps.Runtime
         /// <summary>この <see cref="IAbility.Tick"/> が、効果が出てから最初の Tick か。効果を 1 度だけ出す能力はここで出す。</summary>
         public bool EffectStartedThisFrame { get; internal set; }
 
+        public bool IsHeld => (Host.HeldCommands & AbilityHost.CommandFor(SlotIndex)) != 0;
+
         /// <summary>移動を変えているか (<see cref="OverrideMovement"/> した後で、まだ外していない)。</summary>
         public bool IsOverridingMovement => _movement != null;
 

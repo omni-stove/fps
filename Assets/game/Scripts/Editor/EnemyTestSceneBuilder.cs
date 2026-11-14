@@ -8,6 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
+using LadderComponent = Fps.Runtime.Traversal.Ladder;
 
 namespace Fps.Editor
 {
@@ -24,6 +25,8 @@ namespace Fps.Editor
     /// 右の列を手前へ下りて z ≒ 12 を過ぎたところでプレイヤーが視界 (20m) に入り、Chase → Attack になる。
     /// 遮蔽点 (<see cref="CoverPoints"/>) は、壁の左右の端の裏 (高い壁: 端の外へ出て覗く) と、右手前の低い壁 (x = 10, z = 0.5〜3.5) の両側
     /// (低い壁: しゃがんで隠れ、立って覗く) にある。撃たれた敵はプレイヤーの方向を遮る近い点へ移り、回り込まれると別の点へ移る。
+    /// 左後ろ (<see cref="LadderTowerBaseCenter"/>) に高さ 3m の、はしごの付いた台があり、台に上ったプレイヤーへ敵ははしごを上って近づく
+    /// (プレイヤーが上るにはルールの Ladder を On にする)。
     /// </remarks>
     public static class EnemyTestSceneBuilder
     {
@@ -63,6 +66,24 @@ namespace Fps.Editor
         public static readonly Vector3 LowCoverSize = new Vector3(0.5f, 1.05f, 3f);
 
         public const string CoverPointsObjectName = "CoverPoints";
+
+        public const string LadderTowerName = "LadderTower";
+
+        /// <summary>
+        /// はしごの付いた台の底面の中心。出現位置 (原点) の左後ろで、巡回路と遮蔽点から離れている。
+        /// 台に上ったプレイヤーへ、敵ははしごのリンクを通って近づく。
+        /// </summary>
+        public static readonly Vector3 LadderTowerBaseCenter = new Vector3(-14f, 0f, -10f);
+
+        public static readonly Vector3 LadderTowerSize = new Vector3(4f, 3f, 4f);
+
+        /// <summary>はしごを立てる台の側面の向き。出現位置の側。</summary>
+        public static readonly Vector3 LadderTowerSide = Vector3.right;
+
+        public const float LadderTowerLadderWidth = 0.8f;
+
+        /// <summary>台の上の真ん中 (足元)。</summary>
+        public static Vector3 LadderTowerTop => LadderTowerBaseCenter + (Vector3.up * LadderTowerSize.y);
 
         /// <summary>
         /// 遮蔽点。壁の端の裏 2 つ (高い壁) と、低い壁の両側 2 つ。
@@ -155,8 +176,10 @@ namespace Fps.Editor
 
             // 敵のコライダーで NavMesh に穴が空かないよう、地形だけを置いた状態で焼く。
             var surface = CreateLevel(scene);
+            var tower = CreateLadderTower(scene);
             BakeNavMesh(surface, navMeshDataPath);
             SceneBuildHelpers.RequireOnNavMesh(PatrolRoute, NavMeshCheckRadius, "patrol point");
+            RequireLadderReachable(tower);
             var coverStands = SceneBuildHelpers.CoverStandPoints(CoverPoints);
             SceneBuildHelpers.RequireOnNavMesh(coverStands, NavMeshCheckRadius, "cover point");
             SceneBuildHelpers.RequireReachable(PatrolRoute[0], coverStands, NavMeshCheckRadius, "cover point");
@@ -188,6 +211,46 @@ namespace Fps.Editor
 
             EditorSceneManager.MarkSceneDirty(scene);
             return surface;
+        }
+
+        /// <summary>
+        /// はしごの付いた台 (<see cref="LadderTowerBuilder"/>) を <see cref="LadderTowerBaseCenter"/> に置いて返す。
+        /// 床の NavMeshSurface はシーンのすべてから焼くので、<see cref="CreateLevel"/> の後・焼く前に呼べば台の上にも NavMesh ができる。
+        /// </summary>
+        public static GameObject CreateLadderTower(Scene scene)
+        {
+            var tower = LadderTowerBuilder.Create(
+                scene, LadderTowerName, LadderTowerBaseCenter, LadderTowerSize, LadderTowerSide, LadderTowerLadderWidth);
+            EditorSceneManager.MarkSceneDirty(scene);
+            return tower;
+        }
+
+        /// <summary>
+        /// 焼いた NavMesh で、巡回路の最初の地点から tower の台の上 (<see cref="LadderTowerTop"/>) へ、はしごのリンクを通って行けることを確かめる。
+        /// リンクは実行時にはしごが張るので、確かめる間だけ張って外す。行けなければ例外を投げる。
+        /// </summary>
+        public static void RequireLadderReachable(GameObject tower)
+        {
+            if (tower == null)
+            {
+                throw new ArgumentNullException(nameof(tower));
+            }
+
+            var ladder = tower.GetComponentInChildren<LadderComponent>();
+            if (ladder == null)
+            {
+                throw new InvalidOperationException($"'{tower.name}' has no ladder");
+            }
+
+            ladder.Link();
+            try
+            {
+                SceneBuildHelpers.RequireReachable(PatrolRoute[0], new[] { LadderTowerTop }, NavMeshCheckRadius, "ladder tower top");
+            }
+            finally
+            {
+                ladder.Unlink();
+            }
         }
 
         /// <summary>

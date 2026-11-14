@@ -44,7 +44,7 @@ namespace Fps.Runtime
         public const string PauseActionPath = InputActionPaths.Pause;
 
         /// <summary><see cref="PauseTimeMode.KeepRunning"/> のときに画面に出す案内。</summary>
-        public const string KeepRunningNote = "オンラインでは試合は止まりません";
+        public static string KeepRunningNote => Localizer.Get("pause.keepRunningNote");
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で 0 に戻す。
         private static int _openCount;
@@ -267,6 +267,11 @@ namespace Fps.Runtime
             _settingsButton = null;
             _returnToMenuButton = null;
             _noteLabel = null;
+        }
+
+        protected override void OnLanguageChanged()
+        {
+            RefreshNote();
         }
 
         private void HandleSettingsClicked()

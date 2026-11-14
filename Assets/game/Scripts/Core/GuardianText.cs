@@ -7,19 +7,19 @@ namespace Fps.Core
     /// <summary>ガーディアンの HUD の行と <c>[Mode]</c> のログ (<see cref="GuardianRespawn"/> のリーダーの生死)。</summary>
     public static class GuardianText
     {
-        public const string Alive = "生存";
-        public const string Fallen = "撃破 (復活不可)";
+        public static string Alive => GameText.Get("guardian.alive");
+        public static string Fallen => GameText.Get("guardian.fallen");
 
         /// <summary>自分がリーダーのときに出す行。</summary>
-        public const string YouAreLeader = "あなたがリーダー";
+        public static string YouAreLeader => GameText.Get("guardian.youAreLeader");
 
         /// <summary>自分の陣営のリーダーが倒れていて、自分も倒れているときに出す行。</summary>
-        public const string NoRespawnLeaderDown = "リーダーが倒れたため復活なし";
+        public static string NoRespawnLeaderDown => GameText.Get("guardian.noRespawnLeaderDown");
 
         /// <example><c>Leader(Side.Alpha, false)</c> は <c>ALPHA リーダー 生存</c></example>
         public static string Leader(Side side, bool fallen)
         {
-            return ModeHudText.SideName(side) + " リーダー " + (fallen ? Fallen : Alive);
+            return GameText.Format("guardian.leader", ModeHudText.SideName(side), fallen ? Fallen : Alive);
         }
 
         /// <summary>

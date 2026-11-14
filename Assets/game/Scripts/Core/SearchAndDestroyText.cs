@@ -12,8 +12,8 @@ namespace Fps.Core
     {
         public const string Tag = "[SearchAndDestroy]";
 
-        public const string AttackRole = "攻撃";
-        public const string DefendRole = "防衛";
+        public static string AttackRole => GameText.Get("searchAndDestroy.attackRole");
+        public static string DefendRole => GameText.Get("searchAndDestroy.defendRole");
 
         /// <example><c>SiteName(1)</c> は <c>B</c></example>
         public static string SiteName(int site) => DominationHudFormat.PointName(site);
@@ -51,7 +51,7 @@ namespace Fps.Core
                 var isAttacker = side == attacker;
                 var wins = isAttacker ? attackerWins : defenderWins;
                 var other = isAttacker ? defenderWins : attackerWins;
-                var text = ModeHudText.SideName(side) + " " + Number(wins) + " (" + (isAttacker ? AttackRole : DefendRole) + ")";
+                var text = GameText.Format("searchAndDestroy.score", ModeHudText.SideName(side), wins, isAttacker ? AttackRole : DefendRole);
                 var line = new ModeHudScoreLine(side, text, side == ownSide, wins > other);
                 if (line.IsOwn)
                 {
@@ -81,24 +81,22 @@ namespace Fps.Core
                 return lines;
             }
 
-            lines.Add("ラウンド " + Number(game.RoundNumber) + " (" + Number(game.Spec.WinsToWin) + " 勝先取)");
+            lines.Add(GameText.Format("searchAndDestroy.round", game.RoundNumber, game.Spec.WinsToWin));
 
             var local = localPlayerId.HasValue && game.Mode.HasPlayer(localPlayerId.Value) ? localPlayerId : null;
             if (local.HasValue && game.Phase != RoundPhase.Ended)
             {
-                lines.Add(game.IsAttacker(local.Value)
-                    ? "あなたは攻撃側: 爆弾を設置地点に設置する"
-                    : "あなたは防衛側: 設置を防ぐか解除する");
+                lines.Add(GameText.Get(game.IsAttacker(local.Value) ? "searchAndDestroy.youAttack" : "searchAndDestroy.youDefend"));
             }
 
             if (game.Phase == RoundPhase.Preparing)
             {
                 if (game.LastRoundEnd.HasValue)
                 {
-                    lines.Add("前のラウンド: " + RoundResult(game.LastRoundWinner, game.LastRoundEnd.Value));
+                    lines.Add(GameText.Format("mode.previousRound", RoundResult(game.LastRoundWinner, game.LastRoundEnd.Value)));
                 }
 
-                lines.Add("開始まで " + Number(HudFormat.DisplayedSeconds(game.Rounds.PreparationRemaining)) + " 秒");
+                lines.Add(GameText.Format("mode.startsIn", HudFormat.DisplayedSeconds(game.Rounds.PreparationRemaining)));
                 return lines;
             }
 
@@ -106,7 +104,7 @@ namespace Fps.Core
             {
                 if (game.LastRoundEnd.HasValue)
                 {
-                    lines.Add("最後のラウンド: " + RoundResult(game.LastRoundWinner, game.LastRoundEnd.Value));
+                    lines.Add(GameText.Format("searchAndDestroy.lastRound", RoundResult(game.LastRoundWinner, game.LastRoundEnd.Value)));
                 }
 
                 return lines;
@@ -115,31 +113,31 @@ namespace Fps.Core
             switch (game.Bomb)
             {
                 case BombState.Carried:
-                    lines.Add(local.HasValue && game.CarrierId == local
-                        ? "爆弾を持っている: 設置地点で長押しして設置"
-                        : "爆弾: 攻撃側が所持");
+                    lines.Add(GameText.Get(local.HasValue && game.CarrierId == local
+                        ? "searchAndDestroy.youCarry"
+                        : "searchAndDestroy.carried"));
                     if (game.PlantingSite.HasValue)
                     {
-                        lines.Add("設置中 " + SiteName(game.PlantingSite.Value) + " " + Percent(game.PlantFraction));
+                        lines.Add(GameText.Format("searchAndDestroy.planting", SiteName(game.PlantingSite.Value), Percent(game.PlantFraction)));
                     }
 
                     break;
                 case BombState.Dropped:
-                    lines.Add("爆弾: 落ちている");
+                    lines.Add(GameText.Get("searchAndDestroy.dropped"));
                     break;
                 case BombState.Planted:
                     lines.Add(Fuse(game.PlantedSite.Value, game.FuseRemaining));
                     if (game.DefuserId.HasValue)
                     {
-                        lines.Add("解除中 " + Percent(game.DefuseFraction));
+                        lines.Add(GameText.Format("searchAndDestroy.defusing", Percent(game.DefuseFraction)));
                     }
 
                     break;
                 case BombState.Defused:
-                    lines.Add("爆弾を解除した");
+                    lines.Add(GameText.Get("searchAndDestroy.defused"));
                     break;
                 case BombState.Detonated:
-                    lines.Add("爆弾が起爆した");
+                    lines.Add(GameText.Get("searchAndDestroy.detonated"));
                     break;
             }
 
@@ -150,15 +148,15 @@ namespace Fps.Core
         /// <example><c>Fuse(0, 12.3f)</c> は <c>爆弾 A に設置: 起爆まで 13 秒</c></example>
         public static string Fuse(int site, float fuseRemaining)
         {
-            return "爆弾 " + SiteName(site) + " に設置: 起爆まで " + Number(HudFormat.DisplayedSeconds(fuseRemaining)) + " 秒";
+            return GameText.Format("searchAndDestroy.fuse", SiteName(site), HudFormat.DisplayedSeconds(fuseRemaining));
         }
 
         /// <summary>ラウンドの結果。</summary>
         /// <example><c>RoundResult(Side.Bravo, RoundEndReason.Detonated)</c> は <c>BRAVO の勝ち (起爆)</c>、引き分けなら <c>引き分け (同時に全滅)</c></example>
         public static string RoundResult(Side? winner, RoundEndReason reason)
         {
-            var head = winner.HasValue ? ModeHudText.SideName(winner.Value) + " の勝ち" : HudFormat.Draw;
-            return head + " (" + ReasonText(reason) + ")";
+            var head = winner.HasValue ? HudFormat.Wins(ModeHudText.SideName(winner.Value)) : HudFormat.Draw;
+            return GameText.Format("searchAndDestroy.roundResult", head, ReasonText(reason));
         }
 
         public static string ReasonText(RoundEndReason reason)
@@ -166,17 +164,17 @@ namespace Fps.Core
             switch (reason)
             {
                 case RoundEndReason.Detonated:
-                    return "起爆";
+                    return GameText.Get("searchAndDestroy.reason.detonated");
                 case RoundEndReason.Defused:
-                    return "解除";
+                    return GameText.Get("searchAndDestroy.reason.defused");
                 case RoundEndReason.DefendersEliminated:
-                    return "防衛側が全滅";
+                    return GameText.Get("searchAndDestroy.reason.defendersEliminated");
                 case RoundEndReason.AttackersEliminated:
-                    return "攻撃側が全滅";
+                    return GameText.Get("searchAndDestroy.reason.attackersEliminated");
                 case RoundEndReason.TimeUp:
-                    return "時間切れ";
+                    return GameText.Get("searchAndDestroy.reason.timeUp");
                 case RoundEndReason.BothEliminated:
-                    return "同時に全滅";
+                    return GameText.Get("searchAndDestroy.reason.bothEliminated");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(reason), reason, "reason is not a valid RoundEndReason");
             }
@@ -187,7 +185,7 @@ namespace Fps.Core
         {
             Require(game);
             return game.Phase == RoundPhase.Ended && game.Winner.HasValue
-                ? ModeHudText.SideName(game.Winner.Value) + " の勝ち"
+                ? HudFormat.Wins(ModeHudText.SideName(game.Winner.Value))
                 : HudFormat.NoResult;
         }
 

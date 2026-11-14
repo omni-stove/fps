@@ -42,6 +42,20 @@ namespace Fps.Core
             return SideName(side) + " " + DisplayScore(score).ToString(CultureInfo.InvariantCulture);
         }
 
+        /// <summary>陣営の残り人数。</summary>
+        /// <example><c>Remaining(Side.Bravo, 3)</c> は <c>BRAVO 残り 3</c></example>
+        public static string Remaining(Side side, int remaining)
+        {
+            return GameText.Format("mode.remaining", SideName(side), remaining);
+        }
+
+        /// <summary>人数の行 text に、ダウン中の人数 downed を添える。</summary>
+        /// <example><c>WithDowned("BRAVO 残り 3", 1)</c> は <c>BRAVO 残り 3 (ダウン 1)</c></example>
+        public static string WithDowned(string text, int downed)
+        {
+            return GameText.Format("mode.withDowned", text, downed);
+        }
+
         /// <summary>残り時間。<see cref="HudFormat.Time"/> と同じ書式。</summary>
         public static string Time(ModeSession session)
         {
@@ -98,7 +112,7 @@ namespace Fps.Core
                 return HudFormat.NoResult;
             }
 
-            return session.Winner.HasValue ? SideName(session.Winner.Value) + " の勝ち" : HudFormat.Draw;
+            return session.Winner.HasValue ? HudFormat.Wins(SideName(session.Winner.Value)) : HudFormat.Draw;
         }
     }
 }

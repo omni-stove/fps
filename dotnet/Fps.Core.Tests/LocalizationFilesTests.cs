@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using NUnit.Framework;
 
@@ -12,8 +10,6 @@ namespace Fps.Core.Tests
     /// </summary>
     public sealed class LocalizationFilesTests
     {
-        private const string _folder = "Assets/game/Localization/Resources/Strings";
-
         [Test]
         public void EveryLanguageHasAReadableTable()
         {
@@ -60,28 +56,25 @@ namespace Fps.Core.Tests
             }
         }
 
-        private static StringTable Load(GameLanguage language)
+        [Test]
+        public void TheEnglishTableHasNoJapanese()
         {
-            var path = Path.Combine(FindRepositoryRoot(), _folder, GameLanguages.Code(language) + ".json");
-            Assert.That(File.Exists(path), Is.True, path);
-
-            var warnings = new List<string>();
-            Assert.That(StringTable.TryParse(File.ReadAllText(path), warnings.Add, out var table, out var error), Is.True, $"{path}: {error}");
-            return table;
+            var english = Load(GameLanguage.English);
+            foreach (var key in english.Keys)
+            {
+                Assert.That(english.Get(key).Any(IsJapanese), Is.False, $"en: {key} = {english.Get(key)}");
+            }
         }
 
-        private static string FindRepositoryRoot()
+        private static StringTable Load(GameLanguage language)
         {
-            for (var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory); directory != null; directory = directory.Parent)
-            {
-                if (Directory.Exists(Path.Combine(directory.FullName, _folder)))
-                {
-                    return directory.FullName;
-                }
-            }
+            return JapaneseGameTextSetUp.LoadTable(language);
+        }
 
-            Assert.Fail($"'{_folder}' was not found above {TestContext.CurrentContext.TestDirectory}");
-            return null;
+        // 和文の句読点・かな・漢字 (U+3000〜U+9FFF) と全角の記号 (U+FF00〜U+FFEF)。
+        private static bool IsJapanese(char c)
+        {
+            return (c >= '　' && c <= '鿿') || (c >= '＀' && c <= '￯');
         }
     }
 }

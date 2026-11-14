@@ -42,7 +42,7 @@ namespace Fps.Runtime
         private static readonly Color InactiveColor = new Color(0.7f, 0.7f, 0.7f, 1f);
         private static readonly Color ActiveColor = new Color(1f, 0.82f, 0.2f, 1f);
 
-        [SerializeField, Tooltip("表示するアクションの読み元。GameBootstrap が配線する")]
+        [SerializeField, Tooltip("Where the shown actions are read from; GameBootstrap wires it")]
         private PlayerActionReader _reader;
 
         private bool _visible = true;
@@ -94,7 +94,7 @@ namespace Fps.Runtime
             _reader = GetComponent<PlayerActionReader>();
             if (_reader == null)
             {
-                Debug.LogError($"{LogTag} '{name}' に PlayerActionReader がありません。表示するアクションはそこから読みます。", this);
+                Debug.LogError($"{LogTag} '{name}' has no PlayerActionReader; the shown actions are read from it", this);
                 enabled = false;
             }
         }
@@ -162,7 +162,7 @@ namespace Fps.Runtime
         {
             if (_reader == null)
             {
-                Debug.LogError($"{LogTag} '{name}' の PlayerActionReader が破棄されたため、デバッグ表示を止めます。", this);
+                Debug.LogError($"{LogTag} the PlayerActionReader of '{name}' was destroyed; stopping the debug overlay", this);
                 enabled = false;
                 return;
             }
@@ -218,7 +218,7 @@ namespace Fps.Runtime
             if (theme == null)
             {
                 Debug.LogError(
-                    $"{LogTag} テーマ 'Resources/{Hud.ThemeResourcePath}.tss' が見つからないため、デバッグ表示を出せません (Assets/game/UI/Resources にあるはず)。",
+                    $"{LogTag} theme 'Resources/{Hud.ThemeResourcePath}.tss' was not found (expected under Assets/game/UI/Resources); the debug overlay cannot be shown",
                     this);
                 return false;
             }

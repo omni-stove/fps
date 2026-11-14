@@ -99,6 +99,12 @@ namespace Fps.Runtime
             Rebuild();
         }
 
+        // 選んでいる並びは LoadoutSelection が持つので、作り直しても選びかけのものは失わない。
+        protected override void OnLanguageChanged()
+        {
+            Rebuild();
+        }
+
         protected override void OnUnbinding(VisualElement element)
         {
             DisposePanel();

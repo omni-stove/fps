@@ -114,7 +114,8 @@ namespace Fps.Editor
 
         /// <summary>
         /// <see cref="Build"/> のうち、試合のルールをドミネーション (<see cref="GameRulesAssetBuilder.DominationPath"/>) にしたもの。
-        /// NetTest の拠点を取り合い、拠点のポイントで勝敗を決める。コミットするのはチームデスマッチのほうなので、
+        /// NetTest の拠点 (<c>-map NetArena01</c> なら <see cref="ArenaSceneBuilder.ControlPoints"/>) を取り合い、拠点のポイントで勝敗を決める。
+        /// コミットするのはチームデスマッチのほうなので、
         /// 確かめ終えたら <see cref="Build"/> で戻す。batchmode では
         /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.BuildWithDominationRules</c> で呼ぶ。
         /// </summary>

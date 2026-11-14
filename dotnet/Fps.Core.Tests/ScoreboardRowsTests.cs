@@ -192,8 +192,8 @@ namespace Fps.Core.Tests
         }
 
         [TestCase(ScoreboardConnection.None, "")]
-        [TestCase(ScoreboardConnection.Connected, ScoreboardRows.ConnectedText)]
-        [TestCase(ScoreboardConnection.Disconnected, ScoreboardRows.DisconnectedText)]
+        [TestCase(ScoreboardConnection.Connected, "接続中")]
+        [TestCase(ScoreboardConnection.Disconnected, "切断")]
         public void ConnectionText(ScoreboardConnection connection, string expected)
         {
             Assert.That(ScoreboardRows.ConnectionText(connection), Is.EqualTo(expected));

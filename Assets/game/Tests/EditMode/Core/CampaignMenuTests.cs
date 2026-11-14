@@ -253,7 +253,8 @@ namespace Fps.Core.Tests
                 Assert.That(CampaignMenuFormat.ItemLabel(kind), Is.Not.Empty, kind.ToString());
             }
 
-            Assert.That(CampaignMenuFormat.DifficultyLabel(CampaignDifficulty.Easy), Is.EqualTo("EASY"));
+            Assert.That(CampaignMenuFormat.DifficultyLabel(CampaignDifficulty.Easy), Is.EqualTo("かんたん"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => CampaignMenuFormat.DifficultyLabel((CampaignDifficulty)99));
             Assert.That(CampaignMenuFormat.ConfirmRestartQuestion("Operation One"), Does.Contain("Operation One"));
         }
     }

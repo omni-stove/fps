@@ -61,7 +61,7 @@ namespace Fps.Net
             }
             catch (InvalidOperationException e)
             {
-                Debug.LogError($"{Hud.LogTag} HUD に回線の表示の欄を出せません: {e.Message}", hud);
+                Debug.LogError($"{Hud.LogTag} could not show the network stats on the HUD: {e.Message}", hud);
             }
 
             return view;

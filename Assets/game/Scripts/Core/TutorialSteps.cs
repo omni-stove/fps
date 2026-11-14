@@ -28,7 +28,7 @@ namespace Fps.Core
         public const float DefaultTeleportMeters = 2f;
 
         /// <summary>すべて終えたときに出す文。</summary>
-        public const string CompletedText = "チュートリアル完了";
+        public static string CompletedText => GameText.Get("tutorial.completed");
 
         /// <summary>手順の並び。この順に進む。</summary>
         public static IReadOnlyList<TutorialStep> Order { get; } = new[]
@@ -222,17 +222,12 @@ namespace Fps.Core
             switch (step)
             {
                 case TutorialStep.Move:
-                    return key + " で移動";
                 case TutorialStep.Aim:
-                    return key + " で照準を覗く";
                 case TutorialStep.Shoot:
-                    return string.Format(CultureInfo.InvariantCulture, "{0} で撃って標的に {1} 回当てる", key, hitsRequired);
                 case TutorialStep.Reload:
-                    return key + " でリロード";
                 case TutorialStep.Crouch:
-                    return key + " でしゃがむ";
                 case TutorialStep.Cover:
-                    return "遮蔽物に近づいて " + key + " でカバー";
+                    return GameText.Format("tutorial.step." + step, key, hitsRequired);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(step), step, "unknown tutorial step");
             }

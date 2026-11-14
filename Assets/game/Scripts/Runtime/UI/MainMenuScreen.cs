@@ -23,6 +23,7 @@ namespace Fps.Runtime
     /// キャンペーンのボタンは、ミッションの一覧 (<see cref="Missions"/>、MenuSceneBuilder が配線) とセーブ (<see cref="SaveStorage"/>) から
     /// ミッションと難易度を選ぶ画面 (<see cref="CampaignPanel"/>) を差し込み口に出し、決めた始め方で <see cref="MenuNavigator.StartCampaign"/> を呼ぶ。
     /// 「最初から」はシーンを読めると確かめてからセーブを消す。
+    /// ボタンの文字は MainMenu.uxml にキーで書き、<see cref="LocalizedTexts"/> で今の言語にして、言語が変わったら書き直す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MainMenuScreen : MonoBehaviour
@@ -51,10 +52,19 @@ namespace Fps.Runtime
         public const string CampaignSlotName = "menu-campaign-slot";
 
         /// <summary>設定画面がまだ差し込まれていないときに出す案内。</summary>
-        public const string SettingsUnavailableNotice = "Settings are not available yet.";
+        public static string SettingsUnavailableNotice => Localizer.Get("menu.settingsUnavailable");
 
-        /// <summary>ロードアウトのアセットが使えないときに出す案内の頭。続けて理由を出す。</summary>
-        public const string LoadoutUnavailableNotice = "The loadout cannot be changed: ";
+        /// <summary>ロードアウトのアセットが使えないときに出す案内。reason に理由を入れる。</summary>
+        public static string LoadoutUnavailableNotice(string reason)
+        {
+            return Localizer.Format("menu.loadoutUnavailable", reason);
+        }
+
+        /// <summary>行き先のシーンがビルドに無いときに出す案内。</summary>
+        public static string SceneMissingNotice(string scenePath)
+        {
+            return Localizer.Format("menu.sceneMissing", scenePath);
+        }
 
         /// <summary>ボタンの名前。この順に上から並べ、ゲームパッドのフォーカスもこの順に動かす。</summary>
         public static readonly IReadOnlyList<string> ButtonNames = new[]
@@ -70,13 +80,13 @@ namespace Fps.Runtime
             QuitButtonName,
         };
 
-        [SerializeField, Tooltip("オンラインのロードアウト (Assets/game/Weapons/DefaultLoadout.asset)。スロットのルールと既定の武器をここから引く")]
+        [SerializeField, Tooltip("The online loadout (Assets/game/Weapons/DefaultLoadout.asset); the slot rules and default weapons come from it")]
         private LoadoutDefinition _loadout;
 
-        [SerializeField, Tooltip("オンラインで選べる武器の一覧 (Assets/game/Weapons/WeaponCatalog.asset)")]
+        [SerializeField, Tooltip("The weapons that can be chosen online (Assets/game/Weapons/WeaponCatalog.asset)")]
         private WeaponCatalogAsset _catalog;
 
-        [SerializeField, Tooltip("キャンペーンのミッションの一覧 (Assets/game/Missions/MissionCatalog.asset)")]
+        [SerializeField, Tooltip("The campaign missions (Assets/game/Missions/MissionCatalog.asset)")]
         private MissionCatalog _missions;
 
         private readonly List<Button> _buttons = new List<Button>();
@@ -96,6 +106,7 @@ namespace Fps.Runtime
         private bool _settingsOpen;
         private bool _leaving;
         private SettingsView _settingsView;
+        private LocalizedTexts _texts;
 
         /// <summary>
         /// 設定ボタンを押したときに、差し込み口の要素 (空にして表示した状態) を渡す。設定画面はここに中身を入れ、
@@ -363,6 +374,10 @@ namespace Fps.Runtime
                 navigationRoot.UnregisterCallback<NavigationCancelEvent>(HandleNavigationCancel, TrickleDown.TrickleDown);
             });
 
+            _texts = LocalizedTexts.Bind(root);
+            Localizer.Changed += HandleLanguageChanged;
+            _unbind.Add(() => Localizer.Changed -= HandleLanguageChanged);
+
             _focusIndex = -1;
             _settingsOpen = false;
             _leaving = false;
@@ -415,7 +430,7 @@ namespace Fps.Runtime
             {
                 _leaving = false;
                 SetButtonsEnabled(true);
-                ShowNotice("Cannot open " + MenuRoute.Plan(destination).ScenePath + ": it is not in this build.");
+                ShowNotice(SceneMissingNotice(MenuRoute.Plan(destination).ScenePath));
                 FocusAt(_focusIndex);
             }
 
@@ -484,7 +499,7 @@ namespace Fps.Runtime
             if (!LoadoutSelectionAssets.TryCreate(_loadout, _catalog, _loadoutStore.Load(), null, out var selection, out var error))
             {
                 Debug.LogWarning(LoadoutPreferenceStore.LogTag + " cannot open the loadout screen: " + error, this);
-                ShowNotice(LoadoutUnavailableNotice + error);
+                ShowNotice(LoadoutUnavailableNotice(error));
                 return;
             }
 
@@ -545,7 +560,7 @@ namespace Fps.Runtime
             if (!TryCreateCampaignMenu(out var menu, out var error))
             {
                 Debug.LogWarning(MenuNavigator.LogTag + " cannot open the campaign: " + error, this);
-                ShowNotice(CampaignMenuFormat.UnavailableNotice + error);
+                ShowNotice(CampaignMenuFormat.Unavailable(error));
                 return;
             }
 
@@ -714,6 +729,17 @@ namespace Fps.Runtime
             SetDisplayed(_notice, shown);
         }
 
+        // 言語は設定画面からしか変わらず、設定画面は自分で組み直すので、ここではメニューのボタンなど UXML の文字だけを書き直す。
+        private void HandleLanguageChanged(GameLanguage language)
+        {
+            if (this == null)
+            {
+                return;
+            }
+
+            _texts?.Refresh();
+        }
+
         private void Press(string buttonName)
         {
             switch (buttonName)
@@ -871,6 +897,7 @@ namespace Fps.Runtime
 
             _unbind.Clear();
             _buttons.Clear();
+            _texts = null;
             _navigationRoot = null;
             _notice = null;
             _settingsSlot = null;

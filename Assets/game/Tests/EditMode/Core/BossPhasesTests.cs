@@ -6,17 +6,17 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class BossPhasesTests
     {
-        private static readonly string[] CoreOnly = { "Core" };
-        private static readonly string[] CoreAndEye = { "Core", "Core", "Eye" };
-        private static readonly string[] CoreEyeDeduped = { "Core", "Eye" };
-        private static readonly string[] EmptyName = { "" };
+        private static readonly string[] _coreOnly = { "Core" };
+        private static readonly string[] _coreAndEye = { "Core", "Core", "Eye" };
+        private static readonly string[] _coreEyeDeduped = { "Core", "Eye" };
+        private static readonly string[] _emptyName = { "" };
 
         private static BossPhases TwoPhases()
         {
             return new BossPhases(new[]
             {
                 new BossPhase("Guarded", null),
-                new BossPhase("Exposed", BossPhaseTrigger.HealthAtOrBelow(0.5f), moveSpeedMultiplier: 2f, exposedWeakPoints: CoreOnly),
+                new BossPhase("Exposed", BossPhaseTrigger.HealthAtOrBelow(0.5f), moveSpeedMultiplier: 2f, exposedWeakPoints: _coreOnly),
             });
         }
 
@@ -218,15 +218,15 @@ namespace Fps.Core.Tests
         [Test]
         public void PhaseDropsRepeatedWeakPointsAndRefusesBadValues()
         {
-            var phase = new BossPhase("A", null, exposedWeakPoints: CoreAndEye);
+            var phase = new BossPhase("A", null, exposedWeakPoints: _coreAndEye);
 
-            Assert.That(phase.ExposedWeakPoints, Is.EqualTo(CoreEyeDeduped));
+            Assert.That(phase.ExposedWeakPoints, Is.EqualTo(_coreEyeDeduped));
             Assert.That(phase.Exposes("Eye"), Is.True);
             Assert.That(phase.Exposes("Tail"), Is.False);
             Assert.That(new BossPhase("B", null).ExposedWeakPoints, Is.Empty);
 
             Assert.Throws<ArgumentException>(() => new BossPhase(" ", null));
-            Assert.Throws<ArgumentException>(() => new BossPhase("A", null, exposedWeakPoints: EmptyName));
+            Assert.Throws<ArgumentException>(() => new BossPhase("A", null, exposedWeakPoints: _emptyName));
             Assert.Throws<ArgumentOutOfRangeException>(() => new BossPhase("A", null, moveSpeedMultiplier: 0f));
             Assert.Throws<ArgumentOutOfRangeException>(() => new BossPhase("A", null, moveSpeedMultiplier: float.PositiveInfinity));
         }

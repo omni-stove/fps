@@ -38,7 +38,8 @@ namespace Fps.Core
                 spec.CoverHideSeconds,
                 spec.CoverPeekSeconds,
                 spec.CoverHealthFraction,
-                spec.Archetype);
+                spec.Archetype,
+                spec.StaggerResistance);
         }
 
         /// <summary>最大体力 baseHealth に倍率 multiplier を掛けた値。四捨五入し、1 以上 int の最大値以下に収める。</summary>

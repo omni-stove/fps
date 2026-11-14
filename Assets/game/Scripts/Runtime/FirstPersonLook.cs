@@ -38,6 +38,7 @@ namespace Fps.Runtime
         private InputAction _lookAction;
         private bool _enabledLookAction;
         private float _sensitivityMultiplier = 1f;
+        private float _turnMultiplier = 1f;
         private ControlSettings _controlSettings = ControlSettings.Default;
         private bool _listeningToSettings;
         private float _recoilPitchUp;
@@ -94,6 +95,22 @@ namespace Fps.Runtime
                 }
 
                 _sensitivityMultiplier = value;
+            }
+        }
+
+        // 覗き込みは SensitivityMultiplier を毎フレーム書き直すので、怯みなどで一時的に遅くする倍率はそれと別に持って掛け合わせる。
+        // 観戦の自由カメラも ReadLookDegrees を使うので、そちらには掛けず、この視点を回すときにだけ掛ける。
+        public float TurnMultiplier
+        {
+            get => _turnMultiplier;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "turn multiplier must be a non-negative finite number");
+                }
+
+                _turnMultiplier = value;
             }
         }
 
@@ -235,7 +252,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            var degrees = ReadLookDegrees(Time.deltaTime);
+            var degrees = ReadLookDegrees(Time.deltaTime) * _turnMultiplier;
             if (degrees == Vector2.zero)
             {
                 return;

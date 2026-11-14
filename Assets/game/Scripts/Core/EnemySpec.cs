@@ -42,6 +42,8 @@ namespace Fps.Core
 
         public EnemyArchetype Archetype { get; }
 
+        public float StaggerResistance { get; }
+
         public const float DefaultCoverHideSeconds = 1.5f;
         public const float DefaultCoverPeekSeconds = 2f;
         public const float DefaultCoverHealthFraction = 0.5f;
@@ -58,6 +60,7 @@ namespace Fps.Core
         /// <param name="coverPeekSeconds">TakeCover で 1 回覗いている時間。0 以上。</param>
         /// <param name="coverHealthFraction">体力の割合がこれを下回ったら TakeCover に移る。0 以上 1 以下。</param>
         /// <param name="archetype">敵の種類。</param>
+        /// <param name="staggerResistance">怯みにくさ (<see cref="StaggerJudge.Threshold"/>・<see cref="StaggerJudge.Duration"/>)。0 以上の有限値。</param>
         public EnemySpec(
             float sightRange,
             float attackRange,
@@ -70,7 +73,8 @@ namespace Fps.Core
             float coverHideSeconds = DefaultCoverHideSeconds,
             float coverPeekSeconds = DefaultCoverPeekSeconds,
             float coverHealthFraction = DefaultCoverHealthFraction,
-            EnemyArchetype archetype = EnemyArchetype.Rifleman)
+            EnemyArchetype archetype = EnemyArchetype.Rifleman,
+            float staggerResistance = 0f)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
             {
@@ -104,6 +108,8 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(archetype), archetype, "archetype is not a defined EnemyArchetype");
             }
 
+            RequireNonNegativeSeconds(staggerResistance, nameof(staggerResistance));
+
             SightRange = sightRange;
             AttackRange = attackRange;
             LoseSightSeconds = loseSightSeconds;
@@ -116,6 +122,7 @@ namespace Fps.Core
             CoverPeekSeconds = coverPeekSeconds;
             CoverHealthFraction = coverHealthFraction;
             Archetype = archetype;
+            StaggerResistance = staggerResistance;
         }
 
         /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread(System.Numerics.Vector3, float, System.Random)"/>) が受け付ける範囲に合わせる。</summary>

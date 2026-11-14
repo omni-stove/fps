@@ -1,13 +1,12 @@
 using System;
 using System.Numerics;
-using Fps.Core;
 using NUnit.Framework;
 
 namespace Fps.Core.Tests
 {
     public sealed class ParachuteMotionTests
     {
-        private const float Epsilon = 1e-4f;
+        private const float _epsilon = 1e-4f;
 
         [Test]
         public void DefaultsDescendSlowerThanTheSafeFallSpeed()
@@ -88,7 +87,7 @@ namespace Fps.Core.Tests
             Assert.That(motion.HorizontalVelocity, Is.EqualTo(new Vector2(3f, 0f)));
 
             motion.Open(new Vector2(0f, 20f));
-            Assert.That(motion.HorizontalVelocity.Length(), Is.EqualTo(6f).Within(Epsilon));
+            Assert.That(motion.HorizontalVelocity.Length(), Is.EqualTo(6f).Within(_epsilon));
             Assert.That(motion.HorizontalVelocity.Y, Is.GreaterThan(0f), "the direction is kept");
 
             Assert.Throws<ArgumentOutOfRangeException>(() => motion.Open(new Vector2(float.NaN, 0f)));
@@ -114,15 +113,15 @@ namespace Fps.Core.Tests
 
             // 前 (Y) への入力で、向き 0 ならワールドの +Z (水平の Y) へ、1 秒あたり 8 m/s ずつ速くなる。
             var first = motion.Step(new Vector2(0f, 1f), 0f, 0.25f);
-            Assert.That(first.Z, Is.EqualTo(2f).Within(Epsilon));
-            Assert.That(first.X, Is.EqualTo(0f).Within(Epsilon));
+            Assert.That(first.Z, Is.EqualTo(2f).Within(_epsilon));
+            Assert.That(first.X, Is.EqualTo(0f).Within(_epsilon));
 
             for (var i = 0; i < 10; i++)
             {
                 motion.Step(new Vector2(0f, 1f), 0f, 0.25f);
             }
 
-            Assert.That(motion.HorizontalVelocity.Y, Is.EqualTo(6f).Within(Epsilon), "it stops at the horizontal speed");
+            Assert.That(motion.HorizontalVelocity.Y, Is.EqualTo(6f).Within(_epsilon), "it stops at the horizontal speed");
         }
 
         [Test]
@@ -133,14 +132,14 @@ namespace Fps.Core.Tests
 
             // 右 (X) への入力で、向き 0 ならワールドの +X へ向きを変える。
             motion.Step(new Vector2(1f, 0f), 0f, 0.1f);
-            Assert.That(motion.HorizontalVelocity.X, Is.EqualTo(6f).Within(Epsilon));
-            Assert.That(motion.HorizontalVelocity.Y, Is.EqualTo(0f).Within(Epsilon));
+            Assert.That(motion.HorizontalVelocity.X, Is.EqualTo(6f).Within(_epsilon));
+            Assert.That(motion.HorizontalVelocity.Y, Is.EqualTo(0f).Within(_epsilon));
 
             // 右に 90 度向いて前へ入れても、ワールドの +X へ進む。
             motion.Open(Vector2.Zero);
             motion.Step(new Vector2(0f, 1f), (float)(Math.PI / 2d), 0.1f);
-            Assert.That(motion.HorizontalVelocity.X, Is.EqualTo(6f).Within(Epsilon));
-            Assert.That(motion.HorizontalVelocity.Y, Is.EqualTo(0f).Within(Epsilon));
+            Assert.That(motion.HorizontalVelocity.X, Is.EqualTo(6f).Within(_epsilon));
+            Assert.That(motion.HorizontalVelocity.Y, Is.EqualTo(0f).Within(_epsilon));
         }
 
         [Test]
@@ -153,10 +152,10 @@ namespace Fps.Core.Tests
             Assert.That(motion.HorizontalVelocity, Is.EqualTo(Vector2.Zero));
 
             motion.Step(new Vector2(0f, 5f), 0f, 0.1f);
-            Assert.That(motion.HorizontalVelocity.Length(), Is.EqualTo(6f).Within(Epsilon), "an input longer than 1 does not go faster");
+            Assert.That(motion.HorizontalVelocity.Length(), Is.EqualTo(6f).Within(_epsilon), "an input longer than 1 does not go faster");
 
             motion.Step(new Vector2(0f, 0.5f), 0f, 0.1f);
-            Assert.That(motion.HorizontalVelocity.Length(), Is.EqualTo(3f).Within(Epsilon), "a half input goes half as fast");
+            Assert.That(motion.HorizontalVelocity.Length(), Is.EqualTo(3f).Within(_epsilon), "a half input goes half as fast");
         }
 
         [Test]

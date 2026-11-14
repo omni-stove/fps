@@ -54,11 +54,11 @@ run = [
 ]
 
 [export-server-data]
-description = "Write the collision and the NavMesh with its links (ladders) of every map selectable with -map to server-data/maps/<map>.fpsmap and <map>.fpsnav with the Unity editor in batch mode via Fps.Editor.MapCollisionExporter.Export, removing .fpsmap and .fpsnav files of maps no longer listed (close the Editor first). Commit the result"
+description = "Write the collision, the NavMesh with its links (ladders) and the destructible structures of every map selectable with -map to server-data/maps/<map>.fpsmap, <map>.fpsnav and <map>.structures.json with the Unity editor in batch mode via Fps.Editor.MapCollisionExporter.Export, removing those files of maps no longer listed (close the Editor first). Commit the result"
 run = "unity --non-interactive run . -- -executeMethod Fps.Editor.MapCollisionExporter.Export"
 
 [export-server-rules]
-description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Fps.Editor.ServerRulesExporter.Export (close the Editor first): the NetMatch.prefab settings with each rules asset to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping tuning to server-data/tuning/ping.json. Commit the written files"
+description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Fps.Editor.ServerRulesExporter.Export (close the Editor first): the NetMatch.prefab settings with each rules asset to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping and grenade tuning to server-data/tuning/ping.json and grenade.json. Commit the written files"
 run = "unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export"
 
 [eos-sdk]

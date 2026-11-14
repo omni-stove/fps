@@ -13,15 +13,18 @@ namespace Fps.Server
         public const string MapsDirectoryName = "maps";
         public const string CollisionExtension = ".fpsmap";
 
-        public ServerMapData(string name, WorldMap world, NavMeshFile navMesh, string directory, NetMapPoints points = null)
+        public ServerMapData(
+            string name, WorldMap world, NavMeshFile navMesh, string directory, NetMapPoints points = null, NetMapStructures structures = null)
         {
             Points = points;
+            Structures = structures;
             Name = name ?? throw new ArgumentNullException(nameof(name));
             ArgumentNullException.ThrowIfNull(world);
             NavMesh = navMesh ?? throw new ArgumentNullException(nameof(navMesh));
             Directory = directory ?? "";
             ColliderCount = world.Colliders.Count;
-            World = new BvhWorldCollision(world);
+            Source = world;
+            Collision = new BvhWorldCollision(world);
             Navigation = new MeshNavigation(navMesh);
         }
 
@@ -33,12 +36,21 @@ namespace Fps.Server
 
         public NavMeshFile NavMesh { get; }
 
-        public IWorldCollision World { get; }
+        public IWorldCollision World => Collision;
+
+        /// <summary>壊れた建物の部品を当たりから外すために、形の組 (<see cref="MapColliderGroups"/>) を切り替えられる型で持つ。</summary>
+        public BvhWorldCollision Collision { get; }
+
+        /// <summary>.fpsmap から読んだ形。爆発が届く部品を探すのに使う。</summary>
+        public WorldMap Source { get; }
 
         public INavigation Navigation { get; }
 
         /// <summary>出現地点と拠点。ルールを動かさないサーバー (テストなど) では要らないので、ファイルが無ければ null。</summary>
         public NetMapPoints Points { get; }
+
+        /// <summary>壊せる建物の部品の並び。書き出していないマップでは null で、部品は壊れない壁として残る。</summary>
+        public NetMapStructures Structures { get; }
 
         public string LogLine => ServerProgram.LogTag + " map " + Name
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
@@ -46,6 +58,7 @@ namespace Fps.Server
             + " navLinks=" + NavMesh.Links.Count.ToString(CultureInfo.InvariantCulture)
             + " spawnPoints=" + (Points == null ? "none" : Points.SpawnPoints.Count.ToString(CultureInfo.InvariantCulture))
             + " controlPoints=" + (Points == null ? "none" : Points.ControlPoints.Count.ToString(CultureInfo.InvariantCulture))
+            + " structures=" + (Structures == null ? "none" : Structures.Structures.Count.ToString(CultureInfo.InvariantCulture))
             + " from=" + Directory;
 
         /// <summary>
@@ -149,9 +162,24 @@ namespace Fps.Server
                 }
             }
 
+            NetMapStructures structures = null;
+            var structuresPath = Path.Combine(directory, map + NetMapStructures.Extension);
+            if (File.Exists(structuresPath))
+            {
+                try
+                {
+                    structures = NetMapStructures.Parse(File.ReadAllText(structuresPath), structuresPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + structuresPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                data = new ServerMapData(map, world, navMesh, directory, points);
+                data = new ServerMapData(map, world, navMesh, directory, points, structures);
             }
             catch (ArgumentException e)
             {

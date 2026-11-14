@@ -48,12 +48,15 @@ namespace Fps.Server
             ArgumentNullException.ThrowIfNull(modules);
             ArgumentNullException.ThrowIfNull(motorSettings);
 
-            // スナップショットは移動が tick の入力を処理し、ルールがその tick を進めた後の状態を載せるので、両方より後に登録する
+            // スナップショットは移動が tick の入力を処理し、ルールと戦闘がその tick を進めた後の状態を載せるので、どれより後にも登録する。
+            // 戦闘はルールが出現させた後の位置を当たり判定に残すので、ルールより後
             var movement = new ServerMovement(motorSettings);
             var rules = new MatchRulesModule();
+            var combat = new ServerCombat(rules, movement);
             modules.Add(movement);
             modules.Add(rules);
-            modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement, rules }));
+            modules.Add(combat);
+            modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat }));
 
             error = null;
             if (!launch.Options.RegistersLobby)

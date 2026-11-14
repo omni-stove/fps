@@ -12,13 +12,14 @@ using UnityEngine.TestTools;
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// <see cref="WeaponJsonImporter"/> を一時フォルダに走らせて、同梱のサンプル JSON が今の武器と同じ値になることと、
-    /// 不正な JSON では何も保存しないことを確かめる。リポジトリの Assets/game/Weapons は書き換えない。
+    /// <see cref="WeaponJsonImporter"/> を一時フォルダに走らせて、テストの JSON (<see cref="TestWeaponJson"/>) が同じ値の武器になることと、
+    /// 不正な JSON では何も保存しないことを確かめる。
     /// </summary>
     public sealed class WeaponJsonImporterTests
     {
         private string _folder;
         private string _jsonFolder;
+        private string _samplesFolder;
 
         [SetUp]
         public void SetUp()
@@ -27,6 +28,12 @@ namespace Fps.Tests.EditMode
             // Assets の外に置き、テスト用の JSON を Unity に取り込ませない
             _jsonFolder = Path.Combine(Path.GetTempPath(), "WeaponJsonImporterTests_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_jsonFolder);
+            _samplesFolder = Path.Combine(Path.GetTempPath(), "WeaponJsonImporterTests_Samples_" + Guid.NewGuid().ToString("N")).Replace('\\', '/');
+            Directory.CreateDirectory(_samplesFolder);
+            foreach (var name in TestWeaponJson.Names)
+            {
+                File.WriteAllText(Path.Combine(_samplesFolder, name + ".json"), TestWeaponJson.Text(name));
+            }
         }
 
         [TearDown]
@@ -41,50 +48,40 @@ namespace Fps.Tests.EditMode
             {
                 Directory.Delete(_jsonFolder, true);
             }
+
+            if (Directory.Exists(_samplesFolder))
+            {
+                Directory.Delete(_samplesFolder, true);
+            }
         }
 
         [Test]
-        public void TheSamplesLiveUnderTheBundledWeaponsFolder()
+        public void TheDefaultOutputIsTheWeaponsFolderOfTheOutputRoot()
         {
-            Assert.That(WeaponJsonImporter.SampleFolder, Is.EqualTo(FpsKitRoot.Bundled + "/Weapons/Json"));
-            Assert.That(WeaponJsonImporter.DefaultOutputFolder, Is.EqualTo(WeaponAssetBuilder.Folder));
+            Assert.That(WeaponJsonImporter.DefaultOutputFolder, Is.EqualTo(WeaponAssets.Folder));
         }
 
         [Test]
-        public void ImportingTheSamplesReproducesTheBuiltInWeapons()
+        public void ImportingTheTestJsonReproducesTheTestWeapons()
         {
-            var imported = WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder, _folder, null);
+            var imported = WeaponJsonImporter.ImportFrom(_samplesFolder, _folder, null);
 
             Assert.That(imported, Has.Count.EqualTo(3));
-            AssertSameSpec(Load("Rifle").ToSpec(), WeaponAssetBuilder.RifleSpec());
-            AssertSameSpec(Load("Handgun").ToSpec(), WeaponAssetBuilder.HandgunSpec());
-            AssertSameSpec(Load("Launcher").ToSpec(), WeaponAssetBuilder.LauncherSpec());
-        }
-
-        [Test]
-        public void ImportingTheSamplesMatchesTheCommittedAssetFields()
-        {
-            var committedRifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);
-            var committedHandgun = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.HandgunPath);
-            Assume.That(committedRifle, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build first");
-            Assume.That(committedHandgun, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build first");
-
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder, _folder, null);
-
-            AssertSameFields(Load("Rifle"), committedRifle);
-            AssertSameFields(Load("Handgun"), committedHandgun);
+            AssertSameSpec(Load("Rifle").ToSpec(), TestWeapons.RifleSpec());
+            AssertSameSpec(Load("Handgun").ToSpec(), TestWeapons.HandgunSpec());
+            AssertSameSpec(Load("Launcher").ToSpec(), TestWeapons.LauncherSpec());
         }
 
         [Test]
         public void ReimportingKeepsTheGuidAndRestoresTheValues()
         {
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder, _folder, null);
+            WeaponJsonImporter.ImportFrom(_samplesFolder, _folder, null);
             var path = _folder + "/Rifle.asset";
             var guid = AssetDatabase.AssetPathToGUID(path);
             var rifle = Load("Rifle");
             rifle.Damage = 1;
 
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder + "/Rifle.json", _folder, null);
+            WeaponJsonImporter.ImportFrom(_samplesFolder + "/Rifle.json", _folder, null);
 
             Assert.That(AssetDatabase.AssetPathToGUID(path), Is.EqualTo(guid));
             Assert.That(Load("Rifle"), Is.SameAs(rifle));
@@ -94,24 +91,23 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ImportsOverTheBuilderOutputWithoutChangingIt()
         {
-            WeaponAssetBuilder.BuildAt(
-                _folder + "/Rifle.asset", _folder + "/Handgun.asset", _folder + "/WeaponCatalog.asset", _folder + "/DefaultLoadout.asset");
+            BuildTestWeapons(_folder + "/Rifle.asset", _folder + "/Handgun.asset", _folder + "/WeaponCatalog.asset");
             var rifleGuid = AssetDatabase.AssetPathToGUID(_folder + "/Rifle.asset");
 
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder, _folder, null);
+            WeaponJsonImporter.ImportFrom(_samplesFolder, _folder, null);
 
             Assert.That(AssetDatabase.AssetPathToGUID(_folder + "/Rifle.asset"), Is.EqualTo(rifleGuid));
-            AssertSameSpec(Load("Rifle").ToSpec(), WeaponAssetBuilder.RifleSpec());
+            AssertSameSpec(Load("Rifle").ToSpec(), TestWeapons.RifleSpec());
         }
 
         [Test]
         public void AddsTheImportedWeaponsToTheCatalogOnceById()
         {
             var catalogPath = _folder + "/WeaponCatalog.asset";
-            WeaponAssetBuilder.BuildAt(_folder + "/Rifle.asset", _folder + "/Handgun.asset", catalogPath, _folder + "/DefaultLoadout.asset");
+            BuildTestWeapons(_folder + "/Rifle.asset", _folder + "/Handgun.asset", catalogPath);
 
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder, _folder, catalogPath);
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder, _folder, catalogPath);
+            WeaponJsonImporter.ImportFrom(_samplesFolder, _folder, catalogPath);
+            WeaponJsonImporter.ImportFrom(_samplesFolder, _folder, catalogPath);
 
             var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(catalogPath);
             Assert.That(catalog.Weapons, Is.EqualTo(new[] { Load("Rifle"), Load("Handgun"), Load("Launcher") }));
@@ -123,13 +119,12 @@ namespace Fps.Tests.EditMode
         {
             var otherFolder = _folder + "/Other";
             var catalogPath = otherFolder + "/WeaponCatalog.asset";
-            WeaponAssetBuilder.BuildAt(
-                otherFolder + "/Rifle.asset", otherFolder + "/Handgun.asset", catalogPath, otherFolder + "/DefaultLoadout.asset");
+            BuildTestWeapons(otherFolder + "/Rifle.asset", otherFolder + "/Handgun.asset", catalogPath);
             var otherHandgun = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(otherFolder + "/Handgun.asset");
             var importFolder = _folder + "/Imported";
 
-            LogAssert.Expect(LogType.Warning, new Regex(Regex.Escape(WeaponAssetBuilder.RifleId)));
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder + "/Rifle.json", importFolder, catalogPath);
+            LogAssert.Expect(LogType.Warning, new Regex(Regex.Escape(TestWeapons.RifleId)));
+            WeaponJsonImporter.ImportFrom(_samplesFolder + "/Rifle.json", importFolder, catalogPath);
 
             var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(catalogPath);
             var imported = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(importFolder + "/Rifle.asset");
@@ -140,7 +135,7 @@ namespace Fps.Tests.EditMode
         public void AMissingCatalogStopsBeforeSavingAnything()
         {
             Assert.Throws<InvalidOperationException>(
-                () => WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder, _folder, _folder + "/Missing.asset"));
+                () => WeaponJsonImporter.ImportFrom(_samplesFolder, _folder, _folder + "/Missing.asset"));
 
             Assert.That(AssetDatabase.IsValidFolder(_folder), Is.False);
         }
@@ -148,7 +143,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AnInvalidValueNamesTheFileAndFieldAndSavesNothing()
         {
-            File.Copy(FpsKitRoot.PhysicalPath(WeaponJsonImporter.SampleFolder + "/Rifle.json"), Path.Combine(_jsonFolder, "A_Rifle.json"));
+            WriteJson("A_Rifle.json", SampleText("Rifle"));
             WriteJson("B_Broken.json", SampleText("Handgun").Replace("\"magazineSize\": 12", "\"magazineSize\": 0"));
 
             var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ImportFrom(_jsonFolder, _folder, null));
@@ -176,7 +171,7 @@ namespace Fps.Tests.EditMode
                 SampleText("Launcher").Replace("\"activeReloadFailSeconds\": 0.5,", string.Empty).Replace("\"adsFieldOfView\": null,", string.Empty),
                 "Launcher.json");
 
-            AssertSameSpec(spec, WeaponAssetBuilder.LauncherSpec());
+            AssertSameSpec(spec, TestWeapons.LauncherSpec());
         }
 
         [Test]
@@ -204,10 +199,10 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheImportedNameIsReadFromTheTableByItsKey()
         {
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder + "/Launcher.json", _folder, null);
+            WeaponJsonImporter.ImportFrom(_samplesFolder + "/Launcher.json", _folder, null);
 
             var launcher = Load("Launcher");
-            Assert.That(launcher.NameKey, Is.EqualTo(WeaponAssetBuilder.LauncherNameKey), "the asset stores the key, not the text");
+            Assert.That(launcher.NameKey, Is.EqualTo(TestWeapons.LauncherNameKey), "the asset stores the key, not the text");
             Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(launcher.ToSpec().Name), Is.EqualTo("Launcher"));
         }
 
@@ -309,7 +304,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AnIdThatAnotherAssetInTheOutputAlreadyUsesIsRejected()
         {
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder + "/Rifle.json", _folder, null);
+            WeaponJsonImporter.ImportFrom(_samplesFolder + "/Rifle.json", _folder, null);
             WriteJson("Carbine.json", SampleText("Rifle"));
 
             var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ImportFrom(_jsonFolder, _folder, null));
@@ -322,13 +317,13 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ChangingTheIdOfAnExistingAssetIsRejected()
         {
-            WeaponJsonImporter.ImportFrom(WeaponJsonImporter.SampleFolder + "/Rifle.json", _folder, null);
-            WriteJson("Rifle.json", SampleText("Rifle").Replace(WeaponAssetBuilder.RifleId, "11111111-2222-4333-8444-555555555555"));
+            WeaponJsonImporter.ImportFrom(_samplesFolder + "/Rifle.json", _folder, null);
+            WriteJson("Rifle.json", SampleText("Rifle").Replace(TestWeapons.RifleId, "11111111-2222-4333-8444-555555555555"));
 
             var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ImportFrom(_jsonFolder, _folder, null));
 
             Assert.That(e.Field, Is.EqualTo("id"));
-            Assert.That(Load("Rifle").Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+            Assert.That(Load("Rifle").Id, Is.EqualTo(TestWeapons.RifleId));
         }
 
         [Test]
@@ -388,7 +383,17 @@ namespace Fps.Tests.EditMode
 
         private static string SampleText(string name)
         {
-            return File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponJsonImporter.SampleFolder + "/" + name + ".json"));
+            return TestWeaponJson.Text(name);
+        }
+
+        /// <summary>rifle・handgun の定義と、それを並べたカタログを作る。</summary>
+        private static void BuildTestWeapons(string riflePath, string handgunPath, string catalogPath)
+        {
+            var rifleSpec = TestWeapons.RifleSpec();
+            var handgunSpec = TestWeapons.HandgunSpec();
+            var rifle = SceneBuildHelpers.CreateOrUpdateAsset<WeaponDefinition>(riflePath, d => WeaponAssets.Configure(d, rifleSpec));
+            var handgun = SceneBuildHelpers.CreateOrUpdateAsset<WeaponDefinition>(handgunPath, d => WeaponAssets.Configure(d, handgunSpec));
+            SceneBuildHelpers.CreateOrUpdateAsset<WeaponCatalogAsset>(catalogPath, c => WeaponAssets.Configure(c, new[] { rifle, handgun }));
         }
 
         private static void AssertSameSpec(WeaponSpec actual, WeaponSpec expected)

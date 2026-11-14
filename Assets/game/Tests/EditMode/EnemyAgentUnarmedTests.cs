@@ -21,8 +21,8 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            _rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
-            _handgun = NewWeapon("Handgun", WeaponAssetBuilder.HandgunSpec());
+            _rifle = NewWeapon("Rifle", TestWeapons.RifleSpec());
+            _handgun = NewWeapon("Handgun", TestWeapons.HandgunSpec());
 
             _host = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             _host.name = "Bot";
@@ -103,7 +103,7 @@ namespace Fps.Tests.EditMode
         {
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             definition.name = name;
-            WeaponAssetBuilder.Configure(definition, spec);
+            WeaponAssets.Configure(definition, spec);
             return definition;
         }
     }

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 各自が置いた EOS の C# SDK をこのアセンブリに取り込む。SDK が無くても空のままビルドが通るよう、取り込みは EosSdk.props の判定に従う -->
+  <Import Project="../EosSdk.props" />
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <RootNamespace>Fps.EosSdk</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- 参照元の -r を受け取らないと、別の OS 向けにビルドしてもビルドするマシンの OS の SDK とライブラリが入るため -->
+    <IsRidAgnostic>false</IsRidAgnostic>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EosSdkAvailable)' == 'true'">
+    <!-- SDK の doc コメントの崩れ。generated_code では消えない、コンパイラ自身の警告なので名指しで黙らせる -->
+    <NoWarn>$(NoWarn);CS0419;CS1572;CS1573;CS1574;CS1711;CS1712</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fps.EosSdk.Tests" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EosSdkAvailable)' == 'true'">
+    <Compile Include="@(EosSdkSource)" Link="EOSSDK/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="@(EosSdkNative)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+{
+  "fuseSeconds": 2.5,
+  "throwSeconds": 0.6,
+  "throwSpeed": 14,
+  "throwLiftSpeed": 3,
+  "maxDamage": 150,
+  "damageRadius": 6,
+  "fullDamageRadius": 1.5,
+  "structureDamageAtCenter": 150
+}

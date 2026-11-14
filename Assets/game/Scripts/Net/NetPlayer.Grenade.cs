@@ -27,7 +27,8 @@ namespace Fps.Net
         private InputAction _grenadeAction;
         private bool _enabledGrenadeAction;
 
-        // 持ち主が最後に送ってから GrenadeSpec.Default.ThrowSeconds の残り。サーバーに断られる連打を送らないためだけに使う
+        // 持ち主が最後に送ってから KitTuning.Grenade.ThrowSeconds の残り。サーバーに断られる連打を送らないためだけに使う
+        // (サーバーとクライアントは同じビルドの調整値の JSON を読むので、サーバーの間隔と揃う)
         private float _grenadeRequestCooldown;
 
         /// <summary>サーバーから届いたグレネードの状態。持ち主とサーバーでだけ読める (他では <see cref="NetGrenadeState.None"/>)。</summary>
@@ -37,7 +38,7 @@ namespace Fps.Net
         internal NetworkVariable<NetGrenadeState> GrenadesVariable => _grenades;
 
         /// <summary>
-        /// 持ち主が投げてから <see cref="GrenadeSpec.ThrowSeconds"/> (<see cref="GrenadeSpec.Default"/>) 秒の間か。この間は射撃の入力を送らない (オフラインの <see cref="GameBootstrap"/> と同じ)。
+        /// 持ち主が投げてから <see cref="GrenadeSpec.ThrowSeconds"/> (<see cref="KitTuning.Grenade"/>) 秒の間か。この間は射撃の入力を送らない (オフラインの <see cref="GameBootstrap"/> と同じ)。
         /// </summary>
         public bool IsThrowingGrenade => _grenadeRequestCooldown > 0f;
 
@@ -80,7 +81,7 @@ namespace Fps.Net
                 return;
             }
 
-            _grenadeRequestCooldown = GrenadeSpec.Default.ThrowSeconds;
+            _grenadeRequestCooldown = KitTuning.Grenade.ThrowSeconds;
             Debug.Log(GrenadeThrower.LogTag + " net request remaining=" + _grenades.Value.Remaining, this);
             ThrowGrenadeRpc(direction.normalized);
             ReleaseSprint(SprintInput.ReasonFire);

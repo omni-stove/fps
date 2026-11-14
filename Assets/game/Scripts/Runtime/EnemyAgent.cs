@@ -550,6 +550,12 @@ namespace Fps.Runtime
             else
             {
                 ResolveTarget(force: true);
+
+                // 置かれたタレットの近くで有効になった敵が、選び直しの間隔が過ぎるまで遠いプレイヤーを狙わないように。
+                if (Turret.Armed.Count > 0)
+                {
+                    ResolveTurretTarget(force: true);
+                }
             }
 
             _lastFinitePosition = transform.position;
@@ -618,6 +624,11 @@ namespace Fps.Runtime
             else if (!pinned && _target == null)
             {
                 ResolveTarget(force: false);
+            }
+            else if (!pinned && (Turret.Armed.Count > 0 || _target.GetComponent<Turret>() != null))
+            {
+                // タレットが無くなった後も、狙っていたのがタレットならタグの相手へ戻す。
+                ResolveTurretTarget(force: _target.IsDead);
             }
 
             if (TickKnockback(deltaSeconds) || TraverseOffMeshLink(deltaSeconds))

@@ -121,6 +121,17 @@ namespace Fps.Runtime
                 throw;
             }
 
+            // 持ち主の一覧に入った後なので、Remove を通して一覧からも外す (Edit Mode では OnDestroy が呼ばれず、壊すだけでは一覧に残る)。
+            try
+            {
+                _definition.NotifyPlaced(deployable, context);
+            }
+            catch
+            {
+                deployable.Remove(DeployRemoval.Discarded);
+                throw;
+            }
+
             _placed = true;
             Debug.Log(
                 DeployLog.Placed(owner.OwnerId, kind, deployable.Serial, pose.position.ToNumerics(), owner.ActiveCount(kind), _spec.MaxActive),

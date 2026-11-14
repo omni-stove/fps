@@ -154,6 +154,9 @@ namespace Fps.Editor
             var grapple = AbilityAssetBuilder.LoadOrBuildGrappleAbility();
             var shield = AbilityAssetBuilder.LoadOrBuildShieldAbility();
 
+            // 枠が埋まっているのでタレットは枠に入れない。smoke の手順 (TurretSmokeStep) が Play 中に読んで盾の枠と入れ替えるので、アセットだけ用意する。
+            AbilityAssetBuilder.LoadOrBuildTurretAbility();
+
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(path));
             var bootstrap = PopulateScene(scene, weapons, rules, fixtures);
             bootstrap.AbilityDefinitions = new AbilityDefinition[] { grapple, shield };

@@ -45,6 +45,9 @@ namespace Fps.Runtime
         /// <summary>ルールで能力を使うことになっているか。</summary>
         public bool UsesAbilities => _rule == Abilities.On;
 
+        // 置いたタレットのように、持ち主の手を離れて撃つ物が味方撃ちのルールに従えるよう、Configure で渡されたルールを覚えておく。
+        public FriendlyFire FriendlyFire { get; private set; } = FriendlyFire.Off;
+
         public PlayerCommands HeldCommands { get; private set; }
 
         /// <summary>同じ GameObject の移動。無ければ null。</summary>
@@ -193,6 +196,7 @@ namespace Fps.Runtime
             }
 
             _rule = rules.Actions.Abilities;
+            FriendlyFire = rules.FriendlyFire;
             if (_rule != Abilities.On)
             {
                 EndAll(true);

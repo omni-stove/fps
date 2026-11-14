@@ -22,12 +22,12 @@ namespace Fps.Server.Tests
                 new[] { new NavTriangle(0, 1, 2, 0) });
         }
 
-        public static ServerMapData Data(string name = "NetTest")
+        public static ServerMapData Data(string name = "NetTest", NetMapPoints points = null)
         {
-            return new ServerMapData(name, World(), NavMesh(), "memory");
+            return new ServerMapData(name, World(), NavMesh(), "memory", points);
         }
 
-        public static string Write(string root, string name, bool collision = true, bool navigation = true)
+        public static string Write(string root, string name, bool collision = true, bool navigation = true, NetMapPoints points = null)
         {
             var directory = Path.Combine(root, ServerMapData.DataDirectoryName, ServerMapData.MapsDirectoryName);
             Directory.CreateDirectory(directory);
@@ -45,6 +45,11 @@ namespace Fps.Server.Tests
                 {
                     NavMesh().Write(stream);
                 }
+            }
+
+            if (points != null)
+            {
+                File.WriteAllText(Path.Combine(directory, name + NetMapPoints.Extension), NetMapPoints.Write(points));
             }
 
             return directory;

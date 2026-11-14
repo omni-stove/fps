@@ -37,6 +37,8 @@ namespace Fps.Server
             MatchId = ServerEventLog.NewMatchId();
         }
 
+        public delegate Team TeamChooser(string rejoinKey, out bool rejoined);
+
         public event Action<ServerPlayer> PlayerJoined;
 
         public event Action<ServerPlayer> PlayerLeft;
@@ -62,6 +64,12 @@ namespace Fps.Server
         public float RestartRemainingSeconds => State == GameModeState.Ended ? Math.Max(0f, _restartRemaining) : 0f;
 
         public IEnumerable<ServerPlayer> Players => _players.Values;
+
+        /// <summary>
+        /// 参加する人のチームを決める。null なら人数の少ないほう (同じなら点の低いほう)。ルールのモジュールが、
+        /// 切断した人を同じチームに戻すために差し替える。
+        /// </summary>
+        public TeamChooser ChooseTeam { get; set; }
 
         /// <summary>
         /// Bot の Id と重ならない範囲に収めるのは、成績の行や JSON の playerId で Bot と見分けられなくなるため。
@@ -114,7 +122,10 @@ namespace Fps.Server
                 throw new ArgumentException("connection " + connection + " has already joined", nameof(connection));
             }
 
-            var team = TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
+            var rejoined = false;
+            var team = ChooseTeam != null
+                ? ChooseTeam(rejoinKey, out rejoined)
+                : TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
             var player = new ServerPlayer(connection, playerId, team, rejoinKey);
             _players.Add(playerId, player);
             _byConnection.Add(connection, player);
@@ -122,7 +133,7 @@ namespace Fps.Server
             _log.WriteLine(MatchLog.Joined(playerId, team));
             if (_events.Enabled)
             {
-                _events.Write(ServerEventLog.PlayerJoined(_utcNow(), MatchId, playerId, null, team, false));
+                _events.Write(ServerEventLog.PlayerJoined(_utcNow(), MatchId, playerId, null, team, rejoined));
             }
 
             PlayerJoined?.Invoke(player);
@@ -188,6 +199,34 @@ namespace Fps.Server
 
             Ended?.Invoke(winner);
             return true;
+        }
+
+        // 試合の JSON のイベントを 1 か所で書き、どれも同じ試合の Id と時計を使うようにする
+        public void WriteKill(int killerId, int victimId, bool teamKill)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.Kill(_utcNow(), MatchId, killerId, null, victimId, null, teamKill));
+            }
+        }
+
+        public void WritePingPlaced(SharedPing ping, bool refreshed)
+        {
+            if (_events.Enabled)
+            {
+                var marker = ping.Marker;
+                _events.Write(ServerEventLog.PingPlaced(
+                    _utcNow(), MatchId, ping.PingerId, null, ping.Team, marker.Id, marker.Kind,
+                    marker.Kind == PingKind.Enemy ? marker.TargetKey : null, refreshed));
+            }
+        }
+
+        public void WritePingRefused(int playerId, PingRefusal reason)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.PingRefused(_utcNow(), MatchId, playerId, null, reason));
+            }
         }
 
         /// <summary>終わった回の Tick の残りを待ちに数えないのは、Core の TeamDeathmatchSession と同じ間で次の試合を始めるため。</summary>

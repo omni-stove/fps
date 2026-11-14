@@ -27,7 +27,7 @@ namespace Fps.Server
         {
             ArgumentNullException.ThrowIfNull(modules);
 
-            return Run(args, (ServerLaunch _, ServerRuntime _, ICollection<IServerModule> created, out string error) =>
+            return Run(args, (ServerLaunch _, ServerRuntime _, ServerRulesData _, ICollection<IServerModule> created, out string error) =>
             {
                 foreach (var module in modules)
                 {
@@ -65,8 +65,16 @@ namespace Fps.Server
 
             output.WriteLine(map.LogLine);
 
+            if (!ServerRulesData.TryLoad(launch.Rules, runtime.MapSearchRoots, out var rules, out problem))
+            {
+                error.WriteLine(LogTag + " " + problem);
+                return ExitMisconfigured;
+            }
+
+            output.WriteLine(rules.LogLine);
+
             var modules = new List<IServerModule>();
-            if (!createModules(launch, runtime, modules, out problem))
+            if (!createModules(launch, runtime, rules, modules, out problem))
             {
                 error.WriteLine(problem);
                 return ExitMisconfigured;
@@ -87,7 +95,15 @@ namespace Fps.Server
             using (var transport = runtime.CreateTransport())
             {
                 var server = new MatchServer(
-                    launch, transport, host, map, output, new ServerEventWriter(json, output, output), () => DateTime.UtcNow);
+                    launch,
+                    transport,
+                    host,
+                    map,
+                    output,
+                    new ServerEventWriter(json, output, output),
+                    () => DateTime.UtcNow,
+                    rules.Settings.RestartDelaySeconds,
+                    rules);
                 var code = Start(server, error);
                 if (code != ExitOk)
                 {

@@ -1,0 +1,34 @@
+{
+  "spawnPoints": [
+    {
+      "position": [-4, 0, -22],
+      "team": "Alpha"
+    },
+    {
+      "position": [4, 0, -22],
+      "team": "Alpha"
+    },
+    {
+      "position": [-4, 0, 22],
+      "team": "Bravo"
+    },
+    {
+      "position": [4, 0, 22],
+      "team": "Bravo"
+    },
+    {
+      "position": [-22, 0, 0]
+    },
+    {
+      "position": [22, 0, 0]
+    }
+  ],
+  "controlPoints": [
+    {
+      "index": 0,
+      "center": [0, -1, 0],
+      "radius": 5,
+      "height": 6
+    }
+  ]
+}

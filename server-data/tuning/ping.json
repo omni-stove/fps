@@ -1,0 +1,7 @@
+{
+  "lifetimeSeconds": 6,
+  "maxMarkers": 3,
+  "maxDistance": 150,
+  "enemyAimToleranceDegrees": 3,
+  "minIntervalSeconds": 0.5
+}

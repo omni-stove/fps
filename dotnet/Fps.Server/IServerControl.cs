@@ -1,3 +1,5 @@
+using Fps.Protocol;
+
 namespace Fps.Server
 {
     /// <summary>モジュールがサーバーの状態を見て、続けられないときに止めるための口。</summary>
@@ -13,5 +15,8 @@ namespace Fps.Server
         /// <param name="exitCode">終了コード (<see cref="ServerProgram"/> の Exit*)。</param>
         /// <param name="message">ログに出す理由。</param>
         void Fail(int exitCode, string message);
+
+        /// <summary>モジュールのフックの最中に呼んでよいよう、切るのは今の tick の残りのモジュールを回した後。</summary>
+        void Kick(ConnectionId connection, string reason, string logText);
     }
 }

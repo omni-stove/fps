@@ -25,6 +25,8 @@ namespace Fps.Server.Tests
         /// <summary>0 でなければ、最初の tick でこの終了コードでサーバーを止めさせる。</summary>
         public int FailOnTickWith { get; set; }
 
+        public ConnectionId KickOnNextTick { get; set; }
+
         private ServerContext Context { get; set; }
 
         public void Start(ServerContext context)
@@ -43,6 +45,13 @@ namespace Fps.Server.Tests
             if (FailOnTickWith != 0)
             {
                 Context.Control.Fail(FailOnTickWith, Name + " cannot go on");
+            }
+
+            if (KickOnNextTick.IsValid)
+            {
+                Context.Control.Kick(KickOnNextTick, "test-kick", "kicked by " + Name);
+                _calls.Add(Name + ".Kicked" + KickOnNextTick);
+                KickOnNextTick = ConnectionId.None;
             }
         }
 

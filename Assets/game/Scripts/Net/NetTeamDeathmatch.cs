@@ -59,7 +59,7 @@ namespace Fps.Net
     /// <para>
     /// 射撃は .Fire.cs、出現とリスポーンと出現直後の無敵 (<see cref="SpawnProtections"/>) は .Spawn.cs、武器を配る処理は .Loadout.cs、参加と退出は .Roster.cs、
     /// ダウンと蘇生は .Downed.cs、射撃・ヒット・被弾・キルをクライアントへ配る処理 (<see cref="NetCombatFeed"/>) は .CombatFeed.cs、
-    /// グレネードを投げる・爆発させる処理は .Explosion.cs に分けてある。
+    /// グレネードを投げる・爆発させる処理は .Explosion.cs、印を付けて同じ陣営に配る処理は .Ping.cs に分けてある。
     /// </para>
     /// <para>
     /// Bot で人数を埋める処理は .Bots.cs、放置した人を切る処理は .Idle.cs、拠点で勝敗を決める処理は .Objective.cs が受け持つ。
@@ -355,6 +355,7 @@ namespace Fps.Net
             _lastKillers.Clear();
             ClearDowned();
             ClearGrenades();
+            PingServerStopped();
             _combatFeed = null;
             _killShot = null;
 
@@ -366,6 +367,7 @@ namespace Fps.Net
 
         private void Update()
         {
+            PingClientTick();
             if (!IsSpawned || !IsServer || _session == null)
             {
                 return;
@@ -386,6 +388,7 @@ namespace Fps.Net
             BotsServerTick(Time.deltaTime);
             IdleServerTick(Time.deltaTime);
             ObjectiveServerTick(Time.deltaTime);
+            PingServerTick();
             SyncDownedStates();
             SyncSpawnProtections();
             SyncRemainingSeconds();
@@ -532,6 +535,7 @@ namespace Fps.Net
             ClearDowned();
             ServerEventsSessionCreated();
             PrepareGrenades(spec.Rules);
+            PreparePings(spec.Rules);
 
             _alphaScore.Value = 0;
             _bravoScore.Value = 0;
@@ -813,6 +817,7 @@ namespace Fps.Net
             _reviveHolds.Clear();
             Debug.Log(MatchLog.Restart());
             ServerEventsMatchRestarted();
+            PingMatchRestarted();
             BotsMatchRestarted();
             IdleMatchRestarted();
             ObjectiveMatchRestarted();

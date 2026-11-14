@@ -246,6 +246,8 @@ namespace Fps.Net
             {
                 ResolveAttackAction();
                 ResolveGrenadeAction();
+                ResolvePingAction();
+                AttachPingDisplay();
                 if (_weapon != null)
                 {
                     _weapon.ReloadOrSwitchStarted += HandleReloadOrSwitchStarted;
@@ -287,6 +289,8 @@ namespace Fps.Net
 
             ReleaseAttackAction();
             ReleaseGrenadeAction();
+            ReleasePingAction();
+            DetachPingDisplay();
             DespawnDowned();
             ResetSpawnProtectionLook();
             SetLocalView(false);
@@ -836,6 +840,7 @@ namespace Fps.Net
             RefreshDownedMarker();
             RefreshSpawnProtection();
             RefreshTeamColor();
+            RefreshPingDisplay();
 
             if (!_deathBodyPending)
             {

@@ -407,7 +407,8 @@ namespace Fps.Editor
                 }
 
                 var scene = SceneManager.GetSceneByPath(path);
-                var wasLoaded = scene.IsValid() && scene.isLoaded;
+                var wasInHierarchy = scene.IsValid();
+                var wasLoaded = wasInHierarchy && scene.isLoaded;
                 if (!wasLoaded)
                 {
                     scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
@@ -424,7 +425,8 @@ namespace Fps.Editor
                 {
                     if (!wasLoaded)
                     {
-                        EditorSceneManager.CloseScene(scene, true);
+                        // Hierarchy に残っていた未読み込みのシーンは、取り除かず元の「読み込まれていない」状態へ戻す。
+                        EditorSceneManager.CloseScene(scene, !wasInHierarchy);
                     }
                 }
             }

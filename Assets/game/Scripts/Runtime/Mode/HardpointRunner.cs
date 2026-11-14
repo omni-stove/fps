@@ -11,6 +11,7 @@ namespace Fps.Runtime
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
+    /// <item>秒数や得点は調整値のアセット (<see cref="Definition"/>) から読む。設定していなければ Inspector の値 (既定は Default*) を使う。</item>
     /// <item>拠点は <see cref="SetZones"/> で渡したもの。渡していなければ始めるときにシーンの ControlPointZone をすべて使う。
     /// 番号は 0 から抜けも重なりもなく、2 つ以上あること (でなければ理由をログに出して止まる)。</item>
     /// <item>毎 Tick の前に、有効な拠点の範囲にいる生きた参加者を調べ (<see cref="ControlPointZone.Scan"/>)、
@@ -35,6 +36,9 @@ namespace Fps.Runtime
 
         // bot ごとに巡回する向きを黄金角ずつ回し、同じ拠点に集まっても重ならないようにする。
         private const float RouteAngleStepDegrees = 137.5f;
+
+        [SerializeField, Tooltip("調整値のアセット。設定すれば下の値の代わりにこれを使う")]
+        private HardpointDefinition _definition;
 
         [SerializeField, Min(0.01f), Tooltip("有効な拠点が次の拠点へ移るまでの秒数")]
         private float _rotateSeconds = DefaultRotateSeconds;
@@ -66,6 +70,16 @@ namespace Fps.Runtime
 
         /// <summary>使っている拠点。番号の順。開始前は空。</summary>
         public IReadOnlyList<ControlPointZone> Zones => _activeZones;
+
+        /// <summary>
+        /// 調整値のアセット。設定されていれば <see cref="CreateSpec"/> はこれの値を使い、<see cref="RotateSeconds"/> などの Runner 自身の値は使わない。
+        /// null なら Runner 自身の値 (既定は Default*) を使う。始めた後に変えても効かない。
+        /// </summary>
+        public HardpointDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
 
         public float RotateSeconds
         {
@@ -112,9 +126,17 @@ namespace Fps.Runtime
             _zones = copy;
         }
 
-        /// <summary>Inspector の設定から、拠点が pointCount 個の <see cref="HardpointSpec"/> を作る。値が不正なら <see cref="ArgumentOutOfRangeException"/>。</summary>
+        /// <summary>
+        /// 拠点が pointCount 個の <see cref="HardpointSpec"/> を、<see cref="Definition"/> があればその値から、無ければ Inspector の設定から作る。
+        /// 値が不正なら <see cref="ArgumentOutOfRangeException"/>。
+        /// </summary>
         public HardpointSpec CreateSpec(int pointCount)
         {
+            if (_definition != null)
+            {
+                return _definition.ToSpec(pointCount);
+            }
+
             return new HardpointSpec(pointCount, _rotateSeconds, _pointsPerSecond, _scoreLimit, _timeLimitSeconds, _respawnSeconds);
         }
 

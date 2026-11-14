@@ -26,6 +26,7 @@ namespace Fps.Editor
     /// </summary>
     /// <remarks>
     /// 制限時間は、開いたシーンの <see cref="DominationRunner.TimeLimitSeconds"/> を Play の前に書き換えて縮める (シーンのファイルは保存しない)。
+    /// 調整値のアセット (<see cref="DominationRunner.Definition"/>) が配線されていれば、その値を Runner に写して外してから縮める。
     /// batchmode には入力が無いので、拠点 A へは歩かせずに移し、倒れて戻されたら生き返った後にまた移す。
     /// 再開も R の入力の代わりに <see cref="DominationRunner.Restart"/> を呼ぶ (R から Restart へつなぐのは DominationRunner の Update)。
     /// Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
@@ -118,6 +119,13 @@ namespace Fps.Editor
                 if (runner == null)
                 {
                     throw new InvalidOperationException($"'{DominationSceneBuilder.ScenePath}' has no DominationRunner; rerun {DominationSceneBuilder.MenuPath}");
+                }
+
+                // 調整値のアセットを書き換えると保存しなくてもメモリ上で後の実行に残るので、値を Runner に写してアセットを外し、Runner の値だけを縮める。
+                if (runner.Definition != null)
+                {
+                    runner.CopyFrom(runner.Definition);
+                    runner.Definition = null;
                 }
 
                 runner.TimeLimitSeconds = seconds;

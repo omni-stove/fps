@@ -28,6 +28,8 @@
   (`Assets/game/README.md`)。
 - 武器: `Assets/game/Weapons/Json/*.json` → `WeaponSpec`。表示名は表のキー (`nameKey`)。
 - ルール: `Assets/game/Rules/Json/*.json` → `GameRules`。
+- 陣取り系のモード: `DominationDefinition`・`HardpointDefinition` (`Modes/*.asset`、`ModeTuningAssetBuilder` が無ければ既定値で作る) →
+  `DominationSpec`・`HardpointSpec`。Runner に配線していなければ Runner の既定値で動く。
 - 音とエフェクト: `PresentationCatalog` (Resources の `Presentation/PresentationCatalog`) を差し替えれば変わる。
   武器ごとのものは武器の Id で引く。
 - 文言: `Resources/Localization/<言語>/*.json` の表を引く `LocalizedText`。
@@ -41,7 +43,8 @@
 - グレネード: `GrenadeSpec.Default*`。`GrenadeThrower` の Inspector では変えられるが、ルールや武器のような JSON は無い
 - 印: `PingSpec.Default*`。オフラインは `PingController` の Inspector、ネット対戦は `NetTeamDeathmatch.PingSpec` をコードで差し替えられるが、JSON は無い
 - 吹き飛ばし: `KnockbackSpec.Default*`。`KnockbackMovement` / `EnemyAgent` の `KnockbackSpec` をコードで差し替えられ、重さだけ Inspector で変えられるが、JSON は無い
-- 各モード: `DominationSpec`・`HordeSpec`・`SearchAndDestroySpec`・`KillConfirmedSpec`・`HardpointSpec`・`TeamDeathmatchSpec`・`PickupSpec` と、それぞれの `*Runner`
+- 各モード: `HordeSpec`・`SearchAndDestroySpec`・`KillConfirmedSpec`・`TeamDeathmatchSpec`・`PickupSpec` と、それぞれの `*Runner`。
+  オンラインの拠点制圧 (`NetTeamDeathmatch` の `_captureSeconds` など) もまだ `DominationRunner.Default*` を直接持つ
 - その他: `DestructiblePiece`、`ShrinkingZone`、`Damageable`、`CameraBoom`、`AdsZoom`、`RecoilState` などの `Default*`
 
 ### 設定した値でなく定数を直接見ている箇所

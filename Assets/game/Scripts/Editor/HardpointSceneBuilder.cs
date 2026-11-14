@@ -10,7 +10,7 @@ namespace Fps.Editor
     /// <summary>
     /// ハードポイントのシーン Hardpoint を組む。<see cref="ModeSceneBuilder"/> の既定の地形・出現点・bot (プレイヤーの陣営 0 に bot 2 体、陣営 1 に 3 体) に、
     /// 拠点 (<see cref="ControlPointZone"/>) を <see cref="Points"/> の 4 つ置き、<see cref="HardpointRunner"/> に配線する。
-    /// ルールは <see cref="GameRulesAssetBuilder.HardpointPath"/>。拠点の中心が NavMesh に乗っていて、プレイヤーの出現点から歩けることを確かめ、
+    /// ルールは <see cref="GameRulesAssetBuilder.HardpointPath"/>、秒数や得点は <see cref="ModeTuningAssetBuilder.HardpointPath"/> (無ければ既定値で作る)。拠点の中心が NavMesh に乗っていて、プレイヤーの出現点から歩けることを確かめ、
     /// 満たさなければシーンを保存せずに例外を投げる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.HardpointSceneBuilder.Build</code>
     /// </summary>
@@ -50,12 +50,10 @@ namespace Fps.Editor
 
         protected override ModeRunnerBase AddRunner(GameObject host, ModeSceneContext context)
         {
+            // NewScene(Single) は参照されていないアセットをアンロードするので、シーンを作った後のここで読む。
+            var tuning = ModeTuningAssetBuilder.LoadOrCreateHardpoint(ModeTuningAssetBuilder.HardpointPath);
             var runner = host.AddComponent<HardpointRunner>();
-            runner.RotateSeconds = HardpointRunner.DefaultRotateSeconds;
-            runner.PointsPerSecond = HardpointRunner.DefaultPointsPerSecond;
-            runner.ScoreLimit = HardpointRunner.DefaultScoreLimit;
-            runner.TimeLimitSeconds = HardpointRunner.DefaultTimeLimitSeconds;
-            runner.RespawnSeconds = HardpointRunner.DefaultRespawnSeconds;
+            runner.Definition = tuning;
             return runner;
         }
 

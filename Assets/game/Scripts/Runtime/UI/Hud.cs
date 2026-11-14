@@ -464,7 +464,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 武器の今のばらつき (<see cref="WeaponController.SpreadFraction"/>) を照準の広がりにし、ADS 中
+        /// 武器の今のばらつき (<see cref="WeaponController.SpreadFraction"/>) に姿勢の倍率 (<see cref="WeaponController.SpreadScale"/>) を掛けて照準の広がりにし、ADS 中
         /// (<see cref="AimDownSights.IsAiming"/>) とダッシュ中 (<see cref="PlayerController.IsSprinting"/>) は照準を隠す。
         /// 武器を渡していなければ広がり 0 で出す。値の源は <see cref="Initialize"/> の weapon と、その親の階層の ADS とプレイヤー。
         /// </summary>
@@ -478,7 +478,7 @@ namespace Fps.Runtime
 
             var aiming = _ads != null && _ads.IsAiming;
             var sprinting = _mover != null && _mover.IsSprinting;
-            _model.SetCrosshair(Mathf.Clamp01(_weapon.SpreadFraction), !aiming && !sprinting);
+            _model.SetCrosshair(Mathf.Clamp01(_weapon.SpreadFraction * _weapon.SpreadScale), !aiming && !sprinting);
         }
 
         private void TryRebuildViewAndLog()

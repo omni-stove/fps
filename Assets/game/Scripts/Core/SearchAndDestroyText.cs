@@ -5,31 +5,33 @@ using System.Globalization;
 namespace Fps.Core
 {
     /// <summary>
-    /// 爆破 (<see cref="SearchAndDestroy"/>) の HUD に出す文字列と、<c>[SearchAndDestroy]</c> 付きのログの文言。
+    /// 爆破 (<see cref="SearchAndDestroy"/>) の HUD に出す文と、<c>[SearchAndDestroy]</c> 付きのログの文言。
+    /// HUD の文は表のキー <c>mode.snd.*</c> と引数の <see cref="LocalizedText"/> で返し、受け取った側が今の言語で文にする。
     /// 陣営名は <see cref="ModeHudText.SideName"/>、設置地点の名前は <see cref="DominationHudFormat.PointName"/> (0 = A, 1 = B) と同じ。
     /// </summary>
     public static class SearchAndDestroyText
     {
         public const string Tag = "[SearchAndDestroy]";
 
-        public static string AttackRole => GameText.Get("searchAndDestroy.attackRole");
-        public static string DefendRole => GameText.Get("searchAndDestroy.defendRole");
+        public static LocalizedText AttackRole => new LocalizedText("mode.snd.attackRole");
+        public static LocalizedText DefendRole => new LocalizedText("mode.snd.defendRole");
 
         /// <example><c>SiteName(1)</c> は <c>B</c></example>
         public static string SiteName(int site) => DominationHudFormat.PointName(site);
 
         /// <summary>
         /// HUD の時計。待ちの間は開始までの秒数、設置前はラウンドの残り時間、設置後は起爆までの秒数 (<see cref="HudFormat.Time"/> の書式)。
+        /// 言語に依らないので表を引かずにそのまま運ぶ。
         /// </summary>
-        public static string Clock(SearchAndDestroy game)
+        public static LocalizedText Clock(SearchAndDestroy game)
         {
             Require(game);
             if (game.Phase == RoundPhase.Preparing)
             {
-                return HudFormat.Time(game.Rounds.PreparationRemaining);
+                return LocalizedText.Literal(HudFormat.Time(game.Rounds.PreparationRemaining));
             }
 
-            return HudFormat.Time(IsPlantedOrAfter(game.Bomb) ? game.FuseRemaining : game.RoundRemaining);
+            return LocalizedText.Literal(HudFormat.Time(IsPlantedOrAfter(game.Bomb) ? game.FuseRemaining : game.RoundRemaining));
         }
 
         /// <summary>
@@ -51,7 +53,7 @@ namespace Fps.Core
                 var isAttacker = side == attacker;
                 var wins = isAttacker ? attackerWins : defenderWins;
                 var other = isAttacker ? defenderWins : attackerWins;
-                var text = new LocalizedText("searchAndDestroy.score", ModeHudText.SideName(side), wins, isAttacker ? AttackRole : DefendRole);
+                var text = new LocalizedText("mode.snd.score", ModeHudText.SideName(side), wins, isAttacker ? AttackRole : DefendRole);
                 var line = new ModeHudScoreLine(side, text, side == ownSide, wins > other);
                 if (line.IsOwn)
                 {
@@ -72,31 +74,31 @@ namespace Fps.Core
         /// </summary>
         /// <param name="game">表示する試合。</param>
         /// <param name="localPlayerId">この画面で操作しているプレイヤー。参加していなければ null。</param>
-        public static IReadOnlyList<string> Lines(SearchAndDestroy game, int? localPlayerId)
+        public static IReadOnlyList<LocalizedText> Lines(SearchAndDestroy game, int? localPlayerId)
         {
             Require(game);
-            var lines = new List<string>();
+            var lines = new List<LocalizedText>();
             if (game.Phase == RoundPhase.Waiting)
             {
                 return lines;
             }
 
-            lines.Add(GameText.Format("searchAndDestroy.round", game.RoundNumber, game.Spec.WinsToWin));
+            lines.Add(new LocalizedText("mode.snd.round", game.RoundNumber, game.Spec.WinsToWin));
 
             var local = localPlayerId.HasValue && game.Mode.HasPlayer(localPlayerId.Value) ? localPlayerId : null;
             if (local.HasValue && game.Phase != RoundPhase.Ended)
             {
-                lines.Add(GameText.Get(game.IsAttacker(local.Value) ? "searchAndDestroy.youAttack" : "searchAndDestroy.youDefend"));
+                lines.Add(new LocalizedText(game.IsAttacker(local.Value) ? "mode.snd.youAttack" : "mode.snd.youDefend"));
             }
 
             if (game.Phase == RoundPhase.Preparing)
             {
                 if (game.LastRoundEnd.HasValue)
                 {
-                    lines.Add(GameText.Format("mode.previousRound", RoundResult(game.LastRoundWinner, game.LastRoundEnd.Value)));
+                    lines.Add(new LocalizedText("mode.snd.previousRound", RoundResult(game.LastRoundWinner, game.LastRoundEnd.Value)));
                 }
 
-                lines.Add(GameText.Format("mode.startsIn", HudFormat.DisplayedSeconds(game.Rounds.PreparationRemaining)));
+                lines.Add(new LocalizedText("mode.snd.startsIn", HudFormat.DisplayedSeconds(game.Rounds.PreparationRemaining)));
                 return lines;
             }
 
@@ -104,7 +106,7 @@ namespace Fps.Core
             {
                 if (game.LastRoundEnd.HasValue)
                 {
-                    lines.Add(GameText.Format("searchAndDestroy.lastRound", RoundResult(game.LastRoundWinner, game.LastRoundEnd.Value)));
+                    lines.Add(new LocalizedText("mode.snd.lastRound", RoundResult(game.LastRoundWinner, game.LastRoundEnd.Value)));
                 }
 
                 return lines;
@@ -113,31 +115,31 @@ namespace Fps.Core
             switch (game.Bomb)
             {
                 case BombState.Carried:
-                    lines.Add(GameText.Get(local.HasValue && game.CarrierId == local
-                        ? "searchAndDestroy.youCarry"
-                        : "searchAndDestroy.carried"));
+                    lines.Add(new LocalizedText(local.HasValue && game.CarrierId == local
+                        ? "mode.snd.youCarry"
+                        : "mode.snd.carried"));
                     if (game.PlantingSite.HasValue)
                     {
-                        lines.Add(GameText.Format("searchAndDestroy.planting", SiteName(game.PlantingSite.Value), Percent(game.PlantFraction)));
+                        lines.Add(new LocalizedText("mode.snd.planting", SiteName(game.PlantingSite.Value), Percent(game.PlantFraction)));
                     }
 
                     break;
                 case BombState.Dropped:
-                    lines.Add(GameText.Get("searchAndDestroy.dropped"));
+                    lines.Add(new LocalizedText("mode.snd.dropped"));
                     break;
                 case BombState.Planted:
                     lines.Add(Fuse(game.PlantedSite.Value, game.FuseRemaining));
                     if (game.DefuserId.HasValue)
                     {
-                        lines.Add(GameText.Format("searchAndDestroy.defusing", Percent(game.DefuseFraction)));
+                        lines.Add(new LocalizedText("mode.snd.defusing", Percent(game.DefuseFraction)));
                     }
 
                     break;
                 case BombState.Defused:
-                    lines.Add(GameText.Get("searchAndDestroy.defused"));
+                    lines.Add(new LocalizedText("mode.snd.defused"));
                     break;
                 case BombState.Detonated:
-                    lines.Add(GameText.Get("searchAndDestroy.detonated"));
+                    lines.Add(new LocalizedText("mode.snd.detonated"));
                     break;
             }
 
@@ -146,47 +148,47 @@ namespace Fps.Core
 
         /// <summary>設置後の起爆までの秒数 (端数は切り上げ)。</summary>
         /// <example><c>Fuse(0, 12.3f)</c> は <c>爆弾 A に設置: 起爆まで 13 秒</c></example>
-        public static string Fuse(int site, float fuseRemaining)
+        public static LocalizedText Fuse(int site, float fuseRemaining)
         {
-            return GameText.Format("searchAndDestroy.fuse", SiteName(site), HudFormat.DisplayedSeconds(fuseRemaining));
+            return new LocalizedText("mode.snd.fuse", SiteName(site), HudFormat.DisplayedSeconds(fuseRemaining));
         }
 
         /// <summary>ラウンドの結果。</summary>
         /// <example><c>RoundResult(Side.Bravo, RoundEndReason.Detonated)</c> は <c>BRAVO の勝ち (起爆)</c>、引き分けなら <c>引き分け (同時に全滅)</c></example>
-        public static string RoundResult(Side? winner, RoundEndReason reason)
+        public static LocalizedText RoundResult(Side? winner, RoundEndReason reason)
         {
             var head = winner.HasValue ? HudFormat.Wins(ModeHudText.SideName(winner.Value)) : HudFormat.Draw;
-            return GameText.Format("searchAndDestroy.roundResult", head, ReasonText(reason));
+            return new LocalizedText("mode.snd.roundResult", head, ReasonText(reason));
         }
 
-        public static string ReasonText(RoundEndReason reason)
+        public static LocalizedText ReasonText(RoundEndReason reason)
         {
             switch (reason)
             {
                 case RoundEndReason.Detonated:
-                    return GameText.Get("searchAndDestroy.reason.detonated");
+                    return new LocalizedText("mode.snd.reason.detonated");
                 case RoundEndReason.Defused:
-                    return GameText.Get("searchAndDestroy.reason.defused");
+                    return new LocalizedText("mode.snd.reason.defused");
                 case RoundEndReason.DefendersEliminated:
-                    return GameText.Get("searchAndDestroy.reason.defendersEliminated");
+                    return new LocalizedText("mode.snd.reason.defendersEliminated");
                 case RoundEndReason.AttackersEliminated:
-                    return GameText.Get("searchAndDestroy.reason.attackersEliminated");
+                    return new LocalizedText("mode.snd.reason.attackersEliminated");
                 case RoundEndReason.TimeUp:
-                    return GameText.Get("searchAndDestroy.reason.timeUp");
+                    return new LocalizedText("mode.snd.reason.timeUp");
                 case RoundEndReason.BothEliminated:
-                    return GameText.Get("searchAndDestroy.reason.bothEliminated");
+                    return new LocalizedText("mode.snd.reason.bothEliminated");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(reason), reason, "reason is not a valid RoundEndReason");
             }
         }
 
-        /// <summary>試合が終わったときの結果。終わっていなければ <see cref="HudFormat.NoResult"/>。</summary>
-        public static string Result(SearchAndDestroy game)
+        /// <summary>試合が終わったときの結果。終わっていなければ <c>default</c> (空の文)。</summary>
+        public static LocalizedText Result(SearchAndDestroy game)
         {
             Require(game);
             return game.Phase == RoundPhase.Ended && game.Winner.HasValue
-                ? GameText.Resolve(HudFormat.Wins(ModeHudText.SideName(game.Winner.Value)))
-                : HudFormat.NoResult;
+                ? HudFormat.Wins(ModeHudText.SideName(game.Winner.Value))
+                : default;
         }
 
         /// <example><c>[SearchAndDestroy] round=3 attacker=1 defender=0</c></example>
@@ -239,10 +241,10 @@ namespace Fps.Core
             return bomb == BombState.Planted || bomb == BombState.Defused || bomb == BombState.Detonated;
         }
 
-        private static string Percent(float fraction)
+        private static int Percent(float fraction)
         {
             var clamped = fraction > 0f ? Math.Min(1f, fraction) : 0f;
-            return Number((int)Math.Floor(clamped * 100f)) + "%";
+            return (int)Math.Floor(clamped * 100f);
         }
 
         private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);

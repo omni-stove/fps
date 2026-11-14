@@ -1,15 +1,18 @@
 using System;
+using System.Globalization;
 using Fps.Core;
 using UnityEngine;
 
 namespace Fps.Runtime
 {
     /// <summary>
-    /// <see cref="PlayerController"/> のうち、しゃがみの姿勢の処理。
+    /// <see cref="PlayerController"/> のうち、立ち・しゃがみ・伏せの姿勢の処理。
     /// Crouch を <see cref="ControlSettings"/> のモード (押している間／押すたびに切り替え) で <see cref="CrouchInput"/> が解釈し、
     /// ジャンプとダッシュの開始で解除する (頭上が塞がっていれば解除しない)。死亡・リスポーンでの解除は <see cref="ReleaseCrouch"/> を呼ぶ。
-    /// しゃがむと CharacterController の height と center を縮め (足元は動かさない)、目も下げる。
-    /// 立つときは立った高さのカプセルが自分以外のコライダーに重ならないときだけ立ち上がる。
+    /// 伏せたいか (.Prone.cs の <see cref="IsProneActive"/>) はしゃがみより優先する。
+    /// 低い姿勢になると CharacterController の height と center を縮め (足元は動かさない)、目も下げる。カプセルはそのまま当たり判定 (<see cref="Hitbox"/>) なので、
+    /// 当たり判定も同じ高さになる。高い姿勢へ戻るときは、その高さのカプセルが自分以外のコライダーに重ならないときだけ戻り、
+    /// 伏せから立てなければしゃがみまでは起き上がる。姿勢が変わるたびに <see cref="FormatStanceLog"/> の 1 行を出す。
     /// </summary>
     public sealed partial class PlayerController
     {
@@ -21,23 +24,32 @@ namespace Fps.Runtime
         private StanceGeometry _stance;
         private Transform _eye;
 
-        // 立ちの目の位置 (本体のローカル座標)。しゃがみでは Y だけ変える。
+        // 立ちの目の位置 (本体のローカル座標)。低い姿勢では Y だけ変える。
         private Vector3 _standingEyeLocal;
 
-        // 立ちの center。しゃがみでは Y だけ変え、X と Z は元のまま保つ。
+        // 立ちの center。低い姿勢では Y だけ変え、X と Z は元のまま保つ。
         private Vector3 _standingCenter;
-        private bool _isCrouched;
+        private PlayerStance _currentStance = PlayerStance.Standing;
         private InputDeviceKind _crouchDevice = InputDeviceKind.KeyboardMouse;
         private CrouchInput _crouchInput;
 
-        /// <summary>立ちとしゃがみの寸法。未初期化なら null。</summary>
+        /// <summary>立ち・しゃがみ・伏せの寸法。未初期化なら null。</summary>
         public StanceGeometry Stance => _stance;
 
-        /// <summary>しゃがみで上下させる目。目もカメラも無ければ null (カプセルだけ縮める)。</summary>
+        /// <summary>低い姿勢で上下させる目。目もカメラも無ければ null (カプセルだけ縮める)。</summary>
         public Transform Eye => _eye;
 
-        /// <summary>しゃがんでいるか。</summary>
-        public bool IsCrouched => _isCrouched;
+        /// <summary>今の実際の姿勢 (頭上が塞がって戻れないときも含む)。</summary>
+        public PlayerStance CurrentStance => _currentStance;
+
+        /// <summary>しゃがんでいるか。伏せているときは false。</summary>
+        public bool IsCrouched => _currentStance == PlayerStance.Crouching;
+
+        /// <summary>伏せているか (実際の姿勢)。</summary>
+        public bool IsProne => _currentStance == PlayerStance.Prone;
+
+        /// <summary>今の当たり判定 (CharacterController のカプセル) のワールドでの高さ (m)。未初期化なら 0。</summary>
+        public float HitboxHeight => _controller != null ? _controller.height * Mathf.Abs(transform.lossyScale.y) : 0f;
 
         /// <summary>最後にしゃがみか移動の入力をした機器。しゃがみのモードはこの機器の設定を使う。</summary>
         public InputDeviceKind CrouchDevice => _crouchDevice;
@@ -106,18 +118,34 @@ namespace Fps.Runtime
         /// </summary>
         public bool HasHeadroomToStand()
         {
+            return HasHeadroomFor(PlayerStance.Standing);
+        }
+
+        /// <summary>
+        /// stance の高さのカプセルが、今の位置で自分以外のコライダー (トリガーを除く) に重ならないか。
+        /// <see cref="HasHeadroomToStand"/> と同じ規則で調べる。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">未初期化。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">stance が定義済みの値でない。</exception>
+        public bool HasHeadroomFor(PlayerStance stance)
+        {
             if (!IsInitialized)
             {
                 throw new InvalidOperationException("PlayerController is not initialized");
             }
 
-            return IsStandingCapsuleClear(Vector3.zero);
+            return IsCapsuleClear(_stance.Shape(stance), Vector3.zero);
         }
 
         // 立った高さのカプセルを今の位置から offset (ワールド) だけずらした所に置き、自分以外に重ならないか (乗り越えの軌跡の検査と共用)。
         private bool IsStandingCapsuleClear(Vector3 offset)
         {
-            _stance.SphereCenters(_stance.Standing, out var bottomY, out var topY);
+            return IsCapsuleClear(_stance.Standing, offset);
+        }
+
+        private bool IsCapsuleClear(StanceShape shape, Vector3 offset)
+        {
+            _stance.SphereCenters(shape, out var bottomY, out var topY);
             var body = transform;
             var scale = body.lossyScale;
             var radius = _stance.Radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
@@ -149,24 +177,42 @@ namespace Fps.Runtime
             return $"{LogTag} crouched={(crouched ? "true" : "false")}";
         }
 
-        private void UpdateStance(bool wantsCrouch)
+        /// <summary>姿勢が変わったときのログ。例: <c>[Player] stance=Prone hitboxHeight=1.00</c>。</summary>
+        /// <param name="stance">変わった後の姿勢。</param>
+        /// <param name="hitboxHeight">変わった後の当たり判定のワールドでの高さ (m)。</param>
+        public static string FormatStanceLog(PlayerStance stance, float hitboxHeight)
         {
-            if (wantsCrouch == _isCrouched)
-            {
-                return;
-            }
-
-            if (!wantsCrouch && !HasHeadroomToStand())
-            {
-                return;
-            }
-
-            ApplyStance(wantsCrouch);
+            return $"{LogTag} stance={stance} hitboxHeight={hitboxHeight.ToString("F2", CultureInfo.InvariantCulture)}";
         }
 
-        private void ApplyStance(bool crouched)
+        // 低い姿勢へはすぐ移る。高い姿勢へは、望む高さから順に今の高さの 1 つ上まで、頭上が空いている最も高いものへ戻る。
+        private void UpdateStance(bool wantsCrouch, bool wantsProne)
         {
-            var shape = _stance.Shape(crouched);
+            var target = wantsProne ? PlayerStance.Prone : wantsCrouch ? PlayerStance.Crouching : PlayerStance.Standing;
+            if (target == _currentStance)
+            {
+                return;
+            }
+
+            if (target > _currentStance)
+            {
+                ApplyStance(target);
+                return;
+            }
+
+            for (var stance = target; stance < _currentStance; stance++)
+            {
+                if (HasHeadroomFor(stance))
+                {
+                    ApplyStance(stance);
+                    return;
+                }
+            }
+        }
+
+        private void ApplyStance(PlayerStance stance)
+        {
+            var shape = _stance.Shape(stance);
             _controller.height = shape.Height;
             _controller.center = new Vector3(_standingCenter.x, shape.CenterY, _standingCenter.z);
             if (_eye != null)
@@ -174,13 +220,20 @@ namespace Fps.Runtime
                 _eye.position = transform.TransformPoint(new Vector3(_standingEyeLocal.x, shape.EyeY, _standingEyeLocal.z));
             }
 
-            if (_isCrouched == crouched)
+            if (_currentStance == stance)
             {
                 return;
             }
 
-            _isCrouched = crouched;
-            Debug.Log(FormatCrouchedLog(crouched), this);
+            var wasCrouched = IsCrouched;
+            _currentStance = stance;
+            ApplyProneLook();
+            if (wasCrouched != IsCrouched)
+            {
+                Debug.Log(FormatCrouchedLog(IsCrouched), this);
+            }
+
+            Debug.Log(FormatStanceLog(stance, HitboxHeight), this);
         }
 
         // ViewRig の Awake より先でも決まるよう、ViewRig.FindEye も自分で階層を探す。

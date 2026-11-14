@@ -331,7 +331,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// TPS 射撃場のアクション。<see cref="RangeActions"/> に回避・乗り越え・崖のぼり・グレネード (<see cref="TpsRangeGrenadeCount"/> 個)・スライディング・怯みを足したもの。
+        /// TPS 射撃場のアクション。<see cref="RangeActions"/> に回避・乗り越え・崖のぼり・グレネード (<see cref="TpsRangeGrenadeCount"/> 個)・スライディング・伏せ・怯みを足したもの。
         /// </summary>
         public static ActionRules TpsRangeActions()
         {
@@ -342,6 +342,7 @@ namespace Fps.Editor
                 .WithGrenade(Grenade.On)
                 .WithGrenadeCount(TpsRangeGrenadeCount)
                 .WithSlide(Slide.On)
+                .WithProne(Prone.On)
                 .WithStagger(Stagger.On);
         }
 

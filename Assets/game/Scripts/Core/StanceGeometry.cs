@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// 立ちとしゃがみのカプセル・目の寸法を出す。しゃがむとカプセルを足元に合わせたまま縮め (足元の Y は変えない)、
+    /// 立ち・しゃがみ・伏せのカプセル・目の寸法を出す。低い姿勢ではカプセルを足元に合わせたまま縮め (足元の Y は変えない)、
     /// 目は頭のてっぺんからの距離を保ったまま下げる。Y はすべてプレイヤー本体のローカル座標 (m)。
     /// </summary>
     public sealed class StanceGeometry
@@ -14,15 +14,31 @@ namespace Fps.Core
         /// <summary>しゃがみの寸法。</summary>
         public StanceShape Crouched { get; }
 
+        /// <summary>伏せの寸法。伏せの高さを渡さずに作ったときはしゃがみと同じ。</summary>
+        public StanceShape Prone { get; }
+
         /// <summary>カプセルの半径。</summary>
         public float Radius { get; }
 
+        /// <summary>伏せの高さを渡さずに作る。<see cref="Prone"/> はしゃがみと同じ寸法になる。</summary>
         /// <param name="standingHeight">立ちのカプセルの高さ。正の有限値。</param>
         /// <param name="standingCenterY">立ちのカプセルの中心の Y。有限値。</param>
         /// <param name="standingEyeY">立ちの目の Y。有限値。</param>
         /// <param name="crouchHeight">しゃがみのカプセルの高さ。半径の 2 倍以上、立ちの高さ以下。</param>
         /// <param name="radius">カプセルの半径。0 以上の有限値。</param>
         public StanceGeometry(float standingHeight, float standingCenterY, float standingEyeY, float crouchHeight, float radius)
+            : this(standingHeight, standingCenterY, standingEyeY, crouchHeight, crouchHeight, radius)
+        {
+        }
+
+        /// <param name="standingHeight">立ちのカプセルの高さ。正の有限値。</param>
+        /// <param name="standingCenterY">立ちのカプセルの中心の Y。有限値。</param>
+        /// <param name="standingEyeY">立ちの目の Y。有限値。</param>
+        /// <param name="crouchHeight">しゃがみのカプセルの高さ。半径の 2 倍以上、立ちの高さ以下。</param>
+        /// <param name="proneHeight">伏せのカプセルの高さ。半径の 2 倍以上、しゃがみの高さ以下。</param>
+        /// <param name="radius">カプセルの半径。0 以上の有限値。</param>
+        public StanceGeometry(
+            float standingHeight, float standingCenterY, float standingEyeY, float crouchHeight, float proneHeight, float radius)
         {
             if (!(standingHeight > 0f) || float.IsInfinity(standingHeight))
             {
@@ -53,21 +69,42 @@ namespace Fps.Core
                     $"crouchHeight must be positive, at least twice the radius ({radius * 2f}) and not above standingHeight ({standingHeight})");
             }
 
+            // 伏せから立つときにしゃがみを経て確かめるので、しゃがみより高い伏せは認めない。
+            if (!(proneHeight > 0f && proneHeight <= crouchHeight && proneHeight >= radius * 2f))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(proneHeight),
+                    proneHeight,
+                    $"proneHeight must be positive, at least twice the radius ({radius * 2f}) and not above crouchHeight ({crouchHeight})");
+            }
+
             Radius = radius;
             Standing = new StanceShape(standingHeight, standingCenterY, standingEyeY);
-
-            var drop = standingHeight - crouchHeight;
-            var feetY = Standing.BottomY;
-
-            // 目が足元より下へ行かないようにする。ただし元から足元より下に置かれた目はそのまま。
-            var crouchedEyeY = Math.Max(standingEyeY - drop, Math.Min(standingEyeY, feetY));
-            Crouched = new StanceShape(crouchHeight, feetY + (crouchHeight * 0.5f), crouchedEyeY);
+            Crouched = Lowered(Standing, crouchHeight);
+            Prone = Lowered(Standing, proneHeight);
         }
 
-        /// <summary>姿勢に応じた寸法。</summary>
+        /// <summary>姿勢に応じた寸法。crouched が false なら立ち。</summary>
         public StanceShape Shape(bool crouched)
         {
             return crouched ? Crouched : Standing;
+        }
+
+        /// <summary>姿勢に応じた寸法。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">stance が定義済みの値でない。</exception>
+        public StanceShape Shape(PlayerStance stance)
+        {
+            switch (stance)
+            {
+                case PlayerStance.Standing:
+                    return Standing;
+                case PlayerStance.Crouching:
+                    return Crouched;
+                case PlayerStance.Prone:
+                    return Prone;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(stance), stance, "stance is not a defined PlayerStance");
+            }
         }
 
         /// <summary>
@@ -78,6 +115,16 @@ namespace Fps.Core
             var half = Math.Max((shape.Height * 0.5f) - Radius, 0f);
             bottomY = shape.CenterY - half;
             topY = shape.CenterY + half;
+        }
+
+        private static StanceShape Lowered(StanceShape standing, float height)
+        {
+            var drop = standing.Height - height;
+            var feetY = standing.BottomY;
+
+            // 目が足元より下へ行かないようにする。ただし元から足元より下に置かれた目はそのまま。
+            var eyeY = Math.Max(standing.EyeY - drop, Math.Min(standing.EyeY, feetY));
+            return new StanceShape(height, feetY + (height * 0.5f), eyeY);
         }
 
         private static bool IsFinite(float value)

@@ -217,6 +217,27 @@ namespace Fps.Tests.EditMode
                 WeaponAssetBuilder.RifleAdsFieldOfView,
                 Is.LessThan(WeaponAssetBuilder.HandgunAdsFieldOfView),
                 "the rifle zooms in further than the handgun");
+
+            Assert.That(rifleAsset.NameKey, Is.EqualTo(WeaponAssetBuilder.RifleNameKey), "the asset stores the key, not the text");
+            Assert.That(handgunAsset.NameKey, Is.EqualTo(WeaponAssetBuilder.HandgunNameKey), "the asset stores the key, not the text");
+            Assert.That(rifle.Name, Is.EqualTo(new LocalizedText(WeaponAssetBuilder.RifleNameKey)));
+            Assert.That(handgun.Name, Is.EqualTo(new LocalizedText(WeaponAssetBuilder.HandgunNameKey)));
+        }
+
+        [Test]
+        public void EveryBuiltWeaponNameIsInEveryLanguageTable()
+        {
+            foreach (var spec in new[] { WeaponAssetBuilder.RifleSpec(), WeaponAssetBuilder.HandgunSpec(), WeaponAssetBuilder.LauncherSpec() })
+            {
+                foreach (var language in GameLanguages.All)
+                {
+                    Assert.That(Localizer.TableOf(language).Contains(spec.NameKey), Is.True, $"{GameLanguages.Code(language)}: {spec.NameKey}");
+                }
+            }
+
+            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(WeaponAssetBuilder.RifleSpec().Name), Is.EqualTo("Rifle"));
+            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(WeaponAssetBuilder.HandgunSpec().Name), Is.EqualTo("Handgun"));
+            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(WeaponAssetBuilder.LauncherSpec().Name), Is.EqualTo("Launcher"));
         }
 
         [Test]
@@ -451,9 +472,9 @@ namespace Fps.Tests.EditMode
                 var ads = SpreadPattern.ConeDegrees(spec, 1f, 0f);
                 var moving = SpreadPattern.ConeDegrees(spec, 0f, 1f);
 
-                Assert.That(ads, Is.GreaterThan(0f).And.LessThan(hip), spec.DisplayName);
-                Assert.That(moving, Is.GreaterThan(hip), spec.DisplayName);
-                Assert.That(spec.BlindFireSpreadDegrees, Is.GreaterThan(hip), spec.DisplayName + ": blind fire is still the widest");
+                Assert.That(ads, Is.GreaterThan(0f).And.LessThan(hip), spec.LogName);
+                Assert.That(moving, Is.GreaterThan(hip), spec.LogName);
+                Assert.That(spec.BlindFireSpreadDegrees, Is.GreaterThan(hip), spec.LogName + ": blind fire is still the widest");
             }
 
             Assert.That(

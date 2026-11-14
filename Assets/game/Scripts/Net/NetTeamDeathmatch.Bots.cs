@@ -410,7 +410,7 @@ namespace Fps.Net
             var team = _session.NextTeam;
             Debug.Log(MatchLog.Joined(playerId, team));
             Debug.Log(BotLogTag + " added player=" + playerId.ToString(CultureInfo.InvariantCulture)
-                + " name=" + BotRoster.ScoreboardName(playerId) + " team=" + team);
+                + " name=" + GameText.Resolve(BotRoster.ScoreboardName(playerId)) + " team=" + team);
             _session.Join(playerId);
             ObjectivePlayerJoined(playerId, player);
             return true;

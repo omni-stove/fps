@@ -8,6 +8,7 @@ namespace Fps.Core
     /// (Bind 系も中では Set 系を呼ぶ)。毎フレーム値を読みに行かず、値が来たときだけ書式を通し、表示が変わったときだけ
     /// <see cref="Changed"/> を呼ぶ (残り時間は秒の桁が変わったときだけ)。Bind で源を差し替えると前の源の購読は外し、今の値をすぐ反映する。
     /// null を渡すとその項目は仮の表示に戻る。
+    /// 表のキーで作る文 (<see cref="HudFormat.Result"/> など) は、受けた時点の言語 (<see cref="GameText"/>) で文字列にして持つ。
     /// <para>
     /// 同じ項目を Bind しながら Set 系でも書くと、次に来た方が表示に残る。ネットワークの値のように Core の型が無い源は
     /// Bind せずに Set 系だけで書く。
@@ -41,7 +42,7 @@ namespace Fps.Core
         /// <summary>リロード中か。<see cref="AmmoText"/> にも出るが、View が見た目を変えるのに使う。</summary>
         public bool IsReloading { get; private set; }
 
-        /// <summary>弾数の上に出す、持っている武器の表示名 (<see cref="WeaponSpec.DisplayName"/>)。武器が無ければ <see cref="HudFormat.NoWeaponName"/>。</summary>
+        /// <summary>弾数の上に出す、持っている武器の名前 (<see cref="WeaponSpec.Name"/> を引いた文字列)。武器が無ければ <see cref="HudFormat.NoWeaponName"/>。</summary>
         public string WeaponNameText { get; private set; } = HudFormat.NoWeaponName;
 
         /// <summary>上中央の残り時間 (mm:ss)。</summary>
@@ -99,7 +100,7 @@ namespace Fps.Core
 
         /// <summary>
         /// 弾数と武器名の源を差し替える。弾数は射撃 (Fired)・リロード完了 (Reloaded)・予備弾の補充 (ReserveAmmoAdded) で更新し、武器名はここで
-        /// <see cref="WeaponSpec.DisplayName"/> にする。null なら両方とも仮の表示に戻す。
+        /// <see cref="WeaponSpec.Name"/> を今の言語で引いた文字列にする。null なら両方とも仮の表示に戻す。
         /// </summary>
         public void BindWeapon(Weapon weapon)
         {
@@ -119,7 +120,7 @@ namespace Fps.Core
             }
 
             OnWeaponChanged();
-            SetWeaponName(_weapon != null ? _weapon.Spec.DisplayName : HudFormat.NoWeaponName);
+            SetWeaponName(_weapon != null ? GameText.Resolve(_weapon.Spec.Name) : HudFormat.NoWeaponName);
         }
 
         /// <summary>残り時間の源を差し替える。null なら仮の表示に戻す。</summary>
@@ -293,6 +294,12 @@ namespace Fps.Core
             Changed?.Invoke(HudField.Notice);
         }
 
+        /// <summary>一時的な案内を、今の言語 (<see cref="GameText"/>) の文にして出す。空の文なら消す。</summary>
+        public void SetNotice(LocalizedText text)
+        {
+            SetNotice(GameText.Resolve(text));
+        }
+
         /// <summary>倒れている間の案内を、リスポーン方式に合わせて出す (<see cref="HudFormat.RespawnNotice"/>)。</summary>
         /// <exception cref="ArgumentOutOfRangeException">mode が定義済みの値でないか、None 以外で seconds が負。</exception>
         public void SetRespawnNotice(RespawnMode mode, int seconds)
@@ -305,8 +312,8 @@ namespace Fps.Core
         public void SetScores(Team ownTeam, int alphaScore, int bravoScore)
         {
             var opponent = HudFormat.Opponent(ownTeam);
-            var first = HudFormat.TeamScore(ownTeam, ownTeam == Team.Alpha ? alphaScore : bravoScore);
-            var second = HudFormat.TeamScore(opponent, opponent == Team.Alpha ? alphaScore : bravoScore);
+            var first = GameText.Resolve(HudFormat.TeamScore(ownTeam, ownTeam == Team.Alpha ? alphaScore : bravoScore));
+            var second = GameText.Resolve(HudFormat.TeamScore(opponent, opponent == Team.Alpha ? alphaScore : bravoScore));
             ApplyScores(ownTeam, first, second);
         }
 
@@ -319,7 +326,7 @@ namespace Fps.Core
         /// <summary>試合結果 (winner が null なら引き分け) を出す。</summary>
         public void SetResult(Team? winner)
         {
-            ApplyResult(HudFormat.Result(winner));
+            ApplyResult(GameText.Resolve(HudFormat.Result(winner)));
         }
 
         /// <summary>試合結果を消す。</summary>

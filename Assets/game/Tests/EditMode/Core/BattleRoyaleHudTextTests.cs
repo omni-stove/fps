@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using NUnit.Framework;
 
@@ -11,26 +12,34 @@ namespace Fps.Core.Tests
         private const int _squadmate = 1;
         private const int _enemy = 10;
         private const int _otherEnemy = 20;
-        private const string _zoneLine = "エリア縮小まで 00:12";
-
         private static readonly string[] _expectedLines =
         {
             "残り分隊 3/3",
             "順位 3 位以内",
-            _zoneLine,
+            "エリア縮小まで 00:12",
             "分隊 生存 1 (ダウン 1)",
             "蘇生中 0%",
-            BattleRoyaleHudText.NoWeapon,
+            "武器なし: 落ちている武器を拾う",
+        };
+
+        private static readonly string[] _modeBrKeys =
+        {
+            "mode.br.squadsLeft",
+            "mode.br.placementAtLeast",
+            "mode.br.squad",
+            "mode.br.noWeapon",
         };
 
         [Test]
         public void FormatsTheSingleLines()
         {
-            Assert.That(BattleRoyaleHudText.SquadsLeft(3, 4), Is.EqualTo("残り分隊 3/4"));
-            Assert.That(BattleRoyaleHudText.Placement(3, 2), Is.EqualTo("順位 3 位"));
-            Assert.That(BattleRoyaleHudText.Placement(null, 2), Is.EqualTo("順位 2 位以内"));
-            Assert.That(BattleRoyaleHudText.Squad(2, 1), Is.EqualTo("分隊 生存 2 (ダウン 1)"));
-            Assert.That(BattleRoyaleHudText.Squad(2, 0), Is.EqualTo("分隊 生存 2"));
+            Assert.That(GameText.Resolve(BattleRoyaleHudText.SquadsLeft(3, 4)), Is.EqualTo("残り分隊 3/4"));
+            Assert.That(GameText.Resolve(BattleRoyaleHudText.Placement(3, 2)), Is.EqualTo("順位 3 位"));
+            Assert.That(GameText.Resolve(BattleRoyaleHudText.Placement(null, 2)), Is.EqualTo("順位 2 位以内"));
+            Assert.That(GameText.Resolve(BattleRoyaleHudText.Squad(2, 1)), Is.EqualTo("分隊 生存 2 (ダウン 1)"));
+            Assert.That(GameText.Resolve(BattleRoyaleHudText.Squad(2, 0)), Is.EqualTo("分隊 生存 2"));
+            Assert.That(BattleRoyaleHudText.SquadsLeft(3, 4), Is.EqualTo(new LocalizedText("mode.br.squadsLeft", 3, 4)));
+            Assert.That(BattleRoyaleHudText.Squad(2, 1).Key, Is.EqualTo("hud.mode.withDowned"));
             Assert.Throws<ArgumentOutOfRangeException>(() => BattleRoyaleHudText.SquadsLeft(5, 4));
             Assert.Throws<ArgumentOutOfRangeException>(() => BattleRoyaleHudText.Placement(0, 2));
             Assert.Throws<ArgumentOutOfRangeException>(() => BattleRoyaleHudText.Placement(null, 0));
@@ -44,9 +53,13 @@ namespace Fps.Core.Tests
             br.Start();
             br.ReportLethal(_squadmate, _enemy);
 
-            var lines = BattleRoyaleHudText.Lines(br, _player, _squadmate, _zoneLine, unarmed: true);
+            var zoneLine = new LocalizedText("hud.zone.waiting", "00:12");
 
-            Assert.That(lines, Is.EqualTo(_expectedLines));
+            var lines = BattleRoyaleHudText.Lines(br, _player, _squadmate, zoneLine, unarmed: true);
+
+            Assert.That(Resolve(lines), Is.EqualTo(_expectedLines));
+            Assert.That(lines[2], Is.EqualTo(zoneLine));
+            Assert.That(new[] { lines[0].Key, lines[1].Key, ((LocalizedText)lines[3].Args[0]).Key, lines[5].Key }, Is.EqualTo(_modeBrKeys));
         }
 
         [Test]
@@ -56,7 +69,7 @@ namespace Fps.Core.Tests
             br.Start();
             br.ReportLethal(_player, _enemy);
 
-            var lines = BattleRoyaleHudText.Lines(br, _player, null, null, unarmed: false);
+            var lines = BattleRoyaleHudText.Lines(br, _player, null, default, unarmed: false);
 
             Assert.That(lines, Does.Contain(HudFormat.Downed(15, 0)));
         }
@@ -70,15 +83,15 @@ namespace Fps.Core.Tests
             br.ReportLethal(_squadmate, _enemy);
             br.Tick(0f);
 
-            var lines = BattleRoyaleHudText.Lines(br, _player, null, null, unarmed: false);
+            var lines = Resolve(BattleRoyaleHudText.Lines(br, _player, null, default, unarmed: false));
             var scores = BattleRoyaleHudText.Squads(br, new Side(0));
 
             Assert.That(lines, Does.Contain("残り分隊 2/3"));
             Assert.That(lines, Does.Contain("順位 3 位"));
-            Assert.That(scores[0].Text, Is.EqualTo("ALPHA 3 位"));
+            Assert.That(GameText.Resolve(scores[0].Text), Is.EqualTo("ALPHA 3 位"));
             Assert.That(scores[0].IsOwn, Is.True);
-            Assert.That(scores[1].Text, Is.EqualTo("BRAVO 残り 1"));
-            Assert.That(scores[2].Text, Is.EqualTo("SIDE 2 残り 1"));
+            Assert.That(GameText.Resolve(scores[1].Text), Is.EqualTo("BRAVO 残り 1"));
+            Assert.That(GameText.Resolve(scores[2].Text), Is.EqualTo("SIDE 2 残り 1"));
             Assert.That(scores.Count, Is.EqualTo(3), "the empty fourth squad is not listed");
         }
 
@@ -87,14 +100,14 @@ namespace Fps.Core.Tests
         {
             var br = Create();
             br.Start();
-            Assert.That(BattleRoyaleHudText.Result(br), Is.EqualTo(HudFormat.NoResult));
+            Assert.That(BattleRoyaleHudText.Result(br).IsEmpty, Is.True);
 
             br.ReportLethal(_player, _enemy);
             br.ReportLethal(_squadmate, _enemy);
             br.ReportLethal(_otherEnemy, _enemy);
             br.Tick(0f);
 
-            Assert.That(BattleRoyaleHudText.Result(br), Is.EqualTo("BRAVO の勝ち"));
+            Assert.That(GameText.Resolve(BattleRoyaleHudText.Result(br)), Is.EqualTo("BRAVO の勝ち"));
             Assert.That(BattleRoyaleLog.Placements(br), Is.EqualTo("[Mode] placements winner=1 1:squad=1 2:squad=0 2:squad=2"));
         }
 
@@ -122,6 +135,17 @@ namespace Fps.Core.Tests
             br.Mode.AddPlayer(_enemy, new Side(1));
             br.Mode.AddPlayer(_otherEnemy, new Side(2));
             return br;
+        }
+
+        private static string[] Resolve(IReadOnlyList<LocalizedText> lines)
+        {
+            var resolved = new string[lines.Count];
+            for (var i = 0; i < lines.Count; i++)
+            {
+                resolved[i] = GameText.Resolve(lines[i]);
+            }
+
+            return resolved;
         }
     }
 }

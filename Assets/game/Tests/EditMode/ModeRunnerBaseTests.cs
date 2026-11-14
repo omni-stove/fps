@@ -186,15 +186,16 @@ namespace Fps.Tests.EditMode
 
             Assert.That(hud.IsShown, Is.True);
             Assert.That(hud.TimeText, Is.EqualTo("01:00"));
-            Assert.That(hud.Scores[0].Text, Is.EqualTo("BRAVO 0"));
+            Assert.That(hud.ScoreTexts[0], Is.EqualTo("BRAVO 0"));
+            Assert.That(hud.Scores[0].Text, Is.EqualTo(ModeHudText.ScoreText(Side.Bravo, 0d)));
             Assert.That(hud.Scores[0].IsOwn, Is.True);
             Assert.That(hud.Lines, Is.EqualTo(new[] { "extra" }));
 
             KillBy(b, player);
             _runner.Tick(0f);
 
-            Assert.That(hud.Lines, Is.EqualTo(new[] { HudFormat.Respawn(1), "extra" }));
-            Assert.That(hud.Scores[2].Text, Is.EqualTo("SIDE 2 1"));
+            Assert.That(hud.Lines, Is.EqualTo(new[] { "リスポーンまで 1 秒", "extra" }));
+            Assert.That(hud.ScoreTexts[2], Is.EqualTo("SIDE 2 1"));
             Assert.That(hud.Scores[2].IsLeading, Is.True);
         }
 

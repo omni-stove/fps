@@ -74,9 +74,10 @@ namespace Fps.Core.Tests
         {
             var schedule = Schedule();
 
-            Assert.That(ZoneHudText.Line(schedule.Evaluate(17.5f)), Is.EqualTo("エリア縮小まで 00:13"));
-            Assert.That(ZoneHudText.Line(schedule.Evaluate(40f)), Is.EqualTo("エリア縮小中 00:10"));
-            Assert.That(ZoneHudText.Line(schedule.Evaluate(100f)), Is.EqualTo("最終エリア"));
+            Assert.That(ZoneHudText.Line(schedule.Evaluate(17.5f)), Is.EqualTo(new LocalizedText("hud.zone.waiting", "00:13")));
+            Assert.That(GameText.Resolve(ZoneHudText.Line(schedule.Evaluate(17.5f))), Is.EqualTo("エリア縮小まで 00:13"));
+            Assert.That(GameText.Resolve(ZoneHudText.Line(schedule.Evaluate(40f))), Is.EqualTo("エリア縮小中 00:10"));
+            Assert.That(GameText.Resolve(ZoneHudText.Line(schedule.Evaluate(100f))), Is.EqualTo("最終エリア"));
         }
     }
 }

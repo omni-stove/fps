@@ -105,7 +105,8 @@ namespace Fps.Core
 
         private static string PerSide(int alpha, int bravo)
         {
-            return ModeHudText.SideName(Side.Alpha) + " " + Number(alpha) + " / " + ModeHudText.SideName(Side.Bravo) + " " + Number(bravo);
+            return GameText.Resolve(ModeHudText.SideName(Side.Alpha)) + " " + Number(alpha) + " / "
+                + GameText.Resolve(ModeHudText.SideName(Side.Bravo)) + " " + Number(bravo);
         }
 
         private static string Number(int value)

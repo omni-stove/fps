@@ -62,7 +62,7 @@ namespace Fps.Core
             }
 
             var text = ModeHudText.Remaining(side, remaining);
-            return downed == 0 ? text : ModeHudText.WithDowned(text, downed);
+            return GameText.Resolve(downed == 0 ? text : ModeHudText.WithDowned(text, downed));
         }
 
         /// <summary>敵にとどめを刺している人の案内。</summary>
@@ -151,13 +151,13 @@ namespace Fps.Core
             if (local.HasValue && session.IsDowned(local.Value))
             {
                 var bleedout = session.GetBleedoutRemaining(local.Value) ?? 0f;
-                lines.Add(HudFormat.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value))));
+                lines.Add(GameText.Resolve(HudFormat.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value)))));
             }
             else if (local.HasValue && interactTargetId.HasValue && session.IsDowned(interactTargetId.Value) && mode.HasPlayer(interactTargetId.Value))
             {
                 var target = interactTargetId.Value;
                 lines.Add(mode.GetSide(target) == ownSide
-                    ? HudFormat.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(target)))
+                    ? GameText.Resolve(HudFormat.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(target))))
                     : Executing(HudFormat.RevivePercent(session.GetExecuteProgress(target))));
             }
 
@@ -179,7 +179,7 @@ namespace Fps.Core
                 return HudFormat.NoResult;
             }
 
-            return HudFormat.Wins(ModeHudText.SideName(round.Winner.Value));
+            return GameText.Resolve(HudFormat.Wins(ModeHudText.SideName(round.Winner.Value)));
         }
     }
 }

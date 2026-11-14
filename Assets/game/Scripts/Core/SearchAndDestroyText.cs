@@ -51,7 +51,7 @@ namespace Fps.Core
                 var isAttacker = side == attacker;
                 var wins = isAttacker ? attackerWins : defenderWins;
                 var other = isAttacker ? defenderWins : attackerWins;
-                var text = GameText.Format("searchAndDestroy.score", ModeHudText.SideName(side), wins, isAttacker ? AttackRole : DefendRole);
+                var text = new LocalizedText("searchAndDestroy.score", ModeHudText.SideName(side), wins, isAttacker ? AttackRole : DefendRole);
                 var line = new ModeHudScoreLine(side, text, side == ownSide, wins > other);
                 if (line.IsOwn)
                 {
@@ -185,7 +185,7 @@ namespace Fps.Core
         {
             Require(game);
             return game.Phase == RoundPhase.Ended && game.Winner.HasValue
-                ? HudFormat.Wins(ModeHudText.SideName(game.Winner.Value))
+                ? GameText.Resolve(HudFormat.Wins(ModeHudText.SideName(game.Winner.Value)))
                 : HudFormat.NoResult;
         }
 

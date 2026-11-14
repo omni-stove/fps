@@ -133,7 +133,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 ```json
 {
   "id": "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83",
-  "displayName": "Rifle",
+  "nameKey": "weapon.rifle",
   "category": "AssaultRifle",
   "fireMode": "Auto",
   "magazineSize": 30,
@@ -143,7 +143,9 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 - `category`・`fireMode` は列挙子の名前の文字列。
 - `falloff` は `{ "startDistance": …, "endDistance": …, "minMultiplier": … }` か、減衰しないなら `"None"`。
-- `adsFieldOfView` と `displayName` は `null` も書ける。既定値のある項目は省ける。知らない項目はエラーになる。
+- `nameKey` は画面に出す武器の名前を引く表のキー。文は `Resources/Localization/<言語>/` の JSON (例: `items.json` に `"weapon.rifle": "Rifle"`) に書く。表に無いキーはキーそのものが出る。空か `null` なら `id` が出る。
+- 前の項目名 `displayName` は読まない (書き換えを促すエラーになる)。
+- `adsFieldOfView` と `nameKey` は `null` も書ける。既定値のある項目は省ける。知らない項目はエラーになる。
 
 batchmode で取り込む:
 

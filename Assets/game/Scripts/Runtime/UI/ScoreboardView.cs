@@ -14,7 +14,8 @@ namespace Fps.Runtime
     /// <remarks>
     /// 一覧の中身は持ち主が <see cref="SetEntries"/> で渡す。オンラインは Fps.Net の NetHud が
     /// NetTeamDeathmatch.Players の変化のたびに、オフラインは <see cref="MatchRunner"/> がキル・デスのたびに渡す。
-    /// 並べ方は Core の <see cref="ScoreboardRows"/> が決める。閉じている間に届いた一覧は覚えておくだけにし、
+    /// 並べ方は Core の <see cref="ScoreboardRows"/> が決める。名前などの文は作り直すときに今の言語 (<see cref="Localizer.Resolve"/>) で文にし、
+    /// 言語が変わったら作り直す。閉じている間に届いた一覧は覚えておくだけにし、
     /// 次に開いたときに要素を作り直す (キルのたびに見えない要素を作り直さないため)。
     /// </remarks>
     [DisallowMultipleComponent]
@@ -63,7 +64,7 @@ namespace Fps.Runtime
 
         public const string DeathsCaption = "D";
 
-        public static string ConnectionCaption => Localizer.Get("scoreboard.connectionCaption");
+        public static string ConnectionCaption => Localizer.Resolve(ScoreboardRows.ConnectionCaption);
 
         private static readonly IReadOnlyList<ScoreboardSection> _empty =
             ScoreboardRows.Build(Array.Empty<ScoreboardEntry>(), Team.Alpha);
@@ -221,7 +222,7 @@ namespace Fps.Runtime
                 box.AddToClassList(SectionClass);
 
                 var header = Row(TeamRowClass);
-                var teamName = Cell(HudFormat.TeamName(section.Team), NameCellClass);
+                var teamName = Cell(Localizer.Resolve(HudFormat.TeamName(section.Team)), NameCellClass);
                 if (hud != null)
                 {
                     teamName.style.color = hud.TeamColor(section.Team);
@@ -246,7 +247,7 @@ namespace Fps.Runtime
                         row.AddToClassList(DisconnectedRowClass);
                     }
 
-                    row.Add(Cell(entry.Name, NameCellClass));
+                    row.Add(Cell(Localizer.Resolve(entry.Name), NameCellClass));
                     row.Add(Cell(ScoreboardRows.Count(entry.Kills), CountCellClass));
                     row.Add(Cell(ScoreboardRows.Count(entry.Deaths), CountCellClass));
                     row.Add(Cell(ConnectionTextOrEmpty(entry.Connection), ConnectionCellClass));
@@ -262,7 +263,7 @@ namespace Fps.Runtime
         {
             try
             {
-                return ScoreboardRows.ConnectionText(connection);
+                return Localizer.Resolve(ScoreboardRows.ConnectionText(connection));
             }
             catch (ArgumentOutOfRangeException)
             {

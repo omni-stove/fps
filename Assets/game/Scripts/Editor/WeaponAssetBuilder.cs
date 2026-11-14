@@ -36,6 +36,11 @@ namespace Fps.Editor
         public const string HandgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
         public const string LauncherId = "e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96";
 
+        /// <summary>武器の名前を引く表のキー。文は Resources/Localization/&lt;言語&gt;/items.json にある。</summary>
+        public const string RifleNameKey = "weapon.rifle";
+        public const string HandgunNameKey = "weapon.handgun";
+        public const string LauncherNameKey = "weapon.launcher";
+
         /// <summary>launcher の 1 発が建造物に被害を広げる半径 (m)。</summary>
         public const float LauncherExplosionRadius = 4f;
 
@@ -124,7 +129,7 @@ namespace Fps.Editor
         {
             return new WeaponSpec(
                 RifleId,
-                "Rifle",
+                RifleNameKey,
                 WeaponCategory.AssaultRifle,
                 FireMode.Auto,
                 30,
@@ -221,7 +226,7 @@ namespace Fps.Editor
         {
             return new WeaponSpec(
                 HandgunId,
-                "Handgun",
+                HandgunNameKey,
                 WeaponCategory.Handgun,
                 FireMode.Semi,
                 12,
@@ -252,7 +257,7 @@ namespace Fps.Editor
         {
             return new WeaponSpec(
                 LauncherId,
-                "Launcher",
+                LauncherNameKey,
                 WeaponCategory.Launcher,
                 FireMode.Semi,
                 1,
@@ -411,7 +416,7 @@ namespace Fps.Editor
             }
 
             definition.Id = spec.Id;
-            definition.DisplayName = spec.DisplayName;
+            definition.NameKey = spec.NameKey;
             definition.Category = spec.Category;
             definition.FireMode = spec.FireMode;
             definition.MagazineSize = spec.MagazineSize;

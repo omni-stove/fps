@@ -252,7 +252,7 @@ namespace Fps.Tests.EditMode
                 var player = world.Controller;
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=start "));
                 Assert.That(layout.Checkpoint(CampaignSceneBuilder.StartCheckpointId).HandleEnter(player), Is.True);
-                Assert.That(hud.Model.NoticeText, Is.EqualTo(HudFormat.CheckpointSaved));
+                Assert.That(hud.Model.NoticeText, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointSaved)));
 
                 layout.Runner.Progress(CampaignSceneBuilder.ReachAreaAId);
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=area_a "));
@@ -270,9 +270,9 @@ namespace Fps.Tests.EditMode
                 LogAssert.Expect(LogType.Log, "[Combat] target died id=Player");
                 LogAssert.Expect(LogType.Log, "[Campaign] player died; reloading in 3s from checkpoint=area_a");
                 world.PlayerDamageable.Kill();
-                Assert.That(hud.Model.NoticeText, Is.EqualTo(HudFormat.CheckpointRestart(3)));
+                Assert.That(hud.Model.NoticeText, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(3))));
                 layout.Campaign.Tick(1.5f);
-                Assert.That(hud.Model.NoticeText, Is.EqualTo(HudFormat.CheckpointRestart(2)));
+                Assert.That(hud.Model.NoticeText, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(2))));
 
                 layout.Campaign.Stop();
                 Assert.That(hud.Model.NoticeText, Is.EqualTo(HudFormat.NoNotice), "stopping takes the notice off the HUD");

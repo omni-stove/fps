@@ -1,24 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace Fps.Core
 {
     /// <summary>
-    /// オフラインのモードの HUD (陣営ごとの得点・残り時間・結果) に出す文字列。
+    /// オフラインのモードの HUD (陣営ごとの得点・残り時間・結果) に出す文。表のキー <c>hud.*</c> と引数の <see cref="LocalizedText"/> で返す。
     /// Alpha と Bravo にあたる陣営は既存の HUD と同じチーム名 (<see cref="HudFormat.TeamName"/>) で、それ以外は <c>SIDE n</c> で書く。
+    /// 陣営名 (<see cref="SideName"/>) は、ほかのモードの文が引数に入れて使う。
     /// </summary>
     public static class ModeHudText
     {
-        /// <summary>Alpha と Bravo 以外の陣営名の頭。</summary>
-        public const string SidePrefix = "SIDE ";
-
         /// <example><c>SideName(Side.Alpha)</c> は <c>ALPHA</c>、<c>SideName(new Side(2))</c> は <c>SIDE 2</c></example>
-        public static string SideName(Side side)
+        public static LocalizedText SideName(Side side)
         {
             return side.TryGetTeam(out var team)
                 ? HudFormat.TeamName(team)
-                : SidePrefix + side.Id.ToString(CultureInfo.InvariantCulture);
+                : new LocalizedText("hud.side", side.Id);
         }
 
         /// <summary>
@@ -37,34 +34,34 @@ namespace Fps.Core
         }
 
         /// <example><c>ScoreText(new Side(2), 3.7d)</c> は <c>SIDE 2 3</c></example>
-        public static string ScoreText(Side side, double score)
+        public static LocalizedText ScoreText(Side side, double score)
         {
-            return SideName(side) + " " + DisplayScore(score).ToString(CultureInfo.InvariantCulture);
+            return HudFormat.Score(SideName(side), DisplayScore(score));
         }
 
         /// <summary>陣営の残り人数。</summary>
         /// <example><c>Remaining(Side.Bravo, 3)</c> は <c>BRAVO 残り 3</c></example>
-        public static string Remaining(Side side, int remaining)
+        public static LocalizedText Remaining(Side side, int remaining)
         {
-            return GameText.Format("mode.remaining", SideName(side), remaining);
+            return new LocalizedText("hud.mode.remaining", SideName(side), remaining);
         }
 
         /// <summary>人数の行 text に、ダウン中の人数 downed を添える。</summary>
-        /// <example><c>WithDowned("BRAVO 残り 3", 1)</c> は <c>BRAVO 残り 3 (ダウン 1)</c></example>
-        public static string WithDowned(string text, int downed)
+        /// <example><c>WithDowned(Remaining(Side.Bravo, 3), 1)</c> は <c>BRAVO 残り 3 (ダウン 1)</c></example>
+        public static LocalizedText WithDowned(LocalizedText text, int downed)
         {
-            return GameText.Format("mode.withDowned", text, downed);
+            return new LocalizedText("hud.mode.withDowned", text, downed);
         }
 
-        /// <summary>残り時間。<see cref="HudFormat.Time"/> と同じ書式。</summary>
-        public static string Time(ModeSession session)
+        /// <summary>残り時間。<see cref="HudFormat.Time"/> と同じ書式で、言語に依らないので表を引かずにそのまま運ぶ。</summary>
+        public static LocalizedText Time(ModeSession session)
         {
             if (session == null)
             {
                 throw new ArgumentNullException(nameof(session));
             }
 
-            return HudFormat.Time(session.RemainingSeconds);
+            return LocalizedText.Literal(HudFormat.Time(session.RemainingSeconds));
         }
 
         /// <summary>
@@ -98,9 +95,9 @@ namespace Fps.Core
             return lines;
         }
 
-        /// <summary>試合が終わったときの結果。終わっていなければ <see cref="HudFormat.NoResult"/>。</summary>
+        /// <summary>試合が終わったときの結果。終わっていなければ <c>default</c> (空の文)。</summary>
         /// <example><c>Result(session)</c> は <c>SIDE 2 の勝ち</c>、引き分けなら <c>引き分け</c></example>
-        public static string Result(ModeSession session)
+        public static LocalizedText Result(ModeSession session)
         {
             if (session == null)
             {
@@ -109,7 +106,7 @@ namespace Fps.Core
 
             if (session.State != GameModeState.Ended)
             {
-                return HudFormat.NoResult;
+                return default;
             }
 
             return session.Winner.HasValue ? HudFormat.Wins(SideName(session.Winner.Value)) : HudFormat.Draw;

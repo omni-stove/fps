@@ -32,6 +32,7 @@ namespace Fps.Runtime
         public const string ResultClass = "mode-hud__result";
 
         private readonly List<ModeHudScoreLine> _scores = new List<ModeHudScoreLine>();
+        private readonly List<string> _scoreTexts = new List<string>();
         private readonly List<LocalizedText> _lineSources = new List<LocalizedText>();
         private readonly List<string> _lines = new List<string>();
         private LocalizedText _timeSource;
@@ -55,6 +56,9 @@ namespace Fps.Runtime
 
         /// <summary>出している得点の行 (上から)。</summary>
         public IReadOnlyList<ModeHudScoreLine> Scores => _scores;
+
+        /// <summary>出している得点の行の文 (<see cref="Scores"/> と同じ順、今の言語の文)。</summary>
+        public IReadOnlyList<string> ScoreTexts => _scoreTexts;
 
         /// <summary>出している、派生モードが足した行 (上から、今の言語の文)。</summary>
         public IReadOnlyList<string> Lines => _lines;
@@ -119,6 +123,12 @@ namespace Fps.Runtime
         {
             _time = Localizer.Resolve(_timeSource);
             _result = Localizer.Resolve(_resultSource);
+            _scoreTexts.Clear();
+            foreach (var score in _scores)
+            {
+                _scoreTexts.Add(Localizer.Resolve(score.Text));
+            }
+
             _lines.Clear();
             foreach (var source in _lineSources)
             {
@@ -161,7 +171,7 @@ namespace Fps.Runtime
             for (var i = 0; i < _scores.Count; i++)
             {
                 var label = (Label)_scoresBox[i];
-                SetText(label, _scores[i].Text);
+                SetText(label, _scoreTexts[i]);
                 label.EnableInClassList(OwnScoreClass, _scores[i].IsOwn);
                 label.EnableInClassList(LeadingScoreClass, _scores[i].IsLeading);
             }

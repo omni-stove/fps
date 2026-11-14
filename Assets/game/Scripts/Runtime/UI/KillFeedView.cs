@@ -12,6 +12,7 @@ namespace Fps.Runtime
     /// <remarks>
     /// 名前の色はチーム (<see cref="Hud.TeamColor"/>) で、チームの無い名前は USS の既定の色のまま。この画面のプレイヤーが倒したか
     /// 倒された行 (<see cref="KillFeedLine.Highlighted"/>) は <see cref="LocalRowClass"/> で強調する。
+    /// 印と武器の欄は描くときに今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら描き直す。
     /// 足した行は <see cref="LogTag"/> でログにも出し、画面を見ずにネット対戦の両クライアントのフィードを突き合わせられるようにする。
     /// </remarks>
     [DisallowMultipleComponent]
@@ -121,6 +122,11 @@ namespace Fps.Runtime
             Render();
         }
 
+        protected override void OnLanguageChanged()
+        {
+            Render();
+        }
+
         protected override void OnUnbinding(VisualElement element)
         {
             element.Clear();
@@ -157,7 +163,7 @@ namespace Fps.Runtime
 
             if (line.Entry.Friendly)
             {
-                row.Add(CreateLabel(KillFeedFormat.FriendlyMark, FriendlyClass));
+                row.Add(CreateLabel(Localizer.Resolve(KillFeedFormat.FriendlyMark), FriendlyClass));
             }
 
             if (line.ShowsKiller)
@@ -165,7 +171,7 @@ namespace Fps.Runtime
                 row.Add(CreateName(line.Killer, hud));
             }
 
-            var weapon = CreateLabel(line.WeaponText, WeaponClass);
+            var weapon = CreateLabel(Localizer.Resolve(line.WeaponText), WeaponClass);
             if (line.Entry.Headshot)
             {
                 weapon.AddToClassList(HeadshotClass);

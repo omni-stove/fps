@@ -67,7 +67,7 @@ namespace Fps.Tests.EditMode
             Assert.That(line.Victim.Text, Is.EqualTo("Dummy-1"));
             Assert.That(line.Killer.Team, Is.Null);
             Assert.That(line.Highlighted, Is.True);
-            Assert.That(line.WeaponText, Is.EqualTo(KillFeedFormat.Weapon(string.Empty, true, false)));
+            Assert.That(line.WeaponText, Is.EqualTo(KillFeedFormat.Weapon(default, true, false)));
         }
 
         [Test]
@@ -141,7 +141,9 @@ namespace Fps.Tests.EditMode
             Assert.That(row.ClassListContains(KillFeedView.LocalRowClass), Is.True);
 
             var labels = row.Query<Label>().ToList();
-            Assert.That(labels.ConvertAll(l => l.text), Is.EqualTo(new[] { KillFeedFormat.FriendlyMark, "P1", "[Rifle] " + KillFeedFormat.HeadshotMark, "P2" }));
+            Assert.That(
+                labels.ConvertAll(l => l.text),
+                Is.EqualTo(new[] { Localizer.Resolve(KillFeedFormat.FriendlyMark), "P1", "[Rifle] " + Localizer.Resolve(KillFeedFormat.HeadshotMark), "P2" }));
             Assert.That(labels[1].style.color.value, Is.EqualTo(_hud.TeamColor(Team.Alpha)));
             Assert.That(labels[2].ClassListContains(KillFeedView.HeadshotClass), Is.True);
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
@@ -156,7 +158,28 @@ namespace Fps.Tests.EditMode
 
             Assume.That(_view.Element, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
             var labels = _view.Element[0].Query<Label>().ToList();
-            Assert.That(labels.ConvertAll(l => l.text), Is.EqualTo(new[] { "[" + KillFeedFormat.Suicide + "]", "P2" }));
+            Assert.That(labels.ConvertAll(l => l.text), Is.EqualTo(new[] { "[" + Localizer.Resolve(KillFeedFormat.Suicide) + "]", "P2" }));
+        }
+
+        [Test]
+        public void TheRowsAreRedrawnWhenTheLanguageChanges()
+        {
+            _view.Names = new FixedNames();
+            _view.Show(new KillFeedEntry(2, 2, "", false, false));
+            Assume.That(_view.Element, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
+            var before = AppliedControlSettings.Current;
+            try
+            {
+                AppliedControlSettings.Apply(before.WithLanguage(GameLanguage.English));
+
+                Assert.That(_view.Element[0].Query<Label>().ToList().ConvertAll(l => l.text)[0], Is.EqualTo("[Suicide]"));
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(before);
+            }
+
+            Assert.That(_view.Element[0].Query<Label>().ToList().ConvertAll(l => l.text)[0], Is.EqualTo("[" + Localizer.Resolve(KillFeedFormat.Suicide) + "]"));
         }
 
         private void AssertRows(int count)
@@ -185,7 +208,7 @@ namespace Fps.Tests.EditMode
         {
             public KillFeedLine Describe(KillFeedEntry entry)
             {
-                return new KillFeedLine(entry, NameOf(entry.KillerId), NameOf(entry.VictimId), entry.WeaponId.Length > 0 ? "Rifle" : string.Empty);
+                return new KillFeedLine(entry, NameOf(entry.KillerId), NameOf(entry.VictimId), entry.WeaponId.Length > 0 ? new LocalizedText("weapon.rifle") : default);
             }
 
             private static KillFeedName NameOf(int id)

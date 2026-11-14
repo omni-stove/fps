@@ -7,14 +7,14 @@ namespace Fps.Core
     /// </summary>
     public readonly struct ScoreboardEntry : IEquatable<ScoreboardEntry>
     {
-        // default(ScoreboardEntry) ではコンストラクタを通らず null になるので、読むときに空文字へ寄せる。
-        private readonly string _name;
-
         /// <summary>参加者の Id。同じ一覧の中で重ならない。キル数・デス数が同じ行はこの小さい順に並べる。</summary>
         public int PlayerId { get; }
 
-        /// <summary>表示する名前。null にならない。</summary>
-        public string Name => _name ?? string.Empty;
+        /// <summary>
+        /// 表示する名前。スコアボードが今の言語で文にする。言葉の入らない名前 (Bot や敵の名前) は <see cref="LocalizedText.Literal"/> で渡す。
+        /// <c>default(ScoreboardEntry)</c> では空の文。
+        /// </summary>
+        public LocalizedText Name { get; }
 
         public Team Team { get; }
 
@@ -28,7 +28,7 @@ namespace Fps.Core
         public bool IsLocal { get; }
 
         /// <exception cref="ArgumentOutOfRangeException">kills か deaths が負。</exception>
-        public ScoreboardEntry(int playerId, string name, Team team, int kills, int deaths, ScoreboardConnection connection, bool isLocal)
+        public ScoreboardEntry(int playerId, LocalizedText name, Team team, int kills, int deaths, ScoreboardConnection connection, bool isLocal)
         {
             if (kills < 0)
             {
@@ -41,7 +41,7 @@ namespace Fps.Core
             }
 
             PlayerId = playerId;
-            _name = name ?? string.Empty;
+            Name = name;
             Team = team;
             Kills = kills;
             Deaths = deaths;
@@ -52,7 +52,7 @@ namespace Fps.Core
         public bool Equals(ScoreboardEntry other)
         {
             return PlayerId == other.PlayerId
-                && string.Equals(Name, other.Name, StringComparison.Ordinal)
+                && Name == other.Name
                 && Team == other.Team
                 && Kills == other.Kills
                 && Deaths == other.Deaths
@@ -77,7 +77,7 @@ namespace Fps.Core
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(PlayerId, StringComparer.Ordinal.GetHashCode(Name), (int)Team, Kills, Deaths, (int)Connection, IsLocal);
+            return HashCode.Combine(PlayerId, Name, (int)Team, Kills, Deaths, (int)Connection, IsLocal);
         }
 
         public override string ToString()

@@ -276,7 +276,7 @@ namespace Fps.Tests.EditMode
             Assert.That(view.PointTexts, Is.EqualTo(new[] { "A ALPHA" }));
 
             _runner.Tick(10f);
-            Assert.That(view.ResultText, Is.EqualTo(HudFormat.Result(Team.Alpha)));
+            Assert.That(view.ResultText, Is.EqualTo(Localizer.Resolve(HudFormat.Result(Team.Alpha))));
         }
 
         [Test]

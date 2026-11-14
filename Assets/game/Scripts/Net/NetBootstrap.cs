@@ -28,6 +28,7 @@ namespace Fps.Net
     /// サーバー (Host を含む) は止まる前に、つないでいるクライアントへ止まると知らせてから切る。
     /// 専用サーバーは終了を求められても (SIGTERM)、ロビーから外して新しい参加を断り、今の試合が終わるまで止まるのを待つ (.Shutdown.cs)。
     /// どこからメニューへ戻るときも (<see cref="IMenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
+    /// <c>-netstack v2</c> (<see cref="NetStackLaunch"/>) では Netcode を起動せずに消え、つなぐのは Fps.NetV2 に任せる。
     /// <para>
     /// <c>-bots</c> は試合の進行役を Spawn する前に <see cref="NetTeamDeathmatch.LaunchBots"/> へ渡す (Bot を足すのは試合の .Bots.cs)。
     /// <c>-map</c> は .Map.cs、<c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> は .NetSimulation.cs、
@@ -170,6 +171,15 @@ namespace Fps.Net
 
             var isDedicatedServer = NetStartup.IsDedicatedServerBuild;
 
+            // -netstack v2 では Fps.NetV2 がつなぎ、つないだサーバーのマップ (このシーンのこともある) を読む。ここで Netcode を起動すると同じサーバーへ 2 本つなぐことになる
+            if (!isDedicatedServer && NetStackLaunch.RequestsV2(Environment.GetCommandLineArgs()))
+            {
+                Debug.Log("[Net] " + NetStackLaunch.Flag + " " + NetStackLaunch.V2Name + ": the NetV2 client connects instead; removing "
+                    + name + " from scene " + gameObject.scene.name);
+                Destroy(gameObject);
+                return;
+            }
+
             // 起動引数が不正で先に止まっても、メニューで選んだ要求を次の起動まで持ち越さないよう最初に受け取る
             _menu = GameUi.Menu;
             var menuLobby = LobbyLaunchOptions.None;
@@ -198,6 +208,13 @@ namespace Fps.Net
             }
 
             var args = Environment.GetCommandLineArgs();
+            // 値の誤りは RequestsV2 では false になるだけなので、黙って Netcode で起動しないようここで止める
+            if (!isDedicatedServer && !NetStackLaunch.TryParse(args, out _, out var stackError))
+            {
+                Fail(ExitInvalidArguments, "[Net] invalid arguments: " + stackError);
+                return;
+            }
+
             if (!NetStartup.TryResolveLobby(args, isDedicatedServer, out var lobbyOptions, out var lobbyError))
             {
                 Fail(ExitInvalidArguments, "[Lobby] invalid arguments: " + lobbyError);

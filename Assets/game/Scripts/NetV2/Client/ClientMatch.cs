@@ -51,6 +51,12 @@ namespace Fps.NetV2
         /// <summary>スナップショットの並びから消えた他のプレイヤー (Id)。</summary>
         public event Action<int> PlayerRemoved;
 
+        /// <summary>
+        /// 自分の予測がはしごにつかまった。渡すのははしごの番号と、はしごを向く yaw (ラジアン)。
+        /// オフラインの LadderMovement と同じく、つかまったら視点をはしごへ向けるため。
+        /// </summary>
+        public event Action<int, float> LadderGrabbed;
+
         /// <summary>予測を照合した。巻き戻したかどうかは <see cref="ReconcileResult.Outcome"/>。</summary>
         public event Action<ReconcileResult> Reconciled;
 
@@ -119,7 +125,17 @@ namespace Fps.NetV2
                 downed = own >= 0 && latest.Players[own].Downed.IsDowned;
             }
 
-            return _prediction.Predict(frame, SnapshotMotion.ToInput(frame, downed, rules));
+            var before = _prediction.Current.Ladder;
+            var state = _prediction.Predict(frame, SnapshotMotion.ToInput(frame, downed, rules));
+            var ladder = state.Ladder;
+            var ladders = _prediction.Simulation.Ladders;
+            if (ladder.IsClimbing && (!before.IsClimbing || before.Index != ladder.Index) && ladder.Index < ladders.Count)
+            {
+                var facing = ladders[ladder.Index].Span.Facing;
+                LadderGrabbed?.Invoke(ladder.Index, MathF.Atan2(facing.X, facing.Z));
+            }
+
+            return state;
         }
 
         /// <summary>まだサーバーが処理していない入力をまとめて送る。</summary>
@@ -180,12 +196,12 @@ namespace Fps.NetV2
                 {
                     track = new RemoteTrack();
                     _remotes.Add(row.PlayerId, track);
-                    track.Record(snapshot.Tick, new RemotePose(row.Position, row.Yaw, row.IsCrouched));
+                    track.Record(snapshot.Tick, RemotePose.From(row));
                     PlayerAdded?.Invoke(row.PlayerId);
                     continue;
                 }
 
-                track.Record(snapshot.Tick, new RemotePose(row.Position, row.Yaw, row.IsCrouched));
+                track.Record(snapshot.Tick, RemotePose.From(row));
             }
 
             _gone.Clear();

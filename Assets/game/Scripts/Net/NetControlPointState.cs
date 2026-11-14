@@ -53,6 +53,12 @@ namespace Fps.Net
         /// <summary>寄っている側への進みの大きさ。0 (中立) から 1 (占領し終えた)。</summary>
         public float Fill => Math.Abs(Control);
 
+        /// <summary>HUD の拠点のビューに渡す形。</summary>
+        public ControlPointStatus ToStatus()
+        {
+            return new ControlPointStatus(Owner, ControlPercent, Contested);
+        }
+
         public static sbyte ToPercent(float control)
         {
             if (float.IsNaN(control))

@@ -99,7 +99,8 @@ namespace Fps.NetV2
                 pose = new RemotePose(
                     Vector3.Lerp(before.Position, after.Position, t),
                     SnapshotMotion.LerpYaw(before.Yaw, after.Yaw, t),
-                    before.IsCrouched);
+                    before.Stance,
+                    before.WeaponId);
                 return true;
             }
 

@@ -129,9 +129,9 @@ namespace Fps.NetV2.Tests
         public void ATrackInterpolatesBetweenTicksAndHoldsAtItsEnds()
         {
             var track = new RemoteTrack();
-            track.Record(10, new RemotePose(Vector3.Zero, 0f, false));
-            track.Record(12, new RemotePose(new Vector3(2f, 0f, 0f), 1f, true));
-            track.Record(11, new RemotePose(new Vector3(9f, 9f, 9f), 0f, false));
+            track.Record(10, new RemotePose(Vector3.Zero, 0f, PlayerStance.Standing, ""));
+            track.Record(12, new RemotePose(new Vector3(2f, 0f, 0f), 1f, PlayerStance.Crouching, "rifle"));
+            track.Record(11, new RemotePose(new Vector3(9f, 9f, 9f), 0f, PlayerStance.Standing, ""));
 
             Assert.That(track.TrySample(11f, out var middle), Is.True);
             Assert.That(middle.Position.X, Is.EqualTo(1f).Within(1e-5f));

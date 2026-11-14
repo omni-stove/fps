@@ -94,6 +94,12 @@ namespace Fps.NetV2
 
         public int MaxHealth { get; private set; } = 1;
 
+        /// <summary>サーバーがプレイヤーを動かす値。予測はこの値で動かす (<see cref="ClientWorld.CreateSimulation"/>)。</summary>
+        public NetMotorSettings Motor { get; private set; } = NetMotorSettings.Default;
+
+        /// <summary>サーバーが落ちたプレイヤーを出現地点へ戻す高さ。</summary>
+        public float KillPlaneY { get; private set; } = ConnectAcceptedMessage.DefaultKillPlaneY;
+
         /// <summary>組み立てられた最新のスナップショット。まだ無ければ null。</summary>
         public SnapshotMessage LatestSnapshot => _snapshots.Latest;
 
@@ -290,6 +296,8 @@ namespace Fps.NetV2
             AcceptedServerTick = accepted.ServerTick;
             Map = accepted.Map;
             MaxHealth = accepted.MaxHealth;
+            Motor = accepted.Motor;
+            KillPlaneY = accepted.KillPlaneY;
             State = MatchClientState.Connected;
             _log(LogTag + " client connected id=" + PlayerId.ToString(CultureInfo.InvariantCulture) + " (local) server version="
                 + ServerVersion + " map=" + Map + " tickRate=" + TickRate.ToString(CultureInfo.InvariantCulture));

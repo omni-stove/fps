@@ -422,9 +422,10 @@ namespace Fps.Runtime
             _leaving = true;
             SetButtonsEnabled(false);
             bool went;
+            LocalizedText refusal;
             try
             {
-                went = MenuNavigator.Go(destination);
+                went = MenuNavigator.Go(destination, out refusal);
             }
             catch
             {
@@ -437,7 +438,15 @@ namespace Fps.Runtime
             {
                 _leaving = false;
                 SetButtonsEnabled(true);
-                ShowNotice(SceneMissingNotice(MenuNavigator.Plan(destination).ScenePath));
+                if (refusal.IsEmpty)
+                {
+                    ShowNotice(SceneMissingNotice(MenuNavigator.Plan(destination).ScenePath));
+                }
+                else
+                {
+                    ShowNotice(refusal);
+                }
+
                 FocusAt(_focusIndex);
             }
 

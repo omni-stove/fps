@@ -72,11 +72,40 @@ namespace Fps.Runtime
         public static LocalizedText PendingNotice => _notice;
 
         /// <summary>
+        /// オンラインのボタンを Netcode の代わりに始める手順。null なら NetTest のシーンへ移る (既定)。
+        /// </summary>
+        public static IOnlineMatchStarter OnlineStarter { get; set; }
+
+        /// <summary>
         /// destination へ進む。読むシーンが Build Settings に無ければエラーログを出して false を返し、何もしない。
         /// </summary>
         public static bool Go(MenuDestination destination)
         {
+            return Go(destination, out _);
+        }
+
+        /// <summary>
+        /// destination へ進む。オンラインの行き先で <see cref="OnlineStarter"/> があればそれに任せ、断られたら false と理由 refusal を返す。
+        /// シーンへ移る行き先で読むシーンが Build Settings に無ければ、エラーログを出して false (refusal は空) を返す。
+        /// </summary>
+        public static bool Go(MenuDestination destination, out LocalizedText refusal)
+        {
+            refusal = default;
+            var starter = OnlineStarter;
+            if (starter != null && IsOnline(destination))
+            {
+                Debug.Log(LogTag + " " + destination + " -> " + starter.GetType().Name);
+                return starter.Start(destination, out refusal);
+            }
+
             return Execute(Plan(destination));
+        }
+
+        /// <summary>オンラインの試合を始める行き先か。</summary>
+        public static bool IsOnline(MenuDestination destination)
+        {
+            return destination == MenuDestination.CreateLobby || destination == MenuDestination.JoinLobby
+                || destination == MenuDestination.QuickMatch;
         }
 
         /// <summary>
@@ -231,6 +260,7 @@ namespace Fps.Runtime
             _notice = default;
             _scenes = null;
             ReturningToMenu = null;
+            OnlineStarter = null;
         }
 
         private sealed class SceneManagerHost : IMenuSceneHost

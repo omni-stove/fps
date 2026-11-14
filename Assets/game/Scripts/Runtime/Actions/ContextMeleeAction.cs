@@ -30,6 +30,9 @@ namespace Fps.Runtime
 
         private Damageable _target;
         private EnemyAgent _targetAgent;
+        private string _priorReason = string.Empty;
+        private float _priorSeconds;
+        private float _priorTime;
         private PlayerController _targetMover;
         private IContextMeleePresenter _presenter;
         private ControlHandoff _claimedMover;
@@ -353,6 +356,10 @@ namespace Fps.Runtime
             if (_targetAgent != null && _targetAgent.IsInitialized)
             {
                 // 結果を出すフレームまで止めておく。秒数ちょうどだと敵の Update が先に解き、とどめの直前に動き出すことがある。
+                // Interrupt は長い方で理由を上書きするので、中断で戻せるよう元の停止を覚えておく。
+                _priorReason = _targetAgent.InterruptReason;
+                _priorSeconds = _targetAgent.InterruptSecondsRemaining;
+                _priorTime = Time.time;
                 _targetAgent.Interrupt(move.TotalSeconds + Time.maximumDeltaTime, InterruptReasonPrefix + move.Id);
             }
 
@@ -385,7 +392,7 @@ namespace Fps.Runtime
 
             if (resumeTarget && move != null && _targetAgent != null && _targetAgent.IsInitialized)
             {
-                _targetAgent.Resume(InterruptReasonPrefix + move.Id);
+                ResumeTarget(_targetAgent, move);
             }
 
             _claimedTarget?.Release(this);
@@ -400,6 +407,23 @@ namespace Fps.Runtime
             {
                 _target.Died -= OnTargetDied;
             }
+        }
+
+        private void ResumeTarget(EnemyAgent agent, ContextMeleeMove move)
+        {
+            if (!agent.Resume(InterruptReasonPrefix + move.Id))
+            {
+                return;
+            }
+
+            // 技の前から続いていた停止 (怯みなど) の残りは戻す。
+            var remaining = _priorSeconds - (Time.time - _priorTime);
+            if (!string.IsNullOrEmpty(_priorReason) && remaining > 0f)
+            {
+                agent.Interrupt(remaining, _priorReason);
+            }
+
+            _priorReason = string.Empty;
         }
 
         private void Align(float progress)
@@ -463,7 +487,7 @@ namespace Fps.Runtime
                 var agent = target.GetComponent<EnemyAgent>();
                 if (agent != null && agent.IsInitialized)
                 {
-                    agent.Resume(InterruptReasonPrefix + move.Id);
+                    ResumeTarget(agent, move);
                 }
             }
 

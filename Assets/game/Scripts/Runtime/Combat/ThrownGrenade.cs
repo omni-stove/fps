@@ -215,6 +215,7 @@ namespace Fps.Runtime
             Debug.Log(FormatLog(result), this);
 
             PlayExplosionEffects(center);
+            CombatEvents.RaiseExploded(center, GrenadeThrower.WeaponId);
             try
             {
                 Exploded?.Invoke(this, result);

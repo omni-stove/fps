@@ -85,6 +85,8 @@
                 <ui:Label name="pause-note" text="" class="pause__note" style="display: none;" />
                 <ui:Button name="pause-resume" text="#pause.resume" class="pause__button" />
                 <ui:Button name="pause-settings" text="#pause.settings" class="pause__button" />
+                <!-- フォトモード。PhotoModeView が入っている間は HUD ごと隠す。 -->
+                <ui:Button name="pause-photo-mode" text="#pause.photoMode" class="pause__button" />
                 <ui:Button name="pause-return-to-menu" text="#pause.returnToMenu" class="pause__button" />
             </ui:VisualElement>
             <!-- 設定画面の枠。「設定」で PauseSettingsView が SettingsView の中身を入れて出す。 -->

@@ -574,50 +574,17 @@ namespace Fps.Runtime
 
             var effect = pool.Rent(now);
             pool.Extend(effect, now + effect.Seconds);
-            effect.Root.transform.SetPositionAndRotation(position, rotation);
-            effect.Root.SetActive(true);
-            foreach (var system in effect.Systems)
-            {
-                system.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
-                system.Play(false);
-            }
+            effect.PlayAt(position, rotation);
         }
 
         private PooledEffect CreateEffect(GameObject prefab)
         {
-            var instance = Instantiate(prefab, EnsurePoolRoot(), false);
-            instance.name = prefab.name;
-            instance.SetActive(false);
-
-            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
-            var seconds = 0f;
-            foreach (var system in systems)
-            {
-                // プレハブは単発で自分を消す設定 (Destroy) なので、使い回せるよう止めるだけにする。
-                var main = system.main;
-                main.stopAction = ParticleSystemStopAction.None;
-                seconds = Mathf.Max(seconds, main.startDelay.constantMax + main.duration + main.startLifetime.constantMax);
-            }
-
-            return new PooledEffect(instance, systems, systems.Length > 0 ? seconds : PooledEffect.DefaultSeconds);
+            return PooledEffect.Instantiate(prefab, EnsurePoolRoot());
         }
 
         private static void HideEffect(PooledEffect effect)
         {
-            if (effect.Root == null)
-            {
-                return;
-            }
-
-            foreach (var system in effect.Systems)
-            {
-                if (system != null)
-                {
-                    system.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
-                }
-            }
-
-            effect.Root.SetActive(false);
+            effect.Hide();
         }
 
         private PooledTracer LaunchTracer(PresentationCatalog catalog, Vector3 from, Vector3 to, float now)
@@ -801,7 +768,7 @@ namespace Fps.Runtime
         }
     }
 
-    /// <summary><see cref="WeaponPresentation"/> がプールで使い回すエフェクト 1 つ。</summary>
+    /// <summary><see cref="WeaponPresentation"/> と <see cref="BloodPresenter"/> がプールで使い回すエフェクト 1 つ。</summary>
     public sealed class PooledEffect
     {
         /// <summary>粒の系が無いエフェクトを出しておく秒数。</summary>
@@ -812,6 +779,74 @@ namespace Fps.Runtime
             Root = root;
             Systems = systems ?? Array.Empty<ParticleSystem>();
             Seconds = seconds;
+        }
+
+        /// <summary>
+        /// prefab を parent の下に隠した状態で 1 つ作る。<see cref="Seconds"/> はいちばん長く残る粒が消えるまでの秒数で、
+        /// 粒の系が無ければ <see cref="DefaultSeconds"/>。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">prefab が null。</exception>
+        public static PooledEffect Instantiate(GameObject prefab, Transform parent)
+        {
+            if (prefab == null)
+            {
+                throw new ArgumentNullException(nameof(prefab));
+            }
+
+            var instance = UnityEngine.Object.Instantiate(prefab, parent, false);
+            instance.name = prefab.name;
+            instance.SetActive(false);
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            var seconds = 0f;
+            foreach (var system in systems)
+            {
+                // プレハブは単発で自分を消す設定 (Destroy) なので、使い回せるよう止めるだけにする。
+                var main = system.main;
+                main.stopAction = ParticleSystemStopAction.None;
+                seconds = Mathf.Max(seconds, main.startDelay.constantMax + main.duration + main.startLifetime.constantMax);
+            }
+
+            return new PooledEffect(instance, systems, systems.Length > 0 ? seconds : DefaultSeconds);
+        }
+
+        /// <summary>position に rotation で置いて見せ、粒を最初から出し直す。</summary>
+        public void PlayAt(Vector3 position, Quaternion rotation)
+        {
+            if (Root == null)
+            {
+                return;
+            }
+
+            Root.transform.SetPositionAndRotation(position, rotation);
+            Root.SetActive(true);
+            foreach (var system in Systems)
+            {
+                if (system != null)
+                {
+                    system.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    system.Play(false);
+                }
+            }
+        }
+
+        /// <summary>粒を消して隠す。もう破棄されていれば何もしない。</summary>
+        public void Hide()
+        {
+            if (Root == null)
+            {
+                return;
+            }
+
+            foreach (var system in Systems)
+            {
+                if (system != null)
+                {
+                    system.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
+            }
+
+            Root.SetActive(false);
         }
 
         /// <summary>プレハブから作ったインスタンス。</summary>

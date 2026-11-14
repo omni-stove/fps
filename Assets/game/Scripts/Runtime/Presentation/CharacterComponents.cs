@@ -10,7 +10,7 @@ namespace Fps.Runtime
     public static class CharacterComponents
     {
         /// <summary>
-        /// body に <see cref="WeaponPresentation"/>・<see cref="CharacterAudio"/>・<see cref="CharacterAnimator"/> を付け、
+        /// body に <see cref="WeaponPresentation"/>・<see cref="BloodPresenter"/>・<see cref="CharacterAudio"/>・<see cref="CharacterAnimator"/> を付け、
         /// throwsGrenades なら <see cref="GrenadeThrower"/> も付ける。既に付いているものは付け直さない。
         /// </summary>
         /// <param name="body">キャラの本体 (ルート)。</param>
@@ -23,6 +23,7 @@ namespace Fps.Runtime
             }
 
             AddIfMissing<WeaponPresentation>(body);
+            AddIfMissing<BloodPresenter>(body);
             AddIfMissing<CharacterAudio>(body);
             AddIfMissing<CharacterAnimator>(body);
             if (throwsGrenades)

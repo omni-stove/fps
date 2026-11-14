@@ -861,6 +861,7 @@ namespace Fps.Tests.EditMode
             var player = _world.Player;
 
             Assert.That(player.GetComponent<WeaponPresentation>(), Is.Not.Null);
+            Assert.That(player.GetComponent<BloodPresenter>(), Is.Not.Null);
             Assert.That(player.GetComponent<CharacterAudio>(), Is.Not.Null);
             Assert.That(player.GetComponent<CharacterAnimator>(), Is.Not.Null);
             Assert.That(player.GetComponent<GrenadeThrower>(), Is.Not.Null);

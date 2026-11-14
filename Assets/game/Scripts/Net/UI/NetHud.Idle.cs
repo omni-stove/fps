@@ -21,7 +21,7 @@ namespace Fps.Net
         public bool IsShowingIdleWarning => _idleRemaining.HasValue;
 
         /// <summary>「あと remainingSeconds 秒で切断」の警告を出し、ここから数える。負・NaN は 0 として扱う。</summary>
-        internal void ShowIdleWarning(float remainingSeconds)
+        public void ShowIdleWarning(float remainingSeconds)
         {
             _idleRemaining = remainingSeconds > 0f && !float.IsInfinity(remainingSeconds) ? remainingSeconds : 0f;
             _idleDisplayedSeconds = HudFormat.DisplayedSeconds(_idleRemaining.Value);
@@ -29,7 +29,7 @@ namespace Fps.Net
         }
 
         /// <summary>放置の警告を消す。出していなければ何もしない。</summary>
-        internal void ClearIdleWarning()
+        public void ClearIdleWarning()
         {
             if (!_idleRemaining.HasValue)
             {

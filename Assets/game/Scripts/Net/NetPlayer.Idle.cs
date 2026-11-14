@@ -1,12 +1,13 @@
 using System.Globalization;
 using Fps.Core;
+using Fps.Runtime;
 using Unity.Netcode;
 using UnityEngine;
 
 namespace Fps.Net
 {
     /// <summary>
-    /// <see cref="NetPlayer"/> のうち、放置の警告をサーバーから持ち主へ送り、持ち主の HUD (<see cref="NetHud.ShowIdleWarning"/>) に出す処理。
+    /// <see cref="NetPlayer"/> のうち、放置の警告をサーバーから持ち主へ送り、持ち主の HUD (<see cref="INetHud.ShowIdleWarning"/>) に出す処理。
     /// いつ送るかは <see cref="NetTeamDeathmatch"/> (.Idle.cs) が決める。
     /// </summary>
     public sealed partial class NetPlayer
@@ -40,7 +41,7 @@ namespace Fps.Net
             }
 
             Debug.Log("[Net] idle warning seconds=" + HudFormat.DisplayedSeconds(remainingSeconds).ToString(CultureInfo.InvariantCulture), this);
-            if (_hud != null)
+            if (GameUi.IsAlive(_hud))
             {
                 _hud.ShowIdleWarning(remainingSeconds);
             }
@@ -55,7 +56,7 @@ namespace Fps.Net
             }
 
             Debug.Log("[Net] idle warning cleared", this);
-            if (_hud != null)
+            if (GameUi.IsAlive(_hud))
             {
                 _hud.ClearIdleWarning();
             }

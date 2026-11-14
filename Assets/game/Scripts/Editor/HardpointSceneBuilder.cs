@@ -16,8 +16,8 @@ namespace Fps.Editor
     /// </summary>
     public sealed class HardpointSceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.HardpointScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.HardpointPath;
+        public static string ScenePathValue => BuildSceneList.HardpointScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.HardpointPath;
         public const string MenuPath = "Fps/Build Hardpoint Scene";
 
         public const string PointsRootName = "ControlPoints";

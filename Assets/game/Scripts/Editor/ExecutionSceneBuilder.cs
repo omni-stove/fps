@@ -14,8 +14,8 @@ namespace Fps.Editor
     /// </summary>
     public sealed class ExecutionSceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.ExecutionScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.ExecutionPath;
+        public static string ScenePathValue => BuildSceneList.ExecutionScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.ExecutionPath;
         public const string MenuPath = "Fps/Build Execution Scene";
 
         /// <summary>プレイヤーの陣営の bot の数。プレイヤーを合わせて <see cref="EnemySideBots"/> と同じ人数になる。</summary>

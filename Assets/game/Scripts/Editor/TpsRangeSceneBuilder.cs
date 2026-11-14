@@ -26,7 +26,7 @@ namespace Fps.Editor
     /// </remarks>
     public static class TpsRangeSceneBuilder
     {
-        public const string ScenePath = BuildSceneList.TpsRangeScene;
+        public static string ScenePath => BuildSceneList.TpsRangeScene;
         public const string MenuPath = "Fps/Build TPS Range Scene";
         public const string LogTag = "[TpsRangeSceneBuilder]";
 

@@ -20,13 +20,13 @@ namespace Fps.Editor
     /// </summary>
     public static class PresentationAssetBuilder
     {
-        public const string AudioFolder = "Assets/game/Audio";
-        public const string PresentationFolder = "Assets/game/Presentation";
+        public static string AudioFolder => FpsKitRoot.OutputPath("Audio");
+        public static string PresentationFolder => FpsKitRoot.OutputPath("Presentation");
         /// <summary>
         /// カタログの置き場所。実行時に <see cref="PresentationCatalog.Load"/> で読めるよう、Resources の
         /// <see cref="PresentationCatalog.ResourcePath"/> に置く。
         /// </summary>
-        public const string CatalogPath = PresentationFolder + "/Resources/" + PresentationCatalog.ResourcePath + ".asset";
+        public static string CatalogPath => PresentationFolder + "/Resources/" + PresentationCatalog.ResourcePath + ".asset";
 
         public const string MenuPath = "Fps/Build Presentation Assets";
         public const string LogTag = "[PresentationAssetBuilder]";

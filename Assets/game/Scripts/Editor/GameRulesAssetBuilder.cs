@@ -24,14 +24,16 @@ namespace Fps.Editor
     /// </summary>
     public static class GameRulesAssetBuilder
     {
-        public const string Folder = "Assets/game/Rules";
-        public const string TeamDeathmatchPath = Folder + "/TeamDeathmatch.asset";
-        public const string CampaignEasyPath = Folder + "/CampaignEasy.asset";
-        public const string CampaignNormalPath = Folder + "/CampaignNormal.asset";
-        public const string CampaignHardPath = Folder + "/CampaignHard.asset";
-        public const string RangePath = Folder + "/Range.asset";
-        public const string TpsRangePath = Folder + "/TpsRange.asset";
-        public const string DominationPath = Folder + "/Domination.asset";
+        /// <summary>ルールのアセットを置く、出力先ルート (<see cref="FpsKitRoot.Output"/>) の下のフォルダ。</summary>
+        public static string Folder => FpsKitRoot.OutputPath("Rules");
+
+        public static string TeamDeathmatchPath => Folder + "/TeamDeathmatch.asset";
+        public static string CampaignEasyPath => Folder + "/CampaignEasy.asset";
+        public static string CampaignNormalPath => Folder + "/CampaignNormal.asset";
+        public static string CampaignHardPath => Folder + "/CampaignHard.asset";
+        public static string RangePath => Folder + "/Range.asset";
+        public static string TpsRangePath => Folder + "/TpsRange.asset";
+        public static string DominationPath => Folder + "/Domination.asset";
 
         public const string FreeForAllName = "FreeForAll";
         public const string KillConfirmedName = "KillConfirmed";
@@ -43,15 +45,15 @@ namespace Fps.Editor
         public const string HordeName = "Horde";
         public const string BattleRoyaleName = "BattleRoyale";
 
-        public const string FreeForAllPath = Folder + "/" + FreeForAllName + ".asset";
-        public const string KillConfirmedPath = Folder + "/" + KillConfirmedName + ".asset";
-        public const string GunGamePath = Folder + "/" + GunGameName + ".asset";
-        public const string HardpointPath = Folder + "/" + HardpointName + ".asset";
-        public const string GuardianPath = Folder + "/" + GuardianName + ".asset";
-        public const string ExecutionPath = Folder + "/" + ExecutionName + ".asset";
-        public const string SearchAndDestroyPath = Folder + "/" + SearchAndDestroyName + ".asset";
-        public const string HordePath = Folder + "/" + HordeName + ".asset";
-        public const string BattleRoyalePath = Folder + "/" + BattleRoyaleName + ".asset";
+        public static string FreeForAllPath => Folder + "/" + FreeForAllName + ".asset";
+        public static string KillConfirmedPath => Folder + "/" + KillConfirmedName + ".asset";
+        public static string GunGamePath => Folder + "/" + GunGameName + ".asset";
+        public static string HardpointPath => Folder + "/" + HardpointName + ".asset";
+        public static string GuardianPath => Folder + "/" + GuardianName + ".asset";
+        public static string ExecutionPath => Folder + "/" + ExecutionName + ".asset";
+        public static string SearchAndDestroyPath => Folder + "/" + SearchAndDestroyName + ".asset";
+        public static string HordePath => Folder + "/" + HordeName + ".asset";
+        public static string BattleRoyalePath => Folder + "/" + BattleRoyaleName + ".asset";
 
         /// <summary><see cref="HordeRules"/> で、倒れた人がまとめて戻る波の間隔 (秒)。</summary>
         public const float HordeWaveIntervalSeconds = 30f;
@@ -64,7 +66,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// 対戦・PvE モードの名前。<see cref="BuildModesAt"/> はこの順に <c>&lt;フォルダ&gt;/&lt;名前&gt;.asset</c> を作って返す。
-        /// シーンは <see cref="BuildSceneList"/> の <c>Assets/game/Scenes/&lt;名前&gt;.unity</c>。
+        /// シーンは <see cref="BuildSceneList"/> の <c>&lt;出力先ルート&gt;/Scenes/&lt;名前&gt;.unity</c>。
         /// </summary>
         public static IReadOnlyList<string> ModeNames { get; } = new[]
         {

@@ -32,8 +32,8 @@ namespace Fps.Editor
     /// </remarks>
     public sealed class BattleRoyaleSceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.BattleRoyaleScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.BattleRoyalePath;
+        public static string ScenePathValue => BuildSceneList.BattleRoyaleScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.BattleRoyalePath;
         public const string MenuPath = "Fps/Build Battle Royale Scene";
 
         public const int SquadCount = 6;

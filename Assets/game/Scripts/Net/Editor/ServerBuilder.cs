@@ -136,7 +136,8 @@ namespace Fps.Editor
         /// </summary>
         private static void EnsureNetScene()
         {
-            var hasScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(NetBootstrap.ScenePath) != null;
+            var scenePath = NetSceneBuilder.ScenePath;
+            var hasScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) != null;
             var hasPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NetSceneBuilder.PlayerPrefabPath) != null;
             var hasLoadout = MatchLoadout() != null;
             if (hasScene && hasPrefab && hasLoadout)
@@ -144,15 +145,15 @@ namespace Fps.Editor
                 return;
             }
 
-            Debug.Log("[Net] ServerBuilder: " + NetBootstrap.ScenePath + " or " + NetSceneBuilder.PlayerPrefabPath
+            Debug.Log("[Net] ServerBuilder: " + scenePath + " or " + NetSceneBuilder.PlayerPrefabPath
                 + " is missing, or " + NetSceneBuilder.MatchPrefabPath + " has no usable loadout;"
                 + " running NetSceneBuilder.Build (commit the generated files)");
             NetSceneBuilder.Build();
 
-            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(NetBootstrap.ScenePath) == null)
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) == null)
             {
                 throw new InvalidOperationException(
-                    "[Net] ServerBuilder: " + NetBootstrap.ScenePath + " was not created by NetSceneBuilder.Build");
+                    "[Net] ServerBuilder: " + scenePath + " was not created by NetSceneBuilder.Build");
             }
 
             if (MatchLoadout() == null)
@@ -200,7 +201,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 試合の進行役のロードアウトとその武器の定義が、ビルドに入れるシーン (<see cref="NetBootstrap.ScenePath"/>) から
+        /// 試合の進行役のロードアウトとその武器の定義が、ビルドに入れるシーン (<see cref="NetSceneBuilder.ScenePath"/>) から
         /// 参照をたどって届き、プレイヤーに含まれることを確かめる。届かなければ例外を投げる。
         /// </summary>
         private static void RequireLoadoutInBuild()
@@ -212,11 +213,12 @@ namespace Fps.Editor
                     "[Net] ServerBuilder: " + NetSceneBuilder.MatchPrefabPath + " has no usable loadout");
             }
 
-            var missing = MissingFromScene(NetBootstrap.ScenePath, LoadoutAssetPaths(loadout));
+            var scenePath = NetSceneBuilder.ScenePath;
+            var missing = MissingFromScene(scenePath, LoadoutAssetPaths(loadout));
             if (missing.Count > 0)
             {
                 throw new InvalidOperationException(
-                    "[Net] ServerBuilder: " + string.Join(", ", missing) + " would not be in the build of " + NetBootstrap.ScenePath
+                    "[Net] ServerBuilder: " + string.Join(", ", missing) + " would not be in the build of " + scenePath
                     + "; run NetSceneBuilder.Build");
             }
 

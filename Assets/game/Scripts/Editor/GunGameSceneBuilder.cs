@@ -19,16 +19,16 @@ namespace Fps.Editor
     /// </summary>
     public sealed class GunGameSceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.GunGameScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.GunGamePath;
-        public const string LadderPath = "Assets/game/Weapons/GunGameLadder.asset";
+        public static string ScenePathValue => BuildSceneList.GunGameScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.GunGamePath;
+        public static string LadderPath => FpsKitRoot.OutputPath("Weapons/GunGameLadder.asset");
         public const string MenuPath = "Fps/Build Gun Game Scene";
 
         /// <summary>bot の数。1 体ずつ別の陣営に立てる。</summary>
         public const int BotCount = 5;
 
         /// <summary>武器の並び。0 段目は bot が最初に持つ武器 (<see cref="ModeSceneBuilder.BotWeaponId"/> の rifle) と揃える。</summary>
-        public static readonly IReadOnlyList<string> LadderWeaponPaths = new[]
+        public static IReadOnlyList<string> LadderWeaponPaths => new[]
         {
             WeaponAssetBuilder.RiflePath,
             WeaponAssetBuilder.LauncherPath,

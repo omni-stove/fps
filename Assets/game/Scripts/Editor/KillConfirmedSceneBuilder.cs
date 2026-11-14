@@ -16,8 +16,8 @@ namespace Fps.Editor
     /// </summary>
     public sealed class KillConfirmedSceneBuilder : ModeSceneBuilder
     {
-        public const string ScenePathValue = BuildSceneList.KillConfirmedScene;
-        public const string RulesPathValue = GameRulesAssetBuilder.KillConfirmedPath;
+        public static string ScenePathValue => BuildSceneList.KillConfirmedScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.KillConfirmedPath;
         public const string MenuPath = "Fps/Build Kill Confirmed Scene";
 
         /// <summary>プレイヤーの陣営の bot の数。プレイヤーを合わせて <see cref="EnemySideBots"/> と同じ人数になる。</summary>

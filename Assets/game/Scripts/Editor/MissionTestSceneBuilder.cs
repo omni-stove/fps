@@ -20,8 +20,8 @@ namespace Fps.Editor
     /// </summary>
     public static class MissionTestSceneBuilder
     {
-        public const string ScenePath = BuildSceneList.MissionTestScene;
-        public const string DefinitionPath = "Assets/game/Missions/TestMission.asset";
+        public static string ScenePath => BuildSceneList.MissionTestScene;
+        public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/TestMission.asset");
         public const string MenuPath = "Fps/Build Mission Test Scene";
         public const string LogTag = "[MissionTestSceneBuilder]";
 

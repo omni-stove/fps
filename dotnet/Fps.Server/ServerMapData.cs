@@ -14,10 +14,17 @@ namespace Fps.Server
         public const string CollisionExtension = ".fpsmap";
 
         public ServerMapData(
-            string name, WorldMap world, NavMeshFile navMesh, string directory, NetMapPoints points = null, NetMapStructures structures = null)
+            string name,
+            WorldMap world,
+            NavMeshFile navMesh,
+            string directory,
+            NetMapPoints points = null,
+            NetMapStructures structures = null,
+            NetMapLadders ladders = null)
         {
             Points = points;
             Structures = structures;
+            Ladders = ladders ?? NetMapLadders.None;
             Name = name ?? throw new ArgumentNullException(nameof(name));
             ArgumentNullException.ThrowIfNull(world);
             NavMesh = navMesh ?? throw new ArgumentNullException(nameof(navMesh));
@@ -52,6 +59,9 @@ namespace Fps.Server
         /// <summary>壊せる建物の部品の並び。書き出していないマップでは null で、部品は壊れない壁として残る。</summary>
         public NetMapStructures Structures { get; }
 
+        /// <summary>はしご。書き出す前のマップでもはしごが無いだけで動けるよう、ファイルが無ければ空。</summary>
+        public NetMapLadders Ladders { get; }
+
         public string LogLine => ServerProgram.LogTag + " map " + Name
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
             + " navTriangles=" + NavMesh.Triangles.Count.ToString(CultureInfo.InvariantCulture)
@@ -59,6 +69,7 @@ namespace Fps.Server
             + " spawnPoints=" + (Points == null ? "none" : Points.SpawnPoints.Count.ToString(CultureInfo.InvariantCulture))
             + " controlPoints=" + (Points == null ? "none" : Points.ControlPoints.Count.ToString(CultureInfo.InvariantCulture))
             + " structures=" + (Structures == null ? "none" : Structures.Structures.Count.ToString(CultureInfo.InvariantCulture))
+            + " ladders=" + Ladders.Ladders.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Directory;
 
         /// <summary>
@@ -177,9 +188,24 @@ namespace Fps.Server
                 }
             }
 
+            NetMapLadders ladders = null;
+            var laddersPath = Path.Combine(directory, map + NetMapLadders.Extension);
+            if (File.Exists(laddersPath))
+            {
+                try
+                {
+                    ladders = NetMapLadders.Parse(File.ReadAllText(laddersPath), laddersPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + laddersPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                data = new ServerMapData(map, world, navMesh, directory, points, structures);
+                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders);
             }
             catch (ArgumentException e)
             {

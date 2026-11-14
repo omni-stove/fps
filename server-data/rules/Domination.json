@@ -79,7 +79,11 @@
     "radius": 0.5,
     "slopeLimitDegrees": 45,
     "stepOffset": 0.3,
-    "skinWidth": 0.08
+    "skinWidth": 0.08,
+    "proneHeight": 1,
+    "proneSpeed": 1.2,
+    "diveDistance": 2.5,
+    "diveSeconds": 0.5
   },
   "loadout": {
     "name": "DefaultLoadout",

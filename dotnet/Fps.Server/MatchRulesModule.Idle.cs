@@ -48,7 +48,8 @@ namespace Fps.Server
 
         private void IdlePlayerJoined(int playerId)
         {
-            if (_idleTracker == null)
+            // Bot は入力のメッセージを送らないので、数えると放置として切ってしまう (Unity の NetTeamDeathmatch.Bots と同じく外す)
+            if (_idleTracker == null || BotRoster.IsBotId(playerId))
             {
                 return;
             }

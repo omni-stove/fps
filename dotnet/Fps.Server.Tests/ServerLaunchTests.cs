@@ -81,10 +81,17 @@ namespace Fps.Server.Tests
             Assert.That(launch.Options.RegisterLobbyEndpoint, Is.EqualTo("203.0.113.10:7777"));
         }
 
+        [Test]
+        public void AcceptsBots()
+        {
+            var launch = Parse(Env(), "-bots", "4");
+
+            Assert.That(launch.Options.Bots, Is.EqualTo(4));
+        }
+
         [TestCase("-mode", "host", "-mode must be server")]
         [TestCase("-mode", "client", "-mode must be server")]
         [TestCase("-transport", "eos", "-transport eos is not supported")]
-        [TestCase("-bots", "4", "-bots is not supported")]
         [TestCase("-net-latency", "100", "are not supported")]
         [TestCase("-drain-timeout", "3601", "-drain-timeout")]
         [TestCase("-map", "../etc", "-map")]

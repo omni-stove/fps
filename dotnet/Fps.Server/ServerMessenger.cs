@@ -13,9 +13,15 @@ namespace Fps.Server
             _transport = transport ?? throw new ArgumentNullException(nameof(transport));
         }
 
+        // Bot は接続を持たない (ConnectionId.None) まま試合の一覧にいるので、全員へ送る側が Bot を見分けなくて済むよう、ここで読み飛ばす
         public void Send(ConnectionId connection, TransportChannel channel, IMessage message)
         {
             ArgumentNullException.ThrowIfNull(message);
+            if (!connection.IsValid)
+            {
+                return;
+            }
+
             _writer.Reset();
             _writer.WriteMessage(message);
             _transport.Send(connection, channel, _writer.AsSegment());
@@ -27,6 +33,11 @@ namespace Fps.Server
         public TransportChannel SendPreferringUnreliable(ConnectionId connection, IMessage message)
         {
             ArgumentNullException.ThrowIfNull(message);
+            if (!connection.IsValid)
+            {
+                return TransportChannel.Unreliable;
+            }
+
             _writer.Reset();
             _writer.WriteMessage(message);
             var channel = _writer.Length <= _transport.GetMaxPayloadSize(TransportChannel.Unreliable)

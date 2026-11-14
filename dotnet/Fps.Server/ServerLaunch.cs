@@ -190,11 +190,6 @@ namespace Fps.Server
                     + " is not supported by the .NET server yet; use " + NetLaunchOptions.TransportName(NetTransportKind.Udp);
             }
 
-            if (options.Bots > 0)
-            {
-                return NetLaunchOptions.BotsFlag + " is not supported by the .NET server yet (it has no bot module)";
-            }
-
             if (options.SimulatesNetwork)
             {
                 return NetLaunchOptions.NetLatencyFlag + " / " + NetLaunchOptions.NetLossFlag + " / " + NetLaunchOptions.NetJitterFlag

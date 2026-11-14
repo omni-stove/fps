@@ -296,8 +296,8 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 
 Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠、
 上の運用 (版の確認・drain・JSON のイベント)、EOS のロビーへの登録 (`-register-lobby`) と、試合のルール (TDM・Domination・ダウンと蘇生・印・
-出現と出現直後の無敵・ロードアウトの選択・放置で切る)、移動、戦闘 (射撃・巻き戻しの当たり判定・ダメージ・武器・グレネード・壊せる建物) を行う。
-Bot・EOS の P2P・EAC はまだ無い。
+出現と出現直後の無敵・ロードアウトの選択・放置で切る)、移動、戦闘 (射撃・巻き戻しの当たり判定・ダメージ・武器・グレネード・壊せる建物)、Bot を行う。
+EOS の P2P・EAC はまだ無い。
 
 ```sh
 make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
@@ -308,7 +308,7 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
 - 引数 (`-map`・`-drain-timeout`・`-log-format`・`-buildVersion`) と環境変数 (`FPS_SERVER_ADDRESS`・`FPS_SERVER_PORT`) は Unity のサーバーと同じ意味。
   `-address` / `-port` が無ければ環境変数、それも無ければ `0.0.0.0` / `7777` で待ち受ける。引数と環境変数の両方で渡すと
   `[Net] invalid arguments: -port is given more than once (FPS_SERVER_PORT is set too) ...` で終わる (終了コード 2)。
-- まだ動かせない `-transport eos`・`-bots`・`-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
+- まだ動かせない `-transport eos`・`-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む (`-map` が無ければ `NetTest`)。作業ディレクトリの `server-data/`、
   無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
   ファイルは Unity の Editor から `make export-server-data` で書き出す。
@@ -333,6 +333,15 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
 - 壊せる建物の部品の並びは `server-data/maps/<マップ名>.structures.json` (`make export-server-data` で書き出す) から読む。
   無いマップでは `[Destruction] map <マップ名> has N destructible structure(s) but no ...` を出し、部品は壊れない壁として残る。
   破片が当たるダメージ (DebrisCrush) はまだ無い。
+- Bot は Unity のサーバーと同じく、人と Bot を合わせて `-bots` とルールの `minPlayers` の大きいほうの人数になるまで足し、
+  人が入るとその人のチームの Bot を抜く。人が 1 人もいなければ Bot も置かない。Bot は `.fpsnav` の経路をたどり、人と同じ入力で
+  移動と射撃の検査を通る。はしごのリンクでは、はしごへ進んでつかまり、上り下りして渡る (ルールの `actions.ladder` が `Off` なら、
+  はしごを通る経路は使わない)。書き出した NavMesh は壊せる建物をくり抜いていないので、壊れていない部品を通り抜ける経路は使わず、
+  壊れたら通る。見える距離・反応・照準の誤差・経路を引き直す間隔などは `server-data/tuning/bots.json` (無ければ既定値) から読む。
+  ログは `[Bot] fill target=..`・`[Bot] added player=.. name=[BOT] B1 team=..`・`[Bot] removed player=.. reason=..`、
+  2 秒ごとの `[Bot] pos player=.. x=.. y=.. z=.. state=.. health=..`、はしごの `[Bot] ladder player=.. ladder=.. climb=Up|Down|Done`、
+  進めなくなったときの `[Bot] stuck player=..`。倒した・倒されたは人と同じ `[Match] kill ...` と JSON の `kill` の行に出る。
+  Bot は JSON の `player_joined` / `player_left` にも出るが、drain が待つ人数とロビーに載せる人数には数えない。
 - 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
 - SIGTERM と SIGINT (Ctrl+C) で「試合が終わってから止める」と同じ drain に入り、同じログを出す。
 - 承認は `ConnectRequestMessage` の版と鍵を Netcode の承認データと同じ判定に通すので、断ったときのログ

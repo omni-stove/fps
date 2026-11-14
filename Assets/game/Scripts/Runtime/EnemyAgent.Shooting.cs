@@ -219,7 +219,8 @@ namespace Fps.Runtime
             _brain.RecordShot();
             Fired?.Invoke(_weapon);
 
-            var result = Hitscan.Fire(eye, direction, spec.Range, spec.Damage, spec.Falloff, transform, spec.ExplosionRadius, spec.Id);
+            var damage = ScaleDamage(spec.Damage, _shotDamageMultiplier);
+            var result = Hitscan.Fire(eye, direction, spec.Range, damage, spec.Falloff, transform, spec.ExplosionRadius, spec.Id);
             Debug.Log(
                 string.Format(
                     CultureInfo.InvariantCulture,

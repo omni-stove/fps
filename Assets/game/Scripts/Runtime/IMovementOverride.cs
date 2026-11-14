@@ -8,7 +8,7 @@ namespace Fps.Runtime
     /// 有効なもののうち <see cref="Priority"/> が最も高いもの (同じなら先に登録したもの) が、その Tick の位置・速度・向き・姿勢を <see cref="Step"/> で決める。
     /// 選ばれたときに <see cref="Begin"/>、選ばれなくなったとき (無効になった・より高いものに替わった・登録を外した・
     /// PlayerController が無効になったか初期化し直した) に <see cref="End"/> が呼ばれる。
-    /// 回避と乗り越えはこの口を使わないが、選ばれた時点でやめさせ、横取りの間は始めない。
+    /// 回避・乗り越え・崖のぼりはこの口を使わないが、選ばれた時点でやめさせ、横取りの間は始めない。
     /// </summary>
     public interface IMovementOverride
     {

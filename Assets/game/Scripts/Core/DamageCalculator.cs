@@ -16,20 +16,12 @@ namespace Fps.Core
         /// <summary>手足への命中の倍率。</summary>
         public const double LimbMultiplier = 0.75;
 
+        public const double WeakPointMultiplier = 2.0;
+
         /// <summary>部位の倍率を返す。</summary>
         public static double ZoneMultiplier(HitZone zone)
         {
-            switch (zone)
-            {
-                case HitZone.Head:
-                    return HeadMultiplier;
-                case HitZone.Body:
-                    return BodyMultiplier;
-                case HitZone.Limb:
-                    return LimbMultiplier;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(zone), zone, "unknown hit zone");
-            }
+            return ZoneDamageMultipliers.Default.For(zone);
         }
 
         /// <summary>
@@ -42,6 +34,11 @@ namespace Fps.Core
         /// <param name="falloff">距離減衰の設定。</param>
         public static int Calculate(int baseDamage, HitZone zone, float distance, DamageFalloff falloff)
         {
+            return Calculate(baseDamage, zone, distance, falloff, ZoneDamageMultipliers.Default);
+        }
+
+        public static int Calculate(int baseDamage, HitZone zone, float distance, DamageFalloff falloff, ZoneDamageMultipliers multipliers)
+        {
             if (baseDamage < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(baseDamage), baseDamage, "baseDamage must not be negative");
@@ -52,10 +49,16 @@ namespace Fps.Core
                 throw new ArgumentNullException(nameof(falloff));
             }
 
-            var zoneMultiplier = ZoneMultiplier(zone);
+            if (multipliers == null)
+            {
+                throw new ArgumentNullException(nameof(multipliers));
+            }
+
+            var zoneMultiplier = multipliers.For(zone);
             var distanceMultiplier = falloff.MultiplierAt(distance);
 
-            if (baseDamage == 0)
+            // 倍率 0 の部位を効かない部位として使えるよう、最低 1 の決まりより先に 0 を返す。
+            if (baseDamage == 0 || zoneMultiplier == 0d)
             {
                 return 0;
             }

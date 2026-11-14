@@ -14,19 +14,20 @@ namespace Fps.Server
         private readonly HitConfirmMessage _hitConfirm = new HitConfirmMessage();
         private readonly DamageTakenMessage _damageTaken = new DamageTakenMessage();
         private readonly ShotIndexCorrectedMessage _shotIndexCorrected = new ShotIndexCorrectedMessage();
+        private readonly FireRequestMessage _botFire = new FireRequestMessage();
 
         /// <summary>
         /// 射撃 1 発。撃てる状態・武器と連射の間隔・始点を確かめ、弾倉から 1 発消費してから、撃った人が見ていた時点まで他の人を巻き戻して当てる。
         /// 判定の向きはサーバーが数えた発射番号でばらつきを掛けた向き。検査で捨てた射撃では弾も連射の枠も減らさない。
         /// </summary>
-        private void Fire(Fighter shooter, FireRequestMessage request)
+        private bool Fire(Fighter shooter, FireRequestMessage request)
         {
             var shooterId = shooter.PlayerId;
 
             // ダウン中・倒れている人の射撃は理由を出さずに捨てる
             if (!_rules.CanFire(shooterId) || !_bodies.TryGet(shooterId, out var body))
             {
-                return;
+                return false;
             }
 
             // 回避・乗り越えの最中は撃たせない。連射の枠も弾も使わないよう、武器の検査より先に捨てる
@@ -34,7 +35,7 @@ namespace Fps.Server
             if (motion.IsDodging || motion.IsVaulting)
             {
                 WarnRejected(shooterId, motion.IsDodging ? ShotRejection.Dodging : ShotRejection.Vaulting);
-                return;
+                return false;
             }
 
             var spec = shooter.Weapons.CurrentSpec;
@@ -42,7 +43,7 @@ namespace Fps.Server
             if (weaponCheck != ShotRejection.None)
             {
                 WarnRejected(shooterId, weaponCheck);
-                return;
+                return false;
             }
 
             var time = new ShotTime(request.ClientTick, request.InterpolationAlpha);
@@ -50,13 +51,13 @@ namespace Fps.Server
             if (rejection != ShotRejection.None)
             {
                 WarnRejected(shooterId, rejection);
-                return;
+                return false;
             }
 
             if (IsOriginBlocked(body.EyePosition, request.Origin))
             {
                 WarnRejected(shooterId, ShotRejection.OriginBlocked);
-                return;
+                return false;
             }
 
             // ブラインドファイアの始点はクライアントの始点ではなく、サーバーの知るカバーの状態と目の位置から決める
@@ -64,14 +65,14 @@ namespace Fps.Server
             if (blind == BlindFireAim.Blocked)
             {
                 WarnRejected(shooterId, ShotRejection.BlindFireBlocked);
-                return;
+                return false;
             }
 
             var ammo = shooter.Weapons.TryFire();
             if (ammo != ShotRejection.None)
             {
                 WarnRejected(shooterId, ammo);
-                return;
+                return false;
             }
 
             // 弾を撃った時点で出現直後の無敵を解く (外れても)。跳ね返しの味方撃ちが撃った本人に届くよう、ダメージより先に
@@ -83,14 +84,14 @@ namespace Fps.Server
             SendShot(shooterId, spec.Id, origin, direction, any, hit);
             if (!any)
             {
-                return;
+                return true;
             }
 
             if (!hit.HitTarget)
             {
                 _structures.ApplyHit(hit.ColliderId, hit.Point, spec.Damage, spec.ExplosionRadius, _changedStructures, _log);
                 SendStructureChanges();
-                return;
+                return true;
             }
 
             var victimId = hit.TargetId;
@@ -110,6 +111,47 @@ namespace Fps.Server
             var session = _rules.Session;
             var health = session != null && session.HasPlayer(victimId) ? session.GetHealth(victimId) : 0;
             _log.WriteLine(NetHitLog.Hit(shooterId, victimId, hit.RewindTicks, hit.Zone, damage, health, outcome, hit.TargetCrouched));
+            return true;
+        }
+
+        /// <summary>
+        /// Bot の射撃を人の射撃と同じ検査 (撃てる状態・武器・連射・始点・弾数) に通す。Bot はサーバーの上で今の位置を見て撃つので、
+        /// 見ていた tick はこの tick (巻き戻しは無い)。発射番号はサーバーが次に受け入れる番号を添え、訂正を起こさない。
+        /// </summary>
+        public bool BotFire(int playerId, Vector3 origin, Vector3 direction, int tick)
+        {
+            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null)
+            {
+                return false;
+            }
+
+            _botFire.WeaponId = fighter.Weapons.CurrentSpec.Id;
+            _botFire.Origin = origin;
+            _botFire.Direction = direction;
+            _botFire.ClientTick = tick;
+            _botFire.InterpolationAlpha = 0f;
+            _botFire.ShotIndex = fighter.Shots.NextIndex;
+            _botFire.ShotGeneration = fighter.Shots.Generation;
+            return Fire(fighter, _botFire);
+        }
+
+        public bool TryGetWeapon(int playerId, out WeaponSpec spec, out WeaponSync state)
+        {
+            if (_fighters.TryGetValue(playerId, out var fighter) && fighter.Weapons.CurrentSpec != null)
+            {
+                spec = fighter.Weapons.CurrentSpec;
+                state = fighter.Weapons.Sync();
+                return true;
+            }
+
+            spec = null;
+            state = default;
+            return false;
+        }
+
+        public bool BotReload(int playerId)
+        {
+            return BotRoster.IsBotId(playerId) && _fighters.TryGetValue(playerId, out var fighter) && fighter.Weapons.TryReload();
         }
 
         /// <summary>

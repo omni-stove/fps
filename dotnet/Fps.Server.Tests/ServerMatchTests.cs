@@ -32,6 +32,52 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void ABotJoinsWithoutAConnectionAndIsNotCountedAsAHuman()
+        {
+            _match.Join(new ConnectionId(1), "device1");
+            var bot = _match.JoinBot(BotRoster.FirstBotPlayerId);
+
+            Assert.That(bot.IsBot, Is.True);
+            Assert.That(bot.Connection.IsValid, Is.False);
+            Assert.That(bot.Team, Is.EqualTo(Team.Bravo));
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(_match.PlayerCount, Is.EqualTo(2));
+            Assert.That(_match.HumanCount, Is.EqualTo(1));
+            Assert.That(_match.BotCount, Is.EqualTo(1));
+            Assert.That(_match.TryGetPlayer(ConnectionId.None, out _), Is.False);
+            Assert.That(_json.ToString(), Does.Contain("\"playerId\":\"" + BotRoster.FirstBotPlayerId + "\""));
+
+            Assert.That(_match.Leave(ConnectionId.None), Is.False);
+            Assert.That(_match.LeaveBot(1), Is.False);
+            Assert.That(_match.LeaveBot(BotRoster.FirstBotPlayerId), Is.True);
+            Assert.That(_match.LeaveBot(BotRoster.FirstBotPlayerId), Is.False);
+            Assert.That(_match.PlayerCount, Is.EqualTo(1));
+            Assert.That(_match.BotCount, Is.Zero);
+        }
+
+        [Test]
+        public void OnlyBotIdsJoinAsBots()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _match.JoinBot(5));
+            _match.JoinBot(BotRoster.FirstBotPlayerId);
+            Assert.Throws<ArgumentException>(() => _match.JoinBot(BotRoster.FirstBotPlayerId));
+        }
+
+        [Test]
+        public void MessagesToNoConnectionAreDropped()
+        {
+            using (var transport = new RecordingTransport())
+            {
+                var messenger = new ServerMessenger(transport);
+                messenger.Send(ConnectionId.None, TransportChannel.Reliable, new KilledMessage());
+                messenger.SendPreferringUnreliable(ConnectionId.None, new KilledMessage());
+                messenger.Send(new ConnectionId(1), TransportChannel.Reliable, new KilledMessage());
+
+                Assert.That(transport.Sent, Has.Count.EqualTo(1));
+            }
+        }
+
+        [Test]
         public void PlayersAlternateTeamsAndTheMatchStartsWhenBothTeamsHaveSomeone()
         {
             var first = _match.Join(new ConnectionId(1), "key1");

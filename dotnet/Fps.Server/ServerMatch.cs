@@ -21,6 +21,7 @@ namespace Fps.Server
         private readonly ServerEventWriter _events;
         private readonly Func<DateTime> _utcNow;
         private float _restartRemaining;
+        private int _botCount;
 
         public ServerMatch(float restartDelaySeconds, TextWriter log, ServerEventWriter events, Func<DateTime> utcNow)
         {
@@ -56,6 +57,11 @@ namespace Fps.Server
         public GameModeState State { get; private set; }
 
         public int PlayerCount => _players.Count;
+
+        // 抜けるのを待つ (drain) ・ロビーに載せる人数に Bot を数えると、人がいなくても試合が続いているように見えるため
+        public int HumanCount => _players.Count - _botCount;
+
+        public int BotCount => _botCount;
 
         public int AlphaScore { get; private set; }
 
@@ -122,13 +128,49 @@ namespace Fps.Server
                 throw new ArgumentException("connection " + connection + " has already joined", nameof(connection));
             }
 
+            return Add(connection, playerId, rejoinKey);
+        }
+
+        /// <summary>Bot は接続を持たないので <see cref="ConnectionId.None"/> で加え、送る側はそれを読み飛ばす。</summary>
+        public ServerPlayer JoinBot(int playerId)
+        {
+            if (!BotRoster.IsBotId(playerId))
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerId), playerId, "not a bot player id");
+            }
+
+            if (_players.ContainsKey(playerId))
+            {
+                throw new ArgumentException("player " + playerId + " has already joined", nameof(playerId));
+            }
+
+            _botCount++;
+            return Add(ConnectionId.None, playerId, null);
+        }
+
+        public bool LeaveBot(int playerId)
+        {
+            if (!BotRoster.IsBotId(playerId) || !_players.TryGetValue(playerId, out var player))
+            {
+                return false;
+            }
+
+            Remove(player);
+            return true;
+        }
+
+        private ServerPlayer Add(ConnectionId connection, int playerId, string rejoinKey)
+        {
             var rejoined = false;
             var team = ChooseTeam != null
                 ? ChooseTeam(rejoinKey, out rejoined)
                 : TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
             var player = new ServerPlayer(connection, playerId, team, rejoinKey);
             _players.Add(playerId, player);
-            _byConnection.Add(connection, player);
+            if (connection.IsValid)
+            {
+                _byConnection.Add(connection, player);
+            }
 
             _log.WriteLine(MatchLog.Joined(playerId, team));
             if (_events.Enabled)
@@ -148,7 +190,21 @@ namespace Fps.Server
                 return false;
             }
 
-            _byConnection.Remove(connection);
+            Remove(player);
+            return true;
+        }
+
+        private void Remove(ServerPlayer player)
+        {
+            if (player.Connection.IsValid)
+            {
+                _byConnection.Remove(player.Connection);
+            }
+            else
+            {
+                _botCount--;
+            }
+
             _players.Remove(player.PlayerId);
             _log.WriteLine(MatchLog.Left(player.PlayerId));
             if (_events.Enabled)
@@ -157,7 +213,6 @@ namespace Fps.Server
             }
 
             PlayerLeft?.Invoke(player);
-            return true;
         }
 
         public void SetScores(int alphaScore, int bravoScore)

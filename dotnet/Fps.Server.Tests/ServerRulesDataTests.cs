@@ -35,7 +35,9 @@ namespace Fps.Server.Tests
             Assert.That(data.Ping, Is.SameAs(PingSpec.Default));
             Assert.That(data.PingPath, Is.Null);
             Assert.That(data.Grenade, Is.SameAs(GrenadeSpec.Default));
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
+            Assert.That(data.Bots, Is.SameAs(NetBotSpec.Default));
+            Assert.That(data.BotsPath, Is.Null);
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
         }
 
         [Test]
@@ -80,6 +82,50 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void ReadsTheBotTuningBesideTheRules()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.BotsTuningFileName), "{\"sightRange\": 30, \"repathSeconds\": 1}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Bots.Brain.SightRange, Is.EqualTo(30f));
+            Assert.That(data.Bots.RepathSeconds, Is.EqualTo(1f));
+            Assert.That(data.Bots.Input.MaxTurnDegreesPerSecond, Is.EqualTo(BotInputSpec.DefaultMaxTurnDegreesPerSecond));
+            Assert.That(data.BotsPath, Does.EndWith(ServerRulesData.BotsTuningFileName));
+        }
+
+        [Test]
+        public void BrokenBotTuningStopsTheLoad()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.BotsTuningFileName), "{\"attackRange\": 50}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("cannot read bots tuning: ").And.Contain("attackRange"));
+        }
+
+        [Test]
+        public void TheCommittedBotTuningMatchesTheDefaults()
+        {
+            var path = Path.Combine(RepositoryRoot(), ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName, ServerRulesData.BotsTuningFileName);
+            var spec = TuningJson.ParseBots(File.ReadAllText(path), path);
+            var defaults = NetBotSpec.Default;
+
+            Assert.That(spec.Brain.SightRange, Is.EqualTo(defaults.Brain.SightRange));
+            Assert.That(spec.Brain.AttackRange, Is.EqualTo(defaults.Brain.AttackRange));
+            Assert.That(spec.Brain.ReactionSeconds, Is.EqualTo(defaults.Brain.ReactionSeconds));
+            Assert.That(spec.Input.AimErrorPerMeter, Is.EqualTo(defaults.Input.AimErrorPerMeter));
+            Assert.That(spec.Input.CrouchWhenHolding, Is.EqualTo(defaults.Input.CrouchWhenHolding));
+            Assert.That(spec.NavSampleRadius, Is.EqualTo(defaults.NavSampleRadius));
+            Assert.That(spec.StuckProgress, Is.EqualTo(defaults.StuckProgress));
+        }
+
+        [Test]
         public void MissingRulesTellWhereItLookedAndHowToExport()
         {
             Assert.That(ServerRulesData.TryLoad("Domination", Roots(), out _, out var error), Is.False);
@@ -108,5 +154,19 @@ namespace Fps.Server.Tests
         }
 
         private string[] Roots() => new[] { _first.Path, _second.Path };
+
+        private static string RepositoryRoot()
+        {
+            for (var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory); directory != null; directory = directory.Parent)
+            {
+                if (Directory.Exists(Path.Combine(directory.FullName, ServerMapData.DataDirectoryName)))
+                {
+                    return directory.FullName;
+                }
+            }
+
+            Assert.Fail(ServerMapData.DataDirectoryName + " is not above " + TestContext.CurrentContext.TestDirectory);
+            return null;
+        }
     }
 }

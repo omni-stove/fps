@@ -451,7 +451,7 @@ namespace Fps.Tests.EditMode
             try
             {
                 var weapon = holder.AddComponent<WeaponController>();
-                var spec = WeaponAssetBuilder.RifleSpec();
+                var spec = TestWeapons.RifleSpec();
                 weapon.MoveFractionSource = () => 1f;
                 var full = weapon.CurrentConeDegrees(spec);
                 Assume.That(full, Is.GreaterThan(0f), "the rifle spreads while moving");

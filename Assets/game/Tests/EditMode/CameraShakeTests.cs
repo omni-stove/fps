@@ -81,8 +81,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void OwnShotUsesTheTraumaOfTheWeaponCategory()
         {
-            var rifle = WeaponAssetBuilder.RifleSpec();
-            var launcher = WeaponAssetBuilder.LauncherSpec();
+            var rifle = TestWeapons.RifleSpec();
+            var launcher = TestWeapons.LauncherSpec();
             _shake.WeaponSource = () => rifle;
 
             CombatEvents.RaiseShotFired(_body, Vector3.zero, Vector3.forward, rifle.Id);
@@ -99,7 +99,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ShotFromAnotherWeaponThanTheHeldOneUsesTheDefault()
         {
-            var rifle = WeaponAssetBuilder.RifleSpec();
+            var rifle = TestWeapons.RifleSpec();
             _shake.WeaponSource = () => rifle;
 
             CombatEvents.RaiseShotFired(_body, Vector3.zero, Vector3.forward, "previous-weapon");

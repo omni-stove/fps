@@ -19,7 +19,7 @@ namespace Fps.Tests.EditMode
         {
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
 
             _host = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             _host.name = "Enemy";
@@ -86,7 +86,7 @@ namespace Fps.Tests.EditMode
             var recoil = new RecoilState();
             Assert.That(EnemyAgent.WithRecoil(Vector3.forward, recoil, 0f), Is.EqualTo(Vector3.forward));
 
-            var spec = WeaponAssetBuilder.RifleSpec();
+            var spec = TestWeapons.RifleSpec();
             for (var i = 0; i < 10; i++)
             {
                 recoil.Kick(spec, 7, i);

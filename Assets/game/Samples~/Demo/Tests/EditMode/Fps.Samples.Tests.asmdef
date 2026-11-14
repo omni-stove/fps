@@ -1,0 +1,30 @@
+{
+    "name": "Fps.Samples.Tests",
+    "rootNamespace": "Fps.Tests.EditMode",
+    "references": [
+        "Fps.Core",
+        "Fps.Runtime",
+        "Fps.Runtime.UI",
+        "Fps.Editor",
+        "Fps.Samples.Editor",
+        "Unity.InputSystem",
+        "Unity.AI.Navigation",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

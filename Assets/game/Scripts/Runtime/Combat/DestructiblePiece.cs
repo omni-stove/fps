@@ -15,6 +15,9 @@ namespace Fps.Runtime
     {
         public const int DefaultMaxHealth = 100;
 
+        /// <summary><see cref="Create"/> に渡したプレハブを置く子の名前。</summary>
+        public const string VisualName = "Visual";
+
         [SerializeField, Min(0), Tooltip("建造物の中での添字。建造物の部品で 0 から部品数-1 までを重ならないように振る")]
         private int _index;
 
@@ -56,6 +59,7 @@ namespace Fps.Runtime
         /// <summary>
         /// 1m の Cube の部品を作る。size に合わせた <see cref="BoxCollider"/> の付いた見た目と、
         /// carveObstacle なら同じ大きさで NavMesh を削る <see cref="NavMeshObstacle"/> を付ける。
+        /// visualPrefab があれば、見た目だけをそのプレハブにする (当たり判定は同じ大きさの箱のまま)。
         /// 途中で失敗したら作りかけを片付けて例外を投げ直す。
         /// </summary>
         /// <param name="parent">親 (建造物か、その子孫)。null 不可。</param>
@@ -66,6 +70,10 @@ namespace Fps.Runtime
         /// <param name="maxHealth">最大耐久値。1 以上。</param>
         /// <param name="grounded">地面に接しているか。</param>
         /// <param name="carveObstacle">NavMesh を削る NavMeshObstacle を付けるか。</param>
+        /// <param name="visualPrefab">
+        /// 見た目。原点を中心にした大きさ 1m の形にする (部品と一緒に size まで拡大する)。当たり判定を外して <see cref="VisualName"/> の子に置く。
+        /// null なら仮の Cube を作る。
+        /// </param>
         public static DestructiblePiece Create(
             Transform parent,
             string pieceName,
@@ -74,7 +82,8 @@ namespace Fps.Runtime
             int index,
             int maxHealth = DefaultMaxHealth,
             bool grounded = false,
-            bool carveObstacle = true)
+            bool carveObstacle = true,
+            GameObject visualPrefab = null)
         {
             if (parent == null)
             {
@@ -86,10 +95,16 @@ namespace Fps.Runtime
                 throw new ArgumentOutOfRangeException(nameof(size), size, "size must be positive on every axis");
             }
 
-            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var cube = visualPrefab != null ? new GameObject(pieceName, typeof(BoxCollider)) : GameObject.CreatePrimitive(PrimitiveType.Cube);
             try
             {
                 cube.name = pieceName;
+                if (visualPrefab != null)
+                {
+                    // 隣接と当たりは部品の箱で決めるので、見た目の当たり判定は外す (残すと隣の部品と重なって支えの計算が変わる)。
+                    VisualPrefab.Instantiate(visualPrefab, cube.transform, VisualName, stripColliders: true);
+                }
+
                 cube.transform.SetParent(parent, false);
                 cube.transform.localPosition = localPosition;
                 cube.transform.localRotation = Quaternion.identity;

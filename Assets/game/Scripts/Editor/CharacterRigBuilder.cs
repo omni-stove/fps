@@ -24,7 +24,7 @@ namespace Fps.Editor
     /// </summary>
     public static class CharacterRigBuilder
     {
-        public static string Folder => FpsKitRoot.OutputPath("Characters");
+        public static string Folder => FpsKitRoot.BundledPath("Characters");
         // CharacterAnimator が実行時に Resources.Load で読むので、プレハブだけ Resources の下に置く。
         public static string PrefabPath => Folder + "/Resources/" + Fps.Runtime.CharacterAnimator.RigResourcePath + ".prefab";
         public static string ControllerPath => Folder + "/CharacterRig.controller";

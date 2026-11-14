@@ -341,6 +341,28 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -
   -buildVersion "$(git describe --tags --always --dirty)" -register-lobby 127.0.0.1:7777
 ```
 
+### .NET のサーバーにクライアントをつなぐ (`-netstack v2`)
+
+.NET のサーバーへは、新しい通信手順 (`Fps.Protocol` と LiteNetLib) のクライアント (`Assets/game/Scripts/NetV2`) でつなぐ。
+置き換えが終わるまで、`-netstack v2` を付けたときだけこの経路を使い、付けなければ今の Netcode for GameObjects のクライアントのまま。
+
+```sh
+make server-dotnet
+<ビルドしたゲーム> -mode client -netstack v2 -address 127.0.0.1    # 2 つ起動すると互いが見える
+```
+
+- `-address`・`-port` は今のクライアントと同じ意味。マップは `-map` ではなく、承認のときにサーバーが知らせる試合のマップのシーンへ移る
+  (`-map` は今と同じくクライアントには付けられない)。そのシーンがビルドに無い・`.fpsmap` が無ければ理由を出してそのシーンに留まる。
+- 自分の移動はサーバーと同じ Core の移動と `.fpsmap` で予測して入力を送り、スナップショットの処理済みの入力の tick で照合する。
+  食い違って巻き戻したときは `[Net] reconciled tick=... error=...` を出す。他のプレイヤーは 2 tick 遅らせて補間する。
+  他のプレイヤーの見た目は `Resources/NetV2/RemotePlayerBody` のプレハブで差し替えられ、無ければ体の寸法のカプセルを出す。
+- 射撃・リロード・グレネード・印は押したときに要求を送り、保存してあるロードアウトを承認されたときに頼む。キル・被弾・ヒット・爆発は
+  今の HUD とエフェクト (`CombatEvents`) に流し、`[Combat]` の行を出す。
+- サーバーとの接続を失うと、今のクライアントと同じ文 (「サーバーが止まりました。」・タイムアウト・断られた・版が違う) を出してメニューへ戻る。
+  batchmode では今と同じ終了コード (切断 0・つながらない 5) で終わる。
+- まだ使えない `-lobby`・`-transport eos`・`-net-latency` / `-net-loss` / `-net-jitter` や、`-mode client` 以外と一緒に付けると
+  `[Net] invalid arguments: ...` を出して終了コード 2 で終わる。
+
 ## CI でのリリース
 
 `v*` のタグを push すると `.github/workflows/server-image.yml` が専用サーバーをビルドし、

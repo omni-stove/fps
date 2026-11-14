@@ -1,0 +1,21 @@
+{
+    "name": "Fps.NetV2",
+    "rootNamespace": "Fps.NetV2",
+    "references": [
+        "Fps.Core",
+        "Fps.Protocol",
+        "Fps.NetV2.Client",
+        "Fps.Runtime",
+        "Fps.Runtime.UI",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

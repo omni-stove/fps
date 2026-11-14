@@ -27,12 +27,32 @@ namespace Fps.Protocol.Tests
         public void ConnectAccepted()
         {
             var got = ToClient<ConnectAcceptedMessage>(
-                new ConnectAcceptedMessage { PlayerId = 7, ServerVersion = "1.2.3", TickRate = 60, ServerTick = 1234 });
+                new ConnectAcceptedMessage
+                {
+                    PlayerId = 7,
+                    ServerVersion = "1.2.3",
+                    TickRate = 60,
+                    ServerTick = 1234,
+                    Map = "NetArena01",
+                    MaxHealth = 150,
+                });
 
             Assert.That(got.PlayerId, Is.EqualTo(7));
             Assert.That(got.ServerVersion, Is.EqualTo("1.2.3"));
             Assert.That(got.TickRate, Is.EqualTo(60));
             Assert.That(got.ServerTick, Is.EqualTo(1234));
+            Assert.That(got.Map, Is.EqualTo("NetArena01"));
+            Assert.That(got.MaxHealth, Is.EqualTo(150));
+        }
+
+        [TestCase("")]
+        [TestCase("../NetTest")]
+        public void ConnectAcceptedWithAMapThatIsNotASceneNameIsUnreadable(string map)
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = map, MaxHealth = 100 });
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(writer.AsSegment()));
         }
 
         [Test]

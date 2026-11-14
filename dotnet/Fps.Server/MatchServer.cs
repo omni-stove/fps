@@ -362,6 +362,8 @@ namespace Fps.Server
             _accepted.ServerVersion = _launch.ServerVersion;
             _accepted.TickRate = TickClock.DefaultTickRate;
             _accepted.ServerTick = (int)Math.Min(_host.TickCount, int.MaxValue);
+            _accepted.Map = _launch.Map;
+            _accepted.MaxHealth = _rules?.Settings.MaxHealth ?? NetMatchSettings.DefaultMaxHealth;
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 

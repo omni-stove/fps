@@ -112,6 +112,8 @@ namespace Fps.Server.Tests
                         ServerVersion = accepted.ServerVersion,
                         TickRate = accepted.TickRate,
                         ServerTick = accepted.ServerTick,
+                        Map = accepted.Map,
+                        MaxHealth = accepted.MaxHealth,
                     };
                     break;
                 case ConnectRejectedMessage rejected:

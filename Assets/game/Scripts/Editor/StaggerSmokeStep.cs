@@ -118,7 +118,7 @@ namespace Fps.Editor
                 return $"the scene has no '{StaggerRangeFixture.FixtureName}'; rerun {TpsRangeSceneBuilder.MenuPath}";
             }
 
-            var navMesh = root.GetComponent<RuntimeNavMesh>();
+            var navMesh = root.GetComponent<NavMeshBakeActivator>();
             if (navMesh == null || !navMesh.IsBaked)
             {
                 return $"'{StaggerRangeFixture.FixtureName}' did not bake its NavMesh";

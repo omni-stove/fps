@@ -5,6 +5,8 @@ using UnityEngine;
 
 namespace Fps.Runtime
 {
+    // 怯みの解除を EnemyAgent.Update より先に数え、解けたフレームの発砲を怯み中の発砲に数えないようにする。
+    [DefaultExecutionOrder(-10)]
     [DisallowMultipleComponent]
     public sealed class StaggerReaction : MonoBehaviour
     {

@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace Fps.Editor
 {
-    // 怯みを試す敵を TPS の射撃場に置く。射撃場の床は実行時に作られて NavMesh が無いので、敵の足元に台を置いて Play の頭に焼く (RuntimeNavMesh)。
+    // 怯みを試す敵を TPS の射撃場に置く。射撃場の床は実行時に作られて NavMesh が無いので、敵の足元に台を置いて Play の頭に焼く (NavMeshBakeActivator)。
     // 射撃場の他の手順の邪魔をしないよう、敵は左奥の隅に置き、視界を射撃場の他の場所に届かない広さに絞る。
     public sealed class StaggerRangeFixture : ITpsRangeFixture
     {
@@ -36,10 +36,10 @@ namespace Fps.Editor
         public static readonly Vector3 LegsCenter = new Vector3(0f, -0.6f, 0f);
         public static readonly Vector3 LegsSize = new Vector3(1.1f, 0.8f, 1.1f);
 
-        public static readonly Vector3 Center = new Vector3(-20f, 0f, 2f);
+        public static readonly Vector3 Center = new Vector3(20f, 0f, 2f);
 
         // 敵の視界 (EnemySightRange) の内側で、台の外の床の上。
-        public static readonly Vector3 StandPoint = new Vector3(-12f, 0f, 2f);
+        public static readonly Vector3 StandPoint = new Vector3(12f, 0f, 2f);
 
         public int Order => 500;
 
@@ -64,9 +64,6 @@ namespace Fps.Editor
             {
                 SceneManager.MoveGameObjectToScene(root, scene);
                 root.transform.SetPositionAndRotation(Center, Quaternion.identity);
-                var navMesh = root.AddComponent<RuntimeNavMesh>();
-                navMesh.AgentTypeId = SceneBuildHelpers.HumanoidAgentTypeId;
-
                 SceneBuildHelpers.CreateStaticBox(
                     scene, root.transform, PadName, Center + (Vector3.up * (PadHeight / 2f)), new Vector3(PadSize, PadHeight, PadSize));
 
@@ -113,7 +110,7 @@ namespace Fps.Editor
 
                 enemy.gameObject.AddComponent<StaggerReaction>();
                 enemy.gameObject.SetActive(false);
-                navMesh.ActivateAfterBake = new[] { enemy.gameObject };
+                root.AddComponent<NavMeshBakeActivator>().Configure(root.transform, new[] { enemy.gameObject }, SceneBuildHelpers.HumanoidAgentTypeId);
                 return root;
             }
             catch

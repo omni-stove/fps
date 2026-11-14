@@ -51,7 +51,7 @@ namespace Fps.Tests.EditMode
             var enemy = root.GetComponentInChildren<EnemyAgent>(true);
             Assert.That(enemy, Is.Not.Null);
             Assert.That(enemy.gameObject.activeSelf, Is.False, "the NavMeshAgent must not look for a NavMesh before it is baked");
-            Assert.That(root.GetComponent<RuntimeNavMesh>().ActivateAfterBake, Is.EqualTo(new[] { enemy.gameObject }));
+            Assert.That(root.GetComponent<NavMeshBakeActivator>().ActivateAfterBake, Is.EqualTo(new[] { enemy.gameObject }));
             Assert.That(enemy.GetComponent<StaggerReaction>(), Is.Not.Null);
             Assert.That(enemy.SightRange, Is.EqualTo(StaggerRangeFixture.EnemySightRange));
             Assert.That(enemy.AttackRange, Is.EqualTo(StaggerRangeFixture.EnemyAttackRange));

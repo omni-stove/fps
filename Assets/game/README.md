@@ -146,6 +146,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 - `nameKey` は画面に出す武器の名前を引く表のキー。文は `Resources/Localization/<言語>/` の JSON (例: `items.json` に `"weapon.rifle": "Rifle"`) に書く。表に無いキーはキーそのものが出る。空か `null` なら `id` が出る。
 - 前の項目名 `displayName` は読まない (書き換えを促すエラーになる)。
 - `adsFieldOfView` と `nameKey` は `null` も書ける。既定値のある項目は省ける。知らない項目はエラーになる。
+- `recoilRecoveryDelaySeconds` (撃ってから反動が戻り始めるまでの秒数) はサンプルでは省いていて、既定は 0.15。
 
 batchmode で取り込む:
 

@@ -30,6 +30,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("腰だめから覗き込み切るまで (と戻るまで) の秒数")]
         private float _transitionSeconds = AdsZoom.DefaultTransitionSeconds;
 
+        [SerializeField, Min(0.01f), Tooltip("武器を持っていないときに覗き込み切ったときの視野角 (度)。0 より大きく 180 未満")]
+        private float _fallbackFieldOfView = AdsZoom.DefaultFieldOfView;
+
         private Camera _camera;
         private FirstPersonLook _look;
         private InputAction _aimAction;
@@ -51,7 +54,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今持っている武器の値を返す。視野角はその <see cref="WeaponSpec.AdsFieldOfView"/> へ寄せる。
-        /// null か、null を返すときは <see cref="AdsZoom.DefaultFieldOfView"/>。オフラインは GameBootstrap、オンラインは NetPlayer が渡す。
+        /// null か、null を返すときは <see cref="FallbackFieldOfView"/>。オフラインは GameBootstrap、オンラインは NetPlayer が渡す。
         /// </summary>
         public Func<WeaponSpec> WeaponSource { get; set; }
 
@@ -115,8 +118,30 @@ namespace Fps.Runtime
             set => _hipFieldOfView = AdsZoom.ValidateFieldOfView(value, nameof(value));
         }
 
-        /// <summary>腰だめから覗き込み切るまでの秒数 (Inspector の値。初期化のときに読む)。</summary>
-        public float TransitionSeconds => _transitionSeconds;
+        /// <summary>
+        /// 腰だめから覗き込み切るまでの秒数。0 以上の有限値。初期化した後に変えても、次の <see cref="Tick(bool, bool, InputDeviceKind, float)"/> から今の進み具合のまま新しい速さで動く。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">負か有限でないとき。</exception>
+        public float TransitionSeconds
+        {
+            get => _transitionSeconds;
+            set
+            {
+                _transitionSeconds = AdsZoom.ValidateTransitionSeconds(value, nameof(value));
+                if (_zoom != null)
+                {
+                    _zoom.TransitionSeconds = _transitionSeconds;
+                }
+            }
+        }
+
+        /// <summary>武器を持っていない (<see cref="WeaponSource"/> が無いか null を返す) ときに覗き込み切ったときの視野角 (度)。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">0 以下か 180 以上のとき。</exception>
+        public float FallbackFieldOfView
+        {
+            get => _fallbackFieldOfView;
+            set => _fallbackFieldOfView = AdsZoom.ValidateFieldOfView(value, nameof(value));
+        }
 
         /// <summary>今の武器で覗き込み切ったときの視野角 (度)。</summary>
         public float TargetFieldOfView
@@ -124,7 +149,7 @@ namespace Fps.Runtime
             get
             {
                 var spec = WeaponSource?.Invoke();
-                return spec != null ? spec.AdsFieldOfView : AdsZoom.DefaultFieldOfView;
+                return spec != null ? spec.AdsFieldOfView : _fallbackFieldOfView;
             }
         }
 
@@ -311,7 +336,7 @@ namespace Fps.Runtime
         /// 参照を直接渡して初期化する。camera はこの Transform の子孫、look はこの GameObject のものであること。
         /// 腰だめの視野角は、このときの camera の視野角にする。
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">camera の視野角か <see cref="TransitionSeconds"/> が不正なとき。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">camera の視野角・<see cref="TransitionSeconds"/>・<see cref="FallbackFieldOfView"/> が不正なとき。</exception>
         public void Initialize(Camera camera, FirstPersonLook look, InputAction aimAction)
         {
             if (camera == null)
@@ -347,6 +372,7 @@ namespace Fps.Runtime
 
             var hip = AdsZoom.ValidateFieldOfView(camera.fieldOfView, nameof(camera));
             var zoom = new AdsZoom(_transitionSeconds);
+            AdsZoom.ValidateFieldOfView(_fallbackFieldOfView, nameof(FallbackFieldOfView));
 
             // OnEnable 済み (動作中) に差し替えるなら、自分が有効にした古いアクションを戻してから新しいものを有効にする。
             if (_isLive)

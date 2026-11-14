@@ -19,6 +19,8 @@ namespace Fps.Runtime
     /// 自動回復と予備弾の倍率・無限・落下ダメージは <see cref="RulesDefinition"/> のルール (<see cref="GameRulesOverride"/> があればそちら) で決める (標的ダミーには効かせない)。
     /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す項目は
     /// <see cref="GameRules.HudDensity"/> (<see cref="IHud.ApplyDensity"/>) で、倒れてから戻るまでに映すものは <see cref="GameRules.DeathCamera"/> で決める。
+    /// プレイヤーの最大体力・三人称のカメラの位置と縮める下限・覗き込みにかかる秒数は、このコンポーネントの値
+    /// (<see cref="PlayerMaxHealth"/>・<see cref="ThirdPersonOffset"/>・<see cref="MinBoomLength"/>・<see cref="AdsTransitionSeconds"/>) で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
     /// </summary>
     [DisallowMultipleComponent]
@@ -62,9 +64,6 @@ namespace Fps.Runtime
 
         public static readonly Vector3 LightEuler = new Vector3(50f, -30f, 0f);
 
-        /// <summary>プレイヤーの最大体力。敵 (<see cref="EnemyAgent"/>) の射撃はプレイヤーの <see cref="Damageable"/> に届く。</summary>
-        public const int PlayerMaxHealth = 100;
-
         /// <summary>標的ダミーをまとめる親の名前。</summary>
         public const string TargetsName = "TargetDummies";
 
@@ -99,6 +98,19 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("プレイヤーの能力の枠 (AbilityHost) に入れる能力。i 番目が i 番目の枠 (0 が Ability1)。使えるかはルールの Abilities で決まる")]
         private AbilityDefinition[] _abilityDefinitions = Array.Empty<AbilityDefinition>();
+
+        [Header("プレイヤー")]
+        [SerializeField, Min(1), Tooltip("プレイヤーの最大体力。敵の射撃はプレイヤーの Damageable に届く")]
+        private int _playerMaxHealth = Damageable.DefaultMaxHealth;
+
+        [SerializeField, Tooltip("三人称のカメラの位置 (目のローカル座標、m)。z が目から後ろへの距離")]
+        private Vector3 _thirdPersonOffset = ViewRig.DefaultThirdPersonOffset;
+
+        [SerializeField, Min(0f), Tooltip("三人称のカメラが壁に寄ったときも、目からこれ以上は近づけない距離 (m)")]
+        private float _minBoomLength = CameraBoom.DefaultMinLength;
+
+        [SerializeField, Min(0f), Tooltip("腰だめから覗き込み切るまで (と戻るまで) の秒数")]
+        private float _adsTransitionSeconds = AdsZoom.DefaultTransitionSeconds;
 
         private BootstrapWorld _world;
 
@@ -190,6 +202,38 @@ namespace Fps.Runtime
             set => _rules = value;
         }
 
+        /// <summary><see cref="Build"/> で作るプレイヤーの最大体力。1 以上。生成後に変えるなら <see cref="BootstrapWorld.PlayerDamageable"/> を変える。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">1 未満のとき。</exception>
+        public int PlayerMaxHealth
+        {
+            get => _playerMaxHealth;
+            set => _playerMaxHealth = ValidatePlayerMaxHealth(value, nameof(value));
+        }
+
+        /// <summary><see cref="Build"/> で作るプレイヤーの三人称のカメラの位置 (<see cref="ViewRig.ThirdPersonOffset"/>)。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">どれかの成分が有限でないとき。</exception>
+        public Vector3 ThirdPersonOffset
+        {
+            get => _thirdPersonOffset;
+            set => _thirdPersonOffset = ValidateThirdPersonOffset(value, nameof(value));
+        }
+
+        /// <summary><see cref="Build"/> で作るプレイヤーの <see cref="ViewRig.MinBoomLength"/>。0 以上の有限値。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">負か有限でないとき。</exception>
+        public float MinBoomLength
+        {
+            get => _minBoomLength;
+            set => _minBoomLength = ValidateNonNegativeFinite(value, nameof(value));
+        }
+
+        /// <summary><see cref="Build"/> で作るプレイヤーの <see cref="AimDownSights.TransitionSeconds"/>。0 以上の有限値。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">負か有限でないとき。</exception>
+        public float AdsTransitionSeconds
+        {
+            get => _adsTransitionSeconds;
+            set => _adsTransitionSeconds = AdsZoom.ValidateTransitionSeconds(value, nameof(value));
+        }
+
         private void Awake()
         {
             try
@@ -209,6 +253,7 @@ namespace Fps.Runtime
         /// 途中で失敗したら作りかけのオブジェクトを片付けてから例外を投げ直す。
         /// <see cref="RulesDefinition"/> の値が不正なら何も作らずに <see cref="GameRulesDefinitionException"/> を投げる
         /// (<see cref="GameRulesOverride"/> で上書き中は <see cref="RulesDefinition"/> を読まない)。
+        /// プレイヤーの値 (<see cref="PlayerMaxHealth"/> など) が不正なときも、何も作らずに <see cref="ArgumentOutOfRangeException"/> を投げる。
         /// </summary>
         public BootstrapWorld Build()
         {
@@ -218,6 +263,7 @@ namespace Fps.Runtime
             }
 
             var rules = ResolveRules();
+            var tuning = ResolvePlayerTuning();
 
             GameObject floor = null;
             GameObject player = null;
@@ -229,7 +275,7 @@ namespace Fps.Runtime
             {
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(
-                    _viewMode, WeaponDefinitions, AbilityDefinitions, rules, out var controller, out var rig, out var camera, out var look, out var mover,
+                    _viewMode, WeaponDefinitions, AbilityDefinitions, rules, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
                     out var weapon, out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera,
                     out var abilities);
                 light = CreateLight(out var lightComponent);
@@ -286,6 +332,51 @@ namespace Fps.Runtime
             return _rules.ToRules();
         }
 
+        // Inspector の Min は NaN や無限大を止めないので、作り始める前に確かめる。
+        private PlayerTuning ResolvePlayerTuning()
+        {
+            return new PlayerTuning(
+                ValidatePlayerMaxHealth(_playerMaxHealth, nameof(PlayerMaxHealth)),
+                ValidateThirdPersonOffset(_thirdPersonOffset, nameof(ThirdPersonOffset)),
+                ValidateNonNegativeFinite(_minBoomLength, nameof(MinBoomLength)),
+                AdsZoom.ValidateTransitionSeconds(_adsTransitionSeconds, nameof(AdsTransitionSeconds)));
+        }
+
+        private static int ValidatePlayerMaxHealth(int value, string paramName)
+        {
+            if (value < 1)
+            {
+                throw new ArgumentOutOfRangeException(paramName, value, "the player's max health must be at least 1");
+            }
+
+            return value;
+        }
+
+        private static Vector3 ValidateThirdPersonOffset(Vector3 value, string paramName)
+        {
+            if (!IsFinite(value.x) || !IsFinite(value.y) || !IsFinite(value.z))
+            {
+                throw new ArgumentOutOfRangeException(paramName, value, "the third-person camera offset must be finite");
+            }
+
+            return value;
+        }
+
+        private static float ValidateNonNegativeFinite(float value, string paramName)
+        {
+            if (!(value >= 0f) || float.IsInfinity(value))
+            {
+                throw new ArgumentOutOfRangeException(paramName, value, paramName + " must be a non-negative finite number");
+            }
+
+            return value;
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
+        }
+
         private void NotifyBuilt(BootstrapWorld world)
         {
             var handlers = Built;
@@ -321,6 +412,7 @@ namespace Fps.Runtime
             IReadOnlyList<WeaponDefinition> weaponDefinitions,
             IReadOnlyList<AbilityDefinition> abilityDefinitions,
             GameRules rules,
+            PlayerTuning tuning,
             out CharacterController controller,
             out ViewRig rig,
             out Camera camera,
@@ -339,11 +431,11 @@ namespace Fps.Runtime
             try
             {
                 ConfigurePlayer(
-                    player, viewMode, weaponDefinitions, rules, out controller, out rig, out camera, out look, out mover, out weapon, out ads);
+                    player, viewMode, weaponDefinitions, rules, tuning, out controller, out rig, out camera, out look, out mover, out weapon, out ads);
 
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
-                damageable.Initialize(PlayerName, PlayerMaxHealth);
+                damageable.Initialize(PlayerName, tuning.MaxHealth);
                 damageable.IsLocalPlayer = true;
                 player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
                 CharacterComponents.Attach(player, throwsGrenades: true);
@@ -390,6 +482,7 @@ namespace Fps.Runtime
             ViewMode viewMode,
             IReadOnlyList<WeaponDefinition> weaponDefinitions,
             GameRules rules,
+            PlayerTuning tuning,
             out CharacterController controller,
             out ViewRig rig,
             out Camera camera,
@@ -429,6 +522,8 @@ namespace Fps.Runtime
             // 視点を先に決めておくと、Play 中の AddComponent で走る OnEnable が最初からその視点でカメラを置く。
             // Edit Mode では Awake / OnEnable が走らないので、参照と見た目はここで直接整える。
             rig = player.AddComponent<ViewRig>();
+            rig.ThirdPersonOffset = tuning.ThirdPersonOffset;
+            rig.MinBoomLength = tuning.MinBoomLength;
             rig.Mode = viewMode;
             if (!rig.IsInitialized)
             {
@@ -485,6 +580,8 @@ namespace Fps.Runtime
                 throw new InvalidOperationException(
                     "AimDownSights could not resolve its camera, FirstPersonLook or Aim action; see the error above");
             }
+
+            ads.TransitionSeconds = tuning.AdsTransitionSeconds;
 
             WireAds(ads, weapon, mover);
             WireSpreadAndRecoil(weapon, ads, mover, look);
@@ -826,6 +923,25 @@ namespace Fps.Runtime
             {
                 DestroyImmediate(target);
             }
+        }
+
+        private readonly struct PlayerTuning
+        {
+            public PlayerTuning(int maxHealth, Vector3 thirdPersonOffset, float minBoomLength, float adsTransitionSeconds)
+            {
+                MaxHealth = maxHealth;
+                ThirdPersonOffset = thirdPersonOffset;
+                MinBoomLength = minBoomLength;
+                AdsTransitionSeconds = adsTransitionSeconds;
+            }
+
+            public int MaxHealth { get; }
+
+            public Vector3 ThirdPersonOffset { get; }
+
+            public float MinBoomLength { get; }
+
+            public float AdsTransitionSeconds { get; }
         }
     }
 

@@ -11,7 +11,7 @@ namespace Fps.Runtime
     /// 失敗したらどのアセットの値かを添えて <see cref="WeaponDefinitionException"/> を投げる。
     /// 新しく作ったときの値は rifle 相当 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、
     /// 20〜60m で 0.5 倍まで減衰)。ただし ADS の視野角は未設定 (共通の初期値) で、ブラインドファイアの散らばりは 0°、
-    /// アクティブリロードの値は <see cref="WeaponSpec"/> の既定で始まり、反動と弾の散らばりはすべて 0 (反動なし・散らばらない)。Id はエディターで作ったとき (<see cref="Reset"/>) と値を検証するとき (<see cref="OnValidate"/>) に、
+    /// アクティブリロードの値と反動の戻り始めまでの秒数は <see cref="WeaponSpec"/> の既定で始まり、それ以外の反動と弾の散らばりはすべて 0 (反動なし・散らばらない)。Id はエディターで作ったとき (<see cref="Reset"/>) と値を検証するとき (<see cref="OnValidate"/>) に、
     /// 空なら新しい UUID を入れる。
     /// 実際に使う値はアセット (Assets/game/Weapons/*.asset、Fps.Editor.WeaponAssetBuilder が作る) の側にある。
     /// </summary>
@@ -90,6 +90,9 @@ namespace Fps.Runtime
 
         [SerializeField, Min(0f), Tooltip("撃ち止めてから跳ねた視線が戻る速さ (度/秒)。0 なら戻らない")]
         private float _recoilRecoveryPerSecond;
+
+        [SerializeField, Min(0f), Tooltip("最後に撃ってから跳ねた視線が戻り始めるまでの秒数")]
+        private float _recoilRecoveryDelaySeconds = WeaponSpec.DefaultRecoilRecoveryDelaySeconds;
 
         [Header("弾の散らばり")]
         [SerializeField, UnityEngine.Range(0f, 90f), Tooltip("腰だめで撃ったときに弾が散らばる最大の角度 (度)")]
@@ -240,6 +243,12 @@ namespace Fps.Runtime
             set => _recoilRecoveryPerSecond = value;
         }
 
+        public float RecoilRecoveryDelaySeconds
+        {
+            get => _recoilRecoveryDelaySeconds;
+            set => _recoilRecoveryDelaySeconds = value;
+        }
+
         public float HipSpreadDegrees
         {
             get => _hipSpreadDegrees;
@@ -322,7 +331,8 @@ namespace Fps.Runtime
                     _recoilRecoveryPerSecond,
                     _hipSpreadDegrees,
                     _adsSpreadDegrees,
-                    _moveSpreadDegrees);
+                    _moveSpreadDegrees,
+                    _recoilRecoveryDelaySeconds);
             }
             catch (ArgumentException e)
             {

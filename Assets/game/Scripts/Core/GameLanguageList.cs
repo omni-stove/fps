@@ -213,9 +213,9 @@ namespace Fps.Core
             var other = default(GameLanguage);
             if (otherCode != null)
             {
-                if (positions.ContainsKey(otherCode))
+                if (positions.TryGetValue(otherCode, out var otherPosition))
                 {
-                    other = entries[positions[otherCode]].Language;
+                    other = entries[otherPosition].Language;
                 }
                 else
                 {

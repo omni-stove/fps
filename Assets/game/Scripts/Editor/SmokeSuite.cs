@@ -42,6 +42,15 @@ namespace Fps.Editor
         private const char ResultSeparator = ';';
         private const char CodeSeparator = '=';
 
+        /// <summary>サーバーの tick の時間を計る SmokeRun (Fps.Net.Editor の <c>Fps.Editor.PerfSmokeRun</c>) の名前。</summary>
+        public const string PerfSmokeRunName = "PerfSmokeRun";
+
+        /// <summary><see cref="PerfSmokeRunName"/> のログの頭。PerfSmokeRun.LogTag はこれを使う。</summary>
+        public const string PerfSmokeRunLogTag = "[PerfSmokeRun]";
+
+        /// <summary><see cref="PerfSmokeRunName"/> の型 (アセンブリ修飾名)。</summary>
+        public const string PerfSmokeRunTypeName = "Fps.Editor.PerfSmokeRun, Fps.Net.Editor";
+
         /// <summary>走らせる SmokeRun。この順に 1 つずつ呼ぶ。</summary>
         public static IReadOnlyList<SmokeRunEntry> Runs { get; } = new[]
         {
@@ -50,6 +59,9 @@ namespace Fps.Editor
             new SmokeRunEntry(nameof(EnemyFireSmokeRun), EnemyFireSmokeRun.LogTag, EnemyFireSmokeRun.Run),
             new SmokeRunEntry(nameof(EnemyStuckSmokeRun), EnemyStuckSmokeRun.LogTag, EnemyStuckSmokeRun.Run),
             new SmokeRunEntry(nameof(WeaponSwitchSmokeRun), WeaponSwitchSmokeRun.LogTag, WeaponSwitchSmokeRun.Run),
+
+            // Fps.Net.Editor はこのアセンブリを参照しているので、ここから型を参照すると循環する。名前で引き、見つからなければその回を失敗にする
+            new SmokeRunEntry(PerfSmokeRunName, PerfSmokeRunLogTag, () => InvokeStaticRun(PerfSmokeRunTypeName)),
         };
 
         /// <summary>スイートが走っている (SmokeRun の結果を <see cref="TakeOver"/> で受け取る) 間は true。</summary>
@@ -114,6 +126,46 @@ namespace Fps.Editor
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// アセンブリ修飾名 typeName の型の、引数の無い public static な <c>Run</c> を探す。
+        /// 型もメソッドも見つからなければ、何が無いかを添えて <see cref="InvalidOperationException"/> を投げる。
+        /// </summary>
+        public static System.Reflection.MethodInfo FindStaticRun(string typeName)
+        {
+            if (string.IsNullOrEmpty(typeName))
+            {
+                throw new ArgumentException("typeName must not be empty", nameof(typeName));
+            }
+
+            var type = Type.GetType(typeName, throwOnError: false);
+            if (type == null)
+            {
+                throw new InvalidOperationException($"smoke run type '{typeName}' was not found; check that its assembly compiles");
+            }
+
+            var method = type.GetMethod(
+                "Run", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, Type.EmptyTypes, null);
+            if (method == null)
+            {
+                throw new InvalidOperationException($"smoke run type '{typeName}' has no public static Run()");
+            }
+
+            return method;
+        }
+
+        private static void InvokeStaticRun(string typeName)
+        {
+            try
+            {
+                FindStaticRun(typeName).Invoke(null, null);
+            }
+            catch (System.Reflection.TargetInvocationException e) when (e.InnerException != null)
+            {
+                // StartRun が呼び出し先の例外そのものをログに出せるよう、リフレクションの包みを外す
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e.InnerException).Throw();
+            }
         }
 
         /// <summary>args に Unity の <c>-quit</c> があれば true。大文字小文字は区別しない (Unity と同じ)。</summary>

@@ -44,6 +44,9 @@ namespace Fps.Runtime
         private PanelSettings _ownedPanelSettings;
         private Color _alphaColor = Color.white;
         private Color _bravoColor = Color.white;
+        private bool _followsPalette;
+        private Team? _paletteViewer;
+        private ColorPalette _paintedPalette;
         private HudVisibility _visibility = HudVisibility.Full;
 
         /// <summary>表示中の文字列。</summary>
@@ -120,7 +123,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>・
-        /// <see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>) を
+        /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>) を
         /// hudObject に付ける。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
         /// 既に付いているものは付け直さない。
@@ -135,6 +138,7 @@ namespace Fps.Runtime
             AddIfMissing<HitMarkerView>(hudObject);
             AddIfMissing<DamageDirectionView>(hudObject);
             AddIfMissing<KillFeedView>(hudObject);
+            AddIfMissing<SubtitleView>(hudObject);
             AddIfMissing<ScoreboardView>(hudObject);
             AddIfMissing<LoadoutSelectView>(hudObject);
             AddIfMissing<TutorialPromptView>(hudObject);
@@ -152,6 +156,9 @@ namespace Fps.Runtime
 
         /// <summary>同じ GameObject のキルフィード。<see cref="AddViews"/> で付けていなければ null。</summary>
         public KillFeedView KillFeed => GetComponent<KillFeedView>();
+
+        /// <summary>同じ GameObject の音の合図の字幕。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public SubtitleView Subtitles => GetComponent<SubtitleView>();
 
         /// <summary>同じ GameObject のスコアボード。<see cref="AddViews"/> で付けていなければ null。</summary>
         public ScoreboardView Scoreboard => GetComponent<ScoreboardView>();
@@ -171,8 +178,42 @@ namespace Fps.Runtime
         /// <summary>同じ GameObject のポーズ画面の設定画面。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseSettingsView PauseSettings => GetComponent<PauseSettingsView>();
 
-        /// <summary>チームの点数とスコアボードの見出しを塗る色を決める。View を作り直しても引き継ぐ。</summary>
+        /// <summary>
+        /// チームの点数・スコアボードの見出し・キルログの名前・拠点制圧の欄を塗る色を決める。View を作り直しても引き継ぐ。
+        /// 色の組に従わせていた (<see cref="UseTeamPalette"/>) ときはやめ、この色のままにする。
+        /// </summary>
         public void SetTeamColors(Color alpha, Color bravo)
+        {
+            StopFollowingPalette();
+            ApplyTeamColors(alpha, bravo);
+        }
+
+        /// <summary>
+        /// viewer のチームから見た敵味方の色 (<see cref="TeamColors"/>) で塗り、設定の色の組が変わったら塗り直す。
+        /// viewer が null (自分のチームがまだ無い) なら Alpha を味方の色にする。チームが変わったら呼び直す。
+        /// </summary>
+        public void UseTeamPalette(Team? viewer)
+        {
+            _paletteViewer = viewer;
+            if (!_followsPalette)
+            {
+                AppliedControlSettings.Changed += HandleSettingsChanged;
+                _followsPalette = true;
+            }
+
+            ApplyPaletteColors();
+        }
+
+        /// <summary>色の組に従っている (<see cref="UseTeamPalette"/>) か。</summary>
+        public bool FollowsTeamPalette => _followsPalette;
+
+        /// <summary>team の点数を塗る色。<see cref="SetTeamColors"/> の前は白。</summary>
+        public Color TeamColor(Team team)
+        {
+            return team == Team.Bravo ? _bravoColor : _alphaColor;
+        }
+
+        private void ApplyTeamColors(Color alpha, Color bravo)
         {
             _alphaColor = alpha;
             _bravoColor = bravo;
@@ -183,12 +224,47 @@ namespace Fps.Runtime
             {
                 scoreboard.RefreshTeamColors();
             }
+
+            var killFeed = KillFeed;
+            if (killFeed != null)
+            {
+                killFeed.RefreshTeamColors();
+            }
+
+            var domination = GetComponent<DominationView>();
+            if (domination != null)
+            {
+                domination.RefreshTeamColors();
+            }
         }
 
-        /// <summary>team の点数を塗る色。<see cref="SetTeamColors"/> の前は白。</summary>
-        public Color TeamColor(Team team)
+        private void ApplyPaletteColors()
         {
-            return team == Team.Bravo ? _bravoColor : _alphaColor;
+            var palette = TeamColors.Current;
+            _paintedPalette = palette.Kind;
+            ApplyTeamColors(
+                TeamColors.Of(palette, Team.Alpha, _paletteViewer),
+                TeamColors.Of(palette, Team.Bravo, _paletteViewer));
+        }
+
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            // 破棄の後に届いた通知では消えた要素を塗らない。感度などほかの設定だけが変わったときも、キルログを作り直さない
+            if (this == null || settings.Palette == _paintedPalette)
+            {
+                return;
+            }
+
+            ApplyPaletteColors();
+        }
+
+        private void StopFollowingPalette()
+        {
+            if (_followsPalette)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _followsPalette = false;
+            }
         }
 
         /// <summary>今出している項目。<see cref="ApplyDensity"/> の前は <see cref="HudVisibility.Full"/>。</summary>
@@ -375,6 +451,7 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
+            StopFollowingPalette();
             DisposeView();
             UnsubscribeSources();
             _model.UnbindAll();

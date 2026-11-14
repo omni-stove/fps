@@ -30,6 +30,12 @@ namespace Fps.Runtime
         /// <summary>爆発のエフェクトを消すまでの秒数。プレハブが自分で消えなかったときの後始末。</summary>
         public const float EffectLifetimeSeconds = 4f;
 
+        /// <summary>
+        /// 爆発の音が聞こえなくなる距離 (m)。<see cref="AudioSource.PlayClipAtPoint(AudioClip, Vector3)"/> が作る音源の既定の maxDistance に合わせ、
+        /// 字幕 (<see cref="SubtitleFeed"/>) をこれより遠い人には出さない。
+        /// </summary>
+        public const float ExplosionAudibleDistance = 500f;
+
         // 身をかがめて頭だけ出している相手にも当たるよう、体の上端の少し下へも線を引く。
         private const float TopProbeInset = 0.1f;
 
@@ -83,7 +89,7 @@ namespace Fps.Runtime
                 go.transform.localScale = Vector3.one * (BodyRadius * 2f);
 
                 var collider = go.GetComponent<SphereCollider>();
-                collider.sharedMaterial = SharedMaterial();
+                collider.sharedMaterial = SharedPhysicsMaterial();
                 if (thrower != null)
                 {
                     foreach (var other in thrower.GetComponentsInChildren<Collider>())
@@ -203,7 +209,7 @@ namespace Fps.Runtime
             var result = new GrenadeExplosion(center, damaged, killed, structures);
             Debug.Log(FormatLog(result), this);
 
-            PlayEffects(center);
+            PlayExplosionEffects(center);
             try
             {
                 Exploded?.Invoke(this, result);
@@ -382,7 +388,12 @@ namespace Fps.Runtime
             return false;
         }
 
-        private static void PlayEffects(Vector3 center)
+        /// <summary>
+        /// center に <see cref="PresentationCatalog"/> の爆発のエフェクトと音を出し、音を鳴らしたら字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
+        /// Play 中でない・専用サーバー・カタログか素材が無いときは何もしない。
+        /// ネット対戦ではサーバーから爆発を受け取ったクライアント (<c>Fps.Net.NetCombatFeed</c>) も呼ぶ。
+        /// </summary>
+        public static void PlayExplosionEffects(Vector3 center)
         {
             // Edit Mode では時間差で消せず、専用サーバーには見る人がいない。
             if (!Application.isPlaying || NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
@@ -405,10 +416,12 @@ namespace Fps.Runtime
             if (catalog.ExplosionSound != null)
             {
                 AudioSource.PlayClipAtPoint(catalog.ExplosionSound, center);
+                SubtitleFeed.Raise(SoundCueKind.Explosion, center, ExplosionAudibleDistance);
             }
         }
 
-        private static PhysicsMaterial SharedMaterial()
+        /// <summary>グレネードの球の跳ね方 (<see cref="Bounciness"/>)。ネット対戦のグレネード (<c>Fps.Net.NetGrenade</c>) も同じものを使う。</summary>
+        public static PhysicsMaterial SharedPhysicsMaterial()
         {
             if (_material == null)
             {

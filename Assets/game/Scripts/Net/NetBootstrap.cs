@@ -29,10 +29,13 @@ namespace Fps.Net
     /// 専用サーバーは終了を求められても (SIGTERM)、ロビーから外して新しい参加を断り、今の試合が終わるまで止まるのを待つ (.Shutdown.cs)。
     /// どこからメニューへ戻るときも (<see cref="MenuNavigator.ReturningToMenu"/>)、接続を切ってこの GameObject を消す。
     /// <para>
+    /// <c>-bots</c> は試合の進行役を Spawn する前に <see cref="NetTeamDeathmatch.LaunchBots"/> へ渡す (Bot を足すのは試合の .Bots.cs)。
     /// <c>-map</c> は .Map.cs、<c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> は .NetSimulation.cs、
     /// <c>-drain-timeout</c> と終了の要求は .Shutdown.cs、試合のイベントのログは .Log.cs が受け持つ。
     /// それぞれの起動の前 (<c>*BeforeStart</c>)・起動の後 (<c>*AfterStart</c>)・終了の要求 (<c>*QuitRequested</c>) の差し込み口を
     /// <see cref="StartNetwork"/> と <see cref="HandleWantsToQuit"/> から呼ぶ。
+    /// <c>-map</c> のシーンが今のシーンと違えば、NetworkManager を組み立てる前に .Map.cs (<c>MapHandOff</c>) がそのシーンへ移り、
+    /// 起動はそのシーンの NetBootstrap に任せる。
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -144,7 +147,16 @@ namespace Fps.Net
         {
             if (NetworkManager.Singleton != null)
             {
-                Debug.LogWarning("[Net] a NetworkManager already exists; destroying duplicate " + name);
+                if (NetworkManager.Singleton.IsListening)
+                {
+                    // Netcode がサーバーのシーンに合わせて読んだシーンにも NetBootstrap があるので、動いている方を使い続ける
+                    Debug.Log("[Net] scene " + gameObject.scene.name + " was loaded while the network is running; removing its " + name);
+                }
+                else
+                {
+                    Debug.LogWarning("[Net] a NetworkManager already exists; destroying duplicate " + name);
+                }
+
                 Destroy(gameObject);
                 return;
             }
@@ -206,6 +218,14 @@ namespace Fps.Net
             {
                 // 起動モードと接続先はロビーが決まってから分かるので、NetworkManager はそのときに組み立てる
                 PrepareLobby(lobbyOptions);
+                return;
+            }
+
+            // EOS のプラットフォームは 1 プロセスで 1 度しか作れないので、transport やロビーを組み立てる前に移る
+            var handedOff = false;
+            MapHandOff(ref handedOff);
+            if (handedOff)
+            {
                 return;
             }
 
@@ -295,6 +315,30 @@ namespace Fps.Net
             return true;
         }
 
+        /// <summary>
+        /// サーバーが実行中に Spawn するプレハブ。試合の進行役 matchPrefab と、その <see cref="NetTeamDeathmatch.GrenadePrefab"/>。
+        /// グレネードのプレハブが使えなければ (<see cref="NetTeamDeathmatch.TryValidateGrenadePrefab"/>) 登録せずに警告を出す
+        /// (サーバーもクライアントも同じ NetMatch プレハブから決めるので、どちらも登録しない側にそろう)。
+        /// </summary>
+        internal static GameObject[] SpawnablePrefabs(GameObject matchPrefab)
+        {
+            if (matchPrefab == null)
+            {
+                throw new ArgumentNullException(nameof(matchPrefab));
+            }
+
+            var match = matchPrefab.GetComponent<NetTeamDeathmatch>();
+            var grenade = match != null ? match.GrenadePrefab : null;
+            if (!NetTeamDeathmatch.TryValidateGrenadePrefab(grenade, out var error))
+            {
+                Debug.LogWarning("[Net] " + error + " on " + matchPrefab.name + "; grenades cannot be thrown online"
+                    + "; run Fps.Editor.NetSceneBuilder.Build");
+                return new[] { matchPrefab };
+            }
+
+            return new[] { matchPrefab, grenade };
+        }
+
         /// <summary>NetworkManager と transport を組み立て、イベントを購読する。失敗したら false。</summary>
         private bool ConfigureNetwork(NetTransportPlan plan)
         {
@@ -302,7 +346,7 @@ namespace Fps.Net
 
             try
             {
-                _manager = NetworkSetup.Configure(gameObject, plan, _playerPrefab, new[] { _matchPrefab });
+                _manager = NetworkSetup.Configure(gameObject, plan, _playerPrefab, SpawnablePrefabs(_matchPrefab));
             }
             catch (ArgumentException e)
             {
@@ -625,6 +669,9 @@ namespace Fps.Net
             {
                 instance = Instantiate(_matchPrefab);
                 instance.name = _matchPrefab.name;
+
+                // 試合は Spawn の中で始まる (OnNetworkSpawn) ので、Bot の数はその前に渡す
+                instance.GetComponent<NetTeamDeathmatch>().LaunchBots = _options.Bots;
                 instance.GetComponent<NetworkObject>().Spawn(true);
             }
             catch (Exception e)

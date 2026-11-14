@@ -33,5 +33,6 @@
   "hud.killFeed.weaponHeadshot": "[{0}] {1}",
   "hud.killFeed.headshot": "頭",
   "hud.killFeed.friendly": "味方撃ち",
-  "hud.killFeed.suicide": "自滅"
+  "hud.killFeed.suicide": "自滅",
+  "hud.killCam.caption": "キルカム {0}"
 }

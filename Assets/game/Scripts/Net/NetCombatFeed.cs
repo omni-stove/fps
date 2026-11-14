@@ -424,6 +424,7 @@ namespace Fps.Net
 
             Debug.Log(ExplosionLog(weaponId.ToString(), center, throwerClientId), this);
             ThrownGrenade.PlayExplosionEffects(center);
+            CombatEvents.RaiseExploded(center, weaponId.ToString());
         }
 
         private bool IsFromServer(RpcParams rpcParams)

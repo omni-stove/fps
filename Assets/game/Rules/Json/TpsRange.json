@@ -21,6 +21,7 @@
     "vault": "On",
     "grenade": "On",
     "grenadeCount": 3,
+    "slide": "On",
     "mantle": "On"
   },
   "spawnProtectionSeconds": 0,

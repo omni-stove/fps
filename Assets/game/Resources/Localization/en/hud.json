@@ -33,5 +33,6 @@
   "hud.killFeed.weaponHeadshot": "[{0}] {1}",
   "hud.killFeed.headshot": "Headshot",
   "hud.killFeed.friendly": "Friendly fire",
-  "hud.killFeed.suicide": "Suicide"
+  "hud.killFeed.suicide": "Suicide",
+  "hud.killCam.caption": "KILLCAM {0}"
 }

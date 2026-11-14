@@ -125,7 +125,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>・
+        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="DamageVignetteView"/>・<see cref="KillFeedView"/>・
         /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
         /// hudObject に付ける。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
@@ -140,6 +140,7 @@ namespace Fps.Runtime
 
             AddIfMissing<HitMarkerView>(hudObject);
             AddIfMissing<DamageDirectionView>(hudObject);
+            AddIfMissing<DamageVignetteView>(hudObject);
             AddIfMissing<KillFeedView>(hudObject);
             AddIfMissing<SubtitleView>(hudObject);
             AddIfMissing<ScoreboardView>(hudObject);
@@ -157,6 +158,9 @@ namespace Fps.Runtime
 
         /// <summary>同じ GameObject の被弾方向。<see cref="AddViews"/> で付けていなければ null。</summary>
         public DamageDirectionView DamageDirection => GetComponent<DamageDirectionView>();
+
+        /// <summary>同じ GameObject の被弾の画面効果と低体力の演出。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public DamageVignetteView DamageVignette => GetComponent<DamageVignetteView>();
 
         /// <summary>同じ GameObject のキルフィード。<see cref="AddViews"/> で付けていなければ null。</summary>
         public KillFeedView KillFeed => GetComponent<KillFeedView>();

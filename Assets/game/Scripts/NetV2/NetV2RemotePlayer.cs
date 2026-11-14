@@ -7,7 +7,8 @@ namespace Fps.NetV2
     /// <summary>
     /// <c>-netstack v2</c> で見える他のプレイヤー 1 人。補間した姿 (<see cref="RemotePose"/>) を書き写すだけで、自分では動かさない。
     /// 見た目は Resources の <see cref="BodyResourcePath"/> のプレハブを使い、無ければ体の寸法のカプセルを作る。
-    /// しゃがみは見た目を縦に縮めて下げて表す (プレハブの見た目は立ったときの高さで作ってある前提)。
+    /// しゃがみと伏せは見た目を縦に縮めて下げて表す (プレハブの見た目は立ったときの高さで作ってある前提)。
+    /// 撃ったときの演出は自分のプレイヤーと同じ部品 (<see cref="NetV2LocalPlayer.AttachPresentation"/>) が出す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class NetV2RemotePlayer : MonoBehaviour
@@ -21,7 +22,7 @@ namespace Fps.NetV2
         private Transform _body;
         private Vector3 _standingScale;
         private float _standingY;
-        private bool _crouched;
+        private PlayerStance _stance = PlayerStance.Standing;
 
         public int PlayerId { get; private set; }
 
@@ -40,15 +41,16 @@ namespace Fps.NetV2
             remote._body = CreateBody(geometry, root.transform);
             remote._standingScale = remote._body.localScale;
             remote._standingY = remote._body.localPosition.y;
+            NetV2LocalPlayer.AttachPresentation(root, false);
             return remote;
         }
 
         public void Show(RemotePose pose)
         {
             transform.SetPositionAndRotation(NetV2Math.ToUnity(pose.Position), NetV2Math.YawRotation(pose.Yaw));
-            if (pose.IsCrouched != _crouched)
+            if (pose.Stance != _stance)
             {
-                ApplyStance(pose.IsCrouched);
+                ApplyStance(pose.Stance);
             }
         }
 
@@ -76,11 +78,11 @@ namespace Fps.NetV2
             return body.transform;
         }
 
-        private void ApplyStance(bool crouched)
+        private void ApplyStance(PlayerStance stance)
         {
-            _crouched = crouched;
+            _stance = stance;
             var standing = _geometry.Standing;
-            var shape = _geometry.Shape(crouched);
+            var shape = _geometry.Shape(stance);
             var scale = _standingScale;
             scale.y *= shape.Height / standing.Height;
             _body.localScale = scale;

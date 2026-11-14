@@ -142,6 +142,61 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
+        public void ThePredictionUsesTheMotorValuesOfTheServersRulesAndLiesDownWithTheServer()
+        {
+            // 既定と違う移動の値とルールにする。クライアントが自分の既定値で予測していれば、歩くたびに巻き戻される
+            var rulesPath = Path.Combine(_root, "server-data", "rules", ServerLaunch.DefaultRules + ".json");
+            var text = File.ReadAllText(rulesPath);
+            text = Replace(text, "\"walkSpeed\": 5", "\"walkSpeed\": 7.5");
+            text = Replace(text, "\"radius\": 0.5", "\"radius\": 0.4");
+            text = Replace(text, "\"standingHeight\": 2", "\"standingHeight\": 1.8");
+            text = Replace(text, "\"proneSpeed\": 1.2", "\"proneSpeed\": 2");
+            text = Replace(text, "\"prone\": \"Off\"", "\"prone\": \"On\"");
+            File.WriteAllText(rulesPath, text);
+
+            StartServer();
+            var mover = Join();
+            Pump(() => mover.Match.IsPredicting);
+
+            Assert.That(mover.Client.Motor.Motor.WalkSpeed, Is.EqualTo(7.5f));
+            Assert.That(mover.Client.Motor.Stance.Radius, Is.EqualTo(0.4f));
+            Assert.That(mover.Client.Motor.Stance.Standing.Height, Is.EqualTo(1.8f));
+            Assert.That(mover.Client.Motor.Prone.Speed, Is.EqualTo(2f));
+            Assert.That(mover.Client.LatestSnapshot.Match.Rules.Prone, Is.EqualTo(Prone.On));
+
+            var start = mover.Match.LocalState.Position;
+            var elapsed = Stopwatch.StartNew();
+            Pump(() =>
+            {
+                mover.Move = new Vector2(0f, 1f);
+                return elapsed.Elapsed > TimeSpan.FromSeconds(1.5);
+            });
+            mover.Move = Vector2.Zero;
+            Pump(() => mover.Match.Prediction.PendingFrames < 4);
+            Assert.That(Horizontal(mover.Match.LocalState.Position - start), Is.GreaterThan(7.5f), "walking at the rules' speed");
+
+            mover.Buttons = InputButtons.Prone;
+            Pump(() => mover.Match.LocalState.IsProne);
+            mover.Buttons = InputButtons.None;
+            Pump(() => ServerRow(mover).IsProne && mover.Match.Prediction.PendingFrames < 4);
+
+            var crawlStart = mover.Match.LocalState.Position;
+            elapsed.Restart();
+            Pump(() =>
+            {
+                mover.Move = new Vector2(0f, 1f);
+                return elapsed.Elapsed > TimeSpan.FromSeconds(1);
+            });
+            mover.Move = Vector2.Zero;
+            Pump(() => mover.Match.Prediction.PendingFrames < 4
+                && Horizontal(ServerRow(mover).Position - mover.Match.LocalState.Position) < 0.01f);
+
+            Assert.That(mover.Match.LocalState.IsProne, Is.True);
+            Assert.That(Horizontal(mover.Match.LocalState.Position - crawlStart), Is.InRange(1f, 3f), "crawling at the rules' prone speed");
+            Assert.That(mover.Match.Corrections, Is.LessThanOrEqualTo(2), "the prediction moves with the server's values");
+        }
+
+        [Test]
         public void AClientOfAnotherVersionIsToldTheVersionsDiffer()
         {
             StartServer();
@@ -152,6 +207,20 @@ namespace Fps.NetV2.Tests
 
             Assert.That(player.Notice.Kind, Is.EqualTo(DisconnectKind.VersionMismatch));
             Assert.That(player.Notice.ServerVersion, Is.EqualTo("0.2.0"));
+        }
+
+        private static string Replace(string text, string from, string to)
+        {
+            Assert.That(text, Does.Contain(from));
+            return text.Replace(from, to, StringComparison.Ordinal);
+        }
+
+        private static PlayerSnapshot ServerRow(Player player)
+        {
+            var latest = player.Client.LatestSnapshot;
+            var own = latest.Players.IndexOf(player.Client.PlayerId);
+            Assert.That(own, Is.GreaterThanOrEqualTo(0));
+            return latest.Players[own];
         }
 
         private static bool HasRemote(Player viewer, int playerId)
@@ -244,22 +313,15 @@ namespace Fps.NetV2.Tests
             client.Connect(address, _port);
             Pump(() => client.State == MatchClientState.Connected);
             Assert.That(client.Map, Is.EqualTo(ServerLaunch.DefaultMap));
-            player.Match = new ClientMatch(client, Simulation(client.Map));
+            player.Match = new ClientMatch(client, Simulation(client));
             return player;
         }
 
-        private CharacterMotorSimulation Simulation(string map)
+        private CharacterMotorSimulation Simulation(MatchClient client)
         {
-            WorldMap world;
-            using (var stream = File.OpenRead(Path.Combine(_root, "server-data", "maps", map + FpsMapFile.Extension)))
-            {
-                world = FpsMapFile.Read(stream);
-            }
-
-            Assert.That(ServerRulesData.TryLoad(ServerLaunch.DefaultRules, new[] { _root }, out var rules, out var error), Is.True, error);
-            var motor = rules.Motor;
-            var body = new CharacterBody(new BvhWorldCollision(world), motor.Mover, motor.Stance);
-            return new CharacterMotorSimulation(body, new PlayerMotor(motor.Motor), 1f / TickClock.DefaultTickRate, ServerMotorSettings.DefaultKillPlaneY);
+            Assert.That(
+                ClientWorld.TryLoad(Path.Combine(_root, "server-data", "maps"), client.Map, out var world, out var error), Is.True, error);
+            return world.CreateSimulation(client.Motor, client.TickRate, client.KillPlaneY);
         }
 
         private void Pump(Func<bool> until)
@@ -351,6 +413,9 @@ namespace Fps.NetV2.Tests
 
             public Vector2 Move { get; set; }
 
+            /// <summary>次の tick に押すボタン。押しっぱなしにせず、1 tick 送ったら消す。</summary>
+            public InputButtons Buttons { get; set; }
+
             public DisconnectNotice Notice { get; private set; }
 
             public void Update(float deltaSeconds)
@@ -364,7 +429,8 @@ namespace Fps.NetV2.Tests
                 var ticks = Match.Advance(deltaSeconds);
                 for (var i = 0; i < ticks; i++)
                 {
-                    Match.Step(Move, 0f, InputButtons.None);
+                    Match.Step(Move, 0f, Buttons);
+                    Buttons = InputButtons.None;
                 }
 
                 Match.SendInput();

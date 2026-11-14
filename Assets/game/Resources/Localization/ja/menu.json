@@ -12,6 +12,7 @@
   "menu.settingsUnavailable": "設定画面はまだ使えません。",
   "menu.loadoutUnavailable": "ロードアウトを変えられません: {0}",
   "menu.sceneMissing": "{0} を開けません: このビルドにありません。",
+  "menu.lobbyUnavailableOnNetV2": "-netstack v2 ではロビーをまだ使えません。クイックマッチでサーバーにつないでください。",
   "pause.title": "ポーズ",
   "pause.resume": "再開",
   "pause.settings": "設定",

@@ -47,6 +47,19 @@ namespace Fps.Core
         /// <summary>伏せたいか。</summary>
         public bool IsActive { get; private set; }
 
+        /// <summary>前回の <see cref="Update"/> でダッシュ中だったか。</summary>
+        public bool WasSprinting => _wasSprinting;
+
+        /// <summary>
+        /// 予測の巻き戻しとサーバーの tick の間で、写した中身 (<see cref="IsActive"/>・<see cref="WasSprinting"/>) に戻す。
+        /// 外から見た変化ではないので <see cref="Changed"/> は呼ばない。
+        /// </summary>
+        public void Restore(bool isActive, bool wasSprinting)
+        {
+            IsActive = isActive;
+            _wasSprinting = wasSprinting;
+        }
+
         /// <summary>
         /// 1 回分 (1 フレーム) の入力を渡し、伏せたいかを返す。
         /// 伏せていなければ、canStart のときに限り伏せボタンで伏せる。そのときダッシュ中なら dive を true にする。

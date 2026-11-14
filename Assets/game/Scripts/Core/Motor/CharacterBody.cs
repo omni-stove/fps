@@ -33,9 +33,11 @@ namespace Fps.Core
 
         public bool IsGrounded => _mover.IsGrounded;
 
-        public bool IsCrouched { get; private set; }
+        public PlayerStance Stance { get; private set; }
 
-        public StanceShape Current => Geometry.Shape(IsCrouched);
+        public bool IsCrouched => Stance == PlayerStance.Crouching;
+
+        public StanceShape Current => Geometry.Shape(Stance);
 
         public float FeetY(Vector3 position)
         {
@@ -49,9 +51,14 @@ namespace Fps.Core
 
         public void ApplyStance(bool crouched)
         {
-            var shape = Geometry.Shape(crouched);
+            ApplyStance(crouched ? PlayerStance.Crouching : PlayerStance.Standing);
+        }
+
+        public void ApplyStance(PlayerStance stance)
+        {
+            var shape = Geometry.Shape(stance);
             _mover.SetShape(shape.Height, new Vector3(0f, shape.CenterY, 0f));
-            IsCrouched = crouched;
+            Stance = stance;
         }
 
         public void Place(Vector3 position, bool grounded)
@@ -67,6 +74,12 @@ namespace Fps.Core
         public bool HasHeadroomToStand()
         {
             return IsStandingClear(Position);
+        }
+
+        public bool HasHeadroomFor(PlayerStance stance)
+        {
+            var shape = Geometry.Shape(stance);
+            return _mover.IsClear(Position, shape.Height, new Vector3(0f, shape.CenterY, 0f));
         }
 
         public bool IsStandingClear(Vector3 position)

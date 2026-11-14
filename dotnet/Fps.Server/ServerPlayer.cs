@@ -24,5 +24,7 @@ namespace Fps.Server
 
         /// <summary>EOS でつないだ人の、通信路が確かめた ProductUserId。EOS でなければ null。</summary>
         public string ProductUserId { get; }
+
+        public bool IsBot => BotRoster.IsBotId(PlayerId);
     }
 }

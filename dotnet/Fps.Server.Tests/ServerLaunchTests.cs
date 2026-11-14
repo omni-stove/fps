@@ -95,9 +95,16 @@ namespace Fps.Server.Tests
             Assert.That(udp.DrainTimeoutSeconds, Is.EqualTo(launch.DrainTimeoutSeconds));
         }
 
+        [Test]
+        public void AcceptsBots()
+        {
+            var launch = Parse(Env(), "-bots", "4");
+
+            Assert.That(launch.Options.Bots, Is.EqualTo(4));
+        }
+
         [TestCase("-mode", "host", "-mode must be server")]
         [TestCase("-mode", "client", "-mode must be server")]
-        [TestCase("-bots", "4", "-bots is not supported")]
         [TestCase("-net-latency", "100", "are not supported")]
         [TestCase("-drain-timeout", "3601", "-drain-timeout")]
         [TestCase("-map", "../etc", "-map")]

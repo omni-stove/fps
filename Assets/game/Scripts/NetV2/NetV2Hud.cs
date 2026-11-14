@@ -4,6 +4,7 @@ using Fps.Core;
 using Fps.Protocol;
 using Fps.Runtime;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Fps.NetV2
 {
@@ -15,6 +16,7 @@ namespace Fps.NetV2
     /// 値が変わったときだけ書き直す。毎 tick 届くスナップショットのたびに文を作り直さないため。
     /// 案内の欄の優先は <c>NetHud</c> と同じ: 試合の終わり、放置の警告、ダウン中、倒れている間のリスポーンの案内、出現直後の無敵。
     /// Individual のリスポーンまでの秒数はスナップショットに無いので、倒れている間は出さない。
+    /// 拠点制圧の試合では、拠点ごとの状態を <see cref="ControlPointsView"/> に出す (Netcode の <c>NetHud</c> と同じ部品)。
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Hud))]
@@ -24,6 +26,8 @@ namespace Fps.NetV2
 
         private readonly List<ScoreboardEntry> _scoreboard = new List<ScoreboardEntry>();
         private readonly Dictionary<int, Team> _teams = new Dictionary<int, Team>();
+        private readonly List<ControlPointStatus> _controlPoints = new List<ControlPointStatus>();
+        private ControlPointsView _controlPointsView;
         private Hud _hud;
         private int _localId;
         private int _maxHealth = 1;
@@ -154,6 +158,7 @@ namespace Fps.NetV2
             }
 
             _shown = true;
+            ShowControlPoints(snapshot);
             ShowNotice(own >= 0 ? snapshot.Players[own] : default, own >= 0);
             ShowScoreboard(snapshot);
         }
@@ -249,6 +254,69 @@ namespace Fps.NetV2
             {
                 _hud.Model.SetNotice(notice);
             }
+        }
+
+        private void ShowControlPoints(SnapshotMessage snapshot)
+        {
+            if (snapshot.Match.Objective != MatchObjective.Domination)
+            {
+                if (_controlPointsView != null)
+                {
+                    _controlPointsView.Clear();
+                }
+
+                return;
+            }
+
+            _controlPoints.Clear();
+            var points = snapshot.ControlPoints;
+            for (var index = 0; _controlPoints.Count < points.Count && index < SnapshotMessage.MaxControlPoints; index++)
+            {
+                var at = points.IndexOf(index);
+                if (at < 0)
+                {
+                    // 番号が抜けた拠点は出さない (HUD の呼び名 A, B, C ... は並びの順に付くため、抜けたまま詰めると名前がずれる)
+                    break;
+                }
+
+                var point = points[at];
+                _controlPoints.Add(new ControlPointStatus(point.HasOwner ? point.Owner : (Team?)null, point.ControlPercent, point.Contested));
+            }
+
+            var view = EnsureControlPointsView();
+            var alpha = _hud.TeamColor(Team.Alpha);
+            var bravo = _hud.TeamColor(Team.Bravo);
+            if (view.ColorOf(Team.Alpha) != alpha || view.ColorOf(Team.Bravo) != bravo)
+            {
+                view.SetTeamColors(alpha, bravo);
+            }
+
+            view.Show(_controlPoints);
+        }
+
+        // 拠点制圧のときだけ要るビューなので、Hud.AddViews では付けずに初めて要るときに付ける (Netcode の NetHud と同じ)
+        private ControlPointsView EnsureControlPointsView()
+        {
+            if (_controlPointsView != null)
+            {
+                return _controlPointsView;
+            }
+
+            _controlPointsView = GetComponent<ControlPointsView>();
+            if (_controlPointsView == null)
+            {
+                _controlPointsView = gameObject.AddComponent<ControlPointsView>();
+            }
+
+            // 木を作ったときの Bind には間に合っていないので、今の木があればここで要素を渡す (作り直したときは Hud が渡す)
+            var document = GetComponent<UIDocument>();
+            var root = document != null ? document.rootVisualElement : null;
+            if (_controlPointsView.Element == null && root != null && root.childCount > 0)
+            {
+                _controlPointsView.Bind(root);
+            }
+
+            return _controlPointsView;
         }
 
         private void ShowScoreboard(SnapshotMessage snapshot)

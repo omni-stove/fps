@@ -28,7 +28,13 @@ namespace Fps.Net
         private readonly bool[] _pieceEnabled;
 
         public NetMapWorld(string map, WorldMap world, IReadOnlyList<GameObject> sceneRoots)
+            : this(map, world, sceneRoots, NetMapLadders.None)
         {
+        }
+
+        public NetMapWorld(string map, WorldMap world, IReadOnlyList<GameObject> sceneRoots, NetMapLadders ladders)
+        {
+            Ladders = ladders ?? throw new ArgumentNullException(nameof(ladders));
             Map = map ?? throw new ArgumentNullException(nameof(map));
             if (world == null)
             {
@@ -65,9 +71,13 @@ namespace Fps.Net
 
         public IWorldCollision Collision => _collision;
 
+        /// <summary>マップのはしご。スナップショットははしごをこの並びの番号で指すので、サーバーと同じファイルから読む。</summary>
+        public NetMapLadders Ladders { get; }
+
         public string LogLine => LogTag + " map collision " + Map
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
-            + " pieces=" + PieceCount.ToString(CultureInfo.InvariantCulture);
+            + " pieces=" + PieceCount.ToString(CultureInfo.InvariantCulture)
+            + " ladders=" + Ladders.Ladders.Count.ToString(CultureInfo.InvariantCulture);
 
         /// <summary>シーンの名前の <c>.fpsmap</c> を読む。同じシーンでは前に読んだものを返す。</summary>
         public static bool TryGet(Scene scene, out NetMapWorld world, out string error)
@@ -120,9 +130,25 @@ namespace Fps.Net
                 return false;
             }
 
+            // はしごのファイルが無いマップは、サーバー (ServerMapData) と同じくはしごが無いものとして動かす
+            var ladders = NetMapLadders.None;
+            var laddersPath = Path.Combine(Path.GetDirectoryName(path) ?? ".", scene.name + NetMapLadders.Extension);
+            if (File.Exists(laddersPath))
+            {
+                try
+                {
+                    ladders = NetMapLadders.Parse(File.ReadAllText(laddersPath), laddersPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = LogTag + " cannot read " + laddersPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                world = new NetMapWorld(scene.name, map, scene.GetRootGameObjects());
+                world = new NetMapWorld(scene.name, map, scene.GetRootGameObjects(), ladders);
             }
             catch (ArgumentException e)
             {

@@ -296,8 +296,8 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 
 Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠、
 上の運用 (版の確認・drain・JSON のイベント)、EOS のロビーへの登録 (`-register-lobby`) と、試合のルール (TDM・Domination・ダウンと蘇生・印・
-出現と出現直後の無敵・ロードアウトの選択・放置で切る)、移動、戦闘 (射撃・巻き戻しの当たり判定・ダメージ・武器・グレネード・壊せる建物) を行う。
-Bot・EAC はまだ無い。
+出現と出現直後の無敵・ロードアウトの選択・放置で切る)、移動、戦闘 (射撃・巻き戻しの当たり判定・ダメージ・武器・グレネード・壊せる建物)、Bot を行う。
+EAC はまだ無い。
 
 ```sh
 make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
@@ -308,7 +308,7 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
 - 引数 (`-map`・`-drain-timeout`・`-log-format`・`-buildVersion`) と環境変数 (`FPS_SERVER_ADDRESS`・`FPS_SERVER_PORT`) は Unity のサーバーと同じ意味。
   `-address` / `-port` が無ければ環境変数、それも無ければ `0.0.0.0` / `7777` で待ち受ける。引数と環境変数の両方で渡すと
   `[Net] invalid arguments: -port is given more than once (FPS_SERVER_PORT is set too) ...` で終わる (終了コード 2)。
-- まだ動かせない `-bots`・`-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
+- まだ動かせない `-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
 - `-transport eos` は EOS の P2P (ソケット名 `fps`、Unity のサーバーと同じチャンネル) で待ち受け、Device ID でログインできたら
   `[Net] EOS server ready id=<サーバーの ID> ...` を出す。EOS の C# SDK を [dotnet/ThirdParty/EOSSDK](../dotnet/ThirdParty/EOSSDK/README.md)
   に置いてビルドしたサーバーでだけ使え、SDK かそのライブラリが無ければ理由を出して終了コード 3、ログインできなければ
@@ -321,6 +321,11 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
 - クライアントと Unity のサーバー (Host を含む) も、プレイヤーの移動の当たりを同じ `.fpsmap` で取る (`NetMapWorld`)。
   Editor では `server-data/maps/` を直接読み、ビルドには `MapCollisionBuildFiles` が `StreamingAssets/maps/` として入れる。
   今のシーンの名前の `.fpsmap` が無ければ `[Net] map <マップ名> has no collision: ...` を出し、プレイヤーは動かない。
+- はしごの形と調整値は `server-data/maps/<マップ名>.ladders.json` から読む (`make export-server-data` が `.fpsmap` と一緒に書き出す)。
+  サーバーとクライアントの予測はどちらもこの並びの番号ではしごを指すので、同じファイルを読む。ファイルが無いマップははしごが無いものとして動く。
+  起動時の `[Server] map ...` の `ladders=` が読んだ本数。はしごと伏せはルールの `actions.ladder` / `actions.prone` が `On` のときだけ使え、
+  伏せの寸法と速さはルールのファイルの `motor` の `proneHeight`・`proneSpeed`・`diveDistance`・`diveSeconds` (無ければ既定値) で決まる。
+  つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
 - ルールは `-rules <名前>` (無ければ `TeamDeathmatch`) で選び、`server-data/rules/<名前>.json` を読む。NetMatch.prefab に焼いてある
   試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値など)・ルールのアセット・ロードアウトと武器の一覧・移動の値と体の寸法
   (MotorSettings と NetPlayer.prefab の CharacterController。サーバーの移動はクライアントの予測と同じこの値で動く) が入っていて、
@@ -334,6 +339,15 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
 - 壊せる建物の部品の並びは `server-data/maps/<マップ名>.structures.json` (`make export-server-data` で書き出す) から読む。
   無いマップでは `[Destruction] map <マップ名> has N destructible structure(s) but no ...` を出し、部品は壊れない壁として残る。
   破片が当たるダメージ (DebrisCrush) はまだ無い。
+- Bot は Unity のサーバーと同じく、人と Bot を合わせて `-bots` とルールの `minPlayers` の大きいほうの人数になるまで足し、
+  人が入るとその人のチームの Bot を抜く。人が 1 人もいなければ Bot も置かない。Bot は `.fpsnav` の経路をたどり、人と同じ入力で
+  移動と射撃の検査を通る。はしごのリンクでは、はしごへ進んでつかまり、上り下りして渡る (ルールの `actions.ladder` が `Off` なら、
+  はしごを通る経路は使わない)。書き出した NavMesh は壊せる建物をくり抜いていないので、壊れていない部品を通り抜ける経路は使わず、
+  壊れたら通る。見える距離・反応・照準の誤差・経路を引き直す間隔などは `server-data/tuning/bots.json` (無ければ既定値) から読む。
+  ログは `[Bot] fill target=..`・`[Bot] added player=.. name=[BOT] B1 team=..`・`[Bot] removed player=.. reason=..`、
+  2 秒ごとの `[Bot] pos player=.. x=.. y=.. z=.. state=.. health=..`、はしごの `[Bot] ladder player=.. ladder=.. climb=Up|Down|Done`、
+  進めなくなったときの `[Bot] stuck player=..`。倒した・倒されたは人と同じ `[Match] kill ...` と JSON の `kill` の行に出る。
+  Bot は JSON の `player_joined` / `player_left` にも出るが、drain が待つ人数とロビーに載せる人数には数えない。
 - 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
 - SIGTERM と SIGINT (Ctrl+C) で「試合が終わってから止める」と同じ drain に入り、同じログを出す。
 - 承認は `ConnectRequestMessage` の版と鍵を Netcode の承認データと同じ判定に通すので、断ったときのログ
@@ -366,11 +380,19 @@ make server-dotnet
 
 - `-address`・`-port` は今のクライアントと同じ意味。マップは `-map` ではなく、承認のときにサーバーが知らせる試合のマップのシーンへ移る
   (`-map` は今と同じくクライアントには付けられない)。そのシーンがビルドに無い・`.fpsmap` が無ければ理由を出してそのシーンに留まる。
-- 自分の移動はサーバーと同じ Core の移動と `.fpsmap` で予測して入力を送り、スナップショットの処理済みの入力の tick で照合する。
+- `-mode` を付けずに `-netstack v2` だけで起動すると、メニューが出て、メニューのクイックマッチが `-address`・`-port` (既定 `127.0.0.1:7777`)
+  のサーバーへこのクライアントでつなぐ。切断してメニューへ戻った後も同じボタンでつなぎ直せる。ロビー (作る・入る) はまだ使えないと案内を出す。
+- 自分の移動はサーバーと同じ Core の移動と、マップの `.fpsmap`・`.ladders.json` で予測して入力を送り、スナップショットの処理済みの入力の tick で照合する。
+  移動の値 (移動・体の寸法・伏せ) は、サーバーが承認のときに送るサーバーのルールのファイルの `motor` の値を使う (`[Net] motor from the server's rules ...`)。
   食い違って巻き戻したときは `[Net] reconciled tick=... error=...` を出す。他のプレイヤーは 2 tick 遅らせて補間する。
-  他のプレイヤーの見た目は `Resources/NetV2/RemotePlayerBody` のプレハブで差し替えられ、無ければ体の寸法のカプセルを出す。
-- 射撃・リロード・グレネード・印は押したときに要求を送り、保存してあるロードアウトを承認されたときに頼む。キル・被弾・ヒット・爆発は
-  今の HUD とエフェクト (`CombatEvents`) に流し、`[Combat]` の行を出す。
+  他のプレイヤーの見た目は `Resources/NetV2/RemotePlayerBody` のプレハブで差し替えられ、無ければ体の寸法のカプセルを出す (しゃがみ・伏せは縦に縮める)。
+- 伏せ (Prone) とはしごは、試合のルールの `prone`・`ladder` が On のときだけ使える。はしごにつかまると視点をはしごへ向ける (`[Ladder] grab ...`)。
+- 射撃は今の武器の射撃モードと連射間隔 (入口の `GameContent` のロードアウトと武器の一覧) で送り、弾倉が空なら空撃ちの音を出してリロードを頼む。
+  リロード・グレネード・印は押したときに要求を送る。撃った・撃たれたときの銃声・マズルフラッシュ・曳光弾・リロード音は今のクライアントと同じ部品
+  (`WeaponPresentation` など) が出す。キル・被弾・ヒット・爆発は今の HUD とエフェクト (`CombatEvents`) に流し、`[Combat]` の行を出す。
+- 印は今のクライアントと同じ `PingController` に、拠点制圧の拠点はマップの `ControlPointZone` の円盤と HUD の拠点の欄に出す。
+- 壊れる建物は、サーバーが送る壊れた部品 (`StructureStateMessage`) をシーンの見た目と予測の当たりに写す。
+- 保存してあるロードアウトを承認されたときに頼み、倒れている間はロードアウトを選ぶ画面を出す (受け入れられた並びだけを保存する)。
 - サーバーとの接続を失うと、今のクライアントと同じ文 (「サーバーが止まりました。」・タイムアウト・断られた・版が違う) を出してメニューへ戻る。
   batchmode では今と同じ終了コード (切断 0・つながらない 5) で終わる。
 - `-transport eos -eos-server <サーバーの ID>` で .NET の EOS のサーバーへ P2P でつなぐ (EOS のプラグインと Netcode が入ったビルドだけ)。
@@ -381,8 +403,9 @@ make server-dotnet
   <ビルドしたゲーム> -mode client -netstack v2 -transport eos -eos-server <サーバーの ID> -noeac
   ```
 
-- まだ使えない `-lobby`・`-net-latency` / `-net-loss` / `-net-jitter` や、`-mode client` 以外と一緒に付けると
-  `[Net] invalid arguments: ...` を出して終了コード 2 で終わる。
+- `-netstack` の値が誤っている (`-netstack v3`・値の付け忘れ・2 回指定) と、Netcode のクライアントでは起動せずに
+  `[Net] invalid arguments: ...` を出して終了コード 2 で終わる。まだ使えない `-lobby`・`-net-latency` / `-net-loss` /
+  `-net-jitter` や、`-mode client` 以外と一緒に付けたときも同じ。
 
 ## CI でのリリース
 

@@ -153,7 +153,7 @@ namespace Fps.Protocol.Tests
         public void UnknownInputButtonIsRejected()
         {
             var input = new InputMessage();
-            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)64));
+            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)128));
             var writer = new MessageWriter();
             writer.WriteMessage(input);
 

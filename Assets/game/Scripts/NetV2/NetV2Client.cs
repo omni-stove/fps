@@ -19,13 +19,19 @@ namespace Fps.NetV2
     /// <remarks>
     /// <para>
     /// 自分の移動は Core の移動で予測して入力を送り、スナップショットで照合する。他のプレイヤーは補間して出す (<see cref="ClientMatch"/>)。
-    /// 当たりは Netcode のクライアントと同じく、マップの <c>.fpsmap</c> (<see cref="MapCollisionFiles"/>) で取る。
-    /// 移動の値はサーバーのルールのファイルに書き出す元 (Resources の <see cref="MotorSettings"/> と、対戦のプレイヤーの寸法の既定
-    /// <see cref="NetMotorSettings.Default"/>) から作る。
+    /// 当たりはサーバーと同じマップの <c>.fpsmap</c> と <c>.ladders.json</c> (<see cref="ClientWorld"/>) で取り、壊れた建物の部品は
+    /// サーバーの知らせで外す (<see cref="NetV2Structures"/>)。移動の値はサーバーが承認のときに送る、サーバーのルールのファイルの値
+    /// (<see cref="MatchClient.Motor"/>) を使う。はしごにつかまったら視点をはしごへ向ける。
     /// </para>
     /// <para>
-    /// 射撃・リロード・グレネード・印は押したときに要求を送り、承認されたら保存してあるロードアウト (<see cref="LoadoutPreferenceStore"/>) を頼む。
+    /// 射撃は今の武器の射撃モードと連射間隔 (<see cref="NetV2Weapons"/>) で、リロード・グレネード・印は押したときに要求を送る。
+    /// 承認されたら保存してあるロードアウトを頼み、倒れている間はロードアウトを選ぶ画面を出す (<see cref="NetV2LoadoutChooser"/>)。
     /// サーバーのイベントは、オフラインと Netcode のクライアントと同じ <see cref="CombatEvents"/> と HUD に流し、<c>[Combat]</c> の行を出す。
+    /// 印は Netcode のクライアントと同じ <see cref="PingController"/> に、拠点の持ち主はマップの <see cref="ControlPointZone"/> に出す。
+    /// </para>
+    /// <para>
+    /// <c>-netstack v2</c> で起動したプロセスでは、メニューのクイックマッチもこのクライアントで <c>-address</c>・<c>-port</c> のサーバーへつなぐ
+    /// (<see cref="MenuNavigator.OnlineStarter"/>)。
     /// </para>
     /// <para>
     /// サーバーとの接続を失ったら (つながらない・断られたを含む)、Netcode のクライアントと同じ理由の文 (<see cref="DisconnectNotice"/>) を添えてメニューへ戻る。
@@ -41,14 +47,14 @@ namespace Fps.NetV2
 
         // Netcode のクライアント (NetBootstrap) と同じ終了コード
         public const int ExitDisconnected = 0;
-        public const int ExitInvalidArguments = 2;
+        public const int ExitInvalidArguments = NetStackLaunch.ExitInvalidArguments;
         public const int ExitMisconfigured = 3;
         public const int ExitConnectFailed = 5;
 
         private const string _sceneExtension = ".unity";
 
-        // サーバー (ServerMotorSettings.DefaultKillPlaneY) と Netcode のクライアント (NetworkPlayerMotor.KillPlaneY) と同じ高さ
-        private const float _killPlaneY = -50f;
+        /// <summary>メニューでロビーを選んだときの案内 (Resources/Localization の menu の表)。</summary>
+        public const string LobbyUnavailableKey = "menu.lobbyUnavailableOnNetV2";
 
         /// <summary>このプロセスの端末の Id。Netcode のクライアントと同じく、同じプロセスのままつなぎ直したときだけ成績を引き継ぐ。</summary>
         private static readonly string _deviceKey = RejoinKey.NewDeviceKey();
@@ -58,12 +64,21 @@ namespace Fps.NetV2
         private readonly ThrowGrenadeRequestMessage _grenade = new ThrowGrenadeRequestMessage();
         private readonly PingRequestMessage _ping = new PingRequestMessage();
         private readonly WeaponActionRequestMessage _weaponAction = new WeaponActionRequestMessage();
-        private readonly LoadoutRequestMessage _loadout = new LoadoutRequestMessage();
+        private readonly List<ControlPointZone> _zones = new List<ControlPointZone>();
+        private readonly NetV2Weapons _weapons = new NetV2Weapons();
+        private NetV2Structures _structures;
+        private NetV2LoadoutChooser _loadout;
+        private ClientPings _pings;
         private NetLaunchOptions _options;
         private MatchClient _client;
         private ClientMatch _match;
-        private NetMotorSettings _motor;
+        private ClientWorld _world;
         private NetV2LocalPlayer _local;
+        private WeaponPresentation _presentation;
+        private DryFireSound _dryFire;
+        private PingController _pingDisplay;
+        private bool _wasReloading;
+        private bool _startedFromMenu;
         private NetV2Hud _hud;
         private Transform _remoteRoot;
         private IMenuNavigator _menu;
@@ -76,22 +91,59 @@ namespace Fps.NetV2
 
         public ClientMatch Match => _match;
 
-        /// <summary><c>-netstack v2</c> で起動されたときだけ、最初のシーンを読んだ後にクライアントを作る。</summary>
+        /// <summary>今動いているクライアント。無ければ null。</summary>
+        public static NetV2Client Current { get; private set; }
+
+        /// <summary>
+        /// 最初のシーンを読んだ後に <c>-netstack</c> を読む。<c>-netstack v2</c> ならメニューのオンラインのボタンをこのクライアントにし、
+        /// <c>-mode client</c> も付いていればすぐつなぐ。値が誤っていれば誤りを出して終了コード 2 で終える (Netcode のクライアントでは起動しない)。
+        /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void LaunchWhenRequested()
         {
-            if (NetStartup.IsDedicatedServerBuild || !NetStackLaunch.RequestsV2(Environment.GetCommandLineArgs()))
+            var start = NetStackLaunch.ResolveStart(Environment.GetCommandLineArgs(), NetStartup.IsDedicatedServerBuild, out var options, out var error);
+            switch (start)
             {
-                return;
+                case NetV2Start.NotRequested:
+                    return;
+                case NetV2Start.Invalid:
+                    Debug.LogError(LogTag + " invalid arguments: " + error);
+                    if (!Application.isEditor)
+                    {
+                        Application.Quit(ExitInvalidArguments);
+                    }
+
+                    return;
+            }
+
+            MenuNavigator.OnlineStarter = new MenuStarter(options);
+            Debug.Log(LogTag + " the menu's quick match connects with " + NetStackLaunch.Flag + " " + NetStackLaunch.V2Name + " to " + options.Endpoint);
+            if (start == NetV2Start.Connect)
+            {
+                Begin(options, false);
+            }
+        }
+
+        /// <summary>options のサーバーへつなぐクライアントを作る。シーンをまたいで残る。</summary>
+        public static NetV2Client Begin(NetLaunchOptions options, bool fromMenu)
+        {
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
             }
 
             var host = new GameObject(ObjectName);
             DontDestroyOnLoad(host);
-            host.AddComponent<NetV2Client>();
+            var client = host.AddComponent<NetV2Client>();
+            client._startedFromMenu = fromMenu;
+            client.Connect(options);
+            return client;
         }
 
         private void Awake()
         {
+            Current = this;
+
             // サーバーと同じマシンで並べて動かすので、裏に回っても止めない
             Application.runInBackground = true;
             if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, false))
@@ -105,28 +157,27 @@ namespace Fps.NetV2
                 _menu.ReturningToMenu += HandleReturningToMenu;
             }
 
-            var args = Environment.GetCommandLineArgs();
-            if (!NetStackLaunch.TryResolveV2Client(args, out var requested, out var error))
-            {
-                Leave(ExitInvalidArguments, LogTag + " invalid arguments: " + error);
-                return;
-            }
+            _structures = new NetV2Structures(this);
+            _pings = new ClientPings(line => Debug.Log(line, this));
+            _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
+        }
 
-            if (!TryPlanTransport(requested, out var plan, out error))
-            {
-                Leave(ExitMisconfigured, error);
-                return;
-            }
-
-            _options = plan.Options;
-
+        private void Connect(NetLaunchOptions requested)
+        {
+            _options = requested;
             if (!BuildVersion.TryNormalize(Application.version, out var version, out var versionError))
             {
                 Leave(ExitMisconfigured, LogTag + " cannot read the build version (Application.version): " + versionError);
                 return;
             }
 
-            _motor = new NetMotorSettings(MotorSettings.ResolveOrDefault(null), NetMotorSettings.Default.Stance, NetMotorSettings.Default.Mover);
+            if (!TryPlanTransport(requested, out var plan, out var planError))
+            {
+                Leave(ExitMisconfigured, planError);
+                return;
+            }
+
+            _options = plan.Options;
             var eos = _options.Transport == NetTransportKind.Eos;
             var transport = eos ? NetV2Eos.Factory.Create(plan.Credentials, line => Debug.Log(line, this)) : new UdpMatchTransport();
             _client = new MatchClient(transport, version, _deviceKey, "", line => Debug.Log(line, this));
@@ -209,10 +260,17 @@ namespace Fps.NetV2
             StepOwner(Time.deltaTime);
             ShowRemotes();
             SendRequests();
+            _pings.Markers.Expire(Time.time);
         }
 
         private void OnDestroy()
         {
+            if (Current == this)
+            {
+                Current = null;
+            }
+
+            _loadout?.Dispose();
             if (_menu != null)
             {
                 _menu.ReturningToMenu -= HandleReturningToMenu;
@@ -226,7 +284,7 @@ namespace Fps.NetV2
 
         private void HandleAccepted()
         {
-            SendSavedLoadout();
+            _loadout.SendSaved();
             var map = _client.Map;
             if (SceneManager.GetActiveScene().name == map)
             {
@@ -247,19 +305,27 @@ namespace Fps.NetV2
         private void EnterMap()
         {
             var map = _client.Map;
-            if (!TryLoadWorld(map, out var world, out var error))
+            if (!ClientWorld.TryLoad(MapCollisionFiles.Directory, map, out _world, out var error))
             {
-                Leave(ExitMisconfigured, error);
+                Leave(ExitMisconfigured, LogTag + " " + error);
                 return;
             }
 
-            var body = new CharacterBody(world, _motor.Mover, _motor.Stance);
-            var simulation = new CharacterMotorSimulation(
-                body, new PlayerMotor(_motor.Motor), 1f / _client.TickRate, _killPlaneY);
-            _match = new ClientMatch(_client, simulation);
+            Debug.Log(_world.LogLine, this);
+            var motor = _client.Motor;
+            Debug.Log(LogTag + " motor from the server's rules walk=" + motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
+                + " sprint=" + motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
+                + " height=" + motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
+                + " radius=" + motor.Stance.Radius.ToString(CultureInfo.InvariantCulture)
+                + " proneSpeed=" + motor.Prone.Speed.ToString(CultureInfo.InvariantCulture), this);
+            _match = new ClientMatch(_client, _world.CreateSimulation(motor, _client.TickRate, _client.KillPlaneY));
             _match.PlayerAdded += AddRemote;
             _match.PlayerRemoved += RemoveRemote;
             _match.Reconciled += HandleReconciled;
+            _match.LadderGrabbed += HandleLadderGrabbed;
+            var scene = SceneManager.GetActiveScene();
+            _structures.Enter(scene, _world);
+            CollectControlPoints(scene);
             _remoteRoot = new GameObject("NetV2Players").transform;
             foreach (var id in _match.RemotePlayerIds)
             {
@@ -269,6 +335,7 @@ namespace Fps.NetV2
             try
             {
                 _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth);
+                _loadout.Bind(_hud.Hud.LoadoutSelect);
             }
             catch (InvalidOperationException e)
             {
@@ -277,40 +344,10 @@ namespace Fps.NetV2
 
             if (_client.LatestSnapshot != null)
             {
-                _hud?.Apply(_client.LatestSnapshot);
+                HandleSnapshot(_client.LatestSnapshot);
             }
 
             Debug.Log(LogTag + " synchronized with the server; map " + map, this);
-        }
-
-        private bool TryLoadWorld(string map, out IWorldCollision world, out string error)
-        {
-            world = null;
-            var path = MapCollisionFiles.PathOf(map);
-            if (!File.Exists(path))
-            {
-                error = LogTag + " map " + map + " has no collision: " + path
-                    + " does not exist; export it with make export-server-data (Fps/Net/Export Server Data) and rebuild";
-                return false;
-            }
-
-            try
-            {
-                using (var stream = File.OpenRead(path))
-                {
-                    var file = FpsMapFile.Read(stream);
-                    world = new BvhWorldCollision(file);
-                    Debug.Log(LogTag + " map collision " + map + " colliders=" + file.Colliders.Count.ToString(CultureInfo.InvariantCulture), this);
-                }
-            }
-            catch (Exception e) when (e is IOException || e is InvalidDataException || e is UnauthorizedAccessException || e is ArgumentException)
-            {
-                error = LogTag + " cannot read " + path + ": " + e.Message;
-                return false;
-            }
-
-            error = null;
-            return true;
         }
 
         private void StepOwner(float deltaSeconds)
@@ -325,7 +362,13 @@ namespace Fps.NetV2
             {
                 var start = _match.LocalState;
                 _local = NetV2LocalPlayer.Create(
-                    _motor.Stance, _match.Prediction.Simulation.Body.HasHeadroomToStand, NetV2Math.ToUnity(start.Position), OwnYaw());
+                    _client.Motor.Stance, _match.Prediction.Simulation.Body.HasHeadroomToStand, NetV2Math.ToUnity(start.Position), OwnYaw());
+                _presentation = _local.GetComponent<WeaponPresentation>();
+                _dryFire = _local.GetComponent<DryFireSound>();
+
+                // 印を見る画面があるのは自分のプレイヤーだけなので、表示もここにだけ付ける (Netcode の NetPlayer と同じ)
+                _pingDisplay = _local.gameObject.AddComponent<PingController>();
+                _pingDisplay.ShowShared(_pings.Markers);
             }
 
             for (var i = 0; i < ticks; i++)
@@ -364,10 +407,7 @@ namespace Fps.NetV2
             }
 
             var direction = NetV2Math.ToNumerics(_local.AimDirection);
-            if (_local.TakeAttack())
-            {
-                SendFire(direction);
-            }
+            Trigger(direction);
 
             if (_local.TakeReload())
             {
@@ -381,31 +421,75 @@ namespace Fps.NetV2
                 _client.Send(_grenade, TransportChannel.Reliable);
             }
 
-            if (_local.TakePing())
+            // 付けられないと分かっている印は送らない (Netcode の NetTeamDeathmatch.CanRequestPing と同じく、ルールで付けられて生きているときだけ)
+            if (_local.TakePing() && CanPing())
             {
+                Debug.Log(PingLog.Tag + " net request", this);
                 _ping.Direction = direction;
                 _client.Send(_ping, TransportChannel.Reliable);
             }
         }
 
-        // 撃てるか (弾・間隔) と当たりはサーバーが決める。表示している tick を載せ、サーバーがその時点へ巻き戻して当てる
-        private void SendFire(System.Numerics.Vector3 direction)
+        private bool CanPing()
         {
             var latest = _client.LatestSnapshot;
-            if (latest == null || !latest.HasOwner)
+            if (latest == null || latest.Match.Rules.Ping != Fps.Core.Ping.On)
+            {
+                return false;
+            }
+
+            var own = latest.Players.IndexOf(_client.PlayerId);
+            return own >= 0 && latest.Players[own].Health > 0;
+        }
+
+        // 引き金は今の武器の射撃モードと連射間隔 (Netcode の NetPlayer.Update と同じ FireTrigger) で、押している間の連射の間合いを決める
+        private void Trigger(System.Numerics.Vector3 direction)
+        {
+            var held = _local.IsAttackHeld;
+            var pressed = _local.TakeAttack();
+            var latest = _client.LatestSnapshot;
+            var weaponId = ClientFire.CurrentWeaponId(latest != null && latest.HasOwner ? latest.Owner : null);
+            var trigger = _weapons.TriggerFor(weaponId);
+            if (trigger == null)
+            {
+                if (pressed)
+                {
+                    Debug.LogWarning(LogTag + " cannot fire " + (_weapons.TriggerError ?? "without a weapon"), this);
+                }
+
+                return;
+            }
+
+            trigger.Tick(Time.deltaTime);
+            if (!trigger.Pull(held, pressed))
             {
                 return;
             }
 
-            var owner = latest.Owner;
-            var index = owner.Weapon.EquippedIndex;
-            if (index >= owner.EquippedWeaponIds.Count)
+            switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState))
             {
-                return;
-            }
+                case FireDecision.Fire:
+                    SendFire(direction, weaponId);
+                    _local.ReleaseSprint(SprintInput.ReasonFire);
+                    break;
+                case FireDecision.Reload:
+                    // 押し続けている間は鳴らさず頼み直さない (オフラインの WeaponController と同じ)
+                    if (pressed)
+                    {
+                        _dryFire?.Play(weaponId);
+                        _weaponAction.Action = WeaponAction.Reload;
+                        _client.Send(_weaponAction, TransportChannel.Reliable);
+                    }
 
+                    break;
+            }
+        }
+
+        // 撃てるか (弾・間隔) と当たりはサーバーが決める。表示している tick を載せ、サーバーがその時点へ巻き戻して当てる
+        private void SendFire(System.Numerics.Vector3 direction, string weaponId)
+        {
             var renderTick = Math.Max(0f, _match.Interpolation.RenderTick);
-            _fire.WeaponId = owner.EquippedWeaponIds[index];
+            _fire.WeaponId = weaponId;
             _fire.Origin = NetV2Math.ToNumerics(_local.EyePosition);
             _fire.Direction = direction;
             _fire.ClientTick = (int)renderTick;
@@ -417,44 +501,82 @@ namespace Fps.NetV2
             CombatEvents.RaiseShotFired(_local.gameObject, _local.EyePosition, _local.AimDirection, _fire.WeaponId);
         }
 
-        private void SendSavedLoadout()
+        private bool SendReliable(IMessage message)
         {
-            IReadOnlyList<string> saved;
-            try
+            if (_client == null || _client.State != MatchClientState.Connected)
             {
-                saved = new LoadoutPreferenceStore().Load();
-            }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
-            {
-                Debug.LogWarning(LogTag + " ignored the saved loadout: " + e.Message, this);
-                return;
+                return false;
             }
 
-            if (saved == null || saved.Count == 0)
-            {
-                return;
-            }
-
-            _loadout.WeaponIds.Clear();
-            foreach (var id in saved)
-            {
-                if (_loadout.WeaponIds.Count == _loadout.WeaponIds.MaxCount)
-                {
-                    break;
-                }
-
-                _loadout.WeaponIds.Add(id);
-            }
-
-            _client.Send(_loadout, TransportChannel.Reliable);
+            _client.Send(message, TransportChannel.Reliable);
+            return true;
         }
 
         private void HandleSnapshot(SnapshotMessage snapshot)
         {
-            if (_hud != null)
+            if (_match == null)
             {
-                _hud.Apply(snapshot);
+                return;
             }
+
+            _hud?.Apply(snapshot);
+            _loadout.Apply(snapshot, _client.PlayerId);
+            ShowControlPoints(snapshot);
+            PlayReloadSound(snapshot);
+        }
+
+        // リロードを始めた (サーバーの自動リロードを含む) ときにリロード音を鳴らす (Netcode の NetPlayer と同じ)
+        private void PlayReloadSound(SnapshotMessage snapshot)
+        {
+            if (!snapshot.HasOwner)
+            {
+                return;
+            }
+
+            var reloading = snapshot.Owner.Weapon.IsReloading;
+            var weaponId = ClientFire.CurrentWeaponId(snapshot.Owner);
+            if (reloading && !_wasReloading && weaponId != null && _presentation != null && _presentation.isActiveAndEnabled)
+            {
+                _presentation.PlayReload(weaponId);
+            }
+
+            _wasReloading = reloading;
+        }
+
+        private void CollectControlPoints(Scene scene)
+        {
+            _zones.Clear();
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                _zones.AddRange(root.GetComponentsInChildren<ControlPointZone>(false));
+            }
+        }
+
+        // 拠点の円盤を持ち主の色で塗る (Netcode の NetControlPoint と同じ)。拠点はマップの番号 (ControlPointZone.Index) で指す
+        private void ShowControlPoints(SnapshotMessage snapshot)
+        {
+            var points = snapshot.ControlPoints;
+            foreach (var zone in _zones)
+            {
+                if (zone == null)
+                {
+                    continue;
+                }
+
+                var at = points.IndexOf(zone.Index);
+                Team? owner = at >= 0 && points[at].HasOwner ? points[at].Owner : (Team?)null;
+                if (zone.Owner != owner)
+                {
+                    zone.ShowOwner(owner);
+                }
+            }
+        }
+
+        private void HandleLadderGrabbed(int ladder, float yaw)
+        {
+            Debug.Log("[Ladder] grab index=" + ladder.ToString(CultureInfo.InvariantCulture)
+                + " yaw=" + (yaw * Mathf.Rad2Deg).ToString("F1", CultureInfo.InvariantCulture), this);
+            _local?.FaceYaw(yaw);
         }
 
         private void HandleReconciled(ReconcileResult result)
@@ -527,14 +649,13 @@ namespace Fps.NetV2
 
                     break;
                 case LoadoutAnswerMessage answer:
-                    Debug.Log("[Loadout] server " + (answer.Accepted ? "accepted the loadout" : "refused the loadout: " + answer.Reason), this);
+                    _loadout.Answer(answer);
                     break;
-                case PingPlacedMessage placed:
-                    Debug.Log("[Ping] placed id=" + placed.PingId.ToString(CultureInfo.InvariantCulture) + " kind=" + placed.Kind
-                        + " at=" + NetV2Math.ToUnity(placed.Position).ToString("F2", CultureInfo.InvariantCulture), this);
+                case StructureStateMessage structure:
+                    _structures.Receive(structure);
                     break;
-                case PingRemovedMessage removed:
-                    Debug.Log("[Ping] removed id=" + removed.PingId.ToString(CultureInfo.InvariantCulture) + " reason=" + removed.Reason, this);
+                default:
+                    _pings.Handle(message, Time.time);
                     break;
             }
         }
@@ -580,7 +701,7 @@ namespace Fps.NetV2
                 return;
             }
 
-            _remotes.Add(playerId, NetV2RemotePlayer.Create(playerId, _motor.Stance, _remoteRoot));
+            _remotes.Add(playerId, NetV2RemotePlayer.Create(playerId, _client.Motor.Stance, _remoteRoot));
             Debug.Log(LogTag + " player " + playerId.ToString(CultureInfo.InvariantCulture) + " is in view", this);
         }
 
@@ -625,7 +746,8 @@ namespace Fps.NetV2
             Destroy(gameObject);
         }
 
-        // 接続を失ったのでなければ、Netcode のクライアントを起動引数で動かしたときと同じく、このシーンに留まってログだけ残す
+        // 接続を失ったのでなければ、Netcode のクライアントを起動引数で動かしたときと同じく、このシーンに留まってログだけ残す。
+        // メニューから始めたときは、Netcode のクライアント (NetBootstrap.ReturnToMenuIfStartedThere) と同じく理由を添えて戻る
         private void Leave(int exitCode, string message, DisconnectNotice notice = null)
         {
             Debug.LogError(message, this);
@@ -633,6 +755,12 @@ namespace Fps.NetV2
             if (notice != null)
             {
                 Finish(exitCode, notice.Message);
+                return;
+            }
+
+            if (_startedFromMenu)
+            {
+                Finish(exitCode, LocalizedText.Literal(message));
                 return;
             }
 
@@ -694,6 +822,8 @@ namespace Fps.NetV2
             }
 
             _remotes.Clear();
+            _zones.Clear();
+            _structures?.Leave();
         }
 
         private static bool TryFindScene(string map, out string path)
@@ -712,6 +842,34 @@ namespace Fps.NetV2
 
             path = null;
             return false;
+        }
+
+        /// <summary>メニューのクイックマッチで、起動引数の <c>-address</c>・<c>-port</c> のサーバーへつなぐ。ロビーはまだ v2 に無いので断る。</summary>
+        private sealed class MenuStarter : IOnlineMatchStarter
+        {
+            private readonly NetLaunchOptions _options;
+
+            public MenuStarter(NetLaunchOptions options)
+            {
+                _options = options;
+            }
+
+            public bool Start(MenuDestination destination, out LocalizedText refusal)
+            {
+                if (destination != MenuDestination.QuickMatch)
+                {
+                    refusal = new LocalizedText(LobbyUnavailableKey);
+                    return false;
+                }
+
+                refusal = default;
+                if (Current == null)
+                {
+                    Begin(_options, true);
+                }
+
+                return true;
+            }
         }
     }
 }

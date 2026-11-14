@@ -21,7 +21,8 @@ namespace Fps.Server
             ArgumentNullException.ThrowIfNull(rules);
             var motor = rules.Motor;
             var defaults = ServerMotorSettings.Default;
-            return new ServerMotorSettings(motor.Motor, motor.Stance, motor.Mover, rules.Rules, defaults.KillPlaneY, defaults.SpawnPosition);
+            return new ServerMotorSettings(
+                motor.Motor, motor.Stance, motor.Mover, motor.Prone, rules.Rules, defaults.KillPlaneY, defaults.SpawnPosition);
         }
 
         /// <param name="launch">起動設定。</param>
@@ -56,6 +57,9 @@ namespace Fps.Server
             modules.Add(movement);
             modules.Add(rules);
             modules.Add(combat);
+
+            // Bot は戦闘がこの tick の当たり判定を記録した後の位置へ撃ち、スナップショットには動いた後の位置を載せる
+            modules.Add(new ServerBots(rules, movement, combat));
             modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat }));
 
             error = null;

@@ -81,7 +81,7 @@ namespace Fps.Server
         /// <summary>止まった後にプロセスが返す終了コード。<see cref="Fail"/> されていなければ 0。</summary>
         public int ExitCode { get; private set; } = ServerProgram.ExitOk;
 
-        public int ConnectedPlayers => Match.PlayerCount;
+        public int ConnectedPlayers => Match.HumanCount;
 
         public bool ListenFailed { get; private set; }
 
@@ -200,7 +200,16 @@ namespace Fps.Server
             }
 
             _shutDown = true;
-            var players = new List<ServerPlayer>(Match.Players);
+            var players = new List<ServerPlayer>();
+            foreach (var player in Match.Players)
+            {
+                // Bot は接続を持たず、Bot のモジュールが止まるときに抜ける
+                if (!player.IsBot)
+                {
+                    players.Add(player);
+                }
+            }
+
             _disconnecting.Reason = DisconnectNotice.ServerStoppedReason;
             foreach (var player in players)
             {
@@ -372,6 +381,10 @@ namespace Fps.Server
             _accepted.ServerTick = (int)Math.Min(_host.TickCount, int.MaxValue);
             _accepted.Map = _launch.Map;
             _accepted.MaxHealth = _rules?.Settings.MaxHealth ?? NetMatchSettings.DefaultMaxHealth;
+
+            // 移動のモジュールは同じルールのファイルの値 (ServerModules.MotorSettingsFrom) で動くので、クライアントの予測にも同じ値を渡す
+            _accepted.Motor = _rules?.Motor ?? NetMotorSettings.Default;
+            _accepted.KillPlaneY = ServerMotorSettings.DefaultKillPlaneY;
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 

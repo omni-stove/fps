@@ -84,5 +84,59 @@ namespace Fps.Core.Tests
             Assert.That(NetStartup.ShouldLoadNetScene(false, false, Args("Game.exe -mode client")), Is.True);
             Assert.That(NetStartup.ShouldLoadNetScene(false, true, Args("Game.exe -netstack v2")), Is.True);
         }
+        [TestCase("Game.exe -mode client -netstack v3")]
+        [TestCase("Game.exe -mode client -netstack")]
+        [TestCase("Game.exe -netstack v3")]
+        [TestCase("Game.exe -netstack")]
+        [TestCase("Game.exe -mode client -netstack v2 -netstack v2")]
+        public void AWrongStackIsRefusedInsteadOfStartingTheNetcodeClient(string commandLine)
+        {
+            var start = NetStackLaunch.ResolveStart(Args(commandLine), false, out var options, out var error);
+
+            Assert.That(start, Is.EqualTo(NetV2Start.Invalid));
+            Assert.That(options, Is.Null);
+            Assert.That(error, Does.Contain(NetStackLaunch.Flag));
+            Assert.That(NetStackLaunch.ExitInvalidArguments, Is.EqualTo(2));
+            Assert.That(NetStartup.ShouldLoadNetScene(false, false, Args(commandLine)), Is.False, "the Netcode scene must not start");
+        }
+
+        [Test]
+        public void AV2ClientWithAModeConnectsAtOnceAndWithoutOneWaitsForTheMenu()
+        {
+            Assert.That(
+                NetStackLaunch.ResolveStart(Args("Game.exe -mode client -netstack v2 -address 10.0.0.5"), false, out var now, out var error),
+                Is.EqualTo(NetV2Start.Connect),
+                error);
+            Assert.That(now.Address, Is.EqualTo("10.0.0.5"));
+
+            Assert.That(
+                NetStackLaunch.ResolveStart(Args("Game.exe -netstack v2 -port 7800"), false, out var menu, out error),
+                Is.EqualTo(NetV2Start.FromMenu),
+                error);
+            Assert.That(menu.Mode, Is.EqualTo(NetLaunchMode.Client));
+            Assert.That(menu.Port, Is.EqualTo(7800));
+        }
+
+        [TestCase("Game.exe -netstack v2 -lobby quickmatch", "-lobby")]
+        [TestCase("Game.exe -netstack v2 -mode server", "make server-dotnet")]
+        public void AV2StartWithArgumentsItCannotRunIsRefused(string commandLine, string mentioned)
+        {
+            Assert.That(NetStackLaunch.ResolveStart(Args(commandLine), false, out _, out var error), Is.EqualTo(NetV2Start.Invalid));
+            Assert.That(error, Does.Contain(mentioned));
+        }
+
+        [TestCase("Game.exe -mode client")]
+        [TestCase("Game.exe -mode client -netstack v1")]
+        [TestCase("Game.exe")]
+        public void WithoutV2NothingStarts(string commandLine)
+        {
+            Assert.That(NetStackLaunch.ResolveStart(Args(commandLine), false, out _, out var error), Is.EqualTo(NetV2Start.NotRequested), error);
+        }
+
+        [Test]
+        public void ADedicatedServerIgnoresTheStack()
+        {
+            Assert.That(NetStackLaunch.ResolveStart(Args("Game.exe -netstack v3"), true, out _, out _), Is.EqualTo(NetV2Start.NotRequested));
+        }
     }
 }

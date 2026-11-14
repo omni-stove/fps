@@ -293,7 +293,10 @@ namespace Fps.Net
             try
             {
                 var mover = new CapsuleMoverSpec(_controller.slopeLimit, _controller.stepOffset, _controller.skinWidth, _collisionMask);
-                _simulation = new NetMotorSimulation(_controller, _motor, _stance, _map.Collision, mover, TickSeconds, KillPlaneY);
+                _simulation = new NetMotorSimulation(_controller, _motor, _stance, _map.Collision, mover, TickSeconds, KillPlaneY)
+                {
+                    Ladders = _map.Ladders.Ladders,
+                };
             }
             catch (ArgumentOutOfRangeException e)
             {

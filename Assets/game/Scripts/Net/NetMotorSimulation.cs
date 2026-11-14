@@ -45,7 +45,7 @@ namespace Fps.Net
 
             Stance = stance ?? throw new ArgumentNullException(nameof(stance));
             Body = new CharacterBody(world, mover, stance.Geometry);
-            _core = new CharacterMotorSimulation(Body, motor, tickSeconds, killPlaneY);
+            _core = new CharacterMotorSimulation(Body, motor, tickSeconds, killPlaneY, ProneSpec.Default);
             _dodge = new DodgeMotion(motor.Spec);
             SpawnPosition = _root.position;
         }
@@ -77,6 +77,13 @@ namespace Fps.Net
 
         public VaultProbeResult LastVaultProbe => _core.LastVaultProbe;
 
+        /// <summary>つかまれるはしご。サーバーと同じ並び (<see cref="NetMapWorld.Ladders"/>) を渡す。</summary>
+        public System.Collections.Generic.IReadOnlyList<MapLadder> Ladders
+        {
+            get => _core.Ladders;
+            set => _core.Ladders = value;
+        }
+
         public static Vector3 YawForward(float yaw)
         {
             return NetMath.ToUnity(CharacterMotorSimulation.YawForward(yaw));
@@ -85,14 +92,14 @@ namespace Fps.Net
         public MotorState Step(MotorState state, MotorInput input)
         {
             var next = MotorState.FromCore(_core.Step(state.ToCore(), input.ToCore()));
-            Show(next.Position, next.IsCrouched);
+            Show(next.Position, next.Stance);
             return next;
         }
 
         public void Place(MotorState state)
         {
             _core.Place(state.ToCore());
-            Show(state.Position, state.IsCrouched);
+            Show(state.Position, state.Stance);
         }
 
         /// <summary>体が今の位置で立ち上がれるか。持ち主のしゃがみの自動解除 (<see cref="CrouchInput"/>) がサーバーと同じ答えを使うため。</summary>
@@ -101,11 +108,11 @@ namespace Fps.Net
             return Body.HasHeadroomToStand();
         }
 
-        private void Show(Vector3 position, bool crouched)
+        private void Show(Vector3 position, PlayerStance stance)
         {
-            if (Stance.IsCrouched != crouched)
+            if (Stance.Stance != stance)
             {
-                Stance.Apply(crouched);
+                Stance.Apply(stance);
             }
 
             if (_root.position.Equals(position))

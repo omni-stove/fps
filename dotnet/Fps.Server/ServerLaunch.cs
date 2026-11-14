@@ -191,11 +191,6 @@ namespace Fps.Server
         // 黙って無視すると、ロビーや Bot が動いていると運用する人が思い込むので、移すまでは起動させない
         private static string Unsupported(NetLaunchOptions options)
         {
-            if (options.Bots > 0)
-            {
-                return NetLaunchOptions.BotsFlag + " is not supported by the .NET server yet (it has no bot module)";
-            }
-
             if (options.SimulatesNetwork)
             {
                 return NetLaunchOptions.NetLatencyFlag + " / " + NetLaunchOptions.NetLossFlag + " / " + NetLaunchOptions.NetJitterFlag

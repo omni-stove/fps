@@ -102,6 +102,11 @@ namespace Fps.Server
 
         public PlayerStance Stance { get; private set; }
 
+        /// <summary>つかまっているはしごの、マップのはしごの並びでの番号。つかまっていなければ <see cref="CharacterLadderState.NoLadder"/>。</summary>
+        public int Ladder { get; private set; } = CharacterLadderState.NoLadder;
+
+        public bool IsClimbing => Ladder >= 0;
+
         public long TeleportTick { get; private set; } = -1;
 
         public bool HasSpawned => TeleportTick >= 0;
@@ -123,6 +128,11 @@ namespace Fps.Server
 
         public void SetPose(Vector3 position, float yaw, PlayerStance stance)
         {
+            SetPose(position, yaw, stance, CharacterLadderState.NoLadder);
+        }
+
+        public void SetPose(Vector3 position, float yaw, PlayerStance stance, int ladder)
+        {
             if (!IsFinite(position) || float.IsNaN(yaw) || float.IsInfinity(yaw))
             {
                 throw new ArgumentOutOfRangeException(nameof(position), position, "position and yaw must be finite");
@@ -131,6 +141,7 @@ namespace Fps.Server
             Position = position;
             Yaw = yaw;
             Stance = stance;
+            Ladder = ladder < 0 ? CharacterLadderState.NoLadder : ladder;
         }
 
         internal void Teleport(Vector3 position, float yaw, long tick)

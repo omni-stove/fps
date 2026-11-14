@@ -12,10 +12,14 @@ namespace Fps.Server
         public const string TuningDirectoryName = "tuning";
         public const string PingTuningFileName = "ping.json";
         public const string GrenadeTuningFileName = "grenade.json";
+        public const string BotsTuningFileName = "bots.json";
 
         public ServerRulesData(
-            string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeSpec grenade = null, string grenadePath = null)
+            string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeSpec grenade = null, string grenadePath = null,
+            NetBotSpec bots = null, string botsPath = null)
         {
+            Bots = bots ?? NetBotSpec.Default;
+            BotsPath = botsPath;
             Grenade = grenade ?? GrenadeSpec.Default;
             GrenadePath = grenadePath;
             Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -47,12 +51,17 @@ namespace Fps.Server
 
         public string GrenadePath { get; }
 
+        public NetBotSpec Bots { get; }
+
+        public string BotsPath { get; }
+
         public string LogLine => ServerProgram.LogTag + " rules " + Name
             + " objective=" + Rules.Objective
             + " weapons=" + File.LoadoutWeapons.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Path
             + " ping=" + (PingPath ?? "default")
             + " grenade=" + (GrenadePath ?? "default")
+            + " bots=" + (BotsPath ?? "default")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
@@ -144,7 +153,28 @@ namespace Fps.Server
                 grenadePath = null;
             }
 
-            data = new ServerRulesData(name, file, ping, path, pingPath, grenade, grenadePath);
+            // Bot の判断と入力の調整値は Unity のサーバーではコードの定数だったので、server-data にだけ置き、無ければその値で動かす
+            var botsPath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, BotsTuningFileName));
+            var bots = NetBotSpec.Default;
+            if (System.IO.File.Exists(botsPath))
+            {
+                try
+                {
+                    bots = TuningJson.ParseBots(System.IO.File.ReadAllText(botsPath), botsPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read bots tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                botsPath = null;
+            }
+
+            data = new ServerRulesData(name, file, ping, path, pingPath, grenade, grenadePath, bots, botsPath);
             error = null;
             return true;
         }

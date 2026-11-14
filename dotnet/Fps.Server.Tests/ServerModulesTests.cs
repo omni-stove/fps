@@ -37,14 +37,15 @@ namespace Fps.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyAddsMovementRulesCombatAndSnapshots()
+        public void WithoutRegisterLobbyAddsMovementRulesCombatBotsAndSnapshots()
         {
             Assert.That(Create(_library.Path), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(4));
+            Assert.That(_modules, Has.Count.EqualTo(5));
             Assert.That(_modules[0], Is.InstanceOf<ServerMovement>());
             Assert.That(_modules[1], Is.InstanceOf<MatchRulesModule>());
             Assert.That(_modules[2], Is.InstanceOf<ServerCombat>());
-            Assert.That(_modules[3], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[3], Is.InstanceOf<ServerBots>());
+            Assert.That(_modules[4], Is.InstanceOf<ServerSnapshots>());
         }
 
         [Test]

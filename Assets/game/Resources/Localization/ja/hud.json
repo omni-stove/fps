@@ -14,8 +14,6 @@
   "hud.reviving": "蘇生中 {0}%",
   "hud.spawnProtected": "保護中 あと {0} 秒",
   "hud.idleWarning": "操作がありません あと {0} 秒で切断されます",
-  "hud.checkpointSaved": "チェックポイントでセーブしました",
-  "hud.checkpointRestart": "チェックポイントから再開まで {0} 秒",
   "hud.grenades": "グレネード {0}",
   "hud.mode.remaining": "{0} 残り {1}",
   "hud.mode.withDowned": "{0} (ダウン {1})",

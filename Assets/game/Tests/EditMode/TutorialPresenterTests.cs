@@ -97,7 +97,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_presenter.Steps.Current, Is.EqualTo(TutorialStep.Move));
             Assert.That(_view.IsShown, Is.True);
             Assert.That(_view.Text, Does.StartWith("[1/6] ").And.EndWith(" で移動"));
-            Assert.That(_view.Text, Is.EqualTo(_presenter.Prompt));
+            Assert.That(_view.Text, Is.EqualTo(Localizer.Resolve(_presenter.Prompt)));
             Assert.That(_view.IsCompleted, Is.False);
         }
 
@@ -154,7 +154,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_presenter.Steps.IsComplete, Is.True);
             Assert.That(_store.IsCompleted, Is.True);
-            Assert.That(_view.Text, Is.EqualTo(TutorialSteps.CompletedText));
+            Assert.That(_view.Text, Is.EqualTo(Localizer.Resolve(TutorialSteps.CompletedText)));
             Assert.That(_view.IsCompleted, Is.True);
 
             _presenter.Tick(TutorialPresenter.CompletedDisplaySeconds, State(PlayerActionConditions.None), Vector3.zero, InputDeviceKind.KeyboardMouse);
@@ -188,10 +188,10 @@ namespace Fps.Tests.EditMode
             Begin();
 
             Tick(Vector3.zero, device: InputDeviceKind.KeyboardMouse);
-            Assert.That(_view.Text, Does.EndWith(TutorialSteps.Instruction(TutorialStep.Move, keyboardKey)));
+            Assert.That(_view.Text, Does.EndWith(Localizer.Resolve(TutorialSteps.Instruction(TutorialStep.Move, keyboardKey))));
 
             Tick(Vector3.zero, device: InputDeviceKind.Gamepad);
-            Assert.That(_view.Text, Does.EndWith(TutorialSteps.Instruction(TutorialStep.Move, gamepadKey)));
+            Assert.That(_view.Text, Does.EndWith(Localizer.Resolve(TutorialSteps.Instruction(TutorialStep.Move, gamepadKey))));
         }
 
         [Test]
@@ -204,7 +204,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_presenter.IsRunning, Is.False);
             Assert.That(_view.IsShown, Is.False);
             Assert.That(_store.IsCompleted, Is.False);
-            Assert.That(_presenter.Prompt, Is.Null);
+            Assert.That(_presenter.Prompt.IsEmpty, Is.True);
         }
 
         [Test]

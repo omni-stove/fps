@@ -44,14 +44,14 @@ namespace Fps.Tests.EditMode
             Assert.That(missions, Has.Count.EqualTo(2));
             Assert.That(missions[0].Id, Is.EqualTo("Campaign01"));
             Assert.That(missions[0].Id, Is.EqualTo(CampaignSaveSlots.LegacyMissionId), "Campaign01 is the mission that owned the legacy save slot");
-            Assert.That(missions[0].DisplayName, Is.EqualTo(CampaignSceneBuilder.MissionDisplayName));
+            Assert.That(missions[0].NameKey, Is.EqualTo(CampaignSceneBuilder.MissionNameKey));
             Assert.That(missions[0].ScenePath, Is.EqualTo(CampaignSceneBuilder.ScenePath));
             Assert.That(missions[0].DefinitionPath, Is.EqualTo(CampaignSceneBuilder.DefinitionPath));
 
             Assert.That(missions[1].Id, Is.EqualTo(MissionCatalogBuilder.Campaign02Id));
             Assert.That(missions[1].Id, Is.EqualTo("Campaign02"));
             Assert.That(CampaignSaveSlots.ReadsLegacy(missions[1].Id), Is.False, "only Campaign01 reads the legacy save slot");
-            Assert.That(missions[1].DisplayName, Is.EqualTo(Campaign02Mission.MissionDisplayName));
+            Assert.That(missions[1].NameKey, Is.EqualTo(Campaign02Mission.MissionNameKey));
             Assert.That(missions[1].ScenePath, Is.EqualTo(BuildSceneList.Campaign02Scene));
             Assert.That(missions[1].DefinitionPath, Is.EqualTo(Campaign02Mission.DefinitionPath));
         }
@@ -67,11 +67,11 @@ namespace Fps.Tests.EditMode
             var missions = new[]
             {
                 new MissionCatalogBuilder.MissionSource(
-                    MissionCatalogBuilder.Campaign01Id, "Campaign 01", BuildSceneList.CampaignScene, _definitionPath),
+                    MissionCatalogBuilder.Campaign01Id, CampaignSceneBuilder.MissionNameKey, BuildSceneList.CampaignScene, _definitionPath),
 
                 // シーンは開かずに有無だけを見るので、リポジトリにある Campaign01 のシーンを指す。
                 new MissionCatalogBuilder.MissionSource(
-                    MissionCatalogBuilder.Campaign02Id, "Campaign 02", BuildSceneList.CampaignScene, secondPath),
+                    MissionCatalogBuilder.Campaign02Id, Campaign02Mission.MissionNameKey, BuildSceneList.CampaignScene, secondPath),
             };
 
             var catalog = MissionCatalogBuilder.BuildAt(_catalogPath, missions);
@@ -81,7 +81,8 @@ namespace Fps.Tests.EditMode
             Assert.That(catalog.Missions[1].Id, Is.EqualTo("Campaign02"));
             Assert.That(catalog.Missions[1].Definition, Is.SameAs(second));
             Assert.That(catalog.TryFind("Campaign02", out var found), Is.True);
-            Assert.That(found.DisplayName, Is.EqualTo("Campaign 02"));
+            Assert.That(found.DisplayNameKey, Is.EqualTo(Campaign02Mission.MissionNameKey));
+            Assert.That(Localizer.Resolve(found.DisplayName), Is.EqualTo("Campaign 02"));
         }
 
         [Test]
@@ -97,7 +98,7 @@ namespace Fps.Tests.EditMode
             Assert.That(catalog.Missions, Has.Count.EqualTo(1));
             var entry = catalog.Missions[0];
             Assert.That(entry.Id, Is.EqualTo("Campaign01"));
-            Assert.That(entry.DisplayName, Is.EqualTo("Campaign 01"));
+            Assert.That(entry.DisplayNameKey, Is.EqualTo(CampaignSceneBuilder.MissionNameKey));
             Assert.That(entry.ScenePath, Is.EqualTo(BuildSceneList.CampaignScene));
             Assert.That(entry.Definition, Is.SameAs(definition));
             Assert.That(catalog.TryFind("Campaign01", out _), Is.True);
@@ -122,7 +123,7 @@ namespace Fps.Tests.EditMode
             var missions = new[]
             {
                 new MissionCatalogBuilder.MissionSource(
-                    MissionCatalogBuilder.Campaign01Id, "Campaign 01", _folder + "/Missing.unity", _definitionPath),
+                    MissionCatalogBuilder.Campaign01Id, CampaignSceneBuilder.MissionNameKey, _folder + "/Missing.unity", _definitionPath),
             };
 
             Assert.That(
@@ -167,7 +168,7 @@ namespace Fps.Tests.EditMode
         {
             return new[]
             {
-                new MissionCatalogBuilder.MissionSource(id, "Campaign 01", BuildSceneList.CampaignScene, _definitionPath),
+                new MissionCatalogBuilder.MissionSource(id, CampaignSceneBuilder.MissionNameKey, BuildSceneList.CampaignScene, _definitionPath),
             };
         }
 

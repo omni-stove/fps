@@ -39,7 +39,8 @@ namespace Fps.Tests.EditMode
             Assert.That(mission.Objectives, Has.Count.EqualTo(3));
             var kill = mission.Objectives[1];
             Assert.That(kill.Id, Is.EqualTo("kill"));
-            Assert.That(kill.Description, Is.EqualTo("Kill 3"));
+            Assert.That(kill.DescriptionKey, Is.EqualTo("Kill 3"));
+            Assert.That(kill.Description, Is.EqualTo(new LocalizedText("Kill 3", 3)));
             Assert.That(kill.RequiredCount, Is.EqualTo(3));
             Assert.That(kill.Optional, Is.False);
             Assert.That(kill.Prerequisites, Is.EqualTo(new[] { "reach" }));
@@ -48,6 +49,27 @@ namespace Fps.Tests.EditMode
             Assert.That(mission.GetState("reach"), Is.EqualTo(ObjectiveState.Active));
             Assert.That(mission.GetState("kill"), Is.EqualTo(ObjectiveState.Locked));
             Assert.That(mission.GetState("intel"), Is.EqualTo(ObjectiveState.Active));
+        }
+
+        [Test]
+        public void KeysAreBuiltFromTheMissionAndObjectiveIds()
+        {
+            Assert.That(MissionDefinition.NameKeyOf("Campaign01"), Is.EqualTo("campaign.mission.Campaign01.name"));
+            Assert.That(
+                MissionDefinition.ObjectiveKeyOf("Campaign01", "reach_exit"),
+                Is.EqualTo("campaign.mission.Campaign01.objective.reach_exit"));
+            Assert.Throws<ArgumentException>(() => MissionDefinition.NameKeyOf(" "));
+            Assert.Throws<ArgumentException>(() => MissionDefinition.ObjectiveKeyOf("Campaign01", null));
+        }
+
+        [Test]
+        public void AnEmptyNameKeyHasNoName()
+        {
+            Assert.That(_definition.DisplayName.IsEmpty, Is.True);
+
+            _definition.DisplayNameKey = " campaign.mission.Op.name ";
+
+            Assert.That(_definition.DisplayName, Is.EqualTo(new LocalizedText("campaign.mission.Op.name")));
         }
 
         [Test]
@@ -145,7 +167,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ObjectivesSurviveSerialization()
         {
-            _definition.DisplayName = "Op";
+            _definition.DisplayNameKey = "campaign.mission.Op.name";
             _definition.SetObjectives(new[]
             {
                 new ObjectiveDefinition("a", "first"),
@@ -155,11 +177,12 @@ namespace Fps.Tests.EditMode
             var copy = Object.Instantiate(_definition);
             try
             {
-                Assert.That(copy.DisplayName, Is.EqualTo("Op"));
+                Assert.That(copy.DisplayNameKey, Is.EqualTo("campaign.mission.Op.name"));
+                Assert.That(copy.DisplayName, Is.EqualTo(new LocalizedText("campaign.mission.Op.name")));
                 Assert.That(copy.Objectives, Has.Count.EqualTo(2));
                 var b = copy.Objectives[1];
                 Assert.That(b.Id, Is.EqualTo("b"));
-                Assert.That(b.Description, Is.EqualTo("second"));
+                Assert.That(b.DescriptionKey, Is.EqualTo("second"));
                 Assert.That(b.RequiredCount, Is.EqualTo(2));
                 Assert.That(b.Optional, Is.True);
                 Assert.That(b.Prerequisites, Is.EqualTo(new[] { "a" }));

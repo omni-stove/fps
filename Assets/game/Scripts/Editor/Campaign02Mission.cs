@@ -28,7 +28,7 @@ namespace Fps.Editor
     public static class Campaign02Mission
     {
         public const string MissionId = "Campaign02";
-        public const string MissionDisplayName = "Campaign 02";
+        public static string MissionNameKey => MissionDefinition.NameKeyOf(MissionId);
         public static string ScenePath => BuildSceneList.Campaign02Scene;
         public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/" + MissionId + ".asset");
 
@@ -188,10 +188,15 @@ namespace Fps.Editor
         {
             return new[]
             {
-                new ObjectiveDefinition(EnterBuildingId, "敵を倒しながら建物に入る"),
-                new ObjectiveDefinition(UseTerminalId, "端末を操作する", 1, false, EnterBuildingId),
-                new ObjectiveDefinition(KillReinforcementsId, $"増援を {ReinforcementCount} 体倒す", ReinforcementCount, false, UseTerminalId),
-                new ObjectiveDefinition(ReachExtractionId, "脱出地点に着く", 1, false, KillReinforcementsId),
+                new ObjectiveDefinition(EnterBuildingId, MissionDefinition.ObjectiveKeyOf(MissionId, EnterBuildingId)),
+                new ObjectiveDefinition(UseTerminalId, MissionDefinition.ObjectiveKeyOf(MissionId, UseTerminalId), 1, false, EnterBuildingId),
+                new ObjectiveDefinition(
+                    KillReinforcementsId,
+                    MissionDefinition.ObjectiveKeyOf(MissionId, KillReinforcementsId),
+                    ReinforcementCount,
+                    false,
+                    UseTerminalId),
+                new ObjectiveDefinition(ReachExtractionId, MissionDefinition.ObjectiveKeyOf(MissionId, ReachExtractionId), 1, false, KillReinforcementsId),
             };
         }
 
@@ -200,7 +205,7 @@ namespace Fps.Editor
         {
             return new CampaignMissionSpec(
                 MissionId,
-                MissionDisplayName,
+                MissionNameKey,
                 ScenePath,
                 DefinitionPath,
                 NavMeshDataPath,

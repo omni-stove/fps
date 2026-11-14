@@ -82,6 +82,20 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void AcceptsTheEosTransportAndCanSwapItsOptions()
+        {
+            var launch = Parse(Env(), "-transport", "eos", "-rules", "Custom", "-buildVersion", "1.2.3");
+            Assert.That(launch.Options.Transport, Is.EqualTo(NetTransportKind.Eos));
+
+            var udp = launch.WithOptions(launch.Options.WithTransport(NetTransportKind.Udp));
+
+            Assert.That(udp.Options.Transport, Is.EqualTo(NetTransportKind.Udp));
+            Assert.That(udp.Version, Is.EqualTo("1.2.3"));
+            Assert.That(udp.Rules, Is.EqualTo("Custom"));
+            Assert.That(udp.DrainTimeoutSeconds, Is.EqualTo(launch.DrainTimeoutSeconds));
+        }
+
+        [Test]
         public void AcceptsBots()
         {
             var launch = Parse(Env(), "-bots", "4");
@@ -91,7 +105,6 @@ namespace Fps.Server.Tests
 
         [TestCase("-mode", "host", "-mode must be server")]
         [TestCase("-mode", "client", "-mode must be server")]
-        [TestCase("-transport", "eos", "-transport eos is not supported")]
         [TestCase("-net-latency", "100", "are not supported")]
         [TestCase("-drain-timeout", "3601", "-drain-timeout")]
         [TestCase("-map", "../etc", "-map")]

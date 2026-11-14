@@ -10,6 +10,7 @@ using System.Threading;
 using Fps.Core;
 using Fps.Core.Navigation;
 using Fps.Protocol;
+using Fps.Protocol.Tests;
 using Fps.Server;
 using NUnit.Framework;
 
@@ -22,6 +23,9 @@ namespace Fps.NetV2.Tests
     [NonParallelizable]
     public sealed class ServerConnectionTests
     {
+        private const string _eosServerId = "0002aaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        private const string _eosFirstId = "0002bbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        private const string _eosSecondId = "0002cccccccccccccccccccccccccccc";
         private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(15);
 
         private readonly List<Player> _players = new List<Player>();
@@ -105,6 +109,34 @@ namespace Fps.NetV2.Tests
             Assert.That(mover.Notice.Kind, Is.EqualTo(DisconnectKind.ServerStopped));
             Assert.That(watcher.Notice.Kind, Is.EqualTo(DisconnectKind.ServerStopped));
             Assert.That(mover.Notice.Message, Is.EqualTo(DisconnectNotice.ServerStoppedMessage));
+            Assert.That(_serverThread.Join(_timeout), Is.True);
+            Assert.That(_exitCode, Is.EqualTo(0), _output.ToString());
+        }
+
+        [Test]
+        public void EosClientsPlayOnAnEosServerAndTheJsonEventsCarryTheirProductUserIds()
+        {
+            var network = new FakeEosNetwork();
+            StartServer(network);
+            Assert.That(_output.ToString(), Does.Contain("[Net] EOS server ready id=" + _eosServerId));
+
+            var first = Join(EosClient(network, _eosFirstId), _eosServerId.ToUpperInvariant());
+            var second = Join(EosClient(network, _eosSecondId), _eosServerId);
+            Pump(() => first.Match.IsPredicting && second.Match.IsPredicting
+                && HasRemote(first, second.Client.PlayerId) && HasRemote(second, first.Client.PlayerId));
+
+            var log = _output.ToString();
+            Assert.That(log, Does.Contain("\"type\":\"server_started\"").And.Contain("\"transport\":\"eos\""));
+            Assert.That(log, Does.Contain("\"type\":\"player_joined\"").And.Contain("\"productUserId\":\"" + _eosFirstId + "\""));
+            Assert.That(log, Does.Contain("\"productUserId\":\"" + _eosSecondId + "\""));
+
+            first.Client.Leave();
+            Pump(() => _output.ToString().Contains("\"type\":\"player_left\"", StringComparison.Ordinal) && !HasRemote(second, first.Client.PlayerId));
+            Assert.That(PlayerLeftLine(), Does.Contain("\"productUserId\":\"" + _eosFirstId + "\""));
+
+            _stop.Raise();
+            Pump(() => second.Notice != null);
+            Assert.That(second.Notice.Kind, Is.EqualTo(DisconnectKind.ServerStopped));
             Assert.That(_serverThread.Join(_timeout), Is.True);
             Assert.That(_exitCode, Is.EqualTo(0), _output.ToString());
         }
@@ -212,13 +244,53 @@ namespace Fps.NetV2.Tests
             return new Vector2(v.X, v.Z).Length();
         }
 
-        private void StartServer()
+        private static EosMatchTransport EosClient(FakeEosNetwork network, string userId)
+        {
+            return new EosMatchTransport(network.Join(userId), new EosTransportOptions(), _ => { });
+        }
+
+        private string PlayerLeftLine()
+        {
+            foreach (var line in _output.ToString().Split('\n'))
+            {
+                if (line.Contains("\"type\":\"player_left\"", StringComparison.Ordinal))
+                {
+                    return line;
+                }
+            }
+
+            return "";
+        }
+
+        /// <param name="eos">与えれば、その偽の EOS のネットワークで <c>-transport eos -log-format json</c> のサーバーにする。</param>
+        private void StartServer(FakeEosNetwork eos = null)
         {
             var environment = new Dictionary<string, string>
             {
                 [ServerLaunch.AddressVariable] = "127.0.0.1",
                 [ServerLaunch.PortVariable] = _port.ToString(CultureInfo.InvariantCulture),
             };
+            ServerRuntime.EosTransportFactory createEos = null;
+            var args = new List<string> { "-mode", "server", "-buildVersion", "0.2.0", "-drain-timeout", "0" };
+            if (eos != null)
+            {
+                foreach (var name in EosCredentials.VariableNames)
+                {
+                    environment[name] = "test";
+                }
+
+                args.Add("-transport");
+                args.Add("eos");
+                args.Add("-log-format");
+                args.Add("json");
+                createEos = (EosCredentials credentials, string version, TextWriter log, out IMatchTransport transport, out string error) =>
+                {
+                    transport = new EosMatchTransport(eos.Join(_eosServerId), new EosTransportOptions(), log.WriteLine);
+                    error = null;
+                    return true;
+                };
+            }
+
             var runtime = new ServerRuntime(
                 _synchronizedOutput,
                 _synchronizedOutput,
@@ -226,19 +298,19 @@ namespace Fps.NetV2.Tests
                 _stop,
                 new[] { _root },
                 new[] { _root },
-                () => new UdpMatchTransport());
-            var args = new[] { "-mode", "server", "-buildVersion", "0.2.0", "-drain-timeout", "0" };
+                () => new UdpMatchTransport(),
+                createEos);
             _serverThread = new Thread(() => _exitCode = ServerProgram.Run(args, ServerModules.Create, runtime)) { IsBackground = true };
             _serverThread.Start();
             Pump(() => _output.ToString().Contains("[Net] server listening on", StringComparison.Ordinal));
         }
 
-        private Player Join()
+        private Player Join(IMatchTransport transport = null, string address = "127.0.0.1")
         {
-            var client = new MatchClient(new UdpMatchTransport(), "0.2.0", RejoinKey.NewDeviceKey(), "tester", _ => { });
+            var client = new MatchClient(transport ?? new UdpMatchTransport(), "0.2.0", RejoinKey.NewDeviceKey(), "tester", _ => { });
             var player = new Player(client);
             _players.Add(player);
-            client.Connect("127.0.0.1", _port);
+            client.Connect(address, _port);
             Pump(() => client.State == MatchClientState.Connected);
             Assert.That(client.Map, Is.EqualTo(ServerLaunch.DefaultMap));
             player.Match = new ClientMatch(client, Simulation(client));

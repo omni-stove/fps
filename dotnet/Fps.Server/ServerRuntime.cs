@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Fps.Core;
 using Fps.Protocol;
+using Fps.Server.Eos;
 
 namespace Fps.Server
 {
@@ -15,7 +17,8 @@ namespace Fps.Server
             IStopSignal stopSignal,
             IReadOnlyList<string> mapSearchRoots,
             IReadOnlyList<string> credentialSearchRoots,
-            Func<IMatchTransport> createTransport)
+            Func<IMatchTransport> createTransport,
+            EosTransportFactory createEosTransport = null)
         {
             Output = output ?? throw new ArgumentNullException(nameof(output));
             Error = error ?? throw new ArgumentNullException(nameof(error));
@@ -24,7 +27,12 @@ namespace Fps.Server
             MapSearchRoots = mapSearchRoots ?? throw new ArgumentNullException(nameof(mapSearchRoots));
             CredentialSearchRoots = credentialSearchRoots ?? throw new ArgumentNullException(nameof(credentialSearchRoots));
             CreateTransport = createTransport ?? throw new ArgumentNullException(nameof(createTransport));
+            CreateEosTransport = createEosTransport ?? CreateProcessEosTransport;
         }
+
+        /// <summary><c>-transport eos</c> の通信路を作る。SDK が無いビルドなどで作れなければ false と理由を返す。</summary>
+        public delegate bool EosTransportFactory(
+            EosCredentials credentials, string version, TextWriter log, out IMatchTransport transport, out string error);
 
         public TextWriter Output { get; }
 
@@ -39,7 +47,10 @@ namespace Fps.Server
         /// <summary>EOS の認証情報のファイル (<c>eos.local.json</c>) を探すフォルダ。</summary>
         public IReadOnlyList<string> CredentialSearchRoots { get; }
 
+        /// <summary>UDP の通信路を作る。</summary>
         public Func<IMatchTransport> CreateTransport { get; }
+
+        public EosTransportFactory CreateEosTransport { get; }
 
         public static ServerRuntime Process()
         {
@@ -51,6 +62,12 @@ namespace Fps.Server
                 ServerMapData.DefaultSearchRoots(),
                 ServerMapData.DefaultSearchRoots(),
                 () => new UdpMatchTransport());
+        }
+
+        private static bool CreateProcessEosTransport(
+            EosCredentials credentials, string version, TextWriter log, out IMatchTransport transport, out string error)
+        {
+            return EosServerTransport.TryCreate(credentials, version, AppContext.BaseDirectory, log, out transport, out error);
         }
     }
 }

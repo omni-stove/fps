@@ -116,8 +116,13 @@ namespace Fps.Server
             return count;
         }
 
-        public ServerPlayer Join(ConnectionId connection, string rejoinKey)
+        public ServerPlayer Join(ConnectionId connection, string rejoinKey, string productUserId = null)
         {
+            if (productUserId != null && !NetLaunchOptions.IsProductUserId(productUserId))
+            {
+                throw new ArgumentException("'" + productUserId + "' is not an EOS product user id", nameof(productUserId));
+            }
+
             if (!TryGetPlayerId(connection, out var playerId))
             {
                 throw new ArgumentException("connection " + connection + " does not fit a player id", nameof(connection));
@@ -128,7 +133,7 @@ namespace Fps.Server
                 throw new ArgumentException("connection " + connection + " has already joined", nameof(connection));
             }
 
-            return Add(connection, playerId, rejoinKey);
+            return Add(connection, playerId, rejoinKey, productUserId);
         }
 
         /// <summary>Bot は接続を持たないので <see cref="ConnectionId.None"/> で加え、送る側はそれを読み飛ばす。</summary>
@@ -145,7 +150,7 @@ namespace Fps.Server
             }
 
             _botCount++;
-            return Add(ConnectionId.None, playerId, null);
+            return Add(ConnectionId.None, playerId, null, null);
         }
 
         public bool LeaveBot(int playerId)
@@ -159,13 +164,13 @@ namespace Fps.Server
             return true;
         }
 
-        private ServerPlayer Add(ConnectionId connection, int playerId, string rejoinKey)
+        private ServerPlayer Add(ConnectionId connection, int playerId, string rejoinKey, string productUserId)
         {
             var rejoined = false;
             var team = ChooseTeam != null
                 ? ChooseTeam(rejoinKey, out rejoined)
                 : TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
-            var player = new ServerPlayer(connection, playerId, team, rejoinKey);
+            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId);
             _players.Add(playerId, player);
             if (connection.IsValid)
             {
@@ -175,7 +180,7 @@ namespace Fps.Server
             _log.WriteLine(MatchLog.Joined(playerId, team));
             if (_events.Enabled)
             {
-                _events.Write(ServerEventLog.PlayerJoined(_utcNow(), MatchId, playerId, null, team, rejoined));
+                _events.Write(ServerEventLog.PlayerJoined(_utcNow(), MatchId, playerId, productUserId, team, rejoined));
             }
 
             PlayerJoined?.Invoke(player);
@@ -209,7 +214,7 @@ namespace Fps.Server
             _log.WriteLine(MatchLog.Left(player.PlayerId));
             if (_events.Enabled)
             {
-                _events.Write(ServerEventLog.PlayerLeft(_utcNow(), MatchId, player.PlayerId, null));
+                _events.Write(ServerEventLog.PlayerLeft(_utcNow(), MatchId, player.PlayerId, player.ProductUserId));
             }
 
             PlayerLeft?.Invoke(player);
@@ -261,7 +266,8 @@ namespace Fps.Server
         {
             if (_events.Enabled)
             {
-                _events.Write(ServerEventLog.Kill(_utcNow(), MatchId, killerId, null, victimId, null, teamKill));
+                _events.Write(ServerEventLog.Kill(
+                    _utcNow(), MatchId, killerId, ProductUserIdOf(killerId), victimId, ProductUserIdOf(victimId), teamKill));
             }
         }
 
@@ -271,7 +277,7 @@ namespace Fps.Server
             {
                 var marker = ping.Marker;
                 _events.Write(ServerEventLog.PingPlaced(
-                    _utcNow(), MatchId, ping.PingerId, null, ping.Team, marker.Id, marker.Kind,
+                    _utcNow(), MatchId, ping.PingerId, ProductUserIdOf(ping.PingerId), ping.Team, marker.Id, marker.Kind,
                     marker.Kind == PingKind.Enemy ? marker.TargetKey : null, refreshed));
             }
         }
@@ -280,8 +286,13 @@ namespace Fps.Server
         {
             if (_events.Enabled)
             {
-                _events.Write(ServerEventLog.PingRefused(_utcNow(), MatchId, playerId, null, reason));
+                _events.Write(ServerEventLog.PingRefused(_utcNow(), MatchId, playerId, ProductUserIdOf(playerId), reason));
             }
+        }
+
+        private string ProductUserIdOf(int playerId)
+        {
+            return _players.TryGetValue(playerId, out var player) ? player.ProductUserId : null;
         }
 
         /// <summary>終わった回の Tick の残りを待ちに数えないのは、Core の TeamDeathmatchSession と同じ間で次の試合を始めるため。</summary>

@@ -9,6 +9,9 @@ namespace Fps.Core
     /// </summary>
     public sealed class NetTransportPlan
     {
+        /// <summary>UDP に切り替えたときに出す 1 行。Netcode のサーバー・.NET のサーバー・v2 のクライアントで同じ文にする。</summary>
+        public const string CredentialsMissingLog = "[Net] EOS credentials missing, using UDP";
+
         private static readonly IReadOnlyList<string> _none = Array.Empty<string>();
 
         private static readonly AntiCheatSettings _antiCheatNotResolved =
@@ -43,6 +46,13 @@ namespace Fps.Core
             FellBackToUdp = fellBackToUdp;
             MissingCredentials = missingCredentials;
             AntiCheat = antiCheat;
+        }
+
+        /// <summary>UDP に切り替えたときに <see cref="CredentialsMissingLog"/> に続けて出す、足りない認証情報と置き場所の 1 行。</summary>
+        public string DescribeMissingCredentials()
+        {
+            return "[Net] missing EOS settings: " + string.Join(", ", MissingCredentials)
+                + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")";
         }
 
         /// <summary>Easy Anti-Cheat の設定だけを差し替えた計画を返す。</summary>

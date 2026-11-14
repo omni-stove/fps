@@ -364,7 +364,15 @@ namespace Fps.Server
                 return;
             }
 
-            DropPreviousConnection(verdict.RejoinKey, connection);
+            var rejoinKey = verdict.RejoinKey;
+            var productUserId = VerifiedProductUserId(connection);
+            if (productUserId != null)
+            {
+                // 名乗った鍵ではなく通信路が確かめた Id で見分け、他人の鍵を送って成績や席を奪えないようにする
+                rejoinKey = productUserId;
+            }
+
+            DropPreviousConnection(rejoinKey, connection);
 
             _pending.Remove(connection);
             _accepted.PlayerId = playerId;
@@ -380,8 +388,21 @@ namespace Fps.Server
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 
-            Match.Join(connection, verdict.RejoinKey);
+            Match.Join(connection, rejoinKey, productUserId);
             _host.OnConnected(connection);
+        }
+
+        private string VerifiedProductUserId(ConnectionId connection)
+        {
+            if (_transport is IConnectionUserIds identity
+                && identity.TryGetProductUserId(connection, out var userId)
+                && NetLaunchOptions.IsProductUserId(userId)
+                && RejoinKey.IsValid(userId))
+            {
+                return userId;
+            }
+
+            return null;
         }
 
         // 前の接続が切れたと分かる前に同じ人がつなぎ直してきたら、前の接続は戻ってこないので先に抜く

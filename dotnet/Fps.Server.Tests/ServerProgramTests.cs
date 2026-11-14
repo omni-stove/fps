@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using Fps.Core;
 using Fps.EosSdk;
 using Fps.Protocol;
 using NUnit.Framework;
@@ -19,6 +20,7 @@ namespace Fps.Server.Tests
         private IStopSignal _stop;
         private Dictionary<string, string> _environment;
         private ushort _port;
+        private ServerRuntime.EosTransportFactory _eosTransport;
 
         [SetUp]
         public void SetUp()
@@ -29,6 +31,7 @@ namespace Fps.Server.Tests
             TestMaps.Write(_data.Path, "NetTest");
             TestRules.Write(_data.Path, ServerLaunch.DefaultRules);
             _stop = new ImmediateStopSignal();
+            _eosTransport = null;
             _port = TestClient.FreePort();
             _environment = new Dictionary<string, string>
             {
@@ -234,6 +237,99 @@ namespace Fps.Server.Tests
             Assert.That(_error.ToString(), Does.Contain("failed to stop: b cannot stop"));
         }
 
+        [Test]
+        public void EosWithoutCredentialsSaysSoAndListensOverUdp()
+        {
+            var code = Run("-transport", "eos", "-log-format", "json");
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+            var log = _output.ToString();
+            Assert.That(log, Does.Contain(NetTransportPlan.CredentialsMissingLog + Environment.NewLine));
+            Assert.That(log, Does.Contain("[Net] missing EOS settings: EOS_PRODUCT_ID"));
+            Assert.That(log, Does.Contain("[Net] server listening on 0.0.0.0:" + _port));
+            Assert.That(log, Does.Contain("\"transport\":\"udp\""));
+        }
+
+        [Test]
+        public void EosWithAntiCheatButWithoutCredentialsDoesNotFallBackToUdp()
+        {
+            Assert.That(Run("-transport", "eos", "-eac"), Is.EqualTo(ServerProgram.ExitMisconfigured));
+            Assert.That(_error.ToString(), Does.Contain("[AntiCheat] -eac needs EOS credentials; missing EOS_PRODUCT_ID"));
+            Assert.That(_output.ToString(), Does.Not.Contain("listening"));
+        }
+
+        [Test]
+        public void EosWithCredentialsListensOverTheEosTransport()
+        {
+            AddCredentials();
+            EosCredentials given = null;
+            var transport = new RecordingTransport();
+            _eosTransport = (EosCredentials credentials, string version, TextWriter log, out IMatchTransport created, out string error) =>
+            {
+                given = credentials;
+                created = transport;
+                error = null;
+                return true;
+            };
+
+            var code = Run("-transport", "eos", "-log-format", "json");
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+            Assert.That(given.ProductId, Is.EqualTo("product"));
+            Assert.That(_output.ToString(), Does.Contain("[Net] server listening on eos"));
+            Assert.That(_output.ToString(), Does.Contain("\"transport\":\"eos\",\"endpoint\":\"eos\""));
+            Assert.That(_output.ToString(), Does.Not.Contain(NetTransportPlan.CredentialsMissingLog));
+        }
+
+        [Test]
+        public void EosThatCannotBeUsedExitsMisconfigured()
+        {
+            AddCredentials();
+            _eosTransport = (EosCredentials credentials, string version, TextWriter log, out IMatchTransport created, out string error) =>
+            {
+                created = null;
+                error = "the EOS C# SDK is not in this build";
+                return false;
+            };
+
+            Assert.That(Run("-transport", "eos"), Is.EqualTo(ServerProgram.ExitMisconfigured));
+            Assert.That(_error.ToString(), Does.Contain("[Net] -transport eos cannot use EOS: the EOS C# SDK is not in this build"));
+            Assert.That(_output.ToString(), Does.Not.Contain("listening"));
+        }
+
+        [Test]
+        public void EosLoginFailureExitsAsAFailedStart()
+        {
+            AddCredentials();
+            _eosTransport = (EosCredentials credentials, string version, TextWriter log, out IMatchTransport created, out string error) =>
+            {
+                created = new FailingListenTransport();
+                error = null;
+                return true;
+            };
+
+            Assert.That(Run("-transport", "eos"), Is.EqualTo(ServerProgram.ExitStartFailed));
+            Assert.That(_error.ToString(), Does.Contain("[Net] failed to start the server: EOS connect login failed"));
+        }
+
+        [Test]
+        public void BrokenCredentialsFileExitsMisconfigured()
+        {
+            File.WriteAllText(Path.Combine(_data.Path, EosCredentials.LocalFileName), "not json");
+
+            Assert.That(Run("-transport", "eos"), Is.EqualTo(ServerProgram.ExitMisconfigured));
+            Assert.That(_error.ToString(), Does.Contain("[Net] cannot load EOS credentials: "));
+        }
+
+        private void AddCredentials()
+        {
+            _environment[EosCredentials.ProductIdVariable] = "product";
+            _environment[EosCredentials.SandboxIdVariable] = "sandbox";
+            _environment[EosCredentials.DeploymentIdVariable] = "deployment";
+            _environment[EosCredentials.ClientIdVariable] = "client";
+            _environment[EosCredentials.ClientSecretVariable] = "secret";
+        }
+
         private int Run(params string[] args)
         {
             return ServerProgram.Run(args, Array.Empty<IServerModule>(), Runtime());
@@ -258,7 +354,47 @@ namespace Fps.Server.Tests
                 _stop,
                 new[] { _data.Path },
                 new[] { _data.Path },
-                () => new UdpMatchTransport());
+                () => new UdpMatchTransport(),
+                _eosTransport);
+        }
+
+        private sealed class FailingListenTransport : IMatchTransport
+        {
+            public bool IsActive => false;
+
+            public void Listen(string address, ushort port) => throw new InvalidOperationException("EOS connect login failed: InvalidAuth");
+
+            public void Connect(string address, ushort port) => throw new InvalidOperationException();
+
+            public void Disconnect(ConnectionId connection, string reason)
+            {
+            }
+
+            public void Send(ConnectionId connection, TransportChannel channel, ArraySegment<byte> payload)
+            {
+            }
+
+            public int GetMaxPayloadSize(TransportChannel channel) => 1000;
+
+            public bool TryGetRoundTripTime(ConnectionId connection, out int milliseconds)
+            {
+                milliseconds = 0;
+                return false;
+            }
+
+            public bool TryReceive(out TransportEvent transportEvent)
+            {
+                transportEvent = default;
+                return false;
+            }
+
+            public void Shutdown(string reason)
+            {
+            }
+
+            public void Dispose()
+            {
+            }
         }
 
         // 定数配列を直接渡すと CA1861 になるので params で受ける

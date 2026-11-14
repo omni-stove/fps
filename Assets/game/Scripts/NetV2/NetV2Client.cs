@@ -11,7 +11,8 @@ using UnityEngine.SceneManagement;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-mode client -netstack v2</c> のクライアント。Fps.Protocol と LiteNetLib (<see cref="UdpMatchTransport"/>) で .NET のサーバーへつなぎ、
+    /// <c>-mode client -netstack v2</c> のクライアント。Fps.Protocol と LiteNetLib (<see cref="UdpMatchTransport"/>) か、
+    /// <c>-transport eos</c> なら EOS の P2P (<see cref="NetV2Eos"/>) で .NET のサーバーへつなぎ、
     /// 承認されたらサーバーのマップのシーンへ移って、自分のプレイヤー (<see cref="NetV2LocalPlayer"/>)・他のプレイヤー
     /// (<see cref="NetV2RemotePlayer"/>)・HUD (<see cref="NetV2Hud"/>) を作る。シーンをまたいで残る。
     /// </summary>
@@ -163,15 +164,22 @@ namespace Fps.NetV2
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
         }
 
-        private void Connect(NetLaunchOptions options)
+        private void Connect(NetLaunchOptions requested)
         {
-            _options = options;
+            _options = requested;
             if (!BuildVersion.TryNormalize(Application.version, out var version, out var versionError))
             {
                 Leave(ExitMisconfigured, LogTag + " cannot read the build version (Application.version): " + versionError);
                 return;
             }
 
+            if (!TryPlanTransport(requested, out var plan, out var planError))
+            {
+                Leave(ExitMisconfigured, planError);
+                return;
+            }
+
+            _options = plan.Options;
             if (!AntiCheatSettings.TryResolve(Environment.GetCommandLineArgs(), Application.isEditor, _options, out var antiCheat, out var antiCheatError))
             {
                 Leave(ExitInvalidArguments, AntiCheatSettings.LogTag + " invalid arguments: " + antiCheatError);
@@ -179,7 +187,9 @@ namespace Fps.NetV2
             }
 
             Debug.Log(antiCheat.Describe(), this);
-            _client = new MatchClient(new UdpMatchTransport(), version, _deviceKey, "", line => Debug.Log(line, this));
+            var eos = _options.Transport == NetTransportKind.Eos;
+            var transport = eos ? NetV2Eos.Factory.Create(plan.Credentials, line => Debug.Log(line, this)) : new UdpMatchTransport();
+            _client = new MatchClient(transport, version, _deviceKey, "", line => Debug.Log(line, this));
             _client.Accepted += HandleAccepted;
             _client.SnapshotReceived += HandleSnapshot;
             _client.MessageReceived += HandleMessage;
@@ -190,15 +200,52 @@ namespace Fps.NetV2
                 return;
             }
 
-            Debug.Log(LogTag + " starting " + _options + " transport=udp " + NetStackLaunch.Flag + " " + NetStackLaunch.V2Name, this);
+            Debug.Log(LogTag + " starting " + _options + " transport=" + NetLaunchOptions.TransportName(_options.Transport) + " "
+                + NetStackLaunch.Flag + " " + NetStackLaunch.V2Name, this);
             try
             {
-                _client.Connect(_options.Address, _options.Port);
+                _client.Connect(eos ? _options.EosServerId : _options.Address, _options.Port);
             }
             catch (Exception e) when (e is InvalidOperationException || e is ArgumentException)
             {
                 Leave(ExitConnectFailed, LogTag + " failed to start " + _options + ": " + e.Message);
             }
+        }
+
+        /// <summary>
+        /// Netcode のクライアントと同じく、EOS を求められても認証情報が揃わなければ UDP でつなぐ。
+        /// 認証情報のファイルが壊れているときは、黙って UDP にすると誤りに気づけないので止める。
+        /// </summary>
+        private bool TryPlanTransport(NetLaunchOptions requested, out NetTransportPlan plan, out string error)
+        {
+            plan = null;
+            EosCredentials credentials = null;
+            IReadOnlyList<string> missing = null;
+            if (requested.Transport == NetTransportKind.Eos)
+            {
+                var factory = NetV2Eos.Factory;
+                if (factory == null)
+                {
+                    error = LogTag + " the EOS transport is not in this build (is com.playeveryware.eos installed and Fps.NetEos compiled?)";
+                    return false;
+                }
+
+                if (!factory.TryLoadCredentials(out credentials, out missing, out var loadError))
+                {
+                    error = LogTag + " cannot load EOS credentials: " + loadError;
+                    return false;
+                }
+            }
+
+            plan = NetTransportPlan.Decide(requested, credentials, missing);
+            if (plan.FellBackToUdp)
+            {
+                Debug.LogWarning(NetTransportPlan.CredentialsMissingLog, this);
+                Debug.Log(plan.DescribeMissingCredentials(), this);
+            }
+
+            error = null;
+            return true;
         }
 
         private void Update()

@@ -100,6 +100,31 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void EventsCarryTheProductUserIdOfPlayersWhoJoinedOverEos()
+        {
+            const string eosUser = "0002aaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+            _match.Join(new ConnectionId(1), eosUser, eosUser);
+            _match.Join(new ConnectionId(2), "device2");
+
+            _match.WriteKill(1, 2, false);
+            _match.WritePingRefused(1, PingRefusal.RuleOff);
+            _match.Leave(new ConnectionId(1));
+
+            var lines = JsonLines();
+            Assert.That(lines[0], Does.Contain("\"playerId\":\"1\",\"productUserId\":\"" + eosUser + "\",\"team\""));
+            Assert.That(lines[1], Does.Not.Contain("productUserId"));
+            Assert.That(lines.Single(l => l.Contains("\"type\":\"kill\"", StringComparison.Ordinal)), Does.Contain("\"killerProductUserId\":\"" + eosUser + "\"").And.Not.Contain("victimProductUserId"));
+            Assert.That(lines.Single(l => l.Contains("ping_refused", StringComparison.Ordinal)), Does.Contain(eosUser));
+            Assert.That(lines.Last(), Does.StartWith("{\"type\":\"player_left\"").And.Contain("\"productUserId\":\"" + eosUser + "\""));
+        }
+
+        [Test]
+        public void JoinRefusesAProductUserIdOfTheWrongShape()
+        {
+            Assert.That(() => _match.Join(new ConnectionId(1), "key", "not-a-user"), Throws.ArgumentException);
+        }
+
+        [Test]
         public void NewPlayersJoinTheSmallerTeamThenTheLowerScore()
         {
             _match.Join(new ConnectionId(1), null);

@@ -1,11 +1,12 @@
 using Fps.Net;
+using Fps.NetV2;
 using UnityEngine;
 
 namespace Fps.NetEos
 {
     /// <summary>
     /// 起動時に <see cref="EosP2PTransport"/> と <see cref="EosLobbyBackend"/> の作り方を
-    /// <see cref="NetTransportFactories"/> へ登録する。
+    /// <see cref="NetTransportFactories"/> へ、<c>-netstack v2</c> の EOS の通信路の作り方を <see cref="NetV2Eos"/> へ登録する。
     /// Fps.NetEos は com.unity.netcode.gameobjects と com.playeveryware.eos の両方があるときだけコンパイルされる。
     /// 無ければ何も登録されず、Fps.Net は EOS を選ばれたときに「このビルドに無い」というエラーにする。
     /// </summary>
@@ -25,6 +26,7 @@ namespace Fps.NetEos
             };
             NetTransportFactories.EosLobby = (credentials, displayName) =>
                 new EosLobbyBackend(credentials, string.IsNullOrWhiteSpace(displayName) ? LobbyDisplayName : displayName);
+            NetV2Eos.Factory = new EosClientTransportFactory();
         }
     }
 }

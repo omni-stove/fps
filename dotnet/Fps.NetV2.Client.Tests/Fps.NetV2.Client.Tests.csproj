@@ -9,6 +9,10 @@
     <ProjectReference Include="../Fps.Server/Fps.Server.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- EOS の通信路で .NET のサーバーとつなぐのに、Fps.Protocol.Tests の偽の EOS のネットワークを使う -->
+    <Compile Include="../Fps.Protocol.Tests/FakeEosNetwork.cs" Link="FakeEosNetwork.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.1" />
     <PackageReference Include="NUnit" Version="5.0.0" />
     <PackageReference Include="NUnit.Analyzers" Version="4.15.0">

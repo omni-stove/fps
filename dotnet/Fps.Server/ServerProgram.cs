@@ -27,7 +27,7 @@ namespace Fps.Server
         {
             ArgumentNullException.ThrowIfNull(modules);
 
-            return Run(args, (ServerLaunch _, ServerRuntime _, ICollection<IServerModule> created, out string error) =>
+            return Run(args, (ServerLaunch _, ServerRuntime _, ServerRulesData _, ICollection<IServerModule> created, out string error) =>
             {
                 foreach (var module in modules)
                 {
@@ -74,7 +74,7 @@ namespace Fps.Server
             output.WriteLine(rules.LogLine);
 
             var modules = new List<IServerModule>();
-            if (!createModules(launch, runtime, modules, out problem))
+            if (!createModules(launch, runtime, rules, modules, out problem))
             {
                 error.WriteLine(problem);
                 return ExitMisconfigured;

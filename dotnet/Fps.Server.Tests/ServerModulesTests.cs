@@ -37,11 +37,13 @@ namespace Fps.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyAddsNothing()
+        public void WithoutRegisterLobbyAddsMovementSnapshotsAndRules()
         {
             Assert.That(Create(_library.Path), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(1));
-            Assert.That(_modules[0], Is.InstanceOf<MatchRulesModule>());
+            Assert.That(_modules, Has.Count.EqualTo(3));
+            Assert.That(_modules[0], Is.InstanceOf<ServerMovement>());
+            Assert.That(_modules[1], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[2], Is.InstanceOf<MatchRulesModule>());
         }
 
         [Test]
@@ -53,7 +55,7 @@ namespace Fps.Server.Tests
 
             Assert.That(error, Does.StartWith("[Lobby] -register-lobby needs EOS credentials; missing EOS_SANDBOX_ID,"));
             Assert.That(error, Does.Contain(EosCredentials.LocalFileName));
-            Assert.That(_modules, Is.Empty);
+            Assert.That(_modules, Has.None.InstanceOf<ServerLobbyModule>());
         }
 
         [Test]
@@ -75,7 +77,7 @@ namespace Fps.Server.Tests
 
             Assert.That(error, Does.StartWith("[Lobby] -register-lobby cannot use EOS: "));
             Assert.That(error, EosSdkBuild.Included ? Does.Contain("native library") : Does.Contain("not in this build"));
-            Assert.That(_modules, Is.Empty);
+            Assert.That(_modules, Has.None.InstanceOf<ServerLobbyModule>());
         }
 
         [Test]
@@ -89,9 +91,28 @@ namespace Fps.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777"), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(2));
-            Assert.That(_modules[0], Is.InstanceOf<ServerLobbyModule>());
-            Assert.That(_modules[1], Is.InstanceOf<MatchRulesModule>());
+            Assert.That(_modules, Has.Count.EqualTo(4));
+            Assert.That(_modules[3], Is.InstanceOf<ServerLobbyModule>());
+        }
+
+        [Test]
+        public void MovementUsesTheMotorValuesAndRulesOfTheRulesFile()
+        {
+            var motor = new NetMotorSettings(
+                new MotorSpec(6f, 9f, 1.5f, 18f, 0.2f, 3f), new StanceGeometry(1.8f, 0.9f, 1.6f, 1.1f, 0.4f), CapsuleMoverSpec.Default);
+            var rules = GameRules.Default.WithObjective(MatchObjective.Domination);
+            var data = new ServerRulesData("Domination", new NetMatchFile(
+                "Domination", rules, NetMatchSettings.Default, "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } }),
+                new[] { TestRules.Rifle(), TestRules.Handgun() }, 0.4f, null, null, motor), PingSpec.Default, "memory", null);
+
+            var settings = ServerModules.MotorSettingsFrom(data);
+
+            Assert.That(settings.Motor, Is.SameAs(motor.Motor));
+            Assert.That(settings.Stance, Is.SameAs(motor.Stance));
+            Assert.That(settings.Mover, Is.SameAs(motor.Mover));
+            Assert.That(settings.Rules, Is.SameAs(rules));
+            Assert.That(settings.KillPlaneY, Is.EqualTo(ServerMotorSettings.Default.KillPlaneY));
         }
 
         private void WriteLocalFile()

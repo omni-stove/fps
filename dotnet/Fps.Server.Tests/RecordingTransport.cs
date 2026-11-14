@@ -4,8 +4,11 @@ using Fps.Protocol;
 
 namespace Fps.Server.Tests
 {
+    /// <summary>送ったものを覚えておくだけの通路。届いたものは無い。</summary>
     internal sealed class RecordingTransport : IMatchTransport
     {
+        public const int UnreliableLimit = 1200;
+
         private readonly MessageTable _table = MatchMessages.CreateClientTable();
 
         public List<(ConnectionId Connection, TransportChannel Channel, byte[] Payload)> Sent { get; } =
@@ -30,7 +33,10 @@ namespace Fps.Server.Tests
             Sent.Add((connection, channel, payload.ToArray()));
         }
 
-        public int GetMaxPayloadSize(TransportChannel channel) => 1200;
+        public int GetMaxPayloadSize(TransportChannel channel)
+        {
+            return channel == TransportChannel.Unreliable ? UnreliableLimit : ushort.MaxValue;
+        }
 
         public bool TryGetRoundTripTime(ConnectionId connection, out int milliseconds)
         {

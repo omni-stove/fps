@@ -61,7 +61,7 @@ namespace Fps.Protocol
             return copy;
         }
 
-        /// <summary>メッセージの Id と中身を書く。</summary>
+        /// <summary>メッセージの Id・版・中身の順に書く。</summary>
         public void WriteMessage(IMessage message)
         {
             if (message == null)
@@ -74,6 +74,7 @@ namespace Fps.Protocol
             try
             {
                 WriteUInt16(message.Id);
+                WriteByte(message.Version);
                 message.Write(this);
             }
             catch
@@ -143,6 +144,21 @@ namespace Fps.Protocol
             WriteInt32(BitConverter.SingleToInt32Bits(value));
         }
 
+        /// <summary>IEEE 754 の 64 ビットのビット列のまま書く。</summary>
+        public void WriteDouble(double value)
+        {
+            WriteInt64(BitConverter.DoubleToInt64Bits(value));
+        }
+
+        /// <summary>x・y の順に <see cref="WriteSingle"/> で書く。</summary>
+        public void WriteVector2(Vector2 value)
+        {
+            // 8 バイトを 1 回で取るのは、収まらないときに x だけが残らないようにするため。
+            var at = Reserve(8);
+            PutUInt32(at, unchecked((uint)BitConverter.SingleToInt32Bits(value.X)));
+            PutUInt32(at + 4, unchecked((uint)BitConverter.SingleToInt32Bits(value.Y)));
+        }
+
         /// <summary>x・y・z の順に <see cref="WriteSingle"/> で書く。</summary>
         public void WriteVector3(Vector3 value)
         {
@@ -153,10 +169,33 @@ namespace Fps.Protocol
             PutUInt32(at + 8, unchecked((uint)BitConverter.SingleToInt32Bits(value.Z)));
         }
 
+        /// <summary>x・y・z・w の順に <see cref="WriteSingle"/> で書く。</summary>
+        public void WriteQuaternion(Quaternion value)
+        {
+            // 16 バイトを 1 回で取るのは、収まらないときに一部の成分だけが残らないようにするため。
+            var at = Reserve(16);
+            PutUInt32(at, unchecked((uint)BitConverter.SingleToInt32Bits(value.X)));
+            PutUInt32(at + 4, unchecked((uint)BitConverter.SingleToInt32Bits(value.Y)));
+            PutUInt32(at + 8, unchecked((uint)BitConverter.SingleToInt32Bits(value.Z)));
+            PutUInt32(at + 12, unchecked((uint)BitConverter.SingleToInt32Bits(value.W)));
+        }
+
         /// <summary>UTF-8 のバイト数 (ushort) を書いてから中身を書く。null は空文字列として書く。</summary>
         /// <exception cref="ArgumentException">UTF-8 で <see cref="MaxStringBytes"/> バイトを超える、または対になっていないサロゲートを含む。</exception>
         public void WriteString(string value)
         {
+            WriteString(value, MaxStringBytes);
+        }
+
+        /// <summary><see cref="WriteString(string)"/> と同じく書くが、UTF-8 で maxBytes バイトを超えるなら書かずに投げる。</summary>
+        /// <exception cref="ArgumentException">UTF-8 で maxBytes バイトを超える、または対になっていないサロゲートを含む。</exception>
+        public void WriteString(string value, int maxBytes)
+        {
+            if (maxBytes < 0 || maxBytes > MaxStringBytes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxBytes), maxBytes, "max bytes must be 0-" + Text(MaxStringBytes));
+            }
+
             var text = value ?? "";
             int count;
             try
@@ -168,10 +207,10 @@ namespace Fps.Protocol
                 throw new ArgumentException("string is not valid UTF-16", nameof(value), e);
             }
 
-            if (count > MaxStringBytes)
+            if (count > maxBytes)
             {
                 throw new ArgumentException(
-                    "string is " + Text(count) + " bytes in UTF-8; at most " + Text(MaxStringBytes) + " can be written", nameof(value));
+                    "string is " + Text(count) + " bytes in UTF-8; at most " + Text(maxBytes) + " can be written", nameof(value));
             }
 
             // 前置きと中身を 1 回で取るのは、収まらないときに前置きだけが残らないようにするため。

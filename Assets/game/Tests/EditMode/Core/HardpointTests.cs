@@ -219,10 +219,12 @@ namespace Fps.Core.Tests
         [Test]
         public void TheHudAndLogTextNameThePointsByLetter()
         {
-            Assert.That(HardpointText.ActivePoint(1, 2, 22.3f), Is.EqualTo("拠点 B (次は C まで 23 秒)"));
-            Assert.That(HardpointText.Status(HardpointStatus.Held, Side.Bravo), Is.EqualTo("BRAVO が確保中"));
+            Assert.That(GameText.Resolve(HardpointText.ActivePoint(1, 2, 22.3f)), Is.EqualTo("拠点 B (次は C まで 23 秒)"));
+            Assert.That(GameText.Resolve(HardpointText.Status(HardpointStatus.Held, Side.Bravo)), Is.EqualTo("BRAVO が確保中"));
             Assert.That(HardpointText.Status(HardpointStatus.Contested, null), Is.EqualTo(HardpointText.Contested));
+            Assert.That(GameText.Resolve(HardpointText.Contested), Is.EqualTo("争奪中"));
             Assert.That(HardpointText.Status(HardpointStatus.Empty, null), Is.EqualTo(HardpointText.Empty));
+            Assert.That(GameText.Resolve(HardpointText.Empty), Is.EqualTo("拠点は無人"));
             Assert.Throws<ArgumentException>(() => HardpointText.Status(HardpointStatus.Held, null));
             Assert.That(HardpointText.MovedLog(3, 0), Is.EqualTo("[Mode] hardpoint moved from=D to=A"));
             Assert.That(HardpointText.StatusLog(1, HardpointStatus.Held, Side.Bravo), Is.EqualTo("[Mode] hardpoint point=B status=Held holder=1"));
@@ -231,7 +233,7 @@ namespace Fps.Core.Tests
             var hardpoint = CreateWithPlayers(rotateSeconds: 10f);
             hardpoint.SetPlayerPoint(_alphaId, 0);
             hardpoint.Session.Tick(1f);
-            Assert.That(HardpointText.HudLines(hardpoint), Is.EqualTo(_expectedHeldHudLines));
+            Assert.That(Array.ConvertAll(HardpointText.HudLines(hardpoint), GameText.Resolve), Is.EqualTo(_expectedHeldHudLines));
         }
 
         private static Hardpoint Create(

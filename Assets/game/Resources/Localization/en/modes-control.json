@@ -1,0 +1,16 @@
+{
+  "mode.domination.pointOwner": "{0} {1}",
+  "mode.domination.neutral": "--",
+  "mode.hardpoint.empty": "Nobody holds the point",
+  "mode.hardpoint.contested": "Contested",
+  "mode.hardpoint.activePoint": "Point {0} (moves to {1} in {2} s)",
+  "mode.hardpoint.held": "{0} holds the point",
+  "mode.killConfirmed.perSide": "{0} {1} / {2} {3}",
+  "mode.killConfirmed.confirmed": "Confirmed {0}",
+  "mode.killConfirmed.denied": "Denied {0}",
+  "mode.killConfirmed.tagsOnField": "Tags on the ground {0}",
+  "mode.freeForAll.rank": "Rank {0}/{1}",
+  "mode.freeForAll.aheadOfSecond": "{0}  +{1} over 2nd",
+  "mode.freeForAll.tiedForFirst": "{0}  tied for 1st",
+  "mode.freeForAll.behindFirst": "{0}  {1} behind 1st"
+}

@@ -16,6 +16,8 @@ namespace Fps.Tests.EditMode
 
         public string ExtraHudLine { get; set; }
 
+        public LocalizedText ExtraHudText { get; set; }
+
         protected override ModeSession CreateSession() => Factory?.Invoke();
 
         protected override void OnKill(SideMember killer, SideMember victim)
@@ -38,6 +40,14 @@ namespace Fps.Tests.EditMode
             if (!string.IsNullOrEmpty(ExtraHudLine))
             {
                 lines.Add(ExtraHudLine);
+            }
+        }
+
+        protected override void AppendHudTexts(List<LocalizedText> lines)
+        {
+            if (!ExtraHudText.IsEmpty)
+            {
+                lines.Add(ExtraHudText);
             }
         }
     }

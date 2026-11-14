@@ -42,7 +42,7 @@ namespace Fps.Runtime
             return FreeForAllMode.Create(_timeLimitSeconds, _scoreLimit, _respawnSeconds);
         }
 
-        protected override void AppendHudLines(List<string> lines)
+        protected override void AppendHudTexts(List<LocalizedText> lines)
         {
             var player = LocalPlayer;
             if (player != null && Session != null)

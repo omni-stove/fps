@@ -187,7 +187,7 @@ namespace Fps.Runtime
             }
         }
 
-        protected override void AppendHudLines(List<string> lines)
+        protected override void AppendHudTexts(List<LocalizedText> lines)
         {
             if (_killConfirmed != null)
             {

@@ -391,6 +391,64 @@ namespace Fps.Tests.EditMode
             Assert.That(count, Is.Zero);
         }
 
+        [Test]
+        public void ClearSubscribersDropsExplosionAndLandingHandlers()
+        {
+            var count = 0;
+            CombatEvents.Exploded += _ => count++;
+            CombatEvents.Landed += _ => count++;
+            CombatEvents.ClearSubscribers();
+
+            CombatEvents.RaiseExploded(Vector3.zero, "grenade");
+            CombatEvents.RaiseLanded(null, 10f);
+
+            Assert.That(count, Is.Zero);
+        }
+
+        [Test]
+        public void RaiseExplodedPassesTheCenterAndWeapon()
+        {
+            var explosions = new List<ExplosionInfo>();
+            CombatEvents.Exploded += explosions.Add;
+
+            CombatEvents.RaiseExploded(new Vector3(1f, 2f, 3f), null);
+
+            Assert.That(explosions, Has.Count.EqualTo(1));
+            Assert.That(explosions[0].Center, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(explosions[0].WeaponId, Is.Empty, "a missing weapon id reads as empty");
+        }
+
+        [Test]
+        public void ThrownGrenadeRaisesExplodedOnce()
+        {
+            var explosions = new List<ExplosionInfo>();
+            CombatEvents.Exploded += explosions.Add;
+            var grenade = ThrownGrenade.Spawn(null, new Vector3(0f, 50f, 0f), Vector3.zero, 1f, new ExplosionDamage(10, 2f), 0);
+            _created.Add(grenade.gameObject);
+
+            grenade.Explode();
+            grenade.Explode();
+
+            Assert.That(explosions, Has.Count.EqualTo(1));
+            Assert.That(explosions[0].Center, Is.EqualTo(new Vector3(0f, 50f, 0f)));
+            Assert.That(explosions[0].WeaponId, Is.EqualTo(GrenadeThrower.WeaponId));
+        }
+
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void LandingWithABrokenFallSpeedReadsAsZero(float fallSpeed)
+        {
+            var landings = new List<LandingInfo>();
+            CombatEvents.Landed += landings.Add;
+
+            CombatEvents.RaiseLanded(null, fallSpeed);
+
+            Assert.That(landings, Has.Count.EqualTo(1));
+            Assert.That(landings[0].FallSpeed, Is.Zero);
+            Assert.That(landings[0].Body, Is.Null);
+        }
+
         private WeaponController CreatePlayerWeapon(out WeaponDefinition rifle)
         {
             var camera = new GameObject("PlayerCamera", typeof(Camera));

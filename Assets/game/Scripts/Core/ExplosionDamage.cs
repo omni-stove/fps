@@ -76,6 +76,23 @@ namespace Fps.Core
             return Math.Min(Math.Max(damage, 0), MaxDamage);
         }
 
+        // At から逆算しないのは、整数に丸めたダメージでは MaxDamage が小さいときに強さが段になるため。
+        public float StrengthAt(float distance)
+        {
+            if (!Reaches(distance))
+            {
+                return 0f;
+            }
+
+            if (distance <= FullDamageRadius)
+            {
+                return 1f;
+            }
+
+            var t = (distance - (double)FullDamageRadius) / ((double)Radius - FullDamageRadius);
+            return (float)Math.Min(Math.Max(1d - t, 0d), 1d);
+        }
+
         private static void RequireDistance(float distance)
         {
             if (!(distance >= 0f))

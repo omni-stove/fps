@@ -290,7 +290,7 @@ namespace Fps.Core.Tests
         }
 
         [TestCase(-1)]
-        [TestCase(4)]
+        [TestCase(5)]
         public void RejectsAnUndefinedDeathCamera(int value)
         {
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(deathCamera: (DeathCamera)value));

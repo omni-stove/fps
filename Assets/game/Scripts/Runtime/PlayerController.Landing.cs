@@ -105,7 +105,9 @@ namespace Fps.Runtime
         {
             if (_lastGrounded == false && grounded)
             {
-                OnLanded(Mathf.Max(0f, -_motor.Velocity.Y));
+                var fallSpeed = Mathf.Max(0f, -_motor.Velocity.Y);
+                CombatEvents.RaiseLanded(gameObject, fallSpeed);
+                OnLanded(fallSpeed);
             }
         }
     }

@@ -40,6 +40,7 @@ namespace Fps.Tests.EditMode
         {
             nameof(TpsActionSmokeRun),
             nameof(TpsRangeSmokeRun),
+            nameof(KnockbackSmokeRun),
         };
 
         [Test]

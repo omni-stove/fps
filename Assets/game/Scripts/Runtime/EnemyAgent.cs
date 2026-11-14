@@ -610,7 +610,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            if (HoldWhileInterrupted(deltaSeconds))
+            if (TickKnockback(deltaSeconds) || HoldWhileInterrupted(deltaSeconds))
             {
                 return;
             }
@@ -793,6 +793,7 @@ namespace Fps.Runtime
             LeaveVehicleForReset();
             ClearPendingPerception();
             _interruption.Clear();
+            _flight.Clear();
             _loggedCoverIndex = -1;
             _loggedCoverPhase = EnemyCoverPhase.None;
             _destination = null;
@@ -853,6 +854,7 @@ namespace Fps.Runtime
         {
             ClearPendingPerception();
             _interruption.Clear();
+            _flight.Clear();
             SetCrouching(false);
             _sprinting = false;
             _aiming = false;

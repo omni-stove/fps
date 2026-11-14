@@ -230,7 +230,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 - 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
 - オフラインの `GameUi.HudFactory` とオンラインの `NetUi.HudFactory` は別のもの。両方を差し替えるなら両方に入れる。
 - 既定の HUD を差し替えると、その HUD に載っていたポーズメニューやロードアウトの画面も出なくなる。自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
-- `IHud` の `Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。`AttachGrenadeCount()` だけは `null` を返さない (プレイヤーがグレネードを持つと、返した値の `Show` をすぐ呼ぶ)。
+- `IHud` の `Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さない (プレイヤーがグレネードや能力の枠を持つと、返した値の `Show` をすぐ呼ぶ)。
 - 登録はシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単。
 
 ### 最小の例: オフラインの HUD
@@ -243,7 +243,7 @@ using Fps.Runtime;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount
+public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount, IAbilitySlots
 {
     private Damageable _player;
     private WeaponController _weapon;
@@ -269,9 +269,11 @@ public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount
     public void UseTeamPalette(Team? viewer) { }
     public void SetPauseTimeMode(PauseTimeMode mode) { }
     public IGrenadeCount AttachGrenadeCount() => this;
+    public IAbilitySlots AttachAbilitySlots() => this;
     public IDominationHud AttachDomination() => null;
 
     public void Show(GrenadeThrower thrower) => _grenades = thrower;
+    public void Show(AbilityHost host) { }
 
     private void OnGUI()
     {

@@ -5,7 +5,8 @@ namespace Fps.Core
 {
     /// <summary>
     /// メインメニューの遷移先の選び方。ボタンの行き先 (<see cref="MenuDestination"/>) から読むシーンとロビーの設定を決め
-    /// (<see cref="Plan(MenuDestination, string)"/>。シーンのルートを省くと <see cref="KitPaths.DefaultRoot"/>)、起動引数でメニューを飛ばすか (<see cref="ShouldSkipMenu"/>) と、ゲームパッドで動かすフォーカスの
+    /// (<see cref="Plan(MenuDestination, string, MenuScenes)"/>。シーンのルートを省くと <see cref="KitPaths.DefaultRoot"/>、
+    /// シーンの名前 (<see cref="MenuScenes"/>) を省くと下の const の既定の名前)、起動引数でメニューを飛ばすか (<see cref="ShouldSkipMenu"/>) と、ゲームパッドで動かすフォーカスの
     /// 次の位置 (<see cref="MoveFocus"/>) を決める。実際にシーンを読むのは Fps.Runtime の MenuNavigator。
     /// </summary>
     public static class MenuRoute
@@ -43,6 +44,18 @@ namespace Fps.Core
         /// <summary>root の下のネット対戦のシーン。</summary>
         public static string NetSceneUnder(string root) => KitPaths.ScenePath(root, NetSceneName);
 
+        /// <summary>root の下の、scenes で決めたメインメニュー。</summary>
+        public static string MainMenuSceneUnder(string root, MenuScenes scenes) => KitPaths.ScenePath(root, Require(scenes).MainMenu);
+
+        /// <summary>root の下の、scenes で決めた射撃場。</summary>
+        public static string RangeSceneUnder(string root, MenuScenes scenes) => KitPaths.ScenePath(root, Require(scenes).Range);
+
+        /// <summary>root の下の、scenes で決めたキャンペーンの最初のシーン。</summary>
+        public static string CampaignSceneUnder(string root, MenuScenes scenes) => KitPaths.ScenePath(root, Require(scenes).Campaign);
+
+        /// <summary>root の下の、scenes で決めたネット対戦のシーン。</summary>
+        public static string NetSceneUnder(string root, MenuScenes scenes) => KitPaths.ScenePath(root, Require(scenes).Net);
+
         /// <summary>メニューから選べる行き先。ボタンを並べる順と同じ。</summary>
         public static IReadOnlyList<MenuDestination> Destinations { get; } = new[]
         {
@@ -69,20 +82,29 @@ namespace Fps.Core
         /// <exception cref="ArgumentException">sceneRoot が空か不正な区切りを含む。</exception>
         public static MenuTransition Plan(MenuDestination destination, string sceneRoot)
         {
+            return Plan(destination, sceneRoot, MenuScenes.Default);
+        }
+
+        /// <summary><see cref="Plan(MenuDestination)"/> のシーンを、scenes で決めた名前で sceneRoot の下から読む遷移。</summary>
+        /// <exception cref="ArgumentNullException">scenes が null。</exception>
+        /// <exception cref="ArgumentException">sceneRoot が空か不正な区切りを含む。</exception>
+        public static MenuTransition Plan(MenuDestination destination, string sceneRoot, MenuScenes scenes)
+        {
+            Require(scenes);
             switch (destination)
             {
                 case MenuDestination.Campaign:
-                    return MenuTransition.Load(CampaignSceneUnder(sceneRoot));
+                    return MenuTransition.Load(CampaignSceneUnder(sceneRoot, scenes));
                 case MenuDestination.CreateLobby:
-                    return MenuTransition.Load(NetSceneUnder(sceneRoot), LobbyLaunchOptions.Create());
+                    return MenuTransition.Load(NetSceneUnder(sceneRoot, scenes), LobbyLaunchOptions.Create());
                 case MenuDestination.JoinLobby:
-                    return MenuTransition.Load(NetSceneUnder(sceneRoot), LobbyLaunchOptions.Join());
+                    return MenuTransition.Load(NetSceneUnder(sceneRoot, scenes), LobbyLaunchOptions.Join());
                 case MenuDestination.QuickMatch:
-                    return MenuTransition.Load(NetSceneUnder(sceneRoot), LobbyLaunchOptions.QuickMatch());
+                    return MenuTransition.Load(NetSceneUnder(sceneRoot, scenes), LobbyLaunchOptions.QuickMatch());
                 case MenuDestination.Range:
-                    return MenuTransition.Load(RangeSceneUnder(sceneRoot));
+                    return MenuTransition.Load(RangeSceneUnder(sceneRoot, scenes));
                 case MenuDestination.Tutorial:
-                    return MenuTransition.Load(RangeSceneUnder(sceneRoot), startsTutorial: true);
+                    return MenuTransition.Load(RangeSceneUnder(sceneRoot, scenes), startsTutorial: true);
                 case MenuDestination.Quit:
                     return MenuTransition.Quit;
                 default:
@@ -100,7 +122,15 @@ namespace Fps.Core
         /// <exception cref="ArgumentException">sceneRoot が空か不正な区切りを含む。</exception>
         public static MenuTransition BackToMenu(string sceneRoot)
         {
-            return MenuTransition.Load(MainMenuSceneUnder(sceneRoot));
+            return BackToMenu(sceneRoot, MenuScenes.Default);
+        }
+
+        /// <summary>sceneRoot の下の、scenes で決めたメインメニューへ戻る遷移。</summary>
+        /// <exception cref="ArgumentNullException">scenes が null。</exception>
+        /// <exception cref="ArgumentException">sceneRoot が空か不正な区切りを含む。</exception>
+        public static MenuTransition BackToMenu(string sceneRoot, MenuScenes scenes)
+        {
+            return MenuTransition.Load(MainMenuSceneUnder(sceneRoot, scenes));
         }
 
         /// <summary>
@@ -136,6 +166,11 @@ namespace Fps.Core
 
             var next = (current + step) % count;
             return next < 0 ? next + count : next;
+        }
+
+        private static MenuScenes Require(MenuScenes scenes)
+        {
+            return scenes ?? throw new ArgumentNullException(nameof(scenes));
         }
     }
 }

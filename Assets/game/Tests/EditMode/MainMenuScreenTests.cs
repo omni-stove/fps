@@ -29,6 +29,7 @@ namespace Fps.Tests.EditMode
             _screen = _owner.AddComponent<MainMenuScreen>();
             _host = new RecordingHost();
             MenuNavigator.Host = _host;
+            MenuNavigator.Scenes = MenuScenes.Default;
 
             // 本物の選択 (LoadoutPreferenceStore.DefaultKey) を壊さないよう、テストごとに別のキーを使う
             _store = new LoadoutPreferenceStore("Fps.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"));
@@ -44,6 +45,7 @@ namespace Fps.Tests.EditMode
         {
             _store.Delete();
             MenuNavigator.Host = null;
+            MenuNavigator.Scenes = null;
             MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
@@ -153,6 +155,33 @@ namespace Fps.Tests.EditMode
             Assert.That(_screen.Notice, Does.Contain(MenuRoute.CampaignScene));
             Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
             Assert.That(_screen.Choose(MenuDestination.Range), Is.True);
+        }
+
+        [Test]
+        public void ChooseGoesToTheCampaignSceneSetByTheData()
+        {
+            const string chapter = "Assets/game/Scenes/Chapter1.unity";
+            _host.Scenes.Add(chapter);
+            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1", null);
+            _screen.Bind(_root);
+
+            Assert.That(_screen.Choose(MenuDestination.Campaign), Is.True);
+
+            Assert.That(_host.Loaded, Is.EqualTo(new[] { chapter }));
+        }
+
+        [Test]
+        public void TheMissingSceneNoticeNamesTheSceneSetByTheData()
+        {
+            const string chapter = "Assets/game/Scenes/Chapter1.unity";
+            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1", null);
+            _screen.Bind(_root);
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(chapter)));
+
+            Assert.That(_screen.Choose(MenuDestination.Campaign), Is.False);
+
+            Assert.That(_screen.Notice, Does.Contain(chapter));
+            Assert.That(_host.Loaded, Is.Empty);
         }
 
         [Test]
@@ -508,7 +537,7 @@ namespace Fps.Tests.EditMode
 
         private sealed class RecordingHost : IMenuSceneHost
         {
-            private static readonly string[] _scenes =
+            public readonly System.Collections.Generic.List<string> Scenes = new System.Collections.Generic.List<string>
             {
                 MenuRoute.MainMenuScene, MenuRoute.RangeScene, MenuRoute.CampaignScene, MenuRoute.NetScene,
             };
@@ -518,12 +547,12 @@ namespace Fps.Tests.EditMode
 
             public int BuildIndexOf(string path)
             {
-                return path == Missing ? -1 : Array.IndexOf(_scenes, path);
+                return path == Missing ? -1 : Scenes.IndexOf(path);
             }
 
             public void Load(int buildIndex)
             {
-                Loaded.Add(_scenes[buildIndex]);
+                Loaded.Add(Scenes[buildIndex]);
             }
 
             public void Quit()

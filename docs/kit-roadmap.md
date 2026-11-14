@@ -31,6 +31,9 @@
 - 音とエフェクト: `PresentationCatalog` (Resources の `Presentation/PresentationCatalog`) を差し替えれば変わる。
   武器ごとのものは武器の Id で引く。
 - 文言: `Resources/Localization/<言語>/*.json` の表を引く `LocalizedText`。
+- メニューから移るシーン名: `MenuSceneSettings` (Resources の `Menu/MenuSceneSettings`) を置けば、メインメニュー・射撃場・
+  キャンペーン・ネット対戦のシーン名が `MenuRoute` の既定 (MainMenu / Bootstrap / Campaign01 / NetTest) から変わる。
+  キャンペーンの選択画面で選ぶミッションのシーンは、これとは別に `MissionCatalog` が持つ。
 
 ### まだコードに入っている調整値
 

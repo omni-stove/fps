@@ -182,8 +182,67 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void OnlyLanguagesWithAFolderOfStringsCanBeChosen()
+        {
+            var onlyJapanese = Localizer.AvailableLanguages(Reader(english: Array.Empty<KeyValuePair<string, string>>()));
+            var both = Localizer.AvailableLanguages(Reader(english: new[] { Layer("settings", "{}") }));
+
+            Assert.That(onlyJapanese, Is.EqualTo(new[] { GameLanguage.Japanese }));
+            Assert.That(both, Is.EqualTo(new[] { GameLanguage.Japanese, GameLanguage.English }));
+            Assert.That(Localizer.AvailableLanguages(_ => null), Is.Empty);
+        }
+
+        [Test]
+        public void TheResourcesOfferJapaneseAndEnglish()
+        {
+            Assert.That(Localizer.AvailableLanguages(), Is.EqualTo(new[] { GameLanguage.Japanese, GameLanguage.English }));
+            Assert.That(Localizer.ReadLayers(GameLanguage.Japanese).Select(l => l.Key), Does.Contain("Resources/Localization/ja/settings"));
+        }
+
+        [Test]
+        public void TheNativeNameComesFromTheLanguagesOwnSettings()
+        {
+            Assert.That(Localizer.NativeNameOf(GameLanguage.Japanese), Is.EqualTo("日本語"));
+            Assert.That(Localizer.NativeNameOf(GameLanguage.English), Is.EqualTo("English"));
+
+            // 今の言語が英語でも、日本語の名前は日本語の表から引く
+            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
+            Assert.That(Localizer.NativeNameOf(GameLanguage.Japanese), Is.EqualTo("日本語"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void TheLastLayerWithTheNameWinsAndBrokenLayersAreSkipped()
+        {
+            var name = Localizer.NativeNameOf(GameLanguage.English, Reader(english: new[]
+            {
+                Layer("a", "{\"settings.language.name\":\"English\"}"),
+                Layer("b", "{\"settings.language.name\":\"English (UK)\"}"),
+                Layer("broken", "{\"settings.language.name\":"),
+                Layer("c", "{\"other\":\"x\"}"),
+            }));
+
+            Assert.That(name, Is.EqualTo("English (UK)"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void AMissingNativeNameFallsBackWithAWarning()
+        {
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Localization\] en: 'settings\.language\.name' was not found"));
+
+            var name = Localizer.NativeNameOf(GameLanguage.English, Reader(english: new[] { Layer("settings", "{}") }));
+
+            Assert.That(name, Is.EqualTo(GameLanguages.NativeName(GameLanguage.English)));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
         public void RejectsUndefinedLanguagesAndNullReaders()
         {
+            Assert.Throws<ArgumentNullException>(() => Localizer.AvailableLanguages(null));
+            Assert.Throws<ArgumentNullException>(() => Localizer.NativeNameOf(GameLanguage.Japanese, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Localizer.NativeNameOf((GameLanguage)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => _store.Save((GameLanguage)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => Localizer.SwitchTo((GameLanguage)99, _store));
             Assert.Throws<ArgumentNullException>(() => Localizer.Build(GameLanguage.Japanese, null));

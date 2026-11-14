@@ -10,6 +10,7 @@ namespace Fps.Runtime
     /// <see cref="StringTable"/> から引く。表は Assets/game/Localization/Resources/Strings/ja.json と en.json を Resources から
     /// 初めて使うときに読み、Play の間は持ち続ける。言語が変わると (<see cref="AppliedControlSettings.Apply"/>) <see cref="Changed"/> で知らせる。
     /// 表が見つからない・壊れているときはエラーを出し、空の表 (キーそのものを出す) で続ける。無いキーは <c>[Localization]</c> 付きの警告で知らせる。
+    /// Core の書式 (<see cref="HudFormat"/> など) が引く <see cref="GameText"/> にも、Play の開始時とエディターの読み込み時に同じ表を渡す。
     /// </summary>
     public static class Localizer
     {
@@ -145,6 +146,22 @@ namespace Fps.Runtime
         {
             _tables.Clear();
             Changed = null;
+            UseForCore();
+        }
+
+        // Core の書式 (HudFormat など) は Unity に依らないので、今の言語の表を GameText 越しに渡す。
+        // Edit Mode (テストやエディター拡張) では Play の初期化が走らないので、エディターの読み込みでも渡す。
+#if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+#endif
+        private static void UseForCore()
+        {
+            GameText.Use(CurrentTable);
+        }
+
+        private static StringTable CurrentTable()
+        {
+            return TableOf(Language);
         }
     }
 }

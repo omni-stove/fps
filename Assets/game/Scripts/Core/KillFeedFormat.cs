@@ -6,13 +6,13 @@ namespace Fps.Core
     public static class KillFeedFormat
     {
         /// <summary>止めの弾が頭に当たった行に、武器の後ろへ付ける印。</summary>
-        public const string HeadshotMark = "頭";
+        public static string HeadshotMark => GameText.Get("killFeed.headshot");
 
         /// <summary>味方撃ちの行の先頭に出す印。</summary>
-        public const string FriendlyMark = "味方撃ち";
+        public static string FriendlyMark => GameText.Get("killFeed.friendly");
 
         /// <summary>武器によらない自滅 (落下・跳ね返った味方撃ちなど) の武器の欄。</summary>
-        public const string Suicide = "自滅";
+        public static string Suicide => GameText.Get("killFeed.suicide");
 
         /// <summary>自滅でなく武器も分からない死 (出血など) の武器の欄。</summary>
         public const string NoWeapon = "-";

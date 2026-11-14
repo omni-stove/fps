@@ -56,7 +56,7 @@ namespace Fps.Runtime
             }
             catch (InvalidOperationException e)
             {
-                Debug.LogError($"{Hud.LogTag} HUD にグレネードの数の欄を出せません: {e.Message}", hud);
+                Debug.LogError($"{Hud.LogTag} could not show the grenade count on the HUD: {e.Message}", hud);
             }
 
             return view;

@@ -63,7 +63,7 @@ namespace Fps.Runtime
 
         public const string DeathsCaption = "D";
 
-        public const string ConnectionCaption = "状態";
+        public static string ConnectionCaption => Localizer.Get("scoreboard.connectionCaption");
 
         private static readonly IReadOnlyList<ScoreboardSection> _empty =
             ScoreboardRows.Build(Array.Empty<ScoreboardEntry>(), Team.Alpha);
@@ -148,6 +148,11 @@ namespace Fps.Runtime
             // 新しい木の要素は空なので、前の木で作った行があっても作り直す
             _dirty = true;
             Refresh();
+        }
+
+        protected override void OnLanguageChanged()
+        {
+            MarkDirty();
         }
 
         protected override void OnUnbinding(VisualElement element)
@@ -320,7 +325,7 @@ namespace Fps.Runtime
             if (actions == null)
             {
                 Debug.LogError(
-                    $"{LogTag} プロジェクト全体の Input Actions が設定されていないため、スコアボードを開けません (Project Settings > Input System Package)。",
+                    $"{LogTag} project-wide Input Actions are not set (Project Settings > Input System Package); the scoreboard cannot be opened",
                     this);
                 return null;
             }
@@ -328,7 +333,7 @@ namespace Fps.Runtime
             var action = actions.FindAction(ToggleActionPath);
             if (action == null)
             {
-                Debug.LogError($"{LogTag} Input Actions '{actions.name}' に '{ToggleActionPath}' がないため、スコアボードを開けません。", this);
+                Debug.LogError($"{LogTag} Input Actions '{actions.name}' has no '{ToggleActionPath}'; the scoreboard cannot be opened", this);
             }
 
             return action;

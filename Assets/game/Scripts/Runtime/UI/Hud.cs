@@ -16,6 +16,7 @@ namespace Fps.Runtime
     /// 試合結果 (中央上) はそのときだけ出る。
     /// ヒットマーカーなど HUD の部分ごとのビュー (<see cref="HudElementView"/>) は <see cref="Create"/> が同じ GameObject に付け
     /// (<see cref="AddViews"/>)、View を作り直すたびに Hud.uxml の要素を渡し直す。
+    /// Hud.uxml にキーで書いた文字 (見出し・ポーズのボタン) は <see cref="LocalizedTexts"/> で今の言語にし、言語が変わったら書き直す。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(UIDocument))]
@@ -48,6 +49,7 @@ namespace Fps.Runtime
         private Team? _paletteViewer;
         private ColorPalette _paintedPalette;
         private HudVisibility _visibility = HudVisibility.Full;
+        private LocalizedTexts _texts;
 
         /// <summary>表示中の文字列。</summary>
         public HudModel Model => _model;
@@ -373,6 +375,8 @@ namespace Fps.Runtime
 
             _view = new HudView(root, _model, _visibility);
             _view.SetTeamColors(_alphaColor, _bravoColor);
+            _texts = LocalizedTexts.Bind(root);
+            Localizer.Changed += HandleLanguageChanged;
             ApplyVisibilityToElementViews();
             foreach (var view in GetComponents<HudElementView>())
             {
@@ -491,6 +495,8 @@ namespace Fps.Runtime
                 }
             }
 
+            Localizer.Changed -= HandleLanguageChanged;
+            _texts = null;
             if (_view == null)
             {
                 return;
@@ -498,6 +504,17 @@ namespace Fps.Runtime
 
             _view.Dispose();
             _view = null;
+        }
+
+        private void HandleLanguageChanged(GameLanguage language)
+        {
+            // 破棄の後に届いた通知では消えた要素に書かない。
+            if (this == null)
+            {
+                return;
+            }
+
+            _texts?.Refresh();
         }
 
         // スコアボード・ロードアウト選択・ポーズは自分で開くものなので、HUD の量では隠さない

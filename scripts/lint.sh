@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # C# の書式・スタイル・アナライザを検査する。Unity 非依存のコードは dotnet/Fps.slnx で全規則を、
 # Assets/game の全 .cs は書式だけを見る (MonoBehaviour などは Unity 抜きでビルドできないため)。
-# あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応を検査する。
+# あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応と、UI のコードに日本語の直書きが無いこと (ui_text_problems) を検査する。
 # 問題が無ければ何も出さず、あれば指摘の行だけを出して 1 で終わる。--fix で直せるものを直す
 # (.meta の抜けは、.cs とフォルダなら Unity と同じ形で作る。本体の無い .meta は消さない。詳しくは fix_metas)。
 # --fix-meta は .meta の抜けだけを直して終わる。CI の lint ジョブが dotnet の復元より前に作り直すため。
@@ -74,6 +74,79 @@ fix_metas() {
 	done < <(git -c core.quotepath=off ls-files --others --exclude-standard -- 'Assets/*.meta')
 }
 
+# 画面の文字は文字列表 (Assets/game/Localization/Resources/Strings) のキーで引く決まりなので、UI のコード
+# (Runtime/UI と Net の HUD・ビュー) の C# の文字列リテラルと UXML の text・label・tooltip に残った日本語を 1 行ずつ出す。
+# コメントの日本語は見ない。新しく足して未追跡のファイルも見る。
+# 日本語は UTF-8 の先頭バイトが E3〜E9 (U+3000〜U+9FFF: 和文の句読点・かな・漢字) の文字で見分ける。
+# awk は実装によって UTF-8 を文字で数えたりバイトで数えたりするので、バイトで読む perl を使う。
+ui_text_problems() {
+	local cs=() uxml=() path
+	while IFS= read -r -d '' path; do
+		[ -f "$path" ] || continue
+		case "$path" in
+		*.uxml) uxml+=("$path") ;;
+		*) cs+=("$path") ;;
+		esac
+	done < <(git -c core.quotepath=off ls-files -z --cached --others --exclude-standard -- \
+		':(glob)Assets/game/Scripts/Runtime/UI/**/*.cs' \
+		':(glob)Assets/game/Scripts/Net/NetHud*.cs' \
+		':(glob)Assets/game/Scripts/Net/*View.cs' \
+		'Assets/game/Scripts/Net/NetKillFeedNames.cs' \
+		'Assets/game/Scripts/Net/NetNameplates.cs' \
+		'Assets/game/Scripts/Net/NetLoadoutChooser.cs' \
+		':(glob)Assets/game/UI/**/*.uxml')
+
+	if [ "${#cs[@]}" -gt 0 ]; then
+		# 1 行ずつ、ブロックコメント・逐語的文字列 (@"..." は行をまたぐ) の中かを持ち越しながら読み、閉じた文字列リテラルを調べる。
+		perl -ne '
+			BEGIN { $block = 0; $verbatim = 0; $str = "" }
+			sub check { print "$ARGV:$.: error JA: UI のコードに日本語の文字列リテラルがある (文字列表のキーにして Localizer か GameText で引く)\n" if $_[0] =~ /[\xE3-\xE9]/ }
+			my ($line, $i, $instr) = ($_, 0, 0);
+			my $n = length $line;
+			while ($i < $n) {
+				my $c = substr($line, $i, 1);
+				my $two = substr($line, $i, 2);
+				if ($block) {
+					if ($two eq "*/") { $block = 0; $i += 2 } else { $i++ }
+				} elsif ($verbatim) {
+					if ($two eq "\"\"") { $str .= "\""; $i += 2 }
+					elsif ($c eq "\"") { check($str); ($verbatim, $str) = (0, ""); $i++ }
+					else { $str .= $c; $i++ }
+				} elsif ($instr) {
+					if ($c eq "\\") { $str .= $two; $i += 2 }
+					elsif ($c eq "\"") { check($str); ($instr, $str) = (0, ""); $i++ }
+					else { $str .= $c; $i++ }
+				} elsif ($two eq "//") {
+					last;
+				} elsif ($two eq "/*") {
+					$block = 1; $i += 2;
+				} elsif ($c eq "\x27") {
+					my $j = $i + 1;
+					$j++ if substr($line, $j, 1) eq "\\";
+					$j = index($line, "\x27", $j + 1);
+					$i = $j < 0 ? $n : $j + 1;
+				} elsif ($c eq "\"") {
+					my $before = $i > 0 ? substr($line, $i - 1, 1) : "";
+					my $before2 = $i > 1 ? substr($line, $i - 2, 1) : "";
+					if ($before eq "@" || ($before eq "\$" && $before2 eq "@")) { $verbatim = 1 } else { $instr = 1 }
+					$i++;
+				} else {
+					$i++;
+				}
+			}
+			if ($instr) { check($str); $str = "" }
+			if (eof) { check($str) if $verbatim; ($block, $verbatim, $str) = (0, 0, ""); close ARGV }
+		' "${cs[@]}"
+	fi
+
+	if [ "${#uxml[@]}" -gt 0 ]; then
+		perl -ne '
+			print "$ARGV:$.: error JA: UXML に日本語の文字がある (text=\"#キー\" で文字列表のキーにする)\n" if /\b(?:text|label|tooltip)="[^"]*[\xE3-\xE9]/;
+			close ARGV if eof;
+		' "${uxml[@]}"
+	fi
+}
+
 if [ "${1:-}" = "--fix-meta" ]; then
 	fix_metas
 	exit 0
@@ -86,6 +159,8 @@ out="$( {
 	dotnet format whitespace Assets/game --folder ${verify[@]+"${verify[@]}"} -v q || status=1
 	metas="$(meta_problems)"
 	[ -z "$metas" ] || { printf '%s\n' "$metas"; status=1; }
+	texts="$(ui_text_problems)" || status=1
+	[ -z "$texts" ] || { printf '%s\n' "$texts"; status=1; }
 	echo "status=$status"
 } 2>&1)"
 status="${out##*status=}"

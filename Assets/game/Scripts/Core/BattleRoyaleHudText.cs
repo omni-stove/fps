@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace Fps.Core
 {
@@ -11,7 +10,7 @@ namespace Fps.Core
     public static class BattleRoyaleHudText
     {
         /// <summary>武器を持っていない人への案内。</summary>
-        public const string NoWeapon = "武器なし: 落ちている武器を拾う";
+        public static string NoWeapon => GameText.Get("battleRoyale.noWeapon");
 
         /// <example><c>SquadsLeft(3, 4)</c> は <c>残り分隊 3/4</c></example>
         /// <exception cref="ArgumentOutOfRangeException">remaining が負か total より多い。</exception>
@@ -22,7 +21,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(remaining), remaining, "remaining must be between 0 and total");
             }
 
-            return "残り分隊 " + Number(remaining) + "/" + Number(total);
+            return GameText.Format("battleRoyale.squadsLeft", remaining, total);
         }
 
         /// <summary>
@@ -39,7 +38,7 @@ namespace Fps.Core
                     throw new ArgumentOutOfRangeException(nameof(place), place.Value, "place must be at least 1");
                 }
 
-                return "順位 " + Number(place.Value) + " 位";
+                return GameText.Format("battleRoyale.placement", place.Value);
             }
 
             if (remaining < 1)
@@ -47,7 +46,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(remaining), remaining, "remaining must be at least 1 while the squad is still in");
             }
 
-            return "順位 " + Number(remaining) + " 位以内";
+            return GameText.Format("battleRoyale.placementAtLeast", remaining);
         }
 
         /// <summary>分隊の立っている人数。ダウン中がいればその数を添える。</summary>
@@ -65,8 +64,8 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(downed), downed, "downed must not be negative");
             }
 
-            var text = "分隊 生存 " + Number(standing);
-            return downed == 0 ? text : text + " (ダウン " + Number(downed) + ")";
+            var text = GameText.Format("battleRoyale.squad", standing);
+            return downed == 0 ? text : ModeHudText.WithDowned(text, downed);
         }
 
         /// <summary>
@@ -90,9 +89,9 @@ namespace Fps.Core
                     continue;
                 }
 
-                var text = ModeHudText.SideName(side) + (place.HasValue
-                    ? " " + Number(place.Value) + " 位"
-                    : " 残り " + Number(session.CountRemaining(side)));
+                var text = place.HasValue
+                    ? GameText.Format("battleRoyale.squadPlace", ModeHudText.SideName(side), place.Value)
+                    : ModeHudText.Remaining(side, session.CountRemaining(side));
                 var line = new ModeHudScoreLine(side, text, side == ownSide, place == 1);
                 if (line.IsOwn)
                 {
@@ -186,11 +185,6 @@ namespace Fps.Core
             }
 
             return ModeHudText.Result(session.Mode);
-        }
-
-        private static string Number(int value)
-        {
-            return value.ToString(CultureInfo.InvariantCulture);
         }
     }
 }

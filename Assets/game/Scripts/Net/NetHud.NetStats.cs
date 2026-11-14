@@ -314,7 +314,7 @@ namespace Fps.Net
             if (actions == null)
             {
                 Debug.LogError(
-                    _netStatsLogTag + " プロジェクト全体の Input Actions が設定されていないため、回線の表示を F3 で出し入れできません (Project Settings > Input System Package)。",
+                    _netStatsLogTag + " project-wide Input Actions are not set (Project Settings > Input System Package); F3 cannot toggle the network stats",
                     this);
                 return;
             }
@@ -323,7 +323,7 @@ namespace Fps.Net
             if (_netStatsAction == null)
             {
                 Debug.LogError(
-                    _netStatsLogTag + " Input Actions '" + actions.name + "' に '" + NetStatsActionPath + "' がないため、回線の表示を出し入れできません。",
+                    _netStatsLogTag + " Input Actions '" + actions.name + "' has no '" + NetStatsActionPath + "'; the network stats cannot be toggled",
                     this);
                 return;
             }

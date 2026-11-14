@@ -15,21 +15,21 @@ namespace Fps.Core
         /// <example><c>Confirmed(3, 2)</c> は <c>確定 ALPHA 3 / BRAVO 2</c></example>
         public static string Confirmed(int alpha, int bravo)
         {
-            return "確定 " + PerSide(alpha, bravo);
+            return GameText.Format("killConfirmed.confirmed", PerSide(alpha, bravo));
         }
 
         /// <summary>陣営ごとの阻止数の行。</summary>
         /// <example><c>Denied(1, 0)</c> は <c>阻止 ALPHA 1 / BRAVO 0</c></example>
         public static string Denied(int alpha, int bravo)
         {
-            return "阻止 " + PerSide(alpha, bravo);
+            return GameText.Format("killConfirmed.denied", PerSide(alpha, bravo));
         }
 
         /// <summary>落ちていて拾われるのを待っているタグの数の行。</summary>
         /// <example><c>TagsOnField(2)</c> は <c>落ちているタグ 2</c></example>
         public static string TagsOnField(int count)
         {
-            return "落ちているタグ " + Number(count);
+            return GameText.Format("killConfirmed.tagsOnField", count);
         }
 
         /// <summary>killConfirmed の HUD の 3 行 (確定数・阻止数・落ちているタグの数)。</summary>

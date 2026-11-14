@@ -394,6 +394,7 @@ namespace Fps.Runtime
 
             // 歩きの速さはシーン生成スクリプトが NavMeshAgent に書いた値。以後 agent.speed は足の運びで毎フレーム書き換える。
             _walkSpeed = _agent.speed;
+            _agent.autoTraverseOffMeshLink = false;
             _spreadSeed = _random.Next();
             _stuck = new StuckMonitor(StuckSeconds, StuckProgressDistance, StuckGoalChangeDistance);
             _stuck.Recovered += OnUnstuck;
@@ -565,6 +566,11 @@ namespace Fps.Runtime
             else if (_target == null)
             {
                 ResolveTarget(force: false);
+            }
+
+            if (TraverseOffMeshLink(deltaSeconds))
+            {
+                return;
             }
 
             if (HoldWhileInterrupted(deltaSeconds))
@@ -755,6 +761,7 @@ namespace Fps.Runtime
             _detour = null;
             _goal = null;
             _stuck.Reset();
+            ClearLinkTraversal();
             SetCrouching(false);
 
             _weapon.Reloaded -= OnReloaded;
@@ -824,6 +831,7 @@ namespace Fps.Runtime
             _detour = null;
             _goal = null;
             _stuck.Reset();
+            ClearLinkTraversal();
             _agent.enabled = false;
         }
     }

@@ -12,7 +12,7 @@ namespace Fps.Protocol.Tests
     [NonParallelizable]
     public sealed class UdpMatchTransportTests
     {
-        private const string Loopback = "127.0.0.1";
+        private const string _loopback = "127.0.0.1";
         private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(10);
 
         private readonly List<UdpMatchTransport> _transports = new List<UdpMatchTransport>();
@@ -178,11 +178,11 @@ namespace Fps.Protocol.Tests
             var options = new UdpTransportOptions { ConnectAttemptIntervalMilliseconds = 20, MaxConnectAttempts = 2 };
             var client = Track(new UdpMatchTransport(options));
             var unused = Track(new UdpMatchTransport());
-            unused.Listen(Loopback, 0);
+            unused.Listen(_loopback, 0);
             var port = (ushort)unused.LocalPort;
             unused.Shutdown(null);
 
-            client.Connect(Loopback, port);
+            client.Connect(_loopback, port);
 
             var clientEvent = WaitFor(client, TransportEventKind.Disconnected);
             Assert.That(clientEvent.Reason, Is.Empty);
@@ -208,10 +208,10 @@ namespace Fps.Protocol.Tests
         public void ClientWithAnotherKeyIsRejectedAsProtocolMismatch()
         {
             var server = Track(new UdpMatchTransport());
-            server.Listen(Loopback, 0);
+            server.Listen(_loopback, 0);
             var client = Track(new UdpMatchTransport(new UdpTransportOptions { ConnectionKey = "other-game" }));
 
-            client.Connect(Loopback, (ushort)server.LocalPort);
+            client.Connect(_loopback, (ushort)server.LocalPort);
 
             var clientEvent = WaitFor(client, TransportEventKind.Disconnected, server);
             Assert.That(clientEvent.Reason, Is.EqualTo(UdpMatchTransport.ProtocolMismatchReason));
@@ -241,11 +241,11 @@ namespace Fps.Protocol.Tests
         public void ServerTellsConnectionsApart()
         {
             var server = Track(new UdpMatchTransport());
-            server.Listen(Loopback, 0);
+            server.Listen(_loopback, 0);
             var first = Track(new UdpMatchTransport());
             var second = Track(new UdpMatchTransport());
-            first.Connect(Loopback, (ushort)server.LocalPort);
-            second.Connect(Loopback, (ushort)server.LocalPort);
+            first.Connect(_loopback, (ushort)server.LocalPort);
+            second.Connect(_loopback, (ushort)server.LocalPort);
 
             var connected = new List<ConnectionId>();
             Pump(
@@ -274,7 +274,7 @@ namespace Fps.Protocol.Tests
             server.Disconnect(serverSide, null);
             WaitFor(client, TransportEventKind.Disconnected, server);
 
-            client.Connect(Loopback, (ushort)server.LocalPort);
+            client.Connect(_loopback, (ushort)server.LocalPort);
 
             var again = WaitFor(client, TransportEventKind.Connected, server);
             Assert.That(again.Connection, Is.Not.EqualTo(serverSide));
@@ -334,20 +334,20 @@ namespace Fps.Protocol.Tests
         public void StartingTwiceThrows()
         {
             var transport = Track(new UdpMatchTransport());
-            transport.Listen(Loopback, 0);
+            transport.Listen(_loopback, 0);
 
-            Assert.Throws<InvalidOperationException>(() => transport.Listen(Loopback, 0));
-            Assert.Throws<InvalidOperationException>(() => transport.Connect(Loopback, 7777));
+            Assert.Throws<InvalidOperationException>(() => transport.Listen(_loopback, 0));
+            Assert.Throws<InvalidOperationException>(() => transport.Connect(_loopback, 7777));
         }
 
         [Test]
         public void ListeningOnABusyPortThrows()
         {
             var first = Track(new UdpMatchTransport());
-            first.Listen(Loopback, 0);
+            first.Listen(_loopback, 0);
             var second = Track(new UdpMatchTransport());
 
-            Assert.Throws<InvalidOperationException>(() => second.Listen(Loopback, (ushort)first.LocalPort));
+            Assert.Throws<InvalidOperationException>(() => second.Listen(_loopback, (ushort)first.LocalPort));
             Assert.That(second.IsActive, Is.False);
         }
 
@@ -355,7 +355,7 @@ namespace Fps.Protocol.Tests
         public void ShutdownTwiceIsHarmless()
         {
             var transport = Track(new UdpMatchTransport());
-            transport.Listen(Loopback, 0);
+            transport.Listen(_loopback, 0);
 
             transport.Shutdown(null);
             transport.Shutdown(null);
@@ -368,9 +368,9 @@ namespace Fps.Protocol.Tests
             UdpTransportOptions options = null)
         {
             var server = Track(new UdpMatchTransport(options ?? new UdpTransportOptions()));
-            server.Listen(Loopback, 0);
+            server.Listen(_loopback, 0);
             var client = Track(new UdpMatchTransport(options ?? new UdpTransportOptions()));
-            client.Connect(Loopback, (ushort)server.LocalPort);
+            client.Connect(_loopback, (ushort)server.LocalPort);
 
             var serverSide = ConnectionId.None;
             var clientSide = ConnectionId.None;

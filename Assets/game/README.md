@@ -199,8 +199,19 @@ Editor からは **Fps > Import Game Rules From JSON**。
 | `WeaponCatalogAsset`・`LoadoutDefinition` | 使える武器の一覧と、最初に持つ武器 |
 | `GameRulesDefinition` (`<root>/Rules/*.asset`) | フレンドリーファイア・リスポーン・自動回復・死亡時の見せ方・弾薬・建造物の破壊・ダウンやカバーなどのアクション・スポーン保護・落下ダメージ・HUD の量・勝敗の決め方 |
 | `GrenadeThrower` (プレイヤーのコンポーネント) | 爆発までの秒数・投げる間隔・初速・ダメージ・爆発の半径・建造物への被害 |
+| `BossController` (ボスのコンポーネント) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点) |
 
 JSON から取り込み直すと、そのアセットの値は JSON の値で上書きされる。Inspector で変えた値を残したいなら、JSON にも同じ値を書く。
+
+### ボスの段階と弱点
+
+`BossController` は体力の割合で段階を進め、段階ごとに `EnemyAgent` の `EnemySpec`・`IEnemyBehavior`・動きの速さの倍率と、出す弱点 (`BossWeakPoint`、部位は `HitZone.WeakPoint`) を差し替える。
+振る舞いや、体力以外の条件 (経過時間・仕掛けが壊れたなど) で進む段階は Inspector に書けないので、コードで `Fps.Core.BossPhases` を組んで `BossController.UsePhases` に渡す。
+行動の合図で弱点を出し入れするときは `SetWeakPointExposed`、条件を待たずに次へ進めるときは `Advance` を呼ぶ。
+
+段階が変わると `CombatEvents.BossPhaseChanged` が出る (復活で最初の段階に戻ったときは `IsReset` が true)。カメラ・音・HUD の体力バーはここを購読して出す。
+ログは `[Boss] id=.. phase=0->1 from=.. to=.. reason=..`、命中ごとに `[Boss] id=.. hit zone=.. damage=..`、弱点の出し入れは `[Boss] id=.. weakpoint=.. exposed=..`。
+TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で弱点が出て速くなる仮のボス (`RangeBoss`) が置かれる。
 
 ## UI を差し替える
 
@@ -219,7 +230,7 @@ JSON から取り込み直すと、そのアセットの値は JSON の値で上
 - 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
 - オフラインの `GameUi.HudFactory` とオンラインの `NetUi.HudFactory` は別のもの。両方を差し替えるなら両方に入れる。
 - 既定の HUD を差し替えると、その HUD に載っていたポーズメニューやロードアウトの画面も出なくなる。自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
-- `IHud` の `Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。`AttachGrenadeCount()` だけは `null` を返さない (プレイヤーがグレネードを持つと、返した値の `Show` をすぐ呼ぶ)。
+- `IHud` の `Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さない (プレイヤーがグレネードや能力の枠を持つと、返した値の `Show` をすぐ呼ぶ)。
 - 登録はシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単。
 
 ### 最小の例: オフラインの HUD
@@ -232,7 +243,7 @@ using Fps.Runtime;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount
+public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount, IAbilitySlots
 {
     private Damageable _player;
     private WeaponController _weapon;
@@ -258,9 +269,11 @@ public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount
     public void UseTeamPalette(Team? viewer) { }
     public void SetPauseTimeMode(PauseTimeMode mode) { }
     public IGrenadeCount AttachGrenadeCount() => this;
+    public IAbilitySlots AttachAbilitySlots() => this;
     public IDominationHud AttachDomination() => null;
 
     public void Show(GrenadeThrower thrower) => _grenades = thrower;
+    public void Show(AbilityHost host) { }
 
     private void OnGUI()
     {

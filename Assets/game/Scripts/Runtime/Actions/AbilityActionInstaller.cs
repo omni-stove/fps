@@ -10,7 +10,7 @@ namespace Fps.Runtime
     public sealed class AbilityActionInstaller : IPlayerActionInstaller
     {
         /// <summary><see cref="Order"/>。ほかのアクションを読まないので、組み込みの間の空いたところに置く。</summary>
-        public const int InstallOrder = 350;
+        public const int InstallOrder = 375;
 
         public int Order => InstallOrder;
 

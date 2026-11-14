@@ -426,7 +426,9 @@ namespace Fps.Runtime
                 _coverHealthFraction,
                 _archetype,
                 CreateShieldSpec(),
-                CreateSniperSpec());
+                CreateSniperSpec(),
+                CreateChargerSpec(),
+                CreateBomberSpec());
         }
 
         /// <summary>

@@ -30,5 +30,42 @@ namespace Fps.Core.Tests
             Assert.That(SniperLog.Arrived("Sniper", 2, gaveUp: true), Is.EqualTo("[AI] id=Sniper sniper relocate gave-up perch=2"));
             Assert.That(SniperLog.Stay("Sniper"), Is.EqualTo("[AI] id=Sniper sniper relocate none"));
         }
+
+        [Test]
+        public void ChargerLinesAreTaggedAsAi()
+        {
+            Assert.That(
+                ChargerLog.Phase("Charger", ChargerPhase.Ready, ChargerPhase.WindingUp),
+                Is.EqualTo("[AI] id=Charger charger phase=WindingUp prev=Ready"));
+            Assert.That(ChargerLog.Windup("Charger", "Player", 0.9f), Is.EqualTo("[AI] id=Charger charger windup target=Player seconds=0.90"));
+            Assert.That(
+                ChargerLog.Charge("Charger", new Vector3(0.6f, 0f, 0.8f), 11f),
+                Is.EqualTo("[AI] id=Charger charger charge dir=(0.60, 0.80) distance=11.0"));
+            Assert.That(ChargerLog.Hit("Charger", "Player", 35, 4.3f), Is.EqualTo("[AI] id=Charger charger hit target=Player dmg=35 travelled=4.3"));
+            Assert.That(
+                ChargerLog.Missed("Charger", ChargeEnd.Obstacle, 6f, 1.8f),
+                Is.EqualTo("[AI] id=Charger charger missed cause=obstacle travelled=6.0 stun=1.80"));
+            Assert.That(ChargerLog.Missed("Charger", ChargeEnd.Spent, 11f, 1.8f), Is.EqualTo("[AI] id=Charger charger missed cause=spent travelled=11.0 stun=1.80"));
+            Assert.That(ChargerLog.Blocked("Charger", "Wall_North"), Is.EqualTo("[AI] id=Charger charger blocked by=Wall_North"));
+            Assert.That(ChargerLog.Blocked("Charger", null), Is.EqualTo("[AI] id=Charger charger blocked by=unknown"));
+            Assert.That(ChargerLog.Cancelled("Charger", "lost-sight"), Is.EqualTo("[AI] id=Charger charger cancelled reason=lost-sight"));
+            Assert.That(ChargerLog.Ready("Charger"), Is.EqualTo("[AI] id=Charger charger ready"));
+        }
+
+        [Test]
+        public void BomberLinesAreTaggedAsAi()
+        {
+            Assert.That(
+                BomberLog.Phase("Bomber", BomberPhase.Approaching, BomberPhase.Fusing),
+                Is.EqualTo("[AI] id=Bomber bomber phase=Fusing prev=Approaching"));
+            Assert.That(BomberLog.Fuse("Bomber", "Player", 1.5f), Is.EqualTo("[AI] id=Bomber bomber fuse target=Player seconds=1.50"));
+            Assert.That(
+                BomberLog.Exploded("Bomber", BomberLog.CauseFuse, 4.5f, 1, 0),
+                Is.EqualTo("[AI] id=Bomber bomber exploded cause=fuse radius=4.5 damaged=1 killed=0"));
+            Assert.That(
+                BomberLog.Exploded("Bomber", BomberLog.CauseKilled, 2.5f, 0, 0),
+                Is.EqualTo("[AI] id=Bomber bomber exploded cause=killed radius=2.5 damaged=0 killed=0"));
+            Assert.That(BomberLog.Hit("Bomber", "Player", 80, 1.3f), Is.EqualTo("[AI] id=Bomber bomber hit target=Player dmg=80 distance=1.3"));
+        }
     }
 }

@@ -172,6 +172,17 @@ namespace Fps.Core
             return true;
         }
 
+        // 回数は使い始めた時点で減るので、置けない所で離したなど効果を出さずに終えた能力が、その 1 回を返すのに使う。
+        public void Refund()
+        {
+            Charges = Math.Min(Spec.MaxCharges, Charges + 1);
+            CooldownRemaining = 0f;
+            if (Charges >= Spec.MaxCharges)
+            {
+                RechargeElapsed = 0f;
+            }
+        }
+
         /// <summary>回数を上限に戻し、待ち時間を消し、使っていない状態にする (出撃し直したときなど)。</summary>
         public void Reset()
         {

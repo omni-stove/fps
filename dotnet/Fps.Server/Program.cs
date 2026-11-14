@@ -6,7 +6,7 @@ namespace Fps.Server
     {
         private static int Main(string[] args)
         {
-            return ServerProgram.Run(args, Array.Empty<IServerModule>(), Console.Out, Console.Error);
+            return ServerProgram.Run(args, Array.Empty<IServerModule>(), ServerRuntime.Process());
         }
     }
 }

@@ -11,18 +11,21 @@ namespace Fps.Server.Tests
     {
         private List<string> _calls;
         private StringWriter _log;
+        private UdpMatchTransport _transport;
 
         [SetUp]
         public void SetUp()
         {
             _calls = new List<string>();
             _log = new StringWriter();
+            _transport = new UdpMatchTransport();
         }
 
         [TearDown]
         public void TearDown()
         {
             _log.Dispose();
+            _transport.Dispose();
         }
 
         [Test]
@@ -35,6 +38,7 @@ namespace Fps.Server.Tests
             host.Start(Context());
             host.Tick(0.1f);
             host.OnConnected(new ConnectionId(7));
+            host.OnMessage(new ConnectionId(7), new NetStatsProbeMessage());
             host.OnDisconnected(new ConnectionId(7));
             host.Stop();
 
@@ -42,6 +46,7 @@ namespace Fps.Server.Tests
                 "a.Start", "b.Start",
                 "a.Tick1", "b.Tick1",
                 "a.Connected#7", "b.Connected#7",
+                "a.Message#7:" + MessageIds.NetStatsProbe, "b.Message#7:" + MessageIds.NetStatsProbe,
                 "a.Disconnected#7", "b.Disconnected#7",
                 "b.Stop", "a.Stop")));
             Assert.That(host.State, Is.EqualTo(ServerHostState.Stopped));
@@ -130,6 +135,8 @@ namespace Fps.Server.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => host.Tick(-1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => host.Tick(float.NaN));
             Assert.Throws<ArgumentException>(() => host.OnConnected(ConnectionId.None));
+            Assert.Throws<ArgumentException>(() => host.OnMessage(ConnectionId.None, new NetStatsProbeMessage()));
+            Assert.Throws<ArgumentNullException>(() => host.OnMessage(new ConnectionId(1), null));
             Assert.That(host.TickCount, Is.Zero);
         }
 
@@ -138,8 +145,14 @@ namespace Fps.Server.Tests
 
         private ServerContext Context()
         {
+            var events = new ServerEventWriter(false, _log, _log);
             return new ServerContext(
-                new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort), "1.0.0", _log);
+                new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),
+                "1.0.0",
+                _log,
+                TestMaps.Data(),
+                new ServerMatch(0f, _log, events, () => DateTime.UtcNow),
+                new ServerMessenger(_transport));
         }
     }
 }

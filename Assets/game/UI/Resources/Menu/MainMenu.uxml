@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <!-- メインメニュー。Fps.Runtime.MainMenuScreen が UIDocument に読み込み、name でボタンを探して押したときの行き先をつなぐ。 -->
-    <!-- text の "#キー" は文字列表 (Assets/game/Localization/Resources/Strings) のキーで、MainMenuScreen が Fps.Runtime.LocalizedTexts で今の言語の文字にする。 -->
+    <!-- text の "#キー" は文字列表 (Assets/game/Resources/Localization/ja/menu.json など) のキーで、MainMenuScreen が Fps.Runtime.LocalizedTexts で今の言語の文字にする。 -->
     <Style src="MainMenu.uss" />
     <ui:VisualElement name="main-menu" class="menu">
         <ui:Label name="menu-title" text="FPS" class="menu__title" />

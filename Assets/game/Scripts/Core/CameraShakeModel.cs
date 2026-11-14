@@ -13,17 +13,17 @@ namespace Fps.Core
         public const int NoisePeriod = 4096;
 
         // ずらさないと Perlin ノイズが 0 になる整数の位置で 6 軸がそろって止まり、揺れが脈打つ。
-        private const float ChannelPhaseOffset = 0.37f;
+        private const float _channelPhaseOffset = 0.37f;
 
         // 同じ種から 6 軸を引くので、軸どうしが似た動きにならないよう大きな奇数で離す。
-        private const int ChannelSeedStride = 7919;
+        private const int _channelSeedStride = 7919;
 
-        private const int PitchChannel = 0;
-        private const int YawChannel = 1;
-        private const int RollChannel = 2;
-        private const int OffsetXChannel = 3;
-        private const int OffsetYChannel = 4;
-        private const int OffsetZChannel = 5;
+        private const int _pitchChannel = 0;
+        private const int _yawChannel = 1;
+        private const int _rollChannel = 2;
+        private const int _offsetXChannel = 3;
+        private const int _offsetYChannel = 4;
+        private const int _offsetZChannel = 5;
 
         private float _decayPerSecond = DefaultDecayPerSecond;
         private float _frequency = DefaultFrequency;
@@ -104,13 +104,13 @@ namespace Fps.Core
             }
 
             var angles = new Vector3(
-                _maxAngles.X * intensity * Channel(PitchChannel),
-                _maxAngles.Y * intensity * Channel(YawChannel),
-                _maxAngles.Z * intensity * Channel(RollChannel));
+                _maxAngles.X * intensity * Channel(_pitchChannel),
+                _maxAngles.Y * intensity * Channel(_yawChannel),
+                _maxAngles.Z * intensity * Channel(_rollChannel));
             var offset = new Vector3(
-                _maxOffset.X * intensity * Channel(OffsetXChannel),
-                _maxOffset.Y * intensity * Channel(OffsetYChannel),
-                _maxOffset.Z * intensity * Channel(OffsetZChannel));
+                _maxOffset.X * intensity * Channel(_offsetXChannel),
+                _maxOffset.Y * intensity * Channel(_offsetYChannel),
+                _maxOffset.Z * intensity * Channel(_offsetZChannel));
             return new CameraShakeSample(angles, offset);
         }
 
@@ -139,7 +139,7 @@ namespace Fps.Core
         {
             unchecked
             {
-                return Noise(Seed + (channel * ChannelSeedStride), _phase + (channel * ChannelPhaseOffset));
+                return Noise(Seed + (channel * _channelSeedStride), _phase + (channel * _channelPhaseOffset));
             }
         }
 

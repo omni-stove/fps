@@ -10,9 +10,9 @@ namespace Fps.Runtime
     public static class CharacterComponents
     {
         /// <summary>
-        /// body に <see cref="WeaponPresentation"/>・<see cref="CharacterAudio"/>・<see cref="CharacterAnimator"/> を付け、
-        /// throwsGrenades なら <see cref="GrenadeThrower"/> も付ける。<see cref="ViewRig"/> を持つ本体 (プレイヤーと NetPlayer) には
-        /// <see cref="CameraShake"/> も付ける。既に付いているものは付け直さない。
+        /// body に <see cref="WeaponPresentation"/>・<see cref="ShellEjector"/>・<see cref="DryFireSound"/>・<see cref="CharacterAudio"/>・
+        /// <see cref="CharacterAnimator"/> を付け、throwsGrenades なら <see cref="GrenadeThrower"/> も付ける。<see cref="ViewRig"/> を持つ本体
+        /// (プレイヤーと NetPlayer) には <see cref="CameraShake"/> も付ける。既に付いているものは付け直さない。
         /// </summary>
         /// <param name="body">キャラの本体 (ルート)。</param>
         /// <param name="throwsGrenades">手榴弾を投げるか。プレイヤーと NetPlayer は true、敵は false。</param>
@@ -24,6 +24,8 @@ namespace Fps.Runtime
             }
 
             AddIfMissing<WeaponPresentation>(body);
+            AddIfMissing<ShellEjector>(body);
+            AddIfMissing<DryFireSound>(body);
             AddIfMissing<CharacterAudio>(body);
             AddIfMissing<CharacterAnimator>(body);
             if (throwsGrenades)

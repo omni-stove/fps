@@ -33,6 +33,12 @@ namespace Fps.Tests.EditMode
         [TestCase(InputActionPaths.Dodge)]
         [TestCase(InputActionPaths.Grenade)]
         [TestCase(InputActionPaths.NetStats)]
+        [TestCase(InputActionPaths.Melee)]
+        [TestCase(InputActionPaths.Prone)]
+        [TestCase(InputActionPaths.Ping)]
+        [TestCase(InputActionPaths.Ability1)]
+        [TestCase(InputActionPaths.Ability2)]
+        [TestCase(InputActionPaths.SquadCommand)]
         public void EveryPathExistsInTheProjectWideActions(string path)
         {
             Find(path);
@@ -42,6 +48,7 @@ namespace Fps.Tests.EditMode
         [TestCase(InputActionPaths.Scoreboard, "<Keyboard>/tab", "<Gamepad>/select")]
         [TestCase(InputActionPaths.Dodge, "<Keyboard>/leftAlt", "<Gamepad>/dpad/down")]
         [TestCase(InputActionPaths.Grenade, "<Keyboard>/g", "<Gamepad>/leftShoulder")]
+        [TestCase(InputActionPaths.Ping, "<Mouse>/middleButton", "<Gamepad>/dpad/up")]
         public void NewButtonsAreBoundToOneKeyAndOneGamepadControlUsedByNoOtherPlayerAction(string path, string key, string gamepad)
         {
             var action = Find(path);
@@ -75,6 +82,28 @@ namespace Fps.Tests.EditMode
                 if (other != action)
                 {
                     Assert.That(other.bindings, Has.None.Matches<InputBinding>(b => b.path == "<Keyboard>/f3"), other.name);
+                }
+            }
+        }
+
+        [TestCase(InputActionPaths.Melee, "<Keyboard>/x")]
+        [TestCase(InputActionPaths.Prone, "<Keyboard>/z")]
+        [TestCase(InputActionPaths.Ability1, "<Keyboard>/t")]
+        [TestCase(InputActionPaths.Ability2, "<Keyboard>/y")]
+        [TestCase(InputActionPaths.SquadCommand, "<Keyboard>/b")]
+        public void KeyboardOnlyButtonsAreBoundToOneKeyUsedByNoOtherPlayerAction(string path, string key)
+        {
+            var action = Find(path);
+
+            Assert.That(action.type, Is.EqualTo(InputActionType.Button));
+            Assert.That(action.bindings, Has.Exactly(1).Matches<InputBinding>(b => b.path == key && b.groups == "Keyboard&Mouse"));
+            Assert.That(action.bindings, Has.None.Matches<InputBinding>(b => b.groups != null && b.groups.Contains("Gamepad")), "no gamepad button is free");
+
+            foreach (var other in action.actionMap.actions)
+            {
+                if (other != action)
+                {
+                    Assert.That(other.bindings, Has.None.Matches<InputBinding>(b => b.path == key), other.name);
                 }
             }
         }

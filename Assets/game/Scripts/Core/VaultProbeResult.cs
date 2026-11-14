@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Fps.Core
 {
-    /// <summary><see cref="VaultProbe.Evaluate"/> の結果。</summary>
+    /// <summary><see cref="VaultProbe.Evaluate"/> と <see cref="VaultProbe.EvaluateMantle"/> の結果。</summary>
     public readonly struct VaultProbeResult
     {
         public VaultProbeResult(VaultVerdict verdict, float height, float depth, Vector3 direction, VaultPath path)
@@ -22,6 +22,9 @@ namespace Fps.Core
 
         /// <summary>乗り越えられる。</summary>
         public bool CanVault => Verdict == VaultVerdict.Vault;
+
+        /// <summary>よじ登れる。</summary>
+        public bool CanMantle => Verdict == VaultVerdict.Mantle;
 
         /// <summary>障害物の上端の、足元からの高さ。前方に何も無ければ 0。</summary>
         public float Height { get; }

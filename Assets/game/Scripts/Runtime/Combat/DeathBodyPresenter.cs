@@ -23,6 +23,11 @@ namespace Fps.Runtime
     /// オフラインでは <see cref="Bind"/> で <see cref="Damageable"/> に繋ぐ (倒れたら作り、体力を作り直したら消す)。
     /// 時間は自分で数える (<see cref="Tick"/>) ので、Update が走らない Edit Mode のテストでも直接進められる。
     /// </para>
+    /// <para>
+    /// <see cref="RagdollCatalog"/> があり、その全ボーンが体のリグに見つかれば、1 つの塊ではなくボーンごとに Rigidbody と関節を持つ
+    /// ラグドールの抜け殻にし、最後の被弾の向きとダメージに応じた速さで倒す。固めるのは抜け殻の <see cref="DeathRagdoll"/>。
+    /// 対応表が無い・中身が不正・ボーンが足りないときは 1 つの塊の抜け殻に戻す。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class DeathBodyPresenter : MonoBehaviour
@@ -67,9 +72,20 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("ログに出す識別子。空なら GameObject の名前")]
         private string _id = string.Empty;
 
+        [SerializeField, Tooltip("ラグドールの対応表。空なら Resources の Presentation/RagdollCatalog を読む")]
+        private RagdollCatalog _ragdollCatalog;
+
+        [SerializeField, Tooltip("対応表があればラグドールで倒すか。切ると常に 1 つの塊で倒す")]
+        private bool _useRagdoll = true;
+
+        private static bool _warnedMissingRagdollCatalog;
+        private static readonly HashSet<RagdollCatalog> _warnedInvalidRagdollCatalogs = new HashSet<RagdollCatalog>();
+
         private readonly List<Mesh> _bakedMeshes = new List<Mesh>();
         private GameObject _shell;
         private Rigidbody _shellBody;
+        private DeathRagdoll _ragdoll;
+        private RagdollCatalog _shellCatalog;
         private float _remaining;
         private Damageable _target;
         private bool _awaitingHitDirection;
@@ -110,6 +126,22 @@ namespace Fps.Runtime
             get => string.IsNullOrEmpty(_id) ? name : _id;
             set => _id = value ?? string.Empty;
         }
+
+        public RagdollCatalog RagdollCatalog
+        {
+            get => _ragdollCatalog;
+            set => _ragdollCatalog = value;
+        }
+
+        public bool UseRagdoll
+        {
+            get => _useRagdoll;
+            set => _useRagdoll = value;
+        }
+
+        public DeathRagdoll Ragdoll => HasShell && _ragdoll != null ? _ragdoll : null;
+
+        public bool IsRagdoll => Ragdoll != null;
 
         /// <summary>今ある抜け殻。無ければ (外から消されたときも) null。</summary>
         public GameObject Shell => _shell != null ? _shell : null;
@@ -216,6 +248,12 @@ namespace Fps.Runtime
         /// <param name="hitDirection">最後に受けた弾の進む向き。null か水平成分が無ければ体の後ろへ倒す。</param>
         public GameObject Present(Vector3? hitDirection)
         {
+            return Present(hitDirection, 0);
+        }
+
+        /// <param name="damage">最後の被弾のダメージ。ラグドールのときだけ倒す速さに効く。</param>
+        public GameObject Present(Vector3? hitDirection, int damage)
+        {
             _awaitingHitDirection = false;
             if (_mode != DeathBody.Collapse)
             {
@@ -237,6 +275,12 @@ namespace Fps.Runtime
             }
 
             Clear(ReasonReplaced);
+
+            var ragdoll = TryPresentRagdoll(renderers, hitDirection, damage);
+            if (ragdoll != null)
+            {
+                return ragdoll;
+            }
 
             var shell = BuildShell(renderers, out var parts);
             if (shell == null)
@@ -265,9 +309,23 @@ namespace Fps.Runtime
         /// <summary>今ある抜け殻を direction の向きへ倒し直す。抜け殻が無ければ何もせず false。</summary>
         public bool Push(Vector3 direction)
         {
+            return Push(direction, 0);
+        }
+
+        public bool Push(Vector3? direction, int damage)
+        {
             if (!HasShell)
             {
                 return false;
+            }
+
+            if (IsRagdoll)
+            {
+                var ragdollPush = PushRagdoll(direction, damage, out var speed);
+                Debug.Log(
+                    $"{LogTag} push id={Id} ragdoll push={FormatDirection(ragdollPush)} speed={FormatSpeed(speed)} damage={damage.ToString(CultureInfo.InvariantCulture)}",
+                    this);
+                return true;
             }
 
             var push = ApplyPush(direction);
@@ -289,6 +347,8 @@ namespace Fps.Runtime
             DestroySafely(_shell);
             _shell = null;
             _shellBody = null;
+            _ragdoll = null;
+            _shellCatalog = null;
             _remaining = 0f;
             foreach (var mesh in _bakedMeshes)
             {
@@ -350,15 +410,402 @@ namespace Fps.Runtime
             }
 
             _awaitingHitDirection = false;
-            if (report.SourcePosition.HasValue && HasShell)
+            if (!HasShell)
             {
-                Push(_shell.transform.position - report.SourcePosition.Value);
+                return;
             }
+
+            Vector3? direction = report.SourcePosition.HasValue ? _shell.transform.position - report.SourcePosition.Value : (Vector3?)null;
+
+            // 塊の抜け殻は撃った者が分からなければ倒れた時の向きのままにする。ラグドールはダメージで速さが変わるので、向きが無くても押し直す
+            if (IsRagdoll)
+            {
+                Push(direction, report.Amount);
+            }
+            else if (direction.HasValue)
+            {
+                Push(direction.Value);
+            }
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay()
+        {
+            _warnedMissingRagdollCatalog = false;
+            _warnedInvalidRagdollCatalogs.Clear();
         }
 
         private void OnHealthReset(Health _)
         {
             Clear(ReasonRespawn);
+        }
+
+        private GameObject TryPresentRagdoll(Renderer[] renderers, Vector3? hitDirection, int damage)
+        {
+            if (!_useRagdoll)
+            {
+                return null;
+            }
+
+            var catalog = ResolveRagdollCatalog();
+            if (catalog == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                catalog.Validate();
+            }
+            catch (RagdollCatalogException e)
+            {
+                if (_warnedInvalidRagdollCatalogs.Add(catalog))
+                {
+                    Debug.LogWarning($"{LogTag} ragdoll skipped id={Id} reason=invalid catalog: {e.Message}", this);
+                }
+
+                return null;
+            }
+
+            var rigRoot = RagdollRoot();
+            if (!TryFindRagdollBones(rigRoot, catalog, out var bones, out var missing))
+            {
+                Debug.Log($"{LogTag} ragdoll skipped id={Id} reason=bone '{missing}' not found under '{rigRoot.name}'", this);
+                return null;
+            }
+
+            var shell = BuildRagdoll(rigRoot, bones, catalog, renderers, out var parts, out var ragdoll);
+            _shell = shell;
+            _shellBody = null;
+            _ragdoll = ragdoll;
+            _shellCatalog = catalog;
+            _remaining = _lifetime;
+            if (Application.isPlaying)
+            {
+                // 塊の抜け殻と同じく、体の GameObject ごと止められても寿命で必ず消す
+                Destroy(shell, _lifetime);
+            }
+
+            var push = PushRagdoll(hitDirection, damage, out var speed);
+            Debug.Log(
+                $"{LogTag} collapse id={Id} ragdoll bones={bones.Count.ToString(CultureInfo.InvariantCulture)} parts={parts.ToString(CultureInfo.InvariantCulture)}"
+                + $" push={FormatDirection(push)} speed={FormatSpeed(speed)} damage={damage.ToString(CultureInfo.InvariantCulture)}"
+                + $" settle={catalog.SettleSeconds.ToString("0.##", CultureInfo.InvariantCulture)}s lifetime={_lifetime.ToString("0.##", CultureInfo.InvariantCulture)}s",
+                this);
+            return shell;
+        }
+
+        private RagdollCatalog ResolveRagdollCatalog()
+        {
+            if (_ragdollCatalog != null)
+            {
+                return _ragdollCatalog;
+            }
+
+            var loaded = RagdollCatalog.Load();
+            if (loaded == null && !_warnedMissingRagdollCatalog)
+            {
+                _warnedMissingRagdollCatalog = true;
+                Debug.LogWarning(
+                    $"{LogTag} no RagdollCatalog at Resources/{RagdollCatalog.ResourcePath}; bodies collapse as one piece. "
+                    + "Run Fps/Build All Presentation Assets (Fps.Editor.PresentationAssetSteps.BuildAll)",
+                    this);
+            }
+
+            return loaded;
+        }
+
+        private Transform RagdollRoot()
+        {
+            var animator = GetComponent<CharacterAnimator>();
+            return animator != null && animator.Rig != null ? animator.Rig : transform;
+        }
+
+        // 同じ名前が複数あれば根に近いものを使う。見た目の部品が偶然ボーンと同じ名前でも、ボーンの方が浅いので取り違えにくい。
+        private static bool TryFindRagdollBones(
+            Transform rigRoot, RagdollCatalog catalog, out List<(RagdollBone Entry, Transform Source)> bones, out string missing)
+        {
+            var byName = new Dictionary<string, Transform>(StringComparer.Ordinal);
+            var queue = new Queue<Transform>();
+            queue.Enqueue(rigRoot);
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                if (!byName.ContainsKey(current.name))
+                {
+                    byName.Add(current.name, current);
+                }
+
+                foreach (Transform child in current)
+                {
+                    queue.Enqueue(child);
+                }
+            }
+
+            bones = new List<(RagdollBone Entry, Transform Source)>(catalog.Bones.Count);
+            foreach (var entry in catalog.Bones)
+            {
+                if (!byName.TryGetValue(entry.Bone, out var source))
+                {
+                    missing = entry.Bone;
+                    bones = null;
+                    return false;
+                }
+
+                bones.Add((entry, source));
+            }
+
+            missing = null;
+            return true;
+        }
+
+        private GameObject BuildRagdoll(
+            Transform rigRoot,
+            List<(RagdollBone Entry, Transform Source)> bones,
+            RagdollCatalog catalog,
+            Renderer[] renderers,
+            out int parts,
+            out DeathRagdoll ragdoll)
+        {
+            parts = 0;
+            var shell = new GameObject(Id + ShellSuffix);
+            try
+            {
+                shell.layer = ShellLayer;
+                if (gameObject.scene.IsValid() && shell.scene != gameObject.scene)
+                {
+                    SceneManager.MoveGameObjectToScene(shell, gameObject.scene);
+                }
+
+                shell.transform.SetPositionAndRotation(rigRoot.position, rigRoot.rotation);
+                shell.transform.localScale = rigRoot.lossyScale;
+
+                // 非アクティブな枝のボーンも物理には要るので、Transform はすべて写し、見た目だけ見えているものに絞る
+                var clones = new Dictionary<Transform, Transform> { [rigRoot] = shell.transform };
+                CloneHierarchy(rigRoot, shell.transform, clones);
+
+                var bodies = new Dictionary<Transform, Rigidbody>();
+                var orderedBodies = new List<Rigidbody>(bones.Count);
+                var shellColliders = new List<Collider>(bones.Count);
+                foreach (var (entry, source) in bones)
+                {
+                    var boneObject = clones[source].gameObject;
+                    var body = boneObject.AddComponent<Rigidbody>();
+                    body.mass = entry.Mass;
+                    body.interpolation = RigidbodyInterpolation.Interpolate;
+                    bodies.Add(source, body);
+                    orderedBodies.Add(body);
+                    shellColliders.Add(AddRagdollCollider(boneObject, entry));
+                }
+
+                Transform anchor = null;
+                foreach (var (entry, source) in bones)
+                {
+                    var parentBody = NearestBodyAbove(source, rigRoot, bodies);
+                    if (parentBody == null)
+                    {
+                        anchor ??= clones[source];
+                        continue;
+                    }
+
+                    AddRagdollJoint(clones[source].gameObject, parentBody, entry);
+                }
+
+                anchor ??= shell.transform;
+                foreach (var source in renderers)
+                {
+                    if (source != null && IsShownWithBody(source.transform) && TryCopyRagdollPart(source, clones, anchor))
+                    {
+                        parts++;
+                    }
+                }
+
+                IgnoreBodyColliders(shellColliders);
+
+                ragdoll = shell.AddComponent<DeathRagdoll>();
+                ragdoll.Initialize(Id, orderedBodies, catalog.SettleSeconds, catalog.FootSpeedRatio);
+                return shell;
+            }
+            catch
+            {
+                DestroySafely(shell);
+                foreach (var mesh in _bakedMeshes)
+                {
+                    DestroySafely(mesh);
+                }
+
+                _bakedMeshes.Clear();
+                throw;
+            }
+        }
+
+        private static void CloneHierarchy(Transform source, Transform clone, Dictionary<Transform, Transform> clones)
+        {
+            foreach (Transform child in source)
+            {
+                var copy = new GameObject(child.name);
+                copy.layer = ShellLayer;
+                var copyTransform = copy.transform;
+                copyTransform.SetParent(clone, false);
+                copyTransform.localPosition = child.localPosition;
+                copyTransform.localRotation = child.localRotation;
+                copyTransform.localScale = child.localScale;
+                clones.Add(child, copyTransform);
+                CloneHierarchy(child, copyTransform, clones);
+            }
+        }
+
+        private static Rigidbody NearestBodyAbove(Transform source, Transform rigRoot, Dictionary<Transform, Rigidbody> bodies)
+        {
+            if (source == rigRoot)
+            {
+                return null;
+            }
+
+            for (var current = source.parent; current != null; current = current.parent)
+            {
+                if (bodies.TryGetValue(current, out var body))
+                {
+                    return body;
+                }
+
+                if (current == rigRoot)
+                {
+                    break;
+                }
+            }
+
+            return null;
+        }
+
+        private static Collider AddRagdollCollider(GameObject bone, RagdollBone entry)
+        {
+            var size = new Vector3(Mathf.Abs(entry.Size.x), Mathf.Abs(entry.Size.y), Mathf.Abs(entry.Size.z));
+            switch (entry.Shape)
+            {
+                case RagdollShape.Capsule:
+                    var axis = entry.LongestAxis;
+                    var capsule = bone.AddComponent<CapsuleCollider>();
+                    capsule.center = entry.Center;
+                    capsule.direction = axis;
+                    capsule.height = size[axis];
+                    capsule.radius = Mathf.Max(size[(axis + 1) % 3], size[(axis + 2) % 3]) * 0.5f;
+                    return capsule;
+
+                case RagdollShape.Sphere:
+                    var sphere = bone.AddComponent<SphereCollider>();
+                    sphere.center = entry.Center;
+                    sphere.radius = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * 0.5f;
+                    return sphere;
+
+                default:
+                    var box = bone.AddComponent<BoxCollider>();
+                    box.center = entry.Center;
+                    box.size = size;
+                    return box;
+            }
+        }
+
+        private static void AddRagdollJoint(GameObject bone, Rigidbody parentBody, RagdollBone entry)
+        {
+            var joint = bone.AddComponent<CharacterJoint>();
+            joint.connectedBody = parentBody;
+            joint.anchor = Vector3.zero;
+            joint.axis = entry.TwistAxis.normalized;
+            joint.swingAxis = entry.SwingAxis.normalized;
+            joint.lowTwistLimit = new SoftJointLimit { limit = entry.LowTwist };
+            joint.highTwistLimit = new SoftJointLimit { limit = entry.HighTwist };
+            joint.swing1Limit = new SoftJointLimit { limit = entry.Swing1 };
+            joint.swing2Limit = new SoftJointLimit { limit = entry.Swing2 };
+
+            // 一瞬で大きく押すので、関節が伸びきって手足が飛ばないよう可動域の外へ出た分を戻す
+            joint.enableProjection = true;
+        }
+
+        private bool TryCopyRagdollPart(Renderer source, Dictionary<Transform, Transform> clones, Transform anchor)
+        {
+            if (source is SkinnedMeshRenderer skinned
+                && skinned.sharedMesh != null
+                && clones.TryGetValue(source.transform, out var skinHost)
+                && TryMapBones(skinned, clones, out var mappedBones, out var mappedRoot))
+            {
+                // 焼かずにボーンを写した側へ付け替えるので、倒れていく間も体の形が関節に付いて曲がる
+                var copy = skinHost.gameObject.AddComponent<SkinnedMeshRenderer>();
+                copy.sharedMesh = skinned.sharedMesh;
+                copy.bones = mappedBones;
+                copy.rootBone = mappedRoot;
+                copy.localBounds = skinned.localBounds;
+                copy.updateWhenOffscreen = skinned.updateWhenOffscreen;
+                for (var i = 0; i < skinned.sharedMesh.blendShapeCount; i++)
+                {
+                    copy.SetBlendShapeWeight(i, skinned.GetBlendShapeWeight(i));
+                }
+
+                CopyLook(copy, source);
+                return true;
+            }
+
+            if (source is MeshRenderer && clones.TryGetValue(source.transform, out var host))
+            {
+                var filter = source.GetComponent<MeshFilter>();
+                if (filter == null || filter.sharedMesh == null)
+                {
+                    return false;
+                }
+
+                AddMeshCopy(host.gameObject, filter.sharedMesh, source);
+                return true;
+            }
+
+            // リグの外の見た目と、リグの外のボーンで曲がる皮は、根のボーンに付けて一緒に倒す
+            if (!TryGetPartMesh(source, out var mesh, out var scale))
+            {
+                return false;
+            }
+
+            AddMeshCopy(CreateDetachedPart(source, anchor, scale), mesh, source);
+            return true;
+        }
+
+        private static bool TryMapBones(
+            SkinnedMeshRenderer skinned, Dictionary<Transform, Transform> clones, out Transform[] mapped, out Transform root)
+        {
+            var sourceBones = skinned.bones;
+            mapped = new Transform[sourceBones.Length];
+            root = null;
+            for (var i = 0; i < sourceBones.Length; i++)
+            {
+                if (sourceBones[i] != null && !clones.TryGetValue(sourceBones[i], out mapped[i]))
+                {
+                    return false;
+                }
+            }
+
+            return skinned.rootBone == null || clones.TryGetValue(skinned.rootBone, out root);
+        }
+
+        private Vector3 PushRagdoll(Vector3? hitDirection, int damage, out float speed)
+        {
+            var direction = HorizontalDirection(hitDirection, transform);
+            speed = _shellCatalog != null ? _shellCatalog.SpeedFor(damage) : 0f;
+
+            // 倒れた後に対応表が書き換えられて NaN などになっても、押す側で例外にしない
+            if (!(speed >= 0f) || float.IsInfinity(speed))
+            {
+                speed = 0f;
+            }
+
+            if (_ragdoll != null)
+            {
+                _ragdoll.Push(direction, speed);
+            }
+
+            return direction;
+        }
+
+        private static string FormatSpeed(float speed)
+        {
+            return speed.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
         /// <summary>見た目を消し、CharacterController 以外のコライダー (当たり判定) を止める。</summary>
@@ -450,8 +897,27 @@ namespace Fps.Runtime
 
         private bool TryCopyPart(Renderer source, Transform shell, List<Collider> shellColliders)
         {
-            Mesh mesh;
-            Vector3 scale;
+            if (!TryGetPartMesh(source, out var mesh, out var scale))
+            {
+                return false;
+            }
+
+            var part = CreateDetachedPart(source, shell, scale);
+            AddMeshCopy(part, mesh, source);
+
+            // 丸い体 (Capsule など) でも転がり続けないよう、箱で受ける
+            var bounds = mesh.bounds;
+            var box = part.AddComponent<BoxCollider>();
+            box.center = bounds.center;
+            box.size = Vector3.Max(bounds.size, MinSizeIn(scale));
+            shellColliders.Add(box);
+            return true;
+        }
+
+        private bool TryGetPartMesh(Renderer source, out Mesh mesh, out Vector3 worldScale)
+        {
+            mesh = null;
+            worldScale = Vector3.one;
             if (source is SkinnedMeshRenderer skinned)
             {
                 if (skinned.sharedMesh == null)
@@ -463,9 +929,10 @@ namespace Fps.Runtime
                 mesh = new Mesh { name = skinned.sharedMesh.name + ShellSuffix };
                 skinned.BakeMesh(mesh, true);
                 _bakedMeshes.Add(mesh);
-                scale = Vector3.one;
+                return true;
             }
-            else if (source is MeshRenderer)
+
+            if (source is MeshRenderer)
             {
                 var filter = source.GetComponent<MeshFilter>();
                 if (filter == null || filter.sharedMesh == null)
@@ -474,34 +941,46 @@ namespace Fps.Runtime
                 }
 
                 mesh = filter.sharedMesh;
-                scale = source.transform.lossyScale;
-            }
-            else
-            {
-                return false;
+                worldScale = source.transform.lossyScale;
+                return true;
             }
 
+            return false;
+        }
+
+        private static GameObject CreateDetachedPart(Renderer source, Transform parent, Vector3 worldScale)
+        {
             var part = new GameObject(source.name);
             part.layer = ShellLayer;
-            part.transform.SetParent(shell, false);
+            part.transform.SetParent(parent, false);
             part.transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
-            part.transform.localScale = scale;
+            var parentScale = parent.lossyScale;
+            part.transform.localScale = new Vector3(
+                worldScale.x / NonZero(parentScale.x),
+                worldScale.y / NonZero(parentScale.y),
+                worldScale.z / NonZero(parentScale.z));
+            return part;
+        }
 
-            part.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var copy = part.AddComponent<MeshRenderer>();
+        private static float NonZero(float value)
+        {
+            return Mathf.Abs(value) < 1e-4f ? (value < 0f ? -1e-4f : 1e-4f) : value;
+        }
+
+        private static void AddMeshCopy(GameObject host, Mesh mesh, Renderer source)
+        {
+            host.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var copy = host.AddComponent<MeshRenderer>();
+            CopyLook(copy, source);
+        }
+
+        private static void CopyLook(Renderer copy, Renderer source)
+        {
             copy.sharedMaterials = source.sharedMaterials;
 
             // 一人称の持ち主は自分の体を影だけにしているが、抜け殻は誰からも見えるようにする
             copy.shadowCastingMode = ShadowCastingMode.On;
             copy.receiveShadows = source.receiveShadows;
-
-            // 丸い体 (Capsule など) でも転がり続けないよう、箱で受ける
-            var bounds = mesh.bounds;
-            var box = part.AddComponent<BoxCollider>();
-            box.center = bounds.center;
-            box.size = Vector3.Max(bounds.size, MinSizeIn(scale));
-            shellColliders.Add(box);
-            return true;
         }
 
         private static Vector3 MinSizeIn(Vector3 scale)

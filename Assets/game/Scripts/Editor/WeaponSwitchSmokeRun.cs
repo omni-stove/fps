@@ -17,6 +17,7 @@ namespace Fps.Editor
     /// <item>rifle (Auto) は押し続けている間撃ち続ける。リロード中に持ち替えるとリロードは取り消される。</item>
     /// <item>Next で handgun に持ち替えて撃てる。handgun (Semi) は押し続けても 2 発目が出ず、押し直すと撃てる。</item>
     /// <item>Next / Previous は端で折り返す。持ち替えるたびに HUD の武器名が変わる。</item>
+    /// <item>一人称では持っている武器のビューモデル (<see cref="ViewmodelPresenter"/>) が出て、持ち替えると差し替わる。三人称では出ない。</item>
     /// <item>Play 中にエラー・例外・Assert のログが出ない。</item>
     /// </list>
     /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。batchmode には入力が無いので、Next / Previous / Attack の代わりに
@@ -43,6 +44,8 @@ namespace Fps.Editor
 
         private static readonly List<string> _errors = new List<string>();
         private static int _hitLogs;
+        private static int _viewmodelSpawnLogs;
+        private static int _viewmodelSwapLogs;
         private static double _playStartedAt = -1d;
         private static bool _finished;
 
@@ -61,12 +64,15 @@ namespace Fps.Editor
             try
             {
                 WeaponAssetBuilder.Build();
+                new ViewmodelAssetStep().Build();
                 GameRulesAssetBuilder.Build();
                 BootstrapSceneBuilder.Build();
                 EditorSceneManager.OpenScene(BootstrapSceneBuilder.DefaultScenePath, OpenSceneMode.Single);
 
                 _errors.Clear();
                 _hitLogs = 0;
+                _viewmodelSpawnLogs = 0;
+                _viewmodelSwapLogs = 0;
                 _playStartedAt = -1d;
                 _finished = false;
                 SessionState.SetBool(ActiveKey, true);
@@ -119,6 +125,14 @@ namespace Fps.Editor
             if (condition != null && condition.StartsWith("[Combat] hit zone=", StringComparison.Ordinal))
             {
                 _hitLogs++;
+            }
+            else if (condition != null && condition.StartsWith(ViewmodelPresenter.SpawnedLogPrefix, StringComparison.Ordinal))
+            {
+                _viewmodelSpawnLogs++;
+            }
+            else if (condition != null && condition.StartsWith(ViewmodelPresenter.SwappedLogPrefix, StringComparison.Ordinal))
+            {
+                _viewmodelSwapLogs++;
             }
         }
 
@@ -244,6 +258,52 @@ namespace Fps.Editor
 
             Debug.Log(
                 $"{LogTag} rifle ammo={rifle.AmmoInMagazine}/{rifle.ReserveAmmo} handgun ammo={handgun.AmmoInMagazine}/{handgun.ReserveAmmo} hud weapon={(hud != null ? hud.Model.WeaponNameText : "(no hud)")}");
+
+            ExerciseViewmodel(problems, bootstrap.World, weapon);
+        }
+
+        // 確かめる間は LateUpdate が来ないので、持ち替えと視点の切り替えのたびに Refresh を直接呼ぶ。
+        private static void ExerciseViewmodel(List<string> problems, BootstrapWorld world, WeaponController weapon)
+        {
+            var presenter = world.Player.GetComponent<ViewmodelPresenter>();
+            if (presenter == null)
+            {
+                problems.Add("the player has no ViewmodelPresenter");
+                return;
+            }
+
+            var rig = world.Rig;
+            Expect(problems, rig.Mode == ViewMode.FirstPerson, "the Bootstrap scene starts in first person");
+            Expect(problems, _viewmodelSpawnLogs >= 1, "a viewmodel was spawned while warming up in first person");
+
+            presenter.Refresh();
+            Expect(problems, presenter.CurrentWeaponId == weapon.Weapon.Spec.Id, $"the viewmodel shows the held weapon (got '{presenter.CurrentWeaponId}')");
+            Expect(problems, presenter.Sockets.Muzzle != null, "WeaponSockets finds the muzzle socket in the viewmodel");
+
+            var swaps = _viewmodelSwapLogs;
+            weapon.SelectNext();
+            presenter.Refresh();
+            Expect(problems, _viewmodelSwapLogs == swaps + 1, $"switching weapons logs one viewmodel swap (got {_viewmodelSwapLogs - swaps})");
+            Expect(problems, presenter.CurrentWeaponId == weapon.Weapon.Spec.Id, "the viewmodel follows the switch");
+
+            rig.Mode = ViewMode.ThirdPerson;
+            presenter.Refresh();
+            Expect(problems, presenter.Instance == null, "third person shows no viewmodel");
+            var spawnsInThirdPerson = _viewmodelSpawnLogs;
+            var swapsInThirdPerson = _viewmodelSwapLogs;
+            weapon.SelectNext();
+            presenter.Refresh();
+            Expect(problems, presenter.Instance == null, "switching in third person shows no viewmodel");
+            Expect(problems, _viewmodelSpawnLogs == spawnsInThirdPerson && _viewmodelSwapLogs == swapsInThirdPerson,
+                "third person logs no viewmodel spawn or swap");
+
+            rig.Mode = ViewMode.FirstPerson;
+            presenter.Refresh();
+            Expect(problems, presenter.CurrentWeaponId == weapon.Weapon.Spec.Id, "returning to first person shows the viewmodel again");
+            Expect(problems, _viewmodelSpawnLogs == spawnsInThirdPerson + 1, "returning to first person logs a spawn");
+
+            Debug.Log(
+                $"{LogTag} viewmodel spawns={_viewmodelSpawnLogs.ToString(CultureInfo.InvariantCulture)} swaps={_viewmodelSwapLogs.ToString(CultureInfo.InvariantCulture)}");
         }
 
         private static void ExpectHudName(List<string> problems, Hud hud, WeaponController weapon)

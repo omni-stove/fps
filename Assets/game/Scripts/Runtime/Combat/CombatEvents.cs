@@ -53,6 +53,9 @@ namespace Fps.Runtime
 
         public static event Action<LandingInfo> Landed;
 
+        // 戦闘の結果 (体力・判断) は BossController が先に変え終えてから流す。演出の有無で戦いが変わらないように。
+        public static event Action<BossPhaseChangedInfo> BossPhaseChanged;
+
         /// <summary>
         /// 今の帰属 (<see cref="Attribute"/> の中なら倒した者と武器)。外なら null。
         /// </summary>
@@ -105,6 +108,17 @@ namespace Fps.Runtime
             return new AttributionScope(previous);
         }
 
+        /// <summary>
+        /// <see cref="CurrentAttribution"/> で前に読んだ帰属を、戻り値を Dispose するまでの間の帰属にする。
+        /// 倒れるのが命中より後になるもの (崩れ落ちる破片など) が、壊した時の帰属を持ち越すのに使う。null なら帰属を外す。
+        /// </summary>
+        public static AttributionScope Attribute(ShotAttribution? attribution)
+        {
+            var previous = _attribution;
+            _attribution = attribution;
+            return new AttributionScope(previous);
+        }
+
         public static void RaiseShotFired(GameObject shooter, Vector3 origin, Vector3 direction, string weaponId)
         {
             Invoke(ShotFired, new ShotFiredInfo(shooter, origin, direction, weaponId));
@@ -147,6 +161,11 @@ namespace Fps.Runtime
             Invoke(Landed, new LandingInfo(body, fallSpeed));
         }
 
+        public static void RaiseBossPhaseChanged(BossPhaseChangedInfo info)
+        {
+            Invoke(BossPhaseChanged, info);
+        }
+
         /// <summary>購読をすべて外し、帰属も消す。Play の開始時と、テストの後片付けで呼ぶ。</summary>
         public static void ClearSubscribers()
         {
@@ -157,6 +176,7 @@ namespace Fps.Runtime
             Killed = null;
             Exploded = null;
             Landed = null;
+            BossPhaseChanged = null;
             _attribution = null;
         }
 
@@ -335,6 +355,41 @@ namespace Fps.Runtime
 
             return collider.GetComponentInParent<Damageable>(true) != null;
         }
+    }
+
+    public readonly struct BossPhaseChangedInfo
+    {
+        public BossPhaseChangedInfo(GameObject boss, Damageable damageable, string bossId, BossPhaseChange change)
+        {
+            Boss = boss;
+            Damageable = damageable;
+            BossId = bossId ?? string.Empty;
+            PreviousIndex = change.PreviousIndex;
+            Index = change.Index;
+            PreviousPhaseId = change.Previous != null ? change.Previous.Id : string.Empty;
+            PhaseId = change.Current != null ? change.Current.Id : string.Empty;
+            HealthFraction = change.HealthFraction;
+        }
+
+        public GameObject Boss { get; }
+
+        // HUD の体力バーが Health を読むのに使う。Boss から引き直させないよう一緒に渡す。
+        public Damageable Damageable { get; }
+
+        public string BossId { get; }
+
+        public int PreviousIndex { get; }
+
+        public int Index { get; }
+
+        public string PreviousPhaseId { get; }
+
+        public string PhaseId { get; }
+
+        public float HealthFraction { get; }
+
+        // 復活などで最初の段階へ戻ったとき。演出が「段階が進んだ」と取り違えないよう見分けられるようにする。
+        public bool IsReset => Index < PreviousIndex;
     }
 
     /// <summary><see cref="CombatEvents.DamageTaken"/> で渡す、撃たれた本人への被弾の情報。</summary>

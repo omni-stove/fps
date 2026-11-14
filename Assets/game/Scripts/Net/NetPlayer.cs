@@ -250,6 +250,7 @@ namespace Fps.Net
                 {
                     _weapon.ReloadOrSwitchStarted += HandleReloadOrSwitchStarted;
                     _weapon.ReloadStarted += HandleReloadStarted;
+                    _weapon.DryFired += HandleDryFired;
                 }
 
                 _canPublishAiming = true;
@@ -281,6 +282,7 @@ namespace Fps.Net
             {
                 _weapon.ReloadOrSwitchStarted -= HandleReloadOrSwitchStarted;
                 _weapon.ReloadStarted -= HandleReloadStarted;
+                _weapon.DryFired -= HandleDryFired;
             }
 
             ReleaseAttackAction();
@@ -727,6 +729,16 @@ namespace Fps.Net
             if (_presentation != null && _presentation.isActiveAndEnabled)
             {
                 _presentation.PlayReload(weaponId);
+            }
+        }
+
+        // 専用サーバーでは DryFireSound が自分を止めているので、enabled を見て鳴らさない
+        private void HandleDryFired(string weaponId)
+        {
+            var sound = GetComponent<DryFireSound>();
+            if (sound != null && sound.isActiveAndEnabled)
+            {
+                sound.Play(weaponId);
             }
         }
 

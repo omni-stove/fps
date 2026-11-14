@@ -80,6 +80,15 @@ namespace Fps.Core
                 + ", " + destination.Z.ToString("F2", CultureInfo.InvariantCulture) + ")";
         }
 
+        /// <summary>始めたときに上空からパラシュートで降ろそうとした (<see cref="BattleRoyaleStart.Parachute"/>)。開けなかったら地面から始める。</summary>
+        /// <example><c>[Mode] drop player=0 height=60.00 parachute=Open</c>、ルールで開けなければ <c>parachute=RuleOff</c></example>
+        public static string Drop(int playerId, float height, ParachuteOpenVerdict verdict)
+        {
+            return Tag + " drop player=" + Number(playerId)
+                + " height=" + height.ToString("F2", CultureInfo.InvariantCulture)
+                + " parachute=" + verdict;
+        }
+
         private static string Optional(int? value)
         {
             return value.HasValue ? Number(value.Value) : "-";

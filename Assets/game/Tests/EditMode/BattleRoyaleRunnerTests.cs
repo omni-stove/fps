@@ -25,6 +25,7 @@ namespace Fps.Tests.EditMode
         private static readonly Vector3 OneSpawnTwo = new Vector3(3f, 0f, 8f);
 
         private readonly List<Object> _objects = new List<Object>();
+        private readonly List<InputAction> _actions = new List<InputAction>();
         private BattleRoyaleRunner _runner;
         private SideSpawnPoint[] _spawns;
         private InputAction _attack;
@@ -63,6 +64,12 @@ namespace Fps.Tests.EditMode
 
             _attack.Dispose();
             _reload.Dispose();
+            foreach (var action in _actions)
+            {
+                action.Dispose();
+            }
+
+            _actions.Clear();
         }
 
         [Test]
@@ -267,6 +274,60 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => BattleRoyaleRunner.CreateBattleRoyale(4, 2, -1f, ActionRules.Default));
         }
 
+        [Test]
+        public void EveryoneStartsOnTheGroundByDefault()
+        {
+            Assert.That(_runner.StartFrom, Is.EqualTo(BattleRoyaleStart.Ground));
+            var player = Member("Player", 0, ZeroSpawn);
+            var parachute = AttachParachute(player, Parachute.On);
+            var enemy = Member("Bot-1-1", 1, OneSpawn);
+            Begin(new[] { player, enemy }, player);
+
+            Assert.That(player.transform.position.y, Is.EqualTo(ZeroSpawn.y).Within(1e-2f));
+            Assert.That(parachute.IsOpen, Is.False);
+        }
+
+        [Test]
+        public void TheParachuteStartLiftsThePlayerAndOpensTheParachute()
+        {
+            _runner.StartFrom = BattleRoyaleStart.Parachute;
+            _runner.DropHeight = 40f;
+            var player = Member("Player", 0, ZeroSpawn);
+            var parachute = AttachParachute(player, Parachute.On);
+            var enemy = Member("Bot-1-1", 1, OneSpawn);
+
+            LogAssert.Expect(LogType.Log, "[Mode] drop player=0 height=40.00 parachute=Open");
+            Begin(new[] { player, enemy }, player);
+
+            Assert.That(parachute.IsOpen, Is.True);
+            Assert.That(player.transform.position.y, Is.EqualTo(ZeroSpawn.y + 40f).Within(1e-2f));
+            Assert.That(enemy.transform.position, Is.EqualTo(OneSpawn), "a member without a parachute starts on the ground");
+        }
+
+        [Test]
+        public void APlayerWhoCannotOpenTheParachuteStartsOnTheGround()
+        {
+            _runner.StartFrom = BattleRoyaleStart.Parachute;
+            var player = Member("Player", 0, ZeroSpawn);
+            var parachute = AttachParachute(player, Parachute.Off);
+            var enemy = Member("Bot-1-1", 1, OneSpawn);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"^\[Mode\] drop player=0 height=60\.00 parachute=RuleOff"));
+            Begin(new[] { player, enemy }, player);
+
+            Assert.That(parachute.IsOpen, Is.False);
+            Assert.That(player.transform.position.y, Is.EqualTo(ZeroSpawn.y).Within(1e-2f));
+        }
+
+        [Test]
+        public void TheStartSettingsRejectInvalidValues()
+        {
+            Assert.That(_runner.DropHeight, Is.EqualTo(BattleRoyaleRunner.DefaultDropHeight));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _runner.StartFrom = (BattleRoyaleStart)99);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _runner.DropHeight = -1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _runner.DropHeight = float.NaN);
+        }
+
         private void Begin(IReadOnlyList<SideMember> members, SideMember localPlayer, ModeHudView hud = null)
         {
             var br = BattleRoyaleRunner.CreateBattleRoyale(4, 2, 0f, ActionRules.Default);
@@ -294,6 +355,32 @@ namespace Fps.Tests.EditMode
             var member = go.AddComponent<SideMember>();
             member.Side = new Side(side);
             return member;
+        }
+
+        // 地面は置かないので、どの高さでも足元の高さは無限大と測られ、ルールが On なら開ける。
+        private ParachuteMovement AttachParachute(SideMember owner, Parachute rule)
+        {
+            var controller = owner.gameObject.AddComponent<CharacterController>();
+            controller.height = 2f;
+            controller.radius = 0.5f;
+            controller.center = new Vector3(0f, 1f, 0f);
+            var look = owner.gameObject.AddComponent<FirstPersonLook>();
+            var mover = owner.gameObject.AddComponent<PlayerController>();
+            var move = TrackAction(new InputAction("Move", InputActionType.Value, expectedControlType: "Vector2"));
+            var sprint = TrackAction(new InputAction("Sprint", InputActionType.Button));
+            var crouch = TrackAction(new InputAction("Crouch", InputActionType.Button));
+            var jump = TrackAction(new InputAction("Jump", InputActionType.Button));
+            mover.Initialize(controller, look, move, sprint, crouch, jump, new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f));
+            var parachute = owner.gameObject.AddComponent<ParachuteMovement>();
+            parachute.Initialize(mover);
+            parachute.Rule = rule;
+            return parachute;
+        }
+
+        private InputAction TrackAction(InputAction action)
+        {
+            _actions.Add(action);
+            return action;
         }
 
         private WeaponController AttachWeapons(SideMember owner, WeaponDefinition definition)

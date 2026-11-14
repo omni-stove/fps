@@ -14,5 +14,6 @@
     <ProjectReference Include="../Fps.Core/Fps.Core.csproj" />
     <ProjectReference Include="../Fps.Protocol/Fps.Protocol.csproj" />
     <ProjectReference Include="../Fps.EosSdk/Fps.EosSdk.csproj" />
+    <ProjectReference Include="../Fps.Server.Eos/Fps.Server.Eos.csproj" />
   </ItemGroup>
 </Project>

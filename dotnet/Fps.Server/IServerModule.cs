@@ -19,11 +19,17 @@ namespace Fps.Server
         /// <param name="deltaSeconds">前の tick からの秒数。</param>
         void Tick(long tick, float deltaSeconds);
 
-        /// <summary>接続が確立したとき、登録した順に呼ばれる。</summary>
+        /// <summary>接続を承認し、試合に入れたとき、登録した順に呼ばれる。承認しなかった接続では呼ばれない。</summary>
         void OnConnected(ConnectionId connection);
 
-        /// <summary>接続が切れたとき、登録した順に呼ばれる。</summary>
+        /// <summary>承認した接続が切れたとき (サーバーが止まるときを含む)、登録した順に呼ばれる。</summary>
         void OnDisconnected(ConnectionId connection);
+
+        /// <summary>
+        /// 承認した接続から、承認のメッセージ以外が届いたとき、登録した順に呼ばれる。
+        /// message は受け取るたびに上書きして使い回すので、呼ばれている間だけ読み、持ち続けない。
+        /// </summary>
+        void OnMessage(ConnectionId connection, IMessage message);
 
         /// <summary>
         /// サーバーが止まるとき、登録と逆の順に 1 度だけ呼ばれる。<see cref="Start"/> が終わったモジュールだけが呼ばれる。

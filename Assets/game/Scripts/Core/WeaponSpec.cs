@@ -16,6 +16,9 @@ namespace Fps.Core
         /// <summary>生成時に指定しなかったときの <see cref="ActiveReloadFailSeconds"/>。</summary>
         public const float DefaultActiveReloadFailSeconds = 0.5f;
 
+        /// <summary>生成時に指定しなかったときの <see cref="RecoilRecoveryDelaySeconds"/>。</summary>
+        public const float DefaultRecoilRecoveryDelaySeconds = 0.15f;
+
         /// <summary>武器の識別子。小文字・ハイフン区切りの UUID (<c>Guid.ToString("D")</c> の形)。</summary>
         public string Id { get; }
 
@@ -96,6 +99,9 @@ namespace Fps.Core
         /// <summary>動きながら撃ったときに散らばりへ足す最大の角度 (度)。0 以上 90 以下。</summary>
         public float MoveSpreadDegrees { get; }
 
+        /// <summary>最後に撃ってから跳ねた視線が戻り始めるまでの秒数。0 以上の有限値。</summary>
+        public float RecoilRecoveryDelaySeconds { get; }
+
         /// <param name="id">識別子。前後の空白は除く。除いた後が小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。</param>
         /// <param name="nameKey">画面に出す名前を引く表のキー。null・空白のみなら名前は <paramref name="id"/> になる。</param>
         /// <param name="category">武器の種別。定義済みの値のみ。</param>
@@ -119,6 +125,7 @@ namespace Fps.Core
         /// <param name="hipSpreadDegrees">腰だめの散らばりの最大角度 (度)。0 以上 90 以下。</param>
         /// <param name="adsSpreadDegrees">ADS の散らばりの最大角度 (度)。0 以上 90 以下。</param>
         /// <param name="moveSpreadDegrees">移動中に足す散らばりの最大角度 (度)。0 以上 90 以下。</param>
+        /// <param name="recoilRecoveryDelaySeconds">撃ってから反動が戻り始めるまでの秒数。0 以上の有限値。</param>
         public WeaponSpec(
             string id,
             string nameKey,
@@ -142,7 +149,8 @@ namespace Fps.Core
             float recoilRecoveryPerSecond = 0f,
             float hipSpreadDegrees = 0f,
             float adsSpreadDegrees = 0f,
-            float moveSpreadDegrees = 0f)
+            float moveSpreadDegrees = 0f,
+            float recoilRecoveryDelaySeconds = DefaultRecoilRecoveryDelaySeconds)
         {
             var normalizedId = NormalizeId(id);
 
@@ -228,6 +236,11 @@ namespace Fps.Core
             ValidateAngle(adsSpreadDegrees, nameof(adsSpreadDegrees));
             ValidateAngle(moveSpreadDegrees, nameof(moveSpreadDegrees));
 
+            if (!IsNonNegativeFinite(recoilRecoveryDelaySeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(recoilRecoveryDelaySeconds), recoilRecoveryDelaySeconds, "recoilRecoveryDelaySeconds must be a non-negative finite number");
+            }
+
             Id = normalizedId;
             NameKey = string.IsNullOrWhiteSpace(nameKey) ? string.Empty : nameKey.Trim();
             Category = category;
@@ -251,6 +264,7 @@ namespace Fps.Core
             HipSpreadDegrees = hipSpreadDegrees;
             AdsSpreadDegrees = adsSpreadDegrees;
             MoveSpreadDegrees = moveSpreadDegrees;
+            RecoilRecoveryDelaySeconds = recoilRecoveryDelaySeconds;
         }
 
         private static void ValidateAngle(float degrees, string paramName)

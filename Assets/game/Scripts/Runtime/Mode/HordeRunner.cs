@@ -11,6 +11,7 @@ namespace Fps.Runtime
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
+    /// <item>通貨と波の調整値は <see cref="Definition"/> (<see cref="HordeDefinition"/>) から読む。無ければ既定値で、波は Spawner の設定のまま。</item>
     /// <item>試合が始まったら (Playing になったら) <see cref="Spawner"/> に波の予定を渡して 1 波目を始める。Spawner の BeginOnStart は切っておく
     /// (自分で波を始めていたら理由をログに出して止まる)。Spawner の敵の陣営は <see cref="EnemySide"/> と同じであること。</item>
     /// <item>Spawner が出した敵が倒されたら通貨を入れる (<see cref="RewardEnemyKill"/>)。倒されずに消えた敵では入らない。</item>
@@ -25,7 +26,7 @@ namespace Fps.Runtime
     {
         public const int DefaultEnemySideId = WaveSpawner.DefaultEnemySideId;
 
-        [SerializeField, Tooltip("波の敵を出す WaveSpawner。シーン生成スクリプトが配線する。BeginOnStart は切っておく")]
+        [SerializeField, RequiredReference, Tooltip("波の敵を出す WaveSpawner。シーン生成スクリプトが配線する。BeginOnStart は切っておく")]
         private WaveSpawner _spawner;
 
         [SerializeField, Tooltip("通貨で直す・置く防衛物。空ならシーンの HordeFortification をすべて使う")]
@@ -34,17 +35,8 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("波の敵の陣営の ID。WaveSpawner の敵の陣営と合わせる")]
         private int _enemySideId = DefaultEnemySideId;
 
-        [SerializeField, Min(0), Tooltip("始めに持っている通貨")]
-        private int _startingCurrency = HordeSpec.DefaultStartingCurrency;
-
-        [SerializeField, Min(0), Tooltip("1 波目で敵を 1 体倒したときに入る通貨")]
-        private int _killReward = HordeSpec.DefaultKillReward;
-
-        [SerializeField, Min(0), Tooltip("波が 1 つ進むごとに、1 体あたりの通貨に足す量")]
-        private int _killRewardPerWave = HordeSpec.DefaultKillRewardPerWave;
-
-        [SerializeField, Tooltip("防衛物を直す・置くのを波の間だけにするか")]
-        private bool _purchasesOnlyBetweenWaves = true;
+        [SerializeField, Tooltip("通貨と波の調整値。空なら HordeSpec の既定値と、WaveSpawner に設定された波を使う")]
+        private HordeDefinition _definition;
 
         private readonly HashSet<Damageable> _enemies = new HashSet<Damageable>();
         private readonly List<HordeFortification> _activeFortifications = new List<HordeFortification>();
@@ -68,28 +60,13 @@ namespace Fps.Runtime
             set => _enemySideId = value.Id;
         }
 
-        public int StartingCurrency
+        /// <summary>
+        /// 通貨と波の調整値。始める前に設定する。null なら <see cref="HordeSpec"/> の既定値を使い、波は <see cref="Spawner"/> の設定から作る。
+        /// </summary>
+        public HordeDefinition Definition
         {
-            get => _startingCurrency;
-            set => _startingCurrency = value;
-        }
-
-        public int KillReward
-        {
-            get => _killReward;
-            set => _killReward = value;
-        }
-
-        public int KillRewardPerWave
-        {
-            get => _killRewardPerWave;
-            set => _killRewardPerWave = value;
-        }
-
-        public bool PurchasesOnlyBetweenWaves
-        {
-            get => _purchasesOnlyBetweenWaves;
-            set => _purchasesOnlyBetweenWaves = value;
+            get => _definition;
+            set => _definition = value;
         }
 
         /// <summary>HUD の案内に出す、直す・置く操作のキー。空なら出さない。<see cref="HordeInteractInput"/> が入れる。</summary>
@@ -113,10 +90,29 @@ namespace Fps.Runtime
             _fortifications = copy;
         }
 
-        /// <summary>Inspector の設定から <see cref="HordeSpec"/> を作る。値が不正なら <see cref="ArgumentException"/>。</summary>
+        /// <summary><see cref="Definition"/> (無ければ既定値) から <see cref="HordeSpec"/> を作る。値が不正なら <see cref="ArgumentException"/>。</summary>
         public HordeSpec CreateSpec()
         {
-            return new HordeSpec(PlayerSide, EnemySide, _startingCurrency, _killReward, _killRewardPerWave, _purchasesOnlyBetweenWaves);
+            return _definition != null ? _definition.ToSpec(PlayerSide, EnemySide) : new HordeSpec(PlayerSide, EnemySide);
+        }
+
+        /// <summary>
+        /// 試合で使う波の予定を作る。<see cref="Definition"/> があればその波、無ければ <see cref="Spawner"/> の設定 (<see cref="WaveSpawner.CreateSchedule"/>)。
+        /// どちらも無ければ <see cref="InvalidOperationException"/>、値が不正なら <see cref="ArgumentException"/>。
+        /// </summary>
+        public WaveSchedule CreateSchedule()
+        {
+            if (_definition != null)
+            {
+                return _definition.CreateSchedule();
+            }
+
+            if (_spawner == null)
+            {
+                throw new InvalidOperationException($"HordeRunner '{name}' に HordeDefinition も WaveSpawner も無いため、波を決められません");
+            }
+
+            return _spawner.CreateSchedule();
         }
 
         /// <summary>
@@ -162,7 +158,7 @@ namespace Fps.Runtime
             }
 
             _spawner.BeginOnStart = false;
-            return PrepareHorde(_spawner.CreateSchedule());
+            return PrepareHorde(CreateSchedule());
         }
 
         protected override void OnEnded(Side? winner)

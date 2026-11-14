@@ -494,5 +494,34 @@ namespace Fps.Core.Tests
             var e = Assert.Throws<ArgumentOutOfRangeException>(() => CreateWithHandling(recoilRecoveryPerSecond: perSecond));
             Assert.That(e.ParamName, Is.EqualTo("recoilRecoveryPerSecond"));
         }
+
+        [Test]
+        public void RecoilRecoveryDelayDefaultsWhenOmitted()
+        {
+            Assert.That(Create().RecoilRecoveryDelaySeconds, Is.EqualTo(WeaponSpec.DefaultRecoilRecoveryDelaySeconds));
+        }
+
+        [TestCase(0f)]
+        [TestCase(0.4f)]
+        public void KeepsTheRecoilRecoveryDelay(float seconds)
+        {
+            var spec = new WeaponSpec(
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff,
+                recoilRecoveryDelaySeconds: seconds);
+
+            Assert.That(spec.RecoilRecoveryDelaySeconds, Is.EqualTo(seconds));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void RejectsInvalidRecoilRecoveryDelay(float seconds)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => new WeaponSpec(
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff,
+                recoilRecoveryDelaySeconds: seconds));
+            Assert.That(e.ParamName, Is.EqualTo("recoilRecoveryDelaySeconds"));
+        }
     }
 }

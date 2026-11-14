@@ -21,20 +21,34 @@ namespace Fps.Core
         /// <summary>視野角の上限 (この値自体は受け付けない)。</summary>
         public const float MaxFieldOfView = 180f;
 
+        private float _transitionSeconds;
+
         /// <param name="transitionSeconds">腰だめから覗き込み切るまでの秒数。0 以上の有限値。0 なら即座に切り替わる。</param>
         public AdsZoom(float transitionSeconds = DefaultTransitionSeconds)
         {
-            if (!(transitionSeconds >= 0f) || float.IsInfinity(transitionSeconds))
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(transitionSeconds), transitionSeconds, "transitionSeconds must be a non-negative finite number");
-            }
-
-            TransitionSeconds = transitionSeconds;
+            _transitionSeconds = ValidateTransitionSeconds(transitionSeconds, nameof(transitionSeconds));
         }
 
-        /// <summary>腰だめから覗き込み切るまでの秒数。</summary>
-        public float TransitionSeconds { get; }
+        /// <summary>
+        /// 腰だめから覗き込み切るまでの秒数。0 以上の有限値。途中で変えると、今の <see cref="Progress"/> から新しい速さで進む。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">負か有限でないとき。</exception>
+        public float TransitionSeconds
+        {
+            get => _transitionSeconds;
+            set => _transitionSeconds = ValidateTransitionSeconds(value, nameof(value));
+        }
+
+        /// <summary>value が <see cref="TransitionSeconds"/> として使えなければ ArgumentOutOfRangeException を投げ、使えればそのまま返す。</summary>
+        public static float ValidateTransitionSeconds(float value, string paramName)
+        {
+            if (!(value >= 0f) || float.IsInfinity(value))
+            {
+                throw new ArgumentOutOfRangeException(paramName, value, "transitionSeconds must be a non-negative finite number");
+            }
+
+            return value;
+        }
 
         /// <summary>最後の <see cref="Step"/> で覗き込もうとしていたか。</summary>
         public bool IsAiming { get; private set; }

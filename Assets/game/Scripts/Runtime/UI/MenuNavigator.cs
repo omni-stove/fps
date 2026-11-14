@@ -20,6 +20,7 @@ namespace Fps.Runtime
         private static LobbyLaunchOptions _pendingLobby = LobbyLaunchOptions.None;
         private static LocalizedText _notice;
         private static bool _pendingTutorial;
+        private static MenuScenes _scenes;
 
         /// <summary>
         /// <see cref="ReturnToMenu"/> でメニューのシーンを読む直前に呼ぶ。シーンをまたいで残るもの (NetworkManager など) は
@@ -32,6 +33,22 @@ namespace Fps.Runtime
         {
             get => _host;
             set => _host = value ?? SceneManagerHost.Instance;
+        }
+
+        /// <summary>
+        /// 移るシーンの名前。初めて使うときに <see cref="MenuSceneSettings.LoadScenes"/> で Resources の設定から決める (無ければ既定の名前)。
+        /// null を入れると次に使うときに設定から決め直す (テストで差し替える)。
+        /// </summary>
+        public static MenuScenes Scenes
+        {
+            get => _scenes ??= MenuSceneSettings.LoadScenes();
+            set => _scenes = value;
+        }
+
+        /// <summary><see cref="Scenes"/> の名前で、<see cref="KitPaths.DefaultRoot"/> の下から destination へ行く遷移。</summary>
+        public static MenuTransition Plan(MenuDestination destination)
+        {
+            return MenuRoute.Plan(destination, KitPaths.DefaultRoot, Scenes);
         }
 
         /// <summary>NetBootstrap にまだ渡していない、メニューで選んだロビーの設定。無ければ <see cref="LobbyLaunchOptions.None"/>。</summary>
@@ -48,7 +65,7 @@ namespace Fps.Runtime
         /// </summary>
         public static bool Go(MenuDestination destination)
         {
-            return Execute(MenuRoute.Plan(destination));
+            return Execute(Plan(destination));
         }
 
         /// <summary>
@@ -103,7 +120,7 @@ namespace Fps.Runtime
         /// </param>
         public static bool ReturnToMenu(LocalizedText notice = default)
         {
-            var transition = MenuRoute.BackToMenu();
+            var transition = MenuRoute.BackToMenu(KitPaths.DefaultRoot, Scenes);
             var buildIndex = _host.BuildIndexOf(transition.ScenePath);
             if (buildIndex < 0)
             {
@@ -201,6 +218,7 @@ namespace Fps.Runtime
             _pendingLobby = LobbyLaunchOptions.None;
             _pendingTutorial = false;
             _notice = default;
+            _scenes = null;
             ReturningToMenu = null;
         }
 

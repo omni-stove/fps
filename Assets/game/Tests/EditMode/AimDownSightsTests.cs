@@ -159,6 +159,69 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void WithoutAWeaponTheConfiguredFallbackFieldOfViewIsUsed()
+        {
+            Assert.That(_ads.FallbackFieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView));
+            Initialize();
+            _ads.FallbackFieldOfView = 35f;
+
+            _ads.Tick(true, true, 1f);
+
+            Assert.That(_ads.TargetFieldOfView, Is.EqualTo(35f));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(35f).Within(1e-4f));
+
+            _ads.WeaponSource = () => Rifle(40f);
+            _ads.Tick(true, false, 0f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(40f).Within(1e-4f), "a weapon's own value wins over the fallback");
+        }
+
+        [TestCase(0f)]
+        [TestCase(180f)]
+        [TestCase(float.NaN)]
+        public void TheFallbackFieldOfViewRejectsUnusableValues(float value)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ads.FallbackFieldOfView = value);
+            Assert.That(_ads.FallbackFieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView));
+        }
+
+        [Test]
+        public void ALongerTransitionTakesLongerToZoomIn()
+        {
+            Initialize();
+            _ads.TransitionSeconds = 0.6f;
+
+            _ads.Tick(true, true, 0.3f);
+            Assert.That(_ads.Progress, Is.EqualTo(0.5f).Within(1e-5f), "half of the configured time is half way");
+
+            _ads.Tick(true, false, 0.3f);
+            Assert.That(_ads.Progress, Is.EqualTo(1f));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView).Within(1e-4f));
+        }
+
+        [Test]
+        public void ChangingTheTransitionMidwayKeepsTheProgress()
+        {
+            Initialize();
+            _ads.TransitionSeconds = 1f;
+            _ads.Tick(true, true, 0.25f);
+
+            _ads.TransitionSeconds = 0.5f;
+            Assert.That(_ads.Progress, Is.EqualTo(0.25f).Within(1e-5f));
+
+            _ads.Tick(true, false, 0.25f);
+            Assert.That(_ads.Progress, Is.EqualTo(0.75f).Within(1e-5f));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void TheTransitionRejectsUnusableValues(float value)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ads.TransitionSeconds = value);
+            Assert.That(_ads.TransitionSeconds, Is.EqualTo(AdsZoom.DefaultTransitionSeconds));
+        }
+
+        [Test]
         public void ReportsOnlyWhenTheStateChanges()
         {
             Initialize();

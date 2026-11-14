@@ -8,6 +8,7 @@ namespace Fps.Runtime
     public sealed class TurretDeployDefinition : DeployAbilityDefinition
     {
         public const string BaseName = "Base";
+        public const string ShellName = "Shell";
 
         public const float BaseHeightFraction = 0.6f;
         public const float HeadWidthFraction = 0.7f;
@@ -29,6 +30,12 @@ namespace Fps.Runtime
 
         [SerializeField, Range(0f, 180f), Tooltip("相手の向きとのずれがこれ以下になったら撃つ (度)")]
         private float _aimToleranceDegrees = TurretSpec.DefaultAimToleranceDegrees;
+
+        [SerializeField, Tooltip("置く物のプレハブが空のときに使う台の見た目と当たり判定。足元が原点、前が +Z。空なら仮の箱を作る")]
+        private GameObject _basePrefab;
+
+        [SerializeField, Tooltip("置く物のプレハブが空のときに使う、回る本体の見た目と当たり判定。原点が回る軸と撃つ位置 (台の上の真ん中)、前が +Z。空なら仮の箱を作る")]
+        private GameObject _headPrefab;
 
         // 基底の既定は盾の形と数なので、作った時点でタレットの既定に置き換える (アセットに保存された値があればそちらが勝つ)。
         public TurretDeployDefinition()
@@ -74,6 +81,18 @@ namespace Fps.Runtime
             set => _aimToleranceDegrees = value;
         }
 
+        public GameObject BasePrefab
+        {
+            get => _basePrefab;
+            set => _basePrefab = value;
+        }
+
+        public GameObject HeadPrefab
+        {
+            get => _headPrefab;
+            set => _headPrefab = value;
+        }
+
         public TurretSpec ToTurretSpec()
         {
             try
@@ -115,22 +134,38 @@ namespace Fps.Runtime
         {
             var root = new GameObject(Id);
             var baseHeight = spec.Height * BaseHeightFraction;
-            var stand = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            stand.name = BaseName;
-            stand.transform.SetParent(root.transform, false);
-            stand.transform.localPosition = new Vector3(0f, baseHeight / 2f, 0f);
-            stand.transform.localScale = new Vector3(spec.Width, baseHeight, spec.Depth);
+            if (_basePrefab != null)
+            {
+                Instantiate(_basePrefab, root.transform, false).name = BaseName;
+            }
+            else
+            {
+                var stand = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                stand.name = BaseName;
+                stand.transform.SetParent(root.transform, false);
+                stand.transform.localPosition = new Vector3(0f, baseHeight / 2f, 0f);
+                stand.transform.localScale = new Vector3(spec.Width, baseHeight, spec.Depth);
+            }
 
+            // 回す軸 (Head) はプレハブの有無によらずここで作る。Turret は Head の名前で探して回すので、本体のプレハブに名前を揃えさせない。
             // 頭は回るので、台の上の真ん中に置き、回っても足元の大きさ (spec の幅と奥行き) をはみ出さない大きさにする。
             var headHeight = spec.Height - baseHeight;
-            var headSide = Mathf.Min(spec.Width, spec.Depth) * HeadWidthFraction;
             var head = new GameObject(Turret.HeadName);
             head.transform.SetParent(root.transform, false);
             head.transform.localPosition = new Vector3(0f, baseHeight + (headHeight / 2f), 0f);
-            var shell = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            shell.name = "Shell";
-            shell.transform.SetParent(head.transform, false);
-            shell.transform.localScale = new Vector3(headSide, headHeight, headSide);
+            if (_headPrefab != null)
+            {
+                Instantiate(_headPrefab, head.transform, false).name = ShellName;
+            }
+            else
+            {
+                var headSide = Mathf.Min(spec.Width, spec.Depth) * HeadWidthFraction;
+                var shell = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                shell.name = ShellName;
+                shell.transform.SetParent(head.transform, false);
+                shell.transform.localScale = new Vector3(headSide, headHeight, headSide);
+            }
+
             return root;
         }
 

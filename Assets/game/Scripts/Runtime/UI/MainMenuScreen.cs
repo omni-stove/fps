@@ -431,7 +431,7 @@ namespace Fps.Runtime
             {
                 _leaving = false;
                 SetButtonsEnabled(true);
-                ShowNotice(SceneMissingNotice(MenuRoute.Plan(destination).ScenePath));
+                ShowNotice(SceneMissingNotice(MenuNavigator.Plan(destination).ScenePath));
                 FocusAt(_focusIndex);
             }
 

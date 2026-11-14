@@ -64,9 +64,7 @@ namespace Fps.Tests.EditMode
 
             var charger = agent.GetComponent<EnemyCharger>();
             Assert.That(charger, Is.Not.Null);
-            Assert.That(charger.Tell, Is.Not.Null);
-            Assert.That(charger.Tell.parent, Is.SameAs(agent.transform));
-            Assert.That(charger.Tell.GetComponent<Collider>(), Is.Null);
+            Assert.That(charger.Tell, Is.Null, "the tell is made at run time so a prefab set later is used");
 
             var bake = root.GetComponent<NavMeshBakeActivator>();
             Assert.That(bake.ActivateAfterBake, Has.Member(agent.gameObject));
@@ -111,10 +109,7 @@ namespace Fps.Tests.EditMode
 
             var bomber = agent.GetComponent<EnemyBomber>();
             Assert.That(bomber, Is.Not.Null);
-            Assert.That(bomber.Signal, Is.Not.Null);
-            Assert.That(bomber.Signal.parent, Is.SameAs(agent.transform));
-            Assert.That(bomber.Signal.GetComponent<Collider>(), Is.Null);
-            Assert.That(bomber.Signal.gameObject.activeSelf, Is.False);
+            Assert.That(bomber.Signal, Is.Null, "the signal is made at run time so a prefab set later is used");
             Assert.That(root.GetComponent<NavMeshBakeActivator>().ActivateAfterBake, Has.Member(agent.gameObject));
         }
 

@@ -35,7 +35,25 @@ namespace Fps.Tests.EditMode
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
             CampaignLaunchSelection.Clear();
+            MenuNavigator.OnlineStarter = null;
             Time.timeScale = 1f;
+        }
+
+        [Test]
+        public void AnOnlineStarterTakesTheOnlineButtonsInsteadOfTheNetcodeScene()
+        {
+            var starter = new FakeStarter();
+            MenuNavigator.OnlineStarter = starter;
+
+            Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch, out var refusal), Is.True);
+            Assert.That(refusal.IsEmpty, Is.True);
+            Assert.That(MenuNavigator.Go(MenuDestination.CreateLobby, out refusal), Is.False);
+            Assert.That(refusal.Key, Is.EqualTo("refused"));
+            Assert.That(MenuNavigator.Go(MenuDestination.Range), Is.True, "only the online buttons go to the starter");
+
+            Assert.That(starter.Started, Is.EqualTo(new[] { MenuDestination.QuickMatch, MenuDestination.CreateLobby }));
+            Assert.That(MenuNavigator.PendingLobby.IsRequested, Is.False, "the Netcode scene gets no lobby request");
+            Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(MenuRoute.RangeScene) }));
         }
 
         [Test]
@@ -365,6 +383,18 @@ namespace Fps.Tests.EditMode
             public void Quit()
             {
                 QuitCount++;
+            }
+        }
+
+        private sealed class FakeStarter : IOnlineMatchStarter
+        {
+            public List<MenuDestination> Started { get; } = new List<MenuDestination>();
+
+            public bool Start(MenuDestination destination, out LocalizedText refusal)
+            {
+                Started.Add(destination);
+                refusal = destination == MenuDestination.QuickMatch ? default : new LocalizedText("refused");
+                return destination == MenuDestination.QuickMatch;
             }
         }
     }

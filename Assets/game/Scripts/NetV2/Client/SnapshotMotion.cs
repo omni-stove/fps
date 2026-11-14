@@ -19,16 +19,18 @@ namespace Fps.NetV2
                 row.Position,
                 row.Velocity,
                 row.IsGrounded,
-                row.IsCrouched,
+                row.IsProne ? PlayerStance.Prone : row.IsCrouched ? PlayerStance.Crouching : PlayerStance.Standing,
                 new CharacterCoverState(cover.Snapshot, cover.TopY, cover.Edges, cover.AppliedPeek),
                 row.Dodge,
                 vault.IsVaulting
                     ? CharacterVaultState.FromPoints(vault.Rise, vault.Cross, vault.Land, vault.Elapsed)
-                    : CharacterVaultState.None);
+                    : CharacterVaultState.None,
+                row.Prone,
+                row.Ladder);
         }
 
         /// <summary>
-        /// サーバーが frame を動かすときと同じ入力。ダウン中か・乗り越えてよいかは送らないので、サーバーが配る値 (downed と rules) から入れる。
+        /// サーバーが frame を動かすときと同じ入力。ダウン中か・乗り越え・伏せ・はしごを使えるかは送らないので、サーバーが配る値 (downed と rules) から入れる。
         /// </summary>
         public static CharacterMotorInput ToInput(in InputFrame frame, bool downed, in MatchRulesSync rules)
         {
@@ -42,9 +44,12 @@ namespace Fps.NetV2
                 frame.Has(InputButtons.Cover),
                 frame.Has(InputButtons.Aim),
                 frame.Has(InputButtons.Dodge),
+                false,
+                frame.Has(InputButtons.Prone),
+                false,
                 false);
 
-            // ActionRules を組み立てずに CharacterMotorInput.WithRules と同じ絞り方をする (同期されるのはこの 3 つの切り替えだけのため)
+            // ActionRules を組み立てずに CharacterMotorInput.WithRules と同じ絞り方をする (同期されるのは移動に効く切り替えだけのため)
             if (rules.Cover != Cover.On)
             {
                 input = input.WithoutCover();
@@ -55,11 +60,14 @@ namespace Fps.NetV2
                 input = input.WithoutDodge();
             }
 
-            return input.WithVaultAllowed(rules.Vault == Vault.On);
+            return input.With(
+                vaultAllowed: rules.Vault == Vault.On,
+                proneAllowed: rules.Prone == Prone.On,
+                ladderAllowed: rules.Ladder == Ladder.On);
         }
 
         /// <summary>押したボタンを送る形にまとめる。</summary>
-        public static InputButtons Buttons(bool sprint, bool jump, bool crouch, bool cover, bool aim, bool dodge)
+        public static InputButtons Buttons(bool sprint, bool jump, bool crouch, bool cover, bool aim, bool dodge, bool prone = false)
         {
             var buttons = InputButtons.None;
             buttons |= sprint ? InputButtons.Sprint : InputButtons.None;
@@ -68,6 +76,7 @@ namespace Fps.NetV2
             buttons |= cover ? InputButtons.Cover : InputButtons.None;
             buttons |= aim ? InputButtons.Aim : InputButtons.None;
             buttons |= dodge ? InputButtons.Dodge : InputButtons.None;
+            buttons |= prone ? InputButtons.Prone : InputButtons.None;
             return buttons;
         }
 

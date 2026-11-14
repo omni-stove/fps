@@ -12,6 +12,7 @@
   "menu.settingsUnavailable": "Settings are not available yet.",
   "menu.loadoutUnavailable": "The loadout cannot be changed: {0}",
   "menu.sceneMissing": "Cannot open {0}: it is not in this build.",
+  "menu.lobbyUnavailableOnNetV2": "Lobbies are not available with -netstack v2 yet. Use Quick Match to connect to the server.",
   "pause.title": "Paused",
   "pause.resume": "Resume",
   "pause.settings": "Settings",

@@ -16,6 +16,7 @@ namespace Fps.NetV2
     /// <remarks>
     /// フレームで押したもの (ジャンプ・切り替え・回避・射撃など) は次の tick まで覚えておく。tick はフレームより遅いことがあり、取りこぼすため。
     /// ダッシュとしゃがみは操作設定 (<see cref="ControlSettings"/>) の押し方を解釈し、送るのは解釈した後の「したいか」だけにする (サーバーは押し方を知らない)。
+    /// 射撃は押した瞬間だけでなく押している間も読む。連射の武器の撃つ間合いを Netcode のクライアントと同じ <see cref="FireTrigger"/> で決めるため。
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class NetV2LocalPlayer : MonoBehaviour
@@ -44,6 +45,7 @@ namespace Fps.NetV2
         private InputAction _reload;
         private InputAction _grenade;
         private InputAction _ping;
+        private InputAction _prone;
         private SprintInput _sprintInput;
         private CrouchInput _crouchInput;
         private ControlSettings _controlSettings = ControlSettings.Default;
@@ -59,6 +61,7 @@ namespace Fps.NetV2
         private bool _reloadLatched;
         private bool _grenadeLatched;
         private bool _pingLatched;
+        private bool _proneLatched;
 
         public Camera Camera => _camera;
 
@@ -99,6 +102,7 @@ namespace Fps.NetV2
             }
 
             var player = root.AddComponent<NetV2LocalPlayer>();
+            AttachPresentation(root, true);
             player._geometry = geometry;
             player._eye = eye;
             player._camera = camera;
@@ -110,11 +114,26 @@ namespace Fps.NetV2
             return player;
         }
 
+        /// <summary>
+        /// 撃つ人の本体に付ける武器の演出 (銃声・マズルフラッシュ・曳光弾・薬莢・空撃ちの音・血)。Netcode の NetPlayer と同じ部品で、
+        /// 中身 (音とエフェクト) はそれぞれのカタログから武器の Id で引く。local は自分の本体か (自分の音は 2D で鳴らす)。
+        /// </summary>
+        /// <remarks>CharacterComponents.Attach を使わないのは、v2 の本体には人型のリグも手榴弾を投げる見た目も無いため。</remarks>
+        public static WeaponPresentation AttachPresentation(GameObject body, bool local)
+        {
+            var presentation = body.AddComponent<WeaponPresentation>();
+            presentation.IsLocal = local;
+            body.AddComponent<ShellEjector>();
+            body.AddComponent<DryFireSound>();
+            body.AddComponent<BloodPresenter>();
+            return presentation;
+        }
+
         /// <summary>予測した状態を書き写す。目の高さは姿勢に合わせる。</summary>
         public void Show(CharacterMotorState state)
         {
             transform.position = NetV2Math.ToUnity(state.Position);
-            var eyeY = _geometry.Shape(state.IsCrouched).EyeY;
+            var eyeY = _geometry.Shape(state.Stance).EyeY;
             if (!Mathf.Approximately(_eye.localPosition.y, eyeY))
             {
                 _eye.localPosition = new Vector3(0f, eyeY, 0f);
@@ -142,14 +161,33 @@ namespace Fps.NetV2
                 sprint);
             var cover = Take(ref _coverLatched) && !paused;
             var dodge = Take(ref _dodgeLatched) && !paused;
+            var prone = Take(ref _proneLatched) && !paused;
             var aim = !paused && _aim != null && _aim.IsPressed();
             var degrees = _look != null && _look.enabled && _look.IsInitialized ? _look.Yaw : transform.eulerAngles.y;
             yaw = degrees * Mathf.Deg2Rad;
-            buttons = SnapshotMotion.Buttons(sprint, jump, crouch, cover, aim, dodge);
+            buttons = SnapshotMotion.Buttons(sprint, jump, crouch, cover, aim, dodge, prone);
         }
 
         /// <summary>射撃を押したか。読むと忘れる。</summary>
         public bool TakeAttack() => Take(ref _attackLatched);
+
+        /// <summary>射撃を押し続けているか (止めのメニューを開いている間は押していないことにする)。</summary>
+        public bool IsAttackHeld => !GameUi.IsPauseOpen && _attack != null && _attack.IsPressed();
+
+        /// <summary>
+        /// 視点の yaw (ラジアン) を向きに合わせる。はしごにつかまったとき、オフラインの LadderMovement と同じくはしごへ向けるのに使う。
+        /// </summary>
+        public void FaceYaw(float yaw)
+        {
+            var degrees = yaw * Mathf.Rad2Deg;
+            if (_look != null && _look.IsInitialized)
+            {
+                _look.ApplyLookDelta(new Vector2(Mathf.DeltaAngle(_look.Yaw, degrees), 0f));
+                return;
+            }
+
+            transform.rotation = NetV2Math.YawRotation(yaw);
+        }
 
         /// <summary>リロードを押したか。読むと忘れる。</summary>
         public bool TakeReload() => Take(ref _reloadLatched);
@@ -159,6 +197,12 @@ namespace Fps.NetV2
 
         /// <summary>印を押したか。読むと忘れる。</summary>
         public bool TakePing() => Take(ref _pingLatched);
+
+        /// <summary>撃ったときにダッシュを解く (Netcode のクライアントと同じ)。reason はログに出す理由。</summary>
+        public void ReleaseSprint(string reason)
+        {
+            _sprintInput.Release(reason);
+        }
 
         /// <summary>死亡・置き直しのとき、切り替えのしゃがみとダッシュを解く。reason はログに出す理由。</summary>
         public void ReleaseHolds(string reason)
@@ -190,6 +234,7 @@ namespace Fps.NetV2
             _reload = Find(actions, InputActionPaths.Reload);
             _grenade = Find(actions, InputActionPaths.Grenade);
             _ping = Find(actions, InputActionPaths.Ping);
+            _prone = Find(actions, InputActionPaths.Prone);
         }
 
         private void OnDestroy()
@@ -225,6 +270,7 @@ namespace Fps.NetV2
             _reloadLatched |= Pressed(_reload);
             _grenadeLatched |= Pressed(_grenade);
             _pingLatched |= Pressed(_ping);
+            _proneLatched |= Pressed(_prone);
 
             // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
             _device = InputDeviceKinds.Of(_sprint, InputDeviceKinds.Of(_move, _device));

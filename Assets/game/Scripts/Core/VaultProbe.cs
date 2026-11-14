@@ -9,7 +9,7 @@ namespace Fps.Core
     /// 軌跡は、障害物の手前へ寄りながら上端より <see cref="Clearance"/> 上まで上がり、向こう側の面から体の半径 + <see cref="WallGap"/> 先まで水平に越え、
     /// 足元の高さまで下りる。座標は Y が上、変位は始めたときの足元から。
     /// </summary>
-    public static class VaultProbe
+    public static partial class VaultProbe
     {
         /// <summary>乗り越えられる、体の中心から手前の面までの水平距離の上限 (m)。</summary>
         public const float MaxReach = 1.0f;
@@ -69,28 +69,12 @@ namespace Fps.Core
                 return VaultProbeResult.None;
             }
 
-            if (!IsFinite(sample.Distance) || !IsFinite(sample.TopHeight) || !IsFinite(sample.Normal) || float.IsNaN(sample.Depth))
-            {
-                throw new ArgumentOutOfRangeException(nameof(sample), "sample must be finite (Depth may be positive infinity)");
-            }
-
-            if (sample.Distance < 0f || sample.Depth < 0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(sample), "sample distance and depth must not be negative");
-            }
-
+            ValidateSample(sample);
             var height = sample.TopHeight;
             var depth = sample.Depth;
-            if (sample.Distance > MaxReach + _boundaryEpsilon)
+            if (!TryReachWall(sample, out var into, out var rejected))
             {
-                return new VaultProbeResult(VaultVerdict.TooFar, height, depth, Vector3.Zero, null);
-            }
-
-            var normalLength = sample.Normal.Length();
-            var into = -CoverProbe.Horizontal(sample.Normal);
-            if (normalLength <= 0f || Math.Abs(sample.Normal.Y / normalLength) > CoverProbe.MaxWallNormalUp || into == Vector3.Zero)
-            {
-                return new VaultProbeResult(VaultVerdict.NotAWall, height, depth, Vector3.Zero, null);
+                return new VaultProbeResult(rejected, height, depth, Vector3.Zero, null);
             }
 
             var verdict = Classify(into, facing, height, depth, maxHeight);
@@ -155,6 +139,41 @@ namespace Fps.Core
             }
 
             return depth > MaxDepth + _boundaryEpsilon ? VaultVerdict.TooDeep : VaultVerdict.Vault;
+        }
+
+        private static void ValidateSample(VaultObstacleSample sample)
+        {
+            if (!IsFinite(sample.Distance) || !IsFinite(sample.TopHeight) || !IsFinite(sample.Normal) || float.IsNaN(sample.Depth))
+            {
+                throw new ArgumentOutOfRangeException(nameof(sample), "sample must be finite (Depth may be positive infinity)");
+            }
+
+            if (sample.Distance < 0f || sample.Depth < 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(sample), "sample distance and depth must not be negative");
+            }
+        }
+
+        private static bool TryReachWall(VaultObstacleSample sample, out Vector3 into, out VaultVerdict rejected)
+        {
+            into = Vector3.Zero;
+            if (sample.Distance > MaxReach + _boundaryEpsilon)
+            {
+                rejected = VaultVerdict.TooFar;
+                return false;
+            }
+
+            var normalLength = sample.Normal.Length();
+            var horizontal = -CoverProbe.Horizontal(sample.Normal);
+            if (normalLength <= 0f || Math.Abs(sample.Normal.Y / normalLength) > CoverProbe.MaxWallNormalUp || horizontal == Vector3.Zero)
+            {
+                rejected = VaultVerdict.NotAWall;
+                return false;
+            }
+
+            into = horizontal;
+            rejected = VaultVerdict.NoObstacle;
+            return true;
         }
 
         private static bool Faces(Vector3 facing, Vector3 into)

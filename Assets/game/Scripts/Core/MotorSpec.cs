@@ -26,6 +26,18 @@ namespace Fps.Core
         /// <summary>生成時に指定しなかったときの <see cref="VaultMaxHeight"/>。</summary>
         public const float DefaultVaultMaxHeight = 1.2f;
 
+        /// <summary>
+        /// 生成時に指定しなかったときの <see cref="MantleMaxHeight"/>。立ち 2 m のプレイヤーが手を伸ばして縁に届く高さ。
+        /// プレイヤーの既定のジャンプ (1.2 m) では上がれない段も、これまではよじ登れる。
+        /// </summary>
+        public const float DefaultMantleMaxHeight = 2.2f;
+
+        /// <summary>
+        /// 生成時に指定しなかったときの <see cref="MantleSpeed"/>。乗り越え (<see cref="VaultProbe.Speed"/>) の半分で、
+        /// 0.8 m 先の高さ 1.8 m の段を約 1 秒で上がる。
+        /// </summary>
+        public const float DefaultMantleSpeed = 3f;
+
         /// <summary>歩きの水平速度。</summary>
         public float WalkSpeed { get; }
 
@@ -59,6 +71,12 @@ namespace Fps.Core
         /// <summary>乗り越えられる障害物の、足元からの最大の高さ。</summary>
         public float VaultMaxHeight { get; }
 
+        /// <summary>よじ登れる段の、足元からの最大の高さ。<see cref="VaultMaxHeight"/> 以下の段はよじ登らずに乗り越える。</summary>
+        public float MantleMaxHeight { get; }
+
+        /// <summary>よじ登る軌跡をたどる速さ (m/s)。</summary>
+        public float MantleSpeed { get; }
+
         /// <param name="walkSpeed">歩きの水平速度。0 以上。</param>
         /// <param name="sprintSpeed">ダッシュ中の水平速度。0 以上。</param>
         /// <param name="jumpHeight">ジャンプで到達する高さ。0 以上。</param>
@@ -70,6 +88,8 @@ namespace Fps.Core
         /// <param name="dodgeDistance">回避 1 回の水平距離。0 以上の有限値。</param>
         /// <param name="dodgeSeconds">回避 1 回の秒数。0 より大きい有限値。</param>
         /// <param name="vaultMaxHeight">乗り越えられる最大の高さ。0 以上の有限値。</param>
+        /// <param name="mantleMaxHeight">よじ登れる最大の高さ。0 以上の有限値。</param>
+        /// <param name="mantleSpeed">よじ登る速さ。0 より大きい有限値。</param>
         public MotorSpec(
             float walkSpeed,
             float sprintSpeed,
@@ -81,7 +101,9 @@ namespace Fps.Core
             float lethalFallSpeed = DefaultLethalFallSpeed,
             float dodgeDistance = DefaultDodgeDistance,
             float dodgeSeconds = DefaultDodgeSeconds,
-            float vaultMaxHeight = DefaultVaultMaxHeight)
+            float vaultMaxHeight = DefaultVaultMaxHeight,
+            float mantleMaxHeight = DefaultMantleMaxHeight,
+            float mantleSpeed = DefaultMantleSpeed)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -139,6 +161,16 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(vaultMaxHeight), vaultMaxHeight, "vaultMaxHeight must be finite and not negative");
             }
 
+            if (!(mantleMaxHeight >= 0f) || float.IsInfinity(mantleMaxHeight))
+            {
+                throw new ArgumentOutOfRangeException(nameof(mantleMaxHeight), mantleMaxHeight, "mantleMaxHeight must be finite and not negative");
+            }
+
+            if (!(mantleSpeed > 0f) || float.IsInfinity(mantleSpeed))
+            {
+                throw new ArgumentOutOfRangeException(nameof(mantleSpeed), mantleSpeed, "mantleSpeed must be finite and positive");
+            }
+
             WalkSpeed = walkSpeed;
             SprintSpeed = sprintSpeed;
             JumpHeight = jumpHeight;
@@ -150,6 +182,8 @@ namespace Fps.Core
             DodgeDistance = dodgeDistance;
             DodgeSeconds = dodgeSeconds;
             VaultMaxHeight = vaultMaxHeight;
+            MantleMaxHeight = mantleMaxHeight;
+            MantleSpeed = mantleSpeed;
         }
     }
 }

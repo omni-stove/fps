@@ -13,14 +13,15 @@ namespace Fps.Net.Tests
         {
             var names = new NetKillFeedNames(
                 id => id == 0 ? Team.Alpha : id == 1 ? Team.Bravo : (Team?)null,
-                id => id == "rifle" ? "Rifle" : string.Empty,
+                id => id == "rifle" ? new LocalizedText("weapon.rifle") : default,
                 1);
 
             var line = names.Describe(new KillFeedEntry(0, 1, "rifle", false, false));
 
             Assert.That(line.Killer, Is.EqualTo(new KillFeedName("P0", Team.Alpha, false)));
             Assert.That(line.Victim, Is.EqualTo(new KillFeedName("P1", Team.Bravo, true)));
-            Assert.That(line.WeaponName, Is.EqualTo("Rifle"));
+            Assert.That(line.WeaponName, Is.EqualTo(new LocalizedText("weapon.rifle")));
+            Assert.That(GameText.Resolve(line.WeaponText), Is.EqualTo("[Rifle]"), "the name is read from the table");
             Assert.That(line.Highlighted, Is.True);
         }
 
@@ -32,7 +33,7 @@ namespace Fps.Net.Tests
             var line = names.Describe(new KillFeedEntry(5, 6, "rifle", false, false));
 
             Assert.That(line.Killer, Is.EqualTo(new KillFeedName("P5", null, false)));
-            Assert.That(line.WeaponName, Is.Empty);
+            Assert.That(line.WeaponName.IsEmpty, Is.True);
             Assert.That(line.Highlighted, Is.False);
         }
 

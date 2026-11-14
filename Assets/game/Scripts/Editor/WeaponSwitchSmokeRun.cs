@@ -254,7 +254,7 @@ namespace Fps.Editor
                 return;
             }
 
-            var expected = weapon.Weapon.Spec.DisplayName;
+            var expected = GameText.Resolve(weapon.Weapon.Spec.Name);
             Expect(problems, hud.Model.WeaponNameText == expected, $"the HUD shows '{expected}' (got '{hud.Model.WeaponNameText}')");
         }
 

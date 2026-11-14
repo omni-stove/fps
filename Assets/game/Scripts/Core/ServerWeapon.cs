@@ -50,7 +50,7 @@ namespace Fps.Core
                 ? spec
                 : new WeaponSpec(
                     spec.Id,
-                    spec.DisplayName,
+                    spec.NameKey,
                     spec.Category,
                     spec.FireMode,
                     spec.MagazineSize,

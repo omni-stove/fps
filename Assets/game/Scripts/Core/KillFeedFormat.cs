@@ -34,11 +34,11 @@ namespace Fps.Core
 
         /// <summary>
         /// 倒した側と倒された側の間に出す武器の欄 (<c>[ライフル]</c>、頭なら <c>[ライフル] 頭</c>)。
-        /// weaponName が空なら、自滅は <see cref="Suicide"/>、それ以外は <see cref="NoWeapon"/> を入れる。
+        /// 武器の名前 weaponName は文にするときに同じ表で引く。<c>default</c> なら、自滅は <see cref="Suicide"/>、それ以外は <see cref="NoWeapon"/> を入れる。
         /// </summary>
-        public static LocalizedText Weapon(string weaponName, bool headshot, bool suicide)
+        public static LocalizedText Weapon(LocalizedText weaponName, bool headshot, bool suicide)
         {
-            object name = !string.IsNullOrEmpty(weaponName) ? weaponName : suicide ? (object)Suicide : NoWeapon;
+            object name = !weaponName.IsEmpty ? weaponName : suicide ? (object)Suicide : NoWeapon;
             return headshot
                 ? new LocalizedText("hud.killFeed.weaponHeadshot", name, HeadshotMark)
                 : new LocalizedText("hud.killFeed.weapon", name);

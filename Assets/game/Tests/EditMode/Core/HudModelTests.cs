@@ -13,12 +13,12 @@ namespace Fps.Core.Tests
 
         private static Weapon NewWeapon(int magazine = 30, int reserve = 90, float fireInterval = 0f, float reloadSeconds = 1f)
         {
-            return new Weapon(new WeaponSpec(_rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, magazine, reserve, fireInterval, reloadSeconds, 25, 100f, DamageFalloff.None));
+            return new Weapon(new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, FireMode.Auto, magazine, reserve, fireInterval, reloadSeconds, 25, 100f, DamageFalloff.None));
         }
 
         private static Weapon NewHandgun()
         {
-            return new Weapon(new WeaponSpec(_handgunId, "Handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None));
+            return new Weapon(new WeaponSpec(_handgunId, "weapon.handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None));
         }
 
         private static List<HudField> Record(HudModel model)
@@ -110,6 +110,16 @@ namespace Fps.Core.Tests
 
             weapon.Tick(1f);
             Assert.That(model.AmmoText, Is.EqualTo("2 / " + HudFormat.InfiniteReserve), "the reload refills from the infinite reserve");
+        }
+
+        [Test]
+        public void AWeaponWithoutANameKeyShowsItsId()
+        {
+            var model = new HudModel();
+
+            model.BindWeapon(new Weapon(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, DamageFalloff.None)));
+
+            Assert.That(model.WeaponNameText, Is.EqualTo(_rifleId));
         }
 
         [Test]

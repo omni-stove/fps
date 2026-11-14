@@ -109,8 +109,8 @@ namespace Fps.Core.Tests
             Assert.That(GameText.Resolve(HudFormat.Result(Team.Alpha)), Is.EqualTo("ALPHA wins"));
             Assert.That(GameText.Resolve(ScoreboardRows.LocalPlayerName), Is.EqualTo("You"));
             Assert.That(SubtitleText.Format(new SoundCue(SoundCueKind.Gunshot, SoundCueDirection.BackLeft, SoundCue.FarDistance)), Is.EqualTo("[Gunshot back left far]"));
-            Assert.That(GameText.Resolve(KillFeedFormat.Weapon(string.Empty, false, true)), Is.EqualTo("[Suicide]"));
-            Assert.That(GameText.Resolve(KillFeedFormat.Weapon("Rifle", true, false)), Is.EqualTo("[Rifle] Headshot"));
+            Assert.That(GameText.Resolve(KillFeedFormat.Weapon(default, false, true)), Is.EqualTo("[Suicide]"));
+            Assert.That(GameText.Resolve(KillFeedFormat.Weapon(new LocalizedText("weapon.rifle"), true, false)), Is.EqualTo("[Rifle] Headshot"));
             Assert.That(GameText.Resolve(ZoneHudText.Closed), Is.EqualTo("Final zone"));
         }
 

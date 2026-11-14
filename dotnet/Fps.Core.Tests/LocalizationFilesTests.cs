@@ -62,6 +62,22 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheWeaponNamesAreReadFromTheItemsTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var items = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("items.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(items.Get("weapon.rifle"), Is.EqualTo("Rifle"), code);
+                Assert.That(items.Get("weapon.handgun"), Is.EqualTo("Handgun"), code);
+                Assert.That(items.Get("weapon.launcher"), Is.EqualTo("Launcher"), code);
+            }
+        }
+
+        [Test]
         public void EveryLanguageHasAReadableTable()
         {
             foreach (var language in GameLanguages.All)

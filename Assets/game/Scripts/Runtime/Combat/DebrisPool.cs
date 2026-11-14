@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using Fps.Core;
 using UnityEngine;
 
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 建造物が壊れたときに出す、見た目だけの破片 (Rigidbody 付きの小さな Cube) をまとめて持つ。
+    /// 建造物が壊れたときに出す破片 (Rigidbody 付きの小さな Cube) をまとめて持つ。破片は見た目だけで、
+    /// 出すときにダメージの出し方を渡したものだけがキャラクターに当たるとダメージを与える (<see cref="DebrisCrusher"/>)。
     /// 破片は <see cref="Lifetime"/> 秒で消え、<see cref="Capacity"/> 個を超えたら古い物から消す。
     /// シーンに 1 つあればよく、<see cref="GetOrCreate"/> で探すか作る。
     /// 時間は自分で数える (<see cref="Tick"/>) ので、Update が走らない Edit Mode のテストでも直接進められる。
@@ -128,6 +130,26 @@ namespace Fps.Runtime
         /// <param name="velocity">出したときの速度。</param>
         public GameObject Spawn(Vector3 position, Quaternion rotation, Vector3 size, Material material, Vector3 velocity)
         {
+            return Spawn(position, rotation, size, material, velocity, null, null, null);
+        }
+
+        /// <summary>
+        /// <see cref="Spawn(Vector3, Quaternion, Vector3, Material, Vector3)"/> と同じく破片を 1 つ出し、crushDamage があれば
+        /// キャラクターに当たるとダメージを与える <see cref="DebrisCrusher"/> を付ける。crushDamage が null なら見た目だけの破片になる。
+        /// </summary>
+        /// <param name="crushDamage">当たったときのダメージの出し方。null なら当たってもダメージを与えない。</param>
+        /// <param name="attribution">破片で倒したときに倒した者とする帰属 (建物を壊した者と武器)。分からなければ null。</param>
+        /// <param name="source">ログに出す、破片を出した建物の名前。</param>
+        public GameObject Spawn(
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 size,
+            Material material,
+            Vector3 velocity,
+            DebrisCrushDamage crushDamage,
+            ShotAttribution? attribution,
+            string source)
+        {
             if (!(size.x > 0f) || !(size.y > 0f) || !(size.z > 0f))
             {
                 throw new ArgumentOutOfRangeException(nameof(size), size, "size must be positive on every axis");
@@ -157,6 +179,11 @@ namespace Fps.Runtime
                 var body = debris.AddComponent<Rigidbody>();
                 body.mass = Mathf.Max(0.05f, size.x * size.y * size.z * 100f);
                 body.linearVelocity = velocity;
+
+                if (crushDamage != null)
+                {
+                    debris.AddComponent<DebrisCrusher>().Initialize(crushDamage, attribution, source);
+                }
             }
             catch
             {

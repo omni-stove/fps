@@ -13,6 +13,9 @@ namespace Fps.Core.Tests
             new VehicleSeatSpec(VehicleSeatRole.Gunner, VehicleSeatPose.Standing),
         };
 
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static int[] Indices(params int[] indices) => indices;
+
         [Test]
         public void KeepsEveryValueItWasBuiltWith()
         {
@@ -33,7 +36,7 @@ namespace Fps.Core.Tests
             Assert.That(spec.EnterRange, Is.EqualTo(3f));
             Assert.That(spec.ChaseDistance, Is.EqualTo(7f));
             Assert.That(spec.ChaseHeight, Is.EqualTo(2.5f));
-            Assert.That(spec.WeaponsOfSeat(2), Is.EqualTo(new[] { 0 }));
+            Assert.That(spec.WeaponsOfSeat(2), Is.EqualTo(Indices(0)));
             Assert.That(spec.WeaponsOfSeat(0), Is.Empty);
         }
 

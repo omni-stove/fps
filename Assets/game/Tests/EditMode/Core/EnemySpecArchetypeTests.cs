@@ -21,6 +21,13 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void KeepsTheShieldAndSniperArchetypes()
+        {
+            Assert.That(new EnemySpec(20f, 10f, 1f, 2f, 0.5f, archetype: EnemyArchetype.Shield).Archetype, Is.EqualTo(EnemyArchetype.Shield));
+            Assert.That(new EnemySpec(20f, 10f, 1f, 2f, 0.5f, archetype: EnemyArchetype.Sniper).Archetype, Is.EqualTo(EnemyArchetype.Sniper));
+        }
+
+        [Test]
         public void RejectsAnUndefinedArchetype()
         {
             Assert.Throws<ArgumentOutOfRangeException>(

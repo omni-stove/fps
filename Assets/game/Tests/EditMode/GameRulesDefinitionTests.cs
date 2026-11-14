@@ -60,6 +60,19 @@ namespace Fps.Tests.EditMode
             definition.Vault = Vault.On;
             definition.Grenade = Grenade.On;
             definition.GrenadeCount = 2;
+            definition.Melee = Melee.On;
+            definition.Stagger = Stagger.On;
+            definition.Slide = Slide.On;
+            definition.Mantle = Mantle.On;
+            definition.Prone = Prone.On;
+            definition.Ladder = Ladder.On;
+            definition.Zipline = Zipline.On;
+            definition.Parachute = Parachute.On;
+            definition.Stealth = Stealth.On;
+            definition.Suppression = Suppression.On;
+            definition.Ping = Fps.Core.Ping.On;
+            definition.Abilities = Abilities.On;
+            definition.SlowMotion = SlowMotion.On;
             definition.SpawnProtectionSeconds = 1.5f;
             definition.FallDamage = FallDamage.On;
             definition.HudDensity = HudDensity.Minimal;
@@ -90,6 +103,19 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.Vault, Is.EqualTo(Vault.On));
             Assert.That(rules.Actions.Grenade, Is.EqualTo(Grenade.On));
             Assert.That(rules.Actions.GrenadeCount, Is.EqualTo(2));
+            Assert.That(rules.Actions.Melee, Is.EqualTo(Melee.On));
+            Assert.That(rules.Actions.Stagger, Is.EqualTo(Stagger.On));
+            Assert.That(rules.Actions.Slide, Is.EqualTo(Slide.On));
+            Assert.That(rules.Actions.Mantle, Is.EqualTo(Mantle.On));
+            Assert.That(rules.Actions.Prone, Is.EqualTo(Prone.On));
+            Assert.That(rules.Actions.Ladder, Is.EqualTo(Ladder.On));
+            Assert.That(rules.Actions.Zipline, Is.EqualTo(Zipline.On));
+            Assert.That(rules.Actions.Parachute, Is.EqualTo(Parachute.On));
+            Assert.That(rules.Actions.Stealth, Is.EqualTo(Stealth.On));
+            Assert.That(rules.Actions.Suppression, Is.EqualTo(Suppression.On));
+            Assert.That(rules.Actions.Ping, Is.EqualTo(Fps.Core.Ping.On));
+            Assert.That(rules.Actions.Abilities, Is.EqualTo(Abilities.On));
+            Assert.That(rules.Actions.SlowMotion, Is.EqualTo(SlowMotion.On));
             Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(1.5f));
             Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.On));
             Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Minimal));
@@ -113,7 +139,31 @@ namespace Fps.Tests.EditMode
                 true,
                 2f,
                 Destruction.On,
-                new ActionRules(Downed.Revive, 12f, 0.25f, 2.5f, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, 3),
+                new ActionRules(
+                    Downed.Revive,
+                    12f,
+                    0.25f,
+                    2.5f,
+                    Cover.On,
+                    BlindFire.On,
+                    ActiveReload.On,
+                    Dodge.On,
+                    Vault.On,
+                    Grenade.On,
+                    3,
+                    Melee.On,
+                    Stagger.On,
+                    Slide.On,
+                    Mantle.On,
+                    Prone.On,
+                    Ladder.On,
+                    Zipline.On,
+                    Parachute.On,
+                    Stealth.On,
+                    Suppression.On,
+                    Fps.Core.Ping.On,
+                    Abilities.On,
+                    SlowMotion.On),
                 2f,
                 FallDamage.On,
                 HudDensity.Hardcore,
@@ -149,6 +199,19 @@ namespace Fps.Tests.EditMode
         [TestCase("Vault")]
         [TestCase("Grenade")]
         [TestCase("GrenadeCount")]
+        [TestCase("Melee")]
+        [TestCase("Stagger")]
+        [TestCase("Slide")]
+        [TestCase("Mantle")]
+        [TestCase("Prone")]
+        [TestCase("Ladder")]
+        [TestCase("Zipline")]
+        [TestCase("Parachute")]
+        [TestCase("Stealth")]
+        [TestCase("Suppression")]
+        [TestCase("Ping")]
+        [TestCase("Abilities")]
+        [TestCase("SlowMotion")]
         [TestCase("SpawnProtectionSeconds")]
         [TestCase("FallDamage")]
         [TestCase("HudDensity")]
@@ -222,6 +285,19 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.Actions.Vault, Is.EqualTo(expected.Actions.Vault));
             Assert.That(actual.Actions.Grenade, Is.EqualTo(expected.Actions.Grenade));
             Assert.That(actual.Actions.GrenadeCount, Is.EqualTo(expected.Actions.GrenadeCount));
+            Assert.That(actual.Actions.Melee, Is.EqualTo(expected.Actions.Melee));
+            Assert.That(actual.Actions.Stagger, Is.EqualTo(expected.Actions.Stagger));
+            Assert.That(actual.Actions.Slide, Is.EqualTo(expected.Actions.Slide));
+            Assert.That(actual.Actions.Mantle, Is.EqualTo(expected.Actions.Mantle));
+            Assert.That(actual.Actions.Prone, Is.EqualTo(expected.Actions.Prone));
+            Assert.That(actual.Actions.Ladder, Is.EqualTo(expected.Actions.Ladder));
+            Assert.That(actual.Actions.Zipline, Is.EqualTo(expected.Actions.Zipline));
+            Assert.That(actual.Actions.Parachute, Is.EqualTo(expected.Actions.Parachute));
+            Assert.That(actual.Actions.Stealth, Is.EqualTo(expected.Actions.Stealth));
+            Assert.That(actual.Actions.Suppression, Is.EqualTo(expected.Actions.Suppression));
+            Assert.That(actual.Actions.Ping, Is.EqualTo(expected.Actions.Ping));
+            Assert.That(actual.Actions.Abilities, Is.EqualTo(expected.Actions.Abilities));
+            Assert.That(actual.Actions.SlowMotion, Is.EqualTo(expected.Actions.SlowMotion));
             Assert.That(actual.SpawnProtectionSeconds, Is.EqualTo(expected.SpawnProtectionSeconds));
             Assert.That(actual.FallDamage, Is.EqualTo(expected.FallDamage));
             Assert.That(actual.HudDensity, Is.EqualTo(expected.HudDensity));
@@ -299,6 +375,45 @@ namespace Fps.Tests.EditMode
                     break;
                 case "GrenadeCount":
                     definition.GrenadeCount = -1;
+                    break;
+                case "Melee":
+                    definition.Melee = (Melee)99;
+                    break;
+                case "Stagger":
+                    definition.Stagger = (Stagger)99;
+                    break;
+                case "Slide":
+                    definition.Slide = (Slide)99;
+                    break;
+                case "Mantle":
+                    definition.Mantle = (Mantle)99;
+                    break;
+                case "Prone":
+                    definition.Prone = (Prone)99;
+                    break;
+                case "Ladder":
+                    definition.Ladder = (Ladder)99;
+                    break;
+                case "Zipline":
+                    definition.Zipline = (Zipline)99;
+                    break;
+                case "Parachute":
+                    definition.Parachute = (Parachute)99;
+                    break;
+                case "Stealth":
+                    definition.Stealth = (Stealth)99;
+                    break;
+                case "Suppression":
+                    definition.Suppression = (Suppression)99;
+                    break;
+                case "Ping":
+                    definition.Ping = (Fps.Core.Ping)99;
+                    break;
+                case "Abilities":
+                    definition.Abilities = (Abilities)99;
+                    break;
+                case "SlowMotion":
+                    definition.SlowMotion = (SlowMotion)99;
                     break;
                 case "SpawnProtectionSeconds":
                     definition.SpawnProtectionSeconds = float.NaN;

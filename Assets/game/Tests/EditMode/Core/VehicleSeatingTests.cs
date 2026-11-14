@@ -9,6 +9,9 @@ namespace Fps.Core.Tests
         private readonly object _alice = new object();
         private readonly object _bob = new object();
 
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static float[] Distances(params float[] distances) => distances;
+
         [Test]
         public void RejectsInvalidArguments()
         {
@@ -22,8 +25,8 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => seating.NextFree(-2, 1));
             Assert.Throws<ArgumentOutOfRangeException>(() => seating.NextFree(0, 0));
             Assert.Throws<ArgumentNullException>(() => seating.NearestFree(null, 1f));
-            Assert.Throws<ArgumentException>(() => seating.NearestFree(new[] { 1f }, 1f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => seating.NearestFree(new[] { 1f, 1f }, -1f));
+            Assert.Throws<ArgumentException>(() => seating.NearestFree(Distances(1f), 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => seating.NearestFree(Distances(1f, 1f), -1f));
         }
 
         [Test]
@@ -99,9 +102,9 @@ namespace Fps.Core.Tests
             var seating = new VehicleSeating(4);
             seating.Board(_alice, 1);
 
-            Assert.That(seating.NearestFree(new[] { 2f, 0.5f, 1.5f, float.NaN }, 2.5f), Is.EqualTo(2), "seat 1 is taken and seat 3 is unreachable");
-            Assert.That(seating.NearestFree(new[] { 2f, 0.5f, 2f, 2f }, 2.5f), Is.EqualTo(0), "ties go to the lower seat");
-            Assert.That(seating.NearestFree(new[] { 3f, 0.5f, 3f, 3f }, 2.5f), Is.EqualTo(-1), "too far");
+            Assert.That(seating.NearestFree(Distances(2f, 0.5f, 1.5f, float.NaN), 2.5f), Is.EqualTo(2), "seat 1 is taken and seat 3 is unreachable");
+            Assert.That(seating.NearestFree(Distances(2f, 0.5f, 2f, 2f), 2.5f), Is.EqualTo(0), "ties go to the lower seat");
+            Assert.That(seating.NearestFree(Distances(3f, 0.5f, 3f, 3f), 2.5f), Is.EqualTo(-1), "too far");
         }
 
         [Test]

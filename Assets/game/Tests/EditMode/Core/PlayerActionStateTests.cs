@@ -137,7 +137,49 @@ namespace Fps.Core.Tests
         [Test]
         public void RejectsUndefinedFlagBits()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => Create((PlayerActionConditions)(1 << 20)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Create((PlayerActionConditions)(1 << 21)));
+        }
+
+        [Test]
+        public void AllFlagsHasEveryDefinedBitAndEachIsReadBack()
+        {
+            var all = PlayerActionConditions.None;
+
+            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
+#pragma warning disable CA2263
+            var defined = (PlayerActionConditions[])Enum.GetValues(typeof(PlayerActionConditions));
+#pragma warning restore CA2263
+            foreach (var flag in defined)
+            {
+                all |= flag;
+            }
+
+            Assert.That(all, Is.EqualTo(PlayerActionState.AllFlags));
+
+            var state = Create(
+                PlayerActionConditions.Meleeing
+                | PlayerActionConditions.Staggered
+                | PlayerActionConditions.Sliding
+                | PlayerActionConditions.Mantling
+                | PlayerActionConditions.Prone
+                | PlayerActionConditions.OnLadder
+                | PlayerActionConditions.Ziplining
+                | PlayerActionConditions.Parachuting
+                | PlayerActionConditions.InVehicle
+                | PlayerActionConditions.AbilityMoving);
+
+            Assert.That(state.IsMeleeing, Is.True);
+            Assert.That(state.IsStaggered, Is.True);
+            Assert.That(state.IsSliding, Is.True);
+            Assert.That(state.IsMantling, Is.True);
+            Assert.That(state.IsProne, Is.True);
+            Assert.That(state.IsOnLadder, Is.True);
+            Assert.That(state.IsZiplining, Is.True);
+            Assert.That(state.IsParachuting, Is.True);
+            Assert.That(state.IsInVehicle, Is.True);
+            Assert.That(state.IsAbilityMoving, Is.True);
+            Assert.That(state.IsDowned, Is.False);
+            Assert.That(default(PlayerActionState).IsProne, Is.False);
         }
 
         [TestCase(-0.01f)]

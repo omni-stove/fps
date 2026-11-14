@@ -6,7 +6,7 @@ namespace Fps.Core
     /// <summary>
     /// プレイヤーの今のアクションを 1 つにまとめた不変の値。デバッグ表示と自機モックが読む。
     /// 移動 (ダッシュ・しゃがみ・回避・乗り越え・接地)、構えと射撃 (カバー・ブラインドファイア・ADS・射撃・リロード)、
-    /// ダウン・乗り物・肩・視点・武器名・ばらつきを持つ。生成時に値を検査する。
+    /// ダウン・肩・視点・武器名・ばらつきを持つ。生成時に値を検査する。
     /// <c>default</c> は「何もしていない・一人称・右肩・武器なし」。
     /// </summary>
     public readonly struct PlayerActionState : IEquatable<PlayerActionState>
@@ -24,7 +24,16 @@ namespace Fps.Core
             | PlayerActionConditions.Firing
             | PlayerActionConditions.Reloading
             | PlayerActionConditions.Downed
-            | PlayerActionConditions.InVehicle;
+            | PlayerActionConditions.Meleeing
+            | PlayerActionConditions.Staggered
+            | PlayerActionConditions.Sliding
+            | PlayerActionConditions.Mantling
+            | PlayerActionConditions.Prone
+            | PlayerActionConditions.OnLadder
+            | PlayerActionConditions.Ziplining
+            | PlayerActionConditions.Parachuting
+            | PlayerActionConditions.InVehicle
+            | PlayerActionConditions.AbilityMoving;
 
         /// <summary>
         /// 1 発撃ってから射撃中と見なし続ける最短の秒数。連射間隔がこれより短い (またはセミオートを 1 回だけ撃った) ときも、
@@ -72,7 +81,16 @@ namespace Fps.Core
         public bool IsFiring => Has(PlayerActionConditions.Firing);
         public bool IsReloading => Has(PlayerActionConditions.Reloading);
         public bool IsDowned => Has(PlayerActionConditions.Downed);
+        public bool IsMeleeing => Has(PlayerActionConditions.Meleeing);
+        public bool IsStaggered => Has(PlayerActionConditions.Staggered);
+        public bool IsSliding => Has(PlayerActionConditions.Sliding);
+        public bool IsMantling => Has(PlayerActionConditions.Mantling);
+        public bool IsProne => Has(PlayerActionConditions.Prone);
+        public bool IsOnLadder => Has(PlayerActionConditions.OnLadder);
+        public bool IsZiplining => Has(PlayerActionConditions.Ziplining);
+        public bool IsParachuting => Has(PlayerActionConditions.Parachuting);
         public bool IsInVehicle => Has(PlayerActionConditions.InVehicle);
+        public bool IsAbilityMoving => Has(PlayerActionConditions.AbilityMoving);
 
         /// <param name="flags">立っている状態。<see cref="AllFlags"/> の外のビットは渡せない。</param>
         /// <param name="reloadProgress">リロードの進み。0 以上 1 以下。<see cref="PlayerActionConditions.Reloading"/> が無ければ 0。</param>

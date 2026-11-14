@@ -6,11 +6,14 @@ using Fps.Runtime;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 namespace Fps.Net
 {
     /// <summary>
-    /// ネットワーク越しのプレイヤー移動。<see cref="PlayerMotor"/> と CharacterController をサーバー権威で動かす。
+    /// ネットワーク越しのプレイヤー移動。<see cref="PlayerMotor"/> と Core のカプセルの移動 (<see cref="NetMotorSimulation"/>) をサーバー権威で動かす。
+    /// 当たりはシーンの名前の <c>.fpsmap</c> (<see cref="NetMapWorld"/>) で取り、無ければ動かさない。
     /// <list type="bullet">
     /// <item>オーナーのクライアント: <see cref="TickClock"/> の tick ごとに入力を読み、自分で先に動かして (予測)
     /// 入力をサーバーへ送る。サーバーから確定状態が届いたら <see cref="PredictionBuffer{TInput, TState}"/> で照合し、
@@ -91,14 +94,18 @@ namespace Fps.Net
         [SerializeField, Min(0.01f), Tooltip("しゃがみのカプセルの高さ (m)。半径の 2 倍以上、立ちの高さ以下")]
         private float _crouchHeight = PlayerController.DefaultCrouchHeight;
 
-        [SerializeField, Tooltip("カバーにする壁として当たるレイヤー")]
-        private LayerMask _coverWallMask = Physics.DefaultRaycastLayers;
+        [SerializeField, FormerlySerializedAs("_coverWallMask")]
+        [Tooltip("移動・しゃがみ・カバー・乗り越えで当たる .fpsmap のレイヤー。サーバーと同じ値にする")]
+        private LayerMask _collisionMask = CapsuleMoverSpec.DefaultLayerMask;
 
         // 補間した向きの長さがこれより短ければ (真逆の向きの間など) 向きを決められないので、前の向きのままにする
         private const float _minYawDirectionLengthSquared = 1e-6f;
 
         private CharacterController _controller;
         private FirstPersonLook _look;
+        private PlayerMotor _motor;
+        private NetStance _stance;
+        private NetMapWorld _map;
         private NetMotorSimulation _simulation;
         private NetworkPlayerRole _role;
 
@@ -154,13 +161,13 @@ namespace Fps.Net
         /// 姿勢 (立ち・しゃがみの寸法と、今当てている姿勢)。設定が不正か CharacterController が無ければ null。
         /// 射撃の始点 (<see cref="NetPlayer.EyePosition"/>) と巻き戻しの当たり判定 (<see cref="RewindTarget.Stance"/>) が使う。
         /// </summary>
-        public NetStance Stance => _simulation != null ? _simulation.Stance : null;
+        public NetStance Stance => _stance;
 
         /// <summary>このインスタンスで今しゃがんでいるか (オーナーは予測、他人は補間表示の姿勢)。</summary>
-        public bool IsCrouched => _simulation != null && _simulation.Stance.IsCrouched;
+        public bool IsCrouched => _stance != null && _stance.IsCrouched;
 
         // Awake を済ませる前に割り当てを変えたときも、Awake で使われる値を返すため設定から作る。
-        public MotorSpec Spec => _simulation != null ? _simulation.Spec : MotorSettings.ResolveOrDefault(_motorSettings);
+        public MotorSpec Spec => _motor != null ? _motor.Spec : MotorSettings.ResolveOrDefault(_motorSettings);
 
         public MotorSettings MotorSettings
         {
@@ -264,15 +271,45 @@ namespace Fps.Net
 
             try
             {
-                var motor = new PlayerMotor(MotorSettings.Resolve(_motorSettings));
-                var stance = NetStance.FromHierarchy(_controller, _crouchHeight);
-                _simulation = new NetMotorSimulation(_controller, motor, stance, TickSeconds, KillPlaneY, _coverWallMask);
+                _motor = new PlayerMotor(MotorSettings.Resolve(_motorSettings));
+                _stance = NetStance.FromHierarchy(_controller, _crouchHeight);
             }
             catch (ArgumentOutOfRangeException e)
             {
                 Debug.LogError("[Net] invalid motor or crouch settings on " + name + ": " + e.Message, this);
-                _simulation = null;
+                _motor = null;
+                _stance = null;
             }
+        }
+
+        // マップのシーンへ移った後に読むので Awake ではなく生成時に作る
+        private bool TryCreateSimulation(out string error)
+        {
+            if (!NetMapWorld.TryGet(SceneManager.GetActiveScene(), out _map, out error))
+            {
+                return false;
+            }
+
+            try
+            {
+                var mover = new CapsuleMoverSpec(_controller.slopeLimit, _controller.stepOffset, _controller.skinWidth, _collisionMask);
+                _simulation = new NetMotorSimulation(_controller, _motor, _stance, _map.Collision, mover, TickSeconds, KillPlaneY);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                error = "[Net] invalid CharacterController settings on " + name + ": " + e.Message;
+                _simulation = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        // 壊れた部品を世界に写してから動かす。予測の巻き戻しもここを通る
+        private MotorState StepSimulation(MotorState state, MotorInput input)
+        {
+            _map.SyncDestruction();
+            return _simulation.Step(state, input);
         }
 
         /// <summary>しゃがみが変わったときのログ。例: <c>[Net] stance owner=1 tick=42 crouched=true</c>。</summary>
@@ -285,15 +322,22 @@ namespace Fps.Net
 
         public override void OnNetworkSpawn()
         {
-            if (_simulation == null || _controller == null)
+            if (_motor == null || _stance == null || _controller == null)
             {
                 Debug.LogError("[Net] " + name + " cannot move: motor or crouch settings or CharacterController are missing", this);
                 enabled = false;
                 return;
             }
 
+            if (!TryCreateSimulation(out var mapError))
+            {
+                Debug.LogError(mapError + "; " + name + " cannot move", this);
+                enabled = false;
+                return;
+            }
+
             _simulation.SpawnPosition = transform.position;
-            _simulation.Stance.Apply(false);
+            _stance.Apply(false);
             Register();
 
             // Bot はサーバーが持ち主だが、入力はキーボードではなく試合 (NetTeamDeathmatch.Bots) から ServerApplyBotInput で受ける
@@ -314,7 +358,7 @@ namespace Fps.Net
             {
                 _role = NetworkPlayerRole.Predicted;
                 _controller.enabled = true;
-                _prediction = new PredictionBuffer<MotorInput, MotorState>(_simulation.Step, MotorState.PositionError, ReconcileTolerance);
+                _prediction = new PredictionBuffer<MotorInput, MotorState>(StepSimulation, MotorState.PositionError, ReconcileTolerance);
                 _prediction.Reset(0, new MotorState(transform.position, Vector3.zero, false, false));
             }
             else
@@ -351,7 +395,7 @@ namespace Fps.Net
                 _crouchDevice = InputDeviceKind.KeyboardMouse;
                 _sprint = new SprintInput();
                 _sprint.Changed += OnSprintChanged;
-                _crouch = new CrouchInput(_simulation.Stance.HasHeadroomToStand);
+                _crouch = new CrouchInput(_simulation.HasHeadroomToStand);
                 _crouch.Changed += OnCrouchInputChanged;
                 ResolveInputActions();
             }
@@ -570,7 +614,7 @@ namespace Fps.Net
             var wasCrouched = _serverState.IsCrouched;
             var wasGrounded = _serverState.IsGrounded;
             var previousCover = _serverState.Cover;
-            _serverState = _simulation.Step(_serverState, input);
+            _serverState = StepSimulation(_serverState, input);
             _serverYaw = input.Yaw;
             if (_serverState.IsCrouched != wasCrouched)
             {
@@ -826,12 +870,12 @@ namespace Fps.Net
         // 他人のプレイヤーの姿勢を表示する。変わったときだけ当ててログを出す
         private void ShowRemoteStance(int tick, bool crouched)
         {
-            if (_simulation.Stance.IsCrouched == crouched)
+            if (_stance.IsCrouched == crouched)
             {
                 return;
             }
 
-            _simulation.Stance.Apply(crouched);
+            _stance.Apply(crouched);
             Debug.Log(FormatStanceLog(OwnerClientId, tick, crouched), this);
         }
 

@@ -1,3 +1,4 @@
+using Fps.Core;
 using UnityEngine;
 
 namespace Fps.Net
@@ -104,6 +105,11 @@ namespace Fps.Net
         }
 
         /// <summary>移動入力と向きがすべて有限値か。ネットワークから受け取った値の検査に使う。</summary>
+        public CharacterMotorInput ToCore()
+        {
+            return new CharacterMotorInput(NetMath.ToNumerics(Move), Yaw, Sprint, Jump, Crouch, Downed, Cover, Aim, Dodge, VaultAllowed);
+        }
+
         public static bool IsValid(Vector2 move, float yaw)
         {
             return NetMath.IsFinite(move.x) && NetMath.IsFinite(move.y) && NetMath.IsFinite(yaw);

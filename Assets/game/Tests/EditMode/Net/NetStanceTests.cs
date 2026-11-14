@@ -159,17 +159,20 @@ namespace Fps.Net.Tests
         [Test]
         public void HeadroomIgnoresOtherPlayersButNotWalls()
         {
-            var player = CreatePlayer("Player", new Vector3(0f, 1f, 0f), withEyeAndBody: false);
-            var stance = NetStance.FromHierarchy(player, _crouchHeight);
-            stance.Apply(true);
+            var position = new Vector3(0f, 1f, 0f);
+            var crouched = new MotorState(position, Vector3.zero, true, true);
+            var player = CreatePlayer("Player", position, withEyeAndBody: false);
 
-            // 他のプレイヤーは予測するクライアントでは無効なので、サーバーでも数えない
+            // 他のプレイヤーは予測するクライアントに確定位置が無いので、サーバーでも世界に入れない
             CreatePlayer("Other", new Vector3(0f, 2.2f, 0f), withEyeAndBody: false);
-            Physics.SyncTransforms();
-            Assert.That(stance.HasHeadroomToStand(), Is.True);
+            var open = CreateSimulation(player);
+            open.Place(crouched);
+            Assert.That(open.HasHeadroomToStand(), Is.True);
 
             CreateCeiling(new Vector3(0f, 1.8f, 0f), new Vector3(3f, 0.4f, 3f));
-            Assert.That(stance.HasHeadroomToStand(), Is.False);
+            var covered = CreateSimulation(player);
+            covered.Place(crouched);
+            Assert.That(covered.HasHeadroomToStand(), Is.False);
         }
 
         [Test]
@@ -356,13 +359,10 @@ namespace Fps.Net.Tests
             }
         }
 
-        private static NetMotorSimulation CreateSimulation(CharacterController controller)
+        private NetMotorSimulation CreateSimulation(CharacterController controller)
         {
             // NetworkPlayerMotor の既定値と同じ
-            var motor = new PlayerMotor(new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f));
-            var stance = NetStance.FromHierarchy(controller, _crouchHeight);
-            return new NetMotorSimulation(
-                controller, motor, stance, NetworkPlayerMotor.TickSeconds, NetworkPlayerMotor.KillPlaneY);
+            return NetTestWorld.CreateSimulation(controller, new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f), _crouchHeight, _created);
         }
 
         private CharacterController CreatePlayer(string name, Vector3 position, bool withEyeAndBody)

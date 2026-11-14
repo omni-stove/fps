@@ -309,6 +309,9 @@ FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む (`-map` が無ければ `NetTest`)。作業ディレクトリの `server-data/`、
   無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
   ファイルは Unity の Editor から `make export-server-data` で書き出す。
+- クライアントと Unity のサーバー (Host を含む) も、プレイヤーの移動の当たりを同じ `.fpsmap` で取る (`NetMapWorld`)。
+  Editor では `server-data/maps/` を直接読み、ビルドには `MapCollisionBuildFiles` が `StreamingAssets/maps/` として入れる。
+  今のシーンの名前の `.fpsmap` が無ければ `[Net] map <マップ名> has no collision: ...` を出し、プレイヤーは動かない。
 - 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
 - SIGTERM と SIGINT (Ctrl+C) で「試合が終わってから止める」と同じ drain に入り、同じログを出す。
 - 承認は `ConnectRequestMessage` の版と鍵を Netcode の承認データと同じ判定に通すので、断ったときのログ

@@ -71,6 +71,51 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PrefabsReplaceOnlyTheirPartsWithoutColliders()
+        {
+            var torsoPrefab = PartPrefab("Armor");
+            var gunPrefab = PartPrefab("Carbine");
+            try
+            {
+                _mock.Prefabs = new PlayerMockBodyPrefabs(torsoPrefab, null, gunPrefab);
+                _mock.Build(_camera);
+
+                Assert.That(_mock.Torso.GetComponent<MeshFilter>(), Is.Null, "the torso is the prefab under an empty root");
+                Assert.That(_mock.Torso.Find("ArmorPrefab/Armor"), Is.Not.Null);
+                Assert.That(_mock.Head.GetComponent<MeshFilter>(), Is.Not.Null, "an empty slot keeps the placeholder sphere");
+                Assert.That(_mock.BodyGun.Find("GunBox/CarbinePrefab/Carbine"), Is.Not.Null);
+                Assert.That(_mock.ViewModelGun.Find("GunBox/CarbinePrefab/Carbine"), Is.Not.Null, "the same gun is used in first person");
+                Assert.That(_mock.BodyRoot.GetComponentsInChildren<Collider>(true), Is.Empty);
+                Assert.That(_mock.ViewModelRoot.GetComponentsInChildren<Collider>(true), Is.Empty);
+
+                Apply(PlayerActionConditions.Grounded, ViewMode.FirstPerson);
+                var armor = _mock.Torso.GetComponentInChildren<Renderer>();
+                Assert.That(armor.shadowCastingMode, Is.EqualTo(ShadowCastingMode.ShadowsOnly), "the prefab follows the view like the placeholder");
+                Assert.That(armor.sharedMaterial, Is.SameAs(torsoPrefab.GetComponentInChildren<Renderer>().sharedMaterial), "the prefab keeps its own material");
+
+                _mock.Prefabs = null;
+                _mock.Dismantle();
+                _mock.Build(_camera);
+                Assert.That(_mock.Torso.GetComponent<MeshFilter>(), Is.Not.Null, "removing the prefabs brings the placeholders back");
+                Assert.That(_mock.BodyGun.Find("GunBox").GetComponent<MeshFilter>(), Is.Not.Null);
+            }
+            finally
+            {
+                Object.DestroyImmediate(torsoPrefab);
+                Object.DestroyImmediate(gunPrefab);
+            }
+        }
+
+        private static GameObject PartPrefab(string partName)
+        {
+            var root = new GameObject(partName + "Prefab");
+            var model = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            model.name = partName;
+            model.transform.SetParent(root.transform, false);
+            return root;
+        }
+
+        [Test]
         public void BodyAndGunUseDistinctFlatColors()
         {
             _mock.Build(_camera);

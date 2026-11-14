@@ -37,6 +37,7 @@ namespace Fps.Editor
         public static string TpsRangePath => Folder + "/TpsRange.asset";
         public static string DominationPath => Folder + "/Domination.asset";
 
+        public const string DominationName = "Domination";
         public const string FreeForAllName = "FreeForAll";
         public const string KillConfirmedName = "KillConfirmed";
         public const string GunGameName = "GunGame";

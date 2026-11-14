@@ -445,6 +445,59 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ThePrefabsReplaceThePlaceholderFloorDummiesMockBodyAndGrenade()
+        {
+            var floorPrefab = new GameObject("Ground");
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ground.name = "Slab";
+            ground.transform.SetParent(floorPrefab.transform, false);
+            var dummyPrefab = new GameObject("Mannequin");
+            GameObject.CreatePrimitive(PrimitiveType.Cube).transform.SetParent(dummyPrefab.transform, false);
+            var gunPrefab = new GameObject("Carbine");
+            var grenadePrefab = new GameObject("Frag");
+            var mockBodyPrefabs = new PlayerMockBodyPrefabs(null, null, gunPrefab);
+
+            var host = new GameObject("Bootstrap-Prefabs");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.FloorPrefab = floorPrefab;
+                bootstrap.TargetDummyPrefab = dummyPrefab;
+                bootstrap.MockBodyPrefabs = mockBodyPrefabs;
+                bootstrap.GrenadePrefab = grenadePrefab;
+
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Floor.name, Is.EqualTo(GameBootstrap.FloorName));
+                Assert.That(world.Floor.GetComponent<MeshCollider>(), Is.Null, "no placeholder plane");
+                Assert.That(world.Floor.transform.localScale, Is.EqualTo(Vector3.one), "the prefab keeps its own size");
+                Assert.That(world.Floor.transform.Find("Slab").GetComponent<Collider>(), Is.Not.Null, "the floor keeps its collider to stand on");
+
+                foreach (var dummy in world.Targets)
+                {
+                    Assert.That(dummy.transform.Find(TargetDummy.VisualName), Is.Not.Null, dummy.name);
+                    Assert.That(dummy.transform.Find(TargetDummy.BodyName).GetComponent<Renderer>(), Is.Null, dummy.name);
+                }
+
+                Assert.That(world.Player.GetComponent<PlayerMockBody>().Prefabs, Is.SameAs(mockBodyPrefabs));
+                Assert.That(world.Grenades.GrenadePrefab, Is.SameAs(grenadePrefab));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(floorPrefab);
+                Object.DestroyImmediate(dummyPrefab);
+                Object.DestroyImmediate(gunPrefab);
+                Object.DestroyImmediate(grenadePrefab);
+            }
+        }
+
+        [Test]
         public void CreatesPlayerWithCharacterControllerOnly()
         {
             var player = _world.Player;

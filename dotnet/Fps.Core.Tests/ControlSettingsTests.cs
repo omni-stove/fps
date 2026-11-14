@@ -821,14 +821,15 @@ namespace Fps.Core.Tests
         [Test]
         public void WithLanguageRejectsUnknownLanguages()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.WithLanguage((GameLanguage)2));
-            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.FromJson("{}", (GameLanguage)2, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.WithLanguage(default));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.FromJson("{}", default, out _));
         }
 
-        [TestCase(GameLanguage.Japanese, "'language':'ja'")]
-        [TestCase(GameLanguage.English, "'language':'en'")]
-        public void RoundTripsTheLanguage(GameLanguage language, string written)
+        [TestCase("ja", "'language':'ja'")]
+        [TestCase("en", "'language':'en'")]
+        public void RoundTripsTheLanguage(string code, string written)
         {
+            var language = new GameLanguage(code);
             var settings = ControlSettings.Default.WithShowSubtitles(true).WithLanguage(language);
 
             // 読む側の既定の言語に引きずられず、保存した言語に戻る
@@ -840,10 +841,11 @@ namespace Fps.Core.Tests
             Assert.That(loaded, Is.EqualTo(settings));
         }
 
-        [TestCase(GameLanguage.Japanese)]
-        [TestCase(GameLanguage.English)]
-        public void ReadsVersionFiveWithTheGivenLanguageAndNoProblems(GameLanguage fallback)
+        [TestCase("ja")]
+        [TestCase("en")]
+        public void ReadsVersionFiveWithTheGivenLanguageAndNoProblems(string fallbackCode)
         {
+            var fallback = new GameLanguage(fallbackCode);
             var versionFive = Json(_validV2.Replace("'version':2", "'version':5", StringComparison.Ordinal)
                 .Replace(
                     "'effectsVolume':0}",

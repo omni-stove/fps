@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -6,7 +7,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// ガーディアンのリーダーの頭上に浮かぶ目印。<see cref="Target"/> の当たり判定の上端から <see cref="HeightAboveHead"/> 上に、
-    /// チームの色の菱形を回しながら出す。<see cref="GuardianRunner"/> が作り、リーダーが倒れたら隠す。
+    /// チームの色の菱形 (<see cref="GuardianRunner.LeaderMarkerPrefab"/> があればその形をチームの色に塗ったもの) を回しながら出す。
+    /// <see cref="GuardianRunner"/> が作り、リーダーが倒れたら隠す。
     /// </summary>
     /// <remarks>
     /// リーダーの子にしないのは、bot の拡縮や倒れたときの体の傾きを目印が受けないようにするため。毎フレーム位置だけを追う。
@@ -23,29 +25,68 @@ namespace Fps.Runtime
         public const float DefaultSize = 0.35f;
         public const float SpinDegreesPerSecond = 90f;
 
+        /// <summary>仮の菱形の傾き。立方体を頂点が上下に来るように傾ける。</summary>
+        public static readonly Quaternion PlaceholderTilt = Quaternion.Euler(45f, 0f, 45f);
+
+        private readonly List<Material> _materials = new List<Material>();
         private SideMember _target;
-        private Renderer _renderer;
-        private Material _material;
+        private Renderer[] _renderers = Array.Empty<Renderer>();
         private float _heightAboveHead = DefaultHeightAboveHead;
         private float _spin;
+        private Quaternion _tilt = PlaceholderTilt;
+        private bool _isPlaceholder = true;
         private Team? _viewerTeam = TeamColors.OfflineViewer;
         private bool _followsSettings;
 
         /// <summary>目印を出すリーダー。</summary>
         public SideMember Target => _target;
 
-        /// <summary>目印の色を塗った Renderer。</summary>
-        public Renderer Renderer => _renderer;
+        /// <summary>目印の色を塗った Renderer (プレハブから作ったときは最初の 1 つ)。無ければ null。</summary>
+        public Renderer Renderer => _renderers.Length > 0 ? _renderers[0] : null;
+
+        /// <summary>目印の色を塗った Renderer すべて。</summary>
+        public IReadOnlyList<Renderer> Renderers => _renderers;
 
         public float HeightAboveHead => _heightAboveHead;
 
+        /// <summary>プレハブが無く仮の菱形で作ったなら true。</summary>
+        public bool IsPlaceholder => _isPlaceholder;
+
         /// <summary>目印が見えているなら true。</summary>
-        public bool IsShown => _renderer != null && _renderer.enabled;
+        public bool IsShown
+        {
+            get
+            {
+                foreach (var markerRenderer in _renderers)
+                {
+                    if (markerRenderer != null && markerRenderer.enabled)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
 
         /// <summary>
-        /// target の頭上に出す目印を作る。シーンの直下に置き、当たり判定は持たせない (弾と移動を遮らないように)。
+        /// target の頭上に出す仮の菱形の目印を作る。シーンの直下に置き、当たり判定は持たせない (弾と移動を遮らないように)。
         /// </summary>
         public static GuardianLeaderMarker Create(SideMember target, float heightAboveHead = DefaultHeightAboveHead, float size = DefaultSize)
+        {
+            return Create(target, null, heightAboveHead, size);
+        }
+
+        /// <summary>
+        /// target の頭上に出す目印を作る。prefab があれば当たり判定を外して置き (大きさと向きはプレハブのまま、原点を目印の下端として
+        /// 頭上 heightAboveHead に置き、縦の軸で回す)、size は使わない。null なら仮の菱形を作る。
+        /// どちらも Renderer の材質を複製してチームの色に塗る。
+        /// </summary>
+        public static GuardianLeaderMarker Create(
+            SideMember target,
+            GameObject prefab,
+            float heightAboveHead = DefaultHeightAboveHead,
+            float size = DefaultSize)
         {
             if (target == null)
             {
@@ -62,21 +103,33 @@ namespace Fps.Runtime
                 throw new ArgumentOutOfRangeException(nameof(size), size, "size must be positive and finite");
             }
 
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = ObjectNamePrefix + target.name;
-            DestroySafely(go.GetComponent<Collider>());
-            go.transform.localScale = Vector3.one * size;
+            var markerName = ObjectNamePrefix + target.name;
+            GameObject go;
+            if (prefab != null)
+            {
+                go = VisualPrefab.Instantiate(prefab, null, markerName, stripColliders: true);
+            }
+            else
+            {
+                go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                go.name = markerName;
+                DestroySafely(go.GetComponent<Collider>());
+                go.transform.localScale = Vector3.one * size;
+            }
 
             var marker = go.AddComponent<GuardianLeaderMarker>();
             marker._target = target;
             marker._heightAboveHead = heightAboveHead;
-            marker._renderer = go.GetComponent<Renderer>();
-            marker._renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            marker._renderer.receiveShadows = false;
+            marker._isPlaceholder = prefab == null;
+            marker._tilt = prefab != null ? prefab.transform.localRotation : PlaceholderTilt;
+            marker._renderers = go.GetComponentsInChildren<Renderer>(true);
+            foreach (var markerRenderer in marker._renderers)
+            {
+                markerRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                markerRenderer.receiveShadows = false;
+                marker.CopyMaterials(markerRenderer);
+            }
 
-            // 共有のマテリアルを塗り替えると他のプリミティブまで色が変わるので、目印ごとに複製する。
-            marker._material = new Material(marker._renderer.sharedMaterial) { name = go.name };
-            marker._renderer.sharedMaterial = marker._material;
             marker.ApplyColor();
             AppliedControlSettings.Changed += marker.HandleSettingsChanged;
             marker._followsSettings = true;
@@ -107,12 +160,50 @@ namespace Fps.Runtime
             return ControlPointZone.ColorOf(side.TryGetTeam(out var team) ? team : (Team?)null, viewer);
         }
 
+        // 共有のマテリアルを塗り替えると他のプリミティブやプレハブの元の材質まで色が変わるので、目印ごとに複製する。
+        private void CopyMaterials(Renderer markerRenderer)
+        {
+            var shared = markerRenderer.sharedMaterials;
+            for (var i = 0; i < shared.Length; i++)
+            {
+                if (shared[i] == null)
+                {
+                    continue;
+                }
+
+                var copy = new Material(shared[i]) { name = name };
+                _materials.Add(copy);
+                shared[i] = copy;
+            }
+
+            markerRenderer.sharedMaterials = shared;
+        }
+
         private void ApplyColor()
         {
-            if (_material != null && _target != null)
+            if (_target == null)
             {
-                _material.color = ColorOf(_target.Side, _viewerTeam);
+                return;
             }
+
+            var color = ColorOf(_target.Side, _viewerTeam);
+            foreach (var material in _materials)
+            {
+                if (material != null)
+                {
+                    material.color = color;
+                }
+            }
+        }
+
+        private void DestroyMaterials()
+        {
+            foreach (var material in _materials)
+            {
+                DestroySafely(material);
+            }
+
+            _materials.Clear();
         }
 
         private void HandleSettingsChanged(ControlSettings settings)
@@ -135,9 +226,12 @@ namespace Fps.Runtime
         /// <summary>目印を見せるか隠す。</summary>
         public void SetShown(bool shown)
         {
-            if (_renderer != null)
+            foreach (var markerRenderer in _renderers)
             {
-                _renderer.enabled = shown;
+                if (markerRenderer != null)
+                {
+                    markerRenderer.enabled = shown;
+                }
             }
         }
 
@@ -163,21 +257,18 @@ namespace Fps.Runtime
                 top = center.y + FallbackHeadHeight;
             }
 
+            // 仮の菱形は中心が原点なので半分持ち上げる。プレハブは原点を下端とする。
+            var lift = _isPlaceholder ? transform.lossyScale.y * 0.5f : 0f;
             transform.SetPositionAndRotation(
-                new Vector3(center.x, top + _heightAboveHead + (transform.lossyScale.y * 0.5f), center.z),
-                Quaternion.Euler(45f, _spin, 45f));
+                new Vector3(center.x, top + _heightAboveHead + lift, center.z),
+                Quaternion.Euler(0f, _spin, 0f) * _tilt);
         }
 
         /// <summary>目印と複製したマテリアルを消す。Edit Mode では OnDestroy が呼ばれないので、マテリアルもここで消す。</summary>
         public void Remove()
         {
             StopFollowingSettings();
-            if (_material != null)
-            {
-                DestroySafely(_material);
-                _material = null;
-            }
-
+            DestroyMaterials();
             DestroySafely(gameObject);
         }
 
@@ -196,11 +287,7 @@ namespace Fps.Runtime
         private void OnDestroy()
         {
             StopFollowingSettings();
-            if (_material != null)
-            {
-                DestroySafely(_material);
-                _material = null;
-            }
+            DestroyMaterials();
         }
 
         private static void DestroySafely(UnityEngine.Object target)

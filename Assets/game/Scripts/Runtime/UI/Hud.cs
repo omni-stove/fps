@@ -211,6 +211,11 @@ namespace Fps.Runtime
             return GrenadeCountView.AttachTo(this);
         }
 
+        IAbilitySlots IHud.AttachAbilitySlots()
+        {
+            return AbilitySlotsView.AttachTo(this);
+        }
+
         IDominationHud IHud.AttachDomination()
         {
             return DominationView.AttachTo(this);
@@ -586,6 +591,13 @@ namespace Fps.Runtime
             if (grenades != null)
             {
                 grenades.SetAllowed(_visibility.Ammo);
+            }
+
+            // 能力の回数も持っているものの残りなので、弾数と一緒に出し入れする。
+            var abilities = GetComponent<AbilitySlotsView>();
+            if (abilities != null)
+            {
+                abilities.SetAllowed(_visibility.Ammo);
             }
         }
 

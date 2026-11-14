@@ -7,7 +7,7 @@ namespace Fps.Protocol
         /// メッセージの組み合わせの版。クライアントが <see cref="ConnectRequestMessage.ProtocolVersion"/> で送り、サーバーは違えば断る。
         /// 個々のメッセージの版 (<see cref="IMessage.Version"/>) だけだと、つないだ後に初めて読めない種類が届くまで食い違いに気付けないため。
         /// </summary>
-        public const ushort Version = 1;
+        public const ushort Version = 2;
 
         /// <summary>切断・拒否の理由 (<c>Fps.Core.DisconnectNotice</c> の符号) の最長のバイト数。</summary>
         public const int MaxReasonBytes = 128;

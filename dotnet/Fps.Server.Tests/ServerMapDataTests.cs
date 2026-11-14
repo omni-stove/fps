@@ -1,5 +1,6 @@
 using System.IO;
 using System.Numerics;
+using Fps.Core;
 using NUnit.Framework;
 
 namespace Fps.Server.Tests
@@ -35,7 +36,29 @@ namespace Fps.Server.Tests
             Assert.That(data.World.Raycast(new Vector3(0f, 5f, 0f), -Vector3.UnitY, 10f, ~0, out var hit), Is.True);
             Assert.That(hit.Point.Y, Is.EqualTo(0.5f).Within(1e-4f));
             Assert.That(data.Navigation.SamplePosition(new Vector3(0.2f, 0.5f, 0.2f), 1f, ~0, out _), Is.True);
-            Assert.That(data.LogLine, Does.StartWith("[Server] map NetArena01 colliders=1 navTriangles=1 navLinks=0 spawnPoints=none controlPoints=none from="));
+            Assert.That(data.LogLine, Does.StartWith("[Server] map NetArena01 colliders=1 navTriangles=1 navLinks=0 spawnPoints=none controlPoints=none ladders=0 from="));
+        }
+
+        [Test]
+        public void LoadsTheLaddersBesideTheCollision()
+        {
+            TestMaps.Write(_second.Path, "NetArena01", ladders: TestMaps.OneLadder());
+
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Ladders.Ladders, Has.Count.EqualTo(1));
+            Assert.That(data.Ladders.Ladders[0].Span.Bottom, Is.EqualTo(new Vector3(0f, 0.5f, 3f)));
+            Assert.That(data.LogLine, Does.Contain(" ladders=1 "));
+        }
+
+        [Test]
+        public void BrokenLaddersAreAnError()
+        {
+            var directory = TestMaps.Write(_second.Path, "NetArena01");
+            File.WriteAllText(Path.Combine(directory, "NetArena01" + NetMapLadders.Extension), "{ \"ladders\": [ { \"bottom\": [0, 0, 0] } ] }");
+
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.Contain("NetArena01.ladders.json"));
         }
 
         [Test]

@@ -34,7 +34,18 @@ namespace Fps.Net
         /// <param name="body">しゃがみで縮める見た目。本体の直下の子。null なら見た目は変えない。</param>
         /// <param name="crouchHeight">しゃがみのカプセルの高さ。<see cref="StanceGeometry"/> の条件に合わなければ ArgumentOutOfRangeException。</param>
         public NetStance(CharacterController controller, Transform eye, Transform body, float crouchHeight)
+            : this(controller, eye, body, crouchHeight, ProneSpec.Default)
         {
+        }
+
+        /// <summary>伏せの高さは prone の <see cref="ProneSpec.Height"/> を、カプセルが取れる高さに収めて使う (<see cref="NetMotorSettings.FitProneHeight"/>)。</summary>
+        public NetStance(CharacterController controller, Transform eye, Transform body, float crouchHeight, ProneSpec prone)
+        {
+            if (prone == null)
+            {
+                throw new ArgumentNullException(nameof(prone));
+            }
+
             if (controller == null)
             {
                 throw new ArgumentNullException(nameof(controller));
@@ -60,7 +71,13 @@ namespace Fps.Net
             _standingBodyPosition = body != null ? body.localPosition : Vector3.zero;
             _standingBodyScale = body != null ? body.localScale : Vector3.one;
             _standingBodyRotation = body != null ? body.localRotation : Quaternion.identity;
-            Geometry = new StanceGeometry(controller.height, _standingCenter.y, _standingEyeLocal.y, crouchHeight, controller.radius);
+            Geometry = new StanceGeometry(
+                controller.height,
+                _standingCenter.y,
+                _standingEyeLocal.y,
+                crouchHeight,
+                NetMotorSettings.FitProneHeight(prone.Height, crouchHeight, controller.radius),
+                controller.radius);
         }
 
         /// <summary>
@@ -82,10 +99,13 @@ namespace Fps.Net
         public StanceGeometry Geometry { get; }
 
         /// <summary>今当てている姿勢がしゃがみか。</summary>
-        public bool IsCrouched { get; private set; }
+        public bool IsCrouched => Stance == PlayerStance.Crouching;
+
+        /// <summary>今当てている姿勢。</summary>
+        public PlayerStance Stance { get; private set; }
 
         /// <summary>今の姿勢の寸法。</summary>
-        public StanceShape Current => Geometry.Shape(IsCrouched);
+        public StanceShape Current => Geometry.Shape(Stance);
 
         /// <summary>しゃがみで下げる目。無ければ null。</summary>
         public Transform Eye => _eye;
@@ -102,7 +122,12 @@ namespace Fps.Net
         /// </summary>
         public void Apply(bool crouched)
         {
-            var shape = Geometry.Shape(crouched);
+            Apply(crouched ? PlayerStance.Crouching : PlayerStance.Standing);
+        }
+
+        public void Apply(PlayerStance stance)
+        {
+            var shape = Geometry.Shape(stance);
             _controller.height = shape.Height;
             _controller.center = new Vector3(_standingCenter.x, shape.CenterY, _standingCenter.z);
 
@@ -111,7 +136,7 @@ namespace Fps.Net
                 _eye.position = _root.TransformPoint(new Vector3(_standingEyeLocal.x, shape.EyeY, _standingEyeLocal.z));
             }
 
-            IsCrouched = crouched;
+            Stance = stance;
             ApplyBody();
         }
 
@@ -150,7 +175,7 @@ namespace Fps.Net
                 return;
             }
 
-            var shape = Geometry.Shape(IsCrouched);
+            var shape = Geometry.Shape(Stance);
             _body.localRotation = _standingBodyRotation;
             _body.localPosition = new Vector3(
                 _standingBodyPosition.x, _standingBodyPosition.y + (shape.CenterY - standing.CenterY), _standingBodyPosition.z);

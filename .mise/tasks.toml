@@ -54,7 +54,7 @@ run = [
 ]
 
 [export-server-data]
-description = "Write the collision and the NavMesh with its links (ladders) of every map selectable with -map to server-data/maps/<map>.fpsmap and <map>.fpsnav with the Unity editor in batch mode via Fps.Editor.MapCollisionExporter.Export, removing .fpsmap and .fpsnav files of maps no longer listed (close the Editor first). Commit the result"
+description = "Write the collision, the NavMesh with its links and the ladders of every map selectable with -map to server-data/maps/<map>.fpsmap, <map>.fpsnav and <map>.ladders.json with the Unity editor in batch mode via Fps.Editor.MapCollisionExporter.Export, removing .fpsmap, .fpsnav and .ladders.json files of maps no longer listed (close the Editor first). Commit the result"
 run = "unity --non-interactive run . -- -executeMethod Fps.Editor.MapCollisionExporter.Export"
 
 [export-server-rules]

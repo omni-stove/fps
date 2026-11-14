@@ -9,7 +9,7 @@ namespace Fps.Protocol
     /// </summary>
     public sealed class InputMessage : IMessage
     {
-        public const byte CurrentVersion = 1;
+        public const byte CurrentVersion = 2;
 
         /// <summary>1 つに載せる tick の最大数。</summary>
         public const int MaxFrames = 16;

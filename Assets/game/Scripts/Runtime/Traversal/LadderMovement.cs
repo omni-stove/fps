@@ -24,10 +24,10 @@ namespace Fps.Runtime.Traversal
         public const int MovementPriority = 200;
 
         /// <summary>上の端・下の端で降りた足元を床から浮かせて置く高さ (m)。置いた Tick の <see cref="LandingDrop"/> で床に着く。</summary>
-        public const float LandingLift = 0.02f;
+        public const float LandingLift = LadderClimb.LandingLift;
 
         /// <summary>降りた Tick に下へ動かす量 (m)。床に触れさせて接地にする。</summary>
-        public const float LandingDrop = 0.1f;
+        public const float LandingDrop = LadderClimb.LandingDrop;
 
         private LadderRule _rule = LadderRule.Off;
         private PlayerController _mover;

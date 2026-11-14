@@ -21,7 +21,8 @@ namespace Fps.Server
             ArgumentNullException.ThrowIfNull(rules);
             var motor = rules.Motor;
             var defaults = ServerMotorSettings.Default;
-            return new ServerMotorSettings(motor.Motor, motor.Stance, motor.Mover, rules.Rules, defaults.KillPlaneY, defaults.SpawnPosition);
+            return new ServerMotorSettings(
+                motor.Motor, motor.Stance, motor.Mover, motor.Prone, rules.Rules, defaults.KillPlaneY, defaults.SpawnPosition);
         }
 
         /// <param name="launch">起動設定。</param>

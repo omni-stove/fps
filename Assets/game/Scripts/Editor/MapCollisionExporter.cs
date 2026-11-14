@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using SceneLadder = Fps.Runtime.Traversal.Ladder;
 using NumericsQuaternion = System.Numerics.Quaternion;
 using NumericsVector3 = System.Numerics.Vector3;
 
@@ -160,6 +161,12 @@ namespace Fps.Editor
                     written.Add(navMeshPath);
                     Debug.Log(NavMeshExporter.LogTag + " wrote " + navMeshPath + " from " + scenePath + " (" + navMesh.Vertices.Count
                         + " vertices, " + navMesh.Triangles.Count + " triangles, " + navMesh.Links.Count + " links)");
+
+                    var ladders = CollectLadders(scene.GetRootGameObjects());
+                    var laddersPath = Path.Combine(outputDirectory, MapName(scenePath) + NetMapLadders.Extension);
+                    WriteText(laddersPath, NetMapLadders.Write(ladders));
+                    written.Add(laddersPath);
+                    Debug.Log(LogTag + " wrote " + laddersPath + " from " + scenePath + " (" + ladders.Ladders.Count + " ladders)");
                 }
             }
             finally
@@ -192,6 +199,66 @@ namespace Fps.Editor
             File.Move(temporary, path);
         }
 
+        public static void WriteText(string path, string text)
+        {
+            // 書きかけのファイルをサーバーやテストが読まないよう、隣に書いてから置き換える
+            var temporary = path + ".tmp";
+            File.WriteAllText(temporary, text);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+
+            File.Move(temporary, path);
+        }
+
+        /// <summary>
+        /// 有効なはしごをシーンの並び順で集める。スナップショットははしごをこの並びの番号で指すので、サーバーとクライアントは同じファイルを読む。
+        /// 無効なはしごはプレイ中につかまれない (Ladder.Enabled に載らない) ので書き出さない。
+        /// </summary>
+        public static NetMapLadders CollectLadders(IReadOnlyList<GameObject> roots)
+        {
+            if (roots == null)
+            {
+                throw new ArgumentNullException(nameof(roots));
+            }
+
+            var ladders = new List<MapLadder>();
+            var invalid = new List<string>();
+            foreach (var root in roots)
+            {
+                if (root == null)
+                {
+                    continue;
+                }
+
+                foreach (var ladder in root.GetComponentsInChildren<SceneLadder>(false))
+                {
+                    if (!ladder.enabled)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        ladders.Add(new MapLadder(ladder.Span, ladder.CreateSpec()));
+                    }
+                    catch (ArgumentException e)
+                    {
+                        invalid.Add(PathOf(ladder.transform) + " (" + e.Message + ")");
+                    }
+                }
+            }
+
+            // 書き出さないと、サーバーとクライアントの予測でだけつかまれないはしごになる
+            if (invalid.Count > 0)
+            {
+                throw new InvalidOperationException(LogTag + " these ladders have invalid settings: " + string.Join(", ", invalid));
+            }
+
+            return new NetMapLadders(ladders);
+        }
+
         public static WorldMap ReadFile(string path)
         {
             using (var stream = File.OpenRead(path))
@@ -221,6 +288,7 @@ namespace Fps.Editor
 
             var files = new List<string>(Directory.GetFiles(outputDirectory, "*" + FileExtension));
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NavMeshFile.Extension));
+            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapLadders.Extension));
             foreach (var path in files)
             {
                 if (kept.Contains(Path.GetFullPath(path)))

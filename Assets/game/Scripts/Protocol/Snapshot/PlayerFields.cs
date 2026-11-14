@@ -9,7 +9,7 @@ namespace Fps.Protocol
         None = 0,
         /// <summary>チームと Bot か。</summary>
         Identity = 1 << 0,
-        /// <summary>位置・速度・向き・接地・しゃがみ・覗き込み。</summary>
+        /// <summary>位置・速度・向き・接地・しゃがみ・伏せ・覗き込み。</summary>
         Motion = 1 << 1,
         Cover = 1 << 2,
         Dodge = 1 << 3,
@@ -22,6 +22,10 @@ namespace Fps.Protocol
         /// <summary>キル・デス・最後に倒した相手。</summary>
         Score = 1 << 8,
         SpawnProtection = 1 << 9,
-        All = (1 << 10) - 1,
+        /// <summary>伏せたいか・飛び込み (姿勢そのものは <see cref="Motion"/>)。</summary>
+        Prone = 1 << 10,
+        /// <summary>はしごの上り下りと、次につかまれるまでの待ち。</summary>
+        Ladder = 1 << 11,
+        All = (1 << 12) - 1,
     }
 }

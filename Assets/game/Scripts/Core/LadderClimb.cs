@@ -15,6 +15,12 @@ namespace Fps.Core
         /// <summary>前後の入力の大きさがこれ未満なら、押していないとみなす。</summary>
         public const float InputDeadZone = 0.1f;
 
+        /// <summary>上の端・下の端で降りた足元を床から浮かせて置く高さ (m)。置いた Tick の <see cref="LandingDrop"/> で床に着く。</summary>
+        public const float LandingLift = 0.02f;
+
+        /// <summary>降りた Tick に下へ動かす量 (m)。床に触れさせて接地にする。</summary>
+        public const float LandingDrop = 0.1f;
+
         private bool _latchUntilReleased;
         private int _latchedDownSign;
 
@@ -69,6 +75,28 @@ namespace Fps.Core
 
         /// <summary>前後の入力を読み替えているか (上の端からつかまり、まだ入力を離していない)。</summary>
         public bool IsInputLatched => _latchUntilReleased;
+
+        /// <summary>読み替えている入力の向き (最初に押した向きの符号)。読み替えていないか、まだ押していなければ 0。</summary>
+        public int LatchedDownSign => _latchUntilReleased ? _latchedDownSign : 0;
+
+        /// <summary>
+        /// 予測の巻き戻しとサーバーの tick の間で、写した途中の中身 (<see cref="Height"/>・<see cref="IsInputLatched"/>・<see cref="LatchedDownSign"/>) から作り直す。
+        /// 同じ中身から同じ入力で <see cref="Step"/> すれば同じ結果になる。height は 0 以上 span の高さ以下に丸め、latchedDownSign は -1・0・1 のどれか。
+        /// </summary>
+        public static LadderClimb Resume(
+            LadderSpan span, LadderSpec spec, LadderEntry entry, float height, bool inputLatched, int latchedDownSign)
+        {
+            if (latchedDownSign < -1 || latchedDownSign > 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(latchedDownSign), latchedDownSign, "latchedDownSign must be -1, 0 or 1");
+            }
+
+            var climb = new LadderClimb(span, spec, entry, height);
+            climb.Height = Clamp(height, 0f, span.Height);
+            climb._latchUntilReleased = inputLatched;
+            climb._latchedDownSign = inputLatched ? latchedDownSign : 0;
+            return climb;
+        }
 
         /// <summary>
         /// 1 Tick 進める。jumpPressed なら高さを変えずに <see cref="LadderOutcome.JumpOff"/>。

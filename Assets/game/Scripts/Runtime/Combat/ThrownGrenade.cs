@@ -304,7 +304,7 @@ namespace Fps.Runtime
             var thrower = _thrower;
             using (CombatEvents.Attribute(thrower, GrenadeThrower.WeaponId))
             {
-                target.TakeDamage(damage, center);
+                target.TakeDamage(damage, center, target.AimPoint - center, DamageKind.Explosion);
             }
 
             killedTarget = target.IsDead;

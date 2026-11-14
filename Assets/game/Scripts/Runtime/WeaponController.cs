@@ -721,7 +721,7 @@ namespace Fps.Runtime
 
             using (CombatEvents.Attribute(shooter, weapon.Spec.Id))
             {
-                if (TryApplyHit(hit.collider, hit.distance, weapon.Spec.Damage, weapon.Spec.Falloff, this, origin, out var result)
+                if (TryApplyHit(hit.collider, hit.distance, weapon.Spec.Damage, weapon.Spec.Falloff, this, origin, direction, out var result)
                     && result.WasAlive)
                 {
                     // オフラインで WeaponController を持つのは手元のプレイヤーだけなので、ここが撃った本人のクライアントになる。
@@ -841,15 +841,17 @@ namespace Fps.Runtime
         /// <param name="falloff">距離減衰の設定。</param>
         /// <param name="context">ログの文脈にするオブジェクト。null 可。</param>
         /// <param name="sourcePosition">撃った者の位置。撃たれた敵がこの方向へ向かう。分からなければ null。</param>
+        /// <param name="direction">弾の進む向き。分からなければ null。</param>
         public static bool TryApplyHit(
             Collider collider,
             float distance,
             int baseDamage,
             DamageFalloff falloff,
             UnityEngine.Object context = null,
-            Vector3? sourcePosition = null)
+            Vector3? sourcePosition = null,
+            Vector3? direction = null)
         {
-            return TryApplyHit(collider, distance, baseDamage, falloff, context, sourcePosition, out _);
+            return TryApplyHit(collider, distance, baseDamage, falloff, context, sourcePosition, direction, out _);
         }
 
         private static bool TryApplyHit(
@@ -859,6 +861,7 @@ namespace Fps.Runtime
             DamageFalloff falloff,
             UnityEngine.Object context,
             Vector3? sourcePosition,
+            Vector3? direction,
             out AppliedHit result)
         {
             result = default;
@@ -881,7 +884,7 @@ namespace Fps.Runtime
             }
 
             var wasAlive = !owner.IsDead;
-            var damage = hitbox.ApplyHit(baseDamage, distance, falloff, sourcePosition);
+            var damage = hitbox.ApplyHit(baseDamage, distance, falloff, sourcePosition, direction);
             Debug.Log($"[Combat] hit zone={hitbox.Zone} dmg={damage}", context != null ? context : hitbox);
             result = new AppliedHit(damage, hitbox.Zone, wasAlive, wasAlive && owner.IsDead);
             return true;

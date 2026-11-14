@@ -338,7 +338,27 @@ namespace Fps.Runtime
                 return new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
             }
 
-            return transform.position;
+            // 補間表示の他人は CharacterController が無効で bounds が当てにならないので、寸法から下端を求める
+            var scaleY = Mathf.Abs(transform.lossyScale.y);
+            var position = transform.position;
+            if (body is CharacterController controller)
+            {
+                position.y += (controller.center.y - (controller.height * 0.5f)) * scaleY;
+            }
+            else if (body is CapsuleCollider capsule)
+            {
+                position.y += (capsule.center.y - (capsule.height * 0.5f)) * scaleY;
+            }
+            else if (body is BoxCollider box)
+            {
+                position.y += (box.center.y - (box.size.y * 0.5f)) * scaleY;
+            }
+            else if (body is SphereCollider sphere)
+            {
+                position.y += (sphere.center.y - sphere.radius) * scaleY;
+            }
+
+            return position;
         }
 
         /// <summary>この画面で操作しているキャラか (<see cref="Damageable.IsLocalPlayer"/> / <see cref="ICharacterHurtSource.IsLocalPlayer"/>)。</summary>

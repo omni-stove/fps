@@ -58,6 +58,29 @@ namespace Fps.Net
         /// <summary>乗り越えていない。</summary>
         public static NetVaultState None => default;
 
+        public static NetVaultState FromCore(CharacterVaultState state)
+        {
+            if (!state.IsVaulting)
+            {
+                return None;
+            }
+
+            var vault = default(NetVaultState);
+            vault._active = true;
+            vault._rise = NetMath.ToUnity(state.Rise);
+            vault._cross = NetMath.ToUnity(state.Cross);
+            vault._land = NetMath.ToUnity(state.Land);
+            vault._elapsed = state.Elapsed;
+            return vault;
+        }
+
+        public CharacterVaultState ToCore()
+        {
+            return _active
+                ? CharacterVaultState.FromPoints(NetMath.ToNumerics(_rise), NetMath.ToNumerics(_cross), NetMath.ToNumerics(_land), _elapsed)
+                : CharacterVaultState.None;
+        }
+
         public bool IsVaulting => _active;
 
         /// <summary>始めてからの秒数。乗り越えていなければ 0。</summary>

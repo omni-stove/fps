@@ -84,14 +84,14 @@ namespace Fps.Net
             }
         }
 
-        /// <summary>体の半径 (m、本体の拡大を含む)。生成前で設定が不正なら CharacterController の値、それも無ければ 0。</summary>
+        /// <summary>体の半径 (m)。生成前で設定が不正なら CharacterController の値、それも無ければ 0。</summary>
         public float BodyRadius
         {
             get
             {
                 if (_simulation != null)
                 {
-                    return _simulation.CoverSensor.BodyRadius;
+                    return _simulation.BodyRadius;
                 }
 
                 return _controller != null ? _controller.radius : 0f;

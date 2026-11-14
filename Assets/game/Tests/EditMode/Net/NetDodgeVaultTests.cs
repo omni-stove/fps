@@ -500,13 +500,10 @@ namespace Fps.Net.Tests
             return new SimulationPair(start, CreateSimulation(predicted), CreateSimulation(server));
         }
 
-        private static NetMotorSimulation CreateSimulation(CharacterController controller)
+        private NetMotorSimulation CreateSimulation(CharacterController controller)
         {
             // NetworkPlayerMotor の既定値と同じ
-            var motor = new PlayerMotor(new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f));
-            var stance = NetStance.FromHierarchy(controller, _crouchHeight);
-            return new NetMotorSimulation(
-                controller, motor, stance, NetworkPlayerMotor.TickSeconds, NetworkPlayerMotor.KillPlaneY, Physics.DefaultRaycastLayers);
+            return NetTestWorld.CreateSimulation(controller, new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f), _crouchHeight, _created);
         }
 
         private CharacterController CreatePlayer(string name, Vector3 position)

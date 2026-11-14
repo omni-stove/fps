@@ -1,3 +1,4 @@
+using Fps.Core;
 using UnityEngine;
 
 namespace Fps.Net
@@ -60,6 +61,31 @@ namespace Fps.Net
         }
 
         /// <summary>回避の最中か。</summary>
+
+        public static MotorState FromCore(CharacterMotorState state)
+        {
+            return new MotorState(
+                NetMath.ToUnity(state.Position),
+                NetMath.ToUnity(state.Velocity),
+                state.IsGrounded,
+                state.IsCrouched,
+                NetCoverState.FromCore(state.Cover),
+                new NetDodgeState(state.Dodge),
+                NetVaultState.FromCore(state.Vault));
+        }
+
+        public CharacterMotorState ToCore()
+        {
+            return new CharacterMotorState(
+                NetMath.ToNumerics(Position),
+                NetMath.ToNumerics(Velocity),
+                IsGrounded,
+                IsCrouched,
+                Cover.ToCore(),
+                Dodge.Snapshot,
+                Vault.ToCore());
+        }
+
         public bool IsDodging => Dodge.IsRolling;
 
         /// <summary>乗り越えの最中か。</summary>

@@ -6,18 +6,13 @@ namespace Fps.Net
 {
     /// <summary>
     /// ネット対戦のプレイヤー 1 人の姿勢 (立ち・しゃがみ)。<see cref="StanceGeometry"/> の寸法を CharacterController の height / center、
-    /// 目 (<see cref="NetPlayer.ViewName"/>)、見た目 (<see cref="BodyName"/>) に当て、頭上に立ち上がる余地があるかを調べる。
+    /// 目 (<see cref="NetPlayer.ViewName"/>)、見た目 (<see cref="BodyName"/>) に当てる。
     /// <see cref="NetworkPlayerMotor"/> の予測・サーバー・補間表示と、<see cref="HitboxRewinder"/> の巻き戻しが同じものを使う。
     /// </summary>
     public sealed class NetStance
     {
         /// <summary>しゃがみで縦に縮める見た目 (MeshRenderer) の子 GameObject の名前。本体の直下に置く。</summary>
         public const string BodyName = "Body";
-
-        // 自分のコライダーを除いて頭上の障害物を探すための一時バッファ。毎 tick の確保を避ける。サーバーのメインスレッドでだけ使う
-        private const int _maxOverlapHits = 16;
-
-        private static readonly Collider[] _overlapBuffer = new Collider[_maxOverlapHits];
 
         private readonly CharacterController _controller;
         private readonly Transform _root;
@@ -161,49 +156,6 @@ namespace Fps.Net
                 _standingBodyPosition.x, _standingBodyPosition.y + (shape.CenterY - standing.CenterY), _standingBodyPosition.z);
             _body.localScale = new Vector3(
                 _standingBodyScale.x, _standingBodyScale.y * (shape.Height / standing.Height), _standingBodyScale.z);
-        }
-
-        /// <summary>
-        /// 立った高さのカプセルが、自分とプレイヤー (CharacterController) 以外のコライダー (トリガーを除く) に重ならないか。
-        /// 床や横の壁に触れているだけで塞がっていると見なさないよう、カプセルを skinWidth だけ細くして調べる。
-        /// </summary>
-        /// <remarks>
-        /// 他のプレイヤーを数えないのは、予測するクライアントでは他人の CharacterController が無効 (補間表示だけ) で、
-        /// サーバーと同じ答えにならず、しゃがみが毎回食い違って巻き戻されるため。プレイヤー同士は移動でも衝突させていない。
-        /// </remarks>
-        public bool HasHeadroomToStand()
-        {
-            return IsStandingClear(Vector3.zero);
-        }
-
-        /// <summary>
-        /// 立った高さのカプセルを今の位置から offset (ワールド、m) だけずらした所に置いたとき、<see cref="HasHeadroomToStand"/> と同じ規則で
-        /// 何にも重ならないか。乗り越えの軌跡の上を体が通れるかの検査 (<see cref="NetVaultSensor"/>) に使う。
-        /// </summary>
-        public bool IsStandingClear(Vector3 offset)
-        {
-            Geometry.SphereCenters(Geometry.Standing, out var bottomY, out var topY);
-            var scale = _root.lossyScale;
-            var radius = Geometry.Radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
-            var margin = Mathf.Min(_controller.skinWidth, radius * 0.5f);
-            var bottom = _root.TransformPoint(new Vector3(_standingCenter.x, bottomY, _standingCenter.z)) + offset;
-            var top = _root.TransformPoint(new Vector3(_standingCenter.x, topY, _standingCenter.z)) + offset;
-
-            var count = Physics.OverlapCapsuleNonAlloc(
-                bottom, top, radius - margin, _overlapBuffer, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-            var blocked = false;
-            for (var i = 0; i < count; i++)
-            {
-                var hit = _overlapBuffer[i];
-                if (hit != null && !hit.transform.IsChildOf(_root) && !(hit is CharacterController))
-                {
-                    blocked = true;
-                    break;
-                }
-            }
-
-            Array.Clear(_overlapBuffer, 0, count);
-            return !blocked;
         }
     }
 }

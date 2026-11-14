@@ -17,12 +17,12 @@ namespace Fps.Editor
         public const string MenuPath = "Fps/Net/Export Server Data";
         public const string LogTag = "[MapCollision]";
         public const string ScenesArgument = "-mapScenes";
-        public const string OutputFolder = "server-data/maps";
-        public const string FileExtension = ".fpsmap";
+        public const string OutputFolder = MapCollisionFiles.ServerDataFolder;
+        public const string FileExtension = FpsMapFile.Extension;
 
         private static Func<IReadOnlyList<string>> _mapScenes;
 
-        public static string OutputDirectory => Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? ".", OutputFolder);
+        public static string OutputDirectory => MapCollisionFiles.ServerDataDirectory;
 
         // マップの一覧はゲーム (取り込んだサンプルなど) が持つので、キットはその読み込み時に渡してもらう。
         // 渡す側はシーンが無ければ作ってから一覧を返してよい。

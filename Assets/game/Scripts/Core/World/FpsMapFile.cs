@@ -9,6 +9,8 @@ namespace Fps.Core
     {
         public const ushort Version = 1;
 
+        public const string Extension = ".fpsmap";
+
         private static readonly byte[] _magic = { (byte)'F', (byte)'P', (byte)'S', (byte)'M' };
 
         private const int _colliderHeaderSize = 1 + 4 + 1 + 4;

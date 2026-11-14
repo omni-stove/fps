@@ -9,6 +9,12 @@ namespace Fps.Core.Tests
     {
         private const float _tolerance = 1e-4f;
 
+        private static readonly float[] _zeroOne = { 0f, 1f };
+        private static readonly float[] _zeroTwo = { 0f, 2f };
+        private static readonly float[] _zeroOnly = { 0f };
+        private static readonly float[] _halfOne = { 0.5f, 1f };
+        private static readonly float[] _zeroZero = { 0f, 0f };
+
         [Test]
         public void BufferCapturesTheLastSecondsAndInterpolatesTheStart()
         {
@@ -136,7 +142,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ClipClampsSamplesAndRejectsBadOffsets()
         {
-            var clip = new KillCamClip(new[] { 0f, 1f }, new[] { Pose(0, 0f), Pose(10, 0f) });
+            var clip = new KillCamClip(_zeroOne, new[] { Pose(0, 0f), Pose(10, 0f) });
 
             Assert.That(clip.Sample(-1f).Eye.X, Is.EqualTo(0f));
             Assert.That(clip.Sample(float.NaN).Eye.X, Is.EqualTo(0f));
@@ -144,9 +150,9 @@ namespace Fps.Core.Tests
             Assert.That(clip.Sample(0.25f).Eye.X, Is.EqualTo(2.5f).Within(_tolerance));
 
             Assert.Throws<ArgumentNullException>(() => new KillCamClip(null, new KillCamPose[0]));
-            Assert.Throws<ArgumentException>(() => new KillCamClip(new[] { 0f }, new KillCamPose[0]));
-            Assert.Throws<ArgumentException>(() => new KillCamClip(new[] { 0.5f, 1f }, new[] { Pose(0, 0f), Pose(1, 0f) }));
-            Assert.Throws<ArgumentException>(() => new KillCamClip(new[] { 0f, 0f }, new[] { Pose(0, 0f), Pose(1, 0f) }));
+            Assert.Throws<ArgumentException>(() => new KillCamClip(_zeroOnly, new KillCamPose[0]));
+            Assert.Throws<ArgumentException>(() => new KillCamClip(_halfOne, new[] { Pose(0, 0f), Pose(1, 0f) }));
+            Assert.Throws<ArgumentException>(() => new KillCamClip(_zeroZero,new[] { Pose(0, 0f), Pose(1, 0f) }));
             Assert.Throws<InvalidOperationException>(() => KillCamClip.Empty.Sample(0f));
             Assert.That(KillCamClip.Empty.IsEmpty, Is.True);
         }
@@ -223,7 +229,7 @@ namespace Fps.Core.Tests
         [Test]
         public void PlaybackFinishesOnceAtTheEndAtTheGivenSpeed()
         {
-            var playback = new KillCamPlayback(new KillCamClip(new[] { 0f, 2f }, new[] { Pose(0, 0f), Pose(2, 0f) }));
+            var playback = new KillCamPlayback(new KillCamClip(_zeroTwo,new[] { Pose(0, 0f), Pose(2, 0f) }));
 
             Assert.That(playback.IsFinished, Is.False);
             Assert.That(playback.Advance(1f, 0.5f), Is.False);
@@ -250,7 +256,7 @@ namespace Fps.Core.Tests
         [Test]
         public void PlaybackRejectsInvalidTimeAndSpeed()
         {
-            var playback = new KillCamPlayback(new KillCamClip(new[] { 0f, 1f }, new[] { Pose(0, 0f), Pose(1, 0f) }));
+            var playback = new KillCamPlayback(new KillCamClip(_zeroOne,new[] { Pose(0, 0f), Pose(1, 0f) }));
 
             Assert.Throws<ArgumentOutOfRangeException>(() => playback.Advance(-1f, 1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => playback.Advance(float.NaN, 1f));

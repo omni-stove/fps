@@ -7,5 +7,6 @@ namespace Fps.Core
         Bullet,
         Explosion,
         Melee,
+        Charge,
     }
 }

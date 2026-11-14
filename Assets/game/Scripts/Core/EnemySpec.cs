@@ -49,6 +49,10 @@ namespace Fps.Core
 
         public SniperSpec Sniper { get; }
 
+        public ChargerSpec Charger { get; }
+
+        public BomberSpec Bomber { get; }
+
         public const float DefaultCoverHideSeconds = 1.5f;
         public const float DefaultCoverPeekSeconds = 2f;
         public const float DefaultCoverHealthFraction = 0.5f;
@@ -67,6 +71,8 @@ namespace Fps.Core
         /// <param name="archetype">敵の種類。</param>
         /// <param name="shield">盾持ちの値。null なら既定値。</param>
         /// <param name="sniper">狙撃兵の値。null なら既定値。</param>
+        /// <param name="charger">突進兵の値。null なら既定値。</param>
+        /// <param name="bomber">自爆兵の値。null なら既定値。</param>
         /// <param name="staggerResistance">怯みにくさ (<see cref="StaggerJudge.Threshold"/>・<see cref="StaggerJudge.Duration"/>)。0 以上の有限値。</param>
         public EnemySpec(
             float sightRange,
@@ -83,6 +89,8 @@ namespace Fps.Core
             EnemyArchetype archetype = EnemyArchetype.Rifleman,
             ShieldSpec shield = null,
             SniperSpec sniper = null,
+            ChargerSpec charger = null,
+            BomberSpec bomber = null,
             float staggerResistance = 0f)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
@@ -133,6 +141,8 @@ namespace Fps.Core
             Archetype = archetype;
             Shield = shield ?? ShieldSpec.Default;
             Sniper = sniper ?? SniperSpec.Default;
+            Charger = charger ?? ChargerSpec.Default;
+            Bomber = bomber ?? BomberSpec.Default;
             StaggerResistance = staggerResistance;
         }
 

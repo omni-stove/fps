@@ -17,5 +17,11 @@ namespace Fps.Core
 
         /// <summary>照準の先に届く距離のものが無い。</summary>
         NoTarget,
+
+        TooSoon,
+
+        InvalidAim,
+
+        Remote,
     }
 }

@@ -1,0 +1,10 @@
+{
+  "squad.reply.line": "{0}: {1}",
+  "squad.reply.Hold": "Copy, holding there",
+  "squad.reply.Attack": "Copy, engaging that one",
+  "squad.reply.Follow": "Copy, right behind you",
+  "squad.reply.targetDown": "Target down, regrouping",
+  "squad.marker.Hold": "Hold",
+  "squad.marker.Attack": "Attack",
+  "squad.marker.Follow": "Follow"
+}

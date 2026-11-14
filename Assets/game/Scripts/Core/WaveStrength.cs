@@ -41,6 +41,8 @@ namespace Fps.Core
                 spec.Archetype,
                 spec.Shield,
                 spec.Sniper,
+                spec.Charger,
+                spec.Bomber,
                 spec.StaggerResistance);
         }
 

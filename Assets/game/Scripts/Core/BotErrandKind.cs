@@ -14,5 +14,14 @@ namespace Fps.Core
 
         /// <summary>拾える物を取りに行く。</summary>
         Collect,
+
+        /// <summary>分隊の指示: 指された場所へ行き、そこで守る (撃たれたら反撃はするが、追って離れない)。</summary>
+        Hold,
+
+        /// <summary>分隊の指示: 指された敵を狙う。見えなければその敵の居場所へ向かう。</summary>
+        Attack,
+
+        /// <summary>分隊の指示: 指示した人に付いていく。</summary>
+        Follow,
     }
 }

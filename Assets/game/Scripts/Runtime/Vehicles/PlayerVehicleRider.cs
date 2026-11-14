@@ -186,6 +186,17 @@ namespace Fps.Runtime
 
         private void Update()
         {
+            if (!ReferenceEquals(_seat, null) && _seat == null)
+            {
+                // 座席ごと消えて降ろしてもらえなかったときは、その場で降りたことにする。
+                ((IVehicleRider)this).OnLeft(
+                    null,
+                    VehicleLeaveReason.RiderRemoved,
+                    transform.position - (Vector3.up * FeetBelowRoot),
+                    transform.rotation);
+                return;
+            }
+
             if (_seat == null)
             {
                 return;

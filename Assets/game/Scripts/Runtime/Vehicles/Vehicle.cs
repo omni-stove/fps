@@ -467,7 +467,11 @@ namespace Fps.Runtime
                     continue;
                 }
 
-                if (IsRemoved(rider))
+                if (_seats[i] == null)
+                {
+                    RemoveFromDestroyedSeat(rider, i);
+                }
+                else if (IsRemoved(rider))
                 {
                     RemoveRider(rider, _seats[i]);
                 }
@@ -645,7 +649,11 @@ namespace Fps.Runtime
 
         private void Board(IVehicleRider rider, int index)
         {
-            _seating.Board(rider, index);
+            if (!_seating.Board(rider, index))
+            {
+                return;
+            }
+
             var seat = _seats[index];
             IgnoreCollisions(rider);
             Debug.Log(VehicleLog.Board(name, rider.RiderName, index, seat.Role), this);
@@ -737,11 +745,32 @@ namespace Fps.Runtime
             for (var i = 0; i < _seats.Length; i++)
             {
                 var rider = (IVehicleRider)_seating.OccupantOf(i);
-                if (rider != null && IsRemoved(rider))
+                if (rider == null)
+                {
+                    continue;
+                }
+
+                if (_seats[i] == null)
+                {
+                    RemoveFromDestroyedSeat(rider, i);
+                }
+                else if (IsRemoved(rider))
                 {
                     RemoveRider(rider, _seats[i]);
                 }
             }
+        }
+
+        // 座席が破棄されると SitPosition などを読めず降り口も探せない。乗り手は座席の破棄を自分で見て後始末するので、ここでは表と当たり判定だけ戻す。
+        private void RemoveFromDestroyedSeat(IVehicleRider rider, int index)
+        {
+            _seating.Leave(rider);
+            if (!IsRemoved(rider))
+            {
+                RestoreCollisions(rider);
+            }
+
+            Debug.Log(VehicleLog.Leave(name, "-", index, VehicleLeaveReason.RiderRemoved, -1), this);
         }
 
         private int CountLiveRiders()

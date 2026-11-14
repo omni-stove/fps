@@ -311,6 +311,9 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules 
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む (`-map` が無ければ `NetTest`)。作業ディレクトリの `server-data/`、
   無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
   ファイルは Unity の Editor から `make export-server-data` で書き出す。
+- クライアントと Unity のサーバー (Host を含む) も、プレイヤーの移動の当たりを同じ `.fpsmap` で取る (`NetMapWorld`)。
+  Editor では `server-data/maps/` を直接読み、ビルドには `MapCollisionBuildFiles` が `StreamingAssets/maps/` として入れる。
+  今のシーンの名前の `.fpsmap` が無ければ `[Net] map <マップ名> has no collision: ...` を出し、プレイヤーは動かない。
 - ルールは `-rules <名前>` (無ければ `TeamDeathmatch`) で選び、`server-data/rules/<名前>.json` を読む。NetMatch.prefab に焼いてある
   試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値など)・ルールのアセット・ロードアウトと武器の一覧・移動の値と体の寸法
   (MotorSettings と NetPlayer.prefab の CharacterController。サーバーの移動はクライアントの予測と同じこの値で動く) が入っていて、

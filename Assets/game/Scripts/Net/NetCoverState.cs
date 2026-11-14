@@ -44,6 +44,16 @@ namespace Fps.Net
         /// <summary>カバーの外。</summary>
         public static NetCoverState Out => default;
 
+        public static NetCoverState FromCore(CharacterCoverState state)
+        {
+            return new NetCoverState(state.Snapshot, state.TopY, state.Edges, state.AppliedPeek);
+        }
+
+        public CharacterCoverState ToCore()
+        {
+            return new CharacterCoverState(Snapshot, _topY, Edges, _appliedPeek);
+        }
+
         public CoverPhase Phase => (CoverPhase)_phase;
 
         public CoverHeight Height => (CoverHeight)_height;

@@ -30,8 +30,9 @@ namespace Fps.Editor
         public const double LimbMultiplier = 0.1;
         public const double WeakPointMultiplier = 3.0;
 
-        // 標的ダミーの列・乗り越えの壁・小屋から離した左奥。プレイヤーの出現位置から撃てる距離に置く。
-        public static readonly Vector3 Position = new Vector3(-14f, 0f, 16f);
+        // 標的ダミーの列・乗り越えの壁・小屋から離した左奥。樽とガソリン缶 (z=14) の爆発の半径 5m の外に出すため z=22 にする。
+        // 爆発は部位の倍率を通らないので、届くと弱点を撃たなくても体力が減ってしまう。
+        public static readonly Vector3 Position = new Vector3(-14f, 0f, 22f);
 
         // 出現位置 (原点) の側を向かせる。往復の向き (transform.right) が x 軸に沿うよう、斜めにはしない。
         public static readonly Quaternion Rotation = Quaternion.Euler(0f, 180f, 0f);

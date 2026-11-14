@@ -13,7 +13,7 @@ namespace Fps.Protocol
     /// </remarks>
     public struct PlayerSnapshot : ISnapshotEntity<PlayerSnapshot>
     {
-        private const int MotionFlagCount = 3;
+        private const int _motionFlagCount = 3;
 
         public int PlayerId { get; set; }
         public PlayerFields Present { get; set; }
@@ -213,7 +213,7 @@ namespace Fps.Protocol
                 Position = reader.ReadFiniteVector3("player position");
                 Velocity = reader.ReadFiniteVector3("player velocity");
                 Yaw = reader.ReadFiniteSingle("player yaw");
-                var flags = reader.ReadByteBelow(1 << MotionFlagCount, "player motion flags");
+                var flags = reader.ReadByteBelow(1 << _motionFlagCount, "player motion flags");
                 IsGrounded = (flags & 1) != 0;
                 IsCrouched = (flags & 2) != 0;
                 IsAiming = (flags & 4) != 0;

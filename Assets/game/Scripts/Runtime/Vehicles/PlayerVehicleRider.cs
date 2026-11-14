@@ -119,6 +119,7 @@ namespace Fps.Runtime
             && gameObject.activeInHierarchy
             && _mover != null
             && _mover.IsInitialized
+            && (!_mover.IsMovementOverridden || ReferenceEquals(_mover.ActiveMovementOverride, this))
             && (_damageable == null || (!_damageable.IsDead && !_damageable.IsDowned));
 
         public VehicleSeat Seat => _seat;
@@ -219,7 +220,8 @@ namespace Fps.Runtime
 
         private void LateUpdate()
         {
-            if (_seat != null)
+            // フォトモードなど DeathCamView の借り手がカメラを動かしている間は、置き直して取り返さない。
+            if (_seat != null && !DeathCamView.IsBorrowed(_camera.Camera))
             {
                 _camera.Place(_seat);
             }

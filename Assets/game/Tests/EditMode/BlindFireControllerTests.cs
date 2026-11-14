@@ -111,7 +111,7 @@ namespace Fps.Tests.EditMode
 
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
             _rifle.BlindFireSpreadDegrees = _spreadDegrees;
 
             // 壁越しに当たるかをブラインドファイアの散らばりだけで確かめるので、腰撃ちのばらつきは切る。

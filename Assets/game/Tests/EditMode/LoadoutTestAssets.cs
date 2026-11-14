@@ -20,16 +20,16 @@ namespace Fps.Tests.EditMode
 
         public LoadoutTestAssets()
         {
-            var rifle = Weapon("Rifle", WeaponAssetBuilder.RifleSpec());
-            var handgun = Weapon("Handgun", WeaponAssetBuilder.HandgunSpec());
+            var rifle = Weapon("Rifle", TestWeapons.RifleSpec());
+            var handgun = Weapon("Handgun", TestWeapons.HandgunSpec());
             var smg = Weapon("SMG", new WeaponSpec(
                 SmgId, "SMG", WeaponCategory.SubmachineGun, FireMode.Auto, 25, 100, 0.07f, 2f, 18, 60f, DamageFalloff.None));
 
             Loadout = Create<LoadoutDefinition>("TestLoadout");
-            WeaponAssetBuilder.Configure(Loadout, WeaponAssetBuilder.DefaultLoadoutSlots(rifle, handgun), LoadoutDefinition.DefaultSwitchSeconds);
+            WeaponAssets.Configure(Loadout, TestWeapons.LoadoutSlots(rifle, handgun), LoadoutDefinition.DefaultSwitchSeconds);
 
             Catalog = Create<WeaponCatalogAsset>("TestCatalog");
-            WeaponAssetBuilder.Configure(Catalog, new[] { rifle, smg, handgun });
+            WeaponAssets.Configure(Catalog, new[] { rifle, smg, handgun });
         }
 
         public LoadoutDefinition Loadout { get; }
@@ -52,7 +52,7 @@ namespace Fps.Tests.EditMode
         private WeaponDefinition Weapon(string assetName, WeaponSpec spec)
         {
             var definition = Create<WeaponDefinition>(assetName);
-            WeaponAssetBuilder.Configure(definition, spec);
+            WeaponAssets.Configure(definition, spec);
             return definition;
         }
 

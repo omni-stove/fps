@@ -326,7 +326,7 @@ namespace Fps.Tests.EditMode
             try
             {
                 camera.transform.SetParent(_body.transform, false);
-                WeaponAssetBuilder.Configure(rifle, WeaponAssetBuilder.RifleSpec());
+                WeaponAssets.Configure(rifle, TestWeapons.RifleSpec());
                 var weapon = camera.AddComponent<WeaponController>();
                 weapon.Initialize(camera.transform, attack, reload, rifle);
                 _player.BindSprintRelease(weapon, null);

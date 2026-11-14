@@ -130,7 +130,7 @@ namespace Fps.Net
         /// </summary>
         private void FollowHudTeamColors(NetControlPointsView view)
         {
-            // Hud は色の組やチームが変わったことを Fps.Net のビューに知らせないので、毎フレーム見比べる
+            // Hud は色の組やチームが変わったことを Fps.Net.UI のビューに知らせないので、毎フレーム見比べる
             var hud = _hud != null ? _hud : GetComponent<Hud>();
             var alpha = hud.TeamColor(Team.Alpha);
             var bravo = hud.TeamColor(Team.Bravo);

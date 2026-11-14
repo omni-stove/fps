@@ -5,6 +5,7 @@
         "Fps.Core",
         "Fps.Editor",
         "Fps.Net",
+        "Fps.Net.UI",
         "Fps.Runtime",
         "Fps.Runtime.UI",
         "Unity.AI.Navigation",

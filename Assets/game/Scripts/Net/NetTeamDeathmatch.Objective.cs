@@ -40,7 +40,7 @@ namespace Fps.Net
         private DominationObjective _domination;
         private NetControlPoint[] _controlPoints;
 
-        /// <summary><see cref="NetHud"/> が OnValueChanged を購読する同期値。</summary>
+        /// <summary>HUD (Fps.Net.UI の NetHud) が OnValueChanged を購読する同期値。</summary>
         internal NetworkVariable<NetObjectiveStatus> ObjectiveStatusVariable => _objectiveStatus;
 
         /// <summary>

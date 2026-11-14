@@ -24,7 +24,7 @@
 
 | アセンブリ | 有効になる条件 | manifest に足す行 |
 | --- | --- | --- |
-| `Fps.Net`・`Fps.Net.Editor`・`Fps.Net.Tests` | `com.unity.netcode.gameobjects` 2.14.0 以上 | `"com.unity.netcode.gameobjects": "2.14.0"` |
+| `Fps.Net`・`Fps.Net.UI`・`Fps.Net.Editor`・`Fps.Net.Tests` | `com.unity.netcode.gameobjects` 2.14.0 以上 | `"com.unity.netcode.gameobjects": "2.14.0"` |
 | `Fps.NetEos` | 上に加えて `com.playeveryware.eos` | `"com.playeveryware.eos": "https://github.com/EOS-Contrib/eos_plugin_for_unity_upm.git"` |
 
 smoke の最後の 1 本 (`PerfSmokeRun`) は `Fps.Net.Editor` にあるので、**smoke をすべて通すには Netcode も入れる**こと ([動作確認](#動作確認-smoke) を参照)。
@@ -261,6 +261,7 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
 | `Fps.Runtime.UI` | 既定の UI (HUD・メニュー・ポーズ・設定)。起動時に `GameUi` へ自分を登録する。外すと HUD 無しで動く | 常に |
 | `Fps.Editor` | シーンとアセットのビルダー、JSON のインポーター、smoke | Editor |
 | `Fps.Net`・`Fps.Net.Editor` | Netcode for GameObjects のネット対戦 | Netcode 2.14.0 以上 |
+| `Fps.Net.UI` | ネット対戦の HUD (キルフィードの名前・スコアボード・F3 の回線表示・装備選択・ネームプレート・拠点)。起動時に `NetUi` へ自分を登録する。外すと HUD 無しで動く | Netcode 2.14.0 以上 |
 | `Fps.NetEos` | EOS のログイン・ロビー・P2P の通信・アンチチート | Netcode と EOS |
 | `Fps.Core.Tests`・`Fps.Tests.EditMode` | EditMode テスト | `testables` に入れたとき |
 | `Fps.Net.Tests` | ネットの EditMode テスト | `testables` に入れ、Netcode もあるとき |

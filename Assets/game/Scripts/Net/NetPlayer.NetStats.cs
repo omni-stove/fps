@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Fps.Net
 {
     /// <summary>
-    /// <see cref="NetPlayer"/> のうち、回線の表示 (<see cref="NetHud"/> の F3) がパケットロスを測るための確かめの便。
+    /// <see cref="NetPlayer"/> のうち、回線の表示 (Fps.Net.UI の NetHud の F3) がパケットロスを測るための確かめの便。
     /// 持ち主が番号を <see cref="SendNetStatsProbe"/> で信頼性なしにサーバーへ送り、サーバーは同じ番号とサーバーの tick を
     /// 信頼性なしに持ち主へ返す。返事は <see cref="NetStatsProbeEchoed"/> で配る。行きと帰りのどちらで欠けても返事は来ない。
     /// </summary>

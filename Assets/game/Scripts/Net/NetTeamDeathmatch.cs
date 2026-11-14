@@ -169,7 +169,7 @@ namespace Fps.Net
         /// </summary>
         public static event Action<NetTeamDeathmatch> CurrentChanged;
 
-        /// <summary><see cref="NetHud"/> が OnValueChanged を購読する同期値。</summary>
+        /// <summary>HUD (Fps.Net.UI の NetHud) が OnValueChanged を購読する同期値。</summary>
         internal NetworkVariable<int> AlphaScoreVariable => _alphaScore;
         internal NetworkVariable<int> BravoScoreVariable => _bravoScore;
         internal NetworkVariable<int> RemainingSecondsVariable => _remainingSeconds;

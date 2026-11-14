@@ -28,6 +28,9 @@ namespace Fps.Server
         private readonly Dictionary<ConnectionId, float> _pending = new Dictionary<ConnectionId, float>();
         private readonly HashSet<ConnectionId> _closing = new HashSet<ConnectionId>();
         private readonly List<ConnectionId> _expired = new List<ConnectionId>();
+        private readonly List<(ConnectionId Connection, string Reason, string LogText)> _kicks =
+            new List<(ConnectionId Connection, string Reason, string LogText)>();
+        private readonly ServerRulesData _rules;
         private readonly ConnectAcceptedMessage _accepted = new ConnectAcceptedMessage();
         private readonly ConnectRejectedMessage _rejected = new ConnectRejectedMessage();
         private readonly ServerDisconnectingMessage _disconnecting = new ServerDisconnectingMessage();
@@ -45,8 +48,11 @@ namespace Fps.Server
             TextWriter log,
             ServerEventWriter events,
             Func<DateTime> utcNow,
-            float restartDelaySeconds = ServerMatch.DefaultRestartDelaySeconds)
+            float restartDelaySeconds = ServerMatch.DefaultRestartDelaySeconds,
+            ServerRulesData rules = null)
         {
+            _rules = rules;
+            Bodies = new ServerBodies((rules?.Motor ?? NetMotorSettings.Default).Stance);
             _launch = launch ?? throw new ArgumentNullException(nameof(launch));
             _transport = transport ?? throw new ArgumentNullException(nameof(transport));
             _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -63,6 +69,8 @@ namespace Fps.Server
         public ServerMatch Match { get; }
 
         public ServerMessenger Messenger { get; }
+
+        public ServerBodies Bodies { get; }
 
         public float ApprovalTimeoutSeconds { get; set; } = DefaultApprovalTimeoutSeconds;
 
@@ -86,7 +94,7 @@ namespace Fps.Server
 
             _started = true;
             var options = _launch.Options;
-            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, this));
+            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, this, _rules, Bodies));
             try
             {
                 _transport.Listen(options.Address, options.Port);
@@ -132,6 +140,7 @@ namespace Fps.Server
             ExpirePending(now);
             Match.Tick(deltaSeconds);
             _host.Tick(deltaSeconds);
+            ApplyKicks();
             TickDrain(now);
         }
 
@@ -407,6 +416,28 @@ namespace Fps.Server
             Messenger.Send(connection, TransportChannel.Reliable, notice);
             _transport.Disconnect(connection, reason);
             _closing.Add(connection);
+        }
+
+        public void Kick(ConnectionId connection, string reason, string logText)
+        {
+            _kicks.Add((connection, reason, logText));
+        }
+
+        private void ApplyKicks()
+        {
+            // 切ったことで呼ばれるモジュールがさらに切ることもあるので、写してから回す
+            while (_kicks.Count > 0)
+            {
+                var kicks = _kicks.ToArray();
+                _kicks.Clear();
+                foreach (var kick in kicks)
+                {
+                    if (Match.TryGetPlayer(kick.Connection, out _))
+                    {
+                        Drop(kick.Connection, kick.Reason, kick.LogText);
+                    }
+                }
+            }
         }
 
         private void ExpirePending(float now)

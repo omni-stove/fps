@@ -27,6 +27,7 @@ namespace Fps.Server.Tests
         private ushort _port;
         private float _now;
         private MatchServer _server;
+        private RecordingModule _module;
 
         [SetUp]
         public void SetUp()
@@ -147,6 +148,21 @@ namespace Fps.Server.Tests
             Assert.That(second.Disconnected, Is.False);
             Assert.That(_server.Match.PlayerCount, Is.EqualTo(1));
             Assert.That(_server.Match.TryGetPlayer(second.Accepted.PlayerId, out _), Is.True);
+        }
+
+        [Test]
+        public void ModulesCanKickAPlayerAfterTheirTick()
+        {
+            Start();
+            var client = Join("0.2.0");
+
+            _module.KickOnNextTick = new ConnectionId((ulong)client.Accepted.PlayerId);
+            Pump(() => client.Disconnected);
+
+            Assert.That(client.DisconnectReason, Is.EqualTo("test-kick"));
+            Assert.That(_log.ToString(), Does.Contain("[Net] dropped client 1: kicked by a"));
+            Assert.That(_server.Match.PlayerCount, Is.Zero);
+            Assert.That(_calls, Does.Contain("a.Disconnected#1"));
         }
 
         [Test]
@@ -324,7 +340,8 @@ namespace Fps.Server.Tests
                 Is.True,
                 error);
             var host = new ServerHost();
-            host.Register(new RecordingModule("a", _calls));
+            _module = new RecordingModule("a", _calls);
+            host.Register(_module);
             var json = launch.Options.LogFormat == ServerLogFormat.Json;
             return new MatchServer(
                 launch, _transport, host, TestMaps.Data(), _log, new ServerEventWriter(json, _json, _log), () => _time, restartDelaySeconds);

@@ -47,7 +47,7 @@ flag "--version <version>" help="build version such as v0.2.0 (default: git desc
 run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
 
 [server-dotnet]
-description = "Build the Unity-independent .NET server (dotnet/Fps.Server) and run it with -mode server on 0.0.0.0:7777 (FPS_SERVER_ADDRESS / FPS_SERVER_PORT change it). It needs server-data/maps/<map>.fpsmap and .fpsnav (make export-server-data). Ctrl+C or SIGTERM drains; a second one stops at once. The version is git describe --tags --always --dirty"
+description = "Build the Unity-independent .NET server (dotnet/Fps.Server) and run it with -mode server on 0.0.0.0:7777 (FPS_SERVER_ADDRESS / FPS_SERVER_PORT change it). It needs server-data/maps/<map>.fpsmap and .fpsnav (make export-server-data), and server-data/rules/<rules>.json and server-data/maps/<map>.points.json (make export-server-rules); -rules <name> picks the rules (default TeamDeathmatch). Ctrl+C or SIGTERM drains; a second one stops at once. The version is git describe --tags --always --dirty"
 run = [
   "dotnet build dotnet/Fps.Server/Fps.Server.csproj -c Release -v q --nologo",
   'dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -- -mode server -buildVersion "$(git describe --tags --always --dirty)"',
@@ -56,6 +56,10 @@ run = [
 [export-server-data]
 description = "Write the collision of every map selectable with -map to server-data/maps/<map>.fpsmap with the Unity editor in batch mode via Fps.Editor.MapCollisionExporter.Export, removing .fpsmap files of maps no longer listed (close the Editor first). Commit the result"
 run = "unity --non-interactive run . -- -executeMethod Fps.Editor.MapCollisionExporter.Export"
+
+[export-server-rules]
+description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Fps.Editor.ServerRulesExporter.Export (close the Editor first): the NetMatch.prefab settings with each rules asset to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping tuning to server-data/tuning/ping.json. Commit the written files"
+run = "unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export"
 
 [eos-sdk]
 description = "Place the EOS C# SDK in dotnet/ThirdParty/EOSSDK (not committed) from the PlayEveryWare EOS package in Library/PackageCache, or from an Epic Developer Portal SDK zip/folder with --from <path>"

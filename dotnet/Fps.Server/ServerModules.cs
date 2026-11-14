@@ -8,9 +8,20 @@ namespace Fps.Server
     /// <summary>起動引数から、このプロセスで動かすモジュールを決める。</summary>
     internal static class ServerModules
     {
-        public static bool Create(ServerLaunch launch, ServerRuntime runtime, ICollection<IServerModule> modules, out string error)
+        public static bool Create(
+            ServerLaunch launch, ServerRuntime runtime, ServerRulesData rules, ICollection<IServerModule> modules, out string error)
         {
-            return Create(launch, runtime, modules, AppContext.BaseDirectory, out error);
+            ArgumentNullException.ThrowIfNull(rules);
+            return Create(launch, runtime, modules, AppContext.BaseDirectory, MotorSettingsFrom(rules), out error);
+        }
+
+        /// <summary>移動はクライアントの予測と同じ値で動かすため、ルールのファイルに書き出した NetPlayer.prefab の移動の値と体の寸法を使う。</summary>
+        public static ServerMotorSettings MotorSettingsFrom(ServerRulesData rules)
+        {
+            ArgumentNullException.ThrowIfNull(rules);
+            var motor = rules.Motor;
+            var defaults = ServerMotorSettings.Default;
+            return new ServerMotorSettings(motor.Motor, motor.Stance, motor.Mover, rules.Rules, defaults.KillPlaneY, defaults.SpawnPosition);
         }
 
         /// <param name="launch">起動設定。</param>
@@ -41,6 +52,7 @@ namespace Fps.Server
             var movement = new ServerMovement(motorSettings);
             modules.Add(movement);
             modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement }));
+            modules.Add(new MatchRulesModule());
 
             error = null;
             if (!launch.Options.RegistersLobby)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Fps.Protocol;
 
 namespace Fps.Server.Tests
 {
@@ -10,10 +11,17 @@ namespace Fps.Server.Tests
 
         public int ExitCode { get; private set; }
 
+        public List<(ConnectionId Connection, string Reason)> Kicks { get; } = new List<(ConnectionId Connection, string Reason)>();
+
         public void Fail(int exitCode, string message)
         {
             Failures.Add(message);
             ExitCode = exitCode;
+        }
+
+        public void Kick(ConnectionId connection, string reason, string logText)
+        {
+            Kicks.Add((connection, reason));
         }
     }
 }

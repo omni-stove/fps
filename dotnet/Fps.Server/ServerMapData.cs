@@ -13,8 +13,9 @@ namespace Fps.Server
         public const string MapsDirectoryName = "maps";
         public const string CollisionExtension = ".fpsmap";
 
-        public ServerMapData(string name, WorldMap world, NavMeshFile navMesh, string directory)
+        public ServerMapData(string name, WorldMap world, NavMeshFile navMesh, string directory, NetMapPoints points = null)
         {
+            Points = points;
             Name = name ?? throw new ArgumentNullException(nameof(name));
             ArgumentNullException.ThrowIfNull(world);
             NavMesh = navMesh ?? throw new ArgumentNullException(nameof(navMesh));
@@ -36,10 +37,15 @@ namespace Fps.Server
 
         public INavigation Navigation { get; }
 
+        /// <summary>出現地点と拠点。ルールを動かさないサーバー (テストなど) では要らないので、ファイルが無ければ null。</summary>
+        public NetMapPoints Points { get; }
+
         public string LogLine => ServerProgram.LogTag + " map " + Name
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
             + " navTriangles=" + NavMesh.Triangles.Count.ToString(CultureInfo.InvariantCulture)
             + " navLinks=" + NavMesh.Links.Count.ToString(CultureInfo.InvariantCulture)
+            + " spawnPoints=" + (Points == null ? "none" : Points.SpawnPoints.Count.ToString(CultureInfo.InvariantCulture))
+            + " controlPoints=" + (Points == null ? "none" : Points.ControlPoints.Count.ToString(CultureInfo.InvariantCulture))
             + " from=" + Directory;
 
         /// <summary>
@@ -128,9 +134,24 @@ namespace Fps.Server
                 return false;
             }
 
+            NetMapPoints points = null;
+            var pointsPath = Path.Combine(directory, map + NetMapPoints.Extension);
+            if (File.Exists(pointsPath))
+            {
+                try
+                {
+                    points = NetMapPoints.Parse(File.ReadAllText(pointsPath), pointsPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + pointsPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                data = new ServerMapData(map, world, navMesh, directory);
+                data = new ServerMapData(map, world, navMesh, directory, points);
             }
             catch (ArgumentException e)
             {

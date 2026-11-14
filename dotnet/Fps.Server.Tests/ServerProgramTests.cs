@@ -27,6 +27,7 @@ namespace Fps.Server.Tests
             _error = new StringWriter();
             _data = new TempDirectory();
             TestMaps.Write(_data.Path, "NetTest");
+            TestRules.Write(_data.Path, ServerLaunch.DefaultRules);
             _stop = new ImmediateStopSignal();
             _port = TestClient.FreePort();
             _environment = new Dictionary<string, string>
@@ -122,6 +123,37 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void DominationRulesStartTheControlPointsOfTheMap()
+        {
+            TestMaps.Write(_data.Path, "NetArena01", points: TestRules.Points(3));
+            TestRules.Write(_data.Path, "Domination", TestRules.File(Fps.Core.GameRules.Default.WithObjective(Fps.Core.MatchObjective.Domination), name: "Domination"));
+
+            var code = ServerProgram.Run(Args("-rules", "Domination", "-map", "NetArena01"), new IServerModule[] { new MatchRulesModule() }, Runtime());
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+            Assert.That(_output.ToString(), Does.Contain("[Server] rules Domination objective=Domination"));
+            Assert.That(_output.ToString(), Does.Contain("[Domination] net points=3 scoreLimit=100 captureSeconds=8 pointsPerSecond=1 maxCapturers=3"));
+        }
+
+        [Test]
+        public void MissingRulesExitMisconfigured()
+        {
+            var code = Run("-rules", "Domination");
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitMisconfigured));
+            Assert.That(_error.ToString(), Does.StartWith("[Server] rules Domination not found"));
+        }
+
+        [Test]
+        public void TheRulesModuleNeedsTheMapsPoints()
+        {
+            var code = ServerProgram.Run(System.Array.Empty<string>(), new IServerModule[] { new MatchRulesModule() }, Runtime());
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitFailure));
+            Assert.That(_error.ToString(), Does.Contain("map NetTest has no spawn points: NetTest.points.json"));
+        }
+
+        [Test]
         public void PortInUseExitsStartFailed()
         {
             using (var taken = new UdpClient(new IPEndPoint(IPAddress.Any, _port)))
@@ -169,10 +201,12 @@ namespace Fps.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyOnlyMovementAndSnapshotsAreAdded()
+        public void WithoutRegisterLobbyOnlyMovementSnapshotsAndRulesAreAdded()
         {
-            Assert.That(RunWithServerModules(), Is.EqualTo(ServerProgram.ExitOk));
-            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 2 module(s)"));
+            TestMaps.Write(_data.Path, "NetTest", points: TestRules.Points());
+
+            Assert.That(RunWithServerModules(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 3 module(s)"));
         }
 
         [Test]
@@ -215,6 +249,9 @@ namespace Fps.Server.Tests
                 new[] { _data.Path },
                 () => new UdpMatchTransport());
         }
+
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Args(params string[] args) => args;
 
         private static string FirstLine(StringWriter writer)
         {

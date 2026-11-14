@@ -62,6 +62,8 @@
         </ui:VisualElement>
         <!-- 被弾方向。DamageDirectionView が撃たれた方向ごとに弧の子要素を足す。 -->
         <ui:VisualElement name="damage-direction" class="damage-direction" picking-mode="Ignore" style="display: none;" />
+        <!-- 敵や場所に付けた印。オフラインのプレイヤーの PingController が PingMarkersView を付けたときだけ、印ごとの子要素 (ping-marker) を足して出す。 -->
+        <ui:VisualElement name="ping-markers" class="ping-markers" picking-mode="Ignore" style="display: none;" />
         <!-- 画面右上のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
         <!-- 画面下の音の合図の字幕 ([銃声 左後ろ] など)。設定で字幕を On にしているとき、SubtitleView が行 (subtitles__line) を入れ、行があるときだけ出す。 -->

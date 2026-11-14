@@ -199,6 +199,7 @@ Editor からは **Fps > Import Game Rules From JSON**。
 | `WeaponCatalogAsset`・`LoadoutDefinition` | 使える武器の一覧と、最初に持つ武器 |
 | `GameRulesDefinition` (`<root>/Rules/*.asset`) | フレンドリーファイア・リスポーン・自動回復・死亡時の見せ方・弾薬・建造物の破壊・ダウンやカバーなどのアクション・スポーン保護・落下ダメージ・HUD の量・勝敗の決め方 |
 | `GrenadeThrower` (プレイヤーのコンポーネント) | 爆発までの秒数・投げる間隔・初速・ダメージ・爆発の半径・建造物への被害 |
+| `PingController` (プレイヤーのコンポーネント) | 印が消えるまでの秒数・同時に付けられる数・照準の先を探す距離・照準が外れていても敵に付ける角度 |
 | `BossController` (ボスのコンポーネント) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点) |
 
 JSON から取り込み直すと、そのアセットの値は JSON の値で上書きされる。Inspector で変えた値を残したいなら、JSON にも同じ値を書く。
@@ -225,6 +226,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | `GameUi.LoadoutSelect` | `ILoadoutSelect` | カーソルを解放してロードアウトの画面を開いているか | 既定の HUD のロードアウトの画面 |
 | `GameUi.Menu` | `IMenuNavigator` | メインメニューへ戻る・メニューで選んだロビーやチュートリアルを受け取る | `Fps.Runtime.UI` のメニューのシーンとの行き来 |
 | `NetUi.HudFactory` (Netcode を入れたときだけ) | `INetHudFactory` (作るのは `INetHud`) | オンラインの自分のプレイヤーの HUD (`NetPlayer` が作る) | `Fps.Net.UI` の HUD |
+| `PingUi.ViewFactory` | `IPingViewFactory` (作るのは `IPingView`) | オフラインのプレイヤーが付けた印 (`PingController`) を画面に出す。画面の外の印は端に寄せて向きを出す | 既定の HUD (`Hud`) に付く `PingMarkersView`。ほかの HUD には出さない (`null` を返す) |
 
 - 入れた実装は、登録の順番に依らず既定より優先される。`null` を入れると既定に戻る。
 - 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
@@ -380,6 +382,29 @@ public sealed class MyPauseState : IPauseState
 ```
 
 `GameUi.Menu` (`IMenuNavigator`) は、既定のメインメニューのシーンを使わないときに差し替える。`ReturnToMenu` はメニューのシーンを読めなければ `false` を返して今のシーンに留まり、`ReturningToMenu` はシーンをまたいで残るもの (NetworkManager など) を片付けるために、メニューのシーンを読む直前に呼ぶ。
+
+### 印 (ピン) の表示
+
+`PingController` は、ルールの `Ping` が On の間、`GameUi.FindHud()` で見つけた HUD を `PingUi.ViewFactory` に渡して表示を受け取り、`IPingView.Show` で自分を渡す。
+表示は `PingController.Markers` (古い順の `PingMarker`) を毎フレーム読み、画面の外の位置と向きは `Fps.Core.PingScreen.Place` で決められる。
+自分の HUD に出すなら、HUD に合わせた `IPingViewFactory` を入れる (既定の HUD のまま印の見た目だけ変えるなら、`Hud.uss` の `.ping-marker` の規則を上書きする)。
+
+```csharp
+public sealed class MyPingViewFactory : IPingViewFactory
+{
+    public IPingView Create(IHud hud)
+    {
+        var view = hud.gameObject.GetComponent<MyPingView>();
+        return view != null ? view : hud.gameObject.AddComponent<MyPingView>();
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Register()
+    {
+        PingUi.ViewFactory = new MyPingViewFactory();
+    }
+}
+```
 
 ### フォトモード
 

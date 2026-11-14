@@ -85,12 +85,13 @@ namespace Fps.Runtime
 
         /// <summary>
         /// move (移動入力、x が右・y が前) の向き (ほぼ 0 なら後ろ) へ転がり始める。
-        /// <see cref="DodgeRule"/> が Off・未初期化・接地していない・転がり中か待ち時間中・<see cref="DodgeBlocker"/> が true なら何もせず false。
+        /// <see cref="DodgeRule"/> が Off・未初期化・接地していない・乗り越えか移動の横取り (<see cref="IsMovementOverridden"/>) の最中・
+        /// 転がり中か待ち時間中・<see cref="DodgeBlocker"/> が true なら何もせず false。
         /// 始めたらしゃがみとダッシュを解き、<c>[Player] dodging=true</c> をログに出して <see cref="DodgeStarted"/> を呼ぶ。
         /// </summary>
         public bool TryStartDodge(Vector2 move)
         {
-            if (_dodgeRule != Dodge.On || !IsInitialized || !IsGrounded || IsVaulting)
+            if (_dodgeRule != Dodge.On || !IsInitialized || !IsGrounded || IsVaulting || IsMovementOverridden)
             {
                 return false;
             }
@@ -124,15 +125,6 @@ namespace Fps.Runtime
 
             ReportDodgeEnded();
             return true;
-        }
-
-        // Update で、移動・ダッシュ・しゃがみの入力を解釈する前に呼ぶ。同じフレームで解いたしゃがみとダッシュを押し直し扱いにしないため。
-        private void UpdateDodgeInput(Vector2 move)
-        {
-            if (_dodgeAction != null && _dodgeAction.WasPressedThisFrame())
-            {
-                TryStartDodge(move);
-            }
         }
 
         // 転がっている間は姿勢とジャンプを止める。カバーの差し込み (MoveFilter) の後に呼ぶので、こちらが優先する。

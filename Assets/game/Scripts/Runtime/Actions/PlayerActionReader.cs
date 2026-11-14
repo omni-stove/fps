@@ -12,11 +12,13 @@ namespace Fps.Runtime
     /// <see cref="Damageable"/>・<see cref="ViewRig"/> は同じ GameObject、<see cref="WeaponController"/> は子 (プレイヤーのカメラ)。
     /// 参照はコードで解決するので Inspector の配線は要らない (<see cref="GameBootstrap"/> は <see cref="Bind"/> で直接渡す)。
     /// 解決できないか途中で消えたら、足りないものを <see cref="LogTag"/> 付きの Debug.LogError に出して自分を無効にする。
+    /// 移動を横取りしているもの (<see cref="IMovementOverride"/>) があれば、その <see cref="IMovementOverride.Conditions"/> も立てる。
+    /// 指示のボタン (近接・伏せなど) を読むのは .Commands.cs。
     /// </summary>
     [DisallowMultipleComponent]
     // 他の部品が Update で状態を変え終えてから読むので LateUpdate で組み立てる。さらに ViewRig などの LateUpdate より後にする。
     [DefaultExecutionOrder(100)]
-    public sealed class PlayerActionReader : MonoBehaviour
+    public sealed partial class PlayerActionReader : MonoBehaviour
     {
         public const string LogTag = "[ActionReader]";
 
@@ -56,6 +58,7 @@ namespace Fps.Runtime
 
         private void Awake()
         {
+            TryResolveCommandActions();
             if (!IsBound && !TryBindFromHierarchy())
             {
                 enabled = false;
@@ -76,6 +79,7 @@ namespace Fps.Runtime
                 return;
             }
 
+            ReadCommands();
             Refresh(Time.deltaTime);
         }
 
@@ -188,6 +192,7 @@ namespace Fps.Runtime
             Set(ref flags, PlayerActionConditions.Firing, weapon != null && PlayerActionState.IsFiringAfter(_secondsSinceShot, weapon.Spec.FireInterval));
             Set(ref flags, PlayerActionConditions.Reloading, weapon != null && weapon.IsReloading);
             Set(ref flags, PlayerActionConditions.Downed, _damageable.IsDowned);
+            flags |= _mover.MovementOverrideConditions;
 
             _current = new PlayerActionState(
                 flags,

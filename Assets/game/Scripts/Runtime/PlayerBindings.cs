@@ -53,6 +53,9 @@ namespace Fps.Runtime
         // スティックの方向は少し倒れているだけでも拾い、メニューを動かすつもりの入力が割り当てになりやすい。
         private static readonly string[] _gamepadExcluded = { "<Gamepad>/leftStick", "<Gamepad>/rightStick" };
 
+        // ゲームパッドに空いているボタンが無く割り当てていないので、キーボードの行だけを出すアクション。_slots より先に初期化する。
+        private static readonly string[] _keyboardOnlyActions = { "Melee", "Prone", "Ability1", "Ability2", "SquadCommand", "NetStats" };
+
         private static readonly RebindSlot[] _slots = BuildSlots();
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
@@ -476,17 +479,18 @@ namespace Fps.Runtime
 
             var buttons = new[]
             {
-                "Jump", "Sprint", "Crouch", "Attack", "Aim", "Reload", "Interact", "Next", "Previous", "Cover", "SwapShoulder", "Dodge", "Grenade",
-                "Scoreboard",
+                "Jump", "Sprint", "Crouch", "Prone", "Attack", "Aim", "Reload", "Melee", "Interact", "Next", "Previous", "Cover", "SwapShoulder",
+                "Dodge", "Grenade", "Ability1", "Ability2", "Ping", "SquadCommand", "Scoreboard", "NetStats",
             };
+
             foreach (var action in buttons)
             {
                 slots.Add(new RebindSlot(action, InputDeviceKind.KeyboardMouse));
-                slots.Add(new RebindSlot(action, InputDeviceKind.Gamepad));
+                if (Array.IndexOf(_keyboardOnlyActions, action) < 0)
+                {
+                    slots.Add(new RebindSlot(action, InputDeviceKind.Gamepad));
+                }
             }
-
-            // 回線の表示はゲームパッドに割り当てない (空いているボタンが無い) ので、キーボードの行だけを出す
-            slots.Add(new RebindSlot("NetStats", InputDeviceKind.KeyboardMouse));
 
             return slots.ToArray();
         }

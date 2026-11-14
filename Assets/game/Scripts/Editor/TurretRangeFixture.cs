@@ -48,7 +48,6 @@ namespace Fps.Editor
 
         public Bounds Footprint => new Bounds(Center + new Vector3(0f, Size.y / 2f, 0f), Size);
 
-        // タレットの置かれる所 (プレイヤーの正面、置ける距離の上限)。
         public static Vector3 TurretGround => PlayerGround + new Vector3(0f, 0f, DeploySpec.DefaultMaxRange);
 
         public GameObject Place(Scene scene, GameRules rules)

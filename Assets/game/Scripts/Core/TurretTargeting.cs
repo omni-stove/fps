@@ -79,7 +79,6 @@ namespace Fps.Core
             return Normalize(currentDegrees + (Math.Sign(delta) * maxStepDegrees));
         }
 
-        // -180 より大きく 180 以下。
         public static float DeltaDegrees(float fromDegrees, float toDegrees)
         {
             RequireFinite(fromDegrees, nameof(fromDegrees));

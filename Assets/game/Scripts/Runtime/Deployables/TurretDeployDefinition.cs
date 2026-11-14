@@ -9,7 +9,6 @@ namespace Fps.Runtime
     {
         public const string BaseName = "Base";
 
-        // 仮の形の台と頭の高さの割合。頭だけが回る。
         public const float BaseHeightFraction = 0.6f;
         public const float HeadWidthFraction = 0.7f;
 

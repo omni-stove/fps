@@ -82,6 +82,17 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlayerHasTheDeathCameraWithTheWiredRules()
+        {
+            var deathCamera = _world.DeathCamera;
+
+            Assert.That(deathCamera, Is.Not.Null);
+            Assert.That(deathCamera, Is.SameAs(_world.Player.GetComponent<PlayerDeathCamera>()));
+            Assert.That(deathCamera.Mode, Is.EqualTo(_testRules.DeathCamera));
+            Assert.That(deathCamera.IsActive, Is.False);
+        }
+
+        [Test]
         public void PlayerHasTheActionReaderWiredToTheOverlayAndTheMockBody()
         {
             var player = _world.Player;

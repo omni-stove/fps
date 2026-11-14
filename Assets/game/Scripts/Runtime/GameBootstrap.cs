@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
     /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/> + 自動回復の <see cref="HealthRegen"/>
     /// + 演出と手榴弾 (<see cref="CharacterComponents.Attach"/>) + 今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読む
-    /// <see cref="ActionDebugOverlay"/>・<see cref="PlayerMockBody"/>)
+    /// <see cref="ActionDebugOverlay"/>・<see cref="PlayerMockBody"/> + 倒れてから戻るまでのカメラ <see cref="PlayerDeathCamera"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
     /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
@@ -18,7 +18,7 @@ namespace Fps.Runtime
     /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
     /// 自動回復と予備弾の倍率・無限・落下ダメージは <see cref="RulesDefinition"/> のルール (<see cref="GameRulesOverride"/> があればそちら) で決める (標的ダミーには効かせない)。
     /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す項目は
-    /// <see cref="GameRules.HudDensity"/> (<see cref="Hud.ApplyDensity"/>) で決める。
+    /// <see cref="GameRules.HudDensity"/> (<see cref="Hud.ApplyDensity"/>) で、倒れてから戻るまでに映すものは <see cref="GameRules.DeathCamera"/> で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
     /// </summary>
     [DisallowMultipleComponent]
@@ -203,7 +203,7 @@ namespace Fps.Runtime
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(
                     _viewMode, WeaponDefinitions, rules, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon,
-                    out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades);
+                    out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 BindDeathBodies(dummies, rules);
@@ -216,7 +216,7 @@ namespace Fps.Runtime
 
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
-                    hudComponent, hudPanelSettings, rig, ads, rules, regen, actionReader, grenades);
+                    hudComponent, hudPanelSettings, rig, ads, rules, regen, actionReader, grenades, deathCamera);
             }
             catch
             {
@@ -302,7 +302,8 @@ namespace Fps.Runtime
             out Damageable damageable,
             out HealthRegen regen,
             out PlayerActionReader actionReader,
-            out GrenadeThrower grenades)
+            out GrenadeThrower grenades,
+            out PlayerDeathCamera deathCamera)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
@@ -330,6 +331,10 @@ namespace Fps.Runtime
                 mover.BindSprintRelease(weapon, damageable);
 
                 actionReader = AttachActionReader(player, mover, weapon, ads, damageable, rig);
+
+                // ルールが None でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため (HealthRegen と同じ)。
+                deathCamera = player.AddComponent<PlayerDeathCamera>();
+                deathCamera.ApplyRules(rules);
             }
             catch
             {
@@ -782,6 +787,9 @@ namespace Fps.Runtime
         /// <summary>プレイヤーのグレネード。投げられるかと数はルールで決まる。</summary>
         public GrenadeThrower Grenades { get; }
 
+        /// <summary>プレイヤーが倒れてから戻るまでのカメラ。何を映すかはルールの <see cref="GameRules.DeathCamera"/> で決まる。</summary>
+        public PlayerDeathCamera DeathCamera { get; }
+
         /// <summary>HUD 用に作った PanelSettings。<see cref="Hud"/> が破棄されるときに一緒に消える。専用サーバーでは null。</summary>
         public PanelSettings HudPanelSettings { get; }
 
@@ -804,8 +812,10 @@ namespace Fps.Runtime
             GameRules rules = null,
             HealthRegen regen = null,
             PlayerActionReader actionReader = null,
-            GrenadeThrower grenades = null)
+            GrenadeThrower grenades = null,
+            PlayerDeathCamera deathCamera = null)
         {
+            DeathCamera = deathCamera;
             ActionReader = actionReader;
             Grenades = grenades;
             Rig = rig;

@@ -55,7 +55,20 @@ namespace Fps.Core.Tests
     ""dodge"": ""On"",
     ""vault"": ""On"",
     ""grenade"": ""On"",
-    ""grenadeCount"": 3
+    ""grenadeCount"": 3,
+    ""melee"": ""On"",
+    ""stagger"": ""On"",
+    ""slide"": ""On"",
+    ""mantle"": ""On"",
+    ""prone"": ""On"",
+    ""ladder"": ""On"",
+    ""zipline"": ""On"",
+    ""parachute"": ""On"",
+    ""stealth"": ""On"",
+    ""suppression"": ""On"",
+    ""ping"": ""On"",
+    ""abilities"": ""On"",
+    ""slowMotion"": ""On""
   },
   ""spawnProtectionSeconds"": 1.5,
   ""fallDamage"": ""On"",
@@ -75,7 +88,7 @@ namespace Fps.Core.Tests
                 true,
                 0.6f,
                 Destruction.On,
-                new ActionRules(Downed.Revive, 12f, 0.25f, 2.5f, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, 3),
+                AllOnActions(),
                 1.5f,
                 FallDamage.On,
                 HudDensity.Hardcore,
@@ -90,8 +103,138 @@ namespace Fps.Core.Tests
         public void ItemNamesMatchTheRulesConstructors()
         {
             Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(17));
-            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(11));
+            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(24));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
+        }
+
+        [Test]
+        public void OmittedNewActionItemsAreOff()
+        {
+            var actions = GameRulesJson.Parse("{\"actions\": {\"cover\": \"On\"}}", _source).Actions;
+
+            Assert.That(actions.Melee, Is.EqualTo(Melee.Off));
+            Assert.That(actions.Stagger, Is.EqualTo(Stagger.Off));
+            Assert.That(actions.Slide, Is.EqualTo(Slide.Off));
+            Assert.That(actions.Mantle, Is.EqualTo(Mantle.Off));
+            Assert.That(actions.Prone, Is.EqualTo(Prone.Off));
+            Assert.That(actions.Ladder, Is.EqualTo(Ladder.Off));
+            Assert.That(actions.Zipline, Is.EqualTo(Zipline.Off));
+            Assert.That(actions.Parachute, Is.EqualTo(Parachute.Off));
+            Assert.That(actions.Stealth, Is.EqualTo(Stealth.Off));
+            Assert.That(actions.Suppression, Is.EqualTo(Suppression.Off));
+            Assert.That(actions.Ping, Is.EqualTo(Ping.Off));
+            Assert.That(actions.Abilities, Is.EqualTo(Abilities.Off));
+            Assert.That(actions.SlowMotion, Is.EqualTo(SlowMotion.Off));
+        }
+
+        [TestCase("melee")]
+        [TestCase("stagger")]
+        [TestCase("slide")]
+        [TestCase("mantle")]
+        [TestCase("prone")]
+        [TestCase("ladder")]
+        [TestCase("zipline")]
+        [TestCase("parachute")]
+        [TestCase("stealth")]
+        [TestCase("suppression")]
+        [TestCase("ping")]
+        [TestCase("abilities")]
+        [TestCase("slowMotion")]
+        public void EachNewActionItemIsReadAndRejectsUnknownNames(string item)
+        {
+            var on = GameRulesJson.Parse("{\"actions\": {\"" + item + "\": \"On\"}}", _source);
+            var written = GameRulesJson.Write(on);
+
+            Assert.That(written, Does.Contain("\"" + item + "\": \"On\""));
+            Assert.That(GameRulesJson.Write(GameRules.Default), Does.Contain("\"" + item + "\": \"Off\""));
+
+            var e = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"actions\": {\"" + item + "\": \"Maybe\"}}", _source));
+            AssertNames(e, "actions." + item);
+        }
+
+        [Test]
+        public void WriteThenParseGivesTheSameDefaultRules()
+        {
+            AssertSameRules(GameRulesJson.Parse(GameRulesJson.Write(GameRules.Default), _source), GameRules.Default);
+        }
+
+        [Test]
+        public void WriteThenParseGivesTheSameRulesForEveryItem()
+        {
+            var rules = new GameRules(
+                FriendlyFire.Reflect,
+                RespawnMode.Wave,
+                25f,
+                3.5f,
+                18f,
+                DeathBody.Collapse,
+                DeathCamera.Free,
+                true,
+                0.6f,
+                Destruction.On,
+                AllOnActions(),
+                1.5f,
+                FallDamage.On,
+                HudDensity.Hardcore,
+                MatchObjective.Domination,
+                8,
+                0.1f);
+
+            var written = GameRulesJson.Write(rules);
+
+            AssertSameRules(GameRulesJson.Parse(written, _source), rules);
+            Assert.That(GameRulesJson.Write(GameRulesJson.Parse(written, _source)), Is.EqualTo(written), "writing is stable");
+        }
+
+        [Test]
+        public void WriteNamesEveryItem()
+        {
+            var written = GameRulesJson.Write(GameRules.Default);
+
+            foreach (var item in GameRulesJson.ItemNames)
+            {
+                Assert.That(written, Does.Contain("\"" + item + "\": "), item);
+            }
+
+            foreach (var item in GameRulesJson.ActionItemNames)
+            {
+                Assert.That(written, Does.Contain("\"" + item + "\": "), "actions." + item);
+            }
+        }
+
+        [Test]
+        public void WriteRejectsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() => GameRulesJson.Write(null));
+        }
+
+        private static ActionRules AllOnActions()
+        {
+            return new ActionRules(
+                Downed.Revive,
+                12f,
+                0.25f,
+                2.5f,
+                Cover.On,
+                BlindFire.On,
+                ActiveReload.On,
+                Dodge.On,
+                Vault.On,
+                Grenade.On,
+                3,
+                Melee.On,
+                Stagger.On,
+                Slide.On,
+                Mantle.On,
+                Prone.On,
+                Ladder.On,
+                Zipline.On,
+                Parachute.On,
+                Stealth.On,
+                Suppression.On,
+                Ping.On,
+                Abilities.On,
+                SlowMotion.On);
         }
 
         [Test]
@@ -264,6 +407,19 @@ namespace Fps.Core.Tests
             Assert.That(a.Vault, Is.EqualTo(b.Vault), "actions.vault");
             Assert.That(a.Grenade, Is.EqualTo(b.Grenade), "actions.grenade");
             Assert.That(a.GrenadeCount, Is.EqualTo(b.GrenadeCount), "actions.grenadeCount");
+            Assert.That(a.Melee, Is.EqualTo(b.Melee), "actions.melee");
+            Assert.That(a.Stagger, Is.EqualTo(b.Stagger), "actions.stagger");
+            Assert.That(a.Slide, Is.EqualTo(b.Slide), "actions.slide");
+            Assert.That(a.Mantle, Is.EqualTo(b.Mantle), "actions.mantle");
+            Assert.That(a.Prone, Is.EqualTo(b.Prone), "actions.prone");
+            Assert.That(a.Ladder, Is.EqualTo(b.Ladder), "actions.ladder");
+            Assert.That(a.Zipline, Is.EqualTo(b.Zipline), "actions.zipline");
+            Assert.That(a.Parachute, Is.EqualTo(b.Parachute), "actions.parachute");
+            Assert.That(a.Stealth, Is.EqualTo(b.Stealth), "actions.stealth");
+            Assert.That(a.Suppression, Is.EqualTo(b.Suppression), "actions.suppression");
+            Assert.That(a.Ping, Is.EqualTo(b.Ping), "actions.ping");
+            Assert.That(a.Abilities, Is.EqualTo(b.Abilities), "actions.abilities");
+            Assert.That(a.SlowMotion, Is.EqualTo(b.SlowMotion), "actions.slowMotion");
         }
     }
 }

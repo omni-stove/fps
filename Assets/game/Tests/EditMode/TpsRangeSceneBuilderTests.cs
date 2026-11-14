@@ -196,6 +196,91 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlacesTheGivenFixturesAfterTheBuiltInsWithTheRules()
+        {
+            var rules = NewRules(GameRulesAssetBuilder.TpsRangeRules());
+            var first = new FakeFixture("FixtureA");
+            var second = new FakeFixture("FixtureB");
+
+            TpsRangeSceneBuilder.PopulateScene(
+                _scene, new[] { NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec()) }, rules, new ITpsRangeFixture[] { first, second });
+
+            var roots = _scene.GetRootGameObjects();
+            Assert.That(roots[roots.Length - 2].name, Is.EqualTo("FixtureA"));
+            Assert.That(roots[roots.Length - 1].name, Is.EqualTo("FixtureB"));
+            Assert.That(first.ReceivedRules, Is.Not.Null);
+            Assert.That(first.ReceivedRules.Actions.Cover, Is.EqualTo(rules.ToRules().Actions.Cover));
+        }
+
+        [Test]
+        public void RefusesFixturesWithEmptyOrTakenNamesAndPlacesNothing()
+        {
+            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var rules = NewRules(GameRulesAssetBuilder.TpsRangeRules());
+
+            Assert.Throws<ArgumentNullException>(() => TpsRangeSceneBuilder.PopulateScene(_scene, new[] { rifle }, rules, null));
+            Assert.Throws<ArgumentException>(
+                () => TpsRangeSceneBuilder.PopulateScene(_scene, new[] { rifle }, rules, new ITpsRangeFixture[] { null }));
+            Assert.Throws<ArgumentException>(
+                () => TpsRangeSceneBuilder.PopulateScene(_scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture(" ") }));
+            Assert.Throws<ArgumentException>(
+                () => TpsRangeSceneBuilder.PopulateScene(_scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture("A/B") }));
+            Assert.Throws<ArgumentException>(
+                () => TpsRangeSceneBuilder.PopulateScene(
+                    _scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture(TpsRangeSceneBuilder.VaultWallName) }));
+            Assert.Throws<ArgumentException>(
+                () => TpsRangeSceneBuilder.PopulateScene(
+                    _scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture("Same"), new FakeFixture("Same") }));
+            Assert.That(_scene.rootCount, Is.Zero, "nothing is placed");
+        }
+
+        [Test]
+        public void AFixtureThatBreaksTheRulesUndoesEverything()
+        {
+            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var rules = NewRules(GameRulesAssetBuilder.TpsRangeRules());
+
+            Assert.Throws<InvalidOperationException>(
+                () => TpsRangeSceneBuilder.PopulateScene(
+                    _scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture("Fine"), new FakeFixture("Named", "Other") }));
+            Assert.That(_scene.rootCount, Is.Zero, "a wrong name removes what was placed");
+
+            Assert.Throws<InvalidOperationException>(
+                () => TpsRangeSceneBuilder.PopulateScene(
+                    _scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture("Nothing", placesNothing: true) }));
+            Assert.That(_scene.rootCount, Is.Zero, "placing nothing removes what was placed");
+
+            Assert.Throws<InvalidOperationException>(
+                () => TpsRangeSceneBuilder.PopulateScene(
+                    _scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture("Child", asChild: true) }));
+            Assert.That(_scene.rootCount, Is.Zero, "placing under another object removes what was placed");
+        }
+
+        [Test]
+        public void FootprintsIncludeTheGivenFixtures()
+        {
+            var fixture = new FakeFixture("Fixture");
+
+            var footprints = TpsRangeSceneBuilder.Footprints(new ITpsRangeFixture[] { fixture });
+
+            Assert.That(footprints[footprints.Count - 1].Name, Is.EqualTo("Fixture"));
+            Assert.That(footprints[footprints.Count - 1].Bounds, Is.EqualTo(fixture.Footprint));
+            Assert.That(footprints.Count, Is.EqualTo(TpsRangeSceneBuilder.Footprints(Array.Empty<ITpsRangeFixture>()).Count + 1));
+            Assert.Throws<ArgumentNullException>(() => TpsRangeSceneBuilder.Footprints(null));
+        }
+
+        [Test]
+        public void OnlyPublicFixturesAreFound()
+        {
+            Assert.That(ExtensionPoints.IsCandidate(typeof(FakeFixture)), Is.False);
+            foreach (var fixture in TpsRangeSceneBuilder.Fixtures())
+            {
+                Assert.That(fixture, Is.Not.InstanceOf<FakeFixture>());
+                Assert.That(TpsRangeSceneBuilder.BuiltInNames, Does.Not.Contain(fixture.Name), fixture.GetType().FullName);
+            }
+        }
+
+        [Test]
         public void RefusesANonEmptyScene()
         {
             var stray = new GameObject("Stray");
@@ -266,6 +351,49 @@ namespace Fps.Tests.EditMode
 
             Assert.Fail($"'{name}' is not in the scene");
             return null;
+        }
+
+        /// <summary>決まりどおりに置くか、名前・置き場所・戻り値のどれかを外す置く物。private なので射撃場の生成には拾われない。</summary>
+        private sealed class FakeFixture : ITpsRangeFixture
+        {
+            private readonly string _placedName;
+            private readonly bool _placesNothing;
+            private readonly bool _asChild;
+
+            public FakeFixture(string name, string placedName = null, bool placesNothing = false, bool asChild = false)
+            {
+                Name = name;
+                _placedName = placedName ?? name;
+                _placesNothing = placesNothing;
+                _asChild = asChild;
+            }
+
+            public int Order => 0;
+
+            public string Name { get; }
+
+            public Bounds Footprint => new Bounds(new Vector3(-20f, 0.5f, -20f), Vector3.one);
+
+            public GameRules ReceivedRules { get; private set; }
+
+            public GameObject Place(Scene scene, GameRules rules)
+            {
+                ReceivedRules = rules;
+                if (_placesNothing)
+                {
+                    return null;
+                }
+
+                var placed = new GameObject(_placedName);
+                SceneManager.MoveGameObjectToScene(placed, scene);
+                if (_asChild)
+                {
+                    // 射撃場の組み込みの物の下に入れ、失敗したときに組み込みの物と一緒に消えることまで確かめる。
+                    placed.transform.SetParent(scene.GetRootGameObjects()[0].transform, false);
+                }
+
+                return placed;
+            }
         }
     }
 }

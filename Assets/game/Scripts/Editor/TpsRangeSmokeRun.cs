@@ -22,6 +22,8 @@ namespace Fps.Editor
     /// 転がっている間は撃てず、終わったら撃てる。</item>
     /// <item>同じ開けた場所で手榴弾を投げ、残りが <see cref="GameRulesAssetBuilder.TpsRangeGrenadeCount"/> から 1 つ減り
     /// (<c>[Grenade] thrown remaining=</c>)、信管が切れて爆発する (<c>[Grenade] exploded</c>)。</item>
+    /// <item>足された手順 (<see cref="ITpsActionSmokeStep"/>、<see cref="ExtraSteps"/>) を <see cref="ITpsActionSmokeStep.Order"/> の順に 1 つずつ終える。
+    /// 時間の上限は手順ごとの <see cref="ITpsActionSmokeStep.TimeoutSeconds"/>。</item>
     /// </list>
     /// どれかが成り立たないか、Play 中にエラー・例外・Assert のログが出たら終了コード 1、すべて成り立てば 0 で終わる。
     /// <see cref="SmokeSuite"/> には入れていない。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
@@ -104,6 +106,9 @@ namespace Fps.Editor
         private static bool _grenadeCountDropped;
         private static bool _grenadeExploded;
         private static ThrownGrenade _grenade;
+        private static IReadOnlyList<ITpsActionSmokeStep> _extraSteps;
+        private static int _extraIndex;
+        private static double _extraStartedAt = -1d;
 
         private enum Step
         {
@@ -119,7 +124,35 @@ namespace Fps.Editor
             FireAfterDodge,
             ThrowGrenade,
             WaitGrenadeExplosion,
+            ExtraSteps,
             Done,
+        }
+
+        /// <summary>
+        /// 読み込み済みのアセンブリから見つけた足された手順を、<see cref="ITpsActionSmokeStep.Order"/> の順に新しく作って返す。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// 手順の型に public な引数なしのコンストラクターが無い、名前が空、名前が重なる、または <see cref="ITpsActionSmokeStep.TimeoutSeconds"/> が 0 より大きい有限値でない。
+        /// </exception>
+        public static IReadOnlyList<ITpsActionSmokeStep> ExtraSteps()
+        {
+            var steps = ExtensionPoints.CreateAll<ITpsActionSmokeStep>(s => s.Order);
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var step in steps)
+            {
+                var type = step.GetType().FullName;
+                if (string.IsNullOrWhiteSpace(step.Name) || !names.Add(step.Name))
+                {
+                    throw new InvalidOperationException($"{LogTag} {type} needs a name that no other smoke step uses (got '{step.Name}')");
+                }
+
+                if (!(step.TimeoutSeconds > 0f) || float.IsInfinity(step.TimeoutSeconds))
+                {
+                    throw new InvalidOperationException($"{LogTag} {type} must time out after a positive, finite number of seconds (got {step.TimeoutSeconds.ToString(CultureInfo.InvariantCulture)})");
+                }
+            }
+
+            return steps;
         }
 
         static TpsRangeSmokeRun()
@@ -198,6 +231,27 @@ namespace Fps.Editor
             _grenadeCountDropped = false;
             _grenadeExploded = false;
             _grenade = null;
+            _extraSteps = null;
+            _extraIndex = 0;
+            _extraStartedAt = -1d;
+            EnsureExtraSteps();
+        }
+
+        // ドメインの再読み込みで静的な値が消えたときも、Play 中の最初の呼び出しで作り直す。
+        private static IReadOnlyList<ITpsActionSmokeStep> EnsureExtraSteps()
+        {
+            if (_extraSteps == null)
+            {
+                var steps = ExtraSteps();
+                foreach (var step in steps)
+                {
+                    step.Reset();
+                }
+
+                _extraSteps = steps;
+            }
+
+            return _extraSteps;
         }
 
         private static void OnLog(string condition, string stackTrace, LogType type)
@@ -261,6 +315,29 @@ namespace Fps.Editor
             {
                 _sawGrenadeExploded = true;
             }
+
+            ForwardLog(condition);
+        }
+
+        // ログの受け取りの中で Debug.Log* を呼ぶと受け取りが入れ子になるので、手順が投げたものはログに出さずに失敗として溜める。
+        private static void ForwardLog(string condition)
+        {
+            if (_extraSteps == null)
+            {
+                return;
+            }
+
+            foreach (var step in _extraSteps)
+            {
+                try
+                {
+                    step.OnLog(condition);
+                }
+                catch (Exception e)
+                {
+                    _errors.Add($"{e.GetType().Name} in smoke step '{step.Name}' while reading a log: {e.Message}");
+                }
+            }
         }
 
         private static void OnUpdate()
@@ -309,7 +386,8 @@ namespace Fps.Editor
                 problem = $"{e.GetType().Name} at step {_step}: {e.Message}";
             }
 
-            if (problem == null && _step != Step.Done && now - _exerciseStartedAt > ExerciseTimeoutSeconds)
+            // 足された手順は手順ごとの上限で見るので、組み込みの手順の上限には含めない。
+            if (problem == null && _step < Step.ExtraSteps && now - _exerciseStartedAt > ExerciseTimeoutSeconds)
             {
                 problem = $"step {_step} did not finish within {ExerciseTimeoutSeconds.ToString("0.##", CultureInfo.InvariantCulture)}s";
             }
@@ -407,6 +485,9 @@ namespace Fps.Editor
 
                 case Step.WaitGrenadeExplosion:
                     return WaitGrenadeExplosion();
+
+                case Step.ExtraSteps:
+                    return AdvanceExtraStep(world);
 
                 default:
                     return null;
@@ -790,8 +871,78 @@ namespace Fps.Editor
                 return $"the grenade exploded but no '{_grenadeExplodedLog}' line was logged";
             }
 
-            _step = Step.Done;
+            _step = Step.ExtraSteps;
             return null;
+        }
+
+        private static string AdvanceExtraStep(BootstrapWorld world)
+        {
+            var steps = EnsureExtraSteps();
+            if (_extraIndex >= steps.Count)
+            {
+                _step = Step.Done;
+                return null;
+            }
+
+            var step = steps[_extraIndex];
+            var now = EditorApplication.timeSinceStartup;
+            if (_extraStartedAt < 0d)
+            {
+                _extraStartedAt = now;
+            }
+
+            bool done;
+            string problem;
+            try
+            {
+                done = step.Advance(world, out problem);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return $"{e.GetType().Name} in smoke step '{step.Name}': {e.Message}";
+            }
+
+            if (problem != null)
+            {
+                return $"smoke step '{step.Name}': {problem}";
+            }
+
+            if (!done)
+            {
+                return now - _extraStartedAt > step.TimeoutSeconds
+                    ? $"smoke step '{step.Name}' did not finish within {step.TimeoutSeconds.ToString("0.##", CultureInfo.InvariantCulture)}s"
+                    : null;
+            }
+
+            _extraIndex++;
+            _extraStartedAt = -1d;
+            if (_extraIndex >= steps.Count)
+            {
+                _step = Step.Done;
+            }
+
+            return null;
+        }
+
+        private static void CleanUpExtraSteps()
+        {
+            if (_extraSteps == null)
+            {
+                return;
+            }
+
+            foreach (var step in _extraSteps)
+            {
+                try
+                {
+                    step.Cleanup();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
         }
 
         private static Collider FindCollider(string path, out string problem)
@@ -882,6 +1033,7 @@ namespace Fps.Editor
             Detach();
             StopWatchingVault();
             StopWatchingGrenade();
+            CleanUpExtraSteps();
             SessionState.EraseBool(ActiveKey);
             SessionState.EraseFloat(RequestedAtKey);
 

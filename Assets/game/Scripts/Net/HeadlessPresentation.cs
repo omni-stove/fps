@@ -6,8 +6,8 @@ namespace Fps.Net
 {
     /// <summary>
     /// 専用サーバーで要らない描画・音声のコンポーネント (Camera / AudioListener / AudioSource / Animator と、演出の
-    /// <see cref="WeaponPresentation"/> / <see cref="ShellEjector"/> / <see cref="DryFireSound"/> / <see cref="CharacterAudio"/> /
-    /// <see cref="CharacterAnimator"/>) を止める。
+    /// <see cref="WeaponPresentation"/> / <see cref="ShellEjector"/> / <see cref="DryFireSound"/> / <see cref="BloodPresenter"/> /
+    /// <see cref="CharacterAudio"/> / <see cref="CharacterAnimator"/>) を止める。
     /// Animator はプレハブに置いたリグ (NetPlayer) のもの。当たり判定はリグの関節を使わないので、止めても試合は変わらない。
     /// 止めるかどうかは <see cref="Fps.Core.NetStartup.ShouldDisablePresentation"/> で決め、ここは止める処理だけを持つ。
     /// </summary>
@@ -49,6 +49,7 @@ namespace Fps.Net
                 + Disable(root.GetComponentsInChildren<WeaponPresentation>(true))
                 + Disable(root.GetComponentsInChildren<ShellEjector>(true))
                 + Disable(root.GetComponentsInChildren<DryFireSound>(true))
+                + Disable(root.GetComponentsInChildren<BloodPresenter>(true))
                 + Disable(root.GetComponentsInChildren<CharacterAudio>(true))
                 + Disable(root.GetComponentsInChildren<CharacterAnimator>(true));
         }

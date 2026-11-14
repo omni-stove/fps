@@ -61,6 +61,7 @@ namespace Fps.Net.Tests
         {
             var root = Create("Root");
             var weapon = root.AddComponent<WeaponPresentation>();
+            var blood = root.AddComponent<BloodPresenter>();
             var audio = root.AddComponent<CharacterAudio>();
             var inactive = Create("Inactive", root.transform);
             inactive.SetActive(false);
@@ -69,8 +70,9 @@ namespace Fps.Net.Tests
 
             var disabled = HeadlessPresentation.DisableUnder(root);
 
-            Assert.That(disabled, Is.EqualTo(3));
+            Assert.That(disabled, Is.EqualTo(4));
             Assert.That(weapon.enabled, Is.False);
+            Assert.That(blood.enabled, Is.False);
             Assert.That(audio.enabled, Is.False);
             Assert.That(animator.enabled, Is.False);
             Assert.That(grenade.enabled, Is.True, "throwing is gameplay, not presentation");

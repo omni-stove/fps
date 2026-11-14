@@ -3,6 +3,8 @@
     <!-- text の "#キー" は文字列表 (Assets/game/Localization/Resources/Strings と Assets/game/Resources/Localization/(言語)/) のキーで、Hud が Fps.Runtime.LocalizedTexts で今の言語の文字にする。 -->
     <Style src="Hud.uss" />
     <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
+        <!-- 被弾と低体力で画面端を赤くする画像。ほかの表示の後ろに描くよう最初に置く。DamageVignetteView が出すときだけ画像と不透明度を入れて出す。 -->
+        <ui:VisualElement name="damage-vignette" class="damage-vignette" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-time-panel" class="hud__panel hud__panel--top-center" picking-mode="Ignore">
             <ui:Label name="hud-time" text="--:--" class="hud__value hud__value--time" picking-mode="Ignore" />
         </ui:VisualElement>
@@ -23,6 +25,8 @@
         <ui:Label name="hud-weapon-name" text="" class="hud__weapon-name" picking-mode="Ignore" style="display: none;" />
         <!-- 残りのグレネードの数。GameBootstrap が GrenadeCountView を付け、ルールでグレネードを使うときだけ出す。 -->
         <ui:Label name="grenade-count" text="" class="grenade-count" picking-mode="Ignore" style="display: none;" />
+        <!-- 能力の枠ごとの回数と待ち時間。GameBootstrap が AbilitySlotsView を付け、行 (ability-slots__row) を入れる。ルールで能力を使い、枠に能力があるときだけ出す。 -->
+        <ui:VisualElement name="ability-slots" class="ability-slots" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-ammo-panel" class="hud__panel hud__panel--bottom-right" picking-mode="Ignore">
             <ui:Label text="#hud.caption.ammo" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-ammo" text="-- / --" class="hud__value" picking-mode="Ignore" />
@@ -58,6 +62,10 @@
         </ui:VisualElement>
         <!-- 被弾方向。DamageDirectionView が撃たれた方向ごとに弧の子要素を足す。 -->
         <ui:VisualElement name="damage-direction" class="damage-direction" picking-mode="Ignore" style="display: none;" />
+        <!-- 敵や場所に付けた印。オフラインのプレイヤーの PingController が PingMarkersView を付けたときだけ、印ごとの子要素 (ping-marker) を足して出す。 -->
+        <ui:VisualElement name="ping-markers" class="ping-markers" picking-mode="Ignore" style="display: none;" />
+        <!-- 分隊への指示の印 (守る場所・狙う敵)。プレイヤーの SquadCommandController が SquadOrderMarkerView を付けたときだけ、印 (squad-order__marker) を足して出す。 -->
+        <ui:VisualElement name="squad-order" class="squad-order" picking-mode="Ignore" style="display: none;" />
         <!-- 画面右上のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
         <!-- 画面下の音の合図の字幕 ([銃声 左後ろ] など)。設定で字幕を On にしているとき、SubtitleView が行 (subtitles__line) を入れ、行があるときだけ出す。 -->

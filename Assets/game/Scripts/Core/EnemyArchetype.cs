@@ -5,5 +5,7 @@ namespace Fps.Core
         Rifleman,
         Shield,
         Sniper,
+        Charger,
+        Bomber,
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using Fps.Core;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Fps.Runtime
 {
@@ -20,8 +21,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("武器の識別子。小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。空なら自動で振る。作った後は変えない")]
         private string _id = string.Empty;
 
-        [SerializeField, Tooltip("プレイヤーに見せる名前。空なら Id")]
-        private string _displayName = string.Empty;
+        // 表示名をそのまま持っていた頃のアセットも読めるようにする。その値はキーとして引かれ、表に無ければそのまま出る
+        [SerializeField, FormerlySerializedAs("_displayName"), Tooltip("プレイヤーに見せる名前を引く表のキー (例: weapon.rifle)。文は Resources/Localization/<言語>/*.json に書く。空なら Id を出す")]
+        private string _nameKey = string.Empty;
 
         [SerializeField, Tooltip("武器の種別。ロードアウトの制約と表示にだけ使う")]
         private WeaponCategory _category = WeaponCategory.AssaultRifle;
@@ -110,10 +112,11 @@ namespace Fps.Runtime
             set => _id = value ?? string.Empty;
         }
 
-        public string DisplayName
+        /// <summary>画面に出す名前を引く表のキー (<see cref="WeaponSpec.NameKey"/>)。null は空文字にする。</summary>
+        public string NameKey
         {
-            get => _displayName ?? string.Empty;
-            set => _displayName = value ?? string.Empty;
+            get => _nameKey ?? string.Empty;
+            set => _nameKey = value ?? string.Empty;
         }
 
         public WeaponCategory Category
@@ -297,7 +300,7 @@ namespace Fps.Runtime
                 var falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
                 return new WeaponSpec(
                     Id,
-                    DisplayName,
+                    NameKey,
                     _category,
                     _fireMode,
                     _magazineSize,

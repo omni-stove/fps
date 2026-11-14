@@ -27,8 +27,8 @@ namespace Fps.Runtime
         /// <summary>キルログに出す武器の Id。</summary>
         public const string WeaponId = "grenade";
 
-        /// <summary>キルログに出す武器の名前 (今の言語)。</summary>
-        public static string DisplayName => Localizer.Get("weapon.grenade");
+        /// <summary>キルログに出す武器の名前。</summary>
+        public static LocalizedText Name => new LocalizedText("weapon.grenade");
 
         /// <summary>目から視線の向きへ、グレネードを出す位置までの距離 (m)。体のカプセル (半径 0.5m) の外に出す。</summary>
         public const float ReleaseDistance = 0.7f;

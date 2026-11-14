@@ -42,7 +42,7 @@ namespace Fps.Core
         /// <summary>リロード中か。<see cref="AmmoText"/> にも出るが、View が見た目を変えるのに使う。</summary>
         public bool IsReloading { get; private set; }
 
-        /// <summary>弾数の上に出す、持っている武器の表示名 (<see cref="WeaponSpec.DisplayName"/>)。武器が無ければ <see cref="HudFormat.NoWeaponName"/>。</summary>
+        /// <summary>弾数の上に出す、持っている武器の名前 (<see cref="WeaponSpec.Name"/> を引いた文字列)。武器が無ければ <see cref="HudFormat.NoWeaponName"/>。</summary>
         public string WeaponNameText { get; private set; } = HudFormat.NoWeaponName;
 
         /// <summary>上中央の残り時間 (mm:ss)。</summary>
@@ -100,7 +100,7 @@ namespace Fps.Core
 
         /// <summary>
         /// 弾数と武器名の源を差し替える。弾数は射撃 (Fired)・リロード完了 (Reloaded)・予備弾の補充 (ReserveAmmoAdded) で更新し、武器名はここで
-        /// <see cref="WeaponSpec.DisplayName"/> にする。null なら両方とも仮の表示に戻す。
+        /// <see cref="WeaponSpec.Name"/> を今の言語で引いた文字列にする。null なら両方とも仮の表示に戻す。
         /// </summary>
         public void BindWeapon(Weapon weapon)
         {
@@ -120,7 +120,7 @@ namespace Fps.Core
             }
 
             OnWeaponChanged();
-            SetWeaponName(_weapon != null ? _weapon.Spec.DisplayName : HudFormat.NoWeaponName);
+            SetWeaponName(_weapon != null ? GameText.Resolve(_weapon.Spec.Name) : HudFormat.NoWeaponName);
         }
 
         /// <summary>残り時間の源を差し替える。null なら仮の表示に戻す。</summary>

@@ -195,7 +195,7 @@ namespace Fps.Runtime
                 _activeReload,
                 _rig.Shoulder,
                 _rig.Mode,
-                weapon != null ? weapon.Spec.DisplayName : string.Empty,
+                weapon != null ? weapon.Spec.LogName : string.Empty,
                 _blindFire.SpreadDegrees);
             return _current;
         }

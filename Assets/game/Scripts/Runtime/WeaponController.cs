@@ -724,7 +724,12 @@ namespace Fps.Runtime
             CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
             if (Hitbox.FindFor(hit.collider) == null)
             {
-                StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
+                // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
+                using (CombatEvents.Attribute(shooter, weapon.Spec.Id))
+                {
+                    StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
+                }
+
                 return true;
             }
 

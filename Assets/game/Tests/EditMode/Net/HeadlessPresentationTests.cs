@@ -77,6 +77,20 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void DisablesTheShellEjectorAndDryFireSound()
+        {
+            var root = Create("Root");
+            var shells = root.AddComponent<ShellEjector>();
+            var dryFire = root.AddComponent<DryFireSound>();
+
+            var disabled = HeadlessPresentation.DisableUnder(root);
+
+            Assert.That(disabled, Is.EqualTo(2));
+            Assert.That(shells.enabled, Is.False);
+            Assert.That(dryFire.enabled, Is.False);
+        }
+
+        [Test]
         public void DisablesTheRigsAnimator()
         {
             // NetSceneBuilder が NetPlayer のプレハブに置くリグと同じく、本体の子の根に Animator がある

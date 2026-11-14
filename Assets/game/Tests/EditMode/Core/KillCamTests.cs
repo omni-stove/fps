@@ -149,10 +149,10 @@ namespace Fps.Core.Tests
             Assert.That(clip.Sample(5f).Eye.X, Is.EqualTo(10f));
             Assert.That(clip.Sample(0.25f).Eye.X, Is.EqualTo(2.5f).Within(_tolerance));
 
-            Assert.Throws<ArgumentNullException>(() => new KillCamClip(null, new KillCamPose[0]));
-            Assert.Throws<ArgumentException>(() => new KillCamClip(_zeroOnly, new KillCamPose[0]));
+            Assert.Throws<ArgumentNullException>(() => new KillCamClip(null, Array.Empty<KillCamPose>()));
+            Assert.Throws<ArgumentException>(() => new KillCamClip(_zeroOnly, Array.Empty<KillCamPose>()));
             Assert.Throws<ArgumentException>(() => new KillCamClip(_halfOne, new[] { Pose(0, 0f), Pose(1, 0f) }));
-            Assert.Throws<ArgumentException>(() => new KillCamClip(_zeroZero,new[] { Pose(0, 0f), Pose(1, 0f) }));
+            Assert.Throws<ArgumentException>(() => new KillCamClip(_zeroZero, new[] { Pose(0, 0f), Pose(1, 0f) }));
             Assert.Throws<InvalidOperationException>(() => KillCamClip.Empty.Sample(0f));
             Assert.That(KillCamClip.Empty.IsEmpty, Is.True);
         }
@@ -229,7 +229,7 @@ namespace Fps.Core.Tests
         [Test]
         public void PlaybackFinishesOnceAtTheEndAtTheGivenSpeed()
         {
-            var playback = new KillCamPlayback(new KillCamClip(_zeroTwo,new[] { Pose(0, 0f), Pose(2, 0f) }));
+            var playback = new KillCamPlayback(new KillCamClip(_zeroTwo, new[] { Pose(0, 0f), Pose(2, 0f) }));
 
             Assert.That(playback.IsFinished, Is.False);
             Assert.That(playback.Advance(1f, 0.5f), Is.False);
@@ -256,7 +256,7 @@ namespace Fps.Core.Tests
         [Test]
         public void PlaybackRejectsInvalidTimeAndSpeed()
         {
-            var playback = new KillCamPlayback(new KillCamClip(_zeroOne,new[] { Pose(0, 0f), Pose(1, 0f) }));
+            var playback = new KillCamPlayback(new KillCamClip(_zeroOne, new[] { Pose(0, 0f), Pose(1, 0f) }));
 
             Assert.Throws<ArgumentOutOfRangeException>(() => playback.Advance(-1f, 1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => playback.Advance(float.NaN, 1f));

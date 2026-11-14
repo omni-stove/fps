@@ -31,7 +31,7 @@ namespace Fps.Core
         public const float MinFixedDeltaTime = 0.0001f;
 
         // 書いた値を読み直すと float の丸めで僅かにずれることがあるので、毎フレーム書き直さないための幅。
-        private const float Tolerance = 1e-6f;
+        private const float _tolerance = 1e-6f;
 
         private readonly List<Entry> _requests = new List<Entry>();
         private bool _applied;
@@ -354,7 +354,7 @@ namespace Fps.Core
 
         private static bool Differs(float a, float b)
         {
-            return Math.Abs(a - b) > Tolerance;
+            return Math.Abs(a - b) > _tolerance;
         }
 
         private static string Number(float value)

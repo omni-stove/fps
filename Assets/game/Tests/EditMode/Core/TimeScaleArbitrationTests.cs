@@ -7,8 +7,8 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class TimeScaleArbitrationTests
     {
-        private const float BaseFixed = 0.02f;
-        private const float Within = 1e-6f;
+        public const float BaseFixed = 0.02f;
+        public const float Within = 1e-6f;
 
         [Test]
         public void RequestsWithInvalidValuesAreRejected()

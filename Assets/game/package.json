@@ -2,7 +2,7 @@
   "name": "com.omnistove.fps",
   "version": "0.1.0",
   "displayName": "FPS Kit",
-  "description": "First-person shooter gameplay, modes, campaign and editor builders. Fps.Net compiles only when com.unity.netcode.gameobjects 2.14.0 or later is installed, and Fps.NetEos only when com.playeveryware.eos is installed as well.",
+  "description": "First-person shooter gameplay, modes, campaign and the JSON importers. The demo game (weapons, rules, missions, scenes, the editor scripts that build them, and smoke runs) is the Demo Game sample. Fps.Net compiles only when com.unity.netcode.gameobjects 2.14.0 or later is installed, and Fps.NetEos only when com.playeveryware.eos is installed as well.",
   "unity": "6000.6",
   "documentationUrl": "https://github.com/omni-stove/fps/blob/main/Assets/game/README.md",
   "dependencies": {
@@ -15,5 +15,12 @@
     "com.unity.modules.physics": "1.0.0",
     "com.unity.modules.screencapture": "1.0.0",
     "com.unity.modules.uielements": "1.0.0"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Demo Game",
+      "description": "The weapons, rules, missions, scenes and prefabs of the demo shooter, the editor scripts that build its scenes and smoke runs, and their tests.",
+      "path": "Samples~/Demo"
+    }
+  ]
 }

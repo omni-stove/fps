@@ -35,3 +35,7 @@ indent_size = 2
 
 [*.asmdef]
 indent_size = 4
+
+# 各自が置く EOS の C# SDK (dotnet/ThirdParty/EOSSDK/README.md)。手を入れないので書式もアナライザも当てない
+[dotnet/ThirdParty/**.cs]
+generated_code = true

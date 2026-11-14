@@ -63,6 +63,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("置いてから消えるまでの秒数。0 なら消えない")]
         private float _lifetimeSeconds;
 
+        [SerializeField, Tooltip("見た目。原点を見た目の中心にする (足元から浮かせて回す)。大きさと材質はプレハブのまま、当たり判定は外す。空なら中身の種類で色を分けた仮の箱を作る")]
+        private GameObject _visualPrefab;
+
         private readonly HashSet<Collider> _inside = new HashSet<Collider>();
         private readonly List<Collider> _insideBuffer = new List<Collider>();
         private readonly HashSet<Damageable> _triedThisTick = new HashSet<Damageable>();
@@ -135,6 +138,13 @@ namespace Fps.Runtime
             set => _lifetimeSeconds = Mathf.Max(0f, value);
         }
 
+        /// <summary>見た目。null なら中身の種類で色を分けた仮の箱。見た目を作る (Awake か <see cref="Create"/>) 前に設定したものを使う。</summary>
+        public GameObject VisualPrefab
+        {
+            get => _visualPrefab;
+            set => _visualPrefab = value;
+        }
+
         /// <summary>まだ拾われていなければ true。</summary>
         public bool IsAvailable => !_collected;
 
@@ -145,16 +155,18 @@ namespace Fps.Runtime
         public InputAction InteractAction => _interactAction;
 
         /// <summary>
-        /// contents の拾える物を groundPosition (足元) に作る。トリガーの球・動かない Rigidbody・中身の種類で色を分けた見た目をコードで付ける。
+        /// contents の拾える物を groundPosition (足元) に作る。トリガーの球・動かない Rigidbody・見た目 (visualPrefab か、中身の種類で色を分けた仮の箱) を付ける。
         /// contents は写しを持つので、後で書き換えても作った物は変わらない。contents が不正なら何も作らずに <see cref="ArgumentException"/>。
         /// </summary>
         /// <param name="parent">親。null ならシーンの直下。</param>
+        /// <param name="visualPrefab">見た目 (<see cref="VisualPrefab"/>)。null なら仮の箱。</param>
         public static Pickup Create(
             PickupContents contents,
             Vector3 groundPosition,
             PickupCollectMode collectMode = PickupCollectMode.Touch,
             Transform parent = null,
-            float radius = DefaultRadius)
+            float radius = DefaultRadius,
+            GameObject visualPrefab = null)
         {
             if (contents == null)
             {
@@ -180,6 +192,7 @@ namespace Fps.Runtime
                 pickup._spec = spec;
                 pickup._collectMode = collectMode;
                 pickup._radius = Mathf.Max(MinRadius, radius);
+                pickup._visualPrefab = visualPrefab;
                 pickup.EnsureParts();
                 go.SetActive(true);
                 return pickup;
@@ -632,6 +645,14 @@ namespace Fps.Runtime
 
         private Transform CreateVisual(PickupKind kind)
         {
+            if (_visualPrefab != null)
+            {
+                // 拾う範囲はトリガーの球で決めるので、見た目の当たり判定は外す (残すと固い物として移動と弾を遮る)。
+                var instance = Fps.Runtime.VisualPrefab.Instantiate(_visualPrefab, transform, VisualName, stripColliders: true);
+                instance.transform.localPosition = new Vector3(0f, VisualHeight, 0f);
+                return instance.transform;
+            }
+
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = VisualName;
 

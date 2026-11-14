@@ -338,42 +338,7 @@ namespace Fps.Tests.EditMode
             Assert.That(PlayerActions.Installers.OfType<SuppressionActionInstaller>().Count(), Is.EqualTo(1));
         }
 
-        [Test]
-        public void TheRangeFixturePlacesATargetThatFollowsTheRules()
-        {
-            var scene = TestScenes.NewAdditive();
-            try
-            {
-                var fixture = new SuppressionRangeFixture();
-                var placed = fixture.Place(scene, GameRulesAssetBuilder.TpsRangeRules());
 
-                Assert.That(placed.name, Is.EqualTo(SuppressionRangeFixture.TargetName));
-                Assert.That(placed.scene, Is.EqualTo(scene));
-                Assert.That(placed.transform.position, Is.EqualTo(SuppressionRangeFixture.TargetCenter));
-                var receiver = placed.GetComponent<SuppressionReceiver>();
-                Assert.That(receiver.Rule, Is.EqualTo(Suppression.On));
-                Assert.That(receiver.Id, Is.EqualTo(SuppressionRangeFixture.TargetName));
-                Assert.That(fixture.Footprint.Contains(SuppressionRangeFixture.TargetCenter), Is.True);
-
-                var off = fixture.Place(scene, GameRules.Default);
-                Assert.That(off.GetComponent<SuppressionReceiver>().Rule, Is.EqualTo(Suppression.Off));
-            }
-            finally
-            {
-                EditorSceneManager.CloseScene(scene, true);
-            }
-        }
-
-        [Test]
-        public void TheSmokeStepIsFoundAndShootsBesideBothTargets()
-        {
-            Assert.That(TpsRangeSmokeRun.ExtraSteps().OfType<SuppressionSmokeStep>().Count(), Is.EqualTo(1));
-            Assert.That(TpsRangeSceneBuilder.Fixtures().OfType<SuppressionRangeFixture>().Count(), Is.EqualTo(1));
-            Assert.That(SuppressionSmokeStep.TargetMissOffset, Is.GreaterThan(SuppressionRangeFixture.TargetDiameter / 2f));
-            Assert.That(SuppressionSmokeStep.TargetMissOffset, Is.LessThan(SuppressionSpec.DefaultNearMissRadius));
-            Assert.That(SuppressionSmokeStep.PlayerMissOffset, Is.GreaterThan(GameBootstrap.PlayerRadius));
-            Assert.That(SuppressionSmokeStep.PlayerMissOffset, Is.LessThan(SuppressionSpec.DefaultNearMissRadius));
-        }
 
         private T Track<T>(T created)
             where T : Object
@@ -386,7 +351,7 @@ namespace Fps.Tests.EditMode
         {
             var rifle = Track(ScriptableObject.CreateInstance<WeaponDefinition>());
             rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(rifle, TestWeapons.RifleSpec());
 
             var host = Track(GameObject.CreatePrimitive(PrimitiveType.Capsule));
             host.name = name;
@@ -398,7 +363,7 @@ namespace Fps.Tests.EditMode
         {
             var rifle = Track(ScriptableObject.CreateInstance<WeaponDefinition>());
             rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(rifle, TestWeapons.RifleSpec());
             var attack = new InputAction("Attack", InputActionType.Button);
             var reload = new InputAction("Reload", InputActionType.Button);
             _actions.Add(attack);

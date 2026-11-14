@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="Fps.Core/Fps.Core.csproj" />
   <Project Path="Fps.Core.Tests/Fps.Core.Tests.csproj" />
+  <Project Path="Fps.EosSdk/Fps.EosSdk.csproj" />
+  <Project Path="Fps.EosSdk.Tests/Fps.EosSdk.Tests.csproj" />
   <Project Path="Fps.Protocol/Fps.Protocol.csproj" />
   <Project Path="Fps.Protocol.Tests/Fps.Protocol.Tests.csproj" />
   <Project Path="Fps.Server/Fps.Server.csproj" />

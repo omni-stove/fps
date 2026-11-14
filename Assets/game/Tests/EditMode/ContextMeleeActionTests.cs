@@ -87,7 +87,7 @@ namespace Fps.Tests.EditMode
 
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
             _attack = new InputAction("Attack", InputActionType.Button);
             _reload = new InputAction("Reload", InputActionType.Button);
             _weapon = camera.gameObject.AddComponent<WeaponController>();

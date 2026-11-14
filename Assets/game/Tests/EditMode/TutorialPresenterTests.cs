@@ -24,9 +24,9 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
             _handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
-            WeaponAssetBuilder.Configure(_handgun, WeaponAssetBuilder.HandgunSpec());
+            WeaponAssets.Configure(_handgun, TestWeapons.HandgunSpec());
 
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();

@@ -514,7 +514,7 @@ namespace Fps.Tests.EditMode
         {
             var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(rifle, TestWeapons.RifleSpec());
             var enemy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             enemy.name = "Enemy";
             try
@@ -531,7 +531,7 @@ namespace Fps.Tests.EditMode
                 var alive = animator.Refresh(DeltaSeconds);
                 Assert.That(alive.Dead, Is.False);
                 Assert.That(alive.Aim, Is.False, "an idle enemy does not aim");
-                Assert.That(alive.WeaponCategory, Is.EqualTo((int)WeaponAssetBuilder.RifleSpec().Category));
+                Assert.That(alive.WeaponCategory, Is.EqualTo((int)TestWeapons.RifleSpec().Category));
 
                 enemy.GetComponent<Damageable>().Kill();
                 Assert.That(agent.State, Is.EqualTo(EnemyState.Dead));
@@ -551,7 +551,7 @@ namespace Fps.Tests.EditMode
         public void EnemyRigStandsOnTheNavMeshAgentsFeet()
         {
             var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
-            WeaponAssetBuilder.Configure(rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(rifle, TestWeapons.RifleSpec());
             var enemy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             enemy.name = "Enemy";
             try

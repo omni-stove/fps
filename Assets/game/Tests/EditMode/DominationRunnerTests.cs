@@ -52,7 +52,7 @@ namespace Fps.Tests.EditMode
 
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
             _created.Add(_rifle);
 
             // Edit Mode では Awake が走らないので、敵は自分で初期化する。

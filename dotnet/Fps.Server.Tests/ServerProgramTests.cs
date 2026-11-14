@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Fps.EosSdk;
 using NUnit.Framework;
 
 namespace Fps.Server.Tests
@@ -22,6 +23,14 @@ namespace Fps.Server.Tests
         {
             _output.Dispose();
             _error.Dispose();
+        }
+
+        [Test]
+        public void PrintsWhetherTheEosSdkIsIncluded()
+        {
+            Run("-mode", "server");
+
+            Assert.That(_output.ToString(), Does.Contain(EosSdkBuild.LogLine(AppContext.BaseDirectory)));
         }
 
         [Test]

@@ -133,7 +133,7 @@ namespace Fps.Net
                 return;
             }
 
-            var scenePath = MenuRoute.NetSceneUnder(KitPaths.DefaultRoot, MenuSceneSettings.LoadScenes());
+            var scenePath = MenuRoute.NetSceneUnder(MenuSceneSettings.LoadSceneRoot(), MenuSceneSettings.LoadScenes());
             if (SceneManager.GetActiveScene().path == scenePath)
             {
                 return;

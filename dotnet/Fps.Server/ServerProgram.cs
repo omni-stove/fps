@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Fps.Core;
+using Fps.EosSdk;
 
 namespace Fps.Server
 {
@@ -49,6 +50,7 @@ namespace Fps.Server
 
             output.WriteLine(BuildVersion.LogLine(version));
             output.WriteLine(LogTag + " " + options);
+            output.WriteLine(EosSdkBuild.LogLine(AppContext.BaseDirectory));
 
             var host = new ServerHost();
             foreach (var module in modules)

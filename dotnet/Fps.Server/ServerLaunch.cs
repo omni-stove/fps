@@ -18,11 +18,17 @@ namespace Fps.Server
         /// <summary>Unity のサーバーも <c>-map</c> が無ければこのシーンのまま始めるため。</summary>
         public const string DefaultMap = MenuRoute.NetSceneName;
 
-        private ServerLaunch(NetLaunchOptions options, string version, int drainTimeoutSeconds)
+        public const string RulesFlag = "-rules";
+
+        /// <summary>Unity の NetMatch.prefab がこのルールに配線されているため。</summary>
+        public const string DefaultRules = "TeamDeathmatch";
+
+        private ServerLaunch(NetLaunchOptions options, string version, int drainTimeoutSeconds, string rules)
         {
             Options = options;
             Version = version;
             DrainTimeoutSeconds = drainTimeoutSeconds;
+            Rules = rules ?? DefaultRules;
         }
 
         public NetLaunchOptions Options { get; }
@@ -34,6 +40,8 @@ namespace Fps.Server
         public int DrainTimeoutSeconds { get; }
 
         public string Map => Options.Map ?? DefaultMap;
+
+        public string Rules { get; }
 
         public static bool TryParse(
             IReadOnlyList<string> args, Func<string, string> environment, out ServerLaunch launch, out string error)
@@ -78,7 +86,47 @@ namespace Fps.Server
                 return false;
             }
 
-            launch = new ServerLaunch(options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds));
+            if (!TryParseRules(args, out var rules, out error))
+            {
+                return false;
+            }
+
+            launch = new ServerLaunch(options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules);
+            return true;
+        }
+
+        // ルールの名前はファイル名になるので、マップと同じくパスに使えない文字を断る
+        private static bool TryParseRules(IReadOnlyList<string> args, out string rules, out string error)
+        {
+            rules = null;
+            for (var i = 0; i < args.Count; i++)
+            {
+                if (!string.Equals(args[i], RulesFlag, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (i + 1 >= args.Count || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1][0] == '-')
+                {
+                    error = RulesFlag + " requires a value";
+                    return false;
+                }
+
+                if (rules != null)
+                {
+                    error = RulesFlag + " is given more than once";
+                    return false;
+                }
+
+                rules = args[++i];
+                if (!NetLaunchOptions.IsMapName(rules))
+                {
+                    error = RulesFlag + " must be a rules name of letters, digits, '_' or '-' (got '" + rules + "')";
+                    return false;
+                }
+            }
+
+            error = null;
             return true;
         }
 

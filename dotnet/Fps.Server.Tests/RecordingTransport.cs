@@ -9,6 +9,8 @@ namespace Fps.Server.Tests
     {
         public const int UnreliableLimit = 1200;
 
+        private readonly MessageTable _table = MatchMessages.CreateClientTable();
+
         public List<(ConnectionId Connection, TransportChannel Channel, byte[] Payload)> Sent { get; } =
             new List<(ConnectionId Connection, TransportChannel Channel, byte[] Payload)>();
 
@@ -54,6 +56,27 @@ namespace Fps.Server.Tests
 
         public void Dispose()
         {
+        }
+
+        // 表は読むたびに同じ物を上書きするので、呼んだ側がすぐ中身を写す
+        public List<T> Read<T>(int connection, Func<T, T> copy)
+            where T : class, IMessage
+        {
+            var found = new List<T>();
+            foreach (var sent in Sent)
+            {
+                if (sent.Connection.Value != (ulong)connection)
+                {
+                    continue;
+                }
+
+                if (_table.Read(new ArraySegment<byte>(sent.Payload)) is T message)
+                {
+                    found.Add(copy(message));
+                }
+            }
+
+            return found;
         }
     }
 }

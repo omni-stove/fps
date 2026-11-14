@@ -88,8 +88,8 @@ namespace Fps.Editor
                         weapon);
                     enemy.ApplySpec(Spec());
 
-                    var bomber = enemy.gameObject.AddComponent<EnemyBomber>();
-                    bomber.Signal = EnemyBomber.CreateSignalPlaceholder(enemy.transform);
+                    // 目印はシーンに焼き込まず、実行時に作らせる。焼き込むと、後で EnemyBomber にプレハブを設定しても使われない。
+                    enemy.gameObject.AddComponent<EnemyBomber>();
                     enemy.gameObject.SetActive(false);
                     activated.Add(enemy.gameObject);
                 }

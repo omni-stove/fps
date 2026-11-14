@@ -118,8 +118,8 @@ namespace Fps.Editor
                         weapon);
                     enemy.ApplySpec(Spec());
 
-                    var charger = enemy.gameObject.AddComponent<EnemyCharger>();
-                    charger.Tell = EnemyCharger.CreateTellPlaceholder(enemy.transform);
+                    // 目印はシーンに焼き込まず、実行時に作らせる。焼き込むと、後で EnemyCharger にプレハブを設定しても使われない。
+                    enemy.gameObject.AddComponent<EnemyCharger>();
                     enemy.gameObject.SetActive(false);
                     activated.Add(enemy.gameObject);
                 }

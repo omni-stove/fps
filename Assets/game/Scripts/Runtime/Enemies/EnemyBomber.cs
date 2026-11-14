@@ -14,8 +14,11 @@ namespace Fps.Runtime
         public const string SignalPlaceholderName = "BomberSignal";
         public const float DefaultBlinkSeconds = 0.15f;
 
-        [SerializeField, Tooltip("合図の間だけ点滅させる目印。シーン生成スクリプトが配線する。空なら実行時に仮の球を作る")]
+        [SerializeField, Tooltip("合図の間だけ点滅させる目印。空なら実行時に合図の見た目のプレハブから作る")]
         private Transform _signal;
+
+        [SerializeField, Tooltip("合図の目印の見た目。持ち主の子に置き、プレハブの位置・向き・大きさをそのまま使う。当たり判定は外す。空なら仮の球を作る")]
+        private GameObject _signalPrefab;
 
         [SerializeField, Min(0.01f), Tooltip("合図の目印の点滅の間隔 (秒)")]
         private float _blinkSeconds = DefaultBlinkSeconds;
@@ -34,6 +37,12 @@ namespace Fps.Runtime
         {
             get => _signal;
             set => _signal = value;
+        }
+
+        public GameObject SignalPrefab
+        {
+            get => _signalPrefab;
+            set => _signalPrefab = value;
         }
 
         public float BlinkSeconds
@@ -74,7 +83,7 @@ namespace Fps.Runtime
             EnsureBehavior();
             if (_signal == null)
             {
-                _signal = CreateSignalPlaceholder(transform);
+                _signal = CreateSignal(transform, _signalPrefab);
             }
         }
 
@@ -139,6 +148,18 @@ namespace Fps.Runtime
 
             UpdateSignal(deltaSeconds);
             return false;
+        }
+
+        public static Transform CreateSignal(Transform parent, GameObject prefab)
+        {
+            if (prefab == null)
+            {
+                return CreateSignalPlaceholder(parent);
+            }
+
+            var signal = EnemyVisualPrefab.Instantiate(prefab, parent);
+            signal.SetActive(false);
+            return signal.transform;
         }
 
         public static Transform CreateSignalPlaceholder(Transform parent)

@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Fps.Runtime
 {
@@ -14,7 +17,11 @@ namespace Fps.Runtime
     /// この画面で操作しているキャラなら <see cref="CombatEvents.DamageTaken"/>、他人なら <see cref="ICharacterHurtSource.Hurt"/> で鳴らす。
     /// 連射や散弾で続けて当たっても <see cref="HurtVoiceCooldownSeconds"/> の間は鳴らし直さない。</item>
     /// </list>
-    /// 音は <see cref="Catalog"/> の <see cref="PresentationCatalog.Footstep"/> / <see cref="PresentationCatalog.Landing"/> / <see cref="PresentationCatalog.HurtVoice"/>。
+    /// 足音と着地音は、鳴らすときに足元へ短く Raycast して床の材質 (<see cref="SurfaceMaterial.IdOf"/>) を引き、
+    /// <see cref="SurfaceCatalog"/> の組からランダムに選ぶ (直前と同じ音は避ける)。組が無ければ <see cref="FootstepSurfaceCatalog.CollectClips"/> の順に
+    /// default の組、<see cref="Catalog"/> の <see cref="PresentationCatalog.Footstep"/> / <see cref="PresentationCatalog.Landing"/> を使う。
+    /// 足元の材質が変わったら <see cref="FootstepLogTag"/> 付きでログに出す。
+    /// 被弾の声は <see cref="Catalog"/> の <see cref="PresentationCatalog.HurtVoice"/>。
     /// 無いものは鳴らさないだけで、動きや戦闘の処理は止めない。AudioSource は初めて鳴らすときに本体へ足す (足と声で 2 つ)。
     /// 他人の足音と着地音を鳴らしたら、字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
     /// 銃声・着弾・リロードの音は <see cref="WeaponPresentation"/> が鳴らす。
@@ -24,6 +31,17 @@ namespace Fps.Runtime
     public sealed class CharacterAudio : MonoBehaviour
     {
         public const string LogTag = "[Audio]";
+
+        /// <summary>足元の材質が変わったときのログの頭。</summary>
+        public const string FootstepLogTag = "[Footstep]";
+
+        /// <summary>足元を調べる Raycast を、足の高さからこれだけ (m) 上から始める。坂や段差で足が床に少し埋まっていても床を拾える。</summary>
+        public const float SurfaceProbeLift = 0.3f;
+
+        /// <summary>足の高さからこれだけ (m) 下まで床を探す。接地の判定の誤差と、ネット対戦の補間で浮いた分を拾える長さ。</summary>
+        public const float SurfaceProbeDepth = 0.5f;
+
+        private const int SurfaceProbeBufferSize = 8;
 
         /// <summary>この距離 (m) までは音量を下げない。</summary>
         public const float DefaultMinDistance = 1.5f;
@@ -40,6 +58,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("音を引く設定。空なら Resources の PresentationCatalog を探す")]
         private PresentationCatalog _catalog;
 
+        [SerializeField, Tooltip("床の材質ごとの足音と着地音。空なら Resources の FootstepSurfaceCatalog を探し、無ければ上の設定の足音を使う")]
+        private FootstepSurfaceCatalog _surfaceCatalog;
+
         [SerializeField, Min(0.01f), Tooltip("この距離 (m) までは音量を下げない")]
         private float _minDistance = DefaultMinDistance;
 
@@ -49,8 +70,18 @@ namespace Fps.Runtime
         [SerializeField, Range(0f, 1f), Tooltip("被弾の声の音量")]
         private float _hurtVolume = 1f;
 
+        private static readonly Func<int, int> RandomBelow = count => Random.Range(0, count);
+        private static bool _missingSurfaceCatalogWarned;
+
         private readonly FootstepCadence _cadence = new FootstepCadence();
+        private readonly List<AudioClip> _candidates = new List<AudioClip>();
+        private readonly RaycastHit[] _probeHits = new RaycastHit[SurfaceProbeBufferSize];
         private bool _catalogResolved;
+        private bool _surfaceCatalogResolved;
+        private AudioClip _lastFootstepClip;
+        private AudioClip _lastLandingClip;
+        private string _lastSurfaceId;
+        private Collider _bodyCollider;
         private bool _started;
         private bool _subscribed;
         private ICharacterMotionSource _motion;
@@ -85,6 +116,39 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>
+        /// 床の材質ごとの足音と着地音。Inspector で入れていなければ、初めて読んだときに <see cref="FootstepSurfaceCatalog.Load"/> で探す。
+        /// 無ければ (1 度だけ警告して) null で、<see cref="Catalog"/> の足音・着地音を鳴らす。代入すると探さずにそれを使う。
+        /// </summary>
+        public FootstepSurfaceCatalog SurfaceCatalog
+        {
+            get
+            {
+                if (_surfaceCatalog == null && !_surfaceCatalogResolved)
+                {
+                    _surfaceCatalog = FootstepSurfaceCatalog.Load();
+                    _surfaceCatalogResolved = true;
+                    if (_surfaceCatalog == null && !_missingSurfaceCatalogWarned)
+                    {
+                        _missingSurfaceCatalogWarned = true;
+                        Debug.LogWarning(
+                            $"{FootstepLogTag} no footstep surface catalog at Resources/{FootstepSurfaceCatalog.ResourcePath}; "
+                            + "footsteps use the presentation catalog's sounds", this);
+                    }
+                }
+
+                return _surfaceCatalog;
+            }
+            set
+            {
+                _surfaceCatalog = value;
+                _surfaceCatalogResolved = true;
+            }
+        }
+
+        /// <summary>最後に足音か着地音を鳴らしたときの足元の材質の Id。まだ鳴らしていなければ null。</summary>
+        public string LastSurfaceId => _lastSurfaceId;
+
         /// <summary>足音と着地音を決める規則。</summary>
         public FootstepCadence Cadence => _cadence;
 
@@ -97,6 +161,7 @@ namespace Fps.Runtime
             _motion = GetComponent<ICharacterMotionSource>();
             _damageable = GetComponent<Damageable>();
             _hurtSource = _damageable == null ? GetComponent<ICharacterHurtSource>() : null;
+            _bodyCollider = GetComponent<Collider>();
             if (_motion == null)
             {
                 Debug.LogWarning($"{LogTag} '{name}' has no {nameof(ICharacterMotionSource)}; footsteps and landings stay silent", this);
@@ -174,28 +239,126 @@ namespace Fps.Runtime
                 return;
             }
 
-            var catalog = Catalog;
-            if (catalog == null)
+            // どちらのカタログも無ければ鳴らす音が無いので、足元を調べる Raycast も省く
+            if (SurfaceCatalog == null && Catalog == null)
             {
                 return;
             }
 
-            var isLanding = cue.Kind == FootstepCueKind.Landing;
-            var clip = isLanding ? catalog.Landing : catalog.Footstep;
+            PlayFootstep(cue.Kind, cue.Volume, ProbeSurfaceId());
+        }
+
+        /// <summary>
+        /// materialId の床で kind (足音か着地) の音を volume で鳴らす。候補は <see cref="FootstepSurfaceCatalog.CollectClips"/> で引き、
+        /// 直前に同じ種類で鳴らした音を避けて選ぶ。materialId が前回と違えば <see cref="FootstepLogTag"/> 付きでログに出す。
+        /// 音が無い・kind が足音でも着地でもなければ何もせず null。鳴らしたらそのクリップを返す。
+        /// </summary>
+        internal AudioClip PlayFootstep(FootstepCueKind kind, float volume, string materialId)
+        {
+            if (kind != FootstepCueKind.Footstep && kind != FootstepCueKind.Landing)
+            {
+                return null;
+            }
+
+            materialId = SurfaceMaterial.Normalize(materialId);
+            var isLanding = kind == FootstepCueKind.Landing;
+            var source = FootstepSurfaceCatalog.CollectClips(SurfaceCatalog, Catalog, materialId, kind, _candidates);
+            var clip = FootstepSurfaceCatalog.PickAvoidingRepeat(_candidates, isLanding ? _lastLandingClip : _lastFootstepClip, RandomBelow);
+            _candidates.Clear();
             if (clip == null)
             {
-                return;
+                return null;
+            }
+
+            if (isLanding)
+            {
+                _lastLandingClip = clip;
+            }
+            else
+            {
+                _lastFootstepClip = clip;
+            }
+
+            // 毎歩ログに出すと埋もれるので、材質が変わったときだけ出す
+            if (!string.Equals(_lastSurfaceId, materialId, StringComparison.Ordinal))
+            {
+                Debug.Log(
+                    $"{FootstepLogTag} '{name}' surface {_lastSurfaceId ?? "(none)"} -> {materialId} ({kind}, clip '{clip.name}' from {source})", this);
+                _lastSurfaceId = materialId;
             }
 
             var feet = EnsureSource(ref _feet);
             feet.pitch = isLanding ? 1f : 1f + Random.Range(-FootstepPitchJitter, FootstepPitchJitter);
-            feet.PlayOneShot(clip, cue.Volume);
+            feet.PlayOneShot(clip, volume);
 
             // 自分の足音は歩くたびに鳴り続け、周りの合図を読む邪魔になるだけなので字幕にしない。
             if (!IsLocalCharacter)
             {
                 SubtitleFeed.Raise(SoundCueKind.Footstep, transform.position, Mathf.Max(_maxDistance, _minDistance + 0.01f));
             }
+
+            return clip;
+        }
+
+        /// <summary>
+        /// 足元の床の材質の Id。足の高さの <see cref="SurfaceProbeLift"/> 上から <see cref="SurfaceProbeDepth"/> 下まで Raycast し、
+        /// 自分の本体の (子を含む) コライダーとトリガーを除いた一番近い面の <see cref="SurfaceMaterial.IdOf"/>。何も無ければ <see cref="SurfaceMaterial.DefaultId"/>。
+        /// </summary>
+        internal string ProbeSurfaceId()
+        {
+            var origin = FeetPosition() + (Vector3.up * SurfaceProbeLift);
+            var count = Physics.RaycastNonAlloc(
+                origin, Vector3.down, _probeHits, SurfaceProbeLift + SurfaceProbeDepth, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            Collider nearest = null;
+            var nearestDistance = float.PositiveInfinity;
+            for (var i = 0; i < count; i++)
+            {
+                var hit = _probeHits[i];
+                if (hit.collider == null || hit.collider.transform.IsChildOf(transform) || !(hit.distance < nearestDistance))
+                {
+                    continue;
+                }
+
+                nearest = hit.collider;
+                nearestDistance = hit.distance;
+            }
+
+            // 残した当たりがコライダーを掴んだままにならないよう消す
+            Array.Clear(_probeHits, 0, count);
+            return SurfaceMaterial.IdOf(nearest);
+        }
+
+        // 本体の原点が足元とは限らない (プレイヤーは CharacterController の中心) ので、本体のコライダーの下端を足の高さにする
+        private Vector3 FeetPosition()
+        {
+            var body = _started ? _bodyCollider : GetComponent<Collider>();
+            if (body != null && body.enabled)
+            {
+                var bounds = body.bounds;
+                return new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+            }
+
+            // 補間表示の他人は CharacterController が無効で bounds が当てにならないので、寸法から下端を求める
+            var scaleY = Mathf.Abs(transform.lossyScale.y);
+            var position = transform.position;
+            if (body is CharacterController controller)
+            {
+                position.y += (controller.center.y - (controller.height * 0.5f)) * scaleY;
+            }
+            else if (body is CapsuleCollider capsule)
+            {
+                position.y += (capsule.center.y - (capsule.height * 0.5f)) * scaleY;
+            }
+            else if (body is BoxCollider box)
+            {
+                position.y += (box.center.y - (box.size.y * 0.5f)) * scaleY;
+            }
+            else if (body is SphereCollider sphere)
+            {
+                position.y += (sphere.center.y - sphere.radius) * scaleY;
+            }
+
+            return position;
         }
 
         /// <summary>この画面で操作しているキャラか (<see cref="Damageable.IsLocalPlayer"/> / <see cref="ICharacterHurtSource.IsLocalPlayer"/>)。</summary>
@@ -241,6 +404,13 @@ namespace Fps.Runtime
             source.minDistance = _minDistance;
             source.maxDistance = Mathf.Max(_maxDistance, _minDistance + 0.01f);
             return source;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            // ドメインを読み直さずに Play Mode に入ったときも、カタログが無いことを 1 度は知らせる
+            _missingSurfaceCatalogWarned = false;
         }
 
         private void ResetTracking()

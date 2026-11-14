@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 908fb49db7fa84e0eadfbeadebef1d80, type: 3}
   m_Name: Campaign01
   m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.MissionDefinition
-  _displayName: Campaign 01
+  _displayNameKey: campaign.mission.Campaign01.name
   _objectives:
   - _id: reach_area_a
-    _description: "\u533A\u57DF A \u306B\u5230\u9054\u3059\u308B"
+    _descriptionKey: campaign.mission.Campaign01.objective.reach_area_a
     _requiredCount: 1
     _optional: 0
     _prerequisites: []
   - _id: kill_enemies
-    _description: "\u6575\u3092 4 \u4F53\u5012\u3059"
+    _descriptionKey: campaign.mission.Campaign01.objective.kill_enemies
     _requiredCount: 4
     _optional: 0
     _prerequisites:
     - reach_area_a
   - _id: reach_exit
-    _description: "\u51FA\u53E3\u306B\u5230\u9054\u3059\u308B"
+    _descriptionKey: campaign.mission.Campaign01.objective.reach_exit
     _requiredCount: 1
     _optional: 0
     _prerequisites:

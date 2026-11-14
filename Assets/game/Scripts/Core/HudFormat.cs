@@ -362,7 +362,7 @@ namespace Fps.Core
         }
 
         /// <summary>キャンペーンのチェックポイントでセーブしたときの案内。</summary>
-        public static string CheckpointSaved => GameText.Get("hud.checkpointSaved");
+        public static string CheckpointSaved => GameText.Get("campaign.checkpoint.saved");
 
         /// <summary>キャンペーンでプレイヤーが倒れた後、チェックポイントから再開するまでの案内。秒数は切り上げた整数で受ける。</summary>
         /// <example><c>CheckpointRestart(3)</c> は <c>チェックポイントから再開まで 3 秒</c></example>
@@ -373,7 +373,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
             }
 
-            return GameText.Format("hud.checkpointRestart", seconds);
+            return GameText.Format("campaign.checkpoint.restart", seconds);
         }
 
         /// <summary>残りのグレネードの数。</summary>

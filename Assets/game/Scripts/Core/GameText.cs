@@ -51,5 +51,20 @@ namespace Fps.Core
             var table = _source?.Invoke();
             return table == null ? key : table.Format(key, args);
         }
+
+        /// <summary>
+        /// 今の表で text を文にする (<see cref="StringTable.Resolve"/>)。表が無ければ、<see cref="LocalizedText.Literal"/> はその文字列、
+        /// <c>default</c> は空文字、それ以外はキーそのもの。
+        /// </summary>
+        public static string Resolve(LocalizedText text)
+        {
+            var table = _source?.Invoke();
+            if (table != null)
+            {
+                return table.Resolve(text);
+            }
+
+            return text.Key;
+        }
     }
 }

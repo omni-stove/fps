@@ -51,7 +51,7 @@ namespace Fps.Runtime
         private bool _running;
         private bool _subscribed;
         private float _completedSeconds;
-        private string _shownPrompt;
+        private LocalizedText _shownPrompt;
         private GameBootstrap _waitingBootstrap;
 
         /// <summary>進みの数え。</summary>
@@ -70,8 +70,8 @@ namespace Fps.Runtime
             set => _store = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        /// <summary>今出している文。出していなければ null。</summary>
-        public string Prompt => _running ? _shownPrompt : null;
+        /// <summary>今出している文。出していなければ <c>default</c>。</summary>
+        public LocalizedText Prompt => _running ? _shownPrompt : default;
 
         private void Start()
         {
@@ -205,7 +205,7 @@ namespace Fps.Runtime
             _pendingHits = 0;
             _reloadStarted = false;
             _completedSeconds = 0f;
-            _shownPrompt = null;
+            _shownPrompt = default;
             _running = true;
             enabled = true;
             Subscribe();
@@ -281,7 +281,7 @@ namespace Fps.Runtime
         {
             Unsubscribe();
             _running = false;
-            _shownPrompt = null;
+            _shownPrompt = default;
             if (GameUi.IsAlive(_view))
             {
                 _view.Hide();
@@ -378,9 +378,7 @@ namespace Fps.Runtime
             }
 
             _shownPrompt = text;
-
-            // 手順の文はまだ表のキーになっていないので、作った文字列をそのまま運ぶ
-            _view.Show(text == null ? default : LocalizedText.Literal(text), _steps.IsComplete);
+            _view.Show(text, _steps.IsComplete);
         }
 
         private void Subscribe()

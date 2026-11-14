@@ -21,7 +21,12 @@ namespace Fps.Editor
     public static class MissionTestSceneBuilder
     {
         public static string ScenePath => BuildSceneList.MissionTestScene;
-        public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/TestMission.asset");
+        /// <summary>定義のアセット名。表のキー (<see cref="MissionDefinition.NameKeyOf"/>) にも使う。</summary>
+        public const string MissionId = "TestMission";
+
+        public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/" + MissionId + ".asset");
+
+        public static string MissionNameKey => MissionDefinition.NameKeyOf(MissionId);
         public const string MenuPath = "Fps/Build Mission Test Scene";
         public const string LogTag = "[MissionTestSceneBuilder]";
 
@@ -58,9 +63,9 @@ namespace Fps.Editor
         {
             return new[]
             {
-                new ObjectiveDefinition(ReachAreaId, "前方のエリアに到達する"),
-                new ObjectiveDefinition(KillTargetsId, "標的を 3 体倒す", TargetCount, false, ReachAreaId),
-                new ObjectiveDefinition(ExtractId, "脱出地点に到達する", 1, false, KillTargetsId),
+                new ObjectiveDefinition(ReachAreaId, MissionDefinition.ObjectiveKeyOf(MissionId, ReachAreaId)),
+                new ObjectiveDefinition(KillTargetsId, MissionDefinition.ObjectiveKeyOf(MissionId, KillTargetsId), TargetCount, false, ReachAreaId),
+                new ObjectiveDefinition(ExtractId, MissionDefinition.ObjectiveKeyOf(MissionId, ExtractId), 1, false, KillTargetsId),
             };
         }
 
@@ -125,7 +130,7 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(definition));
             }
 
-            definition.DisplayName = "Test Mission";
+            definition.DisplayNameKey = MissionNameKey;
             definition.SetObjectives(TestObjectives());
 
             // 不正ならここで MissionDefinitionException になり、壊れたアセットを保存しない。

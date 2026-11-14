@@ -16,7 +16,7 @@ namespace Fps.Editor
     {
         public CampaignMissionSpec(
             string id,
-            string displayName,
+            string nameKey,
             string scenePath,
             string definitionPath,
             string navMeshDataPath,
@@ -34,9 +34,9 @@ namespace Fps.Editor
                 throw new ArgumentException($"mission id '{id}' is not a valid mission id", nameof(id));
             }
 
-            if (string.IsNullOrWhiteSpace(displayName))
+            if (string.IsNullOrWhiteSpace(nameKey))
             {
-                throw new ArgumentException($"mission '{id}' needs a display name", nameof(displayName));
+                throw new ArgumentException($"mission '{id}' needs a name key", nameof(nameKey));
             }
 
             if (definitionPath == null)
@@ -51,7 +51,7 @@ namespace Fps.Editor
             }
 
             Id = id;
-            DisplayName = displayName;
+            NameKey = nameKey;
             ScenePath = scenePath ?? throw new ArgumentNullException(nameof(scenePath));
             DefinitionPath = definitionPath;
             NavMeshDataPath = navMeshDataPath ?? throw new ArgumentNullException(nameof(navMeshDataPath));
@@ -70,7 +70,9 @@ namespace Fps.Editor
         /// <summary>ミッション Id。定義のアセット名・セーブのスロット・カタログの Id に使う。</summary>
         public string Id { get; }
 
-        public string DisplayName { get; }
+        /// <summary>ミッション名を引く言語の表のキー。定義とカタログに入れる。</summary>
+        public string NameKey { get; }
+
         public string ScenePath { get; }
         public string DefinitionPath { get; }
 

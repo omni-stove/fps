@@ -670,6 +670,70 @@
     bottom: 0;
 }
 
+/* 分隊への指示の印。画面全体を覆い、印の中心を SquadOrderMarkerView が left / top (%) に置く。 */
+.squad-order {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.squad-order__marker {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    translate: -50% -50%;
+    align-items: center;
+    justify-content: center;
+    color: rgb(90, 200, 255);
+}
+
+.squad-order__marker--attack {
+    color: rgb(255, 120, 40);
+}
+
+/* 印の形 (輪)。印 (Ping) のひし形と見分けられるよう丸にする。色は印の color と揃える。 */
+.squad-order__icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    border-width: 3px;
+    border-color: rgb(90, 200, 255);
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.squad-order__marker--attack .squad-order__icon {
+    border-color: rgb(255, 120, 40);
+}
+
+/* 札 (「守れ」「狙え」)。印の下に添える。 */
+.squad-order__label {
+    position: absolute;
+    top: 30px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: rgb(255, 255, 255);
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.squad-order__marker--offscreen {
+    scale: 0.85 0.85;
+    opacity: 0.85;
+}
+
+/* 画面の外の印の向きの矢印。印と同じ大きさで重ね、要素ごと中央を軸に回す。三角は上の辺の外に描く。 */
+.squad-order__arrow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
 /* 拠点制圧。Hud の残り時間の欄と同じ上中央に、ポイントと残り時間の行・拠点の持ち主の行・結果を縦に並べる。色は DominationView がチームの色で塗る。 */
 .domination {
     position: absolute;

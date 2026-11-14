@@ -192,6 +192,8 @@ namespace Fps.Editor
 
         private static void Attach()
         {
+            // 再読み込みで _extraSteps が null に戻っていると ForwardLog が足した手順にログを渡せないので、受け始める前に用意する。
+            EnsureExtraSteps();
             Application.logMessageReceived -= OnLog;
             Application.logMessageReceived += OnLog;
             EditorApplication.update -= OnUpdate;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Fps.Core;
+using Fps.Core.Navigation;
 using Fps.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -153,10 +154,18 @@ namespace Fps.Editor
                     written.Add(path);
                     Debug.Log(LogTag + " wrote " + path + " from " + scenePath + " (" + Describe(map) + ")");
 
+                    var navMesh = NavMeshExporter.Capture(scene);
+                    var navMeshPath = Path.Combine(outputDirectory, MapName(scenePath) + NavMeshFile.Extension);
+                    NavMeshExporter.Write(navMesh, navMeshPath);
+                    written.Add(navMeshPath);
+                    Debug.Log(NavMeshExporter.LogTag + " wrote " + navMeshPath + " from " + scenePath + " (" + navMesh.Vertices.Count
+                        + " vertices, " + navMesh.Triangles.Count + " triangles, " + navMesh.Links.Count + " links)");
+
                     // サーバーは .fpsmap から部品の形しか分からないので、同じ耐久値と崩れ方で壊せるよう並びも書く
                     var structures = CollectStructures(scene.GetRootGameObjects());
                     var structuresPath = Path.Combine(outputDirectory, MapName(scenePath) + NetMapStructures.Extension);
                     File.WriteAllText(structuresPath, NetMapStructures.Write(structures));
+                    written.Add(structuresPath);
                     Debug.Log(LogTag + " wrote " + structuresPath + " (" + structures.Structures.Count + " structures)");
                 }
             }
@@ -217,7 +226,10 @@ namespace Fps.Editor
                 kept.Add(Path.GetFullPath(path));
             }
 
-            foreach (var path in Directory.GetFiles(outputDirectory, "*" + FileExtension))
+            var files = new List<string>(Directory.GetFiles(outputDirectory, "*" + FileExtension));
+            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NavMeshFile.Extension));
+            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapStructures.Extension));
+            foreach (var path in files)
             {
                 if (kept.Contains(Path.GetFullPath(path)))
                 {

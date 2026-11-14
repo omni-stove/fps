@@ -73,6 +73,7 @@ namespace Fps.Server
             _bodies.Teleported += HandleTeleported;
             _rules.PlayerSpawned += HandlePlayerSpawned;
             _rules.MatchStarted += HandleMatchStarted;
+            _movement.Landed += HandleLanded;
 
             _log.WriteLine(LogTag + " hitscan maxRewindTicks=" + Text(_hitboxes.MaxRewindTicks)
                 + " maxShotOriginOffset=" + Text(_data.Settings.MaxShotOriginOffset)
@@ -146,6 +147,7 @@ namespace Fps.Server
             _bodies.Teleported -= HandleTeleported;
             _rules.PlayerSpawned -= HandlePlayerSpawned;
             _rules.MatchStarted -= HandleMatchStarted;
+            _movement.Landed -= HandleLanded;
             _fighters.Clear();
             _grenades.Clear();
         }
@@ -211,6 +213,23 @@ namespace Fps.Server
             {
                 fighter.Weapons.Refill();
                 RefillGrenades(fighter);
+            }
+        }
+
+        // 落下ダメージは撃った人のいないダメージとしてルールに通し、倒れたら自滅として数えさせる (Unity の NetworkPlayerMotor.Landing と同じ)
+        private void HandleLanded(ServerPlayer player, int tick, float fallSpeed)
+        {
+            var damage = _movement.FallDamage(fallSpeed, _data.Settings.MaxHealth);
+            if (damage <= 0)
+            {
+                return;
+            }
+
+            var outcome = _rules.ApplyDamage(null, player.PlayerId, damage);
+            if (outcome != DamageOutcome.Ignored)
+            {
+                _log.WriteLine("[Net] fall owner=" + Text(player.PlayerId) + " tick=" + Text(tick)
+                    + " speed=" + fallSpeed.ToString("F2", CultureInfo.InvariantCulture) + " damage=" + Text(damage) + " outcome=" + outcome);
             }
         }
 

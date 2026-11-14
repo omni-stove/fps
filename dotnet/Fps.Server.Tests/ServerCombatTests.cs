@@ -424,6 +424,38 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void AHardLandingHurtsWhenTheRuleIsOn()
+        {
+            Start(Rules().WithFallDamage(FallDamage.On));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            _context.Bodies.Teleport(1, _alphaSpawn + new Vector3(0f, 30f, 0f), 0f, _host.TickCount);
+            Walk(1, Vector2.Zero, 180);
+
+            var health = _rules.Session.GetHealth(1);
+            Assert.That(health, Is.LessThan(NetMatchSettings.DefaultMaxHealth), _log.ToString());
+            Assert.That(_log.ToString(), Does.Contain("[Net] fall owner=1 tick="));
+            Assert.That(_log.ToString(), Does.Contain("damage=" + (NetMatchSettings.DefaultMaxHealth - health).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
+        [Test]
+        public void AHardLandingDoesNotHurtWhenTheRuleIsOff()
+        {
+            Start(Rules().WithFallDamage(FallDamage.Off));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            _context.Bodies.Teleport(1, _alphaSpawn + new Vector3(0f, 30f, 0f), 0f, _host.TickCount);
+            Walk(1, Vector2.Zero, 180);
+
+            Assert.That(_rules.Session.GetHealth(1), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] fall owner="));
+        }
+
+        [Test]
         public void DeadPlayersCannotShoot()
         {
             Start(Rules());

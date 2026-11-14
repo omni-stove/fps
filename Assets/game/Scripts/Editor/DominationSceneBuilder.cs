@@ -409,11 +409,25 @@ namespace Fps.Editor
             zone.Index = index;
             zone.Radius = ControlPointRadius;
             zone.Height = ControlPointHeight;
+            AddFlag(point.transform);
+            return zone;
+        }
+
+        /// <summary>
+        /// 拠点の中心 (point の原点、床の高さ) に旗竿 (<see cref="PoleName"/>) と旗 (<see cref="FlagName"/>) を point の子として立てる。
+        /// 当たり判定は外す。オンラインのマップ (<c>ArenaSceneBuilder</c>) の拠点も同じ見た目にする。
+        /// </summary>
+        public static void AddFlag(Transform point)
+        {
+            if (point == null)
+            {
+                throw new ArgumentNullException(nameof(point));
+            }
 
             var pole = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             pole.name = PoleName;
             UnityEngine.Object.DestroyImmediate(pole.GetComponent<Collider>());
-            pole.transform.SetParent(point.transform, false);
+            pole.transform.SetParent(point, false);
 
             // Cylinder は高さ 2・直径 1。
             pole.transform.localPosition = new Vector3(0f, PoleHeight / 2f, 0f);
@@ -422,11 +436,9 @@ namespace Fps.Editor
             var flag = GameObject.CreatePrimitive(PrimitiveType.Cube);
             flag.name = FlagName;
             UnityEngine.Object.DestroyImmediate(flag.GetComponent<Collider>());
-            flag.transform.SetParent(point.transform, false);
+            flag.transform.SetParent(point, false);
             flag.transform.localPosition = new Vector3((FlagSize.x + PoleDiameter) / 2f, PoleHeight - (FlagSize.y / 2f), 0f);
             flag.transform.localScale = FlagSize;
-
-            return zone;
         }
     }
 }

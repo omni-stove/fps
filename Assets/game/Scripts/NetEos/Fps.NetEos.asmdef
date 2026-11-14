@@ -1,0 +1,34 @@
+{
+    "name": "Fps.NetEos",
+    "rootNamespace": "Fps.NetEos",
+    "references": [
+        "Fps.Core",
+        "Fps.Net",
+        "Unity.Netcode.Runtime",
+        "com.playeveryware.eos-Runtime",
+        "com.playeveryware.eos.core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "FPS_NETCODE",
+        "FPS_EOS"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.netcode.gameobjects",
+            "expression": "2.14.0",
+            "define": "FPS_NETCODE"
+        },
+        {
+            "name": "com.playeveryware.eos",
+            "expression": "0.0.0",
+            "define": "FPS_EOS"
+        }
+    ],
+    "noEngineReferences": false
+}

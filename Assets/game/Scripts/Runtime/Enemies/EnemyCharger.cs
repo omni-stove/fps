@@ -27,8 +27,11 @@ namespace Fps.Runtime
 
         public const float FallbackBodyRadius = 0.5f;
 
-        [SerializeField, Tooltip("構えと突進の間だけ見せる目印。シーン生成スクリプトが配線する。空なら実行時に仮の板を作る")]
+        [SerializeField, Tooltip("構えと突進の間だけ見せる目印。空なら実行時に予兆の見た目のプレハブから作る")]
         private Transform _tell;
+
+        [SerializeField, Tooltip("予兆の目印の見た目。持ち主の子に置き、プレハブの位置・向き・大きさをそのまま使う。当たり判定は外す。空なら仮の板を作る")]
+        private GameObject _tellPrefab;
 
         [SerializeField, Tooltip("突進を止める壁や障害物を探すレイヤー")]
         private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
@@ -47,6 +50,12 @@ namespace Fps.Runtime
         {
             get => _tell;
             set => _tell = value;
+        }
+
+        public GameObject TellPrefab
+        {
+            get => _tellPrefab;
+            set => _tellPrefab = value;
         }
 
         public LayerMask ObstacleMask
@@ -84,7 +93,7 @@ namespace Fps.Runtime
             EnsureBehavior();
             if (_tell == null)
             {
-                _tell = CreateTellPlaceholder(transform);
+                _tell = CreateTell(transform, _tellPrefab);
             }
         }
 
@@ -141,6 +150,18 @@ namespace Fps.Runtime
             var hit = _behavior.IsCharging && Drive(spec.Charger, deltaSeconds);
             SetTell(_behavior.Phase == ChargerPhase.WindingUp || _behavior.Phase == ChargerPhase.Charging);
             return hit;
+        }
+
+        public static Transform CreateTell(Transform parent, GameObject prefab)
+        {
+            if (prefab == null)
+            {
+                return CreateTellPlaceholder(parent);
+            }
+
+            var tell = EnemyVisualPrefab.Instantiate(prefab, parent);
+            tell.SetActive(false);
+            return tell.transform;
         }
 
         public static Transform CreateTellPlaceholder(Transform parent)

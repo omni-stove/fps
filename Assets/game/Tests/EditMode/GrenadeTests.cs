@@ -61,7 +61,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ExplosionDoesNotReachBeyondTheRadius()
         {
-            var target = CreateTarget("Far", new Vector3(0f, 1f, GrenadeThrower.DamageRadius + 2f));
+            var target = CreateTarget("Far", new Vector3(0f, 1f, GrenadeSpec.Default.DamageRadius + 2f));
             var grenade = SpawnGrenade(new Vector3(0f, 1f, 0f));
 
             var result = grenade.Explode();
@@ -117,7 +117,7 @@ namespace Fps.Tests.EditMode
             var explosions = 0;
             grenade.Exploded += (exploded, result) => explosions++;
 
-            Assert.That(grenade.Tick(GrenadeThrower.FuseSeconds - 0.1f), Is.False);
+            Assert.That(grenade.Tick(GrenadeSpec.Default.FuseSeconds - 0.1f), Is.False);
             Assert.That(target.IsDead, Is.False);
             Assert.That(grenade.Tick(0.2f), Is.True);
 
@@ -132,9 +132,9 @@ namespace Fps.Tests.EditMode
             var thrower = CreateThrower(_twoGrenades);
 
             Assert.That(thrower.TryThrow(), Is.True);
-            thrower.Tick(GrenadeThrower.ThrowSeconds);
+            thrower.Tick(GrenadeSpec.Default.ThrowSeconds);
             Assert.That(thrower.TryThrow(), Is.True);
-            thrower.Tick(GrenadeThrower.ThrowSeconds);
+            thrower.Tick(GrenadeSpec.Default.ThrowSeconds);
 
             Assert.That(thrower.TryThrow(), Is.False, "a third grenade cannot be thrown");
             Assert.That(thrower.Remaining, Is.Zero);
@@ -149,7 +149,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(thrower.IsThrowing, Is.True);
             Assert.That(thrower.TryThrow(), Is.False);
-            thrower.Tick(GrenadeThrower.ThrowSeconds);
+            thrower.Tick(GrenadeSpec.Default.ThrowSeconds);
             Assert.That(thrower.IsThrowing, Is.False);
         }
 
@@ -184,7 +184,68 @@ namespace Fps.Tests.EditMode
             Assert.That(thrown.Thrower, Is.SameAs(thrower.gameObject));
             Assert.That(thrown.transform.position.z, Is.GreaterThan(thrower.transform.position.z));
             Assert.That(thrown.GetComponent<Rigidbody>().linearVelocity.z, Is.GreaterThan(0f));
-            Assert.That(thrown.RemainingSeconds, Is.EqualTo(GrenadeThrower.FuseSeconds));
+            Assert.That(thrown.RemainingSeconds, Is.EqualTo(GrenadeSpec.Default.FuseSeconds));
+        }
+
+        [Test]
+        public void ThrowerDefaultsToTheDefaultSpec()
+        {
+            var body = CreateBox("Defaults", new Vector3(0f, 1f, 0f), Vector3.one);
+            var spec = body.AddComponent<GrenadeThrower>().Spec;
+
+            Assert.That(spec.FuseSeconds, Is.EqualTo(GrenadeSpec.DefaultFuseSeconds));
+            Assert.That(spec.ThrowSeconds, Is.EqualTo(GrenadeSpec.DefaultThrowSeconds));
+            Assert.That(spec.ThrowSpeed, Is.EqualTo(GrenadeSpec.DefaultThrowSpeed));
+            Assert.That(spec.ThrowLiftSpeed, Is.EqualTo(GrenadeSpec.DefaultThrowLiftSpeed));
+            Assert.That(spec.MaxDamage, Is.EqualTo(GrenadeSpec.DefaultMaxDamage));
+            Assert.That(spec.DamageRadius, Is.EqualTo(GrenadeSpec.DefaultDamageRadius));
+            Assert.That(spec.FullDamageRadius, Is.EqualTo(GrenadeSpec.DefaultFullDamageRadius));
+            Assert.That(spec.StructureDamageAtCenter, Is.EqualTo(GrenadeSpec.DefaultStructureDamageAtCenter));
+        }
+
+        [Test]
+        public void ThrowerThrowsWithTheAppliedSpec()
+        {
+            var thrower = CreateThrower(_twoGrenades);
+            thrower.ApplySpec(new GrenadeSpec(fuseSeconds: 1f, throwSeconds: 0.2f, maxDamage: 40, damageRadius: 3f, fullDamageRadius: 1f));
+            ThrownGrenade thrown = null;
+            thrower.Thrown += grenade => thrown = grenade;
+
+            thrower.TryThrow();
+
+            Assert.That(thrown.RemainingSeconds, Is.EqualTo(1f));
+            Assert.That(thrown.Explosion.MaxDamage, Is.EqualTo(40));
+            Assert.That(thrown.Explosion.Radius, Is.EqualTo(3f));
+            Assert.That(thrown.Explosion.FullDamageRadius, Is.EqualTo(1f));
+            thrower.Tick(0.2f);
+            Assert.That(thrower.IsThrowing, Is.False);
+            Assert.That(thrower.CreateSpec().MaxDamage, Is.EqualTo(40), "the applied values are the serialized ones");
+        }
+
+        [Test]
+        public void LowerMaxDamageHurtsTheTargetLess()
+        {
+            var target = CreateTarget("Near", new Vector3(0f, 1f, 1f));
+            var spec = new GrenadeSpec(maxDamage: 30);
+            var grenade = SpawnGrenade(new Vector3(0f, 1f, 0f), spec);
+
+            grenade.Explode();
+
+            Assert.That(target.Health.Current, Is.EqualTo(target.Health.Max - 30));
+        }
+
+        [Test]
+        public void ThrowerRejectsInvalidValuesBeforeChangingAnything()
+        {
+            var body = CreateBox("Invalid", new Vector3(0f, 1f, 0f), Vector3.one);
+            var thrower = body.AddComponent<GrenadeThrower>();
+            var serialized = new UnityEditor.SerializedObject(thrower);
+            serialized.FindProperty("_fullDamageRadius").floatValue = GrenadeSpec.DefaultDamageRadius;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => thrower.Configure(_twoGrenades));
+            Assert.That(thrower.UsesGrenades, Is.False);
+            Assert.That(thrower.Remaining, Is.Zero);
         }
 
         [Test]
@@ -236,10 +297,11 @@ namespace Fps.Tests.EditMode
             return thrower;
         }
 
-        private ThrownGrenade SpawnGrenade(Vector3 position)
+        private ThrownGrenade SpawnGrenade(Vector3 position, GrenadeSpec spec = null)
         {
+            spec = spec ?? GrenadeSpec.Default;
             var grenade = ThrownGrenade.Spawn(
-                null, position, Vector3.zero, GrenadeThrower.FuseSeconds, GrenadeThrower.Explosion, GrenadeThrower.StructureDamageAtCenter);
+                null, position, Vector3.zero, spec.FuseSeconds, spec.Explosion, spec.StructureDamageAtCenter);
             _created.Add(grenade.gameObject);
             Physics.SyncTransforms();
             return grenade;

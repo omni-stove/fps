@@ -12,7 +12,7 @@ namespace Fps.Net
         /// <summary>残りが無い。</summary>
         Empty,
 
-        /// <summary>前に投げてから <see cref="Fps.Runtime.GrenadeThrower.ThrowSeconds"/> 秒経っていない。</summary>
+        /// <summary>前に投げてから <see cref="Fps.Core.GrenadeSpec.ThrowSeconds"/> 秒経っていない。</summary>
         TooSoon,
 
         /// <summary>投げる向きが有限でないか長さが 0。</summary>

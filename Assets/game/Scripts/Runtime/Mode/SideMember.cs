@@ -107,7 +107,7 @@ namespace Fps.Runtime
         /// <summary>
         /// 体力を満たして groundPosition (足元) に戻す。生きていても戻す (ラウンドの始めに全員を並べ直すため)。
         /// 初期化済みの <see cref="EnemyAgent"/> なら <see cref="EnemyAgent.ResetTo"/> に任せる。
-        /// それ以外 (プレイヤー) は CharacterController を切って足元が groundPosition に来るように移し、体力を作り直す。
+        /// それ以外 (プレイヤー) は乗り物に乗っていれば降ろし、CharacterController を切って足元が groundPosition に来るように移し、体力を作り直す。
         /// プレイヤーの向きは視点の部品 (<see cref="FirstPersonLook"/>) が持っているので変えない。
         /// </summary>
         public void Respawn(Vector3 groundPosition, Quaternion rotation)
@@ -118,6 +118,13 @@ namespace Fps.Runtime
             {
                 agent.ResetTo(groundPosition, rotation);
                 return;
+            }
+
+            // 座ったままだと座席の移動の横取りが次の Tick で体を座席へ戻すので、置き直す前に降ろす。
+            var rider = GetComponent<PlayerVehicleRider>();
+            if (rider != null && rider.Vehicle != null)
+            {
+                rider.Vehicle.ForceExit(rider, VehicleLeaveReason.Forced);
             }
 
             // CharacterController は有効なままだと Transform の書き換えを次の移動で上書きするので、移す間だけ切る。

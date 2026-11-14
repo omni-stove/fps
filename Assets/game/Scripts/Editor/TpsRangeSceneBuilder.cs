@@ -14,7 +14,9 @@ namespace Fps.Editor
     /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) の
     /// <see cref="GameBootstrap"/> と <see cref="MatchRunner"/> を置いた GameObject、高低の遮蔽物 (<see cref="Covers"/>)、
     /// 乗り越え用の低い壁 (<see cref="VaultWall"/>)、回避と手榴弾を試す開けた場所の目印 (<see cref="OpenAreaName"/>)、
-    /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場を入れ、壁や箱には <see cref="SurfaceIds"/> の材質を付け、最後に差し込まれた置く物 (<see cref="ITpsRangeFixture"/>、<see cref="Fixtures"/>) を置く。
+    /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場、乗り降りを試す動かない仮の乗り物 (<see cref="VehicleName"/>) と
+    /// その左の降りる位置を塞ぐ箱 (<see cref="VehicleExitBlockerName"/>) を入れ、壁や箱には <see cref="SurfaceIds"/> の材質を付け、
+    /// 最後に差し込まれた置く物 (<see cref="ITpsRangeFixture"/>、<see cref="Fixtures"/>) を置く。
     /// 床・プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
     /// ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/> を配線する。保存したシーンは Build Settings に (並びを変えずに) 加える。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
@@ -23,7 +25,7 @@ namespace Fps.Editor
     /// <remarks>
     /// 配置 (上から見て、プレイヤーは原点で +Z を向き、GameBootstrap が z = 10 に標的ダミーを x = -4..4 で並べる):
     /// 遮蔽物は出現位置と標的の間とその周り、乗り越えの壁は左 (x = -10)、開けた場所は右手前 (x = 8..20, z = -12..0)、
-    /// 小屋は右奥 (<see cref="HutCenter"/>) に置き、どれも GameBootstrap の床 (x, z とも ±25m) に収める。
+    /// 小屋は右奥 (<see cref="HutCenter"/>)、乗り物は左手前 (<see cref="VehicleOrigin"/>) に置き、どれも GameBootstrap の床 (x, z とも ±25m) に収める。
     /// </remarks>
     public static class TpsRangeSceneBuilder
     {
@@ -59,6 +61,20 @@ namespace Fps.Editor
 
         /// <summary>壊せる小屋の床面の中心 (地面の高さ)。大きさは <see cref="DestructionTestSceneBuilder"/> の小屋と同じ。</summary>
         public static readonly Vector3 HutCenter = new Vector3(14f, 0f, 14f);
+
+        public const string VehicleName = VehicleFixtureBuilder.DefaultName;
+        public const string VehicleExitBlockerName = "VehicleExitBlocker";
+
+        /// <summary>乗り降りを試す仮の乗り物の原点 (床の高さ)。+Z を向けて左手前に置く。</summary>
+        public static readonly Vector3 VehicleOrigin = new Vector3(-14f, 0f, -12f);
+
+        /// <summary>
+        /// 乗り物の左に降りる位置 (運転席の最初の候補) を塞ぐ箱。運転席から降りると反対側の候補に降りることを確かめるためのもの。
+        /// </summary>
+        public static readonly LevelBox VehicleExitBlocker = new LevelBox(
+            VehicleExitBlockerName,
+            VehicleOrigin + VehicleFixtureBuilder.LeftExitLocal + new Vector3(0f, 1f, 0f),
+            new Vector3(1f, 2f, 1f));
 
         /// <summary>GameBootstrap が作る床の x, z 方向の半分の広さ (m)。Plane は 10m 四方。</summary>
         public static readonly float FloorHalfExtent = GameBootstrap.FloorScale.x * 10f / 2f;
@@ -112,6 +128,8 @@ namespace Fps.Editor
             OpenAreaName,
             DebrisPoolName,
             HutName,
+            VehicleName,
+            VehicleExitBlockerName,
         };
 
         /// <summary>読み込み済みのアセンブリから見つけた置く物 (<see cref="ITpsRangeFixture"/>)。<see cref="ITpsRangeFixture.Order"/> の順。</summary>
@@ -194,8 +212,8 @@ namespace Fps.Editor
 
         /// <summary>
         /// 空のシーンに GameBootstrap (三人称、weapons と rules を配線) と MatchRunner を置いた GameObject、遮蔽物、乗り越えの壁、
-        /// 開けた場所の目印、壊せる小屋と破片の置き場を入れ、見つけた置く物 (<see cref="Fixtures"/>) を置いて GameBootstrap を返す。
-        /// 小屋が壊れるかは rules の <see cref="GameRules.Destruction"/> で決める。引数が不正なら何も置かずに例外を投げる。
+        /// 開けた場所の目印、壊せる小屋と破片の置き場、仮の乗り物とその降りる位置を塞ぐ箱を入れ、見つけた置く物 (<see cref="Fixtures"/>) を置いて
+        /// GameBootstrap を返す。小屋が壊れるかは rules の <see cref="GameRules.Destruction"/> で決める。引数が不正なら何も置かずに例外を投げる。
         /// </summary>
         public static GameBootstrap PopulateScene(Scene scene, IReadOnlyList<WeaponDefinition> weapons, GameRulesDefinition rules)
         {
@@ -259,6 +277,10 @@ namespace Fps.Editor
                 hut.DebrisPool = pool;
                 SceneBuildHelpers.SetSurfaceMaterial(hut.gameObject, SceneBuildHelpers.SurfaceIdOf(SurfaceIds, HutName));
 
+                created.Add(VehicleFixtureBuilder.Create(scene, null, VehicleName, VehicleOrigin, Quaternion.identity).gameObject);
+                created.Add(SceneBuildHelpers.CreateStaticBox(
+                    scene, null, VehicleExitBlocker.Name, VehicleExitBlocker.Center, VehicleExitBlocker.Size));
+
                 foreach (var fixture in fixtures)
                 {
                     created.Add(PlaceFixture(scene, fixture, gameRules));
@@ -282,7 +304,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 床に置くもの (遮蔽物・乗り越えの壁・小屋) の x, z の範囲。開けた場所や床からはみ出していないかを確かめるのに使う。
+        /// 床に置くもの (遮蔽物・乗り越えの壁・小屋・乗り物とその降りる位置を塞ぐ箱) の x, z の範囲。開けた場所や床からはみ出していないかを確かめるのに使う。
         /// 小屋は <see cref="DestructionTestSceneBuilder"/> の大きさから求める。
         /// </summary>
         public static IReadOnlyList<(string Name, Bounds Bounds)> Footprints()
@@ -312,6 +334,8 @@ namespace Fps.Editor
                 (DestructionTestSceneBuilder.WallHeight + 1) * DestructionTestSceneBuilder.PieceSize,
                 DestructionTestSceneBuilder.HutDepth * DestructionTestSceneBuilder.PieceSize);
             footprints.Add((HutName, new Bounds(HutCenter + new Vector3(0f, hutSize.y / 2f, 0f), hutSize)));
+            footprints.Add((VehicleName, VehicleFixtureBuilder.BodyBounds(VehicleOrigin, Quaternion.identity)));
+            footprints.Add((VehicleExitBlocker.Name, new Bounds(VehicleExitBlocker.Center, VehicleExitBlocker.Size)));
             foreach (var fixture in fixtures)
             {
                 if (fixture != null)

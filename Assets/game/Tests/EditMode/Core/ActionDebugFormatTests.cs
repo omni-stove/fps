@@ -20,6 +20,7 @@ namespace Fps.Core.Tests
             "射撃: OFF",
             "リロード: OFF (アクティブ: -)",
             "ダウン: OFF",
+            "乗り物: OFF",
             "肩: 右",
             "視点: 一人称",
             "武器: -",
@@ -47,6 +48,7 @@ namespace Fps.Core.Tests
         [TestCase(PlayerActionConditions.Firing, 8, "射撃: ON")]
         [TestCase(PlayerActionConditions.Reloading, 9, "リロード: ON 0% (アクティブ: -)")]
         [TestCase(PlayerActionConditions.Downed, 10, "ダウン: ON")]
+        [TestCase(PlayerActionConditions.InVehicle, 11, "乗り物: ON")]
         public void EachConditionLightsOnlyItsOwnLine(PlayerActionConditions flag, int index, string expected)
         {
             var lines = ActionDebugFormat.Lines(State(flag));
@@ -66,10 +68,10 @@ namespace Fps.Core.Tests
 
             var lines = ActionDebugFormat.Lines(state);
 
-            Assert.That(lines[11], Is.EqualTo(new ActionDebugLine("肩: 左", false)));
-            Assert.That(lines[12], Is.EqualTo(new ActionDebugLine("視点: 三人称", false)));
-            Assert.That(lines[13], Is.EqualTo(new ActionDebugLine("武器: Rifle", false)));
-            Assert.That(lines[14], Is.EqualTo(new ActionDebugLine("ばらつき: 2.5°", false)));
+            Assert.That(lines[12], Is.EqualTo(new ActionDebugLine("肩: 左", false)));
+            Assert.That(lines[13], Is.EqualTo(new ActionDebugLine("視点: 三人称", false)));
+            Assert.That(lines[14], Is.EqualTo(new ActionDebugLine("武器: Rifle", false)));
+            Assert.That(lines[15], Is.EqualTo(new ActionDebugLine("ばらつき: 2.5°", false)));
         }
 
         [Test]

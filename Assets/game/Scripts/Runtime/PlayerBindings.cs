@@ -31,6 +31,12 @@ namespace Fps.Runtime
         /// <summary>ゲームパッドの割り当てを待っている間に押すと取り消す入力。</summary>
         public const string GamepadCancelPath = "<Gamepad>/start";
 
+        /// <summary>アクションの画面に出す名前の文字列表のキーの頭。後ろにアクション名を付ける。</summary>
+        public const string ActionLabelKeyPrefix = "settings.input.action.";
+
+        /// <summary>移動の部品の画面に出す名前の文字列表のキーの頭。後ろに部品の名前 (小文字) を付ける。</summary>
+        public const string MoveLabelKeyPrefix = "settings.input.move.";
+
         // 指を離すときに隣のキーへ触れたなど、ほぼ同時に来たほかの候補を比べるための待ち。
         private const float MatchWaitSeconds = 0.1f;
 
@@ -139,19 +145,19 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今の言語 (<see cref="Localizer"/>) で、アクション (と合成の部品) の画面に出す名前。
-        /// 文字列表のキーは <c>input.action.{アクション名}</c> と、移動の部品の <c>input.move.{up|down|left|right}</c>。
+        /// 文字列表のキーは <c>settings.input.action.{アクション名}</c> と、移動の部品の <c>settings.input.move.{up|down|left|right}</c>。
         /// 表に無い名前は、Input Actions に足したばかりのアクションでも行が出るよう、警告を出さずにアクション名をそのまま使う。
         /// </summary>
         public static string LabelOf(string actionName, string part = null)
         {
             if (part != null
                 && string.Equals(actionName, "Move", StringComparison.Ordinal)
-                && Localizer.TryGet("input.move." + part.ToLowerInvariant(), out var direction))
+                && Localizer.TryGet(MoveLabelKeyPrefix + part.ToLowerInvariant(), out var direction))
             {
                 return direction;
             }
 
-            var label = actionName != null && Localizer.TryGet("input.action." + actionName, out var text) ? text : actionName;
+            var label = actionName != null && Localizer.TryGet(ActionLabelKeyPrefix + actionName, out var text) ? text : actionName;
             return part == null ? label : label + " (" + part + ")";
         }
 

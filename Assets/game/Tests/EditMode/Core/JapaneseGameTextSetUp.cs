@@ -33,15 +33,36 @@ namespace Fps.Core.Tests
             GameText.Use(_previous);
         }
 
-        /// <summary>language の文字列表をリポジトリから読む。見つからない・読めなければテストを失敗にする。</summary>
+        /// <summary>リポジトリの根からの、言語コードのフォルダーごとに重ねる表を置くフォルダー。</summary>
+        public const string LayersFolder = "Assets/game/Resources/Localization";
+
+        /// <summary>
+        /// language の文字列表をリポジトリから、ゲーム (Fps.Runtime の Localizer) と同じく <see cref="StringsFolder"/> の &lt;言語コード&gt;.json に
+        /// <see cref="LayersFolder"/>/&lt;言語コード&gt;/ の JSON をファイル名 (拡張子なし) の順に重ねて読む。見つからない・読めなければテストを失敗にする。
+        /// </summary>
         public static StringTable LoadTable(GameLanguage language)
         {
-            var path = Path.Combine(FindRepositoryRoot(), StringsFolder, GameLanguages.Code(language) + ".json");
-            Assert.That(File.Exists(path), Is.True, path);
+            var root = FindRepositoryRoot();
+            var code = GameLanguages.Code(language);
+            var paths = new List<string> { Path.Combine(root, StringsFolder, code + ".json") };
+            Assert.That(File.Exists(paths[0]), Is.True, paths[0]);
 
-            var warnings = new List<string>();
-            Assert.That(StringTable.TryParse(File.ReadAllText(path), warnings.Add, out var table, out var error), Is.True, $"{path}: {error}");
-            return table;
+            var layers = Path.Combine(root, LayersFolder, code);
+            if (Directory.Exists(layers))
+            {
+                var files = new List<string>(Directory.GetFiles(layers, "*.json"));
+                files.Sort((a, b) => string.CompareOrdinal(Path.GetFileNameWithoutExtension(a), Path.GetFileNameWithoutExtension(b)));
+                paths.AddRange(files);
+            }
+
+            var tables = new List<StringTable>();
+            foreach (var path in paths)
+            {
+                Assert.That(StringTable.TryParse(File.ReadAllText(path), null, out var table, out var error), Is.True, $"{path}: {error}");
+                tables.Add(table);
+            }
+
+            return StringTable.Merge(tables);
         }
 
         /// <summary>

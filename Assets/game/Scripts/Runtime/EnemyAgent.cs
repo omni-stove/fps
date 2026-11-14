@@ -424,7 +424,9 @@ namespace Fps.Runtime
                 _coverHideSeconds,
                 _coverPeekSeconds,
                 _coverHealthFraction,
-                _archetype);
+                _archetype,
+                CreateShieldSpec(),
+                CreateSniperSpec());
         }
 
         /// <summary>
@@ -488,6 +490,7 @@ namespace Fps.Runtime
             _coverPeekSeconds = spec.CoverPeekSeconds;
             _coverHealthFraction = spec.CoverHealthFraction;
             _archetype = spec.Archetype;
+            CopyArchetypeSpecs(spec);
         }
 
         /// <summary>遮蔽点の段階が変わったときのログ。</summary>
@@ -638,8 +641,8 @@ namespace Fps.Runtime
         {
             var phase = _brain.CoverPhase;
             _aiming = !_unarmed && EnemyGait.IsAiming(_brain.State, phase);
-            _sprinting = EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing);
-            _agent.speed = EnemyGait.Speed(_walkSpeed * _moveSpeedMultiplier, _sprinting, _crouching);
+            _sprinting = _sprintAllowed && EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing);
+            _agent.speed = EnemyGait.Speed(GaitWalkSpeed, _sprinting, _crouching);
         }
 
         /// <summary>

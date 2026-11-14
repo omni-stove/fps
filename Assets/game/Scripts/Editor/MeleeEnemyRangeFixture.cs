@@ -79,7 +79,7 @@ namespace Fps.Editor
             return root;
         }
 
-        private static WeaponDefinition FindEnemyWeapon(Scene scene)
+        internal static WeaponDefinition FindEnemyWeapon(Scene scene)
         {
             foreach (var root in scene.GetRootGameObjects())
             {

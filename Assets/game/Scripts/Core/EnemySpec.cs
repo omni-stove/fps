@@ -42,6 +42,11 @@ namespace Fps.Core
 
         public EnemyArchetype Archetype { get; }
 
+        // 種類が違っても持たせておく。ボスの段階で種類だけを変えたときに、値を探し直さずに済むように。
+        public ShieldSpec Shield { get; }
+
+        public SniperSpec Sniper { get; }
+
         public const float DefaultCoverHideSeconds = 1.5f;
         public const float DefaultCoverPeekSeconds = 2f;
         public const float DefaultCoverHealthFraction = 0.5f;
@@ -70,7 +75,9 @@ namespace Fps.Core
             float coverHideSeconds = DefaultCoverHideSeconds,
             float coverPeekSeconds = DefaultCoverPeekSeconds,
             float coverHealthFraction = DefaultCoverHealthFraction,
-            EnemyArchetype archetype = EnemyArchetype.Rifleman)
+            EnemyArchetype archetype = EnemyArchetype.Rifleman,
+            ShieldSpec shield = null,
+            SniperSpec sniper = null)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
             {
@@ -116,6 +123,8 @@ namespace Fps.Core
             CoverPeekSeconds = coverPeekSeconds;
             CoverHealthFraction = coverHealthFraction;
             Archetype = archetype;
+            Shield = shield ?? ShieldSpec.Default;
+            Sniper = sniper ?? SniperSpec.Default;
         }
 
         /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread(System.Numerics.Vector3, float, System.Random)"/>) が受け付ける範囲に合わせる。</summary>

@@ -358,15 +358,13 @@ namespace Fps.Runtime
                 regen.Bind(damageable, rules);
                 grenades = player.GetComponent<GrenadeThrower>();
                 WireGrenades(grenades, mover, weapon, ads);
+
+                // Attach が出す rule のログに入れた能力が載るよう、Attach より前に枠へ入れる。
+                // ルールが Off でも入れておくのは、キャンペーンや差し替えたルールで On になったときにそのまま使えるようにするため。
+                abilities = PlayerActions.GetOrAdd<AbilityHost>(player);
+                abilities.Equip(abilityDefinitions);
                 PlayerActions.Attach(player, rules);
                 mover.ApplyRules(rules);
-
-                // ルールが Off でも入れておくのは、キャンペーンや差し替えたルールで On になったときにそのまま使えるようにするため。
-                abilities = player.GetComponent<AbilityHost>();
-                if (abilities != null)
-                {
-                    abilities.Equip(abilityDefinitions);
-                }
 
                 // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
                 mover.BindSprintRelease(weapon, damageable);

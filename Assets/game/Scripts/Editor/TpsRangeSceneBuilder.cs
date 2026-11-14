@@ -14,7 +14,8 @@ namespace Fps.Editor
     /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) の
     /// <see cref="GameBootstrap"/> と <see cref="MatchRunner"/> を置いた GameObject、高低の遮蔽物 (<see cref="Covers"/>)、
     /// 乗り越え用の低い壁 (<see cref="VaultWall"/>)、回避と手榴弾を試す開けた場所の目印 (<see cref="OpenAreaName"/>)、
-    /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場を入れ、壁や箱には <see cref="SurfaceIds"/> の材質を付ける。床・プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
+    /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場を入れ、壁や箱には <see cref="SurfaceIds"/> の材質を付け、最後に差し込まれた置く物 (<see cref="ITpsRangeFixture"/>、<see cref="Fixtures"/>) を置く。
+    /// 床・プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
     /// ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/> を配線する。保存したシーンは Build Settings に (並びを変えずに) 加える。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.TpsRangeSceneBuilder.Build</code>
@@ -102,6 +103,24 @@ namespace Fps.Editor
             [HutName] = SurfaceImpactAssetStep.WoodId,
         };
 
+        /// <summary>射撃場に組み込みで置く物の名前。<see cref="ITpsRangeFixture.Name"/> はこれらと重ねられない。</summary>
+        public static readonly IReadOnlyList<string> BuiltInNames = new[]
+        {
+            BootstrapObjectName,
+            CoversName,
+            VaultWallName,
+            OpenAreaName,
+            DebrisPoolName,
+            HutName,
+        };
+
+        /// <summary>読み込み済みのアセンブリから見つけた置く物 (<see cref="ITpsRangeFixture"/>)。<see cref="ITpsRangeFixture.Order"/> の順。</summary>
+        /// <exception cref="InvalidOperationException">置く物の型に public な引数なしのコンストラクターが無い。</exception>
+        public static IReadOnlyList<ITpsRangeFixture> Fixtures()
+        {
+            return ExtensionPoints.CreateAll<ITpsRangeFixture>(f => f.Order);
+        }
+
         [MenuItem(MenuPath)]
         public static void Build()
         {
@@ -129,8 +148,10 @@ namespace Fps.Editor
             var weapons = LoadPlayerWeapons();
             var rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.TpsRangePath);
 
+            var fixtures = Fixtures();
+
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(path));
-            PopulateScene(scene, weapons, rules);
+            PopulateScene(scene, weapons, rules, fixtures);
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {
@@ -139,6 +160,11 @@ namespace Fps.Editor
 
             BuildSceneList.Register(path);
             AssetDatabase.SaveAssets();
+
+            if (fixtures.Count > 0)
+            {
+                Debug.Log($"{LogTag} placed fixtures {string.Join(", ", NamesOf(fixtures))}");
+            }
 
             Debug.Log($"{LogTag} saved '{path}' and registered it in Build Settings");
         }
@@ -160,10 +186,23 @@ namespace Fps.Editor
 
         /// <summary>
         /// 空のシーンに GameBootstrap (三人称、weapons と rules を配線) と MatchRunner を置いた GameObject、遮蔽物、乗り越えの壁、
-        /// 開けた場所の目印、壊せる小屋と破片の置き場を入れ、GameBootstrap を返す。小屋が壊れるかは rules の
-        /// <see cref="GameRules.Destruction"/> で決める。引数が不正なら何も置かずに例外を投げる。
+        /// 開けた場所の目印、壊せる小屋と破片の置き場を入れ、見つけた置く物 (<see cref="Fixtures"/>) を置いて GameBootstrap を返す。
+        /// 小屋が壊れるかは rules の <see cref="GameRules.Destruction"/> で決める。引数が不正なら何も置かずに例外を投げる。
         /// </summary>
         public static GameBootstrap PopulateScene(Scene scene, IReadOnlyList<WeaponDefinition> weapons, GameRulesDefinition rules)
+        {
+            return PopulateScene(scene, weapons, rules, Fixtures());
+        }
+
+        /// <summary>
+        /// <see cref="PopulateScene(Scene, IReadOnlyList{WeaponDefinition}, GameRulesDefinition)"/> の、置く物を fixtures で渡す形。
+        /// 置く物は組み込みの物の後に並びの順で置く。どれかが <see cref="ITpsRangeFixture"/> の決まり (名前・置き場所) を守らないか投げたら、
+        /// それまでに置いた物を消して例外を投げる。
+        /// </summary>
+        /// <exception cref="ArgumentException">fixtures に null がある、名前が空か組み込みの物やほかの置く物と重なる。</exception>
+        /// <exception cref="InvalidOperationException">置く物が null を返した、別のシーンや子に置いた、または <see cref="ITpsRangeFixture.Name"/> と違う名前で置いた。</exception>
+        public static GameBootstrap PopulateScene(
+            Scene scene, IReadOnlyList<WeaponDefinition> weapons, GameRulesDefinition rules, IReadOnlyList<ITpsRangeFixture> fixtures)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the TPS range");
             SceneBuildHelpers.RequirePlayerWeapons(weapons, nameof(weapons));
@@ -172,8 +211,11 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(rules));
             }
 
+            RequireValidFixtures(fixtures);
+
             // 不正なルールを配線しないよう、何か置く前に検査する。
-            var destructionEnabled = rules.ToRules().Destruction == Destruction.On;
+            var gameRules = rules.ToRules();
+            var destructionEnabled = gameRules.Destruction == Destruction.On;
 
             var created = new List<GameObject>();
             try
@@ -209,6 +251,11 @@ namespace Fps.Editor
                 hut.DebrisPool = pool;
                 SceneBuildHelpers.SetSurfaceMaterial(hut.gameObject, SceneBuildHelpers.SurfaceIdOf(SurfaceIds, HutName));
 
+                foreach (var fixture in fixtures)
+                {
+                    created.Add(PlaceFixture(scene, fixture, gameRules));
+                }
+
                 EditorSceneManager.MarkSceneDirty(scene);
                 return bootstrap;
             }
@@ -232,6 +279,18 @@ namespace Fps.Editor
         /// </summary>
         public static IReadOnlyList<(string Name, Bounds Bounds)> Footprints()
         {
+            return Footprints(Fixtures());
+        }
+
+        /// <summary><see cref="Footprints()"/> の、置く物を fixtures で渡す形。組み込みの物の後に置く物の <see cref="ITpsRangeFixture.Footprint"/> を並べる。</summary>
+        /// <exception cref="ArgumentNullException">fixtures が null。</exception>
+        public static IReadOnlyList<(string Name, Bounds Bounds)> Footprints(IReadOnlyList<ITpsRangeFixture> fixtures)
+        {
+            if (fixtures == null)
+            {
+                throw new ArgumentNullException(nameof(fixtures));
+            }
+
             var footprints = new List<(string, Bounds)>();
             foreach (var cover in Covers)
             {
@@ -245,7 +304,86 @@ namespace Fps.Editor
                 (DestructionTestSceneBuilder.WallHeight + 1) * DestructionTestSceneBuilder.PieceSize,
                 DestructionTestSceneBuilder.HutDepth * DestructionTestSceneBuilder.PieceSize);
             footprints.Add((HutName, new Bounds(HutCenter + new Vector3(0f, hutSize.y / 2f, 0f), hutSize)));
+            foreach (var fixture in fixtures)
+            {
+                if (fixture != null)
+                {
+                    footprints.Add((fixture.Name, fixture.Footprint));
+                }
+            }
+
             return footprints;
+        }
+
+        private static void RequireValidFixtures(IReadOnlyList<ITpsRangeFixture> fixtures)
+        {
+            if (fixtures == null)
+            {
+                throw new ArgumentNullException(nameof(fixtures));
+            }
+
+            var names = new HashSet<string>(BuiltInNames, StringComparer.Ordinal);
+            for (var i = 0; i < fixtures.Count; i++)
+            {
+                var fixture = fixtures[i];
+                if (fixture == null)
+                {
+                    throw new ArgumentException($"{LogTag} fixture {i} is null", nameof(fixtures));
+                }
+
+                var name = fixture.Name;
+                if (string.IsNullOrWhiteSpace(name) || name.Contains("/"))
+                {
+                    throw new ArgumentException($"{LogTag} {fixture.GetType().FullName} has an empty name or one with '/' ('{name}')", nameof(fixtures));
+                }
+
+                if (!names.Add(name))
+                {
+                    throw new ArgumentException($"{LogTag} {fixture.GetType().FullName} uses the name '{name}', which is already taken in the TPS range", nameof(fixtures));
+                }
+            }
+        }
+
+        private static GameObject PlaceFixture(Scene scene, ITpsRangeFixture fixture, GameRules rules)
+        {
+            var type = fixture.GetType().FullName;
+            var placed = fixture.Place(scene, rules);
+            if (placed == null)
+            {
+                throw new InvalidOperationException($"{LogTag} {type} placed nothing");
+            }
+
+            if (placed.scene != scene || placed.transform.parent != null)
+            {
+                Discard(placed);
+                throw new InvalidOperationException($"{LogTag} {type} must place '{fixture.Name}' at the root of the TPS range scene");
+            }
+
+            if (!string.Equals(placed.name, fixture.Name, StringComparison.Ordinal))
+            {
+                var actual = placed.name;
+                Discard(placed);
+                throw new InvalidOperationException($"{LogTag} {type} placed '{actual}' instead of '{fixture.Name}'");
+            }
+
+            return placed;
+        }
+
+        // 返す前に投げるので PopulateScene の後始末の一覧には入らない。ここで消すが、誤ってプレハブなどのアセットを返されたときは消さない。
+        private static void Discard(GameObject placed)
+        {
+            if (!EditorUtility.IsPersistent(placed))
+            {
+                UnityEngine.Object.DestroyImmediate(placed);
+            }
+        }
+
+        private static IEnumerable<string> NamesOf(IReadOnlyList<ITpsRangeFixture> fixtures)
+        {
+            foreach (var fixture in fixtures)
+            {
+                yield return fixture.Name;
+            }
         }
 
         private static GameObject CreateBoxes(Scene scene, string rootName, IReadOnlyList<LevelBox> boxes)

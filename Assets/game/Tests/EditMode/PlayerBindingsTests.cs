@@ -75,6 +75,35 @@ namespace Fps.Tests.EditMode
                 "the gamepad moves with the stick");
         }
 
+        [TestCase("Melee")]
+        [TestCase("Prone")]
+        [TestCase("Ability1")]
+        [TestCase("Ability2")]
+        [TestCase("SquadCommand")]
+        public void KeyboardOnlyButtonsHaveOnlyAKeyboardRow(string actionName)
+        {
+            Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot(actionName, InputDeviceKind.KeyboardMouse)));
+            Assert.That(PlayerBindings.Slots, Has.No.Member(new RebindSlot(actionName, InputDeviceKind.Gamepad)));
+        }
+
+        [Test]
+        public void PingHasAKeyboardAndAGamepadRow()
+        {
+            Assert.That(_bindings.PathOf(new RebindSlot("Ping", InputDeviceKind.KeyboardMouse)), Is.EqualTo("<Mouse>/middleButton"));
+            Assert.That(_bindings.PathOf(new RebindSlot("Ping", InputDeviceKind.Gamepad)), Is.EqualTo("<Gamepad>/dpad/up"));
+            Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot("Ping", InputDeviceKind.Gamepad)));
+        }
+
+        [TestCase("Melee", "近接攻撃")]
+        [TestCase("Prone", "伏せ")]
+        [TestCase("Ability1", "アビリティ 1")]
+        [TestCase("Ability2", "アビリティ 2")]
+        [TestCase("SquadCommand", "分隊への指示")]
+        public void NewButtonsAreLabelledInJapanese(string actionName, string label)
+        {
+            Assert.That(PlayerBindings.LabelOf(actionName), Is.EqualTo(label));
+        }
+
         [Test]
         public void SlotsPointAtTheFirstBindingOfTheirGroup()
         {

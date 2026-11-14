@@ -83,7 +83,7 @@ namespace Fps.Tests.EditMode
             {
                 Assert.That(catalog.TryGetSurface(spec.MaterialId, out var assets), Is.True, spec.MaterialId);
                 Assert.That(AssetDatabase.GetAssetPath(assets.Decal), Is.EqualTo($"{_assetFolder}/{spec.DecalMaterialName}.mat"));
-                Assert.That(AssetDatabase.GetAssetPath(assets.Decal.GetTexture(BaseMap)),Is.EqualTo($"{_assetFolder}/{spec.DecalTextureName}.asset"));
+                Assert.That(AssetDatabase.GetAssetPath(assets.Decal.GetTexture(BaseMap)), Is.EqualTo($"{_assetFolder}/{spec.DecalTextureName}.asset"));
                 Assert.That(AssetDatabase.GetAssetPath(assets.Effect), Is.EqualTo($"{_assetFolder}/{spec.EffectName}.prefab"));
                 Assert.That(AssetDatabase.GetAssetPath(assets.Sound), Is.EqualTo($"{_audioFolder}/{spec.Sound.Name}.wav"));
                 Assert.That(assets.DecalSize, Is.EqualTo(spec.DecalSize));

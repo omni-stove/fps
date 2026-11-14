@@ -13,5 +13,8 @@ namespace Fps.Core
 
         /// <summary>手足。倍率 0.75。</summary>
         Limb,
+
+        // 通信では byte に詰めて送るので、既存の値をずらさないよう末尾に足す。
+        WeakPoint,
     }
 }

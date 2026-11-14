@@ -400,5 +400,59 @@ namespace Fps.Core
 
             return new LocalizedText("hud.grenades", remaining);
         }
+
+        /// <summary>
+        /// 能力の枠 1 つの表示。使っている最中は「使用中」、次に使えるまで待つ (待ち時間か、回数が無く戻るのを待つ) 間は残りの秒数を
+        /// <see cref="AbilityWaitSeconds"/> で添え、それ以外は回数だけを出す。回数が無く戻らない設定なら回数だけを出す。
+        /// </summary>
+        /// <example><c>Ability(1, slot)</c> は <c>能力1 1/2</c>・<c>能力1 0/2 あと 3.5 秒</c>・<c>能力1 1/2 使用中</c></example>
+        /// <param name="slotNumber">枠の番号。1 から (入力の Ability1 / Ability2 に合わせる)。</param>
+        /// <param name="slot">枠の状態。</param>
+        /// <exception cref="ArgumentOutOfRangeException">slotNumber が 1 より小さい。</exception>
+        /// <exception cref="ArgumentNullException">slot が null。</exception>
+        public static LocalizedText Ability(int slotNumber, AbilitySlot slot)
+        {
+            if (slotNumber < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(slotNumber), slotNumber, "slotNumber must be at least 1");
+            }
+
+            if (slot == null)
+            {
+                throw new ArgumentNullException(nameof(slot));
+            }
+
+            var charges = slot.Charges;
+            var max = slot.Spec.MaxCharges;
+            if (slot.IsRunning)
+            {
+                return new LocalizedText("hud.ability.active", slotNumber, charges, max);
+            }
+
+            var wait = slot.SecondsUntilReady;
+            if (wait > 0f && !float.IsInfinity(wait))
+            {
+                return new LocalizedText("hud.ability.wait", slotNumber, charges, max, AbilityWaitSeconds(wait));
+            }
+
+            return new LocalizedText("hud.ability", slotNumber, charges, max);
+        }
+
+        /// <summary>
+        /// 能力の待ち時間の秒数の表示。小数 1 桁に切り上げる (待っている間に 0.0 を出さない)。
+        /// </summary>
+        /// <example><c>AbilityWaitSeconds(3.42f)</c> は <c>3.5</c></example>
+        /// <exception cref="ArgumentOutOfRangeException">seconds が負か有限でない。</exception>
+        public static string AbilityWaitSeconds(float seconds)
+        {
+            if (!(seconds >= 0f) || float.IsInfinity(seconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative and must be finite");
+            }
+
+            // float の誤差で 3.0 が 3.0000002 になり 3.1 と出ないよう、切り上げる前に小さく丸める。
+            var tenths = Math.Ceiling(Math.Round(seconds * 10.0, 3));
+            return (tenths / 10.0).ToString("0.0", CultureInfo.InvariantCulture);
+        }
     }
 }

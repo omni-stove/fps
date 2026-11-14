@@ -23,6 +23,8 @@ namespace Fps.Core
         public const string PlayerLeftType = "player_left";
         public const string KillType = "kill";
         public const string MatchEndedType = "match_ended";
+        public const string PingPlacedType = "ping_placed";
+        public const string PingRefusedType = "ping_refused";
 
         /// <summary>試合を見分ける新しい Id (32 桁の小文字の 16 進数)。次の試合を始めるたびに作り直す。</summary>
         public static string NewMatchId()
@@ -124,6 +126,49 @@ namespace Fps.Core
             values.Add(Pair("winner", winner.HasValue ? MatchLog.TeamName(winner.Value) : MatchLog.Draw));
             values.Add(Pair("scoreAlpha", Number(alphaScore)));
             values.Add(Pair("scoreBravo", Number(bravoScore)));
+            return FlatJsonObject.Format(values);
+        }
+
+        // 位置は出さない。運用で要るのは誰がどれだけ付けたかで、毎回の座標は行を太らせるだけのため。
+        /// <example><c>{"type":"ping_placed","time":"...","matchId":"6c1f...","playerId":"1","team":"Alpha","pingId":"4","kind":"Enemy","targetId":"2","refreshed":"false"}</c></example>
+        public static string PingPlaced(
+            DateTime utcNow, string matchId, int playerId, string productUserId, Team team, int pingId, PingKind kind, int? targetId, bool refreshed)
+        {
+            if (!Enum.IsDefined(typeof(PingKind), kind))
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, "kind must be a PingKind");
+            }
+
+            if ((kind == PingKind.Enemy) != targetId.HasValue)
+            {
+                throw new ArgumentException("an enemy ping needs a target and a location ping must not have one", nameof(targetId));
+            }
+
+            var values = BeginMatch(PingPlacedType, utcNow, matchId);
+            AddPlayer(values, "playerId", "productUserId", playerId, productUserId);
+            values.Add(Pair("team", MatchLog.TeamName(team)));
+            values.Add(Pair("pingId", Number(pingId)));
+            values.Add(Pair("kind", kind.ToString()));
+            if (targetId.HasValue)
+            {
+                values.Add(Pair("targetId", Number(targetId.Value)));
+            }
+
+            values.Add(Pair("refreshed", Bool(refreshed)));
+            return FlatJsonObject.Format(values);
+        }
+
+        /// <example><c>{"type":"ping_refused","time":"...","matchId":"6c1f...","playerId":"1","reason":"TooSoon"}</c></example>
+        public static string PingRefused(DateTime utcNow, string matchId, int playerId, string productUserId, PingRefusal reason)
+        {
+            if (reason == PingRefusal.None || !Enum.IsDefined(typeof(PingRefusal), reason))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reason), reason, "reason must be a PingRefusal other than None");
+            }
+
+            var values = BeginMatch(PingRefusedType, utcNow, matchId);
+            AddPlayer(values, "playerId", "productUserId", playerId, productUserId);
+            values.Add(Pair("reason", reason.ToString()));
             return FlatJsonObject.Format(values);
         }
 

@@ -413,6 +413,7 @@ namespace Fps.Editor
                 new AnimatorControllerParameter { name = CharacterPose.DownedParameter, type = AnimatorControllerParameterType.Bool },
                 new AnimatorControllerParameter { name = CharacterPose.DeadParameter, type = AnimatorControllerParameterType.Bool },
                 new AnimatorControllerParameter { name = CharacterPose.WeaponCategoryParameter, type = AnimatorControllerParameterType.Int, defaultInt = CharacterPose.NoWeapon },
+                new AnimatorControllerParameter { name = CharacterPose.SlideParameter, type = AnimatorControllerParameterType.Bool },
             };
         }
 

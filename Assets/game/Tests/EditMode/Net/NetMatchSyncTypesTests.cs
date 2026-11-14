@@ -190,6 +190,19 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void MatchRulesCarryPing()
+        {
+            var synced = NetMatchRules.From(GameRules.Default.WithActions(ActionRules.Default.WithPing(Fps.Core.Ping.On)));
+
+            Assert.That(synced.Ping, Is.EqualTo(Fps.Core.Ping.On));
+            Assert.That(synced.PingEnabled, Is.True);
+            Assert.That(RoundTrip(synced), Is.EqualTo(synced));
+            Assert.That(synced, Is.Not.EqualTo(NetMatchRules.Default), "ping is part of the equality");
+            Assert.That(synced.ToString(), Does.EndWith(" ping=On"));
+            Assert.That(NetMatchRules.Default.PingEnabled, Is.False, "pings are off until the server says otherwise");
+        }
+
+        [Test]
         public void DodgeStateSerializesTheRollAndOnlyTheCooldownWhileReady()
         {
             var rolling = new NetDodgeState(new DodgeSnapshot(true, new System.Numerics.Vector2(0.6f, -0.8f), 0.1f, 0f));

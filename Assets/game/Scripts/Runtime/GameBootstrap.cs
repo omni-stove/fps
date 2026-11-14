@@ -97,6 +97,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("プレイヤーの自動回復と予備弾のルール。空なら GameRules.Default を使い警告を出す。シーン生成スクリプトが配線する")]
         private GameRulesDefinition _rules;
 
+        [SerializeField, Tooltip("プレイヤーの能力の枠 (AbilityHost) に入れる能力。i 番目が i 番目の枠 (0 が Ability1)。使えるかはルールの Abilities で決まる")]
+        private AbilityDefinition[] _abilityDefinitions = Array.Empty<AbilityDefinition>();
+
         private BootstrapWorld _world;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
@@ -152,6 +155,32 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// <see cref="Build"/> で作るプレイヤーの能力の枠 (<see cref="AbilityHost"/>) に入れる能力。i 番目が i 番目の枠 (0 が Ability1)。
+        /// 枠より多い分は入れない。空の要素はその枠を空にする。null を設定すると空になる。
+        /// </summary>
+        public IReadOnlyList<AbilityDefinition> AbilityDefinitions
+        {
+            get => _abilityDefinitions ?? Array.Empty<AbilityDefinition>();
+            set
+            {
+                if (value == null)
+                {
+                    _abilityDefinitions = Array.Empty<AbilityDefinition>();
+                    return;
+                }
+
+                // 呼ぶ側が後から並びを書き換えても、配線した中身が変わらないよう写しを持つ
+                var copy = new AbilityDefinition[value.Count];
+                for (var i = 0; i < copy.Length; i++)
+                {
+                    copy[i] = value[i];
+                }
+
+                _abilityDefinitions = copy;
+            }
+        }
+
+        /// <summary>
         /// <see cref="Build"/> でプレイヤーに効かせるルール (自動回復の <see cref="HealthRegen"/> と、武器の予備弾) と、標的ダミーのやられ演出。
         /// null なら <see cref="GameRules.Default"/> を使い、Build 時に警告を出す。
         /// </summary>
@@ -200,8 +229,9 @@ namespace Fps.Runtime
             {
                 floor = _createFloor ? CreateFloor() : null;
                 player = CreatePlayer(
-                    _viewMode, WeaponDefinitions, rules, out var controller, out var rig, out var camera, out var look, out var mover, out var weapon,
-                    out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera);
+                    _viewMode, WeaponDefinitions, AbilityDefinitions, rules, out var controller, out var rig, out var camera, out var look, out var mover,
+                    out var weapon, out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera,
+                    out var abilities);
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 BindDeathBodies(dummies, rules);
@@ -209,12 +239,12 @@ namespace Fps.Runtime
                 IHud hudComponent = null;
                 if (!NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
                 {
-                    CreateHud(playerDamageable, weapon, grenades, rules, out hudComponent, out hudPanelSettings, out hud);
+                    CreateHud(playerDamageable, weapon, grenades, abilities, rules, out hudComponent, out hudPanelSettings, out hud);
                 }
 
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
-                    hudComponent, hudPanelSettings, rig, ads, rules, regen, actionReader, grenades, deathCamera);
+                    hudComponent, hudPanelSettings, rig, ads, rules, regen, actionReader, grenades, deathCamera, abilities);
             }
             catch
             {
@@ -289,6 +319,7 @@ namespace Fps.Runtime
         private static GameObject CreatePlayer(
             ViewMode viewMode,
             IReadOnlyList<WeaponDefinition> weaponDefinitions,
+            IReadOnlyList<AbilityDefinition> abilityDefinitions,
             GameRules rules,
             out CharacterController controller,
             out ViewRig rig,
@@ -301,7 +332,8 @@ namespace Fps.Runtime
             out HealthRegen regen,
             out PlayerActionReader actionReader,
             out GrenadeThrower grenades,
-            out PlayerDeathCamera deathCamera)
+            out PlayerDeathCamera deathCamera,
+            out AbilityHost abilities)
         {
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             try
@@ -319,12 +351,18 @@ namespace Fps.Runtime
                 // CharacterComponents は敵とネットのプレハブにも付けるので、一人称で手元に出すビューモデルは手元のプレイヤーにだけここで付ける。
                 player.AddComponent<ViewmodelPresenter>();
                 WireDeathAndRespawn(damageable, mover, ads);
+                KnockbackMovement.Attach(mover, damageable);
 
                 // 回復しないルール (RegenPerSecond = 0) でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため。
                 regen = player.AddComponent<HealthRegen>();
                 regen.Bind(damageable, rules);
                 grenades = player.GetComponent<GrenadeThrower>();
                 WireGrenades(grenades, mover, weapon, ads);
+
+                // Attach が出す rule のログに入れた能力が載るよう、Attach より前に枠へ入れる。
+                // ルールが Off でも入れておくのは、キャンペーンや差し替えたルールで On になったときにそのまま使えるようにするため。
+                abilities = PlayerActions.GetOrAdd<AbilityHost>(player);
+                abilities.Equip(abilityDefinitions);
                 PlayerActions.Attach(player, rules);
                 mover.ApplyRules(rules);
 
@@ -697,7 +735,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD を作り (<see cref="GameUi.CreateHud"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。オフラインなので、ポーズ中は時間を止める
-        /// (<see cref="PauseTimeMode.Freeze"/>)。グレネードの残り (<see cref="IHud.AttachGrenadeCount"/>) も出す。
+        /// (<see cref="PauseTimeMode.Freeze"/>)。グレネードの残り (<see cref="IHud.AttachGrenadeCount"/>) と能力の枠 (<see cref="IHud.AttachAbilitySlots"/>) も出す。
         /// 生成役が登録されていなければ、既定の UI を外して使う場合もあるので失敗にせず、out をすべて null にして専用サーバーと同じく HUD 無しで進める。
         /// 作った後の設定で失敗したら、呼び出し元が片付けられるよう out に入れてから例外を投げる。
         /// </summary>
@@ -705,6 +743,7 @@ namespace Fps.Runtime
             Damageable player,
             WeaponController weapon,
             GrenadeThrower grenades,
+            AbilityHost abilities,
             GameRules rules,
             out IHud hud,
             out PanelSettings panelSettings,
@@ -724,6 +763,11 @@ namespace Fps.Runtime
             if (grenades != null)
             {
                 hud.AttachGrenadeCount().Show(grenades);
+            }
+
+            if (abilities != null)
+            {
+                hud.AttachAbilitySlots().Show(abilities);
             }
 
             hud.ApplyDensity(rules.HudDensity);
@@ -809,6 +853,9 @@ namespace Fps.Runtime
         /// <summary>HUD 用に作った PanelSettings。<see cref="Hud"/> が破棄されるときに一緒に消える。<see cref="Hud"/> が無ければ null。</summary>
         public PanelSettings HudPanelSettings { get; }
 
+        /// <summary>プレイヤーの能力の枠。使えるかはルールの <see cref="ActionRules.Abilities"/> で決まる。</summary>
+        public AbilityHost Abilities { get; }
+
         public BootstrapWorld(
             GameObject floor,
             GameObject player,
@@ -829,8 +876,10 @@ namespace Fps.Runtime
             HealthRegen regen = null,
             PlayerActionReader actionReader = null,
             GrenadeThrower grenades = null,
-            PlayerDeathCamera deathCamera = null)
+            PlayerDeathCamera deathCamera = null,
+            AbilityHost abilities = null)
         {
+            Abilities = abilities;
             DeathCamera = deathCamera;
             ActionReader = actionReader;
             Grenades = grenades;

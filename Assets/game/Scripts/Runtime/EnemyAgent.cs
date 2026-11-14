@@ -36,6 +36,9 @@ namespace Fps.Runtime
     /// モードは <see cref="SetErrand"/> で戦いのほかの行き先 (縮むエリアの中・拾える物など) を渡せる。巡回・待機・捜索の間はその行き先へ動き、
     /// 戦いより優先する行き先 (overridesCombat が true) か武器を持っていない間は、追跡・攻撃・隠れる最中でもそこへ動く (向きと射撃は判断のまま)。
     /// </para>
+    /// <para>
+    /// 人は分隊の指示 (<see cref="OrderHold"/>・<see cref="OrderAttack"/>・<see cref="OrderFollow"/>) を出せる。指示は判断と行き先 (<see cref="SetErrand"/>) より優先する。
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
@@ -426,7 +429,9 @@ namespace Fps.Runtime
                 _coverHealthFraction,
                 _archetype,
                 CreateShieldSpec(),
-                CreateSniperSpec());
+                CreateSniperSpec(),
+                CreateChargerSpec(),
+                CreateBomberSpec());
         }
 
         /// <summary>
@@ -594,23 +599,28 @@ namespace Fps.Runtime
             _recoil.Tick(deltaSeconds);
 
             var member = GetComponent<SideMember>();
-            if (member != null)
+
+            // 狙う指示の敵を目標にしている間は、陣営やタグで選び直すと指示の敵から外れてしまう。
+            var pinned = TickOrder();
+            if (!pinned && member != null)
             {
                 // 陣営で狙う相手は動き回り倒れもするので、見つかっていても間隔ごとに選び直す。倒れたらすぐ次を探す。
                 ResolveHostile(member, force: _target != null && _target.IsDead);
             }
-            else if (_target == null)
+            else if (!pinned && _target == null)
             {
                 ResolveTarget(force: false);
             }
 
-            if (HoldWhileInterrupted(deltaSeconds))
+            if (TickKnockback(deltaSeconds) || HoldWhileInterrupted(deltaSeconds))
             {
                 return;
             }
 
             // 同じ selector なら何もしないので毎フレーム渡し、registry の差し替えや作り直しに追いつかせる。
-            _brain.UseCover(_coverRegistry != null ? _coverRegistry.Selector : null);
+            // 守る指示の間は遮蔽点へ移らせない。移る途中は撃たないので、守る場所で撃たれても反撃しなくなる。
+            var holding = _order.Kind == BotErrandKind.Hold;
+            _brain.UseCover(_coverRegistry != null && !holding ? _coverRegistry.Selector : null);
 
             var perception = Perceive();
             var decision = _brain.Tick(deltaSeconds, perception);
@@ -620,11 +630,25 @@ namespace Fps.Runtime
             }
 
             LogCoverChange();
-            var errand = ErrandMoveTo();
-            SetCrouching(!errand.HasValue && decision.Crouch && _brain.CurrentCoverPoint?.Height == CoverHeight.Low);
+            System.Numerics.Vector3? moveTo;
+            bool steered;
+            if (_order.IsOrder)
+            {
+                decision = BotDriver.FollowOrder(decision, _brain.State, _order, GroundPosition.ToNumerics(), _orderSpec, out steered);
+                moveTo = steered ? decision.MoveTo : CoverMoveTo(decision);
+                NoteOrderArrival();
+            }
+            else
+            {
+                var errand = ErrandMoveTo();
+                steered = errand.HasValue;
+                moveTo = errand ?? CoverMoveTo(decision);
+            }
+
+            SetCrouching(!steered && decision.Crouch && _brain.CurrentCoverPoint?.Height == CoverHeight.Low);
             var firing = decision.Fire && !_unarmed;
             UpdateGait(firing);
-            MoveTo(errand ?? CoverMoveTo(decision));
+            MoveTo(moveTo);
             WatchProgress(deltaSeconds);
             Face(decision.LookAt, deltaSeconds);
             if (firing)
@@ -786,6 +810,8 @@ namespace Fps.Runtime
 
             ClearPendingPerception();
             _interruption.Clear();
+            _flight.Clear();
+            ClearOrder(logVerb);
             _loggedCoverIndex = -1;
             _loggedCoverPhase = EnemyCoverPhase.None;
             _destination = null;
@@ -844,8 +870,10 @@ namespace Fps.Runtime
 
         private void OnDied(Damageable self)
         {
+            ClearOrder("Died");
             ClearPendingPerception();
             _interruption.Clear();
+            _flight.Clear();
             SetCrouching(false);
             _sprinting = false;
             _aiming = false;

@@ -19,6 +19,18 @@ namespace Fps.Core
         bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, int layerMask, out WorldHit hit);
 
         /// <summary>
+        /// colliderId の形 1 つだけに、origin から direction へ maxDistance までの線分を当てる (Unity の Collider.Raycast に当たる)。
+        /// 始点が形の中にあるときは当たらない。無効にした形と、無い Id には当たらない。
+        /// </summary>
+        /// <param name="colliderId">当てる形の <see cref="WorldHit.ColliderId"/>。</param>
+        /// <param name="origin">始点。</param>
+        /// <param name="direction">向き。長さ 1 でなくてよい (実装が正規化する)。長さ 0 なら何にも当たらない。</param>
+        /// <param name="maxDistance">探す最長の距離。0 以下なら何にも当たらない。</param>
+        /// <param name="hit">当たったときのいちばん近い当たり。当たらなければ default。</param>
+        /// <returns>当たったか。</returns>
+        bool RaycastCollider(int colliderId, Vector3 origin, Vector3 direction, float maxDistance, out WorldHit hit);
+
+        /// <summary>
         /// point0 と point1 を両端の球の中心とする半径 radius のカプセルに重なるものを探し、その Id を results に入れる。
         /// </summary>
         /// <param name="point0">片方の端の球の中心。</param>

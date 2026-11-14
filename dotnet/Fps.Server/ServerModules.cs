@@ -21,9 +21,26 @@ namespace Fps.Server
         public static bool Create(
             ServerLaunch launch, ServerRuntime runtime, ICollection<IServerModule> modules, string libraryDirectory, out string error)
         {
+            return Create(launch, runtime, modules, libraryDirectory, ServerMotorSettings.Default, out error);
+        }
+
+        public static bool Create(
+            ServerLaunch launch,
+            ServerRuntime runtime,
+            ICollection<IServerModule> modules,
+            string libraryDirectory,
+            ServerMotorSettings motorSettings,
+            out string error)
+        {
             ArgumentNullException.ThrowIfNull(launch);
             ArgumentNullException.ThrowIfNull(runtime);
             ArgumentNullException.ThrowIfNull(modules);
+            ArgumentNullException.ThrowIfNull(motorSettings);
+
+            // スナップショットは移動が tick の入力を処理した後の状態を載せるので、移動より後に登録する
+            var movement = new ServerMovement(motorSettings);
+            modules.Add(movement);
+            modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement }));
 
             error = null;
             if (!launch.Options.RegistersLobby)

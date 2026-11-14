@@ -37,10 +37,12 @@ namespace Fps.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyAddsNothing()
+        public void WithoutRegisterLobbyAddsOnlyMovementAndSnapshots()
         {
             Assert.That(Create(_library.Path), Is.Null);
-            Assert.That(_modules, Is.Empty);
+            Assert.That(_modules, Has.Count.EqualTo(2));
+            Assert.That(_modules[0], Is.InstanceOf<ServerMovement>());
+            Assert.That(_modules[1], Is.InstanceOf<ServerSnapshots>());
         }
 
         [Test]
@@ -52,7 +54,7 @@ namespace Fps.Server.Tests
 
             Assert.That(error, Does.StartWith("[Lobby] -register-lobby needs EOS credentials; missing EOS_SANDBOX_ID,"));
             Assert.That(error, Does.Contain(EosCredentials.LocalFileName));
-            Assert.That(_modules, Is.Empty);
+            Assert.That(_modules, Has.None.InstanceOf<ServerLobbyModule>());
         }
 
         [Test]
@@ -74,7 +76,7 @@ namespace Fps.Server.Tests
 
             Assert.That(error, Does.StartWith("[Lobby] -register-lobby cannot use EOS: "));
             Assert.That(error, EosSdkBuild.Included ? Does.Contain("native library") : Does.Contain("not in this build"));
-            Assert.That(_modules, Is.Empty);
+            Assert.That(_modules, Has.None.InstanceOf<ServerLobbyModule>());
         }
 
         [Test]
@@ -88,8 +90,8 @@ namespace Fps.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777"), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(1));
-            Assert.That(_modules[0], Is.InstanceOf<ServerLobbyModule>());
+            Assert.That(_modules, Has.Count.EqualTo(3));
+            Assert.That(_modules[2], Is.InstanceOf<ServerLobbyModule>());
         }
 
         private void WriteLocalFile()

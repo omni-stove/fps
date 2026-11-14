@@ -11,6 +11,7 @@ namespace Fps.Server.Tests
         private readonly UdpMatchTransport _transport = new UdpMatchTransport();
         private readonly MessageTable _table = MatchMessages.CreateClientTable();
         private readonly MessageWriter _writer = new MessageWriter();
+        private readonly Dictionary<int, SnapshotMessage> _snapshots = new Dictionary<int, SnapshotMessage>();
         private ConnectionId _server;
 
         public bool Connected { get; private set; }
@@ -26,6 +27,14 @@ namespace Fps.Server.Tests
         public string RejectedReason { get; private set; }
 
         public string ServerDisconnectingReason { get; private set; }
+
+        /// <summary>最後に組み立てられた (差分なら基準で埋めた) スナップショット。</summary>
+        public SnapshotMessage LatestSnapshot { get; private set; }
+
+        public int UnresolvedSnapshots { get; private set; }
+
+        /// <summary>組み立てられたスナップショットのうち、差分で届いたものの数。</summary>
+        public int DeltaSnapshots { get; private set; }
 
         public static ushort FreePort()
         {
@@ -45,6 +54,13 @@ namespace Fps.Server.Tests
             _writer.Reset();
             _writer.WriteMessage(message);
             _transport.Send(_server, TransportChannel.Reliable, _writer.AsSegment());
+        }
+
+        public void Send(IMessage message, TransportChannel channel)
+        {
+            _writer.Reset();
+            _writer.WriteMessage(message);
+            _transport.Send(_server, channel, _writer.AsSegment());
         }
 
         public void SendRaw(byte[] bytes)
@@ -104,6 +120,34 @@ namespace Fps.Server.Tests
                 case ServerDisconnectingMessage disconnecting:
                     ServerDisconnectingReason = disconnecting.Reason;
                     break;
+                case SnapshotMessage snapshot:
+                    Keep(snapshot);
+                    break;
+            }
+        }
+
+        private void Keep(SnapshotMessage snapshot)
+        {
+            var delta = snapshot.BaselineTick != SnapshotMessage.NoBaseline;
+            _snapshots.TryGetValue(snapshot.BaselineTick, out var baseline);
+            if (!snapshot.TryResolve(baseline))
+            {
+                UnresolvedSnapshots++;
+                return;
+            }
+
+            if (delta)
+            {
+                DeltaSnapshots++;
+            }
+
+            var kept = new SnapshotMessage();
+            kept.CopyFrom(snapshot);
+            _snapshots[kept.Tick] = kept;
+            _snapshots.Remove(kept.Tick - 64);
+            if (LatestSnapshot == null || kept.Tick > LatestSnapshot.Tick)
+            {
+                LatestSnapshot = kept;
             }
         }
     }

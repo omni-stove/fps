@@ -169,10 +169,10 @@ namespace Fps.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyNoModuleIsAdded()
+        public void WithoutRegisterLobbyOnlyMovementAndSnapshotsAreAdded()
         {
             Assert.That(RunWithServerModules(), Is.EqualTo(ServerProgram.ExitOk));
-            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 0 module(s)"));
+            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 2 module(s)"));
         }
 
         [Test]

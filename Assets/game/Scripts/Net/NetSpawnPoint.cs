@@ -50,8 +50,10 @@ namespace Fps.Net
 
         private void OnDrawGizmos()
         {
-            Gizmos.color = _team == SpawnTeam.Alpha ? NetPlayer.AlphaColor
-                : _team == SpawnTeam.Bravo ? NetPlayer.BravoColor
+            // 編集中に保存した設定を読みに行かない (読むと全体の音量まで当ててしまう) よう、標準の組の Alpha 側から見た色で描く
+            var team = ToCoreTeam(_team);
+            Gizmos.color = team.HasValue
+                ? Fps.Runtime.TeamColors.Of(TeamPalette.Standard, team, null)
                 : Color.white;
             Gizmos.DrawWireSphere(transform.position, 0.5f);
         }

@@ -37,6 +37,18 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void BotsAreNamedWithTheBotTag()
+        {
+            var bot = BotRoster.FirstBotPlayerId;
+            var names = new NetKillFeedNames(id => id == bot ? Team.Bravo : Team.Alpha, null, 1);
+
+            var line = names.Describe(new KillFeedEntry(bot, 1, "rifle", false, false));
+
+            Assert.That(line.Killer, Is.EqualTo(new KillFeedName("[BOT] B1", Team.Bravo, false)));
+            Assert.That(line.Victim, Is.EqualTo(new KillFeedName("P1", Team.Alpha, true)));
+        }
+
+        [Test]
         public void WithoutAMatchOnlyTheNamesAndTheHighlightAreKnown()
         {
             var names = NetKillFeedNames.For(null, 2);

@@ -32,6 +32,9 @@ namespace Fps.Core.Tests
             return pairs;
         }
 
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Names(params string[] expected) => expected;
+
         private static string[] Keys(List<KeyValuePair<string, string>> pairs)
         {
             return pairs.Select(p => p.Key).ToArray();
@@ -48,10 +51,8 @@ namespace Fps.Core.Tests
             var line = ServerEventLog.Kill(_time, _matchId, 0, _killerPuid, 1, _victimPuid, false);
             var pairs = ReadLine(line);
 
-            Assert.That(Keys(pairs), Is.EqualTo(new[]
-            {
-                "type", "time", "matchId", "killerId", "killerProductUserId", "victimId", "victimProductUserId", "teamKill",
-            }));
+            Assert.That(Keys(pairs), Is.EqualTo(Names(
+                "type", "time", "matchId", "killerId", "killerProductUserId", "victimId", "victimProductUserId", "teamKill")));
             Assert.That(Value(pairs, "type"), Is.EqualTo("kill"));
             Assert.That(Value(pairs, "time"), Is.EqualTo("2026-11-13T09:30:05.123Z"));
             Assert.That(Value(pairs, "matchId"), Is.EqualTo(_matchId));
@@ -77,10 +78,8 @@ namespace Fps.Core.Tests
         {
             var pairs = ReadLine(ServerEventLog.PlayerJoined(_time, _matchId, 2, _killerPuid, Team.Bravo, true));
 
-            Assert.That(Keys(pairs), Is.EqualTo(new[]
-            {
-                "type", "time", "matchId", "playerId", "productUserId", "team", "rejoined",
-            }));
+            Assert.That(Keys(pairs), Is.EqualTo(Names(
+                "type", "time", "matchId", "playerId", "productUserId", "team", "rejoined")));
             Assert.That(Value(pairs, "type"), Is.EqualTo("player_joined"));
             Assert.That(Value(pairs, "playerId"), Is.EqualTo("2"));
             Assert.That(Value(pairs, "team"), Is.EqualTo("Bravo"));
@@ -92,7 +91,7 @@ namespace Fps.Core.Tests
         {
             var pairs = ReadLine(ServerEventLog.PlayerLeft(_time, _matchId, 5, null));
 
-            Assert.That(Keys(pairs), Is.EqualTo(new[] { "type", "time", "matchId", "playerId" }));
+            Assert.That(Keys(pairs), Is.EqualTo(Names("type", "time", "matchId", "playerId")));
             Assert.That(Value(pairs, "type"), Is.EqualTo("player_left"));
             Assert.That(Value(pairs, "playerId"), Is.EqualTo("5"));
         }
@@ -102,7 +101,7 @@ namespace Fps.Core.Tests
         {
             var pairs = ReadLine(ServerEventLog.MatchStarted(_time, _matchId, 2));
 
-            Assert.That(Keys(pairs), Is.EqualTo(new[] { "type", "time", "matchId", "players" }));
+            Assert.That(Keys(pairs), Is.EqualTo(Names("type", "time", "matchId", "players")));
             Assert.That(Value(pairs, "type"), Is.EqualTo("match_started"));
             Assert.That(Value(pairs, "players"), Is.EqualTo("2"));
         }
@@ -112,7 +111,7 @@ namespace Fps.Core.Tests
         {
             var pairs = ReadLine(ServerEventLog.MatchEnded(_time, _matchId, Team.Alpha, 30, 12));
 
-            Assert.That(Keys(pairs), Is.EqualTo(new[] { "type", "time", "matchId", "winner", "scoreAlpha", "scoreBravo" }));
+            Assert.That(Keys(pairs), Is.EqualTo(Names("type", "time", "matchId", "winner", "scoreAlpha", "scoreBravo")));
             Assert.That(Value(pairs, "type"), Is.EqualTo("match_ended"));
             Assert.That(Value(pairs, "winner"), Is.EqualTo("Alpha"));
             Assert.That(Value(pairs, "scoreAlpha"), Is.EqualTo("30"));
@@ -133,11 +132,11 @@ namespace Fps.Core.Tests
             var started = ReadLine(ServerEventLog.ServerStarted(_time, "0.2.0", NetTransportKind.Udp, "0.0.0.0:7777"));
             var stopping = ReadLine(ServerEventLog.ServerStopping(_time));
 
-            Assert.That(Keys(started), Is.EqualTo(new[] { "type", "time", "version", "transport", "endpoint" }));
+            Assert.That(Keys(started), Is.EqualTo(Names("type", "time", "version", "transport", "endpoint")));
             Assert.That(Value(started, "type"), Is.EqualTo("server_started"));
             Assert.That(Value(started, "transport"), Is.EqualTo("udp"));
             Assert.That(Value(started, "endpoint"), Is.EqualTo("0.0.0.0:7777"));
-            Assert.That(Keys(stopping), Is.EqualTo(new[] { "type", "time" }));
+            Assert.That(Keys(stopping), Is.EqualTo(Names("type", "time")));
             Assert.That(Value(stopping, "type"), Is.EqualTo("server_stopping"));
         }
 

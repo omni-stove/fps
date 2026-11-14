@@ -8,7 +8,8 @@ namespace Fps.Runtime
     /// <summary>
     /// 残りのグレネードの数 (<see cref="HudFormat.Grenades"/>) を、弾数の上に出す。Hud.uxml の <see cref="UxmlName"/> を使う。
     /// <see cref="Hud.AddViews"/> では付けず、オフラインの <see cref="GameBootstrap"/> がプレイヤーの <see cref="GrenadeThrower"/> を
-    /// <see cref="Show"/> する (ネット対戦にはまだグレネードが無い)。ルールでグレネードを使わない間は隠す。
+    /// <see cref="Show"/> し、ネット対戦の HUD (<c>Fps.Net.NetHud</c>) がサーバーから届いた数を <see cref="ShowCount"/> する。
+    /// ルールでグレネードを使わない間は隠す。
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
     /// </summary>
     [DisallowMultipleComponent]
@@ -18,6 +19,10 @@ namespace Fps.Runtime
         public const string UxmlName = "grenade-count";
 
         private GrenadeThrower _source;
+
+        // ShowCount で渡された値。_source があればそちらを出す
+        private bool _countShown;
+        private int _count;
 
         public override string ElementName => UxmlName;
 
@@ -66,6 +71,8 @@ namespace Fps.Runtime
             }
 
             _source = thrower;
+            _countShown = false;
+            _count = 0;
             if (_source != null)
             {
                 _source.Changed += OnChanged;
@@ -74,11 +81,40 @@ namespace Fps.Runtime
             Refresh();
         }
 
+        /// <summary>
+        /// <see cref="GrenadeThrower"/> を持たない画面 (ネット対戦) で、残りの数を直接出す。usesGrenades が false なら隠す。
+        /// 出していた <see cref="GrenadeThrower"/> は手放す。負の数は 0 として出す。
+        /// </summary>
+        public void ShowCount(bool usesGrenades, int remaining)
+        {
+            if (_source != null)
+            {
+                _source.Changed -= OnChanged;
+                _source = null;
+            }
+
+            _countShown = usesGrenades;
+            _count = Math.Max(0, remaining);
+            Refresh();
+        }
+
         /// <summary>出しているグレネードの今の残りを読み直して Label に写す。</summary>
         public void Refresh()
         {
-            var shown = _source != null && _source.UsesGrenades;
-            Text = shown ? HudFormat.Grenades(_source.Remaining) : string.Empty;
+            bool shown;
+            int remaining;
+            if (_source != null)
+            {
+                shown = _source.UsesGrenades;
+                remaining = _source.Remaining;
+            }
+            else
+            {
+                shown = _countShown;
+                remaining = _count;
+            }
+
+            Text = shown ? HudFormat.Grenades(remaining) : string.Empty;
 
             if (Element is Label label)
             {

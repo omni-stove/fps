@@ -58,10 +58,12 @@ namespace Fps.Net
     /// </para>
     /// <para>
     /// 射撃は .Fire.cs、出現とリスポーンと出現直後の無敵 (<see cref="SpawnProtections"/>) は .Spawn.cs、武器を配る処理は .Loadout.cs、参加と退出は .Roster.cs、
-    /// ダウンと蘇生は .Downed.cs、射撃・ヒット・被弾・キルをクライアントへ配る処理 (<see cref="NetCombatFeed"/>) は .CombatFeed.cs に分けてある。
+    /// ダウンと蘇生は .Downed.cs、射撃・ヒット・被弾・キルをクライアントへ配る処理 (<see cref="NetCombatFeed"/>) は .CombatFeed.cs、
+    /// グレネードを投げる・爆発させる処理は .Explosion.cs に分けてある。
     /// </para>
     /// <para>
     /// Bot で人数を埋める処理は .Bots.cs、放置した人を切る処理は .Idle.cs、拠点で勝敗を決める処理は .Objective.cs が受け持つ。
+    /// サーバーの 1 フレームぶんの処理 (Update と LateUpdate) にかかった時間を計って知らせる処理は .TickTiming.cs が受け持つ。
     /// それぞれの差し込み口を、サーバーで試合を始めたとき・毎フレーム・参加・退出・キル・次の試合の開始・試合の終わり・Despawn から呼ぶ。
     /// 放置の判定には、これに加えて射撃が届いたときにも知らせる (<c>IdlePlayerFired</c>)。
     /// 試合の終わりでは、勝ったチームを <c>ObjectiveDecideWinner</c> が差し替えてから同期とログに使う。
@@ -352,6 +354,7 @@ namespace Fps.Net
             _serverLoadout = null;
             _lastKillers.Clear();
             ClearDowned();
+            ClearGrenades();
             _combatFeed = null;
             _killShot = null;
 
@@ -367,6 +370,8 @@ namespace Fps.Net
             {
                 return;
             }
+
+            var tickStartedAt = TickTimingBegin();
 
             // 終わっている間に来た人は、次の試合が始まってから加える
             if (_session.State != GameModeState.Ended)
@@ -386,17 +391,24 @@ namespace Fps.Net
             SyncRemainingSeconds();
             SyncNextMatchSeconds();
             SyncNextWaveSeconds();
+            TickTimingAddUpdate(tickStartedAt);
         }
 
         // 入力 (RPC) とホストの移動 (Update) が反映された後の位置を記録する
         private void LateUpdate()
         {
-            if (!IsSpawned || !IsServer || _session == null || _lagCompensator == null)
+            if (!IsSpawned || !IsServer || _session == null)
             {
                 return;
             }
 
-            RecordHitboxes();
+            var tickStartedAt = TickTimingBegin();
+            if (_lagCompensator != null)
+            {
+                RecordHitboxes();
+            }
+
+            TickTimingEndFrame(tickStartedAt);
         }
 
         /// <summary>
@@ -512,6 +524,7 @@ namespace Fps.Net
             _lastKillers.Clear();
             ClearDowned();
             ServerEventsSessionCreated();
+            PrepareGrenades(spec.Rules);
 
             _alphaScore.Value = 0;
             _bravoScore.Value = 0;
@@ -695,13 +708,21 @@ namespace Fps.Net
             _status.Value = new NetMatchStatus(GameModeState.Playing, null);
             SyncNextWaveSeconds();
 
-            // 待っている間にリロードを始めていた人も、満タンでそろえて始める
-            foreach (var player in _playerById.Values)
+            // 待っている間にリロードを始めていた人や投げていた人も、満タンでそろえて始める
+            foreach (var pair in _playerById)
             {
-                if (player != null && player.Weapon != null)
+                var player = pair.Value;
+                if (player == null)
+                {
+                    continue;
+                }
+
+                if (player.Weapon != null)
                 {
                     player.Weapon.ServerRefill();
                 }
+
+                ServerRefillGrenades(pair.Key, player);
             }
 
             Debug.Log(MatchLog.Started(_session.PlayerCount));
@@ -725,10 +746,11 @@ namespace Fps.Net
             var team = _session.GetTeam(playerId);
             player.ServerSetState(team, _session.GetHealth(playerId));
 
-            // playerId はクライアント Id をそのまま使っている (JoinNewPlayers) ので、抜けた相手でもクライアント Id に戻せる
+            // playerId は人ならクライアント Id、Bot なら Bot の Id をそのまま使っている (JoinNewPlayers・.Bots.cs) ので、
+            // 抜けた相手でも行の Id (RosterId) に戻せる
             var killer = _lastKillers.Get(playerId);
             var row = new NetPlayerStats(
-                player.OwnerClientId, team, _session.GetKills(playerId), _session.GetDeaths(playerId),
+                player.RosterId, team, _session.GetKills(playerId), _session.GetDeaths(playerId),
                 killer.HasValue ? (ulong)killer.Value : (ulong?)null);
             var index = FindRow(row.ClientId);
             if (index < 0)

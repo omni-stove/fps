@@ -222,6 +222,24 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void DeathStopsWeaponMovementAndGrenadesUntilTheReload()
+        {
+            var scene = BuildScene();
+            var mover = scene.Player.gameObject.AddComponent<PlayerController>();
+            var grenades = scene.Player.gameObject.AddComponent<GrenadeThrower>();
+            BeginQuietly(scene);
+            Assert.That(scene.Weapon.enabled && mover.enabled && grenades.enabled, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=Player");
+            ExpectCampaign("player died; reloading in 3s from checkpoint=(start)");
+            scene.Player.Kill();
+
+            Assert.That(scene.Weapon.enabled, Is.False, "weapon");
+            Assert.That(mover.enabled, Is.False, "movement");
+            Assert.That(grenades.enabled, Is.False, "grenades");
+        }
+
+        [Test]
         public void IgnoresASaveOfAnotherMission()
         {
             var other = new CampaignSave("OtherMission", CheckpointId, 10, RifleAmmo(1, 2), RifleId, new[]

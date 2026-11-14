@@ -91,9 +91,10 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ServerScenesAreOnlyTheNetScene()
+        public void ServerScenesStartWithTheNetSceneAndHaveTheMaps()
         {
-            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { BuildSceneList.NetTestScene }));
+            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { BuildSceneList.NetTestScene, BuildSceneList.NetArena01Scene }));
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.NetArena01Scene), "clients load the server's map too");
         }
 
         [Test]

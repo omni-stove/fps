@@ -44,6 +44,7 @@ namespace Fps.Core.Tests
             Assert.That(spec.CoverHideSeconds, Is.EqualTo(original.CoverHideSeconds));
             Assert.That(spec.CoverPeekSeconds, Is.EqualTo(original.CoverPeekSeconds));
             Assert.That(spec.CoverHealthFraction, Is.EqualTo(original.CoverHealthFraction));
+            Assert.That(spec.Archetype, Is.EqualTo(original.Archetype));
         }
 
         [Test]

@@ -33,7 +33,7 @@ namespace Fps.Core.Tests
         }
 
         [TestCase(-1)]
-        [TestCase(3)]
+        [TestCase(4)]
         public void HitConfirmRejectsAnUndefinedZone(int value)
         {
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => new HitConfirm(10, (HitZone)value, false, false));

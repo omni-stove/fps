@@ -26,7 +26,7 @@ namespace Fps.Tests.EditMode
         {
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
-            WeaponAssetBuilder.Configure(_rifle, WeaponAssetBuilder.RifleSpec());
+            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
 
             _host = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             _host.name = "Enemy";
@@ -85,7 +85,7 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(_agent.TryInitialize(), Is.True);
 
-            var expected = WeaponAssetBuilder.RifleSpec();
+            var expected = TestWeapons.RifleSpec();
             var spec = _agent.Weapon.Spec;
             Assert.That(spec.Id, Is.EqualTo(expected.Id));
             Assert.That(spec.MagazineSize, Is.EqualTo(expected.MagazineSize));
@@ -113,11 +113,11 @@ namespace Fps.Tests.EditMode
 
                 Assert.That(_agent.WeaponDefinition, Is.SameAs(handgun));
                 Assert.That(_agent.WeaponRules, Is.SameAs(rules));
-                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
+                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(TestWeapons.HandgunId));
                 Assert.That(_agent.Weapon.AmmoInMagazine, Is.EqualTo(_agent.Weapon.Spec.MagazineSize));
 
                 _agent.EquipWeapon(_rifle);
-                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(TestWeapons.RifleId));
                 Assert.That(_agent.WeaponRules, Is.SameAs(rules), "without rules the current ones are kept");
             }
             finally
@@ -136,7 +136,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(_agent.Weapon, Is.Null);
 
                 Assert.That(_agent.TryInitialize(), Is.True);
-                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.HandgunId));
+                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(TestWeapons.HandgunId));
             }
             finally
             {
@@ -157,7 +157,7 @@ namespace Fps.Tests.EditMode
                 Assert.Throws<System.ArgumentNullException>(() => _agent.EquipWeapon(null));
 
                 Assert.That(_agent.WeaponDefinition, Is.SameAs(_rifle));
-                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(WeaponAssetBuilder.RifleId));
+                Assert.That(_agent.Weapon.Spec.Id, Is.EqualTo(TestWeapons.RifleId));
             }
             finally
             {
@@ -442,7 +442,7 @@ namespace Fps.Tests.EditMode
         {
             var handgun = ScriptableObject.CreateInstance<WeaponDefinition>();
             handgun.name = "Handgun";
-            WeaponAssetBuilder.Configure(handgun, WeaponAssetBuilder.HandgunSpec());
+            WeaponAssets.Configure(handgun, TestWeapons.HandgunSpec());
             return handgun;
         }
     }

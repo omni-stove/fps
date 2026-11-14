@@ -127,8 +127,8 @@ namespace Fps.Tests.EditMode
         public void WeaponIsAddedToTheLoadoutWithoutSwitching()
         {
             var player = NewCollector("Player");
-            var weapons = AttachWeapons(player, NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec()));
-            var launcher = NewWeapon("Launcher", WeaponAssetBuilder.LauncherSpec());
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
             var changed = 0;
             weapons.WeaponChanged += _ => changed++;
             var pickup = Pickup.Create(PickupContents.ForWeapon(launcher, 2), Vector3.zero);
@@ -147,21 +147,21 @@ namespace Fps.Tests.EditMode
         public void AddingAWeaponKeepsTheAmmoOfTheOthers()
         {
             var player = NewCollector("Player");
-            var weapons = AttachWeapons(player, NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec()));
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
             weapons.Weapon.TryFire();
             var magazine = weapons.Weapon.AmmoInMagazine;
 
-            Assert.That(weapons.AddWeapon(NewWeapon("Launcher", WeaponAssetBuilder.LauncherSpec())), Is.True);
+            Assert.That(weapons.AddWeapon(NewWeapon("Launcher", TestWeapons.LauncherSpec())), Is.True);
 
             Assert.That(weapons.Weapon.AmmoInMagazine, Is.EqualTo(magazine));
-            Assert.That(weapons.AddWeapon(NewWeapon("Launcher2", WeaponAssetBuilder.LauncherSpec())), Is.False, "same id is held already");
+            Assert.That(weapons.AddWeapon(NewWeapon("Launcher2", TestWeapons.LauncherSpec())), Is.False, "same id is held already");
         }
 
         [Test]
         public void OwnedWeaponGivesAmmoInstead()
         {
             var player = NewCollector("Player");
-            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            var rifle = NewWeapon("Rifle", TestWeapons.RifleSpec());
             var weapons = AttachWeapons(player, rifle);
             weapons.Weapon.TryFire();
             weapons.StartReload();
@@ -181,7 +181,7 @@ namespace Fps.Tests.EditMode
         public void AmmoGoesToTheCurrentWeapon()
         {
             var player = NewCollector("Player");
-            var weapons = AttachWeapons(player, NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec()));
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
             weapons.Weapon.TryFire();
             weapons.StartReload();
             weapons.Tick(weapons.Weapon.Spec.ReloadSeconds + 0.1f);
@@ -460,7 +460,7 @@ namespace Fps.Tests.EditMode
         {
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             definition.name = name;
-            WeaponAssetBuilder.Configure(definition, spec);
+            WeaponAssets.Configure(definition, spec);
             _created.Add(definition);
             return definition;
         }

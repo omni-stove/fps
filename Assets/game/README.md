@@ -2,6 +2,7 @@
 
 一人称・三人称のシューターのゲームプレイ (武器・敵 AI・モード・キャンペーン) と、シーンやアセットを作る Editor のスクリプトをまとめた UPM パッケージ。
 ここに書いた手順だけで、空の Unity プロジェクトに入れて、EditMode テスト・武器 JSON の取り込み・smoke の実行まで進められる。
+武器・ルール・ミッション・シーン・プレハブの中身と、それを組む Editor のスクリプトと smoke は、パッケージのサンプル **Demo Game** にある ([サンプル (Demo Game)](#サンプル-demo-game) を参照)。
 
 ## 必要なもの
 
@@ -24,10 +25,10 @@
 
 | アセンブリ | 有効になる条件 | manifest に足す行 |
 | --- | --- | --- |
-| `Fps.Net`・`Fps.Net.UI`・`Fps.Net.Editor`・`Fps.Net.Tests` | `com.unity.netcode.gameobjects` 2.14.0 以上 | `"com.unity.netcode.gameobjects": "2.14.0"` |
+| `Fps.Net`・`Fps.Net.UI`・`Fps.Net.Tests` (サンプルの `Fps.Samples.Net.Editor`・`Fps.Samples.Net.Tests` も) | `com.unity.netcode.gameobjects` 2.14.0 以上 | `"com.unity.netcode.gameobjects": "2.14.0"` |
 | `Fps.NetEos` | 上に加えて `com.playeveryware.eos` | `"com.playeveryware.eos": "https://github.com/EOS-Contrib/eos_plugin_for_unity_upm.git"` |
 
-smoke の最後の 1 本 (`PerfSmokeRun`) は `Fps.Net.Editor` にあるので、**smoke をすべて通すには Netcode も入れる**こと ([動作確認](#動作確認-smoke) を参照)。
+smoke の最後の 1 本 (`PerfSmokeRun`) はサンプルの `Fps.Samples.Net.Editor` にあるので、**smoke をすべて通すには Netcode も入れる**こと ([動作確認](#動作確認-smoke) を参照)。
 
 ## 導入
 
@@ -55,6 +56,26 @@ smoke の最後の 1 本 (`PerfSmokeRun`) は `Fps.Net.Editor` にあるので�
 
 Unity を開くと Package Manager が取ってきてコンパイルする。Editor のメニューに **Fps** が出れば入っている。
 パッケージの実体は `Library/PackageCache/com.omnistove.fps@<hash>/` に置かれ、Unity からは `Packages/com.omnistove.fps/` として見える (読み取り専用)。
+
+## サンプル (Demo Game)
+
+パッケージの本体 (`Fps.Core`・`Fps.Runtime`・`Fps.Runtime.UI`・`Fps.Net`・`Fps.Net.UI`・`Fps.NetEos`、JSON のインポーターなどの `Fps.Editor`) は、サンプルの中身を参照しない。
+仮のゲームの中身はサンプル **Demo Game** (`Samples~/Demo`) にあり、ゲーム側が選んで取り込む。
+
+| 中身 | 置き場所 (サンプルのルートから) |
+| --- | --- |
+| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`) |
+| ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
+| ミッション・シーン・ネット対戦のプレハブ | `Missions/`・`Scenes/`・`Prefabs/Net/` |
+| メニューから移るシーンのルート (`MenuSceneSettings`) | `Resources/Menu/MenuSceneSettings.asset` |
+| シーンと仮の素材を組む Editor のスクリプト・smoke・クライアントとサーバーのビルド | `Scripts/Editor/` (`Fps.Samples.Editor`)・`Scripts/Net/Editor/` (`Fps.Samples.Net.Editor`) |
+| サンプルのテスト | `Tests/EditMode/` (`Fps.Samples.Tests`)・`Tests/EditMode/Net/` (`Fps.Samples.Net.Tests`) |
+
+取り込み方: **Window > Package Manager** で FPS Kit を選び、**Samples** の **Demo Game** の **Import** を押す。`Assets/Samples/FPS Kit/<版>/Demo Game/` に置かれる。
+
+- 取り込んだサンプルは、Editor を開いたときに自分のフォルダを出力先ルートの既定にする (`Fps.Editor.DemoSample`)。ビルダーと smoke は、`-fpsKitRoot` を付けなければサンプルのフォルダの下に書く。
+- 取り込んだら **Fps > Build Main Menu Scene** を一度実行する。メインメニューのシーンを作り、メニューから移るシーンのルート (`MenuSceneSettings` の Scene Root) を取り込んだ場所に書き直す。
+- このリポジトリでは、`Assets/Samples/FpsKitDemo` が `Assets/game/Samples~/Demo` へのシンボリックリンクになっていて、取り込んだのと同じ形で開ける。サンプルを直すときは `Assets/game/Samples~/Demo` の下を直す。
 
 ## Unity の起動コマンド
 
@@ -87,10 +108,10 @@ UNITY="/c/Program Files/Unity/Hub/Editor/6000.6.0f1/Editor/Unity.exe"
 
 1. batchmode の引数 `-fpsKitRoot <path>` (例: `-fpsKitRoot Assets/FpsKit`)
 2. このプロジェクトの EditorPrefs に覚えた値 (Editor のスクリプトから `Fps.Editor.FpsKitRoot.SetPreferredOutput("Assets/FpsKit")` で設定、`Fps.Editor.FpsKitRoot.ClearPreferredOutput()` で既定に戻す)
-3. 既定の `Assets/game`
+3. 既定の出力先 (`Fps.Editor.FpsKitRoot.DefaultOutput`)。サンプルを取り込んでいればそのフォルダ、無ければ `Assets/game`
 
 パッケージの中は書き込めないので、値は `Assets/` の下のフォルダに限る。`Assets` そのもの、`Packages/...`、`..` を含むパス、`-fpsKitRoot` の値が無い・2 度ある、のどれかなら `ArgumentException` で止まる。
-同梱のサンプル JSON などは出力先ルートとは関係なく、パッケージの中 (`Packages/com.omnistove.fps/`) から読む。
+ゲームのキャラクターのリグ (`Fps/Build Character Rig`) だけは、実行時の既定として本体が読むので、出力先ルートではなくパッケージの中 (`Characters/`) に書く。
 
 ## テスト (EditMode)
 
@@ -114,12 +135,13 @@ batchmode で回す (`-runTests` は自分で Editor を閉じるので `-quit` 
 
 ```sh
 "$UNITY" -batchmode -projectPath . -runTests -testPlatform EditMode \
-  -assemblyNames "Fps.Core.Tests;Fps.Tests.EditMode" \
+  -assemblyNames "Fps.Core.Tests;Fps.Tests.EditMode;Fps.Samples.Tests" \
   -testResults "$PWD/fps-editmode-results.xml" -logFile -
 ```
 
 - 終了コードが 0 ならすべて通った。0 以外なら失敗で、どのテストが落ちたかは `fps-editmode-results.xml` (NUnit 形式) にある。
-- Netcode を入れたなら、`-assemblyNames` に `Fps.Net.Tests` を足すとネットのテストも回る。`-assemblyNames` を省くと、プロジェクトにあるすべての EditMode テストが回る。
+- `Fps.Samples.Tests` はサンプルを取り込んだときだけある (サンプルのテストは `testables` に関係なく、取り込むと読み込まれる)。
+- Netcode を入れたなら、`-assemblyNames` に `Fps.Net.Tests` (とサンプルの `Fps.Samples.Net.Tests`) を足すとネットのテストも回る。`-assemblyNames` を省くと、プロジェクトにあるすべての EditMode テストが回る。
 - テストは `Assets/__<テスト名>_<GUID>` のような一時フォルダにアセットを作り、終わると消す。
 
 Editor からは **Window > General > Test Runner** の EditMode タブで同じテストを回せる。
@@ -128,7 +150,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 ### 武器を JSON から取り込む
 
-1 ファイルが武器 1 つで、項目名は `Fps.Core.WeaponSpec` のコンストラクタ引数と同じ。サンプルは `Packages/com.omnistove.fps/Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`)。
+1 ファイルが武器 1 つで、項目名は `Fps.Core.WeaponSpec` のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`)。
 
 ```json
 {
@@ -153,16 +175,16 @@ batchmode で取り込む:
 ```sh
 "$UNITY" -batchmode -quit -projectPath . \
   -executeMethod Fps.Editor.WeaponJsonImporter.Import \
-  -weaponJson Packages/com.omnistove.fps/Weapons/Json \
+  -weaponJson "Assets/Samples/FPS Kit/0.1.0/Demo Game/Weapons/Json" \
   -weaponOut Assets/FpsKit/Weapons \
   -logFile -
 ```
 
 | 引数 | 必須 | 意味 |
 | --- | --- | --- |
-| `-weaponJson <file\|dir>` | 必須 | JSON 1 つか、直下の `*.json` を名前の順に読むフォルダ。プロジェクトからの相対か絶対パス。`Packages/com.omnistove.fps/...` もそのまま渡せる |
+| `-weaponJson <file\|dir>` | 必須 | JSON 1 つか、直下の `*.json` を名前の順に読むフォルダ。プロジェクトからの相対か絶対パス。`Packages/...` もそのまま渡せる |
 | `-weaponOut <dir>` | 省略可 | アセットを置く `Assets/` の下のフォルダ。省くと `<出力先ルート>/Weapons` (`-fpsKitRoot` が効く) |
-| `-weaponCatalog <asset>` | 省略可 | 取り込んだ武器を Id で重複なく足す `WeaponCatalogAsset` のパス (例: `Assets/game/Weapons/WeaponCatalog.asset`)。そのカタログが既に無いとエラー |
+| `-weaponCatalog <asset>` | 省略可 | 取り込んだ武器を Id で重複なく足す `WeaponCatalogAsset` のパス (例: `Assets/FpsKit/Weapons/WeaponCatalog.asset`)。そのカタログが既に無いとエラー |
 
 - アセットの名前は JSON のファイル名 (`Rifle.json` → `Rifle.asset`)。既にあれば GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
 - 成功するとログに `[WeaponJsonImporter] saved '<アセット>' (id '<Id>') from '<JSON>'` が出て、終了コード 0 で終わる。
@@ -172,12 +194,12 @@ Editor からは **Fps > Import Weapons From JSON** でフォルダを選ぶ (�
 
 ### モードのルールを JSON から取り込む
 
-1 ファイルがルール 1 つ (`GameRulesDefinition`)。サンプルは `Packages/com.omnistove.fps/Rules/Json/` にある (`TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`)。
+1 ファイルがルール 1 つ (`GameRulesDefinition`)。例はサンプルの `Rules/Json/` にある (`TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`)。
 
 ```sh
 "$UNITY" -batchmode -quit -projectPath . \
   -executeMethod Fps.Editor.GameRulesJsonImporter.Import \
-  -rulesJson Packages/com.omnistove.fps/Rules/Json \
+  -rulesJson "Assets/Samples/FPS Kit/0.1.0/Demo Game/Rules/Json" \
   -rulesOut Assets/FpsKit/Rules \
   -logFile -
 ```
@@ -552,14 +574,14 @@ photo.PhotoCapture = new MyFramedCapture();
 
 ## 動作確認 (smoke)
 
-`Fps.Editor.SmokeSuite.RunAll` は、次の SmokeRun を 1 つの Editor で順に Play Mode に入れて走らせる。必要な武器・ルール・シーンは各 SmokeRun が出力先ルートに作るので、空のプロジェクトでもそのまま回せる。
+サンプルを取り込んだうえで、`Fps.Editor.SmokeSuite.RunAll` は、次の SmokeRun を 1 つの Editor で順に Play Mode に入れて走らせる。必要な武器・ルール・シーンは各 SmokeRun が出力先ルートに作るので、空のプロジェクトでもそのまま回せる。
 
 1. `CampaignSmokeRun`
 2. `DestructionSmokeRun`
 3. `EnemyFireSmokeRun`
 4. `EnemyStuckSmokeRun`
 5. `WeaponSwitchSmokeRun`
-6. `PerfSmokeRun` (`Fps.Net.Editor`。Netcode が要る。サーバーの tick の平均・最大・p95 を `Logs/perf.json` に書き、予算を超えると失敗)
+6. `PerfSmokeRun` (`Fps.Samples.Net.Editor`。Netcode が要る。サーバーの tick の平均・最大・p95 を `Logs/perf.json` に書き、予算を超えると失敗)
 
 Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに終了コード 1 で終わる)。
 
@@ -570,7 +592,7 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
   -logFile -
 ```
 
-`-fpsKitRoot` を省くと、生成物は `Assets/game` に置かれる。
+`-fpsKitRoot` を省くと、生成物は取り込んだサンプルのフォルダに置かれる。
 
 ### 成功と失敗の見分け方
 
@@ -600,7 +622,7 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
 
 - `FAILED <名前>` の行の SmokeRun が落ちた。その名前のタグ (`[DestructionSmokeRun]` など) でログを探すと理由がある。1 つが 600 秒を超えても終わらないときも、`[SmokeSuite] <名前> did not finish within 600s` を出して `FAILED` になる。
 - `NOT RUN <名前>` は結果を受け取れないままスイートが終わった SmokeRun で、これも失敗に数える。
-- Netcode を入れていないと `PerfSmokeRun` が `smoke run type 'Fps.Editor.PerfSmokeRun, Fps.Net.Editor' was not found` で `FAILED` になり、スイート全体も 1 で終わる。残りの 5 本が `passed` なら、Netcode 以外は動いている。
+- Netcode を入れていないと `PerfSmokeRun` が `smoke run type 'Fps.Editor.PerfSmokeRun, Fps.Samples.Net.Editor' was not found` で `FAILED` になり、スイート全体も 1 で終わる。残りの 5 本が `passed` なら、Netcode 以外は動いている。
 
 ## 差し替え漏れの点検
 
@@ -638,9 +660,12 @@ Editor からは **Fps > Audit Replacements** (一覧をログに出すだけで
 | `Fps.Core` | Unity に依存しないルールと計算 | 常に |
 | `Fps.Runtime` | ゲームプレイのコンポーネントとアセットの型 | 常に |
 | `Fps.Runtime.UI` | 既定の UI (HUD・メニュー・ポーズ・設定)。起動時に `GameUi` へ自分を登録する。外すと HUD 無しで動く | 常に |
-| `Fps.Editor` | シーンとアセットのビルダー、JSON のインポーター、smoke | Editor |
-| `Fps.Net`・`Fps.Net.Editor` | Netcode for GameObjects のネット対戦 | Netcode 2.14.0 以上 |
+| `Fps.Editor` | JSON のインポーター、出力先ルート、ビルダーの共通の処理、キャラクターのリグ、差し替えの点検 | Editor |
+| `Fps.Net` | Netcode for GameObjects のネット対戦 | Netcode 2.14.0 以上 |
 | `Fps.Net.UI` | ネット対戦の HUD (キルフィードの名前・スコアボード・F3 の回線表示・装備選択・ネームプレート・拠点)。起動時に `NetUi` へ自分を登録する。外すと HUD 無しで動く | Netcode 2.14.0 以上 |
 | `Fps.NetEos` | EOS のログイン・ロビー・P2P の通信・アンチチート | Netcode と EOS |
 | `Fps.Core.Tests`・`Fps.Tests.EditMode` | EditMode テスト | `testables` に入れたとき |
 | `Fps.Net.Tests` | ネットの EditMode テスト | `testables` に入れ、Netcode もあるとき |
+| `Fps.Samples.Editor` (サンプル) | シーンと仮の素材のビルダー、smoke、クライアントのビルド | サンプルを取り込んだとき (Editor) |
+| `Fps.Samples.Net.Editor` (サンプル) | ネット対戦のシーンとプレハブのビルダー、サーバーのビルド、`PerfSmokeRun` | サンプルを取り込み、Netcode もあるとき (Editor) |
+| `Fps.Samples.Tests`・`Fps.Samples.Net.Tests` (サンプル) | サンプルの EditMode テスト | サンプルを取り込んだとき (ネットは Netcode も) |

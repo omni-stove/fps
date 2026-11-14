@@ -31,16 +31,18 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            _rifle = Weapon("Rifle", WeaponAssetBuilder.RifleSpec());
-            _launcher = Weapon("Launcher", WeaponAssetBuilder.LauncherSpec());
-            _handgun = Weapon("Handgun", WeaponAssetBuilder.HandgunSpec());
+            _rifle = Weapon("Rifle", TestWeapons.RifleSpec());
+            _launcher = Weapon("Launcher", TestWeapons.LauncherSpec());
+            _handgun = Weapon("Handgun", TestWeapons.HandgunSpec());
             _knife = Weapon(
                 "Knife",
                 new WeaponSpec(KnifeId, "Knife", WeaponCategory.Handgun, FireMode.Semi, 1, 0, 0.5f, 0.1f, 100, 2f, DamageFalloff.None));
 
             _ladder = Track(ScriptableObject.CreateInstance<GunGameLadderDefinition>());
             _ladder.name = "TestLadder";
-            GunGameSceneBuilder.Configure(_ladder, new[] { _rifle, _launcher, _handgun }, new[] { _knife }, true);
+            _ladder.SetTiers(new[] { _rifle, _launcher, _handgun });
+            _ladder.SetMeleeWeapons(new[] { _knife });
+            _ladder.DemotesOnMelee = true;
 
             _runner = Track(new GameObject("Runner")).AddComponent<GunGameRunner>();
             _runner.Ladder = _ladder;
@@ -87,7 +89,7 @@ namespace Fps.Tests.EditMode
             Assert.That(hud.Lines, Is.EqualTo(new[] { "段 1/3 Rifle", "次: Launcher" }));
 
             LogAssert.Expect(LogType.Log, "[Mode] gungame promote player=0 tier=2/3 weapon=weapon.launcher");
-            KillBy(player, bot, WeaponAssetBuilder.RifleId);
+            KillBy(player, bot, TestWeapons.RifleId);
 
             Assert.That(_runner.GunGame.GetTier(0), Is.EqualTo(1));
             Assert.That(Controller(player).Definitions, Is.EqualTo(new[] { _rifle }), "the weapon is swapped at the next tick, not while firing");
@@ -108,7 +110,7 @@ namespace Fps.Tests.EditMode
             var bot = Member("Bot-1", 1);
             Begin(player, bot);
 
-            KillBy(player, bot, WeaponAssetBuilder.HandgunId);
+            KillBy(player, bot, TestWeapons.HandgunId);
             _runner.Tick(0f);
 
             Assert.That(_runner.GunGame.GetTier(0), Is.Zero);
@@ -123,9 +125,9 @@ namespace Fps.Tests.EditMode
             var b = Member("Bot-2", 2);
             Begin(player, a, b);
 
-            KillBy(a, player, WeaponAssetBuilder.RifleId);
+            KillBy(a, player, TestWeapons.RifleId);
             _runner.Tick(0f);
-            KillBy(a, b, WeaponAssetBuilder.LauncherId);
+            KillBy(a, b, TestWeapons.LauncherId);
             _runner.Tick(0f);
             Assert.That(Controller(a).Definitions, Is.EqualTo(new[] { _handgun }));
 
@@ -147,14 +149,14 @@ namespace Fps.Tests.EditMode
             var hud = BoundHudView();
             Begin(player, a, b, hud);
 
-            KillBy(player, a, WeaponAssetBuilder.RifleId);
+            KillBy(player, a, TestWeapons.RifleId);
             _runner.Tick(0f);
-            KillBy(player, b, WeaponAssetBuilder.LauncherId);
+            KillBy(player, b, TestWeapons.LauncherId);
             _runner.Tick(0f);
             Assert.That(hud.Lines, Is.EqualTo(new[] { "段 3/3 Handgun", "次: なし (この武器で倒せば勝ち)" }));
 
             LogAssert.Expect(LogType.Log, "[Mode] gungame finish player=0 weapon=weapon.handgun");
-            KillBy(player, a, WeaponAssetBuilder.HandgunId);
+            KillBy(player, a, TestWeapons.HandgunId);
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Playing));
 
             LogAssert.Expect(LogType.Log, "[Mode] ended winner=0");
@@ -187,8 +189,8 @@ namespace Fps.Tests.EditMode
             var ladder = _ladder.ToLadder();
 
             Assert.That(ladder.TierCount, Is.EqualTo(3));
-            Assert.That(ladder.Tiers[0].WeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
-            Assert.That(ladder.Tiers[1].NameKey, Is.EqualTo(WeaponAssetBuilder.LauncherNameKey));
+            Assert.That(ladder.Tiers[0].WeaponId, Is.EqualTo(TestWeapons.RifleId));
+            Assert.That(ladder.Tiers[1].NameKey, Is.EqualTo(TestWeapons.LauncherNameKey));
             Assert.That(GameText.Resolve(ladder.Tiers[1].Name), Is.EqualTo("Launcher"));
             Assert.That(ladder.IsMelee(KnifeId), Is.True);
             Assert.That(ladder.DemotesOnMelee, Is.True);
@@ -196,11 +198,6 @@ namespace Fps.Tests.EditMode
             var broken = Track(ScriptableObject.CreateInstance<GunGameLadderDefinition>());
             broken.SetTiers(new WeaponDefinition[] { null });
             Assert.Throws<WeaponDefinitionException>(() => broken.ToLadder());
-
-            Assert.Throws<ArgumentException>(
-                () => GunGameSceneBuilder.Configure(broken, Array.Empty<WeaponDefinition>(), Array.Empty<WeaponDefinition>(), true));
-            Assert.Throws<ArgumentException>(
-                () => GunGameSceneBuilder.Configure(broken, new[] { _rifle }, new WeaponDefinition[] { null }, true));
         }
 
         private void Begin(SideMember player, SideMember a, ModeHudView hud = null)
@@ -244,7 +241,7 @@ namespace Fps.Tests.EditMode
         {
             var definition = Track(ScriptableObject.CreateInstance<WeaponDefinition>());
             definition.name = name;
-            WeaponAssetBuilder.Configure(definition, spec);
+            WeaponAssets.Configure(definition, spec);
             return definition;
         }
 

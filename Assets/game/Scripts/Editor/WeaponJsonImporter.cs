@@ -113,11 +113,8 @@ namespace Fps.Editor
             FalloffMinMultiplierField,
         };
 
-        /// <summary><c>-weaponOut</c> を省いたときの出力先。<see cref="WeaponAssetBuilder.Folder"/> (出力先ルートの <c>Weapons/</c>)。</summary>
-        public static string DefaultOutputFolder => WeaponAssetBuilder.Folder;
-
-        /// <summary>同梱のサンプル JSON (rifle・handgun・launcher) のフォルダ。</summary>
-        public static string SampleFolder => FpsKitRoot.BundledPath("Weapons/Json");
+        /// <summary><c>-weaponOut</c> を省いたときの出力先。<see cref="WeaponAssets.Folder"/> (出力先ルートの <c>Weapons/</c>)。</summary>
+        public static string DefaultOutputFolder => WeaponAssets.Folder;
 
         /// <summary>
         /// コマンドライン引数 (<see cref="ParseArguments"/>) の JSON を取り込む。失敗したら例外を投げる
@@ -132,9 +129,7 @@ namespace Fps.Editor
         [MenuItem(MenuPath)]
         private static void ImportFromMenu()
         {
-            var samples = FpsKitRoot.PhysicalPath(SampleFolder);
-            var start = Directory.Exists(samples) ? samples : "Assets";
-            var source = EditorUtility.OpenFolderPanel("Import weapons from JSON", start, string.Empty);
+            var source = EditorUtility.OpenFolderPanel("Import weapons from JSON", "Assets", string.Empty);
             if (string.IsNullOrEmpty(source))
             {
                 return;
@@ -144,7 +139,7 @@ namespace Fps.Editor
             {
                 var outputFolder = DefaultOutputFolder;
                 string catalogPath = null;
-                var defaultCatalog = WeaponAssetBuilder.CatalogPath;
+                var defaultCatalog = WeaponAssets.CatalogPath;
                 if (AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(defaultCatalog) != null
                     && EditorUtility.DisplayDialog(
                         "Import Weapons From JSON",
@@ -183,7 +178,7 @@ namespace Fps.Editor
             }
 
             var output = FindArgument(args, OutputArgument, "a folder under Assets/");
-            var catalog = FindArgument(args, CatalogArgument, "a WeaponCatalogAsset path such as " + WeaponAssetBuilder.CatalogPath);
+            var catalog = FindArgument(args, CatalogArgument, "a WeaponCatalogAsset path such as " + WeaponAssets.CatalogPath);
             return new WeaponJsonImportOptions(
                 source,
                 output == null ? null : ValidateOutputFolder(output),
@@ -219,7 +214,7 @@ namespace Fps.Editor
             {
                 var spec = entry.Spec;
                 definitions.Add(SceneBuildHelpers.CreateOrUpdateAsset<WeaponDefinition>(
-                    entry.AssetPath, d => WeaponAssetBuilder.Configure(d, spec)));
+                    entry.AssetPath, d => WeaponAssets.Configure(d, spec)));
                 Debug.Log($"{LogTag} saved '{entry.AssetPath}' (id '{spec.Id}') from '{entry.File}'");
             }
 
@@ -227,7 +222,7 @@ namespace Fps.Editor
             {
                 var merged = MergeById(catalog.Weapons, definitions);
                 SceneBuildHelpers.CreateOrUpdateAsset<WeaponCatalogAsset>(
-                    catalogPath, c => WeaponAssetBuilder.Configure(c, merged));
+                    catalogPath, c => WeaponAssets.Configure(c, merged));
                 Debug.Log($"{LogTag} saved '{catalogPath}' with {merged.Count.ToString(CultureInfo.InvariantCulture)} weapon(s)");
             }
 
@@ -553,7 +548,7 @@ namespace Fps.Editor
             if (catalog == null)
             {
                 throw new InvalidOperationException(
-                    $"{LogTag} weapon catalog '{catalogPath}' was not found; create it first (e.g. {WeaponAssetBuilder.MenuPath})");
+                    $"{LogTag} weapon catalog '{catalogPath}' was not found; create it first");
             }
 
             // 武器を保存した後でカタログが壊れていると分かっても戻せないので、保存の前に既存の中身を確かめる

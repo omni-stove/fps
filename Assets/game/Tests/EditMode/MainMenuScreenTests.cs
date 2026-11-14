@@ -30,6 +30,7 @@ namespace Fps.Tests.EditMode
             _host = new RecordingHost();
             MenuNavigator.Host = _host;
             MenuNavigator.Scenes = MenuScenes.Default;
+            MenuNavigator.SceneRoot = KitPaths.DefaultRoot;
 
             // 本物の選択 (LoadoutPreferenceStore.DefaultKey) を壊さないよう、テストごとに別のキーを使う
             _store = new LoadoutPreferenceStore("Fps.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"));
@@ -46,6 +47,7 @@ namespace Fps.Tests.EditMode
             _store.Delete();
             MenuNavigator.Host = null;
             MenuNavigator.Scenes = null;
+            MenuNavigator.SceneRoot = null;
             MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
@@ -283,7 +285,7 @@ namespace Fps.Tests.EditMode
                 _screen.LoadoutPanel.Select(0, 1);
                 Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
 
-                var expected = new[] { LoadoutTestAssets.SmgId, WeaponAssetBuilder.HandgunId };
+                var expected = new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId };
                 Assert.That(_store.Load(), Is.EqualTo(expected));
                 Assert.That(_screen.IsLoadoutOpen, Is.False);
                 Assert.That(_screen.LoadoutSlot.childCount, Is.Zero);

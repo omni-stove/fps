@@ -74,3 +74,7 @@ run = "unity -batchmode -projectPath . -executeMethod Fps.Editor.PerfSmokeRun.Ru
 description = "Run the nightly workflow's steps locally: EditMode tests, the smoke suite, and on Sundays (JST) the macOS client build (close the Editor first). Options: --client to always build the client, --no-client to never"
 # 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
 run = "bash scripts/nightly-local.sh"
+
+[export-server-data]
+description = "Write each server map's NavMesh and its links (ladders) to server-data/maps/<map>.fpsnav with the Unity editor in batch mode via Fps.Editor.ServerDataExporter.Export, generating missing map scenes first (close the Editor first). Commit the written files"
+run = "unity run . -- -executeMethod Fps.Editor.ServerDataExporter.Export"

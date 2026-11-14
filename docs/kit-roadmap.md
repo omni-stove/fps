@@ -33,6 +33,9 @@
 - 音とエフェクト: `PresentationCatalog` (Resources の `Presentation/PresentationCatalog`) を差し替えれば変わる。
   武器ごとのものは武器の Id で引く。
 - 文言: `Resources/Localization/<言語>/*.json` の表を引く `LocalizedText`。
+- メニューから移るシーン名: `MenuSceneSettings` (Resources の `Menu/MenuSceneSettings`) を置けば、メインメニュー・射撃場・
+  キャンペーン・ネット対戦のシーン名が `MenuRoute` の既定 (MainMenu / Bootstrap / Campaign01 / NetTest) から変わる。
+  キャンペーンの選択画面で選ぶミッションのシーンは、これとは別に `MissionCatalog` が持つ。
 
 ### まだコードに入っている調整値
 
@@ -45,7 +48,9 @@
 - 吹き飛ばし: `KnockbackSpec.Default*`。`KnockbackMovement` / `EnemyAgent` の `KnockbackSpec` をコードで差し替えられ、重さだけ Inspector で変えられるが、JSON は無い
 - 各モード: `HordeSpec`・`SearchAndDestroySpec`・`KillConfirmedSpec`・`TeamDeathmatchSpec`・`PickupSpec` と、それぞれの `*Runner`。
   オンラインの拠点制圧 (`NetTeamDeathmatch` の `_captureSeconds` など) もまだ `DominationRunner.Default*` を直接持つ
-- その他: `DestructiblePiece`、`ShrinkingZone`、`Damageable`、`CameraBoom`、`AdsZoom`、`RecoilState` などの `Default*`
+- その他: `DestructiblePiece`・`ShrinkingZone`・`Damageable`・`CameraBoom`・`AdsZoom` の `Default*` はコンポーネントの値
+  (オフラインのプレイヤーの体力・三人称のカメラ・覗き込みの秒数は `GameBootstrap` の値) の既定になり、反動の戻り始めまでの秒数は
+  武器の JSON (`recoilRecoveryDelaySeconds`) に移った。プレイヤーまわりの値を JSON から読む口はまだ無い
 
 ### 設定した値でなく定数を直接見ている箇所
 

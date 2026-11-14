@@ -150,6 +150,22 @@ namespace Fps.Runtime
             set => _collisionRadius = Mathf.Max(0f, value);
         }
 
+        /// <summary>三人称のカメラが壁に寄ったときも、目からこれ以上は近づけない距離 (m)。0 以上の有限値。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">負か有限でないとき。</exception>
+        public float MinBoomLength
+        {
+            get => _minBoomLength;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "MinBoomLength must be a non-negative finite number");
+                }
+
+                _minBoomLength = value;
+            }
+        }
+
         /// <summary>pitch を回し、射撃の始点になる目。未初期化なら null。</summary>
         public Transform Eye => _eye;
 

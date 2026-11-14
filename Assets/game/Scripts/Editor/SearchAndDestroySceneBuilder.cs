@@ -11,13 +11,18 @@ namespace Fps.Editor
     /// 爆破 (<see cref="SearchAndDestroyRunner"/>) のシーン SearchAndDestroy を組む。ルールは <see cref="GameRulesAssetBuilder.SearchAndDestroyPath"/>
     /// (リスポーンなし・ダウンなし)。配置は土台の既定 (プレイヤーの陣営 0 に bot 2 体、陣営 1 に bot 3 体で 3 対 3) に、
     /// 両陣営の出現点から同じ距離の左右に設置地点 A・B (<see cref="SiteCenters"/>) と、爆弾の見た目 (<see cref="BombObject"/>) を足す。
-    /// 地図が左右対称なので、攻守が入れ替わっても出現点は陣営のまま変えない。Editor を閉じた状態で次のように呼べる:
+    /// 地図が左右対称なので、攻守が入れ替わっても出現点は陣営のまま変えない。爆弾の秒数や勝ち数は <see cref="DefinitionPath"/> のアセットを Runner に配線して読ませる
+    /// (無ければ既定値で作り、あれば値を変えない)。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.SearchAndDestroySceneBuilder.Build</code>
     /// </summary>
     public sealed class SearchAndDestroySceneBuilder : ModeSceneBuilder
     {
         public static string ScenePathValue => BuildSceneList.SearchAndDestroyScene;
         public static string RulesPathValue => GameRulesAssetBuilder.SearchAndDestroyPath;
+
+        /// <summary>Runner に配線する調整値のアセット (<see cref="SearchAndDestroyDefinition"/>)。</summary>
+        public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.SearchAndDestroyName);
+
         public const string MenuPath = "Fps/Build Search And Destroy Scene";
 
         public const string SitesRootName = "BombSites";
@@ -59,7 +64,21 @@ namespace Fps.Editor
 
         protected override ModeRunnerBase AddRunner(GameObject host, ModeSceneContext context)
         {
-            return host.AddComponent<SearchAndDestroyRunner>();
+            // NewScene(Single) は参照されていないアセットをアンロードするので、シーンを作った後のここで読む。
+            var definition = LoadOrCreateDefinition(DefinitionPath);
+
+            var runner = host.AddComponent<SearchAndDestroyRunner>();
+            runner.Definition = definition;
+            return runner;
+        }
+
+        /// <summary>
+        /// path の調整値のアセットを返す。無ければ <see cref="Fps.Core.SearchAndDestroySpec"/> の既定値で作る。既にあれば値は変えない。
+        /// </summary>
+        public static SearchAndDestroyDefinition LoadOrCreateDefinition(string path)
+        {
+            return ModeDefinitionAssets.LoadOrCreate<SearchAndDestroyDefinition>(
+                path, d => d.CopyFrom(new Fps.Core.SearchAndDestroySpec()));
         }
 
         protected override void AddModeObjects(ModeSceneContext context)

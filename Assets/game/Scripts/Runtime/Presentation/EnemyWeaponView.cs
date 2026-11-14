@@ -11,13 +11,17 @@ namespace Fps.Runtime
     {
         public const string RootName = "EnemyGun";
         public const string MuzzleName = "Muzzle";
+        public const string ModelName = "Model";
+
+        [SerializeField, Tooltip("銃の見た目。原点が握り、前が +Z。子孫に Muzzle という名前の物があれば銃口に使う。当たり判定は外す。空なら仮の箱を作る")]
+        private GameObject _modelPrefab;
 
         private EnemyAgent _enemy;
         private Damageable _damageable;
         private WeaponPresentation _presentation;
         private Transform _root;
         private Transform _muzzle;
-        private Renderer _renderer;
+        private Renderer[] _renderers = Array.Empty<Renderer>();
         private Material _material;
         private float _kick;
         private MockPartPose _pose;
@@ -28,6 +32,12 @@ namespace Fps.Runtime
         public bool IsBuilt => _root != null;
         public bool IsShown => _root != null && _root.gameObject.activeSelf;
         public float Kick => _kick;
+
+        public GameObject ModelPrefab
+        {
+            get => _modelPrefab;
+            set => _modelPrefab = value;
+        }
 
         private void Awake()
         {
@@ -94,19 +104,24 @@ namespace Fps.Runtime
             _root = new GameObject(RootName).transform;
             _root.SetParent(transform, false);
 
-            var model = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            model.name = "Model";
-            // Destroy は次のフレームまで残り、その間に射撃や NavMeshAgent の判定に当たるので、すぐ消す。
-            DestroyImmediate(model.GetComponent<Collider>());
-            model.transform.SetParent(_root, false);
-            model.transform.localScale = PlayerMockPose.GunSize;
-            _renderer = model.GetComponent<Renderer>();
-            _material = new Material(_renderer.sharedMaterial) { name = "EnemyGun", color = PlayerMockBody.GunColor };
-            _renderer.sharedMaterial = _material;
+            if (_modelPrefab != null)
+            {
+                var model = EnemyVisualPrefab.Instantiate(_modelPrefab, _root);
+                // 見せたときに Renderer を点け直すので、プレハブで消してある物は混ぜない。
+                _renderers = Array.FindAll(model.GetComponentsInChildren<Renderer>(true), r => r.enabled);
+                _muzzle = FindDescendant(model.transform, MuzzleName);
+            }
+            else
+            {
+                BuildPlaceholderModel();
+            }
 
-            _muzzle = new GameObject(MuzzleName).transform;
-            _muzzle.SetParent(_root, false);
-            _muzzle.localPosition = new Vector3(0f, 0f, PlayerMockPose.GunSize.z / 2f);
+            if (_muzzle == null)
+            {
+                _muzzle = new GameObject(MuzzleName).transform;
+                _muzzle.SetParent(_root, false);
+                _muzzle.localPosition = new Vector3(0f, 0f, PlayerMockPose.GunSize.z / 2f);
+            }
 
             _presentation = GetComponent<WeaponPresentation>();
             if (_presentation != null && _presentation.Muzzle == null)
@@ -115,6 +130,20 @@ namespace Fps.Runtime
             }
 
             _hasPose = false;
+        }
+
+        private void BuildPlaceholderModel()
+        {
+            var model = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            model.name = ModelName;
+            // Destroy は次のフレームまで残り、その間に射撃や NavMeshAgent の判定に当たるので、すぐ消す。
+            DestroyImmediate(model.GetComponent<Collider>());
+            model.transform.SetParent(_root, false);
+            model.transform.localScale = PlayerMockPose.GunSize;
+            var renderer = model.GetComponent<Renderer>();
+            _material = new Material(renderer.sharedMaterial) { name = "EnemyGun", color = PlayerMockBody.GunColor };
+            renderer.sharedMaterial = _material;
+            _renderers = new[] { renderer };
         }
 
         public void Refresh(float deltaSeconds)
@@ -129,7 +158,14 @@ namespace Fps.Runtime
             {
                 _root.gameObject.SetActive(shown);
                 // DeathBodyPresenter は倒れたときに体の Renderer を消し、復活で戻すのは持ち主に任せている。
-                _renderer.enabled = true;
+                foreach (var gunRenderer in _renderers)
+                {
+                    if (gunRenderer != null)
+                    {
+                        gunRenderer.enabled = true;
+                    }
+                }
+
                 _hasPose = false;
             }
 
@@ -184,6 +220,25 @@ namespace Fps.Runtime
         private void OnFired(Weapon _)
         {
             _kick = 1f;
+        }
+
+        private static Transform FindDescendant(Transform parent, string childName)
+        {
+            foreach (Transform child in parent)
+            {
+                if (child.name == childName)
+                {
+                    return child;
+                }
+
+                var found = FindDescendant(child, childName);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
         }
 
         private static Vector3 ScaleHeight(Vector3 position, float scale)

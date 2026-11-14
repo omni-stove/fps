@@ -9,7 +9,8 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     /// <summary>
-    /// ホードのシーン Horde を組む。Runner は <see cref="HordeRunner"/>、ルールは <see cref="GameRulesAssetBuilder.HordePath"/>。
+    /// ホードのシーン Horde を組む。Runner は <see cref="HordeRunner"/>、ルールは <see cref="GameRulesAssetBuilder.HordePath"/>、
+    /// 通貨と波の調整値は <see cref="DefinitionPath"/> (<see cref="HordeDefinition"/>。無いときだけ作る)。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.HordeSceneBuilder.Build</code>
     /// </summary>
@@ -22,7 +23,7 @@ namespace Fps.Editor
     /// <item>拠点の周り (半径 11〜15m) に動かない遮蔽物 (<see cref="Obstacles"/>)、外周 (半径 25m) に波の敵 (陣営 1) の出現点
     /// (<see cref="EnemySpawnFeet"/>) を置く。</item>
     /// <item>波の敵は、無効にした雛形を <see cref="WaveSpawner"/> が複製して出す。波は <see cref="WaveCount"/> 波で、
-    /// 波の間の休憩 (<see cref="RestSeconds"/>) に壁を直す。</item>
+    /// 波の間の休憩 (<see cref="RestSeconds"/>) に壁を直す。どちらも作った後は <see cref="DefinitionPath"/> の値が効く。</item>
     /// <item>壁が弾で壊れるかはルールの <see cref="Destruction"/> で決める。</item>
     /// </list>
     /// 防衛物は NavMesh を焼いた後に置き、部品の NavMeshObstacle で実行時に道を塞ぐ (壊れたら通れる)。
@@ -31,6 +32,7 @@ namespace Fps.Editor
     {
         public static string ScenePathValue => BuildSceneList.HordeScene;
         public static string RulesPathValue => GameRulesAssetBuilder.HordePath;
+        public static string DefinitionPath => FpsKitRoot.OutputPath("Modes/Horde.asset");
         public const string MenuPath = "Fps/Build Horde Scene";
 
         public const string BaseRootName = "Base";
@@ -221,14 +223,56 @@ namespace Fps.Editor
             }
         }
 
+        /// <summary>
+        /// path に通貨と波の調整値 (<see cref="HordeDefinition"/>) が無ければ <see cref="Configure"/> の値で作って保存し、あれば値を変えずに返す。
+        /// ゲームがアセットで変えた値をシーンを組み直しても消さないため。既存のアセットの値が不正なら <see cref="ArgumentException"/>。
+        /// </summary>
+        public static HordeDefinition BuildDefinition(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+
+            if (AssetDatabase.LoadMainAssetAtPath(path) is HordeDefinition existing)
+            {
+                existing.Validate(DefenderSide, EnemySide);
+                Debug.Log($"[{nameof(HordeSceneBuilder)}] kept '{path}' ({existing.WaveCount} wave(s), rest {existing.RestSeconds}s)");
+                return existing;
+            }
+
+            var definition = SceneBuildHelpers.CreateOrUpdateAsset<HordeDefinition>(path, Configure);
+            Debug.Log($"[{nameof(HordeSceneBuilder)}] saved '{path}' ({definition.WaveCount} wave(s), rest {definition.RestSeconds}s)");
+            return definition;
+        }
+
+        /// <summary>definition をこのシーンの見本の値 (通貨は <see cref="HordeSpec"/> の既定値、波は <see cref="WaveCount"/> など) にする。</summary>
+        public static void Configure(HordeDefinition definition)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            definition.StartingCurrency = HordeSpec.DefaultStartingCurrency;
+            definition.KillReward = HordeSpec.DefaultKillReward;
+            definition.KillRewardPerWave = HordeSpec.DefaultKillRewardPerWave;
+            definition.PurchasesOnlyBetweenWaves = true;
+            definition.WaveCount = WaveCount;
+            definition.RestSeconds = RestSeconds;
+            definition.FirstEnemyCount = FirstEnemyCount;
+            definition.EnemiesPerWave = EnemiesPerWave;
+            definition.FirstStrength = FirstStrength;
+            definition.StrengthPerWave = StrengthPerWave;
+            definition.MaxStrength = MaxStrength;
+            definition.MaxAlive = MaxAlive;
+            definition.Validate(DefenderSide, EnemySide);
+        }
+
         protected override ModeRunnerBase AddRunner(GameObject host, ModeSceneContext context)
         {
             var runner = host.AddComponent<HordeRunner>();
             runner.EnemySide = EnemySide;
-            runner.StartingCurrency = HordeSpec.DefaultStartingCurrency;
-            runner.KillReward = HordeSpec.DefaultKillReward;
-            runner.KillRewardPerWave = HordeSpec.DefaultKillRewardPerWave;
-            runner.PurchasesOnlyBetweenWaves = true;
+
+            // NewScene(Single) は参照されていないアセットをアンロードするので、シーンを作った後のここで読む。
+            runner.Definition = BuildDefinition(DefinitionPath);
             host.AddComponent<HordeInteractInput>().Runner = runner;
             return runner;
         }

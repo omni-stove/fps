@@ -480,6 +480,46 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheConfiguredMinBoomLengthKeepsTheCameraAwayFromTheEye()
+        {
+            Assert.That(_rig.MinBoomLength, Is.EqualTo(CameraBoom.DefaultMinLength));
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+            _rig.ThirdPersonOffset = new Vector3(0f, 0f, -3f);
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = _eye.position + new Vector3(0f, 0f, -0.5f);
+            _wall.transform.localScale = new Vector3(4f, 4f, 0.2f);
+            Physics.SyncTransforms();
+
+            _rig.MinBoomLength = 0.6f;
+            _rig.UpdateCameraPosition();
+
+            Assert.That(_rig.MinBoomLength, Is.EqualTo(0.6f));
+            Assert.That(_camera.transform.localPosition.z, Is.EqualTo(-0.6f).Within(1e-3f));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void TheMinBoomLengthRejectsUnusableValues(float value)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rig.MinBoomLength = value);
+            Assert.That(_rig.MinBoomLength, Is.EqualTo(CameraBoom.DefaultMinLength));
+        }
+
+        [Test]
+        public void AFartherThirdPersonOffsetPutsTheCameraFartherBehind()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+            _rig.ThirdPersonOffset = new Vector3(0f, 0f, -5f);
+
+            _rig.UpdateCameraPosition();
+
+            Assert.That(_camera.transform.localPosition.z, Is.EqualTo(-5f).Within(1e-3f));
+        }
+
+        [Test]
         public void BoomPositionReachesTheOffsetInTheOpen()
         {
             var origin = _eye.position;

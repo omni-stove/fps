@@ -23,6 +23,9 @@ namespace Fps.Runtime
         [SerializeField, Min(1), Tooltip("1 つの陣営に入れる人数の上限")]
         private int _sideCapacity = DefaultSideCapacity;
 
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の制限時間・キル数・リスポーンの代わりにこれを読む")]
+        private TeamDeathmatchDefinition _definition;
+
         [SerializeField, Min(1f), Tooltip("制限時間 (秒)")]
         private float _timeLimitSeconds = DefaultTimeLimitSeconds;
 
@@ -42,6 +45,13 @@ namespace Fps.Runtime
         {
             get => _sideCapacity;
             set => _sideCapacity = value;
+        }
+
+        /// <summary>調整値のアセット。null なら Inspector の値 (既定は Default* の値) で始める。</summary>
+        public TeamDeathmatchDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
         }
 
         public float TimeLimitSeconds
@@ -76,9 +86,25 @@ namespace Fps.Runtime
                 new IWinCondition[] { new ScoreLimitWin(scoreLimit), new TimeLimitWin() });
         }
 
+        /// <summary>
+        /// 得点・制限時間・リスポーンを、<see cref="Definition"/> があればその値で、無ければ Inspector の値で <see cref="TeamDeathmatchSpec"/> にする。
+        /// ルールは <see cref="GameRules.Default"/> (この Runner はルールを読まない)。
+        /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
+        /// </summary>
+        public TeamDeathmatchSpec CreateSpec()
+        {
+            if (_definition != null)
+            {
+                return _definition.ToSpec();
+            }
+
+            return new TeamDeathmatchSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds);
+        }
+
         protected override ModeSession CreateSession()
         {
-            return CreateSession(_sideCount, _sideCapacity, _timeLimitSeconds, _scoreLimit, _respawnSeconds);
+            var spec = CreateSpec();
+            return CreateSession(_sideCount, _sideCapacity, spec.TimeLimitSeconds, spec.ScoreLimit, spec.RespawnSeconds);
         }
     }
 }

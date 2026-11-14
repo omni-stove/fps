@@ -23,7 +23,8 @@
     "grenadeCount": 3,
     "slide": "On",
     "prone": "On",
-    "mantle": "On"
+    "mantle": "On",
+    "stagger": "On"
   },
   "spawnProtectionSeconds": 0,
   "fallDamage": "Off",

@@ -135,8 +135,13 @@ namespace Fps.Editor
 
             var fixtures = Fixtures();
 
+            // 能力の枠を試せるよう、Ability1 に何もしない能力、Ability2 にグラップルを入れる。使えるかはルールの Abilities で決まる (射撃場の既定は Off)。
+            var ability = AbilityAssetBuilder.LoadOrBuildNullAbility();
+            var grapple = AbilityAssetBuilder.LoadOrBuildGrappleAbility();
+
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(path));
-            PopulateScene(scene, weapons, rules, fixtures);
+            var bootstrap = PopulateScene(scene, weapons, rules, fixtures);
+            bootstrap.AbilityDefinitions = new AbilityDefinition[] { ability, grapple };
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {

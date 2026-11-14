@@ -333,6 +333,40 @@ namespace Fps.Runtime
             return true;
         }
 
+        // 吹き飛ばしでは対応表のダメージごとの速さでなく、生きている体を飛ばすのと同じ速度で押す。倒れた瞬間に飛び方が変わらないように。
+        // とどめの被弾の知らせ (OnDamaged) がこの後に来ても、対応表の速さで押し直させない。
+        public bool Launch(Vector3 velocity)
+        {
+            var sqr = velocity.sqrMagnitude;
+            if (float.IsNaN(sqr) || float.IsInfinity(sqr))
+            {
+                throw new ArgumentException($"velocity must be finite: {velocity}", nameof(velocity));
+            }
+
+            _awaitingHitDirection = false;
+            if (!HasShell)
+            {
+                return false;
+            }
+
+            var speed = velocity.magnitude;
+            var heading = speed > 1e-4f ? velocity / speed : Vector3.zero;
+            if (_ragdoll != null)
+            {
+                _ragdoll.Push(heading, speed);
+            }
+            else if (_shellBody != null)
+            {
+                _shellBody.linearVelocity = velocity;
+                _shellBody.angularVelocity = Vector3.Cross(Vector3.up, HorizontalDirection(velocity, transform)) * ToppleSpeed;
+            }
+
+            Debug.Log(
+                $"{LogTag} knockback id={Id} ragdoll={(IsRagdoll ? "true" : "false")} velocity={Knockback.FormatVector(velocity)}",
+                this);
+            return true;
+        }
+
         /// <summary>今ある抜け殻を消して <c>[DeathBody] removed ...</c> を出す。無ければ何もせず false。</summary>
         /// <param name="reason">ログに出す理由 (<see cref="ReasonRespawn"/> など)。</param>
         public bool Clear(string reason)
@@ -412,6 +446,15 @@ namespace Fps.Runtime
             _awaitingHitDirection = false;
             if (!HasShell)
             {
+                return;
+            }
+
+            // 近接と突進は、生きている体を飛ばすのと同じ速度で倒す。爆発は強さが知らせに無いので、爆発させた側が後から Launch で押し直す。
+            if (KnockbackSpec.ComesFromReport(report.Kind)
+                && report.Direction.HasValue
+                && Knockback.TryGetVelocity(self, report.Kind, report.Direction.Value, 1f, out var knockback))
+            {
+                Launch(knockback);
                 return;
             }
 

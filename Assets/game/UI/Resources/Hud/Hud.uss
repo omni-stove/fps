@@ -573,6 +573,16 @@
     bottom: 0;
 }
 
+/* 被弾と低体力の画面端の赤。DamageVignetteView が画像と不透明度を入れる。画面の縦横比に合わせて引き伸ばす。 */
+.damage-vignette {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-size: 100% 100%;
+}
+
 .damage-direction__arc {
     position: absolute;
     left: 0;

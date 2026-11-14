@@ -33,6 +33,9 @@ namespace Fps.Core
         /// <summary>体力が少なく、警告の色で出すべきか (<see cref="HudFormat.IsLowHealth"/>)。</summary>
         public bool IsHealthLow { get; private set; }
 
+        /// <summary>最大体力に対する今の体力の割合 ([0, 1])。体力が無い (仮の表示) なら null。</summary>
+        public float? HealthFraction { get; private set; }
+
         /// <summary>右下の「弾倉 / 予備」。<see cref="ShowsReserveAmmo"/> が false なら弾倉の数だけ。</summary>
         public string AmmoText { get; private set; } = HudFormat.NoAmmo;
 
@@ -194,13 +197,13 @@ namespace Fps.Core
         /// <exception cref="ArgumentOutOfRangeException">current が負か、max が 1 未満。</exception>
         public void SetHealth(int current, int max)
         {
-            ApplyHealth(HudFormat.Health(current), HudFormat.IsLowHealth(current, max));
+            ApplyHealth(HudFormat.Health(current), HudFormat.IsLowHealth(current, max), Math.Min(1f, (float)current / max));
         }
 
         /// <summary>体力を仮の表示に戻す。</summary>
         public void ClearHealth()
         {
-            ApplyHealth(HudFormat.NoHealth, false);
+            ApplyHealth(HudFormat.NoHealth, false, null);
         }
 
         /// <summary>弾倉と予備の弾数と、リロード中かどうかを出す。</summary>
@@ -447,15 +450,16 @@ namespace Fps.Core
             RefreshReloadProgress();
         }
 
-        private void ApplyHealth(string text, bool low)
+        private void ApplyHealth(string text, bool low, float? fraction)
         {
-            if (text == HealthText && low == IsHealthLow)
+            if (text == HealthText && low == IsHealthLow && fraction == HealthFraction)
             {
                 return;
             }
 
             HealthText = text;
             IsHealthLow = low;
+            HealthFraction = fraction;
             Changed?.Invoke(HudField.Health);
         }
 

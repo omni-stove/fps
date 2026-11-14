@@ -275,6 +275,79 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void SpawnPointReadsTheDefinitionInsteadOfItsOwnValues()
+        {
+            var definition = NewDefinition("BigMedkit");
+            definition.Contents = PickupContents.ForHealth(40);
+            definition.CollectMode = PickupCollectMode.Interact;
+            definition.RespawnSeconds = 3f;
+            definition.Radius = 2f;
+
+            var point = new GameObject("Spawn").AddComponent<PickupSpawnPoint>();
+            _created.Add(point.gameObject);
+            point.Contents = PickupContents.ForHealth(25);
+            point.RespawnSeconds = 30f;
+            point.Definition = definition;
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Pickup\] spawned pickup=Pickup-Health kind=Health amount=40 "));
+            Assert.That(point.TrySpawn(), Is.True);
+            var pickup = point.Current;
+            Assert.That(pickup.Spec.Amount, Is.EqualTo(40));
+            Assert.That(pickup.CollectMode, Is.EqualTo(PickupCollectMode.Interact));
+            Assert.That(pickup.Radius, Is.EqualTo(2f));
+            Assert.That(pickup.Contents, Is.Not.SameAs(definition.Contents), "the pickup keeps its own copy of the asset's contents");
+
+            var player = NewCollector("Player");
+            player.TakeDamage(50);
+            Assert.That(pickup.TryCollect(player, out _), Is.True);
+            Assert.That(player.Health.Current, Is.EqualTo(90));
+            Assert.That(point.RemainingSeconds, Is.EqualTo(3f), "the asset's respawn time, not the point's own");
+
+            point.Tick(2f);
+            Assert.That(pickup.gameObject.activeSelf, Is.False);
+
+            LogAssert.Expect(LogType.Log, "[Pickup] respawned pickup=Pickup-Health");
+            point.Tick(1f);
+            Assert.That(pickup.gameObject.activeSelf, Is.True);
+        }
+
+        [Test]
+        public void ANewPickupDefinitionHoldsTheSpawnPointDefaults()
+        {
+            var definition = NewDefinition("Fresh");
+
+            Assert.That(definition.RespawnSeconds, Is.EqualTo(PickupSpawnPoint.DefaultRespawnSeconds));
+            Assert.That(definition.Radius, Is.EqualTo(Pickup.DefaultRadius));
+            Assert.That(definition.CollectMode, Is.EqualTo(PickupCollectMode.Touch));
+            Assert.That(definition.ToSpec().Kind, Is.EqualTo(PickupKind.Health));
+            Assert.That(definition.ToSpec().Amount, Is.EqualTo(PickupContents.DefaultHealthAmount));
+            Assert.DoesNotThrow(definition.Validate);
+        }
+
+        [Test]
+        public void ABadPickupDefinitionNamesTheAssetAndTheSpawnPointStops()
+        {
+            var definition = NewDefinition("BrokenPack");
+            definition.RespawnSeconds = -1f;
+            var error = Assert.Throws<System.ArgumentException>(definition.Validate);
+            Assert.That(error.Message, Does.Contain("BrokenPack"));
+
+            definition.RespawnSeconds = 1f;
+            definition.Radius = 0f;
+            Assert.Throws<System.ArgumentException>(definition.Validate);
+            Assert.Catch<System.ArgumentException>(() => definition.Contents = PickupContents.ForReserveAmmo(0));
+            Assert.Throws<System.ArgumentNullException>(() => definition.Contents = null);
+
+            var point = new GameObject("Spawn").AddComponent<PickupSpawnPoint>();
+            _created.Add(point.gameObject);
+            point.Definition = definition;
+
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[Pickup\] PickupSpawnPoint 'Spawn' の設定が不正です: pickup definition 'BrokenPack' "));
+            Assert.That(point.TrySpawn(), Is.False);
+            Assert.That(point.Current, Is.Null);
+        }
+
+        [Test]
         public void SpawnPointWithBadContentsReportsAndStops()
         {
             var point = new GameObject("Spawn").AddComponent<PickupSpawnPoint>();
@@ -373,6 +446,14 @@ namespace Fps.Tests.EditMode
             var weapons = camera.AddComponent<WeaponController>();
             weapons.Initialize(camera.transform, _attack, _reload, definition);
             return weapons;
+        }
+
+        private PickupDefinition NewDefinition(string name)
+        {
+            var definition = ScriptableObject.CreateInstance<PickupDefinition>();
+            definition.name = name;
+            _created.Add(definition);
+            return definition;
         }
 
         private WeaponDefinition NewWeapon(string name, WeaponSpec spec)

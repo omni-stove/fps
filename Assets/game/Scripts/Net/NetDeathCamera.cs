@@ -18,6 +18,9 @@ namespace Fps.Net
     /// 映せる味方がいなければ (<see cref="SpectateTargets.ResolveMode"/>) Free と同じにし、味方が現れたらその視点へ移る。</item>
     /// <item><see cref="DeathCamera.Free"/>: 倒れた位置の上から、Move で向いている方へ飛び、Look で向きを変える。
     /// 壁の中には入らない (<see cref="ViewRig.ResolveFreeMove"/>)。</item>
+    /// <item><see cref="DeathCamera.KillCam"/>: 倒した相手の倒す直前を、このクライアントがその相手の補間に使っている履歴
+    /// (<see cref="NetworkPlayerMotor"/> の <see cref="HitboxHistory"/>) から切り出して肩越しで再生 (<see cref="KillCamReplay"/>) し、終えたら Killer と同じにする。
+    /// 履歴が無い (相手を自分で動かしている・サーバーの本体・相手が見つからない) ならすぐ Killer にする。</item>
     /// </list>
     /// カメラの置き方と入力はオフラインの <see cref="PlayerDeathCamera"/> と同じ <see cref="DeathCamView"/> に任せる。
     /// 映している間にルールが別の演出に変わったら、次のフレームからそちらで映す。
@@ -43,11 +46,21 @@ namespace Fps.Net
         [SerializeField, Min(0f), Tooltip("自由カメラ (Free) を倒し切ったときの速さ (m/s)")]
         private float _freeSpeed = DeathCamFraming.DefaultFreeSpeed;
 
+        [SerializeField, Min(_minKillCamSeconds), Tooltip("キルカム (KillCam) で再生する、倒される直前の長さ (秒)。相手の履歴より長い分は再生されない")]
+        private float _killCamSeconds = KillCamBuffer.DefaultSeconds;
+
+        private const float _minKillCamSeconds = 0.1f;
+
         private readonly DeathCamSwitch _switch = new DeathCamSwitch();
 
         private NetPlayer _player;
         private DeathCamView _view;
+        private KillCamReplay _replay;
         private bool _resolved;
+
+        // この倒れ方で再生を始めた (か、記録が無くて飛ばした) か。倒した相手の行が後から変わったら再生をやめるために相手も覚える
+        private bool _killCamResolved;
+        private ulong? _killCamKillerId;
 
         // 映す相手。Id が変わったときだけ探し直す (見つからない Id を毎フレーム探さない)
         private ulong? _killerId;
@@ -91,6 +104,16 @@ namespace Fps.Net
             set => _freeSpeed = Mathf.Max(0f, value);
         }
 
+        /// <summary>キルカム (<see cref="DeathCamera.KillCam"/>) で再生する、倒される直前の長さ (秒)。</summary>
+        public float KillCamSeconds
+        {
+            get => _killCamSeconds;
+            set => _killCamSeconds = float.IsNaN(value) || float.IsInfinity(value) ? KillCamBuffer.DefaultSeconds : Mathf.Max(_minKillCamSeconds, value);
+        }
+
+        /// <summary>いまキルカムで倒した相手の記録を再生しているか。</summary>
+        public bool IsReplayingKillCam => IsActive && _replay != null && _replay.IsPlaying;
+
         private void Awake()
         {
             EnsureResolved();
@@ -109,10 +132,22 @@ namespace Fps.Net
                 return;
             }
 
+            if (mode != DeathCamera.KillCam && _replay.IsPlaying)
+            {
+                _replay.Stop("rule changed to " + mode);
+            }
+
             switch (mode)
             {
                 case DeathCamera.Killer:
                     Frame(ResolveKillerEye(match));
+                    break;
+                case DeathCamera.KillCam:
+                    if (!WatchKillCam(match, Time.deltaTime))
+                    {
+                        Frame(ResolveKillerEye(match));
+                    }
+
                     break;
                 case DeathCamera.Ally:
                     WatchAlly(_view.ReadSpectateStep());
@@ -128,7 +163,7 @@ namespace Fps.Net
             // プレイヤーが消えるときも、カメラと入力を戻して次に有効になったときに持ち越さない
             if (_switch.Reset())
             {
-                Restore();
+                Restore("disabled");
                 Debug.Log(LogTag + " stopped on " + name + " (disabled)", this);
             }
         }
@@ -152,7 +187,7 @@ namespace Fps.Net
                     Frame(null);
                     break;
                 default:
-                    Restore();
+                    Restore(transition.ToString());
                     Debug.Log(LogTag + " stopped on " + name + " (" + transition + ")", this);
                     break;
             }
@@ -252,8 +287,55 @@ namespace Fps.Net
             return null;
         }
 
-        private void Restore()
+        /// <summary>
+        /// キルカムの再生を 1 フレーム進める。この倒れ方で初めて呼ばれたら、倒した相手を試合の行から引いて記録を切り出し、再生を始める
+        /// (相手がいない・記録が無ければ始めない)。再生中に試合の行の相手が変わったら (行が倒れた後に届いたとき) 再生をやめる。
+        /// まだ再生中なら true、呼び出し側は false の間 Killer と同じに映す。
+        /// </summary>
+        internal bool WatchKillCam(NetTeamDeathmatch match, float deltaSeconds)
         {
+            if (!IsActive)
+            {
+                return false;
+            }
+
+            var killerId = FindKillerId(match, _player.RosterId);
+            if (!_killCamResolved)
+            {
+                _killCamResolved = true;
+                _killCamKillerId = killerId;
+                BeginKillCam(killerId);
+            }
+            else if (_replay.IsPlaying && killerId != _killCamKillerId)
+            {
+                _replay.Stop("killer changed");
+            }
+
+            return _replay.Advance(_view, deltaSeconds);
+        }
+
+        private void BeginKillCam(ulong? killerId)
+        {
+            if (!killerId.HasValue)
+            {
+                Debug.Log(KillCamLog.NoKiller(name), this);
+                return;
+            }
+
+            var killerName = "client " + killerId.Value.ToString(CultureInfo.InvariantCulture);
+            var killer = FindSpawnedPlayer(killerId.Value);
+            var motor = killer != null ? killer.GetComponent<NetworkPlayerMotor>() : null;
+            var clip = motor != null
+                ? motor.CaptureKillCam(_killCamSeconds, killer.AimOrigin() - killer.transform.position)
+                : KillCamClip.Empty;
+            var caption = KillCamText.Caption(new LocalizedText("hud.scoreboard.player", killerId.Value));
+            _replay.Begin(clip, killerName, caption, killer != null ? killer.transform : null, _view);
+        }
+
+        private void Restore(string reason)
+        {
+            _replay.Stop(reason);
+
             // 映している間に視点が無くなっていたら (プレイヤーが消えるときなど)、NetPlayer が止めた部品を有効に戻さない
             _view.Restore(_player != null && _player.HasLocalView);
             ClearTargets();
@@ -261,6 +343,8 @@ namespace Fps.Net
 
         private void ClearTargets()
         {
+            _killCamResolved = false;
+            _killCamKillerId = null;
             _killerId = null;
             _killer = null;
             _hasKiller = false;
@@ -341,6 +425,7 @@ namespace Fps.Net
             _resolved = true;
             _player = GetComponent<NetPlayer>();
             _view = new DeathCamView(this, "run Fps.Editor.NetSceneBuilder.Build");
+            _replay = new KillCamReplay(this);
         }
     }
 }

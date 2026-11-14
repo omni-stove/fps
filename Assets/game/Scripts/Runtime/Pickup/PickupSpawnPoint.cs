@@ -7,7 +7,8 @@ namespace Fps.Runtime
     /// <summary>
     /// Scene に置いた点に拾える物を出す。Start で自分の子に <see cref="Pickup"/> を作り (位置は Transform の位置が足元)、
     /// 拾われたら <see cref="RespawnSeconds"/> 後に同じ物をまた出す (<see cref="PickupRespawn"/>)。0 秒なら一度きり。
-    /// 中身はシーン生成スクリプトが <see cref="Contents"/> に配線する。
+    /// 中身はシーン生成スクリプトが <see cref="Contents"/> に配線する。<see cref="Definition"/> があれば、中身・拾い方・再出現の秒数・範囲は
+    /// 自分の値の代わりにそちらを読む。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PickupSpawnPoint : MonoBehaviour
@@ -16,6 +17,9 @@ namespace Fps.Runtime
 
         /// <summary>再出現までの既定の秒数。</summary>
         public const float DefaultRespawnSeconds = 20f;
+
+        [SerializeField, Tooltip("拾える物の調整値。入れると下の中身・拾い方・再出現の秒数・範囲の代わりにこれを使う")]
+        private PickupDefinition _definition;
 
         [SerializeField, Tooltip("出す物の中身")]
         private PickupContents _contents = PickupContents.ForHealth(PickupContents.DefaultHealthAmount);
@@ -35,7 +39,17 @@ namespace Fps.Runtime
         /// <summary>出した物が拾われたときに、この点と拾われたときの情報を渡して呼ばれる。</summary>
         public event Action<PickupSpawnPoint, PickupCollection> Collected;
 
-        /// <summary>出す物の中身。出した後に変えても、出ている物は変わらない。null は <see cref="ArgumentNullException"/>、不正なら <see cref="ArgumentException"/>。</summary>
+        /// <summary>
+        /// 拾える物の調整値。null でなければ <see cref="Contents"/>・<see cref="CollectMode"/>・<see cref="RespawnSeconds"/>・<see cref="Radius"/> の代わりに使う。
+        /// 出した後に変えても、次の <see cref="TrySpawn"/> まで効かない。
+        /// </summary>
+        public PickupDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
+
+        /// <summary>出す物の中身 (<see cref="Definition"/> が無いときに使う)。出した後に変えても、出ている物は変わらない。null は <see cref="ArgumentNullException"/>、不正なら <see cref="ArgumentException"/>。</summary>
         public PickupContents Contents
         {
             get => _contents;
@@ -57,7 +71,9 @@ namespace Fps.Runtime
             set => _collectMode = value;
         }
 
-        /// <summary>拾われてから再び出るまでの秒数。0 なら一度きり。出した後に変えても次の <see cref="TrySpawn"/> まで効かない。</summary>
+        /// <summary>
+        /// 拾われてから再び出るまでの秒数 (<see cref="Definition"/> が無いときに使う)。0 なら一度きり。出した後に変えても次の <see cref="TrySpawn"/> まで効かない。
+        /// </summary>
         public float RespawnSeconds
         {
             get => _respawnSeconds;
@@ -113,7 +129,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 子に拾える物を作って出し、<c>[Pickup] spawned</c> を出す。既に出していれば何もせず true。
-        /// 中身が不正なら理由を Debug.LogError に出して false。
+        /// 中身か <see cref="Definition"/> が不正なら理由を Debug.LogError に出して false。
         /// </summary>
         public bool TrySpawn()
         {
@@ -122,17 +138,27 @@ namespace Fps.Runtime
                 return true;
             }
 
-            if (_contents == null)
+            var definition = _definition;
+            if (definition == null && _contents == null)
             {
-                Debug.LogError($"{LogTag} PickupSpawnPoint '{name}' に中身がありません。シーン生成スクリプトで Contents を配線してください。", this);
+                Debug.LogError($"{LogTag} PickupSpawnPoint '{name}' に中身がありません。シーン生成スクリプトで Contents か Definition を配線してください。", this);
                 return false;
             }
 
             PickupSpec spec;
             try
             {
-                spec = _contents.ToSpec();
-                _respawn = new PickupRespawn(_respawnSeconds);
+                if (definition != null)
+                {
+                    definition.Validate();
+                    spec = definition.ToSpec();
+                    _respawn = definition.CreateRespawn();
+                }
+                else
+                {
+                    spec = _contents.ToSpec();
+                    _respawn = new PickupRespawn(_respawnSeconds);
+                }
             }
             catch (ArgumentException e)
             {
@@ -141,7 +167,10 @@ namespace Fps.Runtime
                 return false;
             }
 
-            _pickup = Pickup.Create(_contents, transform.position, _collectMode, transform, _radius);
+            var contents = definition != null ? definition.Contents : _contents;
+            var collectMode = definition != null ? definition.CollectMode : _collectMode;
+            var radius = definition != null ? definition.Radius : _radius;
+            _pickup = Pickup.Create(contents, transform.position, collectMode, transform, radius);
             _pickup.DestroyOnCollect = false;
             _pickup.Collected += OnPickupCollected;
             Debug.Log(PickupLog.Spawned(_pickup.name, spec, transform.position.ToNumerics()), this);
@@ -174,8 +203,10 @@ namespace Fps.Runtime
 
         private void OnDrawGizmos()
         {
-            Gizmos.color = _contents != null ? Pickup.ColorOf(_contents.Kind) : Color.white;
-            Gizmos.DrawWireSphere(transform.position + (Vector3.up * _radius), _radius);
+            var contents = _definition != null ? _definition.Contents : _contents;
+            var radius = _definition != null ? _definition.Radius : _radius;
+            Gizmos.color = contents != null ? Pickup.ColorOf(contents.Kind) : Color.white;
+            Gizmos.DrawWireSphere(transform.position + (Vector3.up * radius), radius);
         }
     }
 }

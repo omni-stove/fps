@@ -17,6 +17,7 @@ namespace Fps.Tests.EditMode
         {
             _host = new FakeHost();
             MenuNavigator.Host = _host;
+            MenuNavigator.Scenes = MenuScenes.Default;
             MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
@@ -27,11 +28,65 @@ namespace Fps.Tests.EditMode
         public void TearDown()
         {
             MenuNavigator.Host = null;
+            MenuNavigator.Scenes = null;
             MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
             CampaignLaunchSelection.Clear();
             Time.timeScale = 1f;
+        }
+
+        [Test]
+        public void GoLoadsTheCampaignSceneSetByTheData()
+        {
+            const string chapter = "Assets/game/Scenes/Chapter1.unity";
+            _host.Scenes.Add(chapter);
+            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1", null);
+
+            Assert.That(MenuNavigator.Go(MenuDestination.Campaign), Is.True);
+            Assert.That(MenuNavigator.Go(MenuDestination.Range), Is.True);
+
+            Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(chapter), _host.IndexOf(MenuRoute.RangeScene) }),
+                "only the overridden scene changes");
+        }
+
+        [Test]
+        public void OnlineAndReturnLoadTheScenesSetByTheData()
+        {
+            const string arena = "Assets/game/Scenes/Arena.unity";
+            const string title = "Assets/game/Scenes/Title.unity";
+            _host.Scenes.Add(arena);
+            _host.Scenes.Add(title);
+            MenuNavigator.Scenes = new MenuScenes("Title", null, null, "Arena");
+
+            Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch), Is.True);
+            Assert.That(MenuNavigator.PendingLobby.Command, Is.EqualTo(LobbyCommand.QuickMatch));
+            Assert.That(MenuNavigator.ReturnToMenu(), Is.True);
+
+            Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(arena), _host.IndexOf(title) }));
+        }
+
+        [Test]
+        public void ASceneSetByTheDataThatIsNotInTheBuildIsReported()
+        {
+            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1", null);
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape("Assets/game/Scenes/Chapter1.unity") + ".*not in the build settings"));
+
+            Assert.That(MenuNavigator.Go(MenuDestination.Campaign), Is.False);
+
+            Assert.That(_host.Loaded, Is.Empty, "the default campaign scene is not loaded instead");
+            Assert.That(MenuNavigator.Plan(MenuDestination.Campaign).ScenePath, Is.EqualTo("Assets/game/Scenes/Chapter1.unity"));
+        }
+
+        [Test]
+        public void WithoutDataTheDefaultScenesAreUsed()
+        {
+            Assume.That(MenuSceneSettings.Load(), Is.Null, "this project provides its own Resources/" + MenuSceneSettings.ResourcePath);
+            MenuNavigator.Scenes = null;
+
+            Assert.That(MenuNavigator.Scenes.ToString(), Is.EqualTo(MenuScenes.Default.ToString()));
+            Assert.That(MenuNavigator.Go(MenuDestination.Campaign), Is.True);
+            Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(MenuRoute.CampaignScene) }));
         }
 
         [TestCase(MenuDestination.Campaign, MenuRoute.CampaignScene)]
@@ -281,7 +336,7 @@ namespace Fps.Tests.EditMode
 
         private sealed class FakeHost : IMenuSceneHost
         {
-            private static readonly string[] _scenes =
+            public readonly List<string> Scenes = new List<string>
             {
                 MenuRoute.MainMenuScene, MenuRoute.RangeScene, MenuRoute.CampaignScene, MenuRoute.NetScene,
             };
@@ -292,7 +347,7 @@ namespace Fps.Tests.EditMode
 
             public int IndexOf(string path)
             {
-                return System.Array.IndexOf(_scenes, path);
+                return Scenes.IndexOf(path);
             }
 
             public int BuildIndexOf(string path)

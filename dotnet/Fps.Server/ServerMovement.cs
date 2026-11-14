@@ -51,6 +51,8 @@ namespace Fps.Server
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _log = context.Log;
+            _context.Bodies.Teleported += HandleTeleported;
+            _context.Bodies.DownedChanged += HandleDownedChanged;
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -70,20 +72,26 @@ namespace Fps.Server
                 return;
             }
 
+            // ルールのモジュールは参加の知らせ (この呼び出しより前) のうちに出現させるので、置き直しはもう体に書いてある
+            var spawned = _context.Bodies.TryGet(player.PlayerId, out var shared) && shared.HasSpawned;
+            var spawn = spawned ? shared.Position : _settings.SpawnPosition;
             var body = new CharacterBody(_context.World, _settings.Mover, _settings.Stance);
             var simulation = new CharacterMotorSimulation(body, new PlayerMotor(_settings.Motor), _tickSeconds, _settings.KillPlaneY)
             {
-                SpawnPosition = _settings.SpawnPosition,
+                SpawnPosition = spawn,
             };
             var mover = new Mover(player, simulation)
             {
-                State = new CharacterMotorState(_settings.SpawnPosition, Vector3.Zero, false, false),
+                State = new CharacterMotorState(spawn, Vector3.Zero, false, false),
                 InputBudget = MaxInputBudget,
                 NextWarning = float.NegativeInfinity,
+                Yaw = spawned ? shared.Yaw : 0f,
+                Downed = shared != null && shared.IsDowned,
             };
             simulation.Place(mover.State);
             _byConnection[connection] = mover;
             _byPlayer[player.PlayerId] = mover;
+            Publish(mover);
         }
 
         public void OnDisconnected(ConnectionId connection)
@@ -104,6 +112,12 @@ namespace Fps.Server
 
         public void Stop()
         {
+            if (_context != null)
+            {
+                _context.Bodies.Teleported -= HandleTeleported;
+                _context.Bodies.DownedChanged -= HandleDownedChanged;
+            }
+
             _byConnection.Clear();
             _byPlayer.Clear();
         }
@@ -140,6 +154,7 @@ namespace Fps.Server
             mover.Simulation.SpawnPosition = position;
             mover.State = new CharacterMotorState(position, Vector3.Zero, false, false);
             mover.Simulation.Place(mover.State);
+            Publish(mover);
             return true;
         }
 
@@ -245,7 +260,32 @@ namespace Fps.Server
             mover.Yaw = input.Yaw;
             mover.Aiming = input.Restrained().Aim;
             mover.LastProcessedTick = frame.Tick;
+            Publish(mover);
             Report(mover, frame.Tick, previous, current);
+        }
+
+        // 位置の持ち主はここなので、ルール・戦闘・Bot が同じ位置で判定できるよう、動かすたびに共有の体へ写す
+        private void Publish(Mover mover)
+        {
+            if (_context.Bodies.TryGet(mover.Player.PlayerId, out var body))
+            {
+                var state = mover.State;
+                body.SetPose(state.Position, mover.Yaw, state.IsCrouched ? PlayerStance.Crouching : PlayerStance.Standing);
+            }
+        }
+
+        private void HandleTeleported(ServerBody body)
+        {
+            if (_byPlayer.TryGetValue(body.PlayerId, out var mover))
+            {
+                mover.Yaw = body.Yaw;
+                Teleport(body.PlayerId, body.Position);
+            }
+        }
+
+        private void HandleDownedChanged(ServerBody body)
+        {
+            SetDowned(body.PlayerId, body.IsDowned);
         }
 
         private void Report(Mover mover, int tick, CharacterMotorState previous, CharacterMotorState current)

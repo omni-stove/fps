@@ -123,6 +123,10 @@ namespace Fps.Server
 
             // ダウンした人はもう起こせず、起き上がった・倒れた人はもう起こされない
             _reviveHolds.RemovePlayer(playerId);
+            if (_bodies.TryGet(playerId, out _))
+            {
+                _bodies.SetDowned(playerId, isDowned);
+            }
 
             if (wasDowned && !isDowned && joined && !_session.IsAlive(playerId)
                 && playerId != _damageAttackerId && playerId != _damageVictimId)

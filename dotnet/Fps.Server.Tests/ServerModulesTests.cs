@@ -42,8 +42,8 @@ namespace Fps.Server.Tests
             Assert.That(Create(_library.Path), Is.Null);
             Assert.That(_modules, Has.Count.EqualTo(3));
             Assert.That(_modules[0], Is.InstanceOf<ServerMovement>());
-            Assert.That(_modules[1], Is.InstanceOf<ServerSnapshots>());
-            Assert.That(_modules[2], Is.InstanceOf<MatchRulesModule>());
+            Assert.That(_modules[1], Is.InstanceOf<MatchRulesModule>());
+            Assert.That(_modules[2], Is.InstanceOf<ServerSnapshots>());
         }
 
         [Test]

@@ -212,10 +212,34 @@ namespace Fps.Net.Tests
         [Test]
         public void TheThrowVelocityMatchesTheOfflineThrow()
         {
-            var velocity = NetTeamDeathmatch.GrenadeVelocity(Vector3.forward);
+            var velocity = NetTeamDeathmatch.GrenadeVelocity(Vector3.forward, GrenadeSpec.Default);
 
             Assert.That(velocity.z, Is.EqualTo(GrenadeSpec.Default.ThrowSpeed).Within(1e-4f));
             Assert.That(velocity.y, Is.EqualTo(GrenadeSpec.Default.ThrowLiftSpeed).Within(1e-4f));
+        }
+
+        [Test]
+        public void TheThrowVelocityFollowsTheGivenSpec()
+        {
+            var velocity = NetTeamDeathmatch.GrenadeVelocity(Vector3.forward, new GrenadeSpec(throwSpeed: 20f, throwLiftSpeed: 1f));
+
+            Assert.That(velocity.z, Is.EqualTo(20f).Within(1e-4f));
+            Assert.That(velocity.y, Is.EqualTo(1f).Within(1e-4f));
+            Assert.Throws<ArgumentNullException>(() => NetTeamDeathmatch.GrenadeVelocity(Vector3.forward, null));
+        }
+
+        [Test]
+        public void TheMatchUsesTheTunedGrenadeUntilReplaced()
+        {
+            var go = Create("Match");
+            go.AddComponent<NetworkObject>();
+            var match = go.AddComponent<NetTeamDeathmatch>();
+
+            Assert.That(match.GrenadeSpec, Is.SameAs(KitTuning.Grenade));
+            var spec = new GrenadeSpec(fuseSeconds: 1f);
+            match.GrenadeSpec = spec;
+            Assert.That(match.GrenadeSpec, Is.SameAs(spec));
+            Assert.Throws<ArgumentNullException>(() => match.GrenadeSpec = null);
         }
 
         [Test]

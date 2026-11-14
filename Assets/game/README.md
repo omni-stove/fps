@@ -570,6 +570,35 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
 - `NOT RUN <名前>` は結果を受け取れないままスイートが終わった SmokeRun で、これも失敗に数える。
 - Netcode を入れていないと `PerfSmokeRun` が `smoke run type 'Fps.Editor.PerfSmokeRun, Fps.Net.Editor' was not found` で `FAILED` になり、スイート全体も 1 で終わる。残りの 5 本が `passed` なら、Netcode 以外は動いている。
 
+## 差し替え漏れの点検
+
+`Fps.Editor.ReplacementAudit.Run` は、差し替えたときに抜けやすいものをまとめて洗い出し、一覧をログに出す。Play Mode には入らない。
+
+```sh
+"$UNITY" -batchmode -quit -projectPath . \
+  -executeMethod Fps.Editor.ReplacementAudit.Run \
+  -logFile -
+```
+
+Editor からは **Fps > Audit Replacements** (一覧をログに出すだけで、Editor は閉じない)。
+
+見るもの:
+
+| 種類 | 漏れとして出すもの |
+| --- | --- |
+| `Presentation` | `Resources/Presentation/PresentationCatalog` が無い・`Validate` に通らない。`Assets/` の下の `WeaponDefinition` の Id にカタログの音とエフェクトが無い。武器の Id が空 |
+| `Strings` | `ja`・`en` のどちらかに表が無い・壊れている。どちらかの言語にあってもう一方に無いキー。武器の `nameKey` が空か、どちらかの言語の表に無い |
+| `Reference` | ビルドの一覧のシーン (有効なもの)・`Assets/` の下のプレハブ・アセットで、`[RequiredReference]` を付けた参照が空 (消えたアセットを指すものも含む)。ビルドの一覧のシーンが無い |
+
+`[RequiredReference]` (`Fps.Runtime.RequiredReferenceAttribute`) は、空だと動かない参照 (空なら仮の形や既定値で続けるものは除く) に付ける印。今は `GunGameRunner` の Ladder・`HordeRunner` の Spawner・`WaveSpawner` の Enemy Template・`MissionRunner` の Definition・`EnemyAgent` の Weapon Definition に付いている。ゲームのコンポーネントやアセットのフィールドに付けても同じく見る。
+
+**終了コード** で見分ける: 漏れが無ければ 0、漏れがあれば 1、点検そのものが例外で止まれば 2。
+
+```
+[ReplacementAudit] failed: 1 missing replacement(s) (exit code 1)
+  [Strings] en: key 'hud.reloading' is missing (ja has it in 'Resources/Localization/ja/hud')
+```
+
 ## アセンブリの一覧
 
 | アセンブリ | 中身 | 有効になる条件 |

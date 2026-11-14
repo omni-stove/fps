@@ -19,6 +19,7 @@ namespace Fps.Editor
     /// TPS 射撃場がそれに回避・乗り越え・グレネードを足したもの。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
+    /// <see cref="BuildAt"/> の 7 つの値を変えたら、同じ値のサンプル JSON (<see cref="GameRulesJsonImporter.SamplesFolder"/>) も直す。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.GameRulesAssetBuilder.Build</code>
     /// </summary>

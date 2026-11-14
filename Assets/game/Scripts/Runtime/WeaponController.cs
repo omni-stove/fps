@@ -28,7 +28,7 @@ namespace Fps.Runtime
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Camera))]
-    public sealed class WeaponController : MonoBehaviour, IWeaponHolder
+    public sealed partial class WeaponController : MonoBehaviour, IWeaponHolder
     {
         /// <summary>武器を手放したときのログ。</summary>
         public const string DisarmedLog = "[Combat] disarmed";
@@ -93,7 +93,6 @@ namespace Fps.Runtime
         private GameRules _rules = GameRules.Default;
         private GameRules _loadedRules;
         private readonly RecoilState _recoil = new RecoilState();
-        private readonly List<IWeaponModifier> _modifiers = new List<IWeaponModifier>();
         private float _spread;
         private float _secondsSinceShot;
         private int _shotCount;
@@ -127,37 +126,6 @@ namespace Fps.Runtime
         /// <see cref="Modifiers"/> があれば、それを通した値 (0〜1 に収める) を返す。
         /// </summary>
         public float SpreadFraction => ModifySpreadFraction(_spread);
-
-        public IReadOnlyList<IWeaponModifier> Modifiers => _modifiers;
-
-        // ShotFilter のように 1 つの枠にせず並べるのは、制圧のほかにも照準を乱すもの (怯みなど) が同時に効くようにするため。
-        /// <exception cref="ArgumentNullException">modifier が null。</exception>
-        public bool AddModifier(IWeaponModifier modifier)
-        {
-            if (modifier == null)
-            {
-                throw new ArgumentNullException(nameof(modifier));
-            }
-
-            if (_modifiers.Contains(modifier))
-            {
-                return false;
-            }
-
-            _modifiers.Add(modifier);
-            return true;
-        }
-
-        /// <exception cref="ArgumentNullException">modifier が null。</exception>
-        public bool RemoveModifier(IWeaponModifier modifier)
-        {
-            if (modifier == null)
-            {
-                throw new ArgumentNullException(nameof(modifier));
-            }
-
-            return _modifiers.Remove(modifier);
-        }
 
         /// <summary>射撃の向きと起点。未初期化なら null。</summary>
         public Transform Aim => _aim;
@@ -252,8 +220,8 @@ namespace Fps.Runtime
         /// </summary>
         public Func<bool> FireBlocker { get; set; }
 
-        /// <summary><see cref="FireBlocker"/> が今の射撃を止めているか。</summary>
-        public bool IsFireBlocked => FireBlocker != null && FireBlocker();
+        /// <summary><see cref="FireBlocker"/> か、登録された modifier (<see cref="IsFireBlockedByModifier"/>) が今の射撃を止めているか。</summary>
+        public bool IsFireBlocked => (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
 
         /// <summary>
         /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous を読まない (武器の時間は進める)。
@@ -758,9 +726,19 @@ namespace Fps.Runtime
             }
 
             CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
+            if (BulletShield.TryBlock(hit.collider, weapon.Spec.Damage, origin, shooter))
+            {
+                return true;
+            }
+
             if (Hitbox.FindFor(hit.collider) == null)
             {
-                StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
+                // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
+                using (CombatEvents.Attribute(shooter, weapon.Spec.Id))
+                {
+                    StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
+                }
+
                 return true;
             }
 
@@ -779,13 +757,13 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今の武器の <see cref="Weapon.TryStartReload"/> を呼ぶ。補充は <see cref="Tick"/> で時間が経ったときに行う。
-        /// 始まったら <see cref="ReloadStarted"/> を呼んで true。
+        /// 始まったら <see cref="ReloadStarted"/> を呼んで true。modifier がリロードを止めている間は始めず false。
         /// </summary>
         public bool StartReload()
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (weapon == null || !weapon.TryStartReload())
+            if (weapon == null || IsReloadBlockedByModifier || !weapon.TryStartReload())
             {
                 return false;
             }
@@ -852,7 +830,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今撃ったときの spec の散らばりの半角 (度)。<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読み、
-        /// <see cref="Modifiers"/> を通して 0 以上 <see cref="SpreadPattern.MaxDegrees"/> 以下に収める。
+        /// 登録された modifier の倍率を掛けてから <see cref="Modifiers"/> の足し引きを通し、0 以上 <see cref="SpreadPattern.MaxDegrees"/> 以下に収める。
         /// </summary>
         public float CurrentConeDegrees(WeaponSpec spec)
         {
@@ -863,7 +841,7 @@ namespace Fps.Runtime
 
             var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
             var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
-            var cone = SpreadPattern.ConeDegrees(spec, ads, move);
+            var cone = SpreadPattern.ConeDegrees(spec, ads, move) * ModifierSpreadMultiplier();
             if (_modifiers.Count == 0)
             {
                 return cone;
@@ -898,6 +876,7 @@ namespace Fps.Runtime
         public void Tick(float deltaSeconds)
         {
             EnsureInitialized();
+            CancelReloadBlockedByModifier();
             Weapon?.Tick(deltaSeconds);
             _recoil.Tick(deltaSeconds);
 

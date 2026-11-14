@@ -17,6 +17,12 @@ namespace Fps.Runtime
 
         public SuppressionReceiver Receiver { get; }
 
+        public bool BlocksFire => false;
+
+        public bool BlocksReload => false;
+
+        public float SpreadMultiplier => 1f;
+
         public float ModifyConeDegrees(WeaponSpec spec, float coneDegrees)
         {
             return coneDegrees + (ActiveLevel() * Receiver.Spec.MaxSpreadDegrees);

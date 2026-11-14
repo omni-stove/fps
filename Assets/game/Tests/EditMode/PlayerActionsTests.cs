@@ -262,6 +262,20 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void MantleFollowsTheRulesOnThePlayerController()
+        {
+            var mover = _player.AddComponent<PlayerController>();
+            Assert.That(mover.MantleRule, Is.EqualTo(Mantle.Off));
+
+            PlayerActions.Attach(_player, GameRules.Default.WithActions(ActionRules.Default.WithMantle(Mantle.On)));
+            Assert.That(mover.MantleRule, Is.EqualTo(Mantle.On));
+            Assert.That(mover.VaultRule, Is.EqualTo(Vault.Off), "mantle does not turn the vault on");
+
+            PlayerActions.Attach(_player, GameRules.Default);
+            Assert.That(mover.MantleRule, Is.EqualTo(Mantle.Off));
+        }
+
+        [Test]
         public void AttachWithoutAPlayerControllerStillWorks()
         {
             PlayerActions.Attach(_player, Rules(Cover.Off, BlindFire.Off, Dodge.On));

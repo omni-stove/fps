@@ -1086,6 +1086,12 @@ namespace Fps.Tests.EditMode
 
         private sealed class AddingModifier : IWeaponModifier
         {
+            public bool BlocksFire => false;
+
+            public bool BlocksReload => false;
+
+            public float SpreadMultiplier => 1f;
+
             private readonly float _degrees;
             private readonly float _spread;
 
@@ -1102,6 +1108,12 @@ namespace Fps.Tests.EditMode
 
         private sealed class ScalingModifier : IWeaponModifier
         {
+            public bool BlocksFire => false;
+
+            public bool BlocksReload => false;
+
+            public float SpreadMultiplier => 1f;
+
             private readonly float _scale;
 
             public ScalingModifier(float scale)

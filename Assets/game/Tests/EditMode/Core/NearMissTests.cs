@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class NearMissTests
     {
-        private const float Epsilon = 1e-5f;
+        private const float _epsilon = 1e-5f;
 
         [Test]
         public void MeasuresTheDistanceFromTheLineBesideIt()
@@ -15,8 +15,8 @@ namespace Fps.Core.Tests
             var found = NearMiss.TryDistance(Vector3.Zero, new Vector3(0f, 0f, 2f), 10f, new Vector3(0.6f, 0f, 5f), out var distance, out var along);
 
             Assert.That(found, Is.True);
-            Assert.That(distance, Is.EqualTo(0.6f).Within(Epsilon));
-            Assert.That(along, Is.EqualTo(5f).Within(Epsilon));
+            Assert.That(distance, Is.EqualTo(0.6f).Within(_epsilon));
+            Assert.That(along, Is.EqualTo(5f).Within(_epsilon));
         }
 
         [Test]
@@ -34,8 +34,8 @@ namespace Fps.Core.Tests
             var found = NearMiss.TryDistance(Vector3.Zero, Vector3.UnitZ, 4f, new Vector3(0f, 0f, 5f), out var distance, out var along);
 
             Assert.That(found, Is.True);
-            Assert.That(along, Is.EqualTo(4f).Within(Epsilon));
-            Assert.That(distance, Is.EqualTo(1f).Within(Epsilon));
+            Assert.That(along, Is.EqualTo(4f).Within(_epsilon));
+            Assert.That(distance, Is.EqualTo(1f).Within(_epsilon));
         }
 
         [Test]

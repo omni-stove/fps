@@ -126,7 +126,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>・
-        /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>) を
+        /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
         /// hudObject に付ける。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
         /// 既に付いているものは付け直さない。
@@ -149,6 +149,7 @@ namespace Fps.Runtime
             AddIfMissing<PauseMenu>(hudObject);
             // PauseMenu の後に付けると、木を作り直したときも PauseMenu が「設定」のボタンを持ってから開く処理を渡せる。
             AddIfMissing<PauseSettingsView>(hudObject);
+            AddIfMissing<PhotoModeView>(hudObject);
         }
 
         /// <summary>同じ GameObject のヒットマーカー。<see cref="AddViews"/> で付けていなければ null。</summary>
@@ -180,6 +181,8 @@ namespace Fps.Runtime
 
         /// <summary>同じ GameObject のポーズ画面の設定画面。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseSettingsView PauseSettings => GetComponent<PauseSettingsView>();
+
+        public PhotoModeView PhotoMode => GetComponent<PhotoModeView>();
 
         IScoreboard IHud.Scoreboard => AsInterface<IScoreboard>(Scoreboard);
 

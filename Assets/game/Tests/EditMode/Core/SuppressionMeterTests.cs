@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class SuppressionMeterTests
     {
-        private const float Epsilon = 1e-5f;
+        private const float _epsilon = 1e-5f;
 
         // 半径 2m、かすめて 0.25、待ち 1 秒、毎秒 0.5 抜ける、0.5 で制圧・0.2 で解ける。
         private static SuppressionSpec Spec() => new SuppressionSpec(2f, 0.25f, 1f, 0.5f, 0.5f, 0.2f);
@@ -26,8 +26,8 @@ namespace Fps.Core.Tests
         {
             var meter = new SuppressionMeter(Spec());
 
-            Assert.That(meter.AmountFor(0f), Is.EqualTo(0.25f).Within(Epsilon));
-            Assert.That(meter.AmountFor(1f), Is.EqualTo(0.125f).Within(Epsilon));
+            Assert.That(meter.AmountFor(0f), Is.EqualTo(0.25f).Within(_epsilon));
+            Assert.That(meter.AmountFor(1f), Is.EqualTo(0.125f).Within(_epsilon));
             Assert.That(meter.AmountFor(2f), Is.EqualTo(0f), "the edge of the radius does not count");
             Assert.That(meter.AmountFor(5f), Is.EqualTo(0f));
         }
@@ -39,11 +39,11 @@ namespace Fps.Core.Tests
 
             Assert.That(meter.AddNearMiss(0f), Is.True);
             Assert.That(meter.AddNearMiss(1f), Is.True);
-            Assert.That(meter.Level, Is.EqualTo(0.375f).Within(Epsilon));
+            Assert.That(meter.Level, Is.EqualTo(0.375f).Within(_epsilon));
             Assert.That(meter.IsSuppressed, Is.False);
 
             meter.AddNearMiss(0f);
-            Assert.That(meter.Level, Is.EqualTo(0.625f).Within(Epsilon));
+            Assert.That(meter.Level, Is.EqualTo(0.625f).Within(_epsilon));
             Assert.That(meter.IsSuppressed, Is.True);
             Assert.That(meter.NearMisses, Is.EqualTo(3));
         }
@@ -78,11 +78,11 @@ namespace Fps.Core.Tests
             meter.AddNearMiss(0f);
 
             meter.Tick(0.6f);
-            Assert.That(meter.Level, Is.EqualTo(0.5f).Within(Epsilon), "still within the delay");
+            Assert.That(meter.Level, Is.EqualTo(0.5f).Within(_epsilon), "still within the delay");
 
             // 待ちの残り 0.4 秒を使い切り、残りの 0.4 秒で 0.2 抜ける。
             meter.Tick(0.8f);
-            Assert.That(meter.Level, Is.EqualTo(0.3f).Within(Epsilon));
+            Assert.That(meter.Level, Is.EqualTo(0.3f).Within(_epsilon));
         }
 
         [Test]
@@ -95,7 +95,7 @@ namespace Fps.Core.Tests
             meter.AddNearMiss(0f);
             meter.Tick(0.9f);
 
-            Assert.That(meter.Level, Is.EqualTo(0.5f).Within(Epsilon));
+            Assert.That(meter.Level, Is.EqualTo(0.5f).Within(_epsilon));
         }
 
         [Test]
@@ -107,7 +107,7 @@ namespace Fps.Core.Tests
             Assert.That(meter.IsSuppressed, Is.True);
 
             meter.Tick(1f + 0.4f);
-            Assert.That(meter.Level, Is.EqualTo(0.3f).Within(Epsilon));
+            Assert.That(meter.Level, Is.EqualTo(0.3f).Within(_epsilon));
             Assert.That(meter.IsSuppressed, Is.True, "0.3 is under the suppress level but above the release level");
 
             meter.Tick(0.4f);

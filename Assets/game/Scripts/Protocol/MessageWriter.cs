@@ -69,8 +69,18 @@ namespace Fps.Protocol
                 throw new ArgumentNullException(nameof(message));
             }
 
-            WriteUInt16(message.Id);
-            message.Write(this);
+            // 本文の途中で失敗したときに、Id や書きかけの本文を残すと受け手のメッセージの区切りがずれるため、書き始めの位置へ戻す。
+            var start = Length;
+            try
+            {
+                WriteUInt16(message.Id);
+                message.Write(this);
+            }
+            catch
+            {
+                Length = start;
+                throw;
+            }
         }
 
         public void WriteByte(byte value)

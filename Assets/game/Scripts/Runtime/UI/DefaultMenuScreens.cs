@@ -53,8 +53,7 @@ namespace Fps.Runtime
 
             public bool ReturnToMenu(LocalizedText notice)
             {
-                // メニューは戻ってから案内を文字列のまま出すので、戻る時点の言語で文にしておく
-                return MenuNavigator.ReturnToMenu(notice.IsEmpty ? null : Localizer.Resolve(notice));
+                return MenuNavigator.ReturnToMenu(notice);
             }
         }
     }

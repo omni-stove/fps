@@ -131,7 +131,7 @@ namespace Fps.Tests.EditMode
             MenuNavigator.ReturningToMenu += Handler;
             try
             {
-                Assert.That(MenuNavigator.ReturnToMenu("Disconnected from the host."), Is.True);
+                Assert.That(MenuNavigator.ReturnToMenu(DisconnectNotice.ServerStoppedMessage), Is.True);
             }
             finally
             {
@@ -142,16 +142,16 @@ namespace Fps.Tests.EditMode
             Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(MenuRoute.MainMenuScene) }));
             Assert.That(Time.timeScale, Is.EqualTo(1f), "a paused game is resumed");
             Assert.That(MenuNavigator.PendingLobby.IsRequested, Is.False);
-            Assert.That(MenuNavigator.TakeNotice(), Is.EqualTo("Disconnected from the host."));
-            Assert.That(MenuNavigator.TakeNotice(), Is.Null, "the notice is shown only once");
+            Assert.That(MenuNavigator.TakeNotice(), Is.EqualTo(DisconnectNotice.ServerStoppedMessage), "the key is kept for the menu to look up");
+            Assert.That(MenuNavigator.TakeNotice().IsEmpty, Is.True, "the notice is shown only once");
         }
 
         [Test]
         public void ReturnToMenuWithoutANoticeLeavesNone()
         {
-            Assert.That(MenuNavigator.ReturnToMenu(" "), Is.True);
+            Assert.That(MenuNavigator.ReturnToMenu(LocalizedText.Literal(" ")), Is.True);
 
-            Assert.That(MenuNavigator.PendingNotice, Is.Null);
+            Assert.That(MenuNavigator.PendingNotice.IsEmpty, Is.True);
         }
 
         [Test]
@@ -187,7 +187,7 @@ namespace Fps.Tests.EditMode
             LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(MenuRoute.MainMenuScene) + ".*not in the build settings"));
             try
             {
-                Assert.That(MenuNavigator.ReturnToMenu("bye"), Is.False);
+                Assert.That(MenuNavigator.ReturnToMenu(LocalizedText.Literal("bye")), Is.False);
             }
             finally
             {
@@ -196,7 +196,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(called, Is.False, "nothing is torn down when the game cannot leave");
             Assert.That(_host.Loaded, Is.Empty);
-            Assert.That(MenuNavigator.PendingNotice, Is.Null);
+            Assert.That(MenuNavigator.PendingNotice.IsEmpty, Is.True);
         }
 
         [Test]

@@ -156,6 +156,31 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ADisconnectReasonIsLookedUpByTheMenuAndFollowsTheLanguage()
+        {
+            var applied = AppliedControlSettings.Current;
+            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.Japanese));
+            try
+            {
+                _screen.Bind(_root);
+
+                _screen.ShowNotice(DisconnectNotice.ServerStoppedMessage);
+                Assert.That(_screen.Notice, Is.EqualTo("サーバーが止まりました。"));
+
+                AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
+                Assert.That(_screen.Notice, Is.EqualTo("The server stopped."));
+
+                _screen.ShowNotice((string)null);
+                AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.Japanese));
+                Assert.That(_screen.Notice, Is.Null, "a hidden notice stays hidden after the language changes");
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(applied);
+            }
+        }
+
+        [Test]
         public void SettingsWithoutAScreenOnlyShowsANotice()
         {
             _screen.Bind(_root);

@@ -821,7 +821,8 @@ namespace Fps.Net
                 return;
             }
 
-            ReturnToMenu(reason);
+            // 理由はエラーログと同じ文で訳さないので、表を引かずにそのまま運ぶ
+            ReturnToMenu(string.IsNullOrWhiteSpace(reason) ? default : LocalizedText.Literal(reason));
         }
 
         /// <summary>
@@ -833,7 +834,8 @@ namespace Fps.Net
             ReturnToMenu(notice.Message);
         }
 
-        private void ReturnToMenu(string notice)
+        /// <param name="notice">メニューに出す文。表を引くのはメニューで、戻った先の言語で文にする。空なら出さない。</param>
+        private void ReturnToMenu(LocalizedText notice)
         {
             if (_returningToMenu
                 || NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, NetStartup.IsDedicatedServerBuild))
@@ -848,8 +850,8 @@ namespace Fps.Net
                 return;
             }
 
-            // 理由の文はまだ表のキーになっていないので、作った文字列をそのまま運ぶ。メニューがビルドに無ければ menu がエラーログを出し、このシーンに留まる
-            menu.ReturnToMenu(string.IsNullOrWhiteSpace(notice) ? default : LocalizedText.Literal(notice));
+            // メニューがビルドに無ければ menu がエラーログを出し、このシーンに留まる
+            menu.ReturnToMenu(notice);
         }
 
         /// <summary>

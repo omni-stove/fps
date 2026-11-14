@@ -35,16 +35,16 @@ namespace Fps.Core
         /// <summary>断った訳の符号の最長の文字数。これより長い・使えない文字を含む符号は捨てる。</summary>
         public const int MaxDetailLength = 32;
 
-        public static string ServerStoppedMessage => GameText.Get("disconnect.serverStopped");
-        public static string TimedOutMessage => GameText.Get("disconnect.timedOut");
-        public static string ConnectTimedOutMessage => GameText.Get("disconnect.connectTimedOut");
-        public static string RejectedMessage => GameText.Get("disconnect.rejected");
-        public static string VersionMismatchMessage => GameText.Get("disconnect.versionMismatch");
-        public static string ServerDrainingMessage => GameText.Get("disconnect.serverDraining");
-        public static string IdleKickedMessage => GameText.Get("disconnect.idleKicked");
+        public static LocalizedText ServerStoppedMessage => new LocalizedText("net.disconnect.serverStopped");
+        public static LocalizedText TimedOutMessage => new LocalizedText("net.disconnect.timedOut");
+        public static LocalizedText ConnectTimedOutMessage => new LocalizedText("net.disconnect.connectTimedOut");
+        public static LocalizedText RejectedMessage => new LocalizedText("net.disconnect.rejected");
+        public static LocalizedText VersionMismatchMessage => new LocalizedText("net.disconnect.versionMismatch");
+        public static LocalizedText ServerDrainingMessage => new LocalizedText("net.disconnect.serverDraining");
+        public static LocalizedText IdleKickedMessage => new LocalizedText("net.disconnect.idleKicked");
 
         private DisconnectNotice(
-            DisconnectKind kind, bool wasConnected, string message, string serverVersion, string detail, string rawReason)
+            DisconnectKind kind, bool wasConnected, LocalizedText message, string serverVersion, string detail, string rawReason)
         {
             Kind = kind;
             WasConnected = wasConnected;
@@ -59,8 +59,8 @@ namespace Fps.Core
         /// <summary>切れる前にサーバーとつながっていた (承認された) なら true。</summary>
         public bool WasConnected { get; }
 
-        /// <summary>メニューに出す文。</summary>
-        public string Message { get; }
+        /// <summary>メニューに出す文 (表のキー <c>net.disconnect.*</c>)。メニューが今の言語で文にする。</summary>
+        public LocalizedText Message { get; }
 
         /// <summary><see cref="DisconnectKind.VersionMismatch"/> でサーバーが知らせてきた版。読めなければ null。</summary>
         public string ServerVersion { get; }
@@ -179,14 +179,14 @@ namespace Fps.Core
         /// 版の違いを伝える文。両方の版が分かれば添える。
         /// 例: <c>版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。サーバーと同じ版のゲームでつないでください。</c>
         /// </summary>
-        public static string VersionMismatchText(string serverVersion, string localVersion)
+        public static LocalizedText VersionMismatchText(string serverVersion, string localVersion)
         {
             if (string.IsNullOrEmpty(serverVersion) || string.IsNullOrEmpty(localVersion))
             {
-                return GameText.Format("disconnect.versionMismatchAdvice", VersionMismatchMessage);
+                return new LocalizedText("net.disconnect.versionMismatchAdvice", VersionMismatchMessage);
             }
 
-            return GameText.Format("disconnect.versionMismatchDetail", serverVersion, localVersion);
+            return new LocalizedText("net.disconnect.versionMismatchDetail", serverVersion, localVersion);
         }
 
         /// <summary>ログに出す 1 行の中身。例: <c>kind=VersionMismatch connected=False server-version=0.2.0 reason="fps:version-mismatch:0.2.0"</c>。</summary>

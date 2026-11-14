@@ -46,6 +46,11 @@ namespace Fps.Server.Tests
             _calls.Add(Name + ".Disconnected" + connection);
         }
 
+        public void OnMessage(ConnectionId connection, IMessage message)
+        {
+            _calls.Add(Name + ".Message" + connection + ":" + message.Id.ToString(CultureInfo.InvariantCulture));
+        }
+
         public void Stop()
         {
             _calls.Add(Name + ".Stop");

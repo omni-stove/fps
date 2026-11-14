@@ -260,7 +260,7 @@ namespace Fps.Tests.EditMode
             var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
             definition.name = assetName;
             definition.Id = id;
-            definition.DisplayName = assetName;
+            definition.NameKey = assetName;
             definition.Category = category;
             _created.Add(definition);
             return definition;

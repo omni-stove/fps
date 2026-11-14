@@ -23,17 +23,17 @@ namespace Fps.Tests.EditMode
         private readonly List<IReadOnlyList<string>> _confirmed = new List<IReadOnlyList<string>>();
         private int _cancelled;
 
-        private static WeaponSpec Spec(string id, string displayName, WeaponCategory category)
+        private static WeaponSpec Spec(string id, string nameKey, WeaponCategory category)
         {
-            return new WeaponSpec(id, displayName, category, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, DamageFalloff.None);
+            return new WeaponSpec(id, nameKey, category, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, DamageFalloff.None);
         }
 
         internal static LoadoutSelection Selection(IReadOnlyList<string> preferred = null)
         {
             var catalog = new WeaponCatalog(new[]
             {
-                Spec(_rifle, "Rifle", WeaponCategory.AssaultRifle),
-                Spec(_handgun, "Handgun", WeaponCategory.Handgun),
+                Spec(_rifle, "weapon.rifle", WeaponCategory.AssaultRifle),
+                Spec(_handgun, "weapon.handgun", WeaponCategory.Handgun),
                 Spec(_smg, "SMG", WeaponCategory.SubmachineGun),
                 Spec(_pistol, "Pistol", WeaponCategory.Handgun),
             });

@@ -65,7 +65,7 @@ namespace Fps.Net.Tests
             _created.Add(definition);
             definition.name = assetName;
             definition.Id = id;
-            definition.DisplayName = assetName;
+            definition.NameKey = "weapon." + assetName.ToLowerInvariant();
             definition.Category = category;
             definition.FireMode = fireMode;
             definition.Damage = damage;
@@ -153,7 +153,7 @@ namespace Fps.Net.Tests
 
             Assert.That(loadout.Weapons.Count, Is.EqualTo(2));
             Assert.That(loadout.Weapons[0].Id, Is.EqualTo(_rifleId));
-            Assert.That(loadout.Weapons[0].DisplayName, Is.EqualTo("Rifle"));
+            Assert.That(loadout.Weapons[0].NameKey, Is.EqualTo("weapon.rifle"));
             Assert.That(loadout.Weapons[0].Damage, Is.EqualTo(_rifleDamage));
             Assert.That(loadout.Weapons[1].Id, Is.EqualTo(_handgunId));
             Assert.That(loadout.Weapons[1].Damage, Is.EqualTo(_handgunDamage));

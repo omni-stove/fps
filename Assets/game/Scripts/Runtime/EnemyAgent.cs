@@ -377,7 +377,7 @@ namespace Fps.Runtime
 
             _weapon = new Weapon(spec, weaponRules);
             _weapon.Reloaded += OnReloaded;
-            Debug.Log($"{LogTag} id={Id} equip weapon={spec.DisplayName} ammo={_weapon.AmmoInMagazine}", this);
+            Debug.Log($"{LogTag} id={Id} equip weapon={spec.LogName} ammo={_weapon.AmmoInMagazine}", this);
         }
 
         /// <summary>巡回地点 (ワールド座標の足元)。</summary>

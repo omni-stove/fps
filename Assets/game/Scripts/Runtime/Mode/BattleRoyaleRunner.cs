@@ -398,16 +398,16 @@ namespace Fps.Runtime
 
         protected override LocalizedText HudResult()
         {
-            return LiteralOrEmpty(BattleRoyaleHudText.Result(_battleRoyale));
+            return BattleRoyaleHudText.Result(_battleRoyale);
         }
 
-        protected override void AppendHudLines(List<string> lines)
+        protected override void AppendHudTexts(List<LocalizedText> lines)
         {
             var local = LocalPlayer;
             var localId = local != null ? IdOf(local) : -1;
             var controller = local != null ? local.GetComponentInChildren<WeaponController>(true) : null;
             var unarmed = controller != null && controller.IsInitialized && controller.IsUnarmed;
-            var zoneLine = _runningZone != null ? Localizer.Resolve(_runningZone.HudLine) : null;
+            var zoneLine = _runningZone != null ? _runningZone.HudLine : default;
             lines.AddRange(BattleRoyaleHudText.Lines(
                 _battleRoyale, localId >= 0 ? localId : (int?)null, _localReviveTarget, zoneLine, unarmed));
         }

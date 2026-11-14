@@ -228,6 +228,12 @@ namespace Fps.Runtime
                 return false;
             }
 
+            // 低い壁越しでも距離は届くので、間に壁があれば当てない。
+            if (IsWallBetween(center, closest))
+            {
+                return false;
+            }
+
             // 近さだけで当てると、すれ違った後ろの相手まで突進の向きへ飛ばしてしまう。
             offset.y = 0f;
             if (offset.sqrMagnitude > 1e-6f && Vector3.Dot(offset.normalized, direction) < 0f)
@@ -245,6 +251,23 @@ namespace Fps.Runtime
             Debug.Log(ChargerLog.Hit(Id, target.Id, spec.ImpactDamage, _travelled), this);
             _behavior.EndCharge(ChargeEnd.Hit);
             return true;
+        }
+
+        private bool IsWallBetween(Vector3 from, Vector3 to)
+        {
+            var hits = Physics.RaycastAll(from, to - from, (to - from).magnitude, _obstacleMask, QueryTriggerInteraction.Ignore);
+            foreach (var hit in hits)
+            {
+                var collider = hit.collider;
+                if (collider == null || collider.transform.IsChildOf(transform) || FindDamageable(collider) != null)
+                {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         private bool TryFindObstacle(Vector3 direction, float step, out Collider obstacle)

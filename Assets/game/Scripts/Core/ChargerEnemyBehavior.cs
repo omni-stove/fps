@@ -9,7 +9,7 @@ namespace Fps.Core
     public sealed class ChargerEnemyBehavior : IEnemyBehavior
     {
         // 突進中に向く先を、進む向きのこれだけ先に置く。近すぎると向き直りが揺れる。
-        private const float LookAheadDistance = 10f;
+        private const float _lookAheadDistance = 10f;
 
         private ChargerSpec _spec = ChargerSpec.Default;
         private float _phaseElapsed;
@@ -171,7 +171,7 @@ namespace Fps.Core
 
         private Vector3? Ahead(Vector3 self)
         {
-            return ChargeDirection.HasValue ? self + (ChargeDirection.Value * LookAheadDistance) : (Vector3?)null;
+            return ChargeDirection.HasValue ? self + (ChargeDirection.Value * _lookAheadDistance) : (Vector3?)null;
         }
 
         private static bool TryAim(Vector3 self, Vector3 target, out Vector3 heading)

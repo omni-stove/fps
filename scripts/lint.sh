@@ -48,7 +48,7 @@ write_meta() {
 }
 
 # meta_problems の指摘のうち直せるものを直す。未追跡の新規ファイルも対象にする。
-# .meta が無ければ、.cs とフォルダに限り作る (他の種類は取り込み設定が要るので Unity に任せる)。
+# .meta が無ければ、.cs・.json とフォルダに限り作る (他の種類は取り込み設定が要るので Unity に任せる)。
 # 本体が追跡済みなら .meta を git add し、未追跡なら本体と一緒に add されるよう作業ツリーに置くだけにする。
 # 本体の無い .meta は改名で取り残された GUID かもしれないので、自動では消さず指摘に残す。
 fix_metas() {
@@ -58,7 +58,7 @@ fix_metas() {
 		case "$line" in
 		*"追跡されていない")
 			if [ ! -e "$path.meta" ]; then
-				[ -d "$path" ] || [ "${path%.cs}" != "$path" ] || continue
+				[ -d "$path" ] || [ "${path%.cs}" != "$path" ] || [ "${path%.json}" != "$path" ] || continue
 				write_meta "$path"
 			fi
 			if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then git add -- "$path.meta"; fi

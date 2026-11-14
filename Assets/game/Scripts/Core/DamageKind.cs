@@ -7,5 +7,8 @@ namespace Fps.Core
         Bullet,
         Explosion,
         Melee,
+
+        // 倒れてきた建物の破片のように、撃った物でなく周りの物が当たったダメージ。帰属は壊した人に付けられる。
+        Environment,
     }
 }

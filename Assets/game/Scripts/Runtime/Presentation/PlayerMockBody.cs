@@ -177,6 +177,26 @@ namespace Fps.Runtime
             var pitch = eye != null ? eye.localRotation : Quaternion.identity;
 
             Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime);
+            ShowGuns(_reader.Weapon == null || !_reader.Weapon.IsHolstered);
+        }
+
+        /// <summary>三人称の体の銃と一人称の銃を見せるか隠す。武器をしまっている間 (<see cref="WeaponController.IsHolstered"/>) は隠す。組み立てていなければ何もしない。</summary>
+        public void ShowGuns(bool shown)
+        {
+            if (!IsBuilt)
+            {
+                return;
+            }
+
+            if (_bodyGun.gameObject.activeSelf != shown)
+            {
+                _bodyGun.gameObject.SetActive(shown);
+            }
+
+            if (_viewModelGun.gameObject.activeSelf != shown)
+            {
+                _viewModelGun.gameObject.SetActive(shown);
+            }
         }
 
         /// <summary>見せるアクションの読み元を渡す。</summary>

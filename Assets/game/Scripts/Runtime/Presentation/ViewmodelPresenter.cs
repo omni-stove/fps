@@ -21,6 +21,7 @@ namespace Fps.Runtime
         public const string ReasonUnarmed = "unarmed";
         public const string ReasonNoViewmodel = "no-viewmodel";
         public const string ReasonDisabled = "disabled";
+        public const string ReasonHolstered = "holstered";
 
         private static readonly HashSet<string> _warnedWeaponIds = new HashSet<string>(StringComparer.Ordinal);
         private static bool _warnedMissingCatalog;
@@ -156,6 +157,11 @@ namespace Fps.Runtime
             if (_damageable != null && _damageable.IsDead)
             {
                 return ReasonDead;
+            }
+
+            if (_weapon != null && _weapon.IsHolstered)
+            {
+                return ReasonHolstered;
             }
 
             return null;

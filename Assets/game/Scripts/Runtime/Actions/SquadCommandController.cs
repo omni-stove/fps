@@ -549,6 +549,13 @@ namespace Fps.Runtime
                 return false;
             }
 
+            // 置いた盾は SideMember を持たないので、弾を通す相手 (持ち主・同じ陣営) のものは味方として外す。
+            var deployable = damageable.GetComponent<Deployable>();
+            if (deployable != null && deployable.LetsThrough(gameObject))
+            {
+                return false;
+            }
+
             var mine = SideMember.Of(gameObject);
             var theirs = SideMember.Of(damageable.gameObject);
             return mine == null || theirs == null || !mine.IsAllyOf(theirs);

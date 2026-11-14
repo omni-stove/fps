@@ -14,7 +14,7 @@ namespace Fps.Editor
     /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) の
     /// <see cref="GameBootstrap"/> と <see cref="MatchRunner"/> を置いた GameObject、高低の遮蔽物 (<see cref="Covers"/>)、
     /// 乗り越え用の低い壁 (<see cref="VaultWall"/>)、回避と手榴弾を試す開けた場所の目印 (<see cref="OpenAreaName"/>)、
-    /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場を入れ、最後に差し込まれた置く物 (<see cref="ITpsRangeFixture"/>、<see cref="Fixtures"/>) を置く。
+    /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場を入れ、壁や箱には <see cref="SurfaceIds"/> の材質を付け、最後に差し込まれた置く物 (<see cref="ITpsRangeFixture"/>、<see cref="Fixtures"/>) を置く。
     /// 床・プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
     /// ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/> を配線する。保存したシーンは Build Settings に (並びを変えずに) 加える。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
@@ -88,6 +88,21 @@ namespace Fps.Editor
         /// <summary>低い遮蔽物 (<see cref="Covers"/> の 0 番)。</summary>
         public static LevelBox LowCover => Covers[0];
 
+        /// <summary>
+        /// 床に置くものの名前ごとの面の材質 (<see cref="SurfaceMaterial"/> の Id)。遮蔽物は Bootstrap の射撃場と同じ材質を使い
+        /// (<see cref="BootstrapSceneBuilder.CoverSurfaceIds"/>)、着弾の演出を見比べられるよう残りは材質を散らす。小屋は部品すべてに効くよう親に付ける。
+        /// 載っていないものは <see cref="SurfaceMaterial.DefaultId"/>。
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> SurfaceIds = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [LowCoverName] = BootstrapSceneBuilder.CoverSurfaceIds[BootstrapSceneBuilder.LowCoverName],
+            [HighCoverName] = BootstrapSceneBuilder.CoverSurfaceIds[BootstrapSceneBuilder.HighCoverName],
+            [LowCoverBackName] = SurfaceImpactAssetStep.ConcreteId,
+            [HighPillarName] = SurfaceImpactAssetStep.MetalId,
+            [VaultWallName] = SurfaceImpactAssetStep.WoodId,
+            [HutName] = SurfaceImpactAssetStep.WoodId,
+        };
+
         /// <summary>射撃場に組み込みで置く物の名前。<see cref="ITpsRangeFixture.Name"/> はこれらと重ねられない。</summary>
         public static readonly IReadOnlyList<string> BuiltInNames = new[]
         {
@@ -135,13 +150,16 @@ namespace Fps.Editor
 
             var fixtures = Fixtures();
 
-            // 能力の枠を試せるよう、Ability1 に何もしない能力、Ability2 にグラップルを入れる。使えるかはルールの Abilities で決まる (射撃場の既定は Off)。
-            var ability = AbilityAssetBuilder.LoadOrBuildNullAbility();
+            // 能力の枠は 2 つなので、何もしない能力は入れず、Ability1 にグラップル、Ability2 に展開式の盾を入れる。使えるかはルールの Abilities で決まる (射撃場の既定は Off)。
             var grapple = AbilityAssetBuilder.LoadOrBuildGrappleAbility();
+            var shield = AbilityAssetBuilder.LoadOrBuildShieldAbility();
+
+            // 枠が埋まっているのでタレットは枠に入れない。smoke の手順 (TurretSmokeStep) が Play 中に読んで盾の枠と入れ替えるので、アセットだけ用意する。
+            AbilityAssetBuilder.LoadOrBuildTurretAbility();
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(path));
             var bootstrap = PopulateScene(scene, weapons, rules, fixtures);
-            bootstrap.AbilityDefinitions = new AbilityDefinition[] { ability, grapple };
+            bootstrap.AbilityDefinitions = new AbilityDefinition[] { grapple, shield };
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {
@@ -220,7 +238,9 @@ namespace Fps.Editor
                 bootstrap.RulesDefinition = rules;
 
                 created.Add(CreateBoxes(scene, CoversName, Covers));
-                created.Add(SceneBuildHelpers.CreateStaticBox(scene, null, VaultWall.Name, VaultWall.Center, VaultWall.Size));
+                var vaultWall = SceneBuildHelpers.CreateStaticBox(scene, null, VaultWall.Name, VaultWall.Center, VaultWall.Size);
+                created.Add(vaultWall);
+                SceneBuildHelpers.SetSurfaceMaterial(vaultWall, SceneBuildHelpers.SurfaceIdOf(SurfaceIds, VaultWall.Name));
 
                 var openArea = new GameObject(OpenAreaName);
                 created.Add(openArea);
@@ -237,6 +257,7 @@ namespace Fps.Editor
                 created.Add(hut.gameObject);
                 hut.transform.SetPositionAndRotation(HutCenter, Quaternion.identity);
                 hut.DebrisPool = pool;
+                SceneBuildHelpers.SetSurfaceMaterial(hut.gameObject, SceneBuildHelpers.SurfaceIdOf(SurfaceIds, HutName));
 
                 foreach (var fixture in fixtures)
                 {
@@ -379,7 +400,8 @@ namespace Fps.Editor
             SceneManager.MoveGameObjectToScene(root, scene);
             foreach (var box in boxes)
             {
-                SceneBuildHelpers.CreateStaticBox(scene, root.transform, box.Name, box.Center, box.Size);
+                var created = SceneBuildHelpers.CreateStaticBox(scene, root.transform, box.Name, box.Center, box.Size);
+                SceneBuildHelpers.SetSurfaceMaterial(created, SceneBuildHelpers.SurfaceIdOf(SurfaceIds, box.Name));
             }
 
             return root;

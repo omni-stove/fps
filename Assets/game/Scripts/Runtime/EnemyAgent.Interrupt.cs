@@ -33,6 +33,19 @@ namespace Fps.Runtime
             return true;
         }
 
+        // 止めた側が早く終えたとき (技の中断など) に使う。理由が違えば解かない。より長い怯みなど、ほかが止めている分まで消さないように。
+        public bool Resume(string reason)
+        {
+            if (!_interruption.IsActive || !string.Equals(_interruption.Reason, reason, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            Debug.Log(FormatResumeLog(Id, reason), this);
+            _interruption.Clear();
+            return true;
+        }
+
         public static string FormatInterruptLog(string id, string reason, float seconds)
         {
             return string.Format(CultureInfo.InvariantCulture, "{0} id={1} interrupted reason={2} seconds={3:F2}", LogTag, id, reason, seconds);

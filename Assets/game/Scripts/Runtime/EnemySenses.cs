@@ -49,6 +49,50 @@ namespace Fps.Runtime
             return preferred != null ? preferred : SideMember.NearestHostile(self.Side, self.GroundPosition, targets);
         }
 
+        // 置いたタレットは SideMember を持たない (持たせるとモードの参加者になる) ので、陣営で選んだ相手やタグの相手と並べて、
+        // より近い敵のタレットがあればそちらを返す。同じ距離なら current を選ぶ。
+        public static Damageable PreferNearerTurret(
+            GameObject self, Side? selfSide, Vector3 selfGround, Damageable current, Vector3 currentGround, IReadOnlyList<Turret> turrets)
+        {
+            if (self == null)
+            {
+                throw new ArgumentNullException(nameof(self));
+            }
+
+            if (turrets == null)
+            {
+                throw new ArgumentNullException(nameof(turrets));
+            }
+
+            var choices = new List<Damageable>(turrets.Count + 1);
+            var options = new List<TargetOption>(turrets.Count + 1);
+            if (current != null)
+            {
+                choices.Add(current);
+                options.Add(new TargetOption(true, currentGround.ToNumerics(), !current.IsDead));
+            }
+
+            foreach (var turret in turrets)
+            {
+                var damageable = turret != null && turret.IsArmed ? turret.Damageable : null;
+                if (damageable == null)
+                {
+                    continue;
+                }
+
+                var owner = turret.Owner;
+                var isOwner = owner != null && self.transform.IsChildOf(owner.transform);
+                choices.Add(damageable);
+                options.Add(new TargetOption(
+                    TurretTargeting.IsHostile(isOwner, turret.Side, selfSide, true),
+                    damageable.GroundPoint.ToNumerics(),
+                    !damageable.IsDead));
+            }
+
+            var index = TurretTargeting.Nearest(selfGround.ToNumerics(), options);
+            return index >= 0 ? choices[index] : current;
+        }
+
         /// <summary>
         /// 1 tick 分の知覚を作る。target が無いか死んでいれば Target は null。
         /// 視線は sightRange 以内のときだけ目の高さから Raycast で調べる (それより遠ければ Raycast しない)。

@@ -68,8 +68,8 @@ namespace Fps.Editor
 
         // URP の BaseShaderGUI の列挙と同じ値。材質をインスペクターを通さずに作るので、ここで直接書く。
         private const float SurfaceTransparent = 1f;
-        private const float BlendAlpha = 0f;
-        private const float BlendAdditive = 2f;
+        internal const float BlendAlpha = 0f;
+        internal const float BlendAdditive = 2f;
 
         /// <summary>
         /// 武器ごとの音とマズルフラッシュの組み合わせ。武器の Id は <see cref="WeaponAssetBuilder"/> の固定値で、
@@ -363,7 +363,7 @@ namespace Fps.Editor
             return true;
         }
 
-        private static Texture2D BuildSoftDot(string path)
+        internal static Texture2D BuildSoftDot(string path)
         {
             var pixels = new Color32[SoftDotSize * SoftDotSize];
             var center = (SoftDotSize - 1) * 0.5f;
@@ -378,7 +378,7 @@ namespace Fps.Editor
                 }
             }
 
-            return WriteTexture(path, SoftDotTextureName, SoftDotSize, pixels, true);
+            return WriteTexture(path, Path.GetFileNameWithoutExtension(path), SoftDotSize, pixels, true);
         }
 
         /// <summary>
@@ -433,7 +433,7 @@ namespace Fps.Editor
             return texture;
         }
 
-        private static Material BuildParticleMaterial(string path, Texture2D texture, float blend)
+        internal static Material BuildParticleMaterial(string path, Texture2D texture, float blend)
         {
             var shader = Shader.Find(ParticleShaderName);
             if (shader == null)
@@ -477,7 +477,7 @@ namespace Fps.Editor
             return material;
         }
 
-        private sealed class ParticleSettings
+        internal sealed class ParticleSettings
         {
             public float Duration = 0.5f;
             public Vector2 Lifetime = new Vector2(0.5f, 0.5f);
@@ -635,7 +635,7 @@ namespace Fps.Editor
             });
         }
 
-        private static Gradient Fade(Color startColor, Color endColor, float startAlpha, float endAlpha)
+        internal static Gradient Fade(Color startColor, Color endColor, float startAlpha, float endAlpha)
         {
             var gradient = new Gradient();
             gradient.SetKeys(
@@ -644,7 +644,7 @@ namespace Fps.Editor
             return gradient;
         }
 
-        private static void AddParticles(GameObject target, ParticleSettings settings)
+        internal static void AddParticles(GameObject target, ParticleSettings settings)
         {
             var system = target.AddComponent<ParticleSystem>();
             system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);

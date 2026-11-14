@@ -362,6 +362,15 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.Vault, Is.EqualTo(Vault.On));
             Assert.That(rules.Actions.Grenade, Is.EqualTo(Grenade.On));
             Assert.That(rules.Actions.GrenadeCount, Is.GreaterThan(0), "grenades are on, so there must be some to throw");
+            Assert.That(rules.Actions.Suppression, Is.EqualTo(Suppression.On));
+        }
+
+        [Test]
+        public void OnlyTheTpsRangeTurnsSuppressionOn()
+        {
+            Assert.That(GameRulesAssetBuilder.RangeActions().Suppression, Is.EqualTo(Suppression.Off));
+            Assert.That(GameRulesAssetBuilder.CampaignActions().Suppression, Is.EqualTo(Suppression.Off));
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchActions().Suppression, Is.EqualTo(Suppression.Off));
         }
 
         private static void AssertActions(ActionRules actual, ExpectedActions expected, string message)

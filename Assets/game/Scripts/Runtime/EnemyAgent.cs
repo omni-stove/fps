@@ -403,7 +403,40 @@ namespace Fps.Runtime
             _weapon.Reloaded += OnReloaded;
             _self.Died += OnDied;
             _self.Damaged += OnDamaged;
+            NotifyInitialized();
             return true;
+        }
+
+        // 静的にするのは、波で後から出る敵にも、ルールで決まる部品 (EnemySuppression など) を出てくる前から付けられるようにするため。
+        public static event Action<EnemyAgent> Initialized;
+
+        // 受け取り側が投げても、敵の初期化は失敗にしない。
+        private void NotifyInitialized()
+        {
+            var handlers = Initialized;
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (var handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<EnemyAgent>)handler)(this);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e, this);
+                }
+            }
+        }
+
+        // ドメインの再読み込みを切った Play で、前の Play の購読が残らないようにする。
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetInitialized()
+        {
+            Initialized = null;
         }
 
         /// <summary>

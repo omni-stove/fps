@@ -683,6 +683,59 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ModifiersWidenTheConeAndTheCrosshairInOrderWithinTheLimits()
+        {
+            _rifle.HipSpreadDegrees = 2f;
+            _rifle.MoveSpreadDegrees = 0f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var spec = _controller.Weapon.Spec;
+            var widen = new AddingModifier(3f, 0.4f);
+            var doubled = new ScalingModifier(2f);
+
+            Assert.That(_controller.AddModifier(widen), Is.True);
+            Assert.That(_controller.AddModifier(doubled), Is.True);
+            Assert.That(_controller.AddModifier(widen), Is.False, "the same modifier is added once");
+
+            Assert.That(_controller.CurrentConeDegrees(spec), Is.EqualTo((2f + 3f) * 2f).Within(1e-5f));
+            Assert.That(_controller.SpreadFraction, Is.EqualTo(0.8f).Within(1e-5f));
+
+            _controller.Fire();
+            Assert.That(_controller.SpreadFraction, Is.EqualTo(1f), "the crosshair never goes past 1");
+
+            _controller.AddModifier(new AddingModifier(1000f, 0f));
+            Assert.That(_controller.CurrentConeDegrees(spec), Is.EqualTo(Fps.Core.SpreadPattern.MaxDegrees));
+
+            Assert.That(_controller.RemoveModifier(widen), Is.True);
+            Assert.That(_controller.RemoveModifier(widen), Is.False);
+            Assert.That(_controller.Modifiers, Has.Count.EqualTo(2));
+            Assert.Throws<ArgumentNullException>(() => _controller.AddModifier(null));
+            Assert.Throws<ArgumentNullException>(() => _controller.RemoveModifier(null));
+        }
+
+        [Test]
+        public void FiringPastATargetReportsANearMiss()
+        {
+            _rifle.HipSpreadDegrees = 0f;
+            _rifle.MoveSpreadDegrees = 0f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var target = new FakeNearMissTarget(new GameObject("Bystander"), _camera.transform.position + (_camera.transform.forward * 5f) + (_camera.transform.right * 0.5f), 1f);
+            _created.Add(target.Root.gameObject);
+            Hitscan.RegisterNearMissTarget(target);
+            try
+            {
+                Assert.That(_controller.Fire(), Is.True);
+
+                Assert.That(target.NearMisses, Has.Count.EqualTo(1));
+                Assert.That(target.NearMisses[0].Distance, Is.EqualTo(0.5f).Within(1e-4f));
+                Assert.That(target.NearMisses[0].Shooter, Is.SameAs(_camera));
+            }
+            finally
+            {
+                Hitscan.UnregisterNearMissTarget(target);
+            }
+        }
+
+        [Test]
         public void FiringKicksTheRecoilAndTickRecoversIt()
         {
             _rifle.RecoilPitchDegrees = 2f;
@@ -1028,6 +1081,65 @@ namespace Fps.Tests.EditMode
                 SeenDirection = direction;
                 origin = Origin ?? origin;
                 direction = Direction ?? direction;
+            }
+        }
+
+        private sealed class AddingModifier : IWeaponModifier
+        {
+            private readonly float _degrees;
+            private readonly float _spread;
+
+            public AddingModifier(float degrees, float spread)
+            {
+                _degrees = degrees;
+                _spread = spread;
+            }
+
+            public float ModifyConeDegrees(Fps.Core.WeaponSpec spec, float coneDegrees) => coneDegrees + _degrees;
+
+            public float ModifySpreadFraction(float spreadFraction) => spreadFraction + _spread;
+        }
+
+        private sealed class ScalingModifier : IWeaponModifier
+        {
+            private readonly float _scale;
+
+            public ScalingModifier(float scale)
+            {
+                _scale = scale;
+            }
+
+            public float ModifyConeDegrees(Fps.Core.WeaponSpec spec, float coneDegrees) => coneDegrees * _scale;
+
+            public float ModifySpreadFraction(float spreadFraction) => spreadFraction * _scale;
+        }
+
+        private sealed class FakeNearMissTarget : INearMissTarget
+        {
+            private readonly Vector3 _center;
+
+            public FakeNearMissTarget(GameObject root, Vector3 center, float radius)
+            {
+                Root = root.transform;
+                _center = center;
+                NearMissRadius = radius;
+            }
+
+            public Transform Root { get; }
+
+            public float NearMissRadius { get; }
+
+            public System.Collections.Generic.List<HitscanNearMiss> NearMisses { get; } = new System.Collections.Generic.List<HitscanNearMiss>();
+
+            public bool TryGetNearMissCenter(out Vector3 center)
+            {
+                center = _center;
+                return true;
+            }
+
+            public void OnNearMiss(HitscanNearMiss nearMiss)
+            {
+                NearMisses.Add(nearMiss);
             }
         }
 

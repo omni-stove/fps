@@ -20,7 +20,8 @@
     "dodge": "On",
     "vault": "On",
     "grenade": "On",
-    "grenadeCount": 3
+    "grenadeCount": 3,
+    "suppression": "On"
   },
   "spawnProtectionSeconds": 0,
   "fallDamage": "Off",

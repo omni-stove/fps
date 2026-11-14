@@ -37,6 +37,9 @@ namespace Fps.Core
 
         public bool IsSuppressed { get; }
 
+        // IsSuppressed は解けるまでの間 (度合いが下がっていく途中も) true のままなので、どれだけ撃ち込まれているかは別に持つ。
+        public float SuppressionLevel { get; }
+
         public const float FullAwareness = 1f;
 
         public EnemyPerception(Vector3 self, Vector3? target, bool hasLineOfSight, bool heardNoise, Vector3? noisePosition)
@@ -80,6 +83,35 @@ namespace Fps.Core
             float healthFraction,
             float awareness,
             bool isSuppressed)
+            // 度合いを渡さない呼び出し元は制圧を有無でしか知らないので、度合いは両端に寄せる。
+            : this(
+                self,
+                target,
+                hasLineOfSight,
+                heardNoise,
+                noisePosition,
+                wasHit,
+                hitSource,
+                healthFraction,
+                awareness,
+                isSuppressed,
+                isSuppressed ? 1f : 0f)
+        {
+        }
+
+        /// <exception cref="ArgumentOutOfRangeException">healthFraction・awareness・suppressionLevel のどれかが 0 以上 1 以下でないとき。</exception>
+        public EnemyPerception(
+            Vector3 self,
+            Vector3? target,
+            bool hasLineOfSight,
+            bool heardNoise,
+            Vector3? noisePosition,
+            bool wasHit,
+            Vector3? hitSource,
+            float healthFraction,
+            float awareness,
+            bool isSuppressed,
+            float suppressionLevel)
         {
             if (!(healthFraction >= 0f) || healthFraction > 1f)
             {
@@ -91,8 +123,14 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(awareness), awareness, "awareness must be between 0 and 1");
             }
 
+            if (!(suppressionLevel >= 0f) || suppressionLevel > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(suppressionLevel), suppressionLevel, "suppressionLevel must be between 0 and 1");
+            }
+
             Awareness = awareness;
             IsSuppressed = isSuppressed;
+            SuppressionLevel = suppressionLevel;
             Self = self;
             Target = target;
             HasLineOfSight = hasLineOfSight;
@@ -106,6 +144,13 @@ namespace Fps.Core
         public static float AwarenessFromSight(bool hasLineOfSight)
         {
             return hasLineOfSight ? FullAwareness : 0f;
+        }
+
+        /// <exception cref="ArgumentOutOfRangeException">level が 0 以上 1 以下でないとき。</exception>
+        public EnemyPerception WithSuppression(float level, bool isSuppressed)
+        {
+            return new EnemyPerception(
+                Self, Target, HasLineOfSight, HeardNoise, NoisePosition, WasHit, HitSource, HealthFraction, Awareness, isSuppressed, level);
         }
     }
 }

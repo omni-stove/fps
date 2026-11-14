@@ -17,7 +17,7 @@ namespace Fps.Editor
     /// その値から作るモード (ドミネーション・対戦・PvE のモード) だけで <see cref="OnlineIdleKickSeconds"/> 秒。キャンペーンと射撃場は切らない。
     /// オンラインの試合の勝敗を拠点で決める (<see cref="MatchObjective.Domination"/>) のはドミネーションだけで、他のモードは拠点なし。
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
-    /// TPS 射撃場がそれに回避・乗り越え・グレネードを足したもの。
+    /// TPS 射撃場がそれに回避・乗り越え・グレネード・制圧射撃を足したもの。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// <see cref="BuildAt"/> の 7 つの値を変えたら、同じ値のサンプル JSON (<see cref="GameRulesJsonImporter.SamplesFolder"/>) も直す。
@@ -331,7 +331,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// TPS 射撃場のアクション。<see cref="RangeActions"/> に回避・乗り越え・グレネード (<see cref="TpsRangeGrenadeCount"/> 個) を足したもの。
+        /// TPS 射撃場のアクション。<see cref="RangeActions"/> に回避・乗り越え・グレネード (<see cref="TpsRangeGrenadeCount"/> 個)・制圧射撃を足したもの。
         /// </summary>
         public static ActionRules TpsRangeActions()
         {
@@ -339,7 +339,8 @@ namespace Fps.Editor
                 .WithDodge(Dodge.On)
                 .WithVault(Vault.On)
                 .WithGrenade(Grenade.On)
-                .WithGrenadeCount(TpsRangeGrenadeCount);
+                .WithGrenadeCount(TpsRangeGrenadeCount)
+                .WithSuppression(Suppression.On);
         }
 
         /// <summary>

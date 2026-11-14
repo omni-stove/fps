@@ -65,16 +65,20 @@ namespace Fps.Core.Tests
         [Test]
         public void TheItemNamesAreTheConstructorArguments()
         {
-            Assert.That(TuningJson.GrenadeItemNames, Is.EqualTo(new[]
-            {
-                "fuseSeconds", "throwSeconds", "throwSpeed", "throwLiftSpeed",
-                "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter",
-            }));
-            Assert.That(TuningJson.PingItemNames, Is.EqualTo(new[]
-            {
-                "lifetimeSeconds", "maxMarkers", "maxDistance", "enemyAimToleranceDegrees", "minIntervalSeconds",
-            }));
+            Assert.That(TuningJson.GrenadeItemNames, Is.EqualTo(ExpectedGrenadeItemNames));
+            Assert.That(TuningJson.PingItemNames, Is.EqualTo(ExpectedPingItemNames));
         }
+
+        static readonly string[] ExpectedGrenadeItemNames =
+        {
+            "fuseSeconds", "throwSeconds", "throwSpeed", "throwLiftSpeed",
+            "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter",
+        };
+
+        static readonly string[] ExpectedPingItemNames =
+        {
+            "lifetimeSeconds", "maxMarkers", "maxDistance", "enemyAimToleranceDegrees", "minIntervalSeconds",
+        };
 
         [Test]
         public void AnInvalidValueNamesTheFileAndTheItem()

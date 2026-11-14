@@ -93,6 +93,16 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlayerHasTheViewmodelPresenterAndMotion()
+        {
+            var player = _world.Player;
+
+            Assert.That(player.GetComponent<ViewmodelPresenter>(), Is.Not.Null);
+            Assert.That(player.GetComponent<ViewmodelMotion>(), Is.Not.Null);
+            Assert.That(player.GetComponent<WeaponPresentation>(), Is.Not.Null, "the viewmodel hands its muzzle socket to the weapon presentation");
+        }
+
+        [Test]
         public void PlayerHasTheActionReaderWiredToTheOverlayAndTheMockBody()
         {
             var player = _world.Player;

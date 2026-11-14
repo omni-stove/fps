@@ -141,7 +141,7 @@ namespace Fps.Tests.EditMode
             Assert.That(torso.linearVelocity.normalized.x, Is.EqualTo(1f).Within(1e-3f), "falls away from the shooter");
             Assert.That(torso.linearVelocity.y, Is.EqualTo(0f).Within(1e-5f));
             Assert.That(torso.linearVelocity.magnitude, Is.EqualTo(6f).Within(1e-3f), "base 1 + 0.1 per damage");
-            Assert.That(hips.linearVelocity.magnitude, Is.EqualTo(6f * DeathRagdoll.FootSpeedRatio).Within(1e-3f), "the lowest bone is pushed less so the body topples");
+            Assert.That(hips.linearVelocity.magnitude, Is.EqualTo(6f * _presenter.RagdollCatalog.FootSpeedRatio).Within(1e-3f), "the lowest bone is pushed less so the body topples");
         }
 
         [Test]

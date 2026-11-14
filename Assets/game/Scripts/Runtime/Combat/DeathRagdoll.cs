@@ -12,16 +12,16 @@ namespace Fps.Runtime
     {
         public const string LogTag = DeathBodyPresenter.LogTag;
 
-        // 足元も上半身と同じ速さで押すと、倒れずに滑っていく。
-        public const float FootSpeedRatio = 0.3f;
-
         private readonly List<Rigidbody> _bodies = new List<Rigidbody>();
         private string _id = string.Empty;
         private float _settleSeconds;
+        private float _footSpeedRatio = RagdollCatalog.DefaultFootSpeedRatio;
         private float _elapsed;
         private bool _frozen;
 
         public IReadOnlyList<Rigidbody> Bodies => _bodies;
+
+        public float FootSpeedRatio => _footSpeedRatio;
 
         public float SettleSeconds => _settleSeconds;
 
@@ -29,11 +29,16 @@ namespace Fps.Runtime
 
         public bool IsFrozen => _frozen;
 
-        public void Initialize(string id, IEnumerable<Rigidbody> bodies, float settleSeconds)
+        public void Initialize(string id, IEnumerable<Rigidbody> bodies, float settleSeconds, float footSpeedRatio = RagdollCatalog.DefaultFootSpeedRatio)
         {
             if (bodies == null)
             {
                 throw new ArgumentNullException(nameof(bodies));
+            }
+
+            if (!(footSpeedRatio >= 0f && footSpeedRatio <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(footSpeedRatio), footSpeedRatio, "footSpeedRatio must be within [0, 1]");
             }
 
             if (!(settleSeconds > 0f) || float.IsInfinity(settleSeconds))
@@ -52,6 +57,7 @@ namespace Fps.Runtime
 
             _id = id ?? string.Empty;
             _settleSeconds = settleSeconds;
+            _footSpeedRatio = footSpeedRatio;
             _elapsed = 0f;
             _frozen = false;
         }
@@ -91,7 +97,7 @@ namespace Fps.Runtime
                 }
 
                 var height = range > 1e-4f ? (body.worldCenterOfMass.y - lowest) / range : 1f;
-                body.linearVelocity = direction * (speed * Mathf.Lerp(FootSpeedRatio, 1f, height));
+                body.linearVelocity = direction * (speed * Mathf.Lerp(_footSpeedRatio, 1f, height));
                 body.angularVelocity = Vector3.zero;
             }
 

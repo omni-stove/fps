@@ -623,7 +623,7 @@ namespace Fps.Runtime
                 IgnoreBodyColliders(shellColliders);
 
                 ragdoll = shell.AddComponent<DeathRagdoll>();
-                ragdoll.Initialize(Id, orderedBodies, catalog.SettleSeconds);
+                ragdoll.Initialize(Id, orderedBodies, catalog.SettleSeconds, catalog.FootSpeedRatio);
                 return shell;
             }
             catch
@@ -684,7 +684,6 @@ namespace Fps.Runtime
             switch (entry.Shape)
             {
                 case RagdollShape.Capsule:
-                {
                     var axis = entry.LongestAxis;
                     var capsule = bone.AddComponent<CapsuleCollider>();
                     capsule.center = entry.Center;
@@ -692,23 +691,18 @@ namespace Fps.Runtime
                     capsule.height = size[axis];
                     capsule.radius = Mathf.Max(size[(axis + 1) % 3], size[(axis + 2) % 3]) * 0.5f;
                     return capsule;
-                }
 
                 case RagdollShape.Sphere:
-                {
                     var sphere = bone.AddComponent<SphereCollider>();
                     sphere.center = entry.Center;
                     sphere.radius = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * 0.5f;
                     return sphere;
-                }
 
                 default:
-                {
                     var box = bone.AddComponent<BoxCollider>();
                     box.center = entry.Center;
                     box.size = size;
                     return box;
-                }
             }
         }
 

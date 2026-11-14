@@ -18,6 +18,7 @@ namespace Fps.Runtime
         public const float DefaultBaseSpeed = 1.5f;
         public const float DefaultSpeedPerDamage = 0.04f;
         public const float DefaultMaxSpeed = 6f;
+        public const float DefaultFootSpeedRatio = 0.3f;
 
         [SerializeField, Tooltip("ボーンの名前と、そのボーンのコライダー・質量・関節の可動域。名前は重複させない")]
         private List<RagdollBone> _bones = new List<RagdollBone>();
@@ -33,6 +34,10 @@ namespace Fps.Runtime
 
         [SerializeField, Min(0f), Tooltip("与える速さの上限 (m/s)")]
         private float _maxSpeed = DefaultMaxSpeed;
+
+        // 足元も上半身と同じ速さで押すと、倒れずに滑っていく。
+        [SerializeField, Range(0f, 1f), Tooltip("最も低いボーンを押す速さが上半身の何割か。1 で全体を同じ速さで押す")]
+        private float _footSpeedRatio = DefaultFootSpeedRatio;
 
         public IReadOnlyList<RagdollBone> Bones => _bones ??= new List<RagdollBone>();
 
@@ -58,6 +63,12 @@ namespace Fps.Runtime
         {
             get => _maxSpeed;
             set => _maxSpeed = value;
+        }
+
+        public float FootSpeedRatio
+        {
+            get => _footSpeedRatio;
+            set => _footSpeedRatio = value;
         }
 
         public static RagdollCatalog Load()
@@ -135,6 +146,11 @@ namespace Fps.Runtime
             RequireNonNegative(problems, _baseSpeed, "base speed");
             RequireNonNegative(problems, _speedPerDamage, "speed per damage");
             RequireNonNegative(problems, _maxSpeed, "max speed");
+            if (!(_footSpeedRatio >= 0f && _footSpeedRatio <= 1f))
+            {
+                problems.Add("foot speed ratio must be within [0, 1]");
+            }
+
             if (IsFinite(_baseSpeed) && IsFinite(_maxSpeed) && _maxSpeed < _baseSpeed)
             {
                 problems.Add("max speed is smaller than base speed");

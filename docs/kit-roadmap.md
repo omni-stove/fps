@@ -39,6 +39,7 @@
 - 移動: `PlayerController` (`DefaultWalkSpeed` など) と `NetworkPlayerMotor` (`_walkSpeed = 5f` など) が別々に持っている
 - 敵 AI: `EnemyAgent` (`DefaultSightRange`、`DefaultReactionSeconds` など)。`EnemySpec` との関係を整理する
 - グレネード: `GrenadeSpec.Default*`。`GrenadeThrower` の Inspector では変えられるが、ルールや武器のような JSON は無い
+- 印: `PingSpec.Default*`。オフラインは `PingController` の Inspector、ネット対戦は `NetTeamDeathmatch.PingSpec` をコードで差し替えられるが、JSON は無い
 - 吹き飛ばし: `KnockbackSpec.Default*`。`KnockbackMovement` / `EnemyAgent` の `KnockbackSpec` をコードで差し替えられ、重さだけ Inspector で変えられるが、JSON は無い
 - 各モード: `DominationSpec`・`HordeSpec`・`SearchAndDestroySpec`・`KillConfirmedSpec`・`HardpointSpec`・`TeamDeathmatchSpec`・`PickupSpec` と、それぞれの `*Runner`
 - その他: `DestructiblePiece`、`ShrinkingZone`、`Damageable`、`CameraBoom`、`AdsZoom`、`RecoilState` などの `Default*`

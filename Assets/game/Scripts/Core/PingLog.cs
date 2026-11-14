@@ -112,6 +112,77 @@ namespace Fps.Core
             return Tag + " view=" + Token(view);
         }
 
+        /// <example><c>[Ping] shared</c></example>
+        public static string Shared()
+        {
+            return Tag + " shared";
+        }
+
+        /// <example><c>[Ping] net placed id=4 player=1 team=Alpha kind=Enemy target=2 at=(1.00, 1.10, 10.00) life=6.00 refreshed=false recipients=2</c></example>
+        public static string NetPlaced(SharedPing ping, bool refreshed, int recipients)
+        {
+            var marker = ping.Marker;
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} net placed id={1} player={2} team={3} kind={4} target={5} at={6} life={7:0.00} refreshed={8} recipients={9}",
+                Tag,
+                marker.Id,
+                ping.PingerId,
+                MatchLog.TeamName(ping.Team),
+                marker.Kind,
+                marker.TargetKey.HasValue ? marker.TargetKey.Value.ToString(CultureInfo.InvariantCulture) : "none",
+                Point(marker.Position),
+                marker.ExpiresAt - marker.PlacedAt,
+                refreshed ? "true" : "false",
+                recipients);
+        }
+
+        /// <example><c>[Ping] net refused player=1 reason=TooSoon</c></example>
+        public static string NetRefused(int playerId, PingRefusal reason)
+        {
+            return Tag + " net refused player=" + playerId.ToString(CultureInfo.InvariantCulture) + " reason=" + reason;
+        }
+
+        /// <example><c>[Ping] net lost id=4 player=1 at=(1.00, 1.10, 10.00)</c></example>
+        public static string NetLost(SharedPing ping)
+        {
+            return Tag + " net lost id=" + Id(ping.Marker) + " player=" + ping.PingerId.ToString(CultureInfo.InvariantCulture)
+                + " at=" + Point(ping.Marker.Position);
+        }
+
+        /// <example><c>[Ping] net removed id=4 player=1 reason=Expired</c></example>
+        public static string NetRemoved(SharedPing ping, PingRemoval reason)
+        {
+            return Tag + " net removed id=" + Id(ping.Marker) + " player=" + ping.PingerId.ToString(CultureInfo.InvariantCulture)
+                + " reason=" + reason;
+        }
+
+        /// <example><c>[Ping] received placed id=4 kind=Enemy at=(1.00, 1.10, 10.00) life=5.95 tracking=true</c></example>
+        public static string ReceivedPlaced(int id, PingKind kind, Vector3 position, float remainingSeconds, bool tracking)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} received placed id={1} kind={2} at={3} life={4:0.00} tracking={5}",
+                Tag,
+                id,
+                kind,
+                Point(position),
+                remainingSeconds,
+                tracking ? "true" : "false");
+        }
+
+        /// <example><c>[Ping] received lost id=4 at=(1.00, 1.10, 10.00)</c></example>
+        public static string ReceivedLost(int id, Vector3 position)
+        {
+            return Tag + " received lost id=" + id.ToString(CultureInfo.InvariantCulture) + " at=" + Point(position);
+        }
+
+        /// <example><c>[Ping] received removed id=4 reason=Expired</c></example>
+        public static string ReceivedRemoved(int id, PingRemoval reason)
+        {
+            return Tag + " received removed id=" + id.ToString(CultureInfo.InvariantCulture) + " reason=" + reason;
+        }
+
         /// <summary>印 1 つの説明。</summary>
         /// <example><c>id=1 kind=Enemy key=42 at=(1.00, 1.10, 10.00) tracking=true expiresAt=6.00</c></example>
         public static string Describe(PingMarker marker)

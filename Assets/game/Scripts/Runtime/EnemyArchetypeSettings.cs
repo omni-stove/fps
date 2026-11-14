@@ -104,4 +104,116 @@ namespace Fps.Runtime
             _relocateGiveUpSeconds = spec.RelocateGiveUpSeconds;
         }
     }
+
+    [Serializable]
+    public sealed class EnemyChargerSettings
+    {
+        [SerializeField, Min(0.01f), Tooltip("目標がこの距離 (m) の内に見えたら構え始める。突進の距離以下")]
+        private float _triggerDistance = ChargerSpec.DefaultTriggerDistance;
+
+        [SerializeField, Min(0.01f), Tooltip("構えを見せてから突っ込むまでの秒数")]
+        private float _windupSeconds = ChargerSpec.DefaultWindupSeconds;
+
+        [SerializeField, Min(0.01f), Tooltip("突進の速さ (m/s)")]
+        private float _chargeSpeed = ChargerSpec.DefaultChargeSpeed;
+
+        [SerializeField, Min(0.01f), Tooltip("1 回の突進で走る距離 (m)")]
+        private float _chargeDistance = ChargerSpec.DefaultChargeDistance;
+
+        [SerializeField, Min(0.01f), Tooltip("体の中心から相手の体までがこの距離 (m) の内なら当たる。自分の体の半径を含める")]
+        private float _hitReach = ChargerSpec.DefaultHitReach;
+
+        [SerializeField, Min(1), Tooltip("当たった相手に与えるダメージ")]
+        private int _impactDamage = ChargerSpec.DefaultImpactDamage;
+
+        [SerializeField, Min(0f), Tooltip("外れて壁などにぶつかったあと止まっている秒数")]
+        private float _stunSeconds = ChargerSpec.DefaultStunSeconds;
+
+        [SerializeField, Min(0f), Tooltip("当てたあと次に動き出すまでの秒数")]
+        private float _recoverSeconds = ChargerSpec.DefaultRecoverSeconds;
+
+        /// <exception cref="ArgumentException">値が不正。</exception>
+        public ChargerSpec ToSpec()
+        {
+            return new ChargerSpec(
+                _triggerDistance, _windupSeconds, _chargeSpeed, _chargeDistance, _hitReach, _impactDamage, _stunSeconds, _recoverSeconds);
+        }
+
+        public void CopyFrom(ChargerSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            _triggerDistance = spec.TriggerDistance;
+            _windupSeconds = spec.WindupSeconds;
+            _chargeSpeed = spec.ChargeSpeed;
+            _chargeDistance = spec.ChargeDistance;
+            _hitReach = spec.HitReach;
+            _impactDamage = spec.ImpactDamage;
+            _stunSeconds = spec.StunSeconds;
+            _recoverSeconds = spec.RecoverSeconds;
+        }
+    }
+
+    [Serializable]
+    public sealed class EnemyBomberSettings
+    {
+        [SerializeField, Min(0.01f), Tooltip("目標がこの距離 (m) の内に見えたら合図を始める。爆発の半径未満")]
+        private float _triggerDistance = BomberSpec.DefaultTriggerDistance;
+
+        [SerializeField, Min(0.01f), Tooltip("合図を始めてから爆発するまでの秒数")]
+        private float _fuseSeconds = BomberSpec.DefaultFuseSeconds;
+
+        [SerializeField, Min(0.01f), Tooltip("近づくときの、歩きの速さに掛ける倍率")]
+        private float _runSpeedMultiplier = BomberSpec.DefaultRunSpeedMultiplier;
+
+        [SerializeField, Min(0), Tooltip("爆発の中心でのダメージ")]
+        private int _blastDamage = BomberSpec.DefaultBlastDamage;
+
+        [SerializeField, Min(0.01f), Tooltip("爆発が届く半径 (m)")]
+        private float _blastRadius = BomberSpec.DefaultBlastRadius;
+
+        [SerializeField, Min(0f), Tooltip("減らさずにダメージを与える半径 (m)。爆発の半径未満")]
+        private float _blastFullDamageRadius = BomberSpec.DefaultBlastFullDamageRadius;
+
+        [SerializeField, Min(0), Tooltip("合図の前に倒されたときの小さな爆発の、中心でのダメージ。爆発のダメージ以下")]
+        private int _deathBlastDamage = BomberSpec.DefaultDeathBlastDamage;
+
+        [SerializeField, Min(0.01f), Tooltip("合図の前に倒されたときの小さな爆発が届く半径 (m)。爆発の半径以下")]
+        private float _deathBlastRadius = BomberSpec.DefaultDeathBlastRadius;
+
+        [SerializeField, Min(0f), Tooltip("小さな爆発の、減らさずにダメージを与える半径 (m)")]
+        private float _deathBlastFullDamageRadius = BomberSpec.DefaultDeathBlastFullDamageRadius;
+
+        /// <exception cref="ArgumentException">値が不正。</exception>
+        public BomberSpec ToSpec()
+        {
+            return new BomberSpec(
+                _triggerDistance,
+                _fuseSeconds,
+                _runSpeedMultiplier,
+                new ExplosionDamage(_blastDamage, _blastRadius, _blastFullDamageRadius),
+                new ExplosionDamage(_deathBlastDamage, _deathBlastRadius, _deathBlastFullDamageRadius));
+        }
+
+        public void CopyFrom(BomberSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            _triggerDistance = spec.TriggerDistance;
+            _fuseSeconds = spec.FuseSeconds;
+            _runSpeedMultiplier = spec.RunSpeedMultiplier;
+            _blastDamage = spec.Blast.MaxDamage;
+            _blastRadius = spec.Blast.Radius;
+            _blastFullDamageRadius = spec.Blast.FullDamageRadius;
+            _deathBlastDamage = spec.DeathBlast.MaxDamage;
+            _deathBlastRadius = spec.DeathBlast.Radius;
+            _deathBlastFullDamageRadius = spec.DeathBlast.FullDamageRadius;
+        }
+    }
 }

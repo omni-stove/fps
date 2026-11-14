@@ -9,7 +9,8 @@ namespace Fps.Runtime
     /// <summary>
     /// 拠点制圧 (<see cref="Domination"/>) の HUD。画面の上中央に両チームのポイント・残り時間・各拠点の持ち主を出し、
     /// 試合が終わったら勝者を出す。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="Hud.AddViews"/> では付けず、<see cref="DominationRunner"/> が試合を始めるときに Hud の GameObject に付けて <see cref="Show"/> する。
+    /// <see cref="Hud.AddViews"/> では付けず、<see cref="DominationRunner"/> が試合を始めるときに <see cref="IHud.AttachDomination"/> (<see cref="AttachTo"/>) で
+    /// Hud の GameObject に付けて <see cref="Show"/> する。言語が変わったら今の言語で出し直す。
     /// 出している間は、残り時間をこちらで出すので Hud の残り時間の欄 (<see cref="HudView.TimeLabelName"/> の親) を隠す。
     /// </summary>
     /// <remarks>
@@ -17,7 +18,7 @@ namespace Fps.Runtime
     /// 文字列は Label が無い (UIDocument の木がまだ無い) ときも <see cref="AlphaScoreText"/> などで読める。
     /// </remarks>
     [DisallowMultipleComponent]
-    public sealed class DominationView : HudElementView
+    public sealed class DominationView : HudElementView, IDominationHud
     {
         /// <summary>Hud.uxml の拠点制圧の要素。</summary>
         public const string UxmlName = "domination";
@@ -69,6 +70,37 @@ namespace Fps.Runtime
 
         /// <summary>拠点ごとの呼び名と持ち主 (番号の順)。</summary>
         public IReadOnlyList<string> PointTexts => _pointTexts;
+
+        /// <summary>
+        /// hud に (無ければ) このビューを付けて返す。付けたばかりなら Hud に木から要素を渡し直させる。
+        /// UXML に要素が無ければエラーをログに出し、要素を持たないまま返す (文字列は <see cref="AlphaScoreText"/> などで読める)。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">hud が null。</exception>
+        public static DominationView AttachTo(Hud hud)
+        {
+            if (hud == null)
+            {
+                throw new ArgumentNullException(nameof(hud));
+            }
+
+            var view = hud.GetComponent<DominationView>();
+            if (view != null)
+            {
+                return view;
+            }
+
+            view = hud.gameObject.AddComponent<DominationView>();
+            try
+            {
+                hud.RebuildView();
+            }
+            catch (InvalidOperationException e)
+            {
+                Debug.LogError($"{Hud.LogTag} could not show the domination panel on the HUD: {e.Message}", hud);
+            }
+
+            return view;
+        }
 
         /// <summary>domination を出し始める。前に出していた試合は手放す。null なら <see cref="Clear"/> と同じ。</summary>
         public void Show(Domination domination)
@@ -173,6 +205,19 @@ namespace Fps.Runtime
 
         protected override void OnBound(VisualElement element)
         {
+            Rebuild();
+            Refresh();
+        }
+
+        protected override void OnLanguageChanged()
+        {
+            if (_source == null)
+            {
+                return;
+            }
+
+            // 値が変わったときだけ文字列を作り直すので、覚えている値を忘れて今の言語で作り直させる
+            ForgetShownValues();
             Rebuild();
             Refresh();
         }

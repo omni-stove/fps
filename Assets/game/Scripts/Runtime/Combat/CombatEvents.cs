@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 戦闘で起きたことを演出と UI (<see cref="WeaponPresentation"/>・<see cref="CharacterAudio"/>・<see cref="HitMarkerView"/> など) に知らせる、
+    /// 戦闘で起きたことを演出と UI (<see cref="WeaponPresentation"/>・<see cref="CharacterAudio"/>・HUD のヒットマーカー (<see cref="IHitMarker"/>) など) に知らせる、
     /// 静的なイベントの集まり。撃つ側・撃たれる側は購読者を知らずに Raise 系を呼ぶだけにし、演出の有無で戦闘の結果が変わらないようにする。
     /// </summary>
     /// <remarks>

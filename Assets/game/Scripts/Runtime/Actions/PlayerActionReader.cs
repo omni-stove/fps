@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// プレイヤーの今のアクションを毎フレーム 1 つの <see cref="PlayerActionState"/> にまとめて <see cref="Current"/> で渡す。
-    /// デバッグ表示 (<see cref="ActionDebugOverlay"/>) と自機モック (<see cref="PlayerMockBody"/>) が読む。読むだけで、何も書き換えない。
+    /// デバッグ表示 (<see cref="IHudFactory.AttachActionDebug"/> が付ける) と自機モック (<see cref="PlayerMockBody"/>) が読む。読むだけで、何も書き換えない。
     /// 読み元: <see cref="PlayerController"/>・<see cref="AimDownSights"/>・<see cref="CoverController"/>・<see cref="BlindFireController"/>・
     /// <see cref="Damageable"/>・<see cref="ViewRig"/> は同じ GameObject、<see cref="WeaponController"/> は子 (プレイヤーのカメラ)。
     /// 参照はコードで解決するので Inspector の配線は要らない (<see cref="GameBootstrap"/> は <see cref="Bind"/> で直接渡す)。

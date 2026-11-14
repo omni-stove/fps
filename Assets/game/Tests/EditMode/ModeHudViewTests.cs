@@ -10,6 +10,8 @@ namespace Fps.Tests.EditMode
 {
     public sealed class ModeHudViewTests
     {
+        private const string ConnectionCaptionKey = "scoreboard.connectionCaption";
+
         private static readonly ModeHudScoreLine[] _scores =
         {
             new ModeHudScoreLine(Side.Bravo, "BRAVO 1", true, false),
@@ -17,7 +19,10 @@ namespace Fps.Tests.EditMode
             new ModeHudScoreLine(new Side(2), "SIDE 2 0", false, false),
         };
 
-        private static readonly string[] _lines = { "リスポーンまで 2 秒", null, string.Empty, "拠点 A: ALPHA" };
+        private static readonly LocalizedText[] _lines =
+        {
+            LocalizedText.Literal("リスポーンまで 2 秒"), default, LocalizedText.Literal(string.Empty), LocalizedText.Literal("拠点 A: ALPHA"),
+        };
 
         private GameObject _owner;
         private ModeHudView _view;
@@ -72,7 +77,7 @@ namespace Fps.Tests.EditMode
         {
             _view.Bind(_root);
 
-            _view.Show("01:30", _scores, _lines, string.Empty);
+            _view.Show(Text("01:30"), _scores, _lines, default);
 
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
             Assert.That(_view.Element.Q<Label>(className: ModeHudView.TimeClass).text, Is.EqualTo("01:30"));
@@ -85,13 +90,13 @@ namespace Fps.Tests.EditMode
             Assert.That(scores[1].ClassListContains(ModeHudView.OwnScoreClass), Is.False);
 
             var lines = _view.Element.Query<Label>(className: ModeHudView.LineClass).ToList();
-            Assert.That(lines.Count, Is.EqualTo(2), "null and empty lines are dropped");
+            Assert.That(lines.Count, Is.EqualTo(2), "default and empty lines are dropped");
             Assert.That(lines[1].text, Is.EqualTo("拠点 A: ALPHA"));
 
             var result = _view.Element.Q<Label>(className: ModeHudView.ResultClass);
             Assert.That(result.style.display.value, Is.EqualTo(DisplayStyle.None));
 
-            _view.Show("00:00", new[] { _scores[1] }, null, "ALPHA の勝ち");
+            _view.Show(Text("00:00"), new[] { _scores[1] }, null, Text("ALPHA の勝ち"));
 
             Assert.That(_view.Element.Query<Label>(className: ModeHudView.ScoreClass).ToList().Count, Is.EqualTo(1));
             Assert.That(_view.Element.Query<Label>(className: ModeHudView.LineClass).ToList(), Is.Empty);
@@ -103,7 +108,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ContentShownBeforeBindingAppearsWhenBound()
         {
-            _view.Show("02:00", _scores, null, string.Empty);
+            _view.Show(Text("02:00"), _scores, null, Text(string.Empty));
 
             _view.Bind(_root);
 
@@ -115,7 +120,7 @@ namespace Fps.Tests.EditMode
         public void HideHidesThePanel()
         {
             _view.Bind(_root);
-            _view.Show("01:00", _scores, null, string.Empty);
+            _view.Show(Text("01:00"), _scores, null, default);
 
             _view.Hide();
 
@@ -126,7 +131,46 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ShowRejectsNullScores()
         {
-            Assert.Throws<ArgumentNullException>(() => _view.Show("00:10", null, null, null));
+            Assert.Throws<ArgumentNullException>(() => _view.Show(Text("00:10"), null, null, default));
+        }
+
+        [Test]
+        public void ShowResolvesKeysInTheCurrentLanguage()
+        {
+            _view.Bind(_root);
+
+            _view.Show(new LocalizedText(ConnectionCaptionKey), _scores, new[] { new LocalizedText(ConnectionCaptionKey) }, default);
+
+            var expected = Localizer.Get(ConnectionCaptionKey);
+            Assert.That(expected, Is.Not.EqualTo(ConnectionCaptionKey), "the key exists in the current language's table");
+            Assert.That(_view.TimeText, Is.EqualTo(expected));
+            Assert.That(_view.Lines, Is.EqualTo(new[] { expected }));
+            Assert.That(_view.Element.Q<Label>(className: ModeHudView.TimeClass).text, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TheViewIsTheHudsModeHud()
+        {
+            var hud = Hud.Create("ModeHudViewTests.Hud", null, null, null);
+            try
+            {
+                IHud asInterface = hud;
+                Assert.That(asInterface.ModeHud, Is.SameAs(hud.ModeHud));
+            }
+            finally
+            {
+                var panelSettings = hud.OwnedPanelSettings;
+                Object.DestroyImmediate(hud.gameObject);
+                if (panelSettings != null)
+                {
+                    Object.DestroyImmediate(panelSettings);
+                }
+            }
+        }
+
+        private static LocalizedText Text(string text)
+        {
+            return LocalizedText.Literal(text);
         }
     }
 }

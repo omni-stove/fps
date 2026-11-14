@@ -19,7 +19,7 @@ namespace Fps.Runtime
     /// <item><see cref="ModeSession.RespawnReady"/> を受けたら、次の <see cref="Tick"/> の終わりに自陣営の <see cref="SideSpawnPoint"/> のうち
     /// 敵からいちばん離れた点 (<see cref="SideSpawnSelector"/>) に戻し、体力を満たす。ダメージの処理の途中で生き返らせないよう、すぐには戻さない。</item>
     /// <item>Update で <see cref="Tick"/> し、状態が変わるたび・倒れるたび・終わったときに <c>[Mode]</c> のログ (<see cref="ModeLog"/>) を出す。
-    /// HUD があれば <see cref="ModeHudView"/> に残り時間・得点・自分のリスポーンまでの秒数・派生モードの行 (<see cref="AppendHudLines"/>)・結果を出す。</item>
+    /// HUD があれば <see cref="IModeHud"/> に残り時間・得点・自分のリスポーンまでの秒数・派生モードの行 (<see cref="AppendHudLines"/>)・結果を出す。</item>
     /// <item>終わったら全員の操作と行動を止め、<see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) でシーンを読み直す。</item>
     /// <item><see cref="HidesTargetDummies"/> が true (既定) なら、始めたときに GameBootstrap の標的ダミーを隠す。</item>
     /// <item>ModeSession をラウンドとして繰り返す派生は、始め方 (<see cref="StartSession"/>)・進め方 (<see cref="AdvanceSession"/>)・
@@ -53,9 +53,10 @@ namespace Fps.Runtime
         private readonly Queue<int> _pendingRespawns = new Queue<int>();
         private readonly HashSet<Side> _warnedMissingSpawn = new HashSet<Side>();
         private readonly List<string> _hudLines = new List<string>();
+        private readonly List<LocalizedText> _hudLineTexts = new List<LocalizedText>();
         private ModeSession _session;
         private SideMember _localPlayer;
-        private ModeHudView _hudView;
+        private IModeHud _hudView;
         private InputAction _restartAction;
         private bool _enabledRestartAction;
         private bool _matchOver;
@@ -84,7 +85,7 @@ namespace Fps.Runtime
         public SideMember LocalPlayer => _localPlayer;
 
         /// <summary>出している HUD。HUD が無ければ null。</summary>
-        public ModeHudView HudView => _hudView;
+        public IModeHud ModeHud => _hudView;
 
         /// <summary>終了後に押すと再開するアクション。解決できなければ null (モードは進むが再開できない)。</summary>
         public InputAction RestartAction => _restartAction;
@@ -320,7 +321,7 @@ namespace Fps.Runtime
                 }
             }
 
-            var hud = world != null && world.Hud != null ? world.Hud : FindAnyObjectByType<Hud>();
+            var hud = world != null && GameUi.IsAlive(world.Hud) ? world.Hud : GameUi.FindHud();
 
             // 再開できなくてもモード自体は進められるので、解決に失敗してもエラーを出して続ける。
             _restartAction = ResolveRestartAction();
@@ -344,7 +345,7 @@ namespace Fps.Runtime
 
             try
             {
-                Begin(session, SideMember.FindAll(), SideSpawnPoint.FindAll(), localPlayer, hud != null ? hud.ModeHud : null);
+                Begin(session, SideMember.FindAll(), SideSpawnPoint.FindAll(), localPlayer, GameUi.IsAlive(hud) ? hud.ModeHud : null);
             }
             catch (ArgumentException e)
             {
@@ -376,7 +377,7 @@ namespace Fps.Runtime
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
             SideMember localPlayer = null,
-            ModeHudView hudView = null)
+            IModeHud hudView = null)
         {
             if (session == null)
             {
@@ -592,7 +593,7 @@ namespace Fps.Runtime
                 _session.Ended -= OnSessionEnded;
             }
 
-            if (_hudView != null)
+            if (GameUi.IsAlive(_hudView))
             {
                 _hudView.Hide();
             }
@@ -647,7 +648,7 @@ namespace Fps.Runtime
         /// <summary>HUD を今の値で書き直す。<see cref="Tick"/> のたびに呼ばれる。</summary>
         protected void RefreshHud()
         {
-            if (_hudView == null || _session == null)
+            if (!GameUi.IsAlive(_hudView) || _session == null)
             {
                 return;
             }
@@ -663,8 +664,20 @@ namespace Fps.Runtime
             }
 
             AppendHudLines(_hudLines);
+            _hudLineTexts.Clear();
+            foreach (var line in _hudLines)
+            {
+                _hudLineTexts.Add(LiteralOrEmpty(line));
+            }
+
             var ownSide = _localPlayer != null ? _localPlayer.Side : (Side?)null;
-            _hudView.Show(HudTime(), HudScores(ownSide), _hudLines, HudResult());
+            _hudView.Show(LiteralOrEmpty(HudTime()), HudScores(ownSide), _hudLineTexts, LiteralOrEmpty(HudResult()));
+        }
+
+        // 派生モードの文はまだ表のキーになっていないので、作った文字列をそのまま運ぶ。null は空の文として渡す
+        private static LocalizedText LiteralOrEmpty(string text)
+        {
+            return text == null ? default : LocalizedText.Literal(text);
         }
 
         private int RequireMember(SideMember member)

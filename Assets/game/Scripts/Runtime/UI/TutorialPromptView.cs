@@ -1,13 +1,15 @@
+using Fps.Core;
 using UnityEngine.UIElements;
 
 namespace Fps.Runtime
 {
     /// <summary>
     /// 画面下の中央に、チュートリアルの今の手順 (または完了) を 1 行で出すビュー。Hud.uxml の <see cref="UxmlName"/> の Label を使う。
-    /// 何を出すかは <see cref="TutorialPresenter"/> が <see cref="Show"/> / <see cref="Hide"/> で決める。
+    /// 何を出すかは <see cref="TutorialPresenter"/> が <see cref="Show(LocalizedText, bool)"/> / <see cref="Hide"/> で決める。
     /// 要素をまだ受けていない間 (HUD の木を作り直している間) も出す文を覚えておき、受けたときに合わせる。
+    /// 受け取った文は今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら文にし直す。
     /// </summary>
-    public sealed class TutorialPromptView : HudElementView
+    public sealed class TutorialPromptView : HudElementView, ITutorialPrompt
     {
         /// <summary>Hud.uxml のチュートリアルの Label。</summary>
         public const string UxmlName = "tutorial-prompt";
@@ -15,6 +17,7 @@ namespace Fps.Runtime
         /// <summary>すべて終えたときに足す USS クラス。</summary>
         public const string CompletedClass = "tutorial-prompt--completed";
 
+        private LocalizedText _source;
         private string _text = string.Empty;
         private bool _shown;
         private bool _completed;
@@ -30,16 +33,24 @@ namespace Fps.Runtime
         /// <summary>完了の見た目で出しているか。</summary>
         public bool IsCompleted => _shown && _completed;
 
-        /// <summary>text を出す。completed なら完了の見た目にする。text が null か空なら隠す。</summary>
+        /// <summary>決まった文字列 text をそのまま出す。completed なら完了の見た目にする。text が null か空白だけなら隠す。</summary>
         public void Show(string text, bool completed)
         {
-            if (string.IsNullOrWhiteSpace(text))
+            Show(string.IsNullOrEmpty(text) ? default : LocalizedText.Literal(text), completed);
+        }
+
+        /// <summary>text を今の言語の文にして出す。completed なら完了の見た目にする。文にして空白だけなら隠す。</summary>
+        public void Show(LocalizedText text, bool completed)
+        {
+            var resolved = Localizer.Resolve(text);
+            if (string.IsNullOrWhiteSpace(resolved))
             {
                 Hide();
                 return;
             }
 
-            _text = text;
+            _source = text;
+            _text = resolved;
             _completed = completed;
             _shown = true;
             Refresh();
@@ -48,6 +59,7 @@ namespace Fps.Runtime
         /// <summary>隠す。</summary>
         public void Hide()
         {
+            _source = default;
             _text = string.Empty;
             _completed = false;
             _shown = false;
@@ -56,7 +68,23 @@ namespace Fps.Runtime
 
         protected override void OnBound(VisualElement element)
         {
+            // 要素を持っていない間の言語の変更は届かないので、受けたときに今の言語で文にし直す
+            ResolveText();
             Refresh();
+        }
+
+        protected override void OnLanguageChanged()
+        {
+            ResolveText();
+            Refresh();
+        }
+
+        private void ResolveText()
+        {
+            if (_shown)
+            {
+                _text = Localizer.Resolve(_source);
+            }
         }
 
         protected override void OnUnbinding(VisualElement element)

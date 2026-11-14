@@ -34,7 +34,7 @@ namespace Fps.Tests.EditMode
             _world = bootstrap.Build();
             Assume.That(_world.Hud, Is.Not.Null, "the HUD is not built on a dedicated server");
 
-            _view = _world.Hud.TutorialPrompt;
+            _view = ((Hud)_world.Hud).TutorialPrompt;
             _store = new TutorialProgressStore("Fps.Tests.TutorialCompleted." + Guid.NewGuid().ToString("N"));
             _presenter = _host.AddComponent<TutorialPresenter>();
             _presenter.Store = _store;

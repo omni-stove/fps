@@ -17,10 +17,11 @@ namespace Fps.Runtime
     /// ヒットマーカーなど HUD の部分ごとのビュー (<see cref="HudElementView"/>) は <see cref="Create"/> が同じ GameObject に付け
     /// (<see cref="AddViews"/>)、View を作り直すたびに Hud.uxml の要素を渡し直す。
     /// Hud.uxml にキーで書いた文字 (見出し・ポーズのボタン) は <see cref="LocalizedTexts"/> で今の言語にし、言語が変わったら書き直す。
+    /// ゲーム進行からは <see cref="IHud"/> として使われ、オフラインでは既定の生成役 (<see cref="DefaultHudFactory"/>) が作る。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(UIDocument))]
-    public sealed class Hud : MonoBehaviour
+    public sealed class Hud : MonoBehaviour, IHud
     {
         public const string LogTag = "[HUD]";
 
@@ -179,6 +180,41 @@ namespace Fps.Runtime
 
         /// <summary>同じ GameObject のポーズ画面の設定画面。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseSettingsView PauseSettings => GetComponent<PauseSettingsView>();
+
+        IScoreboard IHud.Scoreboard => AsInterface<IScoreboard>(Scoreboard);
+
+        IHitMarker IHud.HitMarker => AsInterface<IHitMarker>(HitMarker);
+
+        IModeHud IHud.ModeHud => AsInterface<IModeHud>(ModeHud);
+
+        ITutorialPrompt IHud.TutorialPrompt => AsInterface<ITutorialPrompt>(TutorialPrompt);
+
+        /// <summary>ポーズを開いている間の時間の扱い (<see cref="Fps.Runtime.PauseMenu.TimeMode"/>) を決める。ポーズメニューが無ければ何もしない。</summary>
+        public void SetPauseTimeMode(PauseTimeMode mode)
+        {
+            var pause = PauseMenu;
+            if (pause != null)
+            {
+                pause.TimeMode = mode;
+            }
+        }
+
+        IGrenadeCount IHud.AttachGrenadeCount()
+        {
+            return GrenadeCountView.AttachTo(this);
+        }
+
+        IDominationHud IHud.AttachDomination()
+        {
+            return DominationView.AttachTo(this);
+        }
+
+        // エディターの GetComponent は見つからなくても「null と等しい」オブジェクトを返すので、インターフェースに変える前に本当の null にする
+        private static T AsInterface<T>(Component component)
+            where T : class
+        {
+            return component != null ? component as T : null;
+        }
 
         /// <summary>
         /// チームの点数・スコアボードの見出し・キルログの名前・拠点制圧の欄を塗る色を決める。View を作り直しても引き継ぐ。

@@ -61,7 +61,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BeginShowsTheRemainingTimeOnTheHud()
         {
-            var model = _world.Hud.Model;
+            var model = DefaultHud.Model;
             Assert.That(model.TimeText, Is.EqualTo(HudFormat.Time(TimeLimit)));
 
             _runner.Tick(11f);
@@ -184,7 +184,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BeginListsThePlayerAndTheTargetsOnTheScoreboard()
         {
-            var sections = _world.Hud.Scoreboard.Sections;
+            var sections = DefaultHud.Scoreboard.Sections;
 
             Assert.That(sections[0].Team, Is.EqualTo(Team.Alpha));
             Assert.That(sections[0].Rows, Has.Count.EqualTo(1));
@@ -210,7 +210,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void KillsAndDeathsUpdateTheScoreboardRightAway()
         {
-            var scoreboard = _world.Hud.Scoreboard;
+            var scoreboard = DefaultHud.Scoreboard;
             var firstTargetId = MatchRunner.PlayerId + 1;
 
             _world.Targets[0].Damageable.Kill();
@@ -237,7 +237,7 @@ namespace Fps.Tests.EditMode
             _world.Targets[0].Damageable.Kill();
 
             Assert.That(_runner.TargetDeaths(MatchRunner.PlayerId + 1), Is.Zero);
-            Assert.That(_world.Hud.Scoreboard.Sections[1].Deaths, Is.Zero);
+            Assert.That(DefaultHud.Scoreboard.Sections[1].Deaths, Is.Zero);
         }
 
         [Test]
@@ -247,5 +247,8 @@ namespace Fps.Tests.EditMode
             Assert.That(MatchRunner.TimeLimitSeconds, Is.GreaterThan(0f));
             Assert.That(MatchRunner.RestartActionPath, Is.EqualTo(WeaponController.ReloadActionPath), "R restarts");
         }
+
+        // 中身を確かめるため、GameBootstrap が既定の生成役で作った HUD を具体クラスで読む
+        private Hud DefaultHud => (Hud)_world.Hud;
     }
 }

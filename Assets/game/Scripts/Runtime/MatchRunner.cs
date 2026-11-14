@@ -14,7 +14,7 @@ namespace Fps.Runtime
     /// 状態が変わるたびに <see cref="MatchLog.SoloState"/> の書式で Debug.Log に出し、終わったらプレイヤーの移動と射撃を止める。
     /// 終了後に <see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) を押すと今のシーンを読み込み直して最初からやり直す。
     /// 勝敗をすぐ確かめたいときは <see cref="KillsToWin"/> と <see cref="TimeLimitSeconds"/> を小さくする。
-    /// HUD があれば、開始時とキル・デスのたびに自分と標的のキル数・デス数を <see cref="ScoreboardView"/> に渡す。
+    /// HUD があれば、開始時とキル・デスのたびに自分と標的のキル数・デス数を HUD のスコアボード (<see cref="IScoreboard"/>) に渡す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MatchRunner : MonoBehaviour
@@ -207,7 +207,7 @@ namespace Fps.Runtime
             _match.StateChanged += OnStateChanged;
 
             // HUD (専用サーバーでは無い) に残り時間を出させる。
-            if (world.Hud != null)
+            if (GameUi.IsAlive(world.Hud))
             {
                 world.Hud.BindMatch(_match);
             }
@@ -238,8 +238,8 @@ namespace Fps.Runtime
         /// </summary>
         private void ShowScoreboard()
         {
-            var scoreboard = _world != null && _world.Hud != null ? _world.Hud.Scoreboard : null;
-            if (scoreboard == null || _match == null)
+            var scoreboard = _world != null && GameUi.IsAlive(_world.Hud) ? _world.Hud.Scoreboard : null;
+            if (!GameUi.IsAlive(scoreboard) || _match == null)
             {
                 return;
             }

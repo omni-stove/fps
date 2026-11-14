@@ -10,15 +10,15 @@ namespace Fps.Runtime
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
     /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/> + 自動回復の <see cref="HealthRegen"/>
     /// + 演出と手榴弾 (<see cref="CharacterComponents.Attach"/>) + 今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読む
-    /// <see cref="ActionDebugOverlay"/>・<see cref="PlayerMockBody"/>)
+    /// デバッグ表示 (<see cref="IHudFactory.AttachActionDebug"/>)・<see cref="PlayerMockBody"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
-    /// ・HUD (<see cref="UIDocument"/> + <see cref="PanelSettings"/> + <see cref="Hud"/>) を
+    /// ・HUD (<see cref="GameUi.HudFactory"/> に登録された生成役が作る <see cref="IHud"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
     /// 自動回復と予備弾の倍率・無限・落下ダメージは <see cref="RulesDefinition"/> のルール (<see cref="GameRulesOverride"/> があればそちら) で決める (標的ダミーには効かせない)。
     /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す項目は
-    /// <see cref="GameRules.HudDensity"/> (<see cref="Hud.ApplyDensity"/>) で決める。
+    /// <see cref="GameRules.HudDensity"/> (<see cref="IHud.ApplyDensity"/>) で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
     /// </summary>
     [DisallowMultipleComponent]
@@ -82,10 +82,6 @@ namespace Fps.Runtime
         public const float TargetDummyRespawnDelay = TargetDummy.DefaultRespawnDelay;
 
         public const string HudName = "HUD";
-        public const string HudPanelSettingsName = Hud.PanelSettingsName;
-
-        /// <summary>HUD の基準解像度。これより大きい・小さい画面では幅と高さの中間で拡縮する。</summary>
-        public static readonly Vector2Int HudReferenceResolution = Hud.ReferenceResolution;
 
         [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
         private bool _createFloor = true;
@@ -208,10 +204,10 @@ namespace Fps.Runtime
                 targets = CreateTargetDummies(player.transform, out var dummies);
                 BindDeathBodies(dummies, rules);
                 // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
-                Hud hudComponent = null;
+                IHud hudComponent = null;
                 if (!NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
                 {
-                    hud = CreateHud(playerDamageable, weapon, grenades, rules, out hudComponent, out hudPanelSettings);
+                    CreateHud(playerDamageable, weapon, grenades, rules, out hudComponent, out hudPanelSettings, out hud);
                 }
 
                 _world = new BootstrapWorld(
@@ -557,7 +553,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// プレイヤーの今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読むデバッグ表示 (<see cref="ActionDebugOverlay"/>)・
+        /// プレイヤーの今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読むデバッグ表示 (<see cref="GameUi.AttachActionDebug"/>)・
         /// 自機モック (<see cref="PlayerMockBody"/>) を付けて配線する。カバーとブラインドファイア (<see cref="PlayerActions.Attach"/>) の後に呼ぶ。
         /// Play 中は Reader の Awake が自力で読み元を解決するので、解決できなかったら失敗にする。Edit Mode では Awake が走らないのでここで渡す。
         /// </summary>
@@ -582,7 +578,7 @@ namespace Fps.Runtime
                     mover, weapon, ads, player.GetComponent<CoverController>(), player.GetComponent<BlindFireController>(), damageable, rig);
             }
 
-            player.AddComponent<ActionDebugOverlay>().Bind(reader);
+            GameUi.AttachActionDebug(player, reader);
             player.AddComponent<PlayerMockBody>().Bind(reader);
             return reader;
         }
@@ -686,27 +682,29 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// HUD を作り (<see cref="Hud.Create"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。オフラインなので、ポーズ中は時間を止める
-        /// (<see cref="PauseTimeMode.Freeze"/>)。グレネードの残り (<see cref="GrenadeCountView"/>) も出す。
+        /// HUD を作り (<see cref="GameUi.CreateHud"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。オフラインなので、ポーズ中は時間を止める
+        /// (<see cref="PauseTimeMode.Freeze"/>)。グレネードの残り (<see cref="IHud.AttachGrenadeCount"/>) も出す。
+        /// 作った後の設定で失敗したら、呼び出し元が片付けられるよう out に入れてから例外を投げる。
         /// </summary>
-        private static GameObject CreateHud(
+        private static void CreateHud(
             Damageable player,
             WeaponController weapon,
             GrenadeThrower grenades,
             GameRules rules,
-            out Hud hud,
-            out PanelSettings panelSettings)
+            out IHud hud,
+            out PanelSettings panelSettings,
+            out GameObject hudObject)
         {
-            hud = Hud.Create(HudName, player, weapon, null);
+            hud = GameUi.CreateHud(HudName, player, weapon, null);
             panelSettings = hud.OwnedPanelSettings;
+            hudObject = hud.gameObject;
             if (grenades != null)
             {
-                GrenadeCountView.AttachTo(hud).Show(grenades);
+                hud.AttachGrenadeCount().Show(grenades);
             }
 
             hud.ApplyDensity(rules.HudDensity);
-            hud.PauseMenu.TimeMode = PauseTimeMode.Freeze;
-            return hud.gameObject;
+            hud.SetPauseTimeMode(PauseTimeMode.Freeze);
         }
 
         private static GameObject CreateLight(out Light light)
@@ -768,7 +766,7 @@ namespace Fps.Runtime
         public Damageable PlayerDamageable { get; }
 
         /// <summary>HUD。専用サーバーでは作らないので null。</summary>
-        public Hud Hud { get; }
+        public IHud Hud { get; }
 
         /// <summary>生成時にプレイヤーへ効かせたルール。<see cref="GameBootstrap.RulesDefinition"/> が空なら <see cref="GameRules.Default"/>。</summary>
         public GameRules Rules { get; }
@@ -797,7 +795,7 @@ namespace Fps.Runtime
             GameObject targetRoot,
             IReadOnlyList<TargetDummy> targets,
             Damageable playerDamageable,
-            Hud hud,
+            IHud hud,
             PanelSettings hudPanelSettings,
             ViewRig rig = null,
             AimDownSights ads = null,

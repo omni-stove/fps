@@ -20,7 +20,7 @@ namespace Fps.Net
         public Dodge Dodge;
         public Vault Vault;
 
-        /// <summary>HUD に出す項目の量。クライアントの NetHud が <see cref="Fps.Runtime.Hud.ApplyDensity"/> に渡す。</summary>
+        /// <summary>HUD に出す項目の量。クライアントの NetHud が <see cref="Fps.Runtime.IHud.ApplyDensity"/> に渡す。</summary>
         public HudDensity HudDensity;
 
         public NetMatchRules(DeathBody deathBody, DeathCamera deathCamera, RespawnMode respawnMode, bool infiniteReserve)

@@ -141,10 +141,15 @@ namespace Fps.Core
                 throw new GameRulesJsonException(source, null, $"game rules JSON '{source}' is not valid JSON: {e.Message}", e);
             }
 
-            var top = new Fields(source, root, string.Empty, ItemNames);
+            return FromNode(root, source, string.Empty);
+        }
+
+        internal static GameRules FromNode(Node root, string source, string prefix)
+        {
+            var top = new Fields(source, root, prefix, ItemNames);
             var defaults = GameRules.Default;
 
-            var actions = ReadActions(source, top, defaults.Actions);
+            var actions = ReadActions(source, top, prefix, defaults.Actions);
 
             try
             {
@@ -169,7 +174,7 @@ namespace Fps.Core
             }
             catch (ArgumentException e)
             {
-                throw Rejected(source, string.Empty, e);
+                throw Rejected(source, prefix, e);
             }
         }
 
@@ -232,7 +237,7 @@ namespace Fps.Core
             return writer.Finish();
         }
 
-        private static ActionRules ReadActions(string source, Fields top, ActionRules defaults)
+        private static ActionRules ReadActions(string source, Fields top, string topPrefix, ActionRules defaults)
         {
             var node = top.ReadNested(ActionsItem);
             if (node == null)
@@ -240,7 +245,7 @@ namespace Fps.Core
                 return defaults;
             }
 
-            var prefix = ActionsItem + ".";
+            var prefix = topPrefix + ActionsItem + ".";
             var fields = new Fields(source, node, prefix, ActionItemNames);
             try
             {
@@ -317,6 +322,8 @@ namespace Fps.Core
 
             /// <summary>オブジェクトの項目。書かれた順。</summary>
             public List<KeyValuePair<string, Node>> Members { get; } = new List<KeyValuePair<string, Node>>();
+
+            public List<Node> Elements { get; } = new List<Node>();
 
             public string Position => $"line {Line.ToString(CultureInfo.InvariantCulture)}, column {Column.ToString(CultureInfo.InvariantCulture)}";
 
@@ -706,11 +713,10 @@ namespace Fps.Core
                     return node;
                 }
 
-                // 配列を値に取る項目は無いので、中身は文法だけ確かめて捨てる。型の誤りは Fields が項目名付きで知らせる。
                 while (true)
                 {
                     SkipWhitespace();
-                    ParseValue(depth);
+                    node.Elements.Add(ParseValue(depth));
                     SkipWhitespace();
                     if (TryConsume(']'))
                     {

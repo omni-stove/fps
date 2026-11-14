@@ -19,6 +19,22 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void RulesDefaultToTeamDeathmatchAndAreChosenByName()
+        {
+            Assert.That(Parse(Env()).Rules, Is.EqualTo(ServerLaunch.DefaultRules));
+            Assert.That(Parse(Env(), "-rules", "Domination").Rules, Is.EqualTo("Domination"));
+        }
+
+        [TestCase("-rules")]
+        [TestCase("-rules", "../etc")]
+        [TestCase("-rules", "A", "-rules", "B")]
+        public void BadRulesAreRejected(params string[] args)
+        {
+            Assert.That(ServerLaunch.TryParse(args, _ => null, out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("-rules"));
+        }
+
+        [Test]
         public void EnvironmentChoosesTheAddressAndPort()
         {
             var launch = Parse(Env(ServerLaunch.AddressVariable, "127.0.0.1", ServerLaunch.PortVariable, " 9000 "));

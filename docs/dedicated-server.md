@@ -294,12 +294,14 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 
 ## .NET のサーバー (移行中)
 
-Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠と、
-上の運用 (版の確認・drain・JSON のイベント) だけを行う。戦闘・ルール・移動・Bot・EOS はまだ無い。
+Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠、
+上の運用 (版の確認・drain・JSON のイベント) と、試合のルール (TDM・Domination・ダウンと蘇生・印・出現と出現直後の無敵・ロードアウトの選択・放置で切る) を行う。
+戦闘・移動・Bot・EOS はまだ無い。
 
 ```sh
 make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
 FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
+dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules Domination -map NetArena01   # 拠点制圧で動かす
 ```
 
 - 引数 (`-map`・`-drain-timeout`・`-log-format`・`-buildVersion`) と環境変数 (`FPS_SERVER_ADDRESS`・`FPS_SERVER_PORT`) は Unity のサーバーと同じ意味。
@@ -309,6 +311,12 @@ FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む (`-map` が無ければ `NetTest`)。作業ディレクトリの `server-data/`、
   無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
   ファイルは Unity の Editor から `make export-server-data` で書き出す。
+- ルールは `-rules <名前>` (無ければ `TeamDeathmatch`) で選び、`server-data/rules/<名前>.json` を読む。NetMatch.prefab に焼いてある
+  試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値など)・ルールのアセット・ロードアウトと武器の一覧が入っていて、
+  `[Server] rules <名前> objective=...` を出す。マップの出現地点と拠点は `server-data/maps/<マップ名>.points.json`、
+  印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。どれも Unity の Editor から `make export-server-rules`
+  (メニューは Fps > Server Data > Export Rules And Points) で書き出す。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
+  ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
 - 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
 - SIGTERM と SIGINT (Ctrl+C) で「試合が終わってから止める」と同じ drain に入り、同じログを出す。
 - 承認は `ConnectRequestMessage` の版と鍵を Netcode の承認データと同じ判定に通すので、断ったときのログ

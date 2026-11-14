@@ -39,13 +39,21 @@ namespace Fps.Server
             output.WriteLine(LogTag + " " + launch.Options);
             output.WriteLine(EosSdkBuild.LogLine(AppContext.BaseDirectory));
 
-            if (!ServerMapData.TryLoad(launch.Map, runtime.MapSearchRoots, out var map, out problem))
+            if (!ServerMapData.TryLoad(launch.Map, runtime.DataSearchRoots, out var map, out problem))
             {
                 error.WriteLine(LogTag + " " + problem);
                 return ExitMisconfigured;
             }
 
             output.WriteLine(map.LogLine);
+
+            if (!ServerRulesData.TryLoad(launch.Rules, runtime.DataSearchRoots, out var rules, out problem))
+            {
+                error.WriteLine(LogTag + " " + problem);
+                return ExitMisconfigured;
+            }
+
+            output.WriteLine(rules.LogLine);
 
             var host = new ServerHost();
             foreach (var module in modules)
@@ -62,7 +70,15 @@ namespace Fps.Server
             using (var transport = runtime.CreateTransport())
             {
                 var server = new MatchServer(
-                    launch, transport, host, map, output, new ServerEventWriter(json, output, output), () => DateTime.UtcNow);
+                    launch,
+                    transport,
+                    host,
+                    map,
+                    output,
+                    new ServerEventWriter(json, output, output),
+                    () => DateTime.UtcNow,
+                    rules.Settings.RestartDelaySeconds,
+                    rules);
                 var code = Start(server, error);
                 if (code != ExitOk)
                 {

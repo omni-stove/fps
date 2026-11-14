@@ -13,14 +13,14 @@ namespace Fps.Server
             TextWriter error,
             Func<string, string> environment,
             IStopSignal stopSignal,
-            IReadOnlyList<string> mapSearchRoots,
+            IReadOnlyList<string> dataSearchRoots,
             Func<IMatchTransport> createTransport)
         {
             Output = output ?? throw new ArgumentNullException(nameof(output));
             Error = error ?? throw new ArgumentNullException(nameof(error));
             Environment = environment ?? throw new ArgumentNullException(nameof(environment));
             StopSignal = stopSignal ?? throw new ArgumentNullException(nameof(stopSignal));
-            MapSearchRoots = mapSearchRoots ?? throw new ArgumentNullException(nameof(mapSearchRoots));
+            DataSearchRoots = dataSearchRoots ?? throw new ArgumentNullException(nameof(dataSearchRoots));
             CreateTransport = createTransport ?? throw new ArgumentNullException(nameof(createTransport));
         }
 
@@ -32,7 +32,7 @@ namespace Fps.Server
 
         public IStopSignal StopSignal { get; }
 
-        public IReadOnlyList<string> MapSearchRoots { get; }
+        public IReadOnlyList<string> DataSearchRoots { get; }
 
         public Func<IMatchTransport> CreateTransport { get; }
 

@@ -117,6 +117,19 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheScopedRifleSampleHasSeveralZoomLevelsAndItsCommittedAssetMatchesTheJson()
+        {
+            var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/ScopedRifle.json"));
+            var spec = WeaponJsonImporter.ParseSpec(json, "ScopedRifle.json");
+
+            Assert.That(spec.Aim.ZoomLevels.Count, Is.GreaterThanOrEqualTo(2));
+            Assert.That(spec.Aim.ZoomLevels, Is.Ordered.Descending, "each step zooms in further");
+
+            var committed = WeaponAssetBuilder.LoadRangeWeapons().Weapons.Single(d => d.ToSpec().Id == spec.Id);
+            Assert.That(WeaponSpecJson.Write(committed.ToSpec()), Is.EqualTo(WeaponSpecJson.Write(spec)));
+        }
+
+        [Test]
         public void BuildsTheLauncherOutsideTheCatalogAndLoadout()
         {
             Build();

@@ -36,7 +36,7 @@ namespace Fps.Core
 
             if (trigger.SpinUp != null)
             {
-                model = new SpinUpTrigger(trigger.SpinUp, model);
+                model = new SpinUpTrigger(trigger.SpinUp, model, trigger.FireMode == FireMode.Auto);
             }
 
             if (trigger.Charge != null)

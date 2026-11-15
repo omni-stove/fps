@@ -25,7 +25,6 @@ namespace Fps.Runtime
         private string _breathWeaponId;
         private float _swaySeconds;
         private Quaternion _cameraRestRotation = Quaternion.identity;
-        private bool _swayApplied;
         private bool _warnedSwayOnPitchPivot;
 
         public InputAction HoldBreathAction => _holdBreathAction;
@@ -130,7 +129,8 @@ namespace Fps.Runtime
             SwayPitchUpDegrees = pitchUpDegrees;
             SwayYawDegrees = yawDegrees;
             var still = pitchUpDegrees == 0f && yawDegrees == 0f;
-            if (still && !_swayApplied)
+            // 揺れの乗った向きを別の部品が保存して書き戻すことがあるので、自分が掛けたかの記録ではなく実際の向きで判断する。
+            if (still && _camera.transform.localRotation == _cameraRestRotation)
             {
                 return;
             }
@@ -148,7 +148,6 @@ namespace Fps.Runtime
             }
 
             _camera.transform.localRotation = _cameraRestRotation * Quaternion.Euler(-pitchUpDegrees, yawDegrees, 0f);
-            _swayApplied = !still;
         }
 
         private void ResetBreath()
@@ -161,7 +160,6 @@ namespace Fps.Runtime
         private void BindBreath(Camera camera, InputAction holdBreathAction)
         {
             _cameraRestRotation = camera.transform.localRotation;
-            _swayApplied = false;
             _breath = null;
             _swaySeconds = 0f;
             SwayPitchUpDegrees = 0f;

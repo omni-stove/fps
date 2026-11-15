@@ -49,7 +49,7 @@ namespace Fps.Server
 
             var output = runtime.Output;
             var error = runtime.Error;
-            if (!ServerLaunch.TryParse(args, runtime.Environment, out var launch, out var problem))
+            if (!ServerLaunch.TryParse(args, runtime.Environment, runtime.BuiltVersion, out var launch, out var problem))
             {
                 error.WriteLine("[Net] invalid arguments: " + problem);
                 return ExitUsage;

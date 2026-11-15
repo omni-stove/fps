@@ -21,6 +21,7 @@ namespace Fps.Server.Tests
         private Dictionary<string, string> _environment;
         private ushort _port;
         private ServerRuntime.EosTransportFactory _eosTransport;
+        private string _builtVersion;
 
         [SetUp]
         public void SetUp()
@@ -32,6 +33,7 @@ namespace Fps.Server.Tests
             TestRules.Write(_data.Path, ServerLaunch.DefaultRules);
             _stop = new ImmediateStopSignal();
             _eosTransport = null;
+            _builtVersion = null;
             _port = TestClient.FreePort();
             _environment = new Dictionary<string, string>
             {
@@ -68,6 +70,16 @@ namespace Fps.Server.Tests
 
             Assert.That(FirstLine(_output), Is.EqualTo("[Version] 1.2.3"));
             Assert.That(_output.ToString(), Does.Contain(EosSdkBuild.LogLine(AppContext.BaseDirectory)));
+        }
+
+        [Test]
+        public void PrintsTheBuiltVersionWithoutTheArgument()
+        {
+            _builtVersion = "v2.0.0";
+
+            Run();
+
+            Assert.That(FirstLine(_output), Is.EqualTo("[Version] 2.0.0"));
         }
 
         [Test]
@@ -355,7 +367,8 @@ namespace Fps.Server.Tests
                 new[] { _data.Path },
                 new[] { _data.Path },
                 () => new UdpMatchTransport(),
-                _eosTransport);
+                _eosTransport,
+                _builtVersion);
         }
 
         private sealed class FailingListenTransport : IMatchTransport

@@ -291,6 +291,50 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void IgnoringSavesStartsFreshKeepsTheSaveAndResumesOnceThisPlaySaves()
+        {
+            _storage.Write(Slot, SaveAtCheckpoint(MissionName, 45).ToJson());
+            CampaignLaunchSelection.IgnoreSaves();
+            var first = BuildScene();
+            first.Campaign.ReloadDelaySeconds = 0f;
+
+            ExpectCampaign($"started mission={MissionName}");
+            ExpectCampaign($"not launched from the menu; ignoring the save and starting mission={MissionName} from the beginning");
+            first.Begin(_storage, () => _reloads++);
+
+            AssertStartedFresh(first);
+            Assert.That(_storage.TryRead(Slot, out _), Is.True, "the save is ignored, not deleted");
+
+            first.Missions.Progress("reach");
+            ExpectCampaign(new Regex($@"^\[Campaign\] saved mission={MissionName} checkpoint={CheckpointId} "));
+            Assert.That(first.Checkpoint.HandleEnter(first.PlayerCollider), Is.True);
+            Assert.That(CampaignLaunchSelection.IgnoresSaves, Is.False);
+
+            first.Dispose();
+            var second = BuildScene();
+            ExpectCampaign($"started mission={MissionName}");
+            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={MissionName} checkpoint={CheckpointId} health=100 "));
+            second.Begin(_storage, () => _reloads++);
+
+            Assert.That(second.Checkpoint.IsReached, Is.True);
+        }
+
+        [Test]
+        public void SelectingALaunchReadsTheSaveAgain()
+        {
+            _storage.Write(Slot, SaveAtCheckpoint(MissionName, 45).ToJson());
+            CampaignLaunchSelection.IgnoreSaves();
+            CampaignLaunchSelection.Select(new CampaignLaunch(MissionName, CampaignDifficulty.Normal));
+            var scene = BuildScene();
+
+            ExpectCampaign($"started mission={MissionName}");
+            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={MissionName} checkpoint={CheckpointId} health=45 "));
+            scene.Begin(_storage, () => _reloads++);
+
+            Assert.That(scene.Player.Health.Current, Is.EqualTo(45));
+        }
+
+        [Test]
         public void RestoresTheRestWhenTheCheckpointIsMissing()
         {
             var save = new CampaignSave(MissionName, "gone", 40, RifleAmmo(3, 4), RifleId, new[]

@@ -76,6 +76,36 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void OthersSeeTheThirdPersonFlashAndTheLocalPlayerSeesItsOwn()
+        {
+            var thirdPerson = Effect("RifleThirdPersonFlash");
+            _catalog.SetWeapons(new[] { new WeaponPresentationAssets(RifleId, Clip("Fire"), Clip("Reload"), _flash, thirdPerson) });
+            var enemy = Presenter("Enemy");
+            enemy.IsLocal = false;
+            var player = Presenter("Player");
+            player.IsLocal = true;
+
+            enemy.PlayShot(Shot(enemy.gameObject));
+            player.PlayShot(Shot(player.gameObject));
+
+            Assert.That(enemy.EffectPoolFor(thirdPerson).ActiveCount, Is.EqualTo(1));
+            Assert.That(enemy.EffectPoolFor(_flash), Is.Null);
+            Assert.That(player.EffectPoolFor(_flash).ActiveCount, Is.EqualTo(1));
+            Assert.That(player.EffectPoolFor(thirdPerson), Is.Null);
+        }
+
+        [Test]
+        public void OthersSeeTheOwnFlashWhenThereIsNoThirdPersonFlash()
+        {
+            var enemy = Presenter("Enemy");
+            enemy.IsLocal = false;
+
+            enemy.PlayShot(Shot(enemy.gameObject));
+
+            Assert.That(enemy.EffectPoolFor(_flash).ActiveCount, Is.EqualTo(1));
+        }
+
+        [Test]
         public void ThePooledFlashDoesNotDestroyItselfWhenItStops()
         {
             var presenter = Presenter("Shooter");

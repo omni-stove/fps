@@ -70,6 +70,20 @@ namespace Fps.Core
         }
 
         /// <summary>
+        /// 移動で足された散らばりが、その覗き込み具合で動き切ったときの散らばり (<see cref="ConeDegrees"/> の moveFraction = 1) に占める割合 (0〜1)。
+        /// HUD の照準を移動で開くのに使う。<see cref="WeaponSpec.MoveSpreadDegrees"/> が 0 か、動き切っても散らばりが 0 なら 0。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">spec が null のとき。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">adsProgress か moveFraction が NaN のとき。</exception>
+        public static float MoveShare(WeaponSpec spec, float adsProgress, float moveFraction)
+        {
+            var moving = ConeDegrees(spec, adsProgress, moveFraction);
+            var still = ConeDegrees(spec, adsProgress, 0f);
+            var full = ConeDegrees(spec, adsProgress, 1f);
+            return full <= 0f ? 0f : Clamp01((moving - still) / full);
+        }
+
+        /// <summary>
         /// 移動の速さの割合。speed が fullSpeed 以上なら 1、0 なら 0。fullSpeed が 0 以下なら、動いていれば 1。
         /// </summary>
         /// <param name="speed">今の水平の速さ (m/秒)。負は 0 として扱う。</param>

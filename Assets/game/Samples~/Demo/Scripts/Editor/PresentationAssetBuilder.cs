@@ -47,6 +47,10 @@ namespace Fps.Editor
         public const string RifleMuzzleFlashEffect = "RifleMuzzleFlash";
         public const string HandgunMuzzleFlashEffect = "HandgunMuzzleFlash";
         public const string LauncherMuzzleFlashEffect = "LauncherMuzzleFlash";
+        public const string RifleThirdPersonMuzzleFlashEffect = "RifleThirdPersonMuzzleFlash";
+        public const string HandgunThirdPersonMuzzleFlashEffect = "HandgunThirdPersonMuzzleFlash";
+        public const string LauncherThirdPersonMuzzleFlashEffect = "LauncherThirdPersonMuzzleFlash";
+        public const string MuzzleFlashLightEffect = "MuzzleFlashLight";
         public const string ImpactSparkEffect = "ImpactSpark";
         public const string TracerEffect = "Tracer";
         public const string ExplosionEffect = "ExplosionEffect";
@@ -72,16 +76,16 @@ namespace Fps.Editor
         internal const float BlendAdditive = 2f;
 
         /// <summary>
-        /// 武器ごとの音とマズルフラッシュの組み合わせ。武器の Id は <see cref="WeaponAssetBuilder"/> の固定値で、
+        /// 武器ごとの音とマズルフラッシュ (自分から見るものと、他人から見るもの) の組み合わせ。武器の Id は <see cref="WeaponAssetBuilder"/> の固定値で、
         /// カタログには入らない launcher も含める (建造物の破壊の確認で撃つため)。
         /// </summary>
-        public static IReadOnlyList<(string WeaponId, string Fire, string Reload, string MuzzleFlash)> WeaponEntries()
+        public static IReadOnlyList<(string WeaponId, string Fire, string Reload, string MuzzleFlash, string ThirdPersonMuzzleFlash)> WeaponEntries()
         {
             return new[]
             {
-                (WeaponAssetBuilder.RifleId, RifleFireSound, RifleReloadSound, RifleMuzzleFlashEffect),
-                (WeaponAssetBuilder.HandgunId, HandgunFireSound, HandgunReloadSound, HandgunMuzzleFlashEffect),
-                (WeaponAssetBuilder.LauncherId, LauncherFireSound, LauncherReloadSound, LauncherMuzzleFlashEffect),
+                (WeaponAssetBuilder.RifleId, RifleFireSound, RifleReloadSound, RifleMuzzleFlashEffect, RifleThirdPersonMuzzleFlashEffect),
+                (WeaponAssetBuilder.HandgunId, HandgunFireSound, HandgunReloadSound, HandgunMuzzleFlashEffect, HandgunThirdPersonMuzzleFlashEffect),
+                (WeaponAssetBuilder.LauncherId, LauncherFireSound, LauncherReloadSound, LauncherMuzzleFlashEffect, LauncherThirdPersonMuzzleFlashEffect),
             };
         }
 
@@ -215,14 +219,23 @@ namespace Fps.Editor
             var additive = BuildParticleMaterial($"{presentationFolder}/{AdditiveMaterialName}.mat", softDot, BlendAdditive);
             var alpha = BuildParticleMaterial($"{presentationFolder}/{AlphaMaterialName}.mat", softDot, BlendAlpha);
 
+            // 他人から見るフラッシュの粒子の光はこのプレハブを参照するので、先に保存しておく。
+            var flashLight = SavePrefab(presentationFolder, MuzzleFlashLightEffect, AddMuzzleFlashLight);
             var effects = new Dictionary<string, GameObject>(StringComparer.Ordinal)
             {
+                [MuzzleFlashLightEffect] = flashLight,
                 [RifleMuzzleFlashEffect] = SavePrefab(presentationFolder, RifleMuzzleFlashEffect,
                     root => AddMuzzleFlash(root, additive, 0.35f, 0.5f, new Color(1f, 0.78f, 0.4f), 0.05f, 2)),
                 [HandgunMuzzleFlashEffect] = SavePrefab(presentationFolder, HandgunMuzzleFlashEffect,
                     root => AddMuzzleFlash(root, additive, 0.22f, 0.32f, new Color(1f, 0.85f, 0.5f), 0.04f, 2)),
                 [LauncherMuzzleFlashEffect] = SavePrefab(presentationFolder, LauncherMuzzleFlashEffect,
                     root => AddMuzzleFlash(root, additive, 0.6f, 0.9f, new Color(1f, 0.6f, 0.25f), 0.08f, 3)),
+                [RifleThirdPersonMuzzleFlashEffect] = SavePrefab(presentationFolder, RifleThirdPersonMuzzleFlashEffect,
+                    root => AddMuzzleFlash(root, additive, 0.8f, 1.1f, new Color(1f, 0.78f, 0.4f), 0.07f, 2, flashLight)),
+                [HandgunThirdPersonMuzzleFlashEffect] = SavePrefab(presentationFolder, HandgunThirdPersonMuzzleFlashEffect,
+                    root => AddMuzzleFlash(root, additive, 0.6f, 0.8f, new Color(1f, 0.85f, 0.5f), 0.06f, 2, flashLight)),
+                [LauncherThirdPersonMuzzleFlashEffect] = SavePrefab(presentationFolder, LauncherThirdPersonMuzzleFlashEffect,
+                    root => AddMuzzleFlash(root, additive, 1.3f, 1.8f, new Color(1f, 0.6f, 0.25f), 0.1f, 3, flashLight)),
                 [ImpactSparkEffect] = SavePrefab(presentationFolder, ImpactSparkEffect, root => AddImpactSpark(root, additive)),
                 [TracerEffect] = SavePrefab(presentationFolder, TracerEffect, root => AddTracer(root, additive)),
                 [ExplosionEffect] = SavePrefab(presentationFolder, ExplosionEffect, root => AddExplosion(root, additive, alpha)),
@@ -231,7 +244,8 @@ namespace Fps.Editor
             var weapons = new List<WeaponPresentationAssets>();
             foreach (var entry in WeaponEntries())
             {
-                weapons.Add(new WeaponPresentationAssets(entry.WeaponId, clips[entry.Fire], clips[entry.Reload], effects[entry.MuzzleFlash]));
+                weapons.Add(new WeaponPresentationAssets(
+                    entry.WeaponId, clips[entry.Fire], clips[entry.Reload], effects[entry.MuzzleFlash], effects[entry.ThirdPersonMuzzleFlash]));
             }
 
             var catalog = SceneBuildHelpers.CreateOrUpdateAsset<PresentationCatalog>(catalogPath, c =>
@@ -505,9 +519,11 @@ namespace Fps.Editor
             public float VelocityScale;
             public Material Material;
             public bool DestroyOnStop;
+            public Light Light;
         }
 
-        private static void AddMuzzleFlash(GameObject root, Material material, float minSize, float maxSize, Color color, float lifetime, short burst)
+        private static void AddMuzzleFlash(
+            GameObject root, Material material, float minSize, float maxSize, Color color, float lifetime, short burst, GameObject light = null)
         {
             AddParticles(root, new ParticleSettings
             {
@@ -523,7 +539,18 @@ namespace Fps.Editor
                 Fade = Fade(Color.white, Color.white, 1f, 0f),
                 Material = material,
                 DestroyOnStop = true,
+                Light = light != null ? light.GetComponent<Light>() : null,
             });
+        }
+
+        private static void AddMuzzleFlashLight(GameObject root)
+        {
+            var light = root.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = Color.white;
+            light.range = 8f;
+            light.intensity = 3f;
+            light.shadows = LightShadows.None;
         }
 
         private static void AddImpactSpark(GameObject root, Material material)
@@ -704,6 +731,19 @@ namespace Fps.Editor
             if (settings.Fade != null)
             {
                 colorOverLifetime.color = new ParticleSystem.MinMaxGradient(settings.Fade);
+            }
+
+            // 光を粒の色と透明度に合わせると、粒が消えるのと一緒に光も消え、プール側で光を止めずに済む。
+            var lights = system.lights;
+            lights.enabled = settings.Light != null;
+            if (settings.Light != null)
+            {
+                lights.light = settings.Light;
+                lights.ratio = 1f;
+                lights.maxLights = 1;
+                lights.useParticleColor = true;
+                lights.alphaAffectsIntensity = true;
+                lights.sizeAffectsRange = false;
             }
 
             var renderer = target.GetComponent<ParticleSystemRenderer>();

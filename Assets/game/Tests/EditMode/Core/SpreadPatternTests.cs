@@ -48,6 +48,24 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void MoveShareIsTheMovePartOfTheFullyMovingCone()
+        {
+            var spec = Spec(hip: 6f, ads: 1f, move: 4f);
+
+            Assert.That(SpreadPattern.MoveShare(spec, 0f, 0f), Is.EqualTo(0f));
+            Assert.That(SpreadPattern.MoveShare(spec, 0f, 0.5f), Is.EqualTo(2f / 10f).Within(1e-5f));
+            Assert.That(SpreadPattern.MoveShare(spec, 0f, 1f), Is.EqualTo(4f / 10f).Within(1e-5f));
+            Assert.That(SpreadPattern.MoveShare(spec, 1f, 1f), Is.EqualTo(4f / 5f).Within(1e-5f));
+        }
+
+        [Test]
+        public void MoveShareIsZeroWithoutMoveSpread()
+        {
+            Assert.That(SpreadPattern.MoveShare(Spec(hip: 6f), 0f, 1f), Is.EqualTo(0f));
+            Assert.That(SpreadPattern.MoveShare(Spec(), 0f, 1f), Is.EqualTo(0f));
+        }
+
+        [Test]
         public void ConeClampsInputsOutsideZeroToOne()
         {
             var spec = Spec(hip: 6f, ads: 1f, move: 4f);

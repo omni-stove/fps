@@ -9,6 +9,8 @@ namespace Fps.Runtime
     /// メニューで選んだ <see cref="CampaignLaunch"/> を、ミッションのシーンの <see cref="CampaignRunner"/> へ渡す置き場所。
     /// シーンを読み直しても (プレイヤーが倒れたときの再開でも) 選び直すまで残る。
     /// Play を始めるたびに空に戻すので、シーンを直接開いて Play したときは何も選ばれていない。
+    /// エディタでシーンを直接開いて Play したときは、メニューで選ぶかその Play 中にセーブするまで <see cref="IgnoresSaves"/> が true になり、
+    /// 前の Play のセーブから再開せずに最初から始める。
     /// </summary>
     public static class CampaignLaunchSelection
     {
@@ -17,10 +19,13 @@ namespace Fps.Runtime
         /// <summary>今の選択。何も選ばれていなければ null。</summary>
         public static CampaignLaunch Current { get; private set; }
 
+        public static bool IgnoresSaves { get; private set; }
+
         /// <summary>launch を選ぶ。前の選択は置き換える。</summary>
         public static void Select(CampaignLaunch launch)
         {
             Current = launch ?? throw new ArgumentNullException(nameof(launch));
+            IgnoresSaves = false;
             Debug.Log($"{LogTag} selected launch mission={launch.MissionId} difficulty={CampaignLaunchOptions.DifficultyName(launch.Difficulty)}");
         }
 
@@ -28,6 +33,17 @@ namespace Fps.Runtime
         public static void Clear()
         {
             Current = null;
+            IgnoresSaves = false;
+        }
+
+        public static void IgnoreSaves()
+        {
+            IgnoresSaves = true;
+        }
+
+        public static void MarkSaved()
+        {
+            IgnoresSaves = false;
         }
 
         /// <summary>
@@ -86,6 +102,8 @@ namespace Fps.Runtime
         private static void ResetOnPlay()
         {
             Current = null;
+            // ビルドは起動するたびにここを通るので、続きから遊べるようセーブを読む。エディタの Play だけ前の Play のセーブを持ち込まない。
+            IgnoresSaves = Application.isEditor;
         }
     }
 }

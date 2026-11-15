@@ -299,7 +299,9 @@ namespace Fps.Runtime
 
         /// <summary>
         /// shot の 1 発の銃声・マズルフラッシュ・曳光弾を出す。shot の撃った者がこの本体なら本体の音源 (自分なら 2D) で、
-        /// そうでなければ弾の始点に置いた 3D の音源で鳴らす。武器の Id がカタログに無ければ、銃声とマズルフラッシュは出さずに曳光弾だけ出す。
+        /// そうでなければ弾の始点に置いた 3D の音源で鳴らす。マズルフラッシュは自分の弾なら <see cref="WeaponPresentationAssets.MuzzleFlash"/>、
+        /// 他人の弾なら <see cref="WeaponPresentationAssets.ThirdPersonMuzzleFlash"/> (無ければ MuzzleFlash) を出す。
+        /// 武器の Id がカタログに無ければ、銃声とマズルフラッシュは出さずに曳光弾だけ出す。
         /// </summary>
         public void PlayShot(ShotFiredInfo shot)
         {
@@ -337,9 +339,10 @@ namespace Fps.Runtime
                     SubtitleFeed.Raise(SoundCueKind.Gunshot, heardAt, SoundMaxDistance);
                 }
 
-                if (assets.MuzzleFlash != null)
+                var flash = assets.MuzzleFlashFor(own && IsLocal);
+                if (flash != null)
                 {
-                    SpawnEffect(assets.MuzzleFlash, MuzzleFlashCapacity, muzzle, muzzlePose.rotation, now);
+                    SpawnEffect(flash, MuzzleFlashCapacity, muzzle, muzzlePose.rotation, now);
                 }
             }
             else

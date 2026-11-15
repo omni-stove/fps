@@ -17,6 +17,7 @@ namespace Fps.Runtime
     /// <item>プレイヤーが倒れたら武器・移動・グレネードを止め、<see cref="ReloadDelaySeconds"/> 秒後にシーンを読み直す。</item>
     /// <item>始めるときにセーブがあれば、ミッションの進み具合・チェックポイントの位置・体力・弾数を戻す。
     /// 別のミッションのセーブや壊れたセーブは警告を出して無視し、最初から始める。
+    /// <see cref="CampaignLaunchSelection.IgnoresSaves"/> の間 (エディタでシーンを直接 Play し、まだセーブしていない) はセーブを読まずに最初から始める。
     /// ミッションごとのスロットが無ければ、<see cref="CampaignSaveSlots.LegacyMissionId"/> だけは古いスロット <see cref="CampaignSaveSlots.Legacy"/> も読み、
     /// 戻せたらミッションごとのスロットへ移す。</item>
     /// <item>ミッションを達成したらセーブ (古いスロットも) を消す。</item>
@@ -466,7 +467,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// プレイヤーの死亡とミッションの達成を購読し、storage にセーブがあれば戻す。
+        /// プレイヤーの死亡とミッションの達成を購読し、storage にセーブがあれば戻す (<see cref="CampaignLaunchSelection.IgnoresSaves"/> なら戻さない)。
         /// missionRunner はまだなら始める。始められない・参照が足りないときは例外を投げ、何も購読しない。
         /// </summary>
         /// <param name="missionRunner">セーブするミッション。</param>
@@ -577,7 +578,12 @@ namespace Fps.Runtime
             _mission.MissionCompleted += OnMissionCompleted;
 
             Debug.Log($"{LogTag} started mission={_missionId}", this);
-            if (!TryRestore())
+            if (CampaignLaunchSelection.IgnoresSaves)
+            {
+                Debug.Log($"{LogTag} not launched from the menu; ignoring the save and starting mission={_missionId} from the beginning", this);
+                _passedCheckpointIds.Clear();
+            }
+            else if (!TryRestore())
             {
                 _passedCheckpointIds.Clear();
             }
@@ -633,6 +639,7 @@ namespace Fps.Runtime
 
             _lastCheckpointId = checkpointId;
             _passedCheckpointIds.Add(checkpointId);
+            CampaignLaunchSelection.MarkSaved();
 
             // セーブにグレネードの数を持たせないのは、チェックポイントで満タンに戻すので、再開したときの数 (満タン) と食い違わないため。
             var grenades = _player.GetComponent<GrenadeThrower>();

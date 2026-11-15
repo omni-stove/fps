@@ -81,6 +81,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(assets.Fire, Is.SameAs(Clip(entry.Fire)), entry.Fire);
                 Assert.That(assets.Reload, Is.SameAs(Clip(entry.Reload)), entry.Reload);
                 Assert.That(assets.MuzzleFlash, Is.SameAs(Prefab(entry.MuzzleFlash)), entry.MuzzleFlash);
+                Assert.That(assets.ThirdPersonMuzzleFlash, Is.SameAs(Prefab(entry.ThirdPersonMuzzleFlash)), entry.ThirdPersonMuzzleFlash);
             }
 
             Assert.That(catalog.TryGetWeapon(WeaponAssetBuilder.RifleId, out var rifle), Is.True);
@@ -131,6 +132,9 @@ namespace Fps.Tests.EditMode
                 PresentationAssetBuilder.RifleMuzzleFlashEffect,
                 PresentationAssetBuilder.HandgunMuzzleFlashEffect,
                 PresentationAssetBuilder.LauncherMuzzleFlashEffect,
+                PresentationAssetBuilder.RifleThirdPersonMuzzleFlashEffect,
+                PresentationAssetBuilder.HandgunThirdPersonMuzzleFlashEffect,
+                PresentationAssetBuilder.LauncherThirdPersonMuzzleFlashEffect,
                 PresentationAssetBuilder.ImpactSparkEffect,
                 PresentationAssetBuilder.TracerEffect,
                 PresentationAssetBuilder.ExplosionEffect,
@@ -153,6 +157,24 @@ namespace Fps.Tests.EditMode
             Assert.That(tracer.shape.enabled, Is.False, "the tracer flies straight along +Z");
             Assert.That(tracer.main.startSpeed.constantMax, Is.EqualTo(PresentationAssetBuilder.TracerSpeed));
             Assert.That(Prefab(PresentationAssetBuilder.ExplosionEffect).GetComponentsInChildren<ParticleSystem>(), Has.Length.EqualTo(3));
+        }
+
+        [Test]
+        public void ThirdPersonFlashesAreLargerAndLightTheirSurroundings()
+        {
+            Build();
+            var light = Prefab(PresentationAssetBuilder.MuzzleFlashLightEffect).GetComponent<Light>();
+            Assert.That(light, Is.Not.Null);
+
+            foreach (var entry in PresentationAssetBuilder.WeaponEntries())
+            {
+                var own = Prefab(entry.MuzzleFlash).GetComponent<ParticleSystem>();
+                var seen = Prefab(entry.ThirdPersonMuzzleFlash).GetComponent<ParticleSystem>();
+                Assert.That(seen.main.startSize.constantMax, Is.GreaterThan(own.main.startSize.constantMax), entry.ThirdPersonMuzzleFlash);
+                Assert.That(seen.lights.enabled, Is.True, entry.ThirdPersonMuzzleFlash);
+                Assert.That(seen.lights.light, Is.SameAs(light), entry.ThirdPersonMuzzleFlash);
+                Assert.That(own.lights.enabled, Is.False, entry.MuzzleFlash);
+            }
         }
 
         [Test]

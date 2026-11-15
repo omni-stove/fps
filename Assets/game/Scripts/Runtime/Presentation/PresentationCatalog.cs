@@ -298,17 +298,22 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("マズルフラッシュ。+Z を銃口の向きに向けて置く")]
         private GameObject _muzzleFlash;
 
+        [SerializeField, Tooltip("他人 (敵・相手のプレイヤー) が撃ったのを見るときのマズルフラッシュ。+Z を銃口の向きに向けて置く。空なら自分と同じマズルフラッシュ")]
+        private GameObject _thirdPersonMuzzleFlash;
+
         public WeaponPresentationAssets()
         {
         }
 
         /// <summary>weaponId は前後の空白を除いて持つ (<see cref="Fps.Core.WeaponSpec.Id"/> と同じ形にそろえる)。</summary>
-        public WeaponPresentationAssets(string weaponId, AudioClip fire, AudioClip reload, GameObject muzzleFlash)
+        public WeaponPresentationAssets(
+            string weaponId, AudioClip fire, AudioClip reload, GameObject muzzleFlash, GameObject thirdPersonMuzzleFlash = null)
         {
             _weaponId = weaponId?.Trim() ?? string.Empty;
             _fire = fire;
             _reload = reload;
             _muzzleFlash = muzzleFlash;
+            _thirdPersonMuzzleFlash = thirdPersonMuzzleFlash;
         }
 
         public string WeaponId => _weaponId ?? string.Empty;
@@ -318,6 +323,18 @@ namespace Fps.Runtime
         public AudioClip Reload => _reload;
 
         public GameObject MuzzleFlash => _muzzleFlash;
+
+        /// <summary>他人が撃ったのを見るときのマズルフラッシュ。空なら null。</summary>
+        public GameObject ThirdPersonMuzzleFlash => _thirdPersonMuzzleFlash;
+
+        /// <summary>
+        /// 撃った者から見るなら <see cref="MuzzleFlash"/>、他人から見るなら <see cref="ThirdPersonMuzzleFlash"/>
+        /// (空なら <see cref="MuzzleFlash"/>)。
+        /// </summary>
+        public GameObject MuzzleFlashFor(bool firstPerson)
+        {
+            return firstPerson || _thirdPersonMuzzleFlash == null ? _muzzleFlash : _thirdPersonMuzzleFlash;
+        }
     }
 
     /// <summary><see cref="PresentationCatalog"/> の中身が足りない・重複しているときの例外。</summary>

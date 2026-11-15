@@ -141,6 +141,30 @@ namespace Fps.Runtime
         /// </summary>
         public float SpreadFraction => ModifySpreadFraction(_spread);
 
+        /// <summary>
+        /// HUD の照準の広がり (0〜1)。<see cref="SpreadFraction"/> に、今の武器で移動が足している散らばりの割合
+        /// (<see cref="SpreadPattern.MoveShare"/>、<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読む) を足し、<see cref="SpreadScale"/> を掛ける。
+        /// </summary>
+        public float CrosshairSpreadFraction
+        {
+            get
+            {
+                var spread = SpreadFraction;
+                var spec = Weapon?.Spec;
+                if (spec != null)
+                {
+                    var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
+                    var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
+                    if (!float.IsNaN(ads) && !float.IsNaN(move))
+                    {
+                        spread += SpreadPattern.MoveShare(spec, ads, move);
+                    }
+                }
+
+                return Mathf.Clamp01(spread * SpreadScale);
+            }
+        }
+
         /// <summary>射撃の向きと起点。未初期化なら null。</summary>
         public Transform Aim => _aim;
 

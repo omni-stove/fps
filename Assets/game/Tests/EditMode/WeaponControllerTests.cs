@@ -684,6 +684,22 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void MovingOpensTheCrosshair()
+        {
+            _rifle.HipSpreadDegrees = 2f;
+            _rifle.MoveSpreadDegrees = 4f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+
+            Assert.That(_controller.CrosshairSpreadFraction, Is.EqualTo(0f));
+
+            _controller.MoveFractionSource = () => 1f;
+            Assert.That(_controller.CrosshairSpreadFraction, Is.EqualTo(4f / 6f).Within(1e-5f));
+
+            _controller.SpreadScaleSource = () => 0.5f;
+            Assert.That(_controller.CrosshairSpreadFraction, Is.EqualTo(2f / 6f).Within(1e-5f));
+        }
+
+        [Test]
         public void ModifiersWidenTheConeAndTheCrosshairInOrderWithinTheLimits()
         {
             _rifle.HipSpreadDegrees = 2f;

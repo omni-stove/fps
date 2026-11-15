@@ -25,7 +25,7 @@ namespace Fps.NetV2
         public const string ObjectName = "NetV2HUD";
 
         private readonly List<ScoreboardEntry> _scoreboard = new List<ScoreboardEntry>();
-        private readonly Dictionary<int, Team> _teams = new Dictionary<int, Team>();
+        private readonly ParticipantTable _participants = new ParticipantTable();
         private readonly List<ControlPointStatus> _controlPoints = new List<ControlPointStatus>();
         private ControlPointsView _controlPointsView;
         private Hud _hud;
@@ -46,6 +46,8 @@ namespace Fps.NetV2
         private SnapshotMessage _latest;
 
         public Hud Hud => _hud;
+
+        public IParticipants Participants => _participants;
 
         /// <summary>HUD を作る。作れなければ作りかけを消して例外を投げる (Resources に HUD のレイアウトかテーマが無い)。</summary>
         public static NetV2Hud Create(int localPlayerId, int maxHealth)
@@ -86,11 +88,12 @@ namespace Fps.NetV2
             _latest = snapshot;
             var model = _hud.Model;
             var match = snapshot.Match;
-            _teams.Clear();
+            _participants.Clear();
             var own = -1;
             for (var i = 0; i < snapshot.Players.Count; i++)
             {
-                _teams[snapshot.Players[i].PlayerId] = snapshot.Players[i].Team;
+                var playerId = snapshot.Players[i].PlayerId;
+                _participants.Set(new Participant(playerId, BotRoster.KillFeedName(playerId), snapshot.Players[i].Team, playerId == _localId));
                 if (snapshot.Players[i].PlayerId == _localId)
                 {
                     own = i;
@@ -363,8 +366,10 @@ namespace Fps.NetV2
 
             private KillFeedName NameOf(int playerId)
             {
-                Team? team = _owner._teams.TryGetValue(playerId, out var known) ? known : (Team?)null;
-                return new KillFeedName(BotRoster.KillFeedName(playerId), team, playerId == _owner._localId);
+                // 抜けた人もスナップショットから消えるので、表に無くても Id から名前を作り、チームだけ無しにする。
+                return _owner._participants.TryGet(playerId, out var participant)
+                    ? new KillFeedName(participant)
+                    : new KillFeedName(BotRoster.KillFeedName(playerId), null, playerId == _owner._localId);
             }
         }
     }

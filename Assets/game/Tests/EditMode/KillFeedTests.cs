@@ -190,6 +190,14 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ANameTakesTheParticipantsNameTeamAndLocalFlag()
+        {
+            var name = new KillFeedName(new Participant(12, KillFeedFormat.Player(12), Team.Bravo, true));
+
+            Assert.That(name, Is.EqualTo(new KillFeedName("P12", Team.Bravo, true)));
+        }
+
+        [Test]
         public void DefaultLinesAndNamesReadAsEmptyText()
         {
             Assert.That(default(KillFeedLine).WeaponName.IsEmpty, Is.True);

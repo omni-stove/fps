@@ -164,7 +164,9 @@ namespace Fps.Server
         {
             var shooterId = shot.ShooterId;
             var victimId = hit.TargetId;
-            var outcome = _rules.ApplyDamage(shooterId, victimId, amount, new KillShot(shooterId, victimId, shot.Weapon.Id, hit.Zone));
+            // 飛ぶ弾は撃った人が抜けた後にも当たる。グレネードと同じく攻撃者のいないダメージ (倒れたら自滅) にし、キルフィードも本人にそろえる
+            var attacker = _match.TryGetPlayer(shooterId, out _) ? shooterId : (int?)null;
+            var outcome = _rules.ApplyDamage(attacker, victimId, amount, new KillShot(attacker ?? victimId, victimId, shot.Weapon.Id, hit.Zone));
             if (outcome != DamageOutcome.Ignored)
             {
                 var hurt = IsReflected(shooterId, victimId) ? shooterId : victimId;

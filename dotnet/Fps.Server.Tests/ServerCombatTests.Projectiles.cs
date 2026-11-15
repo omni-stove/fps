@@ -161,7 +161,32 @@ namespace Fps.Server.Tests
 
         private const float _projectileLifetime = 3f;
 
-        private static WeaponSpec ProjectileRifle(float speed, float gravityMultiplier, int? damage = null)
+        [Test]
+        public void AChargedProjectileLeavesFasterByTheAcceptedCharge()
+        {
+            const float speed = 10f;
+            var charge = new ChargeSpec(0.5f, 0f, 1f, fullChargeSpeedMultiplier: 3f);
+            Start(Rules(), rifle: ProjectileRifle(speed, 0f, charge: charge));
+            Join(1);
+            Join(2);
+            Step(1f);
+            var eye = Body(1).EyePosition;
+
+            Send(1, new FireRequestMessage
+            {
+                WeaponId = TestRules.RifleId,
+                Origin = eye,
+                Direction = Body(2).Center - eye,
+                ClientTick = (int)_host.TickCount,
+                ShotIndex = _shotIndex++,
+                ChargeFraction = 1f,
+            });
+
+            var spawned = _transport.Read<ProjectileSpawnedMessage>(2, Copy).Single();
+            Assert.That(spawned.Velocity.Length(), Is.EqualTo(speed * 3f).Within(1e-3f), _log.ToString());
+        }
+
+        private static WeaponSpec ProjectileRifle(float speed, float gravityMultiplier, int? damage = null, ChargeSpec charge = null)
         {
             var rifle = TestRules.Rifle();
             var round = new RoundSpec(
@@ -170,7 +195,16 @@ namespace Fps.Server.Tests
                 projectile: new ProjectileSpec(speed, gravityMultiplier, _projectileLifetime, WorldHitResponse.Stick));
             var impact = damage.HasValue ? new ImpactSpec(damage.Value, DamageFalloff.None, rifle.Impact.StructureRadius) : rifle.Impact;
             return new WeaponSpec(
-                rifle.Id, rifle.NameKey, rifle.Category, rifle.Trigger, rifle.Ammo, round, impact, rifle.Aim, rifle.AmmoTypes, rifle.ShotNoiseRadius);
+                rifle.Id,
+                rifle.NameKey,
+                rifle.Category,
+                charge != null ? new TriggerSpec(FireMode.Semi, rifle.FireInterval, charge: charge) : rifle.Trigger,
+                rifle.Ammo,
+                round,
+                impact,
+                rifle.Aim,
+                rifle.AmmoTypes,
+                rifle.ShotNoiseRadius);
         }
 
         private ProjectileSnapshot OnlyProjectile(int receiverId)

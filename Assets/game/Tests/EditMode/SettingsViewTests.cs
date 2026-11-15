@@ -292,6 +292,84 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheEffectsSectionShowsTheShakeSlidersAndTheBloodSwitchInJapanese()
+        {
+            _view.Open(_container);
+
+            var shake = _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.CameraShakeIntensity));
+            var sway = _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.ViewmodelMotionIntensity));
+            var blood = _container.Q<Button>(SettingsView.BloodButtonName);
+            Assert.That(CaptionOf(shake), Is.EqualTo("画面の揺れの強さ"));
+            Assert.That(CaptionOf(sway), Is.EqualTo("武器の揺れの強さ"));
+            Assert.That(CaptionOf(blood), Is.EqualTo("血の表示"));
+            Assert.That(shake.value, Is.EqualTo(100));
+            Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.CameraShakeIntensity)).text, Is.EqualTo("100%"));
+            Assert.That(blood.text, Is.EqualTo("オン"));
+
+            // 3 項目は「演出」の見出しの下に、揺れ・武器の揺れ・血の順で並ぶ
+            var rows = shake.parent.parent;
+            var heading = rows[rows.IndexOf(shake.parent) - 1] as Label;
+            Assert.That(heading, Is.Not.Null);
+            Assert.That(heading.text, Is.EqualTo("演出"));
+            Assert.That(rows.IndexOf(sway.parent), Is.EqualTo(rows.IndexOf(shake.parent) + 1));
+            Assert.That(rows.IndexOf(blood.parent), Is.EqualTo(rows.IndexOf(shake.parent) + 2));
+        }
+
+        [Test]
+        public void TheShakeSlidersAndTheBloodSwitchReachThePresentersAndAreSavedOnClose()
+        {
+            try
+            {
+                _view.Open(_container);
+
+                _view.SetValue(ControlValue.CameraShakeIntensity, 0);
+                _view.SetValue(ControlValue.ViewmodelMotionIntensity, 30);
+                _view.SetShowBlood(false);
+
+                Assert.That(CameraShake.GlobalMultiplier, Is.Zero);
+                Assert.That(ViewmodelMotion.GlobalMultiplier, Is.EqualTo(0.3f).Within(1e-6f));
+                Assert.That(BloodPresenter.BloodEnabled, Is.False);
+                Assert.That(_container.Q<Button>(SettingsView.BloodButtonName).text, Is.EqualTo(SettingsView.OffText));
+                Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.ViewmodelMotionIntensity)).text, Is.EqualTo("30%"));
+                Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False, "not written until it closes");
+
+                _view.Close();
+
+                var saved = new ControlSettingsStore(_store.Key).Load();
+                Assert.That(saved.Get(ControlValue.CameraShakeIntensity), Is.Zero);
+                Assert.That(saved.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(30));
+                Assert.That(saved.ShowBlood, Is.False);
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(ControlSettings.Default);
+            }
+        }
+
+        [Test]
+        public void ResetToDefaultsTurnsTheEffectsBackOn()
+        {
+            _view.Open(_container);
+            _view.SetValue(ControlValue.CameraShakeIntensity, 10);
+            _view.SetShowBlood(false);
+
+            _view.ResetToDefaults();
+
+            Assert.That(AppliedControlSettings.Current.ShowBlood, Is.True);
+            Assert.That(CameraShake.GlobalMultiplier, Is.EqualTo(1f));
+            Assert.That(BloodPresenter.BloodEnabled, Is.True);
+            Assert.That(_container.Q<Button>(SettingsView.BloodButtonName).text, Is.EqualTo(SettingsView.OnText));
+            Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.CameraShakeIntensity)).value, Is.EqualTo(100));
+        }
+
+        // 行の先頭の見出しの Label。
+        private static string CaptionOf(VisualElement control)
+        {
+            Assert.That(control, Is.Not.Null);
+            return ((Label)control.parent[0]).text;
+        }
+
+        [Test]
         public void TheNetStatsToggledWhileOpenSurviveEditsResetAndSave()
         {
             _view.Open(_container);

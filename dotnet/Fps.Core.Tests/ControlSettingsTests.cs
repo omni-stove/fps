@@ -86,10 +86,11 @@ namespace Fps.Core.Tests
             Assert.That(
                 ControlSettings.Default.ToJson(),
                 Is.EqualTo(Json(
-                    "{'version':6,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
+                    "{'version':7,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
                     "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}," +
                     "'mouseSensitivity':100,'gamepadSensitivity':100,'adsSensitivity':100," +
-                    "'fieldOfView':60,'masterVolume':100,'effectsVolume':100,'showNetStats':false," +
+                    "'fieldOfView':60,'masterVolume':100,'effectsVolume':100,'cameraShake':100,'viewmodelMotion':100," +
+                    "'showBlood':true,'showNetStats':false," +
                     "'colorPalette':'standard','showSubtitles':false,'language':'ja'}")));
         }
 
@@ -140,7 +141,7 @@ namespace Fps.Core.Tests
         [TestCase("{'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':'1','gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':0,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
-        [TestCase("{'version':7,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':8,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':-1,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         public void BrokenDataFallsBackToAllDefaults(string text)
         {
@@ -162,9 +163,9 @@ namespace Fps.Core.Tests
         [Test]
         public void ReportsTheVersionItRejected()
         {
-            ControlSettings.FromJson(Json("{'version':7}"), out var problems);
+            ControlSettings.FromJson(Json("{'version':8}"), out var problems);
 
-            Assert.That(problems[0], Does.Contain("version 7"));
+            Assert.That(problems[0], Does.Contain("version 8"));
         }
 
         // 1 つの操作の値が欠けている・型違い・知らない名前なら、その操作だけ初期値
@@ -257,6 +258,8 @@ namespace Fps.Core.Tests
         [TestCase(ControlValue.FieldOfView, 60, 90, 60)]
         [TestCase(ControlValue.MasterVolume, 0, 100, 100)]
         [TestCase(ControlValue.EffectsVolume, 0, 100, 100)]
+        [TestCase(ControlValue.CameraShakeIntensity, 0, 100, 100)]
+        [TestCase(ControlValue.ViewmodelMotionIntensity, 0, 100, 100)]
         public void ValueRangesAndDefaults(ControlValue value, int min, int max, int expectedDefault)
         {
             var range = ControlSettings.RangeOf(value);
@@ -389,7 +392,7 @@ namespace Fps.Core.Tests
         {
             var loaded = ControlSettings.FromJson(Json(_valid), out _);
 
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':6,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':7,")));
             Assert.That(ControlSettings.FromJson(loaded.ToJson(), out var problems), Is.EqualTo(loaded));
             Assert.That(problems, Is.Empty);
         }
@@ -857,14 +860,14 @@ namespace Fps.Core.Tests
             Assert.That(problems, Is.Empty);
             Assert.That(loaded.Language, Is.EqualTo(fallback));
             Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':6,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':7,")));
         }
 
         [Test]
         public void VersionFiveReportsTheLanguageKeyAsUnknown()
         {
-            var versionFive = ControlSettings.Default.WithLanguage(GameLanguage.English).ToJson()
-                .Replace("\"version\":6", "\"version\":5", StringComparison.Ordinal);
+            var versionFive = WithoutPresentation(ControlSettings.Default.WithLanguage(GameLanguage.English).ToJson())
+                .Replace("\"version\":7", "\"version\":5", StringComparison.Ordinal);
 
             var loaded = ControlSettings.FromJson(versionFive, GameLanguage.Japanese, out var problems);
 
@@ -891,6 +894,166 @@ namespace Fps.Core.Tests
             Assert.That(problems[0], Does.Contain("language"));
             Assert.That(loaded.Language, Is.EqualTo(GameLanguage.Japanese), "the reader's default");
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen), "the saved value");
+        }
+
+        [Test]
+        public void PresentationDefaultsKeepTheEffectsAsTheyWere()
+        {
+            var settings = ControlSettings.Default;
+
+            Assert.That(settings.CameraShakeIntensity, Is.EqualTo(1f));
+            Assert.That(settings.ViewmodelMotionIntensity, Is.EqualTo(1f));
+            Assert.That(settings.ShowBlood, Is.True);
+        }
+
+        [Test]
+        public void IntensitiesAreFractionsOfOne()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.CameraShakeIntensity, 0)
+                .With(ControlValue.ViewmodelMotionIntensity, 25);
+
+            Assert.That(settings.CameraShakeIntensity, Is.EqualTo(0f));
+            Assert.That(settings.ViewmodelMotionIntensity, Is.EqualTo(0.25f));
+        }
+
+        [Test]
+        public void WithShowBloodChangesOnlyThatFlag()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.CameraShakeIntensity, 40)
+                .WithShowSubtitles(true)
+                .WithLanguage(GameLanguage.English);
+
+            var hidden = settings.WithShowBlood(false);
+
+            Assert.That(hidden.ShowBlood, Is.False);
+            Assert.That(settings.ShowBlood, Is.True, "the original does not change");
+            Assert.That(hidden.Get(ControlValue.CameraShakeIntensity), Is.EqualTo(40));
+            Assert.That(hidden.ShowSubtitles, Is.True);
+            Assert.That(hidden.Language, Is.EqualTo(GameLanguage.English));
+            Assert.That(hidden, Is.Not.EqualTo(settings));
+            Assert.That(hidden.WithShowBlood(true), Is.EqualTo(settings));
+            Assert.That(hidden.WithShowBlood(true).GetHashCode(), Is.EqualTo(settings.GetHashCode()));
+            Assert.That(settings.WithShowBlood(true), Is.SameAs(settings));
+        }
+
+        [Test]
+        public void ChangingOtherEntriesKeepsTheBloodFlag()
+        {
+            var hidden = ControlSettings.Default.WithShowBlood(false);
+
+            Assert.That(hidden.With(ControlValue.MasterVolume, 10).ShowBlood, Is.False);
+            Assert.That(hidden.With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle).ShowBlood, Is.False);
+            Assert.That(hidden.WithShowNetStats(true).ShowBlood, Is.False);
+            Assert.That(hidden.WithPalette(ColorPalette.BlueYellow).ShowBlood, Is.False);
+            Assert.That(hidden.WithShowSubtitles(true).ShowBlood, Is.False);
+            Assert.That(hidden.WithLanguage(GameLanguage.English).ShowBlood, Is.False);
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void RoundTripsThePresentationSettings(bool showBlood)
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.CameraShakeIntensity, 0)
+                .With(ControlValue.ViewmodelMotionIntensity, 35)
+                .WithShowBlood(showBlood);
+
+            var json = settings.ToJson();
+            var loaded = ControlSettings.FromJson(json, out var problems);
+
+            Assert.That(json, Does.Contain(Json(",'cameraShake':0,'viewmodelMotion':35,'showBlood':" + (showBlood ? "true" : "false") + ",")));
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.ShowBlood, Is.EqualTo(showBlood));
+        }
+
+        [Test]
+        public void ReadsVersionSixWithThePresentationDefaultsAndNoProblems()
+        {
+            var versionSix = WithoutPresentation(
+                    ControlSettings.Default.WithShowSubtitles(true).WithLanguage(GameLanguage.English).ToJson())
+                .Replace("\"version\":7", "\"version\":6", StringComparison.Ordinal);
+            Assert.That(versionSix, Does.Not.Contain("cameraShake"));
+
+            var loaded = ControlSettings.FromJson(versionSix, GameLanguage.Japanese, out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded.Get(ControlValue.CameraShakeIntensity), Is.EqualTo(100));
+            Assert.That(loaded.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(100));
+            Assert.That(loaded.ShowBlood, Is.True);
+            Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
+            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.English), "the saved value");
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':7,")));
+        }
+
+        [Test]
+        public void ReadsVersionTwoWithThePresentationDefaultsAndNoProblems()
+        {
+            var loaded = ControlSettings.FromJson(Json(_validV2), out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded.Get(ControlValue.CameraShakeIntensity), Is.EqualTo(100));
+            Assert.That(loaded.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(100));
+            Assert.That(loaded.ShowBlood, Is.True);
+        }
+
+        [Test]
+        public void VersionSixReportsThePresentationKeysAsUnknown()
+        {
+            var versionSix = ControlSettings.Default
+                .With(ControlValue.CameraShakeIntensity, 0)
+                .WithShowBlood(false)
+                .ToJson()
+                .Replace("\"version\":7", "\"version\":6", StringComparison.Ordinal);
+
+            var loaded = ControlSettings.FromJson(versionSix, out var problems);
+
+            Assert.That(loaded, Is.EqualTo(ControlSettings.Default), "a version 6 file cannot have these entries");
+            Assert.That(problems, Has.Count.EqualTo(3));
+            Assert.That(string.Join("\n", problems), Does.Contain("'cameraShake'").And.Contain("'viewmodelMotion'").And.Contain("'showBlood'"));
+        }
+
+        // 血の表示が欠けている・真偽値でないなら、その項目だけ初期値 (出す)
+        [TestCase(",'showBlood':false", "")]
+        [TestCase("'showBlood':false", "'showBlood':'false'")]
+        [TestCase("'showBlood':false", "'showBlood':0")]
+        [TestCase("'showBlood':false", "'showBlood':null")]
+        public void BrokenBloodFlagFallsBackOnlyForThatFlag(string from, string to)
+        {
+            var valid = ControlSettings.Default.With(ControlValue.CameraShakeIntensity, 20).WithShowBlood(false).ToJson();
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("showBlood"));
+            Assert.That(loaded.ShowBlood, Is.True, "the default");
+            Assert.That(loaded.Get(ControlValue.CameraShakeIntensity), Is.EqualTo(20), "the saved value");
+        }
+
+        [TestCase("'cameraShake':100,", "", ControlValue.CameraShakeIntensity, 100, "missing")]
+        [TestCase("'cameraShake':100", "'cameraShake':150", ControlValue.CameraShakeIntensity, 100, "outside")]
+        [TestCase("'viewmodelMotion':100", "'viewmodelMotion':-3", ControlValue.ViewmodelMotionIntensity, 0, "outside")]
+        [TestCase("'viewmodelMotion':100", "'viewmodelMotion':'50'", ControlValue.ViewmodelMotionIntensity, 100, "integer")]
+        public void BrokenIntensityFallsBackOnlyForThatValue(string from, string to, ControlValue value, int expected, string reported)
+        {
+            var valid = ControlSettings.Default.WithShowBlood(false).ToJson();
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain(reported));
+            Assert.That(loaded.Get(value), Is.EqualTo(expected));
+            Assert.That(loaded.ShowBlood, Is.False, "the saved value");
+        }
+
+        /// <summary>今の形式から、バージョン 7 で足した揺れの強さと血の表示を除く (初期値のときだけ)。</summary>
+        private static string WithoutPresentation(string json)
+        {
+            return json.Replace(Json(",'cameraShake':100,'viewmodelMotion':100,'showBlood':true"), string.Empty, StringComparison.Ordinal);
         }
 
         /// <summary>読みやすさのため ' で書いた JSON を " に直す。</summary>

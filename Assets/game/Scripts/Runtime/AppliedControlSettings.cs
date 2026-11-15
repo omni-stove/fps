@@ -5,7 +5,8 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 今効いている操作設定。Play の開始時に <see cref="ControlSettingsStore"/> から読み、全体の音量を <see cref="AudioListener.volume"/> に入れる。
+    /// 今効いている操作設定。Play の開始時に <see cref="ControlSettingsStore"/> から読み、全体の音量を <see cref="AudioListener.volume"/> に、
+    /// 揺れの強さを <see cref="CameraShake.GlobalMultiplier"/>・<see cref="ViewmodelMotion.GlobalMultiplier"/> に、血の表示を <see cref="BloodPresenter.BloodEnabled"/> に入れる。
     /// 設定画面が <see cref="Sink"/> (<see cref="ISettingsSink"/>) 越しに <see cref="Apply"/> で変えると <see cref="Changed"/> で配り (言語が変わったときは先に <see cref="Localizer.Changed"/> で配る)、
     /// <see cref="FirstPersonLook"/>・<see cref="AimDownSights"/>・<see cref="ViewRig"/>・<see cref="PlayerController"/> などが
     /// その場で使い直す。効果音を鳴らす側は <see cref="ControlSettings.EffectsVolume"/> を音量に掛ける。
@@ -42,7 +43,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// settings を今効いている設定にし、全体の音量を <see cref="AudioListener.volume"/> に入れる。
+        /// settings を今効いている設定にし、全体の音量を <see cref="AudioListener.volume"/> に、揺れの強さと血の表示を各演出に入れる。
         /// 前と違う値なら <see cref="Changed"/> を呼ぶ。
         /// </summary>
         public static void Apply(ControlSettings settings)
@@ -55,6 +56,7 @@ namespace Fps.Runtime
             var previous = _current;
             _current = settings;
             AudioListener.volume = settings.MasterVolume;
+            ApplyPresentation(settings);
             if (settings.Equals(previous))
             {
                 return;
@@ -84,6 +86,14 @@ namespace Fps.Runtime
                     Debug.LogException(e);
                 }
             }
+        }
+
+        // 演出の倍率と血の表示は、プレイヤーが作り直されても保たれるよう各演出が全体で持つので、Changed の購読ではなくここで入れる。
+        private static void ApplyPresentation(ControlSettings settings)
+        {
+            CameraShake.GlobalMultiplier = settings.CameraShakeIntensity;
+            ViewmodelMotion.GlobalMultiplier = settings.ViewmodelMotionIntensity;
+            BloodPresenter.BloodEnabled = settings.ShowBlood;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

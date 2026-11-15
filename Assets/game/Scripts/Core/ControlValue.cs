@@ -22,5 +22,11 @@ namespace Fps.Core
 
         /// <summary>効果音の音量 (%)。全体の音量に掛ける。</summary>
         EffectsVolume,
+
+        /// <summary>画面の揺れの強さ (%)。0 で揺らさない。</summary>
+        CameraShakeIntensity,
+
+        /// <summary>手元の武器 (ビューモデル) の揺れの強さ (%)。0 で揺らさない。</summary>
+        ViewmodelMotionIntensity,
     }
 }

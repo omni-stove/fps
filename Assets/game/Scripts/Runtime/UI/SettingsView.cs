@@ -9,7 +9,8 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 設定画面。感度・ADS 感度・視野角・音量 (<see cref="ControlValue"/>) のスライダー、敵味方の色の組 (<see cref="ColorPalette"/>) の切り替えと見本、
+    /// 設定画面。感度・ADS 感度・視野角・音量・揺れの強さ (<see cref="ControlValue"/>) のスライダー、血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off、
+    /// 敵味方の色の組 (<see cref="ColorPalette"/>) の切り替えと見本、
     /// 音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off、入力機器ごとの Hold/Toggle の切り替えを
     /// UI Toolkit の要素としてコードで組み、<see cref="Open"/> で渡された入れ物 (メインメニューの差し込み口やポーズ画面の枠) に入れる。
     /// 値を変えるとすぐ <see cref="ISettingsSink.Apply"/> (既定は <see cref="AppliedControlSettings.Sink"/>) で効かせ、<see cref="Close"/> (か <see cref="Save"/>) で
@@ -60,6 +61,9 @@ namespace Fps.Runtime
         /// <summary>音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string SubtitlesButtonName = "settings-subtitles";
 
+        /// <summary>血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off を切り替えるボタンの name。</summary>
+        public const string BloodButtonName = "settings-blood";
+
         /// <summary>今の言語の「オン」。</summary>
         public static string OnText => Localizer.Get("settings.on");
 
@@ -87,6 +91,9 @@ namespace Fps.Runtime
         private static readonly InputDeviceKind[] _devices = { InputDeviceKind.KeyboardMouse, InputDeviceKind.Gamepad };
         private static readonly HoldAction[] _actions = { HoldAction.Sprint, HoldAction.Crouch, HoldAction.Aim };
 
+        // 視点と音の見出しではなく、血の表示と同じ演出の見出しに並べる数値。
+        private static readonly ControlValue[] _effectValues = { ControlValue.CameraShakeIntensity, ControlValue.ViewmodelMotionIntensity };
+
         private static bool _warnedMissingStyle;
 
         private readonly ControlSettingsStore _store;
@@ -113,6 +120,7 @@ namespace Fps.Runtime
         private Label _friendlySample;
         private Label _enemySample;
         private Button _subtitlesButton;
+        private Button _bloodButton;
         private Button _languageButton;
         private IReadOnlyList<GameLanguage> _languages = Array.Empty<GameLanguage>();
         private readonly Dictionary<GameLanguage, string> _languageNames = new Dictionary<GameLanguage, string>();
@@ -367,6 +375,7 @@ namespace Fps.Runtime
             _friendlySample = null;
             _enemySample = null;
             _subtitlesButton = null;
+            _bloodButton = null;
             _languageButton = null;
             _languages = Array.Empty<GameLanguage>();
             _languageNames.Clear();
@@ -489,6 +498,17 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// 血の表示 (<see cref="ControlSettings.ShowBlood"/>) を show にしてすぐ効かせ
+        /// (<see cref="AppliedControlSettings"/> が <see cref="BloodPresenter.BloodEnabled"/> に入れる)、ボタンの表示を合わせる。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        public void SetShowBlood(bool show)
+        {
+            EnsureOpen();
+            Edit(_editing.WithShowBlood(show));
+        }
+
+        /// <summary>
         /// 画面の言語 (<see cref="ControlSettings.Language"/>) を <see cref="Localizer.SwitchTo"/> で language に切り替える。
         /// 表を読み直し、<see cref="Localizer.Changed"/> で開いている画面を今の言語で組み直し、言語だけはすぐ保存先のキーに書き出す
         /// (ほかの値の変更は閉じるときに保存する)。今と同じ言語なら何もしない。
@@ -530,7 +550,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に、字幕も Off に戻す。保存は閉じるとき。
+        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に、字幕も Off に、血の表示も On に戻す。保存は閉じるとき。
         /// この画面に無い回線の表示 (<see cref="ControlSettings.ShowNetStats"/>) と、読めない言語に戻って押した人が戻せなくならないよう言語は、今のまま残す。
         /// </summary>
         /// <exception cref="InvalidOperationException">開いていない。</exception>
@@ -742,8 +762,19 @@ namespace Fps.Runtime
             content.Add(NewLabel(Localizer.Get("settings.section.viewAndSound"), "settings__section"));
             foreach (var value in ControlSettings.Values)
             {
+                if (Array.IndexOf(_effectValues, value) < 0)
+                {
+                    content.Add(BuildSliderRow(value));
+                }
+            }
+
+            content.Add(NewLabel(Localizer.Get("settings.section.effects"), "settings__section"));
+            foreach (var value in _effectValues)
+            {
                 content.Add(BuildSliderRow(value));
             }
+
+            content.Add(BuildBloodRow());
 
             content.Add(NewLabel(Localizer.Get("settings.section.accessibility"), "settings__section"));
             content.Add(BuildPaletteRow());
@@ -942,6 +973,16 @@ namespace Fps.Runtime
             return row;
         }
 
+        private VisualElement BuildBloodRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get("settings.blood"), "settings__caption"));
+            _bloodButton = NewButton(BloodButtonName, string.Empty, () => SetShowBlood(!_editing.ShowBlood));
+            _bloodButton.AddToClassList("settings__mode");
+            row.Add(_bloodButton);
+            return row;
+        }
+
         private VisualElement BuildLanguageRow()
         {
             var row = NewRow();
@@ -1005,6 +1046,11 @@ namespace Fps.Runtime
             if (_subtitlesButton != null)
             {
                 _subtitlesButton.text = FormatOnOff(_editing.ShowSubtitles);
+            }
+
+            if (_bloodButton != null)
+            {
+                _bloodButton.text = FormatOnOff(_editing.ShowBlood);
             }
 
             if (_languageButton != null)
@@ -1206,6 +1252,10 @@ namespace Fps.Runtime
                     return Localizer.Get("settings.value.masterVolume");
                 case ControlValue.EffectsVolume:
                     return Localizer.Get("settings.value.effectsVolume");
+                case ControlValue.CameraShakeIntensity:
+                    return Localizer.Get("settings.value.cameraShake");
+                case ControlValue.ViewmodelMotionIntensity:
+                    return Localizer.Get("settings.value.viewmodelMotion");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }
@@ -1245,6 +1295,10 @@ namespace Fps.Runtime
                     return "master-volume";
                 case ControlValue.EffectsVolume:
                     return "effects-volume";
+                case ControlValue.CameraShakeIntensity:
+                    return "camera-shake";
+                case ControlValue.ViewmodelMotionIntensity:
+                    return "viewmodel-motion";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }

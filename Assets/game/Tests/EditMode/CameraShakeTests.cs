@@ -266,7 +266,34 @@ namespace Fps.Tests.EditMode
                 Assert.That(_rig.ShakeRoot.localRotation, Is.EqualTo(Quaternion.identity));
             }
 
-            Assert.That(_shake.Trauma, Is.GreaterThan(0f), "trauma still builds up; only the output is scaled");
+            Assert.That(_shake.Trauma, Is.Zero, "no trauma builds up, so turning the shake back on later does not replay it");
+        }
+
+        [Test]
+        public void ZeroGlobalMultiplierLogsNoTrauma()
+        {
+            CameraShake.GlobalMultiplier = 0f;
+            var traumaLogs = new List<string>();
+            Application.LogCallback record = (message, stackTrace, type) =>
+            {
+                if (message.StartsWith(CameraShake.LogTag + " trauma", StringComparison.Ordinal))
+                {
+                    traumaLogs.Add(message);
+                }
+            };
+            Application.logMessageReceived += record;
+            try
+            {
+                Assert.That(_shake.AddTrauma(1f, "test", null), Is.Zero);
+                CombatEvents.RaiseDamageTaken(null, 50);
+            }
+            finally
+            {
+                Application.logMessageReceived -= record;
+            }
+
+            Assert.That(_shake.Trauma, Is.Zero);
+            Assert.That(traumaLogs, Is.Empty);
         }
 
         [Test]

@@ -56,5 +56,13 @@ namespace Fps.Server
         public Vector3 ShooterPosition { get; }
 
         public TriggerEdge Trigger { get; }
+
+        public ServerShot WithDamageMultiplier(float multiplier)
+        {
+            return multiplier == 1f
+                ? this
+                : new ServerShot(
+                    ShooterId, Weapon, Round, Impact.WithDamageMultiplier(multiplier), ChargeFraction, LockTargetId, Tick, ShooterPosition, Trigger);
+        }
     }
 }

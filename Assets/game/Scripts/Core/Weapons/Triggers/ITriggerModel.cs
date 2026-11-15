@@ -13,5 +13,7 @@ namespace Fps.Core
         int Release();
 
         int Tick(float deltaSeconds);
+
+        void Cancel();
     }
 }

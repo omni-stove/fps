@@ -72,6 +72,10 @@ namespace Fps.NetV2
         private readonly ClientGrenades _grenadeChoice = new ClientGrenades();
         private readonly Dictionary<int, AreaEffectZone> _areaZones = new Dictionary<int, AreaEffectZone>();
         private readonly ClientOverheat _overheat = new ClientOverheat();
+        private readonly Dictionary<int, GameObject> _grenadeViews = new Dictionary<int, GameObject>();
+        private readonly List<int> _goneGrenades = new List<int>();
+        private GrenadeCarrier _grenadeCarrier;
+        private float _ownYaw;
         private NetV2Structures _structures;
         private ClientWeaponHooks _weaponHooks;
         private ClientTrigger _heldContinuous;
@@ -101,6 +105,8 @@ namespace Fps.NetV2
         public MatchClient Client => _client;
 
         public ClientMatch Match => _match;
+
+        public GameObject GrenadePrefab { get; set; }
 
         /// <summary>今動いているクライアント。無ければ null。</summary>
         public static NetV2Client Current { get; private set; }
@@ -377,6 +383,7 @@ namespace Fps.NetV2
 
             StepOwner(Time.deltaTime);
             ShowRemotes();
+            ShowGrenades();
             SendRequests();
             _pings.Markers.Expire(Time.time);
         }
@@ -500,6 +507,7 @@ namespace Fps.NetV2
             for (var i = 0; i < ticks; i++)
             {
                 _local.Sample(_match.LocalState.IsGrounded, out var move, out var yaw, out var buttons);
+                _ownYaw = yaw;
                 _match.Step(NetV2Math.ToNumerics(move), yaw, buttons);
             }
 
@@ -521,6 +529,88 @@ namespace Fps.NetV2
                 if (_match.TrySampleRemote(pair.Key, out var pose))
                 {
                     pair.Value.Show(pose);
+                }
+            }
+        }
+
+        private void ShowGrenades()
+        {
+            _grenadeCarrier ??= ShownCarrier;
+            var renderTick = _match.Interpolation.RenderTick;
+            foreach (var id in _world.GrenadeIds)
+            {
+                if (!_world.TryShowGrenade(id, renderTick, _grenadeCarrier, out var position, out var rotation))
+                {
+                    continue;
+                }
+
+                if (!_grenadeViews.TryGetValue(id, out var view) || view == null)
+                {
+                    view = CreateGrenadeView();
+                    _grenadeViews[id] = view;
+                }
+
+                view.transform.SetPositionAndRotation(NetV2Math.ToUnity(position), NetV2Math.ToUnity(rotation));
+            }
+        }
+
+        // 自分は予測した位置に、他の人は補間した位置に出しているので、くっついたグレネードもその見せている位置に付ける
+        private bool ShownCarrier(int playerId, out System.Numerics.Vector3 position, out float yaw)
+        {
+            if (playerId == _client.PlayerId)
+            {
+                position = _match.LocalState.Position;
+                yaw = _ownYaw;
+                return _local != null;
+            }
+
+            if (_match.TrySampleRemote(playerId, out var pose))
+            {
+                position = pose.Position;
+                yaw = pose.Yaw;
+                return true;
+            }
+
+            position = default;
+            yaw = 0f;
+            return false;
+        }
+
+        private GameObject CreateGrenadeView()
+        {
+            GameObject view;
+            if (GrenadePrefab != null)
+            {
+                view = new GameObject(ThrownGrenade.ObjectName);
+                VisualPrefab.Instantiate(GrenadePrefab, view.transform, ThrownGrenade.VisualName, stripColliders: true);
+            }
+            else
+            {
+                view = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                view.name = ThrownGrenade.ObjectName;
+                view.transform.localScale = Vector3.one * (ThrownGrenade.BodyRadius * 2f);
+
+                // 当たりはサーバーが取るので、見た目に Unity の物理を持たせない
+                Destroy(view.GetComponent<Collider>());
+            }
+
+            view.transform.SetParent(_remoteRoot, false);
+            return view;
+        }
+
+        private void ForgetGrenades(SnapshotMessage snapshot)
+        {
+            _goneGrenades.Clear();
+            _world.ApplyGrenades(snapshot, _goneGrenades);
+            foreach (var id in _goneGrenades)
+            {
+                if (_grenadeViews.TryGetValue(id, out var view))
+                {
+                    _grenadeViews.Remove(id);
+                    if (view != null)
+                    {
+                        Destroy(view);
+                    }
                 }
             }
         }
@@ -778,6 +868,7 @@ namespace Fps.NetV2
             var grenades = snapshot.HasOwner ? snapshot.Owner.Grenades : null;
             _hud?.ShowGrenades(grenades, _grenadeChoice.Current(grenades));
             _weaponHooks.Apply(snapshot);
+            ForgetGrenades(snapshot);
             _loadout.Apply(snapshot, _client.PlayerId);
             ShowControlPoints(snapshot);
             PlayReloadSound(snapshot);
@@ -1126,6 +1217,8 @@ namespace Fps.NetV2
             }
 
             _remotes.Clear();
+            _grenadeViews.Clear();
+            _world?.ClearGrenades();
             _zones.Clear();
             _weaponHooks?.AreaEffects.Clear();
             _areaZones.Clear();

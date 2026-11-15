@@ -75,6 +75,28 @@ namespace Fps.Protocol.Tests
         }
 
         [Test]
+        public void AGrenadeCarriesWhoItIsStuckTo()
+        {
+            var baseline = Build(100, 0f);
+            var current = Build(101, 0f);
+            current.Grenades[0].HasStuckTo = true;
+            current.Grenades[0].StuckToId = 2;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Grenades[0].Present, Is.EqualTo(GrenadeFields.State));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Grenades[0].IsStuck, Is.True);
+            Assert.That(got.Grenades[0].HasStuckTo, Is.True);
+            Assert.That(got.Grenades[0].StuckToId, Is.EqualTo(2));
+
+            var released = Send(Build(102, 0f), current);
+            Assert.That(released.Grenades[0].Present, Is.EqualTo(GrenadeFields.State));
+            Assert.That(released.TryResolve(Send(current, null)), Is.True);
+            Assert.That(released.Grenades[0].HasStuckTo, Is.False);
+        }
+
+        [Test]
         public void ThePouchCarriesWhatIsLeftOfEachGrenadeType()
         {
             var got = Send(Build(100, 0f), null);

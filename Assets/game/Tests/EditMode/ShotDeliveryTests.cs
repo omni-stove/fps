@@ -11,6 +11,7 @@ namespace Fps.Tests.EditMode
     public sealed class ShotDeliveryTests
     {
         private static readonly Vector3 _eye = new Vector3(0f, 1f, 0f);
+        private static readonly Vector3 _lowMuzzle = new Vector3(0f, 0.5f, 0f);
 
         private readonly List<GameObject> _created = new List<GameObject>();
 
@@ -188,6 +189,96 @@ namespace Fps.Tests.EditMode
             Assert.That(receiver, Is.Not.Null);
             Assert.That(target.EnsureStatusEffects(), Is.SameAs(receiver));
             Assert.That(target.StatusEffects, Is.SameAs(receiver));
+        }
+
+        [Test]
+        public void AShallowShotBouncesOffTheFloorIntoTheTargetWithLessDamage()
+        {
+            CreateFloor();
+            var target = CreateTarget("dummy", new Vector3(0f, 1f, 10f), HitZone.Body);
+            var fired = 0;
+            var continued = new List<ShotFiredInfo>();
+            void CountFired(ShotFiredInfo _) => fired++;
+            void CountContinued(ShotFiredInfo shot) => continued.Add(shot);
+            CombatEvents.ShotFired += CountFired;
+            CombatEvents.ShotContinued += CountContinued;
+            try
+            {
+                var outcome = HitscanDelivery.Instance.Deliver(RicochetRequest(10, 1), Shallow(10f));
+
+                Assert.That(outcome.Owner, Is.SameAs(target));
+                Assert.That(outcome.Damage, Is.EqualTo(5));
+                Assert.That(target.Health.Current, Is.EqualTo(95));
+                Assert.That(fired, Is.EqualTo(1), "the gunshot is not played again at the bounce");
+                Assert.That(continued, Has.Count.EqualTo(1));
+                Assert.That(continued[0].Origin.y, Is.EqualTo(0f).Within(1e-3f));
+                Assert.That(continued[0].Direction.y, Is.GreaterThan(0f));
+                Assert.That(outcome.RaycastHit.distance, Is.GreaterThan(Vector3.Distance(_lowMuzzle, outcome.RaycastHit.point)), "falloff uses the whole path");
+            }
+            finally
+            {
+                CombatEvents.ShotFired -= CountFired;
+                CombatEvents.ShotContinued -= CountContinued;
+            }
+        }
+
+        [Test]
+        public void ADeepShotStopsAtTheFloor()
+        {
+            var floor = CreateFloor();
+            var target = CreateTarget("dummy", new Vector3(0f, 1f, 10f), HitZone.Body);
+
+            var outcome = HitscanDelivery.Instance.Deliver(RicochetRequest(10, 1), Shallow(45f));
+
+            Assert.That(outcome.Hit, Is.True);
+            Assert.That(outcome.RaycastHit.collider.gameObject, Is.SameAs(floor));
+            Assert.That(target.Health.Current, Is.EqualTo(100));
+        }
+
+        [Test]
+        public void TheBouncesRunOutAtTheCeiling()
+        {
+            CreateFloor();
+            var ceiling = CreateFloor();
+            ceiling.transform.position = new Vector3(0f, 1.5f, 0f);
+            Physics.SyncTransforms();
+            var continued = 0;
+            void Count(ShotFiredInfo _) => continued++;
+            CombatEvents.ShotContinued += Count;
+            try
+            {
+                var outcome = HitscanDelivery.Instance.Deliver(RicochetRequest(10, 1), Shallow(10f));
+
+                Assert.That(continued, Is.EqualTo(1));
+                Assert.That(outcome.RaycastHit.collider.gameObject, Is.SameAs(ceiling));
+            }
+            finally
+            {
+                CombatEvents.ShotContinued -= Count;
+            }
+        }
+
+        private static ShotRequest RicochetRequest(int damage, int maxBounces)
+        {
+            var round = new RoundSpec(ricochet: new RicochetSpec(maxBounces, 20f, 0.5f));
+            return new ShotRequest(null, null, null, round, new ImpactSpec(damage), "test-ricochet", Physics.DefaultRaycastLayers);
+        }
+
+        private static PlannedRound Shallow(float degrees)
+        {
+            var direction = Quaternion.Euler(degrees, 0f, 0f) * Vector3.forward;
+            return new PlannedRound(_lowMuzzle.ToNumerics(), direction.ToNumerics(), 0);
+        }
+
+        private GameObject CreateFloor()
+        {
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(floor);
+            floor.name = "floor";
+            floor.transform.position = new Vector3(0f, -0.5f, 0f);
+            floor.transform.localScale = new Vector3(20f, 1f, 60f);
+            Physics.SyncTransforms();
+            return floor;
         }
 
         private static ShotRequest Request(int damage, int layerMask = Physics.DefaultRaycastLayers, float radius = 0f)

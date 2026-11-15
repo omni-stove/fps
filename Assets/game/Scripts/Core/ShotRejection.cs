@@ -62,5 +62,7 @@ namespace Fps.Core
         /// 弾は減らさない。
         /// </summary>
         NotAiming,
+
+        Overheated,
     }
 }

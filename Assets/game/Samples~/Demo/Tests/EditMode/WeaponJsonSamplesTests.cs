@@ -46,6 +46,32 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheRicochetPistolBouncesOffShallowSurfaces()
+        {
+            WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
+
+            var spec = Load("RicochetPistol").ToSpec();
+
+            Assert.That(spec.NameKey, Is.EqualTo("weapon.ricochetPistol"));
+            Assert.That(spec.Round.Delivery, Is.EqualTo(RoundDelivery.Hitscan));
+            Assert.That(spec.Round.Ricochet, Is.Not.Null);
+            Assert.That(spec.Round.Ricochet.MaxBounces, Is.EqualTo(2));
+            Assert.That(spec.Round.Ricochet.MaxGrazingAngleDegrees, Is.EqualTo(25f));
+            Assert.That(spec.Round.Ricochet.DamageMultiplierPerBounce, Is.EqualTo(0.7f));
+        }
+
+        [Test]
+        public void TheCommittedRicochetPistolMatchesItsJson()
+        {
+            var committed = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(DemoSample.Root + "/Weapons/RicochetPistol.asset");
+            Assume.That(committed, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build first");
+
+            WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
+
+            AssertSameFields(Load("RicochetPistol"), committed);
+        }
+
+        [Test]
         public void TheMinigunSampleSpinsUpBeforeItFires()
         {
             WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);

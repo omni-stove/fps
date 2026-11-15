@@ -166,15 +166,23 @@ namespace Fps.NetV2.Tests
         {
             var spec = Weapon(_crossbowId, WorldHitResponse.Stick, pellets: 3, spreadDegrees: 5f);
             var planned = PelletPattern.Count(spec.Round);
-            _projectiles.LocalFired(Fire(_crossbowId, Vector3.UnitZ), spec);
-            _projectiles.LocalFired(Fire(_crossbowId, Vector3.UnitZ), spec);
+            var rows = new ProjectileSnapshot[2 * planned];
+            for (var shot = 0; shot < 2; shot++)
+            {
+                var fire = Fire(_crossbowId, Vector3.UnitZ);
+                fire.ShotIndex = shot;
+                _projectiles.LocalFired(fire, spec);
+
+                // サーバーは同じ射撃番号で同じ並べ方をするので、ペレットごとに散らばった向きで飛ばす。
+                var plan = ShotPlanner.Plan(spec.Round, _eye, Vector3.UnitZ, 0f, _me, shot);
+                for (var pellet = 0; pellet < planned; pellet++)
+                {
+                    var id = (shot * planned) + pellet;
+                    rows[id] = Row(id, _me, _crossbowId, _eye, plan.Rounds[pellet].Direction * 30f);
+                }
+            }
 
             Assert.That(_views.Shown, Has.Count.EqualTo(2 * planned));
-            var rows = new ProjectileSnapshot[2 * planned];
-            for (var id = 0; id < rows.Length; id++)
-            {
-                rows[id] = Row(id, _me, _crossbowId, _eye, new Vector3(0f, 0f, 30f));
-            }
 
             _projectiles.Apply(Snapshot(rows));
 

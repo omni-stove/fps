@@ -5,7 +5,7 @@ namespace Fps.Core
     public sealed class HeatAmmo : IAmmoModel
     {
         // 0.1 を 10 回足すと float では 1 にわずかに届かないので、この差までは上限に達したとみなす。
-        private const float FullTolerance = 1e-4f;
+        private const float _fullTolerance = 1e-4f;
 
         private readonly MagazineAmmo _magazine;
         private float _heat;
@@ -62,7 +62,7 @@ namespace Fps.Core
 
             _heat = Math.Min(1f, _heat + Spec.HeatPerShot);
             _sinceShot = 0f;
-            if (_heat < 1f - FullTolerance)
+            if (_heat < 1f - _fullTolerance)
             {
                 return;
             }

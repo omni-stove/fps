@@ -231,8 +231,10 @@ namespace Fps.Runtime
             return speed >= 0f && !float.IsInfinity(speed) ? speed : 0f;
         }
 
-        private float AdsProgress()
+        /// <summary>今の覗き込みの進み具合。0 (腰だめ) 〜 1 (構えきった)。</summary>
+        public float AdsProgress()
         {
+            Resolve();
             var progress = AdsProgressSource != null ? AdsProgressSource() : _ads != null ? _ads.Progress : 0f;
             return float.IsNaN(progress) || float.IsInfinity(progress) ? 0f : progress;
         }

@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f89a52549c971c62e1e5f5ea0033d551, type: 3}
+  m_Name: FootstepSurfaceCatalog
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.FootstepSurfaceCatalog
+  _surfaces:
+  - _materialId: default
+    _footsteps:
+    - {fileID: 8300000, guid: 4c9edea14234c4bd98eb393b86938cd2, type: 3}
+    - {fileID: 8300000, guid: 84c486f0827c145a489a5655b9b627ee, type: 3}
+    - {fileID: 8300000, guid: 03c0005a0b4a347b9ae3cc3685ba5619, type: 3}
+    _landings:
+    - {fileID: 8300000, guid: e8498eabf5abc45359e94cc3bedfd41b, type: 3}
+  - _materialId: concrete
+    _footsteps:
+    - {fileID: 8300000, guid: 77196770a13484e94b4b9dac5aa01063, type: 3}
+    - {fileID: 8300000, guid: f3e4960d94a3d4d1d82973234aa331e6, type: 3}
+    - {fileID: 8300000, guid: 6a88b49110df54898a1275a54beedd1d, type: 3}
+    _landings:
+    - {fileID: 8300000, guid: fe83b89ed801e4e2d92b2a10bbec832e, type: 3}
+  - _materialId: metal
+    _footsteps:
+    - {fileID: 8300000, guid: ead9005d53ddc4615904d3f30778ff55, type: 3}
+    - {fileID: 8300000, guid: 13fedf0cdb79d4b00ad7cb9bd1599fd3, type: 3}
+    - {fileID: 8300000, guid: 1c0d26ebb2d584c719c40f6c2927c8e2, type: 3}
+    _landings:
+    - {fileID: 8300000, guid: f7559b9b3b3ac4f25a819a9ef51baaa7, type: 3}
+  - _materialId: wood
+    _footsteps:
+    - {fileID: 8300000, guid: 5bec3e6de074b4ef494c8fa355110523, type: 3}
+    - {fileID: 8300000, guid: 6e7339bb451ba408faf775a5db53a71a, type: 3}
+    - {fileID: 8300000, guid: 1e9b173e73f594a4eb8272678bd86bc7, type: 3}
+    _landings:
+    - {fileID: 8300000, guid: 5b803b36c5b6b4e0aab50eef5cbf0d81, type: 3}

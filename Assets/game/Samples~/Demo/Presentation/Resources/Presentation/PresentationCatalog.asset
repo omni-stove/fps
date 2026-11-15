@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac8e36ff4a36ca2f3375f13fe8f30096, type: 3}
+  m_Name: PresentationCatalog
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PresentationCatalog
+  _weapons:
+  - _weaponId: 6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+  - _weaponId: b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+  - _weaponId: e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+  _impactSound: {fileID: 8300000, guid: f12a9d7e25814445bbb3a78ff0ea1e62, type: 3}
+  _impactSpark: {fileID: 3655127799983906801, guid: 92fe6558dac7f4109aff47e829738f54, type: 3}
+  _tracer: {fileID: 3363131383333097025, guid: 9549dda9d358e4476b9bcd02c464fca0, type: 3}
+  _footstep: {fileID: 8300000, guid: 434f4a92499724b2188eca06c220ee44, type: 3}
+  _landing: {fileID: 8300000, guid: 5abb6e849d8bd49669193800e144eef8, type: 3}
+  _hurtVoice: {fileID: 8300000, guid: e91c58fb951fe424ba6e136d27c56037, type: 3}
+  _explosionSound: {fileID: 8300000, guid: fef910dca32ac4b629c0f52bca370dd3, type: 3}
+  _explosion: {fileID: 7746079728175826336, guid: f9d02165d462d40b9b1a7630b0a98999, type: 3}
+  _hitMarkerSound: {fileID: 0}
+  _killMarkerSound: {fileID: 0}
+  _hitMarkerVolume: 0.4

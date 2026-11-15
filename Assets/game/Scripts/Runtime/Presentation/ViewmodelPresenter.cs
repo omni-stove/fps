@@ -36,6 +36,8 @@ namespace Fps.Runtime
         private ViewmodelMotion _motion;
 
         private GameObject _instance;
+        private Vector3 _hipPosition;
+        private Vector3 _adsPosition;
         private string _weaponId;
         private WeaponSockets _sockets = WeaponSockets.None;
 
@@ -114,6 +116,7 @@ namespace Fps.Runtime
 
             if (_instance != null && string.Equals(wanted, _weaponId, StringComparison.Ordinal))
             {
+                PlaceForAim();
                 return;
             }
 
@@ -125,6 +128,26 @@ namespace Fps.Runtime
             }
 
             Spawn(wanted, entry);
+            PlaceForAim();
+        }
+
+        /// <summary>
+        /// 構えきったときのモデルの根の位置。照準の点 (sightInModel、モデルの根から見た位置) が adsOffset に来るようにする。
+        /// </summary>
+        public static Vector3 AimedRootPosition(Vector3 adsOffset, Vector3 sightInModel)
+        {
+            return adsOffset - sightInModel;
+        }
+
+        private void PlaceForAim()
+        {
+            if (_instance == null)
+            {
+                return;
+            }
+
+            var progress = Mathf.Clamp01(_motion.AdsProgress());
+            _instance.transform.localPosition = Vector3.Lerp(_hipPosition, _adsPosition, progress);
         }
 
         public static string FormatSpawnLog(string weaponId, string prefabName, bool hasMuzzle)
@@ -216,10 +239,13 @@ namespace Fps.Runtime
             instance.transform.localPosition = entry.Offset;
             instance.transform.localRotation = Quaternion.identity;
             PrepareForView(instance);
+            _hipPosition = entry.Offset;
 
             _instance = instance;
             _weaponId = weaponId;
             _sockets = new WeaponSockets(instance.transform);
+            var sight = _sockets.Sight != null ? pivot.InverseTransformPoint(_sockets.Sight.position) - entry.Offset : Vector3.zero;
+            _adsPosition = AimedRootPosition(entry.AdsOffset, sight);
             if (_presentation != null)
             {
                 _presentation.WeaponModel = instance.transform;

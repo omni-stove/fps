@@ -22,6 +22,9 @@ namespace Fps.Editor
         public const string GunName = "Gun";
         public const string HandsName = "Hands";
 
+        /// <summary>照門と照星の、機関部の上面からの高さ (m)。</summary>
+        public const float SightPostHeight = 0.014f;
+
         public static readonly Color SkinColor = new Color(0.82f, 0.64f, 0.52f);
         public static readonly Color MetalColor = new Color(0.17f, 0.17f, 0.19f);
 
@@ -86,6 +89,20 @@ namespace Fps.Editor
             }
         }
 
+        /// <summary>構えきったときの照準の点の位置 (カメラから見て)。片手の銃は腕を伸ばすので遠い。</summary>
+        public static Vector3 AdsOffsetFor(WeaponCategory category)
+        {
+            switch (category)
+            {
+                case WeaponCategory.Handgun:
+                    return new Vector3(0f, 0f, 0.32f);
+                case WeaponCategory.Launcher:
+                    return new Vector3(0f, 0f, 0.15f);
+                default:
+                    return ViewmodelEntry.DefaultAdsOffset;
+            }
+        }
+
         public static ViewmodelSwaySettings SwayFor(WeaponCategory category)
         {
             switch (category)
@@ -130,7 +147,8 @@ namespace Fps.Editor
                     prefabs.Add(category, prefab);
                 }
 
-                entries.Add(new ViewmodelEntry(spec.Id, prefab, OffsetFor(category), new ViewmodelSwayParameters(SwayFor(category))));
+                entries.Add(new ViewmodelEntry(
+                    spec.Id, prefab, OffsetFor(category), new ViewmodelSwayParameters(SwayFor(category)), AdsOffsetFor(category)));
             }
 
             var catalog = SceneBuildHelpers.CreateOrUpdateAsset<ViewmodelCatalog>(catalogPath, c =>
@@ -177,6 +195,18 @@ namespace Fps.Editor
             AddBox(gun, "Grip", new Vector3(0f, gripY, gripZ), new Vector3(w * 0.8f, h * 1.1f, w * 0.9f), metal);
             AddSocket(gun, WeaponSockets.MuzzleName, new Vector3(0f, barrelY, r + b), Quaternion.identity);
             AddSocket(gun, WeaponSockets.ShellEjectName, new Vector3(w * 0.5f, h * 0.25f, r * 0.5f), Quaternion.Euler(0f, 90f, 0f));
+
+            // 照星は照門と同じ高さまで伸ばす。高さが違うと、構えたときに照準の線が銃身と平行にならず上下に傾いて見える。
+            var top = h * 0.5f;
+            var rearZ = r * 0.08f;
+            var frontZ = r + b - 0.01f;
+            var notch = Mathf.Max(0.006f, w * 0.12f);
+            AddBox(gun, "RearSight_L", new Vector3(-notch, top + (SightPostHeight * 0.5f), rearZ), new Vector3(0.004f, SightPostHeight, 0.008f), metal);
+            AddBox(gun, "RearSight_R", new Vector3(notch, top + (SightPostHeight * 0.5f), rearZ), new Vector3(0.004f, SightPostHeight, 0.008f), metal);
+            var frontBase = barrelY + (bore * 0.5f);
+            var frontHeight = top + SightPostHeight - frontBase;
+            AddBox(gun, "FrontSight", new Vector3(0f, frontBase + (frontHeight * 0.5f), frontZ), new Vector3(0.004f, frontHeight, 0.006f), metal);
+            AddSocket(gun, WeaponSockets.SightName, new Vector3(0f, top + SightPostHeight, rearZ), Quaternion.identity);
 
             var hands = AddGroup(root.transform, HandsName);
             AddBox(hands, "Hand_R", new Vector3(w * 0.15f, gripY, gripZ - 0.01f), new Vector3(0.07f, 0.08f, 0.1f), skin);

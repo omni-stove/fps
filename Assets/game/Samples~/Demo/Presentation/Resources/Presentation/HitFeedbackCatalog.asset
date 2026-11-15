@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc5872734f7f86162dc40a4533ecfe10, type: 3}
+  m_Name: HitFeedbackCatalog
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.HitFeedbackCatalog
+  _sprays:
+  - _zone: 1
+    _effect: {fileID: 8143318550443136194, guid: 7655d931c49f94191bc51d2dbdf4cefa, type: 3}
+  - _zone: 0
+    _effect: {fileID: 7384244421060500716, guid: 3b3d38b5f46104320b6cfe92ad86c0a4, type: 3}
+  - _zone: 2
+    _effect: {fileID: 3863748675223593721, guid: 27ccaed721f284605a870d5ff4a7cc22, type: 3}
+  - _zone: 3
+    _effect: {fileID: 8485139385351260207, guid: 2b1c168be621b4b6aa702577f4a469e3, type: 3}
+  _defaultSpray: {fileID: 7384244421060500716, guid: 3b3d38b5f46104320b6cfe92ad86c0a4, type: 3}
+  _wallDecal: {fileID: 7057616711899371246, guid: 40b533fe7512e487ea38bce1999e6e89, type: 3}
+  _wallDecalMaxDistance: 2
+  _wallDecalLifetime: 20
+  _wallDecalSize: 0.45

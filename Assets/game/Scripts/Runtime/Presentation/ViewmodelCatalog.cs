@@ -102,21 +102,32 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("カメラから見たモデルの根の位置 (m)。右・上・前")]
         private Vector3 _offset = ViewmodelEntry.DefaultOffset;
 
+        [SerializeField, Tooltip("構えきったときの、カメラから見た照準の点 (Socket_Sight、無ければモデルの根) の位置 (m)。右・上・前。0, 0 で画面の中央")]
+        private Vector3 _adsOffset = ViewmodelEntry.DefaultAdsOffset;
+
         [SerializeField, Tooltip("歩行の揺れ・視点への追従遅れ・発砲時の跳ね上がりの強さ")]
         private ViewmodelSwayParameters _sway = new ViewmodelSwayParameters();
 
         public static readonly Vector3 DefaultOffset = new Vector3(0.14f, -0.14f, 0.2f);
+
+        public static readonly Vector3 DefaultAdsOffset = new Vector3(0f, 0f, 0.2f);
 
         public ViewmodelEntry()
         {
         }
 
         public ViewmodelEntry(string weaponId, GameObject prefab, Vector3 offset, ViewmodelSwayParameters sway)
+            : this(weaponId, prefab, offset, sway, DefaultAdsOffset)
+        {
+        }
+
+        public ViewmodelEntry(string weaponId, GameObject prefab, Vector3 offset, ViewmodelSwayParameters sway, Vector3 adsOffset)
         {
             _weaponId = weaponId?.Trim() ?? string.Empty;
             _prefab = prefab;
             _offset = offset;
             _sway = sway ?? new ViewmodelSwayParameters();
+            _adsOffset = adsOffset;
         }
 
         public string WeaponId => _weaponId ?? string.Empty;
@@ -124,6 +135,8 @@ namespace Fps.Runtime
         public GameObject Prefab => _prefab;
 
         public Vector3 Offset => _offset;
+
+        public Vector3 AdsOffset => _adsOffset;
 
         public ViewmodelSwayParameters Sway => _sway ??= new ViewmodelSwayParameters();
 

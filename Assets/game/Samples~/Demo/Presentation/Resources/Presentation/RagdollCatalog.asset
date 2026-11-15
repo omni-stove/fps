@@ -1,0 +1,141 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b0834412dad036513317fc41d2421b1, type: 3}
+  m_Name: RagdollCatalog
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.RagdollCatalog
+  _bones:
+  - _bone: Hips
+    _shape: 0
+    _center: {x: 0, y: 0.02, z: 0}
+    _size: {x: 0.34, y: 0.16, z: 0.2}
+    _mass: 12
+    _twistAxis: {x: 0, y: 1, z: 0}
+    _swingAxis: {x: 1, y: 0, z: 0}
+    _lowTwist: 0
+    _highTwist: 0
+    _swing1: 0
+    _swing2: 0
+  - _bone: Torso
+    _shape: 0
+    _center: {x: 0, y: 0.275, z: 0}
+    _size: {x: 0.42, y: 0.55, z: 0.22}
+    _mass: 20
+    _twistAxis: {x: 0, y: 1, z: 0}
+    _swingAxis: {x: 1, y: 0, z: 0}
+    _lowTwist: -15
+    _highTwist: 15
+    _swing1: 30
+    _swing2: 15
+  - _bone: Head
+    _shape: 2
+    _center: {x: 0, y: 0.13, z: 0}
+    _size: {x: 0.26, y: 0.26, z: 0.26}
+    _mass: 5
+    _twistAxis: {x: 0, y: 1, z: 0}
+    _swingAxis: {x: 1, y: 0, z: 0}
+    _lowTwist: -40
+    _highTwist: 40
+    _swing1: 30
+    _swing2: 20
+  - _bone: LeftUpperArm
+    _shape: 1
+    _center: {x: 0, y: -0.15, z: 0}
+    _size: {x: 0.1, y: 0.3, z: 0.1}
+    _mass: 3
+    _twistAxis: {x: 0, y: 1, z: 0}
+    _swingAxis: {x: 1, y: 0, z: 0}
+    _lowTwist: -60
+    _highTwist: 60
+    _swing1: 90
+    _swing2: 60
+  - _bone: LeftForearm
+    _shape: 1
+    _center: {x: 0, y: -0.14, z: 0}
+    _size: {x: 0.09, y: 0.28, z: 0.09}
+    _mass: 2
+    _twistAxis: {x: 1, y: 0, z: 0}
+    _swingAxis: {x: 0, y: 1, z: 0}
+    _lowTwist: -130
+    _highTwist: 0
+    _swing1: 10
+    _swing2: 10
+  - _bone: RightUpperArm
+    _shape: 1
+    _center: {x: 0, y: -0.15, z: 0}
+    _size: {x: 0.1, y: 0.3, z: 0.1}
+    _mass: 3
+    _twistAxis: {x: 0, y: 1, z: 0}
+    _swingAxis: {x: 1, y: 0, z: 0}
+    _lowTwist: -60
+    _highTwist: 60
+    _swing1: 90
+    _swing2: 60
+  - _bone: RightForearm
+    _shape: 1
+    _center: {x: 0, y: -0.14, z: 0}
+    _size: {x: 0.09, y: 0.28, z: 0.09}
+    _mass: 2
+    _twistAxis: {x: 1, y: 0, z: 0}
+    _swingAxis: {x: 0, y: 1, z: 0}
+    _lowTwist: -130
+    _highTwist: 0
+    _swing1: 10
+    _swing2: 10
+  - _bone: LeftThigh
+    _shape: 1
+    _center: {x: 0, y: -0.22, z: 0}
+    _size: {x: 0.15, y: 0.44, z: 0.15}
+    _mass: 8
+    _twistAxis: {x: 0, y: 1, z: 0}
+    _swingAxis: {x: 1, y: 0, z: 0}
+    _lowTwist: -30
+    _highTwist: 30
+    _swing1: 70
+    _swing2: 40
+  - _bone: LeftShin
+    _shape: 1
+    _center: {x: 0, y: -0.255, z: 0.05}
+    _size: {x: 0.12, y: 0.51, z: 0.22}
+    _mass: 4
+    _twistAxis: {x: 1, y: 0, z: 0}
+    _swingAxis: {x: 0, y: 1, z: 0}
+    _lowTwist: 0
+    _highTwist: 130
+    _swing1: 10
+    _swing2: 10
+  - _bone: RightThigh
+    _shape: 1
+    _center: {x: 0, y: -0.22, z: 0}
+    _size: {x: 0.15, y: 0.44, z: 0.15}
+    _mass: 8
+    _twistAxis: {x: 0, y: 1, z: 0}
+    _swingAxis: {x: 1, y: 0, z: 0}
+    _lowTwist: -30
+    _highTwist: 30
+    _swing1: 70
+    _swing2: 40
+  - _bone: RightShin
+    _shape: 1
+    _center: {x: 0, y: -0.255, z: 0.05}
+    _size: {x: 0.12, y: 0.51, z: 0.22}
+    _mass: 4
+    _twistAxis: {x: 1, y: 0, z: 0}
+    _swingAxis: {x: 0, y: 1, z: 0}
+    _lowTwist: 0
+    _highTwist: 130
+    _swing1: 10
+    _swing2: 10
+  _settleSeconds: 2
+  _baseSpeed: 1.5
+  _speedPerDamage: 0.04
+  _maxSpeed: 6
+  _footSpeedRatio: 0.3

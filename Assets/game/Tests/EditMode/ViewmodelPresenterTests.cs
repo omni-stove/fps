@@ -105,6 +105,18 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AimingPutsTheSightAtTheAdsOffset()
+        {
+            var sightInModel = new Vector3(0.01f, 0.05f, 0.02f);
+            var adsOffset = new Vector3(0f, 0f, 0.2f);
+
+            var root = ViewmodelPresenter.AimedRootPosition(adsOffset, sightInModel);
+
+            Assert.That(root + sightInModel, Is.EqualTo(adsOffset));
+            Assert.That(ViewmodelPresenter.AimedRootPosition(adsOffset, Vector3.zero), Is.EqualTo(adsOffset), "without a sight the model root is aimed");
+        }
+
+        [Test]
         public void TheMuzzleSocketIsFoundForTheWeaponPresentation()
         {
             var presentation = _body.AddComponent<WeaponPresentation>();

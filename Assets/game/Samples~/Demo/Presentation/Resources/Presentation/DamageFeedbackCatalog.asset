@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 168a8e3492ca853da2505be07255d9f7, type: 3}
+  m_Name: DamageFeedbackCatalog
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DamageFeedbackCatalog
+  _vignette: {fileID: 2800000, guid: e5f4cd9fcea12409fb18db7941b30cb0, type: 2}
+  _tint: {r: 1, g: 1, b: 1, a: 1}
+  _hitPeakIntensity: 0.8
+  _fullHitDamage: 50
+  _hitFadeSeconds: 0.8
+  _lowHealthThreshold: 0.25
+  _lowHealthMinIntensity: 0.35
+  _lowHealthMaxIntensity: 0.7
+  _heartbeat: {fileID: 8300000, guid: 1e5ff933352e54f4da9389939e923196, type: 3}
+  _heartbeatVolume: 0.6
+  _breath: {fileID: 8300000, guid: 402e6a279d8d048959a5b8845582b4a1, type: 3}
+  _breathVolume: 0.5

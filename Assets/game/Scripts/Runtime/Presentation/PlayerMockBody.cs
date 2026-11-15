@@ -46,6 +46,7 @@ namespace Fps.Runtime
         private Transform _bodyGun;
         private Transform _viewModelRoot;
         private Transform _viewModelGun;
+        private ViewmodelPresenter _viewmodel;
         private readonly List<Renderer> _bodyRenderers = new List<Renderer>();
         private readonly List<Renderer> _viewModelRenderers = new List<Renderer>();
         private Material _bodyMaterial;
@@ -187,25 +188,45 @@ namespace Fps.Runtime
             var pitch = eye != null ? eye.localRotation : Quaternion.identity;
 
             Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime);
-            ShowGuns(_reader.Weapon == null || !_reader.Weapon.IsHolstered);
+            var armed = _reader.Weapon == null || !_reader.Weapon.IsHolstered;
+            ShowGuns(armed, armed && !HasViewmodel());
+        }
+
+        /// <summary>
+        /// 武器のビューモデル (<see cref="ViewmodelPresenter.Instance"/>) が出ているか。出ている間は仮の一人称の銃を隠す
+        /// (仮の形は差し替えの見た目が無いときの代わりなので、両方を出すと銃が二重に見える)。
+        /// </summary>
+        private bool HasViewmodel()
+        {
+            if (_viewmodel == null)
+            {
+                _viewmodel = GetComponent<ViewmodelPresenter>();
+            }
+
+            return _viewmodel != null && _viewmodel.Instance != null;
         }
 
         /// <summary>三人称の体の銃と一人称の銃を見せるか隠す。武器をしまっている間 (<see cref="WeaponController.IsHolstered"/>) は隠す。組み立てていなければ何もしない。</summary>
         public void ShowGuns(bool shown)
+        {
+            ShowGuns(shown, shown);
+        }
+
+        private void ShowGuns(bool bodyGun, bool viewModelGun)
         {
             if (!IsBuilt)
             {
                 return;
             }
 
-            if (_bodyGun.gameObject.activeSelf != shown)
+            if (_bodyGun.gameObject.activeSelf != bodyGun)
             {
-                _bodyGun.gameObject.SetActive(shown);
+                _bodyGun.gameObject.SetActive(bodyGun);
             }
 
-            if (_viewModelGun.gameObject.activeSelf != shown)
+            if (_viewModelGun.gameObject.activeSelf != viewModelGun)
             {
-                _viewModelGun.gameObject.SetActive(shown);
+                _viewModelGun.gameObject.SetActive(viewModelGun);
             }
         }
 

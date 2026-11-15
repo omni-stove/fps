@@ -248,7 +248,7 @@ namespace Fps.Runtime
             return damageable != null ? damageable : null;
         }
 
-        private static bool IsLineObstructed(Vector3 from, Vector3 to, Transform target)
+        internal static bool IsLineObstructed(Vector3 from, Vector3 to, Transform target)
         {
             var offset = to - from;
             var length = offset.magnitude;

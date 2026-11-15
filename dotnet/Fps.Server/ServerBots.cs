@@ -496,6 +496,7 @@ namespace Fps.Server
             ServerBody nearest = null;
             var nearestDistance = float.PositiveInfinity;
             var sight = _spec.Brain.SightRange;
+            var blind = _combat.StatusEffects.RemainingSeconds(selfId, StatusEffectKinds.Blind) > 0f;
             foreach (var other in _bodies.All)
             {
                 var id = other.PlayerId;
@@ -511,7 +512,7 @@ namespace Fps.Server
                     nearestDistance = distance;
                 }
 
-                if (distance <= sight && distance < seenDistance && HasLineOfSight(agent, eye, other.Center))
+                if (!blind && distance <= sight && distance < seenDistance && HasLineOfSight(agent, eye, other.Center))
                 {
                     seen = other;
                     seenDistance = distance;
@@ -522,7 +523,8 @@ namespace Fps.Server
             var wasHit = agent.LastHealth != int.MaxValue && health < agent.LastHealth;
             agent.LastHealth = health;
             var healthFraction = session.MaxHealth > 0 ? Math.Clamp((float)health / session.MaxHealth, 0f, 1f) : 1f;
-            var heard = seen == null && wasHit && nearest != null;
+            // 目がくらんでいる間は、撃たれても誰に撃たれたか分からないままにする
+            var heard = !blind && seen == null && wasHit && nearest != null;
             return new EnemyPerception(
                 self.Position,
                 seen?.Position,

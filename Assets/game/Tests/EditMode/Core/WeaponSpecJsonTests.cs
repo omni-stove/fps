@@ -289,6 +289,7 @@ namespace Fps.Core.Tests
         [TestCase("{\"impact\": {\"explosion\": {\"maxDamage\": 10, \"radius\": 2, \"fullDamageRadius\": 3}}}", "impact.explosion.fullDamageRadius")]
         [TestCase("{\"impact\": {\"explosion\": {\"maxDamage\": 10, \"radius\": 2, \"detonation\": \"OnStop\"}}}", "impact")]
         [TestCase("{\"impact\": {\"areaEffect\": {\"radius\": 2, \"durationSeconds\": 3, \"tickSeconds\": 1, \"damagePerTick\": 1, \"statusEffect\": {\"durationSeconds\": 0, \"tickSeconds\": 1, \"damagePerTick\": 1}}}}", "impact.areaEffect.statusEffect.durationSeconds")]
+        [TestCase("{\"impact\": {\"blind\": {\"radius\": 10, \"durationSeconds\": 3, \"backFraction\": 0.2}}}", "impact.blind")]
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\", \"penetrability\": -1}]}}}", "round.penetration.materials[0].penetrability")]
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \" \", \"penetrability\": 1}]}}}", "round.penetration.materials[0].materialId")]
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\"}]}}}", "round.penetration.materials[0].penetrability")]

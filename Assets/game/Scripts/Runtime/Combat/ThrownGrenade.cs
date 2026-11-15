@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 投げられたグレネード 1 個。<see cref="Spawn"/> で Rigidbody の球として作られて跳ね、信管の秒数が経つと <see cref="Explode"/> して、
-    /// 種類の <see cref="ImpactSpec"/> の爆発と範囲効果 (<see cref="AreaEffectZone"/>) を起こす。くっつき方は <c>ThrownGrenade.Sticky.cs</c> が受け持つ。
+    /// 種類の <see cref="ImpactSpec"/> の爆発と範囲効果 (<see cref="AreaEffectZone"/>)、目くらまし (<see cref="Flash"/>) を起こす。くっつき方は <c>ThrownGrenade.Sticky.cs</c> が受け持つ。
     /// 爆発は半径内の <see cref="Damageable"/> に <see cref="ExplosionDamage"/> を与え (中心から体の狙う点か頭の高さまでのどちらかの線が
     /// <see cref="Damageable"/> を持たない物に遮られていなければ)、<see cref="StructureDamage.ApplyAround"/> で建造物にも範囲で当てる。
     /// 演出は <see cref="PresentationCatalog"/> の爆発 (エフェクトと音) を出し、カタログか素材が無ければ出さない。
@@ -284,6 +284,11 @@ namespace Fps.Runtime
             if (_impact.AreaEffect != null)
             {
                 AreaEffectZone.Spread(_impact.AreaEffect, center, _thrower, GrenadeThrower.WeaponId);
+            }
+
+            if (_impact.Blind != null)
+            {
+                Flash.Detonate(center, _impact.Blind, _thrower, GrenadeThrower.WeaponId);
             }
 
             try

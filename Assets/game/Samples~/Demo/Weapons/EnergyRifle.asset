@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: EnergyRifle
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: 9c8df409-3662-4df2-b50e-81fdc51d2623
+  _nameKey: weapon.energyRifle
+  _category: 0
+  _fireMode: 0
+  _magazineSize: 1
+  _reserveAmmo: 0
+  _fireInterval: 0.12
+  _reloadSeconds: 0
+  _damage: 22
+  _range: 120
+  _falloffStart: 30
+  _falloffEnd: 80
+  _falloffMinMultiplier: 0.6
+  _explosionRadius: 0
+  _adsFieldOfView: 45
+  _blindFireSpreadDegrees: 8
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.5
+  _recoilPitchDegrees: 0.25
+  _recoilYawDegrees: 0.1
+  _recoilRecoveryPerSecond: 10
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 2
+  _adsSpreadDegrees: 0.3
+  _moveSpreadDegrees: 2
+  _shotNoiseRadius: 50
+  _ammoKind: 1
+  _heat:
+    _heatPerShot: 0.1
+    _coolPerSecond: 0.4
+    _coolDelaySeconds: 0.3
+    _overheatSeconds: 1.5

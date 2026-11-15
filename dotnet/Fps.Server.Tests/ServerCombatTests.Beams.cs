@@ -151,6 +151,61 @@ namespace Fps.Server.Tests
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - _beamDamage), _log.ToString());
         }
 
+        [Test]
+        public void ShotsWithoutAPressRightAfterABeamDoNotHitFasterThanTheBeamTicks()
+        {
+            Start(Rules(), rifle: BeamRifle());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            PressAt(1, Body(2).Center);
+            for (var i = 0; i < 3; i++)
+            {
+                Tick();
+            }
+
+            Release(1);
+            for (var i = 0; i < 3; i++)
+            {
+                FireAt(1, Body(2).Center);
+            }
+
+            // 押した瞬間と 3 tick 目の 2 回だけ。離した直後の押さない射撃は、前の照射からの待ちが明けるまで当たらない
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - (_beamDamage * 2)), _log.ToString());
+        }
+
+        [Test]
+        public void ABeamStopsWhenItsStartSwingsBehindAWall()
+        {
+            Start(Rules(), wall: true, rifle: BeamRifle());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            // 壁 (x = 0) の手前まで +x へ歩く
+            for (var i = 0; i < 600 && Body(1).Position.X < -1.5f; i++)
+            {
+                var input = new InputMessage();
+                input.Add(new InputFrame(++_inputTick, new Vector2(0f, 1f), MathF.PI / 2f, InputButtons.None));
+                _host.OnMessage(new ConnectionId(1), input);
+                Tick();
+            }
+
+            Turn(1, MathF.PI / 2f);
+            Assert.That(Body(1).Position.X, Is.GreaterThan(-2.5f), "the shooter stands close to the wall");
+
+            // 横にずらした始点で押し、振り向いて始点を壁の向こうへ回す
+            var eye = Body(1).EyePosition;
+            Send(1, Trigger(TriggerEdge.Pressed, eye + new Vector3(0f, 0f, -2.5f), Vector3.UnitX));
+            Turn(1, 0f);
+            Step(0.2f);
+
+            Assert.That(_log.ToString(), Does.Contain("net beam stop shooter=1 weapon=" + TestRules.RifleId), _log.ToString());
+            Assert.That(_log.ToString(), Does.Contain("reason=" + ShotRejection.OriginBlocked));
+            Assert.That(_transport.Read<BeamStateMessage>(2, Copy).Last().Active, Is.False);
+        }
+
         private static WeaponSpec BeamRifle(AmmoSpec ammo = null, float? fireInterval = null)
         {
             var rifle = TestRules.Rifle();

@@ -14,7 +14,7 @@ namespace Fps.Runtime
             var range = request.Round.Range;
 
             // 照射のたびに撃った時点の視線で当たり直すので、照準を振れば当たる相手も線の先も追って変わる。
-            var found = ShotCast.TryFirst(origin, direction, range, request.LayerMask, request.ShooterRoot, out var hit);
+            var found = ShotCast.TryFirst(origin, direction, request.Round.Radius, range, request.LayerMask, request.ShooterRoot, out var hit);
             var end = found ? hit.point : origin + (direction.normalized * range);
             ShowLine(request, origin, direction, end);
 

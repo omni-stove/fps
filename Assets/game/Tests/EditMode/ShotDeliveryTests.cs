@@ -39,7 +39,6 @@ namespace Fps.Tests.EditMode
         }
 
         [TestCase(RoundDelivery.Hitscan)]
-        [TestCase(RoundDelivery.Beam)]
         [TestCase(RoundDelivery.Spray)]
         public void EveryDeliveryHitsLikeTheHitscanUntilItIsFilledIn(RoundDelivery delivery)
         {
@@ -53,6 +52,56 @@ namespace Fps.Tests.EditMode
             Assert.That(outcome.WasAlive, Is.True);
             Assert.That(outcome.Killed, Is.False);
             Assert.That(target.Health.Current, Is.EqualTo(80));
+        }
+
+        [Test]
+        public void TheBeamDamagesWhatItTouchesAndDrawsTheLineFromTheMuzzleToTheHit()
+        {
+            var shooter = new GameObject("beam shooter");
+            _created.Add(shooter);
+            var target = CreateTarget("dummy", new Vector3(0f, 1f, 10f), HitZone.Body);
+            var shots = 0;
+            void Count(ShotFiredInfo _) => shots++;
+            CombatEvents.ShotFired += Count;
+            try
+            {
+                var outcome = BeamDelivery.Instance.Deliver(BeamRequest(shooter, 4), Straight());
+
+                Assert.That(outcome.Owner, Is.SameAs(target));
+                Assert.That(target.Health.Current, Is.EqualTo(96));
+                Assert.That(shots, Is.Zero, "a beam tick is not a gunshot");
+            }
+            finally
+            {
+                CombatEvents.ShotFired -= Count;
+            }
+
+            var line = shooter.GetComponent<BeamLine>();
+            _created.Add(line.Visual);
+            Assert.That(line.IsVisible, Is.True);
+            Assert.That(line.Line.GetPosition(0), Is.EqualTo(WeaponSockets.None.MuzzlePose(_eye, Vector3.forward).position));
+            Assert.That(line.Line.GetPosition(1).z, Is.EqualTo(10f - 0.5f).Within(1e-3f), "the near side of the capsule");
+            Assert.That(line.Line.sharedMaterial, Is.Not.Null, "an empty visual builds the line in code");
+        }
+
+        [Test]
+        public void TheBeamReachesItsRangeOnAMissAndTheLineGoesOutAfterTheTicksStop()
+        {
+            var shooter = new GameObject("beam shooter");
+            _created.Add(shooter);
+
+            var outcome = BeamDelivery.Instance.Deliver(BeamRequest(shooter, 4), Straight());
+
+            Assert.That(outcome.Hit, Is.False);
+            var line = shooter.GetComponent<BeamLine>();
+            _created.Add(line.Visual);
+            Assert.That(line.Line.GetPosition(1), Is.EqualTo(_eye + (Vector3.forward * 30f)));
+
+            var shownAt = Time.time;
+            line.HideIfExpired(shownAt + (0.1f * BeamLine.HoldTicks) - 0.01f);
+            Assert.That(line.IsVisible, Is.True, "the next tick may still come");
+            line.HideIfExpired(shownAt + (0.1f * BeamLine.HoldTicks));
+            Assert.That(line.IsVisible, Is.False);
         }
 
         [Test]
@@ -284,6 +333,12 @@ namespace Fps.Tests.EditMode
         private static ShotRequest Request(int damage, int layerMask = Physics.DefaultRaycastLayers, float radius = 0f)
         {
             return new ShotRequest(null, null, null, new RoundSpec(radius: radius), new ImpactSpec(damage), "test-rifle", layerMask);
+        }
+
+        private static ShotRequest BeamRequest(GameObject shooter, int damage)
+        {
+            var round = new RoundSpec(RoundDelivery.Beam, 30f, beam: new BeamSpec(0.1f));
+            return new ShotRequest(shooter, shooter.transform, _eye, round, new ImpactSpec(damage), "laser", Physics.DefaultRaycastLayers);
         }
 
         private static PlannedRound Straight()

@@ -39,6 +39,8 @@ namespace Fps.Core
 
         void CancelReload();
 
+        void Unload();
+
         void Tick(float deltaSeconds);
     }
 }

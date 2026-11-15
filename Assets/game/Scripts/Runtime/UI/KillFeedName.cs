@@ -30,6 +30,11 @@ namespace Fps.Runtime
             IsLocal = isLocal;
         }
 
+        public KillFeedName(Participant participant)
+            : this(participant.Name, participant.Team, participant.IsLocal)
+        {
+        }
+
         public bool Equals(KillFeedName other)
         {
             return string.Equals(Text, other.Text, StringComparison.Ordinal) && Team == other.Team && IsLocal == other.IsLocal;

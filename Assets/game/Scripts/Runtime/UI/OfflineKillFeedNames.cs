@@ -5,37 +5,26 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// オフラインのキルフィードの引き先。Id (<see cref="CombatEvents.OfflineId"/>) を GameObject に戻し、名前はその
-    /// <see cref="Damageable.Id"/> (無ければ GameObject の名前) にする。チームは無く、<see cref="Damageable.IsLocalPlayer"/> の人を強調する。
+    /// オフラインのキルフィードの引き先。名前・チーム・自分かどうかは <see cref="OfflineParticipants"/> から引く。
     /// 武器の名前 (<see cref="WeaponSpec.Name"/>) は、倒した側が持っている武器 (プレイヤーは <see cref="WeaponController"/> の全武器、敵は <see cref="EnemyAgent.Weapon"/>) から引く。
     /// </summary>
     public sealed class OfflineKillFeedNames : IKillFeedNames
     {
+        private readonly OfflineParticipants _participants = new OfflineParticipants();
+
         public KillFeedLine Describe(KillFeedEntry entry)
         {
             var killerObject = CombatEvents.OfflineObject(entry.KillerId);
-            var killer = NameOf(entry.KillerId, killerObject);
-            var victim = entry.IsSuicide ? killer : NameOf(entry.VictimId, CombatEvents.OfflineObject(entry.VictimId));
+            var killer = NameOf(entry.KillerId);
+            var victim = entry.IsSuicide ? killer : NameOf(entry.VictimId);
             return new KillFeedLine(entry, killer, victim, WeaponNameOf(killerObject, entry.WeaponId));
         }
 
-        private static KillFeedName NameOf(int id, GameObject gameObject)
+        private KillFeedName NameOf(int id)
         {
-            if (gameObject == null)
-            {
-                return new KillFeedName(KillFeedText.Unknown(id), null, false);
-            }
-
-            // 敵の撃ち手 (EnemyAgent) と当たり (Damageable) の付く階層がずれていても同じ人として引けるよう、子も探す。
-            var damageable = gameObject.GetComponent<Damageable>();
-            if (damageable == null)
-            {
-                damageable = gameObject.GetComponentInChildren<Damageable>(true);
-            }
-
-            return damageable != null
-                ? new KillFeedName(damageable.Id, null, damageable.IsLocalPlayer)
-                : new KillFeedName(gameObject.name, null, false);
+            return _participants.TryGet(id, out var participant)
+                ? new KillFeedName(participant)
+                : new KillFeedName(KillFeedText.Unknown(id), null, false);
         }
 
         private static LocalizedText WeaponNameOf(GameObject killer, string weaponId)

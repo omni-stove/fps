@@ -95,7 +95,8 @@ namespace Fps.Core
 
         /// <summary>
         /// 1 発撃つ。撃てたら弾倉を 1 減らして <see cref="ShotRejection.None"/>。
-        /// リロード中なら <see cref="ShotRejection.Reloading"/>、弾倉が空なら <see cref="ShotRejection.OutOfAmmo"/> を返し、
+        /// リロード中なら <see cref="ShotRejection.Reloading"/>、熱で撃つ武器がオーバーヒート中なら <see cref="ShotRejection.Overheated"/>、
+        /// 弾倉が空なら <see cref="ShotRejection.OutOfAmmo"/> を返し、
         /// 空のときは予備弾があれば (<see cref="HasInfiniteReserve"/> なら常に) リロードを始める。
         /// </summary>
         public ShotRejection TryFire()
@@ -111,9 +112,14 @@ namespace Fps.Core
                 return ShotRejection.OutOfAmmo;
             }
 
+            if (_weapon.Ammo is HeatAmmo heat && heat.IsOverheated)
+            {
+                return ShotRejection.Overheated;
+            }
+
             if (!_weapon.TryFire())
             {
-                // 連射間隔は 0 なので、リロード中でも空でもなければ必ず撃てる
+                // 連射間隔は 0 なので、リロード中でも空でもオーバーヒート中でもなければ必ず撃てる
                 throw new InvalidOperationException("the inner weapon refused a shot with ammo and no reload");
             }
 

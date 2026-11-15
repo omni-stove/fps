@@ -30,6 +30,13 @@ namespace Fps.NetV2
         // spec が null でも決められるようにするのは、武器の値がまだ引けないときも弾倉の残りで今までどおり決めるため。
         public static FireDecision Decide(SnapshotMessage latest, int playerId, in CharacterMotorState predicted, WeaponSpec spec)
         {
+            return Decide(latest, playerId, predicted, spec, null);
+        }
+
+        // overheat が null でも決められるようにするのは、上の形と同じく熱が上限の間だけ待つ今までの決め方を残すため。
+        public static FireDecision Decide(
+            SnapshotMessage latest, int playerId, in CharacterMotorState predicted, WeaponSpec spec, ClientOverheat overheat)
+        {
             if (latest == null || !latest.HasOwner)
             {
                 return FireDecision.Hold;
@@ -54,10 +61,11 @@ namespace Fps.NetV2
                 return FireDecision.Hold;
             }
 
-            // 熱で撃つ武器は弾倉を持たずリロードもしないので、熱が上限に達している間は頼まずに待つ。
+            // 熱で撃つ武器は弾倉を持たずリロードもしないので、オーバーヒートして冷め切るまでは頼まずに待つ。
             if (spec != null && spec.Ammo.Kind == AmmoKind.Heat)
             {
-                return weapon.Heat < 1f ? FireDecision.Fire : FireDecision.Hold;
+                var overheated = weapon.Heat >= 1f || (overheat != null && overheat.IsOverheated(latest.Owner));
+                return overheated ? FireDecision.Hold : FireDecision.Fire;
             }
 
             return weapon.AmmoInMagazine > 0 ? FireDecision.Fire : FireDecision.Reload;

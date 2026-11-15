@@ -29,7 +29,7 @@ namespace Fps.Tests.EditMode
             }
 
             KitTuning.Reload();
-            var grenade = KitTuning.Grenade;
+            var grenade = KitTuning.Grenades;
             var ping = KitTuning.Ping;
             var knockback = KitTuning.Knockback;
 
@@ -37,7 +37,7 @@ namespace Fps.Tests.EditMode
             Assert.That(grenade, Is.Not.Null);
             Assert.That(ping, Is.Not.Null);
             Assert.That(knockback, Is.Not.Null);
-            Assert.That(KitTuning.Grenade, Is.SameAs(grenade), "read once and kept");
+            Assert.That(KitTuning.Grenades, Is.SameAs(grenade), "read once and kept");
             Assert.That(KitTuning.Ping, Is.SameAs(ping), "read once and kept");
             Assert.That(KitTuning.Knockback, Is.SameAs(knockback), "read once and kept");
         }
@@ -56,6 +56,18 @@ namespace Fps.Tests.EditMode
             Assert.That(bundled.RecoverSeconds, Is.EqualTo(defaults.RecoverSeconds));
             Assert.That(bundled.PlayerWeight, Is.EqualTo(defaults.PlayerWeight));
             Assert.That(bundled.EnemyWeight, Is.EqualTo(defaults.EnemyWeight));
+        }
+
+        [Test]
+        public void TheBundledGrenadesCarryOnlyTheFragGrenade()
+        {
+            KitTuning.Reload();
+            var grenades = KitTuning.Grenades;
+
+            Assert.That(grenades.Types.Count, Is.EqualTo(5));
+            Assert.That(grenades.Carried.Count, Is.EqualTo(1));
+            Assert.That(grenades.Carried[0].Id, Is.EqualTo(GrenadeSpec.DefaultId));
+            Assert.That(grenades.Carried[0].MaxDamage, Is.EqualTo(GrenadeSpec.DefaultMaxDamage));
         }
 
         [Test]

@@ -65,7 +65,7 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 | 中身 | 置き場所 (サンプルのルートから) |
 | --- | --- |
-| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`・`Crossbow.json`・熱で撃つ `EnergyRifle.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
+| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Dmr.json`・`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`・`Crossbow.json`・熱で撃つ `EnergyRifle.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
 | ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
 | ミッション・シーン | `Missions/`・`Scenes/` |
 | ネット対戦の試合の設定 (`NetMatchDefinition`。専用サーバーへ書き出す) | `Rules/NetMatch.asset` |
@@ -201,7 +201,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 ### 武器を JSON から取り込む
 
-1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`、飛ぶ弾は `Crossbow.json`、熱で撃つのは `EnergyRifle.json`)。
+1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`、飛ぶ弾は `Crossbow.json`、熱で撃つのは `EnergyRifle.json`、弾薬の種類は `Dmr.json`)。
 
 ```json
 {
@@ -234,6 +234,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 - `falloff` は `{ "startDistance": …, "endDistance": …, "minMultiplier": … }` か、減衰しないなら `"None"`。
 - `nameKey` は画面に出す武器の名前を引く表のキー。文は `Resources/Localization/<言語>/` の JSON (例: `items.json` に `"weapon.rifle": "Rifle"`) に書く。表に無いキーはキーそのものが出る。空か `null` なら `id` が出る。弾薬の種類の `nameKey` も同じ (例: `ammo.dmr.armorPiercing`)。
 - 部品に分ける前の平らな形 (`fireMode`・`magazineSize`・`damage`・`range`・`falloff`・`explosionRadius`・`adsFieldOfView` などを武器の直下に書く) もそのまま読める。`explosionRadius` は `impact.structureRadius`、`adsFieldOfView` は `aim.zoomLevels` の 1 つ目として読み、`adsFieldOfView` は `null` (共通の初期値) も書ける。同じ値を平らな項目と部品の両方に書くとエラーになる。
+- 弾薬の種類を持つ武器は並びの先頭の種類で始まり、SwitchAmmoType (キーボードは N) で次の種類へ順に切り替える (最後の次は先頭)。弾倉は種類で共通で、切り替えると込めてあった弾を予備弾に戻すので、新しい種類で撃つにはリロードが要る。HUD には今の種類の名前が出る。ネット対戦ではサーバーが同じ選び方をし、射撃の要求の `AmmoTypeIndex` (0 は武器そのものの弾、種類 n は n + 1) がサーバーの選択と違えばサーバーの選択で撃つ。
 - 前の項目名 `displayName` は読まない (書き換えを促すエラーになる)。知らない項目はエラーになる。
 - 飛ぶ弾・ビーム・火炎・爆発の見た目と音は JSON には書かず、取り込んだ `WeaponDefinition` の各部品の参照 (`Visual`・`Sound`) に Inspector で入れる。空ならコードで形を作る (飛ぶ弾は細い棒)。刺さった弾を残す秒数 (`StuckSeconds`) も見た目だけの値なので同じ所に置く。取り込み直しても参照は消えない。
 - サンプルでは **Fps > Build Weapon Assets** (`Fps.Editor.WeaponAssetBuilder.Build`) が `Weapons/Json/` の JSON をすべてアセットにし、射撃場で拾える武器の一覧 (`Weapons/RangeWeapons.asset`) に並べる。武器を足すときは JSON を 1 つ置いて走らせ直し、TPS の射撃場を作り直す。
@@ -288,16 +289,26 @@ Editor からは **Fps > Import Game Rules From JSON**。
 
 | Resources のパス | 項目 (名前は Spec のコンストラクターの引数名。省いた項目は既定値) |
 | --- | --- |
-| `Tuning/grenade.json` | `fuseSeconds`・`throwSeconds`・`throwSpeed`・`throwLiftSpeed`・`maxDamage`・`damageRadius`・`fullDamageRadius`・`structureDamageAtCenter` |
+| `Tuning/grenade.json` | 種類の並び `types` と、出撃のたびに持つ種類の Id の並び `carried` (省くと先頭の種類だけ)。1 種類は `id` (UUID)・`nameKey`・`fuseSeconds`・`throwSeconds`・`throwSpeed`・`throwLiftSpeed`・`stickiness` (`None`・`Surfaces`・`SurfacesAndCharacters`) と、信管が切れたときの効果を `impact` (武器の JSON と同じ書き方で `explosion`・`statusEffect`・`areaEffect`) か、爆発だけなら平らな `maxDamage`・`damageRadius`・`fullDamageRadius`・`structureDamageAtCenter` で書く。`types` の無い 1 つのオブジェクトは、その 1 種類だけを持つ |
 | `Tuning/ping.json` | `lifetimeSeconds`・`maxMarkers`・`maxDistance`・`enemyAimToleranceDegrees`・`minIntervalSeconds` |
 | `Tuning/knockback.json` | 力 (`KnockbackForce`) は種類 (`explosion`・`melee`・`charge`) を頭に付けて開く: `explosionSpeed`・`explosionUpwardRatio`・`explosionWeightFactor`・`meleeSpeed`・`meleeUpwardRatio`・`meleeWeightFactor`・`chargeSpeed`・`chargeUpwardRatio`・`chargeWeightFactor`。ほかは `minSpeed`・`minAirSeconds`・`maxAirSeconds`・`airControl`・`gravity`・`recoverSeconds`・`landingSnapRadius`・`playerWeight`・`enemyWeight` |
 
 ```json
 {
-  "damageRadius": 8,
-  "throwSpeed": 18
+  "types": [
+    { "id": "ff94f232-2647-4b77-a077-5693d8f954d1", "nameKey": "grenade.frag", "damageRadius": 8, "throwSpeed": 18 },
+    {
+      "id": "ecaf6e57-cb77-4707-9321-6ea5b659408f",
+      "nameKey": "grenade.smoke",
+      "impact": { "damage": 0, "areaEffect": { "radius": 5, "durationSeconds": 15, "tickSeconds": 0.5, "damagePerTick": 0, "visualId": "smoke" } }
+    }
+  ],
+  "carried": ["ff94f232-2647-4b77-a077-5693d8f954d1", "ecaf6e57-cb77-4707-9321-6ea5b659408f"]
 }
 ```
+
+- 持つ種類それぞれに、ルールの `grenadeCount` 個を持つ。2 種類以上持つと、SwitchGrenade (K) で投げる種類を切り替え、HUD に種類の名前を出す。
+- 範囲効果 (`areaEffect`) は `AreaEffectZone` が出す。見た目は `Resources/Presentation/AreaEffects/<visualId>` のプレハブで、無ければ仮の球を出す。
 
 - パッケージにも同じパスの JSON (今の既定値) が入っている (`Packages/com.omnistove.fps/Resources/Tuning/`)。利用側に同じパスのファイルを置くと
   どちらが読まれるか決まらないので、ゲームの値は入口 ([ゲームの中身を差し替える](#ゲームの中身を差し替える-入口のアセット)) の `GrenadeTuning`・`PingTuning`・`KnockbackTuning` に

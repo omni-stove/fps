@@ -8,6 +8,8 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 ARG TARGETARCH
 ARG FPS_BUILD_VERSION=
 WORKDIR /src
+# EOS の SDK のソースをアナライザの対象から外す設定がここにあり、無いと警告がエラーになってビルドが通らない
+COPY .editorconfig ./
 COPY dotnet/ dotnet/
 COPY Assets/game/Scripts/Core/ Assets/game/Scripts/Core/
 COPY Assets/game/Scripts/Protocol/ Assets/game/Scripts/Protocol/

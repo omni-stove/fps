@@ -1,24 +1,16 @@
 name: Server image (.NET)
 
+# キットのテンプレート。ゲームのリポジトリの .github/workflows/ に写して使う (docs/dedicated-server.md の「CI のテンプレート」)。
 # v* のタグを push したら、Unity を使わない専用サーバー (dotnet/Fps.Server) を linux/amd64 と linux/arm64 のイメージにし、
-# GitHub Container Registry に push する。Unity のライセンスもビルドも使わない。
-# PR でサーバーかイメージに関わるファイルを変えたときは、amd64 のイメージを作って起動を確かめるだけで push しない。
-# 起動の仕方は docs/dedicated-server.md を参照
+# コンテナのレジストリに push する。Unity のライセンスもビルドも使わない。
+# PR では amd64 のイメージを作って起動を確かめるだけで push しない。要らなければ pull_request を消す。
+#
+# リポジトリの変数 (Settings > Secrets and variables > Actions > Variables) で変えられる:
+#   SERVER_IMAGE  push するイメージの名前 (既定は ghcr.io/<owner>/<repo>/server-dotnet)。ghcr.io 以外なら下の login も替える
 on:
   push:
     tags: ["v*"]
   pull_request:
-    paths:
-      - "docker/server-dotnet/**"
-      - "dotnet/**"
-      - ".editorconfig"
-      - "Assets/game/Scripts/Core/**"
-      - "Assets/game/Scripts/Protocol/**"
-      - "server-data/**"
-      - "scripts/eos-sdk.sh"
-      - "scripts/server-image-dotnet-smoke.sh"
-      - "Packages/packages-lock.json"
-      - ".github/workflows/server-image-dotnet.yml"
 
 # 同じタグを付け直して push したときに古い方が後から上書きしないよう、タグでは取り消さずに順に走らせる
 concurrency:
@@ -33,6 +25,7 @@ jobs:
       contents: read
       packages: write
     env:
+      IMAGE: ${{ vars.SERVER_IMAGE || format('ghcr.io/{0}/server-dotnet', github.repository) }}
       SMOKE_IMAGE: fps-server-dotnet:smoke
     steps:
       - uses: actions/checkout@v6
@@ -61,7 +54,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       # クライアントと同じ版の EOS の SDK を、Unity の packages-lock.json に固定した PlayEveryWare のプラグインから取る。
-      # プラグインには Linux の arm64 のライブラリが無いので、arm64 のイメージは EOS 無し ([Eos] sdk=included library=... (missing ...)) で動く
+      # プラグインには Linux の arm64 のライブラリが無いので、arm64 のイメージは EOS 無し (UDP だけ) で動く
       - name: Place the EOS SDK
         run: bash scripts/eos-sdk.sh --fetch
 
@@ -71,7 +64,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # push する前に、amd64 のイメージが Unity のサーバーと同じ行を出して待ち受けるところまで動くことを確かめる
+      # push する前に、amd64 のイメージが版を出して待ち受け、SIGTERM で止まるところまで動くことを確かめる
       - name: Build the amd64 image to try
         uses: docker/build-push-action@v6
         with:
@@ -100,7 +93,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/server-dotnet
+          images: ${{ env.IMAGE }}
           # semver でないタグ (v1-rc など) でも push できるよう、タグの名前そのものも付ける。
           # サーバーが起動時に [Version] で出す版と同じ文字列のタグも付け、ログからイメージを引けるようにする
           tags: |

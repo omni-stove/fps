@@ -54,7 +54,7 @@ step() {
 	fi
 }
 
-# nightly の server-data と同じく、書き出し直したマップのデータがコミットしたものと同じかを見る。違えば書き出したものを残すので、確かめてコミットする
+# CI のテンプレートの map-data (templates/github-workflows/map-data.yml) と同じく、書き出し直したマップのデータがコミットしたものと同じかを見る。違えば書き出したものを残すので、確かめてコミットする
 map_data_matches() {
 	mise run export-server-data || return
 	local changed

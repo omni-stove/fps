@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
-# 専用サーバーの Linux 版を Unity でビルドし (make build-server linux と同じ)、docker/server/Dockerfile でイメージにする。
-# 使い方: scripts/server-image.sh [--tag <name:tag>] [--version <version>] [--skip-build]
-#   --tag         作るイメージの名前とタグ (既定は fps-server:local)
-#   --version     サーバーに入れる版 (v0.2.0 など。既定は git describe --tags --always --dirty)
-#   --skip-build  Unity でのビルドを飛ばし、すでにある Builds/server-linux/ を使う
+# Unity を使わない専用サーバー (dotnet/Fps.Server) を docker/server/Dockerfile でイメージにする。Unity も Editor を閉じることも要らない。
+# 使い方: scripts/server-image.sh [--tag <name:tag>] [--version <version>] [--platform <linux/amd64|linux/arm64>]
+#   --tag       作るイメージの名前とタグ (既定は fps-server:local)
+#   --version   サーバーに焼き込む版 (v0.2.0 など。既定は git describe --tags --always --dirty)
+#   --platform  作るイメージのアーキテクチャ (既定は Docker が動いているマシンのもの)
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-
-readonly server_dir="Builds/server-linux"
-readonly executable="$server_dir/fps-server.x86_64"
 
 usage() {
 	sed -n '3,6s/^# \{0,1\}//p' "$0"
@@ -21,20 +18,18 @@ fail() {
 
 tag="fps-server:local"
 version=""
-skip_build=0
+platform=""
 while [ $# -gt 0 ]; do
 	case "$1" in
-	--tag)
-		[ $# -ge 2 ] && [ -n "$2" ] || fail "--tag requires a value"
-		tag="$2"
+	--tag | --version | --platform)
+		[ $# -ge 2 ] && [ -n "$2" ] || fail "$1 requires a value"
+		case "$1" in
+		--tag) tag="$2" ;;
+		--version) version="$2" ;;
+		--platform) platform="$2" ;;
+		esac
 		shift
 		;;
-	--version)
-		[ $# -ge 2 ] && [ -n "$2" ] || fail "--version requires a value"
-		version="$2"
-		shift
-		;;
-	--skip-build) skip_build=1 ;;
 	-h | --help)
 		usage
 		exit 0
@@ -47,25 +42,31 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
-# Unity のビルドは数分かかるので、Docker が使えないことはその前に知らせる
+case "$platform" in
+"" | linux/amd64 | linux/arm64) ;;
+*) fail "--platform must be linux/amd64 or linux/arm64 (got $platform)" ;;
+esac
+
 command -v docker >/dev/null || fail "docker is not installed"
 docker info >/dev/null 2>&1 || fail "cannot reach the Docker daemon (is Docker running?)"
 
-if [ "$skip_build" -eq 0 ]; then
-	command -v mise >/dev/null || fail "mise is not installed; run make setup, or pass --skip-build to reuse $server_dir"
-	if [ -n "$version" ]; then
-		mise run build-server linux --version "$version"
-	else
-		mise run build-server linux
-	fi
-elif [ -n "$version" ]; then
-	fail "--version has no effect with --skip-build; the version is fixed when Builds/server-linux/ is built"
+if [ -z "$version" ]; then
+	version="$(git describe --tags --always --dirty)" || fail "git describe failed; pass --version <version>"
+fi
+# サーバーが起動時に断るのと同じ規則 (Fps.Core.BuildVersion) で、イメージを作る前に確かめる
+if [[ "$version" =~ ^[vV][0-9] ]]; then
+	version="${version:1}"
+fi
+[[ "$version" =~ ^[A-Za-z0-9_][A-Za-z0-9._-]{0,31}$ ]] ||
+	fail "'$version' is not a usable build version (letters, digits, . - _ only, not starting with . or -, at most 32 characters)"
+
+if ! compgen -G "dotnet/ThirdParty/EOSSDK/Source/*" >/dev/null; then
+	echo "server-image: no EOS SDK in dotnet/ThirdParty/EOSSDK; the image runs without EOS (make eos-sdk to add it)" >&2
 fi
 
-[ -x "$executable" ] || fail "$executable is missing; build it with make build-server linux"
+# Dockerfile.dockerignore は BuildKit でしか効かない
+DOCKER_BUILDKIT=1 docker build ${platform:+--platform "$platform"} \
+	--build-arg FPS_BUILD_VERSION="$version" \
+	--file docker/server/Dockerfile --tag "$tag" .
 
-# サーバーは x86_64 の Linux 向けにしかビルドしないので、Apple Silicon の Mac でも amd64 のイメージにする。
-# --chmod と Dockerfile.dockerignore は BuildKit でしか効かない
-DOCKER_BUILDKIT=1 docker build --platform linux/amd64 --file docker/server/Dockerfile --tag "$tag" .
-
-echo "server-image: built $tag; run it with: docker run --rm -p 7777:7777/udp $tag"
+echo "server-image: built $tag (version $version); run it with: docker run --rm -p 7777:7777/udp $tag"

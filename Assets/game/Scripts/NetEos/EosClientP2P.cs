@@ -9,7 +9,7 @@ using UnityEngine;
 namespace Fps.NetEos
 {
     /// <summary>
-    /// <c>-netstack v2</c> のクライアントの <see cref="EosMatchTransport"/> のために、PlayEveryWare のプラグインの SDK で P2P を呼ぶ。
+    /// クライアントの <see cref="EosMatchTransport"/> のために、PlayEveryWare のプラグインの SDK で P2P を呼ぶ。
     /// プラットフォームとログインは <see cref="EosPlatform"/> をロビーと共有する。
     /// </summary>
     /// <remarks>

@@ -108,10 +108,6 @@ namespace Fps.Tests.EditMode
             Assert.That(BuildSceneList.ModeTestScene, Is.EqualTo(Root + "/Scenes/ModeTest.unity"));
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo(Root + "/Scenes/NetTest.unity"));
             Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { Root + "/Scenes/NetTest.unity", Root + "/Scenes/NetArena01.unity" }));
-            Assert.That(
-                BuildSceneList.NetTestScene,
-                Is.EqualTo(MenuRoute.NetSceneUnder(MenuSceneSettings.LoadSceneRoot(), MenuSceneSettings.LoadScenes())),
-                "the builder saves where the runtime loads");
         }
 
         [Test]

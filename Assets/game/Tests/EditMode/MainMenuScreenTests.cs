@@ -48,7 +48,6 @@ namespace Fps.Tests.EditMode
             MenuNavigator.Host = null;
             MenuNavigator.Scenes = null;
             MenuNavigator.SceneRoot = null;
-            MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
             CampaignLaunchSelection.Clear();
@@ -541,7 +540,7 @@ namespace Fps.Tests.EditMode
         {
             public readonly System.Collections.Generic.List<string> Scenes = new System.Collections.Generic.List<string>
             {
-                MenuRoute.MainMenuScene, MenuRoute.RangeScene, MenuRoute.CampaignScene, MenuRoute.NetScene,
+                MenuRoute.MainMenuScene, MenuRoute.RangeScene, MenuRoute.CampaignScene,
             };
 
             public readonly System.Collections.Generic.List<string> Loaded = new System.Collections.Generic.List<string>();

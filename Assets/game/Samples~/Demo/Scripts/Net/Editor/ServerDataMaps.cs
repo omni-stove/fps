@@ -11,11 +11,25 @@ namespace Fps.Editor
             MapCollisionExporter.UseMapScenes(Prepare);
         }
 
-        // まだ生成していないマップがあっても書き出せるよう、サーバーのビルドと同じく無いシーンを作ってから渡す
+        // まだ生成していないマップがあっても書き出せるよう、無いシーンを作ってから渡す
         public static IReadOnlyList<string> Prepare()
         {
-            ServerBuilder.EnsureServerScenes();
+            EnsureScenes();
             return BuildSceneList.ServerScenes;
+        }
+
+        /// <summary>.NET のサーバーが選べるマップ (<see cref="BuildSceneList.ServerScenes"/>) のシーンのうち、無いものを生成する。</summary>
+        public static void EnsureScenes()
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(NetSceneBuilder.ScenePath) == null)
+            {
+                NetSceneBuilder.Build();
+            }
+
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ArenaSceneBuilder.ScenePath) == null)
+            {
+                ArenaSceneBuilder.BuildAt(ArenaSceneBuilder.ScenePath, ArenaSceneBuilder.NavMeshDataPath);
+            }
         }
     }
 }

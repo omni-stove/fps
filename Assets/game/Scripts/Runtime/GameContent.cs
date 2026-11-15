@@ -69,7 +69,7 @@ namespace Fps.Runtime
         private GunGameLadderDefinition _gunGameLadder;
 
         [Header("キャラクター・文言・メニュー")]
-        [SerializeField, Tooltip("プレイヤー・NetPlayer・敵に置く人型のリグ (根に Animator)。空なら Resources/Characters/CharacterRig")]
+        [SerializeField, Tooltip("プレイヤー・敵に置く人型のリグ (根に Animator)。空なら Resources/Characters/CharacterRig")]
         private GameObject _characterRig;
 
         [SerializeField, Tooltip("言語ごとの文言の表。Resources/Localization/<言語>/ の表の後に重ね、同じキーはこちらが勝つ")]

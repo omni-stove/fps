@@ -9,7 +9,7 @@ using UnityEngine.UIElements;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-netstack v2</c> の HUD。表示はオフライン・Netcode のクライアントと同じ <see cref="Hud"/> (Hud.uxml) を使い、
+    /// ネット対戦の HUD。表示はオフライン・Netcode のクライアントと同じ <see cref="Hud"/> (Hud.uxml) を使い、
     /// 届いたスナップショットの値をその <see cref="Hud.Model"/> に流すだけにする (Netcode の <c>NetHud</c> と同じ出し方)。
     /// </summary>
     /// <remarks>

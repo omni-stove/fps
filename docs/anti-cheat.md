@@ -1,62 +1,48 @@
 # Easy Anti-Cheat (EAC)
 
-EOS の Anti-Cheat Client インターフェースを **PeerToPeer モード** で使い、ホスト型 (`-mode host` と `-mode client`) の
-EOS P2P 接続に組み込んでいる。.NET の専用サーバー (`dotnet/Fps.Server`) とそれにつなぐ `-netstack v2` のクライアントでは、
-サーバーが **Anti-Cheat Server インターフェース**、クライアントが Anti-Cheat Client の **ClientServer モード** を使う
-(下の「.NET の専用サーバー」)。ポータルでの設定と配布物の用意は人が行う。
+.NET の専用サーバー (`dotnet/Fps.Server`) が EOS の **Anti-Cheat Server インターフェース**、ゲームのクライアントが
+Anti-Cheat Client の **ClientServer モード** を使う。ポータルでの設定と配布物の用意は人が行う。
 
 ## 仕組み
-
-- コード: `Assets/game/Scripts/NetEos/EosAntiCheat.cs` (SDK の呼び出し)、
-  `Assets/game/Scripts/Core/AntiCheat*.cs` (有効・無効の判定、ピアの状態、パケット形式)。
-- ホストは接続してきたクライアント全員を、クライアントはホストだけを EAC にピアとして登録する
-  (クライアント同士はホストを通してしかやりとりしないため)。
-- EAC が相手へ送るよう求めたメッセージは、EOS P2P の同じソケットの **チャネル 3** (EAC 専用) で相手へ中継し、
-  相手から届いたものを `ReceiveMessageFromPeer` で EAC へ渡す。Netcode のデータとは混ぜない。
-- 接続直後に互いの EAC の有効・無効を Hello パケットで伝える。片方だけ有効なら切断する (`-noeac` の相手と
-  守られた相手を同じ試合に入れない)。Hello が 15 秒来なければ切断する。
-- EAC が `RemovePlayer` を求めたら、ホストはそのクライアントを切断し、クライアントはホストとの接続を終える。
-- 自分の整合性違反 (`ClientIntegrityViolated`) を受けたら transport を止める (`[Net] transport failure`)。
-- Unity の専用サーバー (`-mode server`) は守られたピアにならないので EAC を使わない。EAC が有効なクライアントは
-  Hello の食い違いで切断されるので、Unity の専用サーバーにつなぐクライアントは `-noeac` を付ける。
-  専用サーバーで EAC を使うのは .NET の専用サーバーだけ (下の「.NET の専用サーバー」)。
-
-## 有効・無効の決まり方
-
-上から順に判定する。結果は起動時に `[AntiCheat] ...` の 1 行でログに出る。
-
-| 条件 | 結果 |
-| --- | --- |
-| `-noeac` と `-eac` を両方付けた | 引数エラーで終了 (`[AntiCheat] invalid arguments`) |
-| `-noeac` | 無効 (`[AntiCheat] disabled by -noeac`) |
-| transport が UDP (既定、または EOS の認証情報が無くて UDP に切り替えた) | 無効 |
-| `-mode server` | 無効 |
-| エディタで `-eac` が無い | 無効 (エディタでは既定で無効) |
-| それ以外 (プレイヤーの `-transport eos` の host / client) | 有効 |
-
-有効なのに EAC のセッションを始められないとき (ブートストラッパーを通さずに起動したなど) は、
-`[AntiCheat] ...; launch the game through the EAC bootstrapper (start_protected_game) or pass -noeac` を出して
-transport を止める。守られないまま試合に入らない。
-
-開発ビルドを直接起動して EOS で試すときは `-noeac` を付ける (相手も `-noeac`)。
-
-`-netstack v2` のクライアントも同じ表で決める。.NET の専用サーバーは別の決まりで、下の「.NET の専用サーバー」に書く。
-
-## .NET の専用サーバー
 
 - コード: サーバーは `dotnet/Fps.Server/ServerAntiCheat.cs` (Hello・登録・中継・切断) と
   `dotnet/Fps.Server.Eos/EosAntiCheatServerBackend.cs` (SDK の呼び出し。EOS の C# SDK を置いたビルドだけに入る)。
   クライアントは `Assets/game/Scripts/NetV2/Client/ClientAntiCheat.cs` (Hello と中継)、`Assets/game/Scripts/NetV2/NetV2AntiCheat.cs`
   (SDK の側を差し込む口)、`Assets/game/Scripts/NetEos/EosAntiCheatClientSession.cs` (PlayEveryWare のプラグインの SDK の呼び出し)。
-- EAC のパケットは EOS P2P のチャネル 3 ではなく、`Fps.Protocol` の `AntiCheatToServerMessage` / `AntiCheatToClientMessage` に
-  `AntiCheatPacket` をそのまま載せ、試合のメッセージと同じ通信路の確実な届け方で送る。サーバーが承認した直後から送り合う。
-- Hello の決まり (片方だけ有効なら切る、15 秒来なければ切る) はホスト型と同じ。サーバーが切るときはクライアントへ
-  `fps:rejected:anti-cheat` を送り、クライアントは「サーバーに断られました」の文でメニューへ戻る。
-  クライアントが先に食い違いに気付いたときも、自分の Hello がサーバーへ届くよう 1 秒待ってから同じ文で抜ける。
+  有効・無効の判定とパケットの形は `Assets/game/Scripts/Core/AntiCheat*.cs`。
+- EAC のパケットは `Fps.Protocol` の `AntiCheatToServerMessage` / `AntiCheatToClientMessage` に `AntiCheatPacket` をそのまま載せ、
+  試合のメッセージと同じ通信路の確実な届け方で送る。サーバーが承認した直後から送り合う。
+- 承認の直後に互いの EAC の有効・無効を Hello で伝える。片方だけ有効なら切断する (`-noeac` の相手と守られた相手を同じ試合に入れない)。
+  Hello が 15 秒来なければ切断する。サーバーが切るときはクライアントへ `fps:rejected:anti-cheat` を送り、クライアントは
+  「サーバーに断られました」の文でメニューへ戻る。クライアントが先に食い違いに気付いたときも、自分の Hello がサーバーへ届くよう
+  1 秒待ってから同じ文で抜ける。
 - サーバーはクライアントを ProductUserId で EAC に登録するので、相手の ID を確かめられる EOS の transport (`-transport eos`) が要る。
   transport は `Fps.Protocol.IConnectionUserIds` を実装して ID を渡す。
-- サーバーの EAC は既定で無効 (`[AntiCheat] disabled on the dedicated server by default; ...`)。`-eac` を付けると有効になる
-  (`-transport eos` と EOS の認証情報、EOS の C# SDK とネイティブのライブラリが要る)。
+
+## 有効・無効の決まり方
+
+### クライアント
+
+上から順に判定する。結果は起動時に `[AntiCheat] ...` の 1 行でログに出る。
+
+| 条件 | 結果 |
+| --- | --- |
+| `-noeac` と `-eac` を両方付けた | 引数エラーで終了 (`[AntiCheat] invalid arguments`、終了コード 2) |
+| `-noeac` | 無効 (`[AntiCheat] disabled by -noeac`) |
+| transport が UDP (既定、クイックマッチ、または EOS の認証情報が無くて UDP に切り替えた) | 無効 |
+| エディタで `-eac` が無い | 無効 (エディタでは既定で無効) |
+| それ以外 (プレイヤーの `-mode client -transport eos`) | 有効 (`[AntiCheat] enabled (client-server, client)`) |
+
+有効なのに EAC のセッションを始められないとき (ブートストラッパーを通さずに起動したなど) は、
+`[AntiCheat] ...; launch the game through the EAC bootstrapper (start_protected_game) or pass -noeac` を出して終わる
+(batchmode では終了コード 6)。守られないまま試合に入らない。
+
+開発ビルドを直接起動して EOS で試すときは `-noeac` を付ける。
+
+### サーバー
+
+サーバーの EAC は既定で無効 (`[AntiCheat] disabled on the dedicated server by default; ...`)。`-eac` を付けると有効になる
+(`-transport eos` と EOS の認証情報、EOS の C# SDK とネイティブのライブラリが要る)。
 
 | サーバーの引数 | 結果 |
 | --- | --- |
@@ -71,17 +57,16 @@ transport を止める。守られないまま試合に入らない。
 
 1. [Epic Developer Portal](https://dev.epicgames.com/portal) で、この製品の **Game Services → Anti-Cheat** を開き、
    Anti-Cheat を有効にする (利用規約への同意が要る)。
-2. 使う Sandbox / Deployment で、クライアント保護 (Client protection) と **Peer-to-peer** の利用を有効にする。
-   .NET の専用サーバーで使うなら **Client-server** (サーバーの保護) の利用も有効にする。
+2. 使う Sandbox / Deployment で、クライアント保護 (Client protection) と **Client-server** (サーバーの保護) の利用を有効にする。
 3. 配布するプラットフォーム (Windows / macOS / Linux) を追加し、Anti-Cheat の SDK (ブートストラッパーと
    整合性ツール、署名用の鍵) をダウンロードする。鍵と証明書はリポジトリに入れない。
-4. EOS の認証情報 (`EOS_PRODUCT_ID` など) は今と同じく環境変数か `eos.local.json` で渡す。
+4. EOS の認証情報 (`EOS_PRODUCT_ID` など) は環境変数か `eos.local.json` で渡す。
 
 ## 配布物の用意
 
 ポータルからダウンロードした Anti-Cheat SDK に含まれるツールで、ビルドごとに行う。
 
-1. `make build` で通常のプレイヤーをビルドする (専用サーバービルドは EAC を使わないので対象外)。
+1. `make build` でクライアントをビルドする。
 2. 整合性ツール (`anticheat_integritytool`) をビルドの出力フォルダに対して実行し、整合性カタログを作る。
    ゲームのファイルを変えたら作り直す。
 3. ブートストラッパー (`start_protected_game`) と `EasyAntiCheat/` フォルダ (設定ファイル `Settings.json` を含む)
@@ -93,39 +78,15 @@ transport を止める。守られないまま試合に入らない。
 
 ## 有効にしたときの確認手順
 
-2 台の PC (または同じ PC の別の OS ユーザー。EOS の Device ID が端末・ユーザーごとに 1 つなので) で行う。
-
-1. 上の手順で保護したビルドを用意し、ホスト側でブートストラッパーから
-   `-mode host -transport eos` を付けて起動する。ログに次が出る。
-   - `[AntiCheat] enabled (peer-to-peer, host)`
-   - `[AntiCheat] session started (peer-to-peer) user=<ホストの ID>`
-   - `[Net] EOS server ready id=<ホストの ID> ...`
-2. クライアント側でブートストラッパーから `-mode client -transport eos -eos-server <ホストの ID>` を付けて起動する。
-   双方のログに次が出る。
-   - `[AntiCheat] registered peer id=<相手の transport ID> user=<相手の ID> handle=<n>`
-   - しばらくして `[AntiCheat] peer id=... auth status=RemoteAuthComplete`
-3. 食い違いの確認: クライアントを `-noeac` 付きで (ブートストラッパーを通さずに) 起動すると、ホストに
-   `[AntiCheat] removing peer id=...: the peer runs without anti-cheat (-noeac or an unprotected build)`、
-   クライアントに `[AntiCheat] removing peer id=0: the peer requires anti-cheat but this side runs without it` が出て切断される。
-4. 未保護の確認: ブートストラッパーを通さずに `-mode host -transport eos` で起動すると、
-   `[AntiCheat] anti-cheat BeginSession failed: ...; launch the game through the EAC bootstrapper ...` が出て
-   `[Net] transport failure` で終わる (batchmode では終了コード 6)。
-
-EAC を使わないときの確認: エディタで NetTest を再生する、またはプレイヤーを引数なし・`-transport udp`・
-`-noeac` 付きで起動すると `[AntiCheat] disabled ...` が出て、これまでどおり遊べる。
-
-## .NET の専用サーバーで有効にしたときの確認手順
-
-EOS の P2P の transport (`-transport eos`) を .NET のサーバーと `-netstack v2` のクライアントで使えることが前提 (#594)。
 サーバーとクライアントは別の PC か別の OS ユーザーで動かす (EOS の Device ID が端末・ユーザーごとに 1 つなので)。
 
 1. EOS の認証情報を `eos.local.json` か環境変数で渡し、`make eos-sdk` で SDK を置いてから `make server-dotnet ARGS="-transport eos -eac"`
-   (または `-transport eos -eac` を付けて `dotnet/Fps.Server` を起動) する。ログに次が出る。
+   (または `-transport eos -eac` を付けて `dotnet/Fps.Server` かサーバーのイメージを起動) する。ログに次が出る。
    - `[AntiCheat] enabled (client-server, dedicated server)`
    - `[AntiCheat] session started (client-server)`
    - `[Net] EOS server ready id=<サーバーの ID> ...`
-2. 上の手順で保護したクライアントを、ブートストラッパーから `-mode client -netstack v2 -transport eos -eos-server <サーバーの ID>` で起動する。
-   - クライアント: `[AntiCheat] enabled (peer-to-peer, client)`、`[AntiCheat] session started (client-server)`、
+2. 上の手順で保護したクライアントを、ブートストラッパーから `-mode client -transport eos -eos-server <サーバーの ID>` で起動する。
+   - クライアント: `[AntiCheat] enabled (client-server, client)`、`[AntiCheat] session started (client-server)`、
      `[AntiCheat] server id=0 runs anti-cheat; relaying its messages`
    - サーバー: `[AntiCheat] registered peer id=<接続の番号> user=<クライアントの ID> handle=<n>`、しばらくして
      `[AntiCheat] peer id=... auth status=RemoteAuthComplete`

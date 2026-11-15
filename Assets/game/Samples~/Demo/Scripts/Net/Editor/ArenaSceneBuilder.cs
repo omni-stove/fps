@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Fps.Core;
-using Fps.Net;
 using Fps.Runtime;
 using Unity.AI.Navigation;
-using Unity.Netcode;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -14,10 +12,11 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     /// <summary>
-    /// ネット対戦のマップ NetArena01 を生成する。サーバーは <c>-map NetArena01</c> でこのシーンへ移り、クライアントは Netcode のシーン管理で合わせる。
+    /// ネット対戦のマップ NetArena01 を生成する。.NET のサーバーは <c>-map NetArena01</c> でこのマップの書き出し (server-data/maps) を読み、
+    /// クライアントはつないだサーバーのマップとしてこのシーンへ移る。
     /// 60 m 四方の床と外周の壁に、高い壁・低い壁・乗り越えられる段差を置いて NavMesh を焼き、壊せる建物 2 棟
-    /// (<see cref="DestructibleStructure"/> と <see cref="NetDestructibleStructure"/>)、チームごとの出現地点 <see cref="SpawnsPerTeam"/> か所、
-    /// 拠点制圧の拠点 A/B/C (<see cref="NetControlPoint"/> と旗)、NetTest と同じ配線の <see cref="NetBootstrap"/> を置く (<see cref="NetSceneBuilder.CreateBootstrap"/>)。
+    /// (<see cref="DestructibleStructure"/>)、チームごとの出現地点 <see cref="SpawnsPerTeam"/> か所、
+    /// 拠点制圧の拠点 A/B/C (<see cref="ControlPointZone"/> と旗)、NetTest と同じ観戦カメラとライトを置く。
     /// 拠点はルールが <see cref="MatchObjective.Domination"/> の試合でだけ使われ、チームデスマッチでは置いてあるだけになる。
     /// 何度実行しても同じ結果になる。batchmode では
     /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.ArenaSceneBuilder.Build</c> で呼ぶ。
@@ -182,9 +181,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// シーンを生成して NavMesh を焼き、両方を保存して Build Settings に加える (既存の並びは変えない)。
-        /// プレイヤーと試合の進行役のプレハブが無ければ先に <see cref="NetSceneBuilder.Build"/> で作る。
-        /// 拠点の範囲が壁・段差・建物・出現地点に掛かる、NavMesh が出現地点・拠点に届かない、
-        /// または建物と拠点の NetworkObject に ID が付かなければ例外を投げる (batchmode では終了コード 1)。
+        /// 拠点の範囲が壁・段差・建物・出現地点に掛かる、NavMesh が出現地点・拠点に届かなければ例外を投げる (batchmode では終了コード 1)。
         /// </summary>
         public static void BuildAt(string scenePath, string navMeshDataPath)
         {
@@ -197,13 +194,9 @@ namespace Fps.Editor
                 throw new InvalidOperationException(LogTag + " control point areas overlap the level: " + string.Join("; ", overlaps));
             }
 
-            // NetSceneBuilder.Build は NetTest を開くので、こちらのシーンを作る前に済ませる
-            NetSceneBuilder.EnsurePrefabs();
-
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             // NewScene(Single) は参照されていないアセットをアンロードするので、プレハブはシーンを作ってから読む
-            var (playerPrefab, matchPrefab) = NetSceneBuilder.LoadPrefabs();
             var pieceVisualPrefab = DestructiblePieceVisual.Load();
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
@@ -215,15 +208,8 @@ namespace Fps.Editor
             SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
             RequireNavigable();
 
-            PopulateScene(scene, playerPrefab, matchPrefab, pieceVisualPrefab);
+            PopulateScene(scene, pieceVisualPrefab);
             SaveScene(scene, scenePath);
-
-            // シーンに置いた NetworkObject の ID (GlobalObjectIdHash) は、保存済みのシーンを読んだときの OnValidate で決まる。
-            // 開き直して決めさせ、それを書き戻さないと、サーバーとクライアントで建物を突き合わせられない
-            scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            EditorSceneManager.MarkSceneDirty(scene);
-            SaveScene(scene, scenePath);
-            RequireSceneNetworkObjectIds(scene);
 
             BuildSceneList.Register(scenePath);
             AssetDatabase.SaveAssets();
@@ -296,14 +282,12 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// NetBootstrap・観戦カメラ・ライト・破片の置き場・建物・出現地点・拠点を置き、NetBootstrap を返す。
-        /// プレハブの配線は NetTest と同じ (<see cref="NetSceneBuilder.CreateBootstrap"/>)。
+        /// 観戦カメラ・ライト・破片の置き場・建物・出現地点・拠点を置く。
         /// </summary>
-        public static NetBootstrap PopulateScene(Scene scene, GameObject playerPrefab, GameObject matchPrefab, GameObject pieceVisualPrefab = null)
+        public static void PopulateScene(Scene scene, GameObject pieceVisualPrefab = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);
 
-            var bootstrap = NetSceneBuilder.CreateBootstrap(scene, playerPrefab, matchPrefab);
             NetSceneBuilder.CreateSpectatorCamera(scene, SpectatorPosition, SpectatorRotation);
             NetSceneBuilder.CreateSun(scene);
 
@@ -329,32 +313,28 @@ namespace Fps.Editor
             }
 
             EditorSceneManager.MarkSceneDirty(scene);
-            return bootstrap;
         }
 
         /// <summary>
-        /// position (足元) に拠点を置いて返す。<see cref="NetControlPoint"/> が占領の状態を同期し、<see cref="ControlPointZone"/> が範囲を持って
-        /// Play 中に地面の円盤を出す。中心には遠くから見える旗を立てる (<see cref="DominationSceneBuilder.AddFlag"/>、当たり判定なし)。
+        /// position (足元) に拠点を置いて返す。<see cref="ControlPointZone"/> が範囲を持って Play 中に地面の円盤を出し、
+        /// クライアントはサーバーから届いた持ち主の色で塗る。中心には遠くから見える旗を立てる (<see cref="DominationSceneBuilder.AddFlag"/>、当たり判定なし)。
         /// </summary>
-        public static NetControlPoint CreateControlPoint(Scene scene, string pointName, Vector3 position, int index)
+        public static ControlPointZone CreateControlPoint(Scene scene, string pointName, Vector3 position, int index)
         {
             SceneBuildHelpers.RequireLoaded(scene);
 
-            // シーンに置いた NetworkObject は Netcode がシーンの直下から探して Spawn するので、親を付けない
             var point = new GameObject(pointName);
             SceneManager.MoveGameObjectToScene(point, scene);
             point.transform.SetPositionAndRotation(position, Quaternion.identity);
 
             try
             {
-                point.AddComponent<NetworkObject>();
                 var zone = point.AddComponent<ControlPointZone>();
                 zone.Index = index;
                 zone.Radius = ControlPointRadius;
                 zone.Height = ControlPointHeight;
-                var networked = point.AddComponent<NetControlPoint>();
                 DominationSceneBuilder.AddFlag(point.transform);
-                return networked;
+                return zone;
             }
             catch
             {
@@ -420,16 +400,15 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// groundCenter (床面の中心) に壊せる建物を置いて返す。シーンの直下に置き、壊れた部品は <see cref="NetDestructibleStructure"/> が同期する。
+        /// groundCenter (床面の中心) に壊せる建物を置いて返す。シーンの直下に置き、壊れた部品はサーバーの知らせでクライアントが外す。
         /// 壁 4 面 (下段は地面に接する) と屋根を 1 m の Cube の部品で組み、南北の壁の中央に出入口を空ける。部品の添字は作った順に 0 から振る。
-        /// 弾で壊れるかは試合の開始時に <see cref="NetTeamDeathmatch"/> がルールで決めるので、ここでは壊れない状態にしておく。
+        /// 弾で壊れるかはサーバーが試合のルールで決めるので、ここでは壊れない状態にしておく。
         /// </summary>
         public static DestructibleStructure CreateBuilding(
             Scene scene, string buildingName, Vector3 groundCenter, DebrisPool pool, GameObject pieceVisualPrefab = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);
 
-            // シーンに置いた NetworkObject は Netcode がシーンの直下から探して Spawn するので、親を付けない
             var root = new GameObject(buildingName);
             SceneManager.MoveGameObjectToScene(root, scene);
             root.transform.SetPositionAndRotation(groundCenter, Quaternion.identity);
@@ -439,7 +418,6 @@ namespace Fps.Editor
                 var structure = root.AddComponent<DestructibleStructure>();
                 structure.DestructionEnabled = false;
                 structure.DebrisPool = pool;
-                root.AddComponent<NetDestructibleStructure>();
 
                 var minX = -((BuildingWidth - 1) * PieceSize / 2f);
                 var minZ = -((BuildingDepth - 1) * PieceSize / 2f);
@@ -611,22 +589,6 @@ namespace Fps.Editor
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
                 throw new IOException(LogTag + " failed to save " + scenePath);
-            }
-        }
-
-        private static void RequireSceneNetworkObjectIds(Scene scene)
-        {
-            foreach (var root in scene.GetRootGameObjects())
-            {
-                foreach (var networkObject in root.GetComponentsInChildren<NetworkObject>(true))
-                {
-                    if (networkObject.PrefabIdHash == 0)
-                    {
-                        throw new InvalidOperationException(
-                            LogTag + " " + networkObject.name + " in " + scene.path + " has no GlobalObjectIdHash after reopening the scene;"
-                            + " clients could not match it with the server's");
-                    }
-                }
             }
         }
     }

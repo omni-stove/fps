@@ -8,7 +8,7 @@ namespace Fps.Editor
     /// <summary>
     /// ビルドに入れるシーンの一覧と、Build Settings への登録の仕方を 1 か所にまとめる。
     /// シーンの生成スクリプトは保存したシーンを <see cref="RegisterStartScene"/> (起動時のシーン) か <see cref="Register"/> で登録し、
-    /// 専用サーバーのビルドは <see cref="ServerScenes"/> を使う。
+    /// .NET のサーバーへの書き出し (マップのデータ) は <see cref="ServerScenes"/> を使う。
     /// 一覧をまとめて登録し直すなら <see cref="RegisterAll"/> (メニューの <see cref="MenuPath"/>) を呼ぶ。
     /// </summary>
     public static class BuildSceneList
@@ -66,8 +66,8 @@ namespace Fps.Editor
         public static string ModeTestScene => FpsKitRoot.OutputScene("ModeTest");
 
         /// <summary>
-        /// ネット対戦のシーン。実行時に読み込む側 (Fps.Net の NetBootstrap.ScenePath) と同じ名前で、出力先ルートが既定なら同じパス
-        /// (一致はテストで確かめる)。
+        /// ネット対戦の既定のマップ (<see cref="Fps.Core.MenuRoute.NetSceneName"/>)。.NET のサーバーが <c>-map</c> を省いたときに使い、
+        /// クライアントはつないだサーバーのマップとしてこのシーンへ移る。生成は Fps.Samples.Net.Editor の NetSceneBuilder。
         /// </summary>
         public static string NetTestScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.NetSceneName);
 
@@ -137,8 +137,8 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 専用サーバーのビルドに入れるシーン。メニューと一人称カメラの射撃場は要らないので、ネット対戦のシーンを最初に置き、
-        /// <c>-map</c> で選べるマップを続ける。出力先ルートが変わるので、読むたびに組む。
+        /// .NET のサーバーが <c>-map</c> で選べるマップのシーン。マップのデータ (server-data/maps) をこれらから書き出す。
+        /// 先頭が <c>-map</c> を省いたときのマップ。出力先ルートが変わるので、読むたびに組む。
         /// </summary>
         public static IReadOnlyList<string> ServerScenes => new[] { NetTestScene, NetArena01Scene };
 

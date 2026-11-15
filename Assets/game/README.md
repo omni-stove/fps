@@ -19,16 +19,17 @@
 - 入力は Input System だけを使う。**Edit > Project Settings > Player > Active Input Handling** を `Input System Package (New)` か `Both` にする。
 - 武器の音と光の素材を作る `Fps/Build Presentation Assets` だけは URP (`com.unity.render-pipelines.universal`) のシェーダーを使う。URP が無くてもほかの機能と smoke は動き、武器の音と光が出ないという警告が出るだけ。薬莢と空撃ちの音の素材 (`Presentation/WeaponExtrasCatalog`) も同じく URP のシェーダーを使い、`Fps/Build All Presentation Assets` (`Fps.Editor.PresentationAssetSteps.BuildAll`) で作る。無ければ薬莢と空撃ちの音が出ないという警告が出るだけ。材質ごとの銃痕と着弾の素材 (`Presentation/SurfaceImpactCatalog`) も同じシェーダーを使い、同じ `Fps/Build All Presentation Assets` で作る。無ければ着弾は従来の火花と音になる。
 
-### 任意: ネット対戦 (`Fps.Net`) と EOS (`Fps.NetEos`)
+### ネット対戦 (`Fps.NetV2`) と、任意の EOS (`Fps.NetEos`)
 
-ネットまわりのアセンブリは、必要なパッケージがプロジェクトにあるときだけコンパイルされる (asmdef の `versionDefines` と `defineConstraints`)。入れなければ、そのアセンブリとテストは無いものとして扱われ、コンパイルエラーにもならない。
+ネット対戦のクライアント (`Fps.Protocol`・`Fps.NetV2.Client`・`Fps.NetV2`) は追加のパッケージ無しでコンパイルされ、Unity を使わない .NET の専用サーバー
+(リポジトリの `dotnet/Fps.Server`) へつなぐ。サーバーの作り方と動かし方はリポジトリの `docs/dedicated-server.md` にある。
+
+EOS (P2P の通信路・クイックマッチのロビーの検索・アンチチート) を使う `Fps.NetEos` は、`com.playeveryware.eos` があるときだけコンパイルされる
+(asmdef の `versionDefines` と `defineConstraints`)。入れなければ、そのアセンブリは無いものとして扱われ、コンパイルエラーにもならない。
 
 | アセンブリ | 有効になる条件 | manifest に足す行 |
 | --- | --- | --- |
-| `Fps.Net`・`Fps.Net.UI`・`Fps.Net.Tests` (サンプルの `Fps.Samples.Net.Editor`・`Fps.Samples.Net.Tests` も) | `com.unity.netcode.gameobjects` 2.14.0 以上 | `"com.unity.netcode.gameobjects": "2.14.0"` |
-| `Fps.NetEos` | 上に加えて `com.playeveryware.eos` | `"com.playeveryware.eos": "https://github.com/EOS-Contrib/eos_plugin_for_unity_upm.git"` |
-
-smoke の最後の 1 本 (`PerfSmokeRun`) はサンプルの `Fps.Samples.Net.Editor` にあるので、**smoke をすべて通すには Netcode も入れる**こと ([動作確認](#動作確認-smoke) を参照)。
+| `Fps.NetEos` | `com.playeveryware.eos` | `"com.playeveryware.eos": "https://github.com/EOS-Contrib/eos_plugin_for_unity_upm.git"` |
 
 ## 導入
 
@@ -59,16 +60,17 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 ## サンプル (Demo Game)
 
-パッケージの本体 (`Fps.Core`・`Fps.Runtime`・`Fps.Runtime.UI`・`Fps.Net`・`Fps.Net.UI`・`Fps.NetEos`、JSON のインポーターなどの `Fps.Editor`) は、サンプルの中身を参照しない。
+パッケージの本体 (`Fps.Core`・`Fps.Runtime`・`Fps.Runtime.UI`・`Fps.Protocol`・`Fps.NetV2`・`Fps.NetV2.Client`・`Fps.NetEos`、JSON のインポーターなどの `Fps.Editor`) は、サンプルの中身を参照しない。
 仮のゲームの中身はサンプル **Demo Game** (`Samples~/Demo`) にあり、ゲーム側が選んで取り込む。
 
 | 中身 | 置き場所 (サンプルのルートから) |
 | --- | --- |
 | 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`) |
 | ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
-| ミッション・シーン・ネット対戦のプレハブ | `Missions/`・`Scenes/`・`Prefabs/Net/` |
+| ミッション・シーン | `Missions/`・`Scenes/` |
+| ネット対戦の試合の設定 (`NetMatchDefinition`。専用サーバーへ書き出す) | `Rules/NetMatch.asset` |
 | メニューから移るシーンのルート (`MenuSceneSettings`) | `Resources/Menu/MenuSceneSettings.asset` |
-| シーンと仮の素材を組む Editor のスクリプト・smoke・クライアントとサーバーのビルド | `Scripts/Editor/` (`Fps.Samples.Editor`)・`Scripts/Net/Editor/` (`Fps.Samples.Net.Editor`) |
+| シーンと仮の素材を組む Editor のスクリプト・smoke・クライアントのビルド・専用サーバーへのデータの書き出し | `Scripts/Editor/` (`Fps.Samples.Editor`)・`Scripts/Net/Editor/` (`Fps.Samples.Net.Editor`) |
 | サンプルのテスト | `Tests/EditMode/` (`Fps.Samples.Tests`)・`Tests/EditMode/Net/` (`Fps.Samples.Net.Tests`) |
 
 取り込み方: **Window > Package Manager** で FPS Kit を選び、**Samples** の **Demo Game** の **Import** を押す。`Assets/Samples/FPS Kit/<版>/Demo Game/` に置かれる。
@@ -141,7 +143,7 @@ batchmode で回す (`-runTests` は自分で Editor を閉じるので `-quit` 
 
 - 終了コードが 0 ならすべて通った。0 以外なら失敗で、どのテストが落ちたかは `fps-editmode-results.xml` (NUnit 形式) にある。
 - `Fps.Samples.Tests` はサンプルを取り込んだときだけある (サンプルのテストは `testables` に関係なく、取り込むと読み込まれる)。
-- Netcode を入れたなら、`-assemblyNames` に `Fps.Net.Tests` (とサンプルの `Fps.Samples.Net.Tests`) を足すとネットのテストも回る。`-assemblyNames` を省くと、プロジェクトにあるすべての EditMode テストが回る。
+- サンプルのネット対戦のテストは `Fps.Samples.Net.Tests`。`-assemblyNames` を省くと、プロジェクトにあるすべての EditMode テストが回る。
 - テストは `Assets/__<テスト名>_<GUID>` のような一時フォルダにアセットを作り、終わると消す。
 
 Editor からは **Window > General > Test Runner** の EditMode タブで同じテストを回せる。
@@ -187,9 +189,9 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 | `WeaponCatalog`・`Loadout` | メニューのロードアウト選択 (`MainMenuScreen`)・ネット対戦 (`NetTeamDeathmatch`)。オフラインのプレイヤーの武器は `Loadout` のスロットの武器 | `MainMenuScreen`・`NetTeamDeathmatch` の `Catalog`・`Loadout`、`GameBootstrap` の `WeaponDefinitions` | 選べない・持たない (エラー) |
 | `Missions` | メニューのキャンペーン | `MainMenuScreen` の `Missions` | キャンペーンを開けない |
 | `TeamDeathmatch`・`Domination`・`Hardpoint`・`KillConfirmed`・`SearchAndDestroy`・`Horde`・`GunGameLadder` | 各モードの `*Runner` | Runner の `Definition` (`GunGameRunner` は `Ladder`) | Runner の Inspector の値 (`GunGameRunner` は始められない) |
-| `CharacterRig` | プレイヤー・NetPlayer・敵の人型のリグ (`CharacterAnimator`) | `CharacterAnimator` の `RigPrefab` | `Resources/Characters/CharacterRig` |
+| `CharacterRig` | プレイヤー・敵の人型のリグ (`CharacterAnimator`) | `CharacterAnimator` の `RigPrefab` | `Resources/Characters/CharacterRig` |
 | `Texts` (言語コードと表の並び) | 文言 (`Localizer`・`GameText`) | — | `Resources/Localization/<言語>/` の表だけ |
-| `MenuScenes` | メニューから移るシーン (`MenuNavigator`・`NetBootstrap`) | — | `Resources/Menu/MenuSceneSettings`、無ければ既定の名前 |
+| `MenuScenes` | メニューから移るシーン (`MenuNavigator`) | — | `Resources/Menu/MenuSceneSettings`、無ければ既定の名前 |
 | `Presentation` ほか見た目・音のカタログ | [見た目と音を差し替える](#見た目と音を差し替える) | — | `Resources/Presentation/*` |
 
 - `Texts` の表は `Resources/Localization/<言語>/` の表の後に重ねるので、同じキーは入口の文が勝つ。表の形は [言語を足す・文を変える](#言語を足す文を変える) と同じ。言語コードは言語の一覧 (`Localization/Languages`) の `code`。
@@ -349,7 +351,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | `SuppressionCatalog` | 制圧されたときの画面の色 | `Suppression` | `Presentation/SuppressionCatalog` |
 | `AwarenessIndicatorCatalog` | 発見ゲージの頭上の印のプレハブ | `AwarenessIndicator` | `Presentation/AwarenessIndicatorCatalog` |
 | `CameraShakeSettings` | 撃ったときなどのカメラの揺れ | `CameraShake` | `Presentation/CameraShakeSettings` |
-| 人型のリグ (プレハブ) | プレイヤー・NetPlayer・敵の体とアニメーション | `CharacterRig` | `Characters/CharacterRig` |
+| 人型のリグ (プレハブ) | プレイヤー・敵の体とアニメーション | `CharacterRig` | `Characters/CharacterRig` |
 
 - カタログは **Assets > Create > Fps > <カタログ名>** で作り、武器の Id や材質の Id で引く (武器の名前では引かない)。サンプルの仮の素材は `Fps/Build All Presentation Assets` (`Fps.Editor.PresentationAssetSteps.BuildAll`) で作れる。
 - 1 つの物だけの見た目は、そのコンポーネントのプレハブの欄で変える (例: `GameBootstrap` の床・標的ダミー・グレネード、`EnemySniper`・`EnemyBomber`・`EnemyShield` の仮の形、`Pickup`・`PickupSpawnPoint`・`BombSite`・`ControlPointZone` の見た目、`TurretDeployDefinition`・`DeployAbilityDefinition` の置く物)。空なら仮の形を作る。
@@ -358,22 +360,22 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 
 ## UI を差し替える
 
-ゲーム進行 (`Fps.Runtime`・`Fps.Net`) は、画面を具体的なクラスでは持たず、登録口 `Fps.Runtime.GameUi`・`Fps.Net.NetUi` に入っている実装を使う。
-既定の UI (`Fps.Runtime.UI`・`Fps.Net.UI`) は起動時に自分を **既定** として登録するだけなので、使う側が登録口のプロパティに自分の実装を入れれば、既定の UI のコードは呼ばれなくなる。
+ゲーム進行 (`Fps.Runtime`) は、画面を具体的なクラスでは持たず、登録口 `Fps.Runtime.GameUi` に入っている実装を使う。
+既定の UI (`Fps.Runtime.UI`) は起動時に自分を **既定** として登録するだけなので、使う側が登録口のプロパティに自分の実装を入れれば、既定の UI のコードは呼ばれなくなる。
+ネット対戦の HUD (`Fps.NetV2` の `NetV2Hud`) は、オフラインと同じ HUD (`Hud`・`Hud.uxml`) を使う。
 
 | 登録口のプロパティ | 実装するインターフェース | 使われる所 | 既定 |
 | --- | --- | --- | --- |
 | `GameUi.HudFactory` | `IHudFactory` (作るのは `IHud`) | オフラインの HUD とプレイヤーのデバッグ表示 (`GameBootstrap` が作る) | `Fps.Runtime.UI` の HUD。ポーズメニュー・ロードアウトの選択・字幕なども、この HUD の GameObject に載っている |
 | `GameUi.Pause` | `IPauseState` | ポーズ画面が開いているか (開いている間は操作を止める) | 既定の HUD のポーズメニュー |
 | `GameUi.LoadoutSelect` | `ILoadoutSelect` | カーソルを解放してロードアウトの画面を開いているか | 既定の HUD のロードアウトの画面 |
-| `GameUi.Menu` | `IMenuNavigator` | メインメニューへ戻る・メニューで選んだロビーやチュートリアルを受け取る | `Fps.Runtime.UI` のメニューのシーンとの行き来 |
-| `NetUi.HudFactory` (Netcode を入れたときだけ) | `INetHudFactory` (作るのは `INetHud`) | オンラインの自分のプレイヤーの HUD (`NetPlayer` が作る) | `Fps.Net.UI` の HUD |
+| `GameUi.Menu` | `IMenuNavigator` | メインメニューへ戻る・メニューで選んだチュートリアルを受け取る | `Fps.Runtime.UI` のメニューのシーンとの行き来 |
 | `PingUi.ViewFactory` | `IPingViewFactory` (作るのは `IPingView`) | オフラインのプレイヤーが付けた印 (`PingController`) を画面に出す。画面の外の印は端に寄せて向きを出す | 既定の HUD (`Hud`) に付く `PingMarkersView`。ほかの HUD には出さない (`null` を返す) |
 | `SquadOrderUi.ViewFactory` | `ISquadOrderViewFactory` (作るのは `ISquadOrderView`) | プレイヤーが味方の bot に出した指示 (`SquadCommandController`) の守る場所・狙う敵を画面に出す | 既定の HUD (`Hud`) に付く `SquadOrderMarkerView`。ほかの HUD には出さない (`null` を返す) |
 
 - 入れた実装は、登録の順番に依らず既定より優先される。`null` を入れると既定に戻る。
 - 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
-- オフラインの `GameUi.HudFactory` とオンラインの `NetUi.HudFactory` は別のもの。両方を差し替えるなら両方に入れる。
+- ネット対戦の HUD は `GameUi.HudFactory` を通らない (`NetV2Hud` が既定の `Hud` を作る)。
 - 既定の HUD を差し替えると、その HUD に載っていたポーズメニューやロードアウトの画面も出なくなる。自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
 - `IHud` の `Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さない (プレイヤーがグレネードや能力の枠を持つと、返した値の `Show` をすぐ呼ぶ)。
 - 登録はシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単。
@@ -461,52 +463,6 @@ public sealed class MyHudFactory : IHudFactory
 1. **Fps > Build Weapon Assets**・**Fps > Build Game Rules Assets**・**Fps > Build Bootstrap Scene** を順に実行し、`<出力先ルート>/Scenes/Bootstrap.unity` を開いて Play に入る。
 2. 上の例を置く前は既定の HUD (体力・弾数・照準) が出る。置いてから Play に入り直すと、既定の HUD は出ずに左上に `MY HUD` と HP が出る。
 3. `Register` の中を `GameUi.HudFactory = null;` にすると既定の HUD に戻る。
-
-### オンラインの HUD (Netcode を入れたとき)
-
-`Fps.Net` は Netcode があるときだけコンパイルされるので、このコードも Netcode を入れたプロジェクトに置く (自分の asmdef に置くなら `references` に `Fps.Core`・`Fps.Runtime`・`Fps.Net` を足す)。
-`NetPlayer` は自分のプレイヤーが出たときに `Create` を呼び、プレイヤーが消えるときに返した HUD の GameObject を消す。
-
-```csharp
-using Fps.Net;
-using UnityEngine;
-
-public sealed class MyNetHud : MonoBehaviour, INetHud
-{
-    private float _disconnectAt = -1f;
-
-    public void ShowIdleWarning(float remainingSeconds)
-    {
-        _disconnectAt = Time.unscaledTime + (float.IsNaN(remainingSeconds) ? 0f : Mathf.Max(0f, remainingSeconds));
-    }
-
-    public void ClearIdleWarning() => _disconnectAt = -1f;
-
-    private void OnGUI()
-    {
-        GUILayout.Label("MY NET HUD");
-        if (_disconnectAt >= 0f)
-        {
-            var seconds = Mathf.CeilToInt(Mathf.Max(0f, _disconnectAt - Time.unscaledTime));
-            GUILayout.Label(Fps.Runtime.Localizer.Format("hud.idleWarning", seconds));
-        }
-    }
-}
-
-public sealed class MyNetHudFactory : INetHudFactory
-{
-    public INetHud Create(NetPlayer player)
-    {
-        return new GameObject("MyNetHud").AddComponent<MyNetHud>();
-    }
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void Register()
-    {
-        NetUi.HudFactory = new MyNetHudFactory();
-    }
-}
-```
 
 ### ポーズ・ロードアウト・メニューの様子
 
@@ -697,7 +653,6 @@ photo.PhotoCapture = new MyFramedCapture();
 3. `EnemyFireSmokeRun`
 4. `EnemyStuckSmokeRun`
 5. `WeaponSwitchSmokeRun`
-6. `PerfSmokeRun` (`Fps.Samples.Net.Editor`。Netcode が要る。サーバーの tick の平均・最大・p95 を `Logs/perf.json` に書き、予算を超えると失敗)
 
 Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに終了コード 1 で終わる)。
 
@@ -722,8 +677,7 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
   passed DestructionSmokeRun (exit code 0)
   passed EnemyFireSmokeRun (exit code 0)
   passed EnemyStuckSmokeRun (exit code 0)
-  passed WeaponSwitchSmokeRun (exit code 0)
-  passed PerfSmokeRun (exit code 0) (exit code 0)
+  passed WeaponSwitchSmokeRun (exit code 0) (exit code 0)
 ```
 
 失敗:
@@ -733,12 +687,11 @@ Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに�
   passed CampaignSmokeRun (exit code 0)
   FAILED DestructionSmokeRun (exit code 1)
   ...
-  NOT RUN PerfSmokeRun (exit code 1)
+  NOT RUN WeaponSwitchSmokeRun (exit code 1)
 ```
 
 - `FAILED <名前>` の行の SmokeRun が落ちた。その名前のタグ (`[DestructionSmokeRun]` など) でログを探すと理由がある。1 つが 600 秒を超えても終わらないときも、`[SmokeSuite] <名前> did not finish within 600s` を出して `FAILED` になる。
 - `NOT RUN <名前>` は結果を受け取れないままスイートが終わった SmokeRun で、これも失敗に数える。
-- Netcode を入れていないと `PerfSmokeRun` が `smoke run type 'Fps.Editor.PerfSmokeRun, Fps.Samples.Net.Editor' was not found` で `FAILED` になり、スイート全体も 1 で終わる。残りの 5 本が `passed` なら、Netcode 以外は動いている。
 
 ## 差し替え漏れの点検
 
@@ -777,11 +730,11 @@ Editor からは **Fps > Audit Replacements** (一覧をログに出すだけで
 | `Fps.Runtime` | ゲームプレイのコンポーネントとアセットの型 | 常に |
 | `Fps.Runtime.UI` | 既定の UI (HUD・メニュー・ポーズ・設定)。起動時に `GameUi` へ自分を登録する。外すと HUD 無しで動く | 常に |
 | `Fps.Editor` | JSON のインポーター、出力先ルート、ビルダーの共通の処理、キャラクターのリグ、入口のアセットの作成、差し替えの点検 | Editor |
-| `Fps.Net` | Netcode for GameObjects のネット対戦 | Netcode 2.14.0 以上 |
-| `Fps.Net.UI` | ネット対戦の HUD (キルフィードの名前・スコアボード・F3 の回線表示・装備選択・ネームプレート・拠点)。起動時に `NetUi` へ自分を登録する。外すと HUD 無しで動く | Netcode 2.14.0 以上 |
-| `Fps.NetEos` | EOS のログイン・ロビー・P2P の通信・アンチチート | Netcode と EOS |
+| `Fps.Protocol` | クライアントと .NET の専用サーバーが送り合うメッセージと通信路 (UDP は LiteNetLib)。Unity に依存しない | 常に |
+| `Fps.NetV2.Client` | ネット対戦のクライアントの中身 (つなぐ・予測・補間・クイックマッチのロビーの検索)。Unity に依存しない | 常に |
+| `Fps.NetV2` | ネット対戦のクライアント (起動引数・メニューのクイックマッチ・自分と他のプレイヤー・HUD) | 常に |
+| `Fps.NetEos` | EOS のログイン・ロビーの検索・P2P の通信・アンチチート | EOS |
 | `Fps.Core.Tests`・`Fps.Tests.EditMode` | EditMode テスト | `testables` に入れたとき |
-| `Fps.Net.Tests` | ネットの EditMode テスト | `testables` に入れ、Netcode もあるとき |
 | `Fps.Samples.Editor` (サンプル) | シーンと仮の素材のビルダー、smoke、クライアントのビルド | サンプルを取り込んだとき (Editor) |
-| `Fps.Samples.Net.Editor` (サンプル) | ネット対戦のシーンとプレハブのビルダー、サーバーのビルド、`PerfSmokeRun` | サンプルを取り込み、Netcode もあるとき (Editor) |
-| `Fps.Samples.Tests`・`Fps.Samples.Net.Tests` (サンプル) | サンプルの EditMode テスト | サンプルを取り込んだとき (ネットは Netcode も) |
+| `Fps.Samples.Net.Editor` (サンプル) | ネット対戦のマップと試合の設定のビルダー、専用サーバーへのルールと出現地点の書き出し | サンプルを取り込んだとき (Editor) |
+| `Fps.Samples.Tests`・`Fps.Samples.Net.Tests` (サンプル) | サンプルの EditMode テスト | サンプルを取り込んだとき |

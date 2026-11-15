@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-netstack v2</c> の、自分のロードアウトを選ぶ画面 (HUD の <see cref="LoadoutSelectView"/>) とサーバーへの送信をつなぐ。
+    /// ネット対戦の、自分のロードアウトを選ぶ画面 (HUD の <see cref="LoadoutSelectView"/>) とサーバーへの送信をつなぐ。
     /// 振る舞いは Netcode のクライアントの <c>NetLoadoutChooser</c> と同じ。
     /// </summary>
     /// <remarks>

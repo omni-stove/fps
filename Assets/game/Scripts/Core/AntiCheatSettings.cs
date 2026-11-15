@@ -5,8 +5,8 @@ namespace Fps.Core
 {
     /// <summary>
     /// Easy Anti-Cheat (EAC) を使うかどうかの決定。コマンドライン引数・エディタかどうか・ネットワークの起動設定から決める。
-    /// EAC はホスト型の P2P (Anti-Cheat Client インターフェースの PeerToPeer モード) と、.NET の専用サーバー
-    /// (Anti-Cheat Server インターフェース) で使い、相手を EOS の ProductUserId で登録するので EOS の transport が要る。
+    /// EAC はクライアント (Anti-Cheat Client インターフェース) と .NET の専用サーバー (Anti-Cheat Server インターフェース) で使い、
+    /// 相手を EOS の ProductUserId で登録するので EOS の transport が要る。
     /// </summary>
     public sealed class AntiCheatSettings
     {
@@ -96,9 +96,8 @@ namespace Fps.Core
             else if (options.Mode == NetLaunchMode.Server)
             {
                 settings = Disabled("disabled: a dedicated server (" + NetLaunchOptions.ModeFlag + " "
-                    + NetLaunchOptions.ModeName(NetLaunchMode.Server) + ") is not a protected peer; host with "
-                    + NetLaunchOptions.ModeFlag + " " + NetLaunchOptions.ModeName(NetLaunchMode.Host)
-                    + " to use anti-cheat");
+                    + NetLaunchOptions.ModeName(NetLaunchMode.Server) + ") is not a protected peer; the .NET server decides with "
+                    + nameof(TryResolveDedicatedServer));
             }
             else if (isEditor && !forceEac)
             {
@@ -106,7 +105,7 @@ namespace Fps.Core
             }
             else
             {
-                settings = new AntiCheatSettings(true, "enabled (peer-to-peer, " + NetLaunchOptions.ModeName(options.Mode) + ")");
+                settings = new AntiCheatSettings(true, "enabled (client-server, " + NetLaunchOptions.ModeName(options.Mode) + ")");
             }
 
             return true;

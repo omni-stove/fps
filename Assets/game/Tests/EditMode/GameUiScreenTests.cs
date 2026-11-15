@@ -78,12 +78,9 @@ namespace Fps.Tests.EditMode
         public void DefaultMenu_TakesTheMenuNavigatorRequests()
         {
             var pendingTutorial = MenuNavigator.PendingTutorial;
-            var pendingLobby = MenuNavigator.PendingLobby;
 
             Assert.That(GameUi.Menu.TakeTutorialRequest(), Is.EqualTo(pendingTutorial));
-            Assert.That(GameUi.Menu.TakeLobbyRequest(), Is.SameAs(pendingLobby));
             Assert.That(MenuNavigator.PendingTutorial, Is.False);
-            Assert.That(MenuNavigator.PendingLobby, Is.SameAs(LobbyLaunchOptions.None));
         }
 
         [Test]
@@ -104,11 +101,6 @@ namespace Fps.Tests.EditMode
             {
                 add { }
                 remove { }
-            }
-
-            public LobbyLaunchOptions TakeLobbyRequest()
-            {
-                return LobbyLaunchOptions.None;
             }
 
             public bool TakeTutorialRequest()

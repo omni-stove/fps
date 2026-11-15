@@ -13,7 +13,7 @@ namespace Fps.Core.Tests
             return commandLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         }
 
-        private static NetLaunchOptions ParseOrFail(string commandLine, NetLaunchMode defaultMode = NetLaunchMode.Host)
+        private static NetLaunchOptions ParseOrFail(string commandLine, NetLaunchMode defaultMode = NetLaunchMode.Client)
         {
             var ok = NetLaunchOptions.TryParse(Args(commandLine), defaultMode, out var options, out var error);
             Assert.That(ok, Is.True, error);
@@ -23,7 +23,7 @@ namespace Fps.Core.Tests
 
         private static string ParseError(string commandLine)
         {
-            var ok = NetLaunchOptions.TryParse(Args(commandLine), NetLaunchMode.Host, out var options, out var error);
+            var ok = NetLaunchOptions.TryParse(Args(commandLine), NetLaunchMode.Client, out var options, out var error);
             Assert.That(ok, Is.False);
             Assert.That(options, Is.Null);
             Assert.That(error, Is.Not.Null.And.Not.Empty);
@@ -35,7 +35,7 @@ namespace Fps.Core.Tests
         {
             var options = ParseOrFail("/path/to/fps -batchmode -nographics");
 
-            Assert.That(options.Mode, Is.EqualTo(NetLaunchMode.Host));
+            Assert.That(options.Mode, Is.EqualTo(NetLaunchMode.Client));
             Assert.That(options.Address, Is.EqualTo(NetLaunchOptions.DefaultAddress));
             Assert.That(options.Port, Is.EqualTo(NetLaunchOptions.DefaultPort));
         }
@@ -48,7 +48,6 @@ namespace Fps.Core.Tests
             Assert.That(options.Mode, Is.EqualTo(NetLaunchMode.Client));
         }
 
-        [TestCase("host", NetLaunchMode.Host)]
         [TestCase("server", NetLaunchMode.Server)]
         [TestCase("client", NetLaunchMode.Client)]
         [TestCase("SERVER", NetLaunchMode.Server)]
@@ -57,6 +56,12 @@ namespace Fps.Core.Tests
             var options = ParseOrFail("-mode " + value);
 
             Assert.That(options.Mode, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void HostIsNoLongerAMode()
+        {
+            Assert.That(ParseError("-mode host"), Is.EqualTo("-mode must be server or client (got 'host')"));
         }
 
         [Test]
@@ -140,7 +145,7 @@ namespace Fps.Core.Tests
             Assert.That(ParseError("-mode client -address 0.0.0.0"), Does.Contain("0.0.0.0"));
         }
 
-        [TestCase("-mode host -mode client")]
+        [TestCase("-mode server -mode client")]
         [TestCase("-address 127.0.0.1 -address 10.0.0.1")]
         [TestCase("-port 1 -port 2")]
         public void RejectsDuplicateFlags(string commandLine)
@@ -152,7 +157,7 @@ namespace Fps.Core.Tests
         public void RejectsNullArguments()
         {
             Assert.Throws<ArgumentNullException>(
-                () => NetLaunchOptions.TryParse(null, NetLaunchMode.Host, out _, out _));
+                () => NetLaunchOptions.TryParse(null, NetLaunchMode.Client, out _, out _));
             Assert.Throws<ArgumentNullException>(() => NetLaunchOptions.HasModeFlag(null));
         }
 
@@ -237,7 +242,6 @@ namespace Fps.Core.Tests
 
         [TestCase("-mode client -eos-server " + _serverId)]
         [TestCase("-mode server -transport eos -eos-server " + _serverId)]
-        [TestCase("-mode host -transport eos -eos-server " + _serverId)]
         public void RejectsServerIdWhereUnused(string commandLine)
         {
             Assert.That(ParseError(commandLine), Does.Contain("only used by a client"));
@@ -318,7 +322,6 @@ namespace Fps.Core.Tests
         }
 
         [TestCase("-register-lobby 203.0.113.10:7777")]
-        [TestCase("-mode host -register-lobby 203.0.113.10:7777")]
         [TestCase("-mode client -register-lobby 203.0.113.10:7777")]
         public void OnlyAServerRegistersALobby(string commandLine)
         {
@@ -383,7 +386,7 @@ namespace Fps.Core.Tests
 
             Assert.That(options.RegisterLobbyEndpoint, Is.EqualTo("10.0.0.2:7000"));
             Assert.Throws<ArgumentException>(() => new NetLaunchOptions(
-                NetLaunchMode.Host, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, "10.0.0.2:7000"));
+                NetLaunchMode.Client, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, "10.0.0.2:7000"));
             Assert.Throws<ArgumentException>(() => new NetLaunchOptions(
                 NetLaunchMode.Server, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Eos, null, "10.0.0.2:7000"));
             Assert.Throws<ArgumentException>(() => new NetLaunchOptions(

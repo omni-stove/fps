@@ -15,7 +15,7 @@ using NUnit.Framework;
 namespace Fps.NetV2.Tests
 {
     /// <summary>
-    /// .NET のサーバーと <c>-netstack v2</c> のクライアントが、UDP の上で EAC の Hello とメッセージを送り合う。
+    /// .NET のサーバーと クライアントが、UDP の上で EAC の Hello とメッセージを送り合う。
     /// EAC の SDK は両側とも差し替えるので、EOS の認証情報も SDK も無い手元で回せる。
     /// </summary>
     [NonParallelizable]

@@ -1,47 +1,79 @@
-# 専用サーバーの Docker イメージ
+# 専用サーバー
 
-`ServerBuilder` の Linux 版の出力 (`Builds/server-linux/`) を `docker/server/Dockerfile` でイメージにする。
-コンテナはユーザー `fps` (uid 10001) で動き、`7777/udp` で待ち受ける。
+専用サーバーは Unity を使わない .NET のプログラム (`dotnet/Fps.Server`) で、試合のルールや当たりの判定は Unity のクライアントと
+同じ `Fps.Core` のコードで行う。マップ・ルール・調整値は Unity の Editor で `server-data/` に書き出したファイルから読む。
+イメージは `docker/server/Dockerfile` で作り、コンテナはユーザー `fps` (uid 10001) で動いて `7777/udp` で待ち受ける。
+クライアントはゲームの通常のビルド (`make build`) で、`Fps.Protocol` の通信手順でつなぐ (下の「クライアントからつなぐ」)。
+
+Unity の Editor の中でサーバーを兼ねる遊び方 (Host・`-mode host`) と、プレイヤーが Host になるロビー (`-lobby create|join`、
+メニューの「ロビーを作る／入る」) は無い。オンラインでは専用サーバーにつなぐ。
+
+## サーバーのデータを書き出す
+
+サーバーはシーンとアセットを読めないので、Unity の Editor (閉じておく) で書き出してコミットする。
+
+```sh
+make export-server-data     # 各マップのコリジョン (.fpsmap)・NavMesh (.fpsnav)・壊せる建物・はしご → server-data/maps/
+make export-server-rules    # 試合の設定とルール → server-data/rules/、出現地点と拠点 → server-data/maps/<マップ>.points.json、
+                            # 印とグレネードの調整値 → server-data/tuning/
+```
+
+- 書き出すマップは `-map` で選べるマップ (`BuildSceneList.ServerScenes`、既定は `NetTest` と `NetArena01`)。
+  無いシーンは `NetSceneBuilder`・`ArenaSceneBuilder` で作ってから書き出す。
+- 試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値・ロードアウトと選べる武器・移動の値と体の寸法) は
+  `NetMatchDefinition` のアセット (サンプルでは `Rules/NetMatch.asset`。無ければ `NetSceneBuilder` が既定の値で作る) に置き、
+  ルールのアセット (`TeamDeathmatch`・`Domination`) ごとに `server-data/rules/<ルール名>.json` にする。
+  クライアントは承認のときにサーバーからこの値を受け取るので、ゲームが値を変えたら書き出し直してサーバーを作り直せばよい。
+- 出現地点はシーンの `NetSpawnPoint`、拠点は `ControlPointZone`、壊せる建物は `DestructibleStructure`、はしごは `SceneLadder` から読む。
+
+## 手元で動かす
+
+```sh
+make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
+FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
+dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules Domination -map NetArena01   # 拠点制圧で動かす
+```
 
 ## イメージを作る
 
-Unity の Editor を閉じてから、リポジトリのルートで次を実行する。Unity Hub で Linux Build Support と
-Dedicated Server Build Support (Linux) のモジュールを入れておくこと。
+`dotnet/Fps.Server` を self-contained で `dotnet publish` したものと `server-data/`、EOS の C# SDK のライブラリ
+(`dotnet/ThirdParty/EOSSDK` に置いてあれば) を入れる。Unity も Editor を閉じることも要らない。
 
 ```sh
-make server-image                                  # Builds/server-linux/ を作り直し、fps-server:local を作る
-make server-image ARGS="--tag fps-server:dev"      # タグを変える
-make server-image ARGS="--skip-build"              # 今ある Builds/server-linux/ をそのまま使う
-make server-image ARGS="--version v0.2.0"          # サーバーに入れる版を決める
+make eos-sdk ARGS="--fetch"                            # (任意) EOS の SDK を Unity を使わずに置く。無ければ EOS 無しのイメージになる
+make server-image                                      # fps-server:local を作る (Docker が動いているマシンのアーキテクチャ)
+make server-image ARGS="--platform linux/arm64"        # arm64 のイメージを作る
+make server-image ARGS="--tag fps-server:dev --version v0.2.0"
 ```
+
+`make eos-sdk ARGS="--fetch"` は `Packages/packages-lock.json` に固定した PlayEveryWare のプラグインから SDK を取る
+(git-lfs が要る)。プラグインには Linux の arm64 のライブラリが無いので、arm64 のイメージで EOS を使うには
+Epic Developer Portal の SDK の zip から置く (`make eos-sdk ARGS="--from <zip>"`、[dotnet/ThirdParty/EOSSDK](../dotnet/ThirdParty/EOSSDK/README.md))。
+ライブラリの無いイメージは `[Eos] sdk=included library=libEOSSDK-Linux-Shipping.so (missing; ...)` を出し、UDP でだけ待ち受けられる。
 
 ### 版
 
-ビルドの版 (実行時の `Application.version`) は `--version` で渡したもの、無ければ `git describe --tags --always --dirty`
-の出力になる。先頭の `v` は外すので、`v0.2.0` のタグを付けたコミットなら `0.2.0`、タグの無いコミットなら短い sha
-(`abc1234`)、コミットしていない変更があれば `-dirty` が付く。版は英数字と `. - _` で 32 文字以内でなければならない。
-`make build` / `make build-server` でも同じで、`make build-server linux ARGS="--version v0.2.0"` のように渡す。
-
-版はビルドの間だけ `ProjectSettings/ProjectSettings.asset` の `bundleVersion` に入れ、ビルドが終われば (失敗しても)
-元に戻すので、ビルドのあとに `ProjectSettings` の差分は残らない。クライアントもサーバーも起動するとまず次の行を出す。
+版は `--version` で渡したもの、無ければ `git describe --tags --always --dirty` の出力で、ビルドに焼き込む。
+先頭の `v` は外すので、`v0.2.0` のタグを付けたコミットなら `0.2.0`、タグの無いコミットなら短い sha (`abc1234`)、
+コミットしていない変更があれば `-dirty` が付く。版は英数字と `. - _` で 32 文字以内でなければならない。
+起動時に `-buildVersion` を付ければそちらが勝つ。クライアントの版は `make build` の `--version` で同じように決まる。
+クライアントもサーバーも起動するとまず次の行を出す。
 
 ```
 [Version] 0.2.0
 ```
 
-EOS のロビーは版ごとに分かれる (`fps:<版>` のバケツ) ので、クライアントとサーバーは同じ版でビルドしたものを使う。
-クライアントは接続の承認データに自分の版を載せ、サーバー (Host を含む) は版が違うクライアントを承認で断る。
+EOS のロビーは版ごとに分かれる (`fps-server:<版>` のバケツ) ので、クライアントとサーバーは同じ版でビルドしたものを使う。
+クライアントは承認のデータに自分の版を載せ、サーバーは版が違うクライアントを断る。
 サーバーには `[Net] rejected client <Id>: version mismatch (client 0.1.0, server 0.2.0)` が出て、クライアントは
-「版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。」を出してメインメニューに戻る。版を載せない古いビルドのクライアントも
-(`unreadable connection payload` として) 断られ、「サーバーに接続を断られました。」と出る。
-
-イメージは `linux/amd64` で作る (サーバーは x86_64 の Linux 向けにしかビルドしないため)。
-Apple Silicon の Mac でも Docker Desktop のエミュレーションで動く。
+「版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。」を出してメインメニューに戻る。
+通信の手順の版 (`MatchProtocol.Version`) が違うクライアントも `fps:rejected:protocol-mismatch` で断る。
 
 ## 起動する
 
 ```sh
 docker run --rm --name fps-server -p 7777:7777/udp fps-server:local
+docker compose -f docker/server/compose.yaml up -d     # stop_grace_period: 700s を書いてある
 ```
 
 ログは標準出力に出る (`docker logs -f fps-server`)。待ち受けを始めると次の行が出る。
@@ -52,20 +84,17 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local
 
 止めるときは `docker stop -t 700 fps-server`。サーバーは SIGTERM を受けてもすぐには止まらず、今の試合が終わるのを待つ
 (次の「試合が終わってから止める」)。`-t` を付けないと docker は 10 秒で SIGKILL を送るので、試合の途中で落ちる。
-サーバーは止まる前につないでいるクライアントへ止まると知らせて切り (`[Net] server stopping; told <人数> client(s) and disconnected them`)、
-クライアントは「サーバーが止まりました。」を出してメインメニューに戻る。知らせが届かずに切れたとき (サーバーが落ちた・回線が切れた) は、
-クライアントは Netcode が切断に気づいたところで「サーバーからの応答が途絶えました (タイムアウト)。」を出して戻る。
-クライアントのログには `[Net] disconnected from server id=<Id> kind=ServerStopped connected=True reason="fps:server-stopped"` のように理由が出る。
+サーバーは止まる前につないでいるクライアントへ止まると知らせて切り、クライアントは「サーバーが止まりました。」を出してメインメニューに戻る。
+知らせが届かずに切れたとき (サーバーが落ちた・回線が切れた) は、クライアントは切断に気づいたところで
+「サーバーからの応答が途絶えました (タイムアウト)。」を出して戻る。
 
 ### 試合が終わってから止める
 
-専用サーバー (`-mode server`) は終了を求められると (SIGTERM。`docker stop`、`docker kill -s TERM`、`kill <PID>`)、
-「止まる準備中」になる。
+サーバーは終了を求められると (SIGTERM と SIGINT。`docker stop`、`docker kill -s TERM`、`kill <PID>`、Ctrl+C)、「止まる準備中」になる。
 
 1. EOS のロビーに登録していれば (`-register-lobby`)、すぐにロビーを閉じ、クイックマッチで選ばれないようにする。
 2. 新しく来たクライアントを承認で断る。サーバーには `[Net] rejected client <Id>: the server is draining before it stops` が出て、
-   クライアントは「サーバーが止まる準備中のため参加できません。別のサーバーにつないでください。」を出してメインメニューに戻る
-   (ログは `kind=Rejected connected=False detail=server-draining reason="fps:rejected:server-draining"`)。
+   クライアントは「サーバーが止まる準備中のため参加できません。別のサーバーにつないでください。」を出してメインメニューに戻る。
 3. 今の試合が終わるか、つないでいるクライアントがいなくなるか、`-drain-timeout <秒>` が過ぎたところで、
    残っているクライアントへ止まると知らせて終了コード 0 で止まる。
 
@@ -93,75 +122,32 @@ docker kill -s TERM fps-server; docker kill -s TERM fps-server  # 2 回送ると
 `-drain-timeout` を変えたら猶予もそれに合わせる (例: `-drain-timeout 1800` なら `-t 1810` 以上)。
 Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 
-### 手元のクライアントからつなぐ
+## 引数と環境変数
 
-UDP の専用サーバーにつなぐクライアントは、通常のプレイヤーのビルド (`make build`) を `-mode client` で起動する。
+| 引数 | 内容 |
+| --- | --- |
+| `-map <マップ名>` | 遊ぶマップ。`server-data/maps/<マップ名>.*` を読む。無ければ `NetTest` |
+| `-rules <ルール名>` | 試合のルール。`server-data/rules/<ルール名>.json` を読む。無ければ `TeamDeathmatch` |
+| `-bots <人数>` | 人と Bot を合わせてこの人数になるまで Bot を足す |
+| `-transport udp\|eos` | 待ち受ける通信路。既定は `udp` |
+| `-register-lobby <公開アドレス:ポート>` | EOS のロビーに載せる (下の「EOS のロビーに登録する」) |
+| `-drain-timeout <秒>` | 止める前に試合の終わりを待つ秒数 |
+| `-log-format text\|json` | `json` なら試合のイベントを JSON で出す |
+| `-buildVersion <版>` | 版を焼き込んだものから変える |
 
-```sh
-Builds/client-macos/fps.app/Contents/MacOS/fps -mode client -address 127.0.0.1
-```
-
-ポートを変えたときは `-port` も合わせる。別のマシンのサーバーには `-address` にそのマシンの IPv4 アドレスを渡す。
-
-### NetArena01 で拠点制圧 (Domination) を遊ぶ
-
-マップは起動時に `-map` で選ぶが、試合のルールは試合の進行役のプレハブ (`NetMatch.prefab`) に焼いてあり、起動時には選べない。
-コミットしてあるのはチームデスマッチのルールなので、拠点制圧を遊ぶときはルールを `Domination.asset` にしたプレハブを作り、
-サーバーとクライアントを両方ビルドし直す。マップ NetArena01 には拠点 A (Alpha の陣地寄り)・B (中央)・C (Bravo の陣地寄り) が
-置いてあり、チームデスマッチのときは使われない。
-
-Unity の Editor を閉じてから、リポジトリのルートで次を実行する。
-
-```sh
-# 1. 試合の進行役のルールを Domination にする (NetTest のシーンとプレハブを作り直す)
-unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.BuildWithDominationRules
-# 2. 拠点の入った NetArena01 を作り直す (ServerBuilder はマップがあれば作り直さないので、古いマップが手元にあれば必ず実行する)
-unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ArenaSceneBuilder.Build
-# 3. 同じシーンとプレハブでサーバーのイメージとクライアントを作る (拠点の NetworkObject の ID がそろっていないとつながらない)
-make server-image
-make build
-# 4. NetArena01 で起動する (イメージ名の後ろの引数はサーバーにそのまま渡る)
-docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetArena01
-```
-
-イメージを作らずにビルドしたサーバーを直接動かすときも、`-map NetArena01` を足すだけでよい。
-
-```sh
-Builds/server-linux/fps-server.x86_64 -logFile - -mode server -map NetArena01
-```
-
-試合が始まると、サーバーのログに拠点の数と、占領・中立化のたびに次の行が出る。
-
-```
-[Domination] net points=3 scoreLimit=... captureSeconds=... pointsPerSecond=...
-[Domination] captured point=A team=Alpha
-[Domination] neutralized point=A from=Alpha
-```
-
-2 つのクライアントを `-mode client -address <サーバーのアドレス>` でつなぐと、それぞれ別のチームに入る。HUD に A・B・C の
-3 つの拠点が並び、拠点の床の円と HUD の文字が持ち主のチームの色で塗られる。拠点の中心には旗が立っていて、遠くからでも場所がわかる。
-円の中に立つと占領が進み、両チームがいると止まる。
-
-確かめ終えたら、次でコミットしてあるチームデスマッチのルールに戻す (`NetMatch.prefab` と NetTest の差分が消える)。
-
-```sh
-unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.Build
-```
-
-## 環境変数
-
-| 名前 | 既定 | 内容 |
+| 環境変数 | 既定 | 内容 |
 | --- | --- | --- |
 | `FPS_SERVER_PORT` | `7777` | 待ち受ける UDP のポート。変えたら `-p` の両側も同じ番号にする |
 | `FPS_SERVER_ADDRESS` | `0.0.0.0` | 待ち受ける IPv4 アドレス。コンテナの外からつなぐには `0.0.0.0` のままにする |
-| `EOS_PRODUCT_ID` | なし | EOS の認証情報。`-transport eos` で起動するときだけ要る |
+| `EOS_PRODUCT_ID` | なし | EOS の認証情報。`-transport eos` と `-register-lobby` で使う |
 | `EOS_SANDBOX_ID` | なし | 同上 |
 | `EOS_DEPLOYMENT_ID` | なし | 同上 |
 | `EOS_CLIENT_ID` | なし | 同上 |
 | `EOS_CLIENT_SECRET` | なし | 同上 |
 
-待ち受けのアドレスとポートは環境変数で渡す。`-address` / `-port` をイメージ名の後ろに書くと 2 回指定したことになり、
-サーバーは `[Net] invalid arguments: ... is given more than once` を出して終わる。
+待ち受けのアドレスとポートは環境変数で渡す。`-address` / `-port` と環境変数の両方で渡すと
+`[Net] invalid arguments: -port is given more than once (FPS_SERVER_PORT is set too) ...` を出して終了コード 2 で終わる。
+`-net-latency` / `-net-loss` / `-net-jitter` は使えず、付けると同じく終了コード 2 で終わる。
 
 ```sh
 docker run --rm -e FPS_SERVER_PORT=9000 -p 9000:9000/udp fps-server:local
@@ -171,35 +157,41 @@ docker run --rm -e FPS_SERVER_PORT=9000 -p 9000:9000/udp fps-server:local
 
 イメージ名より後ろの引数はそのままサーバーに渡る。EOS の認証情報はイメージに入れず、実行時に環境変数で渡す
 (コマンドラインやシェルの履歴に残さないよう `--env-file` を使う)。`eos.env` はコミットしないこと。
+手元では作業ディレクトリの `eos.local.json` からも読む。
 
 ```sh
 # eos.env の中身は 1 行に 1 つ、EOS_PRODUCT_ID=... の形
 docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -transport eos
 ```
 
+`-transport eos` は EOS の P2P (ソケット名 `fps`) で待ち受け、Device ID でログインできたら
+`[Net] EOS server ready id=<サーバーの ID> ...` を出す。クライアントは `-mode client -transport eos -eos-server <サーバーの ID>` でつなぐ
+(EAC については [anti-cheat.md](anti-cheat.md))。
 認証情報が欠けていると `[Net] EOS credentials missing, using UDP` と足りない変数の名前を出し、UDP で待ち受ける。
-EOS のサーバーでは `[Net] EOS server ready id=<サーバーの ID>` が出るので、クライアントは
-`-mode client -transport eos -eos-server <サーバーの ID> -noeac` でつなぐ (EAC については [anti-cheat.md](anti-cheat.md))。
+EOS の SDK かそのライブラリが無ければ理由を出して終了コード 3、ログインできなければ `[Net] failed to start the server: ...` を出して
+終了コード 4 で終わる。EOS でつないだ人は、名乗った鍵ではなく EOS が確かめた ProductUserId で見分け (つなぎ直しの成績の引き継ぎも)、
+JSON のイベントに `productUserId` を付ける。
 
 ### EOS のロビーに登録する
 
-UDP で待ち受けるサーバーに `-register-lobby <公開アドレス:ポート>` を付けると、EOS に Device ID でログインし、
-クライアントがサーバーを探せるロビーを作る。公開アドレスはクライアントから届く IPv4 アドレスとポート
-(`docker run -p` で公開した側の番号) で、`0.0.0.0` やホスト名は使えない。EOS の認証情報が無いと起動に失敗する。
+`-register-lobby <公開アドレス:ポート>` を付けると、EOS に Device ID でログインし、クライアントのクイックマッチがサーバーを探せるロビーを作る。
+公開アドレスはクライアントから届く IPv4 アドレスとポート (`docker run -p` で公開した側の番号) で、`0.0.0.0` やホスト名は使えない。
+EOS の SDK か認証情報が無いと、理由を出して終了コード 3 で終わる。
 
 ```sh
 docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -register-lobby 203.0.113.10:7777
+docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -transport eos -register-lobby 203.0.113.10:7777
 ```
 
-ロビーは `fps-server:<版>` のバケツに、最大 8 人で作り、次の公開の属性を付ける。`-lobby join` の Host のロビー
-(`fps:<版>`) とはバケツを分けている。
+ロビーは `fps-server:<版>` のバケツに、最大 8 人で作り、次の公開の属性を付ける。ロビーのオーナーはサーバーが
+Device ID でログインしたユーザーで、EOS のクライアントはオーナーへ P2P でつなぐ。
 
 | 属性 | 値 |
 | --- | --- |
 | `server` | `-register-lobby` に渡したアドレスとポート |
 | `mode` | `tdm` |
 | `version` | ビルドの版 |
-| `players` | 接続しているプレイヤーの人数 (整数) |
+| `players` | 接続しているプレイヤーの人数 (整数。Bot は数えない) |
 
 ログには次のように出る。
 
@@ -215,34 +207,118 @@ docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -register-l
 60 秒ごとにエラーを出しながら作り直しを続ける。止めるとロビーを閉じ (`[Lobby] closed id=<ロビー Id>`)、
 閉じ終えるまで最長 3 秒終了を待つ。
 
-### クライアントからクイックマッチでつなぐ
+## クライアントからつなぐ
 
-クライアントはメインメニューの「ONLINE - QUICK MATCH」か、起動引数 `-lobby quickmatch` で、
-登録されたサーバーを探して UDP でつなぐ。クライアントにも EOS の認証情報が要る (検索に EOS へログインするため)。
+クライアントはゲームの通常のビルド (`make build`) で、つなぎ方は起動引数で決まる。
 
 ```sh
-./fps -lobby quickmatch
+<ビルドしたゲーム> -mode client -address 127.0.0.1                 # 起動してすぐ UDP でつなぐ (2 つ起動すると互いが見える)
+<ビルドしたゲーム> -mode client -transport eos -eos-server <サーバーの ID>   # EOS の P2P でつなぐ
+<ビルドしたゲーム> -lobby quickmatch                               # 起動してすぐロビーを探してつなぐ
+<ビルドしたゲーム>                                                 # メニューの「ONLINE - QUICK MATCH」でつなぐ
 ```
 
-`fps-server:<自分の版>` のバケツを探し、`version` が自分の版と同じで、`players` がロビーの最大人数より少なく、
-`server` が IPv4:ポートのロビーのうち、`players` がいちばん多いもの (同じならロビー ID の順で先のもの) を選ぶ。
-クライアントはロビーには入らず、`server` のアドレスへそのままつなぐ。
+- `-address`・`-port` (既定 `127.0.0.1:7777`) は UDP のサーバー。マップは `-map` ではなく、承認のときにサーバーが知らせるマップのシーンへ移る
+  (クライアントには `-map` を付けられない)。そのシーンがビルドに無い・`.fpsmap` が無ければ理由を出してそのシーンに留まる。
+- 起動引数でつなぐときもメニューは出ていて、承認されたところでマップのシーンへ移る。切断してメニューへ戻った後は、メニューのクイックマッチでつなぎ直せる。
+- `-mode server` は受け付けない (`make server-dotnet` かサーバーのイメージを使う)。`-mode host`・`-lobby create|join` は無い。
+  `-net-latency` / `-net-loss` / `-net-jitter` もクライアントでは使えない。誤った引数では `[Net] invalid arguments: ...` を出して終了コード 2 で終わる。
+- エディタの外では EAC が既定で有効なので、EAC を通さずに EOS でつなぐなら `-noeac` を付ける ([anti-cheat.md](anti-cheat.md))。
+
+### クイックマッチ
+
+メインメニューの「ONLINE - QUICK MATCH」と起動引数の `-lobby quickmatch` は、`-register-lobby` で載ったサーバーを探してつなぐ。
+
+- メニューのクイックマッチは、起動引数に `-address`・`-port`・`-eos-server` があればロビーを探さずにそのサーバーへつなぐ。
+- 探すには EOS のプラグイン (`Fps.NetEos`) と認証情報 (環境変数か `eos.local.json`) が要る。メニューのクイックマッチで、
+  EOS がビルドに無いか認証情報が揃っていない UDP のときは、`[Lobby] the EOS lobby is not available ...; quick match connects to 127.0.0.1:7777`
+  を出して手元のサーバー (`make server-dotnet`) へつなぐ。`-lobby quickmatch` と EOS のクイックマッチは、探せなければ理由を出して止まる。
+- `fps-server:<自分の版>` のバケツを探し、`version` が自分の版と同じで、`players` がロビーの最大人数より少なく、
+  `server` が IPv4:ポートのロビーのうち、`players` がいちばん多いもの (同じならロビー ID の順で先のもの) を選ぶ。
+  クライアントはロビーには入らず、UDP (`-transport udp`、既定) なら `server` のアドレスへ、`-transport eos` ならロビーのオーナーへ P2P でつなぐ。
 
 ```
+[Lobby] logging in to search fps-server:0.2.0 (transport=udp)
+[Lobby] logged in with the device id user=<自分の ID>
 [Lobby] found 2 lobby(s) in fps-server:0.2.0
-[Lobby] quick match picked id=<ロビー Id> server=203.0.113.10:7777 players=1/8; starting client 203.0.113.10:7777
+[Lobby] quick match picked id=<ロビー Id> server=203.0.113.10:7777 owner=<サーバーの ID> players=1/8; connecting client 203.0.113.10:7777
 ```
 
 つなげるサーバーが無ければ 5 秒おきに探し直し (`[Lobby] no server to join among 1 found (full x1); searching again in 5s`)、
 30 秒たっても見つからなければ `[Lobby] no quick match server found after 30s (...)` を出して終わる
 (メニューから来たときはこの理由を添えてメニューへ戻り、batchmode では終了コード 7)。
-`-lobby quickmatch` は `-transport udp` だけを受け付け、`-lobby-id` / `-lobby-max-players` / `-mode` / `-address` / `-port` とは併用できない。
+`-lobby quickmatch` は `-mode` / `-address` / `-port` / `-eos-server` / `-register-lobby` とは併用できない。
+
+### 試合の中のクライアント
+
+- 自分の移動はサーバーと同じ Core の移動と、マップの `.fpsmap`・`.ladders.json` で予測して入力を送り、スナップショットの処理済みの入力の tick で照合する。
+  Editor では `server-data/maps/` を直接読み、ビルドには `MapCollisionBuildFiles` が `StreamingAssets/maps/` として入れる。
+  移動の値 (移動・体の寸法・伏せ) は、サーバーが承認のときに送るルールのファイルの `motor` の値を使う (`[Net] motor from the server's rules ...`)。
+  食い違って巻き戻したときは `[Net] reconciled tick=... error=...` を出す。他のプレイヤーは 2 tick 遅らせて補間する。
+  他のプレイヤーの見た目は `Resources/NetV2/RemotePlayerBody` のプレハブで差し替えられ、無ければ体の寸法のカプセルを出す (しゃがみ・伏せは縦に縮める)。
+- 伏せ (Prone) とはしごは、試合のルールの `prone`・`ladder` が On のときだけ使える。はしごにつかまると視点をはしごへ向ける (`[Ladder] grab ...`)。
+- 射撃は今の武器の射撃モードと連射間隔 (入口の `GameContent` のロードアウトと武器の一覧) で送り、弾倉が空なら空撃ちの音を出してリロードを頼む。
+  リロード・グレネード・印は押したときに要求を送る。キル・被弾・ヒット・爆発はオフラインと同じ HUD とエフェクト (`CombatEvents`) に流し、`[Combat]` の行を出す。
+- 印は `PingController` に、拠点制圧の拠点はマップの `ControlPointZone` の円盤と HUD の拠点の欄に出す。
+- 壊れる建物は、サーバーが送る壊れた部品 (`StructureStateMessage`) をシーンの見た目と予測の当たりに写す。
+- 保存してあるロードアウトを承認されたときに頼み、倒れている間はロードアウトを選ぶ画面を出す (受け入れられた並びだけを保存する)。
+- サーバーとの接続を失うと、理由 (「サーバーが止まりました。」・タイムアウト・断られた・版が違う) を出してメニューへ戻る。
+  batchmode では終了コード (切断 0・つながらない 5・ロビーで見つからない 7) で終わる。
+
+## NetArena01 で拠点制圧 (Domination) を遊ぶ
+
+マップは `-map`、ルールは `-rules` で選ぶ。マップ NetArena01 には拠点 A (Alpha の陣地寄り)・B (中央)・C (Bravo の陣地寄り) が
+置いてあり、チームデスマッチのときは使われない。
+
+```sh
+docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetArena01 -rules Domination
+```
+
+試合が始まると、サーバーのログに拠点の数と、占領・中立化のたびに次の行が出る。
+
+```
+[Domination] net points=3 scoreLimit=... captureSeconds=... pointsPerSecond=...
+[Domination] captured point=A team=Alpha
+[Domination] neutralized point=A from=Alpha
+```
+
+2 つのクライアントを `-mode client -address <サーバーのアドレス>` でつなぐと、それぞれ別のチームに入る。HUD に A・B・C の
+3 つの拠点が並び、拠点の床の円と HUD の文字が持ち主のチームの色で塗られる。円の中に立つと占領が進み、両チームがいると止まる。
+
+## サーバーがすること
+
+- 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む。作業ディレクトリの `server-data/`、
+  無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
+- はしごの形と調整値は `server-data/maps/<マップ名>.ladders.json` から読む。サーバーとクライアントの予測はどちらもこの並びの番号で
+  はしごを指すので、同じファイルを読む。ファイルが無いマップははしごが無いものとして動く。起動時の `[Server] map ...` の `ladders=` が読んだ本数。
+  伏せの寸法と速さはルールのファイルの `motor` の `proneHeight`・`proneSpeed`・`diveDistance`・`diveSeconds` (無ければ既定値) で決まる。
+  つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
+- ルールを読むと `[Server] rules <名前> objective=...` を出す。マップの出現地点と拠点は `server-data/maps/<マップ名>.points.json`、
+  印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
+  ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
+- 射撃は撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
+  ログは `[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`。
+  グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値) から読む。
+- 壊せる建物の部品の並びは `server-data/maps/<マップ名>.structures.json` から読む。
+  無いマップでは `[Destruction] map <マップ名> has N destructible structure(s) but no ...` を出し、部品は壊れない壁として残る。
+  破片が当たるダメージ (DebrisCrush) はまだ無い。
+- Bot は、人と Bot を合わせて `-bots` とルールの `minPlayers` の大きいほうの人数になるまで足し、
+  人が入るとその人のチームの Bot を抜く。人が 1 人もいなければ Bot も置かない。Bot は `.fpsnav` の経路をたどり、人と同じ入力で
+  移動と射撃の検査を通る。はしごのリンクでは、はしごへ進んでつかまり、上り下りして渡る (ルールの `actions.ladder` が `Off` なら、
+  はしごを通る経路は使わない)。書き出した NavMesh は壊せる建物をくり抜いていないので、壊れていない部品を通り抜ける経路は使わず、
+  壊れたら通る。見える距離・反応・照準の誤差・経路を引き直す間隔などは `server-data/tuning/bots.json` (無ければ既定値) から読む。
+  ログは `[Bot] fill target=..`・`[Bot] added player=.. name=[BOT] B1 team=..`・`[Bot] removed player=.. reason=..`、
+  2 秒ごとの `[Bot] pos player=.. x=.. y=.. z=.. state=.. health=..`、はしごの `[Bot] ladder player=.. ladder=.. climb=Up|Down|Done`、
+  進めなくなったときの `[Bot] stuck player=..`。倒した・倒されたは人と同じ `[Match] kill ...` と JSON の `kill` の行に出る。
+  Bot は JSON の `player_joined` / `player_left` にも出るが、drain が待つ人数とロビーに載せる人数には数えない。
+- 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
+- 承認では版と鍵を確かめ、断ったときは `[Net] rejected client <Id>: ...` を出して理由をクライアントへ送る。
+  つないでから 10 秒以内に承認のデータを送らない接続を切り、同じ鍵のクライアントがつなぎ直してきたら前の接続を切る。
 
 ## 試合のイベントを JSON で出す
 
 `-log-format json` を付けると、今までのログ (`[Net]` / `[Match]` 付きの行) に加えて、サーバーの起動・終了と試合のイベントを
 1 イベント 1 行の JSON で標準出力に出す。付けないとき (`-log-format text`、既定) はこれまでのログのままで、JSON の行は出ない。
-`-log-format json` は `-mode server` でだけ使え、Host やクライアントに付けると `[Net] invalid arguments: -log-format json is only used by -mode server (got host)` で終わる。
 
 ```sh
 docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -log-format json
@@ -292,182 +368,31 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。
 
-## .NET のサーバー (移行中)
+## CI のテンプレート
 
-Unity を使わないサーバー (`dotnet/Fps.Server`) は、今のところプレイヤーの承認・出入り・チーム分け・試合の始まりと終わりの枠、
-上の運用 (版の確認・drain・JSON のイベント)、EOS のロビーへの登録 (`-register-lobby`) と、試合のルール (TDM・Domination・ダウンと蘇生・印・
-出現と出現直後の無敵・ロードアウトの選択・放置で切る)、移動、戦闘 (射撃・巻き戻しの当たり判定・ダメージ・武器・グレネード・壊せる建物)、Bot を行う。
-EAC は `-transport eos` と `-eac` で動かす ([anti-cheat.md](anti-cheat.md))。
-
-```sh
-make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
-FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
-dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules Domination -map NetArena01   # 拠点制圧で動かす
-```
-
-- 引数 (`-map`・`-drain-timeout`・`-log-format`・`-buildVersion`) と環境変数 (`FPS_SERVER_ADDRESS`・`FPS_SERVER_PORT`) は Unity のサーバーと同じ意味。
-  `-address` / `-port` が無ければ環境変数、それも無ければ `0.0.0.0` / `7777` で待ち受ける。引数と環境変数の両方で渡すと
-  `[Net] invalid arguments: -port is given more than once (FPS_SERVER_PORT is set too) ...` で終わる (終了コード 2)。
-- まだ動かせない `-net-latency` / `-net-loss` / `-net-jitter` を付けると、同じく理由を出して終了コード 2 で終わる。
-- `-transport eos` は EOS の P2P (ソケット名 `fps`、Unity のサーバーと同じチャンネル) で待ち受け、Device ID でログインできたら
-  `[Net] EOS server ready id=<サーバーの ID> ...` を出す。EOS の C# SDK を [dotnet/ThirdParty/EOSSDK](../dotnet/ThirdParty/EOSSDK/README.md)
-  に置いてビルドしたサーバーでだけ使え、SDK かそのライブラリが無ければ理由を出して終了コード 3、ログインできなければ
-  `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。認証情報 (環境変数か `eos.local.json`) が欠けていれば
-  Unity のサーバーと同じく `[Net] EOS credentials missing, using UDP` を出して UDP で待ち受ける。
-  EOS でつないだ人は、名乗った鍵ではなく EOS が確かめた ProductUserId で見分け (つなぎ直しの成績の引き継ぎも)、JSON のイベントに `productUserId` を付ける。
-- 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む (`-map` が無ければ `NetTest`)。作業ディレクトリの `server-data/`、
-  無ければ実行ファイルの隣の `server-data/` を探す。無いか読めなければ探した場所を出して終了コード 3 で終わる。
-  ファイルは Unity の Editor から `make export-server-data` で書き出す。
-- クライアントと Unity のサーバー (Host を含む) も、プレイヤーの移動の当たりを同じ `.fpsmap` で取る (`NetMapWorld`)。
-  Editor では `server-data/maps/` を直接読み、ビルドには `MapCollisionBuildFiles` が `StreamingAssets/maps/` として入れる。
-  今のシーンの名前の `.fpsmap` が無ければ `[Net] map <マップ名> has no collision: ...` を出し、プレイヤーは動かない。
-- はしごの形と調整値は `server-data/maps/<マップ名>.ladders.json` から読む (`make export-server-data` が `.fpsmap` と一緒に書き出す)。
-  サーバーとクライアントの予測はどちらもこの並びの番号ではしごを指すので、同じファイルを読む。ファイルが無いマップははしごが無いものとして動く。
-  起動時の `[Server] map ...` の `ladders=` が読んだ本数。はしごと伏せはルールの `actions.ladder` / `actions.prone` が `On` のときだけ使え、
-  伏せの寸法と速さはルールのファイルの `motor` の `proneHeight`・`proneSpeed`・`diveDistance`・`diveSeconds` (無ければ既定値) で決まる。
-  つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
-- ルールは `-rules <名前>` (無ければ `TeamDeathmatch`) で選び、`server-data/rules/<名前>.json` を読む。NetMatch.prefab に焼いてある
-  試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値など)・ルールのアセット・ロードアウトと武器の一覧・移動の値と体の寸法
-  (MotorSettings と NetPlayer.prefab の CharacterController。サーバーの移動はクライアントの予測と同じこの値で動く) が入っていて、
-  `[Server] rules <名前> objective=...` を出す。マップの出現地点と拠点は `server-data/maps/<マップ名>.points.json`、
-  印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。どれも Unity の Editor から `make export-server-rules`
-  (メニューは Fps > Server Data > Export Rules And Points) で書き出す。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
-  ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
-- 射撃は Unity のサーバーと同じく、撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
-  ログ (`[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`) と JSON の `kill` の行は今と同じ形。
-  グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値、`make export-server-rules` で書き出す) から読む。
-- 壊せる建物の部品の並びは `server-data/maps/<マップ名>.structures.json` (`make export-server-data` で書き出す) から読む。
-  無いマップでは `[Destruction] map <マップ名> has N destructible structure(s) but no ...` を出し、部品は壊れない壁として残る。
-  破片が当たるダメージ (DebrisCrush) はまだ無い。
-- Bot は Unity のサーバーと同じく、人と Bot を合わせて `-bots` とルールの `minPlayers` の大きいほうの人数になるまで足し、
-  人が入るとその人のチームの Bot を抜く。人が 1 人もいなければ Bot も置かない。Bot は `.fpsnav` の経路をたどり、人と同じ入力で
-  移動と射撃の検査を通る。はしごのリンクでは、はしごへ進んでつかまり、上り下りして渡る (ルールの `actions.ladder` が `Off` なら、
-  はしごを通る経路は使わない)。書き出した NavMesh は壊せる建物をくり抜いていないので、壊れていない部品を通り抜ける経路は使わず、
-  壊れたら通る。見える距離・反応・照準の誤差・経路を引き直す間隔などは `server-data/tuning/bots.json` (無ければ既定値) から読む。
-  ログは `[Bot] fill target=..`・`[Bot] added player=.. name=[BOT] B1 team=..`・`[Bot] removed player=.. reason=..`、
-  2 秒ごとの `[Bot] pos player=.. x=.. y=.. z=.. state=.. health=..`、はしごの `[Bot] ladder player=.. ladder=.. climb=Up|Down|Done`、
-  進めなくなったときの `[Bot] stuck player=..`。倒した・倒されたは人と同じ `[Match] kill ...` と JSON の `kill` の行に出る。
-  Bot は JSON の `player_joined` / `player_left` にも出るが、drain が待つ人数とロビーに載せる人数には数えない。
-- 待ち受けられなければ (ポートが使われているなど) `[Net] failed to start the server: ...` を出して終了コード 4 で終わる。
-- SIGTERM と SIGINT (Ctrl+C) で「試合が終わってから止める」と同じ drain に入り、同じログを出す。
-- 承認は `ConnectRequestMessage` の版と鍵を Netcode の承認データと同じ判定に通すので、断ったときのログ
-  (`[Net] rejected client <Id>: ...`) とクライアントへ送る理由は今と同じ。加えて、通信の手順の版 (`MatchProtocol.Version`) が違うクライアントを
-  `fps:rejected:protocol-mismatch` で断り、つないでから 10 秒以内に承認のデータを送らない接続を切る。
-  同じ鍵のクライアントがつなぎ直してきたら、前の接続を切る。
-- `-register-lobby <公開アドレス:ポート>` は、上の「EOS のロビーに登録する」と同じロビーを同じログで作る
-  (Device ID でログインし、`fps-server:<版>` のバケツに属性を付けて作り、人数を更新し、失ったら 5 秒おきに作り直し、
-  drain に入ったら閉じる。60 秒たっても登録できなければ終了コード 7)。EOS の C# SDK を
-  [dotnet/ThirdParty/EOSSDK](../dotnet/ThirdParty/EOSSDK/README.md) に置いてビルドしたサーバーでだけ使え、
-  SDK かそのライブラリが無い、または認証情報 (環境変数か `eos.local.json`) が欠けていると、理由を出して終了コード 3 で終わる。
-  止まるときは、ロビーを閉じ終えるまで最大 3 秒待つ。
-
-```sh
-dotnet build dotnet/Fps.Server/Fps.Server.csproj -c Release
-set -a; . ./eos.env; set +a                         # EOS_PRODUCT_ID=... の行を環境変数にする
-dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -- \
-  -buildVersion "$(git describe --tags --always --dirty)" -register-lobby 127.0.0.1:7777
-```
-
-### .NET のサーバーの Docker イメージ
-
-`docker/server-dotnet/Dockerfile` は、`dotnet/Fps.Server` を self-contained で `dotnet publish` したものと `server-data/`、
-EOS の C# SDK のライブラリ (`dotnet/ThirdParty/EOSSDK` に置いてあれば) を入れる。Unity も Editor を閉じることも要らない。
-ユーザー `fps` (uid 10001)・tini・`7777/udp`・`STOPSIGNAL SIGTERM` は Unity のサーバーのイメージと同じで、
-引数・環境変数・止め方 (`docker stop -t 700`) も上と同じ。
-
-```sh
-make eos-sdk ARGS="--fetch"                                   # (任意) EOS の SDK を Unity を使わずに置く。無ければ EOS 無しのイメージになる
-make server-image-dotnet                                      # fps-server-dotnet:local を作る (Docker が動いているマシンのアーキテクチャ)
-make server-image-dotnet ARGS="--platform linux/arm64"        # arm64 のイメージを作る
-make server-image-dotnet ARGS="--tag fps-server-dotnet:dev --version v0.2.0"
-docker run --rm --name fps-server -p 7777:7777/udp fps-server-dotnet:local
-docker compose -f docker/server-dotnet/compose.yaml up -d     # stop_grace_period: 700s を書いてある
-```
-
-版 (`--version`、無ければ `git describe --tags --always --dirty`) はビルドに焼き込むので、`-buildVersion` を付けずに起動しても
-`[Version] <版>` を出し、その版の EOS のロビーのバケツを使う。`-buildVersion` を付ければそちらが勝つ。
-
-`make eos-sdk ARGS="--fetch"` は `Packages/packages-lock.json` に固定した PlayEveryWare のプラグインから SDK を取る
-(git-lfs が要る)。プラグインには Linux の arm64 のライブラリが無いので、arm64 のイメージで EOS を使うには
-Epic Developer Portal の SDK の zip から置く (`make eos-sdk ARGS="--from <zip>"`、[dotnet/ThirdParty/EOSSDK](../dotnet/ThirdParty/EOSSDK/README.md))。
-ライブラリの無いイメージは `[Eos] sdk=included library=libEOSSDK-Linux-Shipping.so (missing; ...)` を出し、UDP でだけ待ち受けられる。
-
-### .NET のサーバーにクライアントをつなぐ (`-netstack v2`)
-
-.NET のサーバーへは、新しい通信手順 (`Fps.Protocol` と LiteNetLib) のクライアント (`Assets/game/Scripts/NetV2`) でつなぐ。
-置き換えが終わるまで、`-netstack v2` を付けたときだけこの経路を使い、付けなければ今の Netcode for GameObjects のクライアントのまま。
-
-```sh
-make server-dotnet
-<ビルドしたゲーム> -mode client -netstack v2 -address 127.0.0.1    # 2 つ起動すると互いが見える
-```
-
-- `-address`・`-port` は今のクライアントと同じ意味。マップは `-map` ではなく、承認のときにサーバーが知らせる試合のマップのシーンへ移る
-  (`-map` は今と同じくクライアントには付けられない)。そのシーンがビルドに無い・`.fpsmap` が無ければ理由を出してそのシーンに留まる。
-- `-mode` を付けずに `-netstack v2` だけで起動すると、メニューが出て、メニューのクイックマッチが `-address`・`-port` (既定 `127.0.0.1:7777`)
-  のサーバーへこのクライアントでつなぐ。切断してメニューへ戻った後も同じボタンでつなぎ直せる。ロビー (作る・入る) はまだ使えないと案内を出す。
-- 自分の移動はサーバーと同じ Core の移動と、マップの `.fpsmap`・`.ladders.json` で予測して入力を送り、スナップショットの処理済みの入力の tick で照合する。
-  移動の値 (移動・体の寸法・伏せ) は、サーバーが承認のときに送るサーバーのルールのファイルの `motor` の値を使う (`[Net] motor from the server's rules ...`)。
-  食い違って巻き戻したときは `[Net] reconciled tick=... error=...` を出す。他のプレイヤーは 2 tick 遅らせて補間する。
-  他のプレイヤーの見た目は `Resources/NetV2/RemotePlayerBody` のプレハブで差し替えられ、無ければ体の寸法のカプセルを出す (しゃがみ・伏せは縦に縮める)。
-- 伏せ (Prone) とはしごは、試合のルールの `prone`・`ladder` が On のときだけ使える。はしごにつかまると視点をはしごへ向ける (`[Ladder] grab ...`)。
-- 射撃は今の武器の射撃モードと連射間隔 (入口の `GameContent` のロードアウトと武器の一覧) で送り、弾倉が空なら空撃ちの音を出してリロードを頼む。
-  リロード・グレネード・印は押したときに要求を送る。撃った・撃たれたときの銃声・マズルフラッシュ・曳光弾・リロード音は今のクライアントと同じ部品
-  (`WeaponPresentation` など) が出す。キル・被弾・ヒット・爆発は今の HUD とエフェクト (`CombatEvents`) に流し、`[Combat]` の行を出す。
-- 印は今のクライアントと同じ `PingController` に、拠点制圧の拠点はマップの `ControlPointZone` の円盤と HUD の拠点の欄に出す。
-- 壊れる建物は、サーバーが送る壊れた部品 (`StructureStateMessage`) をシーンの見た目と予測の当たりに写す。
-- 保存してあるロードアウトを承認されたときに頼み、倒れている間はロードアウトを選ぶ画面を出す (受け入れられた並びだけを保存する)。
-- サーバーとの接続を失うと、今のクライアントと同じ文 (「サーバーが止まりました。」・タイムアウト・断られた・版が違う) を出してメニューへ戻る。
-  batchmode では今と同じ終了コード (切断 0・つながらない 5) で終わる。
-- `-transport eos -eos-server <サーバーの ID>` で .NET の EOS のサーバーへ P2P でつなぐ (EOS のプラグインと Netcode が入ったビルドだけ)。
-  認証情報が欠けていれば `[Net] EOS credentials missing, using UDP` を出して `-address` へ UDP でつなぐ。
-  エディタの外では EAC が既定で有効なので、EAC を通さずにつなぐなら `-noeac` を付ける ([anti-cheat.md](anti-cheat.md))。
-
-  ```sh
-  <ビルドしたゲーム> -mode client -netstack v2 -transport eos -eos-server <サーバーの ID> -noeac
-  ```
-
-- `-netstack` の値が誤っている (`-netstack v3`・値の付け忘れ・2 回指定) と、Netcode のクライアントでは起動せずに
-  `[Net] invalid arguments: ...` を出して終了コード 2 で終わる。まだ使えない `-lobby`・`-net-latency` / `-net-loss` /
-  `-net-jitter` や、`-mode client` 以外と一緒に付けたときも同じ。
-
-## CI でのリリース
-
-`v*` のタグを push すると `.github/workflows/server-image.yml` が専用サーバーをビルドし、
-`ghcr.io/<owner>/<repo>/server` に push する。タグはタグ名そのもの (`v1.2.3`)、サーバーが `[Version]` で出す版
-(`1.2.3`、`v1-rc` なら `1-rc`) と、semver なら `1.2` も付く。版はタグ名から `-buildVersion` で渡し、git describe は使わない。
-版にできないタグ名 (`+` を含むものなど) ではビルドの前に失敗する。
-
-```sh
-docker pull ghcr.io/<owner>/<repo>/server:v1.2.3
-```
-
-Unity のビルドには [GameCI](https://game.ci/docs/github/activation) の手順で作ったリポジトリの Secrets
-`UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD` が要る。
-
-### CI のテンプレート
-
-.NET のサーバーの CI は、キットではテンプレートとして `templates/github-workflows/` に置き、このリポジトリでは走らせない。
+サーバーの CI は、キットではテンプレートとして `templates/github-workflows/` に置き、このリポジトリでは走らせない。
 ゲームのリポジトリで使うものを `.github/workflows/` に写す。写せばそのまま動き、名前を変えたいものはリポジトリの変数で渡す。
 
 ```sh
 mkdir -p .github/workflows
-cp templates/github-workflows/server-image-dotnet.yml .github/workflows/
+cp templates/github-workflows/server-image.yml .github/workflows/
 cp templates/github-workflows/map-data.yml .github/workflows/
 ```
 
-- `server-image-dotnet.yml`: `v*` のタグを push すると .NET のサーバーのイメージを `linux/amd64` と `linux/arm64` で作り、
-  上の Unity のサーバーと同じ規則のタグで push する。Unity のライセンスもビルドも使わない。push 先は変数 `SERVER_IMAGE`
-  (無ければ `ghcr.io/<owner>/<repo>/server-dotnet`)。EOS の SDK は `scripts/eos-sdk.sh --fetch` で取るので、
-  EOS のライブラリは amd64 のイメージにだけ入り、arm64 のイメージは UDP だけで待ち受ける。
+- `server-image.yml`: `v*` のタグを push するとサーバーのイメージを `linux/amd64` と `linux/arm64` で作り、
+  タグ名そのもの (`v1.2.3`)、サーバーが `[Version]` で出す版 (`1.2.3`、`v1-rc` なら `1-rc`) と、semver なら `1.2` のタグで push する。
+  版はタグ名から渡し、git describe は使わない。版にできないタグ名 (`+` を含むものなど) ではビルドの前に失敗する。
+  Unity のライセンスもビルドも使わない。push 先は変数 `SERVER_IMAGE` (無ければ `ghcr.io/<owner>/<repo>/server`)。
+  EOS の SDK は `scripts/eos-sdk.sh --fetch` で取るので、EOS のライブラリは amd64 のイメージにだけ入り、arm64 のイメージは UDP だけで待ち受ける。
   push する前に amd64 のイメージを起動し、`[Version] <版>` と `[Net] server listening on 0.0.0.0:7777` を出し、uid 10001 で動き、
-  SIGTERM で終了コード 0 で止まることを確かめる (`scripts/server-image-dotnet-smoke.sh`。手元でも `make server-image-dotnet` の後に
-  `bash scripts/server-image-dotnet-smoke.sh fps-server-dotnet:local` で同じことを確かめられる)。PR でもここまでを push せずに走らせる。
+  SIGTERM で終了コード 0 で止まることを確かめる (`scripts/server-image-smoke.sh`。手元でも `make server-image` の後に
+  `bash scripts/server-image-smoke.sh fps-server:local` で同じことを確かめられる)。PR でもここまでを push せずに走らせる。
   要らなければ `on:` の `pull_request` を消し、ファイルを絞るなら `paths` を足す。
 - `map-data.yml`: 毎晩 Unity でマップのデータ (`server-data/maps`) を書き出し直し (`scripts/nightly-server-data-ci.sh`)、
-  コミットしたものと違えば失敗する。Secrets の `UNITY_LICENSE` (上と同じ GameCI の手順) が要る。手元では `make nightly-local` が同じことを確かめる。
-  失敗したら、シーンを変えたのにマップのデータを書き出していない。`make export-server-data` で書き出してコミットする。
+  コミットしたものと違えば失敗する。[GameCI](https://game.ci/docs/github/activation) の手順で作った Secrets の `UNITY_LICENSE` が要る。
+  手元では `make nightly-local` が同じことを確かめる。失敗したら、シーンを変えたのにマップのデータを書き出していない。
+  `make export-server-data` で書き出してコミットする。
 
 ```sh
-docker pull ghcr.io/<owner>/<repo>/server-dotnet:v1.2.3
+docker pull ghcr.io/<owner>/<repo>/server:v1.2.3
 ```

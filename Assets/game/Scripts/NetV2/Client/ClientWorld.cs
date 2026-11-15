@@ -8,7 +8,7 @@ using Fps.Protocol;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-netstack v2</c> のクライアントが自分の移動を予測する世界。サーバー (<c>ServerMapData</c>) と同じ <c>.fpsmap</c> と <c>.ladders.json</c> を読み、
+    /// クライアントが自分の移動を予測する世界。サーバー (<c>ServerMapData</c>) と同じ <c>.fpsmap</c> と <c>.ladders.json</c> を読み、
     /// 壊れた建物の部品はサーバーの <see cref="StructureStateMessage"/> を受けて当たりから外す (<see cref="Apply"/>)。
     /// </summary>
     /// <remarks>

@@ -62,7 +62,7 @@ namespace Fps.Core
 
         public NetLaunchMode Mode { get; }
 
-        /// <summary>UDP のとき、クライアントでは接続先、ホスト・サーバーでは待ち受けるアドレス (IPv4)。</summary>
+        /// <summary>UDP のとき、クライアントでは接続先、サーバーでは待ち受けるアドレス (IPv4)。</summary>
         public string Address { get; }
 
         public ushort Port { get; }
@@ -80,10 +80,10 @@ namespace Fps.Core
         /// <summary>サーバーが自分を EOS のロビーに登録するか。</summary>
         public bool RegistersLobby => RegisterLobbyEndpoint != null;
 
-        /// <summary>ホスト・サーバーが試合に使うマップ (シーン名)。指定が無ければ null で、今のシーンのまま。</summary>
+        /// <summary>サーバーが試合に使うマップ (シーン名)。指定が無ければ null で、今のシーンのまま。</summary>
         public string Map { get; }
 
-        /// <summary>ホスト・サーバーが試合に足す Bot の数。0 なら足さない。</summary>
+        /// <summary>サーバーが試合に足す Bot の数。0 なら足さない。</summary>
         public int Bots { get; }
 
         /// <summary>送受信に足す遅れ (ミリ秒)。0 なら足さない。</summary>
@@ -161,8 +161,8 @@ namespace Fps.Core
         /// <param name="registerLobbyEndpoint">
         /// UDP のサーバーが EOS のロビーに載せる公開アドレス (<c>address:port</c>)。登録しないなら null。
         /// </param>
-        /// <param name="map">ホスト・サーバーが使うマップ (<see cref="IsMapName"/> に通るシーン名)。今のシーンのままなら null。</param>
-        /// <param name="bots">ホスト・サーバーが足す Bot の数。0 以上 <see cref="MaxBots"/> 以下。クライアントでは 0。</param>
+        /// <param name="map">サーバーが使うマップ (<see cref="IsMapName"/> に通るシーン名)。今のシーンのままなら null。</param>
+        /// <param name="bots">サーバーが足す Bot の数。0 以上 <see cref="MaxBots"/> 以下。クライアントでは 0。</param>
         /// <param name="netLatencyMs">足す遅れ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
         /// <param name="netLossPercent">落とすパケットの割合 (%)。0 以上 <see cref="MaxNetLossPercent"/> 以下。</param>
         /// <param name="netJitterMs">遅れのゆらぎ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
@@ -196,8 +196,8 @@ namespace Fps.Core
         /// <param name="registerLobbyEndpoint">
         /// UDP のサーバーが EOS のロビーに載せる公開アドレス (<c>address:port</c>)。登録しないなら null。
         /// </param>
-        /// <param name="map">ホスト・サーバーが使うマップ (<see cref="IsMapName"/> に通るシーン名)。今のシーンのままなら null。</param>
-        /// <param name="bots">ホスト・サーバーが足す Bot の数。0 以上 <see cref="MaxBots"/> 以下。クライアントでは 0。</param>
+        /// <param name="map">サーバーが使うマップ (<see cref="IsMapName"/> に通るシーン名)。今のシーンのままなら null。</param>
+        /// <param name="bots">サーバーが足す Bot の数。0 以上 <see cref="MaxBots"/> 以下。クライアントでは 0。</param>
         /// <param name="netLatencyMs">足す遅れ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
         /// <param name="netLossPercent">落とすパケットの割合 (%)。0 以上 <see cref="MaxNetLossPercent"/> 以下。</param>
         /// <param name="netJitterMs">遅れのゆらぎ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
@@ -306,6 +306,12 @@ namespace Fps.Core
         /// <summary>引数に <c>-mode</c> が含まれるか。値の妥当性は見ない。</summary>
         public static bool HasModeFlag(IReadOnlyList<string> args)
         {
+            return HasFlag(args, ModeFlag);
+        }
+
+        /// <summary>引数に flag (大文字小文字を問わない) が含まれるか。値の妥当性は見ない。</summary>
+        public static bool HasFlag(IReadOnlyList<string> args, string flag)
+        {
             if (args == null)
             {
                 throw new ArgumentNullException(nameof(args));
@@ -313,7 +319,7 @@ namespace Fps.Core
 
             for (var i = 0; i < args.Count; i++)
             {
-                if (IsFlag(args[i], ModeFlag))
+                if (IsFlag(args[i], flag))
                 {
                     return true;
                 }
@@ -328,7 +334,7 @@ namespace Fps.Core
         /// <c>-transport</c> が無ければ <see cref="DefaultTransport"/> を使う。
         /// <c>-eos-server</c> は <c>-transport eos</c> のクライアントでだけ使い、そのときは必須。
         /// <c>-register-lobby</c> は UDP のサーバーでだけ使える。
-        /// <c>-map</c> と <c>-bots</c> はホスト・サーバーで、<c>-drain-timeout</c> はサーバーでだけ使える。
+        /// <c>-map</c> と <c>-bots</c> と <c>-drain-timeout</c> はサーバーでだけ使える。
         /// <c>-bots</c> / <c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> / <c>-drain-timeout</c> は 0 以上の整数で、無ければ 0。
         /// <c>-log-format</c> は <c>text</c> か <c>json</c> で、<c>json</c> はサーバーでだけ使える。無ければ <c>text</c>。
         /// </summary>
@@ -377,7 +383,7 @@ namespace Fps.Core
             var mode = defaultMode;
             if (values.TryGetValue(ModeFlag, out var modeText) && !TryParseMode(modeText, out mode))
             {
-                error = ModeFlag + " must be host, server or client (got '" + modeText + "')";
+                error = ModeFlag + " must be server or client (got '" + modeText + "')";
                 return false;
             }
 
@@ -464,13 +470,11 @@ namespace Fps.Core
             return true;
         }
 
-        /// <summary>ログ向けの小文字のモード名 (host / server / client)。</summary>
+        /// <summary>ログ向けの小文字のモード名 (server / client)。</summary>
         public static string ModeName(NetLaunchMode mode)
         {
             switch (mode)
             {
-                case NetLaunchMode.Host:
-                    return "host";
                 case NetLaunchMode.Server:
                     return "server";
                 case NetLaunchMode.Client:
@@ -668,13 +672,13 @@ namespace Fps.Core
                     + MaxMapNameLength.ToString(CultureInfo.InvariantCulture) + " characters, got '" + map + "')";
             }
 
-            return mode == NetLaunchMode.Client ? HostOrServerOnly(MapFlag, mode) : null;
+            return mode == NetLaunchMode.Client ? ServerOnly(MapFlag, mode) : null;
         }
 
         /// <returns>正しければ null、誤りならその理由。</returns>
         private static string ValidateBots(NetLaunchMode mode, int bots)
         {
-            return bots > 0 && mode == NetLaunchMode.Client ? HostOrServerOnly(BotsFlag, mode) : null;
+            return bots > 0 && mode == NetLaunchMode.Client ? ServerOnly(BotsFlag, mode) : null;
         }
 
         /// <returns>正しければ null、誤りならその理由。</returns>
@@ -692,7 +696,7 @@ namespace Fps.Core
         /// <returns>正しければ null、誤りならその理由。</returns>
         private static string ValidateLogFormat(NetLaunchMode mode, ServerLogFormat format)
         {
-            // JSON の行は専用サーバーの標準出力を集める運用のためのもので、Host やクライアントには読む先が無い
+            // JSON の行は専用サーバーの標準出力を集める運用のためのもので、クライアントには読む先が無い
             if (format == ServerLogFormat.Text || mode == NetLaunchMode.Server)
             {
                 return null;
@@ -702,10 +706,9 @@ namespace Fps.Core
                 + " (got " + ModeName(mode) + ")";
         }
 
-        private static string HostOrServerOnly(string flag, NetLaunchMode mode)
+        private static string ServerOnly(string flag, NetLaunchMode mode)
         {
-            return flag + " is only used by " + ModeFlag + " " + ModeName(NetLaunchMode.Host) + " or " + ModeName(NetLaunchMode.Server)
-                + " (got " + ModeName(mode) + ")";
+            return flag + " is only used by " + ModeFlag + " " + ModeName(NetLaunchMode.Server) + " (got " + ModeName(mode) + ")";
         }
 
         /// <summary>
@@ -787,7 +790,8 @@ namespace Fps.Core
             return false;
         }
 
-        private static bool TryParseTransport(string text, out NetTransportKind transport)
+        /// <summary><c>-transport</c> の値 (udp / eos、大文字小文字を問わない) を読む。</summary>
+        public static bool TryParseTransport(string text, out NetTransportKind transport)
         {
             foreach (NetTransportKind candidate in Enum.GetValues(typeof(NetTransportKind)))
             {

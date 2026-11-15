@@ -40,6 +40,18 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AnIntervalShorterThanTheRoundingMarginStillFinishesTheStep()
+        {
+            var effects = new StatusEffects();
+            effects.Afflict(new StatusEffectSpec(1f, 0.00005f, 1), null, null);
+
+            effects.Tick(0.001f, _ticks, _ended);
+
+            Assert.That(_ticks, Is.Not.Empty);
+            Assert.That(effects.Has(StatusEffectKinds.Burn), Is.True);
+        }
+
+        [Test]
         public void ItEndsWhenTheTimeRunsOut()
         {
             var effects = new StatusEffects();

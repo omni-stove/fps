@@ -28,7 +28,8 @@ namespace Fps.Core
             Vector3 origin,
             Vector3 direction,
             Vector3 gravity,
-            Func<WorldHit, bool> isTarget = null)
+            Func<WorldHit, bool> isTarget = null,
+            float speedMultiplier = 1f)
         {
             _projectile = projectile ?? throw new ArgumentNullException(nameof(projectile));
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -46,7 +47,7 @@ namespace Fps.Core
             _acceleration = gravity * projectile.GravityMultiplier;
             _isTarget = isTarget;
             Position = origin;
-            Velocity = direction / length * projectile.Speed;
+            Velocity = direction / length * (projectile.Speed * SpecGuard.PositiveFinite(speedMultiplier, nameof(speedMultiplier)));
         }
 
         public Vector3 Position { get; private set; }

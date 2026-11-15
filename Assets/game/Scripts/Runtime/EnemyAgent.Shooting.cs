@@ -195,8 +195,8 @@ namespace Fps.Runtime
                 return;
             }
 
-            var charge = _trigger.ChargeFraction;
             var shots = _trigger.PullAsBot(_weapon.Spec);
+            var charge = _trigger.ShotChargeFraction;
             for (var i = 0; i < shots; i++)
             {
                 if (!_weapon.TryFire())

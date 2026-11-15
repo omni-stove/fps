@@ -136,6 +136,26 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
+        public void APerRoundWeaponFiresTheRoundsLoadedMidReload()
+        {
+            var standing = new CharacterMotorState(new Vector3(0f, 1.1f, 0f), Vector3.Zero, true, false);
+            var perRound = new WeaponSpec(
+                _rifleId, "", WeaponCategory.Shotgun, ammo: new AmmoSpec(6, 30, 2f, reloadStyle: ReloadStyle.PerRound, reloadSecondsPerRound: 0.5f));
+
+            Assert.That(
+                ClientFire.Decide(Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 2, IsReloading = true }), _playerId, standing, perRound),
+                Is.EqualTo(FireDecision.Fire));
+            Assert.That(
+                ClientFire.Decide(Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 0, IsReloading = true }), _playerId, standing, perRound),
+                Is.EqualTo(FireDecision.Hold),
+                "nothing is loaded yet");
+            Assert.That(
+                ClientFire.Decide(Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 2, IsReloading = true }), _playerId, standing, Rifle(FireMode.Auto)),
+                Is.EqualTo(FireDecision.Hold),
+                "a whole-magazine reload still holds the trigger");
+        }
+
+        [Test]
         public void AnOverheatedWeaponWaitsUntilTheServerSendsItFullyCool()
         {
             var standing = new CharacterMotorState(new Vector3(0f, 1.1f, 0f), Vector3.Zero, true, false);
@@ -195,6 +215,37 @@ namespace Fps.NetV2.Tests
             hooks.Apply(new SnapshotMessage());
             hooks.LocalFired(new FireRequestMessage { WeaponId = _beamId, Trigger = TriggerEdge.Pressed }, Beam());
             hooks.LocalFired(new FireRequestMessage { WeaponId = _rifleId }, Rifle(FireMode.Auto));
+        }
+
+        [Test]
+        public void AChargedShotIsSentWithTheChargeItWasReleasedWith()
+        {
+            var trigger = new ClientTrigger(Charged());
+
+            Assert.That(trigger.Pull(true, true).Shots, Is.Zero);
+            trigger.Tick(0.4f);
+            Assert.That(trigger.Pull(true, false).ChargeFraction, Is.EqualTo(0.4f).Within(1e-5f));
+            trigger.Tick(0.2f);
+
+            var pull = trigger.Pull(false, false);
+
+            Assert.That(pull.Shots, Is.EqualTo(1));
+            Assert.That(pull.ChargeFraction, Is.EqualTo(0.4f).Within(1e-5f), "the time after the last pull is not charged");
+        }
+
+        [Test]
+        public void TheHudShowsTheLocalChargeWhileHeld()
+        {
+            var model = new HudModel();
+            var sync = new WeaponSync { WeaponCount = 1, ChargeFraction = 0.9f };
+
+            ClientWeaponGauges.Show(model, sync, Charged(), 0.3f);
+
+            Assert.That(model.ChargeFraction, Is.EqualTo(0.3f));
+
+            ClientWeaponGauges.Show(model, sync, Rifle(FireMode.Auto), 0.3f);
+
+            Assert.That(model.ChargeFraction, Is.Null);
         }
 
         [Test]

@@ -14,6 +14,7 @@
   "hud.reviving": "蘇生中 {0}%",
   "hud.spawnProtected": "保護中 あと {0} 秒",
   "hud.idleWarning": "操作がありません あと {0} 秒で切断されます",
+  "hud.status.burn": "燃焼中 あと {0} 秒",
   "hud.grenades": "グレネード {0}",
   "hud.grenadesOfType": "{0} {1}",
   "hud.ability": "能力{0} {1}/{2}",

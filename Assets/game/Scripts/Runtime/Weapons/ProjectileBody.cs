@@ -46,7 +46,8 @@ namespace Fps.Runtime
                 round.Origin,
                 round.Direction,
                 Physics.gravity.ToNumerics(),
-                _ => world.LastHit.collider != null && Hitbox.FindFor(world.LastHit.collider) != null);
+                _ => world.LastHit.collider != null && Hitbox.FindFor(world.LastHit.collider) != null,
+                ChargeScaling.SpeedMultiplier(request.Charge, request.ChargeFraction));
 
             var body = Create(request.ProjectileLook, request.WeaponId);
             body._request = request;

@@ -47,7 +47,8 @@ namespace Fps.Server
                 planned.Origin,
                 planned.Direction,
                 new Vector3(0f, ServerGrenadeFlight.Gravity, 0f),
-                _ => collision.LastHit.HitTarget);
+                _ => collision.LastHit.HitTarget,
+                ChargeScaling.SpeedMultiplier(shot.Weapon.Trigger.Charge, shot.ChargeFraction));
             var flying = new Flying(_nextId++, shot, collision, flight);
             _flying.Add(flying);
 

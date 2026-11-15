@@ -119,7 +119,7 @@ namespace Fps.Core.Tests
         // どの部品も省略せずに書いた武器。Write が書く項目をすべて通す。
         private static WeaponSpec EveryPart()
         {
-            var burning = new StatusEffectSpec(3f, 0.5f, 4, "fx.burning");
+            var burning = new StatusEffectSpec(3f, 0.5f, 4, "fx.burning", "napalm");
             return new WeaponSpec(
                 _rifleId,
                 "weapon.everything",
@@ -128,7 +128,7 @@ namespace Fps.Core.Tests
                     FireMode.Semi,
                     0.25f,
                     new BurstSpec(3, 0.05f),
-                    new ChargeSpec(1.5f, 0.2f, 2.5f, firesWhenFull: true),
+                    new ChargeSpec(1.5f, 0.2f, 2.5f, firesWhenFull: true, firesBelowMin: true, fullChargeSpeedMultiplier: 1.75f),
                     new SpinUpSpec(0.8f, 3f, 0.4f),
                     new CycleSpec(0.9f, leavesAds: true)),
                 new AmmoSpec(1, 6, 0f, 0.3f, 0.2f, 0.7f, ReloadStyle.PerRound, 0.6f, AmmoKind.Heat, new HeatSpec(0.1f, 0.5f, 0.3f, 2f)),
@@ -138,7 +138,8 @@ namespace Fps.Core.Tests
                     pelletCount: 8,
                     pelletSpreadDegrees: 4f,
                     radius: 0.2f,
-                    penetration: new PenetrationSpec(2, 0.6f, 0.5f),
+                    penetration: new PenetrationSpec(
+                        2, 0.6f, 0.5f, new[] { new PenetrationMaterialSpec("metal", 0f), new PenetrationMaterialSpec("wood", 2f) }),
                     ricochet: new RicochetSpec(1, 20f, 0.5f),
                     projectile: new ProjectileSpec(40f, 0.5f, 6f, WorldHitResponse.Stick, "fx.bolt"),
                     homing: new HomingSpec(1f, 10f, 90f)),
@@ -211,6 +212,8 @@ namespace Fps.Core.Tests
             Assert.That(WeaponSpecJson.Write(read), Is.EqualTo(written));
             Assert.That(read.Trigger.Burst.RoundsPerBurst, Is.EqualTo(3));
             Assert.That(read.Trigger.Charge.FiresWhenFull, Is.True);
+            Assert.That(read.Trigger.Charge.FiresBelowMin, Is.True);
+            Assert.That(read.Trigger.Charge.FullChargeSpeedMultiplier, Is.EqualTo(1.75f));
             Assert.That(read.Trigger.SpinUp.StartIntervalMultiplier, Is.EqualTo(3f));
             Assert.That(read.Trigger.Cycle.LeavesAds, Is.True);
             Assert.That(read.Ammo.Kind, Is.EqualTo(AmmoKind.Heat));
@@ -221,10 +224,15 @@ namespace Fps.Core.Tests
             Assert.That(read.Round.Projectile.VisualId, Is.EqualTo("fx.bolt"));
             Assert.That(read.Round.Homing.TurnDegreesPerSecond, Is.EqualTo(90f));
             Assert.That(read.Round.Penetration.MaxPenetrations, Is.EqualTo(2));
+            Assert.That(read.Round.Penetration.Materials, Has.Count.EqualTo(2));
+            Assert.That(read.Round.Penetration.PenetrabilityOf("metal"), Is.EqualTo(0f));
+            Assert.That(read.Round.Penetration.PenetrabilityOf("wood"), Is.EqualTo(2f));
             Assert.That(read.Round.Ricochet.MaxGrazingAngleDegrees, Is.EqualTo(20f));
             Assert.That(read.Impact.Explosion.Damage.FullDamageRadius, Is.EqualTo(1.5f));
             Assert.That(read.Impact.Explosion.Detonation, Is.EqualTo(DetonationTrigger.OnLifetimeEnd));
             Assert.That(read.Impact.AreaEffect.StatusEffect.DamagePerTick, Is.EqualTo(4));
+            Assert.That(read.Impact.StatusEffect.KindId, Is.EqualTo("napalm"));
+            Assert.That(read.Impact.AreaEffect.StatusEffect.KindId, Is.EqualTo("napalm"));
             Assert.That(read.Aim.ZoomLevels, Is.EqualTo(_everyPartZoom));
             Assert.That(read.Aim.BreathHold.SwayMultiplier, Is.EqualTo(0.1f));
             Assert.That(read.AmmoTypes, Has.Count.EqualTo(2));
@@ -232,6 +240,18 @@ namespace Fps.Core.Tests
             Assert.That(read.AmmoTypes[1].Round.Beam.VisualId, Is.EqualTo("fx.beam"));
             Assert.That(read.AmmoTypes[1].Impact.Damage, Is.EqualTo(40));
             Assert.That(read.ShotNoiseRadius, Is.EqualTo(12f));
+        }
+
+        [Test]
+        public void AStatusEffectWithoutAKindBurns()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", "
+                + "\"impact\": {\"statusEffect\": {\"durationSeconds\": 4, \"tickSeconds\": 0.5, \"damagePerTick\": 4}}}",
+                "burn.json");
+
+            Assert.That(read.Impact.StatusEffect.KindId, Is.EqualTo(StatusEffectKinds.Burn));
+            Assert.That(read.Impact.StatusEffect.DurationSeconds, Is.EqualTo(4f));
         }
 
         [Test]
@@ -269,6 +289,10 @@ namespace Fps.Core.Tests
         [TestCase("{\"impact\": {\"explosion\": {\"maxDamage\": 10, \"radius\": 2, \"fullDamageRadius\": 3}}}", "impact.explosion.fullDamageRadius")]
         [TestCase("{\"impact\": {\"explosion\": {\"maxDamage\": 10, \"radius\": 2, \"detonation\": \"OnStop\"}}}", "impact")]
         [TestCase("{\"impact\": {\"areaEffect\": {\"radius\": 2, \"durationSeconds\": 3, \"tickSeconds\": 1, \"damagePerTick\": 1, \"statusEffect\": {\"durationSeconds\": 0, \"tickSeconds\": 1, \"damagePerTick\": 1}}}}", "impact.areaEffect.statusEffect.durationSeconds")]
+        [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\", \"penetrability\": -1}]}}}", "round.penetration.materials[0].penetrability")]
+        [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \" \", \"penetrability\": 1}]}}}", "round.penetration.materials[0].materialId")]
+        [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\"}]}}}", "round.penetration.materials[0].penetrability")]
+        [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\", \"penetrability\": 0}, {\"materialId\": \"metal\", \"penetrability\": 1}]}}}", "round.penetration.materials")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"x\"}]}", "ammoTypes[0].id")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\", \"round\": {\"range\": 0}}]}", "ammoTypes[0].round.range")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\"}, {\"id\": \"" + _standardId + "\"}]}", "ammoTypes")]

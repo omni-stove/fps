@@ -1,3 +1,4 @@
+using System;
 using Fps.Core;
 
 namespace Fps.Runtime
@@ -6,10 +7,18 @@ namespace Fps.Runtime
     {
         public static readonly ProjectileDelivery Instance = new ProjectileDelivery();
 
-        // 専用の届け方が入るまでは、この届け方の武器も撃てるようヒットスキャンで届ける。
+        // 当たるのは弾が飛んだ後なので、ここではいつも外れを返し、当たりは ShotRequest.Landed で後から知らせる。
         public ShotOutcome Deliver(ShotRequest request, PlannedRound round)
         {
-            return HitscanDelivery.Instance.Deliver(request, round);
+            if (request.Round.Projectile == null)
+            {
+                throw new ArgumentException("the round of a projectile delivery needs RoundSpec.Projectile", nameof(request));
+            }
+
+            // 弾を作れなかった (向きが 0 など) ときに撃ったことにしないよう、知らせるのは作った後にする。
+            ProjectileBody.Launch(request, round);
+            CombatEvents.RaiseShotFired(request.Shooter, round.Origin.ToUnity(), round.Direction.ToUnity(), request.WeaponId, tracer: false);
+            return ShotOutcome.Miss;
         }
     }
 }

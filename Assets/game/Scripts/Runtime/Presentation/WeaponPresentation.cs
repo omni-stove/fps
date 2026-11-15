@@ -347,7 +347,10 @@ namespace Fps.Runtime
                 WarnUnknownWeapon(shot.WeaponId);
             }
 
-            _pendingTracer = LaunchTracer(catalog, muzzle, muzzle + (direction * MaxTracerDistance), now);
+            if (shot.Tracer)
+            {
+                _pendingTracer = LaunchTracer(catalog, muzzle, muzzle + (direction * MaxTracerDistance), now);
+            }
         }
 
         public void PlayContinuation(ShotFiredInfo shot)

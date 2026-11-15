@@ -40,10 +40,10 @@ namespace Fps.Runtime
         }
 
         public static bool TryFirstAfterBounce(
-            RaycastHit surface, Vector3 bounced, float remainingRange, int layerMask, Transform shooterRoot, out RaycastHit hit)
+            RaycastHit surface, Vector3 bounced, float radius, float remainingRange, int layerMask, Transform shooterRoot, out RaycastHit hit)
         {
             var origin = surface.point + (surface.normal.normalized * RicochetSurfaceOffset);
-            return TryFirst(origin, bounced, remainingRange - RicochetSurfaceOffset, layerMask, shooterRoot, out hit);
+            return TryFirst(origin, bounced, radius, remainingRange - RicochetSurfaceOffset, layerMask, shooterRoot, out hit);
         }
     }
 }

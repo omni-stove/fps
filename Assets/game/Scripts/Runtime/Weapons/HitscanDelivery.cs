@@ -1,4 +1,5 @@
 using Fps.Core;
+using UnityEngine;
 
 namespace Fps.Runtime
 {
@@ -11,9 +12,10 @@ namespace Fps.Runtime
             var origin = round.Origin.ToUnity();
             var direction = round.Direction.ToUnity();
             var range = request.Round.Range;
+            var radius = request.Round.Radius;
 
             // ShotCast が向きと射程を検査するので、撃ったことはその後に知らせる (例外になった弾を撃ったことにしない)。
-            var found = ShotCast.TryFirst(origin, direction, range, request.LayerMask, request.ShooterRoot, out var hit);
+            var found = ShotCast.TryFirst(origin, direction, radius, range, request.LayerMask, request.ShooterRoot, out var hit);
             CombatEvents.RaiseShotFired(request.Shooter, origin, direction, request.WeaponId);
 
             var travelled = 0f;
@@ -27,20 +29,20 @@ namespace Fps.Runtime
                     return ShotOutcome.Miss;
                 }
 
-                CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
                 travelled += hit.distance;
                 if (!ShotCast.TryBounce(request.Round.Ricochet, bounces, direction, hit, range - travelled, out var bounced, out var multiplier))
                 {
                     break;
                 }
 
+                CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
                 bounces++;
                 damageMultiplier *= multiplier;
                 var surface = hit;
                 origin = surface.point;
                 direction = bounced;
                 CombatEvents.RaiseShotContinued(request.Shooter, origin, direction, request.WeaponId);
-                found = ShotCast.TryFirstAfterBounce(surface, direction, range - travelled, request.LayerMask, request.ShooterRoot, out hit);
+                found = ShotCast.TryFirstAfterBounce(surface, direction, radius, range - travelled, request.LayerMask, request.ShooterRoot, out hit);
                 if (found)
                 {
                     hit.distance += ShotCast.RicochetSurfaceOffset;
@@ -63,6 +65,13 @@ namespace Fps.Runtime
                     request.ChargeFraction);
             }
 
+            return Land(request, hit, direction);
+        }
+
+        // 飛ぶ弾も当たった所から先はヒットスキャンと同じ順 (盾 → 置いた物 → 着弾の効果) で受け止めるので、ここを共に使う。
+        internal static ShotOutcome Land(ShotRequest request, RaycastHit hit, Vector3 direction)
+        {
+            CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
             var damage = request.Impact.Damage;
             if (BulletShield.TryBlock(hit.collider, damage, request.SourcePosition, request.Shooter))
             {

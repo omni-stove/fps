@@ -73,6 +73,7 @@ namespace Fps.Core
         // 離しても連射は続く作りなので、撃ち手が撃てなくなったとき (持ち替え・弾切れ・止められた) に残りを捨てる入口を別に置く。
         public void Cancel()
         {
+            _inner.Cancel();
             _roundsLeft = 0;
             _untilNextRound = 0f;
         }

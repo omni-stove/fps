@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: SlugCannon
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: 4884db7f-db3a-4f82-a822-82df01491735
+  _nameKey: weapon.slugCannon
+  _category: 2
+  _fireMode: 1
+  _magazineSize: 5
+  _reserveAmmo: 20
+  _fireInterval: 0.8
+  _reloadSeconds: 2.5
+  _damage: 70
+  _range: 120
+  _falloffStart: 30
+  _falloffEnd: 80
+  _falloffMinMultiplier: 0.6
+  _explosionRadius: 0
+  _adsFieldOfView: 50
+  _blindFireSpreadDegrees: 8
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.6
+  _recoilPitchDegrees: 3
+  _recoilYawDegrees: 0.5
+  _recoilRecoveryPerSecond: 8
+  _recoilRecoveryDelaySeconds: 0.2
+  _hipSpreadDegrees: 2
+  _adsSpreadDegrees: 0.2
+  _moveSpreadDegrees: 3
+  _shotNoiseRadius: 70
+  _roundRadius: 0.25

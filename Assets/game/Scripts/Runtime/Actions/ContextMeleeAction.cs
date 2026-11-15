@@ -532,8 +532,7 @@ namespace Fps.Runtime
                 direction.y = 0f;
                 direction = direction.sqrMagnitude > 1e-8f ? direction.normalized : transform.forward;
                 var hit = new MeleeStrike.Result(target, target.AimPoint, Vector3.Distance(transform.position, target.AimPoint), direction);
-                var weapon = _melee.Weapon != null ? _melee.Weapon.Weapon : null;
-                MeleeStrike.Apply(gameObject, hit, damage, weapon != null ? weapon.Spec.Id : string.Empty);
+                MeleeStrike.Apply(gameObject, hit, damage, _melee.StrikeWeaponId);
             }
 
             var killed = target != null && target.IsDead;

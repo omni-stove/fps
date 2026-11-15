@@ -37,6 +37,13 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheMeleeWeaponIsTheKnife()
+        {
+            Assert.That(GunGameSceneBuilder.MeleeWeaponPaths, Is.EqualTo(new[] { WeaponAssetBuilder.KnifePath }));
+            Assert.That(GunGameSceneBuilder.LadderWeaponPaths, Has.No.Member(WeaponAssetBuilder.KnifePath), "a knife kill demotes instead of promoting");
+        }
+
+        [Test]
         public void EverySideIsAloneAndStartsAtItsOwnSpawnPoint()
         {
             var sides = GunGameSceneBuilder.FreeForAllSides(GunGameSceneBuilder.BotCount);

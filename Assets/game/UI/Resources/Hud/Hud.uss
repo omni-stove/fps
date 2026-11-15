@@ -706,6 +706,43 @@
     background-size: 100% 100%;
 }
 
+/* グレネードの警告。画面全体を覆い、印の中心を GrenadeWarningView が left / top (px) に置く。 */
+.grenade-warning {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.grenade-warning__marker {
+    position: absolute;
+    translate: -50% -50%;
+    padding: 4px 10px;
+    border-width: 2px;
+    border-radius: 6px;
+    border-color: rgb(255, 200, 40);
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.grenade-warning__marker--lethal {
+    border-color: rgb(255, 60, 50);
+    background-color: rgba(120, 0, 0, 0.7);
+}
+
+.grenade-warning__label {
+    font-size: 22px;
+    color: rgb(255, 220, 80);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.grenade-warning__marker--lethal .grenade-warning__label {
+    color: rgb(255, 255, 255);
+}
+
 .damage-direction__arc {
     position: absolute;
     left: 0;

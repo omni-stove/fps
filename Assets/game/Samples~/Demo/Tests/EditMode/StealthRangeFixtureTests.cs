@@ -134,7 +134,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheApproachStartsInSightButEverythingElseInTheRangeIsOutOfSight()
         {
-            var sight = EnemySpec.DefaultSightRange;
+            var sight = StealthRangeFixture.Spec().SightRange;
             var enemy = StealthRangeFixture.EnemyFeet;
 
             var approach = Vector3.Distance(enemy, StealthRangeFixture.ApproachStart);

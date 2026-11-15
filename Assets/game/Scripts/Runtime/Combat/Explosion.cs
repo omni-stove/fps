@@ -61,6 +61,7 @@ namespace Fps.Runtime
             Debug.Log(FormatLog(result));
 
             PlayEffects(center);
+            ExplosionRangeDebug.Report(center, damage.Radius, damage.FullDamageRadius);
             CombatEvents.RaiseExploded(center, weaponId);
             return result;
         }

@@ -102,10 +102,9 @@ namespace Fps.Runtime
         public void BeginGuardian(
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
-            SideMember localPlayer = null,
-            IModeHud hudView = null)
+            SideMember localPlayer = null)
         {
-            Begin(CreateSession(), members, spawnPoints, localPlayer, hudView);
+            Begin(CreateSession(), members, spawnPoints, localPlayer);
         }
 
         protected override ModeSession CreateSession()

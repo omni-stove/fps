@@ -262,6 +262,7 @@ namespace Fps.Runtime
             _targets.Clear();
             Debug.Log(BomberLog.Exploded(Id, cause, blast.Radius, damaged, killed), this);
             ThrownGrenade.PlayExplosionEffects(center);
+            ExplosionRangeDebug.Report(center, blast.Radius, blast.FullDamageRadius);
             CombatEvents.RaiseExploded(center, string.Empty);
 
             // 自分の爆発で倒れるのは自滅として出す。帰属を付けると、キルフィードに自分が自分を倒した行が出る。

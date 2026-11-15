@@ -19,7 +19,9 @@ namespace Fps.Runtime
     /// <item><see cref="ModeSession.RespawnReady"/> を受けたら、次の <see cref="Tick"/> の終わりに自陣営の <see cref="SideSpawnPoint"/> のうち
     /// 敵からいちばん離れた点 (<see cref="SideSpawnSelector"/>) に戻し、体力を満たす。ダメージの処理の途中で生き返らせないよう、すぐには戻さない。</item>
     /// <item>Update で <see cref="Tick"/> し、状態が変わるたび・倒れるたび・終わったときに <c>[Mode]</c> のログ (<see cref="ModeLog"/>) を出す。
-    /// HUD があれば <see cref="IModeHud"/> に残り時間・得点・自分のリスポーンまでの秒数・派生モードの行 (<see cref="AppendHudTexts"/>・<see cref="AppendHudLines"/>)・結果を出す。</item>
+    /// 同じ時に、残り時間・得点・自分のリスポーンまでの秒数・勝敗・派生モードの状態 (<see cref="HudDetail"/>) を <see cref="ModeStatus"/> にして
+    /// <see cref="GameSignals.ModeStatus"/> に出す。移す途中の今の文 (<see cref="HudTime()"/>・<see cref="HudScores(Side?)"/>・
+    /// 派生モードの行 (<see cref="AppendHudTexts"/>・<see cref="AppendHudLines"/>)・<see cref="HudResult()"/>) も載せる。止めたら消す。</item>
     /// <item>終わったら全員の操作と行動を止め、<see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) でシーンを読み直す。</item>
     /// <item><see cref="HidesTargetDummies"/> が true (既定) なら、始めたときに GameBootstrap の標的ダミーを隠す。</item>
     /// <item>ModeSession をラウンドとして繰り返す派生は、始め方 (<see cref="StartSession"/>)・進め方 (<see cref="AdvanceSession"/>)・
@@ -53,13 +55,13 @@ namespace Fps.Runtime
         private readonly Queue<int> _pendingRespawns = new Queue<int>();
         private readonly HashSet<Side> _warnedMissingSpawn = new HashSet<Side>();
         private readonly List<string> _hudLines = new List<string>();
-        private readonly List<LocalizedText> _hudLineTexts = new List<LocalizedText>();
         private ModeSession _session;
         private SideMember _localPlayer;
-        private IModeHud _hudView;
+        private ModeStatus _publishedStatus;
         private InputAction _restartAction;
         private bool _enabledRestartAction;
         private bool _matchOver;
+        private Side? _matchWinner;
 
         /// <summary>進めているモード。開始前や開始に失敗したときは null。</summary>
         public ModeSession Session => _session;
@@ -90,8 +92,8 @@ namespace Fps.Runtime
         /// <summary>この画面で操作しているプレイヤー。いなければ null。</summary>
         public SideMember LocalPlayer => _localPlayer;
 
-        /// <summary>出している HUD。HUD が無ければ null。</summary>
-        public IModeHud ModeHud => _hudView;
+        /// <summary>最後に <see cref="GameSignals.ModeStatus"/> に出した状態。出す前と止めた後は null。</summary>
+        public ModeStatus Status => _publishedStatus;
 
         /// <summary>終了後に押すと再開するアクション。解決できなければ null (モードは進むが再開できない)。</summary>
         public InputAction RestartAction => _restartAction;
@@ -117,7 +119,7 @@ namespace Fps.Runtime
         protected abstract ModeSession CreateSession();
 
         /// <summary>
-        /// <see cref="Begin"/> で参加者を入れてモードを始め、HUD を書いた直後に 1 度だけ呼ばれる。<see cref="Members"/> と <see cref="Session"/> は揃っている。
+        /// <see cref="Begin"/> で参加者を入れてモードを始め、状態 (<see cref="ModeStatus"/>) を出した直後に 1 度だけ呼ばれる。<see cref="Members"/> と <see cref="Session"/> は揃っている。
         /// 参加者に持たせる物 (武器など) をモードに合わせるならここで行う。
         /// </summary>
         protected virtual void OnBegan()
@@ -160,6 +162,12 @@ namespace Fps.Runtime
         protected virtual void AppendHudTexts(List<LocalizedText> lines)
         {
         }
+
+        /// <summary>
+        /// <see cref="ModeStatus.Detail"/> に入れる、このモード固有の状態 (そのモードの Core の状態)。既定は null。
+        /// UI はこの型の書式役があればそれで文にし、無ければ移す途中の今の文を出す。
+        /// </summary>
+        protected virtual object HudDetail => null;
 
         /// <summary>
         /// <see cref="Begin"/> が参加者を入れる前に、session をこの Runner で進められるか確かめる。進められなければ <see cref="ArgumentException"/> を投げる。
@@ -306,7 +314,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// シーンの参加者・出現点・HUD を拾い、<see cref="CreateSession"/> のモードを始める。
+        /// シーンの参加者・出現点を拾い、<see cref="CreateSession"/> のモードを始める。
         /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryBegin()
@@ -335,8 +343,6 @@ namespace Fps.Runtime
                 }
             }
 
-            var hud = world != null && GameUi.IsAlive(world.Hud) ? world.Hud : GameUi.FindHud();
-
             // 再開できなくてもモード自体は進められるので、解決に失敗してもエラーを出して続ける。
             _restartAction = ResolveRestartAction();
 
@@ -359,7 +365,7 @@ namespace Fps.Runtime
 
             try
             {
-                Begin(session, SideMember.FindAll(), SideSpawnPoint.FindAll(), localPlayer, GameUi.IsAlive(hud) ? hud.ModeHud : null);
+                Begin(session, SideMember.FindAll(), SideSpawnPoint.FindAll(), localPlayer);
             }
             catch (ArgumentException e)
             {
@@ -378,20 +384,18 @@ namespace Fps.Runtime
 
         /// <summary>
         /// members をモードの参加者にし、死亡と出現を繋いで session を始める。session は Waiting で参加者がいないこと。
-        /// localPlayer は ID 0 にし、HUD で自分の陣営として扱う (members に無ければ加える)。
+        /// localPlayer は ID 0 にし、<see cref="ModeStatus"/> で自分の陣営として扱う (members に無ければ加える)。
         /// 引数が不正か、陣営がモードのチーム分けに入らなければ <see cref="ArgumentException"/> を投げ、何も購読しない (session は使えなくなる)。
         /// </summary>
         /// <param name="session">始めるモード。</param>
         /// <param name="members">参加者。null の要素と重複は飛ばす。<see cref="Damageable"/> を持つこと。</param>
         /// <param name="spawnPoints">出現点。null の要素は飛ばす。</param>
         /// <param name="localPlayer">この画面で操作しているプレイヤー。null 可。</param>
-        /// <param name="hudView">得点を出す HUD。null 可。</param>
         public void Begin(
             ModeSession session,
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
-            SideMember localPlayer = null,
-            IModeHud hudView = null)
+            SideMember localPlayer = null)
         {
             if (session == null)
             {
@@ -446,7 +450,6 @@ namespace Fps.Runtime
 
             _session = session;
             _localPlayer = localPlayer != null && ordered.Contains(localPlayer) ? localPlayer : null;
-            _hudView = hudView;
             _members.AddRange(ordered);
             for (var id = 0; id < _members.Count; id++)
             {
@@ -607,9 +610,10 @@ namespace Fps.Runtime
                 _session.Ended -= OnSessionEnded;
             }
 
-            if (GameUi.IsAlive(_hudView))
+            // 別の Runner が後から出した状態は消さない。
+            if (_publishedStatus != null)
             {
-                _hudView.Hide();
+                GameSignals.ModeStatus.ClearIfCurrent(_publishedStatus);
             }
 
             _ids.Clear();
@@ -619,12 +623,13 @@ namespace Fps.Runtime
             _warnedMissingSpawn.Clear();
             _session = null;
             _localPlayer = null;
-            _hudView = null;
+            _publishedStatus = null;
             _matchOver = false;
+            _matchWinner = null;
         }
 
         /// <summary>
-        /// 試合を終える。全員の操作と行動を止め、再開の入力を受け付け、<c>[Mode] ended</c> を出して HUD を書き直してから <see cref="OnEnded"/> を呼ぶ。
+        /// 試合を終える。全員の操作と行動を止め、再開の入力を受け付け、<c>[Mode] ended</c> を出して状態を出し直してから <see cref="OnEnded"/> を呼ぶ。
         /// <see cref="EndsMatchWithSession"/> が true なら <see cref="Session"/> が終わったときに呼ばれる。2 度目からは何もしない。
         /// </summary>
         protected void EndMatch(Side? winner)
@@ -635,6 +640,7 @@ namespace Fps.Runtime
             }
 
             _matchOver = true;
+            _matchWinner = winner;
             _pendingRespawns.Clear();
             foreach (var member in _members)
             {
@@ -659,35 +665,58 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>HUD を今の値で書き直す。<see cref="Tick"/> のたびに呼ばれる。</summary>
+        /// <summary>今の値で <see cref="ModeStatus"/> を作り、<see cref="GameSignals.ModeStatus"/> に出す。<see cref="Tick"/> のたびに呼ばれる。</summary>
         protected void RefreshHud()
         {
-            if (!GameUi.IsAlive(_hudView) || _session == null)
+            if (_session == null)
             {
                 return;
             }
 
-            _hudLineTexts.Clear();
-            if (_localPlayer != null)
+            float? respawnSeconds = null;
+            if (_localPlayer != null && _session.TracksDowns)
             {
-                var remaining = _session.TracksDowns ? _session.GetRespawnRemaining(LocalPlayerId) : null;
-                if (remaining.HasValue)
-                {
-                    _hudLineTexts.Add(HudFormat.Respawn(HudFormat.DisplayedSeconds(remaining.Value)));
-                }
+                respawnSeconds = _session.GetRespawnRemaining(LocalPlayerId);
+            }
+
+            // ModeStatus は出した後も UI が持つので、行の並びは使い回さずに毎回作る。
+            var lineTexts = new List<LocalizedText>();
+            if (respawnSeconds.HasValue)
+            {
+                lineTexts.Add(HudFormat.Respawn(HudFormat.DisplayedSeconds(respawnSeconds.Value)));
             }
 
             _hudLines.Clear();
             AppendHudLines(_hudLines);
             foreach (var line in _hudLines)
             {
-                _hudLineTexts.Add(LiteralOrEmpty(line));
+                lineTexts.Add(LiteralOrEmpty(line));
             }
 
-            AppendHudTexts(_hudLineTexts);
+            AppendHudTexts(lineTexts);
 
             var ownSide = _localPlayer != null ? _localPlayer.Side : (Side?)null;
-            _hudView.Show(HudTime(), HudScores(ownSide), _hudLineTexts, HudResult());
+            var sideScores = new SideScore[_session.Sides.Count];
+            for (var i = 0; i < sideScores.Length; i++)
+            {
+                var side = _session.Sides[i];
+                sideScores[i] = new SideScore(side, _session.GetScore(side));
+            }
+
+            var remaining = float.IsInfinity(_session.TimeLimitSeconds) ? (float?)null : Math.Max(0f, _session.RemainingSeconds);
+            _publishedStatus = new ModeStatus(
+                remaining,
+                sideScores,
+                ownSide,
+                respawnSeconds.HasValue ? Math.Max(0f, respawnSeconds.Value) : (float?)null,
+                _matchOver,
+                _matchOver ? _matchWinner : null,
+                HudDetail,
+                HudTime(),
+                HudScores(ownSide),
+                lineTexts,
+                HudResult());
+            GameSignals.ModeStatus.Publish(_publishedStatus);
         }
 
         /// <summary>

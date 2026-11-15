@@ -214,8 +214,7 @@ namespace Fps.Runtime
             BattleRoyaleSession battleRoyale,
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
-            SideMember localPlayer = null,
-            IModeHud hudView = null)
+            SideMember localPlayer = null)
         {
             if (battleRoyale == null)
             {
@@ -230,7 +229,7 @@ namespace Fps.Runtime
             _battleRoyale = battleRoyale;
             try
             {
-                Begin(battleRoyale.Mode, members, spawnPoints, localPlayer, hudView);
+                Begin(battleRoyale.Mode, members, spawnPoints, localPlayer);
             }
             catch
             {

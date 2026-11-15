@@ -37,6 +37,23 @@ namespace Fps.Editor
 
         public static readonly Vector3 EnemyFeet = new Vector3(-7f, 0f, 22.5f);
 
+        // 射撃場は手順の場所が近いので、キットの既定の視界のままだとほかの手順に立つプレイヤーまで見えてしまう。
+        public const float SightRange = 20f;
+        public const float AttackRange = 12f;
+
+        public static EnemySpec Spec() => new EnemySpec(
+            SightRange,
+            AttackRange,
+            EnemySpec.DefaultLoseSightSeconds,
+            EnemySpec.DefaultSearchSeconds,
+            EnemySpec.DefaultReactionSeconds,
+            EnemySpec.DefaultOpeningSpreadDegrees,
+            EnemySpec.DefaultSettledSpreadDegrees,
+            EnemySpec.DefaultOpeningShots,
+            fireRange: SightRange,
+            fireToleranceDegrees: EnemySpec.DefaultFireToleranceDegrees,
+            rangeSpreadDegrees: EnemySpec.DefaultRangeSpreadDegrees);
+
         // 床の奥の端に置くので、端を背にして出現位置の側を向かせる。
         public static readonly Quaternion EnemyFacing = Quaternion.LookRotation(Vector3.back, Vector3.up);
 
@@ -49,7 +66,7 @@ namespace Fps.Editor
         public static readonly Quaternion TakedownFacing = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         public static readonly Vector3 TakedownStand = new Vector3(-7f, 0f, 20.9f);
 
-        // 敵の視認距離 (EnemySpec.DefaultSightRange) より手前だが、遠くからたまり始めるのを確かめられる距離。
+        // 敵の視認距離 (SightRange) より手前だが、遠くからたまり始めるのを確かめられる距離。
         public static readonly Vector3 ApproachStart = new Vector3(-7f, 0f, 11.5f);
 
         // 標的ダミーの列や近くの置く物 (怯みの的・ボス) に視認距離の内側で接するので、壁と屋根で囲んで見えなくする。
@@ -95,6 +112,7 @@ namespace Fps.Editor
                     Array.Empty<Vector3>(),
                     new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth),
                     weapon);
+                enemy.ApplySpec(Spec());
                 enemy.gameObject.SetActive(false);
 
                 var sentry = SceneBuildHelpers.CreateEnemy(
@@ -107,6 +125,7 @@ namespace Fps.Editor
                     Array.Empty<Vector3>(),
                     new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth),
                     weapon);
+                sentry.ApplySpec(Spec());
                 sentry.gameObject.SetActive(false);
 
                 var area = root.AddComponent<RuntimeNavMeshArea>();

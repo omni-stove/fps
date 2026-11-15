@@ -180,6 +180,31 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BuildsTheKnifeOutsideTheCatalogAndLoadout()
+        {
+            Build();
+            var knifePath = _folder + "/Knife.asset";
+
+            var built = WeaponAssetBuilder.BuildKnifeAt(knifePath);
+
+            Assert.That(built, Is.SameAs(AssetDatabase.LoadAssetAtPath<WeaponDefinition>(knifePath)));
+            Assert.That(WeaponAssetBuilder.KnifePath, Is.EqualTo(DemoSample.Root + "/Weapons/Knife.asset"));
+            Assert.That(new[] { WeaponAssetBuilder.RifleId, WeaponAssetBuilder.HandgunId, WeaponAssetBuilder.LauncherId }, Has.No.Member(WeaponAssetBuilder.KnifeId));
+
+            var knife = built.ToSpec();
+            Assert.That(knife.Id, Is.EqualTo(WeaponAssetBuilder.KnifeId));
+            Assert.That(knife.NameKey, Is.EqualTo(WeaponAssetBuilder.KnifeNameKey));
+            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(knife.Name), Is.EqualTo("ナイフ"));
+
+            var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(_catalogPath);
+            Assert.That(catalog.TryFind(WeaponAssetBuilder.KnifeId, out _), Is.False, "the knife is not a gun to carry");
+
+            var guid = AssetDatabase.AssetPathToGUID(knifePath);
+            Assert.That(WeaponAssetBuilder.BuildKnifeAt(knifePath), Is.SameAs(built));
+            Assert.That(AssetDatabase.AssetPathToGUID(knifePath), Is.EqualTo(guid));
+        }
+
+        [Test]
         public void BuildsTheLauncherOutsideTheCatalogAndLoadout()
         {
             Build();
@@ -348,7 +373,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void EveryBuiltWeaponNameIsInEveryLanguageTable()
         {
-            foreach (var spec in new[] { WeaponAssetBuilder.RifleSpec(), WeaponAssetBuilder.HandgunSpec(), WeaponAssetBuilder.LauncherSpec() })
+            foreach (var spec in new[] { WeaponAssetBuilder.RifleSpec(), WeaponAssetBuilder.HandgunSpec(), WeaponAssetBuilder.LauncherSpec(), WeaponAssetBuilder.KnifeSpec() })
             {
                 foreach (var language in GameLanguages.All)
                 {

@@ -13,7 +13,7 @@ namespace Fps.Core.Tests
         private static readonly string[] _expectedGrenadeItemNames =
         {
             "id", "nameKey", "fuseSeconds", "throwSeconds", "throwSpeed", "throwLiftSpeed",
-            "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter", "impact", "stickiness",
+            "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter", "impact", "stickiness", "rollDamping",
         };
 
         private static readonly string[] _expectedPingItemNames =
@@ -34,7 +34,7 @@ namespace Fps.Core.Tests
         public void ReadsEveryGrenadeItem()
         {
             var spec = TuningJson.ParseGrenade(
-                "{\"fuseSeconds\": 1.5, \"throwSeconds\": 0.4, \"throwSpeed\": 20, \"throwLiftSpeed\": 2.5,"
+                "{\"fuseSeconds\": 1.5, \"throwSeconds\": 0.4, \"throwSpeed\": 20, \"throwLiftSpeed\": 2.5, \"rollDamping\": 1.5,"
                 + " \"maxDamage\": 90, \"damageRadius\": 8, \"fullDamageRadius\": 2, \"structureDamageAtCenter\": 60}",
                 "grenade.json");
 
@@ -42,6 +42,7 @@ namespace Fps.Core.Tests
             Assert.That(spec.ThrowSeconds, Is.EqualTo(0.4f));
             Assert.That(spec.ThrowSpeed, Is.EqualTo(20f));
             Assert.That(spec.ThrowLiftSpeed, Is.EqualTo(2.5f));
+            Assert.That(spec.RollDamping, Is.EqualTo(1.5f));
             Assert.That(spec.MaxDamage, Is.EqualTo(90));
             Assert.That(spec.DamageRadius, Is.EqualTo(8f));
             Assert.That(spec.FullDamageRadius, Is.EqualTo(2f));

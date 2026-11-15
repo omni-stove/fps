@@ -62,7 +62,7 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", Vector3.zero);
             var ally = Member("Bot-0-1", new Vector3(3f, 0f, 0f));
             var hud = BoundHudView();
-            _runner.BeginHorde(_schedule, new[] { player, ally }, new[] { SpawnPoint(new Vector3(0f, 0f, -2f)) }, player, hud);
+            _runner.BeginHorde(_schedule, new[] { player, ally }, new[] { SpawnPoint(new Vector3(0f, 0f, -2f)) }, player);
 
             Assert.That(_schedule.Phase, Is.EqualTo(WavePhase.Fighting), "the first wave starts with the match");
             Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Wave(1, 2))).And.Contain(Localizer.Resolve(HordeText.RemainingEnemies(2))));
@@ -87,7 +87,7 @@ namespace Fps.Tests.EditMode
         {
             var player = Member("Player", Vector3.zero);
             var hud = BoundHudView();
-            _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player, hud);
+            _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player);
 
             ClearWave();
             _schedule.Tick(RestSeconds);
@@ -107,7 +107,7 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", Vector3.zero);
             var ally = Member("Bot-0-1", new Vector3(3f, 0f, 0f));
             var hud = BoundHudView();
-            _runner.BeginHorde(_schedule, new[] { player, ally }, new SideSpawnPoint[0], player, hud);
+            _runner.BeginHorde(_schedule, new[] { player, ally }, new SideSpawnPoint[0], player);
 
             player.Damageable.Kill();
             _runner.Tick(0f);
@@ -128,7 +128,7 @@ namespace Fps.Tests.EditMode
             var wall = Fortification("Wall", new Vector3(0f, 0f, 2f), true);
             _runner.SetFortifications(new[] { wall });
             var hud = BoundHudView();
-            _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player, hud);
+            _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player);
 
             var structure = wall.Structure;
             structure.ApplyStructureHit(structure.Pieces[0].Collider, structure.Pieces[0].transform.position, 1000);
@@ -235,7 +235,7 @@ namespace Fps.Tests.EditMode
             _schedule = _runner.CreateSchedule();
             var player = Member("Player", Vector3.zero);
             var hud = BoundHudView();
-            _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player, hud);
+            _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player);
 
             Assert.That(_schedule.WaveCount, Is.EqualTo(3));
             Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Wave(1, 3))));

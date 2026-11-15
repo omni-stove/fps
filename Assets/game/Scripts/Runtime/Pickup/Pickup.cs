@@ -13,6 +13,7 @@ namespace Fps.Runtime
     /// bot の <see cref="EnemyAgent"/>。持ち武器・予備弾)・
     /// <see cref="Damageable"/> (体力)・<see cref="IArmorHolder"/> (防具) に反映して <c>[Pickup]</c> のログを出し、<see cref="Collected"/> を呼ぶ。
     /// タグは何にも反映せず、<see cref="Collected"/> を受けたモードが得点などを決める。
+    /// Interact で拾う物は、範囲にこの画面のプレイヤーがいて拾える間、HUD の <see cref="IInteractPrompt"/> に何を拾うかの案内 (<see cref="PickupPrompt"/>) を出す。
     /// </summary>
     /// <remarks>
     /// 実行時に置くときは <see cref="Create"/> を使う (当たり判定と見た目もコードで作る)。Scene に置くなら <see cref="PickupSpawnPoint"/> を使う。
@@ -69,6 +70,7 @@ namespace Fps.Runtime
         private readonly HashSet<Collider> _inside = new HashSet<Collider>();
         private readonly List<Collider> _insideBuffer = new List<Collider>();
         private readonly HashSet<Damageable> _triedThisTick = new HashSet<Damageable>();
+        private readonly InteractKeyLabel _keyLabel = new InteractKeyLabel();
         private PickupSpec _spec;
         private bool _collected;
         private float _age;
@@ -76,6 +78,7 @@ namespace Fps.Runtime
         private InputAction _interactAction;
         private bool _enabledInteractAction;
         private bool _reportedInvalid;
+        private IHud _hud;
 
         /// <summary>拾われたときに呼ばれる。<see cref="DestroyOnCollect"/> なら、呼んだ後に破棄する。</summary>
         public event Action<PickupCollection> Collected;
@@ -243,6 +246,7 @@ namespace Fps.Runtime
         private void OnDisable()
         {
             ReleaseInteractAction();
+            HidePrompt();
 
             // 無効の間はトリガーの出入りが届かないので、戻ったときに入り直しとして数え直す。
             _inside.Clear();
@@ -251,6 +255,7 @@ namespace Fps.Runtime
         private void Update()
         {
             Tick(Time.deltaTime);
+            UpdatePrompt();
         }
 
         private void OnTriggerEnter(Collider other)
@@ -361,6 +366,38 @@ namespace Fps.Runtime
             }
 
             return false;
+        }
+
+        /// <summary>範囲にいるこの画面のプレイヤー。いなければ null。</summary>
+        public Damageable LocalPlayerInside()
+        {
+            foreach (var collider in _inside)
+            {
+                var collector = CollectorOf(collider);
+                if (collector != null && collector.IsLocalPlayer)
+                {
+                    return collector;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// player に出す案内。Interact で拾う物を player が今拾えるなら、Interact のキー (keyLabel) と中身を入れた <see cref="PickupPrompt"/> の文で true。
+        /// 拾い方が Touch・拾われた後・中身が不正・player が拾えない (満タンや倒れているなど) なら案内は出さない (false)。
+        /// </summary>
+        public bool TryDescribe(Damageable player, string keyLabel, out LocalizedText text)
+        {
+            text = default;
+            if (player == null || _collected || _collectMode != PickupCollectMode.Interact || _contents == null || !TryResolveSpec())
+            {
+                return false;
+            }
+
+            var outcome = PickupJudge.Judge(_spec, Describe(player));
+            var weaponName = _contents.Weapon != null ? _contents.Weapon.Name : default;
+            return PickupPrompt.TryDescribe(outcome, keyLabel, weaponName, out text);
         }
 
         /// <summary>
@@ -750,6 +787,44 @@ namespace Fps.Runtime
         private void OnInteractPerformed(InputAction.CallbackContext context)
         {
             Interact();
+        }
+
+        private void UpdatePrompt()
+        {
+            var player = _collectMode == PickupCollectMode.Interact && !_collected && _inside.Count > 0 ? LocalPlayerInside() : null;
+            if (player == null)
+            {
+                HidePrompt();
+                return;
+            }
+
+            // HUD はプレイヤーが範囲に入ったときにだけ探す (シーン全体を見るので毎フレームは探さない)。
+            if (!GameUi.IsAlive(_hud))
+            {
+                _hud = GameUi.FindHud();
+            }
+
+            var prompt = GameUi.IsAlive(_hud) ? _hud.InteractPrompt : null;
+            if (prompt == null)
+            {
+                return;
+            }
+
+            if (!TryDescribe(player, _keyLabel.For(_interactAction), out var text))
+            {
+                prompt.Hide(this);
+                return;
+            }
+
+            prompt.Show(this, text);
+        }
+
+        private void HidePrompt()
+        {
+            if (GameUi.IsAlive(_hud))
+            {
+                _hud.InteractPrompt?.Hide(this);
+            }
         }
 
         private static void DestroySafely(UnityEngine.Object target)

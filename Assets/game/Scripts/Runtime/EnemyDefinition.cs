@@ -20,6 +20,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("この距離 (m) 以内に目標が見えていれば撃ちに入る。視界の距離以下")]
         private float _attackRange = EnemySpec.DefaultAttackRange;
 
+        [SerializeField, Min(0f), Tooltip("この距離 (m) 以内に目標が見えていれば、撃ちに入る距離の外でも近づきながら撃つ。撃ちに入る距離から視界の距離の間に収める")]
+        private float _fireRange = EnemySpec.DefaultFireRange;
+
         [SerializeField, Min(0f), Tooltip("見失ってから探しに移るまでの秒数")]
         private float _loseSightSeconds = EnemySpec.DefaultLoseSightSeconds;
 
@@ -30,11 +33,17 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("撃ちに入ってから最初に撃つまでの秒数")]
         private float _reactionSeconds = EnemySpec.DefaultReactionSeconds;
 
+        [SerializeField, Range(0f, EnemySpec.MaxFireToleranceDegrees), Tooltip("体の向きと目標の向きの差 (度) がこれ以下になるまで撃たない")]
+        private float _fireToleranceDegrees = EnemySpec.DefaultFireToleranceDegrees;
+
         [SerializeField, Range(0f, EnemySpec.MaxSpreadDegrees), Tooltip("撃ちに入って最初の 1 発の散らばりの半角 (度)")]
         private float _openingSpreadDegrees = EnemySpec.DefaultOpeningSpreadDegrees;
 
         [SerializeField, Range(0f, EnemySpec.MaxSpreadDegrees), Tooltip("撃ち始めの数発が過ぎた後の散らばりの半角 (度)")]
         private float _settledSpreadDegrees = EnemySpec.DefaultSettledSpreadDegrees;
+
+        [SerializeField, Range(0f, EnemySpec.MaxSpreadDegrees), Tooltip("撃ち始める距離にいる目標を撃つときに散らばりへ足す半角 (度)。撃ちに入る距離では 0")]
+        private float _rangeSpreadDegrees = EnemySpec.DefaultRangeSpreadDegrees;
 
         [SerializeField, Min(0), Tooltip("散らばりを絞り切るまでの発数")]
         private int _openingShots = EnemySpec.DefaultOpeningShots;
@@ -82,6 +91,24 @@ namespace Fps.Runtime
         {
             get => _attackRange;
             set => _attackRange = value;
+        }
+
+        public float FireRange
+        {
+            get => _fireRange;
+            set => _fireRange = value;
+        }
+
+        public float FireToleranceDegrees
+        {
+            get => _fireToleranceDegrees;
+            set => _fireToleranceDegrees = value;
+        }
+
+        public float RangeSpreadDegrees
+        {
+            get => _rangeSpreadDegrees;
+            set => _rangeSpreadDegrees = value;
         }
 
         public float LoseSightSeconds
@@ -166,7 +193,10 @@ namespace Fps.Runtime
                     _sniper.ToSpec(),
                     _charger.ToSpec(),
                     _bomber.ToSpec(),
-                    StaggerResistanceOrArchetype(_staggerResistance));
+                    StaggerResistanceOrArchetype(_staggerResistance),
+                    _fireRange,
+                    _fireToleranceDegrees,
+                    _rangeSpreadDegrees);
             }
             catch (ArgumentException e)
             {
@@ -190,6 +220,9 @@ namespace Fps.Runtime
             _archetype = spec.Archetype;
             _sightRange = spec.SightRange;
             _attackRange = spec.AttackRange;
+            _fireRange = spec.FireRange;
+            _fireToleranceDegrees = spec.FireToleranceDegrees;
+            _rangeSpreadDegrees = spec.RangeSpreadDegrees;
             _loseSightSeconds = spec.LoseSightSeconds;
             _searchSeconds = spec.SearchSeconds;
             _reactionSeconds = spec.ReactionSeconds;

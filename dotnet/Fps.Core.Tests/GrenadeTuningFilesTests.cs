@@ -37,6 +37,7 @@ namespace Fps.Core.Tests
             Assert.That(frag.ThrowSeconds, Is.EqualTo(expected.ThrowSeconds));
             Assert.That(frag.ThrowSpeed, Is.EqualTo(expected.ThrowSpeed));
             Assert.That(frag.ThrowLiftSpeed, Is.EqualTo(expected.ThrowLiftSpeed));
+            Assert.That(frag.RollDamping, Is.EqualTo(expected.RollDamping));
             Assert.That(frag.MaxDamage, Is.EqualTo(expected.MaxDamage));
             Assert.That(frag.DamageRadius, Is.EqualTo(expected.DamageRadius));
             Assert.That(frag.FullDamageRadius, Is.EqualTo(expected.FullDamageRadius));

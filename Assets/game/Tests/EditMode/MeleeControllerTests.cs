@@ -13,6 +13,7 @@ namespace Fps.Tests.EditMode
     // Edit Mode では Awake・Update が走らないので、参照は Initialize で渡し、振りの時間は Tick で進める。寸法は BlindFireControllerTests と同じ。
     public sealed class MeleeControllerTests
     {
+        private const string KnifeId = "5a8e2d71-c3f4-4b96-8e0a-1d7c9b3f6e24";
         private const float _frame = 0.02f;
         private const float _height = 2f;
         private const float _radius = 0.5f;
@@ -151,6 +152,33 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheHitIsAttributedToTheMeleeWeaponOrElseTheHeldWeapon()
+        {
+            PlaceDummy(new Vector3(0f, 0f, 1.5f));
+            string attributed = null;
+            _dummy.Damageable.Damaged += (_, _) => attributed = CombatEvents.CurrentAttribution?.WeaponId;
+
+            Assert.That(_melee.StrikeWeaponId, Is.EqualTo(TestWeapons.RifleId));
+            SwingAndHit();
+            Assert.That(attributed, Is.EqualTo(TestWeapons.RifleId));
+
+            var knife = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                WeaponAssets.Configure(knife, new WeaponSpec(KnifeId, "weapon.knife", WeaponCategory.Handgun, FireMode.Semi, 1, 0, 0.5f, 0.5f, 50, 2f, DamageFalloff.None));
+                _melee.MeleeWeapon = knife;
+                _melee.Tick(1f);
+                _melee.Tick(1f);
+                SwingAndHit();
+                Assert.That(attributed, Is.EqualTo(KnifeId));
+            }
+            finally
+            {
+                Object.DestroyImmediate(knife);
+            }
+        }
+
+        [Test]
         public void ATargetBehindIsNotHit()
         {
             PlaceDummy(new Vector3(0f, 0f, -1.5f));
@@ -282,6 +310,14 @@ namespace Fps.Tests.EditMode
         {
             _dummy = TargetDummy.Create("Dummy", feet, Quaternion.identity);
             Physics.SyncTransforms();
+        }
+
+        private void SwingAndHit()
+        {
+            LogAssert.Expect(LogType.Log, "[Melee] swing id=Body");
+            Assert.That(_melee.TrySwing(), Is.True);
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Melee\] hit id=Body target=Dummy "));
+            Assert.That(_melee.Tick(0.25f), Is.True);
         }
 
         private void SwingThroughImpact()

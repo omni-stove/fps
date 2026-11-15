@@ -18,6 +18,11 @@ namespace Fps.Tests.EditMode
 
         public LocalizedText ExtraHudText { get; set; }
 
+        /// <summary><see cref="ModeStatus.Detail"/> に入れるもの。</summary>
+        public object Detail { get; set; }
+
+        protected override object HudDetail => Detail;
+
         protected override ModeSession CreateSession() => Factory?.Invoke();
 
         protected override void OnKill(SideMember killer, SideMember victim)

@@ -141,6 +141,19 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BeginMakesThePlayersMeleeKillWithTheFirstMeleeWeapon()
+        {
+            var player = Member("Player", 0);
+            var bot = Member("Bot-1", 1);
+            var melee = player.gameObject.AddComponent<MeleeController>();
+
+            Begin(player, bot);
+
+            Assert.That(melee.MeleeWeapon, Is.SameAs(_knife));
+            Assert.That(melee.StrikeWeaponId, Is.EqualTo(KnifeId));
+        }
+
+        [Test]
         public void AKillWithTheLastWeaponWinsAndLogsTheWinner()
         {
             var player = Member("Player", 0);
@@ -202,12 +215,12 @@ namespace Fps.Tests.EditMode
 
         private void Begin(SideMember player, SideMember a, ModeHudView hud = null)
         {
-            _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a }, Array.Empty<SideSpawnPoint>(), player, hud);
+            _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a }, Array.Empty<SideSpawnPoint>(), player);
         }
 
         private void Begin(SideMember player, SideMember a, SideMember b, ModeHudView hud = null)
         {
-            _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player, hud);
+            _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
         }
 
         private static void KillBy(SideMember killer, SideMember victim, string weaponId)

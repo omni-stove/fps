@@ -409,7 +409,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 - 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
 - ネット対戦の HUD は `GameUi.HudFactory` を通らない (`NetV2Hud` が既定の `Hud` を作る)。
 - 既定の HUD を差し替えると、その HUD に載っていたポーズメニューやロードアウトの画面も出なくなる。自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
-- `IHud` の `Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`InteractPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さない (プレイヤーがグレネードや能力の枠を持つと、返した値の `Show` をすぐ呼ぶ)。
+- `IHud` の `Model`・`Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`InteractPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。オフラインのモードの状態は `IHud.ModeHud` には渡さず、`GameSignals.ModeStatus` に出す (自分の HUD で出すなら購読する)。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さない (プレイヤーがグレネードや能力の枠を持つと、返した値の `Show` をすぐ呼ぶ)。
 - 登録はシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単。
 - 発見ゲージの頭上の印 (ルールの `stealth` が On のときだけ出る) は、根に `IAwarenessIndicator` を実装したコンポーネントを持つプレハブを、どこかの Resources フォルダの `Presentation/AwarenessIndicatorCatalog.asset` (`AwarenessIndicatorCatalog`、入口の `AwarenessIndicator` が先) に入れると差し替わる。敵ごとに変えるなら `EnemyStealth` の印のプレハブに入れる。どちらも空なら仮の球を出す。
 
@@ -438,6 +438,7 @@ public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount, IAbilitySlots
     }
 
     public PanelSettings OwnedPanelSettings => null;
+    public HudModel Model => null;
     public IScoreboard Scoreboard => null;
     public IHitMarker HitMarker => null;
     public IModeHud ModeHud => null;

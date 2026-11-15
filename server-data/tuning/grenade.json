@@ -7,6 +7,7 @@
       "throwSeconds": 0.6,
       "throwSpeed": 14,
       "throwLiftSpeed": 3,
+      "rollDamping": 4,
       "maxDamage": 150,
       "damageRadius": 6,
       "fullDamageRadius": 1.5,
@@ -19,6 +20,7 @@
       "throwSeconds": 0.6,
       "throwSpeed": 14,
       "throwLiftSpeed": 3,
+      "rollDamping": 4,
       "impact": {
         "damage": 0,
         "areaEffect": { "radius": 5, "durationSeconds": 15, "tickSeconds": 0.5, "damagePerTick": 0, "visualId": "smoke" }
@@ -31,6 +33,7 @@
       "throwSeconds": 0.6,
       "throwSpeed": 14,
       "throwLiftSpeed": 3,
+      "rollDamping": 4,
       "impact": {
         "damage": 0,
         "blind": { "radius": 15, "durationSeconds": 4, "backFraction": 0.25 }
@@ -43,6 +46,7 @@
       "throwSeconds": 0.6,
       "throwSpeed": 14,
       "throwLiftSpeed": 3,
+      "rollDamping": 4,
       "impact": {
         "damage": 0,
         "areaEffect": { "radius": 4, "durationSeconds": 8, "tickSeconds": 0.5, "damagePerTick": 5, "visualId": "fire" }
@@ -55,6 +59,7 @@
       "throwSeconds": 0.6,
       "throwSpeed": 14,
       "throwLiftSpeed": 3,
+      "rollDamping": 4,
       "stickiness": "SurfacesAndCharacters",
       "impact": {
         "damage": 0,

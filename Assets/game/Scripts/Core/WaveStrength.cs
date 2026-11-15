@@ -7,10 +7,10 @@ namespace Fps.Core
     /// <list type="bullet">
     /// <item>体力は m 倍 (四捨五入、1 以上)。</item>
     /// <item>撃ち始めるまでの反応時間 (<see cref="EnemySpec.ReactionSeconds"/>) は 1/m 倍。</item>
-    /// <item>散らばり (<see cref="EnemySpec.OpeningSpreadDegrees"/>・<see cref="EnemySpec.SettledSpreadDegrees"/>) は 1/m 倍
+    /// <item>散らばり (<see cref="EnemySpec.OpeningSpreadDegrees"/>・<see cref="EnemySpec.SettledSpreadDegrees"/>・<see cref="EnemySpec.RangeSpreadDegrees"/>) は 1/m 倍
     /// (<see cref="EnemySpec.MaxSpreadDegrees"/> で頭打ち)。</item>
     /// </list>
-    /// 視認距離・攻撃距離・遮蔽の動き方は倍率で変えない。距離を伸ばすとレベルの作り (遮蔽物の配置) と噛み合わなくなるため。
+    /// 視認距離・攻撃距離・撃ち始める距離・遮蔽の動き方は倍率で変えない。距離を伸ばすとレベルの作り (遮蔽物の配置) と噛み合わなくなるため。
     /// m が 1 なら元の値のまま、1 未満なら弱くなる。
     /// </summary>
     public static class WaveStrength
@@ -43,7 +43,10 @@ namespace Fps.Core
                 spec.Sniper,
                 spec.Charger,
                 spec.Bomber,
-                spec.StaggerResistance);
+                spec.StaggerResistance,
+                spec.FireRange,
+                spec.FireToleranceDegrees,
+                Math.Min(EnemySpec.MaxSpreadDegrees, spec.RangeSpreadDegrees / multiplier));
         }
 
         /// <summary>最大体力 baseHealth に倍率 multiplier を掛けた値。四捨五入し、1 以上 int の最大値以下に収める。</summary>

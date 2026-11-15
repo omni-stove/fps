@@ -304,7 +304,7 @@ namespace Fps.Tests.EditMode
 
         private void Begin(IReadOnlyList<ControlPointZone> zones, IReadOnlyList<SideMember> members, SideMember localPlayer, ModeHudView hud = null)
         {
-            _runner.Begin(CreateHardpoint(), zones, members, Array.Empty<SideSpawnPoint>(), localPlayer, hud);
+            _runner.Begin(CreateHardpoint(), zones, members, Array.Empty<SideSpawnPoint>(), localPlayer);
         }
 
         private static Hardpoint CreateHardpoint()

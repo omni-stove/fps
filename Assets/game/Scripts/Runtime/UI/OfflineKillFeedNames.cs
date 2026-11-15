@@ -52,6 +52,14 @@ namespace Fps.Runtime
                 return chargeName;
             }
 
+            // 近接で倒した武器 (ナイフ) はロードアウトに入れないので、近接の武器の Id と照らして名前を引く。
+            var melee = killer.GetComponentInChildren<MeleeController>(true);
+            var meleeWeapon = melee != null ? melee.MeleeWeapon : null;
+            if (meleeWeapon != null && string.Equals(meleeWeapon.Id, weaponId, StringComparison.Ordinal))
+            {
+                return meleeWeapon.ToSpec().Name;
+            }
+
             var controller = killer.GetComponentInChildren<WeaponController>(true);
             var loadout = controller != null ? controller.Loadout : null;
             if (loadout != null)

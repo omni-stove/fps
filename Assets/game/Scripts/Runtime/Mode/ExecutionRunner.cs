@@ -118,8 +118,7 @@ namespace Fps.Runtime
             ExecutionSession execution,
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
-            SideMember localPlayer = null,
-            IModeHud hudView = null)
+            SideMember localPlayer = null)
         {
             if (execution == null)
             {
@@ -134,7 +133,7 @@ namespace Fps.Runtime
             _execution = execution;
             try
             {
-                Begin(execution.Mode, members, spawnPoints, localPlayer, hudView);
+                Begin(execution.Mode, members, spawnPoints, localPlayer);
             }
             catch
             {

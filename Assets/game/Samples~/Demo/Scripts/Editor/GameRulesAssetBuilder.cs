@@ -219,11 +219,13 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// ガンゲーム。<see cref="FreeForAllRules"/> のうち、キルのたびに武器が替わって補給の機会が無いので予備弾を無限にしたもの。
+        /// ガンゲーム。<see cref="FreeForAllRules"/> のうち、キルのたびに武器が替わって補給の機会が無いので予備弾を無限にし、
+        /// 近接で倒した相手を 1 段戻せるよう近接攻撃を使えるようにしたもの。
         /// </summary>
         public static GameRules GunGameRules()
         {
-            return FreeForAllRules().WithInfiniteReserve(true);
+            var free = FreeForAllRules();
+            return free.WithInfiniteReserve(true).WithActions(free.Actions.WithMelee(Melee.On));
         }
 
         /// <summary>ハードポイント。今は <see cref="TeamDeathmatchRules"/> と同じ値 (ドミネーションと同じく拠点の取り合い)。</summary>

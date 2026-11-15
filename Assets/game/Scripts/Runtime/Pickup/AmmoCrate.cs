@@ -53,12 +53,11 @@ namespace Fps.Runtime
         private GameObject _visualPrefab;
 
         private readonly HashSet<Collider> _inside = new HashSet<Collider>();
+        private readonly InteractKeyLabel _keyLabel = new InteractKeyLabel();
         private InputAction _interactAction;
         private bool _enabledInteractAction;
         private float _readyAt;
         private IHud _hud;
-        private InputAction[] _deviceActions;
-        private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
 
         public float Radius
         {
@@ -401,35 +400,13 @@ namespace Fps.Runtime
                 return;
             }
 
-            if (!TryDescribe(player, KeyLabel(), out var text))
+            if (!TryDescribe(player, _keyLabel.For(_interactAction), out var text))
             {
                 prompt.Hide(this);
                 return;
             }
 
             prompt.Show(this, text);
-        }
-
-        private string KeyLabel()
-        {
-            if (_interactAction == null)
-            {
-                return string.Empty;
-            }
-
-            if (_deviceActions == null)
-            {
-                var actions = InputSystem.actions;
-                _deviceActions = new[]
-                {
-                    actions?.FindAction(InputActionPaths.Move),
-                    actions?.FindAction(InputActionPaths.Look),
-                    _interactAction,
-                };
-            }
-
-            _device = TutorialPresenter.DetectDevice(_deviceActions, _device);
-            return TutorialKeyLabels.For(_interactAction, _device);
         }
 
         private void HidePrompt()

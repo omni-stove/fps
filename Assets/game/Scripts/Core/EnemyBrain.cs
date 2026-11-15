@@ -9,8 +9,9 @@ namespace Fps.Core
     /// 移動や視線判定（Raycast）は行わず、呼び出し側が決定を実行する。
     /// </summary>
     /// <remarks>
-    /// 目標が視線の通る SightRange 内にいれば Chase、AttackRange 内なら Attack（Attack に入ってから ReactionSeconds 後に撃つ。
-    /// Chase で追っていた時間は数えないので、射程に入った瞬間には撃たない）。
+    /// 目標が視線の通る SightRange 内にいれば Chase、AttackRange 内なら Attack (足を止めて撃つ)。
+    /// FireRange 内に捉えたら構え (<see cref="IsAiming"/>)、ReactionSeconds 後から撃つ。AttackRange の外で構えている間は足を止め、
+    /// 撃ち始めたら撃ちながら近づく。FireRange の外を追っていた時間は数えないので、射程に入った瞬間には撃たない。
     /// 撃ち始めの数発は散らばりを大きくし、OpeningShots 発かけて絞る（<see cref="EnemySpec.SpreadDegreesForShot"/>）。
     /// 見失ったら最後に見た位置へ向かい、LoseSightSeconds 後に Search、SearchSeconds 後に Patrol（ルートが無ければ Idle）に戻る。
     /// Idle・Patrol・Search 中に音を聞いたら、その位置を Search する。
@@ -36,6 +37,7 @@ namespace Fps.Core
         private Vector3 _lastSeen;
         private Vector3 _searchPoint;
         private float _reactionElapsed;
+        private bool _engaging;
         private int _shotsInAttack;
         private float _lostElapsed;
         private float _searchElapsed;
@@ -82,6 +84,14 @@ namespace Fps.Core
                 _shotsInAttack++;
             }
         }
+
+        /// <summary>
+        /// 目標に銃を構えているか。Attack と、TakeCover で覗いている間と、FireRange 内の目標を Chase している間。
+        /// </summary>
+        public bool IsAiming => EnemyGait.IsAiming(State, CoverPhase) || (State == EnemyState.Chase && _engaging);
+
+        /// <summary>構え始めてから撃てるようになるまでの残り秒数。構えていないか撃てるなら 0。</summary>
+        public float AimRemainingSeconds => IsAiming ? Math.Max(0f, _spec.ReactionSeconds - _reactionElapsed) : 0f;
 
         /// <summary>巡回で次に向かう地点の添字。ルートが無ければ 0。</summary>
         public int PatrolIndex => _routeIndex;
@@ -378,24 +388,35 @@ namespace Fps.Core
             _lostElapsed = 0f;
             _lastSeen = target;
 
-            if (Vector3.Distance(self, target) <= _spec.AttackRange)
+            var distance = Vector3.Distance(self, target);
+            if (distance > _spec.FireRange)
             {
-                if (State == EnemyState.Attack)
-                {
-                    _reactionElapsed += deltaSeconds;
-                }
-                else
-                {
-                    _reactionElapsed = 0f;
-                    _shotsInAttack = 0;
-                }
+                _engaging = false;
+                SetState(EnemyState.Chase);
+                return new EnemyDecision(target, target, false);
+            }
 
+            // 撃ちながら近づいて Attack に入ったときは構え直さない。入った途端に撃つのをやめると、近づくほど撃たなくなって見える。
+            if (_engaging && (State == EnemyState.Attack || State == EnemyState.Chase))
+            {
+                _reactionElapsed += deltaSeconds;
+            }
+            else
+            {
+                _reactionElapsed = 0f;
+                _shotsInAttack = 0;
+            }
+
+            _engaging = true;
+            var ready = _reactionElapsed >= _spec.ReactionSeconds;
+            if (distance <= _spec.AttackRange)
+            {
                 SetState(EnemyState.Attack);
-                return new EnemyDecision(null, target, _reactionElapsed >= _spec.ReactionSeconds);
+                return new EnemyDecision(null, target, ready);
             }
 
             SetState(EnemyState.Chase);
-            return new EnemyDecision(target, target, false);
+            return new EnemyDecision(ready ? target : (Vector3?)null, target, ready);
         }
 
         private bool ShouldTakeCover(EnemyPerception p)
@@ -516,7 +537,7 @@ namespace Fps.Core
 
         private EnemyDecision PeekDecision(Vector3 self, bool seen)
         {
-            var inRange = Vector3.Distance(self, _coverThreat) <= _spec.AttackRange;
+            var inRange = Vector3.Distance(self, _coverThreat) <= _spec.FireRange;
             return new EnemyDecision(null, _coverThreat, seen && inRange && _reactionElapsed >= _spec.ReactionSeconds, false);
         }
 
@@ -559,6 +580,7 @@ namespace Fps.Core
         /// <summary>見失った直後。最後に見た位置へ向かい、LoseSightSeconds 経ったら Search に移る。</summary>
         private EnemyDecision Pursue(float deltaSeconds)
         {
+            _engaging = false;
             _lostElapsed += deltaSeconds;
             if (_lostElapsed >= _spec.LoseSightSeconds)
             {
@@ -611,6 +633,11 @@ namespace Fps.Core
 
             var previous = State;
             State = next;
+            if (next != EnemyState.Attack && next != EnemyState.Chase)
+            {
+                _engaging = false;
+            }
+
             StateChanged?.Invoke(previous, next);
         }
     }

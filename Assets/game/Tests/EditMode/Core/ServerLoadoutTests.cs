@@ -116,12 +116,12 @@ namespace Fps.Core.Tests
 
             Assert.That(loadout.TryFire(1, rifle, _rifle, 0d), Is.EqualTo(ShotRejection.None));
             Assert.That(loadout.TryGetBudget(1, out var budget), Is.True);
-            Assert.That(budget.FireInterval, Is.EqualTo(1f));
+            Assert.That(budget.MinShotSpacingSeconds, Is.EqualTo(1f));
 
             // 持ち替えた武器は満タンの制限から撃てるが、以後は handgun の間隔 (2 秒) で回復する
             Assert.That(loadout.TryFire(1, handgun, _handgun, 0.5d), Is.EqualTo(ShotRejection.None));
             Assert.That(loadout.TryGetBudget(1, out budget), Is.True);
-            Assert.That(budget.FireInterval, Is.EqualTo(2f));
+            Assert.That(budget.MinShotSpacingSeconds, Is.EqualTo(2f));
             Assert.That(loadout.TryFire(1, handgun, _handgun, 1.5d), Is.EqualTo(ShotRejection.FireRateExceeded));
             Assert.That(loadout.TryFire(1, handgun, _handgun, 2.5d), Is.EqualTo(ShotRejection.None));
         }

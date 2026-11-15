@@ -28,6 +28,10 @@ namespace Fps.Core
         /// <summary>ブラインドファイアの散らばりの方位角を選ぶ値の系列。</summary>
         public const uint BlindFireAzimuthStream = 5u;
 
+        public const uint PelletPolarStream = 6u;
+
+        public const uint PelletAzimuthStream = 7u;
+
         private const float _minLength = 1e-6f;
 
         // 2^-53。64 ビットの上位 53 ビットを [0, 1) の double にする。

@@ -136,6 +136,48 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
+        public void AnOverheatedWeaponWaitsUntilTheServerSendsItFullyCool()
+        {
+            var standing = new CharacterMotorState(new Vector3(0f, 1.1f, 0f), Vector3.Zero, true, false);
+            var heat = Heated();
+            var overheat = new ClientOverheat();
+
+            FireDecision At(float value)
+            {
+                var snapshot = Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 1, Heat = value });
+                overheat.Observe(snapshot);
+                return ClientFire.Decide(snapshot, _playerId, standing, heat, overheat);
+            }
+
+            Assert.That(At(0.5f), Is.EqualTo(FireDecision.Fire), "warm but not overheated");
+            Assert.That(At(1f), Is.EqualTo(FireDecision.Hold));
+            Assert.That(At(0.5f), Is.EqualTo(FireDecision.Hold), "cooling down after an overheat");
+            Assert.That(At(0f), Is.EqualTo(FireDecision.Fire));
+            Assert.That(At(0.5f), Is.EqualTo(FireDecision.Fire));
+        }
+
+        [Test]
+        public void TheOverheatIsKeptForTheWeaponThatOverheated()
+        {
+            var overheat = new ClientOverheat();
+            var hot = Armed(new WeaponSync { WeaponCount = 2, EquippedIndex = 0, Heat = 1f });
+            overheat.Observe(hot);
+
+            var other = Armed(new WeaponSync { WeaponCount = 2, EquippedIndex = 1, Heat = 0.5f });
+            overheat.Observe(other);
+            Assert.That(overheat.IsOverheated(other.Owner), Is.False, "the other weapon did not overheat");
+
+            var back = Armed(new WeaponSync { WeaponCount = 2, EquippedIndex = 0, Heat = 0.5f });
+            overheat.Observe(back);
+            Assert.That(overheat.IsOverheated(back.Owner), Is.True);
+
+            var unarmed = Armed(new WeaponSync { WeaponCount = 0 });
+            overheat.Observe(unarmed);
+            overheat.Observe(back);
+            Assert.That(overheat.IsOverheated(back.Owner), Is.False, "losing every weapon forgets the overheat");
+        }
+
+        [Test]
         public void TheNewWeaponMessagesGoToTheirHooksAndOthersAreLeftAlone()
         {
             var hooks = new ClientWeaponHooks(Find);
@@ -165,18 +207,18 @@ namespace Fps.NetV2.Tests
 
             Assert.That(model.ChargeFraction, Is.Null);
             Assert.That(model.HeatFraction, Is.Null);
-            Assert.That(model.AmmoTypeText, Is.Empty);
+            Assert.That(model.AmmoType, Is.Null);
 
             ClientWeaponGauges.Show(model, sync, Charged());
 
             Assert.That(model.ChargeFraction, Is.EqualTo(0.4f));
-            Assert.That(model.AmmoTypeText, Is.EqualTo("items.ammo.armor_piercing"));
+            Assert.That(model.AmmoType.NameKey, Is.EqualTo("items.ammo.armor_piercing"));
 
             ClientWeaponGauges.Show(model, sync, Heated());
 
             Assert.That(model.ChargeFraction, Is.Null);
             Assert.That(model.HeatFraction, Is.EqualTo(0.6f));
-            Assert.That(model.AmmoTypeText, Is.Empty);
+            Assert.That(model.AmmoType, Is.Null);
 
             ClientWeaponGauges.Show(model, new WeaponSync(), Heated());
 

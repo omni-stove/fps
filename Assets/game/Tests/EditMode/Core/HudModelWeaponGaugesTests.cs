@@ -23,7 +23,7 @@ namespace Fps.Core.Tests
 
             Assert.That(model.ChargeFraction, Is.Null);
             Assert.That(model.HeatFraction, Is.Null);
-            Assert.That(model.AmmoTypeText, Is.Empty);
+            Assert.That(model.AmmoType, Is.Null);
             Assert.That(model.Magnification, Is.Null);
             Assert.That(model.LockOnProgress, Is.Null);
             Assert.That(model.IsLockedOn, Is.False);
@@ -38,14 +38,15 @@ namespace Fps.Core.Tests
             model.SetCharge(0.5f);
             model.SetCharge(0.5f);
             model.SetHeat(0.25f);
-            model.SetAmmoTypeName("Slug");
-            model.SetAmmoTypeName("Slug");
+            var slug = new AmmoTypeSpec("00000000-0000-4000-8000-0000000000a1", "ammo.slug");
+            model.SetAmmoType(slug);
+            model.SetAmmoType(slug);
             model.SetMagnification(4f);
             model.SetLockOn(1f);
 
             Assert.That(model.ChargeFraction, Is.EqualTo(0.5f));
             Assert.That(model.HeatFraction, Is.EqualTo(0.25f));
-            Assert.That(model.AmmoTypeText, Is.EqualTo("Slug"));
+            Assert.That(model.AmmoType, Is.SameAs(slug));
             Assert.That(model.Magnification, Is.EqualTo(4f));
             Assert.That(model.IsLockedOn, Is.True);
             Assert.That(
@@ -55,14 +56,14 @@ namespace Fps.Core.Tests
             changes.Clear();
             model.ClearCharge();
             model.ClearHeat();
-            model.ClearAmmoTypeName();
+            model.ClearAmmoType();
             model.ClearMagnification();
             model.ClearLockOn();
             model.ClearLockOn();
 
             Assert.That(model.ChargeFraction, Is.Null);
             Assert.That(model.HeatFraction, Is.Null);
-            Assert.That(model.AmmoTypeText, Is.Empty);
+            Assert.That(model.AmmoType, Is.Null);
             Assert.That(model.Magnification, Is.Null);
             Assert.That(model.LockOnProgress, Is.Null);
             Assert.That(
@@ -83,8 +84,26 @@ namespace Fps.Core.Tests
 
             Assert.That(model.ChargeFraction, Is.Null);
             Assert.That(model.HeatFraction, Is.Null);
-            Assert.That(model.AmmoTypeText, Is.Empty);
+            Assert.That(model.AmmoType, Is.Null);
             Assert.That(changes, Has.No.Member(HudField.Charge).And.No.Member(HudField.Heat).And.No.Member(HudField.AmmoType));
+        }
+
+        [Test]
+        public void ShowsTheHeatOfAHeatWeaponInsteadOfItsRounds()
+        {
+            var model = new HudModel();
+            var ammo = new AmmoSpec(1, 0, 1f, kind: AmmoKind.Heat, heat: new HeatSpec(0.25f, 0.5f, 1f, 1f));
+            var weapon = new Weapon(new WeaponSpec(_rifleId, "weapon.energyRifle", WeaponCategory.AssaultRifle, ammo: ammo));
+
+            model.BindWeapon(weapon);
+            model.RefreshWeaponGauges();
+            Assert.That(model.HeatFraction, Is.EqualTo(0f));
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+
+            weapon.TryFire();
+            model.RefreshWeaponGauges();
+            Assert.That(model.HeatFraction, Is.EqualTo(0.25f));
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
         }
 
         [Test]

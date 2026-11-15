@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: RicochetPistol
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: a9ae4aeb-607f-41a8-875f-2e8deed9bfa6
+  _nameKey: weapon.ricochetPistol
+  _category: 6
+  _fireMode: 1
+  _magazineSize: 12
+  _reserveAmmo: 48
+  _fireInterval: 0.2
+  _reloadSeconds: 1.5
+  _damage: 34
+  _range: 60
+  _falloffStart: 15
+  _falloffEnd: 40
+  _falloffMinMultiplier: 0.6
+  _explosionRadius: 0
+  _adsFieldOfView: 55
+  _blindFireSpreadDegrees: 12
+  _activeReloadWindowStart: 0.45
+  _activeReloadWindowLength: 0.2
+  _activeReloadFailSeconds: 0.4
+  _recoilPitchDegrees: 2.5
+  _recoilYawDegrees: 0.6
+  _recoilRecoveryPerSecond: 60
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 2
+  _adsSpreadDegrees: 0.8
+  _moveSpreadDegrees: 1.5
+  _ricochet:
+    _enabled: 1
+    _maxBounces: 2
+    _maxGrazingAngleDegrees: 25
+    _damageMultiplierPerBounce: 0.7

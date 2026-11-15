@@ -69,6 +69,7 @@ namespace Fps.NetV2
         private readonly WeaponActionRequestMessage _weaponAction = new WeaponActionRequestMessage();
         private readonly List<ControlPointZone> _zones = new List<ControlPointZone>();
         private readonly NetV2Weapons _weapons = new NetV2Weapons();
+        private readonly ClientOverheat _overheat = new ClientOverheat();
         private NetV2Structures _structures;
         private ClientWeaponHooks _weaponHooks;
         private ClientTrigger _heldContinuous;
@@ -611,7 +612,7 @@ namespace Fps.NetV2
                 return;
             }
 
-            switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec))
+            switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec, _overheat))
             {
                 case FireDecision.Fire:
                     for (var i = 0; i < pull.Shots; i++)
@@ -649,7 +650,7 @@ namespace Fps.NetV2
 
             if (pull.Pressed && !sending)
             {
-                switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec))
+                switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec, _overheat))
                 {
                     case FireDecision.Fire:
                         SendContinuous(direction, weaponId, trigger.Spec, pull, TriggerEdge.Pressed, owner);
@@ -725,6 +726,7 @@ namespace Fps.NetV2
                 return;
             }
 
+            _overheat.Observe(snapshot);
             _hud?.Apply(snapshot);
             _weaponHooks.Apply(snapshot);
             _loadout.Apply(snapshot, _client.PlayerId);
@@ -886,7 +888,19 @@ namespace Fps.NetV2
             for (var i = 0; i < shot.SegmentCount; i++)
             {
                 ref var segment = ref shot.Segment(i);
-                CombatEvents.RaiseShotFired(shooter, NetV2Math.ToUnity(segment.Origin), NetV2Math.ToUnity(segment.Direction), shot.WeaponId);
+                var origin = NetV2Math.ToUnity(segment.Origin);
+                var direction = NetV2Math.ToUnity(segment.Direction);
+
+                // 前の区間の着弾から続く区間 (跳弾・貫通) は弾の続きなので、銃声やマズルフラッシュを出し直さない。
+                if (i > 0 && ContinuesFrom(ref shot.Segment(i - 1), segment.Origin))
+                {
+                    CombatEvents.RaiseShotContinued(shooter, origin, direction, shot.WeaponId);
+                }
+                else
+                {
+                    CombatEvents.RaiseShotFired(shooter, origin, direction, shot.WeaponId);
+                }
+
                 if (segment.HasImpact)
                 {
                     HitZone? zone = segment.ImpactIsCharacter && segment.HasImpactZone ? segment.ImpactZone : (HitZone?)null;
@@ -895,6 +909,11 @@ namespace Fps.NetV2
                         segment.ImpactMaterialId ?? "", segment.ImpactIsCharacter, zone));
                 }
             }
+        }
+
+        private static bool ContinuesFrom(ref ShotSegment previous, System.Numerics.Vector3 origin)
+        {
+            return previous.HasImpact && System.Numerics.Vector3.DistanceSquared(previous.ImpactPoint, origin) < 1e-6f;
         }
 
         private void HandleTeleported(TeleportedMessage teleported)

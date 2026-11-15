@@ -114,8 +114,8 @@ namespace Fps.Core.Tests
             Assert.That(((BeamState)model).Spec, Is.SameAs(beam));
             Assert.That(wrapped, Is.TypeOf<SpinUpTrigger>());
             Assert.That(wrapped.MinShotSpacingSeconds, Is.EqualTo(0f));
-            Assert.That(wrapped.Press(), Is.EqualTo(1));
-            Assert.That(wrapped.Tick(0.25f), Is.EqualTo(2), "the beam interval, not the fire interval");
+            Assert.That(model.Press(), Is.EqualTo(1));
+            Assert.That(model.Tick(0.25f), Is.EqualTo(2), "the beam interval, not the fire interval");
         }
 
         [Test]

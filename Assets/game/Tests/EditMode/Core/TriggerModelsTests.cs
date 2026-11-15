@@ -102,6 +102,44 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ABeamWeaponCountsItsShotsByTheBeamAndStillWrapsTheParts()
+        {
+            var beam = new BeamSpec(0.125f);
+            var round = new RoundSpec(RoundDelivery.Beam, beam: beam);
+
+            var model = TriggerModels.For(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, new TriggerSpec(FireMode.Auto, 1f), round: round));
+            var wrapped = TriggerModels.For(
+                new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, new TriggerSpec(FireMode.Auto, 1f, spinUp: new SpinUpSpec(0.5f, 2f, 1f)), round: round));
+
+            Assert.That(model, Is.TypeOf<BeamState>());
+            Assert.That(((BeamState)model).Spec, Is.SameAs(beam));
+            Assert.That(wrapped, Is.TypeOf<SpinUpTrigger>());
+            Assert.That(wrapped.MinShotSpacingSeconds, Is.EqualTo(0f));
+            Assert.That(wrapped.Press(), Is.EqualTo(1));
+            Assert.That(wrapped.Tick(0.25f), Is.EqualTo(2), "the beam interval, not the fire interval");
+        }
+
+        [Test]
+        public void AWeaponFiresEveryBeamTickEvenWhenTwoLandInOneFrame()
+        {
+            var weapon = new Weapon(new WeaponSpec(
+                _rifleId, null, WeaponCategory.AssaultRifle, round: new RoundSpec(RoundDelivery.Beam, beam: new BeamSpec(0.125f))));
+            var full = weapon.AmmoInMagazine;
+
+            Assert.That(weapon.Trigger.Press(), Is.EqualTo(1));
+            Assert.That(weapon.TryFire(), Is.True);
+            weapon.Tick(0.25f);
+            var ticks = weapon.Trigger.Tick(0.25f);
+            for (var i = 0; i < ticks; i++)
+            {
+                Assert.That(weapon.TryFire(), Is.True);
+            }
+
+            Assert.That(ticks, Is.EqualTo(2));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(full - 3), "every tick uses a round");
+        }
+
+        [Test]
         public void TheWeaponSpacesItsShotsByTheTrigger()
         {
             var weapon = new Weapon(Spec(new TriggerSpec(FireMode.Auto, 0.25f)));

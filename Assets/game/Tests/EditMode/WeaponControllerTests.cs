@@ -737,6 +737,114 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void HoldingTheLaserDamagesAtTheBeamRateUsesAmmoEveryTickAndStopsOnRelease()
+        {
+            var laser = Laser(0.125f);
+            try
+            {
+                _controller.Initialize(_camera.transform, _attack, _reload, laser);
+                var target = BeamTarget();
+
+                Assert.That(_controller.PullTrigger(true, true), Is.True);
+                for (var frame = 0; frame < 60; frame++)
+                {
+                    _controller.Tick(1f / 60f);
+                    _controller.PullTrigger(true, false);
+                }
+
+                Assert.That(target.Health.Current, Is.EqualTo(1000 - (9 * _laserDamage)), "a tick on press and every 0.125 s for 1 s");
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(100 - 9));
+                var line = _camera.GetComponent<BeamLine>();
+                Assert.That(line.IsVisible, Is.True);
+                Assert.That(line.Line.GetPosition(1).z, Is.EqualTo(9.5f).Within(1e-3f));
+
+                Assert.That(_controller.PullTrigger(false, false), Is.False);
+                for (var frame = 0; frame < 60; frame++)
+                {
+                    _controller.Tick(1f / 60f);
+                    Assert.That(_controller.PullTrigger(false, false), Is.False);
+                }
+
+                Assert.That(target.Health.Current, Is.EqualTo(1000 - (9 * _laserDamage)));
+            }
+            finally
+            {
+                DestroyBeamVisual();
+                Object.DestroyImmediate(laser);
+            }
+        }
+
+        [Test]
+        public void TheLaserDrawsTheVisualOfItsDefinitionWithoutItsColliders()
+        {
+            var laser = Laser(0.1f);
+            var prefab = new GameObject("Laser Visual", typeof(LineRenderer), typeof(BoxCollider));
+            _created.Add(prefab);
+            laser.Beam.Visual = prefab;
+            try
+            {
+                _controller.Initialize(_camera.transform, _attack, _reload, laser);
+
+                Assert.That(_controller.PullTrigger(true, true), Is.True);
+
+                var line = _camera.GetComponent<BeamLine>();
+                Assert.That(line.Visual, Is.Not.SameAs(prefab));
+                Assert.That(line.Line, Is.SameAs(line.Visual.GetComponent<LineRenderer>()));
+                Assert.That(line.Visual.GetComponentInChildren<Collider>(true), Is.Null);
+                Assert.That(BeamLine.FindSettings(_camera, laser.Id), Is.SameAs(laser.Beam));
+                Assert.That(BeamLine.FindSettings(_camera, "unknown"), Is.Null);
+            }
+            finally
+            {
+                DestroyBeamVisual();
+                Object.DestroyImmediate(laser);
+            }
+        }
+
+        // Play していない間は BeamLine の OnDestroy が呼ばれず、撃った者と別に置いた線が残るので、試験の側で消す。
+        private void DestroyBeamVisual()
+        {
+            var line = _camera.GetComponent<BeamLine>();
+            if (line != null && line.Visual != null)
+            {
+                Object.DestroyImmediate(line.Visual);
+            }
+        }
+
+        private const string _laserId = "5b8e2f41-7c3d-4a96-b1e0-9d4c2a7f6e18";
+
+        private const int _laserDamage = 4;
+
+        private static WeaponDefinition Laser(float tickSeconds)
+        {
+            var laser = ScriptableObject.CreateInstance<WeaponDefinition>();
+            laser.name = "Laser";
+            WeaponAssets.Configure(
+                laser,
+                new Fps.Core.WeaponSpec(
+                    _laserId,
+                    null,
+                    Fps.Core.WeaponCategory.AssaultRifle,
+                    new Fps.Core.TriggerSpec(Fps.Core.FireMode.Auto, 1f),
+                    new Fps.Core.AmmoSpec(magazineSize: 100, reserveAmmo: 0),
+                    new Fps.Core.RoundSpec(Fps.Core.RoundDelivery.Beam, 50f, beam: new Fps.Core.BeamSpec(tickSeconds)),
+                    new Fps.Core.ImpactSpec(_laserDamage)));
+            return laser;
+        }
+
+        private Damageable BeamTarget()
+        {
+            var target = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            _created.Add(target);
+            target.transform.position = _camera.transform.position + (_camera.transform.forward * 10f);
+            var damageable = target.AddComponent<Damageable>();
+            damageable.Initialize("beam-target", 1000);
+            target.AddComponent<Hitbox>().Initialize(Fps.Core.HitZone.Body, damageable);
+            Physics.SyncTransforms();
+            return damageable;
+        }
+
+        [Test]
         public void FiringKicksTheRecoilAndTickRecoversIt()
         {
             _rifle.RecoilPitchDegrees = 2f;

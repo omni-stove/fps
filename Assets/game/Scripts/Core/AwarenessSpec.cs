@@ -21,6 +21,15 @@ namespace Fps.Core
         public const float DefaultEngagedHoldThreshold = 0.8f;
         public const float DefaultAlarmRadius = 15f;
 
+        // 銃声 1 発で、すぐそばなら気づきの手前から警戒まで上がる量。連射すると遠くても警戒に届く。
+        public const float DefaultGunshotGain = 0.4f;
+
+        // 歩いて 1 歩ごとに足す量。真後ろを歩き続けると数歩で振り向く。
+        public const float DefaultFootstepGain = 0.1f;
+
+        // 警戒の境目より上で、減り始めてから警戒が続く間に、物音の所まで歩いて着けるだけの量。
+        public const float DefaultInvestigateLevel = 0.75f;
+
         public static AwarenessSpec Default { get; } = new AwarenessSpec();
 
         public AwarenessSpec(
@@ -38,7 +47,10 @@ namespace Fps.Core
             float noticeThreshold = DefaultNoticeThreshold,
             float alertThreshold = DefaultAlertThreshold,
             float alarmRadius = DefaultAlarmRadius,
-            float engagedHoldThreshold = DefaultEngagedHoldThreshold)
+            float engagedHoldThreshold = DefaultEngagedHoldThreshold,
+            float gunshotGain = DefaultGunshotGain,
+            float footstepGain = DefaultFootstepGain,
+            float investigateLevel = DefaultInvestigateLevel)
         {
             if (!(fieldOfViewDegrees > 0f) || fieldOfViewDegrees > 360f)
             {
@@ -74,6 +86,15 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(engagedHoldThreshold), engagedHoldThreshold, "engagedHoldThreshold must be greater than alertThreshold and at most 1");
             }
 
+            RequireFraction(gunshotGain, nameof(gunshotGain));
+            RequireFraction(footstepGain, nameof(footstepGain));
+
+            // 音だけで交戦にしないので満ちた量より下に置き、聞いた敵が調べに行くよう警戒の境目以上にする。
+            if (!(investigateLevel >= alertThreshold) || !(investigateLevel < AwarenessMeter.Full))
+            {
+                throw new ArgumentOutOfRangeException(nameof(investigateLevel), investigateLevel, "investigateLevel must be at least alertThreshold and less than 1");
+            }
+
             FieldOfViewDegrees = fieldOfViewDegrees;
             GainPerSecond = gainPerSecond;
             FullGainDistance = fullGainDistance;
@@ -89,6 +110,9 @@ namespace Fps.Core
             AlertThreshold = alertThreshold;
             AlarmRadius = alarmRadius;
             EngagedHoldThreshold = engagedHoldThreshold;
+            GunshotGain = gunshotGain;
+            FootstepGain = footstepGain;
+            InvestigateLevel = investigateLevel;
         }
 
         public float FieldOfViewDegrees { get; }
@@ -106,6 +130,23 @@ namespace Fps.Core
         public float AlertThreshold { get; }
         public float AlarmRadius { get; }
         public float EngagedHoldThreshold { get; }
+        public float GunshotGain { get; }
+        public float FootstepGain { get; }
+        public float InvestigateLevel { get; }
+
+        // 爆発やリロードの音で上げないのは、爆発は当たれば撃たれたのと同じく交戦になり、リロードは銃声の後にしか鳴らないため。
+        public float HearingGain(SoundCueKind kind)
+        {
+            switch (kind)
+            {
+                case SoundCueKind.Gunshot:
+                    return GunshotGain;
+                case SoundCueKind.Footstep:
+                    return FootstepGain;
+                default:
+                    return 0f;
+            }
+        }
 
         public float PostureFactor(AwarenessPosture posture)
         {

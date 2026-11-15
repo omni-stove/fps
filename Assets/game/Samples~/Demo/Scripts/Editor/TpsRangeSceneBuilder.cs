@@ -183,6 +183,9 @@ namespace Fps.Editor
             // 枠が埋まっているのでタレットは枠に入れない。smoke の手順 (TurretSmokeStep) が Play 中に読んで盾の枠と入れ替えるので、アセットだけ用意する。
             AbilityAssetBuilder.LoadOrBuildTurretAbility();
 
+            // 物を投げる能力も枠に入れず、smoke の手順 (DistractionSmokeStep) がグラップルの枠と入れ替える。
+            AbilityAssetBuilder.LoadOrBuildDistractionAbility();
+
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(path));
             var bootstrap = PopulateScene(scene, weapons, rules, fixtures);
             bootstrap.AbilityDefinitions = new AbilityDefinition[] { grapple, shield };

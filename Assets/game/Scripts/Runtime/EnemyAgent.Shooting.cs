@@ -221,6 +221,7 @@ namespace Fps.Runtime
 
             var damage = ScaleDamage(spec.Damage, _shotDamageMultiplier);
             var result = Hitscan.Fire(eye, direction, spec.Range, damage, spec.Falloff, transform, spec.ExplosionRadius, spec.Id);
+            StealthNoise.Emit(gameObject, new SoundStimulus(SoundCueKind.Gunshot, eye.ToNumerics(), spec.ShotNoiseRadius, false));
             Debug.Log(
                 string.Format(
                     CultureInfo.InvariantCulture,

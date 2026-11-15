@@ -127,7 +127,8 @@
       "hipSpreadDegrees": 0,
       "adsSpreadDegrees": 0,
       "moveSpreadDegrees": 0,
-      "recoilRecoveryDelaySeconds": 0.15
+      "recoilRecoveryDelaySeconds": 0.15,
+      "shotNoiseRadius": 50
     },
     {
       "id": "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45",
@@ -157,7 +158,8 @@
       "hipSpreadDegrees": 0,
       "adsSpreadDegrees": 0,
       "moveSpreadDegrees": 0,
-      "recoilRecoveryDelaySeconds": 0.15
+      "recoilRecoveryDelaySeconds": 0.15,
+      "shotNoiseRadius": 50
     }
   ]
 }

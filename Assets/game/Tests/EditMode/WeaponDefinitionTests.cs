@@ -166,6 +166,7 @@ namespace Fps.Tests.EditMode
             definition.AdsSpreadDegrees = 0.5f;
             definition.MoveSpreadDegrees = 2f;
             definition.RecoilRecoveryDelaySeconds = 0.3f;
+            definition.ShotNoiseRadius = 8f;
 
             var spec = definition.ToSpec();
 
@@ -196,6 +197,7 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(0.5f));
             Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(2f));
             Assert.That(spec.RecoilRecoveryDelaySeconds, Is.EqualTo(0.3f));
+            Assert.That(spec.ShotNoiseRadius, Is.EqualTo(8f));
             Assert.That(definition.ToSpec(), Is.Not.SameAs(spec));
         }
 
@@ -247,6 +249,7 @@ namespace Fps.Tests.EditMode
         [TestCase("AdsSpreadDegrees", "")]
         [TestCase("MoveSpreadDegrees", "")]
         [TestCase("RecoilRecoveryDelaySeconds", "")]
+        [TestCase("ShotNoiseRadius", "")]
         public void ToSpecRejectsInvalidValuesWithTheAssetName(string field, string id)
         {
             var definition = NewDefinition("BrokenWeapon");
@@ -330,6 +333,9 @@ namespace Fps.Tests.EditMode
                     break;
                 case "RecoilRecoveryDelaySeconds":
                     definition.RecoilRecoveryDelaySeconds = -0.1f;
+                    break;
+                case "ShotNoiseRadius":
+                    definition.ShotNoiseRadius = float.NaN;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

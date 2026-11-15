@@ -38,6 +38,7 @@ namespace Fps.Core
                 case SoundCueKind.Footstep:
                 case SoundCueKind.Explosion:
                 case SoundCueKind.Reload:
+                case SoundCueKind.Clatter:
                     return GameText.Get("subtitle.kind." + kind);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown sound cue kind");

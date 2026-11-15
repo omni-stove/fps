@@ -56,7 +56,9 @@ namespace Fps.NetV2
             }
 
             var weapon = latest.Owner.Weapon;
-            if (CurrentWeaponId(latest.Owner) == null || weapon.IsReloading || weapon.IsSwitching)
+            // 1 発ずつ込める武器は、込めた弾があればサーバーがリロードを止めて撃たせるので、リロード中でも送る。
+            var firesWhileReloading = spec != null && spec.Ammo.ReloadStyle == ReloadStyle.PerRound && weapon.AmmoInMagazine > 0;
+            if (CurrentWeaponId(latest.Owner) == null || (weapon.IsReloading && !firesWhileReloading) || weapon.IsSwitching)
             {
                 return FireDecision.Hold;
             }

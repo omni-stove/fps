@@ -136,6 +136,26 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
+        public void APerRoundWeaponFiresTheRoundsLoadedMidReload()
+        {
+            var standing = new CharacterMotorState(new Vector3(0f, 1.1f, 0f), Vector3.Zero, true, false);
+            var perRound = new WeaponSpec(
+                _rifleId, "", WeaponCategory.Shotgun, ammo: new AmmoSpec(6, 30, 2f, reloadStyle: ReloadStyle.PerRound, reloadSecondsPerRound: 0.5f));
+
+            Assert.That(
+                ClientFire.Decide(Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 2, IsReloading = true }), _playerId, standing, perRound),
+                Is.EqualTo(FireDecision.Fire));
+            Assert.That(
+                ClientFire.Decide(Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 0, IsReloading = true }), _playerId, standing, perRound),
+                Is.EqualTo(FireDecision.Hold),
+                "nothing is loaded yet");
+            Assert.That(
+                ClientFire.Decide(Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 2, IsReloading = true }), _playerId, standing, Rifle(FireMode.Auto)),
+                Is.EqualTo(FireDecision.Hold),
+                "a whole-magazine reload still holds the trigger");
+        }
+
+        [Test]
         public void AnOverheatedWeaponWaitsUntilTheServerSendsItFullyCool()
         {
             var standing = new CharacterMotorState(new Vector3(0f, 1.1f, 0f), Vector3.Zero, true, false);

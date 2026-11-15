@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 using UnityEngine.AI;
@@ -164,6 +165,31 @@ namespace Fps.Runtime
             return DeployPreview.Attach(visual, _validColor, _invalidColor);
         }
 
+        // 床に立てる物と、壁や人に貼る物 (C4) とで置ける所が違うので、種類ごとに差し替えられるようにする。
+        // surface は貼り付けた先。床に置く物は null。
+        public virtual DeployVerdict Survey(Transform owner, Vector3 aimOrigin, Vector3 aimDirection, DeploySpec spec, out Pose pose, out Collider surface)
+        {
+            surface = null;
+            return DeploySurveyor.Survey(owner, aimOrigin, aimDirection, spec, out pose);
+        }
+
+        // true なら、置いた物があるうちに短く押す (DetonateTapSeconds より前に離す) と、置いた物を Detonate で起爆する。
+        public virtual bool Detonates => false;
+
+        public virtual float DetonateTapSeconds => 0f;
+
+        // placed は持ち主が置いているこの種類の物すべて (呼ぶ側が写した一覧)。起爆した数を返す。
+        public virtual int Detonate(IReadOnlyList<Deployable> placed, AbilityContext context)
+        {
+            return 0;
+        }
+
+        public virtual bool TryGetDetonateHint(int placedCount, out LocalizedText hint)
+        {
+            hint = default;
+            return false;
+        }
+
         // 足元が原点、前が +Z で、spec の大きさに収める。置けるかの判定がこの大きさで調べるため。
         protected abstract GameObject CreatePlaceholder(DeploySpec spec);
 
@@ -176,9 +202,43 @@ namespace Fps.Runtime
         {
         }
 
-        internal void NotifyPlaced(Deployable deployable, AbilityContext context)
+        // 貼り付けた先 (surface) が要る種類 (C4) だけが上書きする。
+        protected virtual void OnPlaced(Deployable deployable, AbilityContext context, Collider surface)
         {
             OnPlaced(deployable, context);
+        }
+
+        internal void NotifyPlaced(Deployable deployable, AbilityContext context, Collider surface)
+        {
+            OnPlaced(deployable, context, surface);
+        }
+
+        // 爆発させた持ち主のキルフィードに置いた物の名前を出せるよう、持ち主の能力の枠から Id で探す。
+        protected static bool TryFindEquipped<T>(GameObject owner, string kindId, out T definition)
+            where T : DeployAbilityDefinition
+        {
+            definition = null;
+            if (owner == null || string.IsNullOrEmpty(kindId))
+            {
+                return false;
+            }
+
+            var host = owner.GetComponentInChildren<AbilityHost>(true);
+            if (host == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < AbilityHost.SlotCount; i++)
+            {
+                if (host.Definition(i) is T found && string.Equals(found.Id, kindId, StringComparison.Ordinal))
+                {
+                    definition = found;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // 敵が置いた物に向かって歩き続けないよう、NavMesh に穴を開けて避けさせる。

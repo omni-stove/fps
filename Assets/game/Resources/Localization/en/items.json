@@ -27,5 +27,6 @@
   "grenade.flash": "Flashbang",
   "grenade.incendiary": "Incendiary Grenade",
   "grenade.sticky": "Sticky Grenade",
-  "deployable.mine": "Mine"
+  "deployable.mine": "Mine",
+  "deployable.remoteCharge": "C4"
 }

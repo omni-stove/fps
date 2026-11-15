@@ -107,30 +107,15 @@ namespace Fps.Runtime
             set => _armedVolume = value;
         }
 
-        // 爆発させた持ち主のキルフィードに地雷の名前を出せるよう、持ち主の能力の枠から Id で探す。
         public static bool TryFindName(GameObject owner, string kindId, out LocalizedText name)
         {
+            if (TryFindEquipped<MineDeployDefinition>(owner, kindId, out var mine))
+            {
+                name = mine.Name;
+                return true;
+            }
+
             name = default;
-            if (owner == null || string.IsNullOrEmpty(kindId))
-            {
-                return false;
-            }
-
-            var host = owner.GetComponentInChildren<AbilityHost>(true);
-            if (host == null)
-            {
-                return false;
-            }
-
-            for (var i = 0; i < AbilityHost.SlotCount; i++)
-            {
-                if (host.Definition(i) is MineDeployDefinition mine && string.Equals(mine.Id, kindId, StringComparison.Ordinal))
-                {
-                    name = mine.Name;
-                    return true;
-                }
-            }
-
             return false;
         }
 

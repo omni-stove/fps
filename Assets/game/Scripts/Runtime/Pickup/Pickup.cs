@@ -472,7 +472,7 @@ namespace Fps.Runtime
             return state;
         }
 
-        private static IWeaponHolder WeaponsOf(Damageable collector)
+        internal static IWeaponHolder WeaponsOf(Damageable collector)
         {
             var weapons = collector.GetComponentInChildren<WeaponController>(true);
             if (weapons != null && weapons.IsInitialized)

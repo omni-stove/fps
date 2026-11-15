@@ -34,5 +34,7 @@
   "hud.killFeed.headshot": "Headshot",
   "hud.killFeed.friendly": "Friendly fire",
   "hud.killFeed.suicide": "Suicide",
-  "hud.killCam.caption": "KILLCAM {0}"
+  "hud.killCam.caption": "KILLCAM {0}",
+  "hud.ammoCrate.prompt": "[{0}] Resupply ammo",
+  "hud.ammoCrate.full": "Ammo is full"
 }

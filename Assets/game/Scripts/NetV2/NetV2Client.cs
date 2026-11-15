@@ -996,7 +996,15 @@ namespace Fps.NetV2
                 refusal = default;
                 if (Current != null)
                 {
-                    return true;
+                    if (!Current._finished)
+                    {
+                        return true;
+                    }
+
+                    // 起動引数で始めて失敗したクライアントは残っているので、消して始め直す (Destroy は遅れるので先に外す)
+                    var finished = Current;
+                    Current = null;
+                    Destroy(finished.gameObject);
                 }
 
                 if (_server != null)

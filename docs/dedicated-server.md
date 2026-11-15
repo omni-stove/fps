@@ -235,13 +235,14 @@ Device ID でログインしたユーザーで、EOS のクライアントはオ
   を出して手元のサーバー (`make server-dotnet`) へつなぐ。`-lobby quickmatch` と EOS のクイックマッチは、探せなければ理由を出して止まる。
 - `fps-server:<自分の版>` のバケツを探し、`version` が自分の版と同じで、`players` がロビーの最大人数より少なく、
   `server` が IPv4:ポートのロビーのうち、`players` がいちばん多いもの (同じならロビー ID の順で先のもの) を選ぶ。
-  クライアントはロビーには入らず、UDP (`-transport udp`、既定) なら `server` のアドレスへ、`-transport eos` ならロビーのオーナーへ P2P でつなぐ。
+  クライアントはロビーには入らず、`server` のアドレスへ UDP でつなぐ。クイックマッチは UDP だけで、`-lobby quickmatch -transport eos` は理由を出して終了コード 2 で断られる
+  (EOS でつなぐなら `-mode client -transport eos -eos-server <サーバーの ID>`)。
 
 ```
-[Lobby] logging in to search fps-server:0.2.0 (transport=udp)
+[Lobby] logging in to search fps-server:0.2.0
 [Lobby] logged in with the device id user=<自分の ID>
 [Lobby] found 2 lobby(s) in fps-server:0.2.0
-[Lobby] quick match picked id=<ロビー Id> server=203.0.113.10:7777 owner=<サーバーの ID> players=1/8; connecting client 203.0.113.10:7777
+[Lobby] quick match picked id=<ロビー Id> server=203.0.113.10:7777 players=1/8; connecting client 203.0.113.10:7777
 ```
 
 つなげるサーバーが無ければ 5 秒おきに探し直し (`[Lobby] no server to join among 1 found (full x1); searching again in 5s`)、

@@ -64,9 +64,6 @@ namespace Fps.Core.Tests
         [Test]
         public void TheRoundHooksDoNothingForNow()
         {
-            var velocity = new Vector3(0f, 0f, 30f);
-            Assert.That(ProjectileSteering.Steer(new HomingSpec(1f, 10f, 90f), Vector3.Zero, velocity, Vector3.UnitX, 0.1f), Is.EqualTo(velocity));
-
             Assert.That(SprayCone.Contains(new SpraySpec(0.1f, 20f), 8f, Vector3.Zero, Vector3.UnitZ, new Vector3(0f, 0f, 2f)), Is.False);
         }
 

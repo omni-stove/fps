@@ -91,6 +91,19 @@ namespace Fps.NetV2
             request.Trigger = edge;
         }
 
+        // 弾薬の種類の番号は 0 が武器そのものの弾、1 からが WeaponSpec.AmmoTypes の番号 + 1 (サーバーの ServerPlayerWeapons.AmmoTypeIndex と同じ)。
+        public static RoundSpec CurrentRound(OwnerSnapshot owner, WeaponSpec spec)
+        {
+            if (owner == null || spec == null)
+            {
+                return null;
+            }
+
+            var index = owner.Weapon.AmmoTypeIndex;
+            var types = spec.AmmoTypes;
+            return index > 0 && index <= types.Count ? types[index - 1].RoundOr(spec.Round) : spec.Round;
+        }
+
         /// <summary>今持っている武器の Id。武器が届いていなければ null。</summary>
         public static string CurrentWeaponId(OwnerSnapshot owner)
         {

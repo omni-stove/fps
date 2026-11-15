@@ -81,6 +81,13 @@ namespace Fps.Server
                 return false;
             }
 
+            var chargeCheck = shooter.Weapons.AcceptCharge(request.ChargeFraction, out var chargeFraction);
+            if (chargeCheck != ShotRejection.None)
+            {
+                WarnRejected(shooterId, chargeCheck);
+                return false;
+            }
+
             var ammo = shooter.Weapons.TryFire();
             if (ammo != ShotRejection.None)
             {
@@ -99,7 +106,7 @@ namespace Fps.Server
                 spec,
                 round,
                 shooter.Weapons.CurrentImpact,
-                shooter.Weapons.AcceptCharge(request.ChargeFraction),
+                chargeFraction,
                 request.HasLockTarget ? _lockOn.Resolve(shooterId, round, request) : null,
                 time.ToTick(),
                 body.Position,
@@ -253,7 +260,8 @@ namespace Fps.Server
         /// </summary>
         public bool BotFire(int playerId, Vector3 origin, Vector3 direction, int tick)
         {
-            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null)
+            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null
+                || !fighter.Weapons.IsChargedForBot())
             {
                 return false;
             }
@@ -265,7 +273,7 @@ namespace Fps.Server
             _botFire.InterpolationAlpha = 0f;
             _botFire.ShotIndex = fighter.Shots.NextIndex;
             _botFire.ShotGeneration = fighter.Shots.Generation;
-            _botFire.ChargeFraction = 0f;
+            _botFire.ChargeFraction = 1f;
             _botFire.AmmoTypeIndex = fighter.Weapons.AmmoTypeIndex;
             _botFire.HasLockTarget = false;
             _botFire.LockTargetId = 0;

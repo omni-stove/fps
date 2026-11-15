@@ -46,6 +46,18 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheChargeRifleSampleChargesBeforeItFires()
+        {
+            WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
+
+            var charge = Load("ChargeRifle").ToSpec().Trigger.Charge;
+            Assert.That(charge, Is.Not.Null);
+            Assert.That(charge.MinChargeFraction, Is.GreaterThan(0f));
+            Assert.That(charge.FiresBelowMin, Is.False);
+            Assert.That(charge.FullChargeDamageMultiplier, Is.GreaterThan(1f));
+        }
+
+        [Test]
         public void TheRicochetPistolBouncesOffShallowSurfaces()
         {
             WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);

@@ -1,0 +1,53 @@
+{
+  "id": "0a90a121-a287-4aae-8fcf-885ddf59da79",
+  "nameKey": "weapon.chargeRifle",
+  "category": "MarksmanRifle",
+  "shotNoiseRadius": 60,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.25,
+    "charge": {
+      "chargeSeconds": 1.2,
+      "minChargeFraction": 0.25,
+      "fullChargeDamageMultiplier": 3,
+      "firesWhenFull": false,
+      "firesBelowMin": false,
+      "fullChargeSpeedMultiplier": 1.5
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 6,
+    "reserveAmmo": 30,
+    "reloadSeconds": 2.2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 150,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 30,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2,
+    "adsSpreadDegrees": 0.2,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 1.5,
+    "recoilYawDegrees": 0.3,
+    "recoilRecoveryPerSecond": 15,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 8,
+    "zoomLevels": [40],
+    "swayDegrees": 0
+  }
+}

@@ -59,6 +59,12 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("溜め切ったら離さなくても撃つ")]
         private bool _firesWhenFull;
 
+        [SerializeField, Tooltip("撃てる最小の溜めに届かずに離しても、最小の溜めの威力で撃つ (外すと撃たない)")]
+        private bool _firesBelowMin;
+
+        [SerializeField, Min(0.01f), Tooltip("溜め切って撃ったときの飛ぶ弾の弾速の倍率")]
+        private float _fullChargeSpeedMultiplier = ChargeSpec.DefaultFullChargeSpeedMultiplier;
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public float ChargeSeconds { get => _chargeSeconds; set => _chargeSeconds = value; }
@@ -69,8 +75,14 @@ namespace Fps.Runtime
 
         public bool FiresWhenFull { get => _firesWhenFull; set => _firesWhenFull = value; }
 
+        public bool FiresBelowMin { get => _firesBelowMin; set => _firesBelowMin = value; }
+
+        public float FullChargeSpeedMultiplier { get => _fullChargeSpeedMultiplier; set => _fullChargeSpeedMultiplier = value; }
+
         public ChargeSpec ToSpec() =>
-            _enabled ? new ChargeSpec(_chargeSeconds, _minChargeFraction, _fullChargeDamageMultiplier, _firesWhenFull) : null;
+            _enabled ? new ChargeSpec(
+                _chargeSeconds, _minChargeFraction, _fullChargeDamageMultiplier, _firesWhenFull, _firesBelowMin, _fullChargeSpeedMultiplier)
+            : null;
 
         public void Set(ChargeSpec spec)
         {
@@ -81,6 +93,8 @@ namespace Fps.Runtime
                 _minChargeFraction = spec.MinChargeFraction;
                 _fullChargeDamageMultiplier = spec.FullChargeDamageMultiplier;
                 _firesWhenFull = spec.FiresWhenFull;
+                _firesBelowMin = spec.FiresBelowMin;
+                _fullChargeSpeedMultiplier = spec.FullChargeSpeedMultiplier;
             }
         }
     }

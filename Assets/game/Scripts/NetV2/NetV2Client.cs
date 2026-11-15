@@ -645,6 +645,7 @@ namespace Fps.NetV2
             _local.BlocksAds = trigger != null && trigger.BlocksAds;
             if (trigger == null)
             {
+                _hud?.ShowCharge(null);
                 if (pressed)
                 {
                     Debug.LogWarning(LogTag + " cannot fire " + (_weapons.TriggerError ?? "without a weapon"), this);
@@ -655,6 +656,7 @@ namespace Fps.NetV2
 
             trigger.Tick(Time.deltaTime);
             var pull = trigger.Pull(held, pressed);
+            _hud?.ShowCharge(trigger.Model.ChargeFraction);
             if (trigger.IsContinuous)
             {
                 PullContinuous(trigger, pull, direction, weaponId, latest, owner);

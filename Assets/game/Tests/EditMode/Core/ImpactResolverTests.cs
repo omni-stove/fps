@@ -171,16 +171,15 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ChargeDoesNotScaleTheDamageYet()
+        public void TheChargeScalesTheDamage()
         {
             var charge = new ChargeSpec(1f, 0.2f, 3f);
             var impact = new ImpactSpec(30);
+            var hit = ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f);
 
-            Assert.That(ChargeScaling.DamageMultiplier(charge, 1f), Is.EqualTo(1f));
-            Assert.That(ChargeScaling.SpeedMultiplier(charge, 1f), Is.EqualTo(1f));
-            Assert.That(
-                ImpactResolver.Resolve(impact, ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f), charge, 1f)[0].Amount,
-                Is.EqualTo(30));
+            Assert.That(ImpactResolver.Resolve(impact, hit, charge, 1f)[0].Amount, Is.EqualTo(90));
+            Assert.That(ImpactResolver.Resolve(impact, hit, charge, 0.5f)[0].Amount, Is.EqualTo(60));
+            Assert.That(ImpactResolver.Resolve(impact, hit, null, 1f)[0].Amount, Is.EqualTo(30));
         }
 
         [Test]

@@ -33,6 +33,8 @@ namespace Fps.Core
         public const string MinChargeFractionItem = "minChargeFraction";
         public const string FullChargeDamageMultiplierItem = "fullChargeDamageMultiplier";
         public const string FiresWhenFullItem = "firesWhenFull";
+        public const string FiresBelowMinItem = "firesBelowMin";
+        public const string FullChargeSpeedMultiplierItem = "fullChargeSpeedMultiplier";
         public const string SpinUpSecondsItem = "spinUpSeconds";
         public const string StartIntervalMultiplierItem = "startIntervalMultiplier";
         public const string SpinDownSecondsItem = "spinDownSeconds";
@@ -189,7 +191,10 @@ namespace Fps.Core
         public static IReadOnlyList<string> FalloffItemNames { get; } = new[] { StartDistanceItem, EndDistanceItem, MinMultiplierItem };
 
         private static readonly string[] _burstItems = { RoundsPerBurstItem, RoundIntervalSecondsItem };
-        private static readonly string[] _chargeItems = { ChargeSecondsItem, MinChargeFractionItem, FullChargeDamageMultiplierItem, FiresWhenFullItem };
+        private static readonly string[] _chargeItems =
+        {
+            ChargeSecondsItem, MinChargeFractionItem, FullChargeDamageMultiplierItem, FiresWhenFullItem, FiresBelowMinItem, FullChargeSpeedMultiplierItem,
+        };
         private static readonly string[] _spinUpItems = { SpinUpSecondsItem, StartIntervalMultiplierItem, SpinDownSecondsItem };
         private static readonly string[] _cycleItems = { CycleSecondsItem, LeavesAdsItem };
         private static readonly string[] _heatItems = { HeatPerShotItem, CoolPerSecondItem, CoolDelaySecondsItem, OverheatSecondsItem };
@@ -330,7 +335,9 @@ namespace Fps.Core
                 p.RequireFloat(ChargeSecondsItem),
                 p.RequireFloat(MinChargeFractionItem),
                 p.RequireFloat(FullChargeDamageMultiplierItem),
-                p.Bool(FiresWhenFullItem, false)));
+                p.Bool(FiresWhenFullItem, false),
+                p.Bool(FiresBelowMinItem, false),
+                p.Float(FullChargeSpeedMultiplierItem, ChargeSpec.DefaultFullChargeSpeedMultiplier)));
             var spinUp = ReadNested(part, SpinUpItem, _spinUpItems, p => new SpinUpSpec(
                 p.RequireFloat(SpinUpSecondsItem), p.RequireFloat(StartIntervalMultiplierItem), p.RequireFloat(SpinDownSecondsItem)));
             var cycle = ReadNested(part, CycleItem, _cycleItems, p => new CycleSpec(p.RequireFloat(CycleSecondsItem), p.Bool(LeavesAdsItem, false)));
@@ -363,6 +370,8 @@ namespace Fps.Core
                 writer.Float(MinChargeFractionItem, trigger.Charge.MinChargeFraction);
                 writer.Float(FullChargeDamageMultiplierItem, trigger.Charge.FullChargeDamageMultiplier);
                 writer.Bool(FiresWhenFullItem, trigger.Charge.FiresWhenFull);
+                writer.Bool(FiresBelowMinItem, trigger.Charge.FiresBelowMin);
+                writer.Float(FullChargeSpeedMultiplierItem, trigger.Charge.FullChargeSpeedMultiplier);
                 writer.EndObject();
             }
 

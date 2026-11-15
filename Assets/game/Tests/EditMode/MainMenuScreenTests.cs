@@ -163,7 +163,7 @@ namespace Fps.Tests.EditMode
         {
             const string chapter = "Assets/game/Scenes/Chapter1.unity";
             _host.Scenes.Add(chapter);
-            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1", null);
+            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1");
             _screen.Bind(_root);
 
             Assert.That(_screen.Choose(MenuDestination.Campaign), Is.True);
@@ -175,7 +175,7 @@ namespace Fps.Tests.EditMode
         public void TheMissingSceneNoticeNamesTheSceneSetByTheData()
         {
             const string chapter = "Assets/game/Scenes/Chapter1.unity";
-            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1", null);
+            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1");
             _screen.Bind(_root);
             LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(chapter)));
 

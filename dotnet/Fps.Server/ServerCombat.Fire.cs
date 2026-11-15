@@ -18,6 +18,8 @@ namespace Fps.Server
         private readonly ShotIndexCorrectedMessage _shotIndexCorrected = new ShotIndexCorrectedMessage();
         private readonly FireRequestMessage _botFire = new FireRequestMessage();
         private readonly List<ShotTraceSegment> _segments = new List<ShotTraceSegment>();
+        private readonly PelletHits<int> _pelletHits = new PelletHits<int>();
+        private bool _collectingPelletHits;
 
         /// <summary>
         /// 射撃 1 発。撃てる状態・武器と連射の間隔・始点を確かめ、弾倉から 1 発消費してから、<see cref="ShotPlanner"/> で弾を並べ、
@@ -140,13 +142,32 @@ namespace Fps.Server
             }
 
             SendShot(shot.ShooterId, shot.Weapon.Id, _segments);
-            foreach (var segment in _segments)
+
+            // ペレットごとに知らせると 1 回の射撃でヒットマーカーと被弾の表示が何度も出るので、相手ごとにまとめてから送る。
+            _pelletHits.Clear();
+            _collectingPelletHits = true;
+            try
             {
-                if (segment.HasHit)
+                foreach (var segment in _segments)
                 {
-                    _impact.Apply(shot, segment.Direction, segment.Hit);
+                    if (segment.HasHit)
+                    {
+                        _impact.Apply(shot, segment.Direction, segment.Hit);
+                    }
                 }
             }
+            finally
+            {
+                _collectingPelletHits = false;
+            }
+
+            for (var i = 0; i < _pelletHits.Count; i++)
+            {
+                var hit = _pelletHits[i];
+                SendHitResult(shot.ShooterId, hit.Target, hit.Outcome, hit.Damage, hit.Zone, shot.ShooterPosition);
+            }
+
+            _pelletHits.Clear();
         }
 
         /// <summary>
@@ -166,7 +187,14 @@ namespace Fps.Server
                     hurtFighter.LastHitDirection = direction;
                 }
 
-                SendHitResult(shooterId, victimId, outcome, amount, hit.Zone, shot.ShooterPosition);
+                if (_collectingPelletHits)
+                {
+                    _pelletHits.Add(victimId, amount, hit.Zone, outcome);
+                }
+                else
+                {
+                    SendHitResult(shooterId, victimId, outcome, amount, hit.Zone, shot.ShooterPosition);
+                }
             }
 
             var session = _rules.Session;

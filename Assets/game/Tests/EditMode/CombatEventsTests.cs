@@ -105,6 +105,34 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ShotgunPelletsOnOneTargetConfirmOneHitWithTheirTotalDamage()
+        {
+            var weapon = CreatePlayerWeapon(out _, pelletCount: 8, pelletSpreadDegrees: 1f);
+            var target = CreateTarget("target", new Vector3(0f, 1f, 10f), maxHealth: 1000);
+
+            Assert.That(weapon.Fire(), Is.True);
+
+            Assert.That(_recorder.Shots.Count(), Is.EqualTo(8));
+            Assert.That(_recorder.Impacts.Count(), Is.EqualTo(8));
+            Assert.That(_recorder.Confirms.Count(), Is.EqualTo(1));
+            Assert.That(_recorder.Confirms[0].Damage, Is.EqualTo(1000 - target.Health.Current));
+            Assert.That(_recorder.Confirms[0].Killed, Is.False);
+        }
+
+        [Test]
+        public void ShotgunPelletsThatKillConfirmOneKill()
+        {
+            var weapon = CreatePlayerWeapon(out _, pelletCount: 8, pelletSpreadDegrees: 1f);
+            CreateTarget("target", new Vector3(0f, 1f, 10f), maxHealth: 1);
+
+            Assert.That(weapon.Fire(), Is.True);
+
+            Assert.That(_recorder.Confirms.Count(), Is.EqualTo(1));
+            Assert.That(_recorder.Confirms[0].Killed, Is.True);
+            Assert.That(_recorder.Kills.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
         public void ShootingACorpseConfirmsNothingAndDoesNotKillAgain()
         {
             var weapon = CreatePlayerWeapon(out var rifle);
@@ -450,7 +478,7 @@ namespace Fps.Tests.EditMode
             Assert.That(landings[0].Body, Is.Null);
         }
 
-        private WeaponController CreatePlayerWeapon(out WeaponDefinition rifle)
+        private WeaponController CreatePlayerWeapon(out WeaponDefinition rifle, int pelletCount = 1, float pelletSpreadDegrees = 0f)
         {
             var camera = new GameObject("PlayerCamera", typeof(Camera));
             _created.Add(camera);
@@ -462,6 +490,8 @@ namespace Fps.Tests.EditMode
 
             // 着弾点と向きを決め打ちで確かめるので、rifle の腰撃ちのばらつきを切って真っすぐ撃たせる。
             rifle.HipSpreadDegrees = 0f;
+            rifle.PelletCount = pelletCount;
+            rifle.PelletSpreadDegrees = pelletSpreadDegrees;
 
             var weapon = camera.AddComponent<WeaponController>();
             weapon.Initialize(camera.transform, _attack, _reload, rifle);

@@ -26,14 +26,22 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void PelletsAreOneRoundAlongTheCenterForNow()
+        public void AShotgunPlansOneRoundPerPelletAroundTheSpreadCenter()
         {
             var shotgun = new RoundSpec(pelletCount: 8, pelletSpreadDegrees: 6f);
-            var center = Vector3.Normalize(new Vector3(1f, 0f, 1f));
+            var origin = new Vector3(1f, 2f, 3f);
+            var aim = new Vector3(1f, 0f, 1f);
 
-            Assert.That(PelletPattern.Count(shotgun), Is.EqualTo(1));
-            Assert.That(PelletPattern.Direction(shotgun, center, 1, 2, 0), Is.EqualTo(center));
-            Assert.That(ShotPlanner.Plan(shotgun, Vector3.Zero, center, 0f, 1, 2).Rounds.Count, Is.EqualTo(1));
+            var plan = ShotPlanner.Plan(shotgun, origin, aim, 4f, 1, 2);
+
+            var center = SpreadPattern.Direction(aim, 4f, 1, 2);
+            Assert.That(plan.Rounds.Count, Is.EqualTo(8));
+            for (var i = 0; i < plan.Rounds.Count; i++)
+            {
+                Assert.That(plan.Rounds[i].Index, Is.EqualTo(i));
+                Assert.That(plan.Rounds[i].Origin, Is.EqualTo(origin));
+                Assert.That(plan.Rounds[i].Direction, Is.EqualTo(PelletPattern.Direction(shotgun, center, 1, 2, i)));
+            }
         }
 
         [Test]

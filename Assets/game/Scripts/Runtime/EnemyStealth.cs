@@ -306,7 +306,8 @@ namespace Fps.Runtime
             }
 
             // ルールの取り付けは敵の目標探しより後になることがある (キャンペーンはルールを Start で配る) ので、見つからなければ間を置いて探し直す。
-            var target = _agent.Target;
+            // 囮を見せられている間は囮の姿勢と明るさでゲージをためる。
+            var target = _agent.PerceivedTarget;
             if (target != _observedTarget || (target != null && _observedStealth == null && Time.time >= _nextStealthLookup))
             {
                 _observedTarget = target;

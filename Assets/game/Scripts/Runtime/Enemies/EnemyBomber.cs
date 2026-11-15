@@ -351,7 +351,7 @@ namespace Fps.Runtime
             Debug.Log(BomberLog.Phase(Id, previous, next), this);
             if (next == BomberPhase.Fusing)
             {
-                var target = _agent != null ? _agent.Target : null;
+                var target = _agent != null ? _agent.PerceivedTarget : null;
                 Debug.Log(BomberLog.Fuse(Id, target != null ? target.Id : "none", _behavior.Spec.FuseSeconds), this);
             }
         }

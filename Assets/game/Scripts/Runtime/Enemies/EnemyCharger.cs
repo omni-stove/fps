@@ -235,7 +235,7 @@ namespace Fps.Runtime
         // 当てるのは狙っている相手だけにする。途中の味方を巻き込むと、群れで出したときに突進のたびに同士討ちになる。
         private bool TryStrike(ChargerSpec spec, Vector3 direction)
         {
-            var target = _agent.Target;
+            var target = _agent.PerceivedTarget;
             if (target == null || target.IsDead)
             {
                 return false;
@@ -404,7 +404,7 @@ namespace Fps.Runtime
             switch (next)
             {
                 case ChargerPhase.WindingUp:
-                    var target = _agent != null ? _agent.Target : null;
+                    var target = _agent != null ? _agent.PerceivedTarget : null;
                     Debug.Log(ChargerLog.Windup(Id, target != null ? target.Id : "none", spec.WindupSeconds), this);
                     break;
                 case ChargerPhase.Charging:

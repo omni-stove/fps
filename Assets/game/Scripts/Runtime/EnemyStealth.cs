@@ -294,7 +294,7 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(attacker));
             }
 
-            if (_awareness == null || (_agent.Brain != null && _agent.Brain.IsDead) || _agent.Target != attacker || !_awareness.Meter.IsSeeing)
+            if (_awareness == null || (_agent.Brain != null && _agent.Brain.IsDead) || _agent.PerceivedTarget != attacker || !_awareness.Meter.IsSeeing)
             {
                 return false;
             }

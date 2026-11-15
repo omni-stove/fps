@@ -39,7 +39,7 @@ namespace Fps.NetV2
         private int _remainingSeconds = -1;
         private HudDensity _density = HudDensity.Full;
         private WeaponSync _weapon;
-        private LocalizedText _notice;
+        private HudNotice _notice;
         private bool _noticeShown;
         private float? _idleRemaining;
         private int _idleShownSeconds = -1;
@@ -249,56 +249,49 @@ namespace Fps.NetV2
         {
             var match = _latest.Match;
             ReadStatus(out _statusKind, out _statusShownSeconds);
-            LocalizedText notice;
+            HudNotice notice;
             if (match.State == GameModeState.Ended)
             {
-                notice = HudFormat.NextMatch(Math.Max(0, match.NextMatchSeconds));
+                notice = HudNotice.NextMatch(Math.Max(0, match.NextMatchSeconds));
             }
             else if (_idleRemaining.HasValue)
             {
                 _idleShownSeconds = HudFormat.DisplayedSeconds(_idleRemaining.Value);
-                notice = HudFormat.IdleWarning(_idleShownSeconds);
+                notice = HudNotice.IdleWarning(_idleShownSeconds);
             }
             else if (present && own.Downed.IsDowned)
             {
-                notice = HudFormat.Downed(Math.Max(0, own.Downed.BleedoutSeconds), Math.Min(100, (int)own.Downed.RevivePercent));
+                notice = HudNotice.Downed(Math.Max(0, own.Downed.BleedoutSeconds), Math.Min(100, (int)own.Downed.RevivePercent));
             }
             else if (present && own.Health <= 0 && match.State == GameModeState.Playing)
             {
                 notice = match.Rules.RespawnMode == RespawnMode.Wave
-                    ? HudFormat.RespawnNotice(RespawnMode.Wave, Math.Max(0, match.NextWaveSeconds))
+                    ? HudNotice.ForRespawn(RespawnMode.Wave, Math.Max(0, match.NextWaveSeconds))
                     : match.Rules.RespawnMode == RespawnMode.None
-                        ? HudFormat.RespawnNotice(RespawnMode.None, 0)
-                        : default;
+                        ? HudNotice.ForRespawn(RespawnMode.None, 0)
+                        : HudNotice.None;
             }
             else if (present && own.SpawnProtectionSeconds > 0)
             {
-                notice = HudFormat.SpawnProtected(own.SpawnProtectionSeconds);
+                notice = HudNotice.SpawnProtected(own.SpawnProtectionSeconds);
             }
             else if (present && _statusKind != null && own.Health > 0)
             {
-                notice = HudFormat.StatusEffect(_statusKind, _statusShownSeconds);
+                notice = HudNotice.StatusEffect(_statusKind, _statusShownSeconds);
             }
             else
             {
                 notice = default;
             }
 
-            if (_noticeShown && notice.Equals(_notice))
+            if (_noticeShown && notice == _notice)
             {
                 return;
             }
 
             _notice = notice;
             _noticeShown = true;
-            if (notice.IsEmpty)
-            {
-                _hud.Model.SetNotice(HudFormat.NoNotice);
-            }
-            else
-            {
-                _hud.Model.SetNotice(notice);
-            }
+            _hud.Model.SetNotice(notice);
         }
 
         private void ShowControlPoints(SnapshotMessage snapshot)

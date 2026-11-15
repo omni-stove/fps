@@ -9,13 +9,14 @@ namespace Fps.Core
     /// <summary>
     /// 操作設定。<see cref="HoldAction"/> ごとの <see cref="HoldMode"/> を、キーボード／マウスとゲームパッドで別々に持ち、
     /// 感度・視野角・音量 (<see cref="ControlValue"/>) を整数で持ち、オンラインの回線の表示を出すか (<see cref="ShowNetStats"/>) と
-    /// 敵味方の色の組 (<see cref="Palette"/>) と音の合図の字幕を出すか (<see cref="ShowSubtitles"/>) と画面の言語 (<see cref="Language"/>) を持つ。不変。
+    /// 敵味方の色の組 (<see cref="Palette"/>) と音の合図の字幕を出すか (<see cref="ShowSubtitles"/>) と画面の言語 (<see cref="Language"/>) と
+    /// 血を出すか (<see cref="ShowBlood"/>) を持つ。不変。
     /// <see cref="ToJson"/> と <see cref="FromJson(string, GameLanguage, out IReadOnlyList{string})"/> で文字列にして保存する。
     /// </summary>
     public sealed class ControlSettings : IEquatable<ControlSettings>
     {
         /// <summary>このコードが書き出す形式のバージョン。</summary>
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
 
         /// <summary>
         /// 読める最も古い形式のバージョン。1 は Hold/Toggle だけを持ち、数値の設定は初期値で補う。
@@ -23,6 +24,8 @@ namespace Fps.Core
         /// 3 は色の組 (<see cref="Palette"/>) を持たず、初期値 (<see cref="ColorPalette.Standard"/>) で補う。
         /// 4 は字幕 (<see cref="ShowSubtitles"/>) を持たず、初期値 (出さない) で補う。
         /// 5 は言語 (<see cref="Language"/>) を持たず、読む側が渡した既定の言語 (OS の言語) で補う。
+        /// 6 は画面の揺れ・ビューモデルの揺れの強さ (<see cref="ControlValue.CameraShakeIntensity"/>・<see cref="ControlValue.ViewmodelMotionIntensity"/>) と
+        /// 血の表示 (<see cref="ShowBlood"/>) を持たず、初期値 (揺れは 100%・血は出す) で補う。
         /// </summary>
         public const int OldestReadableVersion = 1;
 
@@ -42,6 +45,9 @@ namespace Fps.Core
         private const string _paletteKey = "colorPalette";
         private const string _showSubtitlesKey = "showSubtitles";
         private const string _languageKey = "language";
+        private const string _cameraShakeKey = "cameraShake";
+        private const string _viewmodelMotionKey = "viewmodelMotion";
+        private const string _showBloodKey = "showBlood";
         private const string _standardPaletteName = "standard";
         private const string _redGreenPaletteName = "redGreen";
         private const string _blueYellowPaletteName = "blueYellow";
@@ -59,6 +65,8 @@ namespace Fps.Core
             ControlValue.FieldOfView,
             ControlValue.MasterVolume,
             ControlValue.EffectsVolume,
+            ControlValue.CameraShakeIntensity,
+            ControlValue.ViewmodelMotionIntensity,
         };
 
         // 添字は ValueIndex(value)。
@@ -71,7 +79,12 @@ namespace Fps.Core
             new ControlValueRange(60, 90, 60),
             new ControlValueRange(0, 100, 100),
             new ControlValueRange(0, 100, 100),
+            new ControlValueRange(0, 100, 100),
+            new ControlValueRange(0, 100, 100),
         };
+
+        // 添字は ValueIndex(value)。その値を書き始めた形式のバージョン。古い形式に無い値を、欠けた値として警告しないために使う。
+        private static readonly int[] _valueSinceVersions = { 2, 2, 2, 2, 2, 2, 7, 7 };
 
         private static readonly string[] _versionOneRootKeys = { _versionKey, _keyboardMouseKey, _gamepadKey };
 
@@ -106,11 +119,20 @@ namespace Fps.Core
             _showNetStatsKey, _paletteKey, _showSubtitlesKey,
         };
 
+        private static readonly string[] _versionSixRootKeys =
+        {
+            _versionKey, _keyboardMouseKey, _gamepadKey,
+            _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
+            _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
+            _showNetStatsKey, _paletteKey, _showSubtitlesKey, _languageKey,
+        };
+
         private static readonly string[] _rootKeys =
         {
             _versionKey, _keyboardMouseKey, _gamepadKey,
             _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
             _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
+            _cameraShakeKey, _viewmodelMotionKey, _showBloodKey,
             _showNetStatsKey, _paletteKey, _showSubtitlesKey, _languageKey,
         };
 
@@ -120,7 +142,7 @@ namespace Fps.Core
         /// 初期値。キーボード／マウスはすべて Hold。
         /// ゲームパッドはスティックを押し込み続けにくいのでダッシュとしゃがみを Toggle にし、ADS はトリガーなので Hold。
         /// 数値は <see cref="RangeOf"/> の初期値。回線の表示は出さない。色の組は <see cref="ColorPalette.Standard"/>。字幕は出さない。
-        /// 言語は日本語。初めて起動したときの言語は OS で決まるので、Core の外 (ControlSettingsStore) が <see cref="DefaultFor"/> で選ぶ。
+        /// 言語は日本語。初めて起動したときの言語は OS で決まるので、Core の外 (ControlSettingsStore) が <see cref="DefaultFor"/> で選ぶ。血は出す。
         /// </summary>
         public static ControlSettings Default { get; } = new ControlSettings(
             new[]
@@ -132,7 +154,8 @@ namespace Fps.Core
             false,
             ColorPalette.Standard,
             false,
-            GameLanguage.Japanese);
+            GameLanguage.Japanese,
+            true);
 
         // 添字は Index(device, action)。
         private readonly HoldMode[] _modes;
@@ -148,13 +171,16 @@ namespace Fps.Core
 
         private readonly GameLanguage _language;
 
+        private readonly bool _showBlood;
+
         private ControlSettings(
             HoldMode[] modes,
             int[] amounts,
             bool showNetStats,
             ColorPalette palette,
             bool showSubtitles,
-            GameLanguage language)
+            GameLanguage language,
+            bool showBlood)
         {
             _modes = modes;
             _amounts = amounts;
@@ -162,6 +188,7 @@ namespace Fps.Core
             _palette = palette;
             _showSubtitles = showSubtitles;
             _language = language;
+            _showBlood = showBlood;
         }
 
         /// <summary>言語だけを language にした初期値 (<see cref="Default"/>)。</summary>
@@ -230,6 +257,15 @@ namespace Fps.Core
         /// <summary>画面に出す文字の言語。</summary>
         public GameLanguage Language => _language;
 
+        /// <summary>画面の揺れに掛ける倍率 (0〜1)。0 で揺らさない。</summary>
+        public float CameraShakeIntensity => Percent(ControlValue.CameraShakeIntensity);
+
+        /// <summary>手元の武器 (ビューモデル) の揺れに掛ける倍率 (0〜1)。0 で揺らさない。</summary>
+        public float ViewmodelMotionIntensity => Percent(ControlValue.ViewmodelMotionIntensity);
+
+        /// <summary>キャラが撃たれたときの血しぶきと血痕を出すか。</summary>
+        public bool ShowBlood => _showBlood;
+
         /// <summary>device の action だけを mode に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings With(InputDeviceKind device, HoldAction action, HoldMode mode)
         {
@@ -246,7 +282,7 @@ namespace Fps.Core
 
             var modes = (HoldMode[])_modes.Clone();
             modes[index] = mode;
-            return new ControlSettings(modes, _amounts, _showNetStats, _palette, _showSubtitles, _language);
+            return new ControlSettings(modes, _amounts, _showNetStats, _palette, _showSubtitles, _language, _showBlood);
         }
 
         /// <summary>数値の設定 value だけを amount に変えた設定を返す。この設定は変わらない。</summary>
@@ -270,13 +306,13 @@ namespace Fps.Core
 
             var amounts = (int[])_amounts.Clone();
             amounts[index] = amount;
-            return new ControlSettings(_modes, amounts, _showNetStats, _palette, _showSubtitles, _language);
+            return new ControlSettings(_modes, amounts, _showNetStats, _palette, _showSubtitles, _language, _showBlood);
         }
 
         /// <summary>回線の表示 (<see cref="ShowNetStats"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowNetStats(bool show)
         {
-            return show == _showNetStats ? this : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles, _language);
+            return show == _showNetStats ? this : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles, _language, _showBlood);
         }
 
         /// <summary>色の組 (<see cref="Palette"/>) だけを palette に変えた設定を返す。この設定は変わらない。</summary>
@@ -284,13 +320,13 @@ namespace Fps.Core
         public ControlSettings WithPalette(ColorPalette palette)
         {
             PaletteName(palette);
-            return palette == _palette ? this : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles, _language);
+            return palette == _palette ? this : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles, _language, _showBlood);
         }
 
         /// <summary>字幕 (<see cref="ShowSubtitles"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowSubtitles(bool show)
         {
-            return show == _showSubtitles ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show, _language);
+            return show == _showSubtitles ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show, _language, _showBlood);
         }
 
         /// <summary>言語 (<see cref="Language"/>) だけを language に変えた設定を返す。この設定は変わらない。</summary>
@@ -298,7 +334,13 @@ namespace Fps.Core
         public ControlSettings WithLanguage(GameLanguage language)
         {
             GameLanguages.Code(language);
-            return language == _language ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, language);
+            return language == _language ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, language, _showBlood);
+        }
+
+        /// <summary>血の表示 (<see cref="ShowBlood"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
+        public ControlSettings WithShowBlood(bool show)
+        {
+            return show == _showBlood ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, _language, show);
         }
 
         /// <summary>JSON の文字列に書き出す。<see cref="FromJson(string, out IReadOnlyList{string})"/> で同じ内容に戻る。</summary>
@@ -332,6 +374,8 @@ namespace Fps.Core
             }
 
             builder.Append(',');
+            AppendKey(builder, _showBloodKey).Append(_showBlood ? "true" : "false");
+            builder.Append(',');
             AppendKey(builder, _showNetStatsKey).Append(_showNetStats ? "true" : "false");
             builder.Append(',');
             AppendKey(builder, _paletteKey);
@@ -353,8 +397,9 @@ namespace Fps.Core
         /// バージョン 1 (数値の設定が無い形式) は、数値の設定を何も言わずに初期値で補う。
         /// バージョン 1・2 (回線の表示が無い形式) は、回線の表示を何も言わずに初期値で補う。
         /// バージョン 1〜3 (色の組が無い形式) は、色の組を何も言わずに初期値で補う。
-        /// バージョン 1〜4 (字幕が無い形式) は、字幕を何も言わずに初期値で補う。知らない項目は読み飛ばす。
-        /// 言語は <see cref="Default"/> の言語 (日本語) を既定にする。
+        /// バージョン 1〜4 (字幕が無い形式) は、字幕を何も言わずに初期値で補う。
+        /// バージョン 1〜6 (揺れの強さと血の表示が無い形式) は、揺れの強さと血の表示を何も言わずに初期値で補う。知らない項目は読み飛ばす。
+        /// 血の表示は、無い・真偽値でなければ初期値にする。言語は <see cref="Default"/> の言語 (日本語) を既定にする。
         /// </summary>
         /// <param name="json">読む文字列。</param>
         /// <param name="problems">初期値に戻した所や読み飛ばした所の理由。問題が無ければ空。</param>
@@ -419,7 +464,9 @@ namespace Fps.Core
             var hasPalette = version >= 4;
             var hasShowSubtitles = version >= 5;
             var hasLanguage = version >= 6;
-            var knownKeys = hasLanguage ? _rootKeys
+            var hasPresentation = version >= 7;
+            var knownKeys = hasPresentation ? _rootKeys
+                : hasLanguage ? _versionSixRootKeys
                 : hasShowSubtitles ? _versionFiveRootKeys
                 : hasPalette ? _versionFourRootKeys
                 : hasShowNetStats ? _versionThreeRootKeys
@@ -431,7 +478,7 @@ namespace Fps.Core
             var amounts = (int[])Default._amounts.Clone();
             if (hasValues)
             {
-                ReadValues(root, amounts, found);
+                ReadValues(root, version, amounts, found);
             }
 
             var showNetStats = hasShowNetStats ? ReadFlag(root, _showNetStatsKey, Default._showNetStats, found) : Default._showNetStats;
@@ -440,7 +487,8 @@ namespace Fps.Core
                 ? ReadFlag(root, _showSubtitlesKey, Default._showSubtitles, found)
                 : Default._showSubtitles;
             var language = hasLanguage ? ReadLanguage(root, defaultLanguage, found) : defaultLanguage;
-            return new ControlSettings(modes, amounts, showNetStats, palette, showSubtitles, language);
+            var showBlood = hasPresentation ? ReadFlag(root, _showBloodKey, Default._showBlood, found) : Default._showBlood;
+            return new ControlSettings(modes, amounts, showNetStats, palette, showSubtitles, language, showBlood);
         }
 
         public bool Equals(ControlSettings other)
@@ -469,7 +517,8 @@ namespace Fps.Core
             return _showNetStats == other._showNetStats
                 && _palette == other._palette
                 && _showSubtitles == other._showSubtitles
-                && _language == other._language;
+                && _language == other._language
+                && _showBlood == other._showBlood;
         }
 
         public override bool Equals(object obj)
@@ -493,7 +542,8 @@ namespace Fps.Core
             hash = unchecked((hash * 31) + (_showNetStats ? 1 : 0));
             hash = unchecked((hash * 31) + (int)_palette);
             hash = unchecked((hash * 31) + (_showSubtitles ? 1 : 0));
-            return unchecked((hash * 31) + _language.GetHashCode());
+            hash = unchecked((hash * 31) + _language.GetHashCode());
+            return unchecked((hash * 31) + (_showBlood ? 1 : 0));
         }
 
         public override string ToString()
@@ -539,12 +589,17 @@ namespace Fps.Core
             }
         }
 
-        private static void ReadValues(Dictionary<string, object> root, int[] amounts, List<string> problems)
+        private static void ReadValues(Dictionary<string, object> root, long version, int[] amounts, List<string> problems)
         {
             foreach (var value in _values)
             {
                 var key = KeyOf(value);
                 var index = ValueIndex(value);
+                if (version < _valueSinceVersions[index])
+                {
+                    continue;
+                }
+
                 var range = _ranges[index];
                 if (!root.TryGetValue(key, out var raw))
                 {
@@ -722,6 +777,10 @@ namespace Fps.Core
                     return _masterVolumeKey;
                 case ControlValue.EffectsVolume:
                     return _effectsVolumeKey;
+                case ControlValue.CameraShakeIntensity:
+                    return _cameraShakeKey;
+                case ControlValue.ViewmodelMotionIntensity:
+                    return _viewmodelMotionKey;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }

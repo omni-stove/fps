@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Fps.Core;
 using UnityEngine;
 
@@ -12,6 +13,11 @@ namespace Fps.Runtime
         // 瞬間移動・復活・視点の切り替えで向きが飛んだフレームを、1 回の素早い振り向きとして遅れに入れないよう捨てる。
         public const float MaxTrackedDegreesPerSecond = 3600f;
 
+        public const string LogTag = ViewmodelPresenter.LogTag;
+
+        // 設定画面で選んだ倍率は、プレイヤーが作り直されても (リスポーン・シーンの切り替え) 保たれるよう本体ごとではなく全体で持つ。
+        private static float _globalMultiplier = 1f;
+
         private readonly ViewmodelSway _sway = new ViewmodelSway();
         private ViewRig _rig;
         private AimDownSights _ads;
@@ -21,6 +27,26 @@ namespace Fps.Runtime
         private bool _hasLastView;
         private float _lastYaw;
         private float _lastPitchUp;
+
+        public static float GlobalMultiplier
+        {
+            get => _globalMultiplier;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "multiplier must be a non-negative finite number");
+                }
+
+                if (Mathf.Approximately(_globalMultiplier, value))
+                {
+                    return;
+                }
+
+                _globalMultiplier = value;
+                Debug.Log(FormatMultiplierLog(value));
+            }
+        }
 
         public ViewmodelSway Sway => _sway;
 
@@ -91,6 +117,11 @@ namespace Fps.Runtime
             pivot.localScale = Vector3.one;
             _pivot = pivot;
             return _pivot;
+        }
+
+        public static string FormatMultiplierLog(float multiplier)
+        {
+            return LogTag + " motion multiplier=" + multiplier.ToString("0.00", CultureInfo.InvariantCulture);
         }
 
         public bool IsOwnShot(GameObject shooter)
@@ -213,8 +244,9 @@ namespace Fps.Runtime
                 return;
             }
 
-            _pivot.localPosition = _sway.Position.ToUnity();
-            _pivot.localRotation = Quaternion.Euler(-_sway.PitchUpDegrees, _sway.YawRightDegrees, 0f);
+            var multiplier = _globalMultiplier;
+            _pivot.localPosition = _sway.Position.ToUnity() * multiplier;
+            _pivot.localRotation = Quaternion.Euler(-_sway.PitchUpDegrees * multiplier, _sway.YawRightDegrees * multiplier, 0f);
         }
     }
 }

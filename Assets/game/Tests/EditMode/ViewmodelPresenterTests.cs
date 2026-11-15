@@ -29,6 +29,7 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             ViewmodelPresenter.ResetOnPlay();
+            ViewmodelMotion.GlobalMultiplier = 1f;
             _body = new GameObject("Body");
             var eye = new GameObject("Eye").transform;
             eye.SetParent(_body.transform, false);
@@ -67,6 +68,7 @@ namespace Fps.Tests.EditMode
             Object.DestroyImmediate(_handgunPrefab);
             Object.DestroyImmediate(_catalog);
             ViewmodelPresenter.ResetOnPlay();
+            ViewmodelMotion.GlobalMultiplier = 1f;
         }
 
         private void Capture(string condition, string stackTrace, LogType type)
@@ -410,6 +412,54 @@ namespace Fps.Tests.EditMode
             Assert.That(_rig.ViewmodelRoot.localRotation, Is.EqualTo(Quaternion.identity));
             Assert.That(_rig.ShakeRoot.localPosition, Is.EqualTo(shakePosition));
             Assert.That(motion.Pivot.localPosition, Is.Not.EqualTo(Vector3.zero));
+        }
+
+        [Test]
+        public void TheGlobalMultiplierScalesTheMotion()
+        {
+            _presenter.Refresh();
+            var motion = _presenter.Motion;
+            motion.HorizontalSpeedSource = () => 5f;
+            motion.AdsProgressSource = () => 0f;
+
+            var full = MaxOffset(motion, 60);
+            motion.ResetMotion();
+            ViewmodelMotion.GlobalMultiplier = 0.5f;
+            var half = MaxOffset(motion, 60);
+
+            Assert.That(full, Is.GreaterThan(0f));
+            Assert.That(half, Is.EqualTo(full * 0.5f).Within(full * 1e-3f));
+        }
+
+        [Test]
+        public void ZeroGlobalMultiplierKeepsThePivotStill()
+        {
+            _presenter.Refresh();
+            var motion = _presenter.Motion;
+            motion.HorizontalSpeedSource = () => 5f;
+            motion.AdsProgressSource = () => 0f;
+            ViewmodelMotion.GlobalMultiplier = 0f;
+
+            motion.Kick();
+            for (var i = 0; i < 60; i++)
+            {
+                _body.transform.Rotate(0f, 1.5f, 0f);
+                motion.Step(Frame);
+
+                Assert.That(motion.Pivot.localPosition, Is.EqualTo(Vector3.zero), $"frame {i}");
+                Assert.That(motion.Pivot.localRotation, Is.EqualTo(Quaternion.identity), $"frame {i}");
+            }
+
+            Assert.That(motion.Sway.IsAtRest, Is.False, "the sway still runs; only the output is scaled");
+        }
+
+        [Test]
+        public void GlobalMultiplierRejectsInvalidValues()
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => ViewmodelMotion.GlobalMultiplier = -0.1f);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => ViewmodelMotion.GlobalMultiplier = float.NaN);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => ViewmodelMotion.GlobalMultiplier = float.PositiveInfinity);
+            Assert.That(ViewmodelMotion.GlobalMultiplier, Is.EqualTo(1f));
         }
 
         private static void Step(ViewmodelMotion motion, int frames)

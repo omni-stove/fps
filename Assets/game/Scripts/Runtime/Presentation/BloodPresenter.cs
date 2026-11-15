@@ -65,12 +65,26 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 血の表示をまとめて出すか。false にすると新しい血しぶきと血痕を出さず (ログも出さない)、出ている血は次の <see cref="Tick"/> で消す。
-        /// 設定画面から切り替える口。Play を始めるたびに true に戻る。
+        /// 設定画面から切り替える口 (<see cref="AppliedControlSettings"/> が <see cref="ControlSettings.ShowBlood"/> を入れる)。Play を始めるたびに true に戻る。
         /// </summary>
         public static bool BloodEnabled
         {
             get => _bloodEnabled;
-            set => _bloodEnabled = value;
+            set
+            {
+                if (_bloodEnabled == value)
+                {
+                    return;
+                }
+
+                _bloodEnabled = value;
+                Debug.Log(FormatEnabledLog(value));
+            }
+        }
+
+        public static string FormatEnabledLog(bool enabled)
+        {
+            return LogTag + " enabled=" + (enabled ? "true" : "false");
         }
 
         /// <summary>

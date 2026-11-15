@@ -139,6 +139,12 @@ namespace Fps.Runtime
 
         public float AddTrauma(float amount, string source, string detail)
         {
+            // 揺れを切った人の画面で、後から倍率を上げたときに溜まっていた揺れが急に出ないよう、0 の間は溜めない。
+            if (_globalMultiplier <= 0f)
+            {
+                return 0f;
+            }
+
             var added = _model.AddTrauma(amount);
             if (amount > 0f)
             {

@@ -66,8 +66,8 @@ namespace Fps.Tests.EditMode
         public void VersionFiveDataSilentlyGetsTheDefaultLanguage()
         {
             // 言語を足す前のゲームが書いた形式。
-            var versionFive = ControlSettings.Default.WithShowSubtitles(true).ToJson()
-                .Replace("\"version\":6", "\"version\":5")
+            var versionFive = WithoutPresentation(ControlSettings.Default.WithShowSubtitles(true).ToJson())
+                .Replace("\"version\":7", "\"version\":5")
                 .Replace(",\"language\":\"ja\"", string.Empty);
             PlayerPrefs.SetString(_store.Key, versionFive);
 
@@ -191,7 +191,60 @@ namespace Fps.Tests.EditMode
             Assert.That(loaded.ShowNetStats, Is.True);
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
             Assert.That(loaded.ShowSubtitles, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":6"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":7"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void SavesThePresentationSettingsAndLoadsThemBackAfterARestart()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.CameraShakeIntensity, 0)
+                .With(ControlValue.ViewmodelMotionIntensity, 45)
+                .WithShowBlood(false);
+
+            _store.Save(settings);
+
+            var loaded = new ControlSettingsStore(_store.Key).Load();
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.CameraShakeIntensity, Is.EqualTo(0f));
+            Assert.That(loaded.ViewmodelMotionIntensity, Is.EqualTo(0.45f).Within(1e-6f));
+            Assert.That(loaded.ShowBlood, Is.False);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void VersionSixDataSilentlyGetsThePresentationDefaults()
+        {
+            // 揺れの強さと血の表示を足す前のゲームが書いた形式。
+            var versionSix = WithoutPresentation(
+                    ControlSettings.Default.WithPalette(ColorPalette.BlueYellow).WithLanguage(GameLanguage.English).ToJson())
+                .Replace("\"version\":7", "\"version\":6");
+            Assert.That(versionSix, Does.Not.Contain("showBlood"));
+            PlayerPrefs.SetString(_store.Key, versionSix);
+
+            var loaded = new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Load();
+
+            Assert.That(loaded.Get(ControlValue.CameraShakeIntensity), Is.EqualTo(ControlSettings.RangeOf(ControlValue.CameraShakeIntensity).Default));
+            Assert.That(loaded.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(ControlSettings.RangeOf(ControlValue.ViewmodelMotionIntensity).Default));
+            Assert.That(loaded.ShowBlood, Is.EqualTo(ControlSettings.Default.ShowBlood));
+            Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.BlueYellow), "the saved value");
+            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.English), "the saved value");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ABrokenBloodFlagFallsBackToShowingBloodWithAWarning()
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                ControlSettings.Default.With(ControlValue.CameraShakeIntensity, 30).ToJson().Replace("\"showBlood\":true", "\"showBlood\":\"no\""));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*showBlood"));
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.ShowBlood, Is.True);
+            Assert.That(loaded.Get(ControlValue.CameraShakeIntensity), Is.EqualTo(30), "the saved value");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -258,6 +311,12 @@ namespace Fps.Tests.EditMode
         public void UsesTheGameKeyByDefault()
         {
             Assert.That(new ControlSettingsStore().Key, Is.EqualTo(ControlSettingsStore.DefaultKey));
+        }
+
+        // 今の形式から、バージョン 7 で足した揺れの強さと血の表示を除く (初期値のときだけ)。
+        private static string WithoutPresentation(string json)
+        {
+            return json.Replace(",\"cameraShake\":100,\"viewmodelMotion\":100,\"showBlood\":true", string.Empty);
         }
     }
 }

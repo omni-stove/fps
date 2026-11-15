@@ -212,6 +212,7 @@ namespace Fps.Tests.EditMode
             var spray = presenter.SprayPoolFor(_head).Items[0];
             var decal = presenter.Decals.Items[0];
 
+            LogAssert.Expect(LogType.Log, BloodPresenter.FormatEnabledLog(false));
             BloodPresenter.BloodEnabled = false;
             var shown = presenter.PlayImpact(CharacterImpact(new Vector3(0f, 1f, 10f), HitZone.Head), Vector3.forward);
             presenter.Tick(Time.time);

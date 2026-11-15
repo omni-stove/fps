@@ -196,7 +196,8 @@ namespace Fps.Server
         /// </summary>
         public bool BotFire(int playerId, Vector3 origin, Vector3 direction, int tick)
         {
-            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null)
+            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null
+                || !fighter.Weapons.IsChargedForBot())
             {
                 return false;
             }
@@ -208,7 +209,6 @@ namespace Fps.Server
             _botFire.InterpolationAlpha = 0f;
             _botFire.ShotIndex = fighter.Shots.NextIndex;
             _botFire.ShotGeneration = fighter.Shots.Generation;
-            // Bot は溜めを持たないので満タンを申告し、前の射撃からの秒数で届く分 (AcceptCharge) だけ溜めたことにする。
             _botFire.ChargeFraction = 1f;
             _botFire.AmmoTypeIndex = fighter.Weapons.AmmoTypeIndex;
             _botFire.HasLockTarget = false;

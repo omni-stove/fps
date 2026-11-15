@@ -11,6 +11,8 @@ namespace Fps.Core
         private float _chargedSeconds;
         private bool _held;
         private bool _spent;
+        private float _dischargedFraction;
+        private bool _firingDischarged;
 
         public ChargeTrigger(ChargeSpec charge, ITriggerModel inner)
         {
@@ -25,7 +27,9 @@ namespace Fps.Core
         public bool BlocksAds => _inner.BlocksAds;
 
         // 溜め切って撃った後も離すまで満タンを返すのは、その弾の溜めを撃った後に読む側 (ClientTrigger・TriggerDriver) が 1 を送れるようにするため。
-        public float ChargeFraction => !_held ? 0f : _spent ? 1f : Fraction(Spec, _chargedSeconds);
+        // 離した後の Tick で内側 (バースト) が続きの弾を出したときは、その弾も離したときの溜めで撃たせるため、その Tick の後だけ離したときの溜めを返す。
+        public float ChargeFraction =>
+            _held ? (_spent ? 1f : Fraction(Spec, _chargedSeconds)) : _firingDischarged ? _dischargedFraction : 0f;
 
         public static float Fraction(ChargeSpec charge, double heldSeconds)
         {
@@ -73,6 +77,7 @@ namespace Fps.Core
 
             _held = true;
             _spent = false;
+            _firingDischarged = false;
             _chargedSeconds = 0f;
             return 0;
         }
@@ -88,15 +93,22 @@ namespace Fps.Core
             var spent = _spent;
             _held = false;
             _spent = false;
+            _firingDischarged = false;
             _chargedSeconds = 0f;
-            return spent || !Fires(Spec, fraction) ? 0 : Discharge();
+            return spent || !Fires(Spec, fraction) ? 0 : Discharge(fraction);
         }
 
         public int Tick(float deltaSeconds)
         {
             SpecGuard.NonNegativeFinite(deltaSeconds, nameof(deltaSeconds));
             var shots = _inner.Tick(deltaSeconds);
-            if (!_held || _spent)
+            if (!_held)
+            {
+                _firingDischarged = shots > 0;
+                return shots;
+            }
+
+            if (_spent)
             {
                 return shots;
             }
@@ -105,7 +117,7 @@ namespace Fps.Core
             if (Spec.FiresWhenFull && ChargeFraction >= 1f)
             {
                 // 連射の待ちで撃てなかった間は撃ったことにせず、待ちが明けた tick で撃つ。
-                var fired = Discharge();
+                var fired = Discharge(1f);
                 _spent = fired > 0;
                 shots += fired;
             }
@@ -117,13 +129,15 @@ namespace Fps.Core
         {
             _held = false;
             _spent = false;
+            _firingDischarged = false;
             _chargedSeconds = 0f;
             _inner.Cancel();
         }
 
         // 内側の撃ち方は 1 回押して離したことにする。押したままにすると Auto が溜めずに撃ち続けるため。
-        private int Discharge()
+        private int Discharge(float fraction)
         {
+            _dischargedFraction = fraction;
             var shots = _inner.Press();
             return shots + _inner.Release();
         }

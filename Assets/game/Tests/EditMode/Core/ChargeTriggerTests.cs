@@ -100,6 +100,24 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheRestOfABurstFiresWithTheChargeItWasReleasedWith()
+        {
+            var spec = new TriggerSpec(FireMode.Semi, 0.5f, new BurstSpec(3, 0.1f), new ChargeSpec(1f, 0.25f, 3f));
+            var trigger = TriggerModels.For(spec);
+
+            trigger.Press();
+            trigger.Tick(0.6f);
+            Assert.That(trigger.Release(), Is.EqualTo(1));
+
+            Assert.That(trigger.Tick(0.1f), Is.EqualTo(1));
+            Assert.That(trigger.ChargeFraction, Is.EqualTo(0.6f).Within(_tolerance), "the second round keeps the released charge");
+            Assert.That(trigger.Tick(0.1f), Is.EqualTo(1));
+            Assert.That(trigger.ChargeFraction, Is.EqualTo(0.6f).Within(_tolerance));
+            Assert.That(trigger.Tick(0.1f), Is.Zero);
+            Assert.That(trigger.ChargeFraction, Is.Zero, "the gauge empties once the burst is over");
+        }
+
+        [Test]
         public void TheInnerTriggerSpacesTheShots()
         {
             var trigger = Create(new ChargeSpec(0.1f, 0f, 2f), fireInterval: 1f);

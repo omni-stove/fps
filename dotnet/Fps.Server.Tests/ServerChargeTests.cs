@@ -85,6 +85,40 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void TheRestOfABurstKeepsTheChargeOfItsFirstRound()
+        {
+            Equip(new ChargeSpec(1f, 0.6f, 3f), new BurstSpec(3, 0.1f));
+            _now += 0.8d;
+            _weapons.AcceptCharge(0.8f, out var first);
+
+            _now += 0.1d;
+            Assert.That(_weapons.AcceptCharge(0.8f, out var second), Is.EqualTo(ShotRejection.None));
+            _now += 0.1d;
+            Assert.That(_weapons.AcceptCharge(0.8f, out var third), Is.EqualTo(ShotRejection.None));
+
+            Assert.That(first, Is.EqualTo(0.8f));
+            Assert.That(second, Is.EqualTo(0.8f));
+            Assert.That(third, Is.EqualTo(0.8f));
+
+            _now += 0.1d;
+            Assert.That(_weapons.AcceptCharge(0.8f, out _), Is.EqualTo(ShotRejection.Undercharged), "a fourth round is a new press");
+        }
+
+        [Test]
+        public void ABotWaitsUntilTheChargeIsFull()
+        {
+            Equip(new ChargeSpec(1f, 0.5f, 3f));
+
+            _now += 0.9d;
+            Assert.That(_weapons.IsChargedForBot(), Is.False);
+            _now += 0.1d;
+            Assert.That(_weapons.IsChargedForBot(), Is.True);
+
+            _weapons.AcceptCharge(1f, out _);
+            Assert.That(_weapons.IsChargedForBot(), Is.False, "the next shot charges again");
+        }
+
+        [Test]
         public void AWeaponWithoutChargeTakesNoCharge()
         {
             _weapons.Equip(new[] { TestRules.Rifle() }, 0.5f, GameRules.Default);
@@ -94,10 +128,10 @@ namespace Fps.Server.Tests
             Assert.That(fraction, Is.Zero);
         }
 
-        private void Equip(ChargeSpec charge)
+        private void Equip(ChargeSpec charge, BurstSpec burst = null)
         {
             var spec = new WeaponSpec(
-                _chargeRifleId, "weapon.chargeRifle", WeaponCategory.MarksmanRifle, new TriggerSpec(FireMode.Semi, 0.25f, charge: charge));
+                _chargeRifleId, "weapon.chargeRifle", WeaponCategory.MarksmanRifle, new TriggerSpec(FireMode.Semi, 0.25f, burst, charge));
             _weapons.Equip(new[] { spec }, 0.5f, GameRules.Default);
         }
     }

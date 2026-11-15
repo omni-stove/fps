@@ -35,6 +35,9 @@ namespace Fps.Protocol
 
         public float Heat { get; set; }
 
+        /// <summary>オーバーヒート中か。overheatSeconds が 1 tick より短いと、熱が 1 のスナップショットが届かないことがあるため熱とは別に運ぶ。</summary>
+        public bool IsOverheated { get; set; }
+
         public float ChargeFraction { get; set; }
 
         public byte AmmoTypeIndex { get; set; }
@@ -54,6 +57,7 @@ namespace Fps.Protocol
                 && Same.Bits(ActiveReloadWindowStart, other.ActiveReloadWindowStart)
                 && Same.Bits(ActiveReloadWindowEnd, other.ActiveReloadWindowEnd)
                 && Same.Bits(Heat, other.Heat)
+                && IsOverheated == other.IsOverheated
                 && Same.Bits(ChargeFraction, other.ChargeFraction)
                 && AmmoTypeIndex == other.AmmoTypeIndex
                 && Same.Bits(SpinUpFraction, other.SpinUpFraction);
@@ -72,6 +76,7 @@ namespace Fps.Protocol
             writer.WriteSingle(ActiveReloadWindowStart);
             writer.WriteSingle(ActiveReloadWindowEnd);
             writer.WriteSingle(Heat);
+            writer.WriteBool(IsOverheated);
             writer.WriteSingle(ChargeFraction);
             writer.WriteByte(AmmoTypeIndex);
             writer.WriteSingle(SpinUpFraction);
@@ -92,6 +97,7 @@ namespace Fps.Protocol
                 ActiveReloadWindowStart = reader.ReadSingle(),
                 ActiveReloadWindowEnd = reader.ReadSingle(),
                 Heat = reader.ReadFiniteSingleBetween(0f, 1f, "weapon heat"),
+                IsOverheated = reader.ReadBool(),
                 ChargeFraction = reader.ReadFiniteSingleBetween(0f, 1f, "charge fraction"),
                 AmmoTypeIndex = reader.ReadByte(),
                 SpinUpFraction = reader.ReadFiniteSingleBetween(0f, 1f, "spin-up fraction"),

@@ -25,6 +25,8 @@ namespace Fps.Server
         private double _reloadStartedAt;
         private float _chargeFraction;
         private double _chargeFrom;
+        private int _burstRoundsLeft;
+        private double _burstUntil;
 
         public ServerPlayerWeapons(int playerId, TextWriter log, Func<double> now)
         {
@@ -75,6 +77,7 @@ namespace Fps.Server
             _ammoTypes = ammoTypes;
             _chargeFraction = 0f;
             _chargeFrom = _now();
+            _burstRoundsLeft = 0;
             SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon));
         }
 
@@ -151,8 +154,18 @@ namespace Fps.Server
                 return ShotRejection.None;
             }
 
-            // 弾かれた射撃でも、撃った側は離して溜め直しているので、ここから測り直す。
+            // バーストの続きの弾は離したときの 1 回の溜めで出るので、測り直さずに最初の弾の溜めを使う。
+            // 測り直すと、続きの弾の間隔しか押していなかったことになり、最小に届かない弾として弾いてしまう。
             var now = _now();
+            if (_burstRoundsLeft > 0 && now <= _burstUntil)
+            {
+                _burstRoundsLeft--;
+                fraction = Math.Min(_chargeFraction, float.IsFinite(requested) ? Math.Max(0f, requested) : 0f);
+                return ShotRejection.None;
+            }
+
+            // 弾かれた射撃でも、撃った側は離して溜め直しているので、ここから測り直す。
+            _burstRoundsLeft = 0;
             var held = now - _chargeFrom + ChargeArrivalToleranceSeconds;
             _chargeFrom = now;
             fraction = ChargeTrigger.Reachable(charge, float.IsFinite(requested) ? requested : 0f, held);
@@ -163,7 +176,22 @@ namespace Fps.Server
             }
 
             _chargeFraction = fraction;
+            var burst = CurrentSpec.Trigger.Burst;
+            if (burst != null)
+            {
+                _burstRoundsLeft = burst.RoundsPerBurst - 1;
+                _burstUntil = now + (_burstRoundsLeft * (double)burst.RoundIntervalSeconds) + ChargeArrivalToleranceSeconds;
+            }
+
             return ShotRejection.None;
+        }
+
+        // Bot は人のように押して溜めないので、溜め切るまで撃たない (オフラインの敵の TriggerDriver.PullAsBot と同じ)。
+        // 溜め切る前に撃たせると、最小に届かない弾として弾かれ続け、連射の枠と警告だけを使い続けるため。
+        public bool IsChargedForBot()
+        {
+            var charge = CurrentSpec?.Trigger.Charge;
+            return charge == null || ChargeTrigger.Fraction(charge, _now() - _chargeFrom) >= 1f;
         }
 
         /// <summary>今の武器の弾薬の種類を次へ切り替える。持ち替え中・装備前・切り替えられない武器なら false。</summary>
@@ -227,6 +255,7 @@ namespace Fps.Server
                 ActiveReloadWindowStart = windowOpen ? spec.ActiveReloadWindowStart : 0f,
                 ActiveReloadWindowEnd = windowOpen ? spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength : 0f,
                 Heat = weapon.HeatFraction ?? 0f,
+                IsOverheated = weapon.IsOverheated,
                 ChargeFraction = spec.Trigger.Charge != null ? _chargeFraction : 0f,
                 AmmoTypeIndex = AmmoTypeIndex,
             };
@@ -272,6 +301,7 @@ namespace Fps.Server
         {
             _chargeFraction = 0f;
             _chargeFrom = _now();
+            _burstRoundsLeft = 0;
             _log.WriteLine("[Net] switch client=" + Text(_playerId) + " index=" + Text(index) + " weapon=" + _loadout.Items[index].Spec.Id);
         }
 

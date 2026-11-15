@@ -39,7 +39,7 @@ namespace Fps.Server
                         _combat.DamageStructure(hit.ColliderId, order.Point, order.Amount, order.Radius);
                         break;
                     case ImpactOrderKind.Explosion:
-                        Explode(shot, order);
+                        Explode(shot, hit, order);
                         break;
                     case ImpactOrderKind.StatusEffect:
                         Afflict(shot, hit, order);
@@ -53,7 +53,7 @@ namespace Fps.Server
             }
         }
 
-        partial void Explode(in ServerShot shot, ImpactOrder order);
+        partial void Explode(in ServerShot shot, in ShotHit hit, ImpactOrder order);
 
         partial void Afflict(in ServerShot shot, in ShotHit hit, ImpactOrder order);
 

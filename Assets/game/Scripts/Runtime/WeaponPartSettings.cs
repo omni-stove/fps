@@ -343,6 +343,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("飛んでいる間の音。空なら鳴らさない")]
         private AudioClip _sound;
 
+        [SerializeField, Min(0f), Tooltip("刺さった弾を残しておく秒数 (見た目だけ)")]
+        private float _stuckSeconds = ProjectileBody.DefaultStuckSeconds;
+
         public float Speed { get => _speed; set => _speed = value; }
 
         public float GravityMultiplier { get => _gravityMultiplier; set => _gravityMultiplier = value; }
@@ -356,6 +359,8 @@ namespace Fps.Runtime
         public GameObject Visual { get => _visual; set => _visual = value; }
 
         public AudioClip Sound { get => _sound; set => _sound = value; }
+
+        public float StuckSeconds { get => _stuckSeconds; set => _stuckSeconds = Mathf.Max(0f, value); }
 
         public ProjectileSpec ToSpec() => new ProjectileSpec(_speed, _gravityMultiplier, _lifetimeSeconds, _onWorldHit, VisualId);
 

@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: ScopedRifle
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: 591ab705-3cf6-4a0d-aa88-d19e6f367408
+  _nameKey: weapon.scopedRifle
+  _category: 3
+  _fireMode: 1
+  _magazineSize: 10
+  _reserveAmmo: 40
+  _fireInterval: 0.4
+  _reloadSeconds: 2.5
+  _damage: 60
+  _range: 200
+  _falloffStart: 80
+  _falloffEnd: 180
+  _falloffMinMultiplier: 0.7
+  _explosionRadius: 0
+  _adsFieldOfView: 32.2
+  _blindFireSpreadDegrees: 10
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.6
+  _recoilPitchDegrees: 2
+  _recoilYawDegrees: 0.4
+  _recoilRecoveryPerSecond: 15
+  _recoilRecoveryDelaySeconds: 0.2
+  _hipSpreadDegrees: 4
+  _adsSpreadDegrees: 0.1
+  _moveSpreadDegrees: 4
+  _shotNoiseRadius: 60
+  _extraZoomLevels:
+  - 16.43
+  - 8.26

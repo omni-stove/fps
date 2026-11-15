@@ -178,6 +178,43 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AShownRoundOnlyMovesWhereItIsToldAndStaysStuckForTheLooksSeconds()
+        {
+            var look = new ProjectileSettings { StuckSeconds = 0.1f };
+            var body = ProjectileBody.Show(look, "test-crossbow", _eye, Vector3.forward * 30f);
+
+            Assert.That(body.transform.position, Is.EqualTo(_eye));
+            Assert.That(body.transform.Find(ProjectileBody.RodName), Is.Not.Null, "an empty look is drawn as a rod");
+
+            body.Tick(1f);
+            Assert.That(body.transform.position, Is.EqualTo(_eye), "a shown round does not fly or hit by itself");
+
+            body.MoveTo(new Vector3(0f, 1f, 1f), Vector3.up);
+            Assert.That(body.transform.position, Is.EqualTo(new Vector3(0f, 1f, 1f)));
+            Assert.That(body.transform.forward.y, Is.EqualTo(1f).Within(1e-4f));
+
+            body.StickAt(new Vector3(0f, 1f, 1.5f));
+            body.Tick(0.05f);
+            Assert.That(body == null, Is.False, "it stays for the look's seconds");
+            Assert.That(body.transform.position, Is.EqualTo(new Vector3(0f, 1f, 1.5f)));
+
+            body.Tick(0.1f);
+            Assert.That(body == null, Is.True);
+        }
+
+        [Test]
+        public void AShownRoundIsRemovedWhenToldAndOnlyAShownRoundIsMovedFromOutside()
+        {
+            var shown = ProjectileBody.Show(null, "test-crossbow", _eye, Vector3.forward);
+            shown.Remove();
+            Assert.That(shown == null, Is.True);
+
+            var flying = ProjectileBody.Launch(Request(Projectile(20f, 0f, 5f), 10), Straight());
+            Assert.Throws<InvalidOperationException>(() => flying.MoveTo(Vector3.zero, Vector3.forward));
+            Assert.Throws<InvalidOperationException>(() => flying.StickAt(Vector3.zero));
+        }
+
+        [Test]
         public void ARoundWithoutAProjectileIsRejected()
         {
             Assert.Throws<ArgumentException>(

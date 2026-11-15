@@ -89,7 +89,10 @@ namespace Fps.Editor
             return definition;
         }
 
-        /// <summary>definition の中身を spec の値にし、<see cref="WeaponDefinition.ToSpec"/> に通ることを確かめる。</summary>
+        /// <summary>
+        /// definition の中身を spec の値にし、<see cref="WeaponDefinition.ToSpec"/> に通ることを確かめる。
+        /// 飛ぶ弾・ビーム・火炎・爆発の見た目と音の参照は spec に無いので、definition に入っているものを残す。
+        /// </summary>
         public static void Configure(WeaponDefinition definition, WeaponSpec spec)
         {
             if (definition == null)
@@ -129,6 +132,59 @@ namespace Fps.Editor
             definition.MoveSpreadDegrees = spec.MoveSpreadDegrees;
             definition.RecoilRecoveryDelaySeconds = spec.RecoilRecoveryDelaySeconds;
             definition.ShotNoiseRadius = spec.ShotNoiseRadius;
+
+            var trigger = spec.Trigger;
+            definition.Burst.Set(trigger.Burst);
+            definition.Charge.Set(trigger.Charge);
+            definition.SpinUp.Set(trigger.SpinUp);
+            definition.Cycle.Set(trigger.Cycle);
+
+            var ammo = spec.Ammo;
+            definition.AmmoKind = ammo.Kind;
+            definition.ReloadStyle = ammo.ReloadStyle;
+            definition.ReloadSecondsPerRound = ammo.ReloadSecondsPerRound;
+            definition.Heat.Set(ammo.Heat);
+
+            var round = spec.Round;
+            definition.Delivery = round.Delivery;
+            definition.PelletCount = round.PelletCount;
+            definition.PelletSpreadDegrees = round.PelletSpreadDegrees;
+            definition.RoundRadius = round.Radius;
+            definition.Penetration.Set(round.Penetration);
+            definition.Ricochet.Set(round.Ricochet);
+            definition.Projectile.Set(round.Projectile);
+            definition.Homing.Set(round.Homing);
+            definition.Beam.Set(round.Beam);
+            definition.Spray.Set(round.Spray);
+
+            var impact = spec.Impact;
+            definition.Explosion.Set(impact.Explosion);
+            definition.StatusEffect.Set(impact.StatusEffect);
+            definition.AreaEffect.Set(impact.AreaEffect);
+
+            var aim = spec.Aim;
+            var extraZoomLevels = new float[aim.ZoomLevels.Count - 1];
+            for (var i = 0; i < extraZoomLevels.Length; i++)
+            {
+                extraZoomLevels[i] = aim.ZoomLevels[i + 1];
+            }
+
+            definition.ExtraZoomLevels = extraZoomLevels;
+            definition.BreathHold.Set(aim.BreathHold);
+            definition.SwayDegrees = aim.SwayDegrees;
+
+            // 同じ Id の弾薬の種類は前の要素に写し、そちらにだけある見た目と音の参照を残す。
+            var previous = definition.AmmoTypes;
+            var ammoTypes = new AmmoTypeSettings[spec.AmmoTypes.Count];
+            for (var i = 0; i < ammoTypes.Length; i++)
+            {
+                var ammoType = spec.AmmoTypes[i];
+                ammoTypes[i] = Array.Find(previous, p => p != null && string.Equals(p.Id.Trim(), ammoType.Id, StringComparison.Ordinal))
+                    ?? new AmmoTypeSettings();
+                ammoTypes[i].Set(ammoType);
+            }
+
+            definition.AmmoTypes = ammoTypes;
 
             // spec は検査済みだが、アセットの形で読み直せることも確かめる。不正なら保存しない。
             definition.ToSpec();

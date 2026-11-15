@@ -2,28 +2,48 @@
   "id": "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45",
   "nameKey": "weapon.handgun",
   "category": "Handgun",
-  "fireMode": "Semi",
-  "magazineSize": 12,
-  "reserveAmmo": 48,
-  "fireInterval": 0.2,
-  "reloadSeconds": 1.5,
-  "damage": 34,
-  "range": 60,
-  "falloff": {
-    "startDistance": 15,
-    "endDistance": 40,
-    "minMultiplier": 0.6
+  "shotNoiseRadius": 50,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2
   },
-  "explosionRadius": 0,
-  "adsFieldOfView": 55,
-  "blindFireSpreadDegrees": 12,
-  "activeReloadWindowStart": 0.45,
-  "activeReloadWindowLength": 0.2,
-  "activeReloadFailSeconds": 0.4,
-  "recoilPitchDegrees": 2.5,
-  "recoilYawDegrees": 0.6,
-  "recoilRecoveryPerSecond": 60,
-  "hipSpreadDegrees": 2,
-  "adsSpreadDegrees": 0.8,
-  "moveSpreadDegrees": 1.5
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 12,
+    "reserveAmmo": 48,
+    "reloadSeconds": 1.5,
+    "activeReloadWindowStart": 0.45,
+    "activeReloadWindowLength": 0.2,
+    "activeReloadFailSeconds": 0.4,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 34,
+    "falloff": {
+      "startDistance": 15,
+      "endDistance": 40,
+      "minMultiplier": 0.6
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2,
+    "adsSpreadDegrees": 0.8,
+    "moveSpreadDegrees": 1.5,
+    "recoilPitchDegrees": 2.5,
+    "recoilYawDegrees": 0.6,
+    "recoilRecoveryPerSecond": 60,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 12,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
 }

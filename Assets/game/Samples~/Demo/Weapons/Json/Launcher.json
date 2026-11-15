@@ -2,24 +2,44 @@
   "id": "e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96",
   "nameKey": "weapon.launcher",
   "category": "Launcher",
-  "fireMode": "Semi",
-  "magazineSize": 1,
-  "reserveAmmo": 4,
-  "fireInterval": 0.5,
-  "reloadSeconds": 3,
-  "damage": 120,
-  "range": 150,
-  "falloff": "None",
-  "explosionRadius": 4,
-  "adsFieldOfView": null,
-  "blindFireSpreadDegrees": 0,
-  "activeReloadWindowStart": 0.5,
-  "activeReloadWindowLength": 0.15,
-  "activeReloadFailSeconds": 0.5,
-  "recoilPitchDegrees": 0,
-  "recoilYawDegrees": 0,
-  "recoilRecoveryPerSecond": 0,
-  "hipSpreadDegrees": 0,
-  "adsSpreadDegrees": 0,
-  "moveSpreadDegrees": 0
+  "shotNoiseRadius": 50,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.5
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 1,
+    "reserveAmmo": 4,
+    "reloadSeconds": 3,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.5,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 150,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 120,
+    "falloff": "None",
+    "structureRadius": 4
+  },
+  "aim": {
+    "hipSpreadDegrees": 0,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0,
+    "recoilPitchDegrees": 0,
+    "recoilYawDegrees": 0,
+    "recoilRecoveryPerSecond": 0,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  }
 }

@@ -202,6 +202,101 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ANewDefinitionUsesNoOptionalPart()
+        {
+            var spec = NewDefinition("Plain").ToSpec();
+
+            Assert.That(spec.Trigger.Burst, Is.Null);
+            Assert.That(spec.Trigger.Charge, Is.Null);
+            Assert.That(spec.Trigger.SpinUp, Is.Null);
+            Assert.That(spec.Trigger.Cycle, Is.Null);
+            Assert.That(spec.Ammo.Kind, Is.EqualTo(AmmoKind.Magazine));
+            Assert.That(spec.Ammo.Heat, Is.Null);
+            Assert.That(spec.Ammo.ReloadStyle, Is.EqualTo(ReloadStyle.Whole));
+            Assert.That(spec.Round.Delivery, Is.EqualTo(RoundDelivery.Hitscan));
+            Assert.That(spec.Round.PelletCount, Is.EqualTo(1));
+            Assert.That(spec.Round.Projectile, Is.Null);
+            Assert.That(spec.Round.Penetration, Is.Null);
+            Assert.That(spec.Impact.Explosion, Is.Null);
+            Assert.That(spec.Impact.AreaEffect, Is.Null);
+            Assert.That(spec.Aim.ZoomLevels, Is.EqualTo(new[] { AdsZoom.DefaultFieldOfView }));
+            Assert.That(spec.Aim.BreathHold, Is.Null);
+            Assert.That(spec.AmmoTypes, Is.Empty);
+        }
+
+        [Test]
+        public void ConfiguringFromASpecWithEveryPartReadsBackTheSame()
+        {
+            var expected = TestWeapons.EveryPartSpec();
+            var definition = NewDefinition("Everything");
+
+            WeaponAssets.Configure(definition, expected);
+
+            Assert.That(WeaponSpecJson.Write(definition.ToSpec()), Is.EqualTo(WeaponSpecJson.Write(expected)));
+        }
+
+        [Test]
+        public void TheRoundOfAnotherDeliveryIsKeptButNotUsed()
+        {
+            var definition = NewDefinition("Hitscan");
+            definition.Projectile.Speed = 30f;
+            definition.Beam.TickSeconds = 0.2f;
+
+            Assert.That(definition.ToSpec().Round.Projectile, Is.Null);
+            Assert.That(definition.ToSpec().Round.Beam, Is.Null);
+
+            definition.Delivery = RoundDelivery.Projectile;
+            Assert.That(definition.ToSpec().Round.Projectile.Speed, Is.EqualTo(30f));
+            Assert.That(definition.ToSpec().Round.Beam, Is.Null);
+        }
+
+        [Test]
+        public void ExtraZoomLevelsFollowTheAdsFieldOfView()
+        {
+            var definition = NewDefinition("Scoped");
+            definition.ExtraZoomLevels = new[] { 20f, 10f };
+
+            Assert.That(definition.ToSpec().Aim.ZoomLevels, Is.EqualTo(new[] { AdsZoom.DefaultFieldOfView, 20f, 10f }));
+
+            definition.AdsFieldOfView = 40f;
+            Assert.That(definition.ToSpec().Aim.ZoomLevels, Is.EqualTo(new[] { 40f, 20f, 10f }));
+        }
+
+        [Test]
+        public void ConfiguringKeepsTheVisualAndSoundReferences()
+        {
+            var expected = TestWeapons.EveryPartSpec();
+            var definition = NewDefinition("Everything");
+            WeaponAssets.Configure(definition, expected);
+            var visual = new GameObject("BoltVisual");
+            _created.Add(visual);
+            var sound = AudioClip.Create("Boom", 1, 1, 8000, false);
+            _created.Add(sound);
+            definition.Projectile.Visual = visual;
+            definition.Explosion.Sound = sound;
+            var piercing = definition.AmmoTypes.Single(a => a.Id == TestWeapons.EveryPartPiercingAmmoId);
+            piercing.Round.Spray.Visual = visual;
+
+            WeaponAssets.Configure(definition, expected);
+
+            Assert.That(definition.Projectile.Visual, Is.SameAs(visual));
+            Assert.That(definition.Explosion.Sound, Is.SameAs(sound));
+            Assert.That(definition.AmmoTypes.Single(a => a.Id == TestWeapons.EveryPartPiercingAmmoId).Round.Spray.Visual, Is.SameAs(visual));
+        }
+
+        [Test]
+        public void AnInvalidPartNamesTheAsset()
+        {
+            var definition = NewDefinition("BadBurst");
+            definition.Burst.Enabled = true;
+            definition.Burst.RoundsPerBurst = 1;
+
+            var e = Assert.Throws<WeaponDefinitionException>(() => definition.ToSpec());
+
+            Assert.That(e.Message, Does.Contain("BadBurst").And.Contain("roundsPerBurst"));
+        }
+
+        [Test]
         public void AnUnsetAdsFieldOfViewUsesTheCommonDefault()
         {
             var definition = NewDefinition("Unset", _rifleId);

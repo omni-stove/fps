@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Fps.Core;
 using Fps.Runtime;
 using UnityEditor;
@@ -8,10 +9,11 @@ using UnityEngine;
 namespace Fps.Editor
 {
     /// <summary>
-    /// 武器のアセット (<see cref="RiflePath"/>・<see cref="HandgunPath"/> の <see cref="WeaponDefinition"/>、
-    /// それを rifle・handgun の順に並べた <see cref="CatalogPath"/> の <see cref="WeaponCatalogAsset"/>、
-    /// それをスロットに入れた <see cref="LoadoutPath"/> の <see cref="LoadoutDefinition"/>、カタログに入れない <see cref="LauncherPath"/> の
-    /// <see cref="WeaponDefinition"/>) を作るか上書きする。
+    /// 武器のアセットを作るか上書きする。<see cref="JsonFolder"/> に置いた武器の JSON をすべて同じ名前の <see cref="WeaponDefinition"/> にし
+    /// (<see cref="WeaponJsonImporter"/>)、それをファイル名の順に並べた射撃場で拾える武器の一覧 (<see cref="RangeWeaponsPath"/> の
+    /// <see cref="WeaponCatalogAsset"/>) を作る。続けて <see cref="RiflePath"/>・<see cref="HandgunPath"/> の武器を rifle・handgun の順に
+    /// 並べた <see cref="CatalogPath"/> の <see cref="WeaponCatalogAsset"/> と、それをスロットに入れた <see cref="LoadoutPath"/> の
+    /// <see cref="LoadoutDefinition"/> を作る。サンプルの武器を足すときは、<see cref="JsonFolder"/> に JSON を 1 つ置いて走らせ直すだけでよい。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
@@ -27,6 +29,12 @@ namespace Fps.Editor
         public static string CatalogPath => WeaponAssets.CatalogPath;
         public static string LoadoutPath => Folder + "/DefaultLoadout.asset";
         public static string LauncherPath => Folder + "/Launcher.asset";
+
+        /// <summary>サンプルの武器の JSON を置くフォルダ。ここの *.json をすべて <see cref="Folder"/> の武器のアセットにする。</summary>
+        public static string JsonFolder => Folder + "/Json";
+
+        /// <summary>射撃場で拾える武器の一覧。<see cref="JsonFolder"/> の武器をすべて、JSON のファイル名の順に並べる。</summary>
+        public static string RangeWeaponsPath => Folder + "/RangeWeapons.asset";
 
         public const string MenuPath = "Fps/Build Weapon Assets";
         public const string LogTag = "[WeaponAssetBuilder]";
@@ -304,11 +312,38 @@ namespace Fps.Editor
             };
         }
 
+        /// <summary>
+        /// <see cref="RangeWeaponsPath"/> の射撃場で拾える武器の一覧を読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう
+        /// 例外を投げる。一覧が不正でも例外を投げ、壊れた定義をシーンに配線しない。
+        /// </summary>
+        public static WeaponCatalogAsset LoadRangeWeapons() => WeaponAssets.LoadCatalog(RangeWeaponsPath);
+
         [MenuItem(MenuPath)]
         public static void Build()
         {
-            BuildAt(RiflePath, HandgunPath, CatalogPath, LoadoutPath);
-            BuildLauncherAt(LauncherPath);
+            BuildFromJsonAt(JsonFolder, Folder, RangeWeaponsPath);
+
+            // rifle と handgun はコードの値でなく JSON から作ったアセットを並べ、JSON を直せば既定の武器も変わるようにする。
+            var rifle = LoadDefinition(RiflePath);
+            var handgun = LoadDefinition(HandgunPath);
+            BuildCatalogAndLoadoutAt(rifle, handgun, CatalogPath, LoadoutPath);
+        }
+
+        /// <summary>
+        /// jsonFolder の *.json をすべて folder の同じ名前の <see cref="WeaponDefinition"/> にし、それを JSON のファイル名の順に並べた
+        /// <see cref="WeaponCatalogAsset"/> を rangeWeaponsPath に作るか上書きして、武器の定義を返す。
+        /// rangeWeaponsPath は folder の武器のアセットと重ならない Assets/ 以下の .asset であること。
+        /// </summary>
+        /// <exception cref="WeaponJsonException">JSON が不正。何も保存しない。</exception>
+        public static IReadOnlyList<WeaponDefinition> BuildFromJsonAt(string jsonFolder, string folder, string rangeWeaponsPath)
+        {
+            rangeWeaponsPath = SceneBuildHelpers.ValidateAssetPath(rangeWeaponsPath);
+
+            var weapons = WeaponJsonImporter.ImportFrom(jsonFolder, folder, null);
+            SceneBuildHelpers.CreateOrUpdateAsset<WeaponCatalogAsset>(rangeWeaponsPath, c => Configure(c, weapons));
+
+            Debug.Log($"{LogTag} saved {weapons.Count.ToString(CultureInfo.InvariantCulture)} weapon(s) from '{jsonFolder}' and '{rangeWeaponsPath}'");
+            return weapons;
         }
 
         /// <summary>
@@ -343,12 +378,21 @@ namespace Fps.Editor
             var handgunSpec = HandgunSpec();
             var rifle = SceneBuildHelpers.CreateOrUpdateAsset<WeaponDefinition>(riflePath, d => Configure(d, rifleSpec));
             var handgun = SceneBuildHelpers.CreateOrUpdateAsset<WeaponDefinition>(handgunPath, d => Configure(d, handgunSpec));
+            var catalog = BuildCatalogAndLoadoutAt(rifle, handgun, catalogPath, loadoutPath);
+
+            Debug.Log($"{LogTag} saved '{riflePath}' and '{handgunPath}'");
+            return catalog;
+        }
+
+        private static WeaponCatalogAsset BuildCatalogAndLoadoutAt(
+            WeaponDefinition rifle, WeaponDefinition handgun, string catalogPath, string loadoutPath)
+        {
             var catalog = SceneBuildHelpers.CreateOrUpdateAsset<WeaponCatalogAsset>(
                 catalogPath, c => Configure(c, new[] { rifle, handgun }));
             SceneBuildHelpers.CreateOrUpdateAsset<LoadoutDefinition>(
                 loadoutPath, l => Configure(l, DefaultLoadoutSlots(rifle, handgun), LoadoutDefinition.DefaultSwitchSeconds));
 
-            Debug.Log($"{LogTag} saved '{riflePath}', '{handgunPath}', '{catalogPath}' and '{loadoutPath}'");
+            Debug.Log($"{LogTag} saved '{catalogPath}' and '{loadoutPath}'");
             return catalog;
         }
 

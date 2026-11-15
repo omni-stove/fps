@@ -79,6 +79,12 @@ namespace Fps.Core
                 return _values.ContainsKey(name);
             }
 
+            // Find は null を書いた項目を断るので、null を「書かない」と同じに読む古い形の項目はこちらで生のまま見る。
+            public GameRulesJson.Node FindRaw(string name)
+            {
+                return _values.TryGetValue(name, out var node) ? node : null;
+            }
+
             public GameRulesJson.Node Find(string name)
             {
                 if (!_values.TryGetValue(name, out var node))
@@ -313,6 +319,17 @@ namespace Fps.Core
                 foreach (var value in values)
                 {
                     parts.Add(Quote(value));
+                }
+
+                Raw(name, "[" + string.Join(", ", parts) + "]");
+            }
+
+            public void FloatArray(string name, IEnumerable<float> values)
+            {
+                var parts = new List<string>();
+                foreach (var value in values)
+                {
+                    parts.Add(FloatText(value));
                 }
 
                 Raw(name, "[" + string.Join(", ", parts) + "]");

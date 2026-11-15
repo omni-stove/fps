@@ -96,6 +96,61 @@ namespace Fps.Tests.EditMode
                 explosionRadius: LauncherExplosionRadius);
         }
 
+        public const string EveryPartId = "5d4c3b2a-1f0e-4d9c-8b7a-6f5e4d3c2b1a";
+        public const string EveryPartStandardAmmoId = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+        public const string EveryPartPiercingAmmoId = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
+
+        /// <summary>省略できる部品をすべて持つ武器。読み書きと、アセットへの写しで何も落ちないことを確かめるのに使う。</summary>
+        public static WeaponSpec EveryPartSpec()
+        {
+            var burning = new StatusEffectSpec(3f, 0.5f, 4, "fx.burning");
+            return new WeaponSpec(
+                EveryPartId,
+                "weapon.everything",
+                WeaponCategory.Launcher,
+                new TriggerSpec(
+                    FireMode.Semi,
+                    0.25f,
+                    new BurstSpec(3, 0.05f),
+                    new ChargeSpec(1.5f, 0.2f, 2.5f, firesWhenFull: true),
+                    new SpinUpSpec(0.8f, 3f, 0.4f),
+                    new CycleSpec(0.9f, leavesAds: true)),
+                new AmmoSpec(1, 6, 0f, 0.3f, 0.2f, 0.7f, ReloadStyle.PerRound, 0.6f, AmmoKind.Heat, new HeatSpec(0.1f, 0.5f, 0.3f, 2f)),
+                new RoundSpec(
+                    RoundDelivery.Projectile,
+                    300f,
+                    pelletCount: 8,
+                    pelletSpreadDegrees: 4f,
+                    radius: 0.2f,
+                    penetration: new PenetrationSpec(2, 0.6f, 0.5f),
+                    ricochet: new RicochetSpec(1, 20f, 0.5f),
+                    projectile: new ProjectileSpec(40f, 0.5f, 6f, WorldHitResponse.Stick, "fx.bolt"),
+                    homing: new HomingSpec(1f, 10f, 90f)),
+                new ImpactSpec(
+                    90,
+                    new DamageFalloff(10f, 30f, 0.25f),
+                    3f,
+                    new ExplosionSpec(new ExplosionDamage(150, 6f, 1.5f), 200, DetonationTrigger.OnLifetimeEnd),
+                    burning,
+                    new AreaEffectSpec(4f, 8f, 1f, 5, burning, "fx.fire")),
+                new AimSpec(1f, 0.2f, 0.5f, 3f, 1f, 20f, 0.25f, 6f, new[] { 30f, 15f }, new BreathHoldSpec(4f, 2f, 0.1f), 1.5f),
+                new[]
+                {
+                    new AmmoTypeSpec(EveryPartStandardAmmoId, "ammo.everything.standard"),
+                    new AmmoTypeSpec(
+                        EveryPartPiercingAmmoId,
+                        "ammo.everything.piercing",
+                        new RoundSpec(RoundDelivery.Spray, 80f, spray: new SpraySpec(0.1f, 12f, "fx.flame")),
+                        new ImpactSpec(40, structureRadius: 1f, explosion: new ExplosionSpec(new ExplosionDamage(20, 2f)))),
+                    new AmmoTypeSpec(
+                        "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f",
+                        "ammo.everything.beam",
+                        new RoundSpec(RoundDelivery.Beam, 60f, penetration: new PenetrationSpec(1, 0.5f, 0.2f), beam: new BeamSpec(0.05f, "fx.beam")),
+                        new ImpactSpec(30, statusEffect: burning)),
+                },
+                shotNoiseRadius: 12f);
+        }
+
         /// <summary>スロット 0 に Handgun 以外のすべての種別で rifle、スロット 1 に Handgun で handgun を入れたロードアウト。</summary>
         public static LoadoutSlotDefinition[] LoadoutSlots(WeaponDefinition rifle, WeaponDefinition handgun)
         {

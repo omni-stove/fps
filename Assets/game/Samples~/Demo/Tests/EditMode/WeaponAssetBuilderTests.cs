@@ -60,6 +60,63 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheSampleJsonIsTheBuiltInWeapons()
+        {
+            Assert.That(WeaponAssetBuilder.JsonFolder, Is.EqualTo(DemoSample.Root + "/Weapons/Json"));
+            Assert.That(WeaponAssetBuilder.RangeWeaponsPath, Is.EqualTo(DemoSample.Root + "/Weapons/RangeWeapons.asset"));
+
+            var expected = new[] { WeaponAssetBuilder.RifleSpec(), WeaponAssetBuilder.HandgunSpec(), WeaponAssetBuilder.LauncherSpec() };
+            foreach (var spec in expected)
+            {
+                var name = System.IO.Path.GetFileNameWithoutExtension(AssetPathOf(spec.Id));
+                var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/" + name + ".json"));
+                Assert.That(
+                    WeaponSpecJson.Write(WeaponJsonImporter.ParseSpec(json, name + ".json")), Is.EqualTo(WeaponSpecJson.Write(spec)), name);
+            }
+        }
+
+        [Test]
+        public void BuildsEveryJsonWeaponAndListsThemForTheRange()
+        {
+            var jsonFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "WeaponAssetBuilderTests_" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(jsonFolder);
+            try
+            {
+                System.IO.File.WriteAllText(System.IO.Path.Combine(jsonFolder, "B_Everything.json"), WeaponSpecJson.Write(PartsSpec()));
+                System.IO.File.WriteAllText(System.IO.Path.Combine(jsonFolder, "A_Rifle.json"), WeaponSpecJson.Write(WeaponAssetBuilder.RifleSpec()));
+                var rangePath = _folder + "/RangeWeapons.asset";
+
+                var built = WeaponAssetBuilder.BuildFromJsonAt(jsonFolder, _folder, rangePath);
+
+                Assert.That(built.Select(d => d.name), Is.EqualTo(new[] { "A_Rifle", "B_Everything" }));
+                var range = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(rangePath);
+                Assert.That(range.Weapons, Is.EqualTo(built));
+                Assert.That(
+                    WeaponSpecJson.Write(built[1].ToSpec()), Is.EqualTo(WeaponSpecJson.Write(PartsSpec())), "every part survives the asset");
+
+                var guid = AssetDatabase.AssetPathToGUID(rangePath);
+                WeaponAssetBuilder.BuildFromJsonAt(jsonFolder, _folder, rangePath);
+                Assert.That(AssetDatabase.AssetPathToGUID(rangePath), Is.EqualTo(guid), "a second run keeps the list asset");
+            }
+            finally
+            {
+                System.IO.Directory.Delete(jsonFolder, true);
+            }
+        }
+
+        [Test]
+        public void TheCommittedRangeListHoldsEverySampleWeapon()
+        {
+            var range = WeaponAssetBuilder.LoadRangeWeapons();
+            var names = System.IO.Directory.GetFiles(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder), "*.json")
+                .Select(System.IO.Path.GetFileNameWithoutExtension)
+                .OrderBy(n => n, StringComparer.Ordinal);
+
+            Assert.That(range.Weapons.Select(d => d.name), Is.EqualTo(names));
+            Assert.That(range.Weapons.Count, Is.LessThanOrEqualTo(RangeWeaponRackFixture.Columns * RangeWeaponRackFixture.Rows));
+        }
+
+        [Test]
         public void BuildsTheLauncherOutsideTheCatalogAndLoadout()
         {
             Build();
@@ -559,6 +616,31 @@ namespace Fps.Tests.EditMode
         private WeaponCatalogAsset Build()
         {
             return WeaponAssetBuilder.BuildAt(_riflePath, _handgunPath, _catalogPath, _loadoutPath);
+        }
+
+        // 部品の入れ子 (バースト・飛ぶ弾・爆発・弾薬の種類) を持つ武器。アセットを通しても落ちないことを確かめる。
+        private static WeaponSpec PartsSpec()
+        {
+            return new WeaponSpec(
+                "5d4c3b2a-1f0e-4d9c-8b7a-6f5e4d3c2b1a",
+                "weapon.grenadeLauncher",
+                WeaponCategory.Launcher,
+                new TriggerSpec(FireMode.Semi, 0.6f, burst: new BurstSpec(2, 0.2f)),
+                new AmmoSpec(6, 12, 0f, reloadStyle: ReloadStyle.PerRound, reloadSecondsPerRound: 0.5f),
+                new RoundSpec(RoundDelivery.Projectile, 120f, projectile: new ProjectileSpec(30f, 1f, 4f, WorldHitResponse.Bounce, "fx.grenade")),
+                new ImpactSpec(20, explosion: new ExplosionSpec(new ExplosionDamage(100, 5f, 1f), 50, DetonationTrigger.OnLifetimeEnd)),
+                new AimSpec(zoomLevels: new[] { 45f, 30f }),
+                new[] { new AmmoTypeSpec("1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", "ammo.grenade.smoke", impact: new ImpactSpec(0)) });
+        }
+
+        private static string AssetPathOf(string id)
+        {
+            if (id == WeaponAssetBuilder.RifleId)
+            {
+                return WeaponAssetBuilder.RiflePath;
+            }
+
+            return id == WeaponAssetBuilder.HandgunId ? WeaponAssetBuilder.HandgunPath : WeaponAssetBuilder.LauncherPath;
         }
     }
 }

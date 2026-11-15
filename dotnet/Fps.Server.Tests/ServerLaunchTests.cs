@@ -74,6 +74,32 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void TheBuiltVersionIsUsedWithoutTheArgument()
+        {
+            Assert.That(ServerLaunch.TryParse(System.Array.Empty<string>(), _ => null, "v0.3.0", out var launch, out var error), Is.True, error);
+
+            Assert.That(launch.Version, Is.EqualTo("0.3.0"));
+        }
+
+        [Test]
+        public void TheArgumentWinsOverTheBuiltVersion()
+        {
+            var args = new[] { "-buildVersion", "0.4.0-test" };
+            Assert.That(ServerLaunch.TryParse(args, _ => null, "0.3.0", out var launch, out var error), Is.True, error);
+
+            Assert.That(launch.Version, Is.EqualTo("0.4.0-test"));
+        }
+
+        [Test]
+        public void AnUnusableBuiltVersionIsRejected()
+        {
+            Assert.That(ServerLaunch.TryParse(System.Array.Empty<string>(), _ => null, "1.0+sha", out var launch, out var error), Is.False);
+
+            Assert.That(launch, Is.Null);
+            Assert.That(error, Does.StartWith("the version built into the server: "));
+        }
+
+        [Test]
         public void AcceptsRegisterLobby()
         {
             var launch = Parse(Env(), "-register-lobby", "203.0.113.10:7777");

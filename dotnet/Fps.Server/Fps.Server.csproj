@@ -7,6 +7,10 @@
     <AssemblyName>fps-server</AssemblyName>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
+  <!-- InformationalVersion ではなく専用の鍵にするのは、SDK が既定の 1.0.0 や +<sha> を入れ、焼き込んでいないことと見分けられないため -->
+  <ItemGroup Condition="'$(FpsBuildVersion)' != ''">
+    <AssemblyMetadata Include="FpsBuildVersion" Value="$(FpsBuildVersion)" />
+  </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Fps.Server.Tests" />
     <InternalsVisibleTo Include="Fps.NetV2.Client.Tests" />

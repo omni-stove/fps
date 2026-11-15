@@ -1,0 +1,125 @@
+name: Server image (.NET)
+
+# v* のタグを push したら、Unity を使わない専用サーバー (dotnet/Fps.Server) を linux/amd64 と linux/arm64 のイメージにし、
+# GitHub Container Registry に push する。Unity のライセンスもビルドも使わない。
+# PR でサーバーかイメージに関わるファイルを変えたときは、amd64 のイメージを作って起動を確かめるだけで push しない。
+# 起動の仕方は docs/dedicated-server.md を参照
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "docker/server-dotnet/**"
+      - "dotnet/**"
+      - ".editorconfig"
+      - "Assets/game/Scripts/Core/**"
+      - "Assets/game/Scripts/Protocol/**"
+      - "server-data/**"
+      - "scripts/eos-sdk.sh"
+      - "scripts/server-image-dotnet-smoke.sh"
+      - "Packages/packages-lock.json"
+      - ".github/workflows/server-image-dotnet.yml"
+
+# 同じタグを付け直して push したときに古い方が後から上書きしないよう、タグでは取り消さずに順に走らせる
+concurrency:
+  group: server-image-dotnet-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  server-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      SMOKE_IMAGE: fps-server-dotnet:smoke
+    steps:
+      - uses: actions/checkout@v6
+
+      # Fps.Core.BuildVersion と同じ規則 (v の直後が数字なら v を外す、英数字と . - _ だけで . と - では始まらず 32 文字以内) で先に確かめる。
+      # PR ではタグが無いので、イメージの試しに使う版は PR の番号から作る
+      - id: version
+        name: Resolve the build version
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            version="pr-$PR"
+          else
+            version="$TAG_NAME"
+            if [[ "$version" =~ ^[vV][0-9] ]]; then
+              version="${version:1}"
+            fi
+          fi
+          if [[ ! "$version" =~ ^[A-Za-z0-9_][A-Za-z0-9._-]{0,31}$ ]]; then
+            echo "::error::tag '$TAG_NAME' is not a usable build version (letters, digits, . - _ only, not starting with . or -, at most 32 characters after the leading v)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # クライアントと同じ版の EOS の SDK を、Unity の packages-lock.json に固定した PlayEveryWare のプラグインから取る。
+      # プラグインには Linux の arm64 のライブラリが無いので、arm64 のイメージは EOS 無し ([Eos] sdk=included library=... (missing ...)) で動く
+      - name: Place the EOS SDK
+        run: bash scripts/eos-sdk.sh --fetch
+
+      # arm64 のイメージの apt-get を amd64 のランナーで動かすため。コンパイルはエミュレーションせずに行う
+      - if: github.event_name == 'push'
+        uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      # push する前に、amd64 のイメージが Unity のサーバーと同じ行を出して待ち受けるところまで動くことを確かめる
+      - name: Build the amd64 image to try
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/server-dotnet/Dockerfile
+          platforms: linux/amd64
+          build-args: FPS_BUILD_VERSION=${{ steps.version.outputs.version }}
+          load: true
+          tags: ${{ env.SMOKE_IMAGE }}
+          cache-from: type=gha,scope=server-image-dotnet
+          cache-to: type=gha,scope=server-image-dotnet,mode=max
+
+      - name: Start the image and wait for it to listen
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/server-image-dotnet-smoke.sh "$SMOKE_IMAGE" "$VERSION"
+
+      - if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - if: github.event_name == 'push'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/server-dotnet
+          # semver でないタグ (v1-rc など) でも push できるよう、タグの名前そのものも付ける。
+          # サーバーが起動時に [Version] で出す版と同じ文字列のタグも付け、ログからイメージを引けるようにする
+          tags: |
+            type=ref,event=tag
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+
+      # dotnet/ThirdParty/EOSSDK は git に入っていないので、git のコンテキストではなくチェックアウトしたディレクトリを渡す
+      - if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/server-dotnet/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: FPS_BUILD_VERSION=${{ steps.version.outputs.version }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=server-image-dotnet

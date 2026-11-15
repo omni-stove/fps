@@ -243,6 +243,120 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ALookPickupLiesStillWithATargetOnlyTheAimHits()
+        {
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
+            var pickup = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(0f, 0f, 1f), PickupCollectMode.Look);
+
+            var visual = pickup.transform.Find(Pickup.VisualName);
+            Assert.That(visual.GetComponentsInChildren<Renderer>(), Is.Not.Empty, "a gun shape stands in for the missing model");
+            var target = visual.Find(Pickup.LookTargetName);
+            Assert.That(target, Is.Not.Null);
+            var box = target.GetComponent<BoxCollider>();
+            Assert.That(box.isTrigger, Is.True, "the aim target does not block movement or shots");
+            Assert.That(target.GetComponent<Rigidbody>().isKinematic, Is.True);
+            Assert.That(pickup.GetComponents<Collider>().Length, Is.EqualTo(1), "the range is still only the trigger sphere");
+
+            Physics.SyncTransforms();
+            Assert.That(box.bounds.min.y, Is.EqualTo(Pickup.LyingGap).Within(0.001f), "lies on the ground");
+            var rotation = visual.localRotation;
+            pickup.Tick(1f);
+            Assert.That(visual.localRotation, Is.EqualTo(rotation), "does not spin");
+
+            pickup.CollectMode = PickupCollectMode.Touch;
+            Assert.That(visual.Find(Pickup.LookTargetName), Is.Null);
+            Assert.That(visual.localPosition, Is.EqualTo(new Vector3(0f, Pickup.VisualHeight, 0f)));
+        }
+
+        [Test]
+        public void ALookPickupIsTakenOnlyWhileTheViewAimsAtIt()
+        {
+            var player = NewCollector("Player");
+            player.IsLocalPlayer = true;
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
+            weapons.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
+            var pickup = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(0f, 0f, 1.5f), PickupCollectMode.Look, radius: 2f);
+            pickup.HandleEnter(player.GetComponent<Collider>());
+            var target = pickup.transform.Find(Pickup.VisualName).Find(Pickup.LookTargetName).GetComponent<BoxCollider>();
+
+            weapons.transform.rotation = Quaternion.LookRotation(Vector3.up);
+            Physics.SyncTransforms();
+            Assert.That(pickup.IsLookedAtBy(player), Is.False);
+            Assert.That(pickup.Interact(), Is.False, "looking away");
+
+            weapons.transform.rotation = Quaternion.LookRotation(target.bounds.center - weapons.transform.position);
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(wall);
+            wall.transform.position = Vector3.Lerp(weapons.transform.position, target.bounds.center, 0.5f);
+            wall.transform.localScale = Vector3.one * 0.2f;
+            Physics.SyncTransforms();
+            Assert.That(Pickup.LookedAt(player), Is.Null, "a wall in the way stops the aim");
+
+            Object.DestroyImmediate(wall);
+            Physics.SyncTransforms();
+            Assert.That(Pickup.LookedAt(player), Is.SameAs(pickup));
+            Assert.That(pickup.TryDescribe(player, "E", out var text), Is.True);
+            Assert.That(text, Is.EqualTo(new LocalizedText(PickupPrompt.WeaponKey, "E", launcher.Name)));
+            Assert.That(pickup.Interact(), Is.True);
+            Assert.That(weapons.Loadout.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void AtTheWeaponLimitANewWeaponSwapsForTheOneInHandAndDropsIt()
+        {
+            var player = NewCollector("Player");
+            var rifle = NewWeapon("Rifle", TestWeapons.RifleSpec());
+            var weapons = AttachWeapons(player, rifle);
+            weapons.Rules = GameRules.Default.WithMaxWeapons(1);
+            weapons.Weapon.TryFire();
+            var magazine = weapons.Weapon.AmmoInMagazine;
+            var reserve = weapons.Weapon.ReserveAmmo;
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
+            var pickup = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(0f, 0f, 2f), PickupCollectMode.Interact);
+            Assert.That(pickup.TryDescribe(player, "E", out var text), Is.True);
+            Assert.That(text, Is.EqualTo(new LocalizedText(PickupPrompt.WeaponSwapKey, "E", launcher.Name)));
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Pickup\] dropped by=Player pickup=Pickup-Weapon kind=Weapon weapon=" + rifle.Id));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Pickup\] collected .* added dropped=" + rifle.Id + "$"));
+            Assert.That(pickup.TryCollect(player, out var outcome), Is.True);
+
+            Assert.That(outcome.DroppedWeaponId, Is.EqualTo(rifle.Id));
+            Assert.That(weapons.Loadout.Count, Is.EqualTo(1));
+            Assert.That(weapons.Weapon.Spec.Id, Is.EqualTo(launcher.Id), "holds the new weapon");
+            var dropped = Object.FindObjectsByType<Pickup>(FindObjectsInactive.Exclude).Single();
+            Assert.That(dropped.CollectMode, Is.EqualTo(PickupCollectMode.Look), "touching it would take it right back");
+            Assert.That(dropped.Contents.Weapon, Is.SameAs(rifle));
+            Assert.That(dropped.Contents.CarriedAmmo.AmmoInMagazine, Is.EqualTo(magazine));
+            Assert.That(Vector3.Distance(dropped.transform.position, new Vector3(0f, 0f, 2f - Pickup.DroppedWeaponOffset)), Is.LessThan(0.001f), "moved toward the player");
+
+            Assert.That(dropped.TryCollect(player, out var back), Is.True);
+
+            Assert.That(back.DroppedWeaponId, Is.EqualTo(launcher.Id));
+            Assert.That(weapons.Weapon.Spec.Id, Is.EqualTo(rifle.Id));
+            Assert.That(weapons.Weapon.AmmoInMagazine, Is.EqualTo(magazine), "the dropped rifle keeps its ammo");
+            Assert.That(weapons.Weapon.ReserveAmmo, Is.EqualTo(reserve));
+        }
+
+        [Test]
+        public void ADroppedWeaponBelowTheLimitIsAddedWithItsAmmo()
+        {
+            var player = NewCollector("Player");
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
+            var contents = PickupContents.ForDroppedWeapon(launcher, new WeaponAmmo(launcher.Id, 0, 1));
+            var pickup = Pickup.Create(contents, Vector3.zero, PickupCollectMode.Look);
+
+            Assert.That(pickup.TryCollect(player, out var outcome), Is.True);
+
+            Assert.That(outcome.DroppedWeaponId, Is.Null);
+            Assert.That(weapons.Loadout.Count, Is.EqualTo(2));
+            Assert.That(weapons.Loadout.Items[1].AmmoInMagazine, Is.Zero);
+            Assert.That(weapons.Loadout.Items[1].ReserveAmmo, Is.EqualTo(1));
+            Assert.Throws<System.ArgumentException>(() => PickupContents.ForDroppedWeapon(launcher, new WeaponAmmo("other", 0, 0)));
+        }
+
+        [Test]
         public void NoPromptForTouchPickupsOrWhatCannotBeTaken()
         {
             var player = NewCollector("Player");

@@ -90,6 +90,8 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.DeathCamera, Is.EqualTo(range.DeathCamera));
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(range.ReserveAmmoMultiplier));
             Assert.That(rules.Destruction, Is.EqualTo(range.Destruction));
+            Assert.That(rules.MaxWeapons, Is.EqualTo(GameRulesAssetBuilder.TpsRangeMaxWeapons), "the weapon rack can be tried up to the limit and past it");
+            Assert.That(range.MaxWeapons, Is.Zero);
             AssertActions(rules.Actions, _expectedActions[TpsRangeIndex], _tpsRangePath);
         }
 

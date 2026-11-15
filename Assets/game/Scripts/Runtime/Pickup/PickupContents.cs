@@ -15,6 +15,9 @@ namespace Fps.Runtime
     {
         public const int DefaultHealthAmount = 25;
 
+        /// <summary>武器を落とした人の残弾を持っていない (拾った人は満タンで持つ) ことを表す弾倉の弾数。</summary>
+        public const int NoCarriedAmmo = -1;
+
         [SerializeField, Tooltip("種類")]
         private PickupKind _kind = PickupKind.Health;
 
@@ -23,6 +26,12 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("武器は渡す武器。予備弾は弾を足す武器で、空なら今持っている武器")]
         private WeaponDefinition _weapon;
+
+        [SerializeField, Min(NoCarriedAmmo), Tooltip("武器を誰かが落としたときの弾倉の弾数。拾った人はこの弾数で持つ。-1 なら満タンで持つ")]
+        private int _carriedMagazine = NoCarriedAmmo;
+
+        [SerializeField, Min(0), Tooltip("武器を誰かが落としたときの予備弾。弾倉の弾数が -1 なら使わない")]
+        private int _carriedReserve;
 
         [SerializeField, Tooltip("拾える陣営の絞り方")]
         private PickupSideRule _sideRule = PickupSideRule.Anyone;
@@ -43,6 +52,12 @@ namespace Fps.Runtime
         /// <summary>渡す武器か、弾を足す武器の定義。無ければ null。</summary>
         public WeaponDefinition Weapon => _weapon;
 
+        /// <summary>落とされた武器の残弾。拾った人はこの弾数で持つ。武器でないか、落とされた物でなければ (満タンで持つ) null。</summary>
+        public WeaponAmmo CarriedAmmo =>
+            _kind == PickupKind.Weapon && _weapon != null && _carriedMagazine >= 0
+                ? new WeaponAmmo(_weapon.Id, _carriedMagazine, Math.Max(0, _carriedReserve))
+                : null;
+
         public PickupEligibility Eligibility => PickupEligibility.Of(_sideRule, new Side(Math.Max(0, _sideId)));
 
         /// <summary>武器。持っていなければ持ち武器に加え、持っていれば予備弾を ammoIfOwned 足す。</summary>
@@ -54,6 +69,33 @@ namespace Fps.Runtime
             }
 
             return Create(PickupKind.Weapon, ammoIfOwned, weapon, eligibility, PickupSpec.NoOwner, null);
+        }
+
+        /// <summary>
+        /// 誰かが手放した武器。持っていなければ ammo の弾数で持ち武器に加え、持っていれば ammo の弾倉と予備弾を合わせた数を予備弾に足す。
+        /// ammo の武器の Id が weapon の Id と違えば <see cref="ArgumentException"/>。
+        /// </summary>
+        public static PickupContents ForDroppedWeapon(WeaponDefinition weapon, WeaponAmmo ammo, PickupEligibility eligibility = default)
+        {
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
+
+            if (ammo == null)
+            {
+                throw new ArgumentNullException(nameof(ammo));
+            }
+
+            if (!string.Equals(ammo.WeaponId, weapon.Id, StringComparison.Ordinal))
+            {
+                throw new ArgumentException($"ammo is for weapon '{ammo.WeaponId}', not '{weapon.Id}'", nameof(ammo));
+            }
+
+            var contents = Create(PickupKind.Weapon, ammo.AmmoInMagazine + ammo.ReserveAmmo, weapon, eligibility, PickupSpec.NoOwner, null);
+            contents._carriedMagazine = ammo.AmmoInMagazine;
+            contents._carriedReserve = ammo.ReserveAmmo;
+            return contents;
         }
 
         /// <summary>予備弾。weapon が null なら今持っている武器に足す。</summary>

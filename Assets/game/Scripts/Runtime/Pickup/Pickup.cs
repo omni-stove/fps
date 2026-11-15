@@ -8,15 +8,20 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 拾える物。トリガーの球 (<see cref="Radius"/>) に <see cref="Damageable"/> を持つ人が入ったら (<see cref="PickupCollectMode.Touch"/>)、
-    /// または範囲にいるプレイヤーが Interact を押したら (<see cref="PickupCollectMode.Interact"/>) 拾う。
+    /// 範囲にいるプレイヤーが Interact を押したら (<see cref="PickupCollectMode.Interact"/>)、
+    /// または範囲にいるプレイヤーが見た目に照準を合わせて Interact を押したら (<see cref="PickupCollectMode.Look"/>) 拾う。
+    /// 持てる武器の数の上限に届いた人が別の武器を拾うと、今の武器と持ち替え、手放した武器をその残弾のまま <see cref="PickupCollectMode.Look"/> で足元に落とす。
     /// 拾えるかと何が起きるかは <see cref="PickupJudge"/> が決め、ここは拾った人の <see cref="IWeaponHolder"/> (プレイヤーの <see cref="WeaponController"/> か
     /// bot の <see cref="EnemyAgent"/>。持ち武器・予備弾)・
     /// <see cref="Damageable"/> (体力)・<see cref="IArmorHolder"/> (防具) に反映して <c>[Pickup]</c> のログを出し、<see cref="Collected"/> を呼ぶ。
     /// タグは何にも反映せず、<see cref="Collected"/> を受けたモードが得点などを決める。
-    /// Interact で拾う物は、範囲にこの画面のプレイヤーがいて拾える間、HUD の <see cref="IInteractPrompt"/> に何を拾うかの案内 (<see cref="PickupPrompt"/>) を出す。
+    /// Interact で拾う物は、範囲にこの画面のプレイヤーがいて拾える間 (Look なら照準を合わせている間)、
+    /// HUD の <see cref="IInteractPrompt"/> に何を拾うかの案内 (<see cref="PickupPrompt"/>) を出す。
     /// </summary>
     /// <remarks>
     /// 実行時に置くときは <see cref="Create"/> を使う (当たり判定と見た目もコードで作る)。Scene に置くなら <see cref="PickupSpawnPoint"/> を使う。
+    /// 武器の見た目は <see cref="VisualPrefab"/>、無ければ <see cref="WeaponExtrasCatalog"/> のその武器の <see cref="WeaponExtrasAssets.PickupModel"/>、
+    /// それも無ければ仮の銃の形を組む。
     /// 当たり判定は動かない Rigidbody (kinematic) を付けたトリガーなので、Rigidbody を持たない bot のコライダーでも入ったことが分かる。
     /// 射撃や視線の Raycast はトリガーを無視するので、拾える物は弾を遮らない。
     /// </remarks>
@@ -43,8 +48,41 @@ namespace Fps.Runtime
         /// <summary>見た目を浮かせる、足元からの高さ (m)。</summary>
         public const float VisualHeight = 0.6f;
 
-        /// <summary>見た目が回る速さ (度/秒)。拾える物だと遠くから分かるように回す。</summary>
+        /// <summary>見た目が回る速さ (度/秒)。拾える物だと遠くから分かるように回す。<see cref="PickupCollectMode.Look"/> では照準を合わせやすいよう回さない。</summary>
         public const float SpinDegreesPerSecond = 90f;
+
+        /// <summary><see cref="PickupCollectMode.Look"/> で見た目を横に倒す角度 (度、前後の軸まわり)。銃を地面に寝かせて置く。</summary>
+        public const float LyingRollDegrees = 90f;
+
+        /// <summary><see cref="PickupCollectMode.Look"/> で寝かせた見た目の下端と足元の間 (m)。</summary>
+        public const float LyingGap = 0.02f;
+
+        /// <summary>
+        /// <see cref="PickupCollectMode.Look"/> で照準の線を伸ばす長さ (m)。三人称のカメラは体から離れているので、拾える距離は線の長さでなく範囲の球で決める。
+        /// </summary>
+        public const float LookRayLength = 30f;
+
+        /// <summary>持ち替えで手放した武器を、拾った物の位置から拾った人の側へずらして置く距離 (m)。</summary>
+        public const float DroppedWeaponOffset = 0.6f;
+
+        /// <summary><see cref="PickupCollectMode.Look"/> の見た目に付ける、照準の線だけが当たる判定の名前。</summary>
+        public const string LookTargetName = "LookTarget";
+
+        /// <summary>仮の銃の本体 (機関部と銃床) の大きさ (m)。幅・高さ・長さ。</summary>
+        public static readonly Vector3 GunBodySize = new Vector3(0.07f, 0.12f, 0.45f);
+
+        /// <summary>仮の銃の銃身の大きさ (m)。</summary>
+        public static readonly Vector3 GunBarrelSize = new Vector3(0.035f, 0.035f, 0.3f);
+
+        /// <summary>仮の銃の握りの大きさ (m)。</summary>
+        public static readonly Vector3 GunGripSize = new Vector3(0.05f, 0.14f, 0.07f);
+
+        private const int LookHitCapacity = 16;
+
+        private static readonly RaycastHit[] _lookHits = new RaycastHit[LookHitCapacity];
+        private static int _lookFrame = -1;
+        private static Damageable _lookViewer;
+        private static Pickup _lookResult;
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -64,7 +102,7 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("置いてから消えるまでの秒数。0 なら消えない")]
         private float _lifetimeSeconds;
 
-        [SerializeField, Tooltip("見た目。原点を見た目の中心にする (足元から浮かせて回す)。大きさと材質はプレハブのまま、当たり判定は外す。空なら中身の種類で色を分けた仮の箱を作る")]
+        [SerializeField, Tooltip("見た目。原点を見た目の中心にする (足元から浮かせて回す。Look なら寝かせて置く)。大きさと材質はプレハブのまま、当たり判定は外す。空なら武器はカタログの見た目か仮の銃、他は中身の種類で色を分けた仮の箱を作る")]
         private GameObject _visualPrefab;
 
         private readonly HashSet<Collider> _inside = new HashSet<Collider>();
@@ -75,10 +113,12 @@ namespace Fps.Runtime
         private bool _collected;
         private float _age;
         private Transform _visual;
+        private BoxCollider _lookTarget;
         private InputAction _interactAction;
         private bool _enabledInteractAction;
         private bool _reportedInvalid;
         private IHud _hud;
+        private int _armedFrame = -1;
 
         /// <summary>拾われたときに呼ばれる。<see cref="DestroyOnCollect"/> なら、呼んだ後に破棄する。</summary>
         public event Action<PickupCollection> Collected;
@@ -109,6 +149,7 @@ namespace Fps.Runtime
             set
             {
                 _collectMode = value;
+                ApplyVisualPose();
                 if (isActiveAndEnabled)
                 {
                     RefreshInteractAction();
@@ -141,7 +182,7 @@ namespace Fps.Runtime
             set => _lifetimeSeconds = Mathf.Max(0f, value);
         }
 
-        /// <summary>見た目。null なら中身の種類で色を分けた仮の箱。見た目を作る (Awake か <see cref="Create"/>) 前に設定したものを使う。</summary>
+        /// <summary>見た目。null なら武器はカタログの見た目か仮の銃、他は中身の種類で色を分けた仮の箱。見た目を作る (Awake か <see cref="Create"/>) 前に設定したものを使う。</summary>
         public GameObject VisualPrefab
         {
             get => _visualPrefab;
@@ -154,15 +195,15 @@ namespace Fps.Runtime
         /// <summary>範囲に入っている人のコライダーの数。</summary>
         public int InsideCount => _inside.Count;
 
-        /// <summary>今使っている Interact アクション。<see cref="PickupCollectMode.Interact"/> で Play 中でなければ null。</summary>
+        /// <summary>今使っている Interact アクション。<see cref="PickupCollectMode.Interact"/> か <see cref="PickupCollectMode.Look"/> で Play 中でなければ null。</summary>
         public InputAction InteractAction => _interactAction;
 
         /// <summary>
-        /// contents の拾える物を groundPosition (足元) に作る。トリガーの球・動かない Rigidbody・見た目 (visualPrefab か、中身の種類で色を分けた仮の箱) を付ける。
+        /// contents の拾える物を groundPosition (足元) に作る。トリガーの球・動かない Rigidbody・見た目 (<see cref="VisualPrefab"/> を参照) を付ける。
         /// contents は写しを持つので、後で書き換えても作った物は変わらない。contents が不正なら何も作らずに <see cref="ArgumentException"/>。
         /// </summary>
         /// <param name="parent">親。null ならシーンの直下。</param>
-        /// <param name="visualPrefab">見た目 (<see cref="VisualPrefab"/>)。null なら仮の箱。</param>
+        /// <param name="visualPrefab">見た目 (<see cref="VisualPrefab"/>)。null なら武器はカタログの見た目か仮の銃、他は仮の箱。</param>
         public static Pickup Create(
             PickupContents contents,
             Vector3 groundPosition,
@@ -197,6 +238,7 @@ namespace Fps.Runtime
                 pickup._radius = Mathf.Max(MinRadius, radius);
                 pickup._visualPrefab = visualPrefab;
                 pickup.EnsureParts();
+                pickup._armedFrame = Time.frameCount;
                 go.SetActive(true);
                 return pickup;
             }
@@ -284,7 +326,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            if (_visual != null)
+            if (_visual != null && _collectMode != PickupCollectMode.Look)
             {
                 _visual.Rotate(0f, SpinDegreesPerSecond * deltaSeconds, 0f, Space.World);
             }
@@ -347,7 +389,8 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 範囲にいるこの画面のプレイヤー (<see cref="Damageable.IsLocalPlayer"/>) が拾う。拾えたら true。
-        /// <see cref="PickupCollectMode.Interact"/> の入力から呼ばれる。拾い方に関わらずコードからも呼べる。
+        /// <see cref="PickupCollectMode.Interact"/> と <see cref="PickupCollectMode.Look"/> の入力から呼ばれる。拾い方に関わらずコードからも呼べるが、
+        /// Look ではプレイヤーが見た目に照準を合わせていなければ (<see cref="IsLookedAtBy"/>) 拾わない。
         /// </summary>
         public bool Interact()
         {
@@ -361,11 +404,96 @@ namespace Fps.Runtime
                 var collector = CollectorOf(collider);
                 if (collector != null && collector.IsLocalPlayer)
                 {
+                    if (_collectMode == PickupCollectMode.Look && !IsLookedAtBy(collector))
+                    {
+                        return false;
+                    }
+
                     return TryCollect(collector, out _);
                 }
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// viewer の視点 (<see cref="ViewOf"/>) の照準の線が、遮られずに最初に当たる <see cref="PickupCollectMode.Look"/> の見た目がこの物なら true。
+        /// viewer 自身のコライダーと、見た目以外のトリガーは素通りする。
+        /// </summary>
+        public bool IsLookedAtBy(Damageable viewer)
+        {
+            return viewer != null && !_collected && _collectMode == PickupCollectMode.Look && LookedAt(viewer) == this;
+        }
+
+        /// <summary>
+        /// viewer が照準を合わせている <see cref="PickupCollectMode.Look"/> の拾える物。無ければ null。
+        /// 照準の線は viewer の視点 (<see cref="ViewOf"/>) の正面へ <see cref="LookRayLength"/> 伸ばし、壁など固い物に当たったらそこで止める。
+        /// </summary>
+        public static Pickup LookedAt(Damageable viewer)
+        {
+            if (viewer == null)
+            {
+                throw new ArgumentNullException(nameof(viewer));
+            }
+
+            // 範囲にいる物がそれぞれ同じ線を引くので、Play 中は 1 フレームに 1 本だけ引いて使い回す。
+            if (Application.isPlaying && _lookFrame == Time.frameCount && _lookViewer == viewer)
+            {
+                return _lookResult;
+            }
+
+            var view = ViewOf(viewer);
+            var result = view != null ? CastLook(view.position, view.forward, viewer) : null;
+            _lookFrame = Time.frameCount;
+            _lookViewer = viewer;
+            _lookResult = result;
+            return result;
+        }
+
+        /// <summary>viewer の照準の起点。子の <see cref="WeaponController"/> が付いたカメラ、無ければ <see cref="Camera.main"/>。どちらも無ければ null。</summary>
+        public static Transform ViewOf(Damageable viewer)
+        {
+            if (viewer == null)
+            {
+                throw new ArgumentNullException(nameof(viewer));
+            }
+
+            var weapons = viewer.GetComponentInChildren<WeaponController>(true);
+            if (weapons != null)
+            {
+                return weapons.transform;
+            }
+
+            var main = Camera.main;
+            return main != null ? main.transform : null;
+        }
+
+        private static Pickup CastLook(Vector3 origin, Vector3 direction, Damageable viewer)
+        {
+            var count = Physics.RaycastNonAlloc(
+                origin, direction, _lookHits, LookRayLength, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+            Array.Sort(_lookHits, 0, count, HitDistanceComparer.Instance);
+            for (var i = 0; i < count; i++)
+            {
+                var collider = _lookHits[i].collider;
+                if (collider == null || collider.GetComponentInParent<Damageable>() == viewer)
+                {
+                    continue;
+                }
+
+                var pickup = collider.GetComponentInParent<Pickup>();
+                if (pickup != null && pickup._lookTarget == collider)
+                {
+                    return pickup.IsAvailable && pickup._collectMode == PickupCollectMode.Look ? pickup : null;
+                }
+
+                if (!collider.isTrigger)
+                {
+                    return null;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>範囲にいるこの画面のプレイヤー。いなければ null。</summary>
@@ -384,13 +512,14 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// player に出す案内。Interact で拾う物を player が今拾えるなら、Interact のキー (keyLabel) と中身を入れた <see cref="PickupPrompt"/> の文で true。
+        /// player に出す案内。Interact か Look で拾う物を player が今拾えるなら、Interact のキー (keyLabel) と中身を入れた <see cref="PickupPrompt"/> の文で true。
         /// 拾い方が Touch・拾われた後・中身が不正・player が拾えない (満タンや倒れているなど) なら案内は出さない (false)。
+        /// Look で照準を合わせているかはここでは見ない (呼ぶ側が <see cref="IsLookedAtBy"/> で確かめる)。
         /// </summary>
         public bool TryDescribe(Damageable player, string keyLabel, out LocalizedText text)
         {
             text = default;
-            if (player == null || _collected || _collectMode != PickupCollectMode.Interact || _contents == null || !TryResolveSpec())
+            if (player == null || _collected || _collectMode == PickupCollectMode.Touch || _contents == null || !TryResolveSpec())
             {
                 return false;
             }
@@ -497,7 +626,7 @@ namespace Fps.Runtime
             if (weapons != null)
             {
                 var list = weapons.DescribeWeapons(out var currentWeaponId);
-                state = state.WithWeapons(list, currentWeaponId);
+                state = state.WithWeapons(list, currentWeaponId, Mathf.Max(0, weapons.MaxWeapons));
             }
 
             // 上限が 0 以下の実装は防具を持てないものとして扱う (Core の検査で例外にしない)。
@@ -536,7 +665,17 @@ namespace Fps.Runtime
 
                     try
                     {
-                        if (!weapons.AddWeapon(definition))
+                        if (outcome.DroppedWeaponId != null)
+                        {
+                            if (!weapons.SwapWeapon(outcome.DroppedWeaponId, definition, _contents.CarriedAmmo, out var dropped))
+                            {
+                                failure = $"could not swap weapon '{outcome.DroppedWeaponId}' for '{definition.Id}'";
+                                return false;
+                            }
+
+                            DropWeapon(dropped, collector);
+                        }
+                        else if (!weapons.AddWeapon(definition, _contents.CarriedAmmo))
                         {
                             failure = $"already holds weapon '{definition.Id}'";
                             return false;
@@ -568,6 +707,26 @@ namespace Fps.Runtime
                     // タグはモードが Collected を受けて扱うので、拾う人には何も反映しない。
                     return true;
             }
+        }
+
+        /// <summary>
+        /// 持ち替えで手放した武器を、この物の位置から collector の側へ <see cref="DroppedWeaponOffset"/> ずらした足元に、
+        /// その残弾のまま <see cref="PickupCollectMode.Look"/> で置く。範囲の半径と拾える陣営はこの物と同じにする。
+        /// </summary>
+        private Pickup DropWeapon(HeldWeapon dropped, Damageable collector)
+        {
+            var position = transform.position;
+            var toward = collector.transform.position - position;
+            toward.y = 0f;
+            if (toward.sqrMagnitude > 1e-6f)
+            {
+                position += toward.normalized * Mathf.Min(DroppedWeaponOffset, toward.magnitude);
+            }
+
+            var contents = PickupContents.ForDroppedWeapon(dropped.Definition, dropped.Ammo, _contents.Eligibility);
+            var pickup = Create(contents, position, PickupCollectMode.Look, radius: _radius);
+            Debug.Log(PickupLog.Dropped(collector.Id, pickup.name, pickup.Spec, position.ToNumerics()), pickup);
+            return pickup;
         }
 
         private void TryCollectInside()
@@ -664,6 +823,116 @@ namespace Fps.Runtime
             {
                 _visual = CreateVisual(_contents.Kind);
             }
+
+            var lookTarget = _visual != null ? _visual.Find(LookTargetName) : null;
+            _lookTarget = lookTarget != null ? lookTarget.GetComponent<BoxCollider>() : null;
+
+            ApplyVisualPose();
+        }
+
+        // Look は寝かせて照準の判定を付け、それ以外は浮かせて回す。拾い方は作った後にも変えられるので、変えるたびに置き直す。
+        private void ApplyVisualPose()
+        {
+            if (_visual == null)
+            {
+                return;
+            }
+
+            if (_collectMode != PickupCollectMode.Look)
+            {
+                _visual.localRotation = Quaternion.identity;
+                _visual.localPosition = new Vector3(0f, VisualHeight, 0f);
+                RemoveLookTarget();
+                return;
+            }
+
+            _visual.localRotation = Quaternion.Euler(0f, 0f, LyingRollDegrees);
+            _visual.localPosition = Vector3.zero;
+            var hasBounds = TryLocalBounds(_visual, out var bounds);
+            if (hasBounds)
+            {
+                var lowest = float.PositiveInfinity;
+                foreach (var corner in Corners(bounds))
+                {
+                    lowest = Mathf.Min(lowest, _visual.TransformPoint(corner).y);
+                }
+
+                _visual.position += Vector3.up * (transform.position.y + LyingGap - lowest);
+            }
+            else
+            {
+                bounds = new Bounds(Vector3.zero, Vector3.one * VisualSize);
+                _visual.position += Vector3.up * (VisualSize / 2f + LyingGap);
+            }
+
+            EnsureLookTarget(bounds);
+        }
+
+        private void EnsureLookTarget(Bounds bounds)
+        {
+            if (_lookTarget == null)
+            {
+                var target = new GameObject(LookTargetName);
+                target.transform.SetParent(_visual, false);
+
+                // 親の Rigidbody にまとまると、この判定への出入りが範囲の球の出入りとして Pickup に届くので、別の体にする。
+                var body = target.AddComponent<Rigidbody>();
+                body.isKinematic = true;
+                body.useGravity = false;
+
+                // 照準の線にだけ当てる。トリガーなので移動と射撃は遮らない。
+                _lookTarget = target.AddComponent<BoxCollider>();
+                _lookTarget.isTrigger = true;
+            }
+
+            _lookTarget.center = bounds.center;
+            _lookTarget.size = bounds.size;
+        }
+
+        private void RemoveLookTarget()
+        {
+            if (_lookTarget == null)
+            {
+                return;
+            }
+
+            DestroySafely(_lookTarget.gameObject);
+            _lookTarget = null;
+        }
+
+        // root の座標で、子孫のすべての Renderer を囲む箱。Renderer が無ければ false。
+        private static bool TryLocalBounds(Transform root, out Bounds bounds)
+        {
+            bounds = default;
+            var found = false;
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                foreach (var corner in Corners(renderer.localBounds))
+                {
+                    var point = root.InverseTransformPoint(renderer.transform.TransformPoint(corner));
+                    if (!found)
+                    {
+                        bounds = new Bounds(point, Vector3.zero);
+                        found = true;
+                    }
+                    else
+                    {
+                        bounds.Encapsulate(point);
+                    }
+                }
+            }
+
+            return found;
+        }
+
+        private static IEnumerable<Vector3> Corners(Bounds bounds)
+        {
+            var min = bounds.min;
+            var max = bounds.max;
+            for (var i = 0; i < 8; i++)
+            {
+                yield return new Vector3((i & 1) == 0 ? min.x : max.x, (i & 2) == 0 ? min.y : max.y, (i & 4) == 0 ? min.z : max.z);
+            }
         }
 
         private void ApplyRadius()
@@ -682,33 +951,71 @@ namespace Fps.Runtime
 
         private Transform CreateVisual(PickupKind kind)
         {
-            if (_visualPrefab != null)
+            var prefab = _visualPrefab != null ? _visualPrefab : WeaponModelOf(_contents);
+            if (prefab != null)
             {
                 // 拾う範囲はトリガーの球で決めるので、見た目の当たり判定は外す (残すと固い物として移動と弾を遮る)。
-                var instance = Fps.Runtime.VisualPrefab.Instantiate(_visualPrefab, transform, VisualName, stripColliders: true);
+                var instance = Fps.Runtime.VisualPrefab.Instantiate(prefab, transform, VisualName, stripColliders: true);
                 instance.transform.localPosition = new Vector3(0f, VisualHeight, 0f);
                 return instance.transform;
             }
 
-            var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            visual.name = VisualName;
+            if (kind == PickupKind.Weapon)
+            {
+                return CreateGunShape();
+            }
+
+            var visual = CreatePart(PrimitiveType.Cube, VisualName, transform, Vector3.one * VisualSize, ColorOf(kind));
+            visual.localPosition = new Vector3(0f, VisualHeight, 0f);
+            return visual;
+        }
+
+        /// <summary>contents の武器の、地面に置いたときの見た目 (<see cref="WeaponExtrasAssets.PickupModel"/>)。武器でないか、カタログに無ければ null。</summary>
+        public static GameObject WeaponModelOf(PickupContents contents)
+        {
+            if (contents == null || contents.Kind != PickupKind.Weapon || contents.Weapon == null)
+            {
+                return null;
+            }
+
+            var catalog = WeaponExtrasCatalog.Load();
+            return catalog != null && catalog.TryGetWeapon(contents.Weapon.Id, out var assets) ? assets.PickupModel : null;
+        }
+
+        // 見た目の素材が無い武器の仮の形。原点を中心に、前 (+Z) を銃口にした本体・銃身・握り。
+        private Transform CreateGunShape()
+        {
+            var root = new GameObject(VisualName).transform;
+            root.SetParent(transform, false);
+            root.localPosition = new Vector3(0f, VisualHeight, 0f);
+            var color = PlayerMockBody.GunColor;
+            CreatePart(PrimitiveType.Cube, "Body", root, GunBodySize, color);
+            var barrel = CreatePart(PrimitiveType.Cube, "Barrel", root, GunBarrelSize, color);
+            barrel.localPosition = new Vector3(0f, GunBodySize.y / 4f, (GunBodySize.z + GunBarrelSize.z) / 2f);
+            var grip = CreatePart(PrimitiveType.Cube, "Grip", root, GunGripSize, color);
+            grip.localPosition = new Vector3(0f, -(GunBodySize.y + GunGripSize.y) / 2f, -GunBodySize.z / 6f);
+            return root;
+        }
+
+        private static Transform CreatePart(PrimitiveType shape, string partName, Transform parent, Vector3 size, Color color)
+        {
+            var part = GameObject.CreatePrimitive(shape);
+            part.name = partName;
 
             // Destroy は次のフレームまで残り、その間に物理に固い箱として現れるので、すぐに外す。
-            DestroyImmediate(visual.GetComponent<Collider>());
-            visual.transform.SetParent(transform, false);
-            visual.transform.localPosition = new Vector3(0f, VisualHeight, 0f);
-            visual.transform.localScale = Vector3.one * VisualSize;
+            DestroyImmediate(part.GetComponent<Collider>());
+            part.transform.SetParent(parent, false);
+            part.transform.localScale = size;
 
-            var renderer = visual.GetComponent<Renderer>();
+            var renderer = part.GetComponent<Renderer>();
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             // 共有マテリアルを塗り替えると他のプリミティブまで色が変わるので、この物だけの上書きで色を付ける。
             var block = new MaterialPropertyBlock();
-            var color = ColorOf(kind);
             block.SetColor(BaseColorId, color);
             block.SetColor(ColorId, color);
             renderer.SetPropertyBlock(block);
-            return visual.transform;
+            return part.transform;
         }
 
         /// <summary>中身の種類ごとの見た目の色。</summary>
@@ -731,7 +1038,7 @@ namespace Fps.Runtime
 
         private void RefreshInteractAction()
         {
-            if (_collectMode != PickupCollectMode.Interact || !Application.isPlaying)
+            if (_collectMode == PickupCollectMode.Touch || !Application.isPlaying)
             {
                 ReleaseInteractAction();
                 return;
@@ -786,12 +1093,23 @@ namespace Fps.Runtime
 
         private void OnInteractPerformed(InputAction.CallbackContext context)
         {
+            // 持ち替えで置いた物は、置いた押下の続きで拾い直さないよう、次のフレームから受け付ける。
+            if (Time.frameCount == _armedFrame)
+            {
+                return;
+            }
+
             Interact();
         }
 
         private void UpdatePrompt()
         {
-            var player = _collectMode == PickupCollectMode.Interact && !_collected && _inside.Count > 0 ? LocalPlayerInside() : null;
+            var player = _collectMode != PickupCollectMode.Touch && !_collected && _inside.Count > 0 ? LocalPlayerInside() : null;
+            if (player != null && _collectMode == PickupCollectMode.Look && !IsLookedAtBy(player))
+            {
+                player = null;
+            }
+
             if (player == null)
             {
                 HidePrompt();
@@ -825,6 +1143,13 @@ namespace Fps.Runtime
             {
                 _hud.InteractPrompt?.Hide(this);
             }
+        }
+
+        private sealed class HitDistanceComparer : IComparer<RaycastHit>
+        {
+            public static readonly HitDistanceComparer Instance = new HitDistanceComparer();
+
+            public int Compare(RaycastHit x, RaycastHit y) => x.distance.CompareTo(y.distance);
         }
 
         private static void DestroySafely(UnityEngine.Object target)

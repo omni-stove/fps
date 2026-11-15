@@ -9,6 +9,9 @@ namespace Fps.Core
         /// <summary>持っていない武器を拾う。{0} はキー、{1} は武器の名前。</summary>
         public const string WeaponKey = "hud.pickup.weapon";
 
+        /// <summary>持てる数の上限に届いているので、今の武器を落として持ち替える。{0} はキー、{1} は拾う武器の名前。</summary>
+        public const string WeaponSwapKey = "hud.pickup.weaponSwap";
+
         /// <summary>持っている武器を拾って予備弾にする。{0} はキー、{1} は武器の名前。</summary>
         public const string WeaponAmmoKey = "hud.pickup.weaponAmmo";
 
@@ -34,7 +37,8 @@ namespace Fps.Core
             switch (outcome.Kind)
             {
                 case PickupKind.Weapon:
-                    text = new LocalizedText(outcome.AddsWeapon ? WeaponKey : WeaponAmmoKey, key, weaponName);
+                    var weaponKey = outcome.DroppedWeaponId != null ? WeaponSwapKey : outcome.AddsWeapon ? WeaponKey : WeaponAmmoKey;
+                    text = new LocalizedText(weaponKey, key, weaponName);
                     return true;
                 case PickupKind.ReserveAmmo:
                     text = new LocalizedText(ReserveAmmoKey, key);

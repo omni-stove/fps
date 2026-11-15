@@ -42,6 +42,7 @@
   "hud.ammoCrate.prompt": "[{0}] 弾薬を補給",
   "hud.ammoCrate.full": "弾薬は満タン",
   "hud.pickup.weapon": "[{0}] {1} を拾う",
+  "hud.pickup.weaponSwap": "[{0}] {1} に持ち替える",
   "hud.pickup.weaponAmmo": "[{0}] {1} の弾を拾う",
   "hud.pickup.reserveAmmo": "[{0}] 予備弾を拾う",
   "hud.pickup.health": "[{0}] 回復を拾う",

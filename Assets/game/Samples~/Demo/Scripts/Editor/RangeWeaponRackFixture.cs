@@ -10,6 +10,7 @@ namespace Fps.Editor
 {
     // 射撃場で拾える武器 (WeaponAssetBuilder.LoadRangeWeapons、サンプルの武器の JSON すべて) を、標的の奥 (x = -1.25..18.75, z = 28.5..37.5) に
     // 一覧の順で左から右・手前から奥へ並べる。サンプルの武器を足す issue は JSON を置くだけで、ここに拾える武器が 1 つ増える。
+    // 武器のモデルに照準を合わせて拾う (Look) ので、隣の武器と範囲が重なっても狙った 1 本だけを拾える。
     public sealed class RangeWeaponRackFixture : ITpsRangeFixture
     {
         public const string RootName = "WeaponRack";
@@ -21,6 +22,9 @@ namespace Fps.Editor
         public const float ColumnSpacing = 2.5f;
         public const float RowSpacing = 3f;
         public const float RespawnSeconds = 5f;
+
+        /// <summary>拾える範囲の半径 (m)。武器の前に立って見下ろせば届く広さ。</summary>
+        public const float PickupRadius = 1.5f;
 
         /// <summary>手前の左端の武器の足元。</summary>
         public static readonly Vector3 FirstSlot = new Vector3(0f, 0f, 30f);
@@ -52,8 +56,9 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// weapons を並べた <see cref="RootName"/> を scene の最上位に置く。どれも入ると拾い、<see cref="RespawnSeconds"/> 後にまた出る。
-        /// 既に持っている武器なら、その武器の弾倉 1 つ分の予備弾になる。
+        /// weapons を並べた <see cref="RootName"/> を scene の最上位に置く。どれも範囲 (<see cref="PickupRadius"/>) で武器のモデルに照準を合わせて
+        /// Interact を押すと拾い、<see cref="RespawnSeconds"/> 後にまた出る。既に持っている武器なら、その武器の弾倉 1 つ分の予備弾になる。
+        /// 持てる武器の数の上限 (<see cref="GameRules.MaxWeapons"/>) に届いていれば、今の武器を足元に落として持ち替える。
         /// </summary>
         /// <exception cref="InvalidOperationException">weapons が棚 (<see cref="Columns"/> × <see cref="Rows"/>) に収まらない。何も置かない。</exception>
         public static GameObject Place(Scene scene, IReadOnlyList<WeaponDefinition> weapons)
@@ -92,7 +97,8 @@ namespace Fps.Editor
                 pointObject.transform.position = SlotPosition(i);
                 var point = pointObject.AddComponent<PickupSpawnPoint>();
                 point.Contents = contents[i];
-                point.CollectMode = PickupCollectMode.Touch;
+                point.CollectMode = PickupCollectMode.Look;
+                point.Radius = PickupRadius;
                 point.RespawnSeconds = RespawnSeconds;
             }
 

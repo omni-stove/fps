@@ -15,7 +15,8 @@ namespace Fps.Core.Tests
             return new PickupCollector(side, 100, 100);
         }
 
-        private static PickupCollector Armed(int rifleReserve = 30, int handgunReserve = 20, string current = _rifle, bool infinite = false)
+        private static PickupCollector Armed(
+            int rifleReserve = 30, int handgunReserve = 20, string current = _rifle, bool infinite = false, int maxWeapons = 0)
         {
             return new PickupCollector(Side.Alpha, 100, 100).WithWeapons(
                 new[]
@@ -23,7 +24,8 @@ namespace Fps.Core.Tests
                     new PickupWeaponState(_rifle, rifleReserve, 90, infinite),
                     new PickupWeaponState(_handgun, handgunReserve, 40, infinite),
                 },
-                current);
+                current,
+                maxWeapons);
         }
 
         [Test]
@@ -96,6 +98,45 @@ namespace Fps.Core.Tests
             Assert.That(outcome.AddsWeapon, Is.True);
             Assert.That(outcome.WeaponId, Is.EqualTo(_launcher));
             Assert.That(outcome.ReserveAmmo, Is.Zero);
+        }
+
+        [Test]
+        public void ANewWeaponAtTheLimitIsSwappedForTheCurrentOne()
+        {
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_launcher, 2), Armed(current: _handgun, maxWeapons: 2));
+
+            Assert.That(outcome.IsCollected, Is.True);
+            Assert.That(outcome.AddsWeapon, Is.True);
+            Assert.That(outcome.WeaponId, Is.EqualTo(_launcher));
+            Assert.That(outcome.DroppedWeaponId, Is.EqualTo(_handgun));
+        }
+
+        [Test]
+        public void ANewWeaponBelowTheLimitOrWithoutOneIsAddedWithoutDropping()
+        {
+            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_launcher, 2), Armed(maxWeapons: 3)).DroppedWeaponId, Is.Null);
+            Assert.That(PickupJudge.Judge(PickupSpec.Weapon(_launcher, 2), Armed(maxWeapons: 0)).DroppedWeaponId, Is.Null);
+
+            var unarmed = new PickupCollector(Side.Alpha, 100, 100).WithWeapons(null, null, 1);
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_launcher, 2), unarmed);
+            Assert.That(outcome.AddsWeapon, Is.True);
+            Assert.That(outcome.DroppedWeaponId, Is.Null, "nothing in hand to drop");
+        }
+
+        [Test]
+        public void AnOwnedWeaponAtTheLimitStillGivesAmmo()
+        {
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_rifle, 5), Armed(maxWeapons: 2));
+
+            Assert.That(outcome.AddsWeapon, Is.False);
+            Assert.That(outcome.DroppedWeaponId, Is.Null);
+            Assert.That(outcome.ReserveAmmo, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void ANegativeWeaponLimitIsRejected()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PickupCollector(null, 100, 100).WithWeapons(null, null, -1));
         }
 
         [Test]

@@ -76,7 +76,8 @@ namespace Fps.Core.Tests
   ""hudDensity"": ""Hardcore"",
   ""objective"": ""Domination"",
   ""minPlayers"": 8,
-  ""idleKickSeconds"": 90
+  ""idleKickSeconds"": 90,
+  ""maxWeapons"": 2
 }";
             var expected = new GameRules(
                 FriendlyFire.Reflect,
@@ -95,7 +96,8 @@ namespace Fps.Core.Tests
                 HudDensity.Hardcore,
                 MatchObjective.Domination,
                 8,
-                90f);
+                90f,
+                2);
 
             AssertSameRules(GameRulesJson.Parse(json, _source), expected);
         }
@@ -103,7 +105,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ItemNamesMatchTheRulesConstructors()
         {
-            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(17));
+            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(18));
             Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(25));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
@@ -295,6 +297,7 @@ namespace Fps.Core.Tests
         [TestCase("{\"reserveAmmoMultiplier\": -0.5}", "reserveAmmoMultiplier")]
         [TestCase("{\"minPlayers\": 65}", "minPlayers")]
         [TestCase("{\"idleKickSeconds\": 1e39}", "idleKickSeconds")]
+        [TestCase("{\"maxWeapons\": -1}", "maxWeapons")]
         [TestCase("{\"actions\": {\"downedHealthFraction\": 1.5}}", "actions.downedHealthFraction")]
         [TestCase("{\"actions\": {\"reviveSeconds\": 0}}", "actions.reviveSeconds")]
         [TestCase("{\"actions\": {\"grenadeCount\": -1}}", "actions.grenadeCount")]
@@ -397,6 +400,7 @@ namespace Fps.Core.Tests
             Assert.That(actual.Objective, Is.EqualTo(expected.Objective), "objective");
             Assert.That(actual.MinPlayers, Is.EqualTo(expected.MinPlayers), "minPlayers");
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds), "idleKickSeconds");
+            Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons), "maxWeapons");
 
             var a = actual.Actions;
             var b = expected.Actions;

@@ -145,6 +145,10 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("入力がこの秒数無いプレイヤーをサーバーから切る。0 なら切らない")]
         private float _idleKickSeconds;
 
+        [Header("武器")]
+        [SerializeField, UnityEngine.Range(0, GameRules.MaxWeaponsLimit), Tooltip("1 人が同時に持てる武器の数。上限で別の武器を拾うと今の武器を落として持ち替える。0 なら上限なし")]
+        private int _maxWeapons;
+
         public FriendlyFire FriendlyFire
         {
             get => _friendlyFire;
@@ -391,6 +395,12 @@ namespace Fps.Runtime
             set => _idleKickSeconds = value;
         }
 
+        public int MaxWeapons
+        {
+            get => _maxWeapons;
+            set => _maxWeapons = value;
+        }
+
         /// <summary>定義を不変の <see cref="GameRules"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="GameRulesDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ToRules()
@@ -439,7 +449,8 @@ namespace Fps.Runtime
                     _hudDensity,
                     _objective,
                     _minPlayers,
-                    _idleKickSeconds);
+                    _idleKickSeconds,
+                    _maxWeapons);
             }
             catch (ArgumentException e)
             {
@@ -491,6 +502,7 @@ namespace Fps.Runtime
             _objective = rules.Objective;
             _minPlayers = rules.MinPlayers;
             _idleKickSeconds = rules.IdleKickSeconds;
+            _maxWeapons = rules.MaxWeapons;
 
             var actions = rules.Actions;
             _downed = actions.Downed;

@@ -9,7 +9,8 @@ namespace Fps.Core
     {
         /// <summary>
         /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない、アクションは <see cref="ActionRules.Default"/>、
-        /// リスポーン直後の無敵なし、落下ダメージなし、HUD はすべて出す、拠点なし (<see cref="MatchObjective.None"/>)、人数を Bot で埋めない、放置しても切らない。
+        /// リスポーン直後の無敵なし、落下ダメージなし、HUD はすべて出す、拠点なし (<see cref="MatchObjective.None"/>)、人数を Bot で埋めない、放置しても切らない、
+        /// 持てる武器の数に上限なし。
         /// </summary>
         public static readonly GameRules Default = new GameRules(
             FriendlyFire.Off,
@@ -28,6 +29,9 @@ namespace Fps.Core
 
         /// <summary><see cref="MinPlayers"/> の上限。サーバーが Bot を際限なく足さないようにする。</summary>
         public const int MaxMinPlayers = 64;
+
+        /// <summary><see cref="MaxWeapons"/> に書ける最大の値。持ち武器を送る電文 (<c>OwnerSnapshot.MaxWeapons</c>) に収まる数。</summary>
+        public const int MaxWeaponsLimit = byte.MaxValue;
 
         /// <summary>味方に弾が当たったときの扱い。</summary>
         public FriendlyFire FriendlyFire { get; }
@@ -82,6 +86,12 @@ namespace Fps.Core
         /// <summary>オンラインの試合で、入力がこの秒数無ければサーバーから切る。0 なら切らない。0 以上の有限値。</summary>
         public float IdleKickSeconds { get; }
 
+        /// <summary>
+        /// 1 人が同時に持てる武器の数。0 なら上限なし。上限に届いている人が持っていない武器を拾うと、今の武器を落として持ち替える。
+        /// 0 以上 <see cref="MaxWeaponsLimit"/> 以下。
+        /// </summary>
+        public int MaxWeapons { get; }
+
         /// <param name="friendlyFire">味方撃ちの扱い。定義済みの値。</param>
         /// <param name="respawnMode">リスポーン方式。定義済みの値。</param>
         /// <param name="waveIntervalSeconds">波の間隔 (秒)。0 より大きい有限値。</param>
@@ -99,6 +109,7 @@ namespace Fps.Core
         /// <param name="objective">勝敗の決め方。定義済みの値。</param>
         /// <param name="minPlayers">Bot で埋める人数。0 以上 <see cref="MaxMinPlayers"/> 以下。</param>
         /// <param name="idleKickSeconds">放置で切るまでの秒数。0 以上の有限値。</param>
+        /// <param name="maxWeapons">持てる武器の数。0 なら上限なし。0 以上 <see cref="MaxWeaponsLimit"/> 以下。</param>
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -116,7 +127,8 @@ namespace Fps.Core
             HudDensity hudDensity = HudDensity.Full,
             MatchObjective objective = MatchObjective.None,
             int minPlayers = 0,
-            float idleKickSeconds = 0f)
+            float idleKickSeconds = 0f,
+            int maxWeapons = 0)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -194,6 +206,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(idleKickSeconds), idleKickSeconds, "idleKickSeconds must be a non-negative finite number");
             }
 
+            if (maxWeapons < 0 || maxWeapons > MaxWeaponsLimit)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxWeapons), maxWeapons, "maxWeapons must be between 0 and " + MaxWeaponsLimit);
+            }
+
             FriendlyFire = friendlyFire;
             RespawnMode = respawnMode;
             WaveIntervalSeconds = waveIntervalSeconds;
@@ -211,6 +228,7 @@ namespace Fps.Core
             Objective = objective;
             MinPlayers = minPlayers;
             IdleKickSeconds = idleKickSeconds;
+            MaxWeapons = maxWeapons;
         }
 
         /// <summary><see cref="FriendlyFire"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
@@ -275,6 +293,9 @@ namespace Fps.Core
         /// <summary><see cref="IdleKickSeconds"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
         public GameRules WithIdleKickSeconds(float value) => Copy(idleKickSeconds: value);
 
+        /// <summary><see cref="MaxWeapons"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithMaxWeapons(int value) => Copy(maxWeapons: value);
+
         private GameRules Copy(
             FriendlyFire? friendlyFire = null,
             RespawnMode? respawnMode = null,
@@ -292,7 +313,8 @@ namespace Fps.Core
             HudDensity? hudDensity = null,
             MatchObjective? objective = null,
             int? minPlayers = null,
-            float? idleKickSeconds = null)
+            float? idleKickSeconds = null,
+            int? maxWeapons = null)
         {
             return new GameRules(
                 friendlyFire ?? FriendlyFire,
@@ -311,7 +333,8 @@ namespace Fps.Core
                 hudDensity ?? HudDensity,
                 objective ?? Objective,
                 minPlayers ?? MinPlayers,
-                idleKickSeconds ?? IdleKickSeconds);
+                idleKickSeconds ?? IdleKickSeconds,
+                maxWeapons ?? MaxWeapons);
         }
     }
 }

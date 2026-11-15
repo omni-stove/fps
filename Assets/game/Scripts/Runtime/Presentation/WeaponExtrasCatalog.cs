@@ -5,8 +5,8 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 武器ごとの薬莢と空撃ちの素材 (薬莢のプレハブ・薬莢の落下音・空撃ちの音) を武器の Id (<see cref="Fps.Core.WeaponSpec.Id"/>) で引く。
-    /// <see cref="ShellEjector"/> と <see cref="DryFireSound"/> が <see cref="Load"/> で読む。
+    /// 武器ごとの薬莢と空撃ちの素材 (薬莢のプレハブ・薬莢の落下音・空撃ちの音) と、地面に置いたときの見た目を武器の Id (<see cref="Fps.Core.WeaponSpec.Id"/>) で引く。
+    /// <see cref="ShellEjector"/>・<see cref="DryFireSound"/>・<see cref="Pickup"/> (武器の見た目) が <see cref="Load"/> で読む。
     /// 中身は Fps.Editor.WeaponExtrasAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
     /// 置き場所と枠の扱いは <see cref="PresentationCatalog"/> の規約に従う (どの枠も空でよく、空の枠の演出だけを出さない)。
     /// </summary>
@@ -147,7 +147,7 @@ namespace Fps.Runtime
         }
     }
 
-    /// <summary>武器 1 種類の薬莢と空撃ちの素材。<see cref="WeaponExtrasCatalog"/> の要素。</summary>
+    /// <summary>武器 1 種類の薬莢・空撃ち・地面に置いたときの見た目の素材。<see cref="WeaponExtrasCatalog"/> の要素。</summary>
     [Serializable]
     public sealed class WeaponExtrasAssets
     {
@@ -162,6 +162,9 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("弾切れでトリガーを引いたときの音。空なら鳴らさない")]
         private AudioClip _dryFireSound;
+
+        [SerializeField, Tooltip("地面に置いた (拾える) ときの銃の見た目。原点が見た目の中心で、前が +Z (銃口)。当たり判定は外す。空なら仮の銃の形を組む")]
+        private GameObject _pickupModel;
 
         public WeaponExtrasAssets()
         {
@@ -183,5 +186,12 @@ namespace Fps.Runtime
         public AudioClip ShellLandSound => _shellLandSound;
 
         public AudioClip DryFireSound => _dryFireSound;
+
+        /// <summary>地面に置いた (拾える) ときの銃の見た目。無ければ null。</summary>
+        public GameObject PickupModel
+        {
+            get => _pickupModel;
+            set => _pickupModel = value;
+        }
     }
 }

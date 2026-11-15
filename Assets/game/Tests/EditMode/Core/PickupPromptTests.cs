@@ -27,6 +27,19 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AWeaponAtTheLimitSaysItSwaps()
+        {
+            var full = new PickupCollector(Side.Alpha, 90, 100).WithWeapons(
+                new[] { new PickupWeaponState(_rifle, 30, 90, false) },
+                _rifle,
+                1);
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_launcher, 4), full);
+
+            Assert.That(PickupPrompt.TryDescribe(outcome, "E", _launcherName, out var text), Is.True);
+            Assert.That(text, Is.EqualTo(new LocalizedText(PickupPrompt.WeaponSwapKey, "E", _launcherName)));
+        }
+
+        [Test]
         public void AWeaponAlreadyHeldSaysItGivesAmmo()
         {
             var rifleName = new LocalizedText("weapon.rifle");

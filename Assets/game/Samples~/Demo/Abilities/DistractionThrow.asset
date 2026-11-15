@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 165a47a33aeb88449f6881c42bfeeaf7, type: 3}
+  m_Name: DistractionThrow
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DistractionThrowDefinition
+  _id: distraction-throw
+  _maxCharges: 3
+  _rechargeSeconds: 10
+  _cooldownSeconds: 1
+  _windupSeconds: 0.15
+  _throwSpeed: 16
+  _throwLiftSpeed: 3
+  _noiseRadius: 15
+  _maxFlightSeconds: 6
+  _lingerSeconds: 4
+  _prefab: {fileID: 0}
+  _landingSound: {fileID: 0}

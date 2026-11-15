@@ -16,7 +16,8 @@ namespace Fps.Core
             int armor,
             int tagOwnerId,
             Side? tagOwnerSide,
-            bool isOwnSideTag)
+            bool isOwnSideTag,
+            string droppedWeaponId = null)
         {
             Kind = kind;
             Rejection = rejection;
@@ -28,6 +29,7 @@ namespace Fps.Core
             TagOwnerId = tagOwnerId;
             TagOwnerSide = tagOwnerSide;
             IsOwnSideTag = isOwnSideTag;
+            DroppedWeaponId = droppedWeaponId;
         }
 
         /// <summary>拾った (拾おうとした) 物の種類。</summary>
@@ -44,6 +46,12 @@ namespace Fps.Core
 
         /// <summary><see cref="WeaponId"/> の武器を持ち武器に加えるなら true。</summary>
         public bool AddsWeapon { get; }
+
+        /// <summary>
+        /// 持てる武器の数の上限 (<see cref="PickupCollector.MaxWeapons"/>) に届いていたので、<see cref="WeaponId"/> の武器と持ち替えて落とす武器の Id。
+        /// 落とさなければ null。
+        /// </summary>
+        public string DroppedWeaponId { get; }
 
         /// <summary><see cref="WeaponId"/> の武器に足す予備弾。</summary>
         public int ReserveAmmo { get; }
@@ -79,6 +87,11 @@ namespace Fps.Core
         internal static PickupOutcome WeaponAdded(string weaponId)
         {
             return new PickupOutcome(PickupKind.Weapon, PickupRejection.None, weaponId, true, 0, 0, 0, PickupSpec.NoOwner, null, false);
+        }
+
+        internal static PickupOutcome WeaponSwapped(string weaponId, string droppedWeaponId)
+        {
+            return new PickupOutcome(PickupKind.Weapon, PickupRejection.None, weaponId, true, 0, 0, 0, PickupSpec.NoOwner, null, false, droppedWeaponId);
         }
 
         internal static PickupOutcome AmmoAdded(PickupKind kind, string weaponId, int amount)

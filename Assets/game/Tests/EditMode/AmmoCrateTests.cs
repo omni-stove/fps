@@ -71,7 +71,15 @@ namespace Fps.Tests.EditMode
                 return _weapons;
             }
 
-            public bool AddWeapon(WeaponDefinition definition) => false;
+            public int MaxWeapons => 0;
+
+            public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null) => false;
+
+            public bool SwapWeapon(string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, out HeldWeapon dropped)
+            {
+                dropped = default;
+                return false;
+            }
 
             public int AddReserveAmmo(string weaponId, int amount)
             {

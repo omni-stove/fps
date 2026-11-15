@@ -87,6 +87,11 @@ namespace Fps.Editor
         /// <summary><see cref="TpsRangeActions"/> で出撃ごとに持つグレネードの数。</summary>
         public const int TpsRangeGrenadeCount = 3;
 
+        /// <summary>
+        /// TPS 射撃場で 1 人が持てる武器の数。既定のロードアウト (2 本) に棚から 1 本足すと届き、その先は棚の武器と持ち替える。
+        /// </summary>
+        public const int TpsRangeMaxWeapons = 3;
+
         /// <summary><see cref="TeamDeathmatchActions"/> (ドミネーションも同じ) で出撃ごとに持つグレネードの数。</summary>
         public const int TeamDeathmatchGrenadeCount = 2;
 
@@ -187,7 +192,7 @@ namespace Fps.Editor
         /// </summary>
         public static GameRules TpsRangeRules()
         {
-            return RangeRules().WithActions(TpsRangeActions());
+            return RangeRules().WithActions(TpsRangeActions()).WithMaxWeapons(TpsRangeMaxWeapons);
         }
 
         /// <summary>
@@ -544,7 +549,8 @@ namespace Fps.Editor
                 source.HudDensity,
                 source.Objective,
                 source.MinPlayers,
-                source.IdleKickSeconds);
+                source.IdleKickSeconds,
+                source.MaxWeapons);
         }
     }
 }

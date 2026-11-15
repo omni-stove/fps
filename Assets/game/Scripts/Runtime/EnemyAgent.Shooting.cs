@@ -60,11 +60,14 @@ namespace Fps.Runtime
             return new[] { PickupWeaponState.Of(weapon) };
         }
 
+        /// <summary>bot は 1 本しか持たず、拾えば持ち替える (<see cref="AddWeapon"/>) ので、拾う判定には上限なしとして見せる。</summary>
+        public int MaxWeapons => 0;
+
         /// <summary>
-        /// 拾った武器を持つ。bot は 1 本しか持たないので、別の武器を持っていればそれと持ち替える (<see cref="EquipWeapon"/>、今の <see cref="WeaponRules"/> で満タン)。
-        /// 同じ Id の武器を持っていれば何もせず false。
+        /// 拾った武器を持つ。bot は 1 本しか持たないので、別の武器を持っていればそれと持ち替える (<see cref="EquipWeapon"/>、今の <see cref="WeaponRules"/>)。
+        /// 弾数は ammo があればその数、null なら満タン。同じ Id の武器を持っていれば何もせず false。
         /// </summary>
-        public bool AddWeapon(WeaponDefinition definition)
+        public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null)
         {
             if (definition == null)
             {
@@ -78,7 +81,35 @@ namespace Fps.Runtime
                 return false;
             }
 
-            EquipWeapon(definition, _weaponRules);
+            EquipWeapon(definition, _weaponRules, ammo);
+            return true;
+        }
+
+        /// <summary>
+        /// Id が droppedWeaponId の今の武器を手放して definition の武器を持つ (<see cref="AddWeapon"/> と同じ弾数)。手放した武器の定義と残弾を dropped に入れて true。
+        /// 今の武器の Id が droppedWeaponId でない・definition と同じなら何もせず false。
+        /// </summary>
+        public bool SwapWeapon(string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, out HeldWeapon dropped)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            dropped = default;
+            var current = Weapon;
+            if (current == null || _weaponDefinition == null || !string.Equals(current.Spec.Id, droppedWeaponId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var leaving = new HeldWeapon(_weaponDefinition, WeaponAmmo.Of(current));
+            if (!AddWeapon(definition, ammo))
+            {
+                return false;
+            }
+
+            dropped = leaving;
             return true;
         }
 
@@ -108,12 +139,12 @@ namespace Fps.Runtime
         public GameRules WeaponRules => _weaponRules;
 
         /// <summary>
-        /// 持つ武器を definition に替え、rules (null なら今の <see cref="WeaponRules"/>) の予備弾で満タンに作り直す。リロード中なら取り消す。
+        /// 持つ武器を definition に替え、rules (null なら今の <see cref="WeaponRules"/>) の予備弾で満タンに作り直す (ammo があればその弾数にする)。リロード中なら取り消す。
         /// 以後の <see cref="Respawn"/> もこの武器とルールで作り直す。未初期化なら定義とルールを覚えるだけで、<see cref="TryInitialize"/> がそれで作る。
         /// 武器を持っていなければ (<see cref="IsUnarmed"/>)、持った状態に戻す。
         /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、今の武器はそのまま残す。
         /// </summary>
-        public void EquipWeapon(WeaponDefinition definition, GameRules rules = null)
+        public void EquipWeapon(WeaponDefinition definition, GameRules rules = null, WeaponAmmo ammo = null)
         {
             if (definition == null)
             {
@@ -135,7 +166,9 @@ namespace Fps.Runtime
                 _weapon.Reloaded -= OnReloaded;
             }
 
-            _weapon = new Weapon(spec, weaponRules);
+            _weapon = ammo != null
+                ? new Weapon(spec, Math.Min(ammo.AmmoInMagazine, spec.MagazineSize), ammo.ReserveAmmo, weaponRules)
+                : new Weapon(spec, weaponRules);
             _weapon.Reloaded += OnReloaded;
             _recoil.Reset();
             Debug.Log($"{LogTag} id={Id} equip weapon={spec.LogName} ammo={_weapon.AmmoInMagazine}", this);

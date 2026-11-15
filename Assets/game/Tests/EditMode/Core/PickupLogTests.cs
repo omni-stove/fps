@@ -49,6 +49,11 @@ namespace Fps.Core.Tests
                 Is.EqualTo("[Pickup] collected pickup=Pickup-Weapon by=Player kind=Weapon weapon=" + _launcher + " added"));
 
             var withLauncher = armed.WithWeapons(new[] { new PickupWeaponState(_launcher, 1, 4, false) }, _launcher);
+            var full = armed.WithWeapons(new[] { new PickupWeaponState(_launcher, 1, 4, false) }, _launcher, 1);
+            Assert.That(
+                PickupLog.Collected("Pickup-Weapon", "Player", PickupJudge.Judge(PickupSpec.Weapon("rifle", 2), full)),
+                Is.EqualTo("[Pickup] collected pickup=Pickup-Weapon by=Player kind=Weapon weapon=rifle added dropped=" + _launcher));
+
             Assert.That(
                 PickupLog.Collected(null, null, PickupJudge.Judge(PickupSpec.ReserveAmmo(10), withLauncher)),
                 Is.EqualTo("[Pickup] collected pickup=- by=- kind=ReserveAmmo weapon=" + _launcher + " reserve=+3"));

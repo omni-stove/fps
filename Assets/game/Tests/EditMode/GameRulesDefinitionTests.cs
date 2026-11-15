@@ -80,6 +80,7 @@ namespace Fps.Tests.EditMode
             definition.Objective = MatchObjective.Domination;
             definition.MinPlayers = 6;
             definition.IdleKickSeconds = 45f;
+            definition.MaxWeapons = 2;
 
             var rules = definition.ToRules();
 
@@ -124,6 +125,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Domination));
             Assert.That(rules.MinPlayers, Is.EqualTo(6));
             Assert.That(rules.IdleKickSeconds, Is.EqualTo(45f));
+            Assert.That(rules.MaxWeapons, Is.EqualTo(2));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
 
@@ -222,6 +224,7 @@ namespace Fps.Tests.EditMode
         [TestCase("Objective")]
         [TestCase("MinPlayers")]
         [TestCase("IdleKickSeconds")]
+        [TestCase("MaxWeapons")]
         public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
         {
             var definition = NewBroken("BrokenRules", field);
@@ -309,6 +312,7 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.Objective, Is.EqualTo(expected.Objective));
             Assert.That(actual.MinPlayers, Is.EqualTo(expected.MinPlayers));
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds));
+            Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)
@@ -440,6 +444,9 @@ namespace Fps.Tests.EditMode
                     break;
                 case "IdleKickSeconds":
                     definition.IdleKickSeconds = float.NegativeInfinity;
+                    break;
+                case "MaxWeapons":
+                    definition.MaxWeapons = -1;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

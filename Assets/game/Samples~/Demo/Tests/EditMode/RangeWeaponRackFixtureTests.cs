@@ -37,7 +37,7 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void PlacesEveryRangeWeaponAsATouchPickupInOrder()
+        public void PlacesEveryRangeWeaponAsALookPickupInOrder()
         {
             var range = WeaponAssetBuilder.LoadRangeWeapons();
             var scene = TestScenes.NewAdditive();
@@ -53,7 +53,8 @@ namespace Fps.Tests.EditMode
                 for (var i = 0; i < points.Length; i++)
                 {
                     Assert.That(points[i].transform.position, Is.EqualTo(RangeWeaponRackFixture.SlotPosition(i)));
-                    Assert.That(points[i].CollectMode, Is.EqualTo(PickupCollectMode.Touch));
+                    Assert.That(points[i].CollectMode, Is.EqualTo(PickupCollectMode.Look));
+                    Assert.That(points[i].Radius, Is.EqualTo(RangeWeaponRackFixture.PickupRadius));
                     Assert.That(points[i].Contents.Kind, Is.EqualTo(PickupKind.Weapon));
                     Assert.That(points[i].Contents.Amount, Is.EqualTo(range.Weapons[i].ToSpec().MagazineSize));
                     Assert.That(fixture.Footprint.Contains(points[i].transform.position + (Vector3.up * 0.5f)), Is.True, points[i].name);

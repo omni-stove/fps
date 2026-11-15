@@ -42,6 +42,7 @@
   "hud.ammoCrate.prompt": "[{0}] Resupply ammo",
   "hud.ammoCrate.full": "Ammo is full",
   "hud.pickup.weapon": "[{0}] Pick up {1}",
+  "hud.pickup.weaponSwap": "[{0}] Swap for {1}",
   "hud.pickup.weaponAmmo": "[{0}] Take ammo for {1}",
   "hud.pickup.reserveAmmo": "[{0}] Pick up ammo",
   "hud.pickup.health": "[{0}] Pick up health",

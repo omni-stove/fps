@@ -54,6 +54,7 @@ namespace Fps.Core
         /// <example>
         /// <c>[Pickup] collected pickup=Pickup-Health by=Player kind=Health health=+25</c>、
         /// <c>[Pickup] collected pickup=Pickup-Weapon by=Player kind=Weapon weapon=launcher added</c>、
+        /// <c>[Pickup] collected pickup=Pickup-Weapon by=Player kind=Weapon weapon=launcher added dropped=rifle</c>、
         /// <c>[Pickup] collected pickup=Tag by=Player kind=Tag owner=2 owner-side=1 own-side=false</c>
         /// </example>
         public static string Collected(string pickupName, string collectorName, PickupOutcome outcome)
@@ -75,6 +76,11 @@ namespace Fps.Core
             if (outcome.AddsWeapon)
             {
                 text.Append(" added");
+            }
+
+            if (outcome.DroppedWeaponId != null)
+            {
+                text.Append(" dropped=").Append(outcome.DroppedWeaponId);
             }
 
             AppendGain(text, "reserve", outcome.ReserveAmmo);

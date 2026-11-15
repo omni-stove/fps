@@ -678,14 +678,19 @@ namespace Fps.Runtime
             WeaponChanged?.Invoke(Weapon);
         }
 
+        /// <summary>同時に持てる武器の数 (<see cref="Rules"/> の <see cref="GameRules.MaxWeapons"/>)。0 なら上限なし。</summary>
+        public int MaxWeapons => _rules.MaxWeapons;
+
         /// <summary>
-        /// definition の武器を満タン (<see cref="LoadedRules"/> の予備弾) で持ち武器の最後に加える。今持っている武器と他の武器の弾数はそのまま。
+        /// definition の武器を持ち武器の最後に加える。ammo があればその弾数、null なら満タン (<see cref="LoadedRules"/> の予備弾)。今持っている武器と他の武器の弾数はそのまま。
         /// 武器を作り直すのでリロード中なら取り消し、<see cref="WeaponChanged"/> を呼ぶ (HUD は購読し直す)。持ち替えはしない。
         /// <see cref="Definitions"/> (既定のロードアウト) は変えないが、<see cref="ApplyRules"/> での満たし直しでは加えた武器も残る。
         /// 同じ Id の武器を既に持っていれば何もせず false。定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、状態は変えない。
         /// 武器を持っていなければ (<see cref="IsUnarmed"/>)、definition の武器 1 本だけを持った状態にする。
+        /// 持てる数の上限 (<see cref="MaxWeapons"/>) はここでは見ない。上限で持ち替えるのは拾う側 (<see cref="Pickup"/>) が <see cref="SwapWeapon"/> で行う。
         /// </summary>
-        public bool AddWeapon(WeaponDefinition definition)
+        /// <exception cref="ArgumentException">ammo の武器の Id が definition の Id と違う。</exception>
+        public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null)
         {
             if (definition == null)
             {
@@ -694,10 +699,11 @@ namespace Fps.Runtime
 
             EnsureInitialized();
             var spec = definition.ToSpec();
+            RequireAmmoFor(spec, ammo);
             if (_unarmed)
             {
                 var only = new[] { spec };
-                var armed = WeaponLoadout.Create(only, _loadedRules);
+                var armed = WeaponLoadout.Restore(only, AmmoList(ammo), spec.Id, _loadedRules, out _);
                 SetLoadout(armed, only, new[] { definition }, _loadedRules);
                 _unarmed = false;
                 Debug.Log($"[Combat] weapon added index=0 id={spec.Id} name={spec.LogName}", this);
@@ -717,17 +723,108 @@ namespace Fps.Runtime
             Array.Copy(_loadedDefinitions, definitions, _loadedDefinitions.Length);
             definitions[_loadedDefinitions.Length] = definition;
 
-            var loadout = WeaponLoadout.Restore(specs, _loadout.SnapshotAmmo(), Weapon.Spec.Id, _loadedRules, out _);
-            // 残弾の数だけでは種類が戻るので、込めた弾が別の種類に変わらないよう作り直した武器へ選択を移す
-            for (var i = 0; i < _loadout.Count; i++)
+            var carried = new List<WeaponAmmo>(_loadout.SnapshotAmmo());
+            if (ammo != null)
             {
-                loadout.Items[i].AmmoTypes.TrySelect(_loadout.Items[i].AmmoTypes.Index);
+                carried.Add(ammo);
             }
 
+            var loadout = WeaponLoadout.Restore(specs, carried, Weapon.Spec.Id, _loadedRules, out _);
+            KeepAmmoTypes(loadout, -1);
             SetLoadout(loadout, specs, definitions, _loadedRules);
             Debug.Log($"[Combat] weapon added index={specs.Length - 1} id={spec.Id} name={spec.LogName}", this);
             WeaponChanged?.Invoke(Weapon);
             return true;
+        }
+
+        /// <summary>
+        /// Id が droppedWeaponId の持ち武器を手放し、同じ番号に definition の武器を入れて構える。弾数は ammo があればその数、null なら満タン。
+        /// 手放した武器の定義と残弾を dropped に入れて true。他の武器の弾数はそのまま。リロード中なら取り消し、<see cref="WeaponChanged"/> を呼ぶ。
+        /// 武器を持っていない・droppedWeaponId を持っていない・definition と同じ Id の武器を既に持っているなら何もせず false。
+        /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、状態は変えない。
+        /// </summary>
+        /// <exception cref="ArgumentException">ammo の武器の Id が definition の Id と違う。</exception>
+        public bool SwapWeapon(string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, out HeldWeapon dropped)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            dropped = default;
+            EnsureInitialized();
+            var spec = definition.ToSpec();
+            RequireAmmoFor(spec, ammo);
+            if (_unarmed || _loadout.IndexOf(spec.Id) >= 0)
+            {
+                return false;
+            }
+
+            var index = _loadout.IndexOf(droppedWeaponId);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var leaving = _loadout.Items[index];
+            leaving.CancelReload();
+            var leavingAmmo = WeaponAmmo.Of(leaving);
+            var leavingDefinition = _loadedDefinitions[index];
+
+            var specs = (WeaponSpec[])_specs.Clone();
+            specs[index] = spec;
+            var definitions = (WeaponDefinition[])_loadedDefinitions.Clone();
+            definitions[index] = definition;
+
+            var carried = new List<WeaponAmmo>();
+            foreach (var entry in _loadout.SnapshotAmmo())
+            {
+                if (!string.Equals(entry.WeaponId, leavingAmmo.WeaponId, StringComparison.Ordinal))
+                {
+                    carried.Add(entry);
+                }
+            }
+
+            if (ammo != null)
+            {
+                carried.Add(ammo);
+            }
+
+            var loadout = WeaponLoadout.Restore(specs, carried, spec.Id, _loadedRules, out _);
+            KeepAmmoTypes(loadout, index);
+            SetLoadout(loadout, specs, definitions, _loadedRules);
+            dropped = new HeldWeapon(leavingDefinition, leavingAmmo);
+            Debug.Log(
+                $"[Combat] weapon swapped index={index} id={spec.Id} name={spec.LogName} dropped={leavingAmmo.WeaponId} "
+                + $"dropped-ammo={leavingAmmo.AmmoInMagazine}/{leavingAmmo.ReserveAmmo}",
+                this);
+            WeaponChanged?.Invoke(Weapon);
+            return true;
+        }
+
+        // 残弾の数だけでは種類が戻るので、込めた弾が別の種類に変わらないよう作り直した武器へ選択を移す。replacedIndex の武器は入れ替えたので移さない。
+        private void KeepAmmoTypes(Loadout<Weapon> rebuilt, int replacedIndex)
+        {
+            for (var i = 0; i < _loadout.Count; i++)
+            {
+                if (i != replacedIndex)
+                {
+                    rebuilt.Items[i].AmmoTypes.TrySelect(_loadout.Items[i].AmmoTypes.Index);
+                }
+            }
+        }
+
+        private static void RequireAmmoFor(WeaponSpec spec, WeaponAmmo ammo)
+        {
+            if (ammo != null && !string.Equals(ammo.WeaponId, spec.Id, StringComparison.Ordinal))
+            {
+                throw new ArgumentException($"ammo is for weapon '{ammo.WeaponId}', not '{spec.Id}'", nameof(ammo));
+            }
+        }
+
+        private static IEnumerable<WeaponAmmo> AmmoList(WeaponAmmo ammo)
+        {
+            return ammo != null ? new[] { ammo } : Array.Empty<WeaponAmmo>();
         }
 
         /// <summary>

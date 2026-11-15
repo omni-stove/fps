@@ -1,3 +1,5 @@
+using System;
+
 namespace Fps.Core
 {
     public sealed class ImpactSpec
@@ -33,5 +35,22 @@ namespace Fps.Core
         public StatusEffectSpec StatusEffect { get; }
 
         public AreaEffectSpec AreaEffect { get; }
+
+        public ImpactSpec WithDamageMultiplier(float multiplier)
+        {
+            if (!(multiplier >= 0f) || float.IsInfinity(multiplier))
+            {
+                throw new ArgumentOutOfRangeException(nameof(multiplier), multiplier, "multiplier must be a non-negative finite number");
+            }
+
+            if (multiplier == 1f)
+            {
+                return this;
+            }
+
+            var scaled = Math.Round((double)Damage * multiplier, MidpointRounding.AwayFromZero);
+            var damage = scaled >= int.MaxValue ? int.MaxValue : (int)scaled;
+            return new ImpactSpec(damage, Falloff, StructureRadius, Explosion, StatusEffect, AreaEffect);
+        }
     }
 }

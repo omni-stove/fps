@@ -1,0 +1,4 @@
+# 各自が置く EOS の C# SDK (EOSSDK/README.md)。手を入れないので書式もアナライザも当てない。
+# リポジトリのルートの .editorconfig はサーバーのイメージのビルド (docker/server-dotnet/Dockerfile) に写されないので、dotnet/ の下に置く
+[**.cs]
+generated_code = true

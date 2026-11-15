@@ -166,6 +166,50 @@ namespace Fps.Protocol.Tests
             Assert.That(got.InterpolationAlpha, Is.EqualTo(0.25f));
             Assert.That(got.ShotIndex, Is.EqualTo(4));
             Assert.That(got.ShotGeneration, Is.EqualTo(2));
+            Assert.That(got.ChargeFraction, Is.Zero);
+            Assert.That(got.AmmoTypeIndex, Is.Zero);
+            Assert.That(got.HasLockTarget, Is.False);
+            Assert.That(got.Trigger, Is.EqualTo(TriggerEdge.None));
+        }
+
+        [Test]
+        public void FireRequestCarriesChargeAmmoTypeLockAndTrigger()
+        {
+            var got = ToServer<FireRequestMessage>(new FireRequestMessage
+            {
+                WeaponId = "railgun",
+                Direction = new Vector3(0f, 0f, 1f),
+                ChargeFraction = 0.75f,
+                AmmoTypeIndex = 3,
+                HasLockTarget = true,
+                LockTargetId = 9,
+                Trigger = TriggerEdge.Released,
+            });
+
+            Assert.That(got.ChargeFraction, Is.EqualTo(0.75f));
+            Assert.That(got.AmmoTypeIndex, Is.EqualTo(3));
+            Assert.That(got.HasLockTarget, Is.True);
+            Assert.That(got.LockTargetId, Is.EqualTo(9));
+            Assert.That(got.Trigger, Is.EqualTo(TriggerEdge.Released));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(1.1f)]
+        [TestCase(float.NaN)]
+        public void FireRequestWithAChargeOutsideZeroToOneIsUnreadable(float charge)
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new FireRequestMessage { WeaponId = "railgun", ChargeFraction = charge });
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void FireRequestRejectsANegativeLockTarget()
+        {
+            var request = new FireRequestMessage { HasLockTarget = true, LockTargetId = -1 };
+
+            Assert.Throws<System.InvalidOperationException>(() => new MessageWriter().WriteMessage(request));
         }
 
         [Test]
@@ -174,6 +218,9 @@ namespace Fps.Protocol.Tests
             Assert.That(
                 ToServer<WeaponActionRequestMessage>(new WeaponActionRequestMessage { Action = WeaponAction.ActiveReload }).Action,
                 Is.EqualTo(WeaponAction.ActiveReload));
+            Assert.That(
+                ToServer<WeaponActionRequestMessage>(new WeaponActionRequestMessage { Action = WeaponAction.SwitchAmmoType }).Action,
+                Is.EqualTo(WeaponAction.SwitchAmmoType));
             Assert.That(
                 ToServer<SwitchWeaponRequestMessage>(new SwitchWeaponRequestMessage { WeaponId = "pistol" }).WeaponId,
                 Is.EqualTo("pistol"));
@@ -190,9 +237,10 @@ namespace Fps.Protocol.Tests
         [Test]
         public void GrenadePingAndReviveRequests()
         {
-            Assert.That(
-                ToServer<ThrowGrenadeRequestMessage>(new ThrowGrenadeRequestMessage { Direction = new Vector3(0f, 0.5f, 1f) }).Direction,
-                Is.EqualTo(new Vector3(0f, 0.5f, 1f)));
+            var thrown = ToServer<ThrowGrenadeRequestMessage>(
+                new ThrowGrenadeRequestMessage { Direction = new Vector3(0f, 0.5f, 1f), GrenadeTypeId = "smoke" });
+            Assert.That(thrown.Direction, Is.EqualTo(new Vector3(0f, 0.5f, 1f)));
+            Assert.That(thrown.GrenadeTypeId, Is.EqualTo("smoke"));
             Assert.That(
                 ToServer<PingRequestMessage>(new PingRequestMessage { Direction = new Vector3(1f, 0f, 0f) }).Direction,
                 Is.EqualTo(new Vector3(1f, 0f, 0f)));
@@ -244,6 +292,93 @@ namespace Fps.Protocol.Tests
             Assert.That(got.ImpactIsCharacter, Is.True);
             Assert.That(got.HasImpactZone, Is.True);
             Assert.That(got.ImpactZone, Is.EqualTo(HitZone.Head));
+            Assert.That(got.SegmentCount, Is.EqualTo(1));
+            Assert.That(got.Segment(0).ImpactMaterialId, Is.EqualTo("flesh"));
+        }
+
+        [Test]
+        public void ShotCarriesEverySegmentOfOneFiring()
+        {
+            var sent = new ShotMessage { HasShooter = true, ShooterId = 2, WeaponId = "shotgun", Direction = new Vector3(0f, 0f, 1f) };
+            ref var pellet = ref sent.AddSegment();
+            pellet.Origin = new Vector3(0f, 1f, 0f);
+            pellet.Direction = new Vector3(0.1f, 0f, 1f);
+            pellet.HasImpact = true;
+            pellet.ImpactPoint = new Vector3(1f, 1f, 10f);
+            pellet.ImpactNormal = new Vector3(0f, 0f, -1f);
+            pellet.ImpactMaterialId = "flesh";
+            pellet.ImpactIsCharacter = true;
+            pellet.HasImpactZone = true;
+            pellet.ImpactZone = HitZone.Limb;
+            ref var ricochet = ref sent.AddSegment();
+            ricochet.Origin = new Vector3(1f, 1f, 10f);
+            ricochet.Direction = new Vector3(0f, 1f, 0f);
+            ricochet.HasImpact = true;
+            ricochet.ImpactPoint = new Vector3(1f, 4f, 10f);
+            ricochet.ImpactNormal = new Vector3(0f, -1f, 0f);
+            ricochet.ImpactMaterialId = "metal";
+
+            var got = ToClient<ShotMessage>(sent);
+
+            Assert.That(got.SegmentCount, Is.EqualTo(3));
+            Assert.That(got.HasImpact, Is.False);
+            Assert.That(got.Segment(1).Direction, Is.EqualTo(new Vector3(0.1f, 0f, 1f)));
+            Assert.That(got.Segment(1).ImpactIsCharacter, Is.True);
+            Assert.That(got.Segment(1).ImpactZone, Is.EqualTo(HitZone.Limb));
+            Assert.That(got.Segment(2).Origin, Is.EqualTo(new Vector3(1f, 1f, 10f)));
+            Assert.That(got.Segment(2).ImpactPoint, Is.EqualTo(new Vector3(1f, 4f, 10f)));
+            Assert.That(got.Segment(2).ImpactMaterialId, Is.EqualTo("metal"));
+            Assert.That(got.Segment(2).ImpactIsCharacter, Is.False);
+        }
+
+        [Test]
+        public void ReadingAOneSegmentShotAfterAManySegmentShotLeavesOneSegment()
+        {
+            var many = new ShotMessage { WeaponId = "shotgun" };
+            many.AddSegment();
+            ToClient<ShotMessage>(many);
+
+            var got = ToClient<ShotMessage>(new ShotMessage { WeaponId = "rifle" });
+
+            Assert.That(got.SegmentCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ResetSegmentsLeavesOneEmptySegment()
+        {
+            var shot = new ShotMessage { HasImpact = true };
+            shot.AddSegment();
+
+            shot.ResetSegments();
+
+            Assert.That(shot.SegmentCount, Is.EqualTo(1));
+            Assert.That(shot.HasImpact, Is.False);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => shot.Segment(1));
+        }
+
+        [Test]
+        public void ShotHoldsAtMostMaxSegments()
+        {
+            var shot = new ShotMessage();
+            for (var i = 1; i < ShotMessage.MaxSegments; i++)
+            {
+                shot.AddSegment();
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => shot.AddSegment());
+        }
+
+        [Test]
+        public void ShotWithoutSegmentsIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.Shot);
+            writer.WriteByte(ShotMessage.CurrentVersion);
+            writer.WriteInt32(PlayerIds.None);
+            writer.WriteString("rifle");
+            writer.WriteByte(0);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
         }
 
         [Test]
@@ -356,6 +491,120 @@ namespace Fps.Protocol.Tests
             var answer = ToClient<LoadoutAnswerMessage>(new LoadoutAnswerMessage { Accepted = false, Reason = "unknown weapon" });
             Assert.That(answer.Accepted, Is.False);
             Assert.That(answer.Reason, Is.EqualTo("unknown weapon"));
+        }
+
+        [Test]
+        public void ProjectileSpawnedAndEnded()
+        {
+            var spawned = ToClient<ProjectileSpawnedMessage>(new ProjectileSpawnedMessage
+            {
+                ProjectileId = 12,
+                WeaponId = "crossbow",
+                HasShooter = true,
+                ShooterId = 3,
+                Position = new Vector3(1f, 2f, 3f),
+                Velocity = new Vector3(0f, 0f, 60f),
+            });
+            Assert.That(spawned.ProjectileId, Is.EqualTo(12));
+            Assert.That(spawned.WeaponId, Is.EqualTo("crossbow"));
+            Assert.That(spawned.HasShooter, Is.True);
+            Assert.That(spawned.ShooterId, Is.EqualTo(3));
+            Assert.That(spawned.Position, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(spawned.Velocity, Is.EqualTo(new Vector3(0f, 0f, 60f)));
+
+            var orphan = ToClient<ProjectileSpawnedMessage>(new ProjectileSpawnedMessage { ProjectileId = 13, WeaponId = "rocket" });
+            Assert.That(orphan.HasShooter, Is.False);
+
+            var ended = ToClient<ProjectileEndedMessage>(new ProjectileEndedMessage
+            {
+                ProjectileId = 12,
+                Reason = ProjectileEndReason.HitCharacter,
+                Position = new Vector3(1f, 2f, 30f),
+            });
+            Assert.That(ended.ProjectileId, Is.EqualTo(12));
+            Assert.That(ended.Reason, Is.EqualTo(ProjectileEndReason.HitCharacter));
+            Assert.That(ended.Position, Is.EqualTo(new Vector3(1f, 2f, 30f)));
+        }
+
+        [Test]
+        public void ProjectileEndedWithAnUnknownReasonIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.ProjectileEnded);
+            writer.WriteByte(ProjectileEndedMessage.CurrentVersion);
+            writer.WriteInt32(1);
+            writer.WriteByte(200);
+            writer.WriteVector3(Vector3.Zero);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void BeamState()
+        {
+            var got = ToClient<BeamStateMessage>(new BeamStateMessage
+            {
+                ShooterId = 4,
+                WeaponId = "laser",
+                Start = new Vector3(0f, 1.5f, 0f),
+                End = new Vector3(0f, 1.5f, 25f),
+                Active = true,
+            });
+
+            Assert.That(got.ShooterId, Is.EqualTo(4));
+            Assert.That(got.WeaponId, Is.EqualTo("laser"));
+            Assert.That(got.Start, Is.EqualTo(new Vector3(0f, 1.5f, 0f)));
+            Assert.That(got.End, Is.EqualTo(new Vector3(0f, 1.5f, 25f)));
+            Assert.That(got.Active, Is.True);
+            Assert.That(ToClient<BeamStateMessage>(new BeamStateMessage { ShooterId = 4 }).Active, Is.False);
+        }
+
+        [Test]
+        public void StatusAndAreaEffects()
+        {
+            var status = ToClient<StatusEffectMessage>(new StatusEffectMessage { TargetId = 6, KindId = "burn", RemainingSeconds = 3.5f });
+            Assert.That(status.TargetId, Is.EqualTo(6));
+            Assert.That(status.KindId, Is.EqualTo("burn"));
+            Assert.That(status.RemainingSeconds, Is.EqualTo(3.5f));
+
+            var area = ToClient<AreaEffectMessage>(new AreaEffectMessage
+            {
+                AreaId = 2,
+                KindId = "smoke",
+                Center = new Vector3(4f, 0f, 4f),
+                Radius = 5f,
+                RemainingSeconds = 12f,
+            });
+            Assert.That(area.AreaId, Is.EqualTo(2));
+            Assert.That(area.KindId, Is.EqualTo("smoke"));
+            Assert.That(area.Center, Is.EqualTo(new Vector3(4f, 0f, 4f)));
+            Assert.That(area.Radius, Is.EqualTo(5f));
+            Assert.That(area.RemainingSeconds, Is.EqualTo(12f));
+        }
+
+        [Test]
+        public void EffectsWithNegativeTimeOrRadiusAreUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new StatusEffectMessage { TargetId = 1, KindId = "burn", RemainingSeconds = -1f });
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+
+            writer.Reset();
+            writer.WriteMessage(new AreaEffectMessage { AreaId = 1, KindId = "smoke", Radius = -2f, RemainingSeconds = 1f });
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void TheNewEventsAreOnlyReadByTheClient()
+        {
+            foreach (var id in new[]
+            {
+                MessageIds.ProjectileSpawned, MessageIds.ProjectileEnded, MessageIds.BeamState, MessageIds.StatusEffect, MessageIds.AreaEffect,
+            })
+            {
+                Assert.That(_client.TryGet(id, out _), Is.True, "client reads " + id);
+                Assert.That(_server.TryGet(id, out _), Is.False, "server refuses " + id);
+            }
         }
 
         private T ToServer<T>(IMessage message)

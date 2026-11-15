@@ -21,6 +21,10 @@ namespace Fps.Protocol
         /// <summary>投げたグレネードの Id (武器の Id と同じ表)。</summary>
         public string WeaponId { get; set; }
 
+        public string TypeId { get; set; }
+
+        public bool IsStuck { get; set; }
+
         public Vector3 Position { get; set; }
         public Quaternion Rotation { get; set; }
 
@@ -35,7 +39,8 @@ namespace Fps.Protocol
             var bits = GrenadeFields.None;
             if (HasThrower != baseline.HasThrower
                 || (HasThrower && ThrowerId != baseline.ThrowerId)
-                || !string.Equals(WeaponId ?? "", baseline.WeaponId ?? "", StringComparison.Ordinal))
+                || !string.Equals(WeaponId ?? "", baseline.WeaponId ?? "", StringComparison.Ordinal)
+                || !string.Equals(TypeId ?? "", baseline.TypeId ?? "", StringComparison.Ordinal))
             {
                 bits |= GrenadeFields.Identity;
             }
@@ -43,6 +48,11 @@ namespace Fps.Protocol
             if (!Same.Bits(Position, baseline.Position) || !Same.Bits(Rotation, baseline.Rotation))
             {
                 bits |= GrenadeFields.Transform;
+            }
+
+            if (IsStuck != baseline.IsStuck)
+            {
+                bits |= GrenadeFields.State;
             }
 
             return (int)bits;
@@ -60,12 +70,18 @@ namespace Fps.Protocol
 
                 writer.WriteInt32(HasThrower ? ThrowerId : PlayerIds.None);
                 writer.WriteString(WeaponId, MatchProtocol.MaxContentIdBytes);
+                writer.WriteString(TypeId, MatchProtocol.MaxContentIdBytes);
             }
 
             if ((fields & GrenadeFields.Transform) != 0)
             {
                 writer.WriteVector3(Position);
                 writer.WriteQuaternion(Rotation);
+            }
+
+            if ((fields & GrenadeFields.State) != 0)
+            {
+                writer.WriteBool(IsStuck);
             }
         }
 
@@ -80,12 +96,18 @@ namespace Fps.Protocol
                 HasThrower = thrower != PlayerIds.None;
                 ThrowerId = HasThrower ? thrower : 0;
                 WeaponId = reader.ReadString(MatchProtocol.MaxContentIdBytes, WeaponId);
+                TypeId = reader.ReadString(MatchProtocol.MaxContentIdBytes, TypeId);
             }
 
             if ((fields & GrenadeFields.Transform) != 0)
             {
                 Position = reader.ReadFiniteVector3("grenade position");
                 Rotation = reader.ReadFiniteQuaternion("grenade rotation");
+            }
+
+            if ((fields & GrenadeFields.State) != 0)
+            {
+                IsStuck = reader.ReadBool();
             }
         }
 
@@ -97,12 +119,18 @@ namespace Fps.Protocol
                 HasThrower = baseline.HasThrower;
                 ThrowerId = baseline.ThrowerId;
                 WeaponId = baseline.WeaponId;
+                TypeId = baseline.TypeId;
             }
 
             if ((missing & GrenadeFields.Transform) != 0)
             {
                 Position = baseline.Position;
                 Rotation = baseline.Rotation;
+            }
+
+            if ((missing & GrenadeFields.State) != 0)
+            {
+                IsStuck = baseline.IsStuck;
             }
 
             Present = GrenadeFields.All;

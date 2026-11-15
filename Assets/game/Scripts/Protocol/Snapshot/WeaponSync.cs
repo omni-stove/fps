@@ -33,6 +33,14 @@ namespace Fps.Protocol
 
         public float ActiveReloadWindowEnd { get; set; }
 
+        public float Heat { get; set; }
+
+        public float ChargeFraction { get; set; }
+
+        public byte AmmoTypeIndex { get; set; }
+
+        public float SpinUpFraction { get; set; }
+
         public bool SameAs(in WeaponSync other)
         {
             return AmmoInMagazine == other.AmmoInMagazine
@@ -44,7 +52,11 @@ namespace Fps.Protocol
                 && Same.Bits(ReloadStartedAt, other.ReloadStartedAt)
                 && Same.Bits(ReloadSeconds, other.ReloadSeconds)
                 && Same.Bits(ActiveReloadWindowStart, other.ActiveReloadWindowStart)
-                && Same.Bits(ActiveReloadWindowEnd, other.ActiveReloadWindowEnd);
+                && Same.Bits(ActiveReloadWindowEnd, other.ActiveReloadWindowEnd)
+                && Same.Bits(Heat, other.Heat)
+                && Same.Bits(ChargeFraction, other.ChargeFraction)
+                && AmmoTypeIndex == other.AmmoTypeIndex
+                && Same.Bits(SpinUpFraction, other.SpinUpFraction);
         }
 
         internal void Write(MessageWriter writer)
@@ -59,6 +71,10 @@ namespace Fps.Protocol
             writer.WriteSingle(ReloadSeconds);
             writer.WriteSingle(ActiveReloadWindowStart);
             writer.WriteSingle(ActiveReloadWindowEnd);
+            writer.WriteSingle(Heat);
+            writer.WriteSingle(ChargeFraction);
+            writer.WriteByte(AmmoTypeIndex);
+            writer.WriteSingle(SpinUpFraction);
         }
 
         internal static WeaponSync Read(MessageReader reader)
@@ -75,6 +91,10 @@ namespace Fps.Protocol
                 ReloadSeconds = reader.ReadSingle(),
                 ActiveReloadWindowStart = reader.ReadSingle(),
                 ActiveReloadWindowEnd = reader.ReadSingle(),
+                Heat = reader.ReadFiniteSingleBetween(0f, 1f, "weapon heat"),
+                ChargeFraction = reader.ReadFiniteSingleBetween(0f, 1f, "charge fraction"),
+                AmmoTypeIndex = reader.ReadByte(),
+                SpinUpFraction = reader.ReadFiniteSingleBetween(0f, 1f, "spin-up fraction"),
             };
         }
     }

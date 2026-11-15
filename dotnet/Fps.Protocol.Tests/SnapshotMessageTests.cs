@@ -41,6 +41,7 @@ namespace Fps.Protocol.Tests
             Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Motion));
             Assert.That(got.Players[1].Present, Is.EqualTo(PlayerFields.Motion | PlayerFields.Health | PlayerFields.Score));
             Assert.That(got.Grenades[0].Present, Is.EqualTo(GrenadeFields.Transform));
+            Assert.That(got.Projectiles[0].Present, Is.EqualTo(ProjectileFields.Motion));
             Assert.That(got.ControlPoints[0].Present, Is.EqualTo(ControlPointFields.None));
             Assert.That(got.TryResolve(received), Is.True);
             Assert.That(got.IsComplete, Is.True);
@@ -54,8 +55,92 @@ namespace Fps.Protocol.Tests
             var current = Build(101, 0f);
 
             // tick・基準の tick・試合と持ち主の部分のビット・処理済みの入力・並びの数と、物ごとの Id と部分のビットだけになる。
-            var expected = 2 + 1 + 4 + 4 + 1 + 1 + 1 + 4 + 3 + (2 * 6) + 6 + 6;
+            var expected = 2 + 1 + 4 + 4 + 1 + 1 + 1 + 4 + 4 + (2 * 6) + 6 + 6 + 6;
             Assert.That(Size(current, baseline), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void AGrenadeThatSticksSendsOnlyItsState()
+        {
+            var baseline = Build(100, 0f);
+            baseline.Grenades[0].IsStuck = false;
+            var current = Build(101, 0f);
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Grenades[0].Present, Is.EqualTo(GrenadeFields.State));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Grenades[0].IsStuck, Is.True);
+            Assert.That(got.Grenades[0].TypeId, Is.EqualTo("sticky"));
+        }
+
+        [Test]
+        public void ThePouchCarriesWhatIsLeftOfEachGrenadeType()
+        {
+            var got = Send(Build(100, 0f), null);
+            var pouch = got.Owner.Grenades;
+
+            Assert.That(pouch.Enabled, Is.True);
+            Assert.That(pouch.Count, Is.EqualTo(2));
+            Assert.That(pouch.TypeIdAt(0), Is.EqualTo("frag"));
+            Assert.That(pouch.RemainingAt(0), Is.EqualTo(2));
+            Assert.That(pouch.TypeIdAt(1), Is.EqualTo("smoke"));
+            Assert.That(pouch.RemainingOf("smoke"), Is.EqualTo(1));
+            Assert.That(pouch.RemainingOf("flash"), Is.Zero);
+            Assert.That(pouch.TotalRemaining, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void AChangeInOneGrenadeTypeIsSentAndResolved()
+        {
+            var baseline = Build(100, 0f);
+            var current = Build(101, 0f);
+            current.Owner.Grenades.Clear();
+            current.Owner.Grenades.Enabled = true;
+            current.Owner.Grenades.Add("frag", 1);
+            current.Owner.Grenades.Add("smoke", 1);
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Owner.Grenades.RemainingOf("frag"), Is.EqualTo(1));
+            AssertSame(current, got);
+        }
+
+        [Test]
+        public void ThePouchRejectsTheSameTypeTwice()
+        {
+            var pouch = new GrenadePouchSync();
+            pouch.Add("frag", 1);
+
+            Assert.Throws<ArgumentException>(() => pouch.Add("frag", 2));
+            Assert.Throws<ArgumentOutOfRangeException>(() => pouch.Add("smoke", -1));
+        }
+
+        [Test]
+        public void WeaponHeatOutsideZeroToOneIsUnreadable()
+        {
+            var current = Build(100, 0f);
+            var weapon = current.Owner.Weapon;
+            weapon.Heat = 1.5f;
+            current.Owner.Weapon = weapon;
+            var writer = new MessageWriter();
+            writer.WriteMessage(current);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void AProjectileThatLeavesIsGoneFromTheResolvedSnapshot()
+        {
+            var baseline = Build(100, 0f);
+            var current = Build(101, 0f);
+            current.Projectiles.Clear();
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Projectiles.Count, Is.Zero);
         }
 
         [Test]
@@ -174,6 +259,9 @@ namespace Fps.Protocol.Tests
             var current = Build(1, 0f);
             var input = new InputMessage();
             var shot = new ShotMessage { WeaponId = "rifle", HasImpact = true, ImpactMaterialId = "concrete" };
+            ref var pellet = ref shot.AddSegment();
+            pellet.HasImpact = true;
+            pellet.ImpactMaterialId = "metal";
 
             long allocated = 0;
             for (var round = 0; round < 3; round++)
@@ -241,8 +329,14 @@ namespace Fps.Protocol.Tests
                 ReloadSeconds = 2f,
                 ActiveReloadWindowStart = 0.4f,
                 ActiveReloadWindowEnd = 0.6f,
+                Heat = 0.75f,
+                ChargeFraction = 0.5f,
+                AmmoTypeIndex = 2,
+                SpinUpFraction = 0.25f,
             };
-            snapshot.Owner.Grenades = new GrenadePouchSync(true, 2);
+            snapshot.Owner.Grenades.Enabled = true;
+            snapshot.Owner.Grenades.Add("frag", 2);
+            snapshot.Owner.Grenades.Add("smoke", 1);
             snapshot.Owner.EquippedWeaponIds.Add("rifle");
             snapshot.Owner.EquippedWeaponIds.Add("pistol");
 
@@ -283,6 +377,16 @@ namespace Fps.Protocol.Tests
             grenade.WeaponId = "frag";
             grenade.Position = new Vector3(moved, 2f, 0f);
             grenade.Rotation = Quaternion.CreateFromYawPitchRoll(moved, 0f, 0f);
+            grenade.TypeId = "sticky";
+            grenade.IsStuck = true;
+
+            ref var projectile = ref snapshot.Projectiles.Add();
+            projectile.ProjectileId = 11;
+            projectile.HasShooter = true;
+            projectile.ShooterId = 2;
+            projectile.WeaponId = "crossbow";
+            projectile.Position = new Vector3(moved, 1.5f, 4f);
+            projectile.Velocity = new Vector3(0f, -1f, 60f);
 
             ref var point = ref snapshot.ControlPoints.Add();
             point.Index = 0;
@@ -351,6 +455,13 @@ namespace Fps.Protocol.Tests
             {
                 Assert.That(actual.Grenades[i].GrenadeId, Is.EqualTo(expected.Grenades[i].GrenadeId));
                 Assert.That(actual.Grenades[i].ChangedBits(expected.Grenades[i]), Is.Zero);
+            }
+
+            Assert.That(actual.Projectiles.Count, Is.EqualTo(expected.Projectiles.Count));
+            for (var i = 0; i < expected.Projectiles.Count; i++)
+            {
+                Assert.That(actual.Projectiles[i].ProjectileId, Is.EqualTo(expected.Projectiles[i].ProjectileId));
+                Assert.That(actual.Projectiles[i].ChangedBits(expected.Projectiles[i]), Is.Zero);
             }
 
             Assert.That(actual.ControlPoints.Count, Is.EqualTo(expected.ControlPoints.Count));

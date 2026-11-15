@@ -285,7 +285,7 @@ namespace Fps.Server.Tests
             Assert.That(snapshot.Owner.Weapon.WeaponCount, Is.EqualTo(2));
             Assert.That(snapshot.Owner.EquippedWeaponIds[0], Is.EqualTo(TestRules.RifleId));
             Assert.That(snapshot.Owner.Grenades.Enabled, Is.True);
-            Assert.That(snapshot.Owner.Grenades.Remaining, Is.EqualTo(2));
+            Assert.That(snapshot.Owner.Grenades.RemainingOf(ServerCombat.GrenadeWeaponId), Is.EqualTo(2));
             Assert.That(snapshot.Players[0].WeaponId, Is.EqualTo(TestRules.RifleId));
         }
 

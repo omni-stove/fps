@@ -82,8 +82,9 @@ namespace Fps.Core
                 var step = Math.Min(deltaSeconds, effect.RemainingSeconds);
                 effect.RemainingSeconds -= step;
                 effect.SinceTick += step;
-                // 間隔が誤差の幅より短いと、0 まで下がった後も幅だけで条件が成り立ち続けるので、残りが 0 なら回さない。
-                while (effect.SinceTick > 0f && effect.SinceTick + _epsilon >= effect.TickSeconds)
+                // 間隔が _epsilon 以下でも SinceTick が 0 まで下がったところで止まるよう、幅を間隔の半分までに抑える。
+                var tolerance = Math.Min(_epsilon, effect.TickSeconds * 0.5f);
+                while (effect.SinceTick + tolerance >= effect.TickSeconds)
                 {
                     effect.SinceTick = Math.Max(0f, effect.SinceTick - effect.TickSeconds);
                     if (effect.DamagePerTick > 0)

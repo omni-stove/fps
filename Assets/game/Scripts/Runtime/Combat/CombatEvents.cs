@@ -37,6 +37,9 @@ namespace Fps.Runtime
         /// <summary>1 発撃ったとき。</summary>
         public static event Action<ShotFiredInfo> ShotFired;
 
+        // 跳ねた弾の続きを ShotFired で出すと、銃声・マズルフラッシュ・薬莢・反動まで跳ねた所でもう一度出てしまうので分ける。
+        public static event Action<ShotFiredInfo> ShotContinued;
+
         /// <summary>撃った弾が何かに当たったとき。</summary>
         public static event Action<ImpactInfo> Impact;
 
@@ -124,6 +127,11 @@ namespace Fps.Runtime
             Invoke(ShotFired, new ShotFiredInfo(shooter, origin, direction, weaponId));
         }
 
+        public static void RaiseShotContinued(GameObject shooter, Vector3 origin, Vector3 direction, string weaponId)
+        {
+            Invoke(ShotContinued, new ShotFiredInfo(shooter, origin, direction, weaponId));
+        }
+
         /// <summary>collider から材質・キャラかどうか・部位を引いて (<see cref="ImpactInfo"/> のコライダーを渡すコンストラクタ) 着弾を知らせる。</summary>
         public static void RaiseImpact(Vector3 point, Vector3 normal, Collider collider)
         {
@@ -170,6 +178,7 @@ namespace Fps.Runtime
         public static void ClearSubscribers()
         {
             ShotFired = null;
+            ShotContinued = null;
             Impact = null;
             HitConfirmed = null;
             DamageTaken = null;

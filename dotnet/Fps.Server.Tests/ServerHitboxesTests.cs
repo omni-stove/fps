@@ -76,6 +76,95 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void AThickRoundHitsATargetTheThinLineMisses()
+        {
+            var hitboxes = Hitboxes();
+            Spawn(2, new Vector3(10f, 1f, 0f));
+            hitboxes.Record(1);
+            var origin = new Vector3(0f, 1f, 0.7f);
+            var hits = new List<ShotHit>();
+
+            Assert.That(hitboxes.Cast(origin, Vector3.UnitX, 0f, 100f, 1, 1f, 1, _ => true, hits), Is.False);
+            Assert.That(hitboxes.Cast(origin, Vector3.UnitX, 0.3f, 100f, 1, 1f, 1, _ => true, hits), Is.True);
+            Assert.That(hits, Has.Count.EqualTo(1));
+            Assert.That(hits[0].HitTarget, Is.True);
+            Assert.That(hits[0].TargetId, Is.EqualTo(2));
+            Assert.That(hits[0].Distance, Is.EqualTo(10f - MathF.Sqrt(0.15f)).Within(1e-3f));
+
+            // 当たった位置は球の中心ではなく体の表面
+            var axis = new Vector3(10f, hits[0].Point.Y, 0f);
+            Assert.That(Vector3.Distance(hits[0].Point, axis), Is.EqualTo(_geometry.Radius).Within(1e-3f));
+        }
+
+        [Test]
+        public void AThickRoundAboveTheHeadGrazesTheHead()
+        {
+            var hitboxes = Hitboxes();
+            Spawn(2, new Vector3(10f, 1f, 0f));
+            hitboxes.Record(1);
+            var hits = new List<ShotHit>();
+
+            Assert.That(hitboxes.Cast(new Vector3(0f, 2.2f, 0f), Vector3.UnitX, 0.3f, 100f, 1, 1f, 1, _ => true, hits), Is.True);
+            Assert.That(hits[0].Zone, Is.EqualTo(HitZone.Head));
+            Assert.That(hits[0].Point.Y, Is.LessThanOrEqualTo(2f));
+        }
+
+        [Test]
+        public void AThickRoundIsStoppedByAWallEdgeTheThinLinePasses()
+        {
+            var wall = WorldCollider.Box(1, 0, WorldCollider.StaticGroup, new Vector3(4f, 1f, 2.5f), new Vector3(0.1f, 2f, 2f), Quaternion.Identity);
+            var hitboxes = new ServerHitboxes(_bodies, new BvhWorldCollision(new WorldMap(new[] { wall })));
+            Spawn(2, new Vector3(10f, 1f, 0f));
+            hitboxes.Record(1);
+            var thin = new List<ShotHit>();
+            var thick = new List<ShotHit>();
+
+            Assert.That(hitboxes.Cast(Vector3.UnitY, Vector3.UnitX, 0f, 100f, 1, 1f, 1, _ => true, thin), Is.True);
+            Assert.That(thin[0].HitTarget, Is.True);
+            Assert.That(hitboxes.Cast(Vector3.UnitY, Vector3.UnitX, 0.6f, 100f, 1, 1f, 1, _ => true, thick), Is.True);
+            Assert.That(thick, Has.Count.EqualTo(1));
+            Assert.That(thick[0].HitTarget, Is.False);
+            Assert.That(thick[0].ColliderId, Is.EqualTo(1));
+            Assert.That(thick[0].Distance, Is.EqualTo(3.9f - MathF.Sqrt(0.11f)).Within(1e-3f));
+        }
+
+        [Test]
+        public void AWallTheThickRoundStartsAgainstDoesNotStopIt()
+        {
+            var wall = WorldCollider.Box(1, 0, WorldCollider.StaticGroup, new Vector3(5f, 1f, 1f), new Vector3(5f, 2f, 0.45f), Quaternion.Identity);
+            var hitboxes = new ServerHitboxes(_bodies, new BvhWorldCollision(new WorldMap(new[] { wall })));
+            Spawn(2, new Vector3(10f, 1f, 0f));
+            hitboxes.Record(1);
+            var hits = new List<ShotHit>();
+
+            Assert.That(hitboxes.Cast(Vector3.UnitY, Vector3.UnitX, 0.6f, 100f, 1, 1f, 1, _ => true, hits), Is.True);
+            Assert.That(hits[0].HitTarget, Is.True);
+        }
+
+        [Test]
+        public void AWallStraightAheadStopsAThickRoundThatStartsInsideIt()
+        {
+            var wall = WorldCollider.Box(1, 0, WorldCollider.StaticGroup, new Vector3(0.5f, 1f, 0f), new Vector3(0.1f, 2f, 2f), Quaternion.Identity);
+            var hitboxes = new ServerHitboxes(_bodies, new BvhWorldCollision(new WorldMap(new[] { wall })));
+            Spawn(2, new Vector3(10f, 1f, 0f));
+            hitboxes.Record(1);
+            var hits = new List<ShotHit>();
+
+            Assert.That(hitboxes.Cast(Vector3.UnitY, Vector3.UnitX, 0.6f, 100f, 1, 1f, 1, _ => true, hits), Is.True);
+            Assert.That(hits[0].HitTarget, Is.False);
+            Assert.That(hits[0].Distance, Is.EqualTo(0.4f).Within(1e-4f));
+        }
+
+        [Test]
+        public void AThickCastRejectsABadDirection()
+        {
+            var hitboxes = Hitboxes();
+            var hits = new List<ShotHit>();
+
+            Assert.Throws<ArgumentException>(() => hitboxes.Cast(Vector3.UnitY, Vector3.Zero, 0.3f, 100f, 1, 1f, 1, _ => true, hits));
+        }
+
+        [Test]
         public void BetweenTicksThePositionIsInterpolated()
         {
             var hitboxes = Hitboxes();

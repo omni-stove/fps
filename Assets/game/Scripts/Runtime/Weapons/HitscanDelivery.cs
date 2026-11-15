@@ -13,7 +13,7 @@ namespace Fps.Runtime
             var range = request.Round.Range;
 
             // ShotCast が向きと射程を検査するので、撃ったことはその後に知らせる (例外になった弾を撃ったことにしない)。
-            var found = ShotCast.TryFirst(origin, direction, range, request.LayerMask, request.ShooterRoot, out var hit);
+            var found = ShotCast.TryFirst(origin, direction, request.Round.Radius, range, request.LayerMask, request.ShooterRoot, out var hit);
             CombatEvents.RaiseShotFired(request.Shooter, origin, direction, request.WeaponId);
             Hitscan.ReportNearMisses(origin, direction, found ? hit.distance : range, request.ShooterRoot, found ? hit.collider : null);
             if (!found)

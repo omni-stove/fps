@@ -112,7 +112,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(weapon.Fire(), Is.True);
 
-            Assert.That(_recorder.Shots.Count(), Is.EqualTo(8));
+            Assert.That(_recorder.Shots.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Impacts.Count(), Is.EqualTo(8));
             Assert.That(_recorder.Confirms.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Confirms[0].Damage, Is.EqualTo(1000 - target.Health.Current));

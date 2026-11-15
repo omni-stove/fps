@@ -46,6 +46,7 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(TpsRangeSceneBuilder.Fixtures().OfType<StealthRangeFixture>().Count(), Is.EqualTo(1));
             Assert.That(TpsRangeSmokeRun.ExtraSteps().OfType<StealthSmokeStep>().Count(), Is.EqualTo(1));
+            Assert.That(TpsRangeSmokeRun.ExtraSteps().OfType<TakedownSmokeStep>().Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -61,7 +62,7 @@ namespace Fps.Tests.EditMode
             Assert.That(builder.Size, Is.EqualTo(StealthRangeFixture.AreaSize));
             Assert.That(builder.AgentTypeId, Is.EqualTo(SceneBuildHelpers.HumanoidAgentTypeId));
 
-            var enemy = area.GetComponentInChildren<EnemyAgent>(true);
+            var enemy = TakedownSmokeStep.FindEnemy(area, StealthRangeFixture.EnemyId);
             Assert.That(enemy, Is.Not.Null);
             Assert.That(enemy.gameObject.activeSelf, Is.False, "it must wait for the NavMesh");
             Assert.That(builder.ActivateAfterBuild, Is.EqualTo(new[] { enemy.gameObject }));
@@ -78,13 +79,49 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PlacesASentryThatStaysAsleepUntilTheTakedownStepWakesIt()
+        {
+            TpsRangeSceneBuilder.PopulateScene(
+                _scene, new[] { NewWeapon() }, NewRules(), new ITpsRangeFixture[] { new StealthRangeFixture() });
+
+            var area = _scene.GetRootGameObjects().Single(r => r.name == StealthRangeFixture.AreaName);
+            var sentry = TakedownSmokeStep.FindEnemy(area, StealthRangeFixture.SentryId);
+            Assert.That(sentry, Is.Not.Null);
+            Assert.That(sentry.gameObject.activeSelf, Is.False);
+            Assert.That(area.GetComponent<RuntimeNavMeshArea>().ActivateAfterBuild, Has.No.Member(sentry.gameObject));
+            Assert.That(sentry.GetComponent<EnemyStealth>(), Is.Not.Null);
+            Assert.That(sentry.GroundPosition.x, Is.EqualTo(StealthRangeFixture.SentryFeet.x).Within(1e-4f));
+            Assert.That(sentry.GroundPosition.z, Is.EqualTo(StealthRangeFixture.SentryFeet.z).Within(1e-4f));
+        }
+
+        [Test]
+        public void TheTakedownStandIsBehindTheTurnedEnemyWithTheSentryNearbyFacingAway()
+        {
+            var enemy = StealthRangeFixture.EnemyFeet.ToNumerics();
+            var stand = StealthRangeFixture.TakedownStand.ToNumerics();
+            var sentry = StealthRangeFixture.SentryFeet.ToNumerics();
+
+            Assert.That(
+                ContextMeleeSelector.IsBehind(enemy, (StealthRangeFixture.TakedownFacing * Vector3.forward).ToNumerics(), stand, ContextMeleeSelector.DefaultBehindArcDegrees),
+                Is.True);
+            Assert.That(Vector3.Distance(StealthRangeFixture.EnemyFeet, StealthRangeFixture.TakedownStand) - StealthRangeFixture.EnemyRadius, Is.LessThan(MeleeSpec.DefaultReach));
+
+            // 見張りは倒される敵の近く (交戦を伝える範囲の内) にいて、倒す所を背にしている。
+            Assert.That(Vector3.Distance(StealthRangeFixture.EnemyFeet, StealthRangeFixture.SentryFeet), Is.LessThan(AwarenessSpec.DefaultAlarmRadius));
+            Assert.That(
+                ContextMeleeSelector.IsBehind(sentry, (StealthRangeFixture.SentryFacing * Vector3.forward).ToNumerics(), stand, 360f - AwarenessSpec.DefaultFieldOfViewDegrees),
+                Is.True,
+                "the stand is outside the sentry's field of view");
+        }
+
+        [Test]
         public void EverythingIsInsideTheAreaAndTheFootprint()
         {
             var fixture = new StealthRangeFixture();
             var area = new Bounds(StealthRangeFixture.AreaCenter, StealthRangeFixture.AreaSize);
             var footprint = fixture.Footprint;
 
-            foreach (var feet in new[] { StealthRangeFixture.EnemyFeet, StealthRangeFixture.ApproachStart })
+            foreach (var feet in new[] { StealthRangeFixture.EnemyFeet, StealthRangeFixture.ApproachStart, StealthRangeFixture.SentryFeet, StealthRangeFixture.TakedownStand })
             {
                 Assert.That(area.Contains(feet), Is.True, feet.ToString());
                 Assert.That(Flat(footprint).Contains(Flat(feet)), Is.True, feet.ToString());

@@ -47,6 +47,15 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("処刑技の最中にほかから撃たれたら中断するか")]
         private bool _finisherInterruptible = MeleeSpec.DefaultFinisherInterruptible;
 
+        [SerializeField, Min(0.01f), Tooltip("気づいていない相手を背後から倒す技の演出の秒数")]
+        private float _takedownSeconds = MeleeSpec.DefaultTakedownSeconds;
+
+        [SerializeField, Tooltip("背後から倒す技の最中にほかから撃たれたら中断するか")]
+        private bool _takedownInterruptible = MeleeSpec.DefaultTakedownInterruptible;
+
+        [SerializeField, Range(0f, 1f), Tooltip("背後から倒す技の最中にこちらを見た敵の発見ゲージを上げる量。1 で交戦、0 で上げない")]
+        private float _takedownWitnessAwareness = MeleeSpec.DefaultTakedownWitnessAwareness;
+
         [SerializeField, Tooltip("当たりを探すレイヤー")]
         private LayerMask _hitMask = Physics.DefaultRaycastLayers;
 
@@ -413,7 +422,10 @@ namespace Fps.Runtime
                     _finisherSeconds,
                     _finisherHealth,
                     _finisherAmmo,
-                    _finisherInterruptible);
+                    _finisherInterruptible,
+                    _takedownSeconds,
+                    _takedownInterruptible,
+                    _takedownWitnessAwareness);
             }
             catch (ArgumentException e)
             {

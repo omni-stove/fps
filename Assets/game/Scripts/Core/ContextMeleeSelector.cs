@@ -114,6 +114,12 @@ namespace Fps.Core
             return Vector3.Dot(-forward, toAttacker) >= Math.Cos(halfArc * Math.PI / 180.0) - 1e-6;
         }
 
+        // 判断が見張りのままでも、発見ゲージが気づきに届いていれば相手はこちらを向き始めているので、気づいていないとはみなさない。
+        public static bool IsUnaware(EnemyState state, AwarenessStage stage)
+        {
+            return (state == EnemyState.Idle || state == EnemyState.Patrol) && stage == AwarenessStage.Unaware;
+        }
+
         // 相手の正面から stand 離れた点ではなく、今いる向きのまま相手に寄った点にする。回り込ませると壁や他の敵にめり込みやすい。
         // 重なっていて向きが決まらなければ、相手の向きの正面に立たせる。
         public static Vector3 StandPoint(Vector3 attackerPosition, Vector3 targetPosition, Vector3 targetForward, float standDistance)

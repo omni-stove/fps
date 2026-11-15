@@ -23,6 +23,20 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheWitnessLineNamesWhoSawItAndTheStageItReached()
+        {
+            Assert.That(
+                ContextMeleeLog.Witnessed("p1", "e1", "takedown", "e2", AwarenessStage.Engaged),
+                Is.EqualTo("[ContextMelee] witnessed id=p1 target=e1 move=takedown by=e2 stage=Engaged"));
+            Assert.That(
+                ContextMeleeLog.Witnessed("p1", "e1", "takedown", "e2", AwarenessStage.Engaged),
+                Does.StartWith(ContextMeleeLog.WitnessedPrefix("p1")));
+            Assert.That(
+                ContextMeleeLog.Witnessed("p10", "e1", "takedown", "e2", AwarenessStage.Engaged),
+                Does.Not.StartWith(ContextMeleeLog.WitnessedPrefix("p1")));
+        }
+
+        [Test]
         public void PrefixesStartTheirLines()
         {
             Assert.That(

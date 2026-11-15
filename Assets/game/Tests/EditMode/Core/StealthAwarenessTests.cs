@@ -196,6 +196,40 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void WitnessingRaisesTheMeterToTheGivenLevelAndPassesTheFightOn()
+        {
+            var (_, awareness, stages, _) = Create(Stealth.On);
+            var spot = new Vector3(3f, 0f, 4f);
+
+            Assert.That(awareness.Witness(spot, AwarenessSpec.Default.AlertThreshold), Is.True);
+            Assert.That(awareness.Stage, Is.EqualTo(AwarenessStage.Alerted));
+            Assert.That(awareness.LastSeen, Is.EqualTo(spot));
+            Assert.That(awareness.Witness(_elsewhere, AwarenessSpec.Default.NoticeThreshold), Is.False, "a lower level changes nothing");
+            Assert.That(awareness.LastSeen, Is.EqualTo(spot));
+
+            Assert.That(awareness.Witness(spot, AwarenessMeter.Full), Is.True);
+            Assert.That(awareness.Stage, Is.EqualTo(AwarenessStage.Engaged));
+            Assert.That(awareness.RaisedByAlarm, Is.False, "it saw for itself, so it passes the fight on");
+            Assert.That(awareness.Witness(spot, AwarenessMeter.Full), Is.False, "already full");
+            Assert.That(stages, Is.EqualTo(new[] { AwarenessStage.Alerted, AwarenessStage.Engaged }));
+        }
+
+        [Test]
+        public void WitnessingDoesNothingWithStealthOffAndRejectsABadLevel()
+        {
+            var off = Create(Stealth.Off).Awareness;
+            Assert.That(off.Witness(_ahead, AwarenessMeter.Full), Is.False);
+            Assert.That(off.Stage, Is.EqualTo(AwarenessStage.Unaware));
+            Assert.That(off.LastSeen, Is.Null);
+
+            var on = Create(Stealth.On).Awareness;
+            Assert.Throws<ArgumentOutOfRangeException>(() => on.Witness(_ahead, -0.1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => on.Witness(_ahead, 1.1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => on.Witness(_ahead, float.NaN));
+            Assert.That(on.Witness(_ahead, 0f), Is.False);
+        }
+
+        [Test]
         public void SeeingTheTargetAfterAnAlarmMakesTheFightOurOwn()
         {
             var (brain, awareness, _, _) = Create(Stealth.On);

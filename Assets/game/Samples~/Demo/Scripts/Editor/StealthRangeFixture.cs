@@ -15,6 +15,9 @@ namespace Fps.Editor
         public const string EnemyId = "stealth-enemy";
         public const string WallName = "StealthWall";
 
+        public const string SentryName = "StealthSentry";
+        public const string SentryId = "stealth-sentry";
+
         public const float EnemyHeight = 2f;
         public const float EnemyRadius = 0.5f;
         public const float EnemySpeed = 2.5f;
@@ -36,6 +39,15 @@ namespace Fps.Editor
 
         // 床の奥の端に置くので、端を背にして出現位置の側を向かせる。
         public static readonly Quaternion EnemyFacing = Quaternion.LookRotation(Vector3.back, Vector3.up);
+
+        // 背後から倒す手順 (TakedownSmokeStep) で、倒される敵の近くにいて倒す所を見ない見張り。囲いの手前の壁を向かせ、倒す所を背にさせる。
+        // 発見ゲージの手順 (StealthSmokeStep) で敵が交戦に入ると仲間に伝わって動き出すので、NavMesh を焼いた後も起こさず、背後から倒す手順が起こす。
+        public static readonly Vector3 SentryFeet = new Vector3(-7f, 0f, 13f);
+        public static readonly Quaternion SentryFacing = Quaternion.LookRotation(Vector3.back, Vector3.up);
+
+        // 背後から倒す手順で、敵を囲いの開いた奥へ向かせ、プレイヤーを見張りとのあいだ (敵の背中側) に立たせる。
+        public static readonly Quaternion TakedownFacing = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        public static readonly Vector3 TakedownStand = new Vector3(-7f, 0f, 20.9f);
 
         // 敵の視認距離 (EnemySpec.DefaultSightRange) より手前だが、遠くからたまり始めるのを確かめられる距離。
         public static readonly Vector3 ApproachStart = new Vector3(-7f, 0f, 11.5f);
@@ -84,6 +96,18 @@ namespace Fps.Editor
                     new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth),
                     weapon);
                 enemy.gameObject.SetActive(false);
+
+                var sentry = SceneBuildHelpers.CreateEnemy(
+                    scene,
+                    root.transform,
+                    SentryName,
+                    SentryId,
+                    SentryFeet,
+                    SentryFacing,
+                    Array.Empty<Vector3>(),
+                    new EnemyBody(EnemyHeight, EnemyRadius, EnemySpeed, EnemyMaxHealth),
+                    weapon);
+                sentry.gameObject.SetActive(false);
 
                 var area = root.AddComponent<RuntimeNavMeshArea>();
                 area.Size = AreaSize;

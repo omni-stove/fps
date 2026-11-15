@@ -86,5 +86,11 @@ namespace Fps.Core
             Stop();
             return 0;
         }
+
+        // 持ち替えで離した扱いになっても、次の照射までの待ちは残す。持ち替えの連打で間隔より速く当てられないようにするため。
+        public void Cancel()
+        {
+            Stop();
+        }
     }
 }

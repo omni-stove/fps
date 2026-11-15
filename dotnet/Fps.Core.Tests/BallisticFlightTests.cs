@@ -145,6 +145,19 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AChargedShotFliesFaster()
+        {
+            var spec = new ProjectileSpec(20f, 0f, 5f);
+            var charge = new ChargeSpec(1f, 0f, 1f, fullChargeSpeedMultiplier: 2f);
+            var flight = new BallisticFlight(
+                spec, null, new FakeWorldCollision(), _everything, Vector3.Zero, Vector3.UnitZ, _gravity, null, ChargeScaling.SpeedMultiplier(charge, 1f));
+
+            Assert.That(flight.Velocity.Z, Is.EqualTo(40f).Within(_tolerance));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new BallisticFlight(spec, null, new FakeWorldCollision(), _everything, Vector3.Zero, Vector3.UnitZ, _gravity, null, 0f));
+        }
+
+        [Test]
         public void RejectsInputsItCannotFly()
         {
             var spec = new ProjectileSpec(20f, 1f, 1f);

@@ -65,7 +65,7 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 | 中身 | 置き場所 (サンプルのルートから) |
 | --- | --- |
-| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Dmr.json`・`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Crossbow.json`・ロックオンして追う `GuidedLauncher.json`・熱で撃つ `EnergyRifle.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
+| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Dmr.json`・`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`・`Crossbow.json`・ロックオンして追う `GuidedLauncher.json`・`RocketLauncher.json`・`GrenadeLauncher.json`・熱で撃つ `EnergyRifle.json`・`AntiMaterial.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
 | ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
 | ミッション・シーン | `Missions/`・`Scenes/` |
 | ネット対戦の試合の設定 (`NetMatchDefinition`。専用サーバーへ書き出す) | `Rules/NetMatch.asset` |
@@ -201,7 +201,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 ### 武器を JSON から取り込む
 
-1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`、飛ぶ弾は `Crossbow.json`、ロックオンして追う弾は `GuidedLauncher.json`、熱で撃つのは `EnergyRifle.json`、弾薬の種類は `Dmr.json`)。
+1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`、飛ぶ弾は `Crossbow.json`、飛んで爆発する弾は `RocketLauncher.json` (当たって爆発) と `GrenadeLauncher.json` (跳ねて寿命で爆発)、ロックオンして追う弾は `GuidedLauncher.json`、熱で撃つのは `EnergyRifle.json`、弾薬の種類は `Dmr.json`、貫通する弾は `AntiMaterial.json`)。
 
 ```json
 {
@@ -219,23 +219,26 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 | 部品 | 項目 | 省略できる入れ子 |
 | --- | --- | --- |
-| `trigger` (撃ち方) | `fireMode` (`Auto`/`Semi`)・`fireInterval` | `burst` (`roundsPerBurst`・`roundIntervalSeconds`)・`charge` (`chargeSeconds`・`minChargeFraction`・`fullChargeDamageMultiplier`・`firesWhenFull`)・`spinUp` (`spinUpSeconds`・`startIntervalMultiplier`・`spinDownSeconds`)・`cycle` (`cycleSeconds`・`leavesAds`) |
+| `trigger` (撃ち方) | `fireMode` (`Auto`/`Semi`)・`fireInterval` | `burst` (`roundsPerBurst`・`roundIntervalSeconds`)・`charge` (`chargeSeconds`・`minChargeFraction`・`fullChargeDamageMultiplier`・`firesWhenFull`・`firesBelowMin`・`fullChargeSpeedMultiplier`)・`spinUp` (`spinUpSeconds`・`startIntervalMultiplier`・`spinDownSeconds`)・`cycle` (`cycleSeconds`・`leavesAds`) |
 | `ammo` (弾薬) | `kind` (`Magazine`/`Heat`)・`magazineSize`・`reserveAmmo`・`reloadSeconds`・`activeReloadWindowStart`・`activeReloadWindowLength`・`activeReloadFailSeconds`・`reloadStyle` (`Whole`/`PerRound`)・`reloadSecondsPerRound` | `heat` (`heatPerShot`・`coolPerSecond`・`coolDelaySeconds`・`overheatSeconds`。`kind` が `Heat` のときは必須) |
-| `round` (弾) | `delivery` (`Hitscan`/`Projectile`/`Beam`/`Spray`)・`range`・`pelletCount`・`pelletSpreadDegrees`・`radius` | `penetration`・`ricochet`・`projectile` (`speed`・`gravityMultiplier`・`lifetimeSeconds`・`onWorldHit`・`visualId`)・`homing` (`lockOnSeconds`・`lockOnConeDegrees`・`turnDegreesPerSecond`。覗き込んで円錐の中に `lockOnSeconds` 秒入れ続けた相手へ、毎秒 `turnDegreesPerSecond` 度まで曲がる。`delivery` が `Projectile` のときだけ)・`beam` (`tickSeconds`・`visualId`)・`spray` (`tickSeconds`・`coneDegrees`・`visualId`)。`projectile`・`beam`・`spray` はその `delivery` のときだけ書き、そのときは必須 |
-| `impact` (着弾) | `damage`・`falloff`・`structureRadius` | `explosion` (`maxDamage`・`radius`・`fullDamageRadius`・`structureDamageAtCenter`・`detonation`)・`statusEffect` (`durationSeconds`・`tickSeconds`・`damagePerTick`・`visualId`)・`areaEffect` (`radius`・`durationSeconds`・`tickSeconds`・`damagePerTick`・`statusEffect`・`visualId`) |
+| `round` (弾) | `delivery` (`Hitscan`/`Projectile`/`Beam`/`Spray`)・`range`・`pelletCount`・`pelletSpreadDegrees`・`radius` | `penetration` (`maxPenetrations`・`damageMultiplierPerPenetration`・`maxThickness`・`materials`)・`ricochet`・`projectile` (`speed`・`gravityMultiplier`・`lifetimeSeconds`・`onWorldHit`・`visualId`)・`homing` (`lockOnSeconds`・`lockOnConeDegrees`・`turnDegreesPerSecond`。覗き込んで円錐の中に `lockOnSeconds` 秒入れ続けた相手へ、毎秒 `turnDegreesPerSecond` 度まで曲がる。`delivery` が `Projectile` のときだけ)・`beam` (`tickSeconds`・`visualId`)・`spray` (`tickSeconds`・`coneDegrees`・`visualId`)。`projectile`・`beam`・`spray` はその `delivery` のときだけ書き、そのときは必須 |
+| `impact` (着弾) | `damage`・`falloff`・`structureRadius` | `explosion` (`maxDamage`・`radius`・`fullDamageRadius`・`structureDamageAtCenter`・`detonation`)・`statusEffect` (`kind`・`durationSeconds`・`tickSeconds`・`damagePerTick`・`visualId`)・`areaEffect` (`radius`・`durationSeconds`・`tickSeconds`・`damagePerTick`・`statusEffect`・`visualId`) |
 | `aim` (照準) | `hipSpreadDegrees`・`adsSpreadDegrees`・`moveSpreadDegrees`・`recoilPitchDegrees`・`recoilYawDegrees`・`recoilRecoveryPerSecond`・`recoilRecoveryDelaySeconds`・`blindFireSpreadDegrees`・`zoomLevels` (覗き込みの視野角の並び。先頭が覗き込み、続きがスコープの倍率)・`swayDegrees` | `breathHold` (`maxHoldSeconds`・`recoverSeconds`・`swayMultiplier`) |
 | `ammoTypes` (弾薬の種類の並び) | 各要素に `id`・`nameKey` | `round`・`impact` (書いた部品だけ武器のものを上書きする) |
 
 - 必須は `id` と `category` だけ。部品や項目を書かなければ部品の既定 (Auto・弾倉制・ヒットスキャン 1 本・着弾でダメージ) になる。入れ子の中の項目は、`visualId` などの既定のあるもの以外は必須。
 - 列挙 (`category`・`fireMode` など) は列挙子の名前の文字列。
 - `spinUp` は撃つ速さを銃身の回転に比例させる。押してから `spinUpSeconds` は撃たず、`fireInterval` の `startIntervalMultiplier` 倍の間隔で撃ち始め、`spinUpSeconds` × `startIntervalMultiplier` 秒押し続けたところで `fireInterval` の間隔になる。離すと満回転から `spinDownSeconds` 秒で止まり、回転が撃ち始めの速さより上のうちに押し直せば待たずに撃てる。
+- `pelletCount` 本の弾を、腰だめ・ADS・移動の散らばりを掛けた向きを中心に半角 `pelletSpreadDegrees` の円錐へ出す。向きは撃った人・発射番号・弾の番号で決まり、オフラインとサーバーで同じになる。`damage` は 1 本あたりで、1 回の射撃で同じ相手に当たった弾はヒットマーカーと被弾の知らせを 1 つにまとめる。
 - `kind` が `Heat` の武器は弾倉を減らさずリロードもしない。撃つたびに熱が `heatPerShot` 上がり、最後に撃ってから `coolDelaySeconds` 経つと毎秒 `coolPerSecond` 下がる。熱が 1 に達すると `overheatSeconds` の間は熱が 1 のまま撃てず、その後 0 まで冷め切ると撃てる。HUD は弾数の代わりに熱を出し、弾薬箱からは弾を取らない。
+- `penetration` の弾は当たった物を `maxPenetrations` 枚まで抜け、1 枚抜けるたびにダメージへ `damageMultiplierPerPenetration` を掛ける。抜けられるのは厚さ `maxThickness` (m) までの物で、人は厚さ 0 として数える。`materials` は面の素材 (`SurfaceMaterial` の Id) ごとの抜けやすさの並び (`[{ "materialId": "metal", "penetrability": 0.5 }]`) で、`maxThickness` に `penetrability` を掛けた厚さまで抜ける。`penetrability` が 0 の素材は抜けずに止まり、並べていない素材は 1。ネット対戦のサーバーは `.fpsmap` が素材を持たないので、どの面も `default` で決める。貫通は `radius` が 0 の細い弾だけに効き、貫通する弾は `ricochet` を書いても跳ねない。
 - `falloff` は `{ "startDistance": …, "endDistance": …, "minMultiplier": … }` か、減衰しないなら `"None"`。
 - `nameKey` は画面に出す武器の名前を引く表のキー。文は `Resources/Localization/<言語>/` の JSON (例: `items.json` に `"weapon.rifle": "Rifle"`) に書く。表に無いキーはキーそのものが出る。空か `null` なら `id` が出る。弾薬の種類の `nameKey` も同じ (例: `ammo.dmr.armorPiercing`)。
 - 部品に分ける前の平らな形 (`fireMode`・`magazineSize`・`damage`・`range`・`falloff`・`explosionRadius`・`adsFieldOfView` などを武器の直下に書く) もそのまま読める。`explosionRadius` は `impact.structureRadius`、`adsFieldOfView` は `aim.zoomLevels` の 1 つ目として読み、`adsFieldOfView` は `null` (共通の初期値) も書ける。同じ値を平らな項目と部品の両方に書くとエラーになる。
 - 弾薬の種類を持つ武器は並びの先頭の種類で始まり、SwitchAmmoType (キーボードは N) で次の種類へ順に切り替える (最後の次は先頭)。弾倉は種類で共通で、切り替えると込めてあった弾を予備弾に戻すので、新しい種類で撃つにはリロードが要る。HUD には今の種類の名前が出る。ネット対戦ではサーバーが同じ選び方をし、射撃の要求の `AmmoTypeIndex` (0 は武器そのものの弾、種類 n は n + 1) がサーバーの選択と違えばサーバーの選択で撃つ。
 - 前の項目名 `displayName` は読まない (書き換えを促すエラーになる)。知らない項目はエラーになる。
 - 飛ぶ弾・ビーム・火炎・爆発の見た目と音は JSON には書かず、取り込んだ `WeaponDefinition` の各部品の参照 (`Visual`・`Sound`) に Inspector で入れる。空ならコードで形を作る (飛ぶ弾は細い棒)。刺さった弾を残す秒数 (`StuckSeconds`) も見た目だけの値なので同じ所に置く。取り込み直しても参照は消えない。
+- `statusEffect` の `kind` は状態異常の種類の Id (省略すると `burn`)。同じ種類をかけ直すと重ねずに長い方へ延ばし、ダメージはかけた人と武器に帰属する。かかっている体の見た目は種類の Id ごとに `Resources/Presentation/StatusEffectVisualsCatalog.asset` (`StatusEffectVisualCatalog`) に入れ、無ければ `burn` だけコードで炎を作る。自分にかかっている間の HUD の文は `hud.json` の `hud.status.<種類の Id>`。
 - サンプルでは **Fps > Build Weapon Assets** (`Fps.Editor.WeaponAssetBuilder.Build`) が `Weapons/Json/` の JSON をすべてアセットにし、射撃場で拾える武器の一覧 (`Weapons/RangeWeapons.asset`) に並べる。武器を足すときは JSON を 1 つ置いて走らせ直し、TPS の射撃場を作り直す。
 
 batchmode で取り込む:
@@ -308,6 +311,7 @@ Editor からは **Fps > Import Game Rules From JSON**。
 
 - 持つ種類それぞれに、ルールの `grenadeCount` 個を持つ。2 種類以上持つと、SwitchGrenade (K) で投げる種類を切り替え、HUD に種類の名前を出す。
 - 範囲効果 (`areaEffect`) は `AreaEffectZone` が出す。見た目は `Resources/Presentation/AreaEffects/<visualId>` のプレハブで、無ければ仮の球を出す。
+- `damagePerTick` が 0 で `statusEffect` の無い範囲効果はスモークになる。出ている間、その球を通る敵 (オフライン) と Bot (サーバー) の視線を遮る (ログは `[Smoke] blocks sight`・`[Smoke] cleared`)。弾は通り、ダメージは無い。見た目のプレハブが無ければ、仮の球の代わりに煙の粒子を出す。
 
 - パッケージにも同じパスの JSON (今の既定値) が入っている (`Packages/com.omnistove.fps/Resources/Tuning/`)。利用側に同じパスのファイルを置くと
   どちらが読まれるか決まらないので、ゲームの値は入口 ([ゲームの中身を差し替える](#ゲームの中身を差し替える-入口のアセット)) の `GrenadeTuning`・`PingTuning`・`KnockbackTuning` に
@@ -380,7 +384,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | 人型のリグ (プレハブ) | プレイヤー・敵の体とアニメーション | `CharacterRig` | `Characters/CharacterRig` |
 
 - カタログは **Assets > Create > Fps > <カタログ名>** で作り、武器の Id や材質の Id で引く (武器の名前では引かない)。サンプルの仮の素材は `Fps/Build All Presentation Assets` (`Fps.Editor.PresentationAssetSteps.BuildAll`) で作れる。
-- 1 つの物だけの見た目は、そのコンポーネントのプレハブの欄で変える (例: `GameBootstrap` の床・標的ダミー・グレネード、`EnemySniper`・`EnemyBomber`・`EnemyShield` の仮の形、`Pickup`・`PickupSpawnPoint`・`BombSite`・`ControlPointZone` の見た目、`TurretDeployDefinition`・`DecoyDeployDefinition`・`DeployAbilityDefinition` の置く物)。空なら仮の形を作る。
+- 1 つの物だけの見た目は、そのコンポーネントのプレハブの欄で変える (例: `GameBootstrap` の床・標的ダミー・グレネード、`EnemySniper`・`EnemyBomber`・`EnemyShield` の仮の形、`Pickup`・`PickupSpawnPoint`・`BombSite`・`ControlPointZone` の見た目、`TurretDeployDefinition`・`DecoyDeployDefinition`・`MineDeployDefinition`・`DeployAbilityDefinition` の置く物)。空なら仮の形を作る。
 - 画面 (HUD・メニュー) は [UI を差し替える](#ui-を差し替える) で替える。
 - 武器の Id にカタログの音とエフェクトが無いと、[差し替え漏れの点検](#差し替え漏れの点検) が一覧に出す。
 
@@ -680,6 +684,7 @@ photo.PhotoCapture = new MyFramedCapture();
 3. `EnemyFireSmokeRun`
 4. `EnemyStuckSmokeRun`
 5. `WeaponSwitchSmokeRun`
+6. `LauncherSmokeRun` (ロケットランチャーとグレネードランチャーを撃ち、爆発とネットのクライアントの見せ方を確かめる)
 
 Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに終了コード 1 で終わる)。
 

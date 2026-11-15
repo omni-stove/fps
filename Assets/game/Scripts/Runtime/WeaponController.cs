@@ -90,6 +90,7 @@ namespace Fps.Runtime
         private GameRules _rules = GameRules.Default;
         private GameRules _loadedRules;
         private readonly RecoilState _recoil = new RecoilState();
+        private readonly PelletHits<Damageable> _pelletHits = new PelletHits<Damageable>();
         private float _spread;
         private float _secondsSinceShot;
         private int _shotCount;
@@ -361,9 +362,8 @@ namespace Fps.Runtime
                 return false;
             }
 
-            // 離した瞬間に撃つ溜めの撃ち方は、離すと溜めが 0 に戻るので、渡す前の溜めで撃つ。
-            var charge = _trigger.ChargeFraction;
             var shots = _trigger.Pull(weapon.Spec.FireMode, isPressed, wasPressedThisFrame);
+            var charge = _trigger.ShotChargeFraction;
             var fired = false;
             for (var i = 0; i < shots && FireShot(weapon, charge); i++)
             {
@@ -740,7 +740,7 @@ namespace Fps.Runtime
         /// 弾の届け方 (<see cref="ShotDeliveries"/>) に渡す。Hitbox に当たれば着弾の効果 (<see cref="ImpactApplier"/>) でダメージを渡し、
         /// Hitbox の無い物に当たれば <see cref="StructureDamage.Apply"/> に武器の <see cref="WeaponSpec.ExplosionRadius"/> で渡す。
         /// 撃つと <see cref="CombatEvents.ShotFired"/>、何かに当たると <see cref="CombatEvents.Impact"/>、
-        /// 生きている相手に当てると <see cref="CombatEvents.HitConfirmed"/> を出す。弾の線の近くを通られた相手には
+        /// 生きている相手に当てると、1 回の射撃で相手ごとに 1 つ <see cref="CombatEvents.HitConfirmed"/> を出す。弾の線の近くを通られた相手には
         /// <see cref="Hitscan.ReportNearMisses"/> でニアミスを知らせる。倒した相手の <see cref="CombatEvents.Killed"/> は
         /// このプレイヤーと武器の帰属 (<see cref="CombatEvents.Attribute"/>) で <see cref="Damageable"/> が出す。
         /// </summary>
@@ -789,6 +789,7 @@ namespace Fps.Runtime
             var delivery = ShotDeliveries.For(round.Delivery);
             var definition = Definition;
             var look = definition != null ? definition.Projectile : null;
+            _pelletHits.Clear();
             var homingTarget = round.Homing != null && LockOn != null ? LockOn.FollowLocked() : null;
             foreach (var planned in rounds)
             {
@@ -806,13 +807,36 @@ namespace Fps.Runtime
                     look,
                     ConfirmHit,
                     homingTarget);
-                ConfirmHit(delivery.Deliver(request, planned));
+                CollectHit(delivery.Deliver(request, planned));
             }
 
+            // ペレットごとに出すと 1 回の射撃でヒットマーカーが何度も出るので、相手ごとにまとめてから出す。
+            for (var i = 0; i < _pelletHits.Count; i++)
+            {
+                CombatEvents.RaiseHitConfirmed(_pelletHits[i].ToHitConfirm());
+            }
+
+            _pelletHits.Clear();
             return true;
         }
 
         // オフラインで WeaponController を持つのは手元のプレイヤーだけなので、ここが撃った本人のクライアントになる。
+        private void CollectHit(ShotOutcome outcome)
+        {
+            if (outcome.Hitbox == null || outcome.Owner == null)
+            {
+                return;
+            }
+
+            Debug.Log($"[Combat] hit zone={outcome.Hitbox.Zone} dmg={outcome.Damage}", this);
+            if (outcome.WasAlive)
+            {
+                _pelletHits.Add(
+                    outcome.Owner, outcome.Damage, outcome.Hitbox.Zone, outcome.Killed ? DamageOutcome.Killed : DamageOutcome.Damaged);
+            }
+        }
+
+        // 飛ぶ弾は撃った後のフレームで着くので、射撃ごとにまとめる先が無く、着いた弾ごとに知らせる。
         private void ConfirmHit(ShotOutcome outcome)
         {
             if (outcome.Hitbox == null || outcome.Owner == null)

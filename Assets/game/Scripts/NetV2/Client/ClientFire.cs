@@ -20,7 +20,8 @@ namespace Fps.NetV2
     {
         /// <summary>
         /// latest の自分の行と持ち主の状態、自分の予測 predicted から決める。倒れている・ダウン中・回避中・乗り越え中・飛び込み中・
-        /// はしごにつかまっている・武器が無い・リロード中・持ち替え中なら <see cref="FireDecision.Hold"/>、弾倉が空なら <see cref="FireDecision.Reload"/>。
+        /// はしごにつかまっている・武器が無い・持ち替え中なら <see cref="FireDecision.Hold"/>、弾倉が空なら <see cref="FireDecision.Reload"/>。
+        /// リロード中も <see cref="FireDecision.Hold"/> だが、1 発ずつ込める武器は込めた弾があればリロード中でも <see cref="FireDecision.Fire"/> を返す。
         /// </summary>
         public static FireDecision Decide(SnapshotMessage latest, int playerId, in CharacterMotorState predicted)
         {
@@ -56,7 +57,9 @@ namespace Fps.NetV2
             }
 
             var weapon = latest.Owner.Weapon;
-            if (CurrentWeaponId(latest.Owner) == null || weapon.IsReloading || weapon.IsSwitching)
+            // 1 発ずつ込める武器は、込めた弾があればサーバーがリロードを止めて撃たせるので、リロード中でも送る。
+            var firesWhileReloading = spec != null && spec.Ammo.ReloadStyle == ReloadStyle.PerRound && weapon.AmmoInMagazine > 0;
+            if (CurrentWeaponId(latest.Owner) == null || (weapon.IsReloading && !firesWhileReloading) || weapon.IsSwitching)
             {
                 return FireDecision.Hold;
             }

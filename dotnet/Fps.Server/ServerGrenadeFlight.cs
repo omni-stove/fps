@@ -54,7 +54,7 @@ namespace Fps.Server
 
         public GrenadeStickiness Stickiness { get; }
 
-        /// <summary>くっついて止まっているか。止まった後は <see cref="Step"/> で動かない。</summary>
+        /// <summary>くっついて止まっているか。止まった後は <see cref="Step"/> で落ちず、くっついた相手に付いて動く。</summary>
         public bool IsStuck { get; private set; }
 
         public void Step(float deltaSeconds)
@@ -66,7 +66,11 @@ namespace Fps.Server
 
             if (IsStuck)
             {
-                return;
+                FollowWhatItIsStuckTo();
+                if (IsStuck)
+                {
+                    return;
+                }
             }
 
             Velocity += new Vector3(0f, Gravity * deltaSeconds, 0f);
@@ -81,7 +85,14 @@ namespace Fps.Server
                 }
 
                 var direction = Velocity / speed;
-                if (!_world.CapsuleCast(Position, Position, BodyRadius, direction, distance, ServerHitboxes.RaycastLayers, out var hit))
+                var blocked = _world.CapsuleCast(Position, Position, BodyRadius, direction, distance, ServerHitboxes.RaycastLayers, out var hit);
+                if (TryStickToCharacter(direction, blocked ? hit.Distance : distance))
+                {
+                    Stop();
+                    return;
+                }
+
+                if (!blocked)
                 {
                     Position += direction * distance;
                     remaining = 0f;
@@ -97,9 +108,7 @@ namespace Fps.Server
                     TryStick(hit, ref stuck);
                     if (stuck)
                     {
-                        IsStuck = true;
-                        Velocity = Vector3.Zero;
-                        AngularVelocity = Vector3.Zero;
+                        Stop();
                         return;
                     }
                 }
@@ -116,6 +125,13 @@ namespace Fps.Server
         }
 
         partial void TryStick(in WorldHit hit, ref bool stuck);
+
+        private void Stop()
+        {
+            IsStuck = true;
+            Velocity = Vector3.Zero;
+            AngularVelocity = Vector3.Zero;
+        }
 
         private static GrenadeStickiness SpecGuardDefined(GrenadeStickiness stickiness)
         {

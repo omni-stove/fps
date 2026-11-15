@@ -13,17 +13,23 @@ MonoBehaviour:
   m_Name: RangeWeapons
   m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponCatalogAsset
   _weapons:
+  - {fileID: 11400000, guid: b011a305b7c94dc0af25647084f9ccf1, type: 2}
   - {fileID: 11400000, guid: 3e0008f531ba4f169fc977898fa086e2, type: 2}
   - {fileID: 11400000, guid: abd3ea8279004f9fa8b4b90458121e2d, type: 2}
+  - {fileID: 11400000, guid: 0e2d48f2ec71475f9e3c947613b2b24d, type: 2}
   - {fileID: 11400000, guid: 1e5c49fe5b29457eaab0f29e5d96f0c7, type: 2}
   - {fileID: 11400000, guid: 8f2adfde9eaf4238ac8e2fbbb25b2c1d, type: 2}
   - {fileID: 11400000, guid: 9e7d3e50404d481da46b56206ae700a3, type: 2}
+  - {fileID: 11400000, guid: c203679198e0431a924fdb524157841b, type: 2}
   - {fileID: 11400000, guid: b62e8c6bfdc44806ad0fbabd51c45738, type: 2}
   - {fileID: 11400000, guid: d96f9ac9ccfb14f6b9303123108fd62a, type: 2}
+  - {fileID: 11400000, guid: 383c6c412ac440c3808846212244d380, type: 2}
   - {fileID: 11400000, guid: 8836030a2106455fa248775cf7843000, type: 2}
   - {fileID: 11400000, guid: c1fd8f0c7f1f24f53b46d1d1ab74859c, type: 2}
   - {fileID: 11400000, guid: 38ae10f4550f448a8ae3a683f2367668, type: 2}
   - {fileID: 11400000, guid: be0e3f05ccfd4f6bb2ba1dc2483d68c3, type: 2}
   - {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}
+  - {fileID: 11400000, guid: c9b566b6a6bc410a8a3f8380abc12c70, type: 2}
   - {fileID: 11400000, guid: 44fd811088e4407ca9e89f1f5834c8bf, type: 2}
+  - {fileID: 11400000, guid: 5a8832d49be9421b9a0f857c2317c10c, type: 2}
   - {fileID: 11400000, guid: 66b67a679ac14fe290be877feadbffd5, type: 2}

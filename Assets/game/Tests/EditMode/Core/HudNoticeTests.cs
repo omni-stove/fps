@@ -27,6 +27,21 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void StatusEffectNoticesAreEqualByKindAndSeconds()
+        {
+            var burning = HudNotice.StatusEffect(StatusEffectKinds.Burn, 3);
+            Assert.That(burning.Kind, Is.EqualTo(HudNoticeKind.StatusEffect));
+            Assert.That(burning.KindId, Is.EqualTo(StatusEffectKinds.Burn));
+            Assert.That(burning, Is.EqualTo(HudNotice.StatusEffect(StatusEffectKinds.Burn, 3)));
+            Assert.That(burning.GetHashCode(), Is.EqualTo(HudNotice.StatusEffect(StatusEffectKinds.Burn, 3).GetHashCode()));
+            Assert.That(burning, Is.Not.EqualTo(HudNotice.StatusEffect("blind", 3)));
+            Assert.That(burning, Is.Not.EqualTo(HudNotice.StatusEffect(StatusEffectKinds.Burn, 2)));
+            Assert.That(HudNotice.SpawnProtected(3).KindId, Is.Empty);
+            Assert.Throws<ArgumentException>(() => HudNotice.StatusEffect(string.Empty, 1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudNotice.StatusEffect(StatusEffectKinds.Burn, -1));
+        }
+
+        [Test]
         public void ForRespawnFollowsTheRespawnMode()
         {
             Assert.That(HudNotice.ForRespawn(RespawnMode.Individual, 4), Is.EqualTo(HudNotice.Respawn(4)));

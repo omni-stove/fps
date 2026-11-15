@@ -50,6 +50,7 @@ namespace Fps.Editor
             new SmokeRunEntry(nameof(EnemyFireSmokeRun), EnemyFireSmokeRun.LogTag, EnemyFireSmokeRun.Run),
             new SmokeRunEntry(nameof(EnemyStuckSmokeRun), EnemyStuckSmokeRun.LogTag, EnemyStuckSmokeRun.Run),
             new SmokeRunEntry(nameof(WeaponSwitchSmokeRun), WeaponSwitchSmokeRun.LogTag, WeaponSwitchSmokeRun.Run),
+            new SmokeRunEntry(nameof(LauncherSmokeRun), LauncherSmokeRun.LogTag, LauncherSmokeRun.Run),
         };
 
         /// <summary>スイートが走っている (SmokeRun の結果を <see cref="TakeOver"/> で受け取る) 間は true。</summary>

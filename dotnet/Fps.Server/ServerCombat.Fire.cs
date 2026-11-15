@@ -18,6 +18,8 @@ namespace Fps.Server
         private readonly ShotIndexCorrectedMessage _shotIndexCorrected = new ShotIndexCorrectedMessage();
         private readonly FireRequestMessage _botFire = new FireRequestMessage();
         private readonly List<ShotTraceSegment> _segments = new List<ShotTraceSegment>();
+        private readonly PelletHits<int> _pelletHits = new PelletHits<int>();
+        private bool _collectingPelletHits;
 
         /// <summary>
         /// 射撃 1 発。撃てる状態・武器と連射の間隔・始点を確かめ、弾倉から 1 発消費してから、<see cref="ShotPlanner"/> で弾を並べ、
@@ -79,6 +81,13 @@ namespace Fps.Server
                 return false;
             }
 
+            var chargeCheck = shooter.Weapons.AcceptCharge(request.ChargeFraction, out var chargeFraction);
+            if (chargeCheck != ShotRejection.None)
+            {
+                WarnRejected(shooterId, chargeCheck);
+                return false;
+            }
+
             var ammo = shooter.Weapons.TryFire();
             if (ammo != ShotRejection.None)
             {
@@ -97,7 +106,7 @@ namespace Fps.Server
                 spec,
                 round,
                 shooter.Weapons.CurrentImpact,
-                shooter.Weapons.AcceptCharge(request.ChargeFraction),
+                chargeFraction,
                 request.HasLockTarget ? _lockOn.Resolve(shooterId, round, request) : null,
                 time.ToTick(),
                 body.Position,
@@ -140,13 +149,32 @@ namespace Fps.Server
             }
 
             SendShot(shot.ShooterId, shot.Weapon.Id, _segments);
-            foreach (var segment in _segments)
+
+            // ペレットごとに知らせると 1 回の射撃でヒットマーカーと被弾の表示が何度も出るので、相手ごとにまとめてから送る。
+            _pelletHits.Clear();
+            _collectingPelletHits = true;
+            try
             {
-                if (segment.HasHit && !segment.Bounced)
+                foreach (var segment in _segments)
                 {
-                    _impact.Apply(shot.WithDamageMultiplier(segment.DamageMultiplier), segment.Direction, segment.Hit);
+                    if (segment.HasHit && !segment.Bounced)
+                    {
+                        _impact.Apply(shot.WithDamageMultiplier(segment.DamageMultiplier), segment.Direction, segment.Hit);
+                    }
                 }
             }
+            finally
+            {
+                _collectingPelletHits = false;
+            }
+
+            for (var i = 0; i < _pelletHits.Count; i++)
+            {
+                var hit = _pelletHits[i];
+                SendHitResult(shot.ShooterId, hit.Target, hit.Outcome, hit.Damage, hit.Zone, shot.ShooterPosition);
+            }
+
+            _pelletHits.Clear();
         }
 
         /// <summary>
@@ -168,12 +196,55 @@ namespace Fps.Server
                     hurtFighter.LastHitDirection = direction;
                 }
 
-                SendHitResult(shooterId, victimId, outcome, amount, hit.Zone, shot.ShooterPosition);
+                if (_collectingPelletHits)
+                {
+                    _pelletHits.Add(victimId, amount, hit.Zone, outcome);
+                }
+                else
+                {
+                    SendHitResult(shooterId, victimId, outcome, amount, hit.Zone, shot.ShooterPosition);
+                }
             }
 
             var session = _rules.Session;
             var health = session != null && session.HasPlayer(victimId) ? session.GetHealth(victimId) : 0;
             _log.WriteLine(NetHitLog.Hit(shooterId, victimId, hit.RewindTicks, hit.Zone, amount, health, outcome, hit.TargetCrouched));
+        }
+
+        /// <summary>
+        /// 燃焼などの状態異常が victimId に amount を与える。かけた人 (attackerId) と武器に帰属させてルールに通し、被弾を本人に送る。
+        /// かけた人が抜けていれば、撃った人のいないダメージとして自滅に数える。
+        /// </summary>
+        internal DamageOutcome DamageOverTime(int? attackerId, int victimId, int amount, string weaponId)
+        {
+            var session = _rules.Session;
+            var attacker = attackerId.HasValue && session != null && session.HasPlayer(attackerId.Value) ? attackerId : null;
+            var outcome = attacker.HasValue
+                ? _rules.ApplyDamage(attacker, victimId, amount, new KillShot(attacker.Value, victimId, weaponId, HitZone.Body))
+                : _rules.ApplyDamage(null, victimId, amount);
+            if (outcome != DamageOutcome.Ignored)
+            {
+                SendDamageTaken(attacker.HasValue && IsReflected(attacker.Value, victimId) ? attacker.Value : victimId, null, amount);
+            }
+
+            return outcome;
+        }
+
+        /// <summary>
+        /// attackerId が victimId に体力を減らす以外の効果 (燃焼など) を与えてよいか。味方撃ちが <see cref="FriendlyFire.On"/> でなければ味方には与えない。
+        /// </summary>
+        internal bool CanAfflict(int attackerId, int victimId)
+        {
+            var session = _rules.Session;
+            if (session == null || !session.HasPlayer(victimId))
+            {
+                return false;
+            }
+
+            return attackerId == victimId
+                || !session.HasPlayer(attackerId)
+                || _data.Rules.FriendlyFire == FriendlyFire.On
+                || session.GetTeam(attackerId) != session.GetTeam(victimId);
         }
 
         /// <summary>世界の colliderId の point に amount の被害を与え、壊れた建物の状態を送る。</summary>
@@ -189,7 +260,8 @@ namespace Fps.Server
         /// </summary>
         public bool BotFire(int playerId, Vector3 origin, Vector3 direction, int tick)
         {
-            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null)
+            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null
+                || !fighter.Weapons.IsChargedForBot())
             {
                 return false;
             }
@@ -201,12 +273,53 @@ namespace Fps.Server
             _botFire.InterpolationAlpha = 0f;
             _botFire.ShotIndex = fighter.Shots.NextIndex;
             _botFire.ShotGeneration = fighter.Shots.Generation;
-            _botFire.ChargeFraction = 0f;
+            _botFire.ChargeFraction = 1f;
             _botFire.AmmoTypeIndex = fighter.Weapons.AmmoTypeIndex;
             _botFire.HasLockTarget = false;
             _botFire.LockTargetId = 0;
             _botFire.Trigger = TriggerEdge.None;
             return Fire(fighter, _botFire);
+        }
+
+        /// <summary>
+        /// 押している間出続ける届け方の照射 1 回ぶん、shooterId が今も weaponId を構えて撃てるかを確かめ、consume なら弾 (熱) を 1 発使う。
+        /// <see cref="Fire"/> の検査を照射のたびに通さないのは、始点・向き・発射番号・連射の枠は押したときの要求にしか無いため。
+        /// 倒れた・試合が止まったなど撃てない状態は、警告にしないよう理由を <see cref="ShotRejection.None"/> にして false を返す。
+        /// </summary>
+        internal bool TryContinueFire(int shooterId, string weaponId, bool consume, out ShotRejection rejection)
+        {
+            rejection = ShotRejection.None;
+            if (!_rules.CanFire(shooterId) || !_fighters.TryGetValue(shooterId, out var fighter))
+            {
+                return false;
+            }
+
+            var spec = fighter.Weapons.CurrentSpec;
+            if (spec == null)
+            {
+                rejection = ShotRejection.NoWeapon;
+                return false;
+            }
+
+            if (!string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
+            {
+                rejection = ShotRejection.WeaponMismatch;
+                return false;
+            }
+
+            _movement.TryGetState(shooterId, out var motion);
+            if (motion.IsDodging || motion.IsVaulting)
+            {
+                rejection = motion.IsDodging ? ShotRejection.Dodging : ShotRejection.Vaulting;
+                return false;
+            }
+
+            if (consume)
+            {
+                rejection = fighter.Weapons.TryFire();
+            }
+
+            return rejection == ShotRejection.None;
         }
 
         public bool TryGetWeapon(int playerId, out WeaponSpec spec, out WeaponSync state)
@@ -301,7 +414,7 @@ namespace Fps.Server
         }
 
         // サーバーの知る目の位置から始点までの間に壁があれば、壁の向こうから撃たせない
-        private bool IsOriginBlocked(Vector3 eye, Vector3 origin)
+        internal bool IsOriginBlocked(Vector3 eye, Vector3 origin)
         {
             var toOrigin = origin - eye;
             var distance = toOrigin.Length();

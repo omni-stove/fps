@@ -47,7 +47,8 @@ namespace Fps.Server
                 planned.Origin,
                 planned.Direction,
                 new Vector3(0f, ServerGrenadeFlight.Gravity, 0f),
-                _ => collision.LastHit.HitTarget);
+                _ => collision.LastHit.HitTarget,
+                ChargeScaling.SpeedMultiplier(shot.Weapon.Trigger.Charge, shot.ChargeFraction));
             var flying = new Flying(_nextId++, shot, collision, flight);
             _flying.Add(flying);
 
@@ -123,6 +124,7 @@ namespace Fps.Server
             {
                 SendEnded(flying, ProjectileEndReason.Expired);
                 Log(flying, null);
+                Combat.Impact.Detonate(flying.Shot, DetonationTrigger.OnLifetimeEnd, flight.Position, Vector3.Zero);
                 return;
             }
 
@@ -137,6 +139,7 @@ namespace Fps.Server
             var velocity = flight.Velocity;
             var direction = velocity.LengthSquared() > 1e-12f ? Vector3.Normalize(velocity) : -hit.Normal;
             Combat.Impact.Apply(flying.Shot, direction, hit);
+            Combat.Impact.Detonate(flying.Shot, DetonationTrigger.OnStop, hit.Point, hit.Normal);
         }
 
         private void SendEnded(Flying flying, ProjectileEndReason reason)

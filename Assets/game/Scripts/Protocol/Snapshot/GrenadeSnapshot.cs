@@ -25,6 +25,10 @@ namespace Fps.Protocol
 
         public bool IsStuck { get; set; }
 
+        public bool HasStuckTo { get; set; }
+
+        public int StuckToId { get; set; }
+
         public Vector3 Position { get; set; }
         public Quaternion Rotation { get; set; }
 
@@ -50,7 +54,9 @@ namespace Fps.Protocol
                 bits |= GrenadeFields.Transform;
             }
 
-            if (IsStuck != baseline.IsStuck)
+            if (IsStuck != baseline.IsStuck
+                || HasStuckTo != baseline.HasStuckTo
+                || (HasStuckTo && StuckToId != baseline.StuckToId))
             {
                 bits |= GrenadeFields.State;
             }
@@ -81,7 +87,13 @@ namespace Fps.Protocol
 
             if ((fields & GrenadeFields.State) != 0)
             {
+                if (HasStuckTo && StuckToId < 0)
+                {
+                    throw new InvalidOperationException("stuck-to player id must not be negative");
+                }
+
                 writer.WriteBool(IsStuck);
+                writer.WriteInt32(HasStuckTo ? StuckToId : PlayerIds.None);
             }
         }
 
@@ -108,6 +120,9 @@ namespace Fps.Protocol
             if ((fields & GrenadeFields.State) != 0)
             {
                 IsStuck = reader.ReadBool();
+                var stuckTo = reader.ReadInt32AtLeast(PlayerIds.None, "grenade stuck-to player");
+                HasStuckTo = stuckTo != PlayerIds.None;
+                StuckToId = HasStuckTo ? stuckTo : 0;
             }
         }
 
@@ -131,6 +146,8 @@ namespace Fps.Protocol
             if ((missing & GrenadeFields.State) != 0)
             {
                 IsStuck = baseline.IsStuck;
+                HasStuckTo = baseline.HasStuckTo;
+                StuckToId = baseline.StuckToId;
             }
 
             Present = GrenadeFields.All;

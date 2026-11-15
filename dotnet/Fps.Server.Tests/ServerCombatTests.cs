@@ -88,6 +88,59 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void EveryPelletOfAShotgunHitsButTheShooterAndTheTargetAreToldOnce()
+        {
+            // 狭い円錐にして、10 m 先の胴にすべてのペレットが当たるようにする
+            var shotgun = new WeaponSpec(
+                TestRules.RifleId,
+                "weapon.shotgun",
+                WeaponCategory.AssaultRifle,
+                round: new RoundSpec(range: 40f, pelletCount: 8, pelletSpreadDegrees: 0.5f),
+                impact: new ImpactSpec(10));
+            Start(Rules(), rifle: shotgun);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            FireAt(1, Body(2).Center);
+
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 80), _log.ToString());
+            var confirms = _transport.Read<HitConfirmMessage>(1, m => new HitConfirmMessage { Damage = m.Damage, Killed = m.Killed });
+            Assert.That(confirms, Has.Count.EqualTo(1));
+            Assert.That(confirms[0].Damage, Is.EqualTo(80));
+            Assert.That(confirms[0].Killed, Is.False);
+            var taken = _transport.Read<DamageTakenMessage>(2, m => new DamageTakenMessage { Amount = m.Amount });
+            Assert.That(taken, Has.Count.EqualTo(1));
+            Assert.That(taken[0].Amount, Is.EqualTo(80));
+            var shot = _transport.Read<ShotMessage>(2, CopySegments).Single();
+            Assert.That(shot.SegmentCount, Is.EqualTo(8));
+        }
+
+        [Test]
+        public void ShotgunPelletsThatKillAreToldAsOneKill()
+        {
+            var shotgun = new WeaponSpec(
+                TestRules.RifleId,
+                "weapon.shotgun",
+                WeaponCategory.AssaultRifle,
+                round: new RoundSpec(range: 40f, pelletCount: 8, pelletSpreadDegrees: 0.5f),
+                impact: new ImpactSpec(20));
+            Start(Rules(), rifle: shotgun);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            FireAt(1, Body(2).Center);
+
+            Assert.That(_rules.Session.IsAlive(2), Is.False, _log.ToString());
+            var confirms = _transport.Read<HitConfirmMessage>(1, m => new HitConfirmMessage { Damage = m.Damage, Killed = m.Killed });
+            Assert.That(confirms, Has.Count.EqualTo(1));
+            Assert.That(confirms[0].Killed, Is.True);
+            Assert.That(confirms[0].Damage, Is.GreaterThanOrEqualTo(NetMatchSettings.DefaultMaxHealth));
+            Assert.That(_transport.Read<DamageTakenMessage>(2, m => new DamageTakenMessage { Amount = m.Amount }), Has.Count.EqualTo(1));
+        }
+
+        [Test]
         public void TheShotIsJudgedAgainstWhereTheTargetWasWhenTheShooterSawIt()
         {
             Start(Rules());
@@ -152,6 +205,31 @@ namespace Fps.Server.Tests
             Assert.That(shot.HasImpact, Is.True);
             Assert.That(shot.ImpactIsCharacter, Is.False);
             Assert.That(shot.ImpactPoint.X, Is.EqualTo(-0.25f).Within(1e-3f));
+        }
+
+        [Test]
+        public void APenetratingRoundGoesThroughTheWallAndHurtsLess()
+        {
+            var plain = TestRules.Rifle();
+            var rifle = new WeaponSpec(
+                plain.Id,
+                plain.NameKey,
+                plain.Category,
+                plain.Trigger,
+                plain.Ammo,
+                new RoundSpec(range: plain.Range, penetration: new PenetrationSpec(1, 0.5f, 0.6f)),
+                new ImpactSpec(40),
+                plain.Aim);
+            Start(Rules(), wall: true, rifle: rifle);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            FireAt(1, Body(2).Center);
+
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 20), _log.ToString());
+            var shot = _transport.Read<ShotMessage>(2, CopySegments).Single();
+            Assert.That(shot.SegmentCount, Is.EqualTo(2));
         }
 
         [Test]
@@ -619,6 +697,30 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void AStickyGrenadeSticksToThePersonItHitsAndGoesOffOnThem()
+        {
+            Start(Rules(), grenades: new GrenadeCatalog(new[] { _sticky }));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            _context.Bodies.TryGet(2, out var target);
+
+            _host.OnMessage(new ConnectionId(1), new ThrowGrenadeRequestMessage { Direction = Vector3.UnitX, GrenadeTypeId = _sticky.Id });
+            Step(1f);
+
+            var grenade = Snapshot(2).Grenades[0];
+            Assert.That(grenade.IsStuck, Is.True);
+            Assert.That(grenade.HasStuckTo, Is.True);
+            Assert.That(grenade.StuckToId, Is.EqualTo(2));
+            Assert.That(grenade.Position.X, Is.LessThan(target.Position.X), "it stays on the side it hit");
+
+            Step(_sticky.FuseSeconds);
+
+            Assert.That(_combat.LiveGrenadeCount, Is.EqualTo(0));
+            Assert.That(_rules.Session.IsAlive(2), Is.False, "it goes off on the person it is stuck to");
+        }
+
+        [Test]
         public void GrenadesAreLimitedByCountAndInterval()
         {
             Start(Rules());
@@ -782,6 +884,12 @@ namespace Fps.Server.Tests
             "grenade.smoke",
             new ImpactSpec(damage: 0, areaEffect: new AreaEffectSpec(4f, 3f, 0.5f, 0, visualId: "smoke")),
             fuseSeconds: 1f);
+
+        private static readonly GrenadeSpec _sticky = new GrenadeSpec(
+            "5eb3292d-6300-4ec2-b325-6ad793017e49",
+            "grenade.sticky",
+            GrenadeSpec.Default.Impact,
+            stickiness: GrenadeStickiness.SurfacesAndCharacters);
 
         private static AreaEffectMessage Copy(AreaEffectMessage m)
         {

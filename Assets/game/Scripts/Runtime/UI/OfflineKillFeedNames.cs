@@ -40,6 +40,12 @@ namespace Fps.Runtime
                 return GrenadeThrower.Name;
             }
 
+            // 地雷もロードアウトの武器ではなく、爆発は置いた物の種類 (能力の Id) で帰属する。
+            if (MineDeployDefinition.TryFindName(killer, weaponId, out var mineName))
+            {
+                return mineName;
+            }
+
             var controller = killer.GetComponentInChildren<WeaponController>(true);
             var loadout = controller != null ? controller.Loadout : null;
             if (loadout != null)

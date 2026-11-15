@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: GrenadeLauncher
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: 06f065a8-b76b-492e-b409-852d85722496
+  _nameKey: weapon.grenadeLauncher
+  _category: 7
+  _fireMode: 1
+  _magazineSize: 6
+  _reserveAmmo: 12
+  _fireInterval: 0.6
+  _reloadSeconds: 4
+  _damage: 20
+  _range: 60
+  _falloffStart: 3.4028235e+38
+  _falloffEnd: 3.4028235e+38
+  _falloffMinMultiplier: 1
+  _explosionRadius: 0
+  _adsFieldOfView: 55
+  _blindFireSpreadDegrees: 0
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.5
+  _recoilPitchDegrees: 3
+  _recoilYawDegrees: 0.8
+  _recoilRecoveryPerSecond: 15
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 2
+  _adsSpreadDegrees: 0.5
+  _moveSpreadDegrees: 3
+  _shotNoiseRadius: 40
+  _delivery: 1
+  _projectile:
+    _speed: 25
+    _gravityMultiplier: 1
+    _lifetimeSeconds: 2.5
+    _onWorldHit: 2
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+    _stuckSeconds: 10
+  _explosion:
+    _enabled: 1
+    _maxDamage: 100
+    _radius: 5
+    _fullDamageRadius: 1
+    _structureDamageAtCenter: 80
+    _detonation: 2
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}

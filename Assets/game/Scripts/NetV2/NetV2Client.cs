@@ -72,6 +72,10 @@ namespace Fps.NetV2
         private readonly ClientGrenades _grenadeChoice = new ClientGrenades();
         private readonly Dictionary<int, AreaEffectZone> _areaZones = new Dictionary<int, AreaEffectZone>();
         private readonly ClientOverheat _overheat = new ClientOverheat();
+        private readonly Dictionary<int, GameObject> _grenadeViews = new Dictionary<int, GameObject>();
+        private readonly List<int> _goneGrenades = new List<int>();
+        private GrenadeCarrier _grenadeCarrier;
+        private float _ownYaw;
         private NetV2Structures _structures;
         private ClientWeaponHooks _weaponHooks;
         private ClientTrigger _heldContinuous;
@@ -102,6 +106,8 @@ namespace Fps.NetV2
         public MatchClient Client => _client;
 
         public ClientMatch Match => _match;
+
+        public GameObject GrenadePrefab { get; set; }
 
         /// <summary>今動いているクライアント。無ければ null。</summary>
         public static NetV2Client Current { get; private set; }
@@ -250,9 +256,13 @@ namespace Fps.NetV2
 
             _structures = new NetV2Structures(this);
             _weaponHooks = new ClientWeaponHooks(_weapons.SpecFor);
+            _weaponHooks.StatusEffects.Started += ShowStatusEffect;
+            _weaponHooks.StatusEffects.Ended += HideStatusEffect;
             _weaponHooks.AreaEffects.Started += ShowArea;
             _weaponHooks.AreaEffects.Updated += UpdateArea;
             _weaponHooks.AreaEffects.Ended += EndArea;
+            _weaponHooks.Beams.Drawn += DrawBeam;
+            _weaponHooks.Beams.Hidden += HideBeam;
             _pings = new ClientPings(line => Debug.Log(line, this));
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
         }
@@ -377,9 +387,16 @@ namespace Fps.NetV2
             }
 
             StepOwner(Time.deltaTime);
+            _weaponHooks.StatusEffects.Tick(Time.deltaTime);
             ShowRemotes();
+            ShowGrenades();
             _weaponHooks.Projectiles.Tick(Time.deltaTime);
             SendRequests();
+            if (_local != null)
+            {
+                _weaponHooks.Beams.Update(NetV2Math.ToNumerics(_local.EyePosition), NetV2Math.ToNumerics(_local.AimDirection));
+            }
+
             _pings.Markers.Expire(Time.time);
         }
 
@@ -449,6 +466,7 @@ namespace Fps.NetV2
             _match = new ClientMatch(_client, _world.CreateSimulation(motor, _client.TickRate, _client.KillPlaneY));
             _weaponHooks.Projectiles.Attach(
                 new NetV2Projectiles(_weapons), _world.Collision, Physics.DefaultRaycastLayers, NetV2Math.ToNumerics(Physics.gravity), _client.PlayerId);
+            _weaponHooks.Beams.Attach(_world.Collision, Physics.DefaultRaycastLayers, _client.PlayerId);
             _match.PlayerAdded += AddRemote;
             _match.PlayerRemoved += RemoveRemote;
             _match.Reconciled += HandleReconciled;
@@ -465,6 +483,7 @@ namespace Fps.NetV2
             try
             {
                 _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.SpecFor);
+                _hud.BindStatusEffects(_weaponHooks.StatusEffects);
                 _loadout.Bind(_hud.Hud.LoadoutSelect);
             }
             catch (InvalidOperationException e)
@@ -505,6 +524,7 @@ namespace Fps.NetV2
             for (var i = 0; i < ticks; i++)
             {
                 _local.Sample(_match.LocalState.IsGrounded, out var move, out var yaw, out var buttons);
+                _ownYaw = yaw;
                 _match.Step(NetV2Math.ToNumerics(move), yaw, buttons);
             }
 
@@ -553,6 +573,88 @@ namespace Fps.NetV2
                 if (_match.TrySampleRemote(pair.Key, out var pose))
                 {
                     pair.Value.Show(pose);
+                }
+            }
+        }
+
+        private void ShowGrenades()
+        {
+            _grenadeCarrier ??= ShownCarrier;
+            var renderTick = _match.Interpolation.RenderTick;
+            foreach (var id in _world.GrenadeIds)
+            {
+                if (!_world.TryShowGrenade(id, renderTick, _grenadeCarrier, out var position, out var rotation))
+                {
+                    continue;
+                }
+
+                if (!_grenadeViews.TryGetValue(id, out var view) || view == null)
+                {
+                    view = CreateGrenadeView();
+                    _grenadeViews[id] = view;
+                }
+
+                view.transform.SetPositionAndRotation(NetV2Math.ToUnity(position), NetV2Math.ToUnity(rotation));
+            }
+        }
+
+        // 自分は予測した位置に、他の人は補間した位置に出しているので、くっついたグレネードもその見せている位置に付ける
+        private bool ShownCarrier(int playerId, out System.Numerics.Vector3 position, out float yaw)
+        {
+            if (playerId == _client.PlayerId)
+            {
+                position = _match.LocalState.Position;
+                yaw = _ownYaw;
+                return _local != null;
+            }
+
+            if (_match.TrySampleRemote(playerId, out var pose))
+            {
+                position = pose.Position;
+                yaw = pose.Yaw;
+                return true;
+            }
+
+            position = default;
+            yaw = 0f;
+            return false;
+        }
+
+        private GameObject CreateGrenadeView()
+        {
+            GameObject view;
+            if (GrenadePrefab != null)
+            {
+                view = new GameObject(ThrownGrenade.ObjectName);
+                VisualPrefab.Instantiate(GrenadePrefab, view.transform, ThrownGrenade.VisualName, stripColliders: true);
+            }
+            else
+            {
+                view = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                view.name = ThrownGrenade.ObjectName;
+                view.transform.localScale = Vector3.one * (ThrownGrenade.BodyRadius * 2f);
+
+                // 当たりはサーバーが取るので、見た目に Unity の物理を持たせない
+                Destroy(view.GetComponent<Collider>());
+            }
+
+            view.transform.SetParent(_remoteRoot, false);
+            return view;
+        }
+
+        private void ForgetGrenades(SnapshotMessage snapshot)
+        {
+            _goneGrenades.Clear();
+            _world.ApplyGrenades(snapshot, _goneGrenades);
+            foreach (var id in _goneGrenades)
+            {
+                if (_grenadeViews.TryGetValue(id, out var view))
+                {
+                    _grenadeViews.Remove(id);
+                    if (view != null)
+                    {
+                        Destroy(view);
+                    }
                 }
             }
         }
@@ -670,6 +772,7 @@ namespace Fps.NetV2
             _local.BlocksAds = trigger != null && trigger.BlocksAds;
             if (trigger == null)
             {
+                _hud?.ShowCharge(null);
                 if (pressed)
                 {
                     Debug.LogWarning(LogTag + " cannot fire " + (_weapons.TriggerError ?? "without a weapon"), this);
@@ -680,6 +783,7 @@ namespace Fps.NetV2
 
             trigger.Tick(Time.deltaTime);
             var pull = trigger.Pull(held, pressed);
+            _hud?.ShowCharge(trigger.Model.ChargeFraction);
             if (trigger.IsContinuous)
             {
                 PullContinuous(trigger, pull, direction, weaponId, latest, owner);
@@ -810,6 +914,7 @@ namespace Fps.NetV2
             var grenades = snapshot.HasOwner ? snapshot.Owner.Grenades : null;
             _hud?.ShowGrenades(grenades, _grenadeChoice.Current(grenades));
             _weaponHooks.Apply(snapshot);
+            ForgetGrenades(snapshot);
             _loadout.Apply(snapshot, _client.PlayerId);
             ShowControlPoints(snapshot);
             PlayReloadSound(snapshot);
@@ -957,6 +1062,41 @@ namespace Fps.NetV2
             }
         }
 
+        private void DrawBeam(BeamView beam)
+        {
+            var shooter = BeamShooter(beam.ShooterId);
+            var from = NetV2Math.ToUnity(beam.Start);
+            var to = NetV2Math.ToUnity(beam.End);
+
+            // 目の位置から線を出すと一人称では線が画面の中心に潰れて見えないので、オフラインの BeamDelivery と同じく銃口から出す
+            var presentation = WeaponPresentation.FindFor(shooter);
+            if (presentation != null)
+            {
+                from = presentation.Sockets.MuzzlePose(from, to - from).position;
+            }
+
+            BeamLine.Show(shooter, beam.WeaponId, beam.TickSeconds, from, to, Time.time);
+        }
+
+        private void HideBeam(int shooterId)
+        {
+            var shooter = BeamShooter(shooterId);
+            if (shooter != null && shooter.TryGetComponent<BeamLine>(out var line))
+            {
+                line.Hide();
+            }
+        }
+
+        private GameObject BeamShooter(int shooterId)
+        {
+            if (_client != null && shooterId == _client.PlayerId)
+            {
+                return _local != null ? _local.gameObject : null;
+            }
+
+            return _remotes.TryGetValue(shooterId, out var remote) && remote != null ? remote.gameObject : null;
+        }
+
         private void ShowShot(ShotMessage shot)
         {
             GameObject shooter = null;
@@ -972,8 +1112,8 @@ namespace Fps.NetV2
                 var origin = NetV2Math.ToUnity(segment.Origin);
                 var direction = NetV2Math.ToUnity(segment.Direction);
 
-                // 前の区間の着弾から続く区間 (跳弾・貫通) は弾の続きなので、銃声やマズルフラッシュを出し直さない。
-                if (i > 0 && ContinuesFrom(ref shot.Segment(i - 1), segment.Origin))
+                // 2 区間目以降は、前の着弾から続く弾 (跳弾・貫通) も同じ射撃の別のペレットも、銃声やマズルフラッシュを出し直さない。
+                if (i > 0)
                 {
                     CombatEvents.RaiseShotContinued(shooter, origin, direction, shot.WeaponId);
                 }
@@ -990,11 +1130,6 @@ namespace Fps.NetV2
                         segment.ImpactMaterialId ?? "", segment.ImpactIsCharacter, zone));
                 }
             }
-        }
-
-        private static bool ContinuesFrom(ref ShotSegment previous, System.Numerics.Vector3 origin)
-        {
-            return previous.HasImpact && System.Numerics.Vector3.DistanceSquared(previous.ImpactPoint, origin) < 1e-6f;
         }
 
         private void HandleTeleported(TeleportedMessage teleported)
@@ -1027,6 +1162,7 @@ namespace Fps.NetV2
 
         private void RemoveRemote(int playerId)
         {
+            _weaponHooks.StatusEffects.Forget(playerId);
             if (!_remotes.TryGetValue(playerId, out var remote))
             {
                 return;
@@ -1039,6 +1175,29 @@ namespace Fps.NetV2
             }
 
             Debug.Log(LogTag + " player " + playerId.ToString(CultureInfo.InvariantCulture) + " left", this);
+        }
+
+        // 自分の体は一人称で見えないので、燃えている見た目は相手の体にだけ付け、自分には HUD (NetV2Hud) で出す。
+        private void ShowStatusEffect(int playerId, string kindId)
+        {
+            Debug.Log(LogTag + " status player=" + playerId.ToString(CultureInfo.InvariantCulture) + " kind=" + kindId + " on", this);
+            if (_remotes.TryGetValue(playerId, out var remote) && remote != null)
+            {
+                StatusEffectVisuals.For(remote.gameObject).Show(kindId);
+            }
+        }
+
+        private void HideStatusEffect(int playerId, string kindId)
+        {
+            Debug.Log(LogTag + " status player=" + playerId.ToString(CultureInfo.InvariantCulture) + " kind=" + kindId + " off", this);
+            if (_remotes.TryGetValue(playerId, out var remote) && remote != null)
+            {
+                var visuals = remote.GetComponent<StatusEffectVisuals>();
+                if (visuals != null)
+                {
+                    visuals.Hide(kindId);
+                }
+            }
         }
 
         // サーバーに切られる前にこちらから抜けても、サーバーが EAC で切ったときと同じ符号で同じ文を出す
@@ -1142,6 +1301,7 @@ namespace Fps.NetV2
 
         private void DestroyViews()
         {
+            _weaponHooks?.StatusEffects.Clear();
             if (_local != null)
             {
                 Destroy(_local.gameObject);
@@ -1158,11 +1318,14 @@ namespace Fps.NetV2
             }
 
             _remotes.Clear();
+            _grenadeViews.Clear();
+            _world?.ClearGrenades();
             _zones.Clear();
             _weaponHooks?.AreaEffects.Clear();
             _areaZones.Clear();
             _structures?.Leave();
             _weaponHooks?.Projectiles.Detach();
+            _weaponHooks?.Beams.Detach();
         }
 
         private static bool TryFindScene(string map, out string path)

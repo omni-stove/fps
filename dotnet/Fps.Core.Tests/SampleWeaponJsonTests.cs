@@ -76,6 +76,21 @@ namespace Fps.Core.Tests
             Assert.That(closest, Is.LessThan(0.5f));
         }
 
+        [Test]
+        public void TheShotgunLoadsOneShellAtATime()
+        {
+            var path = Path.Combine(SampleWeaponJsonFolder(), "Shotgun.json");
+            var spec = WeaponSpecJson.Parse(File.ReadAllText(path), path);
+            var weapon = new Weapon(spec, 0, spec.ReserveAmmo);
+
+            Assert.That(weapon.Ammo, Is.TypeOf<PerRoundReload>());
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(spec.Ammo.ReloadSecondsPerRound);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
+            Assert.That(weapon.TryFire(), Is.True, "a loaded shell fires mid-reload");
+            Assert.That(weapon.IsReloading, Is.False);
+        }
+
         private static string SampleWeaponJsonFolder()
         {
             for (var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory); directory != null; directory = directory.Parent)

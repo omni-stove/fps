@@ -56,20 +56,20 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(spec));
             }
 
-            var zone = Create(spec.VisualId, center, spec.Radius, spec.DurationSeconds);
-            zone.Spec = spec;
+            var zone = Create(spec.VisualId, spec, center, spec.Radius, spec.DurationSeconds);
             zone.Owner = owner;
             zone.WeaponId = weaponId ?? string.Empty;
+            zone.StartSmoke();
             return zone;
         }
 
         /// <summary>サーバーが効かせている範囲の見た目だけを出す。</summary>
         public static AreaEffectZone Show(string kindId, Vector3 center, float radius, float remainingSeconds)
         {
-            return Create(kindId, center, radius, remainingSeconds);
+            return Create(kindId, null, center, radius, remainingSeconds);
         }
 
-        private static AreaEffectZone Create(string kindId, Vector3 center, float radius, float seconds)
+        private static AreaEffectZone Create(string kindId, AreaEffectSpec spec, Vector3 center, float radius, float seconds)
         {
             if (!(radius > 0f) || float.IsInfinity(radius))
             {
@@ -85,6 +85,7 @@ namespace Fps.Runtime
             go.transform.position = center;
             var zone = go.AddComponent<AreaEffectZone>();
             zone.KindId = kindId ?? string.Empty;
+            zone.Spec = spec;
             zone.Radius = radius;
             zone._remaining = seconds;
             zone.BuildVisual();
@@ -104,6 +105,11 @@ namespace Fps.Runtime
         private void Update()
         {
             Tick(Time.deltaTime);
+        }
+
+        private void OnDestroy()
+        {
+            StopSmoke();
         }
 
         /// <summary>寿命を deltaSeconds 進め、効き目を出し、寿命が来たら消す。消えたら true。</summary>
@@ -162,6 +168,7 @@ namespace Fps.Runtime
             }
 
             _ended = true;
+            StopSmoke();
             Debug.Log($"{LogTag} ended kind={KindId}");
             try
             {
@@ -180,6 +187,12 @@ namespace Fps.Runtime
             }
         }
 
+        partial void StartSmoke();
+
+        partial void StopSmoke();
+
+        partial void BuildSmokeVisual(ref bool built);
+
         partial void StepSmoke(float deltaSeconds);
 
         partial void StepFire(float deltaSeconds);
@@ -190,6 +203,13 @@ namespace Fps.Runtime
             if (prefab != null)
             {
                 VisualPrefab.Instantiate(prefab, transform, VisualName, stripColliders: true);
+                return;
+            }
+
+            var built = false;
+            BuildSmokeVisual(ref built);
+            if (built)
+            {
                 return;
             }
 

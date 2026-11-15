@@ -770,11 +770,23 @@ namespace Fps.Runtime
             var impact = weapon.AmmoTypes.Impact;
             var charge = Mathf.Clamp01(chargeFraction);
             var delivery = ShotDeliveries.For(round.Delivery);
+            var definition = Definition;
+            var look = definition != null ? definition.Projectile : null;
             foreach (var planned in rounds)
             {
                 // 撃たれた側が撃った方向へ向かえるよう、弾ごとの始点を撃った者の位置として渡す。
                 var request = new ShotRequest(
-                    shooter, _aim.root, planned.Origin.ToUnity(), round, impact, weapon.Spec.Id, _hitMask, weapon.Spec.Trigger.Charge, charge);
+                    shooter,
+                    _aim.root,
+                    planned.Origin.ToUnity(),
+                    round,
+                    impact,
+                    weapon.Spec.Id,
+                    _hitMask,
+                    weapon.Spec.Trigger.Charge,
+                    charge,
+                    look,
+                    ConfirmHit);
                 ConfirmHit(delivery.Deliver(request, planned));
             }
 

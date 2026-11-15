@@ -50,12 +50,9 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ExplosionsAndAreasAddNothingForNow()
+        public void AreasAddNothingForNow()
         {
-            var impact = new ImpactSpec(
-                25,
-                explosion: new ExplosionSpec(new ExplosionDamage(100, 5f)),
-                areaEffect: new AreaEffectSpec(4f, 5f, 1f, 2));
+            var impact = new ImpactSpec(25, areaEffect: new AreaEffectSpec(4f, 5f, 1f, 2));
 
             var orders = ImpactResolver.Resolve(impact, ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f));
 
@@ -90,6 +87,90 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AnImpactExplosionDetonatesWhereTheRoundHitACharacterAfterTheDamage()
+        {
+            var explosion = new ExplosionSpec(new ExplosionDamage(100, 5f));
+            var point = new Vector3(1f, 2f, 3f);
+
+            var orders = ImpactResolver.Resolve(new ImpactSpec(25, explosion: explosion), ImpactHit.Character(HitZone.Body, point, 7f));
+
+            Assert.That(orders.Count, Is.EqualTo(2));
+            Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.Damage));
+            Assert.That(orders[1].Kind, Is.EqualTo(ImpactOrderKind.Explosion));
+            Assert.That(orders[1].Explosion, Is.SameAs(explosion));
+            Assert.That(orders[1].Point, Is.EqualTo(point));
+        }
+
+        [Test]
+        public void AnImpactExplosionDetonatesWhereTheRoundHitAStructure()
+        {
+            var explosion = new ExplosionSpec(new ExplosionDamage(100, 5f), 80);
+            var point = new Vector3(-4f, 0.5f, 9f);
+
+            var orders = ImpactResolver.Resolve(new ImpactSpec(25, structureRadius: 2f, explosion: explosion), ImpactHit.Structure(point, 12f));
+
+            Assert.That(orders.Count, Is.EqualTo(2));
+            Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.StructureDamage));
+            Assert.That(orders[1].Kind, Is.EqualTo(ImpactOrderKind.Explosion));
+            Assert.That(orders[1].Explosion, Is.SameAs(explosion));
+            Assert.That(orders[1].Point, Is.EqualTo(point));
+        }
+
+        [TestCase(DetonationTrigger.OnStop)]
+        [TestCase(DetonationTrigger.OnLifetimeEnd)]
+        public void AnExplosionThatWaitsForTheRoundToEndDoesNotDetonateOnTheHit(DetonationTrigger detonation)
+        {
+            var impact = new ImpactSpec(25, explosion: new ExplosionSpec(new ExplosionDamage(100, 5f), 0, detonation));
+
+            var orders = ImpactResolver.Resolve(impact, ImpactHit.Structure(Vector3.Zero, 3f));
+
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.StructureDamage));
+        }
+
+        [TestCase(DetonationTrigger.OnImpact, DetonationTrigger.OnImpact, true)]
+        [TestCase(DetonationTrigger.OnStop, DetonationTrigger.OnStop, true)]
+        [TestCase(DetonationTrigger.OnLifetimeEnd, DetonationTrigger.OnLifetimeEnd, true)]
+        [TestCase(DetonationTrigger.OnStop, DetonationTrigger.OnLifetimeEnd, false)]
+        [TestCase(DetonationTrigger.OnLifetimeEnd, DetonationTrigger.OnStop, false)]
+        [TestCase(DetonationTrigger.OnImpact, DetonationTrigger.OnStop, false)]
+        public void ARoundEndingDetonatesOnlyTheMatchingExplosion(DetonationTrigger detonation, DetonationTrigger cause, bool detonates)
+        {
+            var explosion = new ExplosionSpec(new ExplosionDamage(100, 5f), 0, detonation);
+            var point = new Vector3(3f, 1f, -2f);
+
+            var orders = ImpactResolver.ResolveDetonation(new ImpactSpec(25, explosion: explosion), cause, point);
+
+            Assert.That(orders.Count, Is.EqualTo(detonates ? 1 : 0));
+            if (detonates)
+            {
+                Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.Explosion));
+                Assert.That(orders[0].Explosion, Is.SameAs(explosion));
+                Assert.That(orders[0].Point, Is.EqualTo(point));
+            }
+        }
+
+        [Test]
+        public void ARoundWithoutAnExplosionDetonatesNothingWhenItEnds()
+        {
+            Assert.That(ImpactResolver.ResolveDetonation(new ImpactSpec(25), DetonationTrigger.OnStop, Vector3.Zero), Is.Empty);
+        }
+
+        [Test]
+        public void TheDetonationPointStandsOffTheSurfaceAlongTheNormal()
+        {
+            var point = new Vector3(2f, 0.5f, 1f);
+
+            var center = ImpactResolver.DetonationPoint(point, new Vector3(0f, 4f, 0f));
+
+            Assert.That(center.X, Is.EqualTo(point.X));
+            Assert.That(center.Y, Is.EqualTo(point.Y + ImpactResolver.DetonationStandoff).Within(1e-6f));
+            Assert.That(center.Z, Is.EqualTo(point.Z));
+            Assert.That(ImpactResolver.DetonationPoint(point, Vector3.Zero), Is.EqualTo(point));
+            Assert.That(ImpactResolver.DetonationPoint(point, new Vector3(float.NaN, 0f, 0f)), Is.EqualTo(point));
+        }
+
+        [Test]
         public void ChargeDoesNotScaleTheDamageYet()
         {
             var charge = new ChargeSpec(1f, 0.2f, 3f);
@@ -111,6 +192,8 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f, null));
             Assert.Throws<ArgumentOutOfRangeException>(() => ImpactOrder.Damage(-1));
             Assert.Throws<ArgumentNullException>(() => ImpactOrder.Detonate(null, Vector3.Zero));
+            Assert.Throws<ArgumentNullException>(() => ImpactResolver.ResolveDetonation(null, DetonationTrigger.OnStop, Vector3.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ImpactResolver.ResolveDetonation(ImpactSpec.Default, (DetonationTrigger)99, Vector3.Zero));
         }
     }
 }

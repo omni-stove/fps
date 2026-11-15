@@ -276,7 +276,7 @@ namespace Fps.Runtime
             }
 
             _throwRemaining = spec.ThrowSeconds;
-            var velocity = (direction * spec.ThrowSpeed) + (Vector3.up * spec.ThrowLiftSpeed);
+            var velocity = LaunchVelocity(direction, spec.ThrowSpeed, spec.ThrowLiftSpeed);
             var grenade = ThrownGrenade.Spawn(
                 gameObject, position, velocity, spec.FuseSeconds, spec.Explosion, spec.StructureDamageAtCenter, _grenadePrefab);
             Debug.Log($"{LogTag} thrown remaining={_pouch.Remaining}", this);
@@ -290,7 +290,18 @@ namespace Fps.Runtime
         /// </summary>
         public void ResolveThrow(out Vector3 position, out Vector3 direction)
         {
-            var rig = GetComponent<ViewRig>();
+            ResolveRelease(transform, out position, out direction);
+        }
+
+        // 注意をそらす物 (DistractionThrowAbility) もグレネードと同じ所から同じ弧で投げるよう、本体だけから求められる形で公開する。
+        public static void ResolveRelease(Transform body, out Vector3 position, out Vector3 direction)
+        {
+            if (body == null)
+            {
+                throw new ArgumentNullException(nameof(body));
+            }
+
+            var rig = body.GetComponent<ViewRig>();
             Vector3 origin;
             if (rig != null && rig.IsInitialized)
             {
@@ -299,13 +310,13 @@ namespace Fps.Runtime
             }
             else
             {
-                origin = transform.position;
-                direction = transform.forward;
+                origin = body.position;
+                direction = body.forward;
             }
 
             direction = direction.sqrMagnitude > 1e-8f ? direction.normalized : Vector3.forward;
             var distance = ReleaseDistance;
-            if (TryNearestObstacle(origin, direction, ReleaseDistance + ThrownGrenade.BodyRadius, out var hitDistance))
+            if (TryNearestObstacle(body, origin, direction, ReleaseDistance + ThrownGrenade.BodyRadius, out var hitDistance))
             {
                 distance = Mathf.Max(0f, hitDistance - ThrownGrenade.BodyRadius);
             }
@@ -313,12 +324,16 @@ namespace Fps.Runtime
             position = origin + (direction * distance);
         }
 
+        public static Vector3 LaunchVelocity(Vector3 direction, float speed, float liftSpeed)
+        {
+            return (direction * speed) + (Vector3.up * liftSpeed);
+        }
+
         // 自分の体を除いて、目と出す位置の間にある最も近い物までの距離。
-        private bool TryNearestObstacle(Vector3 origin, Vector3 direction, float maxDistance, out float distance)
+        private static bool TryNearestObstacle(Transform self, Vector3 origin, Vector3 direction, float maxDistance, out float distance)
         {
             distance = 0f;
             var found = false;
-            var self = transform;
             foreach (var hit in Physics.RaycastAll(origin, direction, maxDistance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
             {
                 if (hit.collider.transform.IsChildOf(self))

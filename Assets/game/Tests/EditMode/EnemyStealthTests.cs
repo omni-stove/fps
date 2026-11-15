@@ -164,6 +164,120 @@ namespace Fps.Tests.EditMode
                 Is.EqualTo("[Stealth] id=enemy-1 alarmed by=enemy-2 at=(3.0, 0.0, 4.0)"));
         }
 
+        [Test]
+        public void AClatterFromThePlayerSendsTheEnemyToInvestigate()
+        {
+            Assert.That(_stealth.TryInitialize(), Is.True);
+            _stealth.Awareness.Rule = Stealth.On;
+            var player = new GameObject("Player");
+            try
+            {
+                var clatter = Clatter(new Vector3(0f, 0f, -4f));
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Stealth\] id=enemy-1 stage=Alerted prev=Unaware "));
+                LogAssert.Expect(LogType.Log, EnemyStealth.FormatHeardLog("enemy-1", clatter, HearingOutcome.Investigating, Stealth.On));
+
+                Assert.That(_stealth.Hear(player, clatter), Is.EqualTo(HearingOutcome.Investigating));
+                Assert.That(_stealth.Stage, Is.EqualTo(AwarenessStage.Alerted));
+                Assert.That(_stealth.Awareness.LastSeen, Is.EqualTo(clatter.Position));
+            }
+            finally
+            {
+                Object.DestroyImmediate(player);
+            }
+        }
+
+        [Test]
+        public void AnEngagedEnemyIgnoresTheClatter()
+        {
+            Assert.That(_stealth.TryInitialize(), Is.True);
+            _stealth.Awareness.Rule = Stealth.On;
+            _stealth.ReceiveAlarm(null, Vector3.zero);
+            var clatter = Clatter(new Vector3(0f, 0f, -4f));
+            LogAssert.Expect(LogType.Log, EnemyStealth.FormatHeardLog("enemy-1", clatter, HearingOutcome.Engaged, Stealth.On));
+
+            Assert.That(_stealth.Hear(null, clatter), Is.EqualTo(HearingOutcome.Engaged));
+            Assert.That(_stealth.Awareness.LastSeen, Is.EqualTo(System.Numerics.Vector3.Zero));
+        }
+
+        [Test]
+        public void WithStealthOffAClatterStillSendsTheEnemyToSearch()
+        {
+            Assert.That(_stealth.TryInitialize(), Is.True);
+            var clatter = Clatter(new Vector3(0f, 0f, -4f));
+            LogAssert.Expect(LogType.Log, EnemyStealth.FormatHeardLog("enemy-1", clatter, HearingOutcome.Investigating, Stealth.Off));
+
+            Assert.That(_stealth.Hear(null, clatter), Is.EqualTo(HearingOutcome.Investigating));
+            Assert.That(_stealth.Stage, Is.EqualTo(AwarenessStage.Unaware), "the gauge is not used with stealth off");
+            Assert.That(_agent.Perceive().NoisePosition, Is.EqualTo(clatter.Position), "the brain searches where the object landed");
+        }
+
+        [Test]
+        public void SoundsFromItselfOrAnAllyAreNotHeard()
+        {
+            Assert.That(_stealth.TryInitialize(), Is.True);
+            _stealth.Awareness.Rule = Stealth.On;
+            var (allyHost, _, _) = CreateEnemy("enemy-2");
+            try
+            {
+                var shot = new SoundStimulus(SoundCueKind.Gunshot, System.Numerics.Vector3.Zero, 30f, false);
+
+                Assert.That(_stealth.Hear(_host, shot), Is.EqualTo(HearingOutcome.NotHeard));
+                Assert.That(_stealth.Hear(allyHost, shot), Is.EqualTo(HearingOutcome.NotHeard));
+                Assert.That(_stealth.IsHostileSource(allyHost), Is.False);
+                Assert.That(_stealth.Level, Is.EqualTo(0f));
+
+                _host.AddComponent<SideMember>().Side = new Side(1);
+                allyHost.AddComponent<SideMember>().Side = new Side(0);
+                Assert.That(_stealth.IsHostileSource(allyHost), Is.True, "an enemy of another side is heard");
+                Assert.That(_stealth.Hear(allyHost, shot), Is.EqualTo(HearingOutcome.Noticed));
+            }
+            finally
+            {
+                Object.DestroyImmediate(allyHost);
+            }
+        }
+
+        [Test]
+        public void TheNoiseReachesEveryListenerAndCountsThoseWhoReacted()
+        {
+            Assert.That(_stealth.TryInitialize(), Is.True);
+            _stealth.Awareness.Rule = Stealth.On;
+            var (farHost, _, far) = CreateEnemy("enemy-far");
+            try
+            {
+                farHost.transform.position = new Vector3(100f, 0f, 0f);
+                Assert.That(far.TryInitialize(), Is.True);
+                far.Awareness.Rule = Stealth.On;
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Stealth\] id=enemy-1 stage=Alerted "));
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Stealth\] id=enemy-1 heard kind=Clatter "));
+
+                var reacted = StealthNoise.Emit(null, Clatter(new Vector3(0f, 0f, -4f)), new[] { _stealth, null, far });
+
+                Assert.That(reacted, Is.EqualTo(1));
+                Assert.That(far.Stage, Is.EqualTo(AwarenessStage.Unaware), "too far to hear it");
+            }
+            finally
+            {
+                Object.DestroyImmediate(farHost);
+            }
+        }
+
+        [Test]
+        public void TheHearingValuesRoundTripThroughTheSpec()
+        {
+            _stealth.ApplySpec(new AwarenessSpec(gunshotGain: 0.2f, footstepGain: 0.05f, investigateLevel: 0.7f));
+            var created = _stealth.CreateSpec();
+
+            Assert.That(created.GunshotGain, Is.EqualTo(0.2f));
+            Assert.That(created.FootstepGain, Is.EqualTo(0.05f));
+            Assert.That(created.InvestigateLevel, Is.EqualTo(0.7f));
+        }
+
+        private static SoundStimulus Clatter(Vector3 at)
+        {
+            return new SoundStimulus(SoundCueKind.Clatter, at.ToNumerics(), 10f, true);
+        }
+
         private (GameObject Host, EnemyAgent Agent, EnemyStealth Stealth) CreateEnemy(string id)
         {
             var host = GameObject.CreatePrimitive(PrimitiveType.Capsule);

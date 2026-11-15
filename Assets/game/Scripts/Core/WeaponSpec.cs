@@ -19,6 +19,9 @@ namespace Fps.Core
         /// <summary>生成時に指定しなかったときの <see cref="RecoilRecoveryDelaySeconds"/>。</summary>
         public const float DefaultRecoilRecoveryDelaySeconds = 0.15f;
 
+        // 消音していない銃声が、射撃場の端の敵まで届く距離。
+        public const float DefaultShotNoiseRadius = 50f;
+
         /// <summary>武器の識別子。小文字・ハイフン区切りの UUID (<c>Guid.ToString("D")</c> の形)。</summary>
         public string Id { get; }
 
@@ -102,6 +105,8 @@ namespace Fps.Core
         /// <summary>最後に撃ってから跳ねた視線が戻り始めるまでの秒数。0 以上の有限値。</summary>
         public float RecoilRecoveryDelaySeconds { get; }
 
+        public float ShotNoiseRadius { get; }
+
         /// <param name="id">識別子。前後の空白は除く。除いた後が小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。</param>
         /// <param name="nameKey">画面に出す名前を引く表のキー。null・空白のみなら名前は <paramref name="id"/> になる。</param>
         /// <param name="category">武器の種別。定義済みの値のみ。</param>
@@ -126,6 +131,7 @@ namespace Fps.Core
         /// <param name="adsSpreadDegrees">ADS の散らばりの最大角度 (度)。0 以上 90 以下。</param>
         /// <param name="moveSpreadDegrees">移動中に足す散らばりの最大角度 (度)。0 以上 90 以下。</param>
         /// <param name="recoilRecoveryDelaySeconds">撃ってから反動が戻り始めるまでの秒数。0 以上の有限値。</param>
+        /// <param name="shotNoiseRadius">銃声が敵に聞こえる距離 (m)。消音した武器は小さくする。0 以上の有限値。</param>
         public WeaponSpec(
             string id,
             string nameKey,
@@ -150,7 +156,8 @@ namespace Fps.Core
             float hipSpreadDegrees = 0f,
             float adsSpreadDegrees = 0f,
             float moveSpreadDegrees = 0f,
-            float recoilRecoveryDelaySeconds = DefaultRecoilRecoveryDelaySeconds)
+            float recoilRecoveryDelaySeconds = DefaultRecoilRecoveryDelaySeconds,
+            float shotNoiseRadius = DefaultShotNoiseRadius)
         {
             var normalizedId = NormalizeId(id);
 
@@ -241,6 +248,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(recoilRecoveryDelaySeconds), recoilRecoveryDelaySeconds, "recoilRecoveryDelaySeconds must be a non-negative finite number");
             }
 
+            if (!IsNonNegativeFinite(shotNoiseRadius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(shotNoiseRadius), shotNoiseRadius, "shotNoiseRadius must be a non-negative finite number");
+            }
+
             Id = normalizedId;
             NameKey = string.IsNullOrWhiteSpace(nameKey) ? string.Empty : nameKey.Trim();
             Category = category;
@@ -265,6 +277,7 @@ namespace Fps.Core
             AdsSpreadDegrees = adsSpreadDegrees;
             MoveSpreadDegrees = moveSpreadDegrees;
             RecoilRecoveryDelaySeconds = recoilRecoveryDelaySeconds;
+            ShotNoiseRadius = shotNoiseRadius;
         }
 
         private static void ValidateAngle(float degrees, string paramName)

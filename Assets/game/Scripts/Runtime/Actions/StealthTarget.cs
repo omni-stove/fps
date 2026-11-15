@@ -8,6 +8,9 @@ namespace Fps.Runtime
     [DisallowMultipleComponent]
     public sealed class StealthTarget : MonoBehaviour
     {
+        // 歩き (足音の大きさ 0.6) で 7 m、しゃがみ (0.2) で 2.4 m。しゃがめば見張りの真後ろを抜けられる。
+        public const float DefaultFootstepNoiseRadius = 12f;
+
         [SerializeField]
         private Stealth _rule = Stealth.Off;
 
@@ -18,6 +21,11 @@ namespace Fps.Runtime
         // プレイヤー以外 (PlayerController の無い目標) が伏せを示すときにここを立てる。しゃがみは ICharacterMotionSource から読む。
         [SerializeField]
         private bool _prone;
+
+        [SerializeField, Min(0f), Tooltip("大きさ 1 の足音が敵に聞こえる距離 (m)。歩き・しゃがみ・ダッシュ・着地の大きさを掛ける。0 なら足音で気づかれない")]
+        private float _footstepNoiseRadius = DefaultFootstepNoiseRadius;
+
+        private readonly FootstepCadence _cadence = new FootstepCadence();
 
         private PlayerController _player;
         private ICharacterMotionSource _motion;
@@ -61,6 +69,20 @@ namespace Fps.Runtime
 
         public float Speed => _speed;
 
+        public float FootstepNoiseRadius
+        {
+            get => _footstepNoiseRadius;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "footstep noise radius must not be negative and must be finite");
+                }
+
+                _footstepNoiseRadius = value;
+            }
+        }
+
         public AwarenessPosture Posture
         {
             get
@@ -84,14 +106,43 @@ namespace Fps.Runtime
             var deltaSeconds = Time.deltaTime;
             if (_hasLastPosition && deltaSeconds > 0f)
             {
-                var moved = position - _lastPosition;
-                moved.y = 0f;
+                var delta = position - _lastPosition;
+                var moved = new Vector3(delta.x, 0f, delta.z);
                 var speed = moved.magnitude / deltaSeconds;
                 _speed = float.IsNaN(speed) || float.IsInfinity(speed) ? 0f : speed;
+                AdvanceFootsteps(delta, deltaSeconds);
             }
 
             _lastPosition = position;
             _hasLastPosition = true;
+        }
+
+        // 足音の素材の有無で敵の耳が変わらないよう、鳴らす側 (CharacterAudio) とは別に同じ歩幅の規則で数える。Off では敵が聞かないので数えない。
+        internal bool AdvanceFootsteps(Vector3 delta, float deltaSeconds)
+        {
+            _motion ??= GetComponent<ICharacterMotionSource>();
+            if (_rule != Stealth.On || _motion == null || !(deltaSeconds > 0f))
+            {
+                return false;
+            }
+
+            var horizontal = new Vector2(delta.x, delta.z).magnitude;
+            if (!_motion.TryGetSprinting(out var sprinting))
+            {
+                var walkSpeed = _motion.WalkSpeed;
+                sprinting = walkSpeed > 0f && FootstepCadence.IsSprintingBySpeed(horizontal / deltaSeconds, walkSpeed);
+            }
+
+            var quiet = Posture != AwarenessPosture.Standing;
+            var cue = _cadence.Advance(horizontal, delta.y, deltaSeconds, _motion.IsGrounded, quiet, sprinting && !quiet);
+            var radius = cue.Volume * _footstepNoiseRadius;
+            if (!cue.HasSound || !(radius > 0f))
+            {
+                return false;
+            }
+
+            StealthNoise.Emit(gameObject, new SoundStimulus(SoundCueKind.Footstep, transform.position.ToNumerics(), radius, false));
+            return true;
         }
     }
 }

@@ -523,5 +523,33 @@ namespace Fps.Core.Tests
                 recoilRecoveryDelaySeconds: seconds));
             Assert.That(e.ParamName, Is.EqualTo("recoilRecoveryDelaySeconds"));
         }
+
+        [Test]
+        public void ShotNoiseRadiusDefaultsWhenOmitted()
+        {
+            Assert.That(Create().ShotNoiseRadius, Is.EqualTo(WeaponSpec.DefaultShotNoiseRadius));
+        }
+
+        [TestCase(0f)]
+        [TestCase(8f)]
+        public void KeepsTheShotNoiseRadius(float radius)
+        {
+            var spec = new WeaponSpec(
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff,
+                shotNoiseRadius: radius);
+
+            Assert.That(spec.ShotNoiseRadius, Is.EqualTo(radius));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void RejectsInvalidShotNoiseRadius(float radius)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => new WeaponSpec(
+                _rifleId, "Rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, _falloff,
+                shotNoiseRadius: radius));
+            Assert.That(e.ParamName, Is.EqualTo("shotNoiseRadius"));
+        }
     }
 }

@@ -425,6 +425,7 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.AdsSpreadDegrees, Is.EqualTo(expected.AdsSpreadDegrees));
             Assert.That(actual.MoveSpreadDegrees, Is.EqualTo(expected.MoveSpreadDegrees));
             Assert.That(actual.RecoilRecoveryDelaySeconds, Is.EqualTo(expected.RecoilRecoveryDelaySeconds));
+            Assert.That(actual.ShotNoiseRadius, Is.EqualTo(expected.ShotNoiseRadius));
         }
 
         // 変換後の WeaponSpec だけでなく、Inspector に出るアセットの値そのものが一致することを確かめる

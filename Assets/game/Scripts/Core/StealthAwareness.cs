@@ -93,6 +93,57 @@ namespace Fps.Core
             return true;
         }
 
+        // 交戦中は目の前の相手を追っているので、物音に気を取られて背を向けないよう聞き流す。
+        public HearingOutcome Hear(EnemyBrain brain, Vector3 listener, SoundStimulus sound)
+        {
+            if (brain == null)
+            {
+                throw new ArgumentNullException(nameof(brain));
+            }
+
+            var loudness = sound.LoudnessAt(listener);
+            if (loudness <= 0f || brain.IsDead)
+            {
+                return HearingOutcome.NotHeard;
+            }
+
+            if (_rule != Stealth.On)
+            {
+                return HearingOutcome.RuleOff;
+            }
+
+            if (Stage == AwarenessStage.Engaged || IsFighting(brain.State))
+            {
+                return HearingOutcome.Engaged;
+            }
+
+            if (sound.Draws)
+            {
+                Meter.Raise(Spec.InvestigateLevel);
+            }
+            else
+            {
+                var gain = Spec.HearingGain(sound.Kind) * loudness;
+                if (gain <= 0f)
+                {
+                    return HearingOutcome.Ignored;
+                }
+
+                Meter.Add(gain, Spec.InvestigateLevel);
+            }
+
+            // 見えている間は次の tick で相手の位置に戻るので、音の位置で上書きしてよい。
+            LastSeen = sound.Position;
+            RaisedByAlarm = false;
+            Publish();
+            if (Stage == AwarenessStage.Alerted)
+            {
+                return HearingOutcome.Investigating;
+            }
+
+            return Stage == AwarenessStage.Noticed ? HearingOutcome.Noticed : HearingOutcome.Raised;
+        }
+
         // 仲間から伝わった交戦と違い自分で見たので、交戦に入ればさらに仲間へ伝える (RaisedByAlarm を下ろす)。
         // 今の量以下なら何もしない。毎フレーム呼ばれても、見た瞬間だけを数えられるように。
         /// <exception cref="ArgumentOutOfRangeException">level が 0 以上 1 以下でない。</exception>

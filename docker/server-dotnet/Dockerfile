@@ -24,8 +24,8 @@ RUN for notice in license.txt ThirdPartySoftwareNotice.txt; do \
       if [ -f "dotnet/ThirdParty/EOSSDK/$notice" ]; then cp "dotnet/ThirdParty/EOSSDK/$notice" "/out/EOSSDK-$notice"; fi; \
     done
 
-# self-contained なので .NET のランタイムは要らず、その依存 (libc・ICU・OpenSSL・CA 証明書) だけが入った Ubuntu 24.04 を使う
-FROM mcr.microsoft.com/dotnet/runtime-deps:11.0-noble
+# self-contained なので .NET のランタイムは要らず、その依存 (libc・ICU・OpenSSL・CA 証明書) だけが入った Ubuntu 26.04 を使う
+FROM mcr.microsoft.com/dotnet/runtime-deps:11.0-resolute
 
 # PID 1 のプロセスにはシグナルの既定の扱いが無く、子プロセスの回収もされないので、Unity のサーバーのイメージと同じく tini を挟む
 RUN apt-get update \

@@ -21,5 +21,10 @@
   "weapon.laser": "Laser",
   "weapon.flamethrower": "Flamethrower",
   "weapon.scopedRifle": "Scoped Rifle",
-  "weapon.incendiaryRifle": "Incendiary Rifle"
+  "weapon.incendiaryRifle": "Incendiary Rifle",
+  "grenade.frag": "Frag Grenade",
+  "grenade.smoke": "Smoke Grenade",
+  "grenade.flash": "Flashbang",
+  "grenade.incendiary": "Incendiary Grenade",
+  "grenade.sticky": "Sticky Grenade"
 }

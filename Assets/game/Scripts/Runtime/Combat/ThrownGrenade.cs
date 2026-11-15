@@ -6,14 +6,15 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 投げられたグレネード 1 個。<see cref="Spawn"/> で Rigidbody の球として作られて跳ね、信管の秒数が経つと <see cref="Explode"/> する。
+    /// 投げられたグレネード 1 個。<see cref="Spawn"/> で Rigidbody の球として作られて跳ね、信管の秒数が経つと <see cref="Explode"/> して、
+    /// 種類の <see cref="ImpactSpec"/> の爆発と範囲効果 (<see cref="AreaEffectZone"/>) を起こす。くっつき方は <c>ThrownGrenade.Sticky.cs</c> が受け持つ。
     /// 爆発は半径内の <see cref="Damageable"/> に <see cref="ExplosionDamage"/> を与え (中心から体の狙う点か頭の高さまでのどちらかの線が
     /// <see cref="Damageable"/> を持たない物に遮られていなければ)、<see cref="StructureDamage.ApplyAround"/> で建造物にも範囲で当てる。
     /// 演出は <see cref="PresentationCatalog"/> の爆発 (エフェクトと音) を出し、カタログか素材が無ければ出さない。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody))]
-    public sealed class ThrownGrenade : MonoBehaviour
+    public sealed partial class ThrownGrenade : MonoBehaviour
     {
         public const string ObjectName = "Grenade";
 
@@ -42,8 +43,9 @@ namespace Fps.Runtime
 
         private readonly List<Collider> _ownColliders = new List<Collider>();
         private GameObject _thrower;
-        private ExplosionDamage _explosion;
-        private int _structureDamage;
+        private ImpactSpec _impact;
+        private GrenadeStickiness _stickiness;
+        private string _typeId = string.Empty;
         private float _remaining;
         private bool _armed;
         private bool _exploded;
@@ -57,8 +59,16 @@ namespace Fps.Runtime
         /// <summary>爆発したか。</summary>
         public bool HasExploded => _exploded;
 
-        /// <summary>この爆発が与えるダメージ。<see cref="Arm"/> の前は null。</summary>
-        public ExplosionDamage Explosion => _explosion;
+        /// <summary>この爆発が与えるダメージ。<see cref="Arm"/> の前と、爆発しない種類では null。</summary>
+        public ExplosionDamage Explosion => _impact?.Explosion?.Damage;
+
+        /// <summary>信管が切れたときの効果。<see cref="Arm"/> の前は null。</summary>
+        public ImpactSpec Impact => _impact;
+
+        public GrenadeStickiness Stickiness => _stickiness;
+
+        /// <summary>投げた種類の Id (<see cref="GrenadeSpec.Id"/>)。種類を渡さずに作ったときは空文字。</summary>
+        public string TypeId => _typeId;
 
         /// <summary>爆発したときに、このグレネードと結果を渡して 1 度だけ呼ばれる。</summary>
         public event Action<ThrownGrenade, GrenadeExplosion> Exploded;
@@ -97,6 +107,23 @@ namespace Fps.Runtime
             int structureDamage,
             GameObject visualPrefab)
         {
+            return Create(thrower, position, velocity, visualPrefab, grenade => grenade.Arm(thrower, fuseSeconds, explosion, structureDamage));
+        }
+
+        /// <summary>spec の種類のグレネードを投げる。信管・効果・くっつき方は spec に従う。</summary>
+        /// <param name="visualPrefab">グレネードの見た目。中心が原点。null なら仮の球を作る。</param>
+        public static ThrownGrenade Spawn(GameObject thrower, Vector3 position, Vector3 velocity, GrenadeSpec spec, GameObject visualPrefab)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            return Create(thrower, position, velocity, visualPrefab, grenade => grenade.Arm(thrower, spec));
+        }
+
+        private static ThrownGrenade Create(GameObject thrower, Vector3 position, Vector3 velocity, GameObject visualPrefab, Action<ThrownGrenade> arm)
+        {
             var go = visualPrefab != null ? new GameObject(ObjectName) : GameObject.CreatePrimitive(PrimitiveType.Sphere);
             try
             {
@@ -133,7 +160,7 @@ namespace Fps.Runtime
                 body.linearVelocity = velocity;
 
                 var grenade = go.AddComponent<ThrownGrenade>();
-                grenade.Arm(thrower, fuseSeconds, explosion, structureDamage);
+                arm(grenade);
                 return grenade;
             }
             catch
@@ -146,14 +173,36 @@ namespace Fps.Runtime
         /// <summary>信管と爆発の値を決める。<see cref="Spawn"/> が呼ぶ。2 回目以降は値を差し替える (爆発した後は何もしない)。</summary>
         public void Arm(GameObject thrower, float fuseSeconds, ExplosionDamage explosion, int structureDamage)
         {
-            if (!(fuseSeconds >= 0f) || float.IsInfinity(fuseSeconds))
+            if (explosion == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(fuseSeconds), fuseSeconds, "fuseSeconds must be a non-negative finite number");
+                throw new ArgumentNullException(nameof(explosion));
             }
 
             if (structureDamage < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(structureDamage), structureDamage, "structureDamage must not be negative");
+            }
+
+            var impact = new ImpactSpec(damage: 0, explosion: new ExplosionSpec(explosion, structureDamage, DetonationTrigger.OnLifetimeEnd));
+            Arm(thrower, fuseSeconds, impact, GrenadeStickiness.None, string.Empty);
+        }
+
+        /// <summary>spec の信管・効果・くっつき方にする。2 回目以降は値を差し替える (爆発した後は何もしない)。</summary>
+        public void Arm(GameObject thrower, GrenadeSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            Arm(thrower, spec.FuseSeconds, spec.Impact, spec.Stickiness, spec.Id);
+        }
+
+        private void Arm(GameObject thrower, float fuseSeconds, ImpactSpec impact, GrenadeStickiness stickiness, string typeId)
+        {
+            if (!(fuseSeconds >= 0f) || float.IsInfinity(fuseSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(fuseSeconds), fuseSeconds, "fuseSeconds must be a non-negative finite number");
             }
 
             if (_exploded)
@@ -162,11 +211,22 @@ namespace Fps.Runtime
             }
 
             _thrower = thrower;
-            _explosion = explosion ?? throw new ArgumentNullException(nameof(explosion));
-            _structureDamage = structureDamage;
+            _impact = impact;
+            _stickiness = stickiness;
+            _typeId = typeId;
             _remaining = fuseSeconds;
             _armed = true;
         }
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (_armed && !_exploded && _stickiness != GrenadeStickiness.None)
+            {
+                Stick(collision);
+            }
+        }
+
+        partial void Stick(Collision collision);
 
         private void Update()
         {
@@ -197,8 +257,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 今の位置で爆発させ、グレネードを消す。半径内の生きている <see cref="Damageable"/> に遮られていなければダメージを与え
-        /// (投げた者の帰属で、投げた本人も巻き込む)、建造物に範囲で被害を与え、演出を出す。
+        /// 今の位置で効果を起こし、グレネードを消す。爆発する種類なら半径内の生きている <see cref="Damageable"/> に遮られていなければダメージを与え
+        /// (投げた者の帰属で、投げた本人も巻き込む)、建造物に範囲で被害を与え、演出を出す。範囲効果を持つ種類なら <see cref="AreaEffectZone"/> を置く。
         /// 2 回目以降と <see cref="Arm"/> の前は何もせず default を返す。
         /// </summary>
         public GrenadeExplosion Explode()
@@ -218,11 +278,14 @@ namespace Fps.Runtime
                 own.enabled = false;
             }
 
-            var result = Fps.Runtime.Explosion.Detonate(
-                center,
-                new ExplosionSpec(_explosion, _structureDamage, DetonationTrigger.OnLifetimeEnd),
-                _thrower,
-                GrenadeThrower.WeaponId);
+            var result = _impact.Explosion != null
+                ? Fps.Runtime.Explosion.Detonate(center, _impact.Explosion, _thrower, GrenadeThrower.WeaponId)
+                : new GrenadeExplosion(center, 0, 0, 0);
+            if (_impact.AreaEffect != null)
+            {
+                AreaEffectZone.Spread(_impact.AreaEffect, center, _thrower, GrenadeThrower.WeaponId);
+            }
+
             try
             {
                 Exploded?.Invoke(this, result);

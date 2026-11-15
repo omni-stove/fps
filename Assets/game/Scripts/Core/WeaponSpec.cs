@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Fps.Core
 {
@@ -7,17 +8,19 @@ namespace Fps.Core
     /// </summary>
     public sealed class WeaponSpec
     {
+        private static readonly IReadOnlyList<AmmoTypeSpec> _noAmmoTypes = Array.AsReadOnly(Array.Empty<AmmoTypeSpec>());
+
         /// <summary>生成時に指定しなかったときの <see cref="ActiveReloadWindowStart"/>。</summary>
-        public const float DefaultActiveReloadWindowStart = 0.5f;
+        public const float DefaultActiveReloadWindowStart = AmmoSpec.DefaultActiveReloadWindowStart;
 
         /// <summary>生成時に指定しなかったときの <see cref="ActiveReloadWindowLength"/>。</summary>
-        public const float DefaultActiveReloadWindowLength = 0.15f;
+        public const float DefaultActiveReloadWindowLength = AmmoSpec.DefaultActiveReloadWindowLength;
 
         /// <summary>生成時に指定しなかったときの <see cref="ActiveReloadFailSeconds"/>。</summary>
-        public const float DefaultActiveReloadFailSeconds = 0.5f;
+        public const float DefaultActiveReloadFailSeconds = AmmoSpec.DefaultActiveReloadFailSeconds;
 
         /// <summary>生成時に指定しなかったときの <see cref="RecoilRecoveryDelaySeconds"/>。</summary>
-        public const float DefaultRecoilRecoveryDelaySeconds = 0.15f;
+        public const float DefaultRecoilRecoveryDelaySeconds = AimSpec.DefaultRecoilRecoveryDelaySeconds;
 
         // 消音していない銃声が、射撃場の端の敵まで届く距離。
         public const float DefaultShotNoiseRadius = 50f;
@@ -39,71 +42,83 @@ namespace Fps.Core
         /// <summary>武器の種別。ロードアウトの制約と表示にだけ使う。</summary>
         public WeaponCategory Category { get; }
 
+        public TriggerSpec Trigger { get; }
+
+        public AmmoSpec Ammo { get; }
+
+        public RoundSpec Round { get; }
+
+        public ImpactSpec Impact { get; }
+
+        public AimSpec Aim { get; }
+
+        public IReadOnlyList<AmmoTypeSpec> AmmoTypes { get; }
+
         /// <summary>射撃モード。</summary>
-        public FireMode FireMode { get; }
+        public FireMode FireMode => Trigger.FireMode;
 
         /// <summary>弾倉の容量。1 以上。</summary>
-        public int MagazineSize { get; }
+        public int MagazineSize => Ammo.MagazineSize;
 
         /// <summary>予備弾の初期値。0 以上。</summary>
-        public int ReserveAmmo { get; }
+        public int ReserveAmmo => Ammo.ReserveAmmo;
 
         /// <summary>射撃から次に撃てるまでの秒数。0 以上の有限値。</summary>
-        public float FireInterval { get; }
+        public float FireInterval => Trigger.FireInterval;
 
         /// <summary>リロード開始から補充までの秒数。0 以上の有限値。</summary>
-        public float ReloadSeconds { get; }
+        public float ReloadSeconds => Ammo.ReloadSeconds;
 
         /// <summary>1 発あたりのダメージ。0 以上。</summary>
-        public int Damage { get; }
+        public int Damage => Impact.Damage;
 
         /// <summary>射程 (m)。0 より大きい有限値。</summary>
-        public float Range { get; }
+        public float Range => Round.Range;
 
         /// <summary>距離によるダメージ減衰。null にならない。</summary>
-        public DamageFalloff Falloff { get; }
+        public DamageFalloff Falloff => Impact.Falloff;
 
         /// <summary>建造物に当たったときに被害を広げる半径 (m)。0 なら当たった物だけ。0 以上の有限値。</summary>
-        public float ExplosionRadius { get; }
+        public float ExplosionRadius => Impact.StructureRadius;
 
         /// <summary>
         /// 覗き込み (ADS) し切ったときのカメラの縦の視野角 (度)。0 より大きく 180 未満。
         /// 生成時に指定しなければ <see cref="AdsZoom.DefaultFieldOfView"/>。クライアントの見た目にだけ使い、サーバーは見ない。
         /// </summary>
-        public float AdsFieldOfView { get; }
+        public float AdsFieldOfView => Aim.AdsFieldOfView;
 
         /// <summary>隠れたまま撃ったときに、狙った向きから弾が散らばる最大の角度 (度)。0 以上 90 以下。</summary>
-        public float BlindFireSpreadDegrees { get; }
+        public float BlindFireSpreadDegrees => Aim.BlindFireSpreadDegrees;
 
         /// <summary>アクティブリロードの判定の幅が始まる時点の、<see cref="ReloadSeconds"/> に対する割合。0 以上 1 未満。</summary>
-        public float ActiveReloadWindowStart { get; }
+        public float ActiveReloadWindowStart => Ammo.ActiveReloadWindowStart;
 
         /// <summary>アクティブリロードの判定の幅の長さの、<see cref="ReloadSeconds"/> に対する割合。0 より大きく、<see cref="ActiveReloadWindowStart"/> との和が 1 以下。</summary>
-        public float ActiveReloadWindowLength { get; }
+        public float ActiveReloadWindowLength => Ammo.ActiveReloadWindowLength;
 
         /// <summary>アクティブリロードで判定の幅を外したときに、リロードに足される秒数。0 以上の有限値。</summary>
-        public float ActiveReloadFailSeconds { get; }
+        public float ActiveReloadFailSeconds => Ammo.ActiveReloadFailSeconds;
 
         /// <summary>1 発ごとに視線が上へ跳ねる角度 (度)。0 以上 90 以下。</summary>
-        public float RecoilPitchDegrees { get; }
+        public float RecoilPitchDegrees => Aim.RecoilPitchDegrees;
 
         /// <summary>1 発ごとに視線が左右へぶれる最大の角度 (度)。0 以上 90 以下。</summary>
-        public float RecoilYawDegrees { get; }
+        public float RecoilYawDegrees => Aim.RecoilYawDegrees;
 
         /// <summary>撃ち止めてから跳ねた視線が戻る速さ (度/秒)。0 なら戻らない。0 以上の有限値。</summary>
-        public float RecoilRecoveryPerSecond { get; }
+        public float RecoilRecoveryPerSecond => Aim.RecoilRecoveryPerSecond;
 
         /// <summary>腰だめで撃ったときに、狙った向きから弾が散らばる最大の角度 (度)。0 以上 90 以下。</summary>
-        public float HipSpreadDegrees { get; }
+        public float HipSpreadDegrees => Aim.HipSpreadDegrees;
 
         /// <summary>覗き込み (ADS) し切って撃ったときに弾が散らばる最大の角度 (度)。0 以上 90 以下。</summary>
-        public float AdsSpreadDegrees { get; }
+        public float AdsSpreadDegrees => Aim.AdsSpreadDegrees;
 
         /// <summary>動きながら撃ったときに散らばりへ足す最大の角度 (度)。0 以上 90 以下。</summary>
-        public float MoveSpreadDegrees { get; }
+        public float MoveSpreadDegrees => Aim.MoveSpreadDegrees;
 
         /// <summary>最後に撃ってから跳ねた視線が戻り始めるまでの秒数。0 以上の有限値。</summary>
-        public float RecoilRecoveryDelaySeconds { get; }
+        public float RecoilRecoveryDelaySeconds => Aim.RecoilRecoveryDelaySeconds;
 
         public float ShotNoiseRadius { get; }
 
@@ -158,183 +173,126 @@ namespace Fps.Core
             float moveSpreadDegrees = 0f,
             float recoilRecoveryDelaySeconds = DefaultRecoilRecoveryDelaySeconds,
             float shotNoiseRadius = DefaultShotNoiseRadius)
+            : this(
+                id,
+                nameKey,
+                category,
+                new TriggerSpec(fireMode, fireInterval),
+                new AmmoSpec(
+                    magazineSize,
+                    reserveAmmo,
+                    reloadSeconds,
+                    activeReloadWindowStart,
+                    activeReloadWindowLength,
+                    activeReloadFailSeconds),
+                new RoundSpec(range: range),
+                new ImpactSpec(
+                    damage,
+                    falloff ?? throw new ArgumentNullException(nameof(falloff)),
+                    // 部品では structureRadius と呼ぶが、この口の呼び手には explosionRadius の名前で不正を知らせる。
+                    SpecGuard.NonNegativeFinite(explosionRadius, nameof(explosionRadius))),
+                new AimSpec(
+                    hipSpreadDegrees,
+                    adsSpreadDegrees,
+                    moveSpreadDegrees,
+                    recoilPitchDegrees,
+                    recoilYawDegrees,
+                    recoilRecoveryPerSecond,
+                    recoilRecoveryDelaySeconds,
+                    blindFireSpreadDegrees,
+                    adsFieldOfView.HasValue
+                        ? new[] { AdsZoom.ValidateFieldOfView(adsFieldOfView.Value, nameof(adsFieldOfView)) }
+                        : null),
+                null,
+                shotNoiseRadius)
         {
-            var normalizedId = NormalizeId(id);
+        }
+
+        public WeaponSpec(
+            string id,
+            string nameKey,
+            WeaponCategory category,
+            TriggerSpec trigger = null,
+            AmmoSpec ammo = null,
+            RoundSpec round = null,
+            ImpactSpec impact = null,
+            AimSpec aim = null,
+            IEnumerable<AmmoTypeSpec> ammoTypes = null,
+            float shotNoiseRadius = DefaultShotNoiseRadius)
+        {
+            var normalizedId = SpecGuard.LowercaseUuid(id, nameof(id));
 
             if (!Enum.IsDefined(typeof(WeaponCategory), category))
             {
                 throw new ArgumentOutOfRangeException(nameof(category), category, "category is not a defined WeaponCategory");
             }
 
-            if (fireMode != FireMode.Auto && fireMode != FireMode.Semi)
-            {
-                throw new ArgumentOutOfRangeException(nameof(fireMode), fireMode, "fireMode must be Auto or Semi");
-            }
+            SpecGuard.NonNegativeFinite(shotNoiseRadius, nameof(shotNoiseRadius));
 
-            if (magazineSize <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(magazineSize), magazineSize, "magazineSize must be positive");
-            }
-
-            if (reserveAmmo < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(reserveAmmo), reserveAmmo, "reserveAmmo must not be negative");
-            }
-
-            if (!IsNonNegativeFinite(fireInterval))
-            {
-                throw new ArgumentOutOfRangeException(nameof(fireInterval), fireInterval, "fireInterval must be a non-negative finite number");
-            }
-
-            if (!IsNonNegativeFinite(reloadSeconds))
-            {
-                throw new ArgumentOutOfRangeException(nameof(reloadSeconds), reloadSeconds, "reloadSeconds must be a non-negative finite number");
-            }
-
-            if (damage < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(damage), damage, "damage must not be negative");
-            }
-
-            if (!(range > 0f) || float.IsInfinity(range))
-            {
-                throw new ArgumentOutOfRangeException(nameof(range), range, "range must be positive and finite");
-            }
-
-            if (!IsNonNegativeFinite(explosionRadius))
-            {
-                throw new ArgumentOutOfRangeException(nameof(explosionRadius), explosionRadius, "explosionRadius must be a non-negative finite number");
-            }
-
-            if (adsFieldOfView.HasValue)
-            {
-                AdsZoom.ValidateFieldOfView(adsFieldOfView.Value, nameof(adsFieldOfView));
-            }
-
-            if (!(blindFireSpreadDegrees >= 0f && blindFireSpreadDegrees <= 90f))
-            {
-                throw new ArgumentOutOfRangeException(nameof(blindFireSpreadDegrees), blindFireSpreadDegrees, "blindFireSpreadDegrees must be between 0 and 90");
-            }
-
-            if (!(activeReloadWindowStart >= 0f && activeReloadWindowStart < 1f))
-            {
-                throw new ArgumentOutOfRangeException(nameof(activeReloadWindowStart), activeReloadWindowStart, "activeReloadWindowStart must be at least 0 and less than 1");
-            }
-
-            if (!(activeReloadWindowLength > 0f && activeReloadWindowStart + activeReloadWindowLength <= 1f))
-            {
-                throw new ArgumentOutOfRangeException(nameof(activeReloadWindowLength), activeReloadWindowLength, "activeReloadWindowLength must be positive and end the window at or before the end of the reload");
-            }
-
-            if (!IsNonNegativeFinite(activeReloadFailSeconds))
-            {
-                throw new ArgumentOutOfRangeException(nameof(activeReloadFailSeconds), activeReloadFailSeconds, "activeReloadFailSeconds must be a non-negative finite number");
-            }
-
-            ValidateAngle(recoilPitchDegrees, nameof(recoilPitchDegrees));
-            ValidateAngle(recoilYawDegrees, nameof(recoilYawDegrees));
-
-            if (!IsNonNegativeFinite(recoilRecoveryPerSecond))
-            {
-                throw new ArgumentOutOfRangeException(nameof(recoilRecoveryPerSecond), recoilRecoveryPerSecond, "recoilRecoveryPerSecond must be a non-negative finite number");
-            }
-
-            ValidateAngle(hipSpreadDegrees, nameof(hipSpreadDegrees));
-            ValidateAngle(adsSpreadDegrees, nameof(adsSpreadDegrees));
-            ValidateAngle(moveSpreadDegrees, nameof(moveSpreadDegrees));
-
-            if (!IsNonNegativeFinite(recoilRecoveryDelaySeconds))
-            {
-                throw new ArgumentOutOfRangeException(nameof(recoilRecoveryDelaySeconds), recoilRecoveryDelaySeconds, "recoilRecoveryDelaySeconds must be a non-negative finite number");
-            }
-
-            if (!IsNonNegativeFinite(shotNoiseRadius))
-            {
-                throw new ArgumentOutOfRangeException(nameof(shotNoiseRadius), shotNoiseRadius, "shotNoiseRadius must be a non-negative finite number");
-            }
+            var resolvedRound = round ?? RoundSpec.Default;
+            var resolvedImpact = impact ?? ImpactSpec.Default;
+            RequireDetonationReachable(resolvedRound, resolvedImpact, nameof(impact));
+            var resolvedAmmoTypes = CopyAmmoTypes(ammoTypes, resolvedRound, resolvedImpact);
 
             Id = normalizedId;
-            NameKey = string.IsNullOrWhiteSpace(nameKey) ? string.Empty : nameKey.Trim();
+            NameKey = SpecGuard.NameKey(nameKey);
             Category = category;
-            FireMode = fireMode;
-            MagazineSize = magazineSize;
-            ReserveAmmo = reserveAmmo;
-            FireInterval = fireInterval;
-            ReloadSeconds = reloadSeconds;
-            Damage = damage;
-            Range = range;
-            Falloff = falloff ?? throw new ArgumentNullException(nameof(falloff));
-            ExplosionRadius = explosionRadius;
-            AdsFieldOfView = adsFieldOfView ?? AdsZoom.DefaultFieldOfView;
-            BlindFireSpreadDegrees = blindFireSpreadDegrees;
-            ActiveReloadWindowStart = activeReloadWindowStart;
-            ActiveReloadWindowLength = activeReloadWindowLength;
-            ActiveReloadFailSeconds = activeReloadFailSeconds;
-            RecoilPitchDegrees = recoilPitchDegrees;
-            RecoilYawDegrees = recoilYawDegrees;
-            RecoilRecoveryPerSecond = recoilRecoveryPerSecond;
-            HipSpreadDegrees = hipSpreadDegrees;
-            AdsSpreadDegrees = adsSpreadDegrees;
-            MoveSpreadDegrees = moveSpreadDegrees;
-            RecoilRecoveryDelaySeconds = recoilRecoveryDelaySeconds;
+            Trigger = trigger ?? TriggerSpec.Default;
+            Ammo = ammo ?? AmmoSpec.Default;
+            Round = resolvedRound;
+            Impact = resolvedImpact;
+            Aim = aim ?? AimSpec.Default;
+            AmmoTypes = resolvedAmmoTypes;
             ShotNoiseRadius = shotNoiseRadius;
         }
 
-        private static void ValidateAngle(float degrees, string paramName)
+        public WeaponSpec WithFireInterval(float fireInterval)
         {
-            if (!(degrees >= 0f && degrees <= 90f))
-            {
-                throw new ArgumentOutOfRangeException(paramName, degrees, paramName + " must be between 0 and 90");
-            }
+            var trigger = Trigger.WithFireInterval(fireInterval);
+            return ReferenceEquals(trigger, Trigger)
+                ? this
+                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius);
         }
 
-        private static string NormalizeId(string id)
+        // 起爆を止まったとき・寿命が尽きたときにすると、ヒットスキャンなどの止まりも尽きもしない弾では爆発しないまま設定だけが残る。
+        private static void RequireDetonationReachable(RoundSpec round, ImpactSpec impact, string paramName)
         {
-            if (id == null)
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
-            var trimmed = id.Trim();
-            if (!IsLowercaseUuid(trimmed))
+            var explosion = impact.Explosion;
+            if (explosion != null && explosion.Detonation != DetonationTrigger.OnImpact && round.Delivery != RoundDelivery.Projectile)
             {
                 throw new ArgumentException(
-                    "id must be a lowercase hyphenated UUID (e.g. 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13): '" + trimmed + "'", nameof(id));
+                    "explosion detonation " + explosion.Detonation + " needs round delivery Projectile, but it is " + round.Delivery,
+                    paramName);
             }
-
-            return trimmed;
         }
 
-        // Guid.TryParseExact(value, "D", ...) は大文字も通すので使わない
-        private static bool IsLowercaseUuid(string value)
+        private static IReadOnlyList<AmmoTypeSpec> CopyAmmoTypes(
+            IEnumerable<AmmoTypeSpec> ammoTypes, RoundSpec weaponRound, ImpactSpec weaponImpact)
         {
-            if (value.Length != 36)
+            if (ammoTypes == null)
             {
-                return false;
+                return _noAmmoTypes;
             }
 
-            for (var i = 0; i < value.Length; i++)
+            var copied = new List<AmmoTypeSpec>();
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var ammoType in ammoTypes)
             {
-                var c = value[i];
-                if (i == 8 || i == 13 || i == 18 || i == 23)
+                if (ammoType == null)
                 {
-                    if (c != '-')
-                    {
-                        return false;
-                    }
+                    throw new ArgumentException("ammoTypes must not contain null", nameof(ammoTypes));
                 }
-                else if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+
+                if (!ids.Add(ammoType.Id))
                 {
-                    return false;
+                    throw new ArgumentException("ammoTypes has a duplicate id '" + ammoType.Id + "'", nameof(ammoTypes));
                 }
+
+                RequireDetonationReachable(ammoType.RoundOr(weaponRound), ammoType.ImpactOr(weaponImpact), nameof(ammoTypes));
+                copied.Add(ammoType);
             }
 
-            return true;
-        }
-
-        private static bool IsNonNegativeFinite(float value)
-        {
-            return value >= 0f && !float.IsInfinity(value);
+            return copied.Count == 0 ? _noAmmoTypes : copied.AsReadOnly();
         }
     }
 }

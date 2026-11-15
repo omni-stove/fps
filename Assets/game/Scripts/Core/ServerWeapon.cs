@@ -46,34 +46,7 @@ namespace Fps.Core
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
-            _innerSpec = spec.FireInterval == 0f
-                ? spec
-                : new WeaponSpec(
-                    spec.Id,
-                    spec.NameKey,
-                    spec.Category,
-                    spec.FireMode,
-                    spec.MagazineSize,
-                    spec.ReserveAmmo,
-                    0f,
-                    spec.ReloadSeconds,
-                    spec.Damage,
-                    spec.Range,
-                    spec.Falloff,
-                    spec.ExplosionRadius,
-                    spec.AdsFieldOfView,
-                    spec.BlindFireSpreadDegrees,
-                    spec.ActiveReloadWindowStart,
-                    spec.ActiveReloadWindowLength,
-                    spec.ActiveReloadFailSeconds,
-                    spec.RecoilPitchDegrees,
-                    spec.RecoilYawDegrees,
-                    spec.RecoilRecoveryPerSecond,
-                    spec.HipSpreadDegrees,
-                    spec.AdsSpreadDegrees,
-                    spec.MoveSpreadDegrees,
-                    spec.RecoilRecoveryDelaySeconds,
-                    spec.ShotNoiseRadius);
+            _innerSpec = spec.WithFireInterval(0f);
             _weapon = CreateWeapon();
         }
 

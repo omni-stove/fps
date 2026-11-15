@@ -306,7 +306,7 @@ namespace Fps.Tests.EditMode
 
         private void Begin(KillConfirmed mode, IReadOnlyList<SideMember> members, SideMember player, ModeHudView hud)
         {
-            _runner.Begin(mode, members, Array.Empty<SideSpawnPoint>(), player, hud);
+            _runner.Begin(mode, members, Array.Empty<SideSpawnPoint>(), player);
         }
 
         private static KillConfirmed CreateMode()

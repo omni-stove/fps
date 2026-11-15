@@ -163,7 +163,7 @@ namespace Fps.Tests.EditMode
 
         private void Begin(ModeHudView hud, params SideMember[] members)
         {
-            _runner.Begin(FreeForAllMode.Create(TimeLimit, ScoreLimit, RespawnSeconds), members, Array.Empty<SideSpawnPoint>(), members[0], hud);
+            _runner.Begin(FreeForAllMode.Create(TimeLimit, ScoreLimit, RespawnSeconds), members, Array.Empty<SideSpawnPoint>(), members[0]);
         }
 
         private static void KillBy(SideMember killer, SideMember victim)

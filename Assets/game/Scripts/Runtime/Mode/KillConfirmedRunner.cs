@@ -135,8 +135,7 @@ namespace Fps.Runtime
             KillConfirmed killConfirmed,
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
-            SideMember localPlayer = null,
-            IModeHud hudView = null)
+            SideMember localPlayer = null)
         {
             if (killConfirmed == null)
             {
@@ -151,7 +150,7 @@ namespace Fps.Runtime
             Attach(killConfirmed);
             try
             {
-                Begin(killConfirmed.Session, members, spawnPoints, localPlayer, hudView);
+                Begin(killConfirmed.Session, members, spawnPoints, localPlayer);
             }
             catch
             {

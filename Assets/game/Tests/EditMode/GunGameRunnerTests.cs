@@ -215,12 +215,12 @@ namespace Fps.Tests.EditMode
 
         private void Begin(SideMember player, SideMember a, ModeHudView hud = null)
         {
-            _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a }, Array.Empty<SideSpawnPoint>(), player, hud);
+            _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a }, Array.Empty<SideSpawnPoint>(), player);
         }
 
         private void Begin(SideMember player, SideMember a, SideMember b, ModeHudView hud = null)
         {
-            _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player, hud);
+            _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
         }
 
         private static void KillBy(SideMember killer, SideMember victim, string weaponId)

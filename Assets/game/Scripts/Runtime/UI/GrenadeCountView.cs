@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 残りのグレネードの数 (<see cref="HudFormat.Grenades(int)"/>) を、弾数の上に出す。種類を切り替えて持っているときは、投げる種類の名前も添える。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="Hud.AddViews"/> では付けず、オフラインの <see cref="GameBootstrap"/> が <see cref="IHud.AttachGrenadeCount"/> で付けてプレイヤーの <see cref="GrenadeThrower"/> を
+    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。オフラインの <see cref="GameBootstrap"/> が <see cref="IHud.AttachGrenadeCount"/> で受け取ってプレイヤーの <see cref="GrenadeThrower"/> を
     /// <see cref="Show"/> し、ネット対戦の HUD (<c>Fps.Net.NetHud</c>) がサーバーから届いた数を <see cref="ShowCount"/> する。
     /// ルールでグレネードを使わない間は隠す。
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。

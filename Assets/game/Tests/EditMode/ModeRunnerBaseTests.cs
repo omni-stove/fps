@@ -11,7 +11,8 @@ using Object = UnityEngine.Object;
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// ModeRunnerBase が陣営の参加者をモードに入れ、死亡を報告し、自陣営の出現点に戻し、HUD に出すことを確かめる。
+    /// ModeRunnerBase が陣営の参加者をモードに入れ、死亡を報告し、自陣営の出現点に戻し、状態を <see cref="GameSignals.ModeStatus"/> に出して
+    /// HUD (<see cref="ModeHudView"/>) に届くことを確かめる。
     /// bot (EnemyAgent) は NavMesh が要るので、ここでは Damageable と SideMember だけの参加者で確かめる。
     /// </summary>
     public sealed class ModeRunnerBaseTests
@@ -24,6 +25,7 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
+            GameSignals.ResetAll();
             _runner = Track(new GameObject("Runner")).AddComponent<RecordingModeRunner>();
             _runner.Factory = () => TeamDeathmatchRunner.CreateSession(3, 4, 60f, 2, RespawnSeconds);
         }
@@ -32,6 +34,8 @@ namespace Fps.Tests.EditMode
         public void TearDown()
         {
             _runner.Stop();
+            ModeHudFormatters.Unregister(typeof(FakeDetail));
+            GameSignals.ResetAll();
             for (var i = _objects.Count - 1; i >= 0; i--)
             {
                 if (_objects[i] != null)
@@ -160,7 +164,7 @@ namespace Fps.Tests.EditMode
             var a = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
             var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
             var hud = BoundHudView();
-            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player, hud);
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
 
             KillBy(player, a);
             KillBy(player, b);
@@ -182,7 +186,7 @@ namespace Fps.Tests.EditMode
             var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
             var hud = BoundHudView();
             _runner.ExtraHudLine = "extra";
-            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player, hud);
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
 
             Assert.That(hud.IsShown, Is.True);
             Assert.That(hud.TimeText, Is.EqualTo("01:00"));
@@ -208,7 +212,7 @@ namespace Fps.Tests.EditMode
             var hud = BoundHudView();
             _runner.ExtraHudLine = "extra";
             _runner.ExtraHudText = HardpointText.Contested;
-            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player, hud);
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
 
             Assert.That(hud.Lines, Is.EqualTo(new[] { "extra", "争奪中" }));
         }
@@ -247,7 +251,7 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", 0, Vector3.zero);
             var bot = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
             var hud = BoundHudView();
-            Begin(new[] { player, bot }, Array.Empty<SideSpawnPoint>(), player, hud);
+            Begin(new[] { player, bot }, Array.Empty<SideSpawnPoint>(), player);
             var session = _runner.Session;
 
             _runner.Stop();
@@ -256,7 +260,106 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.IsStarted, Is.False);
             Assert.That(session.GetDeaths(1), Is.Zero);
             Assert.That(_runner.Events, Is.Empty);
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null, "stopping clears the status");
+            Assert.That(_runner.Status, Is.Null);
             Assert.That(hud.IsShown, Is.False);
+        }
+
+        [Test]
+        public void StopKeepsAStatusPublishedByAnotherRunner()
+        {
+            var player = Member("Player", 0, Vector3.zero);
+            var bot = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+            Begin(new[] { player, bot }, Array.Empty<SideSpawnPoint>(), player);
+            var other = new ModeStatus(null, null, null, null, false, null, null, default, null, null, default);
+            GameSignals.ModeStatus.Publish(other);
+
+            _runner.Stop();
+
+            Assert.That(GameSignals.ModeStatus.Value, Is.SameAs(other));
+        }
+
+        [Test]
+        public void BeginAndTickPublishTheTypedStatus()
+        {
+            var player = Member("Player", 1, Vector3.zero);
+            var a = Member("Bot-A", 0, new Vector3(0f, 0f, 10f));
+            var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
+            var published = new List<ModeStatus>();
+            GameSignals.ModeStatus.Changed += published.Add;
+
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
+
+            Assert.That(published, Has.Count.EqualTo(1), "Begin publishes once");
+            var status = GameSignals.ModeStatus.Value;
+            Assert.That(status, Is.SameAs(published[0]));
+            Assert.That(status, Is.SameAs(_runner.Status));
+            Assert.That(status.RemainingSeconds, Is.EqualTo(60f));
+            Assert.That(status.OwnSide, Is.EqualTo((Side?)new Side(1)));
+            Assert.That(status.RespawnSeconds, Is.Null);
+            Assert.That(status.IsEnded, Is.False);
+            Assert.That(status.Winner, Is.Null);
+            Assert.That(status.Detail, Is.Null);
+            Assert.That(status.SideScores, Is.EquivalentTo(new[] { new SideScore(Side.Alpha, 0d), new SideScore(Side.Bravo, 0d), new SideScore(new Side(2), 0d) }));
+            Assert.That(status.Time, Is.EqualTo(LocalizedText.Literal("01:00")));
+            Assert.That(status.Scores[0].Side, Is.EqualTo(new Side(1)), "the current texts keep the own side first");
+
+            KillBy(b, player);
+            _runner.Tick(0.25f);
+
+            Assert.That(published, Has.Count.EqualTo(2), "a tick publishes once");
+            status = GameSignals.ModeStatus.Value;
+            Assert.That(status.RespawnSeconds, Is.EqualTo(RespawnSeconds - 0.25f).Within(1e-4f));
+            Assert.That(status.Lines, Is.EqualTo(new[] { HudFormat.Respawn(1) }));
+            Assert.That(status.SideScores, Has.Member(new SideScore(new Side(2), 1d)));
+        }
+
+        [Test]
+        public void EndingTheMatchPublishesTheWinner()
+        {
+            var player = Member("Player", 0, Vector3.zero);
+            var a = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+            var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
+
+            KillBy(player, a);
+            KillBy(player, b);
+
+            var status = GameSignals.ModeStatus.Value;
+            Assert.That(status.IsEnded, Is.True);
+            Assert.That(status.Winner, Is.EqualTo((Side?)Side.Alpha));
+            Assert.That(status.Result, Is.EqualTo(ModeHudText.Result(_runner.Session)));
+        }
+
+        [Test]
+        public void TheModesDetailIsPublished()
+        {
+            var player = Member("Player", 0, Vector3.zero);
+            var bot = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+            var detail = new FakeDetail();
+            _runner.Detail = detail;
+
+            Begin(new[] { player, bot }, Array.Empty<SideSpawnPoint>(), player);
+
+            Assert.That(GameSignals.ModeStatus.Value.Detail, Is.SameAs(detail));
+        }
+
+        [Test]
+        public void AFormatterRegisteredForTheDetailWritesTheHud()
+        {
+            var player = Member("Player", 0, Vector3.zero);
+            var bot = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+            var hud = BoundHudView();
+            ModeHudFormatters.Register<FakeDetail>(new FakeDetailFormatter());
+            _runner.Detail = new FakeDetail();
+            _runner.ExtraHudLine = "extra";
+
+            Begin(new[] { player, bot }, Array.Empty<SideSpawnPoint>(), player);
+
+            Assert.That(hud.TimeText, Is.EqualTo("fake time"));
+            Assert.That(hud.ScoreTexts, Is.EqualTo(new[] { "fake score" }));
+            Assert.That(hud.Lines, Is.EqualTo(new[] { "fake line" }), "the formatter replaces the runner's lines");
+            Assert.That(hud.ResultText, Is.Empty);
         }
 
         [Test]
@@ -325,9 +428,9 @@ namespace Fps.Tests.EditMode
             }
         }
 
-        private void Begin(IReadOnlyList<SideMember> members, IReadOnlyList<SideSpawnPoint> spawns, SideMember localPlayer, ModeHudView hud = null)
+        private void Begin(IReadOnlyList<SideMember> members, IReadOnlyList<SideSpawnPoint> spawns, SideMember localPlayer)
         {
-            _runner.Begin(_runner.Factory(), members, spawns, localPlayer, hud);
+            _runner.Begin(_runner.Factory(), members, spawns, localPlayer);
         }
 
         private static void KillBy(SideMember killer, SideMember victim)
@@ -367,6 +470,22 @@ namespace Fps.Tests.EditMode
         {
             _objects.Add(go);
             return go;
+        }
+
+        private sealed class FakeDetail
+        {
+        }
+
+        private sealed class FakeDetailFormatter : IModeHudFormatter
+        {
+            public LocalizedText Time(ModeStatus status) => LocalizedText.Literal("fake time");
+
+            public IReadOnlyList<ModeHudScoreLine> Scores(ModeStatus status) =>
+                new[] { new ModeHudScoreLine(Side.Alpha, LocalizedText.Literal("fake score"), true, false) };
+
+            public void AppendLines(ModeStatus status, List<LocalizedText> lines) => lines.Add(LocalizedText.Literal("fake line"));
+
+            public LocalizedText Result(ModeStatus status) => default;
         }
     }
 }

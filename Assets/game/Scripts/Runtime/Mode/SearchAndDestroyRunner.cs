@@ -253,15 +253,14 @@ namespace Fps.Runtime
         public void Begin(
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
-            SideMember localPlayer = null,
-            IModeHud hudView = null)
+            SideMember localPlayer = null)
         {
             if (IsStarted)
             {
                 throw new InvalidOperationException($"SearchAndDestroyRunner '{name}' has already started a mode");
             }
 
-            base.Begin(CreateSession(), members, spawnPoints, localPlayer, hudView);
+            base.Begin(CreateSession(), members, spawnPoints, localPlayer);
         }
 
         protected override ModeSession CreateSession()

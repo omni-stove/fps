@@ -69,6 +69,8 @@ namespace Fps.NetV2
         private readonly WeaponActionRequestMessage _weaponAction = new WeaponActionRequestMessage();
         private readonly List<ControlPointZone> _zones = new List<ControlPointZone>();
         private readonly NetV2Weapons _weapons = new NetV2Weapons();
+        private readonly ClientGrenades _grenadeChoice = new ClientGrenades();
+        private readonly Dictionary<int, AreaEffectZone> _areaZones = new Dictionary<int, AreaEffectZone>();
         private readonly ClientOverheat _overheat = new ClientOverheat();
         private NetV2Structures _structures;
         private ClientWeaponHooks _weaponHooks;
@@ -247,6 +249,9 @@ namespace Fps.NetV2
 
             _structures = new NetV2Structures(this);
             _weaponHooks = new ClientWeaponHooks(_weapons.SpecFor);
+            _weaponHooks.AreaEffects.Started += ShowArea;
+            _weaponHooks.AreaEffects.Updated += UpdateArea;
+            _weaponHooks.AreaEffects.Ended += EndArea;
             _pings = new ClientPings(line => Debug.Log(line, this));
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
         }
@@ -545,9 +550,18 @@ namespace Fps.NetV2
                 _client.Send(_weaponAction, TransportChannel.Reliable);
             }
 
+            var pouch = OwnGrenades();
+            if (_local.TakeSwitchGrenade() && _grenadeChoice.SelectNext(pouch))
+            {
+                var typeId = _grenadeChoice.Current(pouch);
+                Debug.Log(GrenadeThrower.LogTag + " net selected type=" + typeId + " remaining=" + pouch.RemainingOf(typeId).ToString(CultureInfo.InvariantCulture), this);
+                _hud?.ShowGrenades(pouch, typeId);
+            }
+
             if (_local.TakeGrenade())
             {
                 _grenade.Direction = direction;
+                _grenade.GrenadeTypeId = _grenadeChoice.Current(pouch);
                 _client.Send(_grenade, TransportChannel.Reliable);
             }
 
@@ -557,6 +571,42 @@ namespace Fps.NetV2
                 Debug.Log(PingLog.Tag + " net request", this);
                 _ping.Direction = direction;
                 _client.Send(_ping, TransportChannel.Reliable);
+            }
+        }
+
+        private GrenadePouchSync OwnGrenades()
+        {
+            var latest = _client.LatestSnapshot;
+            return latest != null && latest.HasOwner ? latest.Owner.Grenades : null;
+        }
+
+        private void ShowArea(AreaEffectState state)
+        {
+            EndArea(state);
+            var zone = AreaEffectZone.Show(state.KindId, NetV2Math.ToUnity(state.Center), state.Radius, state.RemainingSeconds);
+            _areaZones[state.AreaId] = zone;
+        }
+
+        private void UpdateArea(AreaEffectState state)
+        {
+            if (_areaZones.TryGetValue(state.AreaId, out var zone) && zone != null)
+            {
+                zone.SetRemaining(state.RemainingSeconds);
+                return;
+            }
+
+            ShowArea(state);
+        }
+
+        private void EndArea(AreaEffectState state)
+        {
+            if (_areaZones.TryGetValue(state.AreaId, out var zone))
+            {
+                _areaZones.Remove(state.AreaId);
+                if (zone != null)
+                {
+                    zone.End();
+                }
             }
         }
 
@@ -728,6 +778,8 @@ namespace Fps.NetV2
 
             _overheat.Observe(snapshot);
             _hud?.Apply(snapshot);
+            var grenades = snapshot.HasOwner ? snapshot.Owner.Grenades : null;
+            _hud?.ShowGrenades(grenades, _grenadeChoice.Current(grenades));
             _weaponHooks.Apply(snapshot);
             _loadout.Apply(snapshot, _client.PlayerId);
             ShowControlPoints(snapshot);
@@ -1078,6 +1130,8 @@ namespace Fps.NetV2
 
             _remotes.Clear();
             _zones.Clear();
+            _weaponHooks?.AreaEffects.Clear();
+            _areaZones.Clear();
             _structures?.Leave();
             _weaponHooks?.Projectiles.Detach();
         }

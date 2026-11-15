@@ -246,7 +246,7 @@ namespace Fps.Runtime
         public bool IsHolstered => Holster.IsHandedOff;
 
         /// <summary>
-        /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous を読まない (武器の時間は進める)。
+        /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous・SwitchAmmoType を読まない (武器の時間は進める)。
         /// null なら手放さない。オフラインは <see cref="GameBootstrap"/> が <see cref="PlayerController.Handoff"/> と同じものを配線する。
         /// </summary>
         public ControlHandoff Handoff { get; set; }
@@ -288,6 +288,7 @@ namespace Fps.Runtime
             DisableIfEnabledHere(_reloadAction, ref _enabledReloadAction);
             DisableIfEnabledHere(_nextAction, ref _enabledNextAction);
             DisableIfEnabledHere(_previousAction, ref _enabledPreviousAction);
+            DisableIfEnabledHere(_switchAmmoTypeAction, ref _enabledSwitchAmmoTypeAction);
         }
 
         private void OnDestroy()
@@ -314,6 +315,9 @@ namespace Fps.Runtime
             }
 
             Tick(Time.deltaTime);
+
+            // リロードより先に見るのは、同じフレームに両方押したとき、切り替えた種類を込めるため。
+            ReadSwitchAmmoType();
 
             if (_reloadAction.WasPressedThisFrame())
             {
@@ -440,8 +444,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 同じ GameObject のカメラとプロジェクト全体の Attack / Reload / Next / Previous アクションを探し、<see cref="Definitions"/> の武器で初期化する。
-        /// Next / Previous が無ければ警告を出し、持ち替えの入力だけを無効にする。
+        /// 同じ GameObject のカメラとプロジェクト全体の Attack / Reload / Next / Previous / SwitchAmmoType アクションを探し、<see cref="Definitions"/> の武器で初期化する。
+        /// Next / Previous / SwitchAmmoType が無ければ警告を出し、持ち替え・弾薬の切り替えの入力だけを無効にする。
         /// それ以外が見つからない・定義が未設定か不正なら理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryInitializeFromHierarchy()
@@ -486,6 +490,7 @@ namespace Fps.Runtime
 
             var next = FindOptionalAction(actions, NextActionPath, "次の武器への持ち替え");
             var previous = FindOptionalAction(actions, PreviousActionPath, "前の武器への持ち替え");
+            var switchAmmoType = FindOptionalAction(actions, SwitchAmmoTypeActionPath, "弾薬の種類の切り替え");
 
             try
             {
@@ -504,6 +509,7 @@ namespace Fps.Runtime
                 return false;
             }
 
+            SetSwitchAmmoTypeAction(switchAmmoType);
             return true;
         }
 
@@ -683,6 +689,12 @@ namespace Fps.Runtime
             definitions[_loadedDefinitions.Length] = definition;
 
             var loadout = WeaponLoadout.Restore(specs, _loadout.SnapshotAmmo(), Weapon.Spec.Id, _loadedRules, out _);
+            // 残弾の数だけでは種類が戻るので、込めた弾が別の種類に変わらないよう作り直した武器へ選択を移す
+            for (var i = 0; i < _loadout.Count; i++)
+            {
+                loadout.Items[i].AmmoTypes.TrySelect(_loadout.Items[i].AmmoTypes.Index);
+            }
+
             SetLoadout(loadout, specs, definitions, _loadedRules);
             Debug.Log($"[Combat] weapon added index={specs.Length - 1} id={spec.Id} name={spec.LogName}", this);
             WeaponChanged?.Invoke(Weapon);
@@ -1059,6 +1071,7 @@ namespace Fps.Runtime
             _enabledReloadAction |= EnableIfNeeded(_reloadAction);
             _enabledNextAction |= EnableIfNeeded(_nextAction);
             _enabledPreviousAction |= EnableIfNeeded(_previousAction);
+            _enabledSwitchAmmoTypeAction |= EnableIfNeeded(_switchAmmoTypeAction);
         }
 
         private InputAction FindOptionalAction(InputActionAsset actions, string path, string effect)

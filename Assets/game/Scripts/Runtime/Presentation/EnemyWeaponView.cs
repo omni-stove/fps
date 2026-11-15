@@ -201,7 +201,7 @@ namespace Fps.Runtime
         // 体の向きは EnemyAgent が目標へ回すので、銃は上下だけを目標の狙う点へ合わせる。
         private Quaternion AimPitch()
         {
-            var target = _enemy.Target;
+            var target = _enemy.PerceivedTarget;
             if (!_enemy.IsAiming || target == null || target.IsDead)
             {
                 return Quaternion.identity;

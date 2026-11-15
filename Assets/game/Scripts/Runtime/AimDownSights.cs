@@ -46,6 +46,9 @@ namespace Fps.Runtime
         private bool _listeningToSettings;
         private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
 
+        // 止められている間もボタンの状態 (_aimState) は残す。ボルトを引く間だけ覗き込みを解き、終われば押し直さずに戻すため。
+        private bool _blocked;
+
         /// <summary>
         /// 覗き込み始めたとき (true) と、やめたとき (false) に呼ばれる。
         /// <see cref="Tick(bool, bool, InputDeviceKind, float)"/> では視野角を変える前に呼び、<see cref="Release"/> と <see cref="ResetView"/> でも呼ぶ。
@@ -73,7 +76,7 @@ namespace Fps.Runtime
         public bool IsInitialized => _camera != null && _look != null && _aimAction != null && _zoom != null;
 
         /// <summary>覗き込んでいるか (ボタンの判定。視野角はまだ動いている途中のことがある)。</summary>
-        public bool IsAiming => _aimState.IsActive;
+        public bool IsAiming => _aimState.IsActive && !_blocked;
 
         /// <summary>
         /// ADS のモードと、覗き込み中の感度の倍率 (<see cref="ControlSettings.AdsSensitivity"/>) を決める操作設定。
@@ -239,22 +242,18 @@ namespace Fps.Runtime
 
             var mode = _controlSettings.Get(device, HoldAction.Aim);
             _device = device;
-            var wasAiming = _aimState.IsActive;
+            var wasAiming = IsAiming;
             _aimState.Mode = mode;
-            var aiming = _aimState.Update(isPressed, wasPressedThisFrame);
-            if (aiming && AdsBlocker != null && AdsBlocker())
-            {
-                _aimState.Release();
-                aiming = false;
-            }
-
+            _aimState.Update(isPressed, wasPressedThisFrame);
+            _blocked = AdsBlocker != null && AdsBlocker();
+            var aiming = IsAiming;
             if (aiming != wasAiming)
             {
                 ReportAiming(aiming);
             }
 
             // AimingChanged の購読側が同じフレームで Release することがある (回避中など) ので、決めた後の状態で寄せる。
-            _zoom.Step(_aimState.IsActive, deltaSeconds);
+            _zoom.Step(IsAiming, deltaSeconds);
             StepZoomLevel(deltaSeconds);
             Apply(_zoom.FieldOfView(_hipFieldOfView, TargetFieldOfView));
             StepBreath(deltaSeconds);
@@ -267,12 +266,13 @@ namespace Fps.Runtime
         /// </summary>
         public bool Release()
         {
-            if (!_aimState.IsActive)
+            var wasAiming = IsAiming;
+            _aimState.Release();
+            if (!wasAiming)
             {
                 return false;
             }
 
-            _aimState.Release();
             ReportAiming(false);
             return true;
         }
@@ -285,9 +285,10 @@ namespace Fps.Runtime
         {
             EnsureInitialized();
 
-            if (_aimState.IsActive)
+            var wasAiming = IsAiming;
+            _aimState.Release();
+            if (wasAiming)
             {
-                _aimState.Release();
                 ReportAiming(false);
             }
 

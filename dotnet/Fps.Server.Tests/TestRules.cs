@@ -17,17 +17,17 @@ namespace Fps.Server.Tests
 
         public static NetMatchFile File(GameRules rules = null, NetMatchSettings settings = null, string name = "TeamDeathmatch", WeaponSpec rifle = null)
         {
-            var primary = rifle ?? Rifle();
+            rifle ??= Rifle();
             return new NetMatchFile(
                 name,
                 rules ?? GameRules.Default,
                 settings ?? NetMatchSettings.Default,
                 "DefaultLoadout",
                 new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle, WeaponCategory.Handgun }, new[] { WeaponCategory.Handgun, WeaponCategory.AssaultRifle } }),
-                new[] { primary, Handgun() },
+                new[] { rifle, Handgun() },
                 0.4f,
                 "WeaponCatalog",
-                new WeaponCatalog(new[] { primary, Handgun() }));
+                new WeaponCatalog(new[] { rifle, Handgun() }));
         }
 
         public static ServerRulesData Data(GameRules rules = null, NetMatchSettings settings = null, PingSpec ping = null, string name = "TeamDeathmatch")

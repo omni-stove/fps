@@ -38,3 +38,12 @@ MonoBehaviour:
   _hipSpreadDegrees: 0
   _adsSpreadDegrees: 0
   _moveSpreadDegrees: 0
+  _explosion:
+    _enabled: 1
+    _maxDamage: 100
+    _radius: 5
+    _fullDamageRadius: 1
+    _structureDamageAtCenter: 100
+    _detonation: 0
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}

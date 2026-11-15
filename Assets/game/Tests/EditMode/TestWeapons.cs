@@ -112,7 +112,7 @@ namespace Fps.Tests.EditMode
                     FireMode.Semi,
                     0.25f,
                     new BurstSpec(3, 0.05f),
-                    new ChargeSpec(1.5f, 0.2f, 2.5f, firesWhenFull: true),
+                    new ChargeSpec(1.5f, 0.2f, 2.5f, firesWhenFull: true, firesBelowMin: true, fullChargeSpeedMultiplier: 1.75f),
                     new SpinUpSpec(0.8f, 3f, 0.4f),
                     new CycleSpec(0.9f, leavesAds: true)),
                 new AmmoSpec(1, 6, 0f, 0.3f, 0.2f, 0.7f, ReloadStyle.PerRound, 0.6f, AmmoKind.Heat, new HeatSpec(0.1f, 0.5f, 0.3f, 2f)),

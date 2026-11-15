@@ -46,6 +46,7 @@ namespace Fps.NetV2
         private SnapshotMessage _latest;
         private Func<string, WeaponSpec> _findWeapon;
         private WeaponSpec _weaponSpec;
+        private float? _localCharge;
 
         public Hud Hud => _hud;
 
@@ -83,6 +84,16 @@ namespace Fps.NetV2
             {
                 Destroy(hud.gameObject);
                 throw;
+            }
+        }
+
+        // 溜めは押している手元の引き金の値を毎フレーム出す。スナップショットの溜めは撃った後にしか変わらないため。
+        public void ShowCharge(float? fraction)
+        {
+            _localCharge = fraction;
+            if (fraction.HasValue && _weaponSpec?.Trigger.Charge != null)
+            {
+                _hud.Model.SetCharge(Math.Min(1f, Math.Max(0f, fraction.Value)));
             }
         }
 
@@ -152,7 +163,7 @@ namespace Fps.NetV2
             {
                 _weapon = snapshot.Owner.Weapon;
                 _weaponSpec = weaponSpec;
-                ClientWeaponGauges.Show(model, _weapon, weaponSpec);
+                ClientWeaponGauges.Show(model, _weapon, weaponSpec, _localCharge);
                 if (_weapon.WeaponCount == 0)
                 {
                     model.ClearAmmo();

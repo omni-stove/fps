@@ -38,10 +38,22 @@ namespace Fps.Tests.EditMode
         {
             var imported = WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
 
-            Assert.That(imported.Count(), Is.EqualTo(3));
+            Assert.That(imported.Count(), Is.EqualTo(4));
             AssertSameSpec(Load("Rifle").ToSpec(), WeaponAssetBuilder.RifleSpec());
             AssertSameSpec(Load("Handgun").ToSpec(), WeaponAssetBuilder.HandgunSpec());
             AssertSameSpec(Load("Launcher").ToSpec(), WeaponAssetBuilder.LauncherSpec());
+        }
+
+        [Test]
+        public void TheChargeRifleSampleChargesBeforeItFires()
+        {
+            WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
+
+            var charge = Load("ChargeRifle").ToSpec().Trigger.Charge;
+            Assert.That(charge, Is.Not.Null);
+            Assert.That(charge.MinChargeFraction, Is.GreaterThan(0f));
+            Assert.That(charge.FiresBelowMin, Is.False);
+            Assert.That(charge.FullChargeDamageMultiplier, Is.GreaterThan(1f));
         }
 
         [Test]

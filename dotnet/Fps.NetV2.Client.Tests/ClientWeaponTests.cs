@@ -156,6 +156,37 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
+        public void AChargedShotIsSentWithTheChargeItWasReleasedWith()
+        {
+            var trigger = new ClientTrigger(Charged());
+
+            Assert.That(trigger.Pull(true, true).Shots, Is.Zero);
+            trigger.Tick(0.4f);
+            Assert.That(trigger.Pull(true, false).ChargeFraction, Is.EqualTo(0.4f).Within(1e-5f));
+            trigger.Tick(0.2f);
+
+            var pull = trigger.Pull(false, false);
+
+            Assert.That(pull.Shots, Is.EqualTo(1));
+            Assert.That(pull.ChargeFraction, Is.EqualTo(0.4f).Within(1e-5f), "the time after the last pull is not charged");
+        }
+
+        [Test]
+        public void TheHudShowsTheLocalChargeWhileHeld()
+        {
+            var model = new HudModel();
+            var sync = new WeaponSync { WeaponCount = 1, ChargeFraction = 0.9f };
+
+            ClientWeaponGauges.Show(model, sync, Charged(), 0.3f);
+
+            Assert.That(model.ChargeFraction, Is.EqualTo(0.3f));
+
+            ClientWeaponGauges.Show(model, sync, Rifle(FireMode.Auto), 0.3f);
+
+            Assert.That(model.ChargeFraction, Is.Null);
+        }
+
+        [Test]
         public void TheHudShowsOnlyTheGaugesTheWeaponHas()
         {
             var model = new HudModel();

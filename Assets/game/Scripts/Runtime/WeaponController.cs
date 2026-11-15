@@ -352,9 +352,8 @@ namespace Fps.Runtime
                 return false;
             }
 
-            // 離した瞬間に撃つ溜めの撃ち方は、離すと溜めが 0 に戻るので、渡す前の溜めで撃つ。
-            var charge = _trigger.ChargeFraction;
             var shots = _trigger.Pull(weapon.Spec.FireMode, isPressed, wasPressedThisFrame);
+            var charge = _trigger.ShotChargeFraction;
             var fired = false;
             for (var i = 0; i < shots && FireShot(weapon, charge); i++)
             {

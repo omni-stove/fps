@@ -68,6 +68,50 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AChargedShotKeepsTheChargeItWasReleasedWith()
+        {
+            var driver = new TriggerDriver();
+            driver.Bind(TriggerModels.For(new TriggerSpec(FireMode.Semi, 0f, charge: new ChargeSpec(1f, 0.25f, 3f))));
+
+            Assert.That(driver.Pull(FireMode.Semi, true, true), Is.Zero, "pressing only starts the charge");
+            driver.Advance(0.5f);
+            Assert.That(driver.Pull(FireMode.Semi, true, false), Is.Zero);
+            Assert.That(driver.ChargeFraction, Is.EqualTo(0.5f).Within(1e-5f));
+
+            Assert.That(driver.Pull(FireMode.Semi, false, false), Is.EqualTo(1));
+            Assert.That(driver.ShotChargeFraction, Is.EqualTo(0.5f).Within(1e-5f));
+            Assert.That(driver.ChargeFraction, Is.Zero);
+        }
+
+        [Test]
+        public void AShotFiredWhenFullCarriesTheFullCharge()
+        {
+            var driver = new TriggerDriver();
+            driver.Bind(TriggerModels.For(new TriggerSpec(FireMode.Semi, 0f, charge: new ChargeSpec(1f, 0.25f, 3f, firesWhenFull: true))));
+
+            driver.Pull(FireMode.Semi, true, true);
+            driver.Advance(0.9f);
+            Assert.That(driver.Pull(FireMode.Semi, true, false), Is.Zero);
+            driver.Advance(0.2f);
+
+            Assert.That(driver.Pull(FireMode.Semi, true, false), Is.EqualTo(1));
+            Assert.That(driver.ShotChargeFraction, Is.EqualTo(1f));
+            Assert.That(driver.Pull(FireMode.Semi, false, false), Is.Zero, "releasing after the full shot fires nothing");
+        }
+
+        [Test]
+        public void ATooShortChargeFiresNothing()
+        {
+            var driver = new TriggerDriver();
+            driver.Bind(TriggerModels.For(new TriggerSpec(FireMode.Semi, 0f, charge: new ChargeSpec(1f, 0.5f, 3f))));
+
+            driver.Pull(FireMode.Semi, true, true);
+            driver.Advance(0.2f);
+
+            Assert.That(driver.Pull(FireMode.Semi, false, false), Is.Zero);
+        }
+
+        [Test]
         public void WithoutAModelNothingFires()
         {
             var driver = new TriggerDriver();

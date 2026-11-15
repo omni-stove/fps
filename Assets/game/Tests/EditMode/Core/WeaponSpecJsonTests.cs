@@ -128,7 +128,7 @@ namespace Fps.Core.Tests
                     FireMode.Semi,
                     0.25f,
                     new BurstSpec(3, 0.05f),
-                    new ChargeSpec(1.5f, 0.2f, 2.5f, firesWhenFull: true),
+                    new ChargeSpec(1.5f, 0.2f, 2.5f, firesWhenFull: true, firesBelowMin: true, fullChargeSpeedMultiplier: 1.75f),
                     new SpinUpSpec(0.8f, 3f, 0.4f),
                     new CycleSpec(0.9f, leavesAds: true)),
                 new AmmoSpec(1, 6, 0f, 0.3f, 0.2f, 0.7f, ReloadStyle.PerRound, 0.6f, AmmoKind.Heat, new HeatSpec(0.1f, 0.5f, 0.3f, 2f)),
@@ -211,6 +211,8 @@ namespace Fps.Core.Tests
             Assert.That(WeaponSpecJson.Write(read), Is.EqualTo(written));
             Assert.That(read.Trigger.Burst.RoundsPerBurst, Is.EqualTo(3));
             Assert.That(read.Trigger.Charge.FiresWhenFull, Is.True);
+            Assert.That(read.Trigger.Charge.FiresBelowMin, Is.True);
+            Assert.That(read.Trigger.Charge.FullChargeSpeedMultiplier, Is.EqualTo(1.75f));
             Assert.That(read.Trigger.SpinUp.StartIntervalMultiplier, Is.EqualTo(3f));
             Assert.That(read.Trigger.Cycle.LeavesAds, Is.True);
             Assert.That(read.Ammo.Kind, Is.EqualTo(AmmoKind.Heat));

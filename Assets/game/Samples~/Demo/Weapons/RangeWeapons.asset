@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: RangeWeapons
   m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponCatalogAsset
   _weapons:
+  - {fileID: 11400000, guid: 0e2d48f2ec71475f9e3c947613b2b24d, type: 2}
   - {fileID: 11400000, guid: d96f9ac9ccfb14f6b9303123108fd62a, type: 2}
   - {fileID: 11400000, guid: c1fd8f0c7f1f24f53b46d1d1ab74859c, type: 2}
   - {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}

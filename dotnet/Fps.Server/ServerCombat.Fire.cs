@@ -79,6 +79,13 @@ namespace Fps.Server
                 return false;
             }
 
+            var chargeCheck = shooter.Weapons.AcceptCharge(request.ChargeFraction, out var chargeFraction);
+            if (chargeCheck != ShotRejection.None)
+            {
+                WarnRejected(shooterId, chargeCheck);
+                return false;
+            }
+
             var ammo = shooter.Weapons.TryFire();
             if (ammo != ShotRejection.None)
             {
@@ -97,7 +104,7 @@ namespace Fps.Server
                 spec,
                 round,
                 shooter.Weapons.CurrentImpact,
-                shooter.Weapons.AcceptCharge(request.ChargeFraction),
+                chargeFraction,
                 request.HasLockTarget ? _lockOn.Resolve(shooterId, round, request) : null,
                 time.ToTick(),
                 body.Position,
@@ -199,7 +206,8 @@ namespace Fps.Server
             _botFire.InterpolationAlpha = 0f;
             _botFire.ShotIndex = fighter.Shots.NextIndex;
             _botFire.ShotGeneration = fighter.Shots.Generation;
-            _botFire.ChargeFraction = 0f;
+            // Bot は溜めを持たないので満タンを申告し、前の射撃からの秒数で届く分 (AcceptCharge) だけ溜めたことにする。
+            _botFire.ChargeFraction = 1f;
             _botFire.AmmoTypeIndex = fighter.Weapons.AmmoTypeIndex;
             _botFire.HasLockTarget = false;
             _botFire.LockTargetId = 0;

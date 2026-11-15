@@ -170,6 +170,16 @@ namespace Fps.Runtime
 
             // 円柱の素の形は高さ 2 m・直径 1 m。
             body.transform.localScale = new Vector3(spec.Width, spec.Height / 2f, spec.Depth);
+
+            // 円柱に付くカプセルは、高さが直径より短いと球になって地面から突き出すので、箱に差し替える。
+            var capsule = body.GetComponent<Collider>();
+            if (capsule != null)
+            {
+                UnityEngine.Object.DestroyImmediate(capsule);
+            }
+
+            var box = body.AddComponent<BoxCollider>();
+            box.size = new Vector3(1f, 2f, 1f);
             return root;
         }
 

@@ -1,3 +1,4 @@
+using System;
 using Fps.Core;
 using Fps.Protocol;
 
@@ -23,6 +24,12 @@ namespace Fps.NetV2
         /// </summary>
         public static FireDecision Decide(SnapshotMessage latest, int playerId, in CharacterMotorState predicted)
         {
+            return Decide(latest, playerId, predicted, null);
+        }
+
+        // spec が null でも決められるようにするのは、武器の値がまだ引けないときも弾倉の残りで今までどおり決めるため。
+        public static FireDecision Decide(SnapshotMessage latest, int playerId, in CharacterMotorState predicted, WeaponSpec spec)
+        {
             if (latest == null || !latest.HasOwner)
             {
                 return FireDecision.Hold;
@@ -47,7 +54,30 @@ namespace Fps.NetV2
                 return FireDecision.Hold;
             }
 
+            // 熱で撃つ武器は弾倉を持たずリロードもしないので、熱が上限に達している間は頼まずに待つ。
+            if (spec != null && spec.Ammo.Kind == AmmoKind.Heat)
+            {
+                return weapon.Heat < 1f ? FireDecision.Fire : FireDecision.Hold;
+            }
+
             return weapon.AmmoInMagazine > 0 ? FireDecision.Fire : FireDecision.Reload;
+        }
+
+        // 弾薬の種類はサーバーが選んだ番号を返す。手元で選び直すと、切り替えの要求が届く前の弾がずれた種類で送られるため。
+        public static void Fill(
+            FireRequestMessage request, OwnerSnapshot owner, string weaponId, in TriggerPull pull, TriggerEdge edge, int? lockTargetId)
+        {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            request.WeaponId = weaponId ?? "";
+            request.ChargeFraction = Math.Min(1f, Math.Max(0f, pull.ChargeFraction));
+            request.AmmoTypeIndex = owner != null ? owner.Weapon.AmmoTypeIndex : (byte)0;
+            request.HasLockTarget = lockTargetId.HasValue;
+            request.LockTargetId = lockTargetId ?? 0;
+            request.Trigger = edge;
         }
 
         /// <summary>今持っている武器の Id。武器が届いていなければ null。</summary>

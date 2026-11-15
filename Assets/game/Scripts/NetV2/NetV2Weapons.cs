@@ -1,18 +1,20 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using Fps.Runtime;
 
 namespace Fps.NetV2
 {
     /// <summary>
-    /// ネット対戦の、対戦で選べる武器 (ロードアウトとその一覧のアセット) と、今の武器の引き金 (<see cref="FireTrigger"/>)。
+    /// ネット対戦の、対戦で選べる武器 (ロードアウトとその一覧のアセット) と、今の武器の引き金 (<see cref="ClientTrigger"/>)。
     /// アセットは Netcode のクライアントと同じく入口 (<see cref="GameContent"/>) のものを使う (サーバーのルールのファイルも同じアセットから書き出す)。
     /// </summary>
     internal sealed class NetV2Weapons
     {
         private string _triggerWeaponId;
-        private FireTrigger _trigger;
+        private ClientTrigger _trigger;
         private string _triggerError;
+        private readonly Dictionary<string, WeaponSpec> _specs = new Dictionary<string, WeaponSpec>(StringComparer.Ordinal);
 
         public LoadoutDefinition Loadout => GameContent.Pick<LoadoutDefinition>(c => c.Loadout);
 
@@ -22,10 +24,10 @@ namespace Fps.NetV2
         public string TriggerError => _triggerError;
 
         /// <summary>
-        /// weaponId の武器の射撃モードと連射間隔で判断する引き金。武器が変わったら作り直す (撃ち始めからの間隔も持ち越さない)。
+        /// weaponId の武器の撃ち方で判断する引き金。武器が変わったら作り直す (撃ち始めからの間隔も持ち越さない)。
         /// 武器がどのアセットにも無いなら null (サーバーに弾かれない頻度が分からないので撃たない)。
         /// </summary>
-        public FireTrigger TriggerFor(string weaponId)
+        public ClientTrigger TriggerFor(string weaponId)
         {
             if (string.Equals(weaponId, _triggerWeaponId, StringComparison.Ordinal))
             {
@@ -33,8 +35,25 @@ namespace Fps.NetV2
             }
 
             _triggerWeaponId = weaponId;
-            _trigger = TryFind(weaponId, out var spec, out _triggerError) ? new FireTrigger(spec) : null;
+            _trigger = TryFind(weaponId, out var spec, out _triggerError) ? new ClientTrigger(spec) : null;
             return _trigger;
+        }
+
+        // 毎 tick 届くスナップショットや知らせから引くので、引いた武器 (無かったことも) を覚えてアセットを読み直さない。
+        public WeaponSpec SpecFor(string weaponId)
+        {
+            if (string.IsNullOrEmpty(weaponId))
+            {
+                return null;
+            }
+
+            if (!_specs.TryGetValue(weaponId, out var spec))
+            {
+                spec = TryFind(weaponId, out var found, out _) ? found : null;
+                _specs.Add(weaponId, spec);
+            }
+
+            return spec;
         }
 
         /// <summary>weaponId の武器の値を、ロードアウト・一覧の順に探す。</summary>

@@ -16,7 +16,7 @@ namespace Fps.NetV2
     /// <remarks>
     /// フレームで押したもの (ジャンプ・切り替え・回避・射撃など) は次の tick まで覚えておく。tick はフレームより遅いことがあり、取りこぼすため。
     /// ダッシュとしゃがみは操作設定 (<see cref="ControlSettings"/>) の押し方を解釈し、送るのは解釈した後の「したいか」だけにする (サーバーは押し方を知らない)。
-    /// 射撃は押した瞬間だけでなく押している間も読む。連射の武器の撃つ間合いを Netcode のクライアントと同じ <see cref="FireTrigger"/> で決めるため。
+    /// 射撃は押した瞬間だけでなく押している間も読む。撃つ間合いと押した・離したを武器の撃ち方 (<see cref="ClientTrigger"/>) で決めるため。
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class NetV2LocalPlayer : MonoBehaviour
@@ -25,6 +25,9 @@ namespace Fps.NetV2
 
         private const string _eyeName = "Eye";
         private const string _cameraName = "Camera";
+
+        // InputActionPaths に置かないのは、入力アクションの資産に弾薬の切り替えを足すのがオフラインの射撃の側 (#685) で、それより前にも動かすため。
+        private const string _switchAmmoTypePath = "Player/SwitchAmmoType";
 
         // シーンに置かれたカメラ (メニューの背景など) より前に描く
         private const float _cameraDepth = 10f;
@@ -46,6 +49,7 @@ namespace Fps.NetV2
         private InputAction _grenade;
         private InputAction _ping;
         private InputAction _prone;
+        private InputAction _switchAmmoType;
         private SprintInput _sprintInput;
         private CrouchInput _crouchInput;
         private ControlSettings _controlSettings = ControlSettings.Default;
@@ -62,6 +66,7 @@ namespace Fps.NetV2
         private bool _grenadeLatched;
         private bool _pingLatched;
         private bool _proneLatched;
+        private bool _switchAmmoTypeLatched;
 
         public Camera Camera => _camera;
 
@@ -162,11 +167,14 @@ namespace Fps.NetV2
             var cover = Take(ref _coverLatched) && !paused;
             var dodge = Take(ref _dodgeLatched) && !paused;
             var prone = Take(ref _proneLatched) && !paused;
-            var aim = !paused && _aim != null && _aim.IsPressed();
+            var aim = !paused && !BlocksAds && _aim != null && _aim.IsPressed();
             var degrees = _look != null && _look.enabled && _look.IsInitialized ? _look.Yaw : transform.eulerAngles.y;
             yaw = degrees * Mathf.Deg2Rad;
             buttons = SnapshotMotion.Buttons(sprint, jump, crouch, cover, aim, dodge, prone);
         }
+
+        // 覗き込みを止める撃ち方 (ITriggerModel.BlocksAds) は持っている武器で決まり、武器はサーバーのスナップショットで分かるので外から渡す。
+        public bool BlocksAds { get; set; }
 
         /// <summary>射撃を押したか。読むと忘れる。</summary>
         public bool TakeAttack() => Take(ref _attackLatched);
@@ -197,6 +205,8 @@ namespace Fps.NetV2
 
         /// <summary>印を押したか。読むと忘れる。</summary>
         public bool TakePing() => Take(ref _pingLatched);
+
+        public bool TakeSwitchAmmoType() => Take(ref _switchAmmoTypeLatched);
 
         /// <summary>撃ったときにダッシュを解く (Netcode のクライアントと同じ)。reason はログに出す理由。</summary>
         public void ReleaseSprint(string reason)
@@ -235,6 +245,7 @@ namespace Fps.NetV2
             _grenade = Find(actions, InputActionPaths.Grenade);
             _ping = Find(actions, InputActionPaths.Ping);
             _prone = Find(actions, InputActionPaths.Prone);
+            _switchAmmoType = Find(actions, _switchAmmoTypePath, false);
         }
 
         private void OnDestroy()
@@ -271,6 +282,7 @@ namespace Fps.NetV2
             _grenadeLatched |= Pressed(_grenade);
             _pingLatched |= Pressed(_ping);
             _proneLatched |= Pressed(_prone);
+            _switchAmmoTypeLatched |= Pressed(_switchAmmoType);
 
             // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
             _device = InputDeviceKinds.Of(_sprint, InputDeviceKinds.Of(_move, _device));
@@ -282,12 +294,17 @@ namespace Fps.NetV2
             _controlSettings = settings;
         }
 
-        private InputAction Find(InputActionAsset actions, string path)
+        // 必須でない操作は、入力アクションの資産に無いのが正しい版 (弾薬の切り替えを足す前) もあるので警告しない。
+        private InputAction Find(InputActionAsset actions, string path, bool required = true)
         {
             var action = actions.FindAction(path);
             if (action == null)
             {
-                Debug.LogWarning("[Net] input action " + path + " is missing; the NetV2 player ignores it", this);
+                if (required)
+                {
+                    Debug.LogWarning("[Net] input action " + path + " is missing; the NetV2 player ignores it", this);
+                }
+
                 return null;
             }
 

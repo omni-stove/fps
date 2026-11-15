@@ -309,6 +309,7 @@ namespace Fps.Server
         private void HandleReloadStarted(bool automatic)
         {
             _reloadStartedAt = _now();
+            _burstRoundsLeft = 0;
             var weapon = _loadout.Current;
             _log.WriteLine("[Net] reload start client=" + Text(_playerId) + " auto=" + automatic + " ammo=" + Text(weapon.AmmoInMagazine)
                 + " reserve=" + Text(weapon.ReserveAmmo));

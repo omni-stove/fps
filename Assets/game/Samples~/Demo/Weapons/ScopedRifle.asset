@@ -42,3 +42,9 @@ MonoBehaviour:
   _extraZoomLevels:
   - 16.43
   - 8.26
+  _breathHold:
+    _enabled: 1
+    _maxHoldSeconds: 4
+    _recoverSeconds: 3
+    _swayMultiplier: 0.1
+  _swayDegrees: 0.6

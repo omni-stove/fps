@@ -8,7 +8,7 @@ using Fps.Protocol;
 namespace Fps.Server
 {
     // グレネード (Unity の NetTeamDeathmatch.Explosion・NetGrenade・ServerGrenadeSupply)。種類ごとの数と間隔は 1 人ごとの ServerGrenadeSupply で持ち、
-    // 出現のたびにルールの数に戻す。信管が切れたら、投げた種類の ImpactSpec の爆発と範囲効果を起こす。投げる位置と初速はクライアントの値を使わず、サーバーの知る目の位置と送られた向きから決める。
+    // 出現のたびにルールの数に戻す。信管が切れたら、投げた種類の ImpactSpec の爆発・範囲効果・目くらましを起こす。投げる位置と初速はクライアントの値を使わず、サーバーの知る目の位置と送られた向きから決める。
     // 爆発のダメージは参加中で生きている全員に、体のカプセルの最も近い点までの距離で決める。投げた本人も巻き込む
     internal sealed partial class ServerCombat
     {
@@ -118,8 +118,9 @@ namespace Fps.Server
             thrower.Grenades.Take(_now, typeId, out var spec);
             var position = ReleasePoint(body.EyePosition, direction);
             var velocity = (direction * spec.ThrowSpeed) + new Vector3(0f, spec.ThrowLiftSpeed, 0f);
-            _grenades.Add(new LiveGrenade(
-                _nextGrenadeId++, playerId, spec, new ServerGrenadeFlight(_context.World, position, velocity, spec.Stickiness)));
+            var flight = new ServerGrenadeFlight(_context.World, position, velocity, spec.Stickiness);
+            flight.CollideWithCharacters(_bodies, playerId, IsHittable);
+            _grenades.Add(new LiveGrenade(_nextGrenadeId++, playerId, spec, flight));
 
             // 撃ったときと同じく、投げた時点で出現直後の無敵を解く
             _rules.NotifyFired(playerId);
@@ -179,10 +180,15 @@ namespace Fps.Server
                 Explode(center, impact.Explosion, grenade.ThrowerId, GrenadeWeaponId);
             }
 
+            var owner = _match.TryGetPlayer(grenade.ThrowerId, out _) ? grenade.ThrowerId : (int?)null;
             if (impact.AreaEffect != null)
             {
-                var owner = _match.TryGetPlayer(grenade.ThrowerId, out _) ? grenade.ThrowerId : (int?)null;
                 _areaEffects.Spread(impact.AreaEffect, center, owner, GrenadeWeaponId);
+            }
+
+            if (impact.Blind != null)
+            {
+                _flash.Detonate(center, impact.Blind, owner, GrenadeWeaponId);
             }
         }
 
@@ -364,6 +370,9 @@ namespace Fps.Server
                 row.WeaponId = GrenadeWeaponId;
                 row.TypeId = grenade.Spec.Id;
                 row.IsStuck = grenade.Flight.IsStuck;
+                var stuckTo = grenade.Flight.StuckToPlayerId;
+                row.HasStuckTo = stuckTo.HasValue && _match.TryGetPlayer(stuckTo.Value, out _);
+                row.StuckToId = row.HasStuckTo ? stuckTo.Value : 0;
                 row.Position = grenade.Flight.Position;
                 row.Rotation = grenade.Flight.Rotation;
             }

@@ -215,6 +215,63 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ABouncingRoundExplodesWhereItIsWhenItsLifetimeEndsNotWhenItBounces()
+        {
+            CreateWall(new Vector3(0f, -0.5f, 5f), new Vector3(20f, 1f, 20f));
+            var target = CreateTarget("dummy", new Vector3(3f, 1f, 6f));
+            var explosion = new ExplosionSpec(new ExplosionDamage(40, 10f), 0, DetonationTrigger.OnLifetimeEnd);
+            var down = new PlannedRound(_eye.ToNumerics(), new Vector3(0f, -1f, 1f).normalized.ToNumerics(), 0);
+            var body = ProjectileBody.Launch(
+                Request(Projectile(10f, 1f, 0.6f, WorldHitResponse.Bounce), 10, impact: new ImpactSpec(10, explosion: explosion)), down);
+            var explosions = RecordExplosions(() =>
+            {
+                var bounced = false;
+                for (var i = 0; i < 1000 && body != null; i++)
+                {
+                    body.Tick(_step);
+                    if (body != null && body.Flight != null && body.Flight.Bounces > 0)
+                    {
+                        bounced = true;
+                    }
+                }
+
+                Assert.That(bounced, Is.True, "the round bounced off the floor before its lifetime ran out");
+            });
+
+            Assert.That(body == null, Is.True);
+            Assert.That(explosions, Has.Count.EqualTo(1), "one explosion, at the end of the lifetime only");
+            Assert.That(explosions[0].WeaponId, Is.EqualTo("test-crossbow"));
+            Assert.That(explosions[0].Center.y, Is.GreaterThan(0f), "it bounced up off the floor");
+            Assert.That(explosions[0].Center.z, Is.GreaterThan(1f), "it flew on past where it hit the floor");
+            Assert.That(target.Health.Current, Is.LessThan(100), "the blast reaches the dummy");
+        }
+
+        [Test]
+        public void ARoundThatExplodesWhenItStopsExplodesJustOffTheWall()
+        {
+            CreateWall(new Vector3(0f, 1f, 10.5f), new Vector3(4f, 4f, 1f));
+            var explosion = new ExplosionSpec(new ExplosionDamage(40, 5f), 0, DetonationTrigger.OnStop);
+            var body = ProjectileBody.Launch(Request(Projectile(50f, 0f, 5f), 10, impact: new ImpactSpec(10, explosion: explosion)), Straight());
+
+            var explosions = RecordExplosions(() => TickUntilGone(body));
+
+            Assert.That(explosions, Has.Count.EqualTo(1));
+            Assert.That(explosions[0].Center.z, Is.EqualTo(10f - ImpactResolver.DetonationStandoff).Within(1e-3f));
+        }
+
+        [Test]
+        public void ARoundThatExplodesAtTheEndOfItsLifetimeDoesNotExplodeWhenItStopsAtAWall()
+        {
+            CreateWall(new Vector3(0f, 1f, 10.5f), new Vector3(4f, 4f, 1f));
+            var explosion = new ExplosionSpec(new ExplosionDamage(40, 5f), 0, DetonationTrigger.OnLifetimeEnd);
+            var body = ProjectileBody.Launch(Request(Projectile(50f, 0f, 5f), 10, impact: new ImpactSpec(10, explosion: explosion)), Straight());
+
+            var explosions = RecordExplosions(() => TickUntilGone(body));
+
+            Assert.That(explosions, Is.Empty);
+        }
+
+        [Test]
         public void ARoundWithoutAProjectileIsRejected()
         {
             Assert.Throws<ArgumentException>(
@@ -231,14 +288,14 @@ namespace Fps.Tests.EditMode
         }
 
         private static ShotRequest Request(
-            ProjectileSpec projectile, int damage, Action<ShotOutcome> landed = null, ProjectileSettings look = null)
+            ProjectileSpec projectile, int damage, Action<ShotOutcome> landed = null, ProjectileSettings look = null, ImpactSpec impact = null)
         {
             return new ShotRequest(
                 null,
                 null,
                 null,
                 new RoundSpec(RoundDelivery.Projectile, projectile: projectile),
-                new ImpactSpec(damage),
+                impact ?? new ImpactSpec(damage),
                 "test-crossbow",
                 Physics.DefaultRaycastLayers,
                 projectileLook: look,
@@ -248,6 +305,23 @@ namespace Fps.Tests.EditMode
         private static PlannedRound Straight()
         {
             return new PlannedRound(_eye.ToNumerics(), Vector3.forward.ToNumerics(), 0);
+        }
+
+        private static List<ExplosionInfo> RecordExplosions(Action act)
+        {
+            var explosions = new List<ExplosionInfo>();
+            void Record(ExplosionInfo info) => explosions.Add(info);
+            CombatEvents.Exploded += Record;
+            try
+            {
+                act();
+            }
+            finally
+            {
+                CombatEvents.Exploded -= Record;
+            }
+
+            return explosions;
         }
 
         private static void TickUntilGone(ProjectileBody body)

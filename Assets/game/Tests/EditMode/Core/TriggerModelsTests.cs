@@ -77,28 +77,6 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ThePartTriggersStillFireLikeTheirFireMode()
-        {
-            var parts = new[]
-            {
-                new TriggerSpec(FireMode.Semi, 0.5f, charge: new ChargeSpec(1f, 0.2f, 2f)),
-            };
-
-            foreach (var part in parts)
-            {
-                var model = TriggerModels.For(part);
-
-                Assert.That(model.MinShotSpacingSeconds, Is.EqualTo(0.5f));
-                Assert.That(model.BlocksAds, Is.False);
-                Assert.That(model.ChargeFraction, Is.EqualTo(0f));
-                Assert.That(model.Press(), Is.EqualTo(1));
-                Assert.That(model.Tick(0.25f), Is.EqualTo(0));
-                Assert.That(model.Release(), Is.EqualTo(0));
-                Assert.That(model.Press(), Is.EqualTo(0));
-            }
-        }
-
-        [Test]
         public void ABeamWeaponCountsItsShotsByTheBeamAndStillWrapsTheParts()
         {
             var beam = new BeamSpec(0.125f);
@@ -120,6 +98,21 @@ namespace Fps.Core.Tests
             Assert.That(wrapped.Tick(0.25f), Is.EqualTo(2), "the spun-up beam keeps the beam interval");
             Assert.That(wrapped.Release(), Is.EqualTo(0));
             Assert.That(wrapped.Tick(0.25f), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ASprayWeaponCountsItsShotsByTheSprayTicksWhileHeld()
+        {
+            var round = new RoundSpec(RoundDelivery.Spray, 8f, spray: new SpraySpec(0.1f, 15f));
+
+            var model = TriggerModels.For(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, new TriggerSpec(FireMode.Auto, 1f), round: round));
+
+            Assert.That(model, Is.TypeOf<BeamState>());
+            Assert.That(((BeamState)model).Spec.TickSeconds, Is.EqualTo(0.1f));
+            Assert.That(model.Press(), Is.EqualTo(1));
+            Assert.That(model.Tick(0.3f), Is.EqualTo(3), "the spray interval, not the fire interval");
+            Assert.That(model.Release(), Is.EqualTo(0));
+            Assert.That(model.Tick(0.3f), Is.EqualTo(0), "nothing comes out once released");
         }
 
         [Test]

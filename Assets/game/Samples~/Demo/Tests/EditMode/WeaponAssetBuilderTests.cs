@@ -132,6 +132,28 @@ namespace Fps.Tests.EditMode
             Assert.That(weapon.AmmoTypes.Impact.Damage, Is.Not.EqualTo(standard));
         }
 
+        [TestCase(LauncherSmokeRun.RocketLauncherJson, false, WorldHitResponse.Stop, DetonationTrigger.OnImpact)]
+        [TestCase(LauncherSmokeRun.GrenadeLauncherJson, true, WorldHitResponse.Bounce, DetonationTrigger.OnLifetimeEnd)]
+        public void TheLauncherSamplesFireExplodingRoundsAndTheirCommittedAssetsAreTheJson(
+            string file, bool falls, WorldHitResponse onWorldHit, DetonationTrigger detonation)
+        {
+            var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/" + file));
+            var spec = WeaponJsonImporter.ParseSpec(json, file);
+
+            Assert.That(spec.Round.Delivery, Is.EqualTo(RoundDelivery.Projectile));
+            Assert.That(spec.Round.Projectile.GravityMultiplier > 0f, Is.EqualTo(falls));
+            Assert.That(spec.Round.Projectile.OnWorldHit, Is.EqualTo(onWorldHit));
+            Assert.That(spec.Impact.Explosion, Is.Not.Null);
+            Assert.That(spec.Impact.Explosion.Detonation, Is.EqualTo(detonation));
+            foreach (var language in GameLanguages.All)
+            {
+                Assert.That(Localizer.TableOf(language).Contains(spec.NameKey), Is.True, $"{GameLanguages.Code(language)}: {spec.NameKey}");
+            }
+
+            Assert.That(WeaponAssetBuilder.LoadRangeWeapons().TryFind(spec.Id, out var committed), Is.True);
+            Assert.That(WeaponSpecJson.Write(committed.ToSpec()), Is.EqualTo(WeaponSpecJson.Write(spec)), "the committed asset is the JSON");
+        }
+
         [Test]
         public void TheCommittedRangeListHoldsEverySampleWeapon()
         {

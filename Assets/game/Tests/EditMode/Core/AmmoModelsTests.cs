@@ -80,27 +80,147 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ThePerRoundModelBehavesLikeTheMagazineForNow()
+        public void ThePerRoundModelLoadsOneRoundEachIntervalUntilTheMagazineIsFull()
         {
-            foreach (var spec in new[] { PerRound() })
-            {
-                var ammo = AmmoModels.For(spec, GameRules.Default);
-                var reloaded = 0;
-                ammo.Reloaded += () => reloaded++;
+            var ammo = AmmoModels.For(PerRound(), 2, 10, GameRules.Default);
+            var reloaded = 0;
+            ammo.Reloaded += () => reloaded++;
 
-                Assert.That(ammo.HeatFraction, Is.Null);
-                for (var i = 0; i < 5; i++)
-                {
-                    ammo.Consume();
-                }
+            Assert.That(ammo.HeatFraction, Is.Null);
+            Assert.That(ammo.TryStartReload(), Is.True);
+            Assert.That(ammo.IsReloading, Is.True);
 
-                Assert.That(ammo.CanFire, Is.False);
-                Assert.That(ammo.TryStartReload(), Is.True);
-                ammo.Tick(1f);
-                Assert.That(reloaded, Is.EqualTo(1));
-                Assert.That(ammo.AmmoInMagazine, Is.EqualTo(5));
-                Assert.That(ammo.ReserveAmmo, Is.EqualTo(5));
-            }
+            ammo.Tick(0.25f);
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(2), "half a round's time loads nothing yet");
+            Assert.That(ammo.ReloadProgress, Is.EqualTo(0.5f / 3f).Within(1e-5f));
+
+            ammo.Tick(0.25f);
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(ammo.ReserveAmmo, Is.EqualTo(9));
+            Assert.That(reloaded, Is.EqualTo(1), "each loaded round is announced");
+            Assert.That(ammo.IsReloading, Is.True);
+
+            ammo.Tick(0.5f);
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(4));
+            Assert.That(ammo.ReserveAmmo, Is.EqualTo(8));
+
+            ammo.Tick(0.5f);
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(ammo.ReserveAmmo, Is.EqualTo(7));
+            Assert.That(reloaded, Is.EqualTo(3));
+            Assert.That(ammo.IsReloading, Is.False, "a full magazine ends the reload");
+            Assert.That(ammo.ReloadProgress, Is.Zero);
+        }
+
+        [Test]
+        public void ALongFrameLoadsEveryRoundItCovers()
+        {
+            var ammo = AmmoModels.For(PerRound(), 0, 10, GameRules.Default);
+
+            Assert.That(ammo.TryStartReload(), Is.True);
+            ammo.Tick(1.25f);
+
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(ammo.ReserveAmmo, Is.EqualTo(8));
+            Assert.That(ammo.IsReloading, Is.True);
+        }
+
+        [Test]
+        public void FiringDuringAPerRoundReloadStopsItWithTheRoundsLoadedSoFar()
+        {
+            var ammo = AmmoModels.For(PerRound(), 0, 10, GameRules.Default);
+
+            Assert.That(ammo.TryStartReload(), Is.True);
+            Assert.That(ammo.CanFire, Is.False, "nothing is loaded yet");
+            ammo.Tick(1f);
+            Assert.That(ammo.CanFire, Is.True, "a loaded round can be fired mid-reload");
+
+            ammo.Consume();
+
+            Assert.That(ammo.IsReloading, Is.False);
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(1));
+            ammo.Tick(2f);
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(1), "the stopped reload loads no more");
+            Assert.That(ammo.ReserveAmmo, Is.EqualTo(8));
+        }
+
+        [Test]
+        public void APerRoundReloadStopsWhenTheReserveRunsOut()
+        {
+            var ammo = AmmoModels.For(PerRound(), 0, 2, GameRules.Default);
+
+            Assert.That(ammo.TryStartReload(), Is.True);
+            ammo.Tick(2f);
+
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(ammo.ReserveAmmo, Is.Zero);
+            Assert.That(ammo.IsReloading, Is.False);
+            Assert.That(ammo.TryStartReload(), Is.False);
+        }
+
+        [Test]
+        public void APerRoundReloadWithAnInfiniteReserveKeepsTheReserve()
+        {
+            var ammo = AmmoModels.For(PerRound(), 0, 0, GameRules.Default.WithInfiniteReserve(true));
+
+            Assert.That(ammo.TryStartReload(), Is.True);
+            ammo.Tick(2.5f);
+
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(ammo.ReserveAmmo, Is.Zero);
+        }
+
+        [Test]
+        public void APerRoundReloadDoesNotStartWhenFullOrAlreadyReloading()
+        {
+            var ammo = AmmoModels.For(PerRound(), GameRules.Default);
+            Assert.That(ammo.TryStartReload(), Is.False, "the magazine is full");
+
+            ammo.Consume();
+            Assert.That(ammo.TryStartReload(), Is.True);
+            Assert.That(ammo.TryStartReload(), Is.False);
+        }
+
+        [Test]
+        public void APerRoundReloadHasNoActiveReloadEvenWhenTheRulesTurnItOn()
+        {
+            var rules = GameRules.Default.WithActions(GameRules.Default.Actions.WithActiveReload(ActiveReload.On));
+            var ammo = AmmoModels.For(PerRound(), 0, 10, rules);
+
+            Assert.That(ammo.TryStartReload(), Is.True);
+            Assert.That(ammo.HasActiveReload, Is.False);
+            Assert.That(ammo.TryActiveReload(out var result), Is.False);
+            Assert.That(result, Is.EqualTo(ActiveReloadResult.Fail));
+            Assert.That(ammo.HasJudgedActiveReload, Is.False);
+        }
+
+        [Test]
+        public void CancellingAPerRoundReloadKeepsTheLoadedRounds()
+        {
+            var ammo = AmmoModels.For(PerRound(), 0, 10, GameRules.Default);
+
+            ammo.TryStartReload();
+            ammo.Tick(0.75f);
+            ammo.CancelReload();
+            ammo.Tick(1f);
+
+            Assert.That(ammo.IsReloading, Is.False);
+            Assert.That(ammo.AmmoInMagazine, Is.EqualTo(1));
+            Assert.That(ammo.ReserveAmmo, Is.EqualTo(9));
+        }
+
+        [Test]
+        public void TheWeaponFiresAPerRoundRoundMidReload()
+        {
+            var weapon = new Weapon(new WeaponSpec(_rifleId, null, WeaponCategory.Shotgun, ammo: PerRound()), 0, 10);
+
+            Assert.That(weapon.TryStartReload(), Is.True);
+            Assert.That(weapon.TryFire(), Is.False);
+            weapon.Tick(0.5f);
+
+            Assert.That(weapon.TryFire(), Is.True);
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.Zero);
         }
 
         [Test]
@@ -162,6 +282,25 @@ namespace Fps.Core.Tests
             Assert.That(selector.Index, Is.Zero, "wraps around to the first type");
             Assert.That(selector.Round, Is.SameAs(spec.Round));
             Assert.That(selector.Impact.Damage, Is.EqualTo(40));
+        }
+
+        [Test]
+        public void SelectingATypeKeepsTheMagazine()
+        {
+            var weapon = new Weapon(TwoTypes());
+
+            Assert.That(weapon.AmmoTypes.TrySelect(1), Is.True);
+
+            Assert.That(weapon.AmmoTypes.Current.Id, Is.EqualTo(_piercingId));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(weapon.AmmoTypes.TrySelect(-1), Is.False);
+            Assert.That(weapon.AmmoTypes.TrySelect(2), Is.False);
+            Assert.That(weapon.AmmoTypes.Index, Is.EqualTo(1), "a rejected index keeps the choice");
+
+            var plain = new AmmoTypeSelector(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle));
+            Assert.That(plain.TrySelect(-1), Is.False);
+            Assert.That(plain.TrySelect(0), Is.False);
+            Assert.That(plain.Index, Is.EqualTo(-1));
         }
 
         [Test]

@@ -168,6 +168,11 @@ namespace Fps.Runtime
         /// <summary>射撃の向きと起点。未初期化なら null。</summary>
         public Transform Aim => _aim;
 
+        public int HitMask => _hitMask;
+
+        // 覗き込みとロックオンは武器ではなくプレイヤーに付くので、撃つときにロックした相手を引く先を外から渡す。null ならロックしない。
+        public LockOnAim LockOn { get; set; }
+
         /// <summary>
         /// 持つ武器の定義の並び。Awake (<see cref="TryInitializeFromHierarchy"/>) はこれから武器を作る。
         /// 設定しただけでは今の <see cref="Loadout"/> は変わらない。作り直すなら <see cref="Initialize(Transform, InputAction, InputAction)"/> などを呼ぶ。
@@ -381,9 +386,8 @@ namespace Fps.Runtime
                 return false;
             }
 
-            // 離した瞬間に撃つ溜めの撃ち方は、離すと溜めが 0 に戻るので、渡す前の溜めで撃つ。
-            var charge = _trigger.ChargeFraction;
             var shots = _trigger.Pull(weapon.Spec.FireMode, isPressed, wasPressedThisFrame);
+            var charge = _trigger.ShotChargeFraction;
             var fired = false;
             for (var i = 0; i < shots && FireShot(weapon, charge); i++)
             {
@@ -810,6 +814,7 @@ namespace Fps.Runtime
             var definition = Definition;
             var look = definition != null ? definition.Projectile : null;
             _pelletHits.Clear();
+            var homingTarget = round.Homing != null && LockOn != null ? LockOn.FollowLocked() : null;
             foreach (var planned in rounds)
             {
                 // 撃たれた側が撃った方向へ向かえるよう、弾ごとの始点を撃った者の位置として渡す。
@@ -824,7 +829,8 @@ namespace Fps.Runtime
                     weapon.Spec.Trigger.Charge,
                     charge,
                     look,
-                    ConfirmHit);
+                    ConfirmHit,
+                    homingTarget);
                 CollectHit(delivery.Deliver(request, planned));
             }
 

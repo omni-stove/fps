@@ -16,6 +16,10 @@ namespace Fps.Runtime
 
         public float ChargeFraction => _model != null ? _model.ChargeFraction : 0f;
 
+        // 撃つ前に読んだ溜めでは、溜め切りで撃つ撃ち方の最後のフレームの溜めが入らず、離して撃つ撃ち方は撃った後に読むと 0 に戻っている。
+        // 撃った時点の溜めをここに残し、ネット対戦のクライアント (ClientTrigger) と同じ値で撃つ。
+        public float ShotChargeFraction { get; private set; }
+
         // しまった撃ち方の溜めや押しっぱなしを持ち越すと、持ち替えた先で押していないのに撃つ。
         public void Bind(ITriggerModel model)
         {
@@ -50,13 +54,20 @@ namespace Fps.Runtime
             }
 
             var shots = 0;
+            ShotChargeFraction = _model.ChargeFraction;
             if (_held && (!isPressed || wasPressedThisFrame))
             {
                 shots += _model.Release();
                 _held = false;
             }
 
-            shots += Spend();
+            var spent = Spend();
+            if (spent > 0)
+            {
+                ShotChargeFraction = _model.ChargeFraction;
+            }
+
+            shots += spent;
             var starts = mode == FireMode.Auto ? isPressed && !_held : wasPressedThisFrame;
             if (starts)
             {

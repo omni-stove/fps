@@ -13,13 +13,15 @@ namespace Fps.NetV2
         {
             _findWeapon = findWeapon ?? throw new ArgumentNullException(nameof(findWeapon));
             Projectiles = new ClientProjectiles(findWeapon);
+            Beams = new ClientBeams(findWeapon);
+            Spray = new ClientSpray(findWeapon);
         }
 
         public ClientProjectiles Projectiles { get; }
 
-        public ClientBeams Beams { get; } = new ClientBeams();
+        public ClientBeams Beams { get; }
 
-        public ClientSpray Spray { get; } = new ClientSpray();
+        public ClientSpray Spray { get; }
 
         public ClientStatusEffects StatusEffects { get; } = new ClientStatusEffects();
 

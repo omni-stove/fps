@@ -47,7 +47,8 @@ namespace Fps.Server
                 planned.Origin,
                 planned.Direction,
                 new Vector3(0f, ServerGrenadeFlight.Gravity, 0f),
-                _ => collision.LastHit.HitTarget);
+                _ => collision.LastHit.HitTarget,
+                ChargeScaling.SpeedMultiplier(shot.Weapon.Trigger.Charge, shot.ChargeFraction));
             var flying = new Flying(_nextId++, shot, collision, flight);
             _flying.Add(flying);
 
@@ -67,7 +68,7 @@ namespace Fps.Server
             for (var i = 0; i < _flying.Count; i++)
             {
                 var flying = _flying[i];
-                var step = flying.Flight.Step(deltaSeconds);
+                var step = flying.Flight.Step(deltaSeconds, HomingTarget(flying.Shot));
                 if (step.State == BallisticState.Flying)
                 {
                     continue;
@@ -78,6 +79,17 @@ namespace Fps.Server
                 i--;
                 Finish(flying, step.State);
             }
+        }
+
+        // 弾は巻き戻さずに今の位置で当たるので、追う先も相手の今の位置にする。倒れた・抜けた相手はもう追わない。
+        private Vector3? HomingTarget(ServerShot shot)
+        {
+            return shot.Round.Homing != null
+                && shot.LockTargetId is int id
+                && Combat.IsHittable(id)
+                && Combat.Context.Bodies.TryGet(id, out var body)
+                    ? body.Center
+                    : (Vector3?)null;
         }
 
         /// <summary>飛んでいる弾をスナップショットに載せる。</summary>
@@ -112,6 +124,7 @@ namespace Fps.Server
             {
                 SendEnded(flying, ProjectileEndReason.Expired);
                 Log(flying, null);
+                Combat.Impact.Detonate(flying.Shot, DetonationTrigger.OnLifetimeEnd, flight.Position, Vector3.Zero);
                 return;
             }
 
@@ -126,6 +139,7 @@ namespace Fps.Server
             var velocity = flight.Velocity;
             var direction = velocity.LengthSquared() > 1e-12f ? Vector3.Normalize(velocity) : -hit.Normal;
             Combat.Impact.Apply(flying.Shot, direction, hit);
+            Combat.Impact.Detonate(flying.Shot, DetonationTrigger.OnStop, hit.Point, hit.Normal);
         }
 
         private void SendEnded(Flying flying, ProjectileEndReason reason)

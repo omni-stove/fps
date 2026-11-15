@@ -31,7 +31,10 @@
       "throwSeconds": 0.6,
       "throwSpeed": 14,
       "throwLiftSpeed": 3,
-      "impact": { "damage": 0 }
+      "impact": {
+        "damage": 0,
+        "blind": { "radius": 15, "durationSeconds": 4, "backFraction": 0.25 }
+      }
     },
     {
       "id": "b9e59060-e2b8-4109-a693-0a87015e6817",

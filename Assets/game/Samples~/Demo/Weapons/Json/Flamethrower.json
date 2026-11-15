@@ -1,0 +1,62 @@
+{
+  "id": "8c2b5eea-4ded-4956-af00-0bceb5d3af29",
+  "nameKey": "weapon.flamethrower",
+  "category": "AssaultRifle",
+  "shotNoiseRadius": 25,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.1
+  },
+  "ammo": {
+    "kind": "Heat",
+    "magazineSize": 1,
+    "reserveAmmo": 0,
+    "reloadSeconds": 0,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.5,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0,
+    "heat": {
+      "heatPerShot": 0.025,
+      "coolPerSecond": 0.35,
+      "coolDelaySeconds": 0.5,
+      "overheatSeconds": 2
+    }
+  },
+  "round": {
+    "delivery": "Spray",
+    "range": 8,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "spray": {
+      "tickSeconds": 0.1,
+      "coneDegrees": 15,
+      "visualId": "fx.spray.flame"
+    }
+  },
+  "impact": {
+    "damage": 3,
+    "falloff": "None",
+    "structureRadius": 0,
+    "statusEffect": {
+      "kind": "burn",
+      "durationSeconds": 3,
+      "tickSeconds": 0.5,
+      "damagePerTick": 3
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 0,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0,
+    "recoilPitchDegrees": 0,
+    "recoilYawDegrees": 0,
+    "recoilRecoveryPerSecond": 0,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 5,
+    "zoomLevels": [60],
+    "swayDegrees": 0
+  }
+}

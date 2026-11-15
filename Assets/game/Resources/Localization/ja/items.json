@@ -26,5 +26,7 @@
   "grenade.smoke": "スモークグレネード",
   "grenade.flash": "フラッシュバン",
   "grenade.incendiary": "焼夷手榴弾",
-  "grenade.sticky": "粘着手榴弾"
+  "grenade.sticky": "粘着手榴弾",
+  "deployable.mine": "地雷",
+  "deployable.remoteCharge": "C4"
 }

@@ -12,8 +12,9 @@ namespace Fps.Server
 
         partial void Ricochet(RoundSpec round, float tick, int shooterId, Func<int, bool> hittable, List<ShotTraceSegment> segments, int first)
         {
+            // 貫通する弾は止まった面で跳ねない (オフラインの HitscanDelivery と同じ)。
             var ricochet = round.Ricochet;
-            if (ricochet == null || segments.Count <= first)
+            if (ricochet == null || segments.Count <= first || PenetrationRule.For(round) != null)
             {
                 return;
             }

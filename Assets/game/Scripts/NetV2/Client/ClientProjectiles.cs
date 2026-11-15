@@ -461,7 +461,8 @@ namespace Fps.NetV2
 
             public float Mismatch(Vector3 position, Vector3 velocity)
             {
-                return Vector3.Distance(Shown, position) + Vector3.Distance(_flight.Velocity, velocity);
+                // 向きは比べない。同じ射撃のペレットはサーバーも同じ順で Id を振るので、向きで比べると同じ位置のペレットが古い順に渡らない。
+                return Vector3.Distance(Shown, position) + MathF.Abs(_flight.Velocity.Length() - velocity.Length());
             }
 
             public bool Launch(Vector3 position, Vector3 velocity)

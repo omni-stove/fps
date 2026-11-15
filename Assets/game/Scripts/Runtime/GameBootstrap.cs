@@ -685,6 +685,7 @@ namespace Fps.Runtime
             WireSpreadAndRecoil(weapon, ads, mover, look);
             WireDodgeAndVault(mover, weapon, ads);
             WireAimToFire(weapon, ads, mover);
+            LockOnAim.Attach(player, weapon, ads);
 
             // 乗り物の座席などが操作を引き取ったら、移動と一緒に撃つ・持ち替える入力も止まるよう、同じ口を見させる。
             weapon.Handoff = mover.Handoff;

@@ -14,7 +14,8 @@ namespace Fps.Core
             float structureRadius = 0f,
             ExplosionSpec explosion = null,
             StatusEffectSpec statusEffect = null,
-            AreaEffectSpec areaEffect = null)
+            AreaEffectSpec areaEffect = null,
+            BlindSpec blind = null)
         {
             Damage = SpecGuard.NonNegative(damage, nameof(damage));
             Falloff = falloff ?? DamageFalloff.None;
@@ -22,6 +23,7 @@ namespace Fps.Core
             Explosion = explosion;
             StatusEffect = statusEffect;
             AreaEffect = areaEffect;
+            Blind = blind;
         }
 
         public int Damage { get; }
@@ -35,6 +37,9 @@ namespace Fps.Core
         public StatusEffectSpec StatusEffect { get; }
 
         public AreaEffectSpec AreaEffect { get; }
+
+        // 当たった相手ではなく弾けた所から見えている人にかけるので、今は投げ物の信管 (GrenadeSpec) だけが起こす。
+        public BlindSpec Blind { get; }
 
         public ImpactSpec WithDamageMultiplier(float multiplier)
         {
@@ -50,7 +55,7 @@ namespace Fps.Core
 
             var scaled = Math.Round((double)Damage * multiplier, MidpointRounding.AwayFromZero);
             var damage = scaled >= int.MaxValue ? int.MaxValue : (int)scaled;
-            return new ImpactSpec(damage, Falloff, StructureRadius, Explosion, StatusEffect, AreaEffect);
+            return new ImpactSpec(damage, Falloff, StructureRadius, Explosion, StatusEffect, AreaEffect, Blind);
         }
     }
 }

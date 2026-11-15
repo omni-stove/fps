@@ -4,6 +4,7 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools.Utils;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -23,6 +24,18 @@ namespace Fps.Tests.EditMode
             "grenade.smoke",
             new ImpactSpec(damage: 0, areaEffect: new AreaEffectSpec(5f, 3f, 0.5f, 0, visualId: "smoke")),
             fuseSeconds: 1f);
+
+        private static readonly GrenadeSpec _sticky = new GrenadeSpec(
+            "5eb3292d-6300-4ec2-b325-6ad793017e49",
+            "grenade.sticky",
+            GrenadeSpec.Default.Impact,
+            stickiness: GrenadeStickiness.SurfacesAndCharacters);
+
+        private static readonly GrenadeSpec _stickyToSurfaces = new GrenadeSpec(
+            "5eb3292d-6300-4ec2-b325-6ad793017e49",
+            "grenade.sticky",
+            GrenadeSpec.Default.Impact,
+            stickiness: GrenadeStickiness.Surfaces);
 
         private static readonly GrenadeCatalog _fragAndSmoke =
             new GrenadeCatalog(new[] { GrenadeSpec.Default, _smoke }, new[] { GrenadeSpec.DefaultId, _smoke.Id });
@@ -380,6 +393,80 @@ namespace Fps.Tests.EditMode
             thrower.ApplyCatalog(_fragAndSmoke);
             thrower.SelectNext();
             Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(_smoke.Name, 2))));
+        }
+
+        [Test]
+        public void AStickyGrenadeStaysWhereItTouchesAWall()
+        {
+            var wall = CreateBox("Wall", new Vector3(0f, 1.5f, 3f), new Vector3(4f, 3f, 0.2f)).GetComponent<Collider>();
+            var grenade = SpawnSticky(_sticky, new Vector3(0f, 1f, 2f));
+
+            Assert.That(grenade.StickTo(wall, new Vector3(0f, 1f, 2.9f), Vector3.back), Is.True);
+
+            Assert.That(grenade.IsStuck, Is.True);
+            Assert.That(grenade.StuckTo, Is.SameAs(wall.transform));
+            Assert.That(grenade.GetComponent<Rigidbody>().isKinematic, Is.True, "it does not bounce or fall");
+            Assert.That(grenade.transform.position, Is.EqualTo(new Vector3(0f, 1f, 2.9f - ThrownGrenade.BodyRadius)).Using(Vector3EqualityComparer.Instance));
+            Assert.That(grenade.StickTo(wall, Vector3.zero, Vector3.up), Is.False, "it sticks only to the first thing");
+        }
+
+        [Test]
+        public void AStickyGrenadeMovesWithTheTargetItHitsAndGoesOffOnIt()
+        {
+            var target = CreateTarget("Moving", new Vector3(0f, 1f, 3f));
+            var grenade = SpawnSticky(_sticky, new Vector3(0f, 1f, 2f));
+            Assert.That(grenade.StickTo(target.GetComponent<Collider>(), new Vector3(0f, 1f, 2.7f), Vector3.back), Is.True);
+            var offset = grenade.transform.position - target.transform.position;
+
+            target.transform.position += new Vector3(5f, 0f, 0f);
+            grenade.FollowCarrier();
+
+            Assert.That(grenade.transform.position - target.transform.position, Is.EqualTo(offset).Using(Vector3EqualityComparer.Instance));
+            Physics.SyncTransforms();
+            Assert.That(grenade.Tick(_sticky.FuseSeconds), Is.True);
+            Assert.That(target.IsDead, Is.True);
+        }
+
+        [Test]
+        public void AGrenadeThatSticksOnlyToSurfacesDoesNotStickToATarget()
+        {
+            var target = CreateTarget("Target", new Vector3(0f, 1f, 3f));
+            var grenade = SpawnSticky(_stickyToSurfaces, new Vector3(0f, 1f, 2f));
+
+            Assert.That(grenade.StickTo(target.GetComponent<Collider>(), new Vector3(0f, 1f, 2.7f), Vector3.back), Is.False);
+            Assert.That(grenade.IsStuck, Is.False);
+        }
+
+        [Test]
+        public void AFragGrenadeDoesNotStick()
+        {
+            var wall = CreateBox("Wall", new Vector3(0f, 1.5f, 3f), new Vector3(4f, 3f, 0.2f)).GetComponent<Collider>();
+            var grenade = SpawnGrenade(new Vector3(0f, 1f, 2f));
+
+            Assert.That(grenade.StickTo(wall, new Vector3(0f, 1f, 2.9f), Vector3.back), Is.False);
+        }
+
+        [Test]
+        public void AGrenadeFallsOffWhatItWasStuckToWhenThatGoesAway()
+        {
+            var crate = CreateBox("Crate", new Vector3(0f, 0.5f, 3f), Vector3.one);
+            var grenade = SpawnSticky(_sticky, new Vector3(0f, 1.5f, 3f));
+            grenade.StickTo(crate.GetComponent<Collider>(), new Vector3(0f, 1f, 3f), Vector3.up);
+
+            crate.SetActive(false);
+            grenade.FollowCarrier();
+
+            Assert.That(grenade.IsStuck, Is.False);
+            Assert.That(grenade.GetComponent<Rigidbody>().isKinematic, Is.False);
+            Assert.That(grenade.GetComponent<Collider>().enabled, Is.True);
+        }
+
+        private ThrownGrenade SpawnSticky(GrenadeSpec spec, Vector3 position)
+        {
+            var grenade = ThrownGrenade.Spawn(null, position, Vector3.zero, spec, null);
+            _created.Add(grenade.gameObject);
+            Physics.SyncTransforms();
+            return grenade;
         }
 
         private GrenadeThrower CreateThrower(GameRules rules)

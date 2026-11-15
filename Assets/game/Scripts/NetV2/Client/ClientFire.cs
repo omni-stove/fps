@@ -20,7 +20,8 @@ namespace Fps.NetV2
     {
         /// <summary>
         /// latest の自分の行と持ち主の状態、自分の予測 predicted から決める。倒れている・ダウン中・回避中・乗り越え中・飛び込み中・
-        /// はしごにつかまっている・武器が無い・リロード中・持ち替え中なら <see cref="FireDecision.Hold"/>、弾倉が空なら <see cref="FireDecision.Reload"/>。
+        /// はしごにつかまっている・武器が無い・持ち替え中なら <see cref="FireDecision.Hold"/>、弾倉が空なら <see cref="FireDecision.Reload"/>。
+        /// リロード中も <see cref="FireDecision.Hold"/> だが、1 発ずつ込める武器は込めた弾があればリロード中でも <see cref="FireDecision.Fire"/> を返す。
         /// </summary>
         public static FireDecision Decide(SnapshotMessage latest, int playerId, in CharacterMotorState predicted)
         {
@@ -29,13 +30,6 @@ namespace Fps.NetV2
 
         // spec が null でも決められるようにするのは、武器の値がまだ引けないときも弾倉の残りで今までどおり決めるため。
         public static FireDecision Decide(SnapshotMessage latest, int playerId, in CharacterMotorState predicted, WeaponSpec spec)
-        {
-            return Decide(latest, playerId, predicted, spec, null);
-        }
-
-        // overheat が null でも決められるようにするのは、上の形と同じく熱が上限の間だけ待つ今までの決め方を残すため。
-        public static FireDecision Decide(
-            SnapshotMessage latest, int playerId, in CharacterMotorState predicted, WeaponSpec spec, ClientOverheat overheat)
         {
             if (latest == null || !latest.HasOwner)
             {
@@ -56,7 +50,9 @@ namespace Fps.NetV2
             }
 
             var weapon = latest.Owner.Weapon;
-            if (CurrentWeaponId(latest.Owner) == null || weapon.IsReloading || weapon.IsSwitching)
+            // 1 発ずつ込める武器は、込めた弾があればサーバーがリロードを止めて撃たせるので、リロード中でも送る。
+            var firesWhileReloading = spec != null && spec.Ammo.ReloadStyle == ReloadStyle.PerRound && weapon.AmmoInMagazine > 0;
+            if (CurrentWeaponId(latest.Owner) == null || (weapon.IsReloading && !firesWhileReloading) || weapon.IsSwitching)
             {
                 return FireDecision.Hold;
             }
@@ -64,8 +60,7 @@ namespace Fps.NetV2
             // 熱で撃つ武器は弾倉を持たずリロードもしないので、オーバーヒートして冷め切るまでは頼まずに待つ。
             if (spec != null && spec.Ammo.Kind == AmmoKind.Heat)
             {
-                var overheated = weapon.IsOverheated || weapon.Heat >= 1f || (overheat != null && overheat.IsOverheated(latest.Owner));
-                return overheated ? FireDecision.Hold : FireDecision.Fire;
+                return weapon.IsOverheated || weapon.Heat >= 1f ? FireDecision.Hold : FireDecision.Fire;
             }
 
             return weapon.AmmoInMagazine > 0 ? FireDecision.Fire : FireDecision.Reload;
@@ -86,6 +81,19 @@ namespace Fps.NetV2
             request.HasLockTarget = lockTargetId.HasValue;
             request.LockTargetId = lockTargetId ?? 0;
             request.Trigger = edge;
+        }
+
+        // 弾薬の種類の番号は 0 が武器そのものの弾、1 からが WeaponSpec.AmmoTypes の番号 + 1 (サーバーの ServerPlayerWeapons.AmmoTypeIndex と同じ)。
+        public static RoundSpec CurrentRound(OwnerSnapshot owner, WeaponSpec spec)
+        {
+            if (owner == null || spec == null)
+            {
+                return null;
+            }
+
+            var index = owner.Weapon.AmmoTypeIndex;
+            var types = spec.AmmoTypes;
+            return index > 0 && index <= types.Count ? types[index - 1].RoundOr(spec.Round) : spec.Round;
         }
 
         /// <summary>今持っている武器の Id。武器が届いていなければ null。</summary>

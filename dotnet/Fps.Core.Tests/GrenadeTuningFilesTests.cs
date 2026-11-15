@@ -43,6 +43,19 @@ namespace Fps.Core.Tests
             Assert.That(frag.StructureDamageAtCenter, Is.EqualTo(expected.StructureDamageAtCenter));
         }
 
+        [Test]
+        public void TheFlashBlindsAndDoesNotExplode()
+        {
+            var catalog = TuningJson.ParseGrenades(
+                File.ReadAllText(Path.Combine(RepositoryRoot(), "Assets", "game", "Resources", "Tuning", "grenade.json")), "grenade.json");
+
+            var flash = catalog.Types.Single(t => t.NameKey == "grenade.flash");
+            Assert.That(flash.Impact.Blind, Is.Not.Null);
+            Assert.That(flash.Impact.Blind.Radius, Is.GreaterThan(0f));
+            Assert.That(flash.Explosion, Is.Null);
+            Assert.That(catalog.Types.Where(t => t.NameKey != "grenade.flash").Select(t => t.Impact.Blind), Is.All.Null);
+        }
+
         private static string RepositoryRoot()
         {
             for (var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory); directory != null; directory = directory.Parent)

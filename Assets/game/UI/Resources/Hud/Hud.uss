@@ -653,6 +653,16 @@
     background-size: 100% 100%;
 }
 
+/* フラッシュの目くらまし。FlashOverlay が色 (画像があれば画像) と不透明度を入れる。 */
+.flash-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-size: 100% 100%;
+}
+
 .damage-direction__arc {
     position: absolute;
     left: 0;

@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 能力の枠ごとの回数と待ち時間 (<see cref="HudFormat.Ability"/>) を、体力の上に 1 枠 1 行で出す。Hud.uxml の <see cref="UxmlName"/> に行を入れる。
+    /// 能力の枠ごとの回数と待ち時間 (<see cref="HudFormat.Ability"/>) を、体力の上に 1 枠 1 行で出す。今押すと何が起きるかの案内 (置いた C4 の起爆など) があれば行に添える。Hud.uxml の <see cref="UxmlName"/> に行を入れる。
     /// <see cref="Hud.AddViews"/> では付けず、オフラインの <see cref="GameBootstrap"/> が <see cref="IHud.AttachAbilitySlots"/> で付けて
     /// プレイヤーの <see cref="AbilityHost"/> を <see cref="Show"/> する。待ち時間は時間で減りイベントが無いので、毎フレーム読み直す。
     /// ルールで能力を使わない間と、枠がすべて空の間は隠し、空の枠の行も隠す。枠だけで見て使えない (待ち時間・使用中・回数切れ) 枠の行には
@@ -24,6 +24,9 @@ namespace Fps.Runtime
 
         /// <summary>今は使えない枠の行に足す USS クラス。</summary>
         public const string WaitingRowClass = "ability-slots__row--waiting";
+
+        /// <summary>枠の行に能力ごとの案内 (<see cref="AbilityHost.TryGetHint"/>) を添えるときの書式。{0} が枠の行、{1} が案内。</summary>
+        public const string WithHintKey = "hud.ability.withHint";
 
         private readonly string[] _texts = new string[AbilityHost.SlotCount];
         private readonly bool[] _waiting = new bool[AbilityHost.SlotCount];
@@ -100,7 +103,7 @@ namespace Fps.Runtime
             for (var i = 0; i < AbilityHost.SlotCount; i++)
             {
                 var slot = host != null && host.UsesAbilities ? host.Slot(i) : null;
-                _texts[i] = slot != null ? Localizer.Resolve(HudFormat.Ability(i + 1, slot)) : string.Empty;
+                _texts[i] = slot != null ? Localizer.Resolve(Describe(host, i, slot)) : string.Empty;
                 // 能力ごとの CanUse は毎フレーム聞かない (重い判定やログを出すものがあり得る)。枠の回数と時間だけで決める。
                 _waiting[i] = slot != null && !slot.CanStart;
                 shown |= slot != null;
@@ -146,6 +149,12 @@ namespace Fps.Runtime
             {
                 Refresh();
             }
+        }
+
+        private static LocalizedText Describe(AbilityHost host, int index, AbilitySlot slot)
+        {
+            var line = HudFormat.Ability(index + 1, slot);
+            return host.TryGetHint(index, out var hint) ? new LocalizedText(WithHintKey, line, hint) : line;
         }
 
         private void WriteRow(int index, bool visible)

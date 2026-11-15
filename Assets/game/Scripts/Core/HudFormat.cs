@@ -29,6 +29,9 @@ namespace Fps.Core
         /// <summary>mm:ss で表せる最大の秒数 (99:59)。これより長い残り時間は 99:59 に切り詰める。</summary>
         public const int MaxDisplayedSeconds = 99 * 60 + 59;
 
+        /// <summary>状態異常の残りの文のキーの頭。種類の Id を続けて <c>hud.status.burn</c> のようにする。</summary>
+        public const string StatusEffectKeyPrefix = "hud.status.";
+
         /// <example><c>Health(75)</c> は <c>75</c></example>
         public static string Health(int current)
         {
@@ -363,6 +366,25 @@ namespace Fps.Core
             }
 
             return new LocalizedText("hud.idleWarning", seconds);
+        }
+
+        /// <summary>自分にかかっている状態異常の残り。文のキーは <c>hud.status.&lt;種類の Id&gt;</c>。</summary>
+        /// <example><c>StatusEffect("burn", 3)</c> は <c>燃焼中 あと 3 秒</c></example>
+        /// <exception cref="ArgumentException">kindId が空。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">seconds が負。</exception>
+        public static LocalizedText StatusEffect(string kindId, int seconds)
+        {
+            if (string.IsNullOrEmpty(kindId))
+            {
+                throw new ArgumentException("kind id must not be empty", nameof(kindId));
+            }
+
+            if (seconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
+            }
+
+            return new LocalizedText(StatusEffectKeyPrefix + kindId, seconds);
         }
 
         private static void CheckPercent(int percent)

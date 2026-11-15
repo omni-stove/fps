@@ -43,9 +43,13 @@ namespace Fps.NetV2
         private bool _noticeShown;
         private float? _idleRemaining;
         private int _idleShownSeconds = -1;
+        private ClientStatusEffects _statusEffects;
+        private string _statusKind;
+        private int _statusShownSeconds;
         private SnapshotMessage _latest;
         private Func<string, WeaponSpec> _findWeapon;
         private WeaponSpec _weaponSpec;
+        private float? _localCharge;
         private GrenadeCountView _grenadeCount;
         private bool _grenadesShown;
         private bool _grenadesEnabled;
@@ -130,6 +134,16 @@ namespace Fps.NetV2
             }
         }
 
+        // 溜めは押している手元の引き金の値を毎フレーム出す。スナップショットの溜めは撃った後にしか変わらないため。
+        public void ShowCharge(float? fraction)
+        {
+            _localCharge = fraction;
+            if (fraction.HasValue && _weaponSpec?.Trigger.Charge != null)
+            {
+                _hud.Model.SetCharge(Math.Min(1f, Math.Max(0f, fraction.Value)));
+            }
+        }
+
         /// <summary>届いた最新のスナップショットを出す。</summary>
         public void Apply(SnapshotMessage snapshot)
         {
@@ -196,7 +210,7 @@ namespace Fps.NetV2
             {
                 _weapon = snapshot.Owner.Weapon;
                 _weaponSpec = weaponSpec;
-                ClientWeaponGauges.Show(model, _weapon, weaponSpec);
+                ClientWeaponGauges.Show(model, _weapon, weaponSpec, _localCharge);
                 if (_weapon.WeaponCount == 0 || (weaponSpec != null && weaponSpec.Ammo.Kind == AmmoKind.Heat))
                 {
                     model.ClearAmmo();
@@ -230,6 +244,19 @@ namespace Fps.NetV2
             Refresh();
         }
 
+        /// <summary>自分にかかっている状態異常の残りを、effects から読んで出す。目くらましの間は <see cref="FlashOverlay"/> で画面を白くする。</summary>
+        public void BindStatusEffects(ClientStatusEffects effects)
+        {
+            _statusEffects = effects;
+            var flash = _hud.FlashOverlay;
+            if (flash != null)
+            {
+                flash.Track(effects != null ? () => effects.RemainingSeconds(_localId, StatusEffectKinds.Blind) : (Func<float>)null);
+            }
+
+            Refresh();
+        }
+
         public void ClearIdleWarning()
         {
             if (!_idleRemaining.HasValue)
@@ -243,16 +270,31 @@ namespace Fps.NetV2
 
         private void Update()
         {
-            if (!_idleRemaining.HasValue)
+            var changed = false;
+            if (_idleRemaining.HasValue)
             {
-                return;
+                _idleRemaining = Math.Max(0f, _idleRemaining.Value - Time.unscaledDeltaTime);
+                changed = HudFormat.DisplayedSeconds(_idleRemaining.Value) != _idleShownSeconds;
             }
 
-            _idleRemaining = Math.Max(0f, _idleRemaining.Value - Time.unscaledDeltaTime);
-            if (HudFormat.DisplayedSeconds(_idleRemaining.Value) != _idleShownSeconds)
+            ReadStatus(out var statusKind, out var statusSeconds);
+            changed |= statusSeconds != _statusShownSeconds || !string.Equals(statusKind, _statusKind, StringComparison.Ordinal);
+            if (changed)
             {
                 Refresh();
             }
+        }
+
+        private void ReadStatus(out string kindId, out int seconds)
+        {
+            if (_statusEffects != null && _statusEffects.TryGetLongest(_localId, out kindId, out var remaining))
+            {
+                seconds = HudFormat.DisplayedSeconds(remaining);
+                return;
+            }
+
+            kindId = null;
+            seconds = 0;
         }
 
         private void Refresh()
@@ -267,6 +309,7 @@ namespace Fps.NetV2
         private void ShowNotice(PlayerSnapshot own, bool present)
         {
             var match = _latest.Match;
+            ReadStatus(out _statusKind, out _statusShownSeconds);
             HudNotice notice;
             if (match.State == GameModeState.Ended)
             {
@@ -292,6 +335,10 @@ namespace Fps.NetV2
             else if (present && own.SpawnProtectionSeconds > 0)
             {
                 notice = HudNotice.SpawnProtected(own.SpawnProtectionSeconds);
+            }
+            else if (present && _statusKind != null && own.Health > 0)
+            {
+                notice = HudNotice.StatusEffect(_statusKind, _statusShownSeconds);
             }
             else
             {

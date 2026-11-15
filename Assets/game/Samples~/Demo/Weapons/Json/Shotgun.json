@@ -15,8 +15,8 @@
     "activeReloadWindowStart": 0.5,
     "activeReloadWindowLength": 0.15,
     "activeReloadFailSeconds": 0.6,
-    "reloadStyle": "Whole",
-    "reloadSecondsPerRound": 0
+    "reloadStyle": "PerRound",
+    "reloadSecondsPerRound": 0.5
   },
   "round": {
     "delivery": "Hitscan",

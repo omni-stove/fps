@@ -218,6 +218,68 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void BlindedBotsDoNotShoot()
+        {
+            var points = new NetMapPoints(
+                new[]
+                {
+                    new SpawnPoint(new Vector3(-28f, 1.1f, -28f), Team.Alpha),
+                    new SpawnPoint(new Vector3(-6f, 1.1f, 20f), Team.Alpha),
+                    new SpawnPoint(new Vector3(6f, 1.1f, 20f), Team.Bravo),
+                },
+                Array.Empty<ControlPointArea>());
+            Start(BotTestMaps.Flat(points), Rules(), bots: 3, spec: SightOf(20f));
+            Join(1);
+            for (var elapsed = 0f; elapsed < 20f; elapsed += _tickSeconds)
+            {
+                foreach (var body in _context.Bodies.All.ToList())
+                {
+                    if (body.PlayerId != 1 && _combat.StatusEffects.RemainingSeconds(body.PlayerId, StatusEffectKinds.Blind) <= 0f)
+                    {
+                        _combat.StatusEffects.Afflict(null, ServerCombat.GrenadeWeaponId, body.PlayerId, BlindEffect.StatusEffect(2f));
+                    }
+                }
+
+                Tick();
+            }
+
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] hit attacker=10000000"));
+        }
+
+        [Test]
+        public void BotsDoNotShootThroughSmokeUntilItClears()
+        {
+            var points = new NetMapPoints(
+                new[]
+                {
+                    new SpawnPoint(new Vector3(-28f, 1.1f, -28f), Team.Alpha),
+                    new SpawnPoint(new Vector3(-6f, 1.1f, 20f), Team.Alpha),
+                    new SpawnPoint(new Vector3(6f, 1.1f, 20f), Team.Bravo),
+                },
+                Array.Empty<ControlPointArea>());
+            Start(BotTestMaps.Flat(points), Rules(), bots: 3, spec: SightOf(20f));
+            Join(1);
+            Tick();
+
+            // Bot が煙を回り込んで撃たないよう、床をまるごと煙で覆う
+            const float smokeSeconds = 20f;
+            var smoke = new AreaEffectSpec(60f, smokeSeconds, 0.5f, 0, visualId: "smoke");
+            _combat.AreaEffects.Spread(smoke, new Vector3(0f, 1.1f, 0f), null, string.Empty);
+            Step(smokeSeconds - 1f);
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] hit attacker=10000000"));
+
+            var hit = false;
+            for (var elapsed = 0f; elapsed < 60f && !hit; elapsed += _tickSeconds)
+            {
+                Tick();
+                hit = _log.ToString().Contains("[Net] hit attacker=10000000", StringComparison.Ordinal);
+            }
+
+            Assert.That(_combat.AreaEffects.Count, Is.Zero);
+            Assert.That(hit, Is.True, _log.ToString());
+        }
+
+        [Test]
         public void ABotClimbsDownAndUpTheLadderToReachItsPatrolPoints()
         {
             // 見える距離を縮めて人を目に入れず、出現地点 (足場の上と下) を巡回させる

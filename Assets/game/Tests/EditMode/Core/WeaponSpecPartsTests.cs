@@ -325,6 +325,7 @@ namespace Fps.Core.Tests
                 case "ChargeSpec.chargeSeconds": return new ChargeSpec(0f, 0f, 1f);
                 case "ChargeSpec.minChargeFraction": return new ChargeSpec(1f, 1.1f, 1f);
                 case "ChargeSpec.fullChargeDamageMultiplier": return new ChargeSpec(1f, 0f, float.PositiveInfinity);
+                case "ChargeSpec.fullChargeSpeedMultiplier": return new ChargeSpec(1f, 0f, 1f, fullChargeSpeedMultiplier: 0f);
                 case "SpinUpSpec.spinUpSeconds": return new SpinUpSpec(0f, 2f, 1f);
                 case "SpinUpSpec.startIntervalMultiplier": return new SpinUpSpec(1f, 0.9f, 1f);
                 case "SpinUpSpec.spinDownSeconds": return new SpinUpSpec(1f, 2f, -1f);
@@ -426,6 +427,7 @@ namespace Fps.Core.Tests
         [TestCase("ChargeSpec.chargeSeconds", "chargeSeconds")]
         [TestCase("ChargeSpec.minChargeFraction", "minChargeFraction")]
         [TestCase("ChargeSpec.fullChargeDamageMultiplier", "fullChargeDamageMultiplier")]
+        [TestCase("ChargeSpec.fullChargeSpeedMultiplier", "fullChargeSpeedMultiplier")]
         [TestCase("SpinUpSpec.spinUpSeconds", "spinUpSeconds")]
         [TestCase("SpinUpSpec.startIntervalMultiplier", "startIntervalMultiplier")]
         [TestCase("SpinUpSpec.spinDownSeconds", "spinDownSeconds")]

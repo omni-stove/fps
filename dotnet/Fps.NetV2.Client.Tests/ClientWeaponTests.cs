@@ -136,45 +136,40 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
-        public void AnOverheatedWeaponWaitsUntilTheServerSendsItFullyCool()
+        public void APerRoundWeaponFiresTheRoundsLoadedMidReload()
         {
             var standing = new CharacterMotorState(new Vector3(0f, 1.1f, 0f), Vector3.Zero, true, false);
-            var heat = Heated();
-            var overheat = new ClientOverheat();
+            var perRound = new WeaponSpec(
+                _rifleId, "", WeaponCategory.Shotgun, ammo: new AmmoSpec(6, 30, 2f, reloadStyle: ReloadStyle.PerRound, reloadSecondsPerRound: 0.5f));
 
-            FireDecision At(float value)
-            {
-                var snapshot = Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 1, Heat = value });
-                overheat.Observe(snapshot);
-                return ClientFire.Decide(snapshot, _playerId, standing, heat, overheat);
-            }
-
-            Assert.That(At(0.5f), Is.EqualTo(FireDecision.Fire), "warm but not overheated");
-            Assert.That(At(1f), Is.EqualTo(FireDecision.Hold));
-            Assert.That(At(0.5f), Is.EqualTo(FireDecision.Hold), "cooling down after an overheat");
-            Assert.That(At(0f), Is.EqualTo(FireDecision.Fire));
-            Assert.That(At(0.5f), Is.EqualTo(FireDecision.Fire));
+            Assert.That(
+                ClientFire.Decide(Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 2, IsReloading = true }), _playerId, standing, perRound),
+                Is.EqualTo(FireDecision.Fire));
+            Assert.That(
+                ClientFire.Decide(Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 0, IsReloading = true }), _playerId, standing, perRound),
+                Is.EqualTo(FireDecision.Hold),
+                "nothing is loaded yet");
+            Assert.That(
+                ClientFire.Decide(Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 2, IsReloading = true }), _playerId, standing, Rifle(FireMode.Auto)),
+                Is.EqualTo(FireDecision.Hold),
+                "a whole-magazine reload still holds the trigger");
         }
 
         [Test]
-        public void TheOverheatIsKeptForTheWeaponThatOverheated()
+        public void AnOverheatedWeaponWaitsWhileTheServerSaysItIsOverheated()
         {
-            var overheat = new ClientOverheat();
-            var hot = Armed(new WeaponSync { WeaponCount = 2, EquippedIndex = 0, Heat = 1f });
-            overheat.Observe(hot);
+            var standing = new CharacterMotorState(new Vector3(0f, 1.1f, 0f), Vector3.Zero, true, false);
+            var heat = Heated();
 
-            var other = Armed(new WeaponSync { WeaponCount = 2, EquippedIndex = 1, Heat = 0.5f });
-            overheat.Observe(other);
-            Assert.That(overheat.IsOverheated(other.Owner), Is.False, "the other weapon did not overheat");
+            FireDecision At(float value, bool overheated)
+            {
+                var snapshot = Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 1, Heat = value, IsOverheated = overheated });
+                return ClientFire.Decide(snapshot, _playerId, standing, heat);
+            }
 
-            var back = Armed(new WeaponSync { WeaponCount = 2, EquippedIndex = 0, Heat = 0.5f });
-            overheat.Observe(back);
-            Assert.That(overheat.IsOverheated(back.Owner), Is.True);
-
-            var unarmed = Armed(new WeaponSync { WeaponCount = 0 });
-            overheat.Observe(unarmed);
-            overheat.Observe(back);
-            Assert.That(overheat.IsOverheated(back.Owner), Is.False, "losing every weapon forgets the overheat");
+            Assert.That(At(0.5f, false), Is.EqualTo(FireDecision.Fire), "warm but not overheated");
+            Assert.That(At(0.5f, true), Is.EqualTo(FireDecision.Hold), "cooling down after an overheat");
+            Assert.That(At(0f, false), Is.EqualTo(FireDecision.Fire));
         }
 
         [Test]
@@ -195,6 +190,67 @@ namespace Fps.NetV2.Tests
             hooks.Apply(new SnapshotMessage());
             hooks.LocalFired(new FireRequestMessage { WeaponId = _beamId, Trigger = TriggerEdge.Pressed }, Beam());
             hooks.LocalFired(new FireRequestMessage { WeaponId = _rifleId }, Rifle(FireMode.Auto));
+        }
+
+        [Test]
+        public void TheCurrentRoundIsTheChosenAmmoTypesRoundOrTheWeaponsOwn()
+        {
+            var homing = new RoundSpec(
+                RoundDelivery.Projectile, projectile: new ProjectileSpec(20f, 0f, 3f), homing: new HomingSpec(1f, 8f, 90f));
+            var spec = new WeaponSpec(
+                _rifleId, "", WeaponCategory.Launcher, ammoTypes: new[] { new AmmoTypeSpec(_ammoTypeId, "items.ammo.guided", homing) });
+
+            Assert.That(ClientFire.CurrentRound(Armed(new WeaponSync { WeaponCount = 1 }).Owner, spec), Is.SameAs(spec.Round));
+            Assert.That(ClientFire.CurrentRound(Armed(new WeaponSync { WeaponCount = 1, AmmoTypeIndex = 1 }).Owner, spec), Is.SameAs(homing));
+            Assert.That(
+                ClientFire.CurrentRound(Armed(new WeaponSync { WeaponCount = 1, AmmoTypeIndex = 2 }).Owner, spec), Is.SameAs(spec.Round), "past the last type");
+            Assert.That(ClientFire.CurrentRound(null, spec), Is.Null);
+            Assert.That(ClientFire.CurrentRound(Armed(new WeaponSync()).Owner, null), Is.Null);
+        }
+
+        [Test]
+        public void TheLockedTargetIsSentWithTheShot()
+        {
+            var request = new FireRequestMessage();
+            var owner = Armed(new WeaponSync { WeaponCount = 1 }).Owner;
+
+            ClientFire.Fill(request, owner, _rifleId, default, TriggerEdge.None, 7);
+            Assert.That(request.HasLockTarget, Is.True);
+            Assert.That(request.LockTargetId, Is.EqualTo(7));
+
+            ClientFire.Fill(request, owner, _rifleId, default, TriggerEdge.None, null);
+            Assert.That(request.HasLockTarget, Is.False);
+        }
+
+        [Test]
+        public void AChargedShotIsSentWithTheChargeItWasReleasedWith()
+        {
+            var trigger = new ClientTrigger(Charged());
+
+            Assert.That(trigger.Pull(true, true).Shots, Is.Zero);
+            trigger.Tick(0.4f);
+            Assert.That(trigger.Pull(true, false).ChargeFraction, Is.EqualTo(0.4f).Within(1e-5f));
+            trigger.Tick(0.2f);
+
+            var pull = trigger.Pull(false, false);
+
+            Assert.That(pull.Shots, Is.EqualTo(1));
+            Assert.That(pull.ChargeFraction, Is.EqualTo(0.4f).Within(1e-5f), "the time after the last pull is not charged");
+        }
+
+        [Test]
+        public void TheHudShowsTheLocalChargeWhileHeld()
+        {
+            var model = new HudModel();
+            var sync = new WeaponSync { WeaponCount = 1, ChargeFraction = 0.9f };
+
+            ClientWeaponGauges.Show(model, sync, Charged(), 0.3f);
+
+            Assert.That(model.ChargeFraction, Is.EqualTo(0.3f));
+
+            ClientWeaponGauges.Show(model, sync, Rifle(FireMode.Auto), 0.3f);
+
+            Assert.That(model.ChargeFraction, Is.Null);
         }
 
         [Test]

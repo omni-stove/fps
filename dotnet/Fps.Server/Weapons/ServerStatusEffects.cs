@@ -31,9 +31,17 @@ namespace Fps.Server
         /// <summary>shot の弾で victimId に effect をかける。倒れている相手・かけてはいけない味方には何もしない。</summary>
         public void Afflict(in ServerShot shot, int victimId, StatusEffectSpec effect)
         {
+            Afflict(shot.ShooterId, shot.Weapon.Id, victimId, effect);
+        }
+
+        /// <summary>
+        /// 弾ではなく燃える範囲などがかけるときのため、かけた人を Id で受ける。かけた人が居なければ (sourceId が null) 味方の判定はせず、帰属の無い燃焼にする。
+        /// </summary>
+        public void Afflict(int? sourceId, string weaponId, int victimId, StatusEffectSpec effect)
+        {
             ArgumentNullException.ThrowIfNull(effect);
 
-            if (!Combat.IsHittable(victimId) || !Combat.CanAfflict(shot.ShooterId, victimId))
+            if (!Combat.IsHittable(victimId) || (sourceId.HasValue && !Combat.CanAfflict(sourceId.Value, victimId)))
             {
                 return;
             }
@@ -44,8 +52,8 @@ namespace Fps.Server
                 _byPlayer.Add(victimId, effects);
             }
 
-            var active = effects.Afflict(effect, shot.ShooterId, shot.Weapon.Id);
-            Combat.Context.Log.WriteLine(LogTag + " afflict source=" + Text(shot.ShooterId) + " victim=" + Text(victimId)
+            var active = effects.Afflict(effect, sourceId, weaponId);
+            Combat.Context.Log.WriteLine(LogTag + " afflict source=" + (sourceId.HasValue ? Text(sourceId.Value) : "none") + " victim=" + Text(victimId)
                 + " kind=" + active.KindId + " weapon=" + active.WeaponId + " remaining=" + Text(active.RemainingSeconds));
             Send(victimId, active.KindId, active.RemainingSeconds);
         }

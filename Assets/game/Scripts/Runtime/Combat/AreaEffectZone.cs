@@ -56,8 +56,7 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(spec));
             }
 
-            var zone = Create(spec.VisualId, center, spec.Radius, spec.DurationSeconds);
-            zone.Spec = spec;
+            var zone = Create(spec.VisualId, spec, center, spec.Radius, spec.DurationSeconds);
             zone.Owner = owner;
             zone.WeaponId = weaponId ?? string.Empty;
             return zone;
@@ -66,10 +65,10 @@ namespace Fps.Runtime
         /// <summary>サーバーが効かせている範囲の見た目だけを出す。</summary>
         public static AreaEffectZone Show(string kindId, Vector3 center, float radius, float remainingSeconds)
         {
-            return Create(kindId, center, radius, remainingSeconds);
+            return Create(kindId, null, center, radius, remainingSeconds);
         }
 
-        private static AreaEffectZone Create(string kindId, Vector3 center, float radius, float seconds)
+        private static AreaEffectZone Create(string kindId, AreaEffectSpec spec, Vector3 center, float radius, float seconds)
         {
             if (!(radius > 0f) || float.IsInfinity(radius))
             {
@@ -85,6 +84,7 @@ namespace Fps.Runtime
             go.transform.position = center;
             var zone = go.AddComponent<AreaEffectZone>();
             zone.KindId = kindId ?? string.Empty;
+            zone.Spec = spec;
             zone.Radius = radius;
             zone._remaining = seconds;
             zone.BuildVisual();
@@ -184,12 +184,21 @@ namespace Fps.Runtime
 
         partial void StepFire(float deltaSeconds);
 
+        partial void BuildFireVisual(ref bool built);
+
         private void BuildVisual()
         {
             var prefab = KindId.Length > 0 ? Resources.Load<GameObject>(VisualResourceFolder + "/" + KindId) : null;
             if (prefab != null)
             {
                 VisualPrefab.Instantiate(prefab, transform, VisualName, stripColliders: true);
+                return;
+            }
+
+            var built = false;
+            BuildFireVisual(ref built);
+            if (built)
+            {
                 return;
             }
 

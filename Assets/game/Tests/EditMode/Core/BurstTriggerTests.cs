@@ -8,12 +8,12 @@ namespace Fps.Core.Tests
     public sealed class BurstTriggerTests
     {
         private const string _burstRifleId = "00000000-0000-4000-8000-000000000002";
-        private const float RoundInterval = 0.0625f;
-        private const float FireInterval = 0.5f;
+        private const float _roundInterval = 0.0625f;
+        private const float _fireInterval = 0.5f;
 
         private static TriggerSpec Trigger(FireMode mode, int rounds = 3)
         {
-            return new TriggerSpec(mode, FireInterval, new BurstSpec(rounds, RoundInterval));
+            return new TriggerSpec(mode, _fireInterval, new BurstSpec(rounds, _roundInterval));
         }
 
         private static WeaponSpec Spec(FireMode mode, int magazineSize = 30)
@@ -27,15 +27,15 @@ namespace Fps.Core.Tests
             var trigger = TriggerModels.For(Trigger(FireMode.Semi));
 
             Assert.That(trigger.Press(), Is.EqualTo(1), "the first round leaves on the press");
-            Assert.That(trigger.Tick(RoundInterval / 2f), Is.EqualTo(0));
-            Assert.That(trigger.Tick(RoundInterval / 2f), Is.EqualTo(1));
+            Assert.That(trigger.Tick(_roundInterval / 2f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(_roundInterval / 2f), Is.EqualTo(1));
             Assert.That(trigger.Release(), Is.EqualTo(0));
-            Assert.That(trigger.Tick(RoundInterval), Is.EqualTo(1), "releasing does not cut the burst short");
+            Assert.That(trigger.Tick(_roundInterval), Is.EqualTo(1), "releasing does not cut the burst short");
             Assert.That(trigger.Tick(1f / 128f), Is.EqualTo(0), "three rounds only");
 
-            Assert.That(trigger.Tick(FireInterval - (RoundInterval * 2f) - (1f / 128f)), Is.EqualTo(0));
+            Assert.That(trigger.Tick(_fireInterval - (_roundInterval * 2f) - (1f / 128f)), Is.EqualTo(0));
             Assert.That(trigger.Press(), Is.EqualTo(0), "the fire interval counts from the last round");
-            Assert.That(trigger.Tick(RoundInterval * 2f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(_roundInterval * 2f), Is.EqualTo(0));
             Assert.That(trigger.Press(), Is.EqualTo(1));
         }
 
@@ -45,12 +45,12 @@ namespace Fps.Core.Tests
             var trigger = TriggerModels.For(Trigger(FireMode.Auto));
 
             Assert.That(trigger.Press(), Is.EqualTo(1));
-            Assert.That(trigger.Tick(RoundInterval), Is.EqualTo(1));
-            Assert.That(trigger.Tick(RoundInterval), Is.EqualTo(1));
-            Assert.That(trigger.Tick(FireInterval - RoundInterval), Is.EqualTo(0));
-            Assert.That(trigger.Tick(RoundInterval), Is.EqualTo(1), "the next burst starts while held");
+            Assert.That(trigger.Tick(_roundInterval), Is.EqualTo(1));
+            Assert.That(trigger.Tick(_roundInterval), Is.EqualTo(1));
+            Assert.That(trigger.Tick(_fireInterval - _roundInterval), Is.EqualTo(0));
+            Assert.That(trigger.Tick(_roundInterval), Is.EqualTo(1), "the next burst starts while held");
             Assert.That(trigger.Release(), Is.EqualTo(0));
-            Assert.That(trigger.Tick(RoundInterval * 2f), Is.EqualTo(2), "the started burst still finishes");
+            Assert.That(trigger.Tick(_roundInterval * 2f), Is.EqualTo(2), "the started burst still finishes");
             Assert.That(trigger.Tick(1f), Is.EqualTo(0), "no more bursts once released");
         }
 
@@ -63,8 +63,8 @@ namespace Fps.Core.Tests
             Assert.That(trigger.Release(), Is.EqualTo(0));
             Assert.That(trigger.Press(), Is.EqualTo(0));
             Assert.That(trigger.Release(), Is.EqualTo(0));
-            Assert.That(trigger.Tick(RoundInterval * 2f), Is.EqualTo(2));
-            Assert.That(trigger.Tick(FireInterval * 4f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(_roundInterval * 2f), Is.EqualTo(2));
+            Assert.That(trigger.Tick(_fireInterval * 4f), Is.EqualTo(0));
         }
 
         [Test]
@@ -73,15 +73,15 @@ namespace Fps.Core.Tests
             var trigger = TriggerModels.For(Trigger(FireMode.Semi, rounds: 4));
 
             Assert.That(trigger.Press(), Is.EqualTo(1));
-            Assert.That(trigger.Tick(RoundInterval * 3f), Is.EqualTo(3));
-            Assert.That(trigger.Tick(FireInterval), Is.EqualTo(0));
+            Assert.That(trigger.Tick(_roundInterval * 3f), Is.EqualTo(3));
+            Assert.That(trigger.Tick(_fireInterval), Is.EqualTo(0));
             Assert.That(trigger.Press(), Is.EqualTo(1));
         }
 
         [Test]
         public void AZeroRoundIntervalFiresTheWholeBurstOnThePress()
         {
-            var trigger = new BurstTrigger(new BurstSpec(3, 0f), new SemiTrigger(FireInterval));
+            var trigger = new BurstTrigger(new BurstSpec(3, 0f), new SemiTrigger(_fireInterval));
 
             Assert.That(trigger.Press() + trigger.Tick(0f), Is.EqualTo(3));
             Assert.That(trigger.MinShotSpacingSeconds, Is.EqualTo(0f));
@@ -90,10 +90,10 @@ namespace Fps.Core.Tests
         [Test]
         public void TheShortestSpacingIsTheRoundInterval()
         {
-            Assert.That(TriggerModels.For(Trigger(FireMode.Semi)).MinShotSpacingSeconds, Is.EqualTo(RoundInterval));
+            Assert.That(TriggerModels.For(Trigger(FireMode.Semi)).MinShotSpacingSeconds, Is.EqualTo(_roundInterval));
             Assert.That(
-                new BurstTrigger(new BurstSpec(3, 1f), new SemiTrigger(FireInterval)).MinShotSpacingSeconds,
-                Is.EqualTo(FireInterval),
+                new BurstTrigger(new BurstSpec(3, 1f), new SemiTrigger(_fireInterval)).MinShotSpacingSeconds,
+                Is.EqualTo(_fireInterval),
                 "never slower than the inner trigger allows");
         }
 
@@ -102,7 +102,7 @@ namespace Fps.Core.Tests
         {
             var weapon = new Weapon(Spec(FireMode.Semi));
 
-            Assert.That(Fire(weapon, Pressed(weapon), RoundInterval, 8), Is.EqualTo(3));
+            Assert.That(Fire(weapon, Pressed(weapon), _roundInterval, 8), Is.EqualTo(3));
             Assert.That(weapon.AmmoInMagazine, Is.EqualTo(27));
         }
 
@@ -111,7 +111,7 @@ namespace Fps.Core.Tests
         {
             var weapon = new Weapon(Spec(FireMode.Semi, magazineSize: 2));
 
-            Assert.That(Fire(weapon, Pressed(weapon), RoundInterval, 8), Is.EqualTo(2));
+            Assert.That(Fire(weapon, Pressed(weapon), _roundInterval, 8), Is.EqualTo(2));
             Assert.That(weapon.AmmoInMagazine, Is.EqualTo(0));
         }
 
@@ -120,11 +120,11 @@ namespace Fps.Core.Tests
         {
             var budget = new ShotBudget(TriggerModels.For(Spec(FireMode.Auto)));
 
-            foreach (var burstStart in new[] { 0d, FireInterval + (RoundInterval * 2f), 2d * (FireInterval + (RoundInterval * 2f)) })
+            foreach (var burstStart in new[] { 0d, _fireInterval + (_roundInterval * 2f), 2d * (_fireInterval + (_roundInterval * 2f)) })
             {
                 for (var round = 0; round < 3; round++)
                 {
-                    Assert.That(budget.TryConsume(burstStart + (round * RoundInterval)), Is.True, "burst at " + burstStart + " round " + round);
+                    Assert.That(budget.TryConsume(burstStart + (round * _roundInterval)), Is.True, "burst at " + burstStart + " round " + round);
                 }
             }
         }

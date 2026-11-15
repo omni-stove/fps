@@ -49,6 +49,12 @@ namespace Fps.Core
                 if (deltaSeconds < _untilNextRound)
                 {
                     _untilNextRound -= deltaSeconds;
+                    if (shots > 0)
+                    {
+                        // 撃ったフレームの余りは次弾の待ちから引かない。Weapon は撃ったフレームから間隔を丸ごと数え直すので、引くと次弾が先に出て弾かれる。
+                        _untilNextRound = Spec.RoundIntervalSeconds;
+                    }
+
                     return shots;
                 }
 
@@ -59,6 +65,13 @@ namespace Fps.Core
             }
 
             return shots + StartBursts(_inner.Tick(deltaSeconds));
+        }
+
+        // 離しても連射は続く作りなので、持ち替えで外すときだけ残りを捨てる入口を別に置く。
+        public void Cancel()
+        {
+            _roundsLeft = 0;
+            _untilNextRound = 0f;
         }
 
         private int StartBursts(int starts)

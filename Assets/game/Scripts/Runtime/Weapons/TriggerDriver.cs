@@ -9,6 +9,7 @@ namespace Fps.Runtime
         private ITriggerModel _model;
         private float _unspentSeconds;
         private bool _held;
+        private float _releasedCharge;
 
         public ITriggerModel Model => _model;
 
@@ -57,6 +58,7 @@ namespace Fps.Runtime
             ShotChargeFraction = _model.ChargeFraction;
             if (_held && (!isPressed || wasPressedThisFrame))
             {
+                _releasedCharge = _model.ChargeFraction;
                 shots += _model.Release();
                 _held = false;
             }
@@ -64,7 +66,8 @@ namespace Fps.Runtime
             var spent = Spend();
             if (spent > 0)
             {
-                ShotChargeFraction = _model.ChargeFraction;
+                // 離した後に出るバーストの残りの弾は、離したときの溜めで撃つ (ネット対戦のクライアントと同じ)。離した後のモデルの溜めは 0 に戻っている。
+                ShotChargeFraction = _held ? _model.ChargeFraction : _releasedCharge;
             }
 
             shots += spent;
@@ -77,6 +80,7 @@ namespace Fps.Runtime
 
             if (_held && !isPressed)
             {
+                _releasedCharge = _model.ChargeFraction;
                 shots += _model.Release();
                 _held = false;
             }

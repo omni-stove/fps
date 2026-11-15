@@ -25,7 +25,7 @@ namespace Fps.Server
         private double _reloadStartedAt;
         private float _chargeFraction;
         private double _chargeFrom;
-        private double _burstUntil = double.NegativeInfinity;
+        private int _burstRoundsLeft;
 
         public ServerPlayerWeapons(int playerId, TextWriter log, Func<double> now)
         {
@@ -161,10 +161,11 @@ namespace Fps.Server
 
             var now = _now();
             // バーストの 2 発目以降は離したときの溜めで撃つ。押していた時間は 1 発目で使い切っており、測り直すと必ず短く見えるため。
-            if (spec.Burst != null && trigger == TriggerEdge.None && now <= _burstUntil)
+            // 引き継ぐのは 1 発目で受け入れたバーストの残りの発数まで。時間の窓で見ると、細工したクライアントが満タンの溜めを使い回せるため。
+            if (spec.Burst != null && trigger == TriggerEdge.None && _burstRoundsLeft > 0)
             {
                 fraction = _chargeFraction;
-                _burstUntil = now + spec.Burst.RoundIntervalSeconds + ChargeArrivalToleranceSeconds;
+                _burstRoundsLeft--;
                 return ShotRejection.None;
             }
 
@@ -179,7 +180,7 @@ namespace Fps.Server
             // 弾かれた射撃でも、撃った側は離して溜め直しているので、ここから測り直す。
             var held = now - _chargeFrom + ChargeArrivalToleranceSeconds;
             _chargeFrom = now;
-            _burstUntil = double.NegativeInfinity;
+            _burstRoundsLeft = 0;
             fraction = ChargeTrigger.Reachable(charge, float.IsFinite(requested) ? requested : 0f, held);
             if (!ChargeTrigger.Fires(charge, fraction))
             {
@@ -190,7 +191,7 @@ namespace Fps.Server
             _chargeFraction = fraction;
             if (spec.Burst != null)
             {
-                _burstUntil = now + spec.Burst.RoundIntervalSeconds + ChargeArrivalToleranceSeconds;
+                _burstRoundsLeft = spec.Burst.RoundsPerBurst - 1;
             }
 
             return ShotRejection.None;

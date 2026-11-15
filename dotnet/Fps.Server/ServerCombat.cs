@@ -121,7 +121,7 @@ namespace Fps.Server
                     {
                         fighter.Weapons.TryActiveReload();
                     }
-                    else
+                    else if (action.Action == WeaponAction.Reload)
                     {
                         fighter.Weapons.TryReload();
                     }

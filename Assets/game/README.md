@@ -65,7 +65,7 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 | 中身 | 置き場所 (サンプルのルートから) |
 | --- | --- |
-| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Dmr.json`・`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Crossbow.json`・熱で撃つ `EnergyRifle.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
+| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Dmr.json`・`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Crossbow.json`・`RocketLauncher.json`・`GrenadeLauncher.json`・熱で撃つ `EnergyRifle.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
 | ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
 | ミッション・シーン | `Missions/`・`Scenes/` |
 | ネット対戦の試合の設定 (`NetMatchDefinition`。専用サーバーへ書き出す) | `Rules/NetMatch.asset` |
@@ -201,7 +201,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 ### 武器を JSON から取り込む
 
-1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`、飛ぶ弾は `Crossbow.json`、熱で撃つのは `EnergyRifle.json`、弾薬の種類は `Dmr.json`)。
+1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`、飛ぶ弾は `Crossbow.json`、飛んで爆発する弾は `RocketLauncher.json` (当たって爆発) と `GrenadeLauncher.json` (跳ねて寿命で爆発)、熱で撃つのは `EnergyRifle.json`、弾薬の種類は `Dmr.json`)。
 
 ```json
 {
@@ -680,6 +680,7 @@ photo.PhotoCapture = new MyFramedCapture();
 3. `EnemyFireSmokeRun`
 4. `EnemyStuckSmokeRun`
 5. `WeaponSwitchSmokeRun`
+6. `LauncherSmokeRun` (ロケットランチャーとグレネードランチャーを撃ち、爆発とネットのクライアントの見せ方を確かめる)
 
 Play Mode に入るので、**`-quit` を付けない** (付けるとすぐに終了コード 1 で終わる)。
 

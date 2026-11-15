@@ -4,6 +4,8 @@
     "references": [
         "Fps.Core",
         "Fps.Editor",
+        "Fps.NetV2.Client",
+        "Fps.Protocol",
         "Fps.Runtime",
         "Fps.Runtime.UI",
         "Unity.AI.Navigation",

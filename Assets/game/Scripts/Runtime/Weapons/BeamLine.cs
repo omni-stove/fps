@@ -58,6 +58,9 @@ namespace Fps.Runtime
                 Rebuild(weaponId);
             }
 
+            // 線の端は世界の点で置くので transform は動かないが、3D 音は transform の位置で鳴るため、銃口に合わせて動かす。
+            _visual.transform.position = from;
+
             if (_line != null)
             {
                 _line.SetPosition(0, from);

@@ -95,6 +95,19 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.SpawnProtected(-1));
         }
 
+        [Test]
+        public void StatusEffectShowsTheKindAndTheSeconds()
+        {
+            Assert.That(GameText.Resolve(HudFormat.StatusEffect(StatusEffectKinds.Burn, 3)), Is.EqualTo("燃焼中 あと 3 秒"));
+        }
+
+        [Test]
+        public void StatusEffectRejectsAnEmptyKindAndNegativeSeconds()
+        {
+            Assert.Throws<ArgumentException>(() => HudFormat.StatusEffect(string.Empty, 1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.StatusEffect(StatusEffectKinds.Burn, -1));
+        }
+
         [TestCase(15, "操作がありません あと 15 秒で切断されます")]
         [TestCase(1, "操作がありません あと 1 秒で切断されます")]
         public void IdleWarningShowsTheSecondsUntilTheKick(int seconds, string expected)

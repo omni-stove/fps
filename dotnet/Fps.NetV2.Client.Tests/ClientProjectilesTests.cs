@@ -170,11 +170,13 @@ namespace Fps.NetV2.Tests
             _projectiles.LocalFired(Fire(_crossbowId, Vector3.UnitZ), spec);
 
             Assert.That(_views.Shown, Has.Count.EqualTo(2 * planned));
-            // ペレットは散らばって飛ぶので、サーバーの弾は予測した弾と同じ向きで載せる
             var rows = new ProjectileSnapshot[2 * planned];
+            // サーバーの弾はペレットごとに向きが違うので、予測と同じ並べ方の向きで載せる。
+            var plan = ShotPlanner.Plan(spec.Round, _eye, Vector3.UnitZ, 0f, _me, 0);
             for (var id = 0; id < rows.Length; id++)
             {
-                rows[id] = Row(id, _me, _crossbowId, _eye, _views.Shown[id].Velocity);
+                var pellet = plan.Rounds[id % planned];
+                rows[id] = Row(id, _me, _crossbowId, pellet.Origin, Vector3.Normalize(pellet.Direction) * 30f);
             }
 
             _projectiles.Apply(Snapshot(rows));

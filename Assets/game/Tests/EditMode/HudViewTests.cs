@@ -15,6 +15,8 @@ namespace Fps.Tests.EditMode
             return new WeaponSpec("00000000-0000-4000-8000-000000000001", "weapon.rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0f, 1f, 25, 100f, DamageFalloff.None);
         }
 
+        private static readonly AmmoTypeSpec Slug = new AmmoTypeSpec("00000000-0000-4000-8000-0000000000a1", "ammo.slug");
+
         private static VisualElement CloneLayout()
         {
             var layout = Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath);
@@ -132,7 +134,7 @@ namespace Fps.Tests.EditMode
             var model = new HudModel();
             model.SetHealth(100, 100);
             model.SetAmmo(30, 90, false);
-            model.SetWeaponName("Rifle");
+            model.SetWeaponSpec(NewSpec());
             model.SetTime(60f);
             model.SetScores(Team.Alpha, 1, 2);
 
@@ -157,7 +159,7 @@ namespace Fps.Tests.EditMode
         public void ApplyingFullAgainShowsEverythingThatHasAValue()
         {
             var model = new HudModel();
-            model.SetWeaponName("Rifle");
+            model.SetWeaponSpec(NewSpec());
             var view = new HudView(CloneLayout(), model, HudVisibility.Hardcore);
 
             view.ApplyVisibility(HudVisibility.Full);
@@ -454,6 +456,7 @@ namespace Fps.Tests.EditMode
                 [HudView.MagnificationKey] = "x{0}",
                 [HudView.LockOnKey] = "Lock {0}%",
                 [HudView.LockedOnKey] = "Locked",
+                ["ammo.slug"] = "Slug",
             });
             GameText.Use(() => table);
             return previous;
@@ -487,7 +490,7 @@ namespace Fps.Tests.EditMode
 
                 model.SetCharge(0.5f);
                 model.SetHeat(0.25f);
-                model.SetAmmoTypeName("Slug");
+                model.SetAmmoType(Slug);
                 model.SetMagnification(4f);
                 model.SetLockOn(0.4f);
 
@@ -509,7 +512,7 @@ namespace Fps.Tests.EditMode
 
                 model.ClearCharge();
                 model.ClearHeat();
-                model.ClearAmmoTypeName();
+                model.ClearAmmoType();
                 model.ClearMagnification();
                 model.ClearLockOn();
                 AssertGaugesHidden(view);
@@ -526,7 +529,7 @@ namespace Fps.Tests.EditMode
             var model = new HudModel();
             model.SetCharge(0.5f);
             model.SetHeat(0.5f);
-            model.SetAmmoTypeName("Slug");
+            model.SetAmmoType(Slug);
             model.SetMagnification(2f);
             model.SetLockOn(0.5f);
 

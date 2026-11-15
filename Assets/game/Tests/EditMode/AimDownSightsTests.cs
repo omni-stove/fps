@@ -493,6 +493,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_ads.AimAction, Is.SameAs(InputSystem.actions.FindAction(AimDownSights.AimActionPath)));
             Assert.That(
                 _ads.CycleMagnificationAction, Is.SameAs(InputSystem.actions.FindAction(AimDownSights.CycleMagnificationActionPath)));
+            Assert.That(_ads.HoldBreathAction, Is.SameAs(InputSystem.actions.FindAction(AimDownSights.HoldBreathActionPath)));
             Assert.That(_ads.HipFieldOfView, Is.EqualTo(_hip));
         }
 
@@ -647,6 +648,175 @@ namespace Fps.Tests.EditMode
         public void ZoomLogNamesTheLevelFromOne(int index, int count, float fieldOfView, string expected)
         {
             Assert.That(AimDownSights.FormatZoomLog(index, count, fieldOfView), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void AimingAWeaponWithSwayTurnsTheCameraAndTheShotWithIt()
+        {
+            InitializeSwaying();
+
+            _ads.Tick(false, false, 0.5f);
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity), "no sway from the hip");
+
+            _ads.Tick(true, true, 0.5f);
+
+            Assert.That(_ads.SwayYawDegrees, Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(_ads.SwayPitchUpDegrees, Is.EqualTo(0f).Within(1e-4f));
+            AssertCameraFollowsTheSway();
+            Assert.That(Vector3.Angle(_camera.transform.forward, _camera.transform.parent.forward), Is.EqualTo(1f).Within(1e-2f));
+            Assert.That(_look.Yaw, Is.Zero, "the sway is not written into the look angles");
+        }
+
+        [Test]
+        public void HoldingBreathSteadiesTheScopeAndRunningOutWidensIt()
+        {
+            InitializeSwaying();
+            _ads.Tick(false, false, 0.5f);
+            _ads.Tick(true, true, 0.5f);
+
+            _ads.HoldBreathInput = true;
+            LogAssert.Expect(LogType.Log, "[View] breath=hold remaining=1.5");
+            _ads.Tick(true, false, 0.5f);
+
+            Assert.That(_ads.IsHoldingBreath, Is.True);
+            AssertSway(1.5f, 0.1f);
+
+            LogAssert.Expect(LogType.Log, "[View] breath=exhausted remaining=1");
+            _ads.Tick(true, false, 2f);
+
+            Assert.That(_ads.IsHoldingBreath, Is.False);
+            Assert.That(_ads.Breath.IsExhausted, Is.True);
+            AssertSway(3.5f, 1.5f);
+
+            _ads.HoldBreathInput = false;
+            LogAssert.Expect(LogType.Log, "[View] breath=ready remaining=2");
+            _ads.Tick(true, false, 0.5f);
+            Assert.That(_ads.Breath.IsExhausted, Is.False);
+            AssertSway(0f, 1f);
+        }
+
+        [Test]
+        public void HoldingBreathDoesNothingFromTheHip()
+        {
+            InitializeSwaying();
+            _ads.HoldBreathInput = true;
+
+            _ads.Tick(false, false, 0.5f);
+
+            Assert.That(_ads.IsHoldingBreath, Is.False);
+            Assert.That(_ads.Breath.RemainingSeconds, Is.EqualTo(2f));
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity));
+        }
+
+        [Test]
+        public void StoppingAimingSettlesTheCameraAndResetViewStraightensItAtOnce()
+        {
+            InitializeSwaying();
+            _ads.Tick(false, false, 0.5f);
+            _ads.Tick(true, true, 0.5f);
+
+            _ads.Tick(false, false, 1f);
+            Assert.That(_ads.Progress, Is.Zero);
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity));
+
+            _ads.Tick(true, true, 1.5f);
+            Assert.That(_camera.transform.localRotation, Is.Not.EqualTo(Quaternion.identity));
+            _ads.HoldBreathInput = true;
+            _ads.Tick(true, false, 1f);
+
+            _ads.ResetView();
+
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(_ads.SwayYawDegrees, Is.Zero);
+            Assert.That(_ads.Breath.RemainingSeconds, Is.EqualTo(2f), "the breath is refilled");
+        }
+
+        [Test]
+        public void AWeaponWithoutSwayLeavesTheCameraAlone()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Rifle(40f);
+            _ads.HoldBreathInput = true;
+
+            _ads.Tick(true, true, 1f);
+
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(_ads.IsHoldingBreath, Is.False);
+        }
+
+        [Test]
+        public void SwayStartsFromTheCamerasOwnRestingRotation()
+        {
+            var rest = Quaternion.Euler(0f, 0f, 5f);
+            _camera.transform.localRotation = rest;
+            InitializeSwaying();
+            _ads.Tick(false, false, 0.5f);
+            _ads.Tick(true, true, 0.5f);
+
+            Assert.That(
+                Quaternion.Angle(_camera.transform.localRotation, rest * Quaternion.Euler(0f, 1f, 0f)), Is.LessThan(1e-2f));
+
+            _ads.ResetView();
+            Assert.That(Quaternion.Angle(_camera.transform.localRotation, rest), Is.LessThan(1e-3f));
+        }
+
+        [Test]
+        public void InitializeTakesTheHoldBreathAction()
+        {
+            var hold = new InputAction("HoldBreath", InputActionType.Button);
+            try
+            {
+                _ads.Initialize(_camera, _look, _aim, null, hold);
+                Assert.That(_ads.HoldBreathAction, Is.SameAs(hold));
+            }
+            finally
+            {
+                hold.Dispose();
+            }
+        }
+
+        [Test]
+        public void SwaySettingsRejectUnusableValues()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ads.ExhaustedSwayMultiplier = 0.5f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ads.SwayBlendSeconds = -1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ads.SwayCycleSeconds = 0f);
+            Assert.That(_ads.ExhaustedSwayMultiplier, Is.EqualTo(BreathHold.DefaultExhaustedSwayMultiplier));
+        }
+
+        [TestCase(true, false, 1.5f, "[View] breath=hold remaining=1.5")]
+        [TestCase(false, true, 0f, "[View] breath=exhausted remaining=0")]
+        [TestCase(false, false, 4f, "[View] breath=ready remaining=4")]
+        public void BreathLogNamesTheState(bool holding, bool exhausted, float remaining, string expected)
+        {
+            Assert.That(AimDownSights.FormatBreathLog(holding, exhausted, remaining), Is.EqualTo(expected));
+        }
+
+        private void InitializeSwaying()
+        {
+            Initialize();
+            _ads.TransitionSeconds = 0.25f;
+            _ads.SwayCycleSeconds = 4f;
+            _ads.SwayBlendSeconds = 0f;
+            _ads.WeaponSource = () => new WeaponSpec(
+                _rifleId,
+                "Swaying",
+                WeaponCategory.MarksmanRifle,
+                aim: new AimSpec(zoomLevels: new[] { 30f }, breathHold: new BreathHoldSpec(2f, 1f, 0.1f), swayDegrees: 1f));
+        }
+
+        private void AssertSway(float seconds, float amplitude)
+        {
+            BreathHold.SwayOffset(seconds, amplitude, 4f, out var pitchUp, out var yaw);
+            Assert.That(_ads.SwayPitchUpDegrees, Is.EqualTo(pitchUp).Within(1e-4f));
+            Assert.That(_ads.SwayYawDegrees, Is.EqualTo(yaw).Within(1e-4f));
+            AssertCameraFollowsTheSway();
+        }
+
+        private void AssertCameraFollowsTheSway()
+        {
+            var expected = Quaternion.Euler(-_ads.SwayPitchUpDegrees, _ads.SwayYawDegrees, 0f);
+            Assert.That(Quaternion.Angle(_camera.transform.localRotation, expected), Is.LessThan(1e-2f));
         }
 
         private static WeaponSpec Scoped(string id)

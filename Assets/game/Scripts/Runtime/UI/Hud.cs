@@ -510,7 +510,7 @@ namespace Fps.Runtime
             {
                 if (RebuildView())
                 {
-                    Debug.Log($"{LogTag} ready hp={_model.HealthText} weapon={_model.WeaponNameText} ammo={_model.AmmoText} time={_model.TimeText}", this);
+                    Debug.Log($"{LogTag} ready hp={_model.HealthText} weapon={_model.WeaponSpec?.Id} ammo={_model.AmmoText} time={_model.TimeText}", this);
                 }
             }
             catch (InvalidOperationException e)
@@ -586,6 +586,7 @@ namespace Fps.Runtime
             }
 
             _texts?.Refresh();
+            _view?.RefreshText();
         }
 
         // スコアボード・ロードアウト選択・ポーズは自分で開くものなので、HUD の量では隠さない

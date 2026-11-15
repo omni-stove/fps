@@ -86,5 +86,12 @@ namespace Fps.Core
             _cycleRemaining = Spec.CycleSeconds;
             return shots;
         }
+
+        // 装填は撃てなくなっても途中で終わらせない。持ち替えや弾切れでボルトを引く時間を飛ばせないようにするため。捨てるのは装填中に押した分だけ。
+        public void Cancel()
+        {
+            _inner.Cancel();
+            _pressedDuringCycle = false;
+        }
     }
 }

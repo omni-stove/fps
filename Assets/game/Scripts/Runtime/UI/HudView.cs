@@ -229,6 +229,16 @@ namespace Fps.Runtime
             ShowWeaponGauges();
         }
 
+        // モデルは文でなく型の付いた値を持つので、言語が変わったら言葉の入る欄をここで今の言語の文に作り直す。
+        public void RefreshText()
+        {
+            ShowWeaponName();
+            ShowNotice();
+            ShowScores();
+            ShowResult();
+            ShowWeaponGauges();
+        }
+
         /// <summary>チームの点数を塗る色を決め、今の点数を塗り直す。決めるまでは白で塗る。</summary>
         public void SetTeamColors(Color alpha, Color bravo)
         {
@@ -322,7 +332,7 @@ namespace Fps.Runtime
 
         private void ShowWeaponName()
         {
-            ShowOrHide(WeaponNameLabel, _model.WeaponNameText, _visibility.WeaponName);
+            ShowOrHide(WeaponNameLabel, GameText.Resolve(HudText.WeaponName(_model.WeaponSpec)), _visibility.WeaponName);
         }
 
         private void ShowTime()
@@ -331,25 +341,24 @@ namespace Fps.Runtime
             TimePanel.style.display = Display(_visibility.Time);
         }
 
-        /// <summary>案内の文字列を入れ、空なら Label ごと隠す (背景の帯だけが残らないように)。</summary>
+        /// <summary>案内の文を入れ、空なら Label ごと隠す (背景の帯だけが残らないように)。</summary>
         private void ShowNotice()
         {
-            ShowOrHide(NoticeLabel, _model.NoticeText);
+            ShowOrHide(NoticeLabel, GameText.Resolve(HudText.Notice(_model.Notice)));
         }
 
         private void ShowResult()
         {
-            ShowOrHide(ResultLabel, _model.ResultText);
+            ShowOrHide(ResultLabel, GameText.Resolve(HudText.Result(_model.HasResult, _model.Winner)));
         }
 
         /// <summary>点数を入れてチームの色で塗る。点数が無いか HUD の量で消すなら欄ごと隠す。</summary>
         private void ShowScores()
         {
-            FirstScoreLabel.text = _model.FirstScoreText;
-            SecondScoreLabel.text = _model.SecondScoreText;
-
             var first = _model.FirstScoreTeam;
             var second = _model.SecondScoreTeam;
+            FirstScoreLabel.text = GameText.Resolve(HudText.Score(first, _model.FirstScore));
+            SecondScoreLabel.text = GameText.Resolve(HudText.Score(second, _model.SecondScore));
             if (first.HasValue && second.HasValue)
             {
                 FirstScoreLabel.style.color = TeamColor(first.Value);
@@ -410,7 +419,7 @@ namespace Fps.Runtime
 
         private void ShowAmmoType()
         {
-            ShowOrHide(AmmoTypeLabel, _model.AmmoTypeText, _visibility.Ammo);
+            ShowOrHide(AmmoTypeLabel, GameText.Resolve(HudText.AmmoType(_model.AmmoType)), _visibility.Ammo);
         }
 
         private void ShowMagnification()

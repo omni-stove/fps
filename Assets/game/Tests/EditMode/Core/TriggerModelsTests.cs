@@ -81,7 +81,6 @@ namespace Fps.Core.Tests
         {
             var parts = new[]
             {
-                new TriggerSpec(FireMode.Semi, 0.5f, new BurstSpec(3, 0.05f)),
                 new TriggerSpec(FireMode.Semi, 0.5f, charge: new ChargeSpec(1f, 0.2f, 2f)),
             };
 
@@ -197,6 +196,22 @@ namespace Fps.Core.Tests
             trigger.Tick(0.25f);
             Assert.That(trigger.Release(), Is.EqualTo(0));
 
+            Assert.That(trigger.Tick(0.5f), Is.EqualTo(0));
+            Assert.That(trigger.IsCycling, Is.False);
+        }
+
+        [Test]
+        public void CancellingForgetsAPressMadeDuringTheCycleButKeepsTheCycle()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(1f), new SemiTrigger(0.2f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            trigger.Release();
+            trigger.Tick(0.5f);
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+
+            trigger.Cancel();
+            Assert.That(trigger.IsCycling, Is.True);
             Assert.That(trigger.Tick(0.5f), Is.EqualTo(0));
             Assert.That(trigger.IsCycling, Is.False);
         }

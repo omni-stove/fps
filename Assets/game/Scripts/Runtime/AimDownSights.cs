@@ -212,6 +212,7 @@ namespace Fps.Runtime
         private void Update()
         {
             ReadCycleMagnification();
+            ReadHoldBreath();
             Tick(
                 _aimAction.IsPressed(),
                 _aimAction.WasPressedThisFrame(),
@@ -255,6 +256,7 @@ namespace Fps.Runtime
             _zoom.Step(IsAiming, deltaSeconds);
             StepZoomLevel(deltaSeconds);
             Apply(_zoom.FieldOfView(_hipFieldOfView, TargetFieldOfView));
+            StepBreath(deltaSeconds);
         }
 
         /// <summary>
@@ -293,6 +295,7 @@ namespace Fps.Runtime
             _zoom.Reset();
             SnapToFirstZoomLevel();
             Apply(_hipFieldOfView);
+            ResetBreath();
         }
 
         /// <summary>
@@ -332,10 +335,11 @@ namespace Fps.Runtime
             }
 
             var cycleMagnification = FindCycleMagnificationAction(actions);
+            var holdBreath = FindHoldBreathAction(actions);
 
             try
             {
-                Initialize(camera, look, aim, cycleMagnification);
+                Initialize(camera, look, aim, cycleMagnification, holdBreath);
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -351,7 +355,7 @@ namespace Fps.Runtime
         /// 腰だめの視野角は、このときの camera の視野角にする。
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">camera の視野角・<see cref="TransitionSeconds"/>・<see cref="FallbackFieldOfView"/> が不正なとき。</exception>
-        public void Initialize(Camera camera, FirstPersonLook look, InputAction aimAction, InputAction cycleMagnificationAction = null)
+        public void Initialize(Camera camera, FirstPersonLook look, InputAction aimAction, InputAction cycleMagnificationAction = null, InputAction holdBreathAction = null)
         {
             if (camera == null)
             {
@@ -408,6 +412,7 @@ namespace Fps.Runtime
             }
 
             BindCycleMagnificationAction(cycleMagnificationAction);
+            BindBreath(camera, holdBreathAction);
         }
 
         /// <summary>ADS の状態のログ。例: <c>[View] ads=true</c>。</summary>
@@ -446,6 +451,7 @@ namespace Fps.Runtime
             }
 
             AcquireCycleMagnificationAction();
+            AcquireHoldBreathAction();
         }
 
         private void ReleaseAction()
@@ -457,6 +463,7 @@ namespace Fps.Runtime
 
             _enabledAimAction = false;
             ReleaseCycleMagnificationAction();
+            ReleaseHoldBreathAction();
         }
 
         private void EnsureInitialized()

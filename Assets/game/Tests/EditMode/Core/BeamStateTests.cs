@@ -96,6 +96,11 @@ namespace Fps.Core.Tests
             Assert.That(trigger.Release(), Is.EqualTo(0));
             Assert.That(((BeamState)trigger).IsFiring, Is.False);
             Assert.That(trigger.Tick(1f), Is.EqualTo(0));
+
+            trigger.Press();
+            trigger.Cancel();
+            Assert.That(((BeamState)trigger).IsFiring, Is.False, "cancel stops the beam");
+            Assert.That(trigger.Tick(1f), Is.EqualTo(0));
         }
 
         [Test]

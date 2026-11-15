@@ -86,5 +86,10 @@ namespace Fps.Core
             Stop();
             return 0;
         }
+
+        void ITriggerModel.Cancel()
+        {
+            Stop();
+        }
     }
 }

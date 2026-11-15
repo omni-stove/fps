@@ -115,6 +115,12 @@ namespace Fps.Core.Tests
             Assert.That(wrapped.MinShotSpacingSeconds, Is.EqualTo(0f));
             Assert.That(model.Press(), Is.EqualTo(1));
             Assert.That(model.Tick(0.25f), Is.EqualTo(2), "the beam interval, not the fire interval");
+
+            Assert.That(wrapped.Press(), Is.EqualTo(0), "not spun up yet");
+            Assert.That(wrapped.Tick(0.5f), Is.EqualTo(1), "the beam starts once spun up");
+            Assert.That(wrapped.Tick(0.25f), Is.EqualTo(2), "the spun-up beam keeps the beam interval");
+            Assert.That(wrapped.Release(), Is.EqualTo(0));
+            Assert.That(wrapped.Tick(0.25f), Is.EqualTo(0));
         }
 
         [Test]

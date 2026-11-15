@@ -574,5 +574,39 @@ namespace Fps.Core.Tests
             Assert.That(weapon.HasInfiniteReserve, Is.True);
             Assert.That(weapon.TryStartReload(), Is.True);
         }
+
+        [Test]
+        public void APerRoundWeaponSyncsEachLoadedRoundAndFiresMidReload()
+        {
+            var spec = new WeaponSpec(
+                _rifleId,
+                null,
+                WeaponCategory.Shotgun,
+                ammo: new AmmoSpec(3, 5, 2f, reloadStyle: ReloadStyle.PerRound, reloadSecondsPerRound: 0.5f));
+            var weapon = new ServerWeapon(spec);
+            for (var i = 0; i < 3; i++)
+            {
+                Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
+            }
+
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.OutOfAmmo), "the empty magazine starts a reload");
+            var changes = 0;
+            weapon.Changed += () => changes++;
+
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.Reloading), "nothing is loaded yet");
+            weapon.Tick(0.5f);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
+            Assert.That(changes, Is.EqualTo(1));
+            weapon.Tick(0.5f);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(changes, Is.EqualTo(2), "each loaded round is synced");
+            Assert.That(weapon.IsReloading, Is.True);
+
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(3));
+            Assert.That(changes, Is.EqualTo(3));
+        }
     }
 }

@@ -181,7 +181,7 @@ namespace Fps.Server.Tests
             Join(2);
             Step(0.2f);
 
-            _combat.Explode(new Vector3(-1f, 2.5f, 0f), 1);
+            _combat.Explode(new Vector3(-1f, 2.5f, 0f), _combat.GrenadeExplosion, 1, ServerCombat.GrenadeWeaponId);
 
             Assert.That(_log.ToString(), Does.Contain("[Destruction] structure=0"));
             Assert.That(_context.Map.Collision.IsGroupEnabled(MapColliderGroups.Piece(0, 0)), Is.False);
@@ -231,6 +231,107 @@ namespace Fps.Server.Tests
 
             Assert.That(_log.ToString(), Does.Contain("[Net] rejected shot attacker=1 reason=OriginBlocked"));
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
+        }
+
+        [Test]
+        public void AHitscanShotIsSentAsOneSegment()
+        {
+            Start(Rules());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            FireAt(1, Body(2).Center);
+
+            var shot = _transport.Read<ShotMessage>(2, CopySegments).Single();
+            Assert.That(shot.SegmentCount, Is.EqualTo(1));
+            Assert.That(shot.HasImpact, Is.True);
+            Assert.That(shot.ImpactIsCharacter, Is.True);
+            Assert.That(shot.HasImpactZone, Is.True);
+            Assert.That(shot.WeaponId, Is.EqualTo(TestRules.RifleId));
+        }
+
+        [Test]
+        public void ChargeSentForAWeaponWithoutChargeIsIgnored()
+        {
+            Start(Rules());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var eye = Body(1).EyePosition;
+
+            Send(1, new FireRequestMessage
+            {
+                WeaponId = TestRules.RifleId,
+                Origin = eye,
+                Direction = Body(2).Center - eye,
+                ClientTick = (int)_host.TickCount,
+                ShotIndex = _shotIndex++,
+                ChargeFraction = 1f,
+            });
+
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 25), _log.ToString());
+            Assert.That(Snapshot(1).Owner.Weapon.ChargeFraction, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void ReleasingTheTriggerFiresNothing()
+        {
+            Start(Rules());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var eye = Body(1).EyePosition;
+
+            Send(1, new FireRequestMessage
+            {
+                WeaponId = TestRules.RifleId,
+                Origin = eye,
+                Direction = Body(2).Center - eye,
+                ClientTick = (int)_host.TickCount,
+                ShotIndex = _shotIndex,
+                Trigger = TriggerEdge.Released,
+            });
+
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
+            Assert.That(Snapshot(1).Owner.Weapon.AmmoInMagazine, Is.EqualTo(30));
+            Assert.That(_transport.Read<ShotMessage>(2, m => m), Is.Empty);
+        }
+
+        [Test]
+        public void SwitchingTheAmmoTypeOfAWeaponWithoutTypesChangesNothing()
+        {
+            Start(Rules());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            _host.OnMessage(new ConnectionId(1), new WeaponActionRequestMessage { Action = WeaponAction.SwitchAmmoType });
+            FireAt(1, Body(2).Center);
+
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] ammo-type"));
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 25));
+            var weapon = Snapshot(1).Owner.Weapon;
+            Assert.That(weapon.AmmoTypeIndex, Is.EqualTo(0));
+            Assert.That(weapon.Heat, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void AWeaponExplosionIsCreditedToTheWeapon()
+        {
+            Start(Rules());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var victim = Body(2);
+            var explosion = new ExplosionSpec(new ExplosionDamage(NetMatchSettings.DefaultMaxHealth * 2, 4f, 1f));
+
+            _combat.Explode(victim.Position + new Vector3(-(victim.Radius + 0.5f), 0f, 0f), explosion, 1, TestRules.RifleId);
+
+            Assert.That(_rules.Session.IsAlive(2), Is.False, _log.ToString());
+            Assert.That(_transport.Read<KilledMessage>(2, Copy).Single().WeaponId, Is.EqualTo(TestRules.RifleId));
+            Assert.That(_transport.Read<ExplosionMessage>(2, m => new ExplosionMessage { WeaponId = m.WeaponId }).Single().WeaponId, Is.EqualTo(TestRules.RifleId));
+            Assert.That(_log.ToString(), Does.Contain("[Combat] net exploded thrower=1").And.Not.Contain("[Grenade] net exploded"));
         }
 
         [Test]
@@ -337,7 +438,7 @@ namespace Fps.Server.Tests
             var victim = Body(2);
             var center = victim.Position + new Vector3(-(victim.Radius + distance), 0f, 0f);
 
-            _combat.Explode(center, 1);
+            _combat.Explode(center, _combat.GrenadeExplosion, 1, ServerCombat.GrenadeWeaponId);
 
             var expected = GrenadeSpec.Default.Explosion.At(distance, false);
             Assert.That(expected, Is.GreaterThan(0));
@@ -355,7 +456,8 @@ namespace Fps.Server.Tests
             Step(0.2f);
             var victim = Body(2);
 
-            _combat.Explode(victim.Position + new Vector3(-(victim.Radius + GrenadeSpec.DefaultDamageRadius + 0.5f), 0f, 0f), 1);
+            var center = victim.Position + new Vector3(-(victim.Radius + GrenadeSpec.DefaultDamageRadius + 0.5f), 0f, 0f);
+            _combat.Explode(center, _combat.GrenadeExplosion, 1, ServerCombat.GrenadeWeaponId);
 
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
         }
@@ -372,7 +474,7 @@ namespace Fps.Server.Tests
             var distance = ServerCombat.DistanceToCapsule(
                 center, victim.Position + new Vector3(0f, victim.Shape.BottomY, 0f), victim.Position + new Vector3(0f, victim.Shape.TopY, 0f), victim.Radius);
 
-            _combat.Explode(center, 1);
+            _combat.Explode(center, _combat.GrenadeExplosion, 1, ServerCombat.GrenadeWeaponId);
 
             Assert.That(GrenadeSpec.Default.Explosion.At(distance, false), Is.GreaterThan(0), "without the wall it would hurt");
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
@@ -576,6 +678,11 @@ namespace Fps.Server.Tests
             });
         }
 
+        private void Send(int shooter, FireRequestMessage request)
+        {
+            _host.OnMessage(new ConnectionId((ulong)shooter), request);
+        }
+
         private void Walk(int id, Vector2 move, int ticks, InputButtons buttons = InputButtons.None)
         {
             for (var i = 0; i < ticks; i++)
@@ -617,6 +724,23 @@ namespace Fps.Server.Tests
         private static KilledMessage Copy(KilledMessage m)
         {
             return new KilledMessage { KillerId = m.KillerId, VictimId = m.VictimId, WeaponId = m.WeaponId, Headshot = m.Headshot, Friendly = m.Friendly };
+        }
+
+        private static ShotMessage CopySegments(ShotMessage m)
+        {
+            var copy = new ShotMessage
+            {
+                WeaponId = m.WeaponId,
+                HasImpact = m.HasImpact,
+                ImpactIsCharacter = m.ImpactIsCharacter,
+                HasImpactZone = m.HasImpactZone,
+            };
+            for (var i = 1; i < m.SegmentCount; i++)
+            {
+                copy.AddSegment();
+            }
+
+            return copy;
         }
 
         private static IEnumerable<string> Lines(StringWriter writer)

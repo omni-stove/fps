@@ -196,6 +196,28 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void BotsDoNotShootThroughWhatBlocksTheirSight()
+        {
+            var points = new NetMapPoints(
+                new[]
+                {
+                    new SpawnPoint(new Vector3(-28f, 1.1f, -28f), Team.Alpha),
+                    new SpawnPoint(new Vector3(-6f, 1.1f, 20f), Team.Alpha),
+                    new SpawnPoint(new Vector3(6f, 1.1f, 20f), Team.Bravo),
+                },
+                Array.Empty<ControlPointArea>());
+            Start(BotTestMaps.Flat(points), Rules(), bots: 3, spec: SightOf(20f));
+            _combat.SightBlockers.Add(new BlockEverything());
+            Join(1);
+            for (var elapsed = 0f; elapsed < 20f; elapsed += _tickSeconds)
+            {
+                Tick();
+            }
+
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] hit attacker=10000000"));
+        }
+
+        [Test]
         public void ABotClimbsDownAndUpTheLadderToReachItsPatrolPoints()
         {
             // 見える距離を縮めて人を目に入れず、出現地点 (足場の上と下) を巡回させる
@@ -296,6 +318,11 @@ namespace Fps.Server.Tests
         }
 
         private static Vector3 Flat(Vector3 v) => new Vector3(v.X, 0f, v.Z);
+
+        private sealed class BlockEverything : ISightBlocker
+        {
+            public bool Blocks(Vector3 from, Vector3 to) => true;
+        }
 
         private static NetMapPoints FlatPoints()
         {

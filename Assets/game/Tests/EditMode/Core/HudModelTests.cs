@@ -35,7 +35,7 @@ namespace Fps.Core.Tests
 
             Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
             Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
-            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+            Assert.That(model.WeaponSpec, Is.Null);
             Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime));
         }
 
@@ -51,7 +51,7 @@ namespace Fps.Core.Tests
 
             Assert.That(model.HealthText, Is.EqualTo("100"));
             Assert.That(model.AmmoText, Is.EqualTo("30 / 90"));
-            Assert.That(model.WeaponNameText, Is.EqualTo("Rifle"));
+            Assert.That(model.WeaponSpec.Id, Is.EqualTo(_rifleId));
             Assert.That(model.TimeText, Is.EqualTo("03:00"));
             Assert.That(changes, Is.EqualTo(new[] { HudField.Health, HudField.Ammo, HudField.WeaponName, HudField.Time }));
         }
@@ -60,18 +60,18 @@ namespace Fps.Core.Tests
         public void WeaponNameStartsEmptyAndFollowsTheBoundWeapon()
         {
             var model = new HudModel();
-            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+            Assert.That(model.WeaponSpec, Is.Null);
             var changes = Record(model);
 
             model.BindWeapon(NewWeapon());
-            Assert.That(model.WeaponNameText, Is.EqualTo("Rifle"));
+            Assert.That(model.WeaponSpec.Id, Is.EqualTo(_rifleId));
 
             model.BindWeapon(NewHandgun());
-            Assert.That(model.WeaponNameText, Is.EqualTo("Handgun"), "switching weapons rebinds and shows the new name");
+            Assert.That(model.WeaponSpec.Id, Is.EqualTo(_handgunId), "switching weapons rebinds and shows the new name");
             Assert.That(model.AmmoText, Is.EqualTo("12 / 48"));
 
             model.BindWeapon(null);
-            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+            Assert.That(model.WeaponSpec, Is.Null);
 
             Assert.That(changes, Is.EqualTo(new[]
             {
@@ -113,16 +113,6 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void AWeaponWithoutANameKeyShowsItsId()
-        {
-            var model = new HudModel();
-
-            model.BindWeapon(new Weapon(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, DamageFalloff.None)));
-
-            Assert.That(model.WeaponNameText, Is.EqualTo(_rifleId));
-        }
-
-        [Test]
         public void WeaponNameDoesNotNotifyWhenTheNameStaysTheSame()
         {
             var model = new HudModel();
@@ -131,26 +121,26 @@ namespace Fps.Core.Tests
 
             model.BindWeapon(NewWeapon(magazine: 20));
 
-            Assert.That(model.WeaponNameText, Is.EqualTo("Rifle"));
+            Assert.That(model.WeaponSpec.Id, Is.EqualTo(_rifleId));
             Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo }));
         }
 
         [Test]
-        public void SetWeaponNameTreatsNullAsEmptyAndCanBeCleared()
+        public void SetWeaponSpecTreatsNullAsNoneAndCanBeCleared()
         {
             var model = new HudModel();
             var changes = Record(model);
 
-            model.SetWeaponName("Handgun");
-            Assert.That(model.WeaponNameText, Is.EqualTo("Handgun"));
+            model.SetWeaponSpec(NewHandgun().Spec);
+            Assert.That(model.WeaponSpec.Id, Is.EqualTo(_handgunId));
 
-            model.SetWeaponName(null);
-            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+            model.SetWeaponSpec(null);
+            Assert.That(model.WeaponSpec, Is.Null);
 
-            model.SetWeaponName("Rifle");
-            model.ClearWeaponName();
-            model.ClearWeaponName();
-            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+            model.SetWeaponSpec(NewWeapon().Spec);
+            model.ClearWeaponSpec();
+            model.ClearWeaponSpec();
+            Assert.That(model.WeaponSpec, Is.Null);
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.WeaponName, HudField.WeaponName, HudField.WeaponName, HudField.WeaponName }));
         }
@@ -163,7 +153,7 @@ namespace Fps.Core.Tests
 
             model.UnbindAll();
 
-            Assert.That(model.WeaponNameText, Is.EqualTo("Handgun"));
+            Assert.That(model.WeaponSpec.Id, Is.EqualTo(_handgunId));
         }
 
         [Test]
@@ -286,7 +276,7 @@ namespace Fps.Core.Tests
 
             Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
             Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
-            Assert.That(model.WeaponNameText, Is.EqualTo(HudFormat.NoWeaponName));
+            Assert.That(model.WeaponSpec, Is.Null);
             Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime));
         }
 
@@ -318,21 +308,21 @@ namespace Fps.Core.Tests
         public void NoticeStartsEmptyAndFollowsTheCampaign()
         {
             var model = new HudModel();
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
 
             var notice = new CampaignNotice();
             notice.ShowSaved(1f);
             var changes = Record(model);
 
             model.BindNotice(notice);
-            Assert.That(model.NoticeText, Is.EqualTo(GameText.Resolve(HudFormat.CheckpointSaved)), "binding shows the current notice at once");
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.CheckpointSaved), "binding shows the current notice at once");
 
             notice.Tick(1f);
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
 
             notice.ShowRestartCountdown(3f);
             notice.ShowRestartCountdown(2.5f);
-            Assert.That(model.NoticeText, Is.EqualTo(GameText.Resolve(HudFormat.CheckpointRestart(3))));
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)));
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Notice, HudField.Notice, HudField.Notice }));
         }
@@ -521,24 +511,24 @@ namespace Fps.Core.Tests
             var model = new HudModel();
             Assert.That(model.FirstScoreTeam, Is.Null);
             Assert.That(model.SecondScoreTeam, Is.Null);
-            Assert.That(model.FirstScoreText, Is.EqualTo(HudFormat.NoScore));
-            Assert.That(model.SecondScoreText, Is.EqualTo(HudFormat.NoScore));
+            Assert.That(model.FirstScore, Is.Null);
+            Assert.That(model.SecondScore, Is.Null);
             var changes = Record(model);
 
             model.SetScores(Team.Bravo, 2, 5);
             Assert.That(model.FirstScoreTeam, Is.EqualTo(Team.Bravo));
-            Assert.That(model.FirstScoreText, Is.EqualTo("BRAVO 5"));
+            Assert.That(model.FirstScore, Is.EqualTo(5));
             Assert.That(model.SecondScoreTeam, Is.EqualTo(Team.Alpha));
-            Assert.That(model.SecondScoreText, Is.EqualTo("ALPHA 2"));
+            Assert.That(model.SecondScore, Is.EqualTo(2));
 
             model.SetScores(Team.Bravo, 2, 5);
             model.SetScores(Team.Alpha, 2, 5);
-            Assert.That(model.FirstScoreText, Is.EqualTo("ALPHA 2"));
-            Assert.That(model.SecondScoreText, Is.EqualTo("BRAVO 5"));
+            Assert.That(model.FirstScore, Is.EqualTo(2));
+            Assert.That(model.SecondScore, Is.EqualTo(5));
 
             model.ClearScores();
             Assert.That(model.FirstScoreTeam, Is.Null);
-            Assert.That(model.FirstScoreText, Is.EqualTo(HudFormat.NoScore));
+            Assert.That(model.FirstScore, Is.Null);
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Score, HudField.Score, HudField.Score }));
         }
@@ -547,45 +537,37 @@ namespace Fps.Core.Tests
         public void ResultShowsTheWinnerOrDrawUntilCleared()
         {
             var model = new HudModel();
-            Assert.That(model.ResultText, Is.EqualTo(HudFormat.NoResult));
+            Assert.That(model.HasResult, Is.False);
             var changes = Record(model);
 
             model.SetResult(Team.Alpha);
-            Assert.That(model.ResultText, Is.EqualTo("ALPHA の勝ち"));
+            Assert.That(model.HasResult, Is.True);
+            Assert.That(model.Winner, Is.EqualTo(Team.Alpha));
 
             model.SetResult(null);
-            Assert.That(model.ResultText, Is.EqualTo(GameText.Resolve(HudFormat.Draw)));
+            Assert.That(model.HasResult, Is.True);
+            Assert.That(model.Winner, Is.Null, "a draw has no winner");
 
             model.ClearResult();
             model.ClearResult();
-            Assert.That(model.ResultText, Is.EqualTo(HudFormat.NoResult));
+            Assert.That(model.HasResult, Is.False);
+            Assert.That(model.Winner, Is.Null);
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Result, HudField.Result, HudField.Result }));
         }
 
         [Test]
-        public void SetNoticeTreatsNullAsEmpty()
+        public void ClearNoticeTakesTheNoticeOffAndNotifiesOnce()
         {
             var model = new HudModel();
-            model.SetNotice(HudFormat.Respawn(3));
+            model.SetNotice(HudNotice.Respawn(3));
             var changes = Record(model);
 
-            model.SetNotice(null);
+            model.ClearNotice();
+            model.ClearNotice();
 
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
             Assert.That(changes, Is.EqualTo(new[] { HudField.Notice }));
-        }
-
-        [Test]
-        public void SetNoticeWithAKeyedTextShowsItInTheCurrentLanguageAndAnEmptyTextClears()
-        {
-            var model = new HudModel();
-
-            model.SetNotice(HudFormat.Respawn(3));
-            Assert.That(model.NoticeText, Is.EqualTo("リスポーンまで 3 秒"));
-
-            model.SetNotice(default(LocalizedText));
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
         }
 
         [Test]
@@ -595,10 +577,10 @@ namespace Fps.Core.Tests
             var changes = Record(model);
 
             model.SetRespawnNotice(RespawnMode.Wave, 5);
-            Assert.That(model.NoticeText, Is.EqualTo("リスポーンまで 5 秒"));
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.Respawn(5)));
 
             model.SetRespawnNotice(RespawnMode.None, 0);
-            Assert.That(model.NoticeText, Is.EqualTo(GameText.Resolve(HudFormat.NoRespawnUntilNextMatch)));
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.NoRespawnUntilNextMatch));
 
             // 表示が変わらなければ知らせない
             model.SetRespawnNotice(RespawnMode.None, 3);
@@ -900,17 +882,17 @@ namespace Fps.Core.Tests
             notice.ShowRestartCountdown(3f);
 
             model.BindNotice(null);
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
 
             notice.ShowRestartCountdown(1f);
-            Assert.That(model.NoticeText, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
 
             model.BindNotice(notice);
             model.UnbindAll();
             var changes = Record(model);
             notice.Clear();
             Assert.That(changes, Is.Empty);
-            Assert.That(model.NoticeText, Is.EqualTo(GameText.Resolve(HudFormat.CheckpointRestart(1))), "UnbindAll keeps the text");
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(1)), "UnbindAll keeps the notice");
         }
     }
 }

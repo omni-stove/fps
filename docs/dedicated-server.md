@@ -445,16 +445,29 @@ docker pull ghcr.io/<owner>/<repo>/server:v1.2.3
 Unity のビルドには [GameCI](https://game.ci/docs/github/activation) の手順で作ったリポジトリの Secrets
 `UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD` が要る。
 
-同じタグで `.github/workflows/server-image-dotnet.yml` が .NET のサーバーのイメージを `linux/amd64` と `linux/arm64` で作り、
-`ghcr.io/<owner>/<repo>/server-dotnet` に同じ規則のタグで push する。Unity のライセンスもビルドも使わない。
-EOS の SDK は `scripts/eos-sdk.sh --fetch` で取るので、amd64 のイメージにだけ EOS のライブラリが入る。
-push する前に amd64 のイメージを起動し、`[Version] <版>` と `[Net] server listening on 0.0.0.0:7777` を出し、uid 10001 で動き、
-SIGTERM で終了コード 0 で止まることを確かめる (`scripts/server-image-dotnet-smoke.sh`)。サーバーかイメージに関わるファイルを変えた PR でも、
-push せずにここまでを走らせる。
+### CI のテンプレート
+
+.NET のサーバーの CI は、キットではテンプレートとして `templates/github-workflows/` に置き、このリポジトリでは走らせない。
+ゲームのリポジトリで使うものを `.github/workflows/` に写す。写せばそのまま動き、名前を変えたいものはリポジトリの変数で渡す。
+
+```sh
+mkdir -p .github/workflows
+cp templates/github-workflows/server-image-dotnet.yml .github/workflows/
+cp templates/github-workflows/map-data.yml .github/workflows/
+```
+
+- `server-image-dotnet.yml`: `v*` のタグを push すると .NET のサーバーのイメージを `linux/amd64` と `linux/arm64` で作り、
+  上の Unity のサーバーと同じ規則のタグで push する。Unity のライセンスもビルドも使わない。push 先は変数 `SERVER_IMAGE`
+  (無ければ `ghcr.io/<owner>/<repo>/server-dotnet`)。EOS の SDK は `scripts/eos-sdk.sh --fetch` で取るので、
+  EOS のライブラリは amd64 のイメージにだけ入り、arm64 のイメージは UDP だけで待ち受ける。
+  push する前に amd64 のイメージを起動し、`[Version] <版>` と `[Net] server listening on 0.0.0.0:7777` を出し、uid 10001 で動き、
+  SIGTERM で終了コード 0 で止まることを確かめる (`scripts/server-image-dotnet-smoke.sh`。手元でも `make server-image-dotnet` の後に
+  `bash scripts/server-image-dotnet-smoke.sh fps-server-dotnet:local` で同じことを確かめられる)。PR でもここまでを push せずに走らせる。
+  要らなければ `on:` の `pull_request` を消し、ファイルを絞るなら `paths` を足す。
+- `map-data.yml`: 毎晩 Unity でマップのデータ (`server-data/maps`) を書き出し直し (`scripts/nightly-server-data-ci.sh`)、
+  コミットしたものと違えば失敗する。Secrets の `UNITY_LICENSE` (上と同じ GameCI の手順) が要る。手元では `make nightly-local` が同じことを確かめる。
+  失敗したら、シーンを変えたのにマップのデータを書き出していない。`make export-server-data` で書き出してコミットする。
 
 ```sh
 docker pull ghcr.io/<owner>/<repo>/server-dotnet:v1.2.3
 ```
-
-マップのデータ (`server-data/maps`) は nightly (`.github/workflows/nightly.yml` の `server-data`) が毎晩 Unity で書き出し直し、
-コミットしたものと違えば失敗して `nightly-failure` の issue に載せる。シーンを変えたら書き出してコミットする。

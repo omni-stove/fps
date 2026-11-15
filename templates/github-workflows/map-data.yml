@@ -1,0 +1,32 @@
+name: Map data
+
+# キットのテンプレート。ゲームのリポジトリの .github/workflows/ に写して使う (docs/dedicated-server.md の「CI のテンプレート」)。
+# 毎晩 Unity でマップのデータ (server-data/maps の .fpsmap・.fpsnav・.structures.json・.ladders.json) を書き出し直し、
+# コミットしたものと違えば失敗する。シーンを変えて書き出し忘れると、.NET のサーバーとクライアントの予測が古いマップの当たりで動くため。
+# Unity のライセンスは GameCI (https://game.ci/docs/github/activation) の手順で作った Secrets の UNITY_LICENSE から読む。
+# 時刻は schedule を、手で走らせるなら Actions の画面の Run workflow を使う
+on:
+  schedule:
+    - cron: "0 18 * * *"  # UTC 18:00 = JST 3:00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  map-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: unity-library-map-data-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: unity-library-map-data-
+
+      - name: Export the map data and compare it with the committed files
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: bash scripts/nightly-server-data-ci.sh

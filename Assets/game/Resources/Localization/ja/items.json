@@ -1,5 +1,25 @@
 {
   "weapon.rifle": "Rifle",
   "weapon.handgun": "Handgun",
-  "weapon.launcher": "Launcher"
+  "weapon.launcher": "Launcher",
+  "weapon.shotgun": "ショットガン",
+  "weapon.crossbow": "クロスボウ",
+  "weapon.rocketLauncher": "ロケットランチャー",
+  "weapon.grenadeLauncher": "グレネードランチャー",
+  "weapon.guidedLauncher": "誘導ランチャー",
+  "weapon.burstRifle": "バーストライフル",
+  "weapon.chargeRifle": "チャージライフル",
+  "weapon.minigun": "ミニガン",
+  "weapon.boltSniper": "ボルトアクション狙撃銃",
+  "weapon.energyRifle": "エネルギーライフル",
+  "weapon.dmr": "DMR",
+  "ammo.dmr.standard": "通常弾",
+  "ammo.dmr.armorPiercing": "徹甲弾",
+  "weapon.antiMaterial": "対物ライフル",
+  "weapon.ricochetPistol": "跳弾ピストル",
+  "weapon.slugCannon": "スラッグキャノン",
+  "weapon.laser": "レーザー",
+  "weapon.flamethrower": "火炎放射器",
+  "weapon.scopedRifle": "スコープ付きライフル",
+  "weapon.incendiaryRifle": "焼夷ライフル"
 }

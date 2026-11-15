@@ -13,6 +13,9 @@ namespace Fps.Runtime
     /// 20〜60m で 0.5 倍まで減衰)。ただし ADS の視野角は未設定 (共通の初期値) で、ブラインドファイアの散らばりは 0°、
     /// アクティブリロードの値と反動の戻り始めまでの秒数は <see cref="WeaponSpec"/> の既定で始まり、それ以外の反動と弾の散らばりはすべて 0 (反動なし・散らばらない)。Id はエディターで作ったとき (<see cref="Reset"/>) と値を検証するとき (<see cref="OnValidate"/>) に、
     /// 空なら新しい UUID を入れる。
+    /// 撃ち方・弾薬・弾・着弾・照準の部品の省略できる入れ子 (バースト・熱・飛ぶ弾・爆発・息止めなど) と弾薬の種類は、新しく作ったときは
+    /// どれも使わず、ヒットスキャン 1 本を即着弾させる今までの撃ち方になる。飛ぶ弾・ビーム・火炎・爆発の見た目と音は、
+    /// それぞれの入れ子の差し替えられる参照に置く。
     /// 実際に使う値はアセット (Assets/game/Weapons/*.asset、Fps.Editor.WeaponAssetBuilder が作る) の側にある。
     /// </summary>
     [CreateAssetMenu(fileName = "Weapon", menuName = "Fps/Weapon Definition")]
@@ -107,6 +110,87 @@ namespace Fps.Runtime
         [Header("音")]
         [SerializeField, Min(0f), Tooltip("銃声が敵に聞こえる距離 (m)。消音した武器は小さくする。0 なら聞こえない")]
         private float _shotNoiseRadius = WeaponSpec.DefaultShotNoiseRadius;
+
+        [Header("撃ち方")]
+        [SerializeField]
+        private BurstSettings _burst = new BurstSettings();
+
+        [SerializeField]
+        private ChargeSettings _charge = new ChargeSettings();
+
+        [SerializeField]
+        private SpinUpSettings _spinUp = new SpinUpSettings();
+
+        [SerializeField]
+        private CycleSettings _cycle = new CycleSettings();
+
+        [Header("弾薬")]
+        [SerializeField, Tooltip("弾倉で撃つか、熱が溜まるまで撃てるか")]
+        private AmmoKind _ammoKind = AmmoKind.Magazine;
+
+        [SerializeField, Tooltip("弾倉をまとめて替えるか、1 発ずつ込めるか")]
+        private ReloadStyle _reloadStyle = ReloadStyle.Whole;
+
+        [SerializeField, Min(0f), Tooltip("1 発ずつ込めるときの 1 発あたりの秒数")]
+        private float _reloadSecondsPerRound;
+
+        [SerializeField, Tooltip("弾薬の種類が Heat のときの熱の溜まり方")]
+        private HeatSettings _heat = new HeatSettings();
+
+        [Header("弾")]
+        [SerializeField, Tooltip("弾の届け方")]
+        private RoundDelivery _delivery = RoundDelivery.Hitscan;
+
+        [SerializeField, Min(1), Tooltip("1 発で出る弾 (ペレット) の数")]
+        private int _pelletCount = 1;
+
+        [SerializeField, UnityEngine.Range(0f, 90f), Tooltip("ペレットが散らばる最大の角度 (度)")]
+        private float _pelletSpreadDegrees;
+
+        [SerializeField, Min(0f), Tooltip("弾の当たり判定の半径 (m)。0 なら細い線")]
+        private float _roundRadius;
+
+        [SerializeField]
+        private PenetrationSettings _penetration = new PenetrationSettings();
+
+        [SerializeField]
+        private RicochetSettings _ricochet = new RicochetSettings();
+
+        [SerializeField, Tooltip("届け方が Projectile のときの飛ぶ弾")]
+        private ProjectileSettings _projectile = new ProjectileSettings();
+
+        [SerializeField]
+        private HomingSettings _homing = new HomingSettings();
+
+        [SerializeField, Tooltip("届け方が Beam のときのビーム")]
+        private BeamSettings _beam = new BeamSettings();
+
+        [SerializeField, Tooltip("届け方が Spray のときの火炎")]
+        private SpraySettings _spray = new SpraySettings();
+
+        [Header("着弾")]
+        [SerializeField]
+        private ExplosionSettings _explosion = new ExplosionSettings();
+
+        [SerializeField]
+        private StatusEffectSettings _statusEffect = new StatusEffectSettings();
+
+        [SerializeField]
+        private AreaEffectSettings _areaEffect = new AreaEffectSettings();
+
+        [Header("照準")]
+        [SerializeField, Tooltip("覗き込みの視野角の次から切り替えられる、スコープの倍率ごとの縦の視野角 (度)")]
+        private float[] _extraZoomLevels = Array.Empty<float>();
+
+        [SerializeField]
+        private BreathHoldSettings _breathHold = new BreathHoldSettings();
+
+        [SerializeField, UnityEngine.Range(0f, 90f), Tooltip("覗き込み中に照準が揺れる最大の角度 (度)")]
+        private float _swayDegrees;
+
+        [Header("弾薬の種類")]
+        [SerializeField, Tooltip("切り替えて撃てる弾薬の種類。空なら切り替えない")]
+        private AmmoTypeSettings[] _ammoTypes = Array.Empty<AmmoTypeSettings>();
 
         /// <summary>
         /// <see cref="AdsFieldOfView"/> が未設定であることを表す値。この項目が無かった頃に保存したアセットも、読み込むとこの値になる。
@@ -277,6 +361,99 @@ namespace Fps.Runtime
             set => _moveSpreadDegrees = value;
         }
 
+        public BurstSettings Burst => _burst ??= new BurstSettings();
+
+        public ChargeSettings Charge => _charge ??= new ChargeSettings();
+
+        public SpinUpSettings SpinUp => _spinUp ??= new SpinUpSettings();
+
+        public CycleSettings Cycle => _cycle ??= new CycleSettings();
+
+        public AmmoKind AmmoKind
+        {
+            get => _ammoKind;
+            set => _ammoKind = value;
+        }
+
+        public ReloadStyle ReloadStyle
+        {
+            get => _reloadStyle;
+            set => _reloadStyle = value;
+        }
+
+        public float ReloadSecondsPerRound
+        {
+            get => _reloadSecondsPerRound;
+            set => _reloadSecondsPerRound = value;
+        }
+
+        public HeatSettings Heat => _heat ??= new HeatSettings();
+
+        public RoundDelivery Delivery
+        {
+            get => _delivery;
+            set => _delivery = value;
+        }
+
+        public int PelletCount
+        {
+            get => _pelletCount;
+            set => _pelletCount = value;
+        }
+
+        public float PelletSpreadDegrees
+        {
+            get => _pelletSpreadDegrees;
+            set => _pelletSpreadDegrees = value;
+        }
+
+        /// <summary>弾の当たり判定の半径 (<see cref="RoundSpec.Radius"/>)。</summary>
+        public float RoundRadius
+        {
+            get => _roundRadius;
+            set => _roundRadius = value;
+        }
+
+        public PenetrationSettings Penetration => _penetration ??= new PenetrationSettings();
+
+        public RicochetSettings Ricochet => _ricochet ??= new RicochetSettings();
+
+        public ProjectileSettings Projectile => _projectile ??= new ProjectileSettings();
+
+        public HomingSettings Homing => _homing ??= new HomingSettings();
+
+        public BeamSettings Beam => _beam ??= new BeamSettings();
+
+        public SpraySettings Spray => _spray ??= new SpraySettings();
+
+        public ExplosionSettings Explosion => _explosion ??= new ExplosionSettings();
+
+        public StatusEffectSettings StatusEffect => _statusEffect ??= new StatusEffectSettings();
+
+        public AreaEffectSettings AreaEffect => _areaEffect ??= new AreaEffectSettings();
+
+        /// <summary>覗き込みの視野角 (<see cref="AdsFieldOfView"/>) の次に並ぶ、スコープの倍率ごとの視野角 (度)。null は空にする。</summary>
+        public float[] ExtraZoomLevels
+        {
+            get => _extraZoomLevels ?? Array.Empty<float>();
+            set => _extraZoomLevels = value ?? Array.Empty<float>();
+        }
+
+        public BreathHoldSettings BreathHold => _breathHold ??= new BreathHoldSettings();
+
+        public float SwayDegrees
+        {
+            get => _swayDegrees;
+            set => _swayDegrees = value;
+        }
+
+        /// <summary>切り替えて撃てる弾薬の種類。null は空にする。</summary>
+        public AmmoTypeSettings[] AmmoTypes
+        {
+            get => _ammoTypes ?? Array.Empty<AmmoTypeSettings>();
+            set => _ammoTypes = value ?? Array.Empty<AmmoTypeSettings>();
+        }
+
         /// <summary>Id が空 (空白のみを含む) なら新しい UUID を入れて true を返す。既に値があれば変えずに false。</summary>
         public bool AssignIdIfEmpty()
         {
@@ -316,39 +493,62 @@ namespace Fps.Runtime
             var source = string.IsNullOrEmpty(name) ? "(unnamed weapon)" : name;
             try
             {
-                var falloff = new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier);
-                return new WeaponSpec(
-                    Id,
-                    NameKey,
-                    _category,
-                    _fireMode,
+                var trigger = new TriggerSpec(_fireMode, _fireInterval, Burst.ToSpec(), Charge.ToSpec(), SpinUp.ToSpec(), Cycle.ToSpec());
+                var ammo = new AmmoSpec(
                     _magazineSize,
                     _reserveAmmo,
-                    _fireInterval,
                     _reloadSeconds,
-                    _damage,
-                    _range,
-                    falloff,
-                    _explosionRadius,
-                    // 負の値などは未設定と見なさず、WeaponSpec の検査で不正として弾く。
-                    _adsFieldOfView == UnsetAdsFieldOfView ? (float?)null : _adsFieldOfView,
-                    _blindFireSpreadDegrees,
                     _activeReloadWindowStart,
                     _activeReloadWindowLength,
                     _activeReloadFailSeconds,
-                    _recoilPitchDegrees,
-                    _recoilYawDegrees,
-                    _recoilRecoveryPerSecond,
+                    _reloadStyle,
+                    _reloadSecondsPerRound,
+                    _ammoKind,
+                    _ammoKind == AmmoKind.Heat ? Heat.ToSpec() : null);
+                var round = RoundSettings.Build(
+                    _delivery, _range, _pelletCount, _pelletSpreadDegrees, _roundRadius, Penetration, Ricochet, Projectile, Homing, Beam, Spray);
+                var impact = new ImpactSpec(
+                    _damage,
+                    new DamageFalloff(_falloffStart, _falloffEnd, _falloffMinMultiplier),
+                    _explosionRadius,
+                    Explosion.ToSpec(),
+                    StatusEffect.ToSpec(),
+                    AreaEffect.ToSpec());
+                var aim = new AimSpec(
                     _hipSpreadDegrees,
                     _adsSpreadDegrees,
                     _moveSpreadDegrees,
+                    _recoilPitchDegrees,
+                    _recoilYawDegrees,
+                    _recoilRecoveryPerSecond,
                     _recoilRecoveryDelaySeconds,
-                    _shotNoiseRadius);
+                    _blindFireSpreadDegrees,
+                    ZoomLevels(),
+                    BreathHold.ToSpec(),
+                    _swayDegrees);
+                return new WeaponSpec(
+                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius);
             }
             catch (ArgumentException e)
             {
                 throw new WeaponDefinitionException($"weapon '{source}' (id '{Id}') is invalid: {e.Message}", e);
             }
+        }
+
+        private float[] ZoomLevels()
+        {
+            var extra = ExtraZoomLevels;
+
+            // 負の値などは未設定と見なさず、WeaponSpec の検査で不正として弾く。
+            if (_adsFieldOfView == UnsetAdsFieldOfView && extra.Length == 0)
+            {
+                return null;
+            }
+
+            var levels = new float[extra.Length + 1];
+            levels[0] = _adsFieldOfView == UnsetAdsFieldOfView ? AdsZoom.DefaultFieldOfView : _adsFieldOfView;
+            Array.Copy(extra, 0, levels, 1, extra.Length);
+            return levels;
         }
     }
 

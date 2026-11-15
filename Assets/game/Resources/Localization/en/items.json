@@ -1,5 +1,25 @@
 {
   "weapon.rifle": "Rifle",
   "weapon.handgun": "Handgun",
-  "weapon.launcher": "Launcher"
+  "weapon.launcher": "Launcher",
+  "weapon.shotgun": "Shotgun",
+  "weapon.crossbow": "Crossbow",
+  "weapon.rocketLauncher": "Rocket Launcher",
+  "weapon.grenadeLauncher": "Grenade Launcher",
+  "weapon.guidedLauncher": "Guided Launcher",
+  "weapon.burstRifle": "Burst Rifle",
+  "weapon.chargeRifle": "Charge Rifle",
+  "weapon.minigun": "Minigun",
+  "weapon.boltSniper": "Bolt-Action Sniper",
+  "weapon.energyRifle": "Energy Rifle",
+  "weapon.dmr": "DMR",
+  "ammo.dmr.standard": "Standard Rounds",
+  "ammo.dmr.armorPiercing": "Armor-Piercing Rounds",
+  "weapon.antiMaterial": "Anti-Materiel Rifle",
+  "weapon.ricochetPistol": "Ricochet Pistol",
+  "weapon.slugCannon": "Slug Cannon",
+  "weapon.laser": "Laser",
+  "weapon.flamethrower": "Flamethrower",
+  "weapon.scopedRifle": "Scoped Rifle",
+  "weapon.incendiaryRifle": "Incendiary Rifle"
 }

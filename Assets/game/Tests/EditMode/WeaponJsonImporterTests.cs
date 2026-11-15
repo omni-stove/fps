@@ -159,10 +159,48 @@ namespace Fps.Tests.EditMode
         public void AMissingFieldIsNamed()
         {
             var e = Assert.Throws<WeaponJsonException>(
-                () => WeaponJsonImporter.ParseSpec(SampleText("Rifle").Replace("\"damage\": 25,", string.Empty), "Rifle.json"));
+                () => WeaponJsonImporter.ParseSpec(SampleText("Rifle").Replace("\"category\": \"AssaultRifle\",", string.Empty), "Rifle.json"));
+
+            Assert.That(e.Field, Is.EqualTo("category"));
+            Assert.That(e.Message, Does.Contain("Rifle.json").And.Contain("category"));
+        }
+
+        [Test]
+        public void AnOmittedValueTakesTheDefaultOfItsPart()
+        {
+            var spec = WeaponJsonImporter.ParseSpec(SampleText("Rifle").Replace("\"damage\": 25,", string.Empty), "Rifle.json");
+
+            Assert.That(spec.Damage, Is.EqualTo(ImpactSpec.DefaultDamage));
+        }
+
+        [Test]
+        public void TheJsonInPartsReproducesTheTestWeapons()
+        {
+            foreach (var expected in new[] { TestWeapons.RifleSpec(), TestWeapons.HandgunSpec(), TestWeapons.LauncherSpec() })
+            {
+                AssertSameSpec(WeaponJsonImporter.ParseSpec(WeaponSpecJson.Write(expected), "Parts.json"), expected);
+            }
+        }
+
+        [Test]
+        public void ImportingTheJsonInPartsKeepsEveryPart()
+        {
+            var expected = TestWeapons.EveryPartSpec();
+            WriteJson("Everything.json", WeaponSpecJson.Write(expected));
+
+            WeaponJsonImporter.ImportFrom(_jsonFolder, _folder, null);
+
+            var definition = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_folder + "/Everything.asset");
+            Assert.That(WeaponSpecJson.Write(definition.ToSpec()), Is.EqualTo(WeaponSpecJson.Write(expected)));
+        }
+
+        [Test]
+        public void AValueWrittenBothFlatAndInItsPartIsNamed()
+        {
+            var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ParseSpec(
+                SampleText("Rifle").Replace("\"damage\": 25,", "\"damage\": 25, \"impact\": {\"damage\": 30},"), "Rifle.json"));
 
             Assert.That(e.Field, Is.EqualTo("damage"));
-            Assert.That(e.Message, Does.Contain("Rifle.json").And.Contain("damage").And.Contain("missing"));
         }
 
         [Test]

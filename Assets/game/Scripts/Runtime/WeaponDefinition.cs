@@ -210,6 +210,9 @@ namespace Fps.Runtime
             set => _nameKey = value ?? string.Empty;
         }
 
+        /// <summary>画面に出す名前 (<see cref="WeaponSpec.Name"/>)。</summary>
+        public LocalizedText Name => WeaponSpec.NameOf(Id, NameKey);
+
         public WeaponCategory Category
         {
             get => _category;

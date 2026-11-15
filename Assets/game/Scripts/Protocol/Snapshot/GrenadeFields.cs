@@ -7,10 +7,12 @@ namespace Fps.Protocol
     public enum GrenadeFields
     {
         None = 0,
-        /// <summary>投げた人とグレネードの Id。</summary>
+        /// <summary>投げた人とグレネードの Id と種類の Id。</summary>
         Identity = 1 << 0,
         /// <summary>位置と回転。</summary>
         Transform = 1 << 1,
-        All = Identity | Transform,
+        /// <summary>くっついているか。</summary>
+        State = 1 << 2,
+        All = Identity | Transform | State,
     }
 }

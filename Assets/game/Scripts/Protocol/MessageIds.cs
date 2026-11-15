@@ -43,5 +43,10 @@ namespace Fps.Protocol
         public const ushort ShotIndexCorrected = 74;
         public const ushort IdleWarning = 75;
         public const ushort LoadoutAnswer = 76;
+        public const ushort ProjectileSpawned = 77;
+        public const ushort ProjectileEnded = 78;
+        public const ushort BeamState = 79;
+        public const ushort StatusEffect = 80;
+        public const ushort AreaEffect = 81;
     }
 }

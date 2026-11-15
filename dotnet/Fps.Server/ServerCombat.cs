@@ -176,7 +176,9 @@ namespace Fps.Server
                 var owner = snapshot.Owner;
                 owner.Weapon = own.Weapons.Sync();
                 own.Weapons.FillIds(owner.EquippedWeaponIds);
-                owner.Grenades = new GrenadePouchSync(own.Grenades.Enabled, own.Grenades.Remaining);
+                owner.Grenades.Clear();
+                owner.Grenades.Enabled = own.Grenades.Enabled;
+                owner.Grenades.Add(GrenadeWeaponId, own.Grenades.Remaining);
             }
 
             ContributeGrenades(snapshot.Grenades);

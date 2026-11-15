@@ -1,4 +1,5 @@
 using Fps.Core;
+using UnityEngine;
 
 namespace Fps.Runtime
 {
@@ -21,6 +22,12 @@ namespace Fps.Runtime
                 return ShotOutcome.Miss;
             }
 
+            return Land(request, hit, direction);
+        }
+
+        // 飛ぶ弾も当たった所から先はヒットスキャンと同じ順 (盾 → 置いた物 → 着弾の効果) で受け止めるので、ここを共に使う。
+        internal static ShotOutcome Land(ShotRequest request, RaycastHit hit, Vector3 direction)
+        {
             CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
             var damage = request.Impact.Damage;
             if (BulletShield.TryBlock(hit.collider, damage, request.SourcePosition, request.Shooter))

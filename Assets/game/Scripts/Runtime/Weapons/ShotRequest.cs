@@ -15,7 +15,9 @@ namespace Fps.Runtime
             string weaponId,
             int layerMask,
             ChargeSpec charge = null,
-            float chargeFraction = 0f)
+            float chargeFraction = 0f,
+            ProjectileSettings projectileLook = null,
+            Action<ShotOutcome> landed = null)
         {
             if (!(chargeFraction >= 0f) || chargeFraction > 1f)
             {
@@ -31,6 +33,8 @@ namespace Fps.Runtime
             LayerMask = layerMask;
             Charge = charge;
             ChargeFraction = chargeFraction;
+            ProjectileLook = projectileLook;
+            Landed = landed;
         }
 
         // 撃った者が分からない弾 (仕掛けや試験の弾) もあるので null を許す。
@@ -51,5 +55,11 @@ namespace Fps.Runtime
         public ChargeSpec Charge { get; }
 
         public float ChargeFraction { get; }
+
+        // 見た目と音は WeaponDefinition の側にしか無く RoundSpec に載らないので、撃つ側が武器の定義から渡す。null ならコードで作る。
+        public ProjectileSettings ProjectileLook { get; }
+
+        // 飛ぶ弾は Deliver が返った後に当たるので、当たったことを撃った側へ後から知らせる。
+        public Action<ShotOutcome> Landed { get; }
     }
 }

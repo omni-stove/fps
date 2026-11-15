@@ -1,0 +1,55 @@
+{
+  "id": "78afe32d-bf3f-459c-98b8-8c238290913f",
+  "nameKey": "weapon.incendiaryRifle",
+  "category": "AssaultRifle",
+  "shotNoiseRadius": 50,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.25
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 12,
+    "reserveAmmo": 48,
+    "reloadSeconds": 2.2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 80,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 15,
+    "falloff": {
+      "startDistance": 20,
+      "endDistance": 60,
+      "minMultiplier": 0.5
+    },
+    "structureRadius": 0,
+    "statusEffect": {
+      "kind": "burn",
+      "durationSeconds": 4,
+      "tickSeconds": 0.5,
+      "damagePerTick": 4
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 2.5,
+    "adsSpreadDegrees": 0.5,
+    "moveSpreadDegrees": 2.5,
+    "recoilPitchDegrees": 1,
+    "recoilYawDegrees": 0.3,
+    "recoilRecoveryPerSecond": 15,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 8,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  }
+}

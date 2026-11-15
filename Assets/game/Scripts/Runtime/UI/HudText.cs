@@ -27,6 +27,8 @@ namespace Fps.Runtime
                     return HudFormat.NoRespawnUntilNextMatch;
                 case HudNoticeKind.SpawnProtected:
                     return HudFormat.SpawnProtected(notice.Seconds);
+                case HudNoticeKind.StatusEffect:
+                    return HudFormat.StatusEffect(notice.KindId, notice.Seconds);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(notice), notice.Kind, "notice kind is not a defined HudNoticeKind");
             }

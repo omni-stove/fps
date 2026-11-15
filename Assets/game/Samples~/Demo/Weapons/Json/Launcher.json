@@ -28,7 +28,14 @@
   "impact": {
     "damage": 120,
     "falloff": "None",
-    "structureRadius": 4
+    "structureRadius": 4,
+    "explosion": {
+      "maxDamage": 100,
+      "radius": 5,
+      "fullDamageRadius": 1,
+      "structureDamageAtCenter": 100,
+      "detonation": "OnImpact"
+    }
   },
   "aim": {
     "hipSpreadDegrees": 0,

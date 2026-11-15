@@ -128,6 +128,7 @@ namespace Fps.Editor
             definition.AdsSpreadDegrees = spec.AdsSpreadDegrees;
             definition.MoveSpreadDegrees = spec.MoveSpreadDegrees;
             definition.RecoilRecoveryDelaySeconds = spec.RecoilRecoveryDelaySeconds;
+            definition.ShotNoiseRadius = spec.ShotNoiseRadius;
 
             // spec は検査済みだが、アセットの形で読み直せることも確かめる。不正なら保存しない。
             definition.ToSpec();

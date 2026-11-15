@@ -743,6 +743,7 @@ namespace Fps.Runtime
 
             var shooter = _aim.root.gameObject;
             CombatEvents.RaiseShotFired(shooter, origin, direction, weapon.Spec.Id);
+            StealthNoise.Emit(shooter, new SoundStimulus(SoundCueKind.Gunshot, origin.ToNumerics(), weapon.Spec.ShotNoiseRadius, false));
             var found = TryRaycast(origin, direction, out var hit);
             Hitscan.ReportNearMisses(origin, direction, found ? hit.distance : HitscanRange, _aim.root, found ? hit.collider : null);
             if (!found)

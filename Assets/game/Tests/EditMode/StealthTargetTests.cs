@@ -110,5 +110,49 @@ namespace Fps.Tests.EditMode
                 marker.Remove();
             }
         }
+
+        [Test]
+        public void WalkingWithStealthOnMakesFootstepNoises()
+        {
+            _player.AddComponent<FakeCharacterMotionSource>();
+            var target = _player.AddComponent<StealthTarget>();
+            target.Rule = Stealth.On;
+
+            Assert.That(Walk(target, 30), Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void NoFootstepNoisesWithStealthOffASilentRadiusOrNoMotion()
+        {
+            var target = _player.AddComponent<StealthTarget>();
+            target.Rule = Stealth.On;
+            Assert.That(Walk(target, 30), Is.Zero, "without a motion source it cannot tell whether the feet touch the ground");
+
+            _player.AddComponent<FakeCharacterMotionSource>();
+            target.Rule = Stealth.Off;
+            Assert.That(Walk(target, 30), Is.Zero);
+
+            target.Rule = Stealth.On;
+            target.FootstepNoiseRadius = 0f;
+            Assert.That(Walk(target, 30), Is.Zero);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => target.FootstepNoiseRadius = -1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => target.FootstepNoiseRadius = float.NaN);
+        }
+
+        // 1 フレーム 0.02 秒で 0.1 m (5 m/s、歩きの速さ) 進める。
+        private static int Walk(StealthTarget target, int frames)
+        {
+            var steps = 0;
+            for (var i = 0; i < frames; i++)
+            {
+                if (target.AdvanceFootsteps(new Vector3(0f, 0f, 0.1f), 0.02f))
+                {
+                    steps++;
+                }
+            }
+
+            return steps;
+        }
     }
 }

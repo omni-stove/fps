@@ -11,6 +11,7 @@ namespace Fps.Core.Tests
         [TestCase(SoundCueKind.Explosion, SoundCueDirection.None, 3f, "[爆発]")]
         [TestCase(SoundCueKind.Reload, SoundCueDirection.None, float.NaN, "[リロード]")]
         [TestCase(SoundCueKind.Reload, SoundCueDirection.FrontLeft, 10f, "[リロード 左前]")]
+        [TestCase(SoundCueKind.Clatter, SoundCueDirection.Back, 8f, "[物音 後ろ]")]
         public void FormatsKindDirectionAndDistance(SoundCueKind kind, SoundCueDirection direction, float distance, string expected)
         {
             Assert.That(SubtitleText.Format(new SoundCue(kind, direction, distance)), Is.EqualTo(expected));
@@ -29,7 +30,7 @@ namespace Fps.Core.Tests
         [Test]
         public void UnknownValuesAreRejected()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => SubtitleText.KindText((SoundCueKind)4));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SubtitleText.KindText((SoundCueKind)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => SubtitleText.DirectionText((SoundCueDirection)9));
         }
 

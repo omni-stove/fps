@@ -12,7 +12,8 @@ namespace Fps.Editor
     /// 回数・回数の戻り・待ち時間・効果が出るまでの秒数がどれも見えるよう、どれも 0 でない値にする。
     /// あわせて、展開式の盾を置く能力 (<see cref="ShieldDeployDefinition"/>) を <see cref="ShieldAbilityPath"/> に、
     /// 自動で撃つタレットを置く能力 (<see cref="TurretDeployDefinition"/>) を <see cref="TurretAbilityPath"/> に、
-    /// 敵の気を引く囮を置く能力 (<see cref="DecoyDeployDefinition"/>) を <see cref="DecoyAbilityPath"/> に作る。
+    /// 敵の気を引く囮を置く能力 (<see cref="DecoyDeployDefinition"/>) を <see cref="DecoyAbilityPath"/> に、
+    /// 物を投げて敵の注意をそらす能力 (<see cref="DistractionThrowDefinition"/>) を <see cref="DistractionAbilityPath"/> に作る。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンは壊れない。何度実行しても同じ結果になる。
     /// Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.AbilityAssetBuilder.Build</code>
@@ -46,6 +47,14 @@ namespace Fps.Editor
         public const float DecoyAbilityCooldownSeconds = 1f;
         public const float DecoyAbilityWindupSeconds = 0f;
 
+        public const string DistractionAbilityId = "distraction-throw";
+        public const int DistractionMaxCharges = 3;
+        public const float DistractionRechargeSeconds = 10f;
+        public const float DistractionCooldownSeconds = 1f;
+
+        // 振りかぶってから手を離すまでの間。
+        public const float DistractionWindupSeconds = 0.15f;
+
         public const string GrappleAbilityId = "grapple";
         public const int GrappleMaxCharges = 2;
         public const float GrappleRechargeSeconds = 8f;
@@ -72,6 +81,8 @@ namespace Fps.Editor
 
         public static string DecoyAbilityPath => Folder + "/DeployDecoy.asset";
 
+        public static string DistractionAbilityPath => Folder + "/DistractionThrow.asset";
+
         // タレットは武器のアセットを指すので、WeaponAssetBuilder.Build の後に走らせる (武器が無ければ例外で止まる)。
         [MenuItem(MenuPath)]
         public static void Build()
@@ -81,6 +92,7 @@ namespace Fps.Editor
             BuildGrappleAt(GrappleAbilityPath);
             BuildTurretAt(TurretAbilityPath);
             BuildDecoyAt(DecoyAbilityPath);
+            BuildDistractionAt(DistractionAbilityPath);
         }
 
         public static DecoyDeployDefinition BuildDecoyAt(string path)
@@ -88,6 +100,15 @@ namespace Fps.Editor
             path = SceneBuildHelpers.ValidateAssetPath(path);
             SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'));
             var ability = SceneBuildHelpers.CreateOrUpdateAsset<DecoyDeployDefinition>(path, ConfigureDecoy);
+            Debug.Log($"{LogTag} saved '{path}'");
+            return ability;
+        }
+
+        public static DistractionThrowDefinition BuildDistractionAt(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+            SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'));
+            var ability = SceneBuildHelpers.CreateOrUpdateAsset<DistractionThrowDefinition>(path, ConfigureDistraction);
             Debug.Log($"{LogTag} saved '{path}'");
             return ability;
         }
@@ -106,6 +127,21 @@ namespace Fps.Editor
 
             Debug.Log($"{LogTag} '{DecoyAbilityPath}' is missing; building it");
             return BuildDecoyAt(DecoyAbilityPath);
+        }
+
+        // 手で調整した値を射撃場を作り直すたびに消さないよう、あれば中身は上書きしない。
+        public static DistractionThrowDefinition LoadOrBuildDistractionAbility()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<DistractionThrowDefinition>(DistractionAbilityPath);
+            if (existing != null)
+            {
+                existing.ToSpec();
+                existing.ToDistractionSpec();
+                return existing;
+            }
+
+            Debug.Log($"{LogTag} '{DistractionAbilityPath}' is missing; building it");
+            return BuildDistractionAt(DistractionAbilityPath);
         }
 
         public static TurretDeployDefinition BuildTurretAt(string path)
@@ -240,6 +276,25 @@ namespace Fps.Editor
             ability.GrabbableTags = Array.Empty<string>();
             ability.ToSpec();
             ability.ToGrappleSpec();
+        }
+
+        // 投げ方と音の届く距離はキットの既定 (DistractionSpec.Default*) のまま。見た目と音は空にして仮の球を投げる。
+        private static void ConfigureDistraction(DistractionThrowDefinition ability)
+        {
+            ability.Id = DistractionAbilityId;
+            ability.MaxCharges = DistractionMaxCharges;
+            ability.RechargeSeconds = DistractionRechargeSeconds;
+            ability.CooldownSeconds = DistractionCooldownSeconds;
+            ability.WindupSeconds = DistractionWindupSeconds;
+            ability.ThrowSpeed = DistractionSpec.DefaultThrowSpeed;
+            ability.ThrowLiftSpeed = DistractionSpec.DefaultThrowLiftSpeed;
+            ability.NoiseRadius = DistractionSpec.DefaultNoiseRadius;
+            ability.MaxFlightSeconds = DistractionSpec.DefaultMaxFlightSeconds;
+            ability.LingerSeconds = DistractionSpec.DefaultLingerSeconds;
+            ability.Prefab = null;
+            ability.LandingSound = null;
+            ability.ToSpec();
+            ability.ToDistractionSpec();
         }
 
         private static void ConfigureShield(ShieldDeployDefinition ability)

@@ -121,6 +121,27 @@ namespace Fps.Core
             }
         }
 
+        // ceiling を超えて足さず、すでに超えていれば下げない。音で上げても見た分を消さず、音だけでは交戦にしないため。
+        public void Add(float amount, float ceiling)
+        {
+            if (!(amount >= 0f) || float.IsInfinity(amount))
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative and must be finite");
+            }
+
+            if (!(ceiling >= 0f) || ceiling > Full)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ceiling), ceiling, "ceiling must be between 0 and 1");
+            }
+
+            _unseenSeconds = 0f;
+            var next = Math.Min(Level + amount, ceiling);
+            if (next > Level)
+            {
+                SetLevel(next);
+            }
+        }
+
         public void Reset()
         {
             _unseenSeconds = 0f;

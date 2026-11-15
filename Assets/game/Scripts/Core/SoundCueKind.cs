@@ -14,5 +14,8 @@ namespace Fps.Core
 
         /// <summary>リロードの音。</summary>
         Reload,
+
+        /// <summary>投げた物が落ちた音 (注意をそらす能力)。</summary>
+        Clatter,
     }
 }

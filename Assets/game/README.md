@@ -312,6 +312,7 @@ Editor からは **Fps > Import Game Rules From JSON**。
 - 持つ種類それぞれに、ルールの `grenadeCount` 個を持つ。2 種類以上持つと、SwitchGrenade (K) で投げる種類を切り替え、HUD に種類の名前を出す。
 - 範囲効果 (`areaEffect`) は `AreaEffectZone` が出す。見た目は `Resources/Presentation/AreaEffects/<visualId>` のプレハブで、無ければ仮の球を出す。
 - `damagePerTick` が 0 で `statusEffect` の無い範囲効果はスモークになる。出ている間、その球を通る敵 (オフライン) と Bot (サーバー) の視線を遮る (ログは `[Smoke] blocks sight`・`[Smoke] cleared`)。弾は通り、ダメージは無い。見た目のプレハブが無ければ、仮の球の代わりに煙の粒子を出す。
+- `damagePerTick` か `statusEffect` のある範囲効果は燃える範囲 (焼夷グレネード) になる。出た直後と `tickSeconds` ごとに、中にいる人 (投げた本人も) に `statusEffect` をかけ直す。書かなければ `tickSeconds` ごとに `damagePerTick` を与え、出た後も `FireArea.DefaultBurnSeconds` (3 秒) 燃える燃焼をかける。外に出た人は燃焼が切れるまで燃える (ログは `[StatusEffect] afflict`)。ネット対戦ではサーバーがかけ、味方撃ちが `On` でなければ味方にはかけない。燃焼の範囲で見た目のプレハブが無ければ、仮の球の代わりに炎の粒子を出す。
 
 - パッケージにも同じパスの JSON (今の既定値) が入っている (`Packages/com.omnistove.fps/Resources/Tuning/`)。利用側に同じパスのファイルを置くと
   どちらが読まれるか決まらないので、ゲームの値は入口 ([ゲームの中身を差し替える](#ゲームの中身を差し替える-入口のアセット)) の `GrenadeTuning`・`PingTuning`・`KnockbackTuning` に

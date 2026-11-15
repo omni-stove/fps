@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Numerics;
 using NUnit.Framework;
 
 namespace Fps.Core.Tests
@@ -22,6 +23,30 @@ namespace Fps.Core.Tests
                 Assert.That(WeaponSpecJson.Write(spec), Is.EqualTo(text), path);
                 Assert.That(ids.Add(spec.Id), Is.True, path + " reuses the id " + spec.Id);
             }
+        }
+
+        [Test]
+        public void TheCrossbowShootsASlowDroppingBoltThatSticksInTheWall()
+        {
+            var path = Path.Combine(SampleWeaponJsonFolder(), "Crossbow.json");
+            var spec = WeaponSpecJson.Parse(File.ReadAllText(path), path);
+            var projectile = spec.Round.Projectile;
+
+            Assert.That(spec.NameKey, Is.EqualTo("weapon.crossbow"));
+            Assert.That(spec.Round.Delivery, Is.EqualTo(RoundDelivery.Projectile));
+            Assert.That(projectile.OnWorldHit, Is.EqualTo(WorldHitResponse.Stick));
+            Assert.That(projectile.GravityMultiplier, Is.GreaterThan(0f));
+
+            var world = new FakeWorldCollision();
+            world.AddBox(new Vector3(-5f, -50f, 40f), new Vector3(5f, 50f, 41f));
+            var flight = new BallisticFlight(projectile, null, world, ~0, Vector3.Zero, Vector3.UnitZ, new Vector3(0f, -9.81f, 0f));
+            while (!flight.IsDone)
+            {
+                flight.Step(1f / 60f);
+            }
+
+            Assert.That(flight.State, Is.EqualTo(BallisticState.Stuck));
+            Assert.That(flight.Position.Y, Is.LessThan(-1f), "a target 40 m away needs the aim held above it");
         }
 
         private static string SampleWeaponJsonFolder()

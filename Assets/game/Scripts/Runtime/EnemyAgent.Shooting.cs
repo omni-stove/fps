@@ -260,7 +260,16 @@ namespace Fps.Runtime
 
             var impact = ScaleImpact(_weapon.AmmoTypes.Impact, _shotDamageMultiplier);
             var request = new ShotRequest(
-                gameObject, transform, transform.position, round, impact, spec.Id, Physics.DefaultRaycastLayers, spec.Trigger.Charge, Mathf.Clamp01(chargeFraction));
+                gameObject,
+                transform,
+                transform.position,
+                round,
+                impact,
+                spec.Id,
+                Physics.DefaultRaycastLayers,
+                spec.Trigger.Charge,
+                Mathf.Clamp01(chargeFraction),
+                _weaponDefinition != null ? _weaponDefinition.Projectile : null);
             var hits = new string[directions.Length];
             var damage = 0;
             for (var i = 0; i < directions.Length; i++)

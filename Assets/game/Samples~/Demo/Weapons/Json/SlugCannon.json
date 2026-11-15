@@ -1,0 +1,49 @@
+{
+  "id": "4884db7f-db3a-4f82-a822-82df01491735",
+  "nameKey": "weapon.slugCannon",
+  "category": "Shotgun",
+  "shotNoiseRadius": 70,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.8
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 5,
+    "reserveAmmo": 20,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 120,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0.25
+  },
+  "impact": {
+    "damage": 70,
+    "falloff": {
+      "startDistance": 30,
+      "endDistance": 80,
+      "minMultiplier": 0.6
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2,
+    "adsSpreadDegrees": 0.2,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 3,
+    "recoilYawDegrees": 0.5,
+    "recoilRecoveryPerSecond": 8,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 8,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  }
+}

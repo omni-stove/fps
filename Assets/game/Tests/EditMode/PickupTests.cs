@@ -227,6 +227,38 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AnInteractWeaponPromptNestsTheWeaponName()
+        {
+            var player = NewCollector("Player");
+            player.IsLocalPlayer = true;
+            AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
+            var pickup = Pickup.Create(PickupContents.ForWeapon(launcher, 2), Vector3.zero, PickupCollectMode.Interact);
+
+            pickup.HandleEnter(player.GetComponent<Collider>());
+
+            Assert.That(pickup.LocalPlayerInside(), Is.SameAs(player));
+            Assert.That(pickup.TryDescribe(player, "E", out var text), Is.True);
+            Assert.That(text, Is.EqualTo(new LocalizedText(PickupPrompt.WeaponKey, "E", launcher.Name)));
+        }
+
+        [Test]
+        public void NoPromptForTouchPickupsOrWhatCannotBeTaken()
+        {
+            var player = NewCollector("Player");
+            player.IsLocalPlayer = true;
+            var touch = Pickup.Create(PickupContents.ForHealth(25), Vector3.zero);
+            var interact = Pickup.Create(PickupContents.ForHealth(25), Vector3.zero, PickupCollectMode.Interact);
+
+            Assert.That(touch.TryDescribe(player, "E", out _), Is.False, "touch pickups are taken without a key");
+            Assert.That(interact.TryDescribe(player, "E", out _), Is.False, "health is full");
+
+            player.TakeDamage(50);
+            Assert.That(interact.TryDescribe(player, "E", out var text), Is.True);
+            Assert.That(text, Is.EqualTo(new LocalizedText(PickupPrompt.HealthKey, "E")));
+        }
+
+        [Test]
         public void ExpiresAfterItsLifetime()
         {
             var pickup = Pickup.Create(PickupContents.ForHealth(25), Vector3.zero);

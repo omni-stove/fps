@@ -56,6 +56,16 @@ namespace Fps.Server
         public static bool TryParse(
             IReadOnlyList<string> args, Func<string, string> environment, out ServerLaunch launch, out string error)
         {
+            return TryParse(args, environment, null, out launch, out error);
+        }
+
+        /// <summary>
+        /// builtVersion (ビルドに焼き込んだ版、<see cref="ServerBuildVersion"/>) は <c>-buildVersion</c> が無いときに使う。
+        /// イメージの版を入り口の引数で渡すと、<c>docker run</c> で <c>-buildVersion</c> を足した人が「2 回指定」で起動できなくなるため。
+        /// </summary>
+        public static bool TryParse(
+            IReadOnlyList<string> args, Func<string, string> environment, string builtVersion, out ServerLaunch launch, out string error)
+        {
             ArgumentNullException.ThrowIfNull(args);
             ArgumentNullException.ThrowIfNull(environment);
 
@@ -93,6 +103,12 @@ namespace Fps.Server
 
             if (!BuildVersion.TryParseArgs(args, out var version, out error))
             {
+                return false;
+            }
+
+            if (version == null && !string.IsNullOrWhiteSpace(builtVersion) && !BuildVersion.TryNormalize(builtVersion, out version, out error))
+            {
+                error = "the version built into the server: " + error;
                 return false;
             }
 

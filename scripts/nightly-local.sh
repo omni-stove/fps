@@ -3,7 +3,7 @@
 # 使い方: scripts/nightly-local.sh [--client | --no-client]
 #   --client     曜日にかかわらず macOS クライアントもビルドする (既定は nightly と同じく JST の日曜だけ)
 #   --no-client  日曜でもクライアントをビルドしない
-# EditMode テスト・スモーク・クライアントのビルドは 1 つが失敗しても残りを走らせ、最後に失敗したものを並べて終了コード 1 で終わる。
+# EditMode テスト・スモーク・マップのデータの書き出し直し・クライアントのビルドは 1 つが失敗しても残りを走らせ、最後に失敗したものを並べて終了コード 1 で終わる。
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -54,8 +54,20 @@ step() {
 	fi
 }
 
+# nightly の server-data と同じく、書き出し直したマップのデータがコミットしたものと同じかを見る。違えば書き出したものを残すので、確かめてコミットする
+map_data_matches() {
+	mise run export-server-data || return
+	local changed
+	changed="$(git status --porcelain --untracked-files=all -- server-data/maps)"
+	[ -z "$changed" ] && return
+	printf '%s\n' "$changed" >&2
+	echo "nightly-local: server-data/maps differs from a fresh export; review and commit it" >&2
+	return 1
+}
+
 step "EditMode tests" mise run test-unity
 step "smoke suite" mise run smoke
+step "map data" map_data_matches
 if [ -f Logs/perf.json ]; then
 	echo "nightly-local: server tick timings from PerfSmokeRun are in Logs/perf.json"
 fi

@@ -285,6 +285,23 @@ namespace Fps.Runtime
             return mine != null || theirs != null || source.GetComponentInParent<EnemyAgent>() == null;
         }
 
+        // ゲージは今の目標しか見ていないので、ほかの相手を見ているかは分からない。目標が attacker で、今見えているときだけ上げる。
+        /// <exception cref="ArgumentNullException">attacker が null。</exception>
+        public bool Witness(Damageable attacker, float level)
+        {
+            if (attacker == null)
+            {
+                throw new ArgumentNullException(nameof(attacker));
+            }
+
+            if (_awareness == null || (_agent.Brain != null && _agent.Brain.IsDead) || _agent.Target != attacker || !_awareness.Meter.IsSeeing)
+            {
+                return false;
+            }
+
+            return _awareness.Witness(attacker.GroundPoint.ToNumerics(), level);
+        }
+
         public bool IsAllyOf(EnemyStealth other)
         {
             if (other == null || other == this)

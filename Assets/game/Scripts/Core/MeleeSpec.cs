@@ -15,6 +15,9 @@ namespace Fps.Core
         public const int DefaultFinisherHealth = 25;
         public const int DefaultFinisherAmmo = 30;
         public const bool DefaultFinisherInterruptible = true;
+        public const float DefaultTakedownSeconds = 1.5f;
+        public const bool DefaultTakedownInterruptible = true;
+        public const float DefaultTakedownWitnessAwareness = 1f;
 
         public const float MaxArcDegrees = 360f;
 
@@ -55,8 +58,14 @@ namespace Fps.Core
 
         public bool FinisherInterruptible { get; }
 
-        // 処刑技 (ContextMeleeMove.Finisher) の値を省けるのは、敵の近接や盾の殴りなど処刑技を出さない側が値を並べなくて済むようにするため。
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。impactSeconds は 0 以上 swingSeconds 以下。</exception>
+        public float TakedownSeconds { get; }
+
+        public bool TakedownInterruptible { get; }
+
+        public float TakedownWitnessAwareness { get; }
+
+        // 処刑技 (ContextMeleeMove.Finisher) と背後から倒す技 (ContextMeleeMove.Takedown) の値を省けるのは、敵の近接や盾の殴りなど技を出さない側が値を並べなくて済むようにするため。
+        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。impactSeconds は 0 以上 swingSeconds 以下、takedownWitnessAwareness は 0 以上 1 以下。</exception>
         public MeleeSpec(
             int damage,
             float reach,
@@ -68,7 +77,10 @@ namespace Fps.Core
             float finisherSeconds = DefaultFinisherSeconds,
             int finisherHealth = DefaultFinisherHealth,
             int finisherAmmo = DefaultFinisherAmmo,
-            bool finisherInterruptible = DefaultFinisherInterruptible)
+            bool finisherInterruptible = DefaultFinisherInterruptible,
+            float takedownSeconds = DefaultTakedownSeconds,
+            bool takedownInterruptible = DefaultTakedownInterruptible,
+            float takedownWitnessAwareness = DefaultTakedownWitnessAwareness)
         {
             if (damage <= 0)
             {
@@ -120,6 +132,16 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(finisherAmmo), finisherAmmo, "finisherAmmo must not be negative");
             }
 
+            if (!(takedownSeconds > 0f) || float.IsInfinity(takedownSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(takedownSeconds), takedownSeconds, "takedownSeconds must be positive and finite");
+            }
+
+            if (!(takedownWitnessAwareness >= 0f && takedownWitnessAwareness <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(takedownWitnessAwareness), takedownWitnessAwareness, "takedownWitnessAwareness must be between 0 and 1");
+            }
+
             Damage = damage;
             Reach = reach;
             ArcDegrees = arcDegrees;
@@ -131,6 +153,9 @@ namespace Fps.Core
             FinisherHealth = finisherHealth;
             FinisherAmmo = finisherAmmo;
             FinisherInterruptible = finisherInterruptible;
+            TakedownSeconds = takedownSeconds;
+            TakedownInterruptible = takedownInterruptible;
+            TakedownWitnessAwareness = takedownWitnessAwareness;
         }
 
         // 踏み込みの間は一定の速さで進む。当たりの瞬間が 0 秒なら踏み込まない (0 で割らない)。

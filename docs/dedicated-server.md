@@ -368,6 +368,30 @@ dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -
   -buildVersion "$(git describe --tags --always --dirty)" -register-lobby 127.0.0.1:7777
 ```
 
+### .NET のサーバーの Docker イメージ
+
+`docker/server-dotnet/Dockerfile` は、`dotnet/Fps.Server` を self-contained で `dotnet publish` したものと `server-data/`、
+EOS の C# SDK のライブラリ (`dotnet/ThirdParty/EOSSDK` に置いてあれば) を入れる。Unity も Editor を閉じることも要らない。
+ユーザー `fps` (uid 10001)・tini・`7777/udp`・`STOPSIGNAL SIGTERM` は Unity のサーバーのイメージと同じで、
+引数・環境変数・止め方 (`docker stop -t 700`) も上と同じ。
+
+```sh
+make eos-sdk ARGS="--fetch"                                   # (任意) EOS の SDK を Unity を使わずに置く。無ければ EOS 無しのイメージになる
+make server-image-dotnet                                      # fps-server-dotnet:local を作る (Docker が動いているマシンのアーキテクチャ)
+make server-image-dotnet ARGS="--platform linux/arm64"        # arm64 のイメージを作る
+make server-image-dotnet ARGS="--tag fps-server-dotnet:dev --version v0.2.0"
+docker run --rm --name fps-server -p 7777:7777/udp fps-server-dotnet:local
+docker compose -f docker/server-dotnet/compose.yaml up -d     # stop_grace_period: 700s を書いてある
+```
+
+版 (`--version`、無ければ `git describe --tags --always --dirty`) はビルドに焼き込むので、`-buildVersion` を付けずに起動しても
+`[Version] <版>` を出し、その版の EOS のロビーのバケツを使う。`-buildVersion` を付ければそちらが勝つ。
+
+`make eos-sdk ARGS="--fetch"` は `Packages/packages-lock.json` に固定した PlayEveryWare のプラグインから SDK を取る
+(git-lfs が要る)。プラグインには Linux の arm64 のライブラリが無いので、arm64 のイメージで EOS を使うには
+Epic Developer Portal の SDK の zip から置く (`make eos-sdk ARGS="--from <zip>"`、[dotnet/ThirdParty/EOSSDK](../dotnet/ThirdParty/EOSSDK/README.md))。
+ライブラリの無いイメージは `[Eos] sdk=included library=libEOSSDK-Linux-Shipping.so (missing; ...)` を出し、UDP でだけ待ち受けられる。
+
 ### .NET のサーバーにクライアントをつなぐ (`-netstack v2`)
 
 .NET のサーバーへは、新しい通信手順 (`Fps.Protocol` と LiteNetLib) のクライアント (`Assets/game/Scripts/NetV2`) でつなぐ。
@@ -420,3 +444,17 @@ docker pull ghcr.io/<owner>/<repo>/server:v1.2.3
 
 Unity のビルドには [GameCI](https://game.ci/docs/github/activation) の手順で作ったリポジトリの Secrets
 `UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD` が要る。
+
+同じタグで `.github/workflows/server-image-dotnet.yml` が .NET のサーバーのイメージを `linux/amd64` と `linux/arm64` で作り、
+`ghcr.io/<owner>/<repo>/server-dotnet` に同じ規則のタグで push する。Unity のライセンスもビルドも使わない。
+EOS の SDK は `scripts/eos-sdk.sh --fetch` で取るので、amd64 のイメージにだけ EOS のライブラリが入る。
+push する前に amd64 のイメージを起動し、`[Version] <版>` と `[Net] server listening on 0.0.0.0:7777` を出し、uid 10001 で動き、
+SIGTERM で終了コード 0 で止まることを確かめる (`scripts/server-image-dotnet-smoke.sh`)。サーバーかイメージに関わるファイルを変えた PR でも、
+push せずにここまでを走らせる。
+
+```sh
+docker pull ghcr.io/<owner>/<repo>/server-dotnet:v1.2.3
+```
+
+マップのデータ (`server-data/maps`) は nightly (`.github/workflows/nightly.yml` の `server-data`) が毎晩 Unity で書き出し直し、
+コミットしたものと違えば失敗して `nightly-failure` の issue に載せる。シーンを変えたら書き出してコミットする。

@@ -45,6 +45,33 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheFinisherWinsOverTheTakedownWhenBothMatch()
+        {
+            var selector = new ContextMeleeSelector();
+            var takedown = ContextMeleeMove.Takedown(MeleeSpec.Default);
+            var finisher = ContextMeleeMove.Finisher(MeleeSpec.Default);
+            selector.Register(takedown);
+            selector.Register(finisher);
+
+            var behindUnaware = ContextMeleeConditions.TargetBehind | ContextMeleeConditions.TargetUnaware;
+            Assert.That(selector.Select(At(behindUnaware)), Is.SameAs(takedown));
+            Assert.That(selector.Select(At(behindUnaware | ContextMeleeConditions.TargetStaggered)), Is.SameAs(finisher));
+            Assert.That(selector.Select(At(ContextMeleeConditions.TargetBehind)), Is.Null, "an aware target from behind gets the plain melee");
+        }
+
+        [Test]
+        public void UnawareMeansOnWatchAndBelowTheNoticeStage()
+        {
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Idle, AwarenessStage.Unaware), Is.True);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Patrol, AwarenessStage.Unaware), Is.True);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Idle, AwarenessStage.Noticed), Is.False);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Patrol, AwarenessStage.Alerted), Is.False);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Idle, AwarenessStage.Engaged), Is.False);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Chase, AwarenessStage.Unaware), Is.False);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Search, AwarenessStage.Unaware), Is.False);
+        }
+
+        [Test]
         public void AnExcludedConditionBlocksTheMove()
         {
             var selector = new ContextMeleeSelector();

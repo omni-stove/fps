@@ -7,8 +7,9 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// オフラインのモード (<see cref="ModeRunnerBase"/>) の HUD。画面左上に残り時間・陣営ごとの得点・派生モードが足す行・試合結果を出す。
-    /// Hud.uxml の <see cref="UxmlName"/> の枠に、行の Label をコードで足す。何を出すかは <see cref="ModeRunnerBase"/> が
-    /// <see cref="Show"/> / <see cref="Hide"/> で決める。要素をまだ受けていない間 (HUD の木を作り直している間) も中身を覚えておき、受けたときに合わせる。
+    /// Hud.uxml の <see cref="UxmlName"/> の枠に、行の Label をコードで足す。要素を持っている間は <see cref="GameSignals.ModeStatus"/> を購読し、
+    /// 出された状態を <see cref="ModeHudFormatters"/> の書式役で文にして出し、消されたら隠す。要素を受けたときは今の状態に合わせる。
+    /// <see cref="IModeHud"/> の Show / <see cref="Hide"/> で直に出すこともでき、要素をまだ受けていない間 (HUD の木を作り直している間) もその中身を覚えておき、受けたときに合わせる。
     /// 中身が変わらない行は書き直さない (毎フレーム呼ばれるため)。
     /// 受け取った文は今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら文にし直す。
     /// </summary>
@@ -35,11 +36,16 @@ namespace Fps.Runtime
         private readonly List<string> _scoreTexts = new List<string>();
         private readonly List<LocalizedText> _lineSources = new List<LocalizedText>();
         private readonly List<string> _lines = new List<string>();
+        private readonly List<LocalizedText> _formattedLines = new List<LocalizedText>();
         private LocalizedText _timeSource;
         private LocalizedText _resultSource;
         private string _time = string.Empty;
         private string _result = string.Empty;
         private bool _shown;
+        private bool _subscribed;
+
+        // 出している中身が GameSignals から来たか。来ていれば、要素を持っていない間に状態が消されたことを、受けたときに隠して合わせる
+        private bool _showsSignal;
 
         private Label _timeLabel;
         private VisualElement _scoresBox;
@@ -78,6 +84,42 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(scores));
             }
 
+            _showsSignal = false;
+            Write(time, scores, lines, result);
+        }
+
+        /// <summary>隠す。</summary>
+        public void Hide()
+        {
+            _showsSignal = false;
+            _shown = false;
+            Refresh();
+        }
+
+        /// <summary>
+        /// status を <see cref="ModeHudFormatters"/> の書式役で文にして出す。null なら隠す。
+        /// 要素を持っている間は <see cref="GameSignals.ModeStatus"/> が出されるたびに呼ばれる。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">書式役が得点の行に null を返した。</exception>
+        public void Show(ModeStatus status)
+        {
+            if (status == null)
+            {
+                Hide();
+                return;
+            }
+
+            var formatter = ModeHudFormatters.For(status);
+            var scores = formatter.Scores(status)
+                ?? throw new InvalidOperationException($"{formatter.GetType().Name}.Scores returned null for {status.Detail?.GetType().Name ?? "a mode without detail"}");
+            _formattedLines.Clear();
+            formatter.AppendLines(status, _formattedLines);
+            Write(formatter.Time(status), scores, _formattedLines, formatter.Result(status));
+            _showsSignal = true;
+        }
+
+        private void Write(LocalizedText time, IReadOnlyList<ModeHudScoreLine> scores, IReadOnlyList<LocalizedText> lines, LocalizedText result)
+        {
             _timeSource = time;
             _resultSource = result;
             _scores.Clear();
@@ -93,13 +135,6 @@ namespace Fps.Runtime
             Refresh();
         }
 
-        /// <summary>隠す。</summary>
-        public void Hide()
-        {
-            _shown = false;
-            Refresh();
-        }
-
         protected override void OnBound(VisualElement element)
         {
             element.Clear();
@@ -108,9 +143,52 @@ namespace Fps.Runtime
             _linesBox = AddBox(element, LinesClass);
             _resultLabel = AddLabel(element, ResultClass);
 
+            Subscribe();
+            var status = GameSignals.ModeStatus.Value;
+            if (status != null || _showsSignal)
+            {
+                Show(status);
+                return;
+            }
+
             // 要素を持っていない間の言語の変更は届かないので、受けたときに今の言語で文にし直す
             ResolveTexts();
             Refresh();
+        }
+
+        private void OnDestroy()
+        {
+            Unsubscribe();
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.ModeStatus.Changed += HandleStatusChanged;
+                _subscribed = true;
+            }
+        }
+
+        private void Unsubscribe()
+        {
+            if (_subscribed)
+            {
+                GameSignals.ModeStatus.Changed -= HandleStatusChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandleStatusChanged(ModeStatus status)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.ModeStatus.Changed -= HandleStatusChanged;
+                return;
+            }
+
+            Show(status);
         }
 
         protected override void OnLanguageChanged()
@@ -142,6 +220,7 @@ namespace Fps.Runtime
 
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             element.Clear();
             element.style.display = DisplayStyle.None;
             _timeLabel = null;

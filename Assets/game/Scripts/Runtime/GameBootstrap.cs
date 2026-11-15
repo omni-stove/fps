@@ -22,6 +22,7 @@ namespace Fps.Runtime
     /// プレイヤーの最大体力・三人称のカメラの位置と縮める下限・覗き込みにかかる秒数は、このコンポーネントの値
     /// (<see cref="PlayerMaxHealth"/>・<see cref="ThirdPersonOffset"/>・<see cref="MinBoomLength"/>・<see cref="AdsTransitionSeconds"/>) で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
+    /// 生成し終えたら、プレイヤーの部品を <see cref="GameSignals.LocalPlayer"/> に、HUD の <see cref="HudModel"/> を <see cref="GameSignals.HudModel"/> に出し、破棄するときに消す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameBootstrap : MonoBehaviour
@@ -125,6 +126,8 @@ namespace Fps.Runtime
         private float _adsTransitionSeconds = AdsZoom.DefaultTransitionSeconds;
 
         private BootstrapWorld _world;
+        private LocalPlayerSignal _publishedPlayer;
+        private HudModel _publishedHudModel;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
         public BootstrapWorld World => _world;
@@ -376,9 +379,52 @@ namespace Fps.Runtime
                 throw;
             }
 
+            PublishSignals(_world);
             Debug.Log(ReadyLog, this);
             NotifyBuilt(_world);
             return _world;
+        }
+
+        private void OnDestroy()
+        {
+            ClearSignals();
+        }
+
+        /// <summary>
+        /// <see cref="Build"/> で出した自分のプレイヤーと HUD の <see cref="HudModel"/> を <see cref="GameSignals"/> から消す。破棄時に呼ばれる。
+        /// 後から別の側が出した値は消さない。何度呼んでもよい。
+        /// </summary>
+        public void ClearSignals()
+        {
+            if (_publishedPlayer != null)
+            {
+                GameSignals.LocalPlayer.ClearIfCurrent(_publishedPlayer);
+                _publishedPlayer = null;
+            }
+
+            if (_publishedHudModel != null)
+            {
+                GameSignals.HudModel.ClearIfCurrent(_publishedHudModel);
+                _publishedHudModel = null;
+            }
+        }
+
+        private void PublishSignals(BootstrapWorld world)
+        {
+            _publishedPlayer = new LocalPlayerSignal(
+                world.Player, world.PlayerDamageable, world.Weapon, world.Ads, world.Mover, world.Grenades, world.Abilities, world.ActionReader);
+            GameSignals.LocalPlayer.Publish(_publishedPlayer);
+
+            // HUD を作らなかった (専用サーバー・生成役が無い) ときは、前のシーンの HUD の値を残さないよう空にする
+            _publishedHudModel = GameUi.IsAlive(world.Hud) ? world.Hud.Model : null;
+            if (_publishedHudModel != null)
+            {
+                GameSignals.HudModel.Publish(_publishedHudModel);
+            }
+            else
+            {
+                GameSignals.HudModel.Clear();
+            }
         }
 
         /// <summary>

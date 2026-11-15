@@ -154,8 +154,7 @@ namespace Fps.Runtime
             IReadOnlyList<ControlPointZone> zones,
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
-            SideMember localPlayer = null,
-            IModeHud hudView = null)
+            SideMember localPlayer = null)
         {
             if (hardpoint == null)
             {
@@ -177,7 +176,7 @@ namespace Fps.Runtime
             Attach(hardpoint, sorted);
             try
             {
-                Begin(hardpoint.Session, members, spawnPoints, localPlayer, hudView);
+                Begin(hardpoint.Session, members, spawnPoints, localPlayer);
             }
             catch
             {

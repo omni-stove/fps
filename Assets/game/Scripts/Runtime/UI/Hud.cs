@@ -127,8 +127,9 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="DamageVignetteView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
-        /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
-        /// hudObject に付ける。
+        /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>・
+        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="DominationView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
+        /// hudObject に付ける。グレネード・能力の枠・拠点制圧は、出すものを渡されるまで隠れている。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
         /// 既に付いているものは付け直さない。
         /// </summary>
@@ -151,6 +152,9 @@ namespace Fps.Runtime
             AddIfMissing<InteractPromptView>(hudObject);
             AddIfMissing<ModeHudView>(hudObject);
             AddIfMissing<KillCamView>(hudObject);
+            AddIfMissing<GrenadeCountView>(hudObject);
+            AddIfMissing<AbilitySlotsView>(hudObject);
+            AddIfMissing<DominationView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
             // PauseMenu の後に付けると、木を作り直したときも PauseMenu が「設定」のボタンを持ってから開く処理を渡せる。
             AddIfMissing<PauseSettingsView>(hudObject);
@@ -192,6 +196,15 @@ namespace Fps.Runtime
         /// <summary>同じ GameObject のキルカムの枠と見出し。<see cref="AddViews"/> で付けていなければ null。</summary>
         public KillCamView KillCam => GetComponent<KillCamView>();
 
+        /// <summary>同じ GameObject の残りのグレネードの数。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public GrenadeCountView GrenadeCount => GetComponent<GrenadeCountView>();
+
+        /// <summary>同じ GameObject の能力の枠。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public AbilitySlotsView AbilitySlots => GetComponent<AbilitySlotsView>();
+
+        /// <summary>同じ GameObject の拠点制圧の表示。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public DominationView Domination => GetComponent<DominationView>();
+
         /// <summary>同じ GameObject のポーズメニュー。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();
 
@@ -220,6 +233,7 @@ namespace Fps.Runtime
             }
         }
 
+        // AddViews で付いているものを返す。AddViews を通さずに組んだ HUD だけ、ここで付ける (AttachTo は付いていればそれを返す)。
         IGrenadeCount IHud.AttachGrenadeCount()
         {
             return GrenadeCountView.AttachTo(this);

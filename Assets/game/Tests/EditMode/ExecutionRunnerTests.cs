@@ -222,7 +222,7 @@ namespace Fps.Tests.EditMode
         private void Begin(IReadOnlyList<SideMember> members, SideMember localPlayer, ModeHudView hud = null)
         {
             var execution = ExecutionRunner.CreateExecution(2, PreparationSeconds, 60f, ActionRules.Default, ExecuteSeconds);
-            _runner.Begin(execution, members, _spawns, localPlayer, hud);
+            _runner.Begin(execution, members, _spawns, localPlayer);
         }
 
         private static void KillBy(SideMember killer, SideMember victim)

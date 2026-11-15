@@ -45,9 +45,9 @@ namespace Fps.NetV2
             }
 
             var types = spec.AmmoTypes;
-            if (weapon.AmmoTypeIndex < types.Count)
+            if (weapon.AmmoTypeIndex > 0 && weapon.AmmoTypeIndex <= types.Count)
             {
-                model.SetAmmoType(types[weapon.AmmoTypeIndex]);
+                model.SetAmmoType(types[weapon.AmmoTypeIndex - 1]);
             }
             else
             {

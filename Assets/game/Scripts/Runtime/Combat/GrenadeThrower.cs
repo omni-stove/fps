@@ -12,8 +12,9 @@ namespace Fps.Runtime
     /// <see cref="Configure"/> (オフラインは <see cref="PlayerActions.Attach"/> が呼ぶ) で受け取るまでは投げず、入力も読まない。
     /// 残りは同じ本体の <see cref="Damageable"/> の体力が作り直されたとき (リスポーン・チェックポイントからの再開) と、
     /// <see cref="Refill"/> (キャンペーンのチェックポイントを通ったとき) に満タンへ戻す。
-    /// 信管・初速・爆発の威力と半径は Inspector の値から作る <see cref="Spec"/> (<see cref="GrenadeSpec"/>) に従う。
-    /// Play 中に生まれたときは、先に <see cref="ApplySpec"/> で渡されていなければ、Inspector の値を調整値の JSON (<see cref="KitTuning.Grenade"/>) で上書きする。
+    /// 持つ種類は <see cref="GrenadeCatalog.Carried"/> で、種類ごとに数を持ち、投げる種類を <see cref="InputActionPaths.SwitchGrenade"/> (<see cref="SelectNext"/>) で切り替える。
+    /// Play 中に生まれたときは、先に <see cref="ApplySpec"/> か <see cref="ApplyCatalog"/> で渡されていなければ、調整値の JSON (<see cref="KitTuning.Grenades"/>) の種類を持つ。
+    /// 種類を渡されていない間は、Inspector の値から作る 1 種類 (<see cref="CreateSpec"/>) だけを持つ。
     /// 投げてから <see cref="GrenadeSpec.ThrowSeconds"/> 秒の間は <see cref="IsThrowing"/> が true で、次を投げられず、
     /// <see cref="GameBootstrap"/> の配線で武器も撃てない。
     /// </summary>
@@ -24,6 +25,9 @@ namespace Fps.Runtime
 
         /// <summary>Assets/InputSystem_Actions.inputactions の Grenade アクション (キーボードの G、ゲームパッドの左ショルダー)。</summary>
         public const string ActionPath = InputActionPaths.Grenade;
+
+        /// <summary>Assets/InputSystem_Actions.inputactions の SwitchGrenade アクション (キーボードの K)。</summary>
+        public const string SwitchActionPath = InputActionPaths.SwitchGrenade;
 
         /// <summary>キルログに出す武器の Id。</summary>
         public const string WeaponId = "grenade";
@@ -63,16 +67,20 @@ namespace Fps.Runtime
 
         // 投げるたびに検証し直さないよう持っておき、OnValidate で捨てる。
         private GrenadeSpec _spec;
+        private GrenadeCatalog _catalog;
         private bool _specApplied;
-        private GrenadePouch _pouch = new GrenadePouch(0);
+        private GrenadeInventory _inventory = GrenadeInventory.Empty;
+        private ActionRules _actions;
         private Grenade _rule = Grenade.Off;
         private bool _configured;
         private Damageable _body;
         private InputAction _action;
+        private InputAction _switchAction;
         private bool _enabledAction;
+        private bool _enabledSwitchAction;
         private float _throwRemaining;
 
-        /// <summary>残りの数か、投げられるかどうか (ルール) が変わったときに呼ばれる。HUD が読み直す。</summary>
+        /// <summary>残りの数か、投げる種類か、投げられるかどうか (ルール) が変わったときに呼ばれる。HUD が読み直す。</summary>
         public event Action<GrenadeThrower> Changed;
 
         /// <summary>投げたときに、投げたグレネードを渡して呼ばれる。</summary>
@@ -84,11 +92,17 @@ namespace Fps.Runtime
         /// <summary>今のルールでグレネードを使うなら true (残りが 0 でも true)。</summary>
         public bool UsesGrenades => _rule == Grenade.On;
 
-        /// <summary>持てる数。</summary>
-        public int Capacity => _pouch.Capacity;
+        /// <summary>投げる種類の持てる数。</summary>
+        public int Capacity => _inventory.SelectedCapacity;
 
-        /// <summary>残りの数。</summary>
-        public int Remaining => _pouch.Remaining;
+        /// <summary>投げる種類の残りの数。</summary>
+        public int Remaining => _inventory.SelectedRemaining;
+
+        /// <summary>持っている種類と、種類ごとの残り。<see cref="Configure"/> の前は空。</summary>
+        public GrenadeInventory Inventory => _inventory;
+
+        /// <summary>持つ種類の並び。渡されていなければ Inspector の値の 1 種類。</summary>
+        public GrenadeCatalog Catalog => _catalog ?? GrenadeCatalog.Of(InspectorSpec);
 
         /// <summary>投げている最中 (投げてから <see cref="GrenadeSpec.ThrowSeconds"/> 秒の間) か。この間は撃てず、次も投げられない。</summary>
         public bool IsThrowing => _throwRemaining > 0f;
@@ -100,10 +114,12 @@ namespace Fps.Runtime
         public InputAction Action => _action;
 
         /// <summary>
-        /// 今の値で投げるときの <see cref="GrenadeSpec"/>。初めて読んだときと Inspector で値を変えた後に <see cref="CreateSpec"/> で作り直す。
-        /// 値が不正なら ArgumentOutOfRangeException。
+        /// 次に投げる種類の <see cref="GrenadeSpec"/>。種類を渡されていなければ Inspector の値から作る 1 種類 (初めて読んだときと Inspector で値を変えた後に
+        /// <see cref="CreateSpec"/> で作り直す)。値が不正なら ArgumentOutOfRangeException。
         /// </summary>
-        public GrenadeSpec Spec => _spec ?? (_spec = CreateSpec());
+        public GrenadeSpec Spec => _catalog != null && _inventory.Selected != null ? _inventory.Selected : InspectorSpec;
+
+        private GrenadeSpec InspectorSpec => _spec ?? (_spec = CreateSpec());
 
         /// <summary>投げたグレネードの見た目 (<see cref="ThrownGrenade.Spawn(GameObject, Vector3, Vector3, float, ExplosionDamage, int, GameObject)"/>)。null なら仮の球。</summary>
         public GameObject GrenadePrefab
@@ -146,7 +162,25 @@ namespace Fps.Runtime
             _fullDamageRadius = spec.FullDamageRadius;
             _structureDamageAtCenter = spec.StructureDamageAtCenter;
             _spec = spec;
+            _catalog = null;
             _specApplied = true;
+
+            // 同じ種類の値を変えただけなら、残りの数はそのままにする
+            if (_inventory.Count != 1 || _inventory.IndexOf(spec.Id) < 0)
+            {
+                Rebuild();
+            }
+        }
+
+        /// <summary>
+        /// catalog の種類を持ち、以後は種類ごとの値で投げる。Inspector の値は使わなくなる。
+        /// <see cref="Configure"/> の後なら、持つ数を満タンにして持ち直す。飛んでいるグレネードは変えない。
+        /// </summary>
+        public void ApplyCatalog(GrenadeCatalog catalog)
+        {
+            _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+            _specApplied = true;
+            Rebuild();
         }
 
         private void Awake()
@@ -154,7 +188,7 @@ namespace Fps.Runtime
             // 無効なまま置かれた本体は Awake が有効になるまで遅れるので、その間に Play 中のコードが ApplySpec で渡した値を JSON で消さない。
             if (Application.isPlaying && !_specApplied)
             {
-                ApplySpec(KitTuning.Grenade);
+                ApplyCatalog(KitTuning.Grenades);
             }
         }
 
@@ -185,6 +219,11 @@ namespace Fps.Runtime
         private void Update()
         {
             Tick(Time.deltaTime);
+            if (_switchAction != null && _switchAction.WasPressedThisFrame())
+            {
+                SelectNext();
+            }
+
             if (_action != null && _action.WasPressedThisFrame())
             {
                 TryThrow();
@@ -204,8 +243,9 @@ namespace Fps.Runtime
             }
 
             // 不正な値に投げるまで気づかないことがないよう、状態を変える前に作って確かめる。
-            _ = Spec;
-            SetPouch(GrenadePouch.For(rules.Actions));
+            var inventory = new GrenadeInventory(Catalog, rules.Actions);
+            _actions = rules.Actions;
+            SetInventory(inventory);
             _rule = rules.Actions.Grenade;
             _configured = true;
             _throwRemaining = 0f;
@@ -223,16 +263,29 @@ namespace Fps.Runtime
             {
                 DisableAction();
                 _action = null;
+                _switchAction = null;
             }
 
-            Debug.Log($"{LogTag} rule={_rule} count={_pouch.Capacity}", this);
+            Debug.Log($"{LogTag} rule={_rule} count={_inventory.SelectedCapacity} types={_inventory.Count}", this);
             Changed?.Invoke(this);
         }
 
         /// <summary>残りを持てる数に戻す。</summary>
         public void Refill()
         {
-            _pouch.Refill();
+            _inventory.Refill();
+        }
+
+        /// <summary>投げる種類を、持っている次の種類にする。持つ種類が 1 つ以下なら何もせず false。</summary>
+        public bool SelectNext()
+        {
+            if (!_inventory.SelectNext())
+            {
+                return false;
+            }
+
+            Debug.Log($"{LogTag} selected type={_inventory.Selected.LogName} remaining={_inventory.SelectedRemaining}", this);
+            return true;
         }
 
         /// <summary>投げている最中の残り時間を deltaSeconds 進める。Play 中は Update が呼ぶ。</summary>
@@ -252,7 +305,7 @@ namespace Fps.Runtime
         /// </summary>
         public bool CanThrow =>
             UsesGrenades
-            && _pouch.Remaining > 0
+            && _inventory.SelectedRemaining > 0
             && !IsThrowing
             && (ThrowBlocker == null || !ThrowBlocker())
             && (_body == null || !_body.IsDead);
@@ -270,16 +323,15 @@ namespace Fps.Runtime
 
             var spec = Spec;
             ResolveThrow(out var position, out var direction);
-            if (!_pouch.TryTake())
+            if (!_inventory.TryTake(_inventory.SelectedIndex))
             {
                 return false;
             }
 
             _throwRemaining = spec.ThrowSeconds;
             var velocity = LaunchVelocity(direction, spec.ThrowSpeed, spec.ThrowLiftSpeed);
-            var grenade = ThrownGrenade.Spawn(
-                gameObject, position, velocity, spec.FuseSeconds, spec.Explosion, spec.StructureDamageAtCenter, _grenadePrefab);
-            Debug.Log($"{LogTag} thrown remaining={_pouch.Remaining}", this);
+            var grenade = ThrownGrenade.Spawn(gameObject, position, velocity, spec, _grenadePrefab);
+            Debug.Log($"{LogTag} thrown remaining={_inventory.SelectedRemaining} type={spec.LogName}", this);
             Thrown?.Invoke(grenade);
             return true;
         }
@@ -351,15 +403,26 @@ namespace Fps.Runtime
             return found;
         }
 
-        private void SetPouch(GrenadePouch pouch)
+        private void SetInventory(GrenadeInventory inventory)
         {
-            _pouch.Changed -= OnPouchChanged;
-            _pouch = pouch;
-            _pouch.Changed += OnPouchChanged;
+            _inventory.Changed -= OnInventoryChanged;
+            _inventory = inventory;
+            _inventory.Changed += OnInventoryChanged;
         }
 
-        private void OnPouchChanged(int remaining)
+        private void OnInventoryChanged()
         {
+            Changed?.Invoke(this);
+        }
+
+        private void Rebuild()
+        {
+            if (!_configured)
+            {
+                return;
+            }
+
+            SetInventory(new GrenadeInventory(Catalog, _actions));
             Changed?.Invoke(this);
         }
 
@@ -397,6 +460,7 @@ namespace Fps.Runtime
 
             var actions = InputSystem.actions;
             _action = actions != null ? actions.FindAction(ActionPath) : null;
+            _switchAction = actions != null ? actions.FindAction(SwitchActionPath) : null;
             if (_action == null)
             {
                 Debug.LogWarning(
@@ -413,6 +477,12 @@ namespace Fps.Runtime
                 _action.Enable();
                 _enabledAction = true;
             }
+
+            if (_switchAction != null && !_switchAction.enabled)
+            {
+                _switchAction.Enable();
+                _enabledSwitchAction = true;
+            }
         }
 
         private void DisableAction()
@@ -422,7 +492,13 @@ namespace Fps.Runtime
                 _action.Disable();
             }
 
+            if (_enabledSwitchAction && _switchAction != null)
+            {
+                _switchAction.Disable();
+            }
+
             _enabledAction = false;
+            _enabledSwitchAction = false;
         }
     }
 }

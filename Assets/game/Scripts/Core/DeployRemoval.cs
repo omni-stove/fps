@@ -11,5 +11,8 @@ namespace Fps.Core
         // 壊された (Destroyed) のと分けて、撃ち尽くしたのか時間で消えたのかをログで見分けられるようにする。
         Expended,
         Expired,
+
+        // 地雷のように自分で爆発して消えたのを、壊された (Destroyed) のと分けてログで見分けられるようにする。
+        Detonated,
     }
 }

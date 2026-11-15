@@ -379,7 +379,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | 人型のリグ (プレハブ) | プレイヤー・敵の体とアニメーション | `CharacterRig` | `Characters/CharacterRig` |
 
 - カタログは **Assets > Create > Fps > <カタログ名>** で作り、武器の Id や材質の Id で引く (武器の名前では引かない)。サンプルの仮の素材は `Fps/Build All Presentation Assets` (`Fps.Editor.PresentationAssetSteps.BuildAll`) で作れる。
-- 1 つの物だけの見た目は、そのコンポーネントのプレハブの欄で変える (例: `GameBootstrap` の床・標的ダミー・グレネード、`EnemySniper`・`EnemyBomber`・`EnemyShield` の仮の形、`Pickup`・`PickupSpawnPoint`・`BombSite`・`ControlPointZone` の見た目、`TurretDeployDefinition`・`DecoyDeployDefinition`・`DeployAbilityDefinition` の置く物)。空なら仮の形を作る。
+- 1 つの物だけの見た目は、そのコンポーネントのプレハブの欄で変える (例: `GameBootstrap` の床・標的ダミー・グレネード、`EnemySniper`・`EnemyBomber`・`EnemyShield` の仮の形、`Pickup`・`PickupSpawnPoint`・`BombSite`・`ControlPointZone` の見た目、`TurretDeployDefinition`・`DecoyDeployDefinition`・`MineDeployDefinition`・`DeployAbilityDefinition` の置く物)。空なら仮の形を作る。
 - 画面 (HUD・メニュー) は [UI を差し替える](#ui-を差し替える) で替える。
 - 武器の Id にカタログの音とエフェクトが無いと、[差し替え漏れの点検](#差し替え漏れの点検) が一覧に出す。
 

@@ -122,7 +122,8 @@ namespace Fps.Tests.EditMode
                     pelletCount: 8,
                     pelletSpreadDegrees: 4f,
                     radius: 0.2f,
-                    penetration: new PenetrationSpec(2, 0.6f, 0.5f),
+                    penetration: new PenetrationSpec(
+                        2, 0.6f, 0.5f, new[] { new PenetrationMaterialSpec("metal", 0f), new PenetrationMaterialSpec("wood", 2f) }),
                     ricochet: new RicochetSpec(1, 20f, 0.5f),
                     projectile: new ProjectileSpec(40f, 0.5f, 6f, WorldHitResponse.Stick, "fx.bolt"),
                     homing: new HomingSpec(1f, 10f, 90f)),

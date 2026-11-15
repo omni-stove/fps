@@ -35,6 +35,20 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheDamageMultiplierWeakensTheRoundBeforeTheZoneAndTheFalloff()
+        {
+            var impact = new ImpactSpec(40, _falloff, 2f);
+
+            var person = ImpactResolver.Resolve(impact, ImpactHit.Character(HitZone.Body, Vector3.Zero, 30f), null, 0f, 0.5f);
+            var wall = ImpactResolver.Resolve(impact, ImpactHit.Structure(Vector3.Zero, 5f), null, 0f, 0.25f);
+
+            Assert.That(person[0].Amount, Is.EqualTo(DamageCalculator.Calculate(20, HitZone.Body, 30f, _falloff)));
+            Assert.That(wall[0].Amount, Is.EqualTo(10));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ImpactResolver.Resolve(impact, ImpactHit.Structure(Vector3.Zero, 5f), null, 0f, -0.1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ImpactResolver.Resolve(impact, ImpactHit.Structure(Vector3.Zero, 5f), null, 0f, float.NaN));
+        }
+
+        [Test]
         public void StructuresTakeTheUnscaledDamageOverTheStructureRadius()
         {
             var point = new Vector3(4f, 5f, 6f);

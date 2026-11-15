@@ -144,7 +144,7 @@ namespace Fps.Server
             {
                 if (segment.HasHit)
                 {
-                    _impact.Apply(shot, segment.Direction, segment.Hit);
+                    _impact.Apply(shot, segment.Direction, segment.Hit, segment.DamageMultiplier);
                 }
             }
         }

@@ -65,7 +65,7 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 | 中身 | 置き場所 (サンプルのルートから) |
 | --- | --- |
-| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
+| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`・`AntiMaterial.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
 | ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
 | ミッション・シーン | `Missions/`・`Scenes/` |
 | ネット対戦の試合の設定 (`NetMatchDefinition`。専用サーバーへ書き出す) | `Rules/NetMatch.asset` |
@@ -201,7 +201,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 ### 武器を JSON から取り込む
 
-1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`)。
+1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・貫通する `AntiMaterial.json`)。
 
 ```json
 {
@@ -221,13 +221,14 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 | --- | --- | --- |
 | `trigger` (撃ち方) | `fireMode` (`Auto`/`Semi`)・`fireInterval` | `burst` (`roundsPerBurst`・`roundIntervalSeconds`)・`charge` (`chargeSeconds`・`minChargeFraction`・`fullChargeDamageMultiplier`・`firesWhenFull`)・`spinUp` (`spinUpSeconds`・`startIntervalMultiplier`・`spinDownSeconds`)・`cycle` (`cycleSeconds`・`leavesAds`) |
 | `ammo` (弾薬) | `kind` (`Magazine`/`Heat`)・`magazineSize`・`reserveAmmo`・`reloadSeconds`・`activeReloadWindowStart`・`activeReloadWindowLength`・`activeReloadFailSeconds`・`reloadStyle` (`Whole`/`PerRound`)・`reloadSecondsPerRound` | `heat` (`heatPerShot`・`coolPerSecond`・`coolDelaySeconds`・`overheatSeconds`。`kind` が `Heat` のときは必須) |
-| `round` (弾) | `delivery` (`Hitscan`/`Projectile`/`Beam`/`Spray`)・`range`・`pelletCount`・`pelletSpreadDegrees`・`radius` | `penetration`・`ricochet`・`projectile` (`speed`・`gravityMultiplier`・`lifetimeSeconds`・`onWorldHit`・`visualId`)・`homing`・`beam` (`tickSeconds`・`visualId`)・`spray` (`tickSeconds`・`coneDegrees`・`visualId`)。`projectile`・`beam`・`spray` はその `delivery` のときだけ書き、そのときは必須 |
+| `round` (弾) | `delivery` (`Hitscan`/`Projectile`/`Beam`/`Spray`)・`range`・`pelletCount`・`pelletSpreadDegrees`・`radius` | `penetration` (`maxPenetrations`・`damageMultiplierPerPenetration`・`maxThickness`・`materials`)・`ricochet`・`projectile` (`speed`・`gravityMultiplier`・`lifetimeSeconds`・`onWorldHit`・`visualId`)・`homing`・`beam` (`tickSeconds`・`visualId`)・`spray` (`tickSeconds`・`coneDegrees`・`visualId`)。`projectile`・`beam`・`spray` はその `delivery` のときだけ書き、そのときは必須 |
 | `impact` (着弾) | `damage`・`falloff`・`structureRadius` | `explosion` (`maxDamage`・`radius`・`fullDamageRadius`・`structureDamageAtCenter`・`detonation`)・`statusEffect` (`durationSeconds`・`tickSeconds`・`damagePerTick`・`visualId`)・`areaEffect` (`radius`・`durationSeconds`・`tickSeconds`・`damagePerTick`・`statusEffect`・`visualId`) |
 | `aim` (照準) | `hipSpreadDegrees`・`adsSpreadDegrees`・`moveSpreadDegrees`・`recoilPitchDegrees`・`recoilYawDegrees`・`recoilRecoveryPerSecond`・`recoilRecoveryDelaySeconds`・`blindFireSpreadDegrees`・`zoomLevels` (覗き込みの視野角の並び。先頭が覗き込み、続きがスコープの倍率)・`swayDegrees` | `breathHold` (`maxHoldSeconds`・`recoverSeconds`・`swayMultiplier`) |
 | `ammoTypes` (弾薬の種類の並び) | 各要素に `id`・`nameKey` | `round`・`impact` (書いた部品だけ武器のものを上書きする) |
 
 - 必須は `id` と `category` だけ。部品や項目を書かなければ部品の既定 (Auto・弾倉制・ヒットスキャン 1 本・着弾でダメージ) になる。入れ子の中の項目は、`visualId` などの既定のあるもの以外は必須。
 - 列挙 (`category`・`fireMode` など) は列挙子の名前の文字列。
+- `penetration` の弾は当たった物を `maxPenetrations` 枚まで抜け、1 枚抜けるたびにダメージへ `damageMultiplierPerPenetration` を掛ける。抜けられるのは厚さ `maxThickness` (m) までの物で、人は厚さ 0 として数える。`materials` は面の素材 (`SurfaceMaterial` の Id) ごとの抜けやすさの並び (`[{ "materialId": "metal", "penetrability": 0.5 }]`) で、`maxThickness` に `penetrability` を掛けた厚さまで抜ける。`penetrability` が 0 の素材は抜けずに止まり、並べていない素材は 1。ネット対戦のサーバーは `.fpsmap` が素材を持たないので、どの面も `default` で決める。
 - `falloff` は `{ "startDistance": …, "endDistance": …, "minMultiplier": … }` か、減衰しないなら `"None"`。
 - `nameKey` は画面に出す武器の名前を引く表のキー。文は `Resources/Localization/<言語>/` の JSON (例: `items.json` に `"weapon.rifle": "Rifle"`) に書く。表に無いキーはキーそのものが出る。空か `null` なら `id` が出る。弾薬の種類の `nameKey` も同じ (例: `ammo.dmr.armorPiercing`)。
 - 部品に分ける前の平らな形 (`fireMode`・`magazineSize`・`damage`・`range`・`falloff`・`explosionRadius`・`adsFieldOfView` などを武器の直下に書く) もそのまま読める。`explosionRadius` は `impact.structureRadius`、`adsFieldOfView` は `aim.zoomLevels` の 1 つ目として読み、`adsFieldOfView` は `null` (共通の初期値) も書ける。同じ値を平らな項目と部品の両方に書くとエラーになる。

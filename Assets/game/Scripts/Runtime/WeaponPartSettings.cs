@@ -206,6 +206,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("抜けられる最大の厚さ (m)")]
         private float _maxThickness = 0.5f;
 
+        [SerializeField, Tooltip("面の素材ごとの抜けやすさ。並べていない素材は 1")]
+        private List<PenetrationMaterialSettings> _materials = new List<PenetrationMaterialSettings>();
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public int MaxPenetrations { get => _maxPenetrations; set => _maxPenetrations = value; }
@@ -214,8 +217,23 @@ namespace Fps.Runtime
 
         public float MaxThickness { get => _maxThickness; set => _maxThickness = value; }
 
-        public PenetrationSpec ToSpec() =>
-            _enabled ? new PenetrationSpec(_maxPenetrations, _damageMultiplierPerPenetration, _maxThickness) : null;
+        public List<PenetrationMaterialSettings> Materials => _materials ??= new List<PenetrationMaterialSettings>();
+
+        public PenetrationSpec ToSpec()
+        {
+            if (!_enabled)
+            {
+                return null;
+            }
+
+            var materials = new List<PenetrationMaterialSpec>(Materials.Count);
+            foreach (var material in Materials)
+            {
+                materials.Add(material?.ToSpec());
+            }
+
+            return new PenetrationSpec(_maxPenetrations, _damageMultiplierPerPenetration, _maxThickness, materials);
+        }
 
         public void Set(PenetrationSpec spec)
         {
@@ -225,7 +243,41 @@ namespace Fps.Runtime
                 _maxPenetrations = spec.MaxPenetrations;
                 _damageMultiplierPerPenetration = spec.DamageMultiplierPerPenetration;
                 _maxThickness = spec.MaxThickness;
+                Materials.Clear();
+                foreach (var material in spec.Materials)
+                {
+                    var settings = new PenetrationMaterialSettings();
+                    settings.Set(material);
+                    Materials.Add(settings);
+                }
             }
+        }
+    }
+
+    [Serializable]
+    public sealed class PenetrationMaterialSettings
+    {
+        [SerializeField, Tooltip("面の素材の Id (SurfaceMaterial の Id。例: concrete, metal, wood)")]
+        private string _materialId = SurfaceMaterial.DefaultId;
+
+        [SerializeField, Min(0f), Tooltip("抜けられる最大の厚さに掛ける倍率。0 ならこの素材は抜けない")]
+        private float _penetrability = 1f;
+
+        public string MaterialId { get => _materialId ?? string.Empty; set => _materialId = value ?? string.Empty; }
+
+        public float Penetrability { get => _penetrability; set => _penetrability = value; }
+
+        public PenetrationMaterialSpec ToSpec() => new PenetrationMaterialSpec(MaterialId, _penetrability);
+
+        public void Set(PenetrationMaterialSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            _materialId = spec.MaterialId;
+            _penetrability = spec.Penetrability;
         }
     }
 

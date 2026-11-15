@@ -401,6 +401,19 @@ namespace Fps.Core
             return new LocalizedText("hud.grenades", remaining);
         }
 
+        /// <summary>種類を切り替えて持っているときの、投げる種類の名前と残りの数。</summary>
+        /// <example><c>Grenades(new LocalizedText("grenade.smoke"), 2)</c> は <c>スモークグレネード 2</c></example>
+        /// <exception cref="ArgumentOutOfRangeException">remaining が負。</exception>
+        public static LocalizedText Grenades(LocalizedText typeName, int remaining)
+        {
+            if (remaining < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(remaining), remaining, "remaining must not be negative");
+            }
+
+            return new LocalizedText("hud.grenadesOfType", typeName, remaining);
+        }
+
         /// <summary>
         /// 能力の枠 1 つの表示。使っている最中は「使用中」、次に使えるまで待つ (待ち時間か、回数が無く戻るのを待つ) 間は残りの秒数を
         /// <see cref="AbilityWaitSeconds"/> で添え、それ以外は回数だけを出す。回数が無く戻らない設定なら回数だけを出す。

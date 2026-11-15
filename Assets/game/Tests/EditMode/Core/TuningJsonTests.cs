@@ -6,10 +6,13 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class TuningJsonTests
     {
+        private const string _frag = GrenadeSpec.DefaultId;
+        private const string _smoke = "ecaf6e57-cb77-4707-9321-6ea5b659408f";
+
         private static readonly string[] _expectedGrenadeItemNames =
         {
-            "fuseSeconds", "throwSeconds", "throwSpeed", "throwLiftSpeed",
-            "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter",
+            "id", "nameKey", "fuseSeconds", "throwSeconds", "throwSpeed", "throwLiftSpeed",
+            "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter", "impact", "stickiness",
         };
 
         private static readonly string[] _expectedPingItemNames =
@@ -66,6 +69,82 @@ namespace Fps.Core.Tests
             Assert.That(grenade.StructureDamageAtCenter, Is.EqualTo(GrenadeSpec.DefaultStructureDamageAtCenter));
             Assert.That(ping.LifetimeSeconds, Is.EqualTo(PingSpec.DefaultLifetimeSeconds));
             Assert.That(ping.MinIntervalSeconds, Is.EqualTo(PingSpec.DefaultMinIntervalSeconds));
+        }
+
+        [Test]
+        public void ReadsAListOfGrenadeTypesAndWhichAreCarried()
+        {
+            var catalog = TuningJson.ParseGrenades(
+                "{\"types\": ["
+                + "{\"id\": \"" + _frag + "\", \"nameKey\": \"grenade.frag\", \"damageRadius\": 5},"
+                + "{\"id\": \"" + _smoke + "\", \"nameKey\": \"grenade.smoke\", \"fuseSeconds\": 1, \"stickiness\": \"Surfaces\","
+                + " \"impact\": {\"damage\": 0, \"areaEffect\": {\"radius\": 5, \"durationSeconds\": 15, \"tickSeconds\": 0.5, \"damagePerTick\": 0, \"visualId\": \"smoke\"}}}"
+                + "], \"carried\": [\"" + _smoke + "\", \"" + _frag + "\"]}",
+                "grenade.json");
+
+            Assert.That(catalog.Types.Count, Is.EqualTo(2));
+            Assert.That(catalog.Types[0].DamageRadius, Is.EqualTo(5f));
+            Assert.That(catalog.Types[0].MaxDamage, Is.EqualTo(GrenadeSpec.DefaultMaxDamage));
+            var smoke = catalog.Carried[0];
+            Assert.That(smoke.Id, Is.EqualTo(_smoke));
+            Assert.That(smoke.NameKey, Is.EqualTo("grenade.smoke"));
+            Assert.That(smoke.FuseSeconds, Is.EqualTo(1f));
+            Assert.That(smoke.Stickiness, Is.EqualTo(GrenadeStickiness.Surfaces));
+            Assert.That(smoke.Explosion, Is.Null);
+            Assert.That(smoke.Impact.AreaEffect.Radius, Is.EqualTo(5f));
+            Assert.That(smoke.Impact.AreaEffect.VisualId, Is.EqualTo("smoke"));
+            Assert.That(catalog.Carried[1].Id, Is.EqualTo(_frag));
+        }
+
+        [Test]
+        public void WithoutCarriedOnlyTheFirstTypeIsCarried()
+        {
+            var catalog = TuningJson.ParseGrenades(
+                "{\"types\": [{\"id\": \"" + _frag + "\"}, {\"id\": \"" + _smoke + "\", \"impact\": {\"damage\": 0}}]}", "g");
+
+            Assert.That(catalog.Carried.Count, Is.EqualTo(1));
+            Assert.That(catalog.Carried[0].Id, Is.EqualTo(_frag));
+        }
+
+        [Test]
+        public void TheOneTypeFormIsReadAsTheOnlyCarriedType()
+        {
+            var catalog = TuningJson.ParseGrenades("{\"damageRadius\": 9}", "grenade.json");
+
+            Assert.That(catalog.Types.Count, Is.EqualTo(1));
+            Assert.That(catalog.Carried[0].Id, Is.EqualTo(GrenadeSpec.DefaultId));
+            Assert.That(catalog.Carried[0].DamageRadius, Is.EqualTo(9f));
+        }
+
+        [Test]
+        public void ABadGrenadeListNamesTheItem()
+        {
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades("{\"types\": [{\"id\": \"" + _frag + "\", \"fuseSeconds\": -1}]}", "g")).Item,
+                Is.EqualTo("types[0].fuseSeconds"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades("{\"types\": [{\"id\": \"frag\"}]}", "g")).Item,
+                Is.EqualTo("types[0].id"),
+                "ids are UUIDs like the weapons'");
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades("{\"types\": [{\"id\": \"" + _frag + "\"}], \"carried\": [\"" + _smoke + "\"]}", "g")).Item,
+                Is.EqualTo("carried"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades("{\"types\": [{\"id\": \"" + _frag + "\"}, {\"id\": \"" + _frag + "\"}]}", "g")).Item,
+                Is.EqualTo("types"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades("{\"types\": []}", "g")).Item,
+                Is.EqualTo("types"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades("{\"types\": [{\"maxDamage\": 10, \"impact\": {}}]}", "g")).Item,
+                Is.EqualTo("types[0].maxDamage"),
+                "an explosion written both flat and in impact is ambiguous");
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades("{\"types\": [{\"impact\": {\"blast\": 1}}]}", "g")).Item,
+                Is.EqualTo("types[0].impact.blast"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades("{\"types\": [{\"stickiness\": \"Glue\"}]}", "g")).Item,
+                Is.EqualTo("types[0].stickiness"));
         }
 
         [Test]

@@ -112,7 +112,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(weapon.Fire(), Is.True);
 
-            Assert.That(_recorder.Shots.Count(), Is.EqualTo(8));
+            Assert.That(_recorder.Shots.Count(), Is.EqualTo(1));
+            Assert.That(_recorder.ContinuedShots.Count(), Is.EqualTo(7));
             Assert.That(_recorder.Impacts.Count(), Is.EqualTo(8));
             Assert.That(_recorder.Confirms.Count(), Is.EqualTo(1));
             Assert.That(_recorder.Confirms[0].Damage, Is.EqualTo(1000 - target.Health.Current));
@@ -520,10 +521,11 @@ namespace Fps.Tests.EditMode
             return damageable;
         }
 
-        // 5 つのイベントを購読して届いた値を並べる。Dispose で購読を外す。
+        // 6 つのイベントを購読して届いた値を並べる。Dispose で購読を外す。
         private sealed class Recorder : IDisposable
         {
             public readonly List<ShotFiredInfo> Shots = new List<ShotFiredInfo>();
+            public readonly List<ShotFiredInfo> ContinuedShots = new List<ShotFiredInfo>();
             public readonly List<ImpactInfo> Impacts = new List<ImpactInfo>();
             public readonly List<HitConfirm> Confirms = new List<HitConfirm>();
             public readonly List<DamageTakenInfo> DamageTaken = new List<DamageTakenInfo>();
@@ -532,6 +534,7 @@ namespace Fps.Tests.EditMode
             public Recorder()
             {
                 CombatEvents.ShotFired += Shots.Add;
+                CombatEvents.ShotContinued += ContinuedShots.Add;
                 CombatEvents.Impact += Impacts.Add;
                 CombatEvents.HitConfirmed += Confirms.Add;
                 CombatEvents.DamageTaken += DamageTaken.Add;
@@ -541,6 +544,7 @@ namespace Fps.Tests.EditMode
             public void Dispose()
             {
                 CombatEvents.ShotFired -= Shots.Add;
+                CombatEvents.ShotContinued -= ContinuedShots.Add;
                 CombatEvents.Impact -= Impacts.Add;
                 CombatEvents.HitConfirmed -= Confirms.Add;
                 CombatEvents.DamageTaken -= DamageTaken.Add;

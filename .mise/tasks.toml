@@ -89,6 +89,6 @@ description = "Host a 16-bot TDM on NetArena01 in one batch-mode editor for 120 
 run = "unity -batchmode -projectPath . -executeMethod Fps.Editor.PerfSmokeRun.Run -logFile -"
 
 [nightly-local]
-description = "Run the nightly workflow's steps locally: EditMode tests, the smoke suite, re-exporting the map data and checking it matches server-data/maps, and on Sundays (JST) the macOS client build (close the Editor first). Options: --client to always build the client, --no-client to never"
+description = "Run the nightly workflow's steps locally: EditMode tests, the smoke suite, the map-data template's check (re-export and compare with server-data/maps), and on Sundays (JST) the macOS client build (close the Editor first). Options: --client to always build the client, --no-client to never"
 # 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
 run = "bash scripts/nightly-local.sh"

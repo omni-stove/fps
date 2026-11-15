@@ -109,7 +109,7 @@ namespace Fps.Tests.EditMode
         {
             var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/Dmr.json"));
             var spec = WeaponJsonImporter.ParseSpec(json, "Dmr.json");
-            var asset = WeaponAssetBuilder.LoadRangeWeapons().Weapons.Single(d => d.name == "Dmr");
+            var asset = WeaponAssetBuilder.LoadRangeWeapons().Weapons.Single(d => d.ToSpec().Id == spec.Id);
 
             Assert.That(WeaponSpecJson.Write(asset.ToSpec()), Is.EqualTo(WeaponSpecJson.Write(spec)), "the committed asset is the JSON");
             Assert.That(spec.AmmoTypes.Select(t => t.NameKey), Is.EqualTo(new[] { "ammo.dmr.standard", "ammo.dmr.armorPiercing" }));

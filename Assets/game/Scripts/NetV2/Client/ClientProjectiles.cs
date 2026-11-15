@@ -13,7 +13,7 @@ namespace Fps.NetV2
     /// 終わりの知らせ (<see cref="ProjectileEndedMessage"/>) で消すか刺さったままにする。
     /// </summary>
     /// <remarks>
-    /// 撃った本人は撃った瞬間に予測の弾を出し、同じ武器のサーバーの弾がスナップショットに載ったら古い順にその Id を引き継ぐ。
+    /// 撃った本人は撃った瞬間に予測の弾を出し、同じ武器のサーバーの弾がスナップショットに載ったら古い順に位置と速さが最も近い予測の弾がその Id を引き継ぐ。
     /// 撃った本人には発射の知らせが来ないので、一度も知らない Id の終わりの知らせは、まだ引き継いでいない自分の予測の弾の終わりとみなす。
     /// 予測の弾は撃った時から進めているので、往復の分だけ遅れたスナップショットには寄せない (寄せると毎回引き戻される)。
     /// 誘導する弾だけは手元で曲がり方が分からないので、引き継いだ後はスナップショットに寄せる。
@@ -312,20 +312,37 @@ namespace Fps.NetV2
         {
             if (hasShooter && shooterId == _localPlayerId)
             {
+                // 本人にはサーバーが発射の知らせを送らず、サーバーの弾がスナップショットに載らないまま終わることもある。
+                // 古い順に渡すと、そうして残った前の射撃の予測の弾に次の射撃の Id を渡してしまうので、位置と速さが最も近い予測の弾に渡す。
+                var best = -1;
+                var bestScore = float.MaxValue;
                 for (var i = 0; i < _predicted.Count; i++)
                 {
-                    var predicted = _predicted[i];
-                    if (string.Equals(predicted.WeaponId, weaponId, StringComparison.Ordinal))
+                    var candidate = _predicted[i];
+                    if (!string.Equals(candidate.WeaponId, weaponId, StringComparison.Ordinal))
                     {
-                        _predicted.RemoveAt(i);
-                        _byId.Add(id, predicted);
-                        if (predicted.FollowsServer)
-                        {
-                            predicted.Correct(position, velocity, _snapDistance);
-                        }
-
-                        return predicted;
+                        continue;
                     }
+
+                    var score = candidate.Mismatch(position, velocity);
+                    if (score < bestScore)
+                    {
+                        best = i;
+                        bestScore = score;
+                    }
+                }
+
+                if (best >= 0)
+                {
+                    var predicted = _predicted[best];
+                    _predicted.RemoveAt(best);
+                    _byId.Add(id, predicted);
+                    if (predicted.FollowsServer)
+                    {
+                        predicted.Correct(position, velocity, _snapDistance);
+                    }
+
+                    return predicted;
                 }
             }
 
@@ -441,6 +458,11 @@ namespace Fps.NetV2
             private float Lifetime => _spec != null ? _spec.LifetimeSeconds : UnknownWeaponLifetimeSeconds;
 
             private Vector3 Shown => _flight.Position + _offset;
+
+            public float Mismatch(Vector3 position, Vector3 velocity)
+            {
+                return Vector3.Distance(Shown, position) + Vector3.Distance(_flight.Velocity, velocity);
+            }
 
             public bool Launch(Vector3 position, Vector3 velocity)
             {

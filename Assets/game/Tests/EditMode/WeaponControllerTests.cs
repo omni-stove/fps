@@ -893,6 +893,58 @@ namespace Fps.Tests.EditMode
             LogAssert.NoUnexpectedReceived();
         }
 
+        [Test]
+        public void SwitchingTheAmmoTypeLogsEmptiesTheMagazineAndLoadsTheNewTypeOnReload()
+        {
+            var dmr = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                dmr.name = "Dmr";
+                var piercing = new Fps.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a3", "ammo.dmr.armorPiercing", impact: new Fps.Core.ImpactSpec(36));
+                WeaponAssets.Configure(dmr, new Fps.Core.WeaponSpec(
+                    TestWeapons.RifleId,
+                    "weapon.dmr",
+                    Fps.Core.WeaponCategory.MarksmanRifle,
+                    ammo: new Fps.Core.AmmoSpec(15, 60, 2f),
+                    impact: new Fps.Core.ImpactSpec(45),
+                    ammoTypes: new[] { new Fps.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a2", "ammo.dmr.standard"), piercing }));
+                _controller.Initialize(_camera.transform, _attack, _reload, dmr);
+                var switched = new System.Collections.Generic.List<Fps.Core.Weapon>();
+                _controller.AmmoTypeSwitched += switched.Add;
+
+                LogAssert.Expect(LogType.Log, $"{WeaponController.AmmoTypeSwitchedLogPrefix} weapon=weapon.dmr index=1 id={piercing.Id} damage=36");
+                Assert.That(_controller.SwitchAmmoType(), Is.True);
+
+                Assert.That(switched, Is.EqualTo(new[] { _controller.Weapon }));
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.Zero);
+                Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(75));
+
+                Assert.That(_controller.StartReload(), Is.True);
+                LogAssert.Expect(LogType.Log, WeaponController.ReloadedLog);
+                _controller.Tick(2f);
+
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(15));
+                Assert.That(_controller.Weapon.AmmoTypes.Impact.Damage, Is.EqualTo(36));
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.DestroyImmediate(dmr);
+            }
+        }
+
+        [Test]
+        public void AWeaponWithoutAmmoTypesDoesNotSwitch()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+
+            Assert.That(_controller.SwitchAmmoType(), Is.False);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize));
+            Assert.That(_controller.SwitchAmmoTypeAction, Is.Null, "no switch input unless found or set");
+            Assert.Throws<ArgumentNullException>(() => WeaponController.AmmoTypeSwitchedLog(null));
+            LogAssert.NoUnexpectedReceived();
+        }
+
         private static Fps.Core.GameRules ActiveReloadRules(Fps.Core.ActiveReload activeReload)
         {
             var d = Fps.Core.GameRules.Default;

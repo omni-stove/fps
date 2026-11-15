@@ -64,9 +64,6 @@ namespace Fps.Core.Tests
         [Test]
         public void TheRoundHooksDoNothingForNow()
         {
-            Assert.That(PenetrationRule.TryPassThrough(new PenetrationSpec(2, 0.5f, 0.3f), 0, "concrete", 0.1f, out var multiplier), Is.False);
-            Assert.That(multiplier, Is.EqualTo(1f));
-
             var velocity = new Vector3(0f, 0f, 30f);
             Assert.That(ProjectileSteering.Steer(new HomingSpec(1f, 10f, 90f), Vector3.Zero, velocity, Vector3.UnitX, 0.1f), Is.EqualTo(velocity));
 

@@ -208,6 +208,31 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void APenetratingRoundGoesThroughTheWallAndHurtsLess()
+        {
+            var plain = TestRules.Rifle();
+            var rifle = new WeaponSpec(
+                plain.Id,
+                plain.NameKey,
+                plain.Category,
+                plain.Trigger,
+                plain.Ammo,
+                new RoundSpec(range: plain.Range, penetration: new PenetrationSpec(1, 0.5f, 0.6f)),
+                new ImpactSpec(40),
+                plain.Aim);
+            Start(Rules(), wall: true, rifle: rifle);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            FireAt(1, Body(2).Center);
+
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 20), _log.ToString());
+            var shot = _transport.Read<ShotMessage>(2, CopySegments).Single();
+            Assert.That(shot.SegmentCount, Is.EqualTo(2));
+        }
+
+        [Test]
         public void ABrokenWallLetsTheNextBulletThrough()
         {
             Start(Rules().WithDestruction(Destruction.On), wall: true, destructibleWall: true);

@@ -70,6 +70,9 @@ namespace Fps.Core
         public const string MaxPenetrationsItem = "maxPenetrations";
         public const string DamageMultiplierPerPenetrationItem = "damageMultiplierPerPenetration";
         public const string MaxThicknessItem = "maxThickness";
+        public const string MaterialsItem = "materials";
+        public const string MaterialIdItem = "materialId";
+        public const string PenetrabilityItem = "penetrability";
         public const string MaxBouncesItem = "maxBounces";
         public const string MaxGrazingAngleDegreesItem = "maxGrazingAngleDegrees";
         public const string DamageMultiplierPerBounceItem = "damageMultiplierPerBounce";
@@ -190,7 +193,8 @@ namespace Fps.Core
         private static readonly string[] _spinUpItems = { SpinUpSecondsItem, StartIntervalMultiplierItem, SpinDownSecondsItem };
         private static readonly string[] _cycleItems = { CycleSecondsItem, LeavesAdsItem };
         private static readonly string[] _heatItems = { HeatPerShotItem, CoolPerSecondItem, CoolDelaySecondsItem, OverheatSecondsItem };
-        private static readonly string[] _penetrationItems = { MaxPenetrationsItem, DamageMultiplierPerPenetrationItem, MaxThicknessItem };
+        private static readonly string[] _penetrationItems = { MaxPenetrationsItem, DamageMultiplierPerPenetrationItem, MaxThicknessItem, MaterialsItem };
+        private static readonly string[] _penetrationMaterialItems = { MaterialIdItem, PenetrabilityItem };
         private static readonly string[] _ricochetItems = { MaxBouncesItem, MaxGrazingAngleDegreesItem, DamageMultiplierPerBounceItem };
         private static readonly string[] _projectileItems = { SpeedItem, GravityMultiplierItem, LifetimeSecondsItem, OnWorldHitItem, VisualIdItem };
         private static readonly string[] _homingItems = { LockOnSecondsItem, LockOnConeDegreesItem, TurnDegreesPerSecondItem };
@@ -423,7 +427,10 @@ namespace Fps.Core
         private static RoundSpec ReadRound(Part part)
         {
             var penetration = ReadNested(part, PenetrationItem, _penetrationItems, p => new PenetrationSpec(
-                p.RequireInt(MaxPenetrationsItem), p.RequireFloat(DamageMultiplierPerPenetrationItem), p.RequireFloat(MaxThicknessItem)));
+                p.RequireInt(MaxPenetrationsItem),
+                p.RequireFloat(DamageMultiplierPerPenetrationItem),
+                p.RequireFloat(MaxThicknessItem),
+                ReadPenetrationMaterials(p.Fields)));
             var ricochet = ReadNested(part, RicochetItem, _ricochetItems, p => new RicochetSpec(
                 p.RequireInt(MaxBouncesItem), p.RequireFloat(MaxGrazingAngleDegreesItem), p.RequireFloat(DamageMultiplierPerBounceItem)));
             var projectile = ReadNested(part, ProjectileItem, _projectileItems, p => new ProjectileSpec(
@@ -452,6 +459,22 @@ namespace Fps.Core
                 spray));
         }
 
+        private static List<PenetrationMaterialSpec> ReadPenetrationMaterials(ServerDataJson.Fields fields)
+        {
+            var nodes = fields.Array(MaterialsItem);
+            var materials = new List<PenetrationMaterialSpec>(nodes.Count);
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                var element = fields.Element(nodes[i], MaterialsItem, i, _penetrationMaterialItems);
+                var whole = new Part(element, null, null, null);
+                materials.Add(whole.Build(() => new PenetrationMaterialSpec(
+                    element.ToText(element.ItemPath(MaterialIdItem), element.Require(MaterialIdItem)),
+                    element.ToFloat(element.ItemPath(PenetrabilityItem), element.Require(PenetrabilityItem)))));
+            }
+
+            return materials;
+        }
+
         private static void WriteRound(ServerDataJson.Writer writer, RoundSpec round)
         {
             writer.Enum(DeliveryItem, round.Delivery);
@@ -465,6 +488,20 @@ namespace Fps.Core
                 writer.Int(MaxPenetrationsItem, round.Penetration.MaxPenetrations);
                 writer.Float(DamageMultiplierPerPenetrationItem, round.Penetration.DamageMultiplierPerPenetration);
                 writer.Float(MaxThicknessItem, round.Penetration.MaxThickness);
+                if (round.Penetration.Materials.Count > 0)
+                {
+                    writer.BeginArray(MaterialsItem);
+                    foreach (var material in round.Penetration.Materials)
+                    {
+                        writer.BeginElement();
+                        writer.String(MaterialIdItem, material.MaterialId);
+                        writer.Float(PenetrabilityItem, material.Penetrability);
+                        writer.EndObject();
+                    }
+
+                    writer.EndArray();
+                }
+
                 writer.EndObject();
             }
 

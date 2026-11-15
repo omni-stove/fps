@@ -198,6 +198,7 @@ namespace Fps.NetV2.Tests
             Assert.That(arrow.Position, Is.EqualTo(_eye));
 
             _projectiles.Apply(Snapshot());
+            Advance(ClientProjectiles.DefaultPendingSeconds);
 
             Assert.That(arrow.Removed, Is.True);
             Assert.That(_projectiles.Count, Is.Zero);

@@ -17,6 +17,8 @@ namespace Fps.Core
         /// <summary><see cref="AddReserveAmmo"/> で予備弾が 1 発以上増えたときに呼ばれる。</summary>
         public event Action ReserveAmmoAdded;
 
+        public event Action AmmoTypeSwitched;
+
         private float _cooldownRemaining;
 
         public WeaponSpec Spec { get; }
@@ -209,6 +211,19 @@ namespace Fps.Core
         public bool TryActiveReload(out ActiveReloadResult result)
         {
             return Ammo.TryActiveReload(out result);
+        }
+
+        // 弾倉を空にするのは、弾倉を種類で共通にしたまま、込めてあった弾の種類を覚えずに切り替え後の弾をすべて新しい種類にするため。
+        public bool TrySwitchAmmoType()
+        {
+            if (!AmmoTypes.TrySwitch())
+            {
+                return false;
+            }
+
+            Ammo.Unload();
+            AmmoTypeSwitched?.Invoke();
+            return true;
         }
 
         /// <summary>リロード中ならやめる。弾数は変えない。リロード中でなければ何もしない。</summary>

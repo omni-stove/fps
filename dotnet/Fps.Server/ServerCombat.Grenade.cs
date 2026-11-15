@@ -118,8 +118,9 @@ namespace Fps.Server
             thrower.Grenades.Take(_now, typeId, out var spec);
             var position = ReleasePoint(body.EyePosition, direction);
             var velocity = (direction * spec.ThrowSpeed) + new Vector3(0f, spec.ThrowLiftSpeed, 0f);
-            _grenades.Add(new LiveGrenade(
-                _nextGrenadeId++, playerId, spec, new ServerGrenadeFlight(_context.World, position, velocity, spec.Stickiness)));
+            var flight = new ServerGrenadeFlight(_context.World, position, velocity, spec.Stickiness);
+            flight.CollideWithCharacters(_bodies, playerId, IsHittable);
+            _grenades.Add(new LiveGrenade(_nextGrenadeId++, playerId, spec, flight));
 
             // 撃ったときと同じく、投げた時点で出現直後の無敵を解く
             _rules.NotifyFired(playerId);
@@ -369,6 +370,9 @@ namespace Fps.Server
                 row.WeaponId = GrenadeWeaponId;
                 row.TypeId = grenade.Spec.Id;
                 row.IsStuck = grenade.Flight.IsStuck;
+                var stuckTo = grenade.Flight.StuckToPlayerId;
+                row.HasStuckTo = stuckTo.HasValue && _match.TryGetPlayer(stuckTo.Value, out _);
+                row.StuckToId = row.HasStuckTo ? stuckTo.Value : 0;
                 row.Position = grenade.Flight.Position;
                 row.Rotation = grenade.Flight.Rotation;
             }

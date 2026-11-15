@@ -59,6 +59,12 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("溜め切ったら離さなくても撃つ")]
         private bool _firesWhenFull;
 
+        [SerializeField, Tooltip("撃てる最小の溜めに届かずに離しても、最小の溜めの威力で撃つ (外すと撃たない)")]
+        private bool _firesBelowMin;
+
+        [SerializeField, Min(0.01f), Tooltip("溜め切って撃ったときの飛ぶ弾の弾速の倍率")]
+        private float _fullChargeSpeedMultiplier = ChargeSpec.DefaultFullChargeSpeedMultiplier;
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public float ChargeSeconds { get => _chargeSeconds; set => _chargeSeconds = value; }
@@ -69,8 +75,14 @@ namespace Fps.Runtime
 
         public bool FiresWhenFull { get => _firesWhenFull; set => _firesWhenFull = value; }
 
+        public bool FiresBelowMin { get => _firesBelowMin; set => _firesBelowMin = value; }
+
+        public float FullChargeSpeedMultiplier { get => _fullChargeSpeedMultiplier; set => _fullChargeSpeedMultiplier = value; }
+
         public ChargeSpec ToSpec() =>
-            _enabled ? new ChargeSpec(_chargeSeconds, _minChargeFraction, _fullChargeDamageMultiplier, _firesWhenFull) : null;
+            _enabled ? new ChargeSpec(
+                _chargeSeconds, _minChargeFraction, _fullChargeDamageMultiplier, _firesWhenFull, _firesBelowMin, _fullChargeSpeedMultiplier)
+            : null;
 
         public void Set(ChargeSpec spec)
         {
@@ -81,6 +93,8 @@ namespace Fps.Runtime
                 _minChargeFraction = spec.MinChargeFraction;
                 _fullChargeDamageMultiplier = spec.FullChargeDamageMultiplier;
                 _firesWhenFull = spec.FiresWhenFull;
+                _firesBelowMin = spec.FiresBelowMin;
+                _fullChargeSpeedMultiplier = spec.FullChargeSpeedMultiplier;
             }
         }
     }
@@ -206,6 +220,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("抜けられる最大の厚さ (m)")]
         private float _maxThickness = 0.5f;
 
+        [SerializeField, Tooltip("面の素材ごとの抜けやすさ。並べていない素材は 1")]
+        private List<PenetrationMaterialSettings> _materials = new List<PenetrationMaterialSettings>();
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public int MaxPenetrations { get => _maxPenetrations; set => _maxPenetrations = value; }
@@ -214,8 +231,23 @@ namespace Fps.Runtime
 
         public float MaxThickness { get => _maxThickness; set => _maxThickness = value; }
 
-        public PenetrationSpec ToSpec() =>
-            _enabled ? new PenetrationSpec(_maxPenetrations, _damageMultiplierPerPenetration, _maxThickness) : null;
+        public List<PenetrationMaterialSettings> Materials => _materials ??= new List<PenetrationMaterialSettings>();
+
+        public PenetrationSpec ToSpec()
+        {
+            if (!_enabled)
+            {
+                return null;
+            }
+
+            var materials = new List<PenetrationMaterialSpec>(Materials.Count);
+            foreach (var material in Materials)
+            {
+                materials.Add(material?.ToSpec());
+            }
+
+            return new PenetrationSpec(_maxPenetrations, _damageMultiplierPerPenetration, _maxThickness, materials);
+        }
 
         public void Set(PenetrationSpec spec)
         {
@@ -225,7 +257,41 @@ namespace Fps.Runtime
                 _maxPenetrations = spec.MaxPenetrations;
                 _damageMultiplierPerPenetration = spec.DamageMultiplierPerPenetration;
                 _maxThickness = spec.MaxThickness;
+                Materials.Clear();
+                foreach (var material in spec.Materials)
+                {
+                    var settings = new PenetrationMaterialSettings();
+                    settings.Set(material);
+                    Materials.Add(settings);
+                }
             }
+        }
+    }
+
+    [Serializable]
+    public sealed class PenetrationMaterialSettings
+    {
+        [SerializeField, Tooltip("面の素材の Id (SurfaceMaterial の Id。例: concrete, metal, wood)")]
+        private string _materialId = SurfaceMaterial.DefaultId;
+
+        [SerializeField, Min(0f), Tooltip("抜けられる最大の厚さに掛ける倍率。0 ならこの素材は抜けない")]
+        private float _penetrability = 1f;
+
+        public string MaterialId { get => _materialId ?? string.Empty; set => _materialId = value ?? string.Empty; }
+
+        public float Penetrability { get => _penetrability; set => _penetrability = value; }
+
+        public PenetrationMaterialSpec ToSpec() => new PenetrationMaterialSpec(MaterialId, _penetrability);
+
+        public void Set(PenetrationMaterialSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            _materialId = spec.MaterialId;
+            _penetrability = spec.Penetrability;
         }
     }
 
@@ -341,6 +407,12 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("弾が向きを変えられる速さ (度/秒)")]
         private float _turnDegreesPerSecond = 120f;
 
+        [SerializeField, Tooltip("相手を捉えてからロックするまで鳴らし続ける音。空なら鳴らさない")]
+        private AudioClip _lockingSound;
+
+        [SerializeField, Tooltip("ロックしている間鳴らし続ける音。空なら鳴らさない")]
+        private AudioClip _lockedSound;
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public float LockOnSeconds { get => _lockOnSeconds; set => _lockOnSeconds = value; }
@@ -348,6 +420,10 @@ namespace Fps.Runtime
         public float LockOnConeDegrees { get => _lockOnConeDegrees; set => _lockOnConeDegrees = value; }
 
         public float TurnDegreesPerSecond { get => _turnDegreesPerSecond; set => _turnDegreesPerSecond = value; }
+
+        public AudioClip LockingSound { get => _lockingSound; set => _lockingSound = value; }
+
+        public AudioClip LockedSound { get => _lockedSound; set => _lockedSound = value; }
 
         public HomingSpec ToSpec() => _enabled ? new HomingSpec(_lockOnSeconds, _lockOnConeDegrees, _turnDegreesPerSecond) : null;
 

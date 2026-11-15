@@ -33,6 +33,8 @@ namespace Fps.Core
         public const string MinChargeFractionItem = "minChargeFraction";
         public const string FullChargeDamageMultiplierItem = "fullChargeDamageMultiplier";
         public const string FiresWhenFullItem = "firesWhenFull";
+        public const string FiresBelowMinItem = "firesBelowMin";
+        public const string FullChargeSpeedMultiplierItem = "fullChargeSpeedMultiplier";
         public const string SpinUpSecondsItem = "spinUpSeconds";
         public const string StartIntervalMultiplierItem = "startIntervalMultiplier";
         public const string SpinDownSecondsItem = "spinDownSeconds";
@@ -70,6 +72,9 @@ namespace Fps.Core
         public const string MaxPenetrationsItem = "maxPenetrations";
         public const string DamageMultiplierPerPenetrationItem = "damageMultiplierPerPenetration";
         public const string MaxThicknessItem = "maxThickness";
+        public const string MaterialsItem = "materials";
+        public const string MaterialIdItem = "materialId";
+        public const string PenetrabilityItem = "penetrability";
         public const string MaxBouncesItem = "maxBounces";
         public const string MaxGrazingAngleDegreesItem = "maxGrazingAngleDegrees";
         public const string DamageMultiplierPerBounceItem = "damageMultiplierPerBounce";
@@ -194,11 +199,15 @@ namespace Fps.Core
         public static IReadOnlyList<string> FalloffItemNames { get; } = new[] { StartDistanceItem, EndDistanceItem, MinMultiplierItem };
 
         private static readonly string[] _burstItems = { RoundsPerBurstItem, RoundIntervalSecondsItem };
-        private static readonly string[] _chargeItems = { ChargeSecondsItem, MinChargeFractionItem, FullChargeDamageMultiplierItem, FiresWhenFullItem };
+        private static readonly string[] _chargeItems =
+        {
+            ChargeSecondsItem, MinChargeFractionItem, FullChargeDamageMultiplierItem, FiresWhenFullItem, FiresBelowMinItem, FullChargeSpeedMultiplierItem,
+        };
         private static readonly string[] _spinUpItems = { SpinUpSecondsItem, StartIntervalMultiplierItem, SpinDownSecondsItem };
         private static readonly string[] _cycleItems = { CycleSecondsItem, LeavesAdsItem };
         private static readonly string[] _heatItems = { HeatPerShotItem, CoolPerSecondItem, CoolDelaySecondsItem, OverheatSecondsItem };
-        private static readonly string[] _penetrationItems = { MaxPenetrationsItem, DamageMultiplierPerPenetrationItem, MaxThicknessItem };
+        private static readonly string[] _penetrationItems = { MaxPenetrationsItem, DamageMultiplierPerPenetrationItem, MaxThicknessItem, MaterialsItem };
+        private static readonly string[] _penetrationMaterialItems = { MaterialIdItem, PenetrabilityItem };
         private static readonly string[] _ricochetItems = { MaxBouncesItem, MaxGrazingAngleDegreesItem, DamageMultiplierPerBounceItem };
         private static readonly string[] _projectileItems = { SpeedItem, GravityMultiplierItem, LifetimeSecondsItem, OnWorldHitItem, VisualIdItem };
         private static readonly string[] _homingItems = { LockOnSecondsItem, LockOnConeDegreesItem, TurnDegreesPerSecondItem };
@@ -336,7 +345,9 @@ namespace Fps.Core
                 p.RequireFloat(ChargeSecondsItem),
                 p.RequireFloat(MinChargeFractionItem),
                 p.RequireFloat(FullChargeDamageMultiplierItem),
-                p.Bool(FiresWhenFullItem, false)));
+                p.Bool(FiresWhenFullItem, false),
+                p.Bool(FiresBelowMinItem, false),
+                p.Float(FullChargeSpeedMultiplierItem, ChargeSpec.DefaultFullChargeSpeedMultiplier)));
             var spinUp = ReadNested(part, SpinUpItem, _spinUpItems, p => new SpinUpSpec(
                 p.RequireFloat(SpinUpSecondsItem), p.RequireFloat(StartIntervalMultiplierItem), p.RequireFloat(SpinDownSecondsItem)));
             var cycle = ReadNested(part, CycleItem, _cycleItems, p => new CycleSpec(p.RequireFloat(CycleSecondsItem), p.Bool(LeavesAdsItem, false)));
@@ -369,6 +380,8 @@ namespace Fps.Core
                 writer.Float(MinChargeFractionItem, trigger.Charge.MinChargeFraction);
                 writer.Float(FullChargeDamageMultiplierItem, trigger.Charge.FullChargeDamageMultiplier);
                 writer.Bool(FiresWhenFullItem, trigger.Charge.FiresWhenFull);
+                writer.Bool(FiresBelowMinItem, trigger.Charge.FiresBelowMin);
+                writer.Float(FullChargeSpeedMultiplierItem, trigger.Charge.FullChargeSpeedMultiplier);
                 writer.EndObject();
             }
 
@@ -433,7 +446,10 @@ namespace Fps.Core
         private static RoundSpec ReadRound(Part part)
         {
             var penetration = ReadNested(part, PenetrationItem, _penetrationItems, p => new PenetrationSpec(
-                p.RequireInt(MaxPenetrationsItem), p.RequireFloat(DamageMultiplierPerPenetrationItem), p.RequireFloat(MaxThicknessItem)));
+                p.RequireInt(MaxPenetrationsItem),
+                p.RequireFloat(DamageMultiplierPerPenetrationItem),
+                p.RequireFloat(MaxThicknessItem),
+                ReadPenetrationMaterials(p.Fields)));
             var ricochet = ReadNested(part, RicochetItem, _ricochetItems, p => new RicochetSpec(
                 p.RequireInt(MaxBouncesItem), p.RequireFloat(MaxGrazingAngleDegreesItem), p.RequireFloat(DamageMultiplierPerBounceItem)));
             var projectile = ReadNested(part, ProjectileItem, _projectileItems, p => new ProjectileSpec(
@@ -462,6 +478,22 @@ namespace Fps.Core
                 spray));
         }
 
+        private static List<PenetrationMaterialSpec> ReadPenetrationMaterials(ServerDataJson.Fields fields)
+        {
+            var nodes = fields.Array(MaterialsItem);
+            var materials = new List<PenetrationMaterialSpec>(nodes.Count);
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                var element = fields.Element(nodes[i], MaterialsItem, i, _penetrationMaterialItems);
+                var whole = new Part(element, null, null, null);
+                materials.Add(whole.Build(() => new PenetrationMaterialSpec(
+                    element.ToText(element.ItemPath(MaterialIdItem), element.Require(MaterialIdItem)),
+                    element.ToFloat(element.ItemPath(PenetrabilityItem), element.Require(PenetrabilityItem)))));
+            }
+
+            return materials;
+        }
+
         private static void WriteRound(ServerDataJson.Writer writer, RoundSpec round)
         {
             writer.Enum(DeliveryItem, round.Delivery);
@@ -475,6 +507,20 @@ namespace Fps.Core
                 writer.Int(MaxPenetrationsItem, round.Penetration.MaxPenetrations);
                 writer.Float(DamageMultiplierPerPenetrationItem, round.Penetration.DamageMultiplierPerPenetration);
                 writer.Float(MaxThicknessItem, round.Penetration.MaxThickness);
+                if (round.Penetration.Materials.Count > 0)
+                {
+                    writer.BeginArray(MaterialsItem);
+                    foreach (var material in round.Penetration.Materials)
+                    {
+                        writer.BeginElement();
+                        writer.String(MaterialIdItem, material.MaterialId);
+                        writer.Float(PenetrabilityItem, material.Penetrability);
+                        writer.EndObject();
+                    }
+
+                    writer.EndArray();
+                }
+
                 writer.EndObject();
             }
 

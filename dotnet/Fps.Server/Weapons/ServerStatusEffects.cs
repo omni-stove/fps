@@ -31,10 +31,13 @@ namespace Fps.Server
         /// <summary>shot の弾で victimId に effect をかける。倒れている相手・かけてはいけない味方には何もしない。</summary>
         public void Afflict(in ServerShot shot, int victimId, StatusEffectSpec effect)
         {
-            Afflict(shot.ShooterId, victimId, effect, shot.Weapon.Id);
+            Afflict(shot.ShooterId, shot.Weapon.Id, victimId, effect);
         }
 
-        public void Afflict(int? sourceId, int victimId, StatusEffectSpec effect, string weaponId)
+        /// <summary>
+        /// 弾ではなく燃える範囲などがかけるときのため、かけた人を Id で受ける。かけた人が居なければ (sourceId が null) 味方の判定はせず、帰属の無い燃焼にする。
+        /// </summary>
+        public void Afflict(int? sourceId, string weaponId, int victimId, StatusEffectSpec effect)
         {
             ArgumentNullException.ThrowIfNull(effect);
 

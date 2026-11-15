@@ -471,7 +471,22 @@ namespace Fps.Runtime
                 _model.RefreshReloadProgress();
                 _model.RefreshWeaponGauges();
                 RefreshMagnification();
+                RefreshLockOn();
                 RefreshCrosshair();
+            }
+        }
+
+        // ロックオンは覗き込みと相手で決まり、HudModel が持つ Weapon からは読めないので、武器に渡したロックオンから読んで書く。
+        private void RefreshLockOn()
+        {
+            var lockOn = _weapon.LockOn;
+            if (lockOn != null)
+            {
+                lockOn.ShowOn(_model);
+            }
+            else
+            {
+                _model.ClearLockOn();
             }
         }
 

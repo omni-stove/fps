@@ -55,7 +55,7 @@ namespace Fps.Server
                     continue;
                 }
 
-                Combat.StatusEffects.Afflict(throwerId, playerId, BlindEffect.StatusEffect(seconds), weaponId);
+                Combat.StatusEffects.Afflict(throwerId, weaponId, playerId, BlindEffect.StatusEffect(seconds));
                 blinded++;
             }
 

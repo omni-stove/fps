@@ -214,6 +214,7 @@ namespace Fps.Runtime
             return true;
         }
 
+        /// <summary>燃える範囲 (AreaEffectZone) も爆発と同じ相手を範囲の中とみなすよう、ここで探す。</summary>
         internal static List<Damageable> FindTargets(Vector3 center, float radius)
         {
             var targets = new List<Damageable>();

@@ -5,6 +5,8 @@ namespace Fps.Core
     public sealed class PerRoundReload : IAmmoModel
     {
         private readonly MagazineAmmo _magazine;
+        private float _roundElapsed;
+        private int _loadedThisReload;
 
         public PerRoundReload(AmmoSpec ammo, MagazineAmmo magazine)
         {
@@ -12,11 +14,8 @@ namespace Fps.Core
             _magazine = magazine ?? throw new ArgumentNullException(nameof(magazine));
         }
 
-        public event Action Reloaded
-        {
-            add => _magazine.Reloaded += value;
-            remove => _magazine.Reloaded -= value;
-        }
+        // 1 発込めるたびに呼ぶ。最後の 1 発でだけ呼ぶと、HUD とサーバーの同期 (ServerWeapon.Changed) が途中の弾数を知らないまま進む。
+        public event Action Reloaded;
 
         public AmmoSpec Spec { get; }
 
@@ -30,20 +29,47 @@ namespace Fps.Core
 
         public bool HasInfiniteReserve => _magazine.HasInfiniteReserve;
 
-        public bool HasActiveReload => _magazine.HasActiveReload;
+        // 1 発ずつ込める間に押し直す時機を決められないので、アクティブリロードはルールに関わらず使わない。
+        public bool HasActiveReload => false;
 
-        public bool HasJudgedActiveReload => _magazine.HasJudgedActiveReload;
+        public bool HasJudgedActiveReload => false;
 
-        public bool IsReloading => _magazine.IsReloading;
+        public bool IsReloading { get; private set; }
 
-        public float ReloadProgress => _magazine.ReloadProgress;
+        // 予備弾を拾うと込める数が途中で増えるので、分母は始めたときではなく今から込められる数で数え直す。
+        public float ReloadProgress
+        {
+            get
+            {
+                if (!IsReloading)
+                {
+                    return 0f;
+                }
 
-        public float? HeatFraction => _magazine.HeatFraction;
+                var remaining = Math.Min(Spec.MagazineSize - AmmoInMagazine, HasInfiniteReserve ? int.MaxValue : ReserveAmmo);
+                var total = _loadedThisReload + remaining;
+                if (total <= 0)
+                {
+                    return 0f;
+                }
 
+                return Math.Min(1f, (_loadedThisReload + (_roundElapsed / Spec.ReloadSecondsPerRound)) / total);
+            }
+        }
+
+        public float? HeatFraction => null;
+
+        // リロード中でも込めた弾があれば撃てる。撃つとリロードは止まる (Consume)。
         public bool CanFire => _magazine.CanFire;
 
         public void Consume()
         {
+            if (!CanFire)
+            {
+                throw new InvalidOperationException("cannot consume a round with an empty magazine");
+            }
+
+            CancelReload();
             _magazine.Consume();
         }
 
@@ -54,27 +80,57 @@ namespace Fps.Core
 
         public bool TryStartReload()
         {
-            return _magazine.TryStartReload();
+            if (IsReloading || !_magazine.CanLoadRound)
+            {
+                return false;
+            }
+
+            IsReloading = true;
+            _roundElapsed = 0f;
+            _loadedThisReload = 0;
+            return true;
         }
 
         public bool TryActiveReload(out ActiveReloadResult result)
         {
-            return _magazine.TryActiveReload(out result);
+            result = ActiveReloadResult.Fail;
+            return false;
         }
 
         public void CancelReload()
         {
-            _magazine.CancelReload();
+            IsReloading = false;
+            _roundElapsed = 0f;
+            _loadedThisReload = 0;
         }
 
         public void Unload()
         {
+            CancelReload();
             _magazine.Unload();
         }
 
         public void Tick(float deltaSeconds)
         {
-            _magazine.Tick(deltaSeconds);
+            SpecGuard.NonNegativeFinite(deltaSeconds, nameof(deltaSeconds));
+            if (!IsReloading)
+            {
+                return;
+            }
+
+            _roundElapsed += deltaSeconds;
+            while (IsReloading && _roundElapsed >= Spec.ReloadSecondsPerRound)
+            {
+                _roundElapsed -= Spec.ReloadSecondsPerRound;
+                _magazine.LoadRound();
+                _loadedThisReload++;
+                if (!_magazine.CanLoadRound)
+                {
+                    CancelReload();
+                }
+
+                Reloaded?.Invoke();
+            }
         }
     }
 }

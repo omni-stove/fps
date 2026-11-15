@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Numerics;
 using Fps.Core;
 using Fps.Protocol;
 
@@ -19,6 +20,8 @@ namespace Fps.NetV2
     {
         private readonly Dictionary<int, List<int>> _pieces = new Dictionary<int, List<int>>();
         private readonly HashSet<int> _broken = new HashSet<int>();
+        private readonly Dictionary<int, GrenadeTrack> _grenades = new Dictionary<int, GrenadeTrack>();
+        private readonly List<int> _goneGrenades = new List<int>();
 
         public ClientWorld(string map, WorldMap world, NetMapLadders ladders)
         {
@@ -65,6 +68,8 @@ namespace Fps.NetV2
 
         /// <summary>今当たりから外している部品の数。</summary>
         public int BrokenPieceCount => _broken.Count;
+
+        public IEnumerable<int> GrenadeIds => _grenades.Keys;
 
         public string LogLine => "[Net] map collision " + Map
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
@@ -194,5 +199,154 @@ namespace Fps.NetV2
 
             return true;
         }
+
+        public void ApplyGrenades(SnapshotMessage snapshot, ICollection<int> removed)
+        {
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
+
+            if (removed == null)
+            {
+                throw new ArgumentNullException(nameof(removed));
+            }
+
+            _goneGrenades.Clear();
+            foreach (var id in _grenades.Keys)
+            {
+                if (snapshot.Grenades.IndexOf(id) < 0)
+                {
+                    _goneGrenades.Add(id);
+                }
+            }
+
+            foreach (var id in _goneGrenades)
+            {
+                _grenades.Remove(id);
+                removed.Add(id);
+            }
+
+            for (var i = 0; i < snapshot.Grenades.Count; i++)
+            {
+                ref var row = ref snapshot.Grenades[i];
+                if (!_grenades.TryGetValue(row.GrenadeId, out var track))
+                {
+                    track = new GrenadeTrack();
+                    _grenades.Add(row.GrenadeId, track);
+                }
+
+                track.Record(snapshot.Tick, row.Position, row.Rotation);
+                var carrier = row.HasStuckTo ? snapshot.Players.IndexOf(row.StuckToId) : -1;
+                if (carrier < 0)
+                {
+                    track.HasCarrier = false;
+                    continue;
+                }
+
+                ref var player = ref snapshot.Players[carrier];
+                var unturn = Quaternion.CreateFromAxisAngle(Vector3.UnitY, -player.Yaw);
+                track.HasCarrier = true;
+                track.CarrierId = row.StuckToId;
+                track.CarrierOffset = Vector3.Transform(row.Position - player.Position, unturn);
+                track.CarrierRotation = Quaternion.Normalize(unturn * row.Rotation);
+            }
+        }
+
+        public bool TryShowGrenade(int grenadeId, float renderTick, GrenadeCarrier carrier, out Vector3 position, out Quaternion rotation)
+        {
+            if (!_grenades.TryGetValue(grenadeId, out var track))
+            {
+                position = default;
+                rotation = Quaternion.Identity;
+                return false;
+            }
+
+            // 人とグレネードの補間の遅れが違っても離れて見えないよう、くっついた人は見せている位置に付ける
+            if (track.HasCarrier && carrier != null && carrier(track.CarrierId, out var carrierPosition, out var carrierYaw))
+            {
+                var turn = Quaternion.CreateFromAxisAngle(Vector3.UnitY, carrierYaw);
+                position = carrierPosition + Vector3.Transform(track.CarrierOffset, turn);
+                rotation = Quaternion.Normalize(turn * track.CarrierRotation);
+                return true;
+            }
+
+            track.Sample(renderTick, out position, out rotation);
+            return true;
+        }
+
+        public void ClearGrenades()
+        {
+            _grenades.Clear();
+        }
+
+        private sealed class GrenadeTrack
+        {
+            private const int _capacity = 8;
+
+            private readonly int[] _ticks = new int[_capacity];
+            private readonly Vector3[] _positions = new Vector3[_capacity];
+            private readonly Quaternion[] _rotations = new Quaternion[_capacity];
+            private int _start;
+            private int _count;
+
+            public bool HasCarrier { get; set; }
+
+            public int CarrierId { get; set; }
+
+            public Vector3 CarrierOffset { get; set; }
+
+            public Quaternion CarrierRotation { get; set; }
+
+            public void Record(int tick, Vector3 position, Quaternion rotation)
+            {
+                if (_count > 0 && tick <= _ticks[At(_count - 1)])
+                {
+                    return;
+                }
+
+                if (_count == _capacity)
+                {
+                    _start = (_start + 1) % _capacity;
+                    _count--;
+                }
+
+                var slot = At(_count);
+                _ticks[slot] = tick;
+                _positions[slot] = position;
+                _rotations[slot] = rotation;
+                _count++;
+            }
+
+            public void Sample(float tick, out Vector3 position, out Quaternion rotation)
+            {
+                var newer = 0;
+                while (newer < _count && _ticks[At(newer)] < tick)
+                {
+                    newer++;
+                }
+
+                if (newer == 0 || newer == _count)
+                {
+                    var only = At(newer == 0 ? 0 : _count - 1);
+                    position = _positions[only];
+                    rotation = _rotations[only];
+                    return;
+                }
+
+                var a = At(newer - 1);
+                var b = At(newer);
+                var t = (tick - _ticks[a]) / (_ticks[b] - _ticks[a]);
+                position = Vector3.Lerp(_positions[a], _positions[b], t);
+                rotation = Quaternion.Slerp(_rotations[a], _rotations[b], t);
+            }
+
+            private int At(int index)
+            {
+                return (_start + index) % _capacity;
+            }
+        }
     }
+
+    public delegate bool GrenadeCarrier(int playerId, out Vector3 position, out float yaw);
 }

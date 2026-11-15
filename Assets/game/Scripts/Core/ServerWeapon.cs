@@ -100,13 +100,14 @@ namespace Fps.Core
 
         /// <summary>
         /// 1 発撃つ。撃てたら弾倉を 1 減らして <see cref="ShotRejection.None"/>。
-        /// リロード中なら <see cref="ShotRejection.Reloading"/>、熱で撃つ武器がオーバーヒート中なら <see cref="ShotRejection.Overheated"/>、
+        /// リロード中で撃てなければ <see cref="ShotRejection.Reloading"/>、熱で撃つ武器がオーバーヒート中なら <see cref="ShotRejection.Overheated"/>、
         /// 弾倉が空なら <see cref="ShotRejection.OutOfAmmo"/> を返し、
         /// 空のときは予備弾があれば (<see cref="HasInfiniteReserve"/> なら常に) リロードを始める。
         /// </summary>
         public ShotRejection TryFire()
         {
-            if (_weapon.IsReloading)
+            // リロード中かどうかだけで弾かないのは、1 発ずつ込める弾薬 (PerRoundReload) が込めた弾で撃ってリロードを止めるため。
+            if (_weapon.IsReloading && !_weapon.Ammo.CanFire)
             {
                 return ShotRejection.Reloading;
             }

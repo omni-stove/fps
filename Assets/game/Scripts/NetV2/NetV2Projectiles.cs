@@ -44,33 +44,8 @@ namespace Fps.NetV2
 
         private ProjectileSettings Find(string weaponId)
         {
-            var loadout = _weapons.Loadout;
-            if (loadout != null)
-            {
-                foreach (var slot in loadout.Slots)
-                {
-                    if (slot?.Weapon != null && string.Equals(slot.Weapon.Id.Trim(), weaponId, StringComparison.Ordinal))
-                    {
-                        return slot.Weapon.Projectile;
-                    }
-                }
-            }
-
-            var catalog = _weapons.Catalog;
-            if (catalog == null)
-            {
-                return null;
-            }
-
-            try
-            {
-                return catalog.TryFind(weaponId, out var definition) ? definition.Projectile : null;
-            }
-            catch (WeaponDefinitionException)
-            {
-                // 見た目が引けないだけなので、コードで作る棒で出す。
-                return null;
-            }
+            var definition = _weapons.DefinitionFor(weaponId);
+            return definition != null ? definition.Projectile : null;
         }
 
         private sealed class View : IClientProjectileView

@@ -13,6 +13,7 @@ namespace Fps.Editor
     /// あわせて、展開式の盾を置く能力 (<see cref="ShieldDeployDefinition"/>) を <see cref="ShieldAbilityPath"/> に、
     /// 自動で撃つタレットを置く能力 (<see cref="TurretDeployDefinition"/>) を <see cref="TurretAbilityPath"/> に、
     /// 敵の気を引く囮を置く能力 (<see cref="DecoyDeployDefinition"/>) を <see cref="DecoyAbilityPath"/> に、
+    /// 敵が踏むと爆発する地雷を置く能力 (<see cref="MineDeployDefinition"/>) を <see cref="MineAbilityPath"/> に、
     /// 物を投げて敵の注意をそらす能力 (<see cref="DistractionThrowDefinition"/>) を <see cref="DistractionAbilityPath"/> に作る。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンは壊れない。何度実行しても同じ結果になる。
     /// Editor を閉じた状態で次のように呼べる:
@@ -46,6 +47,12 @@ namespace Fps.Editor
         public const float DecoyAbilityRechargeSeconds = 20f;
         public const float DecoyAbilityCooldownSeconds = 1f;
         public const float DecoyAbilityWindupSeconds = 0f;
+
+        public const string MineAbilityId = "deploy-mine";
+        public const int MineAbilityMaxCharges = 2;
+        public const float MineAbilityRechargeSeconds = 20f;
+        public const float MineAbilityCooldownSeconds = 1f;
+        public const float MineAbilityWindupSeconds = 0f;
 
         public const string DistractionAbilityId = "distraction-throw";
         public const int DistractionMaxCharges = 3;
@@ -81,6 +88,8 @@ namespace Fps.Editor
 
         public static string DecoyAbilityPath => Folder + "/DeployDecoy.asset";
 
+        public static string MineAbilityPath => Folder + "/DeployMine.asset";
+
         public static string DistractionAbilityPath => Folder + "/DistractionThrow.asset";
 
         // タレットは武器のアセットを指すので、WeaponAssetBuilder.Build の後に走らせる (武器が無ければ例外で止まる)。
@@ -92,6 +101,7 @@ namespace Fps.Editor
             BuildGrappleAt(GrappleAbilityPath);
             BuildTurretAt(TurretAbilityPath);
             BuildDecoyAt(DecoyAbilityPath);
+            BuildMineAt(MineAbilityPath);
             BuildDistractionAt(DistractionAbilityPath);
         }
 
@@ -102,6 +112,31 @@ namespace Fps.Editor
             var ability = SceneBuildHelpers.CreateOrUpdateAsset<DecoyDeployDefinition>(path, ConfigureDecoy);
             Debug.Log($"{LogTag} saved '{path}'");
             return ability;
+        }
+
+        public static MineDeployDefinition BuildMineAt(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+            SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'));
+            var ability = SceneBuildHelpers.CreateOrUpdateAsset<MineDeployDefinition>(path, ConfigureMine);
+            Debug.Log($"{LogTag} saved '{path}'");
+            return ability;
+        }
+
+        // 手で調整した値を射撃場を作り直すたびに消さないよう、あれば中身は上書きしない。
+        public static MineDeployDefinition LoadOrBuildMineAbility()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<MineDeployDefinition>(MineAbilityPath);
+            if (existing != null)
+            {
+                existing.ToSpec();
+                existing.ToDeploySpec();
+                existing.ToMineSpec();
+                return existing;
+            }
+
+            Debug.Log($"{LogTag} '{MineAbilityPath}' is missing; building it");
+            return BuildMineAt(MineAbilityPath);
         }
 
         public static DistractionThrowDefinition BuildDistractionAt(string path)
@@ -370,6 +405,37 @@ namespace Fps.Editor
             ability.ToSpec();
             ability.ToDeploySpec();
             ability.ToDecoySpec();
+        }
+
+        // 有効になったときの音はキットに無いので空のまま。ゲームが音と見た目 (Prefab) を差し込む。
+        private static void ConfigureMine(MineDeployDefinition ability)
+        {
+            ability.Id = MineAbilityId;
+            ability.MaxCharges = MineAbilityMaxCharges;
+            ability.RechargeSeconds = MineAbilityRechargeSeconds;
+            ability.CooldownSeconds = MineAbilityCooldownSeconds;
+            ability.WindupSeconds = MineAbilityWindupSeconds;
+            ability.MaxActive = MineSpec.DefaultMaxActive;
+            ability.Overflow = Fps.Core.DeploySpec.DefaultOverflow;
+            ability.MaxHealth = MineSpec.DefaultMaxHealth;
+            ability.MaxRange = Fps.Core.DeploySpec.DefaultMaxRange;
+            ability.MaxSlopeDegrees = Fps.Core.DeploySpec.DefaultMaxSlopeDegrees;
+            ability.MaxStepHeight = Fps.Core.DeploySpec.DefaultMaxStepHeight;
+            ability.Size = new Vector3(MineSpec.DefaultWidth, MineSpec.DefaultHeight, MineSpec.DefaultDepth);
+            ability.Prefab = null;
+            ability.PreviewPrefab = null;
+            ability.NameKey = MineSpec.DefaultNameKey;
+            ability.ArmSeconds = MineSpec.DefaultArmSeconds;
+            ability.TriggerRadius = MineSpec.DefaultTriggerRadius;
+            ability.MaxDamage = MineSpec.DefaultMaxDamage;
+            ability.DamageRadius = MineSpec.DefaultDamageRadius;
+            ability.FullDamageRadius = MineSpec.DefaultFullDamageRadius;
+            ability.StructureDamageAtCenter = MineSpec.DefaultStructureDamageAtCenter;
+            ability.ArmedSound = null;
+            ability.ArmedVolume = 1f;
+            ability.ToSpec();
+            ability.ToDeploySpec();
+            ability.ToMineSpec();
         }
     }
 }

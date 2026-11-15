@@ -16,14 +16,22 @@ namespace Fps.Runtime
             var penetration = PenetrationRule.For(request.Round);
             if (penetration != null)
             {
-                return DeliverPenetrating(request, penetration, origin, direction, range);
+                return DeliverPenetrating(request, penetration, round.Index, origin, direction, range);
             }
 
             var radius = request.Round.Radius;
 
             // ShotCast が向きと射程を検査するので、撃ったことはその後に知らせる (例外になった弾を撃ったことにしない)。
             var found = ShotCast.TryFirst(origin, direction, radius, range, request.LayerMask, request.ShooterRoot, out var hit);
-            CombatEvents.RaiseShotFired(request.Shooter, origin, direction, request.WeaponId);
+            // 2 本目からのペレットは 1 回の射撃の続きなので、銃声・薬莢・反動・カメラの揺れを重ねず、トレーサーだけ出す。
+            if (round.Index > 0)
+            {
+                CombatEvents.RaiseShotContinued(request.Shooter, origin, direction, request.WeaponId);
+            }
+            else
+            {
+                CombatEvents.RaiseShotFired(request.Shooter, origin, direction, request.WeaponId);
+            }
 
             var travelled = 0f;
             var bounces = 0;
@@ -96,12 +104,19 @@ namespace Fps.Runtime
         // 当たった物を近い順に抜けられるだけ抜ける。撃った本人に返すのは最初に当てた人の結果で、人に当たらなければ止まった所の結果。
         // 当てた相手が倒れた知らせから次の弾が撃たれても並びを壊さないよう、並びは弾ごとに持つ。止まった面では跳ねない (サーバーと同じ)。
         private static ShotOutcome DeliverPenetrating(
-            ShotRequest request, PenetrationSpec penetration, Vector3 origin, Vector3 direction, float range)
+            ShotRequest request, PenetrationSpec penetration, int pelletIndex, Vector3 origin, Vector3 direction, float range)
         {
             var hits = new List<RaycastHit>();
             var struck = new HashSet<Damageable>();
             ShotCast.CastAll(origin, direction, range, request.LayerMask, request.ShooterRoot, hits);
-            CombatEvents.RaiseShotFired(request.Shooter, origin, direction, request.WeaponId);
+            if (pelletIndex > 0)
+            {
+                CombatEvents.RaiseShotContinued(request.Shooter, origin, direction, request.WeaponId);
+            }
+            else
+            {
+                CombatEvents.RaiseShotFired(request.Shooter, origin, direction, request.WeaponId);
+            }
 
             var outcome = ShotOutcome.Miss;
             var personOutcome = ShotOutcome.Miss;

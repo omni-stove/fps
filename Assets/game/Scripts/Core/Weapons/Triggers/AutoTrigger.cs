@@ -37,6 +37,11 @@ namespace Fps.Core
             return _held ? TryShoot() : 0;
         }
 
+        // 連射の残りを持たない撃ち方なので取り消すものが無い。
+        public void Cancel()
+        {
+        }
+
         private int TryShoot()
         {
             if (_cooldownRemaining > 0f)

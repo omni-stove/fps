@@ -35,6 +35,13 @@ namespace Fps.Server
         private readonly Dictionary<int, Fighter> _fighters = new Dictionary<int, Fighter>();
         // 1 回の着弾・爆発で同じ建物の部品がいくつ壊れても、その建物の状態を送るのは 1 度だけにする
         private readonly SortedSet<int> _changedStructures = new SortedSet<int>();
+        private readonly ServerSightBlockers _sightBlockers = new ServerSightBlockers();
+        private readonly ServerImpact _impact;
+        private readonly ServerProjectiles _projectiles;
+        private readonly ServerBeams _beams;
+        private readonly ServerSpray _spray;
+        private readonly ServerStatusEffects _statusEffects;
+        private readonly ServerLockOn _lockOn;
         private ServerContext _context;
         private TextWriter _log;
         private ServerMatch _match;
@@ -42,6 +49,7 @@ namespace Fps.Server
         private ServerRulesData _data;
         private ServerHitboxes _hitboxes;
         private ServerStructures _structures;
+        private ServerShotTrace _shotTrace;
         private double _now;
         private float _nextRejectWarningTime = float.NegativeInfinity;
 
@@ -49,6 +57,12 @@ namespace Fps.Server
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _movement = movement ?? throw new ArgumentNullException(nameof(movement));
+            _impact = new ServerImpact(this);
+            _projectiles = new ServerProjectiles(this);
+            _beams = new ServerBeams(this);
+            _spray = new ServerSpray(this);
+            _statusEffects = new ServerStatusEffects(this);
+            _lockOn = new ServerLockOn(this);
         }
 
         public string Name => "combat";
@@ -56,6 +70,17 @@ namespace Fps.Server
         internal ServerHitboxes Hitboxes => _hitboxes;
 
         internal ServerStructures Structures => _structures;
+
+        /// <summary>世界の当たりのほかに視線を遮る物。Bot の知覚が問い合わせる。</summary>
+        internal ServerSightBlockers SightBlockers => _sightBlockers;
+
+        internal ServerContext Context => _context;
+
+        internal ServerImpact Impact => _impact;
+
+        internal ServerStatusEffects StatusEffects => _statusEffects;
+
+        internal MatchRulesModule Rules => _rules;
 
         public void Start(ServerContext context)
         {
@@ -65,6 +90,7 @@ namespace Fps.Server
             _bodies = context.Bodies;
             _data = context.Rules ?? throw new InvalidOperationException("no match rules are loaded; start the server with " + ServerLaunch.RulesFlag);
             _hitboxes = new ServerHitboxes(_bodies, context.World);
+            _shotTrace = new ServerShotTrace(_hitboxes);
             _structures = new ServerStructures(context.Map, _log);
             var rules = _data.Rules;
             _structures.Enabled = rules.Destruction == Destruction.On;
@@ -91,6 +117,11 @@ namespace Fps.Server
             }
 
             TickGrenades(deltaSeconds);
+            _projectiles.Tick(deltaSeconds);
+            _beams.Tick(deltaSeconds);
+            _spray.Tick(deltaSeconds);
+            _statusEffects.Tick(deltaSeconds);
+            _lockOn.Tick(deltaSeconds);
             _hitboxes.Record((int)Math.Min(tick, int.MaxValue));
         }
 
@@ -125,6 +156,10 @@ namespace Fps.Server
                     {
                         fighter.Weapons.TryReload();
                     }
+                    else if (action.Action == WeaponAction.SwitchAmmoType)
+                    {
+                        fighter.Weapons.TrySwitchAmmoType();
+                    }
 
                     break;
                 case SwitchWeaponRequestMessage weaponSwitch:
@@ -151,6 +186,8 @@ namespace Fps.Server
             _movement.Landed -= HandleLanded;
             _fighters.Clear();
             _grenades.Clear();
+            _projectiles.Clear();
+            _statusEffects.Clear();
         }
 
         /// <summary>
@@ -182,6 +219,7 @@ namespace Fps.Server
             }
 
             ContributeGrenades(snapshot.Grenades);
+            _projectiles.Contribute(snapshot.Projectiles);
         }
 
         private void HandlePlayerJoined(ServerPlayer player)
@@ -193,6 +231,9 @@ namespace Fps.Server
         {
             _fighters.Remove(player.PlayerId);
             _hitboxes.Forget(player.PlayerId);
+            _beams.Forget(player.PlayerId);
+            _spray.Forget(player.PlayerId);
+            _statusEffects.Forget(player.PlayerId);
         }
 
         // 置き直した人の前の位置と新しい位置の間を補間して当てないよう、それまでの記録を捨てる
@@ -212,6 +253,8 @@ namespace Fps.Server
         private void HandleMatchStarted()
         {
             ClearGrenades();
+            _projectiles.Clear();
+            _statusEffects.Clear();
             foreach (var fighter in _fighters.Values)
             {
                 fighter.Weapons.Refill();
@@ -250,7 +293,7 @@ namespace Fps.Server
             return fighter;
         }
 
-        private void Send(int playerId, IMessage message)
+        internal void Send(int playerId, IMessage message)
         {
             if (_match.TryGetPlayer(playerId, out var player))
             {
@@ -258,7 +301,7 @@ namespace Fps.Server
             }
         }
 
-        private void SendToAll(IMessage message, int? except = null)
+        internal void SendToAll(IMessage message, int? except = null)
         {
             foreach (var player in _match.Players)
             {
@@ -279,7 +322,7 @@ namespace Fps.Server
                 && session.GetTeam(attackerId) == session.GetTeam(victimId);
         }
 
-        private bool IsHittable(int playerId)
+        internal bool IsHittable(int playerId)
         {
             var session = _rules.Session;
             return session != null && session.HasPlayer(playerId) && session.IsAlive(playerId);

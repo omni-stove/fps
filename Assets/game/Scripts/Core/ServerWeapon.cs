@@ -57,6 +57,9 @@ namespace Fps.Core
         public int ReserveAmmo => _weapon.ReserveAmmo;
         public bool IsReloading => _weapon.IsReloading;
 
+        /// <summary>熱で撃つ弾薬の熱 (0〜1)。熱を持たない弾薬なら null。</summary>
+        public float? HeatFraction => _weapon.Ammo.HeatFraction;
+
         /// <summary>true ならリロードで予備弾を減らさず、予備弾が 0 でもリロードできる。</summary>
         public bool HasInfiniteReserve => _weapon.HasInfiniteReserve;
 

@@ -287,7 +287,7 @@ namespace Fps.Server
             }
 
             var playerId = _nextBotId++;
-            var agent = new ServerBotAgent(playerId, _spec, _navigation, ShuffledPatrolRoute(playerId), new Random(playerId));
+            var agent = new ServerBotAgent(playerId, _spec, _navigation, ShuffledPatrolRoute(playerId), new Random(playerId), _combat.SightBlockers);
             _agents.Add(playerId, agent);
 
             var player = _match.JoinBot(playerId);
@@ -511,7 +511,7 @@ namespace Fps.Server
                     nearestDistance = distance;
                 }
 
-                if (distance <= sight && distance < seenDistance && HasLineOfSight(eye, other.Center))
+                if (distance <= sight && distance < seenDistance && HasLineOfSight(agent, eye, other.Center))
                 {
                     seen = other;
                     seenDistance = distance;
@@ -535,11 +535,12 @@ namespace Fps.Server
         }
 
         // 壊れた建物の部品は世界の当たりから外れているので、その穴越しには見える
-        private bool HasLineOfSight(Vector3 eye, Vector3 target)
+        private bool HasLineOfSight(ServerBotAgent agent, Vector3 eye, Vector3 target)
         {
             var offset = target - eye;
             var distance = offset.Length();
-            return !(distance > 0f) || !_context.World.Raycast(eye, offset / distance, distance, ServerHitboxes.RaycastLayers, out _);
+            return !(distance > 0f)
+                || (!_context.World.Raycast(eye, offset / distance, distance, ServerHitboxes.RaycastLayers, out _) && !agent.IsSightBlocked(eye, target));
         }
 
         private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);

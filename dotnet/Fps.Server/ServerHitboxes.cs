@@ -13,7 +13,7 @@ namespace Fps.Server
     /// 巻き戻した位置が無い対象 (その時点にまだいなかった・置き直した直後) と当てられない対象は素通りする。撃った本人にも当たらない。
     /// 置き直すと前の位置との間を補間しないよう、その人の記録を捨てる。
     /// </remarks>
-    internal sealed class ServerHitboxes
+    internal sealed partial class ServerHitboxes
     {
         /// <summary>Unity の Physics.DefaultRaycastLayers と同じく Ignore Raycast (2) だけを外す。</summary>
         public const int RaycastLayers = ~(1 << 2);
@@ -62,6 +62,54 @@ namespace Fps.Server
         {
             _lag.Remove(playerId);
         }
+
+        /// <summary>
+        /// 太さ radius の弾を <see cref="Raycast"/> と同じく巻き戻した対象と世界に通し、近い順に maxHits 件までを hits に足す。
+        /// 半径 0・1 件なら <see cref="Raycast"/> と同じ結果になる。何かに当たれば true。
+        /// </summary>
+        public bool Cast(
+            Vector3 origin, Vector3 direction, float radius, float range, int maxHits, float tick, int shooterId, Func<int, bool> hittable,
+            List<ShotHit> hits)
+        {
+            ArgumentNullException.ThrowIfNull(hits);
+            if (!(radius >= 0f) || float.IsInfinity(radius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(radius), radius, "radius must be a non-negative finite number");
+            }
+
+            if (maxHits < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxHits), maxHits, "maxHits must be at least 1");
+            }
+
+            var count = hits.Count;
+            var handled = false;
+            if (radius > 0f)
+            {
+                CastSphere(origin, direction, radius, range, maxHits, tick, shooterId, hittable, hits, ref handled);
+            }
+            else if (maxHits > 1)
+            {
+                CastMany(origin, direction, range, maxHits, tick, shooterId, hittable, hits, ref handled);
+            }
+
+            if (!handled && Raycast(origin, direction, range, tick, shooterId, hittable, out var hit))
+            {
+                hits.Add(hit);
+            }
+
+            return hits.Count > count;
+        }
+
+        // 太い弾の判定。埋まるまでは handled を立てず、細い線の判定で代える
+        partial void CastSphere(
+            Vector3 origin, Vector3 direction, float radius, float range, int maxHits, float tick, int shooterId, Func<int, bool> hittable,
+            List<ShotHit> hits, ref bool handled);
+
+        // 1 本の線で複数の当たりを拾う判定。埋まるまでは handled を立てず、最初の当たりだけを拾う
+        partial void CastMany(
+            Vector3 origin, Vector3 direction, float range, int maxHits, float tick, int shooterId, Func<int, bool> hittable,
+            List<ShotHit> hits, ref bool handled);
 
         /// <summary>
         /// 撃った人が見ていた tick (補間の割合を含む。<see cref="MaxRewindTicks"/> より古ければそこまでに縮める) まで巻き戻した対象と世界に、

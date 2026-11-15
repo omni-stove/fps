@@ -10,6 +10,7 @@ namespace Fps.Server
     /// <summary>
     /// 1 人ぶんの持たせている武器の並び (Unity の NetPlayerWeapon のサーバー側)。弾倉・予備弾・リロード・アクティブリロード・持ち替えを
     /// Core の <see cref="ServerWeapon"/> と <see cref="Loadout{T}"/> で進め、持ち主に送る <see cref="WeaponSync"/> を作る。
+    /// 弾薬の種類は武器ごとの <see cref="AmmoTypeSelector"/> で選び、撃つ弾の値 (<see cref="CurrentRound"/>・<see cref="CurrentImpact"/>) はその種類で上書きする。
     /// </summary>
     internal sealed class ServerPlayerWeapons
     {
@@ -17,7 +18,9 @@ namespace Fps.Server
         private readonly TextWriter _log;
         private readonly Func<double> _now;
         private Loadout<ServerWeapon> _loadout;
+        private AmmoTypeSelector[] _ammoTypes = Array.Empty<AmmoTypeSelector>();
         private double _reloadStartedAt;
+        private float _chargeFraction;
 
         public ServerPlayerWeapons(int playerId, TextWriter log, Func<double> now)
         {
@@ -33,6 +36,20 @@ namespace Fps.Server
 
         public IReadOnlyList<ServerWeapon> Items => _loadout?.Items ?? Array.Empty<ServerWeapon>();
 
+        /// <summary>今の武器で撃つ弾の値 (選んだ弾薬の種類で上書きした後)。装備前は null。</summary>
+        public RoundSpec CurrentRound => _loadout == null ? null : CurrentAmmoType.Round;
+
+        /// <summary>今の武器の着弾の値 (選んだ弾薬の種類で上書きした後)。装備前は null。</summary>
+        public ImpactSpec CurrentImpact => _loadout == null ? null : CurrentAmmoType.Impact;
+
+        /// <summary>
+        /// 今の武器の弾薬の種類を <see cref="WeaponSync.AmmoTypeIndex"/> の値にしたもの。0 は種類を選んでいない (武器そのものの弾)、
+        /// 1 からは <see cref="WeaponSpec.AmmoTypes"/> の番号 + 1。
+        /// </summary>
+        public byte AmmoTypeIndex => _loadout == null ? (byte)0 : (byte)(CurrentAmmoType.Index + 1);
+
+        private AmmoTypeSelector CurrentAmmoType => _ammoTypes[_loadout.CurrentIndex];
+
         /// <summary>specs をこの並びで満タンで持たせ、0 番を構えた状態にする。前の武器 (リロード中・持ち替え中を含む) は捨てる。</summary>
         public void Equip(IReadOnlyList<WeaponSpec> specs, float switchSeconds, GameRules rules)
         {
@@ -44,11 +61,15 @@ namespace Fps.Server
             }
 
             var weapons = new ServerWeapon[specs.Count];
+            var ammoTypes = new AmmoTypeSelector[specs.Count];
             for (var i = 0; i < specs.Count; i++)
             {
                 weapons[i] = new ServerWeapon(specs[i] ?? throw new ArgumentException("specs must not contain null", nameof(specs)), rules);
+                ammoTypes[i] = new AmmoTypeSelector(specs[i]);
             }
 
+            _ammoTypes = ammoTypes;
+            _chargeFraction = 0f;
             SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon));
         }
 
@@ -110,6 +131,29 @@ namespace Fps.Server
             return true;
         }
 
+        /// <summary>
+        /// 射撃の要求の溜め requested を今の武器に照らして受け入れ、着弾の倍率に使う値を返す。溜めの無い武器は 0。
+        /// 受け入れた値は持ち主に <see cref="WeaponSync.ChargeFraction"/> で返す。
+        /// </summary>
+        public float AcceptCharge(float requested)
+        {
+            var charge = CurrentSpec?.Trigger.Charge;
+            _chargeFraction = charge == null || !float.IsFinite(requested) ? 0f : Math.Clamp(requested, 0f, 1f);
+            return _chargeFraction;
+        }
+
+        /// <summary>今の武器の弾薬の種類を次へ切り替える。持ち替え中・装備前・切り替えられない武器なら false。</summary>
+        public bool TrySwitchAmmoType()
+        {
+            if (_loadout == null || _loadout.IsSwitching || !CurrentAmmoType.TrySwitch())
+            {
+                return false;
+            }
+
+            _log.WriteLine("[Net] ammo-type player=" + Text(_playerId) + " weapon=" + _loadout.Current.Spec.Id + " index=" + Text(AmmoTypeIndex));
+            return true;
+        }
+
         /// <summary>持っている weaponId (大文字・小文字は区別する) へ持ち替える。並びに無ければ警告を出して false。</summary>
         public bool TrySwitch(string weaponId)
         {
@@ -158,6 +202,9 @@ namespace Fps.Server
                 ReloadSeconds = showsProgress ? weapon.ReloadDurationSeconds : 0f,
                 ActiveReloadWindowStart = windowOpen ? spec.ActiveReloadWindowStart : 0f,
                 ActiveReloadWindowEnd = windowOpen ? spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength : 0f,
+                Heat = weapon.HeatFraction ?? 0f,
+                ChargeFraction = spec.Trigger.Charge != null ? _chargeFraction : 0f,
+                AmmoTypeIndex = AmmoTypeIndex,
             };
         }
 
@@ -199,6 +246,7 @@ namespace Fps.Server
 
         private void HandleSwitched(int index)
         {
+            _chargeFraction = 0f;
             _log.WriteLine("[Net] switch client=" + Text(_playerId) + " index=" + Text(index) + " weapon=" + _loadout.Items[index].Spec.Id);
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Fps.Core;
 using NUnit.Framework;
@@ -32,6 +33,46 @@ namespace Fps.Server.Tests
             Assert.That(old.Distance, Is.EqualTo(9.5f).Within(1e-4f));
             Assert.That(old.RewindTicks, Is.EqualTo(1f));
             Assert.That(hitboxes.Raycast(Vector3.UnitY, Vector3.UnitX, 100f, 2f, 1, _ => true, out _), Is.False);
+        }
+
+        [Test]
+        public void AThinCastOfOneHitMatchesTheRaycast()
+        {
+            var hitboxes = Hitboxes();
+            var target = Spawn(2, new Vector3(10f, 1f, 0f));
+            hitboxes.Record(1);
+            target.SetPose(new Vector3(10f, 1f, 3f), 0f, PlayerStance.Standing);
+            hitboxes.Record(2);
+            var hits = new List<ShotHit>();
+
+            Assert.That(hitboxes.Cast(Vector3.UnitY, Vector3.UnitX, 0f, 100f, 1, 1f, 1, _ => true, hits), Is.True);
+            Assert.That(hitboxes.Raycast(Vector3.UnitY, Vector3.UnitX, 100f, 1f, 1, _ => true, out var ray), Is.True);
+            Assert.That(hits, Has.Count.EqualTo(1));
+            Assert.That(hits[0].TargetId, Is.EqualTo(ray.TargetId));
+            Assert.That(hits[0].Distance, Is.EqualTo(ray.Distance));
+            Assert.That(hits[0].RewindTicks, Is.EqualTo(ray.RewindTicks));
+        }
+
+        [Test]
+        public void AMissedCastAddsNothing()
+        {
+            var hitboxes = Hitboxes();
+            Spawn(2, new Vector3(10f, 1f, 0f));
+            hitboxes.Record(1);
+            var hits = new List<ShotHit>();
+
+            Assert.That(hitboxes.Cast(Vector3.UnitY, -Vector3.UnitX, 0f, 100f, 1, 1f, 1, _ => true, hits), Is.False);
+            Assert.That(hits, Is.Empty);
+        }
+
+        [Test]
+        public void ACastRejectsANegativeRadiusAndNoHits()
+        {
+            var hitboxes = Hitboxes();
+            var hits = new List<ShotHit>();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => hitboxes.Cast(Vector3.UnitY, Vector3.UnitX, -1f, 100f, 1, 1f, 1, _ => true, hits));
+            Assert.Throws<ArgumentOutOfRangeException>(() => hitboxes.Cast(Vector3.UnitY, Vector3.UnitX, 0f, 100f, 0, 1f, 1, _ => true, hits));
         }
 
         [Test]

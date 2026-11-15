@@ -24,6 +24,8 @@ namespace Fps.Runtime
         private AudioSource _audio;
         private Collider _stuckIn;
         private float _stuckLeft;
+        private ProjectileSettings _look;
+        private bool _shownOnly;
 
         public BallisticFlight Flight => _flight;
 
@@ -47,31 +49,69 @@ namespace Fps.Runtime
                 _ => world.LastHit.collider != null && Hitbox.FindFor(world.LastHit.collider) != null,
                 ChargeScaling.SpeedMultiplier(request.Charge, request.ChargeFraction));
 
-            var look = request.ProjectileLook;
-            var visual = look != null && look.Visual != null ? Instantiate(look.Visual) : BuildRod();
-            visual.name = "Projectile-" + request.WeaponId;
-
-            // 見た目の当たりが残ると、次に撃った弾や周りの Raycast がそれに当たるので切る。
-            foreach (var collider in visual.GetComponentsInChildren<Collider>())
-            {
-                collider.enabled = false;
-            }
-
-            var body = visual.AddComponent<ProjectileBody>();
+            var body = Create(request.ProjectileLook, request.WeaponId);
             body._request = request;
             body._world = world;
             body._flight = flight;
             body.Place();
-            if (look != null && look.Sound != null)
+            body.PlaySound();
+            return body;
+        }
+
+        /// <summary>
+        /// 当たりを持たない見た目だけの弾。ネット対戦のクライアントのように、飛び方と当たりを別の所 (サーバー) が決めるときに使う。
+        /// </summary>
+        public static ProjectileBody Show(ProjectileSettings look, string weaponId, Vector3 position, Vector3 velocity)
+        {
+            var body = Create(look, weaponId);
+            body._look = look;
+            body._shownOnly = true;
+            body.MoveTo(position, velocity);
+            body.PlaySound();
+            return body;
+        }
+
+        /// <summary>見た目だけの弾 (<see cref="Show"/>) を動かす。刺さっていたら抜いて飛ばし直す。</summary>
+        public void MoveTo(Vector3 position, Vector3 velocity)
+        {
+            if (!_shownOnly)
             {
-                body._audio = visual.AddComponent<AudioSource>();
-                body._audio.clip = look.Sound;
-                body._audio.loop = true;
-                body._audio.spatialBlend = 1f;
-                body._audio.Play();
+                throw new InvalidOperationException("only a body made by Show is moved from outside");
             }
 
-            return body;
+            if (_stuckLeft > 0f)
+            {
+                _stuckLeft = 0f;
+                PlaySound();
+            }
+
+            transform.position = position;
+            if (velocity.sqrMagnitude > 1e-8f)
+            {
+                transform.rotation = Quaternion.LookRotation(velocity);
+            }
+        }
+
+        /// <summary>見た目だけの弾 (<see cref="Show"/>) を刺さった所に残し、武器の見た目の秒数が過ぎたら消す。</summary>
+        public void StickAt(Vector3 position)
+        {
+            if (!_shownOnly)
+            {
+                throw new InvalidOperationException("only a body made by Show is stuck from outside");
+            }
+
+            transform.position = position;
+            StopSound();
+            _stuckLeft = _look != null ? _look.StuckSeconds : DefaultStuckSeconds;
+            if (_stuckLeft <= 0f)
+            {
+                Despawn();
+            }
+        }
+
+        public void Remove()
+        {
+            Despawn();
         }
 
         private void FixedUpdate()
@@ -81,6 +121,20 @@ namespace Fps.Runtime
 
         internal void Tick(float deltaSeconds)
         {
+            if (_shownOnly)
+            {
+                if (_stuckLeft > 0f)
+                {
+                    _stuckLeft -= deltaSeconds;
+                    if (_stuckLeft <= 0f)
+                    {
+                        Despawn();
+                    }
+                }
+
+                return;
+            }
+
             if (_flight == null)
             {
                 return;
@@ -172,6 +226,37 @@ namespace Fps.Runtime
             if (velocity.sqrMagnitude > 1e-8f)
             {
                 transform.rotation = Quaternion.LookRotation(velocity);
+            }
+        }
+
+        private static ProjectileBody Create(ProjectileSettings look, string weaponId)
+        {
+            var visual = look != null && look.Visual != null ? Instantiate(look.Visual) : BuildRod();
+            visual.name = "Projectile-" + weaponId;
+
+            // 見た目の当たりが残ると、次に撃った弾や周りの Raycast がそれに当たるので切る。
+            foreach (var collider in visual.GetComponentsInChildren<Collider>())
+            {
+                collider.enabled = false;
+            }
+
+            var body = visual.AddComponent<ProjectileBody>();
+            if (look != null && look.Sound != null)
+            {
+                body._audio = visual.AddComponent<AudioSource>();
+                body._audio.clip = look.Sound;
+                body._audio.loop = true;
+                body._audio.spatialBlend = 1f;
+            }
+
+            return body;
+        }
+
+        private void PlaySound()
+        {
+            if (_audio != null && !_audio.isPlaying)
+            {
+                _audio.Play();
             }
         }
 

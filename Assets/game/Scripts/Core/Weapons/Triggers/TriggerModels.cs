@@ -6,10 +6,16 @@ namespace Fps.Core
     {
         public static ITriggerModel For(WeaponSpec spec)
         {
-            return For((spec ?? throw new ArgumentNullException(nameof(spec))).Trigger);
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            // ビームは押している間ずっと当て続けるので、連射間隔でなくビームの間隔で数える撃ち方を土台にする。
+            var round = spec.Round;
+            return round.Delivery == RoundDelivery.Beam ? Wrap(spec.Trigger, new BeamState(round.Beam)) : For(spec.Trigger);
         }
 
-        // 部品ごとに内側の撃ち方を包むのは、バーストのミニガンや装填動作のあるチャージのように部品を重ねても組めるようにするため。
         public static ITriggerModel For(TriggerSpec trigger)
         {
             if (trigger == null)
@@ -17,7 +23,12 @@ namespace Fps.Core
                 throw new ArgumentNullException(nameof(trigger));
             }
 
-            var model = For(trigger.FireMode, trigger.FireInterval);
+            return Wrap(trigger, For(trigger.FireMode, trigger.FireInterval));
+        }
+
+        // 部品ごとに内側の撃ち方を包むのは、バーストのミニガンや装填動作のあるチャージのように部品を重ねても組めるようにするため。
+        private static ITriggerModel Wrap(TriggerSpec trigger, ITriggerModel model)
+        {
             if (trigger.Burst != null)
             {
                 model = new BurstTrigger(trigger.Burst, model);

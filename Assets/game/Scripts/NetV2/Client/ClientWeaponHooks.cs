@@ -12,9 +12,10 @@ namespace Fps.NetV2
         public ClientWeaponHooks(Func<string, WeaponSpec> findWeapon)
         {
             _findWeapon = findWeapon ?? throw new ArgumentNullException(nameof(findWeapon));
+            Projectiles = new ClientProjectiles(findWeapon);
         }
 
-        public ClientProjectiles Projectiles { get; } = new ClientProjectiles();
+        public ClientProjectiles Projectiles { get; }
 
         public ClientBeams Beams { get; } = new ClientBeams();
 

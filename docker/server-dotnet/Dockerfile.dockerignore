@@ -1,0 +1,11 @@
+# docker/server-dotnet/Dockerfile のビルドコンテキスト (リポジトリのルート) から、イメージに入れるものだけを残す。
+# Library/ などを送らないよう、すべてを除いてから必要なものを戻す
+*
+!dotnet/
+!Assets/game/Scripts/Core/
+!Assets/game/Scripts/Protocol/
+!server-data/
+
+# 手元でビルドした出力が混ざると、コンテナの中で別の RID 向けに restore したものと食い違う
+**/bin/
+**/obj/

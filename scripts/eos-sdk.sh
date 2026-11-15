@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # EOS の C# SDK を dotnet/ThirdParty/EOSSDK に置く (配布の条件からリポジトリには入れない。置き場所は同じ場所の README.md)。
-# 使い方: scripts/eos-sdk.sh [--from <path>]
-#   --from  取り出し元。PlayEveryWare の EOS プラグインのパッケージ、Epic Developer Portal の SDK の zip か、それを展開したフォルダ
-#           (既定は Library/PackageCache/com.playeveryware.eos@*。worktree ではメインのチェックアウトのものも探す)
+# 使い方: scripts/eos-sdk.sh [--from <path> | --fetch]
+#   --from   取り出し元。PlayEveryWare の EOS プラグインのパッケージ、Epic Developer Portal の SDK の zip か、それを展開したフォルダ
+#            (既定は Library/PackageCache/com.playeveryware.eos@*。worktree ではメインのチェックアウトのものも探す)
+#   --fetch  Unity を使わず、Packages/packages-lock.json に固定した版の PlayEveryWare のプラグインを git で取ってくる (git-lfs が要る)
 # 置き直すたびに Source/・Bin/ と配布の条件のファイルを作り直す。取り出し元に無い OS のライブラリは置かない。
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
@@ -10,7 +11,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 readonly dest="dotnet/ThirdParty/EOSSDK"
 
 usage() {
-	sed -n '3,6s/^# \{0,1\}//p' "$0"
+	sed -n '3,7s/^# \{0,1\}//p' "$0"
 }
 
 fail() {
@@ -19,6 +20,7 @@ fail() {
 }
 
 from=""
+fetch=0
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--from)
@@ -26,6 +28,7 @@ while [ $# -gt 0 ]; do
 		from="$2"
 		shift
 		;;
+	--fetch) fetch=1 ;;
 	-h | --help)
 		usage
 		exit 0
@@ -48,13 +51,41 @@ find_package() {
 	return 1
 }
 
-if [ -z "$from" ]; then
+# サーバーのイメージはクライアントと同じ版の SDK にしたいので、Unity が使う packages-lock.json の commit を取る。
+# Unity 用のライブラリが全 OS 分 LFS にあるので、C# のソースと Linux のライブラリだけを落とす
+fetch_package() {
+	local url hash dir lib
+	url="$(sed -n '/"com.playeveryware.eos"/,/}/s/.*"version": *"\(http[^"]*\)".*/\1/p' Packages/packages-lock.json)"
+	hash="$(sed -n '/"com.playeveryware.eos"/,/"hash"/s/.*"hash": *"\([0-9a-f]\{40\}\)".*/\1/p' Packages/packages-lock.json)"
+	[ -n "$url" ] && [ -n "$hash" ] || fail "no git url and hash of com.playeveryware.eos in Packages/packages-lock.json"
+	command -v git-lfs >/dev/null || fail "git-lfs is not installed; it is needed to fetch the EOS libraries"
+	dir="$work/plugin"
+	echo "eos-sdk: fetching $url at $hash" >&2
+	git init -q "$dir"
+	git -C "$dir" remote add origin "$url"
+	GIT_LFS_SKIP_SMUDGE=1 git -C "$dir" fetch -q --depth 1 --filter=blob:none origin "$hash"
+	git -C "$dir" sparse-checkout set --no-cone /Runtime/EOS_SDK/ /Runtime/Linux/
+	GIT_LFS_SKIP_SMUDGE=1 git -C "$dir" checkout -q FETCH_HEAD
+	# git lfs pull は木の全てのファイルを調べ、blob:none ではそのたびに 1 つずつ取りに行くので、ポインタを 1 つだけ smudge する
+	lib="$dir/Runtime/Linux/libEOSSDK-Linux-Shipping.so"
+	(cd "$dir" && git lfs smudge "Runtime/Linux/libEOSSDK-Linux-Shipping.so" <"$lib" >"$lib.tmp")
+	mv "$lib.tmp" "$lib"
+	# LFS から落とせなければ、ライブラリの代わりに数百バイトのポインタのファイルが残る
+	[ "$(wc -c <"$lib")" -gt 4096 ] || fail "git lfs did not download libEOSSDK-Linux-Shipping.so"
+	printf '%s\n' "$dir"
+}
+
+work=""
+trap '[ -z "$work" ] || rm -rf "${work:?}"' EXIT
+if [ "$fetch" -eq 1 ]; then
+	[ -z "$from" ] || fail "pass either --from or --fetch, not both"
+	work="$(mktemp -d)"
+	from="$(fetch_package)"
+elif [ -z "$from" ]; then
 	from="$(find_package)" || fail "no PlayEveryWare EOS package in Library/PackageCache (open the project in Unity once, or pass --from <SDK zip or folder>)"
 fi
 [ -e "$from" ] || fail "not found: $from"
 
-work=""
-trap '[ -z "$work" ] || rm -rf "${work:?}"' EXIT
 if [ -f "$from" ]; then
 	case "$from" in
 	*.zip) ;;

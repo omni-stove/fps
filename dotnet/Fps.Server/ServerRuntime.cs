@@ -18,7 +18,8 @@ namespace Fps.Server
             IReadOnlyList<string> mapSearchRoots,
             IReadOnlyList<string> credentialSearchRoots,
             Func<IMatchTransport> createTransport,
-            EosTransportFactory createEosTransport = null)
+            EosTransportFactory createEosTransport = null,
+            string builtVersion = null)
         {
             Output = output ?? throw new ArgumentNullException(nameof(output));
             Error = error ?? throw new ArgumentNullException(nameof(error));
@@ -28,6 +29,7 @@ namespace Fps.Server
             CredentialSearchRoots = credentialSearchRoots ?? throw new ArgumentNullException(nameof(credentialSearchRoots));
             CreateTransport = createTransport ?? throw new ArgumentNullException(nameof(createTransport));
             CreateEosTransport = createEosTransport ?? CreateProcessEosTransport;
+            BuiltVersion = builtVersion;
         }
 
         /// <summary><c>-transport eos</c> の通信路を作る。SDK が無いビルドなどで作れなければ false と理由を返す。</summary>
@@ -52,6 +54,9 @@ namespace Fps.Server
 
         public EosTransportFactory CreateEosTransport { get; }
 
+        /// <summary>ビルドに焼き込んだ版。<c>-buildVersion</c> が無いときに使う。焼き込んでいなければ null。</summary>
+        public string BuiltVersion { get; }
+
         public static ServerRuntime Process()
         {
             return new ServerRuntime(
@@ -61,7 +66,8 @@ namespace Fps.Server
                 new PosixStopSignal(),
                 ServerMapData.DefaultSearchRoots(),
                 ServerMapData.DefaultSearchRoots(),
-                () => new UdpMatchTransport());
+                () => new UdpMatchTransport(),
+                builtVersion: ServerBuildVersion.Embedded());
         }
 
         private static bool CreateProcessEosTransport(

@@ -39,8 +39,11 @@ SDK の版は決めていない。クライアントの PlayEveryWare のプラ�
 
 ```sh
 make eos-sdk                                         # Library/PackageCache の PlayEveryWare のプラグインから
+make eos-sdk ARGS="--fetch"                          # Packages/packages-lock.json の版のプラグインを git で取って (Unity は要らない。git-lfs が要る)
 make eos-sdk ARGS="--from ~/Downloads/EOS-SDK.zip"   # ポータルの zip (か、それを展開したフォルダ) から
 ```
+
+`--fetch` は C# のソースと Linux の x64 のライブラリだけを取る (サーバーのイメージの CI が使う)。
 
 置いたら `make test` か `make server-dotnet` で確かめる。サーバーが `[Eos] sdk=included library=... version=...` と出せば SDK とライブラリの両方が読めている。
 

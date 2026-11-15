@@ -441,8 +441,7 @@ namespace Fps.Runtime
         {
             var velocity = _navAgent != null && _navAgent.enabled ? _navAgent.velocity : Vector3.zero;
             var state = _enemy.State;
-            var phase = _enemy.Brain != null ? _enemy.Brain.CoverPhase : EnemyCoverPhase.None;
-            var aiming = EnemyGait.IsAiming(state, phase);
+            var aiming = _enemy.IsAiming;
 
             WeaponCategory? category = null;
             if (_enemy.Weapon != null)

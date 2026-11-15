@@ -39,7 +39,11 @@ namespace Fps.Runtime
         /// </summary>
         public const float ExplosionAudibleDistance = Fps.Runtime.Explosion.AudibleDistance;
 
+        // 上を向いた面とみなす接触の法線の y。これより急な壁に触れても転がりは減らさない。
+        private const float GroundNormalMinY = 0.5f;
+
         private static PhysicsMaterial _material;
+        private static readonly List<ThrownGrenade> _live = new List<ThrownGrenade>();
 
         private readonly List<Collider> _ownColliders = new List<Collider>();
         private GameObject _thrower;
@@ -47,6 +51,9 @@ namespace Fps.Runtime
         private GrenadeStickiness _stickiness;
         private string _typeId = string.Empty;
         private float _remaining;
+        private float _rollDamping;
+        private bool _grounded;
+        private Rigidbody _body;
         private bool _armed;
         private bool _exploded;
 
@@ -69,6 +76,12 @@ namespace Fps.Runtime
 
         /// <summary>投げた種類の Id (<see cref="GrenadeSpec.Id"/>)。種類を渡さずに作ったときは空文字。</summary>
         public string TypeId => _typeId;
+
+        /// <summary>地面に触れている間の転がりの減り方 (1/s、<see cref="GrenadeSpec.RollDamping"/>)。</summary>
+        public float RollDamping => _rollDamping;
+
+        /// <summary>今シーンにある、まだ爆発していないグレネード。警告や範囲の表示が毎フレーム読む。</summary>
+        public static IReadOnlyList<ThrownGrenade> Live => _live;
 
         /// <summary>爆発したときに、このグレネードと結果を渡して 1 度だけ呼ばれる。</summary>
         public event Action<ThrownGrenade, GrenadeExplosion> Exploded;
@@ -184,7 +197,7 @@ namespace Fps.Runtime
             }
 
             var impact = new ImpactSpec(damage: 0, explosion: new ExplosionSpec(explosion, structureDamage, DetonationTrigger.OnLifetimeEnd));
-            Arm(thrower, fuseSeconds, impact, GrenadeStickiness.None, string.Empty);
+            Arm(thrower, fuseSeconds, impact, GrenadeStickiness.None, string.Empty, GrenadeSpec.DefaultRollDamping);
         }
 
         /// <summary>spec の信管・効果・くっつき方にする。2 回目以降は値を差し替える (爆発した後は何もしない)。</summary>
@@ -195,10 +208,10 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(spec));
             }
 
-            Arm(thrower, spec.FuseSeconds, spec.Impact, spec.Stickiness, spec.Id);
+            Arm(thrower, spec.FuseSeconds, spec.Impact, spec.Stickiness, spec.Id, spec.RollDamping);
         }
 
-        private void Arm(GameObject thrower, float fuseSeconds, ImpactSpec impact, GrenadeStickiness stickiness, string typeId)
+        private void Arm(GameObject thrower, float fuseSeconds, ImpactSpec impact, GrenadeStickiness stickiness, string typeId, float rollDamping)
         {
             if (!(fuseSeconds >= 0f) || float.IsInfinity(fuseSeconds))
             {
@@ -214,6 +227,7 @@ namespace Fps.Runtime
             _impact = impact;
             _stickiness = stickiness;
             _typeId = typeId;
+            _rollDamping = rollDamping;
             _remaining = fuseSeconds;
             _armed = true;
         }
@@ -227,6 +241,65 @@ namespace Fps.Runtime
         }
 
         partial void Stick(Collision collision);
+
+        private void OnEnable()
+        {
+            _live.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            _live.Remove(this);
+        }
+
+        // 球の当たり判定は転がりの抵抗を持たず、摩擦だけでは平らな床をいつまでも転がり続けるので、床に触れている間だけ速さと回転を減らす。
+        private void OnCollisionStay(Collision collision)
+        {
+            for (var i = 0; i < collision.contactCount; i++)
+            {
+                if (collision.GetContact(i).normal.y >= GroundNormalMinY)
+                {
+                    _grounded = true;
+                    return;
+                }
+            }
+        }
+
+        private void FixedUpdate()
+        {
+            var grounded = _grounded;
+            _grounded = false;
+            if (!grounded || _rollDamping <= 0f || _exploded)
+            {
+                return;
+            }
+
+            if (_body == null)
+            {
+                _body = GetComponent<Rigidbody>();
+            }
+
+            if (_body == null || _body.isKinematic)
+            {
+                return;
+            }
+
+            DampRoll(_body, _rollDamping, Time.fixedDeltaTime);
+        }
+
+        /// <summary>body の水平の速さと回転を e^(-rollDamping * deltaSeconds) 倍にする。縦の速さ (跳ねと落下) は変えない。</summary>
+        public static void DampRoll(Rigidbody body, float rollDamping, float deltaSeconds)
+        {
+            if (body == null)
+            {
+                throw new ArgumentNullException(nameof(body));
+            }
+
+            var factor = Mathf.Exp(-Mathf.Max(0f, rollDamping) * Mathf.Max(0f, deltaSeconds));
+            var velocity = body.linearVelocity;
+            body.linearVelocity = new Vector3(velocity.x * factor, velocity.y, velocity.z * factor);
+            body.angularVelocity *= factor;
+        }
 
         private void Update()
         {

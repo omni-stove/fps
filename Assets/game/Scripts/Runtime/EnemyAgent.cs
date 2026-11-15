@@ -148,6 +148,12 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f)]
         private float _attackRange = EnemySpec.DefaultAttackRange;
 
+        [SerializeField, Min(0f), Tooltip("この距離 (m) 以内に目標が見えていれば、Attack の外でも近づきながら撃つ")]
+        private float _fireRange = EnemySpec.DefaultFireRange;
+
+        [SerializeField, Range(0f, EnemySpec.MaxFireToleranceDegrees), Tooltip("体の向きと目標の向きの差 (度) がこれ以下になるまで撃たない")]
+        private float _fireToleranceDegrees = EnemySpec.DefaultFireToleranceDegrees;
+
         [SerializeField, Min(0f)]
         private float _loseSightSeconds = EnemySpec.DefaultLoseSightSeconds;
 
@@ -162,6 +168,9 @@ namespace Fps.Runtime
 
         [SerializeField, Range(0f, EnemySpec.MaxSpreadDegrees), Tooltip("撃ち始めの数発が過ぎた後の散らばりの半角 (度)")]
         private float _settledSpreadDegrees = EnemySpec.DefaultSettledSpreadDegrees;
+
+        [SerializeField, Range(0f, EnemySpec.MaxSpreadDegrees), Tooltip("撃ち始める距離にいる目標を撃つときに散らばりへ足す半角 (度)。Attack の距離では 0")]
+        private float _rangeSpreadDegrees = EnemySpec.DefaultRangeSpreadDegrees;
 
         [SerializeField, Min(0), Tooltip("散らばりを絞り切るまでの発数")]
         private int _openingShots = EnemySpec.DefaultOpeningShots;
@@ -292,6 +301,7 @@ namespace Fps.Runtime
 
         public float SightRange => _sightRange;
         public float AttackRange => _attackRange;
+        public float FireRange => _fireRange;
         public float EyeHeight => _eyeHeight;
         public float CrouchHeight => _crouchHeight;
         public float CrouchEyeHeight => _crouchEyeHeight;
@@ -500,7 +510,10 @@ namespace Fps.Runtime
                 CreateSniperSpec(),
                 CreateChargerSpec(),
                 CreateBomberSpec(),
-                _staggerResistance);
+                _staggerResistance,
+                _fireRange,
+                _fireToleranceDegrees,
+                _rangeSpreadDegrees);
         }
 
         /// <summary>
@@ -575,6 +588,9 @@ namespace Fps.Runtime
         {
             _sightRange = spec.SightRange;
             _attackRange = spec.AttackRange;
+            _fireRange = spec.FireRange;
+            _fireToleranceDegrees = spec.FireToleranceDegrees;
+            _rangeSpreadDegrees = spec.RangeSpreadDegrees;
             _loseSightSeconds = spec.LoseSightSeconds;
             _searchSeconds = spec.SearchSeconds;
             _reactionSeconds = spec.ReactionSeconds;
@@ -772,7 +788,8 @@ namespace Fps.Runtime
             MoveTo(moveTo);
             WatchProgress(deltaSeconds);
             Face(decision.LookAt, deltaSeconds);
-            if (firing)
+            LogAimStart();
+            if (firing && IsFacing(decision.LookAt))
             {
                 Shoot();
             }
@@ -786,8 +803,9 @@ namespace Fps.Runtime
         private void UpdateGait(bool firing)
         {
             var phase = _brain.CoverPhase;
-            _aiming = !_unarmed && EnemyGait.IsAiming(_brain.State, phase);
-            _sprinting = _sprintAllowed && EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing);
+            _aiming = !_unarmed && _brain.IsAiming;
+            // 構えている間はプレイヤーと同じくダッシュしない。撃つ前から歩いて狙ってくるのが見えるように。
+            _sprinting = _sprintAllowed && EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing || _aiming);
             _agent.speed = EnemyGait.Speed(GaitWalkSpeed, _sprinting, _crouching);
         }
 

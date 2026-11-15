@@ -16,6 +16,7 @@ namespace Fps.Runtime
         private readonly TriggerDriver _trigger = new TriggerDriver();
         private int _spreadSeed;
         private int _shotCount;
+        private bool _loggedAim;
 
         public RecoilState Recoil => _recoil;
         public int ShotCount => _shotCount;
@@ -209,6 +210,63 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>
+        /// 体の向き (水平) と lookAt への向きの差が <see cref="EnemySpec.FireToleranceDegrees"/> 以下か。lookAt が無いか真上・真下なら true。
+        /// </summary>
+        public bool IsFacing(System.Numerics.Vector3? lookAt)
+        {
+            if (!lookAt.HasValue || _brain == null)
+            {
+                return true;
+            }
+
+            var tolerance = _brain.Spec.FireToleranceDegrees;
+            if (tolerance >= EnemySpec.MaxFireToleranceDegrees)
+            {
+                return true;
+            }
+
+            var direction = lookAt.Value.ToUnity() - transform.position;
+            direction.y = 0f;
+            var forward = transform.forward;
+            forward.y = 0f;
+            if (direction.sqrMagnitude < 1e-6f || forward.sqrMagnitude < 1e-6f)
+            {
+                return true;
+            }
+
+            return Vector3.Angle(forward, direction) <= tolerance;
+        }
+
+        private void LogAimStart()
+        {
+            if (!_aiming)
+            {
+                _loggedAim = false;
+                return;
+            }
+
+            if (_loggedAim)
+            {
+                return;
+            }
+
+            _loggedAim = true;
+            var target = PerceivedTarget;
+            var distance = target != null ? Vector3.Distance(EyePosition, target.AimPoint) : 0f;
+            Debug.Log(
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{0} id={1} aim state={2} target={3} distance={4:F1} wait={5:F2}",
+                    LogTag,
+                    Id,
+                    _brain.State,
+                    target != null ? target.Id : "none",
+                    distance,
+                    _brain.AimRemainingSeconds),
+                this);
+        }
+
         // 撃ち合いをやめた間は引き金を離す。押したままにすると、次に撃ち始めた最初の弾が押しっぱなしの撃ち方の間隔ぶん遅れる。
         private void ReleaseTrigger()
         {
@@ -249,7 +307,8 @@ namespace Fps.Runtime
 
             _recoil.Kick(spec, _spreadSeed, shotIndex);
 
-            var spread = _brain.NextShotSpreadDegrees;
+            var spread = Mathf.Min(
+                EnemySpec.MaxSpreadDegrees, _brain.NextShotSpreadDegrees + _brain.Spec.RangeSpreadDegreesAt(Vector3.Distance(eye, target.AimPoint)));
             for (var i = 0; i < directions.Length; i++)
             {
                 directions[i] = BlindFireShot.Spread(directions[i].ToNumerics(), spread, _random).ToUnity();

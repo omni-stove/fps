@@ -27,6 +27,7 @@ namespace Fps.Core
         public const string GrenadeNameKeyItem = "nameKey";
         public const string GrenadeImpactItem = "impact";
         public const string StickinessItem = "stickiness";
+        public const string RollDampingItem = "rollDamping";
         public const string GrenadeTypesItem = "types";
         public const string CarriedItem = "carried";
 
@@ -94,6 +95,7 @@ namespace Fps.Core
             StructureDamageAtCenterItem,
             GrenadeImpactItem,
             StickinessItem,
+            RollDampingItem,
         };
 
         public static IReadOnlyList<string> GrenadeCatalogItemNames { get; } = new[] { GrenadeTypesItem, CarriedItem };
@@ -329,6 +331,7 @@ namespace Fps.Core
             var throwSpeed = fields.ReadFloat(ThrowSpeedItem, defaults.ThrowSpeed);
             var throwLiftSpeed = fields.ReadFloat(ThrowLiftSpeedItem, defaults.ThrowLiftSpeed);
             var stickiness = fields.ReadEnum(StickinessItem, defaults.Stickiness);
+            var rollDamping = fields.ReadFloat(RollDampingItem, defaults.RollDamping);
             var impactFields = fields.Object(GrenadeImpactItem, WeaponSpecJson.GrenadeImpactItemNames);
             try
             {
@@ -345,7 +348,8 @@ namespace Fps.Core
                         fields.ReadInt(StructureDamageAtCenterItem, defaults.StructureDamageAtCenter),
                         id,
                         nameKey,
-                        stickiness);
+                        stickiness,
+                        rollDamping);
                 }
 
                 foreach (var flat in _flatExplosionItems)
@@ -358,7 +362,7 @@ namespace Fps.Core
                 }
 
                 return new GrenadeSpec(
-                    id, nameKey, WeaponSpecJson.ReadImpact(impactFields), fuseSeconds, throwSeconds, throwSpeed, throwLiftSpeed, stickiness);
+                    id, nameKey, WeaponSpecJson.ReadImpact(impactFields), fuseSeconds, throwSeconds, throwSpeed, throwLiftSpeed, stickiness, rollDamping);
             }
             catch (ArgumentException e)
             {

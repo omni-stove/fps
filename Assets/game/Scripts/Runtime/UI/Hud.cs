@@ -126,7 +126,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="DamageVignetteView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
+        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
         /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
         /// hudObject に付ける。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
@@ -141,6 +141,7 @@ namespace Fps.Runtime
 
             AddIfMissing<HitMarkerView>(hudObject);
             AddIfMissing<DamageDirectionView>(hudObject);
+            AddIfMissing<GrenadeWarningView>(hudObject);
             AddIfMissing<DamageVignetteView>(hudObject);
             AddIfMissing<FlashOverlay>(hudObject);
             AddIfMissing<KillFeedView>(hudObject);
@@ -624,6 +625,13 @@ namespace Fps.Runtime
             if (damageDirection != null)
             {
                 damageDirection.SetAllowed(_visibility.DamageDirection);
+            }
+
+            // 近くのグレネードも被弾方向と同じく身の危険の向きを知らせるものなので、一緒に出し入れする。
+            var grenadeWarning = GetComponent<GrenadeWarningView>();
+            if (grenadeWarning != null)
+            {
+                grenadeWarning.SetAllowed(_visibility.DamageDirection);
             }
 
             var killFeed = KillFeed;

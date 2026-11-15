@@ -25,6 +25,9 @@ namespace Fps.Core
         /// <summary>生成時に指定しなかったときの <see cref="ThrowLiftSpeed"/>。水平に狙っても弧を描いて遠くへ届く。</summary>
         public const float DefaultThrowLiftSpeed = 3f;
 
+        /// <summary>生成時に指定しなかったときの <see cref="RollDamping"/>。地面に落ちてから 1 m 前後で止まる。</summary>
+        public const float DefaultRollDamping = 4f;
+
         /// <summary>生成時に指定しなかったときの <see cref="MaxDamage"/>。標的ダミーとプレイヤーの最大体力 (100) を超え、近くなら 1 個で倒せる。</summary>
         public const int DefaultMaxDamage = 150;
 
@@ -51,6 +54,7 @@ namespace Fps.Core
         /// <param name="id">小文字・ハイフン区切りの UUID。</param>
         /// <param name="nameKey">名前を引く表のキー。空なら名前は id。</param>
         /// <param name="stickiness">定義済みの値。</param>
+        /// <param name="rollDamping">地面に触れている間の転がりの減り方 (1/s)。0 以上の有限値。</param>
         public GrenadeSpec(
             float fuseSeconds = DefaultFuseSeconds,
             float throwSeconds = DefaultThrowSeconds,
@@ -62,7 +66,8 @@ namespace Fps.Core
             int structureDamageAtCenter = DefaultStructureDamageAtCenter,
             string id = DefaultId,
             string nameKey = DefaultNameKey,
-            GrenadeStickiness stickiness = GrenadeStickiness.None)
+            GrenadeStickiness stickiness = GrenadeStickiness.None,
+            float rollDamping = DefaultRollDamping)
             : this(
                 id,
                 nameKey,
@@ -71,7 +76,8 @@ namespace Fps.Core
                 throwSeconds,
                 throwSpeed,
                 throwLiftSpeed,
-                stickiness)
+                stickiness,
+                rollDamping)
         {
         }
 
@@ -83,7 +89,8 @@ namespace Fps.Core
             float throwSeconds = DefaultThrowSeconds,
             float throwSpeed = DefaultThrowSpeed,
             float throwLiftSpeed = DefaultThrowLiftSpeed,
-            GrenadeStickiness stickiness = GrenadeStickiness.None)
+            GrenadeStickiness stickiness = GrenadeStickiness.None,
+            float rollDamping = DefaultRollDamping)
         {
             Id = SpecGuard.LowercaseUuid(id, nameof(id));
             NameKey = SpecGuard.NameKey(nameKey);
@@ -93,6 +100,7 @@ namespace Fps.Core
             ThrowSpeed = SpecGuard.NonNegativeFinite(throwSpeed, nameof(throwSpeed));
             ThrowLiftSpeed = SpecGuard.NonNegativeFinite(throwLiftSpeed, nameof(throwLiftSpeed));
             Stickiness = SpecGuard.Defined(stickiness, nameof(stickiness));
+            RollDamping = SpecGuard.NonNegativeFinite(rollDamping, nameof(rollDamping));
         }
 
         public string Id { get; }
@@ -119,6 +127,11 @@ namespace Fps.Core
         public ImpactSpec Impact { get; }
 
         public GrenadeStickiness Stickiness { get; }
+
+        /// <summary>
+        /// 地面 (上を向いた面) に触れている間、水平の速さと回転を毎秒 e^-RollDamping 倍に減らす割合 (1/s)。0 なら物理の摩擦だけで転がり続ける。
+        /// </summary>
+        public float RollDamping { get; }
 
         /// <summary>爆発が人に与えるダメージ。爆発しない種類なら null。</summary>
         public ExplosionDamage Explosion => Impact.Explosion?.Damage;

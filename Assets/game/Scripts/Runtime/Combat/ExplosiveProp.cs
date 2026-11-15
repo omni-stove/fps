@@ -252,6 +252,7 @@ namespace Fps.Runtime
             Debug.Log(ExplosivePropLog.Exploded(Id, result.Chained, center.x, center.y, center.z, damaged, killed, structures), this);
 
             ThrownGrenade.PlayExplosionEffects(center);
+            ExplosionRangeDebug.Report(center, spec.DamageRadius, spec.FullDamageRadius);
             try
             {
                 Exploded?.Invoke(this, result);

@@ -16,6 +16,7 @@
   "hud.idleWarning": "操作がありません あと {0} 秒で切断されます",
   "hud.status.burn": "燃焼中 あと {0} 秒",
   "hud.status.blind": "目くらまし中 あと {0} 秒",
+  "hud.grenadeWarning": "グレネード {0}m",
   "hud.grenades": "グレネード {0}",
   "hud.grenadesOfType": "{0} {1}",
   "hud.ability": "能力{0} {1}/{2}",

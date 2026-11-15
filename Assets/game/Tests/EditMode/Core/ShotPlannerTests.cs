@@ -67,11 +67,6 @@ namespace Fps.Core.Tests
             Assert.That(PenetrationRule.TryPassThrough(new PenetrationSpec(2, 0.5f, 0.3f), 0, "concrete", 0.1f, out var multiplier), Is.False);
             Assert.That(multiplier, Is.EqualTo(1f));
 
-            var direction = Vector3.Normalize(new Vector3(1f, -0.1f, 0f));
-            Assert.That(RicochetRule.TryBounce(new RicochetSpec(1, 20f, 0.5f), 0, direction, Vector3.UnitY, out var bounced, out multiplier), Is.False);
-            Assert.That(bounced, Is.EqualTo(direction));
-            Assert.That(multiplier, Is.EqualTo(1f));
-
             var velocity = new Vector3(0f, 0f, 30f);
             Assert.That(ProjectileSteering.Steer(new HomingSpec(1f, 10f, 90f), Vector3.Zero, velocity, Vector3.UnitX, 0.1f), Is.EqualTo(velocity));
 

@@ -150,9 +150,9 @@ namespace Fps.Server
             {
                 foreach (var segment in _segments)
                 {
-                    if (segment.HasHit)
+                    if (segment.HasHit && !segment.Bounced)
                     {
-                        _impact.Apply(shot, segment.Direction, segment.Hit);
+                        _impact.Apply(shot.WithDamageMultiplier(segment.DamageMultiplier), segment.Direction, segment.Hit);
                     }
                 }
             }

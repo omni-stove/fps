@@ -166,33 +166,33 @@ namespace Fps.Tests.EditMode
             var scene = BuildScene();
             BeginQuietly(scene);
             var notice = scene.Campaign.Notice;
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.None));
 
             ExpectCampaign(new Regex($@"^\[Campaign\] saved mission={MissionName} checkpoint={CheckpointId} "));
             Assert.That(scene.Checkpoint.HandleEnter(scene.PlayerCollider), Is.True);
-            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointSaved)));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointSaved));
 
             scene.Campaign.Tick(CampaignRunner.SavedNoticeSeconds - 0.1f);
-            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointSaved)));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointSaved));
             scene.Campaign.Tick(0.1f);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.NoNotice), "the saved notice is temporary");
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.None), "the saved notice is temporary");
 
             LogAssert.Expect(LogType.Log, "[Combat] target died id=Player");
             ExpectCampaign($"player died; reloading in 3s from checkpoint={CheckpointId}");
             scene.Player.Kill();
-            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(3))));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)));
 
             scene.Campaign.Tick(0.5f);
-            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(3))), "2.5s left still reads 3");
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)), "2.5s left still reads 3");
             scene.Campaign.Tick(1f);
-            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(2))));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointRestart(2)));
             scene.Campaign.Tick(1f);
-            Assert.That(notice.Text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(1))));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointRestart(1)));
 
             ExpectCampaign("reloading scene");
             scene.Campaign.Tick(1f);
             Assert.That(_reloads, Is.EqualTo(1));
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.None));
         }
 
         [Test]

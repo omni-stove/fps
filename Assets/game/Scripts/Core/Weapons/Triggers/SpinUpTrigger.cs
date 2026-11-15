@@ -125,5 +125,10 @@ namespace Fps.Core
 
             return shots;
         }
+
+        public void Cancel()
+        {
+            _inner.Cancel();
+        }
     }
 }

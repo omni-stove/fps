@@ -7,18 +7,18 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class CampaignNoticeTests
     {
-        private static string Saved => GameText.Resolve(HudFormat.CheckpointSaved);
+        private static HudNotice Saved => HudNotice.CheckpointSaved;
 
-        private static List<string> Record(CampaignNotice notice)
+        private static List<HudNotice> Record(CampaignNotice notice)
         {
-            var texts = new List<string>();
-            notice.TextChanged += texts.Add;
+            var texts = new List<HudNotice>();
+            notice.Changed += texts.Add;
             return texts;
         }
 
-        private static string Restart(int seconds)
+        private static HudNotice Restart(int seconds)
         {
-            return GameText.Resolve(HudFormat.CheckpointRestart(seconds));
+            return HudNotice.CheckpointRestart(seconds);
         }
 
         [Test]
@@ -26,7 +26,7 @@ namespace Fps.Core.Tests
         {
             var notice = new CampaignNotice();
 
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.None));
             Assert.That(notice.IsCountingDown, Is.False);
         }
 
@@ -37,14 +37,14 @@ namespace Fps.Core.Tests
             var texts = Record(notice);
 
             notice.ShowSaved(2f);
-            Assert.That(notice.Text, Is.EqualTo("チェックポイントでセーブしました"));
+            Assert.That(notice.Notice, Is.EqualTo(Saved));
 
             notice.Tick(1.5f);
-            Assert.That(notice.Text, Is.EqualTo(Saved));
+            Assert.That(notice.Notice, Is.EqualTo(Saved));
 
             notice.Tick(0.5f);
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.NoNotice));
-            Assert.That(texts, Is.EqualTo(new[] { Saved, HudFormat.NoNotice }));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.None));
+            Assert.That(texts, Is.EqualTo(new[] { Saved, HudNotice.None }));
         }
 
         [Test]
@@ -58,7 +58,7 @@ namespace Fps.Core.Tests
             notice.ShowSaved(2f);
             notice.Tick(1.5f);
 
-            Assert.That(notice.Text, Is.EqualTo(Saved));
+            Assert.That(notice.Notice, Is.EqualTo(Saved));
             Assert.That(texts, Is.Empty);
         }
 
@@ -74,7 +74,7 @@ namespace Fps.Core.Tests
             notice.ShowRestartCountdown(0.1f);
 
             Assert.That(notice.IsCountingDown, Is.True);
-            Assert.That(notice.Text, Is.EqualTo("チェックポイントから再開まで 1 秒"));
+            Assert.That(notice.Notice, Is.EqualTo(Restart(1)));
             Assert.That(
                 texts,
                 Is.EqualTo(new[]
@@ -95,7 +95,7 @@ namespace Fps.Core.Tests
             notice.ShowSaved(2f);
             notice.Tick(10f);
 
-            Assert.That(notice.Text, Is.EqualTo(Restart(3)));
+            Assert.That(notice.Notice, Is.EqualTo(Restart(3)));
         }
 
         [Test]
@@ -106,11 +106,11 @@ namespace Fps.Core.Tests
 
             notice.Clear();
 
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.None));
             Assert.That(notice.IsCountingDown, Is.False);
 
             notice.ShowSaved(1f);
-            Assert.That(notice.Text, Is.EqualTo(Saved), "saving shows again after the countdown is cleared");
+            Assert.That(notice.Notice, Is.EqualTo(Saved), "saving shows again after the countdown is cleared");
         }
 
         [Test]
@@ -124,7 +124,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => notice.ShowRestartCountdown(float.NaN));
             Assert.Throws<ArgumentOutOfRangeException>(() => notice.Tick(-1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => notice.Tick(float.PositiveInfinity));
-            Assert.That(notice.Text, Is.EqualTo(HudFormat.NoNotice));
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.None));
         }
     }
 }

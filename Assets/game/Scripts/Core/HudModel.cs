@@ -3,12 +3,12 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// HUD に出す文字列と照準の状態を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo(int, int, bool, bool)"/>・<see cref="SetTime"/> などで直接渡すか、
+    /// HUD に出す値と照準の状態を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo(int, int, bool, bool)"/>・<see cref="SetTime"/> などで直接渡すか、
     /// <see cref="Health"/>・<see cref="Weapon"/>・<see cref="Match"/>・<see cref="CampaignNotice"/> を Bind してそのイベントで受ける
     /// (Bind 系も中では Set 系を呼ぶ)。毎フレーム値を読みに行かず、値が来たときだけ書式を通し、表示が変わったときだけ
     /// <see cref="Changed"/> を呼ぶ (残り時間は秒の桁が変わったときだけ)。Bind で源を差し替えると前の源の購読は外し、今の値をすぐ反映する。
     /// null を渡すとその項目は仮の表示に戻る。
-    /// 表のキーで作る文 (<see cref="HudFormat.Result"/> など) は、受けた時点の言語 (<see cref="GameText"/>) で文字列にして持つ。
+    /// 言葉の入る項目 (案内・点数・結果・武器名・弾薬の種類) は文にせず型の付いた値で持ち、どう言うかは HUD に任せる。
     /// <para>
     /// 同じ項目を Bind しながら Set 系でも書くと、次に来た方が表示に残る。ネットワークの値のように Core の型が無い源は
     /// Bind せずに Set 系だけで書く。
@@ -45,29 +45,32 @@ namespace Fps.Core
         /// <summary>リロード中か。<see cref="AmmoText"/> にも出るが、View が見た目を変えるのに使う。</summary>
         public bool IsReloading { get; private set; }
 
-        /// <summary>弾数の上に出す、持っている武器の名前 (<see cref="WeaponSpec.Name"/> を引いた文字列)。武器が無ければ <see cref="HudFormat.NoWeaponName"/>。</summary>
-        public string WeaponNameText { get; private set; } = HudFormat.NoWeaponName;
+        /// <summary>弾数の上に名前を出す、持っている武器。武器が無ければ null。</summary>
+        public WeaponSpec WeaponSpec { get; private set; }
 
         /// <summary>上中央の残り時間 (mm:ss)。</summary>
         public string TimeText { get; private set; } = HudFormat.NoTime;
 
-        /// <summary>画面上部に一時的に出す案内。空文字なら出さない。</summary>
-        public string NoticeText { get; private set; } = HudFormat.NoNotice;
+        /// <summary>画面上部に一時的に出す案内。<see cref="HudNotice.None"/> なら出さない。</summary>
+        public HudNotice Notice { get; private set; }
 
         /// <summary>先に出すチーム (自分のチーム)。点数が無ければ null。</summary>
         public Team? FirstScoreTeam { get; private set; }
 
-        /// <summary>先に出すチームの「チーム名 点数」。点数が無ければ <see cref="HudFormat.NoScore"/>。</summary>
-        public string FirstScoreText { get; private set; } = HudFormat.NoScore;
+        /// <summary>先に出すチームの点数。点数が無ければ null。</summary>
+        public int? FirstScore { get; private set; }
 
         /// <summary>後に出すチーム (相手のチーム)。点数が無ければ null。</summary>
         public Team? SecondScoreTeam => FirstScoreTeam.HasValue ? HudFormat.Opponent(FirstScoreTeam.Value) : (Team?)null;
 
-        /// <summary>後に出すチームの「チーム名 点数」。点数が無ければ <see cref="HudFormat.NoScore"/>。</summary>
-        public string SecondScoreText { get; private set; } = HudFormat.NoScore;
+        /// <summary>後に出すチームの点数。点数が無ければ null。</summary>
+        public int? SecondScore { get; private set; }
 
-        /// <summary>試合結果。試合が終わっていなければ <see cref="HudFormat.NoResult"/>。</summary>
-        public string ResultText { get; private set; } = HudFormat.NoResult;
+        /// <summary>試合が終わって結果を出しているか。</summary>
+        public bool HasResult { get; private set; }
+
+        /// <summary>勝ったチーム。結果が無いか引き分けなら null。</summary>
+        public Team? Winner { get; private set; }
 
         /// <summary>リロードの進捗 (0〜1)。出さないときは null。</summary>
         public float? ReloadProgress { get; private set; }
@@ -88,7 +91,7 @@ namespace Fps.Core
 
         public float? HeatFraction { get; private set; }
 
-        public string AmmoTypeText { get; private set; } = string.Empty;
+        public AmmoTypeSpec AmmoType { get; private set; }
 
         public float? Magnification { get; private set; }
 
@@ -114,8 +117,8 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 弾数と武器名の源を差し替える。弾数は射撃 (Fired)・リロード完了 (Reloaded)・予備弾の補充 (ReserveAmmoAdded)・弾薬の種類の切り替え (AmmoTypeSwitched) で更新し、武器名はここで
-        /// <see cref="WeaponSpec.Name"/> を今の言語で引いた文字列にする。null なら両方とも仮の表示に戻す。
+        /// 弾数と武器名の源を差し替える。弾数は射撃 (Fired)・リロード完了 (Reloaded)・予備弾の補充 (ReserveAmmoAdded)・弾薬の種類の切り替え (AmmoTypeSwitched) で更新し、武器名は
+        /// ここで <see cref="WeaponSpec"/> を差し替える。null なら両方とも仮の表示に戻す。
         /// </summary>
         public void BindWeapon(Weapon weapon)
         {
@@ -137,7 +140,7 @@ namespace Fps.Core
             }
 
             OnWeaponChanged();
-            SetWeaponName(_weapon != null ? GameText.Resolve(_weapon.Spec.Name) : HudFormat.NoWeaponName);
+            SetWeaponSpec(_weapon?.Spec);
         }
 
         /// <summary>残り時間の源を差し替える。null なら仮の表示に戻す。</summary>
@@ -165,19 +168,19 @@ namespace Fps.Core
         {
             if (_notice != null)
             {
-                _notice.TextChanged -= SetNotice;
+                _notice.Changed -= SetNotice;
             }
 
             _notice = notice;
             if (_notice != null)
             {
-                _notice.TextChanged += SetNotice;
+                _notice.Changed += SetNotice;
             }
 
-            SetNotice(_notice != null ? _notice.Text : HudFormat.NoNotice);
+            SetNotice(_notice != null ? _notice.Notice : HudNotice.None);
         }
 
-        /// <summary>すべての源の購読を外す。表示の文字列はそのまま残す。</summary>
+        /// <summary>すべての源の購読を外す。表示の値はそのまま残す。</summary>
         public void UnbindAll()
         {
             if (_health != null)
@@ -203,7 +206,7 @@ namespace Fps.Core
 
             if (_notice != null)
             {
-                _notice.TextChanged -= SetNotice;
+                _notice.Changed -= SetNotice;
                 _notice = null;
             }
         }
@@ -268,23 +271,22 @@ namespace Fps.Core
             }
         }
 
-        /// <summary>武器名を出す。null は <see cref="HudFormat.NoWeaponName"/> (出さない) として扱う。</summary>
-        public void SetWeaponName(string displayName)
+        /// <summary>名前を出す武器を決める。null なら出さない。</summary>
+        public void SetWeaponSpec(WeaponSpec spec)
         {
-            displayName ??= HudFormat.NoWeaponName;
-            if (displayName == WeaponNameText)
+            // 同じ武器を Weapon ごと作り直して Bind し直しても、名前が変わらなければ欄を描き直させない。
+            var same = spec == null ? WeaponSpec == null : WeaponSpec != null && spec.Id == WeaponSpec.Id && spec.Name.Equals(WeaponSpec.Name);
+            WeaponSpec = spec;
+            if (!same)
             {
-                return;
+                Changed?.Invoke(HudField.WeaponName);
             }
-
-            WeaponNameText = displayName;
-            Changed?.Invoke(HudField.WeaponName);
         }
 
         /// <summary>武器名を消す。</summary>
-        public void ClearWeaponName()
+        public void ClearWeaponSpec()
         {
-            SetWeaponName(HudFormat.NoWeaponName);
+            SetWeaponSpec(null);
         }
 
         /// <summary>残り時間 (秒) を出す。表示は秒の桁が変わったときだけ変わる (<see cref="HudFormat.Time"/>)。</summary>
@@ -299,30 +301,29 @@ namespace Fps.Core
             ApplyTime(HudFormat.NoTime);
         }
 
-        /// <summary>一時的な案内を出す。null か空文字なら消す。</summary>
-        public void SetNotice(string text)
+        /// <summary>一時的な案内を出す。<see cref="HudNotice.None"/> なら消す。</summary>
+        public void SetNotice(HudNotice notice)
         {
-            text ??= HudFormat.NoNotice;
-            if (text == NoticeText)
+            if (notice == Notice)
             {
                 return;
             }
 
-            NoticeText = text;
+            Notice = notice;
             Changed?.Invoke(HudField.Notice);
         }
 
-        /// <summary>一時的な案内を、今の言語 (<see cref="GameText"/>) の文にして出す。空の文なら消す。</summary>
-        public void SetNotice(LocalizedText text)
+        /// <summary>案内を消す。</summary>
+        public void ClearNotice()
         {
-            SetNotice(GameText.Resolve(text));
+            SetNotice(HudNotice.None);
         }
 
-        /// <summary>倒れている間の案内を、リスポーン方式に合わせて出す (<see cref="HudFormat.RespawnNotice"/>)。</summary>
+        /// <summary>倒れている間の案内を、リスポーン方式に合わせて出す (<see cref="HudNotice.ForRespawn"/>)。</summary>
         /// <exception cref="ArgumentOutOfRangeException">mode が定義済みの値でないか、None 以外で seconds が負。</exception>
         public void SetRespawnNotice(RespawnMode mode, int seconds)
         {
-            SetNotice(HudFormat.RespawnNotice(mode, seconds));
+            SetNotice(HudNotice.ForRespawn(mode, seconds));
         }
 
         /// <summary>チームの点数を、ownTeam を先にして出す。</summary>
@@ -330,27 +331,35 @@ namespace Fps.Core
         public void SetScores(Team ownTeam, int alphaScore, int bravoScore)
         {
             var opponent = HudFormat.Opponent(ownTeam);
-            var first = GameText.Resolve(HudFormat.TeamScore(ownTeam, ownTeam == Team.Alpha ? alphaScore : bravoScore));
-            var second = GameText.Resolve(HudFormat.TeamScore(opponent, opponent == Team.Alpha ? alphaScore : bravoScore));
-            ApplyScores(ownTeam, first, second);
+            if (alphaScore < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(alphaScore), alphaScore, "score must not be negative");
+            }
+
+            if (bravoScore < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bravoScore), bravoScore, "score must not be negative");
+            }
+
+            ApplyScores(ownTeam, ownTeam == Team.Alpha ? alphaScore : bravoScore, opponent == Team.Alpha ? alphaScore : bravoScore);
         }
 
         /// <summary>チームの点数を消す。</summary>
         public void ClearScores()
         {
-            ApplyScores(null, HudFormat.NoScore, HudFormat.NoScore);
+            ApplyScores(null, null, null);
         }
 
         /// <summary>試合結果 (winner が null なら引き分け) を出す。</summary>
         public void SetResult(Team? winner)
         {
-            ApplyResult(GameText.Resolve(HudFormat.Result(winner)));
+            ApplyResult(true, winner);
         }
 
         /// <summary>試合結果を消す。</summary>
         public void ClearResult()
         {
-            ApplyResult(HudFormat.NoResult);
+            ApplyResult(false, null);
         }
 
         /// <summary>リロードの進捗と、成功になる区間を出す。どれも 0〜1 で、windowStart は windowEnd 以下。</summary>
@@ -458,21 +467,19 @@ namespace Fps.Core
             ApplyGauge(HudField.Heat, null);
         }
 
-        public void SetAmmoTypeName(string displayName)
+        public void SetAmmoType(AmmoTypeSpec ammoType)
         {
-            displayName ??= string.Empty;
-            if (displayName == AmmoTypeText)
+            var same = ammoType == null ? AmmoType == null : AmmoType != null && ammoType.Id == AmmoType.Id && ammoType.Name.Equals(AmmoType.Name);
+            AmmoType = ammoType;
+            if (!same)
             {
-                return;
+                Changed?.Invoke(HudField.AmmoType);
             }
-
-            AmmoTypeText = displayName;
-            Changed?.Invoke(HudField.AmmoType);
         }
 
-        public void ClearAmmoTypeName()
+        public void ClearAmmoType()
         {
-            SetAmmoTypeName(string.Empty);
+            SetAmmoType(null);
         }
 
         public void SetMagnification(float magnification)
@@ -507,7 +514,7 @@ namespace Fps.Core
             {
                 ClearCharge();
                 ClearHeat();
-                ClearAmmoTypeName();
+                ClearAmmoType();
                 return;
             }
 
@@ -531,8 +538,7 @@ namespace Fps.Core
                 ClearHeat();
             }
 
-            var ammoType = _weapon.AmmoTypes.Current;
-            SetAmmoTypeName(ammoType != null ? GameText.Resolve(ammoType.Name) : string.Empty);
+            SetAmmoType(_weapon.AmmoTypes.Current);
         }
 
         private void OnHealthChanged()
@@ -599,28 +605,28 @@ namespace Fps.Core
             Changed?.Invoke(HudField.Time);
         }
 
-        private void ApplyScores(Team? firstTeam, string first, string second)
+        private void ApplyScores(Team? firstTeam, int? first, int? second)
         {
-            if (firstTeam == FirstScoreTeam && first == FirstScoreText && second == SecondScoreText)
+            if (firstTeam == FirstScoreTeam && first == FirstScore && second == SecondScore)
             {
                 return;
             }
 
             FirstScoreTeam = firstTeam;
-            FirstScoreText = first;
-            SecondScoreText = second;
+            FirstScore = first;
+            SecondScore = second;
             Changed?.Invoke(HudField.Score);
         }
 
-        private void ApplyResult(string text)
+        private void ApplyResult(bool hasResult, Team? winner)
         {
-            text ??= HudFormat.NoResult;
-            if (text == ResultText)
+            if (hasResult == HasResult && winner == Winner)
             {
                 return;
             }
 
-            ResultText = text;
+            HasResult = hasResult;
+            Winner = winner;
             Changed?.Invoke(HudField.Result);
         }
 

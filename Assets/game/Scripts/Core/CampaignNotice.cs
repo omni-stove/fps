@@ -3,25 +3,24 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// キャンペーンが HUD に一時的に出す案内。<see cref="Text"/> が空文字 (<see cref="HudFormat.NoNotice"/>) なら何も出さない。
+    /// キャンペーンが HUD に一時的に出す案内。<see cref="Notice"/> が <see cref="HudNotice.None"/> なら何も出さない。
     /// <list type="bullet">
     /// <item><see cref="ShowSaved"/> は「セーブしました」を指定の秒数だけ出し、<see cref="Tick"/> で時間が過ぎたら消す。</item>
     /// <item><see cref="ShowRestartCountdown"/> は「チェックポイントから再開まで N 秒」を出し、<see cref="Clear"/> まで消さない
     /// (残り秒数は呼ぶ側が毎フレーム渡し直す)。カウントダウン中は「セーブしました」で上書きしない。</item>
     /// </list>
-    /// 文字列が変わったときだけ <see cref="TextChanged"/> を呼ぶ (カウントダウンは表示の秒の桁が変わったときだけ)。
-    /// 文字列は出した時点の言語 (<see cref="GameText"/>) で作る。
+    /// 案内が変わったときだけ <see cref="Changed"/> を呼ぶ (カウントダウンは表示の秒の桁が変わったときだけ)。
     /// </summary>
     public sealed class CampaignNotice
     {
         private float _savedRemaining;
         private bool _countingDown;
 
-        /// <summary>表示の文字列が変わったときに、新しい文字列を渡して呼ばれる。</summary>
-        public event Action<string> TextChanged;
+        /// <summary>案内が変わったときに、新しい案内を渡して呼ばれる。</summary>
+        public event Action<HudNotice> Changed;
 
-        /// <summary>今の案内。無ければ空文字。</summary>
-        public string Text { get; private set; } = HudFormat.NoNotice;
+        /// <summary>今の案内。無ければ <see cref="HudNotice.None"/>。</summary>
+        public HudNotice Notice { get; private set; }
 
         /// <summary>再開までのカウントダウンを出していれば true。</summary>
         public bool IsCountingDown => _countingDown;
@@ -43,7 +42,7 @@ namespace Fps.Core
             }
 
             _savedRemaining = seconds;
-            SetText(GameText.Resolve(HudFormat.CheckpointSaved));
+            SetNotice(HudNotice.CheckpointSaved);
         }
 
         /// <summary>
@@ -59,7 +58,7 @@ namespace Fps.Core
 
             _countingDown = true;
             _savedRemaining = 0f;
-            SetText(GameText.Resolve(HudFormat.CheckpointRestart(HudFormat.DisplayedSeconds(remainingSeconds))));
+            SetNotice(HudNotice.CheckpointRestart(HudFormat.DisplayedSeconds(remainingSeconds)));
         }
 
         /// <summary>「セーブしました」の残り時間を deltaSeconds 進め、尽きたら消す。カウントダウンには影響しない。</summary>
@@ -82,7 +81,7 @@ namespace Fps.Core
             }
 
             _savedRemaining = 0f;
-            SetText(HudFormat.NoNotice);
+            SetNotice(HudNotice.None);
         }
 
         /// <summary>案内を消し、カウントダウンもやめる。</summary>
@@ -90,18 +89,18 @@ namespace Fps.Core
         {
             _countingDown = false;
             _savedRemaining = 0f;
-            SetText(HudFormat.NoNotice);
+            SetNotice(HudNotice.None);
         }
 
-        private void SetText(string text)
+        private void SetNotice(HudNotice notice)
         {
-            if (text == Text)
+            if (notice == Notice)
             {
                 return;
             }
 
-            Text = text;
-            TextChanged?.Invoke(text);
+            Notice = notice;
+            Changed?.Invoke(notice);
         }
     }
 }

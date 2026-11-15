@@ -165,26 +165,26 @@ namespace Fps.NetV2.Tests
 
             Assert.That(model.ChargeFraction, Is.Null);
             Assert.That(model.HeatFraction, Is.Null);
-            Assert.That(model.AmmoTypeText, Is.Empty);
+            Assert.That(model.AmmoType, Is.Null);
 
             ClientWeaponGauges.Show(model, sync, Charged());
 
             Assert.That(model.ChargeFraction, Is.EqualTo(0.4f));
-            Assert.That(model.AmmoTypeText, Is.EqualTo("items.ammo.armor_piercing"));
+            Assert.That(model.AmmoType.NameKey, Is.EqualTo("items.ammo.armor_piercing"));
 
             ClientWeaponGauges.Show(model, new WeaponSync { WeaponCount = 1, AmmoTypeIndex = 0 }, Charged());
 
-            Assert.That(model.AmmoTypeText, Is.Empty, "0 is the weapon's own rounds");
+            Assert.That(model.AmmoType, Is.Null, "0 is the weapon's own rounds");
 
             ClientWeaponGauges.Show(model, new WeaponSync { WeaponCount = 1, AmmoTypeIndex = 2 }, Charged());
 
-            Assert.That(model.AmmoTypeText, Is.Empty, "past the last type");
+            Assert.That(model.AmmoType, Is.Null, "past the last type");
 
             ClientWeaponGauges.Show(model, sync, Heated());
 
             Assert.That(model.ChargeFraction, Is.Null);
             Assert.That(model.HeatFraction, Is.EqualTo(0.6f));
-            Assert.That(model.AmmoTypeText, Is.Empty);
+            Assert.That(model.AmmoType, Is.Null);
 
             ClientWeaponGauges.Show(model, new WeaponSync(), Heated());
 

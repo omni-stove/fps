@@ -44,6 +44,11 @@
     "recoilRecoveryDelaySeconds": 0.2,
     "blindFireSpreadDegrees": 10,
     "zoomLevels": [32.2, 16.43, 8.26],
-    "swayDegrees": 0
+    "breathHold": {
+      "maxHoldSeconds": 4,
+      "recoverSeconds": 3,
+      "swayMultiplier": 0.1
+    },
+    "swayDegrees": 0.6
   }
 }

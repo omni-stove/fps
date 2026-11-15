@@ -141,6 +141,19 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BeginMakesThePlayersMeleeKillWithTheFirstMeleeWeapon()
+        {
+            var player = Member("Player", 0);
+            var bot = Member("Bot-1", 1);
+            var melee = player.gameObject.AddComponent<MeleeController>();
+
+            Begin(player, bot);
+
+            Assert.That(melee.MeleeWeapon, Is.SameAs(_knife));
+            Assert.That(melee.StrikeWeaponId, Is.EqualTo(KnifeId));
+        }
+
+        [Test]
         public void AKillWithTheLastWeaponWinsAndLogsTheWinner()
         {
             var player = Member("Player", 0);

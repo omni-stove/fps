@@ -13,7 +13,7 @@ namespace Fps.Editor
     /// (<see cref="WeaponJsonImporter"/>)、それをファイル名の順に並べた射撃場で拾える武器の一覧 (<see cref="RangeWeaponsPath"/> の
     /// <see cref="WeaponCatalogAsset"/>) を作る。続けて <see cref="RiflePath"/>・<see cref="HandgunPath"/> の武器を rifle・handgun の順に
     /// 並べた <see cref="CatalogPath"/> の <see cref="WeaponCatalogAsset"/> と、それをスロットに入れた <see cref="LoadoutPath"/> の
-    /// <see cref="LoadoutDefinition"/> を作る。サンプルの武器を足すときは、<see cref="JsonFolder"/> に JSON を 1 つ置いて走らせ直すだけでよい。
+    /// <see cref="LoadoutDefinition"/> を作り、近接で倒したときの武器のナイフ (<see cref="KnifePath"/>) を作る。サンプルの武器を足すときは、<see cref="JsonFolder"/> に JSON を 1 つ置いて走らせ直すだけでよい。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
@@ -29,6 +29,7 @@ namespace Fps.Editor
         public static string CatalogPath => WeaponAssets.CatalogPath;
         public static string LoadoutPath => Folder + "/DefaultLoadout.asset";
         public static string LauncherPath => Folder + "/Launcher.asset";
+        public static string KnifePath => Folder + "/Knife.asset";
 
         /// <summary>サンプルの武器の JSON を置くフォルダ。ここの *.json をすべて <see cref="Folder"/> の武器のアセットにする。</summary>
         public static string JsonFolder => Folder + "/Json";
@@ -43,11 +44,13 @@ namespace Fps.Editor
         public const string RifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
         public const string HandgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
         public const string LauncherId = "e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96";
+        public const string KnifeId = "f4df3778-7da1-49c7-88a6-3f4769c23f9e";
 
         /// <summary>武器の名前を引く表のキー。文は Resources/Localization/&lt;言語&gt;/items.json にある。</summary>
         public const string RifleNameKey = "weapon.rifle";
         public const string HandgunNameKey = "weapon.handgun";
         public const string LauncherNameKey = "weapon.launcher";
+        public const string KnifeNameKey = "weapon.knife";
 
         /// <summary>launcher の 1 発が建造物に被害を広げる半径 (m)。</summary>
         public const float LauncherExplosionRadius = 4f;
@@ -250,6 +253,33 @@ namespace Fps.Editor
         }
 
         /// <summary>
+        /// ナイフの値。近接 (<see cref="MeleeController.MeleeWeapon"/>) で倒したときの武器の Id と名前に使い、銃としては持たせない。
+        /// 当たりとダメージは <see cref="MeleeController"/> の値 (<see cref="MeleeSpec"/>) で決まる。
+        /// </summary>
+        public static WeaponSpec KnifeSpec()
+        {
+            // WeaponCategory に近接が無く、銃としては撃たないので、射撃の値は近接の既定の値に寄せるだけにする。
+            return new WeaponSpec(
+                KnifeId,
+                KnifeNameKey,
+                WeaponCategory.Handgun,
+                FireMode.Semi,
+                1,
+                0,
+                MeleeSpec.DefaultSwingSeconds,
+                MeleeSpec.DefaultSwingSeconds,
+                MeleeSpec.DefaultDamage,
+                MeleeSpec.DefaultReach,
+                DamageFalloff.None);
+        }
+
+        /// <summary><see cref="KnifePath"/> のナイフの定義を読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。</summary>
+        public static WeaponDefinition LoadKnife()
+        {
+            return LoadDefinition(KnifePath);
+        }
+
+        /// <summary>
         /// <see cref="LauncherPath"/> の launcher の定義を読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
         /// 値が不正でも例外を投げ、壊れた定義をシーンに配線しない。
         /// </summary>
@@ -335,6 +365,7 @@ namespace Fps.Editor
             var rifle = LoadDefinition(RiflePath);
             var handgun = LoadDefinition(HandgunPath);
             BuildCatalogAndLoadoutAt(rifle, handgun, CatalogPath, LoadoutPath);
+            BuildKnifeAt(KnifePath);
         }
 
         /// <summary>
@@ -367,6 +398,21 @@ namespace Fps.Editor
 
             Debug.Log($"{LogTag} saved '{path}'");
             return launcher;
+        }
+
+        /// <summary>
+        /// path にナイフの定義を作るか上書きして保存し、返す。射撃場の一覧・カタログ・ロードアウトには入れないので、
+        /// それらのパスと重ならない Assets/ 以下の .asset であること。
+        /// </summary>
+        public static WeaponDefinition BuildKnifeAt(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+
+            var spec = KnifeSpec();
+            var knife = SceneBuildHelpers.CreateOrUpdateAsset<WeaponDefinition>(path, d => Configure(d, spec));
+
+            Debug.Log($"{LogTag} saved '{path}'");
+            return knife;
         }
 
         /// <summary>

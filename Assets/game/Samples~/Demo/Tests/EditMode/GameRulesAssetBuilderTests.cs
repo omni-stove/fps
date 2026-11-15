@@ -705,6 +705,7 @@ namespace Fps.Tests.EditMode
             Assert.That(GameRulesAssetBuilder.HordeRules().ReserveAmmoMultiplier, Is.GreaterThan(1f));
             Assert.That(GameRulesAssetBuilder.BattleRoyaleRules().ReserveAmmoMultiplier, Is.GreaterThan(1f));
             Assert.That(GameRulesAssetBuilder.GunGameRules().InfiniteReserve, Is.True);
+            Assert.That(GameRulesAssetBuilder.GunGameRules().Actions.Melee, Is.EqualTo(Melee.On), "a melee kill sends the victim back a tier");
             Assert.That(GameRulesAssetBuilder.FreeForAllRules().DeathCamera, Is.EqualTo(DeathCamera.Killer), "there is no ally to watch");
 
             foreach (var name in new[] { GameRulesAssetBuilder.FreeForAllName, GameRulesAssetBuilder.KillConfirmedName, GameRulesAssetBuilder.HardpointName,

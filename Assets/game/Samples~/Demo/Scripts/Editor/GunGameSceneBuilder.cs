@@ -11,7 +11,7 @@ namespace Fps.Editor
     /// ガンゲームのシーン GunGame を組む。全員が別の陣営 (プレイヤーが陣営 0、bot が 1 から <see cref="BotCount"/>) で撃ち合い、
     /// Runner は <see cref="GunGameRunner"/>、ルールは <see cref="GameRulesAssetBuilder.GunGamePath"/> (予備弾は無限)。
     /// 武器の並び (<see cref="GunGameLadderDefinition"/>) は <see cref="LadderPath"/> に作るか上書きして Runner に配線する。
-    /// 並びは <see cref="LadderWeaponPaths"/> の順 (rifle → launcher → handgun) で、近接の武器はまだ無いので空 (戻す設定はオン)。
+    /// 並びは <see cref="LadderWeaponPaths"/> の順 (rifle → launcher → handgun) で、近接の武器は <see cref="MeleeWeaponPaths"/> のナイフ (戻す設定はオン)。
     /// 出現点は <see cref="SpawnPositions"/> の 8 か所を全陣営で共有し、陣営ごとに並びをずらして最初の点をばらけさせる
     /// (Runner は自陣営の点のうち敵からいちばん離れた点に戻すので、共有していれば生きている全員から離れた点に戻る)。
     /// Editor を閉じた状態で次のように呼べる (先に WeaponAssetBuilder.Build と GameRulesAssetBuilder.Build を走らせる):
@@ -33,6 +33,12 @@ namespace Fps.Editor
             WeaponAssetBuilder.RiflePath,
             WeaponAssetBuilder.LauncherPath,
             WeaponAssetBuilder.HandgunPath,
+        };
+
+        /// <summary>近接の武器。プレイヤーの近接はこの先頭の武器で倒したことになり (<see cref="GunGameRunner"/>)、倒された人は 1 段戻る。</summary>
+        public static IReadOnlyList<string> MeleeWeaponPaths => new[]
+        {
+            WeaponAssetBuilder.KnifePath,
         };
 
         /// <summary>
@@ -92,7 +98,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// path に <see cref="LadderWeaponPaths"/> の並び (近接の武器なし・近接で戻す設定はオン) を作るか上書きして保存し、返す。
+        /// path に <see cref="LadderWeaponPaths"/> の並び (近接の武器は <see cref="MeleeWeaponPaths"/>・近接で戻す設定はオン) を作るか上書きして保存し、返す。
         /// 武器のアセットが無いか不正なら、何も保存せずに例外を投げる。
         /// </summary>
         public static GunGameLadderDefinition BuildLadder(string path)
@@ -105,9 +111,15 @@ namespace Fps.Editor
                 tiers[i] = WeaponAssetBuilder.LoadDefinition(LadderWeaponPaths[i]);
             }
 
+            var melee = new WeaponDefinition[MeleeWeaponPaths.Count];
+            for (var i = 0; i < melee.Length; i++)
+            {
+                melee[i] = WeaponAssetBuilder.LoadDefinition(MeleeWeaponPaths[i]);
+            }
+
             var ladder = SceneBuildHelpers.CreateOrUpdateAsset<GunGameLadderDefinition>(
-                path, d => Configure(d, tiers, Array.Empty<WeaponDefinition>(), true));
-            Debug.Log($"[{nameof(GunGameSceneBuilder)}] saved '{path}' ({tiers.Length} tier(s))");
+                path, d => Configure(d, tiers, melee, true));
+            Debug.Log($"[{nameof(GunGameSceneBuilder)}] saved '{path}' ({tiers.Length} tier(s), {melee.Length} melee weapon(s))");
             return ladder;
         }
 

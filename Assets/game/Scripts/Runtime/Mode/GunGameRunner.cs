@@ -15,6 +15,7 @@ namespace Fps.Runtime
     /// bot は <see cref="EnemyAgent.EquipWeapon"/> で替える。予備弾はプレイヤーの WeaponController のルール (GameBootstrap が配線したモードのルール) に従う。</item>
     /// <item>倒した武器 (<see cref="CombatEvents.CurrentAttribution"/>) を <see cref="GunGame.ReportKill"/> に渡して段を動かし、
     /// 段が変わった人の武器は次の <see cref="ModeRunnerBase.Tick"/> の頭で替える。撃っている最中の WeaponController・EnemyAgent の武器を差し替えないため。</item>
+    /// <item>プレイヤーの近接 (<see cref="MeleeController.MeleeWeapon"/>) は並びの最初の近接の武器にし、近接で倒したら相手を 1 段戻せるようにする。</item>
     /// <item>最後の段の武器で倒した人が出たら、次の Tick でその人の陣営の勝ちで終わる (<see cref="GunGame.CheckStanding"/>)。時間切れは段のいちばん進んだ人の勝ち。</item>
     /// <item>陣営の得点は 1 キル 1 点 (<see cref="KillScore"/>) で、勝敗には使わない。HUD には得点の下に自分の段と今の武器、次の武器を出す。</item>
     /// <item>段が動くたびに <c>[Mode] gungame promote|demote|finish</c>、武器を替えるたびに <c>[Mode] gungame equip</c> のログ (<see cref="GunGameText"/>) を出す。</item>
@@ -37,6 +38,7 @@ namespace Fps.Runtime
         private readonly List<SideMember> _pendingEquips = new List<SideMember>();
         private readonly HashSet<SideMember> _warnedUnarmed = new HashSet<SideMember>();
         private readonly List<WeaponDefinition> _tierWeapons = new List<WeaponDefinition>();
+        private WeaponDefinition _meleeWeapon;
         private GunGame _gunGame;
         private ModeSession _gunGameSession;
         private GameRules _weaponRules = GameRules.Default;
@@ -115,6 +117,7 @@ namespace Fps.Runtime
             _gunGameSession = session;
             _tierWeapons.Clear();
             _tierWeapons.AddRange(definition.Tiers);
+            _meleeWeapon = definition.MeleeWeapons.Count > 0 ? definition.MeleeWeapons[0] : null;
             return session;
         }
 
@@ -139,6 +142,7 @@ namespace Fps.Runtime
             foreach (var member in Members)
             {
                 Equip(gunGame, member);
+                EquipMelee(member);
             }
         }
 
@@ -258,6 +262,24 @@ namespace Fps.Runtime
             if (changed)
             {
                 Debug.Log(GunGameText.Equip(id, tier, gunGame.Ladder.TierCount, gunGame.GetWeapon(id).LogName), member);
+            }
+        }
+
+        /// <summary>
+        /// member の近接 (<see cref="MeleeController"/>) で倒したら、並びの最初の近接の武器で倒したことにする。
+        /// 持っている段の武器の Id のままだと、近接で倒しても段の武器で倒したことになり、相手を戻せないため。
+        /// </summary>
+        private void EquipMelee(SideMember member)
+        {
+            if (_meleeWeapon == null)
+            {
+                return;
+            }
+
+            var melee = member.GetComponentInChildren<MeleeController>(true);
+            if (melee != null)
+            {
+                melee.MeleeWeapon = _meleeWeapon;
             }
         }
 

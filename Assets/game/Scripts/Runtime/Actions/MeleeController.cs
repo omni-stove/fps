@@ -59,6 +59,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("当たりを探すレイヤー")]
         private LayerMask _hitMask = Physics.DefaultRaycastLayers;
 
+        [SerializeField, Tooltip("近接で倒したことにする武器 (ナイフなど)。空なら持っている銃で倒したことにする")]
+        private WeaponDefinition _meleeWeapon;
+
         private MeleeSwing _swing;
         private PlayerController _mover;
         private WeaponController _weapon;
@@ -96,6 +99,27 @@ namespace Fps.Runtime
         {
             get => _hitMask;
             set => _hitMask = value;
+        }
+
+        public WeaponDefinition MeleeWeapon
+        {
+            get => _meleeWeapon;
+            set => _meleeWeapon = value;
+        }
+
+        /// <summary>当てたときの帰属 (<see cref="CombatEvents.Attribute"/>) に渡す武器の Id。<see cref="MeleeWeapon"/> があればその Id、無ければ持っている武器の Id、素手なら空。</summary>
+        public string StrikeWeaponId
+        {
+            get
+            {
+                if (_meleeWeapon != null)
+                {
+                    return _meleeWeapon.Id;
+                }
+
+                var weapon = _weapon != null ? _weapon.Weapon : null;
+                return weapon != null ? weapon.Spec.Id : string.Empty;
+            }
         }
 
         public bool IsSwinging => _swing != null && _swing.IsSwinging;
@@ -357,8 +381,7 @@ namespace Fps.Runtime
             }
 
             Debug.Log(MeleeLog.Hit(AttackerId, hit.Target.Id, spec.Damage, hit.Distance), this);
-            var weapon = _weapon != null ? _weapon.Weapon : null;
-            var damage = MeleeStrike.Apply(gameObject, hit, spec.Damage, weapon != null ? weapon.Spec.Id : string.Empty);
+            var damage = MeleeStrike.Apply(gameObject, hit, spec.Damage, StrikeWeaponId);
 
             // オフラインで MeleeController を持つのは手元のプレイヤーだけなので、当てたらその画面にヒットマーカーを出す。
             if (_self != null && _self.IsLocalPlayer)

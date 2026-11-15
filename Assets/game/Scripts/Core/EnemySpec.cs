@@ -69,6 +69,26 @@ namespace Fps.Core
         public const float DefaultCoverHealthFraction = 0.5f;
         public const float DefaultStaggerResistance = 0f;
 
+        /// <summary>archetype の怯みにくさの既定値。Rifleman は <see cref="DefaultStaggerResistance"/>、ほかは種類ごとの Spec の値。</summary>
+        public static float DefaultStaggerResistanceFor(EnemyArchetype archetype)
+        {
+            switch (archetype)
+            {
+                case EnemyArchetype.Rifleman:
+                    return DefaultStaggerResistance;
+                case EnemyArchetype.Shield:
+                    return ShieldSpec.DefaultStaggerResistance;
+                case EnemyArchetype.Sniper:
+                    return SniperSpec.DefaultStaggerResistance;
+                case EnemyArchetype.Charger:
+                    return ChargerSpec.DefaultStaggerResistance;
+                case EnemyArchetype.Bomber:
+                    return BomberSpec.DefaultStaggerResistance;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(archetype), archetype, "archetype is not a defined EnemyArchetype");
+            }
+        }
+
         public static readonly EnemySpec Default = new EnemySpec(
             DefaultSightRange,
             DefaultAttackRange,
@@ -104,7 +124,7 @@ namespace Fps.Core
         /// <param name="sniper">狙撃兵の値。null なら既定値。</param>
         /// <param name="charger">突進兵の値。null なら既定値。</param>
         /// <param name="bomber">自爆兵の値。null なら既定値。</param>
-        /// <param name="staggerResistance">怯みにくさ (<see cref="StaggerJudge.Threshold"/>・<see cref="StaggerJudge.Duration"/>)。0 以上の有限値。</param>
+        /// <param name="staggerResistance">怯みにくさ (<see cref="StaggerJudge.Threshold"/>・<see cref="StaggerJudge.Duration"/>)。0 以上の有限値。null なら <see cref="DefaultStaggerResistanceFor"/>。</param>
         public EnemySpec(
             float sightRange,
             float attackRange,
@@ -122,7 +142,7 @@ namespace Fps.Core
             SniperSpec sniper = null,
             ChargerSpec charger = null,
             BomberSpec bomber = null,
-            float staggerResistance = 0f)
+            float? staggerResistance = null)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
             {
@@ -156,7 +176,8 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(archetype), archetype, "archetype is not a defined EnemyArchetype");
             }
 
-            RequireNonNegativeSeconds(staggerResistance, nameof(staggerResistance));
+            var resistance = staggerResistance ?? DefaultStaggerResistanceFor(archetype);
+            RequireNonNegativeSeconds(resistance, nameof(staggerResistance));
 
             SightRange = sightRange;
             AttackRange = attackRange;
@@ -174,7 +195,7 @@ namespace Fps.Core
             Sniper = sniper ?? SniperSpec.Default;
             Charger = charger ?? ChargerSpec.Default;
             Bomber = bomber ?? BomberSpec.Default;
-            StaggerResistance = staggerResistance;
+            StaggerResistance = resistance;
         }
 
         /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread(System.Numerics.Vector3, float, System.Random)"/>) が受け付ける範囲に合わせる。</summary>

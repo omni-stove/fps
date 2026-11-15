@@ -7,6 +7,9 @@ namespace Fps.Runtime
     [CreateAssetMenu(fileName = "Enemy", menuName = "Fps/Enemy Definition")]
     public sealed class EnemyDefinition : ScriptableObject
     {
+        // 種類を選んだだけのデータが種類ごとの怯みにくさを使えるよう、「決めていない」を Inspector の 1 つの欄で表せる負の値にする。
+        public const float ArchetypeStaggerResistance = -1f;
+
         [SerializeField, Tooltip("敵の種類")]
         private EnemyArchetype _archetype = EnemyArchetype.Rifleman;
 
@@ -47,8 +50,8 @@ namespace Fps.Runtime
         private float _coverHealthFraction = EnemySpec.DefaultCoverHealthFraction;
 
         [Header("怯み")]
-        [SerializeField, Min(0f), Tooltip("怯みにくさ。0 で既定、1 で怯むのに 2 倍のダメージが要り、怯む長さは半分になる")]
-        private float _staggerResistance = EnemySpec.DefaultStaggerResistance;
+        [SerializeField, Min(ArchetypeStaggerResistance), Tooltip("怯みにくさ。0 で既定、1 で怯むのに 2 倍のダメージが要り、怯む長さは半分になる。負なら種類ごとの既定値")]
+        private float _staggerResistance = ArchetypeStaggerResistance;
 
         [Header("種類ごとの値")]
         [SerializeField, Tooltip("種類が Shield のときに使う値")]
@@ -163,12 +166,18 @@ namespace Fps.Runtime
                     _sniper.ToSpec(),
                     _charger.ToSpec(),
                     _bomber.ToSpec(),
-                    _staggerResistance);
+                    StaggerResistanceOrArchetype(_staggerResistance));
             }
             catch (ArgumentException e)
             {
                 throw new EnemyDefinitionException($"enemy '{source}' is invalid: {e.Message}", e);
             }
+        }
+
+        /// <summary>Inspector の怯みにくさ value を <see cref="EnemySpec"/> に渡す値にする。負なら null (種類ごとの既定値)。</summary>
+        public static float? StaggerResistanceOrArchetype(float value)
+        {
+            return value < 0f ? (float?)null : value;
         }
 
         public void CopyFrom(EnemySpec spec)

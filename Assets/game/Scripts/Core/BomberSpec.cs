@@ -7,6 +7,7 @@ namespace Fps.Core
         public const float DefaultTriggerDistance = 3f;
         public const float DefaultFuseSeconds = 1.5f;
         public const float DefaultRunSpeedMultiplier = 1.6f;
+        public const float DefaultStaggerResistance = 0f;
 
         public const int DefaultBlastDamage = 80;
         public const float DefaultBlastRadius = 4.5f;

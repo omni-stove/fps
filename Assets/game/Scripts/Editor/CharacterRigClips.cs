@@ -21,6 +21,10 @@ namespace Fps.Editor
         public const string CoverHigh = "CoverHigh";
         public const string Downed = "Downed";
         public const string Dead = "Dead";
+        public const string Flinch = "Flinch";
+        public const string Kneel = "Kneel";
+        public const string Stumble = "Stumble";
+        public const string Blast = "Blast";
 
         /// <summary>立っているときの腰の高さ (m)。足の裏が足元 (0) に付く。</summary>
         public const float StandingHipsHeight = 0.95f;
@@ -41,6 +45,10 @@ namespace Fps.Editor
                 CoverHighClip(),
                 DownedClip(),
                 DeadClip(),
+                FlinchClip(),
+                KneelClip(),
+                StumbleClip(),
+                BlastClip(),
             };
         }
 
@@ -163,6 +171,59 @@ namespace Fps.Editor
             clip.Rotate(CharacterRigBuilder.RightUpperArmBone, RigWave3.Hold(0f, 0f, 60f));
             clip.Rotate(CharacterRigBuilder.LeftForearmBone, RigWave3.Hold(-10f, 0f, 0f));
             clip.Rotate(CharacterRigBuilder.RightForearmBone, RigWave3.Hold(-10f, 0f, 0f));
+            return clip;
+        }
+
+        private static CharacterRigClipSpec FlinchClip()
+        {
+            var clip = new CharacterRigClipSpec(Flinch, 1f, loop: true, RigWave3.Hold(0f, StandingHipsHeight, 0f));
+            clip.Rotate(CharacterRigBuilder.TorsoBone, new RigWave3(new RigWave(-14f, 2f, 0f), RigWave.Zero, RigWave.Zero));
+            clip.Rotate(CharacterRigBuilder.HeadBone, RigWave3.Hold(-28f, 0f, 0f));
+            Stride(clip, thighBase: 0f, thighSwing: 0f, kneeBase: 0f, kneeSwing: 0f, spread: 6f);
+            ArmSwing(clip, upperBase: -25f, upperSwing: 0f, spread: 20f, elbow: -40f);
+            return clip;
+        }
+
+        private static CharacterRigClipSpec KneelClip()
+        {
+            // 右の太ももを真下、すねを +90° で後ろへ寝かせると膝が腰から 0.5m 下で地面に付き、
+            // 左は太もも -90°・すね +90° で足の裏が同じ高さに来る。
+            var clip = new CharacterRigClipSpec(Kneel, 2f, loop: true, RigWave3.Hold(0f, 0.5f, 0f));
+            CrouchBody(clip, torsoLean: 12f, headTilt: -10f);
+            clip.Rotate(CharacterRigBuilder.LeftThighBone, RigWave3.Hold(-90f, 0f, -6f));
+            clip.Rotate(CharacterRigBuilder.LeftShinBone, RigWave3.Hold(90f, 0f, 0f));
+            clip.Rotate(CharacterRigBuilder.RightThighBone, RigWave3.Hold(0f, 0f, 6f));
+            clip.Rotate(CharacterRigBuilder.RightShinBone, RigWave3.Hold(90f, 0f, 0f));
+            ArmSwing(clip, upperBase: -15f, upperSwing: 0f, spread: 10f, elbow: -45f);
+            return clip;
+        }
+
+        private static CharacterRigClipSpec StumbleClip()
+        {
+            var clip = new CharacterRigClipSpec(Stumble, 1f, loop: true, RigWave3.Hold(0f, 0.9f, 0f));
+            clip.Rotate(CharacterRigBuilder.TorsoBone, new RigWave3(new RigWave(16f, 3f, 0f), RigWave.Of(12f), RigWave.Of(-6f)));
+            clip.Rotate(CharacterRigBuilder.HeadBone, RigWave3.Hold(-12f, -8f, 0f));
+            clip.Rotate(CharacterRigBuilder.LeftThighBone, RigWave3.Hold(-20f, 0f, -6f));
+            clip.Rotate(CharacterRigBuilder.LeftShinBone, RigWave3.Hold(10f, 0f, 0f));
+            clip.Rotate(CharacterRigBuilder.RightThighBone, RigWave3.Hold(15f, 0f, 6f));
+            clip.Rotate(CharacterRigBuilder.RightShinBone, RigWave3.Hold(10f, 0f, 0f));
+            clip.Rotate(CharacterRigBuilder.LeftUpperArmBone, RigWave3.Hold(-50f, 0f, -35f));
+            clip.Rotate(CharacterRigBuilder.LeftForearmBone, RigWave3.Hold(-30f, 0f, 0f));
+            clip.Rotate(CharacterRigBuilder.RightUpperArmBone, RigWave3.Hold(20f, 0f, 40f));
+            clip.Rotate(CharacterRigBuilder.RightForearmBone, RigWave3.Hold(-30f, 0f, 0f));
+            return clip;
+        }
+
+        private static CharacterRigClipSpec BlastClip()
+        {
+            // 太もも -45°・すね +70° で足の裏が腰から 0.76m 下に来る。
+            var clip = new CharacterRigClipSpec(Blast, 1f, loop: true, RigWave3.Hold(0f, 0.76f, 0f));
+            CrouchBody(clip, torsoLean: 35f, headTilt: -5f);
+            Stride(clip, thighBase: -45f, thighSwing: 0f, kneeBase: 70f, kneeSwing: 0f, spread: 10f);
+            clip.Rotate(CharacterRigBuilder.LeftUpperArmBone, RigWave3.Hold(-110f, 0f, 15f));
+            clip.Rotate(CharacterRigBuilder.LeftForearmBone, RigWave3.Hold(-100f, 0f, 0f));
+            clip.Rotate(CharacterRigBuilder.RightUpperArmBone, RigWave3.Hold(-110f, 0f, -15f));
+            clip.Rotate(CharacterRigBuilder.RightForearmBone, RigWave3.Hold(-100f, 0f, 0f));
             return clip;
         }
 

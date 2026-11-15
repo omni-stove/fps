@@ -166,8 +166,8 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("散らばりを絞り切るまでの発数")]
         private int _openingShots = EnemySpec.DefaultOpeningShots;
 
-        [SerializeField, Min(0f), Tooltip("怯みにくさ。0 で既定、1 で怯むのに 2 倍のダメージが要り、怯む長さは半分になる")]
-        private float _staggerResistance = EnemySpec.DefaultStaggerResistance;
+        [SerializeField, Min(EnemyDefinition.ArchetypeStaggerResistance), Tooltip("怯みにくさ。0 で既定、1 で怯むのに 2 倍のダメージが要り、怯む長さは半分になる。負なら種類ごとの既定値")]
+        private float _staggerResistance = EnemyDefinition.ArchetypeStaggerResistance;
 
         // ApplySpec・ChangeSpec で渡された値は、波の強さやボスの段階のように敵のデータを元に作り直したものなので、データより優先する。
         private bool _specApplied;
@@ -262,7 +262,8 @@ namespace Fps.Runtime
 
         public EnemyArchetype Archetype => _archetype;
 
-        public float StaggerResistance => _staggerResistance;
+        public float StaggerResistance =>
+            EnemyDefinition.StaggerResistanceOrArchetype(_staggerResistance) ?? EnemySpec.DefaultStaggerResistanceFor(_archetype);
 
         /// <summary><see cref="SetErrand"/> で渡した行き先 (足元)。無ければ null。</summary>
         public Vector3? Errand => _errand;
@@ -500,7 +501,7 @@ namespace Fps.Runtime
                 CreateSniperSpec(),
                 CreateChargerSpec(),
                 CreateBomberSpec(),
-                _staggerResistance);
+                EnemyDefinition.StaggerResistanceOrArchetype(_staggerResistance));
         }
 
         /// <summary>

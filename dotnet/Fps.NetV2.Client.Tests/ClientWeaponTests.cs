@@ -156,45 +156,20 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
-        public void AnOverheatedWeaponWaitsUntilTheServerSendsItFullyCool()
+        public void AnOverheatedWeaponWaitsWhileTheServerSaysItIsOverheated()
         {
             var standing = new CharacterMotorState(new Vector3(0f, 1.1f, 0f), Vector3.Zero, true, false);
             var heat = Heated();
-            var overheat = new ClientOverheat();
 
-            FireDecision At(float value)
+            FireDecision At(float value, bool overheated)
             {
-                var snapshot = Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 1, Heat = value });
-                overheat.Observe(snapshot);
-                return ClientFire.Decide(snapshot, _playerId, standing, heat, overheat);
+                var snapshot = Armed(new WeaponSync { WeaponCount = 1, AmmoInMagazine = 1, Heat = value, IsOverheated = overheated });
+                return ClientFire.Decide(snapshot, _playerId, standing, heat);
             }
 
-            Assert.That(At(0.5f), Is.EqualTo(FireDecision.Fire), "warm but not overheated");
-            Assert.That(At(1f), Is.EqualTo(FireDecision.Hold));
-            Assert.That(At(0.5f), Is.EqualTo(FireDecision.Hold), "cooling down after an overheat");
-            Assert.That(At(0f), Is.EqualTo(FireDecision.Fire));
-            Assert.That(At(0.5f), Is.EqualTo(FireDecision.Fire));
-        }
-
-        [Test]
-        public void TheOverheatIsKeptForTheWeaponThatOverheated()
-        {
-            var overheat = new ClientOverheat();
-            var hot = Armed(new WeaponSync { WeaponCount = 2, EquippedIndex = 0, Heat = 1f });
-            overheat.Observe(hot);
-
-            var other = Armed(new WeaponSync { WeaponCount = 2, EquippedIndex = 1, Heat = 0.5f });
-            overheat.Observe(other);
-            Assert.That(overheat.IsOverheated(other.Owner), Is.False, "the other weapon did not overheat");
-
-            var back = Armed(new WeaponSync { WeaponCount = 2, EquippedIndex = 0, Heat = 0.5f });
-            overheat.Observe(back);
-            Assert.That(overheat.IsOverheated(back.Owner), Is.True);
-
-            var unarmed = Armed(new WeaponSync { WeaponCount = 0 });
-            overheat.Observe(unarmed);
-            overheat.Observe(back);
-            Assert.That(overheat.IsOverheated(back.Owner), Is.False, "losing every weapon forgets the overheat");
+            Assert.That(At(0.5f, false), Is.EqualTo(FireDecision.Fire), "warm but not overheated");
+            Assert.That(At(0.5f, true), Is.EqualTo(FireDecision.Hold), "cooling down after an overheat");
+            Assert.That(At(0f, false), Is.EqualTo(FireDecision.Fire));
         }
 
         [Test]

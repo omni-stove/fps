@@ -285,6 +285,25 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void SelectingATypeKeepsTheMagazine()
+        {
+            var weapon = new Weapon(TwoTypes());
+
+            Assert.That(weapon.AmmoTypes.TrySelect(1), Is.True);
+
+            Assert.That(weapon.AmmoTypes.Current.Id, Is.EqualTo(_piercingId));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(weapon.AmmoTypes.TrySelect(-1), Is.False);
+            Assert.That(weapon.AmmoTypes.TrySelect(2), Is.False);
+            Assert.That(weapon.AmmoTypes.Index, Is.EqualTo(1), "a rejected index keeps the choice");
+
+            var plain = new AmmoTypeSelector(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle));
+            Assert.That(plain.TrySelect(-1), Is.False);
+            Assert.That(plain.TrySelect(0), Is.False);
+            Assert.That(plain.Index, Is.EqualTo(-1));
+        }
+
+        [Test]
         public void SwitchingTheWeaponsAmmoTypeEmptiesTheSharedMagazineSoTheNextRoundsNeedAReload()
         {
             var weapon = new Weapon(TwoTypes());

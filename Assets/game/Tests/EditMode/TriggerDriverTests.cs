@@ -52,6 +52,19 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void DropDropsTheRestOfABurst()
+        {
+            var driver = new TriggerDriver();
+            var burst = new BurstTrigger(new BurstSpec(3, Interval), new SemiTrigger(1f));
+            driver.Bind(burst);
+            Assert.That(driver.Pull(FireMode.Semi, true, true), Is.EqualTo(1));
+
+            driver.Drop();
+            driver.Advance(Interval * 4f);
+            Assert.That(driver.Pull(FireMode.Semi, false, false), Is.Zero, "the dropped burst does not fire on its own");
+        }
+
+        [Test]
         public void BindingAnotherModelDoesNotCarryTheHeldTriggerOrTheTime()
         {
             var driver = new TriggerDriver();

@@ -113,6 +113,14 @@ namespace Fps.Core
             return shots;
         }
 
+        public void Cancel()
+        {
+            _held = false;
+            _spent = false;
+            _chargedSeconds = 0f;
+            _inner.Cancel();
+        }
+
         // 内側の撃ち方は 1 回押して離したことにする。押したままにすると Auto が溜めずに撃ち続けるため。
         private int Discharge()
         {

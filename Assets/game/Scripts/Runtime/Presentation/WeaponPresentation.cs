@@ -250,6 +250,8 @@ namespace Fps.Runtime
             // ClearSubscribers で外されていても戻るよう、有効になるたびに付け直す (二重には付かない)。
             CombatEvents.ShotFired -= HandleShotFired;
             CombatEvents.ShotFired += HandleShotFired;
+            CombatEvents.ShotContinued -= HandleShotContinued;
+            CombatEvents.ShotContinued += HandleShotContinued;
             CombatEvents.Impact -= HandleImpact;
             CombatEvents.Impact += HandleImpact;
 
@@ -272,6 +274,7 @@ namespace Fps.Runtime
             if (_enabled.Count == 0)
             {
                 CombatEvents.ShotFired -= HandleShotFired;
+                CombatEvents.ShotContinued -= HandleShotContinued;
                 CombatEvents.Impact -= HandleImpact;
             }
 
@@ -348,6 +351,23 @@ namespace Fps.Runtime
             {
                 _pendingTracer = LaunchTracer(catalog, muzzle, muzzle + (direction * MaxTracerDistance), now);
             }
+        }
+
+        public void PlayContinuation(ShotFiredInfo shot)
+        {
+            var now = Time.time;
+            _pendingTracer = null;
+            _pendingTracerFrame = Time.frameCount;
+
+            var catalog = Catalog;
+            if (catalog == null)
+            {
+                WarnMissingCatalog();
+                return;
+            }
+
+            var direction = shot.Direction.sqrMagnitude > 0f ? shot.Direction : transform.forward;
+            _pendingTracer = LaunchTracer(catalog, shot.Origin, shot.Origin + (direction * MaxTracerDistance), now);
         }
 
         /// <summary>
@@ -547,6 +567,21 @@ namespace Fps.Runtime
             if (presenter != null)
             {
                 presenter.PlayShot(shot);
+            }
+        }
+
+        private static void HandleShotContinued(ShotFiredInfo shot)
+        {
+            var presenter = FindFor(shot.Shooter);
+            if (presenter == null || !presenter.isActiveAndEnabled)
+            {
+                presenter = Fallback();
+            }
+
+            _lastShotPresenter = presenter;
+            if (presenter != null)
+            {
+                presenter.PlayContinuation(shot);
             }
         }
 

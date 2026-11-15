@@ -47,11 +47,11 @@ namespace Fps.NetV2
             var types = spec.AmmoTypes;
             if (weapon.AmmoTypeIndex < types.Count)
             {
-                model.SetAmmoTypeName(GameText.Resolve(types[weapon.AmmoTypeIndex].Name));
+                model.SetAmmoType(types[weapon.AmmoTypeIndex]);
             }
             else
             {
-                model.ClearAmmoTypeName();
+                model.ClearAmmoType();
             }
         }
 
@@ -64,7 +64,7 @@ namespace Fps.NetV2
 
             model.ClearCharge();
             model.ClearHeat();
-            model.ClearAmmoTypeName();
+            model.ClearAmmoType();
         }
 
         private static float Fraction(float value)

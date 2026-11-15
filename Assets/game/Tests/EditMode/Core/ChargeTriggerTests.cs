@@ -86,6 +86,20 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void CancelDropsTheChargeWithoutFiring()
+        {
+            var trigger = Create(new ChargeSpec(1f, 0.2f, 2f));
+
+            trigger.Press();
+            trigger.Tick(0.8f);
+            trigger.Cancel();
+
+            Assert.That(trigger.ChargeFraction, Is.Zero);
+            Assert.That(trigger.Release(), Is.Zero, "the cancelled charge is not fired on release");
+            Assert.That(trigger.Tick(1f), Is.Zero);
+        }
+
+        [Test]
         public void TheInnerTriggerSpacesTheShots()
         {
             var trigger = Create(new ChargeSpec(0.1f, 0f, 2f), fireInterval: 1f);

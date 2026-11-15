@@ -149,9 +149,9 @@ namespace Fps.Server
             SendShot(shot.ShooterId, shot.Weapon.Id, _segments);
             foreach (var segment in _segments)
             {
-                if (segment.HasHit)
+                if (segment.HasHit && !segment.Bounced)
                 {
-                    _impact.Apply(shot, segment.Direction, segment.Hit);
+                    _impact.Apply(shot.WithDamageMultiplier(segment.DamageMultiplier), segment.Direction, segment.Hit);
                 }
             }
         }

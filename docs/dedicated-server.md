@@ -177,14 +177,14 @@ JSON のイベントに `productUserId` を付ける。
 `-register-lobby <公開アドレス:ポート>` を付けると、EOS に Device ID でログインし、クライアントのクイックマッチがサーバーを探せるロビーを作る。
 公開アドレスはクライアントから届く IPv4 アドレスとポート (`docker run -p` で公開した側の番号) で、`0.0.0.0` やホスト名は使えない。
 EOS の SDK か認証情報が無いと、理由を出して終了コード 3 で終わる。
+ロビーに載せられるのは UDP で待ち受けるサーバーだけで、`-transport eos` と一緒には使えない。
 
 ```sh
 docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -register-lobby 203.0.113.10:7777
-docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -transport eos -register-lobby 203.0.113.10:7777
 ```
 
 ロビーは `fps-server:<版>` のバケツに、最大 8 人で作り、次の公開の属性を付ける。ロビーのオーナーはサーバーが
-Device ID でログインしたユーザーで、EOS のクライアントはオーナーへ P2P でつなぐ。
+Device ID でログインしたユーザー。
 
 | 属性 | 値 |
 | --- | --- |

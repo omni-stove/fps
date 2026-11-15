@@ -16,6 +16,7 @@
   "hud.idleWarning": "No input: you will be disconnected in {0} s",
   "hud.status.burn": "Burning: {0} s left",
   "hud.grenades": "Grenades {0}",
+  "hud.grenadesOfType": "{0} {1}",
   "hud.ability": "Ability {0} {1}/{2}",
   "hud.ability.wait": "Ability {0} {1}/{2} ready in {3} s",
   "hud.ability.active": "Ability {0} {1}/{2} in use",

@@ -73,6 +73,7 @@
   "settings.input.action.SwitchAmmoType": "Switch ammo type",
   "settings.input.action.CycleMagnification": "Switch magnification",
   "settings.input.action.HoldBreath": "Hold breath",
+  "settings.input.action.SwitchGrenade": "Switch grenade",
   "settings.input.move.up": "Move forward",
   "settings.input.move.down": "Move back",
   "settings.input.move.left": "Move left",

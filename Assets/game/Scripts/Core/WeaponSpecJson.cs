@@ -515,6 +515,12 @@ namespace Fps.Core
             }
         }
 
+        // 投げ物の調整値 (TuningJson) も、武器と同じ書き方で効果を書けるようにする
+        internal static ImpactSpec ReadImpact(ServerDataJson.Fields fields)
+        {
+            return ReadImpact(new Part(fields, null, null, null));
+        }
+
         private static ImpactSpec ReadImpact(Part part)
         {
             var falloff = ReadFalloff(part);

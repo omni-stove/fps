@@ -3,11 +3,16 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// グレネード 1 種類のバランス値。信管・投げる間隔・初速と、爆発の威力と半径 (<see cref="Explosion"/>)・建造物への被害を持つ。
+    /// グレネード 1 種類のバランス値。<see cref="Id"/> で引き、信管・投げる間隔・初速と、信管が切れたときの効果 (<see cref="Impact"/>: 爆発・状態異常・範囲効果)、
+    /// 投げたときのくっつき方 (<see cref="Stickiness"/>) を持つ。
     /// 時間は秒、速さは m/s、距離は m。生成時に値を検査し、以後は変わらない。
     /// </summary>
     public sealed class GrenadeSpec
     {
+        public const string DefaultId = "ff94f232-2647-4b77-a077-5693d8f954d1";
+
+        public const string DefaultNameKey = "grenade.frag";
+
         /// <summary>生成時に指定しなかったときの <see cref="FuseSeconds"/>。</summary>
         public const float DefaultFuseSeconds = 2.5f;
 
@@ -32,7 +37,7 @@ namespace Fps.Core
         /// <summary>生成時に指定しなかったときの <see cref="StructureDamageAtCenter"/>。</summary>
         public const int DefaultStructureDamageAtCenter = 150;
 
-        /// <summary>すべて既定値の Spec。</summary>
+        /// <summary>すべて既定値の Spec (破片手榴弾)。</summary>
         public static readonly GrenadeSpec Default = new GrenadeSpec();
 
         /// <param name="fuseSeconds">投げてから爆発するまでの秒数。0 以上の有限値。</param>
@@ -43,6 +48,9 @@ namespace Fps.Core
         /// <param name="damageRadius">爆発が届く半径 (m)。0 より大きい有限値。</param>
         /// <param name="fullDamageRadius">減らさずに maxDamage を与える半径 (m)。0 以上で damageRadius 未満。</param>
         /// <param name="structureDamageAtCenter">中心で建造物に与える被害。0 以上。半径は damageRadius。</param>
+        /// <param name="id">小文字・ハイフン区切りの UUID。</param>
+        /// <param name="nameKey">名前を引く表のキー。空なら名前は id。</param>
+        /// <param name="stickiness">定義済みの値。</param>
         public GrenadeSpec(
             float fuseSeconds = DefaultFuseSeconds,
             float throwSeconds = DefaultThrowSeconds,
@@ -51,13 +59,85 @@ namespace Fps.Core
             int maxDamage = DefaultMaxDamage,
             float damageRadius = DefaultDamageRadius,
             float fullDamageRadius = DefaultFullDamageRadius,
-            int structureDamageAtCenter = DefaultStructureDamageAtCenter)
+            int structureDamageAtCenter = DefaultStructureDamageAtCenter,
+            string id = DefaultId,
+            string nameKey = DefaultNameKey,
+            GrenadeStickiness stickiness = GrenadeStickiness.None)
+            : this(
+                id,
+                nameKey,
+                ExplosiveImpact(maxDamage, damageRadius, fullDamageRadius, structureDamageAtCenter),
+                fuseSeconds,
+                throwSeconds,
+                throwSpeed,
+                throwLiftSpeed,
+                stickiness)
         {
-            RequireNonNegativeFinite(fuseSeconds, nameof(fuseSeconds));
-            RequireNonNegativeFinite(throwSeconds, nameof(throwSeconds));
-            RequireNonNegativeFinite(throwSpeed, nameof(throwSpeed));
-            RequireNonNegativeFinite(throwLiftSpeed, nameof(throwLiftSpeed));
+        }
 
+        public GrenadeSpec(
+            string id,
+            string nameKey,
+            ImpactSpec impact,
+            float fuseSeconds = DefaultFuseSeconds,
+            float throwSeconds = DefaultThrowSeconds,
+            float throwSpeed = DefaultThrowSpeed,
+            float throwLiftSpeed = DefaultThrowLiftSpeed,
+            GrenadeStickiness stickiness = GrenadeStickiness.None)
+        {
+            Id = SpecGuard.LowercaseUuid(id, nameof(id));
+            NameKey = SpecGuard.NameKey(nameKey);
+            Impact = impact ?? throw new ArgumentNullException(nameof(impact));
+            FuseSeconds = SpecGuard.NonNegativeFinite(fuseSeconds, nameof(fuseSeconds));
+            ThrowSeconds = SpecGuard.NonNegativeFinite(throwSeconds, nameof(throwSeconds));
+            ThrowSpeed = SpecGuard.NonNegativeFinite(throwSpeed, nameof(throwSpeed));
+            ThrowLiftSpeed = SpecGuard.NonNegativeFinite(throwLiftSpeed, nameof(throwLiftSpeed));
+            Stickiness = SpecGuard.Defined(stickiness, nameof(stickiness));
+        }
+
+        public string Id { get; }
+
+        public string NameKey { get; }
+
+        public LocalizedText Name => NameKey.Length > 0 ? new LocalizedText(NameKey) : LocalizedText.Literal(Id);
+
+        public string LogName => NameKey.Length > 0 ? NameKey : Id;
+
+        /// <summary>投げてから効果を起こすまでの秒数。</summary>
+        public float FuseSeconds { get; }
+
+        /// <summary>投げてから次を投げられ、武器を撃てるようになるまでの秒数。</summary>
+        public float ThrowSeconds { get; }
+
+        /// <summary>視線の向きへの初速 (m/s)。</summary>
+        public float ThrowSpeed { get; }
+
+        /// <summary>初速に足す上向きの速さ (m/s)。</summary>
+        public float ThrowLiftSpeed { get; }
+
+        // 投げ物は当たって効くのではなく信管で効くので、直撃のダメージ (ImpactSpec.Damage) は読まない
+        public ImpactSpec Impact { get; }
+
+        public GrenadeStickiness Stickiness { get; }
+
+        /// <summary>爆発が人に与えるダメージ。爆発しない種類なら null。</summary>
+        public ExplosionDamage Explosion => Impact.Explosion?.Damage;
+
+        /// <summary>中心でのダメージ (<see cref="Explosion"/> の <see cref="ExplosionDamage.MaxDamage"/>)。爆発しない種類なら 0。</summary>
+        public int MaxDamage => Explosion?.MaxDamage ?? 0;
+
+        /// <summary>爆発が届く半径 (m)。建造物への被害もこの半径。爆発しない種類なら 0。</summary>
+        public float DamageRadius => Explosion?.Radius ?? 0f;
+
+        /// <summary>減らさずに <see cref="MaxDamage"/> を与える半径 (m)。爆発しない種類なら 0。</summary>
+        public float FullDamageRadius => Explosion?.FullDamageRadius ?? 0f;
+
+        /// <summary>中心で建造物に与える被害。半径は <see cref="DamageRadius"/>。爆発しない種類なら 0。</summary>
+        public int StructureDamageAtCenter => Impact.Explosion?.StructureDamageAtCenter ?? 0;
+
+        // ExplosionDamage の引数名 (radius) ではなくこの Spec の引数名で断り、調整値の JSON が項目名で示せるようにする。
+        private static ImpactSpec ExplosiveImpact(int maxDamage, float damageRadius, float fullDamageRadius, int structureDamageAtCenter)
+        {
             if (maxDamage < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(maxDamage), maxDamage, "maxDamage must not be negative");
@@ -81,47 +161,9 @@ namespace Fps.Core
                     nameof(structureDamageAtCenter), structureDamageAtCenter, "structureDamageAtCenter must not be negative");
             }
 
-            FuseSeconds = fuseSeconds;
-            ThrowSeconds = throwSeconds;
-            ThrowSpeed = throwSpeed;
-            ThrowLiftSpeed = throwLiftSpeed;
-            StructureDamageAtCenter = structureDamageAtCenter;
-            Explosion = new ExplosionDamage(maxDamage, damageRadius, fullDamageRadius);
-        }
-
-        /// <summary>投げてから爆発するまでの秒数。</summary>
-        public float FuseSeconds { get; }
-
-        /// <summary>投げてから次を投げられ、武器を撃てるようになるまでの秒数。</summary>
-        public float ThrowSeconds { get; }
-
-        /// <summary>視線の向きへの初速 (m/s)。</summary>
-        public float ThrowSpeed { get; }
-
-        /// <summary>初速に足す上向きの速さ (m/s)。</summary>
-        public float ThrowLiftSpeed { get; }
-
-        /// <summary>中心でのダメージ (<see cref="Explosion"/> の <see cref="ExplosionDamage.MaxDamage"/>)。</summary>
-        public int MaxDamage => Explosion.MaxDamage;
-
-        /// <summary>爆発が届く半径 (m) (<see cref="Explosion"/> の <see cref="ExplosionDamage.Radius"/>)。建造物への被害もこの半径。</summary>
-        public float DamageRadius => Explosion.Radius;
-
-        /// <summary>減らさずに <see cref="MaxDamage"/> を与える半径 (m) (<see cref="Explosion"/> の <see cref="ExplosionDamage.FullDamageRadius"/>)。</summary>
-        public float FullDamageRadius => Explosion.FullDamageRadius;
-
-        /// <summary>中心で建造物に与える被害。半径は <see cref="DamageRadius"/>。</summary>
-        public int StructureDamageAtCenter { get; }
-
-        /// <summary>爆発が人に与えるダメージ (<see cref="MaxDamage"/>・<see cref="DamageRadius"/>・<see cref="FullDamageRadius"/>)。</summary>
-        public ExplosionDamage Explosion { get; }
-
-        private static void RequireNonNegativeFinite(float value, string name)
-        {
-            if (!(value >= 0f) || float.IsInfinity(value))
-            {
-                throw new ArgumentOutOfRangeException(name, value, name + " must be a non-negative finite number");
-            }
+            var explosion = new ExplosionSpec(
+                new ExplosionDamage(maxDamage, damageRadius, fullDamageRadius), structureDamageAtCenter, DetonationTrigger.OnLifetimeEnd);
+            return new ImpactSpec(damage: 0, explosion: explosion);
         }
     }
 }

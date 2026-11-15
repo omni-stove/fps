@@ -133,7 +133,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(MotorSettings.Resolve(null).WalkSpeed, Is.EqualTo(2.5f));
             Assert.That(MenuSceneSettings.LoadScenes().Campaign, Is.EqualTo("Chapter1"));
-            Assert.That(KitTuning.Grenade.DamageRadius, Is.EqualTo(9f));
+            Assert.That(KitTuning.Grenades.Carried[0].DamageRadius, Is.EqualTo(9f));
             Assert.That(PresentationCatalog.Load(), Is.SameAs(content.Presentation));
             Assert.That(CameraShakeSettings.Load(), Is.SameAs(content.CameraShake));
         }

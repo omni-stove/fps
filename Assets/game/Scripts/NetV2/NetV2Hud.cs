@@ -49,8 +49,52 @@ namespace Fps.NetV2
         private SnapshotMessage _latest;
         private Func<string, WeaponSpec> _findWeapon;
         private WeaponSpec _weaponSpec;
+        private GrenadeCountView _grenadeCount;
+        private bool _grenadesShown;
+        private bool _grenadesEnabled;
+        private string _grenadeTypeId;
+        private int _grenadeRemaining = -1;
+        private int _grenadeTypes = -1;
 
         public Hud Hud => _hud;
+
+        /// <summary>
+        /// 持ち主のグレネードの残りを出す。typeId はクライアントが選んだ投げる種類。種類を切り替えて持っているときは、
+        /// 種類の名前を調整値の JSON (<see cref="KitTuning.Grenades"/>) から Id で引いて添える。pouch が null なら変えない。
+        /// </summary>
+        public void ShowGrenades(GrenadePouchSync pouch, string typeId)
+        {
+            if (pouch == null)
+            {
+                return;
+            }
+
+            var remaining = pouch.RemainingOf(typeId);
+            if (_grenadesShown && pouch.Enabled == _grenadesEnabled && remaining == _grenadeRemaining && pouch.Count == _grenadeTypes
+                && string.Equals(typeId, _grenadeTypeId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _grenadesShown = true;
+            _grenadesEnabled = pouch.Enabled;
+            _grenadeRemaining = remaining;
+            _grenadeTypes = pouch.Count;
+            _grenadeTypeId = typeId;
+            if (_grenadeCount == null)
+            {
+                _grenadeCount = GrenadeCountView.AttachTo(_hud);
+            }
+
+            // 1 種類しか持たないなら、オフラインと同じく種類の名前を添えない
+            LocalizedText name = default;
+            if (pouch.Count > 1)
+            {
+                name = KitTuning.Grenades.TryFind(typeId, out var spec) ? spec.Name : LocalizedText.Literal(typeId);
+            }
+
+            _grenadeCount.ShowCount(pouch.Enabled, name, remaining);
+        }
 
         public IParticipants Participants => _participants;
 

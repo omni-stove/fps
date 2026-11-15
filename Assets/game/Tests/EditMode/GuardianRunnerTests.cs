@@ -87,7 +87,7 @@ namespace Fps.Tests.EditMode
             var enemyA = Member("Bot-1-1", 1, new Vector3(0f, 0f, 30f));
             var enemyB = Member("Bot-1-2", 1, new Vector3(4f, 0f, 30f));
             var hud = BoundHudView();
-            _runner.BeginGuardian(new[] { player, enemyA, enemyB }, new[] { SpawnPoint(1, new Vector3(0f, 0f, 40f)) }, player, hud);
+            _runner.BeginGuardian(new[] { player, enemyA, enemyB }, new[] { SpawnPoint(1, new Vector3(0f, 0f, 40f)) }, player);
 
             var leaderId = _runner.Leaders.GetLeader(Side.Bravo).Value;
             var leader = _runner.MemberOf(leaderId);
@@ -119,7 +119,7 @@ namespace Fps.Tests.EditMode
             var allyB = Member("Bot-0-2", 0, new Vector3(-4f, 0f, 0f));
             var enemy = Member("Bot-1-1", 1, new Vector3(0f, 0f, 30f));
             var hud = BoundHudView();
-            _runner.BeginGuardian(new[] { player, allyA, allyB, enemy }, new[] { SpawnPoint(0, new Vector3(0f, 0f, -5f)) }, player, hud);
+            _runner.BeginGuardian(new[] { player, allyA, allyB, enemy }, new[] { SpawnPoint(0, new Vector3(0f, 0f, -5f)) }, player);
 
             var ownLeader = _runner.MemberOf(_runner.Leaders.GetLeader(Side.Alpha).Value);
             KillBy(enemy, ownLeader);
@@ -149,7 +149,7 @@ namespace Fps.Tests.EditMode
             var enemy = Member("Bot-1-1", 1, new Vector3(0f, 0f, 30f));
             var hud = BoundHudView();
 
-            _runner.BeginGuardian(new[] { player, enemy }, new SideSpawnPoint[0], player, hud);
+            _runner.BeginGuardian(new[] { player, enemy }, new SideSpawnPoint[0], player);
 
             Assert.That(_runner.Leaders.GetLeader(Side.Alpha), Is.EqualTo((int?)ModeRunnerBase.LocalPlayerId), "the player is the only Alpha");
             Assert.That(hud.Lines[0], Is.EqualTo("あなたがリーダー"));

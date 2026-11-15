@@ -47,6 +47,7 @@ namespace Fps.Tests.EditMode
             _rules.name = "TestRules";
             GameRulesAssets.Configure(_rules, _testRules);
 
+            GameSignals.ResetAll();
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
             bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
@@ -64,6 +65,60 @@ namespace Fps.Tests.EditMode
             Object.DestroyImmediate(_rifle);
             Object.DestroyImmediate(_handgun);
             Object.DestroyImmediate(_rules);
+            GameSignals.ResetAll();
+        }
+
+        [Test]
+        public void BuildPublishesTheLocalPlayerAndTheHudModel()
+        {
+            var player = GameSignals.LocalPlayer.Value;
+
+            Assert.That(player, Is.Not.Null);
+            Assert.That(player.Player, Is.SameAs(_world.Player));
+            Assert.That(player.Damageable, Is.SameAs(_world.PlayerDamageable));
+            Assert.That(player.Weapon, Is.SameAs(_world.Weapon));
+            Assert.That(player.Ads, Is.SameAs(_world.Ads));
+            Assert.That(player.Mover, Is.SameAs(_world.Mover));
+            Assert.That(player.Grenades, Is.SameAs(_world.Grenades));
+            Assert.That(player.Abilities, Is.SameAs(_world.Abilities));
+            Assert.That(player.Actions, Is.SameAs(_world.ActionReader));
+            Assert.That(GameSignals.HudModel.Value, Is.SameAs(DefaultHud.Model));
+        }
+
+        [Test]
+        public void ClearSignalsRemovesOnlyWhatTheBootstrapPublished()
+        {
+            var bootstrap = _host.GetComponent<GameBootstrap>();
+            var cleared = new List<LocalPlayerSignal>();
+            GameSignals.LocalPlayer.Changed += cleared.Add;
+
+            bootstrap.ClearSignals();
+
+            Assert.That(GameSignals.LocalPlayer.Value, Is.Null);
+            Assert.That(GameSignals.HudModel.Value, Is.Null);
+            Assert.That(cleared, Is.EqualTo(new LocalPlayerSignal[] { null }), "subscribers hear the clear");
+
+            var other = new LocalPlayerSignal(null, null, null, null, null, null, null, null);
+            GameSignals.LocalPlayer.Publish(other);
+            bootstrap.ClearSignals();
+            Assert.That(GameSignals.LocalPlayer.Value, Is.SameAs(other), "a player published by someone else stays");
+        }
+
+        [Test]
+        public void TheDefaultHudCarriesTheGrenadeAbilityAndDominationViewsFromTheStart()
+        {
+            var hud = DefaultHud;
+
+            Assert.That(hud.GrenadeCount, Is.Not.Null);
+            Assert.That(hud.AbilitySlots, Is.Not.Null);
+            Assert.That(hud.Domination, Is.Not.Null);
+
+            IHud asInterface = hud;
+            Assert.That(asInterface.AttachGrenadeCount(), Is.SameAs(hud.GrenadeCount), "Attach returns the view that is already there");
+            Assert.That(asInterface.AttachAbilitySlots(), Is.SameAs(hud.AbilitySlots));
+            Assert.That(asInterface.AttachDomination(), Is.SameAs(hud.Domination));
+            Assert.That(hud.GetComponents<DominationView>(), Has.Length.EqualTo(1));
+            Assert.That(hud.Domination.Source, Is.Null, "nothing to show until a domination match begins");
         }
 
         [Test]
@@ -1021,7 +1076,10 @@ namespace Fps.Tests.EditMode
         public void HudHasThePartViewsBoundToTheLayout()
         {
             var hud = DefaultHud;
-            HudElementView[] views = { hud.HitMarker, hud.DamageDirection, hud.KillFeed, hud.Scoreboard, hud.LoadoutSelect, hud.TutorialPrompt };
+            HudElementView[] views =
+            {
+                hud.HitMarker, hud.DamageDirection, hud.KillFeed, hud.Scoreboard, hud.LoadoutSelect, hud.TutorialPrompt, hud.AbilitySlots, hud.Domination,
+            };
 
             Assert.That(views, Has.None.Null);
             Assert.That(hud.PauseMenu, Is.Not.Null);
@@ -1130,11 +1188,13 @@ namespace Fps.Tests.EditMode
         {
             GameUi.HudFactory = new NullHudFactory();
             var bootstrap = new GameObject("GameBootstrapTests.NoHud").AddComponent<GameBootstrap>();
+            var published = GameSignals.LocalPlayer.Value;
             try
             {
                 var ex = Assert.Throws<System.InvalidOperationException>(() => bootstrap.Build());
                 Assert.That(ex.Message, Does.Contain("returned no HUD"));
                 Assert.That(bootstrap.World, Is.Null);
+                Assert.That(GameSignals.LocalPlayer.Value, Is.SameAs(published), "a failed build publishes nothing");
             }
             finally
             {

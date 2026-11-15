@@ -127,8 +127,7 @@ namespace Fps.Runtime
             WaveSchedule schedule,
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
-            SideMember localPlayer = null,
-            IModeHud hudView = null)
+            SideMember localPlayer = null)
         {
             if (schedule == null)
             {
@@ -140,7 +139,7 @@ namespace Fps.Runtime
                 throw new ArgumentException($"schedule must be Waiting, but is {schedule.Phase}", nameof(schedule));
             }
 
-            Begin(PrepareHorde(schedule), members, spawnPoints, localPlayer, hudView);
+            Begin(PrepareHorde(schedule), members, spawnPoints, localPlayer);
         }
 
         protected override ModeSession CreateSession()

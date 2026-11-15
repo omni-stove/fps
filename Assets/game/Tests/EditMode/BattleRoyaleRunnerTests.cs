@@ -331,7 +331,7 @@ namespace Fps.Tests.EditMode
         private void Begin(IReadOnlyList<SideMember> members, SideMember localPlayer, ModeHudView hud = null)
         {
             var br = BattleRoyaleRunner.CreateBattleRoyale(4, 2, 0f, ActionRules.Default);
-            _runner.Begin(br, members, _spawns, localPlayer, hud);
+            _runner.Begin(br, members, _spawns, localPlayer);
         }
 
         private static void KillBy(SideMember killer, SideMember victim)

@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 能力の枠ごとの回数と待ち時間 (<see cref="HudFormat.Ability"/>) を、体力の上に 1 枠 1 行で出す。今押すと何が起きるかの案内 (置いた C4 の起爆など) があれば行に添える。Hud.uxml の <see cref="UxmlName"/> に行を入れる。
-    /// <see cref="Hud.AddViews"/> では付けず、オフラインの <see cref="GameBootstrap"/> が <see cref="IHud.AttachAbilitySlots"/> で付けて
+    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。オフラインの <see cref="GameBootstrap"/> が <see cref="IHud.AttachAbilitySlots"/> で受け取って
     /// プレイヤーの <see cref="AbilityHost"/> を <see cref="Show"/> する。待ち時間は時間で減りイベントが無いので、毎フレーム読み直す。
     /// ルールで能力を使わない間と、枠がすべて空の間は隠し、空の枠の行も隠す。枠だけで見て使えない (待ち時間・使用中・回数切れ) 枠の行には
     /// <see cref="WaitingRowClass"/> を付ける。

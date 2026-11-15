@@ -18,6 +18,9 @@ namespace Fps.Runtime
         /// <summary>この HUD 用に作り、HUD を消すときに一緒に消す PanelSettings。無ければ null。</summary>
         PanelSettings OwnedPanelSettings { get; }
 
+        /// <summary>この HUD が出している体力・弾・残り時間など。<see cref="GameSignals.HudModel"/> に出す。持っていなければ null。</summary>
+        HudModel Model { get; }
+
         /// <summary>試合や対戦の点数を一覧にする表示。無ければ null。</summary>
         IScoreboard Scoreboard { get; }
 

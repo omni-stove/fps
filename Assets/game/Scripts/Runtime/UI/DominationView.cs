@@ -9,8 +9,8 @@ namespace Fps.Runtime
     /// <summary>
     /// 拠点制圧 (<see cref="Domination"/>) の HUD。画面の上中央に両チームのポイント・残り時間・各拠点の持ち主を出し、
     /// 試合が終わったら勝者を出す。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="Hud.AddViews"/> では付けず、<see cref="DominationRunner"/> が試合を始めるときに <see cref="IHud.AttachDomination"/> (<see cref="AttachTo"/>) で
-    /// Hud の GameObject に付けて <see cref="Show"/> する。言語が変わったら今の言語で出し直す。
+    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。<see cref="DominationRunner"/> が試合を始めるときに <see cref="IHud.AttachDomination"/> で
+    /// 受け取って <see cref="Show"/> する。言語が変わったら今の言語で出し直す。
     /// 出している間は、残り時間をこちらで出すので Hud の残り時間の欄 (<see cref="HudView.TimeLabelName"/> の親) を隠す。
     /// </summary>
     /// <remarks>

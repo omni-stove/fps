@@ -276,8 +276,7 @@ namespace Fps.Tests.EditMode
             _runner.Begin(
                 new[] { _alphaOne, _alphaTwo, _bravoOne, _bravoTwo },
                 new[] { _alphaSpawnOne, _alphaSpawnTwo, _bravoSpawnOne },
-                null,
-                hud);
+                null);
         }
 
         private SideMember Member(string name, int side, Vector3 position)

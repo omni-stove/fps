@@ -174,6 +174,42 @@ namespace Fps.Server
             _log.WriteLine(NetHitLog.Hit(shooterId, victimId, hit.RewindTicks, hit.Zone, amount, health, outcome, hit.TargetCrouched));
         }
 
+        /// <summary>
+        /// 燃焼などの状態異常が victimId に amount を与える。かけた人 (attackerId) と武器に帰属させてルールに通し、被弾を本人に送る。
+        /// かけた人が抜けていれば、撃った人のいないダメージとして自滅に数える。
+        /// </summary>
+        internal DamageOutcome DamageOverTime(int? attackerId, int victimId, int amount, string weaponId)
+        {
+            var session = _rules.Session;
+            var attacker = attackerId.HasValue && session != null && session.HasPlayer(attackerId.Value) ? attackerId : null;
+            var outcome = attacker.HasValue
+                ? _rules.ApplyDamage(attacker, victimId, amount, new KillShot(attacker.Value, victimId, weaponId, HitZone.Body))
+                : _rules.ApplyDamage(null, victimId, amount);
+            if (outcome != DamageOutcome.Ignored)
+            {
+                SendDamageTaken(attacker.HasValue && IsReflected(attacker.Value, victimId) ? attacker.Value : victimId, null, amount);
+            }
+
+            return outcome;
+        }
+
+        /// <summary>
+        /// attackerId が victimId に体力を減らす以外の効果 (燃焼など) を与えてよいか。味方撃ちが <see cref="FriendlyFire.On"/> でなければ味方には与えない。
+        /// </summary>
+        internal bool CanAfflict(int attackerId, int victimId)
+        {
+            var session = _rules.Session;
+            if (session == null || !session.HasPlayer(victimId))
+            {
+                return false;
+            }
+
+            return attackerId == victimId
+                || !session.HasPlayer(attackerId)
+                || _data.Rules.FriendlyFire == FriendlyFire.On
+                || session.GetTeam(attackerId) != session.GetTeam(victimId);
+        }
+
         /// <summary>世界の colliderId の point に amount の被害を与え、壊れた建物の状態を送る。</summary>
         internal void DamageStructure(int colliderId, Vector3 point, int amount, float radius)
         {

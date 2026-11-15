@@ -222,7 +222,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 | `trigger` (撃ち方) | `fireMode` (`Auto`/`Semi`)・`fireInterval` | `burst` (`roundsPerBurst`・`roundIntervalSeconds`)・`charge` (`chargeSeconds`・`minChargeFraction`・`fullChargeDamageMultiplier`・`firesWhenFull`)・`spinUp` (`spinUpSeconds`・`startIntervalMultiplier`・`spinDownSeconds`)・`cycle` (`cycleSeconds`・`leavesAds`) |
 | `ammo` (弾薬) | `kind` (`Magazine`/`Heat`)・`magazineSize`・`reserveAmmo`・`reloadSeconds`・`activeReloadWindowStart`・`activeReloadWindowLength`・`activeReloadFailSeconds`・`reloadStyle` (`Whole`/`PerRound`)・`reloadSecondsPerRound` | `heat` (`heatPerShot`・`coolPerSecond`・`coolDelaySeconds`・`overheatSeconds`。`kind` が `Heat` のときは必須) |
 | `round` (弾) | `delivery` (`Hitscan`/`Projectile`/`Beam`/`Spray`)・`range`・`pelletCount`・`pelletSpreadDegrees`・`radius` | `penetration`・`ricochet`・`projectile` (`speed`・`gravityMultiplier`・`lifetimeSeconds`・`onWorldHit`・`visualId`)・`homing`・`beam` (`tickSeconds`・`visualId`)・`spray` (`tickSeconds`・`coneDegrees`・`visualId`)。`projectile`・`beam`・`spray` はその `delivery` のときだけ書き、そのときは必須 |
-| `impact` (着弾) | `damage`・`falloff`・`structureRadius` | `explosion` (`maxDamage`・`radius`・`fullDamageRadius`・`structureDamageAtCenter`・`detonation`)・`statusEffect` (`durationSeconds`・`tickSeconds`・`damagePerTick`・`visualId`)・`areaEffect` (`radius`・`durationSeconds`・`tickSeconds`・`damagePerTick`・`statusEffect`・`visualId`) |
+| `impact` (着弾) | `damage`・`falloff`・`structureRadius` | `explosion` (`maxDamage`・`radius`・`fullDamageRadius`・`structureDamageAtCenter`・`detonation`)・`statusEffect` (`kind`・`durationSeconds`・`tickSeconds`・`damagePerTick`・`visualId`)・`areaEffect` (`radius`・`durationSeconds`・`tickSeconds`・`damagePerTick`・`statusEffect`・`visualId`) |
 | `aim` (照準) | `hipSpreadDegrees`・`adsSpreadDegrees`・`moveSpreadDegrees`・`recoilPitchDegrees`・`recoilYawDegrees`・`recoilRecoveryPerSecond`・`recoilRecoveryDelaySeconds`・`blindFireSpreadDegrees`・`zoomLevels` (覗き込みの視野角の並び。先頭が覗き込み、続きがスコープの倍率)・`swayDegrees` | `breathHold` (`maxHoldSeconds`・`recoverSeconds`・`swayMultiplier`) |
 | `ammoTypes` (弾薬の種類の並び) | 各要素に `id`・`nameKey` | `round`・`impact` (書いた部品だけ武器のものを上書きする) |
 
@@ -233,6 +233,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 - 部品に分ける前の平らな形 (`fireMode`・`magazineSize`・`damage`・`range`・`falloff`・`explosionRadius`・`adsFieldOfView` などを武器の直下に書く) もそのまま読める。`explosionRadius` は `impact.structureRadius`、`adsFieldOfView` は `aim.zoomLevels` の 1 つ目として読み、`adsFieldOfView` は `null` (共通の初期値) も書ける。同じ値を平らな項目と部品の両方に書くとエラーになる。
 - 前の項目名 `displayName` は読まない (書き換えを促すエラーになる)。知らない項目はエラーになる。
 - 飛ぶ弾・ビーム・火炎・爆発の見た目と音は JSON には書かず、取り込んだ `WeaponDefinition` の各部品の参照 (`Visual`・`Sound`) に Inspector で入れる。空ならコードで形を作る。取り込み直しても参照は消えない。
+- `statusEffect` の `kind` は状態異常の種類の Id (省略すると `burn`)。同じ種類をかけ直すと重ねずに長い方へ延ばし、ダメージはかけた人と武器に帰属する。かかっている体の見た目は種類の Id ごとに `Resources/Presentation/StatusEffectVisualsCatalog.asset` (`StatusEffectVisualCatalog`) に入れ、無ければ `burn` だけコードで炎を作る。自分にかかっている間の HUD の文は `hud.json` の `hud.status.<種類の Id>`。
 - サンプルでは **Fps > Build Weapon Assets** (`Fps.Editor.WeaponAssetBuilder.Build`) が `Weapons/Json/` の JSON をすべてアセットにし、射撃場で拾える武器の一覧 (`Weapons/RangeWeapons.asset`) に並べる。武器を足すときは JSON を 1 つ置いて走らせ直し、TPS の射撃場を作り直す。
 
 batchmode で取り込む:

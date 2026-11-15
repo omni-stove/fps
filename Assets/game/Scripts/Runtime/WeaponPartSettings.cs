@@ -502,6 +502,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("当たった相手に状態異常 (燃焼など) を付ける")]
         private bool _enabled;
 
+        [SerializeField, Tooltip("状態異常の種類の Id (burn など)。同じ種類をかけ直すと延びる。空なら burn")]
+        private string _kindId = StatusEffectKinds.Burn;
+
         [SerializeField, Min(0.01f), Tooltip("続く秒数")]
         private float _durationSeconds = 3f;
 
@@ -516,6 +519,8 @@ namespace Fps.Runtime
 
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
+        public string KindId { get => _kindId ?? string.Empty; set => _kindId = value ?? string.Empty; }
+
         public float DurationSeconds { get => _durationSeconds; set => _durationSeconds = value; }
 
         public float TickSeconds { get => _tickSeconds; set => _tickSeconds = value; }
@@ -524,7 +529,8 @@ namespace Fps.Runtime
 
         public string VisualId { get => _visualId ?? string.Empty; set => _visualId = value ?? string.Empty; }
 
-        public StatusEffectSpec ToSpec() => _enabled ? new StatusEffectSpec(_durationSeconds, _tickSeconds, _damagePerTick, VisualId) : null;
+        public StatusEffectSpec ToSpec() =>
+            _enabled ? new StatusEffectSpec(_durationSeconds, _tickSeconds, _damagePerTick, VisualId, KindId) : null;
 
         public void Set(StatusEffectSpec spec)
         {
@@ -535,6 +541,7 @@ namespace Fps.Runtime
                 _tickSeconds = spec.TickSeconds;
                 _damagePerTick = spec.DamagePerTick;
                 VisualId = spec.VisualId;
+                KindId = spec.KindId;
             }
         }
     }

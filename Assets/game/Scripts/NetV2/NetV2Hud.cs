@@ -43,6 +43,9 @@ namespace Fps.NetV2
         private bool _noticeShown;
         private float? _idleRemaining;
         private int _idleShownSeconds = -1;
+        private ClientStatusEffects _statusEffects;
+        private string _statusKind;
+        private int _statusShownSeconds;
         private SnapshotMessage _latest;
         private Func<string, WeaponSpec> _findWeapon;
         private WeaponSpec _weaponSpec;
@@ -186,6 +189,13 @@ namespace Fps.NetV2
             Refresh();
         }
 
+        /// <summary>自分にかかっている状態異常の残りを、effects から読んで出す。</summary>
+        public void BindStatusEffects(ClientStatusEffects effects)
+        {
+            _statusEffects = effects;
+            Refresh();
+        }
+
         public void ClearIdleWarning()
         {
             if (!_idleRemaining.HasValue)
@@ -199,16 +209,31 @@ namespace Fps.NetV2
 
         private void Update()
         {
-            if (!_idleRemaining.HasValue)
+            var changed = false;
+            if (_idleRemaining.HasValue)
             {
-                return;
+                _idleRemaining = Math.Max(0f, _idleRemaining.Value - Time.unscaledDeltaTime);
+                changed = HudFormat.DisplayedSeconds(_idleRemaining.Value) != _idleShownSeconds;
             }
 
-            _idleRemaining = Math.Max(0f, _idleRemaining.Value - Time.unscaledDeltaTime);
-            if (HudFormat.DisplayedSeconds(_idleRemaining.Value) != _idleShownSeconds)
+            ReadStatus(out var statusKind, out var statusSeconds);
+            changed |= statusSeconds != _statusShownSeconds || !string.Equals(statusKind, _statusKind, StringComparison.Ordinal);
+            if (changed)
             {
                 Refresh();
             }
+        }
+
+        private void ReadStatus(out string kindId, out int seconds)
+        {
+            if (_statusEffects != null && _statusEffects.TryGetLongest(_localId, out kindId, out var remaining))
+            {
+                seconds = HudFormat.DisplayedSeconds(remaining);
+                return;
+            }
+
+            kindId = null;
+            seconds = 0;
         }
 
         private void Refresh()
@@ -223,6 +248,7 @@ namespace Fps.NetV2
         private void ShowNotice(PlayerSnapshot own, bool present)
         {
             var match = _latest.Match;
+            ReadStatus(out _statusKind, out _statusShownSeconds);
             LocalizedText notice;
             if (match.State == GameModeState.Ended)
             {
@@ -248,6 +274,10 @@ namespace Fps.NetV2
             else if (present && own.SpawnProtectionSeconds > 0)
             {
                 notice = HudFormat.SpawnProtected(own.SpawnProtectionSeconds);
+            }
+            else if (present && _statusKind != null && own.Health > 0)
+            {
+                notice = HudFormat.StatusEffect(_statusKind, _statusShownSeconds);
             }
             else
             {

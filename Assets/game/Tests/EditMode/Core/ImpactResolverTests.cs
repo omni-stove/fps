@@ -50,18 +50,43 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ExplosionsStatusEffectsAndAreasAddNothingForNow()
+        public void ExplosionsAndAreasAddNothingForNow()
         {
             var impact = new ImpactSpec(
                 25,
                 explosion: new ExplosionSpec(new ExplosionDamage(100, 5f)),
-                statusEffect: new StatusEffectSpec(3f, 0.5f, 4),
                 areaEffect: new AreaEffectSpec(4f, 5f, 1f, 2));
 
             var orders = ImpactResolver.Resolve(impact, ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f));
 
             Assert.That(orders.Count, Is.EqualTo(1));
             Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.Damage));
+        }
+
+        [Test]
+        public void ACharacterHitAfflictsTheStatusEffectAfterTheDamage()
+        {
+            var burn = new StatusEffectSpec(3f, 0.5f, 4);
+            var point = new Vector3(1f, 2f, 3f);
+
+            var orders = ImpactResolver.Resolve(new ImpactSpec(25, statusEffect: burn), ImpactHit.Character(HitZone.Body, point, 0f));
+
+            Assert.That(orders.Count, Is.EqualTo(2));
+            Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.Damage));
+            Assert.That(orders[1].Kind, Is.EqualTo(ImpactOrderKind.StatusEffect));
+            Assert.That(orders[1].StatusEffect, Is.SameAs(burn));
+            Assert.That(orders[1].Point, Is.EqualTo(point));
+        }
+
+        [Test]
+        public void AStructureHitAfflictsNothing()
+        {
+            var impact = new ImpactSpec(25, statusEffect: new StatusEffectSpec(3f, 0.5f, 4));
+
+            var orders = ImpactResolver.Resolve(impact, ImpactHit.Structure(Vector3.Zero, 0f));
+
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.StructureDamage));
         }
 
         [Test]

@@ -14,6 +14,7 @@
   "hud.reviving": "Reviving {0}%",
   "hud.spawnProtected": "Spawn protection: {0} s left",
   "hud.idleWarning": "No input: you will be disconnected in {0} s",
+  "hud.status.burn": "Burning: {0} s left",
   "hud.grenades": "Grenades {0}",
   "hud.ability": "Ability {0} {1}/{2}",
   "hud.ability.wait": "Ability {0} {1}/{2} ready in {3} s",

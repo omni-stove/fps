@@ -16,7 +16,15 @@ namespace Fps.Runtime
 
             // ShotCast が向きと射程を検査するので、撃ったことはその後に知らせる (例外になった弾を撃ったことにしない)。
             var found = ShotCast.TryFirst(origin, direction, radius, range, request.LayerMask, request.ShooterRoot, out var hit);
-            CombatEvents.RaiseShotFired(request.Shooter, origin, direction, request.WeaponId);
+            // 2 本目からのペレットは 1 回の射撃の続きなので、銃声・薬莢・反動・カメラの揺れを重ねず、トレーサーだけ出す。
+            if (round.Index > 0)
+            {
+                CombatEvents.RaiseShotContinued(request.Shooter, origin, direction, request.WeaponId);
+            }
+            else
+            {
+                CombatEvents.RaiseShotFired(request.Shooter, origin, direction, request.WeaponId);
+            }
 
             var travelled = 0f;
             var bounces = 0;

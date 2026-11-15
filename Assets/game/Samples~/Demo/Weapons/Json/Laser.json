@@ -1,0 +1,55 @@
+{
+  "id": "739a532a-1faa-498e-b9e1-20de68186e40",
+  "nameKey": "weapon.laser",
+  "category": "AssaultRifle",
+  "shotNoiseRadius": 20,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.05
+  },
+  "ammo": {
+    "kind": "Heat",
+    "magazineSize": 100,
+    "reserveAmmo": 300,
+    "reloadSeconds": 2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.5,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0,
+    "heat": {
+      "heatPerShot": 0.02,
+      "coolPerSecond": 0.5,
+      "coolDelaySeconds": 0.3,
+      "overheatSeconds": 1.5
+    }
+  },
+  "round": {
+    "delivery": "Beam",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "beam": {
+      "tickSeconds": 0.05,
+      "visualId": "fx.beam.laser"
+    }
+  },
+  "impact": {
+    "damage": 4,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 0,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0,
+    "recoilPitchDegrees": 0,
+    "recoilYawDegrees": 0,
+    "recoilRecoveryPerSecond": 0,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 2,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  }
+}

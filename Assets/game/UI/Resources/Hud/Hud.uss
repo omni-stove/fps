@@ -653,6 +653,49 @@
     background-size: 100% 100%;
 }
 
+/* キルカムの再生中の枠。画面の縁を囲み、見出しと進みを上中央に置く。KillCamView が見出しと進みの幅 (%) を入れる。 */
+.kill-cam {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    padding-top: 96px;
+    border-width: 12px;
+    border-color: rgba(220, 40, 40, 0.85);
+}
+
+.kill-cam__caption {
+    padding: 6px 24px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.65);
+    font-size: 36px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.kill-cam__progress {
+    width: 320px;
+    height: 6px;
+    margin-top: 8px;
+    border-radius: 2px;
+    background-color: rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.kill-cam__progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background-color: rgb(220, 40, 40);
+}
+
 /* フラッシュの目くらまし。FlashOverlay が色 (画像があれば画像) と不透明度を入れる。 */
 .flash-overlay {
     position: absolute;

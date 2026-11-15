@@ -709,6 +709,23 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void HoldingBreathDoesNothingWhileTheWeaponBlocksAiming()
+        {
+            InitializeSwaying();
+            var blocked = false;
+            _ads.AdsBlocker = () => blocked;
+            _ads.Tick(false, false, 0.5f);
+            _ads.Tick(true, true, 0.5f);
+
+            blocked = true;
+            _ads.HoldBreathInput = true;
+            _ads.Tick(true, false, 1f);
+
+            Assert.That(_ads.IsHoldingBreath, Is.False);
+            Assert.That(_ads.Breath.RemainingSeconds, Is.EqualTo(2f), "the breath is kept for when aiming comes back");
+        }
+
+        [Test]
         public void StoppingAimingSettlesTheCameraAndResetViewStraightensItAtOnce()
         {
             InitializeSwaying();

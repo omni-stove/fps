@@ -130,6 +130,32 @@ namespace Fps.Editor
 
         public const string CoverPointsObjectName = "CoverPoints";
 
+        public const string PickupsObjectName = "Pickups";
+
+        /// <summary>武器を既に持っていたときに足す予備弾。ランチャーの弾 2 発。</summary>
+        public const int WeaponPickupAmmoIfOwned = 2;
+
+        /// <summary>弾薬箱 1 つで足す予備弾。</summary>
+        public const int AmmoPickupAmount = 60;
+
+        /// <summary>弾薬箱が拾われてから再び出るまでの秒数。武器は一度きり。</summary>
+        public const float AmmoPickupRespawnSeconds = 60f;
+
+        /// <summary>
+        /// Campaign01 の拾える物。開始区画の左右にランチャーと予備弾、区域 A の東の壁際に何度でも使える弾薬箱、
+        /// 敵のいる区画の西の奥 (出口の手前) に予備弾。
+        /// </summary>
+        public static IReadOnlyList<CampaignPickupPlacement> Pickups()
+        {
+            return new[]
+            {
+                CampaignPickupPlacement.Weapon("Pickup-Launcher", new Vector3(-6f, 0f, 12f), WeaponAssetBuilder.LauncherId, WeaponPickupAmmoIfOwned, 0f),
+                CampaignPickupPlacement.Ammo("Pickup-Ammo-Start", new Vector3(6f, 0f, 12f), AmmoPickupAmount, AmmoPickupRespawnSeconds),
+                CampaignPickupPlacement.AmmoCrate("AmmoCrate-AreaA", new Vector3(13.5f, 0f, 36f)),
+                CampaignPickupPlacement.Ammo("Pickup-Ammo-North", new Vector3(-12f, 0f, 60f), AmmoPickupAmount, AmmoPickupRespawnSeconds),
+            };
+        }
+
         /// <summary>遮蔽点を置く、遮蔽物の面からの距離 (m)。敵の半径 (0.5m) で削られた NavMesh の縁より少し外。</summary>
         public const float CoverPointStandOff = 0.7f;
 
@@ -359,6 +385,7 @@ namespace Fps.Editor
                     new CampaignEnemyGroupElement(EnemiesObjectName, AllEnemies(), KillEnemiesId),
                     new CampaignCoverPointsElement(CoverPointsObjectName),
                     CampaignAreaElement.Reach(ExitObjectName, ReachExitId, ExitPosition, ExitPadScale),
+                    new CampaignPickupsElement(PickupsObjectName, Pickups()),
                 },
                 new[]
                 {
@@ -433,12 +460,14 @@ namespace Fps.Editor
             var playerWeapons = WeaponAssetBuilder.LoadPlayerLoadout();
             var catalog = WeaponAssetBuilder.LoadCatalog();
             ResolveEnemyWeapons(spec, catalog);
+            var pickupWeapons = LoadPickupWeapons(catalog);
+            ResolvePickupWeapons(spec, pickupWeapons);
             var rules = LoadRules();
             var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(definitionPath, d => Configure(d, spec));
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
-            var layout = PopulateScene(scene, spec, definition, playerWeapons, catalog, rules);
+            var layout = PopulateScene(scene, spec, definition, playerWeapons, catalog, rules, pickupWeapons);
             SceneBuildHelpers.SaveNavMeshData(layout.Surface, navMeshDataPath);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -519,7 +548,8 @@ namespace Fps.Editor
             MissionDefinition definition,
             IReadOnlyList<WeaponDefinition> playerWeapons,
             WeaponCatalogAsset enemyWeapons,
-            CampaignRules rules)
+            CampaignRules rules,
+            IReadOnlyList<WeaponDefinition> pickupWeapons = null)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the campaign scene");
             if (spec == null)
@@ -540,6 +570,8 @@ namespace Fps.Editor
             SceneBuildHelpers.RequirePlayerWeapons(playerWeapons, nameof(playerWeapons));
 
             var weapons = ResolveEnemyWeapons(spec, enemyWeapons);
+            pickupWeapons ??= LoadPickupWeapons(enemyWeapons);
+            ResolvePickupWeapons(spec, pickupWeapons);
 
             NavMeshSurface surface = null;
             try
@@ -577,6 +609,10 @@ namespace Fps.Editor
 
                         case CampaignEnemyGroupElement group:
                             CreateEnemyGroup(scene, group, runner, body, weapons, enemies, kills, reveals);
+                            break;
+
+                        case CampaignPickupsElement pickups:
+                            CreatePickups(scene, pickups, pickupWeapons);
                             break;
 
                         case CampaignCoverPointsElement coverPoints:
@@ -635,6 +671,129 @@ namespace Fps.Editor
 
                 throw;
             }
+        }
+
+        /// <summary>
+        /// 拾える物として置ける武器。catalog の武器と、プレイヤーにも敵にも持たせないのでカタログに入れていないランチャー
+        /// (<see cref="WeaponAssetBuilder.LoadLauncher"/>)。
+        /// </summary>
+        public static IReadOnlyList<WeaponDefinition> LoadPickupWeapons(WeaponCatalogAsset catalog)
+        {
+            if (catalog == null)
+            {
+                throw new ArgumentNullException(nameof(catalog));
+            }
+
+            var weapons = new List<WeaponDefinition>(catalog.Weapons);
+            var launcher = WeaponAssetBuilder.LoadLauncher();
+            if (FindWeapon(weapons, launcher.Id) == null)
+            {
+                weapons.Add(launcher);
+            }
+
+            return weapons;
+        }
+
+        /// <summary>spec の拾える物の武器がすべて weapons にあることを確かめ、無ければ <see cref="KeyNotFoundException"/> を投げる。</summary>
+        public static void ResolvePickupWeapons(CampaignMissionSpec spec, IReadOnlyList<WeaponDefinition> weapons)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            foreach (var element in spec.Elements)
+            {
+                if (element is CampaignPickupsElement pickups)
+                {
+                    foreach (var pickup in pickups.Pickups)
+                    {
+                        if (pickup.WeaponId != null)
+                        {
+                            RequireWeapon(weapons, pickup);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// element の拾える物の出現点を、シーンの直下の <see cref="CampaignElement.ObjectName"/> の子に置く。武器は Id で weapons から引き、
+        /// 無ければ何も置かずに <see cref="KeyNotFoundException"/> を投げる。
+        /// </summary>
+        public static GameObject CreatePickups(Scene scene, CampaignPickupsElement element, IReadOnlyList<WeaponDefinition> weapons)
+        {
+            if (element == null)
+            {
+                throw new ArgumentNullException(nameof(element));
+            }
+
+            // 中身を先にすべて作り、引けない武器があれば何も置かない。
+            var contents = new PickupContents[element.Pickups.Count];
+            for (var i = 0; i < contents.Length; i++)
+            {
+                var pickup = element.Pickups[i];
+                switch (pickup.Kind)
+                {
+                    case CampaignPickupKind.Weapon:
+                        contents[i] = PickupContents.ForWeapon(RequireWeapon(weapons, pickup), pickup.Amount);
+                        break;
+                    case CampaignPickupKind.Ammo:
+                        contents[i] = PickupContents.ForReserveAmmo(pickup.Amount);
+                        break;
+                }
+            }
+
+            var root = new GameObject(element.ObjectName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            for (var i = 0; i < contents.Length; i++)
+            {
+                var pickup = element.Pickups[i];
+                var pointObject = new GameObject(pickup.ObjectName);
+                pointObject.transform.SetParent(root.transform, false);
+                pointObject.transform.position = pickup.Feet;
+                if (pickup.Kind == CampaignPickupKind.AmmoCrate)
+                {
+                    pointObject.AddComponent<AmmoCrate>().Build();
+                    continue;
+                }
+
+                var point = pointObject.AddComponent<PickupSpawnPoint>();
+                point.Contents = contents[i];
+                point.CollectMode = PickupCollectMode.Touch;
+                point.RespawnSeconds = pickup.RespawnSeconds;
+            }
+
+            return root;
+        }
+
+        private static WeaponDefinition RequireWeapon(IReadOnlyList<WeaponDefinition> weapons, CampaignPickupPlacement pickup)
+        {
+            var found = FindWeapon(weapons, pickup.WeaponId);
+            if (found == null)
+            {
+                throw new KeyNotFoundException($"pickup '{pickup.ObjectName}' uses weapon id '{pickup.WeaponId}', which is not among the pickup weapons");
+            }
+
+            return found;
+        }
+
+        private static WeaponDefinition FindWeapon(IEnumerable<WeaponDefinition> weapons, string weaponId)
+        {
+            if (weapons == null)
+            {
+                throw new ArgumentNullException(nameof(weapons));
+            }
+
+            foreach (var weapon in weapons)
+            {
+                if (weapon != null && string.Equals(weapon.Id, weaponId, StringComparison.Ordinal))
+                {
+                    return weapon;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>Campaign01 の地形を置く (<see cref="CreateLevel(Scene, CampaignMissionSpec)"/>)。</summary>

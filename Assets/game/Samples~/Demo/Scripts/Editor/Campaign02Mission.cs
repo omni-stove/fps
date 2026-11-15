@@ -55,6 +55,23 @@ namespace Fps.Editor
         public const string BuildingCheckpointObjectName = "Checkpoint_Building";
         public const string TerminalCheckpointObjectName = "Checkpoint_Terminal";
 
+        /// <summary>
+        /// 拾える物。開始区画の左右にランチャーと予備弾、ロビーの西の隅に予備弾、端末室の東の壁際 (増援と戦う所) に何度でも使える弾薬箱。
+        /// </summary>
+        public static IReadOnlyList<CampaignPickupPlacement> Pickups()
+        {
+            return new[]
+            {
+                CampaignPickupPlacement.Weapon(
+                    "Pickup-Launcher", new Vector3(-8f, 0f, 5f), WeaponAssetBuilder.LauncherId, CampaignSceneBuilder.WeaponPickupAmmoIfOwned, 0f),
+                CampaignPickupPlacement.Ammo(
+                    "Pickup-Ammo-Start", new Vector3(8f, 0f, 5f), CampaignSceneBuilder.AmmoPickupAmount, CampaignSceneBuilder.AmmoPickupRespawnSeconds),
+                CampaignPickupPlacement.Ammo(
+                    "Pickup-Ammo-Lobby", new Vector3(-14f, 0f, 55f), CampaignSceneBuilder.AmmoPickupAmount, CampaignSceneBuilder.AmmoPickupRespawnSeconds),
+                CampaignPickupPlacement.AmmoCrate("AmmoCrate-Terminal", new Vector3(18.5f, 0f, 70f)),
+            };
+        }
+
         // ---- 地形 ----
 
         /// <summary>床の中心。Plane は 10m 四方なので、<see cref="FloorScale"/> で x = ±20、z = -10〜90 になる。</summary>
@@ -223,6 +240,7 @@ namespace Fps.Editor
                     new CampaignEnemyGroupElement(ReinforcementsObjectName, Reinforcements, KillReinforcementsId, KillReinforcementsId),
                     new CampaignCoverPointsElement(CampaignSceneBuilder.CoverPointsObjectName),
                     CampaignAreaElement.Reach(ExtractionObjectName, ReachExtractionId, ExtractionPosition, ExtractionPadScale),
+                    new CampaignPickupsElement(CampaignSceneBuilder.PickupsObjectName, Pickups()),
                 },
                 new[]
                 {

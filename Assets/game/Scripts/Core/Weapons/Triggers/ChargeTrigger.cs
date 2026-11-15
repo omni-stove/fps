@@ -34,5 +34,10 @@ namespace Fps.Core
         {
             return _inner.Tick(deltaSeconds);
         }
+
+        public void Cancel()
+        {
+            _inner.Cancel();
+        }
     }
 }

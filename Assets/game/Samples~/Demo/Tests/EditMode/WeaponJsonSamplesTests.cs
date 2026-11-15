@@ -1,5 +1,6 @@
 using System.Linq;
 using System;
+using System.IO;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -38,10 +39,53 @@ namespace Fps.Tests.EditMode
         {
             var imported = WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
 
-            Assert.That(imported.Count(), Is.EqualTo(3));
+            Assert.That(imported.Count(), Is.EqualTo(System.IO.Directory.GetFiles(FpsKitRoot.PhysicalPath(SamplesFolder), "*.json").Length));
             AssertSameSpec(Load("Rifle").ToSpec(), WeaponAssetBuilder.RifleSpec());
             AssertSameSpec(Load("Handgun").ToSpec(), WeaponAssetBuilder.HandgunSpec());
             AssertSameSpec(Load("Launcher").ToSpec(), WeaponAssetBuilder.LauncherSpec());
+        }
+
+        [Test]
+        public void TheRicochetPistolBouncesOffShallowSurfaces()
+        {
+            WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
+
+            var spec = Load("RicochetPistol").ToSpec();
+
+            Assert.That(spec.NameKey, Is.EqualTo("weapon.ricochetPistol"));
+            Assert.That(spec.Round.Delivery, Is.EqualTo(RoundDelivery.Hitscan));
+            Assert.That(spec.Round.Ricochet, Is.Not.Null);
+            Assert.That(spec.Round.Ricochet.MaxBounces, Is.EqualTo(2));
+            Assert.That(spec.Round.Ricochet.MaxGrazingAngleDegrees, Is.EqualTo(25f));
+            Assert.That(spec.Round.Ricochet.DamageMultiplierPerBounce, Is.EqualTo(0.7f));
+        }
+
+        [Test]
+        public void TheCommittedRicochetPistolMatchesItsJson()
+        {
+            var committed = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(DemoSample.Root + "/Weapons/RicochetPistol.asset");
+            Assume.That(committed, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build first");
+
+            WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
+
+            AssertSameFields(Load("RicochetPistol"), committed);
+        }
+
+        [Test]
+        public void TheMinigunSampleSpinsUpBeforeItFires()
+        {
+            WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
+            var spec = Load("Minigun").ToSpec();
+            var spinUp = spec.Trigger.SpinUp;
+            Assert.That(spinUp, Is.Not.Null);
+            Assert.That(spinUp.StartIntervalMultiplier, Is.GreaterThan(1f), "the first shots are slower than the full rate");
+
+            var trigger = TriggerModels.For(spec);
+
+            Assert.That(trigger.MinShotSpacingSeconds, Is.EqualTo(spec.FireInterval));
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+            Assert.That(trigger.Tick(spinUp.SpinUpSeconds / 2f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(spinUp.SpinUpSeconds), Is.EqualTo(1));
         }
 
         [Test]

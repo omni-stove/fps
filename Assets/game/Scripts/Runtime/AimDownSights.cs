@@ -151,8 +151,7 @@ namespace Fps.Runtime
         {
             get
             {
-                var spec = WeaponSource?.Invoke();
-                return spec != null ? spec.AdsFieldOfView : _fallbackFieldOfView;
+                return ScopeFieldOfView();
             }
         }
 
@@ -209,6 +208,8 @@ namespace Fps.Runtime
 
         private void Update()
         {
+            ReadCycleMagnification();
+            ReadHoldBreath();
             Tick(
                 _aimAction.IsPressed(),
                 _aimAction.WasPressedThisFrame(),
@@ -254,7 +255,9 @@ namespace Fps.Runtime
 
             // AimingChanged の購読側が同じフレームで Release することがある (回避中など) ので、決めた後の状態で寄せる。
             _zoom.Step(_aimState.IsActive, deltaSeconds);
+            StepZoomLevel(deltaSeconds);
             Apply(_zoom.FieldOfView(_hipFieldOfView, TargetFieldOfView));
+            StepBreath(deltaSeconds);
         }
 
         /// <summary>
@@ -289,7 +292,9 @@ namespace Fps.Runtime
             }
 
             _zoom.Reset();
+            SnapToFirstZoomLevel();
             Apply(_hipFieldOfView);
+            ResetBreath();
         }
 
         /// <summary>
@@ -328,9 +333,12 @@ namespace Fps.Runtime
                 return false;
             }
 
+            var cycleMagnification = FindCycleMagnificationAction(actions);
+            var holdBreath = FindHoldBreathAction(actions);
+
             try
             {
-                Initialize(camera, look, aim);
+                Initialize(camera, look, aim, cycleMagnification, holdBreath);
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -346,7 +354,7 @@ namespace Fps.Runtime
         /// 腰だめの視野角は、このときの camera の視野角にする。
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">camera の視野角・<see cref="TransitionSeconds"/>・<see cref="FallbackFieldOfView"/> が不正なとき。</exception>
-        public void Initialize(Camera camera, FirstPersonLook look, InputAction aimAction)
+        public void Initialize(Camera camera, FirstPersonLook look, InputAction aimAction, InputAction cycleMagnificationAction = null, InputAction holdBreathAction = null)
         {
             if (camera == null)
             {
@@ -395,11 +403,15 @@ namespace Fps.Runtime
             _hipFieldOfView = hip;
             _zoom = zoom;
             _aimState.Release();
+            SnapToFirstZoomLevel();
 
             if (_isLive)
             {
                 AcquireAction();
             }
+
+            BindCycleMagnificationAction(cycleMagnificationAction);
+            BindBreath(camera, holdBreathAction);
         }
 
         /// <summary>ADS の状態のログ。例: <c>[View] ads=true</c>。</summary>
@@ -420,6 +432,11 @@ namespace Fps.Runtime
         private void ReportAiming(bool aiming)
         {
             Debug.Log(FormatAdsLog(aiming), this);
+            if (!aiming)
+            {
+                ReturnToFirstZoomLevel();
+            }
+
             AimingChanged?.Invoke(aiming);
         }
 
@@ -431,6 +448,9 @@ namespace Fps.Runtime
                 _aimAction.Enable();
                 _enabledAimAction = true;
             }
+
+            AcquireCycleMagnificationAction();
+            AcquireHoldBreathAction();
         }
 
         private void ReleaseAction()
@@ -441,6 +461,8 @@ namespace Fps.Runtime
             }
 
             _enabledAimAction = false;
+            ReleaseCycleMagnificationAction();
+            ReleaseHoldBreathAction();
         }
 
         private void EnsureInitialized()

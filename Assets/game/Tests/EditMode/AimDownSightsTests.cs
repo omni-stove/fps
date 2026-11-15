@@ -444,7 +444,337 @@ namespace Fps.Tests.EditMode
             Assert.That(_ads.Camera, Is.SameAs(_camera));
             Assert.That(_ads.Look, Is.SameAs(_look));
             Assert.That(_ads.AimAction, Is.SameAs(InputSystem.actions.FindAction(AimDownSights.AimActionPath)));
+            Assert.That(
+                _ads.CycleMagnificationAction, Is.SameAs(InputSystem.actions.FindAction(AimDownSights.CycleMagnificationActionPath)));
+            Assert.That(_ads.HoldBreathAction, Is.SameAs(InputSystem.actions.FindAction(AimDownSights.HoldBreathActionPath)));
             Assert.That(_ads.HipFieldOfView, Is.EqualTo(_hip));
+        }
+
+        [Test]
+        public void CyclingMovesSmoothlyToTheNextZoomLevelAndWrapsToTheFirst()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            _ads.Tick(true, true, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(30f).Within(1e-4f));
+
+            LogAssert.Expect(LogType.Log, "[View] zoom=2/3 fov=15");
+            Assert.That(_ads.CycleZoomLevel(), Is.True);
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(1));
+            _ads.Tick(true, false, _ads.TransitionSeconds / 2f);
+            Assert.That(_camera.fieldOfView, Is.LessThan(30f).And.GreaterThan(15f), "the step is not a cut");
+            _ads.Tick(true, false, _ads.TransitionSeconds);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(15f).Within(1e-4f));
+
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, _ads.TransitionSeconds);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(7.5f).Within(1e-4f));
+
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, _ads.TransitionSeconds);
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0), "after the last level comes the first");
+            Assert.That(_camera.fieldOfView, Is.EqualTo(30f).Within(1e-4f));
+        }
+
+        [Test]
+        public void AHigherZoomLevelLowersTheSensitivityFurther()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            _ads.Tick(true, true, 1f);
+            var first = _look.SensitivityMultiplier;
+
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, 1f);
+
+            Assert.That(_look.SensitivityMultiplier, Is.LessThan(first));
+            Assert.That(_look.SensitivityMultiplier, Is.EqualTo(AdsZoom.SensitivityMultiplier(_hip, 15f)).Within(1e-5f));
+        }
+
+        [Test]
+        public void StoppingAimingZoomsOutWithoutAJumpAndStartsAgainAtTheFirstLevel()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            _ads.Tick(true, true, 1f);
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(15f).Within(1e-4f));
+
+            _ads.Tick(false, false, 0f);
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(15f).Within(1e-4f), "letting go does not snap the view");
+            _ads.Tick(false, false, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(_hip).Within(1e-4f));
+
+            _ads.Tick(true, true, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(30f).Within(1e-4f));
+        }
+
+        [Test]
+        public void ResettingTheViewGoesBackToTheFirstLevel()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            _ads.Tick(true, true, 1f);
+            _ads.CycleZoomLevel();
+
+            _ads.ResetView();
+
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(_hip));
+        }
+
+        [Test]
+        public void CyclingDoesNothingWhenNotAimingOrWithASingleLevel()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            Assert.That(_ads.CycleZoomLevel(), Is.False, "not aiming");
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0));
+
+            _ads.WeaponSource = () => Rifle(40f);
+            _ads.Tick(true, true, 1f);
+            Assert.That(_ads.ZoomLevelCount, Is.EqualTo(1));
+            Assert.That(_ads.CycleZoomLevel(), Is.False, "a single level");
+            _ads.Tick(true, false, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(40f).Within(1e-4f));
+            Assert.That(_ads.Magnification, Is.Null);
+
+            _ads.WeaponSource = null;
+            Assert.That(_ads.CycleZoomLevel(), Is.False, "no weapon");
+        }
+
+        [Test]
+        public void ChangingWeaponsStartsTheNewOneAtItsFirstLevel()
+        {
+            Initialize();
+            var current = Scoped(_rifleId);
+            _ads.WeaponSource = () => current;
+            _ads.Tick(true, true, 1f);
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, 1f);
+
+            current = Scoped("00000000-0000-4000-8000-000000000002");
+            _ads.Tick(true, false, 0f);
+
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(30f).Within(1e-4f));
+        }
+
+        [Test]
+        public void TheMagnificationIsShownOnlyWhileAimingAWeaponWithSeveralLevels()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            Assert.That(_ads.Magnification, Is.Null, "not aiming");
+
+            _ads.Tick(true, true, 0f);
+            var first = _ads.Magnification;
+            Assert.That(first, Is.EqualTo(1f / AdsZoom.SensitivityMultiplier(_hip, 30f)).Within(1e-5f));
+
+            _ads.CycleZoomLevel();
+            Assert.That(_ads.Magnification, Is.EqualTo(1f / AdsZoom.SensitivityMultiplier(_hip, 15f)).Within(1e-5f));
+            Assert.That(_ads.Magnification, Is.GreaterThan(first));
+
+            _ads.Tick(false, false, 0f);
+            Assert.That(_ads.Magnification, Is.Null);
+        }
+
+        [Test]
+        public void InitializeTakesTheCycleMagnificationAction()
+        {
+            var cycle = new InputAction("CycleMagnification", InputActionType.Button);
+            try
+            {
+                _ads.Initialize(_camera, _look, _aim, cycle);
+                Assert.That(_ads.CycleMagnificationAction, Is.SameAs(cycle));
+            }
+            finally
+            {
+                cycle.Dispose();
+            }
+        }
+
+        [TestCase(0, 3, 30f, "[View] zoom=1/3 fov=30")]
+        [TestCase(1, 3, 16.43f, "[View] zoom=2/3 fov=16.43")]
+        public void ZoomLogNamesTheLevelFromOne(int index, int count, float fieldOfView, string expected)
+        {
+            Assert.That(AimDownSights.FormatZoomLog(index, count, fieldOfView), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void AimingAWeaponWithSwayTurnsTheCameraAndTheShotWithIt()
+        {
+            InitializeSwaying();
+
+            _ads.Tick(false, false, 0.5f);
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity), "no sway from the hip");
+
+            _ads.Tick(true, true, 0.5f);
+
+            Assert.That(_ads.SwayYawDegrees, Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(_ads.SwayPitchUpDegrees, Is.EqualTo(0f).Within(1e-4f));
+            AssertCameraFollowsTheSway();
+            Assert.That(Vector3.Angle(_camera.transform.forward, _camera.transform.parent.forward), Is.EqualTo(1f).Within(1e-2f));
+            Assert.That(_look.Yaw, Is.Zero, "the sway is not written into the look angles");
+        }
+
+        [Test]
+        public void HoldingBreathSteadiesTheScopeAndRunningOutWidensIt()
+        {
+            InitializeSwaying();
+            _ads.Tick(false, false, 0.5f);
+            _ads.Tick(true, true, 0.5f);
+
+            _ads.HoldBreathInput = true;
+            LogAssert.Expect(LogType.Log, "[View] breath=hold remaining=1.5");
+            _ads.Tick(true, false, 0.5f);
+
+            Assert.That(_ads.IsHoldingBreath, Is.True);
+            AssertSway(1.5f, 0.1f);
+
+            LogAssert.Expect(LogType.Log, "[View] breath=exhausted remaining=1");
+            _ads.Tick(true, false, 2f);
+
+            Assert.That(_ads.IsHoldingBreath, Is.False);
+            Assert.That(_ads.Breath.IsExhausted, Is.True);
+            AssertSway(3.5f, 1.5f);
+
+            _ads.HoldBreathInput = false;
+            LogAssert.Expect(LogType.Log, "[View] breath=ready remaining=2");
+            _ads.Tick(true, false, 0.5f);
+            Assert.That(_ads.Breath.IsExhausted, Is.False);
+            AssertSway(0f, 1f);
+        }
+
+        [Test]
+        public void HoldingBreathDoesNothingFromTheHip()
+        {
+            InitializeSwaying();
+            _ads.HoldBreathInput = true;
+
+            _ads.Tick(false, false, 0.5f);
+
+            Assert.That(_ads.IsHoldingBreath, Is.False);
+            Assert.That(_ads.Breath.RemainingSeconds, Is.EqualTo(2f));
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity));
+        }
+
+        [Test]
+        public void StoppingAimingSettlesTheCameraAndResetViewStraightensItAtOnce()
+        {
+            InitializeSwaying();
+            _ads.Tick(false, false, 0.5f);
+            _ads.Tick(true, true, 0.5f);
+
+            _ads.Tick(false, false, 1f);
+            Assert.That(_ads.Progress, Is.Zero);
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity));
+
+            _ads.Tick(true, true, 1.5f);
+            Assert.That(_camera.transform.localRotation, Is.Not.EqualTo(Quaternion.identity));
+            _ads.HoldBreathInput = true;
+            _ads.Tick(true, false, 1f);
+
+            _ads.ResetView();
+
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(_ads.SwayYawDegrees, Is.Zero);
+            Assert.That(_ads.Breath.RemainingSeconds, Is.EqualTo(2f), "the breath is refilled");
+        }
+
+        [Test]
+        public void AWeaponWithoutSwayLeavesTheCameraAlone()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Rifle(40f);
+            _ads.HoldBreathInput = true;
+
+            _ads.Tick(true, true, 1f);
+
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(_ads.IsHoldingBreath, Is.False);
+        }
+
+        [Test]
+        public void SwayStartsFromTheCamerasOwnRestingRotation()
+        {
+            var rest = Quaternion.Euler(0f, 0f, 5f);
+            _camera.transform.localRotation = rest;
+            InitializeSwaying();
+            _ads.Tick(false, false, 0.5f);
+            _ads.Tick(true, true, 0.5f);
+
+            Assert.That(
+                Quaternion.Angle(_camera.transform.localRotation, rest * Quaternion.Euler(0f, 1f, 0f)), Is.LessThan(1e-2f));
+
+            _ads.ResetView();
+            Assert.That(Quaternion.Angle(_camera.transform.localRotation, rest), Is.LessThan(1e-3f));
+        }
+
+        [Test]
+        public void InitializeTakesTheHoldBreathAction()
+        {
+            var hold = new InputAction("HoldBreath", InputActionType.Button);
+            try
+            {
+                _ads.Initialize(_camera, _look, _aim, null, hold);
+                Assert.That(_ads.HoldBreathAction, Is.SameAs(hold));
+            }
+            finally
+            {
+                hold.Dispose();
+            }
+        }
+
+        [Test]
+        public void SwaySettingsRejectUnusableValues()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ads.ExhaustedSwayMultiplier = 0.5f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ads.SwayBlendSeconds = -1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ads.SwayCycleSeconds = 0f);
+            Assert.That(_ads.ExhaustedSwayMultiplier, Is.EqualTo(BreathHold.DefaultExhaustedSwayMultiplier));
+        }
+
+        [TestCase(true, false, 1.5f, "[View] breath=hold remaining=1.5")]
+        [TestCase(false, true, 0f, "[View] breath=exhausted remaining=0")]
+        [TestCase(false, false, 4f, "[View] breath=ready remaining=4")]
+        public void BreathLogNamesTheState(bool holding, bool exhausted, float remaining, string expected)
+        {
+            Assert.That(AimDownSights.FormatBreathLog(holding, exhausted, remaining), Is.EqualTo(expected));
+        }
+
+        private void InitializeSwaying()
+        {
+            Initialize();
+            _ads.TransitionSeconds = 0.25f;
+            _ads.SwayCycleSeconds = 4f;
+            _ads.SwayBlendSeconds = 0f;
+            _ads.WeaponSource = () => new WeaponSpec(
+                _rifleId,
+                "Swaying",
+                WeaponCategory.MarksmanRifle,
+                aim: new AimSpec(zoomLevels: new[] { 30f }, breathHold: new BreathHoldSpec(2f, 1f, 0.1f), swayDegrees: 1f));
+        }
+
+        private void AssertSway(float seconds, float amplitude)
+        {
+            BreathHold.SwayOffset(seconds, amplitude, 4f, out var pitchUp, out var yaw);
+            Assert.That(_ads.SwayPitchUpDegrees, Is.EqualTo(pitchUp).Within(1e-4f));
+            Assert.That(_ads.SwayYawDegrees, Is.EqualTo(yaw).Within(1e-4f));
+            AssertCameraFollowsTheSway();
+        }
+
+        private void AssertCameraFollowsTheSway()
+        {
+            var expected = Quaternion.Euler(-_ads.SwayPitchUpDegrees, _ads.SwayYawDegrees, 0f);
+            Assert.That(Quaternion.Angle(_camera.transform.localRotation, expected), Is.LessThan(1e-2f));
+        }
+
+        private static WeaponSpec Scoped(string id)
+        {
+            return new WeaponSpec(id, "Scoped", WeaponCategory.MarksmanRifle, aim: new AimSpec(zoomLevels: new[] { 30f, 15f, 7.5f }));
         }
 
         private void Initialize()

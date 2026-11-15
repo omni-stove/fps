@@ -119,9 +119,9 @@ namespace Fps.Runtime
             return new AttributionScope(previous);
         }
 
-        public static void RaiseShotFired(GameObject shooter, Vector3 origin, Vector3 direction, string weaponId)
+        public static void RaiseShotFired(GameObject shooter, Vector3 origin, Vector3 direction, string weaponId, bool tracer = true)
         {
-            Invoke(ShotFired, new ShotFiredInfo(shooter, origin, direction, weaponId));
+            Invoke(ShotFired, new ShotFiredInfo(shooter, origin, direction, weaponId, tracer));
         }
 
         /// <summary>collider から材質・キャラかどうか・部位を引いて (<see cref="ImpactInfo"/> のコライダーを渡すコンストラクタ) 着弾を知らせる。</summary>
@@ -261,12 +261,16 @@ namespace Fps.Runtime
         /// <summary>武器の <see cref="WeaponSpec.Id"/>。分からなければ空文字。null にならない。</summary>
         public string WeaponId => _weaponId ?? string.Empty;
 
-        public ShotFiredInfo(GameObject shooter, Vector3 origin, Vector3 direction, string weaponId)
+        // 飛ぶ弾は弾そのものが見えるので、まっすぐな曳光弾を重ねて出さないよう撃つ側が外せるようにする。
+        public bool Tracer { get; }
+
+        public ShotFiredInfo(GameObject shooter, Vector3 origin, Vector3 direction, string weaponId, bool tracer = true)
         {
             Shooter = shooter;
             Origin = origin;
             Direction = direction.sqrMagnitude > 0f ? direction.normalized : direction;
             _weaponId = weaponId ?? string.Empty;
+            Tracer = tracer;
         }
     }
 

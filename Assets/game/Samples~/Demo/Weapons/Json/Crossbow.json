@@ -1,0 +1,51 @@
+{
+  "id": "7639c28b-90a0-40e4-9def-64cbfaa472b1",
+  "nameKey": "weapon.crossbow",
+  "category": "MarksmanRifle",
+  "shotNoiseRadius": 10,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.8
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 1,
+    "reserveAmmo": 20,
+    "reloadSeconds": 1.2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.5,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 150,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 40,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 5,
+      "onWorldHit": "Stick"
+    }
+  },
+  "impact": {
+    "damage": 100,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 1,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 1.5,
+    "recoilYawDegrees": 0.3,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [45],
+    "swayDegrees": 0
+  }
+}

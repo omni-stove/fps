@@ -65,7 +65,7 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 | 中身 | 置き場所 (サンプルのルートから) |
 | --- | --- |
-| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
+| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`・`Crossbow.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
 | ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
 | ミッション・シーン | `Missions/`・`Scenes/` |
 | ネット対戦の試合の設定 (`NetMatchDefinition`。専用サーバーへ書き出す) | `Rules/NetMatch.asset` |
@@ -201,7 +201,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 ### 武器を JSON から取り込む
 
-1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`)。
+1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`、飛ぶ弾は `Crossbow.json`)。
 
 ```json
 {
@@ -234,7 +234,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 - `nameKey` は画面に出す武器の名前を引く表のキー。文は `Resources/Localization/<言語>/` の JSON (例: `items.json` に `"weapon.rifle": "Rifle"`) に書く。表に無いキーはキーそのものが出る。空か `null` なら `id` が出る。弾薬の種類の `nameKey` も同じ (例: `ammo.dmr.armorPiercing`)。
 - 部品に分ける前の平らな形 (`fireMode`・`magazineSize`・`damage`・`range`・`falloff`・`explosionRadius`・`adsFieldOfView` などを武器の直下に書く) もそのまま読める。`explosionRadius` は `impact.structureRadius`、`adsFieldOfView` は `aim.zoomLevels` の 1 つ目として読み、`adsFieldOfView` は `null` (共通の初期値) も書ける。同じ値を平らな項目と部品の両方に書くとエラーになる。
 - 前の項目名 `displayName` は読まない (書き換えを促すエラーになる)。知らない項目はエラーになる。
-- 飛ぶ弾・ビーム・火炎・爆発の見た目と音は JSON には書かず、取り込んだ `WeaponDefinition` の各部品の参照 (`Visual`・`Sound`) に Inspector で入れる。空ならコードで形を作る。取り込み直しても参照は消えない。
+- 飛ぶ弾・ビーム・火炎・爆発の見た目と音は JSON には書かず、取り込んだ `WeaponDefinition` の各部品の参照 (`Visual`・`Sound`) に Inspector で入れる。空ならコードで形を作る (飛ぶ弾は細い棒)。刺さった弾を残す秒数 (`StuckSeconds`) も見た目だけの値なので同じ所に置く。取り込み直しても参照は消えない。
 - サンプルでは **Fps > Build Weapon Assets** (`Fps.Editor.WeaponAssetBuilder.Build`) が `Weapons/Json/` の JSON をすべてアセットにし、射撃場で拾える武器の一覧 (`Weapons/RangeWeapons.asset`) に並べる。武器を足すときは JSON を 1 つ置いて走らせ直し、TPS の射撃場を作り直す。
 
 batchmode で取り込む:

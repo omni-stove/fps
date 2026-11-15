@@ -771,12 +771,24 @@ namespace Fps.Runtime
             var impact = weapon.AmmoTypes.Impact;
             var charge = Mathf.Clamp01(chargeFraction);
             var delivery = ShotDeliveries.For(round.Delivery);
+            var definition = Definition;
+            var look = definition != null ? definition.Projectile : null;
             _pelletHits.Clear();
             foreach (var planned in rounds)
             {
                 // 撃たれた側が撃った方向へ向かえるよう、弾ごとの始点を撃った者の位置として渡す。
                 var request = new ShotRequest(
-                    shooter, _aim.root, planned.Origin.ToUnity(), round, impact, weapon.Spec.Id, _hitMask, weapon.Spec.Trigger.Charge, charge);
+                    shooter,
+                    _aim.root,
+                    planned.Origin.ToUnity(),
+                    round,
+                    impact,
+                    weapon.Spec.Id,
+                    _hitMask,
+                    weapon.Spec.Trigger.Charge,
+                    charge,
+                    look,
+                    ConfirmHit);
                 CollectHit(delivery.Deliver(request, planned));
             }
 
@@ -803,6 +815,21 @@ namespace Fps.Runtime
             {
                 _pelletHits.Add(
                     outcome.Owner, outcome.Damage, outcome.Hitbox.Zone, outcome.Killed ? DamageOutcome.Killed : DamageOutcome.Damaged);
+            }
+        }
+
+        // 飛ぶ弾は撃った後のフレームで着くので、射撃ごとにまとめる先が無く、着いた弾ごとに知らせる。
+        private void ConfirmHit(ShotOutcome outcome)
+        {
+            if (outcome.Hitbox == null || outcome.Owner == null)
+            {
+                return;
+            }
+
+            Debug.Log($"[Combat] hit zone={outcome.Hitbox.Zone} dmg={outcome.Damage}", this);
+            if (outcome.WasAlive)
+            {
+                CombatEvents.RaiseHitConfirmed(new HitConfirm(outcome.Damage, outcome.Hitbox.Zone, outcome.Killed, downed: false));
             }
         }
 

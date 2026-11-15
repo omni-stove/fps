@@ -222,11 +222,12 @@ namespace Fps.Editor
 
         /// <summary>
         /// launcher の値 (Launcher、Semi、1/4 発、<see cref="LauncherFireInterval"/> 秒、リロード 3 秒、120 ダメージ、射程 150m、減衰なし、
-        /// 建造物への被害の半径 <see cref="LauncherExplosionRadius"/>m)。建造物を壊す確認用で、既定のロードアウトとカタログには入れない。
+        /// 建造物への被害の半径 <see cref="LauncherExplosionRadius"/>m、着弾で <see cref="LauncherExplosion"/> の爆発)。
+        /// 建造物を壊す確認用で、既定のロードアウトとカタログには入れない。
         /// </summary>
         public static WeaponSpec LauncherSpec()
         {
-            return new WeaponSpec(
+            var flat = new WeaponSpec(
                 LauncherId,
                 LauncherNameKey,
                 WeaponCategory.Launcher,
@@ -239,6 +240,13 @@ namespace Fps.Editor
                 150f,
                 DamageFalloff.None,
                 explosionRadius: LauncherExplosionRadius);
+            var impact = new ImpactSpec(flat.Impact.Damage, flat.Impact.Falloff, flat.Impact.StructureRadius, LauncherExplosion());
+            return new WeaponSpec(flat.Id, flat.NameKey, flat.Category, flat.Trigger, flat.Ammo, flat.Round, impact, flat.Aim, flat.AmmoTypes, flat.ShotNoiseRadius);
+        }
+
+        public static ExplosionSpec LauncherExplosion()
+        {
+            return new ExplosionSpec(new ExplosionDamage(100, 5f, 1f), 100);
         }
 
         /// <summary>

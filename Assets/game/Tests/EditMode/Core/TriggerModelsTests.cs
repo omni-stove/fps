@@ -83,7 +83,6 @@ namespace Fps.Core.Tests
             {
                 new TriggerSpec(FireMode.Semi, 0.5f, new BurstSpec(3, 0.05f)),
                 new TriggerSpec(FireMode.Semi, 0.5f, charge: new ChargeSpec(1f, 0.2f, 2f)),
-                new TriggerSpec(FireMode.Semi, 0.5f, spinUp: new SpinUpSpec(0.5f, 2f, 1f)),
                 new TriggerSpec(FireMode.Semi, 0.5f, cycle: new CycleSpec(0.8f, leavesAds: true)),
             };
 

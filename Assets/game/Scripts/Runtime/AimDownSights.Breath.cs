@@ -97,7 +97,7 @@ namespace Fps.Runtime
             var sway = spec != null ? spec.Aim.SwayDegrees : 0f;
             var wasHolding = _breath.IsHolding;
             var wasExhausted = _breath.IsExhausted;
-            _breath.Tick(HoldBreathInput && _aimState.IsActive && sway > 0f, deltaSeconds);
+            _breath.Tick(HoldBreathInput && IsAiming && sway > 0f, deltaSeconds);
             if (_breath.IsHolding != wasHolding || _breath.IsExhausted != wasExhausted)
             {
                 Debug.Log(FormatBreathLog(_breath.IsHolding, _breath.IsExhausted, _breath.RemainingSeconds), this);

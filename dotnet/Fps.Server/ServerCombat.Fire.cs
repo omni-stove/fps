@@ -406,7 +406,7 @@ namespace Fps.Server
         }
 
         // サーバーの知る目の位置から始点までの間に壁があれば、壁の向こうから撃たせない
-        private bool IsOriginBlocked(Vector3 eye, Vector3 origin)
+        internal bool IsOriginBlocked(Vector3 eye, Vector3 origin)
         {
             var toOrigin = origin - eye;
             var distance = toOrigin.Length();

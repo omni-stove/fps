@@ -67,6 +67,14 @@ namespace Fps.Server
                     return;
                 }
 
+                // 押した・離したの間の待ちを数える BeamState を通すのは、離した直後に None の要求を重ねて間合いより速く当てられないようにするため
+                var allowed = beam.State.Start();
+                beam.State.Stop();
+                if (allowed == 0)
+                {
+                    return;
+                }
+
                 beam.Aim(shot, planned, body, LastRecordedTick());
                 beam.Ticks = 0;
                 Emit(beam, body, shot.Tick);
@@ -185,6 +193,18 @@ namespace Fps.Server
         private void Emit(Beam beam, ServerBody body, float tick)
         {
             beam.Pose(body, out var origin, out var direction);
+
+            // 押したときの始点のずれを残して回すので、振り向きや壁寄りで始点が壁の向こうに回り込む。照射のたびに押したときと同じ確かめをやり直す
+            if (Combat.IsOriginBlocked(body.EyePosition, origin))
+            {
+                if (beam.State.IsFiring)
+                {
+                    Stop(beam, ShotRejection.OriginBlocked);
+                }
+
+                return;
+            }
+
             var shot = beam.Shot;
             var round = shot.Round;
             _hits.Clear();

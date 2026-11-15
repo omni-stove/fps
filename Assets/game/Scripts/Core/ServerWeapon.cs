@@ -57,6 +57,8 @@ namespace Fps.Core
         public int ReserveAmmo => _weapon.ReserveAmmo;
         public bool IsReloading => _weapon.IsReloading;
 
+        public AmmoTypeSelector AmmoTypes => _weapon.AmmoTypes;
+
         /// <summary>熱で撃つ弾薬の熱 (0〜1)。熱を持たない弾薬なら null。</summary>
         public float? HeatFraction => _weapon.Ammo.HeatFraction;
 
@@ -151,6 +153,17 @@ namespace Fps.Core
                 Changed?.Invoke();
             }
 
+            return true;
+        }
+
+        public bool TrySwitchAmmoType()
+        {
+            if (!_weapon.TrySwitchAmmoType())
+            {
+                return false;
+            }
+
+            Changed?.Invoke();
             return true;
         }
 

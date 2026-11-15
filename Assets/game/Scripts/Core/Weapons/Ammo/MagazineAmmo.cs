@@ -152,6 +152,18 @@ namespace Fps.Core
             HasJudgedActiveReload = false;
         }
 
+        // 予備弾の上限 (MaxReserveAmmo) で切らないのは、込めてあった弾を戻すだけで、拾って増やしたのではないため。
+        public void Unload()
+        {
+            CancelReload();
+            if (!HasInfiniteReserve)
+            {
+                ReserveAmmo = (int)Math.Min((long)ReserveAmmo + AmmoInMagazine, int.MaxValue);
+            }
+
+            AmmoInMagazine = 0;
+        }
+
         public void Tick(float deltaSeconds)
         {
             SpecGuard.NonNegativeFinite(deltaSeconds, nameof(deltaSeconds));

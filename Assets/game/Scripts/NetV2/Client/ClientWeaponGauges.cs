@@ -38,10 +38,11 @@ namespace Fps.NetV2
                 model.ClearHeat();
             }
 
+            // AmmoTypeIndex の 0 は武器そのものの弾で、種類 n は n + 1 で届く。
             var types = spec.AmmoTypes;
-            if (weapon.AmmoTypeIndex < types.Count)
+            if (weapon.AmmoTypeIndex > 0 && weapon.AmmoTypeIndex <= types.Count)
             {
-                model.SetAmmoTypeName(GameText.Resolve(types[weapon.AmmoTypeIndex].Name));
+                model.SetAmmoTypeName(GameText.Resolve(types[weapon.AmmoTypeIndex - 1].Name));
             }
             else
             {

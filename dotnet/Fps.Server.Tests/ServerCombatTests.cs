@@ -317,6 +317,54 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void SwitchingTheAmmoTypeNeedsAReloadAndThenShotsUseTheServersType()
+        {
+            var piercing = new AmmoTypeSpec("00000000-0000-4000-8000-0000000000a3", "ammo.dmr.armorPiercing", impact: new ImpactSpec(60));
+            var rifle = new WeaponSpec(
+                TestRules.RifleId,
+                "weapon.rifle",
+                WeaponCategory.AssaultRifle,
+                ammo: new AmmoSpec(30, 90, 2f),
+                impact: new ImpactSpec(25),
+                ammoTypes: new[] { new AmmoTypeSpec("00000000-0000-4000-8000-0000000000a2", "ammo.dmr.standard"), piercing });
+            Start(Rules(), rifle: rifle);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            Assert.That(Snapshot(1).Owner.Weapon.AmmoTypeIndex, Is.EqualTo(1), "the first type is loaded");
+            FireAt(1, Body(2).Center);
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 25));
+
+            _host.OnMessage(new ConnectionId(1), new WeaponActionRequestMessage { Action = WeaponAction.SwitchAmmoType });
+
+            var switched = Snapshot(1).Owner.Weapon;
+            Assert.That(switched.AmmoTypeIndex, Is.EqualTo(2));
+            Assert.That(switched.AmmoInMagazine, Is.Zero, "the shared magazine is emptied");
+            Assert.That(switched.ReserveAmmo, Is.EqualTo(90 + 29));
+            Assert.That(_log.ToString(), Does.Contain("[Net] ammo-type player=1 weapon=" + TestRules.RifleId + " index=2"));
+
+            Step(0.2f);
+            FireAt(1, Body(2).Center);
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 25), "no rounds until reloaded");
+
+            Step(2.2f);
+            Assert.That(Snapshot(1).Owner.Weapon.AmmoInMagazine, Is.EqualTo(30));
+            var eye = Body(1).EyePosition;
+            _host.OnMessage(new ConnectionId(1), new FireRequestMessage
+            {
+                WeaponId = TestRules.RifleId,
+                Origin = eye,
+                Direction = Body(2).Center - eye,
+                ClientTick = (int)_host.TickCount,
+                ShotIndex = _shotIndex++,
+                AmmoTypeIndex = 1,
+            });
+
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 25 - 60), "the server's type, not the request's");
+        }
+
+        [Test]
         public void AWeaponExplosionIsCreditedToTheWeapon()
         {
             Start(Rules());
@@ -593,7 +641,7 @@ namespace Fps.Server.Tests
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
-        private void Start(GameRules rules, bool wall = false, bool destructibleWall = false, int wallPieces = 1)
+        private void Start(GameRules rules, bool wall = false, bool destructibleWall = false, int wallPieces = 1, WeaponSpec rifle = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -623,7 +671,7 @@ namespace Fps.Server.Tests
 
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points, structures);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules), PingSpec.Default, "memory", null);
+            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules, rifle: rifle), PingSpec.Default, "memory", null);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(true, _json, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),

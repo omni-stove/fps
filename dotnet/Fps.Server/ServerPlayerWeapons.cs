@@ -10,7 +10,7 @@ namespace Fps.Server
     /// <summary>
     /// 1 人ぶんの持たせている武器の並び (Unity の NetPlayerWeapon のサーバー側)。弾倉・予備弾・リロード・アクティブリロード・持ち替えを
     /// Core の <see cref="ServerWeapon"/> と <see cref="Loadout{T}"/> で進め、持ち主に送る <see cref="WeaponSync"/> を作る。
-    /// 弾薬の種類は武器ごとの <see cref="AmmoTypeSelector"/> で選び、撃つ弾の値 (<see cref="CurrentRound"/>・<see cref="CurrentImpact"/>) はその種類で上書きする。
+    /// 弾薬の種類は武器ごとの <see cref="ServerWeapon.AmmoTypes"/> で選び、撃つ弾の値 (<see cref="CurrentRound"/>・<see cref="CurrentImpact"/>) はその種類で上書きする。
     /// </summary>
     internal sealed class ServerPlayerWeapons
     {
@@ -18,7 +18,6 @@ namespace Fps.Server
         private readonly TextWriter _log;
         private readonly Func<double> _now;
         private Loadout<ServerWeapon> _loadout;
-        private AmmoTypeSelector[] _ammoTypes = Array.Empty<AmmoTypeSelector>();
         private double _reloadStartedAt;
         private float _chargeFraction;
 
@@ -48,7 +47,7 @@ namespace Fps.Server
         /// </summary>
         public byte AmmoTypeIndex => _loadout == null ? (byte)0 : (byte)(CurrentAmmoType.Index + 1);
 
-        private AmmoTypeSelector CurrentAmmoType => _ammoTypes[_loadout.CurrentIndex];
+        private AmmoTypeSelector CurrentAmmoType => _loadout.Current.AmmoTypes;
 
         /// <summary>specs をこの並びで満タンで持たせ、0 番を構えた状態にする。前の武器 (リロード中・持ち替え中を含む) は捨てる。</summary>
         public void Equip(IReadOnlyList<WeaponSpec> specs, float switchSeconds, GameRules rules)
@@ -61,14 +60,11 @@ namespace Fps.Server
             }
 
             var weapons = new ServerWeapon[specs.Count];
-            var ammoTypes = new AmmoTypeSelector[specs.Count];
             for (var i = 0; i < specs.Count; i++)
             {
                 weapons[i] = new ServerWeapon(specs[i] ?? throw new ArgumentException("specs must not contain null", nameof(specs)), rules);
-                ammoTypes[i] = new AmmoTypeSelector(specs[i]);
             }
 
-            _ammoTypes = ammoTypes;
             _chargeFraction = 0f;
             SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon));
         }
@@ -142,10 +138,13 @@ namespace Fps.Server
             return _chargeFraction;
         }
 
-        /// <summary>今の武器の弾薬の種類を次へ切り替える。持ち替え中・装備前・切り替えられない武器なら false。</summary>
+        /// <summary>
+        /// 今の武器の弾薬の種類を次へ切り替え、込めてあった弾を予備弾に戻す (次のリロードから新しい種類を込める)。
+        /// 持ち替え中・装備前・切り替えられない武器なら false。
+        /// </summary>
         public bool TrySwitchAmmoType()
         {
-            if (_loadout == null || _loadout.IsSwitching || !CurrentAmmoType.TrySwitch())
+            if (_loadout == null || _loadout.IsSwitching || !_loadout.Current.TrySwitchAmmoType())
             {
                 return false;
             }

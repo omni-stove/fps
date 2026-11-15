@@ -159,7 +159,7 @@ namespace Fps.NetV2.Tests
         public void TheHudShowsOnlyTheGaugesTheWeaponHas()
         {
             var model = new HudModel();
-            var sync = new WeaponSync { WeaponCount = 1, ChargeFraction = 0.4f, Heat = 0.6f, AmmoTypeIndex = 0 };
+            var sync = new WeaponSync { WeaponCount = 1, ChargeFraction = 0.4f, Heat = 0.6f, AmmoTypeIndex = 1 };
 
             ClientWeaponGauges.Show(model, sync, Rifle(FireMode.Auto));
 
@@ -171,6 +171,14 @@ namespace Fps.NetV2.Tests
 
             Assert.That(model.ChargeFraction, Is.EqualTo(0.4f));
             Assert.That(model.AmmoTypeText, Is.EqualTo("items.ammo.armor_piercing"));
+
+            ClientWeaponGauges.Show(model, new WeaponSync { WeaponCount = 1, AmmoTypeIndex = 0 }, Charged());
+
+            Assert.That(model.AmmoTypeText, Is.Empty, "0 is the weapon's own rounds");
+
+            ClientWeaponGauges.Show(model, new WeaponSync { WeaponCount = 1, AmmoTypeIndex = 2 }, Charged());
+
+            Assert.That(model.AmmoTypeText, Is.Empty, "past the last type");
 
             ClientWeaponGauges.Show(model, sync, Heated());
 

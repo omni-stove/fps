@@ -105,6 +105,34 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheDmrSampleSwitchesFromStandardToArmorPiercingRounds()
+        {
+            var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/Dmr.json"));
+            var spec = WeaponJsonImporter.ParseSpec(json, "Dmr.json");
+            var asset = WeaponAssetBuilder.LoadRangeWeapons().Weapons.Single(d => d.name == "Dmr");
+
+            Assert.That(WeaponSpecJson.Write(asset.ToSpec()), Is.EqualTo(WeaponSpecJson.Write(spec)), "the committed asset is the JSON");
+            Assert.That(spec.AmmoTypes.Select(t => t.NameKey), Is.EqualTo(new[] { "ammo.dmr.standard", "ammo.dmr.armorPiercing" }));
+            foreach (var type in spec.AmmoTypes)
+            {
+                foreach (var language in GameLanguages.All)
+                {
+                    Assert.That(Localizer.TableOf(language).Contains(type.NameKey), Is.True, $"{GameLanguages.Code(language)}: {type.NameKey}");
+                }
+            }
+
+            var weapon = new Weapon(spec);
+            var standard = weapon.AmmoTypes.Impact.Damage;
+            Assert.That(weapon.AmmoTypes.Round.Penetration, Is.Null);
+
+            Assert.That(weapon.TrySwitchAmmoType(), Is.True);
+
+            Assert.That(weapon.AmmoTypes.Current.NameKey, Is.EqualTo("ammo.dmr.armorPiercing"));
+            Assert.That(weapon.AmmoTypes.Round.Penetration, Is.Not.Null, "armor-piercing rounds carry the penetration values");
+            Assert.That(weapon.AmmoTypes.Impact.Damage, Is.Not.EqualTo(standard));
+        }
+
+        [Test]
         public void TheCommittedRangeListHoldsEverySampleWeapon()
         {
             var range = WeaponAssetBuilder.LoadRangeWeapons();

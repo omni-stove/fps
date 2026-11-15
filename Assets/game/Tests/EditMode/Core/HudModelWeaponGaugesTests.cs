@@ -103,6 +103,32 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ShowsTheChosenAmmoTypeAndTheEmptiedMagazineWhenItIsSwitched()
+        {
+            var standard = new AmmoTypeSpec("00000000-0000-4000-8000-0000000000a2", "ammo.dmr.standard");
+            var piercing = new AmmoTypeSpec("00000000-0000-4000-8000-0000000000a3", "ammo.dmr.armorPiercing", impact: new ImpactSpec(30));
+            var weapon = new Weapon(new WeaponSpec(
+                _rifleId, null, WeaponCategory.SniperRifle, ammo: new AmmoSpec(5, 10, 1f), ammoTypes: new[] { standard, piercing }));
+            var model = new HudModel();
+
+            model.BindWeapon(weapon);
+
+            Assert.That(model.AmmoTypeText, Is.EqualTo(GameText.Resolve(standard.Name)));
+
+            var changes = Record(model);
+            weapon.TrySwitchAmmoType();
+
+            Assert.That(model.AmmoTypeText, Is.EqualTo(GameText.Resolve(piercing.Name)));
+            Assert.That(changes, Has.Member(HudField.AmmoType).And.Member(HudField.Ammo));
+
+            model.BindWeapon(null);
+            changes.Clear();
+            weapon.TrySwitchAmmoType();
+
+            Assert.That(changes, Is.Empty, "unbound weapons no longer report");
+        }
+
+        [Test]
         public void RejectsInvalidInput()
         {
             var model = new HudModel();

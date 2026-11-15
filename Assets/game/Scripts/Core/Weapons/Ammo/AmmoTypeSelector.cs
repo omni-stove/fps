@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Fps.Core
 {
@@ -11,12 +10,13 @@ namespace Fps.Core
         public AmmoTypeSelector(WeaponSpec spec)
         {
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));
+            Index = spec.AmmoTypes.Count > 0 ? 0 : -1;
         }
 
         public IReadOnlyList<AmmoTypeSpec> Types => _spec.AmmoTypes;
 
-        // 種類を選んでいない間は -1 にして、武器そのものの Round / Impact で撃つ。
-        public int Index { get; private set; } = -1;
+        // 種類を持たない武器は -1 にして、武器そのものの Round / Impact で撃つ。種類を持つ武器は種類を選ばずには撃たないので、0 番から始める。
+        public int Index { get; private set; }
 
         public AmmoTypeSpec Current => Index >= 0 ? _spec.AmmoTypes[Index] : null;
 
@@ -24,10 +24,16 @@ namespace Fps.Core
 
         public ImpactSpec Impact => Current != null ? Current.ImpactOr(_spec.Impact) : _spec.Impact;
 
-        [SuppressMessage("Performance", "CA1822", Justification = "Switching keeps the chosen type on the instance")]
         public bool TrySwitch()
         {
-            return false;
+            var count = _spec.AmmoTypes.Count;
+            if (count < 2)
+            {
+                return false;
+            }
+
+            Index = (Index + 1) % count;
+            return true;
         }
     }
 }

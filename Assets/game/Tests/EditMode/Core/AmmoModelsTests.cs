@@ -8,6 +8,27 @@ namespace Fps.Core.Tests
     {
         private const string _rifleId = "00000000-0000-4000-8000-000000000001";
         private const string _slugId = "00000000-0000-4000-8000-0000000000a1";
+        private const string _standardId = "00000000-0000-4000-8000-0000000000a2";
+        private const string _piercingId = "00000000-0000-4000-8000-0000000000a3";
+
+        private static WeaponSpec TwoTypes()
+        {
+            return new WeaponSpec(
+                _rifleId,
+                null,
+                WeaponCategory.SniperRifle,
+                ammo: new AmmoSpec(5, 10, 1f),
+                impact: new ImpactSpec(40),
+                ammoTypes: new[]
+                {
+                    new AmmoTypeSpec(_standardId, "ammo.dmr.standard"),
+                    new AmmoTypeSpec(
+                        _piercingId,
+                        "ammo.dmr.armorPiercing",
+                        new RoundSpec(RoundDelivery.Hitscan, penetration: new PenetrationSpec(2, 0.75f, 0.5f)),
+                        new ImpactSpec(30)),
+                });
+        }
 
         private static AmmoSpec Heat()
         {
@@ -94,18 +115,133 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheAmmoTypeSelectorKeepsTheWeaponsOwnRoundAndImpact()
+        public void AWeaponWithoutAmmoTypesKeepsItsOwnRoundAndImpact()
         {
-            var slug = new AmmoTypeSpec(_slugId, "ammo.slug", impact: new ImpactSpec(90));
-            var spec = new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, ammoTypes: new[] { slug });
+            var spec = new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle);
             var selector = new AmmoTypeSelector(spec);
 
-            Assert.That(selector.Types, Is.EqualTo(new[] { slug }));
             Assert.That(selector.TrySwitch(), Is.False);
             Assert.That(selector.Index, Is.EqualTo(-1));
             Assert.That(selector.Current, Is.Null);
             Assert.That(selector.Round, Is.SameAs(spec.Round));
             Assert.That(selector.Impact, Is.SameAs(spec.Impact));
+        }
+
+        [Test]
+        public void AWeaponWithOneAmmoTypeLoadsItAndHasNothingToSwitchTo()
+        {
+            var slug = new AmmoTypeSpec(_slugId, "ammo.slug", impact: new ImpactSpec(90));
+            var selector = new AmmoTypeSelector(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, ammoTypes: new[] { slug }));
+
+            Assert.That(selector.Types, Is.EqualTo(new[] { slug }));
+            Assert.That(selector.Index, Is.Zero);
+            Assert.That(selector.Current, Is.SameAs(slug));
+            Assert.That(selector.Impact.Damage, Is.EqualTo(90));
+            Assert.That(selector.TrySwitch(), Is.False);
+            Assert.That(selector.Index, Is.Zero);
+        }
+
+        [Test]
+        public void SwitchingCyclesThroughTheTypesInOrderAndBack()
+        {
+            var spec = TwoTypes();
+            var selector = new AmmoTypeSelector(spec);
+
+            Assert.That(selector.Index, Is.Zero, "starts with the first type");
+            Assert.That(selector.Current.Id, Is.EqualTo(_standardId));
+            Assert.That(selector.Round, Is.SameAs(spec.Round), "a type without a round fires the weapon's round");
+            Assert.That(selector.Impact, Is.SameAs(spec.Impact));
+
+            Assert.That(selector.TrySwitch(), Is.True);
+            Assert.That(selector.Index, Is.EqualTo(1));
+            Assert.That(selector.Current.Id, Is.EqualTo(_piercingId));
+            Assert.That(selector.Round.Penetration.MaxPenetrations, Is.EqualTo(2));
+            Assert.That(selector.Impact.Damage, Is.EqualTo(30));
+
+            Assert.That(selector.TrySwitch(), Is.True);
+            Assert.That(selector.Index, Is.Zero, "wraps around to the first type");
+            Assert.That(selector.Round, Is.SameAs(spec.Round));
+            Assert.That(selector.Impact.Damage, Is.EqualTo(40));
+        }
+
+        [Test]
+        public void SwitchingTheWeaponsAmmoTypeEmptiesTheSharedMagazineSoTheNextRoundsNeedAReload()
+        {
+            var weapon = new Weapon(TwoTypes());
+            var switched = 0;
+            weapon.AmmoTypeSwitched += () => switched++;
+            Assert.That(weapon.TryFire(), Is.True);
+
+            Assert.That(weapon.TrySwitchAmmoType(), Is.True);
+
+            Assert.That(switched, Is.EqualTo(1));
+            Assert.That(weapon.AmmoTypes.Impact.Damage, Is.EqualTo(30));
+            Assert.That(weapon.AmmoInMagazine, Is.Zero);
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(10 + 4), "the loaded rounds go back to the reserve");
+            Assert.That(weapon.TryFire(), Is.False, "the switched rounds are not loaded yet");
+
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(1f);
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(9));
+            Assert.That(weapon.TryFire(), Is.True);
+        }
+
+        [Test]
+        public void SwitchingTheAmmoTypeCancelsAReload()
+        {
+            var weapon = new Weapon(TwoTypes());
+            weapon.TryFire();
+            weapon.TryStartReload();
+            var reloaded = 0;
+            weapon.Reloaded += () => reloaded++;
+
+            Assert.That(weapon.TrySwitchAmmoType(), Is.True);
+            weapon.Tick(1f);
+
+            Assert.That(weapon.IsReloading, Is.False);
+            Assert.That(reloaded, Is.Zero);
+            Assert.That(weapon.AmmoInMagazine, Is.Zero);
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(14));
+        }
+
+        [Test]
+        public void AWeaponWithNothingToSwitchToKeepsItsMagazine()
+        {
+            var weapon = new Weapon(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, ammo: new AmmoSpec(5, 10, 1f)));
+            var switched = 0;
+            weapon.AmmoTypeSwitched += () => switched++;
+
+            Assert.That(weapon.TrySwitchAmmoType(), Is.False);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(5));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(10));
+            Assert.That(switched, Is.Zero);
+        }
+
+        [Test]
+        public void UnloadingWithAnInfiniteReserveOnlyEmptiesTheMagazine()
+        {
+            var infinite = GameRules.Default.WithInfiniteReserve(true);
+            var ammo = new MagazineAmmo(new AmmoSpec(5, 10, 1f), infinite);
+
+            ammo.Unload();
+
+            Assert.That(ammo.AmmoInMagazine, Is.Zero);
+            Assert.That(ammo.ReserveAmmo, Is.EqualTo(10));
+            Assert.That(ammo.TryStartReload(), Is.True);
+        }
+
+        [Test]
+        public void EveryAmmoModelUnloadsIntoTheReserve()
+        {
+            foreach (var model in new[] { AmmoModels.For(Heat(), GameRules.Default), AmmoModels.For(PerRound(), GameRules.Default) })
+            {
+                model.Unload();
+
+                Assert.That(model.AmmoInMagazine, Is.Zero, model.GetType().Name);
+                Assert.That(model.ReserveAmmo, Is.EqualTo(15), model.GetType().Name);
+            }
         }
 
         [Test]

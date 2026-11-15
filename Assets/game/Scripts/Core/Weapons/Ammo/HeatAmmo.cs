@@ -67,6 +67,11 @@ namespace Fps.Core
             _magazine.CancelReload();
         }
 
+        public void Unload()
+        {
+            _magazine.Unload();
+        }
+
         public void Tick(float deltaSeconds)
         {
             _magazine.Tick(deltaSeconds);

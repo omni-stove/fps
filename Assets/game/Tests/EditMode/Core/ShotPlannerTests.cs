@@ -62,13 +62,6 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheRoundHooksDoNothingForNow()
-        {
-            var velocity = new Vector3(0f, 0f, 30f);
-            Assert.That(ProjectileSteering.Steer(new HomingSpec(1f, 10f, 90f), Vector3.Zero, velocity, Vector3.UnitX, 0.1f), Is.EqualTo(velocity));
-        }
-
-        [Test]
         public void RejectsInvalidInput()
         {
             Assert.Throws<ArgumentNullException>(() => ShotPlanner.Plan(null, Vector3.Zero, Vector3.UnitZ, 0f, 0, 0));

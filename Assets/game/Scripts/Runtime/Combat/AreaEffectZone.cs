@@ -197,6 +197,8 @@ namespace Fps.Runtime
 
         partial void StepFire(float deltaSeconds);
 
+        partial void BuildFireVisual(ref bool built);
+
         private void BuildVisual()
         {
             var prefab = KindId.Length > 0 ? Resources.Load<GameObject>(VisualResourceFolder + "/" + KindId) : null;
@@ -208,6 +210,11 @@ namespace Fps.Runtime
 
             var built = false;
             BuildSmokeVisual(ref built);
+            if (!built)
+            {
+                BuildFireVisual(ref built);
+            }
+
             if (built)
             {
                 return;

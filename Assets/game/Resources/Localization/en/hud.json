@@ -43,5 +43,7 @@
   "hud.heat": "Heat {0}%",
   "hud.magnification": "x{0}",
   "hud.lockOn": "Lock {0}%",
-  "hud.lockedOn": "Locked"
+  "hud.lockedOn": "Locked",
+  "hud.ability.withHint": "{0}  {1}",
+  "hud.remoteCharge.detonate": "Tap to detonate {0} x{1}"
 }

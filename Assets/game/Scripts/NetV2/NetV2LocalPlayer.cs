@@ -169,7 +169,7 @@ namespace Fps.NetV2
             var cover = Take(ref _coverLatched) && !paused;
             var dodge = Take(ref _dodgeLatched) && !paused;
             var prone = Take(ref _proneLatched) && !paused;
-            var aim = !paused && !BlocksAds && _aim != null && _aim.IsPressed();
+            var aim = IsAiming;
             var degrees = _look != null && _look.enabled && _look.IsInitialized ? _look.Yaw : transform.eulerAngles.y;
             yaw = degrees * Mathf.Deg2Rad;
             buttons = SnapshotMotion.Buttons(sprint, jump, crouch, cover, aim, dodge, prone);
@@ -177,6 +177,8 @@ namespace Fps.NetV2
 
         // 覗き込みを止める撃ち方 (ITriggerModel.BlocksAds) は持っている武器で決まり、武器はサーバーのスナップショットで分かるので外から渡す。
         public bool BlocksAds { get; set; }
+
+        public bool IsAiming => !GameUi.IsPauseOpen && !BlocksAds && _aim != null && _aim.IsPressed();
 
         /// <summary>射撃を押したか。読むと忘れる。</summary>
         public bool TakeAttack() => Take(ref _attackLatched);

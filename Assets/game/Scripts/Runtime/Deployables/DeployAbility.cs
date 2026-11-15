@@ -1,12 +1,14 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
 namespace Fps.Runtime
 {
     // 押している間は見本を出して狙い、離したら置く。押した時点で置くと、置ける所かを見てから決められない。
-    // 回数は押した時点で枠が減らすので、置かずに終えたとき (置けない所で離した・止められた) は返す。
-    public sealed class DeployAbility : IAbility
+    // 回数は押した時点で枠が減らすので、置かずに終えたとき (置けない所で離した・止められた・起爆した) は返す。
+    // 起爆できる種類 (C4) は、置いた物があるうちに狙う前に離すと起爆する。押し続けると、いつもどおり狙って置く。
+    public sealed class DeployAbility : IAbility, IAbilityFollowUp
     {
         private readonly DeployAbilityDefinition _definition;
         private readonly DeploySpec _spec;
@@ -14,6 +16,11 @@ namespace Fps.Runtime
         private DeployVerdict? _shown;
         private DeployVerdict? _refusal;
         private bool _placed;
+        private bool _aiming;
+        private float _heldSeconds;
+        private bool _detonated;
+        private bool _overLimit;
+        private Collider _surface;
 
         public DeployAbility(DeployAbilityDefinition definition, DeploySpec spec)
         {
@@ -36,6 +43,12 @@ namespace Fps.Runtime
                 return true;
             }
 
+            // 置ける数まで置いていても、短く押して起爆できるようにする。
+            if (CanDetonate(owner))
+            {
+                return true;
+            }
+
             Debug.Log(DeployLog.LimitReached(owner.OwnerId, kind, owner.ActiveCount(kind), _spec.MaxActive), context.Owner);
             return false;
         }
@@ -45,15 +58,45 @@ namespace Fps.Runtime
             _placed = false;
             _shown = null;
             _refusal = null;
+            _detonated = false;
+            _overLimit = false;
+            _surface = null;
+            _heldSeconds = 0f;
+            _aiming = !CanDetonate(DeployOwner.GetOrAdd(context.Owner));
             DestroyPreview();
             _preview = _definition.CreatePreview(_spec);
+
+            // 起爆か置くかが決まるまでは、見本を出さない。
+            if (!_aiming && _preview != null)
+            {
+                _preview.Hide();
+            }
         }
 
         public bool Tick(AbilityContext context, float deltaSeconds)
         {
+            if (!_aiming)
+            {
+                var step = DeployReuse.Decide(context.IsHeld, _heldSeconds, _definition.DetonateTapSeconds);
+                if (step == DeployReuseStep.Detonate)
+                {
+                    Detonate(context);
+                    return false;
+                }
+
+                if (step == DeployReuseStep.Wait)
+                {
+                    _heldSeconds += deltaSeconds;
+                    return true;
+                }
+
+                _aiming = true;
+            }
+
             DeploySurveyor.ResolveAim(context.Owner, out var origin, out var direction);
-            var verdict = DeploySurveyor.Survey(context.Owner.transform, origin, direction, _spec, out var pose);
-            Show(context, verdict, pose);
+            var verdict = _definition.Survey(context.Owner.transform, origin, direction, _spec, out var pose, out var surface);
+            var room = DeployOwner.GetOrAdd(context.Owner).CanPlace(_definition.Id, _spec);
+            Show(context, verdict, room, pose);
 
             if (!context.IsEffective || context.IsHeld)
             {
@@ -66,8 +109,34 @@ namespace Fps.Runtime
                 return false;
             }
 
+            if (!room)
+            {
+                _overLimit = true;
+                return false;
+            }
+
+            _surface = surface;
             Place(context, pose);
             return false;
+        }
+
+        // 回数を使い切った・待ち時間の間でも、置いた物があれば押してすぐ起爆する (置けないので狙う必要がない)。
+        public bool TryFollowUp(AbilityContext context)
+        {
+            if (!CanDetonate(DeployOwner.GetOrAdd(context.Owner)))
+            {
+                return false;
+            }
+
+            Detonate(context);
+            return true;
+        }
+
+        public bool TryGetFollowUpHint(AbilityContext context, out LocalizedText hint)
+        {
+            hint = default;
+            var owner = context.Owner.GetComponent<DeployOwner>();
+            return owner != null && CanDetonate(owner) && _definition.TryGetDetonateHint(owner.ActiveCount(_definition.Id), out hint);
         }
 
         public void End(AbilityContext context, bool interrupted)
@@ -79,9 +148,21 @@ namespace Fps.Runtime
             }
 
             context.Slot.Refund();
-            var ownerId = DeployOwner.GetOrAdd(context.Owner).OwnerId;
+            if (_detonated)
+            {
+                return;
+            }
+
+            var owner = DeployOwner.GetOrAdd(context.Owner);
+            var ownerId = owner.OwnerId;
             var charges = context.Slot.Charges;
             var max = context.Slot.Spec.MaxCharges;
+            if (_overLimit && !interrupted)
+            {
+                Debug.Log(DeployLog.LimitReached(ownerId, _definition.Id, owner.ActiveCount(_definition.Id), _spec.MaxActive), context.Owner);
+                return;
+            }
+
             Debug.Log(
                 _refusal.HasValue && !interrupted
                     ? DeployLog.Refused(ownerId, _definition.Id, _refusal.Value, charges, max)
@@ -89,12 +170,25 @@ namespace Fps.Runtime
                 context.Owner);
         }
 
+        private bool CanDetonate(DeployOwner owner)
+        {
+            return _definition.Detonates && owner.ActiveCount(_definition.Id) > 0;
+        }
+
+        // 起爆で消えると持ち主の一覧が縮むので、写してから渡す。
+        private void Detonate(AbilityContext context)
+        {
+            var placed = new List<Deployable>(DeployOwner.GetOrAdd(context.Owner).Active(_definition.Id));
+            _definition.Detonate(placed, context);
+            _detonated = true;
+        }
+
         // 毎フレーム出すとログが埋まるので、判定が変わったときだけ出す。
-        private void Show(AbilityContext context, DeployVerdict verdict, Pose pose)
+        private void Show(AbilityContext context, DeployVerdict verdict, bool room, Pose pose)
         {
             if (_preview != null)
             {
-                _preview.Show(pose, verdict == DeployVerdict.Ok);
+                _preview.Show(pose, verdict == DeployVerdict.Ok && room);
             }
 
             if (_shown != verdict)
@@ -124,7 +218,7 @@ namespace Fps.Runtime
             // 持ち主の一覧に入った後なので、Remove を通して一覧からも外す (Edit Mode では OnDestroy が呼ばれず、壊すだけでは一覧に残る)。
             try
             {
-                _definition.NotifyPlaced(deployable, context);
+                _definition.NotifyPlaced(deployable, context, _surface);
             }
             catch
             {

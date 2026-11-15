@@ -46,6 +46,12 @@ namespace Fps.Runtime
                 return mineName;
             }
 
+            // C4 も地雷と同じく、爆発は置いた物の種類 (能力の Id) で帰属する。
+            if (RemoteChargeDeployDefinition.TryFindName(killer, weaponId, out var chargeName))
+            {
+                return chargeName;
+            }
+
             var controller = killer.GetComponentInChildren<WeaponController>(true);
             var loadout = controller != null ? controller.Loadout : null;
             if (loadout != null)

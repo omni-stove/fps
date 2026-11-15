@@ -31,13 +31,6 @@ namespace Fps.NetV2
         // spec が null でも決められるようにするのは、武器の値がまだ引けないときも弾倉の残りで今までどおり決めるため。
         public static FireDecision Decide(SnapshotMessage latest, int playerId, in CharacterMotorState predicted, WeaponSpec spec)
         {
-            return Decide(latest, playerId, predicted, spec, null);
-        }
-
-        // overheat が null でも決められるようにするのは、上の形と同じく熱が上限の間だけ待つ今までの決め方を残すため。
-        public static FireDecision Decide(
-            SnapshotMessage latest, int playerId, in CharacterMotorState predicted, WeaponSpec spec, ClientOverheat overheat)
-        {
             if (latest == null || !latest.HasOwner)
             {
                 return FireDecision.Hold;
@@ -67,8 +60,7 @@ namespace Fps.NetV2
             // 熱で撃つ武器は弾倉を持たずリロードもしないので、オーバーヒートして冷め切るまでは頼まずに待つ。
             if (spec != null && spec.Ammo.Kind == AmmoKind.Heat)
             {
-                var overheated = weapon.IsOverheated || weapon.Heat >= 1f || (overheat != null && overheat.IsOverheated(latest.Owner));
-                return overheated ? FireDecision.Hold : FireDecision.Fire;
+                return weapon.IsOverheated || weapon.Heat >= 1f ? FireDecision.Hold : FireDecision.Fire;
             }
 
             return weapon.AmmoInMagazine > 0 ? FireDecision.Fire : FireDecision.Reload;
@@ -89,6 +81,19 @@ namespace Fps.NetV2
             request.HasLockTarget = lockTargetId.HasValue;
             request.LockTargetId = lockTargetId ?? 0;
             request.Trigger = edge;
+        }
+
+        // 弾薬の種類の番号は 0 が武器そのものの弾、1 からが WeaponSpec.AmmoTypes の番号 + 1 (サーバーの ServerPlayerWeapons.AmmoTypeIndex と同じ)。
+        public static RoundSpec CurrentRound(OwnerSnapshot owner, WeaponSpec spec)
+        {
+            if (owner == null || spec == null)
+            {
+                return null;
+            }
+
+            var index = owner.Weapon.AmmoTypeIndex;
+            var types = spec.AmmoTypes;
+            return index > 0 && index <= types.Count ? types[index - 1].RoundOr(spec.Round) : spec.Round;
         }
 
         /// <summary>今持っている武器の Id。武器が届いていなければ null。</summary>

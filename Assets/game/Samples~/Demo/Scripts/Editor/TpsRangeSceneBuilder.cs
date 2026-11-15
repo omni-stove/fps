@@ -189,6 +189,9 @@ namespace Fps.Editor
             // 地雷もタレットと同じく枠には入れず、アセットだけ用意する。試すときは盾の枠と入れ替える。
             AbilityAssetBuilder.LoadOrBuildMineAbility();
 
+            // C4 も地雷と同じく枠には入れず、アセットだけ用意する。試すときは盾の枠と入れ替える。
+            AbilityAssetBuilder.LoadOrBuildRemoteChargeAbility();
+
             // 物を投げる能力も枠に入れず、smoke の手順 (DistractionSmokeStep) がグラップルの枠と入れ替える。
             AbilityAssetBuilder.LoadOrBuildDistractionAbility();
 

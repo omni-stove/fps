@@ -153,7 +153,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            var step = _flight.Step(deltaSeconds);
+            var step = _flight.Step(deltaSeconds, _request.HomingTarget?.Invoke());
             Place();
             switch (step.State)
             {

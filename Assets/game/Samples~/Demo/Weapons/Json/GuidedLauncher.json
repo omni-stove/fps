@@ -1,0 +1,63 @@
+{
+  "id": "5b8e2f47-c1d9-4a36-9e70-3f6a8d2b1c54",
+  "nameKey": "weapon.guidedLauncher",
+  "category": "Launcher",
+  "shotNoiseRadius": 50,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.5
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 1,
+    "reserveAmmo": 6,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.5,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 150,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 25,
+      "gravityMultiplier": 0,
+      "lifetimeSeconds": 6,
+      "onWorldHit": "Stop"
+    },
+    "homing": {
+      "lockOnSeconds": 1,
+      "lockOnConeDegrees": 8,
+      "turnDegreesPerSecond": 90
+    }
+  },
+  "impact": {
+    "damage": 120,
+    "falloff": "None",
+    "structureRadius": 4,
+    "explosion": {
+      "maxDamage": 100,
+      "radius": 4,
+      "fullDamageRadius": 1,
+      "structureDamageAtCenter": 100,
+      "detonation": "OnImpact"
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 0,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0,
+    "recoilPitchDegrees": 0,
+    "recoilYawDegrees": 0,
+    "recoilRecoveryPerSecond": 0,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  }
+}

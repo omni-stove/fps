@@ -17,7 +17,8 @@ namespace Fps.Runtime
             ChargeSpec charge = null,
             float chargeFraction = 0f,
             ProjectileSettings projectileLook = null,
-            Action<ShotOutcome> landed = null)
+            Action<ShotOutcome> landed = null,
+            Func<System.Numerics.Vector3?> homingTarget = null)
         {
             if (!(chargeFraction >= 0f) || chargeFraction > 1f)
             {
@@ -35,6 +36,7 @@ namespace Fps.Runtime
             ChargeFraction = chargeFraction;
             ProjectileLook = projectileLook;
             Landed = landed;
+            HomingTarget = homingTarget;
         }
 
         // 撃った者が分からない弾 (仕掛けや試験の弾) もあるので null を許す。
@@ -61,5 +63,8 @@ namespace Fps.Runtime
 
         // 飛ぶ弾は Deliver が返った後に当たるので、当たったことを撃った側へ後から知らせる。
         public Action<ShotOutcome> Landed { get; }
+
+        // 誘導する弾は飛んでいる間ずっと相手の今の位置へ曲がるので、位置ではなく引く関数を渡す。null なら追わない。
+        public Func<System.Numerics.Vector3?> HomingTarget { get; }
     }
 }

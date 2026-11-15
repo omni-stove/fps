@@ -43,5 +43,7 @@
   "hud.heat": "熱 {0}%",
   "hud.magnification": "x{0}",
   "hud.lockOn": "ロックオン {0}%",
-  "hud.lockedOn": "ロックオン完了"
+  "hud.lockedOn": "ロックオン完了",
+  "hud.ability.withHint": "{0}  {1}",
+  "hud.remoteCharge.detonate": "短く押して{0}を起爆 x{1}"
 }

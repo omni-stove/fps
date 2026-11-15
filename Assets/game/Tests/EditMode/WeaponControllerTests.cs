@@ -1042,6 +1042,47 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PickingUpAWeaponKeepsTheLoadedAmmoTypeOfTheOthers()
+        {
+            var dmr = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var handgun = CreateHandgun();
+            try
+            {
+                dmr.name = "Dmr";
+                WeaponAssets.Configure(dmr, new Fps.Core.WeaponSpec(
+                    TestWeapons.RifleId,
+                    "weapon.dmr",
+                    Fps.Core.WeaponCategory.MarksmanRifle,
+                    ammo: new Fps.Core.AmmoSpec(15, 60, 2f),
+                    impact: new Fps.Core.ImpactSpec(45),
+                    ammoTypes: new[]
+                    {
+                        new Fps.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a2", "ammo.dmr.standard"),
+                        new Fps.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a3", "ammo.dmr.armorPiercing", impact: new Fps.Core.ImpactSpec(36)),
+                    }));
+                _controller.Initialize(_camera.transform, _attack, _reload, dmr);
+                LogAssert.Expect(LogType.Log, new Regex("^" + Regex.Escape(WeaponController.AmmoTypeSwitchedLogPrefix)));
+                _controller.SwitchAmmoType();
+                _controller.StartReload();
+                LogAssert.Expect(LogType.Log, WeaponController.ReloadedLog);
+                _controller.Tick(2f);
+
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] weapon added"));
+                Assert.That(_controller.AddWeapon(handgun), Is.True);
+
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(15));
+                Assert.That(_controller.Weapon.AmmoTypes.Index, Is.EqualTo(1), "the armor-piercing rounds stay loaded");
+                Assert.That(_controller.Weapon.AmmoTypes.Impact.Damage, Is.EqualTo(36));
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.DestroyImmediate(dmr);
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
         public void AWeaponWithoutAmmoTypesDoesNotSwitch()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);

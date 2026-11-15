@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -6,7 +7,7 @@ namespace Fps.Runtime
 {
     // 近接の入力 (MeleeController) で、相手と自分の状態に合う技 (ContextMeleeSelector) があればふつうの近接の代わりに出す。
     // 技は「位置を合わせる → 双方の操作を止めたまま演出の秒数を待つ → 結果を出す」の順に進め、演出は IContextMeleePresenter に任せる。
-    // 使えるかは近接のルール (Melee) に従う。技だけを切りたいゲームは IncludeFinisher を切るか Selector から外す。
+    // 使えるかは近接のルール (Melee) に従う。技だけを切りたいゲームは IncludeFinisher・IncludeTakedown を切るか Selector から外す。
     [DisallowMultipleComponent]
     public sealed class ContextMeleeAction : MonoBehaviour, IWeaponModifier
     {
@@ -18,12 +19,16 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("怯んだ相手への処刑技を登録するか。値は MeleeController の近接の値 (MeleeSpec) から作る")]
         private bool _includeFinisher = true;
 
+        [SerializeField, Tooltip("気づいていない相手を背後から倒す技を登録するか。値は MeleeController の近接の値 (MeleeSpec) から作る")]
+        private bool _includeTakedown = true;
+
         private readonly ContextMeleeSelector _selector = new ContextMeleeSelector();
         private readonly ContextMeleeRun _run = new ContextMeleeRun();
         private MeleeController _melee;
         private Damageable _self;
         private Melee _rule = Melee.Off;
         private MeleeSpec _finisherSource;
+        private MeleeSpec _takedownSource;
         private MeleeSpec _searchSpec;
         private MeleeSpec _searchSource;
         private float _searchReach;
@@ -45,6 +50,8 @@ namespace Fps.Runtime
         private Vector3 _alignTo;
         private float _yawFrom;
         private float _yawTo;
+        private readonly HashSet<EnemyStealth> _witnessed = new HashSet<EnemyStealth>();
+        private readonly List<EnemyStealth> _witnessCandidates = new List<EnemyStealth>();
 
         public ContextMeleeSelector Selector => _selector;
 
@@ -75,7 +82,17 @@ namespace Fps.Runtime
             set
             {
                 _includeFinisher = value;
-                SyncFinisher();
+                SyncMoves();
+            }
+        }
+
+        public bool IncludeTakedown
+        {
+            get => _includeTakedown;
+            set
+            {
+                _includeTakedown = value;
+                SyncMoves();
             }
         }
 
@@ -133,7 +150,7 @@ namespace Fps.Runtime
             }
 
             _self = GetComponent<Damageable>();
-            SyncFinisher();
+            SyncMoves();
             return true;
         }
 
@@ -168,7 +185,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            SyncFinisher();
+            SyncMoves();
             var spec = SearchSpec();
             if (spec == null)
             {
@@ -221,9 +238,14 @@ namespace Fps.Runtime
 
             // プレイヤーは常にこちらを見ている前提にする。見ているかを知る口が無いので、気づいていないと誤って出すよりよい。
             var agent = target.GetComponent<EnemyAgent>();
-            if (agent != null && agent.IsInitialized && (agent.State == EnemyState.Idle || agent.State == EnemyState.Patrol))
+            if (agent != null && agent.IsInitialized)
             {
-                conditions |= ContextMeleeConditions.TargetUnaware;
+                var stealth = target.GetComponent<EnemyStealth>();
+                var stage = stealth != null ? stealth.Stage : AwarenessStage.Unaware;
+                if (ContextMeleeSelector.IsUnaware(agent.State, stage))
+                {
+                    conditions |= ContextMeleeConditions.TargetUnaware;
+                }
             }
 
             var mover = _melee != null ? _melee.Mover : GetComponent<PlayerController>();
@@ -270,10 +292,41 @@ namespace Fps.Runtime
             var move = _run.Move;
             var events = _run.Tick(Mathf.Max(0f, deltaSeconds));
             Align(_run.IsActive ? _run.AlignProgress : 1f);
+            NoticeWitnesses(move, EnemyStealth.Active);
             if ((events & ContextMeleeEvents.Resolved) != 0)
             {
                 Resolve(move);
             }
+        }
+
+        // 技の最中に振る者を見ている敵の発見ゲージを、技の WitnessAwareness まで上げる。相手 (倒される側) は数えない。
+        // EnemyStealth.Active は OnEnable で入るので Edit Mode では空になる。テストから候補を渡せるよう分けておく。
+        internal void NoticeWitnesses(ContextMeleeMove move, IReadOnlyList<EnemyStealth> candidates)
+        {
+            var target = _target;
+            if (move == null || !(move.WitnessAwareness > 0f) || _self == null || target == null || candidates == null)
+            {
+                return;
+            }
+
+            // 見られて交戦に入った敵が仲間へ伝える間に一覧が変わっても回し続けられるよう、写しを回す。
+            _witnessCandidates.Clear();
+            _witnessCandidates.AddRange(candidates);
+            foreach (var witness in _witnessCandidates)
+            {
+                if (witness == null || witness.gameObject == target.gameObject || _witnessed.Contains(witness))
+                {
+                    continue;
+                }
+
+                if (witness.Witness(_self, move.WitnessAwareness))
+                {
+                    _witnessed.Add(witness);
+                    Debug.Log(ContextMeleeLog.Witnessed(AttackerId, target.Id, move.Id, witness.Id, witness.Stage), this);
+                }
+            }
+
+            _witnessCandidates.Clear();
         }
 
         // 中断できない技なら止めずに false。倒れたなどで必ず止めるときは force。
@@ -296,6 +349,7 @@ namespace Fps.Runtime
         private void Begin(ContextMeleeMove move, Damageable target)
         {
             _run.Begin(move);
+            _witnessed.Clear();
             _target = target;
             _targetAgent = target.GetComponent<EnemyAgent>();
             _targetMover = target.GetComponent<PlayerController>();
@@ -562,6 +616,7 @@ namespace Fps.Runtime
             _targetAgent = null;
             _targetMover = null;
             _presenter = null;
+            _witnessed.Clear();
         }
 
         // ほかから撃たれたとき。相手は止めてあるので、技の間に受けるダメージは相手以外からのものになる。
@@ -586,29 +641,34 @@ namespace Fps.Runtime
             Stop(ContextMeleeInterruption.TargetLost, true);
         }
 
-        private void SyncFinisher()
+        private void SyncMoves()
         {
             if (_melee == null)
             {
                 return;
             }
 
-            if (!_includeFinisher)
+            var spec = _melee.Spec;
+            _finisherSource = SyncMove(ContextMeleeMove.FinisherId, _includeFinisher, spec, _finisherSource, ContextMeleeMove.Finisher);
+            _takedownSource = SyncMove(ContextMeleeMove.TakedownId, _includeTakedown, spec, _takedownSource, ContextMeleeMove.Takedown);
+        }
+
+        private MeleeSpec SyncMove(string id, bool include, MeleeSpec spec, MeleeSpec source, Func<MeleeSpec, ContextMeleeMove> create)
+        {
+            if (!include)
             {
-                _selector.Unregister(ContextMeleeMove.FinisherId);
-                _finisherSource = null;
-                return;
+                _selector.Unregister(id);
+                return null;
             }
 
             // MeleeController.Spec は差し替えられるので、変わったときだけ作り直す (毎回作ると登録の並びが動く)。
-            var spec = _melee.Spec;
-            if (ReferenceEquals(spec, _finisherSource) && _selector.Find(ContextMeleeMove.FinisherId) != null)
+            if (ReferenceEquals(spec, source) && _selector.Find(id) != null)
             {
-                return;
+                return source;
             }
 
-            _selector.Register(ContextMeleeMove.Finisher(spec));
-            _finisherSource = spec;
+            _selector.Register(create(spec));
+            return spec;
         }
 
         // 相手は MeleeStrike で探す。届く距離だけを登録した技のいちばん遠いものに広げ、前方の扇はふつうの近接と揃える。

@@ -11,6 +11,7 @@ on:
     paths:
       - "docker/server-dotnet/**"
       - "dotnet/**"
+      - ".editorconfig"
       - "Assets/game/Scripts/Core/**"
       - "Assets/game/Scripts/Protocol/**"
       - "server-data/**"

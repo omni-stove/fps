@@ -1,7 +1,9 @@
 using System;
+using Fps.Core;
+using Fps.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Fps.Tests.EditMode
 {
     public sealed class KillFeedTests
     {
@@ -191,7 +193,7 @@ namespace Fps.Core.Tests
         public void DefaultLinesAndNamesReadAsEmptyText()
         {
             Assert.That(default(KillFeedLine).WeaponName.IsEmpty, Is.True);
-            Assert.That(GameText.Resolve(default(KillFeedLine).WeaponName), Is.Empty);
+            Assert.That(Localizer.Resolve(default(KillFeedLine).WeaponName), Is.Empty);
             Assert.That(default(KillFeedName).Text, Is.Empty);
             Assert.That(default(KillFeedName).Team, Is.Null);
         }
@@ -217,18 +219,18 @@ namespace Fps.Core.Tests
         public string FormatsTheWeapon(string weaponNameKey, bool headshot, bool suicide)
         {
             var name = weaponNameKey == null ? default : new LocalizedText(weaponNameKey);
-            return GameText.Resolve(KillFeedFormat.Weapon(name, headshot, suicide));
+            return Localizer.Resolve(KillFeedText.Weapon(name, headshot, suicide));
         }
 
         [Test]
         public void TheWeaponColumnIsKeyedWithTheNameAndTheMarksNested()
         {
-            Assert.That(KillFeedFormat.Weapon(_rifle, false, false), Is.EqualTo(new LocalizedText("hud.killFeed.weapon", _rifle)));
+            Assert.That(KillFeedText.Weapon(_rifle, false, false), Is.EqualTo(new LocalizedText("hud.killFeed.weapon", _rifle)));
             Assert.That(
-                KillFeedFormat.Weapon(_rifle, true, false),
-                Is.EqualTo(new LocalizedText("hud.killFeed.weaponHeadshot", _rifle, KillFeedFormat.HeadshotMark)));
-            Assert.That(KillFeedFormat.Weapon(default, false, true), Is.EqualTo(new LocalizedText("hud.killFeed.weapon", KillFeedFormat.Suicide)));
-            Assert.That(GameText.Resolve(KillFeedFormat.FriendlyMark), Is.EqualTo("味方撃ち"));
+                KillFeedText.Weapon(_rifle, true, false),
+                Is.EqualTo(new LocalizedText("hud.killFeed.weaponHeadshot", _rifle, KillFeedText.HeadshotMark)));
+            Assert.That(KillFeedText.Weapon(default, false, true), Is.EqualTo(new LocalizedText("hud.killFeed.weapon", KillFeedText.Suicide)));
+            Assert.That(Localizer.Resolve(KillFeedText.FriendlyMark), Is.EqualTo("味方撃ち"));
         }
 
         [Test]
@@ -237,7 +239,7 @@ namespace Fps.Core.Tests
             var id = "00000000-0000-4000-8000-000000000001";
             var spec = new WeaponSpec(id, null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, DamageFalloff.None);
 
-            Assert.That(GameText.Resolve(KillFeedFormat.Weapon(spec.Name, false, false)), Is.EqualTo("[" + id + "]"));
+            Assert.That(Localizer.Resolve(KillFeedText.Weapon(spec.Name, false, false)), Is.EqualTo("[" + id + "]"));
         }
 
         [Test]
@@ -255,16 +257,15 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void FormatsAWholeLine()
+        public void ALineLogsWithoutWordsOfTheLanguage()
         {
             var killer = new KillFeedName("P1", Team.Alpha, false);
             var victim = new KillFeedName("P2", Team.Alpha, false);
             var friendly = new KillFeedLine(new KillFeedEntry(1, 2, "id", true, true), killer, victim, _rifle);
-            var suicide = new KillFeedLine(new KillFeedEntry(2, 2, string.Empty, false, false), victim, victim, default);
 
-            Assert.That(KillFeedFormat.Line(friendly), Is.EqualTo("味方撃ち P1 [Rifle] 頭 P2"));
-            Assert.That(KillFeedFormat.Line(suicide), Is.EqualTo("[自滅] P2"));
-            Assert.That(friendly.ToString(), Is.EqualTo(KillFeedFormat.Line(friendly)));
+            Assert.That(
+                friendly.ToString(),
+                Is.EqualTo("killer=1 victim=2 weapon=id headshot=True friendly=True killerName=P1 victimName=P2"));
         }
 
         [Test]
@@ -272,7 +273,7 @@ namespace Fps.Core.Tests
         {
             Assert.That(KillFeedFormat.Player(0), Is.EqualTo("P0"));
             Assert.That(KillFeedFormat.Player(12), Is.EqualTo("P12"));
-            Assert.That(KillFeedFormat.Unknown(3), Is.EqualTo("?3"));
+            Assert.That(KillFeedText.Unknown(3), Is.EqualTo("?3"));
         }
 
         private static KillFeedLine Line(int killerId, int victimId)

@@ -66,7 +66,7 @@ namespace Fps.Runtime
         {
             var line = Names.Describe(entry);
             _feed.Add(line);
-            Debug.Log($"{LogTag} {line} killer={entry.KillerId} victim={entry.VictimId} local={line.Highlighted}", this);
+            Debug.Log($"{LogTag} {line} local={line.Highlighted}", this);
             Render();
         }
 
@@ -163,7 +163,7 @@ namespace Fps.Runtime
 
             if (line.Entry.Friendly)
             {
-                row.Add(CreateLabel(Localizer.Resolve(KillFeedFormat.FriendlyMark), FriendlyClass));
+                row.Add(CreateLabel(Localizer.Resolve(KillFeedText.FriendlyMark), FriendlyClass));
             }
 
             if (line.ShowsKiller)

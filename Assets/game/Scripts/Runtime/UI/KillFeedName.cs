@@ -1,6 +1,7 @@
 using System;
+using Fps.Core;
 
-namespace Fps.Core
+namespace Fps.Runtime
 {
     /// <summary>
     /// キルフィードの 1 行に出す、倒した側か倒された側の名前。チームが分かれば色を付け、この画面のプレイヤーなら行を強調する。

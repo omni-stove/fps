@@ -64,5 +64,7 @@ namespace Fps.Core
         NotAiming,
 
         Undercharged,
+
+        Overheated,
     }
 }

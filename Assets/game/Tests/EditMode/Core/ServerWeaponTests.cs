@@ -42,6 +42,36 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AnOverheatedHeatWeaponRejectsWithoutReloadingUntilItCools()
+        {
+            var spec = new WeaponSpec(
+                _rifleId,
+                null,
+                WeaponCategory.AssaultRifle,
+                ammo: new AmmoSpec(1, 0, 1f, kind: AmmoKind.Heat, heat: new HeatSpec(0.5f, 1f, 0.25f, 0.5f)));
+            var weapon = new ServerWeapon(spec);
+            var reloads = 0;
+            weapon.ReloadStarted += _ => reloads++;
+
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.HeatFraction, Is.EqualTo(1f));
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.Overheated));
+
+            weapon.Tick(1f);
+            Assert.That(weapon.HeatFraction, Is.EqualTo(0.5f));
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.Overheated), "still cooling down");
+
+            weapon.Tick(0.5f);
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(reloads, Is.Zero);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
+
+            weapon.Refill();
+            Assert.That(weapon.HeatFraction, Is.EqualTo(0f));
+        }
+
+        [Test]
         public void EmptyMagazineRejectsAndStartsReloadAutomatically()
         {
             var weapon = new ServerWeapon(Spec());

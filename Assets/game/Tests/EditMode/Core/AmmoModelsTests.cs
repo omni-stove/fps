@@ -59,9 +59,9 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheHeatAndPerRoundModelsBehaveLikeTheMagazineForNow()
+        public void ThePerRoundModelBehavesLikeTheMagazineForNow()
         {
-            foreach (var spec in new[] { Heat(), PerRound() })
+            foreach (var spec in new[] { PerRound() })
             {
                 var ammo = AmmoModels.For(spec, GameRules.Default);
                 var reloaded = 0;

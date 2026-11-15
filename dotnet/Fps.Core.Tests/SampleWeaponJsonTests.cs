@@ -49,6 +49,37 @@ namespace Fps.Core.Tests
             Assert.That(flight.Position.Y, Is.LessThan(-1f), "a target 40 m away needs the aim held above it");
         }
 
+        [Test]
+        public void TheFlamethrowerSpraysAShortConeThatBurnsAndIsManagedByHeat()
+        {
+            var path = Path.Combine(SampleWeaponJsonFolder(), "Flamethrower.json");
+            var spec = WeaponSpecJson.Parse(File.ReadAllText(path), path);
+            var spray = spec.Round.Spray;
+
+            Assert.That(spec.NameKey, Is.EqualTo("weapon.flamethrower"));
+            Assert.That(spec.Round.Delivery, Is.EqualTo(RoundDelivery.Spray));
+            Assert.That(spec.Ammo.Kind, Is.EqualTo(AmmoKind.Heat));
+            Assert.That(spec.Impact.StatusEffect.KindId, Is.EqualTo(StatusEffectKinds.Burn));
+            Assert.That(spec.Round.Range, Is.LessThanOrEqualTo(10f), "a short range");
+
+            var origin = Vector3.Zero;
+            Assert.That(SprayCone.Contains(spray, spec.Round.Range, origin, Vector3.UnitZ, new Vector3(0f, 0f, spec.Round.Range * 0.5f)), Is.True);
+            Assert.That(SprayCone.Contains(spray, spec.Round.Range, origin, Vector3.UnitZ, new Vector3(0f, 0f, spec.Round.Range + 1f)), Is.False);
+
+            // 押しっぱなしで数秒噴くと熱で止まる
+            var weapon = new Weapon(spec);
+            var ticks = 0;
+            weapon.Trigger.Press();
+            while (weapon.TryFire() && ticks < 1000)
+            {
+                ticks++;
+                weapon.Tick(spray.TickSeconds);
+                weapon.Trigger.Tick(spray.TickSeconds);
+            }
+
+            Assert.That(ticks * spray.TickSeconds, Is.InRange(2f, 8f), "seconds of flame before overheating");
+        }
+
         private static string SampleWeaponJsonFolder()
         {
             for (var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory); directory != null; directory = directory.Parent)

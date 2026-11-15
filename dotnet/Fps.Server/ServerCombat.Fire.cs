@@ -273,6 +273,47 @@ namespace Fps.Server
             return Fire(fighter, _botFire);
         }
 
+        /// <summary>
+        /// 押している間出続ける届け方の照射 1 回ぶん、shooterId が今も weaponId を構えて撃てるかを確かめ、consume なら弾 (熱) を 1 発使う。
+        /// <see cref="Fire"/> の検査を照射のたびに通さないのは、始点・向き・発射番号・連射の枠は押したときの要求にしか無いため。
+        /// 倒れた・試合が止まったなど撃てない状態は、警告にしないよう理由を <see cref="ShotRejection.None"/> にして false を返す。
+        /// </summary>
+        internal bool TryContinueFire(int shooterId, string weaponId, bool consume, out ShotRejection rejection)
+        {
+            rejection = ShotRejection.None;
+            if (!_rules.CanFire(shooterId) || !_fighters.TryGetValue(shooterId, out var fighter))
+            {
+                return false;
+            }
+
+            var spec = fighter.Weapons.CurrentSpec;
+            if (spec == null)
+            {
+                rejection = ShotRejection.NoWeapon;
+                return false;
+            }
+
+            if (!string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
+            {
+                rejection = ShotRejection.WeaponMismatch;
+                return false;
+            }
+
+            _movement.TryGetState(shooterId, out var motion);
+            if (motion.IsDodging || motion.IsVaulting)
+            {
+                rejection = motion.IsDodging ? ShotRejection.Dodging : ShotRejection.Vaulting;
+                return false;
+            }
+
+            if (consume)
+            {
+                rejection = fighter.Weapons.TryFire();
+            }
+
+            return rejection == ShotRejection.None;
+        }
+
         public bool TryGetWeapon(int playerId, out WeaponSpec spec, out WeaponSync state)
         {
             if (_fighters.TryGetValue(playerId, out var fighter) && fighter.Weapons.CurrentSpec != null)

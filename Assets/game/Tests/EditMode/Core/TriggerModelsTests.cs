@@ -123,6 +123,21 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ASprayWeaponCountsItsShotsByTheSprayTicksWhileHeld()
+        {
+            var round = new RoundSpec(RoundDelivery.Spray, 8f, spray: new SpraySpec(0.1f, 15f));
+
+            var model = TriggerModels.For(new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, new TriggerSpec(FireMode.Auto, 1f), round: round));
+
+            Assert.That(model, Is.TypeOf<BeamState>());
+            Assert.That(((BeamState)model).Spec.TickSeconds, Is.EqualTo(0.1f));
+            Assert.That(model.Press(), Is.EqualTo(1));
+            Assert.That(model.Tick(0.3f), Is.EqualTo(3), "the spray interval, not the fire interval");
+            Assert.That(model.Release(), Is.EqualTo(0));
+            Assert.That(model.Tick(0.3f), Is.EqualTo(0), "nothing comes out once released");
+        }
+
+        [Test]
         public void AWeaponFiresEveryBeamTickEvenWhenTwoLandInOneFrame()
         {
             var weapon = new Weapon(new WeaponSpec(

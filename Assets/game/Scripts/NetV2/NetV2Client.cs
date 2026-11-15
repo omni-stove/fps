@@ -254,6 +254,8 @@ namespace Fps.NetV2
             _weaponHooks.AreaEffects.Started += ShowArea;
             _weaponHooks.AreaEffects.Updated += UpdateArea;
             _weaponHooks.AreaEffects.Ended += EndArea;
+            _weaponHooks.Spray.Drawn += DrawSpray;
+            _weaponHooks.Spray.Hidden += HideSpray;
             _pings = new ClientPings(line => Debug.Log(line, this));
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
         }
@@ -382,6 +384,11 @@ namespace Fps.NetV2
             ShowRemotes();
             _weaponHooks.Projectiles.Tick(Time.deltaTime);
             SendRequests();
+            if (_local != null)
+            {
+                _weaponHooks.Spray.Update(NetV2Math.ToNumerics(_local.EyePosition), NetV2Math.ToNumerics(_local.AimDirection));
+            }
+
             _pings.Markers.Expire(Time.time);
         }
 
@@ -451,6 +458,7 @@ namespace Fps.NetV2
             _match = new ClientMatch(_client, _world.CreateSimulation(motor, _client.TickRate, _client.KillPlaneY));
             _weaponHooks.Projectiles.Attach(
                 new NetV2Projectiles(_weapons), _world.Collision, Physics.DefaultRaycastLayers, NetV2Math.ToNumerics(Physics.gravity), _client.PlayerId);
+            _weaponHooks.Spray.Attach(_world.Collision, Physics.DefaultRaycastLayers, _client.PlayerId);
             _match.PlayerAdded += AddRemote;
             _match.PlayerRemoved += RemoveRemote;
             _match.Reconciled += HandleReconciled;
@@ -932,6 +940,48 @@ namespace Fps.NetV2
             }
         }
 
+        private void DrawSpray(SprayView spray)
+        {
+            var shooter = SprayShooter(spray.ShooterId);
+            var from = NetV2Math.ToUnity(spray.Start);
+            var toward = NetV2Math.ToUnity(spray.End) - from;
+            var length = toward.magnitude;
+            if (length < 1e-4f)
+            {
+                return;
+            }
+
+            var direction = toward / length;
+
+            // 目の位置から出すと一人称では火炎が画面の中心に潰れて見えないので、オフラインの SprayDelivery と同じく銃口から出す
+            var presentation = WeaponPresentation.FindFor(shooter);
+            if (presentation != null)
+            {
+                from = presentation.Sockets.MuzzlePose(from, direction).position;
+            }
+
+            SprayFlame.Show(shooter, spray.WeaponId, spray.TickSeconds, from, direction, length, spray.ConeDegrees, Time.time);
+        }
+
+        private void HideSpray(int shooterId)
+        {
+            var shooter = SprayShooter(shooterId);
+            if (shooter != null && shooter.TryGetComponent<SprayFlame>(out var flame))
+            {
+                flame.Stop();
+            }
+        }
+
+        private GameObject SprayShooter(int shooterId)
+        {
+            if (_client != null && shooterId == _client.PlayerId)
+            {
+                return _local != null ? _local.gameObject : null;
+            }
+
+            return _remotes.TryGetValue(shooterId, out var remote) && remote != null ? remote.gameObject : null;
+        }
+
         private void ShowShot(ShotMessage shot)
         {
             GameObject shooter = null;
@@ -1158,6 +1208,7 @@ namespace Fps.NetV2
             _areaZones.Clear();
             _structures?.Leave();
             _weaponHooks?.Projectiles.Detach();
+            _weaponHooks?.Spray.Detach();
         }
 
         private static bool TryFindScene(string map, out string path)

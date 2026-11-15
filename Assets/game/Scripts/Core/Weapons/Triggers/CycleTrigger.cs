@@ -6,6 +6,8 @@ namespace Fps.Core
     {
         private readonly ITriggerModel _inner;
         private float _cycleRemaining;
+        private float _deferredSeconds;
+        private bool _pressedDuringCycle;
 
         public CycleTrigger(CycleSpec cycle, ITriggerModel inner)
         {
@@ -24,23 +26,49 @@ namespace Fps.Core
 
         public float ChargeFraction => _inner.ChargeFraction;
 
-        // 装填中も内側へ押す・離すを渡すのは、押しっぱなしの撃ち方や溜めが装填の後に続けて撃てるようにするため。出た弾だけを捨てる。
+        // 装填中の押す・時間を内側へ渡さず覚えておくのは、内側が捨てられる弾で連射間隔の待ちを始め、装填の後まで撃てなくなるのを避けるため。
         public int Press()
         {
+            if (IsCycling)
+            {
+                _pressedDuringCycle = true;
+                return 0;
+            }
+
             return Pass(_inner.Press());
         }
 
+        // 離すのは装填中でも渡す。押しっぱなしの撃ち方が、離した後に装填が終わって撃たないようにするため。
         public int Release()
         {
+            _pressedDuringCycle = false;
             return Pass(_inner.Release());
         }
 
-        // 先に装填を進めるのは、この時間の中で装填が終わって内側が撃った弾を捨てないため。
         public int Tick(float deltaSeconds)
         {
             SpecGuard.NonNegativeFinite(deltaSeconds, nameof(deltaSeconds));
+            if (!IsCycling)
+            {
+                return Pass(_inner.Tick(deltaSeconds));
+            }
+
             _cycleRemaining = Math.Max(0f, _cycleRemaining - deltaSeconds);
-            return Pass(_inner.Tick(deltaSeconds));
+            _deferredSeconds += deltaSeconds;
+            if (IsCycling)
+            {
+                return 0;
+            }
+
+            var shots = _inner.Tick(_deferredSeconds);
+            _deferredSeconds = 0f;
+            if (_pressedDuringCycle)
+            {
+                _pressedDuringCycle = false;
+                shots += _inner.Press();
+            }
+
+            return Pass(shots);
         }
 
         private int Pass(int shots)

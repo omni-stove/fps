@@ -149,6 +149,60 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void APressDuringTheCycleDoesNotDelayTheFirstPressAfterIt()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(1.1f, leavesAds: true), new SemiTrigger(0.2f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            trigger.Release();
+            Assert.That(trigger.Tick(1f), Is.EqualTo(0));
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+            Assert.That(trigger.Release(), Is.EqualTo(0));
+            Assert.That(trigger.Tick(0.15f), Is.EqualTo(0));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1), "the press inside the cycle must not start the inner fire interval");
+        }
+
+        [Test]
+        public void ATriggerPressedDuringTheCycleAndStillHeldFiresWhenItEnds()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(1f), new SemiTrigger(0.2f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            trigger.Release();
+            trigger.Tick(0.5f);
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+
+            Assert.That(trigger.Tick(0.5f), Is.EqualTo(1));
+            Assert.That(trigger.IsCycling, Is.True);
+        }
+
+        [Test]
+        public void AHeldAutoTriggerKeepsTheCycleAsItsSpacing()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(0.5f), new AutoTrigger(0.4f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            Assert.That(trigger.Tick(0.4f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(0.1f), Is.EqualTo(1), "fires at the end of the cycle, not one inner interval after a dropped shot");
+            Assert.That(trigger.Tick(0.4f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(0.1f), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ReleasingDuringTheCycleStopsAHeldAutoTrigger()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(0.5f), new AutoTrigger(0.1f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            trigger.Tick(0.25f);
+            Assert.That(trigger.Release(), Is.EqualTo(0));
+
+            Assert.That(trigger.Tick(0.5f), Is.EqualTo(0));
+            Assert.That(trigger.IsCycling, Is.False);
+        }
+
+        [Test]
         public void TheCycleSetsTheShortestSpacingBetweenShots()
         {
             Assert.That(new CycleTrigger(new CycleSpec(1f), new SemiTrigger(0.25f)).MinShotSpacingSeconds, Is.EqualTo(1f));

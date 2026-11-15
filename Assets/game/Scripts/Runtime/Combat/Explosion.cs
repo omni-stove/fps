@@ -214,7 +214,7 @@ namespace Fps.Runtime
             return true;
         }
 
-        private static List<Damageable> FindTargets(Vector3 center, float radius)
+        internal static List<Damageable> FindTargets(Vector3 center, float radius)
         {
             var targets = new List<Damageable>();
             var seen = new HashSet<Damageable>();
@@ -247,7 +247,7 @@ namespace Fps.Runtime
             return damageable != null ? damageable : null;
         }
 
-        private static bool IsLineObstructed(Vector3 from, Vector3 to, Transform target)
+        internal static bool IsLineObstructed(Vector3 from, Vector3 to, Transform target)
         {
             var offset = to - from;
             var length = offset.magnitude;

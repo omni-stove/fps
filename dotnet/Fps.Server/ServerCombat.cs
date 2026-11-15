@@ -43,6 +43,7 @@ namespace Fps.Server
         private readonly ServerStatusEffects _statusEffects;
         private readonly ServerLockOn _lockOn;
         private readonly ServerAreaEffects _areaEffects;
+        private readonly ServerFlash _flash;
         private ServerContext _context;
         private TextWriter _log;
         private ServerMatch _match;
@@ -65,6 +66,7 @@ namespace Fps.Server
             _statusEffects = new ServerStatusEffects(this);
             _lockOn = new ServerLockOn(this);
             _areaEffects = new ServerAreaEffects(this);
+            _flash = new ServerFlash(this);
         }
 
         public string Name => "combat";
@@ -85,6 +87,8 @@ namespace Fps.Server
         internal MatchRulesModule Rules => _rules;
 
         internal ServerAreaEffects AreaEffects => _areaEffects;
+
+        internal ServerFlash Flash => _flash;
 
         internal TextWriter Log => _log;
 

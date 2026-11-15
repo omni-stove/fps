@@ -8,6 +8,7 @@ namespace Fps.Core.Tests
     {
         private const string _frag = GrenadeSpec.DefaultId;
         private const string _smoke = "ecaf6e57-cb77-4707-9321-6ea5b659408f";
+        private const string _flash = "bcc273d5-24a8-42f4-bb3c-b054d001434d";
 
         private static readonly string[] _expectedGrenadeItemNames =
         {
@@ -94,6 +95,33 @@ namespace Fps.Core.Tests
             Assert.That(smoke.Impact.AreaEffect.Radius, Is.EqualTo(5f));
             Assert.That(smoke.Impact.AreaEffect.VisualId, Is.EqualTo("smoke"));
             Assert.That(catalog.Carried[1].Id, Is.EqualTo(_frag));
+        }
+
+        [Test]
+        public void AFlashTypeReadsHowItBlinds()
+        {
+            var catalog = TuningJson.ParseGrenades(
+                "{\"types\": [{\"id\": \"" + _flash + "\", \"impact\": {\"damage\": 0, \"blind\": {\"radius\": 12, \"durationSeconds\": 3, \"backFraction\": 0.2}}}]}",
+                "grenade.json");
+
+            var blind = catalog.Types[0].Impact.Blind;
+            Assert.That(blind.Radius, Is.EqualTo(12f));
+            Assert.That(blind.DurationSeconds, Is.EqualTo(3f));
+            Assert.That(blind.BackFraction, Is.EqualTo(0.2f));
+            Assert.That(catalog.Types[0].Explosion, Is.Null);
+        }
+
+        [Test]
+        public void ABadBlindNamesTheItem()
+        {
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades(
+                    "{\"types\": [{\"id\": \"" + _flash + "\", \"impact\": {\"blind\": {\"radius\": 12, \"durationSeconds\": 3, \"backFraction\": 2}}}]}", "g")).Item,
+                Is.EqualTo("types[0].impact.blind.backFraction"));
+            Assert.That(
+                Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenades(
+                    "{\"types\": [{\"id\": \"" + _flash + "\", \"impact\": {\"blind\": {\"radius\": 12, \"durationSeconds\": 3}}}]}", "g")).Item,
+                Is.EqualTo("types[0].impact.blind.backFraction"));
         }
 
         [Test]

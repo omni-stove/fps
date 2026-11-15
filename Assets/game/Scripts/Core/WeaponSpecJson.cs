@@ -90,6 +90,7 @@ namespace Fps.Core
         public const string ExplosionItem = "explosion";
         public const string StatusEffectItem = "statusEffect";
         public const string AreaEffectItem = "areaEffect";
+        public const string BlindItem = "blind";
 
         public const string MaxDamageItem = "maxDamage";
         public const string FullDamageRadiusItem = "fullDamageRadius";
@@ -98,6 +99,7 @@ namespace Fps.Core
         public const string DurationSecondsItem = "durationSeconds";
         public const string DamagePerTickItem = "damagePerTick";
         public const string StatusKindItem = "kind";
+        public const string BackFractionItem = "backFraction";
 
         public const string HipSpreadDegreesItem = "hipSpreadDegrees";
         public const string AdsSpreadDegreesItem = "adsSpreadDegrees";
@@ -174,6 +176,12 @@ namespace Fps.Core
             DamageItem, FalloffItem, StructureRadiusItem, ExplosionItem, StatusEffectItem, AreaEffectItem,
         };
 
+        // 目くらましは弾けた所から見えている人にかけ、当たった相手には効かないので、武器の着弾には書かせない。
+        public static IReadOnlyList<string> GrenadeImpactItemNames { get; } = new[]
+        {
+            DamageItem, FalloffItem, StructureRadiusItem, ExplosionItem, StatusEffectItem, AreaEffectItem, BlindItem,
+        };
+
         public static IReadOnlyList<string> AimItemNames { get; } = new[]
         {
             HipSpreadDegreesItem, AdsSpreadDegreesItem, MoveSpreadDegreesItem, RecoilPitchDegreesItem, RecoilYawDegreesItem,
@@ -203,6 +211,8 @@ namespace Fps.Core
         {
             RadiusItem, DurationSecondsItem, TickSecondsItem, DamagePerTickItem, StatusEffectItem, VisualIdItem,
         };
+
+        private static readonly string[] _blindItems = { RadiusItem, DurationSecondsItem, BackFractionItem };
 
         private static readonly string[] _breathHoldItems = { MaxHoldSecondsItem, RecoverSecondsItem, SwayMultiplierItem };
 
@@ -536,6 +546,8 @@ namespace Fps.Core
                 p.RequireInt(DamagePerTickItem),
                 ReadNested(p, StatusEffectItem, _statusEffectItems, ReadStatusEffect),
                 p.String(VisualIdItem)));
+            var blind = ReadNested(part, BlindItem, _blindItems, p => new BlindSpec(
+                p.RequireFloat(RadiusItem), p.RequireFloat(DurationSecondsItem), p.RequireFloat(BackFractionItem)));
 
             return part.Build(() => new ImpactSpec(
                 part.Int(DamageItem, ImpactSpec.DefaultDamage),
@@ -543,7 +555,8 @@ namespace Fps.Core
                 part.Float(StructureRadiusItem, 0f),
                 explosion,
                 statusEffect,
-                areaEffect));
+                areaEffect,
+                blind));
         }
 
         private static StatusEffectSpec ReadStatusEffect(Part part)
@@ -620,6 +633,15 @@ namespace Fps.Core
                 }
 
                 WriteVisualId(writer, impact.AreaEffect.VisualId);
+                writer.EndObject();
+            }
+
+            if (impact.Blind != null)
+            {
+                writer.BeginObject(BlindItem);
+                writer.Float(RadiusItem, impact.Blind.Radius);
+                writer.Float(DurationSecondsItem, impact.Blind.DurationSeconds);
+                writer.Float(BackFractionItem, impact.Blind.BackFraction);
                 writer.EndObject();
             }
         }

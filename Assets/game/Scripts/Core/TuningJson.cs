@@ -329,7 +329,7 @@ namespace Fps.Core
             var throwSpeed = fields.ReadFloat(ThrowSpeedItem, defaults.ThrowSpeed);
             var throwLiftSpeed = fields.ReadFloat(ThrowLiftSpeedItem, defaults.ThrowLiftSpeed);
             var stickiness = fields.ReadEnum(StickinessItem, defaults.Stickiness);
-            var impactFields = fields.Object(GrenadeImpactItem, WeaponSpecJson.ImpactItemNames);
+            var impactFields = fields.Object(GrenadeImpactItem, WeaponSpecJson.GrenadeImpactItemNames);
             try
             {
                 if (impactFields == null)

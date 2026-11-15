@@ -4,5 +4,7 @@ namespace Fps.Core
     public static class StatusEffectKinds
     {
         public const string Burn = "burn";
+
+        public const string Blind = "blind";
     }
 }

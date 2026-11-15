@@ -283,6 +283,7 @@ namespace Fps.Core.Tests
         [TestCase("{\"impact\": {\"explosion\": {\"maxDamage\": 10, \"radius\": 2, \"fullDamageRadius\": 3}}}", "impact.explosion.fullDamageRadius")]
         [TestCase("{\"impact\": {\"explosion\": {\"maxDamage\": 10, \"radius\": 2, \"detonation\": \"OnStop\"}}}", "impact")]
         [TestCase("{\"impact\": {\"areaEffect\": {\"radius\": 2, \"durationSeconds\": 3, \"tickSeconds\": 1, \"damagePerTick\": 1, \"statusEffect\": {\"durationSeconds\": 0, \"tickSeconds\": 1, \"damagePerTick\": 1}}}}", "impact.areaEffect.statusEffect.durationSeconds")]
+        [TestCase("{\"impact\": {\"blind\": {\"radius\": 10, \"durationSeconds\": 3, \"backFraction\": 0.2}}}", "impact.blind")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"x\"}]}", "ammoTypes[0].id")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\", \"round\": {\"range\": 0}}]}", "ammoTypes[0].round.range")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\"}, {\"id\": \"" + _standardId + "\"}]}", "ammoTypes")]

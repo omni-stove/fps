@@ -290,7 +290,7 @@ Editor からは **Fps > Import Game Rules From JSON**。
 
 | Resources のパス | 項目 (名前は Spec のコンストラクターの引数名。省いた項目は既定値) |
 | --- | --- |
-| `Tuning/grenade.json` | 種類の並び `types` と、出撃のたびに持つ種類の Id の並び `carried` (省くと先頭の種類だけ)。1 種類は `id` (UUID)・`nameKey`・`fuseSeconds`・`throwSeconds`・`throwSpeed`・`throwLiftSpeed`・`stickiness` (`None`・`Surfaces`・`SurfacesAndCharacters`) と、信管が切れたときの効果を `impact` (武器の JSON と同じ書き方で `explosion`・`statusEffect`・`areaEffect`) か、爆発だけなら平らな `maxDamage`・`damageRadius`・`fullDamageRadius`・`structureDamageAtCenter` で書く。`types` の無い 1 つのオブジェクトは、その 1 種類だけを持つ |
+| `Tuning/grenade.json` | 種類の並び `types` と、出撃のたびに持つ種類の Id の並び `carried` (省くと先頭の種類だけ)。1 種類は `id` (UUID)・`nameKey`・`fuseSeconds`・`throwSeconds`・`throwSpeed`・`throwLiftSpeed`・`stickiness` (`None`・`Surfaces`・`SurfacesAndCharacters`) と、信管が切れたときの効果を `impact` (武器の JSON と同じ書き方で `explosion`・`statusEffect`・`areaEffect`、投げ物だけの `blind` (`radius`・`durationSeconds`・`backFraction`)) か、爆発だけなら平らな `maxDamage`・`damageRadius`・`fullDamageRadius`・`structureDamageAtCenter` で書く。`types` の無い 1 つのオブジェクトは、その 1 種類だけを持つ |
 | `Tuning/ping.json` | `lifetimeSeconds`・`maxMarkers`・`maxDistance`・`enemyAimToleranceDegrees`・`minIntervalSeconds` |
 | `Tuning/knockback.json` | 力 (`KnockbackForce`) は種類 (`explosion`・`melee`・`charge`) を頭に付けて開く: `explosionSpeed`・`explosionUpwardRatio`・`explosionWeightFactor`・`meleeSpeed`・`meleeUpwardRatio`・`meleeWeightFactor`・`chargeSpeed`・`chargeUpwardRatio`・`chargeWeightFactor`。ほかは `minSpeed`・`minAirSeconds`・`maxAirSeconds`・`airControl`・`gravity`・`recoverSeconds`・`landingSnapRadius`・`playerWeight`・`enemyWeight` |
 
@@ -310,6 +310,7 @@ Editor からは **Fps > Import Game Rules From JSON**。
 
 - 持つ種類それぞれに、ルールの `grenadeCount` 個を持つ。2 種類以上持つと、SwitchGrenade (K) で投げる種類を切り替え、HUD に種類の名前を出す。
 - 範囲効果 (`areaEffect`) は `AreaEffectZone` が出す。見た目は `Resources/Presentation/AreaEffects/<visualId>` のプレハブで、無ければ仮の球を出す。
+- 目くらまし (`blind`) は、弾けた所から目までを壁や煙が遮っていない人に、状態異常 `blind` をかける。長さは `durationSeconds` × (1 − 目までの距離 / `radius`) × 向きの割合で、向きの割合は正面で 1、真横で (1 + `backFraction`) / 2、真後ろで `backFraction`。かかっている間、プレイヤーは画面が白くなり (`FlashOverlay`。色・画像・薄れ始める秒数・耳鳴りの音は `Resources/Presentation/FlashOverlayCatalog.asset` (`FlashOverlayCatalog`) に入れ、無ければ無地の白)、敵と Bot は相手を見ることも撃った相手を知ることもできない。
 
 - パッケージにも同じパスの JSON (今の既定値) が入っている (`Packages/com.omnistove.fps/Resources/Tuning/`)。利用側に同じパスのファイルを置くと
   どちらが読まれるか決まらないので、ゲームの値は入口 ([ゲームの中身を差し替える](#ゲームの中身を差し替える-入口のアセット)) の `GrenadeTuning`・`PingTuning`・`KnockbackTuning` に

@@ -218,6 +218,35 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void BlindedBotsDoNotShoot()
+        {
+            var points = new NetMapPoints(
+                new[]
+                {
+                    new SpawnPoint(new Vector3(-28f, 1.1f, -28f), Team.Alpha),
+                    new SpawnPoint(new Vector3(-6f, 1.1f, 20f), Team.Alpha),
+                    new SpawnPoint(new Vector3(6f, 1.1f, 20f), Team.Bravo),
+                },
+                Array.Empty<ControlPointArea>());
+            Start(BotTestMaps.Flat(points), Rules(), bots: 3, spec: SightOf(20f));
+            Join(1);
+            for (var elapsed = 0f; elapsed < 20f; elapsed += _tickSeconds)
+            {
+                foreach (var body in _context.Bodies.All.ToList())
+                {
+                    if (body.PlayerId != 1 && _combat.StatusEffects.RemainingSeconds(body.PlayerId, StatusEffectKinds.Blind) <= 0f)
+                    {
+                        _combat.StatusEffects.Afflict(null, body.PlayerId, BlindEffect.StatusEffect(2f), ServerCombat.GrenadeWeaponId);
+                    }
+                }
+
+                Tick();
+            }
+
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] hit attacker=10000000"));
+        }
+
+        [Test]
         public void ABotClimbsDownAndUpTheLadderToReachItsPatrolPoints()
         {
             // 見える距離を縮めて人を目に入れず、出現地点 (足場の上と下) を巡回させる

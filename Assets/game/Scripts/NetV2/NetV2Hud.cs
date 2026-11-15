@@ -233,10 +233,16 @@ namespace Fps.NetV2
             Refresh();
         }
 
-        /// <summary>自分にかかっている状態異常の残りを、effects から読んで出す。</summary>
+        /// <summary>自分にかかっている状態異常の残りを、effects から読んで出す。目くらましの間は <see cref="FlashOverlay"/> で画面を白くする。</summary>
         public void BindStatusEffects(ClientStatusEffects effects)
         {
             _statusEffects = effects;
+            var flash = _hud.FlashOverlay;
+            if (flash != null)
+            {
+                flash.Track(effects != null ? () => effects.RemainingSeconds(_localId, StatusEffectKinds.Blind) : (Func<float>)null);
+            }
+
             Refresh();
         }
 

@@ -90,6 +90,7 @@ namespace Fps.Runtime
         private GameRules _rules = GameRules.Default;
         private GameRules _loadedRules;
         private readonly RecoilState _recoil = new RecoilState();
+        private readonly PelletHits<Damageable> _pelletHits = new PelletHits<Damageable>();
         private float _spread;
         private float _secondsSinceShot;
         private int _shotCount;
@@ -246,7 +247,7 @@ namespace Fps.Runtime
         public bool IsHolstered => Holster.IsHandedOff;
 
         /// <summary>
-        /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous を読まない (武器の時間は進める)。
+        /// 操作を手放す口。誰かが引き取っている間、Update は Attack・Reload・Next・Previous・SwitchAmmoType を読まない (武器の時間は進める)。
         /// null なら手放さない。オフラインは <see cref="GameBootstrap"/> が <see cref="PlayerController.Handoff"/> と同じものを配線する。
         /// </summary>
         public ControlHandoff Handoff { get; set; }
@@ -288,6 +289,7 @@ namespace Fps.Runtime
             DisableIfEnabledHere(_reloadAction, ref _enabledReloadAction);
             DisableIfEnabledHere(_nextAction, ref _enabledNextAction);
             DisableIfEnabledHere(_previousAction, ref _enabledPreviousAction);
+            DisableIfEnabledHere(_switchAmmoTypeAction, ref _enabledSwitchAmmoTypeAction);
         }
 
         private void OnDestroy()
@@ -314,6 +316,9 @@ namespace Fps.Runtime
             }
 
             Tick(Time.deltaTime);
+
+            // リロードより先に見るのは、同じフレームに両方押したとき、切り替えた種類を込めるため。
+            ReadSwitchAmmoType();
 
             if (_reloadAction.WasPressedThisFrame())
             {
@@ -440,8 +445,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 同じ GameObject のカメラとプロジェクト全体の Attack / Reload / Next / Previous アクションを探し、<see cref="Definitions"/> の武器で初期化する。
-        /// Next / Previous が無ければ警告を出し、持ち替えの入力だけを無効にする。
+        /// 同じ GameObject のカメラとプロジェクト全体の Attack / Reload / Next / Previous / SwitchAmmoType アクションを探し、<see cref="Definitions"/> の武器で初期化する。
+        /// Next / Previous / SwitchAmmoType が無ければ警告を出し、持ち替え・弾薬の切り替えの入力だけを無効にする。
         /// それ以外が見つからない・定義が未設定か不正なら理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryInitializeFromHierarchy()
@@ -486,6 +491,7 @@ namespace Fps.Runtime
 
             var next = FindOptionalAction(actions, NextActionPath, "次の武器への持ち替え");
             var previous = FindOptionalAction(actions, PreviousActionPath, "前の武器への持ち替え");
+            var switchAmmoType = FindOptionalAction(actions, SwitchAmmoTypeActionPath, "弾薬の種類の切り替え");
 
             try
             {
@@ -504,6 +510,7 @@ namespace Fps.Runtime
                 return false;
             }
 
+            SetSwitchAmmoTypeAction(switchAmmoType);
             return true;
         }
 
@@ -683,6 +690,12 @@ namespace Fps.Runtime
             definitions[_loadedDefinitions.Length] = definition;
 
             var loadout = WeaponLoadout.Restore(specs, _loadout.SnapshotAmmo(), Weapon.Spec.Id, _loadedRules, out _);
+            // 残弾の数だけでは種類が戻るので、込めた弾が別の種類に変わらないよう作り直した武器へ選択を移す
+            for (var i = 0; i < _loadout.Count; i++)
+            {
+                loadout.Items[i].AmmoTypes.TrySelect(_loadout.Items[i].AmmoTypes.Index);
+            }
+
             SetLoadout(loadout, specs, definitions, _loadedRules);
             Debug.Log($"[Combat] weapon added index={specs.Length - 1} id={spec.Id} name={spec.LogName}", this);
             WeaponChanged?.Invoke(Weapon);
@@ -723,7 +736,7 @@ namespace Fps.Runtime
         /// 弾の届け方 (<see cref="ShotDeliveries"/>) に渡す。Hitbox に当たれば着弾の効果 (<see cref="ImpactApplier"/>) でダメージを渡し、
         /// Hitbox の無い物に当たれば <see cref="StructureDamage.Apply"/> に武器の <see cref="WeaponSpec.ExplosionRadius"/> で渡す。
         /// 撃つと <see cref="CombatEvents.ShotFired"/>、何かに当たると <see cref="CombatEvents.Impact"/>、
-        /// 生きている相手に当てると <see cref="CombatEvents.HitConfirmed"/> を出す。弾の線の近くを通られた相手には
+        /// 生きている相手に当てると、1 回の射撃で相手ごとに 1 つ <see cref="CombatEvents.HitConfirmed"/> を出す。弾の線の近くを通られた相手には
         /// <see cref="Hitscan.ReportNearMisses"/> でニアミスを知らせる。倒した相手の <see cref="CombatEvents.Killed"/> は
         /// このプレイヤーと武器の帰属 (<see cref="CombatEvents.Attribute"/>) で <see cref="Damageable"/> が出す。
         /// </summary>
@@ -772,6 +785,7 @@ namespace Fps.Runtime
             var delivery = ShotDeliveries.For(round.Delivery);
             var definition = Definition;
             var look = definition != null ? definition.Projectile : null;
+            _pelletHits.Clear();
             foreach (var planned in rounds)
             {
                 // 撃たれた側が撃った方向へ向かえるよう、弾ごとの始点を撃った者の位置として渡す。
@@ -787,13 +801,36 @@ namespace Fps.Runtime
                     charge,
                     look,
                     ConfirmHit);
-                ConfirmHit(delivery.Deliver(request, planned));
+                CollectHit(delivery.Deliver(request, planned));
             }
 
+            // ペレットごとに出すと 1 回の射撃でヒットマーカーが何度も出るので、相手ごとにまとめてから出す。
+            for (var i = 0; i < _pelletHits.Count; i++)
+            {
+                CombatEvents.RaiseHitConfirmed(_pelletHits[i].ToHitConfirm());
+            }
+
+            _pelletHits.Clear();
             return true;
         }
 
         // オフラインで WeaponController を持つのは手元のプレイヤーだけなので、ここが撃った本人のクライアントになる。
+        private void CollectHit(ShotOutcome outcome)
+        {
+            if (outcome.Hitbox == null || outcome.Owner == null)
+            {
+                return;
+            }
+
+            Debug.Log($"[Combat] hit zone={outcome.Hitbox.Zone} dmg={outcome.Damage}", this);
+            if (outcome.WasAlive)
+            {
+                _pelletHits.Add(
+                    outcome.Owner, outcome.Damage, outcome.Hitbox.Zone, outcome.Killed ? DamageOutcome.Killed : DamageOutcome.Damaged);
+            }
+        }
+
+        // 飛ぶ弾は撃った後のフレームで着くので、射撃ごとにまとめる先が無く、着いた弾ごとに知らせる。
         private void ConfirmHit(ShotOutcome outcome)
         {
             if (outcome.Hitbox == null || outcome.Owner == null)
@@ -1059,6 +1096,7 @@ namespace Fps.Runtime
             _enabledReloadAction |= EnableIfNeeded(_reloadAction);
             _enabledNextAction |= EnableIfNeeded(_nextAction);
             _enabledPreviousAction |= EnableIfNeeded(_previousAction);
+            _enabledSwitchAmmoTypeAction |= EnableIfNeeded(_switchAmmoTypeAction);
         }
 
         private InputAction FindOptionalAction(InputActionAsset actions, string path, string effect)

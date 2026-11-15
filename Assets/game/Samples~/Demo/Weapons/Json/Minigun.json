@@ -1,0 +1,54 @@
+{
+  "id": "4d8e2a6f-1b3c-4e5d-9f7a-8c0b2d4e6f13",
+  "nameKey": "weapon.minigun",
+  "category": "LightMachineGun",
+  "shotNoiseRadius": 70,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.05,
+    "spinUp": {
+      "spinUpSeconds": 0.6,
+      "startIntervalMultiplier": 3,
+      "spinDownSeconds": 1
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 200,
+    "reserveAmmo": 400,
+    "reloadSeconds": 5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 1,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 80,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 14,
+    "falloff": {
+      "startDistance": 15,
+      "endDistance": 50,
+      "minMultiplier": 0.5
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 4,
+    "adsSpreadDegrees": 2,
+    "moveSpreadDegrees": 4,
+    "recoilPitchDegrees": 0.2,
+    "recoilYawDegrees": 0.3,
+    "recoilRecoveryPerSecond": 8,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

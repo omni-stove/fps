@@ -228,15 +228,34 @@ namespace Fps.NetV2.Tests
         [Test]
         public void AnArrowWhoseSpawnWasMissedAppearsFromTheSnapshotAndLeavesWithIt()
         {
-            _projectiles.Apply(Snapshot(Row(8, _other, _crossbowId, _eye, new Vector3(0f, 0f, 30f))));
+            _projectiles.Apply(Snapshot(Row(8, _other, _crossbowId, _eye, new Vector3(0f, 0f, 5f))));
 
             var arrow = _views.Single();
             Assert.That(arrow.Position, Is.EqualTo(_eye));
 
             _projectiles.Apply(Snapshot());
+            Advance(ClientProjectiles.DefaultPendingSeconds / 2f);
+
+            Assert.That(arrow.Removed, Is.False, "the reliable end may still be on its way");
+
+            Advance(ClientProjectiles.DefaultPendingSeconds);
 
             Assert.That(arrow.Removed, Is.True);
             Assert.That(_projectiles.Count, Is.Zero);
+        }
+
+        [Test]
+        public void AnArrowBackInTheSnapshotIsKept()
+        {
+            var row = Row(8, _other, _crossbowId, _eye, new Vector3(0f, 0f, 30f));
+            _projectiles.Apply(Snapshot(row));
+            _projectiles.Apply(Snapshot());
+            Advance(ClientProjectiles.DefaultPendingSeconds / 2f);
+
+            _projectiles.Apply(Snapshot(row));
+            Advance(ClientProjectiles.DefaultPendingSeconds * 0.75f);
+
+            Assert.That(_views.Single().Removed, Is.False);
         }
 
         [Test]

@@ -199,20 +199,19 @@ namespace Fps.NetV2
 
             _ended.IntersectWith(_listed);
 
-            // 一度スナップショットに載った弾が消えたら、終わりの知らせが無くてもサーバーではもう飛んでいない。
-            _scratch.Clear();
+            // 一度スナップショットに載った弾が消えたら、サーバーではもう飛んでいない。
+            // ただしスナップショットは Unreliable、終わりの知らせは Reliable で再送だと後から届くので、その場では手放さず Tick で待ってから手放す。
             foreach (var pair in _byId)
             {
                 if (pair.Value.Listed && !_listed.Contains(pair.Key))
                 {
-                    _scratch.Add(pair.Key);
+                    pair.Value.Missing = true;
                 }
-            }
-
-            foreach (var id in _scratch)
-            {
-                _byId[id].Release();
-                Retire(id);
+                else if (_listed.Contains(pair.Key))
+                {
+                    pair.Value.Missing = false;
+                    pair.Value.MissingFor = 0f;
+                }
             }
         }
 
@@ -257,7 +256,13 @@ namespace Fps.NetV2
             _scratch.Clear();
             foreach (var pair in _byId)
             {
-                if (!pair.Value.Tick(deltaSeconds, _correctionSeconds))
+                var alive = pair.Value.Tick(deltaSeconds, _correctionSeconds);
+                if (pair.Value.Missing)
+                {
+                    pair.Value.MissingFor += deltaSeconds;
+                }
+
+                if (!alive || (pair.Value.Missing && pair.Value.MissingFor >= _pendingSeconds))
                 {
                     _scratch.Add(pair.Key);
                 }
@@ -426,6 +431,10 @@ namespace Fps.NetV2
             public bool Sticks => _spec != null && _spec.OnWorldHit == WorldHitResponse.Stick;
 
             public bool Listed { get; set; }
+
+            public bool Missing { get; set; }
+
+            public float MissingFor { get; set; }
 
             public float Unclaimed { get; set; }
 

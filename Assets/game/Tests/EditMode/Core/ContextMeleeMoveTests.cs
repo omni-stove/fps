@@ -68,6 +68,61 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheTakedownNeedsAnUnawareTargetFromBehindAndTakesItsAmountsFromTheMeleeSpec()
+        {
+            var spec = new MeleeSpec(50, 2.5f, 90f, 0.5f, 0.4f, 0.2f, 0.75f, 0.9f, 15, 12, true, 2f, false, 0.6f);
+            var takedown = ContextMeleeMove.Takedown(spec);
+
+            Assert.That(takedown.Id, Is.EqualTo(ContextMeleeMove.TakedownId));
+            Assert.That(takedown.Priority, Is.EqualTo(ContextMeleeMove.TakedownPriority));
+            Assert.That(takedown.Priority, Is.LessThan(ContextMeleeMove.FinisherPriority));
+            Assert.That(takedown.Required, Is.EqualTo(ContextMeleeConditions.TargetBehind | ContextMeleeConditions.TargetUnaware));
+            Assert.That(takedown.Excluded, Is.EqualTo(ContextMeleeConditions.None));
+            Assert.That(takedown.Reach, Is.EqualTo(2.5f));
+            Assert.That(takedown.PerformSeconds, Is.EqualTo(2f));
+            Assert.That(takedown.Outcome, Is.EqualTo(ContextMeleeOutcome.Kill));
+            Assert.That(takedown.HealthReward, Is.Zero);
+            Assert.That(takedown.AmmoReward, Is.Zero);
+            Assert.That(takedown.Interruptible, Is.False);
+            Assert.That(takedown.WitnessAwareness, Is.EqualTo(0.6f));
+            Assert.Throws<ArgumentNullException>(() => ContextMeleeMove.Takedown(null));
+        }
+
+        [Test]
+        public void OnlyTheTakedownRaisesWitnessesByDefault()
+        {
+            Assert.That(Make().WitnessAwareness, Is.Zero);
+            Assert.That(ContextMeleeMove.Finisher(MeleeSpec.Default).WitnessAwareness, Is.Zero);
+            Assert.That(ContextMeleeMove.Takedown(MeleeSpec.Default).WitnessAwareness, Is.EqualTo(MeleeSpec.DefaultTakedownWitnessAwareness));
+        }
+
+        [Test]
+        public void TheWitnessAwarenessMustBeALevel()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ContextMeleeMove(
+                "move", 0, ContextMeleeConditions.TargetBehind, ContextMeleeConditions.None, 2f, 1f, 0.1f, 1f, ContextMeleeOutcome.Kill, 0, 0, 0, true, -0.1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ContextMeleeMove(
+                "move", 0, ContextMeleeConditions.TargetBehind, ContextMeleeConditions.None, 2f, 1f, 0.1f, 1f, ContextMeleeOutcome.Kill, 0, 0, 0, true, 1.5f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ContextMeleeMove(
+                "move", 0, ContextMeleeConditions.TargetBehind, ContextMeleeConditions.None, 2f, 1f, 0.1f, 1f, ContextMeleeOutcome.Kill, 0, 0, 0, true, float.NaN));
+        }
+
+        [Test]
+        public void TheMeleeSpecDefaultsTheTakedownAndRejectsBadTakedownValues()
+        {
+            var spec = MeleeSpec.Default;
+            Assert.That(spec.TakedownSeconds, Is.EqualTo(MeleeSpec.DefaultTakedownSeconds));
+            Assert.That(spec.TakedownInterruptible, Is.EqualTo(MeleeSpec.DefaultTakedownInterruptible));
+            Assert.That(spec.TakedownWitnessAwareness, Is.EqualTo(MeleeSpec.DefaultTakedownWitnessAwareness));
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => new MeleeSpec(50, 2f, 90f, 0.5f, 0.4f, 0.2f, 0.75f, 1f, 0, 0, true, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new MeleeSpec(50, 2f, 90f, 0.5f, 0.4f, 0.2f, 0.75f, 1f, 0, 0, true, float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new MeleeSpec(50, 2f, 90f, 0.5f, 0.4f, 0.2f, 0.75f, 1f, 0, 0, true, 1f, true, -0.1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new MeleeSpec(50, 2f, 90f, 0.5f, 0.4f, 0.2f, 0.75f, 1f, 0, 0, true, 1f, true, 1.1f));
+            Assert.That(new MeleeSpec(50, 2f, 90f, 0.5f, 0.4f, 0.2f, 0.75f, 1f, 0, 0, true, 1f, true, 0f).TakedownWitnessAwareness, Is.Zero);
+        }
+
+        [Test]
         public void TheMeleeSpecDefaultsTheFinisherAndRejectsBadFinisherValues()
         {
             var spec = MeleeSpec.Default;

@@ -7,13 +7,18 @@ namespace Fps.Core
         public const string FinisherId = "finisher";
         public const int FinisherPriority = 100;
 
+        public const string TakedownId = "takedown";
+
+        // 怯んだ相手は撃たれて気づいた後なので、背後からでも報酬のある処刑技を先にする。
+        public const int TakedownPriority = 50;
+
         public const float DefaultAlignSeconds = 0.15f;
 
         // 体の中心どうしの距離。相手とプレイヤーの半径 (0.5m ずつ) より少し離し、位置合わせで体がめり込まないようにする。
         public const float DefaultStandDistance = 1.2f;
 
         /// <exception cref="ArgumentException">id が空か空白を含む、または required と excluded が重なる。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。outcome が Damage なら damage は 1 以上。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。outcome が Damage なら damage は 1 以上、witnessAwareness は 0 以上 1 以下。</exception>
         public ContextMeleeMove(
             string id,
             int priority,
@@ -27,7 +32,8 @@ namespace Fps.Core
             int damage,
             int healthReward,
             int ammoReward,
-            bool interruptible)
+            bool interruptible,
+            float witnessAwareness = 0f)
         {
             // ログを key=value で並べるので、空白を含む Id はほかの値と区切れなくなる。
             if (string.IsNullOrEmpty(id) || HasWhiteSpace(id))
@@ -80,6 +86,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(ammoReward), ammoReward, "ammoReward must not be negative");
             }
 
+            if (!(witnessAwareness >= 0f && witnessAwareness <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(witnessAwareness), witnessAwareness, "witnessAwareness must be between 0 and 1");
+            }
+
             Id = id;
             Priority = priority;
             Required = required;
@@ -93,6 +104,7 @@ namespace Fps.Core
             HealthReward = healthReward;
             AmmoReward = ammoReward;
             Interruptible = interruptible;
+            WitnessAwareness = witnessAwareness;
         }
 
         public string Id { get; }
@@ -122,6 +134,9 @@ namespace Fps.Core
 
         public bool Interruptible { get; }
 
+        // 技の最中に振る者を見た敵の発見ゲージを、この量まで上げる (AwarenessMeter.Full で交戦)。0 なら見られても上げない。
+        public float WitnessAwareness { get; }
+
         public float TotalSeconds => AlignSeconds + PerformSeconds;
 
         // 届く距離はふつうの近接と揃え、怯んだ相手に近接を押したときに「届いたのにふつうの近接が出た」とならないようにする。
@@ -147,6 +162,32 @@ namespace Fps.Core
                 spec.FinisherHealth,
                 spec.FinisherAmmo,
                 spec.FinisherInterruptible);
+        }
+
+        // 気づいていない相手を倒すので報酬は付けない。音の合図も出さず、見ていなかった敵の気づきも上げない (ContextMeleeAction はどの技でもそれらを出さない)。
+        /// <exception cref="ArgumentNullException">spec が null。</exception>
+        public static ContextMeleeMove Takedown(MeleeSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            return new ContextMeleeMove(
+                TakedownId,
+                TakedownPriority,
+                ContextMeleeConditions.TargetBehind | ContextMeleeConditions.TargetUnaware,
+                ContextMeleeConditions.None,
+                spec.Reach,
+                DefaultStandDistance,
+                DefaultAlignSeconds,
+                spec.TakedownSeconds,
+                ContextMeleeOutcome.Kill,
+                0,
+                0,
+                0,
+                spec.TakedownInterruptible,
+                spec.TakedownWitnessAwareness);
         }
 
         private static bool HasWhiteSpace(string value)

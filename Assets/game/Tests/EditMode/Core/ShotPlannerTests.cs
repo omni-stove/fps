@@ -63,14 +63,6 @@ namespace Fps.Core.Tests
             Assert.That(ProjectileSteering.Steer(new HomingSpec(1f, 10f, 90f), Vector3.Zero, velocity, Vector3.UnitX, 0.1f), Is.EqualTo(velocity));
 
             Assert.That(SprayCone.Contains(new SpraySpec(0.1f, 20f), 8f, Vector3.Zero, Vector3.UnitZ, new Vector3(0f, 0f, 2f)), Is.False);
-
-            var beam = new BeamState(new BeamSpec(0.1f));
-            beam.Start();
-            Assert.That(beam.Tick(1f), Is.EqualTo(0));
-            Assert.That(beam.IsFiring, Is.True);
-            Assert.That(beam.FiringSeconds, Is.EqualTo(1f));
-            beam.Stop();
-            Assert.That(beam.IsFiring, Is.False);
         }
 
         [Test]

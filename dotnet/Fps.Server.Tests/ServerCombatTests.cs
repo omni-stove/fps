@@ -697,6 +697,30 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void AStickyGrenadeSticksToThePersonItHitsAndGoesOffOnThem()
+        {
+            Start(Rules(), grenades: new GrenadeCatalog(new[] { _sticky }));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            _context.Bodies.TryGet(2, out var target);
+
+            _host.OnMessage(new ConnectionId(1), new ThrowGrenadeRequestMessage { Direction = Vector3.UnitX, GrenadeTypeId = _sticky.Id });
+            Step(1f);
+
+            var grenade = Snapshot(2).Grenades[0];
+            Assert.That(grenade.IsStuck, Is.True);
+            Assert.That(grenade.HasStuckTo, Is.True);
+            Assert.That(grenade.StuckToId, Is.EqualTo(2));
+            Assert.That(grenade.Position.X, Is.LessThan(target.Position.X), "it stays on the side it hit");
+
+            Step(_sticky.FuseSeconds);
+
+            Assert.That(_combat.LiveGrenadeCount, Is.EqualTo(0));
+            Assert.That(_rules.Session.IsAlive(2), Is.False, "it goes off on the person it is stuck to");
+        }
+
+        [Test]
         public void GrenadesAreLimitedByCountAndInterval()
         {
             Start(Rules());
@@ -860,6 +884,12 @@ namespace Fps.Server.Tests
             "grenade.smoke",
             new ImpactSpec(damage: 0, areaEffect: new AreaEffectSpec(4f, 3f, 0.5f, 0, visualId: "smoke")),
             fuseSeconds: 1f);
+
+        private static readonly GrenadeSpec _sticky = new GrenadeSpec(
+            "5eb3292d-6300-4ec2-b325-6ad793017e49",
+            "grenade.sticky",
+            GrenadeSpec.Default.Impact,
+            stickiness: GrenadeStickiness.SurfacesAndCharacters);
 
         private static AreaEffectMessage Copy(AreaEffectMessage m)
         {

@@ -14,12 +14,18 @@ namespace Fps.Server
     /// </summary>
     internal sealed class ServerPlayerWeapons
     {
+        // 押していた時間は届いた時刻の差で測るので、前の射撃だけ遅れて届くと短く見える。その揺れで正しく溜めた弾を削らないよう、この秒数だけ長く見る。
+        public const double ChargeArrivalToleranceSeconds = 0.2d;
+
         private readonly int _playerId;
         private readonly TextWriter _log;
         private readonly Func<double> _now;
         private Loadout<ServerWeapon> _loadout;
         private double _reloadStartedAt;
         private float _chargeFraction;
+        private double _chargeFrom;
+        private int _burstRoundsLeft;
+        private double _burstUntil;
 
         public ServerPlayerWeapons(int playerId, TextWriter log, Func<double> now)
         {
@@ -66,6 +72,8 @@ namespace Fps.Server
             }
 
             _chargeFraction = 0f;
+            _chargeFrom = _now();
+            _burstRoundsLeft = 0;
             SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon));
         }
 
@@ -128,14 +136,58 @@ namespace Fps.Server
         }
 
         /// <summary>
-        /// 射撃の要求の溜め requested を今の武器に照らして受け入れ、着弾の倍率に使う値を返す。溜めの無い武器は 0。
-        /// 受け入れた値は持ち主に <see cref="WeaponSync.ChargeFraction"/> で返す。
+        /// 射撃の要求の溜め requested を今の武器に照らして受け入れ、着弾の倍率に使う値を fraction に返す。溜めの無い武器は 0。
+        /// 溜めは前に溜めを使い切った時 (前の射撃・持ち替え・装備) からの秒数で届く分までに下げ、下げた値が最小に届かず、
+        /// 届かない弾を撃たない武器なら <see cref="ShotRejection.Undercharged"/>。受け入れた値は持ち主に <see cref="WeaponSync.ChargeFraction"/> で返す。
         /// </summary>
-        public float AcceptCharge(float requested)
+        public ShotRejection AcceptCharge(float requested, out float fraction)
         {
             var charge = CurrentSpec?.Trigger.Charge;
-            _chargeFraction = charge == null || !float.IsFinite(requested) ? 0f : Math.Clamp(requested, 0f, 1f);
-            return _chargeFraction;
+            if (charge == null)
+            {
+                _chargeFraction = 0f;
+                fraction = 0f;
+                return ShotRejection.None;
+            }
+
+            // バーストの続きの弾は離したときの 1 回の溜めで出るので、測り直さずに最初の弾の溜めを使う。
+            // 測り直すと、続きの弾の間隔しか押していなかったことになり、最小に届かない弾として弾いてしまう。
+            var now = _now();
+            if (_burstRoundsLeft > 0 && now <= _burstUntil)
+            {
+                _burstRoundsLeft--;
+                fraction = Math.Min(_chargeFraction, float.IsFinite(requested) ? Math.Max(0f, requested) : 0f);
+                return ShotRejection.None;
+            }
+
+            // 弾かれた射撃でも、撃った側は離して溜め直しているので、ここから測り直す。
+            _burstRoundsLeft = 0;
+            var held = now - _chargeFrom + ChargeArrivalToleranceSeconds;
+            _chargeFrom = now;
+            fraction = ChargeTrigger.Reachable(charge, float.IsFinite(requested) ? requested : 0f, held);
+            if (!ChargeTrigger.Fires(charge, fraction))
+            {
+                fraction = 0f;
+                return ShotRejection.Undercharged;
+            }
+
+            _chargeFraction = fraction;
+            var burst = CurrentSpec.Trigger.Burst;
+            if (burst != null)
+            {
+                _burstRoundsLeft = burst.RoundsPerBurst - 1;
+                _burstUntil = now + (_burstRoundsLeft * (double)burst.RoundIntervalSeconds) + ChargeArrivalToleranceSeconds;
+            }
+
+            return ShotRejection.None;
+        }
+
+        // Bot は人のように押して溜めないので、溜め切るまで撃たない (オフラインの敵の TriggerDriver.PullAsBot と同じ)。
+        // 溜め切る前に撃たせると、最小に届かない弾として弾かれ続け、連射の枠と警告だけを使い続けるため。
+        public bool IsChargedForBot()
+        {
+            var charge = CurrentSpec?.Trigger.Charge;
+            return charge == null || ChargeTrigger.Fraction(charge, _now() - _chargeFrom) >= 1f;
         }
 
         /// <summary>
@@ -247,6 +299,8 @@ namespace Fps.Server
         private void HandleSwitched(int index)
         {
             _chargeFraction = 0f;
+            _chargeFrom = _now();
+            _burstRoundsLeft = 0;
             _log.WriteLine("[Net] switch client=" + Text(_playerId) + " index=" + Text(index) + " weapon=" + _loadout.Items[index].Spec.Id);
         }
 
@@ -254,6 +308,7 @@ namespace Fps.Server
         private void HandleReloadStarted(bool automatic)
         {
             _reloadStartedAt = _now();
+            _burstRoundsLeft = 0;
             var weapon = _loadout.Current;
             _log.WriteLine("[Net] reload start client=" + Text(_playerId) + " auto=" + automatic + " ammo=" + Text(weapon.AmmoInMagazine)
                 + " reserve=" + Text(weapon.ReserveAmmo));

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -12,6 +13,12 @@ namespace Fps.Runtime
             var origin = round.Origin.ToUnity();
             var direction = round.Direction.ToUnity();
             var range = request.Round.Range;
+            var penetration = PenetrationRule.For(request.Round);
+            if (penetration != null)
+            {
+                return DeliverPenetrating(request, penetration, round.Index, origin, direction, range);
+            }
+
             var radius = request.Round.Radius;
 
             // ShotCast が向きと射程を検査するので、撃ったことはその後に知らせる (例外になった弾を撃ったことにしない)。
@@ -92,6 +99,103 @@ namespace Fps.Runtime
             }
 
             return ImpactApplier.Apply(request, hit, direction);
+        }
+
+        // 当たった物を近い順に抜けられるだけ抜ける。撃った本人に返すのは最初に当てた人の結果で、人に当たらなければ止まった所の結果。
+        // 当てた相手が倒れた知らせから次の弾が撃たれても並びを壊さないよう、並びは弾ごとに持つ。止まった面では跳ねない (サーバーと同じ)。
+        private static ShotOutcome DeliverPenetrating(
+            ShotRequest request, PenetrationSpec penetration, int pelletIndex, Vector3 origin, Vector3 direction, float range)
+        {
+            var hits = new List<RaycastHit>();
+            var struck = new HashSet<Damageable>();
+            ShotCast.CastAll(origin, direction, range, request.LayerMask, request.ShooterRoot, hits);
+            if (pelletIndex > 0)
+            {
+                CombatEvents.RaiseShotContinued(request.Shooter, origin, direction, request.WeaponId);
+            }
+            else
+            {
+                CombatEvents.RaiseShotFired(request.Shooter, origin, direction, request.WeaponId);
+            }
+
+            var outcome = ShotOutcome.Miss;
+            var personOutcome = ShotOutcome.Miss;
+            var multiplier = 1f;
+            var passed = 0;
+            var travelled = range;
+            Collider stoppedBy = null;
+            foreach (var hit in hits)
+            {
+                // 1 人の体は部位ごとのコライダーに分かれているので、同じ弾が同じ人に 2 度当たらないようにする。
+                var hitbox = Hitbox.FindFor(hit.collider);
+                var owner = hitbox != null ? hitbox.Owner : null;
+                if (owner != null && struck.Contains(owner))
+                {
+                    continue;
+                }
+
+                if (!Strike(request, hit, direction, multiplier, out outcome))
+                {
+                    travelled = hit.distance;
+                    stoppedBy = hit.collider;
+                    break;
+                }
+
+                if (owner != null)
+                {
+                    struck.Add(owner);
+                    if (personOutcome.Owner == null)
+                    {
+                        personOutcome = outcome;
+                    }
+                }
+
+                // 人の厚さは部位のコライダーの重なりで測れないので 0 とし、抜けるかは素材と枚数だけで決める。
+                var material = SurfaceMaterial.IdOf(hit.collider);
+                var thickness = owner != null
+                    ? 0f
+                    : ShotCast.Thickness(hit.collider, hit.point, direction, PenetrationRule.MaxThicknessFor(penetration, material));
+                if (!PenetrationRule.TryPassThrough(penetration, passed, material, thickness, out var passMultiplier))
+                {
+                    travelled = hit.distance;
+                    stoppedBy = hit.collider;
+                    break;
+                }
+
+                passed++;
+                multiplier *= passMultiplier;
+                Debug.Log($"{Damageable.LogTag} penetrate material={material} count={passed} multiplier={multiplier:F2}", hit.collider);
+            }
+
+            Hitscan.ReportNearMisses(origin, direction, travelled, request.ShooterRoot, stoppedBy);
+            return personOutcome.Owner != null ? personOutcome : outcome;
+        }
+
+        // 弾を受け止める物 (盾・置いた物) に止められたら false。
+        private static bool Strike(ShotRequest request, RaycastHit hit, Vector3 direction, float multiplier, out ShotOutcome outcome)
+        {
+            var weakened = new ShotRequest(
+                request.Shooter,
+                request.ShooterRoot,
+                request.SourcePosition,
+                request.Round,
+                request.Impact.WithDamageMultiplier(multiplier),
+                request.WeaponId,
+                request.LayerMask,
+                request.Charge,
+                request.ChargeFraction);
+            CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
+            var damage = weakened.Impact.Damage;
+            if (BulletShield.TryBlock(hit.collider, damage, weakened.SourcePosition, weakened.Shooter)
+                || Deployable.TryStopBullet(
+                    hit.collider, damage, hit.distance, weakened.Impact.Falloff, weakened.SourcePosition, direction, weakened.Shooter))
+            {
+                outcome = ShotOutcome.Stopped(hit);
+                return false;
+            }
+
+            outcome = ImpactApplier.Apply(weakened, hit, direction);
+            return true;
         }
     }
 }

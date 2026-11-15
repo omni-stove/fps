@@ -50,6 +50,21 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheShotgunLoadsOneShellAtATime()
+        {
+            var path = Path.Combine(SampleWeaponJsonFolder(), "Shotgun.json");
+            var spec = WeaponSpecJson.Parse(File.ReadAllText(path), path);
+            var weapon = new Weapon(spec, 0, spec.ReserveAmmo);
+
+            Assert.That(weapon.Ammo, Is.TypeOf<PerRoundReload>());
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(spec.Ammo.ReloadSecondsPerRound);
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
+            Assert.That(weapon.TryFire(), Is.True, "a loaded shell fires mid-reload");
+            Assert.That(weapon.IsReloading, Is.False);
+        }
+
+        [Test]
         public void TheFlamethrowerSpraysAShortConeThatBurnsAndIsManagedByHeat()
         {
             var path = Path.Combine(SampleWeaponJsonFolder(), "Flamethrower.json");

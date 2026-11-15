@@ -302,7 +302,7 @@ namespace Fps.Runtime
                 _weapon.Id,
                 Physics.DefaultRaycastLayers,
                 _weapon.Trigger.Charge,
-                Mathf.Clamp01(_trigger.ChargeFraction));
+                Mathf.Clamp01(_trigger.ShotChargeFraction));
             foreach (var round in plan.Rounds)
             {
                 var result = Hitscan.Fire(request, round);

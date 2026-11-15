@@ -46,7 +46,8 @@ namespace Fps.Runtime
                 round.Origin,
                 round.Direction,
                 Physics.gravity.ToNumerics(),
-                _ => world.LastHit.collider != null && Hitbox.FindFor(world.LastHit.collider) != null);
+                _ => world.LastHit.collider != null && Hitbox.FindFor(world.LastHit.collider) != null,
+                ChargeScaling.SpeedMultiplier(request.Charge, request.ChargeFraction));
 
             var body = Create(request.ProjectileLook, request.WeaponId);
             body._request = request;
@@ -167,10 +168,12 @@ namespace Fps.Runtime
                 case BallisticState.HitTarget:
                 case BallisticState.Stopped:
                     Land();
+                    DetonateOnStop();
                     Despawn();
                     break;
                 case BallisticState.Stuck:
                     Land();
+                    DetonateOnStop();
                     StopSound();
                     _stuckIn = _world.LastHit.collider;
                     _stuckLeft = _request.ProjectileLook != null ? _request.ProjectileLook.StuckSeconds : DefaultStuckSeconds;
@@ -182,9 +185,16 @@ namespace Fps.Runtime
                     break;
                 case BallisticState.Expired:
                     Debug.Log(FormatLog("Expired", null, 0), this);
+                    ImpactApplier.Detonate(_request, DetonationTrigger.OnLifetimeEnd, _flight.Position.ToUnity(), Vector3.zero);
                     Despawn();
                     break;
             }
+        }
+
+        private void DetonateOnStop()
+        {
+            var hit = _world.LastHit;
+            ImpactApplier.Detonate(_request, DetonationTrigger.OnStop, hit.point, hit.normal);
         }
 
         private void Land()

@@ -244,73 +244,16 @@ namespace Fps.Server
             return hitboxes.HasHistory ? hitboxes.LastRecordedTick : float.NaN;
         }
 
-        private sealed class Spray
+        private sealed class Spray : HeldFire
         {
-            private Vector3 _offset;
-            private Vector3 _direction;
-            private float _yaw;
-            private float _lagTicks;
-
+            // 押した・離したと間合いの数え方はビームと同じなので、TriggerModels と同じく火炎の間隔を持つビームとして数える
             public Spray(int shooterId, SpraySpec spec)
+                : base(shooterId, new BeamState(new BeamSpec(spec.TickSeconds)))
             {
-                ShooterId = shooterId;
                 Spec = spec;
-
-                // 押した・離したと間合いの数え方はビームと同じなので、TriggerModels と同じく火炎の間隔を持つビームとして数える
-                State = new BeamState(new BeamSpec(spec.TickSeconds));
             }
-
-            public int ShooterId { get; }
 
             public SpraySpec Spec { get; }
-
-            public BeamState State { get; }
-
-            public ServerShot Shot { get; private set; }
-
-            /// <summary>次の噴射の弾を、押した瞬間の検査で使った 1 発で払うか。</summary>
-            public bool Prepaid { get; set; }
-
-            public int Ticks { get; set; }
-
-            public Vector3 LastStart { get; set; }
-
-            public Vector3 LastEnd { get; set; }
-
-            // 押したときの始点と向きをそのまま使わないのは、押している間に動いたり振り向いたりしても火炎を体に付いてこさせるため
-            public void Aim(in ServerShot shot, PlannedRound planned, ServerBody body, float lastRecordedTick)
-            {
-                Shot = shot;
-                _offset = planned.Origin - body.EyePosition;
-                _direction = Vector3.Normalize(planned.Direction);
-                _yaw = body.Yaw;
-                _lagTicks = float.IsNaN(lastRecordedTick) ? 0f : Math.Max(0f, lastRecordedTick - shot.Tick);
-            }
-
-            public void Pose(ServerBody body, out Vector3 origin, out Vector3 direction)
-            {
-                var turn = body.Yaw - _yaw;
-                origin = body.EyePosition + RotateYaw(_offset, turn);
-                direction = RotateYaw(_direction, turn);
-            }
-
-            public float ViewTick(float lastRecordedTick)
-            {
-                return float.IsNaN(lastRecordedTick) ? Shot.Tick : Math.Max(0f, lastRecordedTick - _lagTicks);
-            }
-
-            // Unity の左手系で Y 軸まわりに回す (PlayerMotor.ToWorld と同じ向き)
-            private static Vector3 RotateYaw(Vector3 value, float radians)
-            {
-                if (radians == 0f)
-                {
-                    return value;
-                }
-
-                var sin = MathF.Sin(radians);
-                var cos = MathF.Cos(radians);
-                return new Vector3((value.X * cos) + (value.Z * sin), value.Y, (-value.X * sin) + (value.Z * cos));
-            }
         }
     }
 }

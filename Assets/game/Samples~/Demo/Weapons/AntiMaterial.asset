@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: AntiMaterial
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: 96be789a-f7e0-4512-b796-2492d70a4a1b
+  _nameKey: weapon.antiMaterial
+  _category: 4
+  _fireMode: 1
+  _magazineSize: 5
+  _reserveAmmo: 20
+  _fireInterval: 1.2
+  _reloadSeconds: 3.5
+  _damage: 150
+  _range: 300
+  _falloffStart: 3.4028235e+38
+  _falloffEnd: 3.4028235e+38
+  _falloffMinMultiplier: 1
+  _explosionRadius: 0
+  _adsFieldOfView: 20
+  _blindFireSpreadDegrees: 15
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.12
+  _activeReloadFailSeconds: 0.8
+  _recoilPitchDegrees: 6
+  _recoilYawDegrees: 1
+  _recoilRecoveryPerSecond: 20
+  _recoilRecoveryDelaySeconds: 0.3
+  _hipSpreadDegrees: 6
+  _adsSpreadDegrees: 0
+  _moveSpreadDegrees: 6
+  _shotNoiseRadius: 80
+  _penetration:
+    _enabled: 1
+    _maxPenetrations: 2
+    _damageMultiplierPerPenetration: 0.6
+    _maxThickness: 0.4
+    _materials:
+    - _materialId: metal
+      _penetrability: 0.5
+    - _materialId: wood
+      _penetrability: 2

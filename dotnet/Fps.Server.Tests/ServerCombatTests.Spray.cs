@@ -30,7 +30,7 @@ namespace Fps.Server.Tests
                 Tick();
             }
 
-            SprayRelease(1);
+            Release(1);
             Step(0.5f);
 
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - (_sprayDamage * expectedHits)), _log.ToString());
@@ -46,7 +46,7 @@ namespace Fps.Server.Tests
             Step(0.2f);
 
             SprayPress(1, AimAt(1, Body(2).Center));
-            SprayRelease(1);
+            Release(1);
             var sprayed = _rules.Session.GetHealth(2);
             Step(1.1f);
 
@@ -70,7 +70,7 @@ namespace Fps.Server.Tests
             Step(0.2f);
 
             SprayPress(1, TurnedBy(AimAt(1, Body(2).Center), offAxisDegrees * MathF.PI / 180f));
-            SprayRelease(1);
+            Release(1);
 
             var expected = reached ? NetMatchSettings.DefaultMaxHealth - _sprayDamage : NetMatchSettings.DefaultMaxHealth;
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(expected), _log.ToString());
@@ -86,7 +86,7 @@ namespace Fps.Server.Tests
 
             SprayPress(1, AimAt(1, Body(2).Center));
             Step(0.5f);
-            SprayRelease(1);
+            Release(1);
 
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth), _log.ToString());
         }
@@ -101,10 +101,10 @@ namespace Fps.Server.Tests
 
             SprayPress(1, AimAt(1, Body(2).Center));
             Step(0.5f);
-            SprayRelease(1);
+            Release(1);
 
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth), _log.ToString());
-            var firing = _transport.Read<BeamStateMessage>(2, CopySpray).First();
+            var firing = _transport.Read<BeamStateMessage>(2, Copy).First();
             Assert.That(firing.Active, Is.True);
             Assert.That(firing.End.X, Is.EqualTo(-0.25f).Within(1e-3f), "the flame ends at the wall");
         }
@@ -119,11 +119,11 @@ namespace Fps.Server.Tests
 
             SprayPress(1, AimAt(1, Body(2).Center));
             Step(0.2f);
-            SprayRelease(1);
+            Release(1);
 
             foreach (var receiver in new[] { 1, 2 })
             {
-                var states = _transport.Read<BeamStateMessage>(receiver, CopySpray);
+                var states = _transport.Read<BeamStateMessage>(receiver, Copy);
                 Assert.That(states.Count, Is.GreaterThan(2));
                 var firing = states.Take(states.Count - 1).ToList();
                 Assert.That(firing.All(s => s.Active && s.ShooterId == 1 && s.WeaponId == TestRules.RifleId), Is.True);
@@ -144,7 +144,7 @@ namespace Fps.Server.Tests
             Step(0.2f);
 
             SprayPress(1, AimAt(1, Body(2).Center));
-            SprayTurn(1, Body(1).Yaw + MathF.PI);
+            Turn(1, Body(1).Yaw + MathF.PI);
             var health = _rules.Session.GetHealth(2);
             Step(0.5f);
 
@@ -166,7 +166,7 @@ namespace Fps.Server.Tests
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - (_sprayDamage * magazine)), _log.ToString());
             Assert.That(_log.ToString(), Does.Contain("net spray stop shooter=1 weapon=" + TestRules.RifleId + " ticks=" + magazine));
             Assert.That(_log.ToString(), Does.Contain("reason=" + ShotRejection.OutOfAmmo));
-            Assert.That(_transport.Read<BeamStateMessage>(1, CopySpray).Last().Active, Is.False, "the shooter learns that the server stopped its spray");
+            Assert.That(_transport.Read<BeamStateMessage>(1, Copy).Last().Active, Is.False, "the shooter learns that the server stopped its spray");
         }
 
         [Test]
@@ -206,40 +206,7 @@ namespace Fps.Server.Tests
 
         private void SprayPress(int shooter, Vector3 direction)
         {
-            Send(shooter, SprayTrigger(TriggerEdge.Pressed, Body(shooter).EyePosition, direction));
-        }
-
-        private void SprayRelease(int shooter)
-        {
-            Send(shooter, SprayTrigger(TriggerEdge.Released, Body(shooter).EyePosition, Vector3.UnitZ));
-        }
-
-        private FireRequestMessage SprayTrigger(TriggerEdge edge, Vector3 origin, Vector3 direction)
-        {
-            return new FireRequestMessage
-            {
-                WeaponId = TestRules.RifleId,
-                Origin = origin,
-                Direction = direction,
-                ClientTick = (int)_host.TickCount,
-                InterpolationAlpha = 0f,
-                ShotIndex = _shotIndex++,
-                ShotGeneration = 0,
-                Trigger = edge,
-            };
-        }
-
-        private void SprayTurn(int id, float yaw)
-        {
-            var input = new InputMessage();
-            input.Add(new InputFrame(++_inputTick, Vector2.Zero, yaw, InputButtons.None));
-            _host.OnMessage(new ConnectionId((ulong)id), input);
-            Tick();
-        }
-
-        private static BeamStateMessage CopySpray(BeamStateMessage m)
-        {
-            return new BeamStateMessage { ShooterId = m.ShooterId, WeaponId = m.WeaponId, Start = m.Start, End = m.End, Active = m.Active };
+            Send(shooter, Trigger(TriggerEdge.Pressed, Body(shooter).EyePosition, direction));
         }
     }
 }

@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: Dmr
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: 8e9139d0-8779-4ec7-af73-198c0289f616
+  _nameKey: weapon.dmr
+  _category: 3
+  _fireMode: 1
+  _magazineSize: 15
+  _reserveAmmo: 60
+  _fireInterval: 0.3
+  _reloadSeconds: 2.5
+  _damage: 45
+  _range: 150
+  _falloffStart: 40
+  _falloffEnd: 100
+  _falloffMinMultiplier: 0.7
+  _explosionRadius: 0
+  _adsFieldOfView: 35
+  _blindFireSpreadDegrees: 10
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.6
+  _recoilPitchDegrees: 1.5
+  _recoilYawDegrees: 0.3
+  _recoilRecoveryPerSecond: 8
+  _recoilRecoveryDelaySeconds: 0.2
+  _hipSpreadDegrees: 4
+  _adsSpreadDegrees: 0.2
+  _moveSpreadDegrees: 4
+  _shotNoiseRadius: 50
+  _ammoTypes:
+  - _id: fc94eae2-4def-40b1-b0e6-97e8199f9e0f
+    _nameKey: ammo.dmr.standard
+    _overridesRound: 0
+    _overridesImpact: 0
+  - _id: cd18145a-6ef1-4c48-b912-07779fcb97e6
+    _nameKey: ammo.dmr.armorPiercing
+    _overridesRound: 1
+    _round:
+      _delivery: 0
+      _range: 150
+      _pelletCount: 1
+      _pelletSpreadDegrees: 0
+      _radius: 0
+      _penetration:
+        _enabled: 1
+        _maxPenetrations: 2
+        _damageMultiplierPerPenetration: 0.75
+        _maxThickness: 0.5
+    _overridesImpact: 1
+    _impact:
+      _damage: 36
+      _falloffStart: 40
+      _falloffEnd: 100
+      _falloffMinMultiplier: 0.7
+      _structureRadius: 0

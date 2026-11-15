@@ -88,6 +88,59 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void EveryPelletOfAShotgunHitsButTheShooterAndTheTargetAreToldOnce()
+        {
+            // 狭い円錐にして、10 m 先の胴にすべてのペレットが当たるようにする
+            var shotgun = new WeaponSpec(
+                TestRules.RifleId,
+                "weapon.shotgun",
+                WeaponCategory.AssaultRifle,
+                round: new RoundSpec(range: 40f, pelletCount: 8, pelletSpreadDegrees: 0.5f),
+                impact: new ImpactSpec(10));
+            Start(Rules(), rifle: shotgun);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            FireAt(1, Body(2).Center);
+
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 80), _log.ToString());
+            var confirms = _transport.Read<HitConfirmMessage>(1, m => new HitConfirmMessage { Damage = m.Damage, Killed = m.Killed });
+            Assert.That(confirms, Has.Count.EqualTo(1));
+            Assert.That(confirms[0].Damage, Is.EqualTo(80));
+            Assert.That(confirms[0].Killed, Is.False);
+            var taken = _transport.Read<DamageTakenMessage>(2, m => new DamageTakenMessage { Amount = m.Amount });
+            Assert.That(taken, Has.Count.EqualTo(1));
+            Assert.That(taken[0].Amount, Is.EqualTo(80));
+            var shot = _transport.Read<ShotMessage>(2, CopySegments).Single();
+            Assert.That(shot.SegmentCount, Is.EqualTo(8));
+        }
+
+        [Test]
+        public void ShotgunPelletsThatKillAreToldAsOneKill()
+        {
+            var shotgun = new WeaponSpec(
+                TestRules.RifleId,
+                "weapon.shotgun",
+                WeaponCategory.AssaultRifle,
+                round: new RoundSpec(range: 40f, pelletCount: 8, pelletSpreadDegrees: 0.5f),
+                impact: new ImpactSpec(20));
+            Start(Rules(), rifle: shotgun);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            FireAt(1, Body(2).Center);
+
+            Assert.That(_rules.Session.IsAlive(2), Is.False, _log.ToString());
+            var confirms = _transport.Read<HitConfirmMessage>(1, m => new HitConfirmMessage { Damage = m.Damage, Killed = m.Killed });
+            Assert.That(confirms, Has.Count.EqualTo(1));
+            Assert.That(confirms[0].Killed, Is.True);
+            Assert.That(confirms[0].Damage, Is.GreaterThanOrEqualTo(NetMatchSettings.DefaultMaxHealth));
+            Assert.That(_transport.Read<DamageTakenMessage>(2, m => new DamageTakenMessage { Amount = m.Amount }), Has.Count.EqualTo(1));
+        }
+
+        [Test]
         public void TheShotIsJudgedAgainstWhereTheTargetWasWhenTheShooterSawIt()
         {
             Start(Rules());
@@ -314,6 +367,54 @@ namespace Fps.Server.Tests
             var weapon = Snapshot(1).Owner.Weapon;
             Assert.That(weapon.AmmoTypeIndex, Is.EqualTo(0));
             Assert.That(weapon.Heat, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void SwitchingTheAmmoTypeNeedsAReloadAndThenShotsUseTheServersType()
+        {
+            var piercing = new AmmoTypeSpec("00000000-0000-4000-8000-0000000000a3", "ammo.dmr.armorPiercing", impact: new ImpactSpec(60));
+            var rifle = new WeaponSpec(
+                TestRules.RifleId,
+                "weapon.rifle",
+                WeaponCategory.AssaultRifle,
+                ammo: new AmmoSpec(30, 90, 2f),
+                impact: new ImpactSpec(25),
+                ammoTypes: new[] { new AmmoTypeSpec("00000000-0000-4000-8000-0000000000a2", "ammo.dmr.standard"), piercing });
+            Start(Rules(), rifle: rifle);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            Assert.That(Snapshot(1).Owner.Weapon.AmmoTypeIndex, Is.EqualTo(1), "the first type is loaded");
+            FireAt(1, Body(2).Center);
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 25));
+
+            _host.OnMessage(new ConnectionId(1), new WeaponActionRequestMessage { Action = WeaponAction.SwitchAmmoType });
+
+            var switched = Snapshot(1).Owner.Weapon;
+            Assert.That(switched.AmmoTypeIndex, Is.EqualTo(2));
+            Assert.That(switched.AmmoInMagazine, Is.Zero, "the shared magazine is emptied");
+            Assert.That(switched.ReserveAmmo, Is.EqualTo(90 + 29));
+            Assert.That(_log.ToString(), Does.Contain("[Net] ammo-type player=1 weapon=" + TestRules.RifleId + " index=2"));
+
+            Step(0.2f);
+            FireAt(1, Body(2).Center);
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 25), "no rounds until reloaded");
+
+            Step(2.2f);
+            Assert.That(Snapshot(1).Owner.Weapon.AmmoInMagazine, Is.EqualTo(30));
+            var eye = Body(1).EyePosition;
+            _host.OnMessage(new ConnectionId(1), new FireRequestMessage
+            {
+                WeaponId = TestRules.RifleId,
+                Origin = eye,
+                Direction = Body(2).Center - eye,
+                ClientTick = (int)_host.TickCount,
+                ShotIndex = _shotIndex++,
+                AmmoTypeIndex = 1,
+            });
+
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 25 - 60), "the server's type, not the request's");
         }
 
         [Test]

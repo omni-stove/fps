@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// サーバーでクライアント 1 人の連射を制限する。<see cref="FireInterval"/> 秒ごとに 1 発ぶん回復し、
+    /// サーバーでクライアント 1 人の連射を制限する。<see cref="MinShotSpacingSeconds"/> 秒ごとに 1 発ぶん回復し、
     /// 最大 <see cref="Burst"/> 発まで溜まる。届く間隔が揺れて数発がまとめて届いても受け入れ、
     /// 間隔より速く撃ち続ける不正は止める。時間は外から渡す。
     /// </summary>
@@ -17,18 +17,25 @@ namespace Fps.Core
         private bool _started;
 
         /// <summary>1 発ぶん回復するまでの秒数。</summary>
-        public float FireInterval { get; }
+        public float MinShotSpacingSeconds { get; }
 
         /// <summary>溜められる発数の上限。</summary>
         public int Burst { get; }
 
-        /// <param name="fireInterval">1 発ぶん回復するまでの秒数。0 以上の有限値。0 なら制限しない。</param>
-        /// <param name="burst">溜められる発数の上限。1 以上。開始時は満タン。</param>
-        public ShotBudget(float fireInterval, int burst = DefaultBurst)
+        // 連射間隔でなく撃ち方の最短の間隔で回復させるのは、バーストのように間隔より速く続けて撃つ撃ち方を弾かないため。
+        public ShotBudget(ITriggerModel trigger, int burst = DefaultBurst)
+            : this((trigger ?? throw new ArgumentNullException(nameof(trigger))).MinShotSpacingSeconds, burst)
         {
-            if (float.IsNaN(fireInterval) || float.IsInfinity(fireInterval) || fireInterval < 0f)
+        }
+
+        /// <param name="minShotSpacingSeconds">1 発ぶん回復するまでの秒数。0 以上の有限値。0 なら制限しない。</param>
+        /// <param name="burst">溜められる発数の上限。1 以上。開始時は満タン。</param>
+        public ShotBudget(float minShotSpacingSeconds, int burst = DefaultBurst)
+        {
+            if (float.IsNaN(minShotSpacingSeconds) || float.IsInfinity(minShotSpacingSeconds) || minShotSpacingSeconds < 0f)
             {
-                throw new ArgumentOutOfRangeException(nameof(fireInterval), fireInterval, "fireInterval must be finite and not negative");
+                throw new ArgumentOutOfRangeException(
+                    nameof(minShotSpacingSeconds), minShotSpacingSeconds, "minShotSpacingSeconds must be finite and not negative");
             }
 
             if (burst <= 0)
@@ -36,7 +43,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(burst), burst, "burst must be positive");
             }
 
-            FireInterval = fireInterval;
+            MinShotSpacingSeconds = minShotSpacingSeconds;
             Burst = burst;
             _tokens = burst;
         }
@@ -53,14 +60,14 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(nowSeconds), nowSeconds, "nowSeconds must be finite");
             }
 
-            if (FireInterval == 0f)
+            if (MinShotSpacingSeconds == 0f)
             {
                 return true;
             }
 
             if (_started && nowSeconds > _lastSeconds)
             {
-                _tokens = Math.Min(Burst, _tokens + ((nowSeconds - _lastSeconds) / FireInterval));
+                _tokens = Math.Min(Burst, _tokens + ((nowSeconds - _lastSeconds) / MinShotSpacingSeconds));
             }
 
             if (!_started || nowSeconds > _lastSeconds)

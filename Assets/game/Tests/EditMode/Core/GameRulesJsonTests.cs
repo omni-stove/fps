@@ -68,7 +68,8 @@ namespace Fps.Core.Tests
     ""suppression"": ""On"",
     ""ping"": ""On"",
     ""abilities"": ""On"",
-    ""slowMotion"": ""On""
+    ""slowMotion"": ""On"",
+    ""aimToFire"": ""On""
   },
   ""spawnProtectionSeconds"": 1.5,
   ""fallDamage"": ""On"",
@@ -103,7 +104,7 @@ namespace Fps.Core.Tests
         public void ItemNamesMatchTheRulesConstructors()
         {
             Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(17));
-            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(24));
+            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(25));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
 
@@ -125,6 +126,7 @@ namespace Fps.Core.Tests
             Assert.That(actions.Ping, Is.EqualTo(Ping.Off));
             Assert.That(actions.Abilities, Is.EqualTo(Abilities.Off));
             Assert.That(actions.SlowMotion, Is.EqualTo(SlowMotion.Off));
+            Assert.That(actions.AimToFire, Is.EqualTo(AimToFire.Off));
         }
 
         [TestCase("melee")]
@@ -140,6 +142,7 @@ namespace Fps.Core.Tests
         [TestCase("ping")]
         [TestCase("abilities")]
         [TestCase("slowMotion")]
+        [TestCase("aimToFire")]
         public void EachNewActionItemIsReadAndRejectsUnknownNames(string item)
         {
             var on = GameRulesJson.Parse("{\"actions\": {\"" + item + "\": \"On\"}}", _source);
@@ -234,7 +237,8 @@ namespace Fps.Core.Tests
                 Suppression.On,
                 Ping.On,
                 Abilities.On,
-                SlowMotion.On);
+                SlowMotion.On,
+                AimToFire.On);
         }
 
         [Test]
@@ -420,6 +424,7 @@ namespace Fps.Core.Tests
             Assert.That(a.Ping, Is.EqualTo(b.Ping), "actions.ping");
             Assert.That(a.Abilities, Is.EqualTo(b.Abilities), "actions.abilities");
             Assert.That(a.SlowMotion, Is.EqualTo(b.SlowMotion), "actions.slowMotion");
+            Assert.That(a.AimToFire, Is.EqualTo(b.AimToFire), "actions.aimToFire");
         }
     }
 }

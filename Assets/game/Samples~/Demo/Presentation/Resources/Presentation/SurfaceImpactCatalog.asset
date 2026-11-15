@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3d0444b56158b5f04a143e7cbef546, type: 3}
+  m_Name: SurfaceImpactCatalog
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceImpactCatalog
+  _surfaces:
+  - _materialId: default
+    _decal: {fileID: 2100000, guid: 87dc5959419f24f44af342afcb9ac47c, type: 2}
+    _decalSize: 0.12
+    _effect: {fileID: 1528657796412865866, guid: e95e25d96c45d4f6cbd7dc64ab1decda, type: 3}
+    _sound: {fileID: 8300000, guid: ca8484c2b06e342de9a0fcb4aaf779de, type: 3}
+  - _materialId: concrete
+    _decal: {fileID: 2100000, guid: fc3f3f0931fdb4692a89b849073ba78a, type: 2}
+    _decalSize: 0.14
+    _effect: {fileID: 883566363034500092, guid: b6ebec5bc699f4011912ff99c9bd0c17, type: 3}
+    _sound: {fileID: 8300000, guid: e355feba32a1143b197c5a573c7c74b8, type: 3}
+  - _materialId: metal
+    _decal: {fileID: 2100000, guid: 7c073df8748674839904a776d58c2d3e, type: 2}
+    _decalSize: 0.08
+    _effect: {fileID: 6306751313764634197, guid: 443858e34aab8412483a244f8110da74, type: 3}
+    _sound: {fileID: 8300000, guid: 17e38e337c8274a4397f9cf2c95dad70, type: 3}
+  - _materialId: wood
+    _decal: {fileID: 2100000, guid: 47b8df364db944d2d8d4d7fb93e5da77, type: 2}
+    _decalSize: 0.12
+    _effect: {fileID: 2269463951359988403, guid: d8fe5e8a6710a4c8baf22b482e3c8908, type: 3}
+    _sound: {fileID: 8300000, guid: 1d2f64b02fcc8457fb7306d8d5bd94ac, type: 3}

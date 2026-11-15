@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Fps.Editor
 {
     /// <summary>
-    /// キャンペーンのミッション 1 つ分の配置 (地形・敵・遮蔽点・目標・チェックポイント) と保存先。
+    /// キャンペーンのミッション 1 つ分の配置 (地形・敵・遮蔽点・目標・拾える物・チェックポイント) と保存先。
     /// <see cref="CampaignSceneBuilder"/> はこれを受け取ってシーンと定義を作る。
     /// 作るときに、目標を進める物がそろっているか・名前や Id が重ならないかを確かめ、だめなら <see cref="ArgumentException"/> を投げる。
     /// </summary>
@@ -122,7 +122,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// NavMesh の上で <see cref="PlayerStart"/> から行かなければならない点 (足元)。
-        /// チェックポイント・目標の範囲・敵の位置と巡回地点・遮蔽点の立つ位置と覗く位置。
+        /// チェックポイント・目標の範囲・敵の位置と巡回地点・拾える物・遮蔽点の立つ位置と覗く位置。
         /// </summary>
         public IReadOnlyList<Vector3> RequiredPoints()
         {
@@ -137,6 +137,14 @@ namespace Fps.Editor
                 if (element is CampaignAreaElement area)
                 {
                     points.Add(area.Position);
+                }
+
+                if (element is CampaignPickupsElement pickups)
+                {
+                    foreach (var pickup in pickups.Pickups)
+                    {
+                        points.Add(pickup.Feet);
+                    }
                 }
             }
 
@@ -431,6 +439,119 @@ namespace Fps.Editor
         public CampaignCoverPointsElement(string objectName)
             : base(objectName)
         {
+        }
+    }
+
+    /// <summary>
+    /// 拾える物の組。<see cref="CampaignElement.ObjectName"/> の GameObject の子に、武器と予備弾は入ったら拾う出現点 (<see cref="PickupSpawnPoint"/>)、
+    /// 弾薬箱は何度でも使える <see cref="AmmoCrate"/> として置く。
+    /// </summary>
+    public sealed class CampaignPickupsElement : CampaignElement
+    {
+        public CampaignPickupsElement(string objectName, IReadOnlyList<CampaignPickupPlacement> pickups)
+            : base(objectName)
+        {
+            if (pickups == null)
+            {
+                throw new ArgumentNullException(nameof(pickups));
+            }
+
+            if (pickups.Count == 0)
+            {
+                throw new ArgumentException($"pickup group '{objectName}' has no pickups", nameof(pickups));
+            }
+
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var pickup in pickups)
+            {
+                if (pickup == null || !names.Add(pickup.ObjectName))
+                {
+                    throw new ArgumentException($"pickup group '{objectName}' has a null or duplicate pickup", nameof(pickups));
+                }
+            }
+
+            Pickups = new List<CampaignPickupPlacement>(pickups).AsReadOnly();
+        }
+
+        public IReadOnlyList<CampaignPickupPlacement> Pickups { get; }
+    }
+
+    /// <summary>拾える物の種類。</summary>
+    public enum CampaignPickupKind
+    {
+        Weapon,
+        Ammo,
+
+        /// <summary>置きっぱなしで、Interact で何度でも補給できる弾薬箱。</summary>
+        AmmoCrate,
+    }
+
+    /// <summary>拾える物 1 つ。武器 (<see cref="Weapon"/>)・予備弾 (<see cref="Ammo"/>)・弾薬箱 (<see cref="AmmoCrate"/>) で作る。</summary>
+    public sealed class CampaignPickupPlacement
+    {
+        private CampaignPickupPlacement(CampaignPickupKind kind, string objectName, Vector3 feet, string weaponId, int amount, float respawnSeconds)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                throw new ArgumentException("a pickup needs an object name", nameof(objectName));
+            }
+
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, $"pickup '{objectName}' amount must not be negative");
+            }
+
+            if (!(respawnSeconds >= 0f) || float.IsInfinity(respawnSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(respawnSeconds), respawnSeconds, $"pickup '{objectName}' respawn seconds must be non-negative and finite");
+            }
+
+            Kind = kind;
+            ObjectName = objectName;
+            Feet = feet;
+            WeaponId = weaponId;
+            Amount = amount;
+            RespawnSeconds = respawnSeconds;
+        }
+
+        public CampaignPickupKind Kind { get; }
+
+        public string ObjectName { get; }
+
+        public Vector3 Feet { get; }
+
+        /// <summary>渡す武器の Id。武器でなければ null。</summary>
+        public string WeaponId { get; }
+
+        /// <summary>武器なら既に持っていたときに足す予備弾、予備弾なら足す数。</summary>
+        public int Amount { get; }
+
+        /// <summary>拾われてから再び出るまでの秒数。0 なら一度きり。</summary>
+        public float RespawnSeconds { get; }
+
+        public static CampaignPickupPlacement Weapon(string objectName, Vector3 feet, string weaponId, int ammoIfOwned, float respawnSeconds)
+        {
+            if (string.IsNullOrWhiteSpace(weaponId))
+            {
+                throw new ArgumentException($"weapon pickup '{objectName}' needs a weapon id", nameof(weaponId));
+            }
+
+            return new CampaignPickupPlacement(CampaignPickupKind.Weapon, objectName, feet, weaponId, ammoIfOwned, respawnSeconds);
+        }
+
+        public static CampaignPickupPlacement Ammo(string objectName, Vector3 feet, int amount, float respawnSeconds)
+        {
+            if (amount <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, $"ammo pickup '{objectName}' needs a positive amount");
+            }
+
+            return new CampaignPickupPlacement(CampaignPickupKind.Ammo, objectName, feet, null, amount, respawnSeconds);
+        }
+
+        public static CampaignPickupPlacement AmmoCrate(string objectName, Vector3 feet)
+        {
+            return new CampaignPickupPlacement(CampaignPickupKind.AmmoCrate, objectName, feet, null, 0, 0f);
         }
     }
 

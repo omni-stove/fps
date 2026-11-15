@@ -857,6 +857,21 @@
     color: rgb(170, 255, 170);
 }
 
+/* Interact の案内。画面下のチュートリアルと同時に出ても重ならないよう、照準の少し下に置く。 */
+.interact-prompt {
+    position: absolute;
+    top: 58%;
+    left: 50%;
+    translate: -50% 0;
+    margin: 0;
+    padding: 6px 18px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.55);
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+}
+
 /* オフラインのモードの左上の枠 (残り時間・陣営ごとの得点・モードが足す行・結果)。行は ModeHudView が足す。 */
 .mode-hud {
     position: absolute;

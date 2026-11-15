@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 748aa232155ac9884965703dd68dc9ef, type: 3}
+  m_Name: CameraShakeSettings
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CameraShakeSettings
+  _decayPerSecond: 1.25
+  _frequency: 15
+  _maxAngles: {x: 4, y: 4, z: 3}
+  _maxOffset: {x: 0.04, y: 0.04, z: 0.02}
+  _fireByCategory:
+  - _category: 0
+    _trauma: 0.07
+  - _category: 1
+    _trauma: 0.05
+  - _category: 2
+    _trauma: 0.3
+  - _category: 3
+    _trauma: 0.18
+  - _category: 4
+    _trauma: 0.35
+  - _category: 5
+    _trauma: 0.08
+  - _category: 6
+    _trauma: 0.1
+  - _category: 7
+    _trauma: 0.45
+  _defaultFireTrauma: 0.08
+  _explosionTrauma: 1
+  _explosionRadius: 25
+  _traumaPerDamage: 0.012
+  _maxDamageTrauma: 0.6
+  _landingMinSpeed: 7
+  _landingFullSpeed: 20
+  _landingMaxTrauma: 0.6

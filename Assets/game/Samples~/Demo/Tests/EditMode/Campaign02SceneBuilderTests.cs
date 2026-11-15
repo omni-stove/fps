@@ -119,9 +119,9 @@ namespace Fps.Tests.EditMode
         {
             var layout = Populate();
 
-            // Level, GameBootstrap, MissionRunner, BuildingEntrance, Guards, Terminal, Reinforcements, CoverPoints, Extraction,
+            // Level, GameBootstrap, MissionRunner, BuildingEntrance, Guards, Terminal, Reinforcements, CoverPoints, Extraction, Pickups,
             // CampaignRunner, 3 つのチェックポイント。
-            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(13));
+            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(14));
             Assert.That(layout.Bootstrap.CreatesFloor, Is.False);
             Assert.That(layout.Runner.Definition, Is.SameAs(_definition));
             Assert.That(layout.Campaign.Runner, Is.SameAs(layout.Runner));

@@ -100,12 +100,31 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PickupsAreALauncherAmmoAndAReusableAmmoCrate()
+        {
+            Populate();
+
+            var root = System.Array.Find(_scene.GetRootGameObjects(), o => o.name == CampaignSceneBuilder.PickupsObjectName);
+            Assert.That(root, Is.Not.Null);
+            var points = root.GetComponentsInChildren<PickupSpawnPoint>();
+            Assert.That(points.Length, Is.EqualTo(3));
+            Assert.That(
+                System.Array.Exists(points, p => p.Contents.Kind == PickupKind.Weapon && p.Contents.Weapon.Id == WeaponAssetBuilder.LauncherId),
+                Is.True,
+                "the launcher can be picked up");
+            Assert.That(System.Array.FindAll(points, p => p.Contents.Kind == PickupKind.ReserveAmmo).Length, Is.EqualTo(2));
+            var crate = root.GetComponentInChildren<AmmoCrate>();
+            Assert.That(crate, Is.Not.Null, "there is an ammo crate that can be used again and again");
+            Assert.That(crate.transform.Find(AmmoCrate.VisualName), Is.Not.Null, "the crate is visible in the editor");
+        }
+
+        [Test]
         public void PopulatedSceneIsWiredInCode()
         {
             var layout = Populate();
 
-            // Level, GameBootstrap, MissionRunner, AreaA, Enemies, CoverPoints, Exit, CampaignRunner, 2 つのチェックポイント。
-            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(10));
+            // Level, GameBootstrap, MissionRunner, AreaA, Enemies, CoverPoints, Exit, Pickups, CampaignRunner, 2 つのチェックポイント。
+            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(11));
             Assert.That(layout.Reveals, Is.Empty, "every Campaign01 enemy is there from the start");
             foreach (var enemy in layout.Enemies)
             {

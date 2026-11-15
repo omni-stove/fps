@@ -51,7 +51,7 @@ namespace Fps.Core.Tests
 #pragma warning restore CA2263
 
             Assert.That(GameRulesDebugDraft.Fields, Is.EqualTo(defined));
-            Assert.That(defined.Length, Is.EqualTo(28));
+            Assert.That(defined.Length, Is.EqualTo(29));
         }
 
         [Test]
@@ -72,6 +72,7 @@ namespace Fps.Core.Tests
                 GameRulesDebugField.Ping,
                 GameRulesDebugField.Abilities,
                 GameRulesDebugField.SlowMotion,
+                GameRulesDebugField.AimToFire,
             };
 
             foreach (var field in newFields)
@@ -182,6 +183,7 @@ namespace Fps.Core.Tests
                 GameRulesDebugField.Ping,
                 GameRulesDebugField.Abilities,
                 GameRulesDebugField.SlowMotion,
+                GameRulesDebugField.AimToFire,
                 GameRulesDebugField.FallDamage,
             }));
         }

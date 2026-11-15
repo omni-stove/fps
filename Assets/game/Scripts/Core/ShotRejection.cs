@@ -56,5 +56,11 @@ namespace Fps.Core
 
         /// <summary>サーバーの知る移動の状態で乗り越え (<see cref="VaultPath"/> をたどっている) の最中なので撃てない。弾は減らさない。</summary>
         Vaulting,
+
+        /// <summary>
+        /// ルールの <see cref="ActionRules.AimToFire"/> が On なのに、持ち主が書いた覗き込みの同期値が構えていない (ブラインドファイアを除く)。
+        /// 弾は減らさない。
+        /// </summary>
+        NotAiming,
     }
 }

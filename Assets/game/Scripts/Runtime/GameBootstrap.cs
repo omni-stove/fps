@@ -684,6 +684,7 @@ namespace Fps.Runtime
             WireAds(ads, weapon, mover);
             WireSpreadAndRecoil(weapon, ads, mover, look);
             WireDodgeAndVault(mover, weapon, ads);
+            WireAimToFire(weapon, ads, mover);
 
             // 乗り物の座席などが操作を引き取ったら、移動と一緒に撃つ・持ち替える入力も止まるよう、同じ口を見させる。
             weapon.Handoff = mover.Handoff;
@@ -720,6 +721,42 @@ namespace Fps.Runtime
                 {
                     ads.Release();
                 }
+            };
+        }
+
+        /// <summary>
+        /// ルールの <see cref="ActionRules.AimToFire"/> が On なら、覗き込んでいない間は撃たせない (ブラインドファイアは除く)。
+        /// ルールは撃つときに <see cref="WeaponController.Rules"/> から読むので、キャンペーンが差し替えたルールにも従う。
+        /// <see cref="WireDodgeAndVault"/> の後に呼ぶ (その射撃の止め方に足す)。
+        /// </summary>
+        private static void WireAimToFire(WeaponController weapon, AimDownSights ads, PlayerController mover)
+        {
+            if (weapon == null)
+            {
+                return;
+            }
+
+            BlindFireController blindFire = null;
+            var previous = weapon.FireBlocker;
+            weapon.FireBlocker = () =>
+            {
+                if (previous != null && previous())
+                {
+                    return true;
+                }
+
+                if (weapon == null || weapon.Rules.Actions.AimToFire != AimToFire.On || (ads != null && ads.IsAiming))
+                {
+                    return false;
+                }
+
+                // BlindFireController はこの後 PlayerActions.Attach が付けるので、撃つときに引く
+                if (blindFire == null && mover != null)
+                {
+                    blindFire = mover.GetComponent<BlindFireController>();
+                }
+
+                return blindFire == null || !blindFire.IsBlindFiring;
             };
         }
 

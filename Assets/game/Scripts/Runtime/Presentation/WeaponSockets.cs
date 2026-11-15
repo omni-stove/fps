@@ -20,6 +20,9 @@ namespace Fps.Runtime
         /// <summary>排莢口のソケットの名前。薬莢を +Z の向きへ飛ばす。</summary>
         public const string ShellEjectName = "Socket_ShellEject";
 
+        /// <summary>照準の点のソケットの名前。一人称で構えたとき、ここを画面の中央に置く (照門と照星を結ぶ線の手前の端)。</summary>
+        public const string SightName = "Socket_Sight";
+
         /// <summary>
         /// 銃口のソケットが無いときの位置を、弾の始点 (目) からの右・下・前の距離 (m) で決める。銃のモデルが無いので、
         /// 一人称で炎が視界の真ん中をふさがないよう右下にずらす。
@@ -40,6 +43,7 @@ namespace Fps.Runtime
             ModelRoot = modelRoot;
             Muzzle = FindSocket(modelRoot, MuzzleName);
             ShellEject = FindSocket(modelRoot, ShellEjectName);
+            Sight = FindSocket(modelRoot, SightName);
         }
 
         /// <summary>探した武器のモデルの根。無ければ null。</summary>
@@ -50,6 +54,9 @@ namespace Fps.Runtime
 
         /// <summary>排莢口のソケット。無いか破棄されていれば null。</summary>
         public Transform ShellEject { get; }
+
+        /// <summary>照準の点のソケット。無いか破棄されていれば null。</summary>
+        public Transform Sight { get; }
 
         /// <summary>
         /// 銃口の位置と向き (+Z が銃口の向き)。ソケットがあればその位置と回転、無ければ origin から direction へ撃ったときの

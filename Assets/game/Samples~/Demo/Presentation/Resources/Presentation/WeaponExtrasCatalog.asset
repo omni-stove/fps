@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b231d26f64b2a388cbb5adf2264a533d, type: 3}
+  m_Name: WeaponExtrasCatalog
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponExtrasCatalog
+  _weapons:
+  - _weaponId: 6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83
+    _shellPrefab: {fileID: 5607472273078574921, guid: 1701fd5433dcb43a09b53ff4ae881fc8, type: 3}
+    _shellLandSound: {fileID: 8300000, guid: 6bb5cc0cf36d04d39b79c8f11fcdd9bf, type: 3}
+    _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
+  - _weaponId: b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45
+    _shellPrefab: {fileID: 485804492503540877, guid: e03567717969c4a3b84fcc740b2ac6a4, type: 3}
+    _shellLandSound: {fileID: 8300000, guid: 6bb5cc0cf36d04d39b79c8f11fcdd9bf, type: 3}
+    _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
+  - _weaponId: e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96
+    _shellPrefab: {fileID: 4740127777505227529, guid: dc3a2b506171f416a8d30bcdb7e885f2, type: 3}
+    _shellLandSound: {fileID: 8300000, guid: 719478fa8683e4d648fc6b83f1592ed6, type: 3}
+    _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}

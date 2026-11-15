@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09d9d7a7159dd857b17baa1a9c81d045, type: 3}
+  m_Name: ViewmodelCatalog
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ViewmodelCatalog
+  _weapons:
+  - _weaponId: 6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83
+    _prefab: {fileID: 1243296652024825256, guid: f5bf82dad5b6045c5ac340d70396c76e, type: 3}
+    _offset: {x: 0.14, y: -0.14, z: 0.2}
+    _adsOffset: {x: 0, y: 0, z: 0.2}
+    _sway:
+      _bobHorizontalMeters: 0.012
+      _bobVerticalMeters: 0.008
+      _bobCyclesPerMeter: 0.55
+      _bobReferenceSpeed: 5
+      _bobSharpness: 8
+      _lookLagSeconds: 0.02
+      _maxLookLagDegrees: 5
+      _lookLagSharpness: 12
+      _kickBackMeters: 0.03
+      _kickPitchDegrees: 2
+      _kickReturnPerSecond: 12
+      _maxKicks: 3
+      _adsSwayScale: 0.15
+      _adsKickScale: 0.4
+  - _weaponId: b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45
+    _prefab: {fileID: 690804762469691328, guid: 8a89e672989d943558e8945bc2890968, type: 3}
+    _offset: {x: 0.12, y: -0.12, z: 0.25}
+    _adsOffset: {x: 0, y: 0, z: 0.32}
+    _sway:
+      _bobHorizontalMeters: 0.012
+      _bobVerticalMeters: 0.008
+      _bobCyclesPerMeter: 0.55
+      _bobReferenceSpeed: 5
+      _bobSharpness: 8
+      _lookLagSeconds: 0.02
+      _maxLookLagDegrees: 5
+      _lookLagSharpness: 12
+      _kickBackMeters: 0.02
+      _kickPitchDegrees: 4
+      _kickReturnPerSecond: 14
+      _maxKicks: 3
+      _adsSwayScale: 0.15
+      _adsKickScale: 0.4
+  - _weaponId: e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96
+    _prefab: {fileID: 8673417521075612154, guid: 9fbd7c9efbf4f4790a3a8930ac817d23, type: 3}
+    _offset: {x: 0.17, y: -0.17, z: 0.12}
+    _adsOffset: {x: 0, y: 0, z: 0.15}
+    _sway:
+      _bobHorizontalMeters: 0.016
+      _bobVerticalMeters: 0.008
+      _bobCyclesPerMeter: 0.55
+      _bobReferenceSpeed: 5
+      _bobSharpness: 8
+      _lookLagSeconds: 0.02
+      _maxLookLagDegrees: 5
+      _lookLagSharpness: 12
+      _kickBackMeters: 0.08
+      _kickPitchDegrees: 6
+      _kickReturnPerSecond: 6
+      _maxKicks: 1
+      _adsSwayScale: 0.15
+      _adsKickScale: 0.4

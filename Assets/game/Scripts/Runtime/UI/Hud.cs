@@ -146,6 +146,7 @@ namespace Fps.Runtime
             AddIfMissing<ScoreboardView>(hudObject);
             AddIfMissing<LoadoutSelectView>(hudObject);
             AddIfMissing<TutorialPromptView>(hudObject);
+            AddIfMissing<InteractPromptView>(hudObject);
             AddIfMissing<ModeHudView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
             // PauseMenu の後に付けると、木を作り直したときも PauseMenu が「設定」のボタンを持ってから開く処理を渡せる。
@@ -177,6 +178,9 @@ namespace Fps.Runtime
         /// <summary>同じ GameObject のチュートリアルの案内。<see cref="AddViews"/> で付けていなければ null。</summary>
         public TutorialPromptView TutorialPrompt => GetComponent<TutorialPromptView>();
 
+        /// <summary>同じ GameObject の Interact の案内。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public InteractPromptView InteractPrompt => GetComponent<InteractPromptView>();
+
         /// <summary>同じ GameObject のオフラインのモードの表示。<see cref="AddViews"/> で付けていなければ null。</summary>
         public ModeHudView ModeHud => GetComponent<ModeHudView>();
 
@@ -195,6 +199,8 @@ namespace Fps.Runtime
         IModeHud IHud.ModeHud => AsInterface<IModeHud>(ModeHud);
 
         ITutorialPrompt IHud.TutorialPrompt => AsInterface<ITutorialPrompt>(TutorialPrompt);
+
+        IInteractPrompt IHud.InteractPrompt => AsInterface<IInteractPrompt>(InteractPrompt);
 
         /// <summary>ポーズを開いている間の時間の扱い (<see cref="Fps.Runtime.PauseMenu.TimeMode"/>) を決める。ポーズメニューが無ければ何もしない。</summary>
         public void SetPauseTimeMode(PauseTimeMode mode)

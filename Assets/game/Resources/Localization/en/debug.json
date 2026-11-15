@@ -25,6 +25,7 @@
   "debug.rules.field.Ping": "Ping",
   "debug.rules.field.Abilities": "Abilities",
   "debug.rules.field.SlowMotion": "Slow motion",
+  "debug.rules.field.AimToFire": "Aim to fire",
   "debug.rules.field.FallDamage": "Fall damage",
   "debug.rules.field.HudDensity": "HUD density"
 }

@@ -30,6 +30,9 @@ namespace Fps.Runtime
         /// <summary>射撃場のチュートリアルの案内。無ければ null。</summary>
         ITutorialPrompt TutorialPrompt { get; }
 
+        /// <summary>近くで Interact したら何が起きるかの案内。無ければ null。</summary>
+        IInteractPrompt InteractPrompt { get; }
+
         /// <summary>HUD の量 (<see cref="GameRules.HudDensity"/>) に合わせて出す項目を切り替える。</summary>
         /// <exception cref="System.ArgumentOutOfRangeException">density が定義済みの値でない。</exception>
         void ApplyDensity(HudDensity density);

@@ -888,8 +888,8 @@ namespace Fps.NetV2
                 var origin = NetV2Math.ToUnity(segment.Origin);
                 var direction = NetV2Math.ToUnity(segment.Direction);
 
-                // 前の区間の着弾から続く区間 (跳弾・貫通) は弾の続きなので、銃声やマズルフラッシュを出し直さない。
-                if (i > 0 && ContinuesFrom(ref shot.Segment(i - 1), segment.Origin))
+                // 2 区間目以降は、前の着弾から続く弾 (跳弾・貫通) も同じ射撃の別のペレットも、銃声やマズルフラッシュを出し直さない。
+                if (i > 0)
                 {
                     CombatEvents.RaiseShotContinued(shooter, origin, direction, shot.WeaponId);
                 }
@@ -906,11 +906,6 @@ namespace Fps.NetV2
                         segment.ImpactMaterialId ?? "", segment.ImpactIsCharacter, zone));
                 }
             }
-        }
-
-        private static bool ContinuesFrom(ref ShotSegment previous, System.Numerics.Vector3 origin)
-        {
-            return previous.HasImpact && System.Numerics.Vector3.DistanceSquared(previous.ImpactPoint, origin) < 1e-6f;
         }
 
         private void HandleTeleported(TeleportedMessage teleported)

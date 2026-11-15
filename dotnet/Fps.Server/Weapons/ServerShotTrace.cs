@@ -55,12 +55,14 @@ namespace Fps.Server
     /// <summary><see cref="ServerShotTrace"/> が分けた弾の区間 1 本。</summary>
     internal readonly struct ShotTraceSegment
     {
-        private ShotTraceSegment(Vector3 origin, Vector3 direction, bool hasHit, ShotHit hit)
+        private ShotTraceSegment(Vector3 origin, Vector3 direction, bool hasHit, ShotHit hit, float damageMultiplier, bool bounced)
         {
             Origin = origin;
             Direction = direction;
             HasHit = hasHit;
             Hit = hit;
+            DamageMultiplier = damageMultiplier;
+            Bounced = bounced;
         }
 
         public Vector3 Origin { get; }
@@ -72,14 +74,24 @@ namespace Fps.Server
         /// <summary><see cref="HasHit"/> が false なら使わない。</summary>
         public ShotHit Hit { get; }
 
-        public static ShotTraceSegment Miss(Vector3 origin, Vector3 direction)
+        public float DamageMultiplier { get; }
+
+        // 跳ねた面は着弾の演出だけを出し、弾はそのまま次の区間へ進むので、着弾の効果を与えない。
+        public bool Bounced { get; }
+
+        public static ShotTraceSegment Miss(Vector3 origin, Vector3 direction, float damageMultiplier = 1f)
         {
-            return new ShotTraceSegment(origin, direction, false, default);
+            return new ShotTraceSegment(origin, direction, false, default, damageMultiplier, false);
         }
 
-        public static ShotTraceSegment WithHit(Vector3 origin, Vector3 direction, ShotHit hit)
+        public static ShotTraceSegment WithHit(Vector3 origin, Vector3 direction, ShotHit hit, float damageMultiplier = 1f)
         {
-            return new ShotTraceSegment(origin, direction, true, hit);
+            return new ShotTraceSegment(origin, direction, true, hit, damageMultiplier, false);
+        }
+
+        public ShotTraceSegment AsBounced()
+        {
+            return new ShotTraceSegment(Origin, Direction, HasHit, Hit, DamageMultiplier, true);
         }
     }
 }

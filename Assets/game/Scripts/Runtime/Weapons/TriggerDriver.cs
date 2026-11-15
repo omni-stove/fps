@@ -109,6 +109,8 @@ namespace Fps.Runtime
                 _held = false;
             }
 
+            _model.Cancel();
+
             Spend();
         }
 

@@ -273,7 +273,7 @@ namespace Fps.Tests.EditMode
                 var player = world.Controller;
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=start "));
                 Assert.That(layout.Checkpoint(CampaignSceneBuilder.StartCheckpointId).HandleEnter(player), Is.True);
-                Assert.That(hud.Model.NoticeText, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointSaved)));
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointSaved));
 
                 layout.Runner.Progress(CampaignSceneBuilder.ReachAreaAId);
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=area_a "));
@@ -286,17 +286,17 @@ namespace Fps.Tests.EditMode
                 Assert.That(saved.EquippedWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
 
                 layout.Campaign.Tick(CampaignRunner.SavedNoticeSeconds);
-                Assert.That(hud.Model.NoticeText, Is.EqualTo(HudFormat.NoNotice), "the saved notice disappears");
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "the saved notice disappears");
 
                 LogAssert.Expect(LogType.Log, "[Combat] target died id=Player");
                 LogAssert.Expect(LogType.Log, "[Campaign] player died; reloading in 3s from checkpoint=area_a");
                 world.PlayerDamageable.Kill();
-                Assert.That(hud.Model.NoticeText, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(3))));
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)));
                 layout.Campaign.Tick(1.5f);
-                Assert.That(hud.Model.NoticeText, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(2))));
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(2)));
 
                 layout.Campaign.Stop();
-                Assert.That(hud.Model.NoticeText, Is.EqualTo(HudFormat.NoNotice), "stopping takes the notice off the HUD");
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "stopping takes the notice off the HUD");
             }
             finally
             {

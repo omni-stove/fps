@@ -1,0 +1,54 @@
+{
+  "id": "a9ae4aeb-607f-41a8-875f-2e8deed9bfa6",
+  "nameKey": "weapon.ricochetPistol",
+  "category": "Handgun",
+  "shotNoiseRadius": 50,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 12,
+    "reserveAmmo": 48,
+    "reloadSeconds": 1.5,
+    "activeReloadWindowStart": 0.45,
+    "activeReloadWindowLength": 0.2,
+    "activeReloadFailSeconds": 0.4,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "ricochet": {
+      "maxBounces": 2,
+      "maxGrazingAngleDegrees": 25,
+      "damageMultiplierPerBounce": 0.7
+    }
+  },
+  "impact": {
+    "damage": 34,
+    "falloff": {
+      "startDistance": 15,
+      "endDistance": 40,
+      "minMultiplier": 0.6
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2,
+    "adsSpreadDegrees": 0.8,
+    "moveSpreadDegrees": 1.5,
+    "recoilPitchDegrees": 2.5,
+    "recoilYawDegrees": 0.6,
+    "recoilRecoveryPerSecond": 60,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 12,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

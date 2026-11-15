@@ -332,7 +332,23 @@ namespace Fps.Runtime
         private Vector3 FeetPosition()
         {
             var body = _started ? _bodyCollider : GetComponent<Collider>();
-            if (body != null && body.enabled)
+
+            // 破棄されたコライダーは == null でも下の型パターン (is) では null に見えず、寸法を読むと例外になるので、ここで引き直す
+            if (body == null)
+            {
+                body = GetComponent<Collider>();
+                if (_started)
+                {
+                    _bodyCollider = body;
+                }
+
+                if (body == null)
+                {
+                    return transform.position;
+                }
+            }
+
+            if (body.enabled)
             {
                 var bounds = body.bounds;
                 return new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);

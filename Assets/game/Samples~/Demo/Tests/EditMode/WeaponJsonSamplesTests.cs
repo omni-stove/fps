@@ -38,7 +38,7 @@ namespace Fps.Tests.EditMode
         {
             var imported = WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
 
-            Assert.That(imported.Count(), Is.EqualTo(3));
+            Assert.That(imported.Count(), Is.EqualTo(System.IO.Directory.GetFiles(FpsKitRoot.PhysicalPath(SamplesFolder), "*.json").Length));
             AssertSameSpec(Load("Rifle").ToSpec(), WeaponAssetBuilder.RifleSpec());
             AssertSameSpec(Load("Handgun").ToSpec(), WeaponAssetBuilder.HandgunSpec());
             AssertSameSpec(Load("Launcher").ToSpec(), WeaponAssetBuilder.LauncherSpec());

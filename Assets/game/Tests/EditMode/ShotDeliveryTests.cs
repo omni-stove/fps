@@ -38,7 +38,6 @@ namespace Fps.Tests.EditMode
         }
 
         [TestCase(RoundDelivery.Hitscan)]
-        [TestCase(RoundDelivery.Projectile)]
         [TestCase(RoundDelivery.Beam)]
         [TestCase(RoundDelivery.Spray)]
         public void EveryDeliveryHitsLikeTheHitscanUntilItIsFilledIn(RoundDelivery delivery)

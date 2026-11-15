@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// 値の源 (プレイヤーの <see cref="Damageable"/>・<see cref="WeaponController"/>・<see cref="Fps.Core.Match"/>) は
     /// <see cref="Initialize"/> でコードから渡す。値はそれぞれのイベントで <see cref="HudModel"/> が更新し、
     /// <see cref="HudView"/> が Label に写す。毎フレーム読みに行くのは、時間で進みイベントの無いリロードの進み
-    /// (<see cref="HudModel.RefreshReloadProgress"/>)・溜めと熱と弾薬の種類 (<see cref="HudModel.RefreshWeaponGauges"/>) と
+    /// (<see cref="HudModel.RefreshReloadProgress"/>)・溜めと熱と弾薬の種類 (<see cref="HudModel.RefreshWeaponGauges"/>)・スコープの倍率 (<see cref="AimDownSights.Magnification"/>) と
     /// 照準の広がり・表示 (<see cref="RefreshCrosshair"/>) だけ。
     /// Health や Weapon が作り直されたとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
     /// オンライン (Fps.Net の NetHud) は源を渡さずに作り、<see cref="Model"/> の Set 系で値を書く。チームの点数 (左上) と
@@ -467,7 +467,22 @@ namespace Fps.Runtime
             {
                 _model.RefreshReloadProgress();
                 _model.RefreshWeaponGauges();
+                RefreshMagnification();
                 RefreshCrosshair();
+            }
+        }
+
+        // 倍率は覗き込みの状態で決まり、HudModel が持つ Weapon からは読めないので、ADS から読んで書く。
+        private void RefreshMagnification()
+        {
+            var magnification = _ads != null ? _ads.Magnification : null;
+            if (magnification.HasValue)
+            {
+                _model.SetMagnification(magnification.Value);
+            }
+            else
+            {
+                _model.ClearMagnification();
             }
         }
 

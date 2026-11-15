@@ -91,6 +91,49 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => Explosion.Detonate(Vector3.zero, null, null, WeaponId));
         }
 
+        [Test]
+        public void AnExplodingRoundHurtsTheTargetsNearWhereItHitLessWithDistance()
+        {
+            CreateBox("Floor", new Vector3(0f, -0.5f, 10f), new Vector3(20f, 1f, 40f));
+            var near = CreateTarget("Near", new Vector3(0f, 1f, 11.5f));
+            var far = CreateTarget("Far", new Vector3(0f, 1f, 14f));
+            var explosions = new List<ExplosionInfo>();
+            CombatEvents.Exploded += explosions.Add;
+
+            FireExplodingRoundAt(new Vector3(0f, 0f, 10f), new ExplosionSpec(new ExplosionDamage(80, 6f)));
+
+            var nearDamage = near.Health.Max - near.Health.Current;
+            var farDamage = far.Health.Max - far.Health.Current;
+            Assert.That(farDamage, Is.GreaterThan(0));
+            Assert.That(nearDamage, Is.GreaterThan(farDamage));
+            Assert.That(explosions.Count(), Is.EqualTo(1));
+            Assert.That(explosions[0].WeaponId, Is.EqualTo(WeaponId));
+            Assert.That(explosions[0].Center.y, Is.EqualTo(ImpactResolver.DetonationStandoff).Within(1e-4f), "the center stands off the floor");
+        }
+
+        [Test]
+        public void AnExplodingRoundDoesNotHitATargetBehindTheWallItHit()
+        {
+            var wall = CreateBox("Wall", new Vector3(0f, 1.5f, 10f), new Vector3(4f, 3f, 0.3f));
+            var hidden = CreateTarget("Hidden", new Vector3(0f, 1f, 11f));
+            var explosions = new List<ExplosionInfo>();
+            CombatEvents.Exploded += explosions.Add;
+
+            FireExplodingRoundAt(new Vector3(0f, 1.6f, 9.85f), new ExplosionSpec(new ExplosionDamage(80, 6f)));
+
+            Assert.That(explosions.Count(), Is.EqualTo(1), "the round hit the wall and exploded");
+            Assert.That(explosions[0].Center.z, Is.LessThan(wall.transform.position.z));
+            Assert.That(hidden.Health.Current, Is.EqualTo(hidden.Health.Max));
+        }
+
+        private static void FireExplodingRoundAt(Vector3 point, ExplosionSpec explosion)
+        {
+            var origin = new Vector3(0f, 1.6f, 0f);
+            var request = new ShotRequest(
+                null, null, origin, new RoundSpec(range: 50f), new ImpactSpec(0, explosion: explosion), WeaponId, Physics.DefaultRaycastLayers);
+            Hitscan.Fire(request, new PlannedRound(origin.ToNumerics(), (point - origin).ToNumerics(), 0));
+        }
+
         private Damageable CreateTarget(string name, Vector3 position)
         {
             var body = CreateBox(name, position, new Vector3(0.6f, 2f, 0.6f));

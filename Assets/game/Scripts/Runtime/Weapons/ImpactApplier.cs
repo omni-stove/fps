@@ -61,7 +61,7 @@ namespace Fps.Runtime
                         StructureDamage.Apply(hit.collider, order.Point.ToUnity(), order.Amount, order.Radius);
                         break;
                     case ImpactOrderKind.Explosion:
-                        ApplyExplosion(order, request);
+                        ApplyExplosion(order, request, hit);
                         break;
                     case ImpactOrderKind.StatusEffect:
                         ApplyStatusEffect(order, request, owner);

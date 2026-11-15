@@ -72,6 +72,10 @@ namespace Fps.NetV2
         private readonly ClientGrenades _grenadeChoice = new ClientGrenades();
         private readonly Dictionary<int, AreaEffectZone> _areaZones = new Dictionary<int, AreaEffectZone>();
         private readonly ClientOverheat _overheat = new ClientOverheat();
+        private readonly Dictionary<int, GameObject> _grenadeViews = new Dictionary<int, GameObject>();
+        private readonly List<int> _goneGrenades = new List<int>();
+        private GrenadeCarrier _grenadeCarrier;
+        private float _ownYaw;
         private NetV2Structures _structures;
         private ClientWeaponHooks _weaponHooks;
         private ClientTrigger _heldContinuous;
@@ -101,6 +105,8 @@ namespace Fps.NetV2
         public MatchClient Client => _client;
 
         public ClientMatch Match => _match;
+
+        public GameObject GrenadePrefab { get; set; }
 
         /// <summary>今動いているクライアント。無ければ null。</summary>
         public static NetV2Client Current { get; private set; }
@@ -254,6 +260,8 @@ namespace Fps.NetV2
             _weaponHooks.AreaEffects.Started += ShowArea;
             _weaponHooks.AreaEffects.Updated += UpdateArea;
             _weaponHooks.AreaEffects.Ended += EndArea;
+            _weaponHooks.Beams.Drawn += DrawBeam;
+            _weaponHooks.Beams.Hidden += HideBeam;
             _pings = new ClientPings(line => Debug.Log(line, this));
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
         }
@@ -380,8 +388,14 @@ namespace Fps.NetV2
             StepOwner(Time.deltaTime);
             _weaponHooks.StatusEffects.Tick(Time.deltaTime);
             ShowRemotes();
+            ShowGrenades();
             _weaponHooks.Projectiles.Tick(Time.deltaTime);
             SendRequests();
+            if (_local != null)
+            {
+                _weaponHooks.Beams.Update(NetV2Math.ToNumerics(_local.EyePosition), NetV2Math.ToNumerics(_local.AimDirection));
+            }
+
             _pings.Markers.Expire(Time.time);
         }
 
@@ -451,6 +465,7 @@ namespace Fps.NetV2
             _match = new ClientMatch(_client, _world.CreateSimulation(motor, _client.TickRate, _client.KillPlaneY));
             _weaponHooks.Projectiles.Attach(
                 new NetV2Projectiles(_weapons), _world.Collision, Physics.DefaultRaycastLayers, NetV2Math.ToNumerics(Physics.gravity), _client.PlayerId);
+            _weaponHooks.Beams.Attach(_world.Collision, Physics.DefaultRaycastLayers, _client.PlayerId);
             _match.PlayerAdded += AddRemote;
             _match.PlayerRemoved += RemoveRemote;
             _match.Reconciled += HandleReconciled;
@@ -507,6 +522,7 @@ namespace Fps.NetV2
             for (var i = 0; i < ticks; i++)
             {
                 _local.Sample(_match.LocalState.IsGrounded, out var move, out var yaw, out var buttons);
+                _ownYaw = yaw;
                 _match.Step(NetV2Math.ToNumerics(move), yaw, buttons);
             }
 
@@ -528,6 +544,88 @@ namespace Fps.NetV2
                 if (_match.TrySampleRemote(pair.Key, out var pose))
                 {
                     pair.Value.Show(pose);
+                }
+            }
+        }
+
+        private void ShowGrenades()
+        {
+            _grenadeCarrier ??= ShownCarrier;
+            var renderTick = _match.Interpolation.RenderTick;
+            foreach (var id in _world.GrenadeIds)
+            {
+                if (!_world.TryShowGrenade(id, renderTick, _grenadeCarrier, out var position, out var rotation))
+                {
+                    continue;
+                }
+
+                if (!_grenadeViews.TryGetValue(id, out var view) || view == null)
+                {
+                    view = CreateGrenadeView();
+                    _grenadeViews[id] = view;
+                }
+
+                view.transform.SetPositionAndRotation(NetV2Math.ToUnity(position), NetV2Math.ToUnity(rotation));
+            }
+        }
+
+        // 自分は予測した位置に、他の人は補間した位置に出しているので、くっついたグレネードもその見せている位置に付ける
+        private bool ShownCarrier(int playerId, out System.Numerics.Vector3 position, out float yaw)
+        {
+            if (playerId == _client.PlayerId)
+            {
+                position = _match.LocalState.Position;
+                yaw = _ownYaw;
+                return _local != null;
+            }
+
+            if (_match.TrySampleRemote(playerId, out var pose))
+            {
+                position = pose.Position;
+                yaw = pose.Yaw;
+                return true;
+            }
+
+            position = default;
+            yaw = 0f;
+            return false;
+        }
+
+        private GameObject CreateGrenadeView()
+        {
+            GameObject view;
+            if (GrenadePrefab != null)
+            {
+                view = new GameObject(ThrownGrenade.ObjectName);
+                VisualPrefab.Instantiate(GrenadePrefab, view.transform, ThrownGrenade.VisualName, stripColliders: true);
+            }
+            else
+            {
+                view = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                view.name = ThrownGrenade.ObjectName;
+                view.transform.localScale = Vector3.one * (ThrownGrenade.BodyRadius * 2f);
+
+                // 当たりはサーバーが取るので、見た目に Unity の物理を持たせない
+                Destroy(view.GetComponent<Collider>());
+            }
+
+            view.transform.SetParent(_remoteRoot, false);
+            return view;
+        }
+
+        private void ForgetGrenades(SnapshotMessage snapshot)
+        {
+            _goneGrenades.Clear();
+            _world.ApplyGrenades(snapshot, _goneGrenades);
+            foreach (var id in _goneGrenades)
+            {
+                if (_grenadeViews.TryGetValue(id, out var view))
+                {
+                    _grenadeViews.Remove(id);
+                    if (view != null)
+                    {
+                        Destroy(view);
+                    }
                 }
             }
         }
@@ -645,6 +743,7 @@ namespace Fps.NetV2
             _local.BlocksAds = trigger != null && trigger.BlocksAds;
             if (trigger == null)
             {
+                _hud?.ShowCharge(null);
                 if (pressed)
                 {
                     Debug.LogWarning(LogTag + " cannot fire " + (_weapons.TriggerError ?? "without a weapon"), this);
@@ -655,6 +754,7 @@ namespace Fps.NetV2
 
             trigger.Tick(Time.deltaTime);
             var pull = trigger.Pull(held, pressed);
+            _hud?.ShowCharge(trigger.Model.ChargeFraction);
             if (trigger.IsContinuous)
             {
                 PullContinuous(trigger, pull, direction, weaponId, latest, owner);
@@ -785,6 +885,7 @@ namespace Fps.NetV2
             var grenades = snapshot.HasOwner ? snapshot.Owner.Grenades : null;
             _hud?.ShowGrenades(grenades, _grenadeChoice.Current(grenades));
             _weaponHooks.Apply(snapshot);
+            ForgetGrenades(snapshot);
             _loadout.Apply(snapshot, _client.PlayerId);
             ShowControlPoints(snapshot);
             PlayReloadSound(snapshot);
@@ -930,6 +1031,41 @@ namespace Fps.NetV2
 
                     break;
             }
+        }
+
+        private void DrawBeam(BeamView beam)
+        {
+            var shooter = BeamShooter(beam.ShooterId);
+            var from = NetV2Math.ToUnity(beam.Start);
+            var to = NetV2Math.ToUnity(beam.End);
+
+            // 目の位置から線を出すと一人称では線が画面の中心に潰れて見えないので、オフラインの BeamDelivery と同じく銃口から出す
+            var presentation = WeaponPresentation.FindFor(shooter);
+            if (presentation != null)
+            {
+                from = presentation.Sockets.MuzzlePose(from, to - from).position;
+            }
+
+            BeamLine.Show(shooter, beam.WeaponId, beam.TickSeconds, from, to, Time.time);
+        }
+
+        private void HideBeam(int shooterId)
+        {
+            var shooter = BeamShooter(shooterId);
+            if (shooter != null && shooter.TryGetComponent<BeamLine>(out var line))
+            {
+                line.Hide();
+            }
+        }
+
+        private GameObject BeamShooter(int shooterId)
+        {
+            if (_client != null && shooterId == _client.PlayerId)
+            {
+                return _local != null ? _local.gameObject : null;
+            }
+
+            return _remotes.TryGetValue(shooterId, out var remote) && remote != null ? remote.gameObject : null;
         }
 
         private void ShowShot(ShotMessage shot)
@@ -1153,11 +1289,14 @@ namespace Fps.NetV2
             }
 
             _remotes.Clear();
+            _grenadeViews.Clear();
+            _world?.ClearGrenades();
             _zones.Clear();
             _weaponHooks?.AreaEffects.Clear();
             _areaZones.Clear();
             _structures?.Leave();
             _weaponHooks?.Projectiles.Detach();
+            _weaponHooks?.Beams.Detach();
         }
 
         private static bool TryFindScene(string map, out string path)

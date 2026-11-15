@@ -24,6 +24,7 @@ namespace Fps.Server
         public ServerAreaEffects(ServerCombat combat)
         {
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
+            AttachSmoke();
         }
 
         public int Count => _zones.Count;
@@ -90,6 +91,8 @@ namespace Fps.Server
                 End(zone);
             }
         }
+
+        partial void AttachSmoke();
 
         partial void StepSmoke(Zone zone, float deltaSeconds);
 

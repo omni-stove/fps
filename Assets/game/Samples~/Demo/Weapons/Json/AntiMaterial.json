@@ -1,0 +1,60 @@
+{
+  "id": "96be789a-f7e0-4512-b796-2492d70a4a1b",
+  "nameKey": "weapon.antiMaterial",
+  "category": "SniperRifle",
+  "shotNoiseRadius": 80,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 1.2
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 5,
+    "reserveAmmo": 20,
+    "reloadSeconds": 3.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.12,
+    "activeReloadFailSeconds": 0.8,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 300,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "penetration": {
+      "maxPenetrations": 2,
+      "damageMultiplierPerPenetration": 0.6,
+      "maxThickness": 0.4,
+      "materials": [
+        {
+          "materialId": "metal",
+          "penetrability": 0.5
+        },
+        {
+          "materialId": "wood",
+          "penetrability": 2
+        }
+      ]
+    }
+  },
+  "impact": {
+    "damage": 150,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 6,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 6,
+    "recoilPitchDegrees": 6,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.3,
+    "blindFireSpreadDegrees": 15,
+    "zoomLevels": [20],
+    "swayDegrees": 0
+  }
+}

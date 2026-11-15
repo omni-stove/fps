@@ -9,6 +9,12 @@ namespace Fps.NetV2
     {
         public static void Show(HudModel model, in WeaponSync weapon, WeaponSpec spec)
         {
+            Show(model, weapon, spec, null);
+        }
+
+        // 手元の溜めを優先するのは、サーバーの溜めは撃った弾のぶんが後から届くだけで、押している間のゲージが動かないため。
+        public static void Show(HudModel model, in WeaponSync weapon, WeaponSpec spec, float? localCharge)
+        {
             if (model == null)
             {
                 throw new ArgumentNullException(nameof(model));
@@ -22,7 +28,7 @@ namespace Fps.NetV2
 
             if (spec.Trigger.Charge != null)
             {
-                model.SetCharge(Fraction(weapon.ChargeFraction));
+                model.SetCharge(Fraction(localCharge ?? weapon.ChargeFraction));
             }
             else
             {

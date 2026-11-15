@@ -81,6 +81,13 @@ namespace Fps.Server
                 return false;
             }
 
+            var chargeCheck = shooter.Weapons.AcceptCharge(request.ChargeFraction, out var chargeFraction);
+            if (chargeCheck != ShotRejection.None)
+            {
+                WarnRejected(shooterId, chargeCheck);
+                return false;
+            }
+
             var ammo = shooter.Weapons.TryFire();
             if (ammo != ShotRejection.None)
             {
@@ -99,7 +106,7 @@ namespace Fps.Server
                 spec,
                 round,
                 shooter.Weapons.CurrentImpact,
-                shooter.Weapons.AcceptCharge(request.ChargeFraction),
+                chargeFraction,
                 request.HasLockTarget ? _lockOn.Resolve(shooterId, round, request) : null,
                 time.ToTick(),
                 body.Position,
@@ -253,7 +260,8 @@ namespace Fps.Server
         /// </summary>
         public bool BotFire(int playerId, Vector3 origin, Vector3 direction, int tick)
         {
-            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null)
+            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null
+                || !fighter.Weapons.IsChargedForBot())
             {
                 return false;
             }
@@ -265,12 +273,53 @@ namespace Fps.Server
             _botFire.InterpolationAlpha = 0f;
             _botFire.ShotIndex = fighter.Shots.NextIndex;
             _botFire.ShotGeneration = fighter.Shots.Generation;
-            _botFire.ChargeFraction = 0f;
+            _botFire.ChargeFraction = 1f;
             _botFire.AmmoTypeIndex = fighter.Weapons.AmmoTypeIndex;
             _botFire.HasLockTarget = false;
             _botFire.LockTargetId = 0;
             _botFire.Trigger = TriggerEdge.None;
             return Fire(fighter, _botFire);
+        }
+
+        /// <summary>
+        /// 押している間出続ける届け方の照射 1 回ぶん、shooterId が今も weaponId を構えて撃てるかを確かめ、consume なら弾 (熱) を 1 発使う。
+        /// <see cref="Fire"/> の検査を照射のたびに通さないのは、始点・向き・発射番号・連射の枠は押したときの要求にしか無いため。
+        /// 倒れた・試合が止まったなど撃てない状態は、警告にしないよう理由を <see cref="ShotRejection.None"/> にして false を返す。
+        /// </summary>
+        internal bool TryContinueFire(int shooterId, string weaponId, bool consume, out ShotRejection rejection)
+        {
+            rejection = ShotRejection.None;
+            if (!_rules.CanFire(shooterId) || !_fighters.TryGetValue(shooterId, out var fighter))
+            {
+                return false;
+            }
+
+            var spec = fighter.Weapons.CurrentSpec;
+            if (spec == null)
+            {
+                rejection = ShotRejection.NoWeapon;
+                return false;
+            }
+
+            if (!string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
+            {
+                rejection = ShotRejection.WeaponMismatch;
+                return false;
+            }
+
+            _movement.TryGetState(shooterId, out var motion);
+            if (motion.IsDodging || motion.IsVaulting)
+            {
+                rejection = motion.IsDodging ? ShotRejection.Dodging : ShotRejection.Vaulting;
+                return false;
+            }
+
+            if (consume)
+            {
+                rejection = fighter.Weapons.TryFire();
+            }
+
+            return rejection == ShotRejection.None;
         }
 
         public bool TryGetWeapon(int playerId, out WeaponSpec spec, out WeaponSync state)
@@ -365,7 +414,7 @@ namespace Fps.Server
         }
 
         // サーバーの知る目の位置から始点までの間に壁があれば、壁の向こうから撃たせない
-        private bool IsOriginBlocked(Vector3 eye, Vector3 origin)
+        internal bool IsOriginBlocked(Vector3 eye, Vector3 origin)
         {
             var toOrigin = origin - eye;
             var distance = toOrigin.Length();

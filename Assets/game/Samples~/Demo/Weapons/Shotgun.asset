@@ -40,8 +40,8 @@ MonoBehaviour:
   _moveSpreadDegrees: 2
   _shotNoiseRadius: 60
   _ammoKind: 0
-  _reloadStyle: 0
-  _reloadSecondsPerRound: 0
+  _reloadStyle: 1
+  _reloadSecondsPerRound: 0.5
   _delivery: 0
   _pelletCount: 8
   _pelletSpreadDegrees: 4

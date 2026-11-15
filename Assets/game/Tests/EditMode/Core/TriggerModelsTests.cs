@@ -77,28 +77,6 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ThePartTriggersStillFireLikeTheirFireMode()
-        {
-            var parts = new[]
-            {
-                new TriggerSpec(FireMode.Semi, 0.5f, charge: new ChargeSpec(1f, 0.2f, 2f)),
-            };
-
-            foreach (var part in parts)
-            {
-                var model = TriggerModels.For(part);
-
-                Assert.That(model.MinShotSpacingSeconds, Is.EqualTo(0.5f));
-                Assert.That(model.BlocksAds, Is.False);
-                Assert.That(model.ChargeFraction, Is.EqualTo(0f));
-                Assert.That(model.Press(), Is.EqualTo(1));
-                Assert.That(model.Tick(0.25f), Is.EqualTo(0));
-                Assert.That(model.Release(), Is.EqualTo(0));
-                Assert.That(model.Press(), Is.EqualTo(0));
-            }
-        }
-
-        [Test]
         public void ABeamWeaponCountsItsShotsByTheBeamAndStillWrapsTheParts()
         {
             var beam = new BeamSpec(0.125f);

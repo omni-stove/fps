@@ -164,6 +164,23 @@ namespace Fps.Core
             AmmoInMagazine = 0;
         }
 
+        internal bool CanLoadRound => !IsReloading && AmmoInMagazine < Spec.MagazineSize && (HasInfiniteReserve || ReserveAmmo > 0);
+
+        // 1 発ずつ込めるリロード (PerRoundReload) が、弾倉と予備弾の数え方をここに置いたまま 1 発だけ移すため。
+        internal void LoadRound()
+        {
+            if (!CanLoadRound)
+            {
+                throw new InvalidOperationException("cannot load a round while reloading, with a full magazine or without reserve ammo");
+            }
+
+            AmmoInMagazine++;
+            if (!HasInfiniteReserve)
+            {
+                ReserveAmmo--;
+            }
+        }
+
         public void Tick(float deltaSeconds)
         {
             SpecGuard.NonNegativeFinite(deltaSeconds, nameof(deltaSeconds));

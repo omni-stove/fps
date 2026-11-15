@@ -1,0 +1,49 @@
+{
+  "id": "5b2af293-a0d8-45cb-af68-8c63628c80d1",
+  "nameKey": "weapon.boltSniper",
+  "category": "SniperRifle",
+  "shotNoiseRadius": 80,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2,
+    "cycle": {
+      "cycleSeconds": 1.1,
+      "leavesAds": true
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 5,
+    "reserveAmmo": 20,
+    "reloadSeconds": 2.8,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 250,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 95,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 6,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 5,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 0.6,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 15,
+    "zoomLevels": [20],
+    "swayDegrees": 0
+  }
+}

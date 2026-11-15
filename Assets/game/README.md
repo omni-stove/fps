@@ -65,7 +65,7 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 | 中身 | 置き場所 (サンプルのルートから) |
 | --- | --- |
-| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`・`Shotgun.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
+| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
 | ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
 | ミッション・シーン | `Missions/`・`Scenes/` |
 | ネット対戦の試合の設定 (`NetMatchDefinition`。専用サーバーへ書き出す) | `Rules/NetMatch.asset` |
@@ -201,7 +201,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 ### 武器を JSON から取り込む
 
-1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Shotgun.json`)。
+1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`)。
 
 ```json
 {
@@ -228,6 +228,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 - 必須は `id` と `category` だけ。部品や項目を書かなければ部品の既定 (Auto・弾倉制・ヒットスキャン 1 本・着弾でダメージ) になる。入れ子の中の項目は、`visualId` などの既定のあるもの以外は必須。
 - 列挙 (`category`・`fireMode` など) は列挙子の名前の文字列。
+- `spinUp` は撃つ速さを銃身の回転に比例させる。押してから `spinUpSeconds` は撃たず、`fireInterval` の `startIntervalMultiplier` 倍の間隔で撃ち始め、`spinUpSeconds` × `startIntervalMultiplier` 秒押し続けたところで `fireInterval` の間隔になる。離すと満回転から `spinDownSeconds` 秒で止まり、回転が撃ち始めの速さより上のうちに押し直せば待たずに撃てる。
 - `pelletCount` 本の弾を、腰だめ・ADS・移動の散らばりを掛けた向きを中心に半角 `pelletSpreadDegrees` の円錐へ出す。向きは撃った人・発射番号・弾の番号で決まり、オフラインとサーバーで同じになる。`damage` は 1 本あたりで、1 回の射撃で同じ相手に当たった弾はヒットマーカーと被弾の知らせを 1 つにまとめる。
 - `falloff` は `{ "startDistance": …, "endDistance": …, "minMultiplier": … }` か、減衰しないなら `"None"`。
 - `nameKey` は画面に出す武器の名前を引く表のキー。文は `Resources/Localization/<言語>/` の JSON (例: `items.json` に `"weapon.rifle": "Rifle"`) に書く。表に無いキーはキーそのものが出る。空か `null` なら `id` が出る。弾薬の種類の `nameKey` も同じ (例: `ammo.dmr.armorPiercing`)。

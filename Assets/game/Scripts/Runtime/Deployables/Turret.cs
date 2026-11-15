@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Fps.Runtime
 {
-    // 撃つのはプレイヤーや敵と同じ Hitscan.Fire なので、減衰・部位・置いた物での止まり方・建物への被害は同じ規則を通る。
+    // 撃つのはプレイヤーや敵と同じ撃ち方 (TriggerDriver) と弾の届け方 (Hitscan.Fire → ShotDeliveries) なので、減衰・部位・置いた物での止まり方・建物への被害は同じ規則を通る。
     // 狙う相手は毎フレームではなく SearchIntervalSeconds ごとに選び直す。候補を集めるのにシーンの Damageable をすべて見るため。
     // 弾倉とリロードは持たせない。置いた時点の弾の数 (TurretSpec.Rounds) を撃ち切るか、持続の秒数が過ぎたら消える。
     [DisallowMultipleComponent]
@@ -28,6 +28,7 @@ namespace Fps.Runtime
         private float _searchIn;
         private Damageable _heldFor;
         private int _shotIndex;
+        private readonly TriggerDriver _trigger = new TriggerDriver();
 
         // 敵の AI が狙う相手の候補に入れるための一覧。毎回シーンを探させないよう、撃てる状態のものだけをここに持つ。
         public static IReadOnlyList<Turret> Armed => _armed;
@@ -96,6 +97,7 @@ namespace Fps.Runtime
             _heldFor = null;
             _searchIn = 0f;
             _shotIndex = 0;
+            _trigger.Bind(TriggerModels.For(weapon));
 
             // Edit Mode では OnDisable / OnDestroy が呼ばれないので、消えたことは Deployable から受けて一覧から外す。
             deployable.Removed += OnRemoved;
@@ -113,6 +115,7 @@ namespace Fps.Runtime
             }
 
             _state.Tick(deltaSeconds);
+            _trigger.Advance(deltaSeconds);
             var over = _state.Over;
             if (over.HasValue)
             {
@@ -129,12 +132,20 @@ namespace Fps.Runtime
 
             if (_target == null)
             {
+                _trigger.Drop();
                 return;
             }
 
             var eye = Eye;
             var toTarget = _target.AimPoint - eye;
-            if (!TurnTowards(toTarget, deltaSeconds) || !_state.IsReady)
+            if (!TurnTowards(toTarget, deltaSeconds))
+            {
+                _trigger.Drop();
+                return;
+            }
+
+            // 連射の間隔を待つ間は離さない。押しっぱなしの撃ち方が撃ち続けられるように。
+            if (!_state.IsReady)
             {
                 return;
             }
@@ -268,31 +279,49 @@ namespace Fps.Runtime
 
             _heldFor = null;
             var direction = toTarget.sqrMagnitude > 1e-8f ? toTarget : Head.forward;
-            var cone = SpreadPattern.ConeDegrees(_weapon, 0f, 0f);
-            if (cone > 0f)
+            var shots = _trigger.PullAsBot(_weapon);
+            for (var i = 0; i < shots && _state.IsReady; i++)
             {
-                direction = SpreadPattern.Direction(direction.ToNumerics(), cone, _deployable.Serial, _shotIndex).ToUnity();
+                FireRound(eye, direction);
             }
+        }
 
+        private void FireRound(Vector3 eye, Vector3 direction)
+        {
+            var cone = SpreadPattern.ConeDegrees(_weapon, 0f, 0f);
+            var plan = ShotPlanner.Plan(_weapon.Round, eye.ToNumerics(), direction.ToNumerics(), cone, _deployable.Serial, _shotIndex);
             _shotIndex = unchecked(_shotIndex + 1);
             _state.Fire();
             var target = _target;
-            var result = Hitscan.Fire(eye, direction, _weapon.Range, _weapon.Damage, _weapon.Falloff, transform, _weapon.ExplosionRadius, _weapon.Id);
-            var hit = result.Hitbox != null ? result.Hitbox.Owner : null;
-            Debug.Log(
-                TurretLog.Fired(
-                    _deployable.OwnerId,
-                    _deployable.KindId,
-                    _deployable.Serial,
-                    target != null ? target.Id : null,
-                    DescribeHit(result),
-                    result.Damage,
-                    _state.RoundsLeft),
-                this);
-
-            if (hit != null && result.Damage > 0 && hit.IsDead)
+            var request = new ShotRequest(
+                gameObject,
+                transform,
+                transform.position,
+                _weapon.Round,
+                _weapon.Impact,
+                _weapon.Id,
+                Physics.DefaultRaycastLayers,
+                _weapon.Trigger.Charge,
+                Mathf.Clamp01(_trigger.ChargeFraction));
+            foreach (var round in plan.Rounds)
             {
-                Debug.Log(TurretLog.Killed(_deployable.OwnerId, _deployable.KindId, _deployable.Serial, hit.Id), this);
+                var result = Hitscan.Fire(request, round);
+                var hit = result.Hitbox != null ? result.Hitbox.Owner : null;
+                Debug.Log(
+                    TurretLog.Fired(
+                        _deployable.OwnerId,
+                        _deployable.KindId,
+                        _deployable.Serial,
+                        target != null ? target.Id : null,
+                        DescribeHit(result),
+                        result.Damage,
+                        _state.RoundsLeft),
+                    this);
+
+                if (hit != null && result.Damage > 0 && hit.IsDead)
+                {
+                    Debug.Log(TurretLog.Killed(_deployable.OwnerId, _deployable.KindId, _deployable.Serial, hit.Id), this);
+                }
             }
         }
 

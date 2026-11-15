@@ -20,7 +20,7 @@ namespace Fps.Runtime
     /// 解決できなければエラーを出して自分を無効にする。無効になるとカメラと感度を腰だめに戻す。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class AimDownSights : MonoBehaviour
+    public sealed partial class AimDownSights : MonoBehaviour
     {
         /// <summary>Assets/InputSystem_Actions.inputactions の Aim アクション。</summary>
         public const string AimActionPath = InputActionPaths.Aim;
@@ -57,6 +57,9 @@ namespace Fps.Runtime
         /// null か、null を返すときは <see cref="FallbackFieldOfView"/>。オフラインは GameBootstrap、オンラインは NetPlayer が渡す。
         /// </summary>
         public Func<WeaponSpec> WeaponSource { get; set; }
+
+        /// <summary>撃ち方の今の状態 (<see cref="ITriggerModel.BlocksAds"/>) は <see cref="WeaponSpec"/> に無いので、<see cref="WeaponSource"/> とは別の口にしている。</summary>
+        public Func<bool> AdsBlocker { get; set; }
 
         /// <summary>視野角を変えるカメラ。未初期化なら null。</summary>
         public Camera Camera => _camera;
@@ -238,6 +241,12 @@ namespace Fps.Runtime
             var wasAiming = _aimState.IsActive;
             _aimState.Mode = mode;
             var aiming = _aimState.Update(isPressed, wasPressedThisFrame);
+            if (aiming && AdsBlocker != null && AdsBlocker())
+            {
+                _aimState.Release();
+                aiming = false;
+            }
+
             if (aiming != wasAiming)
             {
                 ReportAiming(aiming);

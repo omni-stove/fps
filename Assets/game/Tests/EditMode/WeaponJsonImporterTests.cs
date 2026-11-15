@@ -149,7 +149,7 @@ namespace Fps.Tests.EditMode
 
             var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ImportFrom(_jsonFolder, _folder, null));
 
-            Assert.That(e.Field, Is.EqualTo("magazineSize"));
+            Assert.That(e.Field, Is.EqualTo("ammo.magazineSize"));
             Assert.That(e.File, Does.EndWith("B_Broken.json"));
             Assert.That(e.Message, Does.Contain("B_Broken.json").And.Contain("magazineSize"));
             Assert.That(AssetDatabase.IsValidFolder(_folder), Is.False, "the valid rifle before it is not saved either");
@@ -159,10 +159,48 @@ namespace Fps.Tests.EditMode
         public void AMissingFieldIsNamed()
         {
             var e = Assert.Throws<WeaponJsonException>(
-                () => WeaponJsonImporter.ParseSpec(SampleText("Rifle").Replace("\"damage\": 25,", string.Empty), "Rifle.json"));
+                () => WeaponJsonImporter.ParseSpec(SampleText("Rifle").Replace("\"category\": \"AssaultRifle\",", string.Empty), "Rifle.json"));
+
+            Assert.That(e.Field, Is.EqualTo("category"));
+            Assert.That(e.Message, Does.Contain("Rifle.json").And.Contain("category"));
+        }
+
+        [Test]
+        public void AnOmittedValueTakesTheDefaultOfItsPart()
+        {
+            var spec = WeaponJsonImporter.ParseSpec(SampleText("Rifle").Replace("\"damage\": 25,", string.Empty), "Rifle.json");
+
+            Assert.That(spec.Damage, Is.EqualTo(ImpactSpec.DefaultDamage));
+        }
+
+        [Test]
+        public void TheJsonInPartsReproducesTheTestWeapons()
+        {
+            foreach (var expected in new[] { TestWeapons.RifleSpec(), TestWeapons.HandgunSpec(), TestWeapons.LauncherSpec() })
+            {
+                AssertSameSpec(WeaponJsonImporter.ParseSpec(WeaponSpecJson.Write(expected), "Parts.json"), expected);
+            }
+        }
+
+        [Test]
+        public void ImportingTheJsonInPartsKeepsEveryPart()
+        {
+            var expected = TestWeapons.EveryPartSpec();
+            WriteJson("Everything.json", WeaponSpecJson.Write(expected));
+
+            WeaponJsonImporter.ImportFrom(_jsonFolder, _folder, null);
+
+            var definition = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_folder + "/Everything.asset");
+            Assert.That(WeaponSpecJson.Write(definition.ToSpec()), Is.EqualTo(WeaponSpecJson.Write(expected)));
+        }
+
+        [Test]
+        public void AValueWrittenBothFlatAndInItsPartIsNamed()
+        {
+            var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ParseSpec(
+                SampleText("Rifle").Replace("\"category\": \"AssaultRifle\",", "\"category\": \"AssaultRifle\", \"damage\": 30,"), "Rifle.json"));
 
             Assert.That(e.Field, Is.EqualTo("damage"));
-            Assert.That(e.Message, Does.Contain("Rifle.json").And.Contain("damage").And.Contain("missing"));
         }
 
         [Test]
@@ -178,7 +216,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheRecoilRecoveryDelayIsReadAndDefaultsWhenOmitted()
         {
-            var text = SampleText("Rifle");
+            var text = SampleText("Rifle").Replace("\"recoilRecoveryDelaySeconds\": 0.15,", string.Empty);
             Assume.That(text, Does.Not.Contain(WeaponJsonImporter.RecoilRecoveryDelaySecondsField));
             Assume.That(text, Does.Contain("\"recoilRecoveryPerSecond\": 10,"));
 
@@ -194,7 +232,7 @@ namespace Fps.Tests.EditMode
             var e = Assert.Throws<WeaponJsonException>(() => WeaponJsonImporter.ParseSpec(
                 text.Replace("\"recoilRecoveryPerSecond\": 10,", "\"recoilRecoveryPerSecond\": 10, \"recoilRecoveryDelaySeconds\": -1,"),
                 "Rifle.json"));
-            Assert.That(e.Field, Is.EqualTo(WeaponJsonImporter.RecoilRecoveryDelaySecondsField));
+            Assert.That(e.Field, Is.EqualTo("aim." + WeaponJsonImporter.RecoilRecoveryDelaySecondsField));
         }
 
         [Test]
@@ -236,23 +274,23 @@ namespace Fps.Tests.EditMode
             var e = Assert.Throws<WeaponJsonException>(
                 () => WeaponJsonImporter.ParseSpec(SampleText("Rifle").Replace("\"damage\":", "\"damgae\":"), "Rifle.json"));
 
-            Assert.That(e.Field, Is.EqualTo("damgae"));
+            Assert.That(e.Field, Is.EqualTo("impact.damgae"));
         }
 
-        [TestCase("\"magazineSize\": 30", "\"magazineSize\": 30.5", "magazineSize")]
-        [TestCase("\"magazineSize\": 30", "\"magazineSize\": \"30\"", "magazineSize")]
-        [TestCase("\"magazineSize\": 30", "\"magazineSize\": 99999999999", "magazineSize")]
+        [TestCase("\"magazineSize\": 30", "\"magazineSize\": 30.5", "ammo.magazineSize")]
+        [TestCase("\"magazineSize\": 30", "\"magazineSize\": \"30\"", "ammo.magazineSize")]
+        [TestCase("\"magazineSize\": 30", "\"magazineSize\": 99999999999", "ammo.magazineSize")]
         [TestCase("\"category\": \"AssaultRifle\"", "\"category\": \"assaultrifle\"", "category")]
         [TestCase("\"category\": \"AssaultRifle\"", "\"category\": \"0\"", "category")]
-        [TestCase("\"fireMode\": \"Auto\"", "\"fireMode\": 0", "fireMode")]
-        [TestCase("\"range\": 100", "\"range\": 0", "range")]
-        [TestCase("\"range\": 100", "\"range\": 1e39", "range")]
+        [TestCase("\"fireMode\": \"Auto\"", "\"fireMode\": 0", "trigger.fireMode")]
+        [TestCase("\"range\": 100", "\"range\": 0", "round.range")]
+        [TestCase("\"range\": 100", "\"range\": 1e39", "round.range")]
         [TestCase("\"id\": \"6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83\"", "\"id\": \"RIFLE\"", "id")]
         [TestCase("\"id\": \"6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83\"", "\"id\": null", "id")]
-        [TestCase("\"minMultiplier\": 0.5", "\"minMultiplier\": 2", "falloff.minMultiplier")]
-        [TestCase("\"minMultiplier\": 0.5", "\"minMultiplier\": 0.5, \"curve\": 1", "falloff.curve")]
-        [TestCase("\"recoilPitchDegrees\": 0.5", "\"recoilPitchDegrees\": 91", "recoilPitchDegrees")]
-        [TestCase("\"damage\": 25", "\"damage\": 25, \"damage\": 26", "damage")]
+        [TestCase("\"minMultiplier\": 0.5", "\"minMultiplier\": 2", "impact.falloff.minMultiplier")]
+        [TestCase("\"minMultiplier\": 0.5", "\"minMultiplier\": 0.5, \"curve\": 1", "impact.falloff.curve")]
+        [TestCase("\"recoilPitchDegrees\": 0.5", "\"recoilPitchDegrees\": 91", "aim.recoilPitchDegrees")]
+        [TestCase("\"damage\": 25", "\"damage\": 25, \"damage\": 26", "impact.damage")]
         [TestCase("\"nameKey\": \"weapon.rifle\"", "\"nameKey\": 1", "nameKey")]
         public void AnInvalidFieldIsNamed(string original, string replacement, string field)
         {
@@ -275,7 +313,7 @@ namespace Fps.Tests.EditMode
 
             var e = Assert.Throws<WeaponJsonException>(
                 () => WeaponJsonImporter.ParseSpec(SampleText("Launcher").Replace("\"None\"", "\"none\""), "Launcher.json"));
-            Assert.That(e.Field, Is.EqualTo("falloff"));
+            Assert.That(e.Field, Is.EqualTo("impact.falloff"));
         }
 
         [TestCase("")]

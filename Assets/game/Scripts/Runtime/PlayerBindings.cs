@@ -54,7 +54,7 @@ namespace Fps.Runtime
         private static readonly string[] _gamepadExcluded = { "<Gamepad>/leftStick", "<Gamepad>/rightStick" };
 
         // ゲームパッドに空いているボタンが無く割り当てていないので、キーボードの行だけを出すアクション。_slots より先に初期化する。
-        private static readonly string[] _keyboardOnlyActions = { "Melee", "Prone", "Ability1", "Ability2", "SquadCommand", "NetStats" };
+        private static readonly string[] _keyboardOnlyActions = { "Melee", "Prone", "Ability1", "Ability2", "SquadCommand", "NetStats", "SwitchAmmoType", "CycleMagnification", "HoldBreath" };
 
         private static readonly RebindSlot[] _slots = BuildSlots();
 
@@ -479,7 +479,7 @@ namespace Fps.Runtime
 
             var buttons = new[]
             {
-                "Jump", "Sprint", "Crouch", "Prone", "Attack", "Aim", "Reload", "Melee", "Interact", "Next", "Previous", "Cover", "SwapShoulder",
+                "Jump", "Sprint", "Crouch", "Prone", "Attack", "Aim", "Reload", "SwitchAmmoType", "CycleMagnification", "HoldBreath", "Melee", "Interact", "Next", "Previous", "Cover", "SwapShoulder",
                 "Dodge", "Grenade", "Ability1", "Ability2", "Ping", "SquadCommand", "Scoreboard", "NetStats",
             };
 

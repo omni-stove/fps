@@ -1,0 +1,122 @@
+using System;
+using Fps.Core;
+
+namespace Fps.Runtime
+{
+    // 撃ち方 (ITriggerModel) に押す・離す・時間を渡す順を、プレイヤー・敵・タレットで揃える。
+    public sealed class TriggerDriver
+    {
+        private ITriggerModel _model;
+        private float _unspentSeconds;
+        private bool _held;
+
+        public ITriggerModel Model => _model;
+
+        public bool IsHeld => _held;
+
+        public float ChargeFraction => _model != null ? _model.ChargeFraction : 0f;
+
+        // しまった撃ち方の溜めや押しっぱなしを持ち越すと、持ち替えた先で押していないのに撃つ。
+        public void Bind(ITriggerModel model)
+        {
+            if (model == _model)
+            {
+                return;
+            }
+
+            Drop();
+            _model = model;
+            _unspentSeconds = 0f;
+            _held = false;
+        }
+
+        public void Advance(float deltaSeconds)
+        {
+            if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must be a non-negative finite number");
+            }
+
+            // 次に押す・離すを渡すまで溜めるのは、押しっぱなしの撃ち方が時間だけで撃つと、その間に離した入力を見られないため。
+            _unspentSeconds += deltaSeconds;
+        }
+
+        // FireTrigger.Pull と同じ順で渡す。Auto はフレーム内に押して離した入力を押していないと見なす。
+        public int Pull(FireMode mode, bool isPressed, bool wasPressedThisFrame)
+        {
+            if (_model == null)
+            {
+                return 0;
+            }
+
+            var shots = 0;
+            if (_held && (!isPressed || wasPressedThisFrame))
+            {
+                shots += _model.Release();
+                _held = false;
+            }
+
+            shots += Spend();
+            var starts = mode == FireMode.Auto ? isPressed && !_held : wasPressedThisFrame;
+            if (starts)
+            {
+                shots += _model.Press();
+                _held = true;
+            }
+
+            if (_held && !isPressed)
+            {
+                shots += _model.Release();
+                _held = false;
+            }
+
+            return shots;
+        }
+
+        // 人の手で引かない撃ち手 (敵・タレット) の引き方: 溜める撃ち方は溜め切ってから離し、Auto は撃つ間押し続け、ほかは毎回押し直す。
+        public int PullAsBot(WeaponSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (spec.Trigger.Charge != null)
+            {
+                var pressed = !(_held && ChargeFraction >= 1f);
+                return Pull(spec.FireMode, pressed, pressed && !_held);
+            }
+
+            if (spec.FireMode == FireMode.Auto)
+            {
+                return Pull(FireMode.Auto, true, !_held);
+            }
+
+            return Pull(spec.FireMode, true, true);
+        }
+
+        // 撃てない間に押しっぱなしの撃ち方が弾を数えると、撃てるようになった最初の弾が連射間隔のぶん遅れるので、離したことにする。
+        public void Drop()
+        {
+            if (_model == null)
+            {
+                return;
+            }
+
+            if (_held)
+            {
+                _model.Release();
+                _held = false;
+            }
+
+            Spend();
+        }
+
+        private int Spend()
+        {
+            var shots = _model.Tick(_unspentSeconds);
+            _unspentSeconds = 0f;
+            return shots;
+        }
+    }
+}

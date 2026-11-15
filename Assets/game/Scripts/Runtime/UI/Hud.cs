@@ -10,7 +10,8 @@ namespace Fps.Runtime
     /// 値の源 (プレイヤーの <see cref="Damageable"/>・<see cref="WeaponController"/>・<see cref="Fps.Core.Match"/>) は
     /// <see cref="Initialize"/> でコードから渡す。値はそれぞれのイベントで <see cref="HudModel"/> が更新し、
     /// <see cref="HudView"/> が Label に写す。毎フレーム読みに行くのは、時間で進みイベントの無いリロードの進み
-    /// (<see cref="HudModel.RefreshReloadProgress"/>) と照準の広がり・表示 (<see cref="RefreshCrosshair"/>) だけ。
+    /// (<see cref="HudModel.RefreshReloadProgress"/>)・溜めと熱と弾薬の種類 (<see cref="HudModel.RefreshWeaponGauges"/>) と
+    /// 照準の広がり・表示 (<see cref="RefreshCrosshair"/>) だけ。
     /// Health や Weapon が作り直されたとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
     /// オンライン (Fps.Net の NetHud) は源を渡さずに作り、<see cref="Model"/> の Set 系で値を書く。チームの点数 (左上) と
     /// 試合結果 (中央上) はそのときだけ出る。
@@ -465,6 +466,7 @@ namespace Fps.Runtime
             if (_weapon != null)
             {
                 _model.RefreshReloadProgress();
+                _model.RefreshWeaponGauges();
                 RefreshCrosshair();
             }
         }

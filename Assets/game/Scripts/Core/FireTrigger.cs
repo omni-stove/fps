@@ -14,7 +14,9 @@ namespace Fps.Core
     /// </remarks>
     public sealed class FireTrigger
     {
-        private float _cooldownRemaining;
+        private readonly ITriggerModel _model;
+        private float _unspentSeconds;
+        private bool _held;
 
         /// <summary>射撃モード。</summary>
         public FireMode Mode { get; }
@@ -22,24 +24,24 @@ namespace Fps.Core
         /// <summary><see cref="Pull"/> で撃ってから次に撃てるまでの秒数。</summary>
         public float FireInterval { get; }
 
+        public ITriggerModel Model => _model;
+
         /// <param name="mode">射撃モード。Auto か Semi。</param>
         /// <param name="fireInterval">連射間隔 (秒)。0 以上の有限値。</param>
         public FireTrigger(FireMode mode, float fireInterval)
         {
             ValidateMode(mode);
-            if (!(fireInterval >= 0f) || float.IsInfinity(fireInterval))
-            {
-                throw new ArgumentOutOfRangeException(nameof(fireInterval), fireInterval, "fireInterval must be a non-negative finite number");
-            }
-
+            _model = TriggerModels.For(mode, fireInterval);
             Mode = mode;
             FireInterval = fireInterval;
         }
 
         /// <summary>spec の射撃モードと連射間隔で作る。</summary>
         public FireTrigger(WeaponSpec spec)
-            : this((spec ?? throw new ArgumentNullException(nameof(spec))).FireMode, spec.FireInterval)
         {
+            _model = TriggerModels.For(spec ?? throw new ArgumentNullException(nameof(spec)));
+            Mode = spec.FireMode;
+            FireInterval = spec.FireInterval;
         }
 
         /// <summary>
@@ -58,13 +60,32 @@ namespace Fps.Core
         /// </summary>
         public bool Pull(bool isPressed, bool wasPressedThisFrame)
         {
-            if (!Wants(Mode, isPressed, wasPressedThisFrame) || _cooldownRemaining > 0f)
+            var shots = 0;
+            if (_held && (!isPressed || wasPressedThisFrame))
             {
-                return false;
+                shots += _model.Release();
+                _held = false;
             }
 
-            _cooldownRemaining = FireInterval;
-            return true;
+            // 離したかを先に伝えてから時間を進めるのは、離した後のフレームで押しっぱなしの撃ち方が撃たないようにするため。
+            shots += _model.Tick(_unspentSeconds);
+            _unspentSeconds = 0f;
+
+            // Auto はフレーム内に押して離した入力を押していないと見なす (Wants と同じ)。
+            var starts = Mode == FireMode.Auto ? isPressed && !_held : wasPressedThisFrame;
+            if (starts)
+            {
+                shots += _model.Press();
+                _held = true;
+            }
+
+            if (_held && !isPressed)
+            {
+                shots += _model.Release();
+                _held = false;
+            }
+
+            return shots > 0;
         }
 
         /// <summary>連射間隔の待ちを deltaSeconds 進める。</summary>
@@ -75,7 +96,8 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must be a non-negative finite number");
             }
 
-            _cooldownRemaining = Math.Max(0f, _cooldownRemaining - deltaSeconds);
+            // 次の Pull まで溜めるのは、押しっぱなしの撃ち方が Tick の時点で撃つと、その間に離した入力を見られないため。
+            _unspentSeconds += deltaSeconds;
         }
 
         private static void ValidateMode(FireMode mode)

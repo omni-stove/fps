@@ -32,10 +32,14 @@ namespace Fps.Server
         private readonly List<LiveGrenade> _grenades = new List<LiveGrenade>();
         private readonly List<int> _explosionTargets = new List<int>();
         private readonly ExplosionMessage _explosion = new ExplosionMessage();
+        private ExplosionSpec _grenadeExplosion;
         private bool _grenadesEnabled;
         private int _nextGrenadeId;
 
         internal int LiveGrenadeCount => _grenades.Count;
+
+        /// <summary>グレネードの爆発の値 (ルールのグレネードの範囲ダメージと中心の建造物被害)。<see cref="Start"/> の後に決まる。</summary>
+        internal ExplosionSpec GrenadeExplosion => _grenadeExplosion;
 
         /// <summary>
         /// point から、bottom (足元) と top (頭のてっぺん) を両端に持つ半径 radius の縦のカプセルの表面までの距離。中にあれば 0。
@@ -68,6 +72,7 @@ namespace Fps.Server
         {
             _grenadesEnabled = rules.Actions.Grenade == Grenade.On;
             var spec = _data.Grenade;
+            _grenadeExplosion = new ExplosionSpec(spec.Explosion, spec.StructureDamageAtCenter);
             _log.WriteLine(_grenadesEnabled
                 ? "[Match] grenades=On count=" + Text(rules.Actions.GrenadeCount) + " fuse=" + Text(spec.FuseSeconds) + "s radius="
                     + Text(spec.DamageRadius) + " maxDamage=" + Text(spec.MaxDamage)
@@ -158,7 +163,7 @@ namespace Fps.Server
 
                 _grenades.RemoveAt(i);
                 i--;
-                Explode(grenade.Flight.Position, grenade.ThrowerId);
+                Explode(grenade.Flight.Position, _grenadeExplosion, grenade.ThrowerId, GrenadeWeaponId);
             }
         }
 
@@ -168,14 +173,16 @@ namespace Fps.Server
         }
 
         /// <summary>
-        /// throwerId が投げたグレネードの center での爆発。参加中で生きている全員に範囲ダメージ、ルールで壊せるなら建物に被害を与え、ダメージを与えた相手ごとに本人たちへ
-        /// ヒット・被弾を、全員に爆発を送る。投げた人が抜けていれば、攻撃者のいないダメージ (倒れたら自滅) として与える。
-        /// 爆発はサーバーの時刻で起きるので巻き戻さない。
+        /// throwerId が weaponId (グレネードや爆発する弾の武器) で起こした center での爆発。参加中で生きている全員に explosion の範囲ダメージ、
+        /// ルールで壊せるなら建物に被害を与え、ダメージを与えた相手ごとに本人たちへヒット・被弾を、全員に爆発を送る。キルフィードは weaponId で出す。
+        /// 起こした人が抜けていれば、攻撃者のいないダメージ (倒れたら自滅) として与える。爆発はサーバーの時刻で起きるので巻き戻さない。
         /// </summary>
-        internal void Explode(Vector3 center, int throwerId)
+        internal void Explode(Vector3 center, ExplosionSpec explosion, int throwerId, string weaponId)
         {
+            ArgumentNullException.ThrowIfNull(explosion);
+            ArgumentNullException.ThrowIfNull(weaponId);
             var thrower = _match.TryGetPlayer(throwerId, out _) ? throwerId : (int?)null;
-            var spec = _data.Grenade;
+            var tag = ExplosionLogTag(weaponId);
             var damaged = 0;
             var killed = 0;
 
@@ -188,7 +195,7 @@ namespace Fps.Server
 
             foreach (var victimId in _explosionTargets)
             {
-                var outcome = ExplodeOn(thrower, victimId, center, spec.Explosion);
+                var outcome = ExplodeOn(thrower, victimId, center, explosion.Damage, weaponId, tag);
                 if (outcome == DamageOutcome.Ignored)
                 {
                     continue;
@@ -201,18 +208,18 @@ namespace Fps.Server
                 }
             }
 
-            var structures = _structures.ApplyAround(center, spec.StructureDamageAtCenter, spec.Explosion.Radius, _changedStructures, _log);
+            var structures = _structures.ApplyAround(center, explosion.StructureDamageAtCenter, explosion.Damage.Radius, _changedStructures, _log);
             SendStructureChanges();
 
             _explosion.Center = center;
             _explosion.HasThrower = thrower.HasValue;
             _explosion.ThrowerId = thrower ?? 0;
-            _explosion.WeaponId = GrenadeWeaponId;
+            _explosion.WeaponId = weaponId;
             SendToAll(_explosion);
             _log.WriteLine(string.Format(
                 CultureInfo.InvariantCulture,
                 "{0} net exploded thrower={1} at=({2:0.0}, {3:0.0}, {4:0.0}) damaged={5} killed={6} structures={7}",
-                GrenadeLogTag,
+                tag,
                 throwerId,
                 center.X,
                 center.Y,
@@ -222,7 +229,7 @@ namespace Fps.Server
                 structures));
         }
 
-        private DamageOutcome ExplodeOn(int? thrower, int victimId, Vector3 center, ExplosionDamage explosion)
+        private DamageOutcome ExplodeOn(int? thrower, int victimId, Vector3 center, ExplosionDamage explosion, string weaponId, string tag)
         {
             if (!IsHittable(victimId) || !_bodies.TryGet(victimId, out var body))
             {
@@ -252,7 +259,7 @@ namespace Fps.Server
             {
                 if (obstructed)
                 {
-                    _log.WriteLine(GrenadeLogTag + " net blocked victim=" + Text(victimId));
+                    _log.WriteLine(tag + " net blocked victim=" + Text(victimId));
                 }
 
                 return DamageOutcome.Ignored;
@@ -260,7 +267,7 @@ namespace Fps.Server
 
             // 投げた人が抜けていれば、ApplyDamage は本人のダメージ (倒れたら自滅) として数えるので、キルフィードの撃った人も本人にそろえる
             var attackerId = thrower ?? victimId;
-            var outcome = _rules.ApplyDamage(thrower, victimId, damage, new KillShot(attackerId, victimId, GrenadeWeaponId, HitZone.Body));
+            var outcome = _rules.ApplyDamage(thrower, victimId, damage, new KillShot(attackerId, victimId, weaponId, HitZone.Body));
             if (outcome == DamageOutcome.Ignored)
             {
                 return outcome;
@@ -276,7 +283,7 @@ namespace Fps.Server
             _log.WriteLine(string.Format(
                 CultureInfo.InvariantCulture,
                 "{0} net hit attacker={1} victim={2} dmg={3} distance={4:0.0} outcome={5}",
-                GrenadeLogTag,
+                tag,
                 attackerId,
                 victimId,
                 damage,
@@ -305,6 +312,12 @@ namespace Fps.Server
 
             SendHitConfirm(thrower.Value, damage, HitZone.Body, outcome);
             SendDamageTaken(victimId, center, damage);
+        }
+
+        // グレネードのログは今までの [Grenade] のまま残し、武器の爆発は戦闘のログに出す
+        private static string ExplosionLogTag(string weaponId)
+        {
+            return string.Equals(weaponId, GrenadeWeaponId, StringComparison.Ordinal) ? GrenadeLogTag : LogTag;
         }
 
         private bool IsLineBlocked(Vector3 from, Vector3 to)

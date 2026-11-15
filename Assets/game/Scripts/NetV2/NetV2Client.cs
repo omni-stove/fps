@@ -24,7 +24,8 @@ namespace Fps.NetV2
     /// (<see cref="MatchClient.Motor"/>) を使う。はしごにつかまったら視点をはしごへ向ける。
     /// </para>
     /// <para>
-    /// 射撃は今の武器の射撃モードと連射間隔 (<see cref="NetV2Weapons"/>) で、リロード・グレネード・印は押したときに要求を送る。
+    /// 射撃は今の武器の撃ち方 (<see cref="NetV2Weapons"/> の <see cref="ClientTrigger"/>) で、リロード・弾薬の切り替え・グレネード・印は押したときに要求を送る。
+    /// 飛ぶ弾・ビーム・火炎・状態異常・範囲の効果の知らせとスナップショットは、機能ごとの受け口 (<see cref="ClientWeaponHooks"/>) に渡す。
     /// 承認されたら保存してあるロードアウトを頼み、倒れている間はロードアウトを選ぶ画面を出す (<see cref="NetV2LoadoutChooser"/>)。
     /// サーバーのイベントは、オフラインと Netcode のクライアントと同じ <see cref="CombatEvents"/> と HUD に流し、<c>[Combat]</c> の行を出す。
     /// 印は Netcode のクライアントと同じ <see cref="PingController"/> に、拠点の持ち主はマップの <see cref="ControlPointZone"/> に出す。
@@ -69,6 +70,9 @@ namespace Fps.NetV2
         private readonly List<ControlPointZone> _zones = new List<ControlPointZone>();
         private readonly NetV2Weapons _weapons = new NetV2Weapons();
         private NetV2Structures _structures;
+        private ClientWeaponHooks _weaponHooks;
+        private ClientTrigger _heldContinuous;
+        private string _heldContinuousWeaponId;
         private NetV2LoadoutChooser _loadout;
         private ClientPings _pings;
         private NetLaunchOptions _options;
@@ -241,6 +245,7 @@ namespace Fps.NetV2
             }
 
             _structures = new NetV2Structures(this);
+            _weaponHooks = new ClientWeaponHooks(_weapons.SpecFor);
             _pings = new ClientPings(line => Debug.Log(line, this));
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
         }
@@ -449,7 +454,7 @@ namespace Fps.NetV2
 
             try
             {
-                _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth);
+                _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.SpecFor);
                 _loadout.Bind(_hud.Hud.LoadoutSelect);
             }
             catch (InvalidOperationException e)
@@ -530,6 +535,12 @@ namespace Fps.NetV2
                 _client.Send(_weaponAction, TransportChannel.Reliable);
             }
 
+            if (_local.TakeSwitchAmmoType())
+            {
+                _weaponAction.Action = WeaponAction.SwitchAmmoType;
+                _client.Send(_weaponAction, TransportChannel.Reliable);
+            }
+
             if (_local.TakeGrenade())
             {
                 _grenade.Direction = direction;
@@ -557,14 +568,23 @@ namespace Fps.NetV2
             return own >= 0 && latest.Players[own].Health > 0;
         }
 
-        // 引き金は今の武器の射撃モードと連射間隔 (Netcode の NetPlayer.Update と同じ FireTrigger) で、押している間の連射の間合いを決める
+        // 引き金は今の武器の撃ち方 (ITriggerModel) で、押している間の連射の間合いと、押しっぱなしで出る撃ち方の押した・離したを決める
         private void Trigger(System.Numerics.Vector3 direction)
         {
             var held = _local.IsAttackHeld;
             var pressed = _local.TakeAttack();
             var latest = _client.LatestSnapshot;
-            var weaponId = ClientFire.CurrentWeaponId(latest != null && latest.HasOwner ? latest.Owner : null);
+            var owner = latest != null && latest.HasOwner ? latest.Owner : null;
+            var weaponId = ClientFire.CurrentWeaponId(owner);
             var trigger = _weapons.TriggerFor(weaponId);
+            if (_heldContinuous != null && _heldContinuous != trigger)
+            {
+                // 押したまま持ち替えた・武器を失ったときも、押しっぱなしの撃ち方を止めさせる
+                _heldContinuous.Drop();
+                SendContinuous(direction, _heldContinuousWeaponId, _heldContinuous.Spec, default, TriggerEdge.Released, owner);
+            }
+
+            _local.BlocksAds = trigger != null && trigger.BlocksAds;
             if (trigger == null)
             {
                 if (pressed)
@@ -576,15 +596,26 @@ namespace Fps.NetV2
             }
 
             trigger.Tick(Time.deltaTime);
-            if (!trigger.Pull(held, pressed))
+            var pull = trigger.Pull(held, pressed);
+            if (trigger.IsContinuous)
+            {
+                PullContinuous(trigger, pull, direction, weaponId, latest, owner);
+                return;
+            }
+
+            if (pull.Shots <= 0)
             {
                 return;
             }
 
-            switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState))
+            switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec))
             {
                 case FireDecision.Fire:
-                    SendFire(direction, weaponId);
+                    for (var i = 0; i < pull.Shots; i++)
+                    {
+                        SendFire(direction, weaponId, trigger.Spec, pull, TriggerEdge.None, owner);
+                    }
+
                     _local.ReleaseSprint(SprintInput.ReasonFire);
                     break;
                 case FireDecision.Reload:
@@ -600,11 +631,62 @@ namespace Fps.NetV2
             }
         }
 
+        // 撃てない間に押した分は押したと送らないが、押したと送った後は撃てなくなっても必ず離したと送る (サーバーが照射を止められるように)
+        private void PullContinuous(
+            ClientTrigger trigger, in TriggerPull pull, System.Numerics.Vector3 direction, string weaponId, SnapshotMessage latest, OwnerSnapshot owner)
+        {
+            var sending = _heldContinuous == trigger;
+
+            // 離してすぐ押し直したフレームは、前の照射を止めてから次を始める
+            if (sending && pull.Released)
+            {
+                SendContinuous(direction, weaponId, trigger.Spec, pull, TriggerEdge.Released, owner);
+                sending = false;
+            }
+
+            if (pull.Pressed && !sending)
+            {
+                switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec))
+                {
+                    case FireDecision.Fire:
+                        SendContinuous(direction, weaponId, trigger.Spec, pull, TriggerEdge.Pressed, owner);
+                        _heldContinuous = trigger;
+                        _heldContinuousWeaponId = weaponId;
+                        sending = true;
+                        _local.ReleaseSprint(SprintInput.ReasonFire);
+                        break;
+                    case FireDecision.Reload:
+                        _dryFire?.Play(weaponId);
+                        _weaponAction.Action = WeaponAction.Reload;
+                        _client.Send(_weaponAction, TransportChannel.Reliable);
+                        break;
+                }
+            }
+
+            if (sending && !trigger.IsHeld)
+            {
+                SendContinuous(direction, weaponId, trigger.Spec, pull, TriggerEdge.Released, owner);
+            }
+        }
+
+        private void SendContinuous(
+            System.Numerics.Vector3 direction, string weaponId, WeaponSpec spec, in TriggerPull pull, TriggerEdge edge, OwnerSnapshot owner)
+        {
+            if (edge == TriggerEdge.Released)
+            {
+                _heldContinuous = null;
+                _heldContinuousWeaponId = null;
+            }
+
+            SendFire(direction, weaponId, spec, pull, edge, owner);
+        }
+
         // 撃てるか (弾・間隔) と当たりはサーバーが決める。表示している tick を載せ、サーバーがその時点へ巻き戻して当てる
-        private void SendFire(System.Numerics.Vector3 direction, string weaponId)
+        private void SendFire(
+            System.Numerics.Vector3 direction, string weaponId, WeaponSpec spec, in TriggerPull pull, TriggerEdge edge, OwnerSnapshot owner)
         {
             var renderTick = Math.Max(0f, _match.Interpolation.RenderTick);
-            _fire.WeaponId = weaponId;
+            ClientFire.Fill(_fire, owner, weaponId, pull, edge, null);
             _fire.Origin = NetV2Math.ToNumerics(_local.EyePosition);
             _fire.Direction = direction;
             _fire.ClientTick = (int)renderTick;
@@ -613,7 +695,13 @@ namespace Fps.NetV2
             _fire.ShotIndex = _shotIndex;
             _shotIndex = unchecked(_shotIndex + 1);
             _client.Send(_fire, TransportChannel.Reliable);
-            CombatEvents.RaiseShotFired(_local.gameObject, _local.EyePosition, _local.AimDirection, _fire.WeaponId);
+            _weaponHooks.LocalFired(_fire, spec);
+
+            // 押しっぱなしの撃ち方の見た目は受け口が出すので、1 発ごとの射撃の演出は出さない
+            if (edge == TriggerEdge.None)
+            {
+                CombatEvents.RaiseShotFired(_local.gameObject, _local.EyePosition, _local.AimDirection, _fire.WeaponId);
+            }
         }
 
         private bool SendReliable(IMessage message)
@@ -635,6 +723,7 @@ namespace Fps.NetV2
             }
 
             _hud?.Apply(snapshot);
+            _weaponHooks.Apply(snapshot);
             _loadout.Apply(snapshot, _client.PlayerId);
             ShowControlPoints(snapshot);
             PlayReloadSound(snapshot);
@@ -773,7 +862,11 @@ namespace Fps.NetV2
                     _structures.Receive(structure);
                     break;
                 default:
-                    _pings.Handle(message, Time.time);
+                    if (!_weaponHooks.Handle(message))
+                    {
+                        _pings.Handle(message, Time.time);
+                    }
+
                     break;
             }
         }
@@ -786,12 +879,18 @@ namespace Fps.NetV2
                 shooter = remote.gameObject;
             }
 
-            CombatEvents.RaiseShotFired(shooter, NetV2Math.ToUnity(shot.Origin), NetV2Math.ToUnity(shot.Direction), shot.WeaponId);
-            if (shot.HasImpact)
+            // 演出は 1 発ごとに射撃→着弾の順に出す前提 (WeaponPresentation) なので、区間ごとに対で出す
+            for (var i = 0; i < shot.SegmentCount; i++)
             {
-                HitZone? zone = shot.ImpactIsCharacter && shot.HasImpactZone ? shot.ImpactZone : (HitZone?)null;
-                CombatEvents.RaiseImpact(new ImpactInfo(
-                    NetV2Math.ToUnity(shot.ImpactPoint), NetV2Math.ToUnity(shot.ImpactNormal), null, shot.ImpactMaterialId, shot.ImpactIsCharacter, zone));
+                ref var segment = ref shot.Segment(i);
+                CombatEvents.RaiseShotFired(shooter, NetV2Math.ToUnity(segment.Origin), NetV2Math.ToUnity(segment.Direction), shot.WeaponId);
+                if (segment.HasImpact)
+                {
+                    HitZone? zone = segment.ImpactIsCharacter && segment.HasImpactZone ? segment.ImpactZone : (HitZone?)null;
+                    CombatEvents.RaiseImpact(new ImpactInfo(
+                        NetV2Math.ToUnity(segment.ImpactPoint), NetV2Math.ToUnity(segment.ImpactNormal), null,
+                        segment.ImpactMaterialId ?? "", segment.ImpactIsCharacter, zone));
+                }
             }
         }
 

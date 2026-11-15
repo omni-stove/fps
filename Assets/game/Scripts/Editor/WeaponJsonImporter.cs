@@ -13,10 +13,10 @@ namespace Fps.Editor
     /// <summary>
     /// JSON に書いた武器の値から <see cref="WeaponDefinition"/> を作るか更新する。Editor を開かずに利用側へ武器を入れるためのもの。
     /// <para>
-    /// JSON は 1 ファイルに武器 1 つのオブジェクトで、項目名は <see cref="WeaponSpec"/> のコンストラクタ引数と同じ
-    /// (既定値の無い引数は必須、既定値のある引数は省略可)。<c>category</c>・<c>fireMode</c> は列挙子の名前の文字列、
-    /// <c>falloff</c> は <see cref="DamageFalloff"/> のコンストラクタ引数を項目に持つオブジェクトか、減衰しないなら文字列 <c>"None"</c>、
-    /// <c>adsFieldOfView</c> と <c>nameKey</c> は null も書ける。値の検証は <see cref="WeaponSpec"/> に任せる。
+    /// JSON は 1 ファイルに武器 1 つのオブジェクトで、読み書きは <see cref="WeaponSpecJson"/> に任せる。<c>id</c>・<c>category</c> のほかは
+    /// 部品 (<c>trigger</c>・<c>ammo</c>・<c>round</c>・<c>impact</c>・<c>aim</c>・<c>ammoTypes</c>) ごとの入れ子のオブジェクトに書き、
+    /// 項目名は部品の Spec のコンストラクタ引数と同じで、書かない項目は部品の既定になる。部品に分ける前の平らな形
+    /// (<c>damage</c>・<c>range</c>・<c>explosionRadius</c>・<c>adsFieldOfView</c> など) もそのまま読める。
     /// </para>
     /// <para>
     /// <c>nameKey</c> は画面に出す名前を引く表のキー (例: <c>weapon.rifle</c>) で、文そのものは Resources/Localization/&lt;言語&gt;/ の JSON に書く。
@@ -41,79 +41,16 @@ namespace Fps.Editor
         public const string JsonExtension = ".json";
 
         /// <summary><c>falloff</c> にこの文字列を書くと <see cref="DamageFalloff.None"/> (減衰しない) になる。</summary>
-        public const string NoFalloff = "None";
+        public const string NoFalloff = WeaponSpecJson.NoFalloff;
 
-        public const string IdField = "id";
-        public const string NameKeyField = "nameKey";
+        public const string IdField = WeaponSpecJson.IdItem;
+        public const string NameKeyField = WeaponSpecJson.NameKeyItem;
 
         /// <summary><see cref="NameKeyField"/> の前の項目名。書かれていたら、知らない項目とは別の文で書き換えを促す。</summary>
         public const string LegacyDisplayNameField = "displayName";
-        public const string CategoryField = "category";
-        public const string FireModeField = "fireMode";
-        public const string MagazineSizeField = "magazineSize";
-        public const string ReserveAmmoField = "reserveAmmo";
-        public const string FireIntervalField = "fireInterval";
-        public const string ReloadSecondsField = "reloadSeconds";
-        public const string DamageField = "damage";
-        public const string RangeField = "range";
-        public const string FalloffField = "falloff";
-        public const string ExplosionRadiusField = "explosionRadius";
-        public const string AdsFieldOfViewField = "adsFieldOfView";
-        public const string BlindFireSpreadDegreesField = "blindFireSpreadDegrees";
-        public const string ActiveReloadWindowStartField = "activeReloadWindowStart";
-        public const string ActiveReloadWindowLengthField = "activeReloadWindowLength";
-        public const string ActiveReloadFailSecondsField = "activeReloadFailSeconds";
-        public const string RecoilPitchDegreesField = "recoilPitchDegrees";
-        public const string RecoilYawDegreesField = "recoilYawDegrees";
-        public const string RecoilRecoveryPerSecondField = "recoilRecoveryPerSecond";
-        public const string HipSpreadDegreesField = "hipSpreadDegrees";
-        public const string AdsSpreadDegreesField = "adsSpreadDegrees";
-        public const string MoveSpreadDegreesField = "moveSpreadDegrees";
-        public const string RecoilRecoveryDelaySecondsField = "recoilRecoveryDelaySeconds";
-        public const string ShotNoiseRadiusField = "shotNoiseRadius";
-
-        public const string FalloffStartDistanceField = "startDistance";
-        public const string FalloffEndDistanceField = "endDistance";
-        public const string FalloffMinMultiplierField = "minMultiplier";
+        public const string RecoilRecoveryDelaySecondsField = WeaponSpecJson.RecoilRecoveryDelaySecondsItem;
 
         private const string WritablePrefix = "Assets/";
-
-        /// <summary>武器の JSON の項目名。<see cref="WeaponSpec"/> のコンストラクタ引数と同じ順。</summary>
-        public static readonly IReadOnlyList<string> Fields = new[]
-        {
-            IdField,
-            NameKeyField,
-            CategoryField,
-            FireModeField,
-            MagazineSizeField,
-            ReserveAmmoField,
-            FireIntervalField,
-            ReloadSecondsField,
-            DamageField,
-            RangeField,
-            FalloffField,
-            ExplosionRadiusField,
-            AdsFieldOfViewField,
-            BlindFireSpreadDegreesField,
-            ActiveReloadWindowStartField,
-            ActiveReloadWindowLengthField,
-            ActiveReloadFailSecondsField,
-            RecoilPitchDegreesField,
-            RecoilYawDegreesField,
-            RecoilRecoveryPerSecondField,
-            HipSpreadDegreesField,
-            AdsSpreadDegreesField,
-            MoveSpreadDegreesField,
-            RecoilRecoveryDelaySecondsField,
-            ShotNoiseRadiusField,
-        };
-
-        private static readonly IReadOnlyList<string> _falloffFields = new[]
-        {
-            FalloffStartDistanceField,
-            FalloffEndDistanceField,
-            FalloffMinMultiplierField,
-        };
 
         /// <summary><c>-weaponOut</c> を省いたときの出力先。<see cref="WeaponAssets.Folder"/> (出力先ルートの <c>Weapons/</c>)。</summary>
         public static string DefaultOutputFolder => WeaponAssets.Folder;
@@ -285,92 +222,22 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(json));
             }
 
-            object root;
             try
             {
-                root = WeaponJsonSyntax.Parse(json);
+                return WeaponSpecJson.Parse(json, file);
             }
-            catch (FormatException e)
-            {
-                throw new WeaponJsonException(file, null, "is not valid JSON: " + e.Message, e);
-            }
-
-            if (!(root is Dictionary<string, object> fields))
-            {
-                throw new WeaponJsonException(file, null, "must be a JSON object whose fields are the WeaponSpec constructor arguments");
-            }
-
-            if (fields.ContainsKey(LegacyDisplayNameField))
+            catch (ServerDataJsonException e) when (e.Item == LegacyDisplayNameField)
             {
                 throw new WeaponJsonException(
                     file,
                     LegacyDisplayNameField,
                     $"is no longer read; write the key of the name (e.g. \"weapon.rifle\") in '{NameKeyField}' "
-                    + "and the text itself in Resources/Localization/<language>/*.json");
+                    + "and the text itself in Resources/Localization/<language>/*.json",
+                    e);
             }
-
-            RequireKnownFields(file, null, fields, Fields);
-            var reader = new FieldReader(file, fields);
-
-            var id = reader.RequiredString(IdField, allowNull: false);
-            var nameKey = reader.RequiredString(NameKeyField, allowNull: true);
-            var category = reader.RequiredEnum<WeaponCategory>(CategoryField);
-            var fireMode = reader.RequiredEnum<FireMode>(FireModeField);
-            var magazineSize = reader.RequiredInt(MagazineSizeField);
-            var reserveAmmo = reader.RequiredInt(ReserveAmmoField);
-            var fireInterval = reader.RequiredFloat(FireIntervalField);
-            var reloadSeconds = reader.RequiredFloat(ReloadSecondsField);
-            var damage = reader.RequiredInt(DamageField);
-            var range = reader.RequiredFloat(RangeField);
-            var falloff = ReadFalloff(file, reader);
-            var explosionRadius = reader.OptionalFloat(ExplosionRadiusField, 0f);
-            var adsFieldOfView = reader.OptionalNullableFloat(AdsFieldOfViewField);
-            var blindFireSpreadDegrees = reader.OptionalFloat(BlindFireSpreadDegreesField, 0f);
-            var activeReloadWindowStart = reader.OptionalFloat(ActiveReloadWindowStartField, WeaponSpec.DefaultActiveReloadWindowStart);
-            var activeReloadWindowLength = reader.OptionalFloat(ActiveReloadWindowLengthField, WeaponSpec.DefaultActiveReloadWindowLength);
-            var activeReloadFailSeconds = reader.OptionalFloat(ActiveReloadFailSecondsField, WeaponSpec.DefaultActiveReloadFailSeconds);
-            var recoilPitchDegrees = reader.OptionalFloat(RecoilPitchDegreesField, 0f);
-            var recoilYawDegrees = reader.OptionalFloat(RecoilYawDegreesField, 0f);
-            var recoilRecoveryPerSecond = reader.OptionalFloat(RecoilRecoveryPerSecondField, 0f);
-            var hipSpreadDegrees = reader.OptionalFloat(HipSpreadDegreesField, 0f);
-            var adsSpreadDegrees = reader.OptionalFloat(AdsSpreadDegreesField, 0f);
-            var moveSpreadDegrees = reader.OptionalFloat(MoveSpreadDegreesField, 0f);
-            var recoilRecoveryDelaySeconds = reader.OptionalFloat(RecoilRecoveryDelaySecondsField, WeaponSpec.DefaultRecoilRecoveryDelaySeconds);
-            var shotNoiseRadius = reader.OptionalFloat(ShotNoiseRadiusField, WeaponSpec.DefaultShotNoiseRadius);
-
-            try
+            catch (ServerDataJsonException e)
             {
-                return new WeaponSpec(
-                    id,
-                    nameKey,
-                    category,
-                    fireMode,
-                    magazineSize,
-                    reserveAmmo,
-                    fireInterval,
-                    reloadSeconds,
-                    damage,
-                    range,
-                    falloff,
-                    explosionRadius,
-                    adsFieldOfView,
-                    blindFireSpreadDegrees,
-                    activeReloadWindowStart,
-                    activeReloadWindowLength,
-                    activeReloadFailSeconds,
-                    recoilPitchDegrees,
-                    recoilYawDegrees,
-                    recoilRecoveryPerSecond,
-                    hipSpreadDegrees,
-                    adsSpreadDegrees,
-                    moveSpreadDegrees,
-                    recoilRecoveryDelaySeconds,
-                    shotNoiseRadius);
-            }
-            catch (ArgumentException e)
-            {
-                // WeaponSpec は引数名を ParamName に入れるので、それがそのまま JSON の項目名になる
-                throw new WeaponJsonException(file, e.ParamName, "is invalid: " + e.Message, e);
+                throw new WeaponJsonException(file, e.Item, "is invalid: " + e.Message, e);
             }
         }
 
@@ -590,70 +457,6 @@ namespace Fps.Editor
             return catalog;
         }
 
-        private static DamageFalloff ReadFalloff(string file, FieldReader reader)
-        {
-            var value = reader.Required(FalloffField);
-            if (value is string text)
-            {
-                if (string.Equals(text, NoFalloff, StringComparison.Ordinal))
-                {
-                    return DamageFalloff.None;
-                }
-
-                throw new WeaponJsonException(
-                    file, FalloffField, $"must be an object with {string.Join(", ", _falloffFields)}, or \"{NoFalloff}\" (got \"{text}\")");
-            }
-
-            if (!(value is Dictionary<string, object> fields))
-            {
-                throw new WeaponJsonException(
-                    file, FalloffField, $"must be an object with {string.Join(", ", _falloffFields)}, or \"{NoFalloff}\"");
-            }
-
-            RequireKnownFields(file, FalloffField, fields, _falloffFields);
-            var falloffReader = new FieldReader(file, fields, FalloffField + ".");
-            var start = falloffReader.RequiredFloat(FalloffStartDistanceField);
-            var end = falloffReader.RequiredFloat(FalloffEndDistanceField);
-            var minMultiplier = falloffReader.RequiredFloat(FalloffMinMultiplierField);
-            try
-            {
-                return new DamageFalloff(start, end, minMultiplier);
-            }
-            catch (ArgumentException e)
-            {
-                throw new WeaponJsonException(
-                    file, e.ParamName == null ? FalloffField : FalloffField + "." + e.ParamName, "is invalid: " + e.Message, e);
-            }
-        }
-
-        private static void RequireKnownFields(
-            string file, string parent, Dictionary<string, object> fields, IReadOnlyList<string> known)
-        {
-            foreach (var key in fields.Keys)
-            {
-                if (!Contains(known, key))
-                {
-                    throw new WeaponJsonException(
-                        file,
-                        parent == null ? key : parent + "." + key,
-                        $"is not a known field; expected {string.Join(", ", known)}");
-                }
-            }
-        }
-
-        private static bool Contains(IReadOnlyList<string> values, string value)
-        {
-            for (var i = 0; i < values.Count; i++)
-            {
-                if (string.Equals(values[i], value, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private static string FindArgument(IReadOnlyList<string> args, string name, string expected)
         {
             if (args == null)
@@ -698,140 +501,6 @@ namespace Fps.Editor
             public string File { get; }
             public WeaponSpec Spec { get; }
             public string AssetPath { get; }
-        }
-
-        /// <summary>JSON オブジェクトの項目を型ごとに読む。型が違う・欠けているときは項目名を添えて例外にする。</summary>
-        private sealed class FieldReader
-        {
-            private readonly string _file;
-            private readonly Dictionary<string, object> _fields;
-            private readonly string _prefix;
-
-            public FieldReader(string file, Dictionary<string, object> fields, string prefix = "")
-            {
-                _file = file;
-                _fields = fields;
-                _prefix = prefix;
-            }
-
-            public object Required(string name)
-            {
-                if (!_fields.TryGetValue(name, out var value))
-                {
-                    throw Fail(name, "is missing");
-                }
-
-                return value;
-            }
-
-            public string RequiredString(string name, bool allowNull)
-            {
-                var value = Required(name);
-                if (value == null && allowNull)
-                {
-                    return null;
-                }
-
-                if (!(value is string text))
-                {
-                    throw Fail(name, allowNull ? "must be a string or null" : "must be a string");
-                }
-
-                return text;
-            }
-
-            public T RequiredEnum<T>(string name)
-                where T : struct, Enum
-            {
-                var value = Required(name);
-                var names = string.Join(", ", Enum.GetNames(typeof(T)));
-                // Enum.TryParse は "3" のような数字や大文字小文字の違いも通すので、名前の完全一致だけを受け付ける
-                if (!(value is string text) || !Enum.IsDefined(typeof(T), text))
-                {
-                    throw Fail(name, $"must be one of {names} (got {Describe(value)})");
-                }
-
-                return (T)Enum.Parse(typeof(T), text);
-            }
-
-            public int RequiredInt(string name)
-            {
-                var value = Required(name);
-                if (!(value is WeaponJsonNumber number) || !number.IsInteger)
-                {
-                    throw Fail(name, $"must be an integer (got {Describe(value)})");
-                }
-
-                if (!int.TryParse(number.Text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var result))
-                {
-                    throw Fail(name, $"is out of the integer range (got {number.Text})");
-                }
-
-                return result;
-            }
-
-            public float RequiredFloat(string name)
-            {
-                return ToFloat(name, Required(name));
-            }
-
-            public float OptionalFloat(string name, float fallback)
-            {
-                return _fields.TryGetValue(name, out var value) ? ToFloat(name, value) : fallback;
-            }
-
-            public float? OptionalNullableFloat(string name)
-            {
-                if (!_fields.TryGetValue(name, out var value) || value == null)
-                {
-                    return null;
-                }
-
-                return ToFloat(name, value);
-            }
-
-            private float ToFloat(string name, object value)
-            {
-                // double を経ずに float として読み、0.1 が JSON の 0.1 と C# の 0.1f で同じ値になるようにする
-                if (!(value is WeaponJsonNumber number)
-                    || !float.TryParse(number.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
-                {
-                    throw Fail(name, $"must be a number (got {Describe(value)})");
-                }
-
-                if (float.IsInfinity(result))
-                {
-                    throw Fail(name, $"is out of the float range (got {number.Text})");
-                }
-
-                return result;
-            }
-
-            private WeaponJsonException Fail(string name, string message)
-            {
-                return new WeaponJsonException(_file, _prefix + name, message);
-            }
-
-            private static string Describe(object value)
-            {
-                switch (value)
-                {
-                    case null:
-                        return "null";
-                    case string text:
-                        return "\"" + text + "\"";
-                    case WeaponJsonNumber number:
-                        return number.Text;
-                    case bool flag:
-                        return flag ? "true" : "false";
-                    case Dictionary<string, object> _:
-                        return "an object";
-                    case List<object> _:
-                        return "an array";
-                    default:
-                        return value.ToString();
-                }
-            }
         }
     }
 

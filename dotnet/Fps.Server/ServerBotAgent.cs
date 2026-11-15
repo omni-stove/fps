@@ -8,6 +8,7 @@ namespace Fps.Server
     internal sealed class ServerBotAgent
     {
         private readonly NetBotSpec _spec;
+        private readonly ISightBlocker _sightBlocker;
         private Vector3 _progressPosition;
         private float _progressTime;
         private bool _tracking;
@@ -15,10 +16,12 @@ namespace Fps.Server
         private WeaponSpec _triggerSpec;
         private bool _dead = true;
 
-        public ServerBotAgent(int playerId, NetBotSpec spec, ServerBotNavigation navigation, IReadOnlyList<Vector3> route, Random random)
+        public ServerBotAgent(int playerId, NetBotSpec spec, ServerBotNavigation navigation, IReadOnlyList<Vector3> route, Random random,
+            ISightBlocker sightBlocker)
         {
             PlayerId = playerId;
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));
+            _sightBlocker = sightBlocker ?? throw new ArgumentNullException(nameof(sightBlocker));
             Brain = new EnemyBrain(spec.Brain);
             Brain.SetPatrolRoute(route);
             Driver = new BotDriver(spec.Input, random);
@@ -101,6 +104,12 @@ namespace Fps.Server
             _progressPosition = position;
             _progressTime = Clock;
             return moved < _spec.StuckProgress;
+        }
+
+        /// <summary>目 eye から target への視線を、世界の当たりのほかに遮る物 (煙など) があれば true。</summary>
+        public bool IsSightBlocked(Vector3 eye, Vector3 target)
+        {
+            return _sightBlocker.Blocks(eye, target);
         }
 
         public FireTrigger TriggerFor(WeaponSpec spec)

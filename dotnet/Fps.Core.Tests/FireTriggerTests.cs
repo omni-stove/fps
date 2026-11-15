@@ -117,6 +117,48 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AutoIgnoresAPressReleasedWithinTheSameFrame()
+        {
+            var trigger = new FireTrigger(FireMode.Auto, 0.1f);
+
+            Assert.That(trigger.Pull(false, true), Is.False);
+            Assert.That(trigger.Pull(true, true), Is.True);
+        }
+
+        [Test]
+        public void SemiDoesNotFireForATriggerAlreadyHeldWhenFirstPulled()
+        {
+            var trigger = new FireTrigger(FireMode.Semi, 0.1f);
+
+            Assert.That(trigger.Pull(true, false), Is.False);
+            Assert.That(trigger.Pull(false, false), Is.False);
+            Assert.That(trigger.Pull(true, true), Is.True);
+        }
+
+        [Test]
+        public void AutoReleasedAfterTheIntervalPassedFiresAgainOnTheNextPress()
+        {
+            var trigger = new FireTrigger(FireMode.Auto, 0.1f);
+
+            Assert.That(trigger.Pull(true, true), Is.True);
+            trigger.Tick(0.1f);
+            Assert.That(trigger.Pull(false, false), Is.False);
+            Assert.That(trigger.Pull(true, true), Is.True);
+        }
+
+        [Test]
+        public void DrivesTheTriggerModelOfTheSpec()
+        {
+            var spec = new WeaponSpec(
+                "00000000-0000-4000-8000-000000000003", null, WeaponCategory.AssaultRifle, new TriggerSpec(FireMode.Semi, 0.5f, new BurstSpec(3, 0.05f)));
+
+            var trigger = new FireTrigger(spec);
+
+            Assert.That(trigger.Model, Is.TypeOf<BurstTrigger>());
+            Assert.That(new FireTrigger(FireMode.Auto, 0.1f).Model, Is.TypeOf<AutoTrigger>());
+        }
+
+        [Test]
         public void RejectsInvalidInput()
         {
             Assert.Throws<ArgumentNullException>(() => new FireTrigger(null));

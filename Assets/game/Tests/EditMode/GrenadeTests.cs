@@ -18,6 +18,15 @@ namespace Fps.Tests.EditMode
         private static readonly GameRules _twoGrenades =
             GameRules.Default.WithActions(ActionRules.Default.WithGrenade(Grenade.On).WithGrenadeCount(2));
 
+        private static readonly GrenadeSpec _smoke = new GrenadeSpec(
+            "ecaf6e57-cb77-4707-9321-6ea5b659408f",
+            "grenade.smoke",
+            new ImpactSpec(damage: 0, areaEffect: new AreaEffectSpec(5f, 3f, 0.5f, 0, visualId: "smoke")),
+            fuseSeconds: 1f);
+
+        private static readonly GrenadeCatalog _fragAndSmoke =
+            new GrenadeCatalog(new[] { GrenadeSpec.Default, _smoke }, new[] { GrenadeSpec.DefaultId, _smoke.Id });
+
         private readonly List<GameObject> _created = new List<GameObject>();
 
         [TearDown]
@@ -286,6 +295,91 @@ namespace Fps.Tests.EditMode
             thrower.Refill();
 
             Assert.That(changes, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ThrowerSwitchesBetweenTheCarriedTypes()
+        {
+            var thrower = CreateThrower(_twoGrenades);
+            thrower.ApplyCatalog(_fragAndSmoke);
+            var changes = 0;
+            thrower.Changed += _ => changes++;
+
+            Assert.That(thrower.Spec, Is.SameAs(GrenadeSpec.Default));
+            Assert.That(thrower.SelectNext(), Is.True);
+
+            Assert.That(thrower.Spec, Is.SameAs(_smoke));
+            Assert.That(thrower.Remaining, Is.EqualTo(2));
+            Assert.That(changes, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ThrowingOneTypeLeavesTheOthers()
+        {
+            var thrower = CreateThrower(_twoGrenades);
+            thrower.ApplyCatalog(_fragAndSmoke);
+            thrower.SelectNext();
+            ThrownGrenade thrown = null;
+            thrower.Thrown += grenade => thrown = grenade;
+
+            Assert.That(thrower.TryThrow(), Is.True);
+
+            Assert.That(thrown.TypeId, Is.EqualTo(_smoke.Id));
+            Assert.That(thrown.RemainingSeconds, Is.EqualTo(_smoke.FuseSeconds));
+            Assert.That(thrower.Remaining, Is.EqualTo(1));
+            Assert.That(thrower.Inventory.RemainingAt(0), Is.EqualTo(2), "the frags are untouched");
+        }
+
+        [Test]
+        public void OneTypeCannotBeSwitched()
+        {
+            var thrower = CreateThrower(_twoGrenades);
+
+            Assert.That(thrower.SelectNext(), Is.False);
+            Assert.That(thrower.Spec.Id, Is.EqualTo(GrenadeSpec.DefaultId));
+        }
+
+        [Test]
+        public void ASmokeGrenadeLeavesAnAreaThatEndsAfterItsDuration()
+        {
+            var target = CreateTarget("Near", new Vector3(0f, 1f, 1f));
+            var grenade = ThrownGrenade.Spawn(null, new Vector3(0f, 0.1f, 0f), Vector3.zero, _smoke, null);
+            _created.Add(grenade.gameObject);
+            Physics.SyncTransforms();
+
+            var result = grenade.Explode();
+
+            var zone = Object.FindObjectsByType<AreaEffectZone>(FindObjectsSortMode.None).Single();
+            _created.Add(zone.gameObject);
+            Assert.That(result.Damaged, Is.Zero, "smoke does not explode");
+            Assert.That(target.Health.Current, Is.EqualTo(target.Health.Max));
+            Assert.That(zone.Radius, Is.EqualTo(_smoke.Impact.AreaEffect.Radius));
+            Assert.That(zone.KindId, Is.EqualTo("smoke"));
+            Assert.That(zone.Spec, Is.SameAs(_smoke.Impact.AreaEffect));
+            Assert.That(zone.transform.Find(AreaEffectZone.VisualName), Is.Not.Null, "a stand-in shape is built without a visual");
+
+            var ended = 0;
+            zone.Ended += _ => ended++;
+            Assert.That(zone.Tick(_smoke.Impact.AreaEffect.DurationSeconds - 0.5f), Is.False);
+            Assert.That(zone.Tick(0.5f), Is.True);
+            Assert.That(ended, Is.EqualTo(1));
+            Assert.That(zone == null, Is.True, "the area is removed when it ends");
+        }
+
+        [Test]
+        public void TheGrenadeCountNamesTheTypeOnlyWhenThereIsAChoice()
+        {
+            var thrower = CreateThrower(_twoGrenades);
+            var hud = new GameObject("HUD");
+            _created.Add(hud);
+            var view = hud.AddComponent<GrenadeCountView>();
+
+            view.Show(thrower);
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(2))));
+
+            thrower.ApplyCatalog(_fragAndSmoke);
+            thrower.SelectNext();
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(_smoke.Name, 2))));
         }
 
         private GrenadeThrower CreateThrower(GameRules rules)

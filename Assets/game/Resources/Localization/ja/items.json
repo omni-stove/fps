@@ -21,5 +21,10 @@
   "weapon.laser": "レーザー",
   "weapon.flamethrower": "火炎放射器",
   "weapon.scopedRifle": "スコープ付きライフル",
-  "weapon.incendiaryRifle": "焼夷ライフル"
+  "weapon.incendiaryRifle": "焼夷ライフル",
+  "grenade.frag": "破片手榴弾",
+  "grenade.smoke": "スモークグレネード",
+  "grenade.flash": "フラッシュバン",
+  "grenade.incendiary": "焼夷手榴弾",
+  "grenade.sticky": "粘着手榴弾"
 }

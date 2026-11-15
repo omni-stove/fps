@@ -12,7 +12,7 @@ namespace Fps.Server
     /// 値は Unity のグレネード (ThrownGrenade の BodyRadius・Bounciness・摩擦、NetGrenade.prefab の Rigidbody) と、
     /// プロジェクトの物理の設定 (重力・跳ね返りのしきい値) にそろえる。
     /// </remarks>
-    internal sealed class ServerGrenadeFlight
+    internal sealed partial class ServerGrenadeFlight
     {
         public const float BodyRadius = 0.08f;
         public const float Bounciness = 0.35f;
@@ -29,8 +29,9 @@ namespace Fps.Server
 
         private readonly IWorldCollision _world;
 
-        public ServerGrenadeFlight(IWorldCollision world, Vector3 position, Vector3 velocity)
+        public ServerGrenadeFlight(IWorldCollision world, Vector3 position, Vector3 velocity, GrenadeStickiness stickiness = GrenadeStickiness.None)
         {
+            Stickiness = SpecGuardDefined(stickiness);
             _world = world ?? throw new ArgumentNullException(nameof(world));
             if (!IsFinite(position) || !IsFinite(velocity))
             {
@@ -51,11 +52,21 @@ namespace Fps.Server
 
         public int Bounces { get; private set; }
 
+        public GrenadeStickiness Stickiness { get; }
+
+        /// <summary>くっついて止まっているか。止まった後は <see cref="Step"/> で動かない。</summary>
+        public bool IsStuck { get; private set; }
+
         public void Step(float deltaSeconds)
         {
             if (!(deltaSeconds > 0f) || float.IsInfinity(deltaSeconds))
             {
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must be positive and finite");
+            }
+
+            if (IsStuck)
+            {
+                return;
             }
 
             Velocity += new Vector3(0f, Gravity * deltaSeconds, 0f);
@@ -80,6 +91,19 @@ namespace Fps.Server
                 var travel = Math.Max(0f, hit.Distance - _skin);
                 Position += direction * travel;
                 remaining -= remaining * (travel / distance);
+                if (Stickiness != GrenadeStickiness.None)
+                {
+                    var stuck = false;
+                    TryStick(hit, ref stuck);
+                    if (stuck)
+                    {
+                        IsStuck = true;
+                        Velocity = Vector3.Zero;
+                        AngularVelocity = Vector3.Zero;
+                        return;
+                    }
+                }
+
                 Bounce(hit.Normal);
             }
 
@@ -89,6 +113,18 @@ namespace Fps.Server
             {
                 Rotation = Quaternion.Normalize(Quaternion.CreateFromAxisAngle(AngularVelocity / spin, spin * deltaSeconds) * Rotation);
             }
+        }
+
+        partial void TryStick(in WorldHit hit, ref bool stuck);
+
+        private static GrenadeStickiness SpecGuardDefined(GrenadeStickiness stickiness)
+        {
+            if (!Enum.IsDefined(stickiness))
+            {
+                throw new ArgumentOutOfRangeException(nameof(stickiness), stickiness, "stickiness is not a defined GrenadeStickiness");
+            }
+
+            return stickiness;
         }
 
         private void Bounce(Vector3 normal)

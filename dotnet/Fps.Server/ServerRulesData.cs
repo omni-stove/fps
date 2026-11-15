@@ -15,12 +15,12 @@ namespace Fps.Server
         public const string BotsTuningFileName = "bots.json";
 
         public ServerRulesData(
-            string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeSpec grenade = null, string grenadePath = null,
+            string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeCatalog grenades = null, string grenadePath = null,
             NetBotSpec bots = null, string botsPath = null)
         {
             Bots = bots ?? NetBotSpec.Default;
             BotsPath = botsPath;
-            Grenade = grenade ?? GrenadeSpec.Default;
+            Grenades = grenades ?? GrenadeCatalog.Default;
             GrenadePath = grenadePath;
             Name = name ?? throw new ArgumentNullException(nameof(name));
             File = file ?? throw new ArgumentNullException(nameof(file));
@@ -46,8 +46,8 @@ namespace Fps.Server
 
         public string PingPath { get; }
 
-        /// <summary>グレネードの信管・間隔・初速・威力と半径。</summary>
-        public GrenadeSpec Grenade { get; }
+        /// <summary>グレネードの種類 (信管・間隔・初速・効果) と、出撃のたびに持つ種類。</summary>
+        public GrenadeCatalog Grenades { get; }
 
         public string GrenadePath { get; }
 
@@ -132,15 +132,15 @@ namespace Fps.Server
                 pingPath = null;
             }
 
-            // グレネードも Unity では Resources の JSON (KitTuning.Grenade) から読むので、無ければ同じく既定値で動かす
+            // グレネードも Unity では Resources の JSON (KitTuning.Grenades) から読むので、無ければ同じく既定値で動かす
             var grenadePath = System.IO.Path.GetFullPath(
                 System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, GrenadeTuningFileName));
-            var grenade = GrenadeSpec.Default;
+            var grenades = GrenadeCatalog.Default;
             if (System.IO.File.Exists(grenadePath))
             {
                 try
                 {
-                    grenade = TuningJson.ParseGrenade(System.IO.File.ReadAllText(grenadePath), grenadePath);
+                    grenades = TuningJson.ParseGrenades(System.IO.File.ReadAllText(grenadePath), grenadePath);
                 }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
                 {
@@ -174,7 +174,7 @@ namespace Fps.Server
                 botsPath = null;
             }
 
-            data = new ServerRulesData(name, file, ping, path, pingPath, grenade, grenadePath, bots, botsPath);
+            data = new ServerRulesData(name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath);
             error = null;
             return true;
         }

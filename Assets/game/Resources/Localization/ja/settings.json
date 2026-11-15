@@ -73,6 +73,7 @@
   "settings.input.action.SwitchAmmoType": "弾薬の切り替え",
   "settings.input.action.CycleMagnification": "倍率の切り替え",
   "settings.input.action.HoldBreath": "息止め",
+  "settings.input.action.SwitchGrenade": "グレネードの切り替え",
   "settings.input.move.up": "前へ移動",
   "settings.input.move.down": "後ろへ移動",
   "settings.input.move.left": "左へ移動",

@@ -7,8 +7,8 @@ using Fps.Protocol;
 
 namespace Fps.Server
 {
-    // グレネード (Unity の NetTeamDeathmatch.Explosion・NetGrenade・ServerGrenadeSupply)。数と間隔は 1 人ごとの ServerGrenadeSupply で持ち、
-    // 出現のたびにルールの数に戻す。投げる位置と初速はクライアントの値を使わず、サーバーの知る目の位置と送られた向きから決める。
+    // グレネード (Unity の NetTeamDeathmatch.Explosion・NetGrenade・ServerGrenadeSupply)。種類ごとの数と間隔は 1 人ごとの ServerGrenadeSupply で持ち、
+    // 出現のたびにルールの数に戻す。信管が切れたら、投げた種類の ImpactSpec の爆発と範囲効果を起こす。投げる位置と初速はクライアントの値を使わず、サーバーの知る目の位置と送られた向きから決める。
     // 爆発のダメージは参加中で生きている全員に、体のカプセルの最も近い点までの距離で決める。投げた本人も巻き込む
     internal sealed partial class ServerCombat
     {
@@ -32,14 +32,10 @@ namespace Fps.Server
         private readonly List<LiveGrenade> _grenades = new List<LiveGrenade>();
         private readonly List<int> _explosionTargets = new List<int>();
         private readonly ExplosionMessage _explosion = new ExplosionMessage();
-        private ExplosionSpec _grenadeExplosion;
         private bool _grenadesEnabled;
         private int _nextGrenadeId;
 
         internal int LiveGrenadeCount => _grenades.Count;
-
-        /// <summary>グレネードの爆発の値 (ルールのグレネードの範囲ダメージと中心の建造物被害)。<see cref="Start"/> の後に決まる。</summary>
-        internal ExplosionSpec GrenadeExplosion => _grenadeExplosion;
 
         /// <summary>
         /// point から、bottom (足元) と top (頭のてっぺん) を両端に持つ半径 radius の縦のカプセルの表面までの距離。中にあれば 0。
@@ -71,12 +67,17 @@ namespace Fps.Server
         private void PrepareGrenades(GameRules rules)
         {
             _grenadesEnabled = rules.Actions.Grenade == Grenade.On;
-            var spec = _data.Grenade;
-            _grenadeExplosion = new ExplosionSpec(spec.Explosion, spec.StructureDamageAtCenter);
-            _log.WriteLine(_grenadesEnabled
-                ? "[Match] grenades=On count=" + Text(rules.Actions.GrenadeCount) + " fuse=" + Text(spec.FuseSeconds) + "s radius="
-                    + Text(spec.DamageRadius) + " maxDamage=" + Text(spec.MaxDamage)
-                : "[Match] grenades=" + rules.Actions.Grenade);
+            if (!_grenadesEnabled)
+            {
+                _log.WriteLine("[Match] grenades=" + rules.Actions.Grenade);
+                return;
+            }
+
+            foreach (var spec in _data.Grenades.Carried)
+            {
+                _log.WriteLine("[Match] grenades=On type=" + spec.LogName + " count=" + Text(rules.Actions.GrenadeCount) + " fuse="
+                    + Text(spec.FuseSeconds) + "s radius=" + Text(spec.DamageRadius) + " maxDamage=" + Text(spec.MaxDamage));
+            }
         }
 
         private void RefillGrenades(Fighter fighter)
@@ -84,7 +85,7 @@ namespace Fps.Server
             fighter.Grenades.Refill(_data.Rules.Actions);
         }
 
-        private void ThrowGrenade(Fighter thrower, Vector3 direction)
+        private void ThrowGrenade(Fighter thrower, Vector3 direction, string typeId)
         {
             // ダウン中・倒れている人の要求は、射撃と同じく理由を出さずに捨てる
             var playerId = thrower.PlayerId;
@@ -100,7 +101,7 @@ namespace Fps.Server
                 return;
             }
 
-            var rejection = _grenadesEnabled ? thrower.Grenades.Check(_now) : GrenadeThrowRejection.Disabled;
+            var rejection = _grenadesEnabled ? thrower.Grenades.Check(_now, typeId, out _) : GrenadeThrowRejection.Disabled;
             if (rejection != GrenadeThrowRejection.None)
             {
                 WarnGrenadeRejected(playerId, rejection);
@@ -114,26 +115,27 @@ namespace Fps.Server
             }
 
             direction = Vector3.Normalize(direction);
-            var spec = _data.Grenade;
+            thrower.Grenades.Take(_now, typeId, out var spec);
             var position = ReleasePoint(body.EyePosition, direction);
             var velocity = (direction * spec.ThrowSpeed) + new Vector3(0f, spec.ThrowLiftSpeed, 0f);
-            thrower.Grenades.Take(_now);
-            _grenades.Add(new LiveGrenade(_nextGrenadeId++, playerId, new ServerGrenadeFlight(_context.World, position, velocity), spec.FuseSeconds));
+            _grenades.Add(new LiveGrenade(
+                _nextGrenadeId++, playerId, spec, new ServerGrenadeFlight(_context.World, position, velocity, spec.Stickiness)));
 
             // 撃ったときと同じく、投げた時点で出現直後の無敵を解く
             _rules.NotifyFired(playerId);
             _log.WriteLine(string.Format(
                 CultureInfo.InvariantCulture,
-                "{0} net thrown player={1} remaining={2} at=({3:0.0}, {4:0.0}, {5:0.0}) velocity=({6:0.0}, {7:0.0}, {8:0.0})",
+                "{0} net thrown player={1} remaining={2} at=({3:0.0}, {4:0.0}, {5:0.0}) velocity=({6:0.0}, {7:0.0}, {8:0.0}) type={9}",
                 GrenadeLogTag,
                 playerId,
-                thrower.Grenades.Remaining,
+                thrower.Grenades.RemainingOf(spec.Id),
                 position.X,
                 position.Y,
                 position.Z,
                 velocity.X,
                 velocity.Y,
-                velocity.Z));
+                velocity.Z,
+                spec.LogName));
         }
 
         // 目から ReleaseDistance 先。間に壁があれば球が埋まらない壁の手前
@@ -163,7 +165,24 @@ namespace Fps.Server
 
                 _grenades.RemoveAt(i);
                 i--;
-                Explode(grenade.Flight.Position, _grenadeExplosion, grenade.ThrowerId, GrenadeWeaponId);
+                GoOff(grenade);
+            }
+        }
+
+        // 投げ物は当たって効くのではないので、着弾の指示 (ImpactResolver) を通さず ImpactSpec の効果をそのまま起こす
+        private void GoOff(LiveGrenade grenade)
+        {
+            var impact = grenade.Spec.Impact;
+            var center = grenade.Flight.Position;
+            if (impact.Explosion != null)
+            {
+                Explode(center, impact.Explosion, grenade.ThrowerId, GrenadeWeaponId);
+            }
+
+            if (impact.AreaEffect != null)
+            {
+                var owner = _match.TryGetPlayer(grenade.ThrowerId, out _) ? grenade.ThrowerId : (int?)null;
+                _areaEffects.Spread(impact.AreaEffect, center, owner, GrenadeWeaponId);
             }
         }
 
@@ -343,6 +362,8 @@ namespace Fps.Server
                 row.HasThrower = _match.TryGetPlayer(grenade.ThrowerId, out _);
                 row.ThrowerId = row.HasThrower ? grenade.ThrowerId : 0;
                 row.WeaponId = GrenadeWeaponId;
+                row.TypeId = grenade.Spec.Id;
+                row.IsStuck = grenade.Flight.IsStuck;
                 row.Position = grenade.Flight.Position;
                 row.Rotation = grenade.Flight.Rotation;
             }
@@ -358,13 +379,16 @@ namespace Fps.Server
 
         private sealed class LiveGrenade
         {
-            public LiveGrenade(int id, int throwerId, ServerGrenadeFlight flight, float fuseSeconds)
+            public LiveGrenade(int id, int throwerId, GrenadeSpec spec, ServerGrenadeFlight flight)
             {
                 Id = id;
                 ThrowerId = throwerId;
+                Spec = spec;
                 Flight = flight;
-                Remaining = fuseSeconds;
+                Remaining = spec.FuseSeconds;
             }
+
+            public GrenadeSpec Spec { get; }
 
             public int Id { get; }
 

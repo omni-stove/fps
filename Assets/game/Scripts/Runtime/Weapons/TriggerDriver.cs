@@ -109,6 +109,11 @@ namespace Fps.Runtime
                 _held = false;
             }
 
+            if (_model is BurstTrigger burst)
+            {
+                burst.Cancel();
+            }
+
             Spend();
         }
 

@@ -837,7 +837,7 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("弾薬の種類の識別子。小文字・ハイフン区切りの UUID。作った後は変えない")]
         private string _id = string.Empty;
 
-        [SerializeField, Tooltip("プレイヤーに見せる名前を引く表のキー (例: ammo.dmr.armor-piercing)。空なら Id を出す")]
+        [SerializeField, Tooltip("プレイヤーに見せる名前を引く表のキー (例: ammo.dmr.armorPiercing)。空なら Id を出す")]
         private string _nameKey = string.Empty;
 
         [SerializeField, Tooltip("武器の弾の性質を上書きする")]

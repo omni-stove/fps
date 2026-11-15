@@ -12,6 +12,8 @@ namespace Fps.Core
         private bool _held;
         private bool _pending;
         private bool _graceTick;
+        private readonly bool _holdsInner;
+        private bool _innerPressed;
 
         // 撃つ速さを回転の速さに比例させると、撃ち始めの回転 (1 / 倍率) に SpinUpSeconds かかると決めるだけで
         // 満回転までの時間も決まり、間隔の縮み方を別の値で持たずに済む。
@@ -20,6 +22,7 @@ namespace Fps.Core
             Spec = spinUp ?? throw new ArgumentNullException(nameof(spinUp));
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _firesWhileHeld = firesWhileHeld;
+            _holdsInner = inner is BeamState;
             _fullSpinSeconds = spinUp.SpinUpSeconds * spinUp.StartIntervalMultiplier;
         }
 
@@ -46,6 +49,7 @@ namespace Fps.Core
         {
             _held = false;
             _graceTick = !_firesWhileHeld;
+            ReleaseHeldInner();
             return 0;
         }
 
@@ -66,6 +70,8 @@ namespace Fps.Core
 
             if (!SpunUp)
             {
+                ReleaseHeldInner();
+
                 // 回り始めた瞬間に 1 発目を撃つため、撃てる回転に届くまでは次の弾を撃てる状態にしておく。
                 _shotProgress = 1f;
             }
@@ -106,6 +112,16 @@ namespace Fps.Core
             return shots;
         }
 
+        // ビームは押しっぱなしの間だけ照射を数え、押して離すと間隔がフレームの長さに丸まって照射の回数が減るため、回転が足りない間や離した時だけ離す。
+        private void ReleaseHeldInner()
+        {
+            if (_innerPressed)
+            {
+                _innerPressed = false;
+                _inner.Release();
+            }
+        }
+
         private bool SpunUp => _spinSeconds >= Spec.SpinUpSeconds;
 
         // 内側の撃ち方は押してすぐ離し、押しっぱなしで撃たせない。間隔を縮めながら撃つのはこちらが決めるため。
@@ -116,7 +132,25 @@ namespace Fps.Core
                 return 0;
             }
 
-            var shots = _inner.Press();
+            int shots;
+            if (_holdsInner)
+            {
+                if (_innerPressed)
+                {
+                    return 0;
+                }
+
+                _innerPressed = true;
+                shots = _inner.Press();
+                if (shots > 0)
+                {
+                    _shotProgress = 0f;
+                }
+
+                return shots;
+            }
+
+            shots = _inner.Press();
             shots += _inner.Release();
             if (shots > 0)
             {

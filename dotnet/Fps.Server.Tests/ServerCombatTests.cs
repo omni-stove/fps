@@ -10,7 +10,7 @@ using NUnit.Framework;
 namespace Fps.Server.Tests
 {
     // 移動・ルール・戦闘を同じホストで動かし、射撃・巻き戻し・壁・爆発を確かめる
-    public sealed class ServerCombatTests
+    public sealed partial class ServerCombatTests
     {
         private const float _tickSeconds = 1f / TickClock.DefaultTickRate;
         private static readonly DateTime _time = new DateTime(2026, 11, 15, 9, 0, 0, DateTimeKind.Utc);

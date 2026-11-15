@@ -82,7 +82,6 @@ namespace Fps.Core.Tests
             var parts = new[]
             {
                 new TriggerSpec(FireMode.Semi, 0.5f, charge: new ChargeSpec(1f, 0.2f, 2f)),
-                new TriggerSpec(FireMode.Semi, 0.5f, cycle: new CycleSpec(0.8f, leavesAds: true)),
             };
 
             foreach (var part in parts)
@@ -97,6 +96,143 @@ namespace Fps.Core.Tests
                 Assert.That(model.Release(), Is.EqualTo(0));
                 Assert.That(model.Press(), Is.EqualTo(0));
             }
+        }
+
+        [Test]
+        public void ACycleKeepsTheTriggerFromFiringAndLeavesAdsUntilItEnds()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(1f, leavesAds: true), new SemiTrigger(0.25f));
+
+            Assert.That(trigger.BlocksAds, Is.False);
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            Assert.That(trigger.IsCycling, Is.True);
+            Assert.That(trigger.BlocksAds, Is.True);
+
+            Assert.That(trigger.Release(), Is.EqualTo(0));
+            Assert.That(trigger.Tick(0.5f), Is.EqualTo(0));
+            Assert.That(trigger.Press(), Is.EqualTo(0), "the inner interval is over but the bolt is still being worked");
+            Assert.That(trigger.Release(), Is.EqualTo(0));
+            Assert.That(trigger.BlocksAds, Is.True);
+
+            Assert.That(trigger.Tick(0.5f), Is.EqualTo(0));
+            Assert.That(trigger.IsCycling, Is.False);
+            Assert.That(trigger.BlocksAds, Is.False);
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            Assert.That(trigger.BlocksAds, Is.True);
+        }
+
+        [Test]
+        public void ACycleThatKeepsAdsStillStopsShots()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(1f), new SemiTrigger(0.25f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            trigger.Release();
+            Assert.That(trigger.IsCycling, Is.True);
+            Assert.That(trigger.BlocksAds, Is.False);
+            trigger.Tick(0.75f);
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AHeldAutoTriggerFiresAgainAsSoonAsTheCycleEnds()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(0.5f), new AutoTrigger(0.125f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            Assert.That(trigger.Tick(0.25f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(0.125f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(0.125f), Is.EqualTo(1), "the shot the inner trigger fires in the tick that ends the cycle is kept");
+            Assert.That(trigger.IsCycling, Is.True, "that shot starts the next cycle");
+        }
+
+        [Test]
+        public void APressDuringTheCycleDoesNotDelayTheFirstPressAfterIt()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(1.1f, leavesAds: true), new SemiTrigger(0.2f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            trigger.Release();
+            Assert.That(trigger.Tick(1f), Is.EqualTo(0));
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+            Assert.That(trigger.Release(), Is.EqualTo(0));
+            Assert.That(trigger.Tick(0.15f), Is.EqualTo(0));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1), "the press inside the cycle must not start the inner fire interval");
+        }
+
+        [Test]
+        public void ATriggerPressedDuringTheCycleAndStillHeldFiresWhenItEnds()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(1f), new SemiTrigger(0.2f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            trigger.Release();
+            trigger.Tick(0.5f);
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+
+            Assert.That(trigger.Tick(0.5f), Is.EqualTo(1));
+            Assert.That(trigger.IsCycling, Is.True);
+        }
+
+        [Test]
+        public void AHeldAutoTriggerKeepsTheCycleAsItsSpacing()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(0.5f), new AutoTrigger(0.4f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            Assert.That(trigger.Tick(0.4f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(0.1f), Is.EqualTo(1), "fires at the end of the cycle, not one inner interval after a dropped shot");
+            Assert.That(trigger.Tick(0.4f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(0.1f), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ReleasingDuringTheCycleStopsAHeldAutoTrigger()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(0.5f), new AutoTrigger(0.1f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            trigger.Tick(0.25f);
+            Assert.That(trigger.Release(), Is.EqualTo(0));
+
+            Assert.That(trigger.Tick(0.5f), Is.EqualTo(0));
+            Assert.That(trigger.IsCycling, Is.False);
+        }
+
+        [Test]
+        public void CancellingForgetsAPressMadeDuringTheCycleButKeepsTheCycle()
+        {
+            var trigger = new CycleTrigger(new CycleSpec(1f), new SemiTrigger(0.2f));
+
+            Assert.That(trigger.Press(), Is.EqualTo(1));
+            trigger.Release();
+            trigger.Tick(0.5f);
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+
+            trigger.Cancel();
+            Assert.That(trigger.IsCycling, Is.True);
+            Assert.That(trigger.Tick(0.5f), Is.EqualTo(0));
+            Assert.That(trigger.IsCycling, Is.False);
+        }
+
+        [Test]
+        public void TheCycleSetsTheShortestSpacingBetweenShots()
+        {
+            Assert.That(new CycleTrigger(new CycleSpec(1f), new SemiTrigger(0.25f)).MinShotSpacingSeconds, Is.EqualTo(1f));
+            Assert.That(new CycleTrigger(new CycleSpec(0.25f), new SemiTrigger(1f)).MinShotSpacingSeconds, Is.EqualTo(1f));
+
+            var weapon = new Weapon(Spec(new TriggerSpec(FireMode.Semi, 0.25f, cycle: new CycleSpec(1f, leavesAds: true))));
+            Assert.That(weapon.TryFire(), Is.True);
+            weapon.Tick(0.5f);
+            Assert.That(weapon.TryFire(), Is.False);
+            weapon.Tick(0.5f);
+            Assert.That(weapon.TryFire(), Is.True);
+
+            var budget = new ShotBudget(TriggerModels.For(new TriggerSpec(FireMode.Semi, 0.25f, cycle: new CycleSpec(1f))), burst: 1);
+            Assert.That(budget.TryConsume(0d), Is.True);
+            Assert.That(budget.TryConsume(0.5d), Is.False);
+            Assert.That(budget.TryConsume(1d), Is.True);
         }
 
         [Test]
@@ -134,6 +270,8 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new AutoTrigger(0.1f).Tick(-1f));
             Assert.Throws<ArgumentNullException>(() => new BurstTrigger(null, new SemiTrigger(0.1f)));
             Assert.Throws<ArgumentNullException>(() => new CycleTrigger(new CycleSpec(0.8f), null));
+            Assert.Throws<ArgumentNullException>(() => new CycleTrigger(null, new SemiTrigger(0.1f)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new CycleTrigger(new CycleSpec(0.8f), new SemiTrigger(0.1f)).Tick(-1f));
             Assert.Throws<ArgumentNullException>(() => new ShotBudget((ITriggerModel)null));
         }
     }

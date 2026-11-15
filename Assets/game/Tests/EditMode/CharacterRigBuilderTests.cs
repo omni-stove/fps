@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Fps.Core;
 using Fps.Editor;
+using Fps.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -109,6 +110,7 @@ namespace Fps.Tests.EditMode
                 { CharacterPose.DeadParameter, AnimatorControllerParameterType.Bool },
                 { CharacterPose.WeaponCategoryParameter, AnimatorControllerParameterType.Int },
                 { CharacterPose.SlideParameter, AnimatorControllerParameterType.Bool },
+                { CharacterRigBuilder.StaggerParameter, AnimatorControllerParameterType.Int },
             }));
         }
 
@@ -138,6 +140,32 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void StaggerParameterIsTheOneStaggerReactionWrites()
+        {
+            Assert.That(CharacterRigBuilder.StaggerParameter, Is.EqualTo(StaggerReaction.AnimatorParameter));
+        }
+
+        [Test]
+        public void EveryStaggerKindHasAStateWithItsOwnClip()
+        {
+            Build();
+            var machine = LoadController().layers[0].stateMachine;
+
+            var kinds = new List<StaggerKind>();
+            foreach (var (kind, stateName) in CharacterRigBuilder.StaggerStates)
+            {
+                kinds.Add(kind);
+                var state = State(machine, stateName);
+                Assert.That(state.motion, Is.InstanceOf<AnimationClip>(), stateName);
+                Assert.That(state.motion.name, Is.EqualTo(kind.ToString()), stateName);
+            }
+
+            var expected = new List<StaggerKind>((StaggerKind[])Enum.GetValues(typeof(StaggerKind)));
+            expected.Remove(StaggerKind.None);
+            Assert.That(kinds, Is.EquivalentTo(expected));
+        }
+
+        [Test]
         public void EveryPoseReachesExactlyTheExpectedState()
         {
             Build();
@@ -150,30 +178,33 @@ namespace Fps.Tests.EditMode
             {
                 foreach (var cover in covers)
                 {
-                    for (var bits = 0; bits < 64; bits++)
+                    foreach (StaggerKind stagger in Enum.GetValues(typeof(StaggerKind)))
                     {
-                        var input = new CharacterPoseInput(
-                            speed,
-                            (bits & 1) != 0,
-                            (bits & 2) != 0,
-                            (bits & 4) != 0,
-                            (bits & 8) != 0,
-                            cover,
-                            (bits & 16) != 0,
-                            (bits & 32) != 0,
-                            WeaponCategory.Handgun);
-                        var parameters = pose.Evaluate(input);
-
-                        var matched = new List<string>();
-                        foreach (var transition in machine.anyStateTransitions)
+                        for (var bits = 0; bits < 64; bits++)
                         {
-                            if (Matches(transition.conditions, parameters))
-                            {
-                                matched.Add(transition.destinationState.name);
-                            }
-                        }
+                            var input = new CharacterPoseInput(
+                                speed,
+                                (bits & 1) != 0,
+                                (bits & 2) != 0,
+                                (bits & 4) != 0,
+                                (bits & 8) != 0,
+                                cover,
+                                (bits & 16) != 0,
+                                (bits & 32) != 0,
+                                WeaponCategory.Handgun);
+                            var parameters = pose.Evaluate(input);
 
-                        Assert.That(matched, Is.EqualTo(new[] { ExpectedState(parameters) }), input.ToString());
+                            var matched = new List<string>();
+                            foreach (var transition in machine.anyStateTransitions)
+                            {
+                                if (Matches(transition.conditions, parameters, (int)stagger))
+                                {
+                                    matched.Add(transition.destinationState.name);
+                                }
+                            }
+
+                            Assert.That(matched, Is.EqualTo(new[] { ExpectedState(parameters, stagger) }), $"{input} stagger={stagger}");
+                        }
                     }
                 }
             }
@@ -222,6 +253,10 @@ namespace Fps.Tests.EditMode
         [TestCase(CharacterRigClips.CrouchAim)]
         [TestCase(CharacterRigClips.CoverLow)]
         [TestCase(CharacterRigClips.CoverHigh)]
+        [TestCase(CharacterRigClips.Flinch)]
+        [TestCase(CharacterRigClips.Kneel)]
+        [TestCase(CharacterRigClips.Stumble)]
+        [TestCase(CharacterRigClips.Blast)]
         public void UprightPosesKeepAFootOnTheGround(string clipName)
         {
             var rig = SampleRig(clipName);
@@ -240,6 +275,17 @@ namespace Fps.Tests.EditMode
             Assert.That(standing, Is.GreaterThan(1.5f));
             Assert.That(HeadHeight(CharacterRigClips.Crouch), Is.LessThan(standing - 0.3f));
             Assert.That(HeadHeight(CharacterRigClips.CoverLow), Is.LessThan(HeadHeight(CharacterRigClips.Crouch)));
+        }
+
+        [Test]
+        public void KneelAndBlastAreLowerThanStandingButAboveCoverLow()
+        {
+            var standing = HeadHeight(CharacterRigClips.Idle);
+
+            Assert.That(HeadHeight(CharacterRigClips.Kneel), Is.LessThan(standing - 0.3f));
+            Assert.That(HeadHeight(CharacterRigClips.Blast), Is.LessThan(standing - 0.1f));
+            Assert.That(HeadHeight(CharacterRigClips.Kneel), Is.GreaterThan(HeadHeight(CharacterRigClips.CoverLow)));
+            Assert.That(HeadHeight(CharacterRigClips.Flinch), Is.GreaterThan(standing - 0.1f));
         }
 
         [Test]
@@ -344,7 +390,7 @@ namespace Fps.Tests.EditMode
         }
 
         // CharacterPose の優先順を Animator の状態の名前で書き直したもの。コントローラーの条件と食い違えば上のテストが落ちる。
-        private static string ExpectedState(CharacterPoseParameters parameters)
+        private static string ExpectedState(CharacterPoseParameters parameters, StaggerKind stagger)
         {
             if (parameters.Dead)
             {
@@ -354,6 +400,14 @@ namespace Fps.Tests.EditMode
             if (parameters.Downed)
             {
                 return CharacterRigBuilder.DownedState;
+            }
+
+            foreach (var (kind, state) in CharacterRigBuilder.StaggerStates)
+            {
+                if (kind == stagger)
+                {
+                    return state;
+                }
             }
 
             if (parameters.Aim)
@@ -374,11 +428,11 @@ namespace Fps.Tests.EditMode
             return parameters.Crouch ? CharacterRigBuilder.CrouchState : CharacterRigBuilder.LocomotionState;
         }
 
-        private static bool Matches(AnimatorCondition[] conditions, CharacterPoseParameters parameters)
+        private static bool Matches(AnimatorCondition[] conditions, CharacterPoseParameters parameters, int stagger)
         {
             foreach (var condition in conditions)
             {
-                if (!Matches(condition, parameters))
+                if (!Matches(condition, parameters, stagger))
                 {
                     return false;
                 }
@@ -387,7 +441,7 @@ namespace Fps.Tests.EditMode
             return true;
         }
 
-        private static bool Matches(AnimatorCondition condition, CharacterPoseParameters parameters)
+        private static bool Matches(AnimatorCondition condition, CharacterPoseParameters parameters, int stagger)
         {
             float value;
             switch (condition.parameter)
@@ -412,6 +466,9 @@ namespace Fps.Tests.EditMode
                     break;
                 case CharacterPose.WeaponCategoryParameter:
                     value = parameters.WeaponCategory;
+                    break;
+                case CharacterRigBuilder.StaggerParameter:
+                    value = stagger;
                     break;
                 default:
                     throw new ArgumentException($"unknown parameter '{condition.parameter}'");

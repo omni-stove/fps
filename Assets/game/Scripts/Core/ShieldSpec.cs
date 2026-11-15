@@ -9,6 +9,9 @@ namespace Fps.Core
         public const float DefaultMeleeLowerSeconds = 1.5f;
         public const float DefaultExplosionLowerSeconds = 2.5f;
 
+        // 盾を構えて踏ん張る敵なので、どの種類より怯みにくくする。
+        public const float DefaultStaggerResistance = 1.5f;
+
         public const int DefaultBashDamage = 35;
         public const float DefaultBashReach = 1.8f;
         public const float DefaultBashArcDegrees = 90f;

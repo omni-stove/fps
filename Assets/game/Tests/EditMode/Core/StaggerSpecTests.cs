@@ -77,6 +77,42 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = new EnemySpec(20f, 10f, 1f, 2f, 0.5f, staggerResistance: float.PositiveInfinity));
         }
 
+        [TestCase(EnemyArchetype.Rifleman, EnemySpec.DefaultStaggerResistance)]
+        [TestCase(EnemyArchetype.Shield, ShieldSpec.DefaultStaggerResistance)]
+        [TestCase(EnemyArchetype.Sniper, SniperSpec.DefaultStaggerResistance)]
+        [TestCase(EnemyArchetype.Charger, ChargerSpec.DefaultStaggerResistance)]
+        [TestCase(EnemyArchetype.Bomber, BomberSpec.DefaultStaggerResistance)]
+        public void EnemySpecWithoutAStaggerResistanceUsesTheArchetypeDefault(EnemyArchetype archetype, float expected)
+        {
+            Assert.That(EnemySpec.DefaultStaggerResistanceFor(archetype), Is.EqualTo(expected));
+            Assert.That(new EnemySpec(20f, 10f, 1f, 2f, 0.5f, archetype: archetype).StaggerResistance, Is.EqualTo(expected));
+            Assert.That(new EnemySpec(20f, 10f, 1f, 2f, 0.5f, archetype: archetype, staggerResistance: 0.25f).StaggerResistance, Is.EqualTo(0.25f));
+        }
+
+        [Test]
+        public void HeavierArchetypesResistStaggerMoreThanTheRifleman()
+        {
+            var rifleman = EnemySpec.DefaultStaggerResistanceFor(EnemyArchetype.Rifleman);
+
+            Assert.That(EnemySpec.DefaultStaggerResistanceFor(EnemyArchetype.Shield), Is.GreaterThan(rifleman));
+            Assert.That(EnemySpec.DefaultStaggerResistanceFor(EnemyArchetype.Charger), Is.GreaterThan(rifleman));
+        }
+
+        [Test]
+        public void EveryArchetypeHasAValidStaggerResistanceDefault()
+        {
+            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
+#pragma warning disable CA2263
+            foreach (EnemyArchetype archetype in Enum.GetValues(typeof(EnemyArchetype)))
+#pragma warning restore CA2263
+            {
+                var value = EnemySpec.DefaultStaggerResistanceFor(archetype);
+                Assert.That(value >= 0f && !float.IsInfinity(value), Is.True, archetype.ToString());
+            }
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => EnemySpec.DefaultStaggerResistanceFor((EnemyArchetype)99));
+        }
+
         [Test]
         public void WaveStrengthKeepsTheStaggerResistance()
         {

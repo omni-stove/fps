@@ -16,7 +16,7 @@ namespace Fps.Editor
     /// <see cref="Fps.Runtime.CharacterAnimator"/> が Resources から読み、プレイヤーと敵の子に置く。
     /// 見た目だけのリグなので、コライダーは付けない (当たり判定は今までどおり Hitbox が持つ)。</item>
     /// <item><see cref="ClipFolder"/>: <see cref="CharacterRigClips"/> の姿勢ごとの AnimationClip。関節の回転と腰の位置をコードでキーにする。</item>
-    /// <item><see cref="ControllerPath"/>: クリップを <see cref="CharacterPose"/> のパラメーターでつなぐ AnimatorController。</item>
+    /// <item><see cref="ControllerPath"/>: クリップを <see cref="CharacterPose"/> のパラメーターと怯みの <see cref="StaggerParameter"/> でつなぐ AnimatorController。</item>
     /// </list>
     /// 既存のアセットは GUID と中のオブジェクトを保って中身だけ書き換えるので、何度実行しても同じ結果になり、git diff が出ない。
     /// Editor を閉じた状態で次のように呼べる:
@@ -55,9 +55,19 @@ namespace Fps.Editor
         public const string CoverHighState = "CoverHigh";
         public const string DownedState = "Downed";
         public const string DeadState = "Dead";
+        public const string FlinchState = "Flinch";
+        public const string KneelState = "Kneel";
+        public const string StumbleState = "Stumble";
+        public const string BlastState = "Blast";
+
+        /// <summary>怯みの種類 (<see cref="StaggerKind"/> の int) を受け取る int のパラメーター。<see cref="Fps.Runtime.StaggerReaction"/> が書く。</summary>
+        public const string StaggerParameter = Fps.Runtime.StaggerReaction.AnimatorParameter;
 
         /// <summary>ふつうの姿勢の間を移る秒数。</summary>
         public const float PoseTransitionSeconds = 0.15f;
+
+        /// <summary>怯みの姿勢へ移る秒数。被弾の衝撃が伝わるよう、ふつうの姿勢の間より速く移る。</summary>
+        public const float StaggerTransitionSeconds = 0.08f;
 
         /// <summary>ダウンへ崩れ落ちる秒数。</summary>
         public const float DownedTransitionSeconds = 0.3f;
@@ -182,8 +192,21 @@ namespace Fps.Editor
             CrouchAimState,
             CoverLowState,
             CoverHighState,
+            FlinchState,
+            KneelState,
+            StumbleState,
+            BlastState,
             DownedState,
             DeadState,
+        };
+
+        /// <summary>怯みの種類ごとの状態の名前。<see cref="StaggerKind.None"/> は含まない。</summary>
+        public static IReadOnlyList<(StaggerKind Kind, string State)> StaggerStates => new[]
+        {
+            (StaggerKind.Flinch, FlinchState),
+            (StaggerKind.Kneel, KneelState),
+            (StaggerKind.Stumble, StumbleState),
+            (StaggerKind.Blast, BlastState),
         };
 
         [MenuItem(MenuPath)]
@@ -414,6 +437,7 @@ namespace Fps.Editor
                 new AnimatorControllerParameter { name = CharacterPose.DeadParameter, type = AnimatorControllerParameterType.Bool },
                 new AnimatorControllerParameter { name = CharacterPose.WeaponCategoryParameter, type = AnimatorControllerParameterType.Int, defaultInt = CharacterPose.NoWeapon },
                 new AnimatorControllerParameter { name = CharacterPose.SlideParameter, type = AnimatorControllerParameterType.Bool },
+                new AnimatorControllerParameter { name = StaggerParameter, type = AnimatorControllerParameterType.Int, defaultInt = (int)StaggerKind.None },
             };
         }
 
@@ -469,6 +493,7 @@ namespace Fps.Editor
                 Condition(AnimatorConditionMode.IfNot, CharacterPose.DeadParameter),
                 Condition(AnimatorConditionMode.IfNot, CharacterPose.DownedParameter),
             };
+            var calm = With(alive, Condition(AnimatorConditionMode.Equals, StaggerParameter, (int)StaggerKind.None));
 
             // 条件はどの組み合わせでも 1 つの状態にしか当てはまらないようにする。手でパラメーターを変えても、Any State から
             // 2 つの遷移が取り合わない。
@@ -485,7 +510,7 @@ namespace Fps.Editor
                     },
                     PoseTransitionSeconds,
                     With(
-                        alive,
+                        calm,
                         Condition(AnimatorConditionMode.Equals, CharacterPose.CoverParameter, CharacterPose.CoverNone),
                         Condition(AnimatorConditionMode.IfNot, CharacterPose.AimParameter),
                         Condition(AnimatorConditionMode.IfNot, CharacterPose.CrouchParameter))),
@@ -499,7 +524,7 @@ namespace Fps.Editor
                     },
                     PoseTransitionSeconds,
                     With(
-                        alive,
+                        calm,
                         Condition(AnimatorConditionMode.Equals, CharacterPose.CoverParameter, CharacterPose.CoverNone),
                         Condition(AnimatorConditionMode.IfNot, CharacterPose.AimParameter),
                         Condition(AnimatorConditionMode.If, CharacterPose.CrouchParameter))),
@@ -509,7 +534,7 @@ namespace Fps.Editor
                     clips[CharacterRigClips.Aim],
                     PoseTransitionSeconds,
                     With(
-                        alive,
+                        calm,
                         Condition(AnimatorConditionMode.If, CharacterPose.AimParameter),
                         Condition(AnimatorConditionMode.IfNot, CharacterPose.CrouchParameter))),
                 new StateSpec(
@@ -518,7 +543,7 @@ namespace Fps.Editor
                     clips[CharacterRigClips.CrouchAim],
                     PoseTransitionSeconds,
                     With(
-                        alive,
+                        calm,
                         Condition(AnimatorConditionMode.If, CharacterPose.AimParameter),
                         Condition(AnimatorConditionMode.If, CharacterPose.CrouchParameter))),
                 new StateSpec(
@@ -527,7 +552,7 @@ namespace Fps.Editor
                     clips[CharacterRigClips.CoverLow],
                     PoseTransitionSeconds,
                     With(
-                        alive,
+                        calm,
                         Condition(AnimatorConditionMode.Equals, CharacterPose.CoverParameter, CharacterPose.CoverLow),
                         Condition(AnimatorConditionMode.IfNot, CharacterPose.AimParameter))),
                 new StateSpec(
@@ -536,9 +561,13 @@ namespace Fps.Editor
                     clips[CharacterRigClips.CoverHigh],
                     PoseTransitionSeconds,
                     With(
-                        alive,
+                        calm,
                         Condition(AnimatorConditionMode.Equals, CharacterPose.CoverParameter, CharacterPose.CoverHigh),
                         Condition(AnimatorConditionMode.IfNot, CharacterPose.AimParameter))),
+                StaggerStateSpec(FlinchState, StaggerKind.Flinch, clips[CharacterRigClips.Flinch], 80f, alive),
+                StaggerStateSpec(KneelState, StaggerKind.Kneel, clips[CharacterRigClips.Kneel], 160f, alive),
+                StaggerStateSpec(StumbleState, StaggerKind.Stumble, clips[CharacterRigClips.Stumble], 240f, alive),
+                StaggerStateSpec(BlastState, StaggerKind.Blast, clips[CharacterRigClips.Blast], 320f, alive),
                 new StateSpec(
                     DownedState,
                     new Vector3(550f, 160f, 0f),
@@ -556,6 +585,17 @@ namespace Fps.Editor
                     DeadTransitionSeconds,
                     new[] { Condition(AnimatorConditionMode.If, CharacterPose.DeadParameter) }),
             };
+        }
+
+        // 怯みは構え・しゃがみ・カバーより先に見せる。怯んでいる間も姿勢の値は書き換わり続けるので、それらを条件に入れると怯みが途切れる。
+        private static StateSpec StaggerStateSpec(string name, StaggerKind kind, AnimationClip clip, float y, AnimatorCondition[] alive)
+        {
+            return new StateSpec(
+                name,
+                new Vector3(800f, y, 0f),
+                clip,
+                StaggerTransitionSeconds,
+                With(alive, Condition(AnimatorConditionMode.Equals, StaggerParameter, (int)kind)));
         }
 
         private static Dictionary<string, AnimatorState> SyncStates(AnimatorController controller, AnimatorStateMachine machine, StateSpec[] specs)

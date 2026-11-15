@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
@@ -40,14 +41,21 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void AnIntervalShorterThanTheRoundingMarginStillFinishesTheStep()
+        public void AnIntervalTooShortToAdvanceIsRejected()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new StatusEffectSpec(1f, 5e-10f, 1));
+            Assert.That(new StatusEffectSpec(1f, StatusEffectSpec.MinTickSeconds, 1).TickSeconds, Is.EqualTo(StatusEffectSpec.MinTickSeconds));
+        }
+
+        [Test]
+        public void TheShortestIntervalStillFinishesTheStep()
         {
             var effects = new StatusEffects();
-            effects.Afflict(new StatusEffectSpec(1f, 0.00005f, 1), null, null);
+            effects.Afflict(new StatusEffectSpec(1f, StatusEffectSpec.MinTickSeconds, 1), null, null);
 
-            effects.Tick(0.001f, _ticks, _ended);
+            effects.Tick(0.05f, _ticks, _ended);
 
-            Assert.That(_ticks, Is.Not.Empty);
+            Assert.That(_ticks.Count, Is.InRange(4, 5));
             Assert.That(effects.Has(StatusEffectKinds.Burn), Is.True);
         }
 

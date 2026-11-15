@@ -40,5 +40,10 @@ namespace Fps.Core
             _cooldownRemaining = Math.Max(0f, _cooldownRemaining - deltaSeconds);
             return 0;
         }
+
+        // 連射の残りを持たない撃ち方なので取り消すものが無い。
+        public void Cancel()
+        {
+        }
     }
 }

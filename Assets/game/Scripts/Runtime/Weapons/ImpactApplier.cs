@@ -8,17 +8,12 @@ namespace Fps.Runtime
     {
         public static ShotOutcome Apply(ShotRequest request, RaycastHit hit, Vector3 direction)
         {
-            return Apply(request, hit, direction, 1f);
-        }
-
-        public static ShotOutcome Apply(ShotRequest request, RaycastHit hit, Vector3 direction, float damageMultiplier)
-        {
             var point = hit.point.ToNumerics();
             var hitbox = Hitbox.FindFor(hit.collider);
             if (hitbox == null)
             {
                 var structureOrders = ImpactResolver.Resolve(
-                    request.Impact, ImpactHit.Structure(point, hit.distance), request.Charge, request.ChargeFraction, damageMultiplier);
+                    request.Impact, ImpactHit.Structure(point, hit.distance), request.Charge, request.ChargeFraction);
 
                 // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
                 using (CombatEvents.Attribute(request.Shooter, request.WeaponId))
@@ -41,8 +36,7 @@ namespace Fps.Runtime
                 request.Impact,
                 ImpactHit.Character(hitbox.Zone, point, hit.distance, owner.ZoneMultipliers),
                 request.Charge,
-                request.ChargeFraction,
-                damageMultiplier);
+                request.ChargeFraction);
             int damage;
             using (CombatEvents.Attribute(request.Shooter, request.WeaponId))
             {

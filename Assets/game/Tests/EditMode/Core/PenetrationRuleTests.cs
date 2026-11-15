@@ -73,6 +73,15 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void OnlyAThinRoundPenetrates()
+        {
+            Assert.That(PenetrationRule.For(new RoundSpec(penetration: _round)), Is.SameAs(_round));
+            Assert.That(PenetrationRule.For(new RoundSpec(radius: 0.2f, penetration: _round)), Is.Null);
+            Assert.That(PenetrationRule.For(RoundSpec.Default), Is.Null);
+            Assert.Throws<ArgumentNullException>(() => PenetrationRule.For(null));
+        }
+
+        [Test]
         public void RejectsANegativeCountOrThickness()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => PenetrationRule.TryPassThrough(_round, -1, "default", 0f, out _));

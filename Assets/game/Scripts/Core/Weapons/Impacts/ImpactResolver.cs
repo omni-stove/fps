@@ -12,25 +12,13 @@ namespace Fps.Core
 
         public static IReadOnlyList<ImpactOrder> Resolve(ImpactSpec impact, ImpactHit hit, ChargeSpec charge, float chargeFraction)
         {
-            return Resolve(impact, hit, charge, chargeFraction, 1f);
-        }
-
-        // damageMultiplier は貫通・跳弾のように、当たるまでに弾が弱った分。弾そのもののダメージにだけ掛け、爆発などには掛けない。
-        public static IReadOnlyList<ImpactOrder> Resolve(
-            ImpactSpec impact, ImpactHit hit, ChargeSpec charge, float chargeFraction, float damageMultiplier)
-        {
-            if (!(damageMultiplier >= 0f) || float.IsInfinity(damageMultiplier))
-            {
-                throw new ArgumentOutOfRangeException(nameof(damageMultiplier), damageMultiplier, "damageMultiplier must be a non-negative finite number");
-            }
-
             if (impact == null)
             {
                 throw new ArgumentNullException(nameof(impact));
             }
 
             var orders = new List<ImpactOrder>();
-            var baseDamage = ScaleDamage(impact.Damage, ChargeScaling.DamageMultiplier(charge, chargeFraction) * damageMultiplier);
+            var baseDamage = ScaleDamage(impact.Damage, ChargeScaling.DamageMultiplier(charge, chargeFraction));
             if (hit.IsCharacter)
             {
                 orders.Add(ImpactOrder.Damage(DamageCalculator.Calculate(baseDamage, hit.Zone, hit.Distance, impact.Falloff, hit.Multipliers)));

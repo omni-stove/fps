@@ -110,6 +110,27 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void AThickRoundDoesNotPenetrate()
+        {
+            Trace(new RoundSpec(radius: 0.1f, penetration: new PenetrationSpec(3, 0.5f, 0.3f)), Vector3.UnitX);
+
+            Assert.That(_segments, Has.Count.EqualTo(1));
+            Assert.That(_segments[0].Hit.ColliderId, Is.EqualTo(_thinWallId));
+        }
+
+        [Test]
+        public void APenetratingRoundDoesNotBounceOffTheWallThatStopsIt()
+        {
+            var round = new RoundSpec(penetration: new PenetrationSpec(3, 0.5f, 0.3f), ricochet: new RicochetSpec(3, 90f, 0.5f));
+
+            Trace(round, -Vector3.UnitX);
+
+            Assert.That(_segments, Has.Count.EqualTo(1));
+            Assert.That(_segments[0].Hit.ColliderId, Is.EqualTo(_thickWallId));
+            Assert.That(_segments[0].Bounced, Is.False);
+        }
+
+        [Test]
         public void TheRoundStopsAfterItsMaxPenetrations()
         {
             Spawn(4, new Vector3(20f, 1f, 0f));

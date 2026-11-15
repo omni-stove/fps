@@ -4,6 +4,17 @@ namespace Fps.Core
 {
     public static class PenetrationRule
     {
+        // 太い弾は最初の当たりで止まる (ServerHitboxes.CastSphere が 1 件しか拾わない) ので、貫通は細い弾だけに効かせ、オフラインもそれに揃える。
+        public static PenetrationSpec For(RoundSpec round)
+        {
+            if (round == null)
+            {
+                throw new ArgumentNullException(nameof(round));
+            }
+
+            return round.Radius > 0f ? null : round.Penetration;
+        }
+
         // 厚さを測る側が、これより厚ければ測り切らずに諦めてよい長さ。
         public static float MaxThicknessFor(PenetrationSpec penetration, string surfaceMaterialId)
         {

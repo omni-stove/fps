@@ -975,6 +975,7 @@ namespace Fps.Runtime
             _self.ResetHealth();
             _brain.Restart();
             _target = null;
+            _perceivedTarget = null;
             _nextTargetSearch = 0f;
             Debug.Log($"{LogTag} id={Id} {logVerb} at={ground.ToString("F1")} state={_brain.State}", this);
         }

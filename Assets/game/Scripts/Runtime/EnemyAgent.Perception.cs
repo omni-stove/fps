@@ -10,6 +10,7 @@ namespace Fps.Runtime
     {
         private readonly List<IPerceptionContributor> _contributors = new List<IPerceptionContributor>();
         private Damageable _target;
+        private Damageable _perceivedTarget;
         private Vector3? _pendingNoise;
         private bool _pendingHit;
         private Vector3? _pendingHitSource;
@@ -25,6 +26,9 @@ namespace Fps.Runtime
             get => _target;
             set => _target = value;
         }
+
+        // 撃つ相手と発見ゲージが見る相手。IPerceivedTargetContributor が直前の知覚の Target を差し替えていればその相手、でなければ Target。
+        public Damageable PerceivedTarget => _perceivedTarget != null ? _perceivedTarget : _target;
 
         /// <summary>
         /// position の物音を次の知覚 1 回だけ渡す。Idle・Patrol・Search 中ならその位置を Search しに行く (<see cref="EnemyBrain"/>)。
@@ -94,6 +98,7 @@ namespace Fps.Runtime
         // 1 つが投げても敵を止めず、その contributor を飛ばして残りを通す。
         private EnemyPerception Contribute(EnemyPerception perception)
         {
+            _perceivedTarget = null;
             if (_contributors.Count == 0)
             {
                 return perception;
@@ -104,6 +109,10 @@ namespace Fps.Runtime
                 try
                 {
                     perception = contributor.Contribute(perception);
+                    if (contributor is IPerceivedTargetContributor substitute && substitute.PerceivedTarget != null)
+                    {
+                        _perceivedTarget = substitute.PerceivedTarget;
+                    }
                 }
                 catch (Exception e)
                 {

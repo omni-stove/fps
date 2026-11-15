@@ -294,7 +294,7 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(attacker));
             }
 
-            if (_awareness == null || (_agent.Brain != null && _agent.Brain.IsDead) || _agent.Target != attacker || !_awareness.Meter.IsSeeing)
+            if (_awareness == null || (_agent.Brain != null && _agent.Brain.IsDead) || _agent.PerceivedTarget != attacker || !_awareness.Meter.IsSeeing)
             {
                 return false;
             }
@@ -405,7 +405,8 @@ namespace Fps.Runtime
             }
 
             // ルールの取り付けは敵の目標探しより後になることがある (キャンペーンはルールを Start で配る) ので、見つからなければ間を置いて探し直す。
-            var target = _agent.Target;
+            // 囮を見せられている間は囮の姿勢と明るさでゲージをためる。
+            var target = _agent.PerceivedTarget;
             if (target != _observedTarget || (target != null && _observedStealth == null && Time.time >= _nextStealthLookup))
             {
                 _observedTarget = target;

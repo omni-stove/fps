@@ -167,7 +167,7 @@ namespace Fps.Runtime
                 _lastAimElapsed = _behavior.AimElapsed;
             }
 
-            var target = _agent.Target;
+            var target = _agent.PerceivedTarget;
             if (_active && aiming && target != null && !target.IsDead)
             {
                 ShowBeam(_agent.EyePosition, target.AimPoint);
@@ -285,7 +285,7 @@ namespace Fps.Runtime
             switch (next)
             {
                 case SniperPhase.Aiming:
-                    var target = _agent != null ? _agent.Target : null;
+                    var target = _agent != null ? _agent.PerceivedTarget : null;
                     var seconds = _attachedBrain != null ? _attachedBrain.Spec.Sniper.AimSeconds : SniperSpec.DefaultAimSeconds;
                     Debug.Log(SniperLog.Aim(Id, target != null ? target.Id : "none", seconds), this);
                     break;

@@ -12,6 +12,7 @@ namespace Fps.Protocol
         public const int MaxWeapons = byte.MaxValue;
 
         private readonly ContentIdList _equippedWeaponIds = new ContentIdList(MaxWeapons, "equipped weapon");
+        private readonly GrenadePouchSync _grenades = new GrenadePouchSync();
 
         /// <summary>
         /// サーバーが処理したこのプレイヤーの最後の入力の tick。まだ無ければ <see cref="InputMessage.NoSnapshot"/> と同じ -1。
@@ -21,7 +22,7 @@ namespace Fps.Protocol
 
         public WeaponSync Weapon { get; set; }
 
-        public GrenadePouchSync Grenades { get; set; }
+        public GrenadePouchSync Grenades => _grenades;
 
         /// <summary>サーバーが今持たせている武器の Id (スロット順)。</summary>
         public ContentIdList EquippedWeaponIds => _equippedWeaponIds;
@@ -37,7 +38,7 @@ namespace Fps.Protocol
 
             LastProcessedInputTick = other.LastProcessedInputTick;
             Weapon = other.Weapon;
-            Grenades = other.Grenades;
+            _grenades.CopyFrom(other._grenades);
             _equippedWeaponIds.CopyFrom(other._equippedWeaponIds);
             Present = other.Present;
         }
@@ -98,7 +99,7 @@ namespace Fps.Protocol
 
             if ((fields & OwnerFields.Grenades) != 0)
             {
-                Grenades = GrenadePouchSync.Read(reader);
+                _grenades.Read(reader);
             }
         }
 
@@ -117,7 +118,7 @@ namespace Fps.Protocol
 
             if ((missing & OwnerFields.Grenades) != 0)
             {
-                Grenades = baseline.Grenades;
+                _grenades.CopyFrom(baseline._grenades);
             }
 
             Present = OwnerFields.All;

@@ -84,6 +84,18 @@ namespace Fps.Core
         /// <summary>照準を出すか。ADS 中とダッシュ中は false。</summary>
         public bool IsCrosshairVisible { get; private set; } = true;
 
+        public float? ChargeFraction { get; private set; }
+
+        public float? HeatFraction { get; private set; }
+
+        public string AmmoTypeText { get; private set; } = string.Empty;
+
+        public float? Magnification { get; private set; }
+
+        public float? LockOnProgress { get; private set; }
+
+        public bool IsLockedOn => LockOnProgress == 1f;
+
         /// <summary>体力の源を差し替える。null なら仮の表示に戻す。</summary>
         public void BindHealth(Health health)
         {
@@ -423,6 +435,103 @@ namespace Fps.Core
                 spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength);
         }
 
+        public void SetCharge(float fraction)
+        {
+            ApplyGauge(HudField.Charge, Fraction(fraction, nameof(fraction)));
+        }
+
+        public void ClearCharge()
+        {
+            ApplyGauge(HudField.Charge, null);
+        }
+
+        public void SetHeat(float fraction)
+        {
+            ApplyGauge(HudField.Heat, Fraction(fraction, nameof(fraction)));
+        }
+
+        public void ClearHeat()
+        {
+            ApplyGauge(HudField.Heat, null);
+        }
+
+        public void SetAmmoTypeName(string displayName)
+        {
+            displayName ??= string.Empty;
+            if (displayName == AmmoTypeText)
+            {
+                return;
+            }
+
+            AmmoTypeText = displayName;
+            Changed?.Invoke(HudField.AmmoType);
+        }
+
+        public void ClearAmmoTypeName()
+        {
+            SetAmmoTypeName(string.Empty);
+        }
+
+        public void SetMagnification(float magnification)
+        {
+            if (!(magnification > 0f) || float.IsInfinity(magnification))
+            {
+                throw new ArgumentOutOfRangeException(nameof(magnification), magnification, "magnification must be positive and finite");
+            }
+
+            ApplyGauge(HudField.Magnification, magnification);
+        }
+
+        public void ClearMagnification()
+        {
+            ApplyGauge(HudField.Magnification, null);
+        }
+
+        public void SetLockOn(float progress)
+        {
+            ApplyGauge(HudField.LockOn, Fraction(progress, nameof(progress)));
+        }
+
+        public void ClearLockOn()
+        {
+            ApplyGauge(HudField.LockOn, null);
+        }
+
+        // 溜め・熱・弾薬の種類は時間や入力で変わり Weapon にイベントが無いので、リロードの進みと同じく HUD が毎フレーム呼ぶ。
+        public void RefreshWeaponGauges()
+        {
+            if (_weapon == null)
+            {
+                ClearCharge();
+                ClearHeat();
+                ClearAmmoTypeName();
+                return;
+            }
+
+            // 溜めの無い撃ち方も ChargeFraction は 0 を返すので、Spec に溜めがあるかで出すかを決める。
+            if (_weapon.Spec.Trigger.Charge != null)
+            {
+                SetCharge(_weapon.Trigger.ChargeFraction);
+            }
+            else
+            {
+                ClearCharge();
+            }
+
+            var heat = _weapon.Ammo.HeatFraction;
+            if (heat.HasValue)
+            {
+                SetHeat(heat.Value);
+            }
+            else
+            {
+                ClearHeat();
+            }
+
+            var ammoType = _weapon.AmmoTypes.Current;
+            SetAmmoTypeName(ammoType != null ? GameText.Resolve(ammoType.Name) : string.Empty);
+        }
+
         private void OnHealthChanged()
         {
             if (_health != null)
@@ -448,6 +557,7 @@ namespace Fps.Core
 
             // 次のフレームを待たずに、リロードが終わった・武器が替わった時点で進みを消すため。
             RefreshReloadProgress();
+            RefreshWeaponGauges();
         }
 
         private void ApplyHealth(string text, bool low, float? fraction)
@@ -522,6 +632,39 @@ namespace Fps.Core
             ReloadWindowStart = windowStart;
             ReloadWindowEnd = windowEnd;
             Changed?.Invoke(HudField.ReloadProgress);
+        }
+
+        private void ApplyGauge(HudField field, float? value)
+        {
+            switch (field)
+            {
+                case HudField.Charge when value != ChargeFraction:
+                    ChargeFraction = value;
+                    break;
+                case HudField.Heat when value != HeatFraction:
+                    HeatFraction = value;
+                    break;
+                case HudField.Magnification when value != Magnification:
+                    Magnification = value;
+                    break;
+                case HudField.LockOn when value != LockOnProgress:
+                    LockOnProgress = value;
+                    break;
+                default:
+                    return;
+            }
+
+            Changed?.Invoke(field);
+        }
+
+        private static float Fraction(float value, string paramName)
+        {
+            if (!IsFraction(value))
+            {
+                throw new ArgumentOutOfRangeException(paramName, value, paramName + " must be between 0 and 1");
+            }
+
+            return value;
         }
 
         private static bool IsFraction(float value)

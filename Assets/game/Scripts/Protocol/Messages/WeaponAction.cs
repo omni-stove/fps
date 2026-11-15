@@ -6,5 +6,6 @@ namespace Fps.Protocol
         Reload,
         /// <summary>リロード中にアクティブリロードの窓を狙って押した。</summary>
         ActiveReload,
+        SwitchAmmoType,
     }
 }

@@ -5,7 +5,7 @@ namespace Fps.Protocol
 {
     /// <summary>
     /// サーバーが毎 tick クライアントごとに送る試合の状態。Netcode の NetworkVariable・NetworkList と、毎 tick の <c>StateRpc</c>、
-    /// プレイヤーとグレネードの Spawn・Despawn を 1 つにまとめたもの。並びに無い物は消えたものとして扱う。
+    /// プレイヤー・グレネード・飛ぶ弾の Spawn・Despawn を 1 つにまとめたもの。並びに無い物は消えたものとして扱う。
     /// </summary>
     /// <remarks>
     /// <para>
@@ -19,7 +19,7 @@ namespace Fps.Protocol
     /// </remarks>
     public sealed class SnapshotMessage : IMessage
     {
-        public const byte CurrentVersion = 3;
+        public const byte CurrentVersion = 4;
 
         /// <summary>基準が無い (全部が載っている) ことを表す <see cref="BaselineTick"/>。</summary>
         public const int NoBaseline = -1;
@@ -27,12 +27,15 @@ namespace Fps.Protocol
         public const int MaxPlayers = 64;
         public const int MaxGrenades = 64;
         public const int MaxControlPoints = 16;
+        public const int MaxProjectiles = 128;
 
         private readonly OwnerSnapshot _owner = new OwnerSnapshot();
         private readonly SnapshotList<PlayerSnapshot> _players = new SnapshotList<PlayerSnapshot>(MaxPlayers, "player");
         private readonly SnapshotList<GrenadeSnapshot> _grenades = new SnapshotList<GrenadeSnapshot>(MaxGrenades, "grenade");
         private readonly SnapshotList<ControlPointSnapshot> _controlPoints =
             new SnapshotList<ControlPointSnapshot>(MaxControlPoints, "control point");
+        private readonly SnapshotList<ProjectileSnapshot> _projectiles =
+            new SnapshotList<ProjectileSnapshot>(MaxProjectiles, "projectile");
 
         private MatchSnapshot _match;
         private MatchFields _matchPresent = MatchFields.All;
@@ -67,6 +70,8 @@ namespace Fps.Protocol
 
         public SnapshotList<ControlPointSnapshot> ControlPoints => _controlPoints;
 
+        public SnapshotList<ProjectileSnapshot> Projectiles => _projectiles;
+
         /// <summary>送る側が中身を入れ直す前に、前の中身と基準を捨てる。確保した並びは使い回す。</summary>
         public void Clear()
         {
@@ -79,12 +84,13 @@ namespace Fps.Protocol
             HasOwner = false;
             _owner.LastProcessedInputTick = -1;
             _owner.Weapon = default;
-            _owner.Grenades = default;
+            _owner.Grenades.Clear();
             _owner.EquippedWeaponIds.Clear();
             _owner.Present = OwnerFields.All;
             _players.Clear();
             _grenades.Clear();
             _controlPoints.Clear();
+            _projectiles.Clear();
         }
 
         /// <summary>other の中身を写す (後で差分の基準に使うため取っておく)。<see cref="Baseline"/> は写さない。</summary>
@@ -106,6 +112,7 @@ namespace Fps.Protocol
             _players.CopyFrom(other._players);
             _grenades.CopyFrom(other._grenades);
             _controlPoints.CopyFrom(other._controlPoints);
+            _projectiles.CopyFrom(other._projectiles);
         }
 
         /// <summary>
@@ -131,7 +138,8 @@ namespace Fps.Protocol
 
             if (!_players.CanFillFrom(baseline._players)
                 || !_grenades.CanFillFrom(baseline._grenades)
-                || !_controlPoints.CanFillFrom(baseline._controlPoints))
+                || !_controlPoints.CanFillFrom(baseline._controlPoints)
+                || !_projectiles.CanFillFrom(baseline._projectiles))
             {
                 return false;
             }
@@ -146,6 +154,7 @@ namespace Fps.Protocol
             _players.FillFrom(baseline._players);
             _grenades.FillFrom(baseline._grenades);
             _controlPoints.FillFrom(baseline._controlPoints);
+            _projectiles.FillFrom(baseline._projectiles);
             IsComplete = true;
             return true;
         }
@@ -182,6 +191,7 @@ namespace Fps.Protocol
             _players.Write(writer, baseline?._players);
             _grenades.Write(writer, baseline?._grenades);
             _controlPoints.Write(writer, baseline?._controlPoints);
+            _projectiles.Write(writer, baseline?._projectiles);
         }
 
         public void Read(MessageReader reader)
@@ -213,12 +223,14 @@ namespace Fps.Protocol
             _players.Read(reader, hasBaseline);
             _grenades.Read(reader, hasBaseline);
             _controlPoints.Read(reader, hasBaseline);
+            _projectiles.Read(reader, hasBaseline);
 
             IsComplete = _matchPresent == MatchFields.All
                 && (!HasOwner || _owner.Present == OwnerFields.All)
                 && _players.IsComplete
                 && _grenades.IsComplete
-                && _controlPoints.IsComplete;
+                && _controlPoints.IsComplete
+                && _projectiles.IsComplete;
         }
 
         private static void ExpectAll(bool hasBaseline, int present, int all, string what)

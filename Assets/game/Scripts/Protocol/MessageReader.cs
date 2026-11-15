@@ -185,6 +185,27 @@ namespace Fps.Protocol
             return value;
         }
 
+        public float ReadFiniteSingleBetween(float min, float max, string what)
+        {
+            Require(4, what);
+            var value = SingleAt(_data.Offset + Position);
+            if (!IsFinite(value))
+            {
+                throw NotFinite(what);
+            }
+
+            if (value < min || value > max)
+            {
+                throw new MessageReadException(
+                    what + " must be within " + min.ToString(CultureInfo.InvariantCulture) + " to "
+                    + max.ToString(CultureInfo.InvariantCulture) + " (got " + value.ToString(CultureInfo.InvariantCulture)
+                    + ") at byte " + Text(Position));
+            }
+
+            Position += 4;
+            return value;
+        }
+
         /// <summary>IEEE 754 の 64 ビットを読む。NaN や無限大もそのまま返す。</summary>
         public double ReadDouble()
         {

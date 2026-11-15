@@ -49,6 +49,11 @@ namespace Fps.Protocol
                 new ShotIndexCorrectedMessage(),
                 new IdleWarningMessage(),
                 new LoadoutAnswerMessage(),
+                new ProjectileSpawnedMessage(),
+                new ProjectileEndedMessage(),
+                new BeamStateMessage(),
+                new StatusEffectMessage(),
+                new AreaEffectMessage(),
             };
         }
 

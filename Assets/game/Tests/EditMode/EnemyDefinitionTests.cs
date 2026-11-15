@@ -116,6 +116,38 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => _definition.CopyFrom(null));
         }
 
+        [TestCase(EnemyArchetype.Rifleman)]
+        [TestCase(EnemyArchetype.Shield)]
+        [TestCase(EnemyArchetype.Sniper)]
+        [TestCase(EnemyArchetype.Charger)]
+        [TestCase(EnemyArchetype.Bomber)]
+        public void NewDefinitionUsesTheStaggerResistanceOfItsArchetype(EnemyArchetype archetype)
+        {
+            _definition.Archetype = archetype;
+
+            Assert.That(_definition.ToSpec().StaggerResistance, Is.EqualTo(EnemySpec.DefaultStaggerResistanceFor(archetype)));
+        }
+
+        [Test]
+        public void DefinitionStaggerResistanceOverridesTheArchetypeDefault()
+        {
+            _definition.Archetype = EnemyArchetype.Shield;
+            _definition.StaggerResistance = 0f;
+
+            Assert.That(_definition.ToSpec().StaggerResistance, Is.Zero);
+        }
+
+        [Test]
+        public void NewAgentUsesTheStaggerResistanceOfItsArchetype()
+        {
+            var serialized = new UnityEditor.SerializedObject(_agent);
+            serialized.FindProperty("_archetype").enumValueIndex = (int)EnemyArchetype.Shield;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            Assert.That(_agent.StaggerResistance, Is.EqualTo(ShieldSpec.DefaultStaggerResistance));
+            Assert.That(_agent.CreateSpec().StaggerResistance, Is.EqualTo(ShieldSpec.DefaultStaggerResistance));
+        }
+
         [Test]
         public void InvalidValuesAreReportedWithTheAssetName()
         {

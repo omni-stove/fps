@@ -8,6 +8,7 @@ namespace Fps.Core
         public const float DefaultShotDamageMultiplier = 3f;
         public const float DefaultReaimDelaySeconds = 1f;
         public const float DefaultRelocateGiveUpSeconds = 8f;
+        public const float DefaultStaggerResistance = 0f;
 
         public static readonly SniperSpec Default = new SniperSpec(
             DefaultAimSeconds,

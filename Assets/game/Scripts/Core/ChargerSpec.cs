@@ -13,6 +13,9 @@ namespace Fps.Core
         public const float DefaultStunSeconds = 1.8f;
         public const float DefaultRecoverSeconds = 1f;
 
+        // 頭や脚への 1 発で突進が止まると突進兵の脅威が無くなるので、Rifleman より怯みにくくする。
+        public const float DefaultStaggerResistance = 1f;
+
         public static readonly ChargerSpec Default = new ChargerSpec(
             DefaultTriggerDistance,
             DefaultWindupSeconds,

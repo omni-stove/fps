@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 残りのグレネードの数 (<see cref="HudFormat.Grenades"/>) を、弾数の上に出す。Hud.uxml の <see cref="UxmlName"/> を使う。
+    /// 残りのグレネードの数 (<see cref="HudFormat.Grenades(int)"/>) を、弾数の上に出す。種類を切り替えて持っているときは、投げる種類の名前も添える。Hud.uxml の <see cref="UxmlName"/> を使う。
     /// <see cref="Hud.AddViews"/> では付けず、オフラインの <see cref="GameBootstrap"/> が <see cref="IHud.AttachGrenadeCount"/> で付けてプレイヤーの <see cref="GrenadeThrower"/> を
     /// <see cref="Show"/> し、ネット対戦の HUD (<c>Fps.Net.NetHud</c>) がサーバーから届いた数を <see cref="ShowCount"/> する。
     /// ルールでグレネードを使わない間は隠す。
@@ -23,6 +23,7 @@ namespace Fps.Runtime
         // ShowCount で渡された値。_source があればそちらを出す
         private bool _countShown;
         private int _count;
+        private LocalizedText _typeName;
 
         public override string ElementName => UxmlName;
 
@@ -87,6 +88,14 @@ namespace Fps.Runtime
         /// </summary>
         public void ShowCount(bool usesGrenades, int remaining)
         {
+            ShowCount(usesGrenades, default, remaining);
+        }
+
+        /// <summary>
+        /// <see cref="ShowCount(bool, int)"/> と同じく出し、typeName が空でなければ投げる種類の名前を添える。
+        /// </summary>
+        public void ShowCount(bool usesGrenades, LocalizedText typeName, int remaining)
+        {
             if (_source != null)
             {
                 _source.Changed -= OnChanged;
@@ -95,6 +104,7 @@ namespace Fps.Runtime
 
             _countShown = usesGrenades;
             _count = Math.Max(0, remaining);
+            _typeName = typeName;
             Refresh();
         }
 
@@ -103,18 +113,25 @@ namespace Fps.Runtime
         {
             bool shown;
             int remaining;
+            LocalizedText typeName;
             if (_source != null)
             {
                 shown = _source.UsesGrenades;
                 remaining = _source.Remaining;
+
+                // 1 種類しか持たないなら、種類を切り替えて持つ前と同じ表示にする
+                var inventory = _source.Inventory;
+                typeName = inventory.Count > 1 ? inventory.Selected.Name : default;
             }
             else
             {
                 shown = _countShown;
                 remaining = _count;
+                typeName = _typeName;
             }
 
-            Text = shown ? Localizer.Resolve(HudFormat.Grenades(remaining)) : string.Empty;
+            var text = typeName.IsEmpty ? HudFormat.Grenades(remaining) : HudFormat.Grenades(typeName, remaining);
+            Text = shown ? Localizer.Resolve(text) : string.Empty;
 
             if (Element is Label label)
             {

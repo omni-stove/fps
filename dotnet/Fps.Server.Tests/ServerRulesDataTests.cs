@@ -34,7 +34,7 @@ namespace Fps.Server.Tests
             Assert.That(data.Path, Is.EqualTo(Path.GetFullPath(path)));
             Assert.That(data.Ping, Is.SameAs(PingSpec.Default));
             Assert.That(data.PingPath, Is.Null);
-            Assert.That(data.Grenade, Is.SameAs(GrenadeSpec.Default));
+            Assert.That(data.Grenades, Is.SameAs(GrenadeCatalog.Default));
             Assert.That(data.Bots, Is.SameAs(NetBotSpec.Default));
             Assert.That(data.BotsPath, Is.Null);
             Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
@@ -64,8 +64,8 @@ namespace Fps.Server.Tests
 
             Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
 
-            Assert.That(data.Grenade.FuseSeconds, Is.EqualTo(1.5f));
-            Assert.That(data.Grenade.DamageRadius, Is.EqualTo(4f));
+            Assert.That(data.Grenades.Carried[0].FuseSeconds, Is.EqualTo(1.5f));
+            Assert.That(data.Grenades.Carried[0].DamageRadius, Is.EqualTo(4f));
             Assert.That(data.GrenadePath, Does.EndWith(ServerRulesData.GrenadeTuningFileName));
         }
 

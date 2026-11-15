@@ -181,7 +181,7 @@ namespace Fps.Server.Tests
             Join(2);
             Step(0.2f);
 
-            _combat.Explode(new Vector3(-1f, 2.5f, 0f), _combat.GrenadeExplosion, 1, ServerCombat.GrenadeWeaponId);
+            _combat.Explode(new Vector3(-1f, 2.5f, 0f), GrenadeSpec.Default.Impact.Explosion, 1, ServerCombat.GrenadeWeaponId);
 
             Assert.That(_log.ToString(), Does.Contain("[Destruction] structure=0"));
             Assert.That(_context.Map.Collision.IsGroupEnabled(MapColliderGroups.Piece(0, 0)), Is.False);
@@ -386,7 +386,7 @@ namespace Fps.Server.Tests
             Assert.That(snapshot.Owner.Weapon.WeaponCount, Is.EqualTo(2));
             Assert.That(snapshot.Owner.EquippedWeaponIds[0], Is.EqualTo(TestRules.RifleId));
             Assert.That(snapshot.Owner.Grenades.Enabled, Is.True);
-            Assert.That(snapshot.Owner.Grenades.RemainingOf(ServerCombat.GrenadeWeaponId), Is.EqualTo(2));
+            Assert.That(snapshot.Owner.Grenades.RemainingOf(GrenadeSpec.DefaultId), Is.EqualTo(2));
             Assert.That(snapshot.Players[0].WeaponId, Is.EqualTo(TestRules.RifleId));
         }
 
@@ -438,7 +438,7 @@ namespace Fps.Server.Tests
             var victim = Body(2);
             var center = victim.Position + new Vector3(-(victim.Radius + distance), 0f, 0f);
 
-            _combat.Explode(center, _combat.GrenadeExplosion, 1, ServerCombat.GrenadeWeaponId);
+            _combat.Explode(center, GrenadeSpec.Default.Impact.Explosion, 1, ServerCombat.GrenadeWeaponId);
 
             var expected = GrenadeSpec.Default.Explosion.At(distance, false);
             Assert.That(expected, Is.GreaterThan(0));
@@ -457,7 +457,7 @@ namespace Fps.Server.Tests
             var victim = Body(2);
 
             var center = victim.Position + new Vector3(-(victim.Radius + GrenadeSpec.DefaultDamageRadius + 0.5f), 0f, 0f);
-            _combat.Explode(center, _combat.GrenadeExplosion, 1, ServerCombat.GrenadeWeaponId);
+            _combat.Explode(center, GrenadeSpec.Default.Impact.Explosion, 1, ServerCombat.GrenadeWeaponId);
 
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
         }
@@ -474,7 +474,7 @@ namespace Fps.Server.Tests
             var distance = ServerCombat.DistanceToCapsule(
                 center, victim.Position + new Vector3(0f, victim.Shape.BottomY, 0f), victim.Position + new Vector3(0f, victim.Shape.TopY, 0f), victim.Radius);
 
-            _combat.Explode(center, _combat.GrenadeExplosion, 1, ServerCombat.GrenadeWeaponId);
+            _combat.Explode(center, GrenadeSpec.Default.Impact.Explosion, 1, ServerCombat.GrenadeWeaponId);
 
             Assert.That(GrenadeSpec.Default.Explosion.At(distance, false), Is.GreaterThan(0), "without the wall it would hurt");
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
@@ -525,6 +525,72 @@ namespace Fps.Server.Tests
             _host.OnMessage(new ConnectionId(1), throwRequest);
 
             Assert.That(Lines(_log).Count(line => line.StartsWith("[Grenade] net thrown", StringComparison.Ordinal)), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void EachCarriedTypeHasItsOwnCountAndGoesOffWithItsImpact()
+        {
+            Start(Rules(), grenades: new GrenadeCatalog(new[] { GrenadeSpec.Default, _smoke }, new[] { GrenadeSpec.DefaultId, _smoke.Id }));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            var before = Snapshot(1).Owner.Grenades;
+            Assert.That(before.Count, Is.EqualTo(2));
+            Assert.That(before.RemainingOf(_smoke.Id), Is.EqualTo(2));
+
+            _host.OnMessage(new ConnectionId(1), new ThrowGrenadeRequestMessage { Direction = Vector3.UnitX, GrenadeTypeId = _smoke.Id });
+            var owner = Snapshot(1).Owner.Grenades;
+            Assert.That(owner.RemainingOf(_smoke.Id), Is.EqualTo(1));
+            Assert.That(owner.RemainingOf(GrenadeSpec.DefaultId), Is.EqualTo(2), "throwing smoke leaves the frags");
+            Assert.That(Snapshot(2).Grenades[0].TypeId, Is.EqualTo(_smoke.Id));
+
+            Step(_smoke.FuseSeconds + 0.1f);
+
+            Assert.That(_combat.LiveGrenadeCount, Is.EqualTo(0));
+            Assert.That(_combat.AreaEffects.Count, Is.EqualTo(1));
+            Assert.That(_log.ToString(), Does.Not.Contain("[Grenade] net exploded"), "smoke does not explode");
+            var spread = _transport.Read<AreaEffectMessage>(2, Copy).Single();
+            Assert.That(spread.KindId, Is.EqualTo("smoke"));
+            Assert.That(spread.Radius, Is.EqualTo(4f));
+            Assert.That(spread.RemainingSeconds, Is.EqualTo(3f));
+
+            Step(3f);
+
+            Assert.That(_combat.AreaEffects.Count, Is.EqualTo(0));
+            var messages = _transport.Read<AreaEffectMessage>(2, Copy);
+            Assert.That(messages.Count, Is.EqualTo(2));
+            Assert.That(messages[1].AreaId, Is.EqualTo(spread.AreaId));
+            Assert.That(messages[1].RemainingSeconds, Is.Zero, "the end is sent with no time left");
+        }
+
+        [Test]
+        public void ATypeThatIsNotCarriedIsRejected()
+        {
+            Start(Rules());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            _host.OnMessage(new ConnectionId(1), new ThrowGrenadeRequestMessage { Direction = Vector3.UnitX, GrenadeTypeId = _smoke.Id });
+
+            Assert.That(_combat.LiveGrenadeCount, Is.EqualTo(0));
+            Assert.That(_log.ToString(), Does.Contain("reason=UnknownType"));
+        }
+
+        [Test]
+        public void APlayerWhoJoinsLateSeesTheAreaEffectsAlreadyThere()
+        {
+            Start(Rules(), grenades: new GrenadeCatalog(new[] { _smoke }));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            _host.OnMessage(new ConnectionId(1), new ThrowGrenadeRequestMessage { Direction = Vector3.UnitX });
+            Step(_smoke.FuseSeconds + 0.1f);
+
+            Join(3);
+
+            Assert.That(_transport.Read<AreaEffectMessage>(3, Copy).Single().RemainingSeconds, Is.GreaterThan(0f));
         }
 
         [Test]
@@ -593,7 +659,18 @@ namespace Fps.Server.Tests
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
-        private void Start(GameRules rules, bool wall = false, bool destructibleWall = false, int wallPieces = 1)
+        private static readonly GrenadeSpec _smoke = new GrenadeSpec(
+            "ecaf6e57-cb77-4707-9321-6ea5b659408f",
+            "grenade.smoke",
+            new ImpactSpec(damage: 0, areaEffect: new AreaEffectSpec(4f, 3f, 0.5f, 0, visualId: "smoke")),
+            fuseSeconds: 1f);
+
+        private static AreaEffectMessage Copy(AreaEffectMessage m)
+        {
+            return new AreaEffectMessage { AreaId = m.AreaId, KindId = m.KindId, Center = m.Center, Radius = m.Radius, RemainingSeconds = m.RemainingSeconds };
+        }
+
+        private void Start(GameRules rules, bool wall = false, bool destructibleWall = false, int wallPieces = 1, GrenadeCatalog grenades = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -623,7 +700,7 @@ namespace Fps.Server.Tests
 
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points, structures);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules), PingSpec.Default, "memory", null);
+            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules), PingSpec.Default, "memory", null, grenades);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(true, _json, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),

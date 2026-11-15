@@ -1,10 +1,63 @@
 {
-  "fuseSeconds": 2.5,
-  "throwSeconds": 0.6,
-  "throwSpeed": 14,
-  "throwLiftSpeed": 3,
-  "maxDamage": 150,
-  "damageRadius": 6,
-  "fullDamageRadius": 1.5,
-  "structureDamageAtCenter": 150
+  "types": [
+    {
+      "id": "ff94f232-2647-4b77-a077-5693d8f954d1",
+      "nameKey": "grenade.frag",
+      "fuseSeconds": 2.5,
+      "throwSeconds": 0.6,
+      "throwSpeed": 14,
+      "throwLiftSpeed": 3,
+      "maxDamage": 150,
+      "damageRadius": 6,
+      "fullDamageRadius": 1.5,
+      "structureDamageAtCenter": 150
+    },
+    {
+      "id": "ecaf6e57-cb77-4707-9321-6ea5b659408f",
+      "nameKey": "grenade.smoke",
+      "fuseSeconds": 1.5,
+      "throwSeconds": 0.6,
+      "throwSpeed": 14,
+      "throwLiftSpeed": 3,
+      "impact": {
+        "damage": 0,
+        "areaEffect": { "radius": 5, "durationSeconds": 15, "tickSeconds": 0.5, "damagePerTick": 0, "visualId": "smoke" }
+      }
+    },
+    {
+      "id": "bcc273d5-24a8-42f4-bb3c-b054d001434d",
+      "nameKey": "grenade.flash",
+      "fuseSeconds": 1.5,
+      "throwSeconds": 0.6,
+      "throwSpeed": 14,
+      "throwLiftSpeed": 3,
+      "impact": { "damage": 0 }
+    },
+    {
+      "id": "b9e59060-e2b8-4109-a693-0a87015e6817",
+      "nameKey": "grenade.incendiary",
+      "fuseSeconds": 2,
+      "throwSeconds": 0.6,
+      "throwSpeed": 14,
+      "throwLiftSpeed": 3,
+      "impact": {
+        "damage": 0,
+        "areaEffect": { "radius": 4, "durationSeconds": 8, "tickSeconds": 0.5, "damagePerTick": 5, "visualId": "fire" }
+      }
+    },
+    {
+      "id": "5eb3292d-6300-4ec2-b325-6ad793017e49",
+      "nameKey": "grenade.sticky",
+      "fuseSeconds": 2.5,
+      "throwSeconds": 0.6,
+      "throwSpeed": 14,
+      "throwLiftSpeed": 3,
+      "stickiness": "SurfacesAndCharacters",
+      "impact": {
+        "damage": 0,
+        "explosion": { "maxDamage": 150, "radius": 5, "fullDamageRadius": 1.5, "structureDamageAtCenter": 150, "detonation": "OnLifetimeEnd" }
+      }
+    }
+  ],
+  "carried": ["ff94f232-2647-4b77-a077-5693d8f954d1"]
 }

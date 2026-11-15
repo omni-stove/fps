@@ -42,6 +42,7 @@ namespace Fps.Server
         private readonly ServerSpray _spray;
         private readonly ServerStatusEffects _statusEffects;
         private readonly ServerLockOn _lockOn;
+        private readonly ServerAreaEffects _areaEffects;
         private ServerContext _context;
         private TextWriter _log;
         private ServerMatch _match;
@@ -63,6 +64,7 @@ namespace Fps.Server
             _spray = new ServerSpray(this);
             _statusEffects = new ServerStatusEffects(this);
             _lockOn = new ServerLockOn(this);
+            _areaEffects = new ServerAreaEffects(this);
         }
 
         public string Name => "combat";
@@ -81,6 +83,10 @@ namespace Fps.Server
         internal ServerStatusEffects StatusEffects => _statusEffects;
 
         internal MatchRulesModule Rules => _rules;
+
+        internal ServerAreaEffects AreaEffects => _areaEffects;
+
+        internal TextWriter Log => _log;
 
         public void Start(ServerContext context)
         {
@@ -122,6 +128,7 @@ namespace Fps.Server
             _spray.Tick(deltaSeconds);
             _statusEffects.Tick(deltaSeconds);
             _lockOn.Tick(deltaSeconds);
+            _areaEffects.Tick(deltaSeconds);
             _hitboxes.Record((int)Math.Min(tick, int.MaxValue));
         }
 
@@ -129,6 +136,7 @@ namespace Fps.Server
         {
             // 途中から入った人にも、それまでに壊れた建物を見せる
             _structures.SendState(_context.Messenger, connection);
+            _areaEffects.SendState(_context.Messenger, connection);
         }
 
         public void OnDisconnected(ConnectionId connection)
@@ -166,7 +174,7 @@ namespace Fps.Server
                     fighter.Weapons.TrySwitch(weaponSwitch.WeaponId);
                     break;
                 case ThrowGrenadeRequestMessage grenade:
-                    ThrowGrenade(fighter, grenade.Direction);
+                    ThrowGrenade(fighter, grenade.Direction, grenade.GrenadeTypeId);
                     break;
             }
         }
@@ -213,9 +221,7 @@ namespace Fps.Server
                 var owner = snapshot.Owner;
                 owner.Weapon = own.Weapons.Sync();
                 own.Weapons.FillIds(owner.EquippedWeaponIds);
-                owner.Grenades.Clear();
-                owner.Grenades.Enabled = own.Grenades.Enabled;
-                owner.Grenades.Add(GrenadeWeaponId, own.Grenades.Remaining);
+                own.Grenades.Fill(owner.Grenades);
             }
 
             ContributeGrenades(snapshot.Grenades);
@@ -255,6 +261,7 @@ namespace Fps.Server
             ClearGrenades();
             _projectiles.Clear();
             _statusEffects.Clear();
+            _areaEffects.Clear();
             foreach (var fighter in _fighters.Values)
             {
                 fighter.Weapons.Refill();
@@ -285,7 +292,7 @@ namespace Fps.Server
             {
                 fighter = new Fighter(
                     new ServerPlayerWeapons(playerId, _log, () => _now),
-                    new ServerGrenadeSupply(_data.Grenade.ThrowSeconds, GrenadeThrowJitterSeconds),
+                    new ServerGrenadeSupply(_data.Grenades, GrenadeThrowJitterSeconds),
                     playerId);
                 _fighters.Add(playerId, fighter);
             }

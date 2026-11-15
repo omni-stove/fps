@@ -163,7 +163,7 @@ namespace Fps.Editor
                 throw new InvalidOperationException(LogTag + " Resources/" + KitTuning.GrenadeResourcePath + ".json is missing");
             }
 
-            TuningJson.ParseGrenade(text.text, KitTuning.GrenadeResourcePath);
+            TuningJson.ParseGrenades(text.text, KitTuning.GrenadeResourcePath);
             Directory.CreateDirectory(directory);
             var output = Path.Combine(directory, "grenade.json");
             File.WriteAllText(output, text.text);

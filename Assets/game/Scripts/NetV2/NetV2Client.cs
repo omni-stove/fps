@@ -71,6 +71,7 @@ namespace Fps.NetV2
         private readonly NetV2Weapons _weapons = new NetV2Weapons();
         private readonly ClientGrenades _grenadeChoice = new ClientGrenades();
         private readonly Dictionary<int, AreaEffectZone> _areaZones = new Dictionary<int, AreaEffectZone>();
+        private readonly ClientOverheat _overheat = new ClientOverheat();
         private NetV2Structures _structures;
         private ClientWeaponHooks _weaponHooks;
         private ClientTrigger _heldContinuous;
@@ -658,7 +659,7 @@ namespace Fps.NetV2
                 return;
             }
 
-            switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec))
+            switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec, _overheat))
             {
                 case FireDecision.Fire:
                     for (var i = 0; i < pull.Shots; i++)
@@ -696,7 +697,7 @@ namespace Fps.NetV2
 
             if (pull.Pressed && !sending)
             {
-                switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec))
+                switch (ClientFire.Decide(latest, _client.PlayerId, _match.LocalState, trigger.Spec, _overheat))
                 {
                     case FireDecision.Fire:
                         SendContinuous(direction, weaponId, trigger.Spec, pull, TriggerEdge.Pressed, owner);
@@ -772,6 +773,7 @@ namespace Fps.NetV2
                 return;
             }
 
+            _overheat.Observe(snapshot);
             _hud?.Apply(snapshot);
             var grenades = snapshot.HasOwner ? snapshot.Owner.Grenades : null;
             _hud?.ShowGrenades(grenades, _grenadeChoice.Current(grenades));

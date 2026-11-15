@@ -197,7 +197,7 @@ namespace Fps.NetV2
                 _weapon = snapshot.Owner.Weapon;
                 _weaponSpec = weaponSpec;
                 ClientWeaponGauges.Show(model, _weapon, weaponSpec);
-                if (_weapon.WeaponCount == 0)
+                if (_weapon.WeaponCount == 0 || (weaponSpec != null && weaponSpec.Ammo.Kind == AmmoKind.Heat))
                 {
                     model.ClearAmmo();
                 }

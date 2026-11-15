@@ -123,13 +123,15 @@ namespace Fps.Server
             }
 
             TickGrenades(deltaSeconds);
-            _projectiles.Tick(deltaSeconds);
             _beams.Tick(deltaSeconds);
             _spray.Tick(deltaSeconds);
             _statusEffects.Tick(deltaSeconds);
             _lockOn.Tick(deltaSeconds);
             _areaEffects.Tick(deltaSeconds);
             _hitboxes.Record((int)Math.Min(tick, int.MaxValue));
+
+            // 飛ぶ弾は巻き戻さずに今の位置へ当てるので、この tick の位置を残してから進める
+            _projectiles.Tick(deltaSeconds);
         }
 
         public void OnConnected(ConnectionId connection)

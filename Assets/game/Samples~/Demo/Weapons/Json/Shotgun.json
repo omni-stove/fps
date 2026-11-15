@@ -1,0 +1,49 @@
+{
+  "id": "07e1b9a8-f64c-4474-bc38-dbf14d66b135",
+  "nameKey": "weapon.shotgun",
+  "category": "Shotgun",
+  "shotNoiseRadius": 60,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.8
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 6,
+    "reserveAmmo": 30,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 40,
+    "pelletCount": 8,
+    "pelletSpreadDegrees": 4,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 12,
+    "falloff": {
+      "startDistance": 6,
+      "endDistance": 20,
+      "minMultiplier": 0.2
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 1.5,
+    "adsSpreadDegrees": 0.5,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [60],
+    "swayDegrees": 0
+  }
+}

@@ -5,7 +5,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// サーバーが試合で全員に持たせるロードアウト (<see cref="LoadoutRule"/> に合うスロット順の <see cref="WeaponSpec"/> と持ち替え秒数) と、
-    /// 各プレイヤーの今の武器の <see cref="WeaponSpec.FireInterval"/> で作った連射の制限 (<see cref="ShotBudget"/>)。
+    /// 各プレイヤーの今の武器の撃ち方 (<see cref="TriggerModels.For(WeaponSpec)"/>) の最短の間隔で作った連射の制限 (<see cref="ShotBudget"/>)。
     /// クライアントは撃った武器の Id だけを送り、ダメージ・射程・減衰・連射間隔はすべてサーバーが持たせている武器の値を使う。
     /// </summary>
     /// <remarks>
@@ -162,7 +162,7 @@ namespace Fps.Core
 
             if (!_entries.TryGetValue(playerId, out var entry) || !string.Equals(entry.WeaponId, held.Id, StringComparison.Ordinal))
             {
-                entry = new Entry(held.Id, new ShotBudget(held.FireInterval, _burst));
+                entry = new Entry(held.Id, new ShotBudget(TriggerModels.For(held), _burst));
                 _entries[playerId] = entry;
             }
 

@@ -18,52 +18,39 @@ namespace Fps.Core
         public event Action ReserveAmmoAdded;
 
         private float _cooldownRemaining;
-        private float _reloadRemaining;
-        private float _reloadElapsed;
 
         public WeaponSpec Spec { get; }
-        public int AmmoInMagazine { get; private set; }
-        public int ReserveAmmo { get; private set; }
-        public bool IsReloading { get; private set; }
+
+        public ITriggerModel Trigger { get; }
+
+        public IAmmoModel Ammo { get; }
+
+        public AmmoTypeSelector AmmoTypes { get; }
+
+        public int AmmoInMagazine => Ammo.AmmoInMagazine;
+        public int ReserveAmmo => Ammo.ReserveAmmo;
+        public bool IsReloading => Ammo.IsReloading;
 
         /// <summary>
         /// true ならリロードで予備弾を減らさず、予備弾が 0 でもリロードできる。
         /// <see cref="ReserveAmmo"/> は表示用にそのままの値を残す。
         /// </summary>
-        public bool HasInfiniteReserve { get; }
+        public bool HasInfiniteReserve => Ammo.HasInfiniteReserve;
 
         /// <summary>
         /// true ならリロード中の <see cref="TryActiveReload"/> で判定する (<see cref="ActionRules.ActiveReload"/> が
         /// <see cref="ActiveReload.On"/>)。false なら <see cref="TryActiveReload"/> は常に false。
         /// </summary>
-        public bool HasActiveReload { get; }
+        public bool HasActiveReload => Ammo.HasActiveReload;
 
         /// <summary>今のリロードで <see cref="TryActiveReload"/> の判定を済ませたか。リロード中でなければ false。</summary>
-        public bool HasJudgedActiveReload { get; private set; }
+        public bool HasJudgedActiveReload => Ammo.HasJudgedActiveReload;
 
         /// <summary>
         /// リロードの進み (経過時間 / リロードにかかる時間)。0〜1。リロード中でなければ 0。
         /// アクティブリロードに失敗すると、かかる時間が <see cref="WeaponSpec.ActiveReloadFailSeconds"/> だけ延びるので進みは下がる。
         /// </summary>
-        public float ReloadProgress
-        {
-            get
-            {
-                if (!IsReloading)
-                {
-                    return 0f;
-                }
-
-                // 経過と残りの和を分母にするのは、失敗で延びた時間も含めて 1 で終わる進みにするため。
-                var total = _reloadElapsed + _reloadRemaining;
-                if (!(total > 0f))
-                {
-                    return 0f;
-                }
-
-                return Math.Min(1f, Math.Max(0f, _reloadElapsed / total));
-            }
-        }
+        public float ReloadProgress => Ammo.ReloadProgress;
 
         /// <param name="spec">武器の設定。開始時は弾倉満タン、予備弾は spec の初期値。予備弾は有限。</param>
         public Weapon(WeaponSpec spec)
@@ -77,18 +64,8 @@ namespace Fps.Core
         /// (<see cref="ScaleReserveAmmo"/>)、<see cref="GameRules.InfiniteReserve"/> は <see cref="HasInfiniteReserve"/> になる。
         /// </param>
         public Weapon(WeaponSpec spec, GameRules rules)
+            : this(spec, AmmoModels.For((spec ?? throw new ArgumentNullException(nameof(spec))).Ammo, rules ?? throw new ArgumentNullException(nameof(rules))))
         {
-            Spec = spec ?? throw new ArgumentNullException(nameof(spec));
-            if (rules == null)
-            {
-                throw new ArgumentNullException(nameof(rules));
-            }
-
-            AmmoInMagazine = spec.MagazineSize;
-            ReserveAmmo = ScaleReserveAmmo(spec.ReserveAmmo, rules.ReserveAmmoMultiplier);
-            MaxReserveAmmo = ReserveAmmo;
-            HasInfiniteReserve = rules.InfiniteReserve;
-            HasActiveReload = rules.Actions.ActiveReload == ActiveReload.On;
         }
 
         /// <summary>弾数を指定して作る。セーブデータから戻すときに使う。リロード中でも連射の待ち中でもない状態で始まる。</summary>
@@ -112,32 +89,33 @@ namespace Fps.Core
         /// <see cref="ActionRules.ActiveReload"/> だけを使う。
         /// </param>
         public Weapon(WeaponSpec spec, int ammoInMagazine, int reserveAmmo, GameRules rules)
-            : this(spec, rules)
+            : this(
+                spec,
+                AmmoModels.For(
+                    (spec ?? throw new ArgumentNullException(nameof(spec))).Ammo,
+                    ammoInMagazine,
+                    reserveAmmo,
+                    rules ?? throw new ArgumentNullException(nameof(rules))))
         {
-            if (ammoInMagazine < 0 || ammoInMagazine > spec.MagazineSize)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(ammoInMagazine), ammoInMagazine, "ammoInMagazine must be between 0 and the magazine size");
-            }
+        }
 
-            if (reserveAmmo < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(reserveAmmo), reserveAmmo, "reserveAmmo must not be negative");
-            }
-
-            AmmoInMagazine = ammoInMagazine;
-            ReserveAmmo = reserveAmmo;
-            MaxReserveAmmo = Math.Max(MaxReserveAmmo, reserveAmmo);
+        private Weapon(WeaponSpec spec, IAmmoModel ammo)
+        {
+            Spec = spec;
+            Trigger = TriggerModels.For(spec);
+            Ammo = ammo;
+            AmmoTypes = new AmmoTypeSelector(spec);
+            Ammo.Reloaded += () => Reloaded?.Invoke();
         }
 
         /// <summary>
         /// 予備弾を拾って持てる上限。作ったときの予備弾 (<see cref="WeaponSpec.ReserveAmmo"/> × <see cref="GameRules.ReserveAmmoMultiplier"/>) で、
         /// 弾数を指定して作ったときはそれと渡した予備弾の大きい方。撃ったりリロードしたりしても変わらない。
         /// </summary>
-        public int MaxReserveAmmo { get; }
+        public int MaxReserveAmmo => Ammo.MaxReserveAmmo;
 
         /// <summary>予備弾をあと何発拾えるか。<see cref="HasInfiniteReserve"/> なら拾う意味が無いので 0。</summary>
-        public int ReserveAmmoRoom => HasInfiniteReserve ? 0 : Math.Max(0, MaxReserveAmmo - ReserveAmmo);
+        public int ReserveAmmoRoom => Ammo.ReserveAmmoRoom;
 
         /// <summary>
         /// 予備弾を amount 足す。<see cref="MaxReserveAmmo"/> を超える分は捨て、実際に足した数を返す。
@@ -146,15 +124,9 @@ namespace Fps.Core
         /// <param name="amount">足す数。0 以上。</param>
         public int AddReserveAmmo(int amount)
         {
-            if (amount < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
-            }
-
-            var added = Math.Min(amount, ReserveAmmoRoom);
+            var added = Ammo.AddReserveAmmo(amount);
             if (added > 0)
             {
-                ReserveAmmo += added;
                 ReserveAmmoAdded?.Invoke();
             }
 
@@ -167,13 +139,13 @@ namespace Fps.Core
         /// </summary>
         public bool TryFire()
         {
-            if (IsReloading || AmmoInMagazine == 0 || _cooldownRemaining > 0f)
+            if (!Ammo.CanFire || _cooldownRemaining > 0f)
             {
                 return false;
             }
 
-            AmmoInMagazine--;
-            _cooldownRemaining = Spec.FireInterval;
+            Ammo.Consume();
+            _cooldownRemaining = Trigger.MinShotSpacingSeconds;
             Fired?.Invoke();
             return true;
         }
@@ -224,16 +196,7 @@ namespace Fps.Core
         /// </summary>
         public bool TryStartReload()
         {
-            if (IsReloading || AmmoInMagazine == Spec.MagazineSize || (!HasInfiniteReserve && ReserveAmmo == 0))
-            {
-                return false;
-            }
-
-            IsReloading = true;
-            _reloadRemaining = Spec.ReloadSeconds;
-            _reloadElapsed = 0f;
-            HasJudgedActiveReload = false;
-            return true;
+            return Ammo.TryStartReload();
         }
 
         /// <summary>
@@ -245,33 +208,13 @@ namespace Fps.Core
         /// <param name="result">判定の結果。false を返したときは <see cref="ActiveReloadResult.Fail"/> で、意味を持たない。</param>
         public bool TryActiveReload(out ActiveReloadResult result)
         {
-            result = ActiveReloadResult.Fail;
-            if (!HasActiveReload || !IsReloading || HasJudgedActiveReload)
-            {
-                return false;
-            }
-
-            result = ActiveReloadJudge.Judge(ReloadProgress, Spec.ActiveReloadWindowStart, Spec.ActiveReloadWindowLength);
-            HasJudgedActiveReload = true;
-            if (result == ActiveReloadResult.Success)
-            {
-                CompleteReload();
-            }
-            else
-            {
-                _reloadRemaining += Spec.ActiveReloadFailSeconds;
-            }
-
-            return true;
+            return Ammo.TryActiveReload(out result);
         }
 
         /// <summary>リロード中ならやめる。弾数は変えない。リロード中でなければ何もしない。</summary>
         public void CancelReload()
         {
-            IsReloading = false;
-            _reloadRemaining = 0f;
-            _reloadElapsed = 0f;
-            HasJudgedActiveReload = false;
+            Ammo.CancelReload();
         }
 
         /// <summary>連射のクールダウンとリロードを deltaSeconds 進める。</summary>
@@ -283,41 +226,7 @@ namespace Fps.Core
             }
 
             _cooldownRemaining = Math.Max(0f, _cooldownRemaining - deltaSeconds);
-
-            if (!IsReloading)
-            {
-                return;
-            }
-
-            _reloadRemaining -= deltaSeconds;
-            _reloadElapsed += deltaSeconds;
-            if (_reloadRemaining > 0f)
-            {
-                return;
-            }
-
-            CompleteReload();
-        }
-
-        private void CompleteReload()
-        {
-            var missing = Spec.MagazineSize - AmmoInMagazine;
-            if (HasInfiniteReserve)
-            {
-                AmmoInMagazine += missing;
-            }
-            else
-            {
-                var amount = Math.Min(missing, ReserveAmmo);
-                AmmoInMagazine += amount;
-                ReserveAmmo -= amount;
-            }
-
-            _reloadRemaining = 0f;
-            _reloadElapsed = 0f;
-            HasJudgedActiveReload = false;
-            IsReloading = false;
-            Reloaded?.Invoke();
+            Ammo.Tick(deltaSeconds);
         }
     }
 }

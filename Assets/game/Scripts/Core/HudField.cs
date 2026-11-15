@@ -24,5 +24,15 @@ namespace Fps.Core
 
         /// <summary>照準の広がり (0〜1) と、出すかどうか。</summary>
         Crosshair,
+
+        Charge,
+
+        Heat,
+
+        AmmoType,
+
+        Magnification,
+
+        LockOn,
     }
 }

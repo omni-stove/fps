@@ -45,6 +45,23 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheMinigunSampleSpinsUpBeforeItFires()
+        {
+            WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
+            var spec = Load("Minigun").ToSpec();
+            var spinUp = spec.Trigger.SpinUp;
+            Assert.That(spinUp, Is.Not.Null);
+            Assert.That(spinUp.StartIntervalMultiplier, Is.GreaterThan(1f), "the first shots are slower than the full rate");
+
+            var trigger = TriggerModels.For(spec);
+
+            Assert.That(trigger.MinShotSpacingSeconds, Is.EqualTo(spec.FireInterval));
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+            Assert.That(trigger.Tick(spinUp.SpinUpSeconds / 2f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(spinUp.SpinUpSeconds), Is.EqualTo(1));
+        }
+
+        [Test]
         public void ImportingTheSamplesMatchesTheCommittedAssetFields()
         {
             var committedRifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(WeaponAssetBuilder.RiflePath);

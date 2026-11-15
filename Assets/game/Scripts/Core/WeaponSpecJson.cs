@@ -97,6 +97,7 @@ namespace Fps.Core
         public const string DetonationItem = "detonation";
         public const string DurationSecondsItem = "durationSeconds";
         public const string DamagePerTickItem = "damagePerTick";
+        public const string StatusKindItem = "kind";
 
         public const string HipSpreadDegreesItem = "hipSpreadDegrees";
         public const string AdsSpreadDegreesItem = "adsSpreadDegrees";
@@ -196,7 +197,7 @@ namespace Fps.Core
         private static readonly string[] _beamItems = { TickSecondsItem, VisualIdItem };
         private static readonly string[] _sprayItems = { TickSecondsItem, ConeDegreesItem, VisualIdItem };
         private static readonly string[] _explosionItems = { MaxDamageItem, RadiusItem, FullDamageRadiusItem, StructureDamageAtCenterItem, DetonationItem };
-        private static readonly string[] _statusEffectItems = { DurationSecondsItem, TickSecondsItem, DamagePerTickItem, VisualIdItem };
+        private static readonly string[] _statusEffectItems = { StatusKindItem, DurationSecondsItem, TickSecondsItem, DamagePerTickItem, VisualIdItem };
 
         private static readonly string[] _areaEffectItems =
         {
@@ -548,7 +549,11 @@ namespace Fps.Core
         private static StatusEffectSpec ReadStatusEffect(Part part)
         {
             return new StatusEffectSpec(
-                part.RequireFloat(DurationSecondsItem), part.RequireFloat(TickSecondsItem), part.RequireInt(DamagePerTickItem), part.String(VisualIdItem));
+                part.RequireFloat(DurationSecondsItem),
+                part.RequireFloat(TickSecondsItem),
+                part.RequireInt(DamagePerTickItem),
+                part.String(VisualIdItem),
+                part.String(StatusKindItem));
         }
 
         private static DamageFalloff ReadFalloff(Part part)
@@ -637,6 +642,7 @@ namespace Fps.Core
 
         private static void WriteStatusEffect(ServerDataJson.Writer writer, StatusEffectSpec statusEffect)
         {
+            writer.String(StatusKindItem, statusEffect.KindId);
             writer.Float(DurationSecondsItem, statusEffect.DurationSeconds);
             writer.Float(TickSecondsItem, statusEffect.TickSeconds);
             writer.Int(DamagePerTickItem, statusEffect.DamagePerTick);

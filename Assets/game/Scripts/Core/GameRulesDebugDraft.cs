@@ -102,6 +102,7 @@ namespace Fps.Core
                 case GameRulesDebugField.Ping: return (int)actions.Ping;
                 case GameRulesDebugField.Abilities: return (int)actions.Abilities;
                 case GameRulesDebugField.SlowMotion: return (int)actions.SlowMotion;
+                case GameRulesDebugField.AimToFire: return (int)actions.AimToFire;
                 case GameRulesDebugField.FallDamage: return (int)rules.FallDamage;
                 case GameRulesDebugField.HudDensity: return (int)rules.HudDensity;
                 default: throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a defined GameRulesDebugField");
@@ -165,7 +166,8 @@ namespace Fps.Core
                 .WithSuppression((Suppression)Get(GameRulesDebugField.Suppression))
                 .WithPing((Ping)Get(GameRulesDebugField.Ping))
                 .WithAbilities((Abilities)Get(GameRulesDebugField.Abilities))
-                .WithSlowMotion((SlowMotion)Get(GameRulesDebugField.SlowMotion));
+                .WithSlowMotion((SlowMotion)Get(GameRulesDebugField.SlowMotion))
+                .WithAimToFire((AimToFire)Get(GameRulesDebugField.AimToFire));
             if (grenade == Grenade.On && actions.GrenadeCount == 0)
             {
                 actions = actions.WithGrenadeCount(DefaultGrenadeCount);
@@ -275,6 +277,7 @@ namespace Fps.Core
                 case GameRulesDebugField.Ping: return typeof(Ping);
                 case GameRulesDebugField.Abilities: return typeof(Abilities);
                 case GameRulesDebugField.SlowMotion: return typeof(SlowMotion);
+                case GameRulesDebugField.AimToFire: return typeof(AimToFire);
                 case GameRulesDebugField.FallDamage: return typeof(FallDamage);
                 case GameRulesDebugField.HudDensity: return typeof(HudDensity);
                 default: throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a defined GameRulesDebugField");

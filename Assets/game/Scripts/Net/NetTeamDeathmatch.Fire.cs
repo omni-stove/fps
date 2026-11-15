@@ -33,6 +33,10 @@ namespace Fps.Net
         /// サーバーの知る shooter の移動の状態 (確定状態) が回避か乗り越えの最中なら、弾を減らさずに捨てる
         /// (<see cref="ShotRejection.Dodging"/>・<see cref="ShotRejection.Vaulting"/>)。
         /// </para>
+        /// <para>
+        /// ルールの AimToFire が On で、ADS の同期値が構えておらず、ブラインドファイアでもなければ、弾を減らさずに捨てる
+        /// (<see cref="ShotRejection.NotAiming"/>)。
+        /// </para>
         /// </summary>
         /// <param name="shooter">撃った人。試合に参加していて生きていなければ (ダウン中も) 何もしない (<see cref="CanFire"/>)。</param>
         /// <param name="weaponId">クライアントが送ってきた、撃った武器の Id。ロードアウトに無い・今持っている武器と違えば捨てる。</param>
@@ -97,6 +101,15 @@ namespace Fps.Net
             if (blind == BlindFireAim.Blocked)
             {
                 WarnRejected(shooterId, ShotRejection.BlindFireBlocked);
+                return;
+            }
+
+            // 構えているかは持ち主が書いた同期値しか無い (弾のばらつきと同じ値) ので、それで決める
+            var aimCheck = NetPlayer.CheckAimToFire(
+                _session.Spec.Rules.Actions.AimToFire == AimToFire.On, shooter.AimingForSpread, blind);
+            if (aimCheck != ShotRejection.None)
+            {
+                WarnRejected(shooterId, aimCheck);
                 return;
             }
 

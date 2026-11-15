@@ -124,7 +124,8 @@ namespace Fps.Runtime
                 + $" dodge={actions.Dodge} vault={actions.Vault}"
                 + $" melee={actions.Melee} stagger={actions.Stagger} slide={actions.Slide} mantle={actions.Mantle} prone={actions.Prone}"
                 + $" ladder={actions.Ladder} zipline={actions.Zipline} parachute={actions.Parachute} stealth={actions.Stealth}"
-                + $" suppression={actions.Suppression} ping={actions.Ping} abilities={actions.Abilities} slowMotion={actions.SlowMotion}";
+                + $" suppression={actions.Suppression} ping={actions.Ping} abilities={actions.Abilities} slowMotion={actions.SlowMotion}"
+                + $" aimToFire={actions.AimToFire}";
         }
 
         /// <summary>player の T を返す。無ければ付けて返す。取り付けが自分のコンポーネントを増やさないために使う。</summary>

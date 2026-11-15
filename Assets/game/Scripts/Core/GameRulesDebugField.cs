@@ -83,6 +83,9 @@ namespace Fps.Core
         /// <summary><see cref="ActionRules.SlowMotion"/>。</summary>
         SlowMotion,
 
+        /// <summary><see cref="ActionRules.AimToFire"/>。</summary>
+        AimToFire,
+
         /// <summary><see cref="GameRules.FallDamage"/>。</summary>
         FallDamage,
 

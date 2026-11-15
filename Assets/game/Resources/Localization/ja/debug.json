@@ -25,6 +25,7 @@
   "debug.rules.field.Ping": "印を付ける",
   "debug.rules.field.Abilities": "能力",
   "debug.rules.field.SlowMotion": "スローモーション",
+  "debug.rules.field.AimToFire": "構えないと撃てない",
   "debug.rules.field.FallDamage": "落下ダメージ",
   "debug.rules.field.HudDensity": "HUD の情報量"
 }

@@ -455,6 +455,15 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void ShotsWithoutAimingAreRejectedOnlyWhenTheRuleIsOnAndNotBlindFiring()
+        {
+            Assert.That(NetPlayer.CheckAimToFire(false, false, BlindFireAim.Normal), Is.EqualTo(ShotRejection.None));
+            Assert.That(NetPlayer.CheckAimToFire(true, true, BlindFireAim.Normal), Is.EqualTo(ShotRejection.None));
+            Assert.That(NetPlayer.CheckAimToFire(true, false, BlindFireAim.Normal), Is.EqualTo(ShotRejection.NotAiming));
+            Assert.That(NetPlayer.CheckAimToFire(true, false, BlindFireAim.Blind), Is.EqualTo(ShotRejection.None));
+        }
+
+        [Test]
         public void DodgeAndVaultLogsShowTheOwnerAndTick()
         {
             Assert.That(NetworkPlayerMotor.FormatDodgeLog(1, 42, true), Is.EqualTo("[Net] dodge owner=1 tick=42 dodging=true"));

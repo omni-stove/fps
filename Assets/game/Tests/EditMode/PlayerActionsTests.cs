@@ -14,7 +14,7 @@ namespace Fps.Tests.EditMode
     public sealed class PlayerActionsTests
     {
         private const string NewActionsOff =
-            " melee=Off stagger=Off slide=Off mantle=Off prone=Off ladder=Off zipline=Off parachute=Off stealth=Off suppression=Off ping=Off abilities=Off slowMotion=Off";
+            " melee=Off stagger=Off slide=Off mantle=Off prone=Off ladder=Off zipline=Off parachute=Off stealth=Off suppression=Off ping=Off abilities=Off slowMotion=Off aimToFire=Off";
 
         private static readonly List<string> _calls = new List<string>();
 
@@ -162,7 +162,7 @@ namespace Fps.Tests.EditMode
             Assert.That(
                 PlayerActions.FormatLog(actions),
                 Is.EqualTo("[Actions] cover=Off blindFire=Off activeReload=Off downed=Off dodge=Off vault=Off"
-                    + " melee=Off stagger=Off slide=On mantle=Off prone=Off ladder=Off zipline=Off parachute=Off stealth=Off suppression=Off ping=Off abilities=Off slowMotion=On"));
+                    + " melee=Off stagger=Off slide=On mantle=Off prone=Off ladder=Off zipline=Off parachute=Off stealth=Off suppression=Off ping=Off abilities=Off slowMotion=On aimToFire=Off"));
         }
 
         [Test]

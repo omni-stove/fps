@@ -198,8 +198,21 @@ namespace Fps.Net.Tests
             Assert.That(synced.PingEnabled, Is.True);
             Assert.That(RoundTrip(synced), Is.EqualTo(synced));
             Assert.That(synced, Is.Not.EqualTo(NetMatchRules.Default), "ping is part of the equality");
-            Assert.That(synced.ToString(), Does.EndWith(" ping=On"));
+            Assert.That(synced.ToString(), Does.Contain(" ping=On"));
             Assert.That(NetMatchRules.Default.PingEnabled, Is.False, "pings are off until the server says otherwise");
+        }
+
+        [Test]
+        public void MatchRulesCarryAimToFire()
+        {
+            var synced = NetMatchRules.From(GameRules.Default.WithActions(ActionRules.Default.WithAimToFire(AimToFire.On)));
+
+            Assert.That(synced.AimToFire, Is.EqualTo(AimToFire.On));
+            Assert.That(synced.AimToFireEnabled, Is.True);
+            Assert.That(RoundTrip(synced), Is.EqualTo(synced));
+            Assert.That(synced, Is.Not.EqualTo(NetMatchRules.Default), "aimToFire is part of the equality");
+            Assert.That(synced.ToString(), Does.EndWith(" aimToFire=On"));
+            Assert.That(NetMatchRules.Default.AimToFireEnabled, Is.False, "hip fire is allowed until the server says otherwise");
         }
 
         [Test]

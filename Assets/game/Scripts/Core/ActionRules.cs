@@ -4,7 +4,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// TPS のアクション (ダウンと蘇生、カバー、ブラインドファイア、アクティブリロード、回避、乗り越え、グレネード、
-    /// 近接攻撃、怯み、スライディング、崖のぼり、伏せ、はしご、ジップライン、パラシュート、発見ゲージ、制圧射撃、印、能力、時間の速さ) のルール。
+    /// 近接攻撃、怯み、スライディング、崖のぼり、伏せ、はしご、ジップライン、パラシュート、発見ゲージ、制圧射撃、印、能力、時間の速さ、構えての射撃) のルール。
     /// 生成時に値を検査し、以後は変わらない。<see cref="GameRules.Actions"/> として持つ。
     /// </summary>
     public sealed class ActionRules
@@ -104,6 +104,9 @@ namespace Fps.Core
         /// <summary>時間の速さを変えられるか。オフラインに限る。</summary>
         public SlowMotion SlowMotion { get; }
 
+        /// <summary>覗き込んで構えている間しか撃てないか。</summary>
+        public AimToFire AimToFire { get; }
+
         /// <param name="downed">ダウンの扱い。定義済みの値。</param>
         /// <param name="downedBleedoutSeconds">ダウンから倒れるまでの秒数。0 より大きい有限値。</param>
         /// <param name="downedHealthFraction">ダウン中と起こされた後の体力の割合。0 より大きく 1 以下。</param>
@@ -128,6 +131,7 @@ namespace Fps.Core
         /// <param name="ping">印。定義済みの値。</param>
         /// <param name="abilities">能力。定義済みの値。</param>
         /// <param name="slowMotion">時間の速さ。定義済みの値。</param>
+        /// <param name="aimToFire">構えての射撃。定義済みの値。</param>
         public ActionRules(
             Downed downed,
             float downedBleedoutSeconds,
@@ -152,7 +156,8 @@ namespace Fps.Core
             Suppression suppression = Suppression.Off,
             Ping ping = Ping.Off,
             Abilities abilities = Abilities.Off,
-            SlowMotion slowMotion = SlowMotion.Off)
+            SlowMotion slowMotion = SlowMotion.Off,
+            AimToFire aimToFire = AimToFire.Off)
         {
             if (!Enum.IsDefined(typeof(Downed), downed))
             {
@@ -228,6 +233,7 @@ namespace Fps.Core
             RequireDefined(ping, nameof(ping));
             RequireDefined(abilities, nameof(abilities));
             RequireDefined(slowMotion, nameof(slowMotion));
+            RequireDefined(aimToFire, nameof(aimToFire));
 
             Downed = downed;
             DownedBleedoutSeconds = downedBleedoutSeconds;
@@ -253,6 +259,7 @@ namespace Fps.Core
             Ping = ping;
             Abilities = abilities;
             SlowMotion = slowMotion;
+            AimToFire = aimToFire;
         }
 
         /// <summary><see cref="Downed"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
@@ -333,6 +340,9 @@ namespace Fps.Core
         /// <summary><see cref="SlowMotion"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
         public ActionRules WithSlowMotion(SlowMotion value) => Copy(slowMotion: value);
 
+        /// <summary><see cref="AimToFire"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithAimToFire(AimToFire value) => Copy(aimToFire: value);
+
         private static void RequireDefined<T>(T value, string name)
             where T : struct, Enum
         {
@@ -366,7 +376,8 @@ namespace Fps.Core
             Suppression? suppression = null,
             Ping? ping = null,
             Abilities? abilities = null,
-            SlowMotion? slowMotion = null)
+            SlowMotion? slowMotion = null,
+            AimToFire? aimToFire = null)
         {
             return new ActionRules(
                 downed ?? Downed,
@@ -392,7 +403,8 @@ namespace Fps.Core
                 suppression ?? Suppression,
                 ping ?? Ping,
                 abilities ?? Abilities,
-                slowMotion ?? SlowMotion);
+                slowMotion ?? SlowMotion,
+                aimToFire ?? AimToFire);
         }
     }
 }

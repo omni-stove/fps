@@ -49,7 +49,11 @@ namespace Fps.Net
             // 届いている弾数で撃てないと分かっている射撃は送らない (弾倉が空ならリロードを頼む)。判断はサーバーが行う。
             // ダウン中・回避中・乗り越え中の射撃と、高い壁で端にいないブラインドファイアはサーバーが捨てるので送らない
             // 投げている間は撃たない (オフラインと同じ)。サーバーはこの間の射撃を断らないので、持ち主の側だけで止める
-            if (IsAlive && !IsDowned && !IsThrowingGrenade && MoveActionShotRejection == ShotRejection.None && ResolveBlindFire(out _) != BlindFireAim.Blocked
+            // 構えていないと撃てないルールで構えていない射撃もサーバーが捨てるので送らない。構えはサーバーと同じ同期値で見る
+            var blindFire = ResolveBlindFire(out _);
+            if (IsAlive && !IsDowned && !IsThrowingGrenade && MoveActionShotRejection == ShotRejection.None && blindFire != BlindFireAim.Blocked
+                && CheckAimToFire(NetTeamDeathmatch.Current != null && NetTeamDeathmatch.Current.SyncedRules.AimToFireEnabled, AimingForSpread, blindFire)
+                    == ShotRejection.None
                 && trigger.Pull(isPressed, wasPressed))
             {
                 if (_weapon == null || _weapon.PrepareFire())
@@ -212,6 +216,15 @@ namespace Fps.Net
             }
 
             return vaulting ? ShotRejection.Vaulting : ShotRejection.None;
+        }
+
+        /// <summary>
+        /// 構えている間しか撃てないルール (<see cref="ActionRules.AimToFire"/>) で、構えておらずブラインドファイアでもなければ
+        /// <see cref="ShotRejection.NotAiming"/>。それ以外は None。
+        /// </summary>
+        internal static ShotRejection CheckAimToFire(bool aimToFire, bool aiming, BlindFireAim blindFire)
+        {
+            return aimToFire && !aiming && blindFire != BlindFireAim.Blind ? ShotRejection.NotAiming : ShotRejection.None;
         }
 
         /// <summary>

@@ -40,34 +40,37 @@ namespace Fps.Core
         }
 
         // 連射の間は内側の時間を止める。内側の FireInterval の待ちを、最後の弾を撃った後から数えるため。
+        // 1 回の Tick で出すのは 1 発までにし、撃った Tick の余りも次弾の待ちに持ち越さない。
+        // Weapon は撃ったフレームから間隔を丸ごと数え直すので、同じフレームの 2 発目や、余りの分だけ早く出した次弾は弾かれるため。
         public int Tick(float deltaSeconds)
         {
             SpecGuard.NonNegativeFinite(deltaSeconds, nameof(deltaSeconds));
-            var shots = 0;
-            while (IsFiringBurst)
+            if (!IsFiringBurst)
             {
-                if (deltaSeconds < _untilNextRound)
-                {
-                    _untilNextRound -= deltaSeconds;
-                    if (shots > 0)
-                    {
-                        // 撃ったフレームの余りは次弾の待ちから引かない。Weapon は撃ったフレームから間隔を丸ごと数え直すので、引くと次弾が先に出て弾かれる。
-                        _untilNextRound = Spec.RoundIntervalSeconds;
-                    }
-
-                    return shots;
-                }
-
-                deltaSeconds -= _untilNextRound;
-                _untilNextRound = Spec.RoundIntervalSeconds;
-                _roundsLeft--;
-                shots++;
+                return StartBursts(_inner.Tick(deltaSeconds));
             }
 
-            return shots + StartBursts(_inner.Tick(deltaSeconds));
+            if (deltaSeconds < _untilNextRound)
+            {
+                _untilNextRound -= deltaSeconds;
+                return 0;
+            }
+
+            _untilNextRound = Spec.RoundIntervalSeconds;
+            var shots = 1;
+            _roundsLeft--;
+
+            // 間隔 0 なら Weapon も同じフレームに続けて撃てるので、残りをまとめて出す。
+            if (Spec.RoundIntervalSeconds == 0f)
+            {
+                shots += _roundsLeft;
+                _roundsLeft = 0;
+            }
+
+            return IsFiringBurst ? shots : shots + StartBursts(_inner.Tick(0f));
         }
 
-        // 離しても連射は続く作りなので、持ち替えで外すときだけ残りを捨てる入口を別に置く。
+        // 離しても連射は続く作りなので、撃ち手が撃てなくなったとき (持ち替え・弾切れ・止められた) に残りを捨てる入口を別に置く。
         public void Cancel()
         {
             _roundsLeft = 0;

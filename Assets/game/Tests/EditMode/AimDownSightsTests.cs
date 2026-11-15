@@ -491,7 +491,167 @@ namespace Fps.Tests.EditMode
             Assert.That(_ads.Camera, Is.SameAs(_camera));
             Assert.That(_ads.Look, Is.SameAs(_look));
             Assert.That(_ads.AimAction, Is.SameAs(InputSystem.actions.FindAction(AimDownSights.AimActionPath)));
+            Assert.That(
+                _ads.CycleMagnificationAction, Is.SameAs(InputSystem.actions.FindAction(AimDownSights.CycleMagnificationActionPath)));
             Assert.That(_ads.HipFieldOfView, Is.EqualTo(_hip));
+        }
+
+        [Test]
+        public void CyclingMovesSmoothlyToTheNextZoomLevelAndWrapsToTheFirst()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            _ads.Tick(true, true, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(30f).Within(1e-4f));
+
+            LogAssert.Expect(LogType.Log, "[View] zoom=2/3 fov=15");
+            Assert.That(_ads.CycleZoomLevel(), Is.True);
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(1));
+            _ads.Tick(true, false, _ads.TransitionSeconds / 2f);
+            Assert.That(_camera.fieldOfView, Is.LessThan(30f).And.GreaterThan(15f), "the step is not a cut");
+            _ads.Tick(true, false, _ads.TransitionSeconds);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(15f).Within(1e-4f));
+
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, _ads.TransitionSeconds);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(7.5f).Within(1e-4f));
+
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, _ads.TransitionSeconds);
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0), "after the last level comes the first");
+            Assert.That(_camera.fieldOfView, Is.EqualTo(30f).Within(1e-4f));
+        }
+
+        [Test]
+        public void AHigherZoomLevelLowersTheSensitivityFurther()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            _ads.Tick(true, true, 1f);
+            var first = _look.SensitivityMultiplier;
+
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, 1f);
+
+            Assert.That(_look.SensitivityMultiplier, Is.LessThan(first));
+            Assert.That(_look.SensitivityMultiplier, Is.EqualTo(AdsZoom.SensitivityMultiplier(_hip, 15f)).Within(1e-5f));
+        }
+
+        [Test]
+        public void StoppingAimingZoomsOutWithoutAJumpAndStartsAgainAtTheFirstLevel()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            _ads.Tick(true, true, 1f);
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(15f).Within(1e-4f));
+
+            _ads.Tick(false, false, 0f);
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(15f).Within(1e-4f), "letting go does not snap the view");
+            _ads.Tick(false, false, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(_hip).Within(1e-4f));
+
+            _ads.Tick(true, true, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(30f).Within(1e-4f));
+        }
+
+        [Test]
+        public void ResettingTheViewGoesBackToTheFirstLevel()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            _ads.Tick(true, true, 1f);
+            _ads.CycleZoomLevel();
+
+            _ads.ResetView();
+
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(_hip));
+        }
+
+        [Test]
+        public void CyclingDoesNothingWhenNotAimingOrWithASingleLevel()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            Assert.That(_ads.CycleZoomLevel(), Is.False, "not aiming");
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0));
+
+            _ads.WeaponSource = () => Rifle(40f);
+            _ads.Tick(true, true, 1f);
+            Assert.That(_ads.ZoomLevelCount, Is.EqualTo(1));
+            Assert.That(_ads.CycleZoomLevel(), Is.False, "a single level");
+            _ads.Tick(true, false, 1f);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(40f).Within(1e-4f));
+            Assert.That(_ads.Magnification, Is.Null);
+
+            _ads.WeaponSource = null;
+            Assert.That(_ads.CycleZoomLevel(), Is.False, "no weapon");
+        }
+
+        [Test]
+        public void ChangingWeaponsStartsTheNewOneAtItsFirstLevel()
+        {
+            Initialize();
+            var current = Scoped(_rifleId);
+            _ads.WeaponSource = () => current;
+            _ads.Tick(true, true, 1f);
+            _ads.CycleZoomLevel();
+            _ads.Tick(true, false, 1f);
+
+            current = Scoped("00000000-0000-4000-8000-000000000002");
+            _ads.Tick(true, false, 0f);
+
+            Assert.That(_ads.ZoomLevelIndex, Is.EqualTo(0));
+            Assert.That(_camera.fieldOfView, Is.EqualTo(30f).Within(1e-4f));
+        }
+
+        [Test]
+        public void TheMagnificationIsShownOnlyWhileAimingAWeaponWithSeveralLevels()
+        {
+            Initialize();
+            _ads.WeaponSource = () => Scoped(_rifleId);
+            Assert.That(_ads.Magnification, Is.Null, "not aiming");
+
+            _ads.Tick(true, true, 0f);
+            var first = _ads.Magnification;
+            Assert.That(first, Is.EqualTo(1f / AdsZoom.SensitivityMultiplier(_hip, 30f)).Within(1e-5f));
+
+            _ads.CycleZoomLevel();
+            Assert.That(_ads.Magnification, Is.EqualTo(1f / AdsZoom.SensitivityMultiplier(_hip, 15f)).Within(1e-5f));
+            Assert.That(_ads.Magnification, Is.GreaterThan(first));
+
+            _ads.Tick(false, false, 0f);
+            Assert.That(_ads.Magnification, Is.Null);
+        }
+
+        [Test]
+        public void InitializeTakesTheCycleMagnificationAction()
+        {
+            var cycle = new InputAction("CycleMagnification", InputActionType.Button);
+            try
+            {
+                _ads.Initialize(_camera, _look, _aim, cycle);
+                Assert.That(_ads.CycleMagnificationAction, Is.SameAs(cycle));
+            }
+            finally
+            {
+                cycle.Dispose();
+            }
+        }
+
+        [TestCase(0, 3, 30f, "[View] zoom=1/3 fov=30")]
+        [TestCase(1, 3, 16.43f, "[View] zoom=2/3 fov=16.43")]
+        public void ZoomLogNamesTheLevelFromOne(int index, int count, float fieldOfView, string expected)
+        {
+            Assert.That(AimDownSights.FormatZoomLog(index, count, fieldOfView), Is.EqualTo(expected));
+        }
+
+        private static WeaponSpec Scoped(string id)
+        {
+            return new WeaponSpec(id, "Scoped", WeaponCategory.MarksmanRifle, aim: new AimSpec(zoomLevels: new[] { 30f, 15f, 7.5f }));
         }
 
         private void Initialize()

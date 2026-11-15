@@ -56,6 +56,16 @@ namespace Fps.Core
             return $"{LogTag} interrupted id={attackerId} target={targetId} move={moveId} reason={reason}";
         }
 
+        public static string Witnessed(string attackerId, string targetId, string moveId, string witnessId, AwarenessStage stage)
+        {
+            return $"{LogTag} witnessed id={attackerId} target={targetId} move={moveId} by={witnessId} stage={stage}";
+        }
+
+        public static string WitnessedPrefix(string attackerId)
+        {
+            return $"{LogTag} witnessed id={attackerId} ";
+        }
+
         // 「resolved id=X target=Y move=Z」で始まる行を待つ smoke が、ほかの相手や技の行と取り違えないよう、ここまでを頭として返す。
         public static string ResolvedPrefix(string attackerId, string targetId, string moveId)
         {

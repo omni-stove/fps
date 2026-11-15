@@ -147,7 +147,7 @@ namespace Fps.Editor
                 return $"the scene has no '{StealthRangeFixture.AreaName}'; rerun {TpsRangeSceneBuilder.MenuPath}";
             }
 
-            _enemy = area.GetComponentInChildren<EnemyAgent>(true);
+            _enemy = TakedownSmokeStep.FindEnemy(area, StealthRangeFixture.EnemyId);
             if (_enemy == null || !_enemy.gameObject.activeInHierarchy || !_enemy.IsInitialized)
             {
                 return $"'{StealthRangeFixture.EnemyName}' was not activated after the NavMesh was built ({RuntimeNavMeshArea.LogTag} log)";

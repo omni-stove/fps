@@ -335,6 +335,69 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void AnExplodingRoundHurtsTheBodiesNearWhereItHitByDistance()
+        {
+            var explosion = new ExplosionSpec(new ExplosionDamage(60, 5f));
+            Start(Rules(), rifle: ExplodingRifle(explosion));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var victim = Body(2);
+            var floor = new Vector3(victim.Position.X - 1.5f, 0.5f, 0f);
+
+            FireAt(1, floor);
+
+            var center = floor + new Vector3(0f, ImpactResolver.DetonationStandoff, 0f);
+            var distance = ServerCombat.DistanceToCapsule(
+                center, victim.Position + new Vector3(0f, victim.Shape.BottomY, 0f), victim.Position + new Vector3(0f, victim.Shape.TopY, 0f), victim.Radius);
+            var expected = explosion.Damage.At(distance, false);
+            Assert.That(expected, Is.GreaterThan(0).And.LessThan(explosion.Damage.MaxDamage), "the body is inside the radius but off the center");
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - expected), _log.ToString());
+            Assert.That(_rules.Session.GetHealth(1), Is.EqualTo(NetMatchSettings.DefaultMaxHealth), "the shooter is out of the radius");
+            var sent = _transport.Read<ExplosionMessage>(2, m => new ExplosionMessage { Center = m.Center, HasThrower = m.HasThrower, ThrowerId = m.ThrowerId, WeaponId = m.WeaponId }).Single();
+            Assert.That(sent.WeaponId, Is.EqualTo(TestRules.RifleId));
+            Assert.That(sent.HasThrower, Is.True);
+            Assert.That(sent.ThrowerId, Is.EqualTo(1));
+            Assert.That(Vector3.Distance(sent.Center, center), Is.LessThan(1e-3f));
+        }
+
+        [Test]
+        public void AKillByAnExplodingRoundIsCreditedToTheWeapon()
+        {
+            Start(Rules(), rifle: ExplodingRifle(new ExplosionSpec(new ExplosionDamage(NetMatchSettings.DefaultMaxHealth * 2, 4f, 2f))));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            FireAt(1, new Vector3(Body(2).Position.X - 1f, 0.5f, 0f));
+
+            Assert.That(_rules.Session.IsAlive(2), Is.False, _log.ToString());
+            var killed = _transport.Read<KilledMessage>(2, Copy).Single();
+            Assert.That(killed.KillerId, Is.EqualTo(1));
+            Assert.That(killed.WeaponId, Is.EqualTo(TestRules.RifleId));
+        }
+
+        [Test]
+        public void AWallBetweenAnExplodingRoundAndTheBodyBlocksIt()
+        {
+            var explosion = new ExplosionSpec(new ExplosionDamage(NetMatchSettings.DefaultMaxHealth, 8f));
+            Start(Rules(), wall: true, rifle: ExplodingRifle(explosion));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var victim = Body(2);
+            var center = new Vector3(-0.25f - ImpactResolver.DetonationStandoff, 1.5f, 0f);
+            var distance = ServerCombat.DistanceToCapsule(
+                center, victim.Position + new Vector3(0f, victim.Shape.BottomY, 0f), victim.Position + new Vector3(0f, victim.Shape.TopY, 0f), victim.Radius);
+
+            FireAt(1, new Vector3(0f, 1.5f, 0f));
+
+            Assert.That(explosion.Damage.At(distance, false), Is.GreaterThan(0), "without the wall it would hurt");
+            Assert.That(_transport.Read<ExplosionMessage>(2, m => m), Has.Count.EqualTo(1), _log.ToString());
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
+        }
+
+        [Test]
         public void ShotsUseTheMagazineAndAnEmptyOneReloads()
         {
             Start(Rules());
@@ -587,13 +650,20 @@ namespace Fps.Server.Tests
             Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
         }
 
+        private static WeaponSpec ExplodingRifle(ExplosionSpec explosion)
+        {
+            var rifle = TestRules.Rifle();
+            var impact = new ImpactSpec(rifle.Impact.Damage, rifle.Impact.Falloff, rifle.Impact.StructureRadius, explosion);
+            return new WeaponSpec(rifle.Id, rifle.NameKey, rifle.Category, rifle.Trigger, rifle.Ammo, rifle.Round, impact, rifle.Aim, rifle.AmmoTypes, rifle.ShotNoiseRadius);
+        }
+
         private static GameRules Rules()
         {
             var actions = ActionRules.Default.WithDowned(Downed.Off).WithGrenade(Grenade.On).WithGrenadeCount(2);
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
-        private void Start(GameRules rules, bool wall = false, bool destructibleWall = false, int wallPieces = 1)
+        private void Start(GameRules rules, bool wall = false, bool destructibleWall = false, int wallPieces = 1, WeaponSpec rifle = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -623,7 +693,7 @@ namespace Fps.Server.Tests
 
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points, structures);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules), PingSpec.Default, "memory", null);
+            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules, rifle: rifle), PingSpec.Default, "memory", null);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(true, _json, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),

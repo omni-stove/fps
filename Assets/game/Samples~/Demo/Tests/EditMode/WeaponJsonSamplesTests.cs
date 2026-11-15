@@ -38,7 +38,7 @@ namespace Fps.Tests.EditMode
         {
             var imported = WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
 
-            Assert.That(imported.Count(), Is.EqualTo(4));
+            Assert.That(imported.Count(), Is.EqualTo(System.IO.Directory.GetFiles(FpsKitRoot.PhysicalPath(SamplesFolder), "*.json").Length));
             AssertSameSpec(Load("Rifle").ToSpec(), WeaponAssetBuilder.RifleSpec());
             AssertSameSpec(Load("Handgun").ToSpec(), WeaponAssetBuilder.HandgunSpec());
             AssertSameSpec(Load("Launcher").ToSpec(), WeaponAssetBuilder.LauncherSpec());
@@ -54,6 +54,23 @@ namespace Fps.Tests.EditMode
             Assert.That(charge.MinChargeFraction, Is.GreaterThan(0f));
             Assert.That(charge.FiresBelowMin, Is.False);
             Assert.That(charge.FullChargeDamageMultiplier, Is.GreaterThan(1f));
+        }
+
+        [Test]
+        public void TheMinigunSampleSpinsUpBeforeItFires()
+        {
+            WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
+            var spec = Load("Minigun").ToSpec();
+            var spinUp = spec.Trigger.SpinUp;
+            Assert.That(spinUp, Is.Not.Null);
+            Assert.That(spinUp.StartIntervalMultiplier, Is.GreaterThan(1f), "the first shots are slower than the full rate");
+
+            var trigger = TriggerModels.For(spec);
+
+            Assert.That(trigger.MinShotSpacingSeconds, Is.EqualTo(spec.FireInterval));
+            Assert.That(trigger.Press(), Is.EqualTo(0));
+            Assert.That(trigger.Tick(spinUp.SpinUpSeconds / 2f), Is.EqualTo(0));
+            Assert.That(trigger.Tick(spinUp.SpinUpSeconds), Is.EqualTo(1));
         }
 
         [Test]

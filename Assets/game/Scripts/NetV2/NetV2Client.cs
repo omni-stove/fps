@@ -371,6 +371,7 @@ namespace Fps.NetV2
 
             StepOwner(Time.deltaTime);
             ShowRemotes();
+            _weaponHooks.Projectiles.Tick(Time.deltaTime);
             SendRequests();
             _pings.Markers.Expire(Time.time);
         }
@@ -439,6 +440,8 @@ namespace Fps.NetV2
                 + " radius=" + motor.Stance.Radius.ToString(CultureInfo.InvariantCulture)
                 + " proneSpeed=" + motor.Prone.Speed.ToString(CultureInfo.InvariantCulture), this);
             _match = new ClientMatch(_client, _world.CreateSimulation(motor, _client.TickRate, _client.KillPlaneY));
+            _weaponHooks.Projectiles.Attach(
+                new NetV2Projectiles(_weapons), _world.Collision, Physics.DefaultRaycastLayers, NetV2Math.ToNumerics(Physics.gravity), _client.PlayerId);
             _match.PlayerAdded += AddRemote;
             _match.PlayerRemoved += RemoveRemote;
             _match.Reconciled += HandleReconciled;
@@ -1057,6 +1060,7 @@ namespace Fps.NetV2
             _remotes.Clear();
             _zones.Clear();
             _structures?.Leave();
+            _weaponHooks?.Projectiles.Detach();
         }
 
         private static bool TryFindScene(string map, out string path)

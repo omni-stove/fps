@@ -185,14 +185,15 @@ namespace Fps.Server
                 var p = position + new Vector3(0f, bottomY, 0f);
                 var q = position + new Vector3(0f, topY, 0f);
                 var limit = found ? hit.Distance : range;
+                var thickness = radius > 0f && StartsGrazing(origin, p, q, geometry.Radius, radius) ? 0f : radius;
 
                 // 球と体のカプセルが触れるのは、球の中心の線が体を弾の半径だけ太らせたカプセルに触れるとき
-                if (!RayCapsule(origin, unit, p, q, geometry.Radius + radius, limit, out var distance, out var normal))
+                if (!RayCapsule(origin, unit, p, q, geometry.Radius + thickness, limit, out var distance, out var normal))
                 {
                     continue;
                 }
 
-                var point = origin + (unit * distance) - (normal * radius);
+                var point = origin + (unit * distance) - (normal * thickness);
                 var bottom = position.Y + shape.CenterY - (shape.Height / 2f);
                 hit = ShotHit.Target(point, normal, distance, id, position, isCrouched, Zone(point.Y, bottom, shape.Height));
                 found = true;
@@ -263,6 +264,15 @@ namespace Fps.Server
             var outward = point - center;
             normal = outward.LengthSquared() > 1e-12f ? Vector3.Normalize(outward) : -direction;
             return true;
+        }
+
+        // Unity の ShotCast と同じく、始めから弾の太さの分だけ重なっている体は球では拾わず、細い線でだけ拾う。
+        private static bool StartsGrazing(Vector3 origin, Vector3 p, Vector3 q, float bodyRadius, float roundRadius)
+        {
+            var axis = q - p;
+            var distanceSq = Vector3.DistanceSquared(origin, ClosestOnSegment(origin, p, q, axis, axis.LengthSquared()));
+            var outer = bodyRadius + roundRadius;
+            return distanceSq > bodyRadius * bodyRadius && distanceSq <= outer * outer;
         }
 
         private static float RaySphere(Vector3 origin, Vector3 direction, Vector3 center, float radius)

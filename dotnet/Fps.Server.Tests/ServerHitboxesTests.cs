@@ -156,6 +156,25 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void ABodyTheThickRoundStartsAgainstIsHitOnlyByTheThinLine()
+        {
+            var hitboxes = Hitboxes();
+            Spawn(2, new Vector3(0.9f, 1f, 0f));
+            hitboxes.Record(1);
+            var hits = new List<ShotHit>();
+
+            Assert.That(hitboxes.Cast(Vector3.UnitY, Vector3.UnitZ, 0.6f, 100f, 1, 1f, 1, _ => true, hits), Is.False);
+            Assert.That(hitboxes.Cast(Vector3.UnitY, Vector3.UnitX, 0.6f, 100f, 1, 1f, 1, _ => true, hits), Is.True);
+            Assert.That(hits[0].TargetId, Is.EqualTo(2));
+            Assert.That(hits[0].Distance, Is.EqualTo(0.4f).Within(1e-4f));
+            hits.Clear();
+
+            Assert.That(hitboxes.Cast(new Vector3(0.7f, 1f, 0f), Vector3.UnitZ, 0.6f, 100f, 1, 1f, 1, _ => true, hits), Is.True);
+            Assert.That(hits[0].TargetId, Is.EqualTo(2));
+            Assert.That(hits[0].Distance, Is.Zero);
+        }
+
+        [Test]
         public void AThickCastRejectsABadDirection()
         {
             var hitboxes = Hitboxes();

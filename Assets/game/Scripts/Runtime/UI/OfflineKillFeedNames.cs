@@ -23,7 +23,7 @@ namespace Fps.Runtime
         {
             if (gameObject == null)
             {
-                return new KillFeedName(KillFeedFormat.Unknown(id), null, false);
+                return new KillFeedName(KillFeedText.Unknown(id), null, false);
             }
 
             // 敵の撃ち手 (EnemyAgent) と当たり (Damageable) の付く階層がずれていても同じ人として引けるよう、子も探す。

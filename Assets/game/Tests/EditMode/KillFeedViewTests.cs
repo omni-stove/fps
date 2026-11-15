@@ -67,7 +67,7 @@ namespace Fps.Tests.EditMode
             Assert.That(line.Victim.Text, Is.EqualTo("Dummy-1"));
             Assert.That(line.Killer.Team, Is.Null);
             Assert.That(line.Highlighted, Is.True);
-            Assert.That(line.WeaponText, Is.EqualTo(KillFeedFormat.Weapon(default, true, false)));
+            Assert.That(line.WeaponText, Is.EqualTo(KillFeedText.Weapon(default, true, false)));
         }
 
         [Test]
@@ -86,8 +86,8 @@ namespace Fps.Tests.EditMode
         {
             _view.Show(new KillFeedEntry(9001, 9002, "", false, false));
 
-            Assert.That(_view.Feed.Lines[0].Killer.Text, Is.EqualTo(KillFeedFormat.Unknown(9001)));
-            Assert.That(_view.Feed.Lines[0].Victim.Text, Is.EqualTo(KillFeedFormat.Unknown(9002)));
+            Assert.That(_view.Feed.Lines[0].Killer.Text, Is.EqualTo(KillFeedText.Unknown(9001)));
+            Assert.That(_view.Feed.Lines[0].Victim.Text, Is.EqualTo(KillFeedText.Unknown(9002)));
         }
 
         [Test]
@@ -143,7 +143,7 @@ namespace Fps.Tests.EditMode
             var labels = row.Query<Label>().ToList();
             Assert.That(
                 labels.ConvertAll(l => l.text),
-                Is.EqualTo(new[] { Localizer.Resolve(KillFeedFormat.FriendlyMark), "P1", "[Rifle] " + Localizer.Resolve(KillFeedFormat.HeadshotMark), "P2" }));
+                Is.EqualTo(new[] { Localizer.Resolve(KillFeedText.FriendlyMark), "P1", "[Rifle] " + Localizer.Resolve(KillFeedText.HeadshotMark), "P2" }));
             Assert.That(labels[1].style.color.value, Is.EqualTo(_hud.TeamColor(Team.Alpha)));
             Assert.That(labels[2].ClassListContains(KillFeedView.HeadshotClass), Is.True);
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
@@ -158,7 +158,7 @@ namespace Fps.Tests.EditMode
 
             Assume.That(_view.Element, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
             var labels = _view.Element[0].Query<Label>().ToList();
-            Assert.That(labels.ConvertAll(l => l.text), Is.EqualTo(new[] { "[" + Localizer.Resolve(KillFeedFormat.Suicide) + "]", "P2" }));
+            Assert.That(labels.ConvertAll(l => l.text), Is.EqualTo(new[] { "[" + Localizer.Resolve(KillFeedText.Suicide) + "]", "P2" }));
         }
 
         [Test]
@@ -179,7 +179,7 @@ namespace Fps.Tests.EditMode
                 AppliedControlSettings.Apply(before);
             }
 
-            Assert.That(_view.Element[0].Query<Label>().ToList().ConvertAll(l => l.text)[0], Is.EqualTo("[" + Localizer.Resolve(KillFeedFormat.Suicide) + "]"));
+            Assert.That(_view.Element[0].Query<Label>().ToList().ConvertAll(l => l.text)[0], Is.EqualTo("[" + Localizer.Resolve(KillFeedText.Suicide) + "]"));
         }
 
         private void AssertRows(int count)

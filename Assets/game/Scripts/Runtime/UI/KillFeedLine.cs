@@ -1,6 +1,7 @@
 using System;
+using Fps.Core;
 
-namespace Fps.Core
+namespace Fps.Runtime
 {
     /// <summary>
     /// キルフィードに出す 1 行。<see cref="KillFeedEntry"/> に、受け取った時点で引いた名前と武器の名前を添える
@@ -39,8 +40,8 @@ namespace Fps.Core
         /// <summary>倒した側の名前を出すか。自滅では倒された側だけを出す。</summary>
         public bool ShowsKiller => !Entry.IsSuicide;
 
-        /// <summary>倒した側と倒された側の間に出す文 (<see cref="KillFeedFormat.Weapon"/>)。</summary>
-        public LocalizedText WeaponText => KillFeedFormat.Weapon(WeaponName, Entry.Headshot, Entry.IsSuicide);
+        /// <summary>倒した側と倒された側の間に出す文 (<see cref="KillFeedText.Weapon"/>)。</summary>
+        public LocalizedText WeaponText => KillFeedText.Weapon(WeaponName, Entry.Headshot, Entry.IsSuicide);
 
         public bool Equals(KillFeedLine other)
         {
@@ -68,10 +69,10 @@ namespace Fps.Core
             return HashCode.Combine(Entry, Killer, Victim, WeaponName);
         }
 
-        /// <summary><see cref="KillFeedFormat.Line"/> と同じ文字列。</summary>
+        /// <summary>ログ用。言語によらない (例: <c>killer=1 victim=2 weapon=rifle headshot=True friendly=False killerName=P1 victimName=P2</c>)。</summary>
         public override string ToString()
         {
-            return KillFeedFormat.Line(this);
+            return Entry + " killerName=" + Killer.Text + " victimName=" + Victim.Text;
         }
     }
 }

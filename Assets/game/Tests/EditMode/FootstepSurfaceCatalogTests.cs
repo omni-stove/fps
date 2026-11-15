@@ -376,5 +376,24 @@ namespace Fps.Tests.EditMode
             Physics.SyncTransforms();
             Assert.That(audio.ProbeSurfaceId(), Is.EqualTo(SurfaceMaterial.DefaultId), "nothing under the feet is default");
         }
+
+        [Test]
+        public void ProbeSurvivesTheBodyColliderBeingDestroyedAfterStart()
+        {
+            Floor("metal", new Vector3(30f, 0f, 0f));
+            var audio = CreateAudio(null, null);
+            audio.transform.position = new Vector3(30f, 0.2f, 0f);
+            var capsule = audio.gameObject.AddComponent<CapsuleCollider>();
+            capsule.height = 0.4f;
+            capsule.radius = 0.1f;
+            LogAssert.Expect(LogType.Warning, new Regex(Regex.Escape(CharacterAudio.LogTag)));
+            typeof(CharacterAudio).GetMethod("Start", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .Invoke(audio, null);
+
+            Object.DestroyImmediate(capsule);
+            Physics.SyncTransforms();
+
+            Assert.That(audio.ProbeSurfaceId(), Is.EqualTo("metal"));
+        }
     }
 }

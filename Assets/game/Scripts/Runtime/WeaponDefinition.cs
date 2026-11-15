@@ -104,6 +104,10 @@ namespace Fps.Runtime
         [SerializeField, UnityEngine.Range(0f, 90f), Tooltip("動きながら撃ったときに散らばりへ足す最大の角度 (度)")]
         private float _moveSpreadDegrees;
 
+        [Header("音")]
+        [SerializeField, Min(0f), Tooltip("銃声が敵に聞こえる距離 (m)。消音した武器は小さくする。0 なら聞こえない")]
+        private float _shotNoiseRadius = WeaponSpec.DefaultShotNoiseRadius;
+
         /// <summary>
         /// <see cref="AdsFieldOfView"/> が未設定であることを表す値。この項目が無かった頃に保存したアセットも、読み込むとこの値になる。
         /// </summary>
@@ -249,6 +253,12 @@ namespace Fps.Runtime
             set => _recoilRecoveryDelaySeconds = value;
         }
 
+        public float ShotNoiseRadius
+        {
+            get => _shotNoiseRadius;
+            set => _shotNoiseRadius = value;
+        }
+
         public float HipSpreadDegrees
         {
             get => _hipSpreadDegrees;
@@ -332,7 +342,8 @@ namespace Fps.Runtime
                     _hipSpreadDegrees,
                     _adsSpreadDegrees,
                     _moveSpreadDegrees,
-                    _recoilRecoveryDelaySeconds);
+                    _recoilRecoveryDelaySeconds,
+                    _shotNoiseRadius);
             }
             catch (ArgumentException e)
             {

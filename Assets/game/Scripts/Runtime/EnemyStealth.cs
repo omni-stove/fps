@@ -67,6 +67,16 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("交戦に入ったことを仲間に伝える範囲 (m)。0 なら伝えない")]
         private float _alarmRadius = AwarenessSpec.DefaultAlarmRadius;
 
+        [Header("Hearing")]
+        [SerializeField, Range(0f, 1f), Tooltip("すぐそばの銃声 1 発でゲージに足す量。離れるほど音の届く距離に比べて減る")]
+        private float _gunshotGain = AwarenessSpec.DefaultGunshotGain;
+
+        [SerializeField, Range(0f, 1f), Tooltip("すぐそばの足音 1 歩でゲージに足す量")]
+        private float _footstepGain = AwarenessSpec.DefaultFootstepGain;
+
+        [SerializeField, Range(0.01f, 0.99f), Tooltip("物音を聞いて調べに行くときのゲージの量。音だけではこれより上がらない。警戒の境目以上")]
+        private float _investigateLevel = AwarenessSpec.DefaultInvestigateLevel;
+
         [Header("Indicator")]
         [SerializeField, Tooltip("頭上に出す印。空なら AwarenessIndicatorCatalog の印、それも無ければ仮の印")]
         private GameObject _indicatorPrefab;
@@ -122,7 +132,10 @@ namespace Fps.Runtime
                 _noticeThreshold,
                 _alertThreshold,
                 _alarmRadius,
-                _engagedHoldThreshold);
+                _engagedHoldThreshold,
+                _gunshotGain,
+                _footstepGain,
+                _investigateLevel);
         }
 
         // 初期化前に呼ぶ。EnemyAgent.ApplySpec と同じく、作った後の StealthAwareness の設定は変えない。
@@ -153,6 +166,9 @@ namespace Fps.Runtime
             _alertThreshold = spec.AlertThreshold;
             _alarmRadius = spec.AlarmRadius;
             _engagedHoldThreshold = spec.EngagedHoldThreshold;
+            _gunshotGain = spec.GunshotGain;
+            _footstepGain = spec.FootstepGain;
+            _investigateLevel = spec.InvestigateLevel;
         }
 
         // EnemyAgent の初期化 (Awake) の後でないと Brain が無いので、Start でつなぐ。テストからは直接呼ぶ。
@@ -213,6 +229,62 @@ namespace Fps.Runtime
             return true;
         }
 
+        // Off でも物音には調べに行かせる。ゲージの無い今までの敵にも、注意をそらす能力が効くように。
+        // 鳴らした者が味方なら聞き流す。見張り同士の足音や撃ち合いでゲージがたまらないように。
+        public HearingOutcome Hear(GameObject source, SoundStimulus sound)
+        {
+            if (_awareness == null || _agent == null || _agent.Brain == null || !IsHostileSource(source))
+            {
+                return HearingOutcome.NotHeard;
+            }
+
+            var brain = _agent.Brain;
+            var outcome = _awareness.Hear(brain, _agent.GroundPosition.ToNumerics(), sound);
+            if (outcome == HearingOutcome.RuleOff && sound.Draws)
+            {
+                if (StealthAwareness.IsFighting(brain.State))
+                {
+                    outcome = HearingOutcome.Engaged;
+                }
+                else
+                {
+                    _agent.Alert(sound.Position.ToUnity());
+                    outcome = HearingOutcome.Investigating;
+                }
+            }
+
+            // 足音と銃声は毎歩・毎発届くので、段階が変わったときのログ (FormatStageLog) に任せる。
+            if (sound.Draws && outcome != HearingOutcome.NotHeard)
+            {
+                Debug.Log(FormatHeardLog(Id, sound, outcome, _awareness.Rule), this);
+            }
+
+            return outcome;
+        }
+
+        public bool IsHostileSource(GameObject source)
+        {
+            if (source == null)
+            {
+                return true;
+            }
+
+            if (source.transform.IsChildOf(transform))
+            {
+                return false;
+            }
+
+            var mine = _side != null ? _side : GetComponent<SideMember>();
+            var theirs = source.GetComponentInParent<SideMember>();
+            if (mine != null && theirs != null)
+            {
+                return mine.Side != theirs.Side;
+            }
+
+            // 陣営を持たない敵 (キャンペーン) はみな味方なので、陣営の無い敵の音は仲間の音として扱う (IsAllyOf と同じ)。
+            return mine != null || theirs != null || source.GetComponentInParent<EnemyAgent>() == null;
+        }
+
         // ゲージは今の目標しか見ていないので、ほかの相手を見ているかは分からない。目標が attacker で、今見えているときだけ上げる。
         /// <exception cref="ArgumentNullException">attacker が null。</exception>
         public bool Witness(Damageable attacker, float level)
@@ -259,6 +331,16 @@ namespace Fps.Runtime
         public static string StageLogPrefix(string id)
         {
             return $"{LogTag} id={id} stage=";
+        }
+
+        public static string FormatHeardLog(string id, SoundStimulus sound, HearingOutcome outcome, Stealth rule)
+        {
+            return $"{LogTag} id={id} heard kind={sound.Kind} at={sound.Position.ToUnity().ToString("F1")} outcome={outcome} rule={rule}";
+        }
+
+        public static string HeardLogPrefix(string id)
+        {
+            return $"{LogTag} id={id} heard ";
         }
 
         public static string FormatAlarmLog(string id, string from, Vector3 position)

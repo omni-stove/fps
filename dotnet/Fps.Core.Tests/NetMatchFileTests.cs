@@ -15,7 +15,7 @@ namespace Fps.Core.Tests
 
         private static WeaponSpec Rifle() => new WeaponSpec(
             _rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f,
-            new DamageFalloff(20f, 60f, 0.5f), adsFieldOfView: 45f, recoilPitchDegrees: 0.5f);
+            new DamageFalloff(20f, 60f, 0.5f), adsFieldOfView: 45f, recoilPitchDegrees: 0.5f, shotNoiseRadius: 12f);
 
         private static WeaponSpec Handgun() => new WeaponSpec(
             _handgunId, "weapon.handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None);
@@ -57,6 +57,7 @@ namespace Fps.Core.Tests
             Assert.That(read.LoadoutWeapons[0].Falloff.StartDistance, Is.EqualTo(20f));
             Assert.That(read.LoadoutWeapons[0].AdsFieldOfView, Is.EqualTo(45f));
             Assert.That(read.LoadoutWeapons[0].RecoilPitchDegrees, Is.EqualTo(0.5f));
+            Assert.That(read.LoadoutWeapons[0].ShotNoiseRadius, Is.EqualTo(12f));
             Assert.That(read.LoadoutWeapons[1].Falloff.StartDistance, Is.EqualTo(DamageFalloff.None.StartDistance));
             Assert.That(read.CatalogName, Is.EqualTo("WeaponCatalog"));
             Assert.That(read.Catalog.Count, Is.EqualTo(2));
@@ -156,6 +157,7 @@ namespace Fps.Core.Tests
 
             Assert.That(read.Settings.ScoreLimit, Is.EqualTo(NetMatchSettings.DefaultScoreLimit));
             Assert.That(read.LoadoutWeapons[0].Damage, Is.EqualTo(34));
+            Assert.That(read.LoadoutWeapons[0].ShotNoiseRadius, Is.EqualTo(WeaponSpec.DefaultShotNoiseRadius));
             Assert.That(read.SwitchSeconds, Is.Zero);
         }
 

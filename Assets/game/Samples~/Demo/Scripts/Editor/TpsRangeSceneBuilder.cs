@@ -186,6 +186,9 @@ namespace Fps.Editor
             // 囮もタレットと同じく、smoke の手順 (DecoySmokeStep) が盾の枠と入れ替える。
             AbilityAssetBuilder.LoadOrBuildDecoyAbility();
 
+            // 物を投げる能力も枠に入れず、smoke の手順 (DistractionSmokeStep) がグラップルの枠と入れ替える。
+            AbilityAssetBuilder.LoadOrBuildDistractionAbility();
+
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(path));
             var bootstrap = PopulateScene(scene, weapons, rules, fixtures);
             bootstrap.AbilityDefinitions = new AbilityDefinition[] { grapple, shield };

@@ -30,6 +30,7 @@ namespace Fps.Core
         public const string AdsSpreadDegreesItem = "adsSpreadDegrees";
         public const string MoveSpreadDegreesItem = "moveSpreadDegrees";
         public const string RecoilRecoveryDelaySecondsItem = "recoilRecoveryDelaySeconds";
+        public const string ShotNoiseRadiusItem = "shotNoiseRadius";
 
         public const string StartDistanceItem = "startDistance";
         public const string EndDistanceItem = "endDistance";
@@ -41,7 +42,7 @@ namespace Fps.Core
             DamageItem, RangeItem, FalloffItem, ExplosionRadiusItem, AdsFieldOfViewItem, BlindFireSpreadDegreesItem,
             ActiveReloadWindowStartItem, ActiveReloadWindowLengthItem, ActiveReloadFailSecondsItem, RecoilPitchDegreesItem,
             RecoilYawDegreesItem, RecoilRecoveryPerSecondItem, HipSpreadDegreesItem, AdsSpreadDegreesItem, MoveSpreadDegreesItem,
-            RecoilRecoveryDelaySecondsItem,
+            RecoilRecoveryDelaySecondsItem, ShotNoiseRadiusItem,
         };
 
         public static IReadOnlyList<string> FalloffItemNames { get; } = new[] { StartDistanceItem, EndDistanceItem, MinMultiplierItem };
@@ -92,7 +93,8 @@ namespace Fps.Core
                     fields.ReadFloat(HipSpreadDegreesItem, 0f),
                     fields.ReadFloat(AdsSpreadDegreesItem, 0f),
                     fields.ReadFloat(MoveSpreadDegreesItem, 0f),
-                    fields.ReadFloat(RecoilRecoveryDelaySecondsItem, WeaponSpec.DefaultRecoilRecoveryDelaySeconds));
+                    fields.ReadFloat(RecoilRecoveryDelaySecondsItem, WeaponSpec.DefaultRecoilRecoveryDelaySeconds),
+                    fields.ReadFloat(ShotNoiseRadiusItem, WeaponSpec.DefaultShotNoiseRadius));
             }
             catch (ArgumentException e)
             {
@@ -131,6 +133,7 @@ namespace Fps.Core
             writer.Float(AdsSpreadDegreesItem, spec.AdsSpreadDegrees);
             writer.Float(MoveSpreadDegreesItem, spec.MoveSpreadDegrees);
             writer.Float(RecoilRecoveryDelaySecondsItem, spec.RecoilRecoveryDelaySeconds);
+            writer.Float(ShotNoiseRadiusItem, spec.ShotNoiseRadius);
         }
     }
 }

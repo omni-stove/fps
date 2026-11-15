@@ -555,7 +555,8 @@ namespace Fps.Core
 
         private void OnWeaponChanged()
         {
-            if (_weapon != null)
+            // 熱で撃つ武器は弾倉を減らさないので、弾数を出すと撃っても変わらない数が並ぶ。撃てるかは熱のゲージで見せる。
+            if (_weapon != null && !_weapon.Ammo.HeatFraction.HasValue)
             {
                 SetAmmo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, _weapon.IsReloading, _weapon.HasInfiniteReserve);
             }

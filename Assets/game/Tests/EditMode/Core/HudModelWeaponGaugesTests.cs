@@ -89,6 +89,24 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ShowsTheHeatOfAHeatWeaponInsteadOfItsRounds()
+        {
+            var model = new HudModel();
+            var ammo = new AmmoSpec(1, 0, 1f, kind: AmmoKind.Heat, heat: new HeatSpec(0.25f, 0.5f, 1f, 1f));
+            var weapon = new Weapon(new WeaponSpec(_rifleId, "weapon.energyRifle", WeaponCategory.AssaultRifle, ammo: ammo));
+
+            model.BindWeapon(weapon);
+            model.RefreshWeaponGauges();
+            Assert.That(model.HeatFraction, Is.EqualTo(0f));
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+
+            weapon.TryFire();
+            model.RefreshWeaponGauges();
+            Assert.That(model.HeatFraction, Is.EqualTo(0.25f));
+            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+        }
+
+        [Test]
         public void ShowsTheChargeOfAWeaponThatCharges()
         {
             var model = new HudModel();

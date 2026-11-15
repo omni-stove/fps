@@ -65,7 +65,7 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 | 中身 | 置き場所 (サンプルのルートから) |
 | --- | --- |
-| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Dmr.json`・`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Crossbow.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
+| 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Dmr.json`・`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Crossbow.json`・熱で撃つ `EnergyRifle.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
 | ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
 | ミッション・シーン | `Missions/`・`Scenes/` |
 | ネット対戦の試合の設定 (`NetMatchDefinition`。専用サーバーへ書き出す) | `Rules/NetMatch.asset` |
@@ -201,7 +201,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 ### 武器を JSON から取り込む
 
-1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`、飛ぶ弾は `Crossbow.json`、弾薬の種類は `Dmr.json`)。
+1 ファイルが武器 1 つ。`id`・`nameKey`・`category`・`shotNoiseRadius` のほかは、部品ごとの入れ子のオブジェクトに書く。部品の項目名は `Fps.Core` の部品の Spec (`TriggerSpec`・`AmmoSpec`・`RoundSpec`・`ImpactSpec`・`AimSpec`・`AmmoTypeSpec`) のコンストラクタ引数と同じ。例はサンプルの `Weapons/Json/` にある (`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`、飛ぶ弾は `Crossbow.json`、熱で撃つのは `EnergyRifle.json`、弾薬の種類は `Dmr.json`)。
 
 ```json
 {
@@ -229,6 +229,7 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 - 必須は `id` と `category` だけ。部品や項目を書かなければ部品の既定 (Auto・弾倉制・ヒットスキャン 1 本・着弾でダメージ) になる。入れ子の中の項目は、`visualId` などの既定のあるもの以外は必須。
 - 列挙 (`category`・`fireMode` など) は列挙子の名前の文字列。
 - `spinUp` は撃つ速さを銃身の回転に比例させる。押してから `spinUpSeconds` は撃たず、`fireInterval` の `startIntervalMultiplier` 倍の間隔で撃ち始め、`spinUpSeconds` × `startIntervalMultiplier` 秒押し続けたところで `fireInterval` の間隔になる。離すと満回転から `spinDownSeconds` 秒で止まり、回転が撃ち始めの速さより上のうちに押し直せば待たずに撃てる。
+- `kind` が `Heat` の武器は弾倉を減らさずリロードもしない。撃つたびに熱が `heatPerShot` 上がり、最後に撃ってから `coolDelaySeconds` 経つと毎秒 `coolPerSecond` 下がる。熱が 1 に達すると `overheatSeconds` の間は熱が 1 のまま撃てず、その後 0 まで冷め切ると撃てる。HUD は弾数の代わりに熱を出し、弾薬箱からは弾を取らない。
 - `falloff` は `{ "startDistance": …, "endDistance": …, "minMultiplier": … }` か、減衰しないなら `"None"`。
 - `nameKey` は画面に出す武器の名前を引く表のキー。文は `Resources/Localization/<言語>/` の JSON (例: `items.json` に `"weapon.rifle": "Rifle"`) に書く。表に無いキーはキーそのものが出る。空か `null` なら `id` が出る。弾薬の種類の `nameKey` も同じ (例: `ammo.dmr.armorPiercing`)。
 - 部品に分ける前の平らな形 (`fireMode`・`magazineSize`・`damage`・`range`・`falloff`・`explosionRadius`・`adsFieldOfView` などを武器の直下に書く) もそのまま読める。`explosionRadius` は `impact.structureRadius`、`adsFieldOfView` は `aim.zoomLevels` の 1 つ目として読み、`adsFieldOfView` は `null` (共通の初期値) も書ける。同じ値を平らな項目と部品の両方に書くとエラーになる。

@@ -202,6 +202,7 @@ namespace Fps.Server
                 ActiveReloadWindowStart = windowOpen ? spec.ActiveReloadWindowStart : 0f,
                 ActiveReloadWindowEnd = windowOpen ? spec.ActiveReloadWindowStart + spec.ActiveReloadWindowLength : 0f,
                 Heat = weapon.HeatFraction ?? 0f,
+                IsOverheated = weapon.IsOverheated,
                 ChargeFraction = spec.Trigger.Charge != null ? _chargeFraction : 0f,
                 AmmoTypeIndex = AmmoTypeIndex,
             };

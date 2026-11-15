@@ -119,7 +119,7 @@ namespace Fps.Core.Tests
         // どの部品も省略せずに書いた武器。Write が書く項目をすべて通す。
         private static WeaponSpec EveryPart()
         {
-            var burning = new StatusEffectSpec(3f, 0.5f, 4, "fx.burning");
+            var burning = new StatusEffectSpec(3f, 0.5f, 4, "fx.burning", "napalm");
             return new WeaponSpec(
                 _rifleId,
                 "weapon.everything",
@@ -227,6 +227,8 @@ namespace Fps.Core.Tests
             Assert.That(read.Impact.Explosion.Damage.FullDamageRadius, Is.EqualTo(1.5f));
             Assert.That(read.Impact.Explosion.Detonation, Is.EqualTo(DetonationTrigger.OnLifetimeEnd));
             Assert.That(read.Impact.AreaEffect.StatusEffect.DamagePerTick, Is.EqualTo(4));
+            Assert.That(read.Impact.StatusEffect.KindId, Is.EqualTo("napalm"));
+            Assert.That(read.Impact.AreaEffect.StatusEffect.KindId, Is.EqualTo("napalm"));
             Assert.That(read.Aim.ZoomLevels, Is.EqualTo(_everyPartZoom));
             Assert.That(read.Aim.BreathHold.SwayMultiplier, Is.EqualTo(0.1f));
             Assert.That(read.AmmoTypes, Has.Count.EqualTo(2));
@@ -234,6 +236,18 @@ namespace Fps.Core.Tests
             Assert.That(read.AmmoTypes[1].Round.Beam.VisualId, Is.EqualTo("fx.beam"));
             Assert.That(read.AmmoTypes[1].Impact.Damage, Is.EqualTo(40));
             Assert.That(read.ShotNoiseRadius, Is.EqualTo(12f));
+        }
+
+        [Test]
+        public void AStatusEffectWithoutAKindBurns()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", "
+                + "\"impact\": {\"statusEffect\": {\"durationSeconds\": 4, \"tickSeconds\": 0.5, \"damagePerTick\": 4}}}",
+                "burn.json");
+
+            Assert.That(read.Impact.StatusEffect.KindId, Is.EqualTo(StatusEffectKinds.Burn));
+            Assert.That(read.Impact.StatusEffect.DurationSeconds, Is.EqualTo(4f));
         }
 
         [Test]

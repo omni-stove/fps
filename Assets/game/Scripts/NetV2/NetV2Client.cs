@@ -249,6 +249,8 @@ namespace Fps.NetV2
 
             _structures = new NetV2Structures(this);
             _weaponHooks = new ClientWeaponHooks(_weapons.SpecFor);
+            _weaponHooks.StatusEffects.Started += ShowStatusEffect;
+            _weaponHooks.StatusEffects.Ended += HideStatusEffect;
             _weaponHooks.AreaEffects.Started += ShowArea;
             _weaponHooks.AreaEffects.Updated += UpdateArea;
             _weaponHooks.AreaEffects.Ended += EndArea;
@@ -376,6 +378,7 @@ namespace Fps.NetV2
             }
 
             StepOwner(Time.deltaTime);
+            _weaponHooks.StatusEffects.Tick(Time.deltaTime);
             ShowRemotes();
             _weaponHooks.Projectiles.Tick(Time.deltaTime);
             SendRequests();
@@ -464,6 +467,7 @@ namespace Fps.NetV2
             try
             {
                 _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.SpecFor);
+                _hud.BindStatusEffects(_weaponHooks.StatusEffects);
                 _loadout.Bind(_hud.Hud.LoadoutSelect);
             }
             catch (InvalidOperationException e)
@@ -995,6 +999,7 @@ namespace Fps.NetV2
 
         private void RemoveRemote(int playerId)
         {
+            _weaponHooks.StatusEffects.Forget(playerId);
             if (!_remotes.TryGetValue(playerId, out var remote))
             {
                 return;
@@ -1007,6 +1012,29 @@ namespace Fps.NetV2
             }
 
             Debug.Log(LogTag + " player " + playerId.ToString(CultureInfo.InvariantCulture) + " left", this);
+        }
+
+        // 自分の体は一人称で見えないので、燃えている見た目は相手の体にだけ付け、自分には HUD (NetV2Hud) で出す。
+        private void ShowStatusEffect(int playerId, string kindId)
+        {
+            Debug.Log(LogTag + " status player=" + playerId.ToString(CultureInfo.InvariantCulture) + " kind=" + kindId + " on", this);
+            if (_remotes.TryGetValue(playerId, out var remote) && remote != null)
+            {
+                StatusEffectVisuals.For(remote.gameObject).Show(kindId);
+            }
+        }
+
+        private void HideStatusEffect(int playerId, string kindId)
+        {
+            Debug.Log(LogTag + " status player=" + playerId.ToString(CultureInfo.InvariantCulture) + " kind=" + kindId + " off", this);
+            if (_remotes.TryGetValue(playerId, out var remote) && remote != null)
+            {
+                var visuals = remote.GetComponent<StatusEffectVisuals>();
+                if (visuals != null)
+                {
+                    visuals.Hide(kindId);
+                }
+            }
         }
 
         // サーバーに切られる前にこちらから抜けても、サーバーが EAC で切ったときと同じ符号で同じ文を出す
@@ -1110,6 +1138,7 @@ namespace Fps.NetV2
 
         private void DestroyViews()
         {
+            _weaponHooks?.StatusEffects.Clear();
             if (_local != null)
             {
                 Destroy(_local.gameObject);

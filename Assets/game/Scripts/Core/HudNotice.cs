@@ -13,6 +13,7 @@ namespace Fps.Core
         Respawn,
         NoRespawnUntilNextMatch,
         SpawnProtected,
+        StatusEffect,
     }
 
     // 文や LocalizedText で持たないのは、Core から文言を出さず、何をどう言うかを UI に任せるため。
@@ -24,11 +25,18 @@ namespace Fps.Core
 
         public int RevivePercent { get; }
 
-        private HudNotice(HudNoticeKind kind, int seconds, int revivePercent)
+        /// <summary><see cref="HudNoticeKind.StatusEffect"/> の種類の Id (<see cref="StatusEffectKinds"/>)。ほかは空。</summary>
+        public string KindId => _kindId ?? string.Empty;
+
+        // default では null になるので、読むときに空文字へ寄せる。
+        private readonly string _kindId;
+
+        private HudNotice(HudNoticeKind kind, int seconds, int revivePercent, string kindId = null)
         {
             Kind = kind;
             Seconds = seconds;
             RevivePercent = revivePercent;
+            _kindId = kindId;
         }
 
         public static HudNotice None => default;
@@ -64,6 +72,18 @@ namespace Fps.Core
             return WithSeconds(HudNoticeKind.SpawnProtected, seconds);
         }
 
+        /// <summary>自分にかかっている状態異常 (種類 kindId) の残り。</summary>
+        public static HudNotice StatusEffect(string kindId, int seconds)
+        {
+            if (string.IsNullOrEmpty(kindId))
+            {
+                throw new ArgumentException("kind id must not be empty", nameof(kindId));
+            }
+
+            CheckSeconds(seconds);
+            return new HudNotice(HudNoticeKind.StatusEffect, seconds, 0, kindId);
+        }
+
         public static HudNotice Downed(int seconds, int revivePercent)
         {
             CheckSeconds(seconds);
@@ -91,7 +111,8 @@ namespace Fps.Core
 
         public bool Equals(HudNotice other)
         {
-            return Kind == other.Kind && Seconds == other.Seconds && RevivePercent == other.RevivePercent;
+            return Kind == other.Kind && Seconds == other.Seconds && RevivePercent == other.RevivePercent
+                && string.Equals(KindId, other.KindId, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj)
@@ -111,12 +132,12 @@ namespace Fps.Core
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Kind, Seconds, RevivePercent);
+            return HashCode.Combine(Kind, Seconds, RevivePercent, KindId);
         }
 
         public override string ToString()
         {
-            return Kind + (Seconds != 0 ? " " + Seconds + "s" : string.Empty) + (RevivePercent != 0 ? " " + RevivePercent + "%" : string.Empty);
+            return Kind + (KindId.Length > 0 ? " " + KindId : string.Empty) + (Seconds != 0 ? " " + Seconds + "s" : string.Empty) + (RevivePercent != 0 ? " " + RevivePercent + "%" : string.Empty);
         }
 
         private static HudNotice WithSeconds(HudNoticeKind kind, int seconds)

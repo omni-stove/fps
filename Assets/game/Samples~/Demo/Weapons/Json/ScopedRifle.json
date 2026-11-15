@@ -1,0 +1,49 @@
+{
+  "id": "591ab705-3cf6-4a0d-aa88-d19e6f367408",
+  "nameKey": "weapon.scopedRifle",
+  "category": "MarksmanRifle",
+  "shotNoiseRadius": 60,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.4
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 10,
+    "reserveAmmo": 40,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 200,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 60,
+    "falloff": {
+      "startDistance": 80,
+      "endDistance": 180,
+      "minMultiplier": 0.7
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 4,
+    "adsSpreadDegrees": 0.1,
+    "moveSpreadDegrees": 4,
+    "recoilPitchDegrees": 2,
+    "recoilYawDegrees": 0.4,
+    "recoilRecoveryPerSecond": 15,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [32.2, 16.43, 8.26],
+    "swayDegrees": 0
+  }
+}

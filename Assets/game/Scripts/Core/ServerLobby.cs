@@ -21,13 +21,10 @@ namespace Fps.Core
         /// <summary>サーバーに接続しているプレイヤーの人数。</summary>
         public const string PlayersKey = "players";
 
-        /// <summary>ネット対戦のモード (NetTeamDeathmatch) を表す <see cref="ModeKey"/> の値。</summary>
+        /// <summary>ネット対戦のモード (チームで戦う試合) を表す <see cref="ModeKey"/> の値。</summary>
         public const string TeamDeathmatchMode = "tdm";
 
-        /// <summary>
-        /// サーバーのロビーのバケット ID の接頭辞。<c>-lobby join</c> の検索 (<see cref="LobbyLaunchOptions.BucketPrefix"/>) が
-        /// EOS の Host ではない専用サーバーのロビーを拾って P2P でつなごうとしないよう、バケットを分ける。
-        /// </summary>
+        /// <summary>サーバーのロビーのバケット ID の接頭辞。同じ EOS のサンドボックスを使う別のゲームのロビーと混ざらないようにする。</summary>
         public const string BucketPrefix = "fps-server:";
 
         /// <summary>サーバーが Device ID で初めてログインしたときに作るユーザーの表示名。プレイヤーと見分けるために分ける。</summary>
@@ -82,6 +79,27 @@ namespace Fps.Core
             }
 
             return LobbyAttribute.OfNumber(PlayersKey, players);
+        }
+
+        /// <summary>
+        /// クイックマッチで選んだサーバーのロビー lobby の公開アドレス (<see cref="ServerKey"/>) へ UDP でつなぐクライアントの起動設定。
+        /// サーバーは UDP で待ち受けるときだけロビーに載る (<c>-register-lobby</c> は <c>-transport udp</c> だけ) ので、UDP でつなぐ。
+        /// </summary>
+        /// <exception cref="ArgumentException">アドレスが IPv4:port でない。</exception>
+        public static NetLaunchOptions ConnectOptions(LobbyInfo lobby)
+        {
+            if (lobby == null)
+            {
+                throw new ArgumentNullException(nameof(lobby));
+            }
+
+            lobby.TryGetText(ServerKey, out var endpoint);
+            if (!NetLaunchOptions.TryParseEndpoint(endpoint, out var address, out var port))
+            {
+                throw new ArgumentException("the server address '" + endpoint + "' is not an IPv4 address:port", nameof(lobby));
+            }
+
+            return new NetLaunchOptions(NetLaunchMode.Client, address, port, NetTransportKind.Udp, null);
         }
     }
 }

@@ -68,9 +68,6 @@ map_data_matches() {
 step "EditMode tests" mise run test-unity
 step "smoke suite" mise run smoke
 step "map data" map_data_matches
-if [ -f Logs/perf.json ]; then
-	echo "nightly-local: server tick timings from PerfSmokeRun are in Logs/perf.json"
-fi
 if [ "$client" -eq 1 ]; then
 	step "macOS client build" mise run build macos
 else

@@ -28,7 +28,6 @@ namespace Fps.Tests.EditMode
             Assert.That(_settings.MainMenu, Is.EqualTo(MenuRoute.MainMenuSceneName));
             Assert.That(_settings.Range, Is.EqualTo(MenuRoute.RangeSceneName));
             Assert.That(_settings.Campaign, Is.EqualTo(MenuRoute.CampaignSceneName));
-            Assert.That(_settings.Net, Is.EqualTo(MenuRoute.NetSceneName));
             Assert.That(_settings.ToScenes().ToString(), Is.EqualTo(MenuScenes.Default.ToString()));
         }
 
@@ -49,12 +48,12 @@ namespace Fps.Tests.EditMode
         public void AnEmptyFieldFallsBackToTheDefault()
         {
             _settings.MainMenu = "";
-            _settings.Net = null;
+            _settings.Campaign = null;
 
             var scenes = _settings.ToScenes();
 
             Assert.That(scenes.MainMenu, Is.EqualTo(MenuRoute.MainMenuSceneName));
-            Assert.That(scenes.Net, Is.EqualTo(MenuRoute.NetSceneName));
+            Assert.That(scenes.Campaign, Is.EqualTo(MenuRoute.CampaignSceneName));
         }
 
         [Test]
@@ -75,7 +74,6 @@ namespace Fps.Tests.EditMode
             _settings.MainMenu = "Title";
             _settings.Range = "Training";
             _settings.Campaign = "Chapter1";
-            _settings.Net = "Arena";
 
             _settings.ResetToDefaults();
 

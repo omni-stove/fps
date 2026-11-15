@@ -67,61 +67,6 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => _ = new LobbyInfo("l1", "o", 8, null));
         }
 
-        [Test]
-        public void PicksTheFullestLobbyWithRoom()
-        {
-            var lobbies = new List<LobbyInfo>
-            {
-                Lobby("small", "o1", 8, "o1"),
-                Lobby("full", "o2", 2, "o2,m1"),
-                Lobby("busy", "o3", 8, "o3,m2,m3"),
-            };
-
-            Assert.That(LobbySelector.PickJoinable(lobbies, _self).Id, Is.EqualTo("busy"));
-        }
-
-        [Test]
-        public void BreaksTiesByLobbyId()
-        {
-            var lobbies = new List<LobbyInfo>
-            {
-                Lobby("b", "o1", 8, "o1"),
-                Lobby("a", "o2", 8, "o2"),
-            };
-
-            Assert.That(LobbySelector.PickJoinable(lobbies, _self).Id, Is.EqualTo("a"));
-        }
-
-        [Test]
-        public void SkipsOwnLobbiesAndLobbiesAlreadyJoined()
-        {
-            var lobbies = new List<LobbyInfo>
-            {
-                Lobby("mine", _self, 8, _self),
-                Lobby("joined", "o1", 8, "o1," + _self + ",m1"),
-                null,
-                Lobby("other", "o2", 8, "o2"),
-            };
-
-            Assert.That(LobbySelector.PickJoinable(lobbies, _self.ToUpperInvariant()).Id, Is.EqualTo("other"));
-        }
-
-        [Test]
-        public void ReturnsNullWhenNothingIsJoinable()
-        {
-            var lobbies = new List<LobbyInfo> { Lobby("full", "o1", 2, "o1,m1"), Lobby("mine", _self, 8, _self) };
-
-            Assert.That(LobbySelector.PickJoinable(lobbies, _self), Is.Null);
-            Assert.That(LobbySelector.PickJoinable(new List<LobbyInfo>(), _self), Is.Null);
-        }
-
-        [Test]
-        public void PickRejectsInvalidArguments()
-        {
-            Assert.Throws<ArgumentNullException>(() => LobbySelector.PickJoinable(null, _self));
-            Assert.Throws<ArgumentException>(() => LobbySelector.PickJoinable(new List<LobbyInfo>(), " "));
-        }
-
         private const string _version = "0.3.0";
 
         private static LobbyInfo Server(string id, string endpoint, long players, string version = _version, int max = 8)

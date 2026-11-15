@@ -1,12 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Fps.Core;
-using Fps.Net;
 using Fps.Runtime;
 using Unity.AI.Navigation;
-using Unity.Netcode;
-using Unity.Netcode.Components;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -15,39 +11,24 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     /// <summary>
-    /// ネットワークの動作確認用シーン NetTest と、プレイヤー・試合の進行役・投げたグレネードのプレハブを生成し、ビルド設定に加える。
-    /// 何度実行しても同じ結果になる。batchmode では
+    /// ネット対戦の既定のマップ NetTest と、試合の設定 (<see cref="NetMatchDefinition"/>、<see cref="MatchDefinitionPath"/>) を生成し、
+    /// シーンをビルド設定に加える。.NET のサーバーは書き出し (MapCollisionExporter・ServerRulesExporter) を読み、
+    /// クライアントはつないだサーバーのマップとしてこのシーンへ移る。何度実行しても同じ結果になる。batchmode では
     /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.Build</c> で呼ぶ。
     /// </summary>
     public static class NetSceneBuilder
     {
-        public static string PlayerPrefabPath => FpsKitRoot.OutputPath("Prefabs/Net/NetPlayer.prefab");
-        public static string MatchPrefabPath => FpsKitRoot.OutputPath("Prefabs/Net/NetMatch.prefab");
-        public static string GrenadePrefabPath => FpsKitRoot.OutputPath("Prefabs/Net/NetGrenade.prefab");
+        /// <summary>試合の設定。ServerRulesExporter がルールのアセットごとに server-data/rules に書き出す。</summary>
+        public static string MatchDefinitionPath => FpsKitRoot.OutputPath("Rules/NetMatch.asset");
 
         /// <summary>
-        /// 生成して保存するシーン。出力先ルート (<see cref="FpsKitRoot.Output"/>) の下で、既定なら実行時に読む <see cref="ScenePath"/> と同じ。
+        /// 生成して保存するシーン。出力先ルート (<see cref="FpsKitRoot.Output"/>) の下の <see cref="BuildSceneList.NetTestScene"/>。
         /// </summary>
         public static string ScenePath => BuildSceneList.NetTestScene;
 
-        /// <summary>
-        /// Netcode が既定で使うネットワークのプレハブの一覧。実行時の登録は <see cref="NetBootstrap"/> がコードで行うが、
-        /// エディタの Netcode の設定と食い違わないよう、Build で作ったプレハブをここにも足す。
-        /// </summary>
-        public const string DefaultNetworkPrefabsPath = "Assets/DefaultNetworkPrefabs.asset";
-
-        /// <summary>プレイヤーのカプセルの高さと半径 (m)。プリミティブの Capsule と同じ大きさ。</summary>
-        public const float PlayerHeight = 2f;
-        public const float PlayerRadius = 0.5f;
-
-        /// <summary>一人称カメラの近クリップ (m)。カプセルの半径より十分小さくし、壁に寄っても突き抜けて見えにくくする。</summary>
-        public const float ViewNearClip = 0.05f;
-
-        /// <summary>
-        /// ネット対戦のプレイヤーの視点。三人称のゲームにするならここを <see cref="ViewMode.ThirdPerson"/> にして Build し直す
-        /// (当たり判定とサーバーの検査は目から行うので、視点を変えても他は変わらない)。
-        /// </summary>
-        public const ViewMode PlayerViewMode = ViewMode.FirstPerson;
+        /// <summary>プレイヤーのカプセルの高さと半径 (m)。<see cref="NetMotorSettings"/> の既定の寸法と同じ。</summary>
+        public const float PlayerHeight = NetMotorSettings.DefaultStandingHeight;
+        public const float PlayerRadius = NetMotorSettings.DefaultRadius;
 
         /// <summary>床 (Plane は 10m 四方) の拡大率。両陣地と東西の地点が収まる 60m 四方にする。</summary>
         public static readonly Vector3 GroundScale = new Vector3(6f, 1f, 6f);
@@ -92,7 +73,7 @@ namespace Fps.Editor
         };
 
         /// <summary>
-        /// 拠点制圧 (ルールを <see cref="GameRulesAssetBuilder.DominationPath"/> にしたとき) の拠点。両陣地の間、マップの中央に 1 つ置く。
+        /// 拠点制圧 (サーバーを <c>-rules Domination</c> で起動したとき) の拠点。両陣地の間、マップの中央に 1 つ置く。
         /// 位置は足元 (床の高さ) で、範囲の円柱はそこから上下に <see cref="ControlPointZone.DefaultHeight"/> の半分ずつ広がるので、
         /// 床に立つプレイヤーのカプセルの中心 (y=0) が入る。番号は HUD とログで 0 = A。
         /// </summary>
@@ -101,32 +82,8 @@ namespace Fps.Editor
             ("Control Point A", new Vector3(0f, GroundY, 0f), 0),
         };
 
-        /// <summary>
-        /// プレハブにするのは、NetworkObject の GlobalObjectIdHash がアセットの GUID からエディタでしか作られず、
-        /// 実行時に生成したオブジェクトではサーバーとクライアントで同じプレハブだと突き合わせられないため。
-        /// 試合のルールはチームデスマッチ (<see cref="GameRulesAssetBuilder.TeamDeathmatchPath"/>)。
-        /// </summary>
         [MenuItem("Fps/Net/Build NetTest Scene")]
         public static void Build()
-        {
-            Build(GameRulesAssetBuilder.TeamDeathmatchPath);
-        }
-
-        /// <summary>
-        /// <see cref="Build"/> のうち、試合のルールをドミネーション (<see cref="GameRulesAssetBuilder.DominationPath"/>) にしたもの。
-        /// NetTest の拠点 (<c>-map NetArena01</c> なら <see cref="ArenaSceneBuilder.ControlPoints"/>) を取り合い、拠点のポイントで勝敗を決める。
-        /// コミットするのはチームデスマッチのほうなので、
-        /// 確かめ終えたら <see cref="Build"/> で戻す。batchmode では
-        /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.BuildWithDominationRules</c> で呼ぶ。
-        /// </summary>
-        [MenuItem("Fps/Net/Build NetTest Scene (Domination Rules)")]
-        public static void BuildWithDominationRules()
-        {
-            Build(GameRulesAssetBuilder.DominationPath);
-        }
-
-        /// <summary>試合の進行役に rulesPath のルールを渡して、プレハブと NetTest シーンを作る。</summary>
-        public static void Build(string rulesPath)
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
@@ -134,430 +91,56 @@ namespace Fps.Editor
                 return;
             }
 
-            var loadout = LoadOrBuildLoadout();
-            var catalog = LoadCatalogFor(loadout);
-            var rules = LoadOrBuildRules(rulesPath);
-            var rig = LoadOrBuildRig();
-            var playerPrefab = BuildPrefab(PlayerPrefabPath, () => CreatePlayerSource(rig));
-            var grenadePrefab = BuildPrefab(GrenadePrefabPath, CreateGrenadeSource);
-            var matchPrefab = BuildPrefab(MatchPrefabPath, () => CreateMatchSource(loadout, catalog, rules, grenadePrefab));
-            RegisterDefaultNetworkPrefabs(playerPrefab, matchPrefab, grenadePrefab);
-            BuildScene(playerPrefab, matchPrefab);
+            var match = LoadOrBuildMatch();
+            BuildScene();
             BuildSceneList.Register(ScenePath);
             AssetDatabase.SaveAssets();
-            Debug.Log("[Net] NetSceneBuilder: wrote " + PlayerPrefabPath + ", " + GrenadePrefabPath + ", " + MatchPrefabPath + " and " + ScenePath
-                + " (loadout " + WeaponAssetBuilder.LoadoutPath + ", catalog " + WeaponAssetBuilder.CatalogPath
-                + ", rules " + rulesPath + ", rig " + CharacterRigBuilder.PrefabPath + ")");
+            Debug.Log("[Net] NetSceneBuilder: wrote " + ScenePath + " (match " + MatchDefinitionPath + ", loadout "
+                + AssetDatabase.GetAssetPath(match.Loadout) + ", catalog " + AssetDatabase.GetAssetPath(match.Catalog) + ")");
         }
 
         /// <summary>
-        /// プレイヤーの見た目にする人型のリグ (<see cref="CharacterRigBuilder.PrefabPath"/>) を読む。無ければ <see cref="CharacterRigBuilder.Build"/> で作る。
-        /// 根に AnimatorController の付いた Animator が無い・コライダーがある (当たり判定と自分の CharacterController にぶつかる) なら、
-        /// プレハブを書かずに例外を投げる。
+        /// 試合の設定 (<see cref="MatchDefinitionPath"/>) を読む。無ければ既定の値に、デフォルトロードアウト
+        /// (<see cref="WeaponAssetBuilder.LoadoutPath"/>) と武器の一覧 (<see cref="WeaponAssetBuilder.CatalogPath"/>) を配線して作る。
+        /// 既にあれば中身は上書きしない (ゲームが変えた値を残す)。ロードアウトが試合で使えなければ例外を投げる。
         /// </summary>
-        public static GameObject LoadOrBuildRig()
+        public static NetMatchDefinition LoadOrBuildMatch()
         {
-            var rig = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterRigBuilder.PrefabPath);
-            if (rig == null)
+            var match = AssetDatabase.LoadAssetAtPath<NetMatchDefinition>(MatchDefinitionPath);
+            if (match == null)
             {
-                Debug.Log("[Net] NetSceneBuilder: " + CharacterRigBuilder.PrefabPath + " is missing; running CharacterRigBuilder.Build");
-                CharacterRigBuilder.Build();
-                rig = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterRigBuilder.PrefabPath);
-            }
-
-            if (rig == null)
-            {
-                throw new InvalidOperationException("[Net] NetSceneBuilder: " + CharacterRigBuilder.PrefabPath + " could not be loaded");
-            }
-
-            var animator = rig.GetComponent<Animator>();
-            if (animator == null || animator.runtimeAnimatorController == null)
-            {
-                throw new InvalidOperationException("[Net] NetSceneBuilder: " + CharacterRigBuilder.PrefabPath
-                    + " has no Animator with a controller on its root; run CharacterRigBuilder.Build");
-            }
-
-            if (rig.GetComponentsInChildren<Collider>(true).Length > 0)
-            {
-                throw new InvalidOperationException("[Net] NetSceneBuilder: " + CharacterRigBuilder.PrefabPath
-                    + " has colliders, which would block the player's own CharacterController and shots; run CharacterRigBuilder.Build");
-            }
-
-            return rig;
-        }
-
-        /// <summary>
-        /// プレイヤーがロードアウトに選べる武器の一覧 (<see cref="WeaponAssetBuilder.CatalogPath"/>) を
-        /// <see cref="WeaponAssetBuilder.LoadCatalog"/> で読む (<see cref="LoadOrBuildLoadout"/> が無ければ作るのと同じ Build で作られる)。
-        /// サーバーの起動時と同じく loadout と一緒に <see cref="NetTeamDeathmatch.TryCreateLoadout(LoadoutDefinition, WeaponCatalogAsset, out ServerLoadout, out string)"/>
-        /// に通らなければ、プレハブを書かずに例外を投げる。
-        /// </summary>
-        public static WeaponCatalogAsset LoadCatalogFor(LoadoutDefinition loadout)
-        {
-            WeaponCatalogAsset catalog;
-            try
-            {
-                catalog = WeaponAssetBuilder.LoadCatalog();
-            }
-            catch (WeaponDefinitionException e)
-            {
-                throw new InvalidOperationException(
-                    "[Net] NetSceneBuilder: " + WeaponAssetBuilder.CatalogPath + " cannot be used by the match: " + e.Message, e);
-            }
-
-            if (!NetTeamDeathmatch.TryCreateLoadout(loadout, catalog, out _, out var error))
-            {
-                throw new InvalidOperationException(
-                    "[Net] NetSceneBuilder: " + WeaponAssetBuilder.CatalogPath + " cannot be used by the match: " + error);
-            }
-
-            return catalog;
-        }
-
-        /// <summary>
-        /// 試合の進行役に渡すチームデスマッチのルール (<see cref="GameRulesAssetBuilder.TeamDeathmatchPath"/>) を
-        /// <see cref="GameRulesAssetBuilder.LoadRules"/> で読む。無ければ <see cref="GameRulesAssetBuilder.Build"/> で作る。
-        /// サーバーの起動時と同じく <see cref="NetTeamDeathmatch.TryLoadRules"/> に通らなければ、プレハブを書かずに例外を投げる。
-        /// </summary>
-        public static GameRulesDefinition LoadOrBuildRules()
-        {
-            return LoadOrBuildRules(GameRulesAssetBuilder.TeamDeathmatchPath);
-        }
-
-        /// <summary>
-        /// <see cref="LoadOrBuildRules()"/> のうち、読むルールを path (<see cref="GameRulesAssetBuilder.Build"/> が作るどれか) にしたもの。
-        /// </summary>
-        public static GameRulesDefinition LoadOrBuildRules(string path)
-        {
-            if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path) == null)
-            {
-                Debug.Log("[Net] NetSceneBuilder: " + path + " is missing; running GameRulesAssetBuilder.Build");
-                GameRulesAssetBuilder.Build();
-            }
-
-            GameRulesDefinition rules;
-            try
-            {
-                rules = GameRulesAssetBuilder.LoadRules(path);
-            }
-            catch (Exception e) when (e is GameRulesDefinitionException || e is InvalidOperationException || e is ArgumentException)
-            {
-                throw new InvalidOperationException("[Net] NetSceneBuilder: " + path + " cannot be used by the match: " + e.Message, e);
-            }
-
-            if (!NetTeamDeathmatch.TryLoadRules(rules, out _, out _, out var error))
-            {
-                throw new InvalidOperationException("[Net] NetSceneBuilder: " + path + " cannot be used by the match: " + error);
-            }
-
-            return rules;
-        }
-
-        /// <summary>
-        /// 試合の進行役に渡すデフォルトロードアウト (<see cref="WeaponAssetBuilder.LoadoutPath"/>) を
-        /// <see cref="WeaponAssetBuilder.LoadDefaultLoadout"/> で読む。無ければ <see cref="WeaponAssetBuilder.Build"/> と同じものを作る
-        /// (既にあれば中身は上書きしない)。サーバーの起動時と同じく <see cref="NetTeamDeathmatch.TryCreateLoadout"/> に通らなければ、
-        /// プレハブを書かずに例外を投げる。
-        /// </summary>
-        public static LoadoutDefinition LoadOrBuildLoadout()
-        {
-            if (AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(WeaponAssetBuilder.LoadoutPath) == null)
-            {
-                Debug.Log("[Net] NetSceneBuilder: " + WeaponAssetBuilder.LoadoutPath + " is missing; running WeaponAssetBuilder.Build");
-                WeaponAssetBuilder.Build();
-            }
-
-            var loadout = WeaponAssetBuilder.LoadDefaultLoadout();
-            if (!NetTeamDeathmatch.TryCreateLoadout(loadout, out _, out var error))
-            {
-                throw new InvalidOperationException(
-                    "[Net] NetSceneBuilder: " + WeaponAssetBuilder.LoadoutPath + " cannot be used by the match: " + error);
-            }
-
-            return loadout;
-        }
-
-        private static GameObject CreatePlayerSource(GameObject rigPrefab)
-        {
-            var source = new GameObject("NetPlayer");
-            source.AddComponent<NetworkObject>();
-
-            AddRig(source, rigPrefab);
-
-            // 位置は NetworkPlayerMotor が同期する (リスポーンのテレポートも Motor 経由)。NetworkTransform は付けない
-            var controller = source.AddComponent<CharacterController>();
-            controller.height = PlayerHeight;
-            controller.radius = PlayerRadius;
-            controller.center = Vector3.zero;
-            source.AddComponent<NetworkPlayerMotor>();
-
-            AddView(source);
-
-            source.AddComponent<NetPlayer>();
-
-            // やられ演出。ルールが None 以外のとき、自分のプレイヤーで倒れてからリスポーンまでカメラを動かす (相手・味方・自由カメラ)
-            source.AddComponent<NetDeathCamera>();
-
-            // 弾倉・予備弾・リロード。弾数はサーバーが持ち、持ち主にだけ同期する
-            source.AddComponent<NetPlayerWeapon>();
-
-            // 演出と手榴弾。専用サーバーでは演出だけを HeadlessPresentation が止める
-            CharacterComponents.Attach(source, throwsGrenades: true);
-            return source;
-        }
-
-        /// <summary>
-        /// 見た目として人型のリグ (rigPrefab のプレハブのインスタンス) を本体の直下の <see cref="CharacterAnimator.RigObjectName"/> に置き、
-        /// 足元 (カプセルの底) に合わせる。実行時は <see cref="CharacterAnimator"/> がこれを使って動かす。
-        /// </summary>
-        /// <remarks>
-        /// <see cref="NetStance.BodyName"/> にはしない。NetStance は Body をしゃがみで縦に縮め、ダウンで寝かせるが、
-        /// リグではその姿勢を Animator のクリップが付けるので、二重にかかる。
-        /// 実行時に Resources から置かずにプレハブに入れるのは、<see cref="NetPlayer"/> が Awake で見た目の Renderer を集めて
-        /// チームの色を塗るため (CharacterAnimator の Start ではまだ置かれていない) と、リグが読めなくても見た目が消えないようにするため。
-        /// プレハブのインスタンスのままにして、CharacterRigBuilder で作り直したリグがそのまま反映されるようにする。
-        /// </remarks>
-        private static void AddRig(GameObject source, GameObject rigPrefab)
-        {
-            var rig = (GameObject)PrefabUtility.InstantiatePrefab(rigPrefab);
-            if (rig == null)
-            {
-                throw new InvalidOperationException("[Net] NetSceneBuilder: could not instantiate " + CharacterRigBuilder.PrefabPath);
-            }
-
-            rig.name = CharacterAnimator.RigObjectName;
-            rig.transform.SetParent(source.transform, false);
-            rig.transform.localPosition = new Vector3(0f, -PlayerHeight / 2f, 0f);
-            rig.transform.localRotation = Quaternion.identity;
-            rig.transform.localScale = Vector3.one;
-        }
-
-        /// <summary>
-        /// 視点を足す。pitch を回す目 (<see cref="NetPlayer.ViewName"/>) を目の高さに置き、その子 (<see cref="NetPlayer.ViewCameraName"/>) に
-        /// カメラと AudioListener を付け、本体に視点の土台 <see cref="ViewRig"/> (<see cref="PlayerViewMode"/>) と yaw を回す <see cref="FirstPersonLook"/>、
-        /// 覗き込みの <see cref="AimDownSights"/> を付ける。
-        /// どれも無効にしておき、自分のプレイヤーでだけ <see cref="NetPlayer"/> が生成時に有効にする (他人のカメラが映ったり音を拾ったりしない)。
-        /// </summary>
-        private static void AddView(GameObject source)
-        {
-            var view = new GameObject(NetPlayer.ViewName);
-            view.transform.SetParent(source.transform, false);
-            view.transform.localPosition = new Vector3(0f, NetPlayer.EyeHeight, 0f);
-            view.transform.localRotation = Quaternion.identity;
-
-            var cameraObject = new GameObject(NetPlayer.ViewCameraName) { tag = "MainCamera" };
-            cameraObject.transform.SetParent(view.transform, false);
-            cameraObject.transform.localPosition = Vector3.zero;
-            cameraObject.transform.localRotation = Quaternion.identity;
-
-            var camera = cameraObject.AddComponent<Camera>();
-            camera.nearClipPlane = ViewNearClip;
-            camera.enabled = false;
-            cameraObject.AddComponent<AudioListener>().enabled = false;
-
-            // Edit Mode の AddComponent では Awake が走らないので、参照はここで渡す。入力の解決は実行時の Awake に任せる
-            var rig = source.AddComponent<ViewRig>();
-            rig.enabled = false;
-            rig.Initialize(view.transform, camera);
-            rig.Mode = PlayerViewMode;
-            source.AddComponent<FirstPersonLook>().enabled = false;
-
-            // 覗き込みもカメラを持つ自分のプレイヤーでだけ動かす。参照と入力の解決は実行時の Awake に任せる
-            source.AddComponent<AimDownSights>().enabled = false;
-        }
-
-        /// <summary>
-        /// 投げたグレネードのプレハブ。オフラインの <see cref="ThrownGrenade"/> と同じ大きさ・重さの球に、NetworkObject・位置と回転だけを配る
-        /// NetworkTransform・Rigidbody・<see cref="NetGrenade"/> を付ける。Rigidbody は kinematic にしておき、サーバーだけが
-        /// <see cref="NetGrenade"/> の生成時に動的にする (クライアントは届いた位置をなぞるだけ)。
-        /// </summary>
-        private static GameObject CreateGrenadeSource()
-        {
-            var source = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            source.name = "NetGrenade";
-            source.transform.localScale = Vector3.one * (ThrownGrenade.BodyRadius * 2f);
-            source.AddComponent<NetworkObject>();
-
-            var body = source.AddComponent<Rigidbody>();
-            body.mass = ThrownGrenade.Mass;
-            body.isKinematic = true;
-            body.interpolation = RigidbodyInterpolation.None;
-            body.collisionDetectionMode = CollisionDetectionMode.Discrete;
-
-            // 大きさは変わらないので送らない
-            var sync = source.AddComponent<NetworkTransform>();
-            sync.SyncScaleX = false;
-            sync.SyncScaleY = false;
-            sync.SyncScaleZ = false;
-
-            source.AddComponent<NetGrenade>();
-            return source;
-        }
-
-        /// <summary>
-        /// prefabs を <see cref="DefaultNetworkPrefabsPath"/> の一覧に (無ければ) 足す。一覧のアセットが無ければ警告だけを出す
-        /// (実行時は <see cref="NetBootstrap"/> がコードで登録するので、無くても動く)。
-        /// </summary>
-        private static void RegisterDefaultNetworkPrefabs(params GameObject[] prefabs)
-        {
-            var list = AssetDatabase.LoadAssetAtPath<NetworkPrefabsList>(DefaultNetworkPrefabsPath);
-            if (list == null)
-            {
-                Debug.LogWarning("[Net] NetSceneBuilder: " + DefaultNetworkPrefabsPath + " was not found; NetBootstrap still registers the prefabs at runtime");
-                return;
-            }
-
-            var added = 0;
-            foreach (var prefab in prefabs)
-            {
-                if (prefab == null || ContainsPrefab(list, prefab))
+                if (AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(WeaponAssetBuilder.LoadoutPath) == null)
                 {
-                    continue;
+                    Debug.Log("[Net] NetSceneBuilder: " + WeaponAssetBuilder.LoadoutPath + " is missing; running WeaponAssetBuilder.Build");
+                    WeaponAssetBuilder.Build();
                 }
 
-                list.Add(new NetworkPrefab { Prefab = prefab });
-                added++;
+                match = ScriptableObject.CreateInstance<NetMatchDefinition>();
+                match.Loadout = WeaponAssetBuilder.LoadDefaultLoadout();
+                match.Catalog = WeaponAssetBuilder.LoadCatalog();
+                SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(MatchDefinitionPath));
+                AssetDatabase.CreateAsset(match, MatchDefinitionPath);
+                AssetDatabase.SaveAssets();
+                Debug.Log("[Net] NetSceneBuilder: created " + MatchDefinitionPath);
             }
 
-            if (added > 0)
+            if (!match.TryCreateLoadout(out _, out var error))
             {
-                EditorUtility.SetDirty(list);
-                AssetDatabase.SaveAssetIfDirty(list);
-                Debug.Log("[Net] NetSceneBuilder: added " + added + " prefab(s) to " + DefaultNetworkPrefabsPath);
-            }
-        }
-
-        private static bool ContainsPrefab(NetworkPrefabsList list, GameObject prefab)
-        {
-            foreach (var entry in list.PrefabList)
-            {
-                if (entry != null && entry.Prefab == prefab)
-                {
-                    return true;
-                }
+                throw new InvalidOperationException("[Net] NetSceneBuilder: " + MatchDefinitionPath + " cannot be used by the match: " + error);
             }
 
-            return false;
-        }
-
-        private static GameObject CreateMatchSource(
-            LoadoutDefinition loadout, WeaponCatalogAsset catalog, GameRulesDefinition rules, GameObject grenadePrefab)
-        {
-            var source = new GameObject("NetMatch");
-            source.AddComponent<NetworkObject>();
-
-            // 武器とルールの値はプレハブに持たず、アセットへの参照だけを持つ (サーバーは試合の開始時に読む)
-            var match = source.AddComponent<NetTeamDeathmatch>();
-            match.Loadout = loadout;
-            match.Catalog = catalog;
-            match.Rules = rules;
-
-            // 投げたグレネードはサーバーがこのプレハブから出す。NetBootstrap もここから引いてネットワークのプレハブとして登録する
-            match.GrenadePrefab = grenadePrefab;
-
-            // 射撃・ヒット・被弾・キルをクライアントへ配る。NetTeamDeathmatch が同じ GameObject から探す
-            source.AddComponent<NetCombatFeed>();
-            return source;
-        }
-
-        private static GameObject BuildPrefab(string path, Func<GameObject> createSource)
-        {
-            EnsureFolder(System.IO.Path.GetDirectoryName(path));
-
-            var source = createSource();
-            try
-            {
-                var saved = PrefabUtility.SaveAsPrefabAsset(source, path, out var success);
-                if (!success || saved == null)
-                {
-                    throw new InvalidOperationException("failed to save " + path);
-                }
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(source);
-            }
-
-            // 読み込み時の OnValidate で GlobalObjectIdHash が埋まるので、それをディスクへ書き戻す
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (prefab == null || prefab.GetComponent<NetworkObject>() == null)
-            {
-                throw new InvalidOperationException(path + " has no NetworkObject after import");
-            }
-
-            EditorUtility.SetDirty(prefab);
-            AssetDatabase.SaveAssetIfDirty(prefab);
-            return prefab;
+            return match;
         }
 
         /// <summary>
-        /// プレイヤーと試合の進行役のプレハブ (<see cref="PlayerPrefabPath"/> と <see cref="MatchPrefabPath"/>) が揃っているか。
-        /// 揃っていなければ <see cref="Build"/> で作る。別のシーン (マップ) を作る前に呼ぶ。Build は NetTest を開くので、
-        /// 呼び出し側は自分のシーンをこの後に作る。
-        /// </summary>
-        /// <remarks>
-        /// 揃っていれば作り直さない。プレハブを作り直すと、すでに配ったクライアントのビルドと食い違うおそれがあるため。
-        /// </remarks>
-        public static void EnsurePrefabs()
-        {
-            if (TryLoadPrefabs(out _, out _, out var problem))
-            {
-                return;
-            }
-
-            Debug.Log("[Net] NetSceneBuilder: " + problem + "; running NetSceneBuilder.Build");
-            Build();
-        }
-
-        /// <summary>
-        /// 保存済みのプレイヤーと試合の進行役のプレハブを読む。無いか、NetBootstrap が求めるコンポーネントが無ければ例外を投げる
-        /// (<see cref="EnsurePrefabs"/> を先に呼ぶ)。
-        /// </summary>
-        public static (GameObject Player, GameObject Match) LoadPrefabs()
-        {
-            if (!TryLoadPrefabs(out var player, out var match, out var problem))
-            {
-                throw new InvalidOperationException("[Net] NetSceneBuilder: " + problem + "; run Fps.Editor.NetSceneBuilder.Build");
-            }
-
-            return (player, match);
-        }
-
-        /// <summary>
-        /// NetTest と同じ配線の NetBootstrap (プレイヤーと試合の進行役のプレハブ) を scene の直下に置く。
-        /// どのシーンでも NetworkManager はこれがコードで組み立てるので、シーンには NetworkManager を保存しない。
-        /// </summary>
-        public static NetBootstrap CreateBootstrap(Scene scene, GameObject playerPrefab, GameObject matchPrefab)
-        {
-            if (playerPrefab == null)
-            {
-                throw new ArgumentNullException(nameof(playerPrefab));
-            }
-
-            if (matchPrefab == null)
-            {
-                throw new ArgumentNullException(nameof(matchPrefab));
-            }
-
-            var bootstrapObject = new GameObject("NetBootstrap");
-            SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
-            var bootstrap = bootstrapObject.AddComponent<NetBootstrap>();
-            bootstrap.PlayerPrefab = playerPrefab;
-            bootstrap.MatchPrefab = matchPrefab;
-            return bootstrap;
-        }
-
-        /// <summary>
-        /// 自分のプレイヤーが居ない間 (サーバーや接続前) の観戦用のカメラを scene に置く。
-        /// 自分のプレイヤーが生成されたら NetSpectatorCamera が止め、一人称カメラに替わる。
+        /// 自分のプレイヤーが居ない間 (つなぐ前やマップを読んだ直後) に映す、見下ろしのカメラを scene に置く。
+        /// 自分のプレイヤーのカメラは手前に描くので、置いたままでよい。
         /// </summary>
         public static Camera CreateSpectatorCamera(Scene scene, Vector3 position, Quaternion rotation)
         {
             var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
             SceneManager.MoveGameObjectToScene(cameraObject, scene);
             var camera = cameraObject.AddComponent<Camera>();
-            cameraObject.AddComponent<NetSpectatorCamera>();
             cameraObject.transform.SetPositionAndRotation(position, rotation);
             return camera;
         }
@@ -589,34 +172,12 @@ namespace Fps.Editor
             return point;
         }
 
-        private static bool TryLoadPrefabs(out GameObject player, out GameObject match, out string problem)
-        {
-            player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
-            match = AssetDatabase.LoadAssetAtPath<GameObject>(MatchPrefabPath);
-            if (player == null || player.GetComponent<NetworkObject>() == null || player.GetComponent<NetPlayer>() == null)
-            {
-                problem = PlayerPrefabPath + " is missing or has no NetworkObject and NetPlayer";
-                return false;
-            }
-
-            if (match == null || match.GetComponent<NetworkObject>() == null || match.GetComponent<NetTeamDeathmatch>() == null)
-            {
-                problem = MatchPrefabPath + " is missing or has no NetworkObject and NetTeamDeathmatch";
-                return false;
-            }
-
-            problem = null;
-            return true;
-        }
-
-        private static void BuildScene(GameObject playerPrefab, GameObject matchPrefab)
+        private static void BuildScene()
         {
             var scenePath = ScenePath;
-            EnsureFolder(System.IO.Path.GetDirectoryName(scenePath));
+            SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(scenePath));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-            CreateBootstrap(scene, playerPrefab, matchPrefab);
 
             // 両陣地のカプセルが見えるよう上から見下ろす
             CreateSpectatorCamera(scene, new Vector3(0f, 38f, -38f), Quaternion.Euler(45f, 0f, 0f));
@@ -643,14 +204,11 @@ namespace Fps.Editor
                 CreateSpawnPoint(spawnRoot.transform, pointName, position, team);
             }
 
-            // NetworkObject の親にほかの NetworkObject が無いよう、ルートに置く
             foreach (var (pointName, position, index) in ControlPoints)
             {
                 var pointObject = new GameObject(pointName);
                 pointObject.transform.position = position;
-                pointObject.AddComponent<NetworkObject>();
                 pointObject.AddComponent<ControlPointZone>().Index = index;
-                pointObject.AddComponent<NetControlPoint>();
             }
 
             BakeNavMesh(ground);
@@ -659,56 +217,14 @@ namespace Fps.Editor
             {
                 throw new InvalidOperationException("failed to save " + scenePath);
             }
-
-            FillSceneObjectIds();
         }
 
         /// <summary>
-        /// シーンに置いた NetworkObject (拠点) の GlobalObjectIdHash を埋めて保存し直す。この値は保存済みのシーンの中でしか作れず
-        /// (シーンの GUID を使う)、新しいシーンに置いた時点では埋まらないので、開き直して読み込み時の OnValidate に作らせる。
-        /// 埋まらなければ、サーバーとクライアントで拠点を突き合わせられないので例外を投げる。
-        /// </summary>
-        private static void FillSceneObjectIds()
-        {
-            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-            var networkObjects = scene.GetRootGameObjects()
-                .SelectMany(root => root.GetComponentsInChildren<NetworkObject>(true))
-                .ToArray();
-            if (networkObjects.Length == 0)
-            {
-                return;
-            }
-
-            foreach (var networkObject in networkObjects)
-            {
-                EditorUtility.SetDirty(networkObject);
-            }
-
-            EditorSceneManager.MarkSceneDirty(scene);
-            if (!EditorSceneManager.SaveScene(scene))
-            {
-                throw new InvalidOperationException("failed to save " + ScenePath);
-            }
-
-            foreach (var networkObject in networkObjects)
-            {
-                var hash = new SerializedObject(networkObject).FindProperty("GlobalObjectIdHash");
-                if (hash == null || hash.uintValue == 0u)
-                {
-                    throw new InvalidOperationException(
-                        ScenePath + ": " + networkObject.name + " has no GlobalObjectIdHash after reopening the scene");
-                }
-            }
-        }
-
-        /// <summary>
-        /// サーバーの Bot (<see cref="NetTeamDeathmatch"/> の .Bots.cs) が経路を引く NavMesh を、床と壁から焼いて
-        /// <see cref="NavMeshDataPath"/> に保存し、床の NavMeshSurface に持たせる (シーンを開くと読み込まれる)。
-        /// どの出現地点も NavMesh に乗っていて、最初の出現地点から歩いて行けることを確かめる。
+        /// サーバーの Bot が経路を引く NavMesh を、床と壁から焼いて <see cref="NavMeshDataPath"/> に保存し、床の NavMeshSurface に持たせる
+        /// (書き出し NavMeshExporter が読む)。どの出現地点も NavMesh に乗っていて、最初の出現地点から歩いて行けることを確かめる。
         /// </summary>
         private static void BakeNavMesh(GameObject ground)
         {
-            // Bot の生成前のシーンで焼くので、プレイヤーのカプセルで穴は空かない
             var surface = SceneBuildHelpers.AddNavMeshSurface(ground, CollectObjects.All);
             SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(NavMeshDataPath));
             SceneBuildHelpers.BakeNavMesh(surface);
@@ -717,23 +233,6 @@ namespace Fps.Editor
             var spawns = SpawnPoints.Select(point => point.Position).ToList();
             SceneBuildHelpers.RequireOnNavMesh(spawns, NavMeshCheckRadius, "spawn point");
             SceneBuildHelpers.RequireReachable(spawns[0], spawns, NavMeshCheckRadius, "spawn point");
-        }
-
-        private static void EnsureFolder(string path)
-        {
-            path = path.Replace('\\', '/');
-            if (AssetDatabase.IsValidFolder(path))
-            {
-                return;
-            }
-
-            var parent = System.IO.Path.GetDirectoryName(path).Replace('\\', '/');
-            EnsureFolder(parent);
-            var name = path.Split('/').Last();
-            if (string.IsNullOrEmpty(AssetDatabase.CreateFolder(parent, name)))
-            {
-                throw new InvalidOperationException("failed to create folder " + path);
-            }
         }
     }
 }

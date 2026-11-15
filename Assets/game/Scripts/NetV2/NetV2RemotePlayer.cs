@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-netstack v2</c> で見える他のプレイヤー 1 人。補間した姿 (<see cref="RemotePose"/>) を書き写すだけで、自分では動かさない。
+    /// ネット対戦で見える他のプレイヤー 1 人。補間した姿 (<see cref="RemotePose"/>) を書き写すだけで、自分では動かさない。
     /// 見た目は Resources の <see cref="BodyResourcePath"/> のプレハブを使い、無ければ体の寸法のカプセルを作る。
     /// しゃがみと伏せは見た目を縦に縮めて下げて表す (プレハブの見た目は立ったときの高さで作ってある前提)。
     /// 撃ったときの演出は自分のプレイヤーと同じ部品 (<see cref="NetV2LocalPlayer.AttachPresentation"/>) が出す。

@@ -6,7 +6,6 @@ using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
 using Unity.AI.Navigation;
-using Unity.Netcode;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -56,9 +55,7 @@ namespace Fps.Net.Tests
             Assert.That(NetLaunchOptions.IsMapName(ArenaSceneBuilder.MapName), Is.True);
             Assert.That(ArenaSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.NetArena01Scene));
             Assert.That(BuildSceneList.Scenes, Has.Member(ArenaSceneBuilder.ScenePath), "clients load the map the server chose");
-            Assert.That(ServerBuilder.ServerScenePaths(), Has.Member(ArenaSceneBuilder.ScenePath));
-            Assert.That(NetBootstrap.TryFindMapScene(ArenaSceneBuilder.MapName, ServerBuilder.ServerScenePaths(), out var path), Is.True);
-            Assert.That(path, Is.EqualTo(ArenaSceneBuilder.ScenePath));
+            Assert.That(BuildSceneList.ServerScenes, Has.Member(ArenaSceneBuilder.ScenePath), "the server data is exported for it");
         }
 
         [Test]
@@ -145,12 +142,12 @@ namespace Fps.Net.Tests
         [Test]
         public void ControlPointsCanStartADominationMatch()
         {
-            var points = ArenaSceneBuilder.ControlPoints
+            var zones = ArenaSceneBuilder.ControlPoints
                 .Select(p => ArenaSceneBuilder.CreateControlPoint(_scene, p.Name, p.Position, p.Index))
                 .ToArray();
 
-            Assert.That(NetControlPoint.TryBuildMap(points, out var map, out var byIndex, out var error), Is.True, error);
-            Assert.That(byIndex.Select(p => p.name), Is.EqualTo(ArenaSceneBuilder.ControlPoints.Select(p => p.Name)));
+            Assert.That(zones.Select(z => z.Index), Is.EqualTo(ArenaSceneBuilder.ControlPoints.Select(p => p.Index)));
+            var map = new ControlPointMap(zones.Select(z => z.Area).ToArray());
             Assert.That(() => new DominationObjective(map, 10f, 1f, 200, 600f, 3), Throws.Nothing);
         }
 
@@ -244,40 +241,28 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void PopulatedSceneHasTheBootstrapSpawnPointsAndControlPoints()
+        public void PopulatedSceneHasTheCameraSpawnPointsAndControlPoints()
         {
-            var player = Create("TestPlayer");
-            var match = Create("TestMatch");
+            ArenaSceneBuilder.PopulateScene(_scene);
 
-            var bootstrap = ArenaSceneBuilder.PopulateScene(_scene, player, match);
-
-            Assert.That(bootstrap.gameObject.scene, Is.EqualTo(_scene));
-            Assert.That(bootstrap.transform.parent, Is.Null, "NetworkManager needs a root GameObject");
-            Assert.That(bootstrap.PlayerPrefab, Is.SameAs(player));
-            Assert.That(bootstrap.MatchPrefab, Is.SameAs(match));
-            Assert.That(Components<NetBootstrap>(), Has.Length.EqualTo(1));
-            Assert.That(Components<NetSpectatorCamera>(), Has.Length.EqualTo(1));
-            Assert.That(Components<NetworkManager>(), Is.Empty, "NetBootstrap configures the NetworkManager in code");
+            Assert.That(Components<Camera>(), Has.Length.EqualTo(1), "a camera to show before the local player spawns");
 
             var spawns = Components<NetSpawnPoint>();
             Assert.That(spawns.Count(s => s.Team == NetSpawnPoint.SpawnTeam.Alpha), Is.EqualTo(ArenaSceneBuilder.SpawnsPerTeam));
             Assert.That(spawns.Count(s => s.Team == NetSpawnPoint.SpawnTeam.Bravo), Is.EqualTo(ArenaSceneBuilder.SpawnsPerTeam));
 
-            var points = Components<NetControlPoint>();
+            var points = Components<ControlPointZone>();
             Assert.That(points, Has.Length.EqualTo(ArenaSceneBuilder.ControlPoints.Count));
             foreach (var (name, position, index) in ArenaSceneBuilder.ControlPoints)
             {
                 var point = points.Single(p => p.name == name);
-                Assert.That(point.transform.parent, Is.Null, name + " is an in-scene NetworkObject at the root");
-                Assert.That(point.GetComponent<NetworkObject>(), Is.Not.Null, name);
                 Assert.That(point.transform.position, Is.EqualTo(position), name);
-                Assert.That(point.Zone, Is.Not.Null, name);
                 Assert.That(point.Index, Is.EqualTo(index), name);
-                Assert.That(point.Zone.Radius, Is.EqualTo(ArenaSceneBuilder.ControlPointRadius), name);
-                Assert.That(point.Zone.ShowsMarker, Is.True, name + " shows the ground circle while playing");
+                Assert.That(point.Radius, Is.EqualTo(ArenaSceneBuilder.ControlPointRadius), name);
+                Assert.That(point.ShowsMarker, Is.True, name + " shows the ground circle while playing");
 
                 // 床に立つプレイヤーのカプセルの中心 (y = 0) が範囲に入る
-                Assert.That(point.Zone.Contains(new Vector3(position.x, 0f, position.z)), Is.True, name);
+                Assert.That(point.Contains(new Vector3(position.x, 0f, position.z)), Is.True, name);
 
                 foreach (var part in new[] { DominationSceneBuilder.PoleName, DominationSceneBuilder.FlagName })
                 {
@@ -290,18 +275,16 @@ namespace Fps.Net.Tests
         }
 
         [Test]
-        public void BuildingsAreNetworkedDestructibleStructuresWithDoors()
+        public void BuildingsAreDestructibleStructuresWithDoors()
         {
-            ArenaSceneBuilder.PopulateScene(_scene, Create("TestPlayer"), Create("TestMatch"));
+            ArenaSceneBuilder.PopulateScene(_scene);
 
             var structures = Components<DestructibleStructure>();
             Assert.That(structures, Has.Length.EqualTo(ArenaSceneBuilder.Buildings.Count));
             foreach (var structure in structures)
             {
-                Assert.That(structure.transform.parent, Is.Null, structure.name + " is an in-scene NetworkObject at the root");
-                Assert.That(structure.GetComponent<NetDestructibleStructure>(), Is.Not.Null, structure.name);
-                Assert.That(structure.GetComponent<NetworkObject>(), Is.Not.Null, structure.name);
-                Assert.That(structure.DestructionEnabled, Is.False, "the match turns destruction on from its rules");
+                Assert.That(structure.transform.parent, Is.Null, structure.name + " is numbered in scene order like the export");
+                Assert.That(structure.DestructionEnabled, Is.False, "the server decides destruction from its rules");
                 Assert.That(structure.DebrisPool, Is.Not.Null, structure.name);
 
                 var pieces = structure.Pieces;
@@ -326,7 +309,7 @@ namespace Fps.Net.Tests
             var prefab = Create("Brick");
             GameObject.CreatePrimitive(PrimitiveType.Cube).transform.SetParent(prefab.transform, false);
 
-            ArenaSceneBuilder.PopulateScene(_scene, Create("TestPlayer"), Create("TestMatch"), prefab);
+            ArenaSceneBuilder.PopulateScene(_scene, prefab);
 
             var pieces = Components<DestructiblePiece>();
             Assert.That(pieces, Has.Length.EqualTo(ArenaSceneBuilder.BuildingPieceCount * ArenaSceneBuilder.Buildings.Count));
@@ -343,7 +326,7 @@ namespace Fps.Net.Tests
         [Test]
         public void BuildingsKeepThePlaceholderCubesWithoutAPrefab()
         {
-            ArenaSceneBuilder.PopulateScene(_scene, Create("TestPlayer"), Create("TestMatch"));
+            ArenaSceneBuilder.PopulateScene(_scene);
 
             foreach (var piece in Components<DestructiblePiece>())
             {

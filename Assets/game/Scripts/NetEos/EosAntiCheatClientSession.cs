@@ -7,9 +7,9 @@ using UnityEngine;
 namespace Fps.NetEos
 {
     /// <summary>
-    /// <c>-netstack v2</c> のクライアントの EAC を、Anti-Cheat Client の ClientServer モードで動かす。
-    /// .NET のサーバーは Anti-Cheat Server インターフェースでクライアントを登録するので、ホスト型の <see cref="EosAntiCheat"/>
-    /// (PeerToPeer モード) とは別のモードで始める。EOS のプラットフォームとログインは、つなぐときに通信路が済ませたものを使う。
+    /// クライアントの EAC を、Anti-Cheat Client の ClientServer モードで動かす。
+    /// .NET のサーバーは Anti-Cheat Server インターフェースでクライアントを登録するので、このモードで始める。
+    /// EOS のプラットフォームとログインは、つなぐときに通信路が済ませたものを使う。
     /// </summary>
     internal sealed class EosAntiCheatClientSession : IAntiCheatClientSession
     {

@@ -9,7 +9,7 @@ namespace Fps.Core.Tests
         private const string _serverId = "0123456789abcdef0123456789abcdef";
 
         private static readonly string[] _noArgs = { "fps" };
-        private static readonly string[] _noEacArgs = { "fps", "-mode", "host", "-NoEac" };
+        private static readonly string[] _noEacArgs = { "fps", "-mode", "client", "-NoEac" };
         private static readonly string[] _eacArgs = { "fps", "-eac" };
         private static readonly string[] _bothArgs = { "fps", "-noeac", "-eac" };
         private static readonly string[] _similarArgs = { "fps", "-noeacx", "--noeac", "noeac" };
@@ -33,20 +33,18 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void EnabledForEosHostAndClientInAPlayer()
+        public void EnabledForAnEosClientInAPlayer()
         {
-            var host = Resolve(_noArgs, false, Eos(NetLaunchMode.Host));
             var client = Resolve(_noArgs, false, Eos(NetLaunchMode.Client));
 
-            Assert.That(host.Enabled, Is.True);
             Assert.That(client.Enabled, Is.True);
-            Assert.That(host.Describe(), Does.StartWith("[AntiCheat] enabled"));
+            Assert.That(client.Describe(), Does.StartWith("[AntiCheat] enabled"));
         }
 
         [Test]
         public void NoEacDisables()
         {
-            var settings = Resolve(_noEacArgs, false, Eos(NetLaunchMode.Host));
+            var settings = Resolve(_noEacArgs, false, Eos(NetLaunchMode.Client));
 
             Assert.That(settings.Enabled, Is.False);
             Assert.That(settings.Describe(), Is.EqualTo("[AntiCheat] disabled by -noeac"));
@@ -55,8 +53,8 @@ namespace Fps.Core.Tests
         [Test]
         public void DisabledInTheEditorUnlessForced()
         {
-            var byDefault = Resolve(_noArgs, true, Eos(NetLaunchMode.Host));
-            var forced = Resolve(_eacArgs, true, Eos(NetLaunchMode.Host));
+            var byDefault = Resolve(_noArgs, true, Eos(NetLaunchMode.Client));
+            var forced = Resolve(_eacArgs, true, Eos(NetLaunchMode.Client));
 
             Assert.That(byDefault.Enabled, Is.False);
             Assert.That(byDefault.Reason, Does.Contain("editor"));
@@ -66,7 +64,7 @@ namespace Fps.Core.Tests
         [Test]
         public void DisabledWithUdpEvenWhenForced()
         {
-            var settings = Resolve(_eacArgs, false, Udp(NetLaunchMode.Host));
+            var settings = Resolve(_eacArgs, false, Udp(NetLaunchMode.Client));
 
             Assert.That(settings.Enabled, Is.False);
             Assert.That(settings.Reason, Does.Contain("-transport eos"));
@@ -78,14 +76,14 @@ namespace Fps.Core.Tests
             var settings = Resolve(_noArgs, false, Eos(NetLaunchMode.Server));
 
             Assert.That(settings.Enabled, Is.False);
-            Assert.That(settings.Reason, Does.Contain("-mode host"));
+            Assert.That(settings.Reason, Does.Contain(nameof(AntiCheatSettings.TryResolveDedicatedServer)));
         }
 
         [Test]
         public void RejectsBothFlags()
         {
             var ok = AntiCheatSettings.TryResolve(
-                _bothArgs, false, Eos(NetLaunchMode.Host), out var settings, out var error);
+                _bothArgs, false, Eos(NetLaunchMode.Client), out var settings, out var error);
 
             Assert.That(ok, Is.False);
             Assert.That(settings, Is.Null);
@@ -110,7 +108,7 @@ namespace Fps.Core.Tests
         [Test]
         public void RejectsNullArguments()
         {
-            Assert.Throws<ArgumentNullException>(() => AntiCheatSettings.TryResolve(null, false, Eos(NetLaunchMode.Host), out _, out _));
+            Assert.Throws<ArgumentNullException>(() => AntiCheatSettings.TryResolve(null, false, Eos(NetLaunchMode.Client), out _, out _));
             Assert.Throws<ArgumentNullException>(() => AntiCheatSettings.TryResolve(_noArgs, false, null, out _, out _));
         }
 

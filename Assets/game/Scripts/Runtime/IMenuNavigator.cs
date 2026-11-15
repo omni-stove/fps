@@ -9,12 +9,9 @@ namespace Fps.Runtime
     public interface IMenuNavigator
     {
         /// <summary>
-        /// <see cref="ReturnToMenu"/> でメニューのシーンを読む直前。シーンをまたいで残るもの (NetworkManager など) はここで片付ける。
+        /// <see cref="ReturnToMenu"/> でメニューのシーンを読む直前。シーンをまたいで残るもの (ネット対戦のクライアントなど) はここで片付ける。
         /// </summary>
         event Action ReturningToMenu;
-
-        /// <summary>メニューで選んだロビーの設定を受け取り、持っていた分は消す。無ければ <see cref="LobbyLaunchOptions.None"/>。</summary>
-        LobbyLaunchOptions TakeLobbyRequest();
 
         /// <summary>メニューでチュートリアルを選んだかを受け取り、持っていた分は消す。</summary>
         bool TakeTutorialRequest();

@@ -36,3 +36,15 @@ codesign --force --deep --sign - /Applications/fps.app
 ```
 
 1 行目はダウンロードした印 (quarantine) を外し、2 行目はこの Mac の上でだけ通る署名 (ad-hoc 署名) を付け直します。
+
+## オンラインで遊ぶ
+
+メインメニューの「ONLINE - QUICK MATCH」を押すと、空きのあるサーバーを探してつなぎます。サーバーのアドレスを知っているときは、
+起動するものに引数を付けるとそのサーバーへつなぎます。
+
+```sh
+fps.exe -mode client -address 203.0.113.10 -port 7777     # Windows
+fps.app/Contents/MacOS/fps -mode client -address 203.0.113.10 -port 7777     # macOS
+```
+
+サーバーとの接続が切れると、理由を出してメインメニューに戻ります。もう一度クイックマッチを押せばつなぎ直せます。

@@ -38,7 +38,6 @@ namespace Fps.Tests.EditMode
         }
 
         [TestCase(RoundDelivery.Hitscan)]
-        [TestCase(RoundDelivery.Projectile)]
         [TestCase(RoundDelivery.Spray)]
         public void EveryDeliveryHitsLikeTheHitscanUntilItIsFilledIn(RoundDelivery delivery)
         {
@@ -173,6 +172,48 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AThickRoundHitsATargetTheThinLineMisses()
+        {
+            // 既定のカプセルは半径 0.5。線は横に 0.7 ずれて外れ、半径 0.3 の弾なら端をかすめて当たる
+            var target = CreateTarget("dummy", new Vector3(0.7f, 1f, 10f), HitZone.Body);
+
+            Assert.That(HitscanDelivery.Instance.Deliver(Request(10), Straight()).Hit, Is.False);
+            var outcome = HitscanDelivery.Instance.Deliver(Request(10, radius: 0.3f), Straight());
+
+            Assert.That(outcome.Hit, Is.True);
+            Assert.That(outcome.Owner, Is.SameAs(target));
+            Assert.That(target.Health.Current, Is.EqualTo(90));
+        }
+
+        [Test]
+        public void AThickShotCastSkipsTheShooterAndWhatItStartsAgainst()
+        {
+            var shooter = CreateTarget("shooter", new Vector3(0f, 1f, 0.3f), HitZone.Body);
+            var beside = CreateTarget("beside", new Vector3(0.9f, 1f, 0f), HitZone.Body);
+            var target = CreateTarget("target", new Vector3(0f, 1f, 10f), HitZone.Body);
+
+            Assert.That(ShotCast.TryFirst(_eye, Vector3.forward, 0.5f, 50f, Physics.DefaultRaycastLayers, shooter.transform, out var hit), Is.True);
+            Assert.That(hit.collider.gameObject, Is.SameAs(target.gameObject));
+            Assert.That(hit.collider.gameObject, Is.Not.SameAs(beside.gameObject));
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => ShotCast.TryFirst(_eye, Vector3.forward, -1f, 50f, Physics.DefaultRaycastLayers, null, out _));
+        }
+
+        [Test]
+        public void AThickShotCastStopsAtAWallStraightAheadItStartsInside()
+        {
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(wall);
+            wall.transform.position = new Vector3(0f, 1f, 0.3f);
+            wall.transform.localScale = new Vector3(4f, 4f, 0.1f);
+            CreateTarget("target", new Vector3(0f, 1f, 10f), HitZone.Body);
+            Physics.SyncTransforms();
+
+            Assert.That(ShotCast.TryFirst(_eye, Vector3.forward, 0.5f, 50f, Physics.DefaultRaycastLayers, null, out var hit), Is.True);
+            Assert.That(hit.collider.gameObject, Is.SameAs(wall));
+        }
+
+        [Test]
         public void TheEnemyPathLogsTheHitWithTheTargetsHealth()
         {
             CreateTarget("dummy", new Vector3(0f, 1f, 10f), HitZone.Body);
@@ -198,9 +239,9 @@ namespace Fps.Tests.EditMode
             Assert.That(target.StatusEffects, Is.SameAs(receiver));
         }
 
-        private static ShotRequest Request(int damage, int layerMask = Physics.DefaultRaycastLayers)
+        private static ShotRequest Request(int damage, int layerMask = Physics.DefaultRaycastLayers, float radius = 0f)
         {
-            return new ShotRequest(null, null, null, new RoundSpec(), new ImpactSpec(damage), "test-rifle", layerMask);
+            return new ShotRequest(null, null, null, new RoundSpec(radius: radius), new ImpactSpec(damage), "test-rifle", layerMask);
         }
 
         private static ShotRequest BeamRequest(GameObject shooter, int damage)

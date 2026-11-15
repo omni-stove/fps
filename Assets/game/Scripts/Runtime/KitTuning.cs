@@ -7,11 +7,11 @@ namespace Fps.Runtime
     /// <summary>
     /// ゲームごとに変える調整値のうち、JSON (<see cref="TuningJson"/> の形) から読むもの。入口 (<see cref="GameContent"/>) に JSON があればそれを、無ければ Resources の JSON を読む。
     /// <list type="bullet">
-    /// <item>グレネード: <see cref="GrenadeResourcePath"/> (<see cref="Grenade"/>)。オフラインの <see cref="GrenadeThrower"/> とネット対戦が使う。</item>
+    /// <item>グレネード: <see cref="GrenadeResourcePath"/> (<see cref="Grenades"/>)。オフラインの <see cref="GrenadeThrower"/> とネット対戦が使う。</item>
     /// <item>印: <see cref="PingResourcePath"/> (<see cref="Ping"/>)。オフラインの <see cref="PingController"/> とネット対戦が使う。</item>
     /// <item>吹き飛ばし: <see cref="KnockbackResourcePath"/> (<see cref="Knockback"/>)。プレイヤーの <see cref="KnockbackMovement"/> と <see cref="EnemyAgent"/> が使う。</item>
     /// </list>
-    /// ファイルが無ければ Spec の既定値 (<see cref="GrenadeSpec.Default"/>・<see cref="PingSpec.Default"/>・<see cref="KnockbackSpec.Default"/>) で動く。
+    /// ファイルが無ければ Spec の既定値 (<see cref="GrenadeCatalog.Default"/>・<see cref="PingSpec.Default"/>・<see cref="KnockbackSpec.Default"/>) で動く。
     /// 壊れている・値が不正なら、ファイル名と項目名を添えたエラーを出して既定値で続ける。
     /// 初めて使うときに読み、Play の間は持ち続ける (Play の開始時に読み直す)。
     /// </summary>
@@ -29,12 +29,13 @@ namespace Fps.Runtime
         public const string KnockbackResourcePath = "Tuning/knockback";
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
-        private static GrenadeSpec _grenade;
+        private static GrenadeCatalog _grenades;
         private static PingSpec _ping;
         private static KnockbackSpec _knockback;
 
-        /// <summary>グレネードの調整値。<see cref="GrenadeResourcePath"/> が無いか読めなければ <see cref="GrenadeSpec.Default"/>。</summary>
-        public static GrenadeSpec Grenade => _grenade ?? (_grenade = Load(c => c.GrenadeTuning, GrenadeResourcePath, TuningJson.ParseGrenade, GrenadeSpec.Default));
+        /// <summary>グレネードの種類の調整値。<see cref="GrenadeResourcePath"/> が無いか読めなければ <see cref="GrenadeCatalog.Default"/>。</summary>
+        public static GrenadeCatalog Grenades =>
+            _grenades ?? (_grenades = Load(c => c.GrenadeTuning, GrenadeResourcePath, TuningJson.ParseGrenades, GrenadeCatalog.Default));
 
         /// <summary>印の調整値。<see cref="PingResourcePath"/> が無いか読めなければ <see cref="PingSpec.Default"/>。</summary>
         public static PingSpec Ping => _ping ?? (_ping = Load(c => c.PingTuning, PingResourcePath, TuningJson.ParsePing, PingSpec.Default));
@@ -46,7 +47,7 @@ namespace Fps.Runtime
         /// <summary>読んだ値を捨て、次に使うときに Resources から読み直させる。</summary>
         public static void Reload()
         {
-            _grenade = null;
+            _grenades = null;
             _ping = null;
             _knockback = null;
         }

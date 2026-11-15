@@ -247,6 +247,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "SwitchGrenade",
+                    "type": "Button",
+                    "id": "c7d6a2f1-3b8e-4f5a-9e21-6d4b0a8c7f13",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -940,6 +949,17 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "HoldBreath",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "2a9e5c47-8f1d-4b36-a0e8-5c3f7d9b1e64",
+                    "path": "<Keyboard>/k",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "SwitchGrenade",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

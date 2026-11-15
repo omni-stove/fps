@@ -97,6 +97,11 @@ namespace Fps.Core
         {
         }
 
+        public void Unload()
+        {
+            _magazine.Unload();
+        }
+
         public void Tick(float deltaSeconds)
         {
             SpecGuard.NonNegativeFinite(deltaSeconds, nameof(deltaSeconds));

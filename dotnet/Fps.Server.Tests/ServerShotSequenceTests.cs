@@ -1,4 +1,5 @@
 using Fps.Core;
+using Fps.Protocol;
 using NUnit.Framework;
 
 namespace Fps.Server.Tests
@@ -34,15 +35,39 @@ namespace Fps.Server.Tests
         [Test]
         public void TheSupplyFollowsTheRulesAndTheInterval()
         {
-            var supply = new ServerGrenadeSupply(0.6f, 0.15f);
-            Assert.That(supply.Check(0d), Is.EqualTo(GrenadeThrowRejection.Disabled));
+            var supply = new ServerGrenadeSupply(GrenadeCatalog.Default, 0.15f);
+            Assert.That(supply.Check(0d, "", out _), Is.EqualTo(GrenadeThrowRejection.Disabled));
 
             supply.Refill(ActionRules.Default.WithGrenade(Grenade.On).WithGrenadeCount(2));
-            Assert.That(supply.Take(0d), Is.EqualTo(GrenadeThrowRejection.None));
-            Assert.That(supply.Take(0.4d), Is.EqualTo(GrenadeThrowRejection.TooSoon));
-            Assert.That(supply.Take(0.5d), Is.EqualTo(GrenadeThrowRejection.None), "a request up to the jitter early is accepted");
-            Assert.That(supply.Take(5d), Is.EqualTo(GrenadeThrowRejection.Empty));
-            Assert.That(supply.Remaining, Is.EqualTo(0));
+            Assert.That(supply.Take(0d, "", out var spec), Is.EqualTo(GrenadeThrowRejection.None));
+            Assert.That(spec, Is.SameAs(GrenadeSpec.Default), "a request without a type throws the first carried type");
+            Assert.That(supply.Take(0.4d, "", out _), Is.EqualTo(GrenadeThrowRejection.TooSoon));
+            Assert.That(supply.Take(0.5d, GrenadeSpec.DefaultId, out _), Is.EqualTo(GrenadeThrowRejection.None), "a request up to the jitter early is accepted");
+            Assert.That(supply.Take(5d, "", out _), Is.EqualTo(GrenadeThrowRejection.Empty));
+            Assert.That(supply.RemainingOf(GrenadeSpec.DefaultId), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EachTypeIsCountedOnItsOwnAndSetsTheNextInterval()
+        {
+            var slow = new GrenadeSpec(
+                "ecaf6e57-cb77-4707-9321-6ea5b659408f", "grenade.smoke", new ImpactSpec(damage: 0), throwSeconds: 2f);
+            var supply = new ServerGrenadeSupply(new GrenadeCatalog(new[] { GrenadeSpec.Default, slow }, new[] { GrenadeSpec.DefaultId, slow.Id }));
+            supply.Refill(ActionRules.Default.WithGrenade(Grenade.On).WithGrenadeCount(1));
+
+            Assert.That(supply.Take(0d, slow.Id, out var thrown), Is.EqualTo(GrenadeThrowRejection.None));
+            Assert.That(thrown, Is.SameAs(slow));
+            Assert.That(supply.Take(1d, GrenadeSpec.DefaultId, out _), Is.EqualTo(GrenadeThrowRejection.TooSoon), "the smoke's own throw time applies");
+            Assert.That(supply.Take(2d, GrenadeSpec.DefaultId, out _), Is.EqualTo(GrenadeThrowRejection.None));
+            Assert.That(supply.Take(9d, slow.Id, out _), Is.EqualTo(GrenadeThrowRejection.Empty));
+            Assert.That(supply.Take(9d, "5eb3292d-6300-4ec2-b325-6ad793017e49", out _), Is.EqualTo(GrenadeThrowRejection.UnknownType));
+
+            var sync = new GrenadePouchSync();
+            supply.Fill(sync);
+            Assert.That(sync.Enabled, Is.True);
+            Assert.That(sync.Count, Is.EqualTo(2));
+            Assert.That(sync.TypeIdAt(1), Is.EqualTo(slow.Id));
+            Assert.That(sync.TotalRemaining, Is.Zero);
         }
     }
 }

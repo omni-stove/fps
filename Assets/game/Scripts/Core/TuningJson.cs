@@ -5,8 +5,9 @@ using System.Globalization;
 namespace Fps.Core
 {
     /// <summary>
-    /// グレネード (<see cref="GrenadeSpec"/>)・印 (<see cref="PingSpec"/>)・吹き飛ばし (<see cref="KnockbackSpec"/>) の調整値を JSON から読む。
-    /// どれも入れ子の無い 1 つのオブジェクトで、項目の名前はコンストラクターの引数名 (<see cref="GrenadeItemNames"/>・<see cref="PingItemNames"/>・<see cref="KnockbackItemNames"/>)。
+    /// グレネード (<see cref="GrenadeCatalog"/>)・印 (<see cref="PingSpec"/>)・吹き飛ばし (<see cref="KnockbackSpec"/>) の調整値を JSON から読む。
+    /// 印と吹き飛ばしは入れ子の無い 1 つのオブジェクトで、項目の名前はコンストラクターの引数名 (<see cref="PingItemNames"/>・<see cref="KnockbackItemNames"/>)。
+    /// グレネードは種類の並び (<see cref="GrenadeCatalogItemNames"/>) で、1 種類は <see cref="GrenadeItemNames"/> の項目を持つ。
     /// 吹き飛ばしの力 (<see cref="KnockbackForce"/>) だけは入れ子にせず、種類の名前を頭に付けた項目 (explosionSpeed など) に開く。
     /// 省略した項目は各 Spec の既定値になる。小数は JSON の数、整数は小数点も指数も無い数で書く。
     /// 文法は <see cref="GameRulesJson"/> と同じで、値の範囲の検査は Spec に任せ、どれかに引っかかれば
@@ -22,6 +23,12 @@ namespace Fps.Core
         public const string DamageRadiusItem = "damageRadius";
         public const string FullDamageRadiusItem = "fullDamageRadius";
         public const string StructureDamageAtCenterItem = "structureDamageAtCenter";
+        public const string GrenadeIdItem = "id";
+        public const string GrenadeNameKeyItem = "nameKey";
+        public const string GrenadeImpactItem = "impact";
+        public const string StickinessItem = "stickiness";
+        public const string GrenadeTypesItem = "types";
+        public const string CarriedItem = "carried";
 
         public const string LifetimeSecondsItem = "lifetimeSeconds";
         public const string MaxMarkersItem = "maxMarkers";
@@ -72,9 +79,11 @@ namespace Fps.Core
         private const string _knockbackKind = "knockback JSON";
         private const string _botsKind = "bots JSON";
 
-        /// <summary>グレネードの JSON に書ける項目の名前 (<see cref="GrenadeSpec"/> のコンストラクターの並び)。</summary>
+        /// <summary>グレネード 1 種類に書ける項目の名前 (<see cref="GrenadeSpec"/> のコンストラクターの引数名)。</summary>
         public static IReadOnlyList<string> GrenadeItemNames { get; } = new[]
         {
+            GrenadeIdItem,
+            GrenadeNameKeyItem,
             FuseSecondsItem,
             ThrowSecondsItem,
             ThrowSpeedItem,
@@ -83,7 +92,14 @@ namespace Fps.Core
             DamageRadiusItem,
             FullDamageRadiusItem,
             StructureDamageAtCenterItem,
+            GrenadeImpactItem,
+            StickinessItem,
         };
+
+        public static IReadOnlyList<string> GrenadeCatalogItemNames { get; } = new[] { GrenadeTypesItem, CarriedItem };
+
+        // 爆発を impact に書いた種類に平らな爆発の値も書くと、どちらを使うか読み手が迷う
+        private static readonly string[] _flatExplosionItems = { MaxDamageItem, DamageRadiusItem, FullDamageRadiusItem, StructureDamageAtCenterItem };
 
         /// <summary>印の JSON に書ける項目の名前 (<see cref="PingSpec"/> のコンストラクターの並び)。</summary>
         public static IReadOnlyList<string> PingItemNames { get; } = new[]
@@ -141,7 +157,54 @@ namespace Fps.Core
             StuckProgressItem,
         };
 
-        /// <summary>text を 1 つのグレネードの調整値として読む。</summary>
+        /// <summary>
+        /// text をグレネードの種類の並びとして読む。<see cref="GrenadeTypesItem"/> も <see cref="CarriedItem"/> も無いオブジェクトは、
+        /// 種類が 1 つだった頃の形として、その 1 種類だけを持つ並びに読む。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">text が null。</exception>
+        /// <exception cref="TuningJsonException">JSON の文法・項目・値が不正。</exception>
+        public static GrenadeCatalog ParseGrenades(string text, string sourceName)
+        {
+            var source = SourceOf(sourceName, _grenadeKind);
+            return Translated(() =>
+            {
+                var root = ServerDataJson.ParseDocument(text, source, _grenadeKind);
+                if (root.Kind == GameRulesJson.NodeKind.Object && !HasMember(root, GrenadeTypesItem) && !HasMember(root, CarriedItem))
+                {
+                    return GrenadeCatalog.Of(ReadGrenade(new ServerDataJson.Fields(source, _grenadeKind, root, string.Empty, GrenadeItemNames)));
+                }
+
+                var fields = new ServerDataJson.Fields(source, _grenadeKind, root, string.Empty, GrenadeCatalogItemNames);
+                var types = new List<GrenadeSpec>();
+                var nodes = fields.Array(GrenadeTypesItem);
+                for (var i = 0; i < nodes.Count; i++)
+                {
+                    types.Add(ReadGrenade(fields.Element(nodes[i], GrenadeTypesItem, i, GrenadeItemNames)));
+                }
+
+                List<string> carried = null;
+                if (fields.Has(CarriedItem))
+                {
+                    carried = new List<string>();
+                    var carriedNodes = fields.Array(CarriedItem);
+                    for (var i = 0; i < carriedNodes.Count; i++)
+                    {
+                        carried.Add(fields.ToText(fields.ElementPath(CarriedItem, i), carriedNodes[i]));
+                    }
+                }
+
+                try
+                {
+                    return new GrenadeCatalog(types, carried);
+                }
+                catch (ArgumentException e)
+                {
+                    throw fields.Rejected(e.ParamName == "carriedIds" ? CarriedItem : GrenadeTypesItem, e.Message, e);
+                }
+            });
+        }
+
+        /// <summary>text を 1 種類のグレネードの調整値として読む。</summary>
         /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
         /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
         /// <exception cref="ArgumentNullException">text が null。</exception>
@@ -151,24 +214,8 @@ namespace Fps.Core
         public static GrenadeSpec ParseGrenade(string text, string sourceName)
         {
             var source = SourceOf(sourceName, _grenadeKind);
-            var fields = Fields.Read(text, source, _grenadeKind, GrenadeItemNames);
-            var defaults = GrenadeSpec.Default;
-            try
-            {
-                return new GrenadeSpec(
-                    fields.ReadFloat(FuseSecondsItem, defaults.FuseSeconds),
-                    fields.ReadFloat(ThrowSecondsItem, defaults.ThrowSeconds),
-                    fields.ReadFloat(ThrowSpeedItem, defaults.ThrowSpeed),
-                    fields.ReadFloat(ThrowLiftSpeedItem, defaults.ThrowLiftSpeed),
-                    fields.ReadInt(MaxDamageItem, defaults.MaxDamage),
-                    fields.ReadFloat(DamageRadiusItem, defaults.DamageRadius),
-                    fields.ReadFloat(FullDamageRadiusItem, defaults.FullDamageRadius),
-                    fields.ReadInt(StructureDamageAtCenterItem, defaults.StructureDamageAtCenter));
-            }
-            catch (ArgumentException e)
-            {
-                throw Rejected(source, _grenadeKind, GrenadeItemNames, e);
-            }
+            return Translated(() => ReadGrenade(
+                new ServerDataJson.Fields(source, _grenadeKind, ServerDataJson.ParseDocument(text, source, _grenadeKind), string.Empty, GrenadeItemNames)));
         }
 
         /// <summary>text を 1 つの印の調整値として読む。</summary>
@@ -270,6 +317,95 @@ namespace Fps.Core
             {
                 throw Rejected(source, _botsKind, BotItemNames, e);
             }
+        }
+
+        private static GrenadeSpec ReadGrenade(ServerDataJson.Fields fields)
+        {
+            var defaults = GrenadeSpec.Default;
+            var id = fields.ReadString(GrenadeIdItem, defaults.Id);
+            var nameKey = fields.ReadString(GrenadeNameKeyItem, defaults.NameKey);
+            var fuseSeconds = fields.ReadFloat(FuseSecondsItem, defaults.FuseSeconds);
+            var throwSeconds = fields.ReadFloat(ThrowSecondsItem, defaults.ThrowSeconds);
+            var throwSpeed = fields.ReadFloat(ThrowSpeedItem, defaults.ThrowSpeed);
+            var throwLiftSpeed = fields.ReadFloat(ThrowLiftSpeedItem, defaults.ThrowLiftSpeed);
+            var stickiness = fields.ReadEnum(StickinessItem, defaults.Stickiness);
+            var impactFields = fields.Object(GrenadeImpactItem, WeaponSpecJson.ImpactItemNames);
+            try
+            {
+                if (impactFields == null)
+                {
+                    return new GrenadeSpec(
+                        fuseSeconds,
+                        throwSeconds,
+                        throwSpeed,
+                        throwLiftSpeed,
+                        fields.ReadInt(MaxDamageItem, defaults.MaxDamage),
+                        fields.ReadFloat(DamageRadiusItem, defaults.DamageRadius),
+                        fields.ReadFloat(FullDamageRadiusItem, defaults.FullDamageRadius),
+                        fields.ReadInt(StructureDamageAtCenterItem, defaults.StructureDamageAtCenter),
+                        id,
+                        nameKey,
+                        stickiness);
+                }
+
+                foreach (var flat in _flatExplosionItems)
+                {
+                    if (fields.Has(flat))
+                    {
+                        throw fields.Rejected(
+                            fields.ItemPath(flat), $"is also given by '{fields.ItemPath(GrenadeImpactItem)}'; write the explosion in '{GrenadeImpactItem}.{WeaponSpecJson.ExplosionItem}'");
+                    }
+                }
+
+                return new GrenadeSpec(
+                    id, nameKey, WeaponSpecJson.ReadImpact(impactFields), fuseSeconds, throwSeconds, throwSpeed, throwLiftSpeed, stickiness);
+            }
+            catch (ArgumentException e)
+            {
+                var item = e.ParamName != null && Contains(GrenadeItemNames, e.ParamName) ? fields.ItemPath(e.ParamName) : null;
+                throw fields.Rejected(item ?? (fields.Path.Length == 0 ? null : fields.Path), e.Message, e);
+            }
+        }
+
+        // 種類の並びは入れ子を持つので ServerDataJson で読み、呼ぶ側には今までどおり TuningJsonException で知らせる。
+        // 値の検査で断ったときは、元の ArgumentException を中に残す。
+        private static T Translated<T>(Func<T> read)
+        {
+            try
+            {
+                return read();
+            }
+            catch (ServerDataJsonException e)
+            {
+                var inner = e.InnerException is ArgumentException rejected ? (Exception)rejected : e;
+                throw new TuningJsonException(e.SourceName, e.Item, e.Message, inner);
+            }
+        }
+
+        private static bool HasMember(GameRulesJson.Node node, string name)
+        {
+            foreach (var member in node.Members)
+            {
+                if (string.Equals(member.Key, name, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool Contains(IReadOnlyList<string> names, string name)
+        {
+            foreach (var candidate in names)
+            {
+                if (string.Equals(candidate, name, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // KnockbackForce の引数名 (speed など) は種類を持たないので、どの種類の項目かをここで添える。

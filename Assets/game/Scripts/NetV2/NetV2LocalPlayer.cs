@@ -50,6 +50,7 @@ namespace Fps.NetV2
         private InputAction _ping;
         private InputAction _prone;
         private InputAction _switchAmmoType;
+        private InputAction _switchGrenade;
         private SprintInput _sprintInput;
         private CrouchInput _crouchInput;
         private ControlSettings _controlSettings = ControlSettings.Default;
@@ -67,6 +68,7 @@ namespace Fps.NetV2
         private bool _pingLatched;
         private bool _proneLatched;
         private bool _switchAmmoTypeLatched;
+        private bool _switchGrenadeLatched;
 
         public Camera Camera => _camera;
 
@@ -208,6 +210,8 @@ namespace Fps.NetV2
 
         public bool TakeSwitchAmmoType() => Take(ref _switchAmmoTypeLatched);
 
+        public bool TakeSwitchGrenade() => Take(ref _switchGrenadeLatched);
+
         /// <summary>撃ったときにダッシュを解く (Netcode のクライアントと同じ)。reason はログに出す理由。</summary>
         public void ReleaseSprint(string reason)
         {
@@ -246,6 +250,7 @@ namespace Fps.NetV2
             _ping = Find(actions, InputActionPaths.Ping);
             _prone = Find(actions, InputActionPaths.Prone);
             _switchAmmoType = Find(actions, _switchAmmoTypePath, false);
+            _switchGrenade = Find(actions, InputActionPaths.SwitchGrenade, false);
         }
 
         private void OnDestroy()
@@ -283,6 +288,7 @@ namespace Fps.NetV2
             _pingLatched |= Pressed(_ping);
             _proneLatched |= Pressed(_prone);
             _switchAmmoTypeLatched |= Pressed(_switchAmmoType);
+            _switchGrenadeLatched |= Pressed(_switchGrenade);
 
             // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
             _device = InputDeviceKinds.Of(_sprint, InputDeviceKinds.Of(_move, _device));

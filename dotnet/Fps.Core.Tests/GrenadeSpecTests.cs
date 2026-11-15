@@ -142,6 +142,51 @@ namespace Fps.Core.Tests
             AssertRejected("structureDamageAtCenter", () => new GrenadeSpec(structureDamageAtCenter: -1));
         }
 
+        [Test]
+        public void TheDefaultIsTheFragGrenadeThatExplodesWhenTheFuseEnds()
+        {
+            var spec = GrenadeSpec.Default;
+
+            Assert.That(spec.Id, Is.EqualTo(GrenadeSpec.DefaultId));
+            Assert.That(spec.Name, Is.EqualTo(new LocalizedText("grenade.frag")));
+            Assert.That(spec.Stickiness, Is.EqualTo(GrenadeStickiness.None));
+            Assert.That(spec.Impact.Explosion.Detonation, Is.EqualTo(DetonationTrigger.OnLifetimeEnd));
+            Assert.That(spec.Impact.Explosion.StructureDamageAtCenter, Is.EqualTo(150));
+            Assert.That(spec.Impact.AreaEffect, Is.Null);
+        }
+
+        [Test]
+        public void ATypeWithoutAnExplosionReportsNoBlast()
+        {
+            var area = new AreaEffectSpec(5f, 15f, 0.5f, 0);
+            var smoke = new GrenadeSpec(" ecaf6e57-cb77-4707-9321-6ea5b659408f ", "grenade.smoke", new ImpactSpec(damage: 0, areaEffect: area), fuseSeconds: 1f);
+
+            Assert.That(smoke.Id, Is.EqualTo("ecaf6e57-cb77-4707-9321-6ea5b659408f"));
+            Assert.That(smoke.Impact.AreaEffect, Is.SameAs(area));
+            Assert.That(smoke.Explosion, Is.Null);
+            Assert.That(smoke.MaxDamage, Is.Zero);
+            Assert.That(smoke.DamageRadius, Is.Zero);
+            Assert.That(smoke.StructureDamageAtCenter, Is.Zero);
+            Assert.That(smoke.ThrowSpeed, Is.EqualTo(GrenadeSpec.DefaultThrowSpeed));
+        }
+
+        [Test]
+        public void ANameKeyIsOptional()
+        {
+            var spec = new GrenadeSpec(GrenadeSpec.DefaultId, "  ", new ImpactSpec(damage: 0));
+
+            Assert.That(spec.NameKey, Is.Empty);
+            Assert.That(spec.Name, Is.EqualTo(LocalizedText.Literal(GrenadeSpec.DefaultId)));
+        }
+
+        [Test]
+        public void RejectsABadIdImpactOrStickiness()
+        {
+            Assert.That(Assert.Throws<ArgumentException>(() => new GrenadeSpec("frag", null, new ImpactSpec())).ParamName, Is.EqualTo("id"));
+            Assert.That(Assert.Throws<ArgumentNullException>(() => new GrenadeSpec(GrenadeSpec.DefaultId, null, null)).ParamName, Is.EqualTo("impact"));
+            AssertRejected("stickiness", () => new GrenadeSpec(stickiness: (GrenadeStickiness)9));
+        }
+
         private static void AssertRejected(string paramName, Func<GrenadeSpec> create)
         {
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => create());

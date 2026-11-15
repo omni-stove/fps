@@ -220,6 +220,33 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "SwitchAmmoType",
+                    "type": "Button",
+                    "id": "ba039bb6-89b0-4ed8-a04b-feea2cdcfa74",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "CycleMagnification",
+                    "type": "Button",
+                    "id": "fab1fe23-9a8b-4f66-b6f0-5e27b30623e4",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "HoldBreath",
+                    "type": "Button",
+                    "id": "0e135bea-9fd6-4b7c-bec3-e9488bfa50a9",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -880,6 +907,39 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "SquadCommand",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "51e10be1-c583-4a87-a3fc-e1b440c2e2a2",
+                    "path": "<Keyboard>/n",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "SwitchAmmoType",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "47371884-9fe4-4c3a-aed5-06eb3942db4a",
+                    "path": "<Keyboard>/h",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "CycleMagnification",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "94b6b756-13bc-42fb-948c-ad9574f42fb8",
+                    "path": "<Keyboard>/leftCtrl",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "HoldBreath",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

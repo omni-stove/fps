@@ -1,0 +1,114 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Fps.Core;
+using Fps.Runtime;
+using NUnit.Framework;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace Fps.Tests.EditMode
+{
+    public sealed class ExplosionTests
+    {
+        private const string WeaponId = "launcher";
+
+        private static readonly ExplosionSpec _spec = new ExplosionSpec(GrenadeSpec.Default.Explosion, 50);
+
+        private readonly List<GameObject> _created = new List<GameObject>();
+
+        [TearDown]
+        public void TearDown()
+        {
+            CombatEvents.ClearSubscribers();
+            foreach (var created in _created)
+            {
+                if (created != null)
+                {
+                    Object.DestroyImmediate(created);
+                }
+            }
+
+            _created.Clear();
+        }
+
+        [Test]
+        public void DetonateDamagesAndKillsTargetsInTheRadius()
+        {
+            var near = CreateTarget("Near", new Vector3(0f, 1f, 1.5f));
+            var far = CreateTarget("Far", new Vector3(0f, 1f, GrenadeSpec.Default.DamageRadius + 2f));
+
+            var result = Explosion.Detonate(new Vector3(0f, 0.1f, 0f), _spec, null, WeaponId);
+
+            Assert.That(near.IsDead, Is.True);
+            Assert.That(far.Health.Current, Is.EqualTo(far.Health.Max));
+            Assert.That(result.Damaged, Is.EqualTo(1));
+            Assert.That(result.Killed, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DetonateDoesNotHitATargetBehindAWall()
+        {
+            var target = CreateTarget("Hidden", new Vector3(0f, 1f, 2.5f));
+            CreateBox("Wall", new Vector3(0f, 1.5f, 1.2f), new Vector3(4f, 3f, 0.3f));
+
+            var result = Explosion.Detonate(new Vector3(0f, 0.5f, 0f), _spec, null, WeaponId);
+
+            Assert.That(target.Health.Current, Is.EqualTo(target.Health.Max));
+            Assert.That(result.Damaged, Is.Zero);
+        }
+
+        [Test]
+        public void DetonateHitsStructuresWithTheSpecDamage()
+        {
+            var structure = CreateBox("Hut", new Vector3(0f, 0.5f, 2f), Vector3.one).AddComponent<StructureHitRecorder>();
+
+            var result = Explosion.Detonate(new Vector3(0f, 0.5f, 0f), _spec, null, WeaponId);
+
+            Assert.That(structure.Calls.Count(), Is.EqualTo(1));
+            Assert.That(structure.Calls[0].Damage, Is.GreaterThan(0).And.AtMost(_spec.StructureDamageAtCenter));
+            Assert.That(result.StructureHits, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DetonateRaisesExplodedWithTheWeaponId()
+        {
+            var explosions = new List<ExplosionInfo>();
+            CombatEvents.Exploded += explosions.Add;
+            var center = new Vector3(0f, 50f, 0f);
+
+            var result = Explosion.Detonate(center, _spec, null, WeaponId);
+
+            Assert.That(explosions.Count(), Is.EqualTo(1));
+            Assert.That(explosions[0].Center, Is.EqualTo(center));
+            Assert.That(explosions[0].WeaponId, Is.EqualTo(WeaponId));
+            Assert.That(result.Center, Is.EqualTo(center));
+        }
+
+        [Test]
+        public void DetonateRejectsAMissingSpec()
+        {
+            Assert.Throws<ArgumentNullException>(() => Explosion.Detonate(Vector3.zero, null, null, WeaponId));
+        }
+
+        private Damageable CreateTarget(string name, Vector3 position)
+        {
+            var body = CreateBox(name, position, new Vector3(0.6f, 2f, 0.6f));
+            var damageable = body.AddComponent<Damageable>();
+            damageable.Initialize(name, 100);
+            body.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
+            return damageable;
+        }
+
+        private GameObject CreateBox(string name, Vector3 position, Vector3 size)
+        {
+            var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(box);
+            box.name = name;
+            box.transform.position = position;
+            box.transform.localScale = size;
+            Physics.SyncTransforms();
+            return box;
+        }
+    }
+}

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -46,6 +47,11 @@ namespace Fps.Tests.EditMode
             Assert.That(reloadBar, Is.Not.Null);
             Assert.That(reloadBar.Q<VisualElement>(HudView.ReloadFillName), Is.Not.Null);
             Assert.That(reloadBar.Q<VisualElement>(HudView.ReloadWindowName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.ChargeLabelName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.HeatLabelName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.AmmoTypeLabelName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.MagnificationLabelName), Is.Not.Null);
+            Assert.That(root.Q<Label>(HudView.LockOnLabelName), Is.Not.Null);
         }
 
         private static Weapon NewActiveReloadWeapon()
@@ -436,6 +442,100 @@ namespace Fps.Tests.EditMode
         {
             Assert.Throws<ArgumentNullException>(() => new HudView(null, new HudModel()));
             Assert.Throws<ArgumentNullException>(() => new HudView(CloneLayout(), null));
+        }
+
+        private static Func<StringTable> UseGaugeTexts()
+        {
+            var previous = GameText.Source;
+            var table = new StringTable(new Dictionary<string, string>
+            {
+                [HudView.ChargeKey] = "Charge {0}%",
+                [HudView.HeatKey] = "Heat {0}%",
+                [HudView.MagnificationKey] = "x{0}",
+                [HudView.LockOnKey] = "Lock {0}%",
+                [HudView.LockedOnKey] = "Locked",
+            });
+            GameText.Use(() => table);
+            return previous;
+        }
+
+        private static void AssertGaugesHidden(HudView view)
+        {
+            Assert.That(view.ChargeLabel.style.display.value, Is.EqualTo(DisplayStyle.None), "charge");
+            Assert.That(view.HeatLabel.style.display.value, Is.EqualTo(DisplayStyle.None), "heat");
+            Assert.That(view.AmmoTypeLabel.style.display.value, Is.EqualTo(DisplayStyle.None), "ammo type");
+            Assert.That(view.MagnificationLabel.style.display.value, Is.EqualTo(DisplayStyle.None), "magnification");
+            Assert.That(view.LockOnLabel.style.display.value, Is.EqualTo(DisplayStyle.None), "lock-on");
+        }
+
+        [Test]
+        public void TheWeaponGaugesAreHiddenWithoutValues()
+        {
+            var view = new HudView(CloneLayout(), new HudModel());
+
+            AssertGaugesHidden(view);
+        }
+
+        [Test]
+        public void TheWeaponGaugesShowTheirValuesAndHideWhenCleared()
+        {
+            var previous = UseGaugeTexts();
+            try
+            {
+                var model = new HudModel();
+                var view = new HudView(CloneLayout(), model);
+
+                model.SetCharge(0.5f);
+                model.SetHeat(0.25f);
+                model.SetAmmoTypeName("Slug");
+                model.SetMagnification(4f);
+                model.SetLockOn(0.4f);
+
+                Assert.That(view.ChargeLabel.text, Is.EqualTo("Charge 50%"));
+                Assert.That(view.HeatLabel.text, Is.EqualTo("Heat 25%"));
+                Assert.That(view.AmmoTypeLabel.text, Is.EqualTo("Slug"));
+                Assert.That(view.MagnificationLabel.text, Is.EqualTo("x4"));
+                Assert.That(view.LockOnLabel.text, Is.EqualTo("Lock 40%"));
+                Assert.That(view.ChargeLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+                Assert.That(view.HeatLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+                Assert.That(view.AmmoTypeLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+                Assert.That(view.MagnificationLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+                Assert.That(view.LockOnLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+                Assert.That(view.LockOnLabel.ClassListContains(HudView.LockedOnClass), Is.False);
+
+                model.SetLockOn(1f);
+                Assert.That(view.LockOnLabel.text, Is.EqualTo("Locked"));
+                Assert.That(view.LockOnLabel.ClassListContains(HudView.LockedOnClass), Is.True);
+
+                model.ClearCharge();
+                model.ClearHeat();
+                model.ClearAmmoTypeName();
+                model.ClearMagnification();
+                model.ClearLockOn();
+                AssertGaugesHidden(view);
+            }
+            finally
+            {
+                GameText.Use(previous);
+            }
+        }
+
+        [Test]
+        public void HardcoreHidesTheWeaponGaugesEvenWithValues()
+        {
+            var model = new HudModel();
+            model.SetCharge(0.5f);
+            model.SetHeat(0.5f);
+            model.SetAmmoTypeName("Slug");
+            model.SetMagnification(2f);
+            model.SetLockOn(0.5f);
+
+            var view = new HudView(CloneLayout(), model, HudVisibility.Hardcore);
+            AssertGaugesHidden(view);
+
+            view.ApplyVisibility(HudVisibility.Full);
+            Assert.That(view.ChargeLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.LockOnLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
         }
     }
 }

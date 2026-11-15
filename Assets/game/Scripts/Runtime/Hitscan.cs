@@ -13,9 +13,7 @@ namespace Fps.Runtime
     public static class Hitscan
     {
         /// <summary>1 回の Raycast で調べる命中の上限。これを超える数のコライダーが一直線に並ぶと遠いものを取りこぼす。</summary>
-        public const int MaxHits = 32;
-
-        private static readonly RaycastHit[] _buffer = new RaycastHit[MaxHits];
+        public const int MaxHits = ShotCast.MaxHits;
         private static readonly List<INearMissTarget> _nearMissTargets = new List<INearMissTarget>();
 
         // 相手の OnNearMiss の後に出す。受け皿を持たない仕組み (音・カメラの揺れなど) が、どの弾がどこをかすめたかだけ聞けるように。
@@ -51,7 +49,7 @@ namespace Fps.Runtime
             return _nearMissTargets.Remove(target);
         }
 
-        // Fire の中だけでなく公開するのは、Raycast を自前で行う WeaponController (プレイヤーの射撃) からも同じ判定を通すため。
+        // Fire の中だけでなく公開するのは、弾を届ける IShotDelivery (プレイヤー・敵・タレットの射撃) からも同じ判定を通すため。
         // 弾が当たった相手 (struck が相手の子孫) はニアミスではなく被弾として扱うので数えない。
         /// <param name="travelled">弾が進んだ距離 (当たったならそこまで、外れたなら射程)。</param>
         /// <exception cref="ArgumentException">direction が 0。</exception>
@@ -192,47 +190,7 @@ namespace Fps.Runtime
         /// <param name="hit">最も近い命中。</param>
         public static bool TryFirstHit(Vector3 origin, Vector3 direction, float maxDistance, Transform shooterRoot, out RaycastHit hit)
         {
-            if (direction.sqrMagnitude < 1e-12f)
-            {
-                throw new ArgumentException("direction must not be zero", nameof(direction));
-            }
-
-            if (!(maxDistance > 0f) || float.IsInfinity(maxDistance))
-            {
-                throw new ArgumentOutOfRangeException(nameof(maxDistance), maxDistance, "maxDistance must be positive and finite");
-            }
-
-            var count = Physics.RaycastNonAlloc(
-                origin,
-                direction.normalized,
-                _buffer,
-                maxDistance,
-                Physics.DefaultRaycastLayers,
-                QueryTriggerInteraction.Ignore);
-
-            hit = default;
-            var found = false;
-            for (var i = 0; i < count; i++)
-            {
-                var candidate = _buffer[i];
-                if (shooterRoot != null && candidate.collider.transform.IsChildOf(shooterRoot))
-                {
-                    continue;
-                }
-
-                if (shooterRoot != null && Deployable.LetsThrough(candidate.collider, shooterRoot.gameObject))
-                {
-                    continue;
-                }
-
-                if (!found || candidate.distance < hit.distance)
-                {
-                    hit = candidate;
-                    found = true;
-                }
-            }
-
-            return found;
+            return ShotCast.TryFirst(origin, direction, maxDistance, Physics.DefaultRaycastLayers, shooterRoot, out hit);
         }
 
         /// <summary>
@@ -289,62 +247,46 @@ namespace Fps.Runtime
                 throw new ArgumentOutOfRangeException(nameof(explosionRadius), explosionRadius, "explosionRadius must be a non-negative finite number");
             }
 
-            // TryFirstHit が向きと射程を検査するので、撃ったことはその後に知らせる (例外になった弾を撃ったことにしない)。
-            var found = TryFirstHit(origin, direction, range, shooterRoot, out var hit);
-            var shooter = shooterRoot != null ? shooterRoot.gameObject : null;
-            CombatEvents.RaiseShotFired(shooter, origin, direction, weaponId);
-            ReportNearMisses(origin, direction, found ? hit.distance : range, shooterRoot, found ? hit.collider : null);
-            if (!found)
+            // 射程の検査を ShotCast と同じ例外にするため、RoundSpec に渡す前に見る。
+            if (!(range > 0f) || float.IsInfinity(range))
+            {
+                throw new ArgumentOutOfRangeException(nameof(range), range, "range must be positive and finite");
+            }
+
+            var request = new ShotRequest(
+                shooterRoot != null ? shooterRoot.gameObject : null,
+                shooterRoot,
+                shooterRoot != null ? shooterRoot.position : (Vector3?)null,
+                new RoundSpec(range: range),
+                new ImpactSpec(baseDamage, falloff, explosionRadius),
+                weaponId,
+                Physics.DefaultRaycastLayers);
+
+            // 向きは正規化しない。0 の向きを ShotCast に ArgumentException で弾かせ、ShotFired にも渡された向きのまま出すため。
+            return Fire(request, new PlannedRound(origin.ToNumerics(), direction.ToNumerics(), 0));
+        }
+
+        /// <summary>
+        /// request の届け方 (<see cref="ShotDeliveries"/>) で round を 1 本撃ち、<see cref="Fire(Vector3, Vector3, float, int, DamageFalloff, Transform, float, string)"/>
+        /// と同じ結果とログにする。生きている相手に当てたときだけ <c>[Combat] hit zone=.. dmg=.. id=.. hp=..</c> を出し、死んでいた相手へのダメージは 0 にする。
+        /// </summary>
+        public static HitscanResult Fire(ShotRequest request, PlannedRound round)
+        {
+            var outcome = ShotDeliveries.Deliver(request, round);
+            if (!outcome.Hit)
             {
                 return HitscanResult.Miss;
             }
 
-            CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
-            if (BulletShield.TryBlock(hit.collider, baseDamage, shooterRoot != null ? shooterRoot.position : (Vector3?)null, shooter))
+            if (outcome.Owner == null || !outcome.WasAlive)
             {
-                return new HitscanResult(true, hit, null, 0);
+                return new HitscanResult(true, outcome.RaycastHit, outcome.Hitbox, 0);
             }
 
-            if (Deployable.TryStopBullet(
-                hit.collider, baseDamage, hit.distance, falloff, shooterRoot != null ? shooterRoot.position : (Vector3?)null, direction, shooter))
-            {
-                return new HitscanResult(true, hit, null, 0);
-            }
-
-            var hitbox = Hitbox.FindFor(hit.collider);
-            if (hitbox == null)
-            {
-                // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
-                using (CombatEvents.Attribute(shooter, weaponId))
-                {
-                    StructureDamage.Apply(hit.collider, hit.point, baseDamage, explosionRadius);
-                }
-
-                return new HitscanResult(true, hit, null, 0);
-            }
-
-            var owner = hitbox.Owner;
-            if (owner == null)
-            {
-                Debug.LogError($"{Damageable.LogTag} Hitbox '{hitbox.name}' has no Damageable owner; the hit is ignored", hitbox);
-                return new HitscanResult(true, hit, hitbox, 0);
-            }
-
-            if (owner.IsDead)
-            {
-                return new HitscanResult(true, hit, hitbox, 0);
-            }
-
-            // 撃たれた側 (敵) が撃った方向へ向かえるよう、撃った者の位置を渡す。
-            Vector3? sourcePosition = shooterRoot != null ? shooterRoot.position : (Vector3?)null;
-            int damage;
-            using (CombatEvents.Attribute(shooter, weaponId))
-            {
-                damage = hitbox.ApplyHit(baseDamage, hit.distance, falloff, sourcePosition, direction);
-            }
-
-            Debug.Log($"{Damageable.LogTag} hit zone={hitbox.Zone} dmg={damage} id={owner.Id} hp={owner.Health.Current}", hitbox);
-            return new HitscanResult(true, hit, hitbox, damage);
+            Debug.Log(
+                $"{Damageable.LogTag} hit zone={outcome.Hitbox.Zone} dmg={outcome.Damage} id={outcome.Owner.Id} hp={outcome.Owner.Health.Current}",
+                outcome.Hitbox);
+            return new HitscanResult(true, outcome.RaycastHit, outcome.Hitbox, outcome.Damage);
         }
 
         /// <summary>

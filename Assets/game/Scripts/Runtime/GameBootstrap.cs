@@ -826,6 +826,7 @@ namespace Fps.Runtime
         private static void WireAds(AimDownSights ads, WeaponController weapon, PlayerController mover)
         {
             ads.WeaponSource = () => weapon != null && weapon.Weapon != null ? weapon.Weapon.Spec : null;
+            ads.AdsBlocker = () => weapon != null && weapon.Weapon != null && weapon.Weapon.Trigger.BlocksAds;
             ads.AimingChanged += aiming =>
             {
                 if (aiming && mover != null)

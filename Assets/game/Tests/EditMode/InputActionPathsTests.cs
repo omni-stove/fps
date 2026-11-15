@@ -39,6 +39,9 @@ namespace Fps.Tests.EditMode
         [TestCase(InputActionPaths.Ability1)]
         [TestCase(InputActionPaths.Ability2)]
         [TestCase(InputActionPaths.SquadCommand)]
+        [TestCase(InputActionPaths.SwitchAmmoType)]
+        [TestCase(InputActionPaths.CycleMagnification)]
+        [TestCase(InputActionPaths.HoldBreath)]
         public void EveryPathExistsInTheProjectWideActions(string path)
         {
             Find(path);
@@ -91,6 +94,9 @@ namespace Fps.Tests.EditMode
         [TestCase(InputActionPaths.Ability1, "<Keyboard>/t")]
         [TestCase(InputActionPaths.Ability2, "<Keyboard>/y")]
         [TestCase(InputActionPaths.SquadCommand, "<Keyboard>/b")]
+        [TestCase(InputActionPaths.SwitchAmmoType, "<Keyboard>/n")]
+        [TestCase(InputActionPaths.CycleMagnification, "<Keyboard>/h")]
+        [TestCase(InputActionPaths.HoldBreath, "<Keyboard>/leftCtrl")]
         public void KeyboardOnlyButtonsAreBoundToOneKeyUsedByNoOtherPlayerAction(string path, string key)
         {
             var action = Find(path);

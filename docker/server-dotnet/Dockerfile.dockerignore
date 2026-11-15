@@ -1,6 +1,7 @@
 # docker/server-dotnet/Dockerfile のビルドコンテキスト (リポジトリのルート) から、イメージに入れるものだけを残す。
 # Library/ などを送らないよう、すべてを除いてから必要なものを戻す
 *
+!.editorconfig
 !dotnet/
 !Assets/game/Scripts/Core/
 !Assets/game/Scripts/Protocol/

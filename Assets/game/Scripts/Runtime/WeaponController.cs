@@ -689,6 +689,12 @@ namespace Fps.Runtime
             definitions[_loadedDefinitions.Length] = definition;
 
             var loadout = WeaponLoadout.Restore(specs, _loadout.SnapshotAmmo(), Weapon.Spec.Id, _loadedRules, out _);
+            // 残弾の数だけでは種類が戻るので、込めた弾が別の種類に変わらないよう作り直した武器へ選択を移す
+            for (var i = 0; i < _loadout.Count; i++)
+            {
+                loadout.Items[i].AmmoTypes.TrySelect(_loadout.Items[i].AmmoTypes.Index);
+            }
+
             SetLoadout(loadout, specs, definitions, _loadedRules);
             Debug.Log($"[Combat] weapon added index={specs.Length - 1} id={spec.Id} name={spec.LogName}", this);
             WeaponChanged?.Invoke(Weapon);

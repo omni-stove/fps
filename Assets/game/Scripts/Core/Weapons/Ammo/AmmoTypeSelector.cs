@@ -24,6 +24,18 @@ namespace Fps.Core
 
         public ImpactSpec Impact => Current != null ? Current.ImpactOr(_spec.Impact) : _spec.Impact;
 
+        // 武器を作り直すときに、込めてある弾の種類を保つためだけに使う。弾倉には触れないので、切り替え (TrySwitch) とは別にしてある。
+        public bool TrySelect(int index)
+        {
+            if (index < 0 || index >= _spec.AmmoTypes.Count)
+            {
+                return false;
+            }
+
+            Index = index;
+            return true;
+        }
+
         public bool TrySwitch()
         {
             var count = _spec.AmmoTypes.Count;

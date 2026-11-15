@@ -911,7 +911,7 @@ namespace Fps.NetV2
             return previous.HasImpact && System.Numerics.Vector3.DistanceSquared(previous.ImpactPoint, origin) < 1e-6f;
         }
 
-                private void HandleTeleported(TeleportedMessage teleported)
+        private void HandleTeleported(TeleportedMessage teleported)
         {
             if (teleported.PlayerId != _client.PlayerId)
             {

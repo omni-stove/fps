@@ -64,7 +64,7 @@ namespace Fps.NetV2
             // 熱で撃つ武器は弾倉を持たずリロードもしないので、オーバーヒートして冷め切るまでは頼まずに待つ。
             if (spec != null && spec.Ammo.Kind == AmmoKind.Heat)
             {
-                var overheated = weapon.Heat >= 1f || (overheat != null && overheat.IsOverheated(latest.Owner));
+                var overheated = weapon.IsOverheated || weapon.Heat >= 1f || (overheat != null && overheat.IsOverheated(latest.Owner));
                 return overheated ? FireDecision.Hold : FireDecision.Fire;
             }
 

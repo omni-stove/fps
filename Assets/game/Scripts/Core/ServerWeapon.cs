@@ -60,6 +60,9 @@ namespace Fps.Core
         /// <summary>熱で撃つ弾薬の熱 (0〜1)。熱を持たない弾薬なら null。</summary>
         public float? HeatFraction => _weapon.Ammo.HeatFraction;
 
+        /// <summary>熱で撃つ弾薬がオーバーヒート中か。</summary>
+        public bool IsOverheated => _weapon.Ammo is HeatAmmo heat && heat.IsOverheated;
+
         /// <summary>true ならリロードで予備弾を減らさず、予備弾が 0 でもリロードできる。</summary>
         public bool HasInfiniteReserve => _weapon.HasInfiniteReserve;
 

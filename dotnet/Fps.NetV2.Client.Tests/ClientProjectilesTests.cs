@@ -90,8 +90,7 @@ namespace Fps.NetV2.Tests
             Advance(0.1f);
             var ahead = arrow.Position;
 
-            // サーバーの弾は往復の分だけ遅れて届く。
-            _projectiles.Spawned(Spawn(9, _me, _crossbowId, _eye, new Vector3(0f, 0f, 30f)));
+            // 撃った本人には発射の知らせが来ず、サーバーの弾は往復の分だけ遅れたスナップショットで届く。
             _projectiles.Apply(Snapshot(Row(9, _me, _crossbowId, _eye + new Vector3(0f, 0f, 0.5f), new Vector3(0f, 0f, 30f))));
 
             Assert.That(_views.Shown, Has.Count.EqualTo(1), "no second arrow for the server's");
@@ -104,6 +103,40 @@ namespace Fps.NetV2.Tests
             _projectiles.Ended(new ProjectileEndedMessage { ProjectileId = 9, Reason = ProjectileEndReason.HitWorld, Position = hit });
 
             Assert.That(arrow.StuckAt, Is.EqualTo(hit));
+        }
+
+        [Test]
+        public void AnEndForAnArrowNeverSeenEndsTheShootersOldestPrediction()
+        {
+            _projectiles.LocalFired(Fire(_crossbowId, Vector3.UnitZ), Find(_crossbowId));
+            _projectiles.LocalFired(Fire(_crossbowId, Vector3.UnitZ), Find(_crossbowId));
+
+            // 1 tick で当たると、スナップショットに載る前に終わりの知らせが来る。
+            var hit = new Vector3(0f, 1.6f, 2f);
+            _projectiles.Ended(new ProjectileEndedMessage { ProjectileId = 11, Reason = ProjectileEndReason.HitWorld, Position = hit });
+
+            Assert.That(_views.Shown[0].StuckAt, Is.EqualTo(hit));
+            Assert.That(_views.Shown[1].StuckAt, Is.Null);
+            Assert.That(_views.Shown[1].Removed, Is.False);
+
+            _projectiles.Ended(new ProjectileEndedMessage { ProjectileId = 12, Reason = ProjectileEndReason.HitCharacter });
+
+            Assert.That(_views.Shown[1].Removed, Is.True);
+            Assert.That(_projectiles.Count, Is.Zero);
+        }
+
+        [Test]
+        public void ALateEndForAnArrowAlreadyGoneDoesNotTakeAPrediction()
+        {
+            _projectiles.Apply(Snapshot(Row(8, _other, _crossbowId, _eye, new Vector3(0f, 0f, 30f))));
+            _projectiles.Apply(Snapshot());
+            _projectiles.Apply(Snapshot());
+            _projectiles.LocalFired(Fire(_crossbowId, Vector3.UnitZ), Find(_crossbowId));
+
+            _projectiles.Ended(new ProjectileEndedMessage { ProjectileId = 8, Reason = ProjectileEndReason.Removed });
+
+            Assert.That(_views.Shown[1].Removed, Is.False);
+            Assert.That(_projectiles.Count, Is.EqualTo(1));
         }
 
         [Test]
@@ -137,10 +170,13 @@ namespace Fps.NetV2.Tests
             _projectiles.LocalFired(Fire(_crossbowId, Vector3.UnitZ), spec);
 
             Assert.That(_views.Shown, Has.Count.EqualTo(2 * planned));
-            for (var id = 0; id < 2 * planned; id++)
+            var rows = new ProjectileSnapshot[2 * planned];
+            for (var id = 0; id < rows.Length; id++)
             {
-                _projectiles.Spawned(Spawn(id, _me, _crossbowId, _eye, new Vector3(0f, 0f, 30f)));
+                rows[id] = Row(id, _me, _crossbowId, _eye, new Vector3(0f, 0f, 30f));
             }
+
+            _projectiles.Apply(Snapshot(rows));
 
             Assert.That(_views.Shown, Has.Count.EqualTo(2 * planned));
             _projectiles.Ended(new ProjectileEndedMessage { ProjectileId = 0, Reason = ProjectileEndReason.Expired });

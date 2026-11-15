@@ -13,7 +13,8 @@ namespace Fps.NetV2
     /// 終わりの知らせ (<see cref="ProjectileEndedMessage"/>) で消すか刺さったままにする。
     /// </summary>
     /// <remarks>
-    /// 撃った本人は撃った瞬間に予測の弾を出し、同じ武器のサーバーの弾が届いたら古い順にその Id を引き継ぐ。
+    /// 撃った本人は撃った瞬間に予測の弾を出し、同じ武器のサーバーの弾がスナップショットに載ったら古い順にその Id を引き継ぐ。
+    /// 撃った本人には発射の知らせが来ないので、一度も知らない Id の終わりの知らせは、まだ引き継いでいない自分の予測の弾の終わりとみなす。
     /// 予測の弾は撃った時から進めているので、往復の分だけ遅れたスナップショットには寄せない (寄せると毎回引き戻される)。
     /// 誘導する弾だけは手元で曲がり方が分からないので、引き継いだ後はスナップショットに寄せる。
     /// </remarks>
@@ -31,6 +32,8 @@ namespace Fps.NetV2
         /// <summary>武器が分からない弾を、終わりの知らせもスナップショットも無いまま残しておく最長の秒数。</summary>
         public const float UnknownWeaponLifetimeSeconds = 10f;
 
+        private const int _retiredCapacity = 256;
+
         private readonly Func<string, WeaponSpec> _findWeapon;
         private readonly float _pendingSeconds;
         private readonly float _correctionSeconds;
@@ -42,6 +45,10 @@ namespace Fps.NetV2
         private readonly HashSet<int> _ended = new HashSet<int>();
         private readonly HashSet<int> _listed = new HashSet<int>();
         private readonly List<int> _scratch = new List<int>();
+
+        // 見せ終えた弾の Id。遅れて届いた終わりの知らせを、自分の予測の弾の終わりと取り違えないために覚える。
+        private readonly HashSet<int> _retired = new HashSet<int>();
+        private readonly Queue<int> _retiredOrder = new Queue<int>();
         private IClientProjectileViews _views;
         private IWorldCollision _world;
         private int _layerMask;
@@ -89,6 +96,8 @@ namespace Fps.NetV2
             _byId.Clear();
             _predicted.Clear();
             _ended.Clear();
+            _retired.Clear();
+            _retiredOrder.Clear();
             _views = null;
             _world = null;
         }
@@ -120,13 +129,23 @@ namespace Fps.NetV2
                 return;
             }
 
-            _ended.Add(message.ProjectileId);
-            if (!_byId.TryGetValue(message.ProjectileId, out var projectile))
+            var id = message.ProjectileId;
+            _ended.Add(id);
+            if (_byId.TryGetValue(id, out var projectile))
+            {
+                Retire(id);
+            }
+            else if (!_retired.Contains(id) && _predicted.Count > 0)
+            {
+                projectile = _predicted[0];
+                _predicted.RemoveAt(0);
+                Remember(id);
+            }
+            else
             {
                 return;
             }
 
-            _byId.Remove(message.ProjectileId);
             if (message.Reason == ProjectileEndReason.HitWorld && projectile.Sticks)
             {
                 projectile.Stick(message.Position);
@@ -193,7 +212,7 @@ namespace Fps.NetV2
             foreach (var id in _scratch)
             {
                 _byId[id].Release();
-                _byId.Remove(id);
+                Retire(id);
             }
         }
 
@@ -247,7 +266,7 @@ namespace Fps.NetV2
             foreach (var id in _scratch)
             {
                 _byId[id].Release();
-                _byId.Remove(id);
+                Retire(id);
             }
 
             for (var i = _predicted.Count - 1; i >= 0; i--)
@@ -261,6 +280,26 @@ namespace Fps.NetV2
                     projectile.Release();
                     _predicted.RemoveAt(i);
                 }
+            }
+        }
+
+        private void Retire(int id)
+        {
+            _byId.Remove(id);
+            Remember(id);
+        }
+
+        private void Remember(int id)
+        {
+            if (!_retired.Add(id))
+            {
+                return;
+            }
+
+            _retiredOrder.Enqueue(id);
+            if (_retiredOrder.Count > _retiredCapacity)
+            {
+                _retired.Remove(_retiredOrder.Dequeue());
             }
         }
 

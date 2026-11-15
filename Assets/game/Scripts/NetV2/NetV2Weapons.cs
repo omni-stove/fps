@@ -56,6 +56,43 @@ namespace Fps.NetV2
             return spec;
         }
 
+        // 見た目と音は WeaponSpec に載らないので、武器の定義そのものを値と同じ順 (ロードアウト・一覧) に探す。
+        public WeaponDefinition DefinitionFor(string weaponId)
+        {
+            if (string.IsNullOrEmpty(weaponId))
+            {
+                return null;
+            }
+
+            var loadout = Loadout;
+            if (loadout != null)
+            {
+                foreach (var slot in loadout.Slots)
+                {
+                    if (slot?.Weapon != null && string.Equals(slot.Weapon.Id.Trim(), weaponId, StringComparison.Ordinal))
+                    {
+                        return slot.Weapon;
+                    }
+                }
+            }
+
+            var catalog = Catalog;
+            if (catalog == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                return catalog.TryFind(weaponId, out var definition) ? definition : null;
+            }
+            catch (WeaponDefinitionException)
+            {
+                // 見た目と音が引けないだけなので、コードで作る形と無音で出す。
+                return null;
+            }
+        }
+
         /// <summary>weaponId の武器の値を、ロードアウト・一覧の順に探す。</summary>
         public bool TryFind(string weaponId, out WeaponSpec spec, out string error)
         {

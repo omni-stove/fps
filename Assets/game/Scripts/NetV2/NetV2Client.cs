@@ -87,6 +87,7 @@ namespace Fps.NetV2
         private NetV2LocalPlayer _local;
         private WeaponPresentation _presentation;
         private DryFireSound _dryFire;
+        private LockOnAim _lockOn;
         private PingController _pingDisplay;
         private bool _wasReloading;
         private bool _startedFromMenu;
@@ -498,6 +499,7 @@ namespace Fps.NetV2
                 // 印を見る画面があるのは自分のプレイヤーだけなので、表示もここにだけ付ける (Netcode の NetPlayer と同じ)
                 _pingDisplay = _local.gameObject.AddComponent<PingController>();
                 _pingDisplay.ShowShared(_pings.Markers);
+                _lockOn = AttachLockOn(_local);
             }
 
             for (var i = 0; i < ticks; i++)
@@ -508,6 +510,33 @@ namespace Fps.NetV2
 
             _match.SendInput();
             _local.Show(_match.LocalState);
+            if (_lockOn != null && _hud != null)
+            {
+                _lockOn.ShowOn(_hud.Hud.Model);
+            }
+        }
+
+        // 誘導の向きを決めるのはサーバーなので、ここでは相手を捉えて HUD と音に出し、撃つときにロックした相手の Id を送るだけにする。
+        private LockOnAim AttachLockOn(NetV2LocalPlayer local)
+        {
+            var lockOn = local.gameObject.AddComponent<LockOnAim>();
+            lockOn.RoundSource = () => ClientFire.CurrentRound(CurrentOwner(), _weapons.SpecFor(ClientFire.CurrentWeaponId(CurrentOwner())));
+            lockOn.LookSource = () =>
+            {
+                var definition = _weapons.DefinitionFor(ClientFire.CurrentWeaponId(CurrentOwner()));
+                return definition != null ? definition.Homing : null;
+            };
+            lockOn.AimingSource = () => local != null && local.IsAiming;
+            lockOn.AimSource = () => new Ray(local.EyePosition, local.AimDirection);
+            lockOn.Targets = new ClientLockOnTargets(
+                _client.PlayerId, () => _client.LatestSnapshot, _match.TrySampleRemote, _world.Collision, _client.Motor.Stance);
+            return lockOn;
+        }
+
+        private OwnerSnapshot CurrentOwner()
+        {
+            var latest = _client.LatestSnapshot;
+            return latest != null && latest.HasOwner ? latest.Owner : null;
         }
 
         private float OwnYaw()
@@ -740,7 +769,7 @@ namespace Fps.NetV2
             System.Numerics.Vector3 direction, string weaponId, WeaponSpec spec, in TriggerPull pull, TriggerEdge edge, OwnerSnapshot owner)
         {
             var renderTick = Math.Max(0f, _match.Interpolation.RenderTick);
-            ClientFire.Fill(_fire, owner, weaponId, pull, edge, null);
+            ClientFire.Fill(_fire, owner, weaponId, pull, edge, _lockOn != null ? _lockOn.LockedTargetId : null);
             _fire.Origin = NetV2Math.ToNumerics(_local.EyePosition);
             _fire.Direction = direction;
             _fire.ClientTick = (int)renderTick;

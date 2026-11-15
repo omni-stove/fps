@@ -1,0 +1,17 @@
+using System.Numerics;
+
+namespace Fps.Core
+{
+    public readonly struct LockOnCandidate
+    {
+        public LockOnCandidate(int id, Vector3 point)
+        {
+            Id = id;
+            Point = point;
+        }
+
+        public int Id { get; }
+
+        public Vector3 Point { get; }
+    }
+}

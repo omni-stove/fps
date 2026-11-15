@@ -198,6 +198,36 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
+        public void TheCurrentRoundIsTheChosenAmmoTypesRoundOrTheWeaponsOwn()
+        {
+            var homing = new RoundSpec(
+                RoundDelivery.Projectile, projectile: new ProjectileSpec(20f, 0f, 3f), homing: new HomingSpec(1f, 8f, 90f));
+            var spec = new WeaponSpec(
+                _rifleId, "", WeaponCategory.Launcher, ammoTypes: new[] { new AmmoTypeSpec(_ammoTypeId, "items.ammo.guided", homing) });
+
+            Assert.That(ClientFire.CurrentRound(Armed(new WeaponSync { WeaponCount = 1 }).Owner, spec), Is.SameAs(spec.Round));
+            Assert.That(ClientFire.CurrentRound(Armed(new WeaponSync { WeaponCount = 1, AmmoTypeIndex = 1 }).Owner, spec), Is.SameAs(homing));
+            Assert.That(
+                ClientFire.CurrentRound(Armed(new WeaponSync { WeaponCount = 1, AmmoTypeIndex = 2 }).Owner, spec), Is.SameAs(spec.Round), "past the last type");
+            Assert.That(ClientFire.CurrentRound(null, spec), Is.Null);
+            Assert.That(ClientFire.CurrentRound(Armed(new WeaponSync()).Owner, null), Is.Null);
+        }
+
+        [Test]
+        public void TheLockedTargetIsSentWithTheShot()
+        {
+            var request = new FireRequestMessage();
+            var owner = Armed(new WeaponSync { WeaponCount = 1 }).Owner;
+
+            ClientFire.Fill(request, owner, _rifleId, default, TriggerEdge.None, 7);
+            Assert.That(request.HasLockTarget, Is.True);
+            Assert.That(request.LockTargetId, Is.EqualTo(7));
+
+            ClientFire.Fill(request, owner, _rifleId, default, TriggerEdge.None, null);
+            Assert.That(request.HasLockTarget, Is.False);
+        }
+
+        [Test]
         public void TheHudShowsOnlyTheGaugesTheWeaponHas()
         {
             var model = new HudModel();

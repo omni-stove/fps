@@ -58,6 +58,25 @@ namespace Fps.Server
             LastRecordedTick = tick;
         }
 
+        public bool TryRewindCenter(int playerId, float tick, out Vector3 center)
+        {
+            center = default;
+            if (!HasHistory)
+            {
+                return false;
+            }
+
+            var clamped = _lag.ClampTick(tick, LastRecordedTick);
+            if (!_lag.Rewind(clamped).TryGetValue(playerId, out var position))
+            {
+                return false;
+            }
+
+            var crouched = _lag.RewindCrouched(clamped).TryGetValue(playerId, out var c) && c;
+            center = position + new Vector3(0f, _bodies.Geometry.Shape(crouched).CenterY, 0f);
+            return true;
+        }
+
         public void Forget(int playerId)
         {
             _lag.Remove(playerId);

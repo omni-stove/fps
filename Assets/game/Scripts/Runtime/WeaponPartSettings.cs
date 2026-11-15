@@ -341,6 +341,12 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("弾が向きを変えられる速さ (度/秒)")]
         private float _turnDegreesPerSecond = 120f;
 
+        [SerializeField, Tooltip("相手を捉えてからロックするまで鳴らし続ける音。空なら鳴らさない")]
+        private AudioClip _lockingSound;
+
+        [SerializeField, Tooltip("ロックしている間鳴らし続ける音。空なら鳴らさない")]
+        private AudioClip _lockedSound;
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public float LockOnSeconds { get => _lockOnSeconds; set => _lockOnSeconds = value; }
@@ -348,6 +354,10 @@ namespace Fps.Runtime
         public float LockOnConeDegrees { get => _lockOnConeDegrees; set => _lockOnConeDegrees = value; }
 
         public float TurnDegreesPerSecond { get => _turnDegreesPerSecond; set => _turnDegreesPerSecond = value; }
+
+        public AudioClip LockingSound { get => _lockingSound; set => _lockingSound = value; }
+
+        public AudioClip LockedSound { get => _lockedSound; set => _lockedSound = value; }
 
         public HomingSpec ToSpec() => _enabled ? new HomingSpec(_lockOnSeconds, _lockOnConeDegrees, _turnDegreesPerSecond) : null;
 

@@ -44,14 +44,22 @@ namespace Fps.NetV2
         private float? _idleRemaining;
         private int _idleShownSeconds = -1;
         private SnapshotMessage _latest;
+        private Func<string, WeaponSpec> _findWeapon;
+        private WeaponSpec _weaponSpec;
 
         public Hud Hud => _hud;
 
         public IParticipants Participants => _participants;
 
         /// <summary>HUD を作る。作れなければ作りかけを消して例外を投げる (Resources に HUD のレイアウトかテーマが無い)。</summary>
-        public static NetV2Hud Create(int localPlayerId, int maxHealth)
+        // 武器の値を引く口を受け取るのは、溜め・熱・弾薬の種類を出すかを武器の値で決めるため (WeaponSync は無い項目にも 0 を運ぶ)。
+        public static NetV2Hud Create(int localPlayerId, int maxHealth, Func<string, WeaponSpec> findWeapon)
         {
+            if (findWeapon == null)
+            {
+                throw new ArgumentNullException(nameof(findWeapon));
+            }
+
             var hud = Hud.Create(ObjectName, null, null, null);
             try
             {
@@ -59,6 +67,7 @@ namespace Fps.NetV2
                 netHud._hud = hud;
                 netHud._localId = localPlayerId;
                 netHud._maxHealth = Math.Max(1, maxHealth);
+                netHud._findWeapon = findWeapon;
 
                 // 対戦では止めても相手は止まらない
                 hud.PauseMenu.TimeMode = PauseTimeMode.KeepRunning;
@@ -138,9 +147,12 @@ namespace Fps.NetV2
                 model.SetTime(Math.Max(0, _remainingSeconds));
             }
 
-            if (snapshot.HasOwner && (!_shown || !snapshot.Owner.Weapon.SameAs(_weapon)))
+            var weaponSpec = snapshot.HasOwner ? _findWeapon(ClientFire.CurrentWeaponId(snapshot.Owner)) : null;
+            if (snapshot.HasOwner && (!_shown || !snapshot.Owner.Weapon.SameAs(_weapon) || weaponSpec != _weaponSpec))
             {
                 _weapon = snapshot.Owner.Weapon;
+                _weaponSpec = weaponSpec;
+                ClientWeaponGauges.Show(model, _weapon, weaponSpec);
                 if (_weapon.WeaponCount == 0)
                 {
                     model.ClearAmmo();

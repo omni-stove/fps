@@ -25,6 +25,7 @@ namespace Fps.Server
         private double _reloadStartedAt;
         private float _chargeFraction;
         private double _chargeFrom;
+        private double _burstUntil = double.NegativeInfinity;
 
         public ServerPlayerWeapons(int playerId, TextWriter log, Func<double> now)
         {
@@ -143,7 +144,14 @@ namespace Fps.Server
         /// </summary>
         public ShotRejection AcceptCharge(float requested, out float fraction)
         {
-            var charge = CurrentSpec?.Trigger.Charge;
+            return AcceptCharge(requested, TriggerEdge.Released, true, out fraction);
+        }
+
+        /// <inheritdoc cref="AcceptCharge(float, out float)"/>
+        public ShotRejection AcceptCharge(float requested, TriggerEdge trigger, bool measured, out float fraction)
+        {
+            var spec = CurrentSpec?.Trigger;
+            var charge = spec?.Charge;
             if (charge == null)
             {
                 _chargeFraction = 0f;
@@ -151,10 +159,27 @@ namespace Fps.Server
                 return ShotRejection.None;
             }
 
-            // 弾かれた射撃でも、撃った側は離して溜め直しているので、ここから測り直す。
             var now = _now();
+            // バーストの 2 発目以降は離したときの溜めで撃つ。押していた時間は 1 発目で使い切っており、測り直すと必ず短く見えるため。
+            if (spec.Burst != null && trigger == TriggerEdge.None && now <= _burstUntil)
+            {
+                fraction = _chargeFraction;
+                _burstUntil = now + spec.Burst.RoundIntervalSeconds + ChargeArrivalToleranceSeconds;
+                return ShotRejection.None;
+            }
+
+            if (!measured)
+            {
+                // Bot は溜めを持たず、溜めた時間を測れないので申告をそのまま認める。
+                fraction = requested;
+                _chargeFraction = fraction;
+                return ShotRejection.None;
+            }
+
+            // 弾かれた射撃でも、撃った側は離して溜め直しているので、ここから測り直す。
             var held = now - _chargeFrom + ChargeArrivalToleranceSeconds;
             _chargeFrom = now;
+            _burstUntil = double.NegativeInfinity;
             fraction = ChargeTrigger.Reachable(charge, float.IsFinite(requested) ? requested : 0f, held);
             if (!ChargeTrigger.Fires(charge, fraction))
             {
@@ -163,6 +188,11 @@ namespace Fps.Server
             }
 
             _chargeFraction = fraction;
+            if (spec.Burst != null)
+            {
+                _burstUntil = now + spec.Burst.RoundIntervalSeconds + ChargeArrivalToleranceSeconds;
+            }
+
             return ShotRejection.None;
         }
 

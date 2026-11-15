@@ -79,7 +79,7 @@ namespace Fps.Server
                 return false;
             }
 
-            var chargeCheck = shooter.Weapons.AcceptCharge(request.ChargeFraction, out var chargeFraction);
+            var chargeCheck = shooter.Weapons.AcceptCharge(request.ChargeFraction, request.Trigger, !BotRoster.IsBotId(shooterId), out var chargeFraction);
             if (chargeCheck != ShotRejection.None)
             {
                 WarnRejected(shooterId, chargeCheck);
@@ -208,7 +208,7 @@ namespace Fps.Server
             _botFire.InterpolationAlpha = 0f;
             _botFire.ShotIndex = fighter.Shots.NextIndex;
             _botFire.ShotGeneration = fighter.Shots.Generation;
-            // Bot は溜めを持たないので満タンを申告し、前の射撃からの秒数で届く分 (AcceptCharge) だけ溜めたことにする。
+            // Bot は溜めを持たないので満タンを申告し、AcceptCharge は測らずそのまま認める (溜めの秒数が連射間隔を超える武器でも撃てるように)。
             _botFire.ChargeFraction = 1f;
             _botFire.AmmoTypeIndex = fighter.Weapons.AmmoTypeIndex;
             _botFire.HasLockTarget = false;

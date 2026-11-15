@@ -28,6 +28,7 @@ namespace Fps.NetV2
     public sealed class ClientTrigger
     {
         private float _unspentSeconds;
+        private float _releasedCharge;
 
         public ClientTrigger(WeaponSpec spec)
         {
@@ -93,7 +94,17 @@ namespace Fps.NetV2
                 released = true;
             }
 
-            return new TriggerPull(shots, pressed, released, released ? charge : Model.ChargeFraction);
+            if (released)
+            {
+                _releasedCharge = charge;
+            }
+            else if (pressed)
+            {
+                _releasedCharge = 0f;
+            }
+
+            // 離した後に出るバーストの残りの弾は、離したときの溜めで撃つ (オフラインの ChargeScaling と同じ威力にするため)。
+            return new TriggerPull(shots, pressed, released, released ? charge : IsHeld ? Model.ChargeFraction : _releasedCharge);
         }
 
         public bool Drop()

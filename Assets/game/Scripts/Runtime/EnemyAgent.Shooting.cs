@@ -178,7 +178,8 @@ namespace Fps.Runtime
 
         private void Shoot()
         {
-            if (_target == null || _target.IsDead)
+            var target = PerceivedTarget;
+            if (target == null || target.IsDead)
             {
                 return;
             }
@@ -194,7 +195,7 @@ namespace Fps.Runtime
             }
 
             var eye = EyePosition;
-            var direction = _target.AimPoint - eye;
+            var direction = target.AimPoint - eye;
             if (direction.sqrMagnitude < 1e-6f)
             {
                 direction = transform.forward;

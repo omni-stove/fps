@@ -178,7 +178,7 @@ namespace Fps.Runtime
         // 判断は目標の方へ向き直らせるだけなので、向き終える前に振って空振りしないよう、扇に入るまで待つ。高さは問わない (届くかは当たりの判定で測る)。
         private bool IsFacingTarget(MeleeSpec spec)
         {
-            var target = _agent.Target;
+            var target = _agent.PerceivedTarget;
             if (target == null)
             {
                 return false;

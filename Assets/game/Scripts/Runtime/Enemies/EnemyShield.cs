@@ -256,7 +256,7 @@ namespace Fps.Runtime
         // 判断は目標の方へ向き直らせるだけなので、向き終える前に振って空振りしないよう、扇に入るまで待つ (EnemyMelee と同じ)。
         private bool IsFacingTarget(MeleeSpec spec)
         {
-            var target = _agent.Target;
+            var target = _agent.PerceivedTarget;
             if (target == null)
             {
                 return false;

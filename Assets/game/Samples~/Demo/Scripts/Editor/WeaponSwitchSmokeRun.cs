@@ -257,7 +257,7 @@ namespace Fps.Editor
             ExpectHudName(problems, hud, weapon);
 
             Debug.Log(
-                $"{LogTag} rifle ammo={rifle.AmmoInMagazine}/{rifle.ReserveAmmo} handgun ammo={handgun.AmmoInMagazine}/{handgun.ReserveAmmo} hud weapon={(hud != null ? hud.Model.WeaponNameText : "(no hud)")}");
+                $"{LogTag} rifle ammo={rifle.AmmoInMagazine}/{rifle.ReserveAmmo} handgun ammo={handgun.AmmoInMagazine}/{handgun.ReserveAmmo} hud weapon={(hud != null ? hud.Model.WeaponSpec?.Id : "(no hud)")}");
 
             ExerciseViewmodel(problems, bootstrap.World, weapon);
         }
@@ -314,8 +314,8 @@ namespace Fps.Editor
                 return;
             }
 
-            var expected = GameText.Resolve(weapon.Weapon.Spec.Name);
-            Expect(problems, hud.Model.WeaponNameText == expected, $"the HUD shows '{expected}' (got '{hud.Model.WeaponNameText}')");
+            var expected = weapon.Weapon.Spec;
+            Expect(problems, ReferenceEquals(hud.Model.WeaponSpec, expected), $"the HUD shows '{expected.Id}' (got '{hud.Model.WeaponSpec?.Id}')");
         }
 
         private static void Expect(List<string> problems, bool condition, string what)

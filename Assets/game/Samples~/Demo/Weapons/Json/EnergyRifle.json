@@ -1,0 +1,55 @@
+{
+  "id": "9c8df409-3662-4df2-b50e-81fdc51d2623",
+  "nameKey": "weapon.energyRifle",
+  "category": "AssaultRifle",
+  "shotNoiseRadius": 50,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.12
+  },
+  "ammo": {
+    "kind": "Heat",
+    "magazineSize": 1,
+    "reserveAmmo": 0,
+    "reloadSeconds": 0,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.5,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0,
+    "heat": {
+      "heatPerShot": 0.1,
+      "coolPerSecond": 0.4,
+      "coolDelaySeconds": 0.3,
+      "overheatSeconds": 1.5
+    }
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 120,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 22,
+    "falloff": {
+      "startDistance": 30,
+      "endDistance": 80,
+      "minMultiplier": 0.6
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2,
+    "adsSpreadDegrees": 0.3,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 0.25,
+    "recoilYawDegrees": 0.1,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 8,
+    "zoomLevels": [45],
+    "swayDegrees": 0
+  }
+}

@@ -26,6 +26,7 @@ namespace Fps.Runtime
 
         private Health _health;
         private ZoneDamageMultipliers _zoneMultipliers = ZoneDamageMultipliers.Default;
+        private StatusEffectReceiver _statusEffects;
 
         /// <summary>死亡した瞬間に、死んだ Damageable を渡して 1 度だけ呼ばれる (ResetHealth 後は再び呼ばれ得る)。</summary>
         public event Action<Damageable> Died;
@@ -142,6 +143,28 @@ namespace Fps.Runtime
             var damage = DamageCalculator.Calculate(baseDamage, zone, distance, falloff, _zoneMultipliers);
             TakeDamageCore(damage, sourcePosition, zone, direction, kind);
             return damage;
+        }
+
+        // 部位倍率と距離減衰を ImpactResolver が済ませた量を受けるため。ApplyHit に渡すと倍率が二重に掛かる。
+        public int ApplyResolvedHit(int damage, HitZone zone, Vector3? sourcePosition, Vector3? direction, DamageKind kind)
+        {
+            TakeDamageCore(damage, sourcePosition, zone, direction, kind);
+            return damage;
+        }
+
+        // 状態異常を受けない物 (壁の的など) に空の受け口を付けて回らないよう、付けるのは状態異常を当てる側が要るときだけにする。
+        public StatusEffectReceiver StatusEffects => _statusEffects != null ? _statusEffects : (_statusEffects = GetComponent<StatusEffectReceiver>());
+
+        public StatusEffectReceiver EnsureStatusEffects()
+        {
+            var receiver = StatusEffects;
+            if (receiver == null)
+            {
+                receiver = gameObject.AddComponent<StatusEffectReceiver>();
+                _statusEffects = receiver;
+            }
+
+            return receiver;
         }
 
         /// <summary>

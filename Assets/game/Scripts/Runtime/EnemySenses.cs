@@ -11,6 +11,51 @@ namespace Fps.Runtime
     /// </summary>
     public static class EnemySenses
     {
+        private static readonly List<IVisionBlocker> _visionBlockers = new List<IVisionBlocker>();
+
+        public static IReadOnlyList<IVisionBlocker> VisionBlockers => _visionBlockers;
+
+        /// <exception cref="ArgumentNullException">blocker が null。</exception>
+        public static bool RegisterVisionBlocker(IVisionBlocker blocker)
+        {
+            if (blocker == null)
+            {
+                throw new ArgumentNullException(nameof(blocker));
+            }
+
+            if (_visionBlockers.Contains(blocker))
+            {
+                return false;
+            }
+
+            _visionBlockers.Add(blocker);
+            return true;
+        }
+
+        /// <exception cref="ArgumentNullException">blocker が null。</exception>
+        public static bool UnregisterVisionBlocker(IVisionBlocker blocker)
+        {
+            if (blocker == null)
+            {
+                throw new ArgumentNullException(nameof(blocker));
+            }
+
+            return _visionBlockers.Remove(blocker);
+        }
+
+        public static bool IsVisionBlocked(Vector3 eye, Vector3 target)
+        {
+            foreach (var blocker in _visionBlockers)
+            {
+                if (blocker.Blocks(eye, target))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// self の陣営から見た、いちばん近い生きている敵を members から選ぶ。体力 (<see cref="Damageable"/>) の無い相手と self 自身は選ばない。
         /// 同じ陣営の誰かが印を付けた敵 (<see cref="PingController.IsMarkedFor"/>) がいれば、その中でいちばん近いものを先に選ぶ。
@@ -144,7 +189,8 @@ namespace Fps.Runtime
 
             // 距離の判定は足元同士で済ませたので、Raycast は目から狙う点まで (高さの差の分だけ長い) を通す。
             var lineOfSight = inRange
-                && Hitscan.HasLineOfSight(eye, target, Vector3.Distance(eye, target.AimPoint) + 0.01f, selfRoot);
+                && Hitscan.HasLineOfSight(eye, target, Vector3.Distance(eye, target.AimPoint) + 0.01f, selfRoot)
+                && !IsVisionBlocked(eye, target.AimPoint);
 
             return new EnemyPerception(
                 selfGround.ToNumerics(), targetGround.ToNumerics(), lineOfSight, heardNoise, noise, wasHit, source, healthFraction);

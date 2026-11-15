@@ -29,5 +29,8 @@ namespace Fps.Runtime
         public const string Ability1 = "Player/Ability1";
         public const string Ability2 = "Player/Ability2";
         public const string SquadCommand = "Player/SquadCommand";
+        public const string SwitchAmmoType = "Player/SwitchAmmoType";
+        public const string CycleMagnification = "Player/CycleMagnification";
+        public const string HoldBreath = "Player/HoldBreath";
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Fps.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -81,6 +82,39 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml の、アクティブリロードで成功になる幅 (<see cref="ReloadBarName"/> の子)。幅が 0 のときは隠す。</summary>
         public const string ReloadWindowName = "hud-reload-window";
 
+        /// <summary>Hud.uxml の溜めの Label。溜めの無い武器では隠す。</summary>
+        public const string ChargeLabelName = "hud-charge";
+
+        /// <summary>Hud.uxml の熱の Label。熱の無い武器では隠す。</summary>
+        public const string HeatLabelName = "hud-heat";
+
+        /// <summary>Hud.uxml の弾薬の種類の Label。種類が無ければ隠す。</summary>
+        public const string AmmoTypeLabelName = "hud-ammo-type";
+
+        /// <summary>Hud.uxml の倍率の Label。倍率が無ければ隠す。</summary>
+        public const string MagnificationLabelName = "hud-magnification";
+
+        /// <summary>Hud.uxml のロックオンの Label。ロックオンしていなければ隠す。</summary>
+        public const string LockOnLabelName = "hud-lock-on";
+
+        /// <summary>溜めの書式のキー。{0} は 0〜100 の %。</summary>
+        public const string ChargeKey = "hud.charge";
+
+        /// <summary>熱の書式のキー。{0} は 0〜100 の %。</summary>
+        public const string HeatKey = "hud.heat";
+
+        /// <summary>倍率の書式のキー。{0} は倍率。</summary>
+        public const string MagnificationKey = "hud.magnification";
+
+        /// <summary>ロックオンの途中の書式のキー。{0} は 0〜100 の %。</summary>
+        public const string LockOnKey = "hud.lockOn";
+
+        /// <summary>ロックオンし終えたときの文のキー。</summary>
+        public const string LockedOnKey = "hud.lockedOn";
+
+        /// <summary>ロックオンし終えたときにロックオンの Label に付ける USS クラス。</summary>
+        public const string LockedOnClass = "hud__lock-on--locked";
+
         /// <summary>リロード中に弾数の Label に付ける USS クラス。</summary>
         public const string ReloadingClass = "hud__value--reloading";
 
@@ -114,6 +148,11 @@ namespace Fps.Runtime
         public VisualElement ReloadBar { get; }
         public VisualElement ReloadFill { get; }
         public VisualElement ReloadWindow { get; }
+        public Label ChargeLabel { get; }
+        public Label HeatLabel { get; }
+        public Label AmmoTypeLabel { get; }
+        public Label MagnificationLabel { get; }
+        public Label LockOnLabel { get; }
 
         /// <summary>すべての項目を出す (<see cref="HudVisibility.Full"/>) View を作る。</summary>
         public HudView(VisualElement root, HudModel model)
@@ -155,6 +194,11 @@ namespace Fps.Runtime
             ReloadBar = Require<VisualElement>(root, ReloadBarName);
             ReloadFill = Require<VisualElement>(ReloadBar, ReloadFillName);
             ReloadWindow = Require<VisualElement>(ReloadBar, ReloadWindowName);
+            ChargeLabel = Require<Label>(root, ChargeLabelName);
+            HeatLabel = Require<Label>(root, HeatLabelName);
+            AmmoTypeLabel = Require<Label>(root, AmmoTypeLabelName);
+            MagnificationLabel = Require<Label>(root, MagnificationLabelName);
+            LockOnLabel = Require<Label>(root, LockOnLabelName);
 
             ShowHealth();
             ShowAmmo();
@@ -165,6 +209,7 @@ namespace Fps.Runtime
             ShowResult();
             ShowReloadProgress();
             ShowCrosshair();
+            ShowWeaponGauges();
             _model.Changed += OnChanged;
         }
 
@@ -181,6 +226,7 @@ namespace Fps.Runtime
             ShowTime();
             ShowScores();
             ShowCrosshair();
+            ShowWeaponGauges();
         }
 
         /// <summary>チームの点数を塗る色を決め、今の点数を塗り直す。決めるまでは白で塗る。</summary>
@@ -239,6 +285,21 @@ namespace Fps.Runtime
                     break;
                 case HudField.Crosshair:
                     ShowCrosshair();
+                    break;
+                case HudField.Charge:
+                    ShowCharge();
+                    break;
+                case HudField.Heat:
+                    ShowHeat();
+                    break;
+                case HudField.AmmoType:
+                    ShowAmmoType();
+                    break;
+                case HudField.Magnification:
+                    ShowMagnification();
+                    break;
+                case HudField.LockOn:
+                    ShowLockOn();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a valid HudField");
@@ -326,6 +387,52 @@ namespace Fps.Runtime
             {
                 ReloadWindow.style.display = DisplayStyle.None;
             }
+        }
+
+        private void ShowWeaponGauges()
+        {
+            ShowCharge();
+            ShowHeat();
+            ShowAmmoType();
+            ShowMagnification();
+            ShowLockOn();
+        }
+
+        private void ShowCharge()
+        {
+            ShowOrHide(ChargeLabel, Percent(ChargeKey, _model.ChargeFraction), _visibility.Ammo);
+        }
+
+        private void ShowHeat()
+        {
+            ShowOrHide(HeatLabel, Percent(HeatKey, _model.HeatFraction), _visibility.Ammo);
+        }
+
+        private void ShowAmmoType()
+        {
+            ShowOrHide(AmmoTypeLabel, _model.AmmoTypeText, _visibility.Ammo);
+        }
+
+        private void ShowMagnification()
+        {
+            var magnification = _model.Magnification;
+            var text = magnification.HasValue
+                ? GameText.Format(MagnificationKey, magnification.Value.ToString("0.#", CultureInfo.InvariantCulture))
+                : string.Empty;
+            ShowOrHide(MagnificationLabel, text, _visibility.Ammo);
+        }
+
+        // ロックオンは照準に重ねる合図なので、弾数ではなく照準を出すかに合わせる。
+        private void ShowLockOn()
+        {
+            var text = _model.IsLockedOn ? GameText.Get(LockedOnKey) : Percent(LockOnKey, _model.LockOnProgress);
+            LockOnLabel.EnableInClassList(LockedOnClass, _model.IsLockedOn);
+            ShowOrHide(LockOnLabel, text, _visibility.Crosshair);
+        }
+
+        private static string Percent(string key, float? fraction)
+        {
+            return fraction.HasValue ? GameText.Format(key, Mathf.RoundToInt(fraction.Value * 100f)) : string.Empty;
         }
 
         /// <summary>広がり spread (0〜1) のときの、中央から線の内側の端までの隙間 (基準解像度の px)。範囲外は端に揃える。</summary>

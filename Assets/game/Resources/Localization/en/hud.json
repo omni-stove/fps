@@ -36,5 +36,10 @@
   "hud.killFeed.suicide": "Suicide",
   "hud.killCam.caption": "KILLCAM {0}",
   "hud.ammoCrate.prompt": "[{0}] Resupply ammo",
-  "hud.ammoCrate.full": "Ammo is full"
+  "hud.ammoCrate.full": "Ammo is full",
+  "hud.charge": "Charge {0}%",
+  "hud.heat": "Heat {0}%",
+  "hud.magnification": "x{0}",
+  "hud.lockOn": "Lock {0}%",
+  "hud.lockedOn": "Locked"
 }

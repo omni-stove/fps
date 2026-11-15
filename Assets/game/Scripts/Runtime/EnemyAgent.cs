@@ -699,6 +699,8 @@ namespace Fps.Runtime
 
             var deltaSeconds = Time.deltaTime;
             _weapon.Tick(deltaSeconds);
+            _trigger.Bind(_weapon.Trigger);
+            _trigger.Advance(deltaSeconds);
             _recoil.Tick(deltaSeconds);
 
             var member = GetComponent<SideMember>();
@@ -776,6 +778,7 @@ namespace Fps.Runtime
             }
             else
             {
+                ReleaseTrigger();
                 TopUpMagazine();
             }
         }

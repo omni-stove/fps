@@ -325,6 +325,34 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ABlockingWeaponReleasesAimingAndKeepsItFromStarting()
+        {
+            Initialize();
+            var blocked = false;
+            _ads.AdsBlocker = () => blocked;
+            var changes = new List<bool>();
+            _ads.AimingChanged += changes.Add;
+
+            _ads.Tick(true, true, 1f);
+            Assert.That(_ads.IsAiming, Is.True);
+
+            blocked = true;
+            LogAssert.Expect(LogType.Log, "[View] ads=false");
+            _ads.Tick(true, false, 0f);
+            Assert.That(_ads.IsAiming, Is.False);
+
+            _ads.Tick(true, true, _ads.TransitionSeconds);
+            Assert.That(_ads.IsAiming, Is.False, "pressing again while blocked does not aim");
+            Assert.That(_camera.fieldOfView, Is.EqualTo(_hip).Within(1e-4f));
+            Assert.That(changes, Is.EqualTo(new[] { true, false }));
+
+            blocked = false;
+            _ads.Tick(false, false, 0f);
+            _ads.Tick(true, true, 0f);
+            Assert.That(_ads.IsAiming, Is.True, "aiming works again once the weapon stops blocking");
+        }
+
+        [Test]
         public void ApplyingSettingsMovesTheHipFieldOfViewRightAway()
         {
             Initialize();

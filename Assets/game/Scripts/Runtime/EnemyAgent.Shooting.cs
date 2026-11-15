@@ -13,6 +13,7 @@ namespace Fps.Runtime
         private bool _unarmed;
         private readonly System.Random _random = new System.Random();
         private readonly RecoilState _recoil = new RecoilState();
+        private readonly TriggerDriver _trigger = new TriggerDriver();
         private int _spreadSeed;
         private int _shotCount;
 
@@ -176,24 +177,55 @@ namespace Fps.Runtime
             }
         }
 
+        // 敵も撃ち方 (Weapon.Trigger) を通して撃つ。溜める撃ち方は溜め切ってから離し、Auto は撃つ間押し続ける (TriggerDriver.PullAsBot)。
         private void Shoot()
         {
             var target = PerceivedTarget;
+            _trigger.Bind(_weapon.Trigger);
             if (target == null || target.IsDead)
             {
+                _trigger.Drop();
                 return;
             }
 
-            if (!_weapon.TryFire())
+            if (!_weapon.Ammo.CanFire)
             {
-                if (_weapon.AmmoInMagazine == 0 && _weapon.TryStartReload())
+                _trigger.Drop();
+                ReloadIfEmpty();
+                return;
+            }
+
+            var charge = _trigger.ChargeFraction;
+            var shots = _trigger.PullAsBot(_weapon.Spec);
+            for (var i = 0; i < shots; i++)
+            {
+                if (!_weapon.TryFire())
                 {
-                    Debug.Log($"{LogTag} id={Id} reload", this);
+                    ReloadIfEmpty();
+                    return;
                 }
 
-                return;
+                FireRound(target, charge);
             }
+        }
 
+        // 撃ち合いをやめた間は引き金を離す。押したままにすると、次に撃ち始めた最初の弾が押しっぱなしの撃ち方の間隔ぶん遅れる。
+        private void ReleaseTrigger()
+        {
+            _trigger.Bind(_weapon?.Trigger);
+            _trigger.Drop();
+        }
+
+        private void ReloadIfEmpty()
+        {
+            if (_weapon.AmmoInMagazine == 0 && _weapon.TryStartReload())
+            {
+                Debug.Log($"{LogTag} id={Id} reload", this);
+            }
+        }
+
+        private void FireRound(Damageable target, float chargeFraction)
+        {
             var eye = EyePosition;
             var direction = target.AimPoint - eye;
             if (direction.sqrMagnitude < 1e-6f)
@@ -207,28 +239,61 @@ namespace Fps.Runtime
             var shotIndex = _shotCount;
             _shotCount = unchecked(_shotCount + 1);
             var cone = SpreadPattern.ConeDegrees(spec, _aiming ? 1f : 0f, MoveFraction());
-            if (cone > 0f)
+            var round = _weapon.AmmoTypes.Round;
+            var plan = ShotPlanner.Plan(round, eye.ToNumerics(), direction.ToNumerics(), cone, _spreadSeed, shotIndex);
+            var directions = new Vector3[plan.Rounds.Count];
+            for (var i = 0; i < directions.Length; i++)
             {
-                direction = SpreadPattern.Direction(direction.ToNumerics(), cone, _spreadSeed, shotIndex).ToUnity();
+                directions[i] = WithRecoil(plan.Rounds[i].Direction.ToUnity(), _recoil, RecoilControl);
             }
 
-            direction = WithRecoil(direction, _recoil, RecoilControl);
             _recoil.Kick(spec, _spreadSeed, shotIndex);
 
             var spread = _brain.NextShotSpreadDegrees;
-            direction = BlindFireShot.Spread(direction.ToNumerics(), spread, _random).ToUnity();
+            for (var i = 0; i < directions.Length; i++)
+            {
+                directions[i] = BlindFireShot.Spread(directions[i].ToNumerics(), spread, _random).ToUnity();
+            }
+
             _brain.RecordShot();
             Fired?.Invoke(_weapon);
 
-            var damage = ScaleDamage(spec.Damage, _shotDamageMultiplier);
-            var result = Hitscan.Fire(eye, direction, spec.Range, damage, spec.Falloff, transform, spec.ExplosionRadius, spec.Id);
+            var impact = ScaleImpact(_weapon.AmmoTypes.Impact, _shotDamageMultiplier);
+            var request = new ShotRequest(
+                gameObject, transform, transform.position, round, impact, spec.Id, Physics.DefaultRaycastLayers, spec.Trigger.Charge, Mathf.Clamp01(chargeFraction));
+            var hits = new string[directions.Length];
+            var damage = 0;
+            for (var i = 0; i < directions.Length; i++)
+            {
+                var result = Hitscan.Fire(request, new PlannedRound(eye.ToNumerics(), directions[i].ToNumerics(), plan.Rounds[i].Index));
+                hits[i] = DescribeHit(result);
+                damage += result.Damage;
+            }
+
             StealthNoise.Emit(gameObject, new SoundStimulus(SoundCueKind.Gunshot, eye.ToNumerics(), spec.ShotNoiseRadius, false));
             Debug.Log(
                 string.Format(
                     CultureInfo.InvariantCulture,
                     "{0} id={1} fire ammo={2} spread={3:F1} cone={4:F1} hit={5} dmg={6}",
-                    LogTag, Id, _weapon.AmmoInMagazine, spread, cone, DescribeHit(result), result.Damage),
+                    LogTag, Id, _weapon.AmmoInMagazine, spread, cone, string.Join(",", hits), damage),
                 this);
+        }
+
+        // 倍率が 1 の普通の敵のために毎発 ImpactSpec を作り直さない。
+        private static ImpactSpec ScaleImpact(ImpactSpec impact, float multiplier)
+        {
+            if (multiplier == 1f)
+            {
+                return impact;
+            }
+
+            return new ImpactSpec(
+                ScaleDamage(impact.Damage, multiplier),
+                impact.Falloff,
+                impact.StructureRadius,
+                impact.Explosion,
+                impact.StatusEffect,
+                impact.AreaEffect);
         }
 
         private float MoveFraction()

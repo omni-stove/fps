@@ -65,9 +65,6 @@ namespace Fps.Runtime
         /// <summary><see cref="SpreadFraction"/> が戻る速さ (1 秒あたりに減る量)。</summary>
         public const float SpreadRecoveryPerSecond = 2f;
 
-        // 自分の体を除いて最も近い命中を選ぶための一時バッファ。毎発の確保を避ける。
-        private const int MaxRaycastHits = 16;
-
         [Header("Weapon")]
         [SerializeField, Tooltip("持つ武器の定義の並び (既定のロードアウト)。0 番を持って始める。シーン生成スクリプトが配線する")]
         private WeaponDefinition[] _definitions = Array.Empty<WeaponDefinition>();
@@ -76,7 +73,7 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("Raycast が当たるレイヤー")]
         private LayerMask _hitMask = Physics.DefaultRaycastLayers;
 
-        private readonly RaycastHit[] _hitBuffer = new RaycastHit[MaxRaycastHits];
+        private readonly TriggerDriver _trigger = new TriggerDriver();
         private Transform _aim;
         private ViewRig _rig;
         private InputAction _attackAction;
@@ -327,8 +324,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// Attack の入力を今の武器の <see cref="WeaponSpec.FireMode"/> で判断し (<see cref="FireTrigger.Wants"/>)、撃つなら <see cref="Fire"/> する。
-        /// Auto は押している間、Semi は押したフレームだけ撃つ。連射間隔は <see cref="Weapon"/> が制限する。撃てたら true。
+        /// Attack の押す・離すと時間を今の武器の撃ち方 (<see cref="Fps.Core.Weapon.Trigger"/>) に渡し、返った発数ぶん撃つ。
+        /// Auto は押している間、Semi は押したフレームだけ撃つ。連射間隔は撃ち方と <see cref="Weapon"/> が制限する。撃てたら true。
         /// 押したフレームに弾倉が空で撃てなければ <see cref="DryFired"/> を呼ぶ (<see cref="IsDryFire"/>)。
         /// </summary>
         /// <param name="isPressed">Attack が押されているか。</param>
@@ -336,24 +333,35 @@ namespace Fps.Runtime
         public bool PullTrigger(bool isPressed, bool wasPressedThisFrame)
         {
             EnsureInitialized();
-            if (_unarmed || !FireTrigger.Wants(Weapon.Spec.FireMode, isPressed, wasPressedThisFrame))
+            var weapon = Weapon;
+            _trigger.Bind(weapon?.Trigger);
+            if (weapon == null)
             {
                 return false;
             }
 
-            if (Fire())
+            if (IsFireBlocked || !weapon.Ammo.CanFire)
             {
-                return true;
+                _trigger.Drop();
+                if (wasPressedThisFrame && !IsFireBlocked && IsDryFire(weapon))
+                {
+                    Debug.Log($"{DryFireLogPrefix} id={weapon.Spec.Id}", this);
+                    DryFired?.Invoke(weapon);
+                }
+
+                return false;
             }
 
-            var weapon = Weapon;
-            if (wasPressedThisFrame && !IsFireBlocked && IsDryFire(weapon))
+            // 離した瞬間に撃つ溜めの撃ち方は、離すと溜めが 0 に戻るので、渡す前の溜めで撃つ。
+            var charge = _trigger.ChargeFraction;
+            var shots = _trigger.Pull(weapon.Spec.FireMode, isPressed, wasPressedThisFrame);
+            var fired = false;
+            for (var i = 0; i < shots && FireShot(weapon, charge); i++)
             {
-                Debug.Log($"{DryFireLogPrefix} id={weapon.Spec.Id}", this);
-                DryFired?.Invoke(weapon);
+                fired = true;
             }
 
-            return false;
+            return fired;
         }
 
         /// <summary>weapon の弾倉が空で、リロード中でもないか (トリガーを引くと空撃ちになる)。null なら false。</summary>
@@ -711,7 +719,8 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 今の武器で 1 発撃つ。<see cref="FireBlocker"/> が止めているか <see cref="Weapon.TryFire"/> が false なら何もせず false。
-        /// 撃てたら照準の正面へ (<see cref="ShotFilter"/> があれば書き換えた始点と向きで) Raycast し、Hitbox に当たればダメージを渡す。
+        /// 撃てたら照準の正面へ散らばりを掛けた弾 (<see cref="ShotPlanner"/>) を、<see cref="ShotFilter"/> があれば書き換えた始点と向きで、
+        /// 弾の届け方 (<see cref="ShotDeliveries"/>) に渡す。Hitbox に当たれば着弾の効果 (<see cref="ImpactApplier"/>) でダメージを渡し、
         /// Hitbox の無い物に当たれば <see cref="StructureDamage.Apply"/> に武器の <see cref="WeaponSpec.ExplosionRadius"/> で渡す。
         /// 撃つと <see cref="CombatEvents.ShotFired"/>、何かに当たると <see cref="CombatEvents.Impact"/>、
         /// 生きている相手に当てると <see cref="CombatEvents.HitConfirmed"/> を出す。弾の線の近くを通られた相手には
@@ -721,8 +730,12 @@ namespace Fps.Runtime
         public bool Fire()
         {
             EnsureInitialized();
-
             var weapon = Weapon;
+            return FireShot(weapon, weapon != null && weapon.Trigger == _trigger.Model ? _trigger.ChargeFraction : 0f);
+        }
+
+        private bool FireShot(Weapon weapon, float chargeFraction)
+        {
             if (weapon == null || IsFireBlocked || !weapon.TryFire())
             {
                 return false;
@@ -736,54 +749,51 @@ namespace Fps.Runtime
             Fired?.Invoke(weapon);
 
             // この弾は今の視点の向きで撃ち、反動はカメラが次に向きを書くとき (FirstPersonLook.LateUpdate) から効く。
-            ResolveShot(out var origin, out var direction);
-            direction = ApplySpread(weapon.Spec, direction, shotIndex);
+            ResolveShot(out var aimOrigin, out var aimDirection);
+            var round = weapon.AmmoTypes.Round;
+            var plan = ShotPlanner.Plan(
+                round, aimOrigin.ToNumerics(), aimDirection.ToNumerics(), CurrentConeDegrees(weapon.Spec), PlayerId, shotIndex);
             _recoil.Kick(weapon.Spec, PlayerId, shotIndex);
-            ShotFilter?.Filter(ref origin, ref direction);
+
+            var rounds = new PlannedRound[plan.Rounds.Count];
+            for (var i = 0; i < rounds.Length; i++)
+            {
+                var planned = plan.Rounds[i];
+                var origin = planned.Origin.ToUnity();
+                var direction = planned.Direction.ToUnity();
+                ShotFilter?.Filter(ref origin, ref direction);
+                rounds[i] = new PlannedRound(origin.ToNumerics(), direction.ToNumerics(), planned.Index);
+            }
 
             var shooter = _aim.root.gameObject;
-            CombatEvents.RaiseShotFired(shooter, origin, direction, weapon.Spec.Id);
-            StealthNoise.Emit(shooter, new SoundStimulus(SoundCueKind.Gunshot, origin.ToNumerics(), weapon.Spec.ShotNoiseRadius, false));
-            var found = TryRaycast(origin, direction, out var hit);
-            Hitscan.ReportNearMisses(origin, direction, found ? hit.distance : HitscanRange, _aim.root, found ? hit.collider : null);
-            if (!found)
+            StealthNoise.Emit(shooter, new SoundStimulus(SoundCueKind.Gunshot, rounds[0].Origin, weapon.Spec.ShotNoiseRadius, false));
+            var impact = weapon.AmmoTypes.Impact;
+            var charge = Mathf.Clamp01(chargeFraction);
+            var delivery = ShotDeliveries.For(round.Delivery);
+            foreach (var planned in rounds)
             {
-                return true;
-            }
-
-            CombatEvents.RaiseImpact(hit.point, hit.normal, hit.collider);
-            if (BulletShield.TryBlock(hit.collider, weapon.Spec.Damage, origin, shooter))
-            {
-                return true;
-            }
-
-            if (Deployable.TryStopBullet(hit.collider, weapon.Spec.Damage, hit.distance, weapon.Spec.Falloff, origin, direction, shooter))
-            {
-                return true;
-            }
-
-            if (Hitbox.FindFor(hit.collider) == null)
-            {
-                // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
-                using (CombatEvents.Attribute(shooter, weapon.Spec.Id))
-                {
-                    StructureDamage.Apply(hit.collider, hit.point, weapon.Spec.Damage, weapon.Spec.ExplosionRadius);
-                }
-
-                return true;
-            }
-
-            using (CombatEvents.Attribute(shooter, weapon.Spec.Id))
-            {
-                if (TryApplyHit(hit.collider, hit.distance, weapon.Spec.Damage, weapon.Spec.Falloff, this, origin, direction, out var result)
-                    && result.WasAlive)
-                {
-                    // オフラインで WeaponController を持つのは手元のプレイヤーだけなので、ここが撃った本人のクライアントになる。
-                    CombatEvents.RaiseHitConfirmed(new HitConfirm(result.Damage, result.Zone, result.Killed, downed: false));
-                }
+                // 撃たれた側が撃った方向へ向かえるよう、弾ごとの始点を撃った者の位置として渡す。
+                var request = new ShotRequest(
+                    shooter, _aim.root, planned.Origin.ToUnity(), round, impact, weapon.Spec.Id, _hitMask, weapon.Spec.Trigger.Charge, charge);
+                ConfirmHit(delivery.Deliver(request, planned));
             }
 
             return true;
+        }
+
+        // オフラインで WeaponController を持つのは手元のプレイヤーだけなので、ここが撃った本人のクライアントになる。
+        private void ConfirmHit(ShotOutcome outcome)
+        {
+            if (outcome.Hitbox == null || outcome.Owner == null)
+            {
+                return;
+            }
+
+            Debug.Log($"[Combat] hit zone={outcome.Hitbox.Zone} dmg={outcome.Damage}", this);
+            if (outcome.WasAlive)
+            {
+                CombatEvents.RaiseHitConfirmed(new HitConfirm(outcome.Damage, outcome.Hitbox.Zone, outcome.Killed, downed: false));
+            }
         }
 
         /// <summary>
@@ -908,7 +918,12 @@ namespace Fps.Runtime
         {
             EnsureInitialized();
             CancelReloadBlockedByModifier();
-            Weapon?.Tick(deltaSeconds);
+            var weapon = Weapon;
+            weapon?.Tick(deltaSeconds);
+
+            // 持ち替えた直後の時間をしまった武器の撃ち方に数えないよう、進める前に今の武器の撃ち方へ付け替える。
+            _trigger.Bind(weapon?.Trigger);
+            _trigger.Advance(deltaSeconds);
             _recoil.Tick(deltaSeconds);
 
             var waiting = Mathf.Max(0f, SpreadRecoveryDelaySeconds - _secondsSinceShot);
@@ -937,20 +952,6 @@ namespace Fps.Runtime
             Vector3? sourcePosition = null,
             Vector3? direction = null)
         {
-            return TryApplyHit(collider, distance, baseDamage, falloff, context, sourcePosition, direction, out _);
-        }
-
-        private static bool TryApplyHit(
-            Collider collider,
-            float distance,
-            int baseDamage,
-            DamageFalloff falloff,
-            UnityEngine.Object context,
-            Vector3? sourcePosition,
-            Vector3? direction,
-            out AppliedHit result)
-        {
-            result = default;
             if (collider == null)
             {
                 throw new ArgumentNullException(nameof(collider));
@@ -969,28 +970,9 @@ namespace Fps.Runtime
                 return false;
             }
 
-            var wasAlive = !owner.IsDead;
             var damage = hitbox.ApplyHit(baseDamage, distance, falloff, sourcePosition, direction);
             Debug.Log($"[Combat] hit zone={hitbox.Zone} dmg={damage}", context != null ? context : hitbox);
-            result = new AppliedHit(damage, hitbox.Zone, wasAlive, wasAlive && owner.IsDead);
             return true;
-        }
-
-        // ヒットの確認 (HitConfirm) を作るのに要る、1 回の命中の結果。
-        private readonly struct AppliedHit
-        {
-            public int Damage { get; }
-            public HitZone Zone { get; }
-            public bool WasAlive { get; }
-            public bool Killed { get; }
-
-            public AppliedHit(int damage, HitZone zone, bool wasAlive, bool killed)
-            {
-                Damage = damage;
-                Zone = zone;
-                WasAlive = wasAlive;
-                Killed = killed;
-            }
         }
 
         /// <summary>
@@ -1011,39 +993,6 @@ namespace Fps.Runtime
 
             origin = _aim.position;
             direction = _aim.forward;
-        }
-
-        // origin から direction へ射程まで撃ち、自分の体 (照準と同じルートの階層) と自分の弾を通す置いた物を除いた最も近い命中を返す。
-        private bool TryRaycast(Vector3 origin, Vector3 direction, out RaycastHit nearest)
-        {
-            var ray = new Ray(origin, direction);
-            var count = Physics.RaycastNonAlloc(ray, _hitBuffer, HitscanRange, _hitMask, QueryTriggerInteraction.Ignore);
-            var self = _aim.root;
-
-            nearest = default;
-            var found = false;
-            for (var i = 0; i < count; i++)
-            {
-                var candidate = _hitBuffer[i];
-                if (candidate.collider.transform.IsChildOf(self))
-                {
-                    continue;
-                }
-
-                if (Deployable.LetsThrough(candidate.collider, self.gameObject))
-                {
-                    continue;
-                }
-
-                if (!found || candidate.distance < nearest.distance)
-                {
-                    nearest = candidate;
-                    found = true;
-                }
-            }
-
-            Array.Clear(_hitBuffer, 0, count);
-            return found;
         }
 
         private void SetLoadout(Loadout<Weapon> loadout, WeaponSpec[] specs, WeaponDefinition[] definitions, GameRules rules)

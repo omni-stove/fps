@@ -17,7 +17,7 @@ namespace Fps.Core.Tests
 
         private static NetLaunchOptions ParseOrFail(string commandLine)
         {
-            var ok = NetLaunchOptions.TryParse(Args(commandLine), NetLaunchMode.Host, out var options, out var error);
+            var ok = NetLaunchOptions.TryParse(Args(commandLine), NetLaunchMode.Server, out var options, out var error);
             Assert.That(ok, Is.True, error);
             Assert.That(error, Is.Null);
             return options;
@@ -25,7 +25,7 @@ namespace Fps.Core.Tests
 
         private static string ParseError(string commandLine)
         {
-            var ok = NetLaunchOptions.TryParse(Args(commandLine), NetLaunchMode.Host, out var options, out var error);
+            var ok = NetLaunchOptions.TryParse(Args(commandLine), NetLaunchMode.Server, out var options, out var error);
             Assert.That(ok, Is.False);
             Assert.That(options, Is.Null);
             Assert.That(error, Is.Not.Null.And.Not.Empty);
@@ -106,7 +106,7 @@ namespace Fps.Core.Tests
         [Test]
         public void FlagNamesIgnoreCase()
         {
-            var options = ParseOrFail("-mode host -BOTS 2 -Net-Loss 5 -MAP Arena");
+            var options = ParseOrFail("-mode server -BOTS 2 -Net-Loss 5 -MAP Arena");
 
             Assert.That(options.Bots, Is.EqualTo(2));
             Assert.That(options.NetLossPercent, Is.EqualTo(5));
@@ -128,7 +128,7 @@ namespace Fps.Core.Tests
         [TestCase("-net-jitter 1")]
         public void AnySingleImpairmentSimulatesTheNetwork(string flags)
         {
-            Assert.That(ParseOrFail("-mode host " + flags).SimulatesNetwork, Is.True);
+            Assert.That(ParseOrFail("-mode server " + flags).SimulatesNetwork, Is.True);
         }
 
         [Test]
@@ -178,7 +178,7 @@ namespace Fps.Core.Tests
         {
             var args = new[] { "-mode", "server", "-map", map };
 
-            var ok = NetLaunchOptions.TryParse(args, NetLaunchMode.Host, out var options, out var error);
+            var ok = NetLaunchOptions.TryParse(args, NetLaunchMode.Server, out var options, out var error);
 
             Assert.That(ok, Is.False);
             Assert.That(options, Is.Null);
@@ -201,10 +201,9 @@ namespace Fps.Core.Tests
         [TestCase("-bots 2")]
         public void AClientCannotChooseTheMapOrBots(string flags)
         {
-            Assert.That(ParseError("-mode client " + flags), Does.Contain("is only used by -mode host or server (got client)"));
+            Assert.That(ParseError("-mode client " + flags), Does.Contain("is only used by -mode server (got client)"));
         }
 
-        [TestCase("host")]
         [TestCase("client")]
         public void OnlyADedicatedServerDrains(string mode)
         {
@@ -276,7 +275,6 @@ namespace Fps.Core.Tests
             Assert.That(ParseError("-mode server -log-format"), Is.EqualTo("-log-format requires a value"));
         }
 
-        [TestCase("host")]
         [TestCase("client")]
         public void OnlyADedicatedServerWritesJsonLogs(string mode)
         {
@@ -304,14 +302,14 @@ namespace Fps.Core.Tests
         [Test]
         public void ConstructorRejectsJsonLogsOutsideAServerAndUnknownFormats()
         {
-            var host = Assert.Throws<ArgumentException>(() => new NetLaunchOptions(
-                NetLaunchMode.Host, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, null,
+            var client = Assert.Throws<ArgumentException>(() => new NetLaunchOptions(
+                NetLaunchMode.Client, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, null,
                 null, 0, 0, 0, 0, 0, ServerLogFormat.Json));
             var unknown = Assert.Throws<ArgumentOutOfRangeException>(() => new NetLaunchOptions(
                 NetLaunchMode.Server, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, null,
                 null, 0, 0, 0, 0, 0, (ServerLogFormat)99));
 
-            Assert.That(host.ParamName, Is.EqualTo("logFormat"));
+            Assert.That(client.ParamName, Is.EqualTo("logFormat"));
             Assert.That(unknown.ParamName, Is.EqualTo("logFormat"));
         }
 
@@ -345,7 +343,7 @@ namespace Fps.Core.Tests
             Assert.That(Assert.Throws<ArgumentException>(() => Create(NetLaunchMode.Server, map: "a.unity")).ParamName, Is.EqualTo("map"));
             Assert.That(Assert.Throws<ArgumentException>(() => Create(NetLaunchMode.Client, bots: 1)).ParamName, Is.EqualTo("bots"));
             Assert.That(
-                Assert.Throws<ArgumentException>(() => Create(NetLaunchMode.Host, drainTimeoutSeconds: 1)).ParamName,
+                Assert.Throws<ArgumentException>(() => Create(NetLaunchMode.Client, drainTimeoutSeconds: 1)).ParamName,
                 Is.EqualTo("drainTimeoutSeconds"));
         }
     }

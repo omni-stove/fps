@@ -6,7 +6,7 @@ using Fps.Protocol;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-netstack v2 -transport eos</c> のクライアントが EOS の通信路を作る口。Fps.NetV2 が PlayEveryWare のプラグインに依存しないよう、
+    /// クライアントが EOS の通信路とクイックマッチのロビーの検索を作る口。Fps.NetV2 が PlayEveryWare のプラグインに依存しないよう、
     /// プラグインを使う Fps.NetEos が実装して <see cref="NetV2Eos.Factory"/> に入れる。
     /// </summary>
     public interface IEosClientTransportFactory
@@ -16,5 +16,8 @@ namespace Fps.NetV2
 
         /// <summary>まだログインしない通信路を作る。Connect でログインし、サーバーの ProductUserId へつなぐ。</summary>
         IMatchTransport Create(EosCredentials credentials, Action<string> log);
+
+        /// <summary>まだログインしないロビーのサービスを作る。クイックマッチ (<see cref="QuickMatchSearch"/>) が専用サーバーのロビーを探すのに使う。</summary>
+        ILobbyBackend CreateLobbyBackend(EosCredentials credentials);
     }
 }

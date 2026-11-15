@@ -4,7 +4,7 @@ using Epic.OnlineServices;
 using Epic.OnlineServices.Lobby;
 using Epic.OnlineServices.Platform;
 using Fps.Core;
-using Fps.Net;
+using Fps.NetV2;
 using UnityEngine;
 // Lobby と Connect の名前空間を両方開くと型名がぶつかりうるので、Connect は別名で参照する
 using EosConnect = Epic.OnlineServices.Connect;
@@ -14,13 +14,10 @@ using LobbyInfo = Fps.Core.LobbyInfo;
 namespace Fps.NetEos
 {
     /// <summary>
-    /// EOS の Connect (Device ID) と Lobby インターフェースで <see cref="ILobbyBackend"/> を実装する。
+    /// EOS の Connect (Device ID) と Lobby インターフェースで、クイックマッチがサーバーのロビーを探す <see cref="ILobbyBackend"/> を実装する。
     /// SDK の型はここから外に出さず、ID は文字列、ロビーは <see cref="LobbyInfo"/> にして返す。
     /// </summary>
     /// <remarks>
-    /// ロビーは公開 (検索で見つかる)・プレゼンス無し・ID での参加を許可・ホスト移行なしで作る。
-    /// Host が抜けたら試合は続けられないので、オーナーを他のメンバーに移さない。
-    /// 属性は作成の直後に公開の属性として付け、付けられなければロビーを閉じて失敗にする。
     /// Connect の認証の期限が近づいたら Device ID でログインし直し、ログインが切れたら <see cref="LoggedOut"/> で知らせる。
     /// プラットフォームが解放された後 (終了時) は SDK を呼ばず、失敗として返す。
     /// </remarks>
@@ -37,10 +34,8 @@ namespace Fps.NetEos
         private ProductUserId _localUserId;
         private EosDeviceLogin _login;
         private EosDeviceLogin _refresh;
-        private ulong _memberStatusNotification;
         private ulong _authExpirationNotification;
         private ulong _loginStatusNotification;
-        private string _currentLobbyId;
         private bool _disposed;
 
         /// <param name="credentials">プラットフォームを作るのに使う認証情報。</param>
@@ -50,10 +45,6 @@ namespace Fps.NetEos
             _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
             _displayName = string.IsNullOrWhiteSpace(displayName) ? "fps-player" : displayName;
         }
-
-        public event Action<LobbyInfo> MembersChanged;
-
-        public event Action<string, string> Removed;
 
         public event Action<string> LoggedOut;
 
@@ -113,100 +104,6 @@ namespace Fps.NetEos
             {
                 _login = null;
                 FinishLogin(userId, loginError, done);
-            });
-        }
-
-        public void CreateLobby(
-            string bucketId, int maxMembers, IReadOnlyList<Fps.Core.LobbyAttribute> attributes, Action<LobbyInfo, string> done)
-        {
-            if (done == null)
-            {
-                throw new ArgumentNullException(nameof(done));
-            }
-
-            if (attributes == null)
-            {
-                throw new ArgumentNullException(nameof(attributes));
-            }
-
-            if (!CanCall(out var unavailable))
-            {
-                done(null, unavailable);
-                return;
-            }
-
-            var options = new CreateLobbyOptions
-            {
-                LocalUserId = _localUserId,
-                MaxLobbyMembers = (uint)maxMembers,
-                PermissionLevel = LobbyPermissionLevel.Publicadvertised,
-                PresenceEnabled = false,
-                AllowInvites = false,
-                BucketId = bucketId,
-                DisableHostMigration = true,
-                EnableRTCRoom = false,
-                EnableJoinById = true,
-                RejoinAfterKickRequiresInvite = false,
-            };
-            _lobby.CreateLobby(ref options, null, (ref CreateLobbyCallbackInfo info) =>
-            {
-                var lobbyId = Text(info.LobbyId);
-                if (info.ResultCode != Result.Success || lobbyId == null)
-                {
-                    Complete(done, null, "creating the EOS lobby failed: " + info.ResultCode);
-                    return;
-                }
-
-                if (attributes.Count == 0 || _disposed)
-                {
-                    EnteredLobby(lobbyId, true, done);
-                    return;
-                }
-
-                // CreateLobby は属性を受け取らないので、作った直後に足す
-                ApplyAttributes(lobbyId, attributes, attributeError =>
-                {
-                    if (attributeError == null)
-                    {
-                        EnteredLobby(lobbyId, true, done);
-                        return;
-                    }
-
-                    // 属性の無いサーバーのロビーは検索で選ばれても使えないので残さない
-                    if (PlatformAlive)
-                    {
-                        SendLeave(lobbyId, true, _ => { });
-                    }
-
-                    Complete(done, null, attributeError);
-                });
-            });
-        }
-
-        public void UpdateAttributes(string lobbyId, IReadOnlyList<Fps.Core.LobbyAttribute> attributes, Action<string> done)
-        {
-            if (done == null)
-            {
-                throw new ArgumentNullException(nameof(done));
-            }
-
-            if (attributes == null)
-            {
-                throw new ArgumentNullException(nameof(attributes));
-            }
-
-            if (!CanCall(out var unavailable))
-            {
-                done(unavailable);
-                return;
-            }
-
-            ApplyAttributes(lobbyId, attributes, error =>
-            {
-                if (!_disposed)
-                {
-                    done(error);
-                }
             });
         }
 
@@ -280,59 +177,6 @@ namespace Fps.NetEos
             });
         }
 
-        public void JoinLobby(string lobbyId, Action<LobbyInfo, string> done)
-        {
-            if (done == null)
-            {
-                throw new ArgumentNullException(nameof(done));
-            }
-
-            if (!CanCall(out var unavailable))
-            {
-                done(null, unavailable);
-                return;
-            }
-
-            var options = new JoinLobbyByIdOptions
-            {
-                LobbyId = lobbyId,
-                LocalUserId = _localUserId,
-                PresenceEnabled = false,
-            };
-            _lobby.JoinLobbyById(ref options, null, (ref JoinLobbyByIdCallbackInfo info) =>
-            {
-                if (info.ResultCode != Result.Success)
-                {
-                    Complete(done, null, "joining EOS lobby " + lobbyId + " failed: " + info.ResultCode);
-                    return;
-                }
-
-                EnteredLobby(Text(info.LobbyId) ?? lobbyId, false, done);
-            });
-        }
-
-        public void LeaveLobby(string lobbyId, bool destroy, Action<string> done)
-        {
-            if (done == null)
-            {
-                throw new ArgumentNullException(nameof(done));
-            }
-
-            if (string.Equals(_currentLobbyId, lobbyId, StringComparison.Ordinal))
-            {
-                _currentLobbyId = null;
-            }
-
-            // 終了時にプラットフォームが先に解放されていれば、EOS 側が接続切れとしてロビーから外す
-            if (!CanCall(out var unavailable))
-            {
-                done(unavailable);
-                return;
-            }
-
-            SendLeave(lobbyId, destroy, done);
-        }
-
         public void Dispose()
         {
             if (_disposed)
@@ -348,11 +192,6 @@ namespace Fps.NetEos
 
             if (PlatformAlive)
             {
-                if (_memberStatusNotification != 0)
-                {
-                    _lobby.RemoveNotifyLobbyMemberStatusReceived(_memberStatusNotification);
-                }
-
                 if (_authExpirationNotification != 0)
                 {
                     _connect.RemoveNotifyAuthExpiration(_authExpirationNotification);
@@ -364,11 +203,8 @@ namespace Fps.NetEos
                 }
             }
 
-            _memberStatusNotification = 0;
             _authExpirationNotification = 0;
             _loginStatusNotification = 0;
-            MembersChanged = null;
-            Removed = null;
             LoggedOut = null;
         }
 
@@ -392,17 +228,6 @@ namespace Fps.NetEos
             }
 
             // ログインし直したときは登録済みの通知をそのまま使う
-            if (_memberStatusNotification == 0)
-            {
-                var options = new AddNotifyLobbyMemberStatusReceivedOptions();
-                _memberStatusNotification = _lobby.AddNotifyLobbyMemberStatusReceived(ref options, null, HandleMemberStatus);
-                if (_memberStatusNotification == 0)
-                {
-                    done(null, "EOS lobby member notifications could not be registered");
-                    return;
-                }
-            }
-
             if (_authExpirationNotification == 0)
             {
                 var options = new EosConnect.AddNotifyAuthExpirationOptions();
@@ -417,7 +242,7 @@ namespace Fps.NetEos
 
             if (_authExpirationNotification == 0 || _loginStatusNotification == 0)
             {
-                // ログインはできているので続ける。長く動かすと認証の期限が切れ、ロビーから外れたときに気づけない
+                // ログインはできているので続ける。探している間に認証の期限が切れても気づけない
                 Debug.LogWarning("[Lobby] EOS connect notifications could not be registered; the login will not be refreshed");
             }
 
@@ -460,14 +285,6 @@ namespace Fps.NetEos
             _localUserId = null;
             _refresh?.Cancel();
             _refresh = null;
-
-            var lobbyId = _currentLobbyId;
-            _currentLobbyId = null;
-            if (lobbyId != null)
-            {
-                Removed?.Invoke(lobbyId, reason);
-            }
-
             LoggedOut?.Invoke(reason);
         }
 
@@ -475,168 +292,6 @@ namespace Fps.NetEos
         {
             return userId != null && _localUserId != null
                 && string.Equals(userId.ToString(), _localUserId.ToString(), StringComparison.OrdinalIgnoreCase);
-        }
-
-        /// <summary>
-        /// オーナーとして入っているロビーに公開の属性を足して送る。結果は (Dispose 後でも) 1 回だけ渡すので、
-        /// 呼び出し側が Dispose 後の扱いを決める。
-        /// </summary>
-        private void ApplyAttributes(string lobbyId, IReadOnlyList<Fps.Core.LobbyAttribute> attributes, Action<string> done)
-        {
-            var modificationOptions = new UpdateLobbyModificationOptions { LobbyId = lobbyId, LocalUserId = _localUserId };
-            var result = _lobby.UpdateLobbyModification(ref modificationOptions, out var modification);
-            if (result != Result.Success || modification == null)
-            {
-                done("preparing the update of EOS lobby " + lobbyId + " failed: " + result);
-                return;
-            }
-
-            try
-            {
-                foreach (var attribute in attributes)
-                {
-                    var addOptions = new LobbyModificationAddAttributeOptions
-                    {
-                        Attribute = new AttributeData
-                        {
-                            Key = attribute.Key,
-                            Value = attribute.IsText
-                                ? new AttributeDataValue { AsUtf8 = attribute.Text }
-                                : new AttributeDataValue { AsInt64 = attribute.Number },
-                        },
-                        Visibility = LobbyAttributeVisibility.Public,
-                    };
-                    result = modification.AddAttribute(ref addOptions);
-                    if (result != Result.Success)
-                    {
-                        done("setting " + attribute + " on EOS lobby " + lobbyId + " failed: " + result);
-                        return;
-                    }
-                }
-
-                var updateOptions = new UpdateLobbyOptions { LobbyModificationHandle = modification };
-                _lobby.UpdateLobby(ref updateOptions, null, (ref UpdateLobbyCallbackInfo info) =>
-                    done(info.ResultCode == Result.Success
-                        ? null
-                        : "updating EOS lobby " + lobbyId + " failed: " + info.ResultCode));
-            }
-            finally
-            {
-                // UpdateLobby は呼んだ時点で変更を写し取るので、完了を待たずに解放してよい
-                modification.Release();
-            }
-        }
-
-        /// <summary>作成・参加が終わったロビーを読んで返す。Dispose 後に終わったなら、残らないよう出る。</summary>
-        private void EnteredLobby(string lobbyId, bool owner, Action<LobbyInfo, string> done)
-        {
-            if (_disposed)
-            {
-                if (PlatformAlive)
-                {
-                    SendLeave(lobbyId, owner, _ => { });
-                }
-
-                return;
-            }
-
-            var lobby = ReadLobby(lobbyId, out var error);
-            if (lobby == null)
-            {
-                // 入ったのに中身が読めないロビーには留まらない
-                SendLeave(lobbyId, owner, _ => { });
-                done(null, error);
-                return;
-            }
-
-            _currentLobbyId = lobbyId;
-            done(lobby, null);
-        }
-
-        private void SendLeave(string lobbyId, bool destroy, Action<string> done)
-        {
-            if (destroy)
-            {
-                var options = new DestroyLobbyOptions { LobbyId = lobbyId, LocalUserId = _localUserId };
-                _lobby.DestroyLobby(ref options, null, (ref DestroyLobbyCallbackInfo info) =>
-                    CompleteLeave(done, "closing", lobbyId, info.ResultCode));
-                return;
-            }
-
-            var leaveOptions = new LeaveLobbyOptions { LobbyId = lobbyId, LocalUserId = _localUserId };
-            _lobby.LeaveLobby(ref leaveOptions, null, (ref LeaveLobbyCallbackInfo info) =>
-                CompleteLeave(done, "leaving", lobbyId, info.ResultCode));
-        }
-
-        private void CompleteLeave(Action<string> done, string action, string lobbyId, Result result)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            // 既に無いロビーから出るのは成功とみなす
-            done(result == Result.Success || result == Result.NotFound
-                ? null
-                : action + " EOS lobby " + lobbyId + " failed: " + result);
-        }
-
-        private void HandleMemberStatus(ref LobbyMemberStatusReceivedCallbackInfo info)
-        {
-            var lobbyId = Text(info.LobbyId);
-            if (_disposed || _currentLobbyId == null || !string.Equals(lobbyId, _currentLobbyId, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            var isSelf = info.TargetUserId != null && _localUserId != null
-                && string.Equals(info.TargetUserId.ToString(), _localUserId.ToString(), StringComparison.OrdinalIgnoreCase);
-            var status = info.CurrentStatus;
-            if (status == LobbyMemberStatus.Closed
-                || (isSelf && (status == LobbyMemberStatus.Kicked
-                    || status == LobbyMemberStatus.Left
-                    || status == LobbyMemberStatus.Disconnected)))
-            {
-                _currentLobbyId = null;
-                Removed?.Invoke(lobbyId, status == LobbyMemberStatus.Closed ? "the lobby was closed" : "this user was " + status);
-                return;
-            }
-
-            var lobby = ReadLobby(lobbyId, out var error);
-            if (lobby == null)
-            {
-                Debug.LogWarning("[Lobby] could not read id=" + lobbyId + " after a member " + status + ": " + error);
-                return;
-            }
-
-            MembersChanged?.Invoke(lobby);
-        }
-
-        /// <summary>参加中のロビーの今の状態を読む。読めなければ null と理由。</summary>
-        private LobbyInfo ReadLobby(string lobbyId, out string error)
-        {
-            if (!PlatformAlive)
-            {
-                error = "the EOS platform was released";
-                return null;
-            }
-
-            var options = new CopyLobbyDetailsHandleOptions { LobbyId = lobbyId, LocalUserId = _localUserId };
-            var result = _lobby.CopyLobbyDetailsHandle(ref options, out var details);
-            if (result != Result.Success || details == null)
-            {
-                error = "reading EOS lobby " + lobbyId + " failed: " + result;
-                return null;
-            }
-
-            try
-            {
-                return Describe(details, out error);
-            }
-            finally
-            {
-                details.Release();
-            }
         }
 
         private static List<LobbyInfo> ReadResults(LobbySearch search)
@@ -788,14 +443,6 @@ namespace Fps.NetEos
 
             error = null;
             return true;
-        }
-
-        private void Complete(Action<LobbyInfo, string> done, LobbyInfo lobby, string error)
-        {
-            if (!_disposed)
-            {
-                done(lobby, error);
-            }
         }
 
         private void ThrowIfDisposed()

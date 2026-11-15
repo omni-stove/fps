@@ -38,14 +38,6 @@ flag "--version <version>" help="build version such as v0.2.0 (default: git desc
 '''
 run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ClientBuilder.Build -clientPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
 
-[build-server]
-description = "Build the dedicated server (macos by default, or linux) into Builds/server-<platform>/ with the Unity editor in batch mode (close the Editor first). The version is --version <v>, or git describe --tags --always --dirty"
-usage = '''
-arg "[platform]" help="macos or linux" default="macos"
-flag "--version <version>" help="build version such as v0.2.0 (default: git describe --tags --always --dirty)"
-'''
-run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
-
 [server-dotnet]
 description = "Build the Unity-independent .NET server (dotnet/Fps.Server) and run it with -mode server on 0.0.0.0:7777 (FPS_SERVER_ADDRESS / FPS_SERVER_PORT change it). It needs server-data/maps/<map>.fpsmap and .fpsnav (make export-server-data), and server-data/rules/<rules>.json and server-data/maps/<map>.points.json (make export-server-rules); -rules <name> picks the rules (default TeamDeathmatch). Ctrl+C or SIGTERM drains; a second one stops at once. The version is git describe --tags --always --dirty"
 run = [
@@ -58,7 +50,7 @@ description = "Write the collision, the NavMesh with its links, the destructible
 run = "unity --non-interactive run . -- -executeMethod Fps.Editor.MapCollisionExporter.Export"
 
 [export-server-rules]
-description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Fps.Editor.ServerRulesExporter.Export (close the Editor first): the NetMatch.prefab settings with each rules asset to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping and grenade tuning to server-data/tuning/ping.json and grenade.json. Commit the written files"
+description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Fps.Editor.ServerRulesExporter.Export (close the Editor first): the net match settings (Rules/NetMatch.asset, made by Fps.Editor.NetSceneBuilder when missing) with each rules asset to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping and grenade tuning to server-data/tuning/ping.json and grenade.json. Commit the written files"
 run = "unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export"
 
 [eos-sdk]
@@ -67,14 +59,9 @@ description = "Place the EOS C# SDK in dotnet/ThirdParty/EOSSDK (not committed) 
 run = "bash scripts/eos-sdk.sh"
 
 [server-image]
-description = "Build the Linux dedicated server and package it as a Docker image with docker/server/Dockerfile (close the Editor first). Options: --tag <name:tag> (default fps-server:local), --skip-build to reuse Builds/server-linux/"
+description = "Package the Unity-independent .NET server (dotnet/Fps.Server) with server-data/ and the EOS SDK in dotnet/ThirdParty/EOSSDK (make eos-sdk; without it the image runs without EOS) as a Docker image with docker/server/Dockerfile. No Unity needed. Options: --tag <name:tag> (default fps-server:local), --version <v> (default git describe --tags --always --dirty), --platform linux/amd64|linux/arm64"
 # 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
 run = "bash scripts/server-image.sh"
-
-[server-image-dotnet]
-description = "Package the Unity-independent .NET server (dotnet/Fps.Server) with server-data/ and the EOS SDK in dotnet/ThirdParty/EOSSDK (make eos-sdk; without it the image runs without EOS) as a Docker image with docker/server-dotnet/Dockerfile. No Unity needed. Options: --tag <name:tag> (default fps-server-dotnet:local), --version <v> (default git describe --tags --always --dirty), --platform linux/amd64|linux/arm64"
-# 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
-run = "bash scripts/server-image-dotnet.sh"
 
 [test-unity]
 description = "Run the Unity EditMode tests headlessly in batch mode (close the Editor first)"
@@ -83,10 +70,6 @@ run = "unity test --mode EditMode"
 [smoke]
 description = "Run every SmokeRun in one batch-mode editor via Fps.Editor.SmokeSuite.RunAll; exits 1 if any fails (close the Editor first)"
 run = "unity -batchmode -projectPath . -executeMethod Fps.Editor.SmokeSuite.RunAll -logFile -"
-
-[perf]
-description = "Host a 16-bot TDM on NetArena01 in one batch-mode editor for 120 s via Fps.Editor.PerfSmokeRun.Run, write the server tick average/max/p95 to Logs/perf.json, and exit 1 if over the budget (avg 4 ms, max 12 ms) (close the Editor first)"
-run = "unity -batchmode -projectPath . -executeMethod Fps.Editor.PerfSmokeRun.Run -logFile -"
 
 [nightly-local]
 description = "Run the nightly workflow's steps locally: EditMode tests, the smoke suite, the map-data template's check (re-export and compare with server-data/maps), and on Sundays (JST) the macOS client build (close the Editor first). Options: --client to always build the client, --no-client to never"

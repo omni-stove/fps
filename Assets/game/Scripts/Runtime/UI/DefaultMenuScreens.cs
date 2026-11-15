@@ -41,11 +41,6 @@ namespace Fps.Runtime
                 remove => MenuNavigator.ReturningToMenu -= value;
             }
 
-            public LobbyLaunchOptions TakeLobbyRequest()
-            {
-                return MenuNavigator.TakeLobbyRequest();
-            }
-
             public bool TakeTutorialRequest()
             {
                 return MenuNavigator.TakeTutorialRequest();

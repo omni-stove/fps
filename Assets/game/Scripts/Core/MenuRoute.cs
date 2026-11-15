@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace Fps.Core
 {
     /// <summary>
-    /// メインメニューの遷移先の選び方。ボタンの行き先 (<see cref="MenuDestination"/>) から読むシーンとロビーの設定を決め
+    /// メインメニューの遷移先の選び方。オフラインのボタンの行き先 (<see cref="MenuDestination"/>) から読むシーンを決め
     /// (<see cref="Plan(MenuDestination, string, MenuScenes)"/>。シーンのルートを省くと <see cref="KitPaths.DefaultRoot"/>、
-    /// シーンの名前 (<see cref="MenuScenes"/>) を省くと下の const の既定の名前)、起動引数でメニューを飛ばすか (<see cref="ShouldSkipMenu"/>) と、ゲームパッドで動かすフォーカスの
+    /// シーンの名前 (<see cref="MenuScenes"/>) を省くと下の const の既定の名前)、ゲームパッドで動かすフォーカスの
     /// 次の位置 (<see cref="MoveFocus"/>) を決める。実際にシーンを読むのは Fps.Runtime の MenuNavigator。
     /// </summary>
     public static class MenuRoute
@@ -14,6 +14,8 @@ namespace Fps.Core
         public const string MainMenuSceneName = "MainMenu";
         public const string RangeSceneName = "Bootstrap";
         public const string CampaignSceneName = "Campaign01";
+
+        /// <summary>ネット対戦の既定のマップのシーン名。サーバーが <c>-map</c> を省いたときに使い、クライアントはつないだサーバーのマップへ移る。</summary>
         public const string NetSceneName = "NetTest";
 
         // 以下の既定のシーン経路はテストの属性からも引くので、KitPaths.ScenePath を呼ばずに const で組む。
@@ -27,11 +29,6 @@ namespace Fps.Core
         /// <summary><see cref="KitPaths.DefaultRoot"/> のキャンペーンの最初のシーン。</summary>
         public const string CampaignScene = KitPaths.DefaultScenesFolder + "/" + CampaignSceneName + KitPaths.SceneExtension;
 
-        /// <summary>
-        /// <see cref="KitPaths.DefaultRoot"/> のネット対戦のシーン。Fps.Net の NetBootstrap.ScenePath はこれを引く。
-        /// </summary>
-        public const string NetScene = KitPaths.DefaultScenesFolder + "/" + NetSceneName + KitPaths.SceneExtension;
-
         /// <summary>root の下のメインメニュー (<see cref="KitPaths.ScenePath"/>)。</summary>
         public static string MainMenuSceneUnder(string root) => KitPaths.ScenePath(root, MainMenuSceneName);
 
@@ -40,9 +37,6 @@ namespace Fps.Core
 
         /// <summary>root の下のキャンペーンの最初のシーン。</summary>
         public static string CampaignSceneUnder(string root) => KitPaths.ScenePath(root, CampaignSceneName);
-
-        /// <summary>root の下のネット対戦のシーン。</summary>
-        public static string NetSceneUnder(string root) => KitPaths.ScenePath(root, NetSceneName);
 
         /// <summary>root の下の、scenes で決めたメインメニュー。</summary>
         public static string MainMenuSceneUnder(string root, MenuScenes scenes) => KitPaths.ScenePath(root, Require(scenes).MainMenu);
@@ -53,15 +47,10 @@ namespace Fps.Core
         /// <summary>root の下の、scenes で決めたキャンペーンの最初のシーン。</summary>
         public static string CampaignSceneUnder(string root, MenuScenes scenes) => KitPaths.ScenePath(root, Require(scenes).Campaign);
 
-        /// <summary>root の下の、scenes で決めたネット対戦のシーン。</summary>
-        public static string NetSceneUnder(string root, MenuScenes scenes) => KitPaths.ScenePath(root, Require(scenes).Net);
-
         /// <summary>メニューから選べる行き先。ボタンを並べる順と同じ。</summary>
         public static IReadOnlyList<MenuDestination> Destinations { get; } = new[]
         {
             MenuDestination.Campaign,
-            MenuDestination.CreateLobby,
-            MenuDestination.JoinLobby,
             MenuDestination.QuickMatch,
             MenuDestination.Range,
             MenuDestination.Tutorial,
@@ -69,8 +58,7 @@ namespace Fps.Core
         };
 
         /// <summary>
-        /// destination へ行く遷移。オンラインは <c>-lobby create</c> / <c>-lobby join</c> / <c>-lobby quickmatch</c> を起動引数で渡したときと同じ設定
-        /// (最大人数は既定、参加するロビーは検索して選ぶ) で NetTest を読む。
+        /// destination へ行く遷移。オンライン (<see cref="MenuDestination.QuickMatch"/>) はシーンを読まずにクライアントがつなぐので、ここでは扱わない。
         /// チュートリアルは射撃場を読み、終えたことがあってもチュートリアルを出すよう求める (<see cref="MenuTransition.StartsTutorial"/>)。
         /// </summary>
         public static MenuTransition Plan(MenuDestination destination)
@@ -87,7 +75,7 @@ namespace Fps.Core
 
         /// <summary><see cref="Plan(MenuDestination)"/> のシーンを、scenes で決めた名前で sceneRoot の下から読む遷移。</summary>
         /// <exception cref="ArgumentNullException">scenes が null。</exception>
-        /// <exception cref="ArgumentException">sceneRoot が空か不正な区切りを含む。</exception>
+        /// <exception cref="ArgumentException">sceneRoot が空か不正な区切りを含む、または destination がオンライン。</exception>
         public static MenuTransition Plan(MenuDestination destination, string sceneRoot, MenuScenes scenes)
         {
             Require(scenes);
@@ -95,12 +83,8 @@ namespace Fps.Core
             {
                 case MenuDestination.Campaign:
                     return MenuTransition.Load(CampaignSceneUnder(sceneRoot, scenes));
-                case MenuDestination.CreateLobby:
-                    return MenuTransition.Load(NetSceneUnder(sceneRoot, scenes), LobbyLaunchOptions.Create());
-                case MenuDestination.JoinLobby:
-                    return MenuTransition.Load(NetSceneUnder(sceneRoot, scenes), LobbyLaunchOptions.Join());
                 case MenuDestination.QuickMatch:
-                    return MenuTransition.Load(NetSceneUnder(sceneRoot, scenes), LobbyLaunchOptions.QuickMatch());
+                    throw new ArgumentException("online destinations are started by the online client, not by loading a scene", nameof(destination));
                 case MenuDestination.Range:
                     return MenuTransition.Load(RangeSceneUnder(sceneRoot, scenes));
                 case MenuDestination.Tutorial:
@@ -131,15 +115,6 @@ namespace Fps.Core
         public static MenuTransition BackToMenu(string sceneRoot, MenuScenes scenes)
         {
             return MenuTransition.Load(MainMenuSceneUnder(sceneRoot, scenes));
-        }
-
-        /// <summary>
-        /// メニューを出さずに飛ばすか。<see cref="NetStartup.ShouldLoadNetScene"/> と同じ条件 (プレイヤーで <c>-mode</c> か
-        /// <c>-lobby</c> が渡された、または専用サーバー) で、そのときは NetBootstrap がネット対戦のシーンへ切り替える。
-        /// </summary>
-        public static bool ShouldSkipMenu(bool isEditor, bool isDedicatedServer, IReadOnlyList<string> args)
-        {
-            return NetStartup.ShouldLoadNetScene(isEditor, isDedicatedServer, args);
         }
 
         /// <summary>

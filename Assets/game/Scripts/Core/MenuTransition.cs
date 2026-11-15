@@ -3,16 +3,14 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// メニューから (またはメニューへ) の 1 回の遷移。読むシーンと、ネット対戦のシーンに渡すロビーの設定、
-    /// 射撃場でチュートリアルを出すよう求めるかを持つ。作るのは <see cref="MenuRoute"/>。
+    /// メニューから (またはメニューへ) の 1 回の遷移。読むシーンと、射撃場でチュートリアルを出すよう求めるかを持つ。作るのは <see cref="MenuRoute"/>。
     /// </summary>
     public sealed class MenuTransition
     {
-        private MenuTransition(MenuTransitionKind kind, string scenePath, LobbyLaunchOptions lobby, bool startsTutorial)
+        private MenuTransition(MenuTransitionKind kind, string scenePath, bool startsTutorial)
         {
             Kind = kind;
             ScenePath = scenePath;
-            Lobby = lobby;
             StartsTutorial = startsTutorial;
         }
 
@@ -21,26 +19,22 @@ namespace Fps.Core
         /// <summary>読むシーンのパス。<see cref="MenuTransitionKind.Quit"/> では null。</summary>
         public string ScenePath { get; }
 
-        /// <summary>読んだシーンで使うロビーの設定。ロビーを使わなければ <see cref="LobbyLaunchOptions.None"/>。</summary>
-        public LobbyLaunchOptions Lobby { get; }
-
         /// <summary>読んだシーンで、終えたことがあってもチュートリアルを最初から出すか。</summary>
         public bool StartsTutorial { get; }
 
-        public static MenuTransition Quit { get; } = new MenuTransition(MenuTransitionKind.Quit, null, LobbyLaunchOptions.None, false);
+        public static MenuTransition Quit { get; } = new MenuTransition(MenuTransitionKind.Quit, null, false);
 
         /// <summary>シーンを読む遷移。</summary>
         /// <param name="scenePath">読むシーンのパス。</param>
-        /// <param name="lobby">読んだシーンで使うロビーの設定。null なら <see cref="LobbyLaunchOptions.None"/>。</param>
         /// <param name="startsTutorial">読んだシーンでチュートリアルを最初から出すか。</param>
-        public static MenuTransition Load(string scenePath, LobbyLaunchOptions lobby = null, bool startsTutorial = false)
+        public static MenuTransition Load(string scenePath, bool startsTutorial = false)
         {
             if (string.IsNullOrWhiteSpace(scenePath))
             {
                 throw new ArgumentException("scene path must not be empty", nameof(scenePath));
             }
 
-            return new MenuTransition(MenuTransitionKind.LoadScene, scenePath, lobby ?? LobbyLaunchOptions.None, startsTutorial);
+            return new MenuTransition(MenuTransitionKind.LoadScene, scenePath, startsTutorial);
         }
 
         public override string ToString()
@@ -50,7 +44,7 @@ namespace Fps.Core
                 return "quit";
             }
 
-            var text = Lobby.IsRequested ? "load " + ScenePath + " lobby=" + Lobby : "load " + ScenePath;
+            var text = "load " + ScenePath;
             return StartsTutorial ? text + " tutorial" : text;
         }
     }

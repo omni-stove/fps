@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-mode client -netstack v2</c> のクライアント。Fps.Protocol と LiteNetLib (<see cref="UdpMatchTransport"/>) か、
+    /// ゲームのネット対戦のクライアント。Fps.Protocol と LiteNetLib (<see cref="UdpMatchTransport"/>) か、
     /// <c>-transport eos</c> なら EOS の P2P (<see cref="NetV2Eos"/>) で .NET のサーバーへつなぎ、
     /// 承認されたらサーバーのマップのシーンへ移って、自分のプレイヤー (<see cref="NetV2LocalPlayer"/>)・他のプレイヤー
     /// (<see cref="NetV2RemotePlayer"/>)・HUD (<see cref="NetV2Hud"/>) を作る。シーンをまたいで残る。
@@ -30,8 +30,11 @@ namespace Fps.NetV2
     /// 印は Netcode のクライアントと同じ <see cref="PingController"/> に、拠点の持ち主はマップの <see cref="ControlPointZone"/> に出す。
     /// </para>
     /// <para>
-    /// <c>-netstack v2</c> で起動したプロセスでは、メニューのクイックマッチもこのクライアントで <c>-address</c>・<c>-port</c> のサーバーへつなぐ
-    /// (<see cref="MenuNavigator.OnlineStarter"/>)。
+    /// 起動引数は <see cref="NetClientLaunch"/> が読む。<c>-mode client</c> なら起動してすぐ <c>-address</c> か <c>-eos-server</c> のサーバーへ、
+    /// <c>-lobby quickmatch</c> なら起動してすぐ専用サーバーのロビーを探して (<see cref="QuickMatchSearch"/>) つなぐ。
+    /// メニューのクイックマッチ (<see cref="MenuNavigator.OnlineStarter"/>) は、<c>-address</c>・<c>-port</c>・<c>-eos-server</c> があればそのサーバーへ、
+    /// 無ければロビーを探してつなぐ。EOS のロビーが使えない (EOS がビルドに無い・認証情報が揃わない) UDP のときは、
+    /// <see cref="NetClientLaunch.DefaultServer"/> へつなぐ。
     /// </para>
     /// <para>
     /// サーバーとの接続を失ったら (つながらない・断られたを含む)、Netcode のクライアントと同じ理由の文 (<see cref="DisconnectNotice"/>) を添えてメニューへ戻る。
@@ -47,15 +50,13 @@ namespace Fps.NetV2
 
         // Netcode のクライアント (NetBootstrap) と同じ終了コード
         public const int ExitDisconnected = 0;
-        public const int ExitInvalidArguments = NetStackLaunch.ExitInvalidArguments;
+        public const int ExitInvalidArguments = NetClientLaunch.ExitInvalidArguments;
         public const int ExitMisconfigured = 3;
         public const int ExitConnectFailed = 5;
         public const int ExitTransportFailure = 6;
+        public const int ExitLobbyFailed = 7;
 
         private const string _sceneExtension = ".unity";
-
-        /// <summary>メニューでロビーを選んだときの案内 (Resources/Localization の menu の表)。</summary>
-        public const string LobbyUnavailableKey = "menu.lobbyUnavailableOnNetV2";
 
         /// <summary>このプロセスの端末の Id。Netcode のクライアントと同じく、同じプロセスのままつなぎ直したときだけ成績を引き継ぐ。</summary>
         private static readonly string _deviceKey = RejoinKey.NewDeviceKey();
@@ -74,6 +75,7 @@ namespace Fps.NetV2
         private MatchClient _client;
         private ClientAntiCheat _antiCheat;
         private ClientMatch _match;
+        private QuickMatchSearch _search;
         private ClientWorld _world;
         private NetV2LocalPlayer _local;
         private WeaponPresentation _presentation;
@@ -97,32 +99,36 @@ namespace Fps.NetV2
         public static NetV2Client Current { get; private set; }
 
         /// <summary>
-        /// 最初のシーンを読んだ後に <c>-netstack</c> を読む。<c>-netstack v2</c> ならメニューのオンラインのボタンをこのクライアントにし、
-        /// <c>-mode client</c> も付いていればすぐつなぐ。値が誤っていれば誤りを出して終了コード 2 で終える (Netcode のクライアントでは起動しない)。
+        /// 最初のシーンを読んだ後に起動引数を読み (<see cref="NetClientLaunch.ResolveStart"/>)、メニューのクイックマッチをこのクライアントにする。
+        /// <c>-mode client</c> か <c>-lobby quickmatch</c> ならすぐつなぐ。引数が誤っていれば誤りを出して終了コード 2 で終える。
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void LaunchWhenRequested()
+        private static void Launch()
         {
-            var start = NetStackLaunch.ResolveStart(Environment.GetCommandLineArgs(), NetStartup.IsDedicatedServerBuild, out var options, out var error);
-            switch (start)
+            var start = NetClientLaunch.ResolveStart(Environment.GetCommandLineArgs(), out var server, out var error);
+            if (start == NetClientStart.Invalid)
             {
-                case NetV2Start.NotRequested:
-                    return;
-                case NetV2Start.Invalid:
-                    Debug.LogError(LogTag + " invalid arguments: " + error);
-                    if (!Application.isEditor)
-                    {
-                        Application.Quit(ExitInvalidArguments);
-                    }
+                Debug.LogError(LogTag + " invalid arguments: " + error);
+                if (!Application.isEditor)
+                {
+                    Application.Quit(ExitInvalidArguments);
+                }
 
-                    return;
+                return;
             }
 
-            MenuNavigator.OnlineStarter = new MenuStarter(options);
-            Debug.Log(LogTag + " the menu's quick match connects with " + NetStackLaunch.Flag + " " + NetStackLaunch.V2Name + " to " + options.Endpoint);
-            if (start == NetV2Start.Connect)
+            MenuNavigator.OnlineStarter = new MenuStarter(server);
+            switch (start)
             {
-                Begin(options, false);
+                case NetClientStart.Connect:
+                    Begin(server, false);
+                    break;
+                case NetClientStart.QuickMatch:
+                    BeginQuickMatch(false);
+                    break;
+                default:
+                    Debug.Log(LogTag + " the menu's quick match " + (server != null ? "connects to " + server.Endpoint : "searches the server lobbies"));
+                    break;
             }
         }
 
@@ -140,6 +146,81 @@ namespace Fps.NetV2
             client._startedFromMenu = fromMenu;
             client.Connect(options);
             return client;
+        }
+
+        /// <summary>
+        /// 専用サーバーのロビーを探し (<see cref="QuickMatchSearch"/>)、見つけたサーバーへつなぐクライアントを作る。シーンをまたいで残る。
+        /// </summary>
+        public static NetV2Client BeginQuickMatch(bool fromMenu)
+        {
+            var host = new GameObject(ObjectName);
+            DontDestroyOnLoad(host);
+            var client = host.AddComponent<NetV2Client>();
+            client._startedFromMenu = fromMenu;
+            client.SearchServer();
+            return client;
+        }
+
+        /// <summary>
+        /// EOS のロビーを探せるか。EOS がビルドにあり、認証情報が揃っていれば (読めないファイルは誤りを出すため探す側に回す) true。
+        /// </summary>
+        private static bool CanSearchLobbies()
+        {
+            var factory = NetV2Eos.Factory;
+            if (factory == null)
+            {
+                return false;
+            }
+
+            return !factory.TryLoadCredentials(out var credentials, out _, out _) || credentials != null;
+        }
+
+        private void SearchServer()
+        {
+            var factory = NetV2Eos.Factory;
+            if (factory == null)
+            {
+                Leave(ExitMisconfigured, QuickMatchSearch.LogPrefix
+                    + "the EOS lobby is not in this build (is com.playeveryware.eos installed and Fps.NetEos compiled?)");
+                return;
+            }
+
+            if (!factory.TryLoadCredentials(out var credentials, out var missing, out var loadError))
+            {
+                Leave(ExitMisconfigured, QuickMatchSearch.LogPrefix + "cannot load EOS credentials: " + loadError);
+                return;
+            }
+
+            if (credentials == null)
+            {
+                Leave(ExitMisconfigured, QuickMatchSearch.LogPrefix + "quick match needs EOS credentials; missing " + string.Join(", ", missing));
+                return;
+            }
+
+            var backend = factory.CreateLobbyBackend(credentials);
+            if (backend == null)
+            {
+                Leave(ExitMisconfigured, QuickMatchSearch.LogPrefix + "the EOS lobby factory returned no backend");
+                return;
+            }
+
+            _search = new QuickMatchSearch(backend, Application.version, line => Debug.Log(line, this));
+            _search.Begin(Time.unscaledTime, HandleServerFound, HandleSearchFailed);
+        }
+
+        private void HandleServerFound(NetLaunchOptions options)
+        {
+            if (_finished)
+            {
+                return;
+            }
+
+            Connect(options);
+        }
+
+        private void HandleSearchFailed(string reason)
+        {
+            Leave(ExitLobbyFailed, QuickMatchSearch.LogPrefix + reason);
         }
 
         private void Awake()
@@ -200,8 +281,7 @@ namespace Fps.NetV2
                 return;
             }
 
-            Debug.Log(LogTag + " starting " + _options + " transport=" + NetLaunchOptions.TransportName(_options.Transport) + " "
-                + NetStackLaunch.Flag + " " + NetStackLaunch.V2Name, this);
+            Debug.Log(LogTag + " starting " + _options + " transport=" + NetLaunchOptions.TransportName(_options.Transport), this);
             try
             {
                 _client.Connect(eos ? _options.EosServerId : _options.Address, _options.Port);
@@ -250,6 +330,12 @@ namespace Fps.NetV2
 
         private void Update()
         {
+            if (_finished)
+            {
+                return;
+            }
+
+            _search?.Tick(Time.unscaledTime);
             if (_client == null || _finished)
             {
                 return;
@@ -292,6 +378,7 @@ namespace Fps.NetV2
             }
 
             _loadout?.Dispose();
+            _search?.Dispose();
             if (_menu != null)
             {
                 _menu.ReturningToMenu -= HandleReturningToMenu;
@@ -891,28 +978,49 @@ namespace Fps.NetV2
             return false;
         }
 
-        /// <summary>メニューのクイックマッチで、起動引数の <c>-address</c>・<c>-port</c> のサーバーへつなぐ。ロビーはまだ v2 に無いので断る。</summary>
+        /// <summary>
+        /// メニューのクイックマッチ。起動引数でサーバーを決めていればそこへ、無ければロビーを探してつなぐ。
+        /// ロビーを探せないときは、開発中に <c>make server-dotnet</c> へつなげるよう既定のサーバーへつなぐ。
+        /// </summary>
         private sealed class MenuStarter : IOnlineMatchStarter
         {
-            private readonly NetLaunchOptions _options;
+            private readonly NetLaunchOptions _server;
 
-            public MenuStarter(NetLaunchOptions options)
+            public MenuStarter(NetLaunchOptions server)
             {
-                _options = options;
+                _server = server;
             }
 
             public bool Start(MenuDestination destination, out LocalizedText refusal)
             {
-                if (destination != MenuDestination.QuickMatch)
+                refusal = default;
+                if (Current != null)
                 {
-                    refusal = new LocalizedText(LobbyUnavailableKey);
-                    return false;
+                    if (!Current._finished)
+                    {
+                        return true;
+                    }
+
+                    // 起動引数で始めて失敗したクライアントは残っているので、消して始め直す (Destroy は遅れるので先に外す)
+                    var finished = Current;
+                    Current = null;
+                    Destroy(finished.gameObject);
                 }
 
-                refusal = default;
-                if (Current == null)
+                if (_server != null)
                 {
-                    Begin(_options, true);
+                    Begin(_server, true);
+                }
+                else if (!CanSearchLobbies())
+                {
+                    var fallback = NetClientLaunch.DefaultServer();
+                    Debug.Log(QuickMatchSearch.LogPrefix + "the EOS lobby is not available (no EOS in this build or no credentials); quick match connects to "
+                        + fallback.Endpoint);
+                    Begin(fallback, true);
+                }
+                else
+                {
+                    BeginQuickMatch(true);
                 }
 
                 return true;

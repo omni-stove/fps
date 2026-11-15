@@ -445,7 +445,7 @@ namespace Fps.Protocol
             if (_role == Role.Server)
             {
                 _log(_logTag + " EOS server ready id=" + localUserId + " socket=" + SocketName + "; connect with "
-                    + NetLaunchOptions.ModeFlag + " client " + NetStackLaunch.Flag + " " + NetStackLaunch.V2Name + " "
+                    + NetLaunchOptions.ModeFlag + " client "
                     + NetLaunchOptions.TransportFlag + " " + NetLaunchOptions.TransportName(NetTransportKind.Eos) + " " + NetLaunchOptions.EosServerFlag + " " + localUserId);
                 return;
             }

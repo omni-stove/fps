@@ -7,6 +7,16 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ServerLobbyTests
     {
+        private const string _ownerId = "0123456789abcdef0123456789abcdef";
+
+        private static LobbyInfo Lobby(string endpoint)
+        {
+            var attributes = endpoint == null
+                ? Array.Empty<LobbyAttribute>()
+                : new[] { LobbyAttribute.OfText(ServerLobby.ServerKey, endpoint) };
+            return new LobbyInfo("lobby-1", _ownerId, ServerLobby.MaxPlayers, new[] { _ownerId }, attributes);
+        }
+
         private static Dictionary<string, LobbyAttribute> ByKey(IReadOnlyList<LobbyAttribute> attributes)
         {
             var byKey = new Dictionary<string, LobbyAttribute>();
@@ -42,9 +52,25 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ServerBucketIsSeparateFromHostLobbies()
+        public void AUdpQuickMatchConnectsToTheServerAddress()
         {
-            Assert.That(ServerLobby.BucketId("0.3.0"), Is.Not.EqualTo(LobbyLaunchOptions.BucketId("0.3.0")));
+            var net = ServerLobby.ConnectOptions(Lobby("203.0.113.10:7790"));
+
+            Assert.That(net.Mode, Is.EqualTo(NetLaunchMode.Client));
+            Assert.That(net.Transport, Is.EqualTo(NetTransportKind.Udp));
+            Assert.That(net.Address, Is.EqualTo("203.0.113.10"));
+            Assert.That(net.Port, Is.EqualTo(7790));
+            Assert.That(net.EosServerId, Is.Null);
+        }
+
+        [TestCase(null)]
+        [TestCase("203.0.113.10")]
+        [TestCase("0.0.0.0:7777")]
+        [TestCase("server.example:7777")]
+        public void AUdpQuickMatchRejectsAServerAddressThatIsNotIPv4AndPort(string endpoint)
+        {
+            Assert.Throws<ArgumentException>(() => ServerLobby.ConnectOptions(Lobby(endpoint)));
+            Assert.Throws<ArgumentNullException>(() => ServerLobby.ConnectOptions(null));
         }
 
         [Test]

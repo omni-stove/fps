@@ -13,12 +13,11 @@ namespace Fps.Runtime
     /// ボタンを押すと <see cref="MenuNavigator.Go"/> でその行き先へ進む。ゲームパッドの上下 (とキーボードの矢印・Tab) では
     /// <see cref="ButtonNames"/> の順にフォーカスを動かし、端では反対側へ回り込む。マウスで指したボタンにもフォーカスを移すので、
     /// どの入力でも選んでいるボタンは 1 つになる。
-    /// 起動引数に <c>-mode</c> / <c>-lobby</c> があるとき (<see cref="MenuRoute.ShouldSkipMenu"/>) は何も出さず、
-    /// NetBootstrap がネット対戦のシーンへ切り替えるのに任せる。
+    /// 起動引数で <c>-mode client</c> / <c>-lobby quickmatch</c> を渡したときも出し、つないだクライアントがサーバーのマップへ移るまで見せておく。
     /// 設定ボタンは <see cref="SettingsRequested"/> に差し込み口の要素を渡すだけで、中身は設定画面の側が入れる。
     /// ロードアウトのボタンは、オンラインと同じアセット (<see cref="Loadout"/>・<see cref="Catalog"/>、MenuSceneBuilder が配線) から
     /// 選ぶ画面 (<see cref="LoadoutSelectPanel"/>) を差し込み口に出し、決めた並びを <see cref="LoadoutStore"/> に保存する。
-    /// 送るのはオンラインに入ってから (Fps.Net の NetLoadoutChooser が保存した並びを送る)。
+    /// 送るのはオンラインに入ってから (ネット対戦のクライアントが保存した並びを送る)。
     /// <see cref="Show"/> は <see cref="SettingsView"/> を取り付ける (<see cref="InstallSettingsView"/>)。
     /// キャンペーンのボタンは、ミッションの一覧 (<see cref="Missions"/>、MenuSceneBuilder が配線) とセーブ (<see cref="SaveStorage"/>) から
     /// ミッションと難易度を選ぶ画面 (<see cref="CampaignPanel"/>) を差し込み口に出し、決めた始め方で <see cref="MenuNavigator.StartCampaign"/> を呼ぶ。
@@ -38,8 +37,6 @@ namespace Fps.Runtime
         public const string DocumentObjectName = "MainMenuDocument";
 
         public const string CampaignButtonName = "menu-campaign";
-        public const string CreateLobbyButtonName = "menu-create-lobby";
-        public const string JoinLobbyButtonName = "menu-join-lobby";
         public const string QuickMatchButtonName = "menu-quick-match";
         public const string LoadoutButtonName = "menu-loadout";
         public const string RangeButtonName = "menu-range";
@@ -70,8 +67,6 @@ namespace Fps.Runtime
         public static readonly IReadOnlyList<string> ButtonNames = new[]
         {
             CampaignButtonName,
-            CreateLobbyButtonName,
-            JoinLobbyButtonName,
             QuickMatchButtonName,
             LoadoutButtonName,
             RangeButtonName,
@@ -206,12 +201,6 @@ namespace Fps.Runtime
 
         private void Awake()
         {
-            if (MenuRoute.ShouldSkipMenu(Application.isEditor, NetStartup.IsDedicatedServerBuild, Environment.GetCommandLineArgs()))
-            {
-                Debug.Log(MenuNavigator.LogTag + " skipping the menu: -mode or -lobby was given");
-                return;
-            }
-
             try
             {
                 Show();
@@ -781,12 +770,6 @@ namespace Fps.Runtime
             {
                 case CampaignButtonName:
                     OpenCampaign();
-                    break;
-                case CreateLobbyButtonName:
-                    Choose(MenuDestination.CreateLobby);
-                    break;
-                case JoinLobbyButtonName:
-                    Choose(MenuDestination.JoinLobby);
                     break;
                 case QuickMatchButtonName:
                     Choose(MenuDestination.QuickMatch);

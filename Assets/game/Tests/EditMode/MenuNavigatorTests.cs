@@ -20,7 +20,6 @@ namespace Fps.Tests.EditMode
             MenuNavigator.Host = _host;
             MenuNavigator.Scenes = MenuScenes.Default;
             MenuNavigator.SceneRoot = KitPaths.DefaultRoot;
-            MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
             CampaignLaunchSelection.Clear();
@@ -32,7 +31,6 @@ namespace Fps.Tests.EditMode
             MenuNavigator.Host = null;
             MenuNavigator.Scenes = null;
             MenuNavigator.SceneRoot = null;
-            MenuNavigator.TakeLobbyRequest();
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeNotice();
             CampaignLaunchSelection.Clear();
@@ -41,20 +39,32 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void AnOnlineStarterTakesTheOnlineButtonsInsteadOfTheNetcodeScene()
+        public void TheOnlineStarterTakesQuickMatchWithoutLoadingAScene()
         {
             var starter = new FakeStarter();
             MenuNavigator.OnlineStarter = starter;
 
             Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch, out var refusal), Is.True);
             Assert.That(refusal.IsEmpty, Is.True);
-            Assert.That(MenuNavigator.Go(MenuDestination.CreateLobby, out refusal), Is.False);
+            starter.Refuse = true;
+            Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch, out refusal), Is.False);
             Assert.That(refusal.Key, Is.EqualTo("refused"));
             Assert.That(MenuNavigator.Go(MenuDestination.Range), Is.True, "only the online buttons go to the starter");
 
-            Assert.That(starter.Started, Is.EqualTo(new[] { MenuDestination.QuickMatch, MenuDestination.CreateLobby }));
-            Assert.That(MenuNavigator.PendingLobby.IsRequested, Is.False, "the Netcode scene gets no lobby request");
+            Assert.That(starter.Started, Is.EqualTo(new[] { MenuDestination.QuickMatch, MenuDestination.QuickMatch }));
             Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(MenuRoute.RangeScene) }));
+        }
+
+        [Test]
+        public void WithoutAnOnlineClientQuickMatchReportsAndStays()
+        {
+            MenuNavigator.OnlineStarter = null;
+            LogAssert.Expect(LogType.Error, new Regex("no online client is installed"));
+
+            Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch, out var refusal), Is.False);
+
+            Assert.That(refusal.IsEmpty, Is.True);
+            Assert.That(_host.Loaded, Is.Empty);
         }
 
         [Test]
@@ -62,7 +72,7 @@ namespace Fps.Tests.EditMode
         {
             const string chapter = "Assets/game/Scenes/Chapter1.unity";
             _host.Scenes.Add(chapter);
-            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1", null);
+            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1");
 
             Assert.That(MenuNavigator.Go(MenuDestination.Campaign), Is.True);
             Assert.That(MenuNavigator.Go(MenuDestination.Range), Is.True);
@@ -72,25 +82,21 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void OnlineAndReturnLoadTheScenesSetByTheData()
+        public void ReturnLoadsTheMenuSetByTheData()
         {
-            const string arena = "Assets/game/Scenes/Arena.unity";
             const string title = "Assets/game/Scenes/Title.unity";
-            _host.Scenes.Add(arena);
             _host.Scenes.Add(title);
-            MenuNavigator.Scenes = new MenuScenes("Title", null, null, "Arena");
+            MenuNavigator.Scenes = new MenuScenes("Title", null, null);
 
-            Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch), Is.True);
-            Assert.That(MenuNavigator.PendingLobby.Command, Is.EqualTo(LobbyCommand.QuickMatch));
             Assert.That(MenuNavigator.ReturnToMenu(), Is.True);
 
-            Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(arena), _host.IndexOf(title) }));
+            Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(title) }));
         }
 
         [Test]
         public void ASceneSetByTheDataThatIsNotInTheBuildIsReported()
         {
-            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1", null);
+            MenuNavigator.Scenes = new MenuScenes(null, null, "Chapter1");
             LogAssert.Expect(LogType.Error, new Regex(Regex.Escape("Assets/game/Scenes/Chapter1.unity") + ".*not in the build settings"));
 
             Assert.That(MenuNavigator.Go(MenuDestination.Campaign), Is.False);
@@ -113,31 +119,12 @@ namespace Fps.Tests.EditMode
         [TestCase(MenuDestination.Campaign, MenuRoute.CampaignScene)]
         [TestCase(MenuDestination.Range, MenuRoute.RangeScene)]
         [TestCase(MenuDestination.Tutorial, MenuRoute.RangeScene)]
-        [TestCase(MenuDestination.CreateLobby, MenuRoute.NetScene)]
-        [TestCase(MenuDestination.JoinLobby, MenuRoute.NetScene)]
-        [TestCase(MenuDestination.QuickMatch, MenuRoute.NetScene)]
         public void GoLoadsTheDestinationScene(MenuDestination destination, string scene)
         {
             Assert.That(MenuNavigator.Go(destination), Is.True);
 
             Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(scene) }));
             Assert.That(_host.QuitCount, Is.Zero);
-        }
-
-        [Test]
-        public void OnlineLeavesTheLobbyRequestForTheNetScene()
-        {
-            MenuNavigator.Go(MenuDestination.CreateLobby);
-
-            var created = MenuNavigator.TakeLobbyRequest();
-            Assert.That(created.Command, Is.EqualTo(LobbyCommand.Create));
-            Assert.That(MenuNavigator.TakeLobbyRequest().IsRequested, Is.False, "the request is handed over only once");
-
-            MenuNavigator.Go(MenuDestination.JoinLobby);
-            Assert.That(MenuNavigator.PendingLobby.Command, Is.EqualTo(LobbyCommand.Join));
-
-            MenuNavigator.Go(MenuDestination.Range);
-            Assert.That(MenuNavigator.PendingLobby.IsRequested, Is.False, "an offline scene clears an unused request");
         }
 
         [Test]
@@ -187,19 +174,19 @@ namespace Fps.Tests.EditMode
         [Test]
         public void GoFailsAndKeepsStateWhenTheSceneIsNotInTheBuild()
         {
-            _host.Missing.Add(MenuRoute.NetScene);
-            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(MenuRoute.NetScene) + ".*not in the build settings"));
+            _host.Missing.Add(MenuRoute.RangeScene);
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(MenuRoute.RangeScene) + ".*not in the build settings"));
 
-            Assert.That(MenuNavigator.Go(MenuDestination.CreateLobby), Is.False);
+            Assert.That(MenuNavigator.Go(MenuDestination.Tutorial), Is.False);
 
             Assert.That(_host.Loaded, Is.Empty);
-            Assert.That(MenuNavigator.PendingLobby.IsRequested, Is.False, "no request is left behind for a scene that never loads");
+            Assert.That(MenuNavigator.PendingTutorial, Is.False, "no request is left behind for a scene that never loads");
         }
 
         [Test]
         public void ReturnToMenuCleansUpThenLoadsTheMainMenuWithTheNotice()
         {
-            MenuNavigator.Go(MenuDestination.JoinLobby);
+            MenuNavigator.Go(MenuDestination.Tutorial);
             _host.Loaded.Clear();
             Time.timeScale = 0f;
             var calls = new List<int>();
@@ -217,7 +204,7 @@ namespace Fps.Tests.EditMode
             Assert.That(calls, Is.EqualTo(new[] { 0 }), "listeners run once, before the menu scene is loaded");
             Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(MenuRoute.MainMenuScene) }));
             Assert.That(Time.timeScale, Is.EqualTo(1f), "a paused game is resumed");
-            Assert.That(MenuNavigator.PendingLobby.IsRequested, Is.False);
+            Assert.That(MenuNavigator.PendingTutorial, Is.False);
             Assert.That(MenuNavigator.TakeNotice(), Is.EqualTo(DisconnectNotice.ServerStoppedMessage), "the key is kept for the menu to look up");
             Assert.That(MenuNavigator.TakeNotice().IsEmpty, Is.True, "the notice is shown only once");
         }
@@ -280,7 +267,7 @@ namespace Fps.Tests.EditMode
         {
             using (var missions = new CampaignTestCatalog())
             {
-                MenuNavigator.Go(MenuDestination.CreateLobby);
+                MenuNavigator.Go(MenuDestination.Tutorial);
                 _host.Loaded.Clear();
                 var launch = new CampaignLaunch(CampaignTestCatalog.Mission01, CampaignDifficulty.Easy);
                 var order = new List<string>();
@@ -292,7 +279,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(order, Is.EqualTo(new[] { "before:0" }), "beforeLoad runs once, before the scene is loaded");
                 Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(MenuRoute.CampaignScene) }));
                 Assert.That(CampaignLaunchSelection.Current.ToString(), Is.EqualTo(launch.ToString()));
-                Assert.That(MenuNavigator.PendingLobby.IsRequested, Is.False, "an offline scene clears an unused lobby request");
+                Assert.That(MenuNavigator.PendingTutorial, Is.False, "the campaign clears an unused tutorial request");
             }
         }
 
@@ -359,7 +346,7 @@ namespace Fps.Tests.EditMode
         {
             public readonly List<string> Scenes = new List<string>
             {
-                MenuRoute.MainMenuScene, MenuRoute.RangeScene, MenuRoute.CampaignScene, MenuRoute.NetScene,
+                MenuRoute.MainMenuScene, MenuRoute.RangeScene, MenuRoute.CampaignScene,
             };
 
             public readonly HashSet<string> Missing = new HashSet<string>();
@@ -391,11 +378,13 @@ namespace Fps.Tests.EditMode
         {
             public List<MenuDestination> Started { get; } = new List<MenuDestination>();
 
+            public bool Refuse { get; set; }
+
             public bool Start(MenuDestination destination, out LocalizedText refusal)
             {
                 Started.Add(destination);
-                refusal = destination == MenuDestination.QuickMatch ? default : new LocalizedText("refused");
-                return destination == MenuDestination.QuickMatch;
+                refusal = Refuse ? new LocalizedText("refused") : default;
+                return !Refuse;
             }
         }
     }

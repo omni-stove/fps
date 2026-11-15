@@ -31,7 +31,6 @@ namespace Fps.Tests.EditMode
             Assert.That(Fps.Core.MenuRoute.MainMenuSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.MainMenuScene));
             Assert.That(Fps.Core.MenuRoute.RangeSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.BootstrapScene));
             Assert.That(Fps.Core.MenuRoute.CampaignSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.CampaignScene));
-            Assert.That(Fps.Core.MenuRoute.NetSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.NetTestScene));
         }
 
         [Test]

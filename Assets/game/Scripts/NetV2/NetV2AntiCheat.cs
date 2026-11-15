@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-netstack v2</c> のクライアントが EAC のパケットを .NET のサーバーと送受信する口。
+    /// クライアントが EAC のパケットを .NET のサーバーと送受信する口。
     /// EAC の SDK の側 (<see cref="IAntiCheatClientSession"/>) は作り方 (<see cref="CreateSession"/>) を登録してもらう形にする。
     /// EOS のプラグインに依存するアセンブリ (Fps.NetEos) を、このアセンブリが参照しないため。
     /// </summary>

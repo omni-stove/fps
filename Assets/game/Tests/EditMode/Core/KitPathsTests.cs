@@ -21,7 +21,6 @@ namespace Fps.Core.Tests
             Assert.That(MenuRoute.BackToMenu().ScenePath, Is.EqualTo("Assets/game/Scenes/MainMenu.unity"));
             Assert.That(MenuRoute.Plan(MenuDestination.Range).ScenePath, Is.EqualTo("Assets/game/Scenes/Bootstrap.unity"));
             Assert.That(MenuRoute.Plan(MenuDestination.Campaign).ScenePath, Is.EqualTo("Assets/game/Scenes/Campaign01.unity"));
-            Assert.That(MenuRoute.Plan(MenuDestination.CreateLobby).ScenePath, Is.EqualTo("Assets/game/Scenes/NetTest.unity"));
         }
 
         [Test]
@@ -30,7 +29,6 @@ namespace Fps.Core.Tests
             Assert.That(MenuRoute.MainMenuSceneUnder(KitPaths.DefaultRoot), Is.EqualTo(MenuRoute.MainMenuScene));
             Assert.That(MenuRoute.RangeSceneUnder(KitPaths.DefaultRoot), Is.EqualTo(MenuRoute.RangeScene));
             Assert.That(MenuRoute.CampaignSceneUnder(KitPaths.DefaultRoot), Is.EqualTo(MenuRoute.CampaignScene));
-            Assert.That(MenuRoute.NetSceneUnder(KitPaths.DefaultRoot), Is.EqualTo(MenuRoute.NetScene));
         }
 
         [Test]
@@ -38,6 +36,11 @@ namespace Fps.Core.Tests
         {
             foreach (var destination in MenuRoute.Destinations)
             {
+                if (destination == MenuDestination.QuickMatch)
+                {
+                    continue;
+                }
+
                 Assert.That(
                     MenuRoute.Plan(destination).ScenePath,
                     Is.EqualTo(MenuRoute.Plan(destination, KitPaths.DefaultRoot).ScenePath),
@@ -53,8 +56,6 @@ namespace Fps.Core.Tests
             Assert.That(MenuRoute.Plan(MenuDestination.Campaign, _packageRoot).ScenePath, Is.EqualTo(_packageRoot + "/Scenes/Campaign01.unity"));
             Assert.That(MenuRoute.Plan(MenuDestination.Range, _packageRoot).ScenePath, Is.EqualTo(_packageRoot + "/Scenes/Bootstrap.unity"));
             Assert.That(MenuRoute.Plan(MenuDestination.Tutorial, _packageRoot).StartsTutorial, Is.True);
-            Assert.That(MenuRoute.Plan(MenuDestination.QuickMatch, _packageRoot).ScenePath, Is.EqualTo(_packageRoot + "/Scenes/NetTest.unity"));
-            Assert.That(MenuRoute.Plan(MenuDestination.QuickMatch, _packageRoot).Lobby.IsRequested, Is.True);
             Assert.That(MenuRoute.BackToMenu(_packageRoot).ScenePath, Is.EqualTo(_packageRoot + "/Scenes/MainMenu.unity"));
         }
 

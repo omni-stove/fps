@@ -8,8 +8,7 @@ namespace Fps.Runtime
     /// <summary>
     /// メインメニューと他のシーンの行き来をまとめる。メニューのボタンは <see cref="Go"/>、ポーズや切断から戻る画面は
     /// <see cref="ReturnToMenu"/>、キャンペーンの選択画面は <see cref="StartCampaign"/> を呼ぶ。どのシーンを読むかは <see cref="MenuRoute"/> が決め、ここは Build Settings から番号を引いて読む。
-    /// オンラインを選んだときのロビーの設定は、NetTest の NetBootstrap が <see cref="TakeLobbyRequest"/> で受け取る
-    /// (起動引数の <c>-lobby</c> と同じ扱いになる)。
+    /// オンラインを選んだときは、シーンを読まずに <see cref="OnlineStarter"/> (ネット対戦のクライアント) に任せる。
     /// チュートリアルを選んだことは、射撃場の <see cref="TutorialPresenter"/> が <see cref="TakeTutorialRequest"/> で受け取る。
     /// </summary>
     public static class MenuNavigator
@@ -17,14 +16,13 @@ namespace Fps.Runtime
         public const string LogTag = "[Menu]";
 
         private static IMenuSceneHost _host = SceneManagerHost.Instance;
-        private static LobbyLaunchOptions _pendingLobby = LobbyLaunchOptions.None;
         private static LocalizedText _notice;
         private static bool _pendingTutorial;
         private static MenuScenes _scenes;
         private static string _sceneRoot;
 
         /// <summary>
-        /// <see cref="ReturnToMenu"/> でメニューのシーンを読む直前に呼ぶ。シーンをまたいで残るもの (NetworkManager など) は
+        /// <see cref="ReturnToMenu"/> でメニューのシーンを読む直前に呼ぶ。シーンをまたいで残るもの (ネット対戦のクライアントなど) は
         /// ここで片付ける。購読した側の例外はログに出して、他の購読者と遷移は続ける。
         /// </summary>
         public static event Action ReturningToMenu;
@@ -62,9 +60,6 @@ namespace Fps.Runtime
             return MenuRoute.Plan(destination, SceneRoot, Scenes);
         }
 
-        /// <summary>NetBootstrap にまだ渡していない、メニューで選んだロビーの設定。無ければ <see cref="LobbyLaunchOptions.None"/>。</summary>
-        public static LobbyLaunchOptions PendingLobby => _pendingLobby;
-
         /// <summary>射撃場にまだ渡していない、メニューでチュートリアルを選んだこと。</summary>
         public static bool PendingTutorial => _pendingTutorial;
 
@@ -72,7 +67,7 @@ namespace Fps.Runtime
         public static LocalizedText PendingNotice => _notice;
 
         /// <summary>
-        /// オンラインのボタンを Netcode の代わりに始める手順。null なら NetTest のシーンへ移る (既定)。
+        /// オンラインのボタンを始める手順。ネット対戦のクライアント (Fps.NetV2) が起動時に入れる。null ならオンラインは始められない。
         /// </summary>
         public static IOnlineMatchStarter OnlineStarter { get; set; }
 
@@ -85,15 +80,21 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// destination へ進む。オンラインの行き先で <see cref="OnlineStarter"/> があればそれに任せ、断られたら false と理由 refusal を返す。
+        /// destination へ進む。オンラインの行き先は <see cref="OnlineStarter"/> に任せ、断られたか無ければ false と理由 refusal を返す。
         /// シーンへ移る行き先で読むシーンが Build Settings に無ければ、エラーログを出して false (refusal は空) を返す。
         /// </summary>
         public static bool Go(MenuDestination destination, out LocalizedText refusal)
         {
             refusal = default;
-            var starter = OnlineStarter;
-            if (starter != null && IsOnline(destination))
+            if (IsOnline(destination))
             {
+                var starter = OnlineStarter;
+                if (starter == null)
+                {
+                    Debug.LogError(LogTag + " " + destination + ": no online client is installed (is the Fps.NetV2 assembly in the build?)");
+                    return false;
+                }
+
                 Debug.Log(LogTag + " " + destination + " -> " + starter.GetType().Name);
                 return starter.Start(destination, out refusal);
             }
@@ -104,8 +105,7 @@ namespace Fps.Runtime
         /// <summary>オンラインの試合を始める行き先か。</summary>
         public static bool IsOnline(MenuDestination destination)
         {
-            return destination == MenuDestination.CreateLobby || destination == MenuDestination.JoinLobby
-                || destination == MenuDestination.QuickMatch;
+            return destination == MenuDestination.QuickMatch;
         }
 
         /// <summary>
@@ -143,7 +143,6 @@ namespace Fps.Runtime
             beforeLoad?.Invoke();
             CampaignLaunchSelection.Launch(catalog, launch.MissionId, launch.Difficulty, path =>
             {
-                _pendingLobby = LobbyLaunchOptions.None;
                 _pendingTutorial = false;
                 Debug.Log(LogTag + " campaign " + launch + " -> " + path);
                 _host.Load(buildIndex);
@@ -188,21 +187,12 @@ namespace Fps.Runtime
             Time.timeScale = 1f;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
-            _pendingLobby = LobbyLaunchOptions.None;
             _pendingTutorial = false;
             _notice = notice.IsLiteral && string.IsNullOrWhiteSpace(notice.Key) ? default : notice;
 
             Debug.Log(LogTag + " back to the menu" + (_notice.IsEmpty ? "" : " (" + _notice + ")"));
             _host.Load(buildIndex);
             return true;
-        }
-
-        /// <summary>メニューで選んだロビーの設定を受け取り、持っていた分は消す。無ければ <see cref="LobbyLaunchOptions.None"/>。</summary>
-        public static LobbyLaunchOptions TakeLobbyRequest()
-        {
-            var lobby = _pendingLobby;
-            _pendingLobby = LobbyLaunchOptions.None;
-            return lobby;
         }
 
         /// <summary>メニューでチュートリアルを選んだかを受け取り、持っていた分は消す。</summary>
@@ -237,7 +227,6 @@ namespace Fps.Runtime
                 return false;
             }
 
-            _pendingLobby = transition.Lobby;
             _pendingTutorial = transition.StartsTutorial;
             Debug.Log(LogTag + " " + transition);
             _host.Load(buildIndex);
@@ -255,7 +244,6 @@ namespace Fps.Runtime
         private static void ResetStatics()
         {
             _host = SceneManagerHost.Instance;
-            _pendingLobby = LobbyLaunchOptions.None;
             _pendingTutorial = false;
             _notice = default;
             _scenes = null;

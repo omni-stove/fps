@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-netstack v2</c> の自分のプレイヤーの視点と入力。視点は <see cref="FirstPersonLook"/> が本体の yaw と目の pitch を回し、
+    /// ネット対戦の自分のプレイヤーの視点と入力。視点は <see cref="FirstPersonLook"/> が本体の yaw と目の pitch を回し、
     /// 移動の入力は Netcode のクライアント (<c>NetworkPlayerMotor</c>) と同じ読み方で tick ごとに 1 つ作る。
     /// 位置は予測の結果 (<see cref="Show"/>) を書き写すだけで、自分では動かさない。
     /// </summary>

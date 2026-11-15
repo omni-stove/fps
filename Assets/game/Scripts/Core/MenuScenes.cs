@@ -8,17 +8,16 @@ namespace Fps.Core
     /// </summary>
     public sealed class MenuScenes
     {
-        /// <summary><see cref="MenuRoute"/> の既定の名前 (MainMenu / Bootstrap / Campaign01 / NetTest)。</summary>
-        public static MenuScenes Default { get; } = new MenuScenes(null, null, null, null);
+        /// <summary><see cref="MenuRoute"/> の既定の名前 (MainMenu / Bootstrap / Campaign01)。</summary>
+        public static MenuScenes Default { get; } = new MenuScenes(null, null, null);
 
         /// <summary>引数ごとに、null か空白だけなら既定の名前を使う。</summary>
         /// <exception cref="ArgumentException">名前に / や \ を含む、または <see cref="KitPaths.SceneExtension"/> で終わる。</exception>
-        public MenuScenes(string mainMenu, string range, string campaign, string net)
+        public MenuScenes(string mainMenu, string range, string campaign)
         {
             MainMenu = Resolve(mainMenu, MenuRoute.MainMenuSceneName, nameof(mainMenu));
             Range = Resolve(range, MenuRoute.RangeSceneName, nameof(range));
             Campaign = Resolve(campaign, MenuRoute.CampaignSceneName, nameof(campaign));
-            Net = Resolve(net, MenuRoute.NetSceneName, nameof(net));
         }
 
         /// <summary>起動時のシーンで、ポーズや切断から戻るメインメニュー。</summary>
@@ -30,12 +29,9 @@ namespace Fps.Core
         /// <summary>キャンペーンの最初のシーン。</summary>
         public string Campaign { get; }
 
-        /// <summary>オンラインのボタンと <c>-mode</c> / <c>-lobby</c> の起動で読むネット対戦のシーン。</summary>
-        public string Net { get; }
-
         public override string ToString()
         {
-            return $"mainMenu={MainMenu} range={Range} campaign={Campaign} net={Net}";
+            return $"mainMenu={MainMenu} range={Range} campaign={Campaign}";
         }
 
         private static string Resolve(string name, string fallback, string parameterName)

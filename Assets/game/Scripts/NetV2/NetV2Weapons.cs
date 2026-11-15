@@ -5,7 +5,7 @@ using Fps.Runtime;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-netstack v2</c> の、対戦で選べる武器 (ロードアウトとその一覧のアセット) と、今の武器の引き金 (<see cref="FireTrigger"/>)。
+    /// ネット対戦の、対戦で選べる武器 (ロードアウトとその一覧のアセット) と、今の武器の引き金 (<see cref="FireTrigger"/>)。
     /// アセットは Netcode のクライアントと同じく入口 (<see cref="GameContent"/>) のものを使う (サーバーのルールのファイルも同じアセットから書き出す)。
     /// </summary>
     internal sealed class NetV2Weapons

@@ -18,7 +18,7 @@ namespace Fps.NetV2.Tests
 {
     /// <summary>
     /// <c>make server-dotnet</c> と同じ起動 (コミットした server-data・既定のマップとルール) の .NET のサーバーに、
-    /// <c>-netstack v2</c> のクライアントの中身を 2 つつなぐ。
+    /// クライアントの中身を 2 つつなぐ。
     /// </summary>
     [NonParallelizable]
     public sealed class ServerConnectionTests

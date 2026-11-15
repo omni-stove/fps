@@ -1,4 +1,4 @@
-# 専用サーバーを docker compose で動かすときの設定。イメージは先に make server-image で作っておく。
+# Unity を使わない専用サーバーを docker compose で動かすときの設定。イメージは先に make server-image で作っておく。
 #   docker compose -f docker/server/compose.yaml up -d
 #   docker compose -f docker/server/compose.yaml stop     # 試合が終わるまで (最長 700 秒) 待って止まる
 # 起動の仕方と環境変数は docs/dedicated-server.md を参照。

@@ -6,7 +6,7 @@ using Fps.Protocol;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// <c>-netstack v2</c> のクライアントの、サーバーとのやり取り。通信路でつなぎ、承認を頼み、差分のスナップショットを組み立てて受け取ったと知らせ、
+    /// クライアントの、サーバーとのやり取り。通信路でつなぎ、承認を頼み、差分のスナップショットを組み立てて受け取ったと知らせ、
     /// サーバーのイベントを渡し、切れた理由を Netcode のクライアントと同じ <see cref="DisconnectNotice"/> に分ける。
     /// </summary>
     /// <remarks>

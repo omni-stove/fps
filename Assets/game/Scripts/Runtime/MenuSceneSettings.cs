@@ -6,7 +6,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// メニューから移るシーンの名前を、ゲームが <see cref="MenuRoute"/> の既定から変えるためのデータ。
-    /// 入口 (<see cref="GameContent.MenuScenes"/>) に割り当てるか Resources の <see cref="ResourcePath"/> に置くと、メニューの遷移 (MenuNavigator) とネット対戦の起動 (NetBootstrap) がこの名前を読む。
+    /// 入口 (<see cref="GameContent.MenuScenes"/>) に割り当てるか Resources の <see cref="ResourcePath"/> に置くと、メニューの遷移 (MenuNavigator) がこの名前を読む。
     /// 置かなければ、また空にした欄は既定の名前 (<see cref="MenuScenes.Default"/>) を使う。
     /// </summary>
     [CreateAssetMenu(fileName = "MenuSceneSettings", menuName = "Fps/Menu Scene Settings")]
@@ -25,9 +25,6 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("メニューのキャンペーンで読む最初のシーン名。空なら Campaign01")]
         private string _campaign = MenuRoute.CampaignSceneName;
-
-        [SerializeField, Tooltip("オンラインと -mode / -lobby の起動で読むネット対戦のシーン名。空なら NetTest")]
-        private string _net = MenuRoute.NetSceneName;
 
         [SerializeField, Tooltip("上のシーンを置いたルートのフォルダ (その下の Scenes/<名前>.unity を読む)。空なら Assets/game")]
         private string _sceneRoot = string.Empty;
@@ -48,12 +45,6 @@ namespace Fps.Runtime
         {
             get => _campaign;
             set => _campaign = value;
-        }
-
-        public string Net
-        {
-            get => _net;
-            set => _net = value;
         }
 
         public string SceneRoot
@@ -144,7 +135,7 @@ namespace Fps.Runtime
         {
             try
             {
-                return new MenuScenes(_mainMenu, _range, _campaign, _net);
+                return new MenuScenes(_mainMenu, _range, _campaign);
             }
             catch (ArgumentException e)
             {
@@ -158,7 +149,6 @@ namespace Fps.Runtime
             _mainMenu = MenuRoute.MainMenuSceneName;
             _range = MenuRoute.RangeSceneName;
             _campaign = MenuRoute.CampaignSceneName;
-            _net = MenuRoute.NetSceneName;
             _sceneRoot = string.Empty;
         }
     }

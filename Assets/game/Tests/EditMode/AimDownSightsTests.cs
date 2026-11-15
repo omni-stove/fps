@@ -352,6 +352,53 @@ namespace Fps.Tests.EditMode
             Assert.That(_ads.IsAiming, Is.True, "aiming works again once the weapon stops blocking");
         }
 
+        [TestCase(HoldMode.Hold)]
+        [TestCase(HoldMode.Toggle)]
+        public void AimingComesBackWithoutAPressOnceTheWeaponStopsBlocking(HoldMode mode)
+        {
+            Initialize();
+            _ads.ControlSettings = ControlSettings.Default.With(InputDeviceKind.KeyboardMouse, HoldAction.Aim, mode);
+            var blocked = false;
+            _ads.AdsBlocker = () => blocked;
+            var changes = new List<bool>();
+            _ads.AimingChanged += changes.Add;
+            var held = mode == HoldMode.Hold;
+
+            _ads.Tick(true, true, 1f);
+            _ads.Tick(held, false, 0f);
+
+            blocked = true;
+            LogAssert.Expect(LogType.Log, "[View] ads=false");
+            _ads.Tick(held, false, _ads.TransitionSeconds);
+            Assert.That(_ads.IsAiming, Is.False);
+            Assert.That(_camera.fieldOfView, Is.EqualTo(_hip).Within(1e-4f));
+
+            blocked = false;
+            LogAssert.Expect(LogType.Log, "[View] ads=true");
+            _ads.Tick(held, false, 0f);
+            Assert.That(_ads.IsAiming, Is.True, "the aim the player kept asking for returns");
+            Assert.That(changes, Is.EqualTo(new[] { true, false, true }));
+        }
+
+        [Test]
+        public void AReleaseWhileBlockedKeepsAimingFromComingBack()
+        {
+            Initialize();
+            var blocked = false;
+            _ads.AdsBlocker = () => blocked;
+
+            _ads.Tick(true, true, 1f);
+            blocked = true;
+            LogAssert.Expect(LogType.Log, "[View] ads=false");
+            _ads.Tick(true, false, 0f);
+
+            Assert.That(_ads.Release(), Is.False, "nothing to report while already blocked");
+            blocked = false;
+            _ads.Tick(true, false, 0f);
+
+            Assert.That(_ads.IsAiming, Is.False, "a reload or swap during the block still needs a fresh press");
+        }
+
         [Test]
         public void ApplyingSettingsMovesTheHipFieldOfViewRightAway()
         {

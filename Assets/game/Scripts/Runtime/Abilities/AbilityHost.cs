@@ -172,6 +172,13 @@ namespace Fps.Runtime
             return line;
         }
 
+        /// <summary>例: <c>[Ability] slot=1 id=DeployRemoteCharge follow-up</c>。</summary>
+        public static string FormatFollowUpLog(int index, AbilityDefinition definition)
+        {
+            RequireIndex(index);
+            return $"{LogTag} slot={index + 1} id={NameOf(definition)} follow-up";
+        }
+
         /// <summary>例: <c>[Ability] slot=1 id=NullAbility recharged charges=1/1</c>。</summary>
         public static string FormatRechargedLog(int index, AbilityDefinition definition, AbilitySlot slot)
         {
@@ -347,6 +354,12 @@ namespace Fps.Runtime
             var block = UseBlock(index);
             if (block != AbilityUseBlock.None)
             {
+                // 回数を使い切っても置いた C4 を起爆できるよう、枠だけで断る理由なら能力に先に聞く。
+                if ((block == AbilityUseBlock.Cooldown || block == AbilityUseBlock.NoCharges) && TryFollowUp(index))
+                {
+                    return true;
+                }
+
                 if (block != AbilityUseBlock.RuleOff && block != AbilityUseBlock.Empty)
                 {
                     Debug.Log(FormatRejectedLog(index, _definitions[index], block, _slots[index]), this);
@@ -375,6 +388,31 @@ namespace Fps.Runtime
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// index の枠の能力が <see cref="IAbilityFollowUp"/> なら、今押すと何が起きるかの案内を hint に入れて true。
+        /// 枠が空・ルールが Off・使えない状態・案内が無いときは false。
+        /// </summary>
+        public bool TryGetHint(int index, out LocalizedText hint)
+        {
+            RequireIndex(index);
+            hint = default;
+            if (_rule != Abilities.On || !(_abilities[index] is IAbilityFollowUp followUp) || IsIncapacitated)
+            {
+                return false;
+            }
+
+            try
+            {
+                return followUp.TryGetFollowUpHint(_contexts[index], out hint);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, this);
+                hint = default;
+                return false;
+            }
         }
 
         /// <summary>
@@ -550,6 +588,30 @@ namespace Fps.Runtime
             {
                 EndAbility(i, interrupted);
             }
+        }
+
+        private bool TryFollowUp(int index)
+        {
+            if (!(_abilities[index] is IAbilityFollowUp followUp))
+            {
+                return false;
+            }
+
+            try
+            {
+                if (!followUp.TryFollowUp(_contexts[index]))
+                {
+                    return false;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, this);
+                return false;
+            }
+
+            Debug.Log(FormatFollowUpLog(index, _definitions[index]), this);
+            return true;
         }
 
         private bool AskCanUse(int index)

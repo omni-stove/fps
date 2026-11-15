@@ -104,30 +104,8 @@ namespace Fps.Runtime
 
         public static BeamSettings FindSettings(GameObject shooter, string weaponId)
         {
-            if (weaponId == null)
-            {
-                return null;
-            }
-
-            if (shooter != null)
-            {
-                var controller = shooter.GetComponentInChildren<WeaponController>(true);
-                var held = controller != null ? controller.Definition : null;
-                if (held != null && string.Equals(held.Id, weaponId, StringComparison.Ordinal))
-                {
-                    return held.Beam;
-                }
-
-                var enemy = shooter.GetComponentInChildren<EnemyAgent>(true);
-                var carried = enemy != null ? enemy.WeaponDefinition : null;
-                if (carried != null && string.Equals(carried.Id, weaponId, StringComparison.Ordinal))
-                {
-                    return carried.Beam;
-                }
-            }
-
-            var catalog = GameContent.Pick(c => c.WeaponCatalog);
-            return catalog != null && catalog.TryFind(weaponId, out var definition) ? definition.Beam : null;
+            var definition = ShooterWeapons.Find(shooter, weaponId);
+            return definition != null ? definition.Beam : null;
         }
 
         private void Update()

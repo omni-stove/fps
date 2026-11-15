@@ -62,12 +62,6 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheRoundHooksDoNothingForNow()
-        {
-            Assert.That(SprayCone.Contains(new SpraySpec(0.1f, 20f), 8f, Vector3.Zero, Vector3.UnitZ, new Vector3(0f, 0f, 2f)), Is.False);
-        }
-
-        [Test]
         public void RejectsInvalidInput()
         {
             Assert.Throws<ArgumentNullException>(() => ShotPlanner.Plan(null, Vector3.Zero, Vector3.UnitZ, 0f, 0, 0));

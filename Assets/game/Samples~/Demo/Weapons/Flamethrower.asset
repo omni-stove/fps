@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: Flamethrower
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: 8c2b5eea-4ded-4956-af00-0bceb5d3af29
+  _nameKey: weapon.flamethrower
+  _category: 0
+  _fireMode: 0
+  _magazineSize: 1
+  _reserveAmmo: 0
+  _fireInterval: 0.1
+  _reloadSeconds: 0
+  _damage: 3
+  _range: 8
+  _falloffStart: 3.4028235e+38
+  _falloffEnd: 3.4028235e+38
+  _falloffMinMultiplier: 1
+  _explosionRadius: 0
+  _adsFieldOfView: 60
+  _blindFireSpreadDegrees: 5
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.5
+  _recoilPitchDegrees: 0
+  _recoilYawDegrees: 0
+  _recoilRecoveryPerSecond: 0
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 0
+  _adsSpreadDegrees: 0
+  _moveSpreadDegrees: 0
+  _shotNoiseRadius: 25
+  _ammoKind: 1
+  _heat:
+    _heatPerShot: 0.025
+    _coolPerSecond: 0.35
+    _coolDelaySeconds: 0.5
+    _overheatSeconds: 2
+  _delivery: 3
+  _spray:
+    _tickSeconds: 0.1
+    _coneDegrees: 15
+    _visualId: fx.spray.flame
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _statusEffect:
+    _enabled: 1
+    _kindId: burn
+    _durationSeconds: 3
+    _tickSeconds: 0.5
+    _damagePerTick: 3
+    _visualId: 

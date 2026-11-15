@@ -17,7 +17,7 @@ namespace Fps.Server
     /// </remarks>
     internal sealed class ServerBeams
     {
-        private readonly Dictionary<int, Beam> _beams = new Dictionary<int, Beam>();
+        private readonly Dictionary<int, HeldFire> _beams = new Dictionary<int, HeldFire>();
         private readonly List<int> _scratch = new List<int>();
         private readonly List<ShotHit> _hits = new List<ShotHit>();
         private readonly BeamStateMessage _message = new BeamStateMessage();
@@ -165,7 +165,7 @@ namespace Fps.Server
             _beams.Remove(playerId);
         }
 
-        private Beam BeamFor(int shooterId, BeamSpec spec)
+        private HeldFire BeamFor(int shooterId, BeamSpec spec)
         {
             if (_beams.TryGetValue(shooterId, out var beam) && ReferenceEquals(beam.State.Spec, spec))
             {
@@ -177,12 +177,12 @@ namespace Fps.Server
                 Stop(beam, ShotRejection.WeaponMismatch);
             }
 
-            beam = new Beam(shooterId, new BeamState(spec));
+            beam = new HeldFire(shooterId, new BeamState(spec));
             _beams[shooterId] = beam;
             return beam;
         }
 
-        private bool Pay(Beam beam, out ShotRejection rejection)
+        private bool Pay(HeldFire beam, out ShotRejection rejection)
         {
             var prepaid = beam.Prepaid;
             beam.Prepaid = false;
@@ -190,7 +190,7 @@ namespace Fps.Server
         }
 
         // 照射 1 回。今の向きで当たり直し、当たりを着弾に渡して、当てた所までの線を全員に送る
-        private void Emit(Beam beam, ServerBody body, float tick)
+        private void Emit(HeldFire beam, ServerBody body, float tick)
         {
             beam.Pose(body, out var origin, out var direction);
 
@@ -219,7 +219,7 @@ namespace Fps.Server
             }
         }
 
-        private void Stop(Beam beam, ShotRejection reason)
+        private void Stop(HeldFire beam, ShotRejection reason)
         {
             beam.State.Stop();
             beam.Prepaid = false;
@@ -228,7 +228,7 @@ namespace Fps.Server
             beam.Ticks = 0;
         }
 
-        private void Send(Beam beam, Vector3 start, Vector3 end, bool active)
+        private void Send(HeldFire beam, Vector3 start, Vector3 end, bool active)
         {
             beam.LastStart = start;
             beam.LastEnd = end;
@@ -242,7 +242,7 @@ namespace Fps.Server
             Combat.SendToAll(_message);
         }
 
-        private void Log(Beam beam, string what, ShotRejection reason)
+        private void Log(HeldFire beam, string what, ShotRejection reason)
         {
             Combat.Log.WriteLine(string.Format(
                 CultureInfo.InvariantCulture,
@@ -260,70 +260,6 @@ namespace Fps.Server
         {
             var hitboxes = Combat.Hitboxes;
             return hitboxes.HasHistory ? hitboxes.LastRecordedTick : float.NaN;
-        }
-
-        private sealed class Beam
-        {
-            private Vector3 _offset;
-            private Vector3 _direction;
-            private float _yaw;
-            private float _lagTicks;
-
-            public Beam(int shooterId, BeamState state)
-            {
-                ShooterId = shooterId;
-                State = state;
-            }
-
-            public int ShooterId { get; }
-
-            public BeamState State { get; }
-
-            public ServerShot Shot { get; private set; }
-
-            /// <summary>次の照射の弾を、押した瞬間の検査で使った 1 発で払うか。</summary>
-            public bool Prepaid { get; set; }
-
-            public int Ticks { get; set; }
-
-            public Vector3 LastStart { get; set; }
-
-            public Vector3 LastEnd { get; set; }
-
-            // 押したときの始点と向きをそのまま使わないのは、押している間に動いたり振り向いたりしても照射を体に付いてこさせるため
-            public void Aim(in ServerShot shot, PlannedRound planned, ServerBody body, float lastRecordedTick)
-            {
-                Shot = shot;
-                _offset = planned.Origin - body.EyePosition;
-                _direction = planned.Direction;
-                _yaw = body.Yaw;
-                _lagTicks = float.IsNaN(lastRecordedTick) ? 0f : Math.Max(0f, lastRecordedTick - shot.Tick);
-            }
-
-            public void Pose(ServerBody body, out Vector3 origin, out Vector3 direction)
-            {
-                var turn = body.Yaw - _yaw;
-                origin = body.EyePosition + RotateYaw(_offset, turn);
-                direction = RotateYaw(_direction, turn);
-            }
-
-            public float ViewTick(float lastRecordedTick)
-            {
-                return float.IsNaN(lastRecordedTick) ? Shot.Tick : Math.Max(0f, lastRecordedTick - _lagTicks);
-            }
-
-            // Unity の左手系で Y 軸まわりに回す (PlayerMotor.ToWorld と同じ向き)
-            private static Vector3 RotateYaw(Vector3 value, float radians)
-            {
-                if (radians == 0f)
-                {
-                    return value;
-                }
-
-                var sin = MathF.Sin(radians);
-                var cos = MathF.Cos(radians);
-                return new Vector3((value.X * cos) + (value.Z * sin), value.Y, (-value.X * sin) + (value.Z * cos));
-            }
         }
     }
 }

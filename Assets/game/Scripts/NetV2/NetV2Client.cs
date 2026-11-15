@@ -262,6 +262,8 @@ namespace Fps.NetV2
             _weaponHooks.AreaEffects.Ended += EndArea;
             _weaponHooks.Beams.Drawn += DrawBeam;
             _weaponHooks.Beams.Hidden += HideBeam;
+            _weaponHooks.Spray.Drawn += DrawSpray;
+            _weaponHooks.Spray.Hidden += HideSpray;
             _pings = new ClientPings(line => Debug.Log(line, this));
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
         }
@@ -394,6 +396,7 @@ namespace Fps.NetV2
             if (_local != null)
             {
                 _weaponHooks.Beams.Update(NetV2Math.ToNumerics(_local.EyePosition), NetV2Math.ToNumerics(_local.AimDirection));
+                _weaponHooks.Spray.Update(NetV2Math.ToNumerics(_local.EyePosition), NetV2Math.ToNumerics(_local.AimDirection));
             }
 
             _pings.Markers.Expire(Time.time);
@@ -466,6 +469,7 @@ namespace Fps.NetV2
             _weaponHooks.Projectiles.Attach(
                 new NetV2Projectiles(_weapons), _world.Collision, Physics.DefaultRaycastLayers, NetV2Math.ToNumerics(Physics.gravity), _client.PlayerId);
             _weaponHooks.Beams.Attach(_world.Collision, Physics.DefaultRaycastLayers, _client.PlayerId);
+            _weaponHooks.Spray.Attach(_world.Collision, Physics.DefaultRaycastLayers, _client.PlayerId);
             _match.PlayerAdded += AddRemote;
             _match.PlayerRemoved += RemoveRemote;
             _match.Reconciled += HandleReconciled;
@@ -1062,7 +1066,7 @@ namespace Fps.NetV2
 
         private void DrawBeam(BeamView beam)
         {
-            var shooter = BeamShooter(beam.ShooterId);
+            var shooter = ShooterObject(beam.ShooterId);
             var from = NetV2Math.ToUnity(beam.Start);
             var to = NetV2Math.ToUnity(beam.End);
 
@@ -1078,14 +1082,46 @@ namespace Fps.NetV2
 
         private void HideBeam(int shooterId)
         {
-            var shooter = BeamShooter(shooterId);
+            var shooter = ShooterObject(shooterId);
             if (shooter != null && shooter.TryGetComponent<BeamLine>(out var line))
             {
                 line.Hide();
             }
         }
 
-        private GameObject BeamShooter(int shooterId)
+        private void DrawSpray(SprayView spray)
+        {
+            var shooter = ShooterObject(spray.ShooterId);
+            var from = NetV2Math.ToUnity(spray.Start);
+            var toward = NetV2Math.ToUnity(spray.End) - from;
+            var length = toward.magnitude;
+            if (length < 1e-4f)
+            {
+                return;
+            }
+
+            var direction = toward / length;
+
+            // 目の位置から出すと一人称では火炎が画面の中心に潰れて見えないので、オフラインの SprayDelivery と同じく銃口から出す
+            var presentation = WeaponPresentation.FindFor(shooter);
+            if (presentation != null)
+            {
+                from = presentation.Sockets.MuzzlePose(from, direction).position;
+            }
+
+            SprayFlame.Show(shooter, spray.WeaponId, spray.TickSeconds, from, direction, length, spray.ConeDegrees, Time.time);
+        }
+
+        private void HideSpray(int shooterId)
+        {
+            var shooter = ShooterObject(shooterId);
+            if (shooter != null && shooter.TryGetComponent<SprayFlame>(out var flame))
+            {
+                flame.Stop();
+            }
+        }
+
+        private GameObject ShooterObject(int shooterId)
         {
             if (_client != null && shooterId == _client.PlayerId)
             {
@@ -1324,6 +1360,7 @@ namespace Fps.NetV2
             _structures?.Leave();
             _weaponHooks?.Projectiles.Detach();
             _weaponHooks?.Beams.Detach();
+            _weaponHooks?.Spray.Detach();
         }
 
         private static bool TryFindScene(string map, out string path)

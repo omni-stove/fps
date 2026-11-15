@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -38,13 +39,12 @@ namespace Fps.Tests.EditMode
             Assert.That(ShotDeliveries.For(delivery), Is.InstanceOf(expected));
         }
 
-        [TestCase(RoundDelivery.Hitscan)]
-        [TestCase(RoundDelivery.Spray)]
-        public void EveryDeliveryHitsLikeTheHitscanUntilItIsFilledIn(RoundDelivery delivery)
+        [Test]
+        public void TheHitscanDeliveryHitsWhatTheLineTouches()
         {
             var target = CreateTarget("dummy", new Vector3(0f, 1f, 10f), HitZone.Head);
 
-            var outcome = ShotDeliveries.For(delivery).Deliver(Request(10), Straight());
+            var outcome = ShotDeliveries.For(RoundDelivery.Hitscan).Deliver(Request(10), Straight());
 
             Assert.That(outcome.Hit, Is.True);
             Assert.That(outcome.Owner, Is.SameAs(target));
@@ -102,6 +102,107 @@ namespace Fps.Tests.EditMode
             Assert.That(line.IsVisible, Is.True, "the next tick may still come");
             line.HideIfExpired(shownAt + (0.1f * BeamLine.HoldTicks));
             Assert.That(line.IsVisible, Is.False);
+        }
+
+        [Test]
+        public void TheSprayBurnsEveryoneInsideTheConeAndNobodyOutsideIt()
+        {
+            var shooter = new GameObject("spray shooter");
+            _created.Add(shooter);
+            var near = CreateTarget("near", new Vector3(0.2f, 1f, 3f), HitZone.Body);
+            var far = CreateTarget("far", new Vector3(-1.5f, 1f, 6f), HitZone.Body);
+            var beside = CreateTarget("beside", new Vector3(4f, 1f, 3f), HitZone.Body);
+            var beyond = CreateTarget("beyond", new Vector3(0f, 1f, 12f), HitZone.Body);
+            var behind = CreateTarget("behind", new Vector3(0f, 1f, -3f), HitZone.Body);
+            var landed = new List<ShotOutcome>();
+            var shots = 0;
+            void Count(ShotFiredInfo _) => shots++;
+            CombatEvents.ShotFired += Count;
+            try
+            {
+                var outcome = SprayDelivery.Instance.Deliver(SprayRequest(shooter, 3, landed.Add), Straight());
+
+                Assert.That(outcome.Owner, Is.SameAs(near), "the nearest one is the outcome");
+                Assert.That(landed.Select(l => l.Owner), Is.EqualTo(new[] { far }), "the rest are told like landed rounds");
+                Assert.That(shots, Is.Zero, "a spray tick is not a gunshot");
+            }
+            finally
+            {
+                CombatEvents.ShotFired -= Count;
+            }
+
+            foreach (var burnt in new[] { near, far })
+            {
+                Assert.That(burnt.Health.Current, Is.EqualTo(97), burnt.name);
+                Assert.That(burnt.StatusEffects, Is.Not.Null, burnt.name);
+                Assert.That(burnt.StatusEffects.Has(StatusEffectKinds.Burn), Is.True, burnt.name);
+            }
+
+            foreach (var spared in new[] { beside, beyond, behind })
+            {
+                Assert.That(spared.Health.Current, Is.EqualTo(100), spared.name);
+                Assert.That(spared.StatusEffects == null || !spared.StatusEffects.Has(StatusEffectKinds.Burn), Is.True, spared.name);
+            }
+        }
+
+        [Test]
+        public void TheSprayCatchesABodyWhoseEdgeIsInsideTheCone()
+        {
+            var shooter = new GameObject("spray shooter");
+            _created.Add(shooter);
+
+            // 中心は 15 度の円錐の外 (約 17 度) だが、カプセルの半径 0.5 の端は中に入る
+            var target = CreateTarget("edge", new Vector3(1.2f, 1f, 4f), HitZone.Body);
+
+            var outcome = SprayDelivery.Instance.Deliver(SprayRequest(shooter, 3), Straight());
+
+            Assert.That(outcome.Owner, Is.SameAs(target));
+        }
+
+        [Test]
+        public void TheSprayDoesNotBurnATargetBehindAWall()
+        {
+            var shooter = new GameObject("spray shooter");
+            _created.Add(shooter);
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(wall);
+            wall.transform.position = new Vector3(0f, 1f, 2f);
+            wall.transform.localScale = new Vector3(4f, 4f, 0.1f);
+            var hidden = CreateTarget("hidden", new Vector3(0f, 1f, 4f), HitZone.Body);
+
+            var outcome = SprayDelivery.Instance.Deliver(SprayRequest(shooter, 3), Straight());
+
+            Assert.That(outcome.Hit, Is.False);
+            Assert.That(hidden.Health.Current, Is.EqualTo(100));
+            Assert.That(hidden.StatusEffects, Is.Null);
+
+            var flame = shooter.GetComponent<SprayFlame>();
+            _created.Add(flame.Visual);
+            Assert.That(flame.CodeParticles.main.startLifetime.constant * SprayFlame.CodeFlameSpeed, Is.EqualTo(2f - 0.05f).Within(1e-3f), "the flame stops at the wall");
+        }
+
+        [Test]
+        public void TheSprayShowsACodeBuiltFlameFromTheMuzzleThatStopsAfterTheTicksEnd()
+        {
+            var shooter = new GameObject("spray shooter");
+            _created.Add(shooter);
+
+            SprayDelivery.Instance.Deliver(SprayRequest(shooter, 3), Straight());
+
+            var flame = shooter.GetComponent<SprayFlame>();
+            _created.Add(flame.Visual);
+            Assert.That(flame.IsEmitting, Is.True);
+            Assert.That(flame.Visual.transform.position, Is.EqualTo(WeaponSockets.None.MuzzlePose(_eye, Vector3.forward).position));
+            Assert.That(flame.Visual.transform.forward.z, Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(flame.CodeParticles, Is.Not.Null, "an empty visual builds the flame in code");
+            Assert.That(flame.CodeParticles.shape.angle, Is.EqualTo(15f));
+            Assert.That(flame.CodeParticles.main.startLifetime.constant * SprayFlame.CodeFlameSpeed, Is.EqualTo(8f).Within(1e-3f), "the whole range");
+
+            var shownAt = Time.time;
+            flame.StopIfExpired(shownAt + (0.1f * SprayFlame.HoldTicks) - 0.01f);
+            Assert.That(flame.IsEmitting, Is.True, "the next tick may still come");
+            flame.StopIfExpired(shownAt + (0.1f * SprayFlame.HoldTicks));
+            Assert.That(flame.IsEmitting, Is.False);
         }
 
         [Test]
@@ -339,6 +440,14 @@ namespace Fps.Tests.EditMode
         {
             var round = new RoundSpec(RoundDelivery.Beam, 30f, beam: new BeamSpec(0.1f));
             return new ShotRequest(shooter, shooter.transform, _eye, round, new ImpactSpec(damage), "laser", Physics.DefaultRaycastLayers);
+        }
+
+        private static ShotRequest SprayRequest(GameObject shooter, int damage, System.Action<ShotOutcome> landed = null)
+        {
+            var round = new RoundSpec(RoundDelivery.Spray, 8f, spray: new SpraySpec(0.1f, 15f));
+            var impact = new ImpactSpec(damage, statusEffect: new StatusEffectSpec(3f, 0.5f, 2));
+            return new ShotRequest(
+                shooter, shooter.transform, _eye, round, impact, "flamethrower", Physics.DefaultRaycastLayers, landed: landed);
         }
 
         private static PlannedRound Straight()

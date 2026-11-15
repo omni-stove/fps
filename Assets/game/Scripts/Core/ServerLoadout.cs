@@ -162,9 +162,10 @@ namespace Fps.Core
 
             if (!_entries.TryGetValue(playerId, out var entry) || !string.Equals(entry.WeaponId, held.Id, StringComparison.Ordinal))
             {
-                // ビームの撃ち方は照射を自分で数えて最短の間隔を 0 にしているので、それで作ると制限が外れる。照射の間隔で制限する。
-                var budget = held.Round.Delivery == RoundDelivery.Beam
-                    ? new ShotBudget(held.Round.Beam.TickSeconds, _burst)
+                // ビームと火炎の撃ち方は照射を自分で数えて最短の間隔を 0 にしているので、それで作ると制限が外れる。照射の間隔で制限する。
+                var round = held.Round;
+                var budget = round.Delivery == RoundDelivery.Beam ? new ShotBudget(round.Beam.TickSeconds, _burst)
+                    : round.Delivery == RoundDelivery.Spray ? new ShotBudget(round.Spray.TickSeconds, _burst)
                     : new ShotBudget(TriggerModels.For(held), _burst);
                 entry = new Entry(held.Id, budget);
                 _entries[playerId] = entry;

@@ -126,6 +126,24 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void LimitsASprayWeaponByTheSprayInterval()
+        {
+            var flamer = new WeaponSpec(
+                _rifle,
+                null,
+                WeaponCategory.AssaultRifle,
+                new TriggerSpec(FireMode.Auto, 1f),
+                round: new RoundSpec(RoundDelivery.Spray, 8f, spray: new SpraySpec(0.25f, 15f)));
+            var loadout = new ServerLoadout(Rule(), new[] { flamer, Handgun() }, 0.5f, 1);
+
+            Assert.That(loadout.TryFire(1, flamer, _rifle, 0d), Is.EqualTo(ShotRejection.None));
+            Assert.That(loadout.TryFire(1, flamer, _rifle, 0d), Is.EqualTo(ShotRejection.FireRateExceeded));
+            Assert.That(loadout.TryGetBudget(1, out var budget), Is.True);
+            Assert.That(budget.MinShotSpacingSeconds, Is.EqualTo(0.25f));
+            Assert.That(loadout.TryFire(1, flamer, _rifle, 0.25d), Is.EqualTo(ShotRejection.None));
+        }
+
+        [Test]
         public void RebuildsTheBudgetWithTheIntervalOfTheNewWeaponAfterASwitch()
         {
             var loadout = Loadout();

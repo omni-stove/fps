@@ -116,6 +116,18 @@ namespace Fps.Core
         /// <exception cref="ArgumentOutOfRangeException">aim が有限でないか長さ 0、halfAngleDegrees が範囲外のとき。</exception>
         public static Vector3 Direction(Vector3 aim, float halfAngleDegrees, int playerId, int shotIndex, uint polarStream, uint azimuthStream)
         {
+            return Cone(aim, halfAngleDegrees, playerId, shotIndex, null, polarStream, azimuthStream);
+        }
+
+        public static Vector3 Direction(
+            Vector3 aim, float halfAngleDegrees, int playerId, int shotIndex, int subIndex, uint polarStream, uint azimuthStream)
+        {
+            return Cone(aim, halfAngleDegrees, playerId, shotIndex, subIndex, polarStream, azimuthStream);
+        }
+
+        private static Vector3 Cone(
+            Vector3 aim, float halfAngleDegrees, int playerId, int shotIndex, int? subIndex, uint polarStream, uint azimuthStream)
+        {
             if (!IsFinite(aim.X) || !IsFinite(aim.Y) || !IsFinite(aim.Z) || aim.Length() < _minLength)
             {
                 throw new ArgumentOutOfRangeException(nameof(aim), aim, "aim must be finite and not zero");
@@ -135,9 +147,11 @@ namespace Fps.Core
 
             // 円錐の上で一様にするには、極角ではなくその cos を [cos(半角), 1] で一様に選ぶ (球帯の面積は高さに比例する)。
             var cosMax = Math.Cos(halfAngleDegrees * Math.PI / 180.0);
-            var cosTheta = 1.0 - (Sample(playerId, shotIndex, polarStream) * (1.0 - cosMax));
+            var polar = subIndex.HasValue ? Sample(playerId, shotIndex, subIndex.Value, polarStream) : Sample(playerId, shotIndex, polarStream);
+            var azimuth = subIndex.HasValue ? Sample(playerId, shotIndex, subIndex.Value, azimuthStream) : Sample(playerId, shotIndex, azimuthStream);
+            var cosTheta = 1.0 - (polar * (1.0 - cosMax));
             var sinTheta = Math.Sqrt(Math.Max(0.0, 1.0 - (cosTheta * cosTheta)));
-            var phi = Sample(playerId, shotIndex, azimuthStream) * 2.0 * Math.PI;
+            var phi = azimuth * 2.0 * Math.PI;
 
             Perpendiculars(forward, out var u, out var v);
             var sideways = (u * (float)Math.Cos(phi)) + (v * (float)Math.Sin(phi));
@@ -151,6 +165,14 @@ namespace Fps.Core
         {
             // System.Random は実装 (Mono と .NET) で列が変わりうるので使わず、整数の演算だけで決める (クライアントとサーバーで揃えるため)。
             var x = Mix(((ulong)(uint)playerId << 32) | (uint)shotIndex);
+            x = Mix(x ^ (stream * 0x9E3779B97F4A7C15UL));
+            return (x >> 11) * _unitScale;
+        }
+
+        public static double Sample(int playerId, int shotIndex, int subIndex, uint stream)
+        {
+            var x = Mix(((ulong)(uint)playerId << 32) | (uint)shotIndex);
+            x = Mix(x ^ ((ulong)(uint)subIndex * 0xD1B54A32D192ED03UL));
             x = Mix(x ^ (stream * 0x9E3779B97F4A7C15UL));
             return (x >> 11) * _unitScale;
         }

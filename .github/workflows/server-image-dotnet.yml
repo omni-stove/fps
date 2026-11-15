@@ -15,6 +15,7 @@ on:
       - "Assets/game/Scripts/Protocol/**"
       - "server-data/**"
       - "scripts/eos-sdk.sh"
+      - "scripts/server-image-dotnet-smoke.sh"
       - "Packages/packages-lock.json"
       - ".github/workflows/server-image-dotnet.yml"
 

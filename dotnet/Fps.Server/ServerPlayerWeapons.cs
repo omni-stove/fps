@@ -41,6 +41,9 @@ namespace Fps.Server
 
         public IReadOnlyList<ServerWeapon> Items => _loadout?.Items ?? Array.Empty<ServerWeapon>();
 
+        /// <summary>持っている武器の値 (スロット順)。装備前は空。</summary>
+        public IReadOnlyList<WeaponSpec> Specs { get; private set; } = Array.Empty<WeaponSpec>();
+
         /// <summary>今の武器で撃つ弾の値 (選んだ弾薬の種類で上書きした後)。装備前は null。</summary>
         public RoundSpec CurrentRound => _loadout == null ? null : CurrentAmmoType.Round;
 
@@ -283,6 +286,13 @@ namespace Fps.Server
             }
 
             _loadout = loadout;
+            var specs = new WeaponSpec[loadout.Items.Count];
+            for (var i = 0; i < specs.Length; i++)
+            {
+                specs[i] = loadout.Items[i].Spec;
+            }
+
+            Specs = specs;
             _loadout.Switched += HandleSwitched;
             foreach (var weapon in _loadout.Items)
             {

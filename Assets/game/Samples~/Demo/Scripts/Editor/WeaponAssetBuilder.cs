@@ -97,6 +97,9 @@ namespace Fps.Editor
         /// <summary>rifle を走りながら撃ったときに散らばりへ足す最大角度 (度)。</summary>
         public const float RifleMoveSpreadDegrees = 3f;
 
+        /// <summary>rifle の重さ (kg)。</summary>
+        public const float RifleWeight = 3.5f;
+
         /// <summary>handgun の 1 発ごとの縦の反動 (度)。rifle の 1 発より大きく跳ねる。</summary>
         public const float HandgunRecoilPitchDegrees = 2.5f;
 
@@ -117,6 +120,12 @@ namespace Fps.Editor
 
         /// <summary>handgun を走りながら撃ったときに散らばりへ足す最大角度 (度)。軽いので rifle より小さい。</summary>
         public const float HandgunMoveSpreadDegrees = 1.5f;
+
+        /// <summary>handgun の重さ (kg)。</summary>
+        public const float HandgunWeight = 1f;
+
+        /// <summary>launcher の重さ (kg)。</summary>
+        public const float LauncherWeight = 7f;
 
         /// <summary>handgun を隠れたまま撃ったときの散らばりの最大角度 (度)。片手で構えるので rifle より広い。</summary>
         public const float HandgunBlindFireSpreadDegrees = 12f;
@@ -160,7 +169,8 @@ namespace Fps.Editor
                 recoilRecoveryPerSecond: RifleRecoilRecoveryPerSecond,
                 hipSpreadDegrees: RifleHipSpreadDegrees,
                 adsSpreadDegrees: RifleAdsSpreadDegrees,
-                moveSpreadDegrees: RifleMoveSpreadDegrees);
+                moveSpreadDegrees: RifleMoveSpreadDegrees,
+                weight: RifleWeight);
         }
 
         /// <summary>
@@ -220,7 +230,8 @@ namespace Fps.Editor
                 recoilRecoveryPerSecond: HandgunRecoilRecoveryPerSecond,
                 hipSpreadDegrees: HandgunHipSpreadDegrees,
                 adsSpreadDegrees: HandgunAdsSpreadDegrees,
-                moveSpreadDegrees: HandgunMoveSpreadDegrees);
+                moveSpreadDegrees: HandgunMoveSpreadDegrees,
+                weight: HandgunWeight);
         }
 
         /// <summary>
@@ -242,9 +253,10 @@ namespace Fps.Editor
                 120,
                 150f,
                 DamageFalloff.None,
-                explosionRadius: LauncherExplosionRadius);
+                explosionRadius: LauncherExplosionRadius,
+                weight: LauncherWeight);
             var impact = new ImpactSpec(flat.Impact.Damage, flat.Impact.Falloff, flat.Impact.StructureRadius, LauncherExplosion());
-            return new WeaponSpec(flat.Id, flat.NameKey, flat.Category, flat.Trigger, flat.Ammo, flat.Round, impact, flat.Aim, flat.AmmoTypes, flat.ShotNoiseRadius);
+            return new WeaponSpec(flat.Id, flat.NameKey, flat.Category, flat.Trigger, flat.Ammo, flat.Round, impact, flat.Aim, flat.AmmoTypes, flat.ShotNoiseRadius, flat.Weight, flat.MoveSpeedMultiplier);
         }
 
         public static ExplosionSpec LauncherExplosion()

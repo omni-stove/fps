@@ -11,6 +11,8 @@ namespace Fps.Protocol
         /// <summary>持たせている武器の Id の並び。</summary>
         Loadout = 1 << 1,
         Grenades = 1 << 2,
-        All = Weapon | Loadout | Grenades,
+        /// <summary>持ち物による移動の速さの倍率。</summary>
+        CarrySpeed = 1 << 3,
+        All = Weapon | Loadout | Grenades | CarrySpeed,
     }
 }

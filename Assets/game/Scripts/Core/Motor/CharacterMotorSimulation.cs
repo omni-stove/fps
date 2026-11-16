@@ -238,8 +238,8 @@ namespace Fps.Core
                 _dodge.Step(TickSeconds);
                 _motor.SetVelocity(startVelocity);
                 var displacement = stance == PlayerStance.Prone
-                    ? _motor.StepAtSpeed(move, input.Yaw, ProneSpec.Speed, false, state.IsGrounded, TickSeconds)
-                    : _motor.Step(move, input.Yaw, sprint, crouched, jump, state.IsGrounded, TickSeconds);
+                    ? _motor.StepProne(move, input.Yaw, ProneSpec.Speed, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier)
+                    : _motor.Step(move, input.Yaw, sprint, crouched, jump, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier);
                 Body.Move(displacement);
                 velocity = _motor.Velocity;
             }

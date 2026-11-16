@@ -37,13 +37,37 @@ namespace Fps.Core
         /// <param name="jumpPressed">今フレームにジャンプが押されたか。接地中でなければ無視する。</param>
         /// <param name="isGrounded">接地しているか。</param>
         /// <param name="deltaSeconds">経過秒数。0 以上。</param>
+        /// <param name="carrySpeedMultiplier">持ち物による速さの倍率 (<see cref="CarryLoadSpec.SpeedMultiplier"/>)。
+        /// 今の動きが <see cref="CarryLoadSpec.Gaits"/> にあるときだけ掛ける。0 以上の有限値。</param>
         public Vector3 Step(
-            Vector2 moveInput, float yawRadians, bool sprint, bool crouched, bool jumpPressed, bool isGrounded, float deltaSeconds)
+            Vector2 moveInput,
+            float yawRadians,
+            bool sprint,
+            bool crouched,
+            bool jumpPressed,
+            bool isGrounded,
+            float deltaSeconds,
+            float carrySpeedMultiplier = 1f)
         {
             var sprinting = sprint && !crouched;
             var speed = crouched ? Spec.CrouchSpeed : sprinting ? Spec.SprintSpeed : Spec.WalkSpeed;
+            var gait = crouched ? CarryGaits.Crouch : sprinting ? CarryGaits.Sprint : CarryGaits.Walk;
             var direction = sprinting ? Spec.SprintDirection : Spec.WalkDirection;
-            return StepAtSpeed(moveInput, yawRadians, speed, direction, jumpPressed, isGrounded, deltaSeconds);
+            return StepAtSpeed(
+                moveInput, yawRadians, speed * CarryScale(gait, carrySpeedMultiplier), direction, jumpPressed, isGrounded, deltaSeconds);
+        }
+
+        /// <summary>伏せの速さ prone で 1 フレーム進める。<see cref="CarryGaits.Prone"/> が <see cref="CarryLoadSpec.Gaits"/> にあれば持ち物の倍率を掛ける。</summary>
+        /// <param name="moveInput">移動入力。X が右、Y が前。長さ 1 を超える分は切り詰める。</param>
+        /// <param name="yawRadians">向き (<see cref="Step"/> と同じ)。</param>
+        /// <param name="prone">伏せの水平速度 (m/s)。0 以上の有限値。</param>
+        /// <param name="isGrounded">接地しているか。</param>
+        /// <param name="deltaSeconds">経過秒数。0 以上。</param>
+        /// <param name="carrySpeedMultiplier">持ち物による速さの倍率。0 以上の有限値。</param>
+        public Vector3 StepProne(
+            Vector2 moveInput, float yawRadians, float prone, bool isGrounded, float deltaSeconds, float carrySpeedMultiplier = 1f)
+        {
+            return StepAtSpeed(moveInput, yawRadians, prone * CarryScale(CarryGaits.Prone, carrySpeedMultiplier), false, isGrounded, deltaSeconds);
         }
 
         /// <summary>
@@ -125,6 +149,17 @@ namespace Fps.Core
             }
 
             return new Vector3(horizontal.X * deltaSeconds, verticalDisplacement, horizontal.Y * deltaSeconds);
+        }
+
+        private float CarryScale(CarryGaits gait, float carrySpeedMultiplier)
+        {
+            if (!(carrySpeedMultiplier >= 0f) || float.IsInfinity(carrySpeedMultiplier))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(carrySpeedMultiplier), carrySpeedMultiplier, "carrySpeedMultiplier must be finite and not negative");
+            }
+
+            return Spec.CarryLoad.ForGait(gait, carrySpeedMultiplier);
         }
 
         /// <summary>速度を 0 に戻す (リスポーンやテレポート時など)。</summary>

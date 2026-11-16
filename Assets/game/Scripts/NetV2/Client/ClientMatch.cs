@@ -99,7 +99,7 @@ namespace Fps.NetV2
 
         /// <summary>
         /// 次の tick の入力を予測に通して覚える。移動は X が右・Y が前、yaw は Y 軸まわりのラジアン。
-        /// ダウン中か・使えない動きは、届いている自分の行と試合のルールから入れる (サーバーと同じ答えにするため)。
+        /// ダウン中か・使えない動き・持ち物の倍率は、届いている自分の行と試合のルールから入れる (サーバーと同じ答えにするため)。
         /// </summary>
         public CharacterMotorState Step(Vector2 move, float yaw, InputButtons buttons)
         {
@@ -118,15 +118,17 @@ namespace Fps.NetV2
             var latest = _client.LatestSnapshot;
             var downed = false;
             var rules = default(MatchRulesSync);
+            var carry = 1f;
             if (latest != null)
             {
                 rules = latest.Match.Rules;
+                carry = latest.HasOwner ? latest.Owner.CarrySpeedMultiplier : 1f;
                 var own = latest.Players.IndexOf(_client.PlayerId);
                 downed = own >= 0 && latest.Players[own].Downed.IsDowned;
             }
 
             var before = _prediction.Current.Ladder;
-            var state = _prediction.Predict(frame, SnapshotMotion.ToInput(frame, downed, rules));
+            var state = _prediction.Predict(frame, SnapshotMotion.ToInput(frame, downed, rules, carry));
             var ladder = state.Ladder;
             var ladders = _prediction.Simulation.Ladders;
             if (ladder.IsClimbing && (!before.IsClimbing || before.Index != ladder.Index) && ladder.Index < ladders.Count)

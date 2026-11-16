@@ -13,6 +13,8 @@ namespace Fps.Core
         public const string NameKeyItem = "nameKey";
         public const string CategoryItem = "category";
         public const string ShotNoiseRadiusItem = "shotNoiseRadius";
+        public const string WeightItem = "weight";
+        public const string MoveSpeedMultiplierItem = "moveSpeedMultiplier";
         public const string TriggerItem = "trigger";
         public const string AmmoItem = "ammo";
         public const string RoundItem = "round";
@@ -154,7 +156,7 @@ namespace Fps.Core
         public static IReadOnlyList<string> ItemNames { get; } = Concat(
             new[]
             {
-                IdItem, NameKeyItem, CategoryItem, ShotNoiseRadiusItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem,
+                IdItem, NameKeyItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem,
             },
             _triggerFlatItems,
             _ammoFlatItems,
@@ -274,7 +276,9 @@ namespace Fps.Core
                     impact,
                     aim,
                     ammoTypes,
-                    fields.ReadFloat(ShotNoiseRadiusItem, WeaponSpec.DefaultShotNoiseRadius));
+                    fields.ReadFloat(ShotNoiseRadiusItem, WeaponSpec.DefaultShotNoiseRadius),
+                    fields.ReadFloat(WeightItem, WeaponSpec.DefaultWeight),
+                    fields.ReadFloat(MoveSpeedMultiplierItem, WeaponSpec.DefaultMoveSpeedMultiplier));
             }
             catch (ArgumentException e)
             {
@@ -288,6 +292,8 @@ namespace Fps.Core
             writer.String(NameKeyItem, spec.NameKey);
             writer.Enum(CategoryItem, spec.Category);
             writer.Float(ShotNoiseRadiusItem, spec.ShotNoiseRadius);
+            writer.Float(WeightItem, spec.Weight);
+            writer.Float(MoveSpeedMultiplierItem, spec.MoveSpeedMultiplier);
 
             writer.BeginObject(TriggerItem);
             WriteTrigger(writer, spec.Trigger);

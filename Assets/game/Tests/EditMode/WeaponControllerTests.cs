@@ -141,6 +141,49 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheCarryMultiplierFollowsTheHeldWeaponAndTheWholeLoadout()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                _rifle.Weight = 4f;
+                _rifle.MoveSpeedMultiplier = 0.9f;
+                handgun.Weight = 1f;
+                handgun.MoveSpeedMultiplier = 1.1f;
+                InitializeWithRifleAndHandgun(handgun);
+                var held = new Fps.Core.CarryLoadSpec(
+                    Fps.Core.CarrySource.Held, Fps.Core.CarrySource.Held, 0f, 0.1f, 0f, Fps.Core.CarryGaits.All);
+                var carried = new Fps.Core.CarryLoadSpec(
+                    Fps.Core.CarrySource.Carried, Fps.Core.CarrySource.None, 0f, 0.1f, 0f, Fps.Core.CarryGaits.All);
+
+                // 4 kg → 0.6、それに 0.9
+                Assert.That(_controller.CarrySpeedMultiplier(held), Is.EqualTo(0.6f * 0.9f).Within(1e-5f));
+                // 4 + 1 kg → 0.5
+                Assert.That(_controller.CarrySpeedMultiplier(carried), Is.EqualTo(0.5f).Within(1e-5f));
+
+                Assert.That(_controller.SelectNext(), Is.True);
+
+                // 1 kg → 0.9、それに 1.1
+                Assert.That(_controller.CarrySpeedMultiplier(held), Is.EqualTo(0.9f * 1.1f).Within(1e-5f));
+                Assert.That(_controller.CarrySpeedMultiplier(carried), Is.EqualTo(0.5f).Within(1e-5f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void BeforeInitializingTheCarryMultiplierIsOne()
+        {
+            var carry = new Fps.Core.CarryLoadSpec(
+                Fps.Core.CarrySource.Carried, Fps.Core.CarrySource.Carried, 0f, 0.1f, 0f, Fps.Core.CarryGaits.All);
+
+            Assert.That(_controller.CarrySpeedMultiplier(carry), Is.EqualTo(1f));
+            Assert.Throws<ArgumentNullException>(() => _controller.CarrySpeedMultiplier(null));
+        }
+
+        [Test]
         public void ASingleWeaponDoesNotSwitch()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);

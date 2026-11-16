@@ -3,6 +3,8 @@
   "nameKey": "weapon.launcher",
   "category": "Launcher",
   "shotNoiseRadius": 50,
+  "weight": 7,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.5

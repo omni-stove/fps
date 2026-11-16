@@ -3,6 +3,8 @@
   "nameKey": "weapon.laser",
   "category": "AssaultRifle",
   "shotNoiseRadius": 20,
+  "weight": 5,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.05

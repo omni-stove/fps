@@ -25,6 +25,10 @@ namespace Fps.Core
         // 消音していない銃声が、射撃場の端の敵まで届く距離。
         public const float DefaultShotNoiseRadius = 50f;
 
+        public const float DefaultWeight = 0f;
+
+        public const float DefaultMoveSpeedMultiplier = 1f;
+
         /// <summary>武器の識別子。小文字・ハイフン区切りの UUID (<c>Guid.ToString("D")</c> の形)。</summary>
         public string Id { get; }
 
@@ -131,6 +135,12 @@ namespace Fps.Core
 
         public float ShotNoiseRadius { get; }
 
+        /// <summary>重さ (kg)。0 以上の有限値。移動の速さへの効き方は <see cref="CarryLoadSpec"/> が決める。</summary>
+        public float Weight { get; }
+
+        /// <summary>持っている間に移動の速さへ掛ける倍率。0 以上の有限値。どの武器を数えるかは <see cref="CarryLoadSpec.MultiplierSource"/>。</summary>
+        public float MoveSpeedMultiplier { get; }
+
         /// <param name="id">識別子。前後の空白は除く。除いた後が小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。</param>
         /// <param name="nameKey">画面に出す名前を引く表のキー。null・空白のみなら名前は <paramref name="id"/> になる。</param>
         /// <param name="category">武器の種別。定義済みの値のみ。</param>
@@ -156,6 +166,8 @@ namespace Fps.Core
         /// <param name="moveSpreadDegrees">移動中に足す散らばりの最大角度 (度)。0 以上 90 以下。</param>
         /// <param name="recoilRecoveryDelaySeconds">撃ってから反動が戻り始めるまでの秒数。0 以上の有限値。</param>
         /// <param name="shotNoiseRadius">銃声が敵に聞こえる距離 (m)。消音した武器は小さくする。0 以上の有限値。</param>
+        /// <param name="weight">重さ (kg)。0 以上の有限値。</param>
+        /// <param name="moveSpeedMultiplier">持っている間に移動の速さへ掛ける倍率。0 以上の有限値。</param>
         public WeaponSpec(
             string id,
             string nameKey,
@@ -181,7 +193,9 @@ namespace Fps.Core
             float adsSpreadDegrees = 0f,
             float moveSpreadDegrees = 0f,
             float recoilRecoveryDelaySeconds = DefaultRecoilRecoveryDelaySeconds,
-            float shotNoiseRadius = DefaultShotNoiseRadius)
+            float shotNoiseRadius = DefaultShotNoiseRadius,
+            float weight = DefaultWeight,
+            float moveSpeedMultiplier = DefaultMoveSpeedMultiplier)
             : this(
                 id,
                 nameKey,
@@ -213,7 +227,9 @@ namespace Fps.Core
                         ? new[] { AdsZoom.ValidateFieldOfView(adsFieldOfView.Value, nameof(adsFieldOfView)) }
                         : null),
                 null,
-                shotNoiseRadius)
+                shotNoiseRadius,
+                weight,
+                moveSpeedMultiplier)
         {
         }
 
@@ -227,7 +243,9 @@ namespace Fps.Core
             ImpactSpec impact = null,
             AimSpec aim = null,
             IEnumerable<AmmoTypeSpec> ammoTypes = null,
-            float shotNoiseRadius = DefaultShotNoiseRadius)
+            float shotNoiseRadius = DefaultShotNoiseRadius,
+            float weight = DefaultWeight,
+            float moveSpeedMultiplier = DefaultMoveSpeedMultiplier)
         {
             var normalizedId = SpecGuard.LowercaseUuid(id, nameof(id));
 
@@ -237,6 +255,8 @@ namespace Fps.Core
             }
 
             SpecGuard.NonNegativeFinite(shotNoiseRadius, nameof(shotNoiseRadius));
+            SpecGuard.NonNegativeFinite(weight, nameof(weight));
+            SpecGuard.NonNegativeFinite(moveSpeedMultiplier, nameof(moveSpeedMultiplier));
 
             var resolvedRound = round ?? RoundSpec.Default;
             var resolvedImpact = impact ?? ImpactSpec.Default;
@@ -253,6 +273,8 @@ namespace Fps.Core
             Aim = aim ?? AimSpec.Default;
             AmmoTypes = resolvedAmmoTypes;
             ShotNoiseRadius = shotNoiseRadius;
+            Weight = weight;
+            MoveSpeedMultiplier = moveSpeedMultiplier;
         }
 
         public WeaponSpec WithFireInterval(float fireInterval)
@@ -260,7 +282,7 @@ namespace Fps.Core
             var trigger = Trigger.WithFireInterval(fireInterval);
             return ReferenceEquals(trigger, Trigger)
                 ? this
-                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius);
+                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier);
         }
 
         // 起爆を止まったとき・寿命が尽きたときにすると、ヒットスキャンなどの止まりも尽きもしない弾では爆発しないまま設定だけが残る。

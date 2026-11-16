@@ -580,6 +580,25 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void TheBodyCarriesTheHeldAndCarriedWeaponsForTheMovement()
+        {
+            Start(Rules());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            Assert.That(Body(1).HeldWeapon.Id, Is.EqualTo(TestRules.RifleId));
+            Assert.That(Body(1).CarriedWeapons, Has.Count.EqualTo(2));
+            Assert.That(Body(1).CarriedWeapons[1].Id, Is.EqualTo(TestRules.HandgunId));
+
+            _host.OnMessage(new ConnectionId(1), new SwitchWeaponRequestMessage { WeaponId = TestRules.HandgunId });
+            Step(0.5f);
+
+            Assert.That(Body(1).HeldWeapon.Id, Is.EqualTo(TestRules.HandgunId));
+            Assert.That(Body(1).CarriedWeapons, Has.Count.EqualTo(2));
+        }
+
+        [Test]
         public void SwitchingWeaponsChangesWhatTheServerAcceptsAfterTheSwitchTime()
         {
             Start(Rules());

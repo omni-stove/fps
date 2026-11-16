@@ -53,6 +53,15 @@ namespace Fps.Core
         public const string SprintForwardScaleItem = "sprintForwardScale";
         public const string SprintBackwardScaleItem = "sprintBackwardScale";
         public const string SprintSideScaleItem = "sprintSideScale";
+        public const string CarryWeightSourceItem = "carryWeightSource";
+        public const string CarryMultiplierSourceItem = "carryMultiplierSource";
+        public const string CarryFreeWeightItem = "carryFreeWeight";
+        public const string CarrySpeedLossPerKgItem = "carrySpeedLossPerKg";
+        public const string CarryMinWeightMultiplierItem = "carryMinWeightMultiplier";
+        public const string CarryWalkItem = "carryWalk";
+        public const string CarrySprintItem = "carrySprint";
+        public const string CarryCrouchItem = "carryCrouch";
+        public const string CarryProneItem = "carryProne";
         public const string StandingHeightItem = "standingHeight";
         public const string StandingCenterYItem = "standingCenterY";
         public const string StandingEyeYItem = "standingEyeY";
@@ -75,6 +84,8 @@ namespace Fps.Core
             WalkSpeedItem, SprintSpeedItem, JumpHeightItem, GravityItem, AirControlItem, CrouchSpeedItem, SafeFallSpeedItem, LethalFallSpeedItem,
             DodgeDistanceItem, DodgeSecondsItem, VaultMaxHeightItem, MantleMaxHeightItem, MantleSpeedItem,
             WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem,
+            CarryWeightSourceItem, CarryMultiplierSourceItem, CarryFreeWeightItem, CarrySpeedLossPerKgItem, CarryMinWeightMultiplierItem,
+            CarryWalkItem, CarrySprintItem, CarryCrouchItem, CarryProneItem,
             StandingHeightItem, StandingCenterYItem,
             StandingEyeYItem, CrouchHeightItem, RadiusItem, SlopeLimitDegreesItem, StepOffsetItem, SkinWidthItem,
             ProneHeightItem, ProneSpeedItem, DiveDistanceItem, DiveSecondsItem,
@@ -244,6 +255,16 @@ namespace Fps.Core
             writer.Float(SprintForwardScaleItem, motor.SprintDirection.Forward);
             writer.Float(SprintBackwardScaleItem, motor.SprintDirection.Backward);
             writer.Float(SprintSideScaleItem, motor.SprintDirection.Side);
+            var carry = motor.CarryLoad;
+            writer.Enum(CarryWeightSourceItem, carry.WeightSource);
+            writer.Enum(CarryMultiplierSourceItem, carry.MultiplierSource);
+            writer.Float(CarryFreeWeightItem, carry.FreeWeight);
+            writer.Float(CarrySpeedLossPerKgItem, carry.SpeedLossPerKg);
+            writer.Float(CarryMinWeightMultiplierItem, carry.MinWeightMultiplier);
+            writer.Bool(CarryWalkItem, (carry.Gaits & CarryGaits.Walk) != 0);
+            writer.Bool(CarrySprintItem, (carry.Gaits & CarryGaits.Sprint) != 0);
+            writer.Bool(CarryCrouchItem, (carry.Gaits & CarryGaits.Crouch) != 0);
+            writer.Bool(CarryProneItem, (carry.Gaits & CarryGaits.Prone) != 0);
             writer.Float(StandingHeightItem, stance.Standing.Height);
             writer.Float(StandingCenterYItem, stance.Standing.CenterY);
             writer.Float(StandingEyeYItem, stance.Standing.EyeY);
@@ -356,6 +377,7 @@ namespace Fps.Core
                 var walkDirection = ReadDirection(fields, WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, dm.WalkDirection);
                 var sprintDirection = ReadDirection(
                     fields, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem, dm.SprintDirection);
+                var carry = ReadCarry(fields, dm.CarryLoad);
                 return new NetMotorSettings(
                     new MotorSpec(
                         fields.ReadFloat(WalkSpeedItem, dm.WalkSpeed),
@@ -372,7 +394,8 @@ namespace Fps.Core
                         fields.ReadFloat(MantleMaxHeightItem, dm.MantleMaxHeight),
                         fields.ReadFloat(MantleSpeedItem, dm.MantleSpeed),
                         walkDirection,
-                        sprintDirection),
+                        sprintDirection,
+                        carry),
                     new StanceGeometry(
                         fields.ReadFloat(StandingHeightItem, ds.Standing.Height),
                         fields.ReadFloat(StandingCenterYItem, ds.Standing.CenterY),
@@ -392,6 +415,40 @@ namespace Fps.Core
                 // MotorSpec・StanceGeometry・CapsuleMoverSpec の引数名は項目名と同じ
                 throw fields.Rejected(e.ParamName == null ? fields.Path : fields.ItemPath(e.ParamName), e.Message, e);
             }
+        }
+
+        private static CarryLoadSpec ReadCarry(ServerDataJson.Fields fields, CarryLoadSpec fallback)
+        {
+            var gaits = Gait(fields, CarryWalkItem, CarryGaits.Walk, fallback.Gaits)
+                | Gait(fields, CarrySprintItem, CarryGaits.Sprint, fallback.Gaits)
+                | Gait(fields, CarryCrouchItem, CarryGaits.Crouch, fallback.Gaits)
+                | Gait(fields, CarryProneItem, CarryGaits.Prone, fallback.Gaits);
+            try
+            {
+                return new CarryLoadSpec(
+                    fields.ReadEnum(CarryWeightSourceItem, fallback.WeightSource),
+                    fields.ReadEnum(CarryMultiplierSourceItem, fallback.MultiplierSource),
+                    fields.ReadFloat(CarryFreeWeightItem, fallback.FreeWeight),
+                    fields.ReadFloat(CarrySpeedLossPerKgItem, fallback.SpeedLossPerKg),
+                    fields.ReadFloat(CarryMinWeightMultiplierItem, fallback.MinWeightMultiplier),
+                    gaits);
+            }
+            catch (ArgumentException e)
+            {
+                // CarryLoadSpec の引数名には項目名の頭の carry が付いていないので、ここで項目名に直す
+                var item = e.ParamName == "weightSource" ? CarryWeightSourceItem
+                    : e.ParamName == "multiplierSource" ? CarryMultiplierSourceItem
+                    : e.ParamName == "freeWeight" ? CarryFreeWeightItem
+                    : e.ParamName == "speedLossPerKg" ? CarrySpeedLossPerKgItem
+                    : e.ParamName == "minWeightMultiplier" ? CarryMinWeightMultiplierItem
+                    : null;
+                throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
+            }
+        }
+
+        private static CarryGaits Gait(ServerDataJson.Fields fields, string item, CarryGaits gait, CarryGaits fallback)
+        {
+            return fields.ReadBool(item, (fallback & gait) != 0) ? gait : CarryGaits.None;
         }
 
         private static MoveDirectionScale ReadDirection(

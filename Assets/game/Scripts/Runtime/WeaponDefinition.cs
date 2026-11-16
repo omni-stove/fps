@@ -111,6 +111,13 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("銃声が敵に聞こえる距離 (m)。消音した武器は小さくする。0 なら聞こえない")]
         private float _shotNoiseRadius = WeaponSpec.DefaultShotNoiseRadius;
 
+        [Header("持ち運び")]
+        [SerializeField, Min(0f), Tooltip("重さ (kg)。移動の速さへの効き方は移動の設定 (MotorSettings) の持ち物の項目が決める")]
+        private float _weight = WeaponSpec.DefaultWeight;
+
+        [SerializeField, Min(0f), Tooltip("持っている間に移動の速さへ掛ける倍率。どの武器の倍率を掛けるかは移動の設定が決める")]
+        private float _moveSpeedMultiplier = WeaponSpec.DefaultMoveSpeedMultiplier;
+
         [Header("撃ち方")]
         [SerializeField]
         private BurstSettings _burst = new BurstSettings();
@@ -346,6 +353,18 @@ namespace Fps.Runtime
             set => _shotNoiseRadius = value;
         }
 
+        public float Weight
+        {
+            get => _weight;
+            set => _weight = value;
+        }
+
+        public float MoveSpeedMultiplier
+        {
+            get => _moveSpeedMultiplier;
+            set => _moveSpeedMultiplier = value;
+        }
+
         public float HipSpreadDegrees
         {
             get => _hipSpreadDegrees;
@@ -530,7 +549,7 @@ namespace Fps.Runtime
                     BreathHold.ToSpec(),
                     _swayDegrees);
                 return new WeaponSpec(
-                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius);
+                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier);
             }
             catch (ArgumentException e)
             {

@@ -3,6 +3,8 @@
   "nameKey": "weapon.antiMaterial",
   "category": "SniperRifle",
   "shotNoiseRadius": 80,
+  "weight": 13,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 1.2

@@ -498,6 +498,34 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheCarryLoadScalesTheSpeedOfTheChosenGaits()
+        {
+            // 床の無い宙で Tick するので、空中制御で速度が薄まらないよう 1 にする
+            _spec = new MotorSpec(
+                5f, 8f, 1.2f, 20f, 1f, 2.5f,
+                carryLoad: new CarryLoadSpec(CarrySource.Held, CarrySource.Held, 0f, 0f, 0f, CarryGaits.Sprint));
+            InitializeWithLook();
+            _player.CarryLoad = new FixedCarryLoad(0.5f);
+
+            _player.Tick(new Vector2(0f, 1f), true, false, false, 0.01f);
+            var sprint = _player.Motor.Velocity;
+            _player.Tick(new Vector2(0f, 1f), false, false, false, 0.01f);
+            var walk = _player.Motor.Velocity;
+
+            Assert.That(sprint.Z, Is.EqualTo(_spec.SprintSpeed * 0.5f).Within(_tolerance));
+            Assert.That(walk.Z, Is.EqualTo(_spec.WalkSpeed).Within(_tolerance), "walking is not in the chosen gaits");
+        }
+
+        [Test]
+        public void WithoutACarryLoadTheMultiplierIsOne()
+        {
+            InitializeWithLook();
+
+            Assert.That(_player.CarryLoad, Is.Null);
+            Assert.That(_player.CarrySpeedMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void MoveFilterIsNullByDefault()
         {
             Assert.That(_player.MoveFilter, Is.Null);
@@ -1074,6 +1102,18 @@ namespace Fps.Tests.EditMode
                 crouch = Crouch ?? crouch;
                 jumpPressed = Jump ?? jumpPressed;
             }
+        }
+
+        private sealed class FixedCarryLoad : IPlayerCarryLoad
+        {
+            private readonly float _multiplier;
+
+            public FixedCarryLoad(float multiplier)
+            {
+                _multiplier = multiplier;
+            }
+
+            public float CarrySpeedMultiplier(CarryLoadSpec carry) => _multiplier;
         }
     }
 }

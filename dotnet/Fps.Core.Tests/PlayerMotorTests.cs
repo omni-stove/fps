@@ -398,5 +398,56 @@ namespace Fps.Core.Tests
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new MotorSpec(walk, sprint, jump, gravity, air, crouch));
         }
+
+        private static MotorSpec CarrySpec(CarryGaits gaits)
+        {
+            return new MotorSpec(
+                4f, 8f, 1.5f, 9.81f, 0.5f, 2f,
+                carryLoad: new CarryLoadSpec(CarrySource.Held, CarrySource.Held, 0f, 0f, 0f, gaits));
+        }
+
+        [TestCase(false, false, 4f * 0.5f)]
+        [TestCase(true, false, 8f * 0.5f)]
+        [TestCase(false, true, 2f * 0.5f)]
+        public void TheCarryMultiplierScalesEveryGaitByDefault(bool sprint, bool crouched, float expected)
+        {
+            var motor = new PlayerMotor(CarrySpec(CarryGaits.All));
+
+            var d = motor.Step(new Vector2(0f, 1f), 0f, sprint, crouched, false, true, 1f, 0.5f);
+
+            Assert.That(d.Z, Is.EqualTo(expected).Within(_tolerance));
+        }
+
+        [Test]
+        public void TheCarryMultiplierSkipsGaitsLeftOutOfTheSpec()
+        {
+            var motor = new PlayerMotor(CarrySpec(CarryGaits.Sprint));
+
+            var walk = motor.Step(new Vector2(0f, 1f), 0f, false, false, false, true, 1f, 0.5f);
+            var sprint = motor.Step(new Vector2(0f, 1f), 0f, true, false, false, true, 1f, 0.5f);
+
+            Assert.That(walk.Z, Is.EqualTo(4f).Within(_tolerance));
+            Assert.That(sprint.Z, Is.EqualTo(4f).Within(_tolerance));
+        }
+
+        [Test]
+        public void ProneUsesTheCarryMultiplierOnlyWhenProneIsChosen()
+        {
+            var withProne = new PlayerMotor(CarrySpec(CarryGaits.Prone));
+            var withoutProne = new PlayerMotor(CarrySpec(CarryGaits.Walk));
+
+            Assert.That(withProne.StepProne(new Vector2(0f, 1f), 0f, 1f, true, 1f, 0.5f).Z, Is.EqualTo(0.5f).Within(_tolerance));
+            Assert.That(withoutProne.StepProne(new Vector2(0f, 1f), 0f, 1f, true, 1f, 0.5f).Z, Is.EqualTo(1f).Within(_tolerance));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void StepRejectsAnInvalidCarryMultiplier(float carry)
+        {
+            var motor = new PlayerMotor(Spec());
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => motor.Step(Vector2.Zero, 0f, false, false, false, true, _dt, carry));
+        }
     }
 }

@@ -3,6 +3,8 @@
   "nameKey": "weapon.chargeRifle",
   "category": "MarksmanRifle",
   "shotNoiseRadius": 60,
+  "weight": 4.5,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.25,

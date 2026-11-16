@@ -3,6 +3,8 @@
   "nameKey": "weapon.flamethrower",
   "category": "AssaultRifle",
   "shotNoiseRadius": 25,
+  "weight": 9,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.1

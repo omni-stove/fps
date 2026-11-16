@@ -3,6 +3,8 @@
   "nameKey": "weapon.shotgun",
   "category": "Shotgun",
   "shotNoiseRadius": 60,
+  "weight": 3.5,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.8

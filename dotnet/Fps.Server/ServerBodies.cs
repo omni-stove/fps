@@ -126,6 +126,18 @@ namespace Fps.Server
             top = Position + new Vector3(0f, topY, 0f);
         }
 
+        /// <summary>構えている武器 (持ち替え中は持ち替え先)。装備前は null。戦闘のモジュールが写し、移動のモジュールが速さの倍率に使う。</summary>
+        public WeaponSpec HeldWeapon { get; private set; }
+
+        /// <summary>持っている武器すべて。装備前は空。</summary>
+        public IReadOnlyList<WeaponSpec> CarriedWeapons { get; private set; } = Array.Empty<WeaponSpec>();
+
+        public void SetWeapons(WeaponSpec held, IReadOnlyList<WeaponSpec> carried)
+        {
+            HeldWeapon = held;
+            CarriedWeapons = carried ?? throw new ArgumentNullException(nameof(carried));
+        }
+
         public void SetPose(Vector3 position, float yaw, PlayerStance stance)
         {
             SetPose(position, yaw, stance, CharacterLadderState.NoLadder);

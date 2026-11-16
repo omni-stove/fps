@@ -294,6 +294,8 @@ namespace Fps.Core.Tests
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \" \", \"penetrability\": 1}]}}}", "round.penetration.materials[0].materialId")]
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\"}]}}}", "round.penetration.materials[0].penetrability")]
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\", \"penetrability\": 0}, {\"materialId\": \"metal\", \"penetrability\": 1}]}}}", "round.penetration.materials")]
+        [TestCase("{\"weight\": -1}", "weight")]
+        [TestCase("{\"moveSpeedMultiplier\": -0.5}", "moveSpeedMultiplier")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"x\"}]}", "ammoTypes[0].id")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\", \"round\": {\"range\": 0}}]}", "ammoTypes[0].round.range")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\"}, {\"id\": \"" + _standardId + "\"}]}", "ammoTypes")]
@@ -315,6 +317,22 @@ namespace Fps.Core.Tests
             var e = Assert.Throws<ServerDataJsonException>(() => WeaponSpecJson.Parse(text, "bad.json"));
 
             Assert.That(e.Item, Is.EqualTo(item));
+        }
+
+        [Test]
+        public void WeightAndMoveSpeedMultiplierReadBackAndDefaultWhenLeftOut()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", \"weight\": 3.5, \"moveSpeedMultiplier\": 0.9}", "x.json");
+            var bare = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\"}", "x.json");
+            var again = WeaponSpecJson.Parse(WeaponSpecJson.Write(read), "again.json");
+
+            Assert.That(read.Weight, Is.EqualTo(3.5f));
+            Assert.That(read.MoveSpeedMultiplier, Is.EqualTo(0.9f));
+            Assert.That(bare.Weight, Is.EqualTo(WeaponSpec.DefaultWeight));
+            Assert.That(bare.MoveSpeedMultiplier, Is.EqualTo(WeaponSpec.DefaultMoveSpeedMultiplier));
+            Assert.That(again.Weight, Is.EqualTo(3.5f));
+            Assert.That(again.MoveSpeedMultiplier, Is.EqualTo(0.9f));
         }
 
         [Test]

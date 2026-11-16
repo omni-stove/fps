@@ -7,6 +7,9 @@ namespace Fps.Protocol.Tests
     /// <summary>対戦のメッセージを 1 つずつ書いて、受け取る側の表で読み戻すと同じ値になるか。</summary>
     public sealed class MatchMessageRoundTripTests
     {
+        // 重さと倍率の数え方 (1 + 1 バイト)、遅くならない重さ・1 kg ごとの減り・重さの倍率の下限 (4 バイトずつ)、動き (1 バイト)
+        private const int _carryLoadBytes = 1 + 1 + (3 * 4) + 1;
+
         private readonly MessageTable _server = MatchMessages.CreateServerTable();
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
 
@@ -51,7 +54,8 @@ namespace Fps.Protocol.Tests
             var motor = new NetMotorSettings(
                 new MotorSpec(
                     7f, 11f, 1.5f, 18f, 0.2f, 3f, 13f, 26f, 3.5f, 0.4f, 1.1f, 2.1f, 3.5f,
-                    new MoveDirectionScale(1f, 0.75f, 0.9f), new MoveDirectionScale(1.1f, 0.5f, 0.6f)),
+                    new MoveDirectionScale(1f, 0.75f, 0.9f), new MoveDirectionScale(1.1f, 0.5f, 0.6f),
+                    new CarryLoadSpec(CarrySource.Carried, CarrySource.None, 4f, 0.05f, 0.6f, CarryGaits.Sprint | CarryGaits.Prone)),
                 new StanceGeometry(1.8f, 0.1f, 0.65f, 1.1f, 0.9f, 0.4f),
                 new CapsuleMoverSpec(40f, 0.25f, 0.06f, 5),
                 new ProneSpec(0.9f, 1.4f, 25f, 0.4f, 2f, 0.6f));
@@ -67,6 +71,12 @@ namespace Fps.Protocol.Tests
             Assert.That(got.Motor.Motor.SprintDirection.Forward, Is.EqualTo(1.1f));
             Assert.That(got.Motor.Motor.SprintDirection.Backward, Is.EqualTo(0.5f));
             Assert.That(got.Motor.Motor.SprintDirection.Side, Is.EqualTo(0.6f));
+            Assert.That(got.Motor.Motor.CarryLoad.WeightSource, Is.EqualTo(CarrySource.Carried));
+            Assert.That(got.Motor.Motor.CarryLoad.MultiplierSource, Is.EqualTo(CarrySource.None));
+            Assert.That(got.Motor.Motor.CarryLoad.FreeWeight, Is.EqualTo(4f));
+            Assert.That(got.Motor.Motor.CarryLoad.SpeedLossPerKg, Is.EqualTo(0.05f));
+            Assert.That(got.Motor.Motor.CarryLoad.MinWeightMultiplier, Is.EqualTo(0.6f));
+            Assert.That(got.Motor.Motor.CarryLoad.Gaits, Is.EqualTo(CarryGaits.Sprint | CarryGaits.Prone));
             Assert.That(got.Motor.Stance.Standing.Height, Is.EqualTo(1.8f));
             Assert.That(got.Motor.Stance.Standing.EyeY, Is.EqualTo(0.65f));
             Assert.That(got.Motor.Stance.Crouched.Height, Is.EqualTo(1.1f));
@@ -85,9 +95,36 @@ namespace Fps.Protocol.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
             var bytes = writer.AsSegment().ToArray();
 
-            // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (13 + 6 + 6 + 3 + 1 + 6 個)
-            var walkSpeed = bytes.Length - 4 - ((13 + 6 + 6 + 3 + 1 + 6) * 4);
+            // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (13 + 6 個、持ち物の値、6 + 3 + 1 + 6 個)
+            var walkSpeed = bytes.Length - 4 - ((13 + 6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkSpeed, 4), -1f);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void ConnectAcceptedWithACarryMinMultiplierAboveOneIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
+            var bytes = writer.AsSegment().ToArray();
+
+            // 重さの倍率の下限は持ち物の値の 4 番目 (重さと倍率の数え方 2 バイト、遅くならない重さ、1 kg ごとの減り) で、後ろに動きの 1 バイトが続く
+            var minWeightMultiplier = bytes.Length - 4 - ((6 + 3 + 1 + 6) * 4) - 1 - 4;
+            System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, minWeightMultiplier, 4), 1.5f);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void ConnectAcceptedWithAnUndefinedCarrySourceIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
+            var bytes = writer.AsSegment().ToArray();
+
+            var weightSource = bytes.Length - 4 - ((6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            bytes[weightSource] = 9;
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
         }
@@ -99,8 +136,8 @@ namespace Fps.Protocol.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
             var bytes = writer.AsSegment().ToArray();
 
-            // 歩きの前の倍率 (向きの倍率の先頭) を負にする。その後ろに向きの倍率 6 個と体・カプセル・伏せの値 (6 + 3 + 1 + 6 個)、落ちる高さが並ぶ
-            var walkForward = bytes.Length - 4 - ((6 + 6 + 3 + 1 + 6) * 4);
+            // 歩きの前の倍率 (向きの倍率の先頭) を負にする。その後ろに向きの倍率 6 個と持ち物の値、体・カプセル・伏せの値 (6 + 3 + 1 + 6 個)、落ちる高さが並ぶ
+            var walkForward = bytes.Length - 4 - ((6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkForward, 4), -1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));

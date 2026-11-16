@@ -42,6 +42,41 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheCarryMultiplierOnTheInputSlowsTheWalk()
+        {
+            AddFloor();
+            var simulation = NewSimulation();
+            var state = Settle(simulation);
+            var startZ = state.Position.Z;
+
+            for (var i = 0; i < 60; i++)
+            {
+                state = simulation.Step(state, Input(new Vector2(0f, 1f)).WithCarrySpeedMultiplier(0.5f));
+            }
+
+            Assert.That(state.Position.Z - startZ, Is.EqualTo(MotorSpec.DefaultWalkSpeed * 0.5f).Within(0.01f));
+        }
+
+        [Test]
+        public void ADefaultInputCarriesAMultiplierOfOne()
+        {
+            Assert.That(default(CharacterMotorInput).CarrySpeedMultiplier, Is.EqualTo(1f));
+            Assert.That(Input(Vector2.Zero).CarrySpeedMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void RestrainingAndRulesKeepTheCarryMultiplier()
+        {
+            var input = Input(new Vector2(0f, 1f)).WithCarrySpeedMultiplier(0.7f);
+            var downed = new CharacterMotorInput(
+                Vector2.Zero, 0f, false, false, false, true, false, false, false, false, false, false, false, 0.7f);
+
+            Assert.That(input.WithRules(ActionRules.Default).CarrySpeedMultiplier, Is.EqualTo(0.7f).Within(1e-6f));
+            Assert.That(downed.Restrained().CarrySpeedMultiplier, Is.EqualTo(0.7f).Within(1e-6f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => input.WithCarrySpeedMultiplier(-1f));
+        }
+
+        [Test]
         public void TheSameInputsGiveTheSameStatesBitForBit()
         {
             AddFloor();

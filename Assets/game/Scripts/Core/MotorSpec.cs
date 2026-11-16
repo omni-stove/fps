@@ -93,6 +93,9 @@ namespace Fps.Core
         /// <summary>ダッシュ中に、移動の向きごとに <see cref="SprintSpeed"/> へ掛ける倍率。</summary>
         public MoveDirectionScale SprintDirection { get; }
 
+        /// <summary>持っている武器の重さと倍率から速さに掛ける倍率の決め方。</summary>
+        public CarryLoadSpec CarryLoad { get; }
+
         /// <param name="walkSpeed">歩きの水平速度。0 以上。</param>
         /// <param name="sprintSpeed">ダッシュ中の水平速度。0 以上。</param>
         /// <param name="jumpHeight">ジャンプで到達する高さ。0 以上。</param>
@@ -108,6 +111,7 @@ namespace Fps.Core
         /// <param name="mantleSpeed">よじ登る速さ。0 より大きい有限値。</param>
         /// <param name="walkDirection">ダッシュしていないときの向きごとの倍率。null で <see cref="MoveDirectionScale.Uniform"/>。</param>
         /// <param name="sprintDirection">ダッシュ中の向きごとの倍率。null で <see cref="MoveDirectionScale.Uniform"/>。</param>
+        /// <param name="carryLoad">持ち物による速さの倍率の決め方。null で <see cref="CarryLoadSpec.Default"/>。</param>
         public MotorSpec(
             float walkSpeed,
             float sprintSpeed,
@@ -123,7 +127,8 @@ namespace Fps.Core
             float mantleMaxHeight = DefaultMantleMaxHeight,
             float mantleSpeed = DefaultMantleSpeed,
             MoveDirectionScale walkDirection = null,
-            MoveDirectionScale sprintDirection = null)
+            MoveDirectionScale sprintDirection = null,
+            CarryLoadSpec carryLoad = null)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -206,6 +211,7 @@ namespace Fps.Core
             MantleSpeed = mantleSpeed;
             WalkDirection = walkDirection ?? MoveDirectionScale.Uniform;
             SprintDirection = sprintDirection ?? MoveDirectionScale.Uniform;
+            CarryLoad = carryLoad ?? CarryLoadSpec.Default;
         }
     }
 }

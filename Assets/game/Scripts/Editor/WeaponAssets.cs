@@ -132,6 +132,8 @@ namespace Fps.Editor
             definition.MoveSpreadDegrees = spec.MoveSpreadDegrees;
             definition.RecoilRecoveryDelaySeconds = spec.RecoilRecoveryDelaySeconds;
             definition.ShotNoiseRadius = spec.ShotNoiseRadius;
+            definition.Weight = spec.Weight;
+            definition.MoveSpeedMultiplier = spec.MoveSpeedMultiplier;
 
             var trigger = spec.Trigger;
             definition.Burst.Set(trigger.Burst);

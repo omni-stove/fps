@@ -3,6 +3,8 @@
   "nameKey": "weapon.burstRifle",
   "category": "AssaultRifle",
   "shotNoiseRadius": 50,
+  "weight": 3.5,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.3,

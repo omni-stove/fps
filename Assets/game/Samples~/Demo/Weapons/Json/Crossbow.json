@@ -3,6 +3,8 @@
   "nameKey": "weapon.crossbow",
   "category": "MarksmanRifle",
   "shotNoiseRadius": 10,
+  "weight": 3,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.8

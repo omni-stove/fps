@@ -3,6 +3,8 @@
   "nameKey": "weapon.minigun",
   "category": "LightMachineGun",
   "shotNoiseRadius": 70,
+  "weight": 15,
+  "moveSpeedMultiplier": 0.8,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.05,

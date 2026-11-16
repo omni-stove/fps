@@ -124,6 +124,10 @@ namespace Fps.Server
             foreach (var fighter in _fighters.Values)
             {
                 fighter.Weapons.Tick(deltaSeconds);
+                if (_bodies.TryGet(fighter.PlayerId, out var body))
+                {
+                    body.SetWeapons(fighter.Weapons.CurrentSpec, fighter.Weapons.Specs);
+                }
             }
 
             TickGrenades(deltaSeconds);

@@ -28,7 +28,7 @@ namespace Fps.Runtime
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Camera))]
-    public sealed partial class WeaponController : MonoBehaviour, IWeaponHolder
+    public sealed partial class WeaponController : MonoBehaviour, IWeaponHolder, IPlayerCarryLoad
     {
         /// <summary>武器を手放したときのログ。</summary>
         public const string DisarmedLog = "[Combat] disarmed";
@@ -239,6 +239,18 @@ namespace Fps.Runtime
 
         /// <summary>今持っている武器。未初期化か武器を持っていなければ null。</summary>
         public Weapon Weapon => _unarmed ? null : _loadout?.Current;
+
+        /// <summary>今持っている武器 (<see cref="Weapon"/>) と並び (<see cref="Loadout"/>) から出した倍率。武器を持っていなければ何も持たない倍率。</summary>
+        public float CarrySpeedMultiplier(CarryLoadSpec carry)
+        {
+            if (carry == null)
+            {
+                throw new ArgumentNullException(nameof(carry));
+            }
+
+            var armed = _loadout != null && !_unarmed;
+            return carry.SpeedMultiplier(armed ? _loadout.Current.Spec : null, armed ? _specs : null);
+        }
 
         /// <summary>今持っている武器の番号。未初期化か武器を持っていなければ -1。</summary>
         public int CurrentIndex => _loadout != null && !_unarmed ? _loadout.CurrentIndex : -1;

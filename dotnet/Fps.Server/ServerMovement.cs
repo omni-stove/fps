@@ -266,6 +266,7 @@ namespace Fps.Server
             if (_byPlayer.TryGetValue(receiver.PlayerId, out var own))
             {
                 snapshot.Owner.LastProcessedInputTick = own.LastProcessedTick;
+                snapshot.Owner.CarrySpeedMultiplier = CarrySpeedMultiplier(own);
             }
         }
 
@@ -314,7 +315,8 @@ namespace Fps.Server
                     false,
                     frame.Has(InputButtons.Prone),
                     false,
-                    false)
+                    false,
+                    CarrySpeedMultiplier(mover))
                 .WithRules(_settings.Rules.Actions);
 
             var previous = mover.State;
@@ -325,6 +327,13 @@ namespace Fps.Server
             mover.LastProcessedTick = frame.Tick;
             Publish(mover);
             Report(mover, frame.Tick, previous, current);
+        }
+
+        private float CarrySpeedMultiplier(Mover mover)
+        {
+            return _context.Bodies.TryGet(mover.Player.PlayerId, out var body)
+                ? _settings.Motor.CarryLoad.SpeedMultiplier(body.HeldWeapon, body.CarriedWeapons)
+                : 1f;
         }
 
         // 位置の持ち主はここなので、ルール・戦闘・Bot が同じ位置で判定できるよう、動かすたびに共有の体へ写す

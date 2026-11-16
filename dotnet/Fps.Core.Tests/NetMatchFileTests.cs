@@ -121,6 +121,39 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void CarryLoadReadsBackAndDefaultsWhenLeftOut()
+        {
+            var carry = new CarryLoadSpec(CarrySource.Carried, CarrySource.None, 5f, 0.04f, 0.6f, CarryGaits.Walk | CarryGaits.Sprint);
+            var motor = new NetMotorSettings(
+                new MotorSpec(6f, 9f, 1.5f, 18f, 0.2f, 3f, carryLoad: carry),
+                new StanceGeometry(1.8f, 0.9f, 1.6f, 1.1f, 0.4f),
+                new CapsuleMoverSpec(50f, 0.35f, 0.05f, CapsuleMoverSpec.DefaultLayerMask));
+            var original = new NetMatchFile(
+                "TeamDeathmatch", GameRules.Default, NetMatchSettings.Default, "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } }),
+                new[] { Rifle(), Handgun() }, 0.4f, null, null, motor);
+            var read = NetMatchFile.Parse(NetMatchFile.Write(original), "carry.json").Motor.Motor.CarryLoad;
+
+            Assert.That(read.WeightSource, Is.EqualTo(CarrySource.Carried));
+            Assert.That(read.MultiplierSource, Is.EqualTo(CarrySource.None));
+            Assert.That(read.FreeWeight, Is.EqualTo(5f));
+            Assert.That(read.SpeedLossPerKg, Is.EqualTo(0.04f));
+            Assert.That(read.MinWeightMultiplier, Is.EqualTo(0.6f));
+            Assert.That(read.Gaits, Is.EqualTo(CarryGaits.Walk | CarryGaits.Sprint));
+
+            var bareText = "{\"loadout\": {\"slots\": [[\"Handgun\"]], \"weapons\": [\"" + _handgunId + "\"]}, \"weapons\": [" + _handgunJson + "]";
+            var partial = NetMatchFile.Parse(bareText + ", \"motor\": {\"carrySpeedLossPerKg\": 0.1, \"carryCrouch\": false}}", "partial.json")
+                .Motor.Motor.CarryLoad;
+
+            Assert.That(partial.SpeedLossPerKg, Is.EqualTo(0.1f));
+            Assert.That(partial.WeightSource, Is.EqualTo(CarryLoadSpec.DefaultWeightSource));
+            Assert.That(partial.MultiplierSource, Is.EqualTo(CarryLoadSpec.DefaultMultiplierSource));
+            Assert.That(partial.FreeWeight, Is.EqualTo(CarryLoadSpec.DefaultFreeWeight));
+            Assert.That(partial.MinWeightMultiplier, Is.EqualTo(CarryLoadSpec.DefaultMinWeightMultiplier));
+            Assert.That(partial.Gaits, Is.EqualTo(CarryGaits.Walk | CarryGaits.Sprint | CarryGaits.Prone));
+        }
+
+        [Test]
         public void DirectionScalesDefaultToUniformWhenLeftOut()
         {
             var bareText = "{\"loadout\": {\"slots\": [[\"Handgun\"]], \"weapons\": [\"" + _handgunId + "\"]}, \"weapons\": [" + _handgunJson + "]";
@@ -134,6 +167,11 @@ namespace Fps.Core.Tests
             Assert.That(read.WalkDirection.Side, Is.EqualTo(1f));
         }
 
+        [TestCase("{\"motor\": {\"carryWeightSource\": \"Pockets\"}}", "motor.carryWeightSource")]
+        [TestCase("{\"motor\": {\"carryFreeWeight\": -1}}", "motor.carryFreeWeight")]
+        [TestCase("{\"motor\": {\"carrySpeedLossPerKg\": -0.1}}", "motor.carrySpeedLossPerKg")]
+        [TestCase("{\"motor\": {\"carryMinWeightMultiplier\": 1.5}}", "motor.carryMinWeightMultiplier")]
+        [TestCase("{\"motor\": {\"carrySprint\": 1}}", "motor.carrySprint")]
         [TestCase("{\"motor\": {\"walkBackwardScale\": -1}}", "motor.walkBackwardScale")]
         [TestCase("{\"motor\": {\"sprintSideScale\": -0.5}}", "motor.sprintSideScale")]
         [TestCase("{\"motor\": {\"sprintForwardScale\": -1}}", "motor.sprintForwardScale")]

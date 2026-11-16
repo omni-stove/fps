@@ -832,6 +832,12 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ThePlayerMovesWithTheCarryLoadOfTheWeapon()
+        {
+            Assert.That(_world.Mover.CarryLoad, Is.SameAs(_world.Weapon));
+        }
+
+        [Test]
         public void AdsZoomsToTheHeldWeaponAndStopsTheSprint()
         {
             var ads = _world.Ads;

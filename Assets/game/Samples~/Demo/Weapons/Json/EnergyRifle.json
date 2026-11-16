@@ -3,6 +3,8 @@
   "nameKey": "weapon.energyRifle",
   "category": "AssaultRifle",
   "shotNoiseRadius": 50,
+  "weight": 4,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.12

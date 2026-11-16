@@ -47,6 +47,25 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("ダッシュ中に左右へ動く速さの倍率")]
         private float _sprintSideScale = MoveDirectionScale.DefaultSide;
 
+        [Header("持ち物")]
+        [SerializeField, Tooltip("重さを数える武器。Held は構えている武器だけ、Carried は持っている全部の合計、None は数えない")]
+        private CarrySource _carryWeightSource = CarryLoadSpec.DefaultWeightSource;
+
+        [SerializeField, Tooltip("武器ごとの移動の倍率を掛ける武器。Carried なら全部の積")]
+        private CarrySource _carryMultiplierSource = CarryLoadSpec.DefaultMultiplierSource;
+
+        [SerializeField, Min(0f), Tooltip("この重さ (kg) までは遅くならない")]
+        private float _carryFreeWeight = CarryLoadSpec.DefaultFreeWeight;
+
+        [SerializeField, Min(0f), Tooltip("遅くならない重さを超えた 1 kg ごとに速さの倍率から引く量。0 なら重さでは遅くならない")]
+        private float _carrySpeedLossPerKg = CarryLoadSpec.DefaultSpeedLossPerKg;
+
+        [SerializeField, Range(0f, 1f), Tooltip("重さで下がる速さの倍率の下限。武器ごとの倍率はこの後に掛ける")]
+        private float _carryMinWeightMultiplier = CarryLoadSpec.DefaultMinWeightMultiplier;
+
+        [SerializeField, Tooltip("持ち物の倍率を掛ける動き")]
+        private CarryGaits _carryGaits = CarryLoadSpec.DefaultGaits;
+
         public float WalkSpeed
         {
             get => _walkSpeed;
@@ -117,6 +136,27 @@ namespace Fps.Runtime
             }
         }
 
+        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、値が範囲の外。</exception>
+        public CarryLoadSpec CarryLoad
+        {
+            get => new CarryLoadSpec(
+                _carryWeightSource, _carryMultiplierSource, _carryFreeWeight, _carrySpeedLossPerKg, _carryMinWeightMultiplier, _carryGaits);
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+
+                _carryWeightSource = value.WeightSource;
+                _carryMultiplierSource = value.MultiplierSource;
+                _carryFreeWeight = value.FreeWeight;
+                _carrySpeedLossPerKg = value.SpeedLossPerKg;
+                _carryMinWeightMultiplier = value.MinWeightMultiplier;
+                _carryGaits = value.Gaits;
+            }
+        }
+
         public static MotorSettings Load()
         {
             var fromContent = GameContent.Pick(c => c.Motor);
@@ -152,7 +192,8 @@ namespace Fps.Runtime
                 _airControl,
                 _crouchSpeed,
                 walkDirection: WalkDirection,
-                sprintDirection: SprintDirection);
+                sprintDirection: SprintDirection,
+                carryLoad: CarryLoad);
         }
 
         public void ResetToDefaults()
@@ -165,6 +206,7 @@ namespace Fps.Runtime
             _airControl = MotorSpec.DefaultAirControl;
             WalkDirection = MoveDirectionScale.Uniform;
             SprintDirection = MoveDirectionScale.Uniform;
+            CarryLoad = CarryLoadSpec.Default;
         }
     }
 }

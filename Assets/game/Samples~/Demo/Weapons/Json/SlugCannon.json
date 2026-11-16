@@ -3,6 +3,8 @@
   "nameKey": "weapon.slugCannon",
   "category": "Shotgun",
   "shotNoiseRadius": 70,
+  "weight": 6,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.8

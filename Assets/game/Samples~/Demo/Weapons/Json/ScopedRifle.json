@@ -3,6 +3,8 @@
   "nameKey": "weapon.scopedRifle",
   "category": "MarksmanRifle",
   "shotNoiseRadius": 60,
+  "weight": 4,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.4

@@ -26,6 +26,7 @@ namespace Fps.Server.Tests
         private ServerHost _host;
         private ServerMovement _movement;
         private ServerSnapshots _snapshots;
+        private ServerContext _context;
         private int _nextInputTick;
 
         [SetUp]
@@ -231,6 +232,52 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void TheHeldWeaponsWeightSlowsTheWalkAndTheOwnerIsToldTheMultiplier()
+        {
+            var carry = new CarryLoadSpec(CarrySource.Held, CarrySource.None, 1f, 0.1f, 0f, CarryGaits.All);
+            Start(motor: new MotorSpec(
+                MotorSpec.DefaultWalkSpeed, MotorSpec.DefaultSprintSpeed, MotorSpec.DefaultJumpHeight, MotorSpec.DefaultGravity,
+                MotorSpec.DefaultAirControl, MotorSpec.DefaultCrouchSpeed, carryLoad: carry));
+            Settle();
+            var heavy = new WeaponSpec(TestRules.RifleId, null, WeaponCategory.AssaultRifle, weight: 6f);
+            // 体はふつうルールのモジュールが出現で作るが、このテストは移動のモジュールだけで組んでいる
+            _context.Bodies.Add(1).SetWeapons(heavy, new[] { heavy });
+            _movement.TryGetState(1, out var before);
+
+            for (var i = 0; i < TickClock.DefaultTickRate; i++)
+            {
+                Send(new Vector2(0f, 1f), InputButtons.None);
+            }
+
+            // 6 kg − 1 kg = 5 kg 超え → 1 − 0.5
+            _movement.TryGetState(1, out var after);
+            Assert.That(after.Position.Z - before.Position.Z, Is.EqualTo(MotorSpec.DefaultWalkSpeed * 0.5f).Within(0.01f));
+
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            Assert.That(OnlySnapshot().Owner.CarrySpeedMultiplier, Is.EqualTo(0.5f).Within(1e-5f));
+        }
+
+        [Test]
+        public void WithoutWeaponsThePlayerWalksAtFullSpeed()
+        {
+            var carry = new CarryLoadSpec(CarrySource.Carried, CarrySource.Carried, 0f, 0.1f, 0f, CarryGaits.All);
+            Start(motor: new MotorSpec(
+                MotorSpec.DefaultWalkSpeed, MotorSpec.DefaultSprintSpeed, MotorSpec.DefaultJumpHeight, MotorSpec.DefaultGravity,
+                MotorSpec.DefaultAirControl, MotorSpec.DefaultCrouchSpeed, carryLoad: carry));
+            Settle();
+            _movement.TryGetState(1, out var before);
+
+            for (var i = 0; i < TickClock.DefaultTickRate; i++)
+            {
+                Send(new Vector2(0f, 1f), InputButtons.None);
+            }
+
+            _movement.TryGetState(1, out var after);
+            Assert.That(after.Position.Z - before.Position.Z, Is.EqualTo(MotorSpec.DefaultWalkSpeed).Within(0.01f));
+        }
+
+        [Test]
         public void LandingReportsTheFallSpeed()
         {
             Start();
@@ -360,19 +407,22 @@ namespace Fps.Server.Tests
             return state;
         }
 
-        private void Start(GameRules rules = null, NetMapLadders ladders = null)
+        private void Start(GameRules rules = null, NetMapLadders ladders = null, MotorSpec motor = null)
         {
             _transport?.Dispose();
             _transport = new RecordingTransport();
             _match = new ServerMatch(5f, _log, new ServerEventWriter(false, _log, _log), () => _time);
-            var settings = ServerMotorSettings.Default.WithSpawnPosition(_spawn).WithRules(rules ?? GameRules.Default);
+            var defaults = ServerMotorSettings.Default;
+            var settings = new ServerMotorSettings(
+                motor ?? defaults.Motor, defaults.Stance, defaults.Mover, defaults.Prone, rules ?? GameRules.Default, defaults.KillPlaneY, _spawn);
             _movement = new ServerMovement(settings);
             _snapshots = new ServerSnapshots(settings.Rules, new ISnapshotContributor[] { _movement });
             _host = new ServerHost();
             _host.Register(_movement);
             _host.Register(_snapshots);
             var options = new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort);
-            _host.Start(new ServerContext(options, "0.2.0", _log, TestMaps.Data(ladders: ladders), _match, new ServerMessenger(_transport), new StubControl()));
+            _context = new ServerContext(options, "0.2.0", _log, TestMaps.Data(ladders: ladders), _match, new ServerMessenger(_transport), new StubControl());
+            _host.Start(_context);
             _match.Join(_connection, "key");
             _host.OnConnected(_connection);
             _nextInputTick = 0;

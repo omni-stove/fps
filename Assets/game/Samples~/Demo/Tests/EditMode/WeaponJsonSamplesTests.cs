@@ -124,6 +124,8 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.Id, Is.EqualTo(expected.Id));
             Assert.That(actual.NameKey, Is.EqualTo(expected.NameKey));
             Assert.That(actual.Category, Is.EqualTo(expected.Category));
+            Assert.That(actual.Weight, Is.EqualTo(expected.Weight));
+            Assert.That(actual.MoveSpeedMultiplier, Is.EqualTo(expected.MoveSpeedMultiplier));
             Assert.That(actual.FireMode, Is.EqualTo(expected.FireMode));
             Assert.That(actual.MagazineSize, Is.EqualTo(expected.MagazineSize));
             Assert.That(actual.ReserveAmmo, Is.EqualTo(expected.ReserveAmmo));

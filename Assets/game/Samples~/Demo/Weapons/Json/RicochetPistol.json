@@ -3,6 +3,8 @@
   "nameKey": "weapon.ricochetPistol",
   "category": "Handgun",
   "shotNoiseRadius": 50,
+  "weight": 1.2,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.2

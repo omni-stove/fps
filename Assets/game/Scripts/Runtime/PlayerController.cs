@@ -85,6 +85,12 @@ namespace Fps.Runtime
         /// </summary>
         public IPlayerMoveFilter MoveFilter { get; set; }
 
+        /// <summary>持っている物による速さの倍率の出どころ。null なら倍率 1 (何も持っていない速さ) で動く。</summary>
+        public IPlayerCarryLoad CarryLoad { get; set; }
+
+        /// <summary>今の持ち物で <see cref="Tick"/> が速さに掛ける倍率。どの動きに掛けるかは <see cref="CarryLoadSpec.Gaits"/>。</summary>
+        public float CarrySpeedMultiplier => CarryLoad != null ? CarryLoad.CarrySpeedMultiplier(Spec.CarryLoad) : 1f;
+
         /// <summary>
         /// 操作を手放す口。乗り物の座席などが <see cref="ControlHandoff.Claim"/> している間、<see cref="ApplyInput"/> は入力を何も押していないものとして扱う。
         /// 同じプレイヤーの <see cref="WeaponController.Handoff"/> にも同じものを配線する (オフラインは <see cref="GameBootstrap"/>)。
@@ -311,9 +317,10 @@ namespace Fps.Runtime
                 if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out displacement))
                 {
                     var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
+                    var carry = CarrySpeedMultiplier;
                     displacement = IsProne
-                        ? _motor.StepAtSpeed(
-                            move.ToNumerics(), yawRadians, _proneSpec.Speed, false, _controller.isGrounded, deltaSeconds).ToUnity()
+                        ? _motor.StepProne(
+                            move.ToNumerics(), yawRadians, _proneSpec.Speed, _controller.isGrounded, deltaSeconds, carry).ToUnity()
                         : _motor.Step(
                             move.ToNumerics(),
                             yawRadians,
@@ -321,7 +328,8 @@ namespace Fps.Runtime
                             IsCrouched,
                             jumpPressed,
                             _controller.isGrounded,
-                            deltaSeconds).ToUnity();
+                            deltaSeconds,
+                            carry).ToUnity();
                 }
             }
 

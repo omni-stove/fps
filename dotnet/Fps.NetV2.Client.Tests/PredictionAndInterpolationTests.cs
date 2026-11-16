@@ -89,6 +89,17 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
+        public void InputCarriesTheMultiplierTheServerSentAndOneWithoutIt()
+        {
+            var frame = new InputFrame(3, new Vector2(0f, 1f), 0f, InputButtons.None);
+            var rules = new MatchRulesSync { Cover = Cover.On, Dodge = Dodge.On };
+
+            Assert.That(SnapshotMotion.ToInput(frame, false, rules, 0.75f).CarrySpeedMultiplier, Is.EqualTo(0.75f).Within(1e-6f));
+            Assert.That(SnapshotMotion.ToInput(frame, false, rules).CarrySpeedMultiplier, Is.EqualTo(1f));
+            Assert.That(SnapshotMotion.ToInput(frame, true, rules, 0.75f).Restrained().CarrySpeedMultiplier, Is.EqualTo(0.75f).Within(1e-6f));
+        }
+
+        [Test]
         public void ARowBecomesTheSameMotorState()
         {
             var row = new PlayerSnapshot

@@ -3,6 +3,8 @@
   "nameKey": "weapon.boltSniper",
   "category": "SniperRifle",
   "shotNoiseRadius": 80,
+  "weight": 6,
+  "moveSpeedMultiplier": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.2,

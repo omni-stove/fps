@@ -22,6 +22,12 @@ namespace Fps.Protocol
 
         public WeaponSync Weapon { get; set; }
 
+        /// <summary>
+        /// サーバーが今このプレイヤーの移動に掛けている持ち物の倍率 (<c>Fps.Core.CarryLoadSpec.SpeedMultiplier</c>)。
+        /// クライアントは武器の値を持たなくても、これで予測をサーバーと揃える。0 以上の有限値。
+        /// </summary>
+        public float CarrySpeedMultiplier { get; set; } = 1f;
+
         public GrenadePouchSync Grenades => _grenades;
 
         /// <summary>サーバーが今持たせている武器の Id (スロット順)。</summary>
@@ -38,6 +44,7 @@ namespace Fps.Protocol
 
             LastProcessedInputTick = other.LastProcessedInputTick;
             Weapon = other.Weapon;
+            CarrySpeedMultiplier = other.CarrySpeedMultiplier;
             _grenades.CopyFrom(other._grenades);
             _equippedWeaponIds.CopyFrom(other._equippedWeaponIds);
             Present = other.Present;
@@ -61,6 +68,11 @@ namespace Fps.Protocol
                 fields |= OwnerFields.Grenades;
             }
 
+            if (CarrySpeedMultiplier != baseline.CarrySpeedMultiplier)
+            {
+                fields |= OwnerFields.CarrySpeed;
+            }
+
             return fields;
         }
 
@@ -80,6 +92,11 @@ namespace Fps.Protocol
             if ((fields & OwnerFields.Grenades) != 0)
             {
                 Grenades.Write(writer);
+            }
+
+            if ((fields & OwnerFields.CarrySpeed) != 0)
+            {
+                writer.WriteSingle(CarrySpeedMultiplier);
             }
         }
 
@@ -101,6 +118,11 @@ namespace Fps.Protocol
             {
                 _grenades.Read(reader);
             }
+
+            if ((fields & OwnerFields.CarrySpeed) != 0)
+            {
+                CarrySpeedMultiplier = reader.ReadFiniteSingleBetween(0f, float.MaxValue, "carry speed multiplier");
+            }
         }
 
         internal void FillFrom(OwnerSnapshot baseline)
@@ -119,6 +141,11 @@ namespace Fps.Protocol
             if ((missing & OwnerFields.Grenades) != 0)
             {
                 _grenades.CopyFrom(baseline._grenades);
+            }
+
+            if ((missing & OwnerFields.CarrySpeed) != 0)
+            {
+                CarrySpeedMultiplier = baseline.CarrySpeedMultiplier;
             }
 
             Present = OwnerFields.All;

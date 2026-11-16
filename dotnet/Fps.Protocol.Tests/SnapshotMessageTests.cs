@@ -130,6 +130,34 @@ namespace Fps.Protocol.Tests
         }
 
         [Test]
+        public void AChangedCarrySpeedMultiplierIsSentAndAnUnchangedOneIsFilledFromTheBaseline()
+        {
+            var baseline = Build(100, 0f);
+            var changed = Build(101, 0f);
+            changed.Owner.CarrySpeedMultiplier = 0.6f;
+            var unchanged = Build(102, 0f);
+
+            var gotChanged = Send(changed, baseline);
+            var gotUnchanged = Send(unchanged, baseline);
+
+            Assert.That(gotChanged.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(gotChanged.Owner.CarrySpeedMultiplier, Is.EqualTo(0.6f));
+            Assert.That(gotUnchanged.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(gotUnchanged.Owner.CarrySpeedMultiplier, Is.EqualTo(0.85f));
+        }
+
+        [Test]
+        public void ANegativeCarrySpeedMultiplierIsUnreadable()
+        {
+            var current = Build(100, 0f);
+            current.Owner.CarrySpeedMultiplier = -0.5f;
+            var writer = new MessageWriter();
+            writer.WriteMessage(current);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(writer.AsSegment()));
+        }
+
+        [Test]
         public void ThePouchRejectsTheSameTypeTwice()
         {
             var pouch = new GrenadePouchSync();
@@ -361,6 +389,7 @@ namespace Fps.Protocol.Tests
             snapshot.Owner.Grenades.Add("smoke", 1);
             snapshot.Owner.EquippedWeaponIds.Add("rifle");
             snapshot.Owner.EquippedWeaponIds.Add("pistol");
+            snapshot.Owner.CarrySpeedMultiplier = 0.85f;
 
             for (var i = 0; i < 2; i++)
             {
@@ -461,6 +490,7 @@ namespace Fps.Protocol.Tests
             Assert.That(actual.Owner.Weapon.SameAs(expected.Owner.Weapon), Is.True);
             Assert.That(actual.Owner.Grenades.SameAs(expected.Owner.Grenades), Is.True);
             Assert.That(actual.Owner.EquippedWeaponIds.SameAs(expected.Owner.EquippedWeaponIds), Is.True);
+            Assert.That(actual.Owner.CarrySpeedMultiplier, Is.EqualTo(expected.Owner.CarrySpeedMultiplier));
 
             Assert.That(actual.Players.Count, Is.EqualTo(expected.Players.Count));
             for (var i = 0; i < expected.Players.Count; i++)

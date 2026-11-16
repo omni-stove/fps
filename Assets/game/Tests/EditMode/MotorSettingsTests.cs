@@ -99,6 +99,38 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void NewSettingsUseTheDefaultCarryLoad()
+        {
+            var carry = _settings.CreateSpec().CarryLoad;
+
+            Assert.That(carry.WeightSource, Is.EqualTo(CarryLoadSpec.DefaultWeightSource));
+            Assert.That(carry.MultiplierSource, Is.EqualTo(CarryLoadSpec.DefaultMultiplierSource));
+            Assert.That(carry.FreeWeight, Is.EqualTo(CarryLoadSpec.DefaultFreeWeight));
+            Assert.That(carry.SpeedLossPerKg, Is.EqualTo(CarryLoadSpec.DefaultSpeedLossPerKg));
+            Assert.That(carry.MinWeightMultiplier, Is.EqualTo(CarryLoadSpec.DefaultMinWeightMultiplier));
+            Assert.That(carry.Gaits, Is.EqualTo(CarryGaits.All));
+        }
+
+        [Test]
+        public void ResolveCarriesTheCarryLoadAndResetRestoresIt()
+        {
+            _settings.CarryLoad = new CarryLoadSpec(CarrySource.Carried, CarrySource.None, 6f, 0.03f, 0.7f, CarryGaits.Sprint);
+
+            var carry = MotorSettings.Resolve(_settings).CarryLoad;
+
+            Assert.That(carry.WeightSource, Is.EqualTo(CarrySource.Carried));
+            Assert.That(carry.MultiplierSource, Is.EqualTo(CarrySource.None));
+            Assert.That(carry.FreeWeight, Is.EqualTo(6f));
+            Assert.That(carry.SpeedLossPerKg, Is.EqualTo(0.03f));
+            Assert.That(carry.MinWeightMultiplier, Is.EqualTo(0.7f));
+            Assert.That(carry.Gaits, Is.EqualTo(CarryGaits.Sprint));
+
+            _settings.ResetToDefaults();
+            Assert.That(_settings.CreateSpec().CarryLoad.WeightSource, Is.EqualTo(CarryLoadSpec.DefaultWeightSource));
+            Assert.That(_settings.CreateSpec().CarryLoad.Gaits, Is.EqualTo(CarryGaits.All));
+        }
+
+        [Test]
         public void ResolveWithoutAnyAssetFallsBackToTheDefaultSpec()
         {
             Assume.That(MotorSettings.Load(), Is.Null, "a project asset at Resources/" + MotorSettings.ResourcePath + " overrides the default");

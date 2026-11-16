@@ -82,6 +82,15 @@
     "sprintForwardScale": 1,
     "sprintBackwardScale": 1,
     "sprintSideScale": 1,
+    "carryWeightSource": "Held",
+    "carryMultiplierSource": "Held",
+    "carryFreeWeight": 0,
+    "carrySpeedLossPerKg": 0,
+    "carryMinWeightMultiplier": 0.5,
+    "carryWalk": true,
+    "carrySprint": true,
+    "carryCrouch": true,
+    "carryProne": true,
     "standingHeight": 2,
     "standingCenterY": 0,
     "standingEyeY": 0.6,
@@ -114,6 +123,8 @@
       "nameKey": "Rifle",
       "category": "AssaultRifle",
       "shotNoiseRadius": 50,
+      "weight": 3.5,
+      "moveSpeedMultiplier": 1,
       "trigger": {
         "fireMode": "Auto",
         "fireInterval": 0.1
@@ -163,6 +174,8 @@
       "nameKey": "Handgun",
       "category": "Handgun",
       "shotNoiseRadius": 50,
+      "weight": 1,
+      "moveSpeedMultiplier": 1,
       "trigger": {
         "fireMode": "Semi",
         "fireInterval": 0.2

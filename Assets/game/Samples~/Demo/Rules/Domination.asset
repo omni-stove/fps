@@ -52,3 +52,4 @@ MonoBehaviour:
   _objective: 1
   _minPlayers: 0
   _idleKickSeconds: 120
+  _maxWeapons: 2

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Fps.Core;
 using Fps.Runtime;
 using UnityEditor;
 using UnityEngine;
@@ -11,7 +12,9 @@ namespace Fps.Editor
     /// <summary>
     /// 薬莢と空撃ちの仮素材 (小さい円柱の薬莢のプレハブ・手続き生成の薬莢の落下音とカチッという空撃ちの音) と、それをまとめた
     /// <see cref="WeaponExtrasCatalog"/> を作るか上書きする手順。<see cref="PresentationAssetSteps.BuildAll"/> から実行される。
-    /// 武器は <see cref="PresentationAssetBuilder.WeaponEntries"/> のすべての Id に既定の素材を入れる。
+    /// 武器は <see cref="PresentationAssetBuilder.WeaponEntries"/> のすべての Id に既定の素材を入れ、射撃場の武器の JSON
+    /// (<see cref="WeaponAssetBuilder.RangeWeaponSources"/>) のすべてに、その値から決めた置いたときの見た目 (<see cref="WeaponLook"/>) と
+    /// 薬莢 (<see cref="ShellFor"/>) を入れる。
     /// 既存のアセットは GUID を保って中身だけ更新する (<see cref="PresentationAssetBuilder"/> と同じ書き出し方)。
     /// </summary>
     public sealed class WeaponExtrasAssetStep : IPresentationAssetStep
@@ -28,6 +31,9 @@ namespace Fps.Editor
         public const string LauncherShellPrefab = "LauncherShell";
 
         public const string ShellMaterialName = "ShellBrass";
+
+        public const string PickupModelFolderName = "WeaponModels";
+        public const string PickupModelPrefix = "WeaponModel_";
 
         /// <summary>薬莢の材質に使う URP のシェーダー。</summary>
         public const string LitShaderName = "Universal Render Pipeline/Lit";
@@ -58,6 +64,37 @@ namespace Fps.Editor
                 (WeaponAssetBuilder.HandgunId, HandgunShellPrefab, ShellDropSound, DryFireClickSound),
                 (WeaponAssetBuilder.LauncherId, LauncherShellPrefab, HeavyShellDropSound, DryFireClickSound),
             };
+        }
+
+        // 熱で撃つ・光線・噴射・刺さる矢・飛んで爆発する弾は実物に薬莢が無いので、出さない。
+        public static (string Shell, string LandSound) ShellFor(WeaponSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            var round = spec.Round;
+            if (spec.Ammo.Kind == AmmoKind.Heat || round.Delivery == RoundDelivery.Beam || round.Delivery == RoundDelivery.Spray)
+            {
+                return (null, null);
+            }
+
+            if (round.Delivery == RoundDelivery.Projectile && round.Projectile.OnWorldHit != WorldHitResponse.Bounce)
+            {
+                return (null, null);
+            }
+
+            switch (spec.Category)
+            {
+                case WeaponCategory.Handgun:
+                    return (HandgunShellPrefab, ShellDropSound);
+                case WeaponCategory.Shotgun:
+                case WeaponCategory.Launcher:
+                    return (LauncherShellPrefab, HeavyShellDropSound);
+                default:
+                    return (RifleShellPrefab, ShellDropSound);
+            }
         }
 
         /// <summary>薬莢のプレハブの名前と、円柱の直径・長さ (m)。</summary>
@@ -179,10 +216,39 @@ namespace Fps.Editor
                     root => BuildShell(root, cylinder, material, shape.Diameter, shape.Length)));
             }
 
-            var weapons = new List<WeaponExtrasAssets>();
+            var modelFolder = presentationFolder + "/" + PickupModelFolderName;
+            SceneBuildHelpers.EnsureFolder(modelFolder);
+            var paint = ViewmodelAssetStep.PaintCache(modelFolder);
+            var fixedEntries = new Dictionary<string, (string WeaponId, string Shell, string LandSound, string DryFire)>(StringComparer.Ordinal);
             foreach (var entry in WeaponEntries())
             {
-                weapons.Add(new WeaponExtrasAssets(entry.WeaponId, shells[entry.Shell], clips[entry.LandSound], clips[entry.DryFire]));
+                fixedEntries.Add(entry.WeaponId, entry);
+            }
+
+            var weapons = new List<WeaponExtrasAssets>();
+            var listed = new HashSet<string>(StringComparer.Ordinal);
+            var models = 0;
+            foreach (var (weaponName, spec) in WeaponAssetBuilder.RangeWeaponSources())
+            {
+                var (shell, landSound) = fixedEntries.TryGetValue(spec.Id, out var fixedEntry) ? (fixedEntry.Shell, fixedEntry.LandSound) : ShellFor(spec);
+                var dryFire = fixedEntry.DryFire ?? DryFireClickSound;
+                var look = WeaponLook.For(spec);
+                var assets = new WeaponExtrasAssets(
+                    spec.Id, shell != null ? shells[shell] : null, landSound != null ? clips[landSound] : null, clips[dryFire])
+                {
+                    PickupModel = PresentationAssetBuilder.SavePrefab(modelFolder, PickupModelPrefix + weaponName, root => BuildPickupModel(root, look, paint)),
+                };
+                weapons.Add(assets);
+                listed.Add(spec.Id);
+                models++;
+            }
+
+            foreach (var entry in WeaponEntries())
+            {
+                if (listed.Add(entry.WeaponId))
+                {
+                    weapons.Add(new WeaponExtrasAssets(entry.WeaponId, shells[entry.Shell], clips[entry.LandSound], clips[entry.DryFire]));
+                }
             }
 
             var catalog = SceneBuildHelpers.CreateOrUpdateAsset<WeaponExtrasCatalog>(catalogPath, c =>
@@ -203,8 +269,28 @@ namespace Fps.Editor
                 c.SetWeapons(weapons);
             });
 
-            Debug.Log($"{LogTag} saved {clips.Count} sound(s) to '{audioFolder}', {shells.Count} shell casing(s) to '{presentationFolder}' and '{catalogPath}'");
+            Debug.Log($"{LogTag} saved {clips.Count} sound(s) to '{audioFolder}', {shells.Count} shell casing(s) to '{presentationFolder}', "
+                + $"{models} weapon model(s) to '{modelFolder}' and '{catalogPath}'");
             return catalog;
+        }
+
+        // 部品の座標は機関部の後端が原点だが、置いたときの見た目は中心が原点の約束 (WeaponExtrasAssets.PickupModel) なので、ずらした子に置く。
+        public static void BuildPickupModel(GameObject root, WeaponLook look, Func<WeaponPaint, Color, Material> paint)
+        {
+            if (root == null)
+            {
+                throw new ArgumentNullException(nameof(root));
+            }
+
+            if (look == null)
+            {
+                throw new ArgumentNullException(nameof(look));
+            }
+
+            var gun = new GameObject(ViewmodelAssetStep.GunName).transform;
+            gun.SetParent(root.transform, false);
+            gun.localPosition = -look.Bounds.center;
+            look.Build(gun, paint, castShadows: true);
         }
 
         private static void BuildShell(GameObject root, Mesh cylinder, Material material, float diameter, float length)

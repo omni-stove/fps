@@ -59,10 +59,12 @@ namespace Fps.Tests.EditMode
 
             Assert.That(catalog, Is.SameAs(AssetDatabase.LoadAssetAtPath<ViewmodelCatalog>(_catalogPath)));
             Assert.DoesNotThrow(() => catalog.Validate());
-            foreach (var spec in ViewmodelAssetStep.WeaponSpecs())
+            Assert.That(catalog.Weapons.Count, Is.EqualTo(WeaponAssetBuilder.RangeWeaponSources().Count), "every range weapon gets its own viewmodel");
+            foreach (var (name, spec) in ViewmodelAssetStep.Weapons())
             {
                 Assert.That(catalog.TryGetWeapon(spec.Id, out var entry), Is.True, spec.Id);
-                Assert.That(entry.Prefab.name, Is.EqualTo(ViewmodelAssetStep.PrefabName(spec.Category)));
+                Assert.That(entry.Prefab.name, Is.EqualTo(ViewmodelAssetStep.PrefabName(name)));
+                Assert.That(WeaponSockets.FindSocket(entry.Prefab.transform, WeaponSockets.SightName), Is.Not.Null, spec.Id);
                 Assert.That(AssetDatabase.GetAssetPath(entry.Prefab), Does.StartWith(_viewmodelFolder + "/"));
                 Assert.That(WeaponSockets.FindSocket(entry.Prefab.transform, WeaponSockets.MuzzleName), Is.Not.Null, spec.Id);
                 Assert.That(WeaponSockets.FindSocket(entry.Prefab.transform, WeaponSockets.ShellEjectName), Is.Not.Null, spec.Id);
@@ -86,6 +88,26 @@ namespace Fps.Tests.EditMode
             Assert.That(
                 ViewmodelAssetStep.ShapeFor(WeaponCategory.SniperRifle).TotalLength,
                 Is.GreaterThan(ViewmodelAssetStep.ShapeFor(WeaponCategory.SubmachineGun).TotalLength));
+        }
+
+        [Test]
+        public void TheMinigunAndTheRifleGetDifferentViewmodels()
+        {
+            var catalog = ViewmodelAssetStep.BuildAt(_viewmodelFolder, _catalogPath);
+            var minigunId = ViewmodelAssetStep.Weapons().Single(weapon => weapon.Name == "Minigun").Spec.Id;
+
+            Assert.That(catalog.TryGetWeapon(minigunId, out var minigun), Is.True);
+            Assert.That(catalog.TryGetWeapon(WeaponAssetBuilder.RifleId, out var rifle), Is.True);
+            Assert.That(minigun.Prefab, Is.Not.SameAs(rifle.Prefab));
+            Assert.That(minigun.Prefab.transform.Find(ViewmodelAssetStep.GunName + "/" + WeaponLook.RotaryBarrelPrefix + "0"), Is.Not.Null);
+            Assert.That(rifle.Prefab.transform.Find(ViewmodelAssetStep.GunName + "/" + WeaponLook.RotaryBarrelPrefix + "0"), Is.Null);
+        }
+
+        [Test]
+        public void PrefabNameRejectsAnEmptyWeaponName()
+        {
+            Assert.That(ViewmodelAssetStep.PrefabName("Minigun"), Is.EqualTo("Viewmodel_Minigun"));
+            Assert.Throws<ArgumentException>(() => ViewmodelAssetStep.PrefabName(" "));
         }
 
         [Test]

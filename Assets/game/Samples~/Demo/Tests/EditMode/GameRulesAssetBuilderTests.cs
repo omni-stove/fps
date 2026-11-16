@@ -90,8 +90,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.DeathCamera, Is.EqualTo(range.DeathCamera));
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(range.ReserveAmmoMultiplier));
             Assert.That(rules.Destruction, Is.EqualTo(range.Destruction));
-            Assert.That(rules.MaxWeapons, Is.EqualTo(GameRulesAssetBuilder.TpsRangeMaxWeapons), "the weapon rack can be tried up to the limit and past it");
-            Assert.That(range.MaxWeapons, Is.Zero);
+            Assert.That(rules.MaxWeapons, Is.EqualTo(range.MaxWeapons));
             AssertActions(rules.Actions, _expectedActions[TpsRangeIndex], _tpsRangePath);
         }
 
@@ -439,6 +438,22 @@ namespace Fps.Tests.EditMode
         private static float ExpectedSpawnProtection(int index)
         {
             return index == 0 || index == DominationIndex ? GameRulesAssetBuilder.TeamDeathmatchSpawnProtectionSeconds : 0f;
+        }
+
+        [Test]
+        public void EveryDemoModeHoldsTwoWeapons()
+        {
+            Assert.That(GameRulesAssetBuilder.DemoMaxWeapons, Is.EqualTo(2));
+
+            foreach (var definition in Build())
+            {
+                Assert.That(definition.ToRules().MaxWeapons, Is.EqualTo(2), definition.name);
+            }
+
+            foreach (var name in GameRulesAssetBuilder.ModeNames)
+            {
+                Assert.That(GameRulesAssetBuilder.ModeRules(name).MaxWeapons, Is.EqualTo(2), name);
+            }
         }
 
         [Test]

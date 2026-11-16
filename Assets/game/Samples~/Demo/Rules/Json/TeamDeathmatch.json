@@ -27,5 +27,6 @@
   "hudDensity": "Full",
   "objective": "None",
   "minPlayers": 0,
-  "idleKickSeconds": 120
+  "idleKickSeconds": 120,
+  "maxWeapons": 2
 }

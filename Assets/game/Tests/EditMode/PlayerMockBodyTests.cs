@@ -117,6 +117,44 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AWeaponModelReplacesTheBodyGunUntilItIsCleared()
+        {
+            var minigun = PartPrefab("Minigun");
+            var rifle = PartPrefab("Rifle");
+            try
+            {
+                _mock.Build(_camera);
+                var box = _mock.BodyGun.Find("GunBox");
+
+                _mock.SetBodyGunModel(minigun);
+
+                Assert.That(_mock.BodyGunModel, Is.Not.Null);
+                Assert.That(_mock.BodyGun.Find("MinigunPrefab/Minigun"), Is.Not.Null);
+                Assert.That(box.gameObject.activeSelf, Is.False, "the placeholder box hides behind the weapon's model");
+                Assert.That(_mock.ViewModelGun.Find("GunBox").gameObject.activeSelf, Is.True, "first person keeps its own gun");
+                Assert.That(_mock.BodyRoot.GetComponentsInChildren<Collider>(true), Is.Empty);
+
+                Apply(PlayerActionConditions.Grounded, ViewMode.FirstPerson);
+                Assert.That(
+                    _mock.BodyGunModel.GetComponentInChildren<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.ShadowsOnly),
+                    "the weapon's model follows the view like the rest of the body");
+
+                _mock.SetBodyGunModel(rifle);
+                Assert.That(_mock.BodyGun.Find("MinigunPrefab"), Is.Null, "switching weapons removes the old model");
+                Assert.That(_mock.BodyGunModel.name, Is.EqualTo("RiflePrefab"));
+
+                _mock.SetBodyGunModel(null);
+                Assert.That(_mock.BodyGunModel, Is.Null);
+                Assert.That(box.gameObject.activeSelf, Is.True, "clearing the model brings the placeholder back");
+            }
+            finally
+            {
+                Object.DestroyImmediate(minigun);
+                Object.DestroyImmediate(rifle);
+            }
+        }
+
+        [Test]
         public void BodyAndGunUseDistinctFlatColors()
         {
             _mock.Build(_camera);

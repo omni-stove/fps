@@ -16,7 +16,7 @@ namespace Fps.Editor
         public const string LogTag = "[ViewmodelAssetStep]";
         public const string LitShaderName = "Universal Render Pipeline/Lit";
         public const string SkinMaterialName = "ViewmodelSkin";
-        public const string MetalMaterialName = "ViewmodelMetal";
+        public const string PaintMaterialPrefix = "WeaponPaint_";
         public const string PrefabPrefix = "Viewmodel_";
 
         public const string GunName = "Gun";
@@ -41,14 +41,27 @@ namespace Fps.Editor
             BuildAt(ViewmodelFolder, CatalogPath);
         }
 
+        public static IReadOnlyList<(string Name, WeaponSpec Spec)> Weapons() => WeaponAssetBuilder.RangeWeaponSources();
+
         public static IReadOnlyList<WeaponSpec> WeaponSpecs()
         {
-            return new[] { WeaponAssetBuilder.RifleSpec(), WeaponAssetBuilder.HandgunSpec(), WeaponAssetBuilder.LauncherSpec() };
+            var specs = new List<WeaponSpec>();
+            foreach (var weapon in Weapons())
+            {
+                specs.Add(weapon.Spec);
+            }
+
+            return specs;
         }
 
-        public static string PrefabName(WeaponCategory category)
+        public static string PrefabName(string weaponName)
         {
-            return PrefabPrefix + category;
+            if (string.IsNullOrWhiteSpace(weaponName))
+            {
+                throw new ArgumentException("weapon name must not be empty", nameof(weaponName));
+            }
+
+            return PrefabPrefix + weaponName;
         }
 
         public static GunShape ShapeFor(WeaponCategory category)
@@ -133,20 +146,16 @@ namespace Fps.Editor
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(catalogPath)?.Replace('\\', '/'));
 
             var skin = BuildLitMaterial($"{folder}/{SkinMaterialName}.mat", SkinColor, 0.2f);
-            var metal = BuildLitMaterial($"{folder}/{MetalMaterialName}.mat", MetalColor, 0.55f);
+            var paint = PaintCache(folder);
 
-            var prefabs = new Dictionary<WeaponCategory, GameObject>();
+            var prefabs = new List<GameObject>();
             var entries = new List<ViewmodelEntry>();
-            foreach (var spec in WeaponSpecs())
+            foreach (var (weaponName, spec) in Weapons())
             {
                 var category = spec.Category;
-                if (!prefabs.TryGetValue(category, out var prefab))
-                {
-                    var shape = ShapeFor(category);
-                    prefab = PresentationAssetBuilder.SavePrefab(folder, PrefabName(category), root => BuildViewmodel(root, shape, skin, metal));
-                    prefabs.Add(category, prefab);
-                }
-
+                var look = WeaponLook.For(spec);
+                var prefab = PresentationAssetBuilder.SavePrefab(folder, PrefabName(weaponName), root => BuildViewmodel(root, look, skin, paint));
+                prefabs.Add(prefab);
                 entries.Add(new ViewmodelEntry(
                     spec.Id, prefab, OffsetFor(category), new ViewmodelSwayParameters(SwayFor(category)), AdsOffsetFor(category)));
             }
@@ -173,50 +182,65 @@ namespace Fps.Editor
             return catalog;
         }
 
-        public static void BuildViewmodel(GameObject root, GunShape shape, Material skin, Material metal)
+        public static void BuildViewmodel(GameObject root, WeaponLook look, Material skin, Func<WeaponPaint, Color, Material> paint)
         {
             if (root == null)
             {
                 throw new ArgumentNullException(nameof(root));
             }
 
-            var r = shape.ReceiverLength;
-            var b = shape.BarrelLength;
-            var w = shape.Width;
-            var h = shape.Height;
-            var barrelY = h * 0.15f;
-            var gripZ = r * 0.3f;
-            var gripY = (-h * 0.5f) - (h * 0.55f);
+            if (look == null)
+            {
+                throw new ArgumentNullException(nameof(look));
+            }
 
             var gun = AddGroup(root.transform, GunName);
-            AddBox(gun, "Receiver", new Vector3(0f, 0f, r * 0.5f), new Vector3(w, h, r), metal);
-            var bore = Mathf.Max(0.018f, Mathf.Min(w, h) * 0.45f);
-            AddBox(gun, "Barrel", new Vector3(0f, barrelY, r + (b * 0.5f)), new Vector3(bore, bore, b), metal);
-            AddBox(gun, "Grip", new Vector3(0f, gripY, gripZ), new Vector3(w * 0.8f, h * 1.1f, w * 0.9f), metal);
-            AddSocket(gun, WeaponSockets.MuzzleName, new Vector3(0f, barrelY, r + b), Quaternion.identity);
-            AddSocket(gun, WeaponSockets.ShellEjectName, new Vector3(w * 0.5f, h * 0.25f, r * 0.5f), Quaternion.Euler(0f, 90f, 0f));
-
-            // 照星は照門と同じ高さまで伸ばす。高さが違うと、構えたときに照準の線が銃身と平行にならず上下に傾いて見える。
-            var top = h * 0.5f;
-            var rearZ = r * 0.08f;
-            var frontZ = r + b - 0.01f;
-            var notch = Mathf.Max(0.006f, w * 0.12f);
-            AddBox(gun, "RearSight_L", new Vector3(-notch, top + (SightPostHeight * 0.5f), rearZ), new Vector3(0.004f, SightPostHeight, 0.008f), metal);
-            AddBox(gun, "RearSight_R", new Vector3(notch, top + (SightPostHeight * 0.5f), rearZ), new Vector3(0.004f, SightPostHeight, 0.008f), metal);
-            var frontBase = barrelY + (bore * 0.5f);
-            var frontHeight = top + SightPostHeight - frontBase;
-            AddBox(gun, "FrontSight", new Vector3(0f, frontBase + (frontHeight * 0.5f), frontZ), new Vector3(0.004f, frontHeight, 0.006f), metal);
-            AddSocket(gun, WeaponSockets.SightName, new Vector3(0f, top + SightPostHeight, rearZ), Quaternion.identity);
+            look.Build(gun, paint, castShadows: false);
+            AddSocket(gun, WeaponSockets.MuzzleName, look.Muzzle, Quaternion.identity);
+            AddSocket(gun, WeaponSockets.ShellEjectName, look.ShellEject, Quaternion.Euler(0f, 90f, 0f));
+            AddSocket(gun, WeaponSockets.SightName, look.Sight, Quaternion.identity);
 
             var hands = AddGroup(root.transform, HandsName);
-            AddBox(hands, "Hand_R", new Vector3(w * 0.15f, gripY, gripZ - 0.01f), new Vector3(0.07f, 0.08f, 0.1f), skin);
-            AddBox(hands, "Arm_R", new Vector3(0.03f, gripY - 0.05f, gripZ - 0.2f), new Vector3(0.07f, 0.07f, 0.32f), skin);
-            if (shape.TwoHanded)
+            var grip = look.RearGrip;
+            AddBox(hands, "Hand_R", grip + new Vector3(0.005f, 0f, -0.01f), new Vector3(0.07f, 0.08f, 0.1f), skin);
+            AddBox(hands, "Arm_R", new Vector3(0.03f, grip.y - 0.05f, grip.z - 0.2f), new Vector3(0.07f, 0.07f, 0.32f), skin);
+            if (look.ForeGrip.HasValue)
             {
-                var foreZ = r * 0.85f;
-                var foreY = (-h * 0.5f) - 0.03f;
-                AddBox(hands, "Hand_L", new Vector3(0f, foreY, foreZ), new Vector3(0.07f, 0.07f, 0.1f), skin);
-                AddBox(hands, "Arm_L", new Vector3(-0.08f, foreY - 0.04f, foreZ - 0.2f), new Vector3(0.07f, 0.07f, 0.32f), skin);
+                var fore = look.ForeGrip.Value;
+                AddBox(hands, "Hand_L", fore, new Vector3(0.07f, 0.07f, 0.1f), skin);
+                AddBox(hands, "Arm_L", new Vector3(-0.08f, fore.y - 0.04f, fore.z - 0.2f), new Vector3(0.07f, 0.07f, 0.32f), skin);
+            }
+        }
+
+        // 部品ごとに材質を作ると同じ色の .mat が部品の数だけできるので、塗りと色の組み合わせで 1 つにまとめる。
+        public static Func<WeaponPaint, Color, Material> PaintCache(string folder)
+        {
+            var materials = new Dictionary<string, Material>(StringComparer.Ordinal);
+            return (paint, color) =>
+            {
+                var key = paint + "_" + ColorUtility.ToHtmlStringRGB(color);
+                if (!materials.TryGetValue(key, out var material))
+                {
+                    material = BuildLitMaterial($"{folder}/{PaintMaterialPrefix}{key}.mat", color, SmoothnessOf(paint));
+                    materials.Add(key, material);
+                }
+
+                return material;
+            };
+        }
+
+        public static float SmoothnessOf(WeaponPaint paint)
+        {
+            switch (paint)
+            {
+                case WeaponPaint.Glass:
+                    return 0.9f;
+                case WeaponPaint.Furniture:
+                    return 0.25f;
+                case WeaponPaint.Accent:
+                    return 0.4f;
+                default:
+                    return 0.55f;
             }
         }
 
@@ -250,7 +274,7 @@ namespace Fps.Editor
             renderer.shadowCastingMode = ShadowCastingMode.Off;
         }
 
-        private static Material BuildLitMaterial(string path, Color color, float smoothness)
+        internal static Material BuildLitMaterial(string path, Color color, float smoothness)
         {
             var shader = Shader.Find(LitShaderName);
             if (shader == null)

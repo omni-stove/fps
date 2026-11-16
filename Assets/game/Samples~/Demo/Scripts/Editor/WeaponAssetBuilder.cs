@@ -356,6 +356,19 @@ namespace Fps.Editor
         /// </summary>
         public static WeaponCatalogAsset LoadRangeWeapons() => WeaponAssets.LoadCatalog(RangeWeaponsPath);
 
+        // 演出の仮素材は武器のアセットより先に作られることがあるので、アセットでなく JSON から読む。
+        public static IReadOnlyList<(string Name, WeaponSpec Spec)> RangeWeaponSources()
+        {
+            var sources = new List<(string Name, WeaponSpec Spec)>();
+            foreach (var file in WeaponJsonImporter.FindJsonFiles(JsonFolder))
+            {
+                var name = System.IO.Path.GetFileNameWithoutExtension(file);
+                sources.Add((name, WeaponJsonImporter.ParseSpec(System.IO.File.ReadAllText(file), name + ".json")));
+            }
+
+            return sources;
+        }
+
         [MenuItem(MenuPath)]
         public static void Build()
         {

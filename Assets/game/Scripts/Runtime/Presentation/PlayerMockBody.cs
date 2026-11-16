@@ -9,7 +9,8 @@ namespace Fps.Runtime
     /// <summary>
     /// 自機の今のアクション (<see cref="PlayerActionReader.Current"/>) を、プリミティブで作った仮の体 (<see cref="Prefabs"/> があればその形) で見せる自機モック。
     /// <list type="bullet">
-    /// <item>三人称: 胴 (カプセル)・頭 (球)・銃 (細長い箱) を本体の子に置き、<see cref="PlayerMockPose"/> の姿勢へ寄せる。</item>
+    /// <item>三人称: 胴 (カプセル)・頭 (球)・銃 (細長い箱) を本体の子に置き、<see cref="PlayerMockPose"/> の姿勢へ寄せる。
+    /// 銃は、今の武器に置いたときの見た目 (<see cref="WeaponExtrasAssets.PickupModel"/>) があればそれに替える。</item>
     /// <item>一人称: 体は影だけにし、カメラの子に置いた銃 (ビューモデル) だけを右下に見せる。</item>
     /// </list>
     /// <see cref="CharacterAnimator"/> が人型のリグを置いたら体は出さず (<see cref="ShowsBody"/>)、一人称の銃だけを受け持つ。
@@ -44,6 +45,11 @@ namespace Fps.Runtime
         private Transform _torso;
         private Transform _head;
         private Transform _bodyGun;
+        private Transform _bodyGunDefault;
+        private Transform _bodyGunModel;
+        private string _bodyGunWeaponId;
+        private WeaponExtrasCatalog _weaponModels;
+        private bool _weaponModelsResolved;
         private Transform _viewModelRoot;
         private Transform _viewModelGun;
         private ViewmodelPresenter _viewmodel;
@@ -84,6 +90,28 @@ namespace Fps.Runtime
         public Transform Torso => _torso;
         public Transform Head => _head;
         public Transform BodyGun => _bodyGun;
+
+        public Transform BodyGunModel => _bodyGunModel;
+
+        public WeaponExtrasCatalog WeaponModels
+        {
+            get
+            {
+                if (!_weaponModelsResolved)
+                {
+                    _weaponModels = WeaponExtrasCatalog.Load();
+                    _weaponModelsResolved = true;
+                }
+
+                return _weaponModels;
+            }
+            set
+            {
+                _weaponModels = value;
+                _weaponModelsResolved = true;
+                _bodyGunWeaponId = null;
+            }
+        }
 
         /// <summary>一人称の銃の根 (カメラの子)。未組み立てなら null。</summary>
         public Transform ViewModelRoot => _viewModelRoot;
@@ -179,6 +207,7 @@ namespace Fps.Runtime
             }
 
             SyncWeaponSubscription();
+            SyncBodyGunModel();
 
             var mover = _reader.Mover;
             var controller = mover.Controller;
@@ -273,7 +302,7 @@ namespace Fps.Runtime
                 _head = CreatePart(prefabs.Head, PrimitiveType.Sphere, "Head", _bodyRoot, isGun: false, _bodyRenderers);
                 _head.localScale = Vector3.one * PlayerMockPose.HeadDiameter;
                 _bodyGun = CreateRoot("Gun", _bodyRoot);
-                CreateGun(prefabs.Gun, _bodyGun, _bodyRenderers);
+                _bodyGunDefault = CreateGun(prefabs.Gun, _bodyGun, _bodyRenderers);
 
                 _viewModelRoot = CreateRoot(ViewModelRootName, camera);
                 _viewModelGun = CreateRoot("Gun", _viewModelRoot);
@@ -380,6 +409,9 @@ namespace Fps.Runtime
             _torso = null;
             _head = null;
             _bodyGun = null;
+            _bodyGunDefault = null;
+            _bodyGunModel = null;
+            _bodyGunWeaponId = null;
             _viewModelRoot = null;
             _viewModelGun = null;
             _bodyMaterial = null;
@@ -488,13 +520,56 @@ namespace Fps.Runtime
             return root;
         }
 
-        private void CreateGun(GameObject prefab, Transform gunRoot, List<Renderer> renderers)
+        private Transform CreateGun(GameObject prefab, Transform gunRoot, List<Renderer> renderers)
         {
             var box = CreatePart(prefab, PrimitiveType.Cube, "GunBox", gunRoot, isGun: true, renderers);
             if (prefab == null)
             {
                 box.localScale = PlayerMockPose.GunSize;
             }
+
+            return box;
+        }
+
+        public void SetBodyGunModel(GameObject model)
+        {
+            if (!IsBuilt)
+            {
+                return;
+            }
+
+            if (_bodyGunModel != null)
+            {
+                var old = _bodyGunModel;
+                _bodyRenderers.RemoveAll(r => r == null || r.transform.IsChildOf(old));
+                DestroySafely(old.gameObject);
+                _bodyGunModel = null;
+            }
+
+            if (model != null)
+            {
+                var instance = VisualPrefab.Instantiate(model, _bodyGun, model.name, stripColliders: true);
+                VisualPrefab.SetLayer(instance, _bodyGun.gameObject.layer);
+                _bodyRenderers.AddRange(instance.GetComponentsInChildren<Renderer>(true));
+                _bodyGunModel = instance.transform;
+            }
+
+            _bodyGunDefault.gameObject.SetActive(_bodyGunModel == null);
+        }
+
+        // 持ち替えたときだけ置き直す。毎フレーム作り直すと、プレハブの複製が積もる。
+        private void SyncBodyGunModel()
+        {
+            var weapon = _reader.Weapon != null ? _reader.Weapon.Weapon : null;
+            var weaponId = weapon != null ? weapon.Spec.Id : null;
+            if (string.Equals(weaponId, _bodyGunWeaponId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _bodyGunWeaponId = weaponId;
+            var catalog = weaponId != null ? WeaponModels : null;
+            SetBodyGunModel(catalog != null && catalog.TryGetWeapon(weaponId, out var assets) ? assets.PickupModel : null);
         }
 
         // プレハブは名前の付いた空の根の子に置く。根の位置と大きさは姿勢 (Apply) が毎フレーム上書きするが、プレハブ自身の置き方は残すため。

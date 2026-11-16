@@ -83,7 +83,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 武器が 1 つ以上あり、どの武器も Id が空でなく重複せず、仮素材が必ず埋める枠 (薬莢のプレハブ・落下音・空撃ちの音) が埋まっていることを確かめる。
+        /// 武器が 1 つ以上あり、どの武器も Id が空でなく重複せず、仮素材が必ず埋める枠 (空撃ちの音と、薬莢を出す武器の落下音) が埋まっていることを確かめる。
+        /// 薬莢のプレハブは空でよい (光線や噴射のように薬莢を出さない武器がある)。
         /// 足りないものはすべて並べて 1 つの例外にする。
         /// </summary>
         /// <exception cref="PresentationCatalogException">どれかが欠けている・重複しているとき。</exception>
@@ -118,12 +119,7 @@ namespace Fps.Runtime
                 }
 
                 // 破棄されたアセットや参照切れも拾うため、Unity の == null で比べる。
-                if (entry.ShellPrefab == null)
-                {
-                    problems.Add($"{label} shell prefab is missing");
-                }
-
-                if (entry.ShellLandSound == null)
+                if (entry.ShellPrefab != null && entry.ShellLandSound == null)
                 {
                     problems.Add($"{label} shell landing sound is missing");
                 }

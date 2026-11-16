@@ -13,7 +13,7 @@ namespace Fps.Editor
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) と、そこから作る個別リスポーンのモードだけ
     /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す・
-    /// Bot で埋めない (<see cref="GameRules"/> の既定)。放置で切るのは、オンラインの試合が使うチームデスマッチと、
+    /// Bot で埋めない (<see cref="GameRules"/> の既定)。どのモードも持てる武器は <see cref="DemoMaxWeapons"/> 本。放置で切るのは、オンラインの試合が使うチームデスマッチと、
     /// その値から作るモード (ドミネーション・対戦・PvE のモード) だけで <see cref="OnlineIdleKickSeconds"/> 秒。キャンペーンと射撃場は切らない。
     /// オンラインの試合の勝敗を拠点で決める (<see cref="MatchObjective.Domination"/>) のはドミネーションだけで、他のモードは拠点なし。
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
@@ -88,9 +88,9 @@ namespace Fps.Editor
         public const int TpsRangeGrenadeCount = 3;
 
         /// <summary>
-        /// TPS 射撃場で 1 人が持てる武器の数。既定のロードアウト (2 本) に棚から 1 本足すと届き、その先は棚の武器と持ち替える。
+        /// デモのどのモードでも 1 人が持てる武器の数。既定のロードアウト (2 本) でもう届いているので、拾った武器は今の武器と持ち替える。
         /// </summary>
-        public const int TpsRangeMaxWeapons = 3;
+        public const int DemoMaxWeapons = 2;
 
         /// <summary><see cref="TeamDeathmatchActions"/> (ドミネーションも同じ) で出撃ごとに持つグレネードの数。</summary>
         public const int TeamDeathmatchGrenadeCount = 2;
@@ -126,7 +126,8 @@ namespace Fps.Editor
                 Destruction.On,
                 TeamDeathmatchActions())
                 .WithSpawnProtectionSeconds(TeamDeathmatchSpawnProtectionSeconds)
-                .WithIdleKickSeconds(OnlineIdleKickSeconds);
+                .WithIdleKickSeconds(OnlineIdleKickSeconds)
+                .WithMaxWeapons(DemoMaxWeapons);
         }
 
         /// <summary>
@@ -146,7 +147,8 @@ namespace Fps.Editor
                 false,
                 1.5f,
                 Destruction.Off,
-                CampaignActions());
+                CampaignActions())
+                .WithMaxWeapons(DemoMaxWeapons);
         }
 
         /// <summary>
@@ -155,7 +157,7 @@ namespace Fps.Editor
         /// </summary>
         public static GameRules CampaignNormalRules()
         {
-            return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f, CampaignActions());
+            return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f, CampaignActions()).WithMaxWeapons(DemoMaxWeapons);
         }
 
         /// <summary>
@@ -164,7 +166,7 @@ namespace Fps.Editor
         /// </summary>
         public static GameRules CampaignHardRules()
         {
-            return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f, CampaignActions());
+            return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f, CampaignActions()).WithMaxWeapons(DemoMaxWeapons);
         }
 
         /// <summary>
@@ -184,7 +186,8 @@ namespace Fps.Editor
                 true,
                 1f,
                 Destruction.On,
-                RangeActions());
+                RangeActions())
+                .WithMaxWeapons(DemoMaxWeapons);
         }
 
         /// <summary>
@@ -192,7 +195,7 @@ namespace Fps.Editor
         /// </summary>
         public static GameRules TpsRangeRules()
         {
-            return RangeRules().WithActions(TpsRangeActions()).WithMaxWeapons(TpsRangeMaxWeapons);
+            return RangeRules().WithActions(TpsRangeActions());
         }
 
         /// <summary>

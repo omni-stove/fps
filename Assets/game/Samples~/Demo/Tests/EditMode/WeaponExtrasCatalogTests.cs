@@ -62,16 +62,64 @@ namespace Fps.Tests.EditMode
                 new WeaponExtrasAssets("rifle", null, null, null),
                 new WeaponExtrasAssets(string.Empty, _shell, _clip, _clip),
                 null,
+                new WeaponExtrasAssets("shotgun", _shell, null, _clip),
             });
 
             var thrown = Assert.Throws<PresentationCatalogException>(() => _catalog.Validate());
 
             Assert.That(thrown.Message, Does.Contain("weapon #1 ('rifle') uses a weapon id already used"));
-            Assert.That(thrown.Message, Does.Contain("shell prefab is missing"));
-            Assert.That(thrown.Message, Does.Contain("shell landing sound is missing"));
-            Assert.That(thrown.Message, Does.Contain("dry-fire sound is missing"));
+            Assert.That(thrown.Message, Does.Contain("weapon #1 ('rifle') dry-fire sound is missing"));
+            Assert.That(thrown.Message, Does.Not.Contain("weapon #1 ('rifle') shell landing sound is missing"));
+            Assert.That(thrown.Message, Does.Contain("weapon #4 ('shotgun') shell landing sound is missing"));
             Assert.That(thrown.Message, Does.Contain("weapon #2 has no weapon id"));
             Assert.That(thrown.Message, Does.Contain("weapon #3 is empty"));
+        }
+
+        [Test]
+        public void AWeaponWithoutShellsNeedsNoShellLandingSound()
+        {
+            _catalog.SetWeapons(new[] { new WeaponExtrasAssets("laser", null, null, _clip) });
+
+            Assert.DoesNotThrow(() => _catalog.Validate());
+        }
+
+        [Test]
+        public void WeaponsWithoutCasingsGetNoShellAndTheRestGetOneByCategory()
+        {
+            var shells = WeaponAssetBuilder.RangeWeaponSources().ToDictionary(source => source.Name, source => WeaponExtrasAssetStep.ShellFor(source.Spec));
+
+            Assert.That(shells["Laser"], Is.EqualTo(((string)null, (string)null)));
+            Assert.That(shells["EnergyRifle"], Is.EqualTo(((string)null, (string)null)));
+            Assert.That(shells["Flamethrower"], Is.EqualTo(((string)null, (string)null)));
+            Assert.That(shells["Crossbow"], Is.EqualTo(((string)null, (string)null)));
+            Assert.That(shells["RocketLauncher"], Is.EqualTo(((string)null, (string)null)));
+            Assert.That(shells["GuidedLauncher"], Is.EqualTo(((string)null, (string)null)));
+            Assert.That(shells["Minigun"], Is.EqualTo((WeaponExtrasAssetStep.RifleShellPrefab, WeaponExtrasAssetStep.ShellDropSound)));
+            Assert.That(shells["RicochetPistol"], Is.EqualTo((WeaponExtrasAssetStep.HandgunShellPrefab, WeaponExtrasAssetStep.ShellDropSound)));
+            Assert.That(shells["Shotgun"], Is.EqualTo((WeaponExtrasAssetStep.LauncherShellPrefab, WeaponExtrasAssetStep.HeavyShellDropSound)));
+            Assert.That(shells["GrenadeLauncher"], Is.EqualTo((WeaponExtrasAssetStep.LauncherShellPrefab, WeaponExtrasAssetStep.HeavyShellDropSound)));
+        }
+
+        [Test]
+        public void APickupModelIsCenteredOnItsParts()
+        {
+            var spec = WeaponAssetBuilder.RangeWeaponSources().Single(source => source.Name == "Minigun").Spec;
+            var look = WeaponLook.For(spec);
+            var root = new GameObject("Model");
+            try
+            {
+                WeaponExtrasAssetStep.BuildPickupModel(root, look, (paint, color) => null);
+
+                var gun = root.transform.Find(ViewmodelAssetStep.GunName);
+                Assert.That(gun, Is.Not.Null);
+                Assert.That(gun.localPosition, Is.EqualTo(-look.Bounds.center));
+                Assert.That(gun.childCount, Is.EqualTo(look.Parts.Count));
+                Assert.That(root.GetComponentsInChildren<Collider>(true), Is.Empty);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
         }
 
         [Test]

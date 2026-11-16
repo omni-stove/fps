@@ -29,6 +29,24 @@ namespace Fps.Runtime
         [SerializeField, Range(0f, 1f), Tooltip("空中で水平速度を入力方向へ寄せる 1 ステップあたりの割合")]
         private float _airControl = MotorSpec.DefaultAirControl;
 
+        [SerializeField, Min(0f), Tooltip("ダッシュしていないとき (歩き・しゃがみ・伏せ) に前へ動く速さの倍率")]
+        private float _walkForwardScale = MoveDirectionScale.DefaultForward;
+
+        [SerializeField, Min(0f), Tooltip("ダッシュしていないときに後ろへ動く速さの倍率")]
+        private float _walkBackwardScale = MoveDirectionScale.DefaultBackward;
+
+        [SerializeField, Min(0f), Tooltip("ダッシュしていないときに左右へ動く速さの倍率")]
+        private float _walkSideScale = MoveDirectionScale.DefaultSide;
+
+        [SerializeField, Min(0f), Tooltip("ダッシュ中に前へ動く速さの倍率")]
+        private float _sprintForwardScale = MoveDirectionScale.DefaultForward;
+
+        [SerializeField, Min(0f), Tooltip("ダッシュ中に後ろへ動く速さの倍率")]
+        private float _sprintBackwardScale = MoveDirectionScale.DefaultBackward;
+
+        [SerializeField, Min(0f), Tooltip("ダッシュ中に左右へ動く速さの倍率")]
+        private float _sprintSideScale = MoveDirectionScale.DefaultSide;
+
         public float WalkSpeed
         {
             get => _walkSpeed;
@@ -65,6 +83,40 @@ namespace Fps.Runtime
             set => _airControl = value;
         }
 
+        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、倍率が負か有限でない。</exception>
+        public MoveDirectionScale WalkDirection
+        {
+            get => new MoveDirectionScale(_walkForwardScale, _walkBackwardScale, _walkSideScale);
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+
+                _walkForwardScale = value.Forward;
+                _walkBackwardScale = value.Backward;
+                _walkSideScale = value.Side;
+            }
+        }
+
+        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、倍率が負か有限でない。</exception>
+        public MoveDirectionScale SprintDirection
+        {
+            get => new MoveDirectionScale(_sprintForwardScale, _sprintBackwardScale, _sprintSideScale);
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+
+                _sprintForwardScale = value.Forward;
+                _sprintBackwardScale = value.Backward;
+                _sprintSideScale = value.Side;
+            }
+        }
+
         public static MotorSettings Load()
         {
             var fromContent = GameContent.Pick(c => c.Motor);
@@ -92,7 +144,15 @@ namespace Fps.Runtime
 
         public MotorSpec CreateSpec()
         {
-            return new MotorSpec(_walkSpeed, _sprintSpeed, _jumpHeight, _gravity, _airControl, _crouchSpeed);
+            return new MotorSpec(
+                _walkSpeed,
+                _sprintSpeed,
+                _jumpHeight,
+                _gravity,
+                _airControl,
+                _crouchSpeed,
+                walkDirection: WalkDirection,
+                sprintDirection: SprintDirection);
         }
 
         public void ResetToDefaults()
@@ -103,6 +163,8 @@ namespace Fps.Runtime
             _jumpHeight = MotorSpec.DefaultJumpHeight;
             _gravity = MotorSpec.DefaultGravity;
             _airControl = MotorSpec.DefaultAirControl;
+            WalkDirection = MoveDirectionScale.Uniform;
+            SprintDirection = MoveDirectionScale.Uniform;
         }
     }
 }

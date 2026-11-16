@@ -87,6 +87,12 @@ namespace Fps.Core
         /// <summary>よじ登る軌跡をたどる速さ (m/s)。</summary>
         public float MantleSpeed { get; }
 
+        /// <summary>ダッシュしていないとき (歩き・しゃがみ・伏せ) に、移動の向きごとに速さへ掛ける倍率。</summary>
+        public MoveDirectionScale WalkDirection { get; }
+
+        /// <summary>ダッシュ中に、移動の向きごとに <see cref="SprintSpeed"/> へ掛ける倍率。</summary>
+        public MoveDirectionScale SprintDirection { get; }
+
         /// <param name="walkSpeed">歩きの水平速度。0 以上。</param>
         /// <param name="sprintSpeed">ダッシュ中の水平速度。0 以上。</param>
         /// <param name="jumpHeight">ジャンプで到達する高さ。0 以上。</param>
@@ -100,6 +106,8 @@ namespace Fps.Core
         /// <param name="vaultMaxHeight">乗り越えられる最大の高さ。0 以上の有限値。</param>
         /// <param name="mantleMaxHeight">よじ登れる最大の高さ。0 以上の有限値。</param>
         /// <param name="mantleSpeed">よじ登る速さ。0 より大きい有限値。</param>
+        /// <param name="walkDirection">ダッシュしていないときの向きごとの倍率。null で <see cref="MoveDirectionScale.Uniform"/>。</param>
+        /// <param name="sprintDirection">ダッシュ中の向きごとの倍率。null で <see cref="MoveDirectionScale.Uniform"/>。</param>
         public MotorSpec(
             float walkSpeed,
             float sprintSpeed,
@@ -113,7 +121,9 @@ namespace Fps.Core
             float dodgeSeconds = DefaultDodgeSeconds,
             float vaultMaxHeight = DefaultVaultMaxHeight,
             float mantleMaxHeight = DefaultMantleMaxHeight,
-            float mantleSpeed = DefaultMantleSpeed)
+            float mantleSpeed = DefaultMantleSpeed,
+            MoveDirectionScale walkDirection = null,
+            MoveDirectionScale sprintDirection = null)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -194,6 +204,8 @@ namespace Fps.Core
             VaultMaxHeight = vaultMaxHeight;
             MantleMaxHeight = mantleMaxHeight;
             MantleSpeed = mantleSpeed;
+            WalkDirection = walkDirection ?? MoveDirectionScale.Uniform;
+            SprintDirection = sprintDirection ?? MoveDirectionScale.Uniform;
         }
     }
 }

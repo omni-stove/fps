@@ -649,6 +649,76 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ThirdPersonFindsShoulderHighCoverBetweenTheEyeAndTheAimPoint()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+            _rig.UpdateCameraPosition();
+
+            // カメラからは 20m 先の標的が見えているが、目の 1m 先に目の線だけを遮る小さな箱がある
+            var cameraTransform = _camera.transform;
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = cameraTransform.position + (cameraTransform.forward * 20f);
+            var cover = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cover.transform.SetParent(_wall.transform, true);
+            cover.transform.position = _eye.position + new Vector3(0f, 0f, 1f);
+            cover.transform.localScale = new Vector3(0.3f, 0.3f, 0.1f);
+            Physics.SyncTransforms();
+
+            var blocked = _rig.TryFindAimBlock(100f, AimBlockSettings.DefaultMargin, out var blockPoint);
+
+            Assert.That(blocked, Is.True);
+            Assert.That(blockPoint.z - _eye.position.z, Is.EqualTo(0.95f).Within(0.01f), "the mark sits on the near face of the cover");
+        }
+
+        [Test]
+        public void ThirdPersonIsNotBlockedWhenTheEyeSeesTheAimPoint()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+            _rig.UpdateCameraPosition();
+            var cameraTransform = _camera.transform;
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = cameraTransform.position + (cameraTransform.forward * 20f);
+            Physics.SyncTransforms();
+
+            Assert.That(_rig.TryFindAimBlock(100f, AimBlockSettings.DefaultMargin, out var blockPoint), Is.False);
+            Assert.That(blockPoint, Is.EqualTo(_eye.position));
+        }
+
+        [Test]
+        public void NothingToAimAtIsNotBlocked()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.ThirdPerson;
+            _rig.UpdateCameraPosition();
+
+            Assert.That(_rig.TryFindAimBlock(100f, AimBlockSettings.DefaultMargin, out _), Is.False);
+        }
+
+        [Test]
+        public void FirstPersonIsNotBlockedByWhatTheCrosshairCovers()
+        {
+            _rig.Initialize(_eye, _camera);
+            _rig.Mode = ViewMode.FirstPerson;
+            _rig.UpdateCameraPosition();
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = _eye.position + new Vector3(0f, 0f, 5f);
+            Physics.SyncTransforms();
+
+            Assert.That(_rig.TryFindAimBlock(100f, AimBlockSettings.DefaultMargin, out _), Is.False);
+        }
+
+        [Test]
+        public void AimBlockRejectsANegativeMargin()
+        {
+            _rig.Initialize(_eye, _camera);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rig.TryFindAimBlock(100f, -0.1f, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rig.TryFindAimBlock(0f, 0.3f, out _));
+        }
+
+        [Test]
         public void ThirdPersonIgnoresWhatIsBetweenTheCameraAndTheEye()
         {
             _rig.Initialize(_eye, _camera);

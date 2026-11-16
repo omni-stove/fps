@@ -69,6 +69,36 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void NewSettingsMoveTheSameSpeedInEveryDirection()
+        {
+            var spec = _settings.CreateSpec();
+
+            Assert.That(spec.WalkDirection.Forward, Is.EqualTo(1f));
+            Assert.That(spec.WalkDirection.Backward, Is.EqualTo(1f));
+            Assert.That(spec.WalkDirection.Side, Is.EqualTo(1f));
+            Assert.That(spec.SprintDirection.Forward, Is.EqualTo(1f));
+            Assert.That(spec.SprintDirection.Backward, Is.EqualTo(1f));
+            Assert.That(spec.SprintDirection.Side, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ResolveCarriesTheDirectionScales()
+        {
+            _settings.WalkDirection = new MoveDirectionScale(1f, 0.6f, 0.8f);
+            _settings.SprintDirection = new MoveDirectionScale(1f, 0.4f, 0.5f);
+
+            var spec = MotorSettings.Resolve(_settings);
+
+            Assert.That(spec.WalkDirection.Backward, Is.EqualTo(0.6f));
+            Assert.That(spec.WalkDirection.Side, Is.EqualTo(0.8f));
+            Assert.That(spec.SprintDirection.Backward, Is.EqualTo(0.4f));
+            Assert.That(spec.SprintDirection.Side, Is.EqualTo(0.5f));
+
+            _settings.ResetToDefaults();
+            Assert.That(_settings.CreateSpec().SprintDirection.Backward, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void ResolveWithoutAnyAssetFallsBackToTheDefaultSpec()
         {
             Assume.That(MotorSettings.Load(), Is.Null, "a project asset at Resources/" + MotorSettings.ResourcePath + " overrides the default");

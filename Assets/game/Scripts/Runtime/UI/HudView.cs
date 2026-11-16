@@ -52,6 +52,21 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml の照準の右の線 (<see cref="CrosshairName"/> の子)。</summary>
         public const string CrosshairRightName = "hud-crosshair-right";
 
+        /// <summary>目からの射線が狙う点より手前で遮られている間、照準 (<see cref="CrosshairName"/>) に付けるクラス。色は Hud.uss で決める。</summary>
+        public const string CrosshairBlockedClass = "hud__crosshair--blocked";
+
+        /// <summary>Hud.uxml の、目からの射線が遮られた点に出す印。遮られている間だけ出す。</summary>
+        public const string AimBlockMarkerName = "hud-aim-block";
+
+        /// <summary>印の画像を渡されたとき、印 (<see cref="AimBlockMarkerName"/>) に付けるクラス。</summary>
+        public const string AimBlockImageClass = "hud__aim-block--image";
+
+        /// <summary>印の画像が無いときにコードで作る × の 1 本ずつに付けるクラス。</summary>
+        public const string AimBlockBarClass = "hud__aim-block-bar";
+
+        /// <summary>コードで作る × の 2 本目に付けるクラス。</summary>
+        public const string AimBlockBarCrossClass = "hud__aim-block-bar--cross";
+
         /// <summary>広がり 0 で円錐の縁がこれより内のときの、中央から線の内側の端までの隙間 (基準解像度の px)。中央の点と線が重ならない幅。</summary>
         public const float MinCrosshairGap = 6f;
 
@@ -140,6 +155,7 @@ namespace Fps.Runtime
         public VisualElement CrosshairBottom { get; }
         public VisualElement CrosshairLeft { get; }
         public VisualElement CrosshairRight { get; }
+        public VisualElement AimBlockMarker { get; }
         public Label NoticeLabel { get; }
         public VisualElement ScorePanel { get; }
         public Label FirstScoreLabel { get; }
@@ -186,6 +202,8 @@ namespace Fps.Runtime
             CrosshairBottom = Require<VisualElement>(Crosshair, CrosshairBottomName);
             CrosshairLeft = Require<VisualElement>(Crosshair, CrosshairLeftName);
             CrosshairRight = Require<VisualElement>(Crosshair, CrosshairRightName);
+            AimBlockMarker = Require<VisualElement>(root, AimBlockMarkerName);
+            SetAimBlockMarker(null);
             NoticeLabel = Require<Label>(root, NoticeLabelName);
             ScorePanel = Require<VisualElement>(root, ScorePanelName);
             FirstScoreLabel = Require<Label>(root, FirstScoreLabelName);
@@ -209,6 +227,7 @@ namespace Fps.Runtime
             ShowResult();
             ShowReloadProgress();
             ShowCrosshair();
+            ShowAimBlock();
             ShowWeaponGauges();
             _model.Changed += OnChanged;
         }
@@ -226,6 +245,7 @@ namespace Fps.Runtime
             ShowTime();
             ShowScores();
             ShowCrosshair();
+            ShowAimBlock();
             ShowWeaponGauges();
         }
 
@@ -245,6 +265,28 @@ namespace Fps.Runtime
             _alphaColor = alpha;
             _bravoColor = bravo;
             ShowScores();
+        }
+
+        /// <summary>
+        /// 目からの射線が遮られた点に出す印の見た目を決める。marker を渡せばその画像を出し、null なら × の形を要素で作る。
+        /// </summary>
+        public void SetAimBlockMarker(Texture2D marker)
+        {
+            AimBlockMarker.Clear();
+            AimBlockMarker.EnableInClassList(AimBlockImageClass, marker != null);
+            AimBlockMarker.style.backgroundImage = marker != null ? new StyleBackground(marker) : new StyleBackground(StyleKeyword.Null);
+            if (marker != null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < 2; i++)
+            {
+                var bar = new VisualElement { pickingMode = PickingMode.Ignore };
+                bar.AddToClassList(AimBlockBarClass);
+                bar.EnableInClassList(AimBlockBarCrossClass, i == 1);
+                AimBlockMarker.Add(bar);
+            }
         }
 
         /// <summary>team を塗る色。<see cref="SetTeamColors"/> の前は白。</summary>
@@ -295,6 +337,10 @@ namespace Fps.Runtime
                     break;
                 case HudField.Crosshair:
                     ShowCrosshair();
+                    ShowAimBlock();
+                    break;
+                case HudField.AimBlock:
+                    ShowAimBlock();
                     break;
                 case HudField.Charge:
                     ShowCharge();
@@ -477,6 +523,23 @@ namespace Fps.Runtime
             CrosshairBottom.style.translate = new Translate(new Length(0f), new Length(gap));
             CrosshairLeft.style.translate = new Translate(new Length(-gap), new Length(0f));
             CrosshairRight.style.translate = new Translate(new Length(gap), new Length(0f));
+        }
+
+        /// <summary>
+        /// 照準を出している間に射線が遮られていれば、照準に <see cref="CrosshairBlockedClass"/> を付け、遮られた点に印を出す。
+        /// 遮られた点が画面に写らなければ照準だけ変える。
+        /// </summary>
+        private void ShowAimBlock()
+        {
+            var blocked = _model.IsAimBlocked && _model.IsCrosshairVisible && _visibility.Crosshair;
+            Crosshair.EnableInClassList(CrosshairBlockedClass, blocked);
+            var point = _model.AimBlockPoint;
+            AimBlockMarker.style.display = Display(blocked && point.HasValue);
+            if (blocked && point.HasValue)
+            {
+                AimBlockMarker.style.left = Length.Percent(point.Value.X * 100f);
+                AimBlockMarker.style.top = Length.Percent((1f - point.Value.Y) * 100f);
+            }
         }
 
         private static void ShowOrHide(Label label, string text, bool allowed = true)

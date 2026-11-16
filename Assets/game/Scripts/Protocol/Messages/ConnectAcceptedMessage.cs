@@ -9,7 +9,7 @@ namespace Fps.Protocol
     /// </remarks>
     public sealed class ConnectAcceptedMessage : IMessage
     {
-        public const byte CurrentVersion = 3;
+        public const byte CurrentVersion = 4;
 
         /// <summary><see cref="KillPlaneY"/> の既定。.NET のサーバーと Netcode のプレイヤーの既定と同じ。</summary>
         public const float DefaultKillPlaneY = -50f;
@@ -86,6 +86,8 @@ namespace Fps.Protocol
             writer.WriteSingle(motor.VaultMaxHeight);
             writer.WriteSingle(motor.MantleMaxHeight);
             writer.WriteSingle(motor.MantleSpeed);
+            WriteDirection(writer, motor.WalkDirection);
+            WriteDirection(writer, motor.SprintDirection);
 
             var stance = settings.Stance;
             writer.WriteSingle(stance.Standing.Height);
@@ -110,6 +112,13 @@ namespace Fps.Protocol
             writer.WriteSingle(prone.DiveSeconds);
         }
 
+        private static void WriteDirection(MessageWriter writer, Fps.Core.MoveDirectionScale direction)
+        {
+            writer.WriteSingle(direction.Forward);
+            writer.WriteSingle(direction.Backward);
+            writer.WriteSingle(direction.Side);
+        }
+
         // 範囲の検査は Core の型の作り方に任せ、通らない値は読めないメッセージとして断る
         private static Fps.Core.NetMotorSettings ReadMotor(MessageReader reader)
         {
@@ -117,6 +126,12 @@ namespace Fps.Protocol
             for (var i = 0; i < motor.Length; i++)
             {
                 motor[i] = reader.ReadFiniteSingle("motor value");
+            }
+
+            var direction = new float[6];
+            for (var i = 0; i < direction.Length; i++)
+            {
+                direction[i] = reader.ReadFiniteSingle("move direction scale");
             }
 
             var stance = new float[6];
@@ -139,7 +154,9 @@ namespace Fps.Protocol
             {
                 return new Fps.Core.NetMotorSettings(
                     new Fps.Core.MotorSpec(
-                        motor[0], motor[1], motor[2], motor[3], motor[4], motor[5], motor[6], motor[7], motor[8], motor[9], motor[10], motor[11], motor[12]),
+                        motor[0], motor[1], motor[2], motor[3], motor[4], motor[5], motor[6], motor[7], motor[8], motor[9], motor[10], motor[11], motor[12],
+                        new Fps.Core.MoveDirectionScale(direction[0], direction[1], direction[2]),
+                        new Fps.Core.MoveDirectionScale(direction[3], direction[4], direction[5])),
                     new Fps.Core.StanceGeometry(stance[0], stance[1], stance[2], stance[3], stance[4], stance[5]),
                     new Fps.Core.CapsuleMoverSpec(slope, step, skin, layerMask),
                     new Fps.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]));

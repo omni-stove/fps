@@ -574,6 +574,75 @@ namespace Fps.Runtime
             out Vector3 origin,
             out Vector3 direction)
         {
+            ValidateAimArguments(camera, eye, aimDistance);
+
+            origin = eye.position;
+            var forward = camera.forward;
+            if ((camera.position - origin).sqrMagnitude < 1e-8f)
+            {
+                direction = forward;
+                return;
+            }
+
+            var aimPoint = FindAimPoint(camera, origin, aimDistance, shooterRoot, mask);
+            direction = AimSolver.DirectionFromEye(origin.ToNumerics(), aimPoint.ToNumerics(), forward.ToNumerics()).ToUnity();
+        }
+
+        /// <summary>
+        /// 目から画面中央が指す点への線が、その点より margin 以上手前で物に遮られているか (<see cref="AimSolver.IsBlocked"/>)。
+        /// 遮られていれば blockPoint に目からの線が当たった点を返す。当たる物は <see cref="ResolveAim(float, out Vector3, out Vector3)"/> と同じ
+        /// (カメラの壁抜け防止と同じレイヤー、自分の体と弾の抜ける自分の置いた物を除く)。
+        /// </summary>
+        /// <param name="aimDistance">狙う点を探す距離 (m)。武器の射程を渡す。0 より大きい有限値。</param>
+        /// <param name="margin">狙う点からこれより手前の命中だけを遮りとみなす距離 (m)。0 以上の有限値。</param>
+        /// <param name="blockPoint">遮った物に目からの線が当たった点。遮られていなければ目の位置。</param>
+        public bool TryFindAimBlock(float aimDistance, float margin, out Vector3 blockPoint)
+        {
+            EnsureInitialized();
+            return TryFindAimBlock(_camera.transform, _eye, aimDistance, transform, _collisionMask, margin, out blockPoint);
+        }
+
+        /// <summary>
+        /// <see cref="TryFindAimBlock(float, float, out Vector3)"/> の本体。狙う点は <see cref="ResolveAim(Transform, Transform, float, Transform, LayerMask, out Vector3, out Vector3)"/>
+        /// と同じく決め、目からその点へ Raycast する。一人称でも同じ手順で判定する。
+        /// </summary>
+        public static bool TryFindAimBlock(
+            Transform camera,
+            Transform eye,
+            float aimDistance,
+            Transform shooterRoot,
+            LayerMask mask,
+            float margin,
+            out Vector3 blockPoint)
+        {
+            ValidateAimArguments(camera, eye, aimDistance);
+            if (!(margin >= 0f) || float.IsInfinity(margin))
+            {
+                throw new ArgumentOutOfRangeException(nameof(margin), margin, "margin must be a non-negative finite number");
+            }
+
+            var origin = eye.position;
+            blockPoint = origin;
+            var aimPoint = FindAimPoint(camera, origin, aimDistance, shooterRoot, mask);
+            var toAim = aimPoint - origin;
+            var length = toAim.magnitude;
+            if (length <= margin)
+            {
+                return false;
+            }
+
+            if (!TryNearestRaycast(origin, toAim / length, length, shooterRoot, mask, out var hit)
+                || !AimSolver.IsBlocked(origin.ToNumerics(), aimPoint.ToNumerics(), hit.distance, margin))
+            {
+                return false;
+            }
+
+            blockPoint = hit.point;
+            return true;
+        }
+
+        private static void ValidateAimArguments(Transform camera, Transform eye, float aimDistance)
+        {
             if (camera == null)
             {
                 throw new ArgumentNullException(nameof(camera));
@@ -588,22 +657,18 @@ namespace Fps.Runtime
             {
                 throw new ArgumentOutOfRangeException(nameof(aimDistance), aimDistance, "aimDistance must be positive and finite");
             }
+        }
 
-            origin = eye.position;
+        // camera の正面の Ray をカメラと目の間を飛ばして撃ち、最初の命中 (無ければ aimDistance 先) を返す。
+        private static Vector3 FindAimPoint(Transform camera, Vector3 eye, float aimDistance, Transform shooterRoot, LayerMask mask)
+        {
             var cameraPosition = camera.position;
             var forward = camera.forward;
-            if ((cameraPosition - origin).sqrMagnitude < 1e-8f)
-            {
-                direction = forward;
-                return;
-            }
-
-            var start = AimSolver.RayStart(cameraPosition.ToNumerics(), forward.ToNumerics(), origin.ToNumerics());
+            var start = AimSolver.RayStart(cameraPosition.ToNumerics(), forward.ToNumerics(), eye.ToNumerics());
             var rayOrigin = cameraPosition + (forward * start);
-            var aimPoint = TryNearestRaycast(rayOrigin, forward, aimDistance, shooterRoot, mask, out var hit)
+            return TryNearestRaycast(rayOrigin, forward, aimDistance, shooterRoot, mask, out var hit)
                 ? hit.point
                 : rayOrigin + (forward * aimDistance);
-            direction = AimSolver.DirectionFromEye(origin.ToNumerics(), aimPoint.ToNumerics(), forward.ToNumerics()).ToUnity();
         }
 
         private bool TryNearestCast(Vector3 origin, Vector3 direction, float distance, out float hitDistance)

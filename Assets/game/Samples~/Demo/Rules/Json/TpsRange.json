@@ -26,7 +26,8 @@
     "mantle": "On",
     "stagger": "On",
     "stealth": "On",
-    "suppression": "On"
+    "suppression": "On",
+    "jump": "Off"
   },
   "spawnProtectionSeconds": 0,
   "fallDamage": "Off",

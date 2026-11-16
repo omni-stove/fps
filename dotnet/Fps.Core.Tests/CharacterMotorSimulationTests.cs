@@ -65,6 +65,25 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ADefaultInputAllowsJumping()
+        {
+            Assert.That(default(CharacterMotorInput).JumpAllowed, Is.True);
+            Assert.That(new CharacterMotorInput(Vector2.Zero, 0f, false, true, false, false, false, false, false, false).JumpAllowed, Is.True);
+        }
+
+        [Test]
+        public void RestrainingAndRulesKeepTheJumpRule()
+        {
+            var forbidden = Input(Vector2.Zero, jumpAllowed: false);
+            var downed = new CharacterMotorInput(
+                Vector2.Zero, 0f, false, true, false, true, false, false, false, false, false, false, false, 1f, jumpAllowed: false);
+
+            Assert.That(forbidden.WithCarrySpeedMultiplier(0.5f).JumpAllowed, Is.False);
+            Assert.That(forbidden.WithoutCover().WithoutDodge().JumpAllowed, Is.False);
+            Assert.That(downed.Restrained().JumpAllowed, Is.False);
+        }
+
+        [Test]
         public void RestrainingAndRulesKeepTheCarryMultiplier()
         {
             var input = Input(new Vector2(0f, 1f)).WithCarrySpeedMultiplier(0.7f);
@@ -207,6 +226,127 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void JumpingWithTheJumpRuleOffStaysOnTheGround()
+        {
+            AddFloor();
+            var simulation = NewSimulation();
+            var state = Settle(simulation);
+            var groundY = state.Position.Y;
+
+            state = simulation.Step(state, Input(Vector2.Zero, jump: true, jumpAllowed: false));
+            Assert.That(state.IsGrounded, Is.True);
+            Assert.That(state.Velocity.Y, Is.LessThanOrEqualTo(0f));
+
+            for (var i = 0; i < 30; i++)
+            {
+                state = simulation.Step(state, Input(Vector2.Zero));
+            }
+
+            Assert.That(state.IsGrounded, Is.True);
+            Assert.That(state.Position.Y, Is.EqualTo(groundY).Within(0.01f));
+        }
+
+        [Test]
+        public void JumpingAtALowWallWithTheJumpRuleOffStillVaults()
+        {
+            AddFloor();
+            AddBox(new Vector3(0f, 0.4f, 1.2f), new Vector3(2f, 0.4f, 0.2f));
+            var simulation = NewSimulation();
+            var state = Settle(simulation);
+
+            state = simulation.Step(state, Input(Vector2.Zero, jump: true, vaultAllowed: true, jumpAllowed: false));
+
+            Assert.That(state.IsVaulting, Is.True);
+        }
+
+        [Test]
+        public void JumpingAtAThickLowPlatformWithTheJumpRuleOffClimbsOntoIt()
+        {
+            AddFloor();
+            AddBox(new Vector3(0f, 0.4f, 3.8f), new Vector3(2f, 0.4f, 3f));
+            var simulation = NewSimulation();
+            var state = Settle(simulation);
+            var groundY = state.Position.Y;
+
+            state = simulation.Step(state, Input(Vector2.Zero, jump: true, vaultAllowed: true, jumpAllowed: false));
+            Assert.That(state.IsVaulting, Is.True, simulation.LastVaultProbe.Verdict.ToString());
+
+            for (var i = 0; i < 120 && state.IsVaulting; i++)
+            {
+                state = simulation.Step(state, Input(Vector2.Zero));
+            }
+
+            for (var i = 0; i < _settleTicks; i++)
+            {
+                state = simulation.Step(state, Input(Vector2.Zero));
+            }
+
+            Assert.That(state.IsGrounded, Is.True);
+            Assert.That(state.Position.Z, Is.GreaterThan(0.8f + _stance.Radius), "the body stands past the front face");
+            Assert.That(state.Position.Y - groundY, Is.EqualTo(0.8f).Within(0.05f), "the body stands on the platform");
+        }
+
+        [Test]
+        public void JumpingAtAnOverhangingPlatformClimbsOntoItsLip()
+        {
+            AddFloor();
+            // 下が抜けた台: 縁 (z = 0.6) は 0.6〜1.0 m の高さに張り出し、その奥 (z = 0.95) に低い脚がある。低い Ray は脚にしか当たらない。
+            AddBox(new Vector3(0f, 0.8f, 2.1f), new Vector3(2f, 0.2f, 1.5f));
+            AddBox(new Vector3(0f, 0.3f, 1.1f), new Vector3(2f, 0.3f, 0.15f));
+            var simulation = NewSimulation();
+            var state = Settle(simulation);
+            var groundY = state.Position.Y;
+
+            state = simulation.Step(state, Input(Vector2.Zero, jump: true, vaultAllowed: true, jumpAllowed: false));
+            Assert.That(state.IsVaulting, Is.True, simulation.LastVaultProbe.Verdict.ToString());
+            Assert.That(simulation.LastVaultProbe.Height, Is.GreaterThan(0.8f), "the top of the lip (1.0 m), not of the leg (0.6 m)");
+
+            for (var i = 0; i < 120 && state.IsVaulting; i++)
+            {
+                state = simulation.Step(state, Input(Vector2.Zero));
+            }
+
+            for (var i = 0; i < _settleTicks; i++)
+            {
+                state = simulation.Step(state, Input(Vector2.Zero));
+            }
+
+            Assert.That(state.IsGrounded, Is.True);
+            Assert.That(state.Position.Y - groundY, Is.EqualTo(1f).Within(0.05f), "the body stands on the platform");
+        }
+
+        [Test]
+        public void JumpingAtTheEndOfAThinWallDoesNotClimbOntoIt()
+        {
+            AddFloor();
+            // 前へ長く延びる厚さ 0.4 m の壁に、端 (z = 0.8) から向かう。
+            AddBox(new Vector3(0f, 0.4f, 3.3f), new Vector3(0.2f, 0.4f, 2.5f));
+            var simulation = NewSimulation();
+            var state = Settle(simulation);
+
+            state = simulation.Step(state, Input(Vector2.Zero, jump: true, vaultAllowed: true, jumpAllowed: false));
+
+            Assert.That(simulation.LastVaultProbe.Verdict, Is.EqualTo(VaultVerdict.NarrowFace));
+            Assert.That(state.IsVaulting, Is.False);
+            Assert.That(state.IsGrounded, Is.True);
+        }
+
+        [Test]
+        public void JumpingAtATallWallWithTheJumpRuleOffDoesNothing()
+        {
+            AddFloor();
+            AddBox(new Vector3(0f, 2f, 1.2f), new Vector3(2f, 2f, 0.2f));
+            var simulation = NewSimulation();
+            var state = Settle(simulation);
+
+            state = simulation.Step(state, Input(Vector2.Zero, jump: true, vaultAllowed: true, jumpAllowed: false));
+
+            Assert.That(state.IsVaulting, Is.False);
+            Assert.That(state.IsGrounded, Is.True);
+            Assert.That(state.Velocity.Y, Is.LessThanOrEqualTo(0f));
+        }
+
+        [Test]
         public void PressingCoverAtALowWallEntersLowCoverAndCrouches()
         {
             AddFloor();
@@ -286,8 +426,8 @@ namespace Fps.Core.Tests
         public void RulesDropActionsTheMatchTurnedOff()
         {
             var input = new CharacterMotorInput(Vector2.Zero, 0f, false, true, false, false, true, false, true, false);
-            var off = ActionRules.Default.WithCover(Cover.Off).WithDodge(Dodge.Off).WithVault(Vault.Off);
-            var on = ActionRules.Default.WithCover(Cover.On).WithDodge(Dodge.On).WithVault(Vault.On);
+            var off = ActionRules.Default.WithCover(Cover.Off).WithDodge(Dodge.Off).WithVault(Vault.Off).WithJump(Jump.Off);
+            var on = ActionRules.Default.WithCover(Cover.On).WithDodge(Dodge.On).WithVault(Vault.On).WithJump(Jump.On);
 
             var dropped = input.WithRules(off);
             var kept = input.WithRules(on);
@@ -295,9 +435,12 @@ namespace Fps.Core.Tests
             Assert.That(dropped.Cover, Is.False);
             Assert.That(dropped.Dodge, Is.False);
             Assert.That(dropped.VaultAllowed, Is.False);
+            Assert.That(dropped.JumpAllowed, Is.False);
+            Assert.That(dropped.Jump, Is.True, "the button stays for vaulting and the ladder");
             Assert.That(kept.Cover, Is.True);
             Assert.That(kept.Dodge, Is.True);
             Assert.That(kept.VaultAllowed, Is.True);
+            Assert.That(kept.JumpAllowed, Is.True);
         }
 
         [Test]
@@ -331,9 +474,11 @@ namespace Fps.Core.Tests
             bool cover = false,
             bool aim = false,
             bool dodge = false,
-            bool vaultAllowed = false)
+            bool vaultAllowed = false,
+            bool jumpAllowed = true)
         {
-            return new CharacterMotorInput(move, yaw, sprint, jump, crouch, false, cover, aim, dodge, vaultAllowed);
+            return new CharacterMotorInput(move, yaw, sprint, jump, crouch, false, cover, aim, dodge, vaultAllowed)
+                .With(jumpAllowed: jumpAllowed);
         }
 
         private static IEnumerable<CharacterMotorInput> Course()

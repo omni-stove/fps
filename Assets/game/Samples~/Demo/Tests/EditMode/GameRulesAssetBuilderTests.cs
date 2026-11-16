@@ -389,6 +389,19 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void OnlyTheTpsRangeTurnsTheJumpOffAndKeepsVaultAndMantleToClimb()
+        {
+            var tps = GameRulesAssetBuilder.TpsRangeActions();
+
+            Assert.That(tps.Jump, Is.EqualTo(Jump.Off));
+            Assert.That(tps.Vault, Is.EqualTo(Vault.On), "without a jump, low walls and platforms are climbed by vaulting");
+            Assert.That(tps.Mantle, Is.EqualTo(Mantle.On), "without a jump, high ledges are climbed by mantling");
+            Assert.That(GameRulesAssetBuilder.RangeActions().Jump, Is.EqualTo(Jump.On));
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchActions().Jump, Is.EqualTo(Jump.On));
+            Assert.That(GameRulesAssetBuilder.CampaignActions().Jump, Is.EqualTo(Jump.On));
+        }
+
+        [Test]
         public void OnlyTheTpsRangeSlides()
         {
             Assert.That(GameRulesAssetBuilder.RangeActions().Slide, Is.EqualTo(Slide.Off));

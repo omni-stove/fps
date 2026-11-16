@@ -30,7 +30,7 @@ namespace Fps.NetV2
         }
 
         /// <summary>
-        /// サーバーが frame を動かすときと同じ入力。ダウン中か・乗り越え・伏せ・はしごを使えるか・持ち物の倍率は送らないので、
+        /// サーバーが frame を動かすときと同じ入力。ダウン中か・乗り越え・伏せ・はしご・ジャンプを使えるか・持ち物の倍率は送らないので、
         /// サーバーが配る値 (downed と rules と <see cref="OwnerSnapshot.CarrySpeedMultiplier"/>) から入れる。
         /// </summary>
         public static CharacterMotorInput ToInput(in InputFrame frame, bool downed, in MatchRulesSync rules, float carrySpeedMultiplier = 1f)
@@ -65,7 +65,8 @@ namespace Fps.NetV2
                 vaultAllowed: rules.Vault == Vault.On,
                 proneAllowed: rules.Prone == Prone.On,
                 ladderAllowed: rules.Ladder == Ladder.On,
-                carrySpeedMultiplier: carrySpeedMultiplier);
+                carrySpeedMultiplier: carrySpeedMultiplier,
+                jumpAllowed: rules.Jump == Jump.On);
         }
 
         /// <summary>押したボタンを送る形にまとめる。</summary>

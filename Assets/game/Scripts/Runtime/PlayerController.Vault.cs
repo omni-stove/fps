@@ -14,8 +14,8 @@ namespace Fps.Runtime
     /// </summary>
     public sealed partial class PlayerController
     {
-        /// <summary>前方の障害物を探す Ray の、足元からの高さ (m)。<see cref="VaultProbe.MinHeight"/> より上で、低い障害物にも当たる高さ。</summary>
-        public const float VaultProbeHeight = 0.35f;
+        /// <summary>前方の障害物を探す Ray のうち、いちばん低いものの足元からの高さ (m)。上には <see cref="VaultProbe.ProbeHeightAt"/> の高さで並べる。</summary>
+        public const float VaultProbeHeight = VaultProbe.LowestProbeHeight;
 
         /// <summary>
         /// 上端を測る Ray を、乗り越えられる高さよりこれだけ上から下ろす (m)。上限を少し超える壁も「高すぎる」と測れるようにするため。
@@ -38,6 +38,8 @@ namespace Fps.Runtime
         private const int MaxVaultCastHits = 16;
 
         private static readonly RaycastHit[] _vaultCastBuffer = new RaycastHit[MaxVaultCastHits];
+
+        private VaultProbe.FaceRaycast _vaultFaceRaycast;
 
         private Vault _vaultRule = Vault.Off;
         private VaultPath _vaultPath;
@@ -214,18 +216,19 @@ namespace Fps.Runtime
 
             forward.Normalize();
             var feetY = VaultFeetY();
-            var origin = new Vector3(body.position.x, feetY + VaultProbeHeight, body.position.z);
-            if (!TryVaultCast(origin, forward, VaultProbe.MaxReach, out var hit))
+            var maxHeight = _motor.Spec.VaultMaxHeight;
+            if (!TryFindVaultFace(feetY, forward, maxHeight, out var hit))
             {
                 return VaultProbeResult.None;
             }
 
             var into = -Vector3.ProjectOnPlane(hit.normal, Vector3.up).normalized;
-            var maxHeight = _motor.Spec.VaultMaxHeight;
             var topHeight = MeasureVaultTop(hit, into, feetY, maxHeight);
             var depth = into == Vector3.zero ? float.PositiveInfinity : MeasureVaultDepth(hit, into);
-            var sample = new VaultObstacleSample(hit.distance * Vector3.Dot(forward, into), hit.normal.ToNumerics(), topHeight, depth);
-            return VaultProbe.Evaluate(sample, forward.ToNumerics(), maxHeight, VaultBodyRadius(), IsVaultPathClear);
+            var radius = VaultBodyRadius();
+            var width = MeasureVaultFaceWidth(hit, into, radius);
+            var sample = new VaultObstacleSample(hit.distance * Vector3.Dot(forward, into), hit.normal.ToNumerics(), topHeight, depth, width);
+            return VaultProbe.Evaluate(sample, forward.ToNumerics(), maxHeight, radius, IsVaultPathClear);
         }
 
         // 当たったコライダーだけに上から Ray を下ろして上端を測る。始点が中 (それより高い) なら当たらないので、始点の高さ (上限より高い) とする。
@@ -261,6 +264,53 @@ namespace Fps.Runtime
             }
 
             return true;
+        }
+
+        // 1 本では張り出した縁の下をくぐるので高さを並べる。並べ方と選び方はネット対戦の CharacterVaultSensor と揃える。
+        private bool TryFindVaultFace(float feetY, Vector3 forward, float maxHeight, out RaycastHit face)
+        {
+            var found = false;
+            face = default;
+            var position = transform.position;
+            var count = VaultProbe.ProbeHeightCount(maxHeight);
+            for (var i = 0; i < count; i++)
+            {
+                var origin = new Vector3(position.x, feetY + VaultProbe.ProbeHeightAt(i), position.z);
+                if (TryVaultCast(origin, forward, VaultProbe.MaxReach, out var hit)
+                    && VaultProbe.IsBetterFace(found, face.normal.ToNumerics(), face.distance, hit.normal.ToNumerics(), hit.distance))
+                {
+                    face = hit;
+                    found = true;
+                }
+            }
+
+            return found;
+        }
+
+        private float MeasureVaultFaceWidth(RaycastHit hit, Vector3 into, float radius)
+        {
+            if (into == Vector3.zero)
+            {
+                return 0f;
+            }
+
+            _vaultFaceRaycast ??= VaultFaceRaycast;
+            return VaultProbe.MeasureFaceWidth(hit.point.ToNumerics(), into.ToNumerics(), radius, _vaultFaceRaycast);
+        }
+
+        private bool VaultFaceRaycast(
+            System.Numerics.Vector3 origin, System.Numerics.Vector3 direction, float maxDistance, out System.Numerics.Vector3 normal, out float distance)
+        {
+            if (TryVaultCast(origin.ToUnity(), direction.ToUnity(), maxDistance, out var hit))
+            {
+                normal = hit.normal.ToNumerics();
+                distance = hit.distance;
+                return true;
+            }
+
+            normal = System.Numerics.Vector3.Zero;
+            distance = 0f;
+            return false;
         }
 
         private bool TryVaultCast(Vector3 origin, Vector3 direction, float distance, out RaycastHit nearest)

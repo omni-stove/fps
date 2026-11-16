@@ -86,6 +86,19 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AFaceNarrowerThanTheBodyIsNotMantled()
+        {
+            var narrow = new VaultObstacleSample(_distance, _wallNormal, 1.8f, float.PositiveInfinity, 0.4f);
+            var wide = new VaultObstacleSample(_distance, _wallNormal, 1.8f, float.PositiveInfinity, 1f);
+
+            var result = Evaluate(narrow);
+
+            Assert.That(result.Verdict, Is.EqualTo(VaultVerdict.NarrowFace));
+            Assert.That(result.Path, Is.Null);
+            Assert.That(Evaluate(wide).Verdict, Is.EqualTo(VaultVerdict.Mantle));
+        }
+
+        [Test]
         public void ABlockedHeadroomIsNotMantled()
         {
             var result = Evaluate(Ledge(1.8f), _ => false);

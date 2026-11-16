@@ -188,7 +188,7 @@ namespace Fps.Runtime
             MantleEnded?.Invoke();
         }
 
-        // 前方の壁の当て方と上端の測り方は乗り越え (MeasureVault) と同じ。奥行きだけは、上に立てる広さを確かめるので測る先を変える。
+        // 前方の壁の当て方と上端の測り方は乗り越え (MeasureVault) と同じ。Ray は崖のぼりの高さの上限の手前まで並べる。奥行きだけは、上に立てる広さを確かめるので測る先を変える。
         private VaultProbeResult MeasureMantle()
         {
             var body = transform;
@@ -200,18 +200,18 @@ namespace Fps.Runtime
 
             forward.Normalize();
             var feetY = VaultFeetY();
-            var origin = new Vector3(body.position.x, feetY + VaultProbeHeight, body.position.z);
-            if (!TryVaultCast(origin, forward, VaultProbe.MaxReach, out var hit))
+            var spec = _motor.Spec;
+            if (!TryFindVaultFace(feetY, forward, spec.MantleMaxHeight, out var hit))
             {
                 return VaultProbeResult.None;
             }
 
-            var spec = _motor.Spec;
             var radius = VaultBodyRadius();
             var into = -Vector3.ProjectOnPlane(hit.normal, Vector3.up).normalized;
             var topHeight = MeasureVaultTop(hit, into, feetY, spec.MantleMaxHeight);
             var depth = into == Vector3.zero ? float.PositiveInfinity : MeasureMantleDepth(hit, into, VaultProbe.MantleFootingDepth(radius));
-            var sample = new VaultObstacleSample(hit.distance * Vector3.Dot(forward, into), hit.normal.ToNumerics(), topHeight, depth);
+            var width = MeasureVaultFaceWidth(hit, into, radius);
+            var sample = new VaultObstacleSample(hit.distance * Vector3.Dot(forward, into), hit.normal.ToNumerics(), topHeight, depth, width);
             return VaultProbe.EvaluateMantle(
                 sample, forward.ToNumerics(), spec.VaultMaxHeight, spec.MantleMaxHeight, radius, spec.MantleSpeed, IsVaultPathClear);
         }

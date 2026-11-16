@@ -33,7 +33,8 @@ namespace Fps.Core.Tests
             Ping.On,
             Abilities.On,
             SlowMotion.On,
-            AimToFire.On);
+            AimToFire.On,
+            Jump.Off);
 
         private static readonly GameRules _rules = new GameRules(
             FriendlyFire.On,
@@ -124,6 +125,7 @@ namespace Fps.Core.Tests
                 (nameof(ActionRules.Abilities), a => a.WithAbilities(Abilities.Off), Abilities.Off),
                 (nameof(ActionRules.SlowMotion), a => a.WithSlowMotion(SlowMotion.Off), SlowMotion.Off),
                 (nameof(ActionRules.AimToFire), a => a.WithAimToFire(AimToFire.Off), AimToFire.Off),
+                (nameof(ActionRules.Jump), a => a.WithJump(Jump.On), Jump.On),
             };
 
             // Cover は BlindFire が On のままでは Off にできないので、BlindFire を切った値から確かめる。
@@ -221,6 +223,7 @@ namespace Fps.Core.Tests
             AssertRejected(() => _actions.WithAbilities((Abilities)99), "abilities");
             AssertRejected(() => _actions.WithSlowMotion((SlowMotion)99), "slowMotion");
             AssertRejected(() => _actions.WithAimToFire((AimToFire)99), "aimToFire");
+            AssertRejected(() => _actions.WithJump((Jump)99), "jump");
         }
 
         [Test]
@@ -242,6 +245,12 @@ namespace Fps.Core.Tests
             Assert.That(actions.Abilities, Is.EqualTo(Abilities.Off));
             Assert.That(actions.SlowMotion, Is.EqualTo(SlowMotion.Off));
             Assert.That(actions.AimToFire, Is.EqualTo(AimToFire.Off));
+        }
+
+        [Test]
+        public void DefaultActionRulesKeepJumpOn()
+        {
+            Assert.That(ActionRules.Default.Jump, Is.EqualTo(Jump.On));
         }
 
         private static void AssertRejected(Func<ActionRules> with, string paramName)

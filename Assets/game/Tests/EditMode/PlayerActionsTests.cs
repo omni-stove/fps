@@ -14,7 +14,7 @@ namespace Fps.Tests.EditMode
     public sealed class PlayerActionsTests
     {
         private const string NewActionsOff =
-            " melee=Off stagger=Off slide=Off mantle=Off prone=Off ladder=Off zipline=Off parachute=Off stealth=Off suppression=Off ping=Off abilities=Off slowMotion=Off aimToFire=Off";
+            " melee=Off stagger=Off slide=Off mantle=Off prone=Off ladder=Off zipline=Off parachute=Off stealth=Off suppression=Off ping=Off abilities=Off slowMotion=Off aimToFire=Off jump=On";
 
         private static readonly List<string> _calls = new List<string>();
 
@@ -162,7 +162,7 @@ namespace Fps.Tests.EditMode
             Assert.That(
                 PlayerActions.FormatLog(actions),
                 Is.EqualTo("[Actions] cover=Off blindFire=Off activeReload=Off downed=Off dodge=Off vault=Off"
-                    + " melee=Off stagger=Off slide=On mantle=Off prone=Off ladder=Off zipline=Off parachute=Off stealth=Off suppression=Off ping=Off abilities=Off slowMotion=On aimToFire=Off"));
+                    + " melee=Off stagger=Off slide=On mantle=Off prone=Off ladder=Off zipline=Off parachute=Off stealth=Off suppression=Off ping=Off abilities=Off slowMotion=On aimToFire=Off jump=On"));
         }
 
         [Test]
@@ -292,6 +292,33 @@ namespace Fps.Tests.EditMode
 
             PlayerActions.Attach(_player, GameRules.Default);
             Assert.That(mover.MantleRule, Is.EqualTo(Mantle.Off));
+        }
+
+        [Test]
+        public void JumpFollowsTheRulesOnThePlayerController()
+        {
+            var mover = _player.AddComponent<PlayerController>();
+            Assert.That(mover.JumpRule, Is.EqualTo(Jump.On));
+
+            LogAssert.Expect(
+                LogType.Log,
+                "[Actions] cover=Off blindFire=Off activeReload=Off downed=Off dodge=Off vault=Off"
+                    + NewActionsOff.Replace("jump=On", "jump=Off"));
+            PlayerActions.Attach(_player, GameRules.Default.WithActions(ActionRules.Default.WithJump(Jump.Off)));
+            Assert.That(mover.JumpRule, Is.EqualTo(Jump.Off));
+            Assert.That(mover.VaultRule, Is.EqualTo(Vault.Off), "turning the jump off does not touch the vault");
+
+            PlayerActions.Attach(_player, GameRules.Default);
+            Assert.That(mover.JumpRule, Is.EqualTo(Jump.On));
+        }
+
+        [Test]
+        public void JumpRuleRejectsAnUndefinedValue()
+        {
+            var mover = _player.AddComponent<PlayerController>();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => mover.JumpRule = (Jump)99);
+            Assert.That(mover.JumpRule, Is.EqualTo(Jump.On));
         }
 
         [Test]

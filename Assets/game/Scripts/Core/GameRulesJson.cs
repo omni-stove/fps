@@ -63,6 +63,7 @@ namespace Fps.Core
         public const string AbilitiesItem = "abilities";
         public const string SlowMotionItem = "slowMotion";
         public const string AimToFireItem = "aimToFire";
+        public const string JumpItem = "jump";
 
         /// <summary>入れ子の深さの上限。項目は 2 段までなので、それより深いものは読む前に断る。</summary>
         private const int _maxDepth = 8;
@@ -122,6 +123,7 @@ namespace Fps.Core
             AbilitiesItem,
             SlowMotionItem,
             AimToFireItem,
+            JumpItem,
         };
 
         /// <summary>text を 1 つのルールとして読む。</summary>
@@ -262,6 +264,7 @@ namespace Fps.Core
             writer.Enum(AbilitiesItem, actions.Abilities);
             writer.Enum(SlowMotionItem, actions.SlowMotion);
             writer.Enum(AimToFireItem, actions.AimToFire);
+            writer.Enum(JumpItem, actions.Jump);
             writer.EndObject();
             writer.Float(SpawnProtectionSecondsItem, rules.SpawnProtectionSeconds);
             writer.Enum(FallDamageItem, rules.FallDamage);
@@ -312,7 +315,8 @@ namespace Fps.Core
                     fields.ReadEnum(PingItem, defaults.Ping),
                     fields.ReadEnum(AbilitiesItem, defaults.Abilities),
                     fields.ReadEnum(SlowMotionItem, defaults.SlowMotion),
-                    fields.ReadEnum(AimToFireItem, defaults.AimToFire));
+                    fields.ReadEnum(AimToFireItem, defaults.AimToFire),
+                    fields.ReadEnum(JumpItem, defaults.Jump));
             }
             catch (ArgumentException e)
             {

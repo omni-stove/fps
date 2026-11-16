@@ -7,6 +7,9 @@ namespace Fps.Protocol
     /// </summary>
     public struct MatchRulesSync
     {
+        // Jump を持つと、ルールが届く前の default の値でクライアントの予測が跳べなくなるため、禁じるかで持つ。
+        private bool _jumpForbidden;
+
         public DeathBody DeathBody { get; set; }
         public DeathCamera DeathCamera { get; set; }
         public RespawnMode RespawnMode { get; set; }
@@ -20,6 +23,20 @@ namespace Fps.Protocol
         public Prone Prone { get; set; }
         public Ladder Ladder { get; set; }
         public ReloadMode ReloadMode { get; set; }
+
+        public Jump Jump
+        {
+            get => _jumpForbidden ? Jump.Off : Jump.On;
+            set
+            {
+                if (!System.Enum.IsDefined(typeof(Jump), value))
+                {
+                    throw new System.ArgumentOutOfRangeException(nameof(value), value, "value is not a defined Jump");
+                }
+
+                _jumpForbidden = value == Jump.Off;
+            }
+        }
 
         /// <exception cref="System.ArgumentNullException">rules が null。</exception>
         public static MatchRulesSync From(GameRules rules)
@@ -45,6 +62,7 @@ namespace Fps.Protocol
                 Prone = actions.Prone,
                 Ladder = actions.Ladder,
                 ReloadMode = rules.ReloadMode,
+                Jump = actions.Jump,
             };
         }
 
@@ -62,7 +80,8 @@ namespace Fps.Protocol
                 && Ping == other.Ping
                 && Prone == other.Prone
                 && Ladder == other.Ladder
-                && ReloadMode == other.ReloadMode;
+                && ReloadMode == other.ReloadMode
+                && Jump == other.Jump;
         }
 
         internal void Write(MessageWriter writer)
@@ -80,6 +99,7 @@ namespace Fps.Protocol
             writer.WriteByte((byte)Prone);
             writer.WriteByte((byte)Ladder);
             writer.WriteByte((byte)ReloadMode);
+            writer.WriteByte((byte)Jump);
         }
 
         internal static MatchRulesSync Read(MessageReader reader)
@@ -99,6 +119,7 @@ namespace Fps.Protocol
                 Prone = (Prone)reader.ReadByteBelow(EnumRange<Prone>.Count, "prone rule"),
                 Ladder = (Ladder)reader.ReadByteBelow(EnumRange<Ladder>.Count, "ladder rule"),
                 ReloadMode = (ReloadMode)reader.ReadByteBelow(EnumRange<ReloadMode>.Count, "reload mode"),
+                Jump = (Jump)reader.ReadByteBelow(EnumRange<Jump>.Count, "jump rule"),
             };
         }
     }

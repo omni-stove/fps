@@ -20,6 +20,18 @@ namespace Fps.Protocol.Tests
         }
 
         [Test]
+        public void TheJumpRuleRoundTrips()
+        {
+            var sent = Build(100, 0f);
+            sent.Match.Rules = MatchRulesSync.From(GameRules.Default.WithActions(ActionRules.Default.WithJump(Jump.Off)));
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Match.Rules.Jump, Is.EqualTo(Jump.Off));
+            Assert.That(Send(Build(100, 0f), null).Match.Rules.Jump, Is.EqualTo(Jump.On));
+        }
+
+        [Test]
         public void DeltaCarriesOnlyChangedPartsAndResolvesToTheSameValues()
         {
             var baseline = Build(100, 0f);

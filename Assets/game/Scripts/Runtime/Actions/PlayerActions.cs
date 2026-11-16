@@ -111,7 +111,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// アクションのルールのログ。例: <c>[Actions] cover=On blindFire=Off activeReload=Off downed=Off dodge=Off vault=Off melee=Off ...</c>。
-        /// 後ろに近接攻撃から時間の速さまでを <see cref="ActionRules"/> の並びで続ける。
+        /// 後ろに近接攻撃からジャンプまでを <see cref="ActionRules"/> の並びで続ける。
         /// </summary>
         public static string FormatLog(ActionRules actions)
         {
@@ -125,7 +125,7 @@ namespace Fps.Runtime
                 + $" melee={actions.Melee} stagger={actions.Stagger} slide={actions.Slide} mantle={actions.Mantle} prone={actions.Prone}"
                 + $" ladder={actions.Ladder} zipline={actions.Zipline} parachute={actions.Parachute} stealth={actions.Stealth}"
                 + $" suppression={actions.Suppression} ping={actions.Ping} abilities={actions.Abilities} slowMotion={actions.SlowMotion}"
-                + $" aimToFire={actions.AimToFire}";
+                + $" aimToFire={actions.AimToFire} jump={actions.Jump}";
         }
 
         /// <summary>player の T を返す。無ければ付けて返す。取り付けが自分のコンポーネントを増やさないために使う。</summary>

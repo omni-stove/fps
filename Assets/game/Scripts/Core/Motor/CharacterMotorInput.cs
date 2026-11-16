@@ -8,6 +8,9 @@ namespace Fps.Core
         // 倍率そのものを持つと、予測の記録の空きなど default のままの入力が倍率 0 (動けない) になるため、1 との差で持つ。
         private readonly float _carrySpeedOffset;
 
+        // 許すかを持つと、default のままの入力と古い呼び出しが跳べなくなるため、禁じるかで持つ。
+        private readonly bool _jumpForbidden;
+
         public CharacterMotorInput(
             Vector2 move, float yaw, bool sprint, bool jump, bool crouch, bool downed, bool cover, bool aim, bool dodge, bool vaultAllowed)
             : this(move, yaw, sprint, jump, crouch, downed, cover, aim, dodge, vaultAllowed, false, false, false)
@@ -18,6 +21,7 @@ namespace Fps.Core
         /// prone はこの tick に伏せのボタンが押されたか。proneAllowed (ルール) が false なら伏せていても解き、
         /// ladderAllowed (ルール) が false ならはしごにつかまっていても離す。
         /// carrySpeedMultiplier は持ち物による速さの倍率 (<see cref="CarryLoadSpec.SpeedMultiplier"/>)。送られてこず、動かす側が持っている武器から入れる。
+        /// jumpAllowed (ルール) が false なら、jump は乗り越え・伏せから立つ・はしごから離れるにだけ使い、ふつうには跳ばない。
         /// </summary>
         public CharacterMotorInput(
             Vector2 move,
@@ -33,7 +37,8 @@ namespace Fps.Core
             bool prone,
             bool proneAllowed,
             bool ladderAllowed,
-            float carrySpeedMultiplier = 1f)
+            float carrySpeedMultiplier = 1f,
+            bool jumpAllowed = true)
         {
             if (!(carrySpeedMultiplier >= 0f) || float.IsInfinity(carrySpeedMultiplier))
             {
@@ -55,6 +60,7 @@ namespace Fps.Core
             ProneAllowed = proneAllowed;
             LadderAllowed = ladderAllowed;
             _carrySpeedOffset = carrySpeedMultiplier - 1f;
+            _jumpForbidden = !jumpAllowed;
         }
 
         public Vector2 Move { get; }
@@ -85,10 +91,12 @@ namespace Fps.Core
 
         public float CarrySpeedMultiplier => _carrySpeedOffset + 1f;
 
+        public bool JumpAllowed => !_jumpForbidden;
+
         public CharacterMotorInput Restrained()
         {
             return Downed
-                ? new CharacterMotorInput(Vector2.Zero, Yaw, false, false, true, true, false, false, false, false, false, false, false, CarrySpeedMultiplier)
+                ? new CharacterMotorInput(Vector2.Zero, Yaw, false, false, true, true, false, false, false, false, false, false, false, CarrySpeedMultiplier, JumpAllowed)
                 : this;
         }
 
@@ -124,12 +132,13 @@ namespace Fps.Core
             return input.With(
                 vaultAllowed: rules.Vault == Fps.Core.Vault.On,
                 proneAllowed: rules.Prone == Fps.Core.Prone.On,
-                ladderAllowed: rules.Ladder == Fps.Core.Ladder.On);
+                ladderAllowed: rules.Ladder == Fps.Core.Ladder.On,
+                jumpAllowed: rules.Jump == Fps.Core.Jump.On);
         }
 
         public CharacterMotorInput With(
             bool? cover = null, bool? dodge = null, bool? vaultAllowed = null, bool? prone = null, bool? proneAllowed = null, bool? ladderAllowed = null,
-            float? carrySpeedMultiplier = null)
+            float? carrySpeedMultiplier = null, bool? jumpAllowed = null)
         {
             return new CharacterMotorInput(
                 Move,
@@ -145,7 +154,8 @@ namespace Fps.Core
                 prone ?? Prone,
                 proneAllowed ?? ProneAllowed,
                 ladderAllowed ?? LadderAllowed,
-                carrySpeedMultiplier ?? CarrySpeedMultiplier);
+                carrySpeedMultiplier ?? CarrySpeedMultiplier,
+                jumpAllowed ?? JumpAllowed);
         }
 
         public static bool IsValid(Vector2 move, float yaw)

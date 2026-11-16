@@ -36,7 +36,8 @@
       "ping": "Off",
       "abilities": "Off",
       "slowMotion": "Off",
-      "aimToFire": "Off"
+      "aimToFire": "Off",
+      "jump": "On"
     },
     "spawnProtectionSeconds": 2,
     "fallDamage": "Off",

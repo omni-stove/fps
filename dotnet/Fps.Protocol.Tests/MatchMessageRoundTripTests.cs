@@ -154,6 +154,18 @@ namespace Fps.Protocol.Tests
         }
 
         [Test]
+        public void TheSyncedRulesCarryTheJumpAndAllowItBeforeAnyArrive()
+        {
+            var rules = MatchRulesSync.From(GameRules.Default.WithActions(ActionRules.Default.WithJump(Jump.Off)));
+
+            Assert.That(default(MatchRulesSync).Jump, Is.EqualTo(Jump.On));
+            Assert.That(MatchRulesSync.From(GameRules.Default).Jump, Is.EqualTo(Jump.On));
+            Assert.That(rules.Jump, Is.EqualTo(Jump.Off));
+            Assert.That(rules.SameAs(MatchRulesSync.From(GameRules.Default)), Is.False);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new MatchRulesSync { Jump = (Jump)99 });
+        }
+
+        [Test]
         public void TheSyncedRulesCarryTheReloadMode()
         {
             var rules = MatchRulesSync.From(GameRules.Default.WithReloadMode(ReloadMode.Manual));

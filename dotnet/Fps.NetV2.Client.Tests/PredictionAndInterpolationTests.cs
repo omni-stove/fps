@@ -89,6 +89,19 @@ namespace Fps.NetV2.Tests
         }
 
         [Test]
+        public void InputReadsTheJumpRuleAndKeepsTheButton()
+        {
+            var frame = new InputFrame(3, Vector2.Zero, 0f, SnapshotMotion.Buttons(false, true, false, false, false, false));
+
+            var allowed = SnapshotMotion.ToInput(frame, false, default);
+            var forbidden = SnapshotMotion.ToInput(frame, false, new MatchRulesSync { Jump = Jump.Off });
+
+            Assert.That(allowed.JumpAllowed, Is.True);
+            Assert.That(forbidden.JumpAllowed, Is.False);
+            Assert.That(forbidden.Jump, Is.True);
+        }
+
+        [Test]
         public void InputCarriesTheMultiplierTheServerSentAndOneWithoutIt()
         {
             var frame = new InputFrame(3, new Vector2(0f, 1f), 0f, InputButtons.None);

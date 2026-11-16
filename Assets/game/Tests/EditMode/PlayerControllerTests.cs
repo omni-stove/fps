@@ -962,6 +962,74 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void JumpWithTheJumpRuleOffDoesNotJump()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+            _player.JumpRule = Jump.Off;
+
+            _player.Tick(Vector2.zero, false, false, true, 0.02f);
+
+            Assert.That(_player.IsVaulting, Is.False);
+            Assert.That(_player.Motor.Velocity.Y, Is.LessThanOrEqualTo(0f), "did not jump");
+            Assert.That(_player.IsGrounded, Is.True);
+        }
+
+        [Test]
+        public void JumpAtAThickLowPlatformWithTheJumpRuleOffClimbsOntoIt()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+            _player.JumpRule = Jump.Off;
+            PlaceWallInFront(1f, 4f);
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Player\] vault=Vault height=\d\.\d\d depth=inf$"));
+            LogAssert.Expect(LogType.Log, "[Player] vaulting=true");
+            _player.Tick(Vector2.zero, false, false, true, 0.02f);
+            Assert.That(_player.IsVaulting, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Player] vaulting=false");
+            for (var i = 0; i < 100 && _player.IsVaulting; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, 0.02f);
+            }
+
+            for (var i = 0; i < 10; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, 0.02f);
+            }
+
+            Assert.That(_player.IsVaulting, Is.False);
+            Assert.That(_player.IsGrounded, Is.True);
+            Assert.That(FeetY(), Is.EqualTo(1f).Within(0.1f), "standing on top of the platform");
+            Assert.That(_body.transform.position.z, Is.GreaterThan(_wallNearZ + _radius), "past the front face");
+            Assert.That(_body.transform.position.z, Is.LessThan(_wallNearZ + 4f), "not over the far side");
+        }
+
+        [Test]
+        public void JumpAtTheEndOfAThinWallDoesNotClimbOntoIt()
+        {
+            InitializeWithLook();
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+            _player.JumpRule = Jump.Off;
+            // 前へ長く延びる厚さ 0.4 m の壁に、端から向かう。
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = new Vector3(0f, 0.5f, _wallNearZ + 2.5f);
+            _wall.transform.localScale = new Vector3(_wallDepth, 1f, 5f);
+            Physics.SyncTransforms();
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Player\] vault=NarrowFace "));
+            _player.Tick(Vector2.zero, false, false, true, 0.02f);
+
+            Assert.That(_player.IsVaulting, Is.False);
+            Assert.That(_player.LastVaultProbe.Verdict, Is.EqualTo(VaultVerdict.NarrowFace));
+            Assert.That(_player.Motor.Velocity.Y, Is.LessThanOrEqualTo(0f), "did not jump either");
+        }
+
+        [Test]
         public void JumpWithNothingInFrontJumps()
         {
             InitializeWithLook();
@@ -1024,11 +1092,11 @@ namespace Fps.Tests.EditMode
         }
 
         // 正面 (+Z) の、体の中心から _wallNearZ 先に、厚さ _wallDepth・高さ height の壁を床の上に置く。
-        private void PlaceWallInFront(float height)
+        private void PlaceWallInFront(float height, float depth = _wallDepth)
         {
             _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            _wall.transform.position = new Vector3(0f, height / 2f, _wallNearZ + (_wallDepth / 2f));
-            _wall.transform.localScale = new Vector3(3f, height, _wallDepth);
+            _wall.transform.position = new Vector3(0f, height / 2f, _wallNearZ + (depth / 2f));
+            _wall.transform.localScale = new Vector3(3f, height, depth);
             Physics.SyncTransforms();
         }
 

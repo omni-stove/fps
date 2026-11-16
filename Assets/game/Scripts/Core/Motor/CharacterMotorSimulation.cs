@@ -218,6 +218,12 @@ namespace Fps.Core
                 }
             }
 
+            // 乗り越えとはしごに使い終えてから消す。ルールで跳べなくても Jump はそれらの入力として残すため。
+            if (!input.JumpAllowed)
+            {
+                jump = false;
+            }
+
             Vector3 velocity;
             if (vault.IsVaulting)
             {

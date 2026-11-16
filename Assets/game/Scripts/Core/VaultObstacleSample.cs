@@ -12,13 +12,17 @@ namespace Fps.Core
         /// <param name="normal">手前の面の法線 (こちら向き)。</param>
         /// <param name="topHeight">障害物の上端の、足元からの高さ。</param>
         /// <param name="depth">手前の面から向こうの面までの奥行き。測れる範囲より厚ければ <see cref="float.PositiveInfinity"/>。</param>
-        public VaultObstacleSample(float distance, Vector3 normal, float topHeight, float depth)
+        /// <param name="width">
+        /// 手前の面の、体の中心の正面から左右に続く幅 (<see cref="VaultProbe.MeasureFaceWidth"/>)。測っていなければ <see cref="float.PositiveInfinity"/>。
+        /// </param>
+        public VaultObstacleSample(float distance, Vector3 normal, float topHeight, float depth, float width = float.PositiveInfinity)
         {
             HasHit = true;
             Distance = distance;
             Normal = normal;
             TopHeight = topHeight;
             Depth = depth;
+            Width = width;
         }
 
         /// <summary>前方に何も当たらなかった。</summary>
@@ -38,5 +42,8 @@ namespace Fps.Core
 
         /// <summary>手前の面から向こうの面までの奥行き。測れる範囲より厚ければ <see cref="float.PositiveInfinity"/>。</summary>
         public float Depth { get; }
+
+        /// <summary>手前の面の、体の中心の正面から左右に続く幅。測っていなければ <see cref="float.PositiveInfinity"/>。</summary>
+        public float Width { get; }
     }
 }

@@ -69,7 +69,8 @@ namespace Fps.Core.Tests
     ""ping"": ""On"",
     ""abilities"": ""On"",
     ""slowMotion"": ""On"",
-    ""aimToFire"": ""On""
+    ""aimToFire"": ""On"",
+    ""jump"": ""Off""
   },
   ""spawnProtectionSeconds"": 1.5,
   ""fallDamage"": ""On"",
@@ -150,7 +151,7 @@ namespace Fps.Core.Tests
         public void ItemNamesMatchTheRulesConstructors()
         {
             Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(20));
-            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(25));
+            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(26));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
 
@@ -173,6 +174,21 @@ namespace Fps.Core.Tests
             Assert.That(actions.Abilities, Is.EqualTo(Abilities.Off));
             Assert.That(actions.SlowMotion, Is.EqualTo(SlowMotion.Off));
             Assert.That(actions.AimToFire, Is.EqualTo(AimToFire.Off));
+        }
+
+        [Test]
+        public void OmittedJumpIsOnAndOffIsReadAndWritten()
+        {
+            var omitted = GameRulesJson.Parse("{\"actions\": {\"cover\": \"On\"}}", _source).Actions;
+            Assert.That(omitted.Jump, Is.EqualTo(Jump.On));
+
+            var off = GameRulesJson.Parse("{\"actions\": {\"jump\": \"Off\"}}", _source);
+            Assert.That(off.Actions.Jump, Is.EqualTo(Jump.Off));
+            Assert.That(GameRulesJson.Write(off), Does.Contain("\"jump\": \"Off\""));
+            Assert.That(GameRulesJson.Write(GameRules.Default), Does.Contain("\"jump\": \"On\""));
+
+            var e = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"actions\": {\"jump\": \"Maybe\"}}", _source));
+            AssertNames(e, "actions.jump");
         }
 
         [TestCase("melee")]
@@ -287,7 +303,9 @@ namespace Fps.Core.Tests
                 Ping.On,
                 Abilities.On,
                 SlowMotion.On,
-                AimToFire.On);
+                AimToFire.On,
+                // 既定が On なので、既定と違う値を書き戻せるかを見るには Off にする
+                Jump.Off);
         }
 
         [Test]
@@ -479,6 +497,7 @@ namespace Fps.Core.Tests
             Assert.That(a.Abilities, Is.EqualTo(b.Abilities), "actions.abilities");
             Assert.That(a.SlowMotion, Is.EqualTo(b.SlowMotion), "actions.slowMotion");
             Assert.That(a.AimToFire, Is.EqualTo(b.AimToFire), "actions.aimToFire");
+            Assert.That(a.Jump, Is.EqualTo(b.Jump), "actions.jump");
         }
     }
 }

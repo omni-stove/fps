@@ -14,7 +14,7 @@ namespace Fps.Runtime
     /// 滑る向きは始まったときの移動の向きで、視点を回しても変わらない。</item>
     /// <item>最中: 低い姿勢 (しゃがみの当たり判定) のまま足場に沿って滑る。撃てるが、速く動いているので照準は広がる (<see cref="GameBootstrap"/> の配線)。
     /// 壁に当たって進めなければ、その分だけ遅くなる。</item>
-    /// <item>終わり: 速さが落ちるか最長の秒数で (<see cref="SlideMotion"/>)、ジャンプで (勢いを持ったまま跳ぶ)、宙に出て少し経つと
+    /// <item>終わり: 速さが落ちるか最長の秒数で (<see cref="SlideMotion"/>)、ジャンプで (勢いを持ったまま跳ぶ。<see cref="PlayerController.JumpRule"/> が Off なら跳ばずに滑り続ける)、宙に出て少し経つと
     /// (<see cref="AirborneGraceSeconds"/>)、死亡・リスポーン・ルールを Off にしたときに終わる。
     /// その後はしゃがみの入力どおりで、しゃがみを押したままならしゃがみ、離していれば (頭上が空いていれば) 立つ。</item>
     /// </list>
@@ -272,7 +272,7 @@ namespace Fps.Runtime
 
             LimitIfBlocked(mover, direction);
 
-            if (input.JumpPressed && input.IsGrounded)
+            if (input.JumpPressed && input.IsGrounded && mover.JumpRule == Fps.Core.Jump.On)
             {
                 return Jump(mover, direction, deltaSeconds);
             }

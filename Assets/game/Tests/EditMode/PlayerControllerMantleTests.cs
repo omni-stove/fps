@@ -136,6 +136,68 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void JumpUnderAnOverhangingLedgeClimbsOntoItsLip()
+        {
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+            _player.MantleRule = Mantle.On;
+            // 縁 (z = 0.8) が 1.4〜1.8 m に張り出し、その下の壁は奥 (z = 0.95) に引っ込んでいる。低い Ray は引っ込んだ壁にしか当たらない。
+            PlaceSlab(1.4f, _ledgeHeight, _ledgeNearZ, 3f);
+            PlaceSlab(0f, 1.4f, 0.95f, 0.3f);
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Player\] vault=TooHigh "));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Player\] mantle=Mantle height=1\.\d\d depth=inf$"));
+            LogAssert.Expect(LogType.Log, "[Player] mantling=true");
+            _player.Tick(Vector2.up, false, false, true, _step);
+            Assert.That(_player.IsMantling, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Player] mantling=false");
+            for (var i = 0; i < 200 && _player.IsMantling; i++)
+            {
+                _player.Tick(Vector2.up, false, false, false, _step);
+            }
+
+            for (var i = 0; i < 10; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, _step);
+            }
+
+            Assert.That(_player.IsGrounded, Is.True);
+            Assert.That(FeetY(), Is.EqualTo(_ledgeHeight).Within(0.15f), "standing on the lip, not stopped under it");
+        }
+
+        [Test]
+        public void JumpAtAnOverhangingTableWithTheJumpRuleOffClimbsOntoIt()
+        {
+            LandOnFloor();
+            _player.VaultRule = Vault.On;
+            _player.MantleRule = Mantle.On;
+            _player.JumpRule = Jump.Off;
+            // 天板 (z = 0.8) が 0.6〜1.0 m に張り出し、その奥 (z = 1.1) に低い脚がある。
+            PlaceSlab(0.6f, 1f, _ledgeNearZ, 3f);
+            PlaceSlab(0f, 0.6f, 1.1f, 0.3f);
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Player\] vault=Vault height=\d\.\d\d depth=inf$"));
+            LogAssert.Expect(LogType.Log, "[Player] vaulting=true");
+            _player.Tick(Vector2.zero, false, false, true, _step);
+            Assert.That(_player.IsVaulting, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Player] vaulting=false");
+            for (var i = 0; i < 200 && _player.IsVaulting; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, _step);
+            }
+
+            for (var i = 0; i < 10; i++)
+            {
+                _player.Tick(Vector2.zero, false, false, false, _step);
+            }
+
+            Assert.That(_player.IsGrounded, Is.True);
+            Assert.That(FeetY(), Is.EqualTo(1f).Within(0.15f), "standing on the table");
+        }
+
+        [Test]
         public void MantleWorksWithVaultOff()
         {
             LandOnFloor();
@@ -283,6 +345,15 @@ namespace Fps.Tests.EditMode
             _created.Add(box);
             box.transform.position = new Vector3(0f, height / 2f, _ledgeNearZ + (depth / 2f));
             box.transform.localScale = new Vector3(3f, height, depth);
+            Physics.SyncTransforms();
+        }
+
+        private void PlaceSlab(float bottom, float top, float nearZ, float depth)
+        {
+            var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(box);
+            box.transform.position = new Vector3(0f, (bottom + top) / 2f, nearZ + (depth / 2f));
+            box.transform.localScale = new Vector3(3f, top - bottom, depth);
             Physics.SyncTransforms();
         }
 

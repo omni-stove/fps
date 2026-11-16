@@ -74,6 +74,7 @@ namespace Fps.Tests.EditMode
             definition.Abilities = Abilities.On;
             definition.SlowMotion = SlowMotion.On;
             definition.AimToFire = AimToFire.On;
+            definition.Jump = Jump.Off;
             definition.SpawnProtectionSeconds = 1.5f;
             definition.FallDamage = FallDamage.On;
             definition.HudDensity = HudDensity.Minimal;
@@ -121,6 +122,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.Abilities, Is.EqualTo(Abilities.On));
             Assert.That(rules.Actions.SlowMotion, Is.EqualTo(SlowMotion.On));
             Assert.That(rules.Actions.AimToFire, Is.EqualTo(AimToFire.On));
+            Assert.That(rules.Actions.Jump, Is.EqualTo(Jump.Off));
             Assert.That(rules.SpawnProtectionSeconds, Is.EqualTo(1.5f));
             Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.On));
             Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Minimal));
@@ -172,7 +174,8 @@ namespace Fps.Tests.EditMode
                     Fps.Core.Ping.On,
                     Abilities.On,
                     SlowMotion.On,
-                    AimToFire.On),
+                    AimToFire.On,
+                    Jump.Off),
                 2f,
                 FallDamage.On,
                 HudDensity.Hardcore,
@@ -225,6 +228,7 @@ namespace Fps.Tests.EditMode
         [TestCase("Abilities")]
         [TestCase("SlowMotion")]
         [TestCase("AimToFire")]
+        [TestCase("Jump")]
         [TestCase("SpawnProtectionSeconds")]
         [TestCase("FallDamage")]
         [TestCase("HudDensity")]
@@ -315,6 +319,7 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.Actions.Abilities, Is.EqualTo(expected.Actions.Abilities));
             Assert.That(actual.Actions.SlowMotion, Is.EqualTo(expected.Actions.SlowMotion));
             Assert.That(actual.Actions.AimToFire, Is.EqualTo(expected.Actions.AimToFire));
+            Assert.That(actual.Actions.Jump, Is.EqualTo(expected.Actions.Jump));
             Assert.That(actual.SpawnProtectionSeconds, Is.EqualTo(expected.SpawnProtectionSeconds));
             Assert.That(actual.FallDamage, Is.EqualTo(expected.FallDamage));
             Assert.That(actual.HudDensity, Is.EqualTo(expected.HudDensity));
@@ -437,6 +442,9 @@ namespace Fps.Tests.EditMode
                     break;
                 case "AimToFire":
                     definition.AimToFire = (AimToFire)99;
+                    break;
+                case "Jump":
+                    definition.Jump = (Jump)99;
                     break;
                 case "SpawnProtectionSeconds":
                     definition.SpawnProtectionSeconds = float.NaN;

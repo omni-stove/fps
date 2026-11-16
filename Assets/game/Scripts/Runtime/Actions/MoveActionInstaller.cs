@@ -5,7 +5,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// プレイヤーの <see cref="PlayerController"/> の回避 (<see cref="PlayerController.DodgeRule"/>)・乗り越え (<see cref="PlayerController.VaultRule"/>)・
-    /// 崖のぼり (<see cref="PlayerController.MantleRule"/>) をルールにし、カバー中は回避させない。
+    /// 崖のぼり (<see cref="PlayerController.MantleRule"/>)・ジャンプ (<see cref="PlayerController.JumpRule"/>) をルールにし、カバー中は回避させない。
     /// </summary>
     public sealed class MoveActionInstaller : IPlayerActionInstaller
     {
@@ -29,6 +29,7 @@ namespace Fps.Runtime
             mover.DodgeBlocker = () => cover != null && cover.IsInCover;
             mover.VaultRule = rules.Actions.Vault;
             mover.MantleRule = rules.Actions.Mantle;
+            mover.JumpRule = rules.Actions.Jump;
         }
     }
 }

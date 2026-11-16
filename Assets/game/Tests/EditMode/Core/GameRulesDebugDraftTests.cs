@@ -8,6 +8,8 @@ namespace Fps.Core.Tests
     public sealed class GameRulesDebugDraftTests
     {
         private static readonly string[] _offOn = { "Off", "On" };
+
+        private static readonly string[] _jumpTurnedOff = { "Jump: On -> Off" };
         private static readonly string[] _friendlyFireOptions = { "Off", "On", "Reflect" };
         private static readonly string[] _respawnModeOptions = { "Individual", "Wave", "None" };
         private static readonly string[] _deathCameraOptions = { "None", "Killer", "Ally", "Free", "KillCam" };
@@ -51,7 +53,7 @@ namespace Fps.Core.Tests
 #pragma warning restore CA2263
 
             Assert.That(GameRulesDebugDraft.Fields, Is.EqualTo(defined));
-            Assert.That(defined.Length, Is.EqualTo(29));
+            Assert.That(defined.Length, Is.EqualTo(30));
         }
 
         [Test]
@@ -86,6 +88,20 @@ namespace Fps.Core.Tests
 
                 Assert.That(GameRulesDebugDraft.Changes(GameRules.Default, built), Is.EqualTo(new[] { field + ": Off -> On" }));
             }
+        }
+
+        [Test]
+        public void JumpStartsOnAndTurningItOffChangesOnlyIt()
+        {
+            var draft = new GameRulesDebugDraft(GameRules.Default);
+            Assert.That(draft.Get(GameRulesDebugField.Jump), Is.EqualTo(1));
+            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.Jump), Is.EqualTo(_offOn));
+
+            draft.Set(GameRulesDebugField.Jump, 0);
+            var built = draft.Build();
+
+            Assert.That(built.Actions.Jump, Is.EqualTo(Jump.Off));
+            Assert.That(GameRulesDebugDraft.Changes(GameRules.Default, built), Is.EqualTo(_jumpTurnedOff));
         }
 
         [Test]
@@ -184,6 +200,7 @@ namespace Fps.Core.Tests
                 GameRulesDebugField.Abilities,
                 GameRulesDebugField.SlowMotion,
                 GameRulesDebugField.AimToFire,
+                GameRulesDebugField.Jump,
                 GameRulesDebugField.FallDamage,
             }));
         }

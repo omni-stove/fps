@@ -46,6 +46,7 @@ MonoBehaviour:
   _ping: 0
   _abilities: 0
   _slowMotion: 0
+  _jump: 0
   _spawnProtectionSeconds: 0
   _fallDamage: 0
   _hudDensity: 0

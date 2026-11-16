@@ -51,7 +51,7 @@
   "settings.input.action.Attack": "撃つ",
   "settings.input.action.Aim": "覗き込み (ADS)",
   "settings.input.action.Reload": "リロード",
-  "settings.input.action.Jump": "ジャンプ",
+  "settings.input.action.Jump": "ジャンプ・乗り越え",
   "settings.input.action.Sprint": "ダッシュ",
   "settings.input.action.Crouch": "しゃがみ",
   "settings.input.action.Interact": "調べる・起こす",

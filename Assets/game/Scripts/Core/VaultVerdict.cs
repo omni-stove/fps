@@ -27,7 +27,10 @@ namespace Fps.Core
         /// <summary>障害物が <see cref="MotorSpec.VaultMaxHeight"/> より高い。よじ登りでは <see cref="MotorSpec.MantleMaxHeight"/> より高い。</summary>
         TooHigh,
 
-        /// <summary>障害物が <see cref="VaultProbe.MaxDepth"/> より厚い (向こう側へ降りられない)。</summary>
+        /// <summary>
+        /// 障害物が <see cref="VaultProbe.MaxDepth"/> より厚い (向こう側へ降りられない) のに、上に体が立てる奥行き
+        /// (<see cref="VaultProbe.MantleFootingDepth"/>) も無い。立てるなら上に乗る <see cref="Vault"/> になる。
+        /// </summary>
         TooDeep,
 
         /// <summary>上を越える空間か向こう側の立つ場所が塞がっている。よじ登りでは、上がる間の頭上か縁の上の立つ場所が塞がっている。</summary>
@@ -44,5 +47,11 @@ namespace Fps.Core
         /// (<see cref="VaultProbe.EvaluateMantle"/> だけが返す)。
         /// </summary>
         TooNarrow,
+
+        /// <summary>
+        /// 手前の面が体の幅 (<see cref="VaultProbe.MinFaceWidth"/>) に足りない (壁の端や細い柱に横から当たっている)。
+        /// 乗り越えでは TooHigh の後・TooDeep の前に、よじ登りでは TooHigh の後・TooNarrow の前に調べる。
+        /// </summary>
+        NarrowFace,
     }
 }

@@ -96,6 +96,26 @@ namespace Fps.Runtime
         /// <summary>今の持ち物で <see cref="Tick"/> が速さに掛ける倍率。どの動きに掛けるかは <see cref="CarryLoadSpec.Gaits"/>。</summary>
         public float CarrySpeedMultiplier => CarryLoad != null ? CarryLoad.CarrySpeedMultiplier(Spec.CarryLoad) : 1f;
 
+        private Jump _jumpRule = Jump.On;
+
+        /// <summary>
+        /// ふつうのジャンプで跳べるか。既定は <see cref="Jump.On"/>。<see cref="PlayerActions.Attach"/> がルールの <see cref="ActionRules.Jump"/> を入れる。
+        /// Off でも Jump は乗り越え・崖のぼり・伏せから立つ・移動の横取り (はしご・ジップラインなど) には渡す。
+        /// </summary>
+        public Jump JumpRule
+        {
+            get => _jumpRule;
+            set
+            {
+                if (!Enum.IsDefined(typeof(Jump), value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "value is not a defined Jump");
+                }
+
+                _jumpRule = value;
+            }
+        }
+
         /// <summary>
         /// 操作を手放す口。乗り物の座席などが <see cref="ControlHandoff.Claim"/> している間、<see cref="ApplyInput"/> は入力を何も押していないものとして扱う。
         /// 同じプレイヤーの <see cref="WeaponController.Handoff"/> にも同じものを配線する (オフラインは <see cref="GameBootstrap"/>)。
@@ -289,6 +309,7 @@ namespace Fps.Runtime
         /// <see cref="MoveFilter"/> があれば、姿勢を決める前に入力を書き換えさせる。
         /// <see cref="VaultRule"/> が On なら、Jump で前方の低い障害物を乗り越える (乗り越えられなければふつうにジャンプする)。
         /// <see cref="MantleRule"/> が On なら、乗り越えなかった Jump で、それより高い段によじ登る (よじ登れなければふつうにジャンプする)。
+        /// <see cref="JumpRule"/> が Off なら、乗り越えもよじ登りもしなかった Jump では跳ばない。
         /// 登録した <see cref="IMovementOverride"/> のどれかが有効なら、姿勢と移動はそれに任せる (<see cref="ActiveMovementOverride"/>)。
         /// </summary>
         /// <param name="crouch">しゃがみたいか (<see cref="UpdateCrouch"/> の結果)。false でも頭上が塞がっていればしゃがんだまま。</param>
@@ -331,7 +352,7 @@ namespace Fps.Runtime
                             yawRadians,
                             sprint,
                             IsCrouched,
-                            jumpPressed,
+                            jumpPressed && _jumpRule == Jump.On,
                             _controller.isGrounded,
                             deltaSeconds,
                             carry).ToUnity();

@@ -20,7 +20,7 @@ namespace Fps.Core
         /// 崖のぼり (<see cref="Mantle.On"/>) の判定。sample の上端が minHeight (<see cref="MotorSpec.VaultMaxHeight"/>、これ以下は乗り越えの受け持ち) より高く
         /// maxHeight (<see cref="MotorSpec.MantleMaxHeight"/>) 以下で、縁の奥行きが <see cref="MantleFootingDepth"/> 以上なら <see cref="PlanMantlePath"/> で軌跡を作り、
         /// isPathClear (物理で軌跡の上を体が通れるか) が false なら <see cref="VaultVerdict.Blocked"/> にする (上がる間の頭上か、縁の上が塞がっている)。
-        /// 理由は TooFar・NotAWall・NotFacing・TooLow・TooHigh・TooNarrow・Blocked の順に調べ、最初に当たったものを返す。通れば <see cref="VaultVerdict.Mantle"/>。
+        /// 理由は TooFar・NotAWall・NotFacing・TooLow・TooHigh・NarrowFace・TooNarrow・Blocked の順に調べ、最初に当たったものを返す。通れば <see cref="VaultVerdict.Mantle"/>。
         /// sample の Depth は、手前の面から <see cref="MantleFootingDepth"/> より先まで測ったもの (それより厚ければ無限大でよい)。
         /// </summary>
         /// <param name="sample">前方への Ray で測った段の標本。</param>
@@ -68,7 +68,7 @@ namespace Fps.Core
                 return new VaultProbeResult(rejected, height, depth, Vector3.Zero, null);
             }
 
-            var verdict = ClassifyMantle(into, facing, height, depth, minHeight, maxHeight, bodyRadius);
+            var verdict = ClassifyMantle(into, facing, height, depth, minHeight, maxHeight, bodyRadius, sample.Width);
             if (verdict != VaultVerdict.Mantle)
             {
                 return new VaultProbeResult(verdict, height, depth, into, null);
@@ -114,7 +114,7 @@ namespace Fps.Core
         }
 
         private static VaultVerdict ClassifyMantle(
-            Vector3 into, Vector3 facing, float height, float depth, float minHeight, float maxHeight, float bodyRadius)
+            Vector3 into, Vector3 facing, float height, float depth, float minHeight, float maxHeight, float bodyRadius, float width)
         {
             if (!Faces(facing, into))
             {
@@ -130,6 +130,11 @@ namespace Fps.Core
             if (height > maxHeight + _boundaryEpsilon)
             {
                 return VaultVerdict.TooHigh;
+            }
+
+            if (width < MinFaceWidth(bodyRadius) - _boundaryEpsilon)
+            {
+                return VaultVerdict.NarrowFace;
             }
 
             return depth < MantleFootingDepth(bodyRadius) - _boundaryEpsilon ? VaultVerdict.TooNarrow : VaultVerdict.Mantle;

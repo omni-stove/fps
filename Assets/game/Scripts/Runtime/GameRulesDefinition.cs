@@ -123,6 +123,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("覗き込んで構えている間しか撃てないか (腰撃ちを禁じる)。ブラインドファイアは構えずに撃てる")]
         private AimToFire _aimToFire = AimToFire.Off;
 
+        [SerializeField, Tooltip("ふつうのジャンプで跳べるか。Off でも Jump は乗り越え・崖のぼり・伏せから立つ・はしごやジップラインから離れる・パラシュートを開くに使う")]
+        private Jump _jump = Jump.On;
+
         [Header("リスポーン")]
         [SerializeField, Min(0f), Tooltip("リスポーンしてからダメージを受けなくなる秒数。0 なら守らない")]
         private float _spawnProtectionSeconds;
@@ -365,6 +368,12 @@ namespace Fps.Runtime
             set => _aimToFire = value;
         }
 
+        public Jump Jump
+        {
+            get => _jump;
+            set => _jump = value;
+        }
+
         public float SpawnProtectionSeconds
         {
             get => _spawnProtectionSeconds;
@@ -461,7 +470,8 @@ namespace Fps.Runtime
                         _ping,
                         _abilities,
                         _slowMotion,
-                        _aimToFire),
+                        _aimToFire,
+                        _jump),
                     _spawnProtectionSeconds,
                     _fallDamage,
                     _hudDensity,
@@ -552,6 +562,7 @@ namespace Fps.Runtime
             _abilities = actions.Abilities;
             _slowMotion = actions.SlowMotion;
             _aimToFire = actions.AimToFire;
+            _jump = actions.Jump;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed game rules)" : name;

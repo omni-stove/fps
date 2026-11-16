@@ -5,7 +5,7 @@ namespace Fps.Core
 {
     public sealed class CharacterVaultSensor
     {
-        public const float ProbeHeight = 0.35f;
+        public const float ProbeHeight = VaultProbe.LowestProbeHeight;
 
         public const float TopProbeMargin = 0.3f;
 
@@ -17,21 +17,21 @@ namespace Fps.Core
 
         private readonly CharacterBody _body;
         private readonly Func<VaultPath, bool> _isPathClear;
+        private readonly VaultProbe.FaceRaycast _faceRaycast;
         private Vector3 _pathOrigin;
 
         public CharacterVaultSensor(CharacterBody body)
         {
             _body = body ?? throw new ArgumentNullException(nameof(body));
             _isPathClear = IsPathClear;
+            _faceRaycast = FaceRaycast;
         }
 
         public VaultProbeResult Probe(Vector3 position, float yaw, float maxHeight)
         {
             var forward = CharacterMotorSimulation.YawForward(yaw);
             var feetY = _body.FeetY(position);
-            var origin = new Vector3(position.X, feetY + ProbeHeight, position.Z);
-            var world = _body.World;
-            if (!world.Raycast(origin, forward, VaultProbe.MaxReach, _body.LayerMask, out var hit))
+            if (!TryFindFace(position, feetY, forward, maxHeight, out var hit))
             {
                 return VaultProbeResult.None;
             }
@@ -42,9 +42,44 @@ namespace Fps.Core
             var topHeight = MeasureTop(hit, into, feetY, maxHeight);
             var depth = into == Vector3.Zero ? float.PositiveInfinity : MeasureDepth(hit, into);
             var along = (forward.X * into.X) + (forward.Z * into.Z);
-            var sample = new VaultObstacleSample(hit.Distance * along, hit.Normal, topHeight, depth);
+            var width = into == Vector3.Zero ? 0f : VaultProbe.MeasureFaceWidth(hit.Point, into, _body.Radius, _faceRaycast);
+            var sample = new VaultObstacleSample(hit.Distance * along, hit.Normal, topHeight, depth, width);
             _pathOrigin = position;
             return VaultProbe.Evaluate(sample, forward, maxHeight, _body.Radius, _isPathClear);
+        }
+
+        // 1 本では張り出した縁の下をくぐるので高さを並べる。並べ方と選び方は PlayerController.TryFindVaultFace と揃え、予測と答えを同じにする
+        private bool TryFindFace(Vector3 position, float feetY, Vector3 forward, float maxHeight, out WorldHit face)
+        {
+            var found = false;
+            face = default;
+            var count = VaultProbe.ProbeHeightCount(maxHeight);
+            for (var i = 0; i < count; i++)
+            {
+                var origin = new Vector3(position.X, feetY + VaultProbe.ProbeHeightAt(i), position.Z);
+                if (_body.World.Raycast(origin, forward, VaultProbe.MaxReach, _body.LayerMask, out var hit)
+                    && VaultProbe.IsBetterFace(found, face.Normal, face.Distance, hit.Normal, hit.Distance))
+                {
+                    face = hit;
+                    found = true;
+                }
+            }
+
+            return found;
+        }
+
+        private bool FaceRaycast(Vector3 origin, Vector3 direction, float maxDistance, out Vector3 normal, out float distance)
+        {
+            if (_body.World.Raycast(origin, direction, maxDistance, _body.LayerMask, out var hit))
+            {
+                normal = hit.Normal;
+                distance = hit.Distance;
+                return true;
+            }
+
+            normal = Vector3.Zero;
+            distance = 0f;
+            return false;
         }
 
         // 当たった形だけに上から Ray を下ろして上端を測る。始点が中 (それより高い) なら当たらないので、始点の高さ (上限より高い) とする

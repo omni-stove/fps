@@ -86,6 +86,9 @@ namespace Fps.Core
         /// <summary><see cref="ActionRules.AimToFire"/>。</summary>
         AimToFire,
 
+        /// <summary><see cref="ActionRules.Jump"/>。</summary>
+        Jump,
+
         /// <summary><see cref="GameRules.FallDamage"/>。</summary>
         FallDamage,
 

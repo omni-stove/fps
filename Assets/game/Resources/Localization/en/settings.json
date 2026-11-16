@@ -51,7 +51,7 @@
   "settings.input.action.Attack": "Fire",
   "settings.input.action.Aim": "Aim (ADS)",
   "settings.input.action.Reload": "Reload",
-  "settings.input.action.Jump": "Jump",
+  "settings.input.action.Jump": "Jump / Vault",
   "settings.input.action.Sprint": "Sprint",
   "settings.input.action.Crouch": "Crouch",
   "settings.input.action.Interact": "Interact / Revive",

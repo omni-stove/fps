@@ -43,7 +43,8 @@
     "hudDensity": "Full",
     "objective": "None",
     "minPlayers": 0,
-    "idleKickSeconds": 0
+    "idleKickSeconds": 0,
+    "maxWeapons": 0
   },
   "match": {
     "scoreLimit": 10,

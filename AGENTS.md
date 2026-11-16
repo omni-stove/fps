@@ -2,6 +2,8 @@ Work the game engine by `.agents/refs/scriptability-rules.md`.
 
 Leave existing `.meta` files untouched.
 
+Write tests and their expected values with each change, but do not run the Unity tests.
+
 Write a code comment, `///` included, only to say why the code is not written another way. Keep existing comments unless you change the code they describe.
 
 This repo is a shooter kit; each game replaces its content. In kit code:

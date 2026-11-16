@@ -81,8 +81,11 @@ namespace Fps.Core
         /// <summary>アクティブリロードで成功になる区間の終わり (進捗と同じ 0〜1)。<see cref="ReloadProgress"/> が null なら 0。</summary>
         public float ReloadWindowEnd { get; private set; }
 
-        /// <summary>照準の広がり (0〜1)。0 で線が中央に最も寄り、1 で最も離れる。</summary>
+        /// <summary>照準の広がり (0〜1)。0 で線が中央に最も寄り、1 で最も離れる。<see cref="CrosshairConeGap"/> の外へ足す。</summary>
         public float CrosshairSpread { get; private set; }
+
+        /// <summary>弾が実際に散る円錐の縁が画面の中央から離れる距離 (HUD の基準解像度の px、0 以上)。照準の線はここより内へ寄らない。</summary>
+        public float CrosshairConeGap { get; private set; }
 
         /// <summary>照準を出すか。ADS 中とダッシュ中は false。</summary>
         public bool IsCrosshairVisible { get; private set; } = true;
@@ -395,21 +398,36 @@ namespace Fps.Core
             ApplyReloadProgress(null, 0f, 0f);
         }
 
-        /// <summary>照準の広がりと、出すかどうかを決める。広がりは時間で変わるので HUD が毎フレーム呼ぶ。</summary>
+        /// <summary>照準の広がりと、出すかどうかを決める。散らばりの円錐の縁 (<see cref="CrosshairConeGap"/>) は 0 にする。</summary>
         /// <exception cref="ArgumentOutOfRangeException">spread が 0〜1 の外か NaN。</exception>
         public void SetCrosshair(float spread, bool visible)
+        {
+            SetCrosshair(spread, 0f, visible);
+        }
+
+        /// <summary>
+        /// 照準の広がり、散らばりの円錐の縁までの距離 (基準解像度の px)、出すかどうかを決める。広がりも縁も時間で変わるので HUD が毎フレーム呼ぶ。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">spread が 0〜1 の外か NaN、coneGap が負か有限でない。</exception>
+        public void SetCrosshair(float spread, float coneGap, bool visible)
         {
             if (!IsFraction(spread))
             {
                 throw new ArgumentOutOfRangeException(nameof(spread), spread, "spread must be between 0 and 1");
             }
 
-            if (spread == CrosshairSpread && visible == IsCrosshairVisible)
+            if (float.IsNaN(coneGap) || float.IsInfinity(coneGap) || coneGap < 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(coneGap), coneGap, "coneGap must be finite and not negative");
+            }
+
+            if (spread == CrosshairSpread && coneGap == CrosshairConeGap && visible == IsCrosshairVisible)
             {
                 return;
             }
 
             CrosshairSpread = spread;
+            CrosshairConeGap = coneGap;
             IsCrosshairVisible = visible;
             Changed?.Invoke(HudField.Crosshair);
         }

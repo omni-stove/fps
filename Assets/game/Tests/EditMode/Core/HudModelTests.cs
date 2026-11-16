@@ -642,6 +642,37 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void SetCrosshairKeepsTheConeGapAndNotifiesWhenOnlyItChanges()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetCrosshair(0f, 40f, true);
+            model.SetCrosshair(0f, 40f, true);
+            Assert.That(model.CrosshairConeGap, Is.EqualTo(40f));
+
+            model.SetCrosshair(0f, true);
+            Assert.That(model.CrosshairConeGap, Is.EqualTo(0f), "the overload without a cone gap clears it");
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Crosshair, HudField.Crosshair }));
+        }
+
+        [Test]
+        public void SetCrosshairRejectsANegativeOrNonFiniteConeGapAndKeepsTheShownOne()
+        {
+            var model = new HudModel();
+            model.SetCrosshair(0.25f, 12f, true);
+            var changes = Record(model);
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetCrosshair(0f, -1f, true));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetCrosshair(0f, float.NaN, true));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetCrosshair(0f, float.PositiveInfinity, true));
+
+            Assert.That(model.CrosshairConeGap, Is.EqualTo(12f));
+            Assert.That(model.CrosshairSpread, Is.EqualTo(0.25f));
+            Assert.That(changes, Is.Empty);
+        }
+
+        [Test]
         public void SetCrosshairRejectsASpreadOutsideZeroToOneAndKeepsTheShownOne()
         {
             var model = new HudModel();

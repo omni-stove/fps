@@ -119,6 +119,33 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheCrosshairLinesSitOnTheConeEdgeAndBloomOutFromIt()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            model.SetCrosshair(0f, 40f, true);
+            Assert.That(view.CrosshairTop.style.translate.value.y.value, Is.EqualTo(-40f).Within(1e-4f));
+            Assert.That(view.CrosshairRight.style.translate.value.x.value, Is.EqualTo(40f).Within(1e-4f));
+
+            model.SetCrosshair(1f, 40f, true);
+            Assert.That(view.CrosshairBottom.style.translate.value.y.value, Is.EqualTo(64f).Within(1e-4f));
+            Assert.That(view.CrosshairLeft.style.translate.value.x.value, Is.EqualTo(-64f).Within(1e-4f));
+        }
+
+        [Test]
+        public void AShrunkCrosshairKeepsTheConeEdgeWhereItIsOnScreen()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model, HudVisibility.Minimal);
+
+            model.SetCrosshair(0f, 30f, true);
+
+            // 箱を SmallCrosshairScale (0.6) で縮めるので、線は 30 / 0.6 = 50 ずらして画面で 30 に見せる。
+            Assert.That(view.CrosshairTop.style.translate.value.y.value, Is.EqualTo(-50f).Within(1e-3f));
+        }
+
+        [Test]
         public void TheLayoutHasThePanelsTheDensityHides()
         {
             var root = CloneLayout();
@@ -198,6 +225,16 @@ namespace Fps.Tests.EditMode
             Assert.That(HudView.CrosshairGap(1f), Is.EqualTo(HudView.MaxCrosshairGap));
             Assert.That(HudView.CrosshairGap(0.5f), Is.GreaterThan(HudView.MinCrosshairGap).And.LessThan(HudView.MaxCrosshairGap));
             Assert.That(HudView.CrosshairGap(2f), Is.EqualTo(HudView.MaxCrosshairGap));
+        }
+
+        [Test]
+        public void CrosshairGapStartsAtTheConeEdgeButNeverInsideTheMinimum()
+        {
+            Assert.That(HudView.CrosshairGap(0f, 40f), Is.EqualTo(40f));
+            Assert.That(HudView.CrosshairGap(1f, 40f), Is.EqualTo(64f));
+            Assert.That(HudView.CrosshairGap(0f, 2f), Is.EqualTo(HudView.MinCrosshairGap));
+            Assert.That(HudView.CrosshairGap(1f, 0f), Is.EqualTo(HudView.MaxCrosshairGap));
+            Assert.That(HudView.CrosshairGap(0f, float.NaN), Is.EqualTo(HudView.MinCrosshairGap));
         }
 
         [Test]

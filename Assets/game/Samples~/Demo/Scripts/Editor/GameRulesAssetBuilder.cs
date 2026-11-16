@@ -553,7 +553,8 @@ namespace Fps.Editor
                 source.Objective,
                 source.MinPlayers,
                 source.IdleKickSeconds,
-                source.MaxWeapons);
+                source.MaxWeapons,
+                source.ReloadMode);
         }
     }
 }

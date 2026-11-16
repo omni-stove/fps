@@ -813,8 +813,7 @@ namespace Fps.NetV2
                     if (pressed)
                     {
                         _dryFire?.Play(weaponId);
-                        _weaponAction.Action = WeaponAction.Reload;
-                        _client.Send(_weaponAction, TransportChannel.Reliable);
+                        RequestReloadIfAuto(latest);
                     }
 
                     break;
@@ -847,8 +846,7 @@ namespace Fps.NetV2
                         break;
                     case FireDecision.Reload:
                         _dryFire?.Play(weaponId);
-                        _weaponAction.Action = WeaponAction.Reload;
-                        _client.Send(_weaponAction, TransportChannel.Reliable);
+                        RequestReloadIfAuto(latest);
                         break;
                 }
             }
@@ -856,6 +854,15 @@ namespace Fps.NetV2
             if (sending && !trigger.IsHeld)
             {
                 SendContinuous(direction, weaponId, trigger.Spec, pull, TriggerEdge.Released, owner);
+            }
+        }
+
+        private void RequestReloadIfAuto(SnapshotMessage latest)
+        {
+            if (latest != null && latest.Match.Rules.ReloadMode == ReloadMode.Auto)
+            {
+                _weaponAction.Action = WeaponAction.Reload;
+                _client.Send(_weaponAction, TransportChannel.Reliable);
             }
         }
 

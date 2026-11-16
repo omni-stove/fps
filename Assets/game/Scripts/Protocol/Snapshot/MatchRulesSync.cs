@@ -19,6 +19,7 @@ namespace Fps.Protocol
         public Ping Ping { get; set; }
         public Prone Prone { get; set; }
         public Ladder Ladder { get; set; }
+        public ReloadMode ReloadMode { get; set; }
 
         /// <exception cref="System.ArgumentNullException">rules が null。</exception>
         public static MatchRulesSync From(GameRules rules)
@@ -43,6 +44,7 @@ namespace Fps.Protocol
                 Ping = actions.Ping,
                 Prone = actions.Prone,
                 Ladder = actions.Ladder,
+                ReloadMode = rules.ReloadMode,
             };
         }
 
@@ -59,7 +61,8 @@ namespace Fps.Protocol
                 && HudDensity == other.HudDensity
                 && Ping == other.Ping
                 && Prone == other.Prone
-                && Ladder == other.Ladder;
+                && Ladder == other.Ladder
+                && ReloadMode == other.ReloadMode;
         }
 
         internal void Write(MessageWriter writer)
@@ -76,6 +79,7 @@ namespace Fps.Protocol
             writer.WriteByte((byte)Ping);
             writer.WriteByte((byte)Prone);
             writer.WriteByte((byte)Ladder);
+            writer.WriteByte((byte)ReloadMode);
         }
 
         internal static MatchRulesSync Read(MessageReader reader)
@@ -94,6 +98,7 @@ namespace Fps.Protocol
                 Ping = (Ping)reader.ReadByteBelow(EnumRange<Ping>.Count, "ping rule"),
                 Prone = (Prone)reader.ReadByteBelow(EnumRange<Prone>.Count, "prone rule"),
                 Ladder = (Ladder)reader.ReadByteBelow(EnumRange<Ladder>.Count, "ladder rule"),
+                ReloadMode = (ReloadMode)reader.ReadByteBelow(EnumRange<ReloadMode>.Count, "reload mode"),
             };
         }
     }

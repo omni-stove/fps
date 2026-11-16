@@ -149,6 +149,9 @@ namespace Fps.Runtime
         [SerializeField, UnityEngine.Range(0, GameRules.MaxWeaponsLimit), Tooltip("1 人が同時に持てる武器の数。上限で別の武器を拾うと今の武器を落として持ち替える。0 なら上限なし")]
         private int _maxWeapons;
 
+        [SerializeField, Tooltip("Auto なら撃ち切ったら (弾倉が空で引き金を引いたときも) 自動でリロードする。Manual なら Reload を押したときだけ")]
+        private ReloadMode _reloadMode = ReloadMode.Auto;
+
         public FriendlyFire FriendlyFire
         {
             get => _friendlyFire;
@@ -401,6 +404,12 @@ namespace Fps.Runtime
             set => _maxWeapons = value;
         }
 
+        public ReloadMode ReloadMode
+        {
+            get => _reloadMode;
+            set => _reloadMode = value;
+        }
+
         /// <summary>定義を不変の <see cref="GameRules"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="GameRulesDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ToRules()
@@ -450,7 +459,8 @@ namespace Fps.Runtime
                     _objective,
                     _minPlayers,
                     _idleKickSeconds,
-                    _maxWeapons);
+                    _maxWeapons,
+                    _reloadMode);
             }
             catch (ArgumentException e)
             {
@@ -503,6 +513,7 @@ namespace Fps.Runtime
             _minPlayers = rules.MinPlayers;
             _idleKickSeconds = rules.IdleKickSeconds;
             _maxWeapons = rules.MaxWeapons;
+            _reloadMode = rules.ReloadMode;
 
             var actions = rules.Actions;
             _downed = actions.Downed;

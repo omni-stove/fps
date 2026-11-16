@@ -10,7 +10,7 @@ namespace Fps.Core
         /// <summary>
         /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない、アクションは <see cref="ActionRules.Default"/>、
         /// リスポーン直後の無敵なし、落下ダメージなし、HUD はすべて出す、拠点なし (<see cref="MatchObjective.None"/>)、人数を Bot で埋めない、放置しても切らない、
-        /// 持てる武器の数に上限なし。
+        /// 持てる武器の数に上限なし、撃ち切ったら自動でリロード (<see cref="ReloadMode.Auto"/>)。
         /// </summary>
         public static readonly GameRules Default = new GameRules(
             FriendlyFire.Off,
@@ -92,6 +92,9 @@ namespace Fps.Core
         /// </summary>
         public int MaxWeapons { get; }
 
+        /// <summary>弾倉が空になったときに自動でリロードを始めるか、Reload を押したときだけにするか。</summary>
+        public ReloadMode ReloadMode { get; }
+
         /// <param name="friendlyFire">味方撃ちの扱い。定義済みの値。</param>
         /// <param name="respawnMode">リスポーン方式。定義済みの値。</param>
         /// <param name="waveIntervalSeconds">波の間隔 (秒)。0 より大きい有限値。</param>
@@ -110,6 +113,7 @@ namespace Fps.Core
         /// <param name="minPlayers">Bot で埋める人数。0 以上 <see cref="MaxMinPlayers"/> 以下。</param>
         /// <param name="idleKickSeconds">放置で切るまでの秒数。0 以上の有限値。</param>
         /// <param name="maxWeapons">持てる武器の数。0 なら上限なし。0 以上 <see cref="MaxWeaponsLimit"/> 以下。</param>
+        /// <param name="reloadMode">撃ち切ったときのリロード。定義済みの値。</param>
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -128,7 +132,8 @@ namespace Fps.Core
             MatchObjective objective = MatchObjective.None,
             int minPlayers = 0,
             float idleKickSeconds = 0f,
-            int maxWeapons = 0)
+            int maxWeapons = 0,
+            ReloadMode reloadMode = ReloadMode.Auto)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -211,6 +216,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(maxWeapons), maxWeapons, "maxWeapons must be between 0 and " + MaxWeaponsLimit);
             }
 
+            if (!Enum.IsDefined(typeof(ReloadMode), reloadMode))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reloadMode), reloadMode, "reloadMode is not a defined ReloadMode");
+            }
+
             FriendlyFire = friendlyFire;
             RespawnMode = respawnMode;
             WaveIntervalSeconds = waveIntervalSeconds;
@@ -229,6 +239,7 @@ namespace Fps.Core
             MinPlayers = minPlayers;
             IdleKickSeconds = idleKickSeconds;
             MaxWeapons = maxWeapons;
+            ReloadMode = reloadMode;
         }
 
         /// <summary><see cref="FriendlyFire"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
@@ -296,6 +307,9 @@ namespace Fps.Core
         /// <summary><see cref="MaxWeapons"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
         public GameRules WithMaxWeapons(int value) => Copy(maxWeapons: value);
 
+        /// <summary><see cref="ReloadMode"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithReloadMode(ReloadMode value) => Copy(reloadMode: value);
+
         private GameRules Copy(
             FriendlyFire? friendlyFire = null,
             RespawnMode? respawnMode = null,
@@ -314,7 +328,8 @@ namespace Fps.Core
             MatchObjective? objective = null,
             int? minPlayers = null,
             float? idleKickSeconds = null,
-            int? maxWeapons = null)
+            int? maxWeapons = null,
+            ReloadMode? reloadMode = null)
         {
             return new GameRules(
                 friendlyFire ?? FriendlyFire,
@@ -334,7 +349,8 @@ namespace Fps.Core
                 objective ?? Objective,
                 minPlayers ?? MinPlayers,
                 idleKickSeconds ?? IdleKickSeconds,
-                maxWeapons ?? MaxWeapons);
+                maxWeapons ?? MaxWeapons,
+                reloadMode ?? ReloadMode);
         }
     }
 }

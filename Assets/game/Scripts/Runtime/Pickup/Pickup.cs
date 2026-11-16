@@ -10,6 +10,7 @@ namespace Fps.Runtime
     /// 拾える物。トリガーの球 (<see cref="Radius"/>) に <see cref="Damageable"/> を持つ人が入ったら (<see cref="PickupCollectMode.Touch"/>)、
     /// 範囲にいるプレイヤーが Interact を押したら (<see cref="PickupCollectMode.Interact"/>)、
     /// または範囲にいるプレイヤーが見た目に照準を合わせて Interact を押したら (<see cref="PickupCollectMode.Look"/>) 拾う。
+    /// Look の照準は見た目に線が当たらなくても、照準の向きから <see cref="LookAngleDegrees"/> 以内に見えていれば合っているとし、範囲にある中で照準に最も近い物を選ぶ。
     /// 持てる武器の数の上限に届いた人が別の武器を拾うと、今の武器と持ち替え、手放した武器をその残弾のまま <see cref="PickupCollectMode.Look"/> で足元に落とす。
     /// 拾えるかと何が起きるかは <see cref="PickupJudge"/> が決め、ここは拾った人の <see cref="IWeaponHolder"/> (プレイヤーの <see cref="WeaponController"/> か
     /// bot の <see cref="EnemyAgent"/>。持ち武器・予備弾)・
@@ -62,6 +63,15 @@ namespace Fps.Runtime
         /// </summary>
         public const float LookRayLength = 30f;
 
+        /// <summary>
+        /// <see cref="PickupCollectMode.Look"/> で、照準の向きと見た目の中心への向きの間がこの角度 (度) 以内なら照準が合っているとする既定。
+        /// 足元に置いた銃は、正面を見たままでも目からこのくらい下に見える。
+        /// </summary>
+        public const float DefaultLookAngleDegrees = 90f;
+
+        /// <summary><see cref="LookAngleDegrees"/> の上限 (度)。</summary>
+        public const float MaxLookAngleDegrees = 180f;
+
         /// <summary>持ち替えで手放した武器を、拾った物の位置から拾った人の側へずらして置く距離 (m)。</summary>
         public const float DroppedWeaponOffset = 0.6f;
 
@@ -84,6 +94,9 @@ namespace Fps.Runtime
         private static Damageable _lookViewer;
         private static Pickup _lookResult;
 
+        // 照準の線が見た目に当たらないときの候補。誰かが範囲にいる物だけを持ち、Edit Mode でも HandleEnter から入る。
+        private static readonly List<Pickup> _occupied = new List<Pickup>();
+
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
@@ -95,6 +108,9 @@ namespace Fps.Runtime
 
         [SerializeField, Min(MinRadius), Tooltip("拾える範囲の半径 (m)")]
         private float _radius = DefaultRadius;
+
+        [SerializeField, Range(0f, MaxLookAngleDegrees), Tooltip("Look で、照準の向きからこの角度 (度) 以内に見た目が見えていれば照準が合っているとする。0 なら見た目に照準の線が当たったときだけ")]
+        private float _lookAngleDegrees = DefaultLookAngleDegrees;
 
         [SerializeField, Tooltip("拾われたら破棄する。false なら無効にするだけ (PickupSpawnPoint が再び出す)")]
         private bool _destroyOnCollect = true;
@@ -168,6 +184,16 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>
+        /// <see cref="PickupCollectMode.Look"/> で、照準の向きと見た目の中心への向きの間がこの角度 (度) 以内なら、見た目に照準の線が当たらなくても照準が合っているとする。
+        /// 0 なら線が当たったときだけ。0〜<see cref="MaxLookAngleDegrees"/> に収め、NaN は 0 にする。
+        /// </summary>
+        public float LookAngleDegrees
+        {
+            get => _lookAngleDegrees;
+            set => _lookAngleDegrees = ClampLookAngle(value);
+        }
+
         /// <summary>拾われたら破棄するか。false なら無効にするだけで、<see cref="Restock"/> で戻せる。</summary>
         public bool DestroyOnCollect
         {
@@ -204,13 +230,15 @@ namespace Fps.Runtime
         /// </summary>
         /// <param name="parent">親。null ならシーンの直下。</param>
         /// <param name="visualPrefab">見た目 (<see cref="VisualPrefab"/>)。null なら武器はカタログの見た目か仮の銃、他は仮の箱。</param>
+        /// <param name="lookAngleDegrees">Look で照準が合っているとする角度 (<see cref="LookAngleDegrees"/>)。</param>
         public static Pickup Create(
             PickupContents contents,
             Vector3 groundPosition,
             PickupCollectMode collectMode = PickupCollectMode.Touch,
             Transform parent = null,
             float radius = DefaultRadius,
-            GameObject visualPrefab = null)
+            GameObject visualPrefab = null,
+            float lookAngleDegrees = DefaultLookAngleDegrees)
         {
             if (contents == null)
             {
@@ -236,6 +264,7 @@ namespace Fps.Runtime
                 pickup._spec = spec;
                 pickup._collectMode = collectMode;
                 pickup._radius = Mathf.Max(MinRadius, radius);
+                pickup._lookAngleDegrees = ClampLookAngle(lookAngleDegrees);
                 pickup._visualPrefab = visualPrefab;
                 pickup.EnsureParts();
                 pickup._armedFrame = Time.frameCount;
@@ -292,6 +321,12 @@ namespace Fps.Runtime
 
             // 無効の間はトリガーの出入りが届かないので、戻ったときに入り直しとして数え直す。
             _inside.Clear();
+            _occupied.Remove(this);
+        }
+
+        private void OnDestroy()
+        {
+            _occupied.Remove(this);
         }
 
         private void Update()
@@ -372,6 +407,11 @@ namespace Fps.Runtime
                 return;
             }
 
+            if (!_occupied.Contains(this))
+            {
+                _occupied.Add(this);
+            }
+
             if (_collectMode == PickupCollectMode.Touch)
             {
                 TryCollect(collector, out _, logRejection: firstCollider);
@@ -384,6 +424,11 @@ namespace Fps.Runtime
             if (other != null)
             {
                 _inside.Remove(other);
+            }
+
+            if (_inside.Count == 0)
+            {
+                _occupied.Remove(this);
             }
         }
 
@@ -417,8 +462,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// viewer の視点 (<see cref="ViewOf"/>) の照準の線が、遮られずに最初に当たる <see cref="PickupCollectMode.Look"/> の見た目がこの物なら true。
-        /// viewer 自身のコライダーと、見た目以外のトリガーは素通りする。
+        /// viewer が照準を合わせている <see cref="PickupCollectMode.Look"/> の物 (<see cref="LookedAt"/>) がこの物なら true。
         /// </summary>
         public bool IsLookedAtBy(Damageable viewer)
         {
@@ -427,7 +471,10 @@ namespace Fps.Runtime
 
         /// <summary>
         /// viewer が照準を合わせている <see cref="PickupCollectMode.Look"/> の拾える物。無ければ null。
-        /// 照準の線は viewer の視点 (<see cref="ViewOf"/>) の正面へ <see cref="LookRayLength"/> 伸ばし、壁など固い物に当たったらそこで止める。
+        /// 照準の線を viewer の視点 (<see cref="ViewOf"/>) の正面へ <see cref="LookRayLength"/> 伸ばし、壁など固い物より手前で見た目に当たった物を、
+        /// viewer が範囲にいれば選ぶ。当たらなければ、viewer が範囲にいる物のうち、照準の向きから見た目の中心までの角度が
+        /// その物の <see cref="LookAngleDegrees"/> 以内で、固い物に遮られずに見える中で最も角度の小さい物を選ぶ。
+        /// viewer 自身のコライダーと、見た目以外のトリガーは素通りする。
         /// </summary>
         public static Pickup LookedAt(Damageable viewer)
         {
@@ -443,7 +490,13 @@ namespace Fps.Runtime
             }
 
             var view = ViewOf(viewer);
-            var result = view != null ? CastLook(view.position, view.forward, viewer) : null;
+            Pickup result = null;
+            if (view != null)
+            {
+                var hit = CastLook(view.position, view.forward, viewer);
+                result = hit != null && hit.IsInside(viewer) ? hit : NearestInView(view.position, view.forward, viewer);
+            }
+
             _lookFrame = Time.frameCount;
             _lookViewer = viewer;
             _lookResult = result;
@@ -494,6 +547,80 @@ namespace Fps.Runtime
             }
 
             return null;
+        }
+
+        private static Pickup NearestInView(Vector3 origin, Vector3 forward, Damageable viewer)
+        {
+            Pickup best = null;
+            var bestAngle = float.PositiveInfinity;
+            for (var i = _occupied.Count - 1; i >= 0; i--)
+            {
+                var pickup = _occupied[i];
+                if (pickup == null)
+                {
+                    _occupied.RemoveAt(i);
+                    continue;
+                }
+
+                if (!pickup.IsAvailable || pickup._collectMode != PickupCollectMode.Look || !pickup.IsInside(viewer))
+                {
+                    continue;
+                }
+
+                var point = pickup.LookPoint;
+                var angle = Vector3.Angle(forward, point - origin);
+                if (angle > pickup._lookAngleDegrees || angle >= bestAngle || !CanSee(origin, point, viewer))
+                {
+                    continue;
+                }
+
+                best = pickup;
+                bestAngle = angle;
+            }
+
+            return best;
+        }
+
+        // 見た目の中心。照準の判定があればその箱の中心、無ければ見た目か足元の位置。
+        private Vector3 LookPoint
+        {
+            get
+            {
+                if (_lookTarget != null)
+                {
+                    return _lookTarget.transform.TransformPoint(_lookTarget.center);
+                }
+
+                return _visual != null ? _visual.position : transform.position;
+            }
+        }
+
+        private static bool CanSee(Vector3 origin, Vector3 point, Damageable viewer)
+        {
+            var toPoint = point - origin;
+            var distance = toPoint.magnitude;
+            if (distance < 1e-4f)
+            {
+                return true;
+            }
+
+            var count = Physics.RaycastNonAlloc(
+                origin, toPoint / distance, _lookHits, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            for (var i = 0; i < count; i++)
+            {
+                var collider = _lookHits[i].collider;
+                if (collider != null && collider.GetComponentInParent<Damageable>() != viewer)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static float ClampLookAngle(float degrees)
+        {
+            return float.IsNaN(degrees) ? 0f : Mathf.Clamp(degrees, 0f, MaxLookAngleDegrees);
         }
 
         /// <summary>範囲にいるこの画面のプレイヤー。いなければ null。</summary>
@@ -711,7 +838,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 持ち替えで手放した武器を、この物の位置から collector の側へ <see cref="DroppedWeaponOffset"/> ずらした足元に、
-        /// その残弾のまま <see cref="PickupCollectMode.Look"/> で置く。範囲の半径と拾える陣営はこの物と同じにする。
+        /// その残弾のまま <see cref="PickupCollectMode.Look"/> で置く。範囲の半径・照準の角度・拾える陣営はこの物と同じにする。
         /// </summary>
         private Pickup DropWeapon(HeldWeapon dropped, Damageable collector)
         {
@@ -724,7 +851,7 @@ namespace Fps.Runtime
             }
 
             var contents = PickupContents.ForDroppedWeapon(dropped.Definition, dropped.Ammo, _contents.Eligibility);
-            var pickup = Create(contents, position, PickupCollectMode.Look, radius: _radius);
+            var pickup = Create(contents, position, PickupCollectMode.Look, radius: _radius, lookAngleDegrees: _lookAngleDegrees);
             Debug.Log(PickupLog.Dropped(collector.Id, pickup.name, pickup.Spec, position.ToNumerics()), pickup);
             return pickup;
         }

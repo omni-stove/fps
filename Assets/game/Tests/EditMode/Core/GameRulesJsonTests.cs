@@ -77,7 +77,8 @@ namespace Fps.Core.Tests
   ""objective"": ""Domination"",
   ""minPlayers"": 8,
   ""idleKickSeconds"": 90,
-  ""maxWeapons"": 2
+  ""maxWeapons"": 2,
+  ""reloadMode"": ""Manual""
 }";
             var expected = new GameRules(
                 FriendlyFire.Reflect,
@@ -97,7 +98,8 @@ namespace Fps.Core.Tests
                 MatchObjective.Domination,
                 8,
                 90f,
-                2);
+                2,
+                ReloadMode.Manual);
 
             AssertSameRules(GameRulesJson.Parse(json, _source), expected);
         }
@@ -105,7 +107,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ItemNamesMatchTheRulesConstructors()
         {
-            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(18));
+            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(19));
             Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(25));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
@@ -183,7 +185,9 @@ namespace Fps.Core.Tests
                 HudDensity.Hardcore,
                 MatchObjective.Domination,
                 8,
-                0.1f);
+                0.1f,
+                2,
+                ReloadMode.Manual);
 
             var written = GameRulesJson.Write(rules);
 
@@ -401,6 +405,7 @@ namespace Fps.Core.Tests
             Assert.That(actual.MinPlayers, Is.EqualTo(expected.MinPlayers), "minPlayers");
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds), "idleKickSeconds");
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons), "maxWeapons");
+            Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode), "reloadMode");
 
             var a = actual.Actions;
             var b = expected.Actions;

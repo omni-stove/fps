@@ -44,7 +44,8 @@
     "objective": "Domination",
     "minPlayers": 0,
     "idleKickSeconds": 120,
-    "maxWeapons": 2
+    "maxWeapons": 2,
+    "reloadMode": "Auto"
   },
   "match": {
     "scoreLimit": 10,

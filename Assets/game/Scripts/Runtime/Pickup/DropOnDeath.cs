@@ -34,6 +34,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("落とした物の拾い方")]
         private PickupCollectMode _collectMode = PickupCollectMode.Touch;
 
+        [SerializeField, Range(0f, Pickup.MaxLookAngleDegrees), Tooltip("Look で、照準の向きからこの角度 (度) 以内に見た目が見えていれば照準が合っているとする。0 なら見た目に照準の線が当たったときだけ")]
+        private float _lookAngleDegrees = Pickup.DefaultLookAngleDegrees;
+
         [SerializeField, Min(0f), Tooltip("落とした物が消えるまでの秒数。0 なら消えない")]
         private float _lifetimeSeconds = DefaultLifetimeSeconds;
 
@@ -91,6 +94,13 @@ namespace Fps.Runtime
         {
             get => _lifetimeSeconds;
             set => _lifetimeSeconds = Mathf.Max(0f, value);
+        }
+
+        /// <summary>落とした物の <see cref="Pickup.LookAngleDegrees"/>。次に落とす物から使う。</summary>
+        public float LookAngleDegrees
+        {
+            get => _lookAngleDegrees;
+            set => _lookAngleDegrees = float.IsNaN(value) ? 0f : Mathf.Clamp(value, 0f, Pickup.MaxLookAngleDegrees);
         }
 
         /// <summary>2 つ以上落とすときに並べる円の半径 (m)。負の値は 0 にする。</summary>
@@ -185,7 +195,7 @@ namespace Fps.Runtime
                 Pickup pickup;
                 try
                 {
-                    pickup = Pickup.Create(valid[i], position, _collectMode, visualPrefab: _visualPrefab);
+                    pickup = Pickup.Create(valid[i], position, _collectMode, visualPrefab: _visualPrefab, lookAngleDegrees: _lookAngleDegrees);
                 }
                 catch (ArgumentException e)
                 {

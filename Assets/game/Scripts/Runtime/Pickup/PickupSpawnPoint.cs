@@ -33,6 +33,9 @@ namespace Fps.Runtime
         [SerializeField, Min(Pickup.MinRadius), Tooltip("拾える範囲の半径 (m)")]
         private float _radius = Pickup.DefaultRadius;
 
+        [SerializeField, Range(0f, Pickup.MaxLookAngleDegrees), Tooltip("Look で、照準の向きからこの角度 (度) 以内に見た目が見えていれば照準が合っているとする。0 なら見た目に照準の線が当たったときだけ")]
+        private float _lookAngleDegrees = Pickup.DefaultLookAngleDegrees;
+
         [SerializeField, Tooltip("出す物の見た目 (Pickup.VisualPrefab)。調整値を入れても、これを使う。空なら中身の種類で色を分けた仮の箱")]
         private GameObject _visualPrefab;
 
@@ -43,7 +46,7 @@ namespace Fps.Runtime
         public event Action<PickupSpawnPoint, PickupCollection> Collected;
 
         /// <summary>
-        /// 拾える物の調整値。null でなければ <see cref="Contents"/>・<see cref="CollectMode"/>・<see cref="RespawnSeconds"/>・<see cref="Radius"/> の代わりに使う。
+        /// 拾える物の調整値。null でなければ <see cref="Contents"/>・<see cref="CollectMode"/>・<see cref="RespawnSeconds"/>・<see cref="Radius"/>・<see cref="LookAngleDegrees"/> の代わりに使う。
         /// 出した後に変えても、次の <see cref="TrySpawn"/> まで効かない。
         /// </summary>
         public PickupDefinition Definition
@@ -95,6 +98,13 @@ namespace Fps.Runtime
         {
             get => _radius;
             set => _radius = Mathf.Max(Pickup.MinRadius, value);
+        }
+
+        /// <summary>出す物の <see cref="Pickup.LookAngleDegrees"/> (<see cref="Definition"/> が無いときに使う)。出した後に変えても次の <see cref="TrySpawn"/> まで効かない。</summary>
+        public float LookAngleDegrees
+        {
+            get => _lookAngleDegrees;
+            set => _lookAngleDegrees = float.IsNaN(value) ? 0f : Mathf.Clamp(value, 0f, Pickup.MaxLookAngleDegrees);
         }
 
         /// <summary>出す物の見た目 (<see cref="Pickup.VisualPrefab"/>)。null なら仮の箱。出した後に変えても、次の <see cref="TrySpawn"/> まで効かない。</summary>
@@ -180,7 +190,8 @@ namespace Fps.Runtime
             var contents = definition != null ? definition.Contents : _contents;
             var collectMode = definition != null ? definition.CollectMode : _collectMode;
             var radius = definition != null ? definition.Radius : _radius;
-            _pickup = Pickup.Create(contents, transform.position, collectMode, transform, radius, _visualPrefab);
+            var lookAngle = definition != null ? definition.LookAngleDegrees : _lookAngleDegrees;
+            _pickup = Pickup.Create(contents, transform.position, collectMode, transform, radius, _visualPrefab, lookAngle);
             _pickup.DestroyOnCollect = false;
             _pickup.Collected += OnPickupCollected;
             Debug.Log(PickupLog.Spawned(_pickup.name, spec, transform.position.ToNumerics()), this);

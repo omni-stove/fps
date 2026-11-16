@@ -34,6 +34,8 @@ namespace Fps.Core
 
         private const float _minLength = 1e-6f;
 
+        private const double _maxScreenDegrees = 89.9;
+
         // 2^-53。64 ビットの上位 53 ビットを [0, 1) の double にする。
         private const double _unitScale = 1.0 / 9007199254740992.0;
 
@@ -81,6 +83,37 @@ namespace Fps.Core
             var still = ConeDegrees(spec, adsProgress, 0f);
             var full = ConeDegrees(spec, adsProgress, 1f);
             return full <= 0f ? 0f : Clamp01((moving - still) / full);
+        }
+
+        /// <summary>
+        /// 半角 coneDegrees の円錐の縁が、縦の視野角 verticalFieldOfViewDegrees の透視投影の画面で中央から離れる距離。
+        /// 画面の縦半分を halfHeight としたときの同じ単位で返す。円錐が 90° 以上は画面の外の無限遠になるので、<see cref="MaxDegrees"/> の手前で止める。
+        /// </summary>
+        /// <param name="coneDegrees">散らばりの半角 (度)。負は 0 として扱う。</param>
+        /// <param name="verticalFieldOfViewDegrees">カメラの縦の視野角 (度)。0 より大きく 180 未満。</param>
+        /// <param name="halfHeight">画面の縦半分の長さ (px など)。0 以上。</param>
+        /// <exception cref="ArgumentOutOfRangeException">値が有限でないか範囲外のとき。</exception>
+        public static float ScreenRadius(float coneDegrees, float verticalFieldOfViewDegrees, float halfHeight)
+        {
+            if (!IsFinite(coneDegrees))
+            {
+                throw new ArgumentOutOfRangeException(nameof(coneDegrees), coneDegrees, "coneDegrees must be finite");
+            }
+
+            if (!IsFinite(verticalFieldOfViewDegrees) || verticalFieldOfViewDegrees <= 0f || verticalFieldOfViewDegrees >= 180f)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(verticalFieldOfViewDegrees), verticalFieldOfViewDegrees, "verticalFieldOfViewDegrees must be between 0 and 180");
+            }
+
+            if (!IsFinite(halfHeight) || halfHeight < 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(halfHeight), halfHeight, "halfHeight must be finite and not negative");
+            }
+
+            var cone = Math.Min(Math.Max(0.0, coneDegrees), _maxScreenDegrees) * Math.PI / 180.0;
+            var halfFov = verticalFieldOfViewDegrees * 0.5 * Math.PI / 180.0;
+            return (float)(Math.Tan(cone) / Math.Tan(halfFov) * halfHeight);
         }
 
         /// <summary>

@@ -253,6 +253,7 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.MinPlayers, Is.EqualTo(expected.MinPlayers), name + " minPlayers");
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds), name + " idleKickSeconds");
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons), name + " maxWeapons");
+            Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode), name + " reloadMode");
 
             var a = actual.Actions;
             var b = expected.Actions;

@@ -52,10 +52,10 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml の照準の右の線 (<see cref="CrosshairName"/> の子)。</summary>
         public const string CrosshairRightName = "hud-crosshair-right";
 
-        /// <summary>広がり 0 のときの、中央から線の内側の端までの隙間 (基準解像度の px)。</summary>
+        /// <summary>広がり 0 で円錐の縁がこれより内のときの、中央から線の内側の端までの隙間 (基準解像度の px)。中央の点と線が重ならない幅。</summary>
         public const float MinCrosshairGap = 6f;
 
-        /// <summary>広がり 1 のときの、中央から線の内側の端までの隙間 (基準解像度の px)。</summary>
+        /// <summary>円錐の縁が <see cref="MinCrosshairGap"/> より内で広がり 1 のときの、中央から線の内側の端までの隙間 (基準解像度の px)。</summary>
         public const float MaxCrosshairGap = 30f;
 
         /// <summary>Hud.uxml の一時的な案内の Label。案内が空のときは隠す。</summary>
@@ -447,7 +447,17 @@ namespace Fps.Runtime
         /// <summary>広がり spread (0〜1) のときの、中央から線の内側の端までの隙間 (基準解像度の px)。範囲外は端に揃える。</summary>
         public static float CrosshairGap(float spread)
         {
-            return Mathf.Lerp(MinCrosshairGap, MaxCrosshairGap, Mathf.Clamp01(spread));
+            return CrosshairGap(spread, 0f);
+        }
+
+        /// <summary>
+        /// 散らばりの円錐の縁が coneGap (基準解像度の px) にあり、広がり spread (0〜1) のときの、中央から線の内側の端までの隙間。
+        /// 線の内側を円錐の縁 (<see cref="MinCrosshairGap"/> より内なら MinCrosshairGap) に置き、そこから広がりの分 (最大で Max - Min) だけ外へ離す。
+        /// </summary>
+        public static float CrosshairGap(float spread, float coneGap)
+        {
+            var inner = Mathf.Max(MinCrosshairGap, float.IsNaN(coneGap) ? 0f : coneGap);
+            return inner + ((MaxCrosshairGap - MinCrosshairGap) * Mathf.Clamp01(spread));
         }
 
         /// <summary>
@@ -460,7 +470,9 @@ namespace Fps.Runtime
             var scale = _visibility.CrosshairScale;
             Crosshair.style.scale = new Scale(new Vector2(scale, scale));
 
-            var gap = CrosshairGap(_model.CrosshairSpread);
+            // 円錐の縁は画面上の位置なので、箱の scale で縮む分を先に割り戻しておく。
+            var coneGap = scale > 0f ? _model.CrosshairConeGap / scale : _model.CrosshairConeGap;
+            var gap = CrosshairGap(_model.CrosshairSpread, coneGap);
             CrosshairTop.style.translate = new Translate(new Length(0f), new Length(-gap));
             CrosshairBottom.style.translate = new Translate(new Length(0f), new Length(gap));
             CrosshairLeft.style.translate = new Translate(new Length(-gap), new Length(0f));

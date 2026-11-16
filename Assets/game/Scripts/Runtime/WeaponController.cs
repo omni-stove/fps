@@ -142,26 +142,35 @@ namespace Fps.Runtime
         public float SpreadFraction => ModifySpreadFraction(_spread);
 
         /// <summary>
-        /// HUD の照準の広がり (0〜1)。<see cref="SpreadFraction"/> に、今の武器で移動が足している散らばりの割合
-        /// (<see cref="SpreadPattern.MoveShare"/>、<see cref="AdsProgressSource"/> と <see cref="MoveFractionSource"/> を読む) を足し、<see cref="SpreadScale"/> を掛ける。
+        /// HUD の照準が実際の散らばり (<see cref="CrosshairConeDegrees"/>) の外へ足す、撃った後の開き (0〜1)。
+        /// <see cref="SpreadFraction"/> に <see cref="SpreadScale"/> を掛ける。
         /// </summary>
-        public float CrosshairSpreadFraction
+        public float CrosshairSpreadFraction => Mathf.Clamp01(SpreadFraction * SpreadScale);
+
+        /// <summary>
+        /// HUD の照準の線を置く、今撃ったときに弾が散る半角 (度)。<see cref="CurrentConeDegrees"/> (覗き込み・移動・姿勢・modifier 込み) に、
+        /// 今の弾の散弾の広がり (<see cref="RoundSpec.PelletSpreadDegrees"/>) を足す。武器を持っていなければ 0。
+        /// </summary>
+        public float CrosshairConeDegrees
         {
             get
             {
-                var spread = SpreadFraction;
-                var spec = Weapon?.Spec;
-                if (spec != null)
+                var weapon = Weapon;
+                if (weapon == null)
                 {
-                    var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
-                    var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
-                    if (!float.IsNaN(ads) && !float.IsNaN(move))
-                    {
-                        spread += SpreadPattern.MoveShare(spec, ads, move);
-                    }
+                    return 0f;
                 }
 
-                return Mathf.Clamp01(spread * SpreadScale);
+                var ads = AdsProgressSource != null ? AdsProgressSource() : 0f;
+                var move = MoveFractionSource != null ? MoveFractionSource() : 0f;
+                // HUD が毎フレーム読むので、源が NaN を返したフレームに CurrentConeDegrees の例外で HUD を止めない。
+                if (float.IsNaN(ads) || float.IsNaN(move))
+                {
+                    return 0f;
+                }
+
+                var cone = CurrentConeDegrees(weapon.Spec) + weapon.AmmoTypes.Round.PelletSpreadDegrees;
+                return Mathf.Clamp(cone, 0f, SpreadPattern.MaxDegrees);
             }
         }
 
@@ -367,7 +376,9 @@ namespace Fps.Runtime
         /// <summary>
         /// Attack の押す・離すと時間を今の武器の撃ち方 (<see cref="Fps.Core.Weapon.Trigger"/>) に渡し、返った発数ぶん撃つ。
         /// Auto は押している間、Semi は押したフレームだけ撃つ。連射間隔は撃ち方と <see cref="Weapon"/> が制限する。撃てたら true。
-        /// 押したフレームに弾倉が空で撃てなければ <see cref="DryFired"/> を呼ぶ (<see cref="IsDryFire"/>)。
+        /// 押したフレームに弾倉が空で撃てなければ <see cref="DryFired"/> を呼ぶ (<see cref="IsDryFire"/>)。押し続けている間は鳴らさない。
+        /// <see cref="Rules"/> の <see cref="GameRules.ReloadMode"/> が <see cref="ReloadMode.Auto"/> なら、撃って弾倉が空になったときと、空撃ちしたときに
+        /// <see cref="StartReload"/> でリロードを始める (予備弾が無いか modifier が止めていれば始まらない)。
         /// </summary>
         /// <param name="isPressed">Attack が押されているか。</param>
         /// <param name="wasPressedThisFrame">Attack がこのフレームに押されたか。</param>
@@ -388,6 +399,7 @@ namespace Fps.Runtime
                 {
                     Debug.Log($"{DryFireLogPrefix} id={weapon.Spec.Id}", this);
                     DryFired?.Invoke(weapon);
+                    ReloadIfAuto(weapon);
                 }
 
                 return false;
@@ -401,7 +413,20 @@ namespace Fps.Runtime
                 fired = true;
             }
 
+            if (fired)
+            {
+                ReloadIfAuto(weapon);
+            }
+
             return fired;
+        }
+
+        private void ReloadIfAuto(Weapon weapon)
+        {
+            if (Rules.ReloadMode == ReloadMode.Auto && IsDryFire(weapon))
+            {
+                StartReload();
+            }
         }
 
         /// <summary>weapon の弾倉が空で、リロード中でもないか (トリガーを引くと空撃ちになる)。null なら false。</summary>

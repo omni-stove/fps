@@ -81,6 +81,7 @@ namespace Fps.Tests.EditMode
             definition.MinPlayers = 6;
             definition.IdleKickSeconds = 45f;
             definition.MaxWeapons = 2;
+            definition.ReloadMode = ReloadMode.Manual;
 
             var rules = definition.ToRules();
 
@@ -126,6 +127,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.MinPlayers, Is.EqualTo(6));
             Assert.That(rules.IdleKickSeconds, Is.EqualTo(45f));
             Assert.That(rules.MaxWeapons, Is.EqualTo(2));
+            Assert.That(rules.ReloadMode, Is.EqualTo(ReloadMode.Manual));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
 
@@ -174,7 +176,9 @@ namespace Fps.Tests.EditMode
                 HudDensity.Hardcore,
                 MatchObjective.Domination,
                 8,
-                120f);
+                120f,
+                3,
+                ReloadMode.Manual);
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -225,6 +229,7 @@ namespace Fps.Tests.EditMode
         [TestCase("MinPlayers")]
         [TestCase("IdleKickSeconds")]
         [TestCase("MaxWeapons")]
+        [TestCase("ReloadMode")]
         public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
         {
             var definition = NewBroken("BrokenRules", field);
@@ -313,6 +318,7 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.MinPlayers, Is.EqualTo(expected.MinPlayers));
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds));
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons));
+            Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)
@@ -447,6 +453,9 @@ namespace Fps.Tests.EditMode
                     break;
                 case "MaxWeapons":
                     definition.MaxWeapons = -1;
+                    break;
+                case "ReloadMode":
+                    definition.ReloadMode = (ReloadMode)99;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

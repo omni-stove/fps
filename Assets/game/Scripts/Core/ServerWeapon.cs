@@ -4,7 +4,8 @@ namespace Fps.Core
 {
     /// <summary>
     /// サーバーが持つプレイヤー 1 人ぶんの武器。<see cref="Weapon"/> (弾倉・予備弾・リロード) に、撃てなかった理由
-    /// (<see cref="ShotRejection"/>)、弾倉が空のまま撃とうとしたときの自動リロード、リスポーンでの満タン戻しを足す。
+    /// (<see cref="ShotRejection"/>)、撃ち切ったときと弾倉が空のまま撃とうとしたときの自動リロード (<see cref="GameRules.ReloadMode"/> が
+    /// <see cref="ReloadMode.Auto"/> のとき)、リスポーンでの満タン戻しを足す。
     /// 時間は <see cref="Tick"/> で外から進める。
     /// </summary>
     /// <remarks>
@@ -19,7 +20,7 @@ namespace Fps.Core
         /// </summary>
         public event Action Changed;
 
-        /// <summary>リロードを始めたときに呼ばれる。引数は空撃ちによる自動リロードなら true。</summary>
+        /// <summary>リロードを始めたときに呼ばれる。引数は撃ち切ったか空撃ちしたことによる自動リロードなら true。</summary>
         public event Action<bool> ReloadStarted;
 
         /// <summary>リロードが終わって弾倉が補充されたときに呼ばれる。アクティブリロードに成功してその場で終えたときも呼ばれる。</summary>
@@ -38,9 +39,10 @@ namespace Fps.Core
 
         /// <param name="spec">武器の設定。<see cref="WeaponSpec.FireInterval"/> は使わない (<see cref="ShotBudget"/> に渡す)。</param>
         /// <param name="rules">
-        /// 予備弾とアクティブリロードのルール。初期の予備弾と <see cref="Refill"/> で戻す値に <see cref="GameRules.ReserveAmmoMultiplier"/> を掛け、
+        /// 予備弾・リロード・アクティブリロードのルール。初期の予備弾と <see cref="Refill"/> で戻す値に <see cref="GameRules.ReserveAmmoMultiplier"/> を掛け、
         /// <see cref="GameRules.InfiniteReserve"/> ならリロードで予備弾を減らさない。<see cref="ActionRules.ActiveReload"/> が
-        /// <see cref="ActiveReload.On"/> ならリロード中の <see cref="TryActiveReload"/> で判定する。
+        /// <see cref="ActiveReload.On"/> ならリロード中の <see cref="TryActiveReload"/> で判定する。<see cref="GameRules.ReloadMode"/> が
+        /// <see cref="ReloadMode.Auto"/> なら撃ち切ったときと空撃ちしたときに自動でリロードを始める。
         /// </param>
         public ServerWeapon(WeaponSpec spec, GameRules rules)
         {
@@ -101,8 +103,8 @@ namespace Fps.Core
         /// <summary>
         /// 1 発撃つ。撃てたら弾倉を 1 減らして <see cref="ShotRejection.None"/>。
         /// リロード中で撃てなければ <see cref="ShotRejection.Reloading"/>、熱で撃つ武器がオーバーヒート中なら <see cref="ShotRejection.Overheated"/>、
-        /// 弾倉が空なら <see cref="ShotRejection.OutOfAmmo"/> を返し、
-        /// 空のときは予備弾があれば (<see cref="HasInfiniteReserve"/> なら常に) リロードを始める。
+        /// 弾倉が空なら <see cref="ShotRejection.OutOfAmmo"/> を返す。<see cref="GameRules.ReloadMode"/> が <see cref="ReloadMode.Auto"/> なら、
+        /// 空のときと撃って空になったときに、予備弾があれば (<see cref="HasInfiniteReserve"/> なら常に) リロードを始める。
         /// </summary>
         public ShotRejection TryFire()
         {
@@ -114,7 +116,7 @@ namespace Fps.Core
 
             if (_weapon.AmmoInMagazine == 0)
             {
-                StartReload(true);
+                ReloadIfAuto();
                 return ShotRejection.OutOfAmmo;
             }
 
@@ -130,6 +132,11 @@ namespace Fps.Core
             }
 
             Changed?.Invoke();
+            if (_weapon.AmmoInMagazine == 0)
+            {
+                ReloadIfAuto();
+            }
+
             return ShotRejection.None;
         }
 
@@ -201,6 +208,14 @@ namespace Fps.Core
             _weapon.Reloaded -= HandleReloaded;
             _weapon = CreateWeapon();
             Changed?.Invoke();
+        }
+
+        private void ReloadIfAuto()
+        {
+            if (_rules.ReloadMode == ReloadMode.Auto)
+            {
+                StartReload(true);
+            }
         }
 
         private bool StartReload(bool automatic)

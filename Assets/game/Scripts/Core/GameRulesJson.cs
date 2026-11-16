@@ -34,6 +34,7 @@ namespace Fps.Core
         public const string MinPlayersItem = "minPlayers";
         public const string IdleKickSecondsItem = "idleKickSeconds";
         public const string MaxWeaponsItem = "maxWeapons";
+        public const string ReloadModeItem = "reloadMode";
 
         public const string DownedItem = "downed";
         public const string DownedBleedoutSecondsItem = "downedBleedoutSeconds";
@@ -87,6 +88,7 @@ namespace Fps.Core
             MinPlayersItem,
             IdleKickSecondsItem,
             MaxWeaponsItem,
+            ReloadModeItem,
         };
 
         /// <summary><see cref="ActionsItem"/> の中に書ける項目の名前 (<see cref="ActionRules"/> のコンストラクターの並び)。</summary>
@@ -175,7 +177,8 @@ namespace Fps.Core
                     top.ReadEnum(ObjectiveItem, defaults.Objective),
                     top.ReadInt(MinPlayersItem, defaults.MinPlayers),
                     top.ReadFloat(IdleKickSecondsItem, defaults.IdleKickSeconds),
-                    top.ReadInt(MaxWeaponsItem, defaults.MaxWeapons));
+                    top.ReadInt(MaxWeaponsItem, defaults.MaxWeapons),
+                    top.ReadEnum(ReloadModeItem, defaults.ReloadMode));
             }
             catch (ArgumentException e)
             {
@@ -241,6 +244,7 @@ namespace Fps.Core
             writer.Int(MinPlayersItem, rules.MinPlayers);
             writer.Float(IdleKickSecondsItem, rules.IdleKickSeconds);
             writer.Int(MaxWeaponsItem, rules.MaxWeapons);
+            writer.Enum(ReloadModeItem, rules.ReloadMode);
             return writer.Finish();
         }
 

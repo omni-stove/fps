@@ -684,19 +684,49 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void MovingOpensTheCrosshair()
+        public void TheCrosshairConeIsTheWeaponsSpreadEvenWhenStill()
         {
             _rifle.HipSpreadDegrees = 2f;
             _rifle.MoveSpreadDegrees = 4f;
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
 
+            Assert.That(_controller.CrosshairConeDegrees, Is.EqualTo(2f));
             Assert.That(_controller.CrosshairSpreadFraction, Is.EqualTo(0f));
 
             _controller.MoveFractionSource = () => 1f;
-            Assert.That(_controller.CrosshairSpreadFraction, Is.EqualTo(4f / 6f).Within(1e-5f));
+            Assert.That(_controller.CrosshairConeDegrees, Is.EqualTo(6f).Within(1e-5f));
+            Assert.That(_controller.CrosshairSpreadFraction, Is.EqualTo(0f), "movement is in the cone, not added again as bloom");
 
             _controller.SpreadScaleSource = () => 0.5f;
-            Assert.That(_controller.CrosshairSpreadFraction, Is.EqualTo(2f / 6f).Within(1e-5f));
+            Assert.That(_controller.CrosshairConeDegrees, Is.EqualTo(3f).Within(1e-5f));
+
+            _controller.MoveFractionSource = () => float.NaN;
+            Assert.That(_controller.CrosshairConeDegrees, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void TheCrosshairConeAddsThePelletSpread()
+        {
+            _rifle.HipSpreadDegrees = 1.5f;
+            _rifle.MoveSpreadDegrees = 0f;
+            _rifle.PelletCount = 8;
+            _rifle.PelletSpreadDegrees = 4f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+
+            Assert.That(_controller.CrosshairConeDegrees, Is.EqualTo(5.5f).Within(1e-5f));
+        }
+
+        [Test]
+        public void FiringOpensTheCrosshairBeyondTheCone()
+        {
+            _rifle.HipSpreadDegrees = 2f;
+            _rifle.MoveSpreadDegrees = 0f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+
+            _controller.Fire();
+
+            Assert.That(_controller.CrosshairSpreadFraction, Is.EqualTo(WeaponController.SpreadPerShot).Within(1e-5f));
+            Assert.That(_controller.CrosshairConeDegrees, Is.EqualTo(2f));
         }
 
         [Test]
@@ -892,37 +922,92 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void PressingTheTriggerOnAnEmptyMagazineRaisesDryFiredOncePerPress()
+        public void PressingTheTriggerOnAnEmptyMagazineClicksAndStartsTheReload()
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
             _controller.RestoreLoadout(new[] { new WeaponAmmo(TestWeapons.RifleId, 0, 12) }, TestWeapons.RifleId);
             var dry = new System.Collections.Generic.List<Fps.Core.Weapon>();
+            var reloads = 0;
             _controller.DryFired += dry.Add;
+            _controller.ReloadStarted += _ => reloads++;
 
             Assert.That(WeaponController.IsDryFire(_controller.Weapon), Is.True);
             LogAssert.Expect(LogType.Log, $"{WeaponController.DryFireLogPrefix} id={TestWeapons.RifleId}");
             Assert.That(_controller.PullTrigger(true, true), Is.False);
             Assert.That(dry.Count(), Is.EqualTo(1));
             Assert.That(dry[0], Is.SameAs(_controller.Weapon));
-
-            _controller.Tick(_rifle.FireInterval);
-            Assert.That(_controller.PullTrigger(true, false), Is.False);
-            Assert.That(dry.Count(), Is.EqualTo(1), "holding the trigger does not click again");
-
-            // 空撃ちは弾数もリロードも変えない (リロードは従来どおり押したときだけ始まる)。
-            Assert.That(_controller.Weapon.AmmoInMagazine, Is.Zero);
-            Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(12));
-            Assert.That(_controller.Weapon.IsReloading, Is.False);
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+            Assert.That(reloads, Is.EqualTo(1));
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.Zero, "the magazine fills when the reload ends, not at once");
             Assert.That(_controller.ShotCount, Is.Zero);
+
+            Assert.That(_controller.PullTrigger(true, false), Is.False);
+            Assert.That(_controller.PullTrigger(true, true), Is.False);
+            Assert.That(dry.Count(), Is.EqualTo(1), "a reloading weapon does not click");
+            Assert.That(reloads, Is.EqualTo(1), "nor start the reload again");
+        }
+
+        [Test]
+        public void PressingTheTriggerWithNoAmmoLeftOnlyClicks()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            _controller.RestoreLoadout(new[] { new WeaponAmmo(TestWeapons.RifleId, 0, 0) }, TestWeapons.RifleId);
+            var dry = 0;
+            _controller.DryFired += _ => dry++;
 
             LogAssert.Expect(LogType.Log, $"{WeaponController.DryFireLogPrefix} id={TestWeapons.RifleId}");
             Assert.That(_controller.PullTrigger(true, true), Is.False);
-            Assert.That(dry.Count(), Is.EqualTo(2), "pressed again");
+            Assert.That(dry, Is.EqualTo(1));
+            Assert.That(_controller.Weapon.IsReloading, Is.False);
 
-            Assert.That(_controller.StartReload(), Is.True);
-            Assert.That(WeaponController.IsDryFire(_controller.Weapon), Is.False);
+            _controller.Tick(_rifle.FireInterval);
+            Assert.That(_controller.PullTrigger(true, false), Is.False);
+            Assert.That(dry, Is.EqualTo(1), "holding the trigger does not click again");
+
+            LogAssert.Expect(LogType.Log, $"{WeaponController.DryFireLogPrefix} id={TestWeapons.RifleId}");
             Assert.That(_controller.PullTrigger(true, true), Is.False);
-            Assert.That(dry.Count(), Is.EqualTo(2), "a reloading weapon does not click");
+            Assert.That(dry, Is.EqualTo(2), "pressed again");
+        }
+
+        [Test]
+        public void FiringTheLastRoundStartsTheReloadWhenReloadIsAuto()
+        {
+            Assert.That(Fps.Core.GameRules.Default.ReloadMode, Is.EqualTo(Fps.Core.ReloadMode.Auto));
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            _controller.RestoreLoadout(new[] { new WeaponAmmo(TestWeapons.RifleId, 2, 4) }, TestWeapons.RifleId);
+            var reloads = 0;
+            _controller.ReloadStarted += _ => reloads++;
+
+            Assert.That(_controller.PullTrigger(true, true), Is.True);
+            Assert.That(_controller.Weapon.IsReloading, Is.False, "a round is still in the magazine");
+
+            _controller.Tick(_rifle.FireInterval);
+            Assert.That(_controller.PullTrigger(true, false), Is.True, "holding the trigger fires the last round");
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.Zero);
+            Assert.That(_controller.Weapon.IsReloading, Is.True);
+            Assert.That(reloads, Is.EqualTo(1));
+
+            _controller.Tick(_rifle.ReloadSeconds);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(4), "the reserve fills the magazine");
+        }
+
+        [Test]
+        public void ManualReloadNeverStartsFromTheTrigger()
+        {
+            _controller.Rules = Fps.Core.GameRules.Default.WithReloadMode(Fps.Core.ReloadMode.Manual);
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            _controller.RestoreLoadout(new[] { new WeaponAmmo(TestWeapons.RifleId, 1, 4) }, TestWeapons.RifleId);
+
+            Assert.That(_controller.PullTrigger(true, true), Is.True);
+            Assert.That(_controller.Weapon.AmmoInMagazine, Is.Zero);
+            Assert.That(_controller.Weapon.IsReloading, Is.False, "firing the last round does not reload");
+
+            _controller.Tick(_rifle.FireInterval);
+            LogAssert.Expect(LogType.Log, $"{WeaponController.DryFireLogPrefix} id={TestWeapons.RifleId}");
+            Assert.That(_controller.PullTrigger(true, true), Is.False);
+            Assert.That(_controller.Weapon.IsReloading, Is.False, "pulling on an empty magazine only clicks");
+
+            Assert.That(_controller.StartReload(), Is.True, "the Reload button still reloads");
         }
 
         [Test]

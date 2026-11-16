@@ -95,6 +95,16 @@ namespace Fps.Protocol.Tests
             Assert.That(rules.SameAs(MatchRulesSync.From(GameRules.Default)), Is.False);
         }
 
+        [Test]
+        public void TheSyncedRulesCarryTheReloadMode()
+        {
+            var rules = MatchRulesSync.From(GameRules.Default.WithReloadMode(ReloadMode.Manual));
+
+            Assert.That(MatchRulesSync.From(GameRules.Default).ReloadMode, Is.EqualTo(ReloadMode.Auto));
+            Assert.That(rules.ReloadMode, Is.EqualTo(ReloadMode.Manual));
+            Assert.That(rules.SameAs(MatchRulesSync.From(GameRules.Default)), Is.False);
+        }
+
         [TestCase("")]
         [TestCase("../NetTest")]
         public void ConnectAcceptedWithAMapThatIsNotASceneNameIsUnreadable(string map)

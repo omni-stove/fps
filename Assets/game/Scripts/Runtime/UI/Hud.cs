@@ -524,9 +524,10 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 武器の照準の広がり (<see cref="WeaponController.CrosshairSpreadFraction"/>: 撃った後のばらつきと移動の散らばり、姿勢の倍率込み) を出し、ADS 中
-        /// (<see cref="AimDownSights.IsAiming"/>) とダッシュ中 (<see cref="PlayerController.IsSprinting"/>) は照準を隠す。
-        /// 武器を渡していなければ広がり 0 で出す。値の源は <see cref="Initialize"/> の weapon と、その親の階層の ADS とプレイヤー。
+        /// 照準の線を、武器の今の散らばり (<see cref="WeaponController.CrosshairConeDegrees"/>) の縁をカメラ (<see cref="AimDownSights.Camera"/>) の
+        /// 視野角で画面に写した位置 (<see cref="SpreadPattern.ScreenRadius"/>) に置き、撃った後の開き (<see cref="WeaponController.CrosshairSpreadFraction"/>) を足す。
+        /// ADS 中 (<see cref="AimDownSights.IsAiming"/>) とダッシュ中 (<see cref="PlayerController.IsSprinting"/>) は照準を隠す。
+        /// カメラが無ければ縁は 0 で出し、武器を渡していなければ広がり 0 で出す。値の源は <see cref="Initialize"/> の weapon と、その親の階層の ADS とプレイヤー。
         /// </summary>
         public void RefreshCrosshair()
         {
@@ -538,7 +539,37 @@ namespace Fps.Runtime
 
             var aiming = _ads != null && _ads.IsAiming;
             var sprinting = _mover != null && _mover.IsSprinting;
-            _model.SetCrosshair(_weapon.CrosshairSpreadFraction, !aiming && !sprinting);
+            _model.SetCrosshair(_weapon.CrosshairSpreadFraction, CrosshairConeGap(), !aiming && !sprinting);
+        }
+
+        /// <summary>
+        /// 今の武器の散らばりの縁が画面の中央から離れる距離 (HUD の基準解像度の px)。カメラか武器が無ければ 0。
+        /// 画面の縦半分は UIDocument の木の高さ (パネルの拡縮後の px) から取り、まだ並べていなければ <see cref="ReferenceResolution"/> の縦半分を使う。
+        /// </summary>
+        public float CrosshairConeGap()
+        {
+            var camera = _ads != null ? _ads.Camera : null;
+            if (_weapon == null || camera == null || camera.orthographic)
+            {
+                return 0f;
+            }
+
+            var cone = _weapon.CrosshairConeDegrees;
+            var fov = camera.fieldOfView;
+            if (cone <= 0f || !(fov > 0f && fov < 180f))
+            {
+                return 0f;
+            }
+
+            return SpreadPattern.ScreenRadius(cone, fov, PanelHalfHeight());
+        }
+
+        private float PanelHalfHeight()
+        {
+            var document = GetComponent<UIDocument>();
+            var root = document != null ? document.rootVisualElement : null;
+            var height = root != null ? root.layout.height : float.NaN;
+            return float.IsNaN(height) || height <= 0f ? ReferenceResolution.y * 0.5f : height * 0.5f;
         }
 
         private void TryRebuildViewAndLog()

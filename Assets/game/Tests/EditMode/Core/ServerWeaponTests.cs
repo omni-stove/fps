@@ -72,22 +72,50 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void EmptyMagazineRejectsAndStartsReloadAutomatically()
+        public void FiringTheLastRoundStartsReloadAutomatically()
         {
             var weapon = new ServerWeapon(Spec());
             bool? automatic = null;
             weapon.ReloadStarted += a => automatic = a;
-            for (var i = 0; i < 3; i++)
+            for (var i = 0; i < 2; i++)
             {
                 Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
             }
 
-            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.OutOfAmmo));
+            Assert.That(weapon.IsReloading, Is.False, "a round is still in the magazine");
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
             Assert.That(weapon.AmmoInMagazine, Is.EqualTo(0));
             Assert.That(weapon.IsReloading, Is.True);
             Assert.That(automatic, Is.True);
 
             Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.Reloading));
+        }
+
+        [Test]
+        public void AnEmptyMagazineLeftByACancelledReloadStartsReloadWhenFired()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 1));
+            weapon.TryFire();
+            weapon.CancelReload();
+            bool? automatic = null;
+            weapon.ReloadStarted += a => automatic = a;
+
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.OutOfAmmo));
+            Assert.That(weapon.IsReloading, Is.True);
+            Assert.That(automatic, Is.True);
+        }
+
+        [Test]
+        public void ManualReloadModeNeverReloadsByItself()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 1), GameRules.Default.WithReloadMode(ReloadMode.Manual));
+
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
+            Assert.That(weapon.IsReloading, Is.False, "firing the last round does not reload");
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.OutOfAmmo));
+            Assert.That(weapon.IsReloading, Is.False, "firing on an empty magazine does not reload");
+
+            Assert.That(weapon.TryStartReload(), Is.True, "the Reload button still reloads");
         }
 
         [Test]
@@ -319,7 +347,7 @@ namespace Fps.Core.Tests
             }
 
             Assert.That(weapon.HasInfiniteReserve, Is.True);
-            Assert.That(weapon.TryStartReload(), Is.True);
+            Assert.That(weapon.IsReloading, Is.True, "firing the last round starts the reload");
             weapon.Tick(2f);
 
             Assert.That(reloaded, Is.EqualTo(1));
@@ -335,9 +363,9 @@ namespace Fps.Core.Tests
             weapon.ReloadStarted += a => automatic = a;
             weapon.TryFire();
 
-            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.OutOfAmmo));
             Assert.That(weapon.IsReloading, Is.True);
             Assert.That(automatic, Is.True);
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.Reloading));
 
             weapon.Tick(2f);
             Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
@@ -349,6 +377,8 @@ namespace Fps.Core.Tests
         {
             var d = GameRules.Default;
             var a = ActionRules.Default;
+
+            // 撃ち切った武器のリロードを各テストが自分で始めて時間を測るので、自動では始めない。
             return new GameRules(
                 d.FriendlyFire,
                 d.RespawnMode,
@@ -360,7 +390,7 @@ namespace Fps.Core.Tests
                 infiniteReserve,
                 1f,
                 d.Destruction,
-                new ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload));
+                new ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload)).WithReloadMode(ReloadMode.Manual);
         }
 
         // WeaponTests の ActiveReloadWeapon と同じく、リロード 2 秒、成功の幅は 1.0〜1.5 秒 (進み 0.5〜0.75)、失敗で 0.5 秒遅れる。
@@ -572,7 +602,7 @@ namespace Fps.Core.Tests
             weapon.TryFire();
 
             Assert.That(weapon.HasInfiniteReserve, Is.True);
-            Assert.That(weapon.TryStartReload(), Is.True);
+            Assert.That(weapon.IsReloading, Is.True, "the emptied magazine reloads with no reserve left");
         }
 
         [Test]
@@ -589,7 +619,7 @@ namespace Fps.Core.Tests
                 Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None));
             }
 
-            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.OutOfAmmo), "the empty magazine starts a reload");
+            Assert.That(weapon.IsReloading, Is.True, "firing the last round starts a reload");
             var changes = 0;
             weapon.Changed += () => changes++;
 

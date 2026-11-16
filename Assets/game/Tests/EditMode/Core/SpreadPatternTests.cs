@@ -66,6 +66,28 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ScreenRadiusPutsTheConeEdgeWhereThePerspectiveProjectionDoes()
+        {
+            Assert.That(SpreadPattern.ScreenRadius(0f, 60f, 540f), Is.EqualTo(0f));
+            Assert.That(SpreadPattern.ScreenRadius(30f, 60f, 540f), Is.EqualTo(540f).Within(1e-3f));
+            Assert.That(SpreadPattern.ScreenRadius(45f, 90f, 100f), Is.EqualTo(100f).Within(1e-3f));
+            // tan(4°) / tan(30°) * 540 = 65.40
+            Assert.That(SpreadPattern.ScreenRadius(4f, 60f, 540f), Is.EqualTo(65.40f).Within(0.01f));
+            Assert.That(SpreadPattern.ScreenRadius(-1f, 60f, 540f), Is.EqualTo(0f));
+            Assert.That(float.IsInfinity(SpreadPattern.ScreenRadius(SpreadPattern.MaxDegrees, 60f, 540f)), Is.False);
+        }
+
+        [Test]
+        public void ScreenRadiusRejectsAFieldOfViewOrHeightOutOfRange()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpreadPattern.ScreenRadius(1f, 0f, 540f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpreadPattern.ScreenRadius(1f, 180f, 540f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpreadPattern.ScreenRadius(1f, float.NaN, 540f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpreadPattern.ScreenRadius(float.NaN, 60f, 540f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpreadPattern.ScreenRadius(1f, 60f, -1f));
+        }
+
+        [Test]
         public void ConeClampsInputsOutsideZeroToOne()
         {
             var spec = Spec(hip: 6f, ads: 1f, move: 4f);

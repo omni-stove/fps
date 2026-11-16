@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 拾える物 1 種類の調整値 (中身・拾い方・再出現の秒数・拾える範囲) をアセットとして持つ。<see cref="PickupSpawnPoint.Definition"/> に
+    /// 拾える物 1 種類の調整値 (中身・拾い方・再出現の秒数・拾える範囲・照準の角度) をアセットとして持つ。<see cref="PickupSpawnPoint.Definition"/> に
     /// 入れると、出現点は自分の値の代わりにこれを読む。同じアセットを入れた出現点は、アセットを変えればまとめて変わる。
     /// 新しく作ったときの値は <see cref="PickupSpawnPoint"/> の既定値と同じ。
     /// </summary>
@@ -23,6 +23,9 @@ namespace Fps.Runtime
 
         [SerializeField, Min(Pickup.MinRadius), Tooltip("拾える範囲の半径 (m)")]
         private float _radius = Pickup.DefaultRadius;
+
+        [SerializeField, Range(0f, Pickup.MaxLookAngleDegrees), Tooltip("Look で、照準の向きからこの角度 (度) 以内に見た目が見えていれば照準が合っているとする。0 なら見た目に照準の線が当たったときだけ")]
+        private float _lookAngleDegrees = Pickup.DefaultLookAngleDegrees;
 
         /// <summary>中身。null は <see cref="ArgumentNullException"/>、値が不正なら <see cref="ArgumentException"/>。</summary>
         public PickupContents Contents
@@ -58,6 +61,13 @@ namespace Fps.Runtime
             set => _radius = value;
         }
 
+        /// <summary>出した物の <see cref="Pickup.LookAngleDegrees"/>。</summary>
+        public float LookAngleDegrees
+        {
+            get => _lookAngleDegrees;
+            set => _lookAngleDegrees = value;
+        }
+
         /// <summary>中身の Core の表し。呼ぶたびに作る。</summary>
         /// <exception cref="ArgumentException">中身が無いか不正。メッセージにアセット名を含む。</exception>
         public PickupSpec ToSpec()
@@ -91,7 +101,7 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>中身・再出現の秒数・範囲がすべて使えることを確かめる。</summary>
+        /// <summary>中身・再出現の秒数・範囲・照準の角度がすべて使えることを確かめる。</summary>
         /// <exception cref="ArgumentException">どれかが不正。メッセージにアセット名を含む。</exception>
         public void Validate()
         {
@@ -100,6 +110,12 @@ namespace Fps.Runtime
             if (!(_radius >= Pickup.MinRadius) || float.IsInfinity(_radius))
             {
                 throw new ArgumentException($"pickup definition '{SourceName}' radius {_radius} must be a finite number of at least {Pickup.MinRadius}");
+            }
+
+            if (!(_lookAngleDegrees >= 0f) || _lookAngleDegrees > Pickup.MaxLookAngleDegrees)
+            {
+                throw new ArgumentException(
+                    $"pickup definition '{SourceName}' look angle {_lookAngleDegrees} must be between 0 and {Pickup.MaxLookAngleDegrees}");
             }
         }
 

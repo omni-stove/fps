@@ -303,6 +303,97 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ALookPickupAtTheFeetIsTakenWhileLookingStraightAhead()
+        {
+            var player = NewCollector("Player");
+            player.IsLocalPlayer = true;
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
+            weapons.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+            weapons.transform.rotation = Quaternion.LookRotation(Vector3.forward);
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
+            var pickup = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(0f, 0f, 1f), PickupCollectMode.Look, radius: 2f);
+            pickup.HandleEnter(player.GetComponent<Collider>());
+            Physics.SyncTransforms();
+
+            // 目の高さ 1.6 m から 1 m 先の足元は、正面から約 58° 下に見え、既定の 90° 以内に入る。
+            Assert.That(Pickup.LookedAt(player), Is.SameAs(pickup));
+            Assert.That(pickup.Interact(), Is.True);
+            Assert.That(weapons.Loadout.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ALookPickupOutsideItsLookAngleOrBehindIsNotAimedAt()
+        {
+            var player = NewCollector("Player");
+            player.IsLocalPlayer = true;
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
+            weapons.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+            weapons.transform.rotation = Quaternion.LookRotation(Vector3.forward);
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
+            var ahead = Pickup.Create(
+                PickupContents.ForWeapon(launcher, 2), new Vector3(0f, 0f, 1f), PickupCollectMode.Look, radius: 2f, lookAngleDegrees: 45f);
+            var behind = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(0f, 0f, -1f), PickupCollectMode.Look, radius: 2f);
+            ahead.HandleEnter(player.GetComponent<Collider>());
+            behind.HandleEnter(player.GetComponent<Collider>());
+            Physics.SyncTransforms();
+
+            Assert.That(ahead.LookAngleDegrees, Is.EqualTo(45f));
+            Assert.That(Pickup.LookedAt(player), Is.Null, "about 58° below the aim is past 45°, and the one behind is about 122° away");
+
+            ahead.LookAngleDegrees = 60f;
+            Assert.That(Pickup.LookedAt(player), Is.SameAs(ahead));
+
+            ahead.LookAngleDegrees = 500f;
+            Assert.That(ahead.LookAngleDegrees, Is.EqualTo(Pickup.MaxLookAngleDegrees));
+            ahead.LookAngleDegrees = float.NaN;
+            Assert.That(ahead.LookAngleDegrees, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void OfTheLookPickupsInRangeTheOneNearestTheAimIsChosen()
+        {
+            var player = NewCollector("Player");
+            player.IsLocalPlayer = true;
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
+            weapons.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
+            var left = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(-1f, 0f, 1f), PickupCollectMode.Look, radius: 2f);
+            var right = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(1f, 0f, 1f), PickupCollectMode.Look, radius: 2f);
+            left.HandleEnter(player.GetComponent<Collider>());
+            right.HandleEnter(player.GetComponent<Collider>());
+
+            weapons.transform.rotation = Quaternion.LookRotation(new Vector3(0.3f, 0f, 1f));
+            Physics.SyncTransforms();
+            Assert.That(Pickup.LookedAt(player), Is.SameAs(right));
+
+            weapons.transform.rotation = Quaternion.LookRotation(new Vector3(-0.3f, 0f, 1f));
+            Physics.SyncTransforms();
+            Assert.That(Pickup.LookedAt(player), Is.SameAs(left));
+
+            left.HandleExit(player.GetComponent<Collider>());
+            Assert.That(Pickup.LookedAt(player), Is.SameAs(right), "one the player has left is not a candidate");
+        }
+
+        [Test]
+        public void AFarLookPickupInTheAimDoesNotHideOneInRange()
+        {
+            var player = NewCollector("Player");
+            player.IsLocalPlayer = true;
+            var weapons = AttachWeapons(player, NewWeapon("Rifle", TestWeapons.RifleSpec()));
+            weapons.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+            var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
+            var far = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(0f, 0f, 10f), PickupCollectMode.Look);
+            var near = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(0f, 0f, 1f), PickupCollectMode.Look, radius: 2f);
+            near.HandleEnter(player.GetComponent<Collider>());
+            Physics.SyncTransforms();
+            var farTarget = far.transform.Find(Pickup.VisualName).Find(Pickup.LookTargetName).GetComponent<BoxCollider>();
+            weapons.transform.rotation = Quaternion.LookRotation(farTarget.bounds.center - weapons.transform.position);
+            Physics.SyncTransforms();
+
+            Assert.That(Pickup.LookedAt(player), Is.SameAs(near));
+        }
+
+        [Test]
         public void AtTheWeaponLimitANewWeaponSwapsForTheOneInHandAndDropsIt()
         {
             var player = NewCollector("Player");
@@ -430,6 +521,7 @@ namespace Fps.Tests.EditMode
             definition.CollectMode = PickupCollectMode.Interact;
             definition.RespawnSeconds = 3f;
             definition.Radius = 2f;
+            definition.LookAngleDegrees = 30f;
 
             var point = new GameObject("Spawn").AddComponent<PickupSpawnPoint>();
             _created.Add(point.gameObject);
@@ -443,6 +535,7 @@ namespace Fps.Tests.EditMode
             Assert.That(pickup.Spec.Amount, Is.EqualTo(40));
             Assert.That(pickup.CollectMode, Is.EqualTo(PickupCollectMode.Interact));
             Assert.That(pickup.Radius, Is.EqualTo(2f));
+            Assert.That(pickup.LookAngleDegrees, Is.EqualTo(30f));
             Assert.That(pickup.Contents, Is.Not.SameAs(definition.Contents), "the pickup keeps its own copy of the asset's contents");
 
             var player = NewCollector("Player");
@@ -466,6 +559,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(definition.RespawnSeconds, Is.EqualTo(PickupSpawnPoint.DefaultRespawnSeconds));
             Assert.That(definition.Radius, Is.EqualTo(Pickup.DefaultRadius));
+            Assert.That(definition.LookAngleDegrees, Is.EqualTo(Pickup.DefaultLookAngleDegrees));
             Assert.That(definition.CollectMode, Is.EqualTo(PickupCollectMode.Touch));
             Assert.That(definition.ToSpec().Kind, Is.EqualTo(PickupKind.Health));
             Assert.That(definition.ToSpec().Amount, Is.EqualTo(PickupContents.DefaultHealthAmount));
@@ -483,6 +577,12 @@ namespace Fps.Tests.EditMode
             definition.RespawnSeconds = 1f;
             definition.Radius = 0f;
             Assert.Throws<System.ArgumentException>(definition.Validate);
+            definition.Radius = 1f;
+            definition.LookAngleDegrees = 200f;
+            Assert.Throws<System.ArgumentException>(definition.Validate);
+            definition.LookAngleDegrees = float.NaN;
+            Assert.Throws<System.ArgumentException>(definition.Validate);
+            definition.Radius = 0f;
             Assert.Catch<System.ArgumentException>(() => definition.Contents = PickupContents.ForReserveAmmo(0));
             Assert.Throws<System.ArgumentNullException>(() => definition.Contents = null);
 

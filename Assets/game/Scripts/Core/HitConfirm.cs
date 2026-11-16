@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 
 namespace Fps.Core
 {
@@ -20,11 +21,14 @@ namespace Fps.Core
         /// <summary>この弾で倒さずにダウンさせたか。<see cref="Killed"/> と同時には true にならない。</summary>
         public bool Downed { get; }
 
+        public Vector3? Point { get; }
+
         /// <param name="damage">与えたダメージ。0 以上。</param>
         /// <param name="zone">当たった部位。定義済みの値。</param>
         /// <param name="killed">倒したか。</param>
         /// <param name="downed">ダウンさせたか。killed と同時に true にはできない。</param>
-        public HitConfirm(int damage, HitZone zone, bool killed, bool downed)
+        /// <param name="point">当たった点 (ワールド座標)。分からなければ null。</param>
+        public HitConfirm(int damage, HitZone zone, bool killed, bool downed, Vector3? point = null)
         {
             if (damage < 0)
             {
@@ -45,11 +49,12 @@ namespace Fps.Core
             Zone = zone;
             Killed = killed;
             Downed = downed;
+            Point = point;
         }
 
         public bool Equals(HitConfirm other)
         {
-            return Damage == other.Damage && Zone == other.Zone && Killed == other.Killed && Downed == other.Downed;
+            return Damage == other.Damage && Zone == other.Zone && Killed == other.Killed && Downed == other.Downed && Point == other.Point;
         }
 
         public override bool Equals(object obj)
@@ -69,7 +74,7 @@ namespace Fps.Core
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Damage, (int)Zone, Killed, Downed);
+            return HashCode.Combine(Damage, (int)Zone, Killed, Downed, Point);
         }
 
         public override string ToString()

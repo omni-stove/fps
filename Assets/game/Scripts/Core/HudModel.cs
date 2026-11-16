@@ -87,7 +87,7 @@ namespace Fps.Core
         /// <summary>弾が実際に散る円錐の縁が画面の中央から離れる距離 (HUD の基準解像度の px、0 以上)。照準の線はここより内へ寄らない。</summary>
         public float CrosshairConeGap { get; private set; }
 
-        /// <summary>照準を出すか。ADS 中とダッシュ中は false。</summary>
+        /// <summary>照準を出すか。一人称の ADS 中とダッシュ中は false。</summary>
         public bool IsCrosshairVisible { get; private set; } = true;
 
         public float? ChargeFraction { get; private set; }

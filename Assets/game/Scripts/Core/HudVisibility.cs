@@ -113,7 +113,7 @@ namespace Fps.Core
         /// <summary>チームの点数を出すか。</summary>
         public bool Score { get; }
 
-        /// <summary>照準を出すか。true でも ADS 中とダッシュ中は HUD が隠す。</summary>
+        /// <summary>照準を出すか。true でも一人称の ADS 中とダッシュ中は HUD が隠す。</summary>
         public bool Crosshair { get; }
 
         /// <summary>照準の大きさの倍率 (線と隙間をまとめて縮める)。</summary>

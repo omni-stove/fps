@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Fps.Core
 {
@@ -18,7 +19,7 @@ namespace Fps.Core
 
         public PelletHit<TTarget> this[int index] => _hits[index];
 
-        public void Add(TTarget target, int damage, HitZone zone, DamageOutcome outcome)
+        public void Add(TTarget target, int damage, HitZone zone, DamageOutcome outcome, Vector3? point = null)
         {
             if (target == null)
             {
@@ -50,12 +51,12 @@ namespace Fps.Core
             {
                 if (_comparer.Equals(_hits[i].Target, target))
                 {
-                    _hits[i] = _hits[i].With(damage, zone, outcome);
+                    _hits[i] = _hits[i].With(damage, zone, outcome, point);
                     return;
                 }
             }
 
-            _hits.Add(new PelletHit<TTarget>(target, damage, zone, outcome, 1));
+            _hits.Add(new PelletHit<TTarget>(target, damage, zone, outcome, 1, point));
         }
 
         public void Clear()
@@ -66,8 +67,9 @@ namespace Fps.Core
 
     public readonly struct PelletHit<TTarget>
     {
-        public PelletHit(TTarget target, int damage, HitZone zone, DamageOutcome outcome, int pellets)
+        public PelletHit(TTarget target, int damage, HitZone zone, DamageOutcome outcome, int pellets, Vector3? point = null)
         {
+            Point = point;
             Target = target;
             Damage = damage;
             Zone = zone;
@@ -85,12 +87,14 @@ namespace Fps.Core
 
         public int Pellets { get; }
 
+        public Vector3? Point { get; }
+
         public HitConfirm ToHitConfirm()
         {
-            return new HitConfirm(Damage, Zone, Outcome == DamageOutcome.Killed, Outcome == DamageOutcome.Downed);
+            return new HitConfirm(Damage, Zone, Outcome == DamageOutcome.Killed, Outcome == DamageOutcome.Downed, Point);
         }
 
-        internal PelletHit<TTarget> With(int damage, HitZone zone, DamageOutcome outcome)
+        internal PelletHit<TTarget> With(int damage, HitZone zone, DamageOutcome outcome, Vector3? point)
         {
             // 足したダメージが int を超えても負にせず、上限で止める。
             var total = (long)Damage + damage;
@@ -99,7 +103,8 @@ namespace Fps.Core
                 total > int.MaxValue ? int.MaxValue : (int)total,
                 Rank(zone) > Rank(Zone) ? zone : Zone,
                 Rank(outcome) > Rank(Outcome) ? outcome : Outcome,
-                Pellets + 1);
+                Pellets + 1,
+                Point ?? point);
         }
 
         // ヒットマーカーは部位と結果を 1 つしか出せないので、どれか 1 発でも起きたら目立つ方 (弱点・頭、倒した・ダウン) を見せる。

@@ -129,6 +129,7 @@ namespace Fps.Tests.EditMode
             content.GrenadeTuning = Track(new TextAsset("{ \"damageRadius\": 9 }"));
             content.Presentation = Track(ScriptableObject.CreateInstance<PresentationCatalog>());
             content.CameraShake = Track(ScriptableObject.CreateInstance<CameraShakeSettings>());
+            content.DamageNumbers = Track(ScriptableObject.CreateInstance<DamageNumberCatalog>());
             GameContent.Use(content);
 
             Assert.That(MotorSettings.Resolve(null).WalkSpeed, Is.EqualTo(2.5f));
@@ -136,6 +137,7 @@ namespace Fps.Tests.EditMode
             Assert.That(KitTuning.Grenades.Carried[0].DamageRadius, Is.EqualTo(9f));
             Assert.That(PresentationCatalog.Load(), Is.SameAs(content.Presentation));
             Assert.That(CameraShakeSettings.Load(), Is.SameAs(content.CameraShake));
+            Assert.That(DamageNumberCatalog.Load(), Is.SameAs(content.DamageNumbers));
         }
 
         [Test]

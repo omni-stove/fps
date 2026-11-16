@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using NUnit.Framework;
 
 namespace Fps.Core.Tests
@@ -20,6 +21,29 @@ namespace Fps.Core.Tests
             Assert.That(hits[0].Damage, Is.EqualTo(33));
             Assert.That(hits[0].Pellets, Is.EqualTo(3));
             Assert.That(hits[0].ToHitConfirm(), Is.EqualTo(new HitConfirm(33, HitZone.Body, killed: false, downed: false)));
+        }
+
+        [Test]
+        public void TheMergedHitKeepsTheFirstPelletPointItKnows()
+        {
+            var hits = new PelletHits<int>();
+
+            hits.Add(2, 10, HitZone.Body, DamageOutcome.Damaged);
+            hits.Add(2, 10, HitZone.Body, DamageOutcome.Damaged, new Vector3(1f, 2f, 3f));
+            hits.Add(2, 10, HitZone.Body, DamageOutcome.Damaged, new Vector3(4f, 5f, 6f));
+
+            Assert.That(hits[0].Point, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(hits[0].ToHitConfirm().Point, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+        }
+
+        [Test]
+        public void AHitWithoutAPointHasNone()
+        {
+            var hits = new PelletHits<int>();
+
+            hits.Add(2, 10, HitZone.Body, DamageOutcome.Damaged);
+
+            Assert.That(hits[0].ToHitConfirm().Point, Is.Null);
         }
 
         [Test]

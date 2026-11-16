@@ -386,7 +386,7 @@ namespace Fps.Runtime
             // オフラインで MeleeController を持つのは手元のプレイヤーだけなので、当てたらその画面にヒットマーカーを出す。
             if (_self != null && _self.IsLocalPlayer)
             {
-                CombatEvents.RaiseHitConfirmed(new HitConfirm(damage, HitZone.Body, hit.Target.IsDead, downed: false));
+                CombatEvents.RaiseHitConfirmed(new HitConfirm(damage, HitZone.Body, hit.Target.IsDead, downed: false, hit.Point.ToNumerics()));
             }
 
             presenter?.OnHit(gameObject, hit.Target, hit.Point, hit.Direction, damage);

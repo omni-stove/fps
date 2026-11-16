@@ -71,6 +71,8 @@
                 <ui:VisualElement class="hit-marker__line" picking-mode="Ignore" />
             </ui:VisualElement>
         </ui:VisualElement>
+        <!-- 当てたダメージの数値。DamageNumberView が数値ごとの子要素 (damage-number-anchor) を足し、あるときだけ出す。 -->
+        <ui:VisualElement name="damage-numbers" class="damage-numbers" picking-mode="Ignore" style="display: none;" />
         <!-- 被弾方向。DamageDirectionView が撃たれた方向ごとに弧の子要素を足す。 -->
         <ui:VisualElement name="damage-direction" class="damage-direction" picking-mode="Ignore" style="display: none;" />
         <!-- 爆発に巻き込まれる距離のグレネード。GrenadeWarningView が 1 個ごとに印 (grenade-warning__marker) を足し、中央を囲む円周上の向きに置く。 -->

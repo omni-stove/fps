@@ -525,6 +525,7 @@ namespace Fps.Runtime
             ClearTarget();
 
             var damage = 0;
+            System.Numerics.Vector3? hitPoint = null;
             if (target != null && !target.IsDead)
             {
                 damage = move.Outcome == ContextMeleeOutcome.Kill ? target.Health.Current : move.Damage;
@@ -532,6 +533,7 @@ namespace Fps.Runtime
                 direction.y = 0f;
                 direction = direction.sqrMagnitude > 1e-8f ? direction.normalized : transform.forward;
                 var hit = new MeleeStrike.Result(target, target.AimPoint, Vector3.Distance(transform.position, target.AimPoint), direction);
+                hitPoint = hit.Point.ToNumerics();
                 MeleeStrike.Apply(gameObject, hit, damage, _melee.StrikeWeaponId);
             }
 
@@ -555,7 +557,7 @@ namespace Fps.Runtime
 
             if (damage > 0 && _self != null && _self.IsLocalPlayer)
             {
-                CombatEvents.RaiseHitConfirmed(new HitConfirm(damage, HitZone.Body, killed, downed: false));
+                CombatEvents.RaiseHitConfirmed(new HitConfirm(damage, HitZone.Body, killed, downed: false, hitPoint));
             }
 
             presenter?.OnResolved(gameObject, target, move, damage, killed);

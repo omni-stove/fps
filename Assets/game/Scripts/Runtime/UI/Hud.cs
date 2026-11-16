@@ -44,6 +44,7 @@ namespace Fps.Runtime
         private WeaponController _weapon;
         private AimDownSights _ads;
         private PlayerController _mover;
+        private ViewRig _rig;
         private PanelSettings _ownedPanelSettings;
         private Color _alphaColor = Color.white;
         private Color _bravoColor = Color.white;
@@ -126,7 +127,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
+        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageNumberView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
         /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>・
         /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="DominationView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
         /// hudObject に付ける。グレネード・能力の枠・拠点制圧は、出すものを渡されるまで隠れている。
@@ -141,6 +142,7 @@ namespace Fps.Runtime
             }
 
             AddIfMissing<HitMarkerView>(hudObject);
+            AddIfMissing<DamageNumberView>(hudObject);
             AddIfMissing<DamageDirectionView>(hudObject);
             AddIfMissing<GrenadeWarningView>(hudObject);
             AddIfMissing<DamageVignetteView>(hudObject);
@@ -399,6 +401,13 @@ namespace Fps.Runtime
             _weapon = weapon;
             _ads = weapon != null ? weapon.GetComponentInParent<AimDownSights>(true) : null;
             _mover = weapon != null ? weapon.GetComponentInParent<PlayerController>(true) : null;
+            _rig = weapon != null ? weapon.GetComponentInParent<ViewRig>(true) : null;
+            var damageNumbers = GetComponent<DamageNumberView>();
+            if (damageNumbers != null)
+            {
+                damageNumbers.Viewer = _ads != null ? _ads.Camera : null;
+            }
+
             _ownedPanelSettings = ownedPanelSettings;
 
             if (_player != null)
@@ -526,8 +535,8 @@ namespace Fps.Runtime
         /// <summary>
         /// 照準の線を、武器の今の散らばり (<see cref="WeaponController.CrosshairConeDegrees"/>) の縁をカメラ (<see cref="AimDownSights.Camera"/>) の
         /// 視野角で画面に写した位置 (<see cref="SpreadPattern.ScreenRadius"/>) に置き、撃った後の開き (<see cref="WeaponController.CrosshairSpreadFraction"/>) を足す。
-        /// ADS 中 (<see cref="AimDownSights.IsAiming"/>) とダッシュ中 (<see cref="PlayerController.IsSprinting"/>) は照準を隠す。
-        /// カメラが無ければ縁は 0 で出し、武器を渡していなければ広がり 0 で出す。値の源は <see cref="Initialize"/> の weapon と、その親の階層の ADS とプレイヤー。
+        /// 照準を出すかは <see cref="ShowsCrosshair"/> で決める (一人称の ADS 中とダッシュ中は隠す)。
+        /// カメラが無ければ縁は 0 で出し、武器を渡していなければ広がり 0 で出す。値の源は <see cref="Initialize"/> の weapon と、その親の階層の ADS・プレイヤー・<see cref="ViewRig"/>。
         /// </summary>
         public void RefreshCrosshair()
         {
@@ -539,7 +548,14 @@ namespace Fps.Runtime
 
             var aiming = _ads != null && _ads.IsAiming;
             var sprinting = _mover != null && _mover.IsSprinting;
-            _model.SetCrosshair(_weapon.CrosshairSpreadFraction, CrosshairConeGap(), !aiming && !sprinting);
+            var view = _rig != null ? _rig.Mode : ViewMode.FirstPerson;
+            _model.SetCrosshair(_weapon.CrosshairSpreadFraction, CrosshairConeGap(), ShowsCrosshair(view, aiming, sprinting));
+        }
+
+        public static bool ShowsCrosshair(ViewMode view, bool aiming, bool sprinting)
+        {
+            // 三人称の ADS は肩越しに寄るだけでサイトを覗かないので、照準を消すと狙う点が分からなくなる。
+            return !sprinting && (!aiming || view == ViewMode.ThirdPerson);
         }
 
         /// <summary>
@@ -664,6 +680,13 @@ namespace Fps.Runtime
             if (hitMarker != null)
             {
                 hitMarker.SetAllowed(_visibility.HitMarker);
+            }
+
+            // ダメージの数値も当てた手応えなので、ハードコアで隠すヒットマーカーと一緒に出し入れする。
+            var damageNumbers = GetComponent<DamageNumberView>();
+            if (damageNumbers != null)
+            {
+                damageNumbers.SetAllowed(_visibility.HitMarker);
             }
 
             var damageDirection = DamageDirection;

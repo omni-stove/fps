@@ -112,6 +112,9 @@ namespace Fps.Runtime
         [SerializeField]
         private CameraShakeSettings _cameraShake;
 
+        [SerializeField, Tooltip("当てたときのダメージの数値。空なら Resources/Presentation/DamageNumberCatalog、それも無ければ出さない")]
+        private DamageNumberCatalog _damageNumbers;
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
         private static GameContent _found;
@@ -287,6 +290,12 @@ namespace Fps.Runtime
         {
             get => _cameraShake;
             set => _cameraShake = value;
+        }
+
+        public DamageNumberCatalog DamageNumbers
+        {
+            get => _damageNumbers;
+            set => _damageNumbers = value;
         }
 
         public static GameContent Current

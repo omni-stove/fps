@@ -98,6 +98,18 @@ namespace Fps.Tests.EditMode
             Assert.That(crosshair.Q<VisualElement>(HudView.CrosshairRightName), Is.Not.Null);
         }
 
+        [TestCase(ViewMode.FirstPerson, false, false, true)]
+        [TestCase(ViewMode.FirstPerson, true, false, false)]
+        [TestCase(ViewMode.FirstPerson, false, true, false)]
+        [TestCase(ViewMode.ThirdPerson, false, false, true)]
+        [TestCase(ViewMode.ThirdPerson, true, false, true)]
+        [TestCase(ViewMode.ThirdPerson, false, true, false)]
+        [TestCase(ViewMode.ThirdPerson, true, true, false)]
+        public void TheCrosshairStaysWhileAimingInThirdPersonOnly(ViewMode view, bool aiming, bool sprinting, bool expected)
+        {
+            Assert.That(Hud.ShowsCrosshair(view, aiming, sprinting), Is.EqualTo(expected));
+        }
+
         [Test]
         public void TheCrosshairLinesMoveOutWithTheSpreadAndTheCrosshairHidesWhenAsked()
         {

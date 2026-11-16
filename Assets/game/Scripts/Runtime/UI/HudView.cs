@@ -34,7 +34,7 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml の残り時間の Label。</summary>
         public const string TimeLabelName = "hud-time";
 
-        /// <summary>Hud.uxml の照準。ADS 中とダッシュ中は隠す。</summary>
+        /// <summary>Hud.uxml の照準。一人称の ADS 中とダッシュ中は隠す。</summary>
         public const string CrosshairName = "hud-crosshair";
 
         /// <summary>Hud.uxml の照準の中央の点 (<see cref="CrosshairName"/> の子)。</summary>

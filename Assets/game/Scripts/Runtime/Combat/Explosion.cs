@@ -184,7 +184,8 @@ namespace Fps.Runtime
             }
 
             // 倒れると体の当たり判定が隠され狙う点が動くので、向きはダメージの前に取る。
-            var push = target.AimPoint - center;
+            var aimPoint = target.AimPoint;
+            var push = aimPoint - center;
             using (CombatEvents.Attribute(shooter, weaponId))
             {
                 target.TakeDamage(damage, center, push, DamageKind.Explosion);
@@ -208,7 +209,7 @@ namespace Fps.Runtime
                 var shooterBody = shooter.GetComponent<Damageable>();
                 if (shooterBody != null && shooterBody.IsLocalPlayer)
                 {
-                    CombatEvents.RaiseHitConfirmed(new HitConfirm(damage, HitZone.Body, killedTarget, downed: false));
+                    CombatEvents.RaiseHitConfirmed(new HitConfirm(damage, HitZone.Body, killedTarget, downed: false, aimPoint.ToNumerics()));
                 }
             }
 

@@ -634,6 +634,47 @@
     scale: 1.6 1.6;
 }
 
+/* 当てたダメージの数値。画面全体を覆い、数値ごとの子要素を当たった点 (left/top の割合) に置く。 */
+.damage-numbers {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* 大きさを持たない位置の印。数値はこの点の真上に中央揃えで出す。 */
+.damage-number-anchor {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: visible;
+    align-items: center;
+}
+
+.damage-number {
+    position: absolute;
+    translate: -50% -100%;
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    -unity-text-outline-width: 1.5px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.85);
+    white-space: nowrap;
+}
+
+/* 頭か弱点に当てたとき。 */
+.damage-number--head {
+    color: rgb(255, 210, 60);
+    font-size: 32px;
+}
+
+/* 倒したとき。 */
+.damage-number--kill {
+    color: rgb(255, 70, 60);
+    font-size: 34px;
+}
+
 /* 被弾方向。画面全体を覆い、弧の子要素 (大きさは親と同じ) を中央を軸に回す。弧の色は color で決める。 */
 .damage-direction {
     position: absolute;

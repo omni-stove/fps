@@ -985,7 +985,11 @@ namespace Fps.Runtime
             if (outcome.WasAlive)
             {
                 _pelletHits.Add(
-                    outcome.Owner, outcome.Damage, outcome.Hitbox.Zone, outcome.Killed ? DamageOutcome.Killed : DamageOutcome.Damaged);
+                    outcome.Owner,
+                    outcome.Damage,
+                    outcome.Hitbox.Zone,
+                    outcome.Killed ? DamageOutcome.Killed : DamageOutcome.Damaged,
+                    outcome.RaycastHit.point.ToNumerics());
             }
         }
 
@@ -1000,7 +1004,8 @@ namespace Fps.Runtime
             Debug.Log($"[Combat] hit zone={outcome.Hitbox.Zone} dmg={outcome.Damage}", this);
             if (outcome.WasAlive)
             {
-                CombatEvents.RaiseHitConfirmed(new HitConfirm(outcome.Damage, outcome.Hitbox.Zone, outcome.Killed, downed: false));
+                CombatEvents.RaiseHitConfirmed(
+                    new HitConfirm(outcome.Damage, outcome.Hitbox.Zone, outcome.Killed, downed: false, outcome.RaycastHit.point.ToNumerics()));
             }
         }
 

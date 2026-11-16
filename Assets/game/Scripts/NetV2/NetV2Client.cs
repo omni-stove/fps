@@ -80,6 +80,7 @@ namespace Fps.NetV2
         private ClientTrigger _heldContinuous;
         private string _heldContinuousWeaponId;
         private NetV2LoadoutChooser _loadout;
+        private NetV2Inventory _inventory;
         private ClientPings _pings;
         private NetLaunchOptions _options;
         private MatchClient _client;
@@ -266,6 +267,7 @@ namespace Fps.NetV2
             _weaponHooks.Spray.Hidden += HideSpray;
             _pings = new ClientPings(line => Debug.Log(line, this));
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
+            _inventory = new NetV2Inventory(SendReliable);
         }
 
         private void Connect(NetLaunchOptions requested)
@@ -488,6 +490,10 @@ namespace Fps.NetV2
                 _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.SpecFor);
                 _hud.BindStatusEffects(_weaponHooks.StatusEffects);
                 _loadout.Bind(_hud.Hud.LoadoutSelect);
+                if (_hud.Hud.InventoryScreen != null)
+                {
+                    _hud.Hud.InventoryScreen.Source = _inventory;
+                }
             }
             catch (InvalidOperationException e)
             {
@@ -1057,6 +1063,9 @@ namespace Fps.NetV2
                     break;
                 case LoadoutAnswerMessage answer:
                     _loadout.Answer(answer);
+                    break;
+                case InventoryStateMessage inventory:
+                    _inventory.Receive(inventory);
                     break;
                 case StructureStateMessage structure:
                     _structures.Receive(structure);

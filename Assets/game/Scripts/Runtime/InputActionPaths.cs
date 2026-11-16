@@ -33,5 +33,6 @@ namespace Fps.Runtime
         public const string CycleMagnification = "Player/CycleMagnification";
         public const string HoldBreath = "Player/HoldBreath";
         public const string SwitchGrenade = "Player/SwitchGrenade";
+        public const string Inventory = "Player/Inventory";
     }
 }

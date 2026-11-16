@@ -17,5 +17,7 @@ namespace Fps.Core
 
         /// <summary>倒れた人のタグ。拾ったときの得点などはモードが決める。</summary>
         Tag = 4,
+
+        Item = 5,
     }
 }

@@ -34,5 +34,7 @@ namespace Fps.Core
 
         /// <summary>拾えると判定したが、拾う人に反映できなかった (武器の定義が無いなど)。<see cref="PickupJudge"/> は返さず、物を置く側が使う。</summary>
         ApplyFailed = 10,
+        NoInventory = 11,
+        InventoryFull = 12,
     }
 }

@@ -168,6 +168,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Inventory",
+                    "type": "Button",
+                    "id": "309db2f3-7703-4235-9aa2-2b128c3855c3",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Melee",
                     "type": "Button",
                     "id": "6f1a9c3e-2b84-4d57-a0e6-c3d8b5f7192a",
@@ -839,6 +848,17 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "NetStats",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "c00bfa8f-abd0-473a-b531-2f0ef0929eef",
+                    "path": "<Keyboard>/i",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Inventory",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

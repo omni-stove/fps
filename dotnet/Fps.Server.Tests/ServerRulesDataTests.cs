@@ -37,7 +37,7 @@ namespace Fps.Server.Tests
             Assert.That(data.Grenades, Is.SameAs(GrenadeCatalog.Default));
             Assert.That(data.Bots, Is.SameAs(NetBotSpec.Default));
             Assert.That(data.BotsPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
         }
 
         [Test]
@@ -79,6 +79,37 @@ namespace Fps.Server.Tests
 
             Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
             Assert.That(error, Does.StartWith("cannot read grenade tuning: "));
+        }
+
+        [Test]
+        public void ReadsTheInventoryTuningBesideTheRules()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(
+                Path.Combine(tuning, ServerRulesData.InventoryTuningFileName),
+                "{\"rule\": {\"gridWidth\": 6, \"maxWeight\": 20}, \"items\": [{\"id\": \"0d3c6f1a-5b2e-4c7d-8a9f-1e2b3c4d5e6f\", \"useHealth\": 30}]}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Items.Rule.GridWidth, Is.EqualTo(6));
+            Assert.That(data.Items.Rule.MaxWeight, Is.EqualTo(20f));
+            Assert.That(data.Items.Items[0].UseHealth, Is.EqualTo(30));
+            Assert.That(data.ItemsPath, Does.EndWith(ServerRulesData.InventoryTuningFileName));
+            Assert.That(data.LogLine, Does.Contain(" inventory=" + data.ItemsPath + " "));
+        }
+
+        [Test]
+        public void BrokenInventoryTuningStopsTheLoad()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.InventoryTuningFileName), "{\"rule\": {\"gridHeight\": 3}}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("cannot read inventory tuning: "));
         }
 
         [Test]

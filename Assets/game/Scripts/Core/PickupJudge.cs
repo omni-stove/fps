@@ -14,6 +14,7 @@ namespace Fps.Core
     /// 足せなければ <see cref="PickupRejection.AmmoFull"/>。</item>
     /// <item>予備弾: 武器の Id が決まっていればその武器、無ければ今の武器、今の武器が満タンなら持ち武器の並びの順に、足せる最初の武器に足す。</item>
     /// <item>回復・防具: 上限までの足りない分だけ足し、満タンなら拾わない。</item>
+    /// <item>アイテム: 持ち物に入る数まで入れ、1 個も入らなければ <see cref="PickupRejection.InventoryFull"/>。</item>
     /// <item>タグ: 生きていて陣営の条件に合えば必ず拾える。得点などはモードが <see cref="PickupOutcome.IsOwnSideTag"/> を見て決める。</item>
     /// </list>
     /// </remarks>
@@ -65,6 +66,16 @@ namespace Fps.Core
                 case PickupKind.Tag:
                     var ownSide = spec.TagOwnerSide.HasValue && collector.Side.HasValue && spec.TagOwnerSide.Value == collector.Side.Value;
                     return PickupOutcome.TagTaken(spec.TagOwnerId, spec.TagOwnerSide, ownSide);
+                case PickupKind.Item:
+                    if (collector.Inventory == null)
+                    {
+                        return PickupOutcome.Rejected(spec.Kind, PickupRejection.NoInventory);
+                    }
+
+                    var items = Math.Min(spec.Amount, collector.Inventory.RoomFor(spec.ItemId));
+                    return items > 0
+                        ? PickupOutcome.ItemsAdded(spec.ItemId, items)
+                        : PickupOutcome.Rejected(spec.Kind, PickupRejection.InventoryFull);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(spec), spec.Kind, "spec has an unknown PickupKind");
             }

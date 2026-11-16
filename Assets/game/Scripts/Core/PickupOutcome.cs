@@ -17,8 +17,12 @@ namespace Fps.Core
             int tagOwnerId,
             Side? tagOwnerSide,
             bool isOwnSideTag,
-            string droppedWeaponId = null)
+            string droppedWeaponId = null,
+            string itemId = null,
+            int items = 0)
         {
+            ItemId = itemId;
+            Items = items;
             Kind = kind;
             Rejection = rejection;
             WeaponId = weaponId;
@@ -73,6 +77,10 @@ namespace Fps.Core
         /// </summary>
         public bool IsOwnSideTag { get; }
 
+        public string ItemId { get; }
+
+        public int Items { get; }
+
         /// <summary>kind の物を rejection の理由で拾えなかった結果。rejection が <see cref="PickupRejection.None"/> なら <see cref="System.ArgumentException"/>。</summary>
         public static PickupOutcome Rejected(PickupKind kind, PickupRejection rejection)
         {
@@ -107,6 +115,11 @@ namespace Fps.Core
         internal static PickupOutcome ArmorAdded(int amount)
         {
             return new PickupOutcome(PickupKind.Armor, PickupRejection.None, null, false, 0, 0, amount, PickupSpec.NoOwner, null, false);
+        }
+
+        internal static PickupOutcome ItemsAdded(string itemId, int count)
+        {
+            return new PickupOutcome(PickupKind.Item, PickupRejection.None, null, false, 0, 0, 0, PickupSpec.NoOwner, null, false, null, itemId, count);
         }
 
         internal static PickupOutcome TagTaken(int ownerId, Side? ownerSide, bool isOwnSide)

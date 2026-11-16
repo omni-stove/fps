@@ -13,11 +13,14 @@ namespace Fps.Server
         public const string PingTuningFileName = "ping.json";
         public const string GrenadeTuningFileName = "grenade.json";
         public const string BotsTuningFileName = "bots.json";
+        public const string InventoryTuningFileName = "inventory.json";
 
         public ServerRulesData(
             string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeCatalog grenades = null, string grenadePath = null,
-            NetBotSpec bots = null, string botsPath = null)
+            NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null)
         {
+            Items = items ?? ItemCatalog.Empty;
+            ItemsPath = itemsPath;
             Bots = bots ?? NetBotSpec.Default;
             BotsPath = botsPath;
             Grenades = grenades ?? GrenadeCatalog.Default;
@@ -53,6 +56,10 @@ namespace Fps.Server
 
         public NetBotSpec Bots { get; }
 
+        public ItemCatalog Items { get; }
+
+        public string ItemsPath { get; }
+
         public string BotsPath { get; }
 
         public string LogLine => ServerProgram.LogTag + " rules " + Name
@@ -62,6 +69,7 @@ namespace Fps.Server
             + " ping=" + (PingPath ?? "default")
             + " grenade=" + (GrenadePath ?? "default")
             + " bots=" + (BotsPath ?? "default")
+            + " inventory=" + (ItemsPath ?? "default")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
@@ -174,7 +182,28 @@ namespace Fps.Server
                 botsPath = null;
             }
 
-            data = new ServerRulesData(name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath);
+            // 持ち物も Unity では Resources の JSON (KitTuning.Items) から読むので、無ければ同じくアイテムなしで動かす
+            var itemsPath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, InventoryTuningFileName));
+            var items = ItemCatalog.Empty;
+            if (System.IO.File.Exists(itemsPath))
+            {
+                try
+                {
+                    items = InventoryJson.Parse(System.IO.File.ReadAllText(itemsPath), itemsPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read inventory tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                itemsPath = null;
+            }
+
+            data = new ServerRulesData(name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath);
             error = null;
             return true;
         }

@@ -138,6 +138,8 @@ namespace Fps.Server
             CarriedWeapons = carried ?? throw new ArgumentNullException(nameof(carried));
         }
 
+        public float CarriedItemWeight { get; set; }
+
         public void SetPose(Vector3 position, float yaw, PlayerStance stance)
         {
             SetPose(position, yaw, stance, CharacterLadderState.NoLadder);

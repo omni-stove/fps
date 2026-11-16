@@ -66,6 +66,9 @@ namespace Fps.Server
             modules.Add(rules);
             modules.Add(combat);
 
+            // 持ち物は出現 (ルール) の後に持たせ直し、その tick のうちに持ち主へ送る
+            modules.Add(new ServerInventories(rules));
+
             // Bot は戦闘がこの tick の当たり判定を記録した後の位置へ撃ち、スナップショットには動いた後の位置を載せる
             modules.Add(new ServerBots(rules, movement, combat));
             modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat }));

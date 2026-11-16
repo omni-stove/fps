@@ -1,0 +1,64 @@
+{
+  "rule": {
+    "maxStacks": 0,
+    "maxWeight": 30,
+    "gridWidth": 8,
+    "gridHeight": 4,
+    "allowRotation": true,
+    "countWeightInCarryLoad": false
+  },
+  "items": [
+    {
+      "id": "31d5979e-6067-49d9-b70c-fdcf44dc77d1",
+      "nameKey": "item.bandage",
+      "iconId": "bandage",
+      "maxStack": 5,
+      "weight": 0.1,
+      "width": 1,
+      "height": 1,
+      "useHealth": 15
+    },
+    {
+      "id": "61dd226a-156c-4060-ab8f-5dbed8cb7f4f",
+      "nameKey": "item.medkit",
+      "iconId": "medkit",
+      "maxStack": 1,
+      "weight": 1,
+      "width": 2,
+      "height": 1,
+      "useHealth": 60
+    },
+    {
+      "id": "249ee778-6b2b-47a2-ba53-4515b8aab625",
+      "nameKey": "item.armorPlate",
+      "iconId": "armorPlate",
+      "maxStack": 1,
+      "weight": 2.5,
+      "width": 2,
+      "height": 2,
+      "useArmor": 50
+    },
+    {
+      "id": "6879cab0-d2cd-4ace-b51a-cc882b7c8aa9",
+      "nameKey": "item.keycard",
+      "iconId": "keycard",
+      "maxStack": 1,
+      "maxCarried": 1,
+      "weight": 0,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "542515db-5705-497c-8fe6-076a6709131b",
+      "nameKey": "item.toolbox",
+      "iconId": "toolbox",
+      "maxStack": 1,
+      "weight": 6,
+      "width": 3,
+      "height": 2
+    }
+  ],
+  "starting": [
+    { "id": "31d5979e-6067-49d9-b70c-fdcf44dc77d1", "count": 2 }
+  ]
+}

@@ -29,5 +29,10 @@
   "grenade.incendiary": "焼夷手榴弾",
   "grenade.sticky": "粘着手榴弾",
   "deployable.mine": "地雷",
-  "deployable.remoteCharge": "C4"
+  "deployable.remoteCharge": "C4",
+  "item.bandage": "包帯",
+  "item.medkit": "救急キット",
+  "item.armorPlate": "防弾プレート",
+  "item.keycard": "カードキー",
+  "item.toolbox": "工具箱"
 }

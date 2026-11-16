@@ -29,5 +29,10 @@
   "grenade.incendiary": "Incendiary Grenade",
   "grenade.sticky": "Sticky Grenade",
   "deployable.mine": "Mine",
-  "deployable.remoteCharge": "C4"
+  "deployable.remoteCharge": "C4",
+  "item.bandage": "Bandage",
+  "item.medkit": "Medkit",
+  "item.armorPlate": "Armor plate",
+  "item.keycard": "Keycard",
+  "item.toolbox": "Toolbox"
 }

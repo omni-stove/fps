@@ -21,7 +21,7 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("種類")]
         private PickupKind _kind = PickupKind.Health;
 
-        [SerializeField, Min(0), Tooltip("量。武器は持っていたときに足す予備弾、予備弾は数、回復・防具は量。タグでは使わない")]
+        [SerializeField, Min(0), Tooltip("量。武器は持っていたときに足す予備弾、予備弾は数、回復・防具は量、アイテムは数。タグでは使わない")]
         private int _amount = DefaultHealthAmount;
 
         [SerializeField, Tooltip("武器は渡す武器。予備弾は弾を足す武器で、空なら今持っている武器")]
@@ -32,6 +32,9 @@ namespace Fps.Runtime
 
         [SerializeField, Min(0), Tooltip("武器を誰かが落としたときの予備弾。弾倉の弾数が -1 なら使わない")]
         private int _carriedReserve;
+
+        [SerializeField, Tooltip("アイテムは渡すアイテムの Id (Tuning/inventory.json の items の id)")]
+        private string _itemId;
 
         [SerializeField, Tooltip("拾える陣営の絞り方")]
         private PickupSideRule _sideRule = PickupSideRule.Anyone;
@@ -57,6 +60,8 @@ namespace Fps.Runtime
             _kind == PickupKind.Weapon && _weapon != null && _carriedMagazine >= 0
                 ? new WeaponAmmo(_weapon.Id, _carriedMagazine, Math.Max(0, _carriedReserve))
                 : null;
+
+        public string ItemId => _kind == PickupKind.Item ? _itemId : null;
 
         public PickupEligibility Eligibility => PickupEligibility.Of(_sideRule, new Side(Math.Max(0, _sideId)));
 
@@ -114,6 +119,28 @@ namespace Fps.Runtime
             return Create(PickupKind.Armor, amount, null, eligibility, PickupSpec.NoOwner, null);
         }
 
+        public static PickupContents ForItem(string itemId, int amount, PickupEligibility eligibility = default)
+        {
+            var contents = new PickupContents
+            {
+                _kind = PickupKind.Item,
+                _amount = amount,
+                _itemId = itemId,
+                _sideRule = eligibility.Rule,
+                _sideId = eligibility.Side.Id,
+            };
+            contents.ToSpec();
+            return contents;
+        }
+
+        public PickupContents WithAmount(int amount)
+        {
+            var copy = Clone();
+            copy._amount = amount;
+            copy.ToSpec();
+            return copy;
+        }
+
         /// <summary>倒れた人のタグ。</summary>
         /// <param name="ownerId">持ち主のモードでの ID。分からなければ <see cref="PickupSpec.NoOwner"/>。</param>
         /// <param name="ownerSide">持ち主の陣営。分からなければ null。</param>
@@ -149,6 +176,8 @@ namespace Fps.Runtime
                         Math.Max(PickupSpec.NoOwner, _tagOwnerId),
                         _tagOwnerSideId >= 0 ? new Side(_tagOwnerSideId) : (Side?)null,
                         eligibility);
+                case PickupKind.Item:
+                    return PickupSpec.Item(_itemId, _amount, eligibility);
                 default:
                     throw new ArgumentException($"unknown PickupKind {_kind}");
             }

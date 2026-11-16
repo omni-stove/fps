@@ -84,10 +84,17 @@ namespace Fps.Tests.EditMode
         [TestCase("CycleMagnification")]
         [TestCase("HoldBreath")]
         [TestCase("SwitchGrenade")]
+        [TestCase("Inventory")]
         public void KeyboardOnlyButtonsHaveOnlyAKeyboardRow(string actionName)
         {
             Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot(actionName, InputDeviceKind.KeyboardMouse)));
             Assert.That(PlayerBindings.Slots, Has.No.Member(new RebindSlot(actionName, InputDeviceKind.Gamepad)));
+        }
+
+        [Test]
+        public void InventoryOpensWithI()
+        {
+            Assert.That(_bindings.PathOf(new RebindSlot("Inventory", InputDeviceKind.KeyboardMouse)), Is.EqualTo("<Keyboard>/i"));
         }
 
         [Test]
@@ -107,6 +114,7 @@ namespace Fps.Tests.EditMode
         [TestCase("CycleMagnification", "倍率の切り替え")]
         [TestCase("HoldBreath", "息止め")]
         [TestCase("SwitchGrenade", "グレネードの切り替え")]
+        [TestCase("Inventory", "持ち物")]
         public void NewButtonsAreLabelledInJapanese(string actionName, string label)
         {
             Assert.That(PlayerBindings.LabelOf(actionName), Is.EqualTo(label));

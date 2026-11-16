@@ -13,7 +13,7 @@ namespace Fps.Editor
     /// Unity 抜きのサーバー (dotnet/Fps.Server) はアセットとシーンを読めないので、試合の設定 (<see cref="NetMatchDefinition"/>、
     /// <see cref="NetSceneBuilder.MatchDefinitionPath"/>) とルールのアセットを <c>server-data/rules/&lt;ルール名&gt;.json</c> に、
     /// 各マップの出現地点と拠点を <c>server-data/maps/&lt;マップ&gt;.points.json</c> に、
-    /// 印とグレネードの調整値を <c>server-data/tuning/ping.json</c>・<c>grenade.json</c> に書き出す。ルールのファイルには試合の設定の移動の値と体の寸法も入れる。
+    /// 印とグレネードの調整値と持ち物を <c>server-data/tuning/ping.json</c>・<c>grenade.json</c>・<c>inventory.json</c> に書き出す。ルールのファイルには試合の設定の移動の値と体の寸法も入れる。
     /// サーバーは <c>-rules &lt;ルール名&gt;</c> でルールを選ぶ。
     /// </summary>
     /// <remarks>make export-server-rules: unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export</remarks>
@@ -42,6 +42,7 @@ namespace Fps.Editor
             written.AddRange(ExportPoints(Path.Combine(root, MapsFolder)));
             written.Add(ExportPingTuning(Path.Combine(root, TuningFolder)));
             written.Add(ExportGrenadeTuning(Path.Combine(root, TuningFolder)));
+            written.Add(ExportInventoryTuning(Path.Combine(root, TuningFolder)));
             Debug.Log(LogTag + " wrote " + written.Count + " file(s) under " + Path.Combine(root, DataFolder) + "; commit them");
         }
 
@@ -166,6 +167,22 @@ namespace Fps.Editor
             TuningJson.ParseGrenades(text.text, KitTuning.GrenadeResourcePath);
             Directory.CreateDirectory(directory);
             var output = Path.Combine(directory, "grenade.json");
+            File.WriteAllText(output, text.text);
+            return output;
+        }
+
+        // 持ち物も同じく、オフラインと同じアイテムと決め方で持たせるよう同じ JSON を写す
+        public static string ExportInventoryTuning(string directory)
+        {
+            var text = Resources.Load<TextAsset>(KitTuning.InventoryResourcePath);
+            if (text == null)
+            {
+                throw new InvalidOperationException(LogTag + " Resources/" + KitTuning.InventoryResourcePath + ".json is missing");
+            }
+
+            InventoryJson.Parse(text.text, KitTuning.InventoryResourcePath);
+            Directory.CreateDirectory(directory);
+            var output = Path.Combine(directory, "inventory.json");
             File.WriteAllText(output, text.text);
             return output;
         }

@@ -332,7 +332,7 @@ namespace Fps.Server
         private float CarrySpeedMultiplier(Mover mover)
         {
             return _context.Bodies.TryGet(mover.Player.PlayerId, out var body)
-                ? _settings.Motor.CarryLoad.SpeedMultiplier(body.HeldWeapon, body.CarriedWeapons)
+                ? _settings.Motor.CarryLoad.SpeedMultiplier(body.HeldWeapon, body.CarriedWeapons, body.CarriedItemWeight)
                 : 1f;
         }
 

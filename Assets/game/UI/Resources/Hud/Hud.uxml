@@ -93,6 +93,8 @@
         <ui:VisualElement name="scoreboard" class="scoreboard" picking-mode="Ignore" style="display: none;" />
         <!-- ロードアウトの選択。倒されている間に LoadoutSelectView が出し、中身は LoadoutSelectPanel が作る。 -->
         <ui:VisualElement name="loadout-select" class="hud__loadout" picking-mode="Ignore" style="display: none;" />
+        <!-- 持ち物の画面。Inventory を押すと InventoryView が開け閉めし、マス目か一覧と選んだアイテムの欄を作る。 -->
+        <ui:VisualElement name="inventory" class="inventory" picking-mode="Ignore" style="display: none;" />
         <!-- 拠点制圧のポイント・残り時間・拠点の持ち主。DominationRunner が DominationView を付けたときだけ出す。 -->
         <ui:VisualElement name="domination" class="domination" picking-mode="Ignore" style="display: none;" />
         <!-- オンラインの拠点制圧の拠点ごとの持ち主と占領の進み (リング)。NetHud が拠点制圧の試合のときだけ NetControlPointsView に渡して出す。 -->

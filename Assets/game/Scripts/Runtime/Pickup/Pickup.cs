@@ -653,9 +653,15 @@ namespace Fps.Runtime
                 return false;
             }
 
-            var outcome = PickupJudge.Judge(_spec, Describe(player));
-            var weaponName = _contents.Weapon != null ? _contents.Weapon.Name : default;
-            return PickupPrompt.TryDescribe(outcome, keyLabel, weaponName, out text);
+            var collector = Describe(player);
+            var outcome = PickupJudge.Judge(_spec, collector);
+            var contentName = _contents.Weapon != null ? _contents.Weapon.Name : default;
+            if (_spec.Kind == PickupKind.Item && collector.Inventory != null && collector.Inventory.Catalog.TryFind(_spec.ItemId, out var item))
+            {
+                contentName = new LocalizedText(item.NameKey);
+            }
+
+            return PickupPrompt.TryDescribe(outcome, keyLabel, contentName, out text);
         }
 
         /// <summary>
@@ -704,6 +710,14 @@ namespace Fps.Runtime
                 return false;
             }
 
+            // 入り切らなかったアイテムは、残りの数にしてこの場に置いておく
+            if (spec.Kind == PickupKind.Item && outcome.Items < spec.Amount)
+            {
+                Contents = _contents.WithAmount(spec.Amount - outcome.Items);
+                Debug.Log(PickupLog.Collected(name, collector.Id, outcome) + " left=" + (spec.Amount - outcome.Items), this);
+                return true;
+            }
+
             _collected = true;
             _inside.Clear();
             Debug.Log(PickupLog.Collected(name, collector.Id, outcome), this);
@@ -731,7 +745,8 @@ namespace Fps.Runtime
 
         /// <summary>
         /// collector の今の状態を、拾う判定に要る形にする。陣営は <see cref="SideMember"/>、武器は子の初期化済みの <see cref="WeaponController"/>
-        /// (無ければ同じ GameObject の初期化済みの <see cref="EnemyAgent"/>)、防具は同じ GameObject の <see cref="IArmorHolder"/> から読む。
+        /// (無ければ同じ GameObject の初期化済みの <see cref="EnemyAgent"/>)、防具は同じ GameObject の <see cref="IArmorHolder"/>、
+        /// 持ち物は同じ GameObject の <see cref="PlayerInventory"/> から読む。
         /// どれも無ければ陣営なし・武器を持てない・防具を持てない人にする。武器を持っていない (<see cref="WeaponController.IsUnarmed"/>) 人は、
         /// 武器を持てるが 1 本も持っていない人にする。
         /// </summary>
@@ -762,6 +777,12 @@ namespace Fps.Runtime
             if (armor != null && armor.MaxArmor > 0)
             {
                 state = state.WithArmor(Mathf.Clamp(armor.Armor, 0, armor.MaxArmor), armor.MaxArmor);
+            }
+
+            var inventory = collector.GetComponent<PlayerInventory>();
+            if (inventory != null)
+            {
+                state = state.WithInventory(inventory.Inventory);
             }
 
             return state;
@@ -831,6 +852,15 @@ namespace Fps.Runtime
                     return true;
                 case PickupKind.Armor:
                     armor.AddArmor(outcome.Armor);
+                    return true;
+                case PickupKind.Item:
+                    var inventory = collector.GetComponent<PlayerInventory>();
+                    if (inventory == null || inventory.Inventory.Add(outcome.ItemId, outcome.Items) != outcome.Items)
+                    {
+                        failure = $"could not put {outcome.Items} of item '{outcome.ItemId}' into the inventory";
+                        return false;
+                    }
+
                     return true;
                 default:
                     // タグはモードが Collected を受けて扱うので、拾う人には何も反映しない。
@@ -1160,6 +1190,8 @@ namespace Fps.Runtime
                     return new Color(0.3f, 0.9f, 0.4f);
                 case PickupKind.Armor:
                     return new Color(0.3f, 0.6f, 1f);
+                case PickupKind.Item:
+                    return new Color(0.7f, 0.45f, 0.95f);
                 default:
                     return new Color(0.95f, 0.3f, 0.3f);
             }

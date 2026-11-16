@@ -21,6 +21,7 @@ namespace Fps.Protocol
                 new ThrowGrenadeRequestMessage(),
                 new PingRequestMessage(),
                 new ReviveRequestMessage(),
+                new InventoryRequestMessage(),
             };
         }
 
@@ -54,6 +55,7 @@ namespace Fps.Protocol
                 new BeamStateMessage(),
                 new StatusEffectMessage(),
                 new AreaEffectMessage(),
+                new InventoryStateMessage(),
             };
         }
 

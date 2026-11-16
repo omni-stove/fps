@@ -36,6 +36,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("吹き飛ばしの調整値の JSON (Tuning/knockback.json と同じ形)。空なら Resources/Tuning/knockback")]
         private TextAsset _knockbackTuning;
 
+        [SerializeField, Tooltip("アイテムと持ち物の決め方の JSON (Tuning/inventory.json と同じ形)。空なら Resources/Tuning/inventory")]
+        private TextAsset _inventoryTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -118,6 +121,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("目からの射線が遮られているときの照準の知らせ方。空なら Resources/Presentation/AimBlockCatalog、それも無ければ既定値で出す")]
         private AimBlockCatalog _aimBlock;
 
+        [SerializeField, Tooltip("アイテムのアイコン (アイコンの Id ごと)。空なら Resources/Presentation/ItemIconCatalog、それも無ければ持ち物の画面が名前の箱を描く")]
+        private ItemIconCatalog _itemIcons;
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
         private static GameContent _found;
@@ -153,6 +159,12 @@ namespace Fps.Runtime
         {
             get => _knockbackTuning;
             set => _knockbackTuning = value;
+        }
+
+        public TextAsset InventoryTuning
+        {
+            get => _inventoryTuning;
+            set => _inventoryTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog
@@ -305,6 +317,12 @@ namespace Fps.Runtime
         {
             get => _aimBlock;
             set => _aimBlock = value;
+        }
+
+        public ItemIconCatalog ItemIcons
+        {
+            get => _itemIcons;
+            set => _itemIcons = value;
         }
 
         public static GameContent Current

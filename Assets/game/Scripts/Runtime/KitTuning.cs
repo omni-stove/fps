@@ -10,8 +10,10 @@ namespace Fps.Runtime
     /// <item>グレネード: <see cref="GrenadeResourcePath"/> (<see cref="Grenades"/>)。オフラインの <see cref="GrenadeThrower"/> とネット対戦が使う。</item>
     /// <item>印: <see cref="PingResourcePath"/> (<see cref="Ping"/>)。オフラインの <see cref="PingController"/> とネット対戦が使う。</item>
     /// <item>吹き飛ばし: <see cref="KnockbackResourcePath"/> (<see cref="Knockback"/>)。プレイヤーの <see cref="KnockbackMovement"/> と <see cref="EnemyAgent"/> が使う。</item>
+    /// <item>持ち物: <see cref="InventoryResourcePath"/> (<see cref="Items"/>、<see cref="InventoryJson"/> の形)。オフラインの <see cref="PlayerInventory"/> とネット対戦が使う。</item>
     /// </list>
-    /// ファイルが無ければ Spec の既定値 (<see cref="GrenadeCatalog.Default"/>・<see cref="PingSpec.Default"/>・<see cref="KnockbackSpec.Default"/>) で動く。
+    /// ファイルが無ければ Spec の既定値 (<see cref="GrenadeCatalog.Default"/>・<see cref="PingSpec.Default"/>・<see cref="KnockbackSpec.Default"/>・
+    /// <see cref="ItemCatalog.Empty"/>) で動く。
     /// 壊れている・値が不正なら、ファイル名と項目名を添えたエラーを出して既定値で続ける。
     /// 初めて使うときに読み、Play の間は持ち続ける (Play の開始時に読み直す)。
     /// </summary>
@@ -28,7 +30,10 @@ namespace Fps.Runtime
         /// <summary>吹き飛ばしの調整値を置く Resources のパス (拡張子なし)。</summary>
         public const string KnockbackResourcePath = "Tuning/knockback";
 
+        public const string InventoryResourcePath = "Tuning/inventory";
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
+        private static ItemCatalog _items;
         private static GrenadeCatalog _grenades;
         private static PingSpec _ping;
         private static KnockbackSpec _knockback;
@@ -44,9 +49,13 @@ namespace Fps.Runtime
         public static KnockbackSpec Knockback =>
             _knockback ?? (_knockback = Load(c => c.KnockbackTuning, KnockbackResourcePath, TuningJson.ParseKnockback, KnockbackSpec.Default));
 
+        public static ItemCatalog Items =>
+            _items ?? (_items = Load(c => c.InventoryTuning, InventoryResourcePath, InventoryJson.Parse, ItemCatalog.Empty));
+
         /// <summary>読んだ値を捨て、次に使うときに Resources から読み直させる。</summary>
         public static void Reload()
         {
+            _items = null;
             _grenades = null;
             _ping = null;
             _knockback = null;

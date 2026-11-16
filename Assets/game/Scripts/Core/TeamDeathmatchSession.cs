@@ -258,6 +258,30 @@ namespace Fps.Core
             return IsDownedUnchecked(playerId) ? _downed.GetHealth(playerId) : health.Current;
         }
 
+        public int Heal(int playerId, int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
+            }
+
+            var health = FindHealth(playerId);
+            if (health.IsDead || IsDownedUnchecked(playerId))
+            {
+                return 0;
+            }
+
+            var before = health.Current;
+            health.Heal(amount);
+            var healed = health.Current - before;
+            if (healed > 0)
+            {
+                PlayerChanged?.Invoke(playerId);
+            }
+
+            return healed;
+        }
+
         /// <summary>倒れていなければ true。ダウン中も true。</summary>
         public bool IsAlive(int playerId) => IsAliveWith(playerId, FindHealth(playerId));
 

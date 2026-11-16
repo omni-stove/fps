@@ -832,9 +832,14 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ThePlayerMovesWithTheCarryLoadOfTheWeapon()
+        public void ThePlayerMovesWithTheCarryLoadOfTheWeaponAndTheInventory()
         {
-            Assert.That(_world.Mover.CarryLoad, Is.SameAs(_world.Weapon));
+            Assert.That(_world.Mover.CarryLoad, Is.InstanceOf<PlayerCarryLoad>());
+            Assert.That(_world.Player.GetComponent<PlayerInventory>(), Is.Not.Null);
+            Assert.That(
+                _world.Mover.CarryLoad.CarrySpeedMultiplier(CarryLoadSpec.Default),
+                Is.EqualTo(_world.Weapon.CarrySpeedMultiplier(CarryLoadSpec.Default)).Within(1e-5f),
+                "the default rule counts no item weight, so only the weapon counts");
         }
 
         [Test]

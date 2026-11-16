@@ -15,7 +15,7 @@ Unity の Editor の中でサーバーを兼ねる遊び方 (Host・`-mode host`
 ```sh
 make export-server-data     # 各マップのコリジョン (.fpsmap)・NavMesh (.fpsnav)・壊せる建物・はしご → server-data/maps/
 make export-server-rules    # 試合の設定とルール → server-data/rules/、出現地点と拠点 → server-data/maps/<マップ>.points.json、
-                            # 印とグレネードの調整値 → server-data/tuning/
+                            # 印とグレネードの調整値と持ち物 → server-data/tuning/
 ```
 
 - 書き出すマップは `-map` で選べるマップ (`BuildSceneList.ServerScenes`、既定は `NetTest` と `NetArena01`)。
@@ -300,6 +300,10 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetAren
 - 射撃は撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
   ログは `[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`。
   グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値) から読む。
+- 持ち物 (アイテムの種類・マス目や重さの決め方・出現のたびに持つアイテム) は `server-data/tuning/inventory.json`
+  (無ければアイテムなし) から読み、出現のたびに持たせ直す。持ち主の置き直す・使う・捨てるの頼みを確かめ、中身が変わった tick に
+  持ち主にだけ送る。決め方の `countWeightInCarryLoad` が true なら、持ち物の重さを移動の遅さに数える。
+  地面の拾い物はまだ無いので、捨てたアイテムは消える。ログは `[Inventory] items=..`・`[Inventory] move|use|drop owner=..`。
 - 壊せる建物の部品の並びは `server-data/maps/<マップ名>.structures.json` から読む。
   無いマップでは `[Destruction] map <マップ名> has N destructible structure(s) but no ...` を出し、部品は壊れない壁として残る。
   破片が当たるダメージ (DebrisCrush) はまだ無い。

@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// 拾える物 1 つの中身。種類ごとの作り方 (<see cref="Weapon"/>・<see cref="ReserveAmmo"/>・<see cref="Health"/>・<see cref="Armor"/>・<see cref="Tag"/>) で作る。
+    /// 拾える物 1 つの中身。種類ごとの作り方 (<see cref="Weapon"/>・<see cref="ReserveAmmo"/>・<see cref="Health"/>・<see cref="Armor"/>・<see cref="Tag"/>・<see cref="Item"/>) で作る。
     /// 拾ったときに何が起きるかは <see cref="PickupJudge.Judge"/> が拾う人の状態と合わせて決める。
     /// </summary>
     public sealed class PickupSpec
@@ -11,8 +11,9 @@ namespace Fps.Core
         /// <summary><see cref="TagOwnerId"/> の、持ち主のいないときの値。</summary>
         public const int NoOwner = -1;
 
-        private PickupSpec(PickupKind kind, int amount, string weaponId, int tagOwnerId, Side? tagOwnerSide, PickupEligibility eligibility)
+        private PickupSpec(PickupKind kind, int amount, string weaponId, int tagOwnerId, Side? tagOwnerSide, PickupEligibility eligibility, string itemId = null)
         {
+            ItemId = itemId;
             Kind = kind;
             Amount = amount;
             WeaponId = weaponId;
@@ -26,7 +27,7 @@ namespace Fps.Core
         /// <summary>
         /// 量。<see cref="PickupKind.Weapon"/> は既に持っていたときに足す予備弾 (0 なら持っていれば拾えない)、
         /// <see cref="PickupKind.ReserveAmmo"/> は予備弾の数、<see cref="PickupKind.Health"/> は回復量、<see cref="PickupKind.Armor"/> は防具の量、
-        /// <see cref="PickupKind.Tag"/> は 1。
+        /// <see cref="PickupKind.Tag"/> は 1、<see cref="PickupKind.Item"/> はアイテムの数。
         /// </summary>
         public int Amount { get; }
 
@@ -35,6 +36,8 @@ namespace Fps.Core
         /// (満タンなら他の持ち武器)。それ以外の種類では null。
         /// </summary>
         public string WeaponId { get; }
+
+        public string ItemId { get; }
 
         /// <summary><see cref="PickupKind.Tag"/> の持ち主 (倒れた人) のモードでの ID。分からないか他の種類なら <see cref="NoOwner"/>。</summary>
         public int TagOwnerId { get; }
@@ -107,6 +110,16 @@ namespace Fps.Core
             }
 
             return new PickupSpec(PickupKind.Tag, 1, null, ownerId, ownerSide, eligibility);
+        }
+
+        public static PickupSpec Item(string itemId, int amount, PickupEligibility eligibility = default)
+        {
+            if (string.IsNullOrEmpty(itemId))
+            {
+                throw new ArgumentException("itemId must not be null or empty", nameof(itemId));
+            }
+
+            return new PickupSpec(PickupKind.Item, RequirePositive(amount, nameof(amount)), null, NoOwner, null, eligibility, itemId);
         }
 
         public override string ToString()

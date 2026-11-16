@@ -25,6 +25,11 @@ namespace Fps.Core
                 text.Append(" weapon=").Append(spec.WeaponId);
             }
 
+            if (spec.ItemId != null)
+            {
+                text.Append(" item=").Append(spec.ItemId);
+            }
+
             if (spec.Kind == PickupKind.Tag)
             {
                 text.Append(" owner=").Append(Number(spec.TagOwnerId))
@@ -86,6 +91,12 @@ namespace Fps.Core
             AppendGain(text, "reserve", outcome.ReserveAmmo);
             AppendGain(text, "health", outcome.Health);
             AppendGain(text, "armor", outcome.Armor);
+            if (outcome.ItemId != null)
+            {
+                text.Append(" item=").Append(outcome.ItemId);
+            }
+
+            AppendGain(text, "items", outcome.Items);
             if (outcome.Kind == PickupKind.Tag)
             {
                 text.Append(" owner=").Append(Number(outcome.TagOwnerId))

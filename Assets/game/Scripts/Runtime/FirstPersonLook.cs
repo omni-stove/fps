@@ -224,7 +224,7 @@ namespace Fps.Runtime
             }
 
             // ポーズ中やロードアウト選択中に出現し直したプレイヤーが、画面を操作しているカーソルを奪わないようにする。閉じたときに各画面がロックする。
-            if (!GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen)
+            if (!GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen && !GameUi.IsInventoryOpen)
             {
                 LockCursor(true);
             }
@@ -244,7 +244,7 @@ namespace Fps.Runtime
         private void OnApplicationFocus(bool hasFocus)
         {
             // フォーカスを失うと OS がロックを外すので、戻ったときにかけ直す。
-            if (hasFocus && isActiveAndEnabled && !GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen)
+            if (hasFocus && isActiveAndEnabled && !GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen && !GameUi.IsInventoryOpen)
             {
                 LockCursor(true);
             }
@@ -256,7 +256,7 @@ namespace Fps.Runtime
         /// </summary>
         public static void RefreshCursorLock()
         {
-            if (GameUi.IsLoadoutSelectOpen)
+            if (GameUi.IsLoadoutSelectOpen || GameUi.IsInventoryOpen)
             {
                 LockCursor(false);
                 return;

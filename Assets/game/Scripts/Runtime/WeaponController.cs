@@ -248,13 +248,18 @@ namespace Fps.Runtime
         /// <summary>今持っている武器 (<see cref="Weapon"/>) と並び (<see cref="Loadout"/>) から出した倍率。武器を持っていなければ何も持たない倍率。</summary>
         public float CarrySpeedMultiplier(CarryLoadSpec carry)
         {
+            return CarrySpeedMultiplier(carry, 0f);
+        }
+
+        public float CarrySpeedMultiplier(CarryLoadSpec carry, float extraWeight)
+        {
             if (carry == null)
             {
                 throw new ArgumentNullException(nameof(carry));
             }
 
             var armed = _loadout != null && !_unarmed;
-            return carry.SpeedMultiplier(armed ? _loadout.Current.Spec : null, armed ? _specs : null);
+            return carry.SpeedMultiplier(armed ? _loadout.Current.Spec : null, armed ? _specs : null, extraWeight);
         }
 
         /// <summary>今持っている武器の番号。未初期化か武器を持っていなければ -1。</summary>

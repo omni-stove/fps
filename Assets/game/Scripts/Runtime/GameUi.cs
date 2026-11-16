@@ -23,6 +23,8 @@ namespace Fps.Runtime
         private static ILoadoutSelect _defaultLoadoutSelect;
         private static IMenuNavigator _menu;
         private static IMenuNavigator _defaultMenu;
+        private static IInventoryScreen _inventoryScreen;
+        private static IInventoryScreen _defaultInventoryScreen;
 
         /// <summary>ポーズ画面の開閉の様子。差し替えていなければ既定。どちらも無ければ null。</summary>
         public static IPauseState Pause
@@ -79,6 +81,26 @@ namespace Fps.Runtime
             _defaultLoadoutSelect = loadoutSelect ?? throw new ArgumentNullException(nameof(loadoutSelect));
         }
 
+        public static IInventoryScreen InventoryScreen
+        {
+            get => _inventoryScreen ?? _defaultInventoryScreen;
+            set => _inventoryScreen = value;
+        }
+
+        public static bool IsInventoryOpen
+        {
+            get
+            {
+                var screen = InventoryScreen;
+                return screen != null && screen.IsAnyOpen;
+            }
+        }
+
+        public static void UseDefaultInventoryScreen(IInventoryScreen screen)
+        {
+            _defaultInventoryScreen = screen ?? throw new ArgumentNullException(nameof(screen));
+        }
+
         /// <summary>既定のメニューとの行き来を menu にする。<see cref="Menu"/> を差し替えていればそちらを使い続ける。</summary>
         /// <exception cref="ArgumentNullException">menu が null。</exception>
         public static void UseDefaultMenu(IMenuNavigator menu)
@@ -93,6 +115,7 @@ namespace Fps.Runtime
             _defaultPause = null;
             _defaultLoadoutSelect = null;
             _defaultMenu = null;
+            _defaultInventoryScreen = null;
         }
 
         /// <summary>HUD を作る生成役。差し替えていなければ既定の生成役。どちらも無ければ null。</summary>

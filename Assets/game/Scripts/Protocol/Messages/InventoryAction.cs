@@ -1,0 +1,11 @@
+namespace Fps.Protocol
+{
+    public enum InventoryAction : byte
+    {
+        Move = 0,
+
+        Use = 1,
+
+        Drop = 2,
+    }
+}

@@ -179,6 +179,7 @@ namespace Fps.Runtime
             AddIfMissing<SubtitleView>(hudObject);
             AddIfMissing<ScoreboardView>(hudObject);
             AddIfMissing<LoadoutSelectView>(hudObject);
+            AddIfMissing<InventoryView>(hudObject);
             AddIfMissing<TutorialPromptView>(hudObject);
             AddIfMissing<InteractPromptView>(hudObject);
             AddIfMissing<ModeHudView>(hudObject);
@@ -214,6 +215,8 @@ namespace Fps.Runtime
 
         /// <summary>同じ GameObject のロードアウト選択。<see cref="AddViews"/> で付けていなければ null。</summary>
         public LoadoutSelectView LoadoutSelect => GetComponent<LoadoutSelectView>();
+
+        public InventoryView InventoryScreen => GetComponent<InventoryView>();
 
         /// <summary>同じ GameObject のチュートリアルの案内。<see cref="AddViews"/> で付けていなければ null。</summary>
         public TutorialPromptView TutorialPrompt => GetComponent<TutorialPromptView>();
@@ -450,6 +453,14 @@ namespace Fps.Runtime
 
             _model.BindHealth(_player != null ? _player.Health : null);
             _model.BindWeapon(_weapon != null ? _weapon.Weapon : null);
+
+            // オフラインのプレイヤーは持ち物を自分で持つ。ネット対戦は持ち主の HUD が届いた持ち物を後から渡す
+            var inventoryView = InventoryScreen;
+            var ownInventory = _player != null ? _player.GetComponent<PlayerInventory>() : null;
+            if (inventoryView != null && ownInventory != null)
+            {
+                inventoryView.Source = ownInventory;
+            }
             _model.BindMatch(match);
             RefreshCrosshair();
 

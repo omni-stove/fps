@@ -50,7 +50,7 @@ description = "Write the collision, the NavMesh with its links, the destructible
 run = "unity --non-interactive run . -- -executeMethod Fps.Editor.MapCollisionExporter.Export"
 
 [export-server-rules]
-description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Fps.Editor.ServerRulesExporter.Export (close the Editor first): the net match settings (Rules/NetMatch.asset, made by Fps.Editor.NetSceneBuilder when missing) with each rules asset to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping and grenade tuning to server-data/tuning/ping.json and grenade.json. Commit the written files"
+description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Fps.Editor.ServerRulesExporter.Export (close the Editor first): the net match settings (Rules/NetMatch.asset, made by Fps.Editor.NetSceneBuilder when missing) with each rules asset to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping, grenade and inventory tuning to server-data/tuning/ping.json, grenade.json and inventory.json. Commit the written files"
 run = "unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export"
 
 [eos-sdk]

@@ -5,7 +5,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// 拾おうとしている人の、拾う判定 (<see cref="PickupJudge.Judge"/>) に要る今の状態。
-    /// 体力と陣営で作り、武器を持てる人は <see cref="WithWeapons"/>、防具を持てる人は <see cref="WithArmor"/> で足す。
+    /// 体力と陣営で作り、武器を持てる人は <see cref="WithWeapons"/>、防具を持てる人は <see cref="WithArmor"/>、アイテムを持てる人は <see cref="WithInventory"/> で足す。
     /// </summary>
     public sealed class PickupCollector
     {
@@ -19,8 +19,10 @@ namespace Fps.Core
             int maxArmor,
             IReadOnlyList<PickupWeaponState> weapons,
             string currentWeaponId,
-            int maxWeapons)
+            int maxWeapons,
+            Inventory inventory)
         {
+            Inventory = inventory;
             Side = side;
             Health = health;
             MaxHealth = maxHealth;
@@ -35,7 +37,7 @@ namespace Fps.Core
         /// <param name="health">今の体力。0 以上 maxHealth 以下。0 なら倒れている。</param>
         /// <param name="maxHealth">最大体力。1 以上。</param>
         public PickupCollector(Side? side, int health, int maxHealth)
-            : this(side, health, maxHealth, 0, 0, null, null, 0)
+            : this(side, health, maxHealth, 0, 0, null, null, 0, null)
         {
             if (maxHealth <= 0)
             {
@@ -72,6 +74,8 @@ namespace Fps.Core
         /// <summary>同時に持てる武器の数。0 なら上限なし (武器を持てない人も 0)。</summary>
         public int MaxWeapons { get; }
 
+        public Inventory Inventory { get; }
+
         /// <summary>武器を持てる人にする。</summary>
         /// <param name="weapons">持っている武器。null を渡すと空として扱う。Id の重なりは前のものを使う。</param>
         /// <param name="currentWeaponId">今持っている武器の Id。持っていなければ null。weapons に無い Id は <see cref="ArgumentException"/>。</param>
@@ -95,7 +99,7 @@ namespace Fps.Core
                 throw new ArgumentException("currentWeaponId '" + current + "' is not one of weapons", nameof(currentWeaponId));
             }
 
-            return new PickupCollector(Side, Health, MaxHealth, Armor, MaxArmor, copy.Count > 0 ? copy.AsReadOnly() : (IReadOnlyList<PickupWeaponState>)_noWeapons, current, maxWeapons);
+            return new PickupCollector(Side, Health, MaxHealth, Armor, MaxArmor, copy.Count > 0 ? copy.AsReadOnly() : (IReadOnlyList<PickupWeaponState>)_noWeapons, current, maxWeapons, Inventory);
         }
 
         /// <summary>防具を持てる人にする。</summary>
@@ -113,7 +117,17 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(armor), armor, "armor must be between 0 and maxArmor");
             }
 
-            return new PickupCollector(Side, Health, MaxHealth, armor, maxArmor, Weapons, CurrentWeaponId, MaxWeapons);
+            return new PickupCollector(Side, Health, MaxHealth, armor, maxArmor, Weapons, CurrentWeaponId, MaxWeapons, Inventory);
+        }
+
+        public PickupCollector WithInventory(Inventory inventory)
+        {
+            if (inventory == null)
+            {
+                throw new ArgumentNullException(nameof(inventory));
+            }
+
+            return new PickupCollector(Side, Health, MaxHealth, Armor, MaxArmor, Weapons, CurrentWeaponId, MaxWeapons, inventory);
         }
 
         /// <summary>Id が weaponId の持ち武器の番号。無ければ (武器を持てない人も) -1。</summary>

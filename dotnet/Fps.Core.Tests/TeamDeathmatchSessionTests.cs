@@ -142,6 +142,27 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void HealRestoresUpToTheMaximumAndSkipsTheDead()
+        {
+            var session = Create();
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(1, 2, 40);
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+
+            Assert.That(session.Heal(2, 25), Is.EqualTo(25));
+            Assert.That(session.Heal(2, 25), Is.EqualTo(15));
+            Assert.That(session.Heal(2, 25), Is.Zero);
+            Assert.That(session.GetHealth(2), Is.EqualTo(_maxHealth));
+            Assert.That(changed, Is.EqualTo(Ids(2, 2)));
+
+            session.ApplyDamage(1, 2, _maxHealth);
+            Assert.That(session.Heal(2, 25), Is.Zero);
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.Heal(2, -1));
+        }
+
+        [Test]
         public void LethalDamageReportsKillAndScores()
         {
             var session = Create();

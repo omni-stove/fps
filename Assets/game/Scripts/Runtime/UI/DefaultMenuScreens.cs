@@ -21,6 +21,7 @@ namespace Fps.Runtime
             GameUi.UseDefaultPause(new PauseMenuState());
             GameUi.UseDefaultLoadoutSelect(new LoadoutSelectState());
             GameUi.UseDefaultMenu(new SceneMenuNavigator());
+            GameUi.UseDefaultInventoryScreen(new InventoryScreenState());
         }
 
         private sealed class PauseMenuState : IPauseState
@@ -31,6 +32,11 @@ namespace Fps.Runtime
         private sealed class LoadoutSelectState : ILoadoutSelect
         {
             public bool IsAnyOpen => LoadoutSelectView.IsAnyOpen;
+        }
+
+        private sealed class InventoryScreenState : IInventoryScreen
+        {
+            public bool IsAnyOpen => InventoryView.IsAnyOpen;
         }
 
         private sealed class SceneMenuNavigator : IMenuNavigator

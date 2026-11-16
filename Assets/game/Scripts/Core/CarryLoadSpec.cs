@@ -29,7 +29,7 @@ namespace Fps.Core
     }
 
     /// <summary>
-    /// 武器の重さ (<see cref="WeaponSpec.Weight"/>) と武器ごとの倍率 (<see cref="WeaponSpec.MoveSpeedMultiplier"/>) から、移動の速さに掛ける倍率を決める設定。
+    /// 武器の重さ (<see cref="WeaponSpec.Weight"/>)・持ち物の重さ (<see cref="InventoryRule.CountWeightInCarryLoad"/>) と武器ごとの倍率 (<see cref="WeaponSpec.MoveSpeedMultiplier"/>) から、移動の速さに掛ける倍率を決める設定。
     /// 倍率 = max(<see cref="MinWeightMultiplier"/>, 1 − max(0, 重さ − <see cref="FreeWeight"/>) × <see cref="SpeedLossPerKg"/>) × 武器ごとの倍率。
     /// </summary>
     public sealed class CarryLoadSpec
@@ -86,10 +86,11 @@ namespace Fps.Core
 
         /// <summary>
         /// held を構え carried を持っているときの倍率。どちらも null なら持っていないものとして扱い、carried の null は飛ばす。
+        /// extraWeight は武器でない持ち物の重さ (kg) で、<see cref="WeightSource"/> によらず数える。負や有限でない値は 0 と数える。
         /// </summary>
-        public float SpeedMultiplier(WeaponSpec held, IReadOnlyList<WeaponSpec> carried)
+        public float SpeedMultiplier(WeaponSpec held, IReadOnlyList<WeaponSpec> carried, float extraWeight = 0f)
         {
-            var weight = Weight(held, carried);
+            var weight = Weight(held, carried) + (SpecGuard.IsNonNegativeFinite(extraWeight) ? extraWeight : 0f);
             var byWeight = Math.Max(MinWeightMultiplier, 1f - (Math.Max(0f, weight - FreeWeight) * SpeedLossPerKg));
             return byWeight * Multiplier(held, carried);
         }

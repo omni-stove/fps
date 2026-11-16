@@ -31,6 +31,8 @@ namespace Fps.Core
         public float ChargeFraction =>
             _held ? (_spent ? 1f : Fraction(Spec, _chargedSeconds)) : _firingDischarged ? _dischargedFraction : 0f;
 
+        public float SpinFraction => _inner.SpinFraction;
+
         public static float Fraction(ChargeSpec charge, double heldSeconds)
         {
             if (charge == null)
@@ -132,6 +134,12 @@ namespace Fps.Core
             _firingDischarged = false;
             _chargedSeconds = 0f;
             _inner.Cancel();
+        }
+
+        public void Stow()
+        {
+            Cancel();
+            _inner.Stow();
         }
 
         // 内側の撃ち方は 1 回押して離したことにする。押したままにすると Auto が溜めずに撃ち続けるため。

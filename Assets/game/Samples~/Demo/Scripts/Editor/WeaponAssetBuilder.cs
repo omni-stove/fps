@@ -360,6 +360,7 @@ namespace Fps.Editor
         public static void Build()
         {
             BuildFromJsonAt(JsonFolder, Folder, RangeWeaponsPath);
+            WindUpSoundAssetBuilder.Build();
 
             // rifle と handgun はコードの値でなく JSON から作ったアセットを並べ、JSON を直せば既定の武器も変わるようにする。
             var rifle = LoadDefinition(RiflePath);

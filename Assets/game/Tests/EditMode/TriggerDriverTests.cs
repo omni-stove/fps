@@ -65,6 +65,39 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void SwitchingAwayStopsTheSpinSoSwitchingBackSpinsUpAgain()
+        {
+            var driver = new TriggerDriver();
+            var minigun = TriggerModels.For(new TriggerSpec(FireMode.Auto, Interval, spinUp: new SpinUpSpec(0.5f, 2f, 1f)));
+            var spin = (SpinUpTrigger)minigun;
+            driver.Bind(minigun);
+            driver.Pull(FireMode.Auto, true, true);
+            driver.Advance(2f);
+            driver.Pull(FireMode.Auto, true, false);
+            Assert.That(spin.SpinFraction, Is.EqualTo(1f));
+
+            driver.Bind(new SemiTrigger(Interval));
+            driver.Bind(minigun);
+
+            Assert.That(spin.SpinFraction, Is.Zero);
+            Assert.That(driver.Pull(FireMode.Auto, true, true), Is.Zero, "spins up again before firing");
+        }
+
+        [Test]
+        public void SwitchingAwayKeepsTheBoltCycleRunningLeft()
+        {
+            var driver = new TriggerDriver();
+            var bolt = new CycleTrigger(new CycleSpec(1f, false), new SemiTrigger(Interval));
+            driver.Bind(bolt);
+            Assert.That(driver.Pull(FireMode.Semi, true, true), Is.EqualTo(1));
+
+            driver.Bind(new SemiTrigger(Interval));
+            driver.Bind(bolt);
+
+            Assert.That(driver.Pull(FireMode.Semi, true, true), Is.Zero, "the bolt still has to be worked");
+        }
+
+        [Test]
         public void BindingAnotherModelDoesNotCarryTheHeldTriggerOrTheTime()
         {
             var driver = new TriggerDriver();

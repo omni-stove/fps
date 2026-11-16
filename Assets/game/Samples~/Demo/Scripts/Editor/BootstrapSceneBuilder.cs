@@ -68,6 +68,26 @@ namespace Fps.Editor
             [HighCoverName] = SurfaceImpactAssetStep.MetalId,
         };
 
+        public const string WeaponTableName = "WeaponTable";
+
+        public const string ShotgunId = "07e1b9a8-f64c-4474-bc38-dbf14d66b135";
+        public const string MinigunId = "4d8e2a6f-1b3c-4e5d-9f7a-8c0b2d4e6f13";
+        public const string FlamethrowerId = "8c2b5eea-4ded-4956-af00-0bceb5d3af29";
+        public const string LaserId = "739a532a-1faa-498e-b9e1-20de68186e40";
+        public const string BoltSniperId = "5b2af293-a0d8-45cb-af68-8c63628c80d1";
+        public const string RocketLauncherId = "ffe5619d-2694-4ce3-a388-c0d2b026c2a4";
+
+        // 全部を並べると出現位置の前が埋まるので、撃ち味の違いが分かる物だけにする。全部は TpsRange の武器棚 (RangeWeaponRackFixture) で試す。
+        public static readonly IReadOnlyList<string> FeaturedWeaponIds = new[]
+        {
+            ShotgunId, MinigunId, FlamethrowerId, LaserId, BoltSniperId, RocketLauncherId,
+        };
+
+        // 出現位置で拾える範囲 (RangeWeaponRackFixture.PickupRadius) に入らず、遮蔽物より手前に置く。
+        public const float WeaponTableDistance = 2.5f;
+
+        public const float WeaponTableSpacing = 2f;
+
         /// <summary>
         /// コマンドライン引数で決まる場所に Bootstrap シーンを生成し、Build Settings に登録する。
         /// 失敗したら例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
@@ -98,6 +118,7 @@ namespace Fps.Editor
             // 射撃場のルールのアセットも同じく、無ければ止める (先に GameRulesAssetBuilder.Build を走らせる)。
             var weapons = WeaponAssetBuilder.LoadPlayerLoadout();
             var rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.RangePath);
+            var featured = LoadFeaturedWeapons(WeaponAssetBuilder.LoadRangeWeapons());
 
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
@@ -105,7 +126,7 @@ namespace Fps.Editor
                 Directory.CreateDirectory(directory);
             }
 
-            PopulateScene(scene, weapons, rules);
+            PopulateScene(scene, weapons, rules, featured);
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {
@@ -127,6 +148,17 @@ namespace Fps.Editor
         /// </summary>
         public static GameObject PopulateScene(Scene scene, IReadOnlyList<WeaponDefinition> weapons, GameRulesDefinition rules)
         {
+            return PopulateScene(scene, weapons, rules, Array.Empty<WeaponDefinition>());
+        }
+
+        public static GameObject PopulateScene(
+            Scene scene, IReadOnlyList<WeaponDefinition> weapons, GameRulesDefinition rules, IReadOnlyList<WeaponDefinition> featured)
+        {
+            if (featured == null)
+            {
+                throw new ArgumentNullException(nameof(featured));
+            }
+
             if (!scene.IsValid() || !scene.isLoaded)
             {
                 throw new ArgumentException("scene must be a valid, loaded scene", nameof(scene));
@@ -151,6 +183,11 @@ namespace Fps.Editor
             component.RulesDefinition = rules;
             SceneManager.MoveGameObjectToScene(bootstrap, scene);
             CreateCovers(scene);
+            if (featured.Count > 0)
+            {
+                CreateWeaponTable(scene, featured);
+            }
+
             EditorSceneManager.MarkSceneDirty(scene);
             return bootstrap;
         }
@@ -170,6 +207,61 @@ namespace Fps.Editor
             {
                 var box = SceneBuildHelpers.CreateStaticBox(scene, root.transform, cover.Name, cover.Center, cover.Size);
                 SceneBuildHelpers.SetSurfaceMaterial(box, SceneBuildHelpers.SurfaceIdOf(CoverSurfaceIds, cover.Name));
+            }
+
+            return root;
+        }
+
+        public static WeaponDefinition[] LoadFeaturedWeapons(WeaponCatalogAsset catalog)
+        {
+            var weapons = new WeaponDefinition[FeaturedWeaponIds.Count];
+            for (var i = 0; i < weapons.Length; i++)
+            {
+                weapons[i] = WeaponAssetBuilder.FindInCatalog(catalog, WeaponTableName, FeaturedWeaponIds[i]);
+            }
+
+            return weapons;
+        }
+
+        public static Vector3[] WeaponTablePositions(int count)
+        {
+            var feet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
+            var offsets = LineLayout.CenteredOffsets(count, WeaponTableSpacing);
+            var positions = new Vector3[offsets.Length];
+            for (var i = 0; i < offsets.Length; i++)
+            {
+                positions[i] = feet + new Vector3(offsets[i], 0f, WeaponTableDistance);
+            }
+
+            return positions;
+        }
+
+        public static GameObject CreateWeaponTable(Scene scene, IReadOnlyList<WeaponDefinition> weapons)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+            if (weapons == null)
+            {
+                throw new ArgumentNullException(nameof(weapons));
+            }
+
+            // 中身を先に作って検査し、不正なら何も置かない。
+            var contents = new PickupContents[weapons.Count];
+            for (var i = 0; i < weapons.Count; i++)
+            {
+                if (weapons[i] == null)
+                {
+                    throw new ArgumentException($"featured weapon #{i} is empty", nameof(weapons));
+                }
+
+                contents[i] = PickupContents.ForWeapon(weapons[i], weapons[i].ToSpec().MagazineSize);
+            }
+
+            var root = new GameObject(WeaponTableName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            var positions = WeaponTablePositions(weapons.Count);
+            for (var i = 0; i < weapons.Count; i++)
+            {
+                RangeWeaponRackFixture.CreatePickup(root.transform, weapons[i].name, contents[i], positions[i]);
             }
 
             return root;

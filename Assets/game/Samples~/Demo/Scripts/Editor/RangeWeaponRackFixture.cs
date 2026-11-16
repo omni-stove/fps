@@ -92,17 +92,23 @@ namespace Fps.Editor
             SceneManager.MoveGameObjectToScene(root, scene);
             for (var i = 0; i < weapons.Count; i++)
             {
-                var pointObject = new GameObject(PickupNamePrefix + weapons[i].name);
-                pointObject.transform.SetParent(root.transform, false);
-                pointObject.transform.position = SlotPosition(i);
-                var point = pointObject.AddComponent<PickupSpawnPoint>();
-                point.Contents = contents[i];
-                point.CollectMode = PickupCollectMode.Look;
-                point.Radius = PickupRadius;
-                point.RespawnSeconds = RespawnSeconds;
+                CreatePickup(root.transform, weapons[i].name, contents[i], SlotPosition(i));
             }
 
             return root;
+        }
+
+        public static PickupSpawnPoint CreatePickup(Transform parent, string weaponName, PickupContents contents, Vector3 position)
+        {
+            var pointObject = new GameObject(PickupNamePrefix + weaponName);
+            pointObject.transform.SetParent(parent, false);
+            pointObject.transform.position = position;
+            var point = pointObject.AddComponent<PickupSpawnPoint>();
+            point.Contents = contents;
+            point.CollectMode = PickupCollectMode.Look;
+            point.Radius = PickupRadius;
+            point.RespawnSeconds = RespawnSeconds;
+            return point;
         }
     }
 }

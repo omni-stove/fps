@@ -564,5 +564,17 @@ namespace Fps.Tests.EditMode
             _created.Add(catalog);
             return catalog;
         }
+
+        [Test]
+        public void TheWindUpSoundRisesFromTheStartToTheFull()
+        {
+            var sound = new WindUpSoundSettings(0.5f, 1.5f, 0.2f);
+
+            Assert.That(sound.PitchAt(0f), Is.EqualTo(0.5f).Within(1e-5f));
+            Assert.That(sound.PitchAt(0.5f), Is.EqualTo(1f).Within(1e-5f));
+            Assert.That(sound.PitchAt(2f), Is.EqualTo(1.5f).Within(1e-5f), "clamped at full");
+            Assert.That(sound.VolumeAt(0f), Is.EqualTo(0.2f).Within(1e-5f));
+            Assert.That(sound.VolumeAt(1f), Is.EqualTo(1f).Within(1e-5f));
+        }
     }
 }

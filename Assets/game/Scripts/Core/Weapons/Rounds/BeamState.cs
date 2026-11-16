@@ -28,6 +28,8 @@ namespace Fps.Core
 
         public float ChargeFraction => 0f;
 
+        public float SpinFraction => 0f;
+
         public int Start()
         {
             if (IsFiring)
@@ -89,6 +91,11 @@ namespace Fps.Core
 
         // 持ち替えで離した扱いになっても、次の照射までの待ちは残す。持ち替えの連打で間隔より速く当てられないようにするため。
         public void Cancel()
+        {
+            Stop();
+        }
+
+        public void Stow()
         {
             Stop();
         }

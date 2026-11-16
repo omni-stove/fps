@@ -65,6 +65,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("溜め切って撃ったときの飛ぶ弾の弾速の倍率")]
         private float _fullChargeSpeedMultiplier = ChargeSpec.DefaultFullChargeSpeedMultiplier;
 
+        [SerializeField, Tooltip("溜めている間の音")]
+        private WindUpSoundSettings _sound = new WindUpSoundSettings(WindUpSoundSettings.DefaultChargeStartPitch, WindUpSoundSettings.DefaultChargeFullPitch, 1f);
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public float ChargeSeconds { get => _chargeSeconds; set => _chargeSeconds = value; }
@@ -78,6 +81,8 @@ namespace Fps.Runtime
         public bool FiresBelowMin { get => _firesBelowMin; set => _firesBelowMin = value; }
 
         public float FullChargeSpeedMultiplier { get => _fullChargeSpeedMultiplier; set => _fullChargeSpeedMultiplier = value; }
+
+        public WindUpSoundSettings Sound => _sound ??= new WindUpSoundSettings(WindUpSoundSettings.DefaultChargeStartPitch, WindUpSoundSettings.DefaultChargeFullPitch, 1f);
 
         public ChargeSpec ToSpec() =>
             _enabled ? new ChargeSpec(
@@ -114,6 +119,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("離してから回転が落ち切るまでの秒数")]
         private float _spinDownSeconds = 0.5f;
 
+        [SerializeField, Tooltip("回っている間の音")]
+        private WindUpSoundSettings _sound = new WindUpSoundSettings();
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public float SpinUpSeconds { get => _spinUpSeconds; set => _spinUpSeconds = value; }
@@ -121,6 +129,8 @@ namespace Fps.Runtime
         public float StartIntervalMultiplier { get => _startIntervalMultiplier; set => _startIntervalMultiplier = value; }
 
         public float SpinDownSeconds { get => _spinDownSeconds; set => _spinDownSeconds = value; }
+
+        public WindUpSoundSettings Sound => _sound ??= new WindUpSoundSettings();
 
         public SpinUpSpec ToSpec() => _enabled ? new SpinUpSpec(_spinUpSeconds, _startIntervalMultiplier, _spinDownSeconds) : null;
 
@@ -137,6 +147,61 @@ namespace Fps.Runtime
     }
 
     [Serializable]
+    public sealed class WindUpSoundSettings
+    {
+        public const float DefaultStartPitch = 0.5f;
+        public const float DefaultFullPitch = 1f;
+        public const float DefaultStartVolume = 0.3f;
+        public const float DefaultChargeStartPitch = 0.8f;
+        public const float DefaultChargeFullPitch = 1.4f;
+
+        [SerializeField, Tooltip("予備動作の間鳴らし続ける音。空なら鳴らさない")]
+        private AudioClip _loop;
+
+        [SerializeField, UnityEngine.Range(0.1f, 3f), Tooltip("動き始めの音の高さ")]
+        private float _startPitch = DefaultStartPitch;
+
+        [SerializeField, UnityEngine.Range(0.1f, 3f), Tooltip("満ちたときの音の高さ")]
+        private float _fullPitch = DefaultFullPitch;
+
+        [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("動き始めの音の大きさ")]
+        private float _startVolume = DefaultStartVolume;
+
+        [SerializeField, UnityEngine.Range(0f, 1f), Tooltip("満ちたときの音の大きさ")]
+        private float _fullVolume = 1f;
+
+        [SerializeField, Tooltip("満ちた瞬間に 1 回鳴らす音。空なら鳴らさない")]
+        private AudioClip _readySound;
+
+        public WindUpSoundSettings()
+        {
+        }
+
+        public WindUpSoundSettings(float startPitch, float fullPitch, float startVolume)
+        {
+            _startPitch = startPitch;
+            _fullPitch = fullPitch;
+            _startVolume = startVolume;
+        }
+
+        public AudioClip Loop { get => _loop; set => _loop = value; }
+
+        public float StartPitch { get => _startPitch; set => _startPitch = value; }
+
+        public float FullPitch { get => _fullPitch; set => _fullPitch = value; }
+
+        public float StartVolume { get => _startVolume; set => _startVolume = value; }
+
+        public float FullVolume { get => _fullVolume; set => _fullVolume = value; }
+
+        public AudioClip ReadySound { get => _readySound; set => _readySound = value; }
+
+        public float PitchAt(float fraction) => Mathf.Lerp(_startPitch, _fullPitch, Mathf.Clamp01(fraction));
+
+        public float VolumeAt(float fraction) => Mathf.Lerp(_startVolume, _fullVolume, Mathf.Clamp01(fraction));
+    }
+
+    [Serializable]
     public sealed class CycleSettings
     {
         [SerializeField, Tooltip("1 発ごとにボルト・ポンプを引く")]
@@ -148,11 +213,16 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("装填の間は覗き込みを解く")]
         private bool _leavesAds = true;
 
+        [SerializeField, Tooltip("撃つたびに鳴らす装填の音。ボルトを引く間合いは音の頭の無音で合わせる。空なら鳴らさない")]
+        private AudioClip _sound;
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public float CycleSeconds { get => _cycleSeconds; set => _cycleSeconds = value; }
 
         public bool LeavesAds { get => _leavesAds; set => _leavesAds = value; }
+
+        public AudioClip Sound { get => _sound; set => _sound = value; }
 
         public CycleSpec ToSpec() => _enabled ? new CycleSpec(_cycleSeconds, _leavesAds) : null;
 

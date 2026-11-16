@@ -360,6 +360,21 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PelletsHittingInOneFramePlayOnlyTheCappedImpactSounds()
+        {
+            var presenter = Presenter("Shooter");
+            _catalog.MaxImpactSoundsPerFrame = 2;
+
+            for (var i = 0; i < 8; i++)
+            {
+                presenter.PlayImpact(new ImpactInfo(new Vector3(i, 0f, 20f), Vector3.back, null));
+            }
+
+            Assert.That(presenter.Sounds.ActiveCount, Is.EqualTo(2));
+            Assert.That(presenter.EffectPoolFor(_spark).ActiveCount, Is.EqualTo(8), "every pellet still shows its spark");
+        }
+
+        [Test]
         public void AnImpactLogsItsMaterialAndHitZone()
         {
             var presenter = Presenter("Shooter");

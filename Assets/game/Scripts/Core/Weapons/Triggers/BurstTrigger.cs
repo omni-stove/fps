@@ -25,6 +25,8 @@ namespace Fps.Core
 
         public float ChargeFraction => _inner.ChargeFraction;
 
+        public float SpinFraction => _inner.SpinFraction;
+
         // 連射の途中に押しても内側へは伝える。Auto が押されているかを覚えて、連射が終わった後も押し続けていれば次を撃てるようにするため。
         public int Press()
         {
@@ -76,6 +78,12 @@ namespace Fps.Core
             _inner.Cancel();
             _roundsLeft = 0;
             _untilNextRound = 0f;
+        }
+
+        public void Stow()
+        {
+            Cancel();
+            _inner.Stow();
         }
 
         private int StartBursts(int starts)

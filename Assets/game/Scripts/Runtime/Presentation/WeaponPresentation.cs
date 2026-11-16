@@ -86,6 +86,8 @@ namespace Fps.Runtime
         private readonly List<PooledTracer> _tracerScratch = new List<PooledTracer>();
         private PresentationPool<PooledTracer> _tracers;
         private PresentationPool<AudioSource> _sounds;
+        private int _impactSoundFrame = -1;
+        private int _impactSoundsThisFrame;
         private Transform _poolRoot;
         private AudioSource _bodySource;
 
@@ -424,7 +426,7 @@ namespace Fps.Runtime
                 SpawnEffect(effect, ImpactSparkCapacity, impact.Point, Quaternion.LookRotation(normal), now);
             }
 
-            if (sound != null)
+            if (sound != null && TakeImpactSoundSlot(catalog))
             {
                 PlayAt(sound, impact.Point, now);
             }
@@ -651,6 +653,24 @@ namespace Fps.Runtime
 
             _bodySource.spatialBlend = IsLocal ? 0f : 1f;
             _bodySource.PlayOneShot(clip);
+        }
+
+        private bool TakeImpactSoundSlot(PresentationCatalog catalog)
+        {
+            if (_impactSoundFrame != Time.frameCount)
+            {
+                _impactSoundFrame = Time.frameCount;
+                _impactSoundsThisFrame = 0;
+            }
+
+            var limit = catalog != null ? catalog.MaxImpactSoundsPerFrame : PresentationCatalog.DefaultMaxImpactSoundsPerFrame;
+            if (_impactSoundsThisFrame >= limit)
+            {
+                return false;
+            }
+
+            _impactSoundsThisFrame++;
+            return true;
         }
 
         private void PlayAt(AudioClip clip, Vector3 position, float now)

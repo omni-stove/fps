@@ -29,6 +29,7 @@ namespace Fps.Runtime
             }
 
             Drop();
+            _model?.Stow();
             _model = model;
             _unspentSeconds = 0f;
             _held = false;

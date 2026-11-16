@@ -199,6 +199,10 @@ namespace Fps.Runtime
         /// <summary>今の <see cref="Loadout"/> を作ったときのルール。未初期化なら null。</summary>
         public GameRules LoadedRules => _loadout != null ? _loadedRules : null;
 
+        public float SpinFraction => _trigger.Model != null ? _trigger.Model.SpinFraction : 0f;
+
+        public float ChargeFraction => _trigger.ChargeFraction;
+
         /// <summary>今持っている武器の定義。未初期化か武器を持っていなければ null。</summary>
         public WeaponDefinition Definition => _loadout != null && !_unarmed ? _loadedDefinitions[_loadout.CurrentIndex] : null;
 
@@ -331,6 +335,9 @@ namespace Fps.Runtime
             if (_unarmed || IsInputHandedOff)
             {
                 Tick(Time.deltaTime);
+
+                // 乗り物やテイクダウンは武器をしまわず入力だけ手放すので、押したままの溜めが戻った時に離した扱いで撃たれないよう捨てる。
+                _trigger.Drop();
                 return;
             }
 

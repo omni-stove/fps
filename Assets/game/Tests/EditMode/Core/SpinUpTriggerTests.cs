@@ -144,6 +144,31 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void StowingStopsTheSpinAtOnce()
+        {
+            var trigger = Minigun();
+            SpinFully(trigger);
+
+            trigger.Stow();
+
+            Assert.That(trigger.SpinFraction, Is.EqualTo(0f));
+            var times = ShotTimesWhileHeld(trigger, 1f);
+            Assert.That(times[0], Is.EqualTo(0.5f), "waits the spin-up seconds again");
+        }
+
+        [Test]
+        public void TheSpinShowsThroughTheOuterParts()
+        {
+            var model = TriggerModels.For(new TriggerSpec(
+                FireMode.Auto, _fireInterval, spinUp: new SpinUpSpec(0.5f, 2f, 0.25f), cycle: new CycleSpec(0.5f)));
+
+            model.Press();
+            model.Tick(0.5f);
+
+            Assert.That(model.SpinFraction, Is.EqualTo(0.5f));
+        }
+
+        [Test]
         public void ZeroSpinDownSecondsStopsAtOnce()
         {
             var trigger = Minigun(spinDownSeconds: 0f);

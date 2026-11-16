@@ -159,10 +159,15 @@ namespace Fps.Tests.EditMode
             try
             {
                 var roots = scene.GetRootGameObjects();
-                Assert.That(roots, Has.Length.EqualTo(2), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers");
+                Assert.That(roots, Has.Length.EqualTo(3), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers and the weapon table");
                 Assert.That(roots[0].GetComponent<GameBootstrap>(), Is.Not.Null);
                 Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
                 AssertCovers(roots[1]);
+                Assert.That(roots[2].name, Is.EqualTo(BootstrapSceneBuilder.WeaponTableName));
+                Assert.That(
+                    roots[2].GetComponentsInChildren<PickupSpawnPoint>().Select(p => p.Contents.Weapon.Id),
+                    Is.EqualTo(BootstrapSceneBuilder.FeaturedWeaponIds),
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build");
                 Assert.That(roots[0].GetComponent<MatchRunner>(), Is.Not.Null, $"rerun {nameof(BootstrapSceneBuilder)}.Build");
                 Assert.That(
                     roots[0].GetComponent<TutorialPresenter>(),
@@ -247,6 +252,63 @@ namespace Fps.Tests.EditMode
             foreach (var cover in BootstrapSceneBuilder.Covers)
             {
                 Assert.That(new Bounds(cover.Center, cover.Size).IntersectRay(toCenter), Is.False, $"{cover.Name} keeps the middle target open");
+            }
+        }
+
+        [Test]
+        public void TheFeaturedWeaponsAreRangeWeapons()
+        {
+            var featured = BootstrapSceneBuilder.LoadFeaturedWeapons(WeaponAssetBuilder.LoadRangeWeapons());
+
+            Assert.That(featured.Select(w => w.Id), Is.EqualTo(BootstrapSceneBuilder.FeaturedWeaponIds));
+        }
+
+        [Test]
+        public void TheWeaponTableLinesUpLookPickupsJustAheadOfTheSpawn()
+        {
+            var featured = BootstrapSceneBuilder.LoadFeaturedWeapons(WeaponAssetBuilder.LoadRangeWeapons());
+            var scene = TestScenes.NewAdditive();
+            try
+            {
+                var table = BootstrapSceneBuilder.CreateWeaponTable(scene, featured);
+
+                Assert.That(table.name, Is.EqualTo(BootstrapSceneBuilder.WeaponTableName));
+                var points = table.GetComponentsInChildren<PickupSpawnPoint>();
+                Assert.That(points.Select(p => p.Contents.Weapon), Is.EqualTo(featured));
+                var feet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
+                var positions = BootstrapSceneBuilder.WeaponTablePositions(featured.Length);
+                for (var i = 0; i < points.Length; i++)
+                {
+                    var position = points[i].transform.position;
+                    Assert.That(position, Is.EqualTo(positions[i]));
+                    Assert.That(points[i].CollectMode, Is.EqualTo(PickupCollectMode.Look));
+                    Assert.That(points[i].Contents.Amount, Is.EqualTo(featured[i].ToSpec().MagazineSize));
+                    Assert.That(Vector3.Distance(position, feet), Is.GreaterThan(points[i].Radius), $"{points[i].name} is not picked up at the spawn");
+                    foreach (var cover in BootstrapSceneBuilder.Covers)
+                    {
+                        Assert.That(position.z, Is.LessThan(cover.Center.z - (cover.Size.z / 2f)), $"{points[i].name} is in front of {cover.Name}");
+                    }
+                }
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
+        public void CreateWeaponTableRejectsAnEmptyWeapon()
+        {
+            var scene = TestScenes.NewAdditive();
+            try
+            {
+                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.CreateWeaponTable(scene, null));
+                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreateWeaponTable(scene, new WeaponDefinition[] { null }));
+                Assert.That(scene.rootCount, Is.Zero, "nothing is placed when a weapon is empty");
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
             }
         }
 

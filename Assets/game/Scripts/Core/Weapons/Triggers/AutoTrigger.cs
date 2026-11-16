@@ -18,6 +18,8 @@ namespace Fps.Core
 
         public float ChargeFraction => 0f;
 
+        public float SpinFraction => 0f;
+
         public int Press()
         {
             _held = true;
@@ -39,6 +41,10 @@ namespace Fps.Core
 
         // 連射の残りを持たない撃ち方なので取り消すものが無い。
         public void Cancel()
+        {
+        }
+
+        public void Stow()
         {
         }
 

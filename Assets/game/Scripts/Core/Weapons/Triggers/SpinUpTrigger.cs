@@ -164,5 +164,15 @@ namespace Fps.Core
         {
             _inner.Cancel();
         }
+
+        public void Stow()
+        {
+            _held = false;
+            _pending = false;
+            _graceTick = false;
+            _spinSeconds = 0f;
+            ReleaseHeldInner();
+            _inner.Stow();
+        }
     }
 }

@@ -102,8 +102,19 @@ namespace Fps.Runtime
         [SerializeField, Range(0f, 1f), Tooltip("ヒットマーカーの音量")]
         private float _hitMarkerVolume = 0.4f;
 
+        [SerializeField, Min(1), Tooltip("1 人が同じフレームに鳴らす着弾の音の数の上限。散弾のペレットが一度に当たっても重ならない")]
+        private int _maxImpactSoundsPerFrame = DefaultMaxImpactSoundsPerFrame;
+
+        public const int DefaultMaxImpactSoundsPerFrame = 2;
+
         /// <summary>定義順の武器ごとの音とエフェクト。中身を書き換えるときは <see cref="SetWeapons"/> を使う。</summary>
         public IReadOnlyList<WeaponPresentationAssets> Weapons => _weapons ??= new List<WeaponPresentationAssets>();
+
+        public int MaxImpactSoundsPerFrame
+        {
+            get => _maxImpactSoundsPerFrame;
+            set => _maxImpactSoundsPerFrame = value;
+        }
 
         public AudioClip ImpactSound
         {

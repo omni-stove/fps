@@ -26,6 +26,8 @@ namespace Fps.Core
 
         public float ChargeFraction => _inner.ChargeFraction;
 
+        public float SpinFraction => _inner.SpinFraction;
+
         // 装填中の押す・時間を内側へ渡さず覚えておくのは、内側が捨てられる弾で連射間隔の待ちを始め、装填の後まで撃てなくなるのを避けるため。
         public int Press()
         {
@@ -92,6 +94,12 @@ namespace Fps.Core
         {
             _inner.Cancel();
             _pressedDuringCycle = false;
+        }
+
+        public void Stow()
+        {
+            Cancel();
+            _inner.Stow();
         }
     }
 }

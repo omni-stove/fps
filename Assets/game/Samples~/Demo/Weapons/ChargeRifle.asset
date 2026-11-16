@@ -39,6 +39,10 @@ MonoBehaviour:
   _adsSpreadDegrees: 0.2
   _moveSpreadDegrees: 2
   _shotNoiseRadius: 60
+  _burst:
+    _enabled: 0
+    _roundsPerBurst: 3
+    _roundIntervalSeconds: 0.08
   _charge:
     _enabled: 1
     _chargeSeconds: 1.2
@@ -47,3 +51,115 @@ MonoBehaviour:
     _firesWhenFull: 0
     _firesBelowMin: 0
     _fullChargeSpeedMultiplier: 1.5
+    _sound:
+      _loop: {fileID: 8300000, guid: 396bed8ba63a44938a5812e22fef09a8, type: 3}
+      _startPitch: 0.8
+      _fullPitch: 1.4
+      _startVolume: 1
+      _fullVolume: 1
+      _readySound: {fileID: 8300000, guid: 6e87428eb52a049269e3f22c77a548c2, type: 3}
+  _spinUp:
+    _enabled: 0
+    _spinUpSeconds: 1
+    _startIntervalMultiplier: 3
+    _spinDownSeconds: 0.5
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.5
+      _fullPitch: 1
+      _startVolume: 0.3
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _cycle:
+    _enabled: 0
+    _cycleSeconds: 1
+    _leavesAds: 1
+    _sound: {fileID: 0}
+  _ammoKind: 0
+  _reloadStyle: 0
+  _reloadSecondsPerRound: 0
+  _heat:
+    _heatPerShot: 0.1
+    _coolPerSecond: 0.5
+    _coolDelaySeconds: 0.25
+    _overheatSeconds: 1.5
+  _delivery: 0
+  _pelletCount: 1
+  _pelletSpreadDegrees: 0
+  _roundRadius: 0
+  _penetration:
+    _enabled: 0
+    _maxPenetrations: 1
+    _damageMultiplierPerPenetration: 0.7
+    _maxThickness: 0.5
+    _materials: []
+  _ricochet:
+    _enabled: 0
+    _maxBounces: 1
+    _maxGrazingAngleDegrees: 30
+    _damageMultiplierPerBounce: 0.6
+  _projectile:
+    _speed: 60
+    _gravityMultiplier: 1
+    _lifetimeSeconds: 5
+    _onWorldHit: 0
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+    _stuckSeconds: 10
+  _homing:
+    _enabled: 0
+    _lockOnSeconds: 1
+    _lockOnConeDegrees: 15
+    _turnDegreesPerSecond: 120
+    _lockingSound: {fileID: 0}
+    _lockedSound: {fileID: 0}
+  _beam:
+    _tickSeconds: 0.1
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _spray:
+    _tickSeconds: 0.1
+    _coneDegrees: 10
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _explosion:
+    _enabled: 0
+    _maxDamage: 100
+    _radius: 5
+    _fullDamageRadius: 1
+    _structureDamageAtCenter: 0
+    _detonation: 0
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _statusEffect:
+    _enabled: 0
+    _kindId: burn
+    _durationSeconds: 3
+    _tickSeconds: 0.5
+    _damagePerTick: 5
+    _visualId: 
+  _areaEffect:
+    _enabled: 0
+    _radius: 4
+    _durationSeconds: 6
+    _tickSeconds: 1
+    _damagePerTick: 5
+    _statusEffect:
+      _enabled: 0
+      _kindId: burn
+      _durationSeconds: 3
+      _tickSeconds: 0.5
+      _damagePerTick: 5
+      _visualId: 
+    _visualId: 
+  _extraZoomLevels: []
+  _breathHold:
+    _enabled: 0
+    _maxHoldSeconds: 4
+    _recoverSeconds: 2
+    _swayMultiplier: 0.2
+  _swayDegrees: 0
+  _ammoTypes: []

@@ -8,7 +8,7 @@ namespace Fps.Runtime
     /// <summary>
     /// 投げられたグレネード 1 個。<see cref="Spawn"/> で Rigidbody の球として作られて跳ね、信管の秒数が経つと <see cref="Explode"/> して、
     /// 種類の <see cref="ImpactSpec"/> の爆発と範囲効果 (<see cref="AreaEffectZone"/>)、目くらまし (<see cref="Flash"/>) を起こす。くっつき方は <c>ThrownGrenade.Sticky.cs</c> が受け持つ。
-    /// 爆発は半径内の <see cref="Damageable"/> に <see cref="ExplosionDamage"/> を与え (中心から体の狙う点か頭の高さまでのどちらかの線が
+    /// 爆発は半径内の <see cref="Damageable"/> に <see cref="ExplosionDamage"/> を与え (中心から体の狙う点・頭の高さ・足元までのどれかの線が
     /// <see cref="Damageable"/> を持たない物に遮られていなければ)、<see cref="StructureDamage.ApplyAround"/> で建造物にも範囲で当てる。
     /// 演出は <see cref="PresentationCatalog"/> の爆発 (エフェクトと音) を出し、カタログか素材が無ければ出さない。
     /// </summary>
@@ -384,7 +384,8 @@ namespace Fps.Runtime
 
         /// <summary>
         /// center から target までの線が遮られているか。target 自身と、<see cref="Damageable"/> を持つ物 (人や標的) とトリガーは遮らない。
-        /// target の狙う点と、体の上端の少し下の 2 本を引き、両方とも遮られていれば true。
+        /// 置いた物 (盾など <see cref="Deployable"/>) は <see cref="Damageable"/> を持っていても遮る。
+        /// target の狙う点と、体の上端の少し下と、足元の少し上の 3 本を引き、すべて遮られていれば true。
         /// </summary>
         public static bool IsObstructed(Vector3 center, Damageable target)
         {

@@ -7,8 +7,8 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 1 回の爆発。<see cref="Detonate"/> は半径内の <see cref="Damageable"/> に <see cref="ExplosionDamage"/> を与え (中心から体の狙う点か頭の高さまでのどちらかの線が
-    /// <see cref="Damageable"/> を持たない物に遮られていなければ)、<see cref="StructureDamage.ApplyAround"/> で建造物にも範囲で当てる。
+    /// 1 回の爆発。<see cref="Detonate"/> は半径内の <see cref="Damageable"/> に <see cref="ExplosionDamage"/> を与え (中心から体の狙う点・頭の高さ・足元までのどれかの線が
+    /// 人や標的でない物に遮られていなければ。置いた物 (<see cref="Deployable"/>) は <see cref="Damageable"/> を持っていても遮る)、<see cref="StructureDamage.ApplyAround"/> で建造物にも範囲で当てる。
     /// 演出は <see cref="PresentationCatalog"/> の爆発 (エフェクトと音) を出し、カタログか素材が無ければ出さない。
     /// </summary>
     public static class Explosion
@@ -24,6 +24,9 @@ namespace Fps.Runtime
 
         // 身をかがめて頭だけ出している相手にも当たるよう、体の上端の少し下へも線を引く。
         private const float TopProbeInset = 0.1f;
+
+        // 下の空いた物の隙間から見える足にも当たるよう、足元へも線を引く。床に沿って床のコライダーに当たらないよう少し上げる。
+        private const float BottomProbeLift = 0.1f;
 
         /// <summary>
         /// center で爆発させる。半径内の生きている <see cref="Damageable"/> に遮られていなければダメージを与え
@@ -84,7 +87,8 @@ namespace Fps.Runtime
 
         /// <summary>
         /// center から target までの線が遮られているか。target 自身と、<see cref="Damageable"/> を持つ物 (人や標的) とトリガーは遮らない。
-        /// target の狙う点と、体の上端の少し下の 2 本を引き、両方とも遮られていれば true。
+        /// 置いた物 (盾など <see cref="Deployable"/>) は <see cref="Damageable"/> を持っていても遮る。
+        /// target の狙う点と、体の上端の少し下と、足元の少し上の 3 本を引き、すべて遮られていれば true。
         /// </summary>
         public static bool IsObstructed(Vector3 center, Damageable target)
         {
@@ -104,7 +108,13 @@ namespace Fps.Runtime
             }
 
             var top = new Vector3(bounds.center.x, Mathf.Max(bounds.center.y, bounds.max.y - TopProbeInset), bounds.center.z);
-            return IsLineObstructed(center, top, target.transform);
+            if (!IsLineObstructed(center, top, target.transform))
+            {
+                return false;
+            }
+
+            var feet = new Vector3(bounds.center.x, Mathf.Min(bounds.center.y, bounds.min.y + BottomProbeLift), bounds.center.z);
+            return IsLineObstructed(center, feet, target.transform);
         }
 
         /// <summary>center から target の体 (コライダーを合わせた範囲) のいちばん近い点までの距離。コライダーが無ければ Transform の位置まで。</summary>
@@ -262,16 +272,24 @@ namespace Fps.Runtime
             var hits = Physics.RaycastAll(from, offset / length, length, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
             foreach (var hit in hits)
             {
-                var hitTransform = hit.collider.transform;
-                if (hitTransform.IsChildOf(target) || FindDamageable(hit.collider) != null)
+                if (Blocks(hit.collider, target))
                 {
-                    continue;
+                    return true;
                 }
-
-                return true;
             }
 
             return false;
+        }
+
+        private static bool Blocks(Collider collider, Transform target)
+        {
+            if (collider.transform.IsChildOf(target))
+            {
+                return false;
+            }
+
+            // 置いた盾などは耐久のために Damageable を持つが、壁として置かれる物なので人や標的と違って遮る。
+            return FindDamageable(collider) == null || Deployable.Of(collider) != null;
         }
     }
 }

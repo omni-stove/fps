@@ -59,6 +59,58 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void APersonInBetweenDoesNotShieldTheOneBehind()
+        {
+            var front = CreateTarget("Front", new Vector3(0f, 1f, 1.2f));
+            var back = CreateTarget("Back", new Vector3(0f, 1f, 2.5f));
+
+            var result = Explosion.Detonate(new Vector3(0f, 0.5f, 0f), _spec, null, WeaponId);
+
+            Assert.That(front.Health.Current, Is.LessThan(front.Health.Max));
+            Assert.That(back.Health.Current, Is.LessThan(back.Health.Max));
+            Assert.That(result.Damaged, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TheBlastReachesFeetSeenUnderARaisedBoard()
+        {
+            CreateFloor();
+            CreateBox("Board", new Vector3(0f, 1.15f, 1.5f), new Vector3(4f, 1.3f, 0.2f));
+            var target = CreateTarget("Behind", new Vector3(0f, 1f, 2f));
+
+            var result = Explosion.Detonate(new Vector3(0f, 0.1f, -1f), _spec, null, WeaponId);
+
+            Assert.That(target.Health.Current, Is.LessThan(target.Health.Max), "the line to the feet passes under the board");
+            Assert.That(result.Damaged, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AGapUnderALowWallLetsTheBlastReachACrouchingTargetItHides()
+        {
+            CreateFloor();
+            CreateBox("Wall", new Vector3(0f, 0.675f, 1.2f), new Vector3(4f, 1.05f, 0.3f));
+            var target = CreateTarget("Crouching", new Vector3(0f, 0.45f, 2f), 0.9f);
+
+            var result = Explosion.Detonate(new Vector3(0f, 0.1f, -1f), _spec, null, WeaponId);
+
+            Assert.That(target.Health.Current, Is.LessThan(target.Health.Max), "a 15 cm gap at the floor is enough for the line to the feet");
+            Assert.That(result.Damaged, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ALowWallDownToTheFloorHidesACrouchingTarget()
+        {
+            CreateFloor();
+            CreateBox("Wall", new Vector3(0f, 0.6f, 1.2f), new Vector3(4f, 1.2f, 0.3f));
+            var target = CreateTarget("Crouching", new Vector3(0f, 0.45f, 2f), 0.9f);
+
+            var result = Explosion.Detonate(new Vector3(0f, 0.1f, -1f), _spec, null, WeaponId);
+
+            Assert.That(target.Health.Current, Is.EqualTo(target.Health.Max));
+            Assert.That(result.Damaged, Is.Zero);
+        }
+
+        [Test]
         public void DetonateHitsStructuresWithTheSpecDamage()
         {
             var structure = CreateBox("Hut", new Vector3(0f, 0.5f, 2f), Vector3.one).AddComponent<StructureHitRecorder>();
@@ -134,13 +186,18 @@ namespace Fps.Tests.EditMode
             Hitscan.Fire(request, new PlannedRound(origin.ToNumerics(), (point - origin).ToNumerics(), 0));
         }
 
-        private Damageable CreateTarget(string name, Vector3 position)
+        private Damageable CreateTarget(string name, Vector3 position, float height = 2f)
         {
-            var body = CreateBox(name, position, new Vector3(0.6f, 2f, 0.6f));
+            var body = CreateBox(name, position, new Vector3(0.6f, height, 0.6f));
             var damageable = body.AddComponent<Damageable>();
             damageable.Initialize(name, 100);
             body.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
             return damageable;
+        }
+
+        private void CreateFloor()
+        {
+            CreateBox("Floor", new Vector3(0f, -0.05f, 0f), new Vector3(20f, 0.1f, 20f));
         }
 
         private GameObject CreateBox(string name, Vector3 position, Vector3 size)

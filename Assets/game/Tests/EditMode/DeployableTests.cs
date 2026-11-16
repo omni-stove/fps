@@ -89,6 +89,19 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AnExplosionInFrontOfTheShieldDoesNotHurtWhoIsBehindIt()
+        {
+            var shield = PlaceShield(null);
+            var victim = CreateVictim(new Vector3(0f, 0.7f, -1f));
+            Physics.SyncTransforms();
+
+            Explosion.Detonate(new Vector3(0f, 0.5f, 1.5f), new ExplosionSpec(new ExplosionDamage(30, 6f)), null, "launcher");
+
+            Assert.That(victim.Health.Current, Is.EqualTo(victim.MaxHealth), "the shield blocks the blast");
+            Assert.That(shield.Damageable.Health.Current, Is.LessThan(MaxHealth), "the blast reached the shield");
+        }
+
+        [Test]
         public void TheOwnersBulletsGoThrough()
         {
             var shield = PlaceShield(null);

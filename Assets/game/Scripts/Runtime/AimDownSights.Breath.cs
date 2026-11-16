@@ -19,6 +19,8 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("スコープの揺れが 1 周する秒数")]
         private float _swayCycleSeconds = BreathHold.DefaultSwayCycleSeconds;
 
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _holdBreathAction;
         private bool _enabledHoldBreathAction;
         private BreathHold _breath;

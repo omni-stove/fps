@@ -42,6 +42,8 @@ namespace Fps.Runtime
         private PlayerActionReader _reader;
         private WeaponController _weapon;
         private ITutorialPrompt _view;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction[] _deviceActions = Array.Empty<InputAction>();
         private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
         private Vector3 _lastPosition;

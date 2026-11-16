@@ -78,6 +78,8 @@ namespace Fps.Runtime
         private readonly List<string> _textLines = new List<string>();
         private SearchAndDestroy _game;
         private BombSite[] _sortedSites = Array.Empty<BombSite>();
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _interactAction;
         private bool _enabledInteractAction;
         private Vector3 _bombGround;

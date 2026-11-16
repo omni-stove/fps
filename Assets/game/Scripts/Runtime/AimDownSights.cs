@@ -35,6 +35,8 @@ namespace Fps.Runtime
 
         private Camera _camera;
         private FirstPersonLook _look;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _aimAction;
         private bool _enabledAimAction;
         private bool _isLive;

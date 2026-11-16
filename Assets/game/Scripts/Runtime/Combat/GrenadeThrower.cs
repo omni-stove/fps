@@ -74,7 +74,10 @@ namespace Fps.Runtime
         private Grenade _rule = Grenade.Off;
         private bool _configured;
         private Damageable _body;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _action;
+        [NonSerialized]
         private InputAction _switchAction;
         private bool _enabledAction;
         private bool _enabledSwitchAction;

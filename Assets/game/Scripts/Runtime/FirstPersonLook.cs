@@ -35,6 +35,8 @@ namespace Fps.Runtime
 
         private readonly LookAngles _angles = new LookAngles();
         private Transform _pitchPivot;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _lookAction;
         private bool _enabledLookAction;
         private float _sensitivityMultiplier = 1f;

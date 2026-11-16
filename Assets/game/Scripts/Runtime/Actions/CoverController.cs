@@ -67,8 +67,12 @@ namespace Fps.Runtime
         private ViewRig _rig;
         private AimDownSights _ads;
         private Damageable _damageable;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _coverAction;
+        [NonSerialized]
         private InputAction _aimAction;
+        [NonSerialized]
         private InputAction _moveAction;
         private bool _enabledCover;
         private bool _enabledAim;

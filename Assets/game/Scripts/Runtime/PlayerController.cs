@@ -52,9 +52,14 @@ namespace Fps.Runtime
         private readonly ControlHandoff _handoff = new ControlHandoff();
         private CharacterController _controller;
         private FirstPersonLook _look;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _moveAction;
+        [NonSerialized]
         private InputAction _sprintAction;
+        [NonSerialized]
         private InputAction _crouchAction;
+        [NonSerialized]
         private InputAction _jumpAction;
         private PlayerMotor _motor;
         private bool _enabledMove;

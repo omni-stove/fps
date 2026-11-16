@@ -11,6 +11,8 @@ namespace Fps.Runtime
 
         public const string AmmoTypeSwitchedLogPrefix = "[Combat] ammo-type";
 
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _switchAmmoTypeAction;
         private bool _enabledSwitchAmmoTypeAction;
 

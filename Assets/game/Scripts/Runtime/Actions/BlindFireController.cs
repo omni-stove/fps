@@ -29,6 +29,8 @@ namespace Fps.Runtime
         private System.Random _random = new System.Random();
 
         // 端にいない高い壁で止めている Attack。止めていなければ null。
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _blockedAttack;
 
         public CoverController Cover => _cover;

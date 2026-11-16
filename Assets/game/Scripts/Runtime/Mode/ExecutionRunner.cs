@@ -55,6 +55,8 @@ namespace Fps.Runtime
 
         private ExecutionSession _execution;
         private bool _subscribed;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _interactAction;
         private bool _enabledInteractAction;
         private int? _localInteractTarget;

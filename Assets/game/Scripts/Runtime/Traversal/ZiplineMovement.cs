@@ -46,6 +46,8 @@ namespace Fps.Runtime.Traversal
         private AimDownSights _ads;
         private WeaponController _weapon;
         private Damageable _damageable;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _interactAction;
         private bool _enabledInteract;
         private bool _wrappedSpread;

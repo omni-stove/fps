@@ -67,6 +67,8 @@ namespace Fps.Runtime
         private WeaponController _weapon;
         private Damageable _self;
         private AimDownSights _ads;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _meleeAction;
         private bool _enabledMeleeAction;
         private bool _hooked;

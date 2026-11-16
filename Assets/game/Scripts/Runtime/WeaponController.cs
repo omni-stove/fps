@@ -76,9 +76,14 @@ namespace Fps.Runtime
         private readonly TriggerDriver _trigger = new TriggerDriver();
         private Transform _aim;
         private ViewRig _rig;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _attackAction;
+        [NonSerialized]
         private InputAction _reloadAction;
+        [NonSerialized]
         private InputAction _nextAction;
+        [NonSerialized]
         private InputAction _previousAction;
         private bool _enabledAttackAction;
         private bool _enabledReloadAction;

@@ -38,13 +38,22 @@ namespace Fps.Runtime
         // ポーズ画面は共有のアクション (InputSystem.actions) の Player を止め続けるので、複製を自分だけで有効にして読む。
         // 共有のものを有効にすると、プレイヤーの移動や射撃もその入力で動いてしまう
         private InputActionAsset _actions;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _move;
+        [NonSerialized]
         private InputAction _look;
+        [NonSerialized]
         private InputAction _capture;
+        [NonSerialized]
         private InputAction _zoomIn;
+        [NonSerialized]
         private InputAction _zoomOut;
+        [NonSerialized]
         private InputAction _rollLeft;
+        [NonSerialized]
         private InputAction _rollRight;
+        [NonSerialized]
         private InputAction _resetLens;
 
         public override string ElementName => PauseMenu.UxmlName;

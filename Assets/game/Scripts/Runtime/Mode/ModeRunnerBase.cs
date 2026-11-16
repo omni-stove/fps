@@ -58,6 +58,8 @@ namespace Fps.Runtime
         private ModeSession _session;
         private SideMember _localPlayer;
         private ModeStatus _publishedStatus;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _restartAction;
         private bool _enabledRestartAction;
         private bool _matchOver;

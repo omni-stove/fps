@@ -52,6 +52,8 @@ namespace Fps.Runtime
         private readonly PauseState _state = new PauseState(PauseTimeMode.KeepRunning, new[] { PauseActionPath, InputActionPaths.NetStats });
         private readonly List<string> _enabledScratch = new List<string>();
         private InputActionAsset _actions;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _pauseAction;
         private bool _enabledPauseAction;
         private Action _openSettings;

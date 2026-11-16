@@ -72,6 +72,8 @@ namespace Fps.Runtime
         private IReadOnlyList<ScoreboardSection> _sections = _empty;
         private bool _open;
         private bool _dirty = true;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _toggleAction;
         private bool _resolvedToggleAction;
         private bool _enabledToggleAction;

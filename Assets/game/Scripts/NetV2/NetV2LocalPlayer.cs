@@ -37,19 +37,34 @@ namespace Fps.NetV2
         private Transform _eye;
         private Camera _camera;
         private FirstPersonLook _look;
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _move;
+        [NonSerialized]
         private InputAction _jump;
+        [NonSerialized]
         private InputAction _sprint;
+        [NonSerialized]
         private InputAction _crouch;
+        [NonSerialized]
         private InputAction _cover;
+        [NonSerialized]
         private InputAction _aim;
+        [NonSerialized]
         private InputAction _dodge;
+        [NonSerialized]
         private InputAction _attack;
+        [NonSerialized]
         private InputAction _reload;
+        [NonSerialized]
         private InputAction _grenade;
+        [NonSerialized]
         private InputAction _ping;
+        [NonSerialized]
         private InputAction _prone;
+        [NonSerialized]
         private InputAction _switchAmmoType;
+        [NonSerialized]
         private InputAction _switchGrenade;
         private SprintInput _sprintInput;
         private CrouchInput _crouchInput;

@@ -57,8 +57,12 @@ namespace Fps.Runtime
         private float? _freeLimitRadius;
 
         // 映している間だけ読む入力。プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ戻す
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _moveAction;
+        [NonSerialized]
         private InputAction _nextAction;
+        [NonSerialized]
         private InputAction _previousAction;
         private bool _enabledMoveAction;
         private bool _enabledNextAction;

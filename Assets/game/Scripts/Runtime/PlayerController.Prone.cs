@@ -18,6 +18,8 @@ namespace Fps.Runtime
         /// <summary>Assets/InputSystem_Actions.inputactions の Prone アクション。</summary>
         public const string ProneActionPath = InputActionPaths.Prone;
 
+        // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
+        [NonSerialized]
         private InputAction _proneAction;
         private bool _enabledProne;
         private Prone _proneRule = Prone.Off;

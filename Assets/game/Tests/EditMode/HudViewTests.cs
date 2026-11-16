@@ -54,6 +54,7 @@ namespace Fps.Tests.EditMode
             Assert.That(root.Q<Label>(HudView.AmmoTypeLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.MagnificationLabelName), Is.Not.Null);
             Assert.That(root.Q<Label>(HudView.LockOnLabelName), Is.Not.Null);
+            Assert.That(root.Q<VisualElement>(HudView.AimBlockMarkerName), Is.Not.Null);
         }
 
         private static Weapon NewActiveReloadWeapon()
@@ -128,6 +129,109 @@ namespace Fps.Tests.EditMode
 
             model.SetCrosshair(1f, false);
             Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void ABlockedAimTintsTheCrosshairAndMarksTheBlockedPoint()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            Assert.That(view.Crosshair.ClassListContains(HudView.CrosshairBlockedClass), Is.False);
+            Assert.That(view.AimBlockMarker.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            model.SetAimBlock(new System.Numerics.Vector2(0.25f, 0.75f));
+
+            Assert.That(view.Crosshair.ClassListContains(HudView.CrosshairBlockedClass), Is.True);
+            Assert.That(view.AimBlockMarker.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.AimBlockMarker.style.left.value.value, Is.EqualTo(25f).Within(1e-4f));
+            Assert.That(view.AimBlockMarker.style.left.value.unit, Is.EqualTo(LengthUnit.Percent));
+            Assert.That(view.AimBlockMarker.style.top.value.value, Is.EqualTo(25f).Within(1e-4f));
+
+            model.ClearAimBlock();
+
+            Assert.That(view.Crosshair.ClassListContains(HudView.CrosshairBlockedClass), Is.False);
+            Assert.That(view.AimBlockMarker.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void ABlockedPointOffScreenOnlyTintsTheCrosshair()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            model.SetAimBlock(null);
+
+            Assert.That(view.Crosshair.ClassListContains(HudView.CrosshairBlockedClass), Is.True);
+            Assert.That(view.AimBlockMarker.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheBlockMarkerHidesWithTheCrosshair()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+            model.SetAimBlock(new System.Numerics.Vector2(0.5f, 0.5f));
+
+            model.SetCrosshair(0f, false);
+            Assert.That(view.AimBlockMarker.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.Crosshair.ClassListContains(HudView.CrosshairBlockedClass), Is.False);
+
+            model.SetCrosshair(0f, true);
+            Assert.That(view.AimBlockMarker.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            view.ApplyVisibility(HudVisibility.Hardcore);
+            Assert.That(view.AimBlockMarker.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheBlockMarkerIsBuiltAsACrossUnlessAnImageIsGiven()
+        {
+            var view = new HudView(CloneLayout(), new HudModel());
+
+            Assert.That(view.AimBlockMarker.childCount, Is.EqualTo(2));
+            Assert.That(view.AimBlockMarker.ElementAt(0).ClassListContains(HudView.AimBlockBarClass), Is.True);
+            Assert.That(view.AimBlockMarker.ElementAt(1).ClassListContains(HudView.AimBlockBarCrossClass), Is.True);
+            Assert.That(view.AimBlockMarker.ClassListContains(HudView.AimBlockImageClass), Is.False);
+
+            var image = new Texture2D(4, 4);
+            try
+            {
+                view.SetAimBlockMarker(image);
+
+                Assert.That(view.AimBlockMarker.childCount, Is.Zero);
+                Assert.That(view.AimBlockMarker.ClassListContains(HudView.AimBlockImageClass), Is.True);
+                Assert.That(view.AimBlockMarker.style.backgroundImage.value.texture, Is.SameAs(image));
+
+                view.SetAimBlockMarker(null);
+
+                Assert.That(view.AimBlockMarker.childCount, Is.EqualTo(2));
+                Assert.That(view.AimBlockMarker.ClassListContains(HudView.AimBlockImageClass), Is.False);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(image);
+            }
+        }
+
+        [Test]
+        public void TheBlockPointIsMappedToTheViewportAndDroppedBehindTheCamera()
+        {
+            var camera = new GameObject("Camera").AddComponent<Camera>();
+            try
+            {
+                var ahead = Hud.AimBlockViewport(camera, camera.transform.position + (camera.transform.forward * 5f));
+                Assert.That(ahead.HasValue, Is.True);
+                Assert.That(ahead.Value.X, Is.EqualTo(0.5f).Within(1e-4f));
+                Assert.That(ahead.Value.Y, Is.EqualTo(0.5f).Within(1e-4f));
+
+                Assert.That(Hud.AimBlockViewport(camera, camera.transform.position - (camera.transform.forward * 5f)).HasValue, Is.False);
+                Assert.That(Hud.AimBlockViewport(null, Vector3.zero).HasValue, Is.False);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(camera.gameObject);
+            }
         }
 
         [Test]

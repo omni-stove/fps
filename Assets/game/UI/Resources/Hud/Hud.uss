@@ -420,6 +420,43 @@
     left: 0;
 }
 
+/* 目からの射線が手前の物に遮られている間の照準。撃っても狙う点に届かないことを色で知らせる。 */
+.hud__crosshair--blocked .hud__crosshair-dot,
+.hud__crosshair--blocked .hud__crosshair-line {
+    background-color: rgba(255, 90, 70, 0.95);
+}
+
+/*
+ * 遮られた点の印。left / top は HudView が画面の割合で決め、中心をその点に合わせる。
+ * 画像を渡されなければ HudView が 2 本の棒を足して × にする。
+ */
+.hud__aim-block {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    translate: -50% -50%;
+}
+
+.hud__aim-block--image {
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.hud__aim-block-bar {
+    position: absolute;
+    left: 6px;
+    top: -1px;
+    width: 4px;
+    height: 18px;
+    background-color: rgba(255, 90, 70, 0.95);
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.7);
+    rotate: 45deg;
+}
+
+.hud__aim-block-bar--cross {
+    rotate: -45deg;
+}
+
 /* ロードアウトの選択。倒されている間に画面の中央に出す。中身の見た目は Resources/Loadout/LoadoutSelect.uss。 */
 .hud__loadout {
     position: absolute;

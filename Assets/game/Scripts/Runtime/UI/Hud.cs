@@ -11,7 +11,7 @@ namespace Fps.Runtime
     /// <see cref="Initialize"/> でコードから渡す。値はそれぞれのイベントで <see cref="HudModel"/> が更新し、
     /// <see cref="HudView"/> が Label に写す。毎フレーム読みに行くのは、時間で進みイベントの無いリロードの進み
     /// (<see cref="HudModel.RefreshReloadProgress"/>)・溜めと熱と弾薬の種類 (<see cref="HudModel.RefreshWeaponGauges"/>)・スコープの倍率 (<see cref="AimDownSights.Magnification"/>) と
-    /// 照準の広がり・表示 (<see cref="RefreshCrosshair"/>) だけ。
+    /// 照準の広がり・表示・目からの射線の遮り (<see cref="RefreshCrosshair"/>) だけ。
     /// Health や Weapon が作り直されたとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
     /// オンライン (Fps.Net の NetHud) は源を渡さずに作り、<see cref="Model"/> の Set 系で値を書く。チームの点数 (左上) と
     /// 試合結果 (中央上) はそのときだけ出る。
@@ -53,9 +53,37 @@ namespace Fps.Runtime
         private ColorPalette _paintedPalette;
         private HudVisibility _visibility = HudVisibility.Full;
         private LocalizedTexts _texts;
+        private AimBlockCatalog _aimBlockCatalog;
+        private bool _aimBlockCatalogResolved;
+        private AimBlockSettings _aimBlockSettings;
 
         /// <summary>表示中の文字列。</summary>
         public HudModel Model => _model;
+
+        /// <summary>
+        /// 目からの射線が遮られているときの照準の知らせ方 (<see cref="RefreshAimBlock"/>)。初めて読むときに <see cref="AimBlockCatalog.Load"/> で探し、
+        /// 見つからなければ null (<see cref="AimBlockSettings.Default"/> と、コードで作る印で出す)。
+        /// </summary>
+        public AimBlockCatalog AimBlockCatalog
+        {
+            get
+            {
+                if (!_aimBlockCatalogResolved)
+                {
+                    _aimBlockCatalog = AimBlockCatalog.Load();
+                    _aimBlockCatalogResolved = true;
+                }
+
+                return _aimBlockCatalog;
+            }
+            set
+            {
+                _aimBlockCatalog = value;
+                _aimBlockCatalogResolved = true;
+                _aimBlockSettings = null;
+                _view?.SetAimBlockMarker(value != null ? value.Marker : null);
+            }
+        }
 
         /// <summary>Label に写している View。UIDocument の木がまだ無ければ null。</summary>
         public HudView View => _view;
@@ -461,6 +489,8 @@ namespace Fps.Runtime
 
             _view = new HudView(root, _model, _visibility);
             _view.SetTeamColors(_alphaColor, _bravoColor);
+            var aimBlockCatalog = AimBlockCatalog;
+            _view.SetAimBlockMarker(aimBlockCatalog != null ? aimBlockCatalog.Marker : null);
             _texts = LocalizedTexts.Bind(root);
             Localizer.Changed += HandleLanguageChanged;
             ApplyVisibilityToElementViews();
@@ -543,13 +573,109 @@ namespace Fps.Runtime
             if (_weapon == null)
             {
                 _model.ResetCrosshair();
+                ApplyAimBlock(false, null);
                 return;
             }
 
             var aiming = _ads != null && _ads.IsAiming;
             var sprinting = _mover != null && _mover.IsSprinting;
             var view = _rig != null ? _rig.Mode : ViewMode.FirstPerson;
-            _model.SetCrosshair(_weapon.CrosshairSpreadFraction, CrosshairConeGap(), ShowsCrosshair(view, aiming, sprinting));
+            var shown = ShowsCrosshair(view, aiming, sprinting);
+            _model.SetCrosshair(_weapon.CrosshairSpreadFraction, CrosshairConeGap(), shown);
+            RefreshAimBlock(shown);
+        }
+
+        /// <summary>
+        /// 照準を出している間、目から画面中央が指す点への線がその点より手前で遮られているかを武器の射撃と同じ条件
+        /// (<see cref="ViewRig.TryFindAimBlock(Transform, Transform, float, Transform, LayerMask, float, out Vector3)"/>・武器の射程と当たるレイヤー) で調べ、
+        /// 遮られていれば遮られた点の画面上の位置を <see cref="HudModel.SetAimBlock"/> で渡す。視点に関係なく同じ判定を使う。
+        /// 出すかと余裕は <see cref="AimBlockCatalog"/> から読み、変わったときに <c>[HUD] aim blocked=True</c> のようにログに出す。
+        /// </summary>
+        private void RefreshAimBlock(bool crosshairShown)
+        {
+            var settings = AimBlockSettingsInUse();
+            var aim = _weapon.Aim;
+            var eye = _rig != null ? ViewRig.FindEye(_rig.transform) : null;
+            var range = _weapon.HitscanRange;
+            if (!crosshairShown || !settings.Enabled || aim == null || eye == null || aim.parent != eye
+                || !(range > 0f) || float.IsInfinity(range))
+            {
+                ApplyAimBlock(false, null);
+                return;
+            }
+
+            if (!ViewRig.TryFindAimBlock(aim, eye, range, aim.root, _weapon.HitMask, settings.Margin, out var point))
+            {
+                ApplyAimBlock(false, null);
+                return;
+            }
+
+            var camera = _ads != null && _ads.Camera != null ? _ads.Camera : aim.GetComponent<Camera>();
+            ApplyAimBlock(true, AimBlockViewport(camera, point));
+        }
+
+        /// <summary>world の点をカメラのビューポート座標にする。カメラが無いか点がカメラの後ろなら null。</summary>
+        public static System.Numerics.Vector2? AimBlockViewport(Camera camera, Vector3 world)
+        {
+            if (camera == null)
+            {
+                return null;
+            }
+
+            var viewport = camera.WorldToViewportPoint(world);
+            if (!(viewport.z > 0f)
+                || float.IsNaN(viewport.x) || float.IsInfinity(viewport.x)
+                || float.IsNaN(viewport.y) || float.IsInfinity(viewport.y))
+            {
+                return null;
+            }
+
+            return new System.Numerics.Vector2(viewport.x, viewport.y);
+        }
+
+        private void ApplyAimBlock(bool blocked, System.Numerics.Vector2? viewport)
+        {
+            var changed = blocked != _model.IsAimBlocked;
+            if (blocked)
+            {
+                _model.SetAimBlock(viewport);
+            }
+            else
+            {
+                _model.ClearAimBlock();
+            }
+
+            if (changed)
+            {
+                Debug.Log($"{LogTag} aim blocked={blocked}", this);
+            }
+        }
+
+        private AimBlockSettings AimBlockSettingsInUse()
+        {
+            if (_aimBlockSettings != null)
+            {
+                return _aimBlockSettings;
+            }
+
+            var catalog = AimBlockCatalog;
+            if (catalog == null)
+            {
+                _aimBlockSettings = AimBlockSettings.Default;
+                return _aimBlockSettings;
+            }
+
+            try
+            {
+                _aimBlockSettings = catalog.ToSettings();
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                Debug.LogWarning($"{LogTag} aim block catalog '{catalog.name}' is invalid; using the defaults: {e.Message}", this);
+                _aimBlockSettings = AimBlockSettings.Default;
+            }
+
+            return _aimBlockSettings;
         }
 
         public static bool ShowsCrosshair(ViewMode view, bool aiming, bool sprinting)

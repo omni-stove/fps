@@ -115,6 +115,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("当てたときのダメージの数値。空なら Resources/Presentation/DamageNumberCatalog、それも無ければ出さない")]
         private DamageNumberCatalog _damageNumbers;
 
+        [SerializeField, Tooltip("目からの射線が遮られているときの照準の知らせ方。空なら Resources/Presentation/AimBlockCatalog、それも無ければ既定値で出す")]
+        private AimBlockCatalog _aimBlock;
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
         private static GameContent _found;
@@ -296,6 +299,12 @@ namespace Fps.Runtime
         {
             get => _damageNumbers;
             set => _damageNumbers = value;
+        }
+
+        public AimBlockCatalog AimBlock
+        {
+            get => _aimBlock;
+            set => _aimBlock = value;
         }
 
         public static GameContent Current

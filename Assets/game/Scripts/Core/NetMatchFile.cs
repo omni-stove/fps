@@ -47,6 +47,12 @@ namespace Fps.Core
         public const string VaultMaxHeightItem = "vaultMaxHeight";
         public const string MantleMaxHeightItem = "mantleMaxHeight";
         public const string MantleSpeedItem = "mantleSpeed";
+        public const string WalkForwardScaleItem = "walkForwardScale";
+        public const string WalkBackwardScaleItem = "walkBackwardScale";
+        public const string WalkSideScaleItem = "walkSideScale";
+        public const string SprintForwardScaleItem = "sprintForwardScale";
+        public const string SprintBackwardScaleItem = "sprintBackwardScale";
+        public const string SprintSideScaleItem = "sprintSideScale";
         public const string StandingHeightItem = "standingHeight";
         public const string StandingCenterYItem = "standingCenterY";
         public const string StandingEyeYItem = "standingEyeY";
@@ -67,7 +73,9 @@ namespace Fps.Core
         private static readonly string[] _motorItems =
         {
             WalkSpeedItem, SprintSpeedItem, JumpHeightItem, GravityItem, AirControlItem, CrouchSpeedItem, SafeFallSpeedItem, LethalFallSpeedItem,
-            DodgeDistanceItem, DodgeSecondsItem, VaultMaxHeightItem, MantleMaxHeightItem, MantleSpeedItem, StandingHeightItem, StandingCenterYItem,
+            DodgeDistanceItem, DodgeSecondsItem, VaultMaxHeightItem, MantleMaxHeightItem, MantleSpeedItem,
+            WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem,
+            StandingHeightItem, StandingCenterYItem,
             StandingEyeYItem, CrouchHeightItem, RadiusItem, SlopeLimitDegreesItem, StepOffsetItem, SkinWidthItem,
             ProneHeightItem, ProneSpeedItem, DiveDistanceItem, DiveSecondsItem,
         };
@@ -230,6 +238,12 @@ namespace Fps.Core
             writer.Float(VaultMaxHeightItem, motor.VaultMaxHeight);
             writer.Float(MantleMaxHeightItem, motor.MantleMaxHeight);
             writer.Float(MantleSpeedItem, motor.MantleSpeed);
+            writer.Float(WalkForwardScaleItem, motor.WalkDirection.Forward);
+            writer.Float(WalkBackwardScaleItem, motor.WalkDirection.Backward);
+            writer.Float(WalkSideScaleItem, motor.WalkDirection.Side);
+            writer.Float(SprintForwardScaleItem, motor.SprintDirection.Forward);
+            writer.Float(SprintBackwardScaleItem, motor.SprintDirection.Backward);
+            writer.Float(SprintSideScaleItem, motor.SprintDirection.Side);
             writer.Float(StandingHeightItem, stance.Standing.Height);
             writer.Float(StandingCenterYItem, stance.Standing.CenterY);
             writer.Float(StandingEyeYItem, stance.Standing.EyeY);
@@ -339,6 +353,9 @@ namespace Fps.Core
                 var crouchHeight = fields.ReadFloat(CrouchHeightItem, ds.Crouched.Height);
                 var radius = fields.ReadFloat(RadiusItem, ds.Radius);
                 var prone = ReadProne(fields, dp);
+                var walkDirection = ReadDirection(fields, WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, dm.WalkDirection);
+                var sprintDirection = ReadDirection(
+                    fields, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem, dm.SprintDirection);
                 return new NetMotorSettings(
                     new MotorSpec(
                         fields.ReadFloat(WalkSpeedItem, dm.WalkSpeed),
@@ -353,7 +370,9 @@ namespace Fps.Core
                         fields.ReadFloat(DodgeSecondsItem, dm.DodgeSeconds),
                         fields.ReadFloat(VaultMaxHeightItem, dm.VaultMaxHeight),
                         fields.ReadFloat(MantleMaxHeightItem, dm.MantleMaxHeight),
-                        fields.ReadFloat(MantleSpeedItem, dm.MantleSpeed)),
+                        fields.ReadFloat(MantleSpeedItem, dm.MantleSpeed),
+                        walkDirection,
+                        sprintDirection),
                     new StanceGeometry(
                         fields.ReadFloat(StandingHeightItem, ds.Standing.Height),
                         fields.ReadFloat(StandingCenterYItem, ds.Standing.CenterY),
@@ -372,6 +391,27 @@ namespace Fps.Core
             {
                 // MotorSpec・StanceGeometry・CapsuleMoverSpec の引数名は項目名と同じ
                 throw fields.Rejected(e.ParamName == null ? fields.Path : fields.ItemPath(e.ParamName), e.Message, e);
+            }
+        }
+
+        private static MoveDirectionScale ReadDirection(
+            ServerDataJson.Fields fields, string forwardItem, string backwardItem, string sideItem, MoveDirectionScale fallback)
+        {
+            try
+            {
+                return new MoveDirectionScale(
+                    fields.ReadFloat(forwardItem, fallback.Forward),
+                    fields.ReadFloat(backwardItem, fallback.Backward),
+                    fields.ReadFloat(sideItem, fallback.Side));
+            }
+            catch (ArgumentException e)
+            {
+                // MoveDirectionScale の引数名は歩きとダッシュで共通なので、ここで項目名に直す
+                var item = e.ParamName == "forward" ? forwardItem
+                    : e.ParamName == "backward" ? backwardItem
+                    : e.ParamName == "side" ? sideItem
+                    : null;
+                throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
             }
         }
 

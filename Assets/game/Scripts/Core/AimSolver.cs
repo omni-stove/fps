@@ -50,6 +50,37 @@ namespace Fps.Core
             return toAim / (float)Math.Sqrt(lengthSquared);
         }
 
+        /// <summary>
+        /// 目から aimPoint への線が、目から hitDistance の所で物に当たったとき、狙う点より手前で遮られているか。
+        /// aimPoint から margin 以内の命中は狙った物そのものとみなし、遮られていないとする。
+        /// 視点に関係なく同じ判定で、一人称では目とカメラが重なるので命中は狙う点と同じ所になり、遮られない。
+        /// </summary>
+        /// <param name="eye">目の位置。</param>
+        /// <param name="aimPoint">狙う点。</param>
+        /// <param name="hitDistance">目から最初の命中までの距離 (m)。0 以上の有限値。</param>
+        /// <param name="margin">狙う点からこれより手前の命中だけを遮りとみなす距離 (m)。0 以上の有限値。</param>
+        /// <exception cref="ArgumentOutOfRangeException">hitDistance か margin が負か有限でないとき。</exception>
+        public static bool IsBlocked(Vector3 eye, Vector3 aimPoint, float hitDistance, float margin)
+        {
+            if (!IsNonNegativeFinite(hitDistance))
+            {
+                throw new ArgumentOutOfRangeException(nameof(hitDistance), hitDistance, "hitDistance must be a non-negative finite number");
+            }
+
+            if (!IsNonNegativeFinite(margin))
+            {
+                throw new ArgumentOutOfRangeException(nameof(margin), margin, "margin must be a non-negative finite number");
+            }
+
+            var lineLength = Vector3.Distance(eye, aimPoint);
+            return hitDistance < lineLength - margin;
+        }
+
+        private static bool IsNonNegativeFinite(float value)
+        {
+            return value >= 0f && !float.IsInfinity(value);
+        }
+
         private static Vector3 NormalizeOrThrow(Vector3 value, string name)
         {
             var lengthSquared = value.LengthSquared();

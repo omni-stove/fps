@@ -90,6 +90,15 @@ namespace Fps.Core
         /// <summary>照準を出すか。一人称の ADS 中とダッシュ中は false。</summary>
         public bool IsCrosshairVisible { get; private set; } = true;
 
+        /// <summary>目から狙う点までの線が、狙う点より手前で物に遮られているか。</summary>
+        public bool IsAimBlocked { get; private set; }
+
+        /// <summary>
+        /// 遮られた点の画面上の位置 (ビューポート座標。x は左 0〜右 1、y は下 0〜上 1)。
+        /// 遮られていないか、遮られた点がカメラの後ろにあるときは null。
+        /// </summary>
+        public System.Numerics.Vector2? AimBlockPoint { get; private set; }
+
         public float? ChargeFraction { get; private set; }
 
         public float? HeatFraction { get; private set; }
@@ -436,6 +445,44 @@ namespace Fps.Core
         public void ResetCrosshair()
         {
             SetCrosshair(0f, true);
+        }
+
+        /// <summary>
+        /// 目からの線が遮られている状態にし、遮られた点の画面上の位置 (ビューポート座標) を決める。点が画面に写らなければ null。
+        /// 狙う向きは毎フレーム変わるので HUD が毎フレーム呼び、状態か位置が変わったときだけ <see cref="HudField.AimBlock"/> を知らせる。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">viewport の成分が有限でない。</exception>
+        public void SetAimBlock(System.Numerics.Vector2? viewport)
+        {
+            if (viewport.HasValue && !IsFinite(viewport.Value.X, viewport.Value.Y))
+            {
+                throw new ArgumentOutOfRangeException(nameof(viewport), viewport, "viewport must be finite");
+            }
+
+            ApplyAimBlock(true, viewport);
+        }
+
+        /// <summary>遮られていない状態に戻す。</summary>
+        public void ClearAimBlock()
+        {
+            ApplyAimBlock(false, null);
+        }
+
+        private void ApplyAimBlock(bool blocked, System.Numerics.Vector2? viewport)
+        {
+            if (blocked == IsAimBlocked && viewport == AimBlockPoint)
+            {
+                return;
+            }
+
+            IsAimBlocked = blocked;
+            AimBlockPoint = viewport;
+            Changed?.Invoke(HudField.AimBlock);
+        }
+
+        private static bool IsFinite(float x, float y)
+        {
+            return !float.IsNaN(x) && !float.IsInfinity(x) && !float.IsNaN(y) && !float.IsInfinity(y);
         }
 
         /// <summary>

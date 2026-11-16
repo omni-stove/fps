@@ -68,7 +68,9 @@ namespace Fps.Core.Tests
         public void MotorValuesReadBackAndDefaultWhenLeftOut()
         {
             var motor = new NetMotorSettings(
-                new MotorSpec(6f, 9f, 1.5f, 18f, 0.2f, 3f, dodgeDistance: 4f),
+                new MotorSpec(
+                    6f, 9f, 1.5f, 18f, 0.2f, 3f, dodgeDistance: 4f,
+                    walkDirection: new MoveDirectionScale(1f, 0.7f, 0.85f), sprintDirection: new MoveDirectionScale(1f, 0.5f, 0.6f)),
                 new StanceGeometry(1.8f, 0.9f, 1.6f, 1.1f, 0.4f),
                 new CapsuleMoverSpec(50f, 0.35f, 0.05f, CapsuleMoverSpec.DefaultLayerMask));
             var original = new NetMatchFile(
@@ -81,6 +83,11 @@ namespace Fps.Core.Tests
             Assert.That(read.Motor.WalkSpeed, Is.EqualTo(6f));
             Assert.That(read.Motor.SprintSpeed, Is.EqualTo(9f));
             Assert.That(read.Motor.DodgeDistance, Is.EqualTo(4f));
+            Assert.That(read.Motor.WalkDirection.Forward, Is.EqualTo(1f));
+            Assert.That(read.Motor.WalkDirection.Backward, Is.EqualTo(0.7f));
+            Assert.That(read.Motor.WalkDirection.Side, Is.EqualTo(0.85f));
+            Assert.That(read.Motor.SprintDirection.Backward, Is.EqualTo(0.5f));
+            Assert.That(read.Motor.SprintDirection.Side, Is.EqualTo(0.6f));
             Assert.That(read.Stance.Standing.Height, Is.EqualTo(1.8f));
             Assert.That(read.Stance.Standing.CenterY, Is.EqualTo(0.9f));
             Assert.That(read.Stance.Standing.EyeY, Is.EqualTo(1.6f));
@@ -113,6 +120,23 @@ namespace Fps.Core.Tests
             Assert.That(NetMotorSettings.Default.Stance.Prone.Height, Is.EqualTo(ProneSpec.DefaultHeight));
         }
 
+        [Test]
+        public void DirectionScalesDefaultToUniformWhenLeftOut()
+        {
+            var bareText = "{\"loadout\": {\"slots\": [[\"Handgun\"]], \"weapons\": [\"" + _handgunId + "\"]}, \"weapons\": [" + _handgunJson + "]";
+            var read = NetMatchFile.Parse(bareText + ", \"motor\": {\"sprintBackwardScale\": 0.5}}", "direction.json").Motor.Motor;
+
+            Assert.That(read.SprintDirection.Backward, Is.EqualTo(0.5f));
+            Assert.That(read.SprintDirection.Forward, Is.EqualTo(1f));
+            Assert.That(read.SprintDirection.Side, Is.EqualTo(1f));
+            Assert.That(read.WalkDirection.Forward, Is.EqualTo(1f));
+            Assert.That(read.WalkDirection.Backward, Is.EqualTo(1f));
+            Assert.That(read.WalkDirection.Side, Is.EqualTo(1f));
+        }
+
+        [TestCase("{\"motor\": {\"walkBackwardScale\": -1}}", "motor.walkBackwardScale")]
+        [TestCase("{\"motor\": {\"sprintSideScale\": -0.5}}", "motor.sprintSideScale")]
+        [TestCase("{\"motor\": {\"sprintForwardScale\": -1}}", "motor.sprintForwardScale")]
         [TestCase("{\"motor\": {\"proneSpeed\": -1}}", "motor.proneSpeed")]
         [TestCase("{\"motor\": {\"diveSeconds\": 0}}", "motor.diveSeconds")]
         [TestCase("{\"motor\": {\"radius\": -1}}", "motor.radius")]

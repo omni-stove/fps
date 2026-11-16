@@ -31,7 +31,8 @@ namespace Fps.Core
         /// </summary>
         /// <param name="moveInput">移動入力。X が右、Y が前。長さ 1 を超える分は切り詰める。</param>
         /// <param name="yawRadians">向き (Y 軸まわり、ラジアン)。0 で +Z が前、正で右回り (+X 側) へ向く。</param>
-        /// <param name="sprint">ダッシュ中か。crouched が true なら無視する。</param>
+        /// <param name="sprint">ダッシュ中か。crouched が true なら無視する。ダッシュ中は <see cref="MotorSpec.SprintDirection"/>、
+        /// それ以外は <see cref="MotorSpec.WalkDirection"/> を向きの倍率に使う。</param>
         /// <param name="crouched">しゃがみ中か。<see cref="MotorSpec.CrouchSpeed"/> で動く。</param>
         /// <param name="jumpPressed">今フレームにジャンプが押されたか。接地中でなければ無視する。</param>
         /// <param name="isGrounded">接地しているか。</param>
@@ -39,13 +40,15 @@ namespace Fps.Core
         public Vector3 Step(
             Vector2 moveInput, float yawRadians, bool sprint, bool crouched, bool jumpPressed, bool isGrounded, float deltaSeconds)
         {
-            var speed = crouched ? Spec.CrouchSpeed : sprint ? Spec.SprintSpeed : Spec.WalkSpeed;
-            return StepAtSpeed(moveInput, yawRadians, speed, jumpPressed, isGrounded, deltaSeconds);
+            var sprinting = sprint && !crouched;
+            var speed = crouched ? Spec.CrouchSpeed : sprinting ? Spec.SprintSpeed : Spec.WalkSpeed;
+            var direction = sprinting ? Spec.SprintDirection : Spec.WalkDirection;
+            return StepAtSpeed(moveInput, yawRadians, speed, direction, jumpPressed, isGrounded, deltaSeconds);
         }
 
         /// <summary>
-        /// <see cref="Step"/> と同じく 1 フレーム進めるが、入力を倒し切ったときの水平速度を speed で渡す
-        /// (伏せのように <see cref="MotorSpec"/> に無い速さで動くとき)。
+        /// <see cref="Step"/> と同じく 1 フレーム進めるが、入力を前へ倒し切ったときの水平速度を speed で渡す
+        /// (伏せのように <see cref="MotorSpec"/> に無い速さで動くとき)。向きの倍率は <see cref="MotorSpec.WalkDirection"/> を掛ける。
         /// </summary>
         /// <param name="moveInput">移動入力。X が右、Y が前。長さ 1 を超える分は切り詰める。</param>
         /// <param name="yawRadians">向き (<see cref="Step"/> と同じ)。</param>
@@ -55,6 +58,12 @@ namespace Fps.Core
         /// <param name="deltaSeconds">経過秒数。0 以上。</param>
         public Vector3 StepAtSpeed(
             Vector2 moveInput, float yawRadians, float speed, bool jumpPressed, bool isGrounded, float deltaSeconds)
+        {
+            return StepAtSpeed(moveInput, yawRadians, speed, Spec.WalkDirection, jumpPressed, isGrounded, deltaSeconds);
+        }
+
+        private Vector3 StepAtSpeed(
+            Vector2 moveInput, float yawRadians, float speed, MoveDirectionScale direction, bool jumpPressed, bool isGrounded, float deltaSeconds)
         {
             if (!(speed >= 0f) || float.IsInfinity(speed))
             {
@@ -76,7 +85,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(yawRadians), yawRadians, "yawRadians must be finite");
             }
 
-            var desired = ToWorld(ClampLength(moveInput), yawRadians) * speed;
+            var desired = ToWorld(direction.Apply(ClampLength(moveInput)), yawRadians) * speed;
             var current = new Vector2(Velocity.X, Velocity.Z);
 
             Vector2 horizontal;

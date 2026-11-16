@@ -113,6 +113,80 @@ namespace Fps.Core.Tests
             Assert.That(motor.Velocity.Z, Is.EqualTo(2f).Within(_tolerance));
         }
 
+        private static MotorSpec DirectionalSpec()
+        {
+            return new MotorSpec(
+                walkSpeed: 4f, sprintSpeed: 8f, jumpHeight: 1.5f, gravity: 9.81f, airControl: 0.5f, crouchSpeed: 2f,
+                walkDirection: new MoveDirectionScale(1f, 0.5f, 0.75f),
+                sprintDirection: new MoveDirectionScale(1f, 0.25f, 0.5f));
+        }
+
+        [TestCase(0f, 1f, false, 0f, 4f)]
+        [TestCase(0f, -1f, false, 0f, -2f)]
+        [TestCase(1f, 0f, false, 3f, 0f)]
+        [TestCase(-1f, 0f, false, -3f, 0f)]
+        [TestCase(0f, 1f, true, 0f, 8f)]
+        [TestCase(0f, -1f, true, 0f, -2f)]
+        [TestCase(1f, 0f, true, 4f, 0f)]
+        public void DirectionScaleDependsOnTheInputDirectionAndSprint(float x, float y, bool sprint, float expectedX, float expectedZ)
+        {
+            var motor = new PlayerMotor(DirectionalSpec());
+
+            var d = motor.Step(new Vector2(x, y), 0f, sprint, false, false, true, 1f);
+
+            Assert.That(d.X, Is.EqualTo(expectedX).Within(_tolerance));
+            Assert.That(d.Z, Is.EqualTo(expectedZ).Within(_tolerance));
+        }
+
+        [Test]
+        public void DiagonalScalesEachAxisOfTheClampedInput()
+        {
+            var motor = new PlayerMotor(DirectionalSpec());
+            var half = (float)Math.Sqrt(0.5);
+
+            var d = motor.Step(new Vector2(1f, -1f), 0f, false, false, false, true, 1f);
+
+            Assert.That(d.X, Is.EqualTo(half * 0.75f * 4f).Within(_tolerance));
+            Assert.That(d.Z, Is.EqualTo(-half * 0.5f * 4f).Within(_tolerance));
+        }
+
+        [Test]
+        public void CrouchAndProneUseTheWalkDirectionScale()
+        {
+            var crouching = new PlayerMotor(DirectionalSpec());
+            var prone = new PlayerMotor(DirectionalSpec());
+
+            var crouched = crouching.Step(new Vector2(0f, -1f), 0f, true, true, false, true, 1f);
+            var crawled = prone.StepAtSpeed(new Vector2(0f, -1f), 0f, 1f, false, true, 1f);
+
+            Assert.That(crouched.Z, Is.EqualTo(-1f).Within(_tolerance));
+            Assert.That(crawled.Z, Is.EqualTo(-0.5f).Within(_tolerance));
+        }
+
+        [Test]
+        public void DefaultSpecMovesTheSameSpeedInEveryDirection()
+        {
+            Assert.That(MotorSpec.Default.WalkDirection, Is.SameAs(MoveDirectionScale.Uniform));
+            Assert.That(MotorSpec.Default.SprintDirection, Is.SameAs(MoveDirectionScale.Uniform));
+
+            var motor = new PlayerMotor(Spec());
+            var back = motor.Step(new Vector2(0f, -1f), 0f, true, false, false, true, 1f);
+            var side = motor.Step(new Vector2(1f, 0f), 0f, true, false, false, true, 1f);
+
+            Assert.That(back.Z, Is.EqualTo(-8f).Within(_tolerance));
+            Assert.That(side.X, Is.EqualTo(8f).Within(_tolerance));
+        }
+
+        [TestCase(-0.1f, 1f, 1f, "forward")]
+        [TestCase(1f, float.NaN, 1f, "backward")]
+        [TestCase(1f, 1f, float.PositiveInfinity, "side")]
+        public void DirectionScaleRejectsNegativeOrNonFiniteValues(float forward, float backward, float side, string param)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => new MoveDirectionScale(forward, backward, side));
+
+            Assert.That(e.ParamName, Is.EqualTo(param));
+        }
+
         [Test]
         public void CrouchSpeedIsTheTargetWhileAirborne()
         {

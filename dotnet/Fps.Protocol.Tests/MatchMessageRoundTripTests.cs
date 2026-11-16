@@ -49,7 +49,9 @@ namespace Fps.Protocol.Tests
         public void ConnectAcceptedCarriesTheServersMotorSettings()
         {
             var motor = new NetMotorSettings(
-                new MotorSpec(7f, 11f, 1.5f, 18f, 0.2f, 3f, 13f, 26f, 3.5f, 0.4f, 1.1f, 2.1f, 3.5f),
+                new MotorSpec(
+                    7f, 11f, 1.5f, 18f, 0.2f, 3f, 13f, 26f, 3.5f, 0.4f, 1.1f, 2.1f, 3.5f,
+                    new MoveDirectionScale(1f, 0.75f, 0.9f), new MoveDirectionScale(1.1f, 0.5f, 0.6f)),
                 new StanceGeometry(1.8f, 0.1f, 0.65f, 1.1f, 0.9f, 0.4f),
                 new CapsuleMoverSpec(40f, 0.25f, 0.06f, 5),
                 new ProneSpec(0.9f, 1.4f, 25f, 0.4f, 2f, 0.6f));
@@ -60,6 +62,11 @@ namespace Fps.Protocol.Tests
             Assert.That(got.KillPlaneY, Is.EqualTo(-30f));
             Assert.That(got.Motor.Motor.WalkSpeed, Is.EqualTo(7f));
             Assert.That(got.Motor.Motor.MantleSpeed, Is.EqualTo(3.5f));
+            Assert.That(got.Motor.Motor.WalkDirection.Backward, Is.EqualTo(0.75f));
+            Assert.That(got.Motor.Motor.WalkDirection.Side, Is.EqualTo(0.9f));
+            Assert.That(got.Motor.Motor.SprintDirection.Forward, Is.EqualTo(1.1f));
+            Assert.That(got.Motor.Motor.SprintDirection.Backward, Is.EqualTo(0.5f));
+            Assert.That(got.Motor.Motor.SprintDirection.Side, Is.EqualTo(0.6f));
             Assert.That(got.Motor.Stance.Standing.Height, Is.EqualTo(1.8f));
             Assert.That(got.Motor.Stance.Standing.EyeY, Is.EqualTo(0.65f));
             Assert.That(got.Motor.Stance.Crouched.Height, Is.EqualTo(1.1f));
@@ -78,9 +85,23 @@ namespace Fps.Protocol.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
             var bytes = writer.AsSegment().ToArray();
 
-            // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (13 + 6 + 3 + 1 + 6 個)
-            var walkSpeed = bytes.Length - 4 - ((13 + 6 + 3 + 1 + 6) * 4);
+            // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (13 + 6 + 6 + 3 + 1 + 6 個)
+            var walkSpeed = bytes.Length - 4 - ((13 + 6 + 6 + 3 + 1 + 6) * 4);
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkSpeed, 4), -1f);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void ConnectAcceptedWithANegativeDirectionScaleIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
+            var bytes = writer.AsSegment().ToArray();
+
+            // 歩きの前の倍率 (向きの倍率の先頭) を負にする。その後ろに向きの倍率 6 個と体・カプセル・伏せの値 (6 + 3 + 1 + 6 個)、落ちる高さが並ぶ
+            var walkForward = bytes.Length - 4 - ((6 + 6 + 3 + 1 + 6) * 4);
+            System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkForward, 4), -1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
         }

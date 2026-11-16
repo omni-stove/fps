@@ -34,5 +34,8 @@ namespace Fps.Core
         Magnification,
 
         LockOn,
+
+        /// <summary>目から狙う点までの線が手前で遮られているかと、遮られた点の画面上の位置。</summary>
+        AimBlock,
     }
 }

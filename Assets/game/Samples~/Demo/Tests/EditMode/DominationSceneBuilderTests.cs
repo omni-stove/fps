@@ -171,7 +171,7 @@ namespace Fps.Tests.EditMode
 
             var bootstrap = Find(DominationSceneBuilder.BootstrapObjectName).GetComponent<GameBootstrap>();
             Assert.That(bootstrap, Is.Not.Null);
-            Assert.That(bootstrap.ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(bootstrap.RulesDefinition.ViewMode, Is.EqualTo(ViewMode.FirstPerson));
             Assert.That(bootstrap.CreatesFloor, Is.False, "the scene has its own floor with a baked NavMesh");
             Assert.That(bootstrap.WeaponDefinitions, Is.EqualTo(new[] { rifle }));
             Assert.That(bootstrap.RulesDefinition, Is.SameAs(rules));
@@ -308,7 +308,7 @@ namespace Fps.Tests.EditMode
             _scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
 
             var bootstrap = Find(DominationSceneBuilder.BootstrapObjectName).GetComponent<GameBootstrap>();
-            Assert.That(bootstrap.ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(bootstrap.RulesDefinition.ViewMode, Is.EqualTo(ViewMode.FirstPerson));
             Assert.That(bootstrap.WeaponDefinitions, Is.EqualTo(TestScenes.ExpectedPlayerWeapons()));
             Assert.That(
                 bootstrap.RulesDefinition,

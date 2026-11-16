@@ -645,7 +645,8 @@ namespace Fps.Tests.EditMode
             {
                 var bootstrap = host.AddComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
-                bootstrap.ViewMode = ViewMode.ThirdPerson;
+                _rules.ViewMode = ViewMode.ThirdPerson;
+                bootstrap.RulesDefinition = _rules;
                 bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
                 LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
 
@@ -697,7 +698,7 @@ namespace Fps.Tests.EditMode
             {
                 var bootstrap = host.AddComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
-                bootstrap.ViewMode = ViewMode.ThirdPerson;
+                _rules.ViewMode = ViewMode.ThirdPerson;
                 bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
                 bootstrap.RulesDefinition = _rules;
                 bootstrap.PlayerMaxHealth = 150;

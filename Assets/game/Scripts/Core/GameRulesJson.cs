@@ -9,6 +9,7 @@ namespace Fps.Core
     /// <see cref="GameRules"/> を JSON から読む。項目は <see cref="GameRules"/> の構成と同じで、名前はコンストラクターの引数名
     /// (<see cref="ItemNames"/>)。アクションは <see cref="ActionsItem"/> の入れ子のオブジェクト (<see cref="ActionItemNames"/>) に書く。
     /// 省略した項目は <see cref="GameRules.Default"/> (アクションは <see cref="GameRules.Default"/> の <see cref="GameRules.Actions"/>) の値になる。
+    /// 土台のルールを渡す <see cref="Parse(string, string, GameRules)"/> なら、省略した項目は土台の値になる (ミッションが難易度のルールの一部だけを変えるときに使う)。
     /// 列挙は名前の文字列 (例: <c>"Off"</c>)、小数は JSON の数、整数は小数点も指数も無い数、真偽は true / false で書く。
     /// 値の範囲の検査は <see cref="GameRules"/> と <see cref="ActionRules"/> に任せ、どれかに引っかかれば
     /// どのファイルのどの項目かを添えた <see cref="GameRulesJsonException"/> を投げる。
@@ -35,6 +36,7 @@ namespace Fps.Core
         public const string IdleKickSecondsItem = "idleKickSeconds";
         public const string MaxWeaponsItem = "maxWeapons";
         public const string ReloadModeItem = "reloadMode";
+        public const string ViewModeItem = "viewMode";
 
         public const string DownedItem = "downed";
         public const string DownedBleedoutSecondsItem = "downedBleedoutSeconds";
@@ -89,6 +91,7 @@ namespace Fps.Core
             IdleKickSecondsItem,
             MaxWeaponsItem,
             ReloadModeItem,
+            ViewModeItem,
         };
 
         /// <summary><see cref="ActionsItem"/> の中に書ける項目の名前 (<see cref="ActionRules"/> のコンストラクターの並び)。</summary>
@@ -130,6 +133,24 @@ namespace Fps.Core
         /// </exception>
         public static GameRules Parse(string text, string sourceName)
         {
+            return Parse(text, sourceName, GameRules.Default);
+        }
+
+        /// <summary>text を、baseRules の上に書いた項目だけを変えるルールとして読む。省略した項目 (アクションの中の項目も) は baseRules の値になる。</summary>
+        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
+        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
+        /// <param name="baseRules">省略した項目に使うルール。</param>
+        /// <exception cref="ArgumentNullException">text か baseRules が null。</exception>
+        /// <exception cref="GameRulesJsonException">
+        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="GameRules"/> の検査に通らない。
+        /// </exception>
+        public static GameRules Parse(string text, string sourceName, GameRules baseRules)
+        {
+            if (baseRules == null)
+            {
+                throw new ArgumentNullException(nameof(baseRules));
+            }
+
             if (text == null)
             {
                 throw new ArgumentNullException(nameof(text));
@@ -147,13 +168,17 @@ namespace Fps.Core
                 throw new GameRulesJsonException(source, null, $"game rules JSON '{source}' is not valid JSON: {e.Message}", e);
             }
 
-            return FromNode(root, source, string.Empty);
+            return FromNode(root, source, string.Empty, baseRules);
         }
 
         internal static GameRules FromNode(Node root, string source, string prefix)
         {
+            return FromNode(root, source, prefix, GameRules.Default);
+        }
+
+        private static GameRules FromNode(Node root, string source, string prefix, GameRules defaults)
+        {
             var top = new Fields(source, root, prefix, ItemNames);
-            var defaults = GameRules.Default;
 
             var actions = ReadActions(source, top, prefix, defaults.Actions);
 
@@ -178,7 +203,8 @@ namespace Fps.Core
                     top.ReadInt(MinPlayersItem, defaults.MinPlayers),
                     top.ReadFloat(IdleKickSecondsItem, defaults.IdleKickSeconds),
                     top.ReadInt(MaxWeaponsItem, defaults.MaxWeapons),
-                    top.ReadEnum(ReloadModeItem, defaults.ReloadMode));
+                    top.ReadEnum(ReloadModeItem, defaults.ReloadMode),
+                    top.ReadEnum(ViewModeItem, defaults.ViewMode));
             }
             catch (ArgumentException e)
             {
@@ -187,8 +213,8 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// rules のすべての項目を <see cref="Parse"/> が読める JSON にする。並びは <see cref="ItemNames"/> と <see cref="ActionItemNames"/> の順で、
-        /// 省略はしない。小数は読み直すと同じ float になる最短の形で書くので、<see cref="Parse"/> に通すと同じ値に戻る。
+        /// rules のすべての項目を <see cref="Parse(string, string)"/> が読める JSON にする。並びは <see cref="ItemNames"/> と <see cref="ActionItemNames"/> の順で、
+        /// 省略はしない。小数は読み直すと同じ float になる最短の形で書くので、<see cref="Parse(string, string)"/> に通すと同じ値に戻る。
         /// </summary>
         /// <exception cref="ArgumentNullException">rules が null。</exception>
         public static string Write(GameRules rules)
@@ -245,6 +271,7 @@ namespace Fps.Core
             writer.Float(IdleKickSecondsItem, rules.IdleKickSeconds);
             writer.Int(MaxWeaponsItem, rules.MaxWeapons);
             writer.Enum(ReloadModeItem, rules.ReloadMode);
+            writer.Enum(ViewModeItem, rules.ViewMode);
             return writer.Finish();
         }
 

@@ -634,6 +634,77 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TryBeginWithLaysTheMissionsRulesOverrideOverTheDifficultyRules()
+        {
+            var scene = BuildScene();
+            var rig = scene.Player.gameObject.AddComponent<ViewRig>();
+            scene.Campaign.RulesDefinition = NewRules("CampaignNormal", 3f, 20f, false, 1.5f);
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+            _definition.RulesOverride = "{\"viewMode\": \"ThirdPerson\", \"regenPerSecond\": 5}";
+
+            ExpectCampaign(new Regex(@"^\[Campaign\] rules=CampaignNormal difficulty=\(none\) regen=20/s "));
+            ExpectCampaign($"mission={MissionName} rules override view=ThirdPerson");
+            BeginWithWorldQuietly(scene);
+
+            Assert.That(scene.Campaign.Rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+            Assert.That(scene.Campaign.Rules.RegenPerSecond, Is.EqualTo(5f));
+            Assert.That(scene.Campaign.Rules.RegenDelaySeconds, Is.EqualTo(3f), "items the override leaves out keep the difficulty's value");
+            Assert.That(scene.Campaign.Rules.ReserveAmmoMultiplier, Is.EqualTo(1.5f));
+            Assert.That(scene.Weapon.Loadout.Items[0].ReserveAmmo, Is.EqualTo(135), "90 x 1.5");
+            Assert.That(scene.Player.GetComponent<HealthRegen>().Rules, Is.SameAs(scene.Campaign.Rules));
+            Assert.That(rig.Mode, Is.EqualTo(ViewMode.ThirdPerson));
+        }
+
+        [Test]
+        public void WithoutAnOverrideTheViewFollowsTheDifficultyRules()
+        {
+            var scene = BuildScene();
+            var rig = scene.Player.gameObject.AddComponent<ViewRig>();
+            rig.Mode = ViewMode.ThirdPerson;
+            scene.Campaign.RulesDefinition = NewRules("CampaignNormal", 0f, 0f, false, 1f);
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+
+            BeginWithWorldQuietly(scene);
+
+            Assert.That(scene.Campaign.Rules.ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(rig.Mode, Is.EqualTo(ViewMode.FirstPerson));
+        }
+
+        [Test]
+        public void AnInvalidMissionRulesOverrideRefusesToBegin()
+        {
+            var scene = BuildScene();
+            scene.Campaign.RulesDefinition = NewRules("CampaignNormal", 0f, 0f, false, 1f);
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+            _definition.RulesOverride = "{\"viewMode\": \"Overhead\"}";
+            ConfigureForWorld(scene);
+
+            LogAssert.Expect(
+                LogType.Error,
+                new Regex(@"^\[Campaign\] キャンペーンを始められません: mission '" + MissionName + "' has an invalid rules override: .*'viewMode'"));
+            Assert.That(scene.Campaign.TryBeginWith(scene.World()), Is.False);
+
+            Assert.That(scene.Campaign.IsStarted, Is.False);
+            Assert.That(scene.Player.GetComponent<HealthRegen>(), Is.Null, "nothing is applied");
+        }
+
+        [Test]
+        public void TryApplyMissionRulesKeepsTheRulesWithoutAMissionOrAnOverride()
+        {
+            var scene = BuildScene();
+            var rules = GameRules.Default.WithRegenPerSecond(7f);
+            var kept = rules;
+
+            Assert.That(scene.Campaign.TryApplyMissionRules(null, ref rules), Is.True);
+            Assert.That(rules, Is.SameAs(kept));
+            Assert.That(scene.Campaign.TryApplyMissionRules(_definition, ref rules), Is.True);
+            Assert.That(rules, Is.SameAs(kept));
+
+            GameRules none = null;
+            Assert.Throws<ArgumentNullException>(() => scene.Campaign.TryApplyMissionRules(_definition, ref none));
+        }
+
+        [Test]
         public void RestoringASaveKeepsItsReserveWithoutTheMultiplier()
         {
             var save = new CampaignSave(MissionName, CheckpointId, 60, RifleAmmo(5, 20), RifleId, new[]

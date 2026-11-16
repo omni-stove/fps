@@ -194,5 +194,70 @@ namespace Fps.Tests.EditMode
                 Object.DestroyImmediate(copy);
             }
         }
+
+        [Test]
+        public void AnEmptyRulesOverrideKeepsTheBaseRules()
+        {
+            var baseRules = GameRules.Default.WithRegenPerSecond(20f);
+
+            Assert.That(_definition.RulesOverride, Is.Empty);
+            Assert.That(_definition.ApplyRulesOverride(baseRules), Is.SameAs(baseRules));
+
+            _definition.RulesOverride = "  \n ";
+            Assert.That(_definition.ApplyRulesOverride(baseRules), Is.SameAs(baseRules));
+
+            _definition.RulesOverride = null;
+            Assert.That(_definition.RulesOverride, Is.Empty);
+        }
+
+        [Test]
+        public void TheRulesOverrideChangesOnlyTheItemsItNames()
+        {
+            var baseRules = GameRules.Default
+                .WithRegenDelaySeconds(3f)
+                .WithRegenPerSecond(20f)
+                .WithActions(ActionRules.Default.WithActiveReload(ActiveReload.On));
+            _definition.RulesOverride = "{\"viewMode\": \"ThirdPerson\", \"actions\": {\"cover\": \"On\"}}";
+
+            var rules = _definition.ApplyRulesOverride(baseRules);
+
+            Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+            Assert.That(rules.Actions.Cover, Is.EqualTo(Cover.On));
+            Assert.That(rules.Actions.ActiveReload, Is.EqualTo(ActiveReload.On), "unnamed action items keep the base");
+            Assert.That(rules.RegenDelaySeconds, Is.EqualTo(3f));
+            Assert.That(rules.RegenPerSecond, Is.EqualTo(20f));
+            Assert.That(baseRules.ViewMode, Is.EqualTo(ViewMode.FirstPerson), "the base rules are not changed");
+        }
+
+        [Test]
+        public void AnInvalidRulesOverrideNamesTheMission()
+        {
+            _definition.RulesOverride = "{\"viewMode\": \"Overhead\"}";
+
+            var e = Assert.Throws<MissionDefinitionException>(() => _definition.ApplyRulesOverride(GameRules.Default));
+            Assert.That(e.Message, Does.Contain("TestDefinition"));
+            Assert.That(e.Message, Does.Contain("viewMode"));
+            Assert.That(e.InnerException, Is.InstanceOf<GameRulesJsonException>());
+
+            _definition.RulesOverride = "{";
+            Assert.Throws<MissionDefinitionException>(() => _definition.ApplyRulesOverride(GameRules.Default));
+            Assert.Throws<ArgumentNullException>(() => _definition.ApplyRulesOverride(null));
+        }
+
+        [Test]
+        public void TheRulesOverrideSurvivesSerialization()
+        {
+            _definition.RulesOverride = "{\"viewMode\": \"ThirdPerson\"}";
+
+            var copy = Object.Instantiate(_definition);
+            try
+            {
+                Assert.That(copy.RulesOverride, Is.EqualTo("{\"viewMode\": \"ThirdPerson\"}"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(copy);
+            }
+        }
     }
 }

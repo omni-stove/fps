@@ -78,7 +78,8 @@ namespace Fps.Core.Tests
   ""minPlayers"": 8,
   ""idleKickSeconds"": 90,
   ""maxWeapons"": 2,
-  ""reloadMode"": ""Manual""
+  ""reloadMode"": ""Manual"",
+  ""viewMode"": ""ThirdPerson""
 }";
             var expected = new GameRules(
                 FriendlyFire.Reflect,
@@ -99,15 +100,56 @@ namespace Fps.Core.Tests
                 8,
                 90f,
                 2,
-                ReloadMode.Manual);
+                ReloadMode.Manual,
+                ViewMode.ThirdPerson);
 
             AssertSameRules(GameRulesJson.Parse(json, _source), expected);
         }
 
         [Test]
+        public void OmittedViewModeIsFirstPerson()
+        {
+            Assert.That(GameRulesJson.Parse("{}", _source).ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(GameRulesJson.Parse("{\"viewMode\": \"ThirdPerson\"}", _source).ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+        }
+
+        [Test]
+        public void ParseOverBaseRulesChangesOnlyTheWrittenItems()
+        {
+            var baseRules = GameRules.Default
+                .WithRegenPerSecond(15f)
+                .WithInfiniteReserve(true)
+                .WithActions(ActionRules.Default.WithGrenade(Grenade.On).WithGrenadeCount(2));
+
+            var rules = GameRulesJson.Parse("{\"viewMode\": \"ThirdPerson\", \"actions\": {\"cover\": \"On\"}}", _source, baseRules);
+
+            var expected = baseRules
+                .WithViewMode(ViewMode.ThirdPerson)
+                .WithActions(baseRules.Actions.WithCover(Cover.On));
+            AssertSameRules(rules, expected);
+        }
+
+        [Test]
+        public void ParseOverBaseRulesOfAnEmptyObjectIsTheBase()
+        {
+            var baseRules = GameRules.Default.WithViewMode(ViewMode.ThirdPerson).WithMaxWeapons(3);
+
+            AssertSameRules(GameRulesJson.Parse("{}", _source, baseRules), baseRules);
+        }
+
+        [Test]
+        public void ParseOverBaseRulesRejectsNullBaseAndBadValuesWithTheirNames()
+        {
+            Assert.Throws<ArgumentNullException>(() => GameRulesJson.Parse("{}", _source, null));
+
+            var e = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"viewMode\": \"Overhead\"}", _source, GameRules.Default));
+            AssertNames(e, "viewMode");
+        }
+
+        [Test]
         public void ItemNamesMatchTheRulesConstructors()
         {
-            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(19));
+            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(20));
             Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(25));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
@@ -187,7 +229,8 @@ namespace Fps.Core.Tests
                 8,
                 0.1f,
                 2,
-                ReloadMode.Manual);
+                ReloadMode.Manual,
+                ViewMode.ThirdPerson);
 
             var written = GameRulesJson.Write(rules);
 
@@ -326,6 +369,7 @@ namespace Fps.Core.Tests
         [TestCase("{\"actions\": \"On\"}", "actions")]
         [TestCase("{\"actions\": [1]}", "actions")]
         [TestCase("{\"deathBody\": null}", "deathBody")]
+        [TestCase("{\"viewMode\": \"Overhead\"}", "viewMode")]
         [TestCase("{\"actions\": null}", "actions")]
         public void WrongTypeIsRejectedWithItsName(string json, string item)
         {
@@ -406,6 +450,7 @@ namespace Fps.Core.Tests
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds), "idleKickSeconds");
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons), "maxWeapons");
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode), "reloadMode");
+            Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode), "viewMode");
 
             var a = actual.Actions;
             var b = expected.Actions;

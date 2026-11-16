@@ -662,7 +662,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.GameBootstrap
   _createFloor: 1
-  _viewMode: 0
   _weaponDefinitions:
   - {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}
   - {fileID: 11400000, guid: d96f9ac9ccfb14f6b9303123108fd62a, type: 2}

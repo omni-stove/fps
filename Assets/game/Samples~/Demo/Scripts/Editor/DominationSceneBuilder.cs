@@ -347,7 +347,6 @@ namespace Fps.Editor
                 created.Add(bootstrapObject);
                 SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
                 var bootstrap = bootstrapObject.AddComponent<GameBootstrap>();
-                bootstrap.ViewMode = ViewMode.FirstPerson;
                 bootstrap.CreatesFloor = false;
                 bootstrap.WeaponDefinitions = playerWeapons;
                 bootstrap.RulesDefinition = rules;

@@ -10,6 +10,8 @@ namespace Fps.Runtime
     /// キャンペーンの 1 ミッションの定義。目標の一覧をアセットとして持ち、<see cref="CreateMission"/> で
     /// <see cref="Fps.Core.Mission"/> を作る。検証は <see cref="Fps.Core.Mission"/> と <see cref="Objective"/> に任せ、
     /// 失敗したらどのアセットのどの目標かを添えて <see cref="MissionDefinitionException"/> を投げる。
+    /// ミッションだけ視点やアクションを変えるときは、変える項目だけをルールの JSON (<see cref="GameRulesJson"/> の形) で
+    /// <see cref="RulesOverride"/> に書く。キャンペーンは難易度のルールにこれを重ねて使う (<see cref="ApplyRulesOverride"/>)。
     /// </summary>
     [CreateAssetMenu(fileName = "Mission", menuName = "Fps/Mission Definition")]
     public sealed class MissionDefinition : ScriptableObject
@@ -20,6 +22,9 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("目標。前提は同じミッションの目標の Id を指す")]
         private List<ObjectiveDefinition> _objectives = new List<ObjectiveDefinition>();
+
+        [SerializeField, TextArea(3, 12), Tooltip("難易度のルールのうち、このミッションだけ変える項目を書いたルールの JSON (例: {\"viewMode\": \"ThirdPerson\", \"actions\": {\"cover\": \"On\"}})。空なら難易度のルールのまま")]
+        private string _rulesOverride = string.Empty;
 
         /// <summary>プレイヤーに見せるミッション名の、言語の表のキー。</summary>
         public string DisplayNameKey
@@ -49,6 +54,42 @@ namespace Fps.Runtime
             RequireKeyPart(missionId, nameof(missionId));
             RequireKeyPart(objectiveId, nameof(objectiveId));
             return "campaign.mission." + missionId + ".objective." + objectiveId;
+        }
+
+        /// <summary>難易度のルールのうち、このミッションだけ変える項目を書いたルールの JSON。空白だけなら変えない。</summary>
+        public string RulesOverride
+        {
+            get => _rulesOverride ?? string.Empty;
+            set => _rulesOverride = value ?? string.Empty;
+        }
+
+        /// <summary>
+        /// baseRules に <see cref="RulesOverride"/> を重ねたルール。書いていない項目 (アクションの中の項目も) は baseRules の値のまま。
+        /// <see cref="RulesOverride"/> が空白だけなら baseRules をそのまま返す。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">baseRules が null。</exception>
+        /// <exception cref="MissionDefinitionException">JSON が読めないか、重ねた値が不正なとき。メッセージにアセット名を含む。</exception>
+        public GameRules ApplyRulesOverride(GameRules baseRules)
+        {
+            if (baseRules == null)
+            {
+                throw new ArgumentNullException(nameof(baseRules));
+            }
+
+            if (string.IsNullOrWhiteSpace(_rulesOverride))
+            {
+                return baseRules;
+            }
+
+            var source = string.IsNullOrEmpty(name) ? "(unnamed mission)" : name;
+            try
+            {
+                return GameRulesJson.Parse(_rulesOverride, $"mission '{source}' rules override", baseRules);
+            }
+            catch (GameRulesJsonException e)
+            {
+                throw new MissionDefinitionException($"mission '{source}' has an invalid rules override: {e.Message}", e);
+            }
         }
 
         /// <summary>定義順の目標。中身を書き換えるときは <see cref="SetObjectives"/> を使う。</summary>

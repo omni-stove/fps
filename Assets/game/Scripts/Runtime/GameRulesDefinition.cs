@@ -152,6 +152,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("Auto なら撃ち切ったら (弾倉が空で引き金を引いたときも) 自動でリロードする。Manual なら Reload を押したときだけ")]
         private ReloadMode _reloadMode = ReloadMode.Auto;
 
+        [SerializeField, Tooltip("プレイヤーの視点。一人称か三人称 (肩越し)")]
+        private ViewMode _viewMode = ViewMode.FirstPerson;
+
         public FriendlyFire FriendlyFire
         {
             get => _friendlyFire;
@@ -410,6 +413,12 @@ namespace Fps.Runtime
             set => _reloadMode = value;
         }
 
+        public ViewMode ViewMode
+        {
+            get => _viewMode;
+            set => _viewMode = value;
+        }
+
         /// <summary>定義を不変の <see cref="GameRules"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="GameRulesDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ToRules()
@@ -460,7 +469,8 @@ namespace Fps.Runtime
                     _minPlayers,
                     _idleKickSeconds,
                     _maxWeapons,
-                    _reloadMode);
+                    _reloadMode,
+                    _viewMode);
             }
             catch (ArgumentException e)
             {
@@ -514,6 +524,7 @@ namespace Fps.Runtime
             _idleKickSeconds = rules.IdleKickSeconds;
             _maxWeapons = rules.MaxWeapons;
             _reloadMode = rules.ReloadMode;
+            _viewMode = rules.ViewMode;
 
             var actions = rules.Actions;
             _downed = actions.Downed;

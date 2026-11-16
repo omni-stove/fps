@@ -53,3 +53,4 @@ MonoBehaviour:
   _minPlayers: 0
   _idleKickSeconds: 0
   _maxWeapons: 2
+  _viewMode: 1

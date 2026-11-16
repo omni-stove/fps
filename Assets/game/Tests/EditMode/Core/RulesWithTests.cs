@@ -54,7 +54,8 @@ namespace Fps.Core.Tests
             4,
             60f,
             3,
-            ReloadMode.Manual);
+            ReloadMode.Manual,
+            ViewMode.ThirdPerson);
 
         [Test]
         public void EachGameRulesWithReplacesOnlyItsValue()
@@ -81,6 +82,7 @@ namespace Fps.Core.Tests
                 (nameof(GameRules.IdleKickSeconds), r => r.WithIdleKickSeconds(0f), 0f),
                 (nameof(GameRules.MaxWeapons), r => r.WithMaxWeapons(0), 0),
                 (nameof(GameRules.ReloadMode), r => r.WithReloadMode(ReloadMode.Auto), ReloadMode.Auto),
+                (nameof(GameRules.ViewMode), r => r.WithViewMode(ViewMode.FirstPerson), ViewMode.FirstPerson),
             };
 
             AssertEveryPropertyHasACase(typeof(GameRules), cases.Length);
@@ -188,6 +190,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithMaxWeapons(-1));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithMaxWeapons(GameRules.MaxWeaponsLimit + 1));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithReloadMode((ReloadMode)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithViewMode((ViewMode)99));
         }
 
         [Test]

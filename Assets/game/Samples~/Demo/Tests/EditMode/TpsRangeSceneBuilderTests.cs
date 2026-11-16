@@ -62,7 +62,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(bootstrap.name, Is.EqualTo(TpsRangeSceneBuilder.BootstrapObjectName));
             Assert.That(bootstrap.gameObject.scene, Is.EqualTo(_scene));
-            Assert.That(bootstrap.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+            Assert.That(bootstrap.RulesDefinition.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
             Assert.That(bootstrap.CreatesFloor, Is.False, "the range places its own, larger floor");
             var floor = Find(TpsRangeSceneBuilder.FloorName);
             Assert.That(floor.GetComponent<Collider>(), Is.Not.Null);
@@ -380,7 +380,7 @@ namespace Fps.Tests.EditMode
             }
 
             Assert.That(bootstrap, Is.Not.Null);
-            Assert.That(bootstrap.ViewMode, Is.EqualTo(ViewMode.ThirdPerson), $"rerun {nameof(TpsRangeSceneBuilder)}.Build");
+            Assert.That(bootstrap.RulesDefinition.ViewMode, Is.EqualTo(ViewMode.ThirdPerson), $"rerun {nameof(TpsRangeSceneBuilder)}.Build");
             Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null);
             Assert.That(bootstrap.WeaponDefinitions, Is.Not.Empty);
             Assert.That(

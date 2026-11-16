@@ -15,7 +15,7 @@ namespace Fps.Runtime
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
     /// ・HUD (<see cref="GameUi.HudFactory"/> に登録された生成役が作る <see cref="IHud"/>) を
     /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
-    /// 一人称か三人称かは <see cref="ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
+    /// 一人称か三人称かはルールの <see cref="GameRules.ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
     /// 自動回復と予備弾の倍率・無限・落下ダメージは <see cref="RulesDefinition"/> のルール (<see cref="GameRulesOverride"/> があればそちら) で決める (標的ダミーには効かせない)。
     /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す項目は
     /// <see cref="GameRules.HudDensity"/> (<see cref="IHud.ApplyDensity"/>) で、倒れてから戻るまでに映すものは <see cref="GameRules.DeathCamera"/> で決める。
@@ -88,9 +88,6 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
         private bool _createFloor = true;
 
-        [SerializeField, Tooltip("プレイヤーの視点。一人称か三人称 (肩越し)")]
-        private ViewMode _viewMode = ViewMode.FirstPerson;
-
         [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義の並び (既定のロードアウト)。空なら入口 (GameContent) のロードアウトのスロットの武器")]
         private WeaponDefinition[] _weaponDefinitions = Array.Empty<WeaponDefinition>();
 
@@ -146,13 +143,6 @@ namespace Fps.Runtime
         {
             get => _createFloor;
             set => _createFloor = value;
-        }
-
-        /// <summary><see cref="Build"/> で作るプレイヤーの視点。生成後に変えるなら <see cref="BootstrapWorld.Rig"/> の Mode を変える。</summary>
-        public ViewMode ViewMode
-        {
-            get => _viewMode;
-            set => _viewMode = value;
         }
 
         /// <summary>
@@ -350,7 +340,7 @@ namespace Fps.Runtime
             {
                 floor = _createFloor ? CreateFloor(_floorPrefab) : null;
                 player = CreatePlayer(
-                    _viewMode, EffectiveWeaponDefinitions, AbilityDefinitions, rules, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
+                    EffectiveWeaponDefinitions, AbilityDefinitions, rules, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
                     out var weapon, out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera,
                     out var abilities);
                 ApplyPlayerVisuals(player, grenades, MockBodyPrefabs, _grenadePrefab);
@@ -552,7 +542,6 @@ namespace Fps.Runtime
         }
 
         private static GameObject CreatePlayer(
-            ViewMode viewMode,
             IReadOnlyList<WeaponDefinition> weaponDefinitions,
             IReadOnlyList<AbilityDefinition> abilityDefinitions,
             GameRules rules,
@@ -575,7 +564,7 @@ namespace Fps.Runtime
             try
             {
                 ConfigurePlayer(
-                    player, viewMode, weaponDefinitions, rules, tuning, out controller, out rig, out camera, out look, out mover, out weapon, out ads);
+                    player, weaponDefinitions, rules, tuning, out controller, out rig, out camera, out look, out mover, out weapon, out ads);
 
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
@@ -623,7 +612,6 @@ namespace Fps.Runtime
 
         private static void ConfigurePlayer(
             GameObject player,
-            ViewMode viewMode,
             IReadOnlyList<WeaponDefinition> weaponDefinitions,
             GameRules rules,
             PlayerTuning tuning,
@@ -668,7 +656,7 @@ namespace Fps.Runtime
             rig = player.AddComponent<ViewRig>();
             rig.ThirdPersonOffset = tuning.ThirdPersonOffset;
             rig.MinBoomLength = tuning.MinBoomLength;
-            rig.Mode = viewMode;
+            rig.Mode = rules.ViewMode;
             if (!rig.IsInitialized)
             {
                 rig.Initialize(eye, camera);

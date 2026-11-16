@@ -91,7 +91,24 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(range.ReserveAmmoMultiplier));
             Assert.That(rules.Destruction, Is.EqualTo(range.Destruction));
             Assert.That(rules.MaxWeapons, Is.EqualTo(range.MaxWeapons));
+            Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
             AssertActions(rules.Actions, _expectedActions[TpsRangeIndex], _tpsRangePath);
+        }
+
+        [Test]
+        public void OnlyTheTpsRangeIsThirdPerson()
+        {
+            Assert.That(GameRulesAssetBuilder.TpsRangeRules().ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchRules().ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(GameRulesAssetBuilder.CampaignEasyRules().ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(GameRulesAssetBuilder.CampaignNormalRules().ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(GameRulesAssetBuilder.CampaignHardRules().ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(GameRulesAssetBuilder.RangeRules().ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(GameRulesAssetBuilder.DominationRules().ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            foreach (var mode in GameRulesAssetBuilder.ModeNames)
+            {
+                Assert.That(GameRulesAssetBuilder.ModeRules(mode).ViewMode, Is.EqualTo(ViewMode.FirstPerson), mode);
+            }
         }
 
         [Test]

@@ -45,7 +45,8 @@
     "minPlayers": 0,
     "idleKickSeconds": 120,
     "maxWeapons": 2,
-    "reloadMode": "Auto"
+    "reloadMode": "Auto",
+    "viewMode": "FirstPerson"
   },
   "match": {
     "scoreLimit": 10,

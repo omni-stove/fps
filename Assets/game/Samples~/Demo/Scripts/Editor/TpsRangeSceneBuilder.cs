@@ -11,14 +11,14 @@ using UnityEngine.SceneManagement;
 namespace Fps.Editor
 {
     /// <summary>
-    /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには床 (<see cref="FloorName"/>)、肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) の
+    /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには床 (<see cref="FloorName"/>)、
     /// <see cref="GameBootstrap"/> と <see cref="MatchRunner"/> を置いた GameObject、高低の遮蔽物 (<see cref="Covers"/>)、
     /// 乗り越え用の低い壁 (<see cref="VaultWall"/>)、回避と手榴弾を試す開けた場所の目印 (<see cref="OpenAreaName"/>)、
     /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場、乗り降りを試す動かない仮の乗り物 (<see cref="VehicleName"/>) と
     /// その左の降りる位置を塞ぐ箱 (<see cref="VehicleExitBlockerName"/>) を入れ、壁や箱には <see cref="SurfaceIds"/> の材質を付け、
     /// 最後に差し込まれた置く物 (<see cref="ITpsRangeFixture"/>、<see cref="Fixtures"/>) を置く。
     /// プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
-    /// ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/> を配線する。保存したシーンは Build Settings に (並びを変えずに) 加える。
+    /// ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/> を配線し、肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) もそのルールで決める。保存したシーンは Build Settings に (並びを変えずに) 加える。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.TpsRangeSceneBuilder.Build</code>
     /// </summary>
@@ -272,7 +272,6 @@ namespace Fps.Editor
                 SceneManager.MoveGameObjectToScene(bootstrapObject, scene);
                 var bootstrap = bootstrapObject.GetComponent<GameBootstrap>();
                 bootstrap.CreatesFloor = false;
-                bootstrap.ViewMode = ViewMode.ThirdPerson;
 
                 created.Add(SceneBuildHelpers.CreateStaticPlane(scene, null, FloorName, Vector3.zero, FloorScale));
                 bootstrap.WeaponDefinitions = weapons;

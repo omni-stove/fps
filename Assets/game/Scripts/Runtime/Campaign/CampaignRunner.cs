@@ -30,6 +30,7 @@ namespace Fps.Runtime
     /// 始めるときにルール (メニューの選択 <see cref="CampaignLaunchSelection.Current"/> かコマンドライン引数 <c>-difficulty easy|normal|hard</c> があれば
     /// <see cref="EasyRules"/> / <see cref="NormalRules"/> / <see cref="HardRules"/>、無ければ <see cref="RulesDefinition"/>) を読み、プレイヤーの自動回復 (<see cref="HealthRegen"/>) と
     /// 武器の予備弾 (<see cref="WeaponController.ApplyRules"/>) に効かせてからセーブを戻す。セーブの予備弾には倍率を掛け直さない。
+    /// ミッションの <see cref="MissionDefinition.RulesOverride"/> があれば、難易度のルールにそれを重ねてから効かせる (視点もそのルールの <see cref="GameRules.ViewMode"/> にする)。
     /// 同じルールの <see cref="GameRules.DeathBody"/> で、シーンの敵と標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も決める。
     /// 状態の変化は <see cref="LogTag"/> を付けて Debug.Log に出す。
     /// </summary>
@@ -321,7 +322,8 @@ namespace Fps.Runtime
                 return false;
             }
 
-            if (!TryResolveRules(runner.Definition != null ? runner.Definition.name : string.Empty, out var rules))
+            if (!TryResolveRules(runner.Definition != null ? runner.Definition.name : string.Empty, out var rules)
+                || !TryApplyMissionRules(runner.Definition, ref rules))
             {
                 return false;
             }
@@ -442,6 +444,38 @@ namespace Fps.Runtime
         }
 
         /// <summary>
+        /// rules に mission の <see cref="MissionDefinition.RulesOverride"/> を重ねる。mission が null か上書きが空なら rules のまま true。
+        /// 上書きが読めないか値が不正なら理由を Debug.LogError に出して false (rules は変えない)。
+        /// </summary>
+        public bool TryApplyMissionRules(MissionDefinition mission, ref GameRules rules)
+        {
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
+            if (mission == null || string.IsNullOrWhiteSpace(mission.RulesOverride))
+            {
+                return true;
+            }
+
+            GameRules overridden;
+            try
+            {
+                overridden = mission.ApplyRulesOverride(rules);
+            }
+            catch (MissionDefinitionException e)
+            {
+                Debug.LogError($"{LogTag} キャンペーンを始められません: {e.Message}", this);
+                return false;
+            }
+
+            Debug.Log($"{LogTag} mission={mission.name} rules override view={overridden.ViewMode}", this);
+            rules = overridden;
+            return true;
+        }
+
+        /// <summary>
         /// <see cref="Notice"/> を出す HUD を差し替える。null なら出さない。前の HUD からは外す。
         /// 始めたときのルール (<see cref="Rules"/>) があれば、その <see cref="GameRules.HudDensity"/> を HUD に効かせる。
         /// <see cref="TryBeginWith"/> が GameBootstrap の HUD で呼ぶ。<see cref="Begin"/> を直接呼んだときは自分で呼ぶ。
@@ -490,7 +524,7 @@ namespace Fps.Runtime
         /// <see cref="Begin(MissionRunner, Damageable, WeaponController, ISaveStorage, Action)"/> と同じだが、セーブを戻す前に rules を
         /// プレイヤーに効かせる。武器は rules の予備弾で満タンに作り直し (<see cref="WeaponController.ApplyRules"/>)、
         /// プレイヤーの <see cref="HealthRegen"/> (無ければ付ける) とアクション (<see cref="PlayerActions.Attach"/>)、落下ダメージ (<see cref="PlayerController.ApplyRules"/>)、
-        /// 倒れてから読み直すまでのカメラ (<see cref="PlayerDeathCamera"/>、無ければ付ける) を rules で付け直す。セーブがあればその後で弾数を戻すので、
+        /// 倒れてから読み直すまでのカメラ (<see cref="PlayerDeathCamera"/>、無ければ付ける)、視点 (<see cref="ViewRig.Mode"/>、ViewRig があれば) を rules で付け直す。セーブがあればその後で弾数を戻すので、
         /// セーブの予備弾には倍率を掛け直さない。rules が null ならルールは効かせ直さない。
         /// </summary>
         public void Begin(
@@ -732,6 +766,12 @@ namespace Fps.Runtime
                 mover.ApplyRules(rules);
             }
 
+            var rig = player.GetComponent<ViewRig>();
+            if (rig != null)
+            {
+                ApplyView(rig, rules.ViewMode);
+            }
+
             var deathCamera = player.GetComponent<PlayerDeathCamera>();
             if (deathCamera == null)
             {
@@ -739,6 +779,18 @@ namespace Fps.Runtime
             }
 
             deathCamera.ApplyRules(rules);
+        }
+
+        private static void ApplyView(ViewRig rig, ViewMode mode)
+        {
+            rig.Mode = mode;
+
+            // Mode の setter は有効な間しかカメラと体を直さないので、Edit Mode やまだ有効になる前の rig でもここで揃える。
+            if (rig.IsInitialized)
+            {
+                rig.ApplyBodyVisibility(rig.IsLocalView);
+                rig.UpdateCameraPosition();
+            }
         }
 
         /// <summary>

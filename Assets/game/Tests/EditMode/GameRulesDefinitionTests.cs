@@ -82,6 +82,7 @@ namespace Fps.Tests.EditMode
             definition.IdleKickSeconds = 45f;
             definition.MaxWeapons = 2;
             definition.ReloadMode = ReloadMode.Manual;
+            definition.ViewMode = ViewMode.ThirdPerson;
 
             var rules = definition.ToRules();
 
@@ -128,6 +129,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.IdleKickSeconds, Is.EqualTo(45f));
             Assert.That(rules.MaxWeapons, Is.EqualTo(2));
             Assert.That(rules.ReloadMode, Is.EqualTo(ReloadMode.Manual));
+            Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
 
@@ -178,7 +180,8 @@ namespace Fps.Tests.EditMode
                 8,
                 120f,
                 3,
-                ReloadMode.Manual);
+                ReloadMode.Manual,
+                ViewMode.ThirdPerson);
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -230,6 +233,7 @@ namespace Fps.Tests.EditMode
         [TestCase("IdleKickSeconds")]
         [TestCase("MaxWeapons")]
         [TestCase("ReloadMode")]
+        [TestCase("ViewMode")]
         public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
         {
             var definition = NewBroken("BrokenRules", field);
@@ -319,6 +323,7 @@ namespace Fps.Tests.EditMode
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds));
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons));
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode));
+            Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)
@@ -456,6 +461,9 @@ namespace Fps.Tests.EditMode
                     break;
                 case "ReloadMode":
                     definition.ReloadMode = (ReloadMode)99;
+                    break;
+                case "ViewMode":
+                    definition.ViewMode = (ViewMode)99;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

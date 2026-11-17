@@ -10,11 +10,11 @@ namespace Shooter.Core.Tests
     public sealed class ServerEventLogTests
     {
         private const string _matchId = "0123456789abcdef0123456789abcdef";
-        private static readonly int[] _twoAssisters ={ 4, 2 };
         private const string _killerPuid = "0002aaaabbbbccccddddeeeeffff0000";
         private const string _victimPuid = "0002111122223333444455556666aaaa";
 
         private static readonly DateTime _time = new DateTime(2026, 11, 13, 9, 30, 5, 123, DateTimeKind.Utc);
+        private static readonly int[] _twoAssisters = { 4, 2 };
 
         /// <summary>1 行の JSON オブジェクトとして読み、キーと値を出てきた順に返す。値はすべて文字列であること。</summary>
         private static List<KeyValuePair<string, string>> ReadLine(string line)

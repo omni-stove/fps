@@ -404,8 +404,6 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | `GameUi.Pause` | `IPauseState` | ポーズ画面が開いているか (開いている間は操作を止める) | 既定の HUD のポーズメニュー |
 | `GameUi.LoadoutSelect` | `ILoadoutSelect` | カーソルを解放してロードアウトの画面を開いているか | 既定の HUD のロードアウトの画面 |
 | `GameUi.Menu` | `IMenuNavigator` | メインメニューへ戻る・メニューで選んだチュートリアルを受け取る | `Fps.Runtime.UI` のメニューのシーンとの行き来 |
-| `PingUi.ViewFactory` | `IPingViewFactory` (作るのは `IPingView`) | オフラインのプレイヤーが付けた印 (`PingController`) を画面に出す。画面の外の印は端に寄せて向きを出す | 既定の HUD (`Hud`) に付く `PingMarkersView`。ほかの HUD には出さない (`null` を返す) |
-| `SquadOrderUi.ViewFactory` | `ISquadOrderViewFactory` (作るのは `ISquadOrderView`) | プレイヤーが味方の bot に出した指示 (`SquadCommandController`) の守る場所・狙う敵を画面に出す | 既定の HUD (`Hud`) に付く `SquadOrderMarkerView`。ほかの HUD には出さない (`null` を返す) |
 
 - 入れた実装は、登録の順番に依らず既定より優先される。`null` を入れると既定に戻る。
 - 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
@@ -521,23 +519,27 @@ public sealed class MyPauseState : IPauseState
 
 ### 印 (ピン) の表示
 
-`PingController` は、ルールの `Ping` が On の間、`GameUi.FindHud()` で見つけた HUD を `PingUi.ViewFactory` に渡して表示を受け取り、`IPingView.Show` で自分を渡す。
-表示は `PingController.Markers` (古い順の `PingMarker`) を毎フレーム読み、画面の外の位置と向きは `Fps.Core.PingScreen.Place` で決められる。
-自分の HUD に出すなら、HUD に合わせた `IPingViewFactory` を入れる (既定の HUD のまま印の見た目だけ変えるなら、`Hud.uss` の `.ping-marker` の規則を上書きする)。
+`PingController` は、ルールの `Ping` が On の間、今ある印 (古い順の `PingMarker`) を `GameSignals.Pings` に出し、付いた・動いた・消えたたびに出し直す (Off になれば消す)。
+既定の HUD は `PingMarkersView` (`Hud.AddViews` が付ける) がそれを購読し、自分のプレイヤー (`GameSignals.LocalPlayer`) の視点のカメラから見て毎フレーム置き直す。画面の外の位置と向きは `Fps.Core.PingScreen.Place` で決められる。
+自分の HUD に出すなら、`GameSignals.Pings` を購読して出す (既定の HUD のまま印の見た目だけ変えるなら、`Hud.uss` の `.ping-marker` の規則を上書きする)。
 
 ```csharp
-public sealed class MyPingViewFactory : IPingViewFactory
+public sealed class MyPingView : MonoBehaviour
 {
-    public IPingView Create(IHud hud)
+    private void OnEnable()
     {
-        var view = hud.gameObject.GetComponent<MyPingView>();
-        return view != null ? view : hud.gameObject.AddComponent<MyPingView>();
+        GameSignals.Pings.Changed += Show;
+        Show(GameSignals.Pings.Value);
     }
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void Register()
+    private void OnDisable()
     {
-        PingUi.ViewFactory = new MyPingViewFactory();
+        GameSignals.Pings.Changed -= Show;
+    }
+
+    // markers は中身が変わる同じ並びなので、動く印に合わせるなら毎フレーム読み直す。null なら印は無い。
+    private void Show(IReadOnlyList<PingMarker> markers)
+    {
     }
 }
 ```
@@ -554,8 +556,8 @@ public sealed class MyPingViewFactory : IPingViewFactory
 
 - 指示は bot 自身の判断やモードの用事 (`EnemyAgent.SetErrand`) より優先し、合わせ方は `Fps.Core.BotDriver.FollowOrder` が決める。
 - 分隊のあるモード (`ModeRunnerBase.HasSquads` が true。既定ではバトルロイヤル) では分隊の全員に、ほかでは近くの同じ陣営の bot にだけ出す。
-- 指示の印は `SquadOrderUi.ViewFactory` の表示 (既定は `SquadOrderMarkerView`、見た目は `Hud.uss` の `.squad-order__*`) に出る。
-- bot の応答は字幕 (`SubtitleFeed.Say`) に出る。文は表 (`Resources/Localization/<言語>/squad.json` の `squad.reply.*`) から引く。
+- 出している守る・狙う指示は `GameSignals.SquadOrder` (`SquadOrderStatus`。狙う敵の今の位置は `CurrentPoint`) に出る。既定の HUD は `SquadOrderMarkerView` が印を出す (見た目は `Hud.uss` の `.squad-order__*`)。
+- bot の応答は `SubtitleFeed.SquadReplied` (`SquadOrderReply`) で知らせ、既定の字幕 (`SubtitleView`) が `SquadOrderText` で表 (`Resources/Localization/<言語>/squad.json` の `squad.reply.*`) から文にする。
 - ログは `[Squad] order` / `refused` (指示した側)、`[Squad] accepted` / `arrived` / `engage` / `done` (bot)。
 - TPS の射撃場 (`Fps/Build TPS Range Scene`) の右の中ほどに、味方の bot (`SquadCommandYard/SquadBot`) が置かれる。プレイヤーに同じ陣営 (0) を持たせると指示を出せる。
 

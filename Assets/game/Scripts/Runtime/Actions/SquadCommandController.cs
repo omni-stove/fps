@@ -14,7 +14,7 @@ namespace Fps.Runtime
     /// <item>指示は、自分と同じ陣営 (<see cref="SideMember"/>) で生きている bot に出す。分隊のあるモード (<see cref="ModeRunnerBase.HasSquads"/>) では
     /// 離れていても分隊の全員に、そうでなければ <see cref="SquadOrderSpec.NearbyRadius"/> 以内の bot にだけ出す (<see cref="SquadOrderRecipients"/>)。</item>
     /// <item>出したら <c>[Squad] order</c>、出さなかったら理由を <c>[Squad] refused</c> でログに出す。</item>
-    /// <item>狙う・守る指示の印は HUD の表示 (<see cref="ISquadOrderView"/>、<see cref="SquadOrderUi"/> が作る) に渡す。
+    /// <item>狙う・守る指示は <see cref="GameSignals.SquadOrder"/> に出す。どう出すかは UI が決める。
     /// 狙う敵が倒れるか、指示を受けた bot が誰もその指示を続けていなければ印を消す。</item>
     /// </list>
     /// 値は Inspector の値から作る <see cref="Spec"/> に従う。オフラインの bot だけが相手で、ネット対戦の bot には出さない。
@@ -25,9 +25,6 @@ namespace Fps.Runtime
     public sealed class SquadCommandController : MonoBehaviour
     {
         public const string LogTag = SquadOrderLog.Tag;
-
-        /// <summary>HUD が見つかっていないときに探し直す間隔 (秒)。</summary>
-        public const float ViewSearchIntervalSeconds = 1f;
 
         [SerializeField, Min(0.01f), Tooltip("押し続けてこれだけ経ったら、指示を取り消して付いてこさせる秒数")]
         private float _holdSeconds = SquadOrderSpec.DefaultHoldSeconds;
@@ -60,8 +57,7 @@ namespace Fps.Runtime
         private Damageable _self;
         private ViewRig _rig;
         private PlayerActionReader _reader;
-        private ISquadOrderView _view;
-        private float _nextViewSearch;
+        private SquadOrderStatus? _published;
         private SquadOrderRefusal _lastRefusal;
         private BotErrandKind _currentKind = BotErrandKind.None;
         private Vector3 _currentPoint;
@@ -91,9 +87,6 @@ namespace Fps.Runtime
 
         /// <summary>最後の指示を受けた bot。</summary>
         public IReadOnlyList<EnemyAgent> Recipients => _recipients;
-
-        /// <summary>指示の印を出している表示。無ければ null。</summary>
-        public ISquadOrderView View => GameUi.IsAlive(_view) ? _view : null;
 
         /// <summary>印を見るカメラ。プレイヤーの視点 (<see cref="ViewRig"/>) のカメラで、無ければ null。</summary>
         public Camera ViewCamera
@@ -165,10 +158,9 @@ namespace Fps.Runtime
             _lastRefusal = SquadOrderRefusal.None;
             _self = GetComponent<Damageable>();
             _reader = GetComponent<PlayerActionReader>();
-            _nextViewSearch = 0f;
             ClearCurrent();
             Debug.Log(SquadOrderLog.Spec(spec), this);
-            Changed?.Invoke(this);
+            NotifyChanged();
         }
 
         /// <summary>
@@ -252,7 +244,7 @@ namespace Fps.Runtime
             _currentTarget = target;
             _lastRefusal = SquadOrderRefusal.None;
             Debug.Log(SquadOrderLog.Issued(kind, target != null ? target.Id : null, aim.Position, recipients, squads), this);
-            Changed?.Invoke(this);
+            NotifyChanged();
             return true;
         }
 
@@ -288,7 +280,7 @@ namespace Fps.Runtime
             Debug.Log(SquadOrderLog.Issued(BotErrandKind.Follow, null, leader.GroundPosition.ToNumerics(), recipients, squads), this);
             if (hadMarker)
             {
-                Changed?.Invoke(this);
+                NotifyChanged();
             }
 
             return true;
@@ -321,32 +313,7 @@ namespace Fps.Runtime
             if (gone)
             {
                 ClearCurrent();
-                Changed?.Invoke(this);
-            }
-        }
-
-        /// <summary>指示の印を view に出す。前の表示は手放す。null なら出すのをやめ、HUD から探し直す。</summary>
-        public void BindView(ISquadOrderView view)
-        {
-            if (ReferenceEquals(view, _view))
-            {
-                return;
-            }
-
-            if (GameUi.IsAlive(_view))
-            {
-                _view.Show(null);
-            }
-
-            _view = view;
-            if (view != null)
-            {
-                view.Show(this);
-                Debug.Log(SquadOrderLog.View(view.GetType().Name), this);
-            }
-            else
-            {
-                _nextViewSearch = 0f;
+                NotifyChanged();
             }
         }
 
@@ -381,12 +348,7 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
-            if (GameUi.IsAlive(_view))
-            {
-                _view.Show(null);
-            }
-
-            _view = null;
+            Unpublish();
         }
 
         private void LateUpdate()
@@ -421,21 +383,30 @@ namespace Fps.Runtime
             }
 
             Tick();
-            EnsureView();
         }
 
-        private void EnsureView()
+        private void NotifyChanged()
         {
-            if (GameUi.IsAlive(_view) || Time.unscaledTime < _nextViewSearch)
+            if (_currentKind != BotErrandKind.None)
             {
-                return;
+                _published = new SquadOrderStatus(_currentKind, _currentPoint, CurrentTarget);
+                GameSignals.SquadOrder.Publish(_published);
+            }
+            else
+            {
+                Unpublish();
             }
 
-            _nextViewSearch = Time.unscaledTime + ViewSearchIntervalSeconds;
-            var view = SquadOrderUi.CreateView(GameUi.FindHud());
-            if (view != null)
+            Changed?.Invoke(this);
+        }
+
+        // 後から別のプレイヤーが出した指示までは消さない。
+        private void Unpublish()
+        {
+            if (_published.HasValue)
             {
-                BindView(view);
+                GameSignals.SquadOrder.ClearIfCurrent(_published);
+                _published = null;
             }
         }
 

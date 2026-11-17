@@ -44,6 +44,7 @@ namespace Fps.Tests.EditMode
             }
 
             _objects.Clear();
+            GameSignals.ResetAll();
         }
 
         [Test]
@@ -245,24 +246,41 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void BindViewHandsTheMarksToTheView()
+        public void TheMarksArePublishedWhilePingIsOnAndClearedWhenItGoesAway()
         {
             var pinger = Pinger();
-            var first = new FakeView();
-            var second = new FakeView();
+            var heard = new List<IReadOnlyList<PingMarker>>();
+            GameSignals.Pings.Changed += heard.Add;
+            Wall(new Vector3(0f, 1f, 10f));
 
-            LogAssert.Expect(LogType.Log, PingLog.View(nameof(FakeView)));
-            pinger.BindView(first);
-            Assert.That(first.Source, Is.SameAs(pinger));
-            Assert.That(pinger.View, Is.SameAs(first));
+            Assert.That(GameSignals.Pings.Value, Is.SameAs(pinger.Markers), "configuring with Ping on publishes the (empty) marks");
+            Assert.That(pinger.Markers, Is.Empty);
 
-            pinger.BindView(second);
-            Assert.That(first.Source, Is.Null, "the old view is released");
-            Assert.That(second.Source, Is.SameAs(pinger));
+            Assert.That(pinger.TryPingAlong(_eye, Vector3.forward, out var marker), Is.True);
+            Assert.That(heard.Count, Is.EqualTo(1), "placing a mark publishes again");
+            Assert.That(GameSignals.Pings.Value, Is.EqualTo(new[] { marker }));
 
-            pinger.BindView(null);
-            Assert.That(second.Source, Is.Null);
-            Assert.That(pinger.View, Is.Null);
+            _now = pinger.Spec.LifetimeSeconds;
+            pinger.Tick(_now);
+            Assert.That(heard.Count, Is.EqualTo(2), "an expired mark publishes again");
+            Assert.That(GameSignals.Pings.Value, Is.Empty);
+
+            pinger.Configure(PingRules(Fps.Core.Ping.Off));
+            Assert.That(GameSignals.Pings.Value, Is.Null, "with Ping off nothing is published");
+        }
+
+        [Test]
+        public void TurningPingOffClearsOnlyThePingersOwnMarks()
+        {
+            var first = Pinger();
+            var second = Pinger();
+            Assert.That(GameSignals.Pings.Value, Is.SameAs(second.Markers), "the last pinger to change wins");
+
+            first.Configure(PingRules(Fps.Core.Ping.Off));
+            Assert.That(GameSignals.Pings.Value, Is.SameAs(second.Markers), "another pinger's marks stay");
+
+            second.Configure(PingRules(Fps.Core.Ping.Off));
+            Assert.That(GameSignals.Pings.Value, Is.Null);
         }
 
         [Test]
@@ -343,16 +361,6 @@ namespace Fps.Tests.EditMode
         {
             _objects.Add(go);
             return go;
-        }
-
-        private sealed class FakeView : IPingView
-        {
-            public PingController Source { get; private set; }
-
-            public void Show(PingController source)
-            {
-                Source = source;
-            }
         }
     }
 }

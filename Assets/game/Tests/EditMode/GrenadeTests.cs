@@ -555,7 +555,7 @@ namespace Fps.Tests.EditMode
 
         private Hud CreateHud()
         {
-            var hud = Hud.Create("GrenadeTests.Hud", null, null, null);
+            var hud = Hud.Create("GrenadeTests.Hud");
             _created.Add(hud.gameObject);
             _hudSettings = hud.OwnedPanelSettings;
             return hud;

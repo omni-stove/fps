@@ -5,12 +5,12 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 画面の中央の下に、近くで Interact したら何が起きるかを 1 行で出すビュー (<see cref="IInteractPrompt"/>)。Hud.uxml の <see cref="UxmlName"/> の Label を使う。
+    /// 画面の中央の下に、近くで Interact したら何が起きるかを 1 行で出すビュー。Hud.uxml の <see cref="UxmlName"/> の Label を使う。
     /// 要素を持っている間は <see cref="GameSignals.InteractHint"/> を購読し、出された案内の中身 (<see cref="PickupHint"/>・<see cref="AmmoCrateHint"/>) を
     /// 今の入力機器のキー (<see cref="InteractKeyLabel"/>) を入れた文にして出し、消されたら隠す。要素を受けたときは今の案内に合わせる。
     /// 要素をまだ受けていない間も出す文を覚えておき、受けたときに合わせる。言語が変わったら文にし直す。
     /// </summary>
-    public sealed class InteractPromptView : HudElementView, IInteractPrompt
+    public sealed class InteractPromptView : HudElementView
     {
         /// <summary>Hud.uxml の案内の Label。</summary>
         public const string UxmlName = "interact-prompt";

@@ -85,7 +85,7 @@ namespace Fps.Runtime
         private float _reloadRemaining;
 
         private readonly CampaignNotice _notice = new CampaignNotice();
-        private IHud _hud;
+        private HudDensity? _publishedDensity;
 
         // Start の時点でプレイヤーがまだ無かったときに、Built を待っている GameBootstrap。
         private GameBootstrap _awaitedBootstrap;
@@ -178,8 +178,8 @@ namespace Fps.Runtime
         /// <summary>HUD に一時的に出す案内 (セーブした・再開まで N 秒)。</summary>
         public CampaignNotice Notice => _notice;
 
-        /// <summary>HUD の量を効かせている HUD。HUD が無い (専用サーバーなど) か開始前なら null。</summary>
-        public IHud BoundHud => _hud;
+        /// <summary><see cref="GameSignals.HudDensity"/> に出している HUD の量。開始前と止めた後は null。</summary>
+        public HudDensity? PublishedHudDensity => _publishedDensity;
 
         /// <summary>秒数を読むミッションの一覧。null なら入口 (<see cref="GameContent"/>) の一覧を使う。</summary>
         public MissionCatalog Missions
@@ -333,7 +333,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// world (GameBootstrap の生成物) のプレイヤーと、<see cref="Runner"/> (null ならシーンの MissionRunner) で <see cref="Begin"/> し、
-        /// world に HUD があれば HUD の量を効かせる (<see cref="BindHud"/>)。セーブの置き場所は <see cref="Storage"/>、無ければ
+        /// セーブの置き場所は <see cref="Storage"/>、無ければ
         /// <see cref="FileSaveStorage.CreateDefault"/>。ルールは <see cref="TryResolveRules"/> で決める。
         /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
         /// </summary>
@@ -383,7 +383,6 @@ namespace Fps.Runtime
                 return false;
             }
 
-            BindHud(world.Hud);
             return true;
         }
 
@@ -510,24 +509,6 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// HUD の量を効かせる HUD を差し替える。null なら効かせない。
-        /// 始めたときのルール (<see cref="Rules"/>) があれば、その <see cref="GameRules.HudDensity"/> を HUD に効かせる。
-        /// <see cref="TryBeginWith"/> が GameBootstrap の HUD で呼ぶ。<see cref="Begin"/> を直接呼んだときは自分で呼ぶ。
-        /// </summary>
-        public void BindHud(IHud hud)
-        {
-            _hud = hud;
-            if (GameUi.IsAlive(_hud))
-            {
-                // 難易度のルールは GameBootstrap のルールと別のことがあるので、HUD の量も始めたときのルールで決め直す
-                if (_activeRules != null)
-                {
-                    _hud.ApplyDensity(_activeRules.HudDensity);
-                }
-            }
-        }
-
-        /// <summary>
         /// プレイヤーの死亡とミッションの達成を購読し、storage にセーブがあれば戻す (<see cref="CampaignLaunchSelection.IgnoresSaves"/> なら戻さない)。
         /// missionRunner はまだなら始める。始められない・参照が足りないときは例外を投げ、何も購読しない。
         /// </summary>
@@ -618,9 +599,11 @@ namespace Fps.Runtime
             }
 
             _activeRules = rules;
-            if (rules != null && GameUi.IsAlive(_hud))
+            // 難易度のルールは GameBootstrap のルールと別のことがあるので、HUD の量も始めたときのルールで出し直す
+            if (rules != null)
             {
-                _hud.ApplyDensity(rules.HudDensity);
+                _publishedDensity = rules.HudDensity;
+                GameSignals.HudDensity.Publish(_publishedDensity);
             }
 
             _mission = missionRunner.Mission;
@@ -752,7 +735,12 @@ namespace Fps.Runtime
         /// <summary>購読を解除してミッションから離れ、HUD の案内を外す。破棄時にも呼ばれる。</summary>
         public void Stop()
         {
-            BindHud(null);
+            if (_publishedDensity.HasValue)
+            {
+                GameSignals.HudDensity.ClearIfCurrent(_publishedDensity);
+                _publishedDensity = null;
+            }
+
             _notice.Clear();
             GameSignals.CampaignNotice.ClearIfCurrent(_notice);
 

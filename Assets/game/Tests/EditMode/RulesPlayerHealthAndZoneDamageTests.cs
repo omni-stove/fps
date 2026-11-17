@@ -264,17 +264,6 @@ namespace Fps.Tests.EditMode
                 return;
             }
 
-            // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
-            if (world.Hud != null)
-            {
-                Object.DestroyImmediate(world.Hud.gameObject);
-            }
-
-            if (world.HudPanelSettings != null)
-            {
-                Object.DestroyImmediate(world.HudPanelSettings);
-            }
-
             Object.DestroyImmediate(world.Player);
             Object.DestroyImmediate(world.Light.gameObject);
             Object.DestroyImmediate(world.TargetRoot);

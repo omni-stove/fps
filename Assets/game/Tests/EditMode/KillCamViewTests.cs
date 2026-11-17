@@ -41,12 +41,11 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void WithoutAReplayTheFrameIsHiddenAndThePresentationIsPlain()
+        public void WithoutAReplayTheFrameIsHidden()
         {
             CreateHudView(out var element);
 
             Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.None));
-            Assert.That(KillCamPresentations.Current, Is.SameAs(KillCamPresentations.Plain), "the UI no longer registers a presentation");
         }
 
         [Test]
@@ -125,7 +124,7 @@ namespace Fps.Tests.EditMode
 
         private KillCamView CreateHudView(out VisualElement element)
         {
-            var hud = Hud.Create("KillCamViewTests.Hud", null, null, null);
+            var hud = Hud.Create("KillCamViewTests.Hud");
             _created.Add(hud.gameObject);
             _created.Add(hud.OwnedPanelSettings);
             var view = hud.KillCam;

@@ -41,17 +41,6 @@ namespace Fps.Tests.EditMode
         {
             if (_world != null)
             {
-                // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
-                if (_world.Hud != null)
-                {
-                    Object.DestroyImmediate(_world.Hud.gameObject);
-                }
-
-                if (_world.HudPanelSettings != null)
-                {
-                    Object.DestroyImmediate(_world.HudPanelSettings);
-                }
-
                 Object.DestroyImmediate(_world.Floor);
                 Object.DestroyImmediate(_world.Player);
                 Object.DestroyImmediate(_world.Light.gameObject);
@@ -72,7 +61,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BeginShowsTheRemainingTimeOnTheHud()
         {
-            var model = DefaultHud.Model;
+            var model = _world.HudModel;
             Assert.That(model.RemainingSeconds, Is.EqualTo(HudFormat.DisplayedSeconds(TimeLimit)));
 
             _runner.Tick(11f);
@@ -306,7 +295,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void WinningShowsTheResultOnTheHud()
         {
-            var model = DefaultHud.Model;
+            var model = _world.HudModel;
             Assert.That(model.SoloResult, Is.Null);
 
             _world.Targets[0].Damageable.Kill();
@@ -323,7 +312,7 @@ namespace Fps.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=0 remaining=30.0");
             _world.PlayerDamageable.Kill();
 
-            Assert.That(DefaultHud.Model.SoloResult, Is.EqualTo(MatchResult.Lost));
+            Assert.That(_world.HudModel.SoloResult, Is.EqualTo(MatchResult.Lost));
         }
 
         [Test]
@@ -342,22 +331,11 @@ namespace Fps.Tests.EditMode
 
                 runner.Tick(10000f);
 
-                var hud = (Hud)world.Hud;
                 Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
-                Assert.That(hud.Model.HasTime, Is.False);
+                Assert.That(world.HudModel.HasTime, Is.False);
             }
             finally
             {
-                if (world.Hud != null)
-                {
-                    Object.DestroyImmediate(world.Hud.gameObject);
-                }
-
-                if (world.HudPanelSettings != null)
-                {
-                    Object.DestroyImmediate(world.HudPanelSettings);
-                }
-
                 Object.DestroyImmediate(world.Floor);
                 Object.DestroyImmediate(world.Player);
                 Object.DestroyImmediate(world.Light.gameObject);
@@ -365,8 +343,5 @@ namespace Fps.Tests.EditMode
                 Object.DestroyImmediate(host);
             }
         }
-
-        // 中身を確かめるため、GameBootstrap が既定の生成役で作った HUD を具体クラスで読む
-        private Hud DefaultHud => (Hud)_world.Hud;
     }
 }

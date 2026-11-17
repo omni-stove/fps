@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace Fps.Runtime
 {
@@ -10,28 +9,27 @@ namespace Fps.Runtime
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
     /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/> + 自動回復の <see cref="HealthRegen"/>
     /// + 演出と手榴弾 (<see cref="CharacterComponents.Attach"/>) + 今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読む
-    /// デバッグ表示 (<see cref="IHudFactory.AttachActionDebug"/>)・<see cref="PlayerMockBody"/> + 倒れてから戻るまでのカメラ <see cref="PlayerDeathCamera"/>)
+    /// <see cref="PlayerMockBody"/> + 倒れてから戻るまでのカメラ <see cref="PlayerDeathCamera"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
-    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する)
-    /// ・HUD (<see cref="GameUi.HudFactory"/> に登録された生成役が作る <see cref="IHud"/>) を
-    /// コードで生成する。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
+    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する) と、プレイヤーの体力と弾を写す <see cref="HudModel"/> を
+    /// コードで生成する。HUD は作らない (UI が <see cref="GameSignals"/> を見て作る)。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
     /// 一人称か三人称かはルールの <see cref="GameRules.ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
     /// 自動回復と予備弾の倍率・無限・落下ダメージは <see cref="RulesDefinition"/> のルール (<see cref="GameRulesOverride"/> があればそちら) で決める (標的ダミーには効かせない)。
-    /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す項目は
-    /// <see cref="GameRules.HudDensity"/> (<see cref="IHud.ApplyDensity"/>) で、倒れてから戻るまでに映すものは <see cref="GameRules.DeathCamera"/> で決める。
+    /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す量は
+    /// <see cref="GameRules.HudDensity"/> で、倒れてから戻るまでに映すものは <see cref="GameRules.DeathCamera"/> で決める。
     /// プレイヤーの最大体力はルールの <see cref="GameRules.PlayerMaxHealth"/> で、ルールが無いときだけこのコンポーネントの <see cref="PlayerMaxHealth"/> で決める。
     /// プレイヤーと標的ダミーの部位のダメージ倍率は同じルールの <see cref="GameRules.ZoneDamage"/> で決める。
     /// 三人称のカメラの位置と縮める下限・覗き込みにかかる秒数は、このコンポーネントの値
     /// (<see cref="ThirdPersonOffset"/>・<see cref="MinBoomLength"/>・<see cref="AdsTransitionSeconds"/>) で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
-    /// 生成し終えたら、プレイヤーの部品を <see cref="GameSignals.LocalPlayer"/> に、HUD の <see cref="HudModel"/> を <see cref="GameSignals.HudModel"/> に出し、破棄するときに消す。
+    /// 生成し終えたら、<see cref="HudModel"/> を <see cref="GameSignals.HudModel"/> に、HUD の量を <see cref="GameSignals.HudDensity"/> に、
+    /// オフラインなのでポーズ中は時間を止める (<see cref="PauseTimeMode.Freeze"/>) ことを <see cref="GameSignals.PauseTimeMode"/> に、
+    /// プレイヤーの部品を <see cref="GameSignals.LocalPlayer"/> に出し、破棄するときに消す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameBootstrap : MonoBehaviour
     {
         public const string ReadyLog = "[Bootstrap] ready";
-
-        public const string NoHudLog = "[Bootstrap] no HUD factory is registered with GameUi.HudFactory; running without a HUD";
 
         /// <summary>
         /// <see cref="GameRulesOverride"/> のルールを使うときのログ。definitionName は上書きされたシーンのルールの名前で、未設定なら null。
@@ -85,8 +83,6 @@ namespace Fps.Runtime
         public const int TargetDummyMaxHealth = TargetDummy.DefaultMaxHealth;
         public const float TargetDummyRespawnDelay = TargetDummy.DefaultRespawnDelay;
 
-        public const string HudName = "HUD";
-
         [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
         private bool _createFloor = true;
 
@@ -127,6 +123,8 @@ namespace Fps.Runtime
         private BootstrapWorld _world;
         private LocalPlayerSignal _publishedPlayer;
         private HudModel _publishedHudModel;
+        private HudDensity? _publishedDensity;
+        private bool _publishedPauseTimeMode;
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
         public BootstrapWorld World => _world;
@@ -326,7 +324,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 床・プレイヤー・ライト・標的ダミー・HUD を生成する。2 回目以降は何もせず最初の結果を返す。
+        /// 床・プレイヤー・ライト・標的ダミー・<see cref="HudModel"/> を生成する。2 回目以降は何もせず最初の結果を返す。
         /// 途中で失敗したら作りかけのオブジェクトを片付けてから例外を投げ直す。
         /// <see cref="RulesDefinition"/> の値が不正なら何も作らずに <see cref="GameRulesDefinitionException"/> を投げる
         /// (<see cref="GameRulesOverride"/> で上書き中は <see cref="RulesDefinition"/> を読まない)。
@@ -346,8 +344,6 @@ namespace Fps.Runtime
             GameObject player = null;
             GameObject light = null;
             GameObject targets = null;
-            GameObject hud = null;
-            PanelSettings hudPanelSettings = null;
             try
             {
                 floor = _createFloor ? CreateFloor(_floorPrefab) : null;
@@ -360,21 +356,14 @@ namespace Fps.Runtime
                 targets = CreateTargetDummies(player.transform, _targetDummyPrefab, out var dummies);
                 BindDeathBodies(dummies, rules);
                 ApplyZoneDamage(dummies, rules);
-                // 専用サーバーには画面が無いので HUD を作らない。残り時間は MatchRunner が試合を始めたときに繋ぐ。
-                IHud hudComponent = null;
-                if (!NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
-                {
-                    CreateHud(playerDamageable, weapon, rules, out hudComponent, out hudPanelSettings, out hud);
-                }
-
+                // 残り時間は MatchRunner が試合を始めたときに繋ぐ。
+                var hudModel = CreateHudModel(playerDamageable, weapon);
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
-                    hudComponent, hudPanelSettings, rig, ads, rules, regen, actionReader, grenades, deathCamera, abilities);
+                    hudModel, rig, ads, rules, regen, actionReader, grenades, deathCamera, abilities);
             }
             catch
             {
-                DestroySafely(hud);
-                DestroySafely(hudPanelSettings);
                 DestroySafely(targets);
                 DestroySafely(light);
                 DestroySafely(player);
@@ -391,11 +380,15 @@ namespace Fps.Runtime
         private void OnDestroy()
         {
             ClearSignals();
+            if (_world != null)
+            {
+                ReleaseHudModel(_world);
+            }
         }
 
         /// <summary>
-        /// <see cref="Build"/> で出した自分のプレイヤーと HUD の <see cref="HudModel"/> を <see cref="GameSignals"/> から消す。破棄時に呼ばれる。
-        /// 後から別の側が出した値は消さない。何度呼んでもよい。
+        /// <see cref="Build"/> で出した自分のプレイヤー・<see cref="HudModel"/>・HUD の量・ポーズ中の時間の扱いを <see cref="GameSignals"/> から消す。
+        /// 破棄時に呼ばれる。後から別の側が出した値は消さない。何度呼んでもよい。
         /// </summary>
         public void ClearSignals()
         {
@@ -410,24 +403,32 @@ namespace Fps.Runtime
                 GameSignals.HudModel.ClearIfCurrent(_publishedHudModel);
                 _publishedHudModel = null;
             }
+
+            if (_publishedDensity.HasValue)
+            {
+                GameSignals.HudDensity.ClearIfCurrent(_publishedDensity);
+                _publishedDensity = null;
+            }
+
+            if (_publishedPauseTimeMode)
+            {
+                GameSignals.PauseTimeMode.ClearIfCurrent(PauseTimeMode.Freeze);
+                _publishedPauseTimeMode = false;
+            }
         }
 
+        // プレイヤーを最後に出す。プレイヤーを見て HUD を作る UI が、作ったときから HUD の値と量に合わせられるように
         private void PublishSignals(BootstrapWorld world)
         {
+            _publishedHudModel = world.HudModel;
+            GameSignals.HudModel.Publish(_publishedHudModel);
+            _publishedDensity = world.Rules.HudDensity;
+            GameSignals.HudDensity.Publish(_publishedDensity);
+            GameSignals.PauseTimeMode.Publish(PauseTimeMode.Freeze);
+            _publishedPauseTimeMode = true;
             _publishedPlayer = new LocalPlayerSignal(
                 world.Player, world.PlayerDamageable, world.Weapon, world.Ads, world.Mover, world.Grenades, world.Abilities, world.ActionReader);
             GameSignals.LocalPlayer.Publish(_publishedPlayer);
-
-            // HUD を作らなかった (専用サーバー・生成役が無い) ときは、前のシーンの HUD の値を残さないよう空にする
-            _publishedHudModel = GameUi.IsAlive(world.Hud) ? world.Hud.Model : null;
-            if (_publishedHudModel != null)
-            {
-                GameSignals.HudModel.Publish(_publishedHudModel);
-            }
-            else
-            {
-                GameSignals.HudModel.Clear();
-            }
         }
 
         /// <summary>
@@ -904,8 +905,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// プレイヤーの今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読むデバッグ表示 (<see cref="GameUi.AttachActionDebug"/>)・
-        /// 自機モック (<see cref="PlayerMockBody"/>) を付けて配線する。カバーとブラインドファイア (<see cref="PlayerActions.Attach"/>) の後に呼ぶ。
+        /// プレイヤーの今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読む自機モック (<see cref="PlayerMockBody"/>) を付けて配線する。カバーとブラインドファイア (<see cref="PlayerActions.Attach"/>) の後に呼ぶ。
         /// Play 中は Reader の Awake が自力で読み元を解決するので、解決できなかったら失敗にする。Edit Mode では Awake が走らないのでここで渡す。
         /// </summary>
         private static PlayerActionReader AttachActionReader(
@@ -929,7 +929,6 @@ namespace Fps.Runtime
                     mover, weapon, ads, player.GetComponent<CoverController>(), player.GetComponent<BlindFireController>(), damageable, rig);
             }
 
-            GameUi.AttachActionDebug(player, reader);
             player.AddComponent<PlayerMockBody>().Bind(reader);
             return reader;
         }
@@ -1111,32 +1110,40 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// HUD を作り (<see cref="GameUi.CreateHud"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。オフラインなので、ポーズ中は時間を止める
-        /// (<see cref="PauseTimeMode.Freeze"/>)。グレネードの残りと能力の枠は、HUD が <see cref="GameSignals.LocalPlayer"/> から読んで出す。
-        /// 生成役が登録されていなければ、既定の UI を外して使う場合もあるので失敗にせず、out をすべて null にして専用サーバーと同じく HUD 無しで進める。
-        /// 作った後の設定で失敗したら、呼び出し元が片付けられるよう out に入れてから例外を投げる。
+        /// プレイヤーの体力と武器を写す <see cref="HudModel"/> を作る。体力や武器が作り直されたとき
+        /// (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は写し直す。
         /// </summary>
-        private static void CreateHud(
-            Damageable player,
-            WeaponController weapon,
-            GameRules rules,
-            out IHud hud,
-            out PanelSettings panelSettings,
-            out GameObject hudObject)
+        private static HudModel CreateHudModel(Damageable player, WeaponController weapon)
         {
-            hud = GameUi.CreateHud(HudName, player, weapon, null);
-            if (hud == null)
+            var model = new HudModel();
+            if (player != null)
             {
-                panelSettings = null;
-                hudObject = null;
-                Debug.Log(NoHudLog);
-                return;
+                player.HealthReset += model.BindHealth;
+                model.BindHealth(player.Health);
             }
 
-            panelSettings = hud.OwnedPanelSettings;
-            hudObject = hud.gameObject;
-            hud.ApplyDensity(rules.HudDensity);
-            hud.SetPauseTimeMode(PauseTimeMode.Freeze);
+            if (weapon != null)
+            {
+                weapon.WeaponChanged += model.BindWeapon;
+                model.BindWeapon(weapon.Weapon);
+            }
+
+            return model;
+        }
+
+        private static void ReleaseHudModel(BootstrapWorld world)
+        {
+            if (world.PlayerDamageable != null)
+            {
+                world.PlayerDamageable.HealthReset -= world.HudModel.BindHealth;
+            }
+
+            if (world.Weapon != null)
+            {
+                world.Weapon.WeaponChanged -= world.HudModel.BindWeapon;
+            }
+
+            world.HudModel.UnbindAll();
         }
 
         private static GameObject CreateLight(out Light light)
@@ -1216,8 +1223,8 @@ namespace Fps.Runtime
         /// <summary>プレイヤーの体力。敵の射撃はここに届く。</summary>
         public Damageable PlayerDamageable { get; }
 
-        /// <summary>HUD。専用サーバーと、<see cref="GameUi.HudFactory"/> に生成役が無いときは作らないので null。</summary>
-        public IHud Hud { get; }
+        /// <summary>プレイヤーの体力・弾と、試合の残り時間などを HUD に出す値。<see cref="GameSignals.HudModel"/> に出す。</summary>
+        public HudModel HudModel { get; }
 
         /// <summary>生成時にプレイヤーへ効かせたルール。<see cref="GameBootstrap.RulesDefinition"/> が空なら <see cref="GameRules.Default"/>。</summary>
         public GameRules Rules { get; }
@@ -1234,9 +1241,6 @@ namespace Fps.Runtime
         /// <summary>プレイヤーが倒れてから戻るまでのカメラ。何を映すかはルールの <see cref="GameRules.DeathCamera"/> で決まる。</summary>
         public PlayerDeathCamera DeathCamera { get; }
 
-        /// <summary>HUD 用に作った PanelSettings。<see cref="Hud"/> が破棄されるときに一緒に消える。<see cref="Hud"/> が無ければ null。</summary>
-        public PanelSettings HudPanelSettings { get; }
-
         /// <summary>プレイヤーの能力の枠。使えるかはルールの <see cref="ActionRules.Abilities"/> で決まる。</summary>
         public AbilityHost Abilities { get; }
 
@@ -1252,8 +1256,7 @@ namespace Fps.Runtime
             GameObject targetRoot,
             IReadOnlyList<TargetDummy> targets,
             Damageable playerDamageable,
-            IHud hud,
-            PanelSettings hudPanelSettings,
+            HudModel hudModel,
             ViewRig rig = null,
             AimDownSights ads = null,
             GameRules rules = null,
@@ -1271,8 +1274,7 @@ namespace Fps.Runtime
             Ads = ads;
             Rules = rules ?? GameRules.Default;
             Regen = regen;
-            Hud = hud;
-            HudPanelSettings = hudPanelSettings;
+            HudModel = hudModel ?? new HudModel();
             Floor = floor;
             Player = player;
             Controller = controller;

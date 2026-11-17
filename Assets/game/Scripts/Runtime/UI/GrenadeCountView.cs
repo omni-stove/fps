@@ -14,7 +14,7 @@ namespace Fps.Runtime
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class GrenadeCountView : HudElementView, IGrenadeCount
+    public sealed class GrenadeCountView : HudElementView
     {
         /// <summary>Hud.uxml の残りのグレネードの数の Label。</summary>
         public const string UxmlName = "grenade-count";

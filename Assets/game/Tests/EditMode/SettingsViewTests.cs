@@ -676,7 +676,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ThePauseMenuOpensTheSettingsInPlaceOfItsButtons()
         {
-            var hud = Hud.Create("SettingsViewTests.Hud", null, null, null);
+            var hud = Hud.Create("SettingsViewTests.Hud");
             try
             {
                 var pause = hud.PauseMenu;
@@ -721,7 +721,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ClosingThePauseMenuClosesAndSavesTheSettings()
         {
-            var hud = Hud.Create("SettingsViewTests.HudClose", null, null, null);
+            var hud = Hud.Create("SettingsViewTests.HudClose");
             try
             {
                 var pause = hud.PauseMenu;

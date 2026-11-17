@@ -88,17 +88,6 @@ namespace Fps.Tests.EditMode
 
             if (_world != null)
             {
-                // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
-                if (_world.Hud != null)
-                {
-                    Object.DestroyImmediate(_world.Hud.gameObject);
-                }
-
-                if (_world.HudPanelSettings != null)
-                {
-                    Object.DestroyImmediate(_world.HudPanelSettings);
-                }
-
                 Object.DestroyImmediate(_world.Floor);
                 Object.DestroyImmediate(_world.Player);
                 Object.DestroyImmediate(_world.Light.gameObject);
@@ -131,6 +120,22 @@ namespace Fps.Tests.EditMode
             Assert.That(domination.PointCount, Is.EqualTo(1));
             Assert.That(_runner.Zones, Is.EqualTo(new[] { _zone }));
             Assert.That(_world.TargetRoot.activeSelf, Is.False, "target dummies are not part of the match");
+        }
+
+        [Test]
+        public void BeginPaintsTheTeamsFromTheOfflinePlayersSideUntilStopped()
+        {
+            Assert.That(GameSignals.PaletteViewer.Value, Is.Null);
+
+            Begin();
+            Assert.That(GameSignals.PaletteViewer.Value, Is.EqualTo((Team?)TeamColors.OfflineViewer));
+
+            _runner.Stop();
+            Assert.That(GameSignals.PaletteViewer.Value, Is.Null);
+
+            GameSignals.PaletteViewer.Publish(Team.Bravo);
+            _runner.Stop();
+            Assert.That(GameSignals.PaletteViewer.Value, Is.EqualTo((Team?)Team.Bravo), "a viewer published by someone else stays");
         }
 
         [Test]

@@ -5,18 +5,14 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// ゲーム進行が画面を作るときの登録口。HUD は <see cref="HudFactory"/> の生成役が作る。
-    /// 既定の生成役は UI のアセンブリ (Fps.Runtime.UI) が起動時に <see cref="UseDefaultHudFactory"/> で登録し、使う側は <see cref="HudFactory"/> に
-    /// 自分の生成役を入れると差し替えられる (null を入れると既定に戻る)。
-    /// ポーズ (<see cref="Pause"/>)・ロードアウトの選択 (<see cref="LoadoutSelect"/>)・メニューとの行き来 (<see cref="Menu"/>) も、
-    /// 同じく UI のコードが UseDefault… で既定を登録し、プロパティに入れると差し替えられる。
+    /// UI からゲーム進行への口の登録口。ポーズ (<see cref="Pause"/>)・ロードアウトの選択 (<see cref="LoadoutSelect"/>)・持ち物 (<see cref="InventoryScreen"/>)・
+    /// メニューとの行き来 (<see cref="Menu"/>) は、UI のコードが UseDefault… で既定を登録し、プロパティに入れると差し替えられる (null を入れると既定に戻る)。
+    /// HUD はゲーム進行からは作らず、UI が <see cref="GameSignals"/> を見て自分で作る。
     /// </summary>
     public static class GameUi
     {
         public const string LogTag = "[GameUi]";
 
-        private static IHudFactory _hudFactory;
-        private static IHudFactory _defaultHudFactory;
         private static IPauseState _pause;
         private static IPauseState _defaultPause;
         private static ILoadoutSelect _loadoutSelect;
@@ -121,80 +117,10 @@ namespace Fps.Runtime
         // 既定の UI のアセンブリが無い状態は、テストで登録済みの既定を外さないと作れない。使う側は差し替えれば済むので公開しない
         internal static void ClearDefaults()
         {
-            _defaultHudFactory = null;
             _defaultPause = null;
             _defaultLoadoutSelect = null;
             _defaultMenu = null;
             _defaultInventoryScreen = null;
-        }
-
-        /// <summary>HUD を作る生成役。差し替えていなければ既定の生成役。どちらも無ければ null。</summary>
-        public static IHudFactory HudFactory
-        {
-            get => _hudFactory ?? _defaultHudFactory;
-            set => _hudFactory = value;
-        }
-
-        /// <summary>
-        /// 既定の生成役を factory にする。<see cref="HudFactory"/> を差し替えていればそちらを使い続ける
-        /// (起動時の登録の順番に依らず、差し替えが既定に上書きされないよう、既定は別に持つ)。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">factory が null。</exception>
-        public static void UseDefaultHudFactory(IHudFactory factory)
-        {
-            _defaultHudFactory = factory ?? throw new ArgumentNullException(nameof(factory));
-        }
-
-        /// <summary>
-        /// <see cref="HudFactory"/> で HUD を作る。生成役が登録されていなければ null を返す
-        /// (既定の UI のアセンブリ Fps.Runtime.UI を入れずに使っても、例外で止めずに HUD 無しで進めるため)。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">登録された生成役が null を返した。</exception>
-        public static IHud CreateHud(string objectName, Damageable player, WeaponController weapon, Match match)
-        {
-            var factory = HudFactory;
-            if (factory == null)
-            {
-                return null;
-            }
-
-            var hud = factory.Create(objectName, player, weapon, match);
-            if (hud == null)
-            {
-                throw new InvalidOperationException($"{factory.GetType().Name}.Create returned no HUD");
-            }
-
-            return hud;
-        }
-
-        /// <summary>
-        /// <see cref="HudFactory"/> で player にデバッグ表示を付ける。生成役が無ければ付けずに false
-        /// (デバッグ用の表示なので、無くてもゲームは進める)。
-        /// </summary>
-        public static bool AttachActionDebug(GameObject player, PlayerActionReader reader)
-        {
-            var factory = HudFactory;
-            if (factory == null)
-            {
-                return false;
-            }
-
-            factory.AttachActionDebug(player, reader);
-            return true;
-        }
-
-        /// <summary>今のシーンで有効な HUD を 1 つ探す。無ければ null。</summary>
-        public static IHud FindHud()
-        {
-            foreach (var behaviour in UnityEngine.Object.FindObjectsByType<MonoBehaviour>())
-            {
-                if (behaviour is IHud hud)
-                {
-                    return hud;
-                }
-            }
-
-            return null;
         }
 
         /// <summary>

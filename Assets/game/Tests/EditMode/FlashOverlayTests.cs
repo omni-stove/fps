@@ -43,7 +43,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheHudFactoryAttachesTheOverlay()
         {
-            var hud = Hud.Create("TestFlashHud", null, null, null);
+            var hud = Hud.Create("TestFlashHud");
             _created.Add(hud.gameObject);
             _created.Add(hud.OwnedPanelSettings);
 

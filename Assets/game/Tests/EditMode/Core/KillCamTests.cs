@@ -277,11 +277,50 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void CaptionNamesTheKiller()
+        public void StatusCarriesTheKillerTheWeaponAndTheTimeLeft()
         {
-            var caption = KillCamText.Caption(LocalizedText.Literal("Enemy-1"));
+            var status = new KillCamStatus("Enemy-1", "rifle", 4f, 1f, 2f);
 
-            Assert.That(caption.Key, Is.EqualTo("hud.killCam.caption"));
+            Assert.That(status.KillerName, Is.EqualTo("Enemy-1"));
+            Assert.That(status.WeaponId, Is.EqualTo("rifle"));
+            Assert.That(status.DurationSeconds, Is.EqualTo(4f));
+            Assert.That(status.ElapsedSeconds, Is.EqualTo(1f));
+            Assert.That(status.Speed, Is.EqualTo(2f));
+            Assert.That(status.Progress, Is.EqualTo(0.25f).Within(_tolerance));
+            Assert.That(status.RemainingSeconds, Is.EqualTo(1.5f).Within(_tolerance), "three clip seconds at 2x");
+            Assert.That(status.ToString(), Is.EqualTo("killer=Enemy-1 weapon=rifle 1.00/4.00s at 2.00x"));
+        }
+
+        [Test]
+        public void StatusClampsThePositionAndMovesAlongTheSameReplay()
+        {
+            var status = new KillCamStatus(null, null, 2f, -1f, 1f);
+            Assert.That(status.KillerName, Is.Empty);
+            Assert.That(status.WeaponId, Is.Empty);
+            Assert.That(status.ElapsedSeconds, Is.EqualTo(0f));
+            Assert.That(default(KillCamStatus).KillerName, Is.Empty);
+            Assert.That(default(KillCamStatus).WeaponId, Is.Empty);
+
+            var later = status.At(5f);
+            Assert.That(later.ElapsedSeconds, Is.EqualTo(2f), "clamped to the clip");
+            Assert.That(later.Progress, Is.EqualTo(1f));
+            Assert.That(later.RemainingSeconds, Is.EqualTo(0f));
+            Assert.That(later, Is.Not.EqualTo(status));
+            Assert.That(later.At(0f), Is.EqualTo(status));
+            Assert.That(later.At(0f).GetHashCode(), Is.EqualTo(status.GetHashCode()));
+
+            Assert.That(new KillCamStatus("Turret", "", 0f, 0f, 1f).Progress, Is.EqualTo(1f), "an empty clip is already done");
+        }
+
+        [Test]
+        public void StatusRejectsBrokenTimes()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KillCamStatus("Enemy-1", "rifle", -1f, 0f, 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KillCamStatus("Enemy-1", "rifle", float.NaN, 0f, 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KillCamStatus("Enemy-1", "rifle", float.PositiveInfinity, 0f, 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KillCamStatus("Enemy-1", "rifle", 1f, float.NaN, 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KillCamStatus("Enemy-1", "rifle", 1f, 0f, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KillCamStatus("Enemy-1", "rifle", 1f, 0f, float.NaN));
         }
 
         [Test]

@@ -157,6 +157,71 @@ namespace Shooter.Server.Eos.Tests
         }
 
         [Test]
+        public void ASkillAverageChangeDuringAnUpdateIsSentAfterIt()
+        {
+            Register();
+
+            _registrar.SetPlayers(1, 1000);
+            _registrar.SetPlayers(1, 1100);
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1));
+            Assert.That(ByKey(_backend.Updates[0])[ServerLobby.SkillAverageKey].Number, Is.EqualTo(1000));
+            _backend.CompleteUpdate();
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            var second = ByKey(_backend.Updates[1]);
+            Assert.That(second.ContainsKey(ServerLobby.PlayersKey), Is.False, "only the changed attribute is sent");
+            Assert.That(second[ServerLobby.SkillAverageKey].Number, Is.EqualTo(1100));
+            _backend.CompleteUpdate();
+            Assert.That(_registrar.PublishedSkillAverage, Is.EqualTo(1100));
+            Assert.That(_registrar.PublishedPlayers, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AFailedSkillAverageUpdateIsRetriedAfterTheInterval()
+        {
+            Register();
+            _registrar.SetPlayers(0, 1000);
+            _backend.CompleteUpdate("throttled");
+
+            Assert.That(_registrar.PublishedSkillAverage, Is.Null);
+            _registrar.Tick(_interval);
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            Assert.That(ByKey(_backend.Updates[1])[ServerLobby.SkillAverageKey].Number, Is.EqualTo(1000));
+            _backend.CompleteUpdate();
+            Assert.That(_registrar.PublishedSkillAverage, Is.EqualTo(1000));
+        }
+
+        [Test]
+        public void ARecreatedLobbyCarriesTheSkillAverage()
+        {
+            Register();
+            _registrar.SetPlayers(2, 1300);
+            _backend.CompleteUpdate();
+
+            _backend.RaiseRemoved("l1", "the lobby was closed");
+            _registrar.Tick(1f);
+
+            Assert.That(_backend.Creates, Is.EqualTo(2));
+            Assert.That(ByKey(_backend.CreatedAttributes)[ServerLobby.SkillAverageKey].Number, Is.EqualTo(1300));
+        }
+
+        [Test]
+        public void ANullSkillAverageKeepsTheLastOne()
+        {
+            Register();
+            _registrar.SetPlayers(1, 1300);
+            _backend.CompleteUpdate();
+
+            _registrar.SetPlayers(0, null);
+
+            Assert.That(_registrar.SkillAverage, Is.EqualTo(1300));
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            Assert.That(ByKey(_backend.Updates[1]).ContainsKey(ServerLobby.SkillAverageKey), Is.False);
+        }
+
+        [Test]
         public void PlayersWhoJoinBeforeRegistrationAreInTheCreatedLobby()
         {
             Begin();

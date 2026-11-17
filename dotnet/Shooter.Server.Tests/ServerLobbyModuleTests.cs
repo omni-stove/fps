@@ -79,6 +79,108 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void PublishesTheSkillAverageOfThePlayersAsTheyJoinAndLeave()
+        {
+            Register();
+
+            _match.Join(new ConnectionId(1), "device1", skillRating: 1000);
+            Assert.That(_module.SkillAverage, Is.EqualTo(1000));
+            _match.Join(new ConnectionId(2), "device2", skillRating: 1400);
+            _match.Join(new ConnectionId(3), "device3");
+            Assert.That(_module.SkillAverage, Is.EqualTo(1200), "a player without a value is not counted");
+            Tick();
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1), "the players and the average go in one update");
+            Assert.That(_backend.Updates[0], Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.PlayersKey && a.Number == 3));
+            Assert.That(_backend.Updates[0], Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.SkillAverageKey && a.Number == 1200));
+            Assert.That(_log.ToString(), Does.Contain("[Lobby] skill average - -> 1200"));
+            _backend.CompleteUpdate();
+
+            _match.Leave(new ConnectionId(1));
+            Assert.That(_module.SkillAverage, Is.EqualTo(1400));
+            Tick();
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            Assert.That(_backend.Updates[1], Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.PlayersKey && a.Number == 2));
+            Assert.That(_backend.Updates[1], Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.SkillAverageKey && a.Number == 1400));
+            Assert.That(_log.ToString(), Does.Contain("[Lobby] skill average 1200 -> 1400"));
+            _backend.CompleteUpdate();
+            Assert.That(_module.Registration.Registrar.PublishedSkillAverage, Is.EqualTo(1400));
+        }
+
+        [Test]
+        public void APlayerWithoutAValueChangesOnlyThePlayers()
+        {
+            Register();
+            _match.Join(new ConnectionId(1), "device1", skillRating: 1000);
+            Tick();
+            _backend.CompleteUpdate();
+
+            _match.Join(new ConnectionId(2), "device2");
+            Tick();
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            Assert.That(_backend.Updates[1], Has.Count.EqualTo(1));
+            Assert.That(_backend.Updates[1][0].Key, Is.EqualTo(ServerLobby.PlayersKey));
+        }
+
+        [Test]
+        public void KeepsTheLastAverageWhenNoPlayerWithAValueIsLeft()
+        {
+            Register();
+            _match.Join(new ConnectionId(1), "device1", skillRating: 1000);
+            Tick();
+            _backend.CompleteUpdate();
+
+            _match.Leave(new ConnectionId(1));
+            Assert.That(_module.SkillAverage, Is.Null);
+            Tick();
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            Assert.That(_backend.Updates[1], Has.None.Matches<LobbyAttribute>(a => a.Key == ServerLobby.SkillAverageKey));
+            _backend.CompleteUpdate();
+            Assert.That(_module.Registration.Registrar.PublishedSkillAverage, Is.EqualTo(1000));
+        }
+
+        [Test]
+        public void PlayersWhoJoinBeforeRegistrationPutTheirAverageInTheCreatedLobby()
+        {
+            Start();
+            _match.Join(new ConnectionId(1), "device1", skillRating: 1500);
+            Tick();
+            _backend.CompleteLogin(_server);
+
+            Assert.That(_backend.CreatedAttributes, Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.SkillAverageKey && a.Number == 1500));
+            _backend.CompleteCreate(new LobbyInfo("l1", _server, NetMatchSettings.DefaultMaxPlayers, new[] { _server }, _backend.CreatedAttributes));
+
+            Assert.That(_backend.Updates, Is.Empty);
+            Assert.That(_log.ToString(), Does.Contain("[Lobby] registered id=l1 server=" + _endpoint + " players=1 skill_average=1500"));
+        }
+
+        [Test]
+        public void ALobbyWithoutRatedPlayersHasNoSkillAverage()
+        {
+            Start();
+            _match.Join(new ConnectionId(1), "device1");
+            Tick();
+            _backend.CompleteLogin(_server);
+
+            Assert.That(_module.SkillAverage, Is.Null);
+            Assert.That(_backend.CreatedAttributes, Has.None.Matches<LobbyAttribute>(a => a.Key == ServerLobby.SkillAverageKey));
+        }
+
+        [Test]
+        public void StopsFollowingTheMatchAfterStop()
+        {
+            Register();
+            _module.Stop();
+
+            _match.Join(new ConnectionId(1), "device1", skillRating: 1000);
+
+            Assert.That(_module.SkillAverage, Is.Null);
+        }
+
+        [Test]
         public void ClosesTheLobbyWhenTheServerStartsDraining()
         {
             Register();

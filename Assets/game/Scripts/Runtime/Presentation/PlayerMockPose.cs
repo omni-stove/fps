@@ -41,7 +41,8 @@ namespace Shooter.Runtime
     /// <summary>
     /// 自機モック (<see cref="PlayerMockBody"/>) の寸法と、<see cref="PlayerActionState"/> から作る姿勢。状態を持たない計算だけを置く。
     /// 三人称の体は足元を原点とする本体のローカル座標 (+Z が正面)、一人称の銃 (ビューモデル) はカメラのローカル座標で表す。
-    /// 同時に立つ状態の優先は ダウン &gt; 乗り越え &gt; 回避 &gt; カバー。しゃがみはそれらと重ねて胴を縮める。
+    /// 同時に立つ状態の優先は ダウン &gt; 乗り越え &gt; 回避 &gt; カバー &gt; 壁走り &gt; 水泳 &gt; リーン。しゃがみはそれらと重ねて胴を縮める。
+    /// 壁走り・水泳・リーンは移動の Core の状態 (<see cref="CharacterMotorState"/>) から読む。
     /// </summary>
     public static class PlayerMockPose
     {
@@ -77,6 +78,12 @@ namespace Shooter.Runtime
 
         /// <summary>ダウンで横に倒す角度。真横 (90) だと体が床にめり込むので少し手前で止める。</summary>
         public const float DownedRollDegrees = 80f;
+
+        /// <summary>泳ぐときに体を前へ倒す角度。真横 (90) まで倒すと、足元を軸に回した体が水面より下へ沈むので少し起こす。</summary>
+        public const float SwimPitchDegrees = 70f;
+
+        /// <summary>壁走りで体を壁と反対へ傾ける角度。</summary>
+        public const float WallRunTiltDegrees = 20f;
 
         /// <summary>カバー中に体を壁へ寄せる距離 (m)。</summary>
         public const float CoverShift = 0.2f;
@@ -188,6 +195,72 @@ namespace Shooter.Runtime
             }
 
             return Quaternion.identity;
+        }
+
+        /// <summary>
+        /// <see cref="BodyLean(PlayerActionState, Vector3, Vector3)"/> に、移動の Core の状態 motor の壁走り・水泳・リーンを足した体全体の傾き。
+        /// ダウン・乗り越え・回避・カバーの間はそちらの傾きのまま (リーンはカバー中に効かせない)。
+        /// leanAngleDegrees は傾け切ったときの角度 (<see cref="MotorSpec.LeanAngleDegrees"/>)。
+        /// </summary>
+        public static Quaternion BodyLean(
+            PlayerActionState state, Vector3 localMove, Vector3 localCoverNormal, CharacterMotorState motor, float leanAngleDegrees)
+        {
+            if (state.IsDowned || state.IsVaulting || state.IsDodging || state.IsInCover)
+            {
+                return BodyLean(state, localMove, localCoverNormal);
+            }
+
+            return TraversalLean(motor, leanAngleDegrees);
+        }
+
+        /// <summary>motor の壁走り・水泳・リーンの傾き。<see cref="TraversalLean(float, bool, WallRunSide, float)"/> を見る。</summary>
+        public static Quaternion TraversalLean(CharacterMotorState motor, float leanAngleDegrees)
+        {
+            return TraversalLean(motor.Lean.Amount, motor.IsSwimming, motor.WallRun.Side, leanAngleDegrees);
+        }
+
+        /// <summary>
+        /// Animator に渡すパラメーターの壁走り・水泳・リーンの傾き。<see cref="CharacterPose"/> が死亡・ダウン・カバーの間はそれらを寝かせるので、そのときは傾けない。
+        /// </summary>
+        public static Quaternion TraversalLean(CharacterPoseParameters parameters, float leanAngleDegrees)
+        {
+            return TraversalLean(parameters.Lean, parameters.Swimming, (WallRunSide)parameters.WallRun, leanAngleDegrees);
+        }
+
+        /// <summary>
+        /// 足元を軸にした体全体の傾き。壁走りなら壁と反対の側へ <see cref="WallRunTiltDegrees"/>、泳いでいれば前へ <see cref="SwimPitchDegrees"/>、
+        /// それ以外は lean (-1 左〜1 右) の向きへ leanAngleDegrees × |lean| 傾ける。優先は 壁走り &gt; 水泳 &gt; リーン。
+        /// </summary>
+        public static Quaternion TraversalLean(float lean, bool swimming, WallRunSide wallRun, float leanAngleDegrees)
+        {
+            if (!(lean >= -1f && lean <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(lean), lean, "lean must be between -1 and 1");
+            }
+
+            if (!(leanAngleDegrees >= 0f && leanAngleDegrees <= 90f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(leanAngleDegrees), leanAngleDegrees, "leanAngleDegrees must be between 0 and 90");
+            }
+
+            switch (wallRun)
+            {
+                case WallRunSide.Left:
+                    return LeanToward(Vector3.right, WallRunTiltDegrees);
+                case WallRunSide.Right:
+                    return LeanToward(Vector3.left, WallRunTiltDegrees);
+                case WallRunSide.None:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(wallRun), wallRun, "wallRun is not a defined WallRunSide");
+            }
+
+            if (swimming)
+            {
+                return Quaternion.Euler(SwimPitchDegrees, 0f, 0f);
+            }
+
+            return LeanToward(Vector3.right, leanAngleDegrees * lean);
         }
 
         /// <summary>体全体をずらす量。カバー中 (ダウンを除く) は壁へ <see cref="CoverShift"/> 寄せる。</summary>

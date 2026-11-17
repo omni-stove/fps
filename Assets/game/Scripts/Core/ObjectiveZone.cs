@@ -33,6 +33,8 @@ namespace Shooter.Core
 
         public bool IsOccupied => Occupants > 0;
 
+        public bool IsActive => !_disposed && !_mission.IsFinished && _mission.GetState(ObjectiveId) == ObjectiveState.Active;
+
         /// <param name="mission">進めるミッション。</param>
         /// <param name="objectiveId">mission にある目標の Id。</param>
         /// <param name="mode">進める条件。</param>

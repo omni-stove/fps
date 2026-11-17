@@ -29,6 +29,7 @@ namespace Shooter.Core.Tests
         public void FormatsJoinKillAndSpawn()
         {
             Assert.That(MatchLog.Joined(2, Team.Bravo), Is.EqualTo("[Match] joined player=2 team=Bravo"));
+            Assert.That(MatchLog.TeamBalanced(3, Team.Alpha, Team.Bravo), Is.EqualTo("[Match] balanced player=3 from=Alpha to=Bravo"));
             Assert.That(MatchLog.Kill(1, 2), Is.EqualTo("[Match] kill killer=1 victim=2"));
             Assert.That(MatchLog.TeamKill(1, 3), Is.EqualTo("[Match] teamkill killer=1 victim=3"));
             Assert.That(MatchLog.Spawn(2, new SpawnPoint(new Vector3(1f, 0f, -20.5f))),

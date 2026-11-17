@@ -42,6 +42,7 @@ namespace Fps.Tests.EditMode
         {
             _definition = ScriptableObject.CreateInstance<MissionDefinition>();
             _definition.name = MissionName;
+            _definition.Id = MissionName;
             _definition.SetObjectives(new[]
             {
                 new ObjectiveDefinition("reach", ""),
@@ -172,7 +173,7 @@ namespace Fps.Tests.EditMode
             Assert.That(scene.Checkpoint.HandleEnter(scene.PlayerCollider), Is.True);
             Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointSaved));
 
-            scene.Campaign.Tick(CampaignRunner.SavedNoticeSeconds - 0.1f);
+            scene.Campaign.Tick(scene.Campaign.SavedNoticeSeconds - 0.1f);
             Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointSaved));
             scene.Campaign.Tick(0.1f);
             Assert.That(notice.Notice, Is.EqualTo(HudNotice.None), "the saved notice is temporary");
@@ -855,7 +856,7 @@ namespace Fps.Tests.EditMode
         public void Campaign01RestoresTheLegacySlotAndMovesItToItsOwnSlot()
         {
             const string id = CampaignSaveSlots.LegacyMissionId;
-            _definition.name = id;
+            _definition.Id = id;
             var legacy = SaveAtCheckpoint(id, 45).ToJson();
             _storage.Write(CampaignSaveSlots.Legacy, legacy);
             var scene = BuildScene();
@@ -885,7 +886,7 @@ namespace Fps.Tests.EditMode
         public void Campaign01PrefersItsOwnSlotAndCompletionDeletesBothSlots()
         {
             const string id = CampaignSaveSlots.LegacyMissionId;
-            _definition.name = id;
+            _definition.Id = id;
             _storage.Write(CampaignSaveSlots.Legacy, SaveAtCheckpoint(id, 20).ToJson());
             _storage.Write(CampaignSaveSlots.Prefix + id, SaveAtCheckpoint(id, 80).ToJson());
             var scene = BuildScene();
@@ -923,7 +924,7 @@ namespace Fps.Tests.EditMode
         public void AFailedMigrationKeepsTheLegacySlot()
         {
             const string id = CampaignSaveSlots.LegacyMissionId;
-            _definition.name = id;
+            _definition.Id = id;
             var storage = new MemoryStorage();
             var legacy = SaveAtCheckpoint(id, 45).ToJson();
             storage.Write(CampaignSaveSlots.Legacy, legacy);
@@ -946,11 +947,84 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BeginRejectsAMissionIdThatCannotNameASlot()
         {
-            _definition.name = "Bad Mission";
+            _definition.Id = "Bad Mission";
             var scene = BuildScene();
 
             Assert.Throws<ArgumentException>(() => scene.Begin(_storage, () => _reloads++));
             Assert.That(scene.Campaign.IsStarted, Is.False);
+        }
+
+        [Test]
+        public void BeginRejectsAMissionWithoutAnIdEvenIfItsAssetNameIsValid()
+        {
+            _definition.Id = string.Empty;
+            var scene = BuildScene();
+
+            Assert.Throws<ArgumentException>(() => scene.Begin(_storage, () => _reloads++));
+            Assert.That(scene.Campaign.IsStarted, Is.False);
+        }
+
+        [Test]
+        public void TheMissionIdComesFromTheDefinitionNotItsAssetName()
+        {
+            _definition.name = "RenamedAsset";
+            var scene = BuildScene();
+
+            BeginQuietly(scene);
+
+            Assert.That(scene.Campaign.MissionId, Is.EqualTo(MissionName));
+            Assert.That(scene.Campaign.SaveSlot, Is.EqualTo(Slot));
+        }
+
+        [Test]
+        public void TheReloadDelayAndTheSavedNoticeComeFromTheMissionCatalog()
+        {
+            var catalog = ScriptableObject.CreateInstance<MissionCatalog>();
+            _assets.Add(catalog);
+            Assert.That(catalog.ReloadDelaySeconds, Is.EqualTo(3f), "the default is the old CampaignRunner value");
+            Assert.That(catalog.SavedNoticeSeconds, Is.EqualTo(2.5f), "the default is the old CampaignRunner value");
+            catalog.ReloadDelaySeconds = 5f;
+            catalog.SavedNoticeSeconds = 1f;
+
+            var scene = BuildScene();
+            scene.Campaign.Missions = catalog;
+            BeginQuietly(scene);
+            Assert.That(scene.Campaign.ReloadDelaySeconds, Is.EqualTo(5f));
+            Assert.That(scene.Campaign.SavedNoticeSeconds, Is.EqualTo(1f));
+
+            var notice = scene.Campaign.Notice;
+            ExpectCampaign(new Regex($@"^\[Campaign\] saved mission={MissionName} checkpoint={CheckpointId} "));
+            Assert.That(scene.Checkpoint.HandleEnter(scene.PlayerCollider), Is.True);
+            scene.Campaign.Tick(0.9f);
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointSaved));
+            scene.Campaign.Tick(0.1f);
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.None));
+
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=Player");
+            ExpectCampaign($"player died; reloading in 5s from checkpoint={CheckpointId}");
+            scene.Player.Kill();
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.CheckpointRestart(5)));
+
+            scene.Campaign.Tick(4.9f);
+            Assert.That(_reloads, Is.Zero);
+            ExpectCampaign("reloading scene");
+            scene.Campaign.Tick(0.1f);
+            Assert.That(_reloads, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ASetReloadDelayOverridesTheMissionCatalog()
+        {
+            var catalog = ScriptableObject.CreateInstance<MissionCatalog>();
+            _assets.Add(catalog);
+            catalog.ReloadDelaySeconds = 5f;
+            var scene = BuildScene();
+            scene.Campaign.Missions = catalog;
+
+            scene.Campaign.ReloadDelaySeconds = 1f;
+
+            Assert.That(scene.Campaign.ReloadDelaySeconds, Is.EqualTo(1f));
+            Assert.That(catalog.ReloadDelaySeconds, Is.EqualTo(5f), "the shared catalog is left alone");
         }
 
         [Test]

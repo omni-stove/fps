@@ -12,7 +12,8 @@ namespace Fps.Editor
     /// <item>陣営の無いプレイヤーが指示しても出ない (<c>[Squad] refused reason=NoSide</c>) ことを確かめ、プレイヤーに味方の bot
     /// (<see cref="SquadCommandRangeFixture.BotName"/>) と同じ陣営を持たせる。</item>
     /// <item><see cref="SquadCommandRangeFixture.StandPoint"/> から地面 (<see cref="SquadCommandRangeFixture.HoldPoint"/>) を指して指示すると、
-    /// bot が受けて (<c>[Squad] accepted ... kind=Hold</c>) 応答の字幕を出し、そこへ移って着く (<c>[Squad] arrived</c>)。HUD に守る指示の印が出る。</item>
+    /// bot が受けて (<c>[Squad] accepted ... kind=Hold</c>) 応答 (<see cref="SubtitleFeed.SquadReplied"/>) を字幕に出し、そこへ移って着く (<c>[Squad] arrived</c>)。
+    /// 守る指示が <see cref="GameSignals.SquadOrder"/> に出て、それを購読する HUD (<see cref="SquadOrderMarkerView"/>) に印が出る。</item>
     /// <item>標的ダミーを <see cref="SquadCommandRangeFixture.TargetPoint"/> に置いて指して指示すると、bot がそのダミーを狙う (<c>[Squad] engage</c>)。</item>
     /// <item>長押し (<see cref="SquadCommandController.Recall"/>) で付いてこさせると (<c>[Squad] order kind=Follow</c>)、
     /// bot がプレイヤーの近く (<see cref="SquadOrderSpec.FollowDistance"/>) まで戻る。</item>
@@ -30,8 +31,8 @@ namespace Fps.Editor
         // 照準を合わせ直すフレーム数。肩越しのカメラは向きを変えると位置も動くので、何度か合わせ直して揃える。
         private const int _aimFrames = 3;
 
-        // HUD に表示が付くまで待つ秒数。SquadCommandController は HUD を ViewSearchIntervalSeconds ごとに探す。
-        private const float _viewWaitSeconds = SquadCommandController.ViewSearchIntervalSeconds * 3f;
+        // HUD が LateUpdate で印を置くまで待つ秒数。フレームが遅い CI でも数フレームは回る長さにする。
+        private const float _viewWaitSeconds = 3f;
 
         // 付いてきたとみなす距離の余裕 (m)。止まった後に押し合って少し離れる分。
         private const float _followTolerance = 1f;
@@ -277,6 +278,12 @@ namespace Fps.Editor
 
         private string CheckMarker(BootstrapWorld world)
         {
+            var order = GameSignals.SquadOrder.Value;
+            if (!order.HasValue || order.Value.Order != BotErrandKind.Hold)
+            {
+                return $"the hold order is not in GameSignals.SquadOrder ({GameSignals.SquadOrder})";
+            }
+
             if (!GameUi.IsAlive(world.Hud))
             {
                 Debug.Log($"{SquadOrderLog.Tag} smoke: the TPS range has no HUD, so the order marker is not checked");

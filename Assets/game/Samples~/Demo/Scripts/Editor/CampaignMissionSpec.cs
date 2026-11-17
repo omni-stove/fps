@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Fps.Core;
 using Fps.Runtime;
 using UnityEngine;
@@ -39,21 +38,10 @@ namespace Fps.Editor
                 throw new ArgumentException($"mission '{id}' needs a name key", nameof(nameKey));
             }
 
-            if (definitionPath == null)
-            {
-                throw new ArgumentNullException(nameof(definitionPath));
-            }
-
-            // CampaignRunner は定義のアセット名をミッション Id (セーブのスロット) にするので、ずれると別のミッションとして保存される。
-            if (!string.Equals(Path.GetFileNameWithoutExtension(definitionPath), id, StringComparison.Ordinal))
-            {
-                throw new ArgumentException($"mission '{id}' definition '{definitionPath}' must be named '{id}.asset'", nameof(definitionPath));
-            }
-
             Id = id;
             NameKey = nameKey;
             ScenePath = scenePath ?? throw new ArgumentNullException(nameof(scenePath));
-            DefinitionPath = definitionPath;
+            DefinitionPath = definitionPath ?? throw new ArgumentNullException(nameof(definitionPath));
             NavMeshDataPath = navMeshDataPath ?? throw new ArgumentNullException(nameof(navMeshDataPath));
             FloorCenter = floorCenter;
             FloorScale = floorScale;
@@ -67,7 +55,7 @@ namespace Fps.Editor
             Validate();
         }
 
-        /// <summary>ミッション Id。定義のアセット名・セーブのスロット・カタログの Id に使う。</summary>
+        /// <summary>ミッション Id。定義の Id (<see cref="MissionDefinition.Id"/>)・セーブのスロット・カタログの Id に使う。</summary>
         public string Id { get; }
 
         /// <summary>ミッション名を引く言語の表のキー。定義とカタログに入れる。</summary>

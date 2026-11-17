@@ -21,7 +21,7 @@ namespace Fps.Tests.EditMode
         private static readonly Vector3 _eye = new Vector3(0f, 1f, 0f);
 
         private readonly List<GameObject> _objects = new List<GameObject>();
-        private readonly List<SubtitleSpeech> _speech = new List<SubtitleSpeech>();
+        private readonly List<SquadOrderReply> _replies = new List<SquadOrderReply>();
         private WeaponDefinition _rifle;
 
         [SetUp]
@@ -30,14 +30,14 @@ namespace Fps.Tests.EditMode
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
             _rifle.name = "Rifle";
             WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
-            SubtitleFeed.Spoken += OnSpoken;
+            SubtitleFeed.SquadReplied += OnReplied;
         }
 
         [TearDown]
         public void TearDown()
         {
-            SubtitleFeed.Spoken -= OnSpoken;
-            _speech.Clear();
+            SubtitleFeed.SquadReplied -= OnReplied;
+            _replies.Clear();
             foreach (var go in _objects)
             {
                 if (go != null)
@@ -48,6 +48,7 @@ namespace Fps.Tests.EditMode
 
             _objects.Clear();
             Object.DestroyImmediate(_rifle);
+            GameSignals.ResetAll();
         }
 
         [Test]
@@ -74,7 +75,8 @@ namespace Fps.Tests.EditMode
             Assert.That(commander.CurrentOrder, Is.EqualTo(BotErrandKind.Hold));
             Assert.That(commander.CurrentPoint.z, Is.EqualTo(5f).Within(1e-3f));
             Assert.That(commander.LastRefusal, Is.EqualTo(SquadOrderRefusal.None));
-            Assert.That(_speech.Select(s => s.Text), Is.EqualTo(new[] { SquadOrderText.Reply("Ally", BotErrandKind.Hold) }));
+            Assert.That(_replies, Is.EqualTo(new[] { SquadOrderReply.Accepted("Ally", BotErrandKind.Hold) }));
+            Assert.That(GameSignals.SquadOrder.Value, Is.EqualTo(new SquadOrderStatus(BotErrandKind.Hold, commander.CurrentPoint, null)));
         }
 
         [Test]
@@ -91,6 +93,12 @@ namespace Fps.Tests.EditMode
             Assert.That(commander.CurrentOrder, Is.EqualTo(BotErrandKind.Attack));
             Assert.That(commander.CurrentTarget, Is.SameAs(enemy));
             Assert.That(Vector3.Distance(commander.CurrentPoint, enemy.AimPoint), Is.LessThan(1e-4f));
+
+            var published = GameSignals.SquadOrder.Value;
+            Assert.That(published.HasValue, Is.True);
+            Assert.That(published.Value.Order, Is.EqualTo(BotErrandKind.Attack));
+            Assert.That(published.Value.Target, Is.SameAs(enemy));
+            Assert.That(Vector3.Distance(published.Value.CurrentPoint, enemy.AimPoint), Is.LessThan(1e-4f));
         }
 
         [Test]
@@ -106,6 +114,7 @@ namespace Fps.Tests.EditMode
             commander.Tick();
 
             Assert.That(commander.CurrentOrder, Is.EqualTo(BotErrandKind.None), "the marker goes away with the target");
+            Assert.That(GameSignals.SquadOrder.Value, Is.Null, "the order is cleared with it");
         }
 
         [Test]
@@ -116,7 +125,7 @@ namespace Fps.Tests.EditMode
             var other = Bot("Other", 0, new Vector3(-3f, 0f, 2f));
             Floor();
             commander.TryOrderAlong(_eye, new Vector3(0f, -1f, 5f), out _);
-            _speech.Clear();
+            _replies.Clear();
 
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Squad\] order kind=Follow target=none at=.* recipients=2 squads=false$"));
             Assert.That(commander.Recall(out var recipients), Is.True);
@@ -125,7 +134,9 @@ namespace Fps.Tests.EditMode
             Assert.That(ally.Order.Kind, Is.EqualTo(BotErrandKind.Follow));
             Assert.That(other.Order.Kind, Is.EqualTo(BotErrandKind.Follow));
             Assert.That(commander.CurrentOrder, Is.EqualTo(BotErrandKind.None));
-            Assert.That(_speech.Select(s => s.Speaker), Is.EquivalentTo(new[] { "Ally", "Other" }));
+            Assert.That(_replies.Select(r => r.Speaker), Is.EquivalentTo(new[] { "Ally", "Other" }));
+            Assert.That(_replies.Select(r => r.Order), Is.All.EqualTo(BotErrandKind.Follow));
+            Assert.That(GameSignals.SquadOrder.Value, Is.Null, "a recall clears the order");
         }
 
         [Test]
@@ -223,9 +234,9 @@ namespace Fps.Tests.EditMode
             Assert.Throws<System.ArgumentNullException>(() => commander.ApplySpec(null));
         }
 
-        private void OnSpoken(SubtitleSpeech speech)
+        private void OnReplied(SquadOrderReply reply)
         {
-            _speech.Add(speech);
+            _replies.Add(reply);
         }
 
         private SquadCommandController Commander(int side)

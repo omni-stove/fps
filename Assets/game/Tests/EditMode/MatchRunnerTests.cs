@@ -242,11 +242,89 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void DefaultsAreReachableInTheBootstrapScene()
+        public void DefaultsHaveNoTimeLimitAndAReachableKillCount()
         {
-            Assert.That(MatchRunner.KillsToWin, Is.GreaterThan(0));
-            Assert.That(MatchRunner.TimeLimitSeconds, Is.GreaterThan(0f));
+            Assert.That(_runner.KillsToWin, Is.EqualTo(MatchRunner.DefaultKillsToWin));
+            Assert.That(MatchRunner.DefaultKillsToWin, Is.EqualTo(10));
+            Assert.That(_runner.TimeLimitSeconds, Is.EqualTo(0f), "the range has no timer by default");
+            Assert.That(float.IsPositiveInfinity(MatchRunner.MatchTimeLimit(_runner.TimeLimitSeconds)), Is.True);
+            Assert.That(MatchRunner.MatchTimeLimit(45f), Is.EqualTo(45f));
             Assert.That(MatchRunner.RestartActionPath, Is.EqualTo(WeaponController.ReloadActionPath), "R restarts");
+        }
+
+        [Test]
+        public void TimeLimitAndKillsToWinRejectBadValues()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _runner.TimeLimitSeconds = -1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _runner.KillsToWin = 0);
+
+            _runner.TimeLimitSeconds = 90f;
+            _runner.KillsToWin = 3;
+            Assert.That(_runner.TimeLimitSeconds, Is.EqualTo(90f));
+            Assert.That(_runner.KillsToWin, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void WinningShowsTheResultOnTheHud()
+        {
+            var model = DefaultHud.Model;
+            Assert.That(model.SoloResult, Is.Null);
+
+            _world.Targets[0].Damageable.Kill();
+            LogAssert.Expect(LogType.Log, "[Match] state=Won kills=2 remaining=30.0");
+            _world.Targets[1].Damageable.Kill();
+
+            Assert.That(model.SoloResult, Is.EqualTo(MatchResult.Won));
+            Assert.That(model.HasResult, Is.False, "a solo match has no winning team");
+        }
+
+        [Test]
+        public void DyingShowsTheLossOnTheHud()
+        {
+            LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=0 remaining=30.0");
+            _world.PlayerDamageable.Kill();
+
+            Assert.That(DefaultHud.Model.SoloResult, Is.EqualTo(MatchResult.Lost));
+        }
+
+        [Test]
+        public void AMatchWithoutATimeLimitHidesTheTimerAndNeverRunsOut()
+        {
+            var host = new GameObject("NoLimitBootstrap");
+            var bootstrap = host.AddComponent<GameBootstrap>();
+            LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+            var world = bootstrap.Build();
+            try
+            {
+                var runner = host.AddComponent<MatchRunner>();
+                var match = new Match(MatchRunner.MatchTimeLimit(runner.TimeLimitSeconds), Kills, MatchRunner.PlayerId);
+                LogAssert.Expect(LogType.Log, "[Match] state=Playing kills=0 remaining=none");
+                runner.Begin(world, match);
+
+                runner.Tick(10000f);
+
+                var hud = (Hud)world.Hud;
+                Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
+                Assert.That(hud.Model.HasTime, Is.False);
+            }
+            finally
+            {
+                if (world.Hud != null)
+                {
+                    Object.DestroyImmediate(world.Hud.gameObject);
+                }
+
+                if (world.HudPanelSettings != null)
+                {
+                    Object.DestroyImmediate(world.HudPanelSettings);
+                }
+
+                Object.DestroyImmediate(world.Floor);
+                Object.DestroyImmediate(world.Player);
+                Object.DestroyImmediate(world.Light.gameObject);
+                Object.DestroyImmediate(world.TargetRoot);
+                Object.DestroyImmediate(host);
+            }
         }
 
         // 中身を確かめるため、GameBootstrap が既定の生成役で作った HUD を具体クラスで読む

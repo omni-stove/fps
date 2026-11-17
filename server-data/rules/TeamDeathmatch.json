@@ -37,7 +37,8 @@
       "abilities": "Off",
       "slowMotion": "Off",
       "aimToFire": "Off",
-      "jump": "On"
+      "jump": "On",
+      "reviveRange": 1.5
     },
     "spawnProtectionSeconds": 2,
     "fallDamage": "Off",
@@ -47,7 +48,13 @@
     "idleKickSeconds": 0,
     "maxWeapons": 2,
     "reloadMode": "Auto",
-    "viewMode": "FirstPerson"
+    "viewMode": "FirstPerson",
+    "playerMaxHealth": 100,
+    "zoneDamage": {
+      "head": 2,
+      "body": 1,
+      "limb": 0.75
+    }
   },
   "match": {
     "scoreLimit": 10,

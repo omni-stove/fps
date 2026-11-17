@@ -71,8 +71,8 @@ namespace Fps.Core.Tests
             var inventory = Make();
             var outcome = PickupJudge.Judge(PickupSpec.Item(_herbId, 2), new PickupCollector(null, 100, 100).WithInventory(inventory));
 
-            Assert.That(PickupPrompt.TryDescribe(outcome, "E", new LocalizedText(_herb.NameKey), out var text), Is.True);
-            Assert.That(text.Key, Is.EqualTo(PickupPrompt.ItemKey));
+            Assert.That(PickupHint.TryFrom(outcome, _herb.NameKey, "Player/Interact", out var hint), Is.True);
+            Assert.That(hint, Is.EqualTo(new PickupHint(PickupHintAction.Item, _herbId, "item.herb", 2, "Player/Interact")));
         }
 
         [Test]

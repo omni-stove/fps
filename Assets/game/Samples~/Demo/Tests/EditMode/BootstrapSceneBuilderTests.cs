@@ -110,6 +110,7 @@ namespace Fps.Tests.EditMode
                     "the player's loadout is wired");
                 Assert.That(bootstrap.GetComponent<GameBootstrap>().RulesDefinition, Is.SameAs(range), "the range rules are wired");
                 Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null, "the bootstrap scene runs a solo match");
+                Assert.That(bootstrap.GetComponent<MatchRunner>().TimeLimitSeconds, Is.EqualTo(0f), "the range has no timer");
                 Assert.That(bootstrap.GetComponent<TutorialPresenter>(), Is.Not.Null, "the range shows the tutorial");
                 Assert.That(bootstrap.transform.childCount, Is.Zero, "everything else is built at runtime");
             }

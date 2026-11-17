@@ -1,14 +1,102 @@
 using System.Collections.Generic;
 using Fps.Core;
+using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
 {
     public sealed class AmmoCrateTests
     {
+        private readonly List<Object> _created = new List<Object>();
+        private InputAction _attack;
+        private InputAction _reload;
+
+        [SetUp]
+        public void SetUp()
+        {
+            GameSignals.ResetAll();
+            _attack = new InputAction("Attack", InputActionType.Button);
+            _reload = new InputAction("Reload", InputActionType.Button);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _attack.Dispose();
+            _reload.Dispose();
+            foreach (var created in _created)
+            {
+                if (created != null)
+                {
+                    Object.DestroyImmediate(created);
+                }
+            }
+
+            _created.Clear();
+            GameSignals.ResetAll();
+        }
+
+        [Test]
+        public void TheHintSaysWhetherAnyWeaponHasRoom()
+        {
+            var player = NewPlayer(out var weapons);
+            Assert.That(AmmoCrate.TryDescribe(player, out var full), Is.True);
+            Assert.That(full, Is.EqualTo(new AmmoCrateHint(false, AmmoCrate.InteractActionPath)), "a new weapon starts with a full reserve");
+
+            weapons.RestoreLoadout(new[] { new WeaponAmmo(weapons.Weapon.Spec.Id, 0, 0) }, null);
+            Assert.That(AmmoCrate.TryDescribe(player, out var room), Is.True);
+            Assert.That(room, Is.EqualTo(new AmmoCrateHint(true, AmmoCrate.InteractActionPath)));
+        }
+
+        [Test]
+        public void NoHintWithoutWeaponsOrWhileDown()
+        {
+            var unarmed = NewCollector("Unarmed");
+            Assert.That(AmmoCrate.TryDescribe(unarmed, out _), Is.False);
+
+            var player = NewPlayer(out _);
+            player.SetDowned(true);
+            Assert.That(AmmoCrate.TryDescribe(player, out _), Is.False);
+            Assert.That(AmmoCrate.TryDescribe(null, out _), Is.False);
+        }
+
+        [Test]
+        public void TheHintIsPublishedWhileThePlayerIsInRangeAndClearedWhenTheyLeave()
+        {
+            var player = NewPlayer(out _);
+            player.IsLocalPlayer = true;
+            var crate = new GameObject("Crate").AddComponent<AmmoCrate>();
+            _created.Add(crate.gameObject);
+
+            crate.UpdatePrompt();
+            Assert.That(GameSignals.InteractHint.HasValue, Is.False);
+
+            crate.HandleEnter(player.GetComponent<Collider>());
+            crate.UpdatePrompt();
+            Assert.That(GameSignals.InteractHint.Value, Is.EqualTo(new InteractHint(crate, new AmmoCrateHint(false, AmmoCrate.InteractActionPath))));
+
+            crate.HandleExit(player.GetComponent<Collider>());
+            crate.UpdatePrompt();
+            Assert.That(GameSignals.InteractHint.HasValue, Is.False);
+        }
+
+        [Test]
+        public void ABotInRangeGetsNoHint()
+        {
+            var bot = NewPlayer(out _);
+            var crate = new GameObject("Crate").AddComponent<AmmoCrate>();
+            _created.Add(crate.gameObject);
+
+            crate.HandleEnter(bot.GetComponent<Collider>());
+            crate.UpdatePrompt();
+
+            Assert.That(crate.InsideCount, Is.EqualTo(1));
+            Assert.That(GameSignals.InteractHint.HasValue, Is.False, "only the player on this screen is told");
+        }
         [Test]
         public void RefillTopsUpEveryWeaponButTheInfiniteOnes()
         {
@@ -52,6 +140,29 @@ namespace Fps.Tests.EditMode
             {
                 Object.DestroyImmediate(crate.gameObject);
             }
+        }
+
+        private Damageable NewCollector(string name)
+        {
+            var go = new GameObject(name, typeof(CapsuleCollider));
+            _created.Add(go);
+            var damageable = go.AddComponent<Damageable>();
+            damageable.Initialize(name, 100);
+            return damageable;
+        }
+
+        private Damageable NewPlayer(out WeaponController weapons)
+        {
+            var player = NewCollector("Player");
+            var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
+            definition.name = "Rifle";
+            WeaponAssets.Configure(definition, TestWeapons.RifleSpec());
+            _created.Add(definition);
+            var camera = new GameObject("Camera", typeof(Camera));
+            camera.transform.SetParent(player.transform, false);
+            weapons = camera.AddComponent<WeaponController>();
+            weapons.Initialize(camera.transform, _attack, _reload, definition);
+            return player;
         }
 
         private sealed class FakeHolder : IWeaponHolder

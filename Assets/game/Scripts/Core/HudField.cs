@@ -13,7 +13,7 @@ namespace Fps.Core
         /// <summary>チームの点数 (自分のチームが先)。チーム戦でなければ出さない。</summary>
         Score,
 
-        /// <summary>試合結果 (勝ったチームか引き分け)。試合が終わっている間だけ出す。</summary>
+        /// <summary>試合結果 (勝ったチームか引き分け、ソロの試合の勝敗とやり直すキー)。試合が終わっている間だけ出す。</summary>
         Result,
 
         /// <summary>持っている武器の表示名。武器が無ければ出さない。</summary>

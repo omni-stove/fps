@@ -278,6 +278,120 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ThePublishedChatSenderOpensTheInputAndSendsTheTrimmedText()
+        {
+            var published = new FakeChatSender();
+            GameSignals.ChatSender.Publish(published);
+
+            Assert.That(_view.CanSend, Is.True);
+            Assert.That(_view.Open(ChatChannel.Team), Is.True);
+            _view.Field.value = "  push B  ";
+            Assert.That(_view.Submit(), Is.True);
+
+            Assert.That(published.Sent, Is.EqualTo(new[] { (ChatChannel.Team, "push B") }));
+            Assert.That(_view.IsOpen, Is.False);
+            Assert.That(_view.Field.value, Is.Empty);
+        }
+
+        [Test]
+        public void AnExplicitSenderIsUsedBeforeThePublishedOne()
+        {
+            var published = new FakeChatSender();
+            GameSignals.ChatSender.Publish(published);
+            var sent = new List<(ChatChannel, string)>();
+            _view.Sender = (channel, text) => sent.Add((channel, text));
+
+            _view.Open(ChatChannel.All);
+            _view.Field.value = "hi";
+            Assert.That(_view.Submit(), Is.True);
+
+            Assert.That(sent, Is.EqualTo(new[] { (ChatChannel.All, "hi") }));
+            Assert.That(published.Sent, Is.Empty);
+        }
+
+        [Test]
+        public void AfterThePublishedSenderIsClearedTheInputDoesNotOpen()
+        {
+            var published = new FakeChatSender();
+            GameSignals.ChatSender.Publish(published);
+            GameSignals.ChatSender.ClearIfCurrent(published);
+
+            Assert.That(_view.CanSend, Is.False);
+            Assert.That(_view.Open(ChatChannel.All), Is.False);
+            Assert.That(_view.IsOpen, Is.False);
+        }
+
+        [Test]
+        public void ThePublishedSenderGoingAwayWhileTypingClosesTheInputAndGivesTheActionsBack()
+        {
+            _actions = ScriptableObject.CreateInstance<InputActionAsset>();
+            var player = _actions.AddActionMap("Player");
+            var move = player.AddAction("Move");
+            player.AddAction("Chat");
+            player.AddAction("TeamChat");
+            _actions.Enable();
+            _view.Actions = _actions;
+            var published = new FakeChatSender();
+            GameSignals.ChatSender.Publish(published);
+            _view.Open(ChatChannel.All);
+            _view.Field.value = "too late";
+            Assert.That(move.enabled, Is.False);
+
+            GameSignals.ChatSender.ClearIfCurrent(published);
+
+            Assert.That(_view.IsOpen, Is.False);
+            Assert.That(_view.Field.value, Is.Empty);
+            Assert.That(InputRow().style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(move.enabled, Is.True);
+            Assert.That(published.Sent, Is.Empty);
+        }
+
+        [Test]
+        public void ThePublishedSenderBeingReplacedWhileTypingKeepsTheInputAndSendsToTheNewOne()
+        {
+            var first = new FakeChatSender();
+            var second = new FakeChatSender();
+            GameSignals.ChatSender.Publish(first);
+            _view.Open(ChatChannel.All);
+            _view.Field.value = "gg";
+
+            GameSignals.ChatSender.Publish(second);
+
+            Assert.That(_view.IsOpen, Is.True);
+            Assert.That(_view.Submit(), Is.True);
+            Assert.That(first.Sent, Is.Empty);
+            Assert.That(second.Sent, Is.EqualTo(new[] { (ChatChannel.All, "gg") }));
+        }
+
+        [Test]
+        public void AnExplicitSenderKeepsTheInputOpenWhenThePublishedOneGoesAway()
+        {
+            var published = new FakeChatSender();
+            GameSignals.ChatSender.Publish(published);
+            _view.Sender = (channel, text) => { };
+            _view.Open(ChatChannel.All);
+
+            GameSignals.ChatSender.ClearIfCurrent(published);
+
+            Assert.That(_view.IsOpen, Is.True);
+        }
+
+        [Test]
+        public void APublishedSenderThatThrowsKeepsTheInputOpenWithTheText()
+        {
+            GameSignals.ChatSender.Publish(new FakeChatSender { Failure = new InvalidOperationException("disposed") });
+            _view.Open(ChatChannel.Team);
+            _view.Field.value = "retry me";
+
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[Chat\] could not send to Team: disposed"));
+            LogAssert.Expect(LogType.Exception, new Regex("disposed"));
+            Assert.That(_view.Submit(), Is.False);
+
+            Assert.That(_view.IsOpen, Is.True);
+            Assert.That(_view.Field.value, Is.EqualTo("retry me"));
+        }
+
+        [Test]
         public void EveryChatKeyIsInBothLanguages()
         {
             foreach (var language in new[] { GameLanguage.Japanese, GameLanguage.English })
@@ -317,6 +431,23 @@ namespace Shooter.Tests.EditMode
             public bool TryGet(int id, out Participant participant)
             {
                 return _byId.TryGetValue(id, out participant);
+            }
+        }
+
+        private sealed class FakeChatSender : IChatSender
+        {
+            public List<(ChatChannel, string)> Sent { get; } = new List<(ChatChannel, string)>();
+
+            public Exception Failure { get; set; }
+
+            public void Send(ChatChannel channel, string text)
+            {
+                if (Failure != null)
+                {
+                    throw Failure;
+                }
+
+                Sent.Add((channel, text));
             }
         }
     }

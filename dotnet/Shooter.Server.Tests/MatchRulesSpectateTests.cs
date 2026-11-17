@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Numerics;
 using NUnit.Framework;
 using Shooter.Core;
@@ -13,6 +12,7 @@ namespace Shooter.Server.Tests
     public sealed class MatchRulesSpectateTests
     {
         private const float _tickSeconds = 1f / TickClock.DefaultTickRate;
+        private static readonly int[] _allPlayerIds = { 1, 2, 3 };
         private static readonly DateTime _time = new DateTime(2026, 11, 17, 9, 0, 0, DateTimeKind.Utc);
 
         // 床 (TestMaps の箱) の上面は y=0.5、体の原点はカプセルの中心 (高さ 2) なので、足を床に付けるには y=1.5 より少し上に置く
@@ -74,7 +74,7 @@ namespace Shooter.Server.Tests
             var dead = LatestRows(1);
             var ally = LatestRows(3);
 
-            Assert.That(dead.Keys, Is.EquivalentTo(new[] { 1, 2, 3 }));
+            Assert.That(dead.Keys, Is.EquivalentTo(_allPlayerIds));
             Assert.That(dead[1].Health, Is.Zero);
             Assert.That(dead[3].Team, Is.EqualTo(Team.Alpha));
             Assert.That(dead[3].Health, Is.EqualTo(NetMatchSettings.DefaultMaxHealth));

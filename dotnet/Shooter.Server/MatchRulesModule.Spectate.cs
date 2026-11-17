@@ -12,7 +12,6 @@ namespace Shooter.Server
         private readonly List<SpectateCandidate> _spectateCandidates = new List<SpectateCandidate>();
         private readonly List<int> _spectateScratch = new List<int>();
 
-        /// <summary>viewerId が観戦で映している相手。映していなければ false。</summary>
         public bool TryGetSpectateTarget(int viewerId, out int targetId)
         {
             return _spectating.TryGetValue(viewerId, out targetId);
@@ -23,10 +22,6 @@ namespace Shooter.Server
             ServerSpectate(player.PlayerId, request.Step);
         }
 
-        /// <summary>
-        /// viewerId が映す相手を step の向きへ替える。替えられたら映す相手の Id、替えられなければ (観戦できるときでない・
-        /// 映せる味方がいない) null を返し、記録を消す。
-        /// </summary>
         internal int? ServerSpectate(int viewerId, SpectateStep step)
         {
             if (_session == null || !_session.HasPlayer(viewerId) || viewerId < 0)

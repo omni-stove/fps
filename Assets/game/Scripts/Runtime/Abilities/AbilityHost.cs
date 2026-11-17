@@ -14,6 +14,7 @@ namespace Fps.Runtime
     /// 入力は同じ GameObject の <see cref="PlayerActionReader.PressedCommands"/> と <see cref="PlayerActionReader.HeldCommands"/> を毎フレーム読む。
     /// 体力が戻った (<see cref="Damageable.HealthReset"/>、出撃し直し) ら回数と待ち時間を戻す。
     /// 使った・効果が出た・終えた・断った・回数が戻ったことを <see cref="LogTag"/> 付きのログに出す。
+    /// 枠の中身・回数・待ち時間・使うかどうか (ルール)・今もう一度押すと何ができるか (<see cref="TryGetFollowUp"/>) が変わると <see cref="Changed"/> を呼ぶ。
     /// オフラインでは <see cref="AbilityActionInstaller"/> が付けてルールを渡し、<see cref="GameBootstrap"/> が枠に入れる。
     /// </summary>
     [DisallowMultipleComponent]
@@ -32,12 +33,21 @@ namespace Fps.Runtime
         private readonly IAbility[] _abilities = new IAbility[SlotCount];
         private readonly AbilityContext[] _contexts = new AbilityContext[SlotCount];
         private readonly bool[] _pendingEffect = new bool[SlotCount];
+        private readonly AbilityFollowUp?[] _notifiedFollowUps = new AbilityFollowUp?[SlotCount];
 
         private Abilities _rule = Abilities.Off;
         private PlayerActionReader _input;
         private PlayerController _mover;
         private Damageable _damageable;
         private bool _resolved;
+        private bool _changed;
+        private int _deferDepth;
+
+        /// <summary>
+        /// 枠の中身・回数・待ち時間・使うかどうか (ルール)・今もう一度押すと何ができるかが変わったときに呼ばれる。
+        /// 1 回の <see cref="Step"/> の中で何度変わっても 1 度にまとめ、待ち時間や回数の戻りが進む間は <see cref="Step"/> のたびに呼ばれる。
+        /// </summary>
+        public event Action<AbilityHost> Changed;
 
         /// <summary>能力を使うか。<see cref="Configure"/> の前は Off。</summary>
         public Abilities Rule => _rule;
@@ -210,6 +220,8 @@ namespace Fps.Runtime
             }
 
             Debug.Log(FormatRuleLog(_rule, _definitions), this);
+            MarkChanged();
+            NotifyChanged();
         }
 
         /// <summary>
@@ -243,6 +255,16 @@ namespace Fps.Runtime
 
             EndAbility(index, true);
             var slot = spec != null ? new AbilitySlot(spec) : null;
+            if (_slots[index] != null)
+            {
+                _slots[index].Changed -= MarkChanged;
+            }
+
+            if (slot != null)
+            {
+                slot.Changed += MarkChanged;
+            }
+
             _definitions[index] = definition;
             _slots[index] = slot;
             _abilities[index] = ability;
@@ -250,6 +272,8 @@ namespace Fps.Runtime
             _pendingEffect[index] = false;
 
             Debug.Log(FormatEquipLog(index, definition, spec), this);
+            MarkChanged();
+            NotifyChanged();
         }
 
         /// <summary>
@@ -265,19 +289,29 @@ namespace Fps.Runtime
                     $"{LogTag} '{name}' has {SlotCount} ability slots; {count - SlotCount} more abilities were given and are not equipped", this);
             }
 
-            for (var i = 0; i < SlotCount; i++)
+            _deferDepth++;
+            try
             {
-                var definition = i < count ? definitions[i] : null;
-                try
+                for (var i = 0; i < SlotCount; i++)
                 {
-                    Equip(i, definition);
-                }
-                catch (AbilityDefinitionException e)
-                {
-                    Debug.LogError($"{LogTag} could not equip slot {i + 1} on '{name}': {e.Message}", this);
-                    Equip(i, null);
+                    var definition = i < count ? definitions[i] : null;
+                    try
+                    {
+                        Equip(i, definition);
+                    }
+                    catch (AbilityDefinitionException e)
+                    {
+                        Debug.LogError($"{LogTag} could not equip slot {i + 1} on '{name}': {e.Message}", this);
+                        Equip(i, null);
+                    }
                 }
             }
+            finally
+            {
+                _deferDepth--;
+            }
+
+            NotifyChanged();
         }
 
         /// <summary>index の枠の定義。空なら null。</summary>
@@ -351,6 +385,23 @@ namespace Fps.Runtime
         /// </summary>
         public bool TryUse(int index)
         {
+            _deferDepth++;
+            bool used;
+            try
+            {
+                used = Use(index);
+            }
+            finally
+            {
+                _deferDepth--;
+            }
+
+            NotifyChanged();
+            return used;
+        }
+
+        private bool Use(int index)
+        {
             var block = UseBlock(index);
             if (block != AbilityUseBlock.None)
             {
@@ -391,26 +442,26 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// index の枠の能力が <see cref="IAbilityFollowUp"/> なら、今押すと何が起きるかの案内を hint に入れて true。
-        /// 枠が空・ルールが Off・使えない状態・案内が無いときは false。
+        /// index の枠の能力が <see cref="IAbilityFollowUp"/> なら、今押すと何ができるかを followUp に入れて true。
+        /// 枠が空・ルールが Off・使えない状態・出せる効果が無いときは false。
         /// </summary>
-        public bool TryGetHint(int index, out LocalizedText hint)
+        public bool TryGetFollowUp(int index, out AbilityFollowUp followUp)
         {
             RequireIndex(index);
-            hint = default;
-            if (_rule != Abilities.On || !(_abilities[index] is IAbilityFollowUp followUp) || IsIncapacitated)
+            followUp = default;
+            if (_rule != Abilities.On || !(_abilities[index] is IAbilityFollowUp source) || IsIncapacitated)
             {
                 return false;
             }
 
             try
             {
-                return followUp.TryGetFollowUpHint(_contexts[index], out hint);
+                return source.TryGetFollowUp(_contexts[index], out followUp);
             }
             catch (Exception e)
             {
                 Debug.LogException(e, this);
-                hint = default;
+                followUp = default;
                 return false;
             }
         }
@@ -435,19 +486,29 @@ namespace Fps.Runtime
             }
 
             HeldCommands = held;
-            var stopped = _rule != Abilities.On || IsIncapacitated;
-            for (var i = 0; i < SlotCount; i++)
+            _deferDepth++;
+            try
             {
-                StepSlot(i, deltaSeconds, stopped);
-            }
-
-            for (var i = 0; i < SlotCount; i++)
-            {
-                if ((pressed & CommandFor(i)) != 0)
+                var stopped = _rule != Abilities.On || IsIncapacitated;
+                for (var i = 0; i < SlotCount; i++)
                 {
-                    TryUse(i);
+                    StepSlot(i, deltaSeconds, stopped);
+                }
+
+                for (var i = 0; i < SlotCount; i++)
+                {
+                    if ((pressed & CommandFor(i)) != 0)
+                    {
+                        TryUse(i);
+                    }
                 }
             }
+            finally
+            {
+                _deferDepth--;
+            }
+
+            NotifyChanged();
         }
 
         /// <summary>使っている能力を止め、すべての枠の回数を上限に、待ち時間を無しに戻す。</summary>
@@ -458,6 +519,8 @@ namespace Fps.Runtime
                 EndAbility(i, true);
                 _slots[i]?.Reset();
             }
+
+            NotifyChanged();
         }
 
         /// <summary>index の枠の能力を使っている途中なら止める (<see cref="IAbility.End"/> の interrupted は true)。</summary>
@@ -465,6 +528,7 @@ namespace Fps.Runtime
         {
             RequireIndex(index);
             EndAbility(index, true);
+            NotifyChanged();
         }
 
         private void Awake()
@@ -485,6 +549,7 @@ namespace Fps.Runtime
         private void OnDisable()
         {
             EndAll(true);
+            NotifyChanged();
         }
 
         private void OnDestroy()
@@ -652,6 +717,53 @@ namespace Fps.Runtime
             }
 
             ResetSlots();
+        }
+
+        private void MarkChanged()
+        {
+            _changed = true;
+        }
+
+        // 置いた C4 が撃たれて消えた・持ち主が倒れたなど、枠の外で変わる続けての操作は、知らせる前に聞き直して比べる。
+        // 聞く相手は重い判定やログを出すことがあるので、聞いている UI がいないときは聞かない。
+        private void NotifyChanged()
+        {
+            if (_deferDepth > 0)
+            {
+                return;
+            }
+
+            var handlers = Changed;
+            if (handlers == null)
+            {
+                _changed = false;
+                return;
+            }
+
+            for (var i = 0; i < SlotCount; i++)
+            {
+                AbilityFollowUp? followUp = TryGetFollowUp(i, out var current) ? current : (AbilityFollowUp?)null;
+                if (!Nullable.Equals(followUp, _notifiedFollowUps[i]))
+                {
+                    _notifiedFollowUps[i] = followUp;
+                    _changed = true;
+                }
+            }
+
+            if (!_changed)
+            {
+                return;
+            }
+
+            _changed = false;
+            try
+            {
+                handlers(this);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, this);
+            }
         }
 
         private static string NameOf(AbilityDefinition definition)

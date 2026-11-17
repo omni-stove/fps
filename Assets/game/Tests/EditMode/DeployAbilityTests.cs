@@ -87,6 +87,8 @@ namespace Fps.Tests.EditMode
             Assert.That(Vector3.Distance(placed[0].transform.position, new Vector3(0f, 0f, Range)), Is.LessThan(0.01f));
             Assert.That(placed[0].Damageable.Health.Current, Is.EqualTo(_definition.MaxHealth));
             Assert.That(Previews(), Is.Empty, "the preview goes away");
+            Assert.That(_host.TryGetFollowUp(0, out _), Is.False, "a placed shield cannot be detonated");
+            Assert.That(_definition.DisplayNameKey, Is.Empty);
         }
 
         [Test]

@@ -430,11 +430,11 @@ namespace Shooter.Server.Tests
                 _movement.TryGetState(1, out state);
             }
 
-            Assert.That(state.WallRun.Side, Is.EqualTo(WallRunSide.Right));
+            Assert.That(state.WallRun.Side, Is.EqualTo(Shooter.Core.WallRunSide.Right));
             Assert.That(_log.ToString(), Does.Contain("[Net] wallrun owner=1 tick=" + (_nextInputTick - 1) + " running=true side=right"));
             _transport.Sent.Clear();
             _host.Tick(_tickSeconds);
-            Assert.That(OnlySnapshot().Players[0].WallRunSide, Is.EqualTo(WallRunSide.Right));
+            Assert.That(OnlySnapshot().Players[0].WallRunSide, Is.EqualTo(Shooter.Protocol.WallRunSide.Right));
         }
 
         [Test]

@@ -102,7 +102,8 @@ namespace Fps.Editor
         /// <summary>
         /// 試合の設定 (<see cref="MatchDefinitionPath"/>) を読む。無ければ既定の値に、デフォルトロードアウト
         /// (<see cref="WeaponAssetBuilder.LoadoutPath"/>) と武器の一覧 (<see cref="WeaponAssetBuilder.CatalogPath"/>) を配線して作る。
-        /// 既にあれば中身は上書きしない (ゲームが変えた値を残す)。ロードアウトが試合で使えなければ例外を投げる。
+        /// 新しく作るときだけ、ルールの並びにチームデスマッチとドミネーション (<see cref="SampleRulesPaths"/>) を入れる。
+        /// ほかの中身は上書きしない (ゲームが変えた値を残す)。ロードアウトが試合で使えなければ例外を投げる。
         /// </summary>
         public static NetMatchDefinition LoadOrBuildMatch()
         {
@@ -118,10 +119,11 @@ namespace Fps.Editor
                 match = ScriptableObject.CreateInstance<NetMatchDefinition>();
                 match.Loadout = WeaponAssetBuilder.LoadDefaultLoadout();
                 match.Catalog = WeaponAssetBuilder.LoadCatalog();
+                match.SetRules(LoadSampleRules());
                 SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(MatchDefinitionPath));
                 AssetDatabase.CreateAsset(match, MatchDefinitionPath);
                 AssetDatabase.SaveAssets();
-                Debug.Log("[Net] NetSceneBuilder: created " + MatchDefinitionPath);
+                Debug.Log("[Net] NetSceneBuilder: created " + MatchDefinitionPath + " with the rules " + string.Join(", ", SampleRulesPaths));
             }
 
             if (!match.TryCreateLoadout(out _, out var error))
@@ -130,6 +132,19 @@ namespace Fps.Editor
             }
 
             return match;
+        }
+
+        public static string[] SampleRulesPaths => new[] { GameRulesAssetBuilder.TeamDeathmatchPath, GameRulesAssetBuilder.DominationPath };
+
+        private static GameRulesDefinition[] LoadSampleRules()
+        {
+            if (SampleRulesPaths.Any(p => AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(p) == null))
+            {
+                Debug.Log("[Net] NetSceneBuilder: the sample rules are missing; running GameRulesAssetBuilder.Build");
+                GameRulesAssetBuilder.Build();
+            }
+
+            return SampleRulesPaths.Select(GameRulesAssetBuilder.LoadRules).ToArray();
         }
 
         /// <summary>

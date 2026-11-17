@@ -9,14 +9,19 @@ namespace Fps.Runtime
     /// ネット対戦の試合の設定 (点数・時間・体力・拠点・ロードアウト) と、プレイヤーの移動と体の寸法。
     /// .NET の専用サーバーはアセットを読めないので、書き出し (Fps.Editor.ServerRulesExporter) がルールのアセットごとに
     /// <c>server-data/rules/&lt;ルール名&gt;.json</c> (<see cref="NetMatchFile"/>) にし、クライアントは承認のときにサーバーからその値を受け取る。
+    /// 書き出すルールは入口 (<see cref="GameContent"/>) のルールと <see cref="Rules"/> の並び。
+    /// ロードアウトと武器の一覧は、クライアントと同じく入口のものを先に使う (<see cref="PickLoadout"/>・<see cref="PickCatalog"/>)。
     /// </summary>
     [CreateAssetMenu(fileName = "NetMatch", menuName = "Fps/Net Match Definition")]
     public sealed class NetMatchDefinition : ScriptableObject
     {
-        [SerializeField, Tooltip("全員が最初に持つロードアウト")]
+        [SerializeField, Tooltip("サーバーに書き出すルール。入口 (GameContent) のルールに加えて、この並びの順に書き出す")]
+        private List<GameRulesDefinition> _rules = new List<GameRulesDefinition>();
+
+        [SerializeField, Tooltip("全員が最初に持つロードアウト。入口 (GameContent) にロードアウトがあればそちらを使う")]
         private LoadoutDefinition _loadout;
 
-        [SerializeField, Tooltip("プレイヤーがロードアウトに選べる武器の一覧。空ならロードアウトの武器だけ")]
+        [SerializeField, Tooltip("プレイヤーがロードアウトに選べる武器の一覧。入口 (GameContent) に一覧があればそちらを使う。どちらも空ならロードアウトの武器だけ")]
         private WeaponCatalogAsset _catalog;
 
         [Header("チームデスマッチ")]
@@ -85,6 +90,8 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("当たり判定のカプセルの外側に取る隙間 (m)")]
         private float _skinWidth = CapsuleMoverSpec.DefaultSkinWidth;
 
+        public IReadOnlyList<GameRulesDefinition> Rules => _rules ??= new List<GameRulesDefinition>();
+
         public LoadoutDefinition Loadout
         {
             get => _loadout;
@@ -101,6 +108,34 @@ namespace Fps.Runtime
         {
             get => _motorSettings;
             set => _motorSettings = value;
+        }
+
+        public void SetRules(IEnumerable<GameRulesDefinition> rules)
+        {
+            _rules = rules == null ? new List<GameRulesDefinition>() : new List<GameRulesDefinition>(rules);
+        }
+
+        // クライアント (NetV2Weapons) とサーバーへの書き出しで選ぶ順がずれないよう、どちらもここで選ぶ
+        public static LoadoutDefinition PickLoadout(NetMatchDefinition match)
+        {
+            var picked = GameContent.Pick(c => c.Loadout);
+            if (picked != null)
+            {
+                return picked;
+            }
+
+            return match != null && match._loadout != null ? match._loadout : null;
+        }
+
+        public static WeaponCatalogAsset PickCatalog(NetMatchDefinition match)
+        {
+            var picked = GameContent.Pick(c => c.WeaponCatalog);
+            if (picked != null)
+            {
+                return picked;
+            }
+
+            return match != null && match._catalog != null ? match._catalog : null;
         }
 
         /// <summary>試合の設定。</summary>
@@ -145,17 +180,19 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// ロードアウトのルール・武器と、選べる武器の一覧を検査し、試合で使う <see cref="ServerLoadout"/> にする。
+        /// ロードアウトのルール・武器と、選べる武器の一覧 (<see cref="PickLoadout"/>・<see cref="PickCatalog"/>) を検査し、試合で使う <see cref="ServerLoadout"/> にする。
         /// ロードアウトが未設定か、ルール・武器・一覧が不正なら false と理由を返す。
         /// </summary>
         public bool TryCreateLoadout(out ServerLoadout loadout, out string error)
         {
             loadout = null;
+            var picked = PickLoadout(this);
+            var catalog = PickCatalog(this);
 
             // 参照切れ (破棄されたアセット) も Unity の == null で拾う
-            if (_loadout == null)
+            if (picked == null)
             {
-                error = "net match '" + name + "' has no loadout";
+                error = "neither GameContent nor net match '" + name + "' has a loadout";
                 return false;
             }
 
@@ -164,11 +201,11 @@ namespace Fps.Runtime
             WeaponCatalog choices = null;
             try
             {
-                rule = _loadout.ToRule();
-                specs = _loadout.ToSpecs();
-                if (_catalog != null)
+                rule = picked.ToRule();
+                specs = picked.ToSpecs();
+                if (catalog != null)
                 {
-                    choices = _catalog.ToCatalog();
+                    choices = catalog.ToCatalog();
                 }
             }
             catch (WeaponDefinitionException e)
@@ -179,11 +216,11 @@ namespace Fps.Runtime
 
             try
             {
-                loadout = new ServerLoadout(rule, specs, choices, _loadout.SwitchSeconds);
+                loadout = new ServerLoadout(rule, specs, choices, picked.SwitchSeconds);
             }
             catch (ArgumentException e)
             {
-                error = "loadout '" + _loadout.name + "' is invalid: " + e.Message;
+                error = "loadout '" + picked.name + "' is invalid: " + e.Message;
                 return false;
             }
 

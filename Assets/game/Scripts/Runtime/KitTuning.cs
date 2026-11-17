@@ -140,26 +140,48 @@ namespace Fps.Runtime
             return spec;
         }
 
-        private static T LoadUncached<T>(Func<GameContent, TextAsset> select, string path, Func<string, string, T> parse, T fallback)
-            where T : class
+        // サーバーへの書き出しが Load と違う順で読まないよう、parse の前の引き先だけを分けて出す
+        public static string FindText(Func<GameContent, TextAsset> select, string path, out string sourceName)
         {
+            if (select == null)
+            {
+                throw new ArgumentNullException(nameof(select));
+            }
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("a Resources path such as Tuning/grenade is required", nameof(path));
+            }
+
             var fromContent = GameContent.Pick(select);
             if (fromContent != null)
             {
-                var source = $"GameContent '{GameContent.Current.name}' ({fromContent.name})";
-                Debug.Log($"{LogTag} read {source}");
-                return Read(fromContent.text, source, parse, fallback);
+                sourceName = $"GameContent '{GameContent.Current.name}' ({fromContent.name})";
+                return fromContent.text;
             }
 
+            sourceName = $"Resources/{path}.json";
             var asset = Resources.Load<TextAsset>(path);
-            var spec = Read(asset != null ? asset.text : null, $"Resources/{path}.json", parse, fallback);
-            if (asset != null)
+            if (asset == null)
             {
-                Debug.Log($"{LogTag} read Resources/{path}.json");
-                Resources.UnloadAsset(asset);
+                return null;
             }
 
-            return spec;
+            var text = asset.text;
+            Resources.UnloadAsset(asset);
+            return text;
+        }
+
+        private static T LoadUncached<T>(Func<GameContent, TextAsset> select, string path, Func<string, string, T> parse, T fallback)
+            where T : class
+        {
+            var text = FindText(select, path, out var source);
+            if (text != null)
+            {
+                Debug.Log($"{LogTag} read {source}");
+            }
+
+            return Read(text, source, parse, fallback);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

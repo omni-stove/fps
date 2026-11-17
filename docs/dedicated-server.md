@@ -15,14 +15,17 @@ Unity の Editor の中でサーバーを兼ねる遊び方 (Host・`-mode host`
 ```sh
 make export-server-data     # 各マップのコリジョン (.fpsmap)・NavMesh (.fpsnav)・壊せる建物・はしご → server-data/maps/
 make export-server-rules    # 試合の設定とルール → server-data/rules/、出現地点と拠点 → server-data/maps/<マップ>.points.json、
-                            # 印とグレネードの調整値と持ち物 → server-data/tuning/
+                            # 印・グレネード・持ち物・吹き飛ばし・ボットの調整値 → server-data/tuning/
 ```
 
 - 書き出すマップは `-map` で選べるマップ (`BuildSceneList.ServerScenes`、既定は `NetTest` と `NetArena01`)。
   無いシーンは `NetSceneBuilder`・`ArenaSceneBuilder` で作ってから書き出す。
 - 試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値・ロードアウトと選べる武器・移動の値と体の寸法) は
   `NetMatchDefinition` のアセット (サンプルでは `Rules/NetMatch.asset`。無ければ `NetSceneBuilder` が既定の値で作る) に置き、
-  ルールのアセット (`TeamDeathmatch`・`Domination`) ごとに `server-data/rules/<ルール名>.json` にする。
+  入口 (`GameContent`) のルールと、`NetMatchDefinition` の Rules に並べたルール (サンプルでは `TeamDeathmatch`・`Domination`) ごとに
+  `server-data/rules/<ルール名>.json` にする。ロードアウトと選べる武器は、クライアントと同じく入口のものを先に使い、無ければ `NetMatchDefinition` のもの。
+- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`) は、オフラインと同じく入口の欄の JSON、
+  無ければ `Resources/Tuning/<名前>.json` を写す。どちらも無ければ項目を省いた `{}` (既定値) を書く。
   クライアントは承認のときにサーバーからこの値を受け取るので、ゲームが値を変えたら書き出し直してサーバーを作り直せばよい。
 - 出現地点はシーンの `NetSpawnPoint`、拠点は `ControlPointZone`、壊せる建物は `DestructibleStructure`、はしごは `SceneLadder` から読む。
 

@@ -6,7 +6,7 @@ namespace Shooter.Runtime
 {
     /// <summary>
     /// Play の開始時 (シーンを読む前) に <see cref="ProgressionRecorder"/> を <see cref="FileSaveStorage.CreateDefault"/> の置き場所で作って
-    /// <see cref="ProgressionRecorder.Install"/> し、<see cref="Recorder"/> に置く。メニュー・ロードアウト・持ち物は
+    /// <see cref="ProgressionRecorder.Install"/> し、<see cref="Recorder"/> に置く。Play を抜けるときに外す。メニュー・ロードアウト・持ち物は
     /// <see cref="IsUnlocked"/> を「使えるか」の述語として受け取る。
     /// </summary>
     public static class ProgressionBootstrap
@@ -83,6 +83,9 @@ namespace Shooter.Runtime
         private static void InstallOnPlay()
         {
             Install(FileSaveStorage.CreateDefault());
+            // 次の Play まで残すと、その間に走らせた Edit Mode のテストが本物のプロフィールで判定され、保存先にも書き込むので、Play を抜けるときに外す。
+            Application.quitting -= Uninstall;
+            Application.quitting += Uninstall;
         }
     }
 }

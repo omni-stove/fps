@@ -40,6 +40,12 @@ namespace Shooter.Tests.EditMode
         private readonly List<Object> _created = new List<Object>();
         private readonly List<InputAction> _actions = new List<InputAction>();
 
+        [SetUp]
+        public void SetUp()
+        {
+            ProgressionBootstrap.Uninstall();
+        }
+
         [TearDown]
         public void TearDown()
         {

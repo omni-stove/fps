@@ -17,6 +17,11 @@ namespace Shooter.NetV2.Tests
         private const int _allyId = 2;
         private const int _enemyId = 3;
 
+        private static readonly bool[] _sendThenStop = { true, false };
+        private static readonly int[] _allyOnly = { _allyId };
+        private static readonly int[] _enemyOnly = { _enemyId };
+        private static readonly int[] _unmappedOnly = { 4 };
+
         private FakeVoiceSession _session;
         private VoiceRoster _roster;
         private ClientVoice _voice;
@@ -39,6 +44,7 @@ namespace Shooter.NetV2.Tests
         public void TearDown()
         {
             _voice.Dispose();
+            _session.Dispose();
         }
 
         private static SnapshotMessage Snapshot(params (int Id, Team Team)[] players)
@@ -131,7 +137,7 @@ namespace Shooter.NetV2.Tests
             _voice.SetTalking(false);
             Assert.That(_session.WantsSending, Is.False, "not sending after releasing");
             Assert.That(_voice.Status.Value.IsLocalSpeaking, Is.False);
-            Assert.That(_session.SendingRequests, Is.EqualTo(new[] { true, false }));
+            Assert.That(_session.SendingRequests, Is.EqualTo(_sendThenStop));
         }
 
         [Test]
@@ -224,7 +230,7 @@ namespace Shooter.NetV2.Tests
             _session.Speak(_ally, true);
             _session.Speak(_self, true);
 
-            Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(new[] { _allyId }));
+            Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(_allyOnly));
         }
 
         [Test]
@@ -234,13 +240,13 @@ namespace Shooter.NetV2.Tests
             _voice.Apply(StartingTeams(), _selfId);
             _session.Speak(_ally, true);
             _session.Speak(_enemy, true);
-            Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(new[] { _allyId }));
+            Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(_allyOnly));
 
             _voice.Apply(Snapshot((_selfId, Team.Alpha), (_allyId, Team.Bravo), (_enemyId, Team.Alpha)), _selfId);
 
             Assert.That(_session.WantsReceiving(_ally), Is.False, "the old ally is now an enemy");
             Assert.That(_session.WantsReceiving(_enemy), Is.True, "the old enemy is now an ally");
-            Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(new[] { _enemyId }));
+            Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(_enemyOnly));
         }
 
         [Test]
@@ -305,7 +311,7 @@ namespace Shooter.NetV2.Tests
             _roster.Set(_stranger, 4);
 
             Assert.That(_session.WantsReceiving(_stranger), Is.True);
-            Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(new[] { 4 }));
+            Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(_unmappedOnly));
         }
 
         [Test]

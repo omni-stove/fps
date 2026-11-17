@@ -6,6 +6,8 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class VoiceSettingsTests
     {
+        private static readonly string[] _unknownKeyProblems = { "ignored unknown key 'echo'" };
+
         [Test]
         public void TheDefaultUsesTheMicrophoneAtFullVolume()
         {
@@ -93,7 +95,7 @@ namespace Shooter.Core.Tests
             var read = VoiceSettings.FromJson("{\"version\":1,\"microphoneEnabled\":false,\"echo\":true}", out var problems);
 
             Assert.That(read, Is.EqualTo(new VoiceSettings(false, 100)));
-            Assert.That(problems, Is.EqualTo(new[] { "ignored unknown key 'echo'" }));
+            Assert.That(problems, Is.EqualTo(_unknownKeyProblems));
         }
     }
 }

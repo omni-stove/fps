@@ -106,6 +106,7 @@ namespace Shooter.Server
             _match.PlayerJoined += HandlePlayerJoined;
             _match.PlayerLeft += HandlePlayerLeft;
             _match.Restarted += HandleMatchRestarted;
+            _match.TeamChanged += HandleTeamChanged;
 
             _log.WriteLine(MatchLog.Tag + " waiting for players scoreLimit=" + Text(_session.Spec.ScoreLimit)
                 + " timeLimit=" + Text(_session.Spec.TimeLimitSeconds) + "s respawn=" + Text(_session.Spec.RespawnSeconds)
@@ -217,6 +218,7 @@ namespace Shooter.Server
             _match.PlayerJoined -= HandlePlayerJoined;
             _match.PlayerLeft -= HandlePlayerLeft;
             _match.Restarted -= HandleMatchRestarted;
+            _match.TeamChanged -= HandleTeamChanged;
             if (_match.ChooseTeam == ChooseTeam)
             {
                 _match.ChooseTeam = null;
@@ -377,6 +379,7 @@ namespace Shooter.Server
             IdlePlayerLeft(playerId);
             ObjectivePlayerLeft(playerId);
             ChatPlayerLeft(playerId);
+            SpectatePlayerLeft(playerId);
             OnPlayerLeft(player);
             if (_session.HasPlayer(playerId) && _session.Leave(playerId))
             {
@@ -384,6 +387,27 @@ namespace Shooter.Server
             }
 
             _bodies.Remove(playerId);
+        }
+
+        // 続く HandleMatchRestarted の Session.Restart が、移った先のチームの地点に出現させてスナップショットに載せる
+        private void HandleTeamChanged(ServerPlayer player, Team from)
+        {
+            var playerId = player.PlayerId;
+            if (!_session.HasPlayer(playerId))
+            {
+                return;
+            }
+
+            if (_session.State != GameModeState.Ended)
+            {
+                _log.WriteLine(MatchLog.Tag + " player " + Text(playerId) + " moved to " + player.Team + " in the match but the rules are " + _session.State);
+                return;
+            }
+
+            // マーカーは送り先をチームで選ぶので、次の試合で消えるものも移す前に消して、前のチームのマーカーを残さない
+            PingMatchRestarted();
+            _session.ChangeTeam(playerId, player.Team);
+            ObjectivePlayerJoined(playerId);
         }
 
         private void HandleMatchRestarted()
@@ -408,6 +432,7 @@ namespace Shooter.Server
             ClearDowned();
             PingMatchRestarted();
             ObjectiveMatchRestarted();
+            SpectateMatchRestarted();
         }
 
         private void HandleScoreChanged(int alpha, int bravo)
@@ -425,6 +450,7 @@ namespace Shooter.Server
             _match.WriteKill(killerId, victimId, byAlly);
             SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot));
             ObjectivePlayerKilled(victimId);
+            SpectatePlayerKilled(victimId);
         }
 
         private void HandleEnded(Team? winner)
@@ -443,6 +469,7 @@ namespace Shooter.Server
 
         private void HandleSpawned(int playerId, SpawnPoint point)
         {
+            SpectatePlayerSpawned(playerId);
             if (!_bodies.TryGet(playerId, out var body))
             {
                 return;

@@ -110,6 +110,9 @@ namespace Shooter.Tests.EditMode
                 { CharacterPose.DeadParameter, AnimatorControllerParameterType.Bool },
                 { CharacterPose.WeaponCategoryParameter, AnimatorControllerParameterType.Int },
                 { CharacterPose.SlideParameter, AnimatorControllerParameterType.Bool },
+                { CharacterPose.LeanParameter, AnimatorControllerParameterType.Float },
+                { CharacterPose.SwimmingParameter, AnimatorControllerParameterType.Bool },
+                { CharacterPose.WallRunParameter, AnimatorControllerParameterType.Int },
                 { CharacterRigBuilder.StaggerParameter, AnimatorControllerParameterType.Int },
             }));
         }

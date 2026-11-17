@@ -21,6 +21,9 @@ namespace Shooter.Runtime
     /// (一人称の銃は残す)。プレハブが無ければ警告を出してカプセルのまま止まる。</item>
     /// <item>毎フレーム (<see cref="Refresh"/>): 状態を <see cref="CharacterPose"/> で Animator のパラメーターにして渡す。
     /// この端末のプレイヤーの一人称 (<see cref="ViewRig"/>) ではリグを影だけにし、自分の体が視界に入らないようにする。</item>
+    /// <item>リーン・水泳・壁走り: <see cref="MotorSource"/> (未設定なら同じ GameObject の <see cref="ICharacterMotorStateSource"/>) があれば、
+    /// 読み元の種類によらずその状態から Lean・Swimming・WallRun を決める。<see cref="TiltsRigWithMotor"/> なら、リグの根もそれらの向きへ
+    /// <see cref="PlayerMockPose.TraversalLean(CharacterPoseParameters, float)"/> で傾ける (それらのクリップの無いリグでも姿勢が変わって見えるように)。</item>
     /// </list>
     /// 専用サーバーでは自分を止める (<c>Shooter.Net.HeadlessPresentation</c> も止める)。
     /// </summary>
@@ -43,6 +46,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("置くリグのプレハブ。空なら入口 (GameContent) のキャラクターのリグ、それも無ければ Resources の Characters/CharacterRig を読む")]
         private GameObject _rigPrefab;
 
+        [SerializeField, Tooltip("リーン・水泳・壁走りの向きへリグの根を傾けるか。AnimatorController のクリップがそれらの姿勢を体の傾きごと持つなら切る (二重に傾くので)")]
+        private bool _tiltsRigWithMotor = true;
+
         private CharacterAnimatorSource _source;
         private PlayerController _mover;
         private WeaponController _weapon;
@@ -52,8 +58,13 @@ namespace Shooter.Runtime
         private EnemyAgent _enemy;
         private NavMeshAgent _navAgent;
         private ICharacterPoseSource _network;
+        private ICharacterMotorStateSource _motorSource;
+        private MotorSpec _fallbackMotorSpec;
+        private bool _warnedInvalidMotor;
         private readonly HorizontalSpeedMeter _speedMeter = new HorizontalSpeedMeter();
         private ViewRig _view;
+        private Quaternion _rigTilt = Quaternion.identity;
+        private bool _snapRigTilt;
 
         private CharacterPose _pose;
         private float _poseWalk;
@@ -88,6 +99,9 @@ namespace Shooter.Runtime
         private static readonly int DeadHash = Animator.StringToHash(CharacterPose.DeadParameter);
         private static readonly int WeaponCategoryHash = Animator.StringToHash(CharacterPose.WeaponCategoryParameter);
         private static readonly int SlideHash = Animator.StringToHash(CharacterPose.SlideParameter);
+        private static readonly int LeanHash = Animator.StringToHash(CharacterPose.LeanParameter);
+        private static readonly int SwimmingHash = Animator.StringToHash(CharacterPose.SwimmingParameter);
+        private static readonly int WallRunHash = Animator.StringToHash(CharacterPose.WallRunParameter);
 
         /// <summary>
         /// 置くリグのプレハブ。null なら <see cref="BuildRig"/> が Resources の <see cref="RigResourcePath"/> を読む。
@@ -98,6 +112,26 @@ namespace Shooter.Runtime
             get => _rigPrefab;
             set => _rigPrefab = value;
         }
+
+        /// <summary>リーン・水泳・壁走りの向きへリグの根を傾けるか。既定は true。</summary>
+        public bool TiltsRigWithMotor
+        {
+            get => _tiltsRigWithMotor;
+            set => _tiltsRigWithMotor = value;
+        }
+
+        /// <summary>
+        /// リーン・水泳・壁走りを読む移動の状態の読み元。<see cref="TryBind"/> が同じ GameObject の <see cref="ICharacterMotorStateSource"/> で置き換える
+        /// (無ければ設定したものを残す)。null (か破棄済み) なら、それらは <see cref="ReadState"/> の読み元の値のまま。
+        /// </summary>
+        public ICharacterMotorStateSource MotorSource
+        {
+            get => CharacterMotorStateSources.IsMissing(_motorSource) ? null : _motorSource;
+            set => _motorSource = value;
+        }
+
+        /// <summary>リグの根の今の傾き (本体のローカル)。<see cref="TiltsRigWithMotor"/> が false なら単位回転。</summary>
+        public Quaternion RigTilt => _rigTilt;
 
         /// <summary>どの部品から状態を読むか。<see cref="TryBind"/> 前は <see cref="CharacterAnimatorSource.None"/>。</summary>
         public CharacterAnimatorSource Source => _source;
@@ -184,6 +218,11 @@ namespace Shooter.Runtime
             _network = _mover == null && _enemy == null && TryGetComponent<ICharacterPoseSource>(out var network) ? network : null;
             _damageable = GetComponent<Damageable>();
             _view = GetComponent<ViewRig>();
+            if (TryGetComponent<ICharacterMotorStateSource>(out var motorSource))
+            {
+                _motorSource = motorSource;
+            }
+
             _speedMeter.Reset();
 
             if (_mover != null)
@@ -321,6 +360,8 @@ namespace Shooter.Runtime
             _animatorParameters.Clear();
             _hasParameterTable = false;
             _hasParameters = false;
+            _rigTilt = Quaternion.identity;
+            _snapRigTilt = true;
             PlaceRig();
             HideHostRenderer();
             HideMockBody();
@@ -358,6 +399,12 @@ namespace Shooter.Runtime
 
             if (IsBuilt)
             {
+                var targetTilt = _tiltsRigWithMotor
+                    ? PlayerMockPose.TraversalLean(_parameters, _parameters.Lean != 0f ? LeanAngleDegrees() : 0f)
+                    : Quaternion.identity;
+                // 置いた直後は前の傾きが無いので、泳いでいる最中に出てきたキャラが起き上がった姿から倒れ込まないよう、そのまま置く。
+                _rigTilt = _snapRigTilt ? targetTilt : Quaternion.Slerp(_rigTilt, targetTilt, PlayerMockPose.BlendFactor(deltaSeconds));
+                _snapRigTilt = false;
                 PlaceRig();
                 ApplyVisibility();
                 ApplyToAnimator(_parameters, deltaSeconds);
@@ -372,17 +419,66 @@ namespace Shooter.Runtime
         /// </summary>
         public CharacterPoseInput ReadState()
         {
+            CharacterPoseInput input;
             switch (_source)
             {
                 case CharacterAnimatorSource.Player:
-                    return ReadPlayer();
+                    input = ReadPlayer();
+                    break;
                 case CharacterAnimatorSource.Enemy:
-                    return ReadEnemy();
+                    input = ReadEnemy();
+                    break;
                 case CharacterAnimatorSource.Network:
-                    return _network.ReadPose(_speedMeter.Speed);
+                    input = _network.ReadPose(_speedMeter.Speed);
+                    break;
                 default:
                     throw new InvalidOperationException($"CharacterAnimator '{name}' has no state source; call TryBind first");
             }
+
+            return TryReadMotor(out var motor) ? input.WithMotor(motor) : input;
+        }
+
+        private bool TryReadMotor(out CharacterMotorState motor)
+        {
+            motor = default;
+            var source = MotorSource;
+            if (source == null || !source.TryGetMotorState(out motor))
+            {
+                return false;
+            }
+
+            // 壊れた状態で毎フレーム例外を投げると、ほかの姿勢まで止まるので、リーン・水泳・壁走りだけを諦める。
+            if (!motor.Lean.IsValid || !motor.WallRun.IsValid)
+            {
+                if (!_warnedInvalidMotor)
+                {
+                    Debug.LogWarning($"{LogTag} '{name}' の移動の状態のリーンか壁走りが範囲の外なので、それらを読まずに姿勢を決めます。", this);
+                    _warnedInvalidMotor = true;
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
+        // 移動の状態の読み元・プレイヤーの調整値の順に探し、どちらも無ければ (敵・ネット対戦) 設定された既定の調整値を一度だけ読む。
+        private float LeanAngleDegrees()
+        {
+            var source = MotorSource;
+            var spec = source != null ? source.Spec : null;
+            if (spec == null && _mover != null)
+            {
+                spec = _mover.Spec;
+            }
+
+            if (spec == null)
+            {
+                _fallbackMotorSpec = _fallbackMotorSpec ?? MotorSettings.ResolveOrDefault(null);
+                spec = _fallbackMotorSpec;
+            }
+
+            return spec.LeanAngleDegrees;
         }
 
         /// <summary>
@@ -401,6 +497,7 @@ namespace Shooter.Runtime
             _ownsRig = false;
             _animator = null;
             _rigRenderers = Array.Empty<Renderer>();
+            _rigTilt = Quaternion.identity;
             _animatorParameters.Clear();
             _hasParameterTable = false;
             RestoreHostRenderer();
@@ -559,7 +656,7 @@ namespace Shooter.Runtime
         private void PlaceRig()
         {
             _rig.localPosition = new Vector3(0f, FeetLocalY(), 0f);
-            _rig.localRotation = Quaternion.identity;
+            _rig.localRotation = _rigTilt;
         }
 
         // ViewRig は視点を変えたときにしか子孫のレンダラーを書き換えず、後から置いたリグは漏れるので、毎フレーム合わせる。
@@ -597,6 +694,13 @@ namespace Shooter.Runtime
             SetBool(DeadHash, parameters.Dead);
             SetInt(WeaponCategoryHash, parameters.WeaponCategory);
             SetBool(SlideHash, parameters.Slide);
+            if (Has(LeanHash))
+            {
+                _animator.SetFloat(LeanHash, parameters.Lean);
+            }
+
+            SetBool(SwimmingHash, parameters.Swimming);
+            SetInt(WallRunHash, parameters.WallRun);
         }
 
         // 無いパラメーターを渡すと毎フレーム警告が出るので、あるものだけに渡し、足りなければ一度だけ知らせる。
@@ -622,6 +726,9 @@ namespace Shooter.Runtime
             AddIfMissing(missing, CharacterPose.DeadParameter, DeadHash);
             AddIfMissing(missing, CharacterPose.WeaponCategoryParameter, WeaponCategoryHash);
             AddIfMissing(missing, CharacterPose.SlideParameter, SlideHash);
+            AddIfMissing(missing, CharacterPose.LeanParameter, LeanHash);
+            AddIfMissing(missing, CharacterPose.SwimmingParameter, SwimmingHash);
+            AddIfMissing(missing, CharacterPose.WallRunParameter, WallRunHash);
             if (missing.Count > 0)
             {
                 Debug.LogWarning(

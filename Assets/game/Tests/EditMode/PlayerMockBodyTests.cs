@@ -155,6 +155,41 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void MotorStateTiltsTheBodyForLeanSwimmingAndWallRun()
+        {
+            _mock.Build(_camera);
+            var grounded = State(PlayerActionConditions.Grounded, ViewMode.ThirdPerson);
+
+            var leaning = FakeCharacterMotorStateSource.Motor(lean: 1f);
+            _mock.Apply(grounded, Vector3.zero, Vector3.zero, Quaternion.identity, FeetY, 10f, null, leaning, 20f);
+            Assert.That(
+                Quaternion.Angle(_mock.BodyRoot.localRotation, PlayerMockPose.TraversalLean(leaning, 20f)), Is.LessThan(0.01f));
+            Assert.That((_mock.BodyRoot.localRotation * Vector3.up).x, Is.GreaterThan(0.3f), "leans to the right");
+
+            var swimming = FakeCharacterMotorStateSource.Motor(swimming: true);
+            _mock.Apply(grounded, Vector3.zero, Vector3.zero, Quaternion.identity, FeetY, 10f, null, swimming, 20f);
+            Assert.That((_mock.BodyRoot.localRotation * Vector3.up).z, Is.GreaterThan(0.9f), "lies forward to swim");
+
+            var wallRunning = FakeCharacterMotorStateSource.Motor(wallRun: WallRunSide.Right);
+            _mock.Apply(grounded, Vector3.zero, Vector3.zero, Quaternion.identity, FeetY, 10f, null, wallRunning, 20f);
+            Assert.That((_mock.BodyRoot.localRotation * Vector3.up).x, Is.LessThan(-0.3f), "tilts left, away from the wall on the right");
+
+            _mock.Apply(State(PlayerActionConditions.InCover, ViewMode.ThirdPerson), Vector3.zero, Vector3.zero, Quaternion.identity, FeetY, 10f, null, leaning, 20f);
+            Assert.That(Quaternion.Angle(_mock.BodyRoot.localRotation, Quaternion.identity), Is.LessThan(0.01f), "the lean does not work in cover");
+        }
+
+        [Test]
+        public void ApplyWithoutAMotorStateKeepsTheBodyUpright()
+        {
+            _mock.Build(_camera);
+
+            Apply(PlayerActionConditions.Grounded, ViewMode.ThirdPerson);
+
+            Assert.That(Quaternion.Angle(_mock.BodyRoot.localRotation, Quaternion.identity), Is.LessThan(0.01f));
+            Assert.That(_mock.MotorSource, Is.Null);
+        }
+
+        [Test]
         public void BodyAndGunUseDistinctFlatColors()
         {
             _mock.Build(_camera);

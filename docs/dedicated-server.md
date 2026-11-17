@@ -396,7 +396,8 @@ docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `vehicle_entered` | プレイヤーが乗り物に乗った | `matchId`、`playerId`、`productUserId`、`vehicle` (マップの乗り物の並びの番号)、`vehicleId` (乗り物の Id)、`seat`、`role` (`Driver` / `Passenger` / `Gunner`) |
 | `vehicle_left` | プレイヤーが乗り物から降りた・降ろされた | `matchId`、`playerId`、`productUserId`、`vehicle`、`vehicleId`、`seat`、`reason` (`Request` / `Wrecked` / `RiderDied` / `Forced` / `RiderRemoved`) |
 | `vehicle_exploded` | 乗り物が壊れて爆発した。残骸は試合の終わりまで残る | `matchId`、`vehicle`、`vehicleId`、`attackerId` (最後に傷めた人。抜けていれば無し)、`attackerProductUserId`、`riders` (乗っていた人数)、`damaged`、`killed` |
-| `chat` | プレイヤーがチャットを送った。本文は出さない | `matchId`、`playerId`、`productUserId`、`channel` (`All` / `Team`)、`length` (本文の文字数) |
+| `chat` | プレイヤーのチャットを配った。`All` は全員に、`Team` は送った人と同じチームの人にだけ配る。本文は出さない | `matchId`、`playerId`、`productUserId`、`channel` (`All` / `Team`)、`length` (前後の空白と改行を落とした本文の文字数) |
+| `chat_refused` | チャットを断った。断った文は送った人にも返さない。連打でログを埋めないよう、1 秒に 1 行まで | `matchId`、`playerId`、`productUserId`、`reason` (`Empty` / `TooLong` / `TooSoon`) |
 | `map_vote` | プレイヤーが次のマップに投票した (選び直しも 1 行) | `matchId`、`playerId`、`productUserId`、`mapId` |
 | `map_changed` | 次の試合のマップを替えた | `matchId` (終わった試合)、`fromMapId`、`toMapId` |
 | `team_balanced` | 人数をそろえるため、次の試合の前にプレイヤーのチームを移した。移した人ごとに 1 行 | `matchId`、`playerId`、`productUserId`、`from`、`to` (`Alpha` / `Bravo`) |

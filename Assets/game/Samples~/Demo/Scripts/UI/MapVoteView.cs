@@ -54,7 +54,7 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        // 票を送る口を持たずに番号を渡すのは、Shooter.NetV2 が UI のアセンブリを参照しないため。マップ Id でなく番号にするのは、送る口 (IMapVoteSender.Vote(int)) が番号で受けるため。
+        // 票は GameSignals.MapVoteSender へ送り、これは送った後の知らせにする。ここで受けて送らせないのは、送る口が出ていないときに選んだことにしないため。
         public event Action<int> Voted;
 
         public MapVoteStatus? Status => _status;
@@ -115,15 +115,16 @@ namespace Shooter.Runtime
                 return false;
             }
 
-            var handlers = Voted;
-            if (handlers == null)
+            var sender = GameSignals.MapVoteSender.Value;
+            if (sender == null)
             {
-                Debug.LogWarning($"{Hud.LogTag} map '{mapId}' was chosen but nothing sends the vote", this);
+                Debug.LogWarning($"{Hud.LogTag} map '{mapId}' was chosen but no vote sender is published (GameSignals.MapVoteSender)", this);
                 return false;
             }
 
-            Debug.Log($"{Hud.LogTag} map vote chose={mapId}", this);
-            handlers(index);
+            Debug.Log($"{Hud.LogTag} map vote chose={mapId} index={index}", this);
+            sender.Vote(index);
+            Voted?.Invoke(index);
             return true;
         }
 

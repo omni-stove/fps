@@ -28,7 +28,6 @@ namespace Shooter.Core
 
         public bool IsUnderwater { get; }
 
-        /// <summary>今の潜りで使った息の秒数。<see cref="SwimTuning.BreathSeconds"/> を超えるたびに <see cref="Drownings"/> を 1 つ積み、その分を引く。</summary>
         public float BreathUsedSeconds { get; }
 
         /// <summary>
@@ -40,7 +39,6 @@ namespace Shooter.Core
         public bool IsValid => !float.IsNaN(SurfaceY) && !float.IsInfinity(SurfaceY)
             && BreathUsedSeconds >= 0f && !float.IsInfinity(BreathUsedSeconds) && Drownings >= 0;
 
-        /// <summary>previous の後にこの状態になるまでに積んだ、息が切れたダメージの出来事の数。</summary>
         public int DrowningsSince(CharacterSwimState previous)
         {
             if (!IsSwimming)

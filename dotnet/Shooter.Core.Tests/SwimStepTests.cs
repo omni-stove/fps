@@ -12,7 +12,8 @@ namespace Shooter.Core.Tests
         private const float _killPlaneY = -50f;
         private const int _settleTicks = 192;
 
-        // 胸 (中心 0 と目 0.6 の間) は本体から 0.3 上、足元は 1 下
+        private static readonly int[] _expectedDrownedTicks = { 5, 9, 13 };
+
         private static readonly StanceGeometry _stance = new StanceGeometry(2f, 0f, 0.6f, 1.2f, 0.5f);
 
         private readonly List<WorldCollider> _colliders = new List<WorldCollider>();
@@ -84,7 +85,7 @@ namespace Shooter.Core.Tests
             }
 
             Assert.That(swim.IsUnderwater, Is.True);
-            Assert.That(drownedAt, Is.EqualTo(new[] { 5, 9, 13 }), "1 s is held, so the first event comes when the time passes 1 s");
+            Assert.That(drownedAt, Is.EqualTo(_expectedDrownedTicks),"1 s is held, so the first event comes when the time passes 1 s");
             Assert.That(swim.Drownings, Is.EqualTo(3));
             Assert.That(swim.BreathUsedSeconds, Is.EqualTo(0.25f));
         }
@@ -277,7 +278,6 @@ namespace Shooter.Core.Tests
         {
             AddBox(new Vector3(0f, -4f, 0f), new Vector3(50f, 1f, 50f));
 
-            // 手前の面が z=0.8、上端が -0.3 の岸。浮いた足元 -1.3 から 1 m 上
             AddBox(new Vector3(0f, -1.65f, 10.8f), new Vector3(50f, 1.35f, 10f));
             var simulation = NewSimulation(new Pool(0f, maxZ: 0.8f));
             var floated = Float(simulation, new Vector3(0f, -0.5f, 0f));
@@ -323,7 +323,6 @@ namespace Shooter.Core.Tests
                 state = next;
             }
 
-            // 0.5 s は 32 tick。息は 33 tick 目に初めて切れ、以後 32 tick ごとに切れる
             var expected = (underwaterTicks - 1) / 32;
             Assert.That(state.IsSwimming, Is.True, "the floor under deep water keeps the swim");
             Assert.That(underwaterTicks, Is.GreaterThan(129));

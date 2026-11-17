@@ -86,13 +86,11 @@ namespace Shooter.Core
             return (standing.CenterY + standing.EyeY) * 0.5f;
         }
 
-        /// <summary>水面が胸に来る本体の Y。浮く力はここへ向けて体を寄せる。</summary>
         public static float FloatY(float surfaceY, StanceGeometry geometry)
         {
             return surfaceY - ChestY(geometry);
         }
 
-        /// <summary>足元 feet が水面より下か。着地が水の中なら落下のダメージを 0 にするのに使う (<see cref="FallDamageCalculator"/>)。</summary>
         public static bool IsInWater(IWaterVolumes water, Vector3 feet)
         {
             if (water == null)

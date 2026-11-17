@@ -49,8 +49,8 @@ namespace Shooter.Server.Tests
             var log = _log.ToString();
             var json = _json.ToString();
 
-            _module.OnMessage(new ConnectionId(1), new ChatRequestMessage { Channel = ChatChannel.All, Text = "hello" });
-            _module.OnMessage(new ConnectionId(1), new ChatRequestMessage { Channel = ChatChannel.Team, Text = "go" });
+            _module.OnMessage(new ConnectionId(1), new ChatRequestMessage { Channel = Protocol.ChatChannel.All, Text = "hello" });
+            _module.OnMessage(new ConnectionId(1), new ChatRequestMessage { Channel = Protocol.ChatChannel.Team, Text = "go" });
             _module.OnMessage(new ConnectionId(2), new MapVoteRequestMessage { MapIndex = 1 });
             _module.OnMessage(new ConnectionId(2), new SpectateRequestMessage { Step = SpectateStep.Next });
 
@@ -67,7 +67,7 @@ namespace Shooter.Server.Tests
             Join(1);
             var sent = _transport.Sent.Count;
 
-            _module.OnMessage(new ConnectionId(9), new ChatRequestMessage { Channel = ChatChannel.All, Text = "hello" });
+            _module.OnMessage(new ConnectionId(9), new ChatRequestMessage { Channel = Protocol.ChatChannel.All, Text = "hello" });
 
             Assert.That(_transport.Sent, Has.Count.EqualTo(sent));
         }

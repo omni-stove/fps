@@ -82,7 +82,7 @@ namespace Shooter.Core
         public Team? Winner { get; private set; }
 
         /// <summary>Bind したソロの試合 (<see cref="Match"/>) の勝敗。終わっていないか Bind していなければ null。</summary>
-        public MatchResult? SoloResult { get; private set; }
+        public MatchOutcome? SoloResult { get; private set; }
 
         /// <summary>ソロの試合の結果の下に出す、やり直すキーの表記。空なら案内を出さない。</summary>
         public string RestartKey { get; private set; } = string.Empty;
@@ -724,7 +724,7 @@ namespace Shooter.Core
             ApplySoloResult(_match?.Result, RestartKey);
         }
 
-        private void ApplySoloResult(MatchResult? result, string restartKey)
+        private void ApplySoloResult(MatchOutcome? result, string restartKey)
         {
             if (result == SoloResult && restartKey == RestartKey)
             {

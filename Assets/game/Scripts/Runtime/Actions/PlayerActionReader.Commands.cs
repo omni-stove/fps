@@ -7,7 +7,7 @@ namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="PlayerActionReader"/> のうち、移動と射撃のほかの指示のボタン (<see cref="PlayerCommands"/>) を読む処理。
-    /// プロジェクト全体のアクションの Melee / Prone / Ping / Ability1 / Ability2 / SquadCommand を毎フレーム読み、
+    /// プロジェクト全体のアクションの Melee / Prone / Ping / Ability1 / Ability2 / SquadCommand / UseStreak を毎フレーム読み、
     /// <see cref="PressedCommands"/> と <see cref="HeldCommands"/> にするだけで、それで何かを動かすのは読む側。
     /// 入力アセットに無いアクションは警告を出し、押されないものとして扱う。
     /// </summary>
@@ -21,6 +21,7 @@ namespace Shooter.Runtime
             PlayerCommands.Ability1,
             PlayerCommands.Ability2,
             PlayerCommands.SquadCommand,
+            PlayerCommands.UseStreak,
         };
 
         private readonly InputAction[] _commandActions = new InputAction[_commands.Length];
@@ -53,6 +54,8 @@ namespace Shooter.Runtime
                     return InputActionPaths.Ability2;
                 case PlayerCommands.SquadCommand:
                     return InputActionPaths.SquadCommand;
+                case PlayerCommands.UseStreak:
+                    return InputActionPaths.UseStreak;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(command), command, "command must be a single PlayerCommands button");
             }

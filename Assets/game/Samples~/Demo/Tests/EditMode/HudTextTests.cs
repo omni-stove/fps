@@ -156,13 +156,14 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void SoloResultSaysClearedOrFailedWithTheRestartKey()
         {
-            Assert.That(GameText.Resolve(HudText.SoloResult(MatchResult.Won)), Is.EqualTo("クリア"));
-            Assert.That(GameText.Resolve(HudText.SoloResult(MatchResult.Lost)), Is.EqualTo("失敗"));
-            Assert.That(HudText.SoloResult(MatchResult.Won), Is.EqualTo(new LocalizedText("hud.solo.won")));
+            Assert.That(GameText.Resolve(HudText.SoloResult(MatchOutcome.Won)), Is.EqualTo("クリア"));
+            Assert.That(GameText.Resolve(HudText.SoloResult(MatchOutcome.Lost)), Is.EqualTo("失敗"));
+            Assert.That(HudText.SoloResult(MatchOutcome.Won), Is.EqualTo(new LocalizedText("hud.solo.won")));
+            Assert.That(HudText.SoloResult(MatchOutcome.Draw), Is.EqualTo(HudText.Draw));
             Assert.That(GameText.Resolve(HudText.Restart("R")), Is.EqualTo("[R] でやり直す"));
             Assert.That(HudText.Restart("R"), Is.EqualTo(new LocalizedText("hud.solo.restart", "R")));
             Assert.Throws<ArgumentException>(() => HudText.Restart(string.Empty));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudText.SoloResult((MatchResult)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudText.SoloResult((MatchOutcome)99));
         }
 
         [Test]

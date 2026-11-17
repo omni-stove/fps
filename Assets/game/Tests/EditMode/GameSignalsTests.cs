@@ -46,6 +46,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.HudDensity.Value, Is.Null);
             Assert.That(GameSignals.PauseTimeMode.Value, Is.Null);
             Assert.That(GameSignals.PaletteViewer.Value, Is.Null);
+            Assert.That(GameSignals.Streak.Value, Is.Null);
         }
 
         [Test]
@@ -149,6 +150,7 @@ namespace Shooter.Tests.EditMode
             GameSignals.HudDensity.Publish(HudDensity.Full);
             GameSignals.PauseTimeMode.Publish(PauseTimeMode.Freeze);
             GameSignals.PaletteViewer.Publish(Team.Bravo);
+            GameSignals.Streak.Publish(new StreakStatus(3, new[] { new StreakSlot("uav", "streak.uav", 3, true) }));
             heard = 0;
 
             GameSignals.ResetAll();

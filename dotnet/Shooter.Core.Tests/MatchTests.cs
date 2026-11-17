@@ -145,7 +145,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(match.RemainingSeconds, Is.Zero);
             Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]
@@ -156,7 +156,7 @@ namespace Shooter.Core.Tests
             match.Tick(25f);
 
             Assert.That(match.RemainingSeconds, Is.Zero);
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]
@@ -173,7 +173,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(match.Kills, Is.EqualTo(3));
             Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Won));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Won));
         }
 
         [Test]
@@ -184,7 +184,7 @@ namespace Shooter.Core.Tests
             PlayerDies(match);
 
             Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]
@@ -195,7 +195,7 @@ namespace Shooter.Core.Tests
             match.ReportKill(_target, _player);
 
             Assert.That(match.Kills, Is.Zero);
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]
@@ -206,7 +206,7 @@ namespace Shooter.Core.Tests
             match.ReportKill(_player, _player);
 
             Assert.That(match.Kills, Is.Zero);
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]
@@ -230,7 +230,7 @@ namespace Shooter.Core.Tests
             match.Tick(1f);
             Kill(match);
 
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Lost));
             Assert.That(match.Kills, Is.Zero);
         }
 
@@ -242,7 +242,7 @@ namespace Shooter.Core.Tests
             Kill(match);
             match.Tick(1f);
 
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Won));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Won));
             Assert.That(match.RemainingSeconds, Is.EqualTo(1f));
         }
 
@@ -259,7 +259,7 @@ namespace Shooter.Core.Tests
             match.ReportKill(_target, _player);
 
             Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Won));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Won));
             Assert.That(match.Kills, Is.EqualTo(1));
             Assert.That(match.RemainingSeconds, Is.EqualTo(10f));
             Assert.That(match.IsOver, Is.True);
@@ -278,7 +278,7 @@ namespace Shooter.Core.Tests
             Kill(match);
 
             Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Lost));
             Assert.That(match.Kills, Is.Zero);
             Assert.That(match.RemainingSeconds, Is.EqualTo(7f));
             Assert.That(match.IsOver, Is.True);
@@ -315,7 +315,7 @@ namespace Shooter.Core.Tests
             PlayerDies(match);
 
             Assert.That(states, Is.EqualTo(new[] { GameModeState.Playing, GameModeState.Ended }));
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Won));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Won));
         }
 
         [Test]
@@ -332,23 +332,23 @@ namespace Shooter.Core.Tests
             Kill(match);
 
             Assert.That(states, Is.EqualTo(new[] { GameModeState.Playing, GameModeState.Ended }));
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]
         public void StateAndResultAreUpdatedBeforeStateChangedFires()
         {
             var match = new Match(10f, 1, _player);
-            var observed = new List<(GameModeState, MatchResult?)>();
+            var observed = new List<(GameModeState, MatchOutcome?)>();
             match.StateChanged += _ => observed.Add((match.State, match.Result));
 
             match.Start();
             Kill(match);
 
-            Assert.That(observed, Is.EqualTo(new (GameModeState, MatchResult?)[]
+            Assert.That(observed, Is.EqualTo(new (GameModeState, MatchOutcome?)[]
             {
                 (GameModeState.Playing, null),
-                (GameModeState.Ended, MatchResult.Won),
+                (GameModeState.Ended, MatchOutcome.Won),
             }));
         }
 
@@ -375,12 +375,12 @@ namespace Shooter.Core.Tests
             won.Start();
             won.ReportKill(_player, _target);
             won.ReportKill(_player, _target);
-            Assert.That(won.Result, Is.EqualTo(MatchResult.Won));
+            Assert.That(won.Result, Is.EqualTo(MatchOutcome.Won));
 
             var lost = new Match(float.PositiveInfinity, 2, _player);
             lost.Start();
             lost.ReportDeath(_player);
-            Assert.That(lost.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(lost.Result, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]
@@ -393,7 +393,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(match.HasTimeLimit, Is.True);
             Assert.That(match.RemainingSeconds, Is.EqualTo(0f));
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]

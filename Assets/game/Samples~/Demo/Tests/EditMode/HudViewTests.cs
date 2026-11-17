@@ -462,7 +462,7 @@ namespace Shooter.Tests.EditMode
 
             match.ReportKill(0, 1);
 
-            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudText.SoloResult(MatchResult.Won))));
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudText.SoloResult(MatchOutcome.Won))));
             Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
             Assert.That(view.RestartLabel.text, Is.EqualTo(Localizer.Resolve(HudText.Restart("R"))));
             Assert.That(view.RestartLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
@@ -517,7 +517,7 @@ namespace Shooter.Tests.EditMode
             match.ReportDeath(0);
 
             Assert.That(view.RestartLabel, Is.Null);
-            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudText.SoloResult(MatchResult.Lost))));
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudText.SoloResult(MatchOutcome.Lost))));
         }
 
         [Test]

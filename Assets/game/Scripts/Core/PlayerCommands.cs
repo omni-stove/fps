@@ -25,5 +25,8 @@ namespace Shooter.Core
 
         /// <summary>分隊への指示。</summary>
         SquadCommand = 1 << 5,
+
+        /// <summary>貯めたストリークの報酬を使う。</summary>
+        UseStreak = 1 << 6,
     }
 }

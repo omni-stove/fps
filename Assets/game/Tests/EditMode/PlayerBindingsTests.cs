@@ -79,6 +79,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("HoldBreath")]
         [TestCase("SwitchGrenade")]
         [TestCase("Inventory")]
+        [TestCase("UseStreak")]
         public void KeyboardOnlyButtonsHaveOnlyAKeyboardRow(string actionName)
         {
             Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot(actionName, InputDeviceKind.KeyboardMouse)));
@@ -89,6 +90,12 @@ namespace Shooter.Tests.EditMode
         public void InventoryOpensWithI()
         {
             Assert.That(_bindings.PathOf(new RebindSlot("Inventory", InputDeviceKind.KeyboardMouse)), Is.EqualTo("<Keyboard>/i"));
+        }
+
+        [Test]
+        public void UseStreakIsOn4()
+        {
+            Assert.That(_bindings.PathOf(new RebindSlot("UseStreak", InputDeviceKind.KeyboardMouse)), Is.EqualTo("<Keyboard>/4"));
         }
 
         [Test]

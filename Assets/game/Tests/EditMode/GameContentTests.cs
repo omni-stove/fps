@@ -127,6 +127,40 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheStreakAimAssistAndProgressionTuningAreKeptAndStartEmpty()
+        {
+            var content = Content("A");
+
+            Assert.That(content.StreaksTuning, Is.Null);
+            Assert.That(content.AimAssistTuning, Is.Null);
+            Assert.That(content.ProgressionTuning, Is.Null);
+
+            var streaks = Track(new TextAsset("{}"));
+            var aimAssist = Track(new TextAsset("{}"));
+            var progression = Track(new TextAsset("{}"));
+            content.StreaksTuning = streaks;
+            content.AimAssistTuning = aimAssist;
+            content.ProgressionTuning = progression;
+
+            Assert.That(content.StreaksTuning, Is.SameAs(streaks));
+            Assert.That(content.AimAssistTuning, Is.SameAs(aimAssist));
+            Assert.That(content.ProgressionTuning, Is.SameAs(progression));
+        }
+
+        [TestCase("_streaksTuning", "Resources/Tuning/streaks")]
+        [TestCase("_aimAssistTuning", "Resources/Tuning/aim-assist")]
+        [TestCase("_progressionTuning", "Resources/Tuning/progression")]
+        public void TheTuningFieldsNameTheirResourceFallback(string field, string resourcePath)
+        {
+            var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var tooltip = (TooltipAttribute)System.Attribute.GetCustomAttribute(info, typeof(TooltipAttribute));
+
+            Assert.That(info.FieldType, Is.EqualTo(typeof(TextAsset)));
+            Assert.That(tooltip, Is.Not.Null);
+            Assert.That(tooltip.tooltip, Does.EndWith("空なら " + resourcePath));
+        }
+
+        [Test]
         public void AnUnwiredEnemyTakesTheEntryDataOfItsArchetype()
         {
             var sniper = Track(ScriptableObject.CreateInstance<EnemyDefinition>());

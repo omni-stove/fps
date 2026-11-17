@@ -75,6 +75,7 @@
   "settings.input.action.HoldBreath": "Hold breath",
   "settings.input.action.SwitchGrenade": "Switch grenade",
   "settings.input.action.Inventory": "Inventory",
+  "settings.input.action.UseStreak": "Use streak",
   "settings.input.move.up": "Move forward",
   "settings.input.move.down": "Move back",
   "settings.input.move.left": "Move left",

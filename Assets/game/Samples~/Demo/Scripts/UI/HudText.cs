@@ -41,7 +41,7 @@ namespace Shooter.Runtime
         }
 
         /// <summary>チームの結果があればそれを、無ければソロの試合の勝敗を出す。どちらも無ければ空の文。</summary>
-        public static LocalizedText Result(bool hasResult, Team? winner, MatchResult? soloResult)
+        public static LocalizedText Result(bool hasResult, Team? winner, MatchOutcome? soloResult)
         {
             if (hasResult)
             {
@@ -52,7 +52,7 @@ namespace Shooter.Runtime
         }
 
         /// <summary>ソロの試合が終わっていて、やり直すキーがあるときだけ案内を出す。</summary>
-        public static LocalizedText Restart(MatchResult? soloResult, string restartKey)
+        public static LocalizedText Restart(MatchOutcome? soloResult, string restartKey)
         {
             return soloResult.HasValue && !string.IsNullOrEmpty(restartKey) ? Restart(restartKey) : default;
         }
@@ -127,17 +127,19 @@ namespace Shooter.Runtime
         }
 
         /// <summary>ソロの試合 (<see cref="Match"/>) が終わったときの結果。</summary>
-        /// <example><c>SoloResult(MatchResult.Won)</c> は <c>クリア</c>、<c>SoloResult(MatchResult.Lost)</c> は <c>失敗</c></example>
-        public static LocalizedText SoloResult(MatchResult result)
+        /// <example><c>SoloResult(MatchOutcome.Won)</c> は <c>クリア</c>、<c>SoloResult(MatchOutcome.Lost)</c> は <c>失敗</c></example>
+        public static LocalizedText SoloResult(MatchOutcome result)
         {
             switch (result)
             {
-                case MatchResult.Won:
+                case MatchOutcome.Won:
                     return new LocalizedText("hud.solo.won");
-                case MatchResult.Lost:
+                case MatchOutcome.Lost:
                     return new LocalizedText("hud.solo.lost");
+                case MatchOutcome.Draw:
+                    return Draw;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(result), result, "result is not a defined MatchResult");
+                    throw new ArgumentOutOfRangeException(nameof(result), result, "result is not a defined MatchOutcome");
             }
         }
 

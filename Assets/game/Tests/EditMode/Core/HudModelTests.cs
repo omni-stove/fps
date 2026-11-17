@@ -400,7 +400,7 @@ namespace Shooter.Core.Tests
 
             match.ReportKill(_playerId, _playerId + 1);
 
-            Assert.That(model.SoloResult, Is.EqualTo(MatchResult.Won));
+            Assert.That(model.SoloResult, Is.EqualTo(MatchOutcome.Won));
             Assert.That(model.HasResult, Is.False, "a solo result is not a team result");
             Assert.That(changes, Is.EqualTo(new[] { HudField.Result }));
 
@@ -418,7 +418,7 @@ namespace Shooter.Core.Tests
 
             model.BindMatch(match);
 
-            Assert.That(model.SoloResult, Is.EqualTo(MatchResult.Lost));
+            Assert.That(model.SoloResult, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]

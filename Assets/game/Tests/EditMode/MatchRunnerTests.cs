@@ -89,7 +89,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Match] state=Won kills=2 remaining=30.0");
             _world.Targets[1].Damageable.Kill();
 
-            Assert.That(_match.Result, Is.EqualTo(MatchResult.Won));
+            Assert.That(_match.Result, Is.EqualTo(MatchOutcome.Won));
             Assert.That(_world.Mover.enabled, Is.False, "movement stops once the match is over");
             Assert.That(_world.Weapon.enabled, Is.False, "shooting stops once the match is over");
         }
@@ -104,7 +104,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Match] state=Won kills=2 remaining=30.0");
             dummy.Damageable.Kill();
 
-            Assert.That(_match.Result, Is.EqualTo(MatchResult.Won));
+            Assert.That(_match.Result, Is.EqualTo(MatchOutcome.Won));
         }
 
         [Test]
@@ -115,7 +115,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=0 remaining=20.0");
             _world.PlayerDamageable.Kill();
 
-            Assert.That(_match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(_match.Result, Is.EqualTo(MatchOutcome.Lost));
             Assert.That(_world.Mover.enabled, Is.False);
             Assert.That(_world.Weapon.enabled, Is.False);
         }
@@ -128,7 +128,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=1 remaining=0.0");
             _runner.Tick(TimeLimit + 1f);
 
-            Assert.That(_match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(_match.Result, Is.EqualTo(MatchOutcome.Lost));
             Assert.That(_world.Mover.enabled, Is.False);
         }
 
@@ -142,7 +142,7 @@ namespace Shooter.Tests.EditMode
             _world.Targets[1].Damageable.Kill();
             _runner.Tick(TimeLimit);
 
-            Assert.That(_match.Result, Is.EqualTo(MatchResult.Lost));
+            Assert.That(_match.Result, Is.EqualTo(MatchOutcome.Lost));
             Assert.That(_match.Kills, Is.Zero);
         }
 
@@ -302,7 +302,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Match] state=Won kills=2 remaining=30.0");
             _world.Targets[1].Damageable.Kill();
 
-            Assert.That(model.SoloResult, Is.EqualTo(MatchResult.Won));
+            Assert.That(model.SoloResult, Is.EqualTo(MatchOutcome.Won));
             Assert.That(model.HasResult, Is.False, "a solo match has no winning team");
         }
 
@@ -312,7 +312,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=0 remaining=30.0");
             _world.PlayerDamageable.Kill();
 
-            Assert.That(_world.HudModel.SoloResult, Is.EqualTo(MatchResult.Lost));
+            Assert.That(_world.HudModel.SoloResult, Is.EqualTo(MatchOutcome.Lost));
         }
 
         [Test]

@@ -34,7 +34,7 @@ namespace Shooter.Core
         public GameModeState State { get; private set; } = GameModeState.Waiting;
 
         /// <summary>勝敗。終了前は null。</summary>
-        public MatchResult? Result { get; private set; }
+        public MatchOutcome? Result { get; private set; }
 
         /// <summary>残り時間（秒）。0 未満にはならない。制限時間が無ければ <see cref="float.PositiveInfinity"/> のまま。</summary>
         public float RemainingSeconds { get; private set; }
@@ -99,7 +99,7 @@ namespace Shooter.Core
 
             if (RemainingSeconds <= 0f)
             {
-                End(MatchResult.Lost);
+                End(MatchOutcome.Lost);
             }
         }
 
@@ -117,7 +117,7 @@ namespace Shooter.Core
 
             if (victimId == PlayerId)
             {
-                End(MatchResult.Lost);
+                End(MatchOutcome.Lost);
                 return;
             }
 
@@ -129,7 +129,7 @@ namespace Shooter.Core
             Kills++;
             if (Kills >= KillsToWin)
             {
-                End(MatchResult.Won);
+                End(MatchOutcome.Won);
             }
         }
 
@@ -141,10 +141,10 @@ namespace Shooter.Core
                 return;
             }
 
-            End(MatchResult.Lost);
+            End(MatchOutcome.Lost);
         }
 
-        private void End(MatchResult result)
+        private void End(MatchOutcome result)
         {
             Result = result;
             State = GameModeState.Ended;

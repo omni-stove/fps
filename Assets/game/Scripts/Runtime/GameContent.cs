@@ -60,6 +60,15 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("ボットの調整値の JSON (サーバーの bots.json と同じ形)。空なら Resources/Tuning/bots")]
         private TextAsset _botsTuning;
 
+        [SerializeField, Tooltip("ストリークの調整値の JSON。空なら Resources/Tuning/streaks")]
+        private TextAsset _streaksTuning;
+
+        [SerializeField, Tooltip("照準の補助の調整値の JSON。空なら Resources/Tuning/aim-assist")]
+        private TextAsset _aimAssistTuning;
+
+        [SerializeField, Tooltip("成長の調整値の JSON。空なら Resources/Tuning/progression")]
+        private TextAsset _progressionTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -240,6 +249,24 @@ namespace Shooter.Runtime
         {
             get => _botsTuning;
             set => _botsTuning = value;
+        }
+
+        public TextAsset StreaksTuning
+        {
+            get => _streaksTuning;
+            set => _streaksTuning = value;
+        }
+
+        public TextAsset AimAssistTuning
+        {
+            get => _aimAssistTuning;
+            set => _aimAssistTuning = value;
+        }
+
+        public TextAsset ProgressionTuning
+        {
+            get => _progressionTuning;
+            set => _progressionTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog

@@ -258,7 +258,7 @@ namespace Shooter.Core
                 case GameModeState.Playing:
                     return "Playing";
                 case GameModeState.Ended:
-                    return match.Result == MatchResult.Won ? "Won" : "Lost";
+                    return match.Result == MatchOutcome.Won ? "Won" : "Lost";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(match), match.State, "match has an unknown state");
             }

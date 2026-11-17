@@ -114,7 +114,7 @@ namespace Shooter.Core.Tests
             }
 
             Assert.That(match.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(match.Result, Is.EqualTo(MatchResult.Won));
+            Assert.That(match.Result, Is.EqualTo(MatchOutcome.Won));
             Assert.That(deathmatch.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(deathmatch.Winner, Is.EqualTo(Team.Alpha));
         }

@@ -7,6 +7,8 @@ namespace Shooter.Core.Tests
     {
         private static readonly string[] _pool = { "NetArena01", "NetArena02", "NetArena03", "NetArena04", "NetArena05" };
 
+        private static readonly string[] _onePool = { "NetArena01" };
+
         [Test]
         public void OpenedListsTheCurrentMapCandidatesAndSeconds()
         {
@@ -20,7 +22,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void OpenedWithoutACurrentMapSaysNone()
         {
-            var vote = new MapVote(new[] { "NetArena01" }, null, 7.5f, 0);
+            var vote = new MapVote(_onePool, null, 7.5f, 0);
 
             Assert.That(MapVoteLog.Opened(vote), Is.EqualTo("[MapVote] opened current=none candidates=[NetArena01] seconds=7.5"));
         }

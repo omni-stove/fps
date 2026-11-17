@@ -9,6 +9,11 @@ namespace Shooter.Core.Tests
     {
         private static readonly string[] _fivePool = { "NetArena01", "NetArena02", "NetArena03", "NetArena04", "NetArena05" };
         private static readonly string[] _threePool = { "NetArena01", "NetArena02", "NetArena03" };
+        private static readonly string[] _onePool = { "NetArena01" };
+        private static readonly string[] _duplicatePool = { "NetArena01", "NetArena01" };
+        private static readonly string[] _blankPool = { "NetArena01", " " };
+        private static readonly string[] _seedTwoExpected = { "NetArena01", "NetArena03", "NetArena05" };
+        private static readonly string[] _fewExpected = { "NetArena02", "NetArena03" };
 
         [Test]
         public void PicksThreeCandidatesWithoutTheCurrentMapBySeed()
@@ -19,7 +24,7 @@ namespace Shooter.Core.Tests
 
             // 種 2: 144813 % 4 = 1, 547817382 % 3 = 0, 1726701011 % 2 = 1 で 04 が外れる。
             var seedTwo = new MapVote(_fivePool, "NetArena02", 15f, 2);
-            Assert.That(seedTwo.Candidates, Is.EqualTo(new[] { "NetArena01", "NetArena03", "NetArena05" }));
+            Assert.That(seedTwo.Candidates, Is.EqualTo(_seedTwoExpected));
         }
 
         [Test]
@@ -38,7 +43,7 @@ namespace Shooter.Core.Tests
         {
             var vote = new MapVote(_threePool, "NetArena01", 15f, 0);
 
-            Assert.That(vote.Candidates, Is.EqualTo(new[] { "NetArena02", "NetArena03" }));
+            Assert.That(vote.Candidates, Is.EqualTo(_fewExpected));
         }
 
         [Test]
@@ -159,7 +164,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void OnlyTheCurrentMapKeepsIt()
         {
-            var vote = new MapVote(new[] { "NetArena01" }, "NetArena01", 15f, 0);
+            var vote = new MapVote(_onePool, "NetArena01", 15f, 0);
 
             Assert.That(vote.Candidates, Is.Empty);
             var decision = vote.Close();
@@ -229,8 +234,8 @@ namespace Shooter.Core.Tests
         public void BadArgumentsAreRefused()
         {
             Assert.Throws<ArgumentNullException>(() => _ = new MapVote(null, "NetArena01", 15f, 0));
-            Assert.Throws<ArgumentException>(() => _ = new MapVote(new[] { "NetArena01", "NetArena01" }, null, 15f, 0));
-            Assert.Throws<ArgumentException>(() => _ = new MapVote(new[] { "NetArena01", " " }, null, 15f, 0));
+            Assert.Throws<ArgumentException>(() => _ = new MapVote(_duplicatePool, null, 15f, 0));
+            Assert.Throws<ArgumentException>(() => _ = new MapVote(_blankPool, null, 15f, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = new MapVote(_threePool, null, -1f, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = new MapVote(_threePool, null, float.NaN, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = new MapVote(_threePool, null, 15f, 0, candidateCount: 0));

@@ -41,6 +41,8 @@ namespace Shooter.Runtime
         private bool _enabledLookAction;
         private float _sensitivityMultiplier = 1f;
         private float _turnMultiplier = 1f;
+        private float _assistLookScale = 1f;
+        private Vector2 _pendingAssistDegrees;
         private ControlSettings _controlSettings = ControlSettings.Default;
         private bool _listeningToSettings;
         private float _recoilPitchUp;
@@ -144,6 +146,42 @@ namespace Shooter.Runtime
             }
         }
 
+        // エイムアシストはスティックの弱さを補うものなので、TurnMultiplier と違いマウスで回すフレームには掛けない。
+        public float AssistLookScale
+        {
+            get => _assistLookScale;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "assist look scale must be a non-negative finite number");
+                }
+
+                _assistLookScale = value;
+            }
+        }
+
+        public Vector2 PendingAssistDegrees => _pendingAssistDegrees;
+
+        // 置き換えでなく足し込むのは、渡す部品とこの部品の Update の順が決まっておらず、次に回すまでに 2 度渡されても取りこぼさないため。
+        // 回せば空にするので、同じ角度を 2 度回すことは無い。
+        /// <exception cref="ArgumentOutOfRangeException">x か y が有限でないとき。</exception>
+        public void AddAssistDegrees(Vector2 degrees)
+        {
+            if (!IsFinite(degrees.x) || !IsFinite(degrees.y))
+            {
+                throw new ArgumentOutOfRangeException(nameof(degrees), degrees, "assist degrees must be finite");
+            }
+
+            _pendingAssistDegrees += degrees;
+        }
+
+        public void ClearAssist()
+        {
+            _assistLookScale = 1f;
+            _pendingAssistDegrees = Vector2.zero;
+        }
+
         /// <summary>
         /// 感度の倍率 (<see cref="ControlSettings.LookSensitivity"/>) を決める操作設定。Awake で <see cref="AppliedControlSettings.Current"/> を読み、
         /// 設定画面で変わるたびに入れ直す (Edit Mode では Awake が走らないので初期値)。変えると次のフレームから使う。
@@ -238,6 +276,8 @@ namespace Shooter.Runtime
             }
 
             _enabledLookAction = false;
+            // 止めている間 (死亡など) に溜まった吸い付きを、戻ったときに一度に回さないよう捨てる。
+            _pendingAssistDegrees = Vector2.zero;
             LockCursor(false);
         }
 
@@ -279,10 +319,24 @@ namespace Shooter.Runtime
         {
             if (InputSuspended)
             {
+                _pendingAssistDegrees = Vector2.zero;
                 return;
             }
 
-            var degrees = ReadLookDegrees(Time.deltaTime) * _turnMultiplier;
+            var fromPointer = _lookAction != null && _lookAction.activeControl?.device is Pointer;
+            Turn(ReadLookDegrees(Time.deltaTime), fromPointer);
+        }
+
+        /// <summary>
+        /// Look 入力の回転量 (度、<see cref="ReadLookDegrees(float)"/> の値) でこの視点を回す。Play 中は Update が毎フレーム呼ぶ。
+        /// fromPointer が false なら <see cref="AssistLookScale"/> を掛けて <see cref="PendingAssistDegrees"/> を足す。
+        /// どちらでも <see cref="PendingAssistDegrees"/> は空にし、全体に <see cref="TurnMultiplier"/> を掛ける。
+        /// </summary>
+        public void Turn(Vector2 lookDegrees, bool fromPointer)
+        {
+            var degrees = fromPointer ? lookDegrees : (lookDegrees * _assistLookScale) + _pendingAssistDegrees;
+            _pendingAssistDegrees = Vector2.zero;
+            degrees *= _turnMultiplier;
             if (degrees == Vector2.zero)
             {
                 return;
@@ -481,6 +535,11 @@ namespace Shooter.Runtime
             }
 
             _angles.Set(transform.localEulerAngles.y, LookAngles.ToSigned(_pitchPivot.localEulerAngles.x) + _appliedRecoilPitchUp);
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
         }
 
         private static void LockCursor(bool locked)

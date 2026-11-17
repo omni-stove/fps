@@ -295,5 +295,107 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_look.Pitch, Is.EqualTo(0f).Within(1e-3f));
         }
+
+        [Test]
+        public void TheAssistScalesTheStickTurnAndAddsItsAngleOnce()
+        {
+            _look.Initialize(_pivot, _action);
+            Assert.That(_look.AssistLookScale, Is.EqualTo(1f));
+            Assert.That(_look.PendingAssistDegrees, Is.EqualTo(Vector2.zero));
+
+            _look.AssistLookScale = 0.5f;
+            _look.AddAssistDegrees(new Vector2(1f, 0.5f));
+            _look.AddAssistDegrees(new Vector2(1f, 0.5f));
+            Assert.That(_look.PendingAssistDegrees, Is.EqualTo(new Vector2(2f, 1f)), "angles handed over before the next turn add up");
+
+            _look.Turn(new Vector2(10f, 0f), false);
+
+            // 10 × 0.5 + 2 = 7 度右、1 度上。
+            Assert.That(_look.Yaw, Is.EqualTo(7f).Within(1e-3f));
+            Assert.That(_look.Pitch, Is.EqualTo(-1f).Within(1e-3f));
+            Assert.That(_look.PendingAssistDegrees, Is.EqualTo(Vector2.zero));
+
+            _look.Turn(Vector2.zero, false);
+            Assert.That(_look.Yaw, Is.EqualTo(7f).Within(1e-3f), "the same angle is not turned twice");
+            Assert.That(_look.Pitch, Is.EqualTo(-1f).Within(1e-3f));
+        }
+
+        [Test]
+        public void TheAssistAngleTurnsTheViewWithoutStickInput()
+        {
+            _look.Initialize(_pivot, _action);
+            _look.AddAssistDegrees(new Vector2(-1.5f, 0f));
+
+            _look.Turn(Vector2.zero, false);
+
+            Assert.That(_look.Yaw, Is.EqualTo(358.5f).Within(1e-3f));
+        }
+
+        [Test]
+        public void TheAssistDoesNothingForTheMouse()
+        {
+            _look.Initialize(_pivot, _action);
+            _look.AssistLookScale = 0.5f;
+            _look.AddAssistDegrees(new Vector2(2f, 1f));
+
+            _look.Turn(new Vector2(10f, 0f), true);
+
+            Assert.That(_look.Yaw, Is.EqualTo(10f).Within(1e-3f));
+            Assert.That(_look.Pitch, Is.EqualTo(0f).Within(1e-3f));
+            Assert.That(_look.PendingAssistDegrees, Is.EqualTo(Vector2.zero), "the angle is dropped, not kept for the next stick turn");
+        }
+
+        [Test]
+        public void TheTurnMultiplierAlsoSlowsTheAssistedTurn()
+        {
+            _look.Initialize(_pivot, _action);
+            _look.TurnMultiplier = 0.5f;
+            _look.AssistLookScale = 0.5f;
+            _look.AddAssistDegrees(new Vector2(2f, 0f));
+
+            _look.Turn(new Vector2(10f, 0f), false);
+
+            // (10 × 0.5 + 2) × 0.5 = 3.5 度。
+            Assert.That(_look.Yaw, Is.EqualTo(3.5f).Within(1e-3f));
+        }
+
+        [Test]
+        public void TheAssistLeavesTheSpectatorAndPhotoModeReadingAlone()
+        {
+            _look.AssistLookScale = 0f;
+            _look.AddAssistDegrees(new Vector2(5f, 5f));
+
+            Assert.That(_look.ReadLookDegrees(1f), Is.EqualTo(Vector2.zero));
+            Assert.That(_look.PendingAssistDegrees, Is.EqualTo(new Vector2(5f, 5f)), "reading the input does not use up the assist");
+        }
+
+        [Test]
+        public void ClearingTheAssistRestoresTheScaleAndDropsTheAngle()
+        {
+            _look.AssistLookScale = 0.25f;
+            _look.AddAssistDegrees(new Vector2(3f, 0f));
+
+            _look.ClearAssist();
+
+            Assert.That(_look.AssistLookScale, Is.EqualTo(1f));
+            Assert.That(_look.PendingAssistDegrees, Is.EqualTo(Vector2.zero));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void TheAssistScaleRejectsInvalidValues(float scale)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _look.AssistLookScale = scale);
+            Assert.That(_look.AssistLookScale, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void TheAssistAngleRejectsNonFiniteValues()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _look.AddAssistDegrees(new Vector2(float.NaN, 0f)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _look.AddAssistDegrees(new Vector2(0f, float.PositiveInfinity)));
+            Assert.That(_look.PendingAssistDegrees, Is.EqualTo(Vector2.zero));
+        }
     }
 }

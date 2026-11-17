@@ -182,17 +182,20 @@ namespace Fps.Tests.EditMode
 
             Assert.That(kills.Count, Is.EqualTo(1));
             Assert.That(kills[0].WeaponId, Is.EqualTo(Kind));
-            Assert.That(MineDeployDefinition.TryFindName(CombatEvents.OfflineObject(kills[0].KillerId), kills[0].WeaponId, out var name), Is.True);
-            Assert.That(name, Is.EqualTo(new LocalizedText(MineSpec.DefaultNameKey)));
+            Assert.That(MineDeployDefinition.TryFind(CombatEvents.OfflineObject(kills[0].KillerId), kills[0].WeaponId, out var found), Is.True);
+            Assert.That(found, Is.SameAs(_definition));
+            Assert.That(found.DisplayNameKey, Is.EqualTo(MineSpec.DefaultNameKey));
+            Assert.That(MineDeployDefinition.TryFind(CombatEvents.OfflineObject(kills[0].KillerId), "other", out found), Is.False);
+            Assert.That(found, Is.Null);
         }
 
         [Test]
-        public void WithoutANameKeyTheNameIsTheId()
+        public void ABlankNameKeyIsEmpty()
         {
             _definition.NameKey = " ";
 
-            Assert.That(_definition.Name, Is.EqualTo(LocalizedText.Literal(Kind)));
             Assert.That(_definition.DisplayNameKey, Is.Empty);
+            Assert.That(_definition.Id, Is.EqualTo(Kind));
         }
 
         [Test]

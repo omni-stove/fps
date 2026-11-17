@@ -38,7 +38,7 @@ namespace Fps.Runtime
         /// <summary>画面の見出しの Label の name。</summary>
         public const string TitleName = "settings-title";
 
-        /// <summary>画面の言語 (<see cref="ControlSettings.Language"/>) を順に切り替えるボタンの name。</summary>
+        /// <summary>画面の言語 (<see cref="Localizer.Language"/>) を順に切り替えるボタンの name。</summary>
         public const string LanguageButtonName = "settings-language";
 
         public const string BackButtonName = "settings-back";
@@ -100,6 +100,7 @@ namespace Fps.Runtime
         private readonly InputBindingOverridesStore _bindingStore;
         private readonly InputActionAsset _actionAsset;
         private readonly ISettingsSink _sink;
+        private readonly LanguagePreferenceStore _languageStore;
         private readonly Dictionary<ControlValue, SliderInt> _sliders = new Dictionary<ControlValue, SliderInt>();
         private readonly Dictionary<ControlValue, Label> _valueLabels = new Dictionary<ControlValue, Label>();
         private readonly Dictionary<string, Button> _modeButtons = new Dictionary<string, Button>(StringComparer.Ordinal);
@@ -129,16 +130,19 @@ namespace Fps.Runtime
         /// <param name="bindingStore">割り当ての上書きの保存先。null ならゲームの既定のキー。</param>
         /// <param name="actions">割り当てを変える Input Actions。null なら開くときのプロジェクト全体のもの (<see cref="InputSystem.actions"/>)。</param>
         /// <param name="sink">今の設定を読み、変えた値を効かせる先。null ならゲーム全体の <see cref="AppliedControlSettings.Sink"/>。</param>
+        /// <param name="languageStore">選んだ言語の保存先。null ならゲームの既定のキー。</param>
         public SettingsView(
             ControlSettingsStore store = null,
             InputBindingOverridesStore bindingStore = null,
             InputActionAsset actions = null,
-            ISettingsSink sink = null)
+            ISettingsSink sink = null,
+            LanguagePreferenceStore languageStore = null)
         {
             _store = store ?? new ControlSettingsStore();
             _bindingStore = bindingStore ?? new InputBindingOverridesStore();
             _actionAsset = actions;
             _sink = sink ?? AppliedControlSettings.Sink;
+            _languageStore = languageStore ?? new LanguagePreferenceStore();
         }
 
         /// <summary>「戻る」かキャンセルが押されたとき。開いた側が <see cref="Close"/> を呼んで閉じる。</summary>
@@ -146,6 +150,8 @@ namespace Fps.Runtime
 
         /// <summary>保存先。</summary>
         public ControlSettingsStore Store => _store;
+
+        public LanguagePreferenceStore LanguageStore => _languageStore;
 
         /// <summary>開いているか。</summary>
         public bool IsOpen => _root != null;
@@ -191,9 +197,10 @@ namespace Fps.Runtime
             var labels = new List<string>();
             foreach (var conflict in conflicts)
             {
-                if (!labels.Contains(conflict.Label))
+                var label = InputActionLabels.LabelOf(conflict);
+                if (!labels.Contains(label))
                 {
-                    labels.Add(conflict.Label);
+                    labels.Add(label);
                 }
             }
 
@@ -509,8 +516,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 画面の言語 (<see cref="ControlSettings.Language"/>) を <see cref="Localizer.SwitchTo"/> で language に切り替える。
-        /// 表を読み直し、<see cref="Localizer.Changed"/> で開いている画面を今の言語で組み直し、言語だけはすぐ保存先のキーに書き出す
+        /// 画面の言語 (<see cref="Localizer.Language"/>) を <see cref="Localizer.SwitchTo"/> で language に切り替える。
+        /// 表を読み直し、<see cref="Localizer.Changed"/> で開いている画面を今の言語で組み直し、言語はすぐ <see cref="LanguageStore"/> に書き出す
         /// (ほかの値の変更は閉じるときに保存する)。今と同じ言語なら何もしない。
         /// </summary>
         /// <exception cref="InvalidOperationException">開いていない。</exception>
@@ -519,33 +526,28 @@ namespace Fps.Runtime
         {
             EnsureOpen();
             _ = GameLanguages.Code(language);
-            if (language == _editing.Language)
+            if (language == Localizer.Language)
             {
                 return;
             }
 
-            // SwitchTo の知らせで画面を組み直すとき、言語のボタンに新しい言語を出せるよう、先に編集中の値を変える。
-            _editing = _editing.WithLanguage(language).WithShowNetStats(_sink.Current.ShowNetStats);
             try
             {
-                Localizer.SwitchTo(language, new LanguagePreferenceStore(_store.Key));
-                _saved = _saved.WithLanguage(language);
+                Localizer.SwitchTo(language, _languageStore);
             }
             catch (Exception e)
             {
-                // 言語はもう効いているので、保存は閉じるときにもう一度試す。
-                Debug.LogError($"{LogTag} could not save the language to '{_store.Key}': {e.Message}");
+                // 言語はもう効いているので、画面はそのまま新しい言語で続ける。
+                Debug.LogError($"{LogTag} could not save the language to '{_languageStore.Key}': {e.Message}");
                 Debug.LogException(e);
             }
 
-            // 言語の知らせを受けた側がこの画面を閉じていれば、閉じたときに保存は済んでいる。
+            // 言語の知らせを受けた側がこの画面を閉じていれば、組み直す画面は無い。
             if (_root == null)
             {
                 return;
             }
 
-            // SwitchTo は AppliedControlSettings にだけ効かせるので、別の先を渡されたときもその先に言語を渡す。
-            _sink.Apply(_editing);
             Refresh();
         }
 
@@ -557,7 +559,7 @@ namespace Fps.Runtime
         public void ResetToDefaults()
         {
             EnsureOpen();
-            Edit(ControlSettings.Default.WithLanguage(_editing.Language));
+            Edit(ControlSettings.Default);
         }
 
         /// <summary>
@@ -839,7 +841,7 @@ namespace Fps.Runtime
         private VisualElement BuildBindingRow(string actionName, string part)
         {
             var row = NewRow();
-            row.Add(NewLabel(PlayerBindings.LabelOf(actionName, part), "settings__caption"));
+            row.Add(NewLabel(InputActionLabels.LabelOf(actionName, part), "settings__caption"));
             foreach (var device in _devices)
             {
                 var slot = new RebindSlot(actionName, device, part);
@@ -988,7 +990,7 @@ namespace Fps.Runtime
             var row = NewRow();
             row.Add(NewLabel(Localizer.Get("settings.language"), "settings__caption"));
             _languages = Localizer.AvailableLanguages();
-            _languageButton = NewButton(LanguageButtonName, string.Empty, () => SetLanguage(NextLanguage(_editing.Language, _languages)));
+            _languageButton = NewButton(LanguageButtonName, string.Empty, () => SetLanguage(NextLanguage(Localizer.Language, _languages)));
             _languageButton.AddToClassList("settings__palette");
             row.Add(_languageButton);
             return row;
@@ -1055,8 +1057,9 @@ namespace Fps.Runtime
 
             if (_languageButton != null)
             {
-                _languageButton.text = LanguageNameOf(_editing.Language);
-                _languageButton.SetEnabled(NextLanguage(_editing.Language, _languages) != _editing.Language);
+                var language = Localizer.Language;
+                _languageButton.text = LanguageNameOf(language);
+                _languageButton.SetEnabled(NextLanguage(language, _languages) != language);
             }
 
             RefreshBindings();
@@ -1089,7 +1092,7 @@ namespace Fps.Runtime
                     slot.Device == InputDeviceKind.Gamepad ? "settings.rebind.cancelKey.gamepad" : "settings.rebind.cancelKey.keyboardMouse");
                 _rebindNotice.text = Localizer.Format(
                     "settings.rebind.prompt",
-                    PlayerBindings.LabelOf(slot.ActionName, slot.Part),
+                    InputActionLabels.LabelOf(slot.ActionName, slot.Part),
                     DeviceText(slot.Device),
                     cancelKey);
                 SetDisplayed(_rebindNoticeRow, true);

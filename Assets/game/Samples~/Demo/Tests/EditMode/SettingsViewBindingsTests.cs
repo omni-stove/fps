@@ -22,6 +22,7 @@ namespace Fps.Tests.EditMode
         private static readonly RebindSlot ReloadPad = new RebindSlot("Reload", InputDeviceKind.Gamepad);
 
         private ControlSettings _appliedBefore;
+        private GameLanguage _languageBefore;
         private float _volumeBefore;
         private ControlSettingsStore _store;
         private InputBindingOverridesStore _bindingStore;
@@ -35,9 +36,10 @@ namespace Fps.Tests.EditMode
         {
             _appliedBefore = AppliedControlSettings.Current;
             _volumeBefore = AudioListener.volume;
+            _languageBefore = Localizer.Language;
 
             // 案内の文を日本語で確かめるので、この機械で保存した言語に依らないようにする
-            AppliedControlSettings.Apply(_appliedBefore.WithLanguage(GameLanguage.Japanese));
+            Localizer.Apply(GameLanguage.Japanese);
             var suffix = Guid.NewGuid().ToString("N");
             _store = new ControlSettingsStore("Fps.Tests.SettingsViewBindings.Settings." + suffix);
             _bindingStore = new InputBindingOverridesStore("Fps.Tests.SettingsViewBindings.Bindings." + suffix);
@@ -58,6 +60,7 @@ namespace Fps.Tests.EditMode
             _asset = null;
             _restarted = null;
             AppliedControlSettings.Apply(_appliedBefore);
+            Localizer.Apply(_languageBefore);
             AudioListener.volume = _volumeBefore;
         }
 
@@ -140,7 +143,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_view.PendingConflict, Is.SameAs(result));
             var notice = _container.Q<Label>(SettingsView.RebindNoticeName);
             Assert.That(IsDisplayed(notice.parent), Is.True);
-            Assert.That(notice.text, Does.Contain(PlayerBindings.LabelOf("Interact")));
+            Assert.That(notice.text, Does.Contain(InputActionLabels.LabelOf("Interact")));
             Assert.That(IsDisplayed(_container.Q<Button>(SettingsView.RebindUndoButtonName)), Is.True);
             Assert.That(IsDisplayed(_container.Q<Button>(SettingsView.RebindKeepButtonName)), Is.True);
             Assert.That(IsDisplayed(_container.Q<Button>(SettingsView.RebindCancelButtonName)), Is.False);
@@ -304,9 +307,9 @@ namespace Fps.Tests.EditMode
         {
             var conflicts = new[]
             {
-                new BindingConflict("Move", "up", 2, "前へ移動"),
-                new BindingConflict("Move", "up", 3, "前へ移動"),
-                new BindingConflict("Interact", null, 0, "調べる・起こす"),
+                new BindingConflict("Move", "up", 2),
+                new BindingConflict("Move", "up", 3),
+                new BindingConflict("Interact", null, 0),
             };
 
             Assert.That(SettingsView.FormatConflict("W", conflicts), Is.EqualTo("W は「前へ移動」「調べる・起こす」にも割り当てられています。"));

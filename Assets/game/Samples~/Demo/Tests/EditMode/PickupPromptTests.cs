@@ -85,9 +85,9 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheWeaponNameIsTheKeyOrTheIdWhenThereIsNoKey()
         {
-            Assert.That(WeaponSpec.NameOf(_rifle, " weapon.rifle "), Is.EqualTo(new LocalizedText("weapon.rifle")));
-            Assert.That(WeaponSpec.NameOf(_rifle, "  "), Is.EqualTo(LocalizedText.Literal(_rifle)));
-            Assert.That(WeaponSpec.NameOf(null, null), Is.EqualTo(LocalizedText.Literal(string.Empty)));
+            Assert.That(DisplayNames.Of(" weapon.rifle ", _rifle), Is.EqualTo(new LocalizedText("weapon.rifle")));
+            Assert.That(DisplayNames.Of("  ", _rifle), Is.EqualTo(LocalizedText.Literal(_rifle)));
+            Assert.That(DisplayNames.Of(null, null), Is.EqualTo(LocalizedText.Literal(string.Empty)));
         }
 
         [Test]

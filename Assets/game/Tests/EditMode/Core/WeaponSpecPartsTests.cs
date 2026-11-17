@@ -237,10 +237,11 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void AmmoTypeNameFallsBackToTheId()
+        public void AmmoTypeKeepsOnlyTheTrimmedNameKey()
         {
-            Assert.That(new AmmoTypeSpec(_slugId, " ").Name, Is.EqualTo(LocalizedText.Literal(_slugId)));
-            Assert.That(new AmmoTypeSpec(_slugId, "ammo.slug").Name, Is.EqualTo(new LocalizedText("ammo.slug")));
+            Assert.That(new AmmoTypeSpec(_slugId, " ").NameKey, Is.Empty);
+            Assert.That(new AmmoTypeSpec(_slugId, " ammo.slug ").NameKey, Is.EqualTo("ammo.slug"));
+            Assert.That(new AmmoTypeSpec(_slugId, "ammo.slug").Id, Is.EqualTo(_slugId));
         }
 
         [Test]

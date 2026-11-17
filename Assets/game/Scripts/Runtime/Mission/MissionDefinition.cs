@@ -47,9 +47,6 @@ namespace Fps.Runtime
             set => _displayNameKey = value ?? string.Empty;
         }
 
-        /// <summary>プレイヤーに見せるミッション名。<see cref="DisplayNameKey"/> が空なら <c>default</c> (文にすると空文字)。</summary>
-        public LocalizedText DisplayName => string.IsNullOrWhiteSpace(_displayNameKey) ? default : new LocalizedText(_displayNameKey.Trim());
-
         /// <summary>Id が missionId のミッションの名前を引くキー (<c>campaign.mission.&lt;missionId&gt;.name</c>)。</summary>
         /// <exception cref="ArgumentException">missionId が null か空白だけ。</exception>
         public static string NameKeyOf(string missionId)

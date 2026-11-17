@@ -149,7 +149,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ASquadReplyBecomesTheBotsLineEvenWithSubtitlesOff()
         {
-            AppliedControlSettings.Apply(ControlSettings.Default.WithShowSubtitles(false).WithLanguage(GameLanguage.Japanese));
+            AppliedControlSettings.Apply(ControlSettings.Default.WithShowSubtitles(false));
             var view = CreateBoundView();
 
             view.Show(SquadOrderReply.Accepted("Bot_1", BotErrandKind.Hold));

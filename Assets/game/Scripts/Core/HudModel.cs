@@ -334,7 +334,7 @@ namespace Fps.Core
         public void SetWeaponSpec(WeaponSpec spec)
         {
             // 同じ武器を Weapon ごと作り直して Bind し直しても、名前が変わらなければ欄を描き直させない。
-            var same = spec == null ? WeaponSpec == null : WeaponSpec != null && spec.Id == WeaponSpec.Id && spec.Name.Equals(WeaponSpec.Name);
+            var same = spec == null ? WeaponSpec == null : WeaponSpec != null && spec.Id == WeaponSpec.Id && string.Equals(spec.NameKey, WeaponSpec.NameKey, StringComparison.Ordinal);
             WeaponSpec = spec;
             if (!same)
             {
@@ -581,7 +581,7 @@ namespace Fps.Core
 
         public void SetAmmoType(AmmoTypeSpec ammoType)
         {
-            var same = ammoType == null ? AmmoType == null : AmmoType != null && ammoType.Id == AmmoType.Id && ammoType.Name.Equals(AmmoType.Name);
+            var same = ammoType == null ? AmmoType == null : AmmoType != null && ammoType.Id == AmmoType.Id && string.Equals(ammoType.NameKey, AmmoType.NameKey, StringComparison.Ordinal);
             AmmoType = ammoType;
             if (!same)
             {

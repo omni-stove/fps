@@ -103,7 +103,7 @@ namespace Fps.Runtime
 
                 // 1 種類しか持たないなら、種類を切り替えて持つ前と同じ表示にする
                 var inventory = _source.Inventory;
-                typeName = inventory.Count > 1 ? inventory.Selected.Name : default;
+                typeName = inventory.Count > 1 ? DisplayNames.Of(inventory.Selected) : default;
             }
             else if (_count.HasValue)
             {
@@ -192,7 +192,7 @@ namespace Fps.Runtime
         // 種類の名前は調整値の JSON から Id で引く。届いた Id が JSON に無ければ (サーバーとアセットが違う) Id をそのまま出す
         private static LocalizedText TypeNameOf(string typeId)
         {
-            return KitTuning.Grenades.TryFind(typeId, out var spec) ? spec.Name : LocalizedText.Literal(typeId);
+            return KitTuning.Grenades.TryFind(typeId, out var spec) ? DisplayNames.Of(spec) : LocalizedText.Literal(typeId);
         }
 
         private void Subscribe()

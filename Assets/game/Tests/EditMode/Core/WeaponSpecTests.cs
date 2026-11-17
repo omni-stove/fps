@@ -47,7 +47,6 @@ namespace Fps.Core.Tests
 
             Assert.That(spec.Id, Is.EqualTo(_rifleId));
             Assert.That(spec.NameKey, Is.EqualTo("weapon.rifle"));
-            Assert.That(spec.Name, Is.EqualTo(new LocalizedText("weapon.rifle")));
             Assert.That(spec.LogName, Is.EqualTo("weapon.rifle"));
             Assert.That(spec.Category, Is.EqualTo(WeaponCategory.MarksmanRifle));
             Assert.That(spec.FireMode, Is.EqualTo(FireMode.Semi));
@@ -157,12 +156,12 @@ namespace Fps.Core.Tests
         [TestCase(null)]
         [TestCase("")]
         [TestCase("  ")]
-        public void ShowsTheIdAsIsWhenTheNameKeyIsEmpty(string nameKey)
+        public void LogsTheIdWhenTheNameKeyIsEmpty(string nameKey)
         {
             var spec = Create(id: " " + _rifleId + " ", nameKey: nameKey);
 
             Assert.That(spec.NameKey, Is.Empty);
-            Assert.That(spec.Name, Is.EqualTo(LocalizedText.Literal(_rifleId)), "the id is shown without looking up the table");
+            Assert.That(spec.Id, Is.EqualTo(_rifleId));
             Assert.That(spec.LogName, Is.EqualTo(_rifleId));
         }
 

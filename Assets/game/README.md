@@ -194,11 +194,10 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 | `Missions` | メニューのキャンペーン | `MainMenuScreen` の `Missions` | キャンペーンを開けない |
 | `TeamDeathmatch`・`Domination`・`Hardpoint`・`KillConfirmed`・`SearchAndDestroy`・`Horde`・`GunGameLadder` | 各モードの `*Runner` | Runner の `Definition` (`GunGameRunner` は `Ladder`) | Runner の Inspector の値 (`GunGameRunner` は始められない) |
 | `CharacterRig` | プレイヤー・敵の人型のリグ (`CharacterAnimator`) | `CharacterAnimator` の `RigPrefab` | `Resources/Characters/CharacterRig` |
-| `Texts` (言語コードと表の並び) | 文言 (`Localizer`・`GameText`) | — | `Resources/Localization/<言語>/` の表だけ |
 | `MenuScenes` | メニューから移るシーン (`MenuNavigator`) | — | `Resources/Menu/MenuSceneSettings`、無ければ既定の名前 |
 | `Presentation` ほか見た目・音のカタログ | [見た目と音を差し替える](#見た目と音を差し替える) | — | `Resources/Presentation/*` |
 
-- `Texts` の表は `Resources/Localization/<言語>/` の表の後に重ねるので、同じキーは入口の文が勝つ。表の形は [言語を足す・文を変える](#言語を足す文を変える) と同じ。言語コードは言語の一覧 (`Localization/Languages`) の `code`。
+- キットは言語と文を扱わない。Resources の外に置いた言語ごとの表は、Demo サンプルの `LocalizationContent` (Fps/Localization Content) を `Resources/FpsKit/` に置いてその `Texts` に並べる。`Resources/Localization/<言語>/` の表の後に重ねるので、同じキーはこちらが勝つ。
 - 入口は Play の開始時に探し直す。Edit Mode で入口を置き換えたときは、スクリプトの再読み込みか Play で読み直される。
 
 ## データの差し込み

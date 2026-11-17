@@ -1,6 +1,6 @@
 namespace Fps.Core
 {
-    /// <summary>字幕 (<see cref="SubtitleLines"/>) にする音の合図の種類。字幕は種類ごとに 1 行にまとめる。</summary>
+    /// <summary>字幕にする音の合図の種類。</summary>
     public enum SoundCueKind
     {
         /// <summary>銃声。</summary>

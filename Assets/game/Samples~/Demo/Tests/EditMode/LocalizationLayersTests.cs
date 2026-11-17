@@ -12,28 +12,39 @@ namespace Fps.Tests.EditMode
 {
     /// <summary>
     /// <see cref="Localizer"/> が言語ごとの表を重ねて読み、読めない言語は日本語に戻し、
-    /// <see cref="Localizer.SwitchTo"/> で読み直して保存すること。
+    /// <see cref="Localizer.SwitchTo"/> で読み直して保存し、<see cref="LanguagePreferenceStore"/> が前の形式の操作設定から言語を読み移すこと。
     /// </summary>
     public sealed class LocalizationLayersTests
     {
-        private ControlSettings _appliedBefore;
+        private const string VersionSevenSettings =
+            "{\"version\":7,\"keyboardMouse\":{\"sprint\":\"hold\",\"crouch\":\"hold\",\"aim\":\"hold\"},"
+            + "\"gamepad\":{\"sprint\":\"toggle\",\"crouch\":\"toggle\",\"aim\":\"hold\"},"
+            + "\"mouseSensitivity\":100,\"gamepadSensitivity\":100,\"adsSensitivity\":100,\"fieldOfView\":60,"
+            + "\"masterVolume\":30,\"effectsVolume\":100,\"cameraShake\":100,\"viewmodelMotion\":100,\"showBlood\":true,"
+            + "\"showNetStats\":false,\"colorPalette\":\"standard\",\"showSubtitles\":false,\"language\":\"ja\"}";
+
+        private GameLanguage _languageBefore;
+        private string _legacyKey;
         private LanguagePreferenceStore _store;
 
         [SetUp]
         public void SetUp()
         {
-            _appliedBefore = AppliedControlSettings.Current;
-            AppliedControlSettings.Apply(ControlSettings.Default);
+            _languageBefore = Localizer.Language;
+            Localizer.Apply(GameLanguage.Japanese);
             // 本物の設定 (DefaultKey) を壊さないよう、テストごとに別のキーを使う。
-            _store = new LanguagePreferenceStore("Fps.Tests.Language." + Guid.NewGuid().ToString("N"), GameLanguage.Japanese);
+            var suffix = Guid.NewGuid().ToString("N");
+            _legacyKey = "Fps.Tests.LegacySettings." + suffix;
+            _store = new LanguagePreferenceStore("Fps.Tests.Language." + suffix, _legacyKey, GameLanguage.Japanese);
         }
 
         [TearDown]
         public void TearDown()
         {
             PlayerPrefs.DeleteKey(_store.Key);
+            PlayerPrefs.DeleteKey(_legacyKey);
             PlayerPrefs.Save();
-            AppliedControlSettings.Apply(_appliedBefore);
+            Localizer.Apply(_languageBefore);
             Localizer.Reload();
         }
 
@@ -166,19 +177,90 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ThePreferenceStoreUsesTheDefaultUntilSavedAndKeepsTheOtherSettings()
+        public void ThePreferenceStoreUsesTheDefaultUntilSavedAndLeavesTheControlSettingsAlone()
         {
             Assert.That(_store.HasSaved, Is.False);
             Assert.That(_store.Load(), Is.EqualTo(GameLanguage.Japanese));
 
-            var settings = new ControlSettingsStore(_store.Key, GameLanguage.Japanese);
+            var settings = new ControlSettingsStore(_legacyKey);
             settings.Save(ControlSettings.Default.With(ControlValue.MasterVolume, 30));
             _store.Save(GameLanguage.English);
 
             Assert.That(_store.HasSaved, Is.True);
+            Assert.That(PlayerPrefs.GetString(_store.Key), Is.EqualTo("en"));
             Assert.That(_store.Load(), Is.EqualTo(GameLanguage.English));
-            Assert.That(settings.Load(), Is.EqualTo(ControlSettings.Default.With(ControlValue.MasterVolume, 30).WithLanguage(GameLanguage.English)));
+            Assert.That(settings.Load(), Is.EqualTo(ControlSettings.Default.With(ControlValue.MasterVolume, 30)));
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void TheLanguageSavedInTheOldControlSettingsIsCarriedOver()
+        {
+            PlayerPrefs.SetString(_legacyKey, VersionSevenSettings.Replace("\"language\":\"ja\"", "\"language\":\"en\""));
+            var store = new LanguagePreferenceStore(_store.Key, _legacyKey, GameLanguage.Japanese);
+
+            Assert.That(store.Load(), Is.EqualTo(GameLanguage.English));
+            Assert.That(store.HasSaved, Is.True, "carried over to its own key right away");
+            Assert.That(PlayerPrefs.GetString(store.Key), Is.EqualTo("en"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void JapaneseSavedInTheOldFormatStaysJapaneseAndTheOtherSettingsStay()
+        {
+            PlayerPrefs.SetString(_legacyKey, VersionSevenSettings);
+            var store = new LanguagePreferenceStore(_store.Key, _legacyKey, GameLanguage.English);
+            var settings = new ControlSettingsStore(_legacyKey);
+
+            Assert.That(store.Load(), Is.EqualTo(GameLanguage.Japanese));
+            Assert.That(settings.Load(), Is.EqualTo(ControlSettings.Default.With(ControlValue.MasterVolume, 30)));
+
+            // 操作設定を今の形式で書き直して言語が落ちても、読み移した言語は残る
+            settings.Save(settings.Load());
+            Assert.That(PlayerPrefs.GetString(_legacyKey), Does.Not.Contain("language"));
+            Assert.That(store.Load(), Is.EqualTo(GameLanguage.Japanese));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ItsOwnKeyWinsOverTheOldControlSettings()
+        {
+            PlayerPrefs.SetString(_legacyKey, VersionSevenSettings);
+            PlayerPrefs.SetString(_store.Key, "en");
+
+            Assert.That(_store.Load(), Is.EqualTo(GameLanguage.English));
+        }
+
+        [TestCase("")]
+        [TestCase("not json")]
+        [TestCase("{\"version\":8,\"masterVolume\":30}")]
+        [TestCase("{\"version\":7,\"language\":\"xx\"}")]
+        public void OldControlSettingsWithoutAKnownLanguageUseTheDefault(string legacy)
+        {
+            PlayerPrefs.SetString(_legacyKey, legacy);
+            var store = new LanguagePreferenceStore(_store.Key, _legacyKey, GameLanguage.English);
+
+            Assert.That(store.Load(), Is.EqualTo(GameLanguage.English));
+            Assert.That(store.HasSaved, Is.False);
+        }
+
+        [Test]
+        public void AnUnknownSavedCodeFallsBackToTheDefaultWithAWarning()
+        {
+            PlayerPrefs.SetString(_store.Key, "xx");
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Localization\] language '.*': 'xx' is not a known language code; using ja$"));
+
+            Assert.That(_store.Load(), Is.EqualTo(GameLanguage.Japanese));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ThePreferenceStoreRejectsAnEmptyKeyOrALanguageWithoutACode()
+        {
+            Assert.Throws<ArgumentNullException>(() => new LanguagePreferenceStore(null));
+            Assert.Throws<ArgumentException>(() => new LanguagePreferenceStore(string.Empty));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LanguagePreferenceStore(_store.Key, null, default(GameLanguage)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _store.Save(default));
         }
 
         [Test]
@@ -207,7 +289,7 @@ namespace Fps.Tests.EditMode
 
             // 今の言語が英語でも、日本語の名前は日本語の表から引く
             LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
-            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
+            Localizer.Apply(GameLanguage.English);
             Assert.That(Localizer.NativeNameOf(GameLanguage.Japanese), Is.EqualTo("日本語"));
             LogAssert.NoUnexpectedReceived();
         }

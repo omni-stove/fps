@@ -260,13 +260,11 @@ namespace Fps.Core.Tests
 
             var named = new GunGameTier(_rifle, " weapon.rifle ");
             Assert.That(named.NameKey, Is.EqualTo("weapon.rifle"));
-            Assert.That(named.Name, Is.EqualTo(new LocalizedText("weapon.rifle")));
             Assert.That(named.LogName, Is.EqualTo("weapon.rifle"));
 
             var unnamed = new GunGameTier(" rifle ", " ");
             Assert.That(unnamed.WeaponId, Is.EqualTo(_rifle));
             Assert.That(unnamed.NameKey, Is.Empty);
-            Assert.That(unnamed.Name, Is.EqualTo(LocalizedText.Literal(_rifle)), "a blank key shows the id as is");
             Assert.That(unnamed.LogName, Is.EqualTo(_rifle));
             Assert.That(default(GunGameTier).NameKey, Is.Empty);
         }

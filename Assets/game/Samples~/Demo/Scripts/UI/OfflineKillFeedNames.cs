@@ -37,19 +37,19 @@ namespace Fps.Runtime
             // グレネードはロードアウトの武器ではないので、持っている武器からは名前を引けない。
             if (string.Equals(weaponId, GrenadeThrower.WeaponId, StringComparison.Ordinal))
             {
-                return GrenadeThrower.Name;
+                return new LocalizedText(GrenadeThrower.NameKey);
             }
 
             // 地雷もロードアウトの武器ではなく、爆発は置いた物の種類 (能力の Id) で帰属する。
-            if (MineDeployDefinition.TryFindName(killer, weaponId, out var mineName))
+            if (MineDeployDefinition.TryFind(killer, weaponId, out var mine))
             {
-                return mineName;
+                return DisplayNames.Of(mine);
             }
 
             // C4 も地雷と同じく、爆発は置いた物の種類 (能力の Id) で帰属する。
-            if (RemoteChargeDeployDefinition.TryFindName(killer, weaponId, out var chargeName))
+            if (RemoteChargeDeployDefinition.TryFind(killer, weaponId, out var charge))
             {
-                return chargeName;
+                return DisplayNames.Of(charge);
             }
 
             // 近接で倒した武器 (ナイフ) はロードアウトに入れないので、近接の武器の Id と照らして名前を引く。
@@ -57,7 +57,7 @@ namespace Fps.Runtime
             var meleeWeapon = melee != null ? melee.MeleeWeapon : null;
             if (meleeWeapon != null && string.Equals(meleeWeapon.Id, weaponId, StringComparison.Ordinal))
             {
-                return meleeWeapon.ToSpec().Name;
+                return DisplayNames.Of(meleeWeapon);
             }
 
             var controller = killer.GetComponentInChildren<WeaponController>(true);
@@ -68,7 +68,7 @@ namespace Fps.Runtime
                 {
                     if (weapon != null && IsWeapon(weapon.Spec, weaponId))
                     {
-                        return weapon.Spec.Name;
+                        return DisplayNames.Of(weapon.Spec);
                     }
                 }
             }
@@ -77,7 +77,7 @@ namespace Fps.Runtime
             var enemyWeapon = enemy != null ? enemy.Weapon : null;
             if (enemyWeapon != null && IsWeapon(enemyWeapon.Spec, weaponId))
             {
-                return enemyWeapon.Spec.Name;
+                return DisplayNames.Of(enemyWeapon.Spec);
             }
 
             return default;

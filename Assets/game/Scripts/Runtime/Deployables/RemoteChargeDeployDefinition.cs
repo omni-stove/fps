@@ -56,15 +56,6 @@ namespace Fps.Runtime
 
         public override string DisplayNameKey => _nameKey != null ? _nameKey.Trim() : string.Empty;
 
-        public LocalizedText Name
-        {
-            get
-            {
-                var key = DisplayNameKey;
-                return key.Length > 0 ? new LocalizedText(key) : LocalizedText.Literal(Id);
-            }
-        }
-
         public float TapSeconds
         {
             get => _detonateTapSeconds;
@@ -111,16 +102,10 @@ namespace Fps.Runtime
 
         public override float DetonateTapSeconds => _detonateTapSeconds;
 
-        public static bool TryFindName(GameObject owner, string kindId, out LocalizedText name)
+        /// <summary>owner が持つ、種類の Id が kindId の定義。キルログの名前 (<see cref="DisplayNameKey"/>) を引くのに使う。</summary>
+        public static bool TryFind(GameObject owner, string kindId, out RemoteChargeDeployDefinition charge)
         {
-            if (TryFindEquipped<RemoteChargeDeployDefinition>(owner, kindId, out var charge))
-            {
-                name = charge.Name;
-                return true;
-            }
-
-            name = default;
-            return false;
+            return TryFindEquipped(owner, kindId, out charge);
         }
 
         public RemoteChargeSpec ToRemoteChargeSpec()

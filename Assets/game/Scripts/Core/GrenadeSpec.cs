@@ -107,8 +107,6 @@ namespace Fps.Core
 
         public string NameKey { get; }
 
-        public LocalizedText Name => NameKey.Length > 0 ? new LocalizedText(NameKey) : LocalizedText.Literal(Id);
-
         public string LogName => NameKey.Length > 0 ? NameKey : Id;
 
         /// <summary>投げてから効果を起こすまでの秒数。</summary>

@@ -59,12 +59,12 @@ namespace Fps.Runtime
 
         public static LocalizedText WeaponName(WeaponSpec spec)
         {
-            return spec != null ? spec.Name : default;
+            return spec != null ? DisplayNames.Of(spec) : default;
         }
 
         public static LocalizedText AmmoType(AmmoTypeSpec ammoType)
         {
-            return ammoType != null ? ammoType.Name : default;
+            return ammoType != null ? DisplayNames.Of(ammoType) : default;
         }
 
         /// <summary>状態異常の残りの文のキーの頭。種類の Id を続けて <c>hud.status.burn</c> のようにする。</summary>

@@ -148,7 +148,7 @@ namespace Fps.Core.Tests
             var spec = GrenadeSpec.Default;
 
             Assert.That(spec.Id, Is.EqualTo(GrenadeSpec.DefaultId));
-            Assert.That(spec.Name, Is.EqualTo(new LocalizedText("grenade.frag")));
+            Assert.That(spec.NameKey, Is.EqualTo("grenade.frag"));
             Assert.That(spec.Stickiness, Is.EqualTo(GrenadeStickiness.None));
             Assert.That(spec.Impact.Explosion.Detonation, Is.EqualTo(DetonationTrigger.OnLifetimeEnd));
             Assert.That(spec.Impact.Explosion.StructureDamageAtCenter, Is.EqualTo(150));
@@ -176,7 +176,7 @@ namespace Fps.Core.Tests
             var spec = new GrenadeSpec(GrenadeSpec.DefaultId, "  ", new ImpactSpec(damage: 0));
 
             Assert.That(spec.NameKey, Is.Empty);
-            Assert.That(spec.Name, Is.EqualTo(LocalizedText.Literal(GrenadeSpec.DefaultId)));
+            Assert.That(spec.LogName, Is.EqualTo(GrenadeSpec.DefaultId));
         }
 
         [Test]

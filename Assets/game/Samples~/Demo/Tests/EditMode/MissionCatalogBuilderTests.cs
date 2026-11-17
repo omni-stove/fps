@@ -83,7 +83,7 @@ namespace Fps.Tests.EditMode
             Assert.That(catalog.Missions[1].Definition, Is.SameAs(second));
             Assert.That(catalog.TryFind("Campaign02", out var found), Is.True);
             Assert.That(found.DisplayNameKey, Is.EqualTo(Campaign02Mission.MissionNameKey));
-            Assert.That(Localizer.Resolve(found.DisplayName), Is.EqualTo("Campaign 02"));
+            Assert.That(Localizer.Resolve(DisplayNames.Mission(found.DisplayNameKey)), Is.EqualTo("Campaign 02"));
         }
 
         [Test]

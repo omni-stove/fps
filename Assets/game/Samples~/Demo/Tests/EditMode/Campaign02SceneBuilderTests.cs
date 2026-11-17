@@ -98,8 +98,8 @@ namespace Fps.Tests.EditMode
             var mission = _definition.CreateMission();
 
             Assert.That(_definition.DisplayNameKey, Is.EqualTo(Campaign02Mission.MissionNameKey));
-            Assert.That(Localizer.Resolve(_definition.DisplayName), Is.EqualTo("Campaign 02"));
-            var reinforcements = Localizer.Resolve(mission.Objectives[2].Description);
+            Assert.That(Localizer.Resolve(DisplayNames.Mission(_definition.DisplayNameKey)), Is.EqualTo("Campaign 02"));
+            var reinforcements = Localizer.Resolve(DisplayNames.Description(mission.Objectives[2]));
             Assert.That(reinforcements, Is.Not.EqualTo(mission.Objectives[2].DescriptionKey), "the description is in the table");
             Assert.That(reinforcements, Does.Contain(Campaign02Mission.Reinforcements.Count.ToString(CultureInfo.InvariantCulture)));
             Assert.That(mission.Objectives.Count(), Is.EqualTo(4));

@@ -235,7 +235,7 @@ namespace Shooter.Core.Tests
             Assert.That(ServerLobby.SkillAverage(new int?[] { 1000, null, 1400 }), Is.EqualTo(1200));
             Assert.That(ServerLobby.SkillAverage(new int?[] { 1500 }), Is.EqualTo(1500));
             Assert.That(ServerLobby.SkillAverage(new int?[] { null, null }), Is.Null);
-            Assert.That(ServerLobby.SkillAverage(new int?[0]), Is.Null);
+            Assert.That(ServerLobby.SkillAverage(System.Array.Empty<int?>()), Is.Null);
         }
 
         [Test]

@@ -353,7 +353,7 @@ namespace Shooter.Server.Eos
             }
 
             _service.LeaveLobby();
-            Lose("updating the lobby attributes failed "+ _updateFailures + " times in a row: " + error);
+            Lose("updating the lobby attributes failed " + _updateFailures + " times in a row: " + error);
         }
 
         private void HandleRemoved(string reason)

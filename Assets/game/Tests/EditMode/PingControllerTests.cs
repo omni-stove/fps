@@ -203,6 +203,28 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void MarkingAnEnemyDirectlyUsesTheGivenLifetimeAndRefusesTheDead()
+        {
+            var pinger = Pinger();
+            var enemy = Enemy("Enemy", new Vector3(0f, 1f, 10f));
+            var dead = Enemy("Dead", new Vector3(5f, 1f, 10f));
+            dead.Kill();
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Ping\] revealed id=1 target=Enemy .* life=20\.00 refreshed=false$"));
+            Assert.That(pinger.TryMarkEnemy(enemy, 20f, out var marker), Is.True);
+            Assert.That(marker.Kind, Is.EqualTo(PingKind.Enemy));
+            Assert.That(marker.ExpiresAt, Is.EqualTo(20f));
+            Assert.That(pinger.TargetOf(marker.Id), Is.SameAs(enemy));
+            Assert.That(GameSignals.Pings.Value, Is.EqualTo(new[] { marker }), "a direct mark is published like any other");
+
+            LogAssert.Expect(LogType.Log, PingLog.Refused(PingRefusal.NoTarget));
+            Assert.That(pinger.TryMarkEnemy(dead, 20f, out _), Is.False);
+            Assert.That(pinger.LastRefusal, Is.EqualTo(PingRefusal.NoTarget));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => pinger.TryMarkEnemy(enemy, 0f, out _));
+            Assert.That(pinger.Markers.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
         public void ConfiguringAgainClearsTheMarks()
         {
             var pinger = Pinger();

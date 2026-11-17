@@ -34,6 +34,21 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void RevealedNamesTheMarkerTheTargetAndItsLifetime()
+        {
+            var board = new PingBoard(PingSpec.Default);
+            var first = board.Reveal(42, _point, 0f, 30f);
+            var again = board.Reveal(42, _point, 10f, 30f);
+
+            Assert.That(
+                PingLog.Revealed(first, "Dummy 0"),
+                Is.EqualTo("[Ping] revealed id=1 target=Dummy_0 at=(1.00, 1.10, 10.00) life=30.00 refreshed=false"));
+            Assert.That(
+                PingLog.Revealed(again, null),
+                Is.EqualTo("[Ping] revealed id=1 target=none at=(1.00, 1.10, 10.00) life=30.00 refreshed=true"));
+        }
+
+        [Test]
         public void TheOtherLinesStartWithTheTagAndTheMarker()
         {
             var marker = new PingMarker(3, PingKind.Enemy, 42, _point, false, 0f, 6f);

@@ -295,7 +295,48 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
+        /// target に、lifetimeSeconds 秒で消える敵の印を付ける (<see cref="PingBoard.Reveal"/>)。UAV などの報酬が使う。
+        /// この印は数の上限に数えず、消えるまで見えていなくても敵を追う。付けたら true と付けた印を返し、<c>[Ping] revealed</c> をログに出す。
+        /// 付けなければ false を返し、理由 (<see cref="LastRefusal"/>) を <c>[Ping] refused</c> でログに出す。target が倒れていれば <see cref="PingRefusal.NoTarget"/>。
+        /// 敵かどうかは呼び出し側が決める。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">target が null。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">lifetimeSeconds が 0 以下か有限でない。</exception>
+        public bool TryMarkEnemy(Damageable target, float lifetimeSeconds, out PingMarker marker)
+        {
+            marker = default;
+            if (target == null)
+            {
+                throw new ArgumentNullException(nameof(target));
+            }
+
+            if (float.IsNaN(lifetimeSeconds) || float.IsInfinity(lifetimeSeconds) || lifetimeSeconds <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(lifetimeSeconds), lifetimeSeconds, "lifetimeSeconds must be positive and finite");
+            }
+
+            if (!CanPing())
+            {
+                return false;
+            }
+
+            if (target.IsDead)
+            {
+                return Refuse(PingRefusal.NoTarget);
+            }
+
+            var placement = _board.Reveal(KeyOf(target), target.AimPoint.ToNumerics(), Now, lifetimeSeconds);
+            _targets[placement.Marker.Id] = target;
+            _lastRefusal = PingRefusal.None;
+            marker = placement.Marker;
+            Debug.Log(PingLog.Revealed(placement, target.Id), this);
+            NotifyChanged();
+            return true;
+        }
+
+        /// <summary>
         /// now の時点で、敵の印を追い (見えている間は動かし、見えなくなったら <c>[Ping] lost</c>)、倒れた敵の印と寿命の尽きた印 (<c>[Ping] expired</c>) を消す。
+        /// <see cref="TryMarkEnemy"/> で付けた印は、見えていなくても追う。
         /// Play 中は LateUpdate が <see cref="Time.time"/> (<see cref="Clock"/>) で呼ぶ。
         /// </summary>
         public void Tick(float now)
@@ -331,7 +372,7 @@ namespace Shooter.Runtime
                 _targets.TryGetValue(id, out var target);
                 var alive = target != null && !target.IsDead;
                 var tracking = _board.TryGet(id, out var current) && current.IsTracking;
-                var visible = alive && tracking && Sees(target);
+                var visible = alive && tracking && (_board.IsRevealed(id) || Sees(target));
                 var position = visible ? target.AimPoint.ToNumerics() : System.Numerics.Vector3.Zero;
                 switch (_board.Track(id, alive, visible, position, out var tracked))
                 {

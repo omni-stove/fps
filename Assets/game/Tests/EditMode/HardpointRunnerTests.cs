@@ -4,13 +4,12 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// HardpointRunner が有効な拠点にいる参加者をハードポイントに伝え、有効な拠点だけを光らせ、HUD に移るまでの秒数を出すことを確かめる。
+    /// HardpointRunner が有効な拠点にいる参加者をハードポイントに伝え、有効な拠点だけを光らせ、モードの状態 (ModeStatus) の Detail に進めているハードポイントを入れることを確かめる。
     /// bot (EnemyAgent) は NavMesh が要るので、巡回路は <see cref="HardpointRunner.RouteAround"/> の値だけを確かめる。
     /// </summary>
     public sealed class HardpointRunnerTests
@@ -60,13 +59,12 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void AMemberAloneOnTheActivePointScoresAndTheHudShowsTheCountdown()
+        public void AMemberAloneOnTheActivePointScoresAndTheStatusCarriesTheHardpoint()
         {
             var zones = Zones();
             var player = Member("Player", 0, PointA);
             var bot = Member("Bot-1-1", 1, PointB);
-            var hud = BoundHudView();
-            Begin(zones, new[] { player, bot }, player, hud);
+            Begin(zones, new[] { player, bot }, player);
 
             _runner.Tick(1f);
 
@@ -74,7 +72,13 @@ namespace Fps.Tests.EditMode
             Assert.That(session.GetScore(Side.Alpha), Is.EqualTo(1d));
             Assert.That(session.GetScore(Side.Bravo), Is.Zero, "the bot stands on the inactive point");
             Assert.That(zones[0].Owner, Is.EqualTo((Team?)Team.Alpha));
-            Assert.That(hud.Lines, Is.EqualTo(new[] { Localizer.Resolve(HardpointText.ActivePoint(0, 1, RotateSeconds - 1f)), "ALPHA が確保中" }));
+            var status = _runner.Status;
+            Assert.That(status.Detail, Is.SameAs(_runner.Hardpoint));
+            Assert.That(status.SideScores, Is.EqualTo(new[] { new SideScore(Side.Alpha, 1d), new SideScore(Side.Bravo, 0d) }));
+            Assert.That(status.OwnSide, Is.EqualTo((Side?)Side.Alpha));
+            Assert.That(status.RemainingSeconds, Is.EqualTo(299f));
+            Assert.That(_runner.Hardpoint.SecondsUntilMove, Is.EqualTo(RotateSeconds - 1f));
+            Assert.That(_runner.Hardpoint.Holder, Is.EqualTo((Side?)Side.Alpha));
         }
 
         [Test]
@@ -83,8 +87,7 @@ namespace Fps.Tests.EditMode
             var zones = Zones();
             var player = Member("Player", 0, PointA);
             var bot = Member("Bot-1-1", 1, PointA + new Vector3(1f, 0f, 0f));
-            var hud = BoundHudView();
-            Begin(zones, new[] { player, bot }, player, hud);
+            Begin(zones, new[] { player, bot }, player);
 
             _runner.Tick(2f);
 
@@ -92,7 +95,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Session.GetScore(Side.Bravo), Is.Zero);
             Assert.That(_runner.Hardpoint.Status, Is.EqualTo(HardpointStatus.Contested));
             Assert.That(zones[0].Owner, Is.Null, "a contested point is shown neutral");
-            Assert.That(hud.Lines[1], Is.EqualTo("争奪中"));
+            Assert.That(_runner.Status.Detail, Is.SameAs(_runner.Hardpoint));
         }
 
         [Test]
@@ -302,7 +305,7 @@ namespace Fps.Tests.EditMode
             return tuning;
         }
 
-        private void Begin(IReadOnlyList<ControlPointZone> zones, IReadOnlyList<SideMember> members, SideMember localPlayer, ModeHudView hud = null)
+        private void Begin(IReadOnlyList<ControlPointZone> zones, IReadOnlyList<SideMember> members, SideMember localPlayer)
         {
             _runner.Begin(CreateHardpoint(), zones, members, Array.Empty<SideSpawnPoint>(), localPlayer);
         }
@@ -336,13 +339,6 @@ namespace Fps.Tests.EditMode
             var member = go.AddComponent<SideMember>();
             member.Side = new Side(side);
             return member;
-        }
-
-        private ModeHudView BoundHudView()
-        {
-            var view = Track(new GameObject("ModeHud")).AddComponent<ModeHudView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            return view;
         }
 
         private GameObject Track(GameObject go)

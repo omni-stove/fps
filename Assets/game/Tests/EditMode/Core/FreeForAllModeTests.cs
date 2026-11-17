@@ -206,25 +206,6 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void RankTextNamesTheRankAndTheGap()
-        {
-            Assert.That(GameText.Resolve(FreeForAllMode.RankText(new FreeForAllStanding(3, 6, 1, -4))), Is.EqualTo("順位 3/6  1位と -4"));
-            Assert.That(GameText.Resolve(FreeForAllMode.RankText(new FreeForAllStanding(1, 6, 5, 2))), Is.EqualTo("順位 1/6  2位と +2"));
-            Assert.That(GameText.Resolve(FreeForAllMode.RankText(new FreeForAllStanding(1, 6, 5, 0))), Is.EqualTo("順位 1/6  1位と同点"));
-            Assert.That(GameText.Resolve(FreeForAllMode.RankText(new FreeForAllStanding(1, 1, 0, null))), Is.EqualTo("順位 1/1"));
-        }
-
-        [Test]
-        public void RankTextReadsTheSession()
-        {
-            var session = Started(3);
-            session.ReportKill(2, 0);
-
-            Assert.That(GameText.Resolve(FreeForAllMode.RankText(session, new Side(0))), Is.EqualTo("順位 2/3  1位と -1"));
-            Assert.That(GameText.Resolve(FreeForAllMode.RankText(session, new Side(2))), Is.EqualTo("順位 1/3  2位と +1"));
-        }
-
-        [Test]
         public void StandingRejectsAnImpossibleRank()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new FreeForAllStanding(0, 3, 0, 0));

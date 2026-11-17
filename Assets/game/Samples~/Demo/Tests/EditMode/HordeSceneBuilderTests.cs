@@ -157,6 +157,11 @@ namespace Fps.Tests.EditMode
                 Assert.That(definition.MaxAlive, Is.EqualTo(HordeSceneBuilder.MaxAlive));
                 Assert.That(definition.StartingCurrency, Is.EqualTo(HordeSpec.DefaultStartingCurrency));
                 Assert.That(definition.PurchasesOnlyBetweenWaves, Is.True);
+                Assert.That(definition.BuildCost, Is.EqualTo(HordeSceneBuilder.BarricadeBuildCost), "only the barricades are ever built");
+                Assert.That(definition.RepairCostPerPiece, Is.EqualTo(HordeSceneBuilder.WallRepairCostPerPiece));
+                Assert.That(definition.InteractRadius, Is.EqualTo(4.5f), "the 6-piece walls reach 1.5m past their ends");
+                Assert.That(definition.EnemySide, Is.EqualTo(HordeSceneBuilder.EnemySide));
+                Assert.That(definition.KillScore, Is.EqualTo(1));
                 Assert.That(definition.CreateSchedule().WaveCount, Is.EqualTo(HordeSceneBuilder.WaveCount));
                 Assert.Throws<ArgumentNullException>(() => HordeSceneBuilder.Configure(null));
             }

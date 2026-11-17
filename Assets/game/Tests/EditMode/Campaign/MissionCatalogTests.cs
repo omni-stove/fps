@@ -85,14 +85,14 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void RejectsAnIdThatIsNotTheDefinitionsName()
+        public void RejectsAnIdThatIsNotTheDefinitionsId()
         {
             var definition = Definition("Campaign01");
             var catalog = NewCatalog(new MissionCatalogEntry("Campaign02", "Two", ScenePath, definition));
 
             Assert.That(
                 () => catalog.Validate(),
-                Throws.InstanceOf<MissionCatalogException>().With.Message.Contains("must equal the definition's asset name"));
+                Throws.InstanceOf<MissionCatalogException>().With.Message.Contains("whose id is 'Campaign01'; the ids must be equal"));
         }
 
         [Test]
@@ -122,6 +122,7 @@ namespace Fps.Tests.EditMode
         {
             var definition = ScriptableObject.CreateInstance<MissionDefinition>();
             definition.name = "Campaign01";
+            definition.Id = "Campaign01";
             _created.Add(definition);
             var catalog = NewCatalog(new MissionCatalogEntry("Campaign01", "One", ScenePath, definition));
 
@@ -212,6 +213,7 @@ namespace Fps.Tests.EditMode
         {
             var definition = ScriptableObject.CreateInstance<MissionDefinition>();
             definition.name = id;
+            definition.Id = id;
             definition.SetObjectives(new[] { new ObjectiveDefinition("reach", "") });
             _created.Add(definition);
             return definition;

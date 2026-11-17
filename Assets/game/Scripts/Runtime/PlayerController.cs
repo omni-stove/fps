@@ -442,11 +442,16 @@ namespace Fps.Runtime
 
             try
             {
+                if (!_proneSpecAssigned)
+                {
+                    _proneSpec = MotorSettings.ResolveProne(_motorSettings);
+                }
+
                 Initialize(controller, look, move, sprint, crouch, jump, CreateSpec());
             }
             catch (ArgumentOutOfRangeException e)
             {
-                Debug.LogError($"{LogTag} 移動またはしゃがみの設定値が不正です: {e.Message}", this);
+                Debug.LogError($"{LogTag} 移動・しゃがみ・伏せの設定値が不正です: {e.Message}", this);
                 return false;
             }
 

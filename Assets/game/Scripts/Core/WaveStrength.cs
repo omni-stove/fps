@@ -46,7 +46,11 @@ namespace Fps.Core
                 spec.StaggerResistance,
                 spec.FireRange,
                 spec.FireToleranceDegrees,
-                Math.Min(EnemySpec.MaxSpreadDegrees, spec.RangeSpreadDegrees / multiplier));
+                Math.Min(EnemySpec.MaxSpreadDegrees, spec.RangeSpreadDegrees / multiplier),
+                spec.ArrivalDistance,
+                spec.SprintRatio,
+                spec.CrouchRatio,
+                spec.RecoilControl);
         }
 
         /// <summary>最大体力 baseHealth に倍率 multiplier を掛けた値。四捨五入し、1 以上 int の最大値以下に収める。</summary>

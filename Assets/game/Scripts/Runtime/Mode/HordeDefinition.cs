@@ -5,8 +5,9 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// ホードの調整値 (通貨の入り方・防衛物を買える時期・波の式) をアセットとして持つ。<see cref="HordeRunner"/> が読み、
-    /// <see cref="ToSpec"/> で <see cref="HordeSpec"/>、<see cref="CreateSchedule"/> で波の予定を作る。
+    /// ホードの調整値 (通貨の入り方・防衛物を買える時期・補強の費用と届く距離・倒したときの点・波の敵の陣営と動かし方・波の式) をアセットとして持つ。
+    /// <see cref="HordeRunner"/> が読み、<see cref="ToSpec"/> で <see cref="HordeSpec"/>、<see cref="CreateSchedule"/> で波の予定を作る。
+    /// これがあれば、補強の費用と届く距離はシーンの <see cref="HordeFortification"/>、敵の値は <see cref="WaveSpawner"/> の Inspector の値に代わる。
     /// 新しく作ったときの値は <see cref="HordeSpec"/> と <see cref="WaveSpawner"/> の既定値と同じ。
     /// 中身は Fps.Editor.HordeSceneBuilder が無いときだけ作る。
     /// </summary>
@@ -25,6 +26,32 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("防衛物を直す・置くのを波の間 (と最初の波の前) だけにするか")]
         private bool _purchasesOnlyBetweenWaves = true;
+
+        [SerializeField, Min(0), Tooltip("敵を 1 体倒したときに守る側の得点に足す点")]
+        private int _killScore = HordeSpec.DefaultKillScore;
+
+        [Header("補強")]
+        [SerializeField, Min(0), Tooltip("まだ置かれていない防衛物を置くときに払う通貨。すべての防衛物に使う")]
+        private int _buildCost = HordeSpec.DefaultBuildCost;
+
+        [SerializeField, Min(0), Tooltip("壊れた部品 1 つを直すときに払う通貨。すべての防衛物に使う")]
+        private int _repairCostPerPiece = HordeSpec.DefaultRepairCostPerPiece;
+
+        [SerializeField, Min(0.1f), Tooltip("防衛物の真ん中からこの水平の距離 (m) 以内にいる人が直す・置く操作をできる。すべての防衛物に使う")]
+        private float _interactRadius = HordeSpec.DefaultInteractRadius;
+
+        [Header("敵")]
+        [SerializeField, Min(0), Tooltip("波の敵の陣営の ID。守る側 (プレイヤー) の陣営と違うこと")]
+        private int _enemySideId = HordeSpec.DefaultEnemySideId;
+
+        [SerializeField, Min(0.1f), Tooltip("Idle・Patrol の敵をいちばん近い敵対者へ向かわせる間隔 (秒)")]
+        private float _alertInterval = HordeSpec.DefaultAlertInterval;
+
+        [SerializeField, Min(0f), Tooltip("敵対者からこの距離 (m) 以内の出現点は、ほかに使える点があれば使わない")]
+        private float _minSpawnDistance = HordeSpec.DefaultMinSpawnDistance;
+
+        [SerializeField, Min(0f), Tooltip("倒された敵を消すまでの秒数。0 なら消さない")]
+        private float _corpseSeconds = HordeSpec.DefaultCorpseSeconds;
 
         [Header("波")]
         [SerializeField, Min(0), Tooltip("波の数。最後の波を全滅させたら勝ち。0 なら終わりが無い")]
@@ -73,6 +100,55 @@ namespace Fps.Runtime
         {
             get => _purchasesOnlyBetweenWaves;
             set => _purchasesOnlyBetweenWaves = value;
+        }
+
+        public int KillScore
+        {
+            get => _killScore;
+            set => _killScore = value;
+        }
+
+        public int BuildCost
+        {
+            get => _buildCost;
+            set => _buildCost = value;
+        }
+
+        public int RepairCostPerPiece
+        {
+            get => _repairCostPerPiece;
+            set => _repairCostPerPiece = value;
+        }
+
+        public float InteractRadius
+        {
+            get => _interactRadius;
+            set => _interactRadius = value;
+        }
+
+        /// <summary>波の敵の陣営。<see cref="HordeRunner"/> はこれを敵の陣営として WaveSpawner にも渡す。</summary>
+        public Side EnemySide
+        {
+            get => new Side(Math.Max(0, _enemySideId));
+            set => _enemySideId = value.Id;
+        }
+
+        public float AlertInterval
+        {
+            get => _alertInterval;
+            set => _alertInterval = value;
+        }
+
+        public float MinSpawnDistance
+        {
+            get => _minSpawnDistance;
+            set => _minSpawnDistance = value;
+        }
+
+        public float CorpseSeconds
+        {
+            get => _corpseSeconds;
+            set => _corpseSeconds = value;
         }
 
         public int WaveCount
@@ -129,7 +205,20 @@ namespace Fps.Runtime
         {
             try
             {
-                return new HordeSpec(defenders, attackers, _startingCurrency, _killReward, _killRewardPerWave, _purchasesOnlyBetweenWaves);
+                return new HordeSpec(
+                    defenders,
+                    attackers,
+                    _startingCurrency,
+                    _killReward,
+                    _killRewardPerWave,
+                    _purchasesOnlyBetweenWaves,
+                    _buildCost,
+                    _repairCostPerPiece,
+                    _interactRadius,
+                    _killScore,
+                    _alertInterval,
+                    _minSpawnDistance,
+                    _corpseSeconds);
             }
             catch (ArgumentException e)
             {

@@ -17,7 +17,7 @@ namespace Fps.Runtime
     /// <see cref="Damageable"/> (体力)・<see cref="IArmorHolder"/> (防具) に反映して <c>[Pickup]</c> のログを出し、<see cref="Collected"/> を呼ぶ。
     /// タグは何にも反映せず、<see cref="Collected"/> を受けたモードが得点などを決める。
     /// Interact で拾う物は、範囲にこの画面のプレイヤーがいて拾える間 (Look なら照準を合わせている間)、
-    /// HUD の <see cref="IInteractPrompt"/> に何を拾うかの案内 (<see cref="PickupPrompt"/>) を出す。
+    /// <see cref="GameSignals.InteractHint"/> に何を拾うかの案内 (<see cref="PickupHint"/>) を出し、拾えなくなったら消す。
     /// </summary>
     /// <remarks>
     /// 実行時に置くときは <see cref="Create"/> を使う (当たり判定と見た目もコードで作る)。Scene に置くなら <see cref="PickupSpawnPoint"/> を使う。
@@ -124,7 +124,7 @@ namespace Fps.Runtime
         private readonly HashSet<Collider> _inside = new HashSet<Collider>();
         private readonly List<Collider> _insideBuffer = new List<Collider>();
         private readonly HashSet<Damageable> _triedThisTick = new HashSet<Damageable>();
-        private readonly InteractKeyLabel _keyLabel = new InteractKeyLabel();
+        private InteractHintSlot _hint;
         private PickupSpec _spec;
         private bool _collected;
         private float _age;
@@ -135,7 +135,6 @@ namespace Fps.Runtime
         private InputAction _interactAction;
         private bool _enabledInteractAction;
         private bool _reportedInvalid;
-        private IHud _hud;
         private int _armedFrame = -1;
 
         /// <summary>拾われたときに呼ばれる。<see cref="DestroyOnCollect"/> なら、呼んだ後に破棄する。</summary>
@@ -641,13 +640,13 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// player に出す案内。Interact か Look で拾う物を player が今拾えるなら、Interact のキー (keyLabel) と中身を入れた <see cref="PickupPrompt"/> の文で true。
+        /// player に出す案内。Interact か Look で拾う物を player が今拾えるなら、何が起きるかと中身と <see cref="InteractActionPath"/> を入れた案内で true。
         /// 拾い方が Touch・拾われた後・中身が不正・player が拾えない (満タンや倒れているなど) なら案内は出さない (false)。
         /// Look で照準を合わせているかはここでは見ない (呼ぶ側が <see cref="IsLookedAtBy"/> で確かめる)。
         /// </summary>
-        public bool TryDescribe(Damageable player, string keyLabel, out LocalizedText text)
+        public bool TryDescribe(Damageable player, out PickupHint hint)
         {
-            text = default;
+            hint = default;
             if (player == null || _collected || _collectMode == PickupCollectMode.Touch || _contents == null || !TryResolveSpec())
             {
                 return false;
@@ -655,13 +654,13 @@ namespace Fps.Runtime
 
             var collector = Describe(player);
             var outcome = PickupJudge.Judge(_spec, collector);
-            var contentName = _contents.Weapon != null ? _contents.Weapon.Name : default;
+            var nameKey = _contents.Weapon != null ? _contents.Weapon.NameKey : null;
             if (_spec.Kind == PickupKind.Item && collector.Inventory != null && collector.Inventory.Catalog.TryFind(_spec.ItemId, out var item))
             {
-                contentName = new LocalizedText(item.NameKey);
+                nameKey = item.NameKey;
             }
 
-            return PickupPrompt.TryDescribe(outcome, keyLabel, contentName, out text);
+            return PickupHint.TryFrom(outcome, nameKey, InteractActionPath, out hint);
         }
 
         /// <summary>
@@ -1263,7 +1262,7 @@ namespace Fps.Runtime
             Interact();
         }
 
-        private void UpdatePrompt()
+        internal void UpdatePrompt()
         {
             var player = _collectMode != PickupCollectMode.Touch && !_collected && _inside.Count > 0 ? LocalPlayerInside() : null;
             if (player != null && _collectMode == PickupCollectMode.Look && !IsLookedAtBy(player))
@@ -1271,39 +1270,18 @@ namespace Fps.Runtime
                 player = null;
             }
 
-            if (player == null)
+            if (player == null || !TryDescribe(player, out var hint))
             {
                 HidePrompt();
                 return;
             }
 
-            // HUD はプレイヤーが範囲に入ったときにだけ探す (シーン全体を見るので毎フレームは探さない)。
-            if (!GameUi.IsAlive(_hud))
-            {
-                _hud = GameUi.FindHud();
-            }
-
-            var prompt = GameUi.IsAlive(_hud) ? _hud.InteractPrompt : null;
-            if (prompt == null)
-            {
-                return;
-            }
-
-            if (!TryDescribe(player, _keyLabel.For(_interactAction), out var text))
-            {
-                prompt.Hide(this);
-                return;
-            }
-
-            prompt.Show(this, text);
+            (_hint ?? (_hint = new InteractHintSlot(this))).Show(hint);
         }
 
         private void HidePrompt()
         {
-            if (GameUi.IsAlive(_hud))
-            {
-                _hud.InteractPrompt?.Hide(this);
-            }
+            _hint?.Clear();
         }
 
         private sealed class HitDistanceComparer : IComparer<RaycastHit>

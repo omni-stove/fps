@@ -8,6 +8,7 @@ namespace Fps.Runtime
     /// <see cref="ModeRunnerBase"/> の最小の派生。<see cref="SideCount"/> 個の陣営 (<see cref="Squads"/>) でキル数を競い、
     /// どこかが <see cref="ScoreLimit"/> に届くか制限時間が切れたら終わる。倒れた人は <see cref="RespawnSeconds"/> 後に自陣営の出現点に戻る。
     /// 陣営が 2 つならチームデスマッチ、3 つ以上なら bot の陣営どうしも撃ち合う乱戦になる。
+    /// モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="ModeSession"/> を入れる。
     /// </summary>
     public sealed class TeamDeathmatchRunner : ModeRunnerBase
     {
@@ -110,5 +111,7 @@ namespace Fps.Runtime
             var spec = CreateSpec();
             return CreateSession(_sideCount, _sideCapacity, spec.TimeLimitSeconds, spec.ScoreLimit, spec.RespawnSeconds);
         }
+
+        protected override object HudDetail => Session;
     }
 }

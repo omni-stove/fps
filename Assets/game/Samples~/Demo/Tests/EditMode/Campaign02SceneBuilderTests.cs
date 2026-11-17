@@ -437,16 +437,17 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void SpecNeedsTheDefinitionNamedAfterTheMissionAndOneCoverPointsElement()
+        public void SpecAllowsADefinitionNamedOtherThanTheMissionAndNeedsOneCoverPointsElement()
         {
             var objectives = new[] { new ObjectiveDefinition("reach", "") };
             var reach = CampaignAreaElement.Reach("Reach", "reach", Vector3.zero, Vector3.one);
 
-            Assert.Throws<ArgumentException>(
-                () => new CampaignMissionSpec(
-                    "Mission", "Mission", "Assets/Mission.unity", "Assets/Other.asset", "Assets/NavMesh.asset",
-                    Vector3.zero, Vector3.one, Array.Empty<LevelBox>(), Array.Empty<LevelBox>(), Array.Empty<CoverPointPlacement>(),
-                    objectives, new CampaignElement[] { reach }, Array.Empty<CampaignCheckpoint>()));
+            var renamed = new CampaignMissionSpec(
+                "Mission", "Mission", "Assets/Mission.unity", "Assets/Other.asset", "Assets/NavMesh.asset",
+                Vector3.zero, Vector3.one, Array.Empty<LevelBox>(), Array.Empty<LevelBox>(), Array.Empty<CoverPointPlacement>(),
+                objectives, new CampaignElement[] { reach }, Array.Empty<CampaignCheckpoint>());
+            Assert.That(renamed.Id, Is.EqualTo("Mission"), "the mission id lives in the definition, not in its asset name");
+            Assert.That(renamed.DefinitionPath, Is.EqualTo("Assets/Other.asset"));
 
             var point = CoverPointPlacement.Low("Point", Vector3.zero, Vector3.forward);
             Assert.Throws<ArgumentException>(

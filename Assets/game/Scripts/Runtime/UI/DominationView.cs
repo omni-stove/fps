@@ -9,16 +9,16 @@ namespace Fps.Runtime
     /// <summary>
     /// 拠点制圧 (<see cref="Domination"/>) の HUD。画面の上中央に両チームのポイント・残り時間・各拠点の持ち主を出し、
     /// 試合が終わったら勝者を出す。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。<see cref="DominationRunner"/> が試合を始めるときに <see cref="IHud.AttachDomination"/> で
-    /// 受け取って <see cref="Show"/> する。言語が変わったら今の言語で出し直す。
+    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。要素を持っている間は <see cref="GameSignals.Domination"/> を購読し、
+    /// 出された状態を <see cref="Show"/> し、消されたら隠す。要素を受けたときは今の状態に合わせる。言語が変わったら今の言語で出し直す。
     /// 出している間は、残り時間をこちらで出すので Hud の残り時間の欄 (<see cref="HudView.TimeLabelName"/> の親) を隠す。
     /// </summary>
     /// <remarks>
-    /// 値は毎フレーム (<see cref="LateUpdate"/>) <see cref="Domination"/> から読み直し、表示する整数や持ち主が変わったときだけ文字列を作り直す。
+    /// 状態は毎フレーム出し直されるので、表示する整数や持ち主が変わったときだけ文字列を作り直す。
     /// 文字列は Label が無い (UIDocument の木がまだ無い) ときも <see cref="AlphaScoreText"/> などで読める。
     /// </remarks>
     [DisallowMultipleComponent]
-    public sealed class DominationView : HudElementView, IDominationHud
+    public sealed class DominationView : HudElementView
     {
         /// <summary>Hud.uxml の拠点制圧の要素。</summary>
         public const string UxmlName = "domination";
@@ -36,7 +36,8 @@ namespace Fps.Runtime
 
         private readonly List<string> _pointTexts = new List<string>();
         private readonly List<Label> _pointLabels = new List<Label>();
-        private Domination _source;
+        private DominationStatus _source;
+        private bool _subscribed;
         private Label _alphaLabel;
         private Label _bravoLabel;
         private Label _timeLabel;
@@ -49,12 +50,12 @@ namespace Fps.Runtime
         private int _shownSeconds = -1;
         private Team?[] _shownOwners = Array.Empty<Team?>();
         private bool[] _shownContested = Array.Empty<bool>();
-        private GameModeState? _shownState;
+        private bool? _shownEnded;
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出している試合。出していなければ null。</summary>
-        public Domination Source => _source;
+        /// <summary>出している状態。出していなければ null。</summary>
+        public DominationStatus Source => _source;
 
         /// <summary>Alpha のチーム名と切り捨てたポイント。出していなければ空文字。</summary>
         public string AlphaScoreText { get; private set; } = string.Empty;
@@ -71,54 +72,28 @@ namespace Fps.Runtime
         /// <summary>拠点ごとの呼び名と持ち主 (番号の順)。</summary>
         public IReadOnlyList<string> PointTexts => _pointTexts;
 
-        /// <summary>
-        /// hud に (無ければ) このビューを付けて返す。付けたばかりなら Hud に木から要素を渡し直させる。
-        /// UXML に要素が無ければエラーをログに出し、要素を持たないまま返す (文字列は <see cref="AlphaScoreText"/> などで読める)。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">hud が null。</exception>
-        public static DominationView AttachTo(Hud hud)
+        private void Show(DominationStatus status)
         {
-            if (hud == null)
-            {
-                throw new ArgumentNullException(nameof(hud));
-            }
-
-            var view = hud.GetComponent<DominationView>();
-            if (view != null)
-            {
-                return view;
-            }
-
-            view = hud.gameObject.AddComponent<DominationView>();
-            try
-            {
-                hud.RebuildView();
-            }
-            catch (InvalidOperationException e)
-            {
-                Debug.LogError($"{Hud.LogTag} could not show the domination panel on the HUD: {e.Message}", hud);
-            }
-
-            return view;
-        }
-
-        /// <summary>domination を出し始める。前に出していた試合は手放す。null なら <see cref="Clear"/> と同じ。</summary>
-        public void Show(Domination domination)
-        {
-            if (domination == null)
+            if (status == null)
             {
                 Clear();
                 return;
             }
 
-            _source = domination;
+            var samePoints = _source != null && _source.Points.Count == status.Points.Count;
+            _source = status;
+            if (samePoints)
+            {
+                Refresh();
+                return;
+            }
+
             ForgetShownValues();
             Rebuild();
             Refresh();
         }
 
-        /// <summary>出すのをやめて要素を隠し、Hud の残り時間の欄を戻す。</summary>
-        public void Clear()
+        private void Clear()
         {
             _source = null;
             ForgetShownValues();
@@ -129,15 +104,14 @@ namespace Fps.Runtime
             Rebuild();
         }
 
-        /// <summary>試合の今の値を読み、変わったものだけ文字列と Label を書き直す。Play 中は LateUpdate が呼ぶ。</summary>
-        public void Refresh()
+        private void Refresh()
         {
             if (_source == null)
             {
                 return;
             }
 
-            var alpha = DominationHudFormat.DisplayedScore(_source.GetScore(Team.Alpha));
+            var alpha = DominationHudFormat.DisplayedScore(_source.AlphaScore);
             if (alpha != _shownAlpha)
             {
                 _shownAlpha = alpha;
@@ -145,7 +119,7 @@ namespace Fps.Runtime
                 SetText(_alphaLabel, AlphaScoreText);
             }
 
-            var bravo = DominationHudFormat.DisplayedScore(_source.GetScore(Team.Bravo));
+            var bravo = DominationHudFormat.DisplayedScore(_source.BravoScore);
             if (bravo != _shownBravo)
             {
                 _shownBravo = bravo;
@@ -161,10 +135,10 @@ namespace Fps.Runtime
                 SetText(_timeLabel, TimeText);
             }
 
-            for (var i = 0; i < _source.PointCount; i++)
+            for (var i = 0; i < _source.Points.Count; i++)
             {
-                var owner = _source.GetOwner(i);
-                var contested = _source.IsContested(i);
+                var owner = _source.Points[i].Owner;
+                var contested = _source.Points[i].Contested;
                 if (owner == _shownOwners[i] && contested == _shownContested[i])
                 {
                     continue;
@@ -172,14 +146,14 @@ namespace Fps.Runtime
 
                 _shownOwners[i] = owner;
                 _shownContested[i] = contested;
-                _pointTexts[i] = Localizer.Resolve(DominationHudFormat.PointOwner(i, owner));
+                _pointTexts[i] = Localizer.Resolve(DominationHudText.PointOwner(i, owner));
                 ApplyPoint(i);
             }
 
-            if (_source.State != _shownState)
+            if (_source.IsEnded != _shownEnded)
             {
-                _shownState = _source.State;
-                ResultText = _source.State == GameModeState.Ended ? Localizer.Resolve(HudFormat.Result(_source.Winner)) : string.Empty;
+                _shownEnded = _source.IsEnded;
+                ResultText = _source.IsEnded ? Localizer.Resolve(HudFormat.Result(_source.Winner)) : string.Empty;
                 SetText(_resultLabel, ResultText);
                 if (_resultLabel != null)
                 {
@@ -198,15 +172,48 @@ namespace Fps.Runtime
             }
         }
 
-        private void LateUpdate()
-        {
-            Refresh();
-        }
-
         protected override void OnBound(VisualElement element)
         {
-            Rebuild();
-            Refresh();
+            Subscribe();
+
+            // 要素を持っていない間の通知は受けていないので、覚えている状態を捨てて今の状態から作り直す
+            _source = null;
+            Show(GameSignals.Domination.Value);
+        }
+
+        private void OnDestroy()
+        {
+            Unsubscribe();
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.Domination.Changed += HandleStatusChanged;
+                _subscribed = true;
+            }
+        }
+
+        private void Unsubscribe()
+        {
+            if (_subscribed)
+            {
+                GameSignals.Domination.Changed -= HandleStatusChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandleStatusChanged(DominationStatus status)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.Domination.Changed -= HandleStatusChanged;
+                return;
+            }
+
+            Show(status);
         }
 
         protected override void OnLanguageChanged()
@@ -224,6 +231,7 @@ namespace Fps.Runtime
 
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             RestoreTimePanel();
             element.Clear();
             element.style.display = DisplayStyle.None;
@@ -235,15 +243,15 @@ namespace Fps.Runtime
             _shownAlpha = -1;
             _shownBravo = -1;
             _shownSeconds = -1;
-            _shownState = null;
+            _shownEnded = null;
 
-            var count = _source != null ? _source.PointCount : 0;
+            var count = _source != null ? _source.Points.Count : 0;
             _shownOwners = new Team?[count];
             _shownContested = new bool[count];
             _pointTexts.Clear();
             for (var i = 0; i < count; i++)
             {
-                _pointTexts.Add(Localizer.Resolve(DominationHudFormat.PointOwner(i, null)));
+                _pointTexts.Add(Localizer.Resolve(DominationHudText.PointOwner(i, null)));
             }
         }
 

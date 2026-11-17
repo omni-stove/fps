@@ -4,7 +4,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// TPS のアクション (ダウンと蘇生、カバー、ブラインドファイア、アクティブリロード、回避、乗り越え、グレネード、
-    /// 近接攻撃、怯み、スライディング、崖のぼり、伏せ、はしご、ジップライン、パラシュート、発見ゲージ、制圧射撃、印、能力、時間の速さ、構えての射撃、ジャンプ) のルール。
+    /// 近接攻撃、怯み、スライディング、崖のぼり、伏せ、はしご、ジップライン、パラシュート、発見ゲージ、制圧射撃、印、能力、時間の速さ、構えての射撃、ジャンプ、蘇生の距離) のルール。
     /// 生成時に値を検査し、以後は変わらない。<see cref="GameRules.Actions"/> として持つ。
     /// </summary>
     public sealed class ActionRules
@@ -21,7 +21,7 @@ namespace Fps.Core
         /// <summary>
         /// 今の挙動。ジャンプ (<see cref="Core.Jump.On"/>) のほかはどのアクションも使わない。ダウンの値は <see cref="Core.Downed.Revive"/> にしたときのために、
         /// 出血 <see cref="DefaultDownedBleedoutSeconds"/> 秒、体力の割合 <see cref="DefaultDownedHealthFraction"/>、
-        /// 蘇生 <see cref="DefaultReviveSeconds"/> 秒を入れておく。グレネードの数は 0。
+        /// 蘇生 <see cref="DefaultReviveSeconds"/> 秒、蘇生の距離 <see cref="ReviveReach.DefaultRange"/> m を入れておく。グレネードの数は 0。
         /// </summary>
         public static readonly ActionRules Default = new ActionRules(
             Downed.Off,
@@ -110,6 +110,9 @@ namespace Fps.Core
         /// <summary>ふつうのジャンプで跳べるか。</summary>
         public Jump Jump { get; }
 
+        /// <summary>味方を起こせる距離 (m)。起こす人と起こされる人の本体の中心どうしで測る。0 より大きい有限値。</summary>
+        public float ReviveRange { get; }
+
         /// <param name="downed">ダウンの扱い。定義済みの値。</param>
         /// <param name="downedBleedoutSeconds">ダウンから倒れるまでの秒数。0 より大きい有限値。</param>
         /// <param name="downedHealthFraction">ダウン中と起こされた後の体力の割合。0 より大きく 1 以下。</param>
@@ -136,6 +139,7 @@ namespace Fps.Core
         /// <param name="slowMotion">時間の速さ。定義済みの値。</param>
         /// <param name="aimToFire">構えての射撃。定義済みの値。</param>
         /// <param name="jump">ジャンプ。定義済みの値。</param>
+        /// <param name="reviveRange">起こせる距離 (m)。0 より大きい有限値。</param>
         public ActionRules(
             Downed downed,
             float downedBleedoutSeconds,
@@ -162,7 +166,8 @@ namespace Fps.Core
             Abilities abilities = Abilities.Off,
             SlowMotion slowMotion = SlowMotion.Off,
             AimToFire aimToFire = AimToFire.Off,
-            Jump jump = Jump.On)
+            Jump jump = Jump.On,
+            float reviveRange = ReviveReach.DefaultRange)
         {
             if (!Enum.IsDefined(typeof(Downed), downed))
             {
@@ -241,6 +246,11 @@ namespace Fps.Core
             RequireDefined(aimToFire, nameof(aimToFire));
             RequireDefined(jump, nameof(jump));
 
+            if (!(reviveRange > 0f) || float.IsInfinity(reviveRange))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reviveRange), reviveRange, "reviveRange must be positive and finite");
+            }
+
             Downed = downed;
             DownedBleedoutSeconds = downedBleedoutSeconds;
             DownedHealthFraction = downedHealthFraction;
@@ -267,6 +277,7 @@ namespace Fps.Core
             SlowMotion = slowMotion;
             AimToFire = aimToFire;
             Jump = jump;
+            ReviveRange = reviveRange;
         }
 
         /// <summary><see cref="Downed"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
@@ -353,6 +364,9 @@ namespace Fps.Core
         /// <summary><see cref="Jump"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
         public ActionRules WithJump(Jump value) => Copy(jump: value);
 
+        /// <summary><see cref="ReviveRange"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public ActionRules WithReviveRange(float value) => Copy(reviveRange: value);
+
         private static void RequireDefined<T>(T value, string name)
             where T : struct, Enum
         {
@@ -388,7 +402,8 @@ namespace Fps.Core
             Abilities? abilities = null,
             SlowMotion? slowMotion = null,
             AimToFire? aimToFire = null,
-            Jump? jump = null)
+            Jump? jump = null,
+            float? reviveRange = null)
         {
             return new ActionRules(
                 downed ?? Downed,
@@ -416,7 +431,8 @@ namespace Fps.Core
                 abilities ?? Abilities,
                 slowMotion ?? SlowMotion,
                 aimToFire ?? AimToFire,
-                jump ?? Jump);
+                jump ?? Jump,
+                reviveRange ?? ReviveRange);
         }
     }
 }

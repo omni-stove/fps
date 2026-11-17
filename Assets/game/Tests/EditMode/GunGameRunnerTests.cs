@@ -42,10 +42,10 @@ namespace Fps.Tests.EditMode
             _ladder.SetTiers(new[] { _rifle, _launcher, _handgun });
             _ladder.SetMeleeWeapons(new[] { _knife });
             _ladder.DemotesOnMelee = true;
+            _ladder.RespawnSeconds = 0f;
 
             _runner = Track(new GameObject("Runner")).AddComponent<GunGameRunner>();
             _runner.Ladder = _ladder;
-            _runner.RespawnSeconds = 0f;
         }
 
         [TearDown]
@@ -191,8 +191,39 @@ namespace Fps.Tests.EditMode
             Assert.Throws<InvalidOperationException>(() => _runner.CreateGunGameSession());
 
             _runner.Ladder = _ladder;
-            _runner.TimeLimitSeconds = 0f;
-            Assert.Throws<ArgumentOutOfRangeException>(() => _runner.CreateGunGameSession());
+            _ladder.TimeLimitSeconds = 0f;
+            Assert.Throws<InvalidOperationException>(() => _runner.CreateGunGameSession());
+        }
+
+        [Test]
+        public void TheSessionUsesTheLaddersTimeLimitAndRespawn()
+        {
+            _ladder.TimeLimitSeconds = 30f;
+            _ladder.RespawnSeconds = 4f;
+            var player = Member("Player", 0);
+            var bot = Member("Bot-1", 1);
+            Begin(player, bot);
+
+            Assert.That(_runner.Session.TimeLimitSeconds, Is.EqualTo(30f));
+
+            KillBy(player, bot, TestWeapons.HandgunId);
+
+            Assert.That(_runner.Session.GetRespawnRemaining(1), Is.EqualTo(4f));
+        }
+
+        [Test]
+        public void TheMatchEndsWhenTheLaddersTimeLimitRunsOut()
+        {
+            _ladder.TimeLimitSeconds = 30f;
+            var player = Member("Player", 0);
+            var bot = Member("Bot-1", 1);
+            Begin(player, bot);
+
+            _runner.Tick(29f);
+            Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Playing));
+
+            _runner.Tick(1f);
+            Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
         }
 
         [Test]

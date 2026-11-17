@@ -7,7 +7,8 @@ using UnityEngine.Serialization;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// キャンペーンの 1 ミッションの定義。目標の一覧をアセットとして持ち、<see cref="CreateMission"/> で
+    /// キャンペーンの 1 ミッションの定義。ミッション Id (<see cref="Id"/>、セーブのスロット・メニューの選択・カタログの照合に使う) と
+    /// 目標の一覧をアセットとして持ち、<see cref="CreateMission"/> で
     /// <see cref="Fps.Core.Mission"/> を作る。検証は <see cref="Fps.Core.Mission"/> と <see cref="Objective"/> に任せ、
     /// 失敗したらどのアセットのどの目標かを添えて <see cref="MissionDefinitionException"/> を投げる。
     /// ミッションだけ視点やアクションを変えるときは、変える項目だけをルールの JSON (<see cref="GameRulesJson"/> の形) で
@@ -16,9 +17,22 @@ namespace Fps.Runtime
     [CreateAssetMenu(fileName = "Mission", menuName = "Fps/Mission Definition")]
     public sealed class MissionDefinition : ScriptableObject
     {
+        [SerializeField, Tooltip("ミッション Id (英数字・'_'・'-' の 1-64 文字)。セーブのスロット名・メニューの選択・MissionCatalog の照合に使う。アセット名とは別")]
+        private string _id = string.Empty;
+
         // 文を直に持っていた頃のアセットは、その文がキーとして読まれ、表に無いキーとして警告付きでそのまま画面に出る。
         [SerializeField, FormerlySerializedAs("_displayName"), Tooltip("プレイヤーに見せるミッション名の、言語の表のキー (campaign.mission.<Id>.name)")]
         private string _displayNameKey = string.Empty;
+
+        /// <summary>
+        /// ミッション Id。空なら空文字。
+        /// 使えるかどうか (<see cref="CampaignLaunch.IsValidMissionId"/>) は使う側 (<see cref="MissionCatalog"/>・<see cref="CampaignRunner"/>) が確かめる。
+        /// </summary>
+        public string Id
+        {
+            get => _id ?? string.Empty;
+            set => _id = value ?? string.Empty;
+        }
 
         [SerializeField, Tooltip("目標。前提は同じミッションの目標の Id を指す")]
         private List<ObjectiveDefinition> _objectives = new List<ObjectiveDefinition>();

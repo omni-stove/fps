@@ -56,7 +56,7 @@ namespace Fps.Editor
         public const string MenuPath = "Fps/Build Campaign Scenes";
         public const string LogTag = "[CampaignSceneBuilder]";
 
-        /// <summary>Campaign01 のミッション Id。定義のアセット名 (<see cref="DefinitionPath"/>) と同じ。</summary>
+        /// <summary>Campaign01 のミッション Id。定義 (<see cref="DefinitionPath"/>) の <see cref="MissionDefinition.Id"/> に入れる。</summary>
         public const string MissionId = "Campaign01";
 
         /// <summary>Campaign01 の名前を引くキー。文は Resources/Localization/&lt;言語コード&gt;/campaign.json に書く。</summary>
@@ -468,6 +468,15 @@ namespace Fps.Editor
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));
             var layout = PopulateScene(scene, spec, definition, playerWeapons, catalog, rules, pickupWeapons);
+
+            // 一覧はシーンを作った後に作る (一覧がシーンの有無を確かめる) ので、初めて作るときはまだ無い。
+            // そのときは配線せず、CampaignRunner は入口 (GameContent) の一覧か既定の秒数を使う。
+            var missions = AssetDatabase.LoadAssetAtPath<MissionCatalog>(MissionCatalogBuilder.CatalogPath);
+            if (missions != null)
+            {
+                layout.Campaign.Missions = missions;
+            }
+
             SceneBuildHelpers.SaveNavMeshData(layout.Surface, navMeshDataPath);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -500,7 +509,7 @@ namespace Fps.Editor
             Configure(definition, Campaign01());
         }
 
-        /// <summary>definition の中身を spec の表示名と目標にし、Mission に変換できることを確かめる。</summary>
+        /// <summary>definition の中身を spec の Id・表示名・目標にし、Mission に変換できることを確かめる。</summary>
         public static void Configure(MissionDefinition definition, CampaignMissionSpec spec)
         {
             if (definition == null)
@@ -513,6 +522,7 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(spec));
             }
 
+            definition.Id = spec.Id;
             definition.DisplayNameKey = spec.NameKey;
             definition.SetObjectives(spec.Objectives);
 

@@ -25,7 +25,7 @@ namespace Fps.Core
             Difficulty = difficulty;
         }
 
-        /// <summary>選んだミッションの Id。MissionDefinition のアセット名と同じ。</summary>
+        /// <summary>選んだミッションの Id。MissionDefinition の Id と同じ。</summary>
         public string MissionId { get; }
 
         public CampaignDifficulty Difficulty { get; }

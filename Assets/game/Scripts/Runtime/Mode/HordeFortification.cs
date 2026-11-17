@@ -21,9 +21,9 @@ namespace Fps.Runtime
     [RequireComponent(typeof(DestructibleStructure))]
     public sealed class HordeFortification : MonoBehaviour
     {
-        public const int DefaultBuildCost = 40;
-        public const int DefaultRepairCostPerPiece = 4;
-        public const float DefaultInteractRadius = 3.5f;
+        public const int DefaultBuildCost = HordeSpec.DefaultBuildCost;
+        public const int DefaultRepairCostPerPiece = HordeSpec.DefaultRepairCostPerPiece;
+        public const float DefaultInteractRadius = HordeSpec.DefaultInteractRadius;
 
         /// <summary>部品と人の体が重なるかを見るとき、部品の箱をこの割合に縮める (隣に立っているだけの人を重なりとみなさないため)。</summary>
         public const float BlockCheckShrink = 0.9f;
@@ -31,13 +31,13 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("始めから置かれているか。オフなら通貨を払って置く場所になる")]
         private bool _startsBuilt = true;
 
-        [SerializeField, Min(0), Tooltip("置くときに払う通貨")]
+        [SerializeField, Min(0), Tooltip("置くときに払う通貨。HordeRunner に HordeDefinition があれば、始めるときにその値で置き換わる")]
         private int _buildCost = DefaultBuildCost;
 
-        [SerializeField, Min(0), Tooltip("壊れた部品 1 つを直すときに払う通貨")]
+        [SerializeField, Min(0), Tooltip("壊れた部品 1 つを直すときに払う通貨。HordeRunner に HordeDefinition があれば、始めるときにその値で置き換わる")]
         private int _repairCostPerPiece = DefaultRepairCostPerPiece;
 
-        [SerializeField, Min(0.1f), Tooltip("この距離 (m) 以内にいる人が直す・置く操作をできる")]
+        [SerializeField, Min(0.1f), Tooltip("この距離 (m) 以内にいる人が直す・置く操作をできる。HordeRunner に HordeDefinition があれば、始めるときにその値で置き換わる")]
         private float _interactRadius = DefaultInteractRadius;
 
         private readonly Collider[] _overlaps = new Collider[16];
@@ -82,6 +82,19 @@ namespace Fps.Runtime
         {
             get => _interactRadius;
             set => _interactRadius = Mathf.Max(0.1f, value);
+        }
+
+        /// <summary>置く・直す費用と操作の届く距離を spec の値にする。<see cref="HordeRunner"/> が HordeDefinition から始めるときに呼ぶ。</summary>
+        public void ApplySpec(HordeSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            BuildCost = spec.BuildCost;
+            RepairCostPerPiece = spec.RepairCostPerPiece;
+            InteractRadius = spec.InteractRadius;
         }
 
         /// <summary>置かれていれば true。置かれていない防衛物は <see cref="Build"/> の操作で置く。</summary>

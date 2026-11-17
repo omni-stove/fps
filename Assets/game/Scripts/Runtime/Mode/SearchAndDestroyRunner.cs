@@ -15,7 +15,7 @@ namespace Fps.Runtime
     /// <item>各ラウンドの待ちに入るとき、参加者を自陣営の出現点 (<see cref="SideSpawnPoint"/>、名前の順) に ID の順で 1 人ずつ並べて体力を満たし、
     /// 待ちの間は全員の操作と行動を止める。ラウンドが始まったら戻す。陣営の出現点は攻守が替わっても同じ。</item>
     /// <item>ラウンド中は毎フレーム、生きている参加者の足元から、爆弾を持つ攻撃側が設置地点にいるか・攻撃側が落ちた爆弾の
-    /// <see cref="PickupRadius"/> の中にいるか (いれば拾う)・防衛側が設置された爆弾の <see cref="DefuseRadius"/> の中にいるかを調べて
+    /// <see cref="SearchAndDestroySpec.BombPickupRadius"/> の中にいるか (いれば拾う)・防衛側が設置された爆弾の <see cref="SearchAndDestroySpec.DefuseRadius"/> の中にいるかを調べて
     /// <see cref="SearchAndDestroy"/> に伝える。プレイヤーは Interact (<see cref="InteractActionPath"/>、キーボードは E) を押している間だけ長押しとみなし、
     /// bot はその場にいれば長押ししているとみなす。</item>
     /// <item>bot は、爆弾を持てば設置地点 (ラウンドの番号で A, B, ... を順に選ぶ) へ、爆弾が落ちれば攻撃側がそこへ、設置されれば両陣営がそこへ向かうよう
@@ -29,9 +29,6 @@ namespace Fps.Runtime
     {
         /// <summary>設置と解除の長押しに使うアクション。<see cref="InteractObjective"/> と同じ。</summary>
         public const string InteractActionPath = InputActionPaths.Interact;
-
-        public const float DefaultPickupRadius = 1.5f;
-        public const float DefaultDefuseRadius = 2f;
 
         /// <summary>落ちた爆弾・設置された爆弾のそばにいるとみなす上下の差 (m)。段差の上下で拾ったり解除したりしないように。</summary>
         public const float ReachHeight = 2f;
@@ -61,18 +58,18 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("何ラウンドごとに攻守を入れ替えるか。0 なら入れ替えない")]
         private int _swapEveryRounds = SearchAndDestroySpec.DefaultSwapEveryRounds;
 
+        [SerializeField, Min(0.1f), Tooltip("攻撃側が落ちた爆弾を拾う距離 (m、水平)")]
+        private float _pickupRadius = SearchAndDestroySpec.DefaultBombPickupRadius;
+
+        [SerializeField, Min(0.1f), Tooltip("防衛側が設置された爆弾を解除できる距離 (m、水平)")]
+        private float _defuseRadius = SearchAndDestroySpec.DefaultDefuseRadius;
+
         [Header("Objects")]
         [SerializeField, Tooltip("設置地点。番号は 0 から抜けなく 1 つずつ")]
         private BombSite[] _sites = Array.Empty<BombSite>();
 
         [SerializeField, Tooltip("爆弾の見た目。無くても進むが、落ちた爆弾が見えない")]
         private BombObject _bomb;
-
-        [SerializeField, Min(0.1f), Tooltip("攻撃側が落ちた爆弾を拾う距離 (m、水平)")]
-        private float _pickupRadius = DefaultPickupRadius;
-
-        [SerializeField, Min(0.1f), Tooltip("防衛側が設置された爆弾を解除できる距離 (m、水平)")]
-        private float _defuseRadius = DefaultDefuseRadius;
 
         private readonly Dictionary<EnemyAgent, Vector3[]> _homeRoutes = new Dictionary<EnemyAgent, Vector3[]>();
         private readonly List<string> _textLines = new List<string>();
@@ -205,7 +202,8 @@ namespace Fps.Runtime
             }
 
             return new SearchAndDestroySpec(
-                siteCount, _roundSeconds, _plantSeconds, _defuseSeconds, _fuseSeconds, _winsToWin, _preparationSeconds, _swapEveryRounds);
+                siteCount, _roundSeconds, _plantSeconds, _defuseSeconds, _fuseSeconds, _winsToWin, _preparationSeconds, _swapEveryRounds,
+                _pickupRadius, _defuseRadius);
         }
 
         /// <summary>
@@ -353,6 +351,8 @@ namespace Fps.Runtime
             }
 
             var localHold = IsLocalHolding();
+            var pickupRadius = _game.Spec.BombPickupRadius;
+            var defuseRadius = _game.Spec.DefuseRadius;
             for (var id = 0; id < Members.Count; id++)
             {
                 var member = Members[id];
@@ -372,7 +372,7 @@ namespace Fps.Runtime
                 var ground = member.GroundPosition;
                 if (_game.IsAttacker(id))
                 {
-                    if (_game.Bomb == BombState.Dropped && IsNearBomb(ground, _pickupRadius))
+                    if (_game.Bomb == BombState.Dropped && IsNearBomb(ground, pickupRadius))
                     {
                         _game.PickUpBomb(id);
                     }
@@ -383,7 +383,7 @@ namespace Fps.Runtime
                 else
                 {
                     _game.SetPlanting(id, null);
-                    _game.SetDefusing(id, hold && _game.Bomb == BombState.Planted && IsNearBomb(ground, _defuseRadius));
+                    _game.SetDefusing(id, hold && _game.Bomb == BombState.Planted && IsNearBomb(ground, defuseRadius));
                 }
             }
         }

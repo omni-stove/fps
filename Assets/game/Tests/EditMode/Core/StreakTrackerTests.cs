@@ -8,6 +8,7 @@ namespace Shooter.Core.Tests
     {
         private static readonly string[] _uavOnly = { "uav" };
         private static readonly string[] _airstrikeOnly = { "airstrike" };
+        private static readonly string[] _uavThenAirstrike = { "uav", "airstrike" };
         private static readonly string[] _airstrikeThenUav = { "airstrike", "uav" };
 
         [Test]
@@ -37,7 +38,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(first, Is.Empty);
             Assert.That(second, Is.Empty);
-            Assert.That(third, Is.EqualTo(new[] { "uav" }));
+            Assert.That(third, Is.EqualTo(_uavOnly));
             Assert.That(status.Kills, Is.EqualTo(3));
             Assert.That(status.ReadyCount, Is.EqualTo(1));
             Assert.That(status.Slots[0], Is.EqualTo(new StreakSlot("uav", "streak.uav", 3, true)));
@@ -47,10 +48,10 @@ namespace Shooter.Core.Tests
             tracker.Killed();
             var fifth = tracker.Killed(out var atFive);
 
-            Assert.That(atFive, Is.EqualTo(new[] { "airstrike" }));
+            Assert.That(atFive, Is.EqualTo(_airstrikeOnly));
             Assert.That(fifth.Kills, Is.EqualTo(5));
             Assert.That(fifth.ReadyCount, Is.EqualTo(2));
-            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(new[] { "uav", "airstrike" }));
+            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(_uavThenAirstrike));
         }
 
         [Test]
@@ -87,7 +88,7 @@ namespace Shooter.Core.Tests
             Assert.That(atFour, Is.Empty);
             Assert.That(atFive, Is.EqualTo(_airstrikeOnly));
             Assert.That(atSix, Is.Empty);
-            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(_airstrikeOnly),"the used UAV does not come back in the same life");
+            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(_airstrikeOnly), "the used UAV does not come back in the same life");
         }
 
         [Test]

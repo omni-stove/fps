@@ -15,6 +15,7 @@ namespace Shooter.Core.Tests
         private const float _returnSeconds = 10f;
         private const float _respawnSeconds = 5f;
         private static readonly string[] _expectedTaken = { "1:1" };
+        private static readonly string[] _expectedDropped = { "1:1" };
         private static readonly string[] _expectedReturned = { "1:4" };
         private static readonly string[] _expectedByItself = { "1:-" };
         private static readonly string[] _expectedCaptured = { "1:1 score=1" };
@@ -146,6 +147,37 @@ namespace Shooter.Core.Tests
 
             Assert.That(game.Session.IsDown(_alpha1), Is.False);
             Assert.That(game.GetFlagState(Side.Bravo), Is.EqualTo(FlagState.Dropped));
+        }
+
+        [Test]
+        public void DroppingAfterAKillReportedStraightToTheSessionDropsTheFlagAtOnce()
+        {
+            var game = Start(new CaptureTheFlagSpec(respawnSeconds: 0f, returnSeconds: _returnSeconds));
+            var dropped = new List<string>();
+            game.FlagDropped += (flag, player) => dropped.Add(flag.Id + ":" + player);
+            game.Touch(Side.Bravo, _alpha1);
+
+            game.Session.ReportKill(_bravo1, _alpha1);
+            Assert.That(game.Session.IsDown(_alpha1), Is.False, "a zero respawn brings the carrier straight back");
+
+            Assert.That(game.DropCarriedFlag(_alpha1), Is.True);
+
+            Assert.That(game.GetFlagState(Side.Bravo), Is.EqualTo(FlagState.Dropped));
+            Assert.That(game.GetReturnRemaining(Side.Bravo), Is.EqualTo(_returnSeconds));
+            Assert.That(dropped, Is.EqualTo(_expectedDropped));
+            Assert.That(game.DropCarriedFlag(_alpha1), Is.False, "nothing is left to drop");
+        }
+
+        [Test]
+        public void DroppingDoesNothingForSomeoneNotCarryingOrOutsideTheMatch()
+        {
+            var waiting = Create();
+            Assert.That(waiting.DropCarriedFlag(_alpha1), Is.False);
+
+            var game = Start();
+            Assert.That(game.DropCarriedFlag(_alpha1), Is.False);
+            Assert.That(game.DropCarriedFlag(99), Is.False, "an unknown player carries nothing");
+            Assert.That(game.GetFlagState(Side.Bravo), Is.EqualTo(FlagState.AtBase));
         }
 
         [Test]

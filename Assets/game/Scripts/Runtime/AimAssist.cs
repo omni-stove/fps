@@ -35,7 +35,7 @@ namespace Shooter.Runtime
         // ViewRig が初期化される前 (Awake の前) は照準が決まらないので null を返せるようにする。
         public Func<Ray?> AimSource { get; set; }
 
-        public HostileAimTargets Targets { get; set; }
+        public IAimAssistTargets Targets { get; set; }
 
         public AimAssistResult LastResult { get; private set; } = AimAssistResult.None;
 
@@ -128,10 +128,10 @@ namespace Shooter.Runtime
             }
 
             var spec = Spec;
-            var origin = aim.Value.origin;
+            var origin = aim.Value.origin.ToNumerics();
             _candidates.Clear();
             Targets.Collect(origin, spec.MaxDistance, _candidates);
-            var result = AimAssistSolver.Solve(spec, deltaSeconds, aiming, _aimingSeconds, origin.ToNumerics(), aim.Value.direction.ToNumerics(), _candidates);
+            var result = AimAssistSolver.Solve(spec, deltaSeconds, aiming, _aimingSeconds, origin, aim.Value.direction.ToNumerics(), _candidates);
             _candidates.Clear();
 
             LastResult = result;

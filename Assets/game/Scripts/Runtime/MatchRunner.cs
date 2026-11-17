@@ -12,7 +12,7 @@ namespace Shooter.Runtime
     /// <see cref="GameBootstrap"/> が作った <see cref="BootstrapWorld"/> を拾い、試合を始めて Update で時間を進める。
     /// 標的ダミーの死亡はプレイヤーのキル、プレイヤーの死亡は敗北として Match に渡すだけで、勝敗の判断は Match が行う。
     /// 状態が変わるたびに <see cref="MatchLog.SoloState"/> の書式で Debug.Log に出し、終わったらプレイヤーの移動と射撃を止め、
-    /// HUD に勝敗と、やり直すキーを出す。
+    /// HUD に勝敗と、やり直すキーを出し、勝敗・キル数・デス数を <see cref="CombatEvents.MatchFinished"/> で 1 度だけ知らせる。
     /// 終了後に <see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) を押すと今のシーンを読み込み直して最初からやり直す。
     /// 制限時間と勝利に必要なキル数は、<see cref="Definition"/>、入口 (<see cref="GameContent.FreeForAll"/>) のフリーフォーオールの定義
     /// (<see cref="FreeForAllDefinition.TimeLimitSeconds"/>・<see cref="FreeForAllDefinition.ScoreLimit"/>)、Inspector の値の順で読む。
@@ -425,6 +425,12 @@ namespace Shooter.Runtime
             StopPlayer();
             AcquireRestartAction();
             ShowRestartKey();
+
+            // ソロの得点はキル数そのもの (勝ちの条件が KillsToWin) なので、自陣の得点にもキル数を渡す。
+            if (_match != null && _match.Result.HasValue)
+            {
+                CombatEvents.RaiseMatchFinished(new MatchResult(_match.Result.Value, _match.Kills, PlayerDeaths, _match.Kills));
+            }
         }
 
         /// <summary>HUD の値の結果の下に、やり直すキーを今の入力機器の表記で出す。再開のアクションが無ければ何もしない。</summary>

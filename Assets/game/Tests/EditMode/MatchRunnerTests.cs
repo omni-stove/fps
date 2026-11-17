@@ -19,11 +19,15 @@ namespace Shooter.Tests.EditMode
         private BootstrapWorld _world;
         private MatchRunner _runner;
         private Match _match;
+        private readonly List<MatchResult> _results = new List<MatchResult>();
 
         [SetUp]
         public void SetUp()
         {
             GameSignals.ResetAll();
+            CombatEvents.ClearSubscribers();
+            _results.Clear();
+            CombatEvents.MatchFinished += _results.Add;
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
             LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
@@ -48,6 +52,7 @@ namespace Shooter.Tests.EditMode
             }
 
             Object.DestroyImmediate(_host);
+            CombatEvents.ClearSubscribers();
             GameSignals.ResetAll();
         }
 
@@ -144,6 +149,53 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_match.Result, Is.EqualTo(MatchOutcome.Lost));
             Assert.That(_match.Kills, Is.Zero);
+        }
+
+        [Test]
+        public void WinningRaisesTheResultOnce()
+        {
+            _world.Targets[0].Damageable.Kill();
+            Assert.That(_results, Is.Empty, "nothing is raised before the end");
+
+            LogAssert.Expect(LogType.Log, "[Match] state=Won kills=2 remaining=30.0");
+            _world.Targets[1].Damageable.Kill();
+
+            Assert.That(_results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Won, 2, 0, 2) }));
+        }
+
+        [Test]
+        public void DyingRaisesALossWithTheDeath()
+        {
+            _world.Targets[0].Damageable.Kill();
+
+            LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=1 remaining=30.0");
+            _world.PlayerDamageable.Kill();
+
+            Assert.That(_results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Lost, 1, 1, 1) }));
+        }
+
+        [Test]
+        public void RunningOutOfTimeRaisesALossWithoutADeath()
+        {
+            LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=0 remaining=0.0");
+            _runner.Tick(TimeLimit);
+
+            Assert.That(_results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Lost, 0, 0, 0) }));
+        }
+
+        [Test]
+        public void NothingIsRaisedAgainAfterTheEnd()
+        {
+            LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=0 remaining=30.0");
+            _world.PlayerDamageable.Kill();
+
+            _world.Targets[0].Damageable.Kill();
+            _world.Targets[1].Damageable.Kill();
+            _runner.Tick(TimeLimit);
+            _world.PlayerDamageable.ResetHealth();
+            _world.PlayerDamageable.Kill();
+
+            Assert.That(_results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Lost, 0, 1, 0) }));
         }
 
         [Test]

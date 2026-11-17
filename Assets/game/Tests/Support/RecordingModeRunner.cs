@@ -21,6 +21,9 @@ namespace Shooter.Tests.EditMode
 
         protected override ModeSession CreateSession() => Factory?.Invoke();
 
+        /// <summary><see cref="ModeRunnerBase.EndMatch"/> をテストから呼ぶ。</summary>
+        public void EndMatchFor(Side? winner) => EndMatch(winner);
+
         protected override void OnKill(SideMember killer, SideMember victim)
         {
             Events.Add("kill " + (killer != null ? killer.name : "-") + " " + victim.name);

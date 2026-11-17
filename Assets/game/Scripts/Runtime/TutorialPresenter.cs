@@ -11,8 +11,8 @@ namespace Fps.Runtime
     /// (<see cref="IMenuNavigator.TakeTutorialRequest"/>) だけ始め (<see cref="TutorialSteps.ShouldStart"/>)、そうでなければ自分を無効にする。
     /// 毎フレーム、プレイヤーの今のアクション (<see cref="PlayerActionReader.Current"/>: ADS・リロード・しゃがみ・カバー)・
     /// 歩いた距離・標的に当てた回数 (<see cref="CombatEvents.HitConfirmed"/>) から <see cref="TutorialSteps"/> を進め、
-    /// HUD のチュートリアルの案内 (<see cref="ITutorialPrompt"/>) に今の手順と使うキーを出す。キーの表記は最後に操作した入力機器と今の割り当てで決める
-    /// (<see cref="TutorialKeyLabels"/>)。すべて終えたら記録して完了を <see cref="CompletedDisplaySeconds"/> 秒出し、隠す。
+    /// 今の段階 (<see cref="TutorialStatus"/>: 手順と押すアクション、キーの表記に使う最後に操作した入力機器) を <see cref="GameSignals.Tutorial"/> に出す。
+    /// 文にするのは UI。すべて終えたら記録して完了の段階を <see cref="CompletedDisplaySeconds"/> 秒出し、消す。
     /// </summary>
     [DisallowMultipleComponent]
     // PlayerActionReader (100) が LateUpdate でそのフレームの状態を組み立ててから読む
@@ -41,7 +41,6 @@ namespace Fps.Runtime
         private TutorialProgressStore _store = new TutorialProgressStore();
         private PlayerActionReader _reader;
         private WeaponController _weapon;
-        private ITutorialPrompt _view;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction[] _deviceActions = Array.Empty<InputAction>();
@@ -53,7 +52,7 @@ namespace Fps.Runtime
         private bool _running;
         private bool _subscribed;
         private float _completedSeconds;
-        private LocalizedText _shownPrompt;
+        private TutorialStatus? _status;
         private GameBootstrap _waitingBootstrap;
 
         /// <summary>進みの数え。</summary>
@@ -72,8 +71,8 @@ namespace Fps.Runtime
             set => _store = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        /// <summary>今出している文。出していなければ <c>default</c>。</summary>
-        public LocalizedText Prompt => _running ? _shownPrompt : default;
+        /// <summary>今 <see cref="GameSignals.Tutorial"/> に出している段階。出していなければ null。</summary>
+        public TutorialStatus? Status => _status;
 
         private void Start()
         {
@@ -127,6 +126,7 @@ namespace Fps.Runtime
         {
             StopWaiting();
             Unsubscribe();
+            ClearStatus();
         }
 
         private void OnEnable()
@@ -168,57 +168,48 @@ namespace Fps.Runtime
 
         private void BeginWith(BootstrapWorld world)
         {
-            // 専用サーバー以外で HUD が無いのは、作るのに失敗したか HUD の生成役が登録されていないときで、どちらも GameBootstrap がログを出している
-            var view = GameUi.IsAlive(world.Hud) ? world.Hud.TutorialPrompt : null;
-            if (world.ActionReader == null || !GameUi.IsAlive(view))
+            if (world.ActionReader == null)
             {
-                Debug.LogError(LogTag + " the range has no player action reader or HUD tutorial view; the tutorial cannot start", this);
+                Debug.LogError(LogTag + " the range has no player action reader; the tutorial cannot start", this);
                 enabled = false;
                 return;
             }
 
             _deviceActions = ResolveDeviceActions();
             _device = Gamepad.current != null && Keyboard.current == null ? InputDeviceKind.Gamepad : InputDeviceKind.KeyboardMouse;
-            Begin(world.ActionReader, view);
+            Begin(world.ActionReader);
         }
 
         /// <summary>
-        /// reader のプレイヤーで最初の手順から始め、view に案内を出す。始めていれば最初からやり直す。
+        /// reader のプレイヤーで最初の手順から始め、その段階を <see cref="GameSignals.Tutorial"/> に出す。始めていれば最初からやり直す。
         /// 武器の <see cref="WeaponController.ReloadStarted"/> と <see cref="CombatEvents.HitConfirmed"/> を購読する。
         /// </summary>
-        public void Begin(PlayerActionReader reader, ITutorialPrompt view)
+        public void Begin(PlayerActionReader reader)
         {
             if (reader == null)
             {
                 throw new ArgumentNullException(nameof(reader));
             }
 
-            if (!GameUi.IsAlive(view))
-            {
-                throw new ArgumentNullException(nameof(view));
-            }
-
             Unsubscribe();
             _reader = reader;
             _weapon = reader.Weapon;
-            _view = view;
             _steps.Restart();
             _hasLastPosition = false;
             _pendingHits = 0;
             _reloadStarted = false;
             _completedSeconds = 0f;
-            _shownPrompt = default;
             _running = true;
             enabled = true;
             Subscribe();
-            ShowPrompt(_device);
+            PublishStatus(_device);
             Debug.Log(LogTag + " started at " + _steps.Current, this);
         }
 
         /// <summary>
         /// 1 フレーム分進める。前のフレームからの位置の差を歩いた距離に、その間に届いた命中とリロードの開始を state に足して
-        /// <see cref="TutorialSteps.Observe"/> に渡し、device のキーで案内を出し直す。すべて終えたら記録して完了を出し、
-        /// <see cref="CompletedDisplaySeconds"/> 秒経ったら隠して止める。Play 中は <see cref="LateUpdate"/> から呼ぶ。
+        /// <see cref="TutorialSteps.Observe"/> に渡し、device で段階を出し直す (変わったときだけ)。すべて終えたら記録して完了の段階を出し、
+        /// <see cref="CompletedDisplaySeconds"/> 秒経ったら消して止める。Play 中は <see cref="LateUpdate"/> から呼ぶ。
         /// </summary>
         public void Tick(float deltaSeconds, PlayerActionState state, Vector3 playerPosition, InputDeviceKind device)
         {
@@ -275,20 +266,15 @@ namespace Fps.Runtime
                 }
             }
 
-            ShowPrompt(device);
+            PublishStatus(device);
         }
 
-        /// <summary>案内を隠して止める。終えたかの記録は変えない。</summary>
+        /// <summary>段階を消して止める。終えたかの記録は変えない。</summary>
         public void Stop()
         {
             Unsubscribe();
             _running = false;
-            _shownPrompt = default;
-            if (GameUi.IsAlive(_view))
-            {
-                _view.Hide();
-            }
-
+            ClearStatus();
             enabled = false;
         }
 
@@ -337,25 +323,6 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>
-        /// step を device で行うキーの表記。プロジェクト全体のアクション (<see cref="InputSystem.actions"/>) から引き、
-        /// アクションか device の割り当てが無ければアクションの名前 (Move など) を返す。
-        /// </summary>
-        public static string KeyLabelFor(TutorialStep step, InputDeviceKind device)
-        {
-            var path = ActionPathFor(step);
-            var actionName = path.Substring(path.LastIndexOf('/') + 1);
-            var actions = InputSystem.actions;
-            var action = actions != null ? actions.FindAction(path) : null;
-            if (action == null)
-            {
-                return actionName;
-            }
-
-            var label = TutorialKeyLabels.For(action, device);
-            return string.IsNullOrWhiteSpace(label) ? actionName : label;
-        }
-
         private void Complete()
         {
             Unsubscribe();
@@ -371,16 +338,26 @@ namespace Fps.Runtime
             }
         }
 
-        private void ShowPrompt(InputDeviceKind device)
+        private void PublishStatus(InputDeviceKind device)
         {
-            var text = _steps.IsComplete ? TutorialSteps.CompletedText : _steps.Prompt(KeyLabelFor(_steps.Current, device));
-            if (text == _shownPrompt)
+            var status = new TutorialStatus(_steps, _steps.IsComplete ? null : ActionPathFor(_steps.Current), device);
+            if (_status == status)
             {
                 return;
             }
 
-            _shownPrompt = text;
-            _view.Show(text, _steps.IsComplete);
+            _status = status;
+            GameSignals.Tutorial.Publish(status);
+        }
+
+        private void ClearStatus()
+        {
+            if (_status.HasValue)
+            {
+                // 後から別の側が出した段階まで消さない
+                GameSignals.Tutorial.ClearIfCurrent(_status);
+                _status = null;
+            }
         }
 
         private void Subscribe()

@@ -5,7 +5,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 画面下の中央に、チュートリアルの今の手順 (または完了) を 1 行で出すビュー。Hud.uxml の <see cref="UxmlName"/> の Label を使う。
-    /// 何を出すかは <see cref="TutorialPresenter"/> が <see cref="Show(LocalizedText, bool)"/> / <see cref="Hide"/> で決める。
+    /// 要素を持っている間は <see cref="GameSignals.Tutorial"/> を購読し、出された段階を <see cref="TutorialText"/> で文にして出し、消されたら隠す。
+    /// 要素を受けたときは今の段階に合わせる。<see cref="ITutorialPrompt"/> の <see cref="Show(LocalizedText, bool)"/> / <see cref="Hide"/> で直に出すこともでき、
     /// 要素をまだ受けていない間 (HUD の木を作り直している間) も出す文を覚えておき、受けたときに合わせる。
     /// 受け取った文は今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら文にし直す。
     /// </summary>
@@ -21,6 +22,10 @@ namespace Fps.Runtime
         private string _text = string.Empty;
         private bool _shown;
         private bool _completed;
+        private bool _subscribed;
+
+        // 出している文が GameSignals から来たか。来ていれば、要素を持っていない間に段階が消されたことを、受けたときに隠して合わせる
+        private bool _showsSignal;
 
         public override string ElementName => UxmlName;
 
@@ -42,6 +47,28 @@ namespace Fps.Runtime
         /// <summary>text を今の言語の文にして出す。completed なら完了の見た目にする。文にして空白だけなら隠す。</summary>
         public void Show(LocalizedText text, bool completed)
         {
+            _showsSignal = false;
+            Write(text, completed);
+        }
+
+        /// <summary>
+        /// status を <see cref="TutorialText.For"/> で文にして出す。すべて終えた段階なら完了の見た目にする。null なら隠す。
+        /// 要素を持っている間は <see cref="GameSignals.Tutorial"/> が出されるたびに呼ばれる。
+        /// </summary>
+        public void Show(TutorialStatus? status)
+        {
+            if (!status.HasValue)
+            {
+                Hide();
+                return;
+            }
+
+            Write(TutorialText.For(status.Value), status.Value.IsComplete);
+            _showsSignal = true;
+        }
+
+        private void Write(LocalizedText text, bool completed)
+        {
             var resolved = Localizer.Resolve(text);
             if (string.IsNullOrWhiteSpace(resolved))
             {
@@ -59,6 +86,7 @@ namespace Fps.Runtime
         /// <summary>隠す。</summary>
         public void Hide()
         {
+            _showsSignal = false;
             _source = default;
             _text = string.Empty;
             _completed = false;
@@ -68,6 +96,14 @@ namespace Fps.Runtime
 
         protected override void OnBound(VisualElement element)
         {
+            Subscribe();
+            var status = GameSignals.Tutorial.Value;
+            if (status.HasValue || _showsSignal)
+            {
+                Show(status);
+                return;
+            }
+
             // 要素を持っていない間の言語の変更は届かないので、受けたときに今の言語で文にし直す
             ResolveText();
             Refresh();
@@ -87,8 +123,44 @@ namespace Fps.Runtime
             }
         }
 
+        private void OnDestroy()
+        {
+            Unsubscribe();
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.Tutorial.Changed += HandleStatusChanged;
+                _subscribed = true;
+            }
+        }
+
+        private void Unsubscribe()
+        {
+            if (_subscribed)
+            {
+                GameSignals.Tutorial.Changed -= HandleStatusChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandleStatusChanged(TutorialStatus? status)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.Tutorial.Changed -= HandleStatusChanged;
+                return;
+            }
+
+            Show(status);
+        }
+
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             element.style.display = DisplayStyle.None;
         }
 

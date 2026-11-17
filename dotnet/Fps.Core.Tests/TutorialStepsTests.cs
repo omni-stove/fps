@@ -153,7 +153,6 @@ namespace Fps.Core.Tests
 
             Assert.That(steps.Observe(Frame(hits: 1)), Is.False);
             Assert.That(steps.Hits, Is.EqualTo(1));
-            Assert.That(GameText.Resolve(steps.Prompt("LMB")), Does.EndWith("(1/3)"));
             Assert.That(steps.Observe(Frame(hits: 1)), Is.False);
             Assert.That(steps.Observe(Frame(hits: 1)), Is.True);
 
@@ -210,7 +209,6 @@ namespace Fps.Core.Tests
             Assert.That(steps.IsComplete, Is.True);
             Assert.That(steps.CurrentIndex, Is.EqualTo(TutorialSteps.Order.Count));
             Assert.That(steps.StepProgress, Is.EqualTo(1f));
-            Assert.That(steps.Prompt(null), Is.EqualTo(TutorialSteps.CompletedText));
             Assert.Throws<InvalidOperationException>(() => _ = steps.Current);
             Assert.That(steps.Observe(Frame(inCover: true)), Is.False, "nothing happens after completion");
         }
@@ -229,26 +227,54 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ThePromptNumbersTheStepAndNamesTheKey()
+        public void TheStatusCarriesTheStepItsActionAndTheDevice()
         {
-            var steps = new TutorialSteps();
+            var steps = AtStep(TutorialStep.Shoot);
+            steps.Observe(Frame(hits: 2));
 
-            Assert.That(GameText.Resolve(steps.Prompt("WASD")), Is.EqualTo("[1/6] WASD で移動"));
-            Assert.That(GameText.Resolve(steps.Prompt(" Left Stick ")), Is.EqualTo("[1/6] Left Stick で移動"));
-            Assert.Throws<ArgumentException>(() => steps.Prompt(" "));
+            var status = new TutorialStatus(steps, "Player/Attack", InputDeviceKind.Gamepad);
+
+            Assert.That(status.IsComplete, Is.False);
+            Assert.That(status.Step, Is.EqualTo(TutorialStep.Shoot));
+            Assert.That(status.StepNumber, Is.EqualTo(3));
+            Assert.That(status.StepCount, Is.EqualTo(6));
+            Assert.That(status.Hits, Is.EqualTo(2));
+            Assert.That(status.HitsRequired, Is.EqualTo(3));
+            Assert.That(status.ActionPath, Is.EqualTo("Player/Attack"));
+            Assert.That(status.Device, Is.EqualTo(InputDeviceKind.Gamepad));
         }
 
         [Test]
-        public void EveryStepHasAnInstructionWithTheKey()
+        public void ACompletedStatusHasNoAction()
         {
-            foreach (var step in TutorialSteps.Order)
-            {
-                Assert.That(GameText.Resolve(TutorialSteps.Instruction(step, "KEY")), Does.Contain("KEY"), step.ToString());
-            }
+            var steps = AtStep(TutorialStep.Cover);
+            steps.Observe(Frame(inCover: true));
 
-            Assert.That(GameText.Resolve(TutorialSteps.Instruction(TutorialStep.Shoot, "RT", 5)), Does.Contain("5 回"));
-            Assert.Throws<ArgumentOutOfRangeException>(() => TutorialSteps.Instruction((TutorialStep)99, "KEY"));
-            Assert.Throws<ArgumentOutOfRangeException>(() => TutorialSteps.Instruction(TutorialStep.Shoot, "RT", 0));
+            var status = new TutorialStatus(steps, "Player/Cover", InputDeviceKind.KeyboardMouse);
+
+            Assert.That(status.IsComplete, Is.True);
+            Assert.That(status.StepNumber, Is.EqualTo(6));
+            Assert.That(status.ActionPath, Is.Null);
+        }
+
+        [Test]
+        public void StatusesWithTheSameValuesAreEqual()
+        {
+            var a = new TutorialStatus(new TutorialSteps(), "Player/Move", InputDeviceKind.KeyboardMouse);
+            var b = new TutorialStatus(new TutorialSteps(), "Player/Move", InputDeviceKind.KeyboardMouse);
+
+            Assert.That(a, Is.EqualTo(b));
+            Assert.That(a == b, Is.True);
+            Assert.That(a.GetHashCode(), Is.EqualTo(b.GetHashCode()));
+            Assert.That(a, Is.Not.EqualTo(new TutorialStatus(new TutorialSteps(), "Player/Move", InputDeviceKind.Gamepad)));
+            Assert.That(a != new TutorialStatus(AtStep(TutorialStep.Aim), "Player/Aim", InputDeviceKind.KeyboardMouse), Is.True);
+        }
+
+        [Test]
+        public void StatusRejectsAMissingActionOrSteps()
+        {
+            Assert.Throws<ArgumentNullException>(() => new TutorialStatus(null, "Player/Move", InputDeviceKind.KeyboardMouse));
+            Assert.Throws<ArgumentException>(() => new TutorialStatus(new TutorialSteps(), " ", InputDeviceKind.KeyboardMouse));
         }
 
         [TestCase(false, false, true)]

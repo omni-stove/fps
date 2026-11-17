@@ -34,8 +34,8 @@ namespace Fps.Runtime
         /// <summary>近くで Interact したら何が起きるかの案内。無ければ null。</summary>
         public static GameSignal<InteractHint?> InteractHint { get; } = new GameSignal<InteractHint?>(nameof(InteractHint));
 
-        /// <summary>射撃場のチュートリアルの進み。チュートリアルをしていなければ null。</summary>
-        public static GameSignal<TutorialSteps> Tutorial { get; } = new GameSignal<TutorialSteps>(nameof(Tutorial));
+        /// <summary>射撃場のチュートリアルの今の段階。チュートリアルをしていなければ null。</summary>
+        public static GameSignal<TutorialStatus?> Tutorial { get; } = new GameSignal<TutorialStatus?>(nameof(Tutorial));
 
         /// <summary>再生しているキルカム。再生していなければ null。</summary>
         public static GameSignal<KillCamStatus?> KillCam { get; } = new GameSignal<KillCamStatus?>(nameof(KillCam));

@@ -153,5 +153,56 @@ namespace Shooter.Core.Tests
             Assert.That(new NetMatchSettings(joinCode: string.Empty).JoinCode, Is.Null);
             Assert.That(new NetMatchSettings(privateMatch: true, joinCode: "Room_42").JoinCode, Is.EqualTo("Room_42"));
         }
+
+        [Test]
+        public void WithPrivacyChangesOnlyThePrivacy()
+        {
+            var settings = new NetMatchSettings(
+                scoreLimit: 30,
+                timeLimitSeconds: 600f,
+                respawnSeconds: 5f,
+                restartDelaySeconds: 15f,
+                maxHealth: 150,
+                minEnemySpawnDistance: 12f,
+                reconnectGraceSeconds: 20f,
+                maxShotOriginOffset: 2.5f,
+                dominationScoreLimit: 200,
+                captureSeconds: 6f,
+                pointsPerSecond: 2f,
+                maxCapturers: 3,
+                maxPlayers: 12,
+                mapPool: _maps,
+                mapVoteSeconds: 20f,
+                maxTeamSizeDifference: 2,
+                chatIntervalSeconds: 0.5f,
+                maxChatLength: 80);
+
+            var changed = settings.WithPrivacy(true, "ABC234");
+
+            Assert.That(changed.PrivateMatch, Is.True);
+            Assert.That(changed.JoinCode, Is.EqualTo("ABC234"));
+            Assert.That(settings.PrivateMatch, Is.False, "the original is left as it was");
+            Assert.That(settings.JoinCode, Is.Null);
+            Assert.That(changed.ScoreLimit, Is.EqualTo(30));
+            Assert.That(changed.TimeLimitSeconds, Is.EqualTo(600f));
+            Assert.That(changed.RespawnSeconds, Is.EqualTo(5f));
+            Assert.That(changed.RestartDelaySeconds, Is.EqualTo(15f));
+            Assert.That(changed.MaxHealth, Is.EqualTo(150));
+            Assert.That(changed.MinEnemySpawnDistance, Is.EqualTo(12f));
+            Assert.That(changed.ReconnectGraceSeconds, Is.EqualTo(20f));
+            Assert.That(changed.MaxShotOriginOffset, Is.EqualTo(2.5f));
+            Assert.That(changed.DominationScoreLimit, Is.EqualTo(200));
+            Assert.That(changed.CaptureSeconds, Is.EqualTo(6f));
+            Assert.That(changed.PointsPerSecond, Is.EqualTo(2f));
+            Assert.That(changed.MaxCapturers, Is.EqualTo(3));
+            Assert.That(changed.MaxPlayers, Is.EqualTo(12));
+            Assert.That(changed.MapPool, Is.EqualTo(_maps));
+            Assert.That(changed.MapVoteSeconds, Is.EqualTo(20f));
+            Assert.That(changed.MaxTeamSizeDifference, Is.EqualTo(2));
+            Assert.That(changed.ChatIntervalSeconds, Is.EqualTo(0.5f));
+            Assert.That(changed.MaxChatLength, Is.EqualTo(80));
+            Assert.That(changed.WithPrivacy(false, null).PrivateMatch, Is.False);
+            Assert.Throws<ArgumentException>(() => settings.WithPrivacy(true, "has/slash"));
+        }
     }
 }

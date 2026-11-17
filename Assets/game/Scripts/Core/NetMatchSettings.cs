@@ -114,6 +114,31 @@ namespace Shooter.Core
 
         public static NetMatchSettings Default { get; } = new NetMatchSettings();
 
+        public NetMatchSettings WithPrivacy(bool privateMatch, string joinCode)
+        {
+            return new NetMatchSettings(
+                scoreLimit: ScoreLimit,
+                timeLimitSeconds: TimeLimitSeconds,
+                respawnSeconds: RespawnSeconds,
+                restartDelaySeconds: RestartDelaySeconds,
+                maxHealth: MaxHealth,
+                minEnemySpawnDistance: MinEnemySpawnDistance,
+                reconnectGraceSeconds: ReconnectGraceSeconds,
+                maxShotOriginOffset: MaxShotOriginOffset,
+                dominationScoreLimit: DominationScoreLimit,
+                captureSeconds: CaptureSeconds,
+                pointsPerSecond: PointsPerSecond,
+                maxCapturers: MaxCapturers,
+                maxPlayers: MaxPlayers,
+                mapPool: MapPool,
+                mapVoteSeconds: MapVoteSeconds,
+                maxTeamSizeDifference: MaxTeamSizeDifference,
+                privateMatch: privateMatch,
+                joinCode: joinCode,
+                chatIntervalSeconds: ChatIntervalSeconds,
+                maxChatLength: MaxChatLength);
+        }
+
         public int ScoreLimit { get; }
 
         public float TimeLimitSeconds { get; }

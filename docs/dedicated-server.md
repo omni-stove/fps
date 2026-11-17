@@ -134,6 +134,8 @@ Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 | `-bots <人数>` | 人と Bot を合わせてこの人数になるまで Bot を足す |
 | `-transport udp\|eos` | 待ち受ける通信路。既定は `udp` |
 | `-register-lobby <公開アドレス:ポート>` | EOS のロビーに載せる (下の「EOS のロビーに登録する」) |
+| `--private` | 参加コードを知っている人だけが入れる非公開の試合にする (下の「非公開の試合」) |
+| `--join-code <コード>` | 非公開の試合の参加コード (英数字と `-` `_` で 16 文字まで。小文字は大文字にそろえる)。付けると `--private` も付けたことになる |
 | `-drain-timeout <秒>` | 止める前に試合の終わりを待つ秒数 |
 | `-log-format text\|json` | `json` なら試合のイベントを JSON で出す |
 | `-buildVersion <版>` | 版を焼き込んだものから変える |
@@ -155,6 +157,21 @@ Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 ```sh
 docker run --rm -e SHOOTER_SERVER_PORT=9000 -p 9000:9000/udp shooter-server:local
 ```
+
+### 非公開の試合
+
+`--private` を付けると、参加コードの合う人だけを入れる。コードを省くと 6 文字のコードを作り、起動のログに出す。
+
+```
+[Server] private match join_code=7KQ2MX (generated; pass --join-code to choose one)
+```
+
+ルールの JSON (`server-data/rules/<ルール名>.json`) の `match` の `privateMatch` と `joinCode` でも同じ設定ができる。
+起動の引数があればそちらを使う (`--join-code` は JSON の `joinCode` より優先し、`--private` だけなら JSON の `joinCode` を使う)。
+引数でも JSON でも非公開でなければ `[Server] public match` を出す。
+コードの合わない人・コードを送らなかった人は、版を比べた後に `[Net] rejected client <番号>: wrong join code for the private match`
+(送らなかったときは `no join code for the private match`) で断る。送られたコードはログに出さない。
+`-register-lobby` と一緒に使うと、ロビーに `private` と `join_code` の属性が付く。
 
 ### EOS で待ち受ける
 
@@ -197,6 +214,8 @@ Device ID でログインしたユーザー。ロビーでは RTC 部屋を開�
 | `version` | ビルドの版 |
 | `players` | 接続しているプレイヤーの人数 (整数。Bot は数えない) |
 | `voice_enabled` | `1` (RTC 部屋を開いている) |
+| `private` | 非公開の試合のときだけ `1`。クイックマッチはこのロビーを選ばない |
+| `join_code` | 非公開の試合のときだけ、その参加コード |
 
 ログには次のように出る。
 

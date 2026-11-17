@@ -27,7 +27,7 @@ namespace Shooter.Server.Eos
             IServerLobbyBackend backend,
             string endpoint,
             string version,
-            int maxPlayers,
+            NetMatchSettings match,
             TextWriter log,
             Func<float> clock,
             Action<int> sleep,
@@ -35,6 +35,7 @@ namespace Shooter.Server.Eos
             RetrySchedule schedule = null)
         {
             ArgumentNullException.ThrowIfNull(backend);
+            ArgumentNullException.ThrowIfNull(match);
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _sleep = sleep ?? throw new ArgumentNullException(nameof(sleep));
@@ -44,7 +45,7 @@ namespace Shooter.Server.Eos
                 _service,
                 endpoint,
                 version,
-                maxPlayers,
+                match,
                 schedule ?? new RetrySchedule(ServerLobby.RetryIntervalSeconds, ServerLobby.TimeoutSeconds),
                 log);
         }

@@ -156,7 +156,36 @@ namespace Shooter.Server.Tests
             Assert.That(_backend.Disposed, Is.True);
         }
 
-        private void Start()
+        [Test]
+        public void APrivateMatchPublishesTheJoinCodeSoQuickMatchSkipsIt()
+        {
+            Start(TestRules.Data(settings: new NetMatchSettings(privateMatch: true, joinCode: "FRIENDS")));
+            Tick();
+            _backend.CompleteLogin(_server);
+
+            var attributes = _backend.CreatedAttributes;
+            Assert.That(attributes, Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.PrivateKey && a.Number == 1));
+            Assert.That(attributes, Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.JoinCodeKey && a.Text == "FRIENDS"));
+
+            var lobby = new LobbyInfo("l1", _server, _backend.CreatedMaxMembers, new[] { _server }, attributes);
+            Assert.That(lobby.IsPrivate, Is.True);
+            Assert.That(lobby.JoinCode, Is.EqualTo("FRIENDS"));
+            Assert.That(LobbySelector.ServerRejection(lobby, "0.3.0"), Is.EqualTo("private"));
+            Assert.That(LobbySelector.PickServer(new[] { lobby }, "0.3.0"), Is.Null);
+        }
+
+        [Test]
+        public void APublicMatchHasNoJoinCode()
+        {
+            Start(TestRules.Data());
+            Tick();
+            _backend.CompleteLogin(_server);
+
+            Assert.That(_backend.CreatedAttributes, Has.None.Matches<LobbyAttribute>(a => a.Key == ServerLobby.PrivateKey));
+            Assert.That(_backend.CreatedAttributes, Has.None.Matches<LobbyAttribute>(a => a.Key == ServerLobby.JoinCodeKey));
+        }
+
+        private void Start(ServerRulesData rules = null)
         {
             _module.Start(new ServerContext(
                 new NetLaunchOptions(
@@ -166,7 +195,8 @@ namespace Shooter.Server.Tests
                 TestMaps.Data(),
                 _match,
                 new ServerMessenger(_transport),
-                _control));
+                _control,
+                rules));
         }
 
         private void Register()

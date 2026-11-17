@@ -84,11 +84,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// NavMesh から外れていたら近くの NavMesh に戻す。戻れなければ <see cref="OffMeshRetryInterval"/> ごとに試し直し、
-        /// 警告は 1 回だけ出す (戻れないまま進めずにいれば、<see cref="WatchProgress"/> が出現地点へ瞬間移動させる)。
-        /// 戻れたら (または外れていなければ) true。
-        /// </summary>
         private bool TryReturnToNavMesh()
         {
             if (_agent.isOnNavMesh)
@@ -119,9 +114,6 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>
-        /// 位置が NaN や無限大になっていたら、最後に正常だった位置へ戻す。戻せなかったらこのフレームは何もしない (false)。
-        /// </summary>
         private bool RecoverNonFinitePosition()
         {
             var position = transform.position;
@@ -139,7 +131,6 @@ namespace Shooter.Runtime
             return StuckMonitor.IsFinite(transform.position.ToNumerics());
         }
 
-        /// <summary>進めているかを見張り、進めていなければ <see cref="StuckMonitor"/> の返した立て直しをする。</summary>
         private void WatchProgress(float deltaSeconds)
         {
             // 寄り道中も元の目的地に近づけたかで測る。寄り道先で測ると、寄り道しただけで立ち直ったことになる。
@@ -179,10 +170,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 目的地への今の経路で、<see cref="StuckProgressDistance"/> 以上先にある最初の角 (無ければ最後の角)。
-        /// 寄り道中は経路の終点が寄り道先なので null。寄り道先へ歩いただけで立ち直ったことにしないため。
-        /// </summary>
+        // 寄り道中は経路の終点が寄り道先なので null を返す。寄り道先へ歩いただけで立ち直ったことにしないため。
         private Vector3? PathWaypoint(Vector3? goal)
         {
             if (!goal.HasValue || _detour.HasValue || !_agent.isOnNavMesh || !_agent.hasPath || _agent.pathPending)
@@ -218,11 +206,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 近くの、経路が最後までつながる地点へ少しだけ寄り道させる。見つからなければ経路の引き直しだけにする。
-        /// 目的地へ <see cref="StuckProgressDistance"/> 以上近づく地点は選ばない。選ぶと、寄り道しただけで
-        /// <see cref="StuckMonitor"/> が立ち直ったとみなし、届かない目的地でも段階が先へ進まなくなる。
-        /// </summary>
+        // 目的地へ StuckProgressDistance 以上近づく地点は選ばない。選ぶと、寄り道しただけで
+        // StuckMonitor が立ち直ったとみなし、届かない目的地でも段階が先へ進まなくなる。
         private void Sidestep(Vector3 ground, Vector3? goal)
         {
             Repath();
@@ -268,10 +253,6 @@ namespace Shooter.Runtime
             return Vector3.Dot(move, toGoal.normalized) >= StuckProgressDistance;
         }
 
-        /// <summary>
-        /// 経路上で <see cref="WarpLookAhead"/> より先の角へ瞬間移動させる。そういう角が無く NavMesh からも外れていれば出現地点へ戻す。
-        /// どちらでもなければ (目的地のすぐ手前で詰まっているだけなら) 動かさない。
-        /// </summary>
         private void Warp(Vector3 ground)
         {
             Vector3? to = null;
@@ -320,7 +301,6 @@ namespace Shooter.Runtime
         {
             if (!lookAt.HasValue)
             {
-                // 向きの指定が無ければ、NavMeshAgent に進む向きを向かせる。
                 _agent.updateRotation = true;
                 return;
             }

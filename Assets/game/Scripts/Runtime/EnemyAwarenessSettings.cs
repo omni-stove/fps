@@ -61,7 +61,6 @@ namespace Shooter.Runtime
         [SerializeField, Range(0.01f, 0.99f), Tooltip("物音を聞いて調べに行くときのゲージの量。音だけではこれより上がらない。警戒の境目以上")]
         private float _investigateLevel = AwarenessSpec.DefaultInvestigateLevel;
 
-        /// <exception cref="ArgumentException">値が不正。</exception>
         public AwarenessSpec ToSpec()
         {
             return new AwarenessSpec(

@@ -6,26 +6,14 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーの能力の枠 (<see cref="SlotCount"/> 個。0 番を Ability1、1 番を Ability2 の入力で使う)。
-    /// 枠には <see cref="Equip(int, AbilityDefinition)"/> で能力の定義を入れ、回数と時間は枠ごとの <see cref="AbilitySlot"/>、
-    /// 振る舞いは定義が作る <see cref="IAbility"/> が受け持つ。ルールの <see cref="ActionRules.Abilities"/> が Off の間は使えず、
-    /// 使っている途中で Off になったら止める。倒れた・ダウンした・操作を手放した (<see cref="PlayerController.Handoff"/>) ときも止める。
-    /// 入力は同じ GameObject の <see cref="PlayerActionReader.PressedCommands"/> と <see cref="PlayerActionReader.HeldCommands"/> を毎フレーム読む。
-    /// 体力が戻った (<see cref="Damageable.HealthReset"/>、出撃し直し) ら回数と待ち時間を戻す。
-    /// 使った・効果が出た・終えた・断った・回数が戻ったことを <see cref="LogTag"/> 付きのログに出す。
-    /// 枠の中身・回数・待ち時間・使うかどうか (ルール)・今もう一度押すと何ができるか (<see cref="TryGetFollowUp"/>) が変わると <see cref="Changed"/> を呼ぶ。
-    /// オフラインでは <see cref="AbilityActionInstaller"/> が付けてルールを渡し、<see cref="GameBootstrap"/> が枠に入れる。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class AbilityHost : MonoBehaviour
     {
         public const string LogTag = "[Ability]";
 
-        /// <summary>枠の数。入力の Ability1 / Ability2 に合わせる。</summary>
+        // 入力が Ability1 / Ability2 の 2 つなので、それに合わせる。
         public const int SlotCount = 2;
 
-        /// <summary>空の枠をログに出すときの名前。</summary>
         public const string EmptySlotName = "-";
 
         private readonly AbilityDefinition[] _definitions = new AbilityDefinition[SlotCount];
@@ -43,16 +31,10 @@ namespace Shooter.Runtime
         private bool _changed;
         private int _deferDepth;
 
-        /// <summary>
-        /// 枠の中身・回数・待ち時間・使うかどうか (ルール)・今もう一度押すと何ができるかが変わったときに呼ばれる。
-        /// 1 回の <see cref="Step"/> の中で何度変わっても 1 度にまとめ、待ち時間や回数の戻りが進む間は <see cref="Step"/> のたびに呼ばれる。
-        /// </summary>
         public event Action<AbilityHost> Changed;
 
-        /// <summary>能力を使うか。<see cref="Configure"/> の前は Off。</summary>
         public Abilities Rule => _rule;
 
-        /// <summary>ルールで能力を使うことになっているか。</summary>
         public bool UsesAbilities => _rule == Abilities.On;
 
         // 置いたタレットのように、持ち主の手を離れて撃つ物が味方撃ちのルールに従えるよう、Configure で渡されたルールを覚えておく。
@@ -60,7 +42,6 @@ namespace Shooter.Runtime
 
         public PlayerCommands HeldCommands { get; private set; }
 
-        /// <summary>同じ GameObject の移動。無ければ null。</summary>
         public PlayerController Mover
         {
             get
@@ -70,10 +51,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 入力を読む先。未設定なら同じ GameObject の <see cref="PlayerActionReader"/> を探して使う。
-        /// null を入れると、次のフレームで探し直す。
-        /// </summary>
         public PlayerActionReader Input
         {
             get
@@ -88,15 +65,12 @@ namespace Shooter.Runtime
             set => _input = value;
         }
 
-        /// <summary>index の枠を使う入力。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">index が 0 以上 <see cref="SlotCount"/> 未満でない。</exception>
         public static PlayerCommands CommandFor(int index)
         {
             RequireIndex(index);
             return index == 0 ? PlayerCommands.Ability1 : PlayerCommands.Ability2;
         }
 
-        /// <summary>例: <c>[Ability] rule=On slot1=NullAbility slot2=-</c>。</summary>
         public static string FormatRuleLog(Abilities rule, IReadOnlyList<AbilityDefinition> definitions)
         {
             if (definitions == null)
@@ -113,7 +87,6 @@ namespace Shooter.Runtime
             return line;
         }
 
-        /// <summary>例: <c>[Ability] slot=1 equip=NullAbility charges=1 recharge=10.0 cooldown=1.0 windup=0.0</c>。空にしたら <c>equip=-</c> だけ。</summary>
         public static string FormatEquipLog(int index, AbilityDefinition definition, AbilitySpec spec)
         {
             RequireIndex(index);
@@ -134,7 +107,6 @@ namespace Shooter.Runtime
                 spec.WindupSeconds);
         }
 
-        /// <summary>例: <c>[Ability] slot=1 id=NullAbility used charges=0/1 cooldown=1.0</c>。</summary>
         public static string FormatUsedLog(int index, AbilityDefinition definition, AbilitySlot slot)
         {
             RequireIndex(index);
@@ -154,21 +126,18 @@ namespace Shooter.Runtime
                 slot.CooldownRemaining);
         }
 
-        /// <summary>例: <c>[Ability] slot=1 id=NullAbility effect</c>。</summary>
         public static string FormatEffectLog(int index, AbilityDefinition definition)
         {
             RequireIndex(index);
             return $"{LogTag} slot={index + 1} id={NameOf(definition)} effect";
         }
 
-        /// <summary>例: <c>[Ability] slot=1 id=NullAbility ended interrupted=false</c>。</summary>
         public static string FormatEndedLog(int index, AbilityDefinition definition, bool interrupted)
         {
             RequireIndex(index);
             return $"{LogTag} slot={index + 1} id={NameOf(definition)} ended interrupted={(interrupted ? "true" : "false")}";
         }
 
-        /// <summary>例: <c>[Ability] slot=1 id=NullAbility rejected reason=Cooldown wait=0.6</c>。待たずに使えるようにならない理由なら wait は付けない。</summary>
         public static string FormatRejectedLog(int index, AbilityDefinition definition, AbilityUseBlock reason, AbilitySlot slot)
         {
             RequireIndex(index);
@@ -182,14 +151,12 @@ namespace Shooter.Runtime
             return line;
         }
 
-        /// <summary>例: <c>[Ability] slot=1 id=DeployRemoteCharge follow-up</c>。</summary>
         public static string FormatFollowUpLog(int index, AbilityDefinition definition)
         {
             RequireIndex(index);
             return $"{LogTag} slot={index + 1} id={NameOf(definition)} follow-up";
         }
 
-        /// <summary>例: <c>[Ability] slot=1 id=NullAbility recharged charges=1/1</c>。</summary>
         public static string FormatRechargedLog(int index, AbilityDefinition definition, AbilitySlot slot)
         {
             RequireIndex(index);
@@ -201,10 +168,6 @@ namespace Shooter.Runtime
             return $"{LogTag} slot={index + 1} id={NameOf(definition)} recharged charges={slot.Charges}/{slot.Spec.MaxCharges}";
         }
 
-        /// <summary>
-        /// rules の <see cref="ActionRules.Abilities"/> で使うかを決める。Off なら使っている能力を止める。
-        /// 何度呼んでもよく、最後に渡した rules に従う。決めた内容を <see cref="FormatRuleLog"/> でログに出す。
-        /// </summary>
         public void Configure(GameRules rules)
         {
             if (rules == null)
@@ -224,13 +187,6 @@ namespace Shooter.Runtime
             NotifyChanged();
         }
 
-        /// <summary>
-        /// index の枠に definition を入れる。null なら空にする。前に入っていた能力を使っている途中なら止める。
-        /// 回数は上限から、待ち時間は無しで始める。入れた内容を <see cref="FormatEquipLog"/> でログに出す。
-        /// definition が不正なら、枠を変えずに例外を投げる。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">index が 0 以上 <see cref="SlotCount"/> 未満でない。</exception>
-        /// <exception cref="AbilityDefinitionException">definition の値が不正か、振る舞いを作れない。</exception>
         public void Equip(int index, AbilityDefinition definition)
         {
             RequireIndex(index);
@@ -276,10 +232,6 @@ namespace Shooter.Runtime
             NotifyChanged();
         }
 
-        /// <summary>
-        /// definitions を先頭から順に枠へ入れ、足りない枠は空にする。null なら全部空にする。
-        /// 不正な定義はエラーをログに出してその枠を空にし、残りの枠は続ける。<see cref="SlotCount"/> を超えた分は警告を出して入れない。
-        /// </summary>
         public void Equip(IReadOnlyList<AbilityDefinition> definitions)
         {
             var count = definitions != null ? definitions.Count : 0;
@@ -314,28 +266,24 @@ namespace Shooter.Runtime
             NotifyChanged();
         }
 
-        /// <summary>index の枠の定義。空なら null。</summary>
         public AbilityDefinition Definition(int index)
         {
             RequireIndex(index);
             return _definitions[index];
         }
 
-        /// <summary>index の枠の回数と時間。空なら null。</summary>
         public AbilitySlot Slot(int index)
         {
             RequireIndex(index);
             return _slots[index];
         }
 
-        /// <summary>index の枠の能力を使っている途中か。</summary>
         public bool IsRunning(int index)
         {
             RequireIndex(index);
             return _slots[index] != null && _slots[index].IsRunning;
         }
 
-        /// <summary>持ち主が能力を使えない状態 (倒れている・ダウンしている・操作を手放している) か。</summary>
         public bool IsIncapacitated
         {
             get
@@ -350,7 +298,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>index の枠を今使えない理由。使えるなら <see cref="AbilityUseBlock.None"/>。</summary>
         public AbilityUseBlock UseBlock(int index)
         {
             RequireIndex(index);
@@ -379,10 +326,6 @@ namespace Shooter.Runtime
             return AskCanUse(index) ? AbilityUseBlock.None : AbilityUseBlock.Refused;
         }
 
-        /// <summary>
-        /// index の枠の能力を使う。使えなければ何もせず false (ルールが Off か枠が空のときは黙って、それ以外は理由をログに出す)。
-        /// 使えたら回数を減らして <see cref="IAbility.Begin"/> を呼び、<see cref="FormatUsedLog"/> をログに出す。
-        /// </summary>
         public bool TryUse(int index)
         {
             _deferDepth++;
@@ -441,10 +384,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// index の枠の能力が <see cref="IAbilityFollowUp"/> なら、今押すと何ができるかを followUp に入れて true。
-        /// 枠が空・ルールが Off・使えない状態・出せる効果が無いときは false。
-        /// </summary>
         public bool TryGetFollowUp(int index, out AbilityFollowUp followUp)
         {
             RequireIndex(index);
@@ -466,12 +405,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 1 フレーム分進める。枠の時間を deltaSeconds 進め、使っている能力の <see cref="IAbility.Tick"/> を呼び、
-        /// その後 pressed に入っている枠の入力 (<see cref="CommandFor"/>) で <see cref="TryUse"/> する。
-        /// 使えない状態 (ルールが Off・<see cref="IsIncapacitated"/>) になっていれば、使っている能力を止める。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">deltaSeconds が負か有限でない。</exception>
         public void Step(PlayerCommands pressed, float deltaSeconds)
         {
             Step(pressed, PlayerCommands.None, deltaSeconds);
@@ -511,7 +444,6 @@ namespace Shooter.Runtime
             NotifyChanged();
         }
 
-        /// <summary>使っている能力を止め、すべての枠の回数を上限に、待ち時間を無しに戻す。</summary>
         public void ResetSlots()
         {
             for (var i = 0; i < SlotCount; i++)
@@ -523,7 +455,6 @@ namespace Shooter.Runtime
             NotifyChanged();
         }
 
-        /// <summary>index の枠の能力を使っている途中なら止める (<see cref="IAbility.End"/> の interrupted は true)。</summary>
         public void Interrupt(int index)
         {
             RequireIndex(index);

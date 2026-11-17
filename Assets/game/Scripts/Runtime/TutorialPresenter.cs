@@ -5,15 +5,6 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 射撃場のチュートリアル。Bootstrap シーン (Shooter.Editor.BootstrapSceneBuilder が生成) の <see cref="GameBootstrap"/> と同じ GameObject に置く。
-    /// Start で、まだ一度も終えていないか (<see cref="TutorialProgressStore"/>)、メニューのチュートリアルから来たとき
-    /// (<see cref="IMenuNavigator.TakeTutorialRequest"/>) だけ始め (<see cref="TutorialSteps.ShouldStart"/>)、そうでなければ自分を無効にする。
-    /// 毎フレーム、プレイヤーの今のアクション (<see cref="PlayerActionReader.Current"/>: ADS・リロード・しゃがみ・カバー)・
-    /// 歩いた距離・標的に当てた回数 (<see cref="CombatEvents.HitConfirmed"/>) から <see cref="TutorialSteps"/> を進め、
-    /// 今の段階 (<see cref="TutorialStatus"/>: 手順と押すアクション、キーの表記に使う最後に操作した入力機器) を <see cref="GameSignals.Tutorial"/> に出す。
-    /// 文にするのは UI。すべて終えたら記録して完了の段階を <see cref="CompletedDisplaySeconds"/> 秒出し、消す。
-    /// </summary>
     [DisallowMultipleComponent]
     // PlayerActionReader (100) が LateUpdate でそのフレームの状態を組み立ててから読む
     [DefaultExecutionOrder(110)]
@@ -21,7 +12,6 @@ namespace Shooter.Runtime
     {
         public const string LogTag = "[Tutorial]";
 
-        /// <summary>すべて終えてから完了を出しておく秒数。</summary>
         public const float CompletedDisplaySeconds = 4f;
 
         private static readonly string[] _deviceActionPaths =
@@ -55,23 +45,19 @@ namespace Shooter.Runtime
         private TutorialStatus? _status;
         private GameBootstrap _waitingBootstrap;
 
-        /// <summary>進みの数え。</summary>
         public TutorialSteps Steps => _steps;
 
-        /// <summary>案内を出しているか (始めてから、完了を出し終えるまで)。</summary>
         public bool IsRunning => _running;
 
-        /// <summary>案内のキーの表記に使っている入力機器。</summary>
         public InputDeviceKind Device => _device;
 
-        /// <summary>終えたことを読み書きする先。テストでは本物の記録を壊さないよう別のキーの store を渡す。</summary>
+        // 差し替えられるのは、テストで本物の記録を壊さないよう別のキーの store を使うため。
         public TutorialProgressStore Store
         {
             get => _store;
             set => _store = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        /// <summary>今 <see cref="GameSignals.Tutorial"/> に出している段階。出していなければ null。</summary>
         public TutorialStatus? Status => _status;
 
         private void Start()
@@ -180,10 +166,6 @@ namespace Shooter.Runtime
             Begin(world.ActionReader);
         }
 
-        /// <summary>
-        /// reader のプレイヤーで最初の手順から始め、その段階を <see cref="GameSignals.Tutorial"/> に出す。始めていれば最初からやり直す。
-        /// 武器の <see cref="WeaponController.ReloadStarted"/> と <see cref="CombatEvents.HitConfirmed"/> を購読する。
-        /// </summary>
         public void Begin(PlayerActionReader reader)
         {
             if (reader == null)
@@ -206,11 +188,6 @@ namespace Shooter.Runtime
             Debug.Log(LogTag + " started at " + _steps.Current, this);
         }
 
-        /// <summary>
-        /// 1 フレーム分進める。前のフレームからの位置の差を歩いた距離に、その間に届いた命中とリロードの開始を state に足して
-        /// <see cref="TutorialSteps.Observe"/> に渡し、device で段階を出し直す (変わったときだけ)。すべて終えたら記録して完了の段階を出し、
-        /// <see cref="CompletedDisplaySeconds"/> 秒経ったら消して止める。Play 中は <see cref="LateUpdate"/> から呼ぶ。
-        /// </summary>
         public void Tick(float deltaSeconds, PlayerActionState state, Vector3 playerPosition, InputDeviceKind device)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -269,7 +246,6 @@ namespace Shooter.Runtime
             PublishStatus(device);
         }
 
-        /// <summary>段階を消して止める。終えたかの記録は変えない。</summary>
         public void Stop()
         {
             Unsubscribe();
@@ -278,10 +254,6 @@ namespace Shooter.Runtime
             enabled = false;
         }
 
-        /// <summary>
-        /// 最後に操作した入力機器。actions のうち押されている (しきい値を超えて動かしている) ものの機器を、並びの先のものから選ぶ。
-        /// 何も押されていなければ fallback (直前の機器) のまま。
-        /// </summary>
         public static InputDeviceKind DetectDevice(InputAction[] actions, InputDeviceKind fallback)
         {
             if (actions == null)
@@ -301,7 +273,6 @@ namespace Shooter.Runtime
             return fallback;
         }
 
-        /// <summary>step で使うアクションのパス (<see cref="InputActionPaths"/>)。</summary>
         public static string ActionPathFor(TutorialStep step)
         {
             switch (step)

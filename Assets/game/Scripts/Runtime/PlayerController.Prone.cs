@@ -5,17 +5,8 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="PlayerController"/> のうち、伏せの入力と飛び込みの処理。姿勢そのものは .Stance.cs が当てる。
-    /// <see cref="ProneRule"/> が <see cref="Prone.On"/> で接地しているときに Prone を押すと伏せ、もう一度押すかしゃがみ・ジャンプ・ダッシュの開始で起き上がる
-    /// (<see cref="ProneInput"/>)。ダッシュ中に押すと、その勢いの向きへ <see cref="ProneDive"/> で飛び込んで伏せる。
-    /// 伏せている間は <see cref="ProneSpec.Speed"/> で動き、ダッシュもジャンプもせず、上下を向ける範囲を <see cref="ProneSpec.MaxPitchDegrees"/> に絞り
-    /// (<see cref="FirstPersonLook.PitchLimit"/>)、射撃のばらつきに <see cref="SpreadScale"/> を掛けさせる (配線は <see cref="GameBootstrap"/>)。
-    /// 伏せると、しゃがみとダッシュは解く (押し直すまで戻らない)。
-    /// </summary>
     public sealed partial class PlayerController
     {
-        /// <summary>Assets/InputSystem_Actions.inputactions の Prone アクション。</summary>
         public const string ProneActionPath = InputActionPaths.Prone;
 
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
@@ -29,25 +20,16 @@ namespace Shooter.Runtime
         private ProneInput _proneInput;
         private ProneDive _dive;
 
-        /// <summary>飛び込み始めたときに、飛び込む向き (ワールドの水平の単位ベクトル) を渡して呼ばれる。</summary>
         public event Action<Vector3> DiveStarted;
 
-        /// <summary>飛び込み終えたとき (途中でやめたときを含む) に呼ばれる。</summary>
         public event Action DiveEnded;
 
-        /// <summary>読んでいる Prone アクション。無ければ null (入力では伏せない)。</summary>
         public InputAction ProneAction => _proneAction;
 
-        /// <summary>伏せたいか (ボタンを解釈し、自動解除した後の値)。頭上が塞がっていると、false でも <see cref="IsProne"/> は true のことがある。</summary>
         public bool IsProneActive => ProneState.IsActive;
 
-        /// <summary>飛び込みの最中か。</summary>
         public bool IsDiving => _dive != null && _dive.IsDiving;
 
-        /// <summary>
-        /// 伏せを使うか。既定は <see cref="Prone.Off"/>。<see cref="PlayerActions.Attach"/> がルールの <see cref="ActionRules.Prone"/> を入れる。
-        /// Off にすると伏せたい状態を解き、飛び込みもやめる (実際に起き上がるのは次の <see cref="Tick"/> で頭上が空いているとき)。
-        /// </summary>
         public Prone ProneRule
         {
             get => _proneRule;
@@ -66,11 +48,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 伏せの調整値。既定は <see cref="ProneSpec.Default"/> で、<see cref="TryInitializeFromHierarchy"/> は (ここで渡していなければ)
-        /// <see cref="MotorSettings"/> の伏せ (<see cref="MotorSettings.ResolveProne"/>) にする。初期化済みで変えると、伏せの寸法を作り直し (伏せていれば今の姿勢に当て直す)、飛び込みはやめる。
-        /// 伏せの高さが CharacterController に合わないとき (半径の 2 倍未満・しゃがみより高い) は、合う範囲に収めて警告を出す。
-        /// </summary>
         public ProneSpec ProneSpec
         {
             get => _proneSpec;
@@ -98,7 +75,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>今撃ったときに弾の散らばりと照準の広がりに掛ける倍率。伏せていれば <see cref="ProneSpec.SpreadScale"/>、それ以外は 1。</summary>
         public float SpreadScale => IsProne ? _proneSpec.SpreadScale : 1f;
 
         private ProneInput ProneState
@@ -116,16 +92,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>飛び込みのログ。例: <c>[Player] diving=true</c>。</summary>
         public static string FormatDivingLog(bool diving)
         {
             return $"{LogTag} diving={(diving ? "true" : "false")}";
         }
 
-        /// <summary>
-        /// 伏せの入力にするアクションを差し替える。null なら入力では伏せない (<see cref="UpdateProne"/> は呼べる)。
-        /// 動作中なら、自分が有効にした前のアクションを戻してから新しいものを有効にする。
-        /// </summary>
         public void SetProneAction(InputAction action)
         {
             if (_isLive)
@@ -140,11 +111,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 1 フレーム分の伏せボタンを解釈し、伏せたいかを返す (<see cref="ProneInput"/>)。
-        /// 伏せ始められるのは、<see cref="ProneRule"/> が On・初期化済み・接地している・回避と乗り越えと移動の横取りと飛び込みの最中でないときだけ。
-        /// ダッシュ中に伏せたら、move (移動入力) と今の勢いの向きへ飛び込みも始める。変化は <c>[Player] prone=..</c> でログに出す。
-        /// </summary>
         public bool UpdateProne(bool pronePressed, bool crouchPressed, bool jumpPressed, bool sprinting, Vector2 move)
         {
             var active = ProneState.Update(CanStartProne(), pronePressed, crouchPressed, jumpPressed, sprinting, out var dive);
@@ -156,18 +122,12 @@ namespace Shooter.Runtime
             return active;
         }
 
-        /// <summary>
-        /// 伏せたい状態を解き、飛び込みもやめる (死亡・リスポーンなど)。頭上は確かめないが、実際に起き上がるのは次の <see cref="Tick"/> で頭上が空いているときだけ。
-        /// 伏せたい状態だったら true。
-        /// </summary>
-        /// <param name="reason">ログに出す理由 (<see cref="ProneInput.ReasonDeath"/> など)。</param>
         public bool ReleaseProne(string reason)
         {
             CancelDive();
             return ProneState.Release(reason);
         }
 
-        /// <summary>飛び込んでいる最中ならやめる (伏せたままその場で止まる)。やめたら true。</summary>
         public bool CancelDive()
         {
             if (_dive == null || !_dive.Cancel())
@@ -204,7 +164,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // 勢いがあればその向き、無ければ移動入力、それも無ければ向いている前へ飛び込む。
         private void StartDive(Vector2 move)
         {
             if (_dive == null || _dive.Distance <= 0f)
@@ -274,7 +233,6 @@ namespace Shooter.Runtime
             DiveEnded?.Invoke();
         }
 
-        // 伏せている間だけ上下を絞る。視点の上限より広い値は視点の上限のまま。
         private void ApplyProneLook()
         {
             if (_look == null)

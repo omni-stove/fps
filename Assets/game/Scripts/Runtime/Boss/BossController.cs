@@ -6,7 +6,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // 段階の計算は BossPhases に任せ、ここは体力を読んで渡し、返ってきた段階を判断・速さ・弱点・イベントへ当てはめるだけにする。
     // 個々のボスの動きは持たない。動きは段階の EnemySpec と IEnemyBehavior、または MoveSpeedMultiplier を読む側が作る。
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Damageable))]
@@ -59,8 +58,6 @@ namespace Shooter.Runtime
 
         public IReadOnlyList<BossPhaseEntry> PhaseEntries => _phases;
 
-        // 初期化の後に入れ替えると、その場で段階と部位の倍率を定義の値にし、今の体力で最初の段階から当て直す。
-        // 定義が不正なら何も変えずに例外を投げる。
         public BossDefinition Definition
         {
             get => _definition;
@@ -193,7 +190,6 @@ namespace Shooter.Runtime
         }
 
         // IEnemyBehavior や任意の条件はシリアライズできないので、それらを使う段階はコードから渡す。
-        // 渡した時点で最初の段階から始め直し、今の体力で条件を満たす段階までその場で進める。
         public void UsePhases(BossPhases phases)
         {
             if (phases == null)
@@ -238,7 +234,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        // 次に段階が変わるまで有効。段階の中の行動の合図 (溜めの間だけ弱点を出すなど) で使う。
         public bool SetWeakPointExposed(string weakPointId, bool exposed)
         {
             if (string.IsNullOrWhiteSpace(weakPointId))
@@ -269,8 +264,7 @@ namespace Shooter.Runtime
             return found;
         }
 
-        // 段階の条件 (時間で進むものなど) と、EnemyAgent の初期化を待っていた当てはめを、Play 中は毎フレーム進める。
-        // Edit Mode のテストでは直接呼ぶ。
+        // Edit Mode のテストで Update を待たずに進められるよう public にする。
         public void Tick(float deltaSeconds)
         {
             if (_state == null)

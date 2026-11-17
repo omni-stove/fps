@@ -29,7 +29,6 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("振るときに前へ踏み込む距離 (m)")]
         private float _lungeDistance = MeleeSpec.DefaultLungeDistance;
 
-        /// <exception cref="ArgumentException">値が不正。</exception>
         public MeleeSpec ToSpec()
         {
             return new MeleeSpec(_damage, _reach, _arcDegrees, _swingSeconds, _cooldownSeconds, _impactSeconds, _lungeDistance);

@@ -165,7 +165,6 @@ namespace Shooter.Runtime
             _pendingAim = null;
         }
 
-        // 照準の先 (origin から direction へ MaxRange まで) で、owner の体を除いて最初に当たった面に刺さるか。
         // 掴めない面が手前にあれば、その奥に掴める面があっても刺さらない (縄は面を抜けない)。
         public GrappleMiss TryAim(Transform owner, Vector3 origin, Vector3 direction, out GrappleAim aim)
         {

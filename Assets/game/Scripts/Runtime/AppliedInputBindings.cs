@@ -4,23 +4,16 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 設定画面で変えた割り当ての上書き (<see cref="InputBindingOverridesStore"/>) を、プロジェクト全体の Input Actions (<see cref="InputSystem.actions"/>) に入れる。
-    /// オフラインのプレイヤー (<see cref="PlayerController"/> など) もオンラインのプレイヤー (Shooter.Net の NetPlayer など) も同じアセットのアクションを使うので、
-    /// シーンを読む前 (どのプレイヤーの Awake よりも前) に 1 回入れれば両方に効く。
-    /// </summary>
+    // オフラインのプレイヤーもオンラインのプレイヤー (Shooter.Net の NetPlayer など) も同じアセットのアクションを使うので、
+    // プロジェクト全体の Input Actions にシーンを読む前 (どのプレイヤーの Awake よりも前) に 1 回入れれば両方に効く。
     public static class AppliedInputBindings
     {
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static bool _loaded;
 
-        /// <summary>この Play で読み込みを済ませたか。</summary>
         public static bool IsLoaded => _loaded;
 
-        /// <summary>
-        /// Play 中で、まだ読み込んでいなければ、既定のキーから <see cref="InputSystem.actions"/> に読み込む。
-        /// シーンを読む前に自動で呼ぶが、プレイヤーが入力を解決する前にも呼び、読み込みの順番をそこで確かにする。
-        /// </summary>
+        // シーンを読む前に自動で呼ぶが、プレイヤーが入力を解決する前にも呼び、読み込みの順番をそこで確かにする。
         public static void EnsureLoaded()
         {
             // Edit Mode のテストがプロジェクト全体のアクションを使うので、開発者が保存した上書きをそこへ入れない。

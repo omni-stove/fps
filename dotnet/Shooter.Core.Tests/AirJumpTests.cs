@@ -212,7 +212,7 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void WallRunningGivesTheAirJumpsBack()
+        public void AWallRunWithNoWallEndsWithoutGivingTheAirJumpsBack()
         {
             var simulation = NewSimulation(Spec(airJumps: 1));
             var state = Airborne(wallRun: new CharacterWallRunState(WallRunSide.Left, 0.1f, Vector3.UnitX));
@@ -220,7 +220,8 @@ namespace Shooter.Core.Tests
             var next = simulation.Step(state, Input());
 
             Assert.That(next.IsGrounded, Is.False);
-            Assert.That(next.AirJumpsUsed, Is.Zero);
+            Assert.That(next.WallRun.IsRunning, Is.False);
+            Assert.That(next.AirJumpsUsed, Is.EqualTo(1), "only a tick that is still on the wall gives them back (CharacterWallRunTests)");
         }
 
         [Test]

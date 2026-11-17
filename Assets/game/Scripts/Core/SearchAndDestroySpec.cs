@@ -15,6 +15,8 @@ namespace Fps.Core
         public const int DefaultWinsToWin = 4;
         public const float DefaultPreparationSeconds = 5f;
         public const int DefaultSwapEveryRounds = 2;
+        public const float DefaultBombPickupRadius = 1.5f;
+        public const float DefaultDefuseRadius = 2f;
 
         /// <summary>設置地点の数。1 以上。HUD とログでは 0 = A, 1 = B, ...。</summary>
         public int SiteCount { get; }
@@ -40,6 +42,12 @@ namespace Fps.Core
         /// <summary>何ラウンドごとに攻守を入れ替えるか。0 なら入れ替えない。</summary>
         public int SwapEveryRounds { get; }
 
+        /// <summary>攻撃側が落ちた爆弾を拾う距離 (m、水平)。0 より大きい有限値。</summary>
+        public float BombPickupRadius { get; }
+
+        /// <summary>防衛側が設置された爆弾を解除できる距離 (m、水平)。0 より大きい有限値。</summary>
+        public float DefuseRadius { get; }
+
         /// <exception cref="ArgumentOutOfRangeException">どれかの値が範囲の外。</exception>
         public SearchAndDestroySpec(
             int siteCount = DefaultSiteCount,
@@ -49,7 +57,9 @@ namespace Fps.Core
             float fuseSeconds = DefaultFuseSeconds,
             int winsToWin = DefaultWinsToWin,
             float preparationSeconds = DefaultPreparationSeconds,
-            int swapEveryRounds = DefaultSwapEveryRounds)
+            int swapEveryRounds = DefaultSwapEveryRounds,
+            float bombPickupRadius = DefaultBombPickupRadius,
+            float defuseRadius = DefaultDefuseRadius)
         {
             if (siteCount < 1)
             {
@@ -76,6 +86,9 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(swapEveryRounds), swapEveryRounds, "swapEveryRounds must not be negative");
             }
 
+            RequirePositiveFinite(bombPickupRadius, nameof(bombPickupRadius));
+            RequirePositiveFinite(defuseRadius, nameof(defuseRadius));
+
             SiteCount = siteCount;
             RoundSeconds = roundSeconds;
             PlantSeconds = plantSeconds;
@@ -84,6 +97,8 @@ namespace Fps.Core
             WinsToWin = winsToWin;
             PreparationSeconds = preparationSeconds;
             SwapEveryRounds = swapEveryRounds;
+            BombPickupRadius = bombPickupRadius;
+            DefuseRadius = defuseRadius;
         }
 
         private static void RequirePositiveFinite(float value, string name)

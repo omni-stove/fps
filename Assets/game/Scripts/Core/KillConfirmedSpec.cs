@@ -7,7 +7,13 @@ namespace Fps.Core
     /// </summary>
     public sealed class KillConfirmedSpec
     {
-        /// <summary>どちらかのチームがこの確定数 (得点) に届いたら試合が終わる。1 以上。</summary>
+        /// <summary><see cref="PointsPerConfirm"/> を指定しなかったときの値。</summary>
+        public const int DefaultPointsPerConfirm = 1;
+
+        /// <summary><see cref="TagPickupRadius"/> を指定しなかったときの値 (m)。</summary>
+        public const float DefaultTagPickupRadius = 1f;
+
+        /// <summary>どちらかのチームがこの得点に届いたら試合が終わる。1 以上。</summary>
         public int ScoreLimit { get; }
 
         /// <summary>試合の制限時間 (秒)。0 より大きい有限値。</summary>
@@ -19,11 +25,25 @@ namespace Fps.Core
         /// <summary>落ちたタグが誰にも拾われずに消えるまでの秒数。0 より大きい有限値。</summary>
         public float TagLifetimeSeconds { get; }
 
-        /// <param name="scoreLimit">勝利に必要な確定数。1 以上。</param>
+        /// <summary>敵のタグを 1 枚拾って確定させたときに入る点。1 以上。</summary>
+        public int PointsPerConfirm { get; }
+
+        /// <summary>落ちたタグを拾える範囲の半径 (m)。0 より大きい有限値。</summary>
+        public float TagPickupRadius { get; }
+
+        /// <param name="scoreLimit">勝利に必要な得点。1 以上。</param>
         /// <param name="timeLimitSeconds">制限時間 (秒)。0 より大きい有限値。</param>
         /// <param name="respawnSeconds">倒れてから戻るまでの秒数。0 以上の有限値。</param>
         /// <param name="tagLifetimeSeconds">タグが消えるまでの秒数。0 より大きい有限値。</param>
-        public KillConfirmedSpec(int scoreLimit, float timeLimitSeconds, float respawnSeconds, float tagLifetimeSeconds)
+        /// <param name="pointsPerConfirm">確定 1 回で入る点。1 以上。</param>
+        /// <param name="tagPickupRadius">タグを拾える範囲の半径 (m)。0 より大きい有限値。</param>
+        public KillConfirmedSpec(
+            int scoreLimit,
+            float timeLimitSeconds,
+            float respawnSeconds,
+            float tagLifetimeSeconds,
+            int pointsPerConfirm = DefaultPointsPerConfirm,
+            float tagPickupRadius = DefaultTagPickupRadius)
         {
             if (scoreLimit < 1)
             {
@@ -45,10 +65,22 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(tagLifetimeSeconds), tagLifetimeSeconds, "tagLifetimeSeconds must be positive and finite");
             }
 
+            if (pointsPerConfirm < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pointsPerConfirm), pointsPerConfirm, "pointsPerConfirm must be at least 1");
+            }
+
+            if (!(tagPickupRadius > 0f) || float.IsInfinity(tagPickupRadius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(tagPickupRadius), tagPickupRadius, "tagPickupRadius must be positive and finite");
+            }
+
             ScoreLimit = scoreLimit;
             TimeLimitSeconds = timeLimitSeconds;
             RespawnSeconds = respawnSeconds;
             TagLifetimeSeconds = tagLifetimeSeconds;
+            PointsPerConfirm = pointsPerConfirm;
+            TagPickupRadius = tagPickupRadius;
         }
     }
 }

@@ -303,6 +303,15 @@
     color: rgb(255, 255, 255);
 }
 
+/* パーティと参加コードで入る画面の差し込み口。中身の見た目は Party.uss / CustomMatch.uss。 */
+.menu__party-slot,
+.menu__custom-match-slot {
+    position: absolute;
+    left: 760px;
+    top: 160px;
+    right: 160px;
+}
+
 .menu__settings-slot {
     position: absolute;
     left: 760px;

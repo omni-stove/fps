@@ -9,6 +9,10 @@
             <ui:Button name="menu-campaign" text="#menu.campaign" class="menu__button" />
             <!-- -register-lobby で載った専用サーバーから、版が同じで満員でないものを選んでつなぐ (起動引数でサーバーを決めていればそこへ)。 -->
             <ui:Button name="menu-quick-match" text="#menu.quickMatch" class="menu__button" />
+            <!-- パーティとコードで入るは、GameSignals.PartyControl / JoinByCode が出ているとき (EOS のあるビルド) だけ MainMenuScreen が出す。 -->
+            <ui:Button name="menu-party" text="#menu.party" class="menu__button" style="display: none;" />
+            <!-- 試合を立てた人から聞いた参加コードで、非公開の試合に入る。 -->
+            <ui:Button name="menu-join-by-code" text="#menu.joinByCode" class="menu__button" style="display: none;" />
             <ui:Button name="menu-loadout" text="#menu.loadout" class="menu__button" />
             <!-- 成長の記録 (レベル・XP・戦績・次のアンロック) を出す。 -->
             <ui:Button name="menu-profile" text="#menu.profile" class="menu__button" />
@@ -28,5 +32,9 @@
         <ui:VisualElement name="menu-campaign-slot" class="menu__campaign-slot" style="display: none;" />
         <!-- プロフィールの差し込み口。MainMenuScreen が ProfilePanel で中身を作る。 -->
         <ui:VisualElement name="menu-profile-slot" class="menu__profile-slot" style="display: none;" />
+        <!-- パーティの差し込み口。MainMenuScreen が PartyPanel で中身を作る (見た目は Party.uss)。 -->
+        <ui:VisualElement name="menu-party-slot" class="menu__party-slot" style="display: none;" />
+        <!-- 参加コードで入る画面の差し込み口。MainMenuScreen が CustomMatchPanel で中身を作る (見た目は CustomMatch.uss)。 -->
+        <ui:VisualElement name="menu-custom-match-slot" class="menu__custom-match-slot" style="display: none;" />
     </ui:VisualElement>
 </ui:UXML>

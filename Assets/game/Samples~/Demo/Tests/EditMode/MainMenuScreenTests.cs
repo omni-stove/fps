@@ -45,6 +45,10 @@ namespace Shooter.Tests.EditMode
             CampaignLaunchSelection.Clear();
             ProgressionBootstrap.Uninstall();
             CombatEvents.ClearSubscribers();
+
+            // オフラインだけのビルドと同じく、パーティと参加コードの口が無い状態から始める
+            GameSignals.PartyControl.Clear();
+            GameSignals.JoinByCode.Clear();
         }
 
         [TearDown]
@@ -60,6 +64,7 @@ namespace Shooter.Tests.EditMode
             MenuNavigator.TakeReturnReason();
             CampaignLaunchSelection.Clear();
             UnityEngine.Object.DestroyImmediate(_owner);
+            GameSignals.ResetAll();
         }
 
         [Test]
@@ -106,11 +111,13 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void EveryDestinationHasAButton()
         {
-            // 設定・ロードアウト・プロフィールは遷移ではないので行き先の一覧には無く、ボタンだけがある
-            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 3));
+            // 設定・ロードアウト・プロフィール・パーティ・コードで入るは遷移ではないので行き先の一覧には無く、ボタンだけがある
+            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 5));
             Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.SettingsButtonName));
             Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.LoadoutButtonName));
             Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.ProfileButtonName));
+            Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.PartyButtonName));
+            Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.JoinByCodeButtonName));
             Assert.That(MainMenuScreen.ButtonNames, Is.Unique);
         }
 
@@ -132,12 +139,177 @@ namespace Shooter.Tests.EditMode
             _screen.MoveFocus(1);
             Assert.That(_screen.FocusIndex, Is.EqualTo(0), "the first move from nothing selects the top button");
             _screen.MoveFocus(1);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(1));
             _screen.MoveFocus(1);
-            Assert.That(_screen.FocusIndex, Is.EqualTo(2));
+            Assert.That(_screen.FocusIndex, Is.EqualTo(4), "the hidden party and join-by-code buttons are skipped on the way to the loadout");
+            Assert.That(MainMenuScreen.ButtonNames[4], Is.EqualTo(MainMenuScreen.LoadoutButtonName));
             _screen.MoveFocus(-1);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(1), "and on the way back to quick match");
             _screen.MoveFocus(-1);
             _screen.MoveFocus(-1);
             Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.Count - 1), "moving up from the top wraps to quit");
+        }
+
+        [Test]
+        public void AnOfflineOnlyBuildHidesThePartyAndJoinByCodeButtons()
+        {
+            _screen.Bind(_root);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.PartyButtonName), Is.False);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.JoinByCodeButtonName), Is.False);
+            Assert.That(_root.Q<Button>(MainMenuScreen.PartyButtonName).style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_root.Q<Button>(MainMenuScreen.JoinByCodeButtonName).style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.QuickMatchButtonName), Is.True);
+
+            _screen.OpenParty();
+            _screen.OpenCustomMatch();
+
+            Assert.That(_screen.IsPartyOpen, Is.False, "nothing opens without the party service");
+            Assert.That(_screen.IsCustomMatchOpen, Is.False, "nothing opens without the join-by-code service");
+            Assert.That(_screen.PartySlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.CustomMatchSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+        }
+
+        [Test]
+        public void TheOnlineServicesShowTheButtonsNextToQuickMatchInFocusOrder()
+        {
+            GameSignals.PartyControl.Publish(new FakePartyControl());
+            GameSignals.JoinByCode.Publish(new FakeJoinByCode());
+            _screen.Bind(_root);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.PartyButtonName), Is.True);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.JoinByCodeButtonName), Is.True);
+
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.PartyButtonName));
+            _screen.MoveFocus(1);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.JoinByCodeButtonName));
+            _screen.MoveFocus(1);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.LoadoutButtonName));
+        }
+
+        [Test]
+        public void TheButtonsFollowTheServicesWhileTheMenuIsShown()
+        {
+            _screen.Bind(_root);
+            var party = new FakePartyControl();
+            var joinByCode = new FakeJoinByCode();
+
+            GameSignals.PartyControl.Publish(party);
+            GameSignals.JoinByCode.Publish(joinByCode);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.PartyButtonName), Is.True, "a service published after the menu opened shows its button");
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.JoinByCodeButtonName), Is.True);
+
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.PartyButtonName));
+
+            GameSignals.PartyControl.ClearIfCurrent(party);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.PartyButtonName), Is.False);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.JoinByCodeButtonName), Is.True);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.JoinByCodeButtonName),
+                "the focus leaves the hidden button for the next shown one");
+
+            GameSignals.JoinByCode.ClearIfCurrent(joinByCode);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.JoinByCodeButtonName), Is.False);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.LoadoutButtonName));
+        }
+
+        [Test]
+        public void PartyOpensInItsSlotAndBackReturnsToItsButton()
+        {
+            var party = new FakePartyControl();
+            GameSignals.PartyControl.Publish(party);
+            _screen.Bind(_root);
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Party\] asked to create the party"));
+
+            _screen.OpenParty();
+
+            Assert.That(_screen.IsPartyOpen, Is.True);
+            Assert.That(_screen.PartyPanel.Container, Is.SameAs(_screen.PartySlot));
+            Assert.That(_screen.PartySlot.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(_screen.PartyPanel.Control, Is.SameAs(party));
+            Assert.That(_screen.Buttons.All(b => !b.enabledSelf), Is.True);
+            Assert.That(_screen.Choose(MenuDestination.Range), Is.False, "the menu does not move while the party is open");
+            _screen.OpenCustomMatch();
+            Assert.That(_screen.IsCustomMatchOpen, Is.False, "only one overlay at a time");
+            _screen.MoveFocus(1);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(-1), "the gamepad moves inside the party, not the menu");
+
+            Assert.That(_screen.PartyPanel.Create(), Is.True);
+            Assert.That(party.Calls, Is.EqualTo(new[] { "Create" }));
+
+            _screen.PartyPanel.Cancel();
+
+            Assert.That(_screen.IsPartyOpen, Is.False);
+            Assert.That(_screen.PartySlot.childCount, Is.Zero);
+            Assert.That(_screen.PartySlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.PartyButtonName)));
+            Assert.That(_host.Loaded, Is.Empty);
+        }
+
+        [Test]
+        public void JoinByCodeOpensInItsSlotAndBackReturnsToItsButton()
+        {
+            GameSignals.JoinByCode.Publish(new FakeJoinByCode());
+            _screen.Bind(_root);
+
+            _screen.OpenCustomMatch();
+
+            Assert.That(_screen.IsCustomMatchOpen, Is.True);
+            Assert.That(_screen.CustomMatchPanel.Container, Is.SameAs(_screen.CustomMatchSlot));
+            Assert.That(_screen.CustomMatchSlot.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(_screen.Buttons.All(b => !b.enabledSelf), Is.True);
+            Assert.That(_screen.Choose(MenuDestination.Range), Is.False, "the menu does not move while join by code is open");
+
+            _screen.CustomMatchPanel.Cancel();
+
+            Assert.That(_screen.IsCustomMatchOpen, Is.False);
+            Assert.That(_screen.CustomMatchSlot.childCount, Is.Zero);
+            Assert.That(_screen.CustomMatchSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.JoinByCodeButtonName)));
+        }
+
+        [Test]
+        public void AJoinedMatchKeepsTheMenuFromGoingElsewhereUntilTheSceneChanges()
+        {
+            var joinByCode = new FakeJoinByCode();
+            GameSignals.JoinByCode.Publish(joinByCode);
+            _screen.Bind(_root);
+            _screen.OpenCustomMatch();
+            _screen.CustomMatchPanel.CodeField.value = "ab7-k2x";
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[CustomMatch\] looking for a match with join code AB7-K2X"));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[CustomMatch\] join code AB7-K2X: Joined"));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Menu\] joined a match by code"));
+
+            Assert.That(_screen.CustomMatchPanel.Join(), Is.True);
+            joinByCode.Pending(JoinCodeOutcome.Joined);
+
+            Assert.That(joinByCode.Codes, Is.EqualTo(new[] { "AB7-K2X" }));
+            Assert.That(_screen.CustomMatchPanel.HasJoined, Is.True);
+
+            _screen.CustomMatchPanel.Cancel();
+
+            Assert.That(_screen.IsCustomMatchOpen, Is.True, "back does nothing while the joined match loads");
+            Assert.That(_screen.Buttons.All(b => !b.enabledSelf), Is.True);
+
+            _screen.CloseCustomMatch();
+
+            Assert.That(_screen.IsCustomMatchOpen, Is.False);
+            Assert.That(_screen.Buttons.All(b => !b.enabledSelf), Is.True, "no second destination while the joined match loads");
+            Assert.That(_screen.Choose(MenuDestination.Range), Is.False);
+            _screen.OpenParty();
+            Assert.That(_screen.IsPartyOpen, Is.False);
+            Assert.That(_host.Loaded, Is.Empty);
         }
 
         [Test]
@@ -698,6 +870,47 @@ namespace Shooter.Tests.EditMode
 
             public void Quit()
             {
+            }
+        }
+
+        private sealed class FakePartyControl : IPartyControl
+        {
+            public readonly System.Collections.Generic.List<string> Calls = new System.Collections.Generic.List<string>();
+
+            public event Action<PartyStatus> StatusChanged
+            {
+                add { }
+                remove { }
+            }
+
+            public PartyStatus Status => default;
+
+            public void Create()
+            {
+                Calls.Add("Create");
+            }
+
+            public void Join(string inviteCode)
+            {
+                Calls.Add("Join:" + inviteCode);
+            }
+
+            public void Leave()
+            {
+                Calls.Add("Leave");
+            }
+        }
+
+        private sealed class FakeJoinByCode : IJoinByCode
+        {
+            public readonly System.Collections.Generic.List<string> Codes = new System.Collections.Generic.List<string>();
+
+            public Action<JoinCodeOutcome> Pending { get; private set; }
+
+            public void Join(string code, Action<JoinCodeOutcome> done)
+            {
+                Codes.Add(code);
+                Pending = done;
             }
         }
     }

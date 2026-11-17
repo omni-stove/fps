@@ -23,7 +23,7 @@ namespace Shooter.Runtime
     /// 有効なアクションをすべて止め、閉じたら自分が止めたものだけを戻す。時間には触らない。Pause も止めるので、入力中の Esc でポーズ画面は開かない。
     /// </para>
     /// <para>
-    /// <see cref="Hud.AddViews"/> はまだ付けないので、使うときは HUD の GameObject に手で足し、<see cref="Sender"/> を渡す。
+    /// <see cref="Hud.AddViews"/> が付ける。送れるようにするには、送る側が <see cref="Sender"/> を渡す。
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]

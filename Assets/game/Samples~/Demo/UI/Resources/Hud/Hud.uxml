@@ -3,6 +3,8 @@
     <!-- text の "#キー" は文字列表 (Demo サンプルの Localization/Resources/Strings と Resources/Localization/(言語)/) のキーで、Hud が Shooter.Runtime.LocalizedTexts で今の言語の文字にする。 -->
     <Style src="Hud.uss" />
     <Style src="Minimap.uss" />
+    <Style src="Chat.uss" />
+    <Style src="MapVote.uss" />
     <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
         <!-- 被弾と低体力で画面端を赤くする画像。ほかの表示の後ろに描くよう最初に置く。DamageVignetteView が出すときだけ画像と不透明度を入れて出す。 -->
         <ui:VisualElement name="damage-vignette" class="damage-vignette" picking-mode="Ignore" style="display: none;" />
@@ -94,13 +96,13 @@
         <ui:VisualElement name="minimap" class="minimap" picking-mode="Ignore" style="display: none;" />
         <!-- 上の帯の方位とピン・目標の向き。CompassView が GameSignals.Minimap に値があるときだけ、文字・目盛り・印を足して出す。 -->
         <ui:VisualElement name="compass" class="compass" picking-mode="Ignore" style="display: none;" />
-        <!-- 画面右上のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
+        <!-- 画面右上のミニマップの下のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
         <!-- 画面下の音の合図の字幕 ([銃声 左後ろ] など)。設定で字幕を On にしているとき、SubtitleView が行 (subtitles__line) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="subtitles" class="subtitles" picking-mode="Ignore" style="display: none;" />
-        <!-- 画面左下の体力の上のテキストチャット。ChatView を付けたときだけ、最近の行 (chat__row) と入力欄を入れ、行があるか入力中だけ出す。 -->
+        <!-- 画面左下の体力と能力の枠の上のテキストチャット。ChatView が最近の行 (chat__row) と入力欄を入れ、行があるか入力中だけ出す。 -->
         <ui:VisualElement name="chat" class="chat" picking-mode="Ignore" style="display: none;" />
-        <!-- 画面右上の端の回線の表示 (Ping・ロス・tick)。オンラインで F3 を押すと Shooter.Net の NetStatsView が出す。キルログの上の余白に収める。 -->
+        <!-- 画面右上の端の回線の表示 (Ping・ロス・tick)。オンラインで F3 を押すと Shooter.Net の NetStatsView が出す。ミニマップの上の余白に収める。 -->
         <ui:Label name="net-stats" text="" class="net-stats" picking-mode="Ignore" style="display: none;" />
         <!-- スコアボード。Scoreboard を押している間だけ ScoreboardView が行を作って出す。 -->
         <ui:VisualElement name="scoreboard" class="scoreboard" picking-mode="Ignore" style="display: none;" />
@@ -124,9 +126,10 @@
                 <ui:VisualElement name="kill-cam-progress" class="kill-cam__progress-fill" picking-mode="Ignore" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <!-- ネット対戦で味方を観戦している間の、見ている味方・前と次へ替える操作・復活までの秒数。SpectateView を付けたときだけ、GameSignals.Spectate に値がある間に行 (spectate__row) を入れて出す。 -->
+        <!-- ネット対戦で味方を観戦している間の、見ている味方・前と次へ替える操作・復活までの秒数。SpectateView が、GameSignals.Spectate に値がある間だけ行 (spectate__row) を入れて出す。 -->
         <ui:VisualElement name="spectate" class="spectate" picking-mode="Ignore" style="display: none;" />
-        <!-- ボイスチャットで、自分が声を送っている印と話している人の名前。VoiceIndicatorView を付けたときだけ、出す行 (voice__row) がある間に出す。 -->
+        <!-- ボイスチャットで、自分が声を送っている印と話している人の名前。VoiceIndicatorView が、出す行 (voice__row) がある間だけ出す。 -->
+        <!-- 試合の後のマップの投票の枠 (map-vote) は、MapVoteView が試合結果 (hud-result-restart) のすぐ後ろにコードで足す。 -->
         <ui:VisualElement name="voice" class="voice" picking-mode="Ignore" style="display: none;" />
         <!-- フラッシュの目くらまし。HUD の文字ごと白く覆うよう、ポーズ画面の前のいちばん上に置く。FlashOverlay がかかっている間だけ色と不透明度を入れて出す。 -->
         <ui:VisualElement name="flash-overlay" class="flash-overlay" picking-mode="Ignore" style="display: none;" />

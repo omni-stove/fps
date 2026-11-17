@@ -22,6 +22,8 @@ namespace Shooter.Core.Tests
             Assert.That(visibility.HitMarker, Is.True);
             Assert.That(visibility.DamageDirection, Is.True);
             Assert.That(visibility.KillFeed, Is.True);
+            Assert.That(visibility.Minimap, Is.True);
+            Assert.That(visibility.Compass, Is.True);
         }
 
         [Test]
@@ -50,6 +52,17 @@ namespace Shooter.Core.Tests
             Assert.That(visibility.HitMarker, Is.True);
             Assert.That(visibility.DamageDirection, Is.True);
             Assert.That(visibility.KillFeed, Is.True);
+        }
+
+        [TestCase(HudDensity.Full, true)]
+        [TestCase(HudDensity.Minimal, false)]
+        [TestCase(HudDensity.Hardcore, false)]
+        public void TheMinimapAndTheCompassAreShownOnlyWithEverything(HudDensity density, bool shown)
+        {
+            var visibility = HudVisibility.For(density);
+
+            Assert.That(visibility.Minimap, Is.EqualTo(shown));
+            Assert.That(visibility.Compass, Is.EqualTo(shown));
         }
 
         [Test]

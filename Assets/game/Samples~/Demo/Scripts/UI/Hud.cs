@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace Shooter.Runtime
 {
     /// <summary>
-    /// HUD (左下に体力、右下に弾倉/予備、上中央に残り時間とその下に一時的な案内、中央に照準)。同じ GameObject の <see cref="UIDocument"/> に出す。
+    /// HUD (左下に体力、右下に弾倉/予備、上中央に残り時間とその下に一時的な案内、中央に照準、右上にミニマップ、上端にコンパス)。同じ GameObject の <see cref="UIDocument"/> に出す。
     /// 出す値は <see cref="GameSignals.HudModel"/> に出ている <see cref="HudModel"/> (オフラインは GameBootstrap、ネット対戦は Shooter.NetV2 の NetV2Hud が出す) で、
     /// 出ていない間は自分の <see cref="Model"/> (仮の表示) を出す (<see cref="ShownModel"/>)。<see cref="HudView"/> が Label に写す。
     /// 照準を読むプレイヤーの部品 (<see cref="WeaponController"/>・<see cref="AimDownSights"/>・<see cref="PlayerController"/>) は <see cref="GameSignals.LocalPlayer"/> から受け、
@@ -169,8 +169,9 @@ namespace Shooter.Runtime
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageNumberView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="ScopeOverlayView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
         /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>・
-        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="StreakView"/>・<see cref="DominationView"/>・<see cref="ControlPointsView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
-        /// hudObject に付ける。グレネード・能力の枠・ストリーク・拠点制圧は、出すものを渡されるまで隠れている。
+        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="StreakView"/>・<see cref="DominationView"/>・<see cref="ControlPointsView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>・
+        /// <see cref="MinimapView"/>・<see cref="CompassView"/>・<see cref="ChatView"/>・<see cref="VoiceIndicatorView"/>・<see cref="SpectateView"/>・<see cref="MapVoteView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
+        /// hudObject に付ける。グレネード・能力の枠・ストリーク・拠点制圧・ミニマップ・コンパス・チャット・ボイス・観戦・投票は、出すものを渡されるまで隠れている。
         /// オフラインとネット対戦で同じものを付ける。
         /// 既に付いているものは付け直さない。
         /// </summary>
@@ -204,6 +205,12 @@ namespace Shooter.Runtime
             AddIfMissing<ControlPointsView>(hudObject);
             AddIfMissing<PingMarkersView>(hudObject);
             AddIfMissing<SquadOrderMarkerView>(hudObject);
+            AddIfMissing<MinimapView>(hudObject);
+            AddIfMissing<CompassView>(hudObject);
+            AddIfMissing<ChatView>(hudObject);
+            AddIfMissing<VoiceIndicatorView>(hudObject);
+            AddIfMissing<SpectateView>(hudObject);
+            AddIfMissing<MapVoteView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
             // PauseMenu の後に付けると、木を作り直したときも PauseMenu が「設定」のボタンを持ってから開く処理を渡せる。
             AddIfMissing<PauseSettingsView>(hudObject);
@@ -267,6 +274,24 @@ namespace Shooter.Runtime
         public PingMarkersView PingMarkers => GetComponent<PingMarkersView>();
 
         public SquadOrderMarkerView SquadOrder => GetComponent<SquadOrderMarkerView>();
+
+        /// <summary>同じ GameObject の右上のミニマップ。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public MinimapView Minimap => GetComponent<MinimapView>();
+
+        /// <summary>同じ GameObject の上のコンパス。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public CompassView Compass => GetComponent<CompassView>();
+
+        /// <summary>同じ GameObject のテキストチャット。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public ChatView Chat => GetComponent<ChatView>();
+
+        /// <summary>同じ GameObject のボイスチャットの印。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public VoiceIndicatorView VoiceIndicator => GetComponent<VoiceIndicatorView>();
+
+        /// <summary>同じ GameObject の観戦の欄。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public SpectateView Spectate => GetComponent<SpectateView>();
+
+        /// <summary>同じ GameObject の試合の後のマップの投票。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public MapVoteView MapVote => GetComponent<MapVoteView>();
 
         /// <summary>同じ GameObject のポーズメニュー。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();
@@ -396,7 +421,7 @@ namespace Shooter.Runtime
 
         /// <summary>
         /// 出す項目を visibility に替える。弾数の書式 (<see cref="HudModel.SetReserveAmmoShown"/>)、Label の欄 (<see cref="HudView"/>)、
-        /// 部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>) に効かせる。
+        /// 部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>・<see cref="MinimapView"/>・<see cref="CompassView"/>) に効かせる。
         /// View を作り直しても引き継ぐ。
         /// </summary>
         public void ApplyVisibility(HudVisibility visibility)
@@ -948,6 +973,18 @@ namespace Shooter.Runtime
             if (abilities != null)
             {
                 abilities.SetAllowed(_visibility.Ammo);
+            }
+
+            var minimap = Minimap;
+            if (minimap != null)
+            {
+                minimap.SetAllowed(_visibility.Minimap);
+            }
+
+            var compass = Compass;
+            if (compass != null)
+            {
+                compass.SetAllowed(_visibility.Compass);
             }
         }
 

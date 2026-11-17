@@ -13,7 +13,7 @@ namespace Shooter.Runtime
     /// 印は種類ごとに形を変え (味方は向きの三角・敵はひし形・ピンは丸・目標は四角)、色は <see cref="TeamColors"/> の組と
     /// <see cref="GameSignals.PaletteViewer"/> の視点で塗る (<see cref="ColorOf"/>)。
     /// 要素を持っている間は <see cref="GameSignals.Minimap"/>・<see cref="GameSignals.HudDensity"/>・<see cref="GameSignals.PaletteViewer"/> と設定の色の組を購読し、
-    /// HUD の量が <see cref="HudDensity.Full"/> でなければ隠す (<see cref="AllowedAt"/>)。
+    /// HUD の量でミニマップを出さない (<see cref="HudVisibility.Minimap"/>) なら隠す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MinimapView : HudElementView
@@ -85,18 +85,6 @@ namespace Shooter.Runtime
                 _rotatesWithHeading = value;
                 Redraw();
             }
-        }
-
-        /// <summary>HUD の量 density でミニマップとコンパスを出すか。すべて出すときだけ出す。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">density が定義済みの値でない。</exception>
-        public static bool AllowedAt(HudDensity density)
-        {
-            if (!Enum.IsDefined(typeof(HudDensity), density))
-            {
-                throw new ArgumentOutOfRangeException(nameof(density), density, "unknown HUD density");
-            }
-
-            return density == HudDensity.Full;
         }
 
         /// <summary>
@@ -402,7 +390,7 @@ namespace Shooter.Runtime
             // 値が消されたときは今のままにする (Hud と同じく、戻す先が無いため)。
             if (density.HasValue)
             {
-                SetAllowed(AllowedAt(density.Value));
+                SetAllowed(HudVisibility.For(density.Value).Minimap);
             }
         }
 

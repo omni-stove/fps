@@ -35,12 +35,11 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheHudDoesNotCarryTheViewUntilItIsAddedAndThenHidesItWithoutAValue()
+        public void TheHudCarriesTheViewAndHidesItWithoutAValue()
         {
-            _hud = Hud.Create("SpectateTests.Hud");
-            Assert.That(_hud.GetComponent<SpectateView>(), Is.Null);
-
             var view = CreateView();
+
+            Assert.That(_hud.GetComponents<SpectateView>(), Has.Length.EqualTo(1));
 
             Assert.That(view.IsShown, Is.False);
             Assert.That(view.Lines, Is.Empty);
@@ -171,13 +170,9 @@ namespace Shooter.Tests.EditMode
 
         private SpectateView CreateView()
         {
-            if (_hud == null)
-            {
-                _hud = Hud.Create("SpectateTests.Hud");
-            }
-
-            var view = _hud.gameObject.AddComponent<SpectateView>();
-            Assert.That(_hud.RebuildView(), Is.True);
+            _hud = Hud.Create("SpectateTests.Hud");
+            var view = _hud.Spectate;
+            Assert.That(view, Is.Not.Null, "Hud.AddViews attaches the spectate view");
             Assert.That(view.Element, Is.Not.Null);
             return view;
         }

@@ -11,7 +11,7 @@ namespace Shooter.Runtime
     /// Hud.uxml の <see cref="UxmlName"/> を使い、見た目は Minimap.uss で決める。
     /// 帯の中央が自分の向きで、左右の端までで <see cref="SpanDegrees"/> を見せる (<see cref="BandPosition"/>)。
     /// 方位の文字は Localization の minimap.json (<see cref="CardinalKey"/>) から引き、言語が変わったら書き直す。
-    /// HUD の量が <see cref="HudDensity.Full"/> でなければミニマップと一緒に隠す (<see cref="MinimapView.AllowedAt"/>)。
+    /// HUD の量でコンパスを出さない (<see cref="HudVisibility.Compass"/>) なら隠す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class CompassView : HudElementView
@@ -170,11 +170,7 @@ namespace Shooter.Runtime
             _markerElements.Clear();
             CreateBand(element);
             Subscribe();
-            var density = GameSignals.HudDensity.Value;
-            if (density.HasValue)
-            {
-                SetAllowed(MinimapView.AllowedAt(density.Value));
-            }
+            ApplyDensity(GameSignals.HudDensity.Value);
 
             var status = GameSignals.Minimap.Value;
             if (status.HasValue || _showsSignal)
@@ -407,10 +403,15 @@ namespace Shooter.Runtime
                 return;
             }
 
+            ApplyDensity(density);
+        }
+
+        private void ApplyDensity(HudDensity? density)
+        {
             // 値が消されたときは今のままにする (Hud と同じく、戻す先が無いため)。
             if (density.HasValue)
             {
-                SetAllowed(MinimapView.AllowedAt(density.Value));
+                SetAllowed(HudVisibility.For(density.Value).Compass);
             }
         }
 

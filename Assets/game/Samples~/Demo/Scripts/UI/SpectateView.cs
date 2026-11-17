@@ -10,7 +10,7 @@ namespace Shooter.Runtime
     /// Hud.uxml の <see cref="UxmlName"/> に行を入れ、見た目は Hud.uss の spectate のクラスで決める。
     /// 要素を持っている間は <see cref="GameSignals.Spectate"/>・<see cref="GameSignals.Participants"/>・<see cref="GameSignals.HudModel"/> (その案内) を購読し、
     /// <see cref="GameSignals.Spectate"/> に値が無い間は隠す。名前は参加者の表 (<see cref="IParticipants"/>) から、秒数は HUD のリスポーンの案内 (<see cref="HudNotice"/>) から引く。
-    /// <see cref="Hud.AddViews"/> は付けないので、使うときは HUD の GameObject に付ける。木を持つ HUD に後から付けたときは、Start でその木を受ける。
+    /// <see cref="Hud.AddViews"/> が付ける。木を持つ HUD に後から手で付けたときは、Start でその木を受ける。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class SpectateView : HudElementView

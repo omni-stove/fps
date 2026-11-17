@@ -9,7 +9,7 @@ namespace Shooter.Runtime
     /// ボイスチャットで、自分が声を送っている印と、話している人の名前を 1 行ずつ出す (<see cref="VoiceText.Lines"/>)。
     /// Hud.uxml の <see cref="UxmlName"/> に行を入れ、見た目は Hud.uss の voice のクラスで決める。
     /// 要素を持っている間は <see cref="GameSignals.Voice"/> と <see cref="GameSignals.Participants"/> を購読し、出す行が無い間は隠す。
-    /// <see cref="Hud.AddViews"/> は付けないので、使うときは HUD の GameObject に付ける。木を持つ HUD に後から付けたときは、Start でその木を受ける。
+    /// <see cref="Hud.AddViews"/> が付ける。木を持つ HUD に後から手で付けたときは、Start でその木を受ける。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class VoiceIndicatorView : HudElementView

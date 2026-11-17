@@ -1,5 +1,5 @@
 /*
- * マップの投票。Shooter.Runtime.MapVoteView が HUD の根に作る枠に読み込むので、Hud.uss には書かない。
+ * マップの投票。Hud.uxml と、Shooter.Runtime.MapVoteView が HUD の根に作る枠が読み込む。HUD を組み替えたゲームでも枠に付いてくるよう、Hud.uss には書かない。
  * 試合の結果 (Hud.uss の .hud__result と .hud__result-restart、上から 30% の所) のすぐ下に、候補を横に並べる。
  */
 

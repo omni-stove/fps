@@ -6,8 +6,8 @@ namespace Shooter.Core
     /// HUD の各項目を出すか。<see cref="For"/> で <see cref="HudDensity"/> から決める。
     /// <list type="bullet">
     /// <item><see cref="HudDensity.Full"/>: すべて出す。</item>
-    /// <item><see cref="HudDensity.Minimal"/>: 弾数は弾倉の数だけにし (予備を出さない)、照準を <see cref="SmallCrosshairScale"/> に縮める。ほかは Full と同じ。</item>
-    /// <item><see cref="HudDensity.Hardcore"/>: 体力・弾数・武器名・照準・ヒットマーカーを消す。残り時間・点数・被弾方向・キルログは残す。</item>
+    /// <item><see cref="HudDensity.Minimal"/>: 弾数は弾倉の数だけにし (予備を出さない)、照準を <see cref="SmallCrosshairScale"/> に縮め、ミニマップとコンパスを消す。ほかは Full と同じ。</item>
+    /// <item><see cref="HudDensity.Hardcore"/>: 体力・弾数・武器名・照準・ヒットマーカー・ミニマップ・コンパスを消す。残り時間・点数・被弾方向・キルログは残す。</item>
     /// </list>
     /// 一時的な案内 (リスポーン・セーブ)・試合結果・リロードの進み・スコアボードは、遊ぶのに要るのでどの量でも出す (ここでは扱わない)。
     /// </summary>
@@ -32,9 +32,11 @@ namespace Shooter.Core
             crosshairScale: FullCrosshairScale,
             hitMarker: true,
             damageDirection: true,
-            killFeed: true);
+            killFeed: true,
+            minimap: true,
+            compass: true);
 
-        /// <summary>弾数を弾倉の数だけにし、照準を小さくする。</summary>
+        /// <summary>弾数を弾倉の数だけにし、照準を小さくし、ミニマップとコンパスを消す。</summary>
         public static readonly HudVisibility Minimal = new HudVisibility(
             HudDensity.Minimal,
             health: true,
@@ -47,9 +49,11 @@ namespace Shooter.Core
             crosshairScale: SmallCrosshairScale,
             hitMarker: true,
             damageDirection: true,
-            killFeed: true);
+            killFeed: true,
+            minimap: false,
+            compass: false);
 
-        /// <summary>体力・弾数・武器名・照準・ヒットマーカーを消し、残り時間・点数・被弾方向・キルログだけ残す。</summary>
+        /// <summary>体力・弾数・武器名・照準・ヒットマーカー・ミニマップ・コンパスを消し、残り時間・点数・被弾方向・キルログだけ残す。</summary>
         public static readonly HudVisibility Hardcore = new HudVisibility(
             HudDensity.Hardcore,
             health: false,
@@ -62,7 +66,9 @@ namespace Shooter.Core
             crosshairScale: FullCrosshairScale,
             hitMarker: false,
             damageDirection: true,
-            killFeed: true);
+            killFeed: true,
+            minimap: false,
+            compass: false);
 
         private HudVisibility(
             HudDensity density,
@@ -76,7 +82,9 @@ namespace Shooter.Core
             float crosshairScale,
             bool hitMarker,
             bool damageDirection,
-            bool killFeed)
+            bool killFeed,
+            bool minimap,
+            bool compass)
         {
             Density = density;
             Health = health;
@@ -90,6 +98,8 @@ namespace Shooter.Core
             HitMarker = hitMarker;
             DamageDirection = damageDirection;
             KillFeed = killFeed;
+            Minimap = minimap;
+            Compass = compass;
         }
 
         /// <summary>この組を決めた HUD の量。</summary>
@@ -127,6 +137,12 @@ namespace Shooter.Core
 
         /// <summary>キルログを出すか。</summary>
         public bool KillFeed { get; }
+
+        /// <summary>右上の地図 (味方・見つけた敵・ピン・目標の印) を出すか。</summary>
+        public bool Minimap { get; }
+
+        /// <summary>上の帯の方位とピン・目標の向きを出すか。</summary>
+        public bool Compass { get; }
 
         /// <summary>density の HUD で各項目を出すか。</summary>
         /// <exception cref="ArgumentOutOfRangeException">density が定義済みの値でない。</exception>

@@ -94,7 +94,7 @@
     margin-left: 24px;
 }
 
-/* 画面右上の端の回線の表示。キルログ (top: 24px) に重ならないよう、その上の余白に 1 行で収める。色は Ping の段階で NetStatsView が替える。 */
+/* 画面右上の端の回線の表示。ミニマップ (Minimap.uss の .minimap、top: 40px) に重ならないよう、その上の余白に 1 行で収める。色は Ping の段階で NetStatsView が替える。 */
 .net-stats {
     position: absolute;
     top: 2px;
@@ -117,10 +117,10 @@
     color: rgb(255, 80, 70);
 }
 
-/* 画面右上のキルログ。行は古い順に上から並び、右端をそろえる。名前の色は KillFeedView がチームの色で塗る。 */
+/* 画面右上、ミニマップ (Minimap.uss の .minimap、top 40px・高さ 220px) の下のキルログ。行は古い順に上から並び、右端をそろえる。名前の色は KillFeedView がチームの色で塗る。 */
 .kill-feed {
     position: absolute;
-    top: 24px;
+    top: 276px;
     right: 32px;
     flex-direction: column;
     align-items: flex-end;
@@ -1006,12 +1006,12 @@
     background-color: rgb(220, 40, 40);
 }
 
-/* 観戦の欄。下中央に、見ている味方の行を先頭にして積む。SpectateView が行を入れる。 */
+/* 観戦の欄。下中央の字幕 (.subtitles、bottom 130px から上へ積む) のさらに上に、見ている味方の行を先頭にして積む。SpectateView が行を入れる。 */
 .spectate {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 160px;
+    bottom: 300px;
     flex-direction: column;
     align-items: center;
 }

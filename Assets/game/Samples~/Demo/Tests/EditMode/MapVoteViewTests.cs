@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 namespace Shooter.Tests.EditMode
 {
     /// <summary>
-    /// 手で HUD に足したマップの投票 (<see cref="MapVoteView"/>) が <see cref="GameSignals.MapVote"/> の候補・票数・残り秒数を出し、
+    /// HUD に付くマップの投票 (<see cref="MapVoteView"/>) が <see cref="GameSignals.MapVote"/> の候補・票数・残り秒数を出し、
     /// 選ぶと <see cref="MapVoteView.Voted"/> を呼ぶこと。文は日本語の表 (Resources/Localization/ja/match-flow.json) から引く。
     /// </summary>
     public sealed class MapVoteViewTests
@@ -42,7 +42,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheViewAddedByHandIsHiddenUntilAVoteIsPublished()
+        public void TheViewIsHiddenUntilAVoteIsPublished()
         {
             var view = CreateView();
 
@@ -250,8 +250,9 @@ namespace Shooter.Tests.EditMode
         private MapVoteView CreateView()
         {
             _hud = Hud.Create("MapVoteTests.Hud");
-            var view = _hud.gameObject.AddComponent<MapVoteView>();
-            _hud.RebuildView();
+            var view = _hud.MapVote;
+            Assert.That(view, Is.Not.Null, "Hud.AddViews attaches the map vote");
+            Assert.That(view.Element, Is.Not.Null);
             return view;
         }
 

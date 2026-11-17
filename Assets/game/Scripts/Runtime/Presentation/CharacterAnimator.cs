@@ -565,7 +565,7 @@ namespace Shooter.Runtime
         // ViewRig は視点を変えたときにしか子孫のレンダラーを書き換えず、後から置いたリグは漏れるので、毎フレーム合わせる。
         private void ApplyVisibility()
         {
-            var firstPerson = _view != null && _view.IsLocalView && _view.Mode == ViewMode.FirstPerson;
+            var firstPerson = _view != null && _view.IsLocalView && (_view.Mode == ViewMode.FirstPerson || _view.IsBodyHiddenBySight);
             var mode = firstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
             foreach (var rigRenderer in _rigRenderers)
             {

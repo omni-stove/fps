@@ -7,25 +7,17 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 材質ごとの着弾の仮素材 (銃痕のテクスチャと材質・着弾のエフェクト・着弾音) と <see cref="SurfaceImpactCatalog"/> を作る手順。
-    /// 材質は <see cref="SurfaceMaterial.DefaultId"/>・<see cref="ConcreteId"/>・<see cref="MetalId"/>・<see cref="WoodId"/> の 4 つ (<see cref="Specs"/>)。
-    /// 銃痕のテクスチャは材質ごとの色で手続きに描き、音は <see cref="ProceduralAudio"/> で合成する。粒の材質とテクスチャも自分のフォルダに作り、
-    /// ほかの手順の生成物には頼らない。既存のアセットは GUID を保って中身だけ更新し、同じコードからは同じファイルができる。
-    /// <see cref="PresentationAssetSteps.BuildAll"/> から実行される。
-    /// </summary>
+    // 粒の材質とテクスチャも自分のフォルダに作り、ほかの手順の生成物には頼らない。
     public sealed class SurfaceImpactAssetStep : IPresentationAssetStep
     {
         public const string LogTag = "[SurfaceImpactAssetStep]";
 
-        /// <summary>この手順の <see cref="Order"/>。</summary>
         public const int StepOrder = PresentationCatalogAssetStep.StepOrder + 10;
 
         public const string ConcreteId = "concrete";
         public const string MetalId = "metal";
         public const string WoodId = "wood";
 
-        /// <summary>銃痕のテクスチャの一辺 (px)。</summary>
         public const int DecalTextureSize = 128;
 
         public const string DotTextureName = "ImpactDot";
@@ -46,7 +38,7 @@ namespace Shooter.Editor
 
         public static string AssetFolder => ShooterKitRoot.OutputPath("Presentation/SurfaceImpact");
 
-        /// <summary>カタログの置き場所。実行時に <see cref="SurfaceImpactCatalog.Load"/> で読めるよう、Resources の <see cref="SurfaceImpactCatalog.ResourcePath"/> に置く。</summary>
+        // 実行時に SurfaceImpactCatalog.Load で読めるよう、Resources の下に置く。
         public static string CatalogPath => PresentationAssetBuilder.PresentationFolder + "/Resources/" + SurfaceImpactCatalog.ResourcePath + ".asset";
 
         public string Name => "SurfaceImpactCatalog";
@@ -58,7 +50,6 @@ namespace Shooter.Editor
             BuildAt(AudioFolder, AssetFolder, CatalogPath);
         }
 
-        /// <summary>材質ごとの仮素材の設計図。材質の Id は重複しない。</summary>
         public static IReadOnlyList<SurfaceImpactSpec> Specs()
         {
             return new[]
@@ -99,11 +90,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>
-        /// audioFolder に着弾音を、assetFolder に銃痕のテクスチャと材質・エフェクトのプレハブ・粒の材質を、catalogPath にそれをまとめたカタログを
-        /// 作るか上書きして保存し、カタログを返す。フォルダは Assets/ 以下で、無ければ作る。カタログは書き換える前に
-        /// <see cref="SurfaceImpactCatalog.Validate"/> に通す。
-        /// </summary>
         public static SurfaceImpactCatalog BuildAt(string audioFolder, string assetFolder, string catalogPath)
         {
             audioFolder = PresentationAssetBuilder.ValidateFolderPath(audioFolder, nameof(audioFolder));
@@ -163,11 +149,6 @@ namespace Shooter.Editor
             return catalog;
         }
 
-        /// <summary>
-        /// 一辺 size の銃痕のテクスチャの画素 (下の行から)。中心の穴を hole の色、そのまわりのささくれた縁を rim の色で塗り、
-        /// 縁の外は薄い焦げを残して端に向かって透明にする (四隅と各辺の中点は透明)。縁の揺らぎと粒は seed で決まり、同じ引数なら同じ画素になる。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">size が 2 未満。</exception>
         public static Color32[] DecalPixels(int size, Color rim, Color hole, uint seed)
         {
             if (size < 2)
@@ -313,20 +294,15 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>着弾のエフェクトの見た目の種類。</summary>
     public enum SurfaceImpactStyle
     {
-        /// <summary>ゆっくり広がって消える土埃。</summary>
         Dust,
 
-        /// <summary>速く飛んで尾を引く火花 (加算合成)。</summary>
         Sparks,
 
-        /// <summary>重力で落ちる木片。</summary>
         Chips,
     }
 
-    /// <summary>材質 1 つの着弾の仮素材の設計図。<see cref="SurfaceImpactAssetStep.Specs"/> の要素。</summary>
     public sealed class SurfaceImpactSpec
     {
         public SurfaceImpactSpec(
@@ -361,30 +337,22 @@ namespace Shooter.Editor
             Sound = sound ?? throw new ArgumentNullException(nameof(sound));
         }
 
-        /// <summary>材質の Id (<see cref="SurfaceMaterial.Id"/>)。</summary>
         public string MaterialId { get; }
 
-        /// <summary>ファイル名に付ける名前 (例: Concrete)。</summary>
         public string Label { get; }
 
         public SurfaceImpactStyle Style { get; }
 
-        /// <summary>銃痕の一辺の長さ (m)。</summary>
         public float DecalSize { get; }
 
-        /// <summary>銃痕の縁の色。</summary>
         public Color RimColor { get; }
 
-        /// <summary>銃痕の穴の色。</summary>
         public Color HoleColor { get; }
 
-        /// <summary>着弾のエフェクトの粒の色。</summary>
         public Color ParticleColor { get; }
 
-        /// <summary>銃痕のテクスチャの揺らぎと粒の種。</summary>
         public uint Seed { get; }
 
-        /// <summary>着弾音の設計図。名前がそのままファイル名 (.wav) になる。</summary>
         public SoundSpec Sound { get; }
 
         public string DecalTextureName => Label + "BulletHoleTexture";

@@ -6,30 +6,17 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) に足す伏せの手順。くぐり道 (<see cref="ProneCrawlwayFixture"/>) と組で使う。
-    /// <list type="number">
-    /// <item>くぐり道の入り口の外で伏せ、<c>[Player] stance=Prone hitboxHeight=..</c> が出て、当たり判定が伏せの高さまで下がり、
-    /// <see cref="PlayerActionConditions.Prone"/> が立ち、照準の広がりの倍率と上下の範囲が伏せの値になる。</item>
-    /// <item>伏せたまま天井の下へ移って Prone を押しても、立つこともしゃがむこともできず伏せたまま。</item>
-    /// <item>天井の外へ戻すと立ち上がり (<c>[Player] stance=Standing</c>)、当たり判定が立ちの高さに戻る。</item>
-    /// <item>ルールの伏せを Off にすると、Prone を押しても伏せない (確かめたらルールの値に戻す)。</item>
-    /// <item>開けた場所でダッシュしながら Prone を押すと飛び込み (<c>[Player] diving=true</c> → <c>diving=false</c>)、前へ滑って伏せる。</item>
-    /// </list>
-    /// batchmode には入力が無いので、Prone とダッシュの押下は <see cref="PlayerController.UpdateProne"/>・<see cref="PlayerController.UpdateSprint"/> を直接呼ぶ。
-    /// </summary>
+    // batchmode には入力が無いので、Prone とダッシュの押下は PlayerController.UpdateProne・PlayerController.UpdateSprint を直接呼ぶ。
     public sealed class ProneSmokeStep : ITpsActionSmokeStep
     {
-        /// <summary>天井の下で伏せたままでいることを確かめるフレーム数。起き上がりを毎フレーム試すので、数フレーム続けば足りる。</summary>
+        // 起き上がりは毎フレーム試すので、天井の下で伏せたままでいるのを数フレーム確かめれば足りる。
         public const int FramesUnderCeiling = 10;
 
-        /// <summary>ルールを Off にして Prone を押した後、伏せないことを確かめるフレーム数。</summary>
         public const int FramesWithRuleOff = 5;
 
-        /// <summary>当たり判定の高さを比べるときの許容差 (m)。</summary>
         public const float HeightTolerance = 0.01f;
 
-        /// <summary>飛び込みで少なくとも動くべき水平の距離の、<see cref="ProneSpec.DiveDistance"/> に対する割合。床との摩擦や最後のフレームの端数を見込む。</summary>
+        // 床との摩擦や最後のフレームの端数を見込み、飛び込みで動くべき距離は ProneSpec.DiveDistance の一部で足りるとする。
         public const float MinDiveDistanceRatio = 0.5f;
 
         private static readonly string _proneStanceLog = $"{PlayerController.LogTag} stance={PlayerStance.Prone} ";

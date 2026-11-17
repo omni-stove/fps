@@ -10,45 +10,26 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ネット対戦の既定のマップ NetTest と、試合の設定 (<see cref="NetMatchDefinition"/>、<see cref="MatchDefinitionPath"/>) を生成し、
-    /// シーンをビルド設定に加える。.NET のサーバーは書き出し (MapCollisionExporter・ServerRulesExporter) を読み、
-    /// クライアントはつないだサーバーのマップとしてこのシーンへ移る。何度実行しても同じ結果になる。batchmode では
-    /// <c>-batchmode -quit -projectPath . -executeMethod Shooter.Editor.NetSceneBuilder.Build</c> で呼ぶ。
-    /// </summary>
     public static class NetSceneBuilder
     {
-        /// <summary>試合の設定。ServerRulesExporter がルールのアセットごとに server-data/rules に書き出す。</summary>
         public static string MatchDefinitionPath => ShooterKitRoot.OutputPath("Rules/NetMatch.asset");
 
-        /// <summary>
-        /// 生成して保存するシーン。出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下の <see cref="BuildSceneList.NetTestScene"/>。
-        /// </summary>
         public static string ScenePath => BuildSceneList.NetTestScene;
 
-        /// <summary>プレイヤーのカプセルの高さと半径 (m)。<see cref="NetMotorSettings"/> の既定の寸法と同じ。</summary>
         public const float PlayerHeight = NetMotorSettings.DefaultStandingHeight;
         public const float PlayerRadius = NetMotorSettings.DefaultRadius;
 
-        /// <summary>床 (Plane は 10m 四方) の拡大率。両陣地と東西の地点が収まる 60m 四方にする。</summary>
+        // Plane は 10m 四方なので、両陣地と東西の地点が収まる 60m 四方になるよう 6 倍にする。
         public static readonly Vector3 GroundScale = new Vector3(6f, 1f, 6f);
 
-        /// <summary>床の高さ。カプセルの中心が y=0 のとき足元が床に接する。</summary>
+        // 出現地点はカプセルの中心を y=0 に置くので、足元が床に接するよう半分下げる。
         public const float GroundY = -PlayerHeight / 2f;
 
-        /// <summary>サーバーの Bot が経路を引く、NetTest の焼いた NavMesh (<see cref="ModeSceneBuilder.NavMeshDataPathFor"/> と同じ置き場所)。</summary>
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
-        /// <summary>
-        /// 出現地点が NavMesh に乗っているかを確かめるときに探す半径 (m)。出現地点はカプセルの中心 (床から <see cref="PlayerHeight"/> の半分上) なので、
-        /// それより広くとる。
-        /// </summary>
+        // 出現地点はカプセルの中心 (床から PlayerHeight の半分上) なので、NavMesh を探す半径はそれより広くとる。
         public const float NavMeshCheckRadius = 1.5f;
 
-        /// <summary>
-        /// 出現地点。チームごとの陣地を南北に 2 か所ずつ、どちらも使える地点を東西に 1 か所ずつ置く。
-        /// カプセルの中心が y=0 に来るので、<see cref="GroundY"/> の床にちょうど立つ。
-        /// </summary>
         public static readonly (string Name, Vector3 Position, NetSpawnPoint.SpawnTeam Team)[] SpawnPoints =
         {
             ("Spawn Alpha 1", new Vector3(-4f, 0f, -22f), NetSpawnPoint.SpawnTeam.Alpha),
@@ -59,11 +40,8 @@ namespace Shooter.Editor
             ("Spawn Any East", new Vector3(22f, 0f, 0f), NetSpawnPoint.SpawnTeam.Any),
         };
 
-        /// <summary>
-        /// カバーの確かめ用の壁 (ルールで Cover を On にしたとき張り付ける)。両陣地の前に、低い壁 (上端が床から 0.8m、
-        /// <see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満) と、端から覗ける高い壁 (2.5m) を 1 枚ずつ、相手の陣地に向けて置く。
-        /// 位置は床の上の中心、大きさは Cube の拡大率。出現地点と陣地の間の通り道は塞がない。
-        /// </summary>
+        // 低い壁の上端 (床から 0.8m) は MotorSpec.DefaultCoverLowWallHeight 未満にして低いカバーとして扱わせ、高い壁は端から覗けるようにする。
+        // 出現地点と陣地の間の通り道は塞がない位置に置く。
         public static readonly (string Name, Vector3 Center, Vector3 Size)[] CoverWalls =
         {
             ("Cover Low Alpha", new Vector3(-9f, GroundY + 0.4f, -10f), new Vector3(4f, 0.8f, 0.4f)),
@@ -72,11 +50,7 @@ namespace Shooter.Editor
             ("Cover High Bravo", new Vector3(-9f, GroundY + 1.25f, 10f), new Vector3(2f, 2.5f, 0.4f)),
         };
 
-        /// <summary>
-        /// 拠点制圧 (サーバーを <c>-rules Domination</c> で起動したとき) の拠点。両陣地の間、マップの中央に 1 つ置く。
-        /// 位置は足元 (床の高さ) で、範囲の円柱はそこから上下に <see cref="ControlPointZone.DefaultHeight"/> の半分ずつ広がるので、
-        /// 床に立つプレイヤーのカプセルの中心 (y=0) が入る。番号は HUD とログで 0 = A。
-        /// </summary>
+        // 範囲の円柱は位置から上下に ControlPointZone.DefaultHeight の半分ずつ広がるので、位置を足元 (床の高さ) にすれば床に立つカプセルの中心 (y=0) が入る。
         public static readonly (string Name, Vector3 Position, int Index)[] ControlPoints =
         {
             ("Control Point A", new Vector3(0f, GroundY, 0f), 0),
@@ -99,12 +73,7 @@ namespace Shooter.Editor
                 + AssetDatabase.GetAssetPath(match.Loadout) + ", catalog " + AssetDatabase.GetAssetPath(match.Catalog) + ")");
         }
 
-        /// <summary>
-        /// 試合の設定 (<see cref="MatchDefinitionPath"/>) を読む。無ければ既定の値に、デフォルトロードアウト
-        /// (<see cref="WeaponAssetBuilder.LoadoutPath"/>) と武器の一覧 (<see cref="WeaponAssetBuilder.CatalogPath"/>) を配線して作る。
-        /// 新しく作るときだけ、ルールの並びにチームデスマッチとドミネーション (<see cref="SampleRulesPaths"/>) を入れる。
-        /// ほかの中身は上書きしない (ゲームが変えた値を残す)。ロードアウトが試合で使えなければ例外を投げる。
-        /// </summary>
+        // 既にある試合の設定はルールの並びなどを上書きしないのは、ゲームが変えた値を残すため。
         public static NetMatchDefinition LoadOrBuildMatch()
         {
             var match = AssetDatabase.LoadAssetAtPath<NetMatchDefinition>(MatchDefinitionPath);
@@ -147,10 +116,7 @@ namespace Shooter.Editor
             return SampleRulesPaths.Select(GameRulesAssetBuilder.LoadRules).ToArray();
         }
 
-        /// <summary>
-        /// 自分のプレイヤーが居ない間 (つなぐ前やマップを読んだ直後) に映す、見下ろしのカメラを scene に置く。
-        /// 自分のプレイヤーのカメラは手前に描くので、置いたままでよい。
-        /// </summary>
+        // 自分のプレイヤーのカメラは手前に描くので、プレイヤーが出てきてもこのカメラは消さずに置いたままでよい。
         public static Camera CreateSpectatorCamera(Scene scene, Vector3 position, Quaternion rotation)
         {
             var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
@@ -160,7 +126,6 @@ namespace Shooter.Editor
             return camera;
         }
 
-        /// <summary>NetTest と同じ向きの平行光源を scene に置く。</summary>
         public static Light CreateSun(Scene scene)
         {
             var lightObject = new GameObject("Directional Light");
@@ -171,7 +136,6 @@ namespace Shooter.Editor
             return light;
         }
 
-        /// <summary>出現地点の目印を parent の下に置く。position はカプセルの中心 (足元は <see cref="PlayerHeight"/> の半分下)。</summary>
         public static NetSpawnPoint CreateSpawnPoint(Transform parent, string pointName, Vector3 position, NetSpawnPoint.SpawnTeam team)
         {
             if (parent == null)
@@ -234,10 +198,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// サーバーの Bot が経路を引く NavMesh を、床と壁から焼いて <see cref="NavMeshDataPath"/> に保存し、床の NavMeshSurface に持たせる
-        /// (書き出し NavMeshExporter が読む)。どの出現地点も NavMesh に乗っていて、最初の出現地点から歩いて行けることを確かめる。
-        /// </summary>
+        // サーバーへの書き出し NavMeshExporter は床の NavMeshSurface から読むので、焼いたデータをそこに持たせる。
         private static void BakeNavMesh(GameObject ground)
         {
             var surface = SceneBuildHelpers.AddNavMeshSurface(ground, CollectObjects.All);

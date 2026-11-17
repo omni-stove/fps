@@ -1,9 +1,10 @@
 using System;
+using Fps.Core;
 
-namespace Fps.Core
+namespace Fps.Runtime
 {
     /// <summary>
-    /// 分隊への指示で画面に出す文字。bot の応答の字幕 (「Bot_1: 了解、そこを守る」) と、HUD の指示の印の札。
+    /// 分隊への指示で画面に出す文字。bot の応答 (<see cref="SquadOrderReply"/>) の字幕 (「Bot_1: 了解、そこを守る」) と、HUD の指示の印の札。
     /// 語は表 (Resources/Localization/&lt;言語&gt;/squad.json) から <see cref="GameText"/> で今の言語で引く。
     /// </summary>
     public static class SquadOrderText
@@ -34,6 +35,12 @@ namespace Fps.Core
         public static string Reply(string speaker, BotErrandKind kind)
         {
             return Line(speaker, ReplyKey(kind));
+        }
+
+        /// <summary>reply の字幕。指示を受けたときは <see cref="Reply(string, BotErrandKind)"/>、敵を片付けたときは <see cref="TargetDownKey"/> の行。</summary>
+        public static string Reply(SquadOrderReply reply)
+        {
+            return reply.IsTargetDown ? Line(reply.Speaker, TargetDownKey) : Reply(reply.Speaker, reply.Order);
         }
 
         /// <summary>speaker の、表の replyKey の応答の字幕。</summary>

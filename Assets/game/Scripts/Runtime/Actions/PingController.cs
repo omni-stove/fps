@@ -12,7 +12,7 @@ namespace Fps.Runtime
     /// <item>付けられるかはルール (<see cref="ActionRules.Ping"/>) で決まり、<see cref="Configure"/> (オフラインは <see cref="PlayerActions.Attach"/> が呼ぶ)
     /// で On を受け取るまでは付けない。</item>
     /// <item>敵の印は、カメラから敵が見えている間だけ敵を追い、見失うと最後の位置に残る。敵が倒れたら消す。</item>
-    /// <item>印は HUD の表示 (<see cref="IPingView"/>、<see cref="PingUi"/> が作る) に渡す。</item>
+    /// <item>印は、付けられる間 <see cref="GameSignals.Pings"/> に出し、付いた・動いた・消えたたびに出し直す。どう出すかは UI が決める。</item>
     /// <item>同じ陣営 (<see cref="SideMember"/>) のオフラインの bot は、印の付いた敵を優先して狙う (<see cref="IsMarkedFor"/>)。</item>
     /// </list>
     /// 寿命・数の上限・届く距離・敵に吸い付く角度・続けて付ける間隔は Inspector の値から作る <see cref="Spec"/> に従う。
@@ -26,9 +26,6 @@ namespace Fps.Runtime
     public sealed class PingController : MonoBehaviour
     {
         public const string LogTag = PingLog.Tag;
-
-        /// <summary>HUD が見つかっていないときに探し直す間隔 (秒)。</summary>
-        public const float ViewSearchIntervalSeconds = 1f;
 
         private static readonly List<PingController> _active = new List<PingController>();
 
@@ -61,8 +58,7 @@ namespace Fps.Runtime
         private Damageable _self;
         private ViewRig _rig;
         private PlayerActionReader _reader;
-        private IPingView _view;
-        private float _nextViewSearch;
+        private IReadOnlyList<PingMarker> _published;
         private PingRefusal _lastRefusal;
         private SharedPingMarkers _shared;
         private int _sharedVersion;
@@ -90,9 +86,6 @@ namespace Fps.Runtime
 
         /// <summary>最後に付けようとしたときに付けなかった理由。付けたら <see cref="PingRefusal.None"/>。</summary>
         public PingRefusal LastRefusal => _lastRefusal;
-
-        /// <summary>印を出している表示。無ければ null。</summary>
-        public IPingView View => GameUi.IsAlive(_view) ? _view : null;
 
         /// <summary>印を見るカメラ。プレイヤーの視点 (<see cref="ViewRig"/>) のカメラで、無ければ null。</summary>
         public Camera ViewCamera
@@ -184,7 +177,6 @@ namespace Fps.Runtime
             _lastRefusal = PingRefusal.None;
             _self = GetComponent<Damageable>();
             _reader = GetComponent<PlayerActionReader>();
-            _nextViewSearch = 0f;
             Register();
 
             if (cleared > 0)
@@ -193,7 +185,7 @@ namespace Fps.Runtime
             }
 
             Debug.Log(PingLog.Rule(_rule, spec), this);
-            Changed?.Invoke(this);
+            NotifyChanged();
         }
 
         // 中身を写さずに参照で持つ。印はネットワークの知らせのたびに変わり、表示は Version の変化を見て読み直せば足りるため。
@@ -213,7 +205,6 @@ namespace Fps.Runtime
             _configured = true;
             _lastRefusal = PingRefusal.None;
             _self = GetComponent<Damageable>();
-            _nextViewSearch = 0f;
 
             if (cleared > 0)
             {
@@ -221,7 +212,7 @@ namespace Fps.Runtime
             }
 
             Debug.Log(PingLog.Shared(), this);
-            Changed?.Invoke(this);
+            NotifyChanged();
         }
 
         /// <summary>
@@ -299,7 +290,7 @@ namespace Fps.Runtime
             _lastRefusal = PingRefusal.None;
             marker = placement.Marker;
             Debug.Log(PingLog.Placed(placement, target != null ? target.Id : null), this);
-            Changed?.Invoke(this);
+            NotifyChanged();
             return true;
         }
 
@@ -314,7 +305,7 @@ namespace Fps.Runtime
                 if (_shared.Version != _sharedVersion)
                 {
                     _sharedVersion = _shared.Version;
-                    Changed?.Invoke(this);
+                    NotifyChanged();
                 }
 
                 return;
@@ -374,7 +365,7 @@ namespace Fps.Runtime
 
             if (changed)
             {
-                Changed?.Invoke(this);
+                NotifyChanged();
             }
         }
 
@@ -388,7 +379,7 @@ namespace Fps.Runtime
                 {
                     _sharedVersion = _shared.Version;
                     Debug.Log(PingLog.Cleared(sharedCount), this);
-                    Changed?.Invoke(this);
+                    NotifyChanged();
                 }
 
                 return;
@@ -402,7 +393,7 @@ namespace Fps.Runtime
             var count = _board.Clear(null);
             _targets.Clear();
             Debug.Log(PingLog.Cleared(count), this);
-            Changed?.Invoke(this);
+            NotifyChanged();
         }
 
         public bool TryGetMarker(int id, out PingMarker marker)
@@ -481,31 +472,6 @@ namespace Fps.Runtime
             return false;
         }
 
-        /// <summary>印を view に出す。前の表示は手放す。null なら出すのをやめ、HUD から探し直す。</summary>
-        public void BindView(IPingView view)
-        {
-            if (ReferenceEquals(view, _view))
-            {
-                return;
-            }
-
-            if (GameUi.IsAlive(_view))
-            {
-                _view.Show(null);
-            }
-
-            _view = view;
-            if (view != null)
-            {
-                view.Show(this);
-                Debug.Log(PingLog.View(view.GetType().Name), this);
-            }
-            else
-            {
-                _nextViewSearch = 0f;
-            }
-        }
-
         // 一覧から外すのは破棄のときだけにし、無効の間は IsMarkedFor が飛ばす。Edit Mode では OnEnable が呼ばれないので Configure でも入れる。
         private void Register()
         {
@@ -523,12 +489,7 @@ namespace Fps.Runtime
         private void OnDestroy()
         {
             _active.Remove(this);
-            if (GameUi.IsAlive(_view))
-            {
-                _view.Show(null);
-            }
-
-            _view = null;
+            Unpublish();
         }
 
         private void LateUpdate()
@@ -555,21 +516,31 @@ namespace Fps.Runtime
             }
 
             Tick(Now);
-            EnsureView();
         }
 
-        private void EnsureView()
+        // 印の並びは中身が変わる同じ参照なので、変わるたびに出し直して UI に知らせる。
+        private void NotifyChanged()
         {
-            if (!UsesPing || GameUi.IsAlive(_view) || Time.unscaledTime < _nextViewSearch)
+            if (UsesPing)
             {
-                return;
+                _published = Markers;
+                GameSignals.Pings.Publish(_published);
+            }
+            else
+            {
+                Unpublish();
             }
 
-            _nextViewSearch = Time.unscaledTime + ViewSearchIntervalSeconds;
-            var view = PingUi.CreateView(GameUi.FindHud());
-            if (view != null)
+            Changed?.Invoke(this);
+        }
+
+        // 後から別のプレイヤーが出した印までは消さない。
+        private void Unpublish()
+        {
+            if (_published != null)
             {
-                BindView(view);
+                GameSignals.Pings.ClearIfCurrent(_published);
+                _published = null;
             }
         }
 

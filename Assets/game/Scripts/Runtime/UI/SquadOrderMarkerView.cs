@@ -6,15 +6,15 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 分隊への指示の印 (<see cref="SquadCommandController.CurrentOrder"/>) を HUD に出す既定の表示。Hud.uxml の <see cref="UxmlName"/> を使う。
+    /// 分隊への指示 (<see cref="GameSignals.SquadOrder"/>) の印を HUD に出す既定の表示。Hud.uxml の <see cref="UxmlName"/> を使う。
+    /// 要素を持っている間は <see cref="GameSignals.SquadOrder"/> を購読し、出された指示を出す。要素を受けたときは今の指示に合わせる。
     /// 守る場所か狙う敵の上に、印と札 (「守れ」「狙え」、<see cref="SquadOrderText.Marker"/>) を出す。
     /// 画面の外なら印 (Ping) と同じく <see cref="PingScreen.Place"/> で端に寄せて向きの矢印を出す。
-    /// 印が出たか、画面の中と端を行き来したときに <c>[Squad] screen</c> をログに出す。
-    /// <see cref="Hud.AddViews"/> では付けず、プレイヤーの <see cref="SquadCommandController"/> が <see cref="SquadOrderUi"/> の既定の生成役
-    /// (<see cref="DefaultSquadOrderViewFactory"/>) で付ける。
+    /// 印が出たか、画面の中と端を行き来したときに <c>[Squad] screen</c>、指示を受け始めたときに <c>[Squad] view</c> をログに出す。
+    /// <see cref="Hud.AddViews"/> が付ける。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class SquadOrderMarkerView : HudElementView, ISquadOrderView
+    public sealed class SquadOrderMarkerView : HudElementView
     {
         /// <summary>Hud.uxml の指示の印を入れる要素。</summary>
         public const string UxmlName = "squad-order";
@@ -46,7 +46,11 @@ namespace Fps.Runtime
         // カメラの縦横比が読めないときに使う。HUD の基準解像度 (1920x1080) の比。
         private const float _fallbackAspect = 16f / 9f;
 
-        private SquadCommandController _source;
+        private SquadOrderStatus? _order;
+        private bool _subscribed;
+
+        // 出している指示が GameSignals から来たか。来ていれば、要素を持っていない間に指示が消されたことを、受けたときに消して合わせる
+        private bool _showsSignal;
         private VisualElement _root;
         private VisualElement _arrow;
         private Label _label;
@@ -56,10 +60,12 @@ namespace Fps.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出している指示の持ち主。出していなければ null。</summary>
-        public SquadCommandController Source => _source;
+        /// <summary>出している指示。出していなければ null。</summary>
+        public SquadOrderStatus? Order => _order;
 
-        /// <summary>向きの基準にするカメラ。null なら持ち主のカメラ (<see cref="SquadCommandController.ViewCamera"/>)、それも無ければ <see cref="Camera.main"/>。</summary>
+        /// <summary>
+        /// 向きの基準にするカメラ。null なら自分のプレイヤーの視点のカメラ (<see cref="PingMarkersView.LocalPlayerCamera"/>)、それも無ければ <see cref="Camera.main"/>。
+        /// </summary>
         public Camera Viewer { get; set; }
 
         /// <summary>今出している印の指示の種類。出していなければ None。</summary>
@@ -69,51 +75,13 @@ namespace Fps.Runtime
         public string ShownLabel => _hasPlacement && _label != null ? _label.text : string.Empty;
 
         /// <summary>
-        /// hud に (無ければ) このビューを付けて返す。付けたばかりなら Hud に木から要素を渡し直させる。
-        /// UXML に要素が無ければエラーをログに出し、要素を持たないまま返す (位置は <see cref="TryGetPlacement"/> で読める)。
+        /// order の指示の印を出す。null なら出すのをやめる。
+        /// 要素を持っている間は <see cref="GameSignals.SquadOrder"/> が出されるたびに呼ばれる。
         /// </summary>
-        public static SquadOrderMarkerView AttachTo(Hud hud)
+        public void Show(SquadOrderStatus? order)
         {
-            if (hud == null)
-            {
-                throw new ArgumentNullException(nameof(hud));
-            }
-
-            var view = hud.GetComponent<SquadOrderMarkerView>();
-            if (view != null)
-            {
-                return view;
-            }
-
-            view = hud.gameObject.AddComponent<SquadOrderMarkerView>();
-            try
-            {
-                hud.RebuildView();
-            }
-            catch (InvalidOperationException e)
-            {
-                Debug.LogError($"{Hud.LogTag} could not show squad orders on the HUD: {e.Message}", hud);
-            }
-
-            return view;
-        }
-
-        public void Show(SquadCommandController source)
-        {
-            if (_source != null)
-            {
-                _source.Changed -= OnChanged;
-            }
-
-            _source = source;
-            if (_source != null)
-            {
-                _source.Changed += OnChanged;
-            }
-
-            _hasPlacement = false;
-            _shownKind = BotErrandKind.None;
-            Refresh();
+            _showsSignal = false;
+            Write(order);
         }
 
         /// <summary>今出している印の位置と向き。出していなければ false。</summary>
@@ -123,12 +91,12 @@ namespace Fps.Runtime
             return _hasPlacement;
         }
 
-        /// <summary>持ち主の今の指示を、今のカメラから見て置き直す。</summary>
+        /// <summary>出している指示を、今のカメラから見て置き直す。</summary>
         public void Refresh()
         {
-            var kind = _source != null ? _source.CurrentOrder : BotErrandKind.None;
+            var kind = _order.HasValue ? _order.Value.Order : BotErrandKind.None;
             var camera = ResolveViewer();
-            if (kind == BotErrandKind.None || camera == null || !TryPlace(camera, _source.CurrentPoint, out var placement))
+            if (kind == BotErrandKind.None || camera == null || !TryPlace(camera, _order.Value.CurrentPoint, out var placement))
             {
                 _hasPlacement = false;
                 _shownKind = kind;
@@ -153,11 +121,20 @@ namespace Fps.Runtime
             _root = null;
             _arrow = null;
             _label = null;
+            Subscribe();
+            var order = GameSignals.SquadOrder.Value;
+            if (order.HasValue || _showsSignal)
+            {
+                ShowSignal(order);
+                return;
+            }
+
             Refresh();
         }
 
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             if (_root != null)
             {
                 _root.RemoveFromHierarchy();
@@ -177,33 +154,67 @@ namespace Fps.Runtime
 
         private void LateUpdate()
         {
-            // 持ち主 (DefaultExecutionOrder 110) が指示を出し、カメラが動いた後に置き直す。
+            // SquadCommandController (DefaultExecutionOrder 110) が指示を出し、カメラが動いた後に置き直す。
             Refresh();
         }
 
         private void OnDestroy()
         {
-            if (_source != null)
+            Unsubscribe();
+        }
+
+        private void Write(SquadOrderStatus? order)
+        {
+            if (!_order.Equals(order))
             {
-                _source.Changed -= OnChanged;
-                _source = null;
+                _hasPlacement = false;
+                _shownKind = BotErrandKind.None;
+            }
+
+            _order = order;
+            Refresh();
+        }
+
+        private void ShowSignal(SquadOrderStatus? order)
+        {
+            Write(order);
+            _showsSignal = true;
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.SquadOrder.Changed += HandleOrderChanged;
+                _subscribed = true;
+                Debug.Log(SquadOrderLog.View(GetType().Name), this);
             }
         }
 
-        private void OnChanged(SquadCommandController source)
+        private void Unsubscribe()
         {
-            Refresh();
+            if (_subscribed)
+            {
+                GameSignals.SquadOrder.Changed -= HandleOrderChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandleOrderChanged(SquadOrderStatus? order)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.SquadOrder.Changed -= HandleOrderChanged;
+                return;
+            }
+
+            ShowSignal(order);
         }
 
         private Camera ResolveViewer()
         {
-            if (Viewer != null)
-            {
-                return Viewer;
-            }
-
-            var own = _source != null ? _source.ViewCamera : null;
-            return own != null ? own : Camera.main;
+            return Viewer != null ? Viewer : PingMarkersView.LocalPlayerCamera();
         }
 
         private static bool TryPlace(Camera camera, Vector3 point, out PingScreenPlacement placement)

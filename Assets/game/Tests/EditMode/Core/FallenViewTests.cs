@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class FallenViewTests
     {
-        private const float Tolerance = 1e-4f;
+        private const float _tolerance = 1e-4f;
 
         // 1 秒で倒れ、足元から 0.2m の目の高さ、左へ 80 度傾き、10 度見下ろす。
         private static FallenView Spec() => new FallenView(1f, 0.2f, 80f, 10f);
@@ -42,16 +42,16 @@ namespace Fps.Core.Tests
             var view = Spec();
 
             // 半分の時間で、落ちる高さは 0.5^2 = 0.25、傾きは 1 - 0.5^2 = 0.75 進む。
-            Assert.That(view.DropProgress(0.5f), Is.EqualTo(0.25f).Within(Tolerance));
-            Assert.That(view.TurnProgress(0.5f), Is.EqualTo(0.75f).Within(Tolerance));
+            Assert.That(view.DropProgress(0.5f), Is.EqualTo(0.25f).Within(_tolerance));
+            Assert.That(view.TurnProgress(0.5f), Is.EqualTo(0.75f).Within(_tolerance));
 
             // 1.6 から 0.2 まで 1.4 落ちるうちの 0.25 で 1.25。
             var eye = view.Eye(_deathEye, 0f, 0.5f);
             Assert.That(eye.X, Is.EqualTo(2f));
-            Assert.That(eye.Y, Is.EqualTo(1.25f).Within(Tolerance));
+            Assert.That(eye.Y, Is.EqualTo(1.25f).Within(_tolerance));
             Assert.That(eye.Z, Is.EqualTo(-3f));
-            Assert.That(view.Roll(0.5f), Is.EqualTo(60f).Within(Tolerance));
-            Assert.That(view.Pitch(-20f, 0.5f), Is.EqualTo(2.5f).Within(Tolerance));
+            Assert.That(view.Roll(0.5f), Is.EqualTo(60f).Within(_tolerance));
+            Assert.That(view.Pitch(-20f, 0.5f), Is.EqualTo(2.5f).Within(_tolerance));
         }
 
         [Test]
@@ -62,9 +62,9 @@ namespace Fps.Core.Tests
             foreach (var elapsed in new[] { 1f, 3f, float.PositiveInfinity })
             {
                 var eye = view.Eye(_deathEye, 0.5f, elapsed);
-                Assert.That(eye.Y, Is.EqualTo(0.7f).Within(Tolerance), "0.2m above the feet at 0.5");
-                Assert.That(view.Roll(elapsed), Is.EqualTo(80f).Within(Tolerance));
-                Assert.That(view.Pitch(-20f, elapsed), Is.EqualTo(10f).Within(Tolerance));
+                Assert.That(eye.Y, Is.EqualTo(0.7f).Within(_tolerance), "0.2m above the feet at 0.5");
+                Assert.That(view.Roll(elapsed), Is.EqualTo(80f).Within(_tolerance));
+                Assert.That(view.Pitch(-20f, elapsed), Is.EqualTo(10f).Within(_tolerance));
                 Assert.That(view.IsSettled(elapsed), Is.True);
             }
         }
@@ -84,7 +84,7 @@ namespace Fps.Core.Tests
             var view = new FallenView(0f, 0.2f, 80f, 10f);
 
             Assert.That(view.IsSettled(0f), Is.True);
-            Assert.That(view.Eye(_deathEye, 0f, 0f).Y, Is.EqualTo(0.2f).Within(Tolerance));
+            Assert.That(view.Eye(_deathEye, 0f, 0f).Y, Is.EqualTo(0.2f).Within(_tolerance));
             Assert.That(view.Roll(0f), Is.EqualTo(80f));
         }
 

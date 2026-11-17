@@ -205,10 +205,6 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// member の陣営から見た、いちばん近い生きている敵を目標にする。force でなければ <see cref="TargetSearchInterval"/> ごとにだけ探す。
-        /// 敵がいなければ目標を外す (全員倒れている間など)。目標が変わったときだけログに出す。
-        /// </summary>
-        /// <summary>
         /// 目標が倒れた (ダウンを含む) 最初の 1 回だけ、戦いをやめさせる (<see cref="EnemyBrain.StandDown"/>)。
         /// 倒れた目標は見えなくなるので、放っておくと見失ったとみなして倒れた位置へ駆け寄ってしまう。
         /// 同じ目標が倒れたままの間は呼び直さず、その間に聞いた物音を Search しに行けるようにする。やめさせたら true。
@@ -243,6 +239,10 @@ namespace Fps.Runtime
             return $"{LogTag} id={id} stand-down target={targetId} prev={previous}";
         }
 
+        /// <summary>
+        /// member の陣営から見た、いちばん近い生きている敵を目標にする。force でなければ <see cref="TargetSearchInterval"/> ごとにだけ探す。
+        /// 敵がいなければ目標を外す (全員倒れている間など)。目標が変わったときだけログに出す。
+        /// </summary>
         private void ResolveHostile(SideMember member, bool force)
         {
             if (!force && Time.time < _nextTargetSearch)

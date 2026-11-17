@@ -6,23 +6,12 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 置きっぱなしの弾薬箱。範囲にいるこの画面のプレイヤー (<see cref="Damageable.IsLocalPlayer"/>) が Interact (キーボードは E の長押し) をすると、
-    /// 持ち武器すべての予備弾を上限まで足す (<see cref="Refill"/>)。拾っても消えず、<see cref="EffectiveCooldownSeconds"/> 経てば何度でも使える。
-    /// <see cref="Definition"/> があれば、範囲と補給の間隔は自分の値の代わりにそちらを読む。
-    /// 足したかどうかと数は <c>[AmmoCrate]</c> のログに出す。
-    /// 範囲にプレイヤーがいる間は、<see cref="GameSignals.InteractHint"/> に使えるか満タンかの案内 (<see cref="AmmoCrateHint"/>) を出し、離れたら消す。
-    /// </summary>
-    /// <remarks>
-    /// 見た目は <see cref="VisualPrefab"/>、空なら仮の箱を作る。どちらも固い物として当たり判定を残す (身を隠せる物として置くため)。
-    /// 使える範囲は見た目とは別のトリガーの球 (<see cref="EffectiveRadius"/>) で決める。
-    /// </remarks>
+    // 見た目の当たり判定を外さないのは、身を隠せる固い物として置くため。使える範囲は見た目とは別のトリガーの球で決める。
     [DisallowMultipleComponent]
     public sealed class AmmoCrate : MonoBehaviour
     {
         public const string LogTag = "[AmmoCrate]";
 
-        /// <summary>Assets/InputSystem_Actions.inputactions の Interact アクション。</summary>
         public const string InteractActionPath = InputActionPaths.Interact;
 
         public const float DefaultRadius = 1.6f;
@@ -30,10 +19,9 @@ namespace Shooter.Runtime
         public const float DefaultCooldownSeconds = 1f;
         public const string VisualName = "Visual";
 
-        /// <summary>仮の箱の大きさ (m)。</summary>
         public static readonly Vector3 DefaultVisualSize = new Vector3(0.9f, 0.5f, 0.6f);
 
-        /// <summary>仮の箱の色。拾う物 (回る小さな箱) と見分けが付くよう、くすんだ緑にする。</summary>
+        // 拾う物 (回る小さな箱) と見分けが付くよう、くすんだ緑にする。
         public static readonly Color DefaultVisualColor = new Color(0.3f, 0.38f, 0.22f);
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -59,10 +47,6 @@ namespace Shooter.Runtime
         private float _readyAt;
         private InteractHintSlot _hint;
 
-        /// <summary>
-        /// 調整値。null でなければ <see cref="Radius"/>・<see cref="CooldownSeconds"/> の代わりに <see cref="PickupDefinition.AmmoCrateRadius"/>・
-        /// <see cref="PickupDefinition.AmmoCrateCooldownSeconds"/> を使う。範囲はすぐトリガーの球に映す。値が不正なら <see cref="ArgumentException"/>。
-        /// </summary>
         public PickupDefinition Definition
         {
             get => _definition;
@@ -78,7 +62,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>使える範囲の半径 (m)。<see cref="Definition"/> が無いときに使う。</summary>
         public float Radius
         {
             get => _radius;
@@ -94,7 +77,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>使ってから次に使えるまでの秒数。<see cref="Definition"/> が無いときに使う。</summary>
         public float CooldownSeconds
         {
             get => _cooldownSeconds;
@@ -109,15 +91,9 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 使っている範囲の半径 (m)。<see cref="Definition"/> があればその値、無いか値が不正なら <see cref="Radius"/>。
-        /// </summary>
         public float EffectiveRadius =>
             _definition != null && IsValidRadius(_definition.AmmoCrateRadius) ? _definition.AmmoCrateRadius : _radius;
 
-        /// <summary>
-        /// 使っている、使ってから次に使えるまでの秒数。<see cref="Definition"/> があればその値、無いか値が不正なら <see cref="CooldownSeconds"/>。
-        /// </summary>
         public float EffectiveCooldownSeconds =>
             _definition != null && IsValidCooldown(_definition.AmmoCrateCooldownSeconds) ? _definition.AmmoCrateCooldownSeconds : _cooldownSeconds;
 
@@ -125,14 +101,12 @@ namespace Shooter.Runtime
 
         public static bool IsValidCooldown(float seconds) => seconds >= 0f && !float.IsInfinity(seconds);
 
-        /// <summary>見た目。次に組み立てるとき (Awake) から使う。</summary>
         public GameObject VisualPrefab
         {
             get => _visualPrefab;
             set => _visualPrefab = value;
         }
 
-        /// <summary>範囲にいる人のコライダーの数。</summary>
         public int InsideCount => _inside.Count;
 
         private void Awake()
@@ -200,10 +174,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 範囲にいるこの画面のプレイヤーに補給する。足したら true。使えるまでの時間が残っている・範囲にプレイヤーがいない・
-        /// 倒れている・どの武器も満タンなら false。Interact の入力から呼ばれ、コードからも呼べる。
-        /// </summary>
         public bool Interact()
         {
             foreach (var collider in new List<Collider>(_inside))
@@ -218,7 +188,6 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>範囲にいるこの画面のプレイヤー。いなければ null。</summary>
         public Damageable LocalPlayerInside()
         {
             foreach (var collider in _inside)
@@ -233,10 +202,6 @@ namespace Shooter.Runtime
             return null;
         }
 
-        /// <summary>
-        /// player に出す案内。予備弾を足せる武器があるかと <see cref="InteractActionPath"/> を入れる。
-        /// 倒れている・武器を持たないなら案内は出さない (false)。
-        /// </summary>
         public static bool TryDescribe(Damageable player, out AmmoCrateHint hint)
         {
             hint = default;
@@ -261,7 +226,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>user の持ち武器に補給する。now は使えるまでの時間を測る時刻。足したら true。</summary>
         public bool TryRefill(Damageable user, float now)
         {
             if (user == null)
@@ -292,7 +256,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>weapons の持ち武器すべての予備弾を上限まで足し、足した数の合計を返す。予備弾が尽きない武器には足さない。</summary>
         public static int Refill(IWeaponHolder weapons)
         {
             if (weapons == null)
@@ -312,10 +275,7 @@ namespace Shooter.Runtime
             return added;
         }
 
-        /// <summary>
-        /// トリガーの球・動かない剛体・見た目を、無ければ作る。何度呼んでもよい。Awake でも呼ぶが、Edit Mode で置いたときに
-        /// シーンへ見た目を残すには置いた側が呼ぶ。
-        /// </summary>
+        // Awake でも呼ぶが、Edit Mode で置いたときにシーンへ見た目を残すには置いた側が呼ぶので公開する。
         public void Build()
         {
             var trigger = GetComponent<SphereCollider>();

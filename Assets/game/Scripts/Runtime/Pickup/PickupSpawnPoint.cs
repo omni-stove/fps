@@ -4,18 +4,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// Scene に置いた点に拾える物を出す。Start で自分の子に <see cref="Pickup"/> を作り (位置は Transform の位置が足元)、
-    /// 拾われたら <see cref="RespawnSeconds"/> 後に同じ物をまた出す (<see cref="PickupRespawn"/>)。0 秒なら一度きり。
-    /// 中身はシーン生成スクリプトが <see cref="Contents"/> に配線する。<see cref="Definition"/> があれば、中身・拾い方・再出現の秒数・範囲は
-    /// 自分の値の代わりにそちらを読む。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class PickupSpawnPoint : MonoBehaviour
     {
         public const string LogTag = PickupLog.Tag;
 
-        /// <summary>再出現までの既定の秒数。</summary>
         public const float DefaultRespawnSeconds = 20f;
 
         [SerializeField, Tooltip("拾える物の調整値。入れると下の中身・拾い方・再出現の秒数・範囲の代わりにこれを使う")]
@@ -42,20 +35,14 @@ namespace Shooter.Runtime
         private PickupRespawn _respawn;
         private Pickup _pickup;
 
-        /// <summary>出した物が拾われたときに、この点と拾われたときの情報を渡して呼ばれる。</summary>
         public event Action<PickupSpawnPoint, PickupCollection> Collected;
 
-        /// <summary>
-        /// 拾える物の調整値。null でなければ <see cref="Contents"/>・<see cref="CollectMode"/>・<see cref="RespawnSeconds"/>・<see cref="Radius"/>・<see cref="LookAngleDegrees"/> の代わりに使う。
-        /// 出した後に変えても、次の <see cref="TrySpawn"/> まで効かない。
-        /// </summary>
         public PickupDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>出す物の中身 (<see cref="Definition"/> が無いときに使う)。出した後に変えても、出ている物は変わらない。null は <see cref="ArgumentNullException"/>、不正なら <see cref="ArgumentException"/>。</summary>
         public PickupContents Contents
         {
             get => _contents;
@@ -77,9 +64,6 @@ namespace Shooter.Runtime
             set => _collectMode = value;
         }
 
-        /// <summary>
-        /// 拾われてから再び出るまでの秒数 (<see cref="Definition"/> が無いときに使う)。0 なら一度きり。出した後に変えても次の <see cref="TrySpawn"/> まで効かない。
-        /// </summary>
         public float RespawnSeconds
         {
             get => _respawnSeconds;
@@ -100,27 +84,22 @@ namespace Shooter.Runtime
             set => _radius = Mathf.Max(Pickup.MinRadius, value);
         }
 
-        /// <summary>出す物の <see cref="Pickup.LookAngleDegrees"/> (<see cref="Definition"/> が無いときに使う)。出した後に変えても次の <see cref="TrySpawn"/> まで効かない。</summary>
         public float LookAngleDegrees
         {
             get => _lookAngleDegrees;
             set => _lookAngleDegrees = float.IsNaN(value) ? 0f : Mathf.Clamp(value, 0f, Pickup.MaxLookAngleDegrees);
         }
 
-        /// <summary>出す物の見た目 (<see cref="Pickup.VisualPrefab"/>)。null なら仮の箱。出した後に変えても、次の <see cref="TrySpawn"/> まで効かない。</summary>
         public GameObject VisualPrefab
         {
             get => _visualPrefab;
             set => _visualPrefab = value;
         }
 
-        /// <summary>出している物。出す前や出せなかったときは null。拾われて次を待つ間も同じ物 (無効になっている)。</summary>
         public Pickup Current => _pickup;
 
-        /// <summary>出していて拾えるなら true。</summary>
         public bool IsAvailable => _respawn != null && _respawn.IsAvailable;
 
-        /// <summary>再び出るまでの残り秒数。出ているとき・出す前・もう出ないときは null。</summary>
         public float? RemainingSeconds => _respawn?.RemainingSeconds;
 
         private void Start()
@@ -147,10 +126,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 子に拾える物を作って出し、<c>[Pickup] spawned</c> を出す。既に出していれば何もせず true。
-        /// 中身か <see cref="Definition"/> が不正なら理由を Debug.LogError に出して false。
-        /// </summary>
         public bool TrySpawn()
         {
             if (_pickup != null)
@@ -198,7 +173,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>時間を deltaSeconds 進め、再び出す時間になったら出して <c>[Pickup] respawned</c> を出す。Play 中は Update から呼ぶ。</summary>
         public void Tick(float deltaSeconds)
         {
             if (_respawn == null)

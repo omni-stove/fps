@@ -10,6 +10,8 @@ namespace Shooter.Core
         public const string SlideItem = "slide";
         public const string ParachuteItem = "parachute";
         public const string ZiplineItem = "zipline";
+        public const string SwimItem = "swim";
+        public const string WallRunItem = "wallRun";
 
         public const string StartSpeedItem = "startSpeed";
         public const string DecelerationItem = "deceleration";
@@ -28,9 +30,18 @@ namespace Shooter.Core
         public const string RegrabSecondsItem = "regrabSeconds";
         public const string SpreadMoveFractionItem = "spreadMoveFraction";
 
+        public const string SpeedItem = "speed";
+        public const string BuoyancyItem = "buoyancy";
+        public const string BreathSecondsItem = "breathSeconds";
+
+        public const string EnabledItem = "enabled";
+        public const string MinSpeedItem = "minSpeed";
+        public const string GravityScaleItem = "gravityScale";
+        public const string JumpOffSpeedItem = "jumpOffSpeed";
+
         private const string _kind = "traversal JSON";
 
-        public static IReadOnlyList<string> ItemNames { get; } = new[] { SlideItem, ParachuteItem, ZiplineItem };
+        public static IReadOnlyList<string> ItemNames { get; } = new[] { SlideItem, ParachuteItem, ZiplineItem, SwimItem, WallRunItem };
 
         // 項目名はコンストラクターの引数名にそろえ、値の検査で断られた項目を ParamName から示せるようにする。
         public static IReadOnlyList<string> SlideItemNames { get; } = new[]
@@ -59,6 +70,22 @@ namespace Shooter.Core
             SpreadMoveFractionItem,
         };
 
+        public static IReadOnlyList<string> SwimItemNames { get; } = new[]
+        {
+            SpeedItem,
+            BuoyancyItem,
+            BreathSecondsItem,
+        };
+
+        public static IReadOnlyList<string> WallRunItemNames { get; } = new[]
+        {
+            EnabledItem,
+            MaxSecondsItem,
+            MinSpeedItem,
+            GravityScaleItem,
+            JumpOffSpeedItem,
+        };
+
         public static TraversalSpec Parse(string text, string sourceName)
         {
             var source = ServerDataJson.SourceOf(sourceName, _kind);
@@ -68,10 +95,14 @@ namespace Shooter.Core
                 var slide = fields.Object(SlideItem, SlideItemNames);
                 var parachute = fields.Object(ParachuteItem, ParachuteItemNames);
                 var zipline = fields.Object(ZiplineItem, ZiplineItemNames);
+                var swim = fields.Object(SwimItem, SwimItemNames);
+                var wallRun = fields.Object(WallRunItem, WallRunItemNames);
                 return new TraversalSpec(
                     slide == null ? null : ReadSlide(slide),
                     parachute == null ? null : ReadParachute(parachute),
-                    zipline == null ? null : ReadZipline(zipline));
+                    zipline == null ? null : ReadZipline(zipline),
+                    swim == null ? null : ReadSwim(swim),
+                    wallRun == null ? null : ReadWallRun(wallRun));
             }
             catch (ServerDataJsonException e)
             {
@@ -130,6 +161,40 @@ namespace Shooter.Core
             catch (ArgumentException e)
             {
                 throw Rejected(fields, ZiplineItemNames, e);
+            }
+        }
+
+        private static SwimTuning ReadSwim(ServerDataJson.Fields fields)
+        {
+            var defaults = SwimTuning.Default;
+            var speed = fields.ReadFloat(SpeedItem, defaults.Speed);
+            var buoyancy = fields.ReadFloat(BuoyancyItem, defaults.Buoyancy);
+            var breathSeconds = fields.ReadFloat(BreathSecondsItem, defaults.BreathSeconds);
+            try
+            {
+                return new SwimTuning(speed, buoyancy, breathSeconds);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(fields, SwimItemNames, e);
+            }
+        }
+
+        private static WallRunTuning ReadWallRun(ServerDataJson.Fields fields)
+        {
+            var defaults = WallRunTuning.Default;
+            var enabled = fields.ReadBool(EnabledItem, defaults.Enabled);
+            var maxSeconds = fields.ReadFloat(MaxSecondsItem, defaults.MaxSeconds);
+            var minSpeed = fields.ReadFloat(MinSpeedItem, defaults.MinSpeed);
+            var gravityScale = fields.ReadFloat(GravityScaleItem, defaults.GravityScale);
+            var jumpOffSpeed = fields.ReadFloat(JumpOffSpeedItem, defaults.JumpOffSpeed);
+            try
+            {
+                return new WallRunTuning(enabled, maxSeconds, minSpeed, gravityScale, jumpOffSpeed);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(fields, WallRunItemNames, e);
             }
         }
 

@@ -10,6 +10,8 @@ namespace Shooter.Runtime
     /// 設定画面が <see cref="Sink"/> (<see cref="ISettingsSink"/>) 越しに <see cref="Apply"/> で変えると <see cref="Changed"/> で配り、
     /// <see cref="FirstPersonLook"/>・<see cref="AimDownSights"/>・<see cref="ViewRig"/>・<see cref="PlayerController"/> などが
     /// その場で使い直す。効果音を鳴らす側は <see cref="ControlSettings.EffectsVolume"/> を音量に掛ける。
+    /// 視点の上下反転 (<see cref="ControlSettings.InvertLookY"/>)・スティックのデッドゾーン (<see cref="ControlSettings.StickDeadzone"/>)・
+    /// 振動 (<see cref="ControlSettings.RumbleEnabled"/>・<see cref="ControlSettings.RumbleStrength"/>) も、使う側が <see cref="Current"/> と <see cref="Changed"/> で読む。
     /// 保存はしない (保存は設定画面を閉じたときに <see cref="ControlSettingsStore.Save"/> で行う)。
     /// </summary>
     public static class AppliedControlSettings

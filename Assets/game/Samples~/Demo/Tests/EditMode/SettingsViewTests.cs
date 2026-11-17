@@ -439,6 +439,154 @@ namespace Shooter.Tests.EditMode
             LogAssert.NoUnexpectedReceived();
         }
 
+        [Test]
+        public void TheInvertLookYSwitchStartsOffRightAfterTheAimAssist()
+        {
+            _view.Open(_container);
+
+            var invert = _container.Q<Button>(SettingsView.InvertLookYButtonName);
+            var aimAssist = _container.Q<Button>(SettingsView.AimAssistButtonName);
+            Assert.That(CaptionOf(invert), Is.EqualTo("視点の上下反転"));
+            Assert.That(invert.text, Is.EqualTo("オフ"));
+            var rows = aimAssist.parent.parent;
+            Assert.That(rows.IndexOf(invert.parent), Is.EqualTo(rows.IndexOf(aimAssist.parent) + 1));
+        }
+
+        [Test]
+        public void TheGamepadSectionShowsTheDeadzoneTheRumbleSwitchAndItsStrengthInJapanese()
+        {
+            _view.Open(_container);
+
+            var deadzone = _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.StickDeadzone));
+            var rumble = _container.Q<Button>(SettingsView.RumbleButtonName);
+            var strength = _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.RumbleStrength));
+            Assert.That(CaptionOf(deadzone), Is.EqualTo("スティックのデッドゾーン"));
+            Assert.That(CaptionOf(rumble), Is.EqualTo("振動"));
+            Assert.That(CaptionOf(strength), Is.EqualTo("振動の強さ"));
+            Assert.That(deadzone.lowValue, Is.EqualTo(0));
+            Assert.That(deadzone.highValue, Is.EqualTo(500));
+            Assert.That(deadzone.value, Is.EqualTo(125));
+            Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.StickDeadzone)).text, Is.EqualTo("12.5%"));
+            Assert.That(rumble.text, Is.EqualTo("オン"));
+            Assert.That(strength.value, Is.EqualTo(100));
+            Assert.That(strength.enabledSelf, Is.True);
+            Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.RumbleStrength)).text, Is.EqualTo("100%"));
+
+            // 3 項目は「ゲームパッド」の見出しの下に、デッドゾーン・振動・振動の強さの順で並ぶ
+            var rows = deadzone.parent.parent;
+            var heading = rows[rows.IndexOf(deadzone.parent) - 1] as Label;
+            Assert.That(heading, Is.Not.Null);
+            Assert.That(heading.text, Is.EqualTo("ゲームパッド"));
+            Assert.That(rows.IndexOf(rumble.parent), Is.EqualTo(rows.IndexOf(deadzone.parent) + 1));
+            Assert.That(rows.IndexOf(strength.parent), Is.EqualTo(rows.IndexOf(deadzone.parent) + 2));
+        }
+
+        // 上下反転・デッドゾーン・振動を変えるとすぐ効き、閉じると保存され、開き直しても変えたまま
+        [Test]
+        public void ChangingTheInputFeelAppliesAtOnceAndIsSavedOnClose()
+        {
+            var received = new List<ControlSettings>();
+            AppliedControlSettings.Changed += received.Add;
+            try
+            {
+                _view.Open(_container);
+
+                _view.SetInvertLookY(true);
+                _view.SetValue(ControlValue.StickDeadzone, 200);
+                _view.SetValue(ControlValue.RumbleStrength, 40);
+                _view.SetRumbleEnabled(false);
+
+                var current = AppliedControlSettings.Current;
+                Assert.That(current.InvertLookY, Is.True);
+                Assert.That(current.StickDeadzone, Is.EqualTo(0.2f).Within(1e-6f));
+                Assert.That(current.RumbleStrength, Is.EqualTo(0.4f).Within(1e-6f));
+                Assert.That(current.RumbleEnabled, Is.False);
+                Assert.That(received.Count, Is.EqualTo(4));
+                Assert.That(_container.Q<Button>(SettingsView.InvertLookYButtonName).text, Is.EqualTo(SettingsView.OnText));
+                Assert.That(_container.Q<Button>(SettingsView.RumbleButtonName).text, Is.EqualTo(SettingsView.OffText));
+                Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.StickDeadzone)).text, Is.EqualTo("20%"));
+                Assert.That(
+                    _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.RumbleStrength)).enabledSelf,
+                    Is.False,
+                    "the strength does nothing while the rumble is off");
+                Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False, "not written until it closes");
+
+                _view.Close();
+
+                var saved = new ControlSettingsStore(_store.Key).Load();
+                Assert.That(saved.InvertLookY, Is.True);
+                Assert.That(saved.Get(ControlValue.StickDeadzone), Is.EqualTo(200));
+                Assert.That(saved.RumbleEnabled, Is.False);
+                Assert.That(saved.Get(ControlValue.RumbleStrength), Is.EqualTo(40));
+
+                _view.Open(_container);
+                Assert.That(_container.Q<Button>(SettingsView.InvertLookYButtonName).text, Is.EqualTo(SettingsView.OnText));
+                Assert.That(_container.Q<Button>(SettingsView.RumbleButtonName).text, Is.EqualTo(SettingsView.OffText));
+                Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.StickDeadzone)).value, Is.EqualTo(200));
+                Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.RumbleStrength)).value, Is.EqualTo(40));
+                Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.RumbleStrength)).enabledSelf, Is.False);
+            }
+            finally
+            {
+                AppliedControlSettings.Changed -= received.Add;
+            }
+        }
+
+        [Test]
+        public void TurningTheRumbleBackOnLetsTheStrengthBeChangedAgain()
+        {
+            _view.Open(_container);
+            _view.SetRumbleEnabled(false);
+
+            _view.SetRumbleEnabled(true);
+
+            Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.RumbleStrength)).enabledSelf, Is.True);
+            Assert.That(_container.Q<Button>(SettingsView.RumbleButtonName).text, Is.EqualTo(SettingsView.OnText));
+        }
+
+        [Test]
+        public void ResetToDefaultsRestoresTheInputFeel()
+        {
+            _view.Open(_container);
+            _view.SetInvertLookY(true);
+            _view.SetValue(ControlValue.StickDeadzone, 0);
+            _view.SetRumbleEnabled(false);
+            _view.SetValue(ControlValue.RumbleStrength, 10);
+
+            _view.ResetToDefaults();
+
+            var current = AppliedControlSettings.Current;
+            Assert.That(current.InvertLookY, Is.False);
+            Assert.That(current.Get(ControlValue.StickDeadzone), Is.EqualTo(125));
+            Assert.That(current.RumbleEnabled, Is.True);
+            Assert.That(current.Get(ControlValue.RumbleStrength), Is.EqualTo(100));
+            Assert.That(_container.Q<Button>(SettingsView.InvertLookYButtonName).text, Is.EqualTo(SettingsView.OffText));
+            Assert.That(_container.Q<Button>(SettingsView.RumbleButtonName).text, Is.EqualTo(SettingsView.OnText));
+            Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.StickDeadzone)).value, Is.EqualTo(125));
+        }
+
+        [Test]
+        public void TheInputFeelRowsAreInEnglishToo()
+        {
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
+            Localizer.Apply(GameLanguage.English);
+
+            _view.Open(_container);
+
+            var deadzone = _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.StickDeadzone));
+            var rows = deadzone.parent.parent;
+            Assert.That(((Label)rows[rows.IndexOf(deadzone.parent) - 1]).text, Is.EqualTo("Gamepad"));
+            Assert.That(CaptionOf(_container.Q<Button>(SettingsView.InvertLookYButtonName)), Is.EqualTo("Invert look Y"));
+            Assert.That(_container.Q<Button>(SettingsView.InvertLookYButtonName).text, Is.EqualTo("Off"));
+            Assert.That(CaptionOf(deadzone), Is.EqualTo("Stick deadzone"));
+            Assert.That(CaptionOf(_container.Q<Button>(SettingsView.RumbleButtonName)), Is.EqualTo("Vibration"));
+            Assert.That(_container.Q<Button>(SettingsView.RumbleButtonName).text, Is.EqualTo("On"));
+            Assert.That(
+                CaptionOf(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.RumbleStrength))),
+                Is.EqualTo("Vibration strength"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
         // 行の先頭の見出しの Label。
         private static string CaptionOf(VisualElement control)
         {
@@ -507,6 +655,11 @@ namespace Shooter.Tests.EditMode
         {
             Assert.That(SettingsView.FormatValue(ControlValue.FieldOfView, 75), Is.EqualTo("75°"));
             Assert.That(SettingsView.FormatValue(ControlValue.MasterVolume, 40), Is.EqualTo("40%"));
+            Assert.That(SettingsView.FormatValue(ControlValue.StickDeadzone, 125), Is.EqualTo("12.5%"));
+            Assert.That(SettingsView.FormatValue(ControlValue.StickDeadzone, 80), Is.EqualTo("8%"));
+            Assert.That(SettingsView.FormatValue(ControlValue.StickDeadzone, 0), Is.EqualTo("0%"));
+            Assert.That(SettingsView.FormatValue(ControlValue.StickDeadzone, 500), Is.EqualTo("50%"));
+            Assert.That(SettingsView.FormatValue(ControlValue.RumbleStrength, 70), Is.EqualTo("70%"));
             Assert.That(SettingsView.FormatMode(HoldMode.Hold), Is.EqualTo(SettingsView.HoldText));
             Assert.That(SettingsView.FormatMode(HoldMode.Toggle), Is.EqualTo(SettingsView.ToggleText));
         }
@@ -773,6 +926,10 @@ namespace Shooter.Tests.EditMode
                 Assert.That(_view.Root.parent, Is.SameAs(settings.Slot));
                 Assert.That(settings.Slot.style.display.value, Is.EqualTo(DisplayStyle.Flex));
                 Assert.That(settings.Panel.style.display.value, Is.EqualTo(DisplayStyle.None));
+                Assert.That(settings.Slot.Q<Button>(SettingsView.InvertLookYButtonName), Is.Not.Null);
+                Assert.That(settings.Slot.Q<SliderInt>(SettingsView.SliderName(ControlValue.StickDeadzone)), Is.Not.Null);
+                Assert.That(settings.Slot.Q<Button>(SettingsView.RumbleButtonName), Is.Not.Null);
+                Assert.That(settings.Slot.Q<SliderInt>(SettingsView.SliderName(ControlValue.RumbleStrength)), Is.Not.Null);
 
                 _view.SetValue(ControlValue.MouseSensitivity, 40);
                 settings.CloseSettings();

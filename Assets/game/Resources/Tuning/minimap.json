@@ -1,0 +1,7 @@
+{
+  "radius": 50,
+  "scale": 2,
+  "updateIntervalSeconds": 0.1,
+  "spottedSeconds": 3,
+  "rotateWithPlayer": true
+}

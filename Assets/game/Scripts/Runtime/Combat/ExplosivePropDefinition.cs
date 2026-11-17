@@ -4,11 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 爆発する置き物 (<see cref="ExplosiveProp"/>) 1 種類の値 (耐久・ダメージ・半径・建造物への被害・連鎖の遅れ・燃え方) をアセットとして持つ。
-    /// <see cref="ToSpec"/> で <see cref="ExplosivePropSpec"/> に変換する。新しく作ったときの値は <see cref="ExplosivePropSpec"/> の既定値と同じ。
-    /// <see cref="ExplosiveProp"/> に配線すると、置き物は Inspector の値の代わりにこれを読む。同じアセットを入れた置き物は、アセットを変えればまとめて変わる。
-    /// </summary>
     [CreateAssetMenu(fileName = "ExplosiveProp", menuName = "Shooter/Explosive Prop")]
     public sealed class ExplosivePropDefinition : ScriptableObject
     {
@@ -75,8 +70,6 @@ namespace Shooter.Runtime
             set => _burnSeconds = value;
         }
 
-        /// <summary>定義を <see cref="ExplosivePropSpec"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public ExplosivePropSpec ToSpec()
         {
             try
@@ -96,7 +89,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>spec の値をすべて写す。spec は検査済みなので、写した後は必ず <see cref="ToSpec"/> に通る。</summary>
         public void CopyFrom(ExplosivePropSpec spec)
         {
             if (spec == null)

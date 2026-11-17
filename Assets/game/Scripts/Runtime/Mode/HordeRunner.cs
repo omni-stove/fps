@@ -5,25 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ホード (<see cref="Shooter.Core.Horde"/>) をシーンで進める <see cref="ModeRunnerBase"/>。プレイヤーと味方の bot (<see cref="PlayerSide"/>) が、
-    /// <see cref="WaveSpawner"/> の出す波の敵 (<see cref="EnemySide"/>) を耐える。波の敵はモードの参加者にしない。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>通貨・補強の費用と届く距離・倒したときの点・敵の陣営と動かし方・波の調整値は <see cref="Definition"/> (<see cref="HordeDefinition"/>) から読み、
-    /// 始めるときに防衛物 (<see cref="HordeFortification.ApplySpec"/>) と Spawner (<see cref="WaveSpawner.ApplySpec"/>) に渡す。
-    /// 無ければ通貨と点は既定値で、補強は防衛物の、敵と波は Spawner の Inspector の値のまま。</item>
-    /// <item>試合が始まったら (Playing になったら) <see cref="Spawner"/> に波の予定を渡して 1 波目を始める。Spawner の BeginOnStart は切っておく
-    /// (自分で波を始めていたら理由をログに出して止まる)。Definition が無いとき、Spawner の敵の陣営は <see cref="EnemySide"/> と同じであること。</item>
-    /// <item>Spawner が出した敵が倒されたら通貨を入れる (<see cref="RewardEnemyKill"/>)。倒されずに消えた敵では入らない。</item>
-    /// <item>最後の波を全滅させたら勝ち、全員が倒れたら負け。倒れた味方は波の間に戻る。終わったら Spawner を止め、残った敵の動きも止める。</item>
-    /// <item>操作しているプレイヤーが防衛物 (<see cref="HordeFortification"/>) の近くで <see cref="TryInteract()"/> すると (入力は
-    /// <see cref="HordeInteractInput"/>)、通貨を払って壊れた部品を直すか、まだ置かれていない防衛物を置く。</item>
-    /// <item>HUD に出す波・通貨と、近くの防衛物で直せる・置けるもの (<see cref="HordeFortificationOffer"/>) は <see cref="HordeStatus"/> にして渡す。</item>
-    /// <item>波の始まりと全滅・通貨が入ったとき・直した・置いた・断られたとき・勝ち負けに <c>[Mode]</c> のログ (<see cref="HordeText"/>) を出す。</item>
-    /// </list>
-    /// </remarks>
     public sealed class HordeRunner : ModeRunnerBase
     {
         public const int DefaultEnemySideId = HordeSpec.DefaultEnemySideId;
@@ -45,45 +26,34 @@ namespace Shooter.Runtime
         private Horde _horde;
         private WaveSpawner _subscribedSpawner;
 
-        /// <summary>進めているホード。開始前は null。</summary>
         public Horde Horde => _horde;
 
-        /// <summary>波の敵を出す WaveSpawner。始める前に設定する。</summary>
         public WaveSpawner Spawner
         {
             get => _spawner;
             set => _spawner = value;
         }
 
-        /// <summary>波の敵の陣営。<see cref="EffectiveDefinition"/> があればその陣営。設定するのは Definition が無いときに使う値。</summary>
         public Side EnemySide
         {
             get => EffectiveDefinition is { } definition ? definition.EnemySide : new Side(Math.Max(0, _enemySideId));
             set => _enemySideId = value.Id;
         }
 
-        /// <summary>
-        /// 通貨と波の調整値。始める前に設定する。null なら <see cref="HordeSpec"/> の既定値を使い、波は <see cref="Spawner"/> の設定から作る。
-        /// </summary>
         public HordeDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public HordeDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Horde);
 
-        /// <summary>HUD の案内に出す、直す・置く操作のキー (<see cref="HordeFortificationOffer.KeyLabel"/>)。空なら出さない。<see cref="HordeInteractInput"/> が入れる。</summary>
         public string InteractKeyLabel { get; set; }
 
-        /// <summary>始めるときに使う防衛物。空なら始めるときにシーンの HordeFortification をすべて使う。</summary>
         public IReadOnlyList<HordeFortification> ConfiguredFortifications => _fortifications ?? Array.Empty<HordeFortification>();
 
-        /// <summary>使っている防衛物。開始前は空。</summary>
         public IReadOnlyList<HordeFortification> Fortifications => _activeFortifications;
 
-        /// <summary>始めるときに使う防衛物を設定する。null か空なら、シーンの HordeFortification をすべて使う。始めた後に変えても効かない。</summary>
         public void SetFortifications(IReadOnlyList<HordeFortification> fortifications)
         {
             var copy = new HordeFortification[fortifications != null ? fortifications.Count : 0];
@@ -95,16 +65,11 @@ namespace Shooter.Runtime
             _fortifications = copy;
         }
 
-        /// <summary><see cref="Definition"/> (無ければ既定値) から <see cref="HordeSpec"/> を作る。値が不正なら <see cref="ArgumentException"/>。</summary>
         public HordeSpec CreateSpec()
         {
             return EffectiveDefinition is { } definition ? definition.ToSpec(PlayerSide, EnemySide) : new HordeSpec(PlayerSide, EnemySide);
         }
 
-        /// <summary>
-        /// 試合で使う波の予定を作る。<see cref="Definition"/> があればその波、無ければ <see cref="Spawner"/> の設定 (<see cref="WaveSpawner.CreateSchedule"/>)。
-        /// どちらも無ければ <see cref="InvalidOperationException"/>、値が不正なら <see cref="ArgumentException"/>。
-        /// </summary>
         public WaveSchedule CreateSchedule()
         {
             var definition = EffectiveDefinition;
@@ -121,10 +86,6 @@ namespace Shooter.Runtime
             return _spawner.CreateSchedule();
         }
 
-        /// <summary>
-        /// schedule の波でホードを組み、シーンを探さずに members で始める (<see cref="ModeRunnerBase.Begin"/>)。Edit Mode のテストとスクリプトから使う。
-        /// <see cref="Spawner"/> があれば試合の始まりに schedule で波を始め、無ければ schedule を始めるだけにする (敵を出して倒すのは呼び出し側)。
-        /// </summary>
         public void BeginHorde(
             WaveSchedule schedule,
             IReadOnlyList<SideMember> members,
@@ -231,16 +192,11 @@ namespace Shooter.Runtime
             return new HordeFortificationOffer(action, target.name, cost, _horde.CheckPurchase(cost), InteractKeyLabel);
         }
 
-        /// <summary>操作しているプレイヤーで <see cref="TryInteract(SideMember)"/> する。プレイヤーがいなければ NothingToDo。</summary>
         public HordePurchaseVerdict TryInteract()
         {
             return TryInteract(LocalPlayer);
         }
 
-        /// <summary>
-        /// member の近くでいちばん近い、直す・置くものがある防衛物について、通貨を払って直す・置く。払えなければ通貨も防衛物も変えずに理由を返す。
-        /// 始まっていないか、member が倒れているか、近くに防衛物が無いか、戻せる部品が無ければ NothingToDo。
-        /// </summary>
         public HordePurchaseVerdict TryInteract(SideMember member)
         {
             if (_horde == null || member == null || !member.IsAlive || IdOf(member) < 0)
@@ -276,7 +232,6 @@ namespace Shooter.Runtime
             return HordePurchaseVerdict.Ok;
         }
 
-        /// <summary>position から届く防衛物のうち、直す・置くものがあっていちばん近いもの。無ければ null。</summary>
         public HordeFortification NearestFortification(Vector3 position)
         {
             HordeFortification nearest = null;
@@ -299,10 +254,6 @@ namespace Shooter.Runtime
             return nearest;
         }
 
-        /// <summary>
-        /// 波の敵を 1 体倒したことをホードに伝え、入った通貨を返す (<see cref="Shooter.Core.Horde.ReportEnemyKilled"/>)。
-        /// Spawner の敵が倒されたときに呼ばれる。Spawner を使わないテストでは、予定に倒したことを伝えた後に呼ぶ。
-        /// </summary>
         public int RewardEnemyKill()
         {
             if (_horde == null)

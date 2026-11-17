@@ -170,6 +170,7 @@ namespace Shooter.Runtime
         /// <summary>
         /// プレイヤーの移動と体の寸法。移動は <see cref="MotorSettings.Resolve"/>、伏せは <see cref="MotorSettings.ResolveProne"/> で、
         /// 伏せの高さはその高さをカプセルが取れる高さに収めたもの (<see cref="NetMotorSettings.FitProneHeight"/>)。
+        /// 水泳と壁走りはオフラインと同じ値で動かすため、<see cref="TraversalTuning.Current"/> から取る。
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">寸法・移動・伏せの値が条件に合わない。</exception>
         public NetMotorSettings ToMotor()
@@ -182,11 +183,14 @@ namespace Shooter.Runtime
                 _crouchHeight,
                 NetMotorSettings.FitProneHeight(prone.Height, _crouchHeight, _radius),
                 _radius);
+            var traversal = TraversalTuning.Current;
             return new NetMotorSettings(
                 MotorSettings.Resolve(_motorSettings),
                 stance,
                 new CapsuleMoverSpec(_slopeLimitDegrees, _stepOffset, _skinWidth, CapsuleMoverSpec.DefaultLayerMask),
-                prone);
+                prone,
+                traversal.Swim,
+                traversal.WallRun);
         }
 
         /// <summary>

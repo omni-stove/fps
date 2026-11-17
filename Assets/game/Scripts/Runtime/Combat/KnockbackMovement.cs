@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// Play 中に生まれたときは、先に <see cref="KnockbackSpec"/>・<see cref="KnockbackWeight"/> へ渡されていなければ、
-    /// 調整値の JSON (<see cref="KitTuning.Knockback"/>) の値と、その <see cref="Shooter.Core.KnockbackSpec.PlayerWeight"/> で Inspector の重さを上書きする。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class KnockbackMovement : MonoBehaviour, IMovementOverride, IKnockbackReceiver
     {
@@ -136,10 +132,8 @@ namespace Shooter.Runtime
             _body = null;
         }
 
-        /// <summary>
-        /// 飛行中の状態を捨てる。乗り物に座っている間は優先度の高い横取りに負けて Step が呼ばれず、
-        /// 受けた吹き飛ばしが凍ったまま残るので、乗り降りでここから消す。
-        /// </summary>
+        // 乗り物に座っている間は優先度の高い横取りに負けて Step が呼ばれず、
+        // 受けた吹き飛ばしが凍ったまま残るので、乗り降りでここから消す。
         public void ClearFlight()
         {
             _flight.Clear();

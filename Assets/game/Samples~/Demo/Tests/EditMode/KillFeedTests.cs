@@ -179,6 +179,74 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ALocalAssistIsKeptOnlyWhenTheLocalPlayerNeitherKilledNorDied()
+        {
+            var entry = new KillFeedEntry(1, 2, "rifle", false, false, new[] { 3 });
+            var me = new KillFeedName("P1", Team.Alpha, true);
+            var other = new KillFeedName("P2", Team.Bravo, false);
+
+            var assisted = new KillFeedLine(entry, other, other, _rifle, localAssisted: true);
+            Assert.That(assisted.LocalAssisted, Is.True);
+            Assert.That(assisted.Highlighted, Is.False, "an assist is not the strong highlight");
+            Assert.That(new KillFeedLine(entry, me, other, _rifle, localAssisted: true).LocalAssisted, Is.False);
+            Assert.That(new KillFeedLine(entry, other, me, _rifle, localAssisted: true).LocalAssisted, Is.False);
+            Assert.That(new KillFeedLine(entry, other, other, _rifle).LocalAssisted, Is.False);
+            Assert.That(default(KillFeedLine).LocalAssisted, Is.False);
+        }
+
+        [Test]
+        public void LinesDifferingOnlyInTheLocalAssistAreNotEqual()
+        {
+            var entry = new KillFeedEntry(1, 2, "rifle", false, false, new[] { 3 });
+            var killer = new KillFeedName("P1", Team.Alpha, false);
+            var victim = new KillFeedName("P2", Team.Bravo, false);
+
+            Assert.That(
+                new KillFeedLine(entry, killer, victim, _rifle, true),
+                Is.EqualTo(new KillFeedLine(entry, killer, victim, _rifle, true)));
+            Assert.That(
+                new KillFeedLine(entry, killer, victim, _rifle, true).GetHashCode(),
+                Is.EqualTo(new KillFeedLine(entry, killer, victim, _rifle, true).GetHashCode()));
+            Assert.That(
+                new KillFeedLine(entry, killer, victim, _rifle, true),
+                Is.Not.EqualTo(new KillFeedLine(entry, killer, victim, _rifle, false)));
+        }
+
+        [Test]
+        public void ALocalAssistLineLogsTheAssist()
+        {
+            var killer = new KillFeedName("P1", Team.Alpha, false);
+            var victim = new KillFeedName("P2", Team.Bravo, false);
+            var line = new KillFeedLine(new KillFeedEntry(1, 2, "id", false, false, new[] { 3 }), killer, victim, _rifle, true);
+
+            Assert.That(
+                line.ToString(),
+                Is.EqualTo("killer=1 victim=2 weapon=id headshot=False friendly=False assisters=3 killerName=P1 victimName=P2 localAssist=True"));
+        }
+
+        [Test]
+        public void TheAssistMarkIsKeyedInTheAssistTable()
+        {
+            Assert.That(KillFeedText.AssistMark, Is.EqualTo(new LocalizedText("assist.killFeed.mark")));
+            Assert.That(Localizer.Resolve(KillFeedText.AssistMark), Is.EqualTo("アシスト"));
+        }
+
+        [Test]
+        public void AnyLocalLooksForTheLocalPlayerAmongTheAssisters()
+        {
+            var table = new ParticipantTable();
+            table.Set(new Participant(1, "P1", Team.Alpha, true));
+            table.Set(new Participant(2, "P2", Team.Bravo, false));
+
+            Assert.That(ParticipantKillFeedNames.AnyLocal(table, new[] { 2, 1 }), Is.True);
+            Assert.That(ParticipantKillFeedNames.AnyLocal(table, new[] { 2 }), Is.False);
+            Assert.That(ParticipantKillFeedNames.AnyLocal(table, new[] { 9 }), Is.False, "an Id not in the table is skipped");
+            Assert.That(ParticipantKillFeedNames.AnyLocal(table, new int[0]), Is.False);
+            Assert.That(ParticipantKillFeedNames.AnyLocal(table, null), Is.False);
+            Assert.Throws<ArgumentNullException>(() => ParticipantKillFeedNames.AnyLocal(null, new[] { 1 }));
+        }
+
+        [Test]
         public void ASuicideLineHidesTheKiller()
         {
             var name = new KillFeedName("P1", Team.Alpha, false);

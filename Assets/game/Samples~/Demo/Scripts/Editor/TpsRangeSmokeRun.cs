@@ -56,7 +56,7 @@ namespace Fps.Editor
         public const float StandOffFromCover = 0.3f;
 
         /// <summary>
-        /// 乗り越える前に置く位置の、体の表面から壁の手前の面までの隙間 (m)。体の中心から壁までが <see cref="VaultProbe.MaxReach"/> に収まり、
+        /// 乗り越える前に置く位置の、体の表面から壁の手前の面までの隙間 (m)。体の中心から壁までが <see cref="MotorSpec.DefaultVaultReach"/> に収まり、
         /// 最初の Jump で乗り越えられる。届かないとふつうのジャンプになり、低い壁はそれでも越えられてしまうので乗り越えを確かめられない。
         /// </summary>
         public const float StandOffFromVaultWall = 0.3f;

@@ -95,8 +95,8 @@ namespace Fps.Protocol.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
             var bytes = writer.AsSegment().ToArray();
 
-            // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (13 + 6 個、持ち物の値、6 + 3 + 1 + 6 個)
-            var walkSpeed = bytes.Length - 4 - ((13 + 6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (19 + 6 個、持ち物の値、6 + 3 + 1 + 6 個)
+            var walkSpeed = bytes.Length - 4 - ((19 + 6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkSpeed, 4), -1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));

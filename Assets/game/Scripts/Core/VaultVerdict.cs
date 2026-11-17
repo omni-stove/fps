@@ -9,7 +9,7 @@ namespace Fps.Core
         /// <summary>前方に何も無い。</summary>
         NoObstacle,
 
-        /// <summary>障害物が <see cref="VaultProbe.MaxReach"/> より遠い。</summary>
+        /// <summary>障害物が <see cref="MotorSpec.VaultReach"/> より遠い。</summary>
         TooFar,
 
         /// <summary>当たった面が壁ではない (床・天井・急な斜面)。</summary>
@@ -19,7 +19,7 @@ namespace Fps.Core
         NotFacing,
 
         /// <summary>
-        /// 障害物が <see cref="VaultProbe.MinHeight"/> より低い (段差として歩いて上がる)。
+        /// 障害物が <see cref="MotorSpec.VaultMinHeight"/> より低い (段差として歩いて上がる)。
         /// よじ登りでは <see cref="MotorSpec.VaultMaxHeight"/> 以下 (乗り越えるかジャンプで上がる)。
         /// </summary>
         TooLow,
@@ -28,7 +28,7 @@ namespace Fps.Core
         TooHigh,
 
         /// <summary>
-        /// 障害物が <see cref="VaultProbe.MaxDepth"/> より厚い (向こう側へ降りられない) のに、上に体が立てる奥行き
+        /// 障害物が <see cref="MotorSpec.VaultMaxDepth"/> より厚い (向こう側へ降りられない) のに、上に体が立てる奥行き
         /// (<see cref="VaultProbe.MantleFootingDepth"/>) も無い。立てるなら上に乗る <see cref="Vault"/> になる。
         /// </summary>
         TooDeep,

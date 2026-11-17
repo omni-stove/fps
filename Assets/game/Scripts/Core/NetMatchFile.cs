@@ -47,6 +47,12 @@ namespace Fps.Core
         public const string VaultMaxHeightItem = "vaultMaxHeight";
         public const string MantleMaxHeightItem = "mantleMaxHeight";
         public const string MantleSpeedItem = "mantleSpeed";
+        public const string DodgeCooldownSecondsItem = "dodgeCooldownSeconds";
+        public const string VaultSpeedItem = "vaultSpeed";
+        public const string VaultReachItem = "vaultReach";
+        public const string VaultMaxAngleDegreesItem = "vaultMaxAngleDegrees";
+        public const string VaultMinHeightItem = "vaultMinHeight";
+        public const string VaultMaxDepthItem = "vaultMaxDepth";
         public const string WalkForwardScaleItem = "walkForwardScale";
         public const string WalkBackwardScaleItem = "walkBackwardScale";
         public const string WalkSideScaleItem = "walkSideScale";
@@ -83,6 +89,7 @@ namespace Fps.Core
         {
             WalkSpeedItem, SprintSpeedItem, JumpHeightItem, GravityItem, AirControlItem, CrouchSpeedItem, SafeFallSpeedItem, LethalFallSpeedItem,
             DodgeDistanceItem, DodgeSecondsItem, VaultMaxHeightItem, MantleMaxHeightItem, MantleSpeedItem,
+            DodgeCooldownSecondsItem, VaultSpeedItem, VaultReachItem, VaultMaxAngleDegreesItem, VaultMinHeightItem, VaultMaxDepthItem,
             WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem,
             CarryWeightSourceItem, CarryMultiplierSourceItem, CarryFreeWeightItem, CarrySpeedLossPerKgItem, CarryMinWeightMultiplierItem,
             CarryWalkItem, CarrySprintItem, CarryCrouchItem, CarryProneItem,
@@ -249,6 +256,12 @@ namespace Fps.Core
             writer.Float(VaultMaxHeightItem, motor.VaultMaxHeight);
             writer.Float(MantleMaxHeightItem, motor.MantleMaxHeight);
             writer.Float(MantleSpeedItem, motor.MantleSpeed);
+            writer.Float(DodgeCooldownSecondsItem, motor.DodgeCooldownSeconds);
+            writer.Float(VaultSpeedItem, motor.VaultSpeed);
+            writer.Float(VaultReachItem, motor.VaultReach);
+            writer.Float(VaultMaxAngleDegreesItem, motor.VaultMaxAngleDegrees);
+            writer.Float(VaultMinHeightItem, motor.VaultMinHeight);
+            writer.Float(VaultMaxDepthItem, motor.VaultMaxDepth);
             writer.Float(WalkForwardScaleItem, motor.WalkDirection.Forward);
             writer.Float(WalkBackwardScaleItem, motor.WalkDirection.Backward);
             writer.Float(WalkSideScaleItem, motor.WalkDirection.Side);
@@ -395,7 +408,13 @@ namespace Fps.Core
                         fields.ReadFloat(MantleSpeedItem, dm.MantleSpeed),
                         walkDirection,
                         sprintDirection,
-                        carry),
+                        carry,
+                        fields.ReadFloat(DodgeCooldownSecondsItem, dm.DodgeCooldownSeconds),
+                        fields.ReadFloat(VaultSpeedItem, dm.VaultSpeed),
+                        fields.ReadFloat(VaultReachItem, dm.VaultReach),
+                        fields.ReadFloat(VaultMaxAngleDegreesItem, dm.VaultMaxAngleDegrees),
+                        fields.ReadFloat(VaultMinHeightItem, dm.VaultMinHeight),
+                        fields.ReadFloat(VaultMaxDepthItem, dm.VaultMaxDepth)),
                     new StanceGeometry(
                         fields.ReadFloat(StandingHeightItem, ds.Standing.Height),
                         fields.ReadFloat(StandingCenterYItem, ds.Standing.CenterY),

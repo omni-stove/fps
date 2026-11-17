@@ -11,31 +11,22 @@ namespace Fps.Core
     /// </summary>
     public sealed class DodgeMotion
     {
-        /// <summary>生成時に指定しなかったときの <see cref="CooldownSeconds"/>。</summary>
-        public const float DefaultCooldownSeconds = 0.5f;
-
         private Vector2 _direction;
         private float _elapsed;
         private float _cooldownRemaining;
         private bool _isRolling;
 
-        /// <param name="spec">距離と秒数を読む移動の設定。null 不可。</param>
-        /// <param name="cooldownSeconds">終わってから次を始められるまでの秒数。0 以上の有限値。</param>
-        public DodgeMotion(MotorSpec spec, float cooldownSeconds = DefaultCooldownSeconds)
+        /// <param name="spec">距離・秒数・待ち時間 (<see cref="MotorSpec.DodgeCooldownSeconds"/>) を読む移動の設定。null 不可。</param>
+        public DodgeMotion(MotorSpec spec)
         {
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
             }
 
-            if (!(cooldownSeconds >= 0f) || float.IsInfinity(cooldownSeconds))
-            {
-                throw new ArgumentOutOfRangeException(nameof(cooldownSeconds), cooldownSeconds, "cooldownSeconds must be finite and not negative");
-            }
-
             Distance = spec.DodgeDistance;
             Seconds = spec.DodgeSeconds;
-            CooldownSeconds = cooldownSeconds;
+            CooldownSeconds = spec.DodgeCooldownSeconds;
         }
 
         /// <summary>1 回で動く水平距離 (m)。</summary>

@@ -65,7 +65,7 @@ namespace Fps.Editor
         public const float LowWallHeight = 0.8f;
         public const float LowWallThickness = 0.4f;
 
-        /// <summary>段差の高さと奥行き (m)。<see cref="VaultProbe.MinHeight"/> 以上・<see cref="VaultProbe.MaxDepth"/> 以下なので乗り越えられる。</summary>
+        /// <summary>段差の高さと奥行き (m)。<see cref="MotorSpec.DefaultVaultMinHeight"/> 以上・<see cref="MotorSpec.DefaultVaultMaxDepth"/> 以下なので乗り越えられる。</summary>
         public const float StepHeight = 0.5f;
         public const float StepDepth = 0.8f;
 

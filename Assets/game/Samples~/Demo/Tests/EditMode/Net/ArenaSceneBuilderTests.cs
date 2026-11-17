@@ -354,9 +354,9 @@ namespace Fps.Net.Tests
 
         private static void AssertVaultable(string name, Vector3 size)
         {
-            Assert.That(size.y, Is.GreaterThanOrEqualTo(VaultProbe.MinHeight), name + " is not a mere step");
+            Assert.That(size.y, Is.GreaterThanOrEqualTo(MotorSpec.DefaultVaultMinHeight), name + " is not a mere step");
             Assert.That(size.y, Is.LessThanOrEqualTo(MotorSpec.DefaultVaultMaxHeight), name + " can be vaulted");
-            Assert.That(Mathf.Min(size.x, size.z), Is.LessThanOrEqualTo(VaultProbe.MaxDepth), name + " is thin enough to vault over");
+            Assert.That(Mathf.Min(size.x, size.z), Is.LessThanOrEqualTo(MotorSpec.DefaultVaultMaxDepth), name + " is thin enough to vault over");
         }
 
         private static bool Near(Vector3 a, Vector3 b)

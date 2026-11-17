@@ -27,7 +27,7 @@ namespace Fps.Core.Tests
         [Test]
         public void NothingInFrontIsNotAWall()
         {
-            var result = CoverProbe.Evaluate(CoverWallSample.None, _forward);
+            var result = CoverProbe.Evaluate(CoverWallSample.None, _forward, MotorSpec.Default);
 
             Assert.That(result.IsWall, Is.False);
             Assert.That(result.CanEnter, Is.False);
@@ -38,7 +38,7 @@ namespace Fps.Core.Tests
         [TestCase(1.0f)]
         public void EntersWithinOneMetre(float distance)
         {
-            var result = CoverProbe.Evaluate(Sample(distance), _forward);
+            var result = CoverProbe.Evaluate(Sample(distance), _forward, MotorSpec.Default);
 
             Assert.That(result.IsWall, Is.True);
             Assert.That(result.CanEnter, Is.True);
@@ -49,7 +49,7 @@ namespace Fps.Core.Tests
         [TestCase(5f)]
         public void WallsFartherThanOneMetreAreOutOfReach(float distance)
         {
-            var result = CoverProbe.Evaluate(Sample(distance), _forward);
+            var result = CoverProbe.Evaluate(Sample(distance), _forward, MotorSpec.Default);
 
             Assert.That(result.IsWall, Is.False);
             Assert.That(result.CanEnter, Is.False);
@@ -61,7 +61,7 @@ namespace Fps.Core.Tests
         [TestCase(-45f)]
         public void EntersWhenFacingWithin45Degrees(float yaw)
         {
-            Assert.That(CoverProbe.Evaluate(Sample(), Facing(yaw)).CanEnter, Is.True);
+            Assert.That(CoverProbe.Evaluate(Sample(), Facing(yaw), MotorSpec.Default).CanEnter, Is.True);
         }
 
         [TestCase(46f)]
@@ -70,7 +70,7 @@ namespace Fps.Core.Tests
         [TestCase(180f)]
         public void DoesNotEnterWhenFacingAwayMoreThan45Degrees(float yaw)
         {
-            var result = CoverProbe.Evaluate(Sample(), Facing(yaw));
+            var result = CoverProbe.Evaluate(Sample(), Facing(yaw), MotorSpec.Default);
 
             Assert.That(result.CanEnter, Is.False);
             Assert.That(result.IsWall, Is.True, "the wall is still there, only the angle is off");
@@ -81,27 +81,27 @@ namespace Fps.Core.Tests
         {
             var lookingDown = new Vector3(0f, -0.9f, 0.1f);
 
-            Assert.That(CoverProbe.Evaluate(Sample(), lookingDown).CanEnter, Is.True);
+            Assert.That(CoverProbe.Evaluate(Sample(), lookingDown, MotorSpec.Default).CanEnter, Is.True);
         }
 
         [Test]
         public void StraightUpOrDownFacingCannotEnter()
         {
-            Assert.That(CoverProbe.Evaluate(Sample(), Vector3.UnitY).CanEnter, Is.False);
+            Assert.That(CoverProbe.Evaluate(Sample(), Vector3.UnitY, MotorSpec.Default).CanEnter, Is.False);
         }
 
         [Test]
         public void FloorsAndSteepSlopesAreNotWalls()
         {
-            Assert.That(CoverProbe.Evaluate(Sample(normal: Vector3.UnitY), _forward).IsWall, Is.False);
-            Assert.That(CoverProbe.Evaluate(Sample(normal: new Vector3(0f, 0.5f, -0.866f)), _forward).IsWall, Is.False);
-            Assert.That(CoverProbe.Evaluate(Sample(normal: Vector3.Zero), _forward).IsWall, Is.False);
+            Assert.That(CoverProbe.Evaluate(Sample(normal: Vector3.UnitY), _forward, MotorSpec.Default).IsWall, Is.False);
+            Assert.That(CoverProbe.Evaluate(Sample(normal: new Vector3(0f, 0.5f, -0.866f)), _forward, MotorSpec.Default).IsWall, Is.False);
+            Assert.That(CoverProbe.Evaluate(Sample(normal: Vector3.Zero), _forward, MotorSpec.Default).IsWall, Is.False);
         }
 
         [Test]
         public void SlightlyTiltedWallIsAWallAndItsNormalIsFlattened()
         {
-            var result = CoverProbe.Evaluate(Sample(normal: new Vector3(0f, 0.2f, -0.98f)), _forward);
+            var result = CoverProbe.Evaluate(Sample(normal: new Vector3(0f, 0.2f, -0.98f)), _forward, MotorSpec.Default);
 
             Assert.That(result.IsWall, Is.True);
             Assert.That(result.Normal.X, Is.EqualTo(0f).Within(_tolerance));
@@ -116,7 +116,7 @@ namespace Fps.Core.Tests
         [TestCase(2.0f, CoverHeight.High)]
         public void WallsBelow1Point1MetresAreLow(float topHeight, CoverHeight expected)
         {
-            Assert.That(CoverProbe.Evaluate(Sample(topHeight: topHeight), _forward).Height, Is.EqualTo(expected));
+            Assert.That(CoverProbe.Evaluate(Sample(topHeight: topHeight), _forward, MotorSpec.Default).Height, Is.EqualTo(expected));
         }
 
         [TestCase(true, true, CoverEdge.None)]
@@ -125,7 +125,7 @@ namespace Fps.Core.Tests
         [TestCase(false, false, CoverEdge.Left | CoverEdge.Right)]
         public void MissingWallBesideIsAnEdge(bool wallOnLeft, bool wallOnRight, CoverEdge expected)
         {
-            var result = CoverProbe.Evaluate(Sample(wallOnLeft: wallOnLeft, wallOnRight: wallOnRight), _forward);
+            var result = CoverProbe.Evaluate(Sample(wallOnLeft: wallOnLeft, wallOnRight: wallOnRight), _forward, MotorSpec.Default);
 
             Assert.That(result.Edges, Is.EqualTo(expected));
             Assert.That(result.IsAtLeftEdge, Is.EqualTo(!wallOnLeft));
@@ -135,42 +135,42 @@ namespace Fps.Core.Tests
         [Test]
         public void LowWallsPeekUpWithoutMovingSideways()
         {
-            var result = CoverProbe.Evaluate(Sample(topHeight: 1f, wallOnLeft: false), _forward);
+            var result = CoverProbe.Evaluate(Sample(topHeight: 1f, wallOnLeft: false), _forward, MotorSpec.Default);
 
-            Assert.That(CoverProbe.PeekOffset(result, 1f), Is.EqualTo(0f));
+            Assert.That(CoverProbe.PeekOffset(result, 1f, MotorSpec.Default), Is.EqualTo(0f));
         }
 
         [Test]
         public void HighWallsAwayFromAnEdgeHaveNoPeek()
         {
-            Assert.That(CoverProbe.PeekOffset(CoverProbe.Evaluate(Sample(), _forward), 1f), Is.EqualTo(0f));
+            Assert.That(CoverProbe.PeekOffset(CoverProbe.Evaluate(Sample(), _forward, MotorSpec.Default), 1f, MotorSpec.Default), Is.EqualTo(0f));
         }
 
         [Test]
         public void HighWallsPeekSidewaysOutOfTheOpenEdge()
         {
-            var left = CoverProbe.Evaluate(Sample(wallOnLeft: false), _forward);
-            var right = CoverProbe.Evaluate(Sample(wallOnRight: false), _forward);
+            var left = CoverProbe.Evaluate(Sample(wallOnLeft: false), _forward, MotorSpec.Default);
+            var right = CoverProbe.Evaluate(Sample(wallOnRight: false), _forward, MotorSpec.Default);
 
-            Assert.That(CoverProbe.PeekOffset(left, 1f), Is.EqualTo(-CoverProbe.PeekSideDistance));
-            Assert.That(CoverProbe.PeekOffset(right, -1f), Is.EqualTo(CoverProbe.PeekSideDistance));
-            Assert.That(CoverProbe.PeekSideDistance, Is.EqualTo(0.6f));
+            Assert.That(CoverProbe.PeekOffset(left, 1f, MotorSpec.Default), Is.EqualTo(-MotorSpec.DefaultCoverPeekSideDistance));
+            Assert.That(CoverProbe.PeekOffset(right, -1f, MotorSpec.Default), Is.EqualTo(MotorSpec.DefaultCoverPeekSideDistance));
+            Assert.That(MotorSpec.DefaultCoverPeekSideDistance, Is.EqualTo(0.6f));
         }
 
         [Test]
         public void NarrowPillarsPeekToThePreferredSide()
         {
-            var pillar = CoverProbe.Evaluate(Sample(wallOnLeft: false, wallOnRight: false), _forward);
+            var pillar = CoverProbe.Evaluate(Sample(wallOnLeft: false, wallOnRight: false), _forward, MotorSpec.Default);
 
-            Assert.That(CoverProbe.PeekOffset(pillar, -1f), Is.EqualTo(-CoverProbe.PeekSideDistance));
-            Assert.That(CoverProbe.PeekOffset(pillar, 1f), Is.EqualTo(CoverProbe.PeekSideDistance));
-            Assert.That(CoverProbe.PeekOffset(pillar, 0f), Is.EqualTo(CoverProbe.PeekSideDistance));
+            Assert.That(CoverProbe.PeekOffset(pillar, -1f, MotorSpec.Default), Is.EqualTo(-MotorSpec.DefaultCoverPeekSideDistance));
+            Assert.That(CoverProbe.PeekOffset(pillar, 1f, MotorSpec.Default), Is.EqualTo(MotorSpec.DefaultCoverPeekSideDistance));
+            Assert.That(CoverProbe.PeekOffset(pillar, 0f, MotorSpec.Default), Is.EqualTo(MotorSpec.DefaultCoverPeekSideDistance));
         }
 
         [Test]
         public void NoWallHasNoPeek()
         {
-            Assert.That(CoverProbe.PeekOffset(CoverProbeResult.None, 1f), Is.EqualTo(0f));
+            Assert.That(CoverProbe.PeekOffset(CoverProbeResult.None, 1f, MotorSpec.Default), Is.EqualTo(0f));
         }
 
         [Test]
@@ -204,10 +204,10 @@ namespace Fps.Core.Tests
         [Test]
         public void RejectsNonFiniteSamples()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => CoverProbe.Evaluate(Sample(float.NaN), _forward));
-            Assert.Throws<ArgumentOutOfRangeException>(() => CoverProbe.Evaluate(Sample(topHeight: float.PositiveInfinity), _forward));
+            Assert.Throws<ArgumentOutOfRangeException>(() => CoverProbe.Evaluate(Sample(float.NaN), _forward, MotorSpec.Default));
+            Assert.Throws<ArgumentOutOfRangeException>(() => CoverProbe.Evaluate(Sample(topHeight: float.PositiveInfinity), _forward, MotorSpec.Default));
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => CoverProbe.Evaluate(Sample(normal: new Vector3(float.NaN, 0f, -1f)), _forward));
+                () => CoverProbe.Evaluate(Sample(normal: new Vector3(float.NaN, 0f, -1f)), _forward, MotorSpec.Default));
         }
     }
 }

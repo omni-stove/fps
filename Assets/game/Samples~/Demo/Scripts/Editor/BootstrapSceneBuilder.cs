@@ -31,10 +31,10 @@ namespace Fps.Editor
         public const string LowCoverName = "Cover_Low";
         public const string HighCoverName = "Cover_High";
 
-        /// <summary>低い遮蔽物の高さ (m)。<see cref="CoverProbe.LowWallHeight"/> 未満なので、しゃがんで隠れ、立って覗き、上からブラインドファイアする。</summary>
+        /// <summary>低い遮蔽物の高さ (m)。<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満なので、しゃがんで隠れ、立って覗き、上からブラインドファイアする。</summary>
         public const float LowCoverHeight = 1f;
 
-        /// <summary>高い遮蔽物の高さ (m)。<see cref="CoverProbe.LowWallHeight"/> 以上で目 (1.6m) より高いので、立ったまま隠れ、端から覗く。</summary>
+        /// <summary>高い遮蔽物の高さ (m)。<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 以上で目 (1.6m) より高いので、立ったまま隠れ、端から覗く。</summary>
         public const float HighCoverHeight = 2f;
 
         /// <summary>遮蔽物の厚さ (m)。</summary>

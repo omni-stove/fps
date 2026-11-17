@@ -47,7 +47,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// 乗り越え用の壁の高さ (m)。<see cref="MotorSpec.DefaultVaultMaxHeight"/> より低く、プレイヤーのジャンプ
-        /// (<see cref="PlayerController.DefaultJumpHeight"/>) でも越えられる。<see cref="CoverProbe.LowWallHeight"/> 未満なので低い遮蔽物にもなる。
+        /// (<see cref="PlayerController.DefaultJumpHeight"/>) でも越えられる。<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満なので低い遮蔽物にもなる。
         /// </summary>
         public const float VaultWallHeight = 0.8f;
 

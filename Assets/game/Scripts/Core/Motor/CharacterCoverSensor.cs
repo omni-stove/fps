@@ -24,8 +24,18 @@ namespace Fps.Core
             _body = body ?? throw new ArgumentNullException(nameof(body));
         }
 
-        public CoverProbeResult Probe(Vector3 position, Vector3 direction, Vector3 facing, out float topY)
+        /// <summary>
+        /// position から direction へ壁を探し、facing を向いているとして <see cref="CoverProbe.Evaluate"/> で判定する。
+        /// spec は探す距離と判定に使う移動の設定。壁なら topY に壁の上端の高さ (ワールド) を入れる。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">spec が null のとき。</exception>
+        public CoverProbeResult Probe(Vector3 position, Vector3 direction, Vector3 facing, MotorSpec spec, out float topY)
         {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
             topY = 0f;
             direction = new Vector3(direction.X, 0f, direction.Z);
             var length = MathF.Sqrt((direction.X * direction.X) + (direction.Z * direction.Z));
@@ -39,7 +49,7 @@ namespace Fps.Core
             var origin = new Vector3(position.X, feetY + ProbeHeight, position.Z);
             var world = _body.World;
             var mask = _body.LayerMask;
-            if (!world.Raycast(origin, direction, CoverProbe.MaxEnterDistance, mask, out var hit))
+            if (!world.Raycast(origin, direction, spec.CoverMaxEnterDistance, mask, out var hit))
             {
                 return CoverProbeResult.None;
             }
@@ -60,7 +70,7 @@ namespace Fps.Core
             }
 
             var sample = new CoverWallSample(hit.Distance, normal, topHeight, wallOnLeft, wallOnRight);
-            var result = CoverProbe.Evaluate(sample, facing);
+            var result = CoverProbe.Evaluate(sample, facing, spec);
             if (result.IsWall)
             {
                 topY = feetY + topHeight;

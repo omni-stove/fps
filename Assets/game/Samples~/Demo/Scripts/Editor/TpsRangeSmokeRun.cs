@@ -52,7 +52,7 @@ namespace Fps.Editor
         /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
-        /// <summary>カバーに入る前に置く位置の、体の表面から遮蔽物の手前の面までの隙間 (m)。<see cref="CoverProbe.MaxEnterDistance"/> に収まる。</summary>
+        /// <summary>カバーに入る前に置く位置の、体の表面から遮蔽物の手前の面までの隙間 (m)。<see cref="MotorSpec.DefaultCoverMaxEnterDistance"/> に収まる。</summary>
         public const float StandOffFromCover = 0.3f;
 
         /// <summary>

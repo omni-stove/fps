@@ -183,7 +183,7 @@ namespace Fps.Tests.EditMode
             var high = 0;
             foreach (var cover in TpsRangeSceneBuilder.Covers)
             {
-                if (cover.Size.y < CoverProbe.LowWallHeight)
+                if (cover.Size.y < MotorSpec.DefaultCoverLowWallHeight)
                 {
                     low++;
                 }
@@ -196,7 +196,7 @@ namespace Fps.Tests.EditMode
             Assert.That(low, Is.GreaterThanOrEqualTo(2));
             Assert.That(high, Is.GreaterThanOrEqualTo(2));
             Assert.That(TpsRangeSceneBuilder.LowCover.Name, Is.EqualTo(TpsRangeSceneBuilder.LowCoverName));
-            Assert.That(TpsRangeSceneBuilder.LowCover.Size.y, Is.LessThan(CoverProbe.LowWallHeight));
+            Assert.That(TpsRangeSceneBuilder.LowCover.Size.y, Is.LessThan(MotorSpec.DefaultCoverLowWallHeight));
         }
 
         [Test]
@@ -205,7 +205,7 @@ namespace Fps.Tests.EditMode
             Assert.That(TpsRangeSceneBuilder.VaultWall.Size.y, Is.EqualTo(TpsRangeSceneBuilder.VaultWallHeight));
             Assert.That(TpsRangeSceneBuilder.VaultWallHeight, Is.LessThan(MotorSpec.DefaultVaultMaxHeight));
             Assert.That(TpsRangeSceneBuilder.VaultWallHeight, Is.LessThan(PlayerController.DefaultJumpHeight));
-            Assert.That(TpsRangeSceneBuilder.VaultWallHeight, Is.LessThan(CoverProbe.LowWallHeight), "the vault wall also works as a low cover");
+            Assert.That(TpsRangeSceneBuilder.VaultWallHeight, Is.LessThan(MotorSpec.DefaultCoverLowWallHeight), "the vault wall also works as a low cover");
         }
 
         [Test]

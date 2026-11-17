@@ -17,6 +17,8 @@ namespace Shooter.Runtime
     /// UI Toolkit の要素としてコードで組み、<see cref="Open"/> で渡された入れ物 (メインメニューの差し込み口やポーズ画面の枠) に入れる。
     /// 値を変えるとすぐ <see cref="ISettingsSink.Apply"/> (既定は <see cref="AppliedControlSettings.Sink"/>) で効かせ、<see cref="Close"/> (か <see cref="Save"/>) で
     /// <see cref="ControlSettingsStore"/> に保存する。スライダーを動かすたびにディスクへ書かないよう、保存は閉じるときにまとめる。
+    /// ボイスチャットのマイクの On/Off と受ける声の音量 (<see cref="VoiceSettings"/>) は開くときに <see cref="VoiceSettingsStore"/> から読み、
+    /// 閉じるときに同じストアへ保存する。試合中のボイスはその保存の知らせ (<see cref="VoiceSettingsStore.Saved"/>) で効かせる。
     /// 「戻る」とキャンセル (ゲームパッドの B など) では <see cref="BackRequested"/> を呼ぶだけで、閉じるのは開いた側が決める。
     /// <para>
     /// キーとボタンの割り当ては <see cref="PlayerBindings"/> で機器ごとに変え (<see cref="StartRebind"/>)、上書きはすぐ効く。
@@ -74,6 +76,15 @@ namespace Shooter.Runtime
 
         /// <summary>ゲームパッドの振動 (<see cref="ControlSettings.RumbleEnabled"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string RumbleButtonName = "settings-rumble";
+
+        /// <summary>ボイスチャットのマイク (<see cref="Shooter.Core.VoiceSettings.MicrophoneEnabled"/>) の On/Off を切り替えるボタンの name。</summary>
+        public const string VoiceMicrophoneButtonName = "settings-voice-microphone";
+
+        /// <summary>受ける声の音量 (<see cref="Shooter.Core.VoiceSettings.VolumePercent"/>) のスライダーの name。</summary>
+        public const string VoiceVolumeSliderName = "settings-voice-volume";
+
+        /// <summary>受ける声の音量の今の値を出す Label の name。</summary>
+        public const string VoiceVolumeValueName = VoiceVolumeSliderName + "-value";
 
         /// <summary>今の言語の「オン」。</summary>
         public static string OnText => Localizer.Get("settings.on");
@@ -139,6 +150,12 @@ namespace Shooter.Runtime
         private Button _aimAssistButton;
         private Button _invertLookYButton;
         private Button _rumbleButton;
+        private Button _voiceMicrophoneButton;
+        private SliderInt _voiceVolumeSlider;
+        private Label _voiceVolumeLabel;
+        private readonly VoiceSettingsStore _voiceStore;
+        private VoiceSettings _voiceEditing;
+        private VoiceSettings _voiceSaved;
         private Button _languageButton;
         private IReadOnlyList<GameLanguage> _languages = Array.Empty<GameLanguage>();
         private readonly Dictionary<GameLanguage, string> _languageNames = new Dictionary<GameLanguage, string>();
@@ -148,18 +165,21 @@ namespace Shooter.Runtime
         /// <param name="actions">割り当てを変える Input Actions。null なら開くときのプロジェクト全体のもの (<see cref="InputSystem.actions"/>)。</param>
         /// <param name="sink">今の設定を読み、変えた値を効かせる先。null ならゲーム全体の <see cref="AppliedControlSettings.Sink"/>。</param>
         /// <param name="languageStore">選んだ言語の保存先。null ならゲームの既定のキー。</param>
+        /// <param name="voiceStore">ボイスチャットの設定の保存先。null ならゲームの既定のキー。</param>
         public SettingsView(
             ControlSettingsStore store = null,
             InputBindingOverridesStore bindingStore = null,
             InputActionAsset actions = null,
             ISettingsSink sink = null,
-            LanguagePreferenceStore languageStore = null)
+            LanguagePreferenceStore languageStore = null,
+            VoiceSettingsStore voiceStore = null)
         {
             _store = store ?? new ControlSettingsStore();
             _bindingStore = bindingStore ?? new InputBindingOverridesStore();
             _actionAsset = actions;
             _sink = sink ?? AppliedControlSettings.Sink;
             _languageStore = languageStore ?? new LanguagePreferenceStore();
+            _voiceStore = voiceStore ?? new VoiceSettingsStore();
         }
 
         /// <summary>「戻る」かキャンセルが押されたとき。開いた側が <see cref="Close"/> を呼んで閉じる。</summary>
@@ -169,6 +189,12 @@ namespace Shooter.Runtime
         public ControlSettingsStore Store => _store;
 
         public LanguagePreferenceStore LanguageStore => _languageStore;
+
+        /// <summary>ボイスチャットの設定の保存先。</summary>
+        public VoiceSettingsStore VoiceStore => _voiceStore;
+
+        /// <summary>画面で編集しているボイスチャットの設定。閉じていれば null。</summary>
+        public VoiceSettings Voice => _voiceEditing;
 
         /// <summary>開いているか。</summary>
         public bool IsOpen => _root != null;
@@ -193,8 +219,9 @@ namespace Shooter.Runtime
         /// <summary>直前に変えた割り当てがほかと重なっていて、まだ取り消すか決めていなければその結果。無ければ null。</summary>
         public RebindResult PendingConflict => _pendingConflict;
 
-        /// <summary>まだ保存していない変更 (値・モード・割り当て) があるか。</summary>
-        public bool HasUnsavedChanges => _editing != null && (!_editing.Equals(_saved) || _bindingsDirty);
+        /// <summary>まだ保存していない変更 (値・モード・割り当て・ボイス) があるか。</summary>
+        public bool HasUnsavedChanges =>
+            _editing != null && (!_editing.Equals(_saved) || _bindingsDirty || !_voiceEditing.Equals(_voiceSaved));
 
         /// <summary>slot の割り当てを変えるボタンの name。</summary>
         public static string RebindButtonName(RebindSlot slot)
@@ -255,6 +282,12 @@ namespace Shooter.Runtime
                 default:
                     return amount.ToString(CultureInfo.InvariantCulture) + "%";
             }
+        }
+
+        /// <summary>受ける声の音量のスライダーの横に出す値 (%)。</summary>
+        public static string FormatVoiceVolume(int percent)
+        {
+            return percent.ToString(CultureInfo.InvariantCulture) + "%";
         }
 
         /// <summary>今の言語で、Hold/Toggle のボタンに出す文字。</summary>
@@ -352,6 +385,8 @@ namespace Shooter.Runtime
 
             _editing = _sink.Current;
             _saved = _editing;
+            _voiceEditing = _voiceStore.Load();
+            _voiceSaved = _voiceEditing;
             _bindings = CreateBindings();
             _bindingsDirty = false;
             _pendingConflict = null;
@@ -379,6 +414,8 @@ namespace Shooter.Runtime
             DetachElements();
             _editing = null;
             _saved = null;
+            _voiceEditing = null;
+            _voiceSaved = null;
             _bindings?.Dispose();
             _bindings = null;
             _bindingsDirty = false;
@@ -410,6 +447,9 @@ namespace Shooter.Runtime
             _aimAssistButton = null;
             _invertLookYButton = null;
             _rumbleButton = null;
+            _voiceMicrophoneButton = null;
+            _voiceVolumeSlider = null;
+            _voiceVolumeLabel = null;
             _languageButton = null;
             _languages = Array.Empty<GameLanguage>();
             _languageNames.Clear();
@@ -467,6 +507,22 @@ namespace Shooter.Runtime
                 catch (Exception e)
                 {
                     Debug.LogError($"{LogTag} could not save the settings to '{_store.Key}': {e.Message}");
+                    Debug.LogException(e);
+                    failed = true;
+                }
+            }
+
+            if (!_voiceEditing.Equals(_voiceSaved))
+            {
+                try
+                {
+                    _voiceStore.Save(_voiceEditing);
+                    _voiceSaved = _voiceEditing;
+                    Debug.Log($"{LogTag} saved the voice settings {_voiceEditing.ToJson()}");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"{LogTag} could not save the voice settings to '{_voiceStore.Key}': {e.Message}");
                     Debug.LogException(e);
                     failed = true;
                 }
@@ -574,6 +630,29 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
+        /// ボイスチャットのマイク (<see cref="VoiceSettings.MicrophoneEnabled"/>) を enabled にし、ボタンの表示を合わせる。
+        /// 試合中のボイスには、閉じたときの保存 (<see cref="VoiceSettingsStore.Saved"/>) で効く。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        public void SetMicrophoneEnabled(bool enabled)
+        {
+            EnsureOpen();
+            EditVoice(_voiceEditing.WithMicrophoneEnabled(enabled));
+        }
+
+        /// <summary>
+        /// 受ける声の音量 (<see cref="VoiceSettings.VolumePercent"/>) を percent にし、スライダーと表示を合わせる。
+        /// 試合中のボイスには、閉じたときの保存 (<see cref="VoiceSettingsStore.Saved"/>) で効く。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">percent が 0 から <see cref="VoiceSettings.MaxVolumePercent"/> の外。</exception>
+        public void SetVoiceVolume(int percent)
+        {
+            EnsureOpen();
+            EditVoice(new VoiceSettings(_voiceEditing.MicrophoneEnabled, percent));
+        }
+
+        /// <summary>
         /// 画面の言語 (<see cref="Localizer.Language"/>) を <see cref="Localizer.SwitchTo"/> で language に切り替える。
         /// 表を読み直し、<see cref="Localizer.Changed"/> で開いている画面を今の言語で組み直し、言語はすぐ <see cref="LanguageStore"/> に書き出す
         /// (ほかの値の変更は閉じるときに保存する)。今と同じ言語なら何もしない。
@@ -611,13 +690,14 @@ namespace Shooter.Runtime
 
         /// <summary>
         /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に、字幕も Off に、血の表示も On に、
-        /// 視点の上下反転も Off に、振動も On に戻す。保存は閉じるとき。
+        /// 視点の上下反転も Off に、振動も On に、ボイスチャットも初期値 (<see cref="VoiceSettings.Default"/>) に戻す。保存は閉じるとき。
         /// この画面に無い回線の表示 (<see cref="ControlSettings.ShowNetStats"/>) と、読めない言語に戻って押した人が戻せなくならないよう言語は、今のまま残す。
         /// </summary>
         /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void ResetToDefaults()
         {
             EnsureOpen();
+            EditVoice(VoiceSettings.Default);
             Edit(ControlSettings.Default);
         }
 
@@ -803,6 +883,17 @@ namespace Shooter.Runtime
             Refresh();
         }
 
+        private void EditVoice(VoiceSettings settings)
+        {
+            if (settings.Equals(_voiceEditing))
+            {
+                return;
+            }
+
+            _voiceEditing = settings;
+            RefreshVoice();
+        }
+
         private VisualElement Build()
         {
             var root = new VisualElement { name = RootName };
@@ -853,6 +944,10 @@ namespace Shooter.Runtime
             content.Add(BuildPaletteRow());
             content.Add(BuildPaletteSampleRow());
             content.Add(BuildSubtitlesRow());
+
+            content.Add(NewLabel(Localizer.Get(VoiceText.SettingsSectionKey), "settings__section"));
+            content.Add(BuildVoiceMicrophoneRow());
+            content.Add(BuildVoiceVolumeRow());
 
             content.Add(NewLabel(Localizer.Get("settings.section.language"), "settings__section"));
             content.Add(BuildLanguageRow());
@@ -1086,6 +1181,57 @@ namespace Shooter.Runtime
             return row;
         }
 
+        private VisualElement BuildVoiceMicrophoneRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get(VoiceText.MicrophoneKey), "settings__caption"));
+            _voiceMicrophoneButton = NewButton(
+                VoiceMicrophoneButtonName, string.Empty, () => SetMicrophoneEnabled(!_voiceEditing.MicrophoneEnabled));
+            _voiceMicrophoneButton.AddToClassList("settings__mode");
+            row.Add(_voiceMicrophoneButton);
+            return row;
+        }
+
+        private VisualElement BuildVoiceVolumeRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get(VoiceText.VolumeKey), "settings__caption"));
+
+            _voiceVolumeSlider = new SliderInt(0, VoiceSettings.MaxVolumePercent) { name = VoiceVolumeSliderName };
+            _voiceVolumeSlider.AddToClassList("settings__slider");
+            _voiceVolumeSlider.RegisterValueChangedCallback(
+                evt => SetVoiceVolume(Math.Max(0, Math.Min(VoiceSettings.MaxVolumePercent, evt.newValue))));
+            row.Add(_voiceVolumeSlider);
+
+            _voiceVolumeLabel = NewLabel(string.Empty, "settings__value");
+            _voiceVolumeLabel.name = VoiceVolumeValueName;
+            row.Add(_voiceVolumeLabel);
+            return row;
+        }
+
+        private void RefreshVoice()
+        {
+            if (_voiceEditing == null)
+            {
+                return;
+            }
+
+            if (_voiceMicrophoneButton != null)
+            {
+                _voiceMicrophoneButton.text = FormatOnOff(_voiceEditing.MicrophoneEnabled);
+            }
+
+            if (_voiceVolumeSlider != null)
+            {
+                _voiceVolumeSlider.SetValueWithoutNotify(_voiceEditing.VolumePercent);
+            }
+
+            if (_voiceVolumeLabel != null)
+            {
+                _voiceVolumeLabel.text = FormatVoiceVolume(_voiceEditing.VolumePercent);
+            }
+        }
+
         private VisualElement BuildLanguageRow()
         {
             var row = NewRow();
@@ -1176,6 +1322,8 @@ namespace Shooter.Runtime
             {
                 rumbleStrength.SetEnabled(_editing.RumbleEnabled);
             }
+
+            RefreshVoice();
 
             if (_languageButton != null)
             {

@@ -1016,6 +1016,33 @@
     -unity-font-style: bold;
 }
 
+/* ボイスチャットの欄。左の中ほどに、自分の印を先頭にして話している人を積む。VoiceIndicatorView が行を入れる。 */
+.voice {
+    position: absolute;
+    left: 24px;
+    top: 40%;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.voice__row {
+    margin: 4px 0 0 0;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border-left-width: 4px;
+    border-left-color: rgb(120, 220, 120);
+    background-color: rgba(0, 0, 0, 0.5);
+    font-size: 18px;
+    color: rgb(255, 255, 255);
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.voice__row--local {
+    border-left-color: rgb(240, 200, 60);
+    -unity-font-style: bold;
+}
+
 /* フラッシュの目くらまし。FlashOverlay が色 (画像があれば画像) と不透明度を入れる。 */
 .flash-overlay {
     position: absolute;

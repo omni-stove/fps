@@ -23,6 +23,7 @@ namespace Shooter.Tests.EditMode
         private GameLanguage _languageBefore;
         private ControlSettingsStore _store;
         private LanguagePreferenceStore _languageStore;
+        private VoiceSettingsStore _voiceStore;
         private SettingsView _view;
         private VisualElement _container;
 
@@ -37,7 +38,8 @@ namespace Shooter.Tests.EditMode
             var suffix = Guid.NewGuid().ToString("N");
             _store = new ControlSettingsStore("Shooter.Tests.SettingsView." + suffix);
             _languageStore = new LanguagePreferenceStore("Shooter.Tests.SettingsView.Language." + suffix, _store.Key, GameLanguage.Japanese);
-            _view = new SettingsView(_store, languageStore: _languageStore);
+            _voiceStore = new VoiceSettingsStore("Shooter.Tests.SettingsView.Voice." + suffix);
+            _view = new SettingsView(_store, languageStore: _languageStore, voiceStore: _voiceStore);
             _container = new VisualElement();
         }
 
@@ -47,6 +49,7 @@ namespace Shooter.Tests.EditMode
             _view.Close();
             PlayerPrefs.DeleteKey(_store.Key);
             PlayerPrefs.DeleteKey(_languageStore.Key);
+            PlayerPrefs.DeleteKey(_voiceStore.Key);
             PlayerPrefs.Save();
             AppliedControlSettings.Apply(_appliedBefore);
             Localizer.Apply(_languageBefore);
